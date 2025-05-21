@@ -23,12 +23,12 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-/*── TTS: Use the new audio-preview model ──*/
+/*── TTS: Use gpt-4o-mini-audio-preview, voice 'verse' ──*/
 app.post('/speech', async (req, res) => {
   try {
     const audio = await openai.audio.speech.create({
-      model:  'gpt-4o-mini-audio-preview-2024-12-17', // NEW TTS MODEL
-      voice:  req.body.voice || 'verse',               // 'verse' or other available voices
+      model:  'gpt-4o-mini-audio-preview', // Model as in your screenshot
+      voice:  'verse',                     // "verse" voice
       input:  req.body.text,
       format: 'mp3'
     });
@@ -39,6 +39,8 @@ app.post('/speech', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/* Add your other endpoints (image, vision, etc.) here if needed */
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, ()=>console.log(`API running  http://localhost:${PORT}`));
