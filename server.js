@@ -5,7 +5,7 @@ const cors    = require('cors');
 const multer  = require('multer');
 const fs      = require('fs');
 const sharp   = require('sharp');
-const pdf     = require('pdf-parse'); // Be sure you've run: npm install pdf-parse
+const pdf     = require('pdf-parse'); // npm i pdf-parse
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app    = express();
@@ -14,10 +14,14 @@ const upload = multer({ dest: 'tmp/' });
 app.use(cors());
 app.use(express.json());
 
-/*── CHAT ──────────────────────────────────────────*/
+/*── CHAT ──────────────────────────────────────────────*/
 app.post('/chat', async (req, res) => {
   try {
-    const model = req.body.model || 'o4-mini';
+    let model = req.body.model || 'o4-mini';
+    // Use the special audio-preview model if {live:true} is sent
+    if (req.body.live === true) {
+      model = 'gpt-4o-mini-audio-preview-2024-12-17';
+    }
     const out = await openai.chat.completions.create({
       model,
       messages: req.body.messages
@@ -29,7 +33,7 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-/*── TTS ───────────────────────────────────────────*/
+/*── TTS ───────────────────────────────────────────────*/
 app.post('/speech', async (req, res) => {
   try {
     const audio = await openai.audio.speech.create({
@@ -46,7 +50,7 @@ app.post('/speech', async (req, res) => {
   }
 });
 
-/*── IMAGE (DALL·E 3) ─────────────────────────────*/
+/*── IMAGE (DALL·E 3) ─────────────────────────────────*/
 app.post('/image', async (req, res) => {
   try {
     const img = await openai.images.generate({
@@ -64,17 +68,18 @@ app.post('/image', async (req, res) => {
   }
 });
 
-/*── VISION (image/PDF upload) ────────────────────*/
+/*── VISION  (images  OR  PDFs) ───────────────────────*/
 app.post('/vision', upload.single('file'), async (req, res) => {
   try {
     const { path: tmp, mimetype, size } = req.file;
 
-    // --- Image (JPG, PNG, etc) ---
+    /* ---------- IMAGES ----------*/
     if (mimetype.startsWith('image/')) {
       let buf = fs.readFileSync(tmp);
       if (size > 900_000) buf = await sharp(buf).resize({ width: 640 }).toBuffer();
       fs.unlink(tmp, () => {});
       const dataURL = `data:${mimetype};base64,${buf.toString('base64')}`;
+
       const out = await openai.chat.completions.create({
         model: 'o4-mini',
         messages: [{
@@ -88,11 +93,11 @@ app.post('/vision', upload.single('file'), async (req, res) => {
       return res.json({ description: out.choices[0].message.content });
     }
 
-    // --- PDF ---
+    /* ---------- PDFs ----------*/
     if (mimetype === 'application/pdf') {
       const data = fs.readFileSync(tmp); fs.unlink(tmp, () => {});
-      const text = (await pdf(data)).text.slice(0, 8000); // up to ~3K tokens
-      const out = await openai.chat.completions.create({
+      const text = (await pdf(data)).text.slice(0, 8000);     // trim to ~2-3K tokens
+      const out  = await openai.chat.completions.create({
         model: 'o4-mini',
         messages: [{
           role:'user',
@@ -102,7 +107,7 @@ app.post('/vision', upload.single('file'), async (req, res) => {
       return res.json({ description: out.choices[0].message.content });
     }
 
-    // --- Other file types ---
+    /* all other types */
     fs.unlink(tmp, () => {});
     res.status(415).json({ error: 'Unsupported file type (image or PDF only)' });
 
@@ -113,5 +118,5 @@ app.post('/vision', upload.single('file'), async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API running  http://localhost:${PORT}`));
+app.listen(PORT, ()=>console.log(`API running  http://localhost:${PORT}`));
 
