@@ -9,14 +9,14 @@ const app    = express();
 app.use(cors());
 app.use(express.json());
 
-/*── CHAT ──────────────────────────────────────────*/
+/*───────────────── CHAT (now gpt-4o-mini-audio-preview) ─────────────*/
 app.post('/chat', async (req, res) => {
   try {
     if (!Array.isArray(req.body.messages)) throw new Error('messages[] missing');
     const rsp = await openai.chat.completions.create({
-      model: 'o4-mini',
+      model: 'gpt-4o-mini-audio-preview',
       messages: req.body.messages,
-      max_completion_tokens: 800          // <-- new name
+      max_completion_tokens: 800
     });
     res.json({ content: rsp.choices[0].message.content });
   } catch (e) {
@@ -25,12 +25,12 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-/*── IMAGE (DALL·E 3) ─────────────────────────────*/
+/*───────────────── IMAGE (DALL·E 3) ────────────────────────────────*/
 app.post('/image', async (req, res) => {
   try {
     if (!req.body.prompt) throw new Error('prompt missing');
     const rsp = await openai.images.generate({
-      model:  'dall-e-3',
+      model: 'dall-e-3',
       prompt: req.body.prompt,
       size:   '1024x1024',
       n:      1,
@@ -43,7 +43,7 @@ app.post('/image', async (req, res) => {
   }
 });
 
-/*── SPEECH (audio-preview, voice “verse”) ─────────*/
+/*───────────────── SPEECH (same model, voice “verse”) ───────────────*/
 app.post('/speech', async (req, res) => {
   try {
     const text = req.body.text;
@@ -61,6 +61,8 @@ app.post('/speech', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+/*──────── Vision / upload endpoints (optional) stay here if you had them ─────*/
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('API running on', PORT));
