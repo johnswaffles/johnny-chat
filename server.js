@@ -1,69 +1,87 @@
-require('dotenv').config();
-const OpenAI  = require('openai');
-const express = require('express');
-const cors    = require('cors');
+/*************************************************************************
+ *  new-open-ai-chatbot  –  Node / Express backend
+ *  • /chat   → o4-mini   (text-only chat)
+ *  • /image  → DALL·E-3  (1024×1024, URL)
+ *  • /speech → gpt-4o-mini-tts   voice: “coral”  (cheerful tone, MP3)
+ *  • /vision  (stub) – keep / extend if you need image/PDF analysis
+ *************************************************************************/
+
+require("dotenv").config();
+const OpenAI  = require("openai");
+const express = require("express");
+const cors    = require("cors");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app    = express();
-
 app.use(cors());
 app.use(express.json());
 
-/*───────────────── CHAT (now gpt-4o-mini-audio-preview) ─────────────*/
-app.post('/chat', async (req, res) => {
+/*────────────────────────  CHAT  ────────────────────────*/
+app.post("/chat", async (req, res) => {
   try {
-    if (!Array.isArray(req.body.messages)) throw new Error('messages[] missing');
+    if (!Array.isArray(req.body.messages)) throw new Error("messages[] missing");
     const rsp = await openai.chat.completions.create({
-      model: 'gpt-4o-mini-audio-preview',
+      model: "o4-mini",
       messages: req.body.messages,
       max_completion_tokens: 800
     });
-    res.json({ content: rsp.choices[0].message.content });
-  } catch (e) {
-    console.error('chat:', e.message);
-    res.status(500).json({ error: e.message });
+    return res.json({ content: rsp.choices[0].message.content });
+  } catch (err) {
+    console.error("chat:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/*───────────────── IMAGE (DALL·E 3) ────────────────────────────────*/
-app.post('/image', async (req, res) => {
+/*────────────────────────  IMAGE  ───────────────────────*/
+app.post("/image", async (req, res) => {
   try {
-    if (!req.body.prompt) throw new Error('prompt missing');
-    const rsp = await openai.images.generate({
-      model: 'dall-e-3',
+    if (!req.body.prompt) throw new Error("prompt missing");
+    const img = await openai.images.generate({
+      model: "dall-e-3",
       prompt: req.body.prompt,
-      size:   '1024x1024',
-      n:      1,
-      response_format: 'url'
+      size: "1024x1024",
+      n: 1,
+      response_format: "url"
     });
-    res.json({ url: rsp.data[0].url });
-  } catch (e) {
-    console.error('image:', e.message);
-    res.status(500).json({ error: e.message });
+    res.json({ url: img.data[0].url });
+  } catch (err) {
+    console.error("image:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/*───────────────── SPEECH (same model, voice “verse”) ───────────────*/
-app.post('/speech', async (req, res) => {
+/*────────────────────────  SPEECH  ─────────────────────*/
+app.post("/speech", async (req, res) => {
   try {
     const text = req.body.text;
-    if (!text) throw new Error('text missing');
-    const audio = await openai.audio.speech.create({
-      model: 'gpt-4o-mini-audio-preview',
-      voice: 'verse',
+    if (!text) throw new Error("text missing");
+
+    /* stream the TTS audio, then concat → Buffer → mp3 */
+    const stream = await openai.audio.speech.with_streaming_response.create({
+      model: "gpt-4o-mini-tts",
+      voice: "coral",
       input: text,
-      format: 'mp3'
+      instructions: "Speak in a cheerful and positive tone.",
+      format: "mp3"
     });
-    res.set('Content-Type', 'audio/mpeg');
-    res.send(Buffer.from(await audio.arrayBuffer()));
-  } catch (e) {
-    console.error('speech:', e.message);
-    res.status(500).json({ error: e.message });
+
+    const chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    const audioBuf = Buffer.concat(chunks);
+
+    res.set("Content-Type", "audio/mpeg");
+    res.send(audioBuf);
+  } catch (err) {
+    console.error("speech:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/*──────── Vision / upload endpoints (optional) stay here if you had them ─────*/
+/*────────────────────────  VISION  (optional) ───────────*/
+/*  If you previously had /vision (image/PDF analysis),   *
+ *  paste that route here. Otherwise leave it out.        */
 
+/*────────────────────────  START SERVER  ────────────────*/
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('API running on', PORT));
+app.listen(PORT, () => console.log(`API running  http://localhost:${PORT}`));
 
