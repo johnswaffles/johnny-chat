@@ -2,14 +2,9 @@ require('dotenv').config();
 const OpenAI  = require('openai');
 const express = require('express');
 const cors    = require('cors');
-const multer  = require('multer');
-const fs      = require('fs');
-const sharp   = require('sharp');
-const pdf     = require('pdf-parse');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const app = express();
-const upload = multer({ dest: 'tmp/' });
+const app    = express();
 
 app.use(cors());
 app.use(express.json());
@@ -21,7 +16,7 @@ app.post('/chat', async (req, res) => {
     const rsp = await openai.chat.completions.create({
       model: 'o4-mini',
       messages: req.body.messages,
-      max_tokens: 800
+      max_completion_tokens: 800          // <-- new name
     });
     res.json({ content: rsp.choices[0].message.content });
   } catch (e) {
@@ -30,7 +25,7 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-/*── IMAGE (DALL·E 3) ──────────────────────────────*/
+/*── IMAGE (DALL·E 3) ─────────────────────────────*/
 app.post('/image', async (req, res) => {
   try {
     if (!req.body.prompt) throw new Error('prompt missing');
@@ -48,7 +43,7 @@ app.post('/image', async (req, res) => {
   }
 });
 
-/*── SPEECH (gpt-4o-mini-audio-preview, voice “verse”) ──*/
+/*── SPEECH (audio-preview, voice “verse”) ─────────*/
 app.post('/speech', async (req, res) => {
   try {
     const text = req.body.text;
@@ -67,9 +62,6 @@ app.post('/speech', async (req, res) => {
   }
 });
 
-/*── VISION (image & PDF) – unchanged, optional ─────*/
-app.post('/vision', upload.single('file'), async (req, res) => { /* keep yours */ });
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('API on', PORT));
+app.listen(PORT, () => console.log('API running on', PORT));
 
