@@ -49,19 +49,17 @@ app.post("/speech", async (req, res) => {
   }
 });
 
-/*── IMAGE  (GPT-Image-1 **only**) ─────────────────────────────*/
+/*── IMAGE  (GPT-Image-1) ─────────────────────────────────────*/
 app.post("/image", async (req, res) => {
   try {
     const img = await openai.images.generate({
       model:  "gpt-image-1",
       prompt: req.body.prompt,
       size:   "1024x1024",
-      n:      1,
-      response_format: "b64_json"
+      n:      1                    // <-- NO response_format here
     });
-    const b64 = img.data[0].b64_json;               // base-64 PNG
-    res.json({ image: b64 });
-    console.log("Image created with gpt-image-1");
+    // gpt-image-1 always returns base-64 PNG in data[0].b64_json
+    res.json({ image: img.data[0].b64_json });
   } catch (err) {
     console.error("Image error:", err);
     res.status(err.status ?? 500).json({ error: err.message });
