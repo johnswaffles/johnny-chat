@@ -1,12 +1,14 @@
-// server.js
-
+/*──────────────────────────────────────────────────────────────
+  server.js  –  5 routes (chat, search, speech, image, vision)
+──────────────────────────────────────────────────────────────*/
 require('dotenv').config();
-const express = require('express');
-const cors    = require('cors');
-const multer  = require('multer');
-const fs      = require('fs');
-const pdf     = require('pdf-parse');
 const { OpenAI } = require('openai');
+const express   = require('express');
+const cors      = require('cors');
+const multer    = require('multer');
+const fs        = require('fs');
+const sharp     = require('sharp');
+const pdf       = require('pdf-parse');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app    = express();
@@ -30,16 +32,15 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-/*── WEB SEARCH ───────────────────────────────────────────────*/
+/*── SEARCH (web_search_preview on gpt-4.1-mini) ───────────────*/
 app.post('/search', async (req, res) => {
   try {
-    const { query } = req.body;
-    const out = await openai.responses.create({
-      model: 'o4-mini',
+    const response = await openai.responses.create({
+      model: 'gpt-4.1-mini',
       tools: [{ type: 'web_search_preview' }],
-      input: query
+      input: req.body.query
     });
-    res.json({ text: out.output_text });
+    res.json({ text: response.output_text });
   } catch (err) {
     console.error('Search error:', err);
     res.status(500).json({ error: err.message });
@@ -80,40 +81,44 @@ app.post('/image', async (req, res) => {
   }
 });
 
-/*── VISION  (images  OR  PDFs) ───────────────────────────────*/
+/*── VISION (images OR PDFs) ──────────────────────────────────*/
 app.post('/vision', upload.single('file'), async (req, res) => {
   try {
-    const { path: tmp, mimetype } = req.file;
-    const buf = fs.readFileSync(tmp);
-    fs.unlinkSync(tmp);
+    const { path: tmp, mimetype, size } = req.file;
 
     if (mimetype.startsWith('image/')) {
+      let buf = fs.readFileSync(tmp);
+      if (size > 900_000) buf = await sharp(buf).resize({ width: 640 }).toBuffer();
+      fs.unlink(tmp, () => {});
       const dataURL = `data:${mimetype};base64,${buf.toString('base64')}`;
-      const out = await openai.responses.create({
-        model: 'gpt-4.1-mini',
-        input: [{
-          role: 'user',
-          content: [
-            { type: 'input_text',  text: 'Describe this image.' },
-            { type: 'input_image', image_url: dataURL }
-          ]
-        }]
-      });
-      return res.json({ description: out.output_text });
-    }
 
-    if (mimetype === 'application/pdf') {
-      const text = (await pdf(buf)).text.slice(0, 8000);
-      const out  = await openai.chat.completions.create({
-        model: 'o4-mini',
+      const out = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
         messages: [{
           role: 'user',
-          content: `Here is extracted text from a PDF:\n\n${text}\n\nPlease summarize.`
+          content: [
+            { type: 'text',      text: 'Describe this image.' },
+            { type: 'image_url', image_url: { url: dataURL } }
+          ]
         }]
       });
       return res.json({ description: out.choices[0].message.content });
     }
 
+    if (mimetype === 'application/pdf') {
+      const data = fs.readFileSync(tmp); fs.unlink(tmp, () => {});
+      const text = (await pdf(data)).text.slice(0, 8000);
+      const out  = await openai.chat.completions.create({
+        model: 'o4-mini',
+        messages: [{
+          role:'user',
+          content:`Here is the extracted text from a PDF:\n\n${text}\n\nPlease summarize it.`
+        }]
+      });
+      return res.json({ description: out.choices[0].message.content });
+    }
+
+    fs.unlink(tmp, () => {});
     res.status(415).json({ error: 'Unsupported file type (image or PDF only)' });
   } catch (err) {
     console.error('Vision error:', err);
@@ -122,7 +127,5 @@ app.post('/vision', upload.single('file'), async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () =>
-  console.log(`API running on http://localhost:${PORT}`)
-);
+app.listen(PORT, ()=>console.log(`API running at http://localhost:${PORT}`));
 
