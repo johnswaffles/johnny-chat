@@ -1,9 +1,9 @@
 /*************************************************************************
- *  new-open-ai-chatbot  –  Node / Express backend
- *  • /chat   → o4-mini   (text-only chat)
- *  • /image  → DALL·E-3  (1024×1024, URL)
- *  • /speech → gpt-4o-mini-tts   voice: “coral”  (cheerful tone, MP3)
- *  • /vision  (stub) – keep / extend if you need image/PDF analysis
+ *  new-open-ai-chatbot  •  Node / Express backend
+ *  ────────────────────────────────────────────────────────────────────
+ *  /chat   → o4-mini                     (text chat)
+ *  /image  → DALL·E-3  (URL 1024×1024)
+ *  /speech → gpt-4o-mini-tts  voice:“verse”   (returns MP3)
  *************************************************************************/
 
 require("dotenv").config();
@@ -16,7 +16,7 @@ const app    = express();
 app.use(cors());
 app.use(express.json());
 
-/*────────────────────────  CHAT  ────────────────────────*/
+/*──────── CHAT ─────────────────────────────────────────────*/
 app.post("/chat", async (req, res) => {
   try {
     if (!Array.isArray(req.body.messages)) throw new Error("messages[] missing");
@@ -25,14 +25,14 @@ app.post("/chat", async (req, res) => {
       messages: req.body.messages,
       max_completion_tokens: 800
     });
-    return res.json({ content: rsp.choices[0].message.content });
+    res.json({ content: rsp.choices[0].message.content });
   } catch (err) {
     console.error("chat:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-/*────────────────────────  IMAGE  ───────────────────────*/
+/*──────── IMAGE (DALL·E-3) ─────────────────────────────────*/
 app.post("/image", async (req, res) => {
   try {
     if (!req.body.prompt) throw new Error("prompt missing");
@@ -50,38 +50,29 @@ app.post("/image", async (req, res) => {
   }
 });
 
-/*────────────────────────  SPEECH  ─────────────────────*/
+/*──────── SPEECH  (gpt-4o-mini-tts • voice: verse) ─────────*/
 app.post("/speech", async (req, res) => {
   try {
     const text = req.body.text;
     if (!text) throw new Error("text missing");
 
-    /* stream the TTS audio, then concat → Buffer → mp3 */
-    const stream = await openai.audio.speech.with_streaming_response.create({
+    const audio = await openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
-      voice: "coral",
+      voice: "verse",
       input: text,
       instructions: "Speak in a cheerful and positive tone.",
       format: "mp3"
     });
 
-    const chunks = [];
-    for await (const chunk of stream) chunks.push(chunk);
-    const audioBuf = Buffer.concat(chunks);
-
+    const buf = Buffer.from(await audio.arrayBuffer());
     res.set("Content-Type", "audio/mpeg");
-    res.send(audioBuf);
+    res.send(buf);
   } catch (err) {
     console.error("speech:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-/*────────────────────────  VISION  (optional) ───────────*/
-/*  If you previously had /vision (image/PDF analysis),   *
- *  paste that route here. Otherwise leave it out.        */
-
-/*────────────────────────  START SERVER  ────────────────*/
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API running  http://localhost:${PORT}`));
+app.listen(PORT, () => console.log("API running on", PORT));
 
