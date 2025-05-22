@@ -53,20 +53,25 @@ app.post("/speech", async (req, res) => {
   }
 });
 
-/*── IMAGE  (DALL·E 3) ────────────────────────────────────────*/
+/*── IMAGE  (DALL·E 3) – fully-specified call ─────────────────*/
 app.post("/image", async (req, res) => {
   try {
     const out = await openai.images.generate({
-      model:   "dall-e-3",
-      prompt:  req.body.prompt,
-      n:       1,
-      size:    "1024x1024",
-      quality: "standard"          // ← REQUIRED as of May-2025
+      model:           "dall-e-3",
+      prompt:          req.body.prompt?.trim() || "A photo of a happy cat",
+      n:               1,
+      size:            "1024x1024",
+      quality:         "standard",      // ← must be “standard” or “hd”
+      style:           "natural",       // ← must be “natural” or “vivid”
+      response_format: "url"
     });
+
     res.json({ url: out.data[0].url });
+
   } catch (err) {
+    /* log full JSON from OpenAI so you’ll see future requirement changes */
     console.error("Image error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.error?.message || err.message });
   }
 });
 
