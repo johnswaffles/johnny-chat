@@ -82,6 +82,22 @@ app.post('/chat', async (req, res) => {
   }
 });
 
+/*── IMAGE  (GPT-Image-1) ────────────────────────────────────────────*/
+app.post("/image", async (req, res) => {
+  try {
+    const img = await openai.images.generate({
+      model : "gpt-image-1",
+      prompt: req.body.prompt,
+      size  : "1024x1024",   // supported: 1024x1024 | 1024x1536 | 1536x1024 | "auto"
+      n     : 1
+    });
+    res.json({ image: img.data[0].b64_json });
+  } catch (err) {
+    console.error("Image error:", err);
+    res.status(err.status ?? 500).json({ error: err.message });
+  }
+});
+
 /*── TTS (OpenAI) ─────────────────────────────────────────────*/
 app.post('/speech', async (req, res) => {
   const textToSpeak = req.body.text;
