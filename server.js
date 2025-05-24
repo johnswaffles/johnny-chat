@@ -108,7 +108,7 @@ app.post("/image", async (req, res) => {
     const img = await openai.images.generate({
       model:  "gpt-image-1",
       prompt: req.body.prompt,
-      size:   "1024x1024",
+      size:   "512x512",
       n:      1                    // <-- NO response_format here
     });
     // gpt-image-1 always returns base-64 PNG in data[0].b64_json
