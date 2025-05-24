@@ -119,54 +119,74 @@ app.post("/image", async (req, res) => {
   }
 });
 
-/*── VISION (OpenAI) ──────────────────*/
-app.post('/vision', upload.single('file'), async (req, res) => {
+/*── VISION (OpenAI) ───────────────────────────────────────────────*/
+app.post("/vision", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded." });
-    const { path: tmp, mimetype, size } = req.file;
-    const userQuery = req.body.user_query;
-    const systemMessage = { role: 'system', content: UNIVERSAL_CHATBOT_PERSONA_BACKEND };
-    let visionMessages = [systemMessage];
-    let modelToUse = 'gpt-4.1-nano';
+    if (!req.file)
+      return res.status(400).json({ error: "No file uploaded." });
 
-    if (mimetype.startsWith('image/')) {
+    const { path: tmp, mimetype, size } = req.file;
+    const userQuery     = req.body.user_query?.trim();
+    const systemMessage = { role: "system", content: UNIVERSAL_CHATBOT_PERSONA_BACKEND };
+    const messages      = [ systemMessage ];
+    const model         = "gpt-4o-mini";              // fast + vision
+
+    /*-------  IMAGES  --------*/
+    if (mimetype.startsWith("image/")) {
       let buf = fs.readFileSync(tmp);
-      if (size > 2_000_000) buf = await sharp(buf).resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true }).toBuffer();
-      fs.unlink(tmp, (e) => { if (e) console.error("Error deleting tmp image:", tmp, e);});
-      const dataURL = `data:${mimetype};base64,${buf.toString('base64')}`;
-      visionMessages.push({ role: 'user', content: [{ type: 'text', text: userQuery || 'Describe this image comprehensively.' }, { type: 'image_url', image_url: { url: dataURL, detail: "auto" } }] });
-    } else if (mimetype === 'application/pdf') {
-      const data = fs.readFileSync(tmp);  
-      fs.unlink(tmp, (e) => { if (e) console.error("Error deleting tmp PDF:", tmp, e);});
-      const text = (await pdf(data)).text.slice(0, 80000);
-      const pdfPrompt = userQuery ? `Answer this question: "${userQuery}" based on the PDF text: \n---\n${text}\n---` : `Summarize this PDF text: \n---\n${text}\n---`;
-      visionMessages.push({ role: 'user', content: pdfPrompt });
-    } else {
-      fs.unlink(tmp, (e) => { if (e) console.error("Error deleting tmp unsupported:", tmp, e);});
+      if (size > 2_000_000)                        // > 2 MB → shrink
+        buf = await sharp(buf)
+               .resize({ width: 768, withoutEnlargement: true })
+               .toBuffer();
+
+      fs.unlink(tmp, () => {});
+      const dataURL = `data:${mimetype};base64,${buf.toString("base64")}`;
+
+      messages.push({
+        role: "user",
+        content: [
+          { type: "text",
+            text: userQuery || "Describe this image." },
+          { type: "image_url",
+            image_url: { url: dataURL, detail: "low" } }   // << LOW detail
+        ]
+      });
+    }
+
+    /*-------  PDFs  --------*/
+    else if (mimetype === "application/pdf") {
+      const data = fs.readFileSync(tmp); fs.unlink(tmp, () => {});
+      const raw  = (await pdf(data)).text.slice(0, 16_000);  // ≈ 2 k tokens
+      const prompt = userQuery
+        ? `Based **only** on this PDF text, answer: «${userQuery}»\n\n${raw}`
+        : `Please summarise this PDF:\n\n${raw}`;
+
+      messages.push({ role: "user", content: prompt });
+    }
+
+    /*-------  Unsupported  --------*/
+    else {
+      fs.unlink(tmp, () => {});
       return res.status(415).json({ error: "Unsupported file type." });
     }
 
-    console.log(`Vision request to model: ${modelToUse} with query: "${userQuery || (mimetype.startsWith('image/') ? 'Describe image' : 'Summarize PDF')}"`);
+    /*---  Call the model  ---*/
+    const out = await openai.chat.completions.create({
+      model,
+      messages,
+      max_tokens: 300,        // smaller completion budget
+      temperature: 0.5
+    });
 
-    const out = await openai.chat.completions.create({ model: modelToUse, messages: visionMessages, max_tokens: 700 });
-    if (!out.choices || out.choices.length === 0 || !out.choices[0].message) {
-        console.error("Vision Error: OpenAI response missing choices or message.", JSON.stringify(out, null, 2));
-        return res.status(500).json({ error: "Invalid response structure from OpenAI for vision." });
-    }
-    console.log("Vision success. OpenAI response choice:", JSON.stringify(out.choices[0], null, 2));
+    if (!out.choices?.length)
+      throw new Error("No content returned from vision model.");
+
     res.json({ description: out.choices[0].message.content });
-      
+
   } catch (err) {
-    console.error("Vision API Error Full:", err);
-    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-        fs.unlink(req.file.path, (unlinkErr) => { if (unlinkErr) console.error("Error deleting temp file on vision error:", req.file.path, unlinkErr);});
-    }
-    let errorMsg = "An unexpected error occurred in vision processing.";
-    let statusCode = 500;
-    if (err.response) { errorMsg = err.response.data?.error?.message || err.message; statusCode = err.response.status || 500;} 
-    else if (err.status) { errorMsg = err.error?.message || err.message; statusCode = err.status; }
-    else { errorMsg = err.message || errorMsg; }
-    res.status(statusCode).json({ error: errorMsg });
+    console.error("Vision error:", err);
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    res.status(err.status ?? 500).json({ error: err.message });
   }
 });
 
