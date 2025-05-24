@@ -44,26 +44,29 @@ app.post('/chat', async (req, res) => {
 /*── TTS (OpenAI) ─────────────────────────────────────────────*/
 app.post('/speech', async (req, res) => {
   const textToSpeak = req.body.text;
+  const selectedVoice = req.body.voice || 'shimmer'; // Get voice from request, default to 'shimmer'
+
   if (!textToSpeak) {
-      return res.status(400).json({ error: "Missing text in request body" });
+    return res.status(400).json({ error: 'No text provided for speech synthesis.' });
   }
 
   try {
     const audio = await openai.audio.speech.create({
-      model:  "gpt-4o-mini-tts", // As per your image
-      voice:  "verse",         // Common OpenAI voice, you can choose others like 'alloy', 'echo', etc.
+      model:  'gpt-4o-mini-tts',
+      voice:  selectedVoice, // Use the selected voice here
       input:  textToSpeak,
-      response_format: "mp3"     // Common audio format
+      // format: 'mp3' // 'format' is deprecated, use 'response_format'. Default is mp3.
+      response_format: 'mp3' // Explicitly set response_format
     });
-
-    res.set('Content-Type', 'audio/mpeg'); // MIME type for MP3
-    // The response from OpenAI SDK needs to be converted to a Buffer
-    const buffer = Buffer.from(await audio.arrayBuffer());
-    res.send(buffer);
-
+    res.set('Content-Type', 'audio/mpeg');
+    // The response from audio.speech.create is a Response object.
+    // To get the audio data as a Buffer, you need to access its body (a ReadableStream)
+    // and then convert that stream to a Buffer.
+    const audioBuffer = Buffer.from(await audio.arrayBuffer());
+    res.send(audioBuffer);
   } catch (err) {
-    console.error('OpenAI TTS error:', err);
-    res.status(err.status ?? 500).json({ error: `OpenAI TTS Error: ${err.message}` });
+    console.error('TTS error:', err);
+    res.status(err.status ?? 500).json({ error: err.message });
   }
 });
 
