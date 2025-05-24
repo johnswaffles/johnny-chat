@@ -1,158 +1,102 @@
-/*──────────────────────────────────────────────────────────────
-  server.js
-  • Chat  :  o4-mini (OpenAI)
-  • TTS   :  gpt-4o-mini-tts (OpenAI)
-  • Image :  GPT-Image-1 (OpenAI - base64)
-  • Vision:  GPT-4o-mini (OpenAI - images/PDFs)
-  • Search:  gpt-4.1-mini with web_search_preview (OpenAI)
-──────────────────────────────────────────────────────────────*/
+// server.js
 
-require('dotenv').config();
-const OpenAI  = require('openai');
-const express = require('express');
-const cors    = require('cors');
-const multer  = require('multer');
-const fs      = require('fs');
-const sharp   = require('sharp');
-const pdf     = require('pdf-parse');
+// AT THE TOP OF YOUR server.js, with other require statements:
+// const OpenAI  = require('openai'); // you already have this
+// const fs      = require('fs');      // you already have this
+// const sharp   = require('sharp');   // you already have this
+// const pdf     = require('pdf-parse'); // you already have this
+// const multer  = require('multer');  // you already have this
+// const upload = multer({ dest: 'tmp/' }); // you already have this
 
-// GoogleGenerativeAI is no longer needed
-// const { GoogleGenerativeAI } = require("@google/generative-ai");
+// DEFINE THE UNIVERSAL PERSONA FOR THE BACKEND
+const UNIVERSAL_CHATBOT_PERSONA_BACKEND = "You are a helpful and approachable AI assistant. You have a friendly and slightly humorous personality. Please keep your responses conversational. Do not refer to yourself by any specific name.";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const app    = express();
-const upload = multer({ dest: 'tmp/' });
+// ... (your other app setup, /chat, /speech, /image endpoints) ...
 
-app.use(cors());
-app.use(express.json());
-
-/*── CHAT (OpenAI) ────────────────────────────────────────────*/
-app.post('/chat', async (req, res) => {
-  try {
-    const model = req.body.model || 'o4-mini';
-    const out = await openai.chat.completions.create({
-      model,
-      messages: req.body.messages
-    });
-    res.json(out.choices[0].message);
-  } catch (err) {
-    console.error('Chat error:', err);
-    res.status(err.status ?? 500).json({ error: err.message });
-  }
-});
-
-/*── TTS (OpenAI) ─────────────────────────────────────────────*/
-app.post('/speech', async (req, res) => {
-  const textToSpeak = req.body.text;
-  const selectedVoice = req.body.voice || 'shimmer'; // Get voice from request, default to 'shimmer'
-
-  if (!textToSpeak) {
-    return res.status(400).json({ error: 'No text provided for speech synthesis.' });
-  }
-
-  try {
-    const audio = await openai.audio.speech.create({
-      model:  'gpt-4o-mini-tts',
-      voice:  selectedVoice, // Use the selected voice here
-      input:  textToSpeak,
-      // format: 'mp3' // 'format' is deprecated, use 'response_format'. Default is mp3.
-      response_format: 'mp3' // Explicitly set response_format
-    });
-    res.set('Content-Type', 'audio/mpeg');
-    // The response from audio.speech.create is a Response object.
-    // To get the audio data as a Buffer, you need to access its body (a ReadableStream)
-    // and then convert that stream to a Buffer.
-    const audioBuffer = Buffer.from(await audio.arrayBuffer());
-    res.send(audioBuffer);
-  } catch (err) {
-    console.error('TTS error:', err);
-    res.status(err.status ?? 500).json({ error: err.message });
-  }
-});
-
-/*── IMAGE (OpenAI GPT-Image-1) ────────────────────────────────*/
-app.post("/image", async (req, res) => {
-  try {
-    const img = await openai.images.generate({
-      model:  "gpt-image-1",
-      prompt: req.body.prompt,
-      size:   "1024x1024",
-      n:      1
-    });
-    res.json({ image: img.data[0].b64_json });
-  } catch (err) {
-    console.error("Image error:", err);
-    res.status(err.status ?? 500).json({ error: err.message });
-  }
-});
-
-/*── VISION (OpenAI - images OR PDFs) ─────────────────────────*/
+/*── VISION (OpenAI - images OR PDFs, with optional user_query) ──────────────────*/
 app.post('/vision', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
         return res.status(400).json({ error: "No file uploaded." });
     }
     const { path: tmp, mimetype, size } = req.file;
+    const userQuery = req.body.user_query; // Get the user's question about the file
+
+    // Common system message for the LLM
+    const systemMessage = { role: 'system', content: UNIVERSAL_CHATBOT_PERSONA_BACKEND };
 
     if (mimetype.startsWith('image/')) {
       let buf = fs.readFileSync(tmp);
-      if (size > 900_000) buf = await sharp(buf).resize({ width: 640 }).toBuffer();
-      fs.unlink(tmp, (unlinkErr) => { if (unlinkErr) console.error("Error deleting temp image file:", unlinkErr);});
+      // Consider a slightly larger resize or conditional resize based on actual vision model input limits
+      // For gpt-4o, it can handle larger images well. Resizing aggressively might lose detail.
+      // Max 20MB per image for GPT-4o. 900KB is very conservative. Let's keep it for now for speed.
+      if (size > 900_000) { // ~0.9MB
+        buf = await sharp(buf).resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true }).toBuffer();
+      }
+      fs.unlink(tmp, (unlinkErr) => { if (unlinkErr) console.error("Error deleting temp image file:", tmp, unlinkErr);});
       const dataURL = `data:${mimetype};base64,${buf.toString('base64')}`;
-
-      const out = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{
+    
+      const imageMessages = [
+        systemMessage,
+        {
           role: 'user',
           content: [
-            { type: 'text',      text: 'Describe this image.' },
-            { type: 'image_url', image_url: { url: dataURL } }
+            { type: 'text', text: userQuery || 'Describe this image comprehensively.' }, // Use user's query or default
+            { type: 'image_url', image_url: { url: dataURL, detail: "auto" } } // detail: "low", "high", "auto"
           ]
-        }]
+        }
+      ];
+      
+      const out = await openai.chat.completions.create({
+        model: 'gpt-4o-mini', // Vision-capable model
+        messages: imageMessages,
+        max_tokens: 500 // Adjust as needed
       });
       return res.json({ description: out.choices[0].message.content });
     }
-
+      
     if (mimetype === 'application/pdf') {
-      const data = fs.readFileSync(tmp);
-      fs.unlink(tmp, (unlinkErr) => { if (unlinkErr) console.error("Error deleting temp PDF file:", unlinkErr);});
-      const text = (await pdf(data)).text.slice(0, 8000);
-      const out  = await openai.chat.completions.create({
-        model: 'o4-mini',
-        messages: [{
+      const data = fs.readFileSync(tmp);  
+      fs.unlink(tmp, (unlinkErr) => { if (unlinkErr) console.error("Error deleting temp PDF file:", tmp, unlinkErr);});
+      // Increased slice for more context, ensure your model can handle it
+      // 32000 chars is roughly 8k tokens. o4-mini has a large context window.
+      const text = (await pdf(data)).text.slice(0, 32000); 
+      
+      let pdfPromptContent;
+      if (userQuery) {
+        pdfPromptContent = `Please answer the following question based on the provided PDF text: "${userQuery}"\n\nPDF Text:\n---\n${text}\n---`;
+      } else {
+        pdfPromptContent = `Here is the extracted text from a PDF:\n\n${text}\n\nPlease summarize the document and its key points.`;
+      }
+
+      const pdfMessages = [
+        systemMessage,
+        {
           role:'user',
-          content:`Here is the extracted text from a PDF:\n\n${text}\n\nPlease summarize the document.`
-        }]
+          content: pdfPromptContent
+        }
+      ];
+      
+      const out  = await openai.chat.completions.create({
+        model: 'gpt-4o-mini', // Use a model good for text analysis and following instructions
+        messages: pdfMessages,
+        max_tokens: 500 // Adjust as needed
       });
       return res.json({ description: out.choices[0].message.content });
-    }
-
-    fs.unlink(tmp, (unlinkErr) => { if (unlinkErr) console.error("Error deleting temp unsupported file:", unlinkErr);});
+    }  
+    
+    // If file type is not image or PDF
+    fs.unlink(tmp, (unlinkErr) => { if (unlinkErr) console.error("Error deleting temp unsupported file:", tmp, unlinkErr);});
     res.status(415).json({ error: "Unsupported file type (image or PDF only)" });
-
+      
   } catch (err) {
     console.error("Vision error:", err);
+    // Ensure temp file is deleted even if an error occurs mid-processing
     if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-        fs.unlink(req.file.path, (unlinkErr) => { if (unlinkErr) console.error("Error deleting temp file on vision error:", unlinkErr);});
+        fs.unlink(req.file.path, (unlinkErr) => { if (unlinkErr) console.error("Error deleting temp file on vision error:", req.file.path, unlinkErr);});
     }
     res.status(err.status ?? 500).json({ error: err.message });
   }
 });
 
-/*── WEB SEARCH (OpenAI - preview tool) ───────────────────────*/
-app.post("/search", async (req, res) => {
-  try {
-    const out = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      tools: [{ type: "web_search_preview" }],
-      input: req.body.query
-    });
-    res.json({ answer: out.output_text });
-  } catch (err) {
-    console.error("Search error:", err);
-    res.status(err.status ?? 500).json({ error: err.message });
-  }
-});
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`API ready  →  http://localhost:${PORT}`));
+// ... (your PORT listener and other routes) ...
