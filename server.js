@@ -102,21 +102,20 @@ app.post('/speech', async (req, res) => {
   }
 });
 
-/*── IMAGE (DALL·E 3) ───────────────────────────────────────*/
-app.post('/image', async (req, res) => {
-  const prompt = req.body.prompt;
-  if (!prompt) return res.status(400).json({ error: "Prompt is required." });
+/*── IMAGE  (GPT-Image-1) ─────────────────────────────────────*/
+app.post("/image", async (req, res) => {
   try {
-    const img = await openai.images.generate({ model: 'dall-e-3', prompt, size: '1024x1024', quality: 'standard', style: 'natural', n: 1, response_format: 'b64_json' });
+    const img = await openai.images.generate({
+      model:  "gpt-image-1",
+      prompt: req.body.prompt,
+      size:   "1024x1024",
+      n:      1                    // <-- NO response_format here
+    });
+    // gpt-image-1 always returns base-64 PNG in data[0].b64_json
     res.json({ image: img.data[0].b64_json });
   } catch (err) {
-    console.error('Image API Error Full:', err);
-    let errorMsg = "An unexpected error occurred in image generation.";
-    let statusCode = 500;
-    if (err.response) { errorMsg = err.response.data?.error?.message || err.message; statusCode = err.response.status || 500; } 
-    else if (err.status) { errorMsg = err.error?.message || err.message; statusCode = err.status; }
-    else { errorMsg = err.message || errorMsg; }
-    res.status(statusCode).json({ error: errorMsg });
+    console.error("Image error:", err);
+    res.status(err.status ?? 500).json({ error: err.message });
   }
 });
 
