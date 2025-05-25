@@ -1,9 +1,3 @@
-`ReferenceError: app is not defined` means the new route code was pasted **above** the line that
-creates the Express instance.
-Just move the two new handlers **below** the block where you already create and configure `app`
-– or use the fixed file below.
-
-```js
 /*──────────────────────────────────────────────────────────────
   server.js – 5 routes with safe fall-backs
 ──────────────────────────────────────────────────────────────*/
@@ -17,7 +11,7 @@ const pdf     = require("pdf-parse");
 const { OpenAI } = require("openai");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const app    = express();                     // ← MUST be declared before routes
+const app    = express();
 const upload = multer({ dest: "tmp/" });
 
 app.use(cors());
@@ -26,7 +20,7 @@ app.use(express.json());
 /*── CHAT  (preview → nano fallback) ──────────────────────────*/
 app.post("/chat", async (req, res) => {
   const history = req.body.messages || [];
-  const prompt  = history[history.length - 1]?.content;
+  const prompt  = history.at(-1)?.content;
   if (!prompt) return res.status(400).json({ error: "messages array missing" });
 
   try {
@@ -176,6 +170,4 @@ app.post("/vision", upload.single("file"), async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API running at http://localhost:${PORT}`));
-```
-
 
