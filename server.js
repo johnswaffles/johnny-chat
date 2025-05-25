@@ -23,34 +23,28 @@ const upload = multer({ dest: "tmp/" });
 app.use(cors());
 app.use(express.json());
 
-/*── CHAT  (search-then-polish) ───────────────────────────────*/
+/*── CHAT  (search-preview ➊  →  nano polish ➋) ───────────────*/
 app.post("/chat", async (req, res) => {
-  const userMsgs = req.body.messages;
-  if (!Array.isArray(userMsgs) || userMsgs.length === 0)
-    return res.status(400).json({ error: "messages array missing" });
+  const history = req.body.messages || [];
+  const userMsg = history[history.length - 1]?.content;
+  if (!userMsg) return res.status(400).json({ error: "messages array missing" });
 
   try {
-    /* 1️⃣  answer with real-time web search */
-    const raw = await openai.chat.completions.create({
-      model:       "gpt-4o-mini-search-preview",
-      tools:       [{ type: "web_search_preview" }],
-      tool_choice: { type: "web_search_preview" },
-      messages:    userMsgs          // pass the user’s full history
+    /* ➊ real-time answer via Responses API */
+    const draft = await openai.responses.create({
+      model : "gpt-4o-mini-search-preview",
+      tools : [{ type: "web_search_preview" }],
+      input : userMsg              // Responses API takes a single input string
     });
 
-    const draft = raw.choices[0].message.content || "[empty]";
-
-    /* 2️⃣  clean / re-format with a cheap model */
+    /* ➋ clean-up with cheap model */
     const polished = await openai.chat.completions.create({
       model: "gpt-4.1-nano",
       messages: [
-        {
-          role: "system",
-          content:
-            "You are a copy editor. Rewrite the assistant’s answer so it is concise, well-structured,"+
-            " easy to read, and free of markdown citations or URL clutter."
-        },
-        { role: "user", content: draft }
+        { role: "system",
+          content: "Rewrite the assistant answer so it’s concise, well-structured, "+
+                   "no raw URLs in text, no citations like [1]." },
+        { role: "user", content: draft.output_text }
       ],
       max_tokens: 500
     });
@@ -58,6 +52,24 @@ app.post("/chat", async (req, res) => {
     res.json({ content: polished.choices[0].message.content });
   } catch (err) {
     console.error("Chat pipeline error:", err);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+/*── SEARCH  (Responses API only) ─────────────────────────────*/
+app.post("/search", async (req, res) => {
+  const q = req.body.query;
+  if (!q) return res.status(400).json({ error: "No query provided." });
+
+  try {
+    const out = await openai.responses.create({
+      model : "gpt-4o-mini-search-preview",
+      tools : [{ type: "web_search_preview" }],
+      input : q
+    });
+    res.json({ result: out.output_text });
+  } catch (err) {
+    console.error("Search error:", err);
     res.status(err.status || 500).json({ error: err.message });
   }
 });
@@ -139,30 +151,6 @@ app.post("/vision", upload.single("file"), async (req, res) => {
   } catch (err) {
     console.error("Vision error:", err);
     res.status(500).json({ error: err.message });
-  }
-});
-
-/*── SEARCH  (fixed) ──────────────────────────────────────────*/
-app.post("/search", async (req, res) => {
-  const query = req.body.query;
-  if (!query) return res.status(400).json({ error: "No query provided." });
-
-  try {
-    /* 1️⃣  run the web search tool */
-    const raw = await openai.chat.completions.create({
-      model: "gpt-4o-mini-search-preview",
-      tools: [{ type: "web_search_preview" }],
-      tool_choice: { type: "web_search_preview" },
-      messages: [{ role: "user", content: query }]
-    });
-
-    /* tool returns a single assistant message with the answer text */
-    const answer = raw.choices[0].message.content;
-    res.json({ result: answer });
-  } catch (err) {
-    console.error("Search error:", err);
-    const code = err.status || 500;
-    res.status(code).json({ error: err.message });
   }
 });
 
