@@ -1,6 +1,5 @@
 /*──────────────────────────────────────────────────────────────
-  server.js – minimal chat backend
-  Model : gpt-4o-mini-search-preview   (Responses API + web search tool)
+  server.js – single /chat route, Chat-Completions API
 ──────────────────────────────────────────────────────────────*/
 require("dotenv").config();
 const express = require("express");
@@ -10,22 +9,22 @@ const { OpenAI } = require("openai");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app    = express();
 
-app.use(cors());            // allow calls from your front-end domain
+app.use(cors());
 app.use(express.json());
 
 /*── POST /chat ───────────────────────────────────────────────*/
 app.post("/chat", async (req, res) => {
   const history = req.body.messages || [];
-  const latest  = history.at(-1)?.content;
-  if (!latest) return res.status(400).json({ error: "messages array missing" });
+  if (!Array.isArray(history) || history.length === 0)
+    return res.status(400).json({ error: "messages array missing" });
 
   try {
-    const out = await openai.responses.create({
-      model : "gpt-4o-mini-search-preview",
-      tools : [{ type: "web_search_preview" }],
-      input : latest
+    const out = await openai.chat.completions.create({
+      model   : "gpt-4o-mini-search-preview",
+      messages: history,
+      max_tokens: 800
     });
-    res.json({ content: out.output_text });
+    res.json({ content: out.choices[0].message.content });
   } catch (err) {
     console.error("Chat error:", err);
     res.status(err.status || 500).json({ error: err.message });
@@ -33,5 +32,5 @@ app.post("/chat", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API running at http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
 
