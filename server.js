@@ -1,5 +1,10 @@
 /*──────────────────────────────────────────────────────────────
-  server.js – 5 routes with safe fall-backs
+  server.js – clean version (no fall-backs)
+    • /chat      gpt-4o-mini-search-preview  via Responses API
+    • /search    gpt-4o-mini-search-preview  via Responses API
+    • /speech    gpt-4o-mini-tts   (stream)
+    • /image     gpt-image-1        (b64)
+    • /vision    image | PDF → GPT analysis
 ──────────────────────────────────────────────────────────────*/
 require("dotenv").config();
 const express = require("express");
@@ -17,36 +22,26 @@ const upload = multer({ dest: "tmp/" });
 app.use(cors());
 app.use(express.json());
 
-/*── CHAT  (preview → nano fallback) ──────────────────────────*/
+/*── CHAT  (real-time search model) ────────────────────────────*/
 app.post("/chat", async (req, res) => {
   const history = req.body.messages || [];
   const prompt  = history.at(-1)?.content;
   if (!prompt) return res.status(400).json({ error: "messages array missing" });
 
   try {
-    const draft = await openai.responses.create({
+    const out = await openai.responses.create({
       model : "gpt-4o-mini-search-preview",
       tools : [{ type: "web_search_preview" }],
       input : prompt
     });
-    return res.json({ content: draft.output_text });
+    res.json({ content: out.output_text });
   } catch (err) {
-    console.warn("preview search failed:", err.message);
-    try {
-      const out = await openai.chat.completions.create({
-        model: "gpt-4.1-nano",
-        messages: history,
-        max_tokens: 600
-      });
-      res.json({ content: out.choices[0].message.content });
-    } catch (e) {
-      console.error("Chat fallback error:", e);
-      res.status(e.status || 500).json({ error: e.message });
-    }
+    console.error("Chat error:", err);
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
-/*── SEARCH  (preview → nano fallback) ───────────────────────*/
+/*── SEARCH  (stand-alone endpoint) ───────────────────────────*/
 app.post("/search", async (req, res) => {
   const q = req.body.query;
   if (!q) return res.status(400).json({ error: "No query provided." });
@@ -59,21 +54,8 @@ app.post("/search", async (req, res) => {
     });
     res.json({ result: out.output_text });
   } catch (err) {
-    console.warn("search-preview failed:", err.message);
-    try {
-      const out = await openai.chat.completions.create({
-        model: "gpt-4.1-nano",
-        messages: [
-          { role: "system", content: "Answer as best you can without live web access." },
-          { role: "user",   content: q }
-        ],
-        max_tokens: 400
-      });
-      res.json({ result: out.choices[0].message.content });
-    } catch (e) {
-      console.error("Search fallback error:", e);
-      res.status(e.status || 500).json({ error: e.message });
-    }
+    console.error("Search error:", err);
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -86,7 +68,7 @@ app.post("/speech", async (req, res) => {
       input:  req.body.text,
       instructions: "Respond in a clear, neutral tone."
     });
-    res.setHeader("Content-Type","audio/mpeg");
+    res.setHeader("Content-Type", "audio/mpeg");
     await stream.stream_to_http(res);
   } catch (err) {
     console.error("TTS error:", err);
@@ -94,43 +76,31 @@ app.post("/speech", async (req, res) => {
   }
 });
 
-/*── IMAGE  (gpt-image-1 → DALL·E-3 fallback) ─────────────────*/
+/*── IMAGE  (GPT-Image-1) ─────────────────────────────────────*/
 app.post("/image", async (req, res) => {
   try {
-    const first = await openai.images.generate({
-      model: "gpt-image-1",
+    const out = await openai.images.generate({
+      model:  "gpt-image-1",
       prompt: req.body.prompt,
-      size: "1024x1024",
-      n: 1,
+      size:   "1024x1024",
+      n:      1,
       response_format: "b64_json"
     });
-    return res.json({ image: first.data[0].b64_json });
+    res.json({ image: out.data[0].b64_json });
   } catch (err) {
-    console.warn("gpt-image-1 failed:", err.message);
-    try {
-      const second = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: req.body.prompt,
-        size: "1024x1024",
-        style: "natural",
-        n: 1,
-        response_format: "b64_json"
-      });
-      res.json({ image: second.data[0].b64_json });
-    } catch (e) {
-      console.error("Image fallback error:", e);
-      res.status(e.status || 500).json({ error: e.message });
-    }
+    console.error("Image error:", err);
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
-/*── VISION  (image / PDF) ────────────────────────────────────*/
+/*── VISION  (image or PDF upload) ───────────────────────────*/
 app.post("/vision", upload.single("file"), async (req, res) => {
   try {
     const { path: tmp, mimetype, size } = req.file;
     const data = fs.readFileSync(tmp);
     fs.unlinkSync(tmp);
 
+    /* images */
     if (mimetype.startsWith("image/")) {
       let buf = data;
       if (size > 900_000) buf = await sharp(buf).resize({ width: 640 }).toBuffer();
@@ -149,6 +119,7 @@ app.post("/vision", upload.single("file"), async (req, res) => {
       return res.json({ description: out.choices[0].message.content });
     }
 
+    /* PDFs */
     if (mimetype === "application/pdf") {
       const text = (await pdf(data)).text.slice(0, 8000);
       const out  = await openai.chat.completions.create({
