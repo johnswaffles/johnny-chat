@@ -1,5 +1,6 @@
 /*──────────────────────────────────────────────────────────────
-  server.js – single-route backend for the new chatbot
+  server.js – minimal chat backend
+  Model : gpt-4o-mini-search-preview   (Responses API + web search tool)
 ──────────────────────────────────────────────────────────────*/
 require("dotenv").config();
 const express = require("express");
@@ -9,10 +10,10 @@ const { OpenAI } = require("openai");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app    = express();
 
-app.use(cors());
+app.use(cors());            // allow calls from your front-end domain
 app.use(express.json());
 
-/*── CHAT ─────────────────────────────────────────────────────*/
+/*── POST /chat ───────────────────────────────────────────────*/
 app.post("/chat", async (req, res) => {
   const history = req.body.messages || [];
   const latest  = history.at(-1)?.content;
@@ -32,4 +33,5 @@ app.post("/chat", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`API running at http://localhost:${PORT}`));
+
