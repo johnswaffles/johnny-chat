@@ -190,31 +190,50 @@ app.post("/vision", upload.single("file"), async (req, res) => {
   }
 });
 
-/*── SEARCH (OpenAI) ────────*/
-app.post('/search', async (req, res) => {
-  const userQuery = req.body.query;
-  if (!userQuery) return res.status(400).json({ error: 'No query provided.' });
+/* ───── basic setup ───── */
+import express from "express";
+import cors    from "cors";
+import OpenAI  from "openai";
+
+const app     = express();
+const openai  = new OpenAI({ apiKey : process.env.OPENAI_API_KEY });
+const PORT    = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json({limit:"10mb"}));
+
+/* ───── UNIVERSAL CHATBOT persona (reuse yours) ─── */
+const UNIVERSAL_CHATBOT_PERSONA_BACKEND =
+  "You are a helpful assistant that formats answers clearly and conversationally.";
+
+/* ───────── /search ─────────
+   1️⃣  force web_search_preview tool for fresh info
+   2️⃣  hand off snippets to audio-preview model for nice wording
+*/
+app.post("/search", async (req, res) => {
+  const q = req.body.query;
+  if (!q) return res.status(400).json({ error: "Missing query" });
   try {
-    const searchMessages = [
-        {role: "system", content: `${UNIVERSAL_CHATBOT_PERSONA_BACKEND} You can access web information. Answer based on current data.`},
-        {role: "user", content: `Search the web for: "${userQuery}"`}
-    ];
-    console.log(`Search request to model: gpt-4.1-nano with query: "${userQuery}"`);
-    const out = await openai.chat.completions.create({ model: 'gpt-4.1-nano', messages: searchMessages, max_tokens: 500 });
-     if (!out.choices || out.choices.length === 0 || !out.choices[0].message) {
-        console.error("Search Error: OpenAI response missing choices or message.", JSON.stringify(out, null, 2));
-        return res.status(500).json({ error: "Invalid response structure from OpenAI for search." });
-    }
-    console.log("Search success. OpenAI response choice:", JSON.stringify(out.choices[0], null, 2));
-    res.json({ result: out.choices[0].message.content });
-  } catch (err) {
-    console.error('Search API Error Full:', err);
-    let errorMsg = "An unexpected error occurred during search.";
-    let statusCode = 500;
-    if (err.response) { errorMsg = err.response.data?.error?.message || err.message; statusCode = err.response.status || 500; } 
-    else if (err.status) { errorMsg = err.error?.message || err.message; statusCode = err.status; }
-    else { errorMsg = err.message || errorMsg; }
-    res.status(statusCode).json({ error: errorMsg });
+    const raw = await openai.chat.completions.create({
+      model      : "gpt-4o-mini-search-preview",
+      tools      : [{ type: "web_search_preview" }],
+      tool_choice: { type: "web_search_preview" },
+      messages   : [{ role: "user", content: q }]
+    });
+
+    const snippets = raw.choices[0].message.content;
+    const formatted = await openai.chat.completions.create({
+      model   : "gpt-4o-mini-audio-preview",
+      messages: [
+        { role: "system", content: `${SYS} Summarize like an upbeat newsreader in ≤170 words` },
+        { role: "user", content: snippets }
+      ],
+      max_tokens: 250
+    });
+    res.json({ result: formatted.choices[0].message.content });
+  } catch (e) {
+    console.error("SEARCH ERR", e);
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
