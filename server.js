@@ -27,7 +27,7 @@ app.use(express.json());
 app.post("/chat", async (req, res) => {
   try {
     const out = await openai.chat.completions.create({
-      model: "gpt-4.1-nano",
+      model: "gpt-4o-mini-search-preview",
       messages: req.body.messages
     });
     res.json({ content: out.choices[0].message.content });
