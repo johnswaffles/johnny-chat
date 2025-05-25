@@ -206,35 +206,28 @@ app.use(express.json({limit:"10mb"}));
 const UNIVERSAL_CHATBOT_PERSONA_BACKEND =
   "You are a helpful assistant that formats answers clearly and conversationally.";
 
-/* ───────── /search ─────────
-   1️⃣  force web_search_preview tool for fresh info
-   2️⃣  hand off snippets to audio-preview model for nice wording
-*/
-app.post("/search", async (req, res) => {
-  const q = req.body.query;
-  if (!q) return res.status(400).json({ error: "Missing query" });
-  try {
-    const raw = await openai.chat.completions.create({
-      model      : "gpt-4o-mini-search-preview",
-      tools      : [{ type: "web_search_preview" }],
-      tool_choice: { type: "web_search_preview" },
-      messages   : [{ role: "user", content: q }]
+/* ───────── search ───────── */
+app.post("/search", async (req,res)=>{
+  const q=req.body.query;
+  if(!q) return res.status(400).json({error:"Missing query"});
+  try{
+    const raw=await openai.chat.completions.create({
+      model      :"gpt-4o-mini-search-preview",
+      tools      :[{type:"web_search_preview"}],
+      tool_choice:{type:"web_search_preview"},
+      messages   :[{role:"user",content:q}]
     });
-
-    const snippets = raw.choices[0].message.content;
-    const formatted = await openai.chat.completions.create({
-      model   : "gpt-4o-mini-audio-preview",
-      messages: [
-        { role: "system", content: `${SYS} Summarize like an upbeat newsreader in ≤170 words` },
-        { role: "user", content: snippets }
+    const snippets=raw.choices[0].message.content;
+    const formatted=await openai.chat.completions.create({
+      model:"gpt-4o-mini-audio-preview",
+      messages:[
+        {role:"system",content:`${SYS} Summarize upbeat in ≤170 words.`},
+        {role:"user",content:snippets}
       ],
-      max_tokens: 250
+      max_tokens:250
     });
-    res.json({ result: formatted.choices[0].message.content });
-  } catch (e) {
-    console.error("SEARCH ERR", e);
-    res.status(e.status || 500).json({ error: e.message });
-  }
+    res.json({result:formatted.choices[0].message.content});
+  }catch(e){console.error(e);res.status(e.status||500).json({error:e.message});}
 });
 
 const PORT = process.env.PORT || 3000;
