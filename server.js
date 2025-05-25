@@ -23,17 +23,42 @@ const upload = multer({ dest: "tmp/" });
 app.use(cors());
 app.use(express.json());
 
-/*── CHAT ─────────────────────────────────────────────────────*/
+/*── CHAT  (search-then-polish) ───────────────────────────────*/
 app.post("/chat", async (req, res) => {
+  const userMsgs = req.body.messages;
+  if (!Array.isArray(userMsgs) || userMsgs.length === 0)
+    return res.status(400).json({ error: "messages array missing" });
+
   try {
-    const out = await openai.chat.completions.create({
-      model: "gpt-4o-mini-search-preview",
-      messages: req.body.messages
+    /* 1️⃣  answer with real-time web search */
+    const raw = await openai.chat.completions.create({
+      model:       "gpt-4o-mini-search-preview",
+      tools:       [{ type: "web_search_preview" }],
+      tool_choice: { type: "web_search_preview" },
+      messages:    userMsgs          // pass the user’s full history
     });
-    res.json({ content: out.choices[0].message.content });
+
+    const draft = raw.choices[0].message.content || "[empty]";
+
+    /* 2️⃣  clean / re-format with a cheap model */
+    const polished = await openai.chat.completions.create({
+      model: "gpt-4.1-nano",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a copy editor. Rewrite the assistant’s answer so it is concise, well-structured,"+
+            " easy to read, and free of markdown citations or URL clutter."
+        },
+        { role: "user", content: draft }
+      ],
+      max_tokens: 500
+    });
+
+    res.json({ content: polished.choices[0].message.content });
   } catch (err) {
-    console.error("Chat error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Chat pipeline error:", err);
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
