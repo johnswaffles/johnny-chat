@@ -29,19 +29,38 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-/* ─── IMAGE  (GPT-Image-1, low quality) ─────── */
-app.post('/image', async (req,res)=>{
-  try{
-    const img=await openai.images.generate({
-      model:'gpt-image-1',
-      prompt:req.body.prompt,
-      size:'1024x1024',
-      quality:'low',               // ◀ ◀  lower-quality / faster
-      n:1,
-      response_format:'b64_json'
+/*── IMAGE (GPT-Image-1) ──────────────────────────────────────*/
+const sessions = new Map();                // {sessionId → lastImageId}
+
+/*
+  body = {
+    sessionId : "<uuid from browser>",
+    prompt    : "<paragraph text>",
+    style     : "<art-style string>"
+  }
+*/
+app.post("/image", async (req, res) => {
+  try {
+    const { sessionId, prompt, style = "" } = req.body;
+
+    const previous = sessions.get(sessionId) || null; // image-id for consistency
+
+    const result = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: `Illustration (${style}). ${prompt}`,
+      ...(previous && { previous_response_id: previous }),
+      size:  "1024x1024",
+      n:     1
     });
-    res.json({b64:img.data[0].b64_json});
-  }catch(err){res.status(500).json({error:err.message})}
+
+    const img = result.data[0];
+    sessions.set(sessionId, img.id);        // remember for next turn
+    res.json({ b64: img.b64_json });
+
+  } catch (err) {
+    console.error("Image error:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /*── TTS ──────────────────────────────────────────────────────*/
