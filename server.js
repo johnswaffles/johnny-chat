@@ -82,6 +82,52 @@ app.post("/speech", async (req, res) => {
   }
 });
 
+/* ────────────────────────────────────────────────
+   VISION  – analyse / describe an uploaded image
+   POST  /vision
+   Body (JSON)  {
+     question : "what’s in this image?",   // optional – default is “Describe this image”
+     imageUrl : "https://…",               //  OR
+     imageB64 : "data:image/png;base64,AA…" // data-URL string
+   }
+   Returns  { content : "<assistant reply from GPT-4o-mini>" }
+─────────────────────────────────────────────────*/
+
+app.post("/vision", async (req, res) => {
+  try {
+    const { imageUrl, imageB64, question = "Describe this image" } = req.body || {};
+
+    /* ––– basic validation ––– */
+    if (!imageUrl && !imageB64)
+      return res.status(400).json({ error: "Provide imageUrl OR imageB64" });
+    const img = imageUrl
+      ? { type: "image_url", image_url: { url: imageUrl } }
+      : { type: "image_url", image_url: { url: imageB64 } };   // data-URL counts as url
+
+    /* ––– call GPT-4o-mini with “vision” content ––– */
+    const messages = [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: question },
+          img,
+        ],
+      },
+    ];
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",          // vision-capable model
+      messages,
+      max_tokens: 512,
+    });
+
+    res.json({ content: completion.choices[0].message.content.trim() });
+  } catch (err) {
+    console.error("Vision error:", err);
+    res.status(500).json({ error: err.message || "Vision failure" });
+  }
+});
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, ()=>console.log(`API → http://localhost:${PORT}`));
 
