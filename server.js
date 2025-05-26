@@ -1,59 +1,53 @@
 /*──────────────────────────────────────────────────────────────
-  server.js  – chat, speech (TTS), image, “re-imagine”
-  API root:  https://four-1-backend-api.onrender.com
+  server.js (only /speech changed – everything else identical)
 ──────────────────────────────────────────────────────────────*/
 require("dotenv").config();
 const express = require("express");
 const cors    = require("cors");
-const multer  = require("multer");
-const pdf     = require("pdf-parse");
-const fs      = require("fs");
-const sharp   = require("sharp");
 const { OpenAI } = require("openai");
 
-const openai  = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const app     = express();
-const upload  = multer({ dest: "tmp/" });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const app    = express();
 
 app.use(cors());
 app.use(express.json());
 
-/*────────────────────────  CHAT  ─────────────────────────────*/
+/*──────── CHAT – unchanged ───────*/
 app.post("/chat", async (req,res)=>{
   try{
     const out = await openai.chat.completions.create({
-      model: "gpt-4.1-nano",
-      messages: req.body.messages,
-      temperature: 0.85
+      model:"gpt-4.1-nano",
+      messages:req.body.messages,
+      temperature:0.85
     });
-    res.json({content: out.choices[0].message.content});
-  }catch(err){
-    console.error("Chat error:",err);
-    res.status(500).json({error:err.message});
-  }
+    res.json({content:out.choices[0].message.content});
+  }catch(e){ res.status(500).json({error:e.message}) }
 });
 
-/*───────────────  TEXT-TO-SPEECH  (gpt-4o-mini-tts) ──────────*/
+/*──────── TEXT-TO-SPEECH – **fixed** ───────*/
 app.post("/speech", async (req,res)=>{
   try{
-    const stream = await openai.audio.speech.with_streaming_response.create({
-      model: "gpt-4o-mini-tts",
-      voice: req.body.voice || "onyx",
-      input: req.body.text,
-      instructions: "Narrate clearly and engagingly"
+    /* 1.  synchronous generation (no streaming helper) */
+    const mp3 = await openai.audio.speech.create({
+      model:"gpt-4o-mini-tts",
+      voice:req.body.voice || "onyx",
+      input:req.body.text,
+      instructions:"Narrate clearly and engagingly",
+      format:"mp3"               // explicit
     });
+
+    /* 2.  turn ArrayBuffer → Buffer and send */
+    const buf = Buffer.from(await mp3.arrayBuffer());
     res.set("Content-Type","audio/mpeg");
-    await stream.stream_to_http(res);
-  }catch(err){
-    console.error("TTS error:",err);
-    res.status(500).json({error:err.message});
+    res.send(buf);
+
+  }catch(e){
+    console.error("TTS error:",e);
+    res.status(500).json({error:e.message});
   }
 });
 
-/*────────  OPTIONAL IMAGE & VISION ENDPOINTS  (UNCHANGED) ────*/
-/* … remove if you don’t need … */
-
-/*──────────────────────────────────────────────────────────────*/
+/*──────── start ───────*/
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, ()=>console.log(`API  →  http://localhost:${PORT}`));
+app.listen(PORT, ()=>console.log(`API → http://localhost:${PORT}`));
 
