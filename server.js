@@ -83,48 +83,65 @@ app.post("/speech", async (req, res) => {
 });
 
 /* ────────────────────────────────────────────────
-   VISION  – analyse / describe an uploaded image
+   VISION  – analyse / describe an image
    POST  /vision
-   Body (JSON)  {
-     question : "what’s in this image?",   // optional – default is “Describe this image”
-     imageUrl : "https://…",               //  OR
-     imageB64 : "data:image/png;base64,AA…" // data-URL string
-   }
-   Returns  { content : "<assistant reply from GPT-4o-mini>" }
-─────────────────────────────────────────────────*/
+   ─────────────────────────────────────────────── */
 
-app.post("/vision", async (req, res) => {
+const multer = require('multer');
+const upload = multer({
+  limits: { fileSize: 12 * 1024 * 1024 }      // 12 MB hard cap for form-data uploads
+});
+
+app.post('/vision', upload.single('file'), async (req, res) => {
   try {
-    const { imageUrl, imageB64, question = "Describe this image" } = req.body || {};
+    /* -------- 1.  Normalise the incoming image ---------------- */
+    let { imageUrl, imageB64, question = 'Describe this image' } = req.body || {};
 
-    /* ––– basic validation ––– */
-    if (!imageUrl && !imageB64)
-      return res.status(400).json({ error: "Provide imageUrl OR imageB64" });
-    const img = imageUrl
-      ? { type: "image_url", image_url: { url: imageUrl } }
-      : { type: "image_url", image_url: { url: imageB64 } };   // data-URL counts as url
+    // (a) if the client sent a file, turn it into a data-URL
+    if (req.file) {
+      const mime = req.file.mimetype || 'application/octet-stream';
+      const base64 = req.file.buffer.toString('base64');
+      imageB64 = `data:${mime};base64,${base64}`;
+    }
 
-    /* ––– call GPT-4o-mini with “vision” content ––– */
+    // (b) basic validation
+    if (!imageUrl && !imageB64) {
+      return res.status(400).json({ error: 'Provide imageUrl, imageB64, or upload a file' });
+    }
+
+    // (c) build the “vision” content block
+    const imgContent = {
+      type: 'image_url',
+      image_url: { url: imageUrl ? imageUrl.trim() : imageB64.trim() }
+    };
+
+    /* -------- 2.  Call GPT-4o-mini with the image ------------- */
     const messages = [
       {
-        role: "user",
+        role: 'user',
         content: [
-          { type: "text", text: question },
-          img,
-        ],
-      },
+          { type: 'text', text: question },
+          imgContent
+        ]
+      }
     ];
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",          // vision-capable model
+      model: 'gpt-4o-mini',          // vision-capable model
       messages,
-      max_tokens: 512,
+      max_tokens: 512
     });
 
-    res.json({ content: completion.choices[0].message.content.trim() });
+    const answer = completion.choices?.[0]?.message?.content?.trim() || '(no reply)';
+    res.json({ content: answer });
+
   } catch (err) {
-    console.error("Vision error:", err);
-    res.status(500).json({ error: err.message || "Vision failure" });
+    console.error('Vision error:', err);
+    // Large files that sneak past Multer can still hit JSON limit → send clear message
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'Image larger than 12 MB – please upload a smaller file.' });
+    }
+    res.status(500).json({ error: err.message || 'Vision failure' });
   }
 });
 
