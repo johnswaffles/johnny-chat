@@ -12,7 +12,7 @@ const { OpenAI } = require("openai");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app    = express();
 app.use(cors());
-app.use(express.json());
+app.use('/chat', express.json({ limit: '10mb' }));
 
 /*── CHAT ─────────────────────────────────────────────────────*/
 app.post("/chat", async (req, res) => {
