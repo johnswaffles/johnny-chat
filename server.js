@@ -52,6 +52,40 @@ app.get("/speech", async (req, res) => {
   }
 });
 
+/*── IMAGE (GPT-Image-1) ──────────────────────────────────────*/
+const sessions = new Map();                // {sessionId → lastImageId}
+
+/*
+  body = {
+    sessionId : "<uuid from browser>",
+    prompt    : "<paragraph text>",
+    style     : "<art-style string>"
+  }
+*/
+app.post("/image", async (req, res) => {
+  try {
+    const { sessionId, prompt, style = "" } = req.body;
+
+    const previous = sessions.get(sessionId) || null; // image-id for consistency
+
+    const result = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: `Illustration (${style}). ${prompt}`,
+      ...(previous && { previous_response_id: previous }),
+      size:  "1024x1024",
+      n:     1
+    });
+
+    const img = result.data[0];
+    sessions.set(sessionId, img.id);        // remember for next turn
+    res.json({ b64: img.b64_json });
+
+  } catch (err) {
+    console.error("Image error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ────────────────────────────────────────────────
    VISION  – analyse / describe an image or PDF
    POST  /vision
