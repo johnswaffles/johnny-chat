@@ -1,16 +1,16 @@
-/*──────────────────────────────────────────────────────────────
+B/*──────────────────────────────────────────────────────────────
   Story-bot API
   ─ /chat     : generate the next story paragraph (GPT-4o-mini)
   ─ /speech   : MP3 narration of any text (gpt-4o-mini-tts)
   ─ /image    : GPT-Image-1 illustration, with character-lock
 ──────────────────────────────────────────────────────────────*/
 require("dotenv").config();
-const express = require("express");
+const express = require("express"); // FIRST DECLARATION - GOOD
 const cors    = require("cors");
-const { OpenAI } = require("openai");
+const { OpenAI } = require("openai"); // FIRST DECLARATION - GOOD
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const app    = express();
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); // FIRST INITIALIZATION - GOOD
+const app    = express(); // FIRST INITIALIZATION - GOOD
 app.use(cors());
 app.use(express.json({ limit: '12mb' }));
 app.use(express.urlencoded({ limit: '12mb', extended: true }));
