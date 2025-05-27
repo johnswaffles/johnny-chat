@@ -97,9 +97,8 @@ const OpenAI = require('openai'); // Assuming you're using the official 'openai'
    POST  /vision
    ─────────────────────────────────────────────── */
     
-// Multer configuration specific for the /vision route
-const visionUpload = multer({
-  limits: { fileSize: 12 * 1024 * 1024 },      // 12 MB cap for form-data uploads
+const visionUpload = multer({ // Specific multer instance for this route
+  limits: { fileSize: 12 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
         cb(null, true);
@@ -110,40 +109,35 @@ const visionUpload = multer({
 });
     
 app.post('/vision', visionUpload.single('file'), async (req, res) => {
+  // ... (rest of the /vision route logic as provided before)
+  // NO "const express = require('express');" HERE
+  // NO "const app = express();" HERE
+  // NO "const openai = new OpenAI(...);" HERE
   try {
     if (!req.file) {
         return res.status(400).json({ error: 'No file was uploaded.' });
     }
 
     let { question = 'Describe this item in detail. If it is a document, please summarize its content.' } = req.body || {};
-    // req.body.imageUrl and req.body.imageB64 are not used if a file is uploaded via multer.
-    // Multer puts file info in req.file and other form fields in req.body.
-
+    
     const mime = req.file.mimetype;
     const base64 = req.file.buffer.toString('base64');
-    const dataUrl = `data:${mime};base64,${base64}`; // This is correct for sending to gpt-4o-mini
+    const dataUrl = `data:${mime};base64,${base64}`;
       
     const itemContent = {
       type: 'image_url',
-      image_url: { 
-        url: dataUrl 
-        // For PDFs with gpt-4o or gpt-4-turbo (vision), 'detail' is usually not needed or defaults to 'auto'
-      }
+      image_url: { url: dataUrl }
     };
       
     const messages = [
       {
         role: 'user',
-        content: [
-          { type: 'text', text: question },
-          itemContent   
-        ]
+        content: [ { type: 'text', text: question }, itemContent ]
       }
     ];
 
-    // Ensure you're using a model that explicitly supports PDF processing via data URIs
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Or 'gpt-4o', 'gpt-4-turbo' (with vision)
+      model: 'gpt-4o-mini',
       messages,
       max_tokens: 768 
     });
@@ -153,14 +147,13 @@ app.post('/vision', visionUpload.single('file'), async (req, res) => {
       
   } catch (err) {
     console.error('Error in /vision endpoint:', err.message, err.stack, err.response?.data);
-
     if (err.message && err.message.startsWith('INVALID_MIME_TYPE')) {
         return res.status(400).json({ error: err.message });
     }
-    if (err.code === 'LIMIT_FILE_SIZE') { // This is a Multer error code
+    if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(413).json({ error: 'File larger than 12 MB – please upload a smaller file.' });
     }
-    if (err.response && err.response.data && err.response.data.error) { // OpenAI API error
+    if (err.response && err.response.data && err.response.data.error) {
         console.error('OpenAI API Error details:', err.response.data.error);
         return res.status(err.response.status || 500).json({ error: `AI Error: ${err.response.data.error.message}` });
     }
