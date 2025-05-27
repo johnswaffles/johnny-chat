@@ -83,13 +83,21 @@ app.post("/speech", async (req, res) => {
   }
 });
 
+// ----- In your server.js --------
+// Ensure you have these at the top of your file or relevant scope
+const express = require('express'); 
+const multer = require('multer');
+const OpenAI = require('openai'); // Assuming you're using the official 'openai' Node.js library
+
+// const app = express(); // Or your existing Express app instance
+// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); // Initialize OpenAI client
+
 /* ────────────────────────────────────────────────
-   VISION  – analyse / describe an image
+   VISION  – analyse / describe an image or PDF
    POST  /vision
    ─────────────────────────────────────────────── */
     
-const multer = require('multer');
-const upload = multer({
+const visionUpload = multer({ // Renamed to avoid conflict if 'upload' is used elsewhere
   limits: { fileSize: 12 * 1024 * 1024 },      // 12 MB hard cap for form-data uploads
   fileFilter: (req, file, cb) => {
     // Accept common image types and PDFs
@@ -97,70 +105,85 @@ const upload = multer({
         cb(null, true); // Accept file
     } else {
         // Reject file with a specific error message
-        // This custom error message can be caught in the main try...catch block
         cb(new Error('INVALID_MIME_TYPE: Only images (PNG, JPG, GIF, WEBP) and PDF files are supported.'), false);
     }
   }
 });
     
-app.post('/vision', upload.single('file'), async (req, res) => {
+app.post('/vision', visionUpload.single('file'), async (req, res) => {
   try {
-    /* -------- 1.  Normalise the incoming image ---------------- */
-    let { imageUrl, imageB64, question = 'Describe this image' } = req.body || {};
+    if (!req.file) { // Should be caught by multer if file is mandatory, but good check
+        return res.status(400).json({ error: 'No file was uploaded.' });
+    }
 
-    // (a) if the client sent a file, turn it into a data-URL
+    /* -------- 1.  Normalise the incoming file (image or PDF) ---------------- */
+    let { imageUrl, imageB64, question = 'Describe this item in detail. If it is a document, please summarize its content.' } = req.body || {};
+
+    // If a file was uploaded, convert it to a data URI
+    // This part correctly handles any file buffer multer provides, including PDFs
     if (req.file) {
-      const mime = req.file.mimetype || 'application/octet-stream'; // Mime type from multer
+      const mime = req.file.mimetype; // Mime type from multer (e.g., 'application/pdf')
       const base64 = req.file.buffer.toString('base64');
-      imageB64 = `data:${mime};base64,${base64}`;
+      imageB64 = `data:${mime};base64,${base64}`; // Correctly forms data URI for PDF or image
     }
       
-    // (b) basic validation
+    // Basic validation (though file upload is primary path here)
     if (!imageUrl && !imageB64) {
-      // This case should ideally be caught if 'file' is expected and multer runs first
-      return res.status(400).json({ error: 'Provide imageUrl, imageB64, or upload a file' });
+      return res.status(400).json({ error: 'No file data available to process (missing imageUrl, imageB64, or uploaded file).' });
     }
     
-    // (c) build the “vision” content block
-    const imgContent = {
-      type: 'image_url',
-      image_url: { url: imageUrl ? imageUrl.trim() : imageB64.trim() }
+    // Content block for OpenAI API
+    const itemContent = {
+      type: 'image_url', // This type is used for both images and file data URIs like PDF for compatible models
+      image_url: { 
+        url: imageUrl ? imageUrl.trim() : imageB64.trim()
+        // For PDFs with gpt-4o or gpt-4-turbo (vision), 'detail' is usually not needed or defaults to 'auto'
+      }
     };
       
-    /* -------- 2.  Call GPT-4o-mini with the image ------------- */
+    /* -------- 2.  Call compatible GPT model with the item ------------- */
     const messages = [
       {
         role: 'user',
         content: [
           { type: 'text', text: question },
-          imgContent   
+          itemContent   
         ]
       }
     ];
 
+    // Ensure you're using a model that explicitly supports PDF processing via data URIs
+    // 'gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo' (formerly gpt-4-vision-preview) are good candidates.
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',          // vision-capable model
+      model: 'gpt-4o-mini', 
       messages,
-      max_tokens: 512
+      max_tokens: 768 // May need more tokens for detailed summaries of dense PDFs
     });
     
-    const answer = completion.choices?.[0]?.message?.content?.trim() || '(no reply)';
+    const answer = completion.choices?.[0]?.message?.content?.trim() || '(The AI did not provide a description or summary.)';
     res.json({ content: answer });
       
   } catch (err) {
-    console.error('Vision error:', err);
+    // Log the actual error on your server – THIS IS CRITICAL FOR DEBUGGING 500s
+    console.error('Error in /vision endpoint:', err.message, err.stack, err.response?.data);
 
     // Check for custom error from multer fileFilter
     if (err.message && err.message.startsWith('INVALID_MIME_TYPE')) {
         return res.status(400).json({ error: err.message });
     }
-    // Check for multer's built-in error codes
+    // Check for multer's built-in error codes (e.g., from limits)
     if (err.code === 'LIMIT_FILE_SIZE') {
-      // Changed "Image" to "File" for more general applicability
       return res.status(413).json({ error: 'File larger than 12 MB – please upload a smaller file.' });
     }
-    // General error
-    res.status(500).json({ error: err.message || 'Vision failure' });
+    
+    // Handle potential errors from the OpenAI API more specifically
+    if (err.response && err.response.data && err.response.data.error) {
+        console.error('OpenAI API Error details:', err.response.data.error);
+        return res.status(err.response.status || 500).json({ error: `AI Error: ${err.response.data.error.message}` });
+    }
+
+    // General fallback for other internal server errors
+    res.status(500).json({ error: err.message || 'An internal error occurred in the vision service.' });
   }
 });
 
