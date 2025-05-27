@@ -87,12 +87,22 @@ app.post("/speech", async (req, res) => {
    VISION  – analyse / describe an image
    POST  /vision
    ─────────────────────────────────────────────── */
-
+    
 const multer = require('multer');
 const upload = multer({
-  limits: { fileSize: 12 * 1024 * 1024 }      // 12 MB hard cap for form-data uploads
+  limits: { fileSize: 12 * 1024 * 1024 },      // 12 MB hard cap for form-data uploads
+  fileFilter: (req, file, cb) => {
+    // Accept common image types and PDFs
+    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+        cb(null, true); // Accept file
+    } else {
+        // Reject file with a specific error message
+        // This custom error message can be caught in the main try...catch block
+        cb(new Error('INVALID_MIME_TYPE: Only images (PNG, JPG, GIF, WEBP) and PDF files are supported.'), false);
+    }
+  }
 });
-
+    
 app.post('/vision', upload.single('file'), async (req, res) => {
   try {
     /* -------- 1.  Normalise the incoming image ---------------- */
@@ -100,29 +110,30 @@ app.post('/vision', upload.single('file'), async (req, res) => {
 
     // (a) if the client sent a file, turn it into a data-URL
     if (req.file) {
-      const mime = req.file.mimetype || 'application/octet-stream';
+      const mime = req.file.mimetype || 'application/octet-stream'; // Mime type from multer
       const base64 = req.file.buffer.toString('base64');
       imageB64 = `data:${mime};base64,${base64}`;
     }
-
+      
     // (b) basic validation
     if (!imageUrl && !imageB64) {
+      // This case should ideally be caught if 'file' is expected and multer runs first
       return res.status(400).json({ error: 'Provide imageUrl, imageB64, or upload a file' });
     }
-
+    
     // (c) build the “vision” content block
     const imgContent = {
       type: 'image_url',
       image_url: { url: imageUrl ? imageUrl.trim() : imageB64.trim() }
     };
-
+      
     /* -------- 2.  Call GPT-4o-mini with the image ------------- */
     const messages = [
       {
         role: 'user',
         content: [
           { type: 'text', text: question },
-          imgContent
+          imgContent   
         ]
       }
     ];
@@ -132,16 +143,23 @@ app.post('/vision', upload.single('file'), async (req, res) => {
       messages,
       max_tokens: 512
     });
-
+    
     const answer = completion.choices?.[0]?.message?.content?.trim() || '(no reply)';
     res.json({ content: answer });
-
+      
   } catch (err) {
     console.error('Vision error:', err);
-    // Large files that sneak past Multer can still hit JSON limit → send clear message
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(413).json({ error: 'Image larger than 12 MB – please upload a smaller file.' });
+
+    // Check for custom error from multer fileFilter
+    if (err.message && err.message.startsWith('INVALID_MIME_TYPE')) {
+        return res.status(400).json({ error: err.message });
     }
+    // Check for multer's built-in error codes
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      // Changed "Image" to "File" for more general applicability
+      return res.status(413).json({ error: 'File larger than 12 MB – please upload a smaller file.' });
+    }
+    // General error
     res.status(500).json({ error: err.message || 'Vision failure' });
   }
 });
