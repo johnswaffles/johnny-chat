@@ -55,8 +55,8 @@ app.post("/speech", async (req, res) => {
   }
 });
 
-/*────────────────────── IMAGE (GPT-Image-1 LOW) ─────────────*/
-const sessions = new Map();                         // ← ADDED
+/*──────────────── IMAGE (GPT-Image-1 MEDIUM) ───────────────*/
+const sessions = new Map();
 
 app.post("/image", async (req, res) => {
   try {
@@ -67,14 +67,14 @@ app.post("/image", async (req, res) => {
       model  : "gpt-image-1",
       prompt : `Illustration (${style}) ${prompt}`,
       size   : "1024x1024",
-      quality: "medium"                               // ★ lowest-cost tier
+      quality: "medium",                     // ★ switched from "low" → "medium"
       n      : 1,
       ...(prev && { previous_response_id: prev })
     });
 
     const frame = img.data[0];
-    sessions.set(sessionId, frame.id);              // keep style chain
-    res.json({ b64: frame.b64_json });
+    sessions.set(sessionId, frame.id);
+    res.json({ b64: frame.b64_json });       // keep existing front-end format
   } catch (err) {
     console.error("Image error:", err);
     res.status(500).json({ error: err.message });
