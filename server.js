@@ -16,16 +16,22 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.use(cors());
 app.use(express.json());
 
-/*────────────────────── CHAT ────────────────────────────────*/
+/*────────────── CHAT (gpt-4.1-nano) ──────────────*/
 app.post("/chat", async (req, res) => {
   try {
-    const model = req.body.model || "o4-mini";
-    const out   = await openai.chat.completions.create({
+    const messages = req.body.messages;
+    if (!Array.isArray(messages) || messages.length === 0)
+      return res.status(400).json({ error: "messages[] is required" });
+
+    const model = req.body.model || "gpt-4.1-nano";
+
+    const out = await openai.chat.completions.create({
       model,
-      messages: req.body.messages,
-      max_tokens: 512
+      messages,
+      max_tokens: 512        // plenty for short back-and-forth
     });
-    res.json(out.choices[0].message);
+
+    return res.json(out.choices[0].message);   // {role,content}
   } catch (err) {
     console.error("Chat error:", err);
     res.status(500).json({ error: err.message });
