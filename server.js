@@ -38,24 +38,24 @@ app.post("/chat", async (req, res) => {
   }
 });
 
+/*────────────── TTS  (returns JSON with base-64) ─────────────*/
 app.post("/speech", async (req, res) => {
   try {
     const text = (req.body.text || "").trim();
     if (!text) return res.status(400).json({ error: "text is required" });
 
-    const response = await openai.audio.speech.create({
-      model : "tts-1",          // safest public ID
-      voice : "shimmer",
+    const voice = req.body.voice || "shimmer";
+
+    /* cheapest speech model */
+    const audio = await openai.audio.speech.create({
+      model : "gpt-4o-mini-tts",
+      voice,
       input : text,
       format: "mp3"
     });
 
-    res
-      .set({
-        "Content-Type": "audio/mpeg",
-        // "Content-Disposition": 'attachment; filename="speech.mp3"' // <- optional
-      })
-      .send(Buffer.from(await response.arrayBuffer()));
+    const mp3 = Buffer.from(await audio.arrayBuffer()).toString("base64");
+    res.json({ audio: mp3 });                         // << front-end expects this
   } catch (err) {
     console.error("TTS error:", err.response?.data || err);
     res.status(500).json({ error: err.message });
