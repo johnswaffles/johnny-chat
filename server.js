@@ -67,7 +67,7 @@ app.post("/image", async (req, res) => {
       model  : "gpt-image-1",
       prompt : `Illustration (${style}) ${prompt}`,
       size   : "1024x1024",
-      quality: "low",                               // ★ lowest-cost tier
+      quality: "medium"                               // ★ lowest-cost tier
       n      : 1,
       ...(prev && { previous_response_id: prev })
     });
