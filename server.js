@@ -38,19 +38,26 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-/*────────────────────── TTS ─────────────────────────────────*/
 app.post("/speech", async (req, res) => {
   try {
-    const audio = await openai.audio.speech.create({
-      model : "gpt-4o-mini-tts",
+    const text = (req.body.text || "").trim();
+    if (!text) return res.status(400).json({ error: "text is required" });
+
+    const response = await openai.audio.speech.create({
+      model : "tts-1",          // safest public ID
       voice : "shimmer",
-      input : req.body.text,
+      input : text,
       format: "mp3"
     });
-    res.set("Content-Type", "audio/mpeg");
-    res.send(Buffer.from(await audio.arrayBuffer()));
+
+    res
+      .set({
+        "Content-Type": "audio/mpeg",
+        // "Content-Disposition": 'attachment; filename="speech.mp3"' // <- optional
+      })
+      .send(Buffer.from(await response.arrayBuffer()));
   } catch (err) {
-    console.error("TTS error:", err);
+    console.error("TTS error:", err.response?.data || err);
     res.status(500).json({ error: err.message });
   }
 });
