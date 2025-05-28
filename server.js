@@ -63,44 +63,10 @@ app.post("/speech", async (req, res) => {
   }
 });
 
-/* server.js — GPT-Image-1 @ quality:"low"  */
-import express from "express";
-import OpenAI  from "openai";
-
-const app    = express().use(express.json());
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-/* ----------  IMAGE ROUTE  ---------- */
-const sessions = new Map();              // keeps response-ids for style carry-over
-
-app.post("/image", async (req, res) => {
-  try {
-    const {
-      sessionId = "anon",
-      prompt,
-      style = ""                         // optional user style
-    } = req.body;
-
-    const prev = sessions.get(sessionId) || null;
-
-    const result = await openai.images.generate({
-      model   : "gpt-image-1",
-      prompt  : `Illustration (${style}) ${prompt}`,
-      n       : 1,
-      size    : "1024x1024",             // 1024 is the base square size
-      quality : "low",                   // ★ lowest-cost tier
-      response_format : "url",
-      ...(prev && { previous_response_id: prev })
-    });
-
-    const img = result.data[0];
-    sessions.set(sessionId, img.id);     // only works with GPT-Image-1
-    res.json({ url: img.url });
-  } catch (err) {
-    console.error("Image error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
+/* -------------  START SERVER ------------- */
+const PORT = process.env.PORT || 3000;                 // keeps Render happy
+app.listen(PORT, () =>
+  console.log(`✅  API running  http://localhost:${PORT}`));
 
 /* VISION  (images / PDFs) */
 app.post("/vision", upload.single("file"), async (req, res) => {
