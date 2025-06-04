@@ -15,6 +15,7 @@ const pdf     = require("pdf-parse");
 const openai  = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app     = express();
 const upload  = multer({ storage: multer.memoryStorage() });
+const sessions = new Map();
 
 app.use(cors());
 app.use(express.json({ limit: "6mb" }));
