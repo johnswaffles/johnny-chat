@@ -1,5 +1,7 @@
 /*──────────────────────────────────────────────────────────────
-  server.js – chat, TTS, low-cost GPT-Image-1, vision, search
+  server.js  –  Express API for state-managed chat (Responses API),
+                TTS, GPT-Image-1 generation, vision on images/PDFs,
+                and ad-hoc web search
 ──────────────────────────────────────────────────────────────*/
 require("dotenv").config();
 const OpenAI  = require("openai");
@@ -9,44 +11,45 @@ const multer  = require("multer");
 const sharp   = require("sharp");
 const pdf     = require("pdf-parse");
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const app    = express();
-const upload = multer({ storage: multer.memoryStorage() });
+const openai  = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const app     = express();
+const upload  = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "6mb" }));
 
-/*────────────── CHAT (gpt-4.1-nano) ──────────────*/
+/*──────────────────────── CHAT (Responses API) ────────────────────────*/
+//  POST /chat  { user_input:string, last_id?:string }
+//  ↳ returns   { id:string, answer:string }
 app.post("/chat", async (req, res) => {
   try {
-    const messages = req.body.messages;
-    if (!Array.isArray(messages) || messages.length === 0)
-      return res.status(400).json({ error: "messages[] is required" });
+    const user_input = (req.body.user_input || "").trim();
+    if (!user_input) return res.status(400).json({ error: "user_input is required" });
 
-    const model = req.body.model || "gpt-4.1-nano";
+    const previous_response_id = req.body.last_id || undefined;
 
-    const out = await openai.chat.completions.create({
-      model,
-      messages,
-      max_tokens: 512        // plenty for short back-and-forth
+    const response = await openai.responses.create({
+      model : "gpt-4o-mini",
+      input : user_input,
+      ...(previous_response_id && { previous_response_id }),
+      tools : []
     });
 
-    return res.json(out.choices[0].message);   // {role,content}
+    const text = response.output[0].content[0].text.trim();
+    return res.json({ id: response.id, answer: text });
   } catch (err) {
     console.error("Chat error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-/*────────────── TTS  (returns JSON with base-64) ─────────────*/
+/*─────────────────────────── TTS (gpt-4o-mini-tts) ───────────────────*/
 app.post("/speech", async (req, res) => {
   try {
     const text = (req.body.text || "").trim();
     if (!text) return res.status(400).json({ error: "text is required" });
-
     const voice = req.body.voice || "shimmer";
 
-    /* cheapest speech model */
     const audio = await openai.audio.speech.create({
       model : "gpt-4o-mini-tts",
       voice,
@@ -55,106 +58,109 @@ app.post("/speech", async (req, res) => {
     });
 
     const mp3 = Buffer.from(await audio.arrayBuffer()).toString("base64");
-    res.json({ audio: mp3 });                         // << front-end expects this
+    return res.json({ audio: mp3 });
   } catch (err) {
     console.error("TTS error:", err.response?.data || err);
     res.status(500).json({ error: err.message });
   }
 });
 
-/*──────────────── IMAGE (GPT-Image-1 MEDIUM) ───────────────*/
+/*───────────────────── IMAGE GENERATION (GPT-Image-1) ─────────────────*/
 const sessions = new Map();
-
 app.post("/image", async (req, res) => {
   try {
-    const { sessionId = "anon", prompt, style = "" } = req.body;
-    const prev = sessions.get(sessionId) || null;
+    const { sessionId = "anon", prompt = "", style = "" } = req.body;
+    const prev = sessions.get(sessionId);
 
     const img = await openai.images.generate({
       model  : "gpt-image-1",
-      prompt : `Illustration (${style}) ${prompt}`,
+      prompt : `Illustration (${style}) ${prompt}`.trim(),
       size   : "1024x1024",
-      quality: "medium",                     // ★ switched from "low" → "medium"
+      quality: "medium",
       n      : 1,
       ...(prev && { previous_response_id: prev })
     });
 
     const frame = img.data[0];
     sessions.set(sessionId, frame.id);
-    res.json({ b64: frame.b64_json });       // keep existing front-end format
+    return res.json({ b64: frame.b64_json });
   } catch (err) {
     console.error("Image error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-/*────────────────────── VISION (img / PDF) ──────────────────*/
+/*─────────────────────── VISION (image / PDF) ────────────────────────*/
 app.post("/vision", upload.single("file"), async (req, res) => {
   try {
-    const mime = req.file.mimetype;
+    const mime = req.file?.mimetype || "";
+    if (!mime) return res.status(400).json({ error: "file is required" });
 
-    /* images */
     if (mime.startsWith("image/")) {
       let buf = req.file.buffer;
       if (buf.length > 900_000) buf = await sharp(buf).resize({ width: 640 }).toBuffer();
       const dataUrl = `data:${mime};base64,${buf.toString("base64")}`;
 
-      const out = await openai.chat.completions.create({
-        model   : "gpt-4.1-nano",
-        max_tokens: 512,
-        messages: [{
-          role   : "user",
-          content: [
-            { type: "text", text: req.body.question || "Describe this image." },
-            { type: "image_url", image_url: { url: dataUrl } }
-          ]
-        }]
+      const vis = await openai.responses.create({
+        model : "gpt-4o-mini",
+        input : [
+          {
+            role   : "user",
+            content: [
+              { type: "input_text",  text: req.body.question || "Describe this image." },
+              { type: "input_image", image_url: dataUrl }
+            ]
+          }
+        ]
       });
-      return res.json({ content: out.choices[0].message.content.trim() });
+
+      const text = vis.output[0].content[0].text.trim();
+      return res.json({ content: text });
     }
 
-    /* PDFs */
     if (mime === "application/pdf") {
-      const text = (await pdf(req.file.buffer)).text.slice(0, 8000);
-      const out  = await openai.chat.completions.create({
-        model   : "gpt-4.1-nano",
-        max_tokens: 512,
-        messages: [{
-          role   : "user",
-          content: `Here is the extracted text from a PDF:\n\n${text}\n\nPlease summarise the document.`
-        }]
+      const textContent = (await pdf(req.file.buffer)).text.slice(0, 8000);
+      const vis = await openai.responses.create({
+        model : "gpt-4o-mini",
+        input : `Here is the extracted text from a PDF:
+
+${textContent}
+
+Please summarise the document.`
       });
-      return res.json({ content: out.choices[0].message.content.trim() });
+
+      const text = vis.output[0].content[0].text.trim();
+      return res.json({ content: text });
     }
 
-    res.status(415).json({ error: "Unsupported file type" });
+    return res.status(415).json({ error: "Unsupported file type" });
   } catch (err) {
     console.error("Vision error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-/*────────────────────── SEARCH ──────────────────────────────*/
+/*──────────────────────────── SEARCH ────────────────────────────────*/
 app.post("/search", async (req, res) => {
   try {
-    const { query } = req.body;
-    const out = await openai.chat.completions.create({
-      model : "gpt-4.1-nano",
-      tools : [{ type: "web_search" }],
-      max_tokens: 512,
-      messages: [
-        { role: "user", content: `Search the web for: ${query}` },
-        { role: "tool", name: "web_search", content: `query="${query}"` }
-      ]
+    const query = (req.body.query || "").trim();
+    if (!query) return res.status(400).json({ error: "query is required" });
+
+    const resp = await openai.responses.create({
+      model : "gpt-4o-mini",
+      input : `What's the result for: ${query}`,
+      tools : [{ type: "web_search" }]
     });
-    res.json(out.choices[0].message);
+
+    const text = resp.output[0].content[0].text.trim();
+    return res.json({ answer: text });
   } catch (err) {
     console.error("Search error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-/*────────────────────── START SERVER ───────────────────────*/
+/*────────────────────────── START SERVER ───────────────────────────*/
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅  API running  http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`✅  API running → http://localhost:${PORT}`));
 
