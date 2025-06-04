@@ -70,22 +70,23 @@ app.post("/speech", async (req, res) => {
 app.post("/image", async (req, res) => {
   try {
     const { sessionId = "anon", prompt = "", style = "" } = req.body;
-    const prev = sessions.get(sessionId);
+    const prev = sessions.get(sessionId);          // keeps character pose/style
 
     const img = await openai.images.generate({
       model  : "gpt-image-1",
       prompt : `${style ? `(${style}) ` : ""}${prompt}`.trim(),
       size   : "1024x1024",
-      quality: "medium",
+      quality: "medium",                           // ★ requested tier
       n      : 1,
-      ...(prev && { previous_response_id: prev })
+      ...(prev && { previous_response_id: prev }), // stylistic continuity
+      response_format: "b64_json"                  // ensure Base-64 comes back
     });
 
     const frame = img.data[0];
-    sessions.set(sessionId, frame.id);
+    sessions.set(sessionId, frame.id);             // remember for next call
     res.json({ b64: frame.b64_json });
   } catch (err) {
-    console.error("Image error:", err);
+    console.error("Image error:", err.response?.data || err);
     res.status(500).json({ error: err.message });
   }
 });
