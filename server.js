@@ -68,24 +68,26 @@ app.post("/speech", async (req, res) => {
 });
 
 /*──────────────── IMAGE GENERATION (GPT-image-1 · MEDIUM) ─────────────*/
+const sessions = new Map();             // declare ONCE, near top of file
+
 app.post("/image", async (req, res) => {
   try {
     const { sessionId = "anon", prompt = "", style = "" } = req.body;
-    const prev = sessions.get(sessionId);          // keeps character pose/style
+    const prev = sessions.get(sessionId);            // keep character look
 
     const img = await openai.images.generate({
       model  : "gpt-image-1",
       prompt : `${style ? `(${style}) ` : ""}${prompt}`.trim(),
       size   : "1024x1024",
-      quality: "medium",                           // ★ requested tier
+      quality: "medium",                             // requested tier
       n      : 1,
-      ...(prev && { previous_response_id: prev }), // stylistic continuity
-      response_format: "b64_json"                  // ensure Base-64 comes back
+      ...(prev && { previous_response_id: prev })    // stylistic continuity
+      // no response_format field – GPT-image-1 already returns b64_json
     });
 
     const frame = img.data[0];
-    sessions.set(sessionId, frame.id);             // remember for next call
-    res.json({ b64: frame.b64_json });
+    sessions.set(sessionId, frame.id);               // remember last image id
+    res.json({ b64: frame.b64_json });               // front-end expects {b64}
   } catch (err) {
     console.error("Image error:", err.response?.data || err);
     res.status(500).json({ error: err.message });
