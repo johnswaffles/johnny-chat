@@ -67,24 +67,22 @@ app.post("/speech", async (req, res) => {
 });
 
 /*──────────────── IMAGE GENERATION (GPT-image-1 · MEDIUM) ─────────────*/
-const sessions = sessions || new Map();   // create only if not present
-
 app.post("/image", async (req, res) => {
   try {
     const { sessionId = "anon", prompt = "", style = "" } = req.body;
-    const prev = sessions.get(sessionId);        // keep character style
+    const prev = sessions.get(sessionId);
 
     const img = await openai.images.generate({
       model  : "gpt-image-1",
       prompt : `${style ? `(${style}) ` : ""}${prompt}`.trim(),
       size   : "1024x1024",
-      quality: "medium",                         // ★ medium tier
+      quality: "medium",
       n      : 1,
-      ...(prev && { previous_response_id: prev })// stylistic continuity
+      ...(prev && { previous_response_id: prev })
     });
 
     const frame = img.data[0];
-    sessions.set(sessionId, frame.id);           // remember for next call
+    sessions.set(sessionId, frame.id);
     res.json({ b64: frame.b64_json });
   } catch (err) {
     console.error("Image error:", err);
