@@ -68,7 +68,6 @@ app.post("/speech", async (req, res) => {
 });
 
 /*──────────────── IMAGE GENERATION (GPT-image-1 · MEDIUM) ─────────────*/
-const sessions = new Map();             // declare ONCE, near top of file
 
 app.post("/image", async (req, res) => {
   try {
