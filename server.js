@@ -1,7 +1,8 @@
 /*──────────────────────────────────────────────────────────────
-  server.js  –  Express API for state-managed chat (Responses API),
-                TTS, GPT-Image-1 generation, vision on images/PDFs,
-                and ad-hoc web search
+  server.js  –  Express API for state‑managed chat (Responses API),
+                TTS, GPT‑Image‑1 generation, vision on images/PDFs,
+                and ad‑hoc web search
+                *Cost‑optimised: GPT‑4.1‑nano where feasible*
 ──────────────────────────────────────────────────────────────*/
 require("dotenv").config();
 const OpenAI  = require("openai");
@@ -20,7 +21,7 @@ app.use(express.json({ limit: "6mb" }));
 
 /*──────────────────────── CHAT (Responses API) ────────────────────────*/
 //  POST /chat  { user_input:string, last_id?:string }
-//  ↳ returns   { id:string, answer:string }
+//  ↳ returns   { id, answer }
 app.post("/chat", async (req, res) => {
   try {
     const user_input = (req.body.user_input || "").trim();
@@ -29,14 +30,14 @@ app.post("/chat", async (req, res) => {
     const previous_response_id = req.body.last_id || undefined;
 
     const response = await openai.responses.create({
-      model : "gpt-4o-mini",
+      model : "gpt-4.1-nano",               // ★ ultra‑cheap model
       input : user_input,
       ...(previous_response_id && { previous_response_id }),
       tools : []
     });
 
     const text = response.output[0].content[0].text.trim();
-    return res.json({ id: response.id, answer: text });
+    res.json({ id: response.id, answer: text });
   } catch (err) {
     console.error("Chat error:", err);
     res.status(500).json({ error: err.message });
@@ -51,21 +52,21 @@ app.post("/speech", async (req, res) => {
     const voice = req.body.voice || "shimmer";
 
     const audio = await openai.audio.speech.create({
-      model : "gpt-4o-mini-tts",
+      model : "gpt-4o-mini-tts",            // cheapest voice tier
       voice,
       input : text,
       format: "mp3"
     });
 
     const mp3 = Buffer.from(await audio.arrayBuffer()).toString("base64");
-    return res.json({ audio: mp3 });
+    res.json({ audio: mp3 });
   } catch (err) {
     console.error("TTS error:", err.response?.data || err);
     res.status(500).json({ error: err.message });
   }
 });
 
-/*───────────────────── IMAGE GENERATION (GPT-Image-1) ─────────────────*/
+/*───────────────────── IMAGE GENERATION (GPT-Image‑1) ────────────────*/
 const sessions = new Map();
 app.post("/image", async (req, res) => {
   try {
@@ -76,14 +77,14 @@ app.post("/image", async (req, res) => {
       model  : "gpt-image-1",
       prompt : `Illustration (${style}) ${prompt}`.trim(),
       size   : "1024x1024",
-      quality: "medium",
+      quality: "high",                    // ★ upgraded quality
       n      : 1,
       ...(prev && { previous_response_id: prev })
     });
 
     const frame = img.data[0];
     sessions.set(sessionId, frame.id);
-    return res.json({ b64: frame.b64_json });
+    res.json({ b64: frame.b64_json });
   } catch (err) {
     console.error("Image error:", err);
     res.status(500).json({ error: err.message });
@@ -96,44 +97,36 @@ app.post("/vision", upload.single("file"), async (req, res) => {
     const mime = req.file?.mimetype || "";
     if (!mime) return res.status(400).json({ error: "file is required" });
 
+    // ── Image ──
     if (mime.startsWith("image/")) {
       let buf = req.file.buffer;
       if (buf.length > 900_000) buf = await sharp(buf).resize({ width: 640 }).toBuffer();
       const dataUrl = `data:${mime};base64,${buf.toString("base64")}`;
 
       const vis = await openai.responses.create({
-        model : "gpt-4o-mini",
-        input : [
-          {
-            role   : "user",
-            content: [
-              { type: "input_text",  text: req.body.question || "Describe this image." },
-              { type: "input_image", image_url: dataUrl }
-            ]
-          }
-        ]
+        model : "gpt-4.1-nano",            // ★ cost‑optimised
+        input : [{
+          role   : "user",
+          content: [
+            { type: "input_text",  text: req.body.question || "Describe this image." },
+            { type: "input_image", image_url: dataUrl }
+          ]
+        }]
       });
-
-      const text = vis.output[0].content[0].text.trim();
-      return res.json({ content: text });
+      return res.json({ content: vis.output[0].content[0].text.trim() });
     }
 
+    // ── PDF ──
     if (mime === "application/pdf") {
       const textContent = (await pdf(req.file.buffer)).text.slice(0, 8000);
       const vis = await openai.responses.create({
-        model : "gpt-4o-mini",
-        input : `Here is the extracted text from a PDF:
-
-${textContent}
-
-Please summarise the document.`
+        model : "gpt-4.1-nano",            // ★ cost‑optimised
+        input : `Here is the extracted text from a PDF:\n\n${textContent}\n\nPlease summarise the document.`
       });
-
-      const text = vis.output[0].content[0].text.trim();
-      return res.json({ content: text });
+      return res.json({ content: vis.output[0].content[0].text.trim() });
     }
 
-    return res.status(415).json({ error: "Unsupported file type" });
+    res.status(415).json({ error: "Unsupported file type" });
   } catch (err) {
     console.error("Vision error:", err);
     res.status(500).json({ error: err.message });
@@ -147,13 +140,12 @@ app.post("/search", async (req, res) => {
     if (!query) return res.status(400).json({ error: "query is required" });
 
     const resp = await openai.responses.create({
-      model : "gpt-4o-mini",
+      model : "gpt-4.1-nano",              // ★ cheap model + tool
       input : `What's the result for: ${query}`,
       tools : [{ type: "web_search" }]
     });
 
-    const text = resp.output[0].content[0].text.trim();
-    return res.json({ answer: text });
+    res.json({ answer: resp.output[0].content[0].text.trim() });
   } catch (err) {
     console.error("Search error:", err);
     res.status(500).json({ error: err.message });
