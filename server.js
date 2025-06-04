@@ -66,17 +66,18 @@ app.post("/speech", async (req, res) => {
   }
 });
 
-/*──────────────── IMAGE GENERATION (DALL·E 2 – Base-64) ───────────────*/
+/*──────────────── IMAGE GENERATION (DALL·E 3 – “standard” tier) ─────────────*/
 app.post("/image", async (req, res) => {
   try {
     const { prompt = "", style = "" } = req.body;
 
     const img = await openai.images.generate({
-      model : "dall-e-2",
-      prompt: `${style ? `(${style}) ` : ""}${prompt}`.trim(),
-      size  : "1024x1024",
-      n     : 1,
-      response_format: "b64_json"   // ← KEY LINE
+      model  : "dall-e-3",                    // ← upgraded model
+      prompt : `${style ? `(${style}) ` : ""}${prompt}`.trim(),
+      size   : "1024x1024",
+      quality: "standard",                   // cheapest DALLE-3 option
+      n      : 1,
+      response_format: "b64_json"
     });
 
     res.json({ b64: img.data[0].b64_json });
