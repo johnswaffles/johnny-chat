@@ -66,21 +66,26 @@ app.post("/speech", async (req, res) => {
   }
 });
 
-/*──────────────── IMAGE GENERATION (DALL·E 3 – “standard” tier) ─────────────*/
+/*──────────────── IMAGE GENERATION (GPT-image-1 · MEDIUM) ─────────────*/
+const sessions = sessions || new Map();   // create only if not present
+
 app.post("/image", async (req, res) => {
   try {
-    const { prompt = "", style = "" } = req.body;
+    const { sessionId = "anon", prompt = "", style = "" } = req.body;
+    const prev = sessions.get(sessionId);        // keep character style
 
     const img = await openai.images.generate({
-      model  : "dall-e-3",                    // ← upgraded model
+      model  : "gpt-image-1",
       prompt : `${style ? `(${style}) ` : ""}${prompt}`.trim(),
       size   : "1024x1024",
-      quality: "standard",                   // cheapest DALLE-3 option
+      quality: "medium",                         // ★ medium tier
       n      : 1,
-      response_format: "b64_json"
+      ...(prev && { previous_response_id: prev })// stylistic continuity
     });
 
-    res.json({ b64: img.data[0].b64_json });
+    const frame = img.data[0];
+    sessions.set(sessionId, frame.id);           // remember for next call
+    res.json({ b64: frame.b64_json });
   } catch (err) {
     console.error("Image error:", err);
     res.status(500).json({ error: err.message });
