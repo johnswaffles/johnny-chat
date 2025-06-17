@@ -7,8 +7,13 @@ router.post("/image", async (req, res) => {
   try {
     const { sessionId = "anon", prompt = "", style = "" } = req.body;
     const img = await openai.images.generate({
-      model: "gpt-4-image-1-medium",
-      prompt: `${style ? `(${style}) ` : ""}${prompt}`.trim(),
+  model: "gpt-image-1",
+  prompt,
+  size: "1024x1024",
+  quality: "high",
+  n: 1,
+  user: sessionId
+}) ` : ""}${prompt}`.trim(),
       size: "1024x1024",
       quality: "medium",
       n: 1
