@@ -1,15 +1,20 @@
 /**
- * POST /image   – GPT‑Image‑1, quality high
+ * GPT-Image-1 (high) endpoint
+ * POST /image   { sessionId?, prompt, style? }
+ * Returns       { b64 }
  */
 import express from "express";
+import crypto from "node:crypto";
 import { openai } from "../core/openai.js";
 
 export const router = express.Router();
 const sessions = new Map();
 
-router.post("/image", async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { sessionId = crypto.randomUUID(), prompt = "", style = "" } = req.body;
+    if (!prompt.trim()) return res.status(400).json({ error: "prompt is required" });
+
     const prev = sessions.get(sessionId);
 
     const rsp = await openai.images.generate({
@@ -23,11 +28,10 @@ router.post("/image", async (req, res) => {
       user:   sessionId
     });
 
-    const { id, b64_json } = rsp.data[0];
-    sessions.set(sessionId, id);
-    res.json({ b64: b64_json });
+    const frame = rsp.data[0];
+    sessions.set(sessionId, frame.id);
+    res.json({ b64: frame.b64_json });
   } catch (err) {
-    /*  ↓↓↓  PRINT *AND* RETURN the raw OpenAI error  */
     const msg = err.response?.data?.error?.message ?? err.message;
     console.error("Image route:", msg);
     res.status(500).json({ error: msg });
