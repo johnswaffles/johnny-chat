@@ -11,10 +11,15 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "6mb" }));
 
-/* mount paths */
-app.use("/chat",   chatRouter);    //  POST /chat
-app.use("/image",  imageRouter);   //  POST /image
-app.use("/speech", ttsRouter);     //  POST /speech
+/* ───── plain paths ───── */
+app.use("/chat",   chatRouter);
+app.use("/image",  imageRouter);
+app.use("/speech", ttsRouter);
+
+/* ───── legacy “/bots/:bot/…” aliases ───── */
+app.use("/bots/:bot/chat",   chatRouter);
+app.use("/bots/:bot/image",  imageRouter);
+app.use("/bots/:bot/speech", ttsRouter);
 
 /* start server */
 const PORT = process.env.PORT || 3000;
