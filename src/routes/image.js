@@ -1,12 +1,11 @@
 /**
- * POST /image   { sessionId?, prompt, style? }
- * → { b64 }     (GPT-Image-1 · quality: high)
+ * POST /image   – GPT‑Image‑1, quality high
  */
 import express from "express";
 import { openai } from "../core/openai.js";
 
 export const router = express.Router();
-const sessions = new Map();            // remember last image-id per session
+const sessions = new Map();
 
 router.post("/image", async (req, res) => {
   try {
@@ -17,7 +16,7 @@ router.post("/image", async (req, res) => {
       model:  "gpt-image-1",
       prompt: `${style ? `(${style}) ` : ""}${prompt}`.trim(),
       size:   "1024x1024",
-      quality:"high",                  // ← always high, never DALL·E
+      quality:"high",
       n:      1,
       ...(prev && { previous_response_id: prev }),
       response_format: "b64_json",
@@ -28,7 +27,9 @@ router.post("/image", async (req, res) => {
     sessions.set(sessionId, id);
     res.json({ b64: b64_json });
   } catch (err) {
-    console.error("Image route:", err);
-    res.status(500).json({ error: err.message });
+    /*  ↓↓↓  PRINT *AND* RETURN the raw OpenAI error  */
+    const msg = err.response?.data?.error?.message ?? err.message;
+    console.error("Image route:", msg);
+    res.status(500).json({ error: msg });
   }
 });
