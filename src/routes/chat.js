@@ -1,10 +1,24 @@
-const express     = require("express");
-const { chat }    = require("../services/chatService");
-const router = express.Router();
+import { Router } from "express";
+import { chat }   from "../services/chatService.js";
 
-router.post("/", async (req, res) => {
-  try { const out = await chat(req.body); res.json(out); }
-  catch (e) { console.error(e); res.status(500).json({ error: e.message }); }
+const router = Router();
+
+/**
+ * POST /bots/:bot/chat
+ * body: { history:[{role,content,…}], user:"last user message" }
+ * returns: { content:"assistant reply" }
+ */
+router.post("/bots/:bot/chat", async (req, res) => {
+  try {
+    const { bot }        = req.params;              // "story", "assistant", …
+    const { history,user }= req.body;
+
+    const answer = await chat(bot, history, user);
+    res.json({ content: answer });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-module.exports = router;
+export default router;
