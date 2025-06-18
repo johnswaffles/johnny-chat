@@ -1,69 +1,65 @@
-import 'dotenv/config';                 // loads .env
+// server.js  (ES-module style)
 import express from 'express';
-import cors from 'cors';
-import OpenAI from 'openai';
+import cors     from 'cors';
+import 'dotenv/config';
+import OpenAI   from 'openai';
 
+const app  = express();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-/* ------------ /chat ------------- */
+// ---------- /chat -----------------------------------------------------------
 app.post('/chat', async (req, res) => {
   try {
-    const { messages } = req.body;               // [{role:"user",content:"..."}...]
-    if (!Array.isArray(messages)) throw Error('messages must be an array');
-
+    const { messages = [] } = req.body;             // expecting [{role, content}, ...]
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4.1-nano',                     // cheapest 4-series model
-      messages,
+      model: 'gpt-4.1-nano',
+      messages
     });
-
     res.json({ content: completion.choices[0].message.content });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: err.message });
   }
 });
 
-/* ------------ /image ------------- */
+// ---------- /image ----------------------------------------------------------
 app.post('/image', async (req, res) => {
   try {
-    const { prompt, size = '1024x1024', quality = 'high' } = req.body;
-
+    const { prompt = '', size = '1024x1024' } = req.body;
     const img = await openai.images.generate({
-      model: 'gpt-image-1',
+      model : 'gpt-image-1',
       prompt,
-      size,
-      quality,
+      size
     });
-
+    // frontend expects { b64: ... }
     res.json({ b64: img.data[0].b64_json });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: err.message });
   }
 });
 
-/* ------------ /speech (TTS) ------ */
+// ---------- /speech ---------------------------------------------------------
 app.post('/speech', async (req, res) => {
   try {
-    const { text, voice = 'alloy' } = req.body;
-
-    const audio = await openai.audio.speech.create({
-      model: 'tts-1',                // cheapest TTS
+    const { text = '', voice = 'shimmer' } = req.body;
+    const speech = await openai.audio.speech.create({
+      model  : 'tts-1',          // high-quality model
       voice,
-      input: text,
-      format: 'mp3',
+      format : 'mp3',
+      input  : text
     });
-
-    res.json({ audio: audio.audio });
+    const buffer = Buffer.from(await speech.arrayBuffer());
+    res.json({ audio: buffer.toString('base64') });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: err.message });
   }
 });
 
-/* ------------ start server ------- */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅  API ready on :${PORT}`));
+// ---------------------------------------------------------------------------
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`✅ API ready on :${PORT}`));
