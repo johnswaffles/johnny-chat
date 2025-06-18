@@ -1,24 +1,22 @@
-require("dotenv").config();
-const express = require("express");
-const cors    = require("cors");
+import express    from "express";
+import cors       from "cors";
 
-const chatRouter  = require("./routes/chat");
-const imageRouter = require("./routes/image");
-const ttsRouter   = require("./routes/tts");
+import chatRoutes  from "./routes/chat.js";
+import imageRoutes from "./routes/image.js";
+import ttsRoutes   from "./routes/tts.js";
 
-const app = express();
+const app  = express();
+const PORT = process.env.PORT || 10000;
+
 app.use(cors());
-app.use(express.json({ limit: "6mb" }));
+app.use(express.json({ limit: "10mb" }));
 
-/* plain paths */
-app.use("/chat",   chatRouter);
-app.use("/image",  imageRouter);
-app.use("/speech", ttsRouter);
+// mount routers (they already contain their own paths)
+app.use(chatRoutes);
+app.use(imageRoutes);
+app.use(ttsRoutes);
 
-/* legacy aliases so Squarespace keeps working */
-app.use("/bots/:bot/chat",   chatRouter);
-app.use("/bots/:bot/image",  imageRouter);
-app.use("/bots/:bot/speech", ttsRouter);
+// simple health-check
+app.get("/", (_, res) => res.json({ ok: true }));
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅  API ready on :${PORT}`));
