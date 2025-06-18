@@ -1,17 +1,10 @@
-import express from "express";
-import { chat } from "../services/chatService.js";
+const express     = require("express");
+const { chat }    = require("../services/chatService");
+const router = express.Router();
 
-export const router = express.Router();
-
-router.post("/bots/:id/chat", async (req, res, next) => {
-  try {
-    const { history = [], user } = req.body;
-    if (!user) return res.status(400).json({ error: "user is required" });
-
-    const result = await chat(req.params.id, history, user);
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
+router.post("/", async (req, res) => {
+  try { const out = await chat(req.body); res.json(out); }
+  catch (e) { console.error(e); res.status(500).json({ error: e.message }); }
 });
 
+module.exports = router;

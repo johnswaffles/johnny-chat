@@ -2,7 +2,6 @@
   "name": "new-open-ai-chatbot",
   "version": "1.0.0",
   "description": "OpenAI-powered multi-bot backend",
-  "type": "module",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
