@@ -1,65 +1,72 @@
-// server.js  (ES-module style)
-import express from 'express';
-import cors     from 'cors';
-import 'dotenv/config';
-import OpenAI   from 'openai';
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import OpenAI from "openai";
 
-const app  = express();
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 
-// ---------- /chat -----------------------------------------------------------
-app.post('/chat', async (req, res) => {
+// ─── OpenAI client ────────────────────────────────────────────────────────────
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY    // make sure this is set on Render
+});
+
+// ─── /chat  ───────────────────────────────────────────────────────────────────
+app.post("/chat", async (req, res) => {
   try {
-    const { messages = [] } = req.body;             // expecting [{role, content}, ...]
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4.1-nano',
-      messages
+    // tutor-front-end sends {user_input, last_id}
+    const { user_input, last_id } = req.body || {};
+
+    if (!user_input) {
+      return res.status(400).json({ error: "user_input required" });
+    }
+
+    const systemPrompt =
+      "You are AdaptiveTutor GPT. Begin a 5-question multiple-choice quiz. "
+      + "Correct → next question. Wrong → mini-lesson (≤120 words) then next. "
+      + "Finish with percent score + recap (≤200 words) and a follow-up prompt.";
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user",   content: user_input }
+    ];
+
+    const chat = await openai.chat.completions.create({
+      model: "gpt-4.1-nano",
+      messages,
+      temperature: 0.7
     });
-    res.json({ content: completion.choices[0].message.content });
+
+    const answer = chat.choices?.[0]?.message?.content || "(no reply)";
+    res.json({ id: chat.id, answer });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || "internal error" });
   }
 });
 
-// ---------- /image ----------------------------------------------------------
-app.post('/image', async (req, res) => {
+// ─── /speech  ─────────────────────────────────────────────────────────────────
+app.post("/speech", async (req, res) => {
   try {
-    const { prompt = '', size = '1024x1024' } = req.body;
-    const img = await openai.images.generate({
-      model : 'gpt-image-1',
-      prompt,
-      size
-    });
-    // frontend expects { b64: ... }
-    res.json({ b64: img.data[0].b64_json });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
+    const { text, voice = "alloy" } = req.body || {};
+    if (!text) return res.status(400).json({ error: "text required" });
 
-// ---------- /speech ---------------------------------------------------------
-app.post('/speech', async (req, res) => {
-  try {
-    const { text = '', voice = 'shimmer' } = req.body;
     const speech = await openai.audio.speech.create({
-      model  : 'tts-1',          // high-quality model
+      model: "gpt-4o-audio-preview",
       voice,
-      format : 'mp3',
-      input  : text
+      input: text,
+      format: "mp3"
     });
-    const buffer = Buffer.from(await speech.arrayBuffer());
-    res.json({ audio: buffer.toString('base64') });
+
+    const b64 = Buffer.from(await speech.arrayBuffer()).toString("base64");
+    res.json({ audio: b64 });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || "tts error" });
   }
 });
 
-// ---------------------------------------------------------------------------
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`✅ API ready on :${PORT}`));
+// ─── Launch ───────────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅  API ready on :${PORT}`));
