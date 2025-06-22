@@ -85,6 +85,38 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+/* ────────── snippet A  ▸  /image  (GPT-image-1) ────────── */
+app.post("/image", async (req, res) => {
+  try{
+    const { prompt, style="illustration" } = req.body;
+    const rsp = await openai.images.generate({
+      model : "gpt-image-1",
+      prompt: prompt,
+      size  : "1024x1024"
+    });
+    const b64 = rsp.data[0].b64_json;
+    res.json({ b64 });
+  }catch(e){ console.error(e); res.status(502).end(); }
+});
+
+/* ────────── snippet B  ▸  /vision  (ask about an uploaded image) ────────── */
+app.post("/vision", async (req, res) => {
+  try{
+    const { image } = req.body;                              // base64 PNG/JPEG
+    const msg = [
+      { role:"system", content:"You are a helpful visual analyst." },
+      { role:"user",   content:[
+          { type:"text",  text:"Describe this picture in one short paragraph, then suggest two follow-up questions I could ask." },
+          { type:"image", image_url:"data:image/png;base64,"+image }
+      ]}
+    ];
+    const { choices } = await openai.chat.completions.create({
+      model:"o4-mini", messages:msg
+    });
+    res.json({ answer:choices[0].message.content.trim() });
+  }catch(e){ console.error(e); res.status(502).end(); }
+});
+
 /* ───────────────────────────────────────────────────────────────
    POST /api/speech  – text → speech (wav, shimmer)
 ────────────────────────────────────────────────────────────────── */
