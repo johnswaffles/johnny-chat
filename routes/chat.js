@@ -37,6 +37,7 @@ router.post("/chat", async (req, res) => {
     }
 
     const data  = await r.json();
+    console.log("🔎 OpenAI response:", JSON.stringify(data, null, 2));
     const reply = data.choices[0].message.content[0].text;
     res.json({ reply });                       // no conversation_id for now
   } catch (err) {
