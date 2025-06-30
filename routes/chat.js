@@ -1,24 +1,24 @@
-/* routes/chat.js — o4-mini + live web_search (stateless, stable) */
+/* o4-mini + live web_search + image_generation (stateless) */
 
 import { Router } from "express";
 
 const router   = Router();
 const OPENAI   = process.env.OPENAI_API_KEY;
 const RESP_URL = "https://api.openai.com/v1/responses";
-
-/* Beta header required for /responses preview */
-const BETA_HDR = "assistants=v2";
+const BETA_HDR = "assistants=v2";              // required preview header
 
 router.post("/chat", async (req, res) => {
   try {
     const { input, model = "o4-mini" } = req.body;
     if (!input) return res.status(400).json({ error: "input required" });
 
-    /* stateless request — no conversation_id until OpenAI enables it */
     const body = {
       model,
       input,
-      tools: [{ type: "web_search" }]
+      tools: [
+        { type: "web_search" },
+        { type: "image_generation" }
+      ]
     };
 
     const r = await fetch(RESP_URL, {
@@ -33,18 +33,21 @@ router.post("/chat", async (req, res) => {
 
     if (!r.ok) {
       const err = await r.json();
-      console.error(err);
       return res.status(500).json({ error: err.error?.message || "OpenAI error" });
     }
 
     const data = await r.json();
 
-    /* -------- extract assistant text safely -------- */
-    let reply = "🤖 OpenAI returned no usable text.";
-    const msg  = data.output?.find(o => o.type === "message");
-    if (msg?.content?.[0]?.text) reply = msg.content[0].text;
+    /* — extract text or base-64 image — */
+    let reply="", imageBase=null;
+    for (const out of data.output ?? []) {
+      if (out.type === "message" && out.content?.[0]?.text)
+        reply = out.content[0].text;
+      if (out.type === "image_generation_call")
+        imageBase = out.result;
+    }
 
-    res.json({ reply });
+    res.json({ reply, imageBase });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
