@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Johnny Chat</title></head><body>
+<textarea id="q" rows="3" cols="60" placeholder="Ask Johnny…"></textarea>
+<button id="send">Send</button>
+<pre id="log" style="white-space:pre-wrap"></pre>
+<script>
+const log=document.getElementById("log"),send=document.getElementById("send"),q=document.getElementById("q");
+let convo=null;
+send.onclick=async ()=>{
+  const text=q.value.trim(); if(!text) return;
+  log.textContent+="\n> "+text+"\n"; q.value="";
+  const r=await fetch("/api/chat",{method:"POST",headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({input:text,conversation_id:convo,model:"o4-mini"})});
+  const data=await r.json(); convo=data.conversation_id;
+  log.textContent+=data.reply+"\n";
+};
+q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send.click();}});
+</script></body></html>
