@@ -1,4 +1,4 @@
-/* routes/chat.js — o4‑mini + live web_search (stateless) */
+/* routes/chat.js — o4-mini + live web_search (stateless, stable) */
 
 import { Router } from "express";
 
@@ -6,7 +6,7 @@ const router   = Router();
 const OPENAI   = process.env.OPENAI_API_KEY;
 const RESP_URL = "https://api.openai.com/v1/responses";
 
-/* The header is still required for tool usage */
+/* Beta header required for /responses preview */
 const BETA_HDR = "assistants=v2";
 
 router.post("/chat", async (req, res) => {
@@ -14,10 +14,11 @@ router.post("/chat", async (req, res) => {
     const { input, model = "o4-mini" } = req.body;
     if (!input) return res.status(400).json({ error: "input required" });
 
+    /* stateless request — no conversation_id until OpenAI enables it */
     const body = {
       model,
       input,
-      tools: [{ type: "web_search" }]          // enable live search
+      tools: [{ type: "web_search" }]
     };
 
     const r = await fetch(RESP_URL, {
@@ -36,10 +37,14 @@ router.post("/chat", async (req, res) => {
       return res.status(500).json({ error: err.error?.message || "OpenAI error" });
     }
 
-    const data  = await r.json();
-    console.log("🔎 OpenAI response:", JSON.stringify(data, null, 2));
-    const reply = data.choices[0].message.content[0].text;
-    res.json({ reply });                       // no conversation_id for now
+    const data = await r.json();
+
+    /* -------- extract assistant text safely -------- */
+    let reply = "🤖 OpenAI returned no usable text.";
+    const msg  = data.output?.find(o => o.type === "message");
+    if (msg?.content?.[0]?.text) reply = msg.content[0].text;
+
+    res.json({ reply });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
