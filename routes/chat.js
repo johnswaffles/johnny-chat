@@ -1,11 +1,14 @@
-/* routes/chat.js — Johnny Chat backend (o4-mini + web_search) */
-/* Works on Node ≥ 18 because fetch is globally available */
+/* routes/chat.js — Johnny Chat backend (o4-mini + live web_search) */
+/* Works on Node ≥ 18 because fetch is global */
 
 import { Router } from "express";
 
 const router   = Router();
 const OPENAI   = process.env.OPENAI_API_KEY;
 const RESP_URL = "https://api.openai.com/v1/responses";
+
+/*  OpenAI requires this header while the endpoint is in gated preview.   */
+const BETA_HEADER = "assisted-generation-preview";   // latest as of 2025-06
 
 router.post("/chat", async (req, res) => {
   try {
@@ -23,7 +26,8 @@ router.post("/chat", async (req, res) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "OpenAI-Beta": BETA_HEADER          // ←-- add this line
       },
       body: JSON.stringify(body)
     });
