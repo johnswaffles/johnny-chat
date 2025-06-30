@@ -9,7 +9,8 @@ router.post("/chat", async (req, res) => {
     const { input, conversation_id, model = "o4-mini" } = req.body;
     if (!input) return res.status(400).json({ error: "input required" });
 
-    const oa = await openai.responses.create({
+    /*  Call the new Responses endpoint  */
+    const oa = await openai.beta.responses.create({
       model,
       input,
       conversation_id: conversation_id ?? "new",
@@ -24,5 +25,4 @@ router.post("/chat", async (req, res) => {
   }
 });
 
-/* ---------- critical ---------- */
-export default router;        // <-- makes the default export that server.js expects
+export default router;   // <— default export required by server.js
