@@ -1,11 +1,11 @@
-/* routes/chat.js – call the “Responses” endpoint with built-in web_search */
+/* routes/chat.js — Johnny Chat backend (o4-mini + web_search) */
+/* Works on Node ≥ 18 because fetch is globally available */
 
 import { Router } from "express";
-import fetch       from "node-fetch";                  // Node ≥18 has global fetch – this works too.
 
-const router  = Router();
-const OPENAI  = process.env.OPENAI_API_KEY;
-const URL     = "https://api.openai.com/v1/responses";
+const router   = Router();
+const OPENAI   = process.env.OPENAI_API_KEY;
+const RESP_URL = "https://api.openai.com/v1/responses";
 
 router.post("/chat", async (req, res) => {
   try {
@@ -19,7 +19,7 @@ router.post("/chat", async (req, res) => {
       tools: [{ type: "web_search" }]
     };
 
-    const r = await fetch(URL, {
+    const r = await fetch(RESP_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI}`,
@@ -34,8 +34,8 @@ router.post("/chat", async (req, res) => {
       return res.status(500).json({ error: err.error?.message || "OpenAI error" });
     }
 
-    const data = await r.json();
-    const reply = data.choices[0].message.content[0].text;
+    const data   = await r.json();
+    const reply  = data.choices[0].message.content[0].text;
     res.json({ reply, conversation_id: data.conversation_id });
   } catch (err) {
     console.error(err);
