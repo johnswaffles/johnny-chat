@@ -1,4 +1,4 @@
-/* routes/chat.js — Johnny Chat backend (o4-mini + live web_search) */
+/* routes/chat.js — o4‑mini + live web_search (Responses API) */
 /* Works on Node ≥ 18 because fetch is global */
 
 import { Router } from "express";
@@ -7,8 +7,8 @@ const router   = Router();
 const OPENAI   = process.env.OPENAI_API_KEY;
 const RESP_URL = "https://api.openai.com/v1/responses";
 
-/*  OpenAI requires this header while the endpoint is in gated preview.   */
-const BETA_HEADER = "assisted-generation-preview";   // latest as of 2025-06
+/* -------- OpenAI beta header required for conversation_id -------- */
+const BETA_HDR = "assistants=v2";          // ← the exact string OpenAI expects
 
 router.post("/chat", async (req, res) => {
   try {
@@ -25,9 +25,9 @@ router.post("/chat", async (req, res) => {
     const r = await fetch(RESP_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI}`,
+        Authorization : `Bearer ${OPENAI}`,
         "Content-Type": "application/json",
-        "OpenAI-Beta": BETA_HEADER          // ←-- add this line
+        "OpenAI-Beta" : BETA_HDR          // ← NOW the parameter is accepted
       },
       body: JSON.stringify(body)
     });
@@ -38,8 +38,8 @@ router.post("/chat", async (req, res) => {
       return res.status(500).json({ error: err.error?.message || "OpenAI error" });
     }
 
-    const data   = await r.json();
-    const reply  = data.choices[0].message.content[0].text;
+    const data  = await r.json();
+    const reply = data.choices[0].message.content[0].text;
     res.json({ reply, conversation_id: data.conversation_id });
   } catch (err) {
     console.error(err);
