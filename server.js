@@ -1,18 +1,16 @@
-// server.js  ── entry point
-import "dotenv/config";
+/* server.js — minimal */
+
 import express from "express";
-import cors from "cors";
+import cors    from "cors";
+import dotenv  from "dotenv";
+import chat    from "./routes/chat.js";
 
-import chatRouter from "./routes/chat.js";
-
-const PORT = process.env.PORT || 10_000;
-
+dotenv.config();
 const app = express();
-app.use(cors());
-app.use(express.json({ limit: "2mb" }));      // ◀ allow JSON body
 
-app.use("/api", chatRouter);                  // →  /api/chat
+app.use(cors());              // allow Squarespace origin
+app.use(express.json({limit:"12mb"}));
+app.use("/api", chat);
 
-app.listen(PORT, () => {
-  console.log(`⚡  Johnny-Chat listening on ${PORT}`);
-});
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log("Johnny-Chat up on", PORT));

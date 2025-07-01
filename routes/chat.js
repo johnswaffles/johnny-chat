@@ -1,64 +1,75 @@
-// routes/chat.js  ── o4-mini chat + gpt-4.1-mini vision
-import { Router } from "express";
-import multer from "multer";
-import OpenAI from "openai";
+/* routes/chat.js — o4-mini text + gpt-4.1-mini vision */
 
-const router      = Router();
-const upload      = multer();                 // memory storage
-const openai      = new OpenAI();
-const TEXT_MODEL  = process.env.TEXT_MODEL  || "o4-mini";
-const VISION_MODEL= process.env.VISION_MODEL|| "gpt-4.1-mini";
-const BETA_HDR    = process.env.OPENAI_BETA || "assistants=v2";
+import { Router }   from "express";
+import fetch        from "node-fetch";       // v3 ( ESM )
+import multer       from "multer";
+import fs           from "fs/promises";
+import path         from "path";
 
-/* ------------- text chat ------------------------------------------------ */
-router.post("/chat", async (req, res) => {
+const router   = Router();
+const OPENAI   = process.env.OPENAI_API_KEY;
+const BETA_HDR = process.env.OPENAI_BETA   || "assistants=v2";
+
+const TEXT_MODEL   = process.env.TEXT_MODEL   || "o4-mini";
+const VISION_MODEL = process.env.VISION_MODEL || "gpt-4.1-mini";
+const RESP_URL     = "https://api.openai.com/v1/responses";
+
+const upload = multer({ dest: "/tmp" });
+
+/* ----------------------------------------------
+   POST /api/chat           → text only
+   POST /api/chat (file)    → vision
+------------------------------------------------*/
+router.post("/chat", upload.single("image"), async (req, res) => {
   try {
-    const { input } = req.body;
-    if (!input) return res.status(400).json({ error: "input required" });
+    /* 1️⃣ build input array */
+    const inputArr = [
+      { type: "input_text", text: req.body.prompt || "Hello" }
+    ];
 
-    const response = await openai.responses.create({
-      model: TEXT_MODEL,
-      input,
-      tools: [{ type: "web_search" }]
-    },{
-      headers: { "OpenAI-Beta": BETA_HDR }
+    /* optional vision */
+    if (req.file) {
+      const b64 = (await fs.readFile(req.file.path)).toString("base64");
+      const ext = path.extname(req.file.originalname).replace(".","") || "png";
+      inputArr.push({
+        type : "input_image",
+        image_url : `data:image/${ext};base64,${b64}`
+      });
+    }
+
+    /* 2️⃣ choose correct model */
+    const model = req.file ? VISION_MODEL : TEXT_MODEL;
+
+    /* 3️⃣ hit Responses API */
+    const r = await fetch(RESP_URL,{
+      method:"POST",
+      headers:{
+        Authorization:`Bearer ${OPENAI}`,
+        "Content-Type":"application/json",
+        "OpenAI-Beta":BETA_HDR
+      },
+      body:JSON.stringify({
+        model,
+        input:inputArr,
+        tools:req.file ? []:[{type:"web_search"}]   // text calls get search
+      })
     });
 
-    const reply = response.output_text || response.choices?.[0]?.message?.content?.[0]?.text;
+    if(!r.ok){
+      const err = await r.json();
+      return res.status(500).json({ error: err.error?.message || "OpenAI error" });
+    }
+
+    const data = await r.json();
+    const reply = data.output_text ||                // vision answer
+                  data.choices?.[0]?.message?.content?.[0]?.text || // text answer
+                  "(no reply)";
     res.json({ reply });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || "OpenAI error" });
-  }
-});
-
-/* ------------- image upload (vision) ------------------------------------ */
-router.post("/vision", upload.single("image"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "image required" });
-
-    const b64 = req.file.buffer.toString("base64");
-    const dataUrl = `data:${req.file.mimetype};base64,${b64}`;
-
-    const response = await openai.responses.create({
-      model: VISION_MODEL,
-      input: [
-        {
-          role: "user",
-          content: [
-            { type: "input_text",  text: req.body.prompt || "What’s in this image?" },
-            { type: "input_image", image_url: dataUrl }
-          ]
-        }
-      ]
-    },{
-      headers: { "OpenAI-Beta": BETA_HDR }
-    });
-
-    res.json({ reply: response.output_text });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || "OpenAI error" });
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (req.file) fs.rm(req.file.path, { force:true });
   }
 });
 
