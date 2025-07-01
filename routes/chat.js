@@ -1,49 +1,44 @@
-import { Router } from 'express';
-import fetch from 'node-fetch';
+// chat.js  – Lightweight helper for the Squarespace Code block
 
-const router = Router();
+const API_URL = "https://johnny-chat.onrender.com/api/chat";   // change if your Render URL differs
+const chatBox = document.querySelector("#chat-box");
+const form    = document.querySelector("#ask-form");
+const input   = document.querySelector("#ask-input");
 
-const OPENAI_KEY   = process.env.OPENAI_API_KEY;
-const RESP_URL     = 'https://api.openai.com/v1/responses';
-const BETA_HEADER  = 'assistants=v2';
-const TEXT_MODEL   = process.env.TEXT_MODEL  || 'o4-mini';
-const TOOL_SPEC    = [{ type: 'web_search' }];
+function bubble(html, mine = false) {
+  const div = document.createElement("div");
+  div.className = mine ? "msg mine" : "msg";
+  div.innerHTML = html;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-router.post('/chat', async (req, res) => {
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  bubble(text, true);            // user
+  const loading = document.createElement("div");
+  loading.className = "loader";
+  chatBox.appendChild(loading);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
   try {
-    const { input } = req.body;
-    if (!input?.trim()) return res.status(400).json({ error: 'input required' });
-
-    const body = {
-      model: TEXT_MODEL,
-      input,
-      tools: TOOL_SPEC
-    };
-
-    const r = await fetch(RESP_URL, {
-      method: 'POST',
-      headers: {
-        Authorization : `Bearer ${OPENAI_KEY}`,
-        'Content-Type': 'application/json',
-        'OpenAI-Beta' : BETA_HEADER
-      },
-      body: JSON.stringify(body)
+    const r   = await fetch(API_URL, {
+      method : "POST",
+      headers: { "Content-Type": "application/json" },
+      body   : JSON.stringify({ input: text })
     });
-
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
-      return res.status(r.status).json({ error: err.error?.message || r.statusText });
+    const out = await r.json();
+    loading.remove();
+    if (r.ok) {
+      bubble(out.reply);
+    } else {
+      bubble(`<b>⚠️ Server error</b><br>${out.error || r.statusText}`);
     }
-
-    const data  = await r.json();
-    const reply = data?.output?.[0]?.text
-               ?? data?.choices?.[0]?.message?.content?.[0]?.text
-               ?? '(no content)';
-    res.json({ reply });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    loading.remove();
+    bubble(`<b>⚠️ Network error</b><br>${err.message}`);
   }
 });
-
-export default router;
