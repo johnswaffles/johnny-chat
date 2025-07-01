@@ -1,92 +1,64 @@
-/* routes/chat.js ─ text, image-gen & vision (gpt-4-1-mini)
-   ───────────────────────────────────────────────────────── */
-
+// routes/chat.js  ── o4-mini chat + gpt-4.1-mini vision
 import { Router } from "express";
-import fetch from "node-fetch";     // node 18+  → “node-fetch@3”
+import multer from "multer";
 import OpenAI from "openai";
 
-const router = Router();
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const router      = Router();
+const upload      = multer();                 // memory storage
+const openai      = new OpenAI();
+const TEXT_MODEL  = process.env.TEXT_MODEL  || "o4-mini";
+const VISION_MODEL= process.env.VISION_MODEL|| "gpt-4.1-mini";
+const BETA_HDR    = process.env.OPENAI_BETA || "assistants=v2";
 
-const TEXT_MODEL   = process.env.TEXT_MODEL   || "o4-mini";
-const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
-const VISION_MODEL = process.env.VISION_MODEL || "gpt-4-1-mini"; // multi-modal
-
-/* A *very* small heuristic:
-   ─ if user sent an image_url (or data-URL) ➜ vision
-   ─ elseif prompt looks like “draw/make/create an image/picture/photo/…”
-     ➜ image generation
-   ─ else regular text model
-*/
-function chooseMode({ input, image_url }) {
-  if (image_url) return "vision";
-  const trigger = /(generate|create|draw|make).*(image|picture|photo|logo|icon)/i;
-  return trigger.test(input) ? "image" : "text";
-}
-
-/*──────── POST /api/chat ─────────*/
+/* ------------- text chat ------------------------------------------------ */
 router.post("/chat", async (req, res) => {
   try {
-    const { input = "", image_url } = req.body;
-    if (!input && !image_url) {
-      return res.status(400).json({ error: "input text or image_url required" });
-    }
+    const { input } = req.body;
+    if (!input) return res.status(400).json({ error: "input required" });
 
-    const mode = chooseMode({ input, image_url });
+    const response = await openai.responses.create({
+      model: TEXT_MODEL,
+      input,
+      tools: [{ type: "web_search" }]
+    },{
+      headers: { "OpenAI-Beta": BETA_HDR }
+    });
 
-    let response;
+    const reply = response.output_text || response.choices?.[0]?.message?.content?.[0]?.text;
+    res.json({ reply });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "OpenAI error" });
+  }
+});
 
-    /*──────────────────────────────── TEXT ───────────────────────────────*/
-    if (mode === "text") {
-      response = await openai.chat.completions.create({
-        model: TEXT_MODEL,
-        tools: [{ type: "web_search" }],
-        messages: [{ role: "user", content: input }],
-      });
+/* ------------- image upload (vision) ------------------------------------ */
+router.post("/vision", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "image required" });
 
-      const text = response.choices[0].message.content;
-      return res.json({ reply: text });
-    }
+    const b64 = req.file.buffer.toString("base64");
+    const dataUrl = `data:${req.file.mimetype};base64,${b64}`;
 
-    /*───────────────────────────── IMAGE-GEN ─────────────────────────────*/
-    if (mode === "image") {
-      response = await openai.responses.create({
-        model: IMAGE_MODEL,
-        input,
-        tools: [{ type: "image_generation" }],
-      });
-
-      const imgCall = response.output.find(o => o.type === "image_generation_call");
-
-      if (!imgCall) throw new Error("image_generation_call not found");
-
-      return res.json({
-        reply: "Here you go!",
-        image_base64: imgCall.image,
-        mimetype: "image/png",
-      });
-    }
-
-    /*──────────────────────────────── VISION ─────────────────────────────*/
-    // mode === "vision"
-    response = await openai.responses.create({
+    const response = await openai.responses.create({
       model: VISION_MODEL,
       input: [
         {
           role: "user",
           content: [
-            { type: "input_text",  text: input || "What’s in this image?" },
-            { type: "input_image", image_url },
-          ],
-        },
-      ],
+            { type: "input_text",  text: req.body.prompt || "What’s in this image?" },
+            { type: "input_image", image_url: dataUrl }
+          ]
+        }
+      ]
+    },{
+      headers: { "OpenAI-Beta": BETA_HDR }
     });
 
-    const visionText = response.output_text;
-    return res.json({ reply: visionText });
+    res.json({ reply: response.output_text });
   } catch (err) {
-    console.error("OpenAI error:", err);
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: err.message || "OpenAI error" });
   }
 });
 
