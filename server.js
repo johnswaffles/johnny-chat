@@ -1,57 +1,139 @@
-/*  server.js – Just Ask Johnny backend
-    ────────────────────────────────────
-    ▸ ESM modules (Node 22+)
-    ▸ CORS (Squarespace & localhost)
-    ▸ JSON + multipart (for image uploads / vision)
-    ▸ Routes mounted under /api
-*/
-
+// server.js – Express back-end for JustAskJohnny
 import express from "express";
-import dotenv   from "dotenv";
-import cors     from "cors";
-import multiparty from "multiparty";             // ← npm i multiparty
-import fs      from "fs/promises";
-import chatRouter from "./routes/chat.js";       // text / vision / image-gen
+import cors    from "cors";
+import fetch   from "node-fetch";
+import multiparty from "multiparty";
+import fs from "node:fs/promises";
+import path from "node:path";
 
-dotenv.config();
+const app  = express();
+const PORT = process.env.PORT || 10_000;
 
-const {
-  PORT           = 10_000,                       // Render picks its own port – keep this fallback for local dev
-  ALLOWED_ORIGIN = "http://localhost:3000,https://www.justaskjohnny.com",
-} = process.env;
+/* ─────────────────────────────────────────────
+   ENVIRONMENT VARIABLES (from Render)
+   ───────────────────────────────────────────── */
+const OPENAI_KEY      = process.env.OPENAI_API_KEY;
+const TEXT_MODEL      = process.env.TEXT_MODEL   || "o4-mini";
+const IMAGE_MODEL     = process.env.IMAGE_MODEL  || "gpt-image-1";
+const VISION_MODEL    = process.env.VISION       || "gpt-4-1-mini";
+const OPENAI_BETA     = process.env.OPENAI_BETA  || "assistants=v2";
 
-const app = express();
+/* ───────────────────────────────────────────── */
+app.use(cors({ origin: "*", credentials: true }));
+app.use(express.json({ limit: "10mb" }));           // JSON body-parsing
 
-/*───────────────────────────────────────────────────────────────────────────
-  Middleware
-  ──────────────────────────────────────────────────────────────────────────*/
-app.use(
-  cors({
-    origin: ALLOWED_ORIGIN.split(",").map(s => s.trim()),
-    methods: ["GET", "POST", "OPTIONS"],
-    credentials: true,
-  }),
-);
+/* ==  TEXT (standard chat)  == */
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { input, model = TEXT_MODEL } = req.body;
+    if (!input) { return res.status(400).json({ error: "input required" }); }
 
-app.use(express.json({ limit: "10mb" }));        // JSON bodies (chat requests)
+    const body = {
+      model,
+      input,
+      tools: [{ type: "web_search" }],               // live search
+    };
 
-/* optional multipart endpoint if you want to POST raw images
-   Squarespace uses XMLHttpRequest → FormData for uploads, so we expose /api/upload
-   and return a base64 data-URL that front-end can immediately hand to /api/chat
-*/
-app.post("/api/upload", (req, res) => {
-  const form = new multiparty.Form();
-  form.parse(req, async (err, fields, files) => {
+    const r = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization : `Bearer ${OPENAI_KEY}`,
+        "Content-Type": "application/json",
+        "OpenAI-Beta" : OPENAI_BETA
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!r.ok) {
+      const msg = await r.text();
+      return res.status(500).json({ error: msg });
+    }
+
+    const data   = await r.json();
+    const reply  = data.output?.[0]?.text ?? data.choices?.[0]?.message?.content?.[0]?.text;
+    return res.json({ reply });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ==  IMAGE GENERATION  == */
+app.post("/api/generate-image", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) { return res.status(400).json({ error: "prompt required" }); }
+
+    const body = {
+      model : IMAGE_MODEL,
+      input : prompt,
+      tools : [{ type: "image_generation" }]
+    };
+
+    const r = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization : `Bearer ${OPENAI_KEY}`,
+        "Content-Type": "application/json",
+        "OpenAI-Beta" : OPENAI_BETA
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!r.ok) {
+      const msg = await r.text();
+      return res.status(500).json({ error: msg });
+    }
+
+    const data       = await r.json();
+    const imgBase64  = data.output?.find(o => o.type === "image_generation_call")?.result;
+    if (!imgBase64)  { return res.status(500).json({ error: "no image generated" }); }
+
+    res.json({ image: `data:image/png;base64,${imgBase64}` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ==  IMAGE UPLOAD + VISION  == */
+app.post("/api/vision", (req, res) => {
+  new multiparty.Form().parse(req, async (err, fields, files) => {
     try {
       if (err) throw err;
-      const file = files?.image?.[0];
-      if (!file) return res.status(400).json({ error: "No image file found (name it 'image')" });
+      const question = fields.question?.[0] || "What’s in this image?";
+      const file     = files.image?.[0];
+      if (!file) return res.status(400).json({ error: "image file required" });
 
-      const buffer = await fs.readFile(file.path);
-      const b64    = buffer.toString("base64");
-      // Example data-URL – front-end should send this under input.image_url
-      const dataURL = `data:${file.headers["content-type"]};base64,${b64}`;
-      res.json({ dataURL });
+      const b64 = await fs.readFile(file.path, { encoding: "base64" });
+
+      const body = {
+        model : VISION_MODEL,
+        input : [
+          {
+            role   : "user",
+            content: [
+              { type: "input_text",  text: question },
+              { type: "input_image", image_url: `data:image/${path.extname(file.originalFilename).slice(1)};base64,${b64}` }
+            ]
+          }
+        ]
+      };
+
+      const r = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization : `Bearer ${OPENAI_KEY}`,
+          "Content-Type": "application/json",
+          "OpenAI-Beta" : OPENAI_BETA
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!r.ok) { return res.status(500).json({ error: await r.text() }); }
+      const data  = await r.json();
+      const reply = data.output_text || data.output?.[0]?.text;
+      res.json({ reply });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: e.message });
@@ -59,13 +141,5 @@ app.post("/api/upload", (req, res) => {
   });
 });
 
-/*───────────────────────────────────────────────────────────────────────────
-  Chat / Vision / Image-generation routes
-  ──────────────────────────────────────────────────────────────────────────*/
-app.use("/api", chatRouter);
-
-/* Health-check route (handy for Render) */
-app.get("/", (_req, res) => res.send("Just Ask Johnny API 💜"));
-
-/*───────────────────────────────────────────────────────────────────────────*/
-app.listen(PORT, () => console.log(`✅  Server running on port ${PORT}`));
+/* ───── Start server ───── */
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));
