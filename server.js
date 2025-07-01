@@ -1,19 +1,15 @@
-/* server.js ― tiny Express API */
+/* server.js  –– minimal Express wrapper */
 import express  from "express";
 import cors     from "cors";
-import chatRoute from "./routes/chat.js";
+import chatRoutes from "./routes/chat.js";
 
+const app  = express();
 const PORT = process.env.PORT || 3000;
 
-const app = express();
 app.use(cors());
-app.use(express.json());               //  <-- accepts JSON
-app.use(express.urlencoded({ extended: true })); //  <-- accepts form-URL-encoded
+app.use(express.json({ limit: "2mb" }));     // Squarespace sends JSON
+app.use("/api", chatRoutes);
 
-app.use("/api", chatRoute);            //  /api/chat
+app.get("/", (_, res) => res.send("Johnny-Chat API v2 running."));
 
-app.get("/", (_req, res) => res.status(200).send("Johnny-Chat is up"));
-
-app.listen(PORT, () => {
-  console.log(`✅  API listening on :${PORT}`);
-});
+app.listen(PORT, () => console.log(`API listening on :${PORT}`));

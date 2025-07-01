@@ -1,46 +1,47 @@
-/* routes/chat.js ― o4-mini + web_search (stateless) */
+/* routes/chat.js  –– o4-mini + live web_search  (stateless) */
 import { Router } from "express";
-import fetch from "node-fetch";
+import fetch        from "node-fetch";
 
-const router = Router();
+const router   = Router();
+const OPENAI   = process.env.OPENAI_API_KEY;
+const RESP_URL = "https://api.openai.com/v1/responses";
 
-const OPENAI = process.env.OPENAI_API_KEY;
-const MODEL  = process.env.TEXT_MODEL || "o4-mini";
-const OPENAI_BETA = "assistants=v2";            // tool-use header
-const ENDPOINT    = "https://api.openai.com/v1/responses";
+/* The header is still required for tool usage */
+const BETA_HDR = "assistants=v2";
 
 router.post("/chat", async (req, res) => {
   try {
-    const input = (req.body.input || "").trim();
+    const { input, model = process.env.TEXT_MODEL || "o4-mini" } = req.body;
     if (!input) return res.status(400).json({ error: "input required" });
 
     const body = {
-      model: MODEL,
+      model,
       input,
-      tools: [{ type: "web_search" }]
+      tools: [{ type: "web_search" }]     // enable live search
     };
 
-    const r = await fetch(ENDPOINT, {
+    const r = await fetch(RESP_URL, {
       method: "POST",
       headers: {
         Authorization : `Bearer ${OPENAI}`,
         "Content-Type": "application/json",
-        "OpenAI-Beta" : OPENAI_BETA
+        "OpenAI-Beta" : BETA_HDR
       },
       body: JSON.stringify(body)
     });
 
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
-      return res.status(r.status).json({ error: err?.error?.message || `OpenAI ${r.status}` });
+      console.error(err);
+      return res.status(r.status).json({ error: err.error?.message || "OpenAI error" });
     }
 
     const data  = await r.json();
-    const reply = data.output_text || data.choices?.[0]?.message?.content || "";
-    res.json({ reply: reply.trim() });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message });
+    const reply = data.output?.text || data.choices?.[0]?.message?.content?.[0]?.text || "";
+    res.json({ reply });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 });
 
