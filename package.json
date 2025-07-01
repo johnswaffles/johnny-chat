@@ -9,6 +9,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.1",
     "express": "^4.19.2",
+    "multiparty": "^4.2.3",
     "node-fetch": "^3.3.2"
   }
 }
