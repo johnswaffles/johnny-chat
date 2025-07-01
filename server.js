@@ -1,16 +1,19 @@
-/* server.js — minimal */
+/* server.js ― tiny Express API */
+import express  from "express";
+import cors     from "cors";
+import chatRoute from "./routes/chat.js";
 
-import express from "express";
-import cors    from "cors";
-import dotenv  from "dotenv";
-import chat    from "./routes/chat.js";
+const PORT = process.env.PORT || 3000;
 
-dotenv.config();
 const app = express();
+app.use(cors());
+app.use(express.json());               //  <-- accepts JSON
+app.use(express.urlencoded({ extended: true })); //  <-- accepts form-URL-encoded
 
-app.use(cors());              // allow Squarespace origin
-app.use(express.json({limit:"12mb"}));
-app.use("/api", chat);
+app.use("/api", chatRoute);            //  /api/chat
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log("Johnny-Chat up on", PORT));
+app.get("/", (_req, res) => res.status(200).send("Johnny-Chat is up"));
+
+app.listen(PORT, () => {
+  console.log(`✅  API listening on :${PORT}`);
+});
