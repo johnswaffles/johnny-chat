@@ -1,44 +1,71 @@
-/* ---------------------------------------------------------
-   server.js  — Express API for “Just Ask Johnny”
-   ---------------------------------------------------------
-   • CORS: allows Squarespace front-end only
-   • JSON body-parsing
-   • Route  /api/chat      → ./routes/chat.js   (o4-mini text + gpt-4.1-mini vision + gpt-image-1)
-   • Health /             → simple “OK” check
-----------------------------------------------------------*/
+/*  server.js – Just Ask Johnny backend
+    ────────────────────────────────────
+    ▸ ESM modules (Node 22+)
+    ▸ CORS (Squarespace & localhost)
+    ▸ JSON + multipart (for image uploads / vision)
+    ▸ Routes mounted under /api
+*/
 
 import express from "express";
-import cors    from "cors";
-import dotenv  from "dotenv";
-import chatRoute from "./routes/chat.js";
+import dotenv   from "dotenv";
+import cors     from "cors";
+import multiparty from "multiparty";             // ← npm i multiparty
+import fs      from "fs/promises";
+import chatRouter from "./routes/chat.js";       // text / vision / image-gen
 
 dotenv.config();
 
-const app  = express();
-const PORT = process.env.PORT || 10000;
+const {
+  PORT           = 10_000,                       // Render picks its own port – keep this fallback for local dev
+  ALLOWED_ORIGIN = "http://localhost:3000,https://www.justaskjohnny.com",
+} = process.env;
 
-/* ----------  CORS for Squarespace  ---------- */
+const app = express();
+
+/*───────────────────────────────────────────────────────────────────────────
+  Middleware
+  ──────────────────────────────────────────────────────────────────────────*/
 app.use(
   cors({
-    origin : "https://www.justaskjohnny.com",     // ← put your live Squarespace URL here
+    origin: ALLOWED_ORIGIN.split(",").map(s => s.trim()),
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: false,
-    preflightContinue: false
-  })
+    credentials: true,
+  }),
 );
 
-/* Express automatically answers the OPTIONS pre-flight */
-app.options("*", cors());
+app.use(express.json({ limit: "10mb" }));        // JSON bodies (chat requests)
 
-/* ----------  middleware  ---------- */
-app.use(express.json({ limit: "8mb" }));          // allow image base64 in vision calls
+/* optional multipart endpoint if you want to POST raw images
+   Squarespace uses XMLHttpRequest → FormData for uploads, so we expose /api/upload
+   and return a base64 data-URL that front-end can immediately hand to /api/chat
+*/
+app.post("/api/upload", (req, res) => {
+  const form = new multiparty.Form();
+  form.parse(req, async (err, fields, files) => {
+    try {
+      if (err) throw err;
+      const file = files?.image?.[0];
+      if (!file) return res.status(400).json({ error: "No image file found (name it 'image')" });
 
-/* ----------  routes  ---------- */
-app.get("/", (_req, res) => res.send("Just Ask Johnny backend: OK"));
-app.use("/api", chatRoute);
-
-/* ----------  start  ---------- */
-app.listen(PORT, () => {
-  console.log(`⚡  Johnny-chat server running on port ${PORT}`);
+      const buffer = await fs.readFile(file.path);
+      const b64    = buffer.toString("base64");
+      // Example data-URL – front-end should send this under input.image_url
+      const dataURL = `data:${file.headers["content-type"]};base64,${b64}`;
+      res.json({ dataURL });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
+  });
 });
+
+/*───────────────────────────────────────────────────────────────────────────
+  Chat / Vision / Image-generation routes
+  ──────────────────────────────────────────────────────────────────────────*/
+app.use("/api", chatRouter);
+
+/* Health-check route (handy for Render) */
+app.get("/", (_req, res) => res.send("Just Ask Johnny API 💜"));
+
+/*───────────────────────────────────────────────────────────────────────────*/
+app.listen(PORT, () => console.log(`✅  Server running on port ${PORT}`));
