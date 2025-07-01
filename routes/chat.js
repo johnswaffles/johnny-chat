@@ -1,43 +1,44 @@
-/* routes/chat.js  –– o4-mini + live web_search  (stateless) */
-import { Router } from "express";
-import fetch        from "node-fetch";
+import { Router } from 'express';
+import fetch from 'node-fetch';
 
-const router   = Router();
-const OPENAI   = process.env.OPENAI_API_KEY;
-const RESP_URL = "https://api.openai.com/v1/responses";
+const router = Router();
 
-/* The header is still required for tool usage */
-const BETA_HDR = "assistants=v2";
+const OPENAI_KEY   = process.env.OPENAI_API_KEY;
+const RESP_URL     = 'https://api.openai.com/v1/responses';
+const BETA_HEADER  = 'assistants=v2';
+const TEXT_MODEL   = process.env.TEXT_MODEL  || 'o4-mini';
+const TOOL_SPEC    = [{ type: 'web_search' }];
 
-router.post("/chat", async (req, res) => {
+router.post('/chat', async (req, res) => {
   try {
-    const { input, model = process.env.TEXT_MODEL || "o4-mini" } = req.body;
-    if (!input) return res.status(400).json({ error: "input required" });
+    const { input } = req.body;
+    if (!input?.trim()) return res.status(400).json({ error: 'input required' });
 
     const body = {
-      model,
+      model: TEXT_MODEL,
       input,
-      tools: [{ type: "web_search" }]     // enable live search
+      tools: TOOL_SPEC
     };
 
     const r = await fetch(RESP_URL, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        Authorization : `Bearer ${OPENAI}`,
-        "Content-Type": "application/json",
-        "OpenAI-Beta" : BETA_HDR
+        Authorization : `Bearer ${OPENAI_KEY}`,
+        'Content-Type': 'application/json',
+        'OpenAI-Beta' : BETA_HEADER
       },
       body: JSON.stringify(body)
     });
 
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
-      console.error(err);
-      return res.status(r.status).json({ error: err.error?.message || "OpenAI error" });
+      return res.status(r.status).json({ error: err.error?.message || r.statusText });
     }
 
     const data  = await r.json();
-    const reply = data.output?.text || data.choices?.[0]?.message?.content?.[0]?.text || "";
+    const reply = data?.output?.[0]?.text
+               ?? data?.choices?.[0]?.message?.content?.[0]?.text
+               ?? '(no content)';
     res.json({ reply });
   } catch (err) {
     console.error(err);
