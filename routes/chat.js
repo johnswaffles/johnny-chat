@@ -1,5 +1,8 @@
-/*  /api/chat  –  o4-mini (text ↔ web_search) + gpt-4o-mini (vision / img gen)
-    ------------------------------------------------------------------------ */
+/*  /api/chat
+    ───────────────────────────────────────────────────────────────
+    • plain Q&A  : o4-mini  (text + live web_search)
+    • vision /   : gpt-4o-mini  (input_image / image_generation)
+    ---------------------------------------------------------------- */
 
 import { Router } from "express";
 const router = Router();
@@ -10,21 +13,21 @@ const MULTI_MODEL = process.env.MULTIMODAL_MODEL || "gpt-4o-mini";
 const BETA_HDR    = process.env.OPENAI_BETA      || "assistants=v2";
 const RESP_URL    = "https://api.openai.com/v1/responses";
 
-/* ------------------------------------------------------------------------ */
+/* ---------------------------------------------------------------- */
 router.post("/chat", async (req, res) => {
   try {
     const { input = "", wantImage = false, imageBase64 = null } = req.body;
     if (!input && !imageBase64)
       return res.status(400).json({ error: "input or image required" });
 
-    /* choose model + tools */
-    const needsMulti = wantImage || imageBase64;
+    /* choose model & tools */
+    const needsMulti = wantImage || !!imageBase64;
     const model      = needsMulti ? MULTI_MODEL : TEXT_MODEL;
 
     const tools = [{ type: "web_search" }];
     if (wantImage) tools.push({ type: "image_generation" });
 
-    /* ----- build messages (v2 schema) --------------------------- */
+    /* ----- build messages (assistants-v2 schema) ---------------- */
     let messages = [{
       role   : "user",
       content: [{ type: "input_text", text: input }]
@@ -32,17 +35,20 @@ router.post("/chat", async (req, res) => {
 
     if (imageBase64) {
       messages = [{
-        role: "user",
+        role   : "user",
         content: [
-          {
-            type      : "input_image",
-            image_url : `data:image/png;base64,${imageBase64}`   // **string**
-          },
+          { type: "input_image",
+            image_url: `data:image/png;base64,${imageBase64}` },
           { type: "input_text",
             text: input || "Please describe this image." }
         ]
       }];
     }
+
+    /* when user explicitly wants an image, force the tool */
+    const toolChoice = wantImage ? "image_generation" : "auto";
+
+    const body = { model, input: messages, tools, tool_choice: toolChoice };
 
     /* ----- call OpenAI ----------------------------------------- */
     const r = await fetch(RESP_URL, {
@@ -52,7 +58,7 @@ router.post("/chat", async (req, res) => {
         "Content-Type": "application/json",
         "OpenAI-Beta" : BETA_HDR
       },
-      body: JSON.stringify({ model, input: messages, tools })
+      body: JSON.stringify(body)
     });
 
     if (!r.ok) {
@@ -80,5 +86,5 @@ router.post("/chat", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-/* ------------------------------------------------------------------------ */
+/* ---------------------------------------------------------------- */
 export default router;
