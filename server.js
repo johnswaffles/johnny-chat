@@ -11,6 +11,38 @@ const PORT = process.env.PORT || 3000;
 const CONFIGURED_MODEL =
   process.env.CHAT_MODEL || process.env.TEXT_MODEL || 'gpt-5-mini';
 
+/* -----------------------------
+   Output & behavior guidelines
+------------------------------*/
+const SYSTEM_PROMPT = `
+You are a concise, helpful assistant for justaskjohnny.com.
+
+GENERAL
+- Be accurate and direct. If you’re not certain about a specific fact, say so and suggest how to verify it.
+- Use clean, scannable formatting (short paragraphs or bullet lists).
+- Make links clickable using Markdown: [Title](https://example.com).
+
+RESTAURANTS (VERY IMPORTANT)
+- When the user asks about restaurants (any request for places to eat, “best restaurants”, “where to eat”, etc.), ALWAYS provide, for each place, if available:
+  • Name
+  • Phone number (format: (###) ###-####)
+  • Full street address (with city & state)
+  • Website (official when possible) — show as a clickable Markdown link
+  • Optional: Google Maps link as a secondary link
+- If any field cannot be verified, write “not found” rather than guessing.
+- Prefer official sources (restaurant site, Google Business, the venue’s social page) over aggregators.
+
+WEATHER (VERY IMPORTANT)
+- Default to U.S. units ONLY (°F, mph, inches). Do NOT show Celsius unless the user explicitly asks for it.
+- Present the report in a friendly local-TV meteorologist style:
+  • Lead with the headline and the current/near-term conditions.
+  • Give today’s high/low, feels-like, wind, humidity, and precip chances.
+  • Brief daypart breakdown (morning/afternoon/evening/overnight) when useful.
+  • Mention any watches/warnings if the user hints at severe weather.
+- If you don’t have live data, say that you may not have real-time access and offer to look it up if tools/search are available.
+`;
+
+/* -------------------- app & client -------------------- */
 const app = express();
 app.use(express.json());
 
@@ -24,6 +56,7 @@ app.use(cors({
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+/* ------------- last-seen model/status cache ------------ */
 const lastLLM = {
   model: null,
   system_fingerprint: null,
@@ -39,13 +72,15 @@ function logLLM(prefix, { model, fingerprint, usage, latency }) {
       (usage?.total_tokens != null
         ? ` tokens total=${usage.total_tokens} (prompt=${usage.prompt_tokens ?? 0}, completion=${usage.completion_tokens ?? 0})`
         : '') +
-      (latency != null ? ` latency=${latency}ms` : '')
+      (latency != null ? ` latency=${latency}ms`
+        : '')
   );
 }
 
-/* ===========================================
-   1) Classic Chat (no tools)
-=========================================== */
+/* =======================================================
+   1) Classic Chat Completions (no tools)
+   - Prepends SYSTEM_PROMPT so the bot follows your rules
+======================================================= */
 app.post(['/chat', '/api/chat'], async (req, res) => {
   const t0 = Date.now();
 
@@ -59,10 +94,13 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
 
   if (!messages.length) return res.status(400).json({ error: 'No input or message history provided' });
 
+  // Always inject our behavior guide at the front
+  const withSystem = [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
+
   try {
     const completion = await openai.chat.completions.create({
       model: CONFIGURED_MODEL,
-      messages
+      messages: withSystem
     });
 
     const usedModel = completion.model || CONFIGURED_MODEL;
@@ -91,11 +129,12 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
   }
 });
 
-/* ==========================================================
-   2) SAFE real-time route (no hard-required tools)
-      - Enables web_search but NEVER "requires" it.
-      - If Responses API or tools error, FALL BACK to classic chat.
-========================================================== */
+/* =====================================================================
+   2) SAFE “real-time” route (optional tools, never required) – /api/chat2
+   - Enables web_search (if available to your account), but NEVER forces it.
+   - If Responses API/tooling fails, falls back to classic chat.
+   - Also injects SYSTEM_PROMPT for restaurant & weather behavior.
+===================================================================== */
 app.post(['/api/chat2'], async (req, res) => {
   const t0 = Date.now();
   try {
@@ -104,7 +143,7 @@ app.post(['/api/chat2'], async (req, res) => {
     if (!userInput && history.length === 0) return res.status(400).json({ error: 'No input' });
 
     const input = [
-      { role: 'system', content: 'You are a concise, helpful assistant. Use web search only when clearly necessary.' },
+      { role: 'system', content: SYSTEM_PROMPT },
       ...history,
       { role: 'user', content: userInput }
     ];
@@ -114,10 +153,11 @@ app.post(['/api/chat2'], async (req, res) => {
       r = await openai.responses.create({
         model: CONFIGURED_MODEL,
         input,
-        tools: [{ type: 'web_search' }], // allowed
-        tool_choice: 'auto'              // never "required"
+        tools: [{ type: 'web_search' }], // allowed, not required
+        tool_choice: 'auto'
       });
     } catch (toolErr) {
+      // Graceful fallback to Completions if Responses/tooling isn't available
       console.warn('responses.create failed; falling back to chat:', toolErr?.response?.data || toolErr);
 
       const completion = await openai.chat.completions.create({
@@ -181,7 +221,7 @@ app.post(['/api/chat2'], async (req, res) => {
   }
 });
 
-/* ----------- Health / Status / Debug ----------- */
+/* -------------------- Health / Status / Debug -------------------- */
 app.get(['/health', '/api/health'], (_req, res) => {
   res.json({ status: 'ok', model: CONFIGURED_MODEL });
 });
