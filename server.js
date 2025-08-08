@@ -4,11 +4,12 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import os from 'os';
+import fetch from 'node-fetch'; // For web requests
 
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-const CONFIGURED_MODEL = process.env.CHAT_MODEL || process.env.TEXT_MODEL || 'gpt-4.1-mini';
+const CONFIGURED_MODEL = process.env.CHAT_MODEL || process.env.TEXT_MODEL || 'gpt-5-mini';
 
 const app = express();
 app.use(express.json());
@@ -31,6 +32,7 @@ const lastLLM = {
   latency_ms: null
 };
 
+// Main Chat Endpoint
 app.post(['/chat', '/api/chat'], async (req, res) => {
   const t0 = Date.now();
 
@@ -79,10 +81,36 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
   }
 });
 
+// Real-Time Info (Web Search Simulation) Endpoint
+app.post(['/realtime', '/api/realtime'], async (req, res) => {
+  const query = req.body.query;
+  if (!query) return res.status(400).json({ error: 'No query provided' });
+
+  try {
+    // Example: Fetch Bing search results (replace with your search API if desired)
+    const searchApiKey = process.env.BING_API_KEY; // Set in .env
+    const url = `https://api.bing.microsoft.com/v7.0/search?q=${encodeURIComponent(query)}`;
+
+    const searchRes = await fetch(url, {
+      headers: { 'Ocp-Apim-Subscription-Key': searchApiKey }
+    });
+
+    if (!searchRes.ok) throw new Error(`Search API error: ${searchRes.statusText}`);
+    const data = await searchRes.json();
+
+    res.json({ query, results: data });
+  } catch (error) {
+    console.error('Realtime search error:', error);
+    res.status(500).json({ error: 'Realtime search failed' });
+  }
+});
+
+// Health Check
 app.get(['/health', '/api/health'], (_req, res) => {
   res.json({ status: 'ok', model: CONFIGURED_MODEL });
 });
 
+// Status Check
 app.get(['/status', '/api/status'], (_req, res) => {
   res.json({
     configuredModel: CONFIGURED_MODEL,
@@ -97,6 +125,7 @@ app.get(['/status', '/api/status'], (_req, res) => {
   });
 });
 
+// Whoami
 app.get('/__whoami', (_req, res) => {
   res.json({
     ok: true,
