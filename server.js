@@ -1,19 +1,51 @@
-// server.js — chat + web tools (no image upload)
+// server.js
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import os from 'os';
-import cheerio from 'cheerio';
-import RSSParser from 'rss-parser';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-const CONFIGURED_MODEL = process.env.CHAT_MODEL || process.env.TEXT_MODEL || 'gpt-4.1-mini';
+const CONFIGURED_MODEL =
+  process.env.CHAT_MODEL || process.env.TEXT_MODEL || 'gpt-5-mini';
 
+/* -----------------------------
+   Output & behavior guidelines
+------------------------------*/
+const SYSTEM_PROMPT = `
+You are a concise, helpful assistant for justaskjohnny.com.
+
+GENERAL
+- Be accurate and direct. If you’re not certain about a specific fact, say so and suggest how to verify it.
+- Use clean, scannable formatting (short paragraphs or bullet lists).
+- Make links clickable using Markdown: [Title](https://example.com).
+
+RESTAURANTS (VERY IMPORTANT)
+- When the user asks about restaurants (any request for places to eat, “best restaurants”, “where to eat”, etc.), ALWAYS provide, for each place, if available:
+  • Name
+  • Phone number (format: (###) ###-####)
+  • Full street address (with city & state)
+  • Website (official when possible) — show as a clickable Markdown link
+  • Optional: Google Maps link as a secondary link
+- If any field cannot be verified, write “not found” rather than guessing.
+- Prefer official sources (restaurant site, Google Business, the venue’s social page) over aggregators.
+
+WEATHER (VERY IMPORTANT)
+- Default to U.S. units ONLY (°F, mph, inches). Do NOT show Celsius unless the user explicitly asks for it.
+- Present the report in a friendly local-TV meteorologist style:
+  • Lead with the headline and the current/near-term conditions.
+  • Give today’s high/low, feels-like, wind, humidity, and precip chances.
+  • Brief daypart breakdown (morning/afternoon/evening/overnight) when useful.
+  • Mention any watches/warnings if the user hints at severe weather.
+- If you don’t have live data, say that you may not have real-time access and offer to look it up if tools/search are available.
+`;
+
+/* -------------------- app & client -------------------- */
 const app = express();
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json());
+
 app.use(cors({
   origin: [
     'https://justaskjohnny.com',
@@ -23,269 +55,200 @@ app.use(cors({
 }));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const rss = new RSSParser();
 
-const lastLLM = { model:null, system_fingerprint:null, usage:null, ts:null, latency_ms:null };
+/* ------------- last-seen model/status cache ------------ */
+const lastLLM = {
+  model: null,
+  system_fingerprint: null,
+  usage: null,
+  ts: null,
+  latency_ms: null
+};
 
-function trackAndReply(res, completion, t0, extraHeaders = {}) {
-  const usedModel = completion.model || CONFIGURED_MODEL;
-  const fingerprint = completion.system_fingerprint ?? null;
-  const usage = completion.usage ?? null;
-  const latency = Date.now() - t0;
-
-  Object.assign(lastLLM, {
-    model: usedModel,
-    system_fingerprint: fingerprint,
-    usage,
-    ts: Date.now(),
-    latency_ms: latency
-  });
-
-  res.set('X-LLM-Model', usedModel);
-  if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
-  for (const [k, v] of Object.entries(extraHeaders)) res.set(k, v);
-
-  const reply = completion.choices?.[0]?.message?.content ?? '';
-  res.json({ reply, model: usedModel, usage });
+function logLLM(prefix, { model, fingerprint, usage, latency }) {
+  console.log(
+    `[${prefix}] model=${model}` +
+      (fingerprint ? ` fp=${fingerprint}` : '') +
+      (usage?.total_tokens != null
+        ? ` tokens total=${usage.total_tokens} (prompt=${usage.prompt_tokens ?? 0}, completion=${usage.completion_tokens ?? 0})`
+        : '') +
+      (latency != null ? ` latency=${latency}ms`
+        : '')
+  );
 }
 
-function minimalMessages(body) {
+/* =======================================================
+   1) Classic Chat Completions (no tools)
+   - Prepends SYSTEM_PROMPT so the bot follows your rules
+======================================================= */
+app.post(['/chat', '/api/chat'], async (req, res) => {
+  const t0 = Date.now();
+
   let messages = [];
-  if (Array.isArray(body.history)) messages = body.history;
-  else if (Array.isArray(body.messages)) messages = body.messages;
-  if (body.input && (!messages.length || messages[messages.length - 1]?.content !== body.input)) {
-    messages.push({ role: 'user', content: body.input });
+  if (Array.isArray(req.body.history)) messages = req.body.history;
+  else if (Array.isArray(req.body.messages)) messages = req.body.messages;
+
+  if (req.body.input && (!messages.length || messages[messages.length - 1]?.content !== req.body.input)) {
+    messages.push({ role: 'user', content: req.body.input });
   }
-  return messages;
-}
 
-/* ------------ key-free fetch helpers ------------ */
-const UA = 'JohnnyBot/1.0 (+https://justaskjohnny.com)';
-async function fetchJSON(u) {
-  const r = await fetch(u, { headers: { 'user-agent': UA } });
-  if (!r.ok) throw new Error(`Fetch ${u} failed: ${r.status}`);
-  return await r.json();
-}
-async function fetchText(u) {
-  const r = await fetch(u, { headers: { 'user-agent': UA } });
-  if (!r.ok) throw new Error(`Fetch ${u} failed: ${r.status}`);
-  return await r.text();
-}
-function extractReadable(html, baseUrl) {
-  const $ = cheerio.load(html);
-  $('script,style,noscript,header,footer,svg,iframe').remove();
-  const title = $('title').first().text().trim() || baseUrl;
-  let main = $('article').text() || $('main').text() ||
-             $('[role=main]').text() || $('.article,.post,.story').text();
-  if (!main || main.trim().length < 400) main = $('body').text();
-  const text = (main || '').replace(/\s+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
-  return { title, text: text.slice(0, 12000) };
-}
+  if (!messages.length) return res.status(400).json({ error: 'No input or message history provided' });
 
-/* ------------ intent detectors ------------ */
-const WEATHER_RE = /\b(weather|forecast|temperature|temp|rain|snow|wind|humidity|uv)\b/i;
-const NEWS_RE    = /\bnews|headlines?|latest on|breaking|what (happened|is happening)\b/i;
-const FIN_RE     = /\b(stock|share|ticker|quote|price|market|nasdaq|nyse|dow|s&p|sp500|crypto|bitcoin|btc|eth)\b/i;
-const RECENT_RE  = /\b(today|now|this (week|month|year)|latest|who won|score|earnings|release|launched|updated|announced)\b/i;
+  // Always inject our behavior guide at the front
+  const withSystem = [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
 
-/* ------------ tools ------------ */
-// Weather (Open-Meteo)
-async function toolWeather(userText) {
-  const place = (userText.match(/\bin\s+([A-Za-z.\s'-]+)$/i)?.[1] || userText).trim();
-  const q = encodeURIComponent(place);
-  const geo = await fetchJSON(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name=${q}`);
-  if (!geo?.results?.length) throw new Error('No location found');
-  const g = geo.results[0];
-  const lat = g.latitude, lon = g.longitude, placeName = [g.name, g.admin1, g.country].filter(Boolean).join(', ');
-  const meteo = await fetchJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,is_day,precipitation,wind_speed_10m,wind_direction_10m,relative_humidity_2m&hourly=temperature_2m,precipitation_probability,wind_speed_10m,weathercode&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`);
-  return { placeName, meteo };
-}
-
-// Web search (DuckDuckGo → fetch pages)
-async function searchDDG(q) {
   try {
-    const html = await fetchText(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}&kl=us-en`);
-    const $ = cheerio.load(html);
-    const items = [];
-    $('.result').slice(0, 8).each((i, el) => {
-      const a = $(el).find('a.result__a').first();
-      const url = a.attr('href'); const title = a.text().trim();
-      const snippet = $(el).find('.result__snippet').text().trim();
-      if (url && title) items.push({ url, title, snippet });
+    const completion = await openai.chat.completions.create({
+      model: CONFIGURED_MODEL,
+      messages: withSystem
     });
-    return items;
-  } catch {
-    const html = await fetchText(`https://www.bing.com/search?q=${encodeURIComponent(q)}`);
-    const $ = cheerio.load(html);
-    const items = [];
-    $('li.b_algo').slice(0, 8).each((i, el) => {
-      const a = $(el).find('h2 a').first();
-      const url = a.attr('href'); const title = a.text().trim();
-      const snippet = $(el).find('.b_caption p').text().trim();
-      if (url && title) items.push({ url, title, snippet });
+
+    const usedModel = completion.model || CONFIGURED_MODEL;
+    const fingerprint = completion.system_fingerprint ?? null;
+    const usage = completion.usage ?? null;
+    const latency = Date.now() - t0;
+
+    Object.assign(lastLLM, {
+      model: usedModel,
+      system_fingerprint: fingerprint,
+      usage,
+      ts: Date.now(),
+      latency_ms: latency
     });
-    return items;
-  }
-}
-async function fetchArticles(items, limit = 3) {
-  const picked = items.slice(0, limit);
-  const out = [];
-  for (const it of picked) {
-    try {
-      const html = await fetchText(it.url);
-      const { title, text } = extractReadable(html, it.url);
-      out.push({ url: it.url, title: title || it.title, snippet: it.snippet || '', text });
-    } catch {}
-  }
-  return out;
-}
 
-// News (Google News RSS)
-async function toolNews(q) {
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
-  const feed = await rss.parseURL(url);
-  const items = (feed.items || []).slice(0, 8).map(it => ({ title: it.title, url: it.link, snippet: it.contentSnippet || '' }));
-  const articles = await fetchArticles(items, 3);
-  return { items, articles };
-}
+    res.set('X-LLM-Model', usedModel);
+    if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
 
-// Finance (stocks via Stooq; crypto via CoinGecko)
-function inferTicker(q) {
-  const m1 = q.match(/\$([A-Za-z]{1,5})\b/); if (m1) return m1[1].toLowerCase();
-  const m2 = q.match(/\b([A-Z]{1,5})\b/); if (m2) return m2[1].toLowerCase();
-  return null;
-}
-async function toolFinance(q) {
-  const ticker = inferTicker(q);
-  let stock=null, crypto=null, used='';
+    logLLM('chat', { model: usedModel, fingerprint, usage, latency });
 
-  if (ticker) {
-    try {
-      const csv = await fetchText(`https://stooq.com/q/l/?s=${ticker}&f=sd2t2ohlcv&h&e=csv`);
-      const lines = csv.trim().split('\n');
-      if (lines.length > 1) {
-        const row = lines[1].split(',');
-        stock = { symbol: row[0], date: row[1], time: row[2], open: row[3], high: row[4], low: row[5], close: row[6], volume: row[7] };
-        used='stock';
-      }
-    } catch {}
-  }
-
-  if (!stock) {
-    const ids = ['bitcoin','ethereum','solana','dogecoin','cardano','ripple','litecoin'];
-    const pick = ids.find(id => q.toLowerCase().includes(id) || q.toLowerCase().includes(id.slice(0,3)));
-    if (pick) {
-      const js = await fetchJSON(`https://api.coingecko.com/api/v3/simple/price?ids=${pick}&vs_currencies=usd`);
-      crypto = { id: pick, usd: js[pick]?.usd };
-      used='crypto';
-    }
-  }
-  return { stock, crypto, used };
-}
-
-/* ------------ endpoints (no image) ------------ */
-// Plain chat
-app.post(['/api/chat2','/chat2'], async (req, res) => {
-  const t0 = Date.now();
-  const messages = minimalMessages(req.body);
-  if (!messages.length) return res.status(400).json({ error:'No input or message history provided' });
-  try {
-    const completion = await openai.chat.completions.create({ model: CONFIGURED_MODEL, messages });
-    trackAndReply(res, completion, t0, { 'X-LLM-Tools-Used': 'none' });
+    const reply = completion.choices?.[0]?.message?.content ?? '';
+    res.json({ reply, model: usedModel, usage });
   } catch (err) {
-    console.error('Chat2 error:', err?.response?.data ?? err);
-    res.status(500).json({ error:'Chat2 request failed' });
+    console.error('Chat error:', err?.response?.data ?? err);
+    res.status(500).json({ error: 'Chat request failed' });
   }
 });
 
-// Smart tools
-app.post(['/api/chat-tools','/chat-tools'], async (req, res) => {
+/* =====================================================================
+   2) SAFE “real-time” route (optional tools, never required) – /api/chat2
+   - Enables web_search (if available to your account), but NEVER forces it.
+   - If Responses API/tooling fails, falls back to classic chat.
+   - Also injects SYSTEM_PROMPT for restaurant & weather behavior.
+===================================================================== */
+app.post(['/api/chat2'], async (req, res) => {
   const t0 = Date.now();
-  const userText = String(req.body.input||'').trim();
-  const messages = minimalMessages(req.body);
-  let toolsUsed = 'none';
-
   try {
-    if (WEATHER_RE.test(userText)) {
-      toolsUsed = 'weather';
-      const { placeName, meteo } = await toolWeather(userText);
-      const sys = [
-        "You are Johnny, a TV-style meteorologist. Use Fahrenheit unless asked otherwise.",
-        "Return: current conditions, today's high/low, precip chances, wind, brief outlook."
-      ].join(' ');
-      const content = [
-        { role:'system', content: sys },
-        { role:'user', content: `Location: ${placeName}\nRaw weather JSON (Open-Meteo):\n${JSON.stringify(meteo).slice(0,15000)}\n\nUser request: ${userText}` }
-      ];
-      const completion = await openai.chat.completions.create({ model: CONFIGURED_MODEL, messages: content });
-      return trackAndReply(res, completion, t0, { 'X-LLM-Tools-Used': toolsUsed });
+    const userInput = req.body?.input ?? '';
+    const history = Array.isArray(req.body?.history) ? req.body.history : [];
+    if (!userInput && history.length === 0) return res.status(400).json({ error: 'No input' });
+
+    const input = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history,
+      { role: 'user', content: userInput }
+    ];
+
+    let r;
+    try {
+      r = await openai.responses.create({
+        model: CONFIGURED_MODEL,
+        input,
+        tools: [{ type: 'web_search' }], // allowed, not required
+        tool_choice: 'auto'
+      });
+    } catch (toolErr) {
+      // Graceful fallback to Completions if Responses/tooling isn't available
+      console.warn('responses.create failed; falling back to chat:', toolErr?.response?.data || toolErr);
+
+      const completion = await openai.chat.completions.create({
+        model: CONFIGURED_MODEL,
+        messages: input.map(m => ({ role: m.role, content: m.content }))
+      });
+
+      const usedModel = completion.model || CONFIGURED_MODEL;
+      const fingerprint = completion.system_fingerprint ?? null;
+      const usage = completion.usage ?? null;
+      const latency = Date.now() - t0;
+
+      Object.assign(lastLLM, {
+        model: usedModel,
+        system_fingerprint: fingerprint,
+        usage,
+        ts: Date.now(),
+        latency_ms: latency
+      });
+
+      res.set('X-LLM-Model', usedModel);
+      if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
+      res.set('X-LLM-Tools-Used', 'fallback');
+
+      logLLM('chat2-fallback', { model: usedModel, fingerprint, usage, latency });
+
+      const reply = completion.choices?.[0]?.message?.content ?? 'No output.';
+      return res.json({ reply, model: usedModel, usage });
     }
 
-    if (NEWS_RE.test(userText)) {
-      toolsUsed = 'news';
-      const { items, articles } = await toolNews(userText);
-      const sys = "Summarize the latest news for the query in a tight brief and end with a 'Sources' list of markdown links.";
-      const content = [
-        { role:'system', content: sys },
-        { role:'user', content: `Query: ${userText}\nTop feeds: ${JSON.stringify(items.slice(0,6))}\nArticles (trimmed): ${JSON.stringify(articles).slice(0,12000)}` }
-      ];
-      const completion = await openai.chat.completions.create({ model: CONFIGURED_MODEL, messages: content });
-      return trackAndReply(res, completion, t0, { 'X-LLM-Tools-Used': toolsUsed });
-    }
+    const output = r.output ?? [];
+    const text =
+      r.output_text ??
+      output.flatMap(o => o?.content ?? []).find(c => c?.type === 'output_text')?.text ??
+      output.flatMap(o => o?.content ?? []).filter(c => typeof c?.text === 'string').map(c => c.text).join('\n') ??
+      'No text output.';
 
-    if (FIN_RE.test(userText)) {
-      toolsUsed = 'finance';
-      const fin = await toolFinance(userText);
-      const sys = "Give the latest quote (stocks or crypto) with a short context and today's move if available.";
-      const content = [
-        { role:'system', content: sys },
-        { role:'user', content: `User query: ${userText}\nData: ${JSON.stringify(fin)}` }
-      ];
-      const completion = await openai.chat.completions.create({ model: CONFIGURED_MODEL, messages: content });
-      return trackAndReply(res, completion, t0, { 'X-LLM-Tools-Used': toolsUsed });
-    }
+    const usedModel = r.model || CONFIGURED_MODEL;
+    const fingerprint = r.system_fingerprint ?? null;
+    const usage = r.usage ?? null;
+    const latency = Date.now() - t0;
 
-    if (RECENT_RE.test(userText)) {
-      toolsUsed = 'web';
-      const serp = await searchDDG(userText);
-      const articles = await fetchArticles(serp, 3);
-      const sys = "Answer with the provided web extracts and include a 'Sources' list with markdown links.";
-      const content = [
-        { role:'system', content: sys },
-        { role:'user', content: `Query: ${userText}\nSERP: ${JSON.stringify(serp.slice(0,6))}\nArticles (trimmed): ${JSON.stringify(articles).slice(0,12000)}` }
-      ];
-      const completion = await openai.chat.completions.create({ model: CONFIGURED_MODEL, messages: content });
-      return trackAndReply(res, completion, t0, { 'X-LLM-Tools-Used': toolsUsed });
-    }
+    Object.assign(lastLLM, {
+      model: usedModel,
+      system_fingerprint: fingerprint,
+      usage,
+      ts: Date.now(),
+      latency_ms: latency
+    });
 
-    const completion = await openai.chat.completions.create({ model: CONFIGURED_MODEL, messages });
-    trackAndReply(res, completion, t0, { 'X-LLM-Tools-Used': toolsUsed });
+    res.set('X-LLM-Model', usedModel);
+    if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
+    res.set('X-LLM-Tools-Used', 'auto-or-none');
+
+    logLLM('chat2', { model: usedModel, fingerprint, usage, latency });
+
+    res.json({ reply: text, model: usedModel, usage });
   } catch (err) {
-    console.error('Chat-Tools error:', err?.response?.data ?? err);
-    res.status(500).json({ error:'Chat-Tools request failed' });
+    console.error('chat2 error:', err?.response?.data ?? err);
+    res.status(500).json({ error: 'Chat2 request failed' });
   }
 });
 
-// health/status/whoami
-app.get(['/api/health','/health'], (_req, res) => res.json({ status:'ok', model: CONFIGURED_MODEL }));
-app.get(['/api/status','/status'], (_req, res) => res.json({
-  configuredModel: CONFIGURED_MODEL,
-  lastSeenModel: lastLLM.model,
-  systemFingerprint: lastLLM.system_fingerprint,
-  lastUsage: lastLLM.usage,
-  lastSeenAt: lastLLM.ts,
-  lastLatencyMs: lastLLM.latency_ms,
-  node: process.version,
-  host: os.hostname(),
-  uptimeSeconds: Math.floor(process.uptime())
-}));
-app.get('/__whoami', (_req, res) => res.json({
-  ok:true,
-  commit: process.env.RENDER_GIT_COMMIT || 'unknown',
-  configuredModel: CONFIGURED_MODEL,
-  file: import.meta.url,
-  cwd: process.cwd()
-}));
+/* -------------------- Health / Status / Debug -------------------- */
+app.get(['/health', '/api/health'], (_req, res) => {
+  res.json({ status: 'ok', model: CONFIGURED_MODEL });
+});
+
+app.get(['/status', '/api/status'], (_req, res) => {
+  res.json({
+    configuredModel: CONFIGURED_MODEL,
+    lastSeenModel: lastLLM.model,
+    systemFingerprint: lastLLM.system_fingerprint,
+    lastUsage: lastLLM.usage,
+    lastSeenAt: lastLLM.ts,
+    lastLatencyMs: lastLLM.latency_ms,
+    node: process.version,
+    host: os.hostname(),
+    uptimeSeconds: Math.floor(process.uptime())
+  });
+});
+
+app.get('/__whoami', (_req, res) => {
+  res.json({
+    ok: true,
+    commit: process.env.RENDER_GIT_COMMIT || 'unknown',
+    configuredModel: CONFIGURED_MODEL,
+    file: import.meta.url,
+    cwd: process.cwd()
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on :${PORT} (configured model: ${CONFIGURED_MODEL})`);
