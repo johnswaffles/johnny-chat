@@ -4,7 +4,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import os from 'os';
-import fetch from 'node-fetch'; // For web requests
 
 dotenv.config();
 
