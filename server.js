@@ -8,7 +8,8 @@ import os from 'os';
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-const CONFIGURED_MODEL = process.env.CHAT_MODEL || process.env.TEXT_MODEL || 'gpt-5-mini';
+const CONFIGURED_MODEL =
+  process.env.CHAT_MODEL || process.env.TEXT_MODEL || 'gpt-5-mini';
 
 const app = express();
 app.use(express.json());
@@ -31,7 +32,20 @@ const lastLLM = {
   latency_ms: null
 };
 
-// Main Chat Endpoint
+function logLLM(prefix, { model, fingerprint, usage, latency }) {
+  console.log(
+    `[${prefix}] model=${model}` +
+    (fingerprint ? ` fp=${fingerprint}` : '') +
+    (usage?.total_tokens != null
+      ? ` tokens total=${usage.total_tokens} (prompt=${usage.prompt_tokens ?? 0}, completion=${usage.completion_tokens ?? 0})`
+      : '') +
+    (latency != null ? ` latency=${latency}ms` : '')
+  );
+}
+
+/* ---------------------------
+   Classic Chat Completions
+----------------------------*/
 app.post(['/chat', '/api/chat'], async (req, res) => {
   const t0 = Date.now();
 
@@ -56,21 +70,18 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
     const usage = completion.usage ?? null;
     const latency = Date.now() - t0;
 
-    lastLLM.model = usedModel;
-    lastLLM.system_fingerprint = fingerprint;
-    lastLLM.usage = usage;
-    lastLLM.ts = Date.now();
-    lastLLM.latency_ms = latency;
+    Object.assign(lastLLM, {
+      model: usedModel,
+      system_fingerprint: fingerprint,
+      usage,
+      ts: Date.now(),
+      latency_ms: latency
+    });
 
     res.set('X-LLM-Model', usedModel);
     if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
 
-    console.log(
-      `[chat] model=${usedModel}` +
-      (fingerprint ? ` fp=${fingerprint}` : '') +
-      (usage ? ` tokens total=${usage.total_tokens} (prompt=${usage.prompt_tokens}, completion=${usage.completion_tokens})` : '') +
-      ` latency=${latency}ms`
-    );
+    logLLM('chat', { model: usedModel, fingerprint, usage, latency });
 
     const reply = completion.choices?.[0]?.message?.content ?? '';
     res.json({ reply, model: usedModel, usage });
@@ -80,36 +91,83 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
   }
 });
 
-// Real-Time Info (Web Search Simulation) Endpoint
-app.post(['/realtime', '/api/realtime'], async (req, res) => {
-  const query = req.body.query;
-  if (!query) return res.status(400).json({ error: 'No query provided' });
-
+/* ---------------------------------------------------
+   Chat with real-time info: Responses API + web_search
+   -> Keep your GPT-5 model; enable tools explicitly.
+----------------------------------------------------*/
+app.post(['/api/chat2'], async (req, res) => {
+  const t0 = Date.now();
   try {
-    // Example: Fetch Bing search results (replace with your search API if desired)
-    const searchApiKey = process.env.BING_API_KEY; // Set in .env
-    const url = `https://api.bing.microsoft.com/v7.0/search?q=${encodeURIComponent(query)}`;
+    const userInput = req.body?.input ?? '';
+    const history = Array.isArray(req.body?.history) ? req.body.history : [];
+    if (!userInput && history.length === 0) {
+      return res.status(400).json({ error: 'No input' });
+    }
 
-    const searchRes = await fetch(url, {
-      headers: { 'Ocp-Apim-Subscription-Key': searchApiKey }
+    const input = [
+      { role: 'system', content: 'You are a concise, helpful assistant. Cite sources when available.' },
+      ...history,
+      ...(userInput ? [{ role: 'user', content: userInput }] : [])
+    ];
+
+    // If clearly time-sensitive, require a web search; otherwise let model decide.
+    const mustSearch = /\b(today|now|latest|this (week|month|year)|weather|forecast|score|price|news|who won|stock|flight|open|closed)\b/i
+      .test(userInput);
+
+    const r = await openai.responses.create({
+      model: CONFIGURED_MODEL,          // still GPT-5
+      input,
+      tools: [{ type: 'web_search' }],  // enable built-in search tool
+      tool_choice: mustSearch ? 'required' : 'auto'
     });
 
-    if (!searchRes.ok) throw new Error(`Search API error: ${searchRes.statusText}`);
-    const data = await searchRes.json();
+    // Try to detect whether a tool call occurred (best-effort; schema may vary)
+    const output = r.output ?? [];
+    const text =
+      r.output_text ??
+      output.flatMap(o => o?.content ?? []).find(c => c?.type === 'output_text')?.text ??
+      output.flatMap(o => o?.content ?? []).filter(c => typeof c?.text === 'string').map(c => c.text).join('\n') ??
+      'No text output.';
 
-    res.json({ query, results: data });
-  } catch (error) {
-    console.error('Realtime search error:', error);
-    res.status(500).json({ error: 'Realtime search failed' });
+    const toolCalls = output
+      .flatMap(o => o?.content ?? [])
+      .filter(c => c?.type === 'tool_call');
+
+    const usedModel = r.model || CONFIGURED_MODEL;
+    const fingerprint = r.system_fingerprint ?? null;
+    const usage = r.usage ?? null;
+    const latency = Date.now() - t0;
+
+    Object.assign(lastLLM, {
+      model: usedModel,
+      system_fingerprint: fingerprint,
+      usage,
+      ts: Date.now(),
+      latency_ms: latency
+    });
+
+    res.set('X-LLM-Model', usedModel);
+    if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
+    res.set('X-LLM-Search-Mode', mustSearch ? 'required' : 'auto');
+    res.set('X-LLM-Tools-Used', toolCalls?.length ? 'yes' : 'unknown');
+
+    logLLM('chat2', { model: usedModel, fingerprint, usage, latency });
+    if (toolCalls?.length) {
+      console.log(`[chat2] tool calls: ${toolCalls.length}`);
+    }
+
+    res.json({ reply: text, model: usedModel, usage });
+  } catch (err) {
+    console.error('chat2 error:', err?.response?.data ?? err);
+    res.status(500).json({ error: 'Chat2 request failed' });
   }
 });
 
-// Health Check
+/* ----------- Health / Status / Debug ----------- */
 app.get(['/health', '/api/health'], (_req, res) => {
   res.json({ status: 'ok', model: CONFIGURED_MODEL });
 });
 
-// Status Check
 app.get(['/status', '/api/status'], (_req, res) => {
   res.json({
     configuredModel: CONFIGURED_MODEL,
@@ -124,7 +182,6 @@ app.get(['/status', '/api/status'], (_req, res) => {
   });
 });
 
-// Whoami
 app.get('/__whoami', (_req, res) => {
   res.json({
     ok: true,
