@@ -8,10 +8,11 @@ import os from 'os';
 dotenv.config();
 
 const PORT  = process.env.PORT || 3000;
-const MODEL = process.env.CHAT_MODEL || 'gpt-5-mini';
+// Accept either CHAT_MODEL (preferred) or TEXT_MODEL, then fallback
+const CONFIGURED_MODEL = process.env.CHAT_MODEL || process.env.TEXT_MODEL || 'gpt-4.1-mini';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app = express();
+app.use(express.json());
 
 // Allow your site + localhost
 app.use(cors({
@@ -21,30 +22,27 @@ app.use(cors({
     'http://localhost:3000'
   ]
 }));
-app.use(express.json());
 
-// keep last-seen model/usage for status + debugging
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Track last-seen info for /status
 const lastLLM = {
   model: null,
   system_fingerprint: null,
-  usage: null,           // { prompt_tokens, completion_tokens, total_tokens } for chat.completions
+  usage: null,        // chat.completions: {prompt_tokens, completion_tokens, total_tokens}
   ts: null,
   latency_ms: null
 };
 
-// Chat endpoint
+// --- Chat endpoint (compatible with your current frontend) ---
 app.post(['/chat', '/api/chat'], async (req, res) => {
   const t0 = Date.now();
+
+  // Accept history/messages or a single input string
   let messages = [];
+  if (Array.isArray(req.body.history)) messages = req.body.history;
+  else if (Array.isArray(req.body.messages)) messages = req.body.messages;
 
-  // If full history provided
-  if (Array.isArray(req.body.history)) {
-    messages = req.body.history;
-  } else if (Array.isArray(req.body.messages)) {
-    messages = req.body.messages;
-  }
-
-  // If only "input" string provided, wrap it
   if (req.body.input && (!messages.length || messages[messages.length - 1]?.content !== req.body.input)) {
     messages.push({ role: 'user', content: req.body.input });
   }
@@ -55,28 +53,28 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: MODEL,
+      model: CONFIGURED_MODEL,
       messages,
       temperature: 0.7
     });
 
-    const usedModel = completion.model || MODEL;
+    const usedModel   = completion.model || CONFIGURED_MODEL;
     const fingerprint = completion.system_fingerprint ?? null;
-    const usage = completion.usage ?? null;
-    const latency = Date.now() - t0;
+    const usage       = completion.usage ?? null;
+    const latency     = Date.now() - t0;
 
-    // save for /api/status
+    // Save for /status
     lastLLM.model = usedModel;
     lastLLM.system_fingerprint = fingerprint;
     lastLLM.usage = usage;
     lastLLM.ts = Date.now();
     lastLLM.latency_ms = latency;
 
-    // expose via headers
+    // Surface in headers
     res.set('X-LLM-Model', usedModel);
     if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
 
-    // console log every call (easy to see in Render logs)
+    // Console log every call (shows in Render logs)
     console.log(
       `[chat] model=${usedModel}` +
       (fingerprint ? ` fp=${fingerprint}` : '') +
@@ -84,10 +82,7 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
       ` latency=${latency}ms`
     );
 
-    const reply =
-      completion.choices?.[0]?.message?.content ??
-      '';
-
+    const reply = completion.choices?.[0]?.message?.content ?? '';
     res.json({ reply, model: usedModel, usage });
   } catch (err) {
     console.error('Chat error:', err?.response?.data ?? err);
@@ -95,15 +90,15 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
   }
 });
 
-// Health check
+// --- Health check (both /health and /api/health) ---
 app.get(['/health', '/api/health'], (_req, res) => {
-  res.json({ status: 'ok', model: MODEL });
+  res.json({ status: 'ok', model: CONFIGURED_MODEL });
 });
 
-// Status endpoint: shows configured vs last-seen model + usage/fingerprint
+// --- Status (both /status and /api/status) ---
 app.get(['/status', '/api/status'], (_req, res) => {
   res.json({
-    configuredModel: MODEL,
+    configuredModel: CONFIGURED_MODEL,
     lastSeenModel: lastLLM.model,
     systemFingerprint: lastLLM.system_fingerprint,
     lastUsage: lastLLM.usage,
@@ -115,6 +110,17 @@ app.get(['/status', '/api/status'], (_req, res) => {
   });
 });
 
+// --- Debug route to verify what build is live on Render ---
+app.get('/__whoami', (_req, res) => {
+  res.json({
+    ok: true,
+    commit: process.env.RENDER_GIT_COMMIT || 'unknown',
+    configuredModel: CONFIGURED_MODEL,
+    file: import.meta.url,
+    cwd: process.cwd()
+  });
+});
+
 app.listen(PORT, () => {
-  console.log(`✅ Server running on :${PORT} (configured model: ${MODEL})`);
+  console.log(`✅ Server running on :${PORT} (configured model: ${CONFIGURED_MODEL})`);
 });
