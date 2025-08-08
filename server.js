@@ -35,17 +35,17 @@ const lastLLM = {
 function logLLM(prefix, { model, fingerprint, usage, latency }) {
   console.log(
     `[${prefix}] model=${model}` +
-    (fingerprint ? ` fp=${fingerprint}` : '') +
-    (usage?.total_tokens != null
-      ? ` tokens total=${usage.total_tokens} (prompt=${usage.prompt_tokens ?? 0}, completion=${usage.completion_tokens ?? 0})`
-      : '') +
-    (latency != null ? ` latency=${latency}ms` : '')
+      (fingerprint ? ` fp=${fingerprint}` : '') +
+      (usage?.total_tokens != null
+        ? ` tokens total=${usage.total_tokens} (prompt=${usage.prompt_tokens ?? 0}, completion=${usage.completion_tokens ?? 0})`
+        : '') +
+      (latency != null ? ` latency=${latency}ms` : '')
   );
 }
 
-/* ---------------------------
-   Classic Chat Completions
-----------------------------*/
+/* ===========================================
+   1) Classic Chat (no tools)
+=========================================== */
 app.post(['/chat', '/api/chat'], async (req, res) => {
   const t0 = Date.now();
 
@@ -91,47 +91,69 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
   }
 });
 
-/* ---------------------------------------------------
-   Chat with real-time info: Responses API + web_search
-   -> Keep your GPT-5 model; enable tools explicitly.
-----------------------------------------------------*/
+/* ==========================================================
+   2) SAFE real-time route (no hard-required tools)
+      - Enables web_search but NEVER "requires" it.
+      - If Responses API or tools error, FALL BACK to classic chat.
+========================================================== */
 app.post(['/api/chat2'], async (req, res) => {
   const t0 = Date.now();
   try {
     const userInput = req.body?.input ?? '';
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
-    if (!userInput && history.length === 0) {
-      return res.status(400).json({ error: 'No input' });
-    }
+    if (!userInput && history.length === 0) return res.status(400).json({ error: 'No input' });
 
     const input = [
-      { role: 'system', content: 'You are a concise, helpful assistant. Cite sources when available.' },
+      { role: 'system', content: 'You are a concise, helpful assistant. Use web search only when clearly necessary.' },
       ...history,
-      ...(userInput ? [{ role: 'user', content: userInput }] : [])
+      { role: 'user', content: userInput }
     ];
 
-    // If clearly time-sensitive, require a web search; otherwise let model decide.
-    const mustSearch = /\b(today|now|latest|this (week|month|year)|weather|forecast|score|price|news|who won|stock|flight|open|closed)\b/i
-      .test(userInput);
+    let r;
+    try {
+      r = await openai.responses.create({
+        model: CONFIGURED_MODEL,
+        input,
+        tools: [{ type: 'web_search' }], // allowed
+        tool_choice: 'auto'              // never "required"
+      });
+    } catch (toolErr) {
+      console.warn('responses.create failed; falling back to chat:', toolErr?.response?.data || toolErr);
 
-    const r = await openai.responses.create({
-      model: CONFIGURED_MODEL,          // still GPT-5
-      input,
-      tools: [{ type: 'web_search' }],  // enable built-in search tool
-      tool_choice: mustSearch ? 'required' : 'auto'
-    });
+      const completion = await openai.chat.completions.create({
+        model: CONFIGURED_MODEL,
+        messages: input.map(m => ({ role: m.role, content: m.content }))
+      });
 
-    // Try to detect whether a tool call occurred (best-effort; schema may vary)
+      const usedModel = completion.model || CONFIGURED_MODEL;
+      const fingerprint = completion.system_fingerprint ?? null;
+      const usage = completion.usage ?? null;
+      const latency = Date.now() - t0;
+
+      Object.assign(lastLLM, {
+        model: usedModel,
+        system_fingerprint: fingerprint,
+        usage,
+        ts: Date.now(),
+        latency_ms: latency
+      });
+
+      res.set('X-LLM-Model', usedModel);
+      if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
+      res.set('X-LLM-Tools-Used', 'fallback');
+
+      logLLM('chat2-fallback', { model: usedModel, fingerprint, usage, latency });
+
+      const reply = completion.choices?.[0]?.message?.content ?? 'No output.';
+      return res.json({ reply, model: usedModel, usage });
+    }
+
     const output = r.output ?? [];
     const text =
       r.output_text ??
       output.flatMap(o => o?.content ?? []).find(c => c?.type === 'output_text')?.text ??
       output.flatMap(o => o?.content ?? []).filter(c => typeof c?.text === 'string').map(c => c.text).join('\n') ??
       'No text output.';
-
-    const toolCalls = output
-      .flatMap(o => o?.content ?? [])
-      .filter(c => c?.type === 'tool_call');
 
     const usedModel = r.model || CONFIGURED_MODEL;
     const fingerprint = r.system_fingerprint ?? null;
@@ -148,13 +170,9 @@ app.post(['/api/chat2'], async (req, res) => {
 
     res.set('X-LLM-Model', usedModel);
     if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
-    res.set('X-LLM-Search-Mode', mustSearch ? 'required' : 'auto');
-    res.set('X-LLM-Tools-Used', toolCalls?.length ? 'yes' : 'unknown');
+    res.set('X-LLM-Tools-Used', 'auto-or-none');
 
     logLLM('chat2', { model: usedModel, fingerprint, usage, latency });
-    if (toolCalls?.length) {
-      console.log(`[chat2] tool calls: ${toolCalls.length}`);
-    }
 
     res.json({ reply: text, model: usedModel, usage });
   } catch (err) {
