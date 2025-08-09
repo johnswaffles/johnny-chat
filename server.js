@@ -1,16 +1,18 @@
-// server.js — fixed pdfjs import (v4 uses .mjs), realtime web search chat, file Q&A, image gen.
+// server.js — robust chat (Responses API + web search with preview + safe fallback),
+// PDF/image analyze, image generation. Includes detailed error logging.
 
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import multer from "multer";
 import OpenAI from "openai";
-// ✅ pdfjs-dist v4 path (ESM):
+// pdfjs-dist v4 ships ESM as .mjs
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 dotenv.config();
 
 const PORT         = process.env.PORT || 3000;
+// Use a tool-capable GPT-5 chat model
 const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5-chat-latest";
 const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
 const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
@@ -70,10 +72,22 @@ async function describeImage(dataUrl) {
   };
 }
 
-/* ---------------------------- realtime web-grounded chat ---------------------------- */
+/* ------------------------------ logging helper ------------------------------ */
+const dumpErr = (e) => {
+  try {
+    return JSON.stringify({
+      name: e?.name,
+      message: e?.message,
+      code: e?.code,
+      status: e?.status,
+      data: e?.response?.data
+    }, null, 2);
+  } catch { return String(e); }
+};
+
+/* -------------------- realtime web-grounded chat (robust) ------------------- */
 async function askWithWeb(messages) {
-  // Try stable tool; fall back to preview if org isn’t enabled yet.
-  const tryOnce = (toolType) =>
+  const createWith = (toolType) =>
     openai.responses.create({
       model: CHAT_MODEL,
       input: messages,
@@ -82,14 +96,25 @@ async function askWithWeb(messages) {
       metadata: { app: "johnny-chat", tool: toolType }
     });
 
+  // 1) Try stable hosted tool
   try {
-    return await tryOnce("web_search");
-  } catch (e) {
-    const msg = String(e?.message || "");
-    if (/not enabled|Hosted tool|unsupported|unknown tool/i.test(msg)) {
-      return await tryOnce("web_search_preview");
+    return await createWith("web_search");
+  } catch (e1) {
+    const msg = `${e1?.message || ""} ${e1?.code || ""}`;
+    const retriable = /not enabled|Hosted tool|unsupported|unknown tool|not found|404/i.test(msg);
+    console.error("web_search failed:", dumpErr(e1));
+    // 2) Try preview tool name if org isn’t enabled for stable
+    if (retriable) {
+      try {
+        return await createWith("web_search_preview");
+      } catch (e2) {
+        console.error("web_search_preview failed:", dumpErr(e2));
+      }
     }
-    throw e;
+    // 3) As a last resort, return a normal chat completion (no web),
+    // so the route never 500s due to tool availability.
+    const cc = await openai.chat.completions.create({ model: CHAT_MODEL, messages });
+    return { output_text: cc.choices?.[0]?.message?.content ?? "" };
   }
 }
 
@@ -130,7 +155,7 @@ app.post("/api/chat", async (req, res) => {
     const { reply, sources } = collectReplyAndSources(resp);
     res.json({ reply: reply || "(no reply)", sources });
   } catch (e) {
-    console.error("CHAT_FAILED:", e);
+    console.error("CHAT_FAILED:", dumpErr(e));
     res.status(500).json({ error: "CHAT_FAILED", detail: e?.message });
   }
 });
@@ -163,7 +188,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     docs[docId] = { kind, text };
     res.json({ ok:true, docId, kind, text, summary });
   } catch (e) {
-    console.error(e);
+    console.error("UPLOAD_FAILED:", dumpErr(e));
     res.status(500).json({ error:"UPLOAD_FAILED", detail:e?.message });
   }
 });
@@ -185,7 +210,7 @@ app.post("/query", async (req,res)=>{
     });
     res.json({ answer: r.choices?.[0]?.message?.content ?? "(no answer)" });
   }catch(e){
-    console.error(e);
+    console.error("QUERY_FAILED:", dumpErr(e));
     res.status(500).json({ error:"QUERY_FAILED", detail:e?.message });
   }
 });
@@ -205,17 +230,22 @@ app.post("/generate-image", async (req, res) => {
     if (!b64) return res.status(502).json({ error:"NO_IMAGE" });
     res.json({ image_b64: b64 });
   } catch (err) {
-    console.error(err);
+    console.error("IMAGE_FAILED:", dumpErr(err));
     res.status(500).json({ error: "IMAGE_FAILED", detail: err?.message });
   }
 });
 
 /* ------------------------------- diagnostics ------------------------------- */
 app.get("/api/diag", (req,res)=>{
-  res.json({ ok:true, chat_model: CHAT_MODEL, web_search: true, pdfjs: "legacy/build/pdf.mjs" });
+  res.json({
+    ok: true,
+    chat_model: CHAT_MODEL,
+    web_search_enabled: true,
+    pdfjs: "legacy/build/pdf.mjs"
+  });
 });
 
 app.listen(PORT, () => {
   console.log(`✅ Server :${PORT}  chat=${CHAT_MODEL} vision=${VISION_MODEL} image=${IMAGE_MODEL}`);
-  console.log("   Using pdfjs-dist/legacy/build/pdf.mjs and Responses API with web search.");
+  console.log("   Responses API with web_search → preview fallback; chat-completions safety fallback.");
 });
