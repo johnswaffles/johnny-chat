@@ -1,4 +1,4 @@
-// server.js — file Q&A (PDF/PNG/JPG), GPT-Image generation, and chat
+// server.js — uploads (PDF/PNG/JPG) + doc Q&A + GPT-Image + thumbnail store + chat (+ web chat)
 // Requires: express, cors, dotenv, multer, openai, pdfjs-dist@3.11.174
 
 import express from "express";
@@ -17,11 +17,8 @@ const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
 const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
 
 const app = express();
+app.use(express.json({ limit: "25mb" }));
 
-// JSON for /query, /generate-image, /chat
-app.use(express.json({ limit: "20mb" }));
-
-// CORS — allow your site + local dev
 app.use(cors({
   origin: [
     "http://localhost:3000",
@@ -33,20 +30,20 @@ app.use(cors({
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// In-memory store of uploaded doc text for Q&A
-const docs = Object.create(null);
+// In-memory stores (reset on server restart)
+const docs = Object.create(null);       // docId -> { kind, text }
+const thumbs = Object.create(null);     // docId -> dataURL
 const makeId = () => Math.random().toString(36).slice(2, 10);
 
 // ---------- helpers
 
 async function extractPdfText(buffer) {
-  // Robust server-side PDF text extraction using pdfjs-dist (v3 legacy build)
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
   let text = "";
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
     const content = await page.getTextContent();
-    text += content.items.map(it => it.str).join(" ") + "\n";
+    text += content.items.map((it) => it.str).join(" ") + "\n";
   }
   return text.trim();
 }
@@ -63,7 +60,6 @@ async function summarizeText(text, nChars = 120000) {
 }
 
 async function describeImageDataUrl(dataUrl) {
-  // Vision via Chat Completions with multi-part content
   const r = await openai.chat.completions.create({
     model: VISION_MODEL,
     messages: [
@@ -83,22 +79,20 @@ async function describeImageDataUrl(dataUrl) {
   return { summary, text };
 }
 
-// ---------- routes
-
-// health/status
+// ---------- health/status
 app.get(["/health", "/api/health"], (_req, res) => {
-  res.json({ status: "ok", chatModel: CHAT_MODEL, visionModel: VISION_MODEL, imageModel: IMAGE_MODEL, node: process.version });
+  res.json({ status: "ok", node: process.version, chatModel: CHAT_MODEL, visionModel: VISION_MODEL, imageModel: IMAGE_MODEL });
 });
 app.get(["/status", "/api/status"], (_req, res) => {
   res.json({ host: os.hostname(), uptimeSeconds: Math.floor(process.uptime()) });
 });
 
-// chat (for the floating window)
+// ---------- classic chat
 app.post(["/chat", "/api/chat"], async (req, res) => {
   try {
     const input = String(req.body?.input ?? "").trim();
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
-    if (!input && history.length === 0) return res.status(400).json({ error: "No input" });
+    if (!input && history.length === 0) return res.status(400).json({ error: "NO_INPUT" });
     const messages = [
       { role: "system", content: "You are a concise, accurate assistant." },
       ...history,
@@ -113,7 +107,32 @@ app.post(["/chat", "/api/chat"], async (req, res) => {
   }
 });
 
-// uploads — PDF or image
+// ---------- web chat (built-in Web Search tool via Responses API)
+app.post(["/web-chat", "/api/web-chat"], async (req, res) => {
+  try {
+    const input = String(req.body?.input ?? "").trim();
+    if (!input) return res.status(400).json({ error: "NO_INPUT" });
+
+    // The Responses API can enable web browsing by adding {type:"web_search"} to tools.
+    // See OpenAI docs: Web search tool & Tools guide.
+    const r = await openai.responses.create({
+      model: CHAT_MODEL,
+      input,
+      tools: [{ type: "web_search" }],
+      // Optionally request citations/attributions in the output:
+      metadata: { purpose: "johnny-web-chat" }
+    });
+
+    // The unified Responses API delivers output in r.output_text (SDK helper).
+    const reply = r.output_text ?? "(no reply)";
+    res.json({ reply, model: r.model || CHAT_MODEL });
+  } catch (err) {
+    console.error("web-chat error:", err.response?.data || err);
+    res.status(500).json({ error: "WEB_CHAT_FAILED", detail: err?.message });
+  }
+});
+
+// ---------- uploads
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 app.post("/upload", upload.single("file"), async (req, res) => {
@@ -144,7 +163,6 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     const docId = makeId();
     docs[docId] = { kind, text };
-
     res.json({ ok: true, ms: Date.now() - t0, docId, kind, text, summary });
   } catch (err) {
     console.error("upload error:", err);
@@ -152,7 +170,26 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// Q&A about the last uploaded doc
+// ---------- thumbnails
+app.post("/thumbnail", async (req, res) => {
+  try {
+    const { docId, dataUrl } = req.body || {};
+    if (!docId || !dataUrl) return res.status(400).json({ error: "MISSING_FIELDS" });
+    thumbs[docId] = dataUrl;
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "THUMBNAIL_STORE_FAILED", detail: err?.message });
+  }
+});
+
+app.get("/thumbnail/:docId", (req, res) => {
+  const { docId } = req.params;
+  const dataUrl = thumbs[docId];
+  if (!dataUrl) return res.status(404).json({ error: "NO_THUMBNAIL" });
+  res.json({ dataUrl });
+});
+
+// ---------- query uploaded document
 app.post("/query", async (req, res) => {
   try {
     const docId = String(req.body?.docId || "");
@@ -176,7 +213,7 @@ app.post("/query", async (req, res) => {
   }
 });
 
-// GPT-Image generation
+// ---------- GPT-Image
 app.post("/generate-image", async (req, res) => {
   try {
     const prompt = String(req.body?.prompt || "");
@@ -193,5 +230,4 @@ app.post("/generate-image", async (req, res) => {
   }
 });
 
-// boot
 app.listen(PORT, () => console.log(`✅ Server :${PORT}  chat=${CHAT_MODEL} vision=${VISION_MODEL} image=${IMAGE_MODEL}`));
