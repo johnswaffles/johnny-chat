@@ -1,17 +1,16 @@
-// server.js — realtime, web-grounded chat via Responses API + web search.
-// Keeps your upload/query/image endpoints. Only /api/chat changed/hardened.
+// server.js — fixed pdfjs import (v4 uses .mjs), realtime web search chat, file Q&A, image gen.
 
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import multer from "multer";
 import OpenAI from "openai";
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.js";
+// ✅ pdfjs-dist v4 path (ESM):
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 dotenv.config();
 
 const PORT         = process.env.PORT || 3000;
-// Use a GPT-5 chat model that supports tools; avoid “mini” for web search.
 const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5-chat-latest";
 const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
 const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
@@ -72,32 +71,28 @@ async function describeImage(dataUrl) {
 }
 
 /* ---------------------------- realtime web-grounded chat ---------------------------- */
-// Docs: enable web search by adding it in tools when using the Responses API.  [oai_citation:2‡OpenAI Platform](https://platform.openai.com/docs/guides/tools-web-search?utm_source=chatgpt.com)
 async function askWithWeb(messages) {
-  // Try stable tool name first, then preview if the org isn’t enabled yet.  [oai_citation:3‡OpenAI Community](https://community.openai.com/t/web-search-works-in-playground-but-not-via-api/1152213?utm_source=chatgpt.com) [oai_citation:4‡Microsoft Learn](https://learn.microsoft.com/en-us/answers/questions/2237879/web-search-tool-is-not-enabled-for-this-organizati?utm_source=chatgpt.com)
-  const tryOnce = async (toolType) => {
-    return openai.responses.create({
+  // Try stable tool; fall back to preview if org isn’t enabled yet.
+  const tryOnce = (toolType) =>
+    openai.responses.create({
       model: CHAT_MODEL,
       input: messages,
       tools: [{ type: toolType }],
-      // Encourage the model to actually use the tool for changing facts.  [oai_citation:5‡OpenAI Platform](https://platform.openai.com/docs/guides/tools-web-search?utm_source=chatgpt.com)
       temperature: 0.2,
       metadata: { app: "johnny-chat", tool: toolType }
     });
-  };
 
   try {
     return await tryOnce("web_search");
   } catch (e) {
     const msg = String(e?.message || "");
-    const shouldRetry =
-      /not enabled|Hosted tool|unsupported|unknown tool/i.test(msg);
-    if (!shouldRetry) throw e;
-    return await tryOnce("web_search_preview");
+    if (/not enabled|Hosted tool|unsupported|unknown tool/i.test(msg)) {
+      return await tryOnce("web_search_preview");
+    }
+    throw e;
   }
 }
 
-// Extract reply text + any URLs that appear in output/annotations/tool results.
 function collectReplyAndSources(resp) {
   let reply =
     resp.output_text ??
@@ -211,16 +206,16 @@ app.post("/generate-image", async (req, res) => {
     res.json({ image_b64: b64 });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error:"IMAGE_FAILED", detail: err?.message });
+    res.status(500).json({ error: "IMAGE_FAILED", detail: err?.message });
   }
 });
 
 /* ------------------------------- diagnostics ------------------------------- */
 app.get("/api/diag", (req,res)=>{
-  res.json({ ok:true, chat_model: CHAT_MODEL, web_search: true });
+  res.json({ ok:true, chat_model: CHAT_MODEL, web_search: true, pdfjs: "legacy/build/pdf.mjs" });
 });
 
 app.listen(PORT, () => {
   console.log(`✅ Server :${PORT}  chat=${CHAT_MODEL} vision=${VISION_MODEL} image=${IMAGE_MODEL}`);
-  console.log("   Web search enabled for /api/chat via Responses API (auto-fallback to preview).");
+  console.log("   Using pdfjs-dist/legacy/build/pdf.mjs and Responses API with web search.");
 });
