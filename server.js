@@ -1,4 +1,6 @@
-// server.js
+// server.js — realtime, web-grounded chat via Responses API + web search.
+// Keeps your upload/query/image endpoints. Only /api/chat changed/hardened.
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -9,7 +11,8 @@ import * as pdfjs from "pdfjs-dist/legacy/build/pdf.js";
 dotenv.config();
 
 const PORT         = process.env.PORT || 3000;
-const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5-chat-latest"; // GPT-5 chat
+// Use a GPT-5 chat model that supports tools; avoid “mini” for web search.
+const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5-chat-latest";
 const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
 const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
 
@@ -28,7 +31,7 @@ app.use(cors({
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* --------------------------------- helpers -------------------------------- */
+/* --------------------------- helpers (PDF & vision) --------------------------- */
 async function extractPdfText(buffer) {
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
   let text = "";
@@ -68,69 +71,83 @@ async function describeImage(dataUrl) {
   };
 }
 
-/* ---------------------------------- chat ---------------------------------- */
-// New: real-time, web-grounded chat using Responses API + web_search tool.
+/* ---------------------------- realtime web-grounded chat ---------------------------- */
+// Docs: enable web search by adding it in tools when using the Responses API.  [oai_citation:2‡OpenAI Platform](https://platform.openai.com/docs/guides/tools-web-search?utm_source=chatgpt.com)
+async function askWithWeb(messages) {
+  // Try stable tool name first, then preview if the org isn’t enabled yet.  [oai_citation:3‡OpenAI Community](https://community.openai.com/t/web-search-works-in-playground-but-not-via-api/1152213?utm_source=chatgpt.com) [oai_citation:4‡Microsoft Learn](https://learn.microsoft.com/en-us/answers/questions/2237879/web-search-tool-is-not-enabled-for-this-organizati?utm_source=chatgpt.com)
+  const tryOnce = async (toolType) => {
+    return openai.responses.create({
+      model: CHAT_MODEL,
+      input: messages,
+      tools: [{ type: toolType }],
+      // Encourage the model to actually use the tool for changing facts.  [oai_citation:5‡OpenAI Platform](https://platform.openai.com/docs/guides/tools-web-search?utm_source=chatgpt.com)
+      temperature: 0.2,
+      metadata: { app: "johnny-chat", tool: toolType }
+    });
+  };
+
+  try {
+    return await tryOnce("web_search");
+  } catch (e) {
+    const msg = String(e?.message || "");
+    const shouldRetry =
+      /not enabled|Hosted tool|unsupported|unknown tool/i.test(msg);
+    if (!shouldRetry) throw e;
+    return await tryOnce("web_search_preview");
+  }
+}
+
+// Extract reply text + any URLs that appear in output/annotations/tool results.
+function collectReplyAndSources(resp) {
+  let reply =
+    resp.output_text ??
+    (resp.output?.[0]?.content?.[0]?.text || "");
+
+  const urls = new Set();
+  const walk = (o) => {
+    if (!o || typeof o !== "object") return;
+    for (const k of Object.keys(o)) {
+      const v = o[k];
+      if (typeof v === "string" && /^https?:\/\//i.test(v)) urls.add(v);
+      if (Array.isArray(v)) v.forEach(walk);
+      else if (v && typeof v === "object") walk(v);
+    }
+  };
+  walk(resp);
+  return { reply, sources: Array.from(urls) };
+}
+
 app.post("/api/chat", async (req, res) => {
   try {
     const input = String(req.body?.input ?? "").trim();
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
+    if (!input && history.length === 0) return res.status(400).json({ error: "NO_INPUT" });
 
-    if (!input && history.length === 0) {
-      return res.status(400).json({ error: "NO_INPUT" });
-    }
-
-    // Build conversation for Responses API
     const messages = [
-      { role: "system", content: "You are a concise, accurate assistant. If you use the web, cite sources briefly at the end." },
+      { role: "system", content:
+        "You are a concise assistant. For anything that can change over time (news, stocks, prices, rosters, schedules, ongoing events), use the web_search tool and include 2–4 source links at the end."
+      },
       ...history,
       { role: "user", content: input }
     ];
 
-    // Enable built-in web search tool (official method for up-to-date info).
-    // If your account is on an older preview, swap 'web_search' -> 'web_search_preview'.
-    const response = await openai.responses.create({
-      model: CHAT_MODEL,
-      input: messages,
-      tools: [{ type: "web_search" }],
-      // Ask the model to include citations if available
-      // (Responses API may attach them either in annotations or a citations field).
-      metadata: { app: "johnny-chat", feature: "realtime-web" }
-    });
-
-    // Extract text
-    const reply =
-      response.output_text ??
-      (response.output?.[0]?.content?.[0]?.text || "(no reply)");
-
-    // Try to collect URLs from tool outputs / annotations if present
-    const urls = new Set();
-
-    const dig = (obj) => {
-      if (!obj || typeof obj !== "object") return;
-      for (const k of Object.keys(obj)) {
-        const v = obj[k];
-        if (typeof v === "string" && /^https?:\/\//i.test(v)) urls.add(v);
-        if (Array.isArray(v)) v.forEach(dig);
-        else if (v && typeof v === "object") dig(v);
-      }
-    };
-    dig(response);
-
-    res.json({ reply, sources: Array.from(urls) });
+    const resp = await askWithWeb(messages);
+    const { reply, sources } = collectReplyAndSources(resp);
+    res.json({ reply: reply || "(no reply)", sources });
   } catch (e) {
-    console.error(e);
+    console.error("CHAT_FAILED:", e);
     res.status(500).json({ error: "CHAT_FAILED", detail: e?.message });
   }
 });
 
-/* ---------------------------- upload + analyze ---------------------------- */
+/* --------------------------------- uploads --------------------------------- */
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 const docs = Object.create(null);
 const makeId = () => Math.random().toString(36).slice(2,10);
 
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "NO_FILE" });
+    if (!req.file) return res.status(400).json({ error:"NO_FILE" });
     const mime = req.file.mimetype || "";
     const buf = req.file.buffer;
 
@@ -188,10 +205,7 @@ app.post("/generate-image", async (req, res) => {
     const allowed = new Set(["1024x1024","1024x1536","1536x1024","auto"]);
     if (!allowed.has(size)) size = "1024x1024";
 
-    const payload = { model: IMAGE_MODEL, prompt };
-    payload.size = size;
-
-    const img = await openai.images.generate(payload);
+    const img = await openai.images.generate({ model: IMAGE_MODEL, prompt, size });
     const b64 = img.data?.[0]?.b64_json;
     if (!b64) return res.status(502).json({ error:"NO_IMAGE" });
     res.json({ image_b64: b64 });
@@ -201,7 +215,12 @@ app.post("/generate-image", async (req, res) => {
   }
 });
 
+/* ------------------------------- diagnostics ------------------------------- */
+app.get("/api/diag", (req,res)=>{
+  res.json({ ok:true, chat_model: CHAT_MODEL, web_search: true });
+});
+
 app.listen(PORT, () => {
   console.log(`✅ Server :${PORT}  chat=${CHAT_MODEL} vision=${VISION_MODEL} image=${IMAGE_MODEL}`);
-  console.log("   Web search enabled for /api/chat via Responses API.");
+  console.log("   Web search enabled for /api/chat via Responses API (auto-fallback to preview).");
 });
