@@ -1,5 +1,5 @@
-// server.js — Responses API only (hosted web_search + preview fallback), no temperature.
-// File Q&A (PDF/image) + image generation retained. pdfjs v4 import path fixed.
+// server.js — Responses API (web_search + preview fallback), answer "beautifier",
+// file Q&A (PDF/image), and GPT-Image generation. pdfjs v4 import path fixed.
 
 import express from "express";
 import cors from "cors";
@@ -60,8 +60,7 @@ function collectReplyAndSources(resp) {
 }
 
 /* ----------------------- Responses API with hosted search ------------------ */
-// Strictly use Responses API. Try "web_search"; if org not enabled, try preview.
-// No temperature param (fixes your 400).
+// No temperature param (hosted tool rejects it).
 async function askWithHostedSearch(messages) {
   const createWith = (toolType) =>
     openai.responses.create({
@@ -88,6 +87,35 @@ async function askWithHostedSearch(messages) {
   }
 }
 
+/* ------------------------- "Beautify" the raw answer ----------------------- */
+// Runs a very small follow-up completion to clean formatting & remove markdown link clutter.
+// We keep the plain link list separate for the UI's "Sources" row.
+async function beautifyAnswer(raw, sources = []) {
+  if (!raw) return raw;
+  try {
+    const prompt =
+      "Rewrite the answer so it's clean and easy to read.\n" +
+      "Rules:\n" +
+      "• Use 1–2 short paragraphs OR 3–6 crisp bullet points.\n" +
+      "• No markdown link syntax. Do NOT include [text](url) or bare URLs inside the text.\n" +
+      "• Do NOT fabricate facts or sources. Keep the meaning the same.\n" +
+      "• Do not add a 'Sources' section; the app will render links separately.\n";
+
+    const r = await openai.chat.completions.create({
+      model: CHAT_MODEL,
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: `Answer:\n${raw}\n\nKnown sources:\n${sources.join("\n")}` }
+      ],
+      // no temperature here either
+    });
+    return (r.choices?.[0]?.message?.content || raw).trim();
+  } catch (e) {
+    console.error("BEAUTIFY_FAILED:", dumpErr(e));
+    return raw; // fall back to original if anything fails
+  }
+}
+
 /* --------------------------------- CHAT API -------------------------------- */
 app.post("/api/chat", async (req, res) => {
   try {
@@ -106,8 +134,9 @@ app.post("/api/chat", async (req, res) => {
     ];
 
     const resp = await askWithHostedSearch(messages);
-    const { reply, sources } = collectReplyAndSources(resp);
-    res.json({ reply: reply || "(no reply)", sources });
+    let { reply, sources } = collectReplyAndSources(resp);
+    const pretty = await beautifyAnswer(reply, sources);
+    res.json({ reply: pretty || reply || "(no reply)", sources });
   } catch (e) {
     console.error("CHAT_FAILED:", dumpErr(e));
     const status = e?.status || 500;
@@ -260,5 +289,5 @@ app.get("/api/diag", async (req,res)=>{
 
 app.listen(PORT, () => {
   console.log(`✅ Server :${PORT}  chat=${CHAT_MODEL}  vision=${VISION_MODEL}  image=${IMAGE_MODEL}`);
-  console.log("   Responses API only; hosted web_search (preview fallback); NO temperature param.");
+  console.log("   Responses API + hosted web_search; answer beautifier enabled.");
 });
