@@ -5,11 +5,11 @@ import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import os from 'os';
 
-// NEW: upload helpers
+// Upload + MIME
 import multer from 'multer';
 import { lookup as lookupMime } from 'mime-types';
 
-// NEW: safe PDF text extraction (replaces pdf-parse)
+// Safe PDF extraction
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 dotenv.config();
@@ -105,7 +105,6 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
 
   if (!messages.length) return res.status(400).json({ error: 'No input or message history provided' });
 
-  // Always inject our behavior guide at the front
   const withSystem = [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
 
   try {
@@ -141,8 +140,7 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
 });
 
 /* =====================================================================
-   2) SAFE “real-time” route – /api/chat2
-   (unchanged from your working version)
+   2) SAFE “real-time” route – /api/chat2 (with fallback)
 ===================================================================== */
 app.post(['/api/chat2'], async (req, res) => {
   const t0 = Date.now();
@@ -236,7 +234,10 @@ app.post(['/api/chat2'], async (req, res) => {
 });
 
 /* =====================================================================
-   3) UPLOAD & ANALYZE — /api/analyze (uses pdfjs-dist now)
+   3) UPLOAD & ANALYZE — /api/analyze
+   - uses pdfjs-dist for PDFs
+   - falls back to classic chat if Responses/tools fail
+   - returns detailed error messages to help debug
 ===================================================================== */
 
 // Multer: keep files in memory; limit size to ~15MB each
@@ -291,10 +292,7 @@ app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
         const b64 = f.buffer.toString('base64');
         const dataUrl = `data:${mime};base64=${b64}`;
         content.push({ type: 'input_image', image_url: dataUrl });
-        content.push({
-          type: 'input_text',
-          text: `↑ Image file: ${label} (${mime}, ${f.size} bytes)`,
-        });
+        content.push({ type: 'input_text', text: `↑ Image file: ${label} (${mime}, ${f.size} bytes)` });
         continue;
       }
 
@@ -309,9 +307,10 @@ app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
               `\n===== END PDF: ${label} =====`,
           });
         } catch (e) {
+          console.error('PDF parse failed:', e);
           content.push({
             type: 'input_text',
-            text: `Could not parse PDF ${label}. Size=${f.size} bytes.`,
+            text: `Could not parse PDF ${label}. Size=${f.size} bytes. Error: ${String(e?.message || e)}`,
           });
         }
         continue;
@@ -341,12 +340,44 @@ app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
       { role: 'user', content },
     ];
 
-    const r = await openai.responses.create({
-      model: CONFIGURED_MODEL,
-      input,
-      tools: [{ type: 'web_search' }],
-      tool_choice: 'auto',
-    });
+    let r;
+    try {
+      r = await openai.responses.create({
+        model: CONFIGURED_MODEL,
+        input,
+        tools: [{ type: 'web_search' }],
+        tool_choice: 'auto',
+      });
+    } catch (toolErr) {
+      console.warn('analyze: responses.create failed; falling back to chat:', toolErr?.response?.data || toolErr);
+
+      const completion = await openai.chat.completions.create({
+        model: CONFIGURED_MODEL,
+        messages: input.map((m) => ({ role: m.role, content: m.content })),
+      });
+
+      const usedModel = completion.model || CONFIGURED_MODEL;
+      const fingerprint = completion.system_fingerprint ?? null;
+      const usage = completion.usage ?? null;
+      const latency = Date.now() - t0;
+
+      Object.assign(lastLLM, {
+        model: usedModel,
+        system_fingerprint: fingerprint,
+        usage,
+        ts: Date.now(),
+        latency_ms: latency,
+      });
+
+      res.set('X-LLM-Model', usedModel);
+      if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
+      res.set('X-LLM-Tools-Used', 'fallback');
+
+      logLLM('analyze-fallback', { model: usedModel, fingerprint, usage, latency });
+
+      const reply = completion.choices?.[0]?.message?.content ?? 'No output.';
+      return res.json({ reply, model: usedModel, usage });
+    }
 
     const output = r.output ?? [];
     const text =
@@ -382,8 +413,8 @@ app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
 
     res.json({ reply: text, model: usedModel, usage });
   } catch (err) {
-    console.error('analyze error:', err?.response?.data ?? err);
-    res.status(500).json({ error: 'Analyze request failed' });
+    console.error('analyze error (top-level):', err?.response?.data ?? err);
+    res.status(500).json({ error: 'Analyze request failed', detail: String(err?.message || err) });
   }
 });
 
