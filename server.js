@@ -1,12 +1,11 @@
-// server.js — Responses API ONLY, with hosted web_search tool (preview auto-fallback).
-// Also keeps: PDF/Image analyze + GPT-Image endpoints. pdfjs v4 import fixed.
+// server.js — Responses API only (hosted web_search + preview fallback), no temperature.
+// File Q&A (PDF/image) + image generation retained. pdfjs v4 import path fixed.
 
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import multer from "multer";
 import OpenAI from "openai";
-// pdfjs-dist v4 ships ESM as .mjs
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 dotenv.config();
@@ -31,7 +30,7 @@ app.use(cors({
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/* -------------------------------- utilities -------------------------------- */
+/* ------------------------------- utilities -------------------------------- */
 const dumpErr = (e) => {
   try {
     return JSON.stringify({
@@ -41,7 +40,6 @@ const dumpErr = (e) => {
   } catch { return String(e); }
 };
 
-// Extract assistant text + any URLs we can find (from tool outputs/annotations)
 function collectReplyAndSources(resp) {
   let reply =
     resp?.output_text ??
@@ -61,19 +59,15 @@ function collectReplyAndSources(resp) {
   return { reply: (reply || "").trim(), sources: Array.from(urls) };
 }
 
-/* ------------------------------ Responses API ------------------------------ */
-// Force Responses API with hosted web search.
-// 1) Try stable tool name "web_search"
-// 2) If org not enabled yet, auto-fallback to "web_search_preview"
-// 3) If both fail, return a 503 with a clear message — no other fallback used.
+/* ----------------------- Responses API with hosted search ------------------ */
+// Strictly use Responses API. Try "web_search"; if org not enabled, try preview.
+// No temperature param (fixes your 400).
 async function askWithHostedSearch(messages) {
   const createWith = (toolType) =>
     openai.responses.create({
       model: CHAT_MODEL,
       input: messages,
       tools: [{ type: toolType }],
-      // keep answers crisp; tool decides which sites to use
-      temperature: 0.2,
       metadata: { app: "johnny-chat", tool: toolType }
     });
 
@@ -84,11 +78,8 @@ async function askWithHostedSearch(messages) {
     const retriable = /not enabled|Hosted tool|unsupported|unknown tool|not found|404/i.test(msg);
     console.error("web_search failed:", dumpErr(e1));
     if (retriable) {
-      try {
-        return await createWith("web_search_preview");
-      } catch (e2) {
-        console.error("web_search_preview failed:", dumpErr(e2));
-      }
+      try { return await createWith("web_search_preview"); }
+      catch (e2) { console.error("web_search_preview failed:", dumpErr(e2)); }
     }
     const err = new Error("WEB_SEARCH_TOOL_UNAVAILABLE");
     err.status = 503;
@@ -104,13 +95,11 @@ app.post("/api/chat", async (req, res) => {
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
     if (!input && history.length === 0) return res.status(400).json({ error: "NO_INPUT" });
 
-    // Strong instruction to USE web search for anything time-sensitive.
     const messages = [
       {
         role: "system",
         content:
-          "You are a concise assistant. For any time-sensitive topic (weather, news, sports, prices, schedules, elections, policies), use the web_search tool. " +
-          "Cite 2–4 links at the end. Answer clearly, factually, and briefly."
+          "You are a concise assistant. For any time-sensitive topic (weather, news, sports, prices, schedules, elections, policies), use the web_search tool and cite 2–4 links at the end."
       },
       ...history,
       { role: "user", content: input }
@@ -125,10 +114,7 @@ app.post("/api/chat", async (req, res) => {
     res.status(status).json({
       error: "CHAT_FAILED",
       detail: e?.detail || e?.message || "Unknown error",
-      hint:
-        status === 503
-          ? "Enable the hosted web_search tool for your OpenAI org or wait for access; then redeploy."
-          : undefined
+      hint: status === 503 ? "Enable hosted web_search for your OpenAI org (or preview) and redeploy." : undefined
     });
   }
 });
@@ -145,7 +131,6 @@ async function extractPdfText(buffer) {
   return text.trim();
 }
 async function summarizeText(text, nChars = 120000) {
-  // Summarization can remain a simple chat completion (no web).
   const r = await openai.chat.completions.create({
     model: CHAT_MODEL,
     messages: [
@@ -170,10 +155,7 @@ async function describeImage(dataUrl) {
   });
   const reply = r.choices?.[0]?.message?.content ?? "";
   const parts = reply.split(/Text:\s*/i);
-  return {
-    summary: parts[0].replace(/^Summary:\s*/i, "").trim(),
-    text: (parts[1] || "").trim()
-  };
+  return { summary: parts[0].replace(/^Summary:\s*/i, "").trim(), text: (parts[1] || "").trim() };
 }
 
 /* --------------------------- upload / analyze API -------------------------- */
@@ -253,7 +235,6 @@ app.post("/generate-image", async (req, res) => {
 
 /* -------------------------------- diagnostics ------------------------------ */
 app.get("/api/diag", async (req,res)=>{
-  // Try a tiny responses call with hosted search to confirm availability
   let hosted = "unknown";
   try {
     await openai.responses.create({
@@ -279,5 +260,5 @@ app.get("/api/diag", async (req,res)=>{
 
 app.listen(PORT, () => {
   console.log(`✅ Server :${PORT}  chat=${CHAT_MODEL}  vision=${VISION_MODEL}  image=${IMAGE_MODEL}`);
-  console.log("   Using Responses API only, with hosted web_search (preview fallback).");
+  console.log("   Responses API only; hosted web_search (preview fallback); NO temperature param.");
 });
