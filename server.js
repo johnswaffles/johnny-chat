@@ -1,5 +1,5 @@
-// server.js — unchanged features + size fix for image gen ('1024x1024' | '1024x1536' | '1536x1024' | 'auto')
-// Keeps daily limits if you already replaced with the quota version; otherwise this drop-in works too.
+// server.js — same endpoints as before; size options aligned to API.
+// If you already run the quota version, you can keep it; this file is drop-in compatible.
 
 import express from "express";
 import cors from "cors";
@@ -30,14 +30,14 @@ app.use(cors({
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// -------- helpers
+// ---------- helpers
 async function extractPdfText(buffer) {
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
   let text = "";
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
     const content = await page.getTextContent();
-    text += content.items.map((i) => i.str).join(" ") + "\n";
+    text += content.items.map(i => i.str).join(" ") + "\n";
   }
   return text.trim();
 }
@@ -70,7 +70,7 @@ async function describeImage(dataUrl) {
   };
 }
 
-// -------- chat
+// ---------- chat
 app.post("/api/chat", async (req, res) => {
   try {
     const input = String(req.body?.input ?? "").trim();
@@ -87,13 +87,13 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// -------- upload (PDF/PNG/JPG)
+// ---------- upload (PDF/PNG/JPG)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 const docs = Object.create(null);
 const makeId = () => Math.random().toString(36).slice(2,10);
 
-app.post("/upload", upload.single("file"), async (req,res) => {
-  try{
+app.post("/upload", upload.single("file"), async (req, res) => {
+  try {
     if (!req.file) return res.status(400).json({ error:"NO_FILE" });
     const mime = req.file.mimetype || "";
     const buf = req.file.buffer;
@@ -114,13 +114,13 @@ app.post("/upload", upload.single("file"), async (req,res) => {
     const docId = makeId();
     docs[docId] = { kind, text };
     res.json({ ok:true, docId, kind, text, summary });
-  }catch(e){
+  } catch (e) {
     console.error(e);
     res.status(500).json({ error:"UPLOAD_FAILED", detail:e?.message });
   }
 });
 
-// -------- query doc
+// ---------- query doc
 app.post("/query", async (req,res)=>{
   try{
     const docId = String(req.body?.docId || "");
@@ -143,27 +143,26 @@ app.post("/query", async (req,res)=>{
   }
 });
 
-// -------- image generation (size options aligned to API)
+// ---------- image generation (API-supported sizes only)
 app.post("/generate-image", async (req, res) => {
   try {
     const prompt = String(req.body?.prompt || "");
     let size   = String(req.body?.size || "1024x1024");
-    if (!prompt) return res.status(400).json({ error: "PROMPT_REQUIRED" });
+    if (!prompt) return res.status(400).json({ error:"PROMPT_REQUIRED" });
 
-    // Accept only supported values; default to 1024x1024
     const allowed = new Set(["1024x1024","1024x1536","1536x1024","auto"]);
     if (!allowed.has(size)) size = "1024x1024";
 
     const payload = { model: IMAGE_MODEL, prompt };
-    if (size !== "auto") payload.size = size; else payload.size = "auto";
+    payload.size = size; // 'auto' allowed
 
     const img = await openai.images.generate(payload);
     const b64 = img.data?.[0]?.b64_json;
-    if (!b64) return res.status(502).json({ error: "NO_IMAGE" });
+    if (!b64) return res.status(502).json({ error:"NO_IMAGE" });
     res.json({ image_b64: b64 });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "IMAGE_FAILED", detail: err?.message });
+    res.status(500).json({ error:"IMAGE_FAILED", detail: err?.message });
   }
 });
 
