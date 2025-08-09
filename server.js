@@ -5,6 +5,11 @@ import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import os from 'os';
 
+// NEW: upload helpers
+import multer from 'multer';
+import pdfParse from 'pdf-parse';
+import { lookup as lookupMime } from 'mime-types';
+
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
@@ -23,7 +28,8 @@ GENERAL
 - Make links clickable using Markdown: [Title](https://example.com).
 
 RESTAURANTS (VERY IMPORTANT)
-- When the user asks about restaurants (any request for places to eat, “best restaurants”, “where to eat”, etc.), ALWAYS provide, for each place, if available:
+- When the user asks about restaurants (any request for places to eat, “best restaurants”, “where to eat”, etc.),
+ALWAYS provide, for each place, if available:
   • Name
   • Phone number (format: (###) ###-####)
   • Full street address (with city & state)
@@ -44,15 +50,17 @@ WEATHER (VERY IMPORTANT)
 
 /* -------------------- app & client -------------------- */
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
-app.use(cors({
-  origin: [
-    'https://justaskjohnny.com',
-    'https://www.justaskjohnny.com',
-    'http://localhost:3000'
-  ]
-}));
+app.use(
+  cors({
+    origin: [
+      'https://justaskjohnny.com',
+      'https://www.justaskjohnny.com',
+      'http://localhost:3000',
+    ],
+  })
+);
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -62,7 +70,7 @@ const lastLLM = {
   system_fingerprint: null,
   usage: null,
   ts: null,
-  latency_ms: null
+  latency_ms: null,
 };
 
 function logLLM(prefix, { model, fingerprint, usage, latency }) {
@@ -72,8 +80,7 @@ function logLLM(prefix, { model, fingerprint, usage, latency }) {
       (usage?.total_tokens != null
         ? ` tokens total=${usage.total_tokens} (prompt=${usage.prompt_tokens ?? 0}, completion=${usage.completion_tokens ?? 0})`
         : '') +
-      (latency != null ? ` latency=${latency}ms`
-        : '')
+      (latency != null ? ` latency=${latency}ms` : '')
   );
 }
 
@@ -88,7 +95,10 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
   if (Array.isArray(req.body.history)) messages = req.body.history;
   else if (Array.isArray(req.body.messages)) messages = req.body.messages;
 
-  if (req.body.input && (!messages.length || messages[messages.length - 1]?.content !== req.body.input)) {
+  if (
+    req.body.input &&
+    (!messages.length || messages[messages.length - 1]?.content !== req.body.input)
+  ) {
     messages.push({ role: 'user', content: req.body.input });
   }
 
@@ -100,7 +110,7 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
   try {
     const completion = await openai.chat.completions.create({
       model: CONFIGURED_MODEL,
-      messages: withSystem
+      messages: withSystem,
     });
 
     const usedModel = completion.model || CONFIGURED_MODEL;
@@ -113,7 +123,7 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
       system_fingerprint: fingerprint,
       usage,
       ts: Date.now(),
-      latency_ms: latency
+      latency_ms: latency,
     });
 
     res.set('X-LLM-Model', usedModel);
@@ -145,7 +155,7 @@ app.post(['/api/chat2'], async (req, res) => {
     const input = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...history,
-      { role: 'user', content: userInput }
+      { role: 'user', content: userInput },
     ];
 
     let r;
@@ -154,7 +164,7 @@ app.post(['/api/chat2'], async (req, res) => {
         model: CONFIGURED_MODEL,
         input,
         tools: [{ type: 'web_search' }], // allowed, not required
-        tool_choice: 'auto'
+        tool_choice: 'auto',
       });
     } catch (toolErr) {
       // Graceful fallback to Completions if Responses/tooling isn't available
@@ -162,7 +172,7 @@ app.post(['/api/chat2'], async (req, res) => {
 
       const completion = await openai.chat.completions.create({
         model: CONFIGURED_MODEL,
-        messages: input.map(m => ({ role: m.role, content: m.content }))
+        messages: input.map((m) => ({ role: m.role, content: m.content })),
       });
 
       const usedModel = completion.model || CONFIGURED_MODEL;
@@ -175,7 +185,7 @@ app.post(['/api/chat2'], async (req, res) => {
         system_fingerprint: fingerprint,
         usage,
         ts: Date.now(),
-        latency_ms: latency
+        latency_ms: latency,
       });
 
       res.set('X-LLM-Model', usedModel);
@@ -191,8 +201,14 @@ app.post(['/api/chat2'], async (req, res) => {
     const output = r.output ?? [];
     const text =
       r.output_text ??
-      output.flatMap(o => o?.content ?? []).find(c => c?.type === 'output_text')?.text ??
-      output.flatMap(o => o?.content ?? []).filter(c => typeof c?.text === 'string').map(c => c.text).join('\n') ??
+      output
+        .flatMap((o) => o?.content ?? [])
+        .find((c) => c?.type === 'output_text')?.text ??
+      output
+        .flatMap((o) => o?.content ?? [])
+        .filter((c) => typeof c?.text === 'string')
+        .map((c) => c.text)
+        .join('\n') ??
       'No text output.';
 
     const usedModel = r.model || CONFIGURED_MODEL;
@@ -205,7 +221,7 @@ app.post(['/api/chat2'], async (req, res) => {
       system_fingerprint: fingerprint,
       usage,
       ts: Date.now(),
-      latency_ms: latency
+      latency_ms: latency,
     });
 
     res.set('X-LLM-Model', usedModel);
@@ -218,6 +234,154 @@ app.post(['/api/chat2'], async (req, res) => {
   } catch (err) {
     console.error('chat2 error:', err?.response?.data ?? err);
     res.status(500).json({ error: 'Chat2 request failed' });
+  }
+});
+
+/* =====================================================================
+   3) UPLOAD & ANALYZE — /api/analyze
+   - Accepts up to 5 files (images, PDFs, text) and a user prompt
+   - Images are sent to the LLM as data URLs (input_image)
+   - PDFs/text are extracted and sent as input_text
+   - Keeps your web_search chat route untouched
+===================================================================== */
+
+// Multer: keep files in memory; limit size to ~15MB each
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024, files: 5 },
+});
+
+app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
+  const t0 = Date.now();
+  try {
+    const userPrompt = (req.body?.prompt || '').toString().trim();
+    const history = Array.isArray(req.body?.history) ? req.body.history : [];
+
+    if (!userPrompt && (!req.files || req.files.length === 0)) {
+      return res.status(400).json({ error: 'Provide a prompt and/or at least one file.' });
+    }
+
+    // Build multimodal content
+    // Start with the user's instruction
+    const content = [
+      { type: 'input_text', text: userPrompt || 'Analyze the attached files.' },
+    ];
+
+    // Normalize each file into either input_image or input_text
+    for (const f of req.files || []) {
+      const mime =
+        f.mimetype ||
+        lookupMime(f.originalname) ||
+        'application/octet-stream';
+      const label = f.originalname || `upload.${(mime.split('/')[1] || 'bin')}`;
+
+      // Images -> input_image
+      if (mime.startsWith('image/')) {
+        const b64 = f.buffer.toString('base64');
+        const dataUrl = `data:${mime};base64=${b64}`;
+        content.push({
+          type: 'input_image',
+          image_url: dataUrl,
+          // You can optionally include "mime_type" if SDK supports it.
+        });
+        content.push({
+          type: 'input_text',
+          text: `↑ Image file: ${label} (${mime}, ${f.size} bytes)`,
+        });
+        continue;
+      }
+
+      // PDFs -> extract text
+      if (mime === 'application/pdf') {
+        try {
+          const parsed = await pdfParse(f.buffer);
+          const text = (parsed.text || '').trim().slice(0, 100000); // safety cap
+          content.push({
+            type: 'input_text',
+            text:
+              `===== BEGIN PDF: ${label} =====\n` +
+              (text || '[no text extracted]') +
+              `\n===== END PDF: ${label} =====`,
+          });
+        } catch (e) {
+          content.push({
+            type: 'input_text',
+            text: `Could not parse PDF ${label}. Size=${f.size} bytes.`,
+          });
+        }
+        continue;
+      }
+
+      // Plain text / JSON
+      if (mime.startsWith('text/') || mime === 'application/json') {
+        const text = f.buffer.toString('utf8');
+        content.push({
+          type: 'input_text',
+          text:
+            `===== BEGIN FILE: ${label} (${mime}) =====\n` +
+            text.slice(0, 100000) +
+            `\n===== END FILE: ${label} =====`,
+        });
+        continue;
+      }
+
+      // Fallback: unsupported binary
+      content.push({
+        type: 'input_text',
+        text: `Received unsupported file type for ${label} (${mime}, ${f.size} bytes). Provide guidance or request a different format if needed.`,
+      });
+    }
+
+    const input = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history,
+      { role: 'user', content },
+    ];
+
+    const r = await openai.responses.create({
+      model: CONFIGURED_MODEL,
+      input,
+      // Allow web_search if your account supports it (useful when user asks both to analyze & fetch live info)
+      tools: [{ type: 'web_search' }],
+      tool_choice: 'auto',
+    });
+
+    const output = r.output ?? [];
+    const text =
+      r.output_text ??
+      output
+        .flatMap((o) => o?.content ?? [])
+        .find((c) => c?.type === 'output_text')?.text ??
+      output
+        .flatMap((o) => o?.content ?? [])
+        .filter((c) => typeof c?.text === 'string')
+        .map((c) => c.text)
+        .join('\n') ??
+      'No text output.';
+
+    const usedModel = r.model || CONFIGURED_MODEL;
+    const fingerprint = r.system_fingerprint ?? null;
+    const usage = r.usage ?? null;
+    const latency = Date.now() - t0;
+
+    Object.assign(lastLLM, {
+      model: usedModel,
+      system_fingerprint: fingerprint,
+      usage,
+      ts: Date.now(),
+      latency_ms: latency,
+    });
+
+    res.set('X-LLM-Model', usedModel);
+    if (fingerprint) res.set('X-LLM-Fingerprint', fingerprint);
+    res.set('X-LLM-Tools-Used', 'auto-or-none');
+
+    logLLM('analyze', { model: usedModel, fingerprint, usage, latency });
+
+    res.json({ reply: text, model: usedModel, usage });
+  } catch (err) {
+    console.error('analyze error:', err?.response?.data ?? err);
+    res.status(500).json({ error: 'Analyze request failed' });
   }
 });
 
@@ -236,7 +400,7 @@ app.get(['/status', '/api/status'], (_req, res) => {
     lastLatencyMs: lastLLM.latency_ms,
     node: process.version,
     host: os.hostname(),
-    uptimeSeconds: Math.floor(process.uptime())
+    uptimeSeconds: Math.floor(process.uptime()),
   });
 });
 
@@ -246,7 +410,7 @@ app.get('/__whoami', (_req, res) => {
     commit: process.env.RENDER_GIT_COMMIT || 'unknown',
     configuredModel: CONFIGURED_MODEL,
     file: import.meta.url,
-    cwd: process.cwd()
+    cwd: process.cwd(),
   });
 });
 
