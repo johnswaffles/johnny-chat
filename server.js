@@ -7,8 +7,10 @@ import os from 'os';
 
 // NEW: upload helpers
 import multer from 'multer';
-import pdfParse from 'pdf-parse';
 import { lookup as lookupMime } from 'mime-types';
+
+// NEW: safe PDF text extraction (replaces pdf-parse)
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 dotenv.config();
 
@@ -86,7 +88,6 @@ function logLLM(prefix, { model, fingerprint, usage, latency }) {
 
 /* =======================================================
    1) Classic Chat Completions (no tools)
-   - Prepends SYSTEM_PROMPT so the bot follows your rules
 ======================================================= */
 app.post(['/chat', '/api/chat'], async (req, res) => {
   const t0 = Date.now();
@@ -140,10 +141,8 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
 });
 
 /* =====================================================================
-   2) SAFE “real-time” route (optional tools, never required) – /api/chat2
-   - Enables web_search (if available to your account), but NEVER forces it.
-   - If Responses API/tooling fails, falls back to classic chat.
-   - Also injects SYSTEM_PROMPT for restaurant & weather behavior.
+   2) SAFE “real-time” route – /api/chat2
+   (unchanged from your working version)
 ===================================================================== */
 app.post(['/api/chat2'], async (req, res) => {
   const t0 = Date.now();
@@ -163,11 +162,10 @@ app.post(['/api/chat2'], async (req, res) => {
       r = await openai.responses.create({
         model: CONFIGURED_MODEL,
         input,
-        tools: [{ type: 'web_search' }], // allowed, not required
+        tools: [{ type: 'web_search' }],
         tool_choice: 'auto',
       });
     } catch (toolErr) {
-      // Graceful fallback to Completions if Responses/tooling isn't available
       console.warn('responses.create failed; falling back to chat:', toolErr?.response?.data || toolErr);
 
       const completion = await openai.chat.completions.create({
@@ -238,11 +236,7 @@ app.post(['/api/chat2'], async (req, res) => {
 });
 
 /* =====================================================================
-   3) UPLOAD & ANALYZE — /api/analyze
-   - Accepts up to 5 files (images, PDFs, text) and a user prompt
-   - Images are sent to the LLM as data URLs (input_image)
-   - PDFs/text are extracted and sent as input_text
-   - Keeps your web_search chat route untouched
+   3) UPLOAD & ANALYZE — /api/analyze (uses pdfjs-dist now)
 ===================================================================== */
 
 // Multer: keep files in memory; limit size to ~15MB each
@@ -251,39 +245,52 @@ const upload = multer({
   limits: { fileSize: 15 * 1024 * 1024, files: 5 },
 });
 
+// PDF text extractor using pdfjs-dist
+async function extractPdfText(buffer) {
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(buffer),
+    useSystemFonts: true,
+  });
+  const pdf = await loadingTask.promise;
+  let text = '';
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const line = (content.items || [])
+      .map((it) => (typeof it?.str === 'string' ? it.str : ''))
+      .join(' ');
+    text += line + '\n';
+  }
+  return text.trim();
+}
+
 app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
   const t0 = Date.now();
   try {
     const userPrompt = (req.body?.prompt || '').toString().trim();
-    const history = Array.isArray(req.body?.history) ? req.body.history : [];
+    const historyRaw = req.body?.history;
+    const history =
+      Array.isArray(historyRaw) ? historyRaw :
+      typeof historyRaw === 'string' ? (() => { try { return JSON.parse(historyRaw); } catch { return []; } })() :
+      [];
 
     if (!userPrompt && (!req.files || req.files.length === 0)) {
       return res.status(400).json({ error: 'Provide a prompt and/or at least one file.' });
     }
 
-    // Build multimodal content
-    // Start with the user's instruction
     const content = [
       { type: 'input_text', text: userPrompt || 'Analyze the attached files.' },
     ];
 
-    // Normalize each file into either input_image or input_text
     for (const f of req.files || []) {
-      const mime =
-        f.mimetype ||
-        lookupMime(f.originalname) ||
-        'application/octet-stream';
+      const mime = f.mimetype || lookupMime(f.originalname) || 'application/octet-stream';
       const label = f.originalname || `upload.${(mime.split('/')[1] || 'bin')}`;
 
-      // Images -> input_image
       if (mime.startsWith('image/')) {
         const b64 = f.buffer.toString('base64');
         const dataUrl = `data:${mime};base64=${b64}`;
-        content.push({
-          type: 'input_image',
-          image_url: dataUrl,
-          // You can optionally include "mime_type" if SDK supports it.
-        });
+        content.push({ type: 'input_image', image_url: dataUrl });
         content.push({
           type: 'input_text',
           text: `↑ Image file: ${label} (${mime}, ${f.size} bytes)`,
@@ -291,11 +298,9 @@ app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
         continue;
       }
 
-      // PDFs -> extract text
       if (mime === 'application/pdf') {
         try {
-          const parsed = await pdfParse(f.buffer);
-          const text = (parsed.text || '').trim().slice(0, 100000); // safety cap
+          const text = (await extractPdfText(f.buffer)).slice(0, 100000);
           content.push({
             type: 'input_text',
             text:
@@ -312,7 +317,6 @@ app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
         continue;
       }
 
-      // Plain text / JSON
       if (mime.startsWith('text/') || mime === 'application/json') {
         const text = f.buffer.toString('utf8');
         content.push({
@@ -325,7 +329,6 @@ app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
         continue;
       }
 
-      // Fallback: unsupported binary
       content.push({
         type: 'input_text',
         text: `Received unsupported file type for ${label} (${mime}, ${f.size} bytes). Provide guidance or request a different format if needed.`,
@@ -341,7 +344,6 @@ app.post('/api/analyze', upload.array('files', 5), async (req, res) => {
     const r = await openai.responses.create({
       model: CONFIGURED_MODEL,
       input,
-      // Allow web_search if your account supports it (useful when user asks both to analyze & fetch live info)
       tools: [{ type: 'web_search' }],
       tool_choice: 'auto',
     });
