@@ -1,6 +1,4 @@
-// server.js — same endpoints as before; size options aligned to API.
-// If you already run the quota version, you can keep it; this file is drop-in compatible.
-
+// server.js
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -11,7 +9,7 @@ import * as pdfjs from "pdfjs-dist/legacy/build/pdf.js";
 dotenv.config();
 
 const PORT         = process.env.PORT || 3000;
-const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5-mini";
+const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5-chat-latest"; // GPT-5 chat
 const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
 const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
 
@@ -30,7 +28,7 @@ app.use(cors({
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ---------- helpers
+/* --------------------------------- helpers -------------------------------- */
 async function extractPdfText(buffer) {
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
   let text = "";
@@ -70,31 +68,69 @@ async function describeImage(dataUrl) {
   };
 }
 
-// ---------- chat
+/* ---------------------------------- chat ---------------------------------- */
+// New: real-time, web-grounded chat using Responses API + web_search tool.
 app.post("/api/chat", async (req, res) => {
   try {
     const input = String(req.body?.input ?? "").trim();
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
-    if (!input && history.length === 0) return res.status(400).json({ error: "NO_INPUT" });
-    const r = await openai.chat.completions.create({
+
+    if (!input && history.length === 0) {
+      return res.status(400).json({ error: "NO_INPUT" });
+    }
+
+    // Build conversation for Responses API
+    const messages = [
+      { role: "system", content: "You are a concise, accurate assistant. If you use the web, cite sources briefly at the end." },
+      ...history,
+      { role: "user", content: input }
+    ];
+
+    // Enable built-in web search tool (official method for up-to-date info).
+    // If your account is on an older preview, swap 'web_search' -> 'web_search_preview'.
+    const response = await openai.responses.create({
       model: CHAT_MODEL,
-      messages: [{ role:"system", content:"You are a concise, accurate assistant." }, ...history, { role:"user", content: input }]
+      input: messages,
+      tools: [{ type: "web_search" }],
+      // Ask the model to include citations if available
+      // (Responses API may attach them either in annotations or a citations field).
+      metadata: { app: "johnny-chat", feature: "realtime-web" }
     });
-    res.json({ reply: r.choices?.[0]?.message?.content ?? "(no reply)" });
+
+    // Extract text
+    const reply =
+      response.output_text ??
+      (response.output?.[0]?.content?.[0]?.text || "(no reply)");
+
+    // Try to collect URLs from tool outputs / annotations if present
+    const urls = new Set();
+
+    const dig = (obj) => {
+      if (!obj || typeof obj !== "object") return;
+      for (const k of Object.keys(obj)) {
+        const v = obj[k];
+        if (typeof v === "string" && /^https?:\/\//i.test(v)) urls.add(v);
+        if (Array.isArray(v)) v.forEach(dig);
+        else if (v && typeof v === "object") dig(v);
+      }
+    };
+    dig(response);
+
+    res.json({ reply, sources: Array.from(urls) });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error:"CHAT_FAILED", detail:e?.message });
+    res.status(500).json({ error: "CHAT_FAILED", detail: e?.message });
   }
 });
 
-// ---------- upload (PDF/PNG/JPG)
+/* ---------------------------- upload + analyze ---------------------------- */
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 const docs = Object.create(null);
 const makeId = () => Math.random().toString(36).slice(2,10);
 
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error:"NO_FILE" });
+    if (!req.file) return res.status(400).json({ error: "NO_FILE" });
     const mime = req.file.mimetype || "";
     const buf = req.file.buffer;
 
@@ -120,7 +156,6 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// ---------- query doc
 app.post("/query", async (req,res)=>{
   try{
     const docId = String(req.body?.docId || "");
@@ -143,7 +178,7 @@ app.post("/query", async (req,res)=>{
   }
 });
 
-// ---------- image generation (API-supported sizes only)
+/* ---------------------------- image generation ---------------------------- */
 app.post("/generate-image", async (req, res) => {
   try {
     const prompt = String(req.body?.prompt || "");
@@ -154,7 +189,7 @@ app.post("/generate-image", async (req, res) => {
     if (!allowed.has(size)) size = "1024x1024";
 
     const payload = { model: IMAGE_MODEL, prompt };
-    payload.size = size; // 'auto' allowed
+    payload.size = size;
 
     const img = await openai.images.generate(payload);
     const b64 = img.data?.[0]?.b64_json;
@@ -166,4 +201,7 @@ app.post("/generate-image", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`✅ Server :${PORT}  chat=${CHAT_MODEL} vision=${VISION_MODEL} image=${IMAGE_MODEL}`));
+app.listen(PORT, () => {
+  console.log(`✅ Server :${PORT}  chat=${CHAT_MODEL} vision=${VISION_MODEL} image=${IMAGE_MODEL}`);
+  console.log("   Web search enabled for /api/chat via Responses API.");
+});
