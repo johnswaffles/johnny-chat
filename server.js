@@ -6,7 +6,17 @@ const cors = require("cors");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const OpenAI = require("openai");
-const pdfParse = require("pdf-parse"); // <-- Node-friendly PDF extraction
+
+// Lazy/defensive load: do NOT crash app at boot if pdf-parse isn't installed yet.
+let pdfParse = null;
+try {
+  // Will be available after you add it to package.json and deploy
+  pdfParse = require("pdf-parse");
+} catch (e) {
+  console.warn(
+    "[boot] pdf-parse not installed yet. PDF uploads will return an error until it's added."
+  );
+}
 
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY; // required
@@ -31,9 +41,11 @@ async function summarize(text, maxTokens = 300) {
   const resp = await openai.responses.create({
     model: CHAT_MODEL,
     input: [
-      { role: "system", content:
-        "You are a concise technical summarizer. 2–4 sentences. No links or citations. " +
-        "Focus on the main points and outcomes." },
+      {
+        role: "system",
+        content:
+          "You are a concise technical summarizer. 2–4 sentences. No links or citations. Focus on the core points."
+      },
       { role: "user", content: text.slice(0, 6000) }
     ],
     max_output_tokens: maxTokens
@@ -49,7 +61,7 @@ app.post("/api/chat", async (req, res) => {
     const input = String(req.body?.input || "");
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
 
-    // System: no URLs in the body; UI shows sources separately.
+    // No links in body; sources are UI-only
     const sys =
       "You are Johnny Chat. Be helpful, direct, and concise. " +
       "Do NOT include URLs, markdown links, or bracketed citations in your answer body. " +
@@ -64,15 +76,15 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = resp.output_text?.trim() || "(no reply)";
-    // Provide sources array if your tool-using agent collects them; stubbed empty here.
+    // Add sources if your tool-using agent collects them. Empty for now.
     res.json({ reply, sources: [] });
   } catch (e) {
     console.error("CHAT_ERROR:", e);
-    res.status(503).json({ error: "CHAT_FAILED", detail: (e && e.message) || String(e) });
+    res.status(503).json({ error: "CHAT_FAILED", detail: e?.message || String(e) });
   }
 });
 
-// Beautify: structure and clean formatting, forbid links/citations
+// Beautify: clean/structure, forbid links
 app.post("/api/beautify", async (req, res) => {
   try {
     const text = String(req.body?.text || "");
@@ -98,7 +110,7 @@ app.post("/api/beautify", async (req, res) => {
     res.json({ pretty });
   } catch (e) {
     console.error("BEAUTIFY_ERROR:", e);
-    res.status(500).json({ error: "BEAUTIFY_FAILED", detail: (e && e.message) || String(e) });
+    res.status(500).json({ error: "BEAUTIFY_FAILED", detail: e?.message || String(e) });
   }
 });
 
@@ -111,15 +123,23 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     let text = "";
     if (mimetype === "application/pdf") {
-      const parsed = await pdfParse(buffer);          // ← works on Node 22, no legacy build needed
+      if (!pdfParse) {
+        return res.status(500).json({
+          error: "PDF_PARSE_NOT_INSTALLED",
+          detail: "Install 'pdf-parse' and redeploy."
+        });
+      }
+      const parsed = await pdfParse(buffer);
       text = (parsed.text || "").trim();
     } else if (mimetype.startsWith("image/")) {
       // Vision OCR + description
       const base64 = buffer.toString("base64");
       const visionInput = [
-        { role: "system", content:
-          "Extract readable text (OCR) and give a short description. " +
-          "Return plain text; no links or citations." },
+        {
+          role: "system",
+          content:
+            "Extract readable text (OCR) and give a short description. Return plain text; no links or citations."
+        },
         {
           role: "user",
           content: [
@@ -140,7 +160,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     res.json({ docId, text, summary });
   } catch (e) {
     console.error("UPLOAD_ERROR:", e);
-    res.status(500).json({ error: "UPLOAD_FAILED", detail: (e && e.message) || String(e) });
+    res.status(500).json({ error: "UPLOAD_FAILED", detail: e?.message || String(e) });
   }
 });
 
@@ -156,8 +176,7 @@ app.post("/query", async (req, res) => {
 
     const sys =
       "Answer the user's question using ONLY the provided document content. " +
-      "If the answer is not in the document, say you couldn't find it. " +
-      "No links or citations.";
+      "If the answer is not in the document, say you couldn't find it. No links or citations.";
 
     const resp = await openai.responses.create({
       model: CHAT_MODEL,
@@ -173,7 +192,7 @@ app.post("/query", async (req, res) => {
     res.json({ answer });
   } catch (e) {
     console.error("QUERY_ERROR:", e);
-    res.status(500).json({ error: "QUERY_FAILED", detail: (e && e.message) || String(e) });
+    res.status(500).json({ error: "QUERY_FAILED", detail: e?.message || String(e) });
   }
 });
 
@@ -194,7 +213,7 @@ app.post("/generate-image", async (req, res) => {
     res.json({ image_b64 });
   } catch (e) {
     console.error("IMAGE_ERROR:", e);
-    res.status(500).json({ error: "IMAGE_FAILED", detail: (e && e.message) || String(e) });
+    res.status(500).json({ error: "IMAGE_FAILED", detail: e?.message || String(e) });
   }
 });
 
