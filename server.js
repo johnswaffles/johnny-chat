@@ -207,24 +207,24 @@ async function beautifyAnswer(raw, sources = []) {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    // Extract the current user message and optional history array from the
-    // request.  The client is responsible for maintaining and sending the
-    // conversation history.  Each history element should be an object
-    // conforming to the OpenAI Chat API format, e.g. { role:"user", content:"hi" }.
-    const input = String(req.body?.message ?? "").trim();
-    const history = Array.isArray(req.body?.history) ? req.body.history : [];
+    // Pull the latest user message from either `message` or `input` for backwards compatibility.
+    const input = String(req.body?.message ?? req.body?.input ?? "").trim();
+    // Sanitize conversation history: keep only { role, content } to avoid unknown fields like sources.
+    let history = [];
+    if (Array.isArray(req.body?.history)) {
+      history = req.body.history
+        .filter(item => item && typeof item.role === "string" && typeof item.content === "string")
+        .map(item => ({ role: item.role, content: item.content }));
+    }
     if (!input && history.length === 0) {
       return res.status(400).json({ error: "NO_INPUT" });
     }
-    // Compose the full message list: a system instruction, then any prior
-    // conversation supplied by the client, and finally the latest user input.
+    // Compose messages: a system prompt, sanitized history, then the latest user input.
     const messages = [
       {
         role: "system",
         content:
-          "You are a concise assistant. For any time‑sensitive topic " +
-          "(weather, news, sports, prices, schedules, elections, policies) " +
-          "use the web_search tool and cite 2–4 links at the end.",
+          "You are a concise assistant. For any time-sensitive topic (weather, news, sports, prices, schedules, elections, policies), use the web_search tool and cite 2–4 links at the end.",
       },
       ...history,
       { role: "user", content: input },
@@ -239,10 +239,9 @@ app.post("/api/chat", async (req, res) => {
     res.status(status).json({
       error: "CHAT_FAILED",
       detail: e?.detail || e?.message || "Unknown error",
-      hint:
-        status === 503
-          ? "Enable hosted web_search for your OpenAI org (or preview) and redeploy."
-          : undefined,
+      hint: status === 503
+        ? "Enable hosted web_search for your OpenAI org (or preview) and redeploy."
+        : undefined,
     });
   }
 });
@@ -267,7 +266,9 @@ const makeId = () => Math.random().toString(36).slice(2, 10);
  * @returns {Promise<string>} The extracted text
  */
 async function extractPdfText(buffer) {
-  const doc = await pdfjs.getDocument({ data: buffer }).promise;
+  // Always pass a Uint8Array to pdfjs to avoid "Please provide binary data as 'Uint8Array'" errors.
+  const data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  const doc = await pdfjs.getDocument({ data }).promise;
   let text = "";
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
