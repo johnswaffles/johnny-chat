@@ -1,82 +1,91 @@
-// server.js
-// Express backend for Johnny Chat: chat, beautify, PDF/image upload+QA, image generation
-
+// server.js — Johnny Chat API
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const OpenAI = require("openai");
 
-// Lazy/defensive load: do NOT crash app at boot if pdf-parse isn't installed yet.
+// Lazy require so the app still boots even if install is missing
 let pdfParse = null;
-try {
-  // Will be available after you add it to package.json and deploy
-  pdfParse = require("pdf-parse");
-} catch (e) {
-  console.warn(
-    "[boot] pdf-parse not installed yet. PDF uploads will return an error until it's added."
-  );
-}
+try { pdfParse = require("pdf-parse"); }
+catch { console.warn("[boot] pdf-parse not installed yet. PDF uploads will error until it is."); }
 
 const PORT = process.env.PORT || 3000;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY; // required
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const CHAT_MODEL = process.env.CHAT_MODEL || "gpt-4o-mini";
 const IMAGE_MODEL = process.env.IMAGE_MODEL || "gpt-image-1";
 
-if (!OPENAI_API_KEY) {
-  console.error("Missing OPENAI_API_KEY");
-  process.exit(1);
-}
-
+if (!OPENAI_API_KEY) { console.error("Missing OPENAI_API_KEY"); process.exit(1); }
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-/* ----------------------------- In-memory store ----------------------------- */
-const docs = new Map(); // docId -> { text, summary, uploadedAt, name }
+// In-memory docs: docId -> { text, summary, uploadedAt, names[] }
+const docs = new Map();
 
-/* ------------------------------- Utilities -------------------------------- */
 async function summarize(text, maxTokens = 300) {
   const resp = await openai.responses.create({
     model: CHAT_MODEL,
     input: [
-      {
-        role: "system",
-        content:
-          "You are a concise technical summarizer. 2–4 sentences. No links or citations. Focus on the core points."
-      },
+      { role: "system", content: "You are a concise technical summarizer. 2–4 sentences. No links/citations." },
       { role: "user", content: text.slice(0, 6000) }
     ],
-    max_output_tokens: maxTokens
+    // no temperature (avoid 'Unsupported parameter' with some models)
   });
   return resp.output_text?.trim() || "";
 }
 
-/* --------------------------------- Routes --------------------------------- */
+async function extractFromFile(file) {
+  const { buffer, mimetype } = file;
+  if (mimetype === "application/pdf") {
+    if (!pdfParse) throw new Error("pdf-parse not installed on server");
+    const parsed = await pdfParse(buffer);           // reads all pages; returns text
+    return (parsed.text || "").trim();
+  }
+  if (mimetype.startsWith("image/")) {
+    const base64 = buffer.toString("base64");
+    const resp = await openai.responses.create({
+      model: CHAT_MODEL,
+      input: [
+        { role: "system", content: "Extract readable text (OCR) and add a short description. Plain text only." },
+        {
+          role: "user",
+          content: [
+            { type: "input_text", text: "Describe this image and OCR any visible text." },
+            { type: "input_image", image_url: `data:${mimetype};base64,${base64}` }
+          ]
+        }
+      ],
+      // no temperature
+    });
+    return resp.output_text?.trim() || "";
+  }
+  throw new Error(`Unsupported media type: ${mimetype}`);
+}
 
-// Chat with conversation memory (history [{role, content}])
+/* ----------------------------- Routes ----------------------------- */
+
+// Chat
 app.post("/api/chat", async (req, res) => {
   try {
     const input = String(req.body?.input || "");
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
 
-    // No links in body; sources are UI-only
     const sys =
       "You are Johnny Chat. Be helpful, direct, and concise. " +
-      "Do NOT include URLs, markdown links, or bracketed citations in your answer body. " +
-      "If you reference facts, write them plainly. The UI will show sources separately.";
+      "Do NOT include URLs, markdown links, or bracketed citations in the answer body. " +
+      "The UI will show sources separately.";
 
     const messages = [{ role: "system", content: sys }, ...history, { role: "user", content: input }];
 
     const resp = await openai.responses.create({
       model: CHAT_MODEL,
-      input: messages,
-      temperature: 0.4
+      input: messages
     });
 
     const reply = resp.output_text?.trim() || "(no reply)";
-    // Add sources if your tool-using agent collects them. Empty for now.
     res.json({ reply, sources: [] });
   } catch (e) {
     console.error("CHAT_ERROR:", e);
@@ -84,87 +93,54 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Beautify: clean/structure, forbid links
+// Beautify
 app.post("/api/beautify", async (req, res) => {
   try {
     const text = String(req.body?.text || "");
     if (!text) return res.status(400).json({ error: "TEXT_REQUIRED" });
-
     const prompt =
       "Rewrite the answer so it is clean, readable, and well-structured.\n" +
-      "Rules:\n" +
-      "• Use 1–2 short paragraphs OR 3–8 crisp bullets.\n" +
-      "• Do NOT include any URLs, markdown links, or bracketed citations.\n" +
-      "• Keep it factual and concise.";
-
+      "Rules: 1–2 short paragraphs OR 3–8 bullets. No URLs or bracketed citations. Be concise.";
     const resp = await openai.responses.create({
       model: CHAT_MODEL,
       input: [
         { role: "system", content: prompt },
         { role: "user", content: text }
-      ],
-      temperature: 0.3
+      ]
     });
-
-    const pretty = resp.output_text?.trim() || text;
-    res.json({ pretty });
+    res.json({ pretty: resp.output_text?.trim() || text });
   } catch (e) {
     console.error("BEAUTIFY_ERROR:", e);
     res.status(500).json({ error: "BEAUTIFY_FAILED", detail: e?.message || String(e) });
   }
 });
 
-// Upload (PDF or Image). Returns { docId, text, summary }
-const upload = multer({ storage: multer.memoryStorage() });
-app.post("/upload", upload.single("file"), async (req, res) => {
+// Upload multiple files -> aggregate into one doc
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+app.post("/upload", upload.any(), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "FILE_REQUIRED" });
-    const { buffer, mimetype, originalname } = req.file;
+    const files = (req.files && req.files.length) ? req.files : (req.file ? [req.file] : []);
+    if (!files.length) return res.status(400).json({ error: "FILE_REQUIRED" });
 
-    let text = "";
-    if (mimetype === "application/pdf") {
-      if (!pdfParse) {
-        return res.status(500).json({
-          error: "PDF_PARSE_NOT_INSTALLED",
-          detail: "Install 'pdf-parse' and redeploy."
-        });
-      }
-      const parsed = await pdfParse(buffer);
-      text = (parsed.text || "").trim();
-    } else if (mimetype.startsWith("image/")) {
-      // Vision OCR + description
-      const base64 = buffer.toString("base64");
-      const visionInput = [
-        {
-          role: "system",
-          content:
-            "Extract readable text (OCR) and give a short description. Return plain text; no links or citations."
-        },
-        {
-          role: "user",
-          content: [
-            { type: "input_text", text: "Describe this image and extract visible text (OCR)." },
-            { type: "input_image", image_url: `data:${mimetype};base64,${base64}` }
-          ]
-        }
-      ];
-      const vresp = await openai.responses.create({ model: CHAT_MODEL, input: visionInput });
-      text = vresp.output_text?.trim() || "";
-    } else {
-      return res.status(415).json({ error: "UNSUPPORTED_MEDIA_TYPE" });
+    const parts = [];
+    for (const f of files) {
+      const text = await extractFromFile(f);
+      parts.push(`--- ${f.originalname} ---\n${text}`);
     }
+    const full = parts.join("\n\n");
+    const summary = full ? await summarize(full) : "";
 
-    const summary = text ? await summarize(text) : "";
     const docId = uuidv4();
-    docs.set(docId, { text, summary, uploadedAt: Date.now(), name: originalname });
-    res.json({ docId, text, summary });
+    docs.set(docId, { text: full, summary, uploadedAt: Date.now(), names: files.map(f => f.originalname) });
+
+    res.json({ docId, text: full, summary });
   } catch (e) {
     console.error("UPLOAD_ERROR:", e);
     res.status(500).json({ error: "UPLOAD_FAILED", detail: e?.message || String(e) });
   }
 });
 
-// Query a previously uploaded doc: { docId, question }
+// Query the aggregated doc
 app.post("/query", async (req, res) => {
   try {
     const docId = String(req.body?.docId || "");
@@ -173,42 +149,31 @@ app.post("/query", async (req, res) => {
     if (!question) return res.status(400).json({ error: "QUESTION_REQUIRED" });
 
     const { text, summary } = docs.get(docId);
-
     const sys =
-      "Answer the user's question using ONLY the provided document content. " +
-      "If the answer is not in the document, say you couldn't find it. No links or citations.";
-
+      "Answer ONLY from the document below. If the answer isn't present, say you couldn't find it. No links or citations.";
     const resp = await openai.responses.create({
       model: CHAT_MODEL,
       input: [
         { role: "system", content: sys },
         { role: "user", content: `Document summary:\n${summary}\n\nDocument text:\n${text.slice(0, 20000)}` },
         { role: "user", content: `Question: ${question}` }
-      ],
-      temperature: 0.2
+      ]
     });
-
-    const answer = resp.output_text?.trim() || "";
-    res.json({ answer });
+    res.json({ answer: resp.output_text?.trim() || "" });
   } catch (e) {
     console.error("QUERY_ERROR:", e);
     res.status(500).json({ error: "QUERY_FAILED", detail: e?.message || String(e) });
   }
 });
 
-// Image generation -> base64
+// Image generation
 app.post("/generate-image", async (req, res) => {
   try {
     const prompt = String(req.body?.prompt || "");
     const size = String(req.body?.size || "1024x1024");
     if (!prompt) return res.status(400).json({ error: "PROMPT_REQUIRED" });
 
-    const img = await openai.images.generate({
-      model: IMAGE_MODEL,
-      prompt,
-      size
-    });
-
+    const img = await openai.images.generate({ model: IMAGE_MODEL, prompt, size });
     const image_b64 = img.data?.[0]?.b64_json || "";
     res.json({ image_b64 });
   } catch (e) {
