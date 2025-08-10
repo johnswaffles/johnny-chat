@@ -6,7 +6,7 @@ const cors = require("cors");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const OpenAI = require("openai");
-const pdfjs = require("pdfjs-dist/legacy/build/pdf.js");
+const pdfParse = require("pdf-parse"); // <-- Node-friendly PDF extraction
 
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY; // required
@@ -24,23 +24,9 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
 /* ----------------------------- In-memory store ----------------------------- */
-const docs = new Map(); // docId -> { text, summary, uploadedAt }
+const docs = new Map(); // docId -> { text, summary, uploadedAt, name }
 
-/* ----------------------------- PDF extraction ------------------------------ */
-async function extractPdfText(bufOrUint8) {
-  const data = bufOrUint8 instanceof Uint8Array ? bufOrUint8 : new Uint8Array(bufOrUint8);
-  const doc = await pdfjs.getDocument({ data }).promise;
-  const n = doc.numPages;
-  let full = "";
-  for (let p = 1; p <= n; p++) {
-    const page = await doc.getPage(p);
-    const content = await page.getTextContent();
-    const text = content.items.map(it => it.str).join(" ");
-    full += text + "\n";
-  }
-  return full.trim();
-}
-
+/* ------------------------------- Utilities -------------------------------- */
 async function summarize(text, maxTokens = 300) {
   const resp = await openai.responses.create({
     model: CHAT_MODEL,
@@ -63,7 +49,7 @@ app.post("/api/chat", async (req, res) => {
     const input = String(req.body?.input || "");
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
 
-    // System content: forbid inline links; sources are UI-only
+    // System: no URLs in the body; UI shows sources separately.
     const sys =
       "You are Johnny Chat. Be helpful, direct, and concise. " +
       "Do NOT include URLs, markdown links, or bracketed citations in your answer body. " +
@@ -78,8 +64,7 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const reply = resp.output_text?.trim() || "(no reply)";
-    // If your stack adds web results, include them as an array of URLs here.
-    // For now we return none; the frontend renders sources separately when present.
+    // Provide sources array if your tool-using agent collects them; stubbed empty here.
     res.json({ reply, sources: [] });
   } catch (e) {
     console.error("CHAT_ERROR:", e);
@@ -126,7 +111,8 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     let text = "";
     if (mimetype === "application/pdf") {
-      text = await extractPdfText(buffer);
+      const parsed = await pdfParse(buffer);          // ← works on Node 22, no legacy build needed
+      text = (parsed.text || "").trim();
     } else if (mimetype.startsWith("image/")) {
       // Vision OCR + description
       const base64 = buffer.toString("base64");
