@@ -1,11 +1,9 @@
 {
   "name": "johnny-chat",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "type": "commonjs",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
+  "scripts": { "start": "node server.js" },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",

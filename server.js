@@ -1,18 +1,18 @@
-// server.js — Johnny Chat API
+// server.js — Johnny Chat API (Responses API; simple + robust)
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const OpenAI = require("openai");
 
-// Lazy require so the app still boots even if install is missing
+// Lazy PDF loader so the app always boots
 let pdfParse = null;
 try { pdfParse = require("pdf-parse"); }
-catch { console.warn("[boot] pdf-parse not installed yet. PDF uploads will error until it is."); }
+catch { console.warn("[boot] pdf-parse not installed yet. PDF uploads will error until installed."); }
 
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const CHAT_MODEL = process.env.CHAT_MODEL || "gpt-4o-mini";
+const CHAT_MODEL = process.env.CHAT_MODEL || "gpt-4.1";
 const IMAGE_MODEL = process.env.IMAGE_MODEL || "gpt-image-1";
 
 if (!OPENAI_API_KEY) { console.error("Missing OPENAI_API_KEY"); process.exit(1); }
@@ -20,28 +20,30 @@ const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "12mb" }));
 
-// In-memory docs: docId -> { text, summary, uploadedAt, names[] }
+// In-memory docs
 const docs = new Map();
 
-async function summarize(text, maxTokens = 300) {
-  const resp = await openai.responses.create({
+const isoNow = () => new Date().toISOString();
+const sanitize = (s)=> String(s||"").replace(/https?:\/\/\S+/gi,"").replace(/\[[0-9]+\]/g,"").trim();
+
+async function summarize(text) {
+  const r = await openai.responses.create({
     model: CHAT_MODEL,
     input: [
       { role: "system", content: "You are a concise technical summarizer. 2–4 sentences. No links/citations." },
       { role: "user", content: text.slice(0, 6000) }
-    ],
-    // no temperature (avoid 'Unsupported parameter' with some models)
+    ]
   });
-  return resp.output_text?.trim() || "";
+  return r.output_text?.trim() || "";
 }
 
 async function extractFromFile(file) {
   const { buffer, mimetype } = file;
   if (mimetype === "application/pdf") {
     if (!pdfParse) throw new Error("pdf-parse not installed on server");
-    const parsed = await pdfParse(buffer);           // reads all pages; returns text
+    const parsed = await pdfParse(buffer); // all pages
     return (parsed.text || "").trim();
   }
   if (mimetype.startsWith("image/")) {
@@ -57,8 +59,7 @@ async function extractFromFile(file) {
             { type: "input_image", image_url: `data:${mimetype};base64,${base64}` }
           ]
         }
-      ],
-      // no temperature
+      ]
     });
     return resp.output_text?.trim() || "";
   }
@@ -67,26 +68,32 @@ async function extractFromFile(file) {
 
 /* ----------------------------- Routes ----------------------------- */
 
-// Chat
+// Chat (no temperature; concise; no inline URLs)
 app.post("/api/chat", async (req, res) => {
   try {
     const input = String(req.body?.input || "");
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
 
     const sys =
-      "You are Johnny Chat. Be helpful, direct, and concise. " +
-      "Do NOT include URLs, markdown links, or bracketed citations in the answer body. " +
-      "The UI will show sources separately.";
+      `You are Johnny Chat. Date/Time (UTC): ${isoNow()}.\n` +
+      "Provide accurate, up-to-date answers using your latest capabilities when needed. " +
+      "Keep responses concise. Do NOT include URLs, markdown links, or bracketed citations. " +
+      "If you consulted online sources, include a final line 'SOURCES_JSON: [\"<url>\", ...]' with up to 8 URLs.";
 
     const messages = [{ role: "system", content: sys }, ...history, { role: "user", content: input }];
 
-    const resp = await openai.responses.create({
-      model: CHAT_MODEL,
-      input: messages
-    });
+    const resp = await openai.responses.create({ model: CHAT_MODEL, input: messages });
+    let reply = resp.output_text?.trim() || "(no reply)";
 
-    const reply = resp.output_text?.trim() || "(no reply)";
-    res.json({ reply, sources: [] });
+    // collect sources if present
+    const srcMatch = reply.match(/SOURCES_JSON:\s*(```json)?\s*([\s\S]*?)\s*(```)?\s*$/i);
+    let sources = [];
+    if (srcMatch && srcMatch[2]) {
+      try { const arr = JSON.parse(srcMatch[2].trim()); if (Array.isArray(arr)) sources = arr.slice(0,8); } catch {}
+      reply = reply.replace(/SOURCES_JSON:[\s\S]*$/i, "").trim();
+    }
+
+    res.json({ reply: sanitize(reply), sources });
   } catch (e) {
     console.error("CHAT_ERROR:", e);
     res.status(503).json({ error: "CHAT_FAILED", detail: e?.message || String(e) });
@@ -98,17 +105,9 @@ app.post("/api/beautify", async (req, res) => {
   try {
     const text = String(req.body?.text || "");
     if (!text) return res.status(400).json({ error: "TEXT_REQUIRED" });
-    const prompt =
-      "Rewrite the answer so it is clean, readable, and well-structured.\n" +
-      "Rules: 1–2 short paragraphs OR 3–8 bullets. No URLs or bracketed citations. Be concise.";
-    const resp = await openai.responses.create({
-      model: CHAT_MODEL,
-      input: [
-        { role: "system", content: prompt },
-        { role: "user", content: text }
-      ]
-    });
-    res.json({ pretty: resp.output_text?.trim() || text });
+    const prompt = "Rewrite the answer so it is clean, readable, and well-structured. 1–2 short paragraphs OR 3–8 bullets. No URLs or bracketed citations.";
+    const r = await openai.responses.create({ model: CHAT_MODEL, input: [{role:"system",content:prompt},{role:"user",content:text}] });
+    res.json({ pretty: r.output_text?.trim() || text });
   } catch (e) {
     console.error("BEAUTIFY_ERROR:", e);
     res.status(500).json({ error: "BEAUTIFY_FAILED", detail: e?.message || String(e) });
@@ -149,9 +148,8 @@ app.post("/query", async (req, res) => {
     if (!question) return res.status(400).json({ error: "QUESTION_REQUIRED" });
 
     const { text, summary } = docs.get(docId);
-    const sys =
-      "Answer ONLY from the document below. If the answer isn't present, say you couldn't find it. No links or citations.";
-    const resp = await openai.responses.create({
+    const sys = "Answer ONLY from the document below. If the answer isn't present, say you couldn't find it. No links or citations.";
+    const r = await openai.responses.create({
       model: CHAT_MODEL,
       input: [
         { role: "system", content: sys },
@@ -159,7 +157,7 @@ app.post("/query", async (req, res) => {
         { role: "user", content: `Question: ${question}` }
       ]
     });
-    res.json({ answer: resp.output_text?.trim() || "" });
+    res.json({ answer: r.output_text?.trim() || "" });
   } catch (e) {
     console.error("QUERY_ERROR:", e);
     res.status(500).json({ error: "QUERY_FAILED", detail: e?.message || String(e) });
