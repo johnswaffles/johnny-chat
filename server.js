@@ -1,4 +1,4 @@
-// server.js — Johnny Chat API (Responses API with robust built-in web capability)
+// server.js — Johnny Chat API (Responses API + web tools + image editing)
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
@@ -12,86 +12,70 @@ catch { console.warn("[boot] pdf-parse not installed yet. PDF uploads will error
 
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const CHAT_MODEL = process.env.CHAT_MODEL || "gpt-4.1";     // keep a current model here
-const IMAGE_MODEL = process.env.IMAGE_MODEL || "gpt-image-1";
+const CHAT_MODEL = process.env.CHAT_MODEL || "gpt-5";        // use GPT-5 by default (override via env)
+const IMAGE_MODEL = process.env.IMAGE_MODEL || "gpt-image-1"; // kept for fallback
 
 if (!OPENAI_API_KEY) { console.error("Missing OPENAI_API_KEY"); process.exit(1); }
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "12mb" }));
+app.use(express.json({ limit: "16mb" }));
 
-// In-memory docs
+// In-memory doc store
 const docs = new Map();
 const isoNow = () => new Date().toISOString();
 const sanitizeText = s => String(s||"").replace(/https?:\/\/\S+/gi,"").replace(/\[[0-9]+\]/g,"").trim();
 
-/* -------- attempt Responses API with multiple possible built-in web tool identifiers -------- */
+/** Try Responses API with hosted web tools (for live info) */
 async function askOpenAI(messages, { tryWeb = true } = {}) {
   const variants = tryWeb
     ? [
         { tools: [{ type: "web_search" }], tool_choice: "auto" },
         { tools: [{ type: "web-browsing" }], tool_choice: "auto" },
         { tools: [{ type: "browser" }], tool_choice: "auto" },
-        {} // plain
+        {}
       ]
     : [ {} ];
-
   let lastErr = null;
   for (const v of variants) {
-    try {
-      const resp = await openai.responses.create({ model: CHAT_MODEL, input: messages, ...v });
-      return resp;
-    } catch (e) {
-      lastErr = e;
-      // If this variant is invalid (e.g., 400 bad tool type), try next one
-      if ((e.status && e.status >= 500) || e.code === "ETIMEDOUT") continue;
-    }
+    try { return await openai.responses.create({ model: CHAT_MODEL, input: messages, ...v }); }
+    catch (e) { lastErr = e; }
   }
   throw lastErr;
 }
 
-/* ----------------------------- extract sources ---------------------------- */
+/** Extract web sources if the model provided them */
 function extractSources(resp, answerText) {
   const urls = new Set();
-
   const refs = resp?.output?.[0]?.references || resp?.references;
   if (Array.isArray(refs)) refs.forEach(r => { if (r?.url) urls.add(r.url); });
-
   const parts = resp?.output?.[0]?.content || [];
   for (const p of parts) {
     if (Array.isArray(p?.citations)) for (const c of p.citations) if (c?.url) urls.add(c.url);
   }
-
   const m = String(answerText || "").match(/SOURCES_JSON:\s*(```json)?\s*([\s\S]*?)\s*(```)?\s*$/i);
-  if (m && m[2]) {
-    try { const arr = JSON.parse(m[2].trim()); if (Array.isArray(arr)) arr.forEach(u => { if (typeof u === "string") urls.add(u); }); } catch {}
-  }
-
+  if (m && m[2]) { try { const arr = JSON.parse(m[2].trim()); if (Array.isArray(arr)) arr.forEach(u => typeof u==="string" && urls.add(u)); } catch {} }
   return Array.from(urls).slice(0, 8);
 }
 
-/* --------------------------------- routes --------------------------------- */
+/* ----------------------------- Routes ----------------------------- */
 
-// Chat
+// Chat (keeps your live info capability)
 app.post("/api/chat", async (req, res) => {
   try {
     const input = String(req.body?.input || "");
     const history = Array.isArray(req.body?.history) ? req.body.history : [];
-
     const sys =
       `You are Johnny Chat. Date/Time (UTC): ${isoNow()}.\n` +
-      "Use your latest built-in capability to gather up-to-date facts when the user asks for time-sensitive info (news, weather, sports, prices, etc.). " +
-      "Keep answers concise. Do NOT include URLs, markdown links, or bracketed citations in the body. " +
-      "If you consulted the web, append a final line: SOURCES_JSON: [\"<url>\", ...] with up to 8 unique URLs.";
+      "Use your built-in web capability when the question is time-sensitive (news, weather, sports, prices, etc.). " +
+      "Be concise. Do NOT include URLs, markdown links, or bracketed citations in the body. " +
+      "If you consulted the web, append: SOURCES_JSON: [\"<url>\", ...] at the end.";
 
     const messages = [{ role: "system", content: sys }, ...history, { role: "user", content: input }];
-
     const resp = await askOpenAI(messages, { tryWeb: true });
     let reply = resp.output_text?.trim() || "(no reply)";
     const sources = extractSources(resp, reply);
-
     reply = reply.replace(/SOURCES_JSON:[\s\S]*$/i, "").trim();
     res.json({ reply: sanitizeText(reply), sources });
   } catch (e) {
@@ -114,7 +98,7 @@ app.post("/api/beautify", async (req, res) => {
   }
 });
 
-// Upload multiple files -> aggregate into one doc
+// Upload multiple files -> aggregate doc
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 app.post("/upload", upload.any(), async (req, res) => {
   try {
@@ -168,15 +152,44 @@ app.post("/query", async (req, res) => {
   }
 });
 
-// Images
+/** Image generation + editing (accepts optional reference images) */
 app.post("/generate-image", async (req, res) => {
   try {
     const prompt = String(req.body?.prompt || "");
     const size = String(req.body?.size || "1024x1024");
+    const images = Array.isArray(req.body?.images) ? req.body.images.filter(s => typeof s === "string" && s.startsWith("data:image/")) : [];
     if (!prompt) return res.status(400).json({ error: "PROMPT_REQUIRED" });
-    const img = await openai.images.generate({ model: IMAGE_MODEL, prompt, size });
-    const image_b64 = img.data?.[0]?.b64_json || "";
-    res.json({ image_b64 });
+
+    // Build Responses API call with the image_generation tool.
+    const content = [{ type: "input_text", text: prompt }];
+    for (const dataUrl of images) {
+      content.push({ type: "input_image", image_url: dataUrl });
+    }
+
+    const resp = await openai.responses.create({
+      model: CHAT_MODEL,                                // you asked to use GPT-5 here
+      input: [{ role: "user", content }],
+      tools: [{ type: "image_generation" }],
+      tool_choice: "auto"
+    });
+
+    // Try to extract base64 from various possible shapes
+    let b64 = null;
+    const out = resp?.output || [];
+    for (const item of out) {
+      if (item?.type === "image_generation_call" && item?.result) { b64 = item.result; break; }
+      if (item?.type === "output_image" && item?.b64_json) { b64 = item.b64_json; break; }
+      if (item?.type === "image" && item?.image_base64) { b64 = item.image_base64; break; }
+    }
+
+    // Fallback to Images API if needed (no refs used)
+    if (!b64 && images.length === 0) {
+      const img = await openai.images.generate({ model: IMAGE_MODEL, prompt: prompt + (size && size !== "auto" ? `; target size ${size}` : ""), size: (size && size !== "auto") ? size : "1024x1024" });
+      b64 = img.data?.[0]?.b64_json || null;
+    }
+
+    if (!b64) return res.status(502).json({ error: "IMAGE_NOT_RETURNED", detail: "No image data in response" });
+    res.json({ image_b64: b64 });
   } catch (e) {
     console.error("IMAGE_ERROR:", e);
     res.status(500).json({ error: "IMAGE_FAILED", detail: e?.message || String(e) });
