@@ -1,9 +1,14 @@
 {
   "name": "johnny-chat",
-  "version": "1.4.0",
-  "type": "commonjs",
+  "version": "1.4.1",
+  "type": "module",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
