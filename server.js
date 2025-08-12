@@ -1,5 +1,6 @@
-// server.js — single-model path (chat + weather), stable Analyze (PDF + PNG/JPEG/WEBP)
-// ESM, Node 20+
+// server.js — single-path chat (incl. weather) + stable Analyze (PDF & PNG/JPEG/WEBP)
+// Defensive fallbacks for Responses API variations (input_text vs text; tools on/off)
+// ESM, Node >=20
 
 import express from "express";
 import cors from "cors";
@@ -10,60 +11,93 @@ import { Buffer } from "node:buffer";
 
 const app = express();
 
-// ── Express & uploads ─────────────────────────────────────────────────────────
+// ── Express / uploads ─────────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// Frontend must POST form-data with field name "files"
+// Frontend must send multipart/form-data with field name "files"
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 40 * 1024 * 1024, files: 8 },
 });
 
-// ── OpenAI client (Responses API; enable tools via beta header) ───────────────
+// ── OpenAI client (Responses API + tools) ─────────────────────────────────────
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  // Your Render env shows OPENAI_BETA=assistants=v2 — keep this header
   defaultHeaders: { "OpenAI-Beta": process.env.OPENAI_BETA || "assistants=v2" },
 });
 
+// Models from env (Render screenshot shows CHAT_MODEL=gpt-5, VISION_MODEL=gpt-4o-mini)
 const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5";
 const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
-const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini"; // for OCR/descriptions only
+const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 const ok  = (res, data) => res.status(200).json(data);
-const bad = (res, code, err) => {
+const logE = (label, err) => {
   const msg = typeof err === "string" ? err : (err?.message || "error");
-  console.error("[ERROR]", msg);
+  console.error(`[${label}]`, msg);
   if (err?.response?.status) console.error("→ OpenAI", err.response.status, err.response.data);
-  return res.status(code).json({ error: msg });
 };
+
 const LIVE_REGEX  = /\b(now|today|tonight|tomorrow|latest|breaking|update|news|price|rate|score|forecast|weather|warning|advisory|open|closed|traffic)\b/i;
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
 const urlsFrom    = (s = "") => Array.from((s || "").match(/\bhttps?:\/\/[^\s)]+/g) || []);
 const newId       = () => `id-${Math.random().toString(36).slice(2)}`;
 
-// Health
 app.get("/health", (_req, res) =>
   ok(res, { ok: true, ts: Date.now(), models: { CHAT_MODEL, VISION_MODEL } })
 );
 
-// ── Responses helper (ALWAYS use explicit parts) ──────────────────────────────
-const webTool = [{ type: "web_search" }];
-
-async function respond({ model, parts, tools = webTool, max_output_tokens = 1500, temperature }) {
-  // parts: [{ role, content: [{ type:'input_text'|'input_image', ... }] }]
-  return openai.responses.create({
-    model,
-    input: parts,
-    ...(tools?.length ? { tools } : {}),
-    ...(typeof temperature === "number" ? { temperature } : {}),
-    max_output_tokens,
-  });
+// ── Responses helper with compatibility fallbacks ─────────────────────────────
+// Some accounts expect {type:"input_text"}; others expect {type:"text"}.
+// Some accounts can use {tools:[{type:"web_search"}]}; others cannot.
+// We try (in order): input_text+tools → text+tools → input_text(no tools) → text(no tools).
+function withTextType(parts, useInputText) {
+  // clone & normalize text parts
+  return parts.map(msg => ({
+    role: msg.role,
+    content: (msg.content || []).map(c => {
+      if (c?.type === "input_text" || c?.type === "text") {
+        return { type: useInputText ? "input_text" : "text", text: c.text };
+      }
+      return c; // input_image etc.
+    }),
+  }));
 }
 
-// ── SINGLE chat endpoint (also handles Weather via mode:"weather") ────────────
+async function responsesCompat({ model, baseParts, allowTools = true, max_output_tokens = 1500, temperature }) {
+  const attempts = [
+    { useInputText: true,  useTools: allowTools },
+    { useInputText: false, useTools: allowTools },
+    { useInputText: true,  useTools: false },
+    { useInputText: false, useTools: false },
+  ];
+
+  let lastErr;
+  for (const a of attempts) {
+    try {
+      const parts = withTextType(baseParts, a.useInputText);
+      const resp = await openai.responses.create({
+        model,
+        input: parts,
+        ...(a.useTools ? { tools: [{ type: "web_search" }] } : {}),
+        ...(typeof temperature === "number" ? { temperature } : {}),
+        max_output_tokens,
+      });
+      return { resp, variant: a };
+    } catch (err) {
+      lastErr = err;
+      // If tools not allowed, retry will drop tools; if type wrong, next retry flips it.
+      continue;
+    }
+  }
+  throw lastErr;
+}
+
+// ── CHAT (one path for everything; weather uses mode:"weather") ───────────────
 app.post("/api/chat", async (req, res) => {
   try {
     const { input, history = [], mode } = req.body || {};
@@ -79,74 +113,78 @@ app.post("/api/chat", async (req, res) => {
 
     const userMsg = hist ? `Conversation summary:\n${hist}\n\nCurrent message:\n${input}` : input;
 
-    // Pass 1 — normal (model decides whether to call web_search)
-    let r = await respond({
+    // Pass 1 (+compat): try with tools; auto-fallbacks inside responsesCompat
+    let { resp } = await responsesCompat({
       model: CHAT_MODEL,
-      parts: [
+      baseParts: [
         { role: "system", content: [{ type: "input_text", text: system }] },
         { role: "user",   content: [{ type: "input_text", text: userMsg }] },
       ],
+      allowTools: true,
       max_output_tokens: mode === "writepaper" ? 4000 : 1800,
     });
-    let text = r.output_text ?? "";
+
+    let text = resp.output_text ?? "";
     let sources = urlsFrom(text);
 
-    // Pass 2 — if live-y and no citations, force web_search
+    // Pass 2 — if clearly "live" and no citations, force web_search again (compat)
     if (LIVE_REGEX.test(input) && sources.length === 0) {
-      r = await respond({
+      ({ resp } = await responsesCompat({
         model: CHAT_MODEL,
-        parts: [
+        baseParts: [
           { role: "system", content: [{ type: "input_text", text: "Use web_search NOW and answer concisely with 2–4 citations." }] },
           { role: "user",   content: [{ type: "input_text", text: input }] },
         ],
-        temperature: 0.2,
+        allowTools: true,
         max_output_tokens: 1200,
-      });
-      text = r.output_text || text;
+        temperature: 0.2,
+      }));
+      text = resp.output_text || text;
       sources = urlsFrom(text);
     }
 
-    // Pass 3 — if anything still went sideways, reply without tools (no blanks)
+    // Pass 3 — absolute fallback so you never see a blank
     if (!text || !text.trim()) {
-      const r2 = await respond({
+      ({ resp } = await responsesCompat({
         model: CHAT_MODEL,
-        parts: [{ role: "user", content: [{ type: "input_text", text: userMsg }] }],
-        tools: [], // disable tools to guarantee a reply
+        baseParts: [{ role: "user", content: [{ type: "input_text", text: userMsg }] }],
+        allowTools: false,
         max_output_tokens: 800,
-      });
-      text = r2.output_text || "Unable to fetch live sources right now.";
+      }));
+      text = resp.output_text || "Unable to fetch live sources right now.";
       sources = urlsFrom(text);
     }
 
     ok(res, { reply: text, sources });
   } catch (err) {
-    // Never surface a 500 to the UI for chat—return a graceful message
-    console.error("[/api/chat] fatal", err);
+    logE("/api/chat", err);
+    // Graceful surface to UI instead of 500
     ok(res, { reply: "I hit an error fetching that just now. Try again in a moment.", sources: [] });
   }
 });
 
-// ── Beautify (unchanged) ──────────────────────────────────────────────────────
+// ── Beautify (unchanged; compat wrapper) ──────────────────────────────────────
 app.post("/api/beautify", async (req, res) => {
   try {
     const { text } = req.body || {};
     if (!text) return ok(res, { pretty: "" });
-    const r = await respond({
+    const { resp } = await responsesCompat({
       model: CHAT_MODEL,
-      parts: [
+      baseParts: [
         { role: "system", content: [{ type: "input_text", text: "Rewrite for clarity, flow, and concision. Preserve meaning. Output improved text only." }] },
         { role: "user",   content: [{ type: "input_text", text }] },
       ],
+      allowTools: false,
       max_output_tokens: 800,
     });
-    ok(res, { pretty: r.output_text ?? "" });
-  } catch (err) { bad(res, 500, err); }
+    ok(res, { pretty: resp.output_text ?? "" });
+  } catch (err) { logE("/api/beautify", err); ok(res, { pretty: "" }); }
 });
 
-// ── PDF extract (ALWAYS convert Buffer → plain Uint8Array) ────────────────────
+// ── PDF text (ALWAYS plain Uint8Array for pdfjs) ──────────────────────────────
 function toU8(buf) {
   if (buf instanceof Uint8Array && buf.constructor?.name === "Uint8Array") return buf;
-  if (Buffer.isBuffer(buf)) return Uint8Array.from(buf);
+  if (Buffer.isBuffer(buf)) return Uint8Array.from(buf); // copy from Node Buffer
   return new Uint8Array(buf);
 }
 
@@ -188,72 +226,93 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
         const txt = await pdfToText(f.buffer);
         textParts.push(`--- ${f.originalname} ---\n${txt || "(No extractable text found.)"}`);
       } else if (IMAGE_TYPES.has(f.mimetype)) {
-        // IMPORTANT: Responses API expects image_url to be a STRING (data URL)
+        // Responses expects image_url as a STRING data URL
         const dataUrl = `data:${f.mimetype};base64,${f.buffer.toString("base64")}`;
         visionParts.push({ type: "input_image", image_url: dataUrl });
       }
     }
 
-    // OCR/describe any images
     if (visionParts.length) {
-      const vr = await openai.responses.create({
-        model: VISION_MODEL,
-        input: [{
-          role: "user",
-          content: [
-            { type: "input_text", text: "If there is text, perform OCR. If not, say 'No text is present.' Then give a concise 2–3 sentence description." },
-            ...visionParts,
-          ],
-        }],
-        max_output_tokens: 1000,
-      });
-      const visionText = vr.output_text ?? "";
+      // Vision OCR/description — no tools; compat for text vs input_text handled by wrapper below
+      const baseParts = [{
+        role: "user",
+        content: [
+          { type: "input_text", text: "If text exists, perform OCR. If not, say 'No text is present.' Then add a concise 2–3 sentence description (objects, layout, notable details)." },
+          ...visionParts,
+        ],
+      }];
+
+      // Try with VISION_MODEL (strict) then CHAT_MODEL (as fallback multimodal)
+      let visionText = "";
+      try {
+        const vr = await responsesCompat({
+          model: VISION_MODEL,
+          baseParts,
+          allowTools: false,
+          max_output_tokens: 1000,
+        });
+        visionText = vr.resp.output_text ?? "";
+      } catch (err) {
+        logE("vision(primary)", err);
+        try {
+          const vr2 = await responsesCompat({
+            model: CHAT_MODEL,
+            baseParts,
+            allowTools: false,
+            max_output_tokens: 800,
+          });
+          visionText = vr2.resp.output_text ?? "";
+        } catch (e2) {
+          logE("vision(fallback)", e2);
+          visionText = "(Image analysis failed.)";
+        }
+      }
       if (visionText) textParts.push(`--- Images (OCR + description) ---\n${visionText}`);
     }
 
     const text = textParts.join("\n\n").trim();
 
-    // Summarize (only if we actually have content)
     let summary = "";
     if (text) {
-      const sr = await respond({
+      const { resp } = await responsesCompat({
         model: CHAT_MODEL,
-        parts: [
+        baseParts: [
           { role: "system", content: [{ type: "input_text", text: "You summarize documents crisply." }] },
           { role: "user",   content: [{ type: "input_text", text: "Summarize in 5–8 bullet points. Keep concrete facts (numbers, dates, names)." }] },
         ],
+        allowTools: false,
         max_output_tokens: 600,
       });
-      summary = sr.output_text ?? "";
+      summary = resp.output_text ?? "";
     }
 
     const id = newId();
     DOCS.set(id, { text, summary, files: manifest });
     ok(res, { id, docId: id, text, summary, files: manifest });
   } catch (err) {
-    console.error("[/upload] fatal", err);
-    // Return 200 with empty payload so the UI never blocks on a 500
+    logE("/upload", err);
+    // Return a non-blocking response so UI doesn't show 500
     ok(res, { id: null, text: "", summary: "", files: [], error: "analyze_failed" });
   }
 });
 
-// ── Doc Q&A (unchanged) ───────────────────────────────────────────────────────
+// ── Doc Q&A (from stored text only) ───────────────────────────────────────────
 app.post("/query", async (req, res) => {
   try {
     const { docId, question } = req.body || {};
-    if (!docId || !DOCS.has(docId)) return ok(res, { answer: "" });
-    if (!question) return ok(res, { answer: "" });
+    if (!docId || !DOCS.has(docId) || !question) return ok(res, { answer: "" });
     const { text, files } = DOCS.get(docId);
-    const r = await respond({
+    const { resp } = await responsesCompat({
       model: CHAT_MODEL,
-      parts: [
+      baseParts: [
         { role: "system", content: [{ type: "input_text", text: "Answer strictly from the provided document text; if absent, say so." }] },
         { role: "user",   content: [{ type: "input_text", text: `DOCUMENT:\n${text}\n\nQUESTION: ${question}\n\nAnswer:` }] },
       ],
+      allowTools: false,
       max_output_tokens: 1200,
     });
-    ok(res, { answer: r.output_text ?? "", files });
-  } catch (err) { bad(res, 500, err); }
+    ok(res, { answer: resp.output_text ?? "", files });
+  } catch (err) { logE("/query", err); ok(res, { answer: "" }); }
 });
 
 // ── Image generation (unchanged) ──────────────────────────────────────────────
@@ -268,9 +327,8 @@ app.post("/generate-image", async (req, res) => {
         : prompt,
       size,
     });
-    const image_b64 = imgResp.data?.[0]?.b64_json || null;
-    ok(res, { image_b64 });
-  } catch (err) { bad(res, 500, err); }
+    ok(res, { image_b64: imgResp.data?.[0]?.b64_json || null });
+  } catch (err) { logE("/generate-image", err); ok(res, { image_b64: null }); }
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
