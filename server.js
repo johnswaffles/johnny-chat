@@ -1,4 +1,4 @@
-// server.js — Johnny Chat (Responses API + native web_search, no third‑party fetches)
+// server.js — Johnny Chat (stable Responses API + native web_search)
 // ESM, Node 20+
 import express from "express";
 import cors from "cors";
@@ -8,7 +8,7 @@ import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs"; // workerless for Node
 
 const app = express();
 
-// uploads in memory so we always have file.buffer
+// uploads kept in memory so we always have file.buffer
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 40 * 1024 * 1024, files: 8 },
@@ -30,12 +30,10 @@ const ok  = (res, data) => res.status(200).json(data);
 const bad = (res, code, err) => {
   const msg = typeof err === "string" ? err : (err?.message || "error");
   console.error("[ERROR]", msg);
-  if (err?.response?.status) console.error("→ OpenAI status", err.response.status, err.response.data);
+  if (err?.response?.status) console.error("→ OpenAI", err.response.status, err.response.data);
   return res.status(code).json({ error: msg });
 };
-const newId =
-  () => (globalThis.crypto?.randomUUID?.() || `id-${Math.random().toString(36).slice(2)}`);
-
+const newId = () => `id-${Math.random().toString(36).slice(2)}`;
 const LIVE_REGEX = /\b(now|today|tonight|tomorrow|latest|breaking|update|news|price|rate|score|forecast|weather|warning|advisory|open|closed|traffic)\b/i;
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
 
@@ -46,27 +44,29 @@ app.get("/health", (_req, res) =>
   ok(res, { ok: true, ts: Date.now(), models: { CHAT_MODEL, WEATHER_MODEL, VISION_MODEL } })
 );
 
-// ── Responses API wrappers (native web_search) ────────────────────────────────
-function extractUrls(text = "") {
+// ── Responses API wrappers ─────────────────────────────────────────────────────
+const webTool = [{ type: "web_search" }];
+
+function urlsFrom(text = "") {
   try { return Array.from(text.match(/\bhttps?:\/\/[^\s)]+/g) || []); } catch { return []; }
 }
 
-async function responsesCall({ model, messages, tools = [], max_output_tokens = 1500, temperature }) {
-  // messages: array of {role, content} where content is string for text‑only
+async function callResponses({ model, messages, tools = webTool, max_output_tokens = 1500, temperature }) {
+  // messages: [{ role, content: [{type:'input_text'|'input_image', ...}] }]
   return openai.responses.create({
     model,
     input: messages,
-    ...(tools.length ? { tools } : {}),
-    max_output_tokens,
+    ...(tools?.length ? { tools } : {}),
     ...(typeof temperature === "number" ? { temperature } : {}),
+    max_output_tokens,
   });
 }
 
-// ── Weather Fast Lane (still uses web_search; no external APIs) ───────────────
+// ── Weather Fast Lane (still uses native web_search, no third-party fetches) ──
 const weatherCache = new Map();
-const WEATHER_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const WEATHER_TTL_MS = 10 * 60 * 1000;
 
-function cacheKeyWeather({ location, days, units }) {
+function weatherKey({ location, days, units }) {
   return `${(location||"").trim().toLowerCase()}|${days||2}|${units||"F"}`;
 }
 
@@ -86,66 +86,59 @@ const WEATHER_SCHEMA = `Return ONLY valid JSON in this schema:
   "alerts": [{"title":"<string>","severity":"<string>","url":"<url>"}],
   "sources": ["<url1>","<url2>"]
 }
-Rules: You MUST use the web_search tool to obtain live data; prefer authoritative sources (e.g., NWS/NOAA for the U.S.). No prose outside JSON. If you cannot get live data, return {"error":"no_live_data","sources":[]}.`;
+Rules: Use the web_search tool to obtain live data; prefer authoritative sources (e.g., NWS/NOAA for the U.S.). No prose outside JSON.`;
 
-function weatherPrompt({ location, days = 2, units = "F" }) {
-  return `Task: Provide a concise ${days}-day forecast for ${location}. Units: ${units === "C" ? "Celsius" : "Fahrenheit"}.
-Include highs/lows, precip %, wind, and any watches/warnings/advisories if present.`;
+function weatherTask({ location, days = 2, units = "F" }) {
+  return `Provide a concise ${days}-day forecast for ${location}. Units: ${units === "C" ? "Celsius" : "Fahrenheit"}.
+Include highs/lows, precip %, wind, and any watches/warnings/advisories if present. Output ONLY JSON per schema.`;
 }
 
 async function getWeather({ location, days = 2, units = "F" }) {
   if (!location) throw new Error("missing location");
 
-  const key = cacheKeyWeather({ location, days, units });
+  const key = weatherKey({ location, days, units });
   const cached = weatherCache.get(key);
   if (cached && cached.expires > Date.now()) return { ...cached.payload, cached: true };
 
-  // 1st attempt with fast model
-  const baseMessages = [
-    { role: "system", content: "You are a weather summarizer. Use tools when needed and output only the requested JSON." },
-    { role: "user", content: WEATHER_SCHEMA },
-    { role: "user", content: weatherPrompt({ location, days, units }) },
-  ];
-  const tools = [{ type: "web_search" }];
-
-  let r = await responsesCall({
+  // First attempt on fast model using explicit input_text parts
+  let r = await callResponses({
     model: WEATHER_MODEL,
-    messages: baseMessages,
-    tools,
+    messages: [
+      { role: "system", content: [{ type: "input_text", text: "You are a weather summarizer. Use web_search and output only valid JSON." }] },
+      { role: "user",   content: [{ type: "input_text", text: WEATHER_SCHEMA }] },
+      { role: "user",   content: [{ type: "input_text", text: weatherTask({ location, days, units }) }] }
+    ],
     temperature: 0.1,
     max_output_tokens: 900,
   });
 
   let text = r.output_text ?? "";
-  let parsed;
-  try { parsed = JSON.parse(text); } catch { parsed = null; }
+  let data;
+  try { data = JSON.parse(text); } catch { data = null; }
 
-  // Fallback to main model if no valid JSON or no sources
-  const sources = extractUrls(text);
-  const invalid = !parsed || (!parsed.sources && sources.length === 0);
-
+  // Fallback: main model with a harder instruction if JSON invalid or no citations
+  const invalid = !data || !(Array.isArray(data.sources) ? data.sources.length : urlsFrom(text).length);
   if (invalid) {
-    r = await responsesCall({
+    r = await callResponses({
       model: CHAT_MODEL,
       messages: [
-        { role: "system", content: "Use web_search NOW and return ONLY valid JSON per the schema. No prose." },
-        { role: "user", content: WEATHER_SCHEMA },
-        { role: "user", content: weatherPrompt({ location, days, units }) },
+        { role: "system", content: [{ type: "input_text", text: "Use web_search NOW and return ONLY valid JSON per the schema. No prose." }] },
+        { role: "user",   content: [{ type: "input_text", text: WEATHER_SCHEMA }] },
+        { role: "user",   content: [{ type: "input_text", text: weatherTask({ location, days, units }) }] }
       ],
-      tools,
       temperature: 0.1,
       max_output_tokens: 900,
     });
     text = r.output_text ?? "";
-    try { parsed = JSON.parse(text); } catch { parsed = null; }
+    try { data = JSON.parse(text); } catch { data = null; }
   }
 
-  const payload = parsed || { error: "unable_to_parse_weather", raw: text };
+  const payload = data || { error: "unable_to_parse_weather", raw: text };
   weatherCache.set(key, { expires: Date.now() + WEATHER_TTL_MS, payload });
   return payload;
 }
 
-// API: POST /weather  { location, days?, units? }
+// POST /weather  { location, days?, units? }
 app.post("/weather", async (req, res) => {
   try {
     const { location, days = 2, units = "F" } = req.body || {};
@@ -154,8 +147,8 @@ app.post("/weather", async (req, res) => {
   } catch (err) { bad(res, 500, err); }
 });
 
-// Intercept /api/chat when mode === "weather" (keeps your existing frontend working)
-async function maybeInterceptWeather(req, res) {
+// Intercept /api/chat when mode === "weather"
+async function interceptWeatherIfNeeded(req, res) {
   const { input, mode, units = "F", days = 2 } = req.body || {};
   if (mode !== "weather") return false;
   const location = (input || "").replace(/^\s*weather\s*(for|in)?\s*/i, "").trim() || input;
@@ -164,54 +157,51 @@ async function maybeInterceptWeather(req, res) {
   return true;
 }
 
-// ── General Chat (Responses API + web_search with robust retry) ───────────────
+// ── General Chat (explicit input_text parts + robust retry) ────────────────────
 app.post("/api/chat", async (req, res) => {
   try {
-    if (await maybeInterceptWeather(req, res)) return;
+    if (await interceptWeatherIfNeeded(req, res)) return;
 
     const { input, history = [], mode } = req.body || {};
     if (!input || typeof input !== "string") return bad(res, 400, "missing input");
 
-    const hist = history
-      .slice(-30)
-      .map(m => `${m.role.toUpperCase()}: ${m.content}`)
-      .join("\n\n");
+    const hist = history.slice(-30).map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n");
 
     const system =
       mode === "writepaper"
-        ? "You are a rigorous, elegant academic writer. Produce tightly argued, source‑aware prose. No headings unless asked."
-        : "You are a precise assistant. Prefer fresh, verifiable information. Use the web_search tool when the query is time‑sensitive or requires current facts.";
+        ? "You are a rigorous, elegant academic writer. Produce tightly argued, source-aware prose. No headings unless asked."
+        : "You are a precise assistant. Prefer fresh, verifiable information. Use web_search for time-sensitive queries.";
 
-    const userMsg = hist ? `Conversation summary:\n${hist}\n\nCurrent message:\n${input}` : input;
+    const userMsg = hist
+      ? `Conversation summary:\n${hist}\n\nCurrent message:\n${input}`
+      : input;
 
-    // First attempt: allow web_search, let model decide
-    let r = await responsesCall({
+    // First attempt (model decides to use web_search)
+    let r = await callResponses({
       model: CHAT_MODEL,
       messages: [
-        ...(system ? [{ role: "system", content: system }] : []),
-        { role: "user", content: userMsg },
+        ...(system ? [{ role: "system", content: [{ type: "input_text", text: system }] }] : []),
+        { role: "user", content: [{ type: "input_text", text: userMsg }] }
       ],
-      tools: [{ type: "web_search" }],
       max_output_tokens: mode === "writepaper" ? 4000 : 1800,
     });
 
     let text = r.output_text ?? "";
-    let sources = extractUrls(text);
+    let sources = urlsFrom(text);
 
-    // If obviously live info and no citations, retry with strict instruction
+    // Retry with strict ask if live query and no citations
     if (LIVE_REGEX.test(input) && sources.length === 0) {
-      r = await responsesCall({
+      r = await callResponses({
         model: CHAT_MODEL,
         messages: [
-          { role: "system", content: "Use web_search NOW and answer concisely with 2–4 citations." },
-          { role: "user", content: input },
+          { role: "system", content: [{ type: "input_text", text: "Use web_search NOW and answer concisely with 2–4 citations." }] },
+          { role: "user",   content: [{ type: "input_text", text: input }] }
         ],
-        tools: [{ type: "web_search" }],
         temperature: 0.2,
         max_output_tokens: 1200,
       });
       text = r.output_text ?? text;
-      sources = extractUrls(text);
+      sources = urlsFrom(text);
     }
 
     ok(res, { reply: text, sources });
@@ -223,11 +213,11 @@ app.post("/api/beautify", async (req, res) => {
   try {
     const { text } = req.body || {};
     if (!text) return bad(res, 400, "missing text");
-    const r = await responsesCall({
+    const r = await callResponses({
       model: CHAT_MODEL,
       messages: [
-        { role: "system", content: "Rewrite for clarity, flow, and concision. Preserve meaning. Output improved text only." },
-        { role: "user", content: text },
+        { role: "system", content: [{ type: "input_text", text: "Rewrite for clarity, flow, and concision. Preserve meaning. Output improved text only." }] },
+        { role: "user",   content: [{ type: "input_text", text: text }] }
       ],
       max_output_tokens: 800,
     });
@@ -274,7 +264,8 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
         if (txt) textParts.push(`--- ${f.originalname} ---\n${txt}`);
       } else if (IMAGE_TYPES.has(f.mimetype)) {
         const dataUrl = `data:${f.mimetype};base64,${f.buffer.toString("base64")}`;
-        visionParts.push({ type: "input_image", image_url: { url: dataUrl } });
+        // IMPORTANT: image_url must be a STRING (not an object)
+        visionParts.push({ type: "input_image", image_url: dataUrl });
       }
     }
 
@@ -300,11 +291,11 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
 
     let summary = "";
     if (text) {
-      const r = await responsesCall({
+      const r = await callResponses({
         model: CHAT_MODEL,
         messages: [
-          { role: "system", content: "You summarize documents crisply." },
-          { role: "user", content: "Summarize in 5–8 bullet points. Keep concrete facts (numbers, dates, names)." },
+          { role: "system", content: [{ type: "input_text", text: "You summarize documents crisply." }] },
+          { role: "user",   content: [{ type: "input_text", text: "Summarize in 5–8 bullet points. Keep concrete facts (numbers, dates, names)." }] }
         ],
         max_output_tokens: 500,
       });
@@ -324,11 +315,11 @@ app.post("/query", async (req, res) => {
     if (!docId || !DOCS.has(docId)) return bad(res, 400, "missing or unknown docId");
     if (!question) return bad(res, 400, "missing question");
     const { text, files } = DOCS.get(docId);
-    const r = await responsesCall({
+    const r = await callResponses({
       model: CHAT_MODEL,
       messages: [
-        { role: "system", content: "Answer strictly from the provided document text; if absent, say so." },
-        { role: "user", content: `DOCUMENT:\n${text}\n\nQUESTION: ${question}\n\nAnswer:` },
+        { role: "system", content: [{ type: "input_text", text: "Answer strictly from the provided document text; if absent, say so." }] },
+        { role: "user",   content: [{ type: "input_text", text: `DOCUMENT:\n${text}\n\nQUESTION: ${question}\n\nAnswer:` }] }
       ],
       max_output_tokens: 1200,
     });
