@@ -1,6 +1,4 @@
-// server.js — ESM (package.json must include { "type": "module" })
-// Node 20+ recommended
-
+// server.js
 import express from "express";
 import cors from "cors";
 import multer from "multer";
@@ -46,7 +44,6 @@ function needsWeb(text = "") {
   );
 }
 
-// Multi‑page PDF text extractor
 async function extractPdfText(buffer) {
   const loadingTask = pdfjsLib.getDocument({ data: buffer });
   const pdf = await loadingTask.promise;
@@ -59,17 +56,15 @@ async function extractPdfText(buffer) {
   return out.trim();
 }
 
-/* ----------------------------- Routes ----------------------------- */
+/* Routes */
 
 app.get("/health", (_req, res) =>
   res.json({ ok: true, model: CHAT_MODEL, images: IMAGE_MODEL })
 );
 
-// Core chat with optional live web via Responses API tool
 app.post("/api/chat", async (req, res) => {
   try {
     const { input = "", history = [], web } = req.body || {};
-
     const blocks = [
       {
         role: "system",
@@ -82,7 +77,6 @@ app.post("/api/chat", async (req, res) => {
         ],
       },
     ];
-
     if (Array.isArray(history)) {
       for (const m of history) {
         if (!m?.role || !m?.content) continue;
@@ -92,7 +86,6 @@ app.post("/api/chat", async (req, res) => {
         });
       }
     }
-
     blocks.push({
       role: "user",
       content: [{ type: "text", text: String(input || "") }],
@@ -103,7 +96,6 @@ app.post("/api/chat", async (req, res) => {
     const r = await client.responses.create({
       model: CHAT_MODEL,
       input: blocks,
-      // IMPORTANT: no temperature here (some GPT‑5 variants reject it)
       max_output_tokens: 4000,
       tools: useWeb ? [{ type: "web_search" }] : undefined,
     });
@@ -113,13 +105,11 @@ app.post("/api/chat", async (req, res) => {
       (Array.isArray(r.output)
         ? r.output
             .filter((o) => o.type === "output_text" || o.type === "message")
-            .map((o) =>
-              typeof o.content === "string" ? o.content : ""
-            )
+            .map((o) => (typeof o.content === "string" ? o.content : ""))
             .join("\n")
         : "");
 
-    // Collect URLs from web_search tool results (for clickable links below the answer)
+    // Gather URLs from web_search tool result text so the UI can render links
     let sources = [];
     try {
       if (Array.isArray(r.output)) {
@@ -151,7 +141,6 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Image generation (working)
 app.post("/generate-image", async (req, res) => {
   try {
     const { prompt = "", size = "1024x1024" } = req.body || {};
@@ -169,7 +158,6 @@ app.post("/generate-image", async (req, res) => {
   }
 });
 
-// Upload/analyze PDFs & images (returns combinedText for /qa)
 app.post("/upload", upload.array("files"), async (req, res) => {
   try {
     const files = req.files || [];
@@ -190,7 +178,7 @@ app.post("/upload", upload.array("files"), async (req, res) => {
           console.error("PDF_PARSE_ERROR:", f.originalname, e);
         }
       } else if (isImage(f)) {
-        text = ""; // (optional) add OCR later
+        text = ""; // OCR could be added later
         pages = 1;
       }
 
@@ -215,7 +203,6 @@ app.post("/upload", upload.array("files"), async (req, res) => {
   }
 });
 
-// Grounded Q&A over uploaded text
 app.post("/qa", async (req, res) => {
   try {
     const { question = "", context = "" } = req.body || {};
@@ -249,13 +236,11 @@ app.post("/qa", async (req, res) => {
   }
 });
 
-// Beautifier for messy web search snippets
 app.post("/beautify", async (req, res) => {
   try {
     const { raw = "" } = req.body || {};
     const prompt =
-      "Reformat the following raw web snippets into clean short paragraphs and tidy bullet points. " +
-      "Remove boilerplate and tracking. Keep only useful facts. Do not invent details.\n\n" +
+      "Reformat the following raw web snippets into clean short paragraphs and tidy bullet points. Remove boilerplate and tracking. Keep only useful facts. Do not invent details.\n\n" +
       raw;
 
     const r = await client.responses.create({
