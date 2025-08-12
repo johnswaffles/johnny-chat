@@ -1,320 +1,278 @@
-// server.js — single-path chat (incl. weather) + stable Analyze (PDF & PNG/JPEG/WEBP)
-// Robust Responses API compatibility (input_text vs text; web_search/web_browsing/no tools)
-// Node >= 20, ESM
+// server.js — ESM (package.json must include { "type": "module" })
+// Node 20+ recommended
 
 import express from "express";
 import cors from "cors";
 import multer from "multer";
+import { v4 as uuidv4 } from "uuid";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-import { Buffer } from "node:buffer";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
+const port = process.env.PORT || 3000;
 
-// ── Middleware & uploads ──────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// Frontend must send multipart/form-data with field name "files"
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 40 * 1024 * 1024, files: 8 },
+  limits: { fileSize: 25 * 1024 * 1024 },
 });
 
-// ── OpenAI client ─────────────────────────────────────────────────────────────
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  // Your Render env shows OPENAI_BETA=assistants=v2 — keep it; harmless if ignored
-  defaultHeaders: { "OpenAI-Beta": process.env.OPENAI_BETA || "assistants=v2" },
-});
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5";
-const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
-const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
+function normalizeModel(m) {
+  const s = String(m || "").trim().toLowerCase();
+  if (!s) return "gpt-5";
+  return s.replace(/^gtp/, "gpt");
+}
+const CHAT_MODEL = normalizeModel(process.env.OPENAI_MODEL || "gpt-5");
+const IMAGE_MODEL = normalizeModel(process.env.IMAGE_MODEL || "gpt-image-1");
 
-// Optional override: set WEB_TOOL_TYPE to one of: web_search | web_browsing | web
-const WEB_TOOL_TYPE = (process.env.WEB_TOOL_TYPE || "").trim();
+const isPdf = (f) =>
+  f?.mimetype === "application/pdf" || /\.pdf$/i.test(f?.originalname || "");
+const isImage = (f) => /^image\//.test(f?.mimetype || "");
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const ok   = (res, data) => res.status(200).json(data);
-const logE = (label, err) => {
-  const msg = typeof err === "string" ? err : (err?.message || "error");
-  console.error(`[${label}]`, msg);
-  if (err?.response?.status) console.error("→ OpenAI", err.response.status, err.response.data);
-};
-const LIVE_REGEX  = /\b(now|today|tonight|tomorrow|latest|breaking|update|news|price|rate|score|forecast|weather|warning|advisory|open|closed|traffic)\b/i;
-const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
-const urlsFrom    = (s = "") => Array.from((s || "").match(/\bhttps?:\/\/[^\s)]+/g) || []);
-const newId       = () => `id-${Math.random().toString(36).slice(2)}`;
+function needsWeb(text = "") {
+  const t = text.toLowerCase();
+  return /\b(today|now|current|latest|breaking|news|weather|forecast|temp|temperature|score|stock|price|who won|earnings|rate|exchange)\b/.test(
+    t
+  );
+}
+
+// Multi‑page PDF text extractor
+async function extractPdfText(buffer) {
+  const loadingTask = pdfjsLib.getDocument({ data: buffer });
+  const pdf = await loadingTask.promise;
+  let out = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    out += tc.items.map((it) => it.str || "").join(" ") + "\n\n";
+  }
+  return out.trim();
+}
+
+/* ----------------------------- Routes ----------------------------- */
 
 app.get("/health", (_req, res) =>
-  ok(res, { ok: true, ts: Date.now(), models: { CHAT_MODEL, VISION_MODEL }, toolHint: WEB_TOOL_TYPE || "auto" })
+  res.json({ ok: true, model: CHAT_MODEL, images: IMAGE_MODEL })
 );
 
-// ── Responses API compatibility layer ─────────────────────────────────────────
-function withTextType(parts, useInputText) {
-  return parts.map(msg => ({
-    role: msg.role,
-    content: (msg.content || []).map(c => {
-      if (c?.type === "input_text" || c?.type === "text") {
-        return { type: useInputText ? "input_text" : "text", text: c.text };
-      }
-      return c; // e.g., input_image
-    }),
-  }));
-}
-
-function toolVariants(enableTools) {
-  if (!enableTools) return [null];
-  const preferred = WEB_TOOL_TYPE ? [WEB_TOOL_TYPE] : ["web_search", "web_browsing", "web"];
-  return preferred.map(t => [{ type: t }]);
-}
-
-// Tries: (input_text+tools) → (text+tools) → (input_text) → (text)
-async function responsesCompat({ model, baseParts, allowTools = true, max_output_tokens = 1500, temperature }) {
-  const tries = [
-    { useInputText: true,  tools: toolVariants(allowTools) },
-    { useInputText: false, tools: toolVariants(allowTools) },
-    { useInputText: true,  tools: [null] },
-    { useInputText: false, tools: [null] },
-  ];
-
-  let lastErr;
-  for (const t of tries) {
-    for (const toolConf of t.tools) {
-      try {
-        const parts = withTextType(baseParts, t.useInputText);
-        const resp = await openai.responses.create({
-          model,
-          input: parts,
-          ...(toolConf ? { tools: toolConf } : {}),
-          ...(typeof temperature === "number" ? { temperature } : {}),
-          max_output_tokens,
-        });
-        return resp;
-      } catch (err) {
-        lastErr = err;
-        continue;
-      }
-    }
-  }
-  throw lastErr;
-}
-
-// ── CHAT (one endpoint for chat + weather) ────────────────────────────────────
+// Core chat with optional live web via Responses API tool
 app.post("/api/chat", async (req, res) => {
   try {
-    const { input, history = [], mode } = req.body || {};
-    if (!input || typeof input !== "string") return ok(res, { reply: "Please enter a message.", sources: [] });
+    const { input = "", history = [], web } = req.body || {};
 
-    const hist = history.slice(-30).map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n");
-    const system =
-      mode === "writepaper"
-        ? "You are a rigorous, elegant academic writer. Produce tightly argued, source-aware prose. No headings unless asked."
-        : mode === "weather"
-        ? "You are a concise weather assistant. Prefer authoritative sources (e.g., NWS/NOAA for U.S.). Use web_search for live data and cite 2–4 sources."
-        : "You are a precise assistant. Prefer fresh, verifiable information. Use web_search for time-sensitive queries.";
-
-    const userMsg = hist ? `Conversation summary:\n${hist}\n\nCurrent message:\n${input}` : input;
-
-    // Pass 1: let model decide; try with tools and compat fallbacks
-    let r = await responsesCompat({
-      model: CHAT_MODEL,
-      baseParts: [
-        { role: "system", content: [{ type: "input_text", text: system }] },
-        { role: "user",   content: [{ type: "input_text", text: userMsg }] },
-      ],
-      allowTools: true,
-      max_output_tokens: mode === "writepaper" ? 4000 : 1800,
-    });
-
-    let text = r.output_text ?? "";
-    let sources = urlsFrom(text);
-
-    // Pass 2: if clearly "live" and missing links, force a web pass
-    if (LIVE_REGEX.test(input) && sources.length === 0) {
-      r = await responsesCompat({
-        model: CHAT_MODEL,
-        baseParts: [
-          { role: "system", content: [{ type: "input_text", text: "Use web_search NOW and answer concisely with 2–4 citations." }] },
-          { role: "user",   content: [{ type: "input_text", text: input }] },
+    const blocks = [
+      {
+        role: "system",
+        content: [
+          {
+            type: "text",
+            text:
+              "You are JustAskJohnny. Be clear and helpful. Use US units unless asked otherwise. Keep internal scaffolding hidden.",
+          },
         ],
-        allowTools: true,
-        max_output_tokens: 1200,
-        temperature: 0.2,
-      });
-      text = r.output_text || text;
-      sources = urlsFrom(text);
-    }
+      },
+    ];
 
-    // Pass 3: absolute fallback (no tools) so you never see a blank
-    if (!text || !text.trim()) {
-      r = await responsesCompat({
-        model: CHAT_MODEL,
-        baseParts: [{ role: "user", content: [{ type: "input_text", text: userMsg }] }],
-        allowTools: false,
-        max_output_tokens: 800,
-      });
-      text = r.output_text || "Unable to fetch live sources right now.";
-      sources = urlsFrom(text);
-    }
-
-    ok(res, { reply: text, sources });
-  } catch (err) {
-    logE("/api/chat", err);
-    // Graceful surface to UI instead of 500
-    ok(res, { reply: "I hit an error fetching that just now. Try again in a moment.", sources: [] });
-  }
-});
-
-// ── Beautify (unchanged; compat layer) ────────────────────────────────────────
-app.post("/api/beautify", async (req, res) => {
-  try {
-    const { text } = req.body || {};
-    if (!text) return ok(res, { pretty: "" });
-    const r = await responsesCompat({
-      model: CHAT_MODEL,
-      baseParts: [
-        { role: "system", content: [{ type: "input_text", text: "Rewrite for clarity, flow, and concision. Preserve meaning. Output improved text only." }] },
-        { role: "user",   content: [{ type: "input_text", text }] },
-      ],
-      allowTools: false,
-      max_output_tokens: 800,
-    });
-    ok(res, { pretty: r.output_text ?? "" });
-  } catch (err) { logE("/api/beautify", err); ok(res, { pretty: "" }); }
-});
-
-// ── PDF extraction (ALWAYS pass a plain Uint8Array to pdfjs) ──────────────────
-function toU8(buf) {
-  if (buf instanceof Uint8Array && buf.constructor?.name === "Uint8Array") return buf;
-  if (Buffer.isBuffer(buf)) return Uint8Array.from(buf); // copy from Node Buffer
-  return new Uint8Array(buf);
-}
-
-async function pdfToText(buf) {
-  const data = toU8(buf);
-  const task = pdfjs.getDocument({
-    data,
-    disableWorker: true,
-    useWorkerFetch: false,
-    isEvalSupported: false,
-    disableFontFace: true,
-  });
-  const doc = await task.promise;
-  const out = [];
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    out.push(content.items.map(it => (typeof it.str === "string" ? it.str : "")).join(" "));
-  }
-  return out.join("\n\n").replace(/[ \t]+/g, " ").trim();
-}
-
-// ── Upload / Analyze (PDF + images) ───────────────────────────────────────────
-const DOCS = new Map();
-
-app.post("/upload", upload.array("files", 8), async (req, res) => {
-  try {
-    const files = req.files || [];
-    if (!files.length) return ok(res, { id: null, text: "", summary: "", files: [] });
-
-    const manifest = [];
-    const textParts = [];
-    const visionParts = [];
-
-    for (const f of files) {
-      manifest.push({ name: f.originalname, type: f.mimetype, size: f.size });
-
-      if (f.mimetype === "application/pdf") {
-        const txt = await pdfToText(f.buffer);
-        textParts.push(`--- ${f.originalname} ---\n${txt || "(No extractable text found.)"}`);
-      } else if (IMAGE_TYPES.has(f.mimetype)) {
-        const dataUrl = `data:${f.mimetype};base64,${f.buffer.toString("base64")}`;
-        visionParts.push({ type: "input_image", image_url: dataUrl });
+    if (Array.isArray(history)) {
+      for (const m of history) {
+        if (!m?.role || !m?.content) continue;
+        blocks.push({
+          role: m.role,
+          content: [{ type: "text", text: String(m.content) }],
+        });
       }
     }
 
-    if (visionParts.length) {
-      // OCR/describe via vision model (no tools)
-      const r = await responsesCompat({
-        model: VISION_MODEL,
-        baseParts: [{
-          role: "user",
-          content: [
-            { type: "input_text", text: "If any text exists, perform OCR first. If none, say 'No text is present.' Then add a concise 2–3 sentence description." },
-            ...visionParts,
-          ],
-        }],
-        allowTools: false,
-        max_output_tokens: 1000,
-      });
-      const visionText = r.output_text ?? "";
-      if (visionText) textParts.push(`--- Images (OCR + description) ---\n${visionText}`);
-    }
+    blocks.push({
+      role: "user",
+      content: [{ type: "text", text: String(input || "") }],
+    });
 
-    const text = textParts.join("\n\n").trim();
+    const useWeb = Boolean(web) || needsWeb(input);
 
-    let summary = "";
-    if (text) {
-      const r = await responsesCompat({
-        model: CHAT_MODEL,
-        baseParts: [
-          { role: "system", content: [{ type: "input_text", text: "You summarize documents crisply." }] },
-          { role: "user",   content: [{ type: "input_text", text: "Summarize in 5–8 bullet points. Keep concrete facts (numbers, dates, names)." }] },
-        ],
-        allowTools: false,
-        max_output_tokens: 600,
-      });
-      summary = r.output_text ?? "";
-    }
+    const r = await client.responses.create({
+      model: CHAT_MODEL,
+      input: blocks,
+      // IMPORTANT: no temperature here (some GPT‑5 variants reject it)
+      max_output_tokens: 4000,
+      tools: useWeb ? [{ type: "web_search" }] : undefined,
+    });
 
-    const id = newId();
-    DOCS.set(id, { text, summary, files: manifest });
-    ok(res, { id, docId: id, text, summary, files: manifest });
+    const reply =
+      r.output_text ||
+      (Array.isArray(r.output)
+        ? r.output
+            .filter((o) => o.type === "output_text" || o.type === "message")
+            .map((o) =>
+              typeof o.content === "string" ? o.content : ""
+            )
+            .join("\n")
+        : "");
+
+    // Collect URLs from web_search tool results (for clickable links below the answer)
+    let sources = [];
+    try {
+      if (Array.isArray(r.output)) {
+        for (const o of r.output) {
+          if (
+            o.type === "tool_result" &&
+            o.tool_name === "web_search" &&
+            Array.isArray(o.content)
+          ) {
+            for (const c of o.content) {
+              if (c.type === "tool_text" && typeof c.text === "string") {
+                const found = [...c.text.matchAll(/\bhttps?:\/\/\S+/g)].map(
+                  (m) => m[0]
+                );
+                sources.push(...found);
+              }
+            }
+          }
+        }
+      }
+      const seen = new Set();
+      sources = sources.filter((u) => u && !seen.has(u) && seen.add(u));
+    } catch {}
+
+    res.json({ reply: reply?.trim() ?? "", sources });
   } catch (err) {
-    logE("/upload", err);
-    ok(res, { id: null, text: "", summary: "", files: [], error: "analyze_failed" });
+    console.error("CHAT_ERROR:", err);
+    res.status(500).json({ error: "Chat failed." });
   }
 });
 
-// ── Doc Q&A ───────────────────────────────────────────────────────────────────
-app.post("/query", async (req, res) => {
-  try {
-    const { docId, question } = req.body || {};
-    if (!docId || !DOCS.has(docId) || !question) return ok(res, { answer: "" });
-    const { text, files } = DOCS.get(docId);
-    const r = await responsesCompat({
-      model: CHAT_MODEL,
-      baseParts: [
-        { role: "system", content: [{ type: "input_text", text: "Answer strictly from the provided document text; if absent, say so." }] },
-        { role: "user",   content: [{ type: "input_text", text: `DOCUMENT:\n${text}\n\nQUESTION: ${question}\n\nAnswer:` }] },
-      ],
-      allowTools: false,
-      max_output_tokens: 1200,
-    });
-    ok(res, { answer: r.output_text ?? "", files });
-  } catch (err) { logE("/query", err); ok(res, { answer: "" }); }
-});
-
-// ── Image generation ──────────────────────────────────────────────────────────
+// Image generation (working)
 app.post("/generate-image", async (req, res) => {
   try {
-    const { prompt, size = "1024x1024", images = [] } = req.body || {};
-    if (!prompt && !images?.length) return ok(res, { image_b64: null });
-    const imgResp = await openai.images.generate({
+    const { prompt = "", size = "1024x1024" } = req.body || {};
+    const out = await client.images.generate({
       model: IMAGE_MODEL,
-      prompt: images?.length
-        ? `${prompt}\n\nReference images attached; align to obvious composition/subject while improving quality.`
-        : prompt,
+      prompt,
       size,
     });
-    ok(res, { image_b64: imgResp.data?.[0]?.b64_json || null });
-  } catch (err) { logE("/generate-image", err); ok(res, { image_b64: null }); }
+    const b64 = out?.data?.[0]?.b64_json;
+    if (!b64) return res.status(502).json({ error: "No image returned." });
+    res.json({ image_b64: b64 });
+  } catch (err) {
+    console.error("IMAGE_ERROR:", err);
+    res.status(500).json({ error: "Image generation failed." });
+  }
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Johnny Chat backend listening on :${PORT}`));
+// Upload/analyze PDFs & images (returns combinedText for /qa)
+app.post("/upload", upload.array("files"), async (req, res) => {
+  try {
+    const files = req.files || [];
+    if (!files.length) return res.json({ files: [], combinedText: "" });
 
+    const results = [];
+    for (const f of files) {
+      const id = uuidv4();
+      let text = "";
+      let pages = 0;
+
+      if (isPdf(f)) {
+        try {
+          text = await extractPdfText(f.buffer);
+          const pdf = await pdfjsLib.getDocument({ data: f.buffer }).promise;
+          pages = pdf.numPages || 0;
+        } catch (e) {
+          console.error("PDF_PARSE_ERROR:", f.originalname, e);
+        }
+      } else if (isImage(f)) {
+        text = ""; // (optional) add OCR later
+        pages = 1;
+      }
+
+      results.push({
+        id,
+        name: f.originalname,
+        mimetype: f.mimetype,
+        size: f.size,
+        pages,
+        text,
+      });
+    }
+
+    const combinedText = results
+      .map((r, i) => `=== File ${i + 1}: ${r.name} ===\n${r.text}`)
+      .join("\n\n");
+
+    res.json({ files: results, combinedText });
+  } catch (err) {
+    console.error("UPLOAD_ERROR:", err);
+    res.status(500).json({ error: "Upload/analyze failed." });
+  }
+});
+
+// Grounded Q&A over uploaded text
+app.post("/qa", async (req, res) => {
+  try {
+    const { question = "", context = "" } = req.body || {};
+    const input = [
+      {
+        role: "system",
+        content: [
+          {
+            type: "text",
+            text:
+              "Answer strictly from the provided context. If the answer is not present, say you can't find it.",
+          },
+        ],
+      },
+      {
+        role: "user",
+        content: [{ type: "text", text: `CONTEXT:\n${context}\n\nQUESTION: ${question}` }],
+      },
+    ];
+
+    const r = await client.responses.create({
+      model: CHAT_MODEL,
+      input,
+      max_output_tokens: 1200,
+    });
+
+    res.json({ reply: r.output_text?.trim() || "" });
+  } catch (err) {
+    console.error("QA_ERROR:", err);
+    res.status(500).json({ error: "Q&A failed." });
+  }
+});
+
+// Beautifier for messy web search snippets
+app.post("/beautify", async (req, res) => {
+  try {
+    const { raw = "" } = req.body || {};
+    const prompt =
+      "Reformat the following raw web snippets into clean short paragraphs and tidy bullet points. " +
+      "Remove boilerplate and tracking. Keep only useful facts. Do not invent details.\n\n" +
+      raw;
+
+    const r = await client.responses.create({
+      model: CHAT_MODEL,
+      input: [{ role: "user", content: [{ type: "text", text: prompt }] }],
+      max_output_tokens: 1000,
+    });
+
+    res.json({ pretty: r.output_text?.trim() || "" });
+  } catch (err) {
+    console.error("BEAUTIFY_ERROR:", err);
+    res.status(500).json({ error: "Beautify failed." });
+  }
+});
+
+app.use("/public", express.static(path.join(__dirname, "public")));
+
+app.listen(port, () => {
+  console.log(`JustAskJohnny server listening on :${port} (model=${CHAT_MODEL})`);
+});
