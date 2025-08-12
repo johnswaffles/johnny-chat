@@ -3,11 +3,11 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import OpenAI from "openai";
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs"; // workerless
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs"; // workerless for Node
 
 const app = express();
 
-// store uploads in memory so we have file.buffer
+// keep uploads in memory so we always have file.buffer
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 40 * 1024 * 1024, files: 8 },
@@ -17,41 +17,38 @@ app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// ---------- OpenAI ----------
+// ---- OpenAI + models from env (your Render env looks good) ----
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5";
 const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
 const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
 
-// ---------- utils ----------
 const ok = (res, data) => res.status(200).json(data);
 const bad = (res, code, err) => res.status(code).json({ error: String(err?.message || err) });
-const newId =
-  () => (globalThis.crypto?.randomUUID?.() || `id-${Math.random().toString(36).slice(2)}`);
+const newId = () => (globalThis.crypto?.randomUUID?.() || `id-${Math.random().toString(36).slice(2)}`);
 
 app.get("/health", (_req, res) => ok(res, { ok: true, ts: Date.now() }));
 
-// in‑memory doc store
+// ---------- tiny in‑memory doc store ----------
 const DOCS = new Map();
 
-// Responses API helper with optional web_search
-async function llm({ system, user, max_output_tokens = 1800, enableWeb = false }) {
-  const input = [
-    ...(system ? [{ role: "system", content: system }] : []),
-    { role: "user", content: user },
-  ];
-  const resp = await openai.responses.create({
+// ---------- helpers ----------
+const LIVE_REGEX = /\b(now|today|tonight|tomorrow|latest|breaking|update|news|price|rate|score|forecast|weather|warning|advisory|open|closed|traffic)\b/i;
+
+async function callResponses({ input, tools, max_output_tokens = 1800 }) {
+  return openai.responses.create({
     model: CHAT_MODEL,
     input,
     max_output_tokens,
-    ...(enableWeb ? { tools: [{ type: "web_search" }] } : {}),
+    ...(tools ? { tools } : {}),
   });
-  const text = resp.output_text ?? "";
-  const sources = Array.from(text.match?.(/\bhttps?:\/\/[^\s)]+/g) || []);
-  return { text, sources };
 }
 
-// ---------- chat ----------
+function extractUrls(text = "") {
+  return Array.from(text.match(/\bhttps?:\/\/[^\s)]+/g) || []);
+}
+
+// ---------- /api/chat (forces web_search when needed) ----------
 app.post("/api/chat", async (req, res) => {
   try {
     const { input, history = [], mode } = req.body || {};
@@ -61,33 +58,68 @@ app.post("/api/chat", async (req, res) => {
 
     const system =
       mode === "writepaper"
-        ? "You are a rigorous, elegant academic writer. Produce tightly argued, source‑aware prose with clean structure. No headings unless asked."
-        : "You are a precise assistant. Prefer fresh, verifiable information; call web_search when recency is implied.";
+        ? "You are a rigorous, elegant academic writer. Produce tightly argued, source‑aware prose with clear structure. No headings unless asked."
+        : "You are a precise assistant. When a request is time‑sensitive or asks for current facts, you MUST use the web_search tool and cite reputable sources.";
 
-    const user = hist ? `Conversation summary:\n${hist}\n\nCurrent message:\n${input}` : input;
+    const user = hist
+      ? `Conversation summary:\n${hist}\n\nCurrent message:\n${input}`
+      : input;
 
-    const { text, sources } = await llm({
-      system, user, max_output_tokens: mode === "writepaper" ? 4000 : 1800, enableWeb: true,
+    const allowWeb = true;
+    const tools = allowWeb ? [{ type: "web_search" }] : undefined;
+
+    // 1st attempt (model chooses if it needs web)
+    let r = await callResponses({
+      input: [
+        ...(system ? [{ role: "system", content: system }] : []),
+        { role: "user", content: user },
+      ],
+      tools,
+      max_output_tokens: mode === "writepaper" ? 4000 : 1800,
     });
-    ok(res, { reply: text, sources });
-  } catch (err) { bad(res, 500, err); }
+
+    let text = r.output_text ?? "";
+    let sources = extractUrls(text);
+
+    // If it clearly needed live data but didn't use web_search, ask again and insist.
+    if (LIVE_REGEX.test(input) && sources.length === 0) {
+      r = await callResponses({
+        input: [
+          { role: "system", content: "Use the web_search tool NOW. Return a concise answer with 2–4 citations." },
+          { role: "user", content: input },
+        ],
+        tools: [{ type: "web_search" }],
+        max_output_tokens: 1000,
+      });
+      text = r.output_text ?? text;
+      sources = extractUrls(text);
+    }
+
+    return ok(res, { reply: text, sources });
+  } catch (err) {
+    return bad(res, 500, err);
+  }
 });
 
-// ---------- beautify ----------
+// ---------- /api/beautify ----------
 app.post("/api/beautify", async (req, res) => {
   try {
     const { text } = req.body || {};
     if (!text) return bad(res, 400, "missing text");
-    const { text: pretty } = await llm({
-      system: "Rewrite for clarity and polish. Preserve meaning. Output improved text only.",
-      user: text,
+    const r = await callResponses({
+      input: [
+        { role: "system", content: "Rewrite for clarity, flow, and concision. Preserve meaning. Output improved text only." },
+        { role: "user", content: text },
+      ],
       max_output_tokens: 800,
     });
-    ok(res, { pretty });
-  } catch (err) { bad(res, 500, err); }
+    return ok(res, { pretty: r.output_text ?? "" });
+  } catch (err) {
+    return bad(res, 500, err);
+  }
 });
 
-// ---------- PDF text (Buffer → Uint8Array; no worker) ----------
+// ---------- PDF text (Buffer → Uint8Array; workerless) ----------
 async function pdfToText(buf) {
   const data = buf instanceof Uint8Array ? buf : new Uint8Array(buf.buffer ?? buf);
   const loadingTask = pdfjs.getDocument({
@@ -107,10 +139,8 @@ async function pdfToText(buf) {
   return parts.join("\n\n").replace(/[ \t]+/g, " ").trim();
 }
 
-// ---------- upload: PDF + PNG/JPG/JPEG/WEBP ----------
-const IMAGE_TYPES = new Set([
-  "image/png", "image/jpeg", "image/jpg", "image/webp"
-]);
+// ---------- /upload (PDF + images: png/jpg/jpeg/webp) ----------
+const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
 
 app.post("/upload", upload.array("files", 8), async (req, res) => {
   try {
@@ -131,7 +161,8 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
       } else if (IMAGE_TYPES.has(f.mimetype)) {
         if (!f.buffer) throw new Error("Image missing buffer (memoryStorage required)");
         const dataUrl = `data:${f.mimetype};base64,${f.buffer.toString("base64")}`;
-        imageParts.push({ type: "input_image", image_url: dataUrl });
+        // Responses API expects `input_image` with image_url {url: ...}
+        imageParts.push({ type: "input_image", image_url: { url: dataUrl } });
       }
     }
 
@@ -142,7 +173,11 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
           {
             role: "user",
             content: [
-              { type: "input_text", text: "Extract visible text (OCR) and give a concise 2–3 sentence summary." },
+              {
+                type: "input_text",
+                text:
+                  "Do OCR if any text exists. If no text is visible, say so, then give a concise 2–3 sentence description of the image (objects, layout, notable details).",
+              },
               ...imageParts,
             ],
           },
@@ -150,48 +185,57 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
         max_output_tokens: 1200,
       });
       const visionText = resp.output_text ?? "";
-      if (visionText) textParts.push(`--- Images (OCR + summary) ---\n${visionText}`);
+      if (visionText) textParts.push(`--- Images (OCR + description) ---\n${visionText}`);
     }
 
     const text = textParts.join("\n\n").trim();
 
     let summary = "";
     if (text) {
-      const { text: sum } = await llm({
-        system: "You summarize documents crisply.",
-        user: "Summarize in 5–8 bullet points. Keep concrete facts (numbers, dates, names).",
+      const r = await callResponses({
+        input: [
+          { role: "system", content: "You summarize documents crisply." },
+          { role: "user", content: "Summarize in 5–8 bullet points. Keep concrete facts (numbers, dates, names)." },
+        ],
         max_output_tokens: 500,
       });
-      summary = sum;
+      summary = r.output_text ?? "";
     }
 
     const id = newId();
     DOCS.set(id, { text, summary, files: manifest });
-    ok(res, { id, docId: id, text, summary, files: manifest });
-  } catch (err) { bad(res, 500, err); }
+    return ok(res, { id, docId: id, text, summary, files: manifest });
+  } catch (err) {
+    return bad(res, 500, err);
+  }
 });
 
-// ---------- doc QA ----------
+// ---------- /query ----------
 app.post("/query", async (req, res) => {
   try {
     const { docId, question } = req.body || {};
     if (!docId || !DOCS.has(docId)) return bad(res, 400, "missing or unknown docId");
     if (!question) return bad(res, 400, "missing question");
     const { text, files } = DOCS.get(docId);
-    const { text: answer } = await llm({
-      system: "Answer strictly from the provided document text; if absent, say so.",
-      user: `DOCUMENT:\n${text}\n\nQUESTION: ${question}\n\nAnswer:`,
+    const r = await callResponses({
+      input: [
+        { role: "system", content: "Answer strictly from the provided document text; if absent, say so." },
+        { role: "user", content: `DOCUMENT:\n${text}\n\nQUESTION: ${question}\n\nAnswer:` },
+      ],
       max_output_tokens: 1200,
     });
-    ok(res, { answer, files });
-  } catch (err) { bad(res, 500, err); }
+    return ok(res, { answer: r.output_text ?? "", files });
+  } catch (err) {
+    return bad(res, 500, err);
+  }
 });
 
-// ---------- image gen ----------
+// ---------- /generate-image ----------
 app.post("/generate-image", async (req, res) => {
   try {
     const { prompt, size = "1024x1024", images = [] } = req.body || {};
     if (!prompt && !images?.length) return bad(res, 400, "missing prompt");
+
     const imgResp = await openai.images.generate({
       model: IMAGE_MODEL,
       prompt: images?.length
@@ -199,10 +243,13 @@ app.post("/generate-image", async (req, res) => {
         : prompt,
       size,
     });
+
     const image_b64 = imgResp.data?.[0]?.b64_json;
     if (!image_b64) return bad(res, 502, "image generation failed");
-    ok(res, { image_b64 });
-  } catch (err) { bad(res, 500, err); }
+    return ok(res, { image_b64 });
+  } catch (err) {
+    return bad(res, 500, err);
+  }
 });
 
 const PORT = process.env.PORT || 3000;
