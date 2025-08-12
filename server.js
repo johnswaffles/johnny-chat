@@ -1,13 +1,22 @@
-// server.js
+// server.js  — Johnny Chat backend (ESM)
+// Node 20+, Express, OpenAI Responses API, pdfjs-dist for PDF text, multer for uploads
+
 import express from "express";
 import cors from "cors";
 import multer from "multer";
-import pdfParse from "pdf-parse";
-import { readFile } from "fs/promises";
 import OpenAI from "openai";
 
+// ---- optional, safe dynamic import for pdfjs-dist in Node ESM ----
+const PDFJS = await (async () => {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const worker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+  // wire worker so Render doesn’t try to fetch a file
+  pdfjs.GlobalWorkerOptions.workerSrc = worker;
+  return pdfjs;
+})();
+
 const app = express();
-const upload = multer({ limits: { fileSize: 40 * 1024 * 1024 } }); // 40 MB/file
+const upload = multer({ limits: { fileSize: 40 * 1024 * 1024 } }); // 40MB/file
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
@@ -17,218 +26,216 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+const CHAT_MODEL   = process.env.CHAT_MODEL   || "gpt-5";
+const IMAGE_MODEL  = process.env.IMAGE_MODEL  || "gpt-image-1";
+const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
+
+// ---------- Utilities ----------
+const ok = (res, data) => res.status(200).json(data);
+const bad = (res, code, err) => res.status(code).json({ error: String(err?.message || err) });
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `id-${Math.random().toString(36).slice(2)}`);
+
+// Basic health
+app.get("/health", (_req, res) => ok(res, { ok: true, uptime: process.uptime() }));
+
 // ---------- In-memory doc store ----------
 /** id -> { text, summary, files:[{name,type,size}] } */
 const DOCS = new Map();
-const newId = () => crypto.randomUUID();
 
-// small helper to call Responses API safely
-async function llm(opts) {
-  const {
-    system = "You are a helpful assistant.",
-    user,
-    max_output_tokens = 1800,
-    verbosity, // may be ignored by model, that's fine
-    tools,
-  } = opts;
-
+// ---------- OpenAI helper (Responses API) ----------
+async function llm({ system, user, max_output_tokens = 1800, tools, verbosity }) {
   const input = [
-    { role: "system", content: system },
+    ...(system ? [{ role: "system", content: system }] : []),
     { role: "user", content: user },
   ];
 
   const resp = await openai.responses.create({
-    model: "gpt-5",
+    model: CHAT_MODEL,
     input,
     max_output_tokens,
-    // do not always pass temperature; some preview models reject it
     ...(verbosity ? { verbosity } : {}),
     ...(tools ? { tools } : {}),
   });
 
-  // Normalize output text and crude URL scraping for sources, if any
   const text = resp.output_text ?? "";
+  // best-effort URL scrape to let the UI show “Sources”
   const urlRegex = /\bhttps?:\/\/[^\s)]+/g;
-  const sources = Array.from(new Set(text.match(urlRegex) || [])).slice(0, 8);
+  const sources = Array.from(text.match?.(urlRegex) || []);
   return { text, sources };
 }
 
-// ---------- CHAT ----------
+// ---------- /api/chat ----------
 app.post("/api/chat", async (req, res) => {
   try {
-    const { input, history = [], mode } = req.body;
+    const { input, history = [], mode } = req.body || {};
+    if (!input || typeof input !== "string") return bad(res, 400, "missing input");
 
-    // Build message text from history + current input (history already user/assistant turns)
-    const stitched = history
+    // fold short recent history for better continuity without blowing token budget
+    const histLines = history
       .slice(-40)
       .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
       .join("\n\n");
 
-    // defaults
-    let maxTokens = 2000;
-    let verbosity = "medium";
-    let systemPrompt =
-      "You are Johnny, a pragmatic assistant. When users ask about current facts (weather, news, stocks, etc.), search the web and incorporate live info. Keep the main answer clean; any links can be listed plainly at the end.";
+    const system =
+      mode === "writepaper"
+        ? "You are a rigorous, elegant academic writer. Deliver tightly argued, evidence-aware prose with vivid examples, clean structure, and strong transitions. No headings or meta-commentary unless asked."
+        : "You are a friendly, precise assistant. Answer clearly and concisely, show URLs only when useful.";
 
-    // Long-form mode for Write Paper
-    if (mode === "writepaper") {
-      maxTokens = 48000; // adjust per your quota
-      verbosity = "long";
-      systemPrompt +=
-        " You write long-form papers with rich structure (introduction, well-organized sections, conclusion). Honor explicit word-count requests from the user. Aim for depth, nuance, and clarity without fluff. Use smooth transitions; no bullets or headings unless the user asked.";
-    }
+    const user =
+      histLines
+        ? `Conversation so far (compressed):\n${histLines}\n\nCurrent user message:\n${input}`
+        : input;
 
-    const { text, sources } = await llm({
-      system: systemPrompt,
-      user: `${stitched ? stitched + "\n\n" : ""}USER: ${input}`,
-      max_output_tokens: maxTokens,
-      verbosity,
-      tools: [{ type: "web_search" }], // lets the model fetch live info when needed
-    });
-
-    res.json({ reply: text, sources });
-  } catch (e) {
-    res.status(500).json({ error: String(e.message || e) });
+    const { text, sources } = await llm({ system, user, max_output_tokens: mode === "writepaper" ? 4000 : 1800 });
+    return ok(res, { reply: text, sources });
+  } catch (err) {
+    return bad(res, 500, err);
   }
 });
 
-// ---------- BEAUTIFY ----------
+// ---------- /api/beautify ----------
 app.post("/api/beautify", async (req, res) => {
   try {
-    const { text } = req.body;
-    const prompt = `Clean and format the following text into clear, readable paragraphs and short lists where appropriate. Remove duplicated fragments and tracking parameters. Keep the meaning intact.
-
-TEXT:
-${text}`;
+    const { text } = req.body || {};
+    if (!text) return bad(res, 400, "missing text");
     const { text: pretty } = await llm({
       system:
-        "You are a concise text beautifier. Improve formatting only; do not invent facts.",
-      user: prompt,
-      max_output_tokens: 1200,
+        "Rewrite the text for clarity and polish. Keep meaning. Remove redundant citations and raw URLs. Output the improved text only.",
+      user: text,
+      max_output_tokens: 800,
     });
-    res.json({ pretty });
-  } catch (e) {
-    res.status(500).json({ error: String(e.message || e) });
+    return ok(res, { pretty });
+  } catch (err) {
+    return bad(res, 500, err);
   }
 });
 
-// ---------- UPLOAD (multi-file: PDFs + images) ----------
-app.post("/upload", upload.array("files", 12), async (req, res) => {
+// ---------- Helpers: read PDF text with pdfjs-dist ----------
+async function pdfToText(buffer) {
+  const loadingTask = PDFJS.getDocument({ data: buffer });
+  const doc = await loadingTask.promise;
+  let out = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    const text = content.items.map((it) => (typeof it.str === "string" ? it.str : "")).join(" ");
+    out.push(text);
+  }
+  return out.join("\n\n").replace(/[ \t]+/g, " ").trim();
+}
+
+// ---------- /upload (PDFs + images) ----------
+app.post("/upload", upload.array("files", 8), async (req, res) => {
   try {
-    if (!req.files?.length) return res.status(400).json({ error: "No files" });
+    const files = req.files || [];
+    if (!files.length) return bad(res, 400, "no files");
 
-    let allText = "";
-    const meta = [];
+    let textParts = [];
+    const manifest = [];
 
-    for (const f of req.files) {
-      meta.push({ name: f.originalname, type: f.mimetype, size: f.size });
+    // gather text from PDFs locally; images go through vision model for OCR/summary later
+    const imageInputs = [];
+
+    for (const f of files) {
+      manifest.push({ name: f.originalname, type: f.mimetype, size: f.size });
       if (f.mimetype === "application/pdf") {
-        const data = await pdfParse(f.buffer);
-        allText += `\n\n[PDF: ${f.originalname}]\n${data.text || ""}`;
-      } else if (/^image\//.test(f.mimetype)) {
-        // For images, we store a placeholder note; OCR could be added later
-        allText += `\n\n[IMAGE: ${f.originalname}]`;
-      } else {
-        // try treat as text
-        allText += `\n\n[FILE: ${f.originalname}]\n${f.buffer.toString("utf8")}`;
+        const txt = await pdfToText(f.buffer);
+        if (txt) textParts.push(`--- ${f.originalname} ---\n${txt}`);
+      } else if (f.mimetype.startsWith("image/")) {
+        const b64 = f.buffer.toString("base64");
+        imageInputs.push({
+          type: "input_image",
+          image_url: `data:${f.mimetype};base64,${b64}`,
+        });
       }
     }
 
-    const summaryPrompt = `Summarize the key points from the following combined files. Then provide a 5–8 bullet executive summary.
+    // If there are images, ask the model to OCR + summarize them briefly
+    if (imageInputs.length) {
+      const resp = await openai.responses.create({
+        model: VISION_MODEL,
+        input: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Extract any visible text (OCR) and summarize what is shown. Return OCR text first, then a 2–3 sentence summary." },
+              ...imageInputs,
+            ],
+          },
+        ],
+        max_output_tokens: 1200,
+      });
+      const visionText = resp.output_text ?? "";
+      if (visionText) textParts.push(`--- Images (OCR + summary) ---\n${visionText}`);
+    }
 
-${allText.slice(0, 300000)}`;
-    const { text: summary } = await llm({
-      system:
-        "You summarize documents faithfully. Do not add claims not present in the text.",
-      user: summaryPrompt,
-      max_output_tokens: 2000,
-    });
+    const text = textParts.join("\n\n").trim();
+
+    // Ask the chat model for a clean short summary of the combined text
+    let summary = "";
+    if (text) {
+      const { text: sum } = await llm({
+        system: "You summarize documents crisply.",
+        user:
+          "Summarize in 5–8 bullet points. Be concrete, keep numbers, dates, names. Avoid filler.",
+        max_output_tokens: 500,
+      });
+      summary = sum;
+    }
 
     const id = newId();
-    DOCS.set(id, { text: allText, summary, files: meta });
-
-    res.json({
-      docId: id,
-      text: allText.slice(0, 500000),
-      summary,
-      files: meta,
-    });
-  } catch (e) {
-    res.status(500).json({ error: String(e.message || e) });
+    DOCS.set(id, { text, summary, files: manifest });
+    return ok(res, { id, docId: id, text, summary, files: manifest });
+  } catch (err) {
+    return bad(res, 500, err);
   }
 });
 
-// ---------- QUERY uploaded doc ----------
+// ---------- /query (ask about uploaded docs) ----------
 app.post("/query", async (req, res) => {
   try {
-    const { docId, question } = req.body;
-    const doc = DOCS.get(docId);
-    if (!doc) return res.status(404).json({ error: "Document not found" });
+    const { docId, question } = req.body || {};
+    if (!docId || !DOCS.has(docId)) return bad(res, 400, "missing or unknown docId");
+    if (!question) return bad(res, 400, "missing question");
 
-    const prompt = `Answer the question using only the content below. Quote key phrases when helpful and cite section cues like [PDF: filename] if relevant. If not found, say so.
-
-DOCUMENT:
-${doc.text.slice(0, 400000)}
-
-QUESTION: ${question}`;
+    const { text, files } = DOCS.get(docId);
     const { text: answer } = await llm({
       system:
-        "You are a careful reading assistant. When the answer is uncertain, you say so.",
-      user: prompt,
-      max_output_tokens: 1800,
+        "Answer strictly from the provided document text. If the answer is not in the text, say you cannot find it.",
+      user: `DOCUMENT TEXT:\n${text}\n\nQUESTION: ${question}\n\nAnswer:`,
+      max_output_tokens: 1200,
     });
-    res.json({ answer });
-  } catch (e) {
-    res.status(500).json({ error: String(e.message || e) });
+    return ok(res, { answer, files });
+  } catch (err) {
+    return bad(res, 500, err);
   }
 });
 
-// ---------- IMAGE generation/edit ----------
+// ---------- /generate-image ----------
 app.post("/generate-image", async (req, res) => {
   try {
-    const { prompt, size = "1024x1024", images = [] } = req.body;
+    const { prompt, size = "1024x1024", images = [] } = req.body || {};
+    if (!prompt && !images?.length) return bad(res, 400, "missing prompt");
 
-    const input = [
-      {
-        role: "user",
-        content: [
-          { type: "input_text", text: prompt },
-          ...images.map((u) =>
-            u.startsWith("data:")
-              ? { type: "input_image", image_url: u }
-              : { type: "input_image", image_url: u }
-          ),
-        ],
-      },
-    ];
-
-    const resp = await openai.responses.create({
-      model: "gpt-5",
-      input,
-      tools: [{ type: "image_generation" }],
-      max_output_tokens: 1, // not text output
-      // image tool respects requested size via prompt; add explicit hint:
-      metadata: { target_size: size },
+    // if user passed reference images (data URLs), treat as editing guidance via prompt
+    const imgResp = await openai.images.generate({
+      model: IMAGE_MODEL,
+      prompt: images?.length
+        ? `${prompt}\n\nReference guidance included via attached images; match composition/subject where obvious but improve quality.`
+        : prompt,
+      size,
     });
 
-    // Collect first generated image (base64)
-    const calls = (resp.output || []).filter(
-      (o) => o.type === "image_generation_call"
-    );
-    const image_b64 = calls?.[0]?.result || null;
-
-    if (!image_b64) return res.status(500).json({ error: "No image returned" });
-
-    res.json({ image_b64 });
-  } catch (e) {
-    res.status(500).json({ error: String(e.message || e) });
+    const image_b64 = imgResp.data?.[0]?.b64_json;
+    if (!image_b64) return bad(res, 502, "image generation failed");
+    return ok(res, { image_b64 });
+  } catch (err) {
+    return bad(res, 500, err);
   }
 });
 
-// ---------- HEALTH ----------
-app.get("/", (_req, res) => res.send("OK"));
-
-// ---------- START (Render provides PORT) ----------
+// ---------- start ----------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on :${PORT}`));
-
+app.listen(PORT, () => {
+  console.log(`Johnny Chat backend listening on :${PORT}`);
+});
