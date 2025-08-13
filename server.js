@@ -66,13 +66,13 @@ async function extractPdfText(buffer) {
 }
 
 async function ocrImageWithVision(buffer, mime) {
-  const b64 = buffer.toString("base64");
+  const dataUrl = `data:${mime || "image/png"};base64,${buffer.toString("base64")}`;
   const input = [
     {
       role: "user",
       content: [
         { type: "input_text", text: "Extract all readable text (OCR). Then produce a concise 3–6 bullet summary of the content." },
-        { type: "input_image", image_data: { data: b64, mime_type: mime || "image/png" } }
+        { type: "input_image", image_url: dataUrl }
       ]
     }
   ];
