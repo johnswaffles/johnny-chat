@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import * as pdfjs from "pdfjs-dist/build/pdf.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
