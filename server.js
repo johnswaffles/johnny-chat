@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
-import * as pdfjs from "pdfjs-dist/build/pdf.mjs";
+import { getDocumentProxy, extractText } from "unpdf";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,16 +60,8 @@ async function llm({ system, user, max_output_tokens = 2000, verbosity, tools })
 }
 
 async function extractPdfText(buffer) {
-  const loading = pdfjs.getDocument({ data: buffer, disableWorker: true });
-  const pdf = await loading.promise;
-  let text = "";
-  const pages = Math.min(pdf.numPages, 200);
-  for (let p = 1; p <= pages; p++) {
-    const page = await pdf.getPage(p);
-    const tc = await page.getTextContent();
-    const pageText = tc.items.map(it => it.str).join(" ");
-    text += `\n\n${pageText}`;
-  }
+  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+  const { text } = await extractText(pdf, { mergePages: true });
   return text.trim();
 }
 
