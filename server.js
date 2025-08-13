@@ -69,6 +69,16 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, model: CHAT_MODEL });
 });
 
+app.get("/api/config.js", (req, res) => {
+  const base = `${req.protocol}://${req.get("host")}`;
+  res.type("application/javascript").send(`window.API_BASE=${JSON.stringify(base)};`);
+});
+
+app.get("/api/config", (req, res) => {
+  const base = `${req.protocol}://${req.get("host")}`;
+  res.json({ api_base: base });
+});
+
 app.post("/api/chat", async (req, res) => {
   try {
     const { input, history = [], mode } = req.body || {};
