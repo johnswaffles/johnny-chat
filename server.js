@@ -93,7 +93,7 @@ async function geocodePlace(q) {
 function guessDaysFromText(t) {
   const s = String(t || "");
   if (/today\s+and\s+tomorrow/i.test(s)) return 2;
-  const m = s.match(/next\s+(\d+)\s+day/ i);
+  const m = s.match(/next\s+(\d+)\s+days?/i);
   if (m) return Math.max(1, Math.min(10, parseInt(m[1], 10)));
   if (/tomorrow/i.test(s)) return 2;
   return 3;
