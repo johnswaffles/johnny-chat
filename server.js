@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
-import pdfParse from "pdf-parse";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +57,20 @@ async function llm({ system, user, max_output_tokens = 2000, verbosity, tools })
   });
   const text = resp.output_text ?? "";
   return { text, sources: urlsFrom(text) };
+}
+
+async function extractPdfText(buffer) {
+  const loading = pdfjs.getDocument({ data: buffer, disableWorker: true });
+  const pdf = await loading.promise;
+  let text = "";
+  const pages = Math.min(pdf.numPages, 200);
+  for (let p = 1; p <= pages; p++) {
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    const pageText = tc.items.map(it => it.str).join(" ");
+    text += `\n\n${pageText}`;
+  }
+  return text.trim();
 }
 
 app.get("/health", (_req, res) => {
@@ -120,8 +134,8 @@ app.post("/upload", upload.array("files", 12), async (req, res) => {
     for (const f of req.files) {
       meta.push({ name: f.originalname, type: f.mimetype, size: f.size });
       if (f.mimetype === "application/pdf") {
-        const data = await pdfParse(f.buffer);
-        allText += `\n\n[PDF: ${f.originalname}]\n${data.text || ""}`;
+        const pdfText = await extractPdfText(f.buffer);
+        allText += `\n\n[PDF: ${f.originalname}]\n${pdfText}`;
       } else if (/^image\//.test(f.mimetype)) {
         allText += `\n\n[IMAGE: ${f.originalname}]`;
       } else {
