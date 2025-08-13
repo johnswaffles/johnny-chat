@@ -35,27 +35,97 @@ app.use(
 app.use(express.json({ limit: `${Math.max(1, Number(MAX_UPLOAD_MB))}mb` }));
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/health", (_req, res) => res.json({ ok: true, model: OPENAI_CHAT_MODEL }));
+
+function parseWeatherQuery(s) {
+  const mCity = s.match(/\b(?:in|for)\s+([a-z][a-z0-9\s,.'-]{2,80})/i);
+  const city = mCity ? mCity[1].trim() : "";
+  let when = "today";
+  if (/\bnow\b/i.test(s)) when = "now";
+  else if (/\btomorrow\b/i.test(s)) when = "tomorrow";
+  return { city, when };
+}
+
+function wcodeToText(c) {
+  const map = {
+    0: "clear",
+    1: "mostly clear",
+    2: "partly cloudy",
+    3: "overcast",
+    45: "fog",
+    48: "freezing fog",
+    51: "light drizzle",
+    53: "drizzle",
+    55: "heavy drizzle",
+    56: "freezing drizzle",
+    57: "heavy freezing drizzle",
+    61: "light rain",
+    63: "rain",
+    65: "heavy rain",
+    66: "freezing rain",
+    67: "heavy freezing rain",
+    71: "light snow",
+    73: "snow",
+    75: "heavy snow",
+    77: "snow grains",
+    80: "light showers",
+    81: "showers",
+    82: "heavy showers",
+    85: "snow showers",
+    86: "heavy snow showers",
+    95: "thunderstorms",
+    96: "thunderstorms with hail",
+    99: "severe thunderstorms with hail"
+  };
+  return map[c] || "conditions";
+}
+
+async function liveWeatherBrief(q) {
+  const { city, when } = parseWeatherQuery(q);
+  if (!city) return "I need a city or ZIP. For example: “weather in Mount Vernon, IL today”.";
+  const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
+  const gj = await geo.json();
+  if (!gj.results || !gj.results.length) return `Couldn't find “${city}”. Try a different spelling.`;
+  const g = gj.results[0];
+  const lat = g.latitude;
+  const lon = g.longitude;
+  const loc = `${g.name}${g.admin1 ? ", " + g.admin1 : ""}${g.country ? ", " + g.country : ""}`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation,weather_code&hourly=temperature_2m,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=2`;
+  const fx = await fetch(url);
+  const j = await fx.json();
+  const nowTemp = j.current ? Math.round(j.current.temperature_2m) : null;
+  const nowCode = j.current ? j.current.weather_code : null;
+  const today = j.daily ? 0 : null;
+  const tMax = j.daily ? Math.round(j.daily.temperature_2m_max[0]) : null;
+  const tMin = j.daily ? Math.round(j.daily.temperature_2m_min[0]) : null;
+  const tCode = j.daily ? j.daily.weather_code[0] : null;
+  const tPop = j.daily ? j.daily.precipitation_probability_max[0] : null;
+  const tmMax = j.daily && j.daily.temperature_2m_max[1] != null ? Math.round(j.daily.temperature_2m_max[1]) : null;
+  const tmMin = j.daily && j.daily.temperature_2m_min[1] != null ? Math.round(j.daily.temperature_2m_min[1]) : null;
+  const tmCode = j.daily && j.daily.weather_code[1] != null ? j.daily.weather_code[1] : null;
+  const tmPop = j.daily && j.daily.precipitation_probability_max[1] != null ? j.daily.precipitation_probability_max[1] : null;
+  const parts = [];
+  parts.push(`${loc}`);
+  if (when === "now" && nowTemp != null) parts.push(`Now: ${wcodeToText(nowCode)} around ${nowTemp}°F.`);
+  if (when === "today" || when === "now") {
+    if (tMax != null && tMin != null) parts.push(`Today: ${wcodeToText(tCode)}, ${tMin}–${tMax}°F${tPop != null ? `, precip ${tPop}%` : ""}.`);
+  }
+  if (when === "tomorrow") {
+    if (tmMax != null && tmMin != null) parts.push(`Tomorrow: ${wcodeToText(tmCode)}, ${tmMin}–${tmMax}°F${tmPop != null ? `, precip ${tmPop}%` : ""}.`);
+  }
+  return parts.join(" ");
+}
 
 app.post("/api/chat", async (req, res) => {
   try {
     const { input = "", history = [] } = req.body || {};
     const s = String(input || "");
-    const wantWeather = /(^|\s)weather\s/i.test(s) || /forecast/i.test(s) || /temperature/i.test(s);
-    if (wantWeather) {
-      const mCity = s.match(/in\s+([a-z][a-z0-9\s,.-]{2,80})/i);
-      const city = mCity ? mCity[1].trim() : "";
-      const when = /tomorrow/i.test(s) ? "tomorrow" : /today/i.test(s) ? "today" : "today";
-      const query = `Give a concise local weather brief for ${city || "the user’s location"} for ${when}. If city is missing, ask them to specify.`;
-      const resp = await openai.responses.create({
-        model: OPENAI_CHAT_MODEL,
-        input: [
-          { role: "system", content: "You are a helpful assistant. Keep weather summaries short and clear." },
-          { role: "user", content: query }
-        ]
-      });
-      const reply = resp.output_text || "(no reply)";
-      return res.json({ reply, sources: [] });
+    const wantsWeather = /\bweather\b/i.test(s) || /\bforecast\b/i.test(s) || /\btemperature\b/i.test(s);
+    if (wantsWeather) {
+      try {
+        const brief = await liveWeatherBrief(s);
+        return res.json({ reply: brief, sources: ["open-meteo.com"] });
+      } catch (e) {}
     }
     const resp = await openai.responses.create({
       model: OPENAI_CHAT_MODEL,
@@ -108,14 +178,14 @@ app.post("/upload", upload.array("files", 6), async (req, res) => {
           {
             role: "user",
             content: [
-              { type: "input_text", text: "Transcribe all legible text from this image. Return only the text in reading order." },
+              { type: "input_text", text: "You are an OCR engine. Transcribe every legible word in reading order. Return only the plain text with line breaks. If no text is present, return an empty string." },
               { type: "input_image", image_url: dataUrl }
             ]
           }
         ]
       });
-      const txt = vision.output_text || "";
-      textFromImages += "\n" + txt;
+      const txt = (vision.output_text || "").trim();
+      textFromImages += txt ? "\n" + txt : "";
     }
     res.json({ text: textFromImages.trim() });
   } catch (e) {
@@ -129,10 +199,7 @@ app.post("/summarize-text", async (req, res) => {
     const resp = await openai.responses.create({
       model: OPENAI_CHAT_MODEL,
       input: [
-        {
-          role: "system",
-          content: "Summarize the provided document text: first 3–6 bullet key points, then a short executive summary."
-        },
+        { role: "system", content: "Summarize the provided document text: first 3–6 bullet key points, then a short executive summary." },
         { role: "user", content: String(text).slice(0, 15000) }
       ]
     });
