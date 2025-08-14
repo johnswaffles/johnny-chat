@@ -1,8 +1,7 @@
 import express from "express";
 import cors from "cors";
 import multer from "multer";
-import OpenAI from "openai";
-import { toFile } from "openai/uploads";
+import OpenAI, { toFile } from "openai";
 
 const {
   OPENAI_API_KEY,
@@ -203,12 +202,14 @@ app.post("/query", async (req, res) => {
 
 app.post("/generate-image", async (req, res) => {
   try {
-    const { prompt = "", size = "1024x1024" } = req.body || {};
+    const { prompt = "", size = "1024x1024", quality = "high", background, format } = req.body || {};
     const gen = await openai.images.generate({
       model: OPENAI_IMAGE_MODEL,
       prompt: String(prompt),
       size: size === "auto" ? "1024x1024" : size,
-      quality: "high"
+      quality: quality || "high",
+      ...(background ? { background } : {}),
+      ...(format ? { response_format: format } : {})
     });
     const b64 = gen.data?.[0]?.b64_json || "";
     res.json({ image_b64: b64 });
@@ -224,20 +225,26 @@ const uploadRefs = multer({
 
 app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) => {
   try {
-    const { prompt = "", size = "1024x1024" } = req.body || {};
+    const { prompt = "", size = "1024x1024", quality = "high", background, input_fidelity } = req.body || {};
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ detail: "No reference images provided" });
+
     const imgs = [];
     for (const f of files.slice(0, 5)) {
       const tf = await toFile(f.buffer, f.originalname || "ref.png", { type: f.mimetype || "image/png" });
       imgs.push(tf);
     }
-    const result = await openai.images.edits({
+
+    const result = await openai.images.edit({
       model: OPENAI_IMAGE_MODEL,
-      prompt: String(prompt),
       image: imgs,
-      size: size === "auto" ? "1024x1024" : size
+      prompt: String(prompt),
+      size: size === "auto" ? "1024x1024" : size,
+      quality: quality || "high",
+      ...(background ? { background } : {}),
+      ...(input_fidelity ? { input_fidelity } : {})
     });
+
     const b64 = result.data?.[0]?.b64_json || "";
     res.json({ image_b64: b64 });
   } catch (e) {
