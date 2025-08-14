@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import OpenAI from "openai";
+import { toFile } from "openai/uploads";
 
 const {
   OPENAI_API_KEY,
@@ -210,6 +211,34 @@ app.post("/generate-image", async (req, res) => {
       quality: "high"
     });
     const b64 = gen.data?.[0]?.b64_json || "";
+    res.json({ image_b64: b64 });
+  } catch (e) {
+    res.status(500).json({ detail: String(e.message || e) });
+  }
+});
+
+const uploadRefs = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: Math.max(1, Number(MAX_UPLOAD_MB)) * 1024 * 1024 }
+});
+
+app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) => {
+  try {
+    const { prompt = "", size = "1024x1024" } = req.body || {};
+    const files = req.files || [];
+    if (!files.length) return res.status(400).json({ detail: "No reference images provided" });
+    const imgs = [];
+    for (const f of files.slice(0, 5)) {
+      const tf = await toFile(f.buffer, f.originalname || "ref.png", { type: f.mimetype || "image/png" });
+      imgs.push(tf);
+    }
+    const result = await openai.images.edits({
+      model: OPENAI_IMAGE_MODEL,
+      prompt: String(prompt),
+      image: imgs,
+      size: size === "auto" ? "1024x1024" : size
+    });
+    const b64 = result.data?.[0]?.b64_json || "";
     res.json({ image_b64: b64 });
   } catch (e) {
     res.status(500).json({ detail: String(e.message || e) });
