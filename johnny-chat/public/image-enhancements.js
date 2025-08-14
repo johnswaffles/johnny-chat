@@ -1,98 +1,77 @@
 (function(){
-  function getHost(selector){
-    var el = document.querySelector(selector);
-    if(el) return el;
-    return document.body;
+  var selectors=["#image-generate-panel","#imagePanel","[data-image-panel]",".image-panel","#image-panel"];
+  function findPanel(sel){
+    if(sel){var e=document.querySelector(sel);if(e) return e;}
+    for(var i=0;i<selectors.length;i++){var el=document.querySelector(selectors[i]);if(el) return el;}
+    return null;
+  }
+  function ensurePositioned(el){
+    var cs=getComputedStyle(el);
+    if(cs.position==="static"){el.dataset.jjPosWasStatic="1";el.style.position="relative";}
+  }
+  function restorePosition(el){
+    if(el && el.dataset && el.dataset.jjPosWasStatic==="1"){el.style.position="";delete el.dataset.jjPosWasStatic;}
   }
   function buildOverlay(){
-    var overlay = document.createElement("div");
-    overlay.className = "jj-imggen-overlay";
-    overlay.innerHTML = [
-      '<div class="jj-card">',
-        '<div class="jj-orb orb-1"></div>',
-        '<div class="jj-orb orb-2"></div>',
-        '<div class="jj-orb orb-3"></div>',
-        '<div class="jj-center">',
-          '<div>',
-            '<div class="jj-spinner"></div>',
-            '<div class="jj-text">Crafting your image…</div>',
-            '<div class="jj-sub">High quality rendering in progress</div>',
-          '</div>',
-        '</div>',
+    var ov=document.createElement("div");
+    ov.className="jj-imggen-overlay";
+    ov.innerHTML=[
+      '<div class="jj-neo">',
+      '  <div style="position:relative;display:grid;place-items:center;">',
+      '    <div class="jj-ring"></div>',
+      '    <div class="jj-pulse"></div>',
+      '  </div>',
+      '  <div class="jj-title">Synthesizing image…</div>',
+      '  <div class="jj-sub">Neural renderer online. Please wait.</div>',
+      '  <div class="jj-progress"><div class="bar"></div></div>',
       '</div>'
     ].join("");
-    return overlay;
+    return ov;
   }
   function showOverlay(selector){
-    var host = getHost(selector || "#image-generate-panel");
+    var host=findPanel(selector);
+    if(!host) return;
+    ensurePositioned(host);
     if(host.querySelector(".jj-imggen-overlay")) return;
-    var ov = buildOverlay();
-    if(host === document.body){ ov.style.position = "fixed"; ov.style.inset = "0"; }
+    host.setAttribute("aria-busy","true");
+    host.style.touchAction="none";
+    var ov=buildOverlay();
     host.appendChild(ov);
   }
   function hideOverlay(selector){
-    var host = getHost(selector || "#image-generate-panel");
-    var ov = host.querySelector(".jj-imggen-overlay");
+    var host=findPanel(selector);
+    if(!host) return;
+    var ov=host.querySelector(".jj-imggen-overlay");
     if(ov) ov.remove();
-  }
-  function injectFinalNotes(){
-    var modal = document.querySelector("#imageBuilderModal");
-    if(!modal) return;
-    if(modal.querySelector("#image-builder-final-notes")) return;
-    var container = modal.querySelector(".builder-notes-slot") || modal;
-    var label = document.createElement("label");
-    label.className = "jj-notes-label";
-    label.textContent = "Final changes / comments";
-    var ta = document.createElement("textarea");
-    ta.id = "image-builder-final-notes";
-    ta.placeholder = "Optional tweaks to apply at the end";
-    container.appendChild(label);
-    container.appendChild(ta);
-  }
-  function onApplyFromBuilder(e){
-    var t = e.target;
-    if(!t.closest) return;
-    var inModal = t.closest("#imageBuilderModal");
-    if(!inModal) return;
-    var text = (t.textContent || "").toLowerCase().trim();
-    if(text !== "apply" && text !== "apply to prompt") return;
-    var notes = document.querySelector("#image-builder-final-notes");
-    if(!notes) return;
-    var v = (notes.value || "").trim();
-    if(!v) return;
-    var p = document.querySelector("#imgPrompt,[data-img-prompt],#imagePanel textarea,#imagePanel input[type='text']");
-    if(!p) return;
-    var base = (p.value || "").trim();
-    p.value = base ? base + ". " + v : v;
+    host.removeAttribute("aria-busy");
+    host.style.touchAction="";
+    restorePosition(host);
   }
   function patchFetch(){
     if(window.__jjFetchPatched) return;
-    var orig = window.fetch.bind(window);
-    window.fetch = async function(i,init){
+    var orig=window.fetch.bind(window);
+    window.fetch=async function(i,init){
+      var url="";
+      try{url=typeof i==="string"?i:(i&&i.url)?i.url:"";}catch(_){}
+      var isImg=/\/generate-image(?:-edit)?\b/.test(url);
+      if(isImg) showOverlay();
       try{
-        var url = typeof i==="string" ? i : (i && i.url) ? i.url : "";
-        var isImg = /\/generate-image(?:-edit)?\b/.test(url);
-        if(isImg){ showOverlay("#image-generate-panel"); }
-        var r = await orig(i,init);
-        if(isImg){ hideOverlay("#image-generate-panel"); }
+        var r=await orig(i,init);
+        if(isImg) hideOverlay();
         return r;
-      }catch(err){
-        hideOverlay("#image-generate-panel");
-        throw err;
+      }catch(e){
+        if(isImg) hideOverlay();
+        throw e;
       }
     };
-    window.__jjFetchPatched = true;
+    window.__jjFetchPatched=true;
   }
   function ready(fn){
-    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",fn);
-    else fn();
+    if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",fn);}
+    else{fn();}
   }
   ready(function(){
     patchFetch();
-    injectFinalNotes();
-    var mo = new MutationObserver(injectFinalNotes);
-    mo.observe(document.body,{childList:true,subtree:true});
-    document.addEventListener("click", onApplyFromBuilder, true);
-    window.ImageEnhancements = { showOverlay:showOverlay, hideOverlay:hideOverlay };
+    window.ImageEnhancements={showOverlay:showOverlay,hideOverlay:hideOverlay};
   });
 })();
