@@ -85,14 +85,14 @@ async function liveWeatherFallback(q) {
   const j = await fx.json();
   const nowTemp = j.current ? Math.round(j.current.temperature_2m) : null;
   const nowCode = j.current ? j.current.weather_code : null;
-  const tMax = j.daily ? Math.round(j.daily.temperature_2m_max[0]) : null;
-  const tMin = j.daily ? Math.round(j.daily.temperature_2m_min[0]) : null;
-  const tCode = j.daily ? j.daily.weather_code[0] : null;
-  const tPop = j.daily ? j.daily.precipitation_probability_max[0] : null;
-  const tmMax = j.daily && j.daily.temperature_2m_max[1] != null ? Math.round(j.daily.temperature_2m_max[1]) : null;
-  const tmMin = j.daily && j.daily.temperature_2m_min[1] != null ? Math.round(j.daily.temperature_2m_min[1]) : null;
-  const tmCode = j.daily && j.daily.weather_code[1] != null ? j.daily.weather_code[1] : null;
-  const tmPop = j.daily && j.daily.precipitation_probability_max[1] != null ? j.daily.precipitation_probability_max[1] : null;
+  const tMax = j.daily && j.daily.temperature_2m_max ? Math.round(j.daily.temperature_2m_max[0]) : null;
+  const tMin = j.daily && j.daily.temperature_2m_min ? Math.round(j.daily.temperature_2m_min[0]) : null;
+  const tCode = j.daily && j.daily.weather_code ? j.daily.weather_code[0] : null;
+  const tPop = j.daily && j.daily.precipitation_probability_max ? j.daily.precipitation_probability_max[0] : null;
+  const tmMax = j.daily && j.daily.temperature_2m_max && j.daily.temperature_2m_max[1] != null ? Math.round(j.daily.temperature_2m_max[1]) : null;
+  const tmMin = j.daily && j.daily.temperature_2m_min && j.daily.temperature_2m_min[1] != null ? Math.round(j.daily.temperature_2m_min[1]) : null;
+  const tmCode = j.daily && j.daily.weather_code && j.daily.weather_code[1] != null ? j.daily.weather_code[1] : null;
+  const tmPop = j.daily && j.daily.precipitation_probability_max && j.daily.precipitation_probability_max[1] != null ? j.daily.precipitation_probability_max[1] : null;
   const parts = [];
   parts.push(`${loc}`);
   if (when === "now" && nowTemp != null) parts.push(`Now: ${wcodeToText(nowCode)} around ${nowTemp}°F.`);
@@ -105,30 +105,42 @@ async function liveWeatherFallback(q) {
   return parts.join(" ");
 }
 
+async function tryWebSearch(s, history) {
+  try {
+    const p = openai.responses.create({
+      model: OPENAI_CHAT_MODEL,
+      tools: [
+        {
+          type: "web_search_preview",
+          user_location: { type: "approximate", country: "US", city: "Chicago", region: "Illinois" },
+          search_context_size: "low"
+        }
+      ],
+      max_output_tokens: 320,
+      temperature: 0.2,
+      input: [
+        { role: "system", content: "Answer concisely with concrete dates and short bullet points when useful." },
+        ...history.slice(-8),
+        { role: "user", content: s }
+      ]
+    });
+    const resp = await Promise.race([
+      p,
+      new Promise((_, rej) => setTimeout(() => rej(new Error("web_search_timeout")), 9000))
+    ]);
+    return resp.output_text || "";
+  } catch {
+    return "";
+  }
+}
+
 app.post("/api/chat", async (req, res) => {
   try {
     const { input = "", history = [] } = req.body || {};
     const s = String(input || "");
     if (isLiveQuery(s)) {
-      try {
-        const resp = await openai.responses.create({
-          model: OPENAI_CHAT_MODEL,
-          tools: [
-            {
-              type: "web_search_preview",
-              user_location: { type: "approximate", country: "US", city: "Chicago", region: "Illinois" },
-              search_context_size: "medium"
-            }
-          ],
-          input: [
-            { role: "system", content: "Answer concisely with concrete dates and short bullet points when useful." },
-            ...history.slice(-10),
-            { role: "user", content: s }
-          ]
-        });
-        const reply = resp.output_text || "";
-        if (reply) return res.json({ reply, sources: ["web"] });
-      } catch {}
+      const reply = await tryWebSearch(s, history);
+      if (reply) return res.json({ reply, sources: ["web"] });
       const fallback = await liveWeatherFallback(s);
       if (fallback) return res.json({ reply: fallback, sources: ["open-meteo.com"] });
     }
@@ -176,6 +188,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
     for (const f of files) {
       if (!f.mimetype.startsWith("image/")) continue;
       const b64 = f.buffer.toString("base64");
+      const dataUrl = `data:${f.mimetype};base64,${b64}`;
       const vision = await openai.responses.create({
         model: OPENAI_VISION_MODEL,
         input: [
@@ -183,7 +196,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
             role: "user",
             content: [
               { type: "input_text", text: "Transcribe all legible text in reading order and return plain text only." },
-              { type: "input_image", image: { data: b64, mime_type: f.mimetype } }
+              { type: "input_image", image_url: dataUrl }
             ]
           }
         ]
