@@ -37,55 +37,45 @@ app.use(express.urlencoded({ extended: true }));
 
 app.get("/health", (_req, res) => res.json({ ok: true, model: OPENAI_CHAT_MODEL }));
 
-function parseWeatherQuery(s) {
-  const mCity = s.match(/\b(?:in|for)\s+([a-z][a-z0-9\s,.'-]{2,80})/i);
-  const city = mCity ? mCity[1].trim() : "";
+function isLiveQuery(s) {
+  return /\b(today|now|latest|breaking|news|weather|forecast|temperature|near me|open now|score|stocks?)\b/i.test(s);
+}
+
+function cleanCity(s) {
+  return String(s || "")
+    .replace(/\b(now|today|tonight|tomorrow|current(?:ly)?|weather|forecast|temperature)\b/gi, "")
+    .replace(/[?.,;:!]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseWeatherQuery(q) {
+  const s = String(q || "");
+  let city = "";
   let when = "today";
   if (/\bnow\b/i.test(s)) when = "now";
   else if (/\btomorrow\b/i.test(s)) when = "tomorrow";
+  else when = "today";
+  const m1 = s.match(/\b(?:in|for)\s+([a-z][a-z0-9\s,.'-]{2,80})/i);
+  if (m1) city = cleanCity(m1[1]);
+  if (!city) {
+    const m2 = s.match(/weather\s+(?:in|for)?\s*([a-z0-9,.\s-]{3,80})\s+(?:now|today|tomorrow)/i);
+    if (m2) city = cleanCity(m2[1]);
+  }
   return { city, when };
 }
 
 function wcodeToText(c) {
-  const map = {
-    0: "clear",
-    1: "mostly clear",
-    2: "partly cloudy",
-    3: "overcast",
-    45: "fog",
-    48: "freezing fog",
-    51: "light drizzle",
-    53: "drizzle",
-    55: "heavy drizzle",
-    56: "freezing drizzle",
-    57: "heavy freezing drizzle",
-    61: "light rain",
-    63: "rain",
-    65: "heavy rain",
-    66: "freezing rain",
-    67: "heavy freezing rain",
-    71: "light snow",
-    73: "snow",
-    75: "heavy snow",
-    77: "snow grains",
-    80: "light showers",
-    81: "showers",
-    82: "heavy showers",
-    85: "snow showers",
-    86: "heavy snow showers",
-    95: "thunderstorms",
-    96: "thunderstorms with hail",
-    99: "severe thunderstorms with hail"
-  };
+  const map = {0:"clear",1:"mostly clear",2:"partly cloudy",3:"overcast",45:"fog",48:"freezing fog",51:"light drizzle",53:"drizzle",55:"heavy drizzle",56:"freezing drizzle",57:"heavy freezing drizzle",61:"light rain",63:"rain",65:"heavy rain",66:"freezing rain",67:"heavy freezing rain",71:"light snow",73:"snow",75:"heavy snow",77:"snow grains",80:"light showers",81:"showers",82:"heavy showers",85:"snow showers",86:"heavy snow showers",95:"thunderstorms",96:"thunderstorms with hail",99:"severe thunderstorms with hail"};
   return map[c] || "conditions";
 }
 
-async function liveWeatherBrief(q) {
+async function liveWeatherFallback(q) {
   const { city, when } = parseWeatherQuery(q);
-  if (!city) return "I need a city or ZIP. For example: “weather in Mount Vernon, IL today”.";
+  if (!city) return "";
   const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
   const gj = await geo.json();
-  if (!gj.results || !gj.results.length) return `Couldn't find “${city}”. Try a different spelling.`;
+  if (!gj.results || !gj.results.length) return "";
   const g = gj.results[0];
   const lat = g.latitude;
   const lon = g.longitude;
@@ -95,8 +85,7 @@ async function liveWeatherBrief(q) {
   const j = await fx.json();
   const nowTemp = j.current ? Math.round(j.current.temperature_2m) : null;
   const nowCode = j.current ? j.current.weather_code : null;
-  const today = j.daily ? 0 : null;
-  const tMax = j.daily ? Math.round(j.daily.temperature_2m_max[0]) : null;
+  const tMax = j.daily ? Math.round(j.daily.temperature_2_ m ax?0:0) : null;
   const tMin = j.daily ? Math.round(j.daily.temperature_2m_min[0]) : null;
   const tCode = j.daily ? j.daily.weather_code[0] : null;
   const tPop = j.daily ? j.daily.precipitation_probability_max[0] : null;
@@ -120,12 +109,28 @@ app.post("/api/chat", async (req, res) => {
   try {
     const { input = "", history = [] } = req.body || {};
     const s = String(input || "");
-    const wantsWeather = /\bweather\b/i.test(s) || /\bforecast\b/i.test(s) || /\btemperature\b/i.test(s);
-    if (wantsWeather) {
+    if (isLiveQuery(s)) {
       try {
-        const brief = await liveWeatherBrief(s);
-        return res.json({ reply: brief, sources: ["open-meteo.com"] });
+        const resp = await openai.responses.create({
+          model: OPENAI_CHAT_MODEL,
+          tools: [
+            {
+              type: "web_search_preview",
+              user_location: { type: "approximate", country: "US", city: "Chicago", region: "Illinois" },
+              search_context_size: "medium"
+            }
+          ],
+          input: [
+            { role: "system", content: "Answer concisely with concrete dates and short bullet points when useful." },
+            ...history.slice(-10),
+            { role: "user", content: s }
+          ]
+        });
+        const reply = resp.output_text || "";
+        if (reply) return res.json({ reply, sources: ["web"] });
       } catch (e) {}
+      const fallback = await liveWeatherFallback(s);
+      if (fallback) return res.json({ reply: fallback, sources: ["open-meteo.com"] });
     }
     const resp = await openai.responses.create({
       model: OPENAI_CHAT_MODEL,
@@ -163,7 +168,7 @@ const upload = multer({
   limits: { fileSize: Math.max(1, Number(MAX_UPLOAD_MB)) * 1024 * 1024 }
 });
 
-app.post("/upload", upload.array("files", 6), async (req, res) => {
+app.post("/upload", upload.array("files", 8), async (req, res) => {
   try {
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ detail: "No files" });
@@ -178,7 +183,7 @@ app.post("/upload", upload.array("files", 6), async (req, res) => {
           {
             role: "user",
             content: [
-              { type: "input_text", text: "You are an OCR engine. Transcribe every legible word in reading order. Return only the plain text with line breaks. If no text is present, return an empty string." },
+              { type: "input_text", text: "Transcribe all legible text in reading order and return plain text only." },
               { type: "input_image", image_url: dataUrl }
             ]
           }
@@ -243,3 +248,4 @@ const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {
   console.log(`server on :${port}`);
 });
+
