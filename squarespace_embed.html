@@ -1762,9 +1762,10 @@
     <div id="quota" class="quota" aria-hidden="true">
         <div class="quota-card">
             <div class="q-title">Daily image limit reached</div>
-            <div class="q-badge">1 image / day</div>
+            <div class="q-badge">10 images / day</div>
             <div class="q-note">
-                You've used today's free image. Want more? Head to <strong>Image 1 Pro</strong> at the top of the page
+                You've reached your daily limit of 10 images. Want more? Head to <strong>Image 1 Pro</strong> at the top
+                of the page
                 and subscribe for <strong>$10/month</strong> (40 generations). Priced close to raw model cost with a
                 tiny hosting edge.
             </div>
@@ -1803,8 +1804,8 @@
             function nowISO() { return new Date().toISOString() }
             function safeParse(raw, fb) { try { var v = JSON.parse(raw); return (v === null ? fb : v) } catch (_) { return fb } }
 
-            /* ---------- Image quota (1/day) ---------- */
-            var QUOTA_KEY = "johnny_img_quota_v1", DAILY_LIMIT = 1;
+            /* ---------- Image quota (10/day) ---------- */
+            var QUOTA_KEY = "johnny_img_quota_v1", DAILY_LIMIT = 10;
             function today() { return new Date().toISOString().slice(0, 10) }
             function quotaRead() { var raw = localStorage.getItem(QUOTA_KEY), d = null; try { d = JSON.parse(raw) } catch (e) { } var t = today(); if (!d || d.date !== t) { d = { date: t, count: 0 }; localStorage.setItem(QUOTA_KEY, JSON.stringify(d)) } return d }
             function quotaCanGenerate() { return quotaRead().count < DAILY_LIMIT }
