@@ -2204,10 +2204,84 @@
 
             chatFiles.addEventListener("change", function () {
                 var files = Array.from(chatFiles.files || []);
-                pendingAttachments = pendingAttachments.concat(files);
-                renderAttachments();
+                processChatUploads(files);
                 chatFiles.value = ""; // reset
             });
+
+            async function processChatUploads(files) {
+                if (!files || !files.length) return;
+
+                var c = findConvo(ensureActive());
+                if (!c) return;
+
+                // 1. User message placeholder (so it looks like a user action)
+                var filenames = files.map(function (f) { return f.name }).join(", ");
+                appendBubble("user", "[Uploaded: " + filenames + "]");
+                c.messages.push({ role: "user", content: "Uploaded files: " + filenames });
+                saveConvos();
+
+                // 2. Assistant thinking bubble
+                var thinking = showThinking();
+
+                try {
+                    var pdfTextParts = [];
+                    var imgFiles = [];
+
+                    for (var i = 0; i < files.length; i++) {
+                        var f = files[i];
+                        if (f.type === "application/pdf") {
+                            var t = await extractPdfTextFile(f);
+                            if (t) pdfTextParts.push(t);
+                        } else if (f.type.startsWith("image/")) {
+                            imgFiles.push(f);
+                        }
+                    }
+
+                    var upText = "", upDesc = "";
+                    if (imgFiles.length) {
+                        var fd = new FormData();
+                        for (var j = 0; j < imgFiles.length; j++) fd.append("files", imgFiles[j], imgFiles[j].name);
+
+                        var r = await fetch(URLS.UPLOAD, { method: "POST", body: fd });
+                        var jj = await r.json();
+                        if (!r.ok) throw new Error(jj.detail || "Upload failed");
+
+                        upText = jj.text || "";
+                        upDesc = jj.description || "";
+                    }
+
+                    var combined = (pdfTextParts.join("\n\n") + "\n" + upText).trim();
+
+                    // Summarize if significant content
+                    var summary = "";
+                    try {
+                        if ((combined.length > 300) || upDesc.length > 50) {
+                            var rs = await fetch(URLS.SUM, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: combined, description: upDesc }) });
+                            var js = await rs.json();
+                            summary = js.summary || "";
+                        }
+                    } catch (e) { console.error(e); }
+
+                    // Construct Analysis Message
+                    var finalMsg = "I've analyzed the uploaded content:\n\n";
+                    if (summary) finalMsg += "**Executive Summary**\n" + summary + "\n\n";
+                    if (upDesc) finalMsg += "**Visual Description**\n" + upDesc + "\n\n";
+
+                    // If no summary/desc but text exists (e.g. short PDF or simple OCR)
+                    if (!summary && !upDesc && combined) {
+                        finalMsg += "**Extracted Content**\n" + combined.slice(0, 1500) + (combined.length > 1500 ? "..." : "");
+                    }
+
+                    if (!summary && !upDesc && !combined) finalMsg = "Processed files, but no text or visual content was extracted.";
+
+                    // We append this as an assistant message. 
+                    // CRITICAL: This puts the analysis into the conversation history, so the LLM can "see" it for subsequent questions.
+                    appendAssistant(finalMsg, thinking, c);
+
+                } catch (e) {
+                    thinking.replace("Error processing upload: " + e.message);
+                }
+            }
 
             function renderAttachments() {
                 attachPreview.innerHTML = "";
