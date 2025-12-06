@@ -7,7 +7,7 @@ const {
   OPENAI_API_KEY,
   OPENAI_CHAT_MODEL = "gpt-5",
   OPENAI_LIVE_MODEL = "o4-mini",
-  OPENAI_IMAGE_MODEL = "gpt-image-1",
+  OPENAI_IMAGE_MODEL = "gpt-image-1-mini",
   OPENAI_VISION_MODEL = "gpt-4o-mini",
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = ""

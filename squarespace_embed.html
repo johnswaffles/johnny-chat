@@ -110,33 +110,9 @@
             transition: grid-template-columns 0.3s var(--ease-out);
         }
 
-        /* Sidebar Collapsed State (Global) */
-        .layout.sidebar-collapsed {
-            grid-template-columns: 0 1fr;
-        }
-
-        .layout.sidebar-collapsed #sidebar {
-            transform: translateX(-100%);
-            opacity: 0;
-            pointer-events: none;
-        }
-
         /* Hide Docs Panel Globally */
         .docs-panel {
             display: none !important;
-        }
-
-        /* Toolbar Global (Hidden by default, shown when collapsed) */
-        .toolbar {
-            display: none;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--panelBorder);
-        }
-
-        .layout.sidebar-collapsed .toolbar {
-            display: flex;
         }
 
         @media (max-width: 980px) {
@@ -237,10 +213,6 @@
                 0 8px 25px rgba(139, 92, 246, 0.35),
                 0 0 40px rgba(139, 92, 246, 0.15),
                 inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        }
-
-        .btn:hover::before {
-            opacity: 1;
         }
 
         .btn:active {
@@ -549,15 +521,6 @@
             color: var(--text);
             border: 1px solid var(--panelBorder);
             overflow: hidden;
-        }
-
-        .toolbar {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            padding: 12px 14px;
-            border-bottom: 1px solid var(--panelBorder);
-            background: rgba(248, 250, 255, 0.8);
         }
 
         .messages {
@@ -1456,13 +1419,15 @@
                 display: none;
             }
 
-            /* Full width layout, stacked */
+            /* Full width layout, stacked, minimal padding to prevent cutoff */
             .layout {
                 grid-template-columns: 1fr;
-                padding: 10px;
+                padding: 4px;
                 padding-top: 10px;
                 display: grid;
-                gap: 16px;
+                gap: 12px;
+                width: 100%;
+                overflow-x: hidden;
             }
 
             /* Sidebar underneath */
@@ -1541,20 +1506,6 @@
                 backdrop-filter: blur(20px);
             }
 
-            /* Toolbar */
-            .toolbar {
-                display: none;
-                align-items: center;
-                gap: 10px;
-                padding: 10px 12px;
-                border-bottom: 1px solid var(--panelBorder);
-            }
-
-            /* Show toolbar when sidebar is collapsed so we can access Expand button */
-            .layout.sidebar-collapsed .toolbar {
-                display: flex;
-            }
-
             /* New chat via hamburger menu on mobile */
 
             /* Messages area */
@@ -1603,7 +1554,7 @@
             }
 
             .layout {
-                padding-top: 62px;
+                padding-top: 10px;
             }
 
             .bubble {
@@ -1886,8 +1837,6 @@
                 <div class="brand">Conversations</div>
                 <div class="side-tools">
                     <button id="newChatSide" class="btn">New Chat</button>
-                    <button id="collapseSide" class="btn ghost" style="padding:0 8px;min-width:auto"
-                        title="Collapse Sidebar">«</button>
                 </div>
             </div>
             <div class="search"><input id="search" placeholder="Search titles…" /><button id="clearSearch"
@@ -1912,11 +1861,7 @@
                 <div class="stack">
                     <section class="panel" style="padding:0">
                         <div class="chat">
-                            <div class="toolbar">
-                                <button id="expandSide" class="btn ghost" style="padding:0 8px;"
-                                    title="Expand Sidebar">»</button>
-                                <button id="newChatMain" class="btn">New Chat</button>
-                            </div>
+
                             <div id="messages" class="messages"></div>
 
                             <!-- Command Hint -->
@@ -1941,57 +1886,6 @@
     </div>
 
     <div id="fs" class="fs" aria-hidden="true"><button id="fsClose" class="close">✕</button><img id="fsImg" alt="" />
-    </div>
-
-    <div id="builder" class="builder" aria-hidden="true">
-        <div class="builder-card">
-            <div style="display:flex;align-items:center;justify-content:space-between">
-                <div style="font-weight:900;font-size:18px">Image Builder</div>
-                <div style="display:flex;gap:8px"><button id="builderClose" class="btn ghost">Close</button></div>
-            </div>
-            <div class="growgrid" style="margin-top:12px">
-                <div class="group">
-                    <h4>Style</h4>
-                    <div id="gStyle" class="pills"></div>
-                </div>
-                <div class="group">
-                    <h4>Medium</h4>
-                    <div id="gMedium" class="pills"></div>
-                </div>
-                <div class="group">
-                    <h4>Mood</h4>
-                    <div id="gMood" class="pills"></div>
-                </div>
-                <div class="group">
-                    <h4>Lighting</h4>
-                    <div id="gLighting" class="pills"></div>
-                </div>
-                <div class="group">
-                    <h4>Composition</h4>
-                    <div id="gComposition" class="pills"></div>
-                </div>
-                <div class="group">
-                    <h4>Effects</h4>
-                    <div id="gEffects" class="pills"></div>
-                </div>
-                <div class="group">
-                    <h4>Color</h4>
-                    <div id="gColor" class="pills"></div>
-                </div>
-                <div class="group">
-                    <h4>Output</h4>
-                    <div id="gOutput" class="pills"></div>
-                </div>
-                <div class="group" style="grid-column:1/-1">
-                    <h4>Final Instructions</h4><textarea id="builderNotes"
-                        placeholder="Add final changes or specific edits (e.g., 'make sky more pink, add soft glow, remove background people')…"></textarea>
-                </div>
-            </div>
-            <div class="builder-actions">
-                <button id="builderReset" class="btn ghost">Reset</button>
-                <button id="applyAndGenerate" class="btn">Apply & Generate</button>
-            </div>
-        </div>
     </div>
 
     <div id="quota" class="quota" aria-hidden="true">
@@ -2516,10 +2410,7 @@
             // ENTER to send (unless Shift+Enter)
             $("input").addEventListener("keydown", function (e) { if (e.isComposing) return; if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage() } });
             $("send").addEventListener("click", sendMessage);
-            $("newChatMain").addEventListener("click", function () { var c = newConvo("(new conversation)"); convos.unshift(c); activeId = c.id; renderSidebar(); renderChat() });
             $("newChatSide").addEventListener("click", function () { var c = newConvo("(new conversation)"); convos.unshift(c); activeId = c.id; renderSidebar(); renderChat(); if (window.innerWidth <= 768) toggleSidebar(); }); // Close sidebar on mobile new chat
-            $("clearSearch").addEventListener("click", function () { $("search").value = "" });
-
             /* ---------- Initial greeting ---------- */
             function initialGreeting(c) {
                 if (!c || c.greeted) return;
@@ -2532,92 +2423,15 @@
                     .catch(function () { thinking.replace("Hello! How can I help today?") });
             }
 
-            /* ---------- Docs & image analysis ---------- */
-            var filesEl = $("files"), thumbsEl = $("thumbs"), currentDocText = "", currentImgDesc = "";
-            $("clearUpload").addEventListener("click", function () { filesEl.value = ""; thumbsEl.innerHTML = ""; $("extracted").value = ""; $("answer").value = ""; $("question").value = ""; $("anStatus").textContent = ""; $("qStatus").textContent = ""; currentDocText = ""; currentImgDesc = ""; autoResize($("extracted")); autoResize($("answer")) });
-            filesEl.addEventListener("change", function () { thumbsEl.innerHTML = ""; var files = filesEl.files || []; for (var i = 0; i < files.length; i++) { var f = files[i]; if (f.type.startsWith("image/")) { var img = document.createElement("img"); img.className = "thumb"; img.src = URL.createObjectURL(f); thumbsEl.appendChild(img) } else if (f.type === "application/pdf" && window.pdfjsLib) { var ccv = document.createElement("canvas"); ccv.className = "thumb pdf"; thumbsEl.appendChild(ccv); (function (c, f) { f.arrayBuffer().then(function (b) { return pdfjsLib.getDocument({ data: b }).promise }).then(function (doc) { return doc.getPage(1) }).then(function (p) { var vp = p.getViewport({ scale: .22 }); c.width = vp.width; c.height = vp.height; return p.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise }).catch(function () { c.textContent = "PDF" }) })(ccv, f) } else { var d = document.createElement("div"); d.className = "thumb pdf"; d.textContent = f.name; thumbsEl.appendChild(d) } } });
+            /* ---------- Docs & Image Analysis Utils ---------- */
             function extractPdfTextFile(file) { return new Promise(function (resolve) { file.arrayBuffer().then(function (buffer) { return pdfjsLib.getDocument({ data: buffer }).promise }).then(async function (doc) { let all = ""; for (let p = 1; p <= doc.numPages; p++) { const page = await doc.getPage(p); const content = await page.getTextContent(); const s = (content.items || []).map(function (it) { return it.str || "" }).join(" "); all += s + "\n" } resolve(all.trim()) }).catch(function () { resolve("") }) }) }
-            $("btnAnalyze").addEventListener("click", async function () { var files = filesEl.files || []; if (!files.length) { $("anStatus").textContent = "Choose files first."; return } $("btnAnalyze").disabled = true; $("anStatus").textContent = "Analyzing…"; var pdfTextParts = []; var imgFiles = []; for (var i = 0; i < files.length; i++) { var f = files[i]; if (f.type === "application/pdf") { var t = await extractPdfTextFile(f); if (t) pdfTextParts.push(t) } else if (f.type.startsWith("image/")) { imgFiles.push(f) } } var upText = "", upDesc = ""; if (imgFiles.length) { var fd = new FormData(); for (var j = 0; j < imgFiles.length; j++)fd.append("files", imgFiles[j], imgFiles[j].name); try { var r = await fetch(URLS.UPLOAD, { method: "POST", body: fd }); var jj = await r.json(); if (r.ok) { upText = jj.text || ""; upDesc = jj.description || "" } else { $("anStatus").textContent = jj.detail || "Upload failed"; $("btnAnalyze").disabled = false; return } } catch (e) { $("anStatus").textContent = "Error: " + (e && e.message ? e.message : e); $("btnAnalyze").disabled = false; return } } var combined = (pdfTextParts.join("\n\n") + "\n" + upText).trim(); currentDocText = combined; currentImgDesc = upDesc; var summary = ""; try { var rs = await fetch(URLS.SUM, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: combined, description: upDesc }) }); var js = await rs.json(); summary = js.summary || "" } catch (e) { summary = "" } $("extracted").value = (summary ? summary + "\n\n" : "") + (combined || "") + (upDesc ? ("\n\nVisual notes:\n" + upDesc) : ""); autoResize($("extracted")); $("anStatus").textContent = (combined || upDesc) ? "Done" : "No text found; included visual description."; $("btnAnalyze").disabled = false });
-            $("btnClearSummary").addEventListener("click", function () { $("extracted").value = ""; autoResize($("extracted")) });
-            $("btnAsk").addEventListener("click", function () { var q = $("question").value.trim(); if (!q) { $("qStatus").textContent = "Type a question"; return } $("btnAsk").disabled = true; $("qStatus").textContent = "Thinking…"; fetch(URLS.QUERY, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q, text: currentDocText, description: currentImgDesc }) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, json: j } }) }).then(function (pair) { var j = pair.json; if (!pair.ok) throw new Error(j.detail || j.error || "Query failed"); $("answer").value = j.answer || "(no answer)"; autoResize($("answer")); $("qStatus").textContent = "Done" }).catch(function (e) { $("qStatus").textContent = "Error: " + (e && e.message ? e.message : e) }).finally(function () { $("btnAsk").disabled = false }) });
 
             /* ---------- Images ---------- */
-            var genImg = $("genImg"), imgStatus = $("imgStatus");
-            function showGen() { document.dispatchEvent(new CustomEvent("ai:image:started", { detail: { panel: document.querySelector(".docs-panel") } })) }
-            function hideGen() { document.dispatchEvent(new CustomEvent("ai:image:done", { detail: { panel: document.querySelector(".docs-panel") } })) }
             function openFullscreen(url) { $("fsImg").src = url; $("fs").classList.add("show"); $("fs").setAttribute("aria-hidden", "false") }
             $("fsClose").addEventListener("click", function () { $("fs").classList.remove("show"); $("fs").setAttribute("aria-hidden", "true") });
 
-            function generateNow() {
-                if (!quotaCanGenerate()) { hideGen(); showQuota(); return }
-                var base = $("imgPrompt").value.trim(); if (!base) { imgStatus.textContent = "Describe an image."; setTimeout(function () { imgStatus.textContent = "" }, 1400); return }
-                var size = $("imgSize").value; showGen(); genImg.removeAttribute("src"); $("btnCopy").disabled = true; $("btnDownload").style.pointerEvents = "none"; $("btnDownload").style.opacity = "0.6";
-                var refs = $("refFiles").files;
-                if (refs && refs.length) {
-                    var fd = new FormData(); fd.append("prompt", base); fd.append("size", size); var n = Math.min(refs.length, 5); for (var i = 0; i < n; i++) { fd.append("refs", refs[i], refs[i].name) }
-                    fetch(URLS.GEN_EDIT, { method: "POST", body: fd }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, json: j } }) }).then(function (pair) { var j = pair.json; if (!pair.ok) throw new Error(j.detail || j.error || "Edit failed"); var url = "data:image/png;base64," + j.image_b64; genImg.src = url; $("btnCopy").disabled = false; $("btnDownload").href = url; $("btnDownload").style.pointerEvents = "auto"; $("btnDownload").style.opacity = "1"; addImage(url); quotaInc() }).catch(function (e) { imgStatus.textContent = "Error: " + (e && e.message ? e.message : e) }).finally(function () { hideGen() });
-                } else {
-                    fetch(URLS.GEN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: base, size }) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, json: j } }) }).then(function (pair) { var j = pair.json; if (!pair.ok) throw new Error(j.detail || j.error || "Generation failed"); var url = "data:image/png;base64," + j.image_b64; genImg.src = url; $("btnCopy").disabled = false; $("btnDownload").href = url; $("btnDownload").style.pointerEvents = "auto"; $("btnDownload").style.opacity = "1"; addImage(url); quotaInc() }).catch(function (e) { imgStatus.textContent = "Error: " + (e && e.message ? e.message : e) }).finally(function () { hideGen() });
-                }
-            }
-            $("btnGen").addEventListener("click", function () { if (!quotaCanGenerate()) { showQuota(); return } $("builder").classList.add("show"); $("builder").setAttribute("aria-hidden", "false") });
-            $("btnCopy").addEventListener("click", function () { if (!genImg.src) return; navigator.clipboard.writeText(genImg.src).then(function () { imgStatus.textContent = "Copied URL ✓"; setTimeout(function () { imgStatus.textContent = "" }, 1200) }) });
-            $("btnFull").addEventListener("click", function () { if (!genImg.src) { imgStatus.textContent = "Generate an image first."; setTimeout(function () { imgStatus.textContent = "" }, 1200); return } openFullscreen(genImg.src) });
-
-            /* ---------- Builder chips ---------- */
-            var GROUPS = { Style: ["photorealistic", "cinematic", "studio portrait", "street", "documentary", "concept art", "anime", "isometric", "cubism", "surrealism", "minimalist", "baroque", "painterly", "noir", "retro futurism", "epic"], Medium: ["photo", "oil painting", "watercolor", "charcoal sketch", "3D render", "vector illustration", "ink drawing", "pastel", "mixed media", "collage"], Mood: ["serene", "dramatic", "whimsical", "epic", "cozy", "mysterious", "futuristic", "playful", "somber", "romantic", "bright and clean"], Lighting: ["golden hour", "soft light", "hard rim light", "volumetric light", "neon glow", "backlit", "spotlight", "overcast", "moody shadows", "studio softbox", "high key lighting"], Composition: ["rule of thirds", "close-up", "medium shot", "wide angle", "top-down", "symmetry", "minimal framing", "negative space", "leading lines", "centered subject"], Effects: ["bokeh", "motion blur", "depth of field", "HDR", "long exposure", "film grain", "vignette", "anamorphic flare", "tilt-shift", "particles", "lens flare", "light leaks", "glow"], Color: ["vibrant colors", "muted tones", "pastel palette", "high contrast", "black and white", "duotone", "monochrome", "neon palette", "earth tones", "bright whites"], Output: ["4K detail", "ultra-detailed", "high dynamic range", "sharp focus", "studio quality"] };
-            var selected = { Style: new Set(), Medium: new Set(), Mood: new Set(), Lighting: new Set(), Composition: new Set(), Effects: new Set(), Color: new Set(), Output: new Set() };
-            function renderGroup(id, key) { var host = $(id); host.innerHTML = ""; GROUPS[key].forEach(function (v) { var pill = document.createElement("button"); pill.className = "pill"; pill.textContent = v; pill.addEventListener("click", function () { if (selected[key].has(v)) { selected[key].delete(v); pill.classList.remove("active") } else { selected[key].add(v); pill.classList.add("active") } }); host.appendChild(pill) }) }
-            function initBuilder() { renderGroup("gStyle", "Style"); renderGroup("gMedium", "Medium"); renderGroup("gMood", "Mood"); renderGroup("gLighting", "Lighting"); renderGroup("gComposition", "Composition"); renderGroup("gEffects", "Effects"); renderGroup("gColor", "Color"); renderGroup("gOutput", "Output") }
-            $("builderClose").addEventListener("click", function () { $("builder").classList.remove("show"); $("builder").setAttribute("aria-hidden", "true") });
-            $("builderReset").addEventListener("click", function () { Object.keys(selected).forEach(function (k) { selected[k].clear() });["gStyle", "gMedium", "gMood", "gLighting", "gComposition", "gEffects", "gColor", "gOutput"].forEach(function (id) { var host = $(id);[].slice.call(host.children).forEach(function (p) { p.classList.remove("active") }) }); $("builderNotes").value = "" });
-            $("applyAndGenerate").addEventListener("click", function () { if (!quotaCanGenerate()) { $("builder").classList.remove("show"); $("builder").setAttribute("aria-hidden", "true"); showQuota(); return; } var bits = []; Object.keys(selected).forEach(function (k) { if (selected[k].size) bits.push([...selected[k]].join(", ")) }); var base = $("imgPrompt").value.trim(); var notes = $("builderNotes").value.trim(); var extra = bits.length ? (" in the style of " + bits.join("; ")) : ""; var finalPrompt = [base + extra, notes].filter(Boolean).join("; "); $("imgPrompt").value = finalPrompt; $("builder").classList.remove("show"); $("builder").setAttribute("aria-hidden", "true"); generateNow() });
-
-            /* ---------- Sidebar Collapse ---------- */
-            var layout = document.querySelector(".layout");
-            var collapseBtn = $("collapseSide");
-            var expandBtn = $("expandSide");
-            var isCollapsed = false;
-            try { isCollapsed = localStorage.getItem("johnny_sidebar_collapsed") === "true"; } catch (_) { }
-
-            function updateSidebarState() {
-                if (!layout) return;
-                // Only apply collapse logic on desktop (>768px)
-                if (window.innerWidth <= 768) {
-                    layout.classList.remove("sidebar-collapsed");
-                    if (expandBtn) expandBtn.style.display = "none";
-                    return;
-                }
-
-                if (isCollapsed) {
-                    layout.classList.add("sidebar-collapsed");
-                    if (expandBtn) expandBtn.style.display = "inline-flex";
-                } else {
-                    layout.classList.remove("sidebar-collapsed");
-                    if (expandBtn) expandBtn.style.display = "none";
-                }
-            }
-
-            if (collapseBtn) {
-                collapseBtn.addEventListener("click", function () {
-                    isCollapsed = true;
-                    try { localStorage.setItem("johnny_sidebar_collapsed", "true"); } catch (_) { }
-                    updateSidebarState();
-                });
-            }
-
-            if (expandBtn) {
-                expandBtn.addEventListener("click", function () {
-                    isCollapsed = false;
-                    try { localStorage.setItem("johnny_sidebar_collapsed", "false"); } catch (_) { }
-                    updateSidebarState();
-                });
-            }
-
-            updateSidebarState(); // Init
-
             /* ---------- Init ---------- */
-            ensureActive(); renderSidebar(); loadImages(); initBuilder(); renderChat();
+            ensureActive(); renderSidebar(); loadImages(); renderChat();
         })();
     </script>
 </body>
