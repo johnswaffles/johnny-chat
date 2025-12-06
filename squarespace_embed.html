@@ -2151,12 +2151,12 @@
                 var sys = buildSystemMessages(txt, c);
 
                 if (contextText) {
-                    sys.push({ role: "system", content: "The user has attached files. Here is the extracted text/visual analysis:\n" + contextText });
+                    sys.push({ role: "system", content: "CRITICAL: The user has just attached a file. The following is the analysis of that file. You must answer the user's question based on THIS file analysis, ignoring any previous images or context if they conflict.\n\nFile Analysis:\n" + contextText });
                 }
 
                 var fullInput = txt;
                 if (contextText) {
-                    fullInput = txt + "\n[System: User attached files. Analysis content: " + contextText.slice(0, 2000) + "]";
+                    fullInput = "Reference this attached file analysis:\n" + contextText.slice(0, 3000) + "\n\nUser Question:\n" + (txt || "Describe this file");
                 }
 
                 var payload = {
