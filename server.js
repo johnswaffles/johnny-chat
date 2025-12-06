@@ -75,6 +75,11 @@ app.post("/api/chat", async (req, res) => {
   try {
     const { input = "", history = [] } = req.body || {};
     const s = String(input || "");
+
+    if (s.trim() === "[system_greet]") {
+      return res.json({ reply: "Hello! How can I help you today?", sources: [] });
+    }
+
     if (isLiveQuery(s)) {
       const { text } = await askWithWebSearch({ prompt: s, forceSearch: true, contextSize: "medium" });
       return res.json({ reply: text, sources: ["web"] });
