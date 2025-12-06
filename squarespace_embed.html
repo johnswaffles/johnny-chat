@@ -1471,6 +1471,16 @@
                 transform: translateX(0);
             }
 
+            /* Collapsed state for desktop */
+            .layout.sidebar-collapsed {
+                grid-template-columns: 0 1fr;
+            }
+
+            .layout.sidebar-collapsed #sidebar {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+
             /* Main takes full width */
             #main {
                 width: 100%;
@@ -1493,9 +1503,9 @@
                 padding: 0;
             }
 
-            /* Hide docs panel on mobile - functionality in chat bar */
+            /* Hide docs panel - functionality moved to chat */
             .docs-panel {
-                display: none;
+                display: none !important;
             }
 
             /* Chat panel full width */
@@ -1520,8 +1530,18 @@
             /* Toolbar */
             .toolbar {
                 display: none;
-                /* New chat via hamburger menu on mobile */
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                border-bottom: 1px solid var(--panelBorder);
             }
+
+            /* Show toolbar when sidebar is collapsed so we can access Expand button */
+            .layout.sidebar-collapsed .toolbar {
+                display: flex;
+            }
+
+            /* New chat via hamburger menu on mobile */
 
             /* Messages area */
             .messages {
@@ -1850,7 +1870,11 @@
         <aside id="sidebar">
             <div class="side-head">
                 <div class="brand">Conversations</div>
-                <div class="side-tools"><button id="newChatSide" class="btn">New Chat</button></div>
+                <div class="side-tools">
+                    <button id="newChatSide" class="btn">New Chat</button>
+                    <button id="collapseSide" class="btn ghost" style="padding:0 8px;min-width:auto"
+                        title="Collapse Sidebar">«</button>
+                </div>
             </div>
             <div class="search"><input id="search" placeholder="Search titles…" /><button id="clearSearch"
                     class="btn ghost" style="height:36px">Clear</button></div>
@@ -1874,7 +1898,11 @@
                 <div class="stack">
                     <section class="panel" style="padding:0">
                         <div class="chat">
-                            <div class="toolbar"><button id="newChatMain" class="btn">New Chat</button></div>
+                            <div class="toolbar">
+                                <button id="expandSide" class="btn ghost" style="padding:0 8px;"
+                                    title="Expand Sidebar">»</button>
+                                <button id="newChatMain" class="btn">New Chat</button>
+                            </div>
                             <div id="messages" class="messages"></div>
 
                             <!-- Command Hint -->
@@ -2575,6 +2603,47 @@
             $("builderClose").addEventListener("click", function () { $("builder").classList.remove("show"); $("builder").setAttribute("aria-hidden", "true") });
             $("builderReset").addEventListener("click", function () { Object.keys(selected).forEach(function (k) { selected[k].clear() });["gStyle", "gMedium", "gMood", "gLighting", "gComposition", "gEffects", "gColor", "gOutput"].forEach(function (id) { var host = $(id);[].slice.call(host.children).forEach(function (p) { p.classList.remove("active") }) }); $("builderNotes").value = "" });
             $("applyAndGenerate").addEventListener("click", function () { if (!quotaCanGenerate()) { $("builder").classList.remove("show"); $("builder").setAttribute("aria-hidden", "true"); showQuota(); return; } var bits = []; Object.keys(selected).forEach(function (k) { if (selected[k].size) bits.push([...selected[k]].join(", ")) }); var base = $("imgPrompt").value.trim(); var notes = $("builderNotes").value.trim(); var extra = bits.length ? (" in the style of " + bits.join("; ")) : ""; var finalPrompt = [base + extra, notes].filter(Boolean).join("; "); $("imgPrompt").value = finalPrompt; $("builder").classList.remove("show"); $("builder").setAttribute("aria-hidden", "true"); generateNow() });
+
+            /* ---------- Sidebar Collapse ---------- */
+            var layout = document.querySelector(".layout");
+            var collapseBtn = $("collapseSide");
+            var expandBtn = $("expandSide");
+            var isCollapsed = localStorage.getItem("johnny_sidebar_collapsed") === "true";
+
+            function updateSidebarState() {
+                if (isCollapsed) {
+                    layout.classList.add("sidebar-collapsed");
+                    if (expandBtn) expandBtn.style.display = "inline-flex";
+                } else {
+                    layout.classList.remove("sidebar-collapsed");
+                    if (expandBtn) expandBtn.style.display = "none";
+                }
+            }
+
+            if (collapseBtn) {
+                collapseBtn.addEventListener("click", function () {
+                    isCollapsed = true;
+                    localStorage.setItem("johnny_sidebar_collapsed", "true");
+                    updateSidebarState();
+                });
+            }
+
+            // We need to inject the expand button functionality if it's not already in toolbar
+            // But wait, the toolbar is currently hidden on desktop via CSS (.toolbar { display: none; })
+            // We need to show the toolbar on desktop IF the sidebar is collapsed, OR just the expand button.
+            // Let's modify the CSS for toolbar slightly or just float the expand button.
+            // Actually, best to make the toolbar visible on desktop if sidebar is collapsed? 
+            // Or just put a floating button. For now let's use the toolbar button we added, but we need to ensure toolbar is visible.
+
+            if (expandBtn) {
+                expandBtn.addEventListener("click", function () {
+                    isCollapsed = false;
+                    localStorage.setItem("johnny_sidebar_collapsed", "false");
+                    updateSidebarState();
+                });
+            }
+
+            updateSidebarState(); // Init
 
             /* ---------- Init ---------- */
             ensureActive(); renderSidebar(); loadImages(); initBuilder(); renderChat();
