@@ -1592,6 +1592,244 @@
                 grid-template-columns: repeat(4, 1fr);
             }
         }
+
+        /* Container for the Holographic Loader */
+        .image-loader {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 40px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(20, 20, 40, 0.9) 100%);
+            border-radius: 16px;
+            margin: 15px 0;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            /* Adjust font as needed */
+        }
+
+        /* Animated Holographic Border */
+        .image-loader::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(45deg, #00f7ff, #ff00ff, #00f7ff, #ff00ff);
+            background-size: 400% 400%;
+            animation: gradient-spin 3s linear infinite;
+            border-radius: 18px;
+            z-index: -1;
+        }
+
+        /* Inner Glow/Pulse */
+        .image-loader::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 247, 255, 0.1) 0%, transparent 70%);
+            animation: pulse-glow 2s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        /* Central Orb Container */
+        .neural-orb {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+        }
+
+        /* Spinning Ring around Orb */
+        .neural-orb::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #00f7ff, #ff00ff, #00ff88, #ff00ff, #00f7ff);
+            animation: orb-spin 2s linear infinite;
+            filter: blur(2px);
+        }
+
+        /* The Core of the Orb (with Icon) */
+        .neural-orb::after {
+            content: '🎨';
+            /* You can change this icon */
+            position: absolute;
+            inset: 8px;
+            background: radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            animation: orb-pulse 1.5s ease-in-out infinite;
+        }
+
+        /* Text Styling */
+        .loader-text {
+            font-family: 'Courier New', monospace;
+            /* Tech feel font */
+            font-size: 0.9em;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px #00f7ff, 0 0 40px #ff00ff;
+            animation: text-flicker 2s ease-in-out infinite;
+            z-index: 1;
+        }
+
+        .loader-subtext {
+            font-size: 0.75em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 8px;
+            z-index: 1;
+        }
+
+        /* Floating Particles Effect */
+        .loader-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .loader-particles span {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #00f7ff;
+            border-radius: 50%;
+            animation: float-up 3s ease-in-out infinite;
+            box-shadow: 0 0 10px #00f7ff;
+            bottom: -10px;
+            opacity: 0;
+        }
+
+        /* Particle Positions & Delays */
+        .loader-particles span:nth-child(1) {
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .loader-particles span:nth-child(2) {
+            left: 30%;
+            animation-delay: 0.5s;
+            background: #ff00ff;
+            box-shadow: 0 0 10px #ff00ff;
+        }
+
+        .loader-particles span:nth-child(3) {
+            left: 50%;
+            animation-delay: 1s;
+        }
+
+        .loader-particles span:nth-child(4) {
+            left: 70%;
+            animation-delay: 1.5s;
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .loader-particles span:nth-child(5) {
+            left: 90%;
+            animation-delay: 2s;
+            background: #ff00ff;
+            box-shadow: 0 0 10px #ff00ff;
+        }
+
+        /* Keyframe Animations */
+        @keyframes gradient-spin {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes orb-spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes orb-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes text-flicker {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+
+            52% {
+                opacity: 1;
+            }
+
+            54% {
+                opacity: 0.9;
+            }
+        }
+
+        @keyframes float-up {
+            0% {
+                bottom: -10px;
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            80% {
+                opacity: 1;
+            }
+
+            100% {
+                bottom: 100%;
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
@@ -2027,7 +2265,7 @@
             // Shared image generation logic
             async function performImageGeneration(prompt, c, container) {
                 // container is the div wrapper where we should show status/result
-                container.innerHTML = '<div class="generating-indicator"><div class="orbit"></div><span>Generating canvas...</span></div>';
+                container.innerHTML = '<div class="image-loader"><div class="loader-particles"><span></span><span></span><span></span><span></span><span></span></div><div class="neural-orb"></div><div class="loader-text">Generating Scene</div><div class="loader-subtext">Analyzing character & environment...</div></div>';
                 messagesEl.scrollTop = messagesEl.scrollHeight;
 
                 try {
