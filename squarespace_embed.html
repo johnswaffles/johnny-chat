@@ -107,6 +107,36 @@
             gap: 16px;
             padding: 16px;
             min-height: 100vh;
+            transition: grid-template-columns 0.3s var(--ease-out);
+        }
+
+        /* Sidebar Collapsed State (Global) */
+        .layout.sidebar-collapsed {
+            grid-template-columns: 0 1fr;
+        }
+
+        .layout.sidebar-collapsed #sidebar {
+            transform: translateX(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Hide Docs Panel Globally */
+        .docs-panel {
+            display: none !important;
+        }
+
+        /* Toolbar Global (Hidden by default, shown when collapsed) */
+        .toolbar {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--panelBorder);
+        }
+
+        .layout.sidebar-collapsed .toolbar {
+            display: flex;
         }
 
         @media (max-width: 980px) {
@@ -1471,16 +1501,6 @@
                 transform: translateX(0);
             }
 
-            /* Collapsed state for desktop */
-            .layout.sidebar-collapsed {
-                grid-template-columns: 0 1fr;
-            }
-
-            .layout.sidebar-collapsed #sidebar {
-                transform: translateX(-100%);
-                opacity: 0;
-            }
-
             /* Main takes full width */
             #main {
                 width: 100%;
@@ -1921,51 +1941,6 @@
                             </div>
                         </div>
                     </section>
-                    <section class="panel docs-panel">
-                        <div style="display:flex;align-items:center;justify-content:space-between">
-                            <div style="font-weight:800">Docs & Images</div><button id="clearUpload"
-                                class="btn danger">Clear Upload</button>
-                        </div>
-                        <div style="height:8px"></div>
-                        <input id="files" type="file" accept=".pdf,image/png,image/jpeg" multiple />
-                        <div id="thumbs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
-                        <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button id="btnAnalyze"
-                                class="btn">Analyze</button><span id="anStatus" style="color:#334155"></span></div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-                            <div style="font-weight:700">Extracted Text / Summary</div><button id="btnClearSummary"
-                                class="btn ghost" style="height:32px">Clear Summary</button>
-                        </div>
-                        <textarea id="extracted" class="field" readonly></textarea>
-                        <div style="margin-top:10px;font-weight:700">Ask a question about the uploaded files</div>
-                        <input id="question" class="field" placeholder="Ask something specific…" />
-                        <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button id="btnAsk"
-                                class="btn">Ask</button><span id="qStatus" style="color:#334155"></span></div>
-                        <div style="font-weight:700;margin-top:10px">Answer</div>
-                        <textarea id="answer" class="field" readonly></textarea>
-                        <div style="font-weight:700;margin-top:12px;display:flex;gap:8px;align-items:center">Generate an
-                            image</div>
-                        <input id="imgPrompt" class="field" placeholder="Describe the image…" />
-                        <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-                            <select id="imgSize" class="field" style="max-width:240px">
-                                <option value="1024x1024">1024×1024</option>
-                                <option value="1024x1536">1024×1536</option>
-                                <option value="1536x1024">1536×1024</option>
-                                <option value="auto">Auto</option>
-                            </select>
-                            <input id="refFiles" type="file" accept="image/png,image/jpeg" multiple
-                                style="max-width:280px" />
-                            <button id="btnGen" class="btn">Generate</button>
-                            <button id="btnCopy" class="btn" disabled>Copy</button>
-                            <a id="btnDownload" class="btn" style="text-decoration:none;pointer-events:none;opacity:.6"
-                                download="johnny-image.png">Download</a>
-                            <button id="btnFull" class="btn">Fullscreen</button>
-                            <span id="imgStatus" style="color:#334155"></span>
-                        </div>
-                        <div style="position:relative;margin-top:8px">
-                            <img id="genImg" alt=""
-                                style="max-width:100%;border:1px solid #e5e7eb;border-radius:10px;display:block" />
-                        </div>
-                    </section>
                 </div>
             </div>
         </main>
@@ -2124,7 +2099,7 @@
                     b.dataset.raw = text; b.innerHTML = prettyHTML(stripCites(text));
                     var tip = document.createElement("div"); tip.className = "copy-tip"; tip.textContent = "Copied!";
                     var btn = document.createElement("button"); btn.className = "copy-btn"; btn.textContent = "⧉";
-                    btn.addEventListener("click", function () { navigator.clipboard.writeText(b.dataset.raw || b.textContent || "").then(function () { tip.style.display = "inline-block"; btn.textContent = "✓"; setTimeout(function () { tip.style.display = "none"; btn.textContent = "⧉" }, 1200) }) });
+                    btn.addEventListener("click", function () { navigator.clipboard.writeText(b.dataset.raw || b.textContent || "").then(function () { tip.style.display = "inline-block"; btn.textContent = "✓"; setTimeout(function () { tip.style.display = "none"; btn.textContent = "⧉" }) }) });
                     b.appendChild(btn); b.appendChild(tip)
                 }
                 messagesEl.appendChild(wrap); messagesEl.scrollTop = messagesEl.scrollHeight
@@ -2608,7 +2583,8 @@
             var layout = document.querySelector(".layout");
             var collapseBtn = $("collapseSide");
             var expandBtn = $("expandSide");
-            var isCollapsed = localStorage.getItem("johnny_sidebar_collapsed") === "true";
+            var isCollapsed = false;
+            try { isCollapsed = localStorage.getItem("johnny_sidebar_collapsed") === "true"; } catch (_) { }
 
             function updateSidebarState() {
                 if (isCollapsed) {
@@ -2623,7 +2599,7 @@
             if (collapseBtn) {
                 collapseBtn.addEventListener("click", function () {
                     isCollapsed = true;
-                    localStorage.setItem("johnny_sidebar_collapsed", "true");
+                    try { localStorage.setItem("johnny_sidebar_collapsed", "true"); } catch (_) { }
                     updateSidebarState();
                 });
             }
@@ -2638,7 +2614,7 @@
             if (expandBtn) {
                 expandBtn.addEventListener("click", function () {
                     isCollapsed = false;
-                    localStorage.setItem("johnny_sidebar_collapsed", "false");
+                    try { localStorage.setItem("johnny_sidebar_collapsed", "false"); } catch (_) { }
                     updateSidebarState();
                 });
             }
