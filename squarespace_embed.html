@@ -1854,9 +1854,11 @@
         <main id="main">
             <div class="card">
                 <div class="head">
-                    <div><span class="chip">Johnny Chat</span> <span class="chip">GPT-5</span></div><label
-                        style="display:flex;align-items:center;gap:8px" class="muted"><input id="autoBeautify"
-                            type="checkbox" checked /> Auto-beautify web results</label>
+                    <div><span class="chip">Johnny Chat</span> <span class="chip">GPT-5</span></div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+                        <button id="newChatMain" class="btn" style="padding:6px 12px;font-size:0.85rem">New
+                            Chat</button>
+                    </div>
                 </div>
                 <div class="stack">
                     <section class="panel" style="padding:0">
@@ -1917,14 +1919,21 @@
 
             /* ---------- Utils ---------- */
             function escapeHTML(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") }
-            function stripCites(s) { return String(s || "").replace(/\[[0-9]+\]/g, "").replace(/\((?:source|sources):.*?\)/gi, "").replace(/https?:\/\/\S+/gi, "") }
+            function stripCites(s) { return String(s || "").replace(/\[[0-9]+\]/g, "").replace(/\((?:source|sources):.*?\)/gi, "") }
             function prettyHTML(t) {
-                var L = String(t || "").split(/\r?\n/).map(function (l) { return l.trim() });
+                // 1. Parse Markdown (Bold, Italic, Links)
+                var s = escapeHTML(t)
+                    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+                // 2. Handle Text Blocks
+                var L = s.split(/\r?\n/).map(function (l) { return l.trim() });
                 var h = "", ul = false; function end() { if (ul) { h += "</ul>"; ul = false } }
                 for (var i = 0; i < L.length; i++) {
                     var l = L[i]; if (!l) { end(); continue }
-                    if (/^[-•]\s+/.test(l)) { if (!ul) { h += "<ul>"; ul = true } h += "<li>" + escapeHTML(l.replace(/^[-•]\s+/, "")) + "</li>"; }
-                    else { end(); h += "<p>" + escapeHTML(l) + "</p>"; }
+                    if (/^[-•]\s+/.test(l)) { if (!ul) { h += "<ul>"; ul = true } h += "<li>" + l.replace(/^[-•]\s+/, "") + "</li>"; }
+                    else { end(); h += "<p>" + l + "</p>"; }
                 }
                 end(); return h || "<p></p>";
             }
@@ -2410,7 +2419,9 @@
             // ENTER to send (unless Shift+Enter)
             $("input").addEventListener("keydown", function (e) { if (e.isComposing) return; if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage() } });
             $("send").addEventListener("click", sendMessage);
-            $("newChatSide").addEventListener("click", function () { var c = newConvo("(new conversation)"); convos.unshift(c); activeId = c.id; renderSidebar(); renderChat(); if (window.innerWidth <= 768) toggleSidebar(); }); // Close sidebar on mobile new chat
+            function triggerNewChat() { var c = newConvo("(new conversation)"); convos.unshift(c); activeId = c.id; renderSidebar(); renderChat(); if (window.innerWidth <= 768 && document.querySelector("#sidebar.open")) toggleSidebar(); }
+            $("newChatSide").addEventListener("click", triggerNewChat);
+            $("newChatMain").addEventListener("click", triggerNewChat);
             /* ---------- Initial greeting ---------- */
             function initialGreeting(c) {
                 if (!c || c.greeted) return;
