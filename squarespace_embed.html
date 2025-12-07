@@ -131,7 +131,8 @@
         #sidebar {
             display: flex;
             flex-direction: column;
-            min-height: 0;
+            height: 60vh;
+            overflow: hidden;
             border: 1px solid var(--glass-border);
             border-radius: 20px;
             background: var(--glass-bg);
@@ -906,79 +907,49 @@
         }
 
         /* ─────────────────────────────────────────────────────────────────────────
-   THINKING ANIMATION (Advanced Orbital)
+   THINKING ANIMATION (Digital Wave)
    ───────────────────────────────────────────────────────────────────────── */
         .think {
             display: inline-flex;
             align-items: center;
-            gap: 14px;
-            padding: 8px 0;
+            gap: 12px;
+            padding: 6px 0;
         }
 
-        .orbit {
-            position: relative;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: transparent;
+        .wave {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            height: 20px;
         }
 
-        .orbit::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            border-radius: 50%;
-            border: 3px solid transparent;
-            border-top-color: var(--neon-cyan);
-            border-right-color: var(--neon-purple);
-            animation: orbitSpin 0.8s linear infinite;
-            filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.5));
-        }
-
-        .orbit::after {
-            content: "";
-            position: absolute;
-            inset: -6px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            border-top-color: rgba(236, 72, 153, 0.6);
-            border-left-color: rgba(0, 212, 255, 0.4);
-            animation: orbitSpin 1.6s linear infinite reverse;
-        }
-
-        @keyframes orbitSpin {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Pulsing core */
-        .think::before {
-            content: "";
-            position: absolute;
-            width: 10px;
-            height: 10px;
+        .wave span {
+            display: block;
+            width: 4px;
+            height: 100%;
             background: var(--gradient-primary);
-            border-radius: 50%;
-            left: 9px;
-            animation: corePulse 1s ease-in-out infinite;
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.6);
+            border-radius: 99px;
+            animation: wave 1s ease-in-out infinite;
         }
 
-        @keyframes corePulse {
+        .wave span:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .wave span:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        @keyframes wave {
 
             0%,
             100% {
-                transform: scale(0.8);
-                opacity: 0.7;
+                height: 6px;
+                opacity: 0.5;
             }
 
             50% {
-                transform: scale(1.2);
+                height: 20px;
                 opacity: 1;
             }
         }
@@ -2001,7 +1972,7 @@
                 }
                 messagesEl.appendChild(wrap); messagesEl.scrollTop = messagesEl.scrollHeight
             }
-            function showThinking() { var wrap = document.createElement("div"); var b = document.createElement("div"); b.className = "bubble"; b.innerHTML = '<span class="think"><span class="orbit"></span><span>Thinking…</span></span>'; wrap.appendChild(b); messagesEl.appendChild(wrap); messagesEl.scrollTop = messagesEl.scrollHeight; return { replace: function (txt) { b.dataset.raw = txt; b.innerHTML = prettyHTML(stripCites(txt)) }, container: wrap } }
+            function showThinking() { var wrap = document.createElement("div"); var b = document.createElement("div"); b.className = "bubble"; b.innerHTML = '<div class="think"><div class="wave"><span></span><span></span><span></span></div><span>Thinking…</span></div>'; wrap.appendChild(b); messagesEl.appendChild(wrap); messagesEl.scrollTop = messagesEl.scrollHeight; return { replace: function (txt) { b.dataset.raw = txt; b.innerHTML = prettyHTML(stripCites(txt)) }, container: wrap } }
             function setTitleIfPlaceholder(c, firstUserText) { if (!c) return; if (!c.title || c.title === "(new conversation)") { var t = String(firstUserText || "").trim().replace(/\s+/g, " ").slice(0, 60); c.title = t.length ? t : "(new conversation)" } }
             function transcriptText(c) { var lines = []; (c.messages || []).forEach(function (m) { lines.push((m.role || "assistant").toUpperCase() + ": " + String(m.content || "")) }); return lines.join("\n\n") }
 
