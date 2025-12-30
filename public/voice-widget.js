@@ -105,8 +105,13 @@ class VoiceWidget {
             const offer = await this.pc.createOffer();
             await this.pc.setLocalDescription(offer);
 
-            const baseUrl = window.location.origin;
-            const res = await fetch(`${baseUrl}/session`, {
+            // Determine Backend URL (Either from script tag or fallback)
+            const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
+            const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+
+            console.log("🔗 Connecting to backend:", backendUrl);
+
+            const res = await fetch(`${backendUrl}/session`, {
                 method: 'POST',
                 body: offer.sdp,
                 headers: { 'Content-Type': 'application/sdp' }
