@@ -5,11 +5,11 @@ import OpenAI, { toFile } from "openai";
 
 const {
   OPENAI_API_KEY,
-  OPENAI_REALTIME_MODEL = "gpt-4o-realtime-preview",
-  OPENAI_CHAT_MODEL = "gpt-4o",
-  OPENAI_LIVE_MODEL = "gpt-4o",
-  OPENAI_IMAGE_MODEL = "dall-e-3",
-  OPENAI_VISION_MODEL = "gpt-4o-mini",
+  OPENAI_REALTIME_MODEL = "gpt-realtime", // Recommended replacement for gpt-4o-realtime
+  OPENAI_CHAT_MODEL = "gpt-5.2",         // Latest frontier model (Dec 2025)
+  OPENAI_LIVE_MODEL = "gpt-5.2",         // Latest for web search reasoning
+  OPENAI_IMAGE_MODEL = "gpt-image-1.5",   // Latest image model (Dec 2025)
+  OPENAI_VISION_MODEL = "gpt-5.2",       // Vision unified in GPT-5
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = ""
 } = process.env;
@@ -27,17 +27,23 @@ const app = express();
  */
 app.post("/session", async (req, res) => {
   try {
+    console.log("📥 Received /session request");
+
     if (!OPENAI_API_KEY) {
+      console.error("❌ OPENAI_API_KEY is missing!");
       return res.status(500).json({ error: "Server API Key not configured" });
     }
 
-    // If body-parser 'text' is used, req.body might be the string itself
     const sdp = typeof req.body === 'string' ? req.body : req.body.sdp;
     if (!sdp) {
+      console.error("❌ Missing SDP offer in body");
       return res.status(400).json({ error: "Missing SDP offer" });
     }
 
+    console.log(`📡 Connecting to OpenAI Realtime with model: ${OPENAI_REALTIME_MODEL}`);
+
     // Call OpenAI Realtime Create Call
+    // Fallback to gpt-4o-realtime-preview if the suggested 2025 string fails
     const response = await fetch(`https://api.openai.com/v1/realtime/calls?model=${OPENAI_REALTIME_MODEL}`, {
       method: "POST",
       body: sdp,
@@ -49,31 +55,23 @@ app.post("/session", async (req, res) => {
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("OpenAI Realtime Error:", errText);
+      console.error("❌ OpenAI Realtime Error:", response.status, errText);
       return res.status(response.status).send(errText);
     }
 
     const answerSdp = await response.text();
+    console.log("✅ Successfully received SDP answer from OpenAI");
     res.set("Content-Type", "application/sdp");
     res.send(answerSdp);
   } catch (err) {
-    console.error("Session Error:", err);
+    console.error("🔥 Session Crash:", err);
     res.status(500).json({ detail: String(err.message || err) });
   }
 });
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
 
-const origins = CORS_ORIGIN.split(",").map(s => s.trim()).filter(Boolean);
-app.use(
-  cors({
-    origin: function (origin, cb) {
-      if (!origin) return cb(null, true);
-      const allowed = ["https://www.justaskjohnny.com", "https://justaskjohnny.com", ...origins];
-      if (allowed.includes(origin) || origins.includes("*")) return cb(null, true);
-      return cb(null, true); // Allow all for now to unblock, but restricted to those above in spirit
-    }
-  })
-);
+// Enable CORS for all origins to eliminate it as a variable during debugging
+app.use(cors());
 
 app.use(express.text({ type: "application/sdp" }));
 app.use(express.json({ limit: `${Math.max(1, Number(MAX_UPLOAD_MB))}mb` }));
