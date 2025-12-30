@@ -43,14 +43,31 @@ class VoiceWidget {
         this.captions = document.getElementById('captions');
     }
 
-    updateState(state, text) {
+    updateState(state) {
         this.state = state;
-        this.card.dataset.state = state;
-        // The captions update automatically based on OpenAI events
-        if (state === 'idle') this.captions.innerText = "SYSTEM ONLINE // CLICK TO INITIALIZE";
+        if (this.card) this.card.dataset.state = state;
+
+        switch (state) {
+            case 'idle':
+                this.captions.innerText = "SYSTEM ONLINE // CLICK TO INITIALIZE";
+                break;
+            case 'connecting':
+                this.captions.innerText = "INITIALIZING CORE...";
+                break;
+            case 'listening':
+                this.captions.innerText = "LISTENING...";
+                break;
+            case 'speaking':
+                this.captions.innerText = "TRANSMITTING...";
+                break;
+            case 'error':
+                this.captions.innerText = "SYSTEM ERROR // CHECK CONSOLE";
+                break;
+        }
     }
 
     attachEvents() {
+        if (!this.btn) return;
         this.btn.addEventListener('click', () => {
             if (this.state === 'idle') {
                 this.startSession();
@@ -60,30 +77,9 @@ class VoiceWidget {
         });
     }
 
-    updateState(state, text) {
-        this.state = state;
-        this.card.dataset.state = state;
-        if (text) this.statusText.innerText = text;
-
-        switch (state) {
-            case 'idle':
-                this.statusText.style.color = '#cbd5e1';
-                break;
-            case 'connecting':
-                this.statusText.style.color = '#f59e0b';
-                break;
-            case 'listening':
-                this.statusText.style.color = '#10b981';
-                break;
-            case 'speaking':
-                this.statusText.style.color = '#3b82f6';
-                break;
-        }
-    }
-
     async startSession() {
         try {
-            this.updateState('connecting', 'Connecting...');
+            this.updateState('connecting');
 
             // 1. Get Microphone
             this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -127,12 +123,12 @@ class VoiceWidget {
             const answerSdp = await res.text();
             await this.pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
-            this.updateState('listening', 'Connected');
+            this.updateState('listening');
             this.captions.innerText = "Listening...";
 
         } catch (err) {
             console.error(err);
-            this.updateState('idle', 'Error');
+            this.updateState('error');
             this.captions.innerText = "Microphone access or connection failed.";
         }
     }
@@ -158,16 +154,16 @@ class VoiceWidget {
 
         switch (msg.type) {
             case 'input_audio_buffer.speech_started':
-                this.updateState('listening', 'Listening');
+                this.updateState('listening');
                 break;
             case 'response.audio_transcript.delta':
                 this.captions.innerText = msg.delta;
                 break;
             case 'response.audio_transcript.done':
-                this.updateState('speaking', 'Speaking');
+                this.updateState('speaking');
                 break;
             case 'response.done':
-                this.updateState('listening', 'Listening');
+                this.updateState('listening');
                 break;
         }
     }
@@ -175,7 +171,7 @@ class VoiceWidget {
     stopSession() {
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
         if (this.pc) this.pc.close();
-        this.updateState('idle', 'Disconnected');
+        this.updateState('idle');
         this.captions.innerText = "Ready to talk? Click the mic.";
     }
 }
