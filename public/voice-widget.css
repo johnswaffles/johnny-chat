@@ -1,18 +1,13 @@
 /* 
-   JOHNNY: THE ROBOT (Lost in Space Inspired)
-   Fluid LED Visor UI
+   JOHNNY: THE LIQUID SPHERE
+   A massive, morphing, color-shifting fluid entity
 */
 
 :root {
-    --visor-size: 200px;
-    --color-neutral: #00d4ff;
-    /* Blue */
-    --color-listening: #fbbf24;
-    /* Gold/Amber */
-    --color-speaking: #ef4444;
-    /* Red/Danger */
-    --visor-bg: rgba(5, 8, 20, 0.9);
-    --led-glow: rgba(0, 212, 255, 0.6);
+    --sphere-size: 600px;
+    /* 10x increase from the original 60px widget spirit */
+    --fluid-color: rgba(0, 212, 255, 0.3);
+    --glow-color: rgba(0, 212, 255, 0.5);
 }
 
 #voice-widget-container {
@@ -25,127 +20,176 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     pointer-events: none;
+    width: 100vw;
+    height: 100vh;
 }
 
-/* The Robot's Visor Face */
+/* The Liquid Sphere */
 .voice-widget-card {
     position: relative;
     pointer-events: auto;
-    width: var(--visor-size);
-    height: var(--visor-size);
-    background: var(--visor-bg);
-    border-radius: 40% 40% 45% 45% / 50% 50% 45% 45%;
-    /* Slightly robotic head shape */
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    width: var(--sphere-size);
+    height: var(--sphere-size);
+    max-width: 90vw;
+    max-height: 90vh;
+    background: var(--fluid-color);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+
+    /* Organic Morphing Shape */
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    animation: morph 8s ease-in-out infinite, float 6s ease-in-out infinite;
+
+    border: 2px solid rgba(255, 255, 255, 0.2);
     box-shadow:
-        0 0 50px rgba(0, 0, 0, 0.8),
-        inset 0 0 30px rgba(0, 212, 255, 0.1);
-    overflow: hidden;
+        0 0 100px var(--glow-color),
+        inset 0 0 50px rgba(255, 255, 255, 0.2);
+
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 1.5s cubic-bezier(0.19, 1, 0.22, 1);
     cursor: pointer;
+    overflow: visible;
 }
 
-/* Fluid Particle Field (The "Face") */
+/* Internal Refraction Effect */
 .particle-field {
     position: absolute;
-    inset: 0;
-    opacity: 0.6;
-    background:
-        radial-gradient(circle at 50% 50%, var(--led-glow) 0%, transparent 60%);
-    filter: blur(15px);
-    transition: background 1s ease;
+    inset: -20px;
+    border-radius: inherit;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 50%);
+    filter: blur(10px);
+    pointer-events: none;
 }
 
-.led-cluster {
+/* Centered Button (The Pulse) */
+.mic-button {
     position: relative;
-    width: 100%;
-    height: 100%;
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-/* The "Soul" of the Robot */
-.mic-button {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    z-index: 10;
-    transition: transform 0.3s ease;
-}
-
-.mic-button svg {
-    width: 32px;
-    height: 32px;
-    fill: white;
-    opacity: 0.8;
-}
-
-/* Shifting States & Moods */
-.voice-widget-card[data-state="idle"] {
-    --led-glow: rgba(0, 212, 255, 0.4);
-    box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
-}
-
-.voice-widget-card[data-state="listening"] {
-    --led-glow: rgba(251, 191, 36, 0.6);
-    box-shadow: 0 0 60px rgba(251, 191, 36, 0.4);
-    transform: scale(1.1) translateY(-10px);
-}
-
-.voice-widget-card[data-state="speaking"] {
-    --led-glow: rgba(239, 68, 68, 0.7);
-    box-shadow: 0 0 80px rgba(239, 68, 68, 0.5);
-    animation: jitter 0.2s infinite;
-}
-
-@keyframes jitter {
-    0% {
-        transform: scale(1.1) translate(0, -10px);
-    }
-
-    50% {
-        transform: scale(1.1) translate(2px, -8px);
-    }
-
-    100% {
-        transform: scale(1.1) translate(-1px, -11px);
-    }
-}
-
-/* Caption styling (Tech-style) */
-.captions-area {
-    margin-top: 50px;
-    width: 350px;
-    text-align: center;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.9rem;
-    color: var(--led-glow);
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    opacity: 0;
     transition: all 0.5s ease;
 }
 
-.voice-widget-card:not([data-state="idle"])+.captions-area {
+.mic-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.mic-button svg {
+    width: 48px;
+    height: 48px;
+    fill: white;
+    filter: drop-shadow(0 0 10px white);
+}
+
+/* States & Moods */
+.voice-widget-card[data-state="idle"] {
+    --fluid-color: rgba(0, 212, 255, 0.2);
+    --glow-color: rgba(0, 212, 255, 0.3);
+}
+
+.voice-widget-card[data-state="listening"] {
+    --fluid-color: rgba(251, 191, 36, 0.3);
+    --glow-color: rgba(251, 191, 36, 0.6);
+    transform: scale(1.1);
+}
+
+.voice-widget-card[data-state="speaking"] {
+    --fluid-color: rgba(139, 92, 246, 0.3);
+    --glow-color: rgba(139, 92, 246, 0.6);
+    animation: morph 4s ease-in-out infinite, pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes morph {
+    0% {
+        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    }
+
+    50% {
+        border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+    }
+
+    100% {
+        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-30px) rotate(5deg);
+    }
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 100px var(--glow-color);
+    }
+
+    50% {
+        box-shadow: 0 0 180px var(--glow-color);
+    }
+}
+
+/* Tech-style Captions */
+.captions-area {
+    position: absolute;
+    bottom: 10vh;
+    width: 80%;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: white;
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    letter-spacing: 0.1em;
     opacity: 1;
 }
 
-/* Background "Brain" activity */
-.orb-halo {
+.waveform {
     position: absolute;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, var(--led-glow) 0%, transparent 70%);
-    opacity: 0.15;
-    filter: blur(60px);
-    pointer-events: none;
-    transition: background 1s ease;
+    bottom: 60px;
+    display: flex;
+    gap: 8px;
+    height: 40px;
+}
+
+.bar {
+    width: 4px;
+    height: 15px;
+    background: white;
+    border-radius: 10px;
+    animation: wave 1s infinite alternate;
+}
+
+@keyframes wave {
+    from {
+        height: 10px;
+        transform: scaleY(1);
+        opacity: 0.5;
+    }
+
+    to {
+        height: 40px;
+        transform: scaleY(1.5);
+        opacity: 1;
+    }
 }
