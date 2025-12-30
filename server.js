@@ -78,7 +78,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/tacos", express.static("public/tacos"));
 app.use(express.static("public"));
 
-app.get("/health", (_req, res) => res.json({ ok: true, chatModel: OPENAI_CHAT_MODEL, liveModel: OPENAI_LIVE_MODEL }));
+app.get("/health", (_req, res) => res.json({ ok: true, realtimeModel: OPENAI_REALTIME_MODEL, imageModel: OPENAI_IMAGE_MODEL }));
 
 function isLiveQuery(s) {
   return /\b(today|now|latest|breaking|news|headline|earnings|release|score|stocks?|market|price|forecast|weather|traffic|open now)\b/i.test(s);
