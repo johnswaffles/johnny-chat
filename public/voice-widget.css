@@ -220,9 +220,19 @@
     width: 90%;
     text-align: center;
     font-size: clamp(1.1rem, 4vw, 1.8rem);
-    font-weight: 200;
+    font-weight: 500;
+    /* Increased weight for better outline contrast */
     color: white;
-    text-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+
+    /* Heavy Text Shadow + Outline for max contrast on white backgrounds */
+    text-shadow:
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000,
+        0px 5px 20px rgba(0, 0, 0, 1);
+
     letter-spacing: 0.15em;
     text-transform: uppercase;
+    z-index: 1000;
 }

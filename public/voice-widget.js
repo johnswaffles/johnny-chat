@@ -8,6 +8,8 @@ class VoiceWidget {
         this.dc = null;
         this.stream = null;
         this.state = 'idle'; // idle, connecting, listening, speaking
+        this.inactivityTimer = null;
+        this.shutdownTimer = null;
         this.init();
     }
 
@@ -29,7 +31,7 @@ class VoiceWidget {
                 </div>
                 <button class="mic-button" id="start-btn"></button>
             </div>
-            <div class="captions-area" id="captions">CLICK TO INITIALIZE</div>
+            <div class="captions-area" id="captions">READY TO SYNC // CLICK THE MIDDLE</div>
         `;
         document.body.appendChild(container);
 
@@ -44,21 +46,52 @@ class VoiceWidget {
 
         switch (state) {
             case 'idle':
-                this.captions.innerText = "READY TO TALK";
+                this.captions.innerText = "READY // CLICK THE MIDDLE";
                 break;
             case 'connecting':
                 this.captions.innerText = "INITIALIZING CORE...";
                 break;
             case 'listening':
                 this.captions.innerText = "LISTENING...";
+                this.resetInactivityTimer();
                 break;
             case 'speaking':
                 this.captions.innerText = "TRANSMITTING...";
+                this.resetInactivityTimer();
                 break;
             case 'error':
                 this.captions.innerText = "SYSTEM ERROR // CHECK CONSOLE";
                 break;
         }
+    }
+
+    resetInactivityTimer() {
+        this.clearTimers();
+        if (this.state === 'idle') return;
+
+        // 30 Seconds Inactivity - Prompt user
+        this.inactivityTimer = setTimeout(() => {
+            if (this.dc && this.dc.readyState === 'open') {
+                console.log("⏱️ 30s Silence: Prompting user...");
+                this.dc.send(JSON.stringify({
+                    type: "response.create",
+                    response: {
+                        instructions: "The user has been silent for 30 seconds. Ask them if they are still there and if they'd like to continue, otherwise the session will shut down."
+                    }
+                }));
+
+                // Start second 15s timer to actually kill the session
+                this.shutdownTimer = setTimeout(() => {
+                    console.log("🛑 Still silent: Stopping session.");
+                    this.stopSession();
+                }, 15000);
+            }
+        }, 30000);
+    }
+
+    clearTimers() {
+        if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
+        if (this.shutdownTimer) clearTimeout(this.shutdownTimer);
     }
 
     attachEvents() {
@@ -119,17 +152,17 @@ class VoiceWidget {
             await this.pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
             this.updateState('listening');
-            this.captions.innerText = "Listening...";
 
         } catch (err) {
             console.error(err);
             this.updateState('error');
-            this.captions.innerText = "Microphone access or connection failed.";
+            this.captions.innerText = "Mic or Connection Error.";
         }
     }
 
     onDataChannelOpen() {
         console.log('OpenAI Realtime Data Channel Open');
+        this.resetInactivityTimer();
         // Initial Session Configuration
         const event = {
             type: "session.update",
@@ -145,8 +178,6 @@ class VoiceWidget {
     }
 
     onDataChannelMessage(msg) {
-        // console.log('OAI Msg:', msg.type, msg);
-
         switch (msg.type) {
             case 'input_audio_buffer.speech_started':
                 this.updateState('listening');
@@ -164,10 +195,11 @@ class VoiceWidget {
     }
 
     stopSession() {
+        this.clearTimers();
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
         if (this.pc) this.pc.close();
         this.updateState('idle');
-        this.captions.innerText = "Ready to talk? Click the mic.";
+        this.captions.innerText = "SYNC STOPPED // CLICK THE MIDDLE";
     }
 }
 
