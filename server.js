@@ -97,44 +97,10 @@ app.post("/session", async (req, res) => {
 /**
  * ELEVENLABS CONVERSATIONAL AI TOKEN ENDPOINT
  */
-app.get("/elevenlabs-token", async (req, res) => {
-  try {
-    // Determine the API Key and Agent ID
-    // User mentioned 'Elevenlabs_Voice' is in Render, but that might be the ID or the API Key.
-    // We'll check both.
-    const apiKey = process.env.ELEVENLABS_API_KEY || (process.env.Elevenlabs_Voice?.length > 30 ? process.env.Elevenlabs_Voice : null);
-    const agentId = process.env.ELEVENLABS_AGENT_ID || (process.env.Elevenlabs_Voice?.length < 30 ? process.env.Elevenlabs_Voice : "3DUxJ2hb1hxMqc1BQsjD");
-
-    console.log("🛠️ ElevenLabs Diagnostics:");
-    console.log("- ELEVENLABS_API_KEY present:", !!process.env.ELEVENLABS_API_KEY);
-    console.log("- Elevenlabs_Voice present:", !!process.env.Elevenlabs_Voice);
-    console.log("- Decided API Key source:", process.env.ELEVENLABS_API_KEY ? "ELEVENLABS_API_KEY" : "Elevenlabs_Voice");
-    console.log("- Targeted Agent ID:", agentId);
-
-    if (!apiKey) {
-      console.error("❌ ElevenLabs API Key is missing! Check Render Env Vars.");
-      return res.status(500).json({ error: "ElevenLabs API Key not configured. Please add ELEVENLABS_API_KEY to Render." });
-    }
-
-    const response = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`, {
-      method: "GET",
-      headers: {
-        "xi-api-key": apiKey
-      }
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`❌ ElevenLabs API Error (${response.status}):`, errText);
-      return res.status(response.status).json({ error: errText, status: response.status });
-    }
-
-    const data = await response.json();
-    res.json(data);
   } catch (err) {
-    console.error("🔥 ElevenLabs Token Endpoint crashed:", err);
-    res.status(500).json({ error: err.message });
-  }
+  console.error("🔥 Session Crash:", err);
+  res.status(500).json({ detail: String(err.message || err) });
+}
 });
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
 
