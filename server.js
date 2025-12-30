@@ -21,6 +21,18 @@ if (!OPENAI_API_KEY) {
 const app = express();
 
 /**
+ * GLOBAL MIDDLEWARE
+ * Must be defined BEFORE routes.
+ */
+// Enable CORS for all origins to eliminate it as a variable during debugging
+app.use(cors());
+// Parse SDP text body
+app.use(express.text({ type: "application/sdp" }));
+// Parse JSON and URL-encoded bodies
+app.use(express.json({ limit: `${Math.max(1, Number(MAX_UPLOAD_MB))}mb` }));
+app.use(express.urlencoded({ extended: true }));
+
+/**
  * VOICE SESSION BOOTSTRAP ENDPOINT
  * Directly proxies the WebRTC SDP offer to OpenAI Realtime API.
  * This keeps the API Key secure on the server.
@@ -69,13 +81,6 @@ app.post("/session", async (req, res) => {
   }
 });
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
-
-// Enable CORS for all origins to eliminate it as a variable during debugging
-app.use(cors());
-
-app.use(express.text({ type: "application/sdp" }));
-app.use(express.json({ limit: `${Math.max(1, Number(MAX_UPLOAD_MB))}mb` }));
-app.use(express.urlencoded({ extended: true }));
 
 // Serve the Taqueria Familia clone
 app.use("/tacos", express.static("public/tacos"));
