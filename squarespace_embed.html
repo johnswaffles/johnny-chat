@@ -1,16 +1,31 @@
 <!-- 
   JOHNNY REALTIME VOICE WIDGET 
   Copy this snippet into a Squarespace "Code Block".
-  Ensure "HTML" is selected and "Display Source" is OFF.
+  1. Set Mode to "HTML"
+  2. Turn OFF "Display Source"
 -->
 
-<!-- 1. Widget Styles -->
-<link rel="stylesheet" href="https://my-backend-api.onrender.com/voice-widget.css">
+<!-- Styles -->
+<link rel="stylesheet" href="https://johnny-chat.onrender.com/voice-widget.css">
 
-<!-- 2. Widget Logic (Auto-initializes) -->
-<script src="https://my-backend-api.onrender.com/voice-widget.js"></script>
+<!-- Logic -->
+<script src="https://johnny-chat.onrender.com/voice-widget.js"></script>
 
-<!-- 
-  Note: Replace "https://my-backend-api.onrender.com" 
-  with your actual Render URL if it differs.
--->
+<!-- Diagnostic Check (Invisible if working) -->
+<div id="johnny-loading-check"
+    style="position:fixed; bottom:10px; right:10px; font-size:10px; color:#64748b; opacity:0.5; z-index:9999;">
+    Johnny Voice Widget Loading...
+</div>
+<script>
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            if (window.johnnyInitialized) {
+                document.getElementById('johnny-loading-check').style.display = 'none';
+            } else {
+                document.getElementById('johnny-loading-check').innerHTML = '⚠️ Johnny Widget failed to load from Render. Check your Render URL.';
+                document.getElementById('johnny-loading-check').style.opacity = '1';
+                document.getElementById('johnny-loading-check').style.color = 'red';
+            }
+        }, 5000);
+    });
+</script>
