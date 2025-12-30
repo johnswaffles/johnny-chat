@@ -1,0 +1,2 @@
+OPENAI_API_KEY missing - Chat features will be disabled, but static site is accessible.
+server on :3000

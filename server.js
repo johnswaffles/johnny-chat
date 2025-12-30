@@ -5,21 +5,59 @@ import OpenAI, { toFile } from "openai";
 
 const {
   OPENAI_API_KEY,
-  OPENAI_CHAT_MODEL = "gpt-5",
-  OPENAI_LIVE_MODEL = "o4-mini",
-  OPENAI_IMAGE_MODEL = "gpt-image-1-mini",
-  OPENAI_VISION_MODEL = "gpt-4o-mini",
+  OPENAI_REALTIME_MODEL = "gpt-4o-realtime-preview",
+  OPENAI_IMAGE_MODEL = "dall-e-3",
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = ""
 } = process.env;
 
 if (!OPENAI_API_KEY) {
-  console.error("OPENAI_API_KEY missing");
-  process.exit(1);
+  console.warn("OPENAI_API_KEY missing - Realtime and AI features will be disabled.");
 }
 
 const app = express();
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+/**
+ * VOICE SESSION BOOTSTRAP ENDPOINT
+ * Directly proxies the WebRTC SDP offer to OpenAI Realtime API.
+ * This keeps the API Key secure on the server.
+ */
+app.post("/session", async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({ error: "Server API Key not configured" });
+    }
+
+    const { sdp } = req.body;
+    if (!sdp) {
+      return res.status(400).json({ error: "Missing SDP offer" });
+    }
+
+    // Call OpenAI Realtime Create Call
+    const response = await fetch(`https://api.openai.com/v1/realtime/calls?model=${OPENAI_REALTIME_MODEL}`, {
+      method: "POST",
+      body: sdp,
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/sdp"
+      }
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("OpenAI Realtime Error:", errText);
+      return res.status(response.status).send(errText);
+    }
+
+    const answerSdp = await response.text();
+    res.set("Content-Type", "application/sdp");
+    res.send(answerSdp);
+  } catch (err) {
+    console.error("Session Error:", err);
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
 
 const origins = CORS_ORIGIN.split(",").map(s => s.trim()).filter(Boolean);
 app.use(
@@ -35,6 +73,10 @@ app.use(
 
 app.use(express.json({ limit: `${Math.max(1, Number(MAX_UPLOAD_MB))}mb` }));
 app.use(express.urlencoded({ extended: true }));
+
+// Serve the Taqueria Familia clone
+app.use("/tacos", express.static("public/tacos"));
+app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({ ok: true, chatModel: OPENAI_CHAT_MODEL, liveModel: OPENAI_LIVE_MODEL }));
 
