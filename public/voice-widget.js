@@ -170,7 +170,21 @@ class VoiceWidget {
     }
 }
 
-// Auto-init for Squarespace
-window.addEventListener('load', () => {
-    new VoiceWidget();
-});
+// Auto-init for Squarespace with diagnostic logs
+function initJohnny() {
+    console.log("🚀 Johnny Voice Widget: Initializing...");
+    try {
+        if (window.johnnyInitialized) return;
+        window.johnnyInitialized = true;
+        new VoiceWidget();
+        console.log("✅ Johnny Voice Widget: Successfully injected.");
+    } catch (e) {
+        console.error("❌ Johnny Voice Widget Error:", e);
+    }
+}
+
+if (document.readyState === 'complete') {
+    initJohnny();
+} else {
+    window.addEventListener('load', initJohnny);
+}
