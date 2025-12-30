@@ -141,7 +141,7 @@ class VoiceWidget {
         } catch (err) {
             console.error("🔥 ElevenLabs Boot Error:", err);
             this.updateState('error');
-            this.captions.innerText = "Check ElevenLabs API Key in Render.";
+            this.captions.innerText = `ERROR: ${err.message.slice(0, 50)}... Check Console.`;
         }
     }
 
