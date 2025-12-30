@@ -6,7 +6,10 @@ import OpenAI, { toFile } from "openai";
 const {
   OPENAI_API_KEY,
   OPENAI_REALTIME_MODEL = "gpt-4o-realtime-preview",
+  OPENAI_CHAT_MODEL = "gpt-4o",
+  OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_IMAGE_MODEL = "dall-e-3",
+  OPENAI_VISION_MODEL = "gpt-4o-mini",
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = ""
 } = process.env;
