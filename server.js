@@ -94,14 +94,6 @@ app.post("/session", async (req, res) => {
   }
 });
 
-/**
- * ELEVENLABS CONVERSATIONAL AI TOKEN ENDPOINT
- */
-  } catch (err) {
-  console.error("🔥 Session Crash:", err);
-  res.status(500).json({ detail: String(err.message || err) });
-}
-});
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
 
 // Serve the Taqueria Familia clone
