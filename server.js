@@ -5,11 +5,11 @@ import OpenAI, { toFile } from "openai";
 
 const {
   OPENAI_API_KEY,
-  OPENAI_REALTIME_MODEL = "gpt-realtime", // Recommended replacement for gpt-4o-realtime
-  OPENAI_CHAT_MODEL = "gpt-5.2",         // Latest frontier model (Dec 2025)
-  OPENAI_LIVE_MODEL = "gpt-5.2",         // Latest for web search reasoning
-  OPENAI_IMAGE_MODEL = "gpt-image-1.5",   // Latest image model (Dec 2025)
-  OPENAI_VISION_MODEL = "gpt-5.2",       // Vision unified in GPT-5
+  OPENAI_REALTIME_MODEL = "gpt-4o-realtime-preview", // Reverting to stable preview for debug
+  OPENAI_CHAT_MODEL = "gpt-4o",
+  OPENAI_LIVE_MODEL = "gpt-4o",
+  OPENAI_IMAGE_MODEL = "dall-e-3",
+  OPENAI_VISION_MODEL = "gpt-4o-mini",
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = ""
 } = process.env;
@@ -21,14 +21,25 @@ if (!OPENAI_API_KEY) {
 const app = express();
 
 /**
- * GLOBAL MIDDLEWARE
- * Must be defined BEFORE routes.
+ * HYPER-VERBOSE LOGGING
  */
-// Enable CORS for all origins to eliminate it as a variable during debugging
-app.use(cors());
-// Parse SDP text body
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  next();
+});
+
+/**
+ * GLOBAL MIDDLEWARE
+ */
+app.use(cors({
+  origin: true, // Reflect any origin
+  credentials: true,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.text({ type: "application/sdp" }));
-// Parse JSON and URL-encoded bodies
 app.use(express.json({ limit: `${Math.max(1, Number(MAX_UPLOAD_MB))}mb` }));
 app.use(express.urlencoded({ extended: true }));
 
