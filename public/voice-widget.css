@@ -1,12 +1,14 @@
 /*
-   JOHNNY: THE LIVING VISAGE
-   'Face through a sheet' effect with aggressive fluid dynamics
+   JOHNNY: THE CYBERNETIC ASSISTANT
+   A premium 3D robot head with expressive optics
 */
 
 :root {
-    --sphere-size: 600px;
-    --fluid-color: rgba(255, 255, 255, 0.1);
-    --accent-glow: rgba(0, 212, 255, 0.4);
+    --robot-size: 320px;
+    --plating-bg: rgba(15, 23, 42, 0.85);
+    --visor-glow: #00d4ff;
+    --accent-gold: #fbbf24;
+    --accent-red: #ef4444;
 }
 
 #voice-widget-container {
@@ -23,218 +25,177 @@
     pointer-events: none;
     width: 100vw;
     height: 100vh;
-    overflow: hidden;
 }
 
-/* The Main Fluid Body */
+/* The Robot Helmet/Head */
 .voice-widget-card {
     position: relative;
     pointer-events: auto;
-    width: var(--sphere-size);
-    height: var(--sphere-size);
-    background: var(--fluid-color);
-    backdrop-filter: blur(80px);
-    -webkit-backdrop-filter: blur(80px);
+    width: var(--robot-size);
+    height: calc(var(--robot-size) * 1.2);
+    background: var(--plating-bg);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
 
-    /* Aggressive Morphing Edge */
-    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-    animation:
-        morphEdge 6s ease-in-out infinite,
-        float 10s ease-in-out infinite,
-        colorFlow 25s linear infinite;
-
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    /* Sleek Robot Head Shape */
+    border-radius: 80px 80px 120px 120px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow:
-        0 0 100px var(--accent-glow),
-        inset 0 0 100px rgba(255, 255, 255, 0.1),
-        inset -50px -50px 80px rgba(0, 0, 0, 0.4);
+        0 40px 100px rgba(0, 0, 0, 0.8),
+        inset 0 0 40px rgba(0, 212, 255, 0.1);
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
-    cursor: pointer;
-}
-
-/* The "Face through a Sheet" Layer */
-.face-layer {
-    position: absolute;
-    inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 1.5s ease;
-    filter: blur(15px);
-    /* Creates the 'through a sheet' look */
+    padding-top: 40px;
+    transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+    cursor: pointer;
+    animation: robotFloat 6s ease-in-out infinite;
 }
 
-.voice-widget-card[data-state="speaking"] .face-layer {
-    opacity: 0.8;
-}
-
-.eye {
+/* Mechanical Ear/Side Panels */
+.voice-widget-card::before,
+.voice-widget-card::after {
+    content: '';
     position: absolute;
-    width: 40px;
-    height: 25px;
-    background: white;
-    border-radius: 50%;
-    box-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
-    top: 40%;
-    transition: all 0.5s ease;
-}
-
-.eye.left {
-    left: 35%;
-}
-
-.eye.right {
-    right: 35%;
-}
-
-.mouth {
-    position: absolute;
-    bottom: 35%;
-    width: 80px;
-    height: 10px;
-    background: white;
-    border-radius: 50%;
-    box-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
-    animation: mouthTalk 0.4s ease-in-out infinite alternate paused;
-}
-
-.voice-widget-card[data-state="speaking"] .mouth {
-    animation-play-state: running;
-}
-
-@keyframes mouthTalk {
-    from {
-        height: 10px;
-        transform: scaleX(0.8);
-    }
-
-    to {
-        height: 60px;
-        transform: scaleX(1.2);
-    }
-}
-
-/* 3D Reflection Glare */
-.particle-field {
-    position: absolute;
-    top: 15%;
-    left: 20%;
-    width: 35%;
-    height: 20%;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, transparent 100%);
-    border-radius: 50%;
-    filter: blur(20px);
-    pointer-events: none;
-}
-
-/* Centered Button (Ghostly Glass) */
-.mic-button {
-    position: relative;
-    width: 140px;
-    height: 140px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 50%;
+    top: 50%;
+    width: 30px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 20;
-    transition: all 0.5s ease;
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+}
+
+.voice-widget-card::before {
+    left: -15px;
+    transform: translateY(-50%);
+}
+
+.voice-widget-card::after {
+    right: -15px;
+    transform: translateY(-50%);
+}
+
+/* The Visor/Eyes */
+.visor {
+    width: 85%;
+    height: 70px;
+    background: #050814;
+    border-radius: 20px;
+    border: 2px solid rgba(0, 212, 255, 0.3);
+    position: relative;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.4;
+    box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.2);
 }
 
-.voice-widget-card:hover .mic-button {
-    opacity: 0.8;
+.eye-strip {
+    width: 70%;
+    height: 6px;
+    background: var(--visor-glow);
+    border-radius: 10px;
+    box-shadow: 0 0 20px var(--visor-glow);
+    transition: all 0.4s ease;
 }
 
-.mic-button svg {
-    width: 40px;
+/* Jaw/Talking Part */
+.jaw {
+    margin-top: auto;
+    width: 60%;
     height: 40px;
-    fill: white;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px 10px 40px 40px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 30px;
+    transition: all 0.3s ease;
 }
 
-/* States & Advanced Mood Lighting */
-.voice-widget-card[data-state="speaking"] {
-    --fluid-color: rgba(168, 85, 247, 0.25);
-    --accent-glow: 0 0 200px rgba(168, 85, 247, 0.6);
-    animation:
-        morphEdge 4s ease-in-out infinite,
-        speakingPulse 2s ease-in-out infinite;
+/* Shifting States */
+.voice-widget-card[data-state="idle"] {
+    --visor-glow: #00d4ff;
 }
 
-/* Aggressive Morphs */
-@keyframes morphEdge {
-
-    0%,
-    100% {
-        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-    }
-
-    25% {
-        border-radius: 40% 60% 70% 40% / 50% 40% 60% 45%;
-    }
-
-    50% {
-        border-radius: 30% 50% 60% 80% / 70% 30% 40% 60%;
-    }
-
-    75% {
-        border-radius: 65% 35% 45% 55% / 45% 65% 35% 55%;
-    }
+.voice-widget-card[data-state="listening"] {
+    --visor-glow: var(--accent-gold);
+    transform: scale(1.05);
 }
 
-@keyframes float {
-
-    0%,
-    100% {
-        transform: translate(0, 0);
-    }
-
-    50% {
-        transform: translate(10px, -40px);
-    }
-}
-
-@keyframes speakingPulse {
-
-    0%,
-    100% {
-        transform: scale(1);
-        filter: brightness(1);
-    }
-
-    50% {
-        transform: scale(1.1);
-        filter: brightness(1.3);
-    }
-}
-
-@keyframes colorFlow {
-    0% {
-        filter: hue-rotate(0deg) contrast(1.2);
-    }
-
-    100% {
-        filter: hue-rotate(360deg) contrast(1.2);
-    }
-}
-
-/* Minimalist floating captions */
-.captions-area {
-    position: absolute;
-    bottom: 8vh;
-    font-size: 1.8rem;
-    font-weight: 200;
-    letter-spacing: 0.15em;
-    color: white;
-    text-align: center;
+.voice-widget-card[data-state="listening"] .eye-strip {
     width: 80%;
-    text-transform: uppercase;
-    text-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+    height: 10px;
+    animation: visorPulse 1.5s infinite;
 }
+
+.voice-widget-card[data-state="speaking"] {
+    @keyframes morphEdge {
+
+        0%,
+        100% {
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+        }
+
+        25% {
+            border-radius: 40% 60% 70% 40% / 50% 40% 60% 45%;
+        }
+
+        50% {
+            border-radius: 30% 50% 60% 80% / 70% 30% 40% 60%;
+        }
+
+        75% {
+            border-radius: 65% 35% 45% 55% / 45% 65% 35% 55%;
+        }
+    }
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translate(0, 0);
+        }
+
+        50% {
+            transform: translate(10px, -40px);
+        }
+    }
+
+    @keyframes speakingPulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+            filter: brightness(1);
+        }
+
+        50% {
+            transform: scale(1.1);
+            filter: brightness(1.3);
+        }
+    }
+
+    @keyframes colorFlow {
+        0% {
+            filter: hue-rotate(0deg) contrast(1.2);
+        }
+
+        100% {
+            filter: hue-rotate(360deg) contrast(1.2);
+        }
+    }
+
+    /* Minimalist floating captions */
+    .captions-area {
+        position: absolute;
+        bottom: 8vh;
+        font-size: 1.8rem;
+        font-weight: 200;
+        letter-spacing: 0.15em;
+        color: white;
+        text-align: center;
+        width: 80%;
+        text-transform: uppercase;
+        text-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+    }
