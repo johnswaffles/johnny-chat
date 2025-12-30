@@ -21,15 +21,15 @@ class VoiceWidget {
         container.id = 'voice-widget-container';
         container.innerHTML = `
             <div class="voice-widget-card" id="voice-card" data-state="idle">
-                <div class="visor">
-                    <div class="eye-strip"></div>
+                <div class="particle-field"></div>
+                <div class="face-layer">
+                    <div class="eye left"></div>
+                    <div class="eye right"></div>
+                    <div class="mouth"></div>
                 </div>
-                <div class="jaw"></div>
-                
                 <button class="mic-button" id="start-btn"></button>
             </div>
-
-            <div class="captions-area" id="captions">BOOTING SYSTEM...</div>
+            <div class="captions-area" id="captions">CLICK TO INITIALIZE</div>
         `;
         document.body.appendChild(container);
 
@@ -44,7 +44,7 @@ class VoiceWidget {
 
         switch (state) {
             case 'idle':
-                this.captions.innerText = "SYSTEM ONLINE // CLICK TO INITIALIZE";
+                this.captions.innerText = "READY TO TALK";
                 break;
             case 'connecting':
                 this.captions.innerText = "INITIALIZING CORE...";

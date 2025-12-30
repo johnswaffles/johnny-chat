@@ -1,14 +1,13 @@
 /*
-   JOHNNY: THE CYBERNETIC ASSISTANT
-   A premium 3D robot head with expressive optics
+   JOHNNY: THE RESPONSIVE LIQUID ENTITY
+   3D morphing sphere with mobile-first fluid dynamics
 */
 
 :root {
-    --robot-size: 320px;
-    --plating-bg: rgba(15, 23, 42, 0.85);
-    --visor-glow: #00d4ff;
-    --accent-gold: #fbbf24;
-    --accent-red: #ef4444;
+    /* Responsive size: 80% of the smallest screen dimension, capped at 550px */
+    --sphere-size: clamp(280px, 80vmin, 550px);
+    --fluid-color: rgba(255, 255, 255, 0.1);
+    --accent-glow: rgba(0, 212, 255, 0.4);
 }
 
 #voice-widget-container {
@@ -25,177 +24,140 @@
     pointer-events: none;
     width: 100vw;
     height: 100vh;
+    overflow: hidden;
 }
 
-/* The Robot Helmet/Head */
 .voice-widget-card {
     position: relative;
     pointer-events: auto;
-    width: var(--robot-size);
-    height: calc(var(--robot-size) * 1.2);
-    background: var(--plating-bg);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
+    width: var(--sphere-size);
+    height: var(--sphere-size);
+    background: var(--fluid-color);
+    backdrop-filter: blur(60px);
+    -webkit-backdrop-filter: blur(60px);
 
-    /* Sleek Robot Head Shape */
-    border-radius: 80px 80px 120px 120px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    animation:
+        morphEdge 8s ease-in-out infinite,
+        float 12s ease-in-out infinite,
+        colorFlow 20s linear infinite;
+
+    border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow:
-        0 40px 100px rgba(0, 0, 0, 0.8),
-        inset 0 0 40px rgba(0, 212, 255, 0.1);
+        0 0 80px var(--accent-glow),
+        inset 0 0 60px rgba(255, 255, 255, 0.1),
+        inset -30px -30px 60px rgba(0, 0, 0, 0.4);
 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 40px;
-    transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
-    cursor: pointer;
-    animation: robotFloat 6s ease-in-out infinite;
-}
-
-/* Mechanical Ear/Side Panels */
-.voice-widget-card::before,
-.voice-widget-card::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 30px;
-    height: 80px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border-radius: 10px;
-}
-
-.voice-widget-card::before {
-    left: -15px;
-    transform: translateY(-50%);
-}
-
-.voice-widget-card::after {
-    right: -15px;
-    transform: translateY(-50%);
-}
-
-/* The Visor/Eyes */
-.visor {
-    width: 85%;
-    height: 70px;
-    background: #050814;
-    border-radius: 20px;
-    border: 2px solid rgba(0, 212, 255, 0.3);
-    position: relative;
-    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.2);
+    transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
+    cursor: pointer;
 }
 
-.eye-strip {
-    width: 70%;
-    height: 6px;
-    background: var(--visor-glow);
-    border-radius: 10px;
-    box-shadow: 0 0 20px var(--visor-glow);
-    transition: all 0.4s ease;
+/* Internal Refractive Shine (3D Depth) */
+.particle-field {
+    position: absolute;
+    top: 10%;
+    left: 15%;
+    width: 45%;
+    height: 30%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 80%);
+    filter: blur(20px);
+    pointer-events: none;
+    border-radius: 50%;
+    transform: rotate(-20deg);
 }
 
-/* Jaw/Talking Part */
-.jaw {
-    margin-top: auto;
-    width: 60%;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px 10px 40px 40px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 30px;
-    transition: all 0.3s ease;
+/* The "Face through a Sheet" talking effect */
+.face-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 1s ease;
+    filter: blur(20px);
 }
 
-/* Shifting States */
+.voice-widget-card[data-state="speaking"] .face-layer {
+    opacity: 0.7;
+}
+
+.eye {
+    position: absolute;
+    width: clamp(20px, 6vw, 40px);
+    height: clamp(12px, 4vw, 25px);
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 30px white;
+    top: 38%;
+}
+
+.eye.left {
+    left: 32%;
+}
+
+.eye.right {
+    right: 32%;
+}
+
+.mouth {
+    position: absolute;
+    bottom: 32%;
+    width: clamp(40px, 12vw, 80px);
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 30px white;
+    animation: mouthStretch 0.4s ease-in-out infinite alternate paused;
+}
+
+.voice-widget-card[data-state="speaking"] .mouth {
+    animation-play-state: running;
+}
+
+@keyframes mouthStretch {
+    from {
+        height: 8px;
+        transform: scaleX(0.8);
+    }
+
+    to {
+        height: 50px;
+        transform: scaleX(1.1);
+    }
+}
+
+/* States & Moods */
 .voice-widget-card[data-state="idle"] {
-    --visor-glow: #00d4ff;
+    /* No specific idle glow, uses default --accent-glow */
 }
 
 .voice-widget-card[data-state="listening"] {
-    --visor-glow: var(--accent-gold);
+    --accent-glow: rgba(251, 191, 36, 0.6);
     transform: scale(1.05);
 }
 
-.voice-widget-card[data-state="listening"] .eye-strip {
-    width: 80%;
-    height: 10px;
-    animation: visorPulse 1.5s infinite;
+.voice-widget-card[data-state="speaking"] {
+
+    100% {
+        filter: hue-rotate(360deg) contrast(1.2);
+    }
 }
 
-.voice-widget-card[data-state="speaking"] {
-    @keyframes morphEdge {
-
-        0%,
-        100% {
-            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-        }
-
-        25% {
-            border-radius: 40% 60% 70% 40% / 50% 40% 60% 45%;
-        }
-
-        50% {
-            border-radius: 30% 50% 60% 80% / 70% 30% 40% 60%;
-        }
-
-        75% {
-            border-radius: 65% 35% 45% 55% / 45% 65% 35% 55%;
-        }
-    }
-
-    @keyframes float {
-
-        0%,
-        100% {
-            transform: translate(0, 0);
-        }
-
-        50% {
-            transform: translate(10px, -40px);
-        }
-    }
-
-    @keyframes speakingPulse {
-
-        0%,
-        100% {
-            transform: scale(1);
-            filter: brightness(1);
-        }
-
-        50% {
-            transform: scale(1.1);
-            filter: brightness(1.3);
-        }
-    }
-
-    @keyframes colorFlow {
-        0% {
-            filter: hue-rotate(0deg) contrast(1.2);
-        }
-
-        100% {
-            filter: hue-rotate(360deg) contrast(1.2);
-        }
-    }
-
-    /* Minimalist floating captions */
-    .captions-area {
-        position: absolute;
-        bottom: 8vh;
-        font-size: 1.8rem;
-        font-weight: 200;
-        letter-spacing: 0.15em;
-        color: white;
-        text-align: center;
-        width: 80%;
-        text-transform: uppercase;
-        text-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
-    }
+/* Minimalist floating captions */
+.captions-area {
+    position: absolute;
+    bottom: 8vh;
+    font-size: 1.8rem;
+    font-weight: 200;
+    letter-spacing: 0.15em;
+    color: white;
+    text-align: center;
+    width: 80%;
+    text-transform: uppercase;
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+}
