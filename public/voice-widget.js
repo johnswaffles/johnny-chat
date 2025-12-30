@@ -8,6 +8,7 @@ class VoiceWidget {
         this.dc = null;
         this.stream = null;
         this.state = 'idle'; // idle, connecting, listening, speaking
+        this.transcriptBuffer = "";
         this.inactivityTimer = null;
         this.shutdownTimer = null;
         this.init();
@@ -109,8 +110,14 @@ class VoiceWidget {
         try {
             this.updateState('connecting');
 
-            // 1. Get Microphone
-            this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // 1. Get Microphone with optimization
+            this.stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            });
 
             // 2. Create Peer Connection
             this.pc = new RTCPeerConnection();
@@ -169,7 +176,12 @@ class VoiceWidget {
                 instructions: "You are Johnny, a confident and smart helpful chatbot that lives on justaskjohnny.com. Your responses are concise and tailored for a voice conversation. Use natural pacing.",
                 voice: "echo",
                 input_audio_transcription: { model: "whisper-1" },
-                turn_taking: { type: "server_vad" }
+                turn_taking: {
+                    type: "server_vad",
+                    threshold: 0.5, // Standard threshold
+                    prefix_padding_ms: 300, // More breathing room
+                    silence_duration_ms: 600 // Wait longer before interrupting
+                }
             }
         };
         this.dc.send(JSON.stringify(event));
@@ -179,15 +191,18 @@ class VoiceWidget {
         switch (msg.type) {
             case 'input_audio_buffer.speech_started':
                 this.updateState('listening');
+                this.transcriptBuffer = ""; // Reset on new speech
                 break;
             case 'response.audio_transcript.delta':
-                this.captions.innerText = msg.delta.toUpperCase();
+                this.transcriptBuffer += msg.delta;
+                this.captions.innerText = this.transcriptBuffer.toUpperCase();
                 break;
             case 'response.audio_transcript.done':
                 this.updateState('speaking');
                 break;
             case 'response.done':
                 this.updateState('listening');
+                // Don't clear buffer here so user can read the final sentence
                 break;
         }
     }

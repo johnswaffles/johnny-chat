@@ -10,8 +10,6 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4o-mini",
-  ELEVENLABS_API_KEY,
-  ELEVENLABS_AGENT_ID, // The Conversational AI Agent ID
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = ""
 } = process.env;
