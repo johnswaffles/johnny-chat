@@ -10,6 +10,8 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4o-mini",
+  ELEVENLABS_API_KEY,
+  ELEVENLABS_AGENT_ID, // The Conversational AI Agent ID
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = ""
 } = process.env;
@@ -88,6 +90,42 @@ app.post("/session", async (req, res) => {
     res.send(answerSdp);
   } catch (err) {
     console.error("🔥 Session Crash:", err);
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+/**
+ * ELEVENLABS CONVERSATIONAL AI TOKEN ENDPOINT
+ */
+app.get("/elevenlabs-token", async (req, res) => {
+  try {
+    const apiKey = ELEVENLABS_API_KEY || process.env.Elevenlabs_Voice;
+    const agentId = ELEVENLABS_AGENT_ID || "3DUxJ2hb1hxMqc1BQsjD"; // Use the provided Voice/Agent ID as fallback
+
+    if (!apiKey) {
+      console.error("❌ ELEVENLABS_API_KEY is missing!");
+      return res.status(500).json({ error: "ElevenLabs API Key not configured" });
+    }
+
+    console.log(`📡 Requesting ElevenLabs token for Agent: ${agentId}`);
+
+    const response = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`, {
+      method: "GET",
+      headers: {
+        "xi-api-key": apiKey
+      }
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("❌ ElevenLabs Error:", response.status, errText);
+      return res.status(response.status).send(errText);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error("🔥 ElevenLabs Token Crash:", err);
     res.status(500).json({ detail: String(err.message || err) });
   }
 });

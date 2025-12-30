@@ -1,13 +1,11 @@
 /**
- * VOICE WIDGET LOGIC (OpenAI Realtime WebRTC)
+ * VOICE WIDGET LOGIC (ElevenLabs Conversational AI)
  */
 
 class VoiceWidget {
     constructor() {
-        this.pc = null;
-        this.dc = null;
-        this.stream = null;
-        this.state = 'idle'; // idle, connecting, listening, speaking
+        this.conversation = null;
+        this.state = 'idle';
         this.inactivityTimer = null;
         this.shutdownTimer = null;
         this.init();
@@ -49,18 +47,18 @@ class VoiceWidget {
                 this.captions.innerText = "READY // CLICK THE MIDDLE";
                 break;
             case 'connecting':
-                this.captions.innerText = "INITIALIZING CORE...";
+                this.captions.innerText = "INITIALIZING ELEVENLABS...";
                 break;
             case 'listening':
                 this.captions.innerText = "LISTENING...";
                 this.resetInactivityTimer();
                 break;
             case 'speaking':
-                this.captions.innerText = "TRANSMITTING...";
+                this.captions.innerText = "JOHNNY SPEAKING...";
                 this.resetInactivityTimer();
                 break;
             case 'error':
-                this.captions.innerText = "SYSTEM ERROR // CHECK CONSOLE";
+                this.captions.innerText = "CONNECTION ERROR // RETRY";
                 break;
         }
     }
@@ -71,16 +69,13 @@ class VoiceWidget {
 
         // 30 Seconds Inactivity - Prompt user
         this.inactivityTimer = setTimeout(() => {
-            if (this.dc && this.dc.readyState === 'open') {
-                console.log("⏱️ 30s Silence: Prompting user...");
-                this.dc.send(JSON.stringify({
-                    type: "response.create",
-                    response: {
-                        instructions: "The user has been silent for 30 seconds. Ask them if they are still there and if they'd like to continue, otherwise the session will shut down."
-                    }
-                }));
+            if (this.conversation) {
+                console.log("⏱️ 30s Silence: Prompting user via ElevenLabs...");
+                // Note: We can send a text message to trigger a response if the SDK supports it,
+                // or just notify the UI. For ElevenLabs, we'll notify the UI first.
+                this.captions.innerText = "STILL THERE?";
 
-                // Start second 15s timer to actually kill the session
+                // Final Shutdown after 15 more seconds of silence
                 this.shutdownTimer = setTimeout(() => {
                     console.log("🛑 Still silent: Stopping session.");
                     this.stopSession();
@@ -109,111 +104,72 @@ class VoiceWidget {
         try {
             this.updateState('connecting');
 
-            // 1. Get Microphone
-            this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            // 2. Create Peer Connection
-            this.pc = new RTCPeerConnection();
-
-            // 3. Audio Handlers
-            const audioEl = document.createElement('audio');
-            audioEl.autoplay = true;
-            this.pc.ontrack = (e) => {
-                audioEl.srcObject = e.streams[0];
-            };
-
-            // Add local track
-            this.pc.addTrack(this.stream.getTracks()[0]);
-
-            // 4. Data Channel
-            this.dc = this.pc.createDataChannel('oai-events');
-            this.dc.onopen = () => this.onDataChannelOpen();
-            this.dc.onmessage = (e) => this.onDataChannelMessage(JSON.parse(e.data));
-
-            // 5. SDP Handshake
-            const offer = await this.pc.createOffer();
-            await this.pc.setLocalDescription(offer);
-
-            // Determine Backend URL (Either from script tag or fallback)
+            // 1. Get Signed URL from Backend
             const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
             const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
 
-            console.log("🔗 Connecting to backend:", backendUrl);
+            const res = await fetch(`${backendUrl}/elevenlabs-token`);
+            if (!res.ok) throw new Error('Failed to get ElevenLabs token');
+            const { signed_url } = await res.json();
 
-            const res = await fetch(`${backendUrl}/session`, {
-                method: 'POST',
-                body: offer.sdp,
-                headers: { 'Content-Type': 'application/sdp' }
+            // 2. Initialize ElevenLabs Conversation
+            if (!window.ElevenLabsClient) throw new Error('ElevenLabs SDK not loaded');
+
+            this.conversation = await window.ElevenLabsClient.Conversation.startSession({
+                signedUrl: signed_url,
+                onConnect: () => {
+                    console.log("✅ ElevenLabs Connected");
+                    this.updateState('listening');
+                },
+                onDisconnect: () => {
+                    console.log("❌ ElevenLabs Disconnected");
+                    this.updateState('idle');
+                },
+                onError: (err) => {
+                    console.error("ElevenLabs SDK Error:", err);
+                    this.updateState('error');
+                },
+                onMessage: (message) => {
+                    this.handleMessage(message);
+                },
+                onModeChange: (mode) => {
+                    // mode.mode can be 'speaking' or 'listening'
+                    this.updateState(mode.mode);
+                }
             });
 
-            if (!res.ok) throw new Error('SDP Handshake failed');
-
-            const answerSdp = await res.text();
-            await this.pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
-
-            this.updateState('listening');
-
         } catch (err) {
-            console.error(err);
+            console.error("🔥 ElevenLabs Boot Error:", err);
             this.updateState('error');
-            this.captions.innerText = "Mic or Connection Error.";
+            this.captions.innerText = "Check ElevenLabs API Key in Render.";
         }
     }
 
-    onDataChannelOpen() {
-        console.log('OpenAI Realtime Data Channel Open');
-        this.resetInactivityTimer();
-        // Initial Session Configuration
-        const event = {
-            type: "session.update",
-            session: {
-                modalities: ["text", "audio"],
-                instructions: "You are Johnny, a friendly and helpful assistant. Your responses are concise and tailored for a voice conversation. Use natural pacing.",
-                voice: "verse", // Switched to Verse as requested
-                input_audio_transcription: { model: "whisper-1" },
-                turn_taking: { type: "server_vad" }
-            }
-        };
-        this.dc.send(JSON.stringify(event));
-    }
-
-    onDataChannelMessage(msg) {
-        switch (msg.type) {
-            case 'input_audio_buffer.speech_started':
-                this.updateState('listening');
-                break;
-            case 'response.audio_transcript.delta':
-                this.captions.innerText = msg.delta;
-                break;
-            case 'response.audio_transcript.done':
-                this.updateState('speaking');
-                break;
-            case 'response.done':
-                this.updateState('listening');
-                break;
+    handleMessage(message) {
+        // Handle transcripts for captions
+        if (message.type === 'transcript') {
+            const text = message.transcript;
+            this.captions.innerText = text.toUpperCase();
+            this.resetInactivityTimer();
         }
     }
 
-    stopSession() {
+    async stopSession() {
         this.clearTimers();
-        if (this.stream) this.stream.getTracks().forEach(t => t.stop());
-        if (this.pc) this.pc.close();
+        if (this.conversation) {
+            await this.conversation.endSession();
+            this.conversation = null;
+        }
         this.updateState('idle');
         this.captions.innerText = "SYNC STOPPED // CLICK THE MIDDLE";
     }
 }
 
-// Auto-init for Squarespace with diagnostic logs
+// Auto-init for Squarespace
 function initJohnny() {
-    console.log("🚀 Johnny Voice Widget: Initializing...");
-    try {
-        if (window.johnnyInitialized) return;
-        window.johnnyInitialized = true;
-        new VoiceWidget();
-        console.log("✅ Johnny Voice Widget: Successfully injected.");
-    } catch (e) {
-        console.error("❌ Johnny Voice Widget Error:", e);
-    }
+    if (window.johnnyInitialized) return;
+    window.johnnyInitialized = true;
+    new VoiceWidget();
 }
 
 if (document.readyState === 'complete') {
