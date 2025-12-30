@@ -133,31 +133,96 @@
 
 /* States & Moods */
 .voice-widget-card[data-state="idle"] {
-    /* No specific idle glow, uses default --accent-glow */
+    --accent-glow: rgba(0, 212, 255, 0.5);
 }
 
 .voice-widget-card[data-state="listening"] {
-    --accent-glow: rgba(251, 191, 36, 0.6);
+    --accent-glow: rgba(251, 191, 36, 0.8);
     transform: scale(1.05);
 }
 
 .voice-widget-card[data-state="speaking"] {
+    --accent-glow: rgba(168, 85, 247, 0.8);
+    animation:
+        morphEdge 4s ease-in-out infinite,
+        float 8s ease-in-out infinite,
+        pulseEnergy 2s infinite;
+}
 
+/* Animations */
+@keyframes morphEdge {
+
+    0%,
     100% {
-        filter: hue-rotate(360deg) contrast(1.2);
+        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    }
+
+    33% {
+        border-radius: 40% 60% 70% 40% / 50% 60% 30% 60%;
+    }
+
+    66% {
+        border-radius: 70% 30% 60% 40% / 40% 70% 40% 60%;
     }
 }
 
-/* Minimalist floating captions */
+@keyframes colorFlow {
+    0% {
+        filter: hue-rotate(0deg) saturate(1.5);
+    }
+
+    100% {
+        filter: hue-rotate(360deg) saturate(1.5);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(10px, -30px);
+    }
+}
+
+@keyframes pulseEnergy {
+
+    0%,
+    100% {
+        box-shadow: 0 0 80px var(--accent-glow);
+        filter: brightness(1);
+    }
+
+    50% {
+        box-shadow: 0 0 160px var(--accent-glow);
+        filter: brightness(1.3);
+    }
+}
+
+/* Button & Captions */
+.mic-button {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 100;
+}
+
 .captions-area {
     position: absolute;
-    bottom: 8vh;
-    font-size: 1.8rem;
-    font-weight: 200;
-    letter-spacing: 0.15em;
-    color: white;
+    bottom: 6vh;
+    width: 90%;
     text-align: center;
-    width: 80%;
+    font-size: clamp(1.1rem, 4vw, 1.8rem);
+    font-weight: 200;
+    color: white;
+    text-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    text-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
 }
