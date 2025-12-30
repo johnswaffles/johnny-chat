@@ -21,26 +21,33 @@ class VoiceWidget {
         container.id = 'voice-widget-container';
         container.innerHTML = `
             <div class="orb-halo"></div>
-            <div class="status-indicator" id="status-text">Johnny</div>
             
             <div class="voice-widget-card" id="voice-card" data-state="idle">
-                <button class="mic-button" id="start-btn">
-                    <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-                </button>
-
-                <div class="waveform">
-                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                <div class="particle-field"></div>
+                <div class="led-cluster">
+                    <button class="mic-button" id="start-btn">
+                        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                    </button>
+                    <div class="waveform">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="captions-area" id="captions">Click to start conversation</div>
+            <div class="captions-area" id="captions">SYSTEM ONLINE // CLICK TO INITIALIZE</div>
         `;
         document.body.appendChild(container);
 
         this.card = document.getElementById('voice-card');
         this.btn = document.getElementById('start-btn');
-        this.statusText = document.getElementById('status-text');
         this.captions = document.getElementById('captions');
+    }
+
+    updateState(state, text) {
+        this.state = state;
+        this.card.dataset.state = state;
+        // The captions update automatically based on OpenAI events
+        if (state === 'idle') this.captions.innerText = "SYSTEM ONLINE // CLICK TO INITIALIZE";
     }
 
     attachEvents() {
