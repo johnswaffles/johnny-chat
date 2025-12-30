@@ -20,12 +20,10 @@ class VoiceWidget {
         const container = document.createElement('div');
         container.id = 'voice-widget-container';
         container.innerHTML = `
+            <div class="orb-halo"></div>
+            <div class="status-indicator" id="status-text">Johnny</div>
+            
             <div class="voice-widget-card" id="voice-card" data-state="idle">
-                <div class="status-indicator">
-                    <div class="status-dot"></div>
-                    <span id="status-text">Disconnected</span>
-                </div>
-                
                 <button class="mic-button" id="start-btn">
                     <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
                 </button>
@@ -33,9 +31,9 @@ class VoiceWidget {
                 <div class="waveform">
                     <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
                 </div>
-
-                <div class="captions-area" id="captions">Ready to talk? Click the mic.</div>
             </div>
+
+            <div class="captions-area" id="captions">Click to start conversation</div>
         `;
         document.body.appendChild(container);
 
