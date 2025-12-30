@@ -1,16 +1,12 @@
 /*
-   JOHNNY: THE HYPER-LIQUID ENTITY
-   3D morphing sphere with refractive glares and 'Verse' energy
+   JOHNNY: THE LIVING VISAGE
+   'Face through a sheet' effect with aggressive fluid dynamics
 */
 
 :root {
     --sphere-size: 600px;
-    --color-idle-base: #00d4ff;
-    --color-listening-base: #fbbf24;
-    --color-speaking-base: #a855f7;
-
-    --fluid-bg: rgba(0, 212, 255, 0.2);
-    --glow-intensity: 0 0 120px rgba(0, 212, 255, 0.4);
+    --fluid-color: rgba(255, 255, 255, 0.1);
+    --accent-glow: rgba(0, 212, 255, 0.4);
 }
 
 #voice-widget-container {
@@ -36,68 +32,104 @@
     pointer-events: auto;
     width: var(--sphere-size);
     height: var(--sphere-size);
-    max-width: 90vw;
-    max-height: 90vh;
-    background: var(--fluid-bg);
-    backdrop-filter: blur(60px);
-    -webkit-backdrop-filter: blur(60px);
+    background: var(--fluid-color);
+    backdrop-filter: blur(80px);
+    -webkit-backdrop-filter: blur(80px);
 
-    /* Organic Morphing Shape */
+    /* Aggressive Morphing Edge */
     border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
     animation:
-        morph 12s ease-in-out infinite,
-        float 8s ease-in-out infinite,
-        colorShift 20s linear infinite;
+        morphEdge 6s ease-in-out infinite,
+        float 10s ease-in-out infinite,
+        colorFlow 25s linear infinite;
 
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow:
-        var(--glow-intensity),
-        inset 0 0 80px rgba(255, 255, 255, 0.1),
-        inset -20px -20px 60px rgba(0, 0, 0, 0.5);
+        0 0 100px var(--accent-glow),
+        inset 0 0 100px rgba(255, 255, 255, 0.1),
+        inset -50px -50px 80px rgba(0, 0, 0, 0.4);
 
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 1.5s cubic-bezier(0.19, 1, 0.22, 1);
+    transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
     cursor: pointer;
 }
 
-/* 3D Reflection & Glare Layers */
-.voice-widget-card::before {
-    content: '';
+/* The "Face through a Sheet" Layer */
+.face-layer {
     position: absolute;
-    top: 10%;
-    left: 15%;
-    width: 40%;
-    height: 25%;
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.6) 0%, transparent 100%);
-    border-radius: 50%;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 1.5s ease;
     filter: blur(15px);
-    transform: rotate(-25deg);
-    pointer-events: none;
+    /* Creates the 'through a sheet' look */
 }
 
-.voice-widget-card::after {
-    content: '';
+.voice-widget-card[data-state="speaking"] .face-layer {
+    opacity: 0.8;
+}
+
+.eye {
     position: absolute;
-    bottom: 15%;
-    right: 15%;
-    width: 30%;
-    height: 20%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 80%);
+    width: 40px;
+    height: 25px;
+    background: white;
     border-radius: 50%;
-    filter: blur(20px);
-    pointer-events: none;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+    top: 40%;
+    transition: all 0.5s ease;
 }
 
-/* The Internal "Core" Shine */
+.eye.left {
+    left: 35%;
+}
+
+.eye.right {
+    right: 35%;
+}
+
+.mouth {
+    position: absolute;
+    bottom: 35%;
+    width: 80px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+    animation: mouthTalk 0.4s ease-in-out infinite alternate paused;
+}
+
+.voice-widget-card[data-state="speaking"] .mouth {
+    animation-play-state: running;
+}
+
+@keyframes mouthTalk {
+    from {
+        height: 10px;
+        transform: scaleX(0.8);
+    }
+
+    to {
+        height: 60px;
+        transform: scaleX(1.2);
+    }
+}
+
+/* 3D Reflection Glare */
 .particle-field {
     position: absolute;
-    inset: 10%;
-    border-radius: inherit;
-    background: radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 60%);
-    filter: blur(30px);
-    opacity: 0.8;
+    top: 15%;
+    left: 20%;
+    width: 35%;
+    height: 20%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, transparent 100%);
+    border-radius: 50%;
+    filter: blur(20px);
     pointer-events: none;
 }
 
@@ -106,70 +138,54 @@
     position: relative;
     width: 140px;
     height: 140px;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.03);
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    cursor: pointer;
-    z-index: 10;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 20;
+    transition: all 0.5s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity: 0.4;
 }
 
-.mic-button:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: scale(1.15) rotate(5deg);
-    box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+.voice-widget-card:hover .mic-button {
+    opacity: 0.8;
 }
 
 .mic-button svg {
-    width: 54px;
-    height: 54px;
+    width: 40px;
+    height: 40px;
     fill: white;
-    filter: drop-shadow(0 0 15px white);
-    opacity: 0.9;
-}
-
-/* Removal of waveform bars as requested */
-.waveform {
-    display: none !important;
 }
 
 /* States & Advanced Mood Lighting */
-.voice-widget-card[data-state="idle"] {
-    --fluid-bg: rgba(0, 212, 255, 0.15);
-    --glow-intensity: 0 0 100px rgba(0, 212, 255, 0.3);
-}
-
-.voice-widget-card[data-state="listening"] {
-    --fluid-bg: rgba(251, 191, 36, 0.25);
-    --glow-intensity: 0 0 150px rgba(251, 191, 36, 0.5);
-    transform: scale(1.05);
-}
-
 .voice-widget-card[data-state="speaking"] {
-    --fluid-bg: rgba(168, 85, 247, 0.25);
-    --glow-intensity: 0 0 200px rgba(168, 85, 247, 0.6);
+    --fluid-color: rgba(168, 85, 247, 0.25);
+    --accent-glow: 0 0 200px rgba(168, 85, 247, 0.6);
     animation:
-        morph 4s ease-in-out infinite,
+        morphEdge 4s ease-in-out infinite,
         speakingPulse 2s ease-in-out infinite;
 }
 
-@keyframes morph {
+/* Aggressive Morphs */
+@keyframes morphEdge {
 
     0%,
     100% {
         border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
     }
 
-    33% {
-        border-radius: 40% 60% 50% 50% / 50% 40% 60% 50%;
+    25% {
+        border-radius: 40% 60% 70% 40% / 50% 40% 60% 45%;
     }
 
-    66% {
-        border-radius: 70% 30% 60% 40% / 40% 70% 40% 60%;
+    50% {
+        border-radius: 30% 50% 60% 80% / 70% 30% 40% 60%;
+    }
+
+    75% {
+        border-radius: 65% 35% 45% 55% / 45% 65% 35% 55%;
     }
 }
 
@@ -199,13 +215,13 @@
     }
 }
 
-@keyframes colorShift {
+@keyframes colorFlow {
     0% {
-        filter: hue-rotate(0deg);
+        filter: hue-rotate(0deg) contrast(1.2);
     }
 
     100% {
-        filter: hue-rotate(360deg);
+        filter: hue-rotate(360deg) contrast(1.2);
     }
 }
 
@@ -213,13 +229,12 @@
 .captions-area {
     position: absolute;
     bottom: 8vh;
-    width: 70%;
-    text-align: center;
-    font-family: 'Inter', sans-serif;
-    font-size: 1.6rem;
+    font-size: 1.8rem;
     font-weight: 200;
-    color: white;
-    text-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
     letter-spacing: 0.15em;
+    color: white;
+    text-align: center;
+    width: 80%;
     text-transform: uppercase;
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
 }
