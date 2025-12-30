@@ -145,7 +145,7 @@ class VoiceWidget {
             session: {
                 modalities: ["text", "audio"],
                 instructions: "You are Johnny, a friendly and helpful assistant. Your responses are concise and tailored for a voice conversation. Use natural pacing.",
-                voice: "ash", // Ash, Ballad, Coral, Echo, Sage, Shimmer
+                voice: "verse", // Switched to Verse as requested
                 input_audio_transcription: { model: "whisper-1" },
                 turn_taking: { type: "server_vad" }
             }
