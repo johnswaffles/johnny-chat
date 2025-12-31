@@ -32,7 +32,7 @@ class VoiceWidget {
                 </div>
                 <button class="mic-button" id="start-btn"></button>
             </div>
-            <div class="captions-area" id="captions">READY TO SYNC // CLICK THE MIDDLE</div>
+            <div class="captions-area" id="captions">PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION</div>
         `;
         document.body.appendChild(container);
 
@@ -47,7 +47,7 @@ class VoiceWidget {
 
         switch (state) {
             case 'idle':
-                this.captions.innerText = "READY // CLICK THE MIDDLE";
+                this.captions.innerText = "PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION";
                 break;
             case 'connecting':
                 this.captions.innerText = "INITIALIZING CORE...";
@@ -195,7 +195,13 @@ class VoiceWidget {
                 break;
             case 'response.audio_transcript.delta':
                 this.transcriptBuffer += msg.delta;
-                this.captions.innerText = this.transcriptBuffer.toUpperCase();
+                // Rolling window: keep last ~10 words
+                const words = this.transcriptBuffer.split(' ');
+                if (words.length > 10) {
+                    this.captions.innerText = "... " + words.slice(-10).join(' ').toUpperCase();
+                } else {
+                    this.captions.innerText = this.transcriptBuffer.toUpperCase();
+                }
                 break;
             case 'response.audio_transcript.done':
                 this.updateState('speaking');
@@ -210,9 +216,9 @@ class VoiceWidget {
     stopSession() {
         this.clearTimers();
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
-        if (this.pc) this.pc.close();
+        this.pc.close();
         this.updateState('idle');
-        this.captions.innerText = "SYNC STOPPED // CLICK THE MIDDLE";
+        this.captions.innerText = "PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION";
     }
 }
 
