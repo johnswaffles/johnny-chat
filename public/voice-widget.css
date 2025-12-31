@@ -255,21 +255,21 @@
     white-space: nowrap;
 }
 
-/* Top Controls */
+/* Top Controls Overlay */
 .top-controls {
     position: absolute;
-    top: -15px;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 5%;
+    inset: 10px;
+    /* Shift slightly inside the sphere curve */
+    pointer-events: none;
     z-index: 101;
 }
 
 .top-control {
+    position: absolute;
+    pointer-events: auto;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.6);
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 0.55rem;
@@ -277,17 +277,25 @@
     letter-spacing: 1px;
     text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.3s;
-    backdrop-filter: blur(5px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
 }
 
 .top-control:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
     color: white;
-    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
 }
 
-.top-control.right {
+.top-control.left {
+    top: 5%;
+    left: 5%;
+}
+
+/* Mic Button Bottom-Left */
+.top-control.bottom-left {
+    bottom: 5%;
+    left: 5%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -295,21 +303,34 @@
     height: 32px;
     padding: 0;
     border-radius: 50%;
+    /* Default Listening State: Green */
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.1);
 }
 
-.top-control.right svg {
+.top-control.bottom-left svg {
     width: 16px;
     height: 16px;
 }
 
+.top-control.bottom-left:hover {
+    background: rgba(34, 197, 94, 0.25);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+/* Muted State: Red */
 .top-control[data-muted="true"] {
-    background: rgba(255, 0, 0, 0.15);
-    border-color: rgba(255, 0, 0, 0.3);
-    color: #ff4444;
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #ef4444 !important;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2) !important;
 }
 
 .top-control[data-muted="true"]:hover {
-    background: rgba(255, 0, 0, 0.25);
+    background: rgba(239, 68, 68, 0.3) !important;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4) !important;
 }
 
 .audio-visualizer {
