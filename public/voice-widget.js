@@ -9,28 +9,50 @@ class VoiceWidget {
         this.stream = null;
         this.state = 'idle'; // idle, connecting, listening, speaking
         this.transcriptBuffer = "";
-        this.messages = []; // { role: 'user'|'assistant', text: '', id: '...' }
-        this.activeMessageId = null;
+        this.activeAssistantBubble = null;
+        this.activeUserBubble = null;
+        this.messages = [];
         this.inactivityTimer = null;
         this.shutdownTimer = null;
         this.init();
     }
 
     init() {
+        console.log("🚀 Johnny Widget: Initializing...");
+
+        // VISUAL DEBUGGER BAR (Confirming script execution)
+        const debugBar = document.createElement('div');
+        debugBar.id = 'johnny-debug-bar';
+        debugBar.style.cssText = "position:fixed; top:0; left:0; width:100%; height:25px; background:red; color:white; font-size:12px; z-index:2147483647; text-align:center; padding-top:5px; font-weight:bold; pointer-events:none;";
+        debugBar.innerText = "JOHNNY DEBUG: SCRIPT IS RUNNING";
+        document.body.appendChild(debugBar);
+
         this.createUI();
         this.attachEvents();
-        // Visual Proof: verify captions are drawing
-        if (this.captionArea) {
-            this.captionArea.innerText = "CAPTIONS INITIALIZING...";
+
+        // Immediate Visual Check in History area
+        if (this.history) {
+            const debugMsg = document.createElement('div');
+            debugMsg.style.cssText = "background: #00d4ff !important; color: black !important; font-weight: bold; margin: 2rem auto; text-align: center; width: 85%; padding: 1.5rem; border-radius: 10px; font-size: 1.2rem; box-shadow: 0 0 20px #00d4ff;";
+            debugMsg.innerText = "CAPTIONS TESTING: IF YOU SEE THIS, IT WORKS!";
+            this.history.appendChild(debugMsg);
+
             setTimeout(() => {
-                if (this.state === 'idle') this.captionArea.innerText = "";
-            }, 3000);
+                debugBar.style.background = "green";
+                debugBar.innerText = "JOHNNY DEBUG: UI DETECTED & MOUNTED";
+            }, 2000);
+        } else {
+            debugBar.innerText = "JOHNNY DEBUG: UI FAILED (HISTORY NOT FOUND)";
         }
     }
 
     createUI() {
         const container = document.createElement('div');
         container.id = 'voice-widget-container';
+
+        // Ensure it's prepended or appended specifically to avoid z-index traps on some sites
+        document.body.insertAdjacentElement('afterbegin', container);
+
         container.innerHTML = `
             <div class="voice-widget-card" id="voice-card" data-state="idle">
                 <div class="glow-field"></div>
@@ -39,28 +61,25 @@ class VoiceWidget {
                     <div class="eye right"></div>
                     <div class="mouth"></div>
                 </div>
-                <button class="mic-button" id="start-btn"></button>
-            </div>
-            
-            <div class="bottom-area">
-                <div class="status-indicator">
-                    <span class="status-dot"></span>
-                    <span class="status-label" id="status-label">PRESS TO START</span>
-                </div>
                 
-                <div class="chat-viewport" id="chat-viewport">
-                    <div class="chat-history" id="chat-history"></div>
-                </div>
-
-                <div class="footer-controls">
+                <div class="status-indicator">
+                    <span class="status-label" id="status-label">PRESS TO START</span>
                     <div class="audio-visualizer" id="visualizer">
                         <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
                         <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
                     </div>
                 </div>
+
+                <button class="mic-button" id="start-btn"></button>
+            </div>
+            
+            <div class="bottom-area">
+                <div class="chat-viewport" id="chat-viewport">
+                    <div class="chat-history" id="chat-history"></div>
+                </div>
             </div>
         `;
-        document.body.appendChild(container);
+        // document.body.appendChild(container); // Moved to afterbegin
 
         this.card = document.getElementById('voice-card');
         this.btn = document.getElementById('start-btn');
@@ -68,6 +87,9 @@ class VoiceWidget {
         this.historyViewport = document.getElementById('chat-viewport');
         this.statusLabel = document.getElementById('status-label');
         this.visualizer = document.getElementById('visualizer');
+
+        // Fix for missing reference
+        this.captionArea = this.history;
     }
 
     updateState(state) {
@@ -262,67 +284,88 @@ Default Mindset: “You’re here because you’re curious. I’m here because c
     }
 
     onDataChannelMessage(msg) {
-        // Global Logger: let's see EVERYTHING Johnny sends
         console.log("📥 Johnny -> UI:", msg.type, msg);
 
         switch (msg.type) {
             case 'input_audio_buffer.speech_started':
                 this.updateState('listening');
-                this.transcriptBuffer = "";
-                // Keep the previous transcript visible until the user starts speaking again?
-                // Actually, let's clear it gracefully or wait for delta
+                this.activeUserBubble = this.createMessageBubble('user');
+                this.activeAssistantBubble = null; // Close assistant bubble if any
                 break;
 
-            // User Speech (Input)
             case 'conversation.item.input_audio_transcription.delta':
             case 'conversation.item.input_audio_transcription.completed':
-                if (msg.delta) this.transcriptBuffer += msg.delta;
-                if (msg.transcript) this.transcriptBuffer = msg.transcript;
-                this.renderPersistentText(this.transcriptBuffer);
+                if (this.activeUserBubble) {
+                    const text = msg.delta || msg.transcript || "";
+                    if (msg.delta) {
+                        this.activeUserBubble.innerText += text;
+                    } else if (msg.transcript) {
+                        this.activeUserBubble.innerText = msg.transcript;
+                    }
+                    this.scrollToBottom();
+                }
                 break;
 
-            // AI Speech (Output)
             case 'response.audio_transcript.delta':
             case 'response.output_audio_transcript.delta':
+                this.updateState('speaking');
+                if (!this.activeAssistantBubble) {
+                    this.activeAssistantBubble = this.createMessageBubble('assistant');
+                    this.activeUserBubble = null;
+                }
                 if (msg.delta) {
-                    this.transcriptBuffer += msg.delta;
-                    this.renderPersistentText(this.transcriptBuffer);
+                    this.activeAssistantBubble.innerText += msg.delta;
+                    this.scrollToBottom();
+                    this.updateSphereScale(this.activeAssistantBubble.innerText.length);
                 }
                 break;
 
             case 'response.audio_transcript.done':
             case 'response.output_audio_transcript.done':
-                this.updateState('speaking');
+                this.activeAssistantBubble = null;
                 break;
 
             case 'response.done':
                 this.updateState('listening');
                 break;
+        }
+    }
 
-            case 'error':
-                console.error("❌ OpenAI Data Channel Error:", msg.error);
-                break;
+    createMessageBubble(role) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-bubble-wrapper ${role}`;
+
+        const label = document.createElement('div');
+        label.className = 'message-bubble-label';
+        label.innerText = role === 'user' ? 'YOU' : 'JOHNNY';
+
+        const content = document.createElement('div');
+        content.className = 'message-content';
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(content);
+        this.history.appendChild(wrapper);
+        return content;
+    }
+
+    scrollToBottom() {
+        if (this.historyViewport) {
+            this.historyViewport.scrollTop = this.historyViewport.scrollHeight;
+        }
+    }
+
+    updateSphereScale(charCount) {
+        const minScale = 0.5;
+        const maxChars = 800;
+        const scale = Math.max(minScale, 1 - (charCount / maxChars) * (1 - minScale));
+        if (this.card) {
+            this.card.style.setProperty('--sphere-scale', scale);
         }
     }
 
     renderPersistentText(text) {
-        if (!this.captionArea) return;
-
-        this.captionArea.innerText = text.toUpperCase();
-
-        // Auto-scroll to bottom
-        this.captionArea.scrollTop = this.captionArea.scrollHeight;
-
-        // Dynamic Scaling: Shrink sphere as text grows
-        // 1.0 at 0 chars, 0.4 at 1000+ chars
-        const charCount = text.length;
-        const minScale = 0.5;
-        const maxChars = 800;
-        const scale = Math.max(minScale, 1 - (charCount / maxChars) * (1 - minScale));
-
-        if (this.card) {
-            this.card.style.setProperty('--sphere-scale', scale);
-        }
+        // Obsolete but kept for safety if called elsewhere temporarily
+        console.log("Legacy renderPersistentText called with:", text);
     }
 
 
@@ -341,8 +384,9 @@ function initJohnny() {
     new VoiceWidget();
 }
 
-if (document.readyState === 'complete') {
-    initJohnny();
-} else {
-    window.addEventListener('load', initJohnny);
-}
+// Brute force initialization
+initJohnny();
+setTimeout(initJohnny, 1000);
+setTimeout(initJohnny, 3000);
+window.addEventListener('load', initJohnny);
+document.addEventListener('DOMContentLoaded', initJohnny);
