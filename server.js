@@ -194,7 +194,7 @@ app.post("/api/chat", async (req, res) => {
     const s = String(input || "");
 
     if (s.trim() === "[system_greet]") {
-      return res.json({ reply: "Hello! How can I help you today?", sources: [] });
+      return res.json({ reply: "You're here. I'm here. Let's make this conversation worth both our time.", sources: [] });
     }
 
     if (isLiveQuery(s)) {
