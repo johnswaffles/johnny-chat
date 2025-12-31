@@ -301,6 +301,14 @@ Default Mindset: “You’re here because you’re curious. I’m here because c
         console.log("📥 Johnny -> UI:", msg.type, msg);
 
         switch (msg.type) {
+            case 'session.created':
+                console.log("🛠️ Johnny -> UI: Session Created", msg.session);
+                break;
+
+            case 'session.updated':
+                console.log("✅ Johnny -> UI: Persona applied successfully!", msg.session);
+                break;
+
             case 'input_audio_buffer.speech_started':
                 this.updateState('listening');
                 this.activeUserBubble = this.createMessageBubble('user');
