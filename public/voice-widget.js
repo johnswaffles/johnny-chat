@@ -17,6 +17,13 @@ class VoiceWidget {
     init() {
         this.createUI();
         this.attachEvents();
+        // Visual Proof: verify captions are drawing
+        if (this.captionArea) {
+            this.captionArea.innerText = "CAPTIONS INITIALIZING...";
+            setTimeout(() => {
+                if (this.state === 'idle') this.captionArea.innerText = "";
+            }, 3000);
+        }
     }
 
     createUI() {
@@ -31,9 +38,9 @@ class VoiceWidget {
                     <div class="mouth"></div>
                 </div>
                 <button class="mic-button" id="start-btn"></button>
-                <div class="rolling-captions" id="captions"></div>
             </div>
             <div class="status-text" id="status">PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION</div>
+            <div class="rolling-captions" id="captions"></div>
         `;
         document.body.appendChild(container);
 

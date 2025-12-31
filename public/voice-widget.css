@@ -4,7 +4,6 @@
 */
 
 :root {
-    /* Responsive size: 80% of the smallest screen dimension, capped at 550px */
     --sphere-size: clamp(280px, 80vmin, 550px);
     --fluid-color: rgba(255, 255, 255, 0.1);
     --accent-glow: rgba(0, 212, 255, 0.4);
@@ -23,8 +22,7 @@
     justify-content: center;
     pointer-events: none;
     width: 100vw;
-    height: 110vh;
-    /* Extra room for status text below */
+    height: 120vh;
     overflow: hidden;
 }
 
@@ -57,7 +55,7 @@
     margin-bottom: 2rem;
 }
 
-/* Internal Refractive Shine (3D Depth) */
+/* Internal Refractive Shine */
 .particle-field {
     position: absolute;
     top: 10%;
@@ -71,7 +69,7 @@
     transform: rotate(-20deg);
 }
 
-/* The "Face through a Sheet" talking effect */
+/* Face Layer */
 .face-layer {
     position: absolute;
     inset: 0;
@@ -133,24 +131,6 @@
     }
 }
 
-/* States & Moods */
-.voice-widget-card[data-state="idle"] {
-    --accent-glow: rgba(0, 212, 255, 0.5);
-}
-
-.voice-widget-card[data-state="listening"] {
-    --accent-glow: rgba(251, 191, 36, 0.8);
-    transform: scale(1.05);
-}
-
-.voice-widget-card[data-state="speaking"] {
-    --accent-glow: rgba(168, 85, 247, 0.8);
-    animation:
-        morphEdge 4s ease-in-out infinite,
-        float 8s ease-in-out infinite,
-        pulseEnergy 2s infinite;
-}
-
 /* Animations */
 @keyframes morphEdge {
 
@@ -204,7 +184,22 @@
     }
 }
 
-/* Button */
+/* States */
+.voice-widget-card[data-state="idle"] {
+    --accent-glow: rgba(0, 212, 255, 0.5);
+}
+
+.voice-widget-card[data-state="listening"] {
+    --accent-glow: rgba(251, 191, 36, 0.8);
+    transform: scale(1.05);
+}
+
+.voice-widget-card[data-state="speaking"] {
+    --accent-glow: rgba(168, 85, 247, 0.8);
+    animation: morphEdge 4s ease-in-out infinite, float 8s ease-in-out infinite, pulseEnergy 2s infinite;
+}
+
+/* Interaction */
 .mic-button {
     position: absolute;
     inset: 0;
@@ -216,48 +211,46 @@
     z-index: 100;
 }
 
-/* Status Text below the sphere */
+/* Status Text below sphere */
 .status-text {
     width: 90%;
     text-align: center;
-    font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+    font-size: clamp(0.8rem, 3vw, 1rem);
     font-weight: 500;
-    color: white;
-    text-shadow:
-        -1px -1px 0 #000,
-        1px -1px 0 #000,
-        -1px 1px 0 #000,
-        1px 1px 0 #000,
-        0px 5px 15px rgba(0, 0, 0, 0.5);
-    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.8);
     text-transform: uppercase;
-    z-index: 1000;
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     pointer-events: none;
 }
 
-/* Rolling Captions inside the sphere */
+/* Rolling Captions - Dedicated high-visibility bar */
 .rolling-captions {
-    position: absolute;
-    bottom: 12%;
-    width: 85%;
-    left: 50%;
-    transform: translateX(-50%);
+    width: clamp(300px, 90vw, 800px);
+    min-height: 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.8rem 1.5rem;
     text-align: center;
     font-size: clamp(0.9rem, 3.5vw, 1.4rem);
-    font-weight: 800;
+    font-weight: 700;
     color: white;
-    pointer-events: none;
-
-    /* Maximum contrast on any background */
-    text-shadow:
-        -2px -2px 0 #000,
-        2px -2px 0 #000,
-        -2px 2px 0 #000,
-        2px 2px 0 #000,
-        0px 5px 25px rgba(0, 0, 0, 0.8);
-
-    letter-spacing: 0.05em;
     text-transform: uppercase;
-    z-index: 1000;
-    line-height: 1.2;
+    letter-spacing: 0.05em;
+    pointer-events: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+    /* Strong Glow for text */
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.rolling-captions:empty {
+    display: none;
 }
