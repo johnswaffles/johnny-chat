@@ -31,14 +31,16 @@ class VoiceWidget {
                     <div class="mouth"></div>
                 </div>
                 <button class="mic-button" id="start-btn"></button>
-                <div class="captions-area" id="captions">PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION</div>
+                <div class="rolling-captions" id="captions"></div>
             </div>
+            <div class="status-text" id="status">PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION</div>
         `;
         document.body.appendChild(container);
 
         this.card = document.getElementById('voice-card');
         this.btn = document.getElementById('start-btn');
-        this.captions = document.getElementById('captions');
+        this.statusArea = document.getElementById('status');
+        this.captionArea = document.getElementById('captions');
     }
 
     updateState(state) {
@@ -47,23 +49,22 @@ class VoiceWidget {
 
         switch (state) {
             case 'idle':
-                this.captions.innerText = "PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION";
+                this.statusArea.innerText = "PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION";
+                this.captionArea.innerText = "";
                 break;
             case 'connecting':
-                this.captions.innerText = "INITIALIZING CORE...";
+                this.statusArea.innerText = "INITIALIZING CORE...";
                 break;
             case 'listening':
-                // Only show LISTENING if we don't have a transcript yet
-                if (!this.transcriptBuffer) this.captions.innerText = "LISTENING...";
+                this.statusArea.innerText = "LISTENING...";
                 this.resetInactivityTimer();
                 break;
             case 'speaking':
-                // Reset buffer on speaking to ensure clean start for AI text
-                // but keep UI showing until deltas arrive.
+                this.statusArea.innerText = "JOHNNY SPEAKING...";
                 this.resetInactivityTimer();
                 break;
             case 'error':
-                this.captions.innerText = "SYSTEM ERROR // CHECK CONSOLE";
+                this.statusArea.innerText = "SYSTEM ERROR // CHECK CONSOLE";
                 break;
         }
     }
@@ -216,18 +217,17 @@ class VoiceWidget {
     renderRollingCaptions(text) {
         const words = text.split(' ');
         if (words.length > 10) {
-            this.captions.innerText = "... " + words.slice(-10).join(' ').toUpperCase();
+            this.captionArea.innerText = "... " + words.slice(-10).join(' ').toUpperCase();
         } else {
-            this.captions.innerText = text.toUpperCase();
+            this.captionArea.innerText = text.toUpperCase();
         }
     }
 
     stopSession() {
         this.clearTimers();
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
-        this.pc.close();
+        if (this.pc) this.pc.close();
         this.updateState('idle');
-        this.captions.innerText = "PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION";
     }
 }
 

@@ -23,7 +23,8 @@
     justify-content: center;
     pointer-events: none;
     width: 100vw;
-    height: 100vh;
+    height: 110vh;
+    /* Extra room for status text below */
     overflow: hidden;
 }
 
@@ -53,6 +54,7 @@
     justify-content: center;
     transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
     cursor: pointer;
+    margin-bottom: 2rem;
 }
 
 /* Internal Refractive Shine (3D Depth) */
@@ -202,7 +204,7 @@
     }
 }
 
-/* Button & Captions */
+/* Button */
 .mic-button {
     position: absolute;
     inset: 0;
@@ -214,10 +216,29 @@
     z-index: 100;
 }
 
-.captions-area {
+/* Status Text below the sphere */
+.status-text {
+    width: 90%;
+    text-align: center;
+    font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+    font-weight: 500;
+    color: white;
+    text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0px 5px 15px rgba(0, 0, 0, 0.5);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Rolling Captions inside the sphere */
+.rolling-captions {
     position: absolute;
     bottom: 12%;
-    /* Internal to the sphere */
     width: 85%;
     left: 50%;
     transform: translateX(-50%);
@@ -226,7 +247,6 @@
     font-weight: 800;
     color: white;
     pointer-events: none;
-    /* Let clicks pass to the mic button */
 
     /* Maximum contrast on any background */
     text-shadow:
@@ -236,7 +256,7 @@
         2px 2px 0 #000,
         0px 5px 25px rgba(0, 0, 0, 0.8);
 
-    letter-spacing: 0.1em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     z-index: 1000;
     line-height: 1.2;
