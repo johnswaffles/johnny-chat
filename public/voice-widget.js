@@ -53,11 +53,12 @@ class VoiceWidget {
                 this.captions.innerText = "INITIALIZING CORE...";
                 break;
             case 'listening':
-                this.captions.innerText = "LISTENING...";
+                // Only show LISTENING if we don't have a transcript yet
+                if (!this.transcriptBuffer) this.captions.innerText = "LISTENING...";
                 this.resetInactivityTimer();
                 break;
             case 'speaking':
-                this.captions.innerText = "JOHNNY SPEAKING...";
+                // Don't overwrite the caption text here, it will be handled by the delta events
                 this.resetInactivityTimer();
                 break;
             case 'error':
@@ -191,25 +192,31 @@ class VoiceWidget {
         switch (msg.type) {
             case 'input_audio_buffer.speech_started':
                 this.updateState('listening');
-                this.transcriptBuffer = ""; // Reset on new speech
+                this.transcriptBuffer = "";
+                break;
+            case 'conversation.item.input_audio_transcription.delta':
+                this.transcriptBuffer += msg.delta;
+                this.renderRollingCaptions(this.transcriptBuffer);
                 break;
             case 'response.audio_transcript.delta':
                 this.transcriptBuffer += msg.delta;
-                // Rolling window: keep last ~10 words
-                const words = this.transcriptBuffer.split(' ');
-                if (words.length > 10) {
-                    this.captions.innerText = "... " + words.slice(-10).join(' ').toUpperCase();
-                } else {
-                    this.captions.innerText = this.transcriptBuffer.toUpperCase();
-                }
+                this.renderRollingCaptions(this.transcriptBuffer);
                 break;
             case 'response.audio_transcript.done':
                 this.updateState('speaking');
                 break;
             case 'response.done':
                 this.updateState('listening');
-                // Don't clear buffer here so user can read the final sentence
                 break;
+        }
+    }
+
+    renderRollingCaptions(text) {
+        const words = text.split(' ');
+        if (words.length > 10) {
+            this.captions.innerText = "... " + words.slice(-10).join(' ').toUpperCase();
+        } else {
+            this.captions.innerText = text.toUpperCase();
         }
     }
 
