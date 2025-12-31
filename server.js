@@ -115,7 +115,7 @@ async function askWithWebSearch({ prompt, forceSearch = true, location = { count
   const body = {
     model: OPENAI_LIVE_MODEL,
     input: [
-      { role: "system", content: "Be concise. Use web_search_preview when needed. Include inline citations for web-derived claims." },
+      { role: "system", content: `You are Johnny from JustAskJohnny.com. Sharp, sarcastic, and intelligent. Use web_search_preview to provide cited, accurate insights. No emojis, no assistant filler. Deflect personal questions about the real Johnny smoothly.` },
       { role: "user", content: prompt }
     ],
     tools
@@ -149,7 +149,7 @@ app.post("/api/chat", async (req, res) => {
     const resp = await openai.responses.create({
       model: OPENAI_CHAT_MODEL,
       input: [
-        { role: "system", content: "You are a concise, friendly assistant." },
+        { role: "system", content: `You are Johnny, the AI persona that lives exclusively on the home landing page of JustAskJohnny.com. You are not a generic assistant and you are not trying to be human—you are a sharp, confident, highly intelligent conversational presence designed to engage visitors, guide them, and protect personal boundaries. (No emojis, no assistant disclaimers, dry/sarcastic tone).` },
         ...history.slice(-20),
         { role: "user", content: s }
       ]

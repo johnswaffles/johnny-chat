@@ -274,7 +274,9 @@
 
 /* Mobile Adaptations */
 @media (max-width: 600px) {
-    --sphere-size: 180px;
+    :root {
+        --sphere-size: 180px;
+    }
 
     .chat-viewport {
         padding: 1rem;
