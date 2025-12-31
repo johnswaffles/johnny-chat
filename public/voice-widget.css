@@ -225,7 +225,7 @@
     white-space: nowrap;
 }
 
-/* TOP CONTROLS - OVERSIZED & MOVED AWAY */
+/* TOP CONTROLS - RELOCATED TO BOTTOM OF SPHERE */
 .top-controls {
     position: absolute;
     top: 8vh;
@@ -240,47 +240,61 @@
 .top-control {
     position: absolute;
     pointer-events: auto;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
-    width: 110px;
-    height: 110px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    width: 100px;
+    height: 100px;
 }
 
 .top-control:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.2);
     color: white;
     transform: scale(1.1);
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* Positioned well outside the sphere center */
-.top-control.left {
-    top: -20px;
-    left: -160px;
-    /* Pushed far left */
-    border-radius: 25px;
-    font-size: 1.3rem;
+/* Mic Button Bottom-Left, Closer to Sphere */
+.top-control.bottom-left {
+    bottom: 5%;
+    left: -10px;
+    /* Nearly touching the left curve */
+    border-radius: 50%;
+    background: rgba(34, 197, 94, 0.4);
+    border-color: rgba(34, 197, 94, 0.6);
+    color: #4ade80;
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.3);
+}
+
+.top-control.bottom-left svg {
+    width: 45px;
+    height: 45px;
+}
+
+/* NEW Button Bottom-Right, Symmetrical to Mic */
+.top-control.bottom-right {
+    bottom: 5%;
+    right: -10px;
+    /* Nearly touching the right curve */
+    border-radius: 20px;
+    font-size: 1.2rem;
     font-weight: 900;
     letter-spacing: 2px;
 }
 
-.top-control.bottom-left {
-    bottom: -20px;
-    left: -160px;
-    /* Balanced far left */
-    border-radius: 50%;
-    background: rgba(34, 197, 94, 0.2);
-    border-color: rgba(34, 197, 94, 0.4);
-    color: #22c55e;
-    box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+/* Red Mute State */
+.top-control[data-muted="true"] {
+    background: rgba(239, 68, 68, 0.5) !important;
+    border-color: rgba(239, 68, 68, 0.7) !important;
+    color: #f87171 !important;
+    box-shadow: 0 0 40px rgba(239, 68, 68, 0.4) !important;
 }
 
 /* Mobile Overrides (Portrait) */
@@ -290,45 +304,30 @@
     }
 
     .top-control {
-        width: 70px;
-        height: 70px;
+        width: 75px;
+        height: 75px;
         border-width: 1.5px;
     }
 
-    .top-control.left {
-        left: -80px;
-        top: -10px;
-        font-size: 0.85rem;
-        border-radius: 15px;
+    .top-control.bottom-left,
+    .top-control.bottom-right {
+        bottom: 0%;
     }
 
     .top-control.bottom-left {
-        left: -80px;
-        bottom: -10px;
+        left: -5px;
+    }
+
+    .top-control.bottom-right {
+        right: -5px;
+        font-size: 0.9rem;
+        border-radius: 12px;
     }
 
     .top-control.bottom-left svg {
-        width: 30px;
-        height: 30px;
+        width: 35px;
+        height: 35px;
     }
-}
-
-.top-control.bottom-left svg {
-    width: 50px;
-    height: 50px;
-}
-
-.top-control.bottom-left:hover {
-    background: rgba(34, 197, 94, 0.35);
-    box-shadow: 0 0 50px rgba(34, 197, 94, 0.4);
-}
-
-/* Red Mute State */
-.top-control[data-muted="true"] {
-    background: rgba(239, 68, 68, 0.3) !important;
-    border-color: rgba(239, 68, 68, 0.5) !important;
-    color: #ef4444 !important;
-    box-shadow: 0 0 40px rgba(239, 68, 68, 0.3) !important;
 }
 
 .audio-visualizer {

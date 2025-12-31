@@ -50,13 +50,13 @@ class VoiceWidget {
             </div>
 
             <div class="top-controls">
-                <button class="top-control left" id="new-btn">NEW</button>
                 <button class="top-control bottom-left" id="mute-btn" title="Mute/Unmute">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                         <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                     </svg>
                 </button>
+                <button class="top-control bottom-right" id="new-btn">NEW</button>
             </div>
             
             <div class="bottom-area">
@@ -155,9 +155,16 @@ class VoiceWidget {
 
     async startSession() {
         try {
-            this.updateState('connecting');
+            // 1. Get Ephemeral Token from Server
+            const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
+            const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
 
-            // 1. Get Microphone with optimization
+            const tokenRes = await fetch(`${backendUrl}/session`, { method: 'POST' });
+            if (!tokenRes.ok) throw new Error('Failed to get session token');
+            const data = await tokenRes.json();
+            const EPHEMERAL_KEY = data.client_secret.value;
+
+            // 2. Get Microphone
             this.stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
@@ -166,10 +173,10 @@ class VoiceWidget {
                 }
             });
 
-            // 2. Create Peer Connection
+            // 3. Create Peer Connection
             this.pc = new RTCPeerConnection();
 
-            // 3. Audio Handlers
+            // 4. Audio Handlers
             const audioEl = document.createElement('audio');
             audioEl.autoplay = true;
             this.pc.ontrack = (e) => {
@@ -179,28 +186,29 @@ class VoiceWidget {
             // Add local track
             this.pc.addTrack(this.stream.getTracks()[0]);
 
-            // 4. Data Channel
+            // 5. Data Channel
             this.dc = this.pc.createDataChannel('oai-events');
             this.dc.onopen = () => this.onDataChannelOpen();
             this.dc.onmessage = (e) => this.onDataChannelMessage(JSON.parse(e.data));
 
-            // 5. SDP Handshake
+            // 6. SDP Handshake (Direct to OpenAI with Token)
             const offer = await this.pc.createOffer();
             await this.pc.setLocalDescription(offer);
 
-            // Determine Backend URL
-            const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
-            const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
-
-            const res = await fetch(`${backendUrl}/session`, {
+            const baseUrl = "https://api.openai.com/v1/realtime";
+            const model = data.model || "gpt-4o-realtime-preview";
+            const realtimeRes = await fetch(`${baseUrl}?model=${model}`, {
                 method: 'POST',
                 body: offer.sdp,
-                headers: { 'Content-Type': 'application/sdp' }
+                headers: {
+                    Authorization: `Bearer ${EPHEMERAL_KEY}`,
+                    "Content-Type": "application/sdp"
+                }
             });
 
-            if (!res.ok) throw new Error('SDP Handshake failed');
+            if (!realtimeRes.ok) throw new Error('OpenAI Handshake failed');
 
-            const answerSdp = await res.text();
+            const answerSdp = await realtimeRes.text();
             await this.pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
             this.updateState('listening');

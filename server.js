@@ -76,44 +76,64 @@ app.use(express.urlencoded({ extended: true }));
  * Directly proxies the WebRTC SDP offer to OpenAI Realtime API.
  * This keeps the API Key secure on the server.
  */
+/**
+ * REALTIME SESSION TOKEN ENDPOINT
+ * Creates an ephemeral session token with the Johnny persona pre-configured.
+ * This is the most robust way to ensure the persona sticks.
+ */
 app.post("/session", async (req, res) => {
   try {
-    console.log("📥 Received /session request");
+    console.log("📥 Creating Realtime Session Token...");
 
     if (!OPENAI_API_KEY) {
       console.error("❌ OPENAI_API_KEY is missing!");
       return res.status(500).json({ error: "Server API Key not configured" });
     }
 
-    const sdp = typeof req.body === 'string' ? req.body : req.body.sdp;
-    if (!sdp) {
-      console.error("❌ Missing SDP offer in body");
-      return res.status(400).json({ error: "Missing SDP offer" });
-    }
-
-    console.log(`📡 Connecting to OpenAI Realtime with model: ${OPENAI_REALTIME_MODEL}`);
-
-    // Call OpenAI Realtime Create Call
-    // Fallback to gpt-4o-realtime-preview if the suggested 2025 string fails
-    const response = await fetch(`https://api.openai.com/v1/realtime/calls?model=${OPENAI_REALTIME_MODEL}`, {
+    const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
       method: "POST",
-      body: sdp,
       headers: {
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/sdp"
-      }
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: OPENAI_REALTIME_MODEL,
+        voice: "echo",
+        instructions: JOHNNY_PERSONA,
+        input_audio_transcription: { model: "whisper-1" },
+        turn_taking: {
+          type: "server_vad",
+          threshold: 0.8,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 1000
+        },
+        tools: [
+          {
+            type: "function",
+            name: "web_search",
+            description: "Search the internet for real-time information such as weather, news, scores, or facts. Use this whenever the user asks for current event information.",
+            parameters: {
+              type: "object",
+              properties: {
+                query: { type: "string", description: "The search query to look up on the web" }
+              },
+              required: ["query"]
+            }
+          }
+        ],
+        tool_choice: "auto"
+      }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("❌ OpenAI Realtime Error:", response.status, errText);
+      console.error("❌ OpenAI Session Error:", response.status, errText);
       return res.status(response.status).send(errText);
     }
 
-    const answerSdp = await response.text();
-    console.log("✅ Successfully received SDP answer from OpenAI");
-    res.set("Content-Type", "application/sdp");
-    res.send(answerSdp);
+    const data = await response.json();
+    console.log("✅ Ephemeral token generated for Johnny.");
+    res.json(data);
   } catch (err) {
     console.error("🔥 Session Crash:", err);
     res.status(500).json({ detail: String(err.message || err) });
