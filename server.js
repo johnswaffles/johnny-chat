@@ -113,7 +113,7 @@ app.post("/api/realtime-token", async (req, res) => {
         voice: "echo",
         instructions: JOHNNY_PERSONA,
         input_audio_transcription: { model: "whisper-1" },
-        turn_taking: {
+        turn_detection: {
           type: "server_vad",
           threshold: 0.8,
           prefix_padding_ms: 300,

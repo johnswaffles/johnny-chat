@@ -234,7 +234,12 @@ class VoiceWidget {
             console.error("🔥 OpenAI Realtime Boot Error:", err);
             this.updateState('error');
             if (this.statusLabel) {
-                this.statusLabel.innerText = "ERROR: " + (err.message || "Boot Failed");
+                // Sanitize error: Only show first 20 chars if it looks like raw code/JSON
+                let cleanMsg = err.message || "Boot Failed";
+                if (cleanMsg.includes('{') || cleanMsg.length > 40) {
+                    cleanMsg = "Connection Issue";
+                }
+                this.statusLabel.innerText = "ERROR: " + cleanMsg.toUpperCase();
             }
         }
     }
