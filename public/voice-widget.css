@@ -8,6 +8,12 @@
     --inky-black: #000000;
     --accent-glow: rgba(0, 212, 255, 0.6);
     --bg-dark: #000000;
+
+    /* Vibrant Palette for Morphing */
+    --accent-blue: #00d4ff;
+    --accent-purple: #9d50bb;
+    --accent-gold: #fbbf24;
+    --accent-ruby: #ff0055;
 }
 
 #voice-widget-container {
@@ -60,18 +66,32 @@
 /* Morphing Glow Layer */
 .glow-field {
     position: absolute;
-    inset: -20px;
+    inset: -40px;
     background: conic-gradient(from 0deg,
             transparent,
-            var(--accent-blue),
-            var(--accent-purple),
-            var(--accent-gold),
+            var(--accent-blue) 15%,
+            var(--accent-purple) 35%,
+            var(--accent-ruby) 55%,
+            var(--accent-gold) 75%,
+            var(--accent-blue) 90%,
             transparent);
-    filter: blur(40px);
-    opacity: 0.3;
-    animation: rotateGlow 10s linear infinite;
+    filter: blur(50px);
+    opacity: 0.4;
+    animation: rotateGlow 15s linear infinite, glowPulse 8s ease-in-out infinite alternate;
     z-index: -1;
     border-radius: 50%;
+}
+
+@keyframes glowPulse {
+    from {
+        transform: scale(0.9) rotate(0deg);
+        opacity: 0.3;
+    }
+
+    to {
+        transform: scale(1.1) rotate(10deg);
+        opacity: 0.5;
+    }
 }
 
 @keyframes rotateGlow {
