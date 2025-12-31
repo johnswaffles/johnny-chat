@@ -1,31 +1,33 @@
 /*
    JOHNNY: THE RESPONSIVE LIQUID ENTITY
-   3D morphing sphere with mobile-first fluid dynamics
+   EVOLUTION: OPENAI REALTIME PLAYGROUND STYLE
 */
 
 :root {
-    --sphere-size: clamp(280px, 80vmin, 550px);
+    --sphere-size: clamp(240px, 60vmin, 450px);
     --fluid-color: rgba(255, 255, 255, 0.1);
     --accent-glow: rgba(0, 212, 255, 0.4);
+    --bg-dark: #000;
+    --msg-user: #222;
+    --msg-assistant: #111;
+    --accent-blue: #00d4ff;
+    --accent-gold: #fbbf24;
 }
 
 #voice-widget-container {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    inset: 0;
     z-index: 2147483647;
     font-family: 'Inter', system-ui, sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    width: 100vw;
-    height: 120vh;
+    background: var(--bg-dark);
+    color: white;
     overflow: hidden;
 }
 
+/* Liquid Sphere Section */
 .voice-widget-card {
     position: relative;
     pointer-events: auto;
@@ -34,231 +36,256 @@
     background: var(--fluid-color);
     backdrop-filter: blur(60px);
     -webkit-backdrop-filter: blur(60px);
-
-    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-    animation:
-        morphEdge 8s ease-in-out infinite,
-        float 12s ease-in-out infinite,
-        colorFlow 20s linear infinite;
-
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow:
-        0 0 80px var(--accent-glow),
-        inset 0 0 60px rgba(255, 255, 255, 0.1),
-        inset -30px -30px 60px rgba(0, 0, 0, 0.4);
+    border-radius: 50%;
+    margin-top: 5vh;
+    flex-shrink: 0;
 
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Dynamic scaling logic */
     transform: scale(var(--sphere-scale, 1));
-    transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+    transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
     cursor: pointer;
-    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 60px var(--accent-glow);
+    animation: float 12s ease-in-out infinite;
 }
 
-/* Internal Refractive Shine */
-.particle-field {
-    position: absolute;
-    top: 10%;
-    left: 15%;
-    width: 45%;
-    height: 30%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 80%);
-    filter: blur(20px);
-    pointer-events: none;
-    border-radius: 50%;
-    transform: rotate(-20deg);
+/* Chat History Viewport */
+.chat-viewport {
+    flex-grow: 1;
+    width: 100%;
+    max-width: 800px;
+    overflow-y: auto;
+    padding: 2rem 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
-/* Face Layer */
-.face-layer {
-    position: absolute;
-    inset: 0;
+.chat-history {
     display: flex;
     flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Message Bubbles */
+.message-bubble-wrapper {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+}
+
+.message-bubble-wrapper.user {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.message-bubble-wrapper.assistant {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.message-bubble {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.4rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.message-content {
+    padding: 1rem 1.4rem;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    background: var(--msg-assistant);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.user .message-content {
+    background: var(--msg-user);
+    border-color: rgba(0, 212, 255, 0.2);
+    color: var(--accent-blue);
+}
+
+/* Footer Controls & Visualizer */
+.footer-controls {
+    width: 100%;
+    max-width: 800px;
+    background: #0a0a0a;
+    border-top: 1px solid #222;
+    padding: 1.5rem 2rem;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 1s ease;
-    filter: blur(20px);
+    justify-content: space-between;
+    pointer-events: auto;
 }
 
-.voice-widget-card[data-state="speaking"] .face-layer {
-    opacity: 0.7;
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
 }
 
-.eye {
-    position: absolute;
-    width: clamp(20px, 6vw, 40px);
-    height: clamp(12px, 4vw, 25px);
-    background: white;
+.status-dot {
+    width: 10px;
+    height: 10px;
+    background: #444;
     border-radius: 50%;
-    box-shadow: 0 0 30px white;
-    top: 38%;
+    transition: background 0.3s;
 }
 
-.eye.left {
-    left: 32%;
+[data-state="listening"] .status-dot {
+    background: var(--accent-gold);
+    box-shadow: 0 0 10px var(--accent-gold);
 }
 
-.eye.right {
-    right: 32%;
+[data-state="speaking"] .status-dot {
+    background: var(--accent-blue);
+    box-shadow: 0 0 10px var(--accent-blue);
 }
 
-.mouth {
-    position: absolute;
-    bottom: 32%;
-    width: clamp(40px, 12vw, 80px);
-    height: 8px;
-    background: white;
-    border-radius: 50%;
-    box-shadow: 0 0 30px white;
-    animation: mouthStretch 0.4s ease-in-out infinite alternate paused;
+.status-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #888;
 }
 
-.voice-widget-card[data-state="speaking"] .mouth {
-    animation-play-state: running;
+.audio-visualizer {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
 }
 
-@keyframes mouthStretch {
+.v-bar {
+    width: 3px;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    transition: height 0.2s, background 0.2s;
+}
+
+[data-state="listening"] .v-bar {
+    background: var(--accent-gold);
+    animation: vibrate 0.5s infinite alternate;
+}
+
+[data-state="speaking"] .v-bar {
+    background: var(--accent-blue);
+    animation: vibrate 0.3s infinite alternate;
+}
+
+@keyframes vibrate {
     from {
-        height: 8px;
-        transform: scaleX(0.8);
+        height: 4px;
     }
 
     to {
-        height: 50px;
-        transform: scaleX(1.1);
+        height: 18px;
     }
 }
 
-/* Animations */
-@keyframes morphEdge {
-
-    0%,
-    100% {
-        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-    }
-
-    33% {
-        border-radius: 40% 60% 70% 40% / 50% 60% 30% 60%;
-    }
-
-    66% {
-        border-radius: 70% 30% 60% 40% / 40% 70% 40% 60%;
-    }
+/* Vertical bar nth-child delays for wave effect */
+.v-bar:nth-child(2) {
+    animation-delay: 0.1s;
 }
 
-@keyframes colorFlow {
-    0% {
-        filter: hue-rotate(0deg) saturate(1.5);
-    }
-
-    100% {
-        filter: hue-rotate(360deg) saturate(1.5);
-    }
+.v-bar:nth-child(3) {
+    animation-delay: 0.2s;
 }
 
+.v-bar:nth-child(4) {
+    animation-delay: 0.3s;
+}
+
+.v-bar:nth-child(5) {
+    animation-delay: 0.4s;
+}
+
+.stop-session-btn {
+    background: #111;
+    border: 1px solid #333;
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.stop-session-btn:hover {
+    background: #ff4444;
+    border-color: #ff4444;
+}
+
+/* Core Animations Re-applied */
 @keyframes float {
 
     0%,
     100% {
-        transform: translate(0, 0);
+        transform: translate(0, 0) scale(var(--sphere-scale, 1));
     }
 
     50% {
-        transform: translate(10px, -30px);
+        transform: translate(0, -20px) scale(var(--sphere-scale, 1));
     }
 }
 
-@keyframes pulseEnergy {
-
-    0%,
-    100% {
-        box-shadow: 0 0 80px var(--accent-glow);
-        filter: brightness(1);
-    }
-
-    50% {
-        box-shadow: 0 0 160px var(--accent-glow);
-        filter: brightness(1.3);
-    }
+.voice-widget-card[data-state="idle"] .face-layer {
+    opacity: 0;
 }
 
-/* Interaction */
-.mic-button {
+.face-layer {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    z-index: 100;
+    filter: blur(20px);
+    transition: opacity 1s;
 }
 
-/* Status Text below sphere */
-.status-text {
-    width: 90%;
-    text-align: center;
-    font-size: clamp(0.7rem, 2.5vw, 0.9rem);
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.6);
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    margin-bottom: 0.8rem;
-    pointer-events: none;
+.eye {
+    position: absolute;
+    width: 30px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    top: 40%;
 }
 
-/* Rolling Captions - Dedicated high-visibility bar */
-.rolling-captions {
-    width: clamp(300px, 90vw, 850px);
-    /* Now scrollable and taller */
-    max-height: 35vh;
-    min-height: 4.5rem;
-    overflow-y: auto;
-
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 16px;
-    padding: 1.2rem 2rem;
-    text-align: center;
-    font-size: clamp(0.9rem, 3.5vw, 1.4rem);
-    font-weight: 700;
-    color: white;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    pointer-events: auto;
-    /* Allow scrolling */
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-    line-height: 1.5;
-    scroll-behavior: smooth;
-    transition: all 0.5s ease;
+.eye.left {
+    left: 30%;
 }
 
-.rolling-captions:empty {
-    display: none;
+.eye.right {
+    right: 30%;
 }
 
-/* Premium Scrollbar */
-.rolling-captions::-webkit-scrollbar {
-    width: 6px;
+.mouth {
+    position: absolute;
+    bottom: 30%;
+    width: 60px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
 }
 
-.rolling-captions::-webkit-scrollbar-track {
-    background: transparent;
-}
+/* Mobile Adaptations */
+@media (max-width: 600px) {
+    --sphere-size: 180px;
 
-.rolling-captions::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-}
+    .chat-viewport {
+        padding: 1rem;
+    }
 
-.rolling-captions::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.4);
+    .message-content {
+        font-size: 1rem;
+        padding: 0.8rem 1.1rem;
+    }
+
+    .footer-controls {
+        padding: 1rem;
+    }
 }

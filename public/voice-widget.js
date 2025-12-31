@@ -9,6 +9,8 @@ class VoiceWidget {
         this.stream = null;
         this.state = 'idle'; // idle, connecting, listening, speaking
         this.transcriptBuffer = "";
+        this.messages = []; // { role: 'user'|'assistant', text: '', id: '...' }
+        this.activeMessageId = null;
         this.inactivityTimer = null;
         this.shutdownTimer = null;
         this.init();
@@ -39,15 +41,32 @@ class VoiceWidget {
                 </div>
                 <button class="mic-button" id="start-btn"></button>
             </div>
-            <div class="status-text" id="status">PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION</div>
-            <div class="rolling-captions" id="captions"></div>
+            
+            <div class="chat-viewport" id="chat-viewport">
+                <div class="chat-history" id="chat-history"></div>
+            </div>
+
+            <div class="footer-controls" id="footer-controls">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-label" id="status-label">READY</span>
+                </div>
+                <div class="audio-visualizer" id="visualizer">
+                    <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
+                    <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
+                </div>
+                <button class="stop-session-btn" id="stop-session-btn">END SESSION</button>
+            </div>
         `;
         document.body.appendChild(container);
 
         this.card = document.getElementById('voice-card');
         this.btn = document.getElementById('start-btn');
-        this.statusArea = document.getElementById('status');
-        this.captionArea = document.getElementById('captions');
+        this.history = document.getElementById('chat-history');
+        this.historyViewport = document.getElementById('chat-viewport');
+        this.statusLabel = document.getElementById('status-label');
+        this.stopBtn = document.getElementById('stop-session-btn');
+        this.visualizer = document.getElementById('visualizer');
     }
 
     updateState(state) {
@@ -56,22 +75,23 @@ class VoiceWidget {
 
         switch (state) {
             case 'idle':
-                this.statusArea.innerText = "PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION";
-                this.captionArea.innerText = "";
+                this.statusLabel.innerText = "READY";
+                this.history.innerHTML = "";
+                this.messages = [];
                 break;
             case 'connecting':
-                this.statusArea.innerText = "INITIALIZING CORE...";
+                this.statusLabel.innerText = "BOOTING...";
                 break;
             case 'listening':
-                this.statusArea.innerText = "LISTENING...";
+                this.statusLabel.innerText = "LISTENING";
                 this.resetInactivityTimer();
                 break;
             case 'speaking':
-                this.statusArea.innerText = "JOHNNY SPEAKING...";
+                this.statusLabel.innerText = "JOHNNY SPEAKING";
                 this.resetInactivityTimer();
                 break;
             case 'error':
-                this.statusArea.innerText = "SYSTEM ERROR // CHECK CONSOLE";
+                this.statusLabel.innerText = "ERROR";
                 break;
         }
     }
@@ -108,12 +128,11 @@ class VoiceWidget {
     attachEvents() {
         if (!this.btn) return;
         this.btn.addEventListener('click', () => {
-            if (this.state === 'idle') {
-                this.startSession();
-            } else {
-                this.stopSession();
-            }
+            if (this.state === 'idle') this.startSession();
         });
+        if (this.stopBtn) {
+            this.stopBtn.addEventListener('click', () => this.stopSession());
+        }
     }
 
     async startSession() {
