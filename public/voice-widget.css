@@ -216,23 +216,28 @@
 
 .captions-area {
     position: absolute;
-    bottom: 6vh;
-    width: 90%;
+    bottom: 12%;
+    /* Internal to the sphere */
+    width: 85%;
+    left: 50%;
+    transform: translateX(-50%);
     text-align: center;
-    font-size: clamp(1.1rem, 4vw, 1.8rem);
-    font-weight: 500;
-    /* Increased weight for better outline contrast */
+    font-size: clamp(0.9rem, 3.5vw, 1.4rem);
+    font-weight: 800;
     color: white;
+    pointer-events: none;
+    /* Let clicks pass to the mic button */
 
-    /* Heavy Text Shadow + Outline for max contrast on white backgrounds */
+    /* Maximum contrast on any background */
     text-shadow:
         -2px -2px 0 #000,
         2px -2px 0 #000,
         -2px 2px 0 #000,
         2px 2px 0 #000,
-        0px 5px 20px rgba(0, 0, 0, 1);
+        0px 5px 25px rgba(0, 0, 0, 0.8);
 
-    letter-spacing: 0.15em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     z-index: 1000;
+    line-height: 1.2;
 }
