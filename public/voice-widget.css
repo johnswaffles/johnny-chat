@@ -11,9 +11,9 @@
 
     /* Vibrant Palette for Morphing */
     --accent-blue: #00d4ff;
-    --accent-purple: #9d50bb;
-    --accent-gold: #fbbf24;
-    --accent-ruby: #ff0055;
+    --accent-purple: #bb2dff;
+    --accent-gold: #ffc400;
+    --accent-ruby: #ff004c;
 }
 
 #voice-widget-container {
@@ -75,9 +75,9 @@
             var(--accent-gold) 75%,
             var(--accent-blue) 90%,
             transparent);
-    filter: blur(50px);
-    opacity: 0.4;
-    animation: rotateGlow 15s linear infinite, glowPulse 8s ease-in-out infinite alternate;
+    filter: blur(60px);
+    opacity: 0.6;
+    animation: rotateGlow 12s linear infinite, glowPulse 6s ease-in-out infinite alternate;
     z-index: -1;
     border-radius: 50%;
 }
@@ -251,8 +251,65 @@
     font-size: 0.6rem;
     font-weight: 800;
     letter-spacing: 3px;
-    color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.5);
     white-space: nowrap;
+}
+
+/* Top Controls */
+.top-controls {
+    position: absolute;
+    top: -15px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 5%;
+    z-index: 101;
+}
+
+.top-control {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.4);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.55rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    backdrop-filter: blur(5px);
+}
+
+.top-control:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.top-control.right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+}
+
+.top-control.right svg {
+    width: 16px;
+    height: 16px;
+}
+
+.top-control[data-muted="true"] {
+    background: rgba(255, 0, 0, 0.15);
+    border-color: rgba(255, 0, 0, 0.3);
+    color: #ff4444;
+}
+
+.top-control[data-muted="true"]:hover {
+    background: rgba(255, 0, 0, 0.25);
 }
 
 .audio-visualizer {

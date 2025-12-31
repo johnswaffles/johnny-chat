@@ -12,8 +12,7 @@ class VoiceWidget {
         this.activeAssistantBubble = null;
         this.activeUserBubble = null;
         this.messages = [];
-        this.inactivityTimer = null;
-        this.shutdownTimer = null;
+        this.isMuted = false;
         this.init();
     }
 
@@ -48,6 +47,16 @@ class VoiceWidget {
                 </div>
 
                 <button class="mic-button" id="start-btn"></button>
+
+                <div class="top-controls">
+                    <button class="top-control left" id="new-btn">NEW</button>
+                    <button class="top-control right" id="mute-btn" title="Mute/Unmute">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
             
             <div class="bottom-area">
@@ -64,6 +73,8 @@ class VoiceWidget {
         this.historyViewport = document.getElementById('chat-viewport');
         this.statusLabel = document.getElementById('status-label');
         this.visualizer = document.getElementById('visualizer');
+        this.newBtn = document.getElementById('new-btn');
+        this.muteBtn = document.getElementById('mute-btn');
 
         // Fix for missing reference
         this.captionArea = this.history;
@@ -83,45 +94,14 @@ class VoiceWidget {
                 break;
             case 'listening':
                 this.statusLabel.innerText = "LISTENING";
-                this.resetInactivityTimer();
                 break;
             case 'speaking':
                 this.statusLabel.innerText = "JOHNNY SPEAKING";
-                this.resetInactivityTimer();
                 break;
             case 'error':
                 this.statusLabel.innerText = "ERROR";
                 break;
         }
-    }
-
-    resetInactivityTimer() {
-        this.clearTimers();
-        if (this.state === 'idle') return;
-
-        // 30 Seconds Inactivity - Prompt user
-        this.inactivityTimer = setTimeout(() => {
-            if (this.dc && this.dc.readyState === 'open') {
-                console.log("⏱️ 30s Silence: Prompting user via OpenAI...");
-                this.dc.send(JSON.stringify({
-                    type: "response.create",
-                    response: {
-                        instructions: "The user has been silent for 30 seconds. In your smart and confident Johnny persona, ask them if they're still there. Mention that the session on justaskjohnny.com will shut down soon if there's no reply."
-                    }
-                }));
-
-                // Start second 15s timer to actually kill the session
-                this.shutdownTimer = setTimeout(() => {
-                    console.log("🛑 Still silent: Stopping session.");
-                    this.stopSession();
-                }, 15000);
-            }
-        }, 30000);
-    }
-
-    clearTimers() {
-        if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
-        if (this.shutdownTimer) clearTimeout(this.shutdownTimer);
     }
 
     attachEvents() {
@@ -134,8 +114,42 @@ class VoiceWidget {
                 this.stopSession();
             }
         });
-        if (this.stopBtn) {
-            this.stopBtn.addEventListener('click', () => this.stopSession());
+
+        if (this.newBtn) {
+            this.newBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.resetChat();
+            });
+        }
+
+        if (this.muteBtn) {
+            this.muteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleMute();
+            });
+        }
+    }
+
+    resetChat() {
+        console.log("🧹 Resetting chat history...");
+        if (this.history) this.history.innerHTML = "";
+        this.messages = [];
+        this.activeAssistantBubble = null;
+        this.activeUserBubble = null;
+    }
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        console.log("🎤 Mic Muted:", this.isMuted);
+
+        if (this.stream) {
+            this.stream.getAudioTracks().forEach(track => {
+                track.enabled = !this.isMuted;
+            });
+        }
+
+        if (this.muteBtn) {
+            this.muteBtn.dataset.muted = this.isMuted;
         }
     }
 
@@ -200,7 +214,6 @@ class VoiceWidget {
 
     onDataChannelOpen() {
         console.log('OpenAI Realtime Data Channel Open');
-        this.resetInactivityTimer();
         // Initial Session Configuration
         const event = {
             type: "session.update",
@@ -438,7 +451,6 @@ Default Mindset: “You’re here because you’re curious. I’m here because c
 
 
     stopSession() {
-        this.clearTimers();
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
         if (this.pc) this.pc.close();
         this.updateState('idle');
