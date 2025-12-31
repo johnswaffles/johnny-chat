@@ -87,15 +87,20 @@ app.use(express.urlencoded({ extended: true }));
  * REALTIME SESSION TOKEN ENDPOINT
  * Creates an ephemeral session token with the Johnny persona pre-configured.
  * This is the most robust way to ensure the persona sticks.
+ * Renamed to /api/realtime-token to bypass browser caching of old /session.
  */
-app.post("/session", async (req, res) => {
+app.post("/api/realtime-token", async (req, res) => {
   try {
-    console.log("📥 Creating Realtime Session Token...");
+    console.log("📥 [Realtime] Creating Ephemeral Session Token...");
 
     if (!OPENAI_API_KEY) {
-      console.error("❌ OPENAI_API_KEY is missing!");
+      console.error("❌ [Realtime] OPENAI_API_KEY is missing!");
       return res.status(500).json({ error: "Server API Key not configured" });
     }
+
+    // Use a specific model version if the preview string is failing
+    const modelToUse = OPENAI_REALTIME_MODEL || "gpt-4o-realtime-preview-2024-12-17";
+    console.log(`📡 [Realtime] Requesting session for model: ${modelToUse}`);
 
     const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
       method: "POST",
@@ -104,7 +109,7 @@ app.post("/session", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: OPENAI_REALTIME_MODEL,
+        model: modelToUse,
         voice: "echo",
         instructions: JOHNNY_PERSONA,
         input_audio_transcription: { model: "whisper-1" },
@@ -134,15 +139,20 @@ app.post("/session", async (req, res) => {
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("❌ OpenAI Session Error:", response.status, errText);
-      return res.status(response.status).send(errText);
+      console.error("❌ [Realtime] OpenAI Session Error:", response.status, errText);
+      try {
+        const errJson = JSON.parse(errText);
+        return res.status(response.status).json({ error: "OpenAI refused session", details: errJson });
+      } catch {
+        return res.status(response.status).send(errText);
+      }
     }
 
     const data = await response.json();
-    console.log("✅ Ephemeral token generated for Johnny.");
+    console.log("✅ [Realtime] Ephemeral token generated for Johnny.");
     res.json(data);
   } catch (err) {
-    console.error("🔥 Session Crash:", err);
+    console.error("🔥 [Realtime] Session Crash:", err);
     res.status(500).json({ detail: String(err.message || err) });
   }
 });

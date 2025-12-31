@@ -160,7 +160,8 @@ class VoiceWidget {
             const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
             const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
 
-            const tokenRes = await fetch(`${backendUrl}/session`, { method: 'POST' });
+            // Use /api/realtime-token and add a cache-buster
+            const tokenRes = await fetch(`${backendUrl}/api/realtime-token?t=${Date.now()}`, { method: 'POST' });
             if (!tokenRes.ok) {
                 const errText = await tokenRes.text();
                 throw new Error(`Token fetch failed: ${tokenRes.status} ${errText}`);
