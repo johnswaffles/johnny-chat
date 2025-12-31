@@ -76,8 +76,7 @@ class VoiceWidget {
         switch (state) {
             case 'idle':
                 this.statusLabel.innerText = "READY";
-                this.history.innerHTML = "";
-                this.messages = [];
+                // Persistence: Don't clear history or messages here
                 break;
             case 'connecting':
                 this.statusLabel.innerText = "BOOTING...";
@@ -327,7 +326,12 @@ Default Mindset: “You’re here because you’re curious. I’m here because c
 
     scrollToBottom() {
         if (this.historyViewport) {
-            this.historyViewport.scrollTop = this.historyViewport.scrollHeight;
+            const threshold = 100; // px from bottom to trigger auto-scroll
+            const isAtBottom = this.historyViewport.scrollHeight - this.historyViewport.scrollTop - this.historyViewport.clientHeight <= threshold;
+
+            if (isAtBottom) {
+                this.historyViewport.scrollTop = this.historyViewport.scrollHeight;
+            }
         }
     }
 
