@@ -198,25 +198,44 @@ class VoiceWidget {
     }
 
     onDataChannelMessage(msg) {
+        // Global Logger: let's see EVERYTHING Johnny sends
+        console.log("📥 Johnny -> UI:", msg.type, msg);
+
         switch (msg.type) {
             case 'input_audio_buffer.speech_started':
-                console.log("🎤 Speech started (VAD detected)");
                 this.updateState('listening');
                 this.transcriptBuffer = "";
+                this.captionArea.innerText = ""; // Clear on new speech
                 break;
+
+            // User Speech (Input)
             case 'conversation.item.input_audio_transcription.delta':
-                this.transcriptBuffer += msg.delta;
-                console.log("👤 User Transcript Update:", msg.delta);
+            case 'conversation.item.input_audio_transcription.completed':
+                if (msg.delta) this.transcriptBuffer += msg.delta;
+                if (msg.transcript) this.transcriptBuffer = msg.transcript;
                 this.renderRollingCaptions(this.transcriptBuffer);
                 break;
+
+            // AI Speech (Output) - Handle both naming conventions
             case 'response.audio_transcript.delta':
-                this.transcriptBuffer += msg.delta;
-                console.log("🤖 AI Transcript Update:", msg.delta);
-                this.renderRollingCaptions(this.transcriptBuffer);
+            case 'response.output_audio_transcript.delta':
+                if (msg.delta) {
+                    this.transcriptBuffer += msg.delta;
+                    this.renderRollingCaptions(this.transcriptBuffer);
+                }
                 break;
+
+            case 'response.audio_transcript.done':
+            case 'response.output_audio_transcript.done':
+                this.updateState('speaking');
+                break;
+
             case 'response.done':
-                console.log("💬 Response complete");
                 this.updateState('listening');
+                break;
+
+            case 'error':
+                console.error("❌ OpenAI Data Channel Error:", msg.error);
                 break;
         }
     }
