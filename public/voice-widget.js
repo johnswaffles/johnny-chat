@@ -19,31 +19,8 @@ class VoiceWidget {
 
     init() {
         console.log("🚀 Johnny Widget: Initializing...");
-
-        // VISUAL DEBUGGER BAR (Confirming script execution)
-        const debugBar = document.createElement('div');
-        debugBar.id = 'johnny-debug-bar';
-        debugBar.style.cssText = "position:fixed; top:0; left:0; width:100%; height:25px; background:red; color:white; font-size:12px; z-index:2147483647; text-align:center; padding-top:5px; font-weight:bold; pointer-events:none;";
-        debugBar.innerText = "JOHNNY DEBUG: SCRIPT IS RUNNING";
-        document.body.appendChild(debugBar);
-
         this.createUI();
         this.attachEvents();
-
-        // Immediate Visual Check in History area
-        if (this.history) {
-            const debugMsg = document.createElement('div');
-            debugMsg.style.cssText = "background: #00d4ff !important; color: black !important; font-weight: bold; margin: 2rem auto; text-align: center; width: 85%; padding: 1.5rem; border-radius: 10px; font-size: 1.2rem; box-shadow: 0 0 20px #00d4ff;";
-            debugMsg.innerText = "CAPTIONS TESTING: IF YOU SEE THIS, IT WORKS!";
-            this.history.appendChild(debugMsg);
-
-            setTimeout(() => {
-                debugBar.style.background = "green";
-                debugBar.innerText = "JOHNNY DEBUG: UI DETECTED & MOUNTED";
-            }, 2000);
-        } else {
-            debugBar.innerText = "JOHNNY DEBUG: UI FAILED (HISTORY NOT FOUND)";
-        }
     }
 
     createUI() {
