@@ -1,5 +1,6 @@
 /**
  * VOICE WIDGET LOGIC (OpenAI Realtime WebRTC)
+ * Includes Integrated Legal Lockdown v9
  */
 
 class VoiceWidget {
@@ -14,20 +15,135 @@ class VoiceWidget {
         this.itemBubbles = new Map(); // Link item IDs to message bubbles
         this.messages = [];
         this.isMuted = false;
+
+        // Legal & Editor Settings
+        this.CONSENT_KEY = 'jj_legal_consent_v9_atomic';
+        this.MODAL_ID = 'jj-legal-modal-atomic';
+
+        if (this.isEditor()) {
+            console.log("🛠️ Johnny: Editor mode detected. Disabling widget to avoid blocking tools.");
+            return;
+        }
+
         this.init();
     }
 
+    isEditor() {
+        const url = window.location.href;
+        return url.includes('/config') || url.includes('squarespace.com/config') || url.includes('sqsp.net');
+    }
+
     init() {
-        console.log("🚀 Johnny Widget: Initializing...");
-        this.createUI();
-        this.attachEvents();
+        console.log("🚀 Johnny Widget: Overlord Initializing...");
+
+        // 1. Check Legal First
+        if (!this.hasConsent()) {
+            this.showLegalModal();
+        } else {
+            this.createUI();
+            this.attachEvents();
+        }
+    }
+
+    hasConsent() {
+        try {
+            const raw = localStorage.getItem(this.CONSENT_KEY);
+            if (!raw) return false;
+            const data = JSON.parse(raw);
+            const daysSince = (new Date() - new Date(data.ts)) / (1000 * 60 * 60 * 24);
+            return daysSince < 1; // 24-hour expiry
+        } catch (e) { return false; }
+    }
+
+    showLegalModal() {
+        console.log("⚖️ Johnny Legal: Mandatory intercept triggered.");
+
+        // Inject Overlord CSS for Modal
+        const style = document.createElement('style');
+        style.id = 'jj-legal-styles';
+        style.textContent = `
+            #${this.MODAL_ID} {
+                position: fixed !important;
+                inset: 0 !important;
+                background: rgba(0, 0, 0, 0.98) !important;
+                z-index: 2147483647 !important;
+                font-family: 'Inter', system-ui, sans-serif !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 20px !important;
+                backdrop-filter: blur(15px) !important;
+                color: #fff !important;
+            }
+            #${this.MODAL_ID} .box {
+                background: #111 !important;
+                width: 100% !important;
+                max-width: 650px !important;
+                padding: 40px !important;
+                border-radius: 24px !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                box-shadow: 0 50px 100px rgba(0,0,0,1) !important;
+            }
+            #${this.MODAL_ID} h2 { color: #fbbf24 !important; margin: 0 0 20px !important; font-size: 2rem !important; text-align: center !important; }
+            #${this.MODAL_ID} .scrollbox { max-height: 50vh !important; overflow-y: auto !important; padding-right: 15px !important; margin-bottom: 30px !important; }
+            #${this.MODAL_ID} p { margin: 0 0 1.2rem !important; line-height: 1.6 !important; font-size: 1.05rem !important; color: rgba(255,255,255,0.9) !important; }
+            #${this.MODAL_ID} .highlight { background: rgba(251, 191, 36, 0.1) !important; border-left: 4px solid #fbbf24 !important; padding: 15px !important; margin: 20px 0 !important; }
+            #${this.MODAL_ID} .btn {
+                width: 100% !important;
+                padding: 18px !important;
+                background: #fbbf24 !important;
+                color: #000 !important;
+                border: none !important;
+                border-radius: 12px !important;
+                cursor: pointer !important;
+                font-weight: 800 !important;
+                font-size: 1.2rem !important;
+                text-transform: uppercase !important;
+            }
+        `;
+        document.head.appendChild(style);
+
+        const modal = document.createElement('div');
+        modal.id = this.MODAL_ID;
+        modal.innerHTML = `
+            <div class="box">
+                <h2>Before You Continue</h2>
+                <div class="scrollbox">
+                    <p>Please read and accept our terms to use JustAskJohnny, StoryForge, and related apps.</p>
+                    <p>These tools use AI and may produce errors or unexpected content. Everything here is for <strong>entertainment only</strong>, not professional advice.</p>
+                    <div class="highlight">
+                        <p><strong>StoryForge Notice:</strong> StoryForge is unpredictable. Plots, characters, and tone can shift suddenly. If anything makes you uncomfortable, stop immediately or refresh.</p>
+                    </div>
+                    <p><strong>Your Control:</strong> If the AI feels "off the rails," you must stop, reset, and restart. Do not continue if you are uncomfortable.</p>
+                    <p><strong>Mood Advisory:</strong> If you feel depressed or emotionally unstable, do not use this service. AI content can amplify negative feelings. Only use when grounded.</p>
+                    <p>You are responsible for how you use all outputs. <strong>JustAskJohnny and affiliates are not liable</strong> for any loss, injury, or damages.</p>
+                    <div class="highlight">
+                        <p><strong>Age Requirement:</strong> By continuing, you confirm you are <strong>at least 30 years old</strong>. AI content can be intense, and this threshold helps ensure responsible management.</p>
+                    </div>
+                    <p>By continuing, you accept our Terms and Privacy Policy. <strong>If you are under 30, please do not use this service.</strong></p>
+                </div>
+                <button class="btn" id="jjAcceptBtn">Accept & Continue</button>
+            </div>
+        `;
+
+        document.documentElement.appendChild(modal);
+        document.documentElement.style.overflow = 'hidden';
+
+        modal.querySelector('#jjAcceptBtn').onclick = () => {
+            localStorage.setItem(this.CONSENT_KEY, JSON.stringify({ ts: new Date().toISOString() }));
+            modal.remove();
+            document.documentElement.style.overflow = '';
+            // Now start the actual widget
+            this.createUI();
+            this.attachEvents();
+        };
     }
 
     createUI() {
+        if (document.getElementById('voice-widget-container')) return;
+
         const container = document.createElement('div');
         container.id = 'voice-widget-container';
-
-        // Ensure it's prepended or appended specifically to avoid z-index traps on some sites
         document.body.insertAdjacentElement('afterbegin', container);
 
         container.innerHTML = `
@@ -66,7 +182,6 @@ class VoiceWidget {
                 </div>
             </div>
         `;
-        // document.body.appendChild(container); // Moved to afterbegin
 
         this.card = document.getElementById('voice-card');
         this.btn = document.getElementById('start-btn');
@@ -76,231 +191,118 @@ class VoiceWidget {
         this.visualizer = document.getElementById('visualizer');
         this.newBtn = document.getElementById('new-btn');
         this.muteBtn = document.getElementById('mute-btn');
-
-        // Fix for missing reference
-        this.captionArea = this.history;
-    }
-
-    updateState(state) {
-        this.state = state;
-        if (this.card) this.card.dataset.state = state;
-
-        switch (state) {
-            case 'idle':
-                this.statusLabel.innerText = "READY";
-                // Persistence: Don't clear history or messages here
-                break;
-            case 'connecting':
-                this.statusLabel.innerText = "BOOTING...";
-                break;
-            case 'listening':
-                this.statusLabel.innerText = "LISTENING";
-                break;
-            case 'speaking':
-                this.statusLabel.innerText = "JOHNNY SPEAKING";
-                break;
-            case 'error':
-                this.statusLabel.innerText = "ERROR";
-                break;
-        }
     }
 
     attachEvents() {
         if (!this.btn) return;
-        this.btn.addEventListener('click', () => {
-            console.log("👆 Sphere clicked, current state:", this.state);
-            if (this.state === 'idle') {
-                this.startSession();
-            } else {
-                this.stopSession();
-            }
-        });
+        this.btn.onclick = () => {
+            if (this.state === 'idle') this.startSession();
+            else this.stopSession();
+        };
 
         if (this.newBtn) {
-            this.newBtn.addEventListener('click', (e) => {
+            this.newBtn.onclick = (e) => {
                 e.stopPropagation();
                 this.resetChat();
-            });
+            };
         }
 
         if (this.muteBtn) {
-            this.muteBtn.addEventListener('click', (e) => {
+            this.muteBtn.onclick = (e) => {
                 e.stopPropagation();
                 this.toggleMute();
-            });
+            };
         }
     }
 
     resetChat() {
-        console.log("🧹 Resetting chat history...");
         if (this.history) this.history.innerHTML = "";
         this.messages = [];
-        this.activeAssistantBubble = null;
-        this.activeUserBubble = null;
         this.itemBubbles.clear();
     }
 
     toggleMute() {
         this.isMuted = !this.isMuted;
-        console.log("🎤 Mic Muted:", this.isMuted);
-
         if (this.stream) {
-            this.stream.getAudioTracks().forEach(track => {
-                track.enabled = !this.isMuted;
-            });
+            this.stream.getAudioTracks().forEach(track => track.enabled = !this.isMuted);
         }
-
-        if (this.muteBtn) {
-            this.muteBtn.dataset.muted = this.isMuted;
-        }
+        if (this.muteBtn) this.muteBtn.dataset.muted = this.isMuted;
     }
 
     async startSession() {
         try {
             this.updateState('connecting');
-            console.log("📥 1. Requesting Ephemeral Token from Server...");
             const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
             const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
 
-            // Use /api/realtime-token and add a cache-buster
             const tokenRes = await fetch(`${backendUrl}/api/realtime-token?t=${Date.now()}`, { method: 'POST' });
-            if (!tokenRes.ok) {
-                const errText = await tokenRes.text();
-                throw new Error(`Token fetch failed: ${tokenRes.status} ${errText}`);
-            }
+            if (!tokenRes.ok) throw new Error("Token fetch failed");
+
             const data = await tokenRes.json();
             const EPHEMERAL_KEY = data.client_secret.value;
-            console.log("✅ 2. Token received:", EPHEMERAL_KEY.substring(0, 10) + "...");
 
-            // 2. Get Microphone
-            console.log("🎤 3. Accessing Microphone...");
             this.stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                }
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
             });
 
-            // 3. Create Peer Connection
-            console.log("📡 4. Creating RTCPeerConnection...");
             this.pc = new RTCPeerConnection();
-
-            // 4. Audio Handlers
             const audioEl = document.createElement('audio');
             audioEl.autoplay = true;
-            this.pc.ontrack = (e) => {
-                console.log("🔊 5. Remote audio track received");
-                audioEl.srcObject = e.streams[0];
-            };
-
-            // Add local track
+            this.pc.ontrack = (e) => { audioEl.srcObject = e.streams[0]; };
             this.pc.addTrack(this.stream.getTracks()[0]);
 
-            // 5. Data Channel
-            console.log("💬 6. Creating Data Channel...");
             this.dc = this.pc.createDataChannel('oai-events');
             this.dc.onopen = () => this.onDataChannelOpen();
             this.dc.onmessage = (e) => this.onDataChannelMessage(JSON.parse(e.data));
 
-            // 6. SDP Handshake (Direct to OpenAI with Token)
-            console.log("🤝 7. Starting SDP Handshake with OpenAI...");
             const offer = await this.pc.createOffer();
             await this.pc.setLocalDescription(offer);
 
-            // Important: gpt-4o-realtime-preview often requires specific suffix for WebRTC in some docs
             const model = data.model || "gpt-4o-realtime-preview";
-            const baseUrl = `https://api.openai.com/v1/realtime?model=${model}`;
-
-            const realtimeRes = await fetch(baseUrl, {
+            const realtimeRes = await fetch(`https://api.openai.com/v1/realtime?model=${model}`, {
                 method: 'POST',
                 body: offer.sdp,
-                headers: {
-                    Authorization: `Bearer ${EPHEMERAL_KEY}`,
-                    "Content-Type": "application/sdp"
-                }
+                headers: { Authorization: `Bearer ${EPHEMERAL_KEY}`, "Content-Type": "application/sdp" }
             });
 
-            if (!realtimeRes.ok) {
-                const errText = await realtimeRes.text();
-                throw new Error(`OpenAI Handshake Error: ${realtimeRes.status} ${errText}`);
-            }
-
-            console.log("✅ 8. SDP Answer received from OpenAI");
+            if (!realtimeRes.ok) throw new Error("OpenAI Handshake Error");
             const answerSdp = await realtimeRes.text();
             await this.pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
             this.updateState('listening');
-
         } catch (err) {
-            console.error("🔥 OpenAI Realtime Boot Error:", err);
+            console.error("🔥 Johnny Error:", err);
             this.updateState('error');
-            if (this.statusLabel) {
-                // Sanitize error: Only show first 20 chars if it looks like raw code/JSON
-                let cleanMsg = err.message || "Boot Failed";
-                if (cleanMsg.includes('{') || cleanMsg.length > 40) {
-                    cleanMsg = "Connection Issue";
-                }
-                this.statusLabel.innerText = "ERROR: " + cleanMsg.toUpperCase();
-            }
+            if (this.statusLabel) this.statusLabel.innerText = "CONNECTION ISSUE";
         }
     }
 
     onDataChannelOpen() {
-        console.log('✅ OpenAI Realtime Data Channel Open. Johnny is live.');
-
-        // Request an initial response to force Johnny to introduce himself
+        console.log('✅ Johnny Live.');
         this.dc.send(JSON.stringify({
             type: "response.create",
-            response: {
-                instructions: "Introduce yourself briefly as Johnny from JustAskJohnny.com. Be sharp and slightly sarcastic. Do not use any generic assistant language."
-            }
+            response: { instructions: "Introduce yourself. Be sharp and sarcastic as Johnny." }
         }));
     }
 
     onDataChannelMessage(msg) {
-        console.log("📥 Johnny -> UI:", msg.type, msg);
-
         switch (msg.type) {
-            case 'session.created':
-                console.log("🛠️ Johnny -> UI: Session Created", msg.session);
-                break;
-
-            case 'session.updated':
-                console.log("✅ Johnny -> UI: Persona applied successfully!", msg.session);
-                break;
-
             case 'conversation.item.created':
-                // PRE-CREATE bubbles for every item (User or Assistant)
-                if (!this.itemBubbles.has(msg.item.id)) {
-                    const role = msg.item.role === 'user' ? 'user' : 'assistant';
-                    // We don't create for 'function_call' items unless we want to log them
-                    if (msg.item.type === 'message') {
-                        const bubble = this.createMessageBubble(role);
-                        this.itemBubbles.set(msg.item.id, bubble);
-                    }
+                if (!this.itemBubbles.has(msg.item.id) && msg.item.type === 'message') {
+                    const bubble = this.createMessageBubble(msg.item.role === 'user' ? 'user' : 'assistant');
+                    this.itemBubbles.set(msg.item.id, bubble);
                 }
                 break;
-
-            case 'input_audio_buffer.speech_started':
-                this.updateState('listening');
-                break;
-
             case 'conversation.item.input_audio_transcription.delta':
             case 'conversation.item.input_audio_transcription.completed': {
                 const bubble = this.itemBubbles.get(msg.item_id);
                 if (bubble) {
-                    const text = msg.delta || msg.transcript || "";
-                    if (msg.delta) {
-                        bubble.innerText += text;
-                    } else if (msg.transcript) {
-                        bubble.innerText = msg.transcript;
-                    }
+                    if (msg.delta) bubble.innerText += msg.delta;
+                    else if (msg.transcript) bubble.innerText = msg.transcript;
                     this.scrollToBottom();
                 }
                 break;
             }
-
             case 'response.audio_transcript.delta':
             case 'response.output_audio_transcript.delta': {
                 this.updateState('speaking');
@@ -312,15 +314,9 @@ class VoiceWidget {
                 }
                 break;
             }
-
-            case 'response.audio_transcript.done':
-            case 'response.output_audio_transcript.done':
-                break;
-
             case 'response.done':
                 this.updateState('listening');
                 break;
-
             case 'response.function_call_arguments.done':
                 this.handleFunctionCall(msg);
                 break;
@@ -331,56 +327,28 @@ class VoiceWidget {
         if (msg.name === 'web_search') {
             const args = JSON.parse(msg.arguments || "{}");
             const query = args.query || "";
-
-            console.log(`🔍 Johnny calling web_search for: "${query}"`);
-
-            // Optional: User feedback in chat
             const searchBubble = this.createMessageBubble('assistant');
             searchBubble.innerHTML = `<i>Searching for "${query}"...</i>`;
             this.scrollToBottom();
 
             try {
-                // Call our new server endpoint
                 const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
                 const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
-
                 const res = await fetch(`${backendUrl}/api/voice-search`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query })
                 });
-
                 const data = await res.json();
-                const result = data.result || "I couldn't find any information on that right now.";
-
-                // 1. Submit the tool output
                 this.dc.send(JSON.stringify({
                     type: "conversation.item.create",
-                    item: {
-                        type: "function_call_output",
-                        call_id: msg.call_id,
-                        output: result
-                    }
+                    item: { type: "function_call_output", call_id: msg.call_id, output: data.result || "No info" }
                 }));
-
-                // 2. Request a new response from Johnny to speak the answer
                 this.dc.send(JSON.stringify({ type: "response.create" }));
-
-                // Clean up the "Searching..." bubble by adding the result or removing it
-                // For now, let's just let it be replaced by the actual spoken transcript delta
                 searchBubble.remove();
-
             } catch (err) {
-                console.error("❌ web_search execution failed:", err);
-                this.dc.send(JSON.stringify({
-                    type: "conversation.item.create",
-                    item: {
-                        type: "function_call_output",
-                        call_id: msg.call_id,
-                        output: "I'm sorry, I'm having trouble connecting to my search engine right now."
-                    }
-                }));
-                this.dc.send(JSON.stringify({ type: "response.create" }));
+                console.error("Search failed", err);
+                searchBubble.remove();
             }
         }
     }
@@ -388,14 +356,11 @@ class VoiceWidget {
     createMessageBubble(role) {
         const wrapper = document.createElement('div');
         wrapper.className = `message-bubble-wrapper ${role}`;
-
         const label = document.createElement('div');
         label.className = 'message-bubble-label';
         label.innerText = role === 'user' ? 'YOU' : 'JOHNNY';
-
         const content = document.createElement('div');
         content.className = 'message-content';
-
         wrapper.appendChild(label);
         wrapper.appendChild(content);
         this.history.appendChild(wrapper);
@@ -404,29 +369,24 @@ class VoiceWidget {
 
     scrollToBottom() {
         if (this.historyViewport) {
-            const threshold = 100; // px from bottom to trigger auto-scroll
-            const isAtBottom = this.historyViewport.scrollHeight - this.historyViewport.scrollTop - this.historyViewport.clientHeight <= threshold;
-
-            if (isAtBottom) {
-                this.historyViewport.scrollTop = this.historyViewport.scrollHeight;
-            }
+            this.historyViewport.scrollTop = this.historyViewport.scrollHeight;
         }
     }
 
     updateSphereScale(charCount) {
         const minScale = 0.5;
-        const maxChars = 800;
-        const scale = Math.max(minScale, 1 - (charCount / maxChars) * (1 - minScale));
-        if (this.card) {
-            this.card.style.setProperty('--sphere-scale', scale);
+        const scale = Math.max(minScale, 1 - (charCount / 800) * 0.5);
+        if (this.card) this.card.style.setProperty('--sphere-scale', scale);
+    }
+
+    updateState(state) {
+        this.state = state;
+        if (this.card) this.card.dataset.state = state;
+        if (this.statusLabel) {
+            const labels = { idle: 'READY', connecting: 'BOOTING...', listening: 'LISTENING', speaking: 'JOHNNY SPEAKING', error: 'ERROR' };
+            this.statusLabel.innerText = labels[state] || state.toUpperCase();
         }
     }
-
-    renderPersistentText(text) {
-        // Obsolete but kept for safety if called elsewhere temporarily
-        console.log("Legacy renderPersistentText called with:", text);
-    }
-
 
     stopSession() {
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
@@ -435,14 +395,13 @@ class VoiceWidget {
     }
 }
 
-// Auto-init for Squarespace
+// Global Init with Editor Protection
 function initJohnny() {
     if (window.johnnyInitialized) return;
     window.johnnyInitialized = true;
     new VoiceWidget();
 }
 
-// Brute force initialization
 initJohnny();
 setTimeout(initJohnny, 1000);
 setTimeout(initJohnny, 3000);
