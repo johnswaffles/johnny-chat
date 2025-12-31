@@ -205,7 +205,8 @@ class VoiceWidget {
             case 'input_audio_buffer.speech_started':
                 this.updateState('listening');
                 this.transcriptBuffer = "";
-                this.captionArea.innerText = ""; // Clear on new speech
+                // Keep the previous transcript visible until the user starts speaking again?
+                // Actually, let's clear it gracefully or wait for delta
                 break;
 
             // User Speech (Input)
@@ -213,15 +214,15 @@ class VoiceWidget {
             case 'conversation.item.input_audio_transcription.completed':
                 if (msg.delta) this.transcriptBuffer += msg.delta;
                 if (msg.transcript) this.transcriptBuffer = msg.transcript;
-                this.renderRollingCaptions(this.transcriptBuffer);
+                this.renderPersistentText(this.transcriptBuffer);
                 break;
 
-            // AI Speech (Output) - Handle both naming conventions
+            // AI Speech (Output)
             case 'response.audio_transcript.delta':
             case 'response.output_audio_transcript.delta':
                 if (msg.delta) {
                     this.transcriptBuffer += msg.delta;
-                    this.renderRollingCaptions(this.transcriptBuffer);
+                    this.renderPersistentText(this.transcriptBuffer);
                 }
                 break;
 
@@ -240,14 +241,26 @@ class VoiceWidget {
         }
     }
 
-    renderRollingCaptions(text) {
-        const words = text.split(' ');
-        if (words.length > 10) {
-            this.captionArea.innerText = "... " + words.slice(-10).join(' ').toUpperCase();
-        } else {
-            this.captionArea.innerText = text.toUpperCase();
+    renderPersistentText(text) {
+        if (!this.captionArea) return;
+
+        this.captionArea.innerText = text.toUpperCase();
+
+        // Auto-scroll to bottom
+        this.captionArea.scrollTop = this.captionArea.scrollHeight;
+
+        // Dynamic Scaling: Shrink sphere as text grows
+        // 1.0 at 0 chars, 0.4 at 1000+ chars
+        const charCount = text.length;
+        const minScale = 0.5;
+        const maxChars = 800;
+        const scale = Math.max(minScale, 1 - (charCount / maxChars) * (1 - minScale));
+
+        if (this.card) {
+            this.card.style.setProperty('--sphere-scale', scale);
         }
     }
+
 
     stopSession() {
         this.clearTimers();
