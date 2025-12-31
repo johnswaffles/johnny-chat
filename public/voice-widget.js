@@ -11,6 +11,7 @@ class VoiceWidget {
         this.transcriptBuffer = "";
         this.activeAssistantBubble = null;
         this.activeUserBubble = null;
+        this.itemBubbles = new Map(); // Link item IDs to message bubbles
         this.messages = [];
         this.isMuted = false;
         this.init();
@@ -136,6 +137,7 @@ class VoiceWidget {
         this.messages = [];
         this.activeAssistantBubble = null;
         this.activeUserBubble = null;
+        this.itemBubbles.clear();
     }
 
     toggleMute() {
@@ -268,42 +270,51 @@ class VoiceWidget {
                 console.log("✅ Johnny -> UI: Persona applied successfully!", msg.session);
                 break;
 
+            case 'conversation.item.created':
+                // PRE-CREATE bubbles for every item (User or Assistant)
+                if (!this.itemBubbles.has(msg.item.id)) {
+                    const role = msg.item.role === 'user' ? 'user' : 'assistant';
+                    // We don't create for 'function_call' items unless we want to log them
+                    if (msg.item.type === 'message') {
+                        const bubble = this.createMessageBubble(role);
+                        this.itemBubbles.set(msg.item.id, bubble);
+                    }
+                }
+                break;
+
             case 'input_audio_buffer.speech_started':
                 this.updateState('listening');
-                this.activeUserBubble = this.createMessageBubble('user');
-                this.activeAssistantBubble = null; // Close assistant bubble if any
                 break;
 
             case 'conversation.item.input_audio_transcription.delta':
-            case 'conversation.item.input_audio_transcription.completed':
-                if (this.activeUserBubble) {
+            case 'conversation.item.input_audio_transcription.completed': {
+                const bubble = this.itemBubbles.get(msg.item_id);
+                if (bubble) {
                     const text = msg.delta || msg.transcript || "";
                     if (msg.delta) {
-                        this.activeUserBubble.innerText += text;
+                        bubble.innerText += text;
                     } else if (msg.transcript) {
-                        this.activeUserBubble.innerText = msg.transcript;
+                        bubble.innerText = msg.transcript;
                     }
                     this.scrollToBottom();
                 }
                 break;
+            }
 
             case 'response.audio_transcript.delta':
-            case 'response.output_audio_transcript.delta':
+            case 'response.output_audio_transcript.delta': {
                 this.updateState('speaking');
-                if (!this.activeAssistantBubble) {
-                    this.activeAssistantBubble = this.createMessageBubble('assistant');
-                    this.activeUserBubble = null;
-                }
-                if (msg.delta) {
-                    this.activeAssistantBubble.innerText += msg.delta;
+                const bubble = this.itemBubbles.get(msg.item_id);
+                if (bubble && msg.delta) {
+                    bubble.innerText += msg.delta;
                     this.scrollToBottom();
-                    this.updateSphereScale(this.activeAssistantBubble.innerText.length);
+                    this.updateSphereScale(bubble.innerText.length);
                 }
                 break;
+            }
 
             case 'response.audio_transcript.done':
             case 'response.output_audio_transcript.done':
-                this.activeAssistantBubble = null;
                 break;
 
             case 'response.done':
