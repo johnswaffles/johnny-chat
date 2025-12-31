@@ -133,6 +133,31 @@ async function askWithWebSearch({ prompt, forceSearch = true, location = { count
   return { text, cites };
 }
 
+/**
+ * VOICE SEARCH ENDPOINT
+ * Specialized for the Realtime API to get quick, spoken-style facts.
+ */
+app.post("/api/voice-search", async (req, res) => {
+  try {
+    const { query = "" } = req.body || {};
+    if (!query) return res.status(400).json({ error: "Missing query" });
+
+    console.log(`🌐 Realtime Tool: Searching the web for "${query}"...`);
+
+    // We use contextSize="small" for voice to keep responses from becoming too long
+    const { text } = await askWithWebSearch({
+      prompt: `Provide a quick, concise answer suitable for a voice assistant. Current query: ${query}`,
+      forceSearch: true,
+      contextSize: "small"
+    });
+
+    res.json({ result: text });
+  } catch (err) {
+    console.error("❌ Voice Search Error:", err);
+    res.status(500).json({ error: "Search failed" });
+  }
+});
+
 app.post("/api/chat", async (req, res) => {
   try {
     const { input = "", history = [] } = req.body || {};

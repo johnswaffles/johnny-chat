@@ -253,7 +253,22 @@ Default Mindset: “You’re here because you’re curious. I’m here because c
                     threshold: 0.8, // Increased significantly to ignore echo/self-voice
                     prefix_padding_ms: 300,
                     silence_duration_ms: 1000 // Give the user 1 full second to pause
-                }
+                },
+                tools: [
+                    {
+                        type: "function",
+                        name: "web_search",
+                        description: "Search the internet for real-time information such as weather, news, scores, or facts. Use this whenever the user asks for current event information.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                query: { type: "string", description: "The search query to look up on the web" }
+                            },
+                            required: ["query"]
+                        }
+                    }
+                ],
+                tool_choice: "auto"
             }
         };
         this.dc.send(JSON.stringify(event));
@@ -304,6 +319,68 @@ Default Mindset: “You’re here because you’re curious. I’m here because c
             case 'response.done':
                 this.updateState('listening');
                 break;
+
+            case 'response.function_call_arguments.done':
+                this.handleFunctionCall(msg);
+                break;
+        }
+    }
+
+    async handleFunctionCall(msg) {
+        if (msg.name === 'web_search') {
+            const args = JSON.parse(msg.arguments || "{}");
+            const query = args.query || "";
+
+            console.log(`🔍 Johnny calling web_search for: "${query}"`);
+
+            // Optional: User feedback in chat
+            const searchBubble = this.createMessageBubble('assistant');
+            searchBubble.innerHTML = `<i>Searching for "${query}"...</i>`;
+            this.scrollToBottom();
+
+            try {
+                // Call our new server endpoint
+                const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
+                const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+
+                const res = await fetch(`${backendUrl}/api/voice-search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await res.json();
+                const result = data.result || "I couldn't find any information on that right now.";
+
+                // 1. Submit the tool output
+                this.dc.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: {
+                        type: "function_call_output",
+                        call_id: msg.call_id,
+                        output: result
+                    }
+                }));
+
+                // 2. Request a new response from Johnny to speak the answer
+                this.dc.send(JSON.stringify({ type: "response.create" }));
+
+                // Clean up the "Searching..." bubble by adding the result or removing it
+                // For now, let's just let it be replaced by the actual spoken transcript delta
+                searchBubble.remove();
+
+            } catch (err) {
+                console.error("❌ web_search execution failed:", err);
+                this.dc.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: {
+                        type: "function_call_output",
+                        call_id: msg.call_id,
+                        output: "I'm sorry, I'm having trouble connecting to my search engine right now."
+                    }
+                }));
+                this.dc.send(JSON.stringify({ type: "response.create" }));
+            }
         }
     }
 
