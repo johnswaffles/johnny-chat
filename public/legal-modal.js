@@ -1,128 +1,115 @@
 (function () {
-  // Bump version to v7 to force the modal to show again for everyone
-  const CONSENT_KEY = 'jj_legal_consent_v7_absolute';
+  // Use a completely unique key and ID to avoid any caching or conflict issues
+  const CONSENT_KEY = 'jj_legal_consent_v8_final';
   const CONSENT_MAX_AGE_DAYS = 1;
+  const MODAL_ID = 'jj-legal-modal-absolute';
 
-  console.log("⚖️ Johnny Legal: Initializing mandatory disclaimer...");
+  console.log("⚖️ Johnny Legal: Initializing Liability Shield v8...");
 
-  // Inject High-Liability Dark Theme CSS
+  // Inject High-Dominance CSS
   const style = document.createElement('style');
   style.textContent = `
-    #legalModal {
-      display: none;
+    #${MODAL_ID} {
+      display: none !important;
       position: fixed !important;
-      inset: 0 !important;
-      background: rgba(0, 0, 0, 0.95) !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background: rgba(0, 0, 0, 0.98) !important;
       z-index: 2147483647 !important;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      padding: 20px;
-      box-sizing: border-box;
-      overflow-y: auto;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(10px);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+      padding: 20px !important;
+      box-sizing: border-box !important;
+      overflow-y: auto !important;
+      align-items: center !important;
+      justify-content: center !important;
+      backdrop-filter: blur(15px) !important;
+      color: #fff !important;
     }
 
-    #legalModal.show {
+    #${MODAL_ID}.jj-active {
       display: flex !important;
     }
 
-    #legalModal .content-box {
-      background: #111;
-      color: #eee;
-      width: 100%;
-      max-width: 650px;
-      padding: 40px;
-      border-radius: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 30px 100px rgba(0, 0, 0, 1), 0 0 40px rgba(251, 191, 36, 0.1);
-      position: relative;
+    #${MODAL_ID} .content-box {
+      background: #111 !important;
+      color: #eee !important;
+      width: 100% !important;
+      max-width: 650px !important;
+      padding: 40px !important;
+      border-radius: 24px !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 30px 100px rgba(0, 0, 0, 1) !important;
+      position: relative !important;
+      text-align: left !important;
     }
 
-    #legalModal h2 {
-      margin: 0 0 25px;
-      font-size: 2rem;
-      color: #fbbf24;
-      text-align: center;
-      font-weight: 800;
-      letter-spacing: -0.5px;
+    #${MODAL_ID} h2 {
+      margin: 0 0 25px !important;
+      font-size: 2rem !important;
+      color: #fbbf24 !important;
+      text-align: center !important;
+      font-weight: 800 !important;
+      line-height: 1.2 !important;
     }
 
-    #legalModal .legalese {
-      max-height: 60vh;
-      overflow-y: auto;
-      padding-right: 15px;
-      margin-bottom: 30px;
+    #${MODAL_ID} .legalese {
+      max-height: 55vh !important;
+      overflow-y: auto !important;
+      padding-right: 15px !important;
+      margin-bottom: 30px !important;
     }
 
-    #legalModal .legalese::-webkit-scrollbar { width: 6px; }
-    #legalModal .legalese::-webkit-scrollbar-track { background: transparent; }
-    #legalModal .legalese::-webkit-scrollbar-thumb { background: rgba(251, 191, 36, 0.3); border-radius: 10px; }
-
-    #legalModal p {
-      margin: 0 0 1.2rem;
-      line-height: 1.7;
-      font-size: 1.05rem;
-      color: rgba(255, 255, 255, 0.85);
+    #${MODAL_ID} p {
+      margin: 0 0 1.2rem !important;
+      line-height: 1.7 !important;
+      font-size: 1.05rem !important;
+      color: rgba(255, 255, 255, 0.9) !important;
     }
 
-    #legalModal strong {
-      color: #fff;
-      font-weight: 700;
+    #${MODAL_ID} strong {
+      color: #fff !important;
+      font-weight: 700 !important;
     }
 
-    #legalModal .highlight-box {
-      background: rgba(251, 191, 36, 0.05);
-      border-left: 4px solid #fbbf24;
-      padding: 15px 20px;
-      margin: 20px 0;
-      border-radius: 4px;
+    #${MODAL_ID} .highlight-box {
+      background: rgba(251, 191, 36, 0.1) !important;
+      border-left: 4px solid #fbbf24 !important;
+      padding: 15px 20px !important;
+      margin: 20px 0 !important;
+      border-radius: 4px !important;
     }
 
-    #legalModal .actions {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      align-items: center;
+    #${MODAL_ID} .btn-accept {
+      width: 100% !important;
+      padding: 18px 30px !important;
+      background: #fbbf24 !important;
+      color: #000 !important;
+      border: none !important;
+      border-radius: 12px !important;
+      cursor: pointer !important;
+      font-weight: 800 !important;
+      font-size: 1.2rem !important;
+      text-transform: uppercase !important;
+      letter-spacing: 1px !important;
+      transition: all 0.2s ease !important;
     }
 
-    #legalModal .btn-accept {
-      width: 100%;
-      padding: 18px 30px;
-      background: #fbbf24;
-      color: #000;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 800;
-      font-size: 1.15rem;
-      transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-      text-transform: uppercase;
-      letter-spacing: 1px;
+    #${MODAL_ID} .btn-accept:hover {
+      background: #fcd34d !important;
+      transform: scale(1.02) !important;
     }
 
-    #legalModal .btn-accept:hover {
-      background: #fcd34d;
-      transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba(251, 191, 36, 0.3);
-    }
-
-    #legalModal .footer-note {
-      font-size: 0.85rem;
-      color: rgba(255, 255, 255, 0.4);
-      text-align: center;
-    }
-
-    @media (max-width: 600px) {
-      #legalModal .content-box { padding: 30px 20px; }
-      #legalModal h2 { font-size: 1.6rem; }
-      #legalModal p { font-size: 0.95rem; }
+    /* Force hide the widget until accepted */
+    body.jj-legal-locked #voice-widget-container {
+      display: none !important;
     }
   `;
   document.head.appendChild(style);
 
   const modalHtml = `
-  <div id="legalModal" role="dialog" aria-modal="true">
+  <div id="${MODAL_ID}" role="dialog" aria-modal="true">
     <div class="content-box">
       <h2>Before You Continue</h2>
       
@@ -149,8 +136,7 @@
       </div>
 
       <div class="actions">
-        <button type="button" class="btn-accept" id="acceptBtn">Accept & Continue</button>
-        <div class="footer-note">By clicking, you acknowledge and agree to all terms above.</div>
+        <button type="button" class="btn-accept" id="jjAcceptBtn">Accept & Continue</button>
       </div>
     </div>
   </div>`;
@@ -168,48 +154,56 @@
   }
 
   function initModal() {
+    // If we already have a modal in the DOM, don't add another
+    if (document.getElementById(MODAL_ID)) return;
+
     if (storedConsentValid()) {
-      console.log("✅ Johnny Legal: Valid consent exists.");
+      console.log("✅ Johnny Legal: Valid consent found.");
       return;
     }
 
+    console.log("☝️ Johnny Legal: Mandatory show.");
     const div = document.createElement('div');
     div.innerHTML = modalHtml;
-    const modal = div.querySelector('#legalModal');
-    document.body.appendChild(modal);
+    const modal = div.querySelector(`#${MODAL_ID}`);
 
-    // Fade in
+    // Append to documentElement for ultimate priority
+    document.documentElement.appendChild(modal);
+
+    // Show it
     requestAnimationFrame(() => {
-      modal.classList.add('show');
+      modal.classList.add('jj-active');
+      document.body.classList.add('jj-legal-locked');
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
     });
 
-    // Lock body scroll
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-
-    modal.querySelector('#acceptBtn').onclick = () => {
-      localStorage.setItem(CONSENT_KEY, JSON.stringify({ ts: new Date().toISOString() }));
-      modal.classList.remove('show');
-
-      // Restore scroll
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-
-      console.log("✅ Johnny Legal: Consent Accepted.");
-
-      // Optional: Cleanup DOM
-      setTimeout(() => modal.remove(), 500);
-    };
+    const btn = modal.querySelector('#jjAcceptBtn');
+    if (btn) {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        localStorage.setItem(CONSENT_KEY, JSON.stringify({ ts: new Date().toISOString() }));
+        modal.classList.remove('jj-active');
+        document.body.classList.remove('jj-legal-locked');
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        console.log("✅ Johnny Legal: Agreement confirmed.");
+        setTimeout(() => modal.remove(), 500);
+      };
+    }
   }
 
-  // Use multiple check points to ensure it shows as early as possible
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initModal);
-  } else {
+  // Run as early and often as possible to catch Squarespace loading
+  if (document.readyState === 'complete') {
     initModal();
+  } else {
+    window.addEventListener('load', initModal);
+    document.addEventListener('DOMContentLoaded', initModal);
   }
 
-  // Backup if DOMContentLoaded missed
-  window.addEventListener('load', initModal);
+  // Final safety check
+  setTimeout(initModal, 1000);
+  setTimeout(initModal, 3000);
 
 })();
