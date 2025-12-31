@@ -155,16 +155,22 @@ class VoiceWidget {
 
     async startSession() {
         try {
-            // 1. Get Ephemeral Token from Server
+            this.updateState('connecting');
+            console.log("📥 1. Requesting Ephemeral Token from Server...");
             const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
             const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
 
             const tokenRes = await fetch(`${backendUrl}/session`, { method: 'POST' });
-            if (!tokenRes.ok) throw new Error('Failed to get session token');
+            if (!tokenRes.ok) {
+                const errText = await tokenRes.text();
+                throw new Error(`Token fetch failed: ${tokenRes.status} ${errText}`);
+            }
             const data = await tokenRes.json();
             const EPHEMERAL_KEY = data.client_secret.value;
+            console.log("✅ 2. Token received:", EPHEMERAL_KEY.substring(0, 10) + "...");
 
             // 2. Get Microphone
+            console.log("🎤 3. Accessing Microphone...");
             this.stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
@@ -174,12 +180,14 @@ class VoiceWidget {
             });
 
             // 3. Create Peer Connection
+            console.log("📡 4. Creating RTCPeerConnection...");
             this.pc = new RTCPeerConnection();
 
             // 4. Audio Handlers
             const audioEl = document.createElement('audio');
             audioEl.autoplay = true;
             this.pc.ontrack = (e) => {
+                console.log("🔊 5. Remote audio track received");
                 audioEl.srcObject = e.streams[0];
             };
 
@@ -187,17 +195,21 @@ class VoiceWidget {
             this.pc.addTrack(this.stream.getTracks()[0]);
 
             // 5. Data Channel
+            console.log("💬 6. Creating Data Channel...");
             this.dc = this.pc.createDataChannel('oai-events');
             this.dc.onopen = () => this.onDataChannelOpen();
             this.dc.onmessage = (e) => this.onDataChannelMessage(JSON.parse(e.data));
 
             // 6. SDP Handshake (Direct to OpenAI with Token)
+            console.log("🤝 7. Starting SDP Handshake with OpenAI...");
             const offer = await this.pc.createOffer();
             await this.pc.setLocalDescription(offer);
 
-            const baseUrl = "https://api.openai.com/v1/realtime";
+            // Important: gpt-4o-realtime-preview often requires specific suffix for WebRTC in some docs
             const model = data.model || "gpt-4o-realtime-preview";
-            const realtimeRes = await fetch(`${baseUrl}?model=${model}`, {
+            const baseUrl = `https://api.openai.com/v1/realtime?model=${model}`;
+
+            const realtimeRes = await fetch(baseUrl, {
                 method: 'POST',
                 body: offer.sdp,
                 headers: {
@@ -206,8 +218,12 @@ class VoiceWidget {
                 }
             });
 
-            if (!realtimeRes.ok) throw new Error('OpenAI Handshake failed');
+            if (!realtimeRes.ok) {
+                const errText = await realtimeRes.text();
+                throw new Error(`OpenAI Handshake Error: ${realtimeRes.status} ${errText}`);
+            }
 
+            console.log("✅ 8. SDP Answer received from OpenAI");
             const answerSdp = await realtimeRes.text();
             await this.pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
@@ -216,7 +232,9 @@ class VoiceWidget {
         } catch (err) {
             console.error("🔥 OpenAI Realtime Boot Error:", err);
             this.updateState('error');
-            this.captions.innerText = "Check OpenAI Key in Render Environment.";
+            if (this.statusLabel) {
+                this.statusLabel.innerText = "ERROR: " + (err.message || "Boot Failed");
+            }
         }
     }
 
