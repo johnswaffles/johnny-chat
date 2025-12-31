@@ -31,8 +31,8 @@ class VoiceWidget {
                     <div class="mouth"></div>
                 </div>
                 <button class="mic-button" id="start-btn"></button>
+                <div class="captions-area" id="captions">PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION</div>
             </div>
-            <div class="captions-area" id="captions">PRESS THE MIDDLE AREA TO START AND PAUSE THE CONVERSATION</div>
         `;
         document.body.appendChild(container);
 
@@ -58,7 +58,8 @@ class VoiceWidget {
                 this.resetInactivityTimer();
                 break;
             case 'speaking':
-                // Don't overwrite the caption text here, it will be handled by the delta events
+                // Reset buffer on speaking to ensure clean start for AI text
+                // but keep UI showing until deltas arrive.
                 this.resetInactivityTimer();
                 break;
             case 'error':
@@ -179,9 +180,9 @@ class VoiceWidget {
                 input_audio_transcription: { model: "whisper-1" },
                 turn_taking: {
                     type: "server_vad",
-                    threshold: 0.5, // Standard threshold
-                    prefix_padding_ms: 300, // More breathing room
-                    silence_duration_ms: 600 // Wait longer before interrupting
+                    threshold: 0.8, // Increased significantly to ignore echo/self-voice
+                    prefix_padding_ms: 300,
+                    silence_duration_ms: 1000 // Give the user 1 full second to pause
                 }
             }
         };
@@ -191,21 +192,22 @@ class VoiceWidget {
     onDataChannelMessage(msg) {
         switch (msg.type) {
             case 'input_audio_buffer.speech_started':
+                console.log("🎤 Speech started (VAD detected)");
                 this.updateState('listening');
                 this.transcriptBuffer = "";
                 break;
             case 'conversation.item.input_audio_transcription.delta':
                 this.transcriptBuffer += msg.delta;
+                console.log("👤 User Transcript Update:", msg.delta);
                 this.renderRollingCaptions(this.transcriptBuffer);
                 break;
             case 'response.audio_transcript.delta':
                 this.transcriptBuffer += msg.delta;
+                console.log("🤖 AI Transcript Update:", msg.delta);
                 this.renderRollingCaptions(this.transcriptBuffer);
                 break;
-            case 'response.audio_transcript.done':
-                this.updateState('speaking');
-                break;
             case 'response.done':
+                console.log("💬 Response complete");
                 this.updateState('listening');
                 break;
         }
