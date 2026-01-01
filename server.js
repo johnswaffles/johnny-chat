@@ -12,7 +12,7 @@ const {
   OPENAI_CHAT_MODEL = "gpt-4o",
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_IMAGE_MODEL = "dall-e-3",
-  OPENAI_VISION_MODEL = "gpt-4o-mini",
+  OPENAI_VISION_MODEL = "gpt-4.1-mini",
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = ""
 } = process.env;
@@ -366,8 +366,34 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
       }
     }
 
-    console.log(`🏁 [Upload] Completed. Text length: ${fullText.length}, Descs: ${descriptions.length}`);
-    res.json({ text: fullText.trim(), description: descriptions.join("\n\n").trim() });
+    console.log(`🏁 [Upload] Extraction completed. Text length: ${fullText.length}, Descs: ${descriptions.length}`);
+
+    // AUTOMATIC ANALYSIS / SUMMARY
+    let finalSummary = "";
+    if (fullText || descriptions.length) {
+      console.log("🧠 [Upload] Generating automatic detailed summary...");
+      const combinedContext = [fullText, descriptions.length ? "Visual descriptions of uploaded files:\n" + descriptions.join("\n") : ""].filter(Boolean).join("\n\n");
+
+      try {
+        const summaryCompletion = await openai.chat.completions.create({
+          model: OPENAI_CHAT_MODEL,
+          messages: [
+            { role: "system", content: "You are Johnny's analytical brain. Provide a detailed, structured summary of the provided material. Bullet points for key facts, then a punchy executive summary. Keep Johnny's tone: sharp and authoritative." },
+            { role: "user", content: combinedContext.slice(0, 50000) }
+          ]
+        });
+        finalSummary = summaryCompletion.choices[0]?.message?.content || "";
+      } catch (sumErr) {
+        console.error("🔥 [Upload] Summary generation failed:", sumErr);
+        finalSummary = "I extracted the data but had a minor stroke trying to summarize it. I'm ready to discuss the raw content though.";
+      }
+    }
+
+    res.json({
+      text: fullText.trim(),
+      description: descriptions.join("\n\n").trim(),
+      summary: finalSummary.trim()
+    });
   } catch (e) {
     console.error("🚨 [Upload] Fatal Error:", e);
     res.status(500).json({ detail: String(e.message || e) });

@@ -268,7 +268,7 @@ class VoiceWidget {
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || data.error || "Upload failed");
 
-            const contentDescription = `Uploaded material processed.\n[DATA]: ${data.text || "None"}\n[VISUALS]: ${data.description || "None"}`;
+            const contentDescription = `[SUMMARY]: ${data.summary || "No summary available."}\n\n[RAW DATA]: ${data.text || "None"}\n[VISUALS]: ${data.description || "None"}`;
 
             if (this.state === 'idle') {
                 await this.startSession();
@@ -296,13 +296,13 @@ class VoiceWidget {
             item: {
                 type: "message",
                 role: "user",
-                content: [{ type: "input_text", text: `I've uploaded some files. ${content}` }]
+                content: [{ type: "input_text", text: `I've uploaded some material. Here is the analysis:\n${content}` }]
             }
         }));
         this.dc.send(JSON.stringify({
             type: "response.create",
             response: {
-                instructions: "Acknowledge the upload and ask 'what would you like me to do with this uploaded material?'. Stay in character as Johnny."
+                instructions: "Review the analysis provided by the user. First, present the [SUMMARY] clearly to the user with authority. Then, ask 'What would you like me to do with this material?'. Stay in character as Johnny."
             }
         }));
     }
