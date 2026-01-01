@@ -4,8 +4,20 @@ import multer from "multer";
 import OpenAI, { toFile } from "openai";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
-const pdf = typeof pdfParse === 'function' ? pdfParse : (pdfParse.default || pdfParse);
+let pdf;
+try {
+  const p1 = require("pdf-parse");
+  if (typeof p1 === 'function') pdf = p1;
+  else if (p1 && typeof p1.default === 'function') pdf = p1.default;
+  else {
+    const p2 = require("pdf-parse/lib/pdf-parse.js");
+    if (typeof p2 === 'function') pdf = p2;
+    else if (p2 && typeof p2.default === 'function') pdf = p2.default;
+  }
+} catch (e) {
+  console.error("🛠️ [Startup] PDF Parser Load Attempt Failed:", e);
+}
+console.log(`🛠️ [Startup] PDF Parser initialized: ${typeof pdf === 'function' ? 'YES (function)' : 'NO (' + typeof pdf + ')'}`);
 
 const {
   OPENAI_API_KEY,
@@ -352,9 +364,12 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
           fullText += (fullText ? "\n" : "") + content;
         }
       } else if (f.mimetype === "application/pdf") {
-        console.log(`📄 [Upload] Parsing PDF: ${f.originalname}`);
+        console.log(`📄 [Upload] Parsing PDF: ${f.originalname} (Parser is ${typeof pdf})`);
         try {
-          if (typeof pdf !== 'function') throw new Error("PDF parser not available");
+          if (typeof pdf !== 'function') {
+            console.error("🔥 [Upload] PDF parser is not a function. Current value:", pdf);
+            throw new Error("PDF parser not available on server.");
+          }
           const data = await pdf(f.buffer).catch(err => {
             console.error("🔥 [Upload] pdf-parse internal error:", err);
             return { text: `[Text extraction failed for ${f.originalname}]` };
