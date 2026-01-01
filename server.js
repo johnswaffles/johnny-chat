@@ -2,7 +2,9 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import OpenAI, { toFile } from "openai";
-import pdf from "pdf-parse";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pdf = require("pdf-parse");
 
 const {
   OPENAI_API_KEY,
