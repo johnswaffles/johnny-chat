@@ -6,18 +6,18 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 let pdf;
 try {
-  const p1 = require("pdf-parse");
-  if (typeof p1 === 'function') pdf = p1;
-  else if (p1 && typeof p1.default === 'function') pdf = p1.default;
-  else {
-    const p2 = require("pdf-parse/lib/pdf-parse.js");
-    if (typeof p2 === 'function') pdf = p2;
-    else if (p2 && typeof p2.default === 'function') pdf = p2.default;
-  }
+  const mod = require("pdf-parse");
+  pdf = typeof mod === 'function' ? mod : mod.default;
 } catch (e) {
-  console.error("🛠️ [Startup] PDF Parser Load Attempt Failed:", e);
+  console.error("🛠️ [Startup] Primary PDF Load Failed, trying fallback:", e);
+  try {
+    const fallback = require("pdf-parse/lib/pdf-parse.js");
+    pdf = typeof fallback === 'function' ? fallback : fallback.default;
+  } catch (e2) {
+    console.error("🛠️ [Startup] All PDF Load Attempts Failed:", e2);
+  }
 }
-console.log(`🛠️ [Startup] PDF Parser initialized: ${typeof pdf === 'function' ? 'YES (function)' : 'NO (' + typeof pdf + ')'}`);
+console.log(`🛠️ [Startup] PDF Parser status: ${typeof pdf === 'function' ? 'FUNCTION' : 'MISSING (' + typeof pdf + ')'}`);
 
 const {
   OPENAI_API_KEY,
@@ -385,9 +385,27 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
 
     console.log(`🏁 [Upload] Extraction completed. Text length: ${fullText.length}, Descs: ${descriptions.length}`);
 
+    let autoSummary = "";
+    if (fullText && descriptions.some(d => d.includes("PDF"))) {
+      console.log("🧠 [Upload] Generating automatic detailed summary for PDF...");
+      try {
+        const sumComp = await openai.chat.completions.create({
+          model: OPENAI_CHAT_MODEL,
+          messages: [
+            { role: "system", content: "You are Johnny's analytical brain. Provide a detailed, structured summary of the provided document. Use bullet points for key facts, followed by a punchy executive summary. Keep Johnny's tone: sharp and authoritative." },
+            { role: "user", content: fullText.slice(0, 50000) }
+          ]
+        });
+        autoSummary = sumComp.choices[0]?.message?.content || "";
+      } catch (sumErr) {
+        console.error("🔥 [Upload] PDF Summary failed:", sumErr);
+      }
+    }
+
     res.json({
       text: fullText.trim(),
-      description: descriptions.join("\n\n").trim()
+      description: descriptions.join("\n\n").trim(),
+      summary: autoSummary.trim()
     });
   } catch (e) {
     console.error("🚨 [Upload] Fatal Error:", e);

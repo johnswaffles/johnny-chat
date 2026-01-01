@@ -270,13 +270,18 @@ class VoiceWidget {
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || data.error || "Upload failed");
 
-            const contentDescription = `[RAW DATA]: ${data.text || "None"}\n[VISUALS]: ${data.description || "None"}`;
-            this.pendingUpload = contentDescription;
+            const contentObj = {
+                text: data.text || "None",
+                description: data.description || "None",
+                summary: data.summary || null,
+                isPdf: (data.description || "").includes("PDF")
+            };
+            this.pendingUpload = contentObj;
 
             if (this.state === 'idle') {
                 await this.startSession();
             } else if (this.dc && this.dc.readyState === 'open') {
-                this.processUploadResponse(contentDescription);
+                this.processUploadResponse(contentObj);
                 this.pendingUpload = null;
             }
         } catch (err) {
@@ -289,18 +294,31 @@ class VoiceWidget {
     }
 
     processUploadResponse(content) {
+        let userMsg = `I've uploaded some material. Here is the context:\n[RAW DATA]: ${content.text}\n[VISUALS]: ${content.description}`;
+        if (content.summary) {
+            userMsg += `\n[SUMMARY]: ${content.summary}`;
+        }
+
         this.dc.send(JSON.stringify({
             type: "conversation.item.create",
             item: {
                 type: "message",
                 role: "user",
-                content: [{ type: "input_text", text: `I've uploaded some material. Here is the context:\n${content}` }]
+                content: [{ type: "input_text", text: userMsg }]
             }
         }));
+
+        let prompt = "Acknowledge the material.";
+        if (content.isPdf && content.summary) {
+            prompt = `Present the following detailed summary of the PDF with authority: ${content.summary}. Then ask 'What would you like me to do with this material?'. IMPORTANT: If the user asks you to read the PDF 'word for word', you MUST reply: 'I am unable to do word for word PDF, only summarize' (and spell 'summarize' exactly like that). Otherwise, answer questions using the provided context.`;
+        } else {
+            prompt = "Acknowledge the material and ask 'What would you like me to do with this uploaded material?'. For pictures, you can answer any questions about them normally.";
+        }
+
         this.dc.send(JSON.stringify({
             type: "response.create",
             response: {
-                instructions: "Acknowledge the material and ask 'What would you like me to do with this uploaded material?'. Stay in character as Johnny."
+                instructions: prompt + " Stay in character as Johnny."
             }
         }));
     }
