@@ -249,7 +249,8 @@
 .status-label {
     font-size: 0.6rem;
     font-weight: 800;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
+    /* Slightly reduced to fit longer text */
     color: rgba(255, 255, 255, 0.5);
     white-space: nowrap;
 }
@@ -324,6 +325,36 @@
     border-color: rgba(239, 68, 68, 0.7) !important;
     color: #f87171 !important;
     box-shadow: 0 0 40px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Strikethrough effect */
+.top-control[data-muted="true"]::after {
+    content: "";
+    position: absolute;
+    width: 60%;
+    height: 3px;
+    background: #f87171;
+    transform: rotate(-45deg);
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+    pointer-events: none;
+}
+
+.mute-label {
+    display: none;
+    position: absolute;
+    bottom: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.55rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #ef4444;
+    text-transform: uppercase;
+}
+
+[data-muted="true"] .mute-label {
+    display: block;
 }
 
 /* Mobile Overrides (Portrait) */
