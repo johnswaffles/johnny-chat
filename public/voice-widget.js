@@ -388,7 +388,15 @@ class VoiceWidget {
             const EPHEMERAL_KEY = data.client_secret.value;
 
             this.stream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    // Chrome/Android specific constraints for better AEC
+                    googEchoCancellation: true,
+                    googNoiseSuppression: true,
+                    googAutoGainControl: true
+                }
             });
 
             this.pc = new RTCPeerConnection();
@@ -452,10 +460,13 @@ class VoiceWidget {
                 : "Introduce yourself. Be sharp and sarcastic as Johnny. Lead the conversation.";
 
             if (!this.isTextInitiated) {
-                this.dc.send(JSON.stringify({
-                    type: "response.create",
-                    response: { instructions: prompt }
-                }));
+                // 1s Delay for Mobile AEC Convergence
+                setTimeout(() => {
+                    this.dc.send(JSON.stringify({
+                        type: "response.create",
+                        response: { instructions: prompt }
+                    }));
+                }, 1000);
             }
         }
 
