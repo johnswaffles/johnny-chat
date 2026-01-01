@@ -166,7 +166,7 @@ async function askWithWebSearch({ prompt, forceSearch = true, location = { count
   const body = {
     model: OPENAI_LIVE_MODEL,
     messages: [
-      { role: "system", content: JOHNNY_PERSONA },
+      { role: "system", content: getJohnnyPersona() },
       { role: "user", content: prompt }
     ]
   };
@@ -214,7 +214,7 @@ app.post("/api/voice-search", async (req, res) => {
 
     // We use contextSize="small" for voice to keep responses from becoming too long
     const { text } = await askWithWebSearch({
-      prompt: `Provide a quick, concise answer suitable for a voice assistant. Current query: ${query}`,
+      prompt: `Provide a sharp, substantial answer with actual facts. Current query: ${query}`,
       forceSearch: true,
       contextSize: "small"
     });
