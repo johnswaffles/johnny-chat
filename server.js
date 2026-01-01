@@ -152,6 +152,8 @@ app.post("/api/realtime-token", async (req, res) => {
 });
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
+console.log("🛠️ [SDK] OpenAI instance keys:", Object.keys(openai));
+if (openai.responses) console.log("🛠️ [SDK] Found 'responses' namespace on openai instance.");
 
 // Serve the Taqueria Familia clone
 app.use("/tacos", express.static("public/tacos"));
