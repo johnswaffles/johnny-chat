@@ -445,12 +445,18 @@ class VoiceWidget {
         if (this.pendingUpload) {
             this.processUploadResponse(this.pendingUpload);
             this.pendingUpload = null;
-        } else if (this.messages.length === 0 && !this.isTextInitiated) {
-            // Only intro if it's a completely new voice-only initiation
-            this.dc.send(JSON.stringify({
-                type: "response.create",
-                response: { instructions: "Introduce yourself. Be sharp and sarcastic as Johnny. Lead the conversation." }
-            }));
+        } else {
+            // Always trigger an initial reaction so the user knows Johnny is connected
+            const prompt = (this.messages.length > 0)
+                ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session."
+                : "Introduce yourself. Be sharp and sarcastic as Johnny. Lead the conversation.";
+
+            if (!this.isTextInitiated) {
+                this.dc.send(JSON.stringify({
+                    type: "response.create",
+                    response: { instructions: prompt }
+                }));
+            }
         }
 
         this.isTextInitiated = false; // Reset flag
