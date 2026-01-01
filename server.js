@@ -319,10 +319,12 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
     let descriptions = [];
 
     for (const f of files) {
+      console.log(`📂 [Upload] Processing file: ${f.originalname} (${f.mimetype})`);
       if (f.mimetype.startsWith("image/")) {
         const b64 = f.buffer.toString("base64");
         const dataUrl = `data:${f.mimetype};base64,${b64}`;
 
+        console.log(`📡 [Upload] Sending to Vision: ${OPENAI_VISION_MODEL}`);
         const vision = await openai.chat.completions.create({
           model: OPENAI_VISION_MODEL,
           messages: [
@@ -337,22 +339,35 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
           response_format: { type: "json_object" }
         });
 
+        const content = vision.choices[0]?.message?.content;
+        console.log(`✅ [Upload] Vision response received. Length: ${content?.length}`);
+
         try {
-          const res = JSON.parse(vision.choices[0].message.content);
+          const res = JSON.parse(content);
           if (res.text) fullText += (fullText ? "\n" : "") + res.text;
           if (res.description) descriptions.push(res.description);
         } catch (e) {
-          fullText += (fullText ? "\n" : "") + vision.choices[0].message.content;
+          console.warn("⚠️ [Upload] JSON parse failed, using raw content.");
+          fullText += (fullText ? "\n" : "") + content;
         }
       } else if (f.mimetype === "application/pdf") {
-        const data = await pdf(f.buffer);
-        fullText += (fullText ? "\n" : "") + data.text;
-        descriptions.push(`Uploaded PDF: ${f.originalname}`);
+        console.log(`📄 [Upload] Parsing PDF: ${f.originalname}`);
+        try {
+          const data = await pdf(f.buffer);
+          fullText += (fullText ? "\n" : "") + (data.text || "");
+          descriptions.push(`Uploaded PDF: ${f.originalname}`);
+          console.log(`✅ [Upload] PDF parsed successfully. Text length: ${data.text?.length}`);
+        } catch (pdfErr) {
+          console.error("🔥 [Upload] PDF Parse Error:", pdfErr);
+          throw new Error("Failed to parse PDF document.");
+        }
       }
     }
 
+    console.log(`🏁 [Upload] Completed. Text length: ${fullText.length}, Descs: ${descriptions.length}`);
     res.json({ text: fullText.trim(), description: descriptions.join("\n\n").trim() });
   } catch (e) {
+    console.error("🚨 [Upload] Fatal Error:", e);
     res.status(500).json({ detail: String(e.message || e) });
   }
 });
