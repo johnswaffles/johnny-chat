@@ -3,21 +3,11 @@ import cors from "cors";
 import multer from "multer";
 import OpenAI, { toFile } from "openai";
 import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-let pdf;
-try {
-  const mod = require("pdf-parse");
-  pdf = typeof mod === 'function' ? mod : mod.default;
-} catch (e) {
-  console.error("🛠️ [Startup] Primary PDF Load Failed, trying fallback:", e);
-  try {
-    const fallback = require("pdf-parse/lib/pdf-parse.js");
-    pdf = typeof fallback === 'function' ? fallback : fallback.default;
-  } catch (e2) {
-    console.error("🛠️ [Startup] All PDF Load Attempts Failed:", e2);
-  }
-}
-console.log(`🛠️ [Startup] PDF Parser status: ${typeof pdf === 'function' ? 'FUNCTION' : 'MISSING (' + typeof pdf + ')'}`);
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+// Disable worker for Node.js environment
+// This avoids the need to set up a worker file path which can be tricky in some environments
+// or when bundling.
 
 const {
   OPENAI_API_KEY,
@@ -364,21 +354,28 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
           fullText += (fullText ? "\n" : "") + content;
         }
       } else if (f.mimetype === "application/pdf") {
-        console.log(`📄 [Upload] Parsing PDF: ${f.originalname} (Parser is ${typeof pdf})`);
+        console.log(`📄 [Upload] Parsing PDF: ${f.originalname} using pdfjs-dist`);
         try {
-          if (typeof pdf !== 'function') {
-            console.error("🔥 [Upload] PDF parser is not a function. Current value:", pdf);
-            throw new Error("PDF parser not available on server.");
+          // Convert buffer to Uint8Array for pdfjs-dist
+          const uint8Array = new Uint8Array(f.buffer);
+          const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+          const pdfDocument = await loadingTask.promise;
+
+          let extractedText = "";
+          console.log(`📄 [Upload] PDF has ${pdfDocument.numPages} pages.`);
+
+          for (let i = 1; i <= pdfDocument.numPages; i++) {
+            const page = await pdfDocument.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            extractedText += pageText + "\n";
           }
-          const data = await pdf(f.buffer).catch(err => {
-            console.error("🔥 [Upload] pdf-parse internal error:", err);
-            return { text: `[Text extraction failed for ${f.originalname}]` };
-          });
-          fullText += (fullText ? "\n" : "") + (data.text || "");
-          descriptions.push(`Uploaded PDF: ${f.originalname}`);
+
+          fullText += (fullText ? "\n" : "") + extractedText;
+          descriptions.push(`Uploaded PDF: ${f.originalname} (${pdfDocument.numPages} pages)`);
         } catch (pdfErr) {
-          console.error("🔥 [Upload] PDF outer error:", pdfErr);
-          fullText += (fullText ? "\n" : "") + `[Error processing ${f.originalname}: ${pdfErr.message}]`;
+          console.error("🔥 [Upload] PDF Extraction Error:", pdfErr);
+          fullText += (fullText ? "\n" : "") + `[Error processing PDF ${f.originalname}: ${pdfErr.message}]`;
         }
       }
     }
