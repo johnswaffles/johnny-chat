@@ -180,6 +180,9 @@ class VoiceWidget {
                 <div class="chat-viewport" id="chat-viewport">
                     <div class="chat-history" id="chat-history"></div>
                 </div>
+                <div class="input-area">
+                    <input type="text" id="voice-text-input" placeholder="Type a message..." autocomplete="off">
+                </div>
             </div>
         `;
 
@@ -191,6 +194,7 @@ class VoiceWidget {
         this.visualizer = document.getElementById('visualizer');
         this.newBtn = document.getElementById('new-btn');
         this.muteBtn = document.getElementById('mute-btn');
+        this.textInput = document.getElementById('voice-text-input');
     }
 
     attachEvents() {
@@ -213,6 +217,54 @@ class VoiceWidget {
                 this.toggleMute();
             };
         }
+
+        if (this.textInput) {
+            this.textInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const text = this.textInput.value.trim();
+                    if (text) {
+                        this.sendTextMessage(text);
+                        this.textInput.value = "";
+                    }
+                }
+            });
+        }
+    }
+
+    async sendTextMessage(text) {
+        console.log("📤 Sending Text Message:", text);
+
+        // 1. Ensure session is active
+        if (this.state === 'idle') {
+            await this.startSession();
+            // Wait for data channel
+            const checkDC = setInterval(() => {
+                if (this.dc && this.dc.readyState === 'open') {
+                    clearInterval(checkDC);
+                    this.dispatchText(text);
+                }
+            }, 100);
+            return;
+        }
+
+        if (this.dc && this.dc.readyState === 'open') {
+            this.dispatchText(text);
+        }
+    }
+
+    dispatchText(text) {
+        // Create the user message item
+        this.dc.send(JSON.stringify({
+            type: "conversation.item.create",
+            item: {
+                type: "message",
+                role: "user",
+                content: [{ type: "input_text", text: text }]
+            }
+        }));
+
+        // Request a response
+        this.dc.send(JSON.stringify({ type: "response.create" }));
     }
 
     resetChat() {
