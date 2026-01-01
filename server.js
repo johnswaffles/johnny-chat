@@ -161,43 +161,73 @@ function isLiveQuery(s) {
 }
 
 async function askWithWebSearch({ prompt, forceSearch = true, location = { country: "US", city: "Chicago", region: "Illinois" }, contextSize = "medium" }) {
-  console.log(`📡 [Search] Tool-search requested for: "${prompt}"`);
+  console.log(`📡 [Tavily] Initiating search for: "${prompt}"`);
+  const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 
-  const body = {
-    model: OPENAI_LIVE_MODEL,
-    messages: [
-      { role: "system", content: getJohnnyPersona() },
-      { role: "user", content: prompt }
-    ]
-  };
+  if (!TAVILY_API_KEY) {
+    console.warn("⚠️ [Tavily] Key missing, falling back to standard completion.");
+    const fallback = await openai.chat.completions.create({
+      model: OPENAI_LIVE_MODEL,
+      messages: [
+        { role: "system", content: getJohnnyPersona() },
+        { role: "user", content: prompt }
+      ]
+    });
+    return { text: fallback.choices[0]?.message?.content || "", cites: [] };
+  }
 
   try {
-    // Attempt with tool FIRST
-    console.log("📡 [Search] Attempting tool-based search...");
-    const toolBody = {
-      ...body,
-      tools: [{
-        type: "web_search_preview",
-        search_context_size: contextSize,
-        user_location: { type: "approximate", ...location }
-      }]
-    };
-    if (forceSearch) toolBody.tool_choice = { type: "web_search_preview" };
+    // 1. Fetch from Tavily
+    const tavilyResp = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: TAVILY_API_KEY,
+        query: prompt,
+        search_depth: "advanced",
+        include_answer: true,
+        max_results: 5
+      })
+    });
 
-    const completion = await openai.chat.completions.create(toolBody);
-    console.log("✅ [Search] Tool-based search successful.");
-    return { text: completion.choices[0]?.message?.content || "", cites: [] };
+    if (!tavilyResp.ok) throw new Error(`Tavily Error: ${tavilyResp.status}`);
+    const searchData = await tavilyResp.json();
+    console.log(`✅ [Tavily] Found ${searchData.results?.length} results.`);
+
+    // 2. Synthesize with GPT-4o
+    const synthesisPrompt = `
+      You are Johnny. Use the following real-time search data to answer the user's request with authority and substance.
+      Do not mention "searching" or "the data". Just lead with the facts in your sarcastic, sharp tone.
+      
+      User Prompt: "${prompt}"
+      
+      Search Results:
+      ${JSON.stringify(searchData.results, null, 2)}
+    `;
+
+    const synthesis = await openai.chat.completions.create({
+      model: OPENAI_LIVE_MODEL,
+      messages: [
+        { role: "system", content: getJohnnyPersona() },
+        { role: "user", content: synthesisPrompt }
+      ]
+    });
+
+    const text = synthesis.choices[0]?.message?.content || "";
+    const cites = searchData.results?.map(r => ({ url: r.url, title: r.title })) || [];
+
+    return { text, cites };
   } catch (err) {
-    console.warn("⚠️ [Search] Tool-search failed, falling back to standard completion. Error:", err.message);
-    // Fallback to standard messages (no tools)
-    try {
-      const fallbackCompletion = await openai.chat.completions.create(body);
-      console.log("✅ [Search] Fallback completion successful.");
-      return { text: fallbackCompletion.choices[0]?.message?.content || "", cites: [] };
-    } catch (fallbackErr) {
-      console.error("🔥 [Search] Critical failure in fallback:", fallbackErr);
-      throw fallbackErr;
-    }
+    console.error("🔥 [Tavily] Search synthesis failed:", err);
+    // Final fallback
+    const fallback = await openai.chat.completions.create({
+      model: OPENAI_LIVE_MODEL,
+      messages: [
+        { role: "system", content: getJohnnyPersona() },
+        { role: "user", content: prompt }
+      ]
+    });
+    return { text: fallback.choices[0]?.message?.content || "", cites: [] };
   }
 }
 
