@@ -266,7 +266,7 @@ class VoiceWidget {
                 body: formData
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Upload failed");
+            if (!res.ok) throw new Error(data.detail || data.error || "Upload failed");
 
             const contentDescription = `Uploaded material processed.\n[DATA]: ${data.text || "None"}\n[VISUALS]: ${data.description || "None"}`;
 
