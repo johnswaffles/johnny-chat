@@ -170,37 +170,44 @@ function isLiveQuery(s) {
 }
 
 async function askWithWebSearch({ prompt, forceSearch = true, location = { country: "US", city: "Chicago", region: "Illinois" }, contextSize = "medium" }) {
-  // Use standard Chat Completions with the newer 'web_search_preview' tool if supported, 
-  // or fallback to search logic. Note: 'web_search_preview' is a specialized tool.
-  // We'll use the standard messages format.
+  console.log(`📡 [Search] Tool-search requested for: "${prompt}"`);
+
   const body = {
     model: OPENAI_LIVE_MODEL,
     messages: [
       { role: "system", content: JOHNNY_PERSONA },
       { role: "user", content: prompt }
-    ],
-    tools: [
-      {
-        type: "web_search_preview",
-        search_context_size: contextSize,
-        user_location: { type: "approximate", ...location }
-      }
     ]
   };
 
-  if (forceSearch) {
-    body.tool_choice = { type: "web_search_preview" };
+  try {
+    // Attempt with tool FIRST
+    console.log("📡 [Search] Attempting tool-based search...");
+    const toolBody = {
+      ...body,
+      tools: [{
+        type: "web_search_preview",
+        search_context_size: contextSize,
+        user_location: { type: "approximate", ...location }
+      }]
+    };
+    if (forceSearch) toolBody.tool_choice = { type: "web_search_preview" };
+
+    const completion = await openai.chat.completions.create(toolBody);
+    console.log("✅ [Search] Tool-based search successful.");
+    return { text: completion.choices[0]?.message?.content || "", cites: [] };
+  } catch (err) {
+    console.warn("⚠️ [Search] Tool-search failed, falling back to standard completion. Error:", err.message);
+    // Fallback to standard messages (no tools)
+    try {
+      const fallbackCompletion = await openai.chat.completions.create(body);
+      console.log("✅ [Search] Fallback completion successful.");
+      return { text: fallbackCompletion.choices[0]?.message?.content || "", cites: [] };
+    } catch (fallbackErr) {
+      console.error("🔥 [Search] Critical failure in fallback:", fallbackErr);
+      throw fallbackErr;
+    }
   }
-
-  const completion = await openai.chat.completions.create(body);
-  const text = completion.choices[0]?.message?.content || "";
-
-  // Citations are usually in completion.choices[0].message.tool_calls or annotations
-  // For web_search_preview specifically, citations might be in the content annotations
-  const msg = completion.choices[0]?.message;
-  const cites = []; // Default empty
-
-  return { text, cites };
 }
 
 /**

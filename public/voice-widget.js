@@ -404,14 +404,23 @@ class VoiceWidget {
                     body: JSON.stringify({ query })
                 });
                 const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || "Search API Error");
+
                 this.dc.send(JSON.stringify({
                     type: "conversation.item.create",
                     item: { type: "function_call_output", call_id: msg.call_id, output: data.result || "No info" }
                 }));
                 this.dc.send(JSON.stringify({ type: "response.create" }));
-                searchBubble.remove();
             } catch (err) {
                 console.error("Search failed", err);
+                // Report error to OpenAI so Johnny can explain it
+                this.dc.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: { type: "function_call_output", call_id: msg.call_id, output: "I'm having trouble searching the web right now." }
+                }));
+                this.dc.send(JSON.stringify({ type: "response.create" }));
+            } finally {
                 searchBubble.remove();
             }
         }
