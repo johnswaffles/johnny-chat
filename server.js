@@ -152,8 +152,6 @@ app.post("/api/realtime-token", async (req, res) => {
 });
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
-console.log("🛠️ [SDK] OpenAI instance keys:", Object.keys(openai));
-if (openai.responses) console.log("🛠️ [SDK] Found 'responses' namespace on openai instance.");
 
 // Serve the Taqueria Familia clone
 app.use("/tacos", express.static("public/tacos"));
@@ -355,44 +353,24 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
       } else if (f.mimetype === "application/pdf") {
         console.log(`📄 [Upload] Parsing PDF: ${f.originalname}`);
         try {
-          const data = await pdf(f.buffer);
+          const data = await pdf(f.buffer).catch(err => {
+            console.error("🔥 [Upload] pdf-parse internal error:", err);
+            return { text: `[Text extraction failed for ${f.originalname}]` };
+          });
           fullText += (fullText ? "\n" : "") + (data.text || "");
           descriptions.push(`Uploaded PDF: ${f.originalname}`);
-          console.log(`✅ [Upload] PDF parsed successfully. Text length: ${data.text?.length}`);
         } catch (pdfErr) {
-          console.error("🔥 [Upload] PDF Parse Error:", pdfErr);
-          throw new Error("Failed to parse PDF document.");
+          console.error("🔥 [Upload] PDF outer error:", pdfErr);
+          fullText += (fullText ? "\n" : "") + `[Error processing ${f.originalname}]`;
         }
       }
     }
 
     console.log(`🏁 [Upload] Extraction completed. Text length: ${fullText.length}, Descs: ${descriptions.length}`);
 
-    // AUTOMATIC ANALYSIS / SUMMARY
-    let finalSummary = "";
-    if (fullText || descriptions.length) {
-      console.log("🧠 [Upload] Generating automatic detailed summary...");
-      const combinedContext = [fullText, descriptions.length ? "Visual descriptions of uploaded files:\n" + descriptions.join("\n") : ""].filter(Boolean).join("\n\n");
-
-      try {
-        const summaryCompletion = await openai.chat.completions.create({
-          model: OPENAI_CHAT_MODEL,
-          messages: [
-            { role: "system", content: "You are Johnny's analytical brain. Provide a detailed, structured summary of the provided material. Bullet points for key facts, then a punchy executive summary. Keep Johnny's tone: sharp and authoritative." },
-            { role: "user", content: combinedContext.slice(0, 50000) }
-          ]
-        });
-        finalSummary = summaryCompletion.choices[0]?.message?.content || "";
-      } catch (sumErr) {
-        console.error("🔥 [Upload] Summary generation failed:", sumErr);
-        finalSummary = "I extracted the data but had a minor stroke trying to summarize it. I'm ready to discuss the raw content though.";
-      }
-    }
-
     res.json({
       text: fullText.trim(),
-      description: descriptions.join("\n\n").trim(),
-      summary: finalSummary.trim()
+      description: descriptions.join("\n\n").trim()
     });
   } catch (e) {
     console.error("🚨 [Upload] Fatal Error:", e);

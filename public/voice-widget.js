@@ -15,6 +15,8 @@ class VoiceWidget {
         this.itemBubbles = new Map(); // Link item IDs to message bubbles
         this.messages = [];
         this.isMuted = false;
+        this.pendingUpload = null;
+        this.isTextInitiated = false;
 
         // Legal & Editor Settings
         this.CONSENT_KEY = 'jj_legal_consent_v9_atomic';
@@ -268,18 +270,14 @@ class VoiceWidget {
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || data.error || "Upload failed");
 
-            const contentDescription = `[SUMMARY]: ${data.summary || "No summary available."}\n\n[RAW DATA]: ${data.text || "None"}\n[VISUALS]: ${data.description || "None"}`;
+            const contentDescription = `[RAW DATA]: ${data.text || "None"}\n[VISUALS]: ${data.description || "None"}`;
+            this.pendingUpload = contentDescription;
 
             if (this.state === 'idle') {
                 await this.startSession();
-                const checkDC = setInterval(() => {
-                    if (this.dc && this.dc.readyState === 'open') {
-                        clearInterval(checkDC);
-                        this.processUploadResponse(contentDescription);
-                    }
-                }, 100);
-            } else {
+            } else if (this.dc && this.dc.readyState === 'open') {
                 this.processUploadResponse(contentDescription);
+                this.pendingUpload = null;
             }
         } catch (err) {
             console.error("Upload failed", err);
@@ -296,13 +294,13 @@ class VoiceWidget {
             item: {
                 type: "message",
                 role: "user",
-                content: [{ type: "input_text", text: `I've uploaded some material. Here is the analysis:\n${content}` }]
+                content: [{ type: "input_text", text: `I've uploaded some material. Here is the context:\n${content}` }]
             }
         }));
         this.dc.send(JSON.stringify({
             type: "response.create",
             response: {
-                instructions: "Review the analysis provided by the user. First, present the [SUMMARY] clearly to the user with authority. Then, ask 'What would you like me to do with this material?'. Stay in character as Johnny."
+                instructions: "Acknowledge the material and ask 'What would you like me to do with this uploaded material?'. Stay in character as Johnny."
             }
         }));
     }
@@ -312,6 +310,7 @@ class VoiceWidget {
 
         // 1. Ensure session is active
         if (this.state === 'idle') {
+            this.isTextInitiated = true;
             await this.startSession();
             // Wait for data channel
             const checkDC = setInterval(() => {
@@ -329,6 +328,7 @@ class VoiceWidget {
     }
 
     dispatchText(text) {
+        this.messages.push({ role: 'user', text: text });
         // Create the user message item
         this.dc.send(JSON.stringify({
             type: "conversation.item.create",
@@ -407,10 +407,35 @@ class VoiceWidget {
 
     onDataChannelOpen() {
         console.log('✅ Johnny Live.');
-        this.dc.send(JSON.stringify({
-            type: "response.create",
-            response: { instructions: "Introduce yourself. Be sharp and sarcastic as Johnny." }
-        }));
+
+        // 1. Inject History if it exists (for session continuity)
+        if (this.messages.length > 0) {
+            console.log(`📜 Restoring ${this.messages.length} messages to session.`);
+            for (const msg of this.messages) {
+                this.dc.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: {
+                        type: "message",
+                        role: msg.role,
+                        content: [{ type: "text", text: msg.text }]
+                    }
+                }));
+            }
+        }
+
+        // 2. Handle Pending Upload OR Automatic Introduction
+        if (this.pendingUpload) {
+            this.processUploadResponse(this.pendingUpload);
+            this.pendingUpload = null;
+        } else if (this.messages.length === 0 && !this.isTextInitiated) {
+            // Only intro if it's a completely new voice-only initiation
+            this.dc.send(JSON.stringify({
+                type: "response.create",
+                response: { instructions: "Introduce yourself. Be sharp and sarcastic as Johnny. Lead the conversation." }
+            }));
+        }
+
+        this.isTextInitiated = false; // Reset flag
     }
 
     onDataChannelMessage(msg) {
@@ -433,12 +458,11 @@ class VoiceWidget {
                     }
                 }
                 break;
-            case 'conversation.item.input_audio_transcription.delta':
             case 'conversation.item.input_audio_transcription.completed': {
                 const bubble = this.itemBubbles.get(msg.item_id);
-                if (bubble) {
-                    if (msg.delta) bubble.innerText += msg.delta;
-                    else if (msg.transcript) bubble.innerText = msg.transcript;
+                if (bubble && msg.transcript) {
+                    bubble.innerText = msg.transcript;
+                    this.messages.push({ role: 'user', text: msg.transcript });
                     this.scrollToBottom();
                 }
                 break;
@@ -456,6 +480,17 @@ class VoiceWidget {
             }
             case 'response.done':
                 this.updateState('listening');
+                // Capture the assistant response into messages
+                if (msg.response && msg.response.output) {
+                    msg.response.output.forEach(item => {
+                        if (item.type === 'message' && item.role === 'assistant') {
+                            const bubble = this.itemBubbles.get(item.id);
+                            if (bubble && bubble.innerText) {
+                                this.messages.push({ role: 'assistant', text: bubble.innerText });
+                            }
+                        }
+                    });
+                }
                 break;
             case 'response.function_call_arguments.done':
                 this.handleFunctionCall(msg);
