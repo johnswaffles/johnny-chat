@@ -340,9 +340,21 @@ class VoiceWidget {
     onDataChannelMessage(msg) {
         switch (msg.type) {
             case 'conversation.item.created':
-                if (!this.itemBubbles.has(msg.item.id) && msg.item.type === 'message') {
-                    const bubble = this.createMessageBubble(msg.item.role === 'user' ? 'user' : 'assistant');
-                    this.itemBubbles.set(msg.item.id, bubble);
+                // PRE-CREATE bubbles for every item (User or Assistant)
+                if (!this.itemBubbles.has(msg.item.id)) {
+                    const role = msg.item.role === 'user' ? 'user' : 'assistant';
+                    // We don't create for 'function_call' items unless we want to log them
+                    if (msg.item.type === 'message') {
+                        const bubble = this.createMessageBubble(role);
+                        this.itemBubbles.set(msg.item.id, bubble);
+
+                        // If it's a text message that already has content (like text input), show it!
+                        const textContent = msg.item.content?.find(c => c.type === 'input_text' || c.type === 'text');
+                        if (textContent) {
+                            bubble.innerText = textContent.text;
+                            this.scrollToBottom();
+                        }
+                    }
                 }
                 break;
             case 'conversation.item.input_audio_transcription.delta':

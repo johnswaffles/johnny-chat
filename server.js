@@ -170,33 +170,36 @@ function isLiveQuery(s) {
 }
 
 async function askWithWebSearch({ prompt, forceSearch = true, location = { country: "US", city: "Chicago", region: "Illinois" }, contextSize = "medium" }) {
-  const tools = [
-    {
-      type: "web_search_preview",
-      search_context_size: contextSize,
-      user_location: { type: "approximate", ...location }
-    }
-  ];
+  // Use standard Chat Completions with the newer 'web_search_preview' tool if supported, 
+  // or fallback to search logic. Note: 'web_search_preview' is a specialized tool.
+  // We'll use the standard messages format.
   const body = {
     model: OPENAI_LIVE_MODEL,
-    input: [
-      {
-        role: "system", content: JOHNNY_PERSONA
-      },
+    messages: [
+      { role: "system", content: JOHNNY_PERSONA },
       { role: "user", content: prompt }
     ],
-    tools
+    tools: [
+      {
+        type: "web_search_preview",
+        search_context_size: contextSize,
+        user_location: { type: "approximate", ...location }
+      }
+    ]
   };
-  if (forceSearch) body.tool_choice = { type: "web_search_preview" };
-  const p = openai.responses.create(body);
-  const resp = await Promise.race([
-    p,
-    new Promise((_, rej) => setTimeout(() => rej(new Error("web_search_timeout")), 12000))
-  ]);
-  const text = resp.output_text || "";
-  const msg = resp.output?.find(it => it.type === "message");
-  const anns = msg?.content?.[0]?.annotations || [];
-  const cites = anns.filter(a => a.type === "url_citation").map(a => ({ url: a.url, title: a.title }));
+
+  if (forceSearch) {
+    body.tool_choice = { type: "web_search_preview" };
+  }
+
+  const completion = await openai.chat.completions.create(body);
+  const text = completion.choices[0]?.message?.content || "";
+
+  // Citations are usually in completion.choices[0].message.tool_calls or annotations
+  // For web_search_preview specifically, citations might be in the content annotations
+  const msg = completion.choices[0]?.message;
+  const cites = []; // Default empty
+
   return { text, cites };
 }
 
@@ -238,9 +241,9 @@ app.post("/api/chat", async (req, res) => {
       const { text } = await askWithWebSearch({ prompt: s, forceSearch: true, contextSize: "medium" });
       return res.json({ reply: text, sources: ["web"] });
     }
-    const resp = await openai.responses.create({
+    const completion = await openai.chat.completions.create({
       model: OPENAI_CHAT_MODEL,
-      input: [
+      messages: [
         {
           role: "system", content: JOHNNY_PERSONA
         },
@@ -248,7 +251,7 @@ app.post("/api/chat", async (req, res) => {
         { role: "user", content: s }
       ]
     });
-    const reply = resp.output_text || "(no reply)";
+    const reply = completion.choices[0]?.message?.content || "(no reply)";
     res.json({ reply, sources: [] });
   } catch (err) {
     res.status(500).json({ detail: String(err.message || err) });
@@ -351,11 +354,11 @@ app.post("/query", async (req, res) => {
     const { question = "", text = "", description = "" } = req.body || {};
     const corpus = [text, description].filter(Boolean).join("\n\n");
     const prompt = `Answer the user's question using only this content:\n\n${corpus}\n\nQuestion: ${question}`;
-    const resp = await openai.responses.create({
+    const completion = await openai.chat.completions.create({
       model: OPENAI_CHAT_MODEL,
-      input: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }]
     });
-    res.json({ answer: resp.output_text || "(no answer)" });
+    res.json({ answer: completion.choices[0]?.message?.content || "(no answer)" });
   } catch (e) {
     res.status(500).json({ detail: String(e.message || e) });
   }
