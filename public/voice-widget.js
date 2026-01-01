@@ -182,7 +182,15 @@ class VoiceWidget {
                     <div class="chat-history" id="chat-history"></div>
                 </div>
                 <div class="input-area">
-                    <input type="text" id="voice-text-input" placeholder="Type a message..." autocomplete="off">
+                    <div class="input-wrapper">
+                        <label for="file-input" class="upload-btn" id="upload-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                        </label>
+                        <input type="file" id="file-input" accept="image/*,application/pdf" hidden multiple>
+                        <input type="text" id="voice-text-input" placeholder="Type a message..." autocomplete="off">
+                    </div>
                 </div>
             </div>
         `;
@@ -196,6 +204,7 @@ class VoiceWidget {
         this.newBtn = document.getElementById('new-btn');
         this.muteBtn = document.getElementById('mute-btn');
         this.textInput = document.getElementById('voice-text-input');
+        this.fileInput = document.getElementById('file-input');
     }
 
     attachEvents() {
@@ -230,6 +239,72 @@ class VoiceWidget {
                 }
             });
         }
+
+        if (this.fileInput) {
+            this.fileInput.onchange = (e) => this.handleFileUpload(e);
+        }
+    }
+
+    async handleFileUpload(e) {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const formData = new FormData();
+        for (const file of files) {
+            formData.append('files', file);
+        }
+
+        const uploadBubble = this.createMessageBubble('assistant');
+        uploadBubble.innerHTML = `<i>Processing material...</i>`;
+        this.scrollToBottom();
+
+        try {
+            const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
+            const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+            const res = await fetch(`${backendUrl}/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Upload failed");
+
+            const contentDescription = `Uploaded material processed.\n[DATA]: ${data.text || "None"}\n[VISUALS]: ${data.description || "None"}`;
+
+            if (this.state === 'idle') {
+                await this.startSession();
+                const checkDC = setInterval(() => {
+                    if (this.dc && this.dc.readyState === 'open') {
+                        clearInterval(checkDC);
+                        this.processUploadResponse(contentDescription);
+                    }
+                }, 100);
+            } else {
+                this.processUploadResponse(contentDescription);
+            }
+        } catch (err) {
+            console.error("Upload failed", err);
+            uploadBubble.innerHTML = `<span style="color: #f87171;">Upload failed: ${err.message}</span>`;
+        } finally {
+            uploadBubble.remove();
+            e.target.value = "";
+        }
+    }
+
+    processUploadResponse(content) {
+        this.dc.send(JSON.stringify({
+            type: "conversation.item.create",
+            item: {
+                type: "message",
+                role: "user",
+                content: [{ type: "input_text", text: `I've uploaded some files. ${content}` }]
+            }
+        }));
+        this.dc.send(JSON.stringify({
+            type: "response.create",
+            response: {
+                instructions: "Acknowledge the upload and ask 'what would you like me to do with this uploaded material?'. Stay in character as Johnny."
+            }
+        }));
     }
 
     async sendTextMessage(text) {
