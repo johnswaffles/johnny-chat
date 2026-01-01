@@ -4,7 +4,8 @@ import multer from "multer";
 import OpenAI, { toFile } from "openai";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const pdf = require("pdf-parse");
+const pdfParse = require("pdf-parse");
+const pdf = typeof pdfParse === 'function' ? pdfParse : (pdfParse.default || pdfParse);
 
 const {
   OPENAI_API_KEY,
@@ -353,6 +354,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
       } else if (f.mimetype === "application/pdf") {
         console.log(`📄 [Upload] Parsing PDF: ${f.originalname}`);
         try {
+          if (typeof pdf !== 'function') throw new Error("PDF parser not available");
           const data = await pdf(f.buffer).catch(err => {
             console.error("🔥 [Upload] pdf-parse internal error:", err);
             return { text: `[Text extraction failed for ${f.originalname}]` };
@@ -361,7 +363,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
           descriptions.push(`Uploaded PDF: ${f.originalname}`);
         } catch (pdfErr) {
           console.error("🔥 [Upload] PDF outer error:", pdfErr);
-          fullText += (fullText ? "\n" : "") + `[Error processing ${f.originalname}]`;
+          fullText += (fullText ? "\n" : "") + `[Error processing ${f.originalname}: ${pdfErr.message}]`;
         }
       }
     }
