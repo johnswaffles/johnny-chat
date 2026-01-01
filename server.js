@@ -324,26 +324,27 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
         const b64 = f.buffer.toString("base64");
         const dataUrl = `data:${f.mimetype};base64,${b64}`;
 
-        console.log(`📡 [Upload] Sending to Vision: ${OPENAI_VISION_MODEL}`);
-        const vision = await openai.chat.completions.create({
+        console.log(`📡 [Upload] Sending to Vision (Responses API): ${OPENAI_VISION_MODEL}`);
+        const vision = await openai.responses.create({
           model: OPENAI_VISION_MODEL,
-          messages: [
+          input: [
             {
               role: "user",
               content: [
-                { type: "text", text: "First transcribe all legible text from the image as plain text. Then, if little or no text is present, write a precise visual description capturing subjects, scene, style, and notable details. Return JSON with keys text and description." },
-                { type: "image_url", image_url: { url: dataUrl } }
+                { type: "input_text", text: "First transcribe all legible text from the image as plain text. Then, if little or no text is present, write a precise visual description capturing subjects, scene, style, and notable details. Return JSON with keys text and description." },
+                { type: "input_image", image_url: dataUrl }
               ]
             }
-          ],
-          response_format: { type: "json_object" }
+          ]
         });
 
-        const content = vision.choices[0]?.message?.content;
+        const content = vision.output_text || "";
         console.log(`✅ [Upload] Vision response received. Length: ${content?.length}`);
 
         try {
-          const res = JSON.parse(content);
+          const m = content.match(/\{[\s\S]*\}$/);
+          const rawJson = m ? m[0] : content;
+          const res = JSON.parse(rawJson);
           if (res.text) fullText += (fullText ? "\n" : "") + res.text;
           if (res.description) descriptions.push(res.description);
         } catch (e) {
