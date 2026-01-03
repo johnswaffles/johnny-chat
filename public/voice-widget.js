@@ -399,6 +399,11 @@ class VoiceWidget {
                 }
             });
 
+            // START MUTED by default to prevent self-hearing during intro
+            this.isMuted = true;
+            this.stream.getAudioTracks().forEach(track => track.enabled = false);
+            if (this.muteBtn) this.muteBtn.dataset.muted = "true";
+
             this.pc = new RTCPeerConnection();
             const audioEl = document.createElement('audio');
             audioEl.autoplay = true;
