@@ -3,6 +3,8 @@ import cors from "cors";
 import multer from "multer";
 import OpenAI, { toFile } from "openai";
 import { createRequire } from "module";
+import { WebSocketServer, WebSocket } from "ws";
+import http from "http";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 // Disable worker for Node.js environment
@@ -494,7 +496,132 @@ app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) =
   }
 });
 
+// --- TWILIO INTEGRATION START ---
+
+// 1. TwiML Endpoint: Twilio calls this when a phone call starts
+app.all("/incoming-call", (req, res) => {
+  console.log("☎️  [Twilio] Incoming Call");
+  // TwiML response telling Twilio to connect the call to our WebSocket stream
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Connect>
+        <Stream url="wss://${req.get("host")}/media-stream" />
+    </Connect>
+</Response>`;
+  res.type("text/xml");
+  res.send(twiml);
+});
+
+// --- SERVER STARTUP WITH WEBSOCKET SUPPORT ---
+
 const port = Number(process.env.PORT || 3000);
-app.listen(port, () => {
+const server = http.createServer(app);
+
+const wss = new WebSocketServer({ server });
+
+wss.on("connection", (ws, req) => {
+  console.log("🔌 [WS] Client Connected");
+
+  // Only handle connections to /media-stream
+  if (req.url !== '/media-stream') {
+    ws.close();
+    return;
+  }
+
+  let streamSid = null;
+  let openAIWs = null;
+
+  try {
+    // Connect to OpenAI Realtime API
+    openAIWs = new WebSocket("wss://api.openai.com/v1/realtime?model=" + (process.env.OPENAI_REALTIME_MODEL || "gpt-4o-realtime-preview"), {
+      headers: {
+        Authorization: "Bearer " + OPENAI_API_KEY,
+        "OpenAI-Beta": "realtime=v1"
+      }
+    });
+  } catch (e) {
+    console.error("🔥 [Bridge] OpenAI connection failed:", e);
+    ws.close();
+    return;
+  }
+
+  // OpenAI Event Handlers
+  openAIWs.on("open", () => {
+    console.log("🤖 [Bridge] Connected to OpenAI Realtime");
+    // Initialize Session with G.711 uLaw audio for telephony
+    const sessionUpdate = {
+      type: "session.update",
+      session: {
+        turn_detection: { type: "server_vad" },
+        input_audio_format: "g711_ulaw",
+        output_audio_format: "g711_ulaw",
+        voice: "ash", // or 'alloy', 'echo', etc.
+        instructions: getJohnnyPersona() + "\nIMPORTANT: You are speaking on a telephone. Keep responses concise and purely audio-friendly. No markdown."
+      }
+    };
+    openAIWs.send(JSON.stringify(sessionUpdate));
+  });
+
+  openAIWs.on("message", (data) => {
+    try {
+      const response = JSON.parse(data);
+      if (response.type === "session.updated") {
+        console.log("✨ [Bridge] Session Updated");
+      }
+      if (response.type === "response.audio.delta" && response.delta) {
+        // Forward audio from OpenAI to Twilio
+        if (streamSid) {
+          const audioDelta = {
+            event: "media",
+            streamSid: streamSid,
+            media: { payload: response.delta }
+          };
+          ws.send(JSON.stringify(audioDelta));
+        }
+      }
+    } catch (e) {
+      console.error("🔥 [Bridge] Error parsing OpenAI message:", e);
+    }
+  });
+
+  openAIWs.on("close", () => console.log("🤖 [Bridge] OpenAI Disconnected"));
+  openAIWs.on("error", (e) => console.error("🔥 [Bridge] OpenAI Error:", e));
+
+  // Twilio Event Handlers
+  ws.on("message", (message) => {
+    try {
+      const data = JSON.parse(message);
+
+      switch (data.event) {
+        case "media":
+          // Forward audio from Twilio to OpenAI
+          if (openAIWs && openAIWs.readyState === WebSocket.OPEN) {
+            const audioAppend = {
+              type: "input_audio_buffer.append",
+              audio: data.media.payload
+            };
+            openAIWs.send(JSON.stringify(audioAppend));
+          }
+          break;
+        case "start":
+          streamSid = data.start.streamSid;
+          console.log(`📞 [Bridge] Stream Started: ${streamSid}`);
+          break;
+        case "stop":
+          console.log(`📞 [Bridge] Stream Stopped: ${streamSid}`);
+          break;
+      }
+    } catch (e) {
+      console.error("🔥 [Bridge] Error parsing Media Stream message:", e);
+    }
+  });
+
+  ws.on("close", () => {
+    console.log("🔌 [WS] Client Disconnected");
+    if (openAIWs && openAIWs.readyState === WebSocket.OPEN) openAIWs.close();
+  });
+});
+
+server.listen(port, () => {
   console.log(`server on :${port}`);
 });
