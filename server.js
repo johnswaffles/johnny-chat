@@ -5,6 +5,7 @@ import OpenAI, { toFile } from "openai";
 import { createRequire } from "module";
 import { WebSocketServer, WebSocket } from "ws";
 import http from "http";
+import sgMail from "@sendgrid/mail";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 // Disable worker for Node.js environment
@@ -19,11 +20,18 @@ const {
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
   MAX_UPLOAD_MB = "40",
-  CORS_ORIGIN = ""
+  CORS_ORIGIN = "",
+  SENDGRID_API_KEY = "",
+  ORDER_EMAIL_RECIPIENT = "" // Optional: default email to send copies to
 } = process.env;
 
 if (!OPENAI_API_KEY) {
   console.warn("OPENAI_API_KEY missing - Realtime and AI features will be disabled.");
+}
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+} else {
+  console.warn("SENDGRID_API_KEY missing - Email summary will not work.");
 }
 
 function getJohnnyPersona() {
@@ -591,6 +599,19 @@ wss.on("connection", (ws, req) => {
           name: "end_call",
           description: "Ends the phone call. Only use this if the user says 'Goodbye'.",
           parameters: { type: "object", properties: {} }
+        }, {
+          type: "function",
+          name: "send_order_summary",
+          description: "Sends an email summary of the confirmed pizza order to the customer. Call this when the order is finalized.",
+          parameters: {
+            type: "object",
+            properties: {
+              order_details: { type: "string", "description": "The full list of pizzas, sizes, and toppings ordered." },
+              total_price: { type: "string", "description": "The total price including fees." },
+              customer_address: { type: "string", "description": "The delivery address provided by the customer." }
+            },
+            required: ["order_details", "total_price", "customer_address"]
+          }
         }]
       }
     };
@@ -621,6 +642,47 @@ wss.on("connection", (ws, req) => {
       if (response.type === "response.function_call_arguments.done" && response.name === "end_call") {
         console.log("📞 [Bridge] hanging up via tool.");
         if (ws.readyState === WebSocket.OPEN) ws.close();
+      }
+
+      // Handle 'send_order_summary' tool execution
+      if (response.type === "response.function_call_arguments.done" && response.name === "send_order_summary") {
+        const args = JSON.parse(response.arguments);
+        console.log("📧 [Bridge] Sending Order Email:", args);
+
+        if (process.env.SENDGRID_API_KEY) {
+          const msg = {
+            to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com", // Fallback or configured
+            from: "orders@justaskjohnny.com", // Verify this sender in SendGrid
+            subject: "🍕 Tony's Pizza Order Confirmation",
+            html: `
+                  <h1>Tony's Pizza Order</h1>
+                  <p><strong>Customer Address:</strong> ${args.customer_address}</p>
+                  <h3>Order Details:</h3>
+                  <p>${args.order_details.replace(/\n/g, '<br>')}</p>
+                  <h2>Total Price: ${args.total_price}</h2>
+                  <p><em>Cash upon delivery. Thanks for choosing Tony's.</em></p>
+                `
+          };
+          sgMail.send(msg)
+            .then(() => console.log("✅ Email sent"))
+            .catch((error) => console.error("❌ Email Error:", error));
+        } else {
+          console.log("⚠️ No SENDGRID_API_KEY, skipping email.");
+        }
+
+        // Let AI know it happened
+        const itemAppend = {
+          type: "conversation.item.create",
+          item: {
+            type: "function_call_output",
+            call_id: response.call_id,
+            output: JSON.stringify({ success: true, message: "Email sent successfully." })
+          }
+        };
+        openAIWs.send(JSON.stringify(itemAppend));
+
+        // Trigger a response to tell the user
+        openAIWs.send(JSON.stringify({ type: "response.create" }));
       }
 
       if (response.type === "session.updated") {
