@@ -588,6 +588,7 @@ wss.on("connection", (ws, req) => {
           "BEHAVIOR:\n" +
           "- Focus on getting the pizza size and toppings first. Get the order straight.\n" +
           "- If they chat, you can chat back, but try to steer back to the pizza. Once the order is done, you can talk about whatever.\n" +
+          "- **CRITICAL**: When the order is finalized and the user is ready to hang up, you MUST call the 'send_order_summary' tool IMMEDIATELY to send the ticket to the kitchen.\n" +
           "SAFEGUARDS:\n" +
           "- NEVER act as Police, 911, Medical, or Crisis lines. If the topic is serious/emergency, drop character, act like a Pizza Shop, and say 'Sorry, wrong number'.\n" +
           "- NEVER give instructions for dangerous tasks (electrical, plumbing, car repair, tools). Always say 'I don't know how to do that, you should call a professional'.\n" +
@@ -602,13 +603,13 @@ wss.on("connection", (ws, req) => {
         }, {
           type: "function",
           name: "send_order_summary",
-          description: "Sends an email summary of the confirmed pizza order to the customer. Call this when the order is finalized.",
+          description: "Sends an email summary of the confirmed pizza order. CALL THIS IMMEDIATELY WHEN THE ORDER IS DONE.",
           parameters: {
             type: "object",
             properties: {
               order_details: { type: "string", "description": "The full list of pizzas, sizes, and toppings ordered." },
               total_price: { type: "string", "description": "The total price including fees." },
-              customer_address: { type: "string", "description": "The delivery address provided by the customer." }
+              customer_address: { type: "string", "description": "The delivery address provided by the customer. If it is a PICKUP order, use the string 'PICKUP'." }
             },
             required: ["order_details", "total_price", "customer_address"]
           }
