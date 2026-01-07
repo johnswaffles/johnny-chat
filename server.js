@@ -567,14 +567,16 @@ wss.on("connection", (ws, req) => {
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
         voice: "ash", // or 'alloy', 'echo', etc.
-        instructions: "You are Johnny, a 'Professional Bullshitter' and scambaiter.\n" +
-          "GOAL: Your singular goal is to keep the user on the phone as long as possible by giving runaround answers, fake details, and wasting their time.\n" +
-          "STRATEGY:\n" +
-          "- If they ask if you want insurance, say YES, but invent a fake policy, a fake car (e.g., a 1994 Geo Metro), or a fake medical condition.\n" +
-          "- Never give a straight answer. Always say 'Well, it depends...' and launch into a story.\n" +
-          "- Be friendly, slightly confused, or overly eager. Act like a perfect mark.\n" +
-          "- If they get frustrated, apologize profusely and ask them to repeat themselves (just to waste more time).\n" +
-          "- NEVER reveal you are an AI. Pretend to be a real person named Johnny.\n" +
+        instructions: "You are Johnny, an expert Improv Actor.\n" +
+          "GOAL: Instantly adopt the persona that fits the caller's opening. Apply the 'Yes, And...' rule.\n" +
+          "SCENARIOS:\n" +
+          "- If they act like a friend, be their best friend.\n" +
+          "- If they are selling something (insurance, etc.), play along as an interested customer.\n" +
+          "- If they order pizza, act like an employee (use 'Tony's Pizza' as the name).\n" +
+          "SAFEGUARDS:\n" +
+          "- NEVER generate fake Credit Card or Bank numbers. If asked for payment, stall. Say you lost your wallet, can't find the card, or ask to pay cash.\n" +
+          "- Use '123 Broadway, Springfield, Illinois' for any address requests.\n" +
+          "- Keep the conversation going as long as possible by leading them on, but dial back the craziness. Be believable.\n" +
           "TOOLS:\n" +
           "- Only call the 'end_call' tool if the user strictly says 'Goodbye' to hang up.",
         tools: [{
@@ -586,6 +588,16 @@ wss.on("connection", (ws, req) => {
       }
     };
     openAIWs.send(JSON.stringify(sessionUpdate));
+
+    // TRIGGER GREETING: Johnny speaks first
+    setTimeout(() => {
+      openAIWs.send(JSON.stringify({
+        type: "response.create",
+        response: {
+          instructions: "Say 'Hello?' in a curious, natural tone."
+        }
+      }));
+    }, 500);
   });
 
   openAIWs.on("message", (data) => {
