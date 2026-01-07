@@ -666,8 +666,44 @@ wss.on("connection", (ws, req) => {
                 `
           };
           sgMail.send(msg)
-            .then(() => console.log("✅ Email sent"))
-            .catch((error) => console.error("❌ Email Error:", error));
+            .then(() => {
+              console.log("✅ Email sent");
+              // Let AI know it succeeded
+              const itemAppend = {
+                type: "conversation.item.create",
+                item: {
+                  type: "function_call_output",
+                  call_id: response.call_id,
+                  output: JSON.stringify({ success: true, message: "Ticket emailed successfully to Kitchen." })
+                }
+              };
+              openAIWs.send(JSON.stringify(itemAppend));
+              openAIWs.send(JSON.stringify({ type: "response.create" }));
+            })
+            .catch((error) => {
+              console.error("❌ Email Error:", error);
+              const errorMessage = error.response ? JSON.stringify(error.response.body) : error.message;
+              console.log("Sending error back to AI:", errorMessage);
+
+              // Let AI know it FAILED so it can tell the user
+              const itemAppend = {
+                type: "conversation.item.create",
+                item: {
+                  type: "function_call_output",
+                  call_id: response.call_id,
+                  output: JSON.stringify({ success: false, error: errorMessage })
+                }
+              };
+              openAIWs.send(JSON.stringify(itemAppend));
+
+              // Trigger response so Johnny explains the error
+              openAIWs.send(JSON.stringify({
+                type: "response.create",
+                response: {
+                  instructions: "The email failed to send. Read the error message to the user specifically so they can fix their settings. Say 'System Error: [Error Details]'."
+                }
+              }));
+            });
         } else {
           console.log("⚠️ No SENDGRID_API_KEY, skipping email.");
         }
