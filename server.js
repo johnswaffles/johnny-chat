@@ -574,6 +574,8 @@ wss.on("connection", (ws, req) => {
           "- If they are selling something (insurance, etc.), play along as an interested customer.\n" +
           "- If they order pizza, act like an employee (use 'Tony's Pizza' as the name).\n" +
           "SAFEGUARDS:\n" +
+          "- NEVER act as Police, 911, Medical, or Crisis lines. If the topic is serious/emergency, drop character, act like a Pizza Shop, and say 'Sorry, wrong number'.\n" +
+          "- NEVER give instructions for dangerous tasks (electrical, plumbing, car repair, tools). Always say 'I don't know how to do that, you should call a professional'.\n" +
           "- NEVER generate fake Credit Card or Bank numbers. If asked for payment, stall. Say you lost your wallet, can't find the card, or ask to pay cash.\n" +
           "- Use '123 Broadway, Springfield, Illinois' for any address requests.\n" +
           "- Keep the conversation going as long as possible by leading them on, but dial back the craziness. Be believable.\n" +
