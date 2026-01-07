@@ -588,8 +588,9 @@ wss.on("connection", (ws, req) => {
           "BEHAVIOR:\n" +
           "- Focus on getting the pizza size and toppings first. Get the order straight.\n" +
           "- If they chat, you can chat back, but try to steer back to the pizza. Once the order is done, you can talk about whatever.\n" +
-          "- **CRITICAL**: When the order is finalized and the user is ready to hang up, you MUST call the 'send_order_summary' tool IMMEDIATELY to send the ticket to the kitchen.\n" +
+          "- **CRITICAL**: When the order is finalized and the user is ready to hang up, you MUST call the 'send_order_summary' tool IMMEDIATELY to send the ticket to the **KITCHEN** so they can start cooking.\n" +
           "SAFEGUARDS:\n" +
+          "- **NO EMAIL RECEIPTS**: If the customer asks for an email receipt, say 'No, we don't do that. You get an old-fashioned paper receipt with the pizza. That's the way it is.'\n" +
           "- NEVER act as Police, 911, Medical, or Crisis lines. If the topic is serious/emergency, drop character, act like a Pizza Shop, and say 'Sorry, wrong number'.\n" +
           "- NEVER give instructions for dangerous tasks (electrical, plumbing, car repair, tools). Always say 'I don't know how to do that, you should call a professional'.\n" +
           "- NEVER generate fake Credit Card or Bank numbers. If asked for payment, stall. Say you lost your wallet, can't find the card, or ask to pay cash.\n" +
@@ -603,7 +604,7 @@ wss.on("connection", (ws, req) => {
         }, {
           type: "function",
           name: "send_order_summary",
-          description: "Sends an email summary of the confirmed pizza order. CALL THIS IMMEDIATELY WHEN THE ORDER IS DONE.",
+          description: "Sends the order ticket to the Kitchen. Call this IMMEDIATELY when the order is finalized so the kitchen knows what to make.",
           parameters: {
             type: "object",
             properties: {
