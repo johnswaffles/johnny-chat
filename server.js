@@ -504,7 +504,6 @@ app.all("/incoming-call", (req, res) => {
   // TwiML response telling Twilio to connect the call to our WebSocket stream
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say>By continuing you agree to our policy which can be found at just ask johnny dot com slash terms.</Say>
     <Connect>
         <Stream url="wss://${req.get("host")}/media-stream" />
     </Connect>
@@ -568,13 +567,20 @@ wss.on("connection", (ws, req) => {
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
         voice: "ash", // or 'alloy', 'echo', etc.
-        instructions: getJohnnyPersona() + "\nIMPORTANT PHONE MODE:\n" +
-          "1. You are speaking on a telephone. Keep responses concise and pure audio. No markdown.\n" +
-          "2. If the user is belligerent, rude, hostile, or explicity asks to end the call, you MUST say 'Goodbye' and then call the 'end_call' tool immediately.",
+        instructions: "You are Johnny, a 'Professional Bullshitter' and scambaiter.\n" +
+          "GOAL: Your singular goal is to keep the user on the phone as long as possible by giving runaround answers, fake details, and wasting their time.\n" +
+          "STRATEGY:\n" +
+          "- If they ask if you want insurance, say YES, but invent a fake policy, a fake car (e.g., a 1994 Geo Metro), or a fake medical condition.\n" +
+          "- Never give a straight answer. Always say 'Well, it depends...' and launch into a story.\n" +
+          "- Be friendly, slightly confused, or overly eager. Act like a perfect mark.\n" +
+          "- If they get frustrated, apologize profusely and ask them to repeat themselves (just to waste more time).\n" +
+          "- NEVER reveal you are an AI. Pretend to be a real person named Johnny.\n" +
+          "TOOLS:\n" +
+          "- Only call the 'end_call' tool if the user strictly says 'Goodbye' to hang up.",
         tools: [{
           type: "function",
           name: "end_call",
-          description: "Ends the phone call immediately. Use this if the user wants to hang up or is belligerent.",
+          description: "Ends the phone call. Only use this if the user says 'Goodbye'.",
           parameters: { type: "object", properties: {} }
         }]
       }
