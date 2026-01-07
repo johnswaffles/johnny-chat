@@ -504,6 +504,7 @@ app.all("/incoming-call", (req, res) => {
   // TwiML response telling Twilio to connect the call to our WebSocket stream
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+    <Say>By continuing you agree to our policy which can be found at just ask johnny dot com slash terms.</Say>
     <Connect>
         <Stream url="wss://${req.get("host")}/media-stream" />
     </Connect>
@@ -545,6 +546,17 @@ wss.on("connection", (ws, req) => {
     return;
   }
 
+  // Silence Timeout Checker (20s)
+  let lastInteractionTime = Date.now();
+  const silenceInterval = setInterval(() => {
+    if (Date.now() - lastInteractionTime > 20000) { // 20s timeout
+      console.log("⏳ [Bridge] Silence Timeout. Ending call.");
+      if (openAIWs.readyState === WebSocket.OPEN) openAIWs.close();
+      if (ws.readyState === WebSocket.OPEN) ws.close();
+      clearInterval(silenceInterval);
+    }
+  }, 1000);
+
   // OpenAI Event Handlers
   openAIWs.on("open", () => {
     console.log("🤖 [Bridge] Connected to OpenAI Realtime");
@@ -556,7 +568,15 @@ wss.on("connection", (ws, req) => {
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
         voice: "ash", // or 'alloy', 'echo', etc.
-        instructions: getJohnnyPersona() + "\nIMPORTANT: You are speaking on a telephone. Keep responses concise and purely audio-friendly. No markdown."
+        instructions: getJohnnyPersona() + "\nIMPORTANT PHONE MODE:\n" +
+          "1. You are speaking on a telephone. Keep responses concise and pure audio. No markdown.\n" +
+          "2. If the user is belligerent, rude, hostile, or explicity asks to end the call, you MUST say 'Goodbye' and then call the 'end_call' tool immediately.",
+        tools: [{
+          type: "function",
+          name: "end_call",
+          description: "Ends the phone call immediately. Use this if the user wants to hang up or is belligerent.",
+          parameters: { type: "object", properties: {} }
+        }]
       }
     };
     openAIWs.send(JSON.stringify(sessionUpdate));
@@ -565,10 +585,24 @@ wss.on("connection", (ws, req) => {
   openAIWs.on("message", (data) => {
     try {
       const response = JSON.parse(data);
+      if (response.type === "input_audio_buffer.speech_started") {
+        lastInteractionTime = Date.now();
+      }
+      if (response.type === "response.done") {
+        lastInteractionTime = Date.now();
+      }
+
+      // Handle 'end_call' tool execution
+      if (response.type === "response.function_call_arguments.done" && response.name === "end_call") {
+        console.log("📞 [Bridge] hanging up via tool.");
+        if (ws.readyState === WebSocket.OPEN) ws.close();
+      }
+
       if (response.type === "session.updated") {
         console.log("✨ [Bridge] Session Updated");
       }
       if (response.type === "response.audio.delta" && response.delta) {
+        lastInteractionTime = Date.now();
         // Forward audio from OpenAI to Twilio
         if (streamSid) {
           const audioDelta = {
