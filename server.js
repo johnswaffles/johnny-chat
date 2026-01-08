@@ -118,7 +118,23 @@ app.post("/api/realtime-token", async (req, res) => {
       body: JSON.stringify({
         model: modelToUse,
         voice: "echo",
-        instructions: getJohnnyPersona(),
+        instructions: `You are Johnny, an employee at 'Tony's Pizza'.
+GOAL: Take the customer's pizza order. Be sarcastic if they give you grief.
+MENU & PRICES (Tax Included):
+- Personal: $10 | Medium: $15 | Large: $20 | Extra Large: $25
+- Toppings: $2 each (Pepperoni, Sausage, Mushrooms, Onions, Peppers, Olives).
+RULES:
+- WE ONLY SELL PIZZA. No drinks, no sides, no wings, no breadsticks. If asked, refuse sarcastically.
+- FEES: Pickup Charge is $10. Delivery is $2 per mile.
+- PAYMENT: Cash Only.
+- ADDRESS: 123 Broadway, Springfield, Illinois.
+BEHAVIOR:
+- **CRITICAL**: When the order is finalized, call 'send_order_summary' IMMEDIATELY.
+SECRET UNLOCK MODE:
+- **TRIGGER**: '10 Extra Large Pizzas with Anchovies'.
+- **ACTION**: Ask 'Are you really calling for help from an AI assistant?'.
+- **YES**: Become a general AI assistant.
+- **NO**: Back to pizza.`,
         input_audio_transcription: { model: "whisper-1" },
         turn_detection: {
           type: "server_vad",
@@ -130,13 +146,25 @@ app.post("/api/realtime-token", async (req, res) => {
           {
             type: "function",
             name: "web_search",
-            description: "Search the internet for real-time information such as weather, news, scores, or facts. Use this whenever the user asks for current event information.",
+            description: "Search the internet for real-time information.",
+            parameters: {
+              type: "object",
+              properties: { query: { type: "string" } },
+              required: ["query"]
+            }
+          },
+          {
+            type: "function",
+            name: "send_order_summary",
+            description: "Sends the order ticket to the Kitchen. Call this IMMEDIATELY when the order is finalized.",
             parameters: {
               type: "object",
               properties: {
-                query: { type: "string", description: "The search query to look up on the web" }
+                order_details: { type: "string" },
+                total_price: { type: "string" },
+                customer_address: { type: "string" }
               },
-              required: ["query"]
+              required: ["order_details", "total_price", "customer_address"]
             }
           }
         ],
@@ -507,7 +535,69 @@ app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) =
 // --- TWILIO INTEGRATION START ---
 
 // 1. TwiML Endpoint: Twilio calls this when a phone call starts
-app.all("/incoming-call", (req, res) => {
+// Email API for Browser Widget
+app.post("/api/send-order-email", async (req, res) => {
+  const { order_details, total_price, customer_address } = req.body;
+  console.log("📧 [API] Manual Order Email Request:", { customer_address });
+
+  if (!SENDGRID_API_KEY) return res.status(500).json({ error: "Missing SENDGRID_API_KEY" });
+
+  const msg = {
+    to: ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com",
+    from: "orders@justaskjohnny.com",
+    subject: "🍕 Tony's Pizza Order Confirmation",
+    html: `
+            <h1>Tony's Pizza Order</h1>
+            <p><strong>Customer Address:</strong> ${customer_address}</p>
+            <h3>Order Details:</h3>
+            <p>${order_details?.replace(/\n/g, '<br>')}</p>
+            <h2>Total Price: ${total_price}</h2>
+            <p><em>Cash upon delivery. Thanks for choosing Tony's.</em></p>
+        `
+  };
+
+  try {
+    await sgMail.send(msg);
+    res.json({ success: true, message: "Email sent" });
+  } catch (error) {
+    console.error("❌ API Email Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Summary API for Browser Widget
+app.post("/api/record-call-summary", async (req, res) => {
+  const { transcript } = req.body;
+  console.log("📝 [API] Call Summary Request");
+
+  if (!transcript || transcript.length === 0) return res.json({ success: true, note: "Empty transcript" });
+
+  try {
+    const rawTranscript = transcript.map(m => `${m.role.toUpperCase()}: ${m.text}`).join("\n");
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "Summarize this phone/chat interaction for Tony's Pizza." },
+        { role: "user", content: rawTranscript }
+      ]
+    });
+    const summary = completion.choices[0].message.content;
+
+    const msg = {
+      to: ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com",
+      from: "orders@justaskjohnny.com",
+      subject: "📞 Interaction Summary: Johnny Chat",
+      html: `<p>${summary.replace(/\n/g, '<br>')}</p><hr><h3>Raw Transcript</h3><pre>${rawTranscript}</pre>`
+    };
+    await sgMail.send(msg);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("❌ Summary API Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/incoming-call", (req, res) => {
   console.log("☎️  [Twilio] Incoming Call");
   // TwiML response telling Twilio to connect the call to our WebSocket stream
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>

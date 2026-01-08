@@ -539,23 +539,23 @@ class VoiceWidget {
     }
 
     async handleFunctionCall(msg) {
+        const args = JSON.parse(msg.arguments || "{}");
+        const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
+        const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+
         if (msg.name === 'web_search') {
-            const args = JSON.parse(msg.arguments || "{}");
             const query = args.query || "";
             const searchBubble = this.createMessageBubble('assistant');
             searchBubble.innerHTML = `<i>Searching for "${query}"...</i>`;
             this.scrollToBottom();
 
             try {
-                const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
-                const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
                 const res = await fetch(`${backendUrl}/api/voice-search`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query })
                 });
                 const data = await res.json();
-
                 if (!res.ok) throw new Error(data.error || "Search API Error");
 
                 this.dc.send(JSON.stringify({
@@ -565,7 +565,6 @@ class VoiceWidget {
                 this.dc.send(JSON.stringify({ type: "response.create" }));
             } catch (err) {
                 console.error("Search failed", err);
-                // Report error to OpenAI so Johnny can explain it
                 this.dc.send(JSON.stringify({
                     type: "conversation.item.create",
                     item: { type: "function_call_output", call_id: msg.call_id, output: "I'm having trouble searching the web right now." }
@@ -574,6 +573,40 @@ class VoiceWidget {
             } finally {
                 searchBubble.remove();
             }
+        } else if (msg.name === 'send_order_summary') {
+            console.log("📧 Sending Kitchen Ticket via Widget...");
+            try {
+                const res = await fetch(`${backendUrl}/api/send-order-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(args)
+                });
+                const data = await res.json();
+
+                this.dc.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: {
+                        type: "function_call_output",
+                        call_id: msg.call_id,
+                        output: JSON.stringify({ success: res.ok, message: data.message || data.error })
+                    }
+                }));
+                this.dc.send(JSON.stringify({ type: "response.create" }));
+            } catch (err) {
+                console.error("Email failed", err);
+                this.dc.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: { type: "function_call_output", call_id: msg.call_id, output: JSON.stringify({ success: false, error: err.message }) }
+                }));
+                this.dc.send(JSON.stringify({ type: "response.create" }));
+            }
+        } else if (msg.name === 'end_call') {
+            console.log("👋 Hanging up...");
+            this.dc.send(JSON.stringify({
+                type: "conversation.item.create",
+                item: { type: "function_call_output", call_id: msg.call_id, output: JSON.stringify({ success: true }) }
+            }));
+            setTimeout(() => this.stopSession(), 1000);
         }
     }
 
@@ -612,7 +645,21 @@ class VoiceWidget {
         }
     }
 
-    stopSession() {
+    async stopSession() {
+        console.log("⏹️ Stopping Session...");
+        // Send summary before stopping if we have messages
+        if (this.messages.length > 0) {
+            const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
+            const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+
+            // Fire and forget summary
+            fetch(`${backendUrl}/api/record-call-summary`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transcript: this.messages })
+            }).catch(e => console.error("Summary failed", e));
+        }
+
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
         if (this.pc) this.pc.close();
         this.updateState('idle');
