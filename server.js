@@ -538,6 +538,7 @@ wss.on("connection", (ws, req) => {
 
   let streamSid = null;
   let openAIWs = null;
+  let transcript = []; // Store the conversation for a summary
 
   try {
     // Connect to OpenAI Realtime API
@@ -574,6 +575,7 @@ wss.on("connection", (ws, req) => {
         turn_detection: { type: "server_vad" },
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
+        input_audio_transcription: { model: "whisper-1" },
         voice: "ash", // or 'alloy', 'echo', etc.
         instructions: "You are Johnny, an employee at 'Tony's Pizza'.\n" +
           "GOAL: Take the customer's pizza order. Be sarcastic if they give you grief.\n" +
@@ -644,6 +646,22 @@ wss.on("connection", (ws, req) => {
       }
       if (response.type === "response.done") {
         lastInteractionTime = Date.now();
+        // Capture Johnny's response for the summary
+        response.response?.output?.forEach(output => {
+          if (output.type === "message" || output.type === "audio") {
+            output.content?.forEach(content => {
+              if (content.type === "audio" && content.transcript) {
+                transcript.push(`Johnny: ${content.transcript}`);
+              }
+            });
+          }
+        });
+      }
+
+      if (response.type === "conversation.item.input_audio_transcription.completed") {
+        const userText = response.transcript || "...";
+        transcript.push(`User: ${userText}`);
+        console.log(`👤 User: ${userText}`);
       }
 
       // Handle 'end_call' tool execution
@@ -781,9 +799,45 @@ wss.on("connection", (ws, req) => {
     }
   });
 
-  ws.on("close", () => {
+  ws.on("close", async () => {
     console.log("🔌 [WS] Client Disconnected");
     if (openAIWs && openAIWs.readyState === WebSocket.OPEN) openAIWs.close();
+    clearInterval(silenceInterval);
+
+    // Send call summary email automatically
+    if (transcript.length > 0) {
+      console.log("📝 Generating Call Summary...");
+      try {
+        const rawTranscript = transcript.join("\n");
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "You are a helpful assistant loging phone calls for Tony's Pizza. Summarize the following phone call into 2-3 concise bullet points. Mention orders, requests, and the outcome." },
+            { role: "user", content: `Call Transcript:\n${rawTranscript}` }
+          ]
+        });
+        const summary = completion.choices[0].message.content;
+
+        const msg = {
+          to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com",
+          from: "orders@justaskjohnny.com",
+          subject: "📞 Call Summary: Interaction with Johnny",
+          html: `
+            <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+              <h2 style="color: #d32f2f;">🍕 Call Summary</h2>
+              <p>${summary.replace(/\n/g, '<br>')}</p>
+              <hr>
+              <h3 style="color: #666;">Raw Transcript</h3>
+              <pre style="background: #f4f4f4; padding: 15px; border-radius: 8px; border: 1px solid #ddd; white-space: pre-wrap;">${rawTranscript}</pre>
+            </div>
+          `
+        };
+        await sgMail.send(msg);
+        console.log("✅ Automatic Summary Email Sent");
+      } catch (e) {
+        console.error("❌ Failed to send summary email:", e);
+      }
+    }
   });
 });
 
