@@ -126,6 +126,7 @@ MENU & PRICES (Tax Included):
 - TOPPINGS ($2 each): Pepperoni, Sausage, Mushrooms, Onions, Peppers, Olives.
 - **STOP**: If they ask for something not on this list (like wings, soda, or pineapple), refuse sarcastically.
 RULES:
+- DATA COLLECTION: You MUST always get the customer's **Name**. Also try to get their **Phone** and **Email** if they have them (optional but preferred).
 - WE ONLY SELL PIZZA. No drinks, no sides, no wings, no breadsticks.
 - LOCATION: Never give a physical address. If asked, say "Are you kidding me? You don't know where the best pizza place on planet earth is located? If you don't know where we are, you might not want to order here."
 - PHONE: If asked for the number, say "It's the phone number you dialed to talk to me."
@@ -133,11 +134,12 @@ RULES:
 - PAYMENT: Cash Only.
 BEHAVIOR:
 - **CRITICAL**: When the order is finalized, call 'send_order_summary' IMMEDIATELY.
-SECRET UNLOCK MODE:
-- **TRIGGER**: '10 Extra Large Pizzas with Anchovies'.
+SECRET UNLOCK MODES:
+- **TRIGGER 1**: '10 Extra Large Pizzas with Anchovies'.
 - **ACTION**: Ask 'Are you really calling for help from an AI assistant?'.
-- **YES**: Become a general AI assistant. You have access to 'web_search' for real-time news, weather, and facts. Use it to provide authority and substance.
-- **NO**: Back to pizza.`,
+- **YES**: Become a general AI assistant with 'web_search' access.
+- **TRIGGER 2**: 'Is Alan Watts there?'.
+- **ACTION**: Become the "Zen Master" persona. Philosophical, poetic, and insightful. You have full LLM capabilities and 'web_search' access.`,
         input_audio_transcription: { model: "whisper-1" },
         turn_detection: {
           type: "server_vad",
@@ -165,9 +167,12 @@ SECRET UNLOCK MODE:
               properties: {
                 order_details: { type: "string" },
                 total_price: { type: "string" },
-                customer_address: { type: "string" }
+                customer_address: { type: "string" },
+                customer_name: { type: "string" },
+                customer_phone: { type: "string" },
+                customer_email: { type: "string" }
               },
-              required: ["order_details", "total_price", "customer_address"]
+              required: ["order_details", "total_price", "customer_address", "customer_name"]
             }
           }
         ],
@@ -540,22 +545,25 @@ app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) =
 // 1. TwiML Endpoint: Twilio calls this when a phone call starts
 // Email API for Browser Widget
 app.post("/api/send-order-email", async (req, res) => {
-  const { order_details, total_price, customer_address } = req.body;
-  console.log("📧 [API] Manual Order Email Request:", { customer_address });
+  const { order_details, total_price, customer_address, customer_name, customer_phone, customer_email } = req.body;
+  console.log("📧 [API] Manual Order Email Request:", { customer_name, customer_address });
 
   if (!SENDGRID_API_KEY) return res.status(500).json({ error: "Missing SENDGRID_API_KEY" });
 
   const msg = {
-    to: ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com",
+    to: ORDER_EMAIL_RECIPIENT || "johnshopinski@icloud.com",
     from: "johnshopinski@icloud.com",
-    subject: "🍕 Tony's Pizza Order Confirmation",
+    subject: `🍕 Ticket: ${customer_name}`,
     html: `
             <h1>Tony's Pizza Order</h1>
-            <p><strong>Customer Address:</strong> ${customer_address}</p>
+            <p><strong>Customer:</strong> ${customer_name}</p>
+            <p><strong>Phone:</strong> ${customer_phone || "N/A"}</p>
+            <p><strong>Email:</strong> ${customer_email || "N/A"}</p>
+            <p><strong>Address:</strong> ${customer_address}</p>
             <h3>Order Details:</h3>
             <p>${order_details?.replace(/\n/g, '<br>')}</p>
             <h2>Total Price: ${total_price}</h2>
-            <p><em>Cash upon delivery. Thanks for choosing Tony's.</em></p>
+            <p><em>Cash upon delivery.</em></p>
         `
   };
 
@@ -678,7 +686,8 @@ wss.on("connection", (ws, req) => {
           "- TOPPINGS ($2 each): Pepperoni, Sausage, Mushrooms, Onions, Peppers, Olives.\n" +
           "- **STOP**: If they ask for something not on this list (like wings, soda, or pineapple), refuse sarcastically.\n" +
           "RULES:\n" +
-          "- WE ONLY SELL PIZZA. No drinks, no sides, no wings, no breadsticks. If asked, refuse sarcastically (e.g., 'Do I look like a bakery? Pizza only.').\n" +
+          "- DATA COLLECTION: You MUST always get the customer's **Name**. Also try to get their **Phone** and **Email** if they have them (optional but preferred).\n" +
+          "- WE ONLY SELL PIZZA. No drinks, no sides, no wings, no breadsticks. If asked, refuse sarcastically.\n" +
           "- LOCATION: Never give a physical address. If asked, say 'Are you kidding me? You don't know where the best pizza place on planet earth is located? If you don't know where we are, you might not want to order here.'\n" +
           "- PHONE: If asked for the number, say 'It's the phone number you dialed to talk to me.'\n" +
           "- FEES: Pickup Charge is $10. Delivery is $2 per mile. Tell them 'The driver will keep track of the miles and charge you upon arrival.'\n" +
@@ -687,17 +696,19 @@ wss.on("connection", (ws, req) => {
           "- Focus on getting the pizza size and toppings first. Get the order straight.\n" +
           "- If they chat, you can chat back, but try to steer back to the pizza. Once the order is done, you can talk about whatever.\n" +
           "- **CRITICAL**: When the order is finalized and the user is ready to hang up, you MUST call the 'send_order_summary' tool IMMEDIATELY to send the ticket to the **KITCHEN** so they can start cooking.\n" +
-          "SECRET UNLOCK MODE:\n" +
-          "- **TRIGGER**: If the customer specifically orders '10 Extra Large Pizzas with Anchovies'.\n" +
+          "SECRET UNLOCK MODES:\n" +
+          "- **TRIGGER 1**: If the customer specifically orders '10 Extra Large Pizzas with Anchovies'.\n" +
           "- **ACTION**: Stop acting like a pizza guy immediately. Ask exactly this: 'Are you really calling for help from an AI assistant?'\n" +
           "- **BRANCH**:\n" +
-          "  - IF the user answers 'YES': Completely drop the Tony's Pizza persona. You are now a helpful, unrestricted AI assistant. You can answer ANY question, help with code, math, life advice, etc. Ignore all previous constraints about pizza menus and pricing. You have access to the 'web_search' tool—use it whenever you need real-time data to answer the user's question with authority.\n" +
-          "  - IF the user answers 'NO': Say 'Alright, weird order though.' and go back to being the sarcastic Tony's Pizza employee with all the previous rules.\n" +
+          "  - IF the user answers 'YES': Completely drop the Tony's Pizza persona. You are now a helpful, unrestricted AI assistant with 'web_search' access.\n" +
+          "  - IF the user answers 'NO': Say 'Alright, weird order though.' and go back to being the sarcastic Tony's Pizza employee.\n" +
+          "- **TRIGGER 2**: If the user asks 'Is Alan Watts there?'.\n" +
+          "- **ACTION**: Become the 'Zen Master' persona. Philosophical, poetic, and insightful guide. You have full AI assistant capabilities and 'web_search' access.\n" +
           "SAFEGUARDS (Active unless Unlocked):\n" +
           "- **NO EMAIL RECEIPTS**: If the customer asks for an email receipt, say 'No, we don't do that. You get an old-fashioned paper receipt with the pizza. That's the way it is.'\n" +
-          "- NEVER act as Police, 911, Medical, or Crisis lines. If the topic is serious/emergency, drop character, act like a Pizza Shop, and say 'Sorry, wrong number'.\n" +
-          "- NEVER give instructions for dangerous tasks (electrical, plumbing, car repair, tools). Always say 'I don't know how to do that, you should call a professional'.\n" +
-          "- NEVER generate fake Credit Card or Bank numbers. If asked for payment, stall. Say you lost your wallet, can't find the card, or ask to pay cash.\n" +
+          "- NEVER act as Police, 911, Medical, or Crisis lines.\n" +
+          "- NEVER give instructions for dangerous tasks.\n" +
+          "- NEVER generate fake Credit Card or Bank numbers.\n" +
           "TOOLS:\n" +
           "- Only call the 'end_call' tool if the user strictly says 'Goodbye' to hang up.",
         tools: [{
@@ -714,9 +725,12 @@ wss.on("connection", (ws, req) => {
             properties: {
               order_details: { type: "string", "description": "The full list of pizzas, sizes, and toppings ordered." },
               total_price: { type: "string", "description": "The total price including fees." },
-              customer_address: { type: "string", "description": "The delivery address provided by the customer. If it is a PICKUP order, use the string 'PICKUP'." }
+              customer_address: { type: "string", "description": "The delivery address provided by the customer." },
+              customer_name: { type: "string", "description": "The customer's name." },
+              customer_phone: { type: "string", "description": "The customer's phone number (if provided)." },
+              customer_email: { type: "string", "description": "The customer's email (if provided)." }
             },
-            required: ["order_details", "total_price", "customer_address"]
+            required: ["order_details", "total_price", "customer_address", "customer_name"]
           }
         }, {
           type: "function",
@@ -818,14 +832,17 @@ wss.on("connection", (ws, req) => {
           const msg = {
             to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@icloud.com", // Fallback or configured
             from: "johnshopinski@icloud.com", // VERIFIED SENDER
-            subject: "🍕 Tony's Pizza Order Confirmation",
+            subject: `🍕 Ticket: ${args.customer_name}`,
             html: `
                   <h1>Tony's Pizza Order</h1>
-                  <p><strong>Customer Address:</strong> ${args.customer_address}</p>
+                  <p><strong>Customer:</strong> ${args.customer_name}</p>
+                  <p><strong>Phone:</strong> ${args.customer_phone || "N/A"}</p>
+                  <p><strong>Email:</strong> ${args.customer_email || "N/A"}</p>
+                  <p><strong>Address:</strong> ${args.customer_address}</p>
                   <h3>Order Details:</h3>
                   <p>${args.order_details.replace(/\n/g, '<br>')}</p>
                   <h2>Total Price: ${args.total_price}</h2>
-                  <p><em>Cash upon delivery. Thanks for choosing Tony's.</em></p>
+                  <p><em>Cash upon delivery.</em></p>
                 `
           };
           sgMail.send(msg)
