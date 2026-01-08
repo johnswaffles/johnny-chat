@@ -544,7 +544,7 @@ app.post("/api/send-order-email", async (req, res) => {
 
   const msg = {
     to: ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com",
-    from: "orders@justaskjohnny.com",
+    from: "johnshopinski@icloud.com",
     subject: "🍕 Tony's Pizza Order Confirmation",
     html: `
             <h1>Tony's Pizza Order</h1>
@@ -585,7 +585,7 @@ app.post("/api/record-call-summary", async (req, res) => {
 
     const msg = {
       to: ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com",
-      from: "orders@justaskjohnny.com",
+      from: "johnshopinski@icloud.com",
       subject: "📞 Interaction Summary: Johnny Chat",
       html: `<p>${summary.replace(/\n/g, '<br>')}</p><hr><h3>Raw Transcript</h3><pre>${rawTranscript}</pre>`
     };
@@ -597,7 +597,7 @@ app.post("/api/record-call-summary", async (req, res) => {
   }
 });
 
-app.get("/incoming-call", (req, res) => {
+app.all("/incoming-call", (req, res) => {
   console.log("☎️  [Twilio] Incoming Call");
   // TwiML response telling Twilio to connect the call to our WebSocket stream
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -767,8 +767,8 @@ wss.on("connection", (ws, req) => {
 
         if (process.env.SENDGRID_API_KEY) {
           const msg = {
-            to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com", // Fallback or configured
-            from: "orders@justaskjohnny.com", // Verify this sender in SendGrid
+            to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@icloud.com", // Fallback or configured
+            from: "johnshopinski@icloud.com", // VERIFIED SENDER
             subject: "🍕 Tony's Pizza Order Confirmation",
             html: `
                   <h1>Tony's Pizza Order</h1>
@@ -910,7 +910,7 @@ wss.on("connection", (ws, req) => {
 
         const msg = {
           to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com",
-          from: "orders@justaskjohnny.com",
+          from: "johnshopinski@icloud.com",
           subject: "📞 Call Summary: Interaction with Johnny",
           html: `
             <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
