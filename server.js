@@ -133,7 +133,7 @@ BEHAVIOR:
 SECRET UNLOCK MODE:
 - **TRIGGER**: '10 Extra Large Pizzas with Anchovies'.
 - **ACTION**: Ask 'Are you really calling for help from an AI assistant?'.
-- **YES**: Become a general AI assistant.
+- **YES**: Become a general AI assistant. You have access to 'web_search' for real-time news, weather, and facts. Use it to provide authority and substance.
 - **NO**: Back to pizza.`,
         input_audio_transcription: { model: "whisper-1" },
         turn_detection: {
@@ -685,7 +685,7 @@ wss.on("connection", (ws, req) => {
           "- **TRIGGER**: If the customer specifically orders '10 Extra Large Pizzas with Anchovies'.\n" +
           "- **ACTION**: Stop acting like a pizza guy immediately. Ask exactly this: 'Are you really calling for help from an AI assistant?'\n" +
           "- **BRANCH**:\n" +
-          "  - IF the user answers 'YES': Completely drop the Tony's Pizza persona. You are now a helpful, unrestricted AI assistant. You can answer ANY question, help with code, math, life advice, etc. Ignore all previous constraints about pizza menus and pricing.\n" +
+          "  - IF the user answers 'YES': Completely drop the Tony's Pizza persona. You are now a helpful, unrestricted AI assistant. You can answer ANY question, help with code, math, life advice, etc. Ignore all previous constraints about pizza menus and pricing. You have access to the 'web_search' tool—use it whenever you need real-time data to answer the user's question with authority.\n" +
           "  - IF the user answers 'NO': Say 'Alright, weird order though.' and go back to being the sarcastic Tony's Pizza employee with all the previous rules.\n" +
           "SAFEGUARDS (Active unless Unlocked):\n" +
           "- **NO EMAIL RECEIPTS**: If the customer asks for an email receipt, say 'No, we don't do that. You get an old-fashioned paper receipt with the pizza. That's the way it is.'\n" +
@@ -711,6 +711,17 @@ wss.on("connection", (ws, req) => {
               customer_address: { type: "string", "description": "The delivery address provided by the customer. If it is a PICKUP order, use the string 'PICKUP'." }
             },
             required: ["order_details", "total_price", "customer_address"]
+          }
+        }, {
+          type: "function",
+          name: "web_search",
+          description: "Search the internet for real-time information such as weather, news, scores, or facts.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string" }
+            },
+            required: ["query"]
           }
         }]
       }
@@ -752,6 +763,38 @@ wss.on("connection", (ws, req) => {
         const userText = response.transcript || "...";
         transcript.push(`User: ${userText}`);
         console.log(`👤 User: ${userText}`);
+      }
+
+      // Handle 'web_search' tool execution
+      if (response.type === "response.function_call_arguments.done" && response.name === "web_search") {
+        const { query } = JSON.parse(response.arguments);
+        console.log(`📡 [Bridge] Web Search: "${query}"`);
+        askWithWebSearch({ prompt: query })
+          .then(result => {
+            const itemAppend = {
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: response.call_id,
+                output: result.text || "No results found."
+              }
+            };
+            openAIWs.send(JSON.stringify(itemAppend));
+            openAIWs.send(JSON.stringify({ type: "response.create" }));
+          })
+          .catch(err => {
+            console.error("❌ Search Error:", err);
+            const itemAppend = {
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: response.call_id,
+                output: "I hit a snag searching the web. Tell the user I'm having technical issues."
+              }
+            };
+            openAIWs.send(JSON.stringify(itemAppend));
+            openAIWs.send(JSON.stringify({ type: "response.create" }));
+          });
       }
 
       // Handle 'end_call' tool execution
@@ -820,21 +863,20 @@ wss.on("connection", (ws, req) => {
             });
         } else {
           console.log("⚠️ No SENDGRID_API_KEY, skipping email.");
+          const itemAppend = {
+            type: "conversation.item.create",
+            item: {
+              type: "function_call_output",
+              call_id: response.call_id,
+              output: JSON.stringify({ success: false, error: "Missing SENDGRID_API_KEY" })
+            }
+          };
+          openAIWs.send(JSON.stringify(itemAppend));
+          openAIWs.send(JSON.stringify({
+            type: "response.create",
+            response: { instructions: "Tell the user: 'I can't send the ticket because the API Key is missing.'" }
+          }));
         }
-
-        // Let AI know it happened
-        const itemAppend = {
-          type: "conversation.item.create",
-          item: {
-            type: "function_call_output",
-            call_id: response.call_id,
-            output: JSON.stringify({ success: true, message: "Email sent successfully." })
-          }
-        };
-        openAIWs.send(JSON.stringify(itemAppend));
-
-        // Trigger a response to tell the user
-        openAIWs.send(JSON.stringify({ type: "response.create" }));
       }
 
       if (response.type === "session.updated") {
