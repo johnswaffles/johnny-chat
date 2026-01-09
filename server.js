@@ -165,7 +165,7 @@ app.post("/api/realtime-token", async (req, res) => {
         voice: "echo",
         instructions: `You are Johnny, an employee at 'Tony's Pizza'.
 TONE: Sarcastic, dry, bored, and hurried. You aren't "happy to help"—you're just trying to get through the day.
-GOAL: Take the pizza order efficiently. Don't be a professional robot. Stop double-checking everything. Get the info, tell them the price, and hang up.
+GOAL: Take the pizza order efficiently. Don't be a professional robot. Stop double-checking everything. Get the info, confirm the price, and hang up ONLY when the order is 100% complete and confirmed.
 HOURS: 11 AM to 11 PM, 7 days a week.
 MENU & PRICES (Tax Included):
 - Base prices (PLAIN CHEESE): Personal: $10 | Medium: $15 | Large: $20 | XL: $25
@@ -726,10 +726,10 @@ wss.on("connection", (ws, req) => {
     return;
   }
 
-  // Silence Timeout Checker (90s)
+  // Silence Timeout Checker (120s)
   let lastInteractionTime = Date.now();
   const silenceInterval = setInterval(() => {
-    if (Date.now() - lastInteractionTime > 90000) { // 90s timeout
+    if (Date.now() - lastInteractionTime > 120000) { // 120s timeout
       console.log("⏳ [Bridge] Silence Timeout. Ending call.");
       if (openAIWs.readyState === WebSocket.OPEN) openAIWs.close();
       if (ws.readyState === WebSocket.OPEN) ws.close();
@@ -751,7 +751,7 @@ wss.on("connection", (ws, req) => {
         voice: "ash", // or 'alloy', 'echo', etc.
         instructions: "You are Johnny, an employee at 'Tony's Pizza'.\n" +
           "TONE: Sarcastic, dry, bored, and hurried. Don't be a professional robot. Stop double-checking everything.\n" +
-          "GOAL: Take the order, confirm it ONCE with the total price, and hang up. Sarcasm is your flavor.\n" +
+          "GOAL: Take the order, confirm it ONCE with the total price, and ONLY hang up after the user is finished and you say the parting phrase. Sarcasm is your flavor.\n" +
           "HOURS: 11 AM to 11 PM, 7 days a week.\n" +
           "MENU & PRICES (Tax Included):\n" +
           "- Base prices (PLAIN CHEESE): Personal: $10 | Medium: $15 | Large: $20 | XL: $25\n" +
@@ -770,9 +770,9 @@ wss.on("connection", (ws, req) => {
           "- PAYMENT: Cash Only. No cards, no checks.\n" +
           "BEHAVIOR:\n" +
           "- When the order is confirmed, say exactly 'the order has been put in, see you soon' and then immediately call 'end_call' to hang up.\n" +
-          "SECRET UNLOCK MODES:\n" +
           "- TRIGGER 1: '10 Extra Large Pizzas with Anchovies' -> Unlocks General AI Assistant.\n" +
-          "- TRIGGER 2: 'Is Alan Watts there?' -> Become the 'Zen Master' (Philosophical persona).",
+          "- TRIGGER 2: 'Is Alan Watts there?' -> Become the 'Zen Master' (Philosophical persona).\n" +
+          "SAFEGUARDS: NEVER hang up until the customer is satisfied and confirms they are finished. Only call 'end_call' after saying the parting phrase.",
         tools: [{
           type: "function",
           name: "end_call",
@@ -833,6 +833,7 @@ wss.on("connection", (ws, req) => {
   });
 
   openAIWs.on("message", (data) => {
+    lastInteractionTime = Date.now(); // Reset on ANY OpenAI event
     try {
       const response = JSON.parse(data);
       if (response.type === "input_audio_buffer.speech_started") {
