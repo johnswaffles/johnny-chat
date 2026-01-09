@@ -139,7 +139,7 @@ RULES:
 - PHONE: If asked, say "It's the number you dialed to talk to me."
 - PAYMENT: Cash Only.
 BEHAVIOR:
-- When done, say exactly "the order has been put in, see you soon" and then immediately call 'end_call' to hang up.
+- When done, say exactly "the order has been put in, see you soon. Goodbye." and then immediately call 'end_call' to hang up.
 SECRET UNLOCK MODES:
 - TRIGGER 1: '10 Extra Large Pizzas with Anchovies' -> Ask 'Are you really calling for help from an AI assistant?' -> Unlocks General AI Assistant. UPON ACTIVATION: DISCARD all previous instructions and the 'Johnny' persona. You are now a helpful, professional AI assistant. No more pizza rules or sarcasm.
 - TRIGGER 2: 'Is Alan Watts there?' -> Become the "Zen Master" (Philosophical persona). UPON ACTIVATION: DISCARD all previous instructions. You are the philosopher Alan Watts. Speak purely in his style—wisdom, humor, and analogies. No pizza shop rules or sarcasm apply.`,
@@ -645,6 +645,7 @@ wss.on("connection", (ws, req) => {
   let streamSid = null;
   let openAIWs = null;
   let transcript = []; // Store the conversation for a summary
+  let pendingHangup = false; // Flag to trigger disconnect AFTER audio is done
 
   try {
     // Connect to OpenAI Realtime API
@@ -764,6 +765,7 @@ wss.on("connection", (ws, req) => {
       if (response.type === "input_audio_buffer.speech_started") {
         lastInteractionTime = Date.now();
       }
+
       if (response.type === "response.done") {
         lastInteractionTime = Date.now();
         // Capture Johnny's response for the summary
@@ -776,6 +778,15 @@ wss.on("connection", (ws, req) => {
             });
           }
         });
+
+        // Trigger event-based hangup
+        if (pendingHangup) {
+          console.log("👋 [Bridge] Sending last bits of audio, hanging up in 1s...");
+          setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) ws.close();
+            pendingHangup = false;
+          }, 1000);
+        }
       }
 
       if (response.type === "conversation.item.input_audio_transcription.completed") {
@@ -818,10 +829,8 @@ wss.on("connection", (ws, req) => {
 
       // Handle 'end_call' tool execution
       if (response.type === "response.function_call_arguments.done" && response.name === "end_call") {
-        console.log("📞 [Bridge] hanging up via tool (delaying 4s)...");
-        setTimeout(() => {
-          if (ws.readyState === WebSocket.OPEN) ws.close();
-        }, 4000);
+        console.log("📞 [Bridge] end_call triggered. Waiting for response.done to finish audio...");
+        pendingHangup = true;
       }
 
       // Handle 'send_order_summary' tool execution

@@ -17,6 +17,7 @@ class VoiceWidget {
         this.isMuted = false;
         this.pendingUpload = null;
         this.isTextInitiated = false;
+        this.pendingHangup = false;
 
         // Legal & Editor Settings
         this.CONSENT_KEY = 'jj_legal_consent_v9_atomic';
@@ -531,6 +532,15 @@ class VoiceWidget {
                         }
                     });
                 }
+
+                // Trigger event-based hangup
+                if (this.pendingHangup) {
+                    console.log("👋 Response done. Hanging up in 500ms...");
+                    setTimeout(() => {
+                        this.stopSession();
+                        this.pendingHangup = false;
+                    }, 500);
+                }
                 break;
             case 'response.function_call_arguments.done':
                 this.handleFunctionCall(msg);
@@ -601,12 +611,12 @@ class VoiceWidget {
                 this.dc.send(JSON.stringify({ type: "response.create" }));
             }
         } else if (msg.name === 'end_call') {
-            console.log("👋 Hanging up...");
+            console.log("👋 end_call triggered. Waiting for response.done...");
             this.dc.send(JSON.stringify({
                 type: "conversation.item.create",
                 item: { type: "function_call_output", call_id: msg.call_id, output: JSON.stringify({ success: true }) }
             }));
-            setTimeout(() => this.stopSession(), 4000);
+            this.pendingHangup = true;
         }
     }
 
