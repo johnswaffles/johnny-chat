@@ -22,16 +22,11 @@ const {
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = "",
   SENDGRID_API_KEY = "",
-  ORDER_EMAIL_RECIPIENT = "", // Optional: default email to send copies to
-  GOOGLE_MAPS_API_KEY = "AIzaSyBMVvbDRKtReJHc2Zo2_06PK0D989fjPdA", // Extracted from user image
-  PIZZA_SHOP_ADDRESS = "123 Broadway, Springfield, IL"
+  ORDER_EMAIL_RECIPIENT = "" // Optional: default email to send copies to
 } = process.env;
 
 if (!OPENAI_API_KEY) {
   console.warn("OPENAI_API_KEY missing - Realtime and AI features will be disabled.");
-}
-if (!GOOGLE_MAPS_API_KEY) {
-  console.warn("GOOGLE_MAPS_API_KEY missing - Delivery fee calculation will be estimated.");
 }
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
@@ -63,46 +58,6 @@ Deflection Rules:
 - For all other world/news/fact questions: BE THE AUTHORITY. Provide the info.
 
 Style: No emojis. No filler. Short, punchy, fact-rich responses. If you use a tool, wait for the result and summarize it sharply.`;
-}
-
-/**
- * GOOGLE MAPS DELIVERY QUOTE HELPER
- */
-async function getDeliveryQuote(address) {
-  if (!GOOGLE_MAPS_API_KEY) {
-    return { error: "Google Maps API Key not configured" };
-  }
-
-  try {
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(PIZZA_SHOP_ADDRESS)}&destinations=${encodeURIComponent(address)}&units=imperial&key=${GOOGLE_MAPS_API_KEY}`;
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.status === "OK") {
-      const element = data.rows[0].elements[0];
-      if (element.status === "OK") {
-        const distanceStr = element.distance.text; // e.g. "4.6 mi"
-        const distanceValue = element.distance.value; // meters
-        const miles = distanceValue * 0.000621371;
-        const fee = Math.ceil(miles) * 2; // $2 per mile round up
-
-        return {
-          distance: distanceStr,
-          miles: miles.toFixed(2),
-          delivery_fee: fee,
-          shop_address: PIZZA_SHOP_ADDRESS,
-          destination: address
-        };
-      } else {
-        return { error: `Could not find address: ${element.status}` };
-      }
-    } else {
-      return { error: `Maps API error: ${data.status}` };
-    }
-  } catch (err) {
-    console.error("🔥 Error fetching Google Maps quote:", err);
-    return { error: "Failed to connect to Google Maps" };
-  }
 }
 
 const app = express();
@@ -174,9 +129,10 @@ MENU & PRICES (Tax Included):
 FLOW:
 1. CUSTOMER INFO: Always get the customer's Name. Try for Phone/Email if possible.
 2. PICKUP OR DELIVERY: You MUST ask "Is this for pickup or delivery?" early on.
-3. DELIVERY: If delivery, you MUST call 'get_delivery_quote' for the address. Never estimate the fee.
-4. CONFIRM & PRICE: Once the order is set, states the FINAL TOTAL PRICE clearly once.
-5. FINISH: Call 'send_order_summary' to send the kitchen ticket.
+3. DELIVERY: If delivery, state that "the driver will charge $2 per mile from the store to your home." Do not call any maps tools.
+4. COOK NOTE: Ask if they'd like to send a note to the cook letting him know he's doing a good job or any other note.
+5. CONFIRM & PRICE: Once the order is set, states the FINAL TOTAL PRICE clearly once.
+6. FINISH: Call 'send_order_summary' to send the kitchen ticket.
 RULES:
 - WE ONLY SELL PIZZA. No drinks, sides, or wings. Refuse sarcastically.
 - LOCATION: Never give an address. Say "Are you kidding me? You don't know where the best pizza place on planet earth is located?"
@@ -217,21 +173,10 @@ SECRET UNLOCK MODES:
                 customer_address: { type: "string" },
                 customer_name: { type: "string" },
                 customer_phone: { type: "string" },
-                customer_email: { type: "string" }
+                customer_email: { type: "string" },
+                cook_note: { type: "string", description: "A note to the cook from the customer." }
               },
               required: ["order_details", "total_price", "customer_address", "customer_name"]
-            }
-          },
-          {
-            type: "function",
-            name: "get_delivery_quote",
-            description: "Calculate driving distance and delivery fee for an address. Use this for all delivery inquiries.",
-            parameters: {
-              type: "object",
-              properties: {
-                address: { type: "string", description: "The customer's delivery address." }
-              },
-              required: ["address"]
             }
           }
         ],
@@ -604,7 +549,7 @@ app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) =
 // 1. TwiML Endpoint: Twilio calls this when a phone call starts
 // Email API for Browser Widget
 app.post("/api/send-order-email", async (req, res) => {
-  const { order_details, total_price, customer_address, customer_name, customer_phone, customer_email } = req.body;
+  const { order_details, total_price, customer_address, customer_name, customer_phone, customer_email, cook_note } = req.body;
   console.log("📧 [API] Manual Order Email Request:", { customer_name, customer_address });
 
   if (!SENDGRID_API_KEY) return res.status(500).json({ error: "Missing SENDGRID_API_KEY" });
@@ -619,6 +564,7 @@ app.post("/api/send-order-email", async (req, res) => {
             <p><strong>Phone:</strong> ${customer_phone || "N/A"}</p>
             <p><strong>Email:</strong> ${customer_email || "N/A"}</p>
             <p><strong>Address:</strong> ${customer_address}</p>
+            <p><strong>Note to Cook:</strong> ${cook_note || "None"}</p>
             <h3>Order Details:</h3>
             <p>${order_details?.replace(/\n/g, '<br>')}</p>
             <h2>Total Price: ${total_price}</h2>
@@ -665,18 +611,6 @@ app.post("/api/record-call-summary", async (req, res) => {
     console.error("❌ Summary API Error:", error);
     res.status(500).json({ error: error.message });
   }
-});
-
-// Delivery Quote API for Browser Widget
-app.post("/api/delivery-quote", async (req, res) => {
-  const { address } = req.body;
-  console.log("📍 [API] Delivery Quote Request:", address);
-
-  const quote = await getDeliveryQuote(address);
-  if (quote.error) {
-    return res.status(400).json(quote);
-  }
-  res.json(quote);
 });
 
 app.all("/incoming-call", (req, res) => {
@@ -760,9 +694,10 @@ wss.on("connection", (ws, req) => {
           "FLOW:\n" +
           "1. CUSTOMER INFO: Always get the customer's Name. Try for Phone/Email if possible.\n" +
           "2. PICKUP OR DELIVERY: You MUST ask 'Is this for pickup or delivery?' early on.\n" +
-          "3. DELIVERY: If delivery, you MUST call 'get_delivery_quote' for the address. Never estimate the fee.\n" +
-          "4. CONFIRM & PRICE: Once the order is set, state the FINAL TOTAL PRICE clearly once.\n" +
-          "5. FINISH: Call 'send_order_summary' to send the kitchen ticket.\n" +
+          "3. DELIVERY: If delivery, state that 'the driver will charge $2 per mile from the store to your home.' Do not call any maps tools.\n" +
+          "4. COOK NOTE: Ask if they'd like to send a note to the cook letting him know he's doing a good job or any other note.\n" +
+          "5. CONFIRM & PRICE: Once the order is set, state the FINAL TOTAL PRICE clearly once.\n" +
+          "6. FINISH: Call 'send_order_summary' to send the kitchen ticket.\n" +
           "RULES:\n" +
           "- WE ONLY SELL PIZZA. No drinks, sides, or wings. Refuse sarcastically.\n" +
           "- LOCATION: Never give a physical address. If asked, say 'Are you kidding me? You don't know where the best pizza place on planet earth is located?'\n" +
@@ -790,20 +725,10 @@ wss.on("connection", (ws, req) => {
               customer_address: { type: "string", "description": "The delivery address provided by the customer." },
               customer_name: { type: "string", "description": "The customer's name." },
               customer_phone: { type: "string", "description": "The customer's phone number (if provided)." },
-              customer_email: { type: "string", "description": "The customer's email (if provided)." }
+              customer_email: { type: "string", "description": "The customer's email (if provided)." },
+              cook_note: { type: "string", "description": "A note to the cook from the customer." }
             },
             required: ["order_details", "total_price", "customer_address", "customer_name"]
-          }
-        }, {
-          type: "function",
-          name: "get_delivery_quote",
-          description: "Calculate driving distance and delivery fee for an address. Use this for all delivery inquiries.",
-          parameters: {
-            type: "object",
-            properties: {
-              address: { type: "string", description: "The customer's delivery address." }
-            },
-            required: ["address"]
           }
         }, {
           type: "function",
@@ -891,39 +816,6 @@ wss.on("connection", (ws, req) => {
           });
       }
 
-      // Handle 'get_delivery_quote' tool execution
-      if (response.type === "response.function_call_arguments.done" && response.name === "get_delivery_quote") {
-        const args = JSON.parse(response.arguments);
-        console.log("📍 [Bridge] Getting Delivery Quote for:", args.address);
-
-        getDeliveryQuote(args.address)
-          .then((quote) => {
-            const itemAppend = {
-              type: "conversation.item.create",
-              item: {
-                type: "function_call_output",
-                call_id: response.call_id,
-                output: JSON.stringify(quote)
-              }
-            };
-            openAIWs.send(JSON.stringify(itemAppend));
-            openAIWs.send(JSON.stringify({ type: "response.create" }));
-          })
-          .catch((err) => {
-            console.error("❌ Maps Error:", err);
-            const itemAppend = {
-              type: "conversation.item.create",
-              item: {
-                type: "function_call_output",
-                call_id: response.call_id,
-                output: JSON.stringify({ error: "Failed to get distance. Tell the user the maps system is down." })
-              }
-            };
-            openAIWs.send(JSON.stringify(itemAppend));
-            openAIWs.send(JSON.stringify({ type: "response.create" }));
-          });
-      }
-
       // Handle 'end_call' tool execution
       if (response.type === "response.function_call_arguments.done" && response.name === "end_call") {
         console.log("📞 [Bridge] hanging up via tool.");
@@ -946,6 +838,7 @@ wss.on("connection", (ws, req) => {
                   <p><strong>Phone:</strong> ${args.customer_phone || "N/A"}</p>
                   <p><strong>Email:</strong> ${args.customer_email || "N/A"}</p>
                   <p><strong>Address:</strong> ${args.customer_address}</p>
+                  <p><strong>Note to Cook:</strong> ${args.cook_note || "None"}</p>
                   <h3>Order Details:</h3>
                   <p>${args.order_details.replace(/\n/g, '<br>')}</p>
                   <h2>Total Price: ${args.total_price}</h2>
