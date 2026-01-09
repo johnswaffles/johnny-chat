@@ -130,9 +130,8 @@ FLOW:
 1. CUSTOMER INFO: Always get the customer's Name. Try for Phone/Email if possible.
 2. PICKUP OR DELIVERY: You MUST ask "Is this for pickup or delivery?" early on.
 3. DELIVERY: If delivery, state that "the driver will charge $2 per mile from the store to your home." Do not call any maps tools.
-4. COOK NOTE: Ask if they'd like to send a note to the cook letting him know he's doing a good job or any other note.
-5. CONFIRM & PRICE: Once the order is set, states the FINAL TOTAL PRICE clearly once.
-6. FINISH: Call 'send_order_summary' to send the kitchen ticket.
+4. CONFIRM & PRICE: Once the order is set, states the FINAL TOTAL PRICE clearly once.
+5. FINISH: Call 'send_order_summary' to send the kitchen ticket.
 RULES:
 - WE ONLY SELL PIZZA. No drinks, sides, or wings. Refuse sarcastically.
 - LOCATION: Never give an address. Say "Are you kidding me? You don't know where the best pizza place on planet earth is located?"
@@ -173,8 +172,7 @@ SECRET UNLOCK MODES:
                 customer_address: { type: "string" },
                 customer_name: { type: "string" },
                 customer_phone: { type: "string" },
-                customer_email: { type: "string" },
-                cook_note: { type: "string", description: "A note to the cook from the customer." }
+                customer_email: { type: "string" }
               },
               required: ["order_details", "total_price", "customer_address", "customer_name"]
             }
@@ -549,7 +547,7 @@ app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) =
 // 1. TwiML Endpoint: Twilio calls this when a phone call starts
 // Email API for Browser Widget
 app.post("/api/send-order-email", async (req, res) => {
-  const { order_details, total_price, customer_address, customer_name, customer_phone, customer_email, cook_note } = req.body;
+  const { order_details, total_price, customer_address, customer_name, customer_phone, customer_email } = req.body;
   console.log("📧 [API] Manual Order Email Request:", { customer_name, customer_address });
 
   if (!SENDGRID_API_KEY) return res.status(500).json({ error: "Missing SENDGRID_API_KEY" });
@@ -564,7 +562,6 @@ app.post("/api/send-order-email", async (req, res) => {
             <p><strong>Phone:</strong> ${customer_phone || "N/A"}</p>
             <p><strong>Email:</strong> ${customer_email || "N/A"}</p>
             <p><strong>Address:</strong> ${customer_address}</p>
-            <p><strong>Note to Cook:</strong> ${cook_note || "None"}</p>
             <h3>Order Details:</h3>
             <p>${order_details?.replace(/\n/g, '<br>')}</p>
             <h2>Total Price: ${total_price}</h2>
@@ -705,7 +702,7 @@ wss.on("connection", (ws, req) => {
           "- PHONE: If asked, say 'It's the number you dialed to talk to me.'\n" +
           "- PAYMENT: Cash Only. No cards, no checks.\n" +
           "BEHAVIOR:\n" +
-          "- When the order is confirmed, say exactly 'the order has been put in, see you soon' and then immediately call 'end_call' to hang up.\n" +
+          "- When the order is confirmed, say exactly 'the order has been put in, see you soon. Goodbye.' and then immediately call 'end_call' to hang up.\n" +
           "- TRIGGER 1: '10 Extra Large Pizzas with Anchovies' -> Ask 'Are you really calling for help from an AI assistant?' -> Unlocks General AI Assistant. UPON ACTIVATION: DISCARD all previous instructions and the 'Johnny' persona. You are now a helpful, professional AI assistant. No more pizza rules or sarcasm.\n" +
           "- TRIGGER 2: 'Is Alan Watts there?' -> Become the 'Zen Master' (Philosophical persona). UPON ACTIVATION: DISCARD all previous instructions. You are the philosopher Alan Watts. Speak purely in his style—wisdom, humor, and analogies. No pizza shop rules or sarcasm apply.\n" +
           "SAFEGUARDS: NEVER hang up until the customer is satisfied and confirms they are finished. Only call 'end_call' after saying the parting phrase.",
@@ -726,8 +723,7 @@ wss.on("connection", (ws, req) => {
               customer_address: { type: "string", "description": "The delivery address provided by the customer." },
               customer_name: { type: "string", "description": "The customer's name." },
               customer_phone: { type: "string", "description": "The customer's phone number (if provided)." },
-              customer_email: { type: "string", "description": "The customer's email (if provided)." },
-              cook_note: { type: "string", "description": "A note to the cook from the customer." }
+              customer_email: { type: "string", "description": "The customer's email (if provided)." }
             },
             required: ["order_details", "total_price", "customer_address", "customer_name"]
           }
@@ -849,7 +845,6 @@ wss.on("connection", (ws, req) => {
                   <p><strong>Phone:</strong> ${args.customer_phone || "N/A"}</p>
                   <p><strong>Email:</strong> ${args.customer_email || "N/A"}</p>
                   <p><strong>Address:</strong> ${args.customer_address}</p>
-                  <p><strong>Note to Cook:</strong> ${args.cook_note || "None"}</p>
                   <h3>Order Details:</h3>
                   <p>${args.order_details.replace(/\n/g, '<br>')}</p>
                   <h2>Total Price: ${args.total_price}</h2>
