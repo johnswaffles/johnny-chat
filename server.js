@@ -22,11 +22,16 @@ const {
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = "",
   SENDGRID_API_KEY = "",
-  ORDER_EMAIL_RECIPIENT = "" // Optional: default email to send copies to
+  ORDER_EMAIL_RECIPIENT = "", // Optional: default email to send copies to
+  GOOGLE_MAPS_API_KEY = "AIzaSyBMVvbDRKtReJHc2Zo2_06PK0D989fjPdA", // Extracted from user image
+  PIZZA_SHOP_ADDRESS = "123 Broadway, Springfield, IL"
 } = process.env;
 
 if (!OPENAI_API_KEY) {
   console.warn("OPENAI_API_KEY missing - Realtime and AI features will be disabled.");
+}
+if (!GOOGLE_MAPS_API_KEY) {
+  console.warn("GOOGLE_MAPS_API_KEY missing - Delivery fee calculation will be estimated.");
 }
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
@@ -58,6 +63,46 @@ Deflection Rules:
 - For all other world/news/fact questions: BE THE AUTHORITY. Provide the info.
 
 Style: No emojis. No filler. Short, punchy, fact-rich responses. If you use a tool, wait for the result and summarize it sharply.`;
+}
+
+/**
+ * GOOGLE MAPS DELIVERY QUOTE HELPER
+ */
+async function getDeliveryQuote(address) {
+  if (!GOOGLE_MAPS_API_KEY) {
+    return { error: "Google Maps API Key not configured" };
+  }
+
+  try {
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(PIZZA_SHOP_ADDRESS)}&destinations=${encodeURIComponent(address)}&units=imperial&key=${GOOGLE_MAPS_API_KEY}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === "OK") {
+      const element = data.rows[0].elements[0];
+      if (element.status === "OK") {
+        const distanceStr = element.distance.text; // e.g. "4.6 mi"
+        const distanceValue = element.distance.value; // meters
+        const miles = distanceValue * 0.000621371;
+        const fee = Math.ceil(miles) * 2; // $2 per mile round up
+
+        return {
+          distance: distanceStr,
+          miles: miles.toFixed(2),
+          delivery_fee: fee,
+          shop_address: PIZZA_SHOP_ADDRESS,
+          destination: address
+        };
+      } else {
+        return { error: `Could not find address: ${element.status}` };
+      }
+    } else {
+      return { error: `Maps API error: ${data.status}` };
+    }
+  } catch (err) {
+    console.error("🔥 Error fetching Google Maps quote:", err);
+    return { error: "Failed to connect to Google Maps" };
+  }
 }
 
 const app = express();
@@ -131,7 +176,7 @@ RULES:
 - WE ONLY SELL PIZZA. No drinks, no sides, no wings, no breadsticks.
 - LOCATION: Never give a physical address. If asked, say "Are you kidding me? You don't know where the best pizza place on planet earth is located? If you don't know where we are, you might not want to order here."
 - PHONE: If asked for the number, say "It's the phone number you dialed to talk to me."
-- FEES: Pickup Charge is $10. Delivery is $2 per mile. Tell them "The driver will keep track of the miles and charge you upon arrival."
+- DELIVERY FEES: You MUST call 'get_delivery_quote' for any delivery address to get the exact cost. Never estimate the fee. Tell them "The fee is based on driving distance from our shop."
 - PAYMENT: Cash Only.
 BEHAVIOR:
 - **CRITICAL**: When the order is finalized, call 'send_order_summary' IMMEDIATELY.
@@ -175,6 +220,18 @@ SECRET UNLOCK MODES:
                 customer_email: { type: "string" }
               },
               required: ["order_details", "total_price", "customer_address", "customer_name"]
+            }
+          },
+          {
+            type: "function",
+            name: "get_delivery_quote",
+            description: "Calculate driving distance and delivery fee for an address. Use this for all delivery inquiries.",
+            parameters: {
+              type: "object",
+              properties: {
+                address: { type: "string", description: "The customer's delivery address." }
+              },
+              required: ["address"]
             }
           }
         ],
@@ -610,6 +667,18 @@ app.post("/api/record-call-summary", async (req, res) => {
   }
 });
 
+// Delivery Quote API for Browser Widget
+app.post("/api/delivery-quote", async (req, res) => {
+  const { address } = req.body;
+  console.log("📍 [API] Delivery Quote Request:", address);
+
+  const quote = await getDeliveryQuote(address);
+  if (quote.error) {
+    return res.status(400).json(quote);
+  }
+  res.json(quote);
+});
+
 app.all("/incoming-call", (req, res) => {
   console.log("☎️  [Twilio] Incoming Call");
   // TwiML response telling Twilio to connect the call to our WebSocket stream
@@ -693,7 +762,7 @@ wss.on("connection", (ws, req) => {
           "- WE ONLY SELL PIZZA. No drinks, no sides, no wings, no breadsticks. If asked, refuse sarcastically.\n" +
           "- LOCATION: Never give a physical address. If asked, say 'Are you kidding me? You don't know where the best pizza place on planet earth is located? If you don't know where we are, you might not want to order here.'\n" +
           "- PHONE: If asked for the number, say 'It's the phone number you dialed to talk to me.'\n" +
-          "- FEES: Pickup Charge is $10. Delivery is $2 per mile. Tell them 'The driver will keep track of the miles and charge you upon arrival.'\n" +
+          "- DELIVERY FEES: You MUST call 'get_delivery_quote' for any delivery address to get the exact cost. Never estimate the fee. Tell them 'The fee is based on driving distance from our shop.'\n" +
           "- PAYMENT: Cash Only. No cards, no checks.\n" +
           "BEHAVIOR:\n" +
           "- Focus on getting the pizza size and toppings first. Get the order straight.\n" +
@@ -734,6 +803,17 @@ wss.on("connection", (ws, req) => {
               customer_email: { type: "string", "description": "The customer's email (if provided)." }
             },
             required: ["order_details", "total_price", "customer_address", "customer_name"]
+          }
+        }, {
+          type: "function",
+          name: "get_delivery_quote",
+          description: "Calculate driving distance and delivery fee for an address. Use this for all delivery inquiries.",
+          parameters: {
+            type: "object",
+            properties: {
+              address: { type: "string", description: "The customer's delivery address." }
+            },
+            required: ["address"]
           }
         }, {
           type: "function",
@@ -813,6 +893,39 @@ wss.on("connection", (ws, req) => {
                 type: "function_call_output",
                 call_id: response.call_id,
                 output: "I hit a snag searching the web. Tell the user I'm having technical issues."
+              }
+            };
+            openAIWs.send(JSON.stringify(itemAppend));
+            openAIWs.send(JSON.stringify({ type: "response.create" }));
+          });
+      }
+
+      // Handle 'get_delivery_quote' tool execution
+      if (response.type === "response.function_call_arguments.done" && response.name === "get_delivery_quote") {
+        const args = JSON.parse(response.arguments);
+        console.log("📍 [Bridge] Getting Delivery Quote for:", args.address);
+
+        getDeliveryQuote(args.address)
+          .then((quote) => {
+            const itemAppend = {
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: response.call_id,
+                output: JSON.stringify(quote)
+              }
+            };
+            openAIWs.send(JSON.stringify(itemAppend));
+            openAIWs.send(JSON.stringify({ type: "response.create" }));
+          })
+          .catch((err) => {
+            console.error("❌ Maps Error:", err);
+            const itemAppend = {
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: response.call_id,
+                output: JSON.stringify({ error: "Failed to get distance. Tell the user the maps system is down." })
               }
             };
             openAIWs.send(JSON.stringify(itemAppend));

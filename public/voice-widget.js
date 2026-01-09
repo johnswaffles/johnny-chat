@@ -600,6 +600,34 @@ class VoiceWidget {
                 }));
                 this.dc.send(JSON.stringify({ type: "response.create" }));
             }
+        } else if (msg.name === 'get_delivery_quote') {
+            const address = args.address || "";
+            console.log(`📍 Getting Delivery Quote for: ${address}`);
+            try {
+                const res = await fetch(`${backendUrl}/api/delivery-quote`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address })
+                });
+                const data = await res.json();
+
+                this.dc.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: {
+                        type: "function_call_output",
+                        call_id: msg.call_id,
+                        output: JSON.stringify(data)
+                    }
+                }));
+                this.dc.send(JSON.stringify({ type: "response.create" }));
+            } catch (err) {
+                console.error("Maps quote failed", err);
+                this.dc.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: { type: "function_call_output", call_id: msg.call_id, output: JSON.stringify({ error: "Could not reach maps system." }) }
+                }));
+                this.dc.send(JSON.stringify({ type: "response.create" }));
+            }
         } else if (msg.name === 'end_call') {
             console.log("👋 Hanging up...");
             this.dc.send(JSON.stringify({
