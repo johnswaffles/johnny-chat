@@ -818,8 +818,10 @@ wss.on("connection", (ws, req) => {
 
       // Handle 'end_call' tool execution
       if (response.type === "response.function_call_arguments.done" && response.name === "end_call") {
-        console.log("📞 [Bridge] hanging up via tool.");
-        if (ws.readyState === WebSocket.OPEN) ws.close();
+        console.log("📞 [Bridge] hanging up via tool (delaying 4s)...");
+        setTimeout(() => {
+          if (ws.readyState === WebSocket.OPEN) ws.close();
+        }, 4000);
       }
 
       // Handle 'send_order_summary' tool execution

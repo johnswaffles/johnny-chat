@@ -606,7 +606,7 @@ class VoiceWidget {
                 type: "conversation.item.create",
                 item: { type: "function_call_output", call_id: msg.call_id, output: JSON.stringify({ success: true }) }
             }));
-            setTimeout(() => this.stopSession(), 1000);
+            setTimeout(() => this.stopSession(), 4000);
         }
     }
 
