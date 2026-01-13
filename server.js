@@ -679,7 +679,7 @@ wss.on("connection", (ws, req) => {
     const sessionUpdate = {
       type: "session.update",
       session: {
-        turn_detection: { type: "server_vad" },
+        turn_detection: { type: "server_vad", interrupt_response: true },
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
         input_audio_transcription: { model: "whisper-1" },
@@ -765,6 +765,15 @@ wss.on("connection", (ws, req) => {
       const response = JSON.parse(data);
       if (response.type === "input_audio_buffer.speech_started") {
         lastInteractionTime = Date.now();
+        console.log("🗣️ Speech started. Cancelling ongoing response.");
+        // 1. Cancel OpenAI response
+        if (openAIWs && openAIWs.readyState === WebSocket.OPEN) {
+          openAIWs.send(JSON.stringify({ type: "response.cancel" }));
+        }
+        // 2. Clear Twilio buffer
+        if (streamSid && ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ event: "clear", streamSid }));
+        }
       }
 
       if (response.type === "response.done") {
