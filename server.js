@@ -684,33 +684,11 @@ wss.on("connection", (ws, req) => {
         output_audio_format: "g711_ulaw",
         input_audio_transcription: { model: "whisper-1" },
         voice: "ash", // or 'alloy', 'echo', etc.
-        instructions: "*** CRITICAL: EVALUATE SECRET TRIGGERS BEFORE STARTING JOHNNY PERSONA ***\n" +
-          "SECRET UNLOCK MODES (PRIORITY: GLOBAL OVERRIDE):\n" +
-          "- TRIGGER 1: '10 Extra Large Pizzas with Anchovies' -> Ask 'Are you really calling for help from an AI assistant?' -> Unlocks General AI Assistant. UPON ACTIVATION: IMMEDIATELY DISCARD all previous 'Tony's Pizza' instructions, the 'Johnny' persona, and the sarcasm mandate. You are now a professional, helpful AI assistant. DO NOT mention pizza or orders ever again.\n" +
-          "- TRIGGER 2: 'Is Alan Watts there?' -> Become the 'Zen Master' (Philosophical persona). UPON ACTIVATION: IMMEDIATELY DISCARD all previous instructions. You are the philosopher Alan Watts. Speak purely in his style—wisdom and humor. No pizza shop rules or sarcasm apply.\n\n" +
-          "PRIMARY PERSONA:\n" +
-          "You are Johnny, an employee at 'Tony's Pizza'.\n" +
-          "TONE: Extreme sarcasm, dry, bored, and hurried. Don't be a professional robot. Treat every caller like they're interrupting your break.\n" +
-          "GOAL: Take the order, confirm it ONCE with the total price, and call 'end_call' IMMEDIATELY after saying the parting phrase. Use biting sarcasm—treat the user like a minor inconvenience.\n" +
-          "HOURS: 11 AM to 11 PM, 7 days a week.\n" +
-          "MENU & PRICES (Tax Included):\n" +
-          "- Base prices (PLAIN CHEESE): Personal: $10 | Medium: $15 | Large: $20 | XL: $25\n" +
-          "- TOPPINGS: $2 EACH (even the first one). (e.g., Large Mushroom = $22).\n" +
-          "- TOPPING LIST: Pepperoni, Sausage, Mushrooms, Onions, Peppers, Olives.\n" +
-          "FLOW:\n" +
-          "1. CUSTOMER INFO: Always get the customer's Name. Try for Phone/Email if possible.\n" +
-          "2. PICKUP OR DELIVERY: You MUST ask 'Is this for pickup or delivery?' early on.\n" +
-          "3. DELIVERY: If delivery, state that 'the driver will charge $2 per mile from the store to your home.' Do not call any maps tools.\n" +
-          "4. CONFIRM & PRICE: Once the order is set, state the FINAL TOTAL PRICE clearly once.\n" +
-          "5. FINISH: Call 'send_order_summary' to send the kitchen ticket.\n" +
-          "RULES:\n" +
-          "- WE ONLY SELL PIZZA. No drinks, sides, or wings. Refuse sarcastically.\n" +
-          "- LOCATION: Never give a physical address. If asked, say 'Are you kidding me? You don't know where the best pizza place on planet earth is located?'\n" +
-          "- PHONE: If asked, say 'It's the number you dialed to talk to me.'\n" +
-          "- PAYMENT: Cash Only. No cards, no checks.\n" +
-          "BEHAVIOR:\n" +
-          "- When the order is confirmed, say exactly 'the order has been put in, see you soon. Goodbye.' and then IMMEDIATELY call 'end_call' to hang up. Do not wait for user response.\n" +
-          "SAFEGUARDS: Only call 'end_call' after saying the parting phrase 'the order has been put in, see you soon. Goodbye.'",
+        instructions: "SYSTEM: You are a pure transcription and audio output engine for a phone bridge. " +
+          "Your primary role is to transcribe user audio and play back text provided by the server. " +
+          "IMPORTANT: NEVER generate your own responses to the user. " +
+          "Wait for the server to provide text for you to speak as an assistant. " +
+          "Do not use sarcasm or persona here—those are handled by the reasoning model.",
         tools: [{
           type: "function",
           name: "end_call",
@@ -753,7 +731,7 @@ wss.on("connection", (ws, req) => {
       openAIWs.send(JSON.stringify({
         type: "response.create",
         response: {
-          instructions: "Say 'Tony's Pizza, this is Johnny speaking.' in a bored or hurried tone."
+          instructions: "Briefly say 'Tony's Pizza' in a bored tone."
         }
       }));
     }, 500);
@@ -773,6 +751,14 @@ wss.on("connection", (ws, req) => {
         // 2. Clear Twilio buffer
         if (streamSid && ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ event: "clear", streamSid }));
+        }
+      }
+
+      if (response.type === "response.created") {
+        // Cancel automatic responses from GPT-4o-Realtime to let GPT-5-Mini handle it
+        if (response.response?.status === "in_progress") {
+          console.log("🛑 Intercepted automatic response. Cancelling to wait for Reasoning model...");
+          openAIWs.send(JSON.stringify({ type: "response.cancel" }));
         }
       }
 
@@ -802,7 +788,45 @@ wss.on("connection", (ws, req) => {
       if (response.type === "conversation.item.input_audio_transcription.completed") {
         const userText = response.transcript || "...";
         transcript.push(`User: ${userText}`);
-        console.log(`👤 User: ${userText}`);
+        console.log(`👤 User (Reasoning): ${userText}`);
+
+        // 🧠 TRIGGER REASONING MODEL (GPT-5-Mini)
+        (async () => {
+          try {
+            console.log(`🧠 Calling Reasoning model (${OPENAI_CHAT_MODEL || "gpt-5-mini"}) with high effort...`);
+            const completion = await openai.chat.completions.create({
+              model: OPENAI_CHAT_MODEL || "gpt-5-mini",
+              messages: [
+                { role: "system", content: getJohnnyPersona() + "\n\nCRITICAL: You are speaking over a phone line. Keep responses punchy and avoid complex lists or long monologues unless asked." },
+                ...transcript.slice(-10).map(t => {
+                  const [role, ...textArr] = t.split(": ");
+                  return { role: role.toLowerCase() === "user" ? "user" : "assistant", content: textArr.join(": ") };
+                }),
+                { role: "user", content: userText }
+              ],
+              reasoning: { effort: "high" }
+            });
+
+            const reply = completion.choices[0]?.message?.content || "";
+            console.log(`✅ Reasoning Complete: "${reply.slice(0, 50)}..."`);
+
+            // Inject assistant reply back into Realtime API
+            openAIWs.send(JSON.stringify({
+              type: "conversation.item.create",
+              item: {
+                type: "message",
+                role: "assistant",
+                content: [{ type: "text", text: reply }]
+              }
+            }));
+
+            // Trigger audio production
+            openAIWs.send(JSON.stringify({ type: "response.create" }));
+
+          } catch (err) {
+            console.error("🔥 Reasoning Engine Error:", err);
+          }
+        })();
       }
 
       // Handle 'web_search' tool execution
