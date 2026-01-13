@@ -646,6 +646,7 @@ wss.on("connection", (ws, req) => {
   let openAIWs = null;
   let transcript = []; // Store the conversation for a summary
   let pendingHangup = false; // Flag to trigger disconnect AFTER audio is done
+  let reasoningController = null; // Controller to abort pending reasoning calls
 
   try {
     // Connect to OpenAI Realtime API
@@ -743,12 +744,19 @@ wss.on("connection", (ws, req) => {
       const response = JSON.parse(data);
       if (response.type === "input_audio_buffer.speech_started") {
         lastInteractionTime = Date.now();
-        console.log("🗣️ Speech started. Cancelling ongoing response.");
-        // 1. Cancel OpenAI response
+        console.log("🗣️ Speech started. Cancelling ongoing response and reasoning.");
+
+        // 1. Abort ongoing reasoning call
+        if (reasoningController) {
+          reasoningController.abort();
+          reasoningController = null;
+        }
+
+        // 2. Cancel OpenAI Realtime response
         if (openAIWs && openAIWs.readyState === WebSocket.OPEN) {
           openAIWs.send(JSON.stringify({ type: "response.cancel" }));
         }
-        // 2. Clear Twilio buffer
+        // 3. Clear Twilio buffer
         if (streamSid && ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ event: "clear", streamSid }));
         }
