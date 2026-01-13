@@ -789,28 +789,40 @@ wss.on("connection", (ws, req) => {
 
       if (response.type === "conversation.item.input_audio_transcription.completed") {
         const userText = response.transcript || "...";
+        if (userText.trim() === "") return; // Ignore empty silence transcripted
+
         transcript.push(`User: ${userText}`);
         console.log(`👤 User (Reasoning): ${userText}`);
 
         // 🧠 TRIGGER REASONING MODEL (GPT-5-Mini)
         (async () => {
+          if (reasoningController) reasoningController.abort();
+          reasoningController = new AbortController();
+
           try {
+            // Give immediate feedback so user knows it's thinking
+            openAIWs.send(JSON.stringify({
+              type: "response.create",
+              response: { instructions: "Briefly say 'One moment...' or 'Thinking...' in a bored tone." }
+            }));
             console.log(`🧠 Calling Reasoning model (${OPENAI_CHAT_MODEL || "gpt-5-mini"}) with high effort...`);
             const completion = await openai.chat.completions.create({
               model: OPENAI_CHAT_MODEL || "gpt-5-mini",
               messages: [
                 { role: "system", content: getJohnnyPersona() + "\n\nCRITICAL: You are speaking over a phone line. Keep responses punchy and avoid complex lists or long monologues unless asked." },
                 ...transcript.slice(-10).map(t => {
-                  const [role, ...textArr] = t.split(": ");
-                  return { role: role.toLowerCase() === "user" ? "user" : "assistant", content: textArr.join(": ") };
-                }),
-                { role: "user", content: userText }
+                  const parts = t.split(": ");
+                  const role = parts[0];
+                  const content = parts.slice(1).join(": ");
+                  return { role: role.toLowerCase() === "user" ? "user" : "assistant", content };
+                })
               ],
               reasoning: { effort: "high" }
-            });
+            }, { signal: reasoningController.signal });
 
             const reply = completion.choices[0]?.message?.content || "";
             console.log(`✅ Reasoning Complete: "${reply.slice(0, 50)}..."`);
+            transcript.push(`Johnny: ${reply}`); // Explicitly push to history
 
             // Inject assistant reply back into Realtime API
             openAIWs.send(JSON.stringify({
@@ -826,7 +838,13 @@ wss.on("connection", (ws, req) => {
             openAIWs.send(JSON.stringify({ type: "response.create" }));
 
           } catch (err) {
-            console.error("🔥 Reasoning Engine Error:", err);
+            if (err.name === 'AbortError') {
+              console.log("⏸️ Reasoning call was aborted due to user interruption.");
+            } else {
+              console.error("🔥 Reasoning Engine Error:", err);
+            }
+          } finally {
+            reasoningController = null;
           }
         })();
       }
