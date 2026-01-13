@@ -679,7 +679,7 @@ wss.on("connection", (ws, req) => {
     const sessionUpdate = {
       type: "session.update",
       session: {
-        turn_detection: { type: "server_vad", interrupt_response: true },
+        turn_detection: { type: "server_vad", interrupt_response: true, create_response: false },
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
         input_audio_transcription: { model: "whisper-1" },
@@ -754,13 +754,7 @@ wss.on("connection", (ws, req) => {
         }
       }
 
-      if (response.type === "response.created") {
-        // Cancel automatic responses from GPT-4o-Realtime to let GPT-5-Mini handle it
-        if (response.response?.status === "in_progress") {
-          console.log("🛑 Intercepted automatic response. Cancelling to wait for Reasoning model...");
-          openAIWs.send(JSON.stringify({ type: "response.cancel" }));
-        }
-      }
+
 
       if (response.type === "response.done") {
         lastInteractionTime = Date.now();
