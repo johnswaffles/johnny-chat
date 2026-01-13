@@ -662,37 +662,72 @@ wss.on("connection", (ws, req) => {
   const SILENCE_DURATION = 800; // ms of silence to trigger response
   const SAMPLE_RATE = 8000;
 
-  // Helper to generate TTS and stream to Twilio
+  // Helper to generate TTS and stream to Twilio with fallback and logging
   const playAssistantAudio = async (text) => {
+    if (!streamSid) {
+      console.warn("⚠️ [Bridge] Cannot play audio: No streamSid yet.");
+      return;
+    }
+
     try {
-      console.log(`🗣️ Generating Audio for: "${text.slice(0, 50)}..."`);
-      const ttsResponse = await openai.audio.speech.create({
-        model: "gpt-4o-mini-tts",
-        voice: "ash",
-        input: text,
-        response_format: "wav"
-      });
+      console.log(`🗣️ TTS: "${text.slice(0, 50)}..."`);
+      let ttsResponse;
+      try {
+        ttsResponse = await openai.audio.speech.create({
+          model: "gpt-4o-mini-tts",
+          voice: "ash",
+          input: text,
+          response_format: "wav"
+        });
+      } catch (e) {
+        console.warn("⚠️ [Bridge] gpt-4o-mini-tts failed, falling back to tts-1:", e.message);
+        ttsResponse = await openai.audio.speech.create({
+          model: "tts-1",
+          voice: "ash",
+          input: text,
+          response_format: "wav"
+        });
+      }
 
       const ttsWavBuffer = Buffer.from(await ttsResponse.arrayBuffer());
       const ttsWav = new WaveFile(ttsWavBuffer);
+
+      // Resample to 8kHz for Twilio
       ttsWav.toSampleRate(SAMPLE_RATE);
       const ttsPcm = ttsWav.getSamples(false, Int16Array);
-      const muLawPlayback = encodeMuLaw(Buffer.from(ttsPcm.buffer));
 
+      // Convert to Mu-Law
+      const muLawPlayback = encodeMuLaw(Buffer.from(ttsPcm.buffer, ttsPcm.byteOffset, ttsPcm.byteLength));
+
+      console.log(`📤 Sending ${muLawPlayback.length} bytes of audio to Twilio...`);
       const chunkSize = 160;
+      let chunksSent = 0;
       for (let i = 0; i < muLawPlayback.length; i += chunkSize) {
         const chunk = muLawPlayback.slice(i, i + chunkSize);
-        if (ws.readyState === WebSocket.OPEN && streamSid) {
+        if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             event: "media",
             streamSid: streamSid,
             media: { payload: chunk.toString('base64') }
           }));
+          chunksSent++;
         }
       }
+      console.log(`✅ Sent ${chunksSent} chunks.`);
     } catch (err) {
-      console.error("🔥 Error playing assistant audio:", err);
+      console.error("🔥 Error in playAssistantAudio:", err);
     }
+  };
+
+  // Improved Mu-Law encoder
+  const encodeMuLaw = (pcmBuffer) => {
+    const muLawBuffer = Buffer.alloc(pcmBuffer.length / 2);
+    for (let i = 0; i < muLawBuffer.length; i++) {
+      // Read 16-bit PCM little-endian
+      const sample = pcmBuffer.readInt16LE(i * 2);
+      muLawBuffer[i] = ulaw.encode(sample);
+    }
+    return muLawBuffer;
   };
 
   // Simple function to convert Mu-Law buffer to PCM 16-bit
@@ -702,16 +737,6 @@ wss.on("connection", (ws, req) => {
       pcm[i] = ulaw.decode(buffer[i]);
     }
     return pcm;
-  };
-
-  // Convert PCM 16-bit to Mu-Law
-  const encodeMuLaw = (pcmBuffer) => {
-    const muLawBuffer = Buffer.alloc(pcmBuffer.length / 2);
-    for (let i = 0; i < muLawBuffer.length; i++) {
-      const sample = pcmBuffer.readInt16LE(i * 2);
-      muLawBuffer[i] = ulaw.encode(sample);
-    }
-    return muLawBuffer;
   };
 
   const processUserSpeech = async () => {
@@ -924,10 +949,12 @@ When done, say exactly "the order has been put in, see you soon. Goodbye." and t
         case "start":
           streamSid = data.start.streamSid;
           console.log(`📞 [Bridge] Stream Started: ${streamSid}`);
-          // Initial Greeting
-          const greeting = "Tony's Pizza.";
-          transcript.push(`Johnny: ${greeting}`);
-          playAssistantAudio(greeting);
+          // Initial Greeting with a small delay to ensure stream is ready
+          setTimeout(() => {
+            const greeting = "Tony's Pizza.";
+            transcript.push(`Johnny: ${greeting}`);
+            playAssistantAudio(greeting);
+          }, 500);
           break;
         case "stop":
           console.log(`📞 [Bridge] Stream Stopped: ${streamSid}`);
