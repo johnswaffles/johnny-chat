@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
+    "alawmulaw": "^6.0.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
     "openai": "^4.58.1",
     "pdfjs-dist": "^5.4.530",
+    "wavefile": "^11.0.0",
     "ws": "^8.19.0"
   }
 }
