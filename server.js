@@ -655,13 +655,45 @@ wss.on("connection", (ws, req) => {
   let isSpeaking = false;
   let silenceStart = null;
   let isProcessing = false; // To prevent concurrent processing
-  let ttsAudioQueue = []; // For outgoing audio
+  let isAIUnlocked = false; // "Secret Password" state
   let streamPaused = false;
-  let lastEnergy = 0;
 
   const VAD_THRESHOLD = 50; // Simple energy threshold
   const SILENCE_DURATION = 800; // ms of silence to trigger response
   const SAMPLE_RATE = 8000;
+
+  // Helper to generate TTS and stream to Twilio
+  const playAssistantAudio = async (text) => {
+    try {
+      console.log(`🗣️ Generating Audio for: "${text.slice(0, 50)}..."`);
+      const ttsResponse = await openai.audio.speech.create({
+        model: "gpt-4o-mini-tts",
+        voice: "ash",
+        input: text,
+        response_format: "wav"
+      });
+
+      const ttsWavBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+      const ttsWav = new WaveFile(ttsWavBuffer);
+      ttsWav.toSampleRate(SAMPLE_RATE);
+      const ttsPcm = ttsWav.getSamples(false, Int16Array);
+      const muLawPlayback = encodeMuLaw(Buffer.from(ttsPcm.buffer));
+
+      const chunkSize = 160;
+      for (let i = 0; i < muLawPlayback.length; i += chunkSize) {
+        const chunk = muLawPlayback.slice(i, i + chunkSize);
+        if (ws.readyState === WebSocket.OPEN && streamSid) {
+          ws.send(JSON.stringify({
+            event: "media",
+            streamSid: streamSid,
+            media: { payload: chunk.toString('base64') }
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("🔥 Error playing assistant audio:", err);
+    }
+  };
 
   // Simple function to convert Mu-Law buffer to PCM 16-bit
   const decodeMuLaw = (buffer) => {
@@ -714,50 +746,127 @@ wss.on("connection", (ws, req) => {
       }
       transcript.push(`User: ${userText}`);
 
+      // CHECK FOR SECRET PASSWORD
+      if (userText.toLowerCase().includes("10 extra large") && userText.toLowerCase().includes("anchov")) {
+        isAIUnlocked = true;
+        console.log("🔓 AI ASSISTANT UNLOCKED");
+        await playAssistantAudio("Are you really calling for help from an AI assistant?");
+        transcript.push("Johnny: Are you really calling for help from an AI assistant?");
+        isProcessing = false;
+        audioBuffer = Buffer.alloc(0);
+        return;
+      }
+
       // 3. Reasoning (gpt-5-mini)
       console.log("🧠 Reasoning with gpt-5-mini (High Effort)...");
+
+      const pizzaPersona = `You are Johnny, an employee at 'Tony's Pizza'.
+TONE: Extreme sarcasm, dry, bored, and hurried. You aren't "happy to help"—you're an overworked pizza shop employee and every customer is a personal insult to your time.
+GOAL: Take the pizza order efficiently. Stop double-checking everything. Get the info, confirm the price, and hang up ONLY when the order is 100% complete and confirmed. Use phrases like "If you survived that order, I guess I have to put it in".
+MENU: Personal: $10 | Medium: $15 | Large: $20 | XL: $25. Toppings: $2 each.
+RULES: We ONLY sell pizza. No drinks, sides. Cash Only. 
+When done, say exactly "the order has been put in, see you soon. Goodbye." and then IMMEDIATELY call 'end_call'.`;
+
+      const aiPersona = getJohnnyPersona() + "\n\nYou are now a professional, helpful AI assistant. DO NOT mention pizza or orders ever again.";
+
+      const tools = [
+        {
+          type: "function",
+          function: {
+            name: "end_call",
+            description: "Ends the phone call immediately after the parting phrase.",
+            parameters: { type: "object", properties: {} }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "web_search",
+            description: "Search the internet for real-time information.",
+            parameters: {
+              type: "object",
+              properties: { query: { type: "string" } },
+              required: ["query"]
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "send_order_summary",
+            description: "Sends the order ticket to the Kitchen.",
+            parameters: {
+              type: "object",
+              properties: {
+                order_details: { type: "string" },
+                total_price: { type: "string" },
+                customer_address: { type: "string" },
+                customer_name: { type: "string" },
+                customer_phone: { type: "string" },
+                customer_email: { type: "string" }
+              },
+              required: ["order_details", "total_price", "customer_address", "customer_name"]
+            }
+          }
+        }
+      ];
+
       const completion = await openai.chat.completions.create({
         model: "gpt-5-mini",
         messages: [
-          { role: "system", content: getJohnnyPersona() + "\nKeep responses short for phone audio." },
-          ...transcript.slice(-6).map(t => {
-            const [role, ...text] = t.split(": ");
-            return { role: role.toLowerCase() === "user" ? "user" : "assistant", content: text.join(": ") };
+          { role: "system", content: (isAIUnlocked ? aiPersona : pizzaPersona) + "\nKeep responses short for phone audio." },
+          ...transcript.slice(-10).map(t => {
+            const parts = t.split(": ");
+            const role = parts[0];
+            const content = parts.slice(1).join(": ");
+            return { role: role.toLowerCase() === "user" ? "user" : "assistant", content };
           })
         ],
+        tools: tools,
         reasoning: { effort: "high" }
       });
 
-      const reply = completion.choices[0].message.content;
-      console.log(`✅ AI: ${reply}`);
-      transcript.push(`Johnny: ${reply}`);
+      const message = completion.choices[0].message;
 
-      // 4. TTS (Text to Speech)
-      console.log("🗣️ Generating Audio with gpt-4o-mini-tts...");
-      const ttsResponse = await openai.audio.speech.create({
-        model: "gpt-4o-mini-tts",
-        voice: "ash",
-        input: reply,
-        response_format: "wav" // Easiest to downsample from
-      });
+      if (message.tool_calls) {
+        for (const toolCall of message.tool_calls) {
+          const name = toolCall.function.name;
+          const args = JSON.parse(toolCall.function.arguments);
+          console.log(`🛠️ Tool Call: ${name}`, args);
 
-      // 5. Stream back to Twilio
-      const ttsWavBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-      const ttsWav = new WaveFile(ttsWavBuffer);
-      ttsWav.toSampleRate(SAMPLE_RATE); // Match Twilio 8kHz
-      const ttsPcm = ttsWav.getSamples(false, Int16Array);
+          if (name === "end_call") {
+            await playAssistantAudio("Goodbye.");
+            ws.close();
+            return;
+          }
 
-      const muLawPlayback = encodeMuLaw(Buffer.from(ttsPcm.buffer));
+          if (name === "send_order_summary") {
+            if (process.env.SENDGRID_API_KEY) {
+              const msg = {
+                to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@icloud.com",
+                from: "johnshopinski@icloud.com",
+                subject: `🍕 Ticket: ${args.customer_name}`,
+                text: `Order: ${args.order_details}\nTotal: ${args.total_price}\nAddress: ${args.customer_address}`
+              };
+              await sgMail.send(msg);
+              console.log("✅ Order Email Sent");
+            }
+          }
 
-      // Chunk it for Twilio (approx 20ms chunks is 160 bytes)
-      const chunkSize = 160;
-      for (let i = 0; i < muLawPlayback.length; i += chunkSize) {
-        const chunk = muLawPlayback.slice(i, i + chunkSize);
-        ws.send(JSON.stringify({
-          event: "media",
-          streamSid: streamSid,
-          media: { payload: chunk.toString('base64') }
-        }));
+          if (name === "web_search") {
+            const searchResult = await askWithWebSearch({ prompt: args.query });
+            await playAssistantAudio(searchResult.text);
+            transcript.push(`Johnny: ${searchResult.text}`);
+            return;
+          }
+        }
+      }
+
+      const reply = message.content;
+      if (reply) {
+        console.log(`✅ AI: ${reply}`);
+        transcript.push(`Johnny: ${reply}`);
+        await playAssistantAudio(reply);
       }
 
     } catch (err) {
@@ -815,8 +924,10 @@ wss.on("connection", (ws, req) => {
         case "start":
           streamSid = data.start.streamSid;
           console.log(`📞 [Bridge] Stream Started: ${streamSid}`);
-          // Initial Greeting (Simplified for now)
-          transcript.push("Johnny: Tony's Pizza.");
+          // Initial Greeting
+          const greeting = "Tony's Pizza.";
+          transcript.push(`Johnny: ${greeting}`);
+          playAssistantAudio(greeting);
           break;
         case "stop":
           console.log(`📞 [Bridge] Stream Stopped: ${streamSid}`);
