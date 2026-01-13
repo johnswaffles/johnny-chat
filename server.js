@@ -720,8 +720,10 @@ wss.on("connection", (ws, req) => {
       }
 
       console.log(`📤 Sending ${muLawBuffer.length} bytes of μ-law audio to Twilio...`);
-      const chunkSize = 160; // 20ms at 8kHz
+      const chunkSize = 160; // 20ms at 8kHz = 160 samples
+      const chunkDelayMs = 20; // Real-time pacing
       let chunksSent = 0;
+
       for (let i = 0; i < muLawBuffer.length; i += chunkSize) {
         const chunk = muLawBuffer.slice(i, i + chunkSize);
         if (ws.readyState === WebSocket.OPEN) {
@@ -731,9 +733,14 @@ wss.on("connection", (ws, req) => {
             media: { payload: chunk.toString('base64') }
           }));
           chunksSent++;
+          // Pace the audio at real-time speed
+          await new Promise(resolve => setTimeout(resolve, chunkDelayMs));
+        } else {
+          console.warn("⚠️ WebSocket closed during audio playback");
+          break;
         }
       }
-      console.log(`✅ Sent ${chunksSent} chunks.`);
+      console.log(`✅ Sent ${chunksSent} chunks over ${(chunksSent * chunkDelayMs)}ms.`);
     } catch (err) {
       console.error("🔥 Error in playAssistantAudio:", err);
     }
