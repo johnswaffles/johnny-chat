@@ -662,7 +662,9 @@ wss.on("connection", (ws, req) => {
   const SILENCE_DURATION = 800; // ms of silence to trigger response
   const SAMPLE_RATE = 8000;
 
-  // Helper to generate TTS and stream to Twilio with fallback and logging
+  // Helper to generate TTS and stream to Twilio
+  // OpenAI TTS PCM format: 24kHz, 16-bit signed little-endian
+  // Twilio requires: 8kHz, raw G.711 μ-law
   const playAssistantAudio = async (text) => {
     if (!streamSid) {
       console.warn("⚠️ [Bridge] Cannot play audio: No streamSid yet.");
@@ -671,13 +673,15 @@ wss.on("connection", (ws, req) => {
 
     try {
       console.log(`🗣️ TTS: "${text.slice(0, 50)}..."`);
+
+      // Request raw PCM from OpenAI TTS (24kHz, 16-bit signed little-endian)
       let ttsResponse;
       try {
         ttsResponse = await openai.audio.speech.create({
           model: "gpt-4o-mini-tts",
           voice: "ash",
           input: text,
-          response_format: "wav"
+          response_format: "pcm" // Raw 24kHz PCM16-LE
         });
       } catch (e) {
         console.warn("⚠️ [Bridge] gpt-4o-mini-tts failed, falling back to tts-1:", e.message);
@@ -685,25 +689,41 @@ wss.on("connection", (ws, req) => {
           model: "tts-1",
           voice: "ash",
           input: text,
-          response_format: "wav"
+          response_format: "pcm"
         });
       }
 
-      const ttsWavBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-      const ttsWav = new WaveFile(ttsWavBuffer);
+      // Get the raw PCM buffer (24kHz, 16-bit signed LE)
+      const pcm24kBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+      console.log(`📊 TTS returned ${pcm24kBuffer.length} bytes of 24kHz PCM`);
 
-      // Resample to 8kHz for Twilio
-      ttsWav.toSampleRate(SAMPLE_RATE);
-      const ttsPcm = ttsWav.getSamples(false, Int16Array);
+      // Resample from 24kHz to 8kHz (simple decimation: take every 3rd sample)
+      const sourceRate = 24000;
+      const targetRate = 8000;
+      const ratio = sourceRate / targetRate; // 3
+      const sourceSampleCount = pcm24kBuffer.length / 2; // 16-bit samples
+      const targetSampleCount = Math.floor(sourceSampleCount / ratio);
 
-      // Convert to Mu-Law
-      const muLawPlayback = encodeMuLaw(Buffer.from(ttsPcm.buffer, ttsPcm.byteOffset, ttsPcm.byteLength));
+      const pcm8kBuffer = Buffer.alloc(targetSampleCount * 2);
+      for (let i = 0; i < targetSampleCount; i++) {
+        const sourceIndex = Math.floor(i * ratio);
+        const sample = pcm24kBuffer.readInt16LE(sourceIndex * 2);
+        pcm8kBuffer.writeInt16LE(sample, i * 2);
+      }
+      console.log(`📉 Resampled to ${pcm8kBuffer.length / 2} samples at 8kHz`);
 
-      console.log(`📤 Sending ${muLawPlayback.length} bytes of audio to Twilio...`);
-      const chunkSize = 160;
+      // Encode PCM16 to G.711 μ-law
+      const muLawBuffer = Buffer.alloc(pcm8kBuffer.length / 2);
+      for (let i = 0; i < muLawBuffer.length; i++) {
+        const sample = pcm8kBuffer.readInt16LE(i * 2);
+        muLawBuffer[i] = ulaw.encode(sample);
+      }
+
+      console.log(`📤 Sending ${muLawBuffer.length} bytes of μ-law audio to Twilio...`);
+      const chunkSize = 160; // 20ms at 8kHz
       let chunksSent = 0;
-      for (let i = 0; i < muLawPlayback.length; i += chunkSize) {
-        const chunk = muLawPlayback.slice(i, i + chunkSize);
+      for (let i = 0; i < muLawBuffer.length; i += chunkSize) {
+        const chunk = muLawBuffer.slice(i, i + chunkSize);
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             event: "media",
