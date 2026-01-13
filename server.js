@@ -628,6 +628,7 @@ app.all("/incoming-call", (req, res) => {
     <Connect>
         <Stream url="wss://${req.get("host")}/media-stream" />
     </Connect>
+    <Pause length="3600" />
 </Response>`;
   res.type("text/xml");
   res.send(twiml);
@@ -947,6 +948,9 @@ When done, say exactly "the order has been put in, see you soon. Goodbye." and t
       switch (data.event) {
         case "media":
           if (streamPaused) break;
+          // ONLY process inbound audio (from the caller)
+          if (data.media.track !== "inbound") break;
+
           const chunk = Buffer.from(data.media.payload, 'base64');
 
           // Simple VAD logic: Calculate energy
@@ -971,6 +975,10 @@ When done, say exactly "the order has been put in, see you soon. Goodbye." and t
             silenceStart = null;
             processUserSpeech();
           }
+          break;
+
+        case "mark":
+          console.log(`📍 [Bridge] Mark reached: ${data.mark.name}`);
           break;
 
         case "start":
