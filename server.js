@@ -646,6 +646,7 @@ wss.on("connection", (ws, req) => {
   let openAIWs = null;
   let transcript = []; // Store the conversation for a summary
   let pendingHangup = false; // Flag to trigger disconnect AFTER audio is done
+  let reasoningController = null; // Controller to abort pending reasoning calls
 
   try {
     // Connect to OpenAI Realtime API
@@ -679,7 +680,7 @@ wss.on("connection", (ws, req) => {
     const sessionUpdate = {
       type: "session.update",
       session: {
-        turn_detection: { type: "server_vad", interrupt_response: true },
+        turn_detection: { type: "server_vad", interrupt_response: true, create_response: false },
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
         input_audio_transcription: { model: "whisper-1" },
@@ -743,24 +744,25 @@ wss.on("connection", (ws, req) => {
       const response = JSON.parse(data);
       if (response.type === "input_audio_buffer.speech_started") {
         lastInteractionTime = Date.now();
-        console.log("🗣️ Speech started. Cancelling ongoing response.");
-        // 1. Cancel OpenAI response
+        console.log("🗣️ Speech started. Cancelling ongoing response and reasoning.");
+
+        // 1. Abort ongoing reasoning call
+        if (reasoningController) {
+          reasoningController.abort();
+          reasoningController = null;
+        }
+
+        // 2. Cancel OpenAI Realtime response
         if (openAIWs && openAIWs.readyState === WebSocket.OPEN) {
           openAIWs.send(JSON.stringify({ type: "response.cancel" }));
         }
-        // 2. Clear Twilio buffer
+        // 3. Clear Twilio buffer
         if (streamSid && ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ event: "clear", streamSid }));
         }
       }
 
-      if (response.type === "response.created") {
-        // Cancel automatic responses from GPT-4o-Realtime to let GPT-5-Mini handle it
-        if (response.response?.status === "in_progress") {
-          console.log("🛑 Intercepted automatic response. Cancelling to wait for Reasoning model...");
-          openAIWs.send(JSON.stringify({ type: "response.cancel" }));
-        }
-      }
+
 
       if (response.type === "response.done") {
         lastInteractionTime = Date.now();
@@ -787,28 +789,40 @@ wss.on("connection", (ws, req) => {
 
       if (response.type === "conversation.item.input_audio_transcription.completed") {
         const userText = response.transcript || "...";
+        if (userText.trim() === "") return; // Ignore empty silence transcripted
+
         transcript.push(`User: ${userText}`);
         console.log(`👤 User (Reasoning): ${userText}`);
 
         // 🧠 TRIGGER REASONING MODEL (GPT-5-Mini)
         (async () => {
+          if (reasoningController) reasoningController.abort();
+          reasoningController = new AbortController();
+
           try {
+            // Give immediate feedback so user knows it's thinking
+            openAIWs.send(JSON.stringify({
+              type: "response.create",
+              response: { instructions: "Briefly say 'One moment...' or 'Thinking...' in a bored tone." }
+            }));
             console.log(`🧠 Calling Reasoning model (${OPENAI_CHAT_MODEL || "gpt-5-mini"}) with high effort...`);
             const completion = await openai.chat.completions.create({
               model: OPENAI_CHAT_MODEL || "gpt-5-mini",
               messages: [
                 { role: "system", content: getJohnnyPersona() + "\n\nCRITICAL: You are speaking over a phone line. Keep responses punchy and avoid complex lists or long monologues unless asked." },
                 ...transcript.slice(-10).map(t => {
-                  const [role, ...textArr] = t.split(": ");
-                  return { role: role.toLowerCase() === "user" ? "user" : "assistant", content: textArr.join(": ") };
-                }),
-                { role: "user", content: userText }
+                  const parts = t.split(": ");
+                  const role = parts[0];
+                  const content = parts.slice(1).join(": ");
+                  return { role: role.toLowerCase() === "user" ? "user" : "assistant", content };
+                })
               ],
               reasoning: { effort: "high" }
-            });
+            }, { signal: reasoningController.signal });
 
             const reply = completion.choices[0]?.message?.content || "";
             console.log(`✅ Reasoning Complete: "${reply.slice(0, 50)}..."`);
+            transcript.push(`Johnny: ${reply}`); // Explicitly push to history
 
             // Inject assistant reply back into Realtime API
             openAIWs.send(JSON.stringify({
@@ -824,7 +838,13 @@ wss.on("connection", (ws, req) => {
             openAIWs.send(JSON.stringify({ type: "response.create" }));
 
           } catch (err) {
-            console.error("🔥 Reasoning Engine Error:", err);
+            if (err.name === 'AbortError') {
+              console.log("⏸️ Reasoning call was aborted due to user interruption.");
+            } else {
+              console.error("🔥 Reasoning Engine Error:", err);
+            }
+          } finally {
+            reasoningController = null;
           }
         })();
       }
