@@ -7,6 +7,13 @@ import { WebSocketServer, WebSocket } from "ws";
 import http from "http";
 import sgMail from "@sendgrid/mail";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import alawmulaw from 'alawmulaw';
+const { alaw, mulaw } = alawmulaw;
+import wavefile from 'wavefile';
+const { WaveFile } = wavefile;
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Disable worker for Node.js environment
 // This avoids the need to set up a worker file path which can be tricky in some environments
@@ -621,6 +628,7 @@ app.all("/incoming-call", (req, res) => {
     <Connect>
         <Stream url="wss://${req.get("host")}/media-stream" />
     </Connect>
+    <Pause length="3600" />
 </Response>`;
   res.type("text/xml");
   res.send(twiml);
@@ -643,351 +651,345 @@ wss.on("connection", (ws, req) => {
   }
 
   let streamSid = null;
-  let openAIWs = null;
   let transcript = []; // Store the conversation for a summary
-  let pendingHangup = false; // Flag to trigger disconnect AFTER audio is done
+  let audioBuffer = Buffer.alloc(0); // For collecting user speech
+  let isSpeaking = false;
+  let silenceStart = null;
+  let isProcessing = false; // To prevent concurrent processing
+  let isAIUnlocked = false; // "Secret Password" state
+  let streamPaused = false;
 
-  try {
-    // Connect to OpenAI Realtime API
-    openAIWs = new WebSocket("wss://api.openai.com/v1/realtime?model=" + (process.env.OPENAI_REALTIME_MODEL || "gpt-4o-realtime-preview"), {
-      headers: {
-        Authorization: "Bearer " + OPENAI_API_KEY,
-        "OpenAI-Beta": "realtime=v1"
+  const VAD_THRESHOLD = 50; // Simple energy threshold
+  const SILENCE_DURATION = 800; // ms of silence to trigger response
+  const SAMPLE_RATE = 8000;
+
+  // Helper to generate TTS and stream to Twilio
+  // OpenAI TTS PCM format: 24kHz, 16-bit signed little-endian
+  // Twilio requires: 8kHz, raw G.711 μ-law
+  const playAssistantAudio = async (text) => {
+    if (!streamSid) {
+      console.warn("⚠️ [Bridge] Cannot play audio: No streamSid yet.");
+      return;
+    }
+
+    try {
+      console.log(`🗣️ TTS: "${text.slice(0, 50)}..."`);
+
+      // Request raw PCM from OpenAI TTS (24kHz, 16-bit signed little-endian)
+      let ttsResponse;
+      try {
+        ttsResponse = await openai.audio.speech.create({
+          model: "gpt-4o-mini-tts",
+          voice: "ash",
+          input: text,
+          response_format: "pcm" // Raw 24kHz PCM16-LE
+        });
+      } catch (e) {
+        console.warn("⚠️ [Bridge] gpt-4o-mini-tts failed, falling back to tts-1:", e.message);
+        ttsResponse = await openai.audio.speech.create({
+          model: "tts-1",
+          voice: "ash",
+          input: text,
+          response_format: "pcm"
+        });
       }
-    });
-  } catch (e) {
-    console.error("🔥 [Bridge] OpenAI connection failed:", e);
-    ws.close();
-    return;
-  }
+
+      // Get the raw PCM buffer (24kHz, 16-bit signed LE)
+      const pcm24kBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+      console.log(`📊 TTS returned ${pcm24kBuffer.length} bytes of 24kHz PCM`);
+
+      // Resample from 24kHz to 8kHz (simple decimation: take every 3rd sample)
+      const sourceRate = 24000;
+      const targetRate = 8000;
+      const ratio = sourceRate / targetRate; // 3
+      const sourceSampleCount = pcm24kBuffer.length / 2; // 16-bit samples
+      const targetSampleCount = Math.floor(sourceSampleCount / ratio);
+
+      const pcm8kBuffer = Buffer.alloc(targetSampleCount * 2);
+      for (let i = 0; i < targetSampleCount; i++) {
+        const sourceIndex = Math.floor(i * ratio);
+        const sample = pcm24kBuffer.readInt16LE(sourceIndex * 2);
+        pcm8kBuffer.writeInt16LE(sample, i * 2);
+      }
+      console.log(`📉 Resampled to ${pcm8kBuffer.length / 2} samples at 8kHz`);
+
+      // Encode PCM16 to G.711 μ-law
+      const muLawBuffer = Buffer.alloc(pcm8kBuffer.length / 2);
+      for (let i = 0; i < muLawBuffer.length; i++) {
+        const sample = pcm8kBuffer.readInt16LE(i * 2);
+        muLawBuffer[i] = mulaw.encode(sample);
+      }
+
+      console.log(`📤 Sending ${muLawBuffer.length} bytes of μ-law audio to Twilio...`);
+      const chunkSize = 160; // 20ms at 8kHz = 160 samples
+      const chunkDelayMs = 20; // Real-time pacing
+      let chunksSent = 0;
+
+      for (let i = 0; i < muLawBuffer.length; i += chunkSize) {
+        const chunk = muLawBuffer.slice(i, i + chunkSize);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            event: "media",
+            streamSid: streamSid,
+            media: { payload: chunk.toString('base64') }
+          }));
+          chunksSent++;
+          // Pace the audio at real-time speed
+          await new Promise(resolve => setTimeout(resolve, chunkDelayMs));
+        } else {
+          console.warn("⚠️ WebSocket closed during audio playback");
+          break;
+        }
+      }
+      console.log(`✅ Sent ${chunksSent} chunks over ${(chunksSent * chunkDelayMs)}ms.`);
+    } catch (err) {
+      console.error("🔥 Error in playAssistantAudio:", err);
+    }
+  };
+
+  // Improved Mu-Law encoder
+  const encodeMuLaw = (pcmBuffer) => {
+    const muLawBuffer = Buffer.alloc(pcmBuffer.length / 2);
+    for (let i = 0; i < muLawBuffer.length; i++) {
+      // Read 16-bit PCM little-endian
+      const sample = pcmBuffer.readInt16LE(i * 2);
+      muLawBuffer[i] = mulaw.encode(sample);
+    }
+    return muLawBuffer;
+  };
+
+  // Simple function to convert Mu-Law buffer to PCM 16-bit
+  const decodeMuLaw = (buffer) => {
+    const pcm = new Int16Array(buffer.length);
+    for (let i = 0; i < buffer.length; i++) {
+      pcm[i] = mulaw.decode(buffer[i]);
+    }
+    return pcm;
+  };
+
+  const processUserSpeech = async () => {
+    if (isProcessing || audioBuffer.length === 0) return;
+    isProcessing = true;
+    console.log("🎤 Processing Speech...");
+
+    try {
+      // 1. Create WAV for STT
+      const wav = new WaveFile();
+      const pcmData = decodeMuLaw(audioBuffer);
+      wav.fromScratch(1, SAMPLE_RATE, '16', pcmData);
+      const wavBuffer = wav.toBuffer();
+
+      const tmpPath = path.join(process.cwd(), `tmp_${Date.now()}.wav`);
+      fs.writeFileSync(tmpPath, wavBuffer);
+
+      // 2. STT (Speech to Text)
+      console.log("📜 Transcribing with gpt-4o-transcribe...");
+      const transcription = await openai.audio.transcriptions.create({
+        file: fs.createReadStream(tmpPath),
+        model: "gpt-4o-transcribe"
+      });
+      fs.unlinkSync(tmpPath); // Clean up
+
+      const userText = transcription.text;
+      console.log(`👤 User: ${userText}`);
+      if (!userText || userText.length < 2) {
+        isProcessing = false;
+        audioBuffer = Buffer.alloc(0);
+        return;
+      }
+      transcript.push(`User: ${userText}`);
+
+      // CHECK FOR SECRET PASSWORD
+      if (userText.toLowerCase().includes("10 extra large") && userText.toLowerCase().includes("anchov")) {
+        isAIUnlocked = true;
+        console.log("🔓 AI ASSISTANT UNLOCKED");
+        await playAssistantAudio("Are you really calling for help from an AI assistant?");
+        transcript.push("Johnny: Are you really calling for help from an AI assistant?");
+        isProcessing = false;
+        audioBuffer = Buffer.alloc(0);
+        return;
+      }
+
+      // 3. Reasoning (gpt-5-mini)
+      console.log("🧠 Reasoning with gpt-5-mini (High Effort)...");
+
+      const pizzaPersona = `You are Johnny, an employee at 'Tony's Pizza'.
+TONE: Extreme sarcasm, dry, bored, and hurried. You aren't "happy to help"—you're an overworked pizza shop employee and every customer is a personal insult to your time.
+GOAL: Take the pizza order efficiently. Stop double-checking everything. Get the info, confirm the price, and hang up ONLY when the order is 100% complete and confirmed. Use phrases like "If you survived that order, I guess I have to put it in".
+MENU: Personal: $10 | Medium: $15 | Large: $20 | XL: $25. Toppings: $2 each.
+RULES: We ONLY sell pizza. No drinks, sides. Cash Only. 
+When done, say exactly "the order has been put in, see you soon. Goodbye." and then IMMEDIATELY call 'end_call'.`;
+
+      const aiPersona = getJohnnyPersona() + "\n\nYou are now a professional, helpful AI assistant. DO NOT mention pizza or orders ever again.";
+
+      const tools = [
+        {
+          type: "function",
+          function: {
+            name: "end_call",
+            description: "Ends the phone call immediately after the parting phrase.",
+            parameters: { type: "object", properties: {} }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "web_search",
+            description: "Search the internet for real-time information.",
+            parameters: {
+              type: "object",
+              properties: { query: { type: "string" } },
+              required: ["query"]
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "send_order_summary",
+            description: "Sends the order ticket to the Kitchen.",
+            parameters: {
+              type: "object",
+              properties: {
+                order_details: { type: "string" },
+                total_price: { type: "string" },
+                customer_address: { type: "string" },
+                customer_name: { type: "string" },
+                customer_phone: { type: "string" },
+                customer_email: { type: "string" }
+              },
+              required: ["order_details", "total_price", "customer_address", "customer_name"]
+            }
+          }
+        }
+      ];
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-5-mini",
+        messages: [
+          { role: "system", content: (isAIUnlocked ? aiPersona : pizzaPersona) + "\nKeep responses short for phone audio." },
+          ...transcript.slice(-10).map(t => {
+            const parts = t.split(": ");
+            const role = parts[0];
+            const content = parts.slice(1).join(": ");
+            return { role: role.toLowerCase() === "user" ? "user" : "assistant", content };
+          })
+        ],
+        tools: tools,
+        reasoning: { effort: "high" }
+      });
+
+      const message = completion.choices[0].message;
+
+      if (message.tool_calls) {
+        for (const toolCall of message.tool_calls) {
+          const name = toolCall.function.name;
+          const args = JSON.parse(toolCall.function.arguments);
+          console.log(`🛠️ Tool Call: ${name}`, args);
+
+          if (name === "end_call") {
+            await playAssistantAudio("Goodbye.");
+            ws.close();
+            return;
+          }
+
+          if (name === "send_order_summary") {
+            if (process.env.SENDGRID_API_KEY) {
+              const msg = {
+                to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@icloud.com",
+                from: "johnshopinski@icloud.com",
+                subject: `🍕 Ticket: ${args.customer_name}`,
+                text: `Order: ${args.order_details}\nTotal: ${args.total_price}\nAddress: ${args.customer_address}`
+              };
+              await sgMail.send(msg);
+              console.log("✅ Order Email Sent");
+            }
+          }
+
+          if (name === "web_search") {
+            const searchResult = await askWithWebSearch({ prompt: args.query });
+            await playAssistantAudio(searchResult.text);
+            transcript.push(`Johnny: ${searchResult.text}`);
+            return;
+          }
+        }
+      }
+
+      const reply = message.content;
+      if (reply) {
+        console.log(`✅ AI: ${reply}`);
+        transcript.push(`Johnny: ${reply}`);
+        await playAssistantAudio(reply);
+      }
+
+    } catch (err) {
+      console.error("🔥 Error in modular pipeline:", err);
+    } finally {
+      isProcessing = false;
+      audioBuffer = Buffer.alloc(0);
+    }
+  };
 
   // Silence Timeout Checker (120s)
   let lastInteractionTime = Date.now();
   const silenceInterval = setInterval(() => {
     if (Date.now() - lastInteractionTime > 120000) { // 120s timeout
       console.log("⏳ [Bridge] Silence Timeout. Ending call.");
-      if (openAIWs.readyState === WebSocket.OPEN) openAIWs.close();
       if (ws.readyState === WebSocket.OPEN) ws.close();
       clearInterval(silenceInterval);
     }
   }, 1000);
-
-  // OpenAI Event Handlers
-  openAIWs.on("open", () => {
-    console.log("🤖 [Bridge] Connected to OpenAI Realtime");
-    // Initialize Session with G.711 uLaw audio for telephony
-    const sessionUpdate = {
-      type: "session.update",
-      session: {
-        turn_detection: { type: "server_vad", interrupt_response: true },
-        input_audio_format: "g711_ulaw",
-        output_audio_format: "g711_ulaw",
-        input_audio_transcription: { model: "whisper-1" },
-        voice: "ash", // or 'alloy', 'echo', etc.
-        instructions: "SYSTEM: You are a pure transcription and audio output engine for a phone bridge. " +
-          "Your primary role is to transcribe user audio and play back text provided by the server. " +
-          "IMPORTANT: NEVER generate your own responses to the user. " +
-          "Wait for the server to provide text for you to speak as an assistant. " +
-          "Do not use sarcasm or persona here—those are handled by the reasoning model.",
-        tools: [{
-          type: "function",
-          name: "end_call",
-          description: "Ends the phone call. Call this IMMEDIATELY after saying the parting phrase 'the order has been put in, see you soon. Goodbye.'",
-          parameters: { type: "object", properties: {} }
-        }, {
-          type: "function",
-          name: "send_order_summary",
-          description: "Sends the order ticket to the Kitchen. Call this IMMEDIATELY when the order is finalized so the kitchen knows what to make.",
-          parameters: {
-            type: "object",
-            properties: {
-              order_details: { type: "string", "description": "The full list of pizzas, sizes, and toppings ordered." },
-              total_price: { type: "string", "description": "The total price including fees." },
-              customer_address: { type: "string", "description": "The delivery address provided by the customer." },
-              customer_name: { type: "string", "description": "The customer's name." },
-              customer_phone: { type: "string", "description": "The customer's phone number (if provided)." },
-              customer_email: { type: "string", "description": "The customer's email (if provided)." }
-            },
-            required: ["order_details", "total_price", "customer_address", "customer_name"]
-          }
-        }, {
-          type: "function",
-          name: "web_search",
-          description: "Search the internet for real-time information such as weather, news, scores, or facts.",
-          parameters: {
-            type: "object",
-            properties: {
-              query: { type: "string" }
-            },
-            required: ["query"]
-          }
-        }]
-      }
-    };
-    openAIWs.send(JSON.stringify(sessionUpdate));
-
-    // TRIGGER GREETING: Johnny speaks first
-    setTimeout(() => {
-      openAIWs.send(JSON.stringify({
-        type: "response.create",
-        response: {
-          instructions: "Briefly say 'Tony's Pizza' in a bored tone."
-        }
-      }));
-    }, 500);
-  });
-
-  openAIWs.on("message", (data) => {
-    lastInteractionTime = Date.now(); // Reset on ANY OpenAI event
-    try {
-      const response = JSON.parse(data);
-      if (response.type === "input_audio_buffer.speech_started") {
-        lastInteractionTime = Date.now();
-        console.log("🗣️ Speech started. Cancelling ongoing response.");
-        // 1. Cancel OpenAI response
-        if (openAIWs && openAIWs.readyState === WebSocket.OPEN) {
-          openAIWs.send(JSON.stringify({ type: "response.cancel" }));
-        }
-        // 2. Clear Twilio buffer
-        if (streamSid && ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ event: "clear", streamSid }));
-        }
-      }
-
-      if (response.type === "response.created") {
-        // Cancel automatic responses from GPT-4o-Realtime to let GPT-5-Mini handle it
-        if (response.response?.status === "in_progress") {
-          console.log("🛑 Intercepted automatic response. Cancelling to wait for Reasoning model...");
-          openAIWs.send(JSON.stringify({ type: "response.cancel" }));
-        }
-      }
-
-      if (response.type === "response.done") {
-        lastInteractionTime = Date.now();
-        // Capture Johnny's response for the summary
-        response.response?.output?.forEach(output => {
-          if (output.type === "message" || output.type === "audio") {
-            output.content?.forEach(content => {
-              if (content.type === "audio" && content.transcript) {
-                transcript.push(`Johnny: ${content.transcript}`);
-              }
-            });
-          }
-        });
-
-        // Trigger event-based hangup
-        if (pendingHangup) {
-          console.log("👋 [Bridge] Sending last bits of audio, hanging up in 1s...");
-          setTimeout(() => {
-            if (ws.readyState === WebSocket.OPEN) ws.close();
-            pendingHangup = false;
-          }, 1000);
-        }
-      }
-
-      if (response.type === "conversation.item.input_audio_transcription.completed") {
-        const userText = response.transcript || "...";
-        transcript.push(`User: ${userText}`);
-        console.log(`👤 User (Reasoning): ${userText}`);
-
-        // 🧠 TRIGGER REASONING MODEL (GPT-5-Mini)
-        (async () => {
-          try {
-            console.log(`🧠 Calling Reasoning model (${OPENAI_CHAT_MODEL || "gpt-5-mini"}) with high effort...`);
-            const completion = await openai.chat.completions.create({
-              model: OPENAI_CHAT_MODEL || "gpt-5-mini",
-              messages: [
-                { role: "system", content: getJohnnyPersona() + "\n\nCRITICAL: You are speaking over a phone line. Keep responses punchy and avoid complex lists or long monologues unless asked." },
-                ...transcript.slice(-10).map(t => {
-                  const [role, ...textArr] = t.split(": ");
-                  return { role: role.toLowerCase() === "user" ? "user" : "assistant", content: textArr.join(": ") };
-                }),
-                { role: "user", content: userText }
-              ],
-              reasoning: { effort: "high" }
-            });
-
-            const reply = completion.choices[0]?.message?.content || "";
-            console.log(`✅ Reasoning Complete: "${reply.slice(0, 50)}..."`);
-
-            // Inject assistant reply back into Realtime API
-            openAIWs.send(JSON.stringify({
-              type: "conversation.item.create",
-              item: {
-                type: "message",
-                role: "assistant",
-                content: [{ type: "text", text: reply }]
-              }
-            }));
-
-            // Trigger audio production
-            openAIWs.send(JSON.stringify({ type: "response.create" }));
-
-          } catch (err) {
-            console.error("🔥 Reasoning Engine Error:", err);
-          }
-        })();
-      }
-
-      // Handle 'web_search' tool execution
-      if (response.type === "response.function_call_arguments.done" && response.name === "web_search") {
-        const { query } = JSON.parse(response.arguments);
-        console.log(`📡 [Bridge] Web Search: "${query}"`);
-        askWithWebSearch({ prompt: query })
-          .then(result => {
-            const itemAppend = {
-              type: "conversation.item.create",
-              item: {
-                type: "function_call_output",
-                call_id: response.call_id,
-                output: result.text || "No results found."
-              }
-            };
-            openAIWs.send(JSON.stringify(itemAppend));
-            openAIWs.send(JSON.stringify({ type: "response.create" }));
-          })
-          .catch(err => {
-            console.error("❌ Search Error:", err);
-            const itemAppend = {
-              type: "conversation.item.create",
-              item: {
-                type: "function_call_output",
-                call_id: response.call_id,
-                output: "I hit a snag searching the web. Tell the user I'm having technical issues."
-              }
-            };
-            openAIWs.send(JSON.stringify(itemAppend));
-            openAIWs.send(JSON.stringify({ type: "response.create" }));
-          });
-      }
-
-      // Handle 'end_call' tool execution
-      if (response.type === "response.function_call_arguments.done" && response.name === "end_call") {
-        console.log("📞 [Bridge] end_call triggered. Waiting for response.done to finish audio...");
-        pendingHangup = true;
-      }
-
-      // Handle 'send_order_summary' tool execution
-      if (response.type === "response.function_call_arguments.done" && response.name === "send_order_summary") {
-        const args = JSON.parse(response.arguments);
-        console.log("📧 [Bridge] Sending Order Email:", args);
-
-        if (process.env.SENDGRID_API_KEY) {
-          const msg = {
-            to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@icloud.com", // Fallback or configured
-            from: "johnshopinski@icloud.com", // VERIFIED SENDER
-            subject: `🍕 Ticket: ${args.customer_name}`,
-            html: `
-                  <h1>Tony's Pizza Order</h1>
-                  <p><strong>Customer:</strong> ${args.customer_name}</p>
-                  <p><strong>Phone:</strong> ${args.customer_phone || "N/A"}</p>
-                  <p><strong>Email:</strong> ${args.customer_email || "N/A"}</p>
-                  <p><strong>Address:</strong> ${args.customer_address}</p>
-                  <h3>Order Details:</h3>
-                  <p>${args.order_details.replace(/\n/g, '<br>')}</p>
-                  <h2>Total Price: ${args.total_price}</h2>
-                  <p><em>Cash upon delivery.</em></p>
-                `
-          };
-          sgMail.send(msg)
-            .then(() => {
-              console.log("✅ Email sent");
-              // Let AI know it succeeded
-              const itemAppend = {
-                type: "conversation.item.create",
-                item: {
-                  type: "function_call_output",
-                  call_id: response.call_id,
-                  output: JSON.stringify({ success: true, message: "Ticket emailed successfully to Kitchen." })
-                }
-              };
-              openAIWs.send(JSON.stringify(itemAppend));
-              openAIWs.send(JSON.stringify({ type: "response.create" }));
-            })
-            .catch((error) => {
-              console.error("❌ Email Error:", error);
-              const errorMessage = error.response ? JSON.stringify(error.response.body) : error.message;
-              console.log("Sending error back to AI:", errorMessage);
-
-              // Let AI know it FAILED so it can tell the user
-              const itemAppend = {
-                type: "conversation.item.create",
-                item: {
-                  type: "function_call_output",
-                  call_id: response.call_id,
-                  output: JSON.stringify({ success: false, error: errorMessage })
-                }
-              };
-              openAIWs.send(JSON.stringify(itemAppend));
-
-              // Trigger response so Johnny explains the error
-              openAIWs.send(JSON.stringify({
-                type: "response.create",
-                response: {
-                  instructions: "The email failed to send. Read the error message to the user specifically so they can fix their settings. Say 'System Error: [Error Details]'."
-                }
-              }));
-            });
-        } else {
-          console.log("⚠️ No SENDGRID_API_KEY, skipping email.");
-          const itemAppend = {
-            type: "conversation.item.create",
-            item: {
-              type: "function_call_output",
-              call_id: response.call_id,
-              output: JSON.stringify({ success: false, error: "Missing SENDGRID_API_KEY" })
-            }
-          };
-          openAIWs.send(JSON.stringify(itemAppend));
-          openAIWs.send(JSON.stringify({
-            type: "response.create",
-            response: { instructions: "Tell the user: 'I can't send the ticket because the API Key is missing.'" }
-          }));
-        }
-      }
-
-      if (response.type === "session.updated") {
-        console.log("✨ [Bridge] Session Updated");
-      }
-      if (response.type === "response.audio.delta" && response.delta) {
-        lastInteractionTime = Date.now();
-        // Forward audio from OpenAI to Twilio
-        if (streamSid) {
-          const audioDelta = {
-            event: "media",
-            streamSid: streamSid,
-            media: { payload: response.delta }
-          };
-          ws.send(JSON.stringify(audioDelta));
-        }
-      }
-    } catch (e) {
-      console.error("🔥 [Bridge] Error parsing OpenAI message:", e);
-    }
-  });
-
-  openAIWs.on("close", () => console.log("🤖 [Bridge] OpenAI Disconnected"));
-  openAIWs.on("error", (e) => console.error("🔥 [Bridge] OpenAI Error:", e));
-
   // Twilio Event Handlers
   ws.on("message", (message) => {
     try {
       const data = JSON.parse(message);
+      lastInteractionTime = Date.now();
 
       switch (data.event) {
         case "media":
-          // Forward audio from Twilio to OpenAI
-          if (openAIWs && openAIWs.readyState === WebSocket.OPEN) {
-            const audioAppend = {
-              type: "input_audio_buffer.append",
-              audio: data.media.payload
-            };
-            openAIWs.send(JSON.stringify(audioAppend));
+          if (streamPaused) break;
+          // ONLY process inbound audio (from the caller)
+          if (data.media.track !== "inbound") break;
+
+          const chunk = Buffer.from(data.media.payload, 'base64');
+
+          // Simple VAD logic: Calculate energy
+          let energy = 0;
+          for (let i = 0; i < chunk.length; i++) {
+            energy += Math.abs(mulaw.decode(chunk[i]));
+          }
+          energy /= chunk.length;
+
+          if (energy > VAD_THRESHOLD) {
+            isSpeaking = true;
+            silenceStart = null;
+            audioBuffer = Buffer.concat([audioBuffer, chunk]);
+          } else {
+            if (isSpeaking && !silenceStart) {
+              silenceStart = Date.now();
+            }
+          }
+
+          if (isSpeaking && silenceStart && (Date.now() - silenceStart > SILENCE_DURATION)) {
+            isSpeaking = false;
+            silenceStart = null;
+            processUserSpeech();
           }
           break;
+
+        case "mark":
+          console.log(`📍 [Bridge] Mark reached: ${data.mark.name}`);
+          break;
+
         case "start":
           streamSid = data.start.streamSid;
           console.log(`📞 [Bridge] Stream Started: ${streamSid}`);
+          // Initial Greeting with a small delay to ensure stream is ready
+          setTimeout(() => {
+            const greeting = "Tony's Pizza.";
+            transcript.push(`Johnny: ${greeting}`);
+            playAssistantAudio(greeting);
+          }, 500);
           break;
         case "stop":
           console.log(`📞 [Bridge] Stream Stopped: ${streamSid}`);
@@ -1000,7 +1002,6 @@ wss.on("connection", (ws, req) => {
 
   ws.on("close", async () => {
     console.log("🔌 [WS] Client Disconnected");
-    if (openAIWs && openAIWs.readyState === WebSocket.OPEN) openAIWs.close();
     clearInterval(silenceInterval);
 
     // Send call summary email automatically
