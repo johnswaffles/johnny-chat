@@ -8,7 +8,7 @@ import http from "http";
 import sgMail from "@sendgrid/mail";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import alawmulaw from 'alawmulaw';
-const { alaw, ulaw } = alawmulaw;
+const { alaw, mulaw } = alawmulaw;
 import wavefile from 'wavefile';
 const { WaveFile } = wavefile;
 import fs from 'fs';
@@ -716,7 +716,7 @@ wss.on("connection", (ws, req) => {
       const muLawBuffer = Buffer.alloc(pcm8kBuffer.length / 2);
       for (let i = 0; i < muLawBuffer.length; i++) {
         const sample = pcm8kBuffer.readInt16LE(i * 2);
-        muLawBuffer[i] = ulaw.encode(sample);
+        muLawBuffer[i] = mulaw.encode(sample);
       }
 
       console.log(`📤 Sending ${muLawBuffer.length} bytes of μ-law audio to Twilio...`);
@@ -745,7 +745,7 @@ wss.on("connection", (ws, req) => {
     for (let i = 0; i < muLawBuffer.length; i++) {
       // Read 16-bit PCM little-endian
       const sample = pcmBuffer.readInt16LE(i * 2);
-      muLawBuffer[i] = ulaw.encode(sample);
+      muLawBuffer[i] = mulaw.encode(sample);
     }
     return muLawBuffer;
   };
@@ -754,7 +754,7 @@ wss.on("connection", (ws, req) => {
   const decodeMuLaw = (buffer) => {
     const pcm = new Int16Array(buffer.length);
     for (let i = 0; i < buffer.length; i++) {
-      pcm[i] = ulaw.decode(buffer[i]);
+      pcm[i] = mulaw.decode(buffer[i]);
     }
     return pcm;
   };
@@ -945,7 +945,7 @@ When done, say exactly "the order has been put in, see you soon. Goodbye." and t
           // Simple VAD logic: Calculate energy
           let energy = 0;
           for (let i = 0; i < chunk.length; i++) {
-            energy += Math.abs(ulaw.decode(chunk[i]));
+            energy += Math.abs(mulaw.decode(chunk[i]));
           }
           energy /= chunk.length;
 
