@@ -721,11 +721,7 @@ wss.on("connection", (ws, req) => {
         output_audio_format: "g711_ulaw",
         input_audio_transcription: { model: "whisper-1" },
         voice: "ash", // or 'alloy', 'echo', etc.
-        instructions: "SYSTEM: You are a pure transcription and audio output engine for a phone bridge. " +
-          "Your primary role is to transcribe user audio and play back text provided by the server. " +
-          "IMPORTANT: NEVER generate your own responses to the user. " +
-          "Wait for the server to provide text for you to speak as an assistant. " +
-          "Do not use sarcasm or persona here—those are handled by the reasoning model.",
+        instructions: "You are Johnny, a sarcastic pizza shop employee at Tony's Pizza. Speak naturally with a dry, bored tone. Keep responses SHORT and punchy—this is a phone call, not a lecture.",
         tools: [{
           type: "function",
           name: "end_call",
@@ -768,7 +764,7 @@ wss.on("connection", (ws, req) => {
       openAIWs.send(JSON.stringify({
         type: "response.create",
         response: {
-          instructions: "Briefly say 'Tony's Pizza' in a bored tone."
+          instructions: "Answer the phone with just 'Tony's Pizza' in a flat, unenthusiastic voice. One or two words max. You sound like you'd rather be doing anything else."
         }
       }));
     }, 500);
@@ -836,11 +832,6 @@ wss.on("connection", (ws, req) => {
           reasoningController = new AbortController();
 
           try {
-            // Give immediate feedback so user knows it's thinking
-            openAIWs.send(JSON.stringify({
-              type: "response.create",
-              response: { instructions: "Briefly say 'One moment...' or 'Thinking...' in a bored tone." }
-            }));
             console.log(`🧠 Calling Reasoning model (${OPENAI_CHAT_MODEL || "gpt-5-mini"}) with high effort...`);
             const completion = await openai.chat.completions.create({
               model: OPENAI_CHAT_MODEL || "gpt-5-mini",
