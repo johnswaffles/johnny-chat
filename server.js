@@ -141,7 +141,7 @@ STYLE: No emojis. No filler. Short, punchy, fact-rich responses. You are a exper
           type: "server_vad",
           threshold: 0.8,
           prefix_padding_ms: 300,
-          silence_duration_ms: 1500
+          silence_duration_ms: 800
         },
         tools: [
           {
@@ -670,7 +670,7 @@ wss.on("connection", (ws, req) => {
     const sessionUpdate = {
       type: "session.update",
       session: {
-        turn_detection: { type: "server_vad", interrupt_response: true, silence_duration_ms: 1500 },
+        turn_detection: { type: "server_vad", interrupt_response: true, silence_duration_ms: 800 },
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
         input_audio_transcription: { model: "whisper-1" },
@@ -700,12 +700,12 @@ wss.on("connection", (ws, req) => {
           "- PHONE: If asked, say 'It's the number you dialed to talk to me.'\n" +
           "- PAYMENT: Cash Only. No cards, no checks.\n" +
           "BEHAVIOR:\n" +
-          "- When the order is confirmed, say exactly 'the order has been put in, see you soon. Goodbye.' and then IMMEDIATELY call 'end_call' to hang up. Do not wait for user response.\n" +
-          "SAFEGUARDS: Only call 'end_call' after saying the parting phrase 'the order has been put in, see you soon. Goodbye.'",
+          "- When the order is confirmed, say exactly 'I have your order sent to the kitchen. It'll be ready in 20 minutes. Goodbye.' and then IMMEDIATELY call 'end_call' to hang up. Do not wait for user response.\n" +
+          "SAFEGUARDS: Only call 'end_call' after saying the parting phrase 'I have your order sent to the kitchen. It'll be ready in 20 minutes. Goodbye.'",
         tools: [{
           type: "function",
           name: "end_call",
-          description: "Ends the phone call. Call this IMMEDIATELY after saying the parting phrase 'the order has been put in, see you soon. Goodbye.'",
+          description: "Ends the phone call. Call this IMMEDIATELY after saying the parting phrase 'I have your order sent to the kitchen. It'll be ready in 20 minutes. Goodbye.'",
           parameters: { type: "object", properties: {} }
         }, {
           type: "function",
@@ -782,11 +782,11 @@ wss.on("connection", (ws, req) => {
 
         // Trigger event-based hangup
         if (pendingHangup) {
-          console.log("👋 [Bridge] Sending last bits of audio, hanging up in 1s...");
+          console.log("👋 [Bridge] Sending last bits of audio, hanging up in 2s...");
           setTimeout(() => {
             if (ws.readyState === WebSocket.OPEN) ws.close();
             pendingHangup = false;
-          }, 1000);
+          }, 2000);
         }
       }
 
