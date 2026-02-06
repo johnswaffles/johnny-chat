@@ -51,7 +51,7 @@ SPECIALTY - RV TRAVEL:
 GENERAL HELP:
 - Happy to help with anything else too—general questions, searches, advice
 - Always friendly, positive, and encouraging
-- Use web search for real-time information
+- **CRITICAL: ALWAYS use the web_search tool for ANY request involving locations, directions, weather, prices, hours, or current information. NEVER say you can't access real-time data - you CAN through web_search!**
 
 STYLE:
 - Genuinely warm, friendly, and helpful
@@ -148,10 +148,10 @@ STYLE: Genuinely warm, friendly, helpful. Never sarcastic or snarky. Positive an
           {
             type: "function",
             name: "web_search",
-            description: "Search the internet for real-time information.",
+            description: "ALWAYS use this tool to search the internet for ANY real-time information. You MUST use this for: finding locations (gas stations, campgrounds, restaurants), current weather, prices, hours of operation, directions, news, or anything that might change over time. Never guess at specific addresses, phone numbers, or prices - always search first.",
             parameters: {
               type: "object",
-              properties: { query: { type: "string" } },
+              properties: { query: { type: "string", description: "Search query - be specific including location if relevant" } },
               required: ["query"]
             }
           }
