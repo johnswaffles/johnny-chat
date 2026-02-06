@@ -583,40 +583,6 @@ class VoiceWidget {
             } finally {
                 searchBubble.remove();
             }
-        } else if (msg.name === 'send_order_summary') {
-            console.log("📧 Sending Kitchen Ticket via Widget...");
-            try {
-                const res = await fetch(`${backendUrl}/api/send-order-email`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(args)
-                });
-                const data = await res.json();
-
-                this.dc.send(JSON.stringify({
-                    type: "conversation.item.create",
-                    item: {
-                        type: "function_call_output",
-                        call_id: msg.call_id,
-                        output: JSON.stringify({ success: res.ok, message: data.message || data.error })
-                    }
-                }));
-                this.dc.send(JSON.stringify({ type: "response.create" }));
-            } catch (err) {
-                console.error("Email failed", err);
-                this.dc.send(JSON.stringify({
-                    type: "conversation.item.create",
-                    item: { type: "function_call_output", call_id: msg.call_id, output: JSON.stringify({ success: false, error: err.message }) }
-                }));
-                this.dc.send(JSON.stringify({ type: "response.create" }));
-            }
-        } else if (msg.name === 'end_call') {
-            console.log("👋 end_call triggered. Waiting for response.done...");
-            this.dc.send(JSON.stringify({
-                type: "conversation.item.create",
-                item: { type: "function_call_output", call_id: msg.call_id, output: JSON.stringify({ success: true }) }
-            }));
-            this.pendingHangup = true;
         }
     }
 

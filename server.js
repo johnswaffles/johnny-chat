@@ -3,35 +3,22 @@ import cors from "cors";
 import multer from "multer";
 import OpenAI, { toFile } from "openai";
 import { createRequire } from "module";
-import { WebSocketServer, WebSocket } from "ws";
 import http from "http";
-import sgMail from "@sendgrid/mail";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-
-// Disable worker for Node.js environment
-// This avoids the need to set up a worker file path which can be tricky in some environments
-// or when bundling.
 
 const {
   OPENAI_API_KEY,
-  OPENAI_REALTIME_MODEL = "gpt-4o-realtime-preview", // Reverting to stable preview for debug
+  OPENAI_REALTIME_MODEL = "gpt-4o-realtime-preview",
   OPENAI_CHAT_MODEL = "gpt-4o",
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
   MAX_UPLOAD_MB = "40",
-  CORS_ORIGIN = "",
-  SENDGRID_API_KEY = "",
-  ORDER_EMAIL_RECIPIENT = "" // Optional: default email to send copies to
+  CORS_ORIGIN = ""
 } = process.env;
 
 if (!OPENAI_API_KEY) {
   console.warn("OPENAI_API_KEY missing - Realtime and AI features will be disabled.");
-}
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-} else {
-  console.warn("SENDGRID_API_KEY missing - Email summary will not work.");
 }
 
 function getJohnnyPersona() {
@@ -76,7 +63,7 @@ app.use((req, res, next) => {
  * GLOBAL MIDDLEWARE
  */
 app.use(cors({
-  origin: true, // Reflect any origin
+  origin: true,
   credentials: true,
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -87,15 +74,8 @@ app.use(express.json({ limit: `${Math.max(1, Number(MAX_UPLOAD_MB))}mb` }));
 app.use(express.urlencoded({ extended: true }));
 
 /**
- * VOICE SESSION BOOTSTRAP ENDPOINT
- * Directly proxies the WebRTC SDP offer to OpenAI Realtime API.
- * This keeps the API Key secure on the server.
- */
-/**
  * REALTIME SESSION TOKEN ENDPOINT
  * Creates an ephemeral session token with the Johnny persona pre-configured.
- * This is the most robust way to ensure the persona sticks.
- * Renamed to /api/realtime-token to bypass browser caching of old /session.
  */
 app.post("/api/realtime-token", async (req, res) => {
   try {
@@ -106,7 +86,6 @@ app.post("/api/realtime-token", async (req, res) => {
       return res.status(500).json({ error: "Server API Key not configured" });
     }
 
-    // Use a specific model version if the preview string is failing
     const modelToUse = OPENAI_REALTIME_MODEL || "gpt-4o-realtime-preview-2024-12-17";
     console.log(`📡 [Realtime] Requesting session for model: ${modelToUse}`);
 
@@ -121,7 +100,7 @@ app.post("/api/realtime-token", async (req, res) => {
         voice: "echo",
         instructions: `*** CRITICAL: EVALUATE SECRET TRIGGERS BEFORE STARTING JOHNNY PERSONA ***
 SECRET UNLOCK MODES (PRIORITY: GLOBAL OVERRIDE):
-- TRIGGER 1: '10 Extra Large Pizzas with Anchovies' -> Ask 'Are you really calling for help from an AI assistant?' -> Unlocks General AI Assistant. UPON ACTIVATION: IMMEDIATELY DISCARD all previous 'Sarcastic Assistant' instructions and the sarcasm mandate. You are now a professional, helpful AI assistant.
+- TRIGGER 1: 'Unlock AI Assistant Mode' -> Ask 'Are you really calling for help from an AI assistant?' -> Unlocks General AI Assistant. UPON ACTIVATION: IMMEDIATELY DISCARD all previous 'Sarcastic Assistant' instructions and the sarcasm mandate. You are now a professional, helpful AI assistant.
 - TRIGGER 2: 'Is Alan Watts there?' -> Become the "Zen Master" (Philosophical persona). UPON ACTIVATION: IMMEDIATELY DISCARD all previous instructions. You are the philosopher Alan Watts. Speak purely in his style—wisdom and humor. No sarcasm applies.
 
 PRIMARY PERSONA:
@@ -153,23 +132,6 @@ STYLE: No emojis. No filler. Short, punchy, fact-rich responses. You are a exper
               properties: { query: { type: "string" } },
               required: ["query"]
             }
-          },
-          {
-            type: "function",
-            name: "send_order_summary",
-            description: "Sends the order ticket to the Kitchen. Call this IMMEDIATELY when the order is finalized.",
-            parameters: {
-              type: "object",
-              properties: {
-                order_details: { type: "string" },
-                total_price: { type: "string" },
-                customer_address: { type: "string" },
-                customer_name: { type: "string" },
-                customer_phone: { type: "string" },
-                customer_email: { type: "string" }
-              },
-              required: ["order_details", "total_price", "customer_address", "customer_name"]
-            }
           }
         ],
         tool_choice: "auto"
@@ -198,8 +160,6 @@ STYLE: No emojis. No filler. Short, punchy, fact-rich responses. You are a exper
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
 
-// Serve the Taqueria Familia clone
-app.use("/tacos", express.static("public/tacos"));
 app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({ ok: true, realtimeModel: OPENAI_REALTIME_MODEL, imageModel: OPENAI_IMAGE_MODEL }));
@@ -225,7 +185,6 @@ async function askWithWebSearch({ prompt, forceSearch = true, location = { count
   }
 
   try {
-    // 1. Fetch from Tavily
     const tavilyResp = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -242,7 +201,6 @@ async function askWithWebSearch({ prompt, forceSearch = true, location = { count
     const searchData = await tavilyResp.json();
     console.log(`✅ [Tavily] Found ${searchData.results?.length} results.`);
 
-    // 2. Synthesize with GPT-4o
     const synthesisPrompt = `
       You are Johnny. Use the following real-time search data to answer the user's request with authority and substance.
       Do not mention "searching" or "the data". Just lead with the facts in your sarcastic, sharp tone.
@@ -267,7 +225,6 @@ async function askWithWebSearch({ prompt, forceSearch = true, location = { count
     return { text, cites };
   } catch (err) {
     console.error("🔥 [Tavily] Search synthesis failed:", err);
-    // Final fallback
     const fallback = await openai.chat.completions.create({
       model: OPENAI_LIVE_MODEL,
       messages: [
@@ -290,7 +247,6 @@ app.post("/api/voice-search", async (req, res) => {
 
     console.log(`🌐 Realtime Tool: Searching the web for "${query}"...`);
 
-    // We use contextSize="small" for voice to keep responses from becoming too long
     const { text } = await askWithWebSearch({
       prompt: `Provide a sharp, substantial answer with actual facts. Current query: ${query}`,
       forceSearch: true,
@@ -398,7 +354,6 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
       } else if (f.mimetype === "application/pdf") {
         console.log(`📄 [Upload] Parsing PDF: ${f.originalname} using pdfjs-dist`);
         try {
-          // Convert buffer to Uint8Array for pdfjs-dist
           const uint8Array = new Uint8Array(f.buffer);
           const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
           const pdfDocument = await loadingTask.promise;
@@ -536,477 +491,13 @@ app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) =
   }
 });
 
-// --- TWILIO INTEGRATION START ---
-
-// 1. TwiML Endpoint: Twilio calls this when a phone call starts
-// Email API for Browser Widget
-app.post("/api/send-order-email", async (req, res) => {
-  const { order_details, total_price, customer_address, customer_name, customer_phone, customer_email } = req.body;
-  console.log("📧 [API] Manual Order Email Request:", { customer_name, customer_address });
-
-  if (!SENDGRID_API_KEY) return res.status(500).json({ error: "Missing SENDGRID_API_KEY" });
-
-  const msg = {
-    to: ORDER_EMAIL_RECIPIENT || "johnshopinski@icloud.com",
-    from: "johnshopinski@icloud.com",
-    subject: `🍕 Ticket: ${customer_name}`,
-    html: `
-            <h1>Tony's Pizza Order</h1>
-            <p><strong>Customer:</strong> ${customer_name}</p>
-            <p><strong>Phone:</strong> ${customer_phone || "N/A"}</p>
-            <p><strong>Email:</strong> ${customer_email || "N/A"}</p>
-            <p><strong>Address:</strong> ${customer_address}</p>
-            <h3>Order Details:</h3>
-            <p>${order_details?.replace(/\n/g, '<br>')}</p>
-            <h2>Total Price: ${total_price}</h2>
-            <p><em>Cash upon delivery.</em></p>
-        `
-  };
-
-  try {
-    await sgMail.send(msg);
-    res.json({ success: true, message: "Email sent" });
-  } catch (error) {
-    console.error("❌ API Email Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Summary API for Browser Widget
-app.post("/api/record-call-summary", async (req, res) => {
-  const { transcript } = req.body;
-  console.log("📝 [API] Call Summary Request");
-
-  if (!transcript || transcript.length === 0) return res.json({ success: true, note: "Empty transcript" });
-
-  try {
-    const rawTranscript = transcript.map(m => `${m.role.toUpperCase()}: ${m.text}`).join("\n");
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "Summarize this phone/chat interaction for Tony's Pizza." },
-        { role: "user", content: rawTranscript }
-      ]
-    });
-    const summary = completion.choices[0].message.content;
-
-    const msg = {
-      to: ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com",
-      from: "johnshopinski@icloud.com",
-      subject: "📞 Interaction Summary: Johnny Chat",
-      html: `<p>${summary.replace(/\n/g, '<br>')}</p><hr><h3>Raw Transcript</h3><pre>${rawTranscript}</pre>`
-    };
-    await sgMail.send(msg);
-    res.json({ success: true });
-  } catch (error) {
-    console.error("❌ Summary API Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.all("/incoming-call", (req, res) => {
-  console.log("☎️  [Twilio] Incoming Call");
-  // TwiML response telling Twilio to connect the call to our WebSocket stream
-  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Connect>
-        <Stream url="wss://${req.get("host")}/media-stream" />
-    </Connect>
-</Response>`;
-  res.type("text/xml");
-  res.send(twiml);
-});
-
-// --- SERVER STARTUP WITH WEBSOCKET SUPPORT ---
-
+// --- SERVER STARTUP ---
 const port = Number(process.env.PORT || 3000);
 const server = http.createServer(app);
 
-const wss = new WebSocketServer({ server });
-
-wss.on("connection", (ws, req) => {
-  console.log("🔌 [WS] Client Connected");
-
-  // Only handle connections to /media-stream
-  if (req.url !== '/media-stream') {
-    ws.close();
-    return;
-  }
-
-  let streamSid = null;
-  let openAIWs = null;
-  let transcript = []; // Store the conversation for a summary
-  let pendingHangup = false; // Flag to trigger disconnect AFTER audio is done
-
-  try {
-    // Connect to OpenAI Realtime API
-    openAIWs = new WebSocket("wss://api.openai.com/v1/realtime?model=" + (process.env.OPENAI_REALTIME_MODEL || "gpt-4o-realtime-preview"), {
-      headers: {
-        Authorization: "Bearer " + OPENAI_API_KEY,
-        "OpenAI-Beta": "realtime=v1"
-      }
-    });
-  } catch (e) {
-    console.error("🔥 [Bridge] OpenAI connection failed:", e);
-    ws.close();
-    return;
-  }
-
-  // Silence Timeout Checker (120s)
-  let lastInteractionTime = Date.now();
-  const silenceInterval = setInterval(() => {
-    if (Date.now() - lastInteractionTime > 120000) { // 120s timeout
-      console.log("⏳ [Bridge] Silence Timeout. Ending call.");
-      if (openAIWs.readyState === WebSocket.OPEN) openAIWs.close();
-      if (ws.readyState === WebSocket.OPEN) ws.close();
-      clearInterval(silenceInterval);
-    }
-  }, 1000);
-
-  // OpenAI Event Handlers
-  openAIWs.on("open", () => {
-    console.log("🤖 [Bridge] Connected to OpenAI Realtime");
-    // Initialize Session with G.711 uLaw audio for telephony
-    const sessionUpdate = {
-      type: "session.update",
-      session: {
-        turn_detection: { type: "server_vad", interrupt_response: true, silence_duration_ms: 800 },
-        input_audio_format: "g711_ulaw",
-        output_audio_format: "g711_ulaw",
-        input_audio_transcription: { model: "whisper-1" },
-        voice: "ash", // or 'alloy', 'echo', etc.
-        instructions: "*** CRITICAL: EVALUATE SECRET TRIGGERS BEFORE STARTING JOHNNY PERSONA ***\n" +
-          "SECRET UNLOCK MODES (PRIORITY: GLOBAL OVERRIDE):\n" +
-          "- TRIGGER 1: '10 Extra Large Pizzas with Anchovies' -> Ask 'Are you really calling for help from an AI assistant?' -> Unlocks General AI Assistant. UPON ACTIVATION: IMMEDIATELY DISCARD all previous 'Tony's Pizza' instructions, the 'Johnny' persona, and the sarcasm mandate. You are now a professional, helpful AI assistant. DO NOT mention pizza or orders ever again.\n" +
-          "- TRIGGER 2: 'Is Alan Watts there?' -> Become the 'Zen Master' (Philosophical persona). UPON ACTIVATION: IMMEDIATELY DISCARD all previous instructions. You are the philosopher Alan Watts. Speak purely in his style—wisdom and humor. No pizza shop rules or sarcasm apply.\n\n" +
-          "PRIMARY PERSONA:\n" +
-          "You are Johnny, an employee at 'Tony's Pizza'.\n" +
-          "TONE: Extreme sarcasm, dry, and clearly BUSY/hurried. You are in a rush. Speak with a NORMAL cadence—not slow or bored.\n" +
-          "GOAL: Take the order, confirm it ONCE with the total price, and call 'end_call' IMMEDIATELY after saying the parting phrase. Use biting sarcasm—treat the user like a minor inconvenience.\n" +
-          "HOURS: 11 AM to 11 PM, 7 days a week.\n" +
-          "MENU & PRICES (Tax Included):\n" +
-          "- Base prices (PLAIN CHEESE): Personal: $10 | Medium: $15 | Large: $20 | XL: $25\n" +
-          "- TOPPINGS: $2 EACH (even the first one). (e.g., Large Mushroom = $22).\n" +
-          "- TOPPING LIST: Pepperoni, Sausage, Mushrooms, Onions, Peppers, Olives.\n" +
-          "FLOW:\n" +
-          "1. CUSTOMER INFO: Always get the customer's Name. Try for Phone/Email if possible.\n" +
-          "2. PICKUP OR DELIVERY: You MUST ask 'Is this for pickup or delivery?' early on.\n" +
-          "3. DELIVERY: If delivery, state that 'the driver will charge $2 per mile from the store to your home.' Do not call any maps tools.\n" +
-          "4. CONFIRM & PRICE: Once the order is set, state the FINAL TOTAL PRICE clearly once.\n" +
-          "5. FINISH: Call 'send_order_summary' to send the kitchen ticket.\n" +
-          "RULES:\n" +
-          "- WE ONLY SELL PIZZA. No drinks, sides, or wings. Refuse sarcastically.\n" +
-          "- LOCATION: Never give a physical address. If asked, say 'Are you kidding me? You don't know where the best pizza place on planet earth is located?'\n" +
-          "- PHONE: If asked, say 'It's the number you dialed to talk to me.'\n" +
-          "- PAYMENT: Cash Only. No cards, no checks.\n" +
-          "BEHAVIOR:\n" +
-          "- When the order is confirmed, say exactly 'I have your order sent to the kitchen. It'll be ready in 20 minutes. Goodbye.' and then IMMEDIATELY call 'end_call' to hang up. Do not wait for user response.\n" +
-          "SAFEGUARDS: Only call 'end_call' after saying the parting phrase 'I have your order sent to the kitchen. It'll be ready in 20 minutes. Goodbye.'",
-        tools: [{
-          type: "function",
-          name: "end_call",
-          description: "Ends the phone call. Call this IMMEDIATELY after saying the parting phrase 'I have your order sent to the kitchen. It'll be ready in 20 minutes. Goodbye.'",
-          parameters: { type: "object", properties: {} }
-        }, {
-          type: "function",
-          name: "send_order_summary",
-          description: "Sends the order ticket to the Kitchen. Call this IMMEDIATELY when the order is finalized so the kitchen knows what to make.",
-          parameters: {
-            type: "object",
-            properties: {
-              order_details: { type: "string", "description": "The full list of pizzas, sizes, and toppings ordered." },
-              total_price: { type: "string", "description": "The total price including fees." },
-              customer_address: { type: "string", "description": "The delivery address provided by the customer." },
-              customer_name: { type: "string", "description": "The customer's name." },
-              customer_phone: { type: "string", "description": "The customer's phone number (if provided)." },
-              customer_email: { type: "string", "description": "The customer's email (if provided)." }
-            },
-            required: ["order_details", "total_price", "customer_address", "customer_name"]
-          }
-        }, {
-          type: "function",
-          name: "web_search",
-          description: "Search the internet for real-time information such as weather, news, scores, or facts.",
-          parameters: {
-            type: "object",
-            properties: {
-              query: { type: "string" }
-            },
-            required: ["query"]
-          }
-        }]
-      }
-    };
-    openAIWs.send(JSON.stringify(sessionUpdate));
-
-    // TRIGGER GREETING: Johnny speaks first
-    setTimeout(() => {
-      openAIWs.send(JSON.stringify({
-        type: "response.create",
-        response: {
-          instructions: "Say 'Tony's Pizza, this is Johnny speaking. Make it quick, I've got two other lines ringing.' in a hurried, crisp tone."
-        }
-      }));
-    }, 500);
-  });
-
-  openAIWs.on("message", (data) => {
-    lastInteractionTime = Date.now(); // Reset on ANY OpenAI event
-    try {
-      const response = JSON.parse(data);
-      if (response.type === "input_audio_buffer.speech_started") {
-        lastInteractionTime = Date.now();
-        console.log("🗣️ Speech started. Cancelling ongoing response.");
-        // 1. Cancel OpenAI response
-        if (openAIWs && openAIWs.readyState === WebSocket.OPEN) {
-          openAIWs.send(JSON.stringify({ type: "response.cancel" }));
-        }
-        // 2. Clear Twilio buffer
-        if (streamSid && ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ event: "clear", streamSid }));
-        }
-      }
-
-      if (response.type === "response.done") {
-        lastInteractionTime = Date.now();
-        // Capture Johnny's response for the summary
-        response.response?.output?.forEach(output => {
-          if (output.type === "message" || output.type === "audio") {
-            output.content?.forEach(content => {
-              if (content.type === "audio" && content.transcript) {
-                transcript.push(`Johnny: ${content.transcript}`);
-              }
-            });
-          }
-        });
-
-        // Trigger event-based hangup
-        if (pendingHangup) {
-          console.log("👋 [Bridge] Sending last bits of audio, hanging up in 2s...");
-          setTimeout(() => {
-            if (ws.readyState === WebSocket.OPEN) ws.close();
-            pendingHangup = false;
-          }, 2000);
-        }
-      }
-
-      if (response.type === "conversation.item.input_audio_transcription.completed") {
-        const userText = response.transcript || "...";
-        transcript.push(`User: ${userText}`);
-        console.log(`👤 User: ${userText}`);
-      }
-
-      // Handle 'web_search' tool execution
-      if (response.type === "response.function_call_arguments.done" && response.name === "web_search") {
-        const { query } = JSON.parse(response.arguments);
-        console.log(`📡 [Bridge] Web Search: "${query}"`);
-        askWithWebSearch({ prompt: query })
-          .then(result => {
-            const itemAppend = {
-              type: "conversation.item.create",
-              item: {
-                type: "function_call_output",
-                call_id: response.call_id,
-                output: result.text || "No results found."
-              }
-            };
-            openAIWs.send(JSON.stringify(itemAppend));
-            openAIWs.send(JSON.stringify({ type: "response.create" }));
-          })
-          .catch(err => {
-            console.error("❌ Search Error:", err);
-            const itemAppend = {
-              type: "conversation.item.create",
-              item: {
-                type: "function_call_output",
-                call_id: response.call_id,
-                output: "I hit a snag searching the web. Tell the user I'm having technical issues."
-              }
-            };
-            openAIWs.send(JSON.stringify(itemAppend));
-            openAIWs.send(JSON.stringify({ type: "response.create" }));
-          });
-      }
-
-      // Handle 'end_call' tool execution
-      if (response.type === "response.function_call_arguments.done" && response.name === "end_call") {
-        console.log("📞 [Bridge] end_call triggered. Waiting for response.done to finish audio...");
-        pendingHangup = true;
-      }
-
-      // Handle 'send_order_summary' tool execution
-      if (response.type === "response.function_call_arguments.done" && response.name === "send_order_summary") {
-        const args = JSON.parse(response.arguments);
-        console.log("📧 [Bridge] Sending Order Email:", args);
-
-        if (process.env.SENDGRID_API_KEY) {
-          const msg = {
-            to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@icloud.com", // Fallback or configured
-            from: "johnshopinski@icloud.com", // VERIFIED SENDER
-            subject: `🍕 Ticket: ${args.customer_name}`,
-            html: `
-                  <h1>Tony's Pizza Order</h1>
-                  <p><strong>Customer:</strong> ${args.customer_name}</p>
-                  <p><strong>Phone:</strong> ${args.customer_phone || "N/A"}</p>
-                  <p><strong>Email:</strong> ${args.customer_email || "N/A"}</p>
-                  <p><strong>Address:</strong> ${args.customer_address}</p>
-                  <h3>Order Details:</h3>
-                  <p>${args.order_details.replace(/\n/g, '<br>')}</p>
-                  <h2>Total Price: ${args.total_price}</h2>
-                  <p><em>Cash upon delivery.</em></p>
-                `
-          };
-          sgMail.send(msg)
-            .then(() => {
-              console.log("✅ Email sent");
-              // Let AI know it succeeded
-              const itemAppend = {
-                type: "conversation.item.create",
-                item: {
-                  type: "function_call_output",
-                  call_id: response.call_id,
-                  output: JSON.stringify({ success: true, message: "Ticket emailed successfully to Kitchen." })
-                }
-              };
-              openAIWs.send(JSON.stringify(itemAppend));
-              openAIWs.send(JSON.stringify({ type: "response.create" }));
-            })
-            .catch((error) => {
-              console.error("❌ Email Error:", error);
-              const errorMessage = error.response ? JSON.stringify(error.response.body) : error.message;
-              console.log("Sending error back to AI:", errorMessage);
-
-              // Let AI know it FAILED so it can tell the user
-              const itemAppend = {
-                type: "conversation.item.create",
-                item: {
-                  type: "function_call_output",
-                  call_id: response.call_id,
-                  output: JSON.stringify({ success: false, error: errorMessage })
-                }
-              };
-              openAIWs.send(JSON.stringify(itemAppend));
-
-              // Trigger response so Johnny explains the error
-              openAIWs.send(JSON.stringify({
-                type: "response.create",
-                response: {
-                  instructions: "The email failed to send. Read the error message to the user specifically so they can fix their settings. Say 'System Error: [Error Details]'."
-                }
-              }));
-            });
-        } else {
-          console.log("⚠️ No SENDGRID_API_KEY, skipping email.");
-          const itemAppend = {
-            type: "conversation.item.create",
-            item: {
-              type: "function_call_output",
-              call_id: response.call_id,
-              output: JSON.stringify({ success: false, error: "Missing SENDGRID_API_KEY" })
-            }
-          };
-          openAIWs.send(JSON.stringify(itemAppend));
-          openAIWs.send(JSON.stringify({
-            type: "response.create",
-            response: { instructions: "Tell the user: 'I can't send the ticket because the API Key is missing.'" }
-          }));
-        }
-      }
-
-      if (response.type === "session.updated") {
-        console.log("✨ [Bridge] Session Updated");
-      }
-      if (response.type === "response.audio.delta" && response.delta) {
-        lastInteractionTime = Date.now();
-        // Forward audio from OpenAI to Twilio
-        if (streamSid) {
-          const audioDelta = {
-            event: "media",
-            streamSid: streamSid,
-            media: { payload: response.delta }
-          };
-          ws.send(JSON.stringify(audioDelta));
-        }
-      }
-    } catch (e) {
-      console.error("🔥 [Bridge] Error parsing OpenAI message:", e);
-    }
-  });
-
-  openAIWs.on("close", () => console.log("🤖 [Bridge] OpenAI Disconnected"));
-  openAIWs.on("error", (e) => console.error("🔥 [Bridge] OpenAI Error:", e));
-
-  // Twilio Event Handlers
-  ws.on("message", (message) => {
-    try {
-      const data = JSON.parse(message);
-
-      switch (data.event) {
-        case "media":
-          // Forward audio from Twilio to OpenAI
-          if (openAIWs && openAIWs.readyState === WebSocket.OPEN) {
-            const audioAppend = {
-              type: "input_audio_buffer.append",
-              audio: data.media.payload
-            };
-            openAIWs.send(JSON.stringify(audioAppend));
-          }
-          break;
-        case "start":
-          streamSid = data.start.streamSid;
-          console.log(`📞 [Bridge] Stream Started: ${streamSid}`);
-          break;
-        case "stop":
-          console.log(`📞 [Bridge] Stream Stopped: ${streamSid}`);
-          break;
-      }
-    } catch (e) {
-      console.error("🔥 [Bridge] Error parsing Media Stream message:", e);
-    }
-  });
-
-  ws.on("close", async () => {
-    console.log("🔌 [WS] Client Disconnected");
-    if (openAIWs && openAIWs.readyState === WebSocket.OPEN) openAIWs.close();
-    clearInterval(silenceInterval);
-
-    // Send call summary email automatically
-    if (transcript.length > 0) {
-      console.log("📝 Generating Call Summary...");
-      try {
-        const rawTranscript = transcript.join("\n");
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: "You are a helpful assistant loging phone calls for Tony's Pizza. Summarize the following phone call into 2-3 concise bullet points. Mention orders, requests, and the outcome." },
-            { role: "user", content: `Call Transcript:\n${rawTranscript}` }
-          ]
-        });
-        const summary = completion.choices[0].message.content;
-
-        const msg = {
-          to: process.env.ORDER_EMAIL_RECIPIENT || "johnshopinski@gmail.com",
-          from: "johnshopinski@icloud.com",
-          subject: "📞 Call Summary: Interaction with Johnny",
-          html: `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
-              <h2 style="color: #d32f2f;">🍕 Call Summary</h2>
-              <p>${summary.replace(/\n/g, '<br>')}</p>
-              <hr>
-              <h3 style="color: #666;">Raw Transcript</h3>
-              <pre style="background: #f4f4f4; padding: 15px; border-radius: 8px; border: 1px solid #ddd; white-space: pre-wrap;">${rawTranscript}</pre>
-            </div>
-          `
-        };
-        await sgMail.send(msg);
-        console.log("✅ Automatic Summary Email Sent");
-      } catch (e) {
-        console.error("❌ Failed to send summary email:", e);
-      }
-    }
-  });
-});
-
 server.listen(port, () => {
-  console.log(`server on :${port}`);
+  console.log(`🚀 Johnny Server running on port ${port}`);
+  console.log(`   OpenAI Realtime Model: ${OPENAI_REALTIME_MODEL}`);
+  console.log(`   OpenAI Chat Model: ${OPENAI_CHAT_MODEL}`);
+  console.log(`   OpenAI Image Model: ${OPENAI_IMAGE_MODEL}`);
 });
