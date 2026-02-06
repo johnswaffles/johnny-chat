@@ -39,6 +39,12 @@ class VoiceWidget {
     init() {
         console.log("🚀 Johnny Widget: Overlord Initializing...");
 
+        // 0. Check Lockout First
+        if (this.isLockedOut()) {
+            this.showLockoutPopup();
+            return;
+        }
+
         // 1. Check Legal First
         if (!this.hasConsent()) {
             this.showLegalModal();
@@ -46,6 +52,129 @@ class VoiceWidget {
             this.createUI();
             this.attachEvents();
         }
+    }
+
+    isLockedOut() {
+        try {
+            const raw = localStorage.getItem(this.LOCKOUT_KEY);
+            if (!raw) return false;
+            const data = JSON.parse(raw);
+            const hoursSince = (Date.now() - data.lockedAt) / (1000 * 60 * 60);
+            if (hoursSince >= this.LOCKOUT_HOURS) {
+                localStorage.removeItem(this.LOCKOUT_KEY);
+                return false;
+            }
+            return data.attempts >= this.MAX_ATTEMPTS;
+        } catch (e) { return false; }
+    }
+
+    getAttemptCount() {
+        try {
+            const raw = localStorage.getItem(this.LOCKOUT_KEY);
+            if (!raw) return 0;
+            const data = JSON.parse(raw);
+            const hoursSince = (Date.now() - data.lockedAt) / (1000 * 60 * 60);
+            if (hoursSince >= this.LOCKOUT_HOURS) {
+                localStorage.removeItem(this.LOCKOUT_KEY);
+                return 0;
+            }
+            return data.attempts || 0;
+        } catch (e) { return 0; }
+    }
+
+    incrementAttempts() {
+        const current = this.getAttemptCount();
+        const newCount = current + 1;
+        localStorage.setItem(this.LOCKOUT_KEY, JSON.stringify({
+            attempts: newCount,
+            lockedAt: Date.now()
+        }));
+        console.log(`🔒 Password attempt ${newCount}/${this.MAX_ATTEMPTS}`);
+        if (newCount >= this.MAX_ATTEMPTS) {
+            this.showLockoutPopup();
+        }
+    }
+
+    clearLockout() {
+        localStorage.removeItem(this.LOCKOUT_KEY);
+        this.passwordUnlocked = true;
+    }
+
+    showLockoutPopup() {
+        console.log("🚫 Lockout: Too many failed password attempts.");
+        const existing = document.getElementById('jj-lockout-popup');
+        if (existing) existing.remove();
+
+        const popup = document.createElement('div');
+        popup.id = 'jj-lockout-popup';
+        popup.innerHTML = `
+            <style>
+                #jj-lockout-popup {
+                    position: fixed !important;
+                    inset: 0 !important;
+                    background: rgba(0, 0, 0, 0.95) !important;
+                    z-index: 2147483647 !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    font-family: 'Inter', system-ui, sans-serif !important;
+                }
+                #jj-lockout-popup .lockout-box {
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    border: 2px solid #e94560;
+                    border-radius: 16px;
+                    padding: 40px;
+                    max-width: 400px;
+                    text-align: center;
+                    box-shadow: 0 20px 60px rgba(233, 69, 96, 0.3);
+                }
+                #jj-lockout-popup h2 {
+                    color: #e94560;
+                    font-size: 28px;
+                    margin: 0 0 20px 0;
+                }
+                #jj-lockout-popup p {
+                    color: #ccc;
+                    font-size: 16px;
+                    line-height: 1.6;
+                    margin: 0;
+                }
+                #jj-lockout-popup .timer {
+                    color: #fff;
+                    font-size: 24px;
+                    font-weight: bold;
+                    margin-top: 20px;
+                }
+            </style>
+            <div class="lockout-box">
+                <h2>🔒 Access Denied</h2>
+                <p>Too many incorrect password attempts.<br>Please try again later.</p>
+                <div class="timer" id="jj-lockout-timer"></div>
+            </div>
+        `;
+        document.body.appendChild(popup);
+
+        const updateTimer = () => {
+            try {
+                const raw = localStorage.getItem(this.LOCKOUT_KEY);
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                const msRemaining = (data.lockedAt + this.LOCKOUT_HOURS * 60 * 60 * 1000) - Date.now();
+                if (msRemaining <= 0) {
+                    localStorage.removeItem(this.LOCKOUT_KEY);
+                    popup.remove();
+                    location.reload();
+                    return;
+                }
+                const hours = Math.floor(msRemaining / (1000 * 60 * 60));
+                const minutes = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((msRemaining % (1000 * 60)) / 1000);
+                document.getElementById('jj-lockout-timer').textContent =
+                    `${hours}h ${minutes}m ${seconds}s remaining`;
+            } catch (e) { }
+        };
+        updateTimer();
+        setInterval(updateTimer, 1000);
     }
 
     hasConsent() {
@@ -528,6 +657,20 @@ class VoiceWidget {
                             const bubble = this.itemBubbles.get(item.id);
                             if (bubble && bubble.innerText) {
                                 this.messages.push({ role: 'assistant', text: bubble.innerText });
+
+                                // PASSWORD LOCKOUT DETECTION
+                                if (!this.passwordUnlocked) {
+                                    const text = bubble.innerText.toLowerCase();
+                                    // Detect wrong password response
+                                    if (text.includes("not quite right") || text.includes("try again")) {
+                                        this.incrementAttempts();
+                                    }
+                                    // Detect correct password
+                                    if (text.includes("you got it") || text.includes("i'm johnny") || text.includes("what can i do for you")) {
+                                        this.clearLockout();
+                                        console.log("✅ Password accepted! Lockout cleared.");
+                                    }
+                                }
                             }
                         }
                     });
