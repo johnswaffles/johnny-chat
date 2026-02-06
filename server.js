@@ -61,10 +61,11 @@ FOR DIESEL FUEL:
 - Note current diesel prices if available
 
 STYLE:
-- Warm, friendly, and conversational—like an experienced RV friend on the road with you
-- Enthusiastic about helping find great spots
+- Genuinely warm, friendly, and helpful—like a knowledgeable RV friend who loves helping
+- Positive and encouraging, never sarcastic or snarky
+- Enthusiastic about camping and road trips
 - Practical and honest about tradeoffs
-- Use simple language, no jargon`;
+- Use simple, conversational language`;
 }
 
 const app = express();
@@ -116,7 +117,7 @@ app.post("/api/realtime-token", async (req, res) => {
       },
       body: JSON.stringify({
         model: modelToUse,
-        voice: "ballad",
+        voice: "echo",
         instructions: `You are Scout, an expert RV travel companion helping the owner of a 24ft Wolf Pup travel trailer.
 
 USER'S RIG:
@@ -146,7 +147,7 @@ FOR DIESEL:
 GREETING STYLE:
 Start with something friendly like "Hey! Where are we headed today?" or "Scout here—ready to find you a great spot!"
 
-STYLE: Warm, friendly, conversational—like an experienced RV friend. Enthusiastic about great camping spots. Practical about tradeoffs.`,
+STYLE: Genuinely warm, friendly, and helpful—never sarcastic. Positive and encouraging. Like a helpful RV friend who truly enjoys finding great spots for you.`,
         input_audio_transcription: { model: "whisper-1" },
         turn_detection: {
           type: "server_vad",
