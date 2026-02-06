@@ -211,6 +211,11 @@ async function askWithWebSearch({ prompt, contextSize = "medium" }) {
     if (response.output) {
       response.output.forEach((item, i) => {
         console.log(`📡 [Responses API] output[${i}].type:`, item.type);
+        // Log the full structure of web_search_call to find citation property
+        if (item.type === "web_search_call") {
+          console.log(`📡 [Responses API] web_search_call keys:`, Object.keys(item));
+          console.log(`📡 [Responses API] web_search_call full:`, JSON.stringify(item, null, 2));
+        }
       });
     }
 
