@@ -190,63 +190,52 @@ function isLiveQuery(s) {
   return /\b(today|now|latest|breaking|news|headline|earnings|release|score|stocks?|market|price|forecast|weather|traffic|open now)\b/i.test(s);
 }
 
-async function askWithWebSearch({ prompt, forceSearch = true, location = { country: "US", city: "Chicago", region: "Illinois" }, contextSize = "medium" }) {
-  console.log(`📡 [Tavily] Initiating search for: "${prompt}"`);
-  const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
-
-  if (!TAVILY_API_KEY) {
-    console.warn("⚠️ [Tavily] Key missing, falling back to standard completion.");
-    const fallback = await openai.chat.completions.create({
-      model: OPENAI_LIVE_MODEL,
-      messages: [
-        { role: "system", content: getJohnnyPersona() },
-        { role: "user", content: prompt }
-      ]
-    });
-    return { text: fallback.choices[0]?.message?.content || "", cites: [] };
-  }
+async function askWithWebSearch({ prompt, contextSize = "medium" }) {
+  console.log(`📡 [Responses API] Web search for: "${prompt}"`);
 
   try {
-    const tavilyResp = await fetch("https://api.tavily.com/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: TAVILY_API_KEY,
-        query: prompt,
-        search_depth: "advanced",
-        include_answer: true,
-        max_results: 5
-      })
+    // Use OpenAI Responses API with built-in web_search_preview tool
+    const response = await openai.responses.create({
+      model: "gpt-4o",
+      tools: [{ type: "web_search_preview" }],
+      input: prompt,
+      instructions: getJohnnyPersona()
     });
 
-    if (!tavilyResp.ok) throw new Error(`Tavily Error: ${tavilyResp.status}`);
-    const searchData = await tavilyResp.json();
-    console.log(`✅ [Tavily] Found ${searchData.results?.length} results.`);
+    // Extract text from the response
+    let text = "";
+    const cites = [];
 
-    const synthesisPrompt = `
-      You are Johnny. Use the following real-time search data to answer the user's request with authority and substance.
-      Do not mention "searching" or "the data". Just lead with the facts in your sarcastic, sharp tone.
-      
-      User Prompt: "${prompt}"
-      
-      Search Results:
-      ${JSON.stringify(searchData.results, null, 2)}
-    `;
+    // Process output items
+    if (response.output) {
+      for (const item of response.output) {
+        if (item.type === "message" && item.content) {
+          for (const content of item.content) {
+            if (content.type === "output_text") {
+              text += content.text;
+            }
+          }
+        }
+        // Collect citations from web search results
+        if (item.type === "web_search_call" && item.search_results) {
+          for (const result of item.search_results) {
+            cites.push({ url: result.url, title: result.title });
+          }
+        }
+      }
+    }
 
-    const synthesis = await openai.chat.completions.create({
-      model: OPENAI_LIVE_MODEL,
-      messages: [
-        { role: "system", content: getJohnnyPersona() },
-        { role: "user", content: synthesisPrompt }
-      ]
-    });
+    // Fallback to output_text if available
+    if (!text && response.output_text) {
+      text = response.output_text;
+    }
 
-    const text = synthesis.choices[0]?.message?.content || "";
-    const cites = searchData.results?.map(r => ({ url: r.url, title: r.title })) || [];
-
+    console.log(`✅ [Responses API] Got response with ${cites.length} citations`);
     return { text, cites };
+
   } catch (err) {
-    console.error("🔥 [Tavily] Search synthesis failed:", err);
+    console.error("🔥 [Responses API] Search failed:", err);
+    // Fallback to regular completion
     const fallback = await openai.chat.completions.create({
       model: OPENAI_LIVE_MODEL,
       messages: [
@@ -260,22 +249,21 @@ async function askWithWebSearch({ prompt, forceSearch = true, location = { count
 
 /**
  * VOICE SEARCH ENDPOINT
- * Specialized for the Realtime API to get quick, spoken-style facts.
+ * Uses OpenAI Responses API with web_search_preview for real-time data.
  */
 app.post("/api/voice-search", async (req, res) => {
   try {
     const { query = "" } = req.body || {};
     if (!query) return res.status(400).json({ error: "Missing query" });
 
-    console.log(`🌐 Realtime Tool: Searching the web for "${query}"...`);
+    console.log(`🌐 [Voice Search] Searching for: "${query}"`);
 
-    const { text } = await askWithWebSearch({
-      prompt: `Provide a sharp, substantial answer with actual facts. Current query: ${query}`,
-      forceSearch: true,
-      contextSize: "small"
+    const { text, cites } = await askWithWebSearch({
+      prompt: query
     });
 
-    res.json({ result: text });
+    console.log(`✅ [Voice Search] Returning answer with ${cites.length} sources`);
+    res.json({ result: text, sources: cites });
   } catch (err) {
     console.error("❌ Voice Search Error:", err);
     res.status(500).json({ error: "Search failed" });
@@ -292,8 +280,8 @@ app.post("/api/chat", async (req, res) => {
     }
 
     if (isLiveQuery(s)) {
-      const { text } = await askWithWebSearch({ prompt: s, forceSearch: true, contextSize: "medium" });
-      return res.json({ reply: text, sources: ["web"] });
+      const { text, cites } = await askWithWebSearch({ prompt: s });
+      return res.json({ reply: text, sources: cites });
     }
     const completion = await openai.chat.completions.create({
       model: OPENAI_CHAT_MODEL,
