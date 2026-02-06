@@ -195,12 +195,24 @@ async function askWithWebSearch({ prompt, contextSize = "medium" }) {
 
   try {
     // Use OpenAI Responses API with built-in web_search_preview tool
+    console.log(`📡 [Responses API] Calling openai.responses.create...`);
     const response = await openai.responses.create({
       model: "gpt-4o",
       tools: [{ type: "web_search_preview" }],
       input: prompt,
       instructions: getJohnnyPersona()
     });
+
+    console.log(`📡 [Responses API] Raw response keys:`, Object.keys(response));
+    console.log(`📡 [Responses API] output_text exists:`, !!response.output_text);
+    console.log(`📡 [Responses API] output array length:`, response.output?.length || 0);
+
+    // Debug: log output structure
+    if (response.output) {
+      response.output.forEach((item, i) => {
+        console.log(`📡 [Responses API] output[${i}].type:`, item.type);
+      });
+    }
 
     // Extract text from the response
     let text = "";
@@ -230,11 +242,12 @@ async function askWithWebSearch({ prompt, contextSize = "medium" }) {
       text = response.output_text;
     }
 
-    console.log(`✅ [Responses API] Got response with ${cites.length} citations`);
+    console.log(`✅ [Responses API] Got response with ${cites.length} citations, text length: ${text.length}`);
     return { text, cites };
 
   } catch (err) {
-    console.error("🔥 [Responses API] Search failed:", err);
+    console.error("🔥 [Responses API] Search failed:", err.message);
+    console.error("🔥 [Responses API] Full error:", JSON.stringify(err, null, 2));
     // Fallback to regular completion
     const fallback = await openai.chat.completions.create({
       model: OPENAI_LIVE_MODEL,
