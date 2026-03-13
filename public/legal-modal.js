@@ -114,25 +114,13 @@
       <h2>Before You Continue</h2>
       
       <div class="legalese">
-        <p>Please read and accept our terms to use JustAskJohnny, StoryForge, and related apps.</p>
+        <p>Please read and accept our terms to use this AI Service Demonstration.</p>
 
-        <p>These tools use AI and may produce errors or unexpected content. Everything here is for <strong>entertainment only</strong>, not professional advice.</p>
+        <p>These tools use AI and may produce errors or unexpected content. This interface is provided as a <strong>technology demonstration</strong> of conversational AI capabilities and business automation.</p>
 
-        <div class="highlight-box">
-          <p><strong>StoryForge Notice:</strong> StoryForge is unpredictable. Plots, characters, and tone can shift suddenly or feel strange. If anything makes you uncomfortable, stop immediately and either click “New Story” or refresh the page.</p>
-        </div>
+        <p>You are responsible for how you use all outputs. To the fullest extent allowed by law, <strong>the providers of this demonstration are not liable for any loss, injury, or damages</strong> resulting from use of these tools.</p>
 
-        <p><strong>Your Control:</strong> If the AI feels wrong, overwhelming, offensive, or “off the rails,” you must stop, reset, and restart. Do not continue if you are uncomfortable.</p>
-
-        <p><strong>Mood Advisory:</strong> If you feel depressed, distressed, or emotionally unstable, do not use this service. AI content can sometimes mirror or amplify negative feelings. Only use the app when you feel grounded and well.</p>
-
-        <p>You are responsible for how you use all outputs. To the fullest extent allowed by law, <strong>JustAskJohnny and its affiliates are not liable for any loss, injury, or damages</strong> resulting from use of these tools.</p>
-
-        <div class="highlight-box">
-          <p><strong>Age Requirement:</strong> By continuing, you confirm you are <strong>at least 30 years old</strong>. This requirement is based on research showing that full adult cognitive and emotional maturity generally stabilizes around age 30. AI content can be intense, and this threshold helps ensure users can manage it responsibly.</p>
-        </div>
-
-        <p>By continuing, you accept our Terms of Use and Privacy Policy. <strong>If you are under 30, please do not use this service.</strong></p>
+        <p>By continuing, you accept our Terms of Use and Privacy Policy.</p>
       </div>
 
       <div class="actions">

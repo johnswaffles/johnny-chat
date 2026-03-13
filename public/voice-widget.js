@@ -39,11 +39,7 @@ class VoiceWidget {
     init() {
         console.log("🚀 Johnny Widget: Overlord Initializing...");
 
-        // 0. Check Lockout First
-        if (this.isLockedOut()) {
-            this.showLockoutPopup();
-            return;
-        }
+        // 0. Removed Lockout
 
         // 1. Check Legal First
         if (!this.hasConsent()) {
@@ -241,18 +237,10 @@ class VoiceWidget {
             <div class="box">
                 <h2>Before You Continue</h2>
                 <div class="scrollbox">
-                    <p>Please read and accept our terms to use JustAskJohnny, StoryForge, and related apps.</p>
-                    <p>These tools use AI and may produce errors or unexpected content. Everything here is for <strong>entertainment only</strong>, not professional advice.</p>
-                    <div class="highlight">
-                        <p><strong>StoryForge Notice:</strong> StoryForge is unpredictable. Plots, characters, and tone can shift suddenly. If anything makes you uncomfortable, stop immediately or refresh.</p>
-                    </div>
-                    <p><strong>Your Control:</strong> If the AI feels "off the rails," you must stop, reset, and restart. Do not continue if you are uncomfortable.</p>
-                    <p><strong>Mood Advisory:</strong> If you feel depressed or emotionally unstable, do not use this service. AI content can amplify negative feelings. Only use when grounded.</p>
-                    <p>You are responsible for how you use all outputs. <strong>JustAskJohnny and affiliates are not liable</strong> for any loss, injury, or damages.</p>
-                    <div class="highlight">
-                        <p><strong>Age Requirement:</strong> By continuing, you confirm you are <strong>at least 30 years old</strong>. AI content can be intense, and this threshold helps ensure responsible management.</p>
-                    </div>
-                    <p>By continuing, you accept our Terms and Privacy Policy. <strong>If you are under 30, please do not use this service.</strong></p>
+                    <p>Please read and accept our terms to use this AI Service Demonstration.</p>
+                    <p>These tools use AI and may produce errors or unexpected content. This service acts as a <strong>technology demonstration</strong> of AI automation capabilities.</p>
+                    <p>You are responsible for how you use this service and any outputs generated. To the fullest extent permitted by law, <strong>providers of this demo are not liable</strong> for any loss, injury, or damages.</p>
+                    <p>By continuing, you accept our Terms and Privacy Policy.</p>
                 </div>
                 <button class="btn" id="jjAcceptBtn">Accept & Continue</button>
             </div>
@@ -592,7 +580,7 @@ class VoiceWidget {
             // Always trigger an initial reaction so the user knows Johnny is connected
             const prompt = (this.messages.length > 0)
                 ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session."
-                : "Introduce yourself. Be sharp and sarcastic as Johnny. Lead the conversation.";
+                : "Introduce yourself as a smart AI sales consultant. Offer 3 simple demo paths (e.g., restaurant, appointment, lead capture) and invite the user to describe their business.";
 
             if (!this.isTextInitiated) {
                 // 1s Delay for Mobile AEC Convergence
@@ -658,19 +646,7 @@ class VoiceWidget {
                             if (bubble && bubble.innerText) {
                                 this.messages.push({ role: 'assistant', text: bubble.innerText });
 
-                                // PASSWORD LOCKOUT DETECTION
-                                if (!this.passwordUnlocked) {
-                                    const text = bubble.innerText.toLowerCase();
-                                    // Detect wrong password response
-                                    if (text.includes("not quite right") || text.includes("try again")) {
-                                        this.incrementAttempts();
-                                    }
-                                    // Detect correct password
-                                    if (text.includes("you got it") || text.includes("i'm johnny") || text.includes("what can i do for you")) {
-                                        this.clearLockout();
-                                        console.log("✅ Password accepted! Lockout cleared.");
-                                    }
-                                }
+                                // PASSWORD LOCKOUT REMOVED
                             }
                         }
                     });
