@@ -580,7 +580,7 @@ class VoiceWidget {
             // Always trigger an initial reaction so the user knows Johnny is connected
             const prompt = (this.messages.length > 0)
                 ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session."
-                : "Introduce yourself as a smart AI sales consultant. Offer 3 simple demo paths (e.g., restaurant, appointment, lead capture) and invite the user to describe their business.";
+                : "Introduce yourself as a smart AI sales consultant. Let the user know they can role-play back-and-forth with you to demo an AI for any business—like a restaurant AI that talks about the menu and culture, or an appointment/lead agent. Tell them to just say what business they want to role-play with and you'll play along. At the END of your greeting, you MUST say exactly: 'Now please press the red button so I can hear you. It starts off muted that way you don't accidentally cut me off, and you can also mute it at any time if you're in a noisy environment.'";
 
             if (!this.isTextInitiated) {
                 // 1s Delay for Mobile AEC Convergence
