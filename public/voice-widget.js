@@ -49,7 +49,7 @@ class VoiceWidget {
             <div class="widget-header" id="widget-header">
                 <div class="widget-title">
                     <div class="status-dot"></div>
-                    Johnny - Kingdom Mowing
+                    Johnny - Kingdom Minded Mowing
                 </div>
                 <div class="widget-actions">
                     <button id="minimize-btn" title="Minimize/Maximize">_</button>
