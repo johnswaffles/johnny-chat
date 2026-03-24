@@ -39,6 +39,7 @@ IMPORTANT RULES:
 If a customer asks about any service we do not offer, politely explain that we don't offer it right now and steer the conversation back to mowing or weed eating.
 Keep the assistant focused on Kingdom Minded Mowing, the website, mowing services, weed eating, pricing, scheduling, and service-area questions. If the user asks about unrelated topics like history, science, sports, or general trivia, politely decline and redirect them back to the business.
 For lead capture or scheduling: Instruct the user to fill out the contact box on this page or click "Contact" at the top menu of the site so we can get their info and what they need.
+Let customers know they can upload pictures of their property for a quick look. When they do, help them judge whether the yard looks wide open or has a lot of trees, obstacles, debris, or tight spots.
 Service area: We serve the Mount Vernon, Illinois area. We are based in Rome Township and border Rome Township and Shiloh Township. If the customer is in Rome Township or Shiloh Township, confirm that we serve them. If they are outside that area, ask them to fill out the contact form so we can verify.
 Keep responses clear, concise, and helpful. Do not frame the experience as entertainment.
 
@@ -329,6 +330,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
 
     let fullText = "";
     let descriptions = [];
+    let imageAnalyses = [];
 
     for (const f of files) {
       console.log(`📂 [Upload] Processing file: ${f.originalname} (${f.mimetype})`);
@@ -343,7 +345,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
             {
               role: "user",
               content: [
-                { type: "text", text: "First transcribe all legible text from the image as plain text. Then, if little or no text is present, write a precise visual description capturing subjects, scene, style, and notable details. Return JSON with keys text and description." },
+                { type: "text", text: "Analyze this image as a yard and mowing photo. If it is a real yard/property image, describe how open it looks, what obstacles are present, whether there are trees, debris, toys, fences, landscaping, or tight areas, and whether it looks wide open or crowded. If it is not a yard or property photo, say so and ask for an actual yard picture. Return JSON with keys: is_yard_photo (boolean), short_reply (string), scene_summary (string), openness (wide_open|moderate|tight|unknown), obstacles (array of strings), debris (array of strings), and follow_up (string)." },
                 { type: "image_url", image_url: { url: dataUrl } }
               ]
             }
@@ -358,6 +360,9 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
           const res = JSON.parse(content);
           if (res.text) fullText += (fullText ? "\n" : "") + res.text;
           if (res.description) descriptions.push(res.description);
+          if (res.scene_summary) descriptions.push(`Yard analysis: ${res.scene_summary}`);
+          if (res.short_reply) descriptions.push(`Johnny says: ${res.short_reply}`);
+          imageAnalyses.push(res);
         } catch (e) {
           console.warn("⚠️ [Upload] JSON parse failed, using raw content.");
           fullText += (fullText ? "\n" : "") + content;
@@ -410,7 +415,8 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
     res.json({
       text: fullText.trim(),
       description: descriptions.join("\n\n").trim(),
-      summary: autoSummary.trim()
+      summary: autoSummary.trim(),
+      imageAnalysis: imageAnalyses
     });
   } catch (e) {
     console.error("🚨 [Upload] Fatal Error:", e);

@@ -202,6 +202,9 @@ class VoiceWidget {
     async handleFileUpload(e) {
         const files = e.target.files;
         if (!files || files.length === 0) return;
+        const fileList = Array.from(files);
+        const hasImage = fileList.some(file => file.type.startsWith("image/"));
+        const hasPdf = fileList.some(file => file.type === "application/pdf");
 
         const formData = new FormData();
         for (const file of files) {
@@ -209,7 +212,11 @@ class VoiceWidget {
         }
 
         const uploadBubble = this.createMessageBubble('assistant');
-        uploadBubble.innerHTML = `<i>Processing material...</i>`;
+        uploadBubble.innerHTML = hasImage
+            ? `<i>Checking your yard photo...</i>`
+            : hasPdf
+                ? `<i>Processing document...</i>`
+                : `<i>Processing upload...</i>`;
         this.scrollToBottom();
 
         try {
@@ -226,7 +233,8 @@ class VoiceWidget {
                 text: data.text || "None",
                 description: data.description || "None",
                 summary: data.summary || null,
-                isPdf: (data.description || "").includes("PDF")
+                isPdf: (data.description || "").includes("PDF"),
+                imageAnalysis: Array.isArray(data.imageAnalysis) ? data.imageAnalysis : []
             };
             this.pendingUpload = contentObj;
 
@@ -246,9 +254,30 @@ class VoiceWidget {
     }
 
     processUploadResponse(content) {
-        let userMsg = `I've uploaded some material. Here is the context:\n[RAW DATA]: ${content.text}\n[VISUALS]: ${content.description}`;
-        if (content.summary) {
-            userMsg += `\n[SUMMARY]: ${content.summary}`;
+        let userMsg = "";
+
+        let prompt = "Acknowledge the material.";
+        if (content.isPdf && content.summary) {
+            userMsg = `I've uploaded a document. Here is the context:\n[RAW DATA]: ${content.text}\n[VISUALS]: ${content.description}\n[SUMMARY]: ${content.summary}`;
+            prompt = `Present the following detailed summary of the PDF with authority: ${content.summary}. Then ask 'What would you like me to do with this material?'. IMPORTANT: If the user asks you to read the PDF 'word for word', you MUST reply: 'I am unable to do word for word PDF, only summarize' (and spell 'summarize' exactly like that). Otherwise, answer questions using the provided context.`;
+        } else {
+            const analyses = Array.isArray(content.imageAnalysis) ? content.imageAnalysis : [];
+            const bestAnalysis = analyses[0] || {};
+            const isYardPhoto = Boolean(bestAnalysis.is_yard_photo);
+            const openness = bestAnalysis.openness || "unknown";
+            const obstacles = Array.isArray(bestAnalysis.obstacles) ? bestAnalysis.obstacles.join(", ") : "";
+            const debris = Array.isArray(bestAnalysis.debris) ? bestAnalysis.debris.join(", ") : "";
+            const sceneSummary = bestAnalysis.scene_summary || content.description || "No image summary available.";
+            const shortReply = bestAnalysis.short_reply || "";
+            const followUp = bestAnalysis.follow_up || "";
+
+            userMsg = `I've uploaded a yard photo. Please use it to help the customer understand the property.\n[IS_YARD_PHOTO]: ${isYardPhoto ? "yes" : "no"}\n[OPENNESS]: ${openness}\n[OBSTACLES]: ${obstacles || "None noted"}\n[DEBRIS]: ${debris || "None noted"}\n[SCENE_SUMMARY]: ${sceneSummary}\n[SHORT_REPLY]: ${shortReply}\n[FOLLOW_UP]: ${followUp}`;
+
+            if (isYardPhoto) {
+                prompt = `You are analyzing a yard photo for Kingdom Minded Mowing. Tell the customer whether the property looks wide open, moderately open, or tight/crowded. Mention any trees, fences, toys, rocks, landscaping, debris, or other obstacles that might affect mowing. Keep it helpful, practical, and concise. End by asking what they would like help with next.`;
+            } else {
+                prompt = `Reply with a clever but polite line telling the customer that you need a clear photo of the actual yard or property to judge mowing conditions. Ask them to upload a yard picture instead. Keep it short, friendly, and a little witty.`;
+            }
         }
 
         this.dc.send(JSON.stringify({
@@ -259,13 +288,6 @@ class VoiceWidget {
                 content: [{ type: "input_text", text: userMsg }]
             }
         }));
-
-        let prompt = "Acknowledge the material.";
-        if (content.isPdf && content.summary) {
-            prompt = `Present the following detailed summary of the PDF with authority: ${content.summary}. Then ask 'What would you like me to do with this material?'. IMPORTANT: If the user asks you to read the PDF 'word for word', you MUST reply: 'I am unable to do word for word PDF, only summarize' (and spell 'summarize' exactly like that). Otherwise, answer questions using the provided context.`;
-        } else {
-            prompt = "Acknowledge the material and ask 'What would you like me to do with this uploaded material?'. For pictures, you can answer any questions about them normally.";
-        }
 
         this.dc.send(JSON.stringify({
             type: "response.create",
@@ -439,7 +461,7 @@ class VoiceWidget {
             // Always trigger an initial reaction so the user knows Johnny is connected
             const prompt = (this.messages.length > 0)
                 ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session."
-                : "Introduce yourself as Johnny from Kingdom Minded Mowing. Let them know you're here to answer any questions about our mowing services and to help them get set up. Remind them to fill out the contact box or use the Contact menu at the top of the site. At the END of your greeting, you MUST say exactly: 'Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.'";
+                : "Introduce yourself as Johnny from Kingdom Minded Mowing. Let them know you're here to answer any questions about our mowing services and to help them get set up. Remind them to fill out the contact box or use the Contact menu at the top of the site. Also tell them they can upload a picture of their yard or property so you can quickly judge whether it looks wide open or crowded with obstacles. At the END of your greeting, you MUST say exactly: 'Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.'";
 
             if (!this.isTextInitiated) {
                 // 1s Delay for Mobile AEC Convergence
