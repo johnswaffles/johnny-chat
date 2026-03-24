@@ -1,0 +1,316 @@
+<!--
+  JOHNNY LANDING SECTION
+  Paste this into a Squarespace Code Block inside an existing page section.
+  Keep your normal Squarespace page layout, and place the widget launcher
+  once in Footer Injection or one page-wide Code Block.
+
+  Any button with data-johnny-open-widget will open the floating widget.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  #johnny-landing {
+    --ink: #0f1f12;
+    --copy: #4b5d4f;
+    --line: rgba(15, 31, 18, 0.10);
+    --green: #2f7a44;
+    --green-deep: #184925;
+    --gold: #d6aa54;
+    --cream: #fbfaf3;
+    --card: rgba(255, 255, 255, 0.78);
+    --shadow: 0 30px 80px rgba(24, 61, 34, 0.14);
+    font-family: "Plus Jakarta Sans", Arial, sans-serif;
+    color: var(--ink);
+    border-radius: 32px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 0% 0%, rgba(124, 191, 108, 0.22), transparent 28%),
+      radial-gradient(circle at 100% 15%, rgba(214, 170, 84, 0.18), transparent 24%),
+      linear-gradient(180deg, #f6f7ef 0%, #eef4e7 46%, #f8f5ea 100%);
+    box-shadow: var(--shadow);
+    padding: 24px;
+  }
+
+  #johnny-landing * { box-sizing: border-box; }
+
+  #johnny-landing a { color: inherit; text-decoration: none; }
+
+  .johnny-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .johnny-hero-copy,
+  .johnny-hero-visual,
+  .johnny-panel {
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+
+  .johnny-hero-copy {
+    border-radius: 28px;
+    padding: 28px;
+  }
+
+  .johnny-kicker,
+  .johnny-tag {
+    display: inline-block;
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--green);
+  }
+
+  .johnny-hero h1,
+  .johnny-panel h2 {
+    margin: 10px 0 0;
+    font-family: "Outfit", Arial, sans-serif;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+  }
+
+  .johnny-hero h1 {
+    font-size: clamp(42px, 6vw, 82px);
+    max-width: 11ch;
+  }
+
+  .johnny-hero p,
+  .johnny-panel p,
+  .johnny-card p {
+    color: var(--copy);
+    line-height: 1.75;
+    font-size: 16px;
+  }
+
+  .johnny-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .johnny-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 20px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    font-family: inherit;
+  }
+
+  .johnny-button:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+  }
+
+  .johnny-button-primary {
+    background: linear-gradient(135deg, var(--green) 0%, #4d9659 100%);
+    color: #fffdf7;
+    box-shadow: 0 14px 28px rgba(47, 122, 68, 0.22);
+  }
+
+  .johnny-button-secondary {
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--ink);
+    border-color: rgba(15, 31, 18, 0.08);
+  }
+
+  .johnny-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .johnny-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 31, 18, 0.08);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--copy);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .johnny-hero-visual {
+    border-radius: 28px;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 1.15fr auto;
+  }
+
+  .johnny-sheen {
+    min-height: 220px;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0)),
+      radial-gradient(circle at 70% 18%, rgba(255, 219, 132, 0.45), transparent 24%),
+      repeating-linear-gradient(-18deg, #74b668 0 30px, #5b9f52 30px 60px, #468742 60px 90px);
+  }
+
+  .johnny-hero-stats {
+    padding: 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .johnny-stat {
+    background: rgba(255, 255, 255, 0.66);
+    border: 1px solid rgba(15, 31, 18, 0.08);
+    border-radius: 22px;
+    padding: 16px;
+  }
+
+  .johnny-stat strong {
+    display: block;
+    margin-bottom: 6px;
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 18px;
+  }
+
+  .johnny-panels {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .johnny-card,
+  .johnny-panel {
+    border-radius: 24px;
+    padding: 20px;
+  }
+
+  .johnny-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+
+  .johnny-card h3 {
+    margin: 0 0 10px;
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 24px;
+    line-height: 1.02;
+  }
+
+  .johnny-panel {
+    margin-top: 14px;
+  }
+
+  .johnny-panel h2 {
+    font-size: clamp(32px, 4vw, 52px);
+  }
+
+  .johnny-panel .johnny-actions {
+    justify-content: center;
+  }
+
+  @media (max-width: 1024px) {
+    .johnny-hero { grid-template-columns: 1fr; }
+    .johnny-panels { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 760px) {
+    #johnny-landing { padding: 16px; border-radius: 24px; }
+    .johnny-hero-copy,
+    .johnny-hero-visual,
+    .johnny-panel { border-radius: 22px; }
+    .johnny-hero-copy { padding: 22px; }
+    .johnny-hero h1 { font-size: clamp(38px, 13vw, 58px); max-width: none; }
+    .johnny-hero-stats,
+    .johnny-panels { grid-template-columns: 1fr; }
+  }
+</style>
+
+<section id="johnny-landing">
+  <div class="johnny-hero">
+    <div class="johnny-hero-copy">
+      <span class="johnny-kicker">Kingdom Minded Mowing</span>
+      <h1>Clean lawns, fast answers, and a simple way to get started.</h1>
+      <p>
+        We help homeowners in the Mount Vernon, Illinois area keep their property neat with mowing, weed eating, and
+        dependable scheduling. If you want a quote, service-area check, or a quick question answered, tap Johnny.
+      </p>
+
+      <div class="johnny-actions">
+        <button class="johnny-button johnny-button-primary" type="button" data-johnny-open-widget>
+          Talk to Johnny
+        </button>
+        <button class="johnny-button johnny-button-secondary" type="button" data-johnny-open-widget>
+          Get a Quote
+        </button>
+      </div>
+
+      <div class="johnny-chips">
+        <span class="johnny-chip">Mowing: $75/hour</span>
+        <span class="johnny-chip">Weed eating included</span>
+        <span class="johnny-chip">Mount Vernon area</span>
+      </div>
+    </div>
+
+    <div class="johnny-hero-visual">
+      <div class="johnny-sheen"></div>
+      <div class="johnny-hero-stats">
+        <div class="johnny-stat">
+          <strong>Fast response</strong>
+          <span>Fill out the form and we’ll get back to you.</span>
+        </div>
+        <div class="johnny-stat">
+          <strong>Local service</strong>
+          <span>Rome Township and Shiloh Township are in our zone.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="johnny-panels">
+    <div class="johnny-card">
+      <span class="johnny-tag">Services</span>
+      <h3>Mowing that feels reliable.</h3>
+      <p>Ask about weekly mowing, one-time cuts, weed eating, and keeping the property looking clean and cared for.</p>
+    </div>
+    <div class="johnny-card">
+      <span class="johnny-tag">Value</span>
+      <h3>Pay for time, not headaches.</h3>
+      <p>We price for trucks, trailers, equipment, fuel, insurance, and the time it takes to do the job right.</p>
+    </div>
+    <div class="johnny-card">
+      <span class="johnny-tag">Area</span>
+      <h3>Service-area check.</h3>
+      <p>If you’re in Rome Township or Shiloh Township, ask Johnny right away. If you’re nearby, use the form and we’ll confirm.</p>
+    </div>
+  </div>
+
+  <div class="johnny-panel">
+    <span class="johnny-tag">Ready When You Are</span>
+    <h2>Use the button above, or any button on the page wired to Johnny.</h2>
+    <p>
+      The launcher can float on the page, and any CTA marked with <code>data-johnny-open-widget</code> will open the widget.
+      That gives you a colorful landing page and a clear path into the conversation.
+    </p>
+    <div class="johnny-actions">
+      <button class="johnny-button johnny-button-primary" type="button" data-johnny-open-widget>
+        Start the Conversation
+      </button>
+    </div>
+  </div>
+</section>

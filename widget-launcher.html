@@ -302,6 +302,21 @@
       document.body.classList.remove('johnny-widget-open');
     }
 
+    function handleDocumentClick(event) {
+      const openTrigger = event.target.closest('[data-johnny-open-widget]');
+      if (openTrigger) {
+        event.preventDefault();
+        openJohnnyWidget();
+        return;
+      }
+
+      const closeTrigger = event.target.closest('[data-johnny-close-widget]');
+      if (closeTrigger) {
+        event.preventDefault();
+        closeJohnnyWidget();
+      }
+    }
+
     let drag = null;
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
@@ -358,6 +373,8 @@
         }
       });
     }
+
+    document.addEventListener('click', handleDocumentClick);
 
     window.openJohnnyWidget = openJohnnyWidget;
     window.closeJohnnyWidget = closeJohnnyWidget;
