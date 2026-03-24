@@ -280,9 +280,9 @@
         <button class="johnny-button johnny-button-primary" type="button" data-johnny-open-widget>
           Talk to Johnny on the right
         </button>
-        <button class="johnny-button johnny-button-secondary" type="button" data-johnny-scroll-contact>
+        <a class="johnny-button johnny-button-secondary" href="https://www.justaskjohnny.com/contact">
           Get a Quote
-        </button>
+        </a>
       </div>
 
       <div class="johnny-chips">
@@ -350,28 +350,10 @@
       Ask about pricing, service area, weed eating, the 3-weeks-upfront deal, larger properties, or what services may be coming next.
     </p>
     <div class="johnny-actions">
-      <button class="johnny-button johnny-button-primary" type="button" data-johnny-scroll-contact>
+      <a class="johnny-button johnny-button-primary" href="https://www.justaskjohnny.com/contact">
         Get My Quote
-      </button>
+      </a>
     </div>
   </div>
 
-  <div id="johnny-contact-anchor" aria-hidden="true" style="height: 1px;"></div>
 </section>
-
-<script>
-  (function () {
-    var scrollTriggers = document.querySelectorAll('[data-johnny-scroll-contact]');
-    var contactAnchor = document.getElementById('johnny-contact-anchor');
-
-    function scrollToContact(event) {
-      if (event) event.preventDefault();
-      if (!contactAnchor) return;
-      contactAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    scrollTriggers.forEach(function (trigger) {
-      trigger.addEventListener('click', scrollToContact);
-    });
-  })();
-</script>
