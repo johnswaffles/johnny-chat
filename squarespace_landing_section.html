@@ -152,15 +152,36 @@
     border-radius: 28px;
     overflow: hidden;
     display: grid;
-    grid-template-rows: 1.12fr auto;
+    grid-template-rows: 1.05fr auto;
   }
 
   .johnny-sheen {
     min-height: 220px;
+    position: relative;
+    overflow: hidden;
     background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0)),
-      radial-gradient(circle at 70% 18%, rgba(200, 168, 95, 0.34), transparent 24%),
+      radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.12), transparent 28%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)),
       repeating-linear-gradient(-18deg, #7bb66e 0 30px, #5f9f55 30px 60px, #457f42 60px 90px);
+  }
+
+  .johnny-sheen video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: saturate(1.06) contrast(1.02);
+  }
+
+  .johnny-sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(11, 30, 12, 0.08) 0%, rgba(11, 30, 12, 0.18) 100%);
+    pointer-events: none;
   }
 
   .johnny-hero-stats {
@@ -293,7 +314,11 @@
     </div>
 
     <div class="johnny-hero-visual">
-      <div class="johnny-sheen"></div>
+      <div class="johnny-sheen">
+        <video autoplay muted loop playsinline preload="metadata">
+          <source src="https://www.justaskjohnny.com/My%20Movie%201.mp4" type="video/mp4">
+        </video>
+      </div>
       <div class="johnny-hero-stats">
         <div class="johnny-stat">
           <strong>Fast response</strong>
@@ -301,7 +326,7 @@
         </div>
         <div class="johnny-stat">
           <strong>Local service</strong>
-          <span>We serve the Mount Vernon area.</span>
+          <span>We serve the Mount Vernon area and we’re from the Mount Vernon area.</span>
         </div>
       </div>
     </div>
@@ -310,8 +335,8 @@
   <div class="johnny-panels">
     <div class="johnny-card">
       <span class="johnny-tag">Services</span>
-      <h3>Mowing that feels reliable.</h3>
-      <p>Ask about weekly mowing, one-time cuts, weed eating, and keeping the property looking clean and cared for.</p>
+      <h3>Mount Vernon mowing, done by our own crew.</h3>
+      <p>We are not a St. Louis company sending out subcontractors. We’re local to Mount Vernon, we do the work ourselves, and we show up ready to keep your property looking clean and cared for.</p>
     </div>
     <div class="johnny-card">
       <span class="johnny-tag">Value</span>
