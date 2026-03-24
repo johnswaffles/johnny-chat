@@ -64,7 +64,7 @@ class VoiceWidget {
                 </div>
                 
                 <div class="status-indicator">
-                    <span class="status-label" id="status-label">PRESS TO START</span>
+                    <span class="status-label" id="status-label">PRESS TO CHAT</span>
                     <div class="audio-visualizer" id="visualizer">
                         <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
                         <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
