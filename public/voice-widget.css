@@ -39,8 +39,80 @@
 }
 
 #voice-widget-container.minimized {
+    width: min(340px, calc(100vw - 16px));
     height: 50px;
     min-height: 50px;
+}
+
+#voice-widget-container.minimized .voice-widget-card,
+#voice-widget-container.minimized .top-controls,
+#voice-widget-container.minimized .bottom-area {
+    display: none;
+}
+
+#voice-widget-container.minimized .widget-header {
+    cursor: pointer;
+    justify-content: flex-start;
+}
+
+#voice-widget-container.minimized .widget-actions {
+    display: none;
+}
+
+.widget-title-button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    text-align: left;
+    min-width: 0;
+}
+
+#voice-widget-container.minimized .widget-title-button {
+    flex: 1;
+}
+
+.widget-title-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.widget-title-icon {
+    font-size: 14px;
+    line-height: 1;
+    color: #00d4ff;
+    animation: title-icon-pulse 1.8s ease-in-out infinite;
+}
+
+.widget-title-button .status-dot {
+    width: 8px;
+    height: 8px;
+    background: #00d4ff;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00d4ff;
+    flex-shrink: 0;
+}
+
+@keyframes title-icon-pulse {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.2));
+    }
+
+    50% {
+        transform: translateY(-1px) scale(1.08);
+        filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.6));
+    }
 }
 
 .widget-header {
@@ -60,23 +132,6 @@
 
 .widget-header:active {
     cursor: grabbing;
-}
-
-.widget-title {
-    font-weight: 700;
-    font-size: 14px;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.widget-title .status-dot {
-    width: 8px;
-    height: 8px;
-    background: #00d4ff;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #00d4ff;
 }
 
 .widget-actions button {

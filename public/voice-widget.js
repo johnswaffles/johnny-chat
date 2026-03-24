@@ -47,10 +47,11 @@ class VoiceWidget {
 
         container.innerHTML = `
             <div class="widget-header" id="widget-header">
-                <div class="widget-title">
-                    <div class="status-dot"></div>
-                    Johnny - Kingdom Minded Mowing
-                </div>
+                <button class="widget-title-button" id="widget-title-button" type="button" aria-label="Open chat">
+                    <span class="status-dot"></span>
+                    <span class="widget-title-text">Johnny - click here to chat</span>
+                    <span class="widget-title-icon" aria-hidden="true">💬</span>
+                </button>
                 <div class="widget-actions">
                     <button id="minimize-btn" title="Minimize/Maximize">_</button>
                 </div>
@@ -105,6 +106,7 @@ class VoiceWidget {
 
         this.card = document.getElementById('voice-card');
         this.btn = document.getElementById('start-btn');
+        this.titleBtn = document.getElementById('widget-title-button');
         this.history = document.getElementById('chat-history');
         this.historyViewport = document.getElementById('chat-viewport');
         this.statusLabel = document.getElementById('status-label');
@@ -113,6 +115,11 @@ class VoiceWidget {
         this.muteBtn = document.getElementById('mute-btn');
         this.textInput = document.getElementById('voice-text-input');
         this.fileInput = document.getElementById('file-input');
+
+        const container = document.getElementById('voice-widget-container');
+        if (container) {
+            container.classList.add('minimized');
+        }
     }
 
     attachEvents() {
@@ -153,21 +160,42 @@ class VoiceWidget {
         }
 
         const minBtn = document.getElementById('minimize-btn');
+        const titleBtn = document.getElementById('widget-title-button');
+        const container = document.getElementById('voice-widget-container');
+        const syncChrome = () => {
+            if (!container || !minBtn) return;
+            const minimized = container.classList.contains('minimized');
+            minBtn.innerText = minimized ? '💬' : '_';
+            minBtn.title = minimized ? 'Open chat' : 'Minimize';
+            if (titleBtn) {
+                titleBtn.setAttribute('aria-label', minimized ? 'Open chat' : 'Chat widget header');
+            }
+        };
+
         if (minBtn) {
             minBtn.onclick = () => {
-                const container = document.getElementById('voice-widget-container');
                 container.classList.toggle('minimized');
-                minBtn.innerText = container.classList.contains('minimized') ? '□' : '_';
+                syncChrome();
             };
         }
+
+        if (titleBtn) {
+            titleBtn.onclick = () => {
+                if (!container.classList.contains('minimized')) return;
+                container.classList.remove('minimized');
+                syncChrome();
+            };
+        }
+
+        syncChrome();
 
         const header = document.getElementById('widget-header');
         if (header) {
             let isDragging = false;
             let startX, startY, initialX, initialY;
-            const container = document.getElementById('voice-widget-container');
 
             header.onmousedown = (e) => {
+                if (e.target.closest('button')) return;
                 isDragging = true;
                 startX = e.clientX;
                 startY = e.clientY;
