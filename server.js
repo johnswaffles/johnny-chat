@@ -138,6 +138,13 @@ STYLE: Genuinely professional, warm, persuasive, trustworthy. Action-oriented an
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
 
+// Allow iframe embedding from any origin
+app.use((req, res, next) => {
+  res.setHeader("X-Frame-Options", "ALLOWALL");
+  res.setHeader("Content-Security-Policy", "frame-ancestors *");
+  next();
+});
+
 app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({ ok: true, realtimeModel: OPENAI_REALTIME_MODEL, imageModel: OPENAI_IMAGE_MODEL }));

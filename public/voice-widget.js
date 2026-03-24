@@ -790,7 +790,7 @@ class VoiceWidget {
         this.state = state;
         if (this.card) this.card.dataset.state = state;
         if (this.statusLabel) {
-            const labels = { idle: 'READY', connecting: 'BOOTING...', listening: 'REALTIME GPT5.2', speaking: 'JOHNNY SPEAKING', error: 'ERROR' };
+            const labels = { idle: 'READY', connecting: 'BOOTING...', listening: 'REALTIME GPT5.4', speaking: 'JOHNNY SPEAKING', error: 'ERROR' };
             this.statusLabel.innerText = labels[state] || state.toUpperCase();
         }
     }
