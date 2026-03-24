@@ -267,6 +267,15 @@ class VoiceWidget {
         document.body.insertAdjacentElement('afterbegin', container);
 
         container.innerHTML = `
+            <div class="widget-header" id="widget-header">
+                <div class="widget-title">
+                    <div class="status-dot"></div>
+                    Johnny - Kingdom Mowing
+                </div>
+                <div class="widget-actions">
+                    <button id="minimize-btn" title="Minimize/Maximize">_</button>
+                </div>
+            </div>
             <div class="voice-widget-card" id="voice-card" data-state="idle">
                 <div class="glow-field"></div>
                 <div class="face-layer">
@@ -362,6 +371,52 @@ class VoiceWidget {
 
         if (this.fileInput) {
             this.fileInput.onchange = (e) => this.handleFileUpload(e);
+        }
+
+        const minBtn = document.getElementById('minimize-btn');
+        if (minBtn) {
+            minBtn.onclick = () => {
+                const container = document.getElementById('voice-widget-container');
+                container.classList.toggle('minimized');
+                minBtn.innerText = container.classList.contains('minimized') ? '□' : '_';
+            };
+        }
+
+        const header = document.getElementById('widget-header');
+        if (header) {
+            let isDragging = false;
+            let startX, startY, initialX, initialY;
+            const container = document.getElementById('voice-widget-container');
+
+            header.onmousedown = (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                const rect = container.getBoundingClientRect();
+                initialX = rect.left;
+                initialY = rect.top;
+                
+                container.style.right = 'auto';
+                container.style.bottom = 'auto';
+                container.style.left = initialX + 'px';
+                container.style.top = initialY + 'px';
+                container.style.transition = 'none';
+            };
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                container.style.left = (initialX + dx) + 'px';
+                container.style.top = (initialY + dy) + 'px';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    container.style.transition = 'height 0.3s ease, border-radius 0.3s ease';
+                }
+            });
         }
     }
 
@@ -580,7 +635,7 @@ class VoiceWidget {
             // Always trigger an initial reaction so the user knows Johnny is connected
             const prompt = (this.messages.length > 0)
                 ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session."
-                : "Introduce yourself as a smart AI sales consultant. Let the user know they can role-play back-and-forth with you to demo an AI for any business—like a restaurant AI that talks about the menu and culture, or an appointment/lead agent. Tell them to just say what business they want to role-play with and you'll play along. At the END of your greeting, you MUST say exactly: 'Now please press the red button so I can hear you. It starts off muted that way you don't accidentally cut me off, and you can also mute it at any time if you're in a noisy environment.'";
+                : "Introduce yourself as Johnny from Kingdom Minded Mowing. Let them know you're here to answer any questions about our mowing services and to help them get set up. Remind them to fill out the contact box or use the Contact menu at the top of the site. At the END of your greeting, you MUST say exactly: 'Now please press the red button below so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.'";
 
             if (!this.isTextInitiated) {
                 // 1s Delay for Mobile AEC Convergence

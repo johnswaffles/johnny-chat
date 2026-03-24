@@ -4,7 +4,7 @@
 */
 
 :root {
-    --sphere-size: clamp(260px, 65vmin, 480px);
+    --sphere-size: 150px;
     --inky-black: #000000;
     --accent-glow: rgba(0, 212, 255, 0.6);
     --bg-dark: #000000;
@@ -18,7 +18,11 @@
 
 #voice-widget-container {
     position: fixed;
-    inset: 0;
+    bottom: 20px;
+    right: 20px;
+    width: 380px;
+    height: 600px;
+    max-height: 85vh;
     z-index: 2147483640;
     font-family: 'Inter', system-ui, sans-serif;
     display: flex;
@@ -26,8 +30,72 @@
     align-items: center;
     background: var(--bg-dark);
     color: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 212, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     overflow: hidden;
-    pointer-events: none;
+    pointer-events: auto;
+    transition: height 0.3s ease, border-radius 0.3s ease;
+}
+
+#voice-widget-container.minimized {
+    height: 50px;
+    min-height: 50px;
+}
+
+.widget-header {
+    width: 100%;
+    height: 50px;
+    background: #111;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    cursor: grab;
+    user-select: none;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
+}
+
+.widget-header:active {
+    cursor: grabbing;
+}
+
+.widget-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.widget-title .status-dot {
+    width: 8px;
+    height: 8px;
+    background: #00d4ff;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00d4ff;
+}
+
+.widget-actions button {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.widget-actions button:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 /* The Inky Liquid Sphere */
@@ -40,7 +108,7 @@
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-radius: 50%;
-    margin-top: 8vh;
+    margin-top: 2rem;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -105,7 +173,7 @@
     align-items: center;
     width: 100%;
     max-width: 800px;
-    margin-top: 2rem;
+    margin-top: 1rem;
     overflow: hidden;
     pointer-events: auto;
 }
@@ -287,10 +355,10 @@
     white-space: nowrap;
 }
 
-/* TOP CONTROLS - RELOCATED TO BOTTOM OF SPHERE */
+/* TOP CONTROLS - RELOCATED AROUND SPHERE */
 .top-controls {
     position: absolute;
-    top: 8vh;
+    top: 70px;
     left: 50%;
     width: var(--sphere-size);
     height: var(--sphere-size);
@@ -312,8 +380,8 @@
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-    width: 100px;
-    height: 100px;
+    width: 50px;
+    height: 50px;
 }
 
 .top-control:hover {
@@ -336,19 +404,19 @@
 }
 
 .top-control.bottom-left svg {
-    width: 45px;
-    height: 45px;
+    width: 20px;
+    height: 20px;
 }
 
 /* NEW Button Bottom-Right, Symmetrical to Mic */
 .top-control.bottom-right {
     bottom: 5%;
-    right: -10px;
+    right: -15px;
     /* Nearly touching the right curve */
-    border-radius: 20px;
-    font-size: 1.2rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
     font-weight: 900;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 
 /* Red Mute State */
@@ -429,6 +497,7 @@
     height: 15px;
     opacity: 0;
     transition: opacity 0.5s;
+    margin-bottom: -15px;
 }
 
 [data-state="listening"] .audio-visualizer,
