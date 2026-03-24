@@ -439,7 +439,7 @@ class VoiceWidget {
             // Always trigger an initial reaction so the user knows Johnny is connected
             const prompt = (this.messages.length > 0)
                 ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session."
-                : "Introduce yourself as Johnny from Kingdom Minded Mowing. Let them know you're here to answer any questions about our mowing services and to help them get set up. Remind them to fill out the contact box or use the Contact menu at the top of the site. At the END of your greeting, you MUST say exactly: 'Now please press the red button below so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.'";
+                : "Introduce yourself as Johnny from Kingdom Minded Mowing. Let them know you're here to answer any questions about our mowing services and to help them get set up. Remind them to fill out the contact box or use the Contact menu at the top of the site. At the END of your greeting, you MUST say exactly: 'Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.'";
 
             if (!this.isTextInitiated) {
                 // 1s Delay for Mobile AEC Convergence
