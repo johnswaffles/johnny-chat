@@ -17,6 +17,7 @@ class VoiceWidget {
         this.pendingUpload = null;
         this.isTextInitiated = false;
         this.pendingHangup = false;
+        this.remoteAudioEl = null;
 
         if (this.isEditor()) {
             console.log("🛠️ Johnny: Editor mode detected. Disabling widget to avoid blocking tools.");
@@ -358,8 +359,33 @@ class VoiceWidget {
             this.pc = new RTCPeerConnection();
             const audioEl = document.createElement('audio');
             audioEl.autoplay = true;
-            this.pc.ontrack = (e) => { audioEl.srcObject = e.streams[0]; };
-            this.pc.addTrack(this.stream.getTracks()[0]);
+            audioEl.playsInline = true;
+            audioEl.preload = 'auto';
+            audioEl.muted = false;
+            audioEl.setAttribute('aria-hidden', 'true');
+            audioEl.style.display = 'none';
+            document.body.appendChild(audioEl);
+            this.remoteAudioEl = audioEl;
+
+            this.pc.ontrack = async (e) => {
+                audioEl.srcObject = e.streams[0];
+                try {
+                    await audioEl.play();
+                } catch (playErr) {
+                    console.warn("⚠️ Johnny audio playback retry needed:", playErr);
+                }
+            };
+            this.pc.addTrack(this.stream.getAudioTracks()[0], this.stream);
+
+            this.pc.onconnectionstatechange = () => {
+                console.log("🔌 Johnny PeerConnection:", this.pc.connectionState);
+                if (["failed", "disconnected", "closed"].includes(this.pc.connectionState)) {
+                    this.updateState(this.pc.connectionState === "closed" ? "idle" : "error");
+                }
+            };
+            this.pc.oniceconnectionstatechange = () => {
+                console.log("🛰️ Johnny ICE:", this.pc.iceConnectionState);
+            };
 
             this.dc = this.pc.createDataChannel('oai-events');
             this.dc.onopen = () => this.onDataChannelOpen();
@@ -590,6 +616,11 @@ class VoiceWidget {
 
         if (this.stream) this.stream.getTracks().forEach(t => t.stop());
         if (this.pc) this.pc.close();
+        if (this.remoteAudioEl) {
+            this.remoteAudioEl.srcObject = null;
+            this.remoteAudioEl.remove();
+            this.remoteAudioEl = null;
+        }
         this.updateState('idle');
     }
 }

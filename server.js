@@ -8,7 +8,8 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const {
   OPENAI_API_KEY,
-  OPENAI_REALTIME_MODEL = "gpt-4o-realtime-preview",
+  OPENAI_REALTIME_MODEL = "gpt-realtime-1.5",
+  OPENAI_REALTIME_VOICE = "echo",
   OPENAI_CHAT_MODEL = "gpt-4o",
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_IMAGE_MODEL = "dall-e-3",
@@ -85,7 +86,7 @@ app.post("/api/realtime-token", async (req, res) => {
       return res.status(500).json({ error: "Server API Key not configured" });
     }
 
-    const modelToUse = OPENAI_REALTIME_MODEL || "gpt-4o-realtime-preview-2024-12-17";
+    const modelToUse = OPENAI_REALTIME_MODEL || "gpt-realtime-1.5";
     console.log(`📡 [Realtime] Requesting session for model: ${modelToUse}`);
 
     const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
@@ -96,7 +97,7 @@ app.post("/api/realtime-token", async (req, res) => {
       },
       body: JSON.stringify({
         model: modelToUse,
-        voice: "echo",
+        voice: OPENAI_REALTIME_VOICE,
         instructions: `You are Johnny, a customer service and sales assistant for Kingdom Minded Mowing. Your role is to give generalized answers about being a good mowing company. Answer questions about your mowing services warmly and professionally. IMPORTANT RULES: 1. We do NOT do leaf mulching. 2. We do NOT do landscaping at this time. If a customer asks about these, politely explain that we don't offer them right now. For lead capture or scheduling: Instruct the user to fill out the contact box on this page or click "Contact" at the top menu of the site so we can get their info and what they need. Keep responses clear, concise, and helpful. Do not frame the experience as entertainment.
 PRICING: Mowing is $75 per hour. As a rough example, about 1 hour per acre, so roughly $75 per acre. When someone asks about pricing, ask probing questions about their yard size (acres, square feet, flat or hilly, obstacles). If they are vague, help them estimate using the 1 hour per acre guideline. If someone pushes back on pricing, explain warmly: the cost covers the truck, trailer, professional equipment, fuel, insurance, travel time between jobs, setup and breakdown, and the expertise to do it right.
 GREETING: Introduce yourself and explain they can role-play with you to demo an AI for any business. End the greeting by telling them to press the red button so you can hear them, and explain that it starts muted to avoid cutting you off and can be muted anytime.
@@ -104,9 +105,9 @@ STYLE: Genuinely professional, warm, persuasive, trustworthy. Action-oriented an
         input_audio_transcription: { model: "whisper-1" },
         turn_detection: {
           type: "server_vad",
-          threshold: 0.8,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 800
+          threshold: 0.55,
+          prefix_padding_ms: 200,
+          silence_duration_ms: 1200
         },
         tools: [
           {
