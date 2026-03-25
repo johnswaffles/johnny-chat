@@ -116,9 +116,9 @@
       <div class="legalese">
         <p>Please read and accept our terms to use this AI Service Demonstration.</p>
 
-        <p>These tools use AI and may produce errors or unexpected content. This interface is provided as a <strong>technology demonstration</strong> of conversational AI capabilities and business automation.</p>
+        <p>These tools use AI and may produce errors or unexpected content. This interface is provided as a conversational AI and business automation tool.</p>
 
-        <p>You are responsible for how you use all outputs. To the fullest extent allowed by law, <strong>the providers of this demonstration are not liable for any loss, injury, or damages</strong> resulting from use of these tools.</p>
+        <p>You are responsible for how you use all outputs. To the fullest extent allowed by law, <strong>the providers of this tool are not liable for any loss, injury, or damages</strong> resulting from use of these tools.</p>
 
         <p>By continuing, you accept our Terms of Use and Privacy Policy.</p>
       </div>
