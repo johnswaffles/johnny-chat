@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Services for Business | justaskjohnny.com - mowing</title>
+  <meta
+    name="description"
+    content="Custom websites, voice AI, text chatbots, and vision-enabled assistants built on OpenAI models and shaped around your business."
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f6f4ed;
+      --bg-2: #edf3e7;
+      --ink: #102015;
+      --copy: #5b6b60;
+      --line: rgba(16, 32, 21, 0.1);
+      --green: #2d6f40;
+      --green-2: #4b8d5c;
+      --green-deep: #164426;
+      --gold: #c7a65f;
+      --card: rgba(255, 255, 255, 0.8);
+      --shadow: 0 30px 80px rgba(22, 54, 31, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(122, 176, 106, 0.22), transparent 30%),
+        radial-gradient(circle at 100% 8%, rgba(199, 166, 95, 0.14), transparent 26%),
+        linear-gradient(180deg, #f8f7f1 0%, var(--bg-2) 42%, #f6f4ec 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(120deg, rgba(255,255,255,0.12) 0 2px, transparent 2px 120px),
+        linear-gradient(60deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 140px);
+      background-size: 160px 160px;
+      opacity: 0.35;
+      mask-image: radial-gradient(circle at center, black, transparent 85%);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      width: min(1200px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+      position: relative;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(45, 111, 64, 0.08);
+      color: var(--green-deep);
+      border: 1px solid rgba(45, 111, 64, 0.12);
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+      gap: 20px;
+      align-items: stretch;
+      margin-top: 20px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(251,249,241,0.76));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero-copy {
+      border-radius: 32px;
+      padding: 34px;
+    }
+
+    .hero-copy h1 {
+      margin: 16px 0 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(44px, 6.8vw, 88px);
+      line-height: 0.92;
+      letter-spacing: -0.05em;
+      max-width: 11ch;
+    }
+
+    .hero-copy p {
+      max-width: 62ch;
+      font-size: 17px;
+      line-height: 1.8;
+      color: var(--copy);
+      margin: 18px 0 0;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 54px;
+      padding: 0 20px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font: inherit;
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease, background 180ms ease;
+      will-change: transform;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-2) 100%);
+      color: #fffdf7;
+      box-shadow: 0 14px 28px rgba(47, 122, 68, 0.24);
+    }
+
+    .button-secondary {
+      background: rgba(255,255,255,0.86);
+      color: var(--ink);
+      border-color: rgba(16, 32, 21, 0.08);
+    }
+
+    .hero-points {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .point {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      background: rgba(255,255,255,0.72);
+      color: var(--copy);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .point::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(45, 111, 64, 0.28);
+      flex: none;
+    }
+
+    .hero-visual {
+      border-radius: 32px;
+      overflow: hidden;
+      padding: 22px;
+      position: relative;
+      isolation: isolate;
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+    }
+
+    .hero-visual::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(255,255,255,0.9), transparent 22%),
+        radial-gradient(circle at 90% 0%, rgba(199,166,95,0.18), transparent 28%),
+        linear-gradient(180deg, rgba(236,244,226,0.85), rgba(250,248,240,0.9));
+      z-index: -2;
+    }
+
+    .hero-visual::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.25), transparent 40%),
+        linear-gradient(180deg, transparent 0%, rgba(10, 24, 13, 0.08) 100%);
+      z-index: -1;
+    }
+
+    .stack-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .stack-title h2 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 26px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .stack-title span {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--green);
+    }
+
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-content: start;
+    }
+
+    .stack-card {
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      box-shadow: 0 16px 32px rgba(17, 38, 22, 0.08);
+    }
+
+    .stack-card strong {
+      display: block;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 18px;
+      margin-bottom: 6px;
+    }
+
+    .stack-card p {
+      margin: 0;
+      color: var(--copy);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .stack-footer {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-radius: 22px;
+      background: rgba(16, 32, 21, 0.92);
+      color: #f8fbf5;
+      box-shadow: 0 20px 40px rgba(11, 25, 14, 0.18);
+    }
+
+    .stack-footer strong {
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 16px;
+    }
+
+    .stack-footer span {
+      color: rgba(248, 251, 245, 0.8);
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 36ch;
+    }
+
+    .section {
+      margin-top: 18px;
+      border-radius: 28px;
+      padding: 24px;
+    }
+
+    .section h2 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(28px, 4vw, 52px);
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .section p.lead {
+      margin: 14px 0 0;
+      color: var(--copy);
+      line-height: 1.75;
+      max-width: 70ch;
+    }
+
+    .cards-3,
+    .cards-4 {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cards-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .info-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .info-card h3 {
+      margin: 0 0 10px;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 24px;
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: var(--copy);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .process {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .step {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step .num {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(45,111,64,0.12), rgba(199,166,95,0.16));
+      color: var(--green-deep);
+      font-family: "Outfit", Arial, sans-serif;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .cta-band {
+      margin-top: 18px;
+      border-radius: 30px;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(199,166,95,0.14), transparent 22%),
+        linear-gradient(135deg, rgba(22, 68, 38, 0.98), rgba(45, 111, 64, 0.96));
+      color: #fffdf7;
+      box-shadow: 0 30px 70px rgba(10, 25, 13, 0.2);
+    }
+
+    .cta-band h2 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(30px, 4vw, 52px);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    .cta-band p {
+      margin: 10px 0 0;
+      color: rgba(255, 253, 247, 0.8);
+      line-height: 1.7;
+      max-width: 60ch;
+    }
+
+    .cta-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .button-light {
+      background: #fffdf7;
+      color: var(--green-deep);
+      box-shadow: 0 14px 28px rgba(0,0,0,0.16);
+    }
+
+    .button-ghost {
+      border-color: rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.08);
+      color: #fffdf7;
+    }
+
+    .tiny-note {
+      margin-top: 12px;
+      color: rgba(255, 253, 247, 0.72);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 700ms ease, transform 700ms ease;
+    }
+
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1080px) {
+      .hero,
+      .cta-band {
+        grid-template-columns: 1fr;
+      }
+
+      .cards-3,
+      .cards-4,
+      .process,
+      .stack-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100vw - 20px, 1200px);
+        padding: 14px 0 24px;
+      }
+
+      .hero-copy,
+      .hero-visual,
+      .section,
+      .cta-band {
+        border-radius: 24px;
+      }
+
+      .hero-copy {
+        padding: 24px;
+      }
+
+      .hero-copy h1 {
+        font-size: clamp(38px, 13vw, 58px);
+      }
+
+      .cards-3,
+      .cards-4,
+      .process,
+      .stack-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cta-actions {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="eyebrow reveal">AI Services for Business</div>
+
+    <section class="hero">
+      <article class="panel hero-copy reveal">
+        <div class="eyebrow">Websites. Chatbots. Voice. Vision.</div>
+        <h1>Custom AI that feels like a real part of your business.</h1>
+        <p>
+          We build polished websites and ultra-useful AI assistants for companies that want more than a generic bot.
+          Think text-to-text, voice-to-voice, vision, and custom knowledge working together so your team and your customers get answers fast.
+        </p>
+
+        <div class="hero-actions">
+          <button class="button button-primary" type="button" data-johnny-open-widget>Talk to Johnny</button>
+          <a class="button button-secondary" href="https://www.justaskjohnny.com/contact">Request a build plan</a>
+        </div>
+
+        <div class="hero-points">
+          <span class="point">Website design that converts</span>
+          <span class="point">Voice, text, and vision</span>
+          <span class="point">Trained on your business data</span>
+          <span class="point">Built for real work, not demos</span>
+        </div>
+      </article>
+
+      <aside class="panel hero-visual reveal">
+        <div class="stack-title">
+          <h2>The stack</h2>
+          <span>OpenAI API + your business</span>
+        </div>
+
+        <div class="stack-grid">
+          <div class="stack-card">
+            <strong>Voice AI</strong>
+            <p>Voice-to-voice assistants for phones, websites, and customer chats that feel immediate and human.</p>
+          </div>
+          <div class="stack-card">
+            <strong>Text AI</strong>
+            <p>Text-to-text support for quotes, FAQ, lead capture, intake, and internal team help.</p>
+          </div>
+          <div class="stack-card">
+            <strong>Vision AI</strong>
+            <p>Let customers upload photos of a yard, a product, a document, or a workspace and get useful feedback instantly.</p>
+          </div>
+          <div class="stack-card">
+            <strong>Business brain</strong>
+            <p>Train the assistant on your services, pricing, rules, and tone so it sounds like your company.</p>
+          </div>
+        </div>
+
+        <div class="stack-footer">
+          <div>
+            <strong>Smart enough for teams. Warm enough for customers.</strong>
+            <span>We wire the models to your data, your site, and your workflows so the assistant actually helps.</span>
+          </div>
+          <a class="button button-light" href="https://www.justaskjohnny.com/contact">Start a build</a>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section panel reveal">
+      <div class="eyebrow">What we build</div>
+      <h2>Premium tools that make your brand look sharp and your team move faster.</h2>
+      <p class="lead">
+        If you want a chatbot that answers real questions, a website that feels custom, or a voice assistant that can actually talk to your customers,
+        we build the whole experience end-to-end.
+      </p>
+
+      <div class="cards-4">
+        <article class="info-card">
+          <h3>Custom websites</h3>
+          <p>Bold landing pages, service pages, and conversion-focused design that make the business feel premium right away.</p>
+        </article>
+        <article class="info-card">
+          <h3>Voice-to-voice chat</h3>
+          <p>Phone and web voice assistants that can greet, qualify, answer, and route customers without feeling clunky.</p>
+        </article>
+        <article class="info-card">
+          <h3>Text-to-text support</h3>
+          <p>Fast chatbots for quoting, scheduling, FAQs, internal teams, and customer service.</p>
+        </article>
+        <article class="info-card">
+          <h3>Vision-enabled intake</h3>
+          <p>Customers can upload photos or documents so your assistant can see, summarize, and help guide the next step.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section panel reveal">
+      <div class="eyebrow">Why it works</div>
+      <h2>We use the latest models as the engine, then build the business layer around them.</h2>
+      <p class="lead">
+        A generic chatbot is just a box. We connect the model to your business rules, your services, your tone, and your knowledge base,
+        so it becomes a useful front-line assistant instead of a toy.
+      </p>
+
+      <div class="cards-3">
+        <article class="info-card">
+          <h3>Real knowledge</h3>
+          <p>Train the assistant on your business details, policies, services, and intake questions so it can answer with confidence.</p>
+        </article>
+        <article class="info-card">
+          <h3>Real tools</h3>
+          <p>Connect forms, calendars, content, search, and uploads so the assistant can do more than just talk.</p>
+        </article>
+        <article class="info-card">
+          <h3>Real experience</h3>
+          <p>Make it feel like your brand, sound like your brand, and help customers get what they need without friction.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section panel reveal">
+      <div class="eyebrow">Perfect for</div>
+      <h2>Built for service businesses, labs, teams, and brands that want better automation.</h2>
+      <p class="lead">
+        If you run a science lab, a service company, an agency, a local shop, or a team that gets repeat questions all day, we can build an assistant
+        that actually saves time and improves the experience.
+      </p>
+
+      <div class="cards-3">
+        <article class="info-card">
+          <h3>Science labs</h3>
+          <p>Useful internal assistants for SOPs, document lookup, intake, summaries, and team support.</p>
+        </article>
+        <article class="info-card">
+          <h3>Home services</h3>
+          <p>Voice and text assistants for quote requests, service questions, scheduling, and lead capture.</p>
+        </article>
+        <article class="info-card">
+          <h3>Growing teams</h3>
+          <p>Answer the same questions faster, keep responses consistent, and free your staff for higher-value work.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section panel reveal">
+      <div class="eyebrow">How it works</div>
+      <h2>Simple process. High-end result.</h2>
+      <p class="lead">
+        We make the build straightforward so you can get from idea to launch without getting lost in technical noise.
+      </p>
+
+      <div class="process">
+        <article class="info-card step">
+          <div class="num">1</div>
+          <h3>Plan</h3>
+          <p>We define what the assistant should know, say, and do for your business.</p>
+        </article>
+        <article class="info-card step">
+          <div class="num">2</div>
+          <h3>Build</h3>
+          <p>We wire up the website, chat flow, voice features, and any tools it needs.</p>
+        </article>
+        <article class="info-card step">
+          <div class="num">3</div>
+          <h3>Train</h3>
+          <p>We shape the tone, rules, service info, and knowledge so it feels like your company.</p>
+        </article>
+        <article class="info-card step">
+          <div class="num">4</div>
+          <h3>Launch</h3>
+          <p>We test it, polish it, and get it ready for real customers and real work.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="cta-band reveal">
+      <div>
+        <div class="eyebrow" style="color:#fffdf7;background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.15);">Need the answer fast?</div>
+        <h2>If you have a question, we’ll help you figure out the answer.</h2>
+        <p>
+          Tell us what you want your website or chatbot to do, and we’ll help you turn it into something polished, smart, and actually useful.
+        </p>
+        <div class="tiny-note">
+          Want it to answer questions, book leads, understand photos, or talk like your brand? That is exactly what we build.
+        </div>
+      </div>
+
+      <div class="cta-actions">
+        <button class="button button-light" type="button" data-johnny-open-widget>Open Johnny</button>
+        <a class="button button-ghost" href="https://www.justaskjohnny.com/contact">Get a quote</a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      if ('IntersectionObserver' in window) {
+        const items = document.querySelectorAll('.reveal');
+        const io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              io.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.18 });
+
+        items.forEach(function (item) {
+          io.observe(item);
+        });
+      } else {
+        document.querySelectorAll('.reveal').forEach(function (item) {
+          item.classList.add('is-visible');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
+```
+
+I also kept the current widget behavior intact, so the page buttons with `data-johnny-open-widget` will open Johnny if your sitewide launcher is active. If you want, I can make a matching “dark luxury” version next with a different mood and stronger product positioning.``` 
