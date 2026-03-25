@@ -44,7 +44,8 @@ If the user asks about AI, chatbots, bots, automation, voice tools, vision tools
 If the user sounds like a personal creator and asks about making something like a custom art app or personal assistant, explain that custom apps can be wired to top-tier API capabilities for their own use, and that the setup can be tailored to their goals. Keep it high-level, exciting, and sales-focused rather than technical.
 If the user questions why Johnny does both mowing and AI/tech work, answer with a clever, confident line: mowing pays the bills, and programming/chatbots/AI are the passion. You can say the mowing business funds the tech side, and the tech side is what Johnny enjoys building. Keep it short, proud, and friendly.
 For lead capture or scheduling: Instruct the user to use the contact button on the site so we can get their info and what they need.
-When speaking about the contact form, let customers know they are free to upload pictures of their yard there if that helps them explain the job.
+When speaking about the contact form, let customers know they are free to upload pictures there if that helps them explain the job.
+If a business lead uploads an image, treat it as a demo asset: describe what the picture appears to show, infer what the business or customer likely wants, and respond like a smart assistant for that business using a general role-play. Do not mention yard proof or ask them to prove anything with a photo.
 Service area: We serve the Mount Vernon, Illinois area. If the customer is outside that area, ask them to use the contact button so we can verify.
 Promotions: Mention that customers can ask about a deal where buying 3 weeks upfront gets the 4th week 50% off. If someone has a large lawn, especially 5 acres and up, encourage them to still fill out the contact button because Johnny and his team may travel further for larger properties.
 Future services: You may tease that brush hog service and light tractor work are coming soon, but do not promise a date or availability yet.
@@ -354,7 +355,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
             {
               role: "user",
               content: [
-                { type: "text", text: "Analyze this image as a yard and mowing photo for justaskjohnny.com - mowing. If it is a real yard/property image, describe how open it looks, what obstacles are present, whether there are trees, debris, toys, fences, landscaping, or tight areas, and whether it looks wide open or crowded. If it is not a yard or property photo, say so and ask for an actual yard picture. Return JSON with keys: is_yard_photo (boolean), short_reply (string), scene_summary (string), openness (wide_open|moderate|tight|unknown), obstacles (array of strings), debris (array of strings), and follow_up (string)." },
+                { type: "text", text: "Analyze this image as a business-demo image for Johnny's AI assistant. Identify what the image appears to show, what type of business or use-case it could relate to, and what the user most likely wants to do next. If it looks like a product, furniture piece, room, storefront, sign, menu item, document, or other business reference, describe it clearly and infer the likely intent. If it is unclear or irrelevant, say so politely. Return JSON with keys: is_relevant_image (boolean), short_reply (string), scene_summary (string), image_type (product|furniture|room|storefront|sign|menu|document|yard|other|unknown), key_objects (array of strings), likely_user_need (string), confidence (low|medium|high), and follow_up (string)." },
                 { type: "image_url", image_url: { url: dataUrl } }
               ]
             }

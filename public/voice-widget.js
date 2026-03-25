@@ -240,7 +240,7 @@ class VoiceWidget {
 
         const uploadBubble = this.createMessageBubble('assistant');
         uploadBubble.innerHTML = hasImage
-            ? `<i>Checking your yard photo...</i>`
+            ? `<i>Checking your image...</i>`
             : hasPdf
                 ? `<i>Processing document...</i>`
                 : `<i>Processing upload...</i>`;
@@ -290,20 +290,21 @@ class VoiceWidget {
         } else {
             const analyses = Array.isArray(content.imageAnalysis) ? content.imageAnalysis : [];
             const bestAnalysis = analyses[0] || {};
-            const isYardPhoto = Boolean(bestAnalysis.is_yard_photo);
-            const openness = bestAnalysis.openness || "unknown";
-            const obstacles = Array.isArray(bestAnalysis.obstacles) ? bestAnalysis.obstacles.join(", ") : "";
-            const debris = Array.isArray(bestAnalysis.debris) ? bestAnalysis.debris.join(", ") : "";
+            const isRelevantImage = Boolean(bestAnalysis.is_relevant_image);
+            const imageType = bestAnalysis.image_type || "unknown";
+            const keyObjects = Array.isArray(bestAnalysis.key_objects) ? bestAnalysis.key_objects.join(", ") : "";
             const sceneSummary = bestAnalysis.scene_summary || content.description || "No image summary available.";
             const shortReply = bestAnalysis.short_reply || "";
+            const likelyNeed = bestAnalysis.likely_user_need || "";
+            const confidence = bestAnalysis.confidence || "unknown";
             const followUp = bestAnalysis.follow_up || "";
 
-            userMsg = `I've uploaded a yard photo. Please use it to help the customer understand the property.\n[IS_YARD_PHOTO]: ${isYardPhoto ? "yes" : "no"}\n[OPENNESS]: ${openness}\n[OBSTACLES]: ${obstacles || "None noted"}\n[DEBRIS]: ${debris || "None noted"}\n[SCENE_SUMMARY]: ${sceneSummary}\n[SHORT_REPLY]: ${shortReply}\n[FOLLOW_UP]: ${followUp}`;
+            userMsg = `I've uploaded an image for a business demo. Please use it to help the customer understand what it appears to show and what they likely want next.\n[IS_RELEVANT_IMAGE]: ${isRelevantImage ? "yes" : "no"}\n[IMAGE_TYPE]: ${imageType}\n[KEY_OBJECTS]: ${keyObjects || "None noted"}\n[SCENE_SUMMARY]: ${sceneSummary}\n[LIKELY_USER_NEED]: ${likelyNeed || "Unknown"}\n[CONFIDENCE]: ${confidence}\n[SHORT_REPLY]: ${shortReply}\n[FOLLOW_UP]: ${followUp}`;
 
-            if (isYardPhoto) {
-                prompt = `You are analyzing a yard photo for justaskjohnny.com - mowing. Tell the customer whether the property looks wide open, moderately open, or tight/crowded. Mention any trees, fences, toys, rocks, landscaping, debris, or other obstacles that might affect mowing. Keep it helpful, practical, and concise. End by asking what they would like help with next.`;
+            if (isRelevantImage) {
+                prompt = `You are Johnny's AI assistant in a business-demo role-play. Look at the image and respond like a smart assistant for the most likely business context. Describe what you can see, infer what the user likely wants, and make the response sound sharp, useful, and impressive. If the image seems like a furniture piece, product, room, storefront, menu item, or other business reference, speak naturally in that role without pretending to know exact facts. Keep it concise, confident, and sales-minded. End by asking what they want the assistant to do next.`;
             } else {
-                prompt = `Reply with a clever but polite line telling the customer that you need a clear photo of the actual yard or property to judge mowing conditions. Ask them to upload a yard picture instead. Keep it short, friendly, and a little witty.`;
+                prompt = `Reply with a clever but polite line telling the customer that the image does not give enough business context yet. Ask them to upload a clearer product, workspace, storefront, or reference image so you can show off the demo properly. Keep it short, friendly, and sales-minded.`;
             }
         }
 
