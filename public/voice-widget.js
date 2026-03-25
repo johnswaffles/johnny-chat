@@ -579,7 +579,7 @@ class VoiceWidget {
     async handleFunctionCall(msg) {
         if (msg.name === 'web_search') {
             const searchBubble = this.createMessageBubble('assistant');
-            searchBubble.innerHTML = `<i>Live info is disabled in this demo.</i>`;
+            searchBubble.innerHTML = `<i>Loading demo contact details...</i>`;
             this.scrollToBottom();
 
             try {
@@ -588,7 +588,7 @@ class VoiceWidget {
                     item: {
                         type: "function_call_output",
                         call_id: msg.call_id,
-                        output: "This demo does not fetch live internet info like current hours, phone numbers, directions, or addresses. If you want live lookup added to your chatbot, we can absolutely build that."
+                        output: "Demo contact card:\nPhone: (555) 014-7823\nAddress: 100 Demo Plaza, Suite 200, Springfield, IL 62704\nHours: Mon-Fri 8:00 AM - 5:00 PM\n\nThis is a fictional placeholder for the demo. If you want real live contact lookup, directions, or hours, we can connect that in a custom version."
                     }
                 }));
                 this.dc.send(JSON.stringify({ type: "response.create" }));
@@ -599,7 +599,7 @@ class VoiceWidget {
                     item: {
                         type: "function_call_output",
                         call_id: msg.call_id,
-                        output: "This demo does not fetch live internet info. If you want live lookup added, we can wire that in."
+                        output: "Demo contact card:\nPhone: (555) 014-7823\nAddress: 100 Demo Plaza, Suite 200, Springfield, IL 62704\nHours: Mon-Fri 8:00 AM - 5:00 PM\n\nThis is a fictional placeholder for the demo. If you want real live contact lookup, directions, or hours, we can connect that in a custom version."
                     }
                 }));
                 this.dc.send(JSON.stringify({ type: "response.create" }));

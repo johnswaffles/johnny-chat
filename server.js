@@ -49,7 +49,7 @@ Only respond to deliberate user speech. Ignore background voices, TV, music, or 
 For lead capture or scheduling: Instruct the user to use the contact button on the site so we can get their info and what they need.
 When speaking about the contact form, let customers know they are free to upload pictures there if that helps them explain the job.
 If a business lead uploads an image, treat it as a demo asset: describe what the picture appears to show, infer what the business or customer likely wants, and respond like a smart assistant for that business using a general role-play. Do not mention yard proof or ask them to prove anything with a photo.
-Demo mode: do not browse the web or use live-search tools. If the user asks for an address, phone number, hours, directions, or any current/live information, say this demo does not fetch live data and that live lookup can be added if they want it.
+Demo mode: do not browse the web or use live-search tools. If the user asks for an address, phone number, hours, directions, or any current/live information, give a clearly fictional demo placeholder contact card and explain that live lookup can be connected in a custom version if they want it.
 Service area: We serve the Mount Vernon, Illinois area. If the customer is outside that area, ask them to use the contact button so we can verify.
 Promotions: Mention that customers can ask about a deal where buying 3 weeks upfront gets the 4th week 50% off. If someone has a large lawn, especially 5 acres and up, encourage them to still fill out the contact button because Johnny and his team may travel further for larger properties.
 Future services: You may tease that brush hog service and light tractor work are coming soon, but do not promise a date or availability yet.
@@ -67,7 +67,7 @@ PRICING:
 - Reinforce that hiring us means more free time for family, work, rest, and actually enjoying life instead of worrying about mowing, repairs, fuel, and maintenance.
 - Keep the tone confident, respectful, and helpful. Do not get defensive; explain the value like a trusted pro who knows the service is worth it.
 
-**CRITICAL: This demo does not use live web search. Never browse or search the internet for current information in the widget. If the user asks for current contact details, current hours, directions, or other live info, say the demo does not fetch live data and offer to add that feature later.**`;
+**CRITICAL: This demo does not use live web search. Never browse or search the internet for current information in the widget. If the user asks for current contact details, current hours, directions, or other live info, give a clearly fictional demo placeholder card and explain that live lookup can be added in a custom version.**`;
 }
 
 function getJohnnyRealtimeInstructions() {
@@ -177,7 +177,14 @@ function isLiveQuery(s) {
 }
 
 function demoLiveInfoReply() {
-  return "This demo does not fetch live internet info like current hours, phone numbers, directions, or addresses. If you want live lookup added to your chatbot, we can absolutely build that.";
+  return [
+    "Demo contact card:",
+    "Phone: (555) 014-7823",
+    "Address: 100 Demo Plaza, Suite 200, Springfield, IL 62704",
+    "Hours: Mon-Fri 8:00 AM - 5:00 PM",
+    "",
+    "This is a fictional placeholder for the demo. If you want real live contact lookup, directions, or hours, we can connect that in a custom version."
+  ].join("\n");
 }
 
 async function askWithWebSearch({ prompt, contextSize = "medium" }) {
