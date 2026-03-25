@@ -577,35 +577,30 @@ class VoiceWidget {
     }
 
     async handleFunctionCall(msg) {
-        const args = JSON.parse(msg.arguments || "{}");
-        const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
-        const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
-
         if (msg.name === 'web_search') {
-            const query = args.query || "";
             const searchBubble = this.createMessageBubble('assistant');
-            searchBubble.innerHTML = `<i>Searching for "${query}"...</i>`;
+            searchBubble.innerHTML = `<i>Live info is disabled in this demo.</i>`;
             this.scrollToBottom();
 
             try {
-                const res = await fetch(`${backendUrl}/api/voice-search`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query })
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Search API Error");
-
                 this.dc.send(JSON.stringify({
                     type: "conversation.item.create",
-                    item: { type: "function_call_output", call_id: msg.call_id, output: data.result || "No info" }
+                    item: {
+                        type: "function_call_output",
+                        call_id: msg.call_id,
+                        output: "This demo does not fetch live internet info like current hours, phone numbers, directions, or addresses. If you want live lookup added to your chatbot, we can absolutely build that."
+                    }
                 }));
                 this.dc.send(JSON.stringify({ type: "response.create" }));
             } catch (err) {
-                console.error("Search failed", err);
+                console.error("Live-info guardrail failed", err);
                 this.dc.send(JSON.stringify({
                     type: "conversation.item.create",
-                    item: { type: "function_call_output", call_id: msg.call_id, output: "I'm having trouble searching the web right now." }
+                    item: {
+                        type: "function_call_output",
+                        call_id: msg.call_id,
+                        output: "This demo does not fetch live internet info. If you want live lookup added, we can wire that in."
+                    }
                 }));
                 this.dc.send(JSON.stringify({ type: "response.create" }));
             } finally {

@@ -49,6 +49,7 @@ Only respond to deliberate user speech. Ignore background voices, TV, music, or 
 For lead capture or scheduling: Instruct the user to use the contact button on the site so we can get their info and what they need.
 When speaking about the contact form, let customers know they are free to upload pictures there if that helps them explain the job.
 If a business lead uploads an image, treat it as a demo asset: describe what the picture appears to show, infer what the business or customer likely wants, and respond like a smart assistant for that business using a general role-play. Do not mention yard proof or ask them to prove anything with a photo.
+Demo mode: do not browse the web or use live-search tools. If the user asks for an address, phone number, hours, directions, or any current/live information, say this demo does not fetch live data and that live lookup can be added if they want it.
 Service area: We serve the Mount Vernon, Illinois area. If the customer is outside that area, ask them to use the contact button so we can verify.
 Promotions: Mention that customers can ask about a deal where buying 3 weeks upfront gets the 4th week 50% off. If someone has a large lawn, especially 5 acres and up, encourage them to still fill out the contact button because Johnny and his team may travel further for larger properties.
 Future services: You may tease that brush hog service and light tractor work are coming soon, but do not promise a date or availability yet.
@@ -66,7 +67,7 @@ PRICING:
 - Reinforce that hiring us means more free time for family, work, rest, and actually enjoying life instead of worrying about mowing, repairs, fuel, and maintenance.
 - Keep the tone confident, respectful, and helpful. Do not get defensive; explain the value like a trusted pro who knows the service is worth it.
 
-**CRITICAL: ALWAYS use the web_search tool for ANY request involving locations, directions, weather, prices, hours, or current information. NEVER say you can't access real-time data - you CAN through web_search!**`;
+**CRITICAL: This demo does not use live web search. Never browse or search the internet for current information in the widget. If the user asks for current contact details, current hours, directions, or other live info, say the demo does not fetch live data and offer to add that feature later.**`;
 }
 
 function getJohnnyRealtimeInstructions() {
@@ -134,19 +135,7 @@ app.post("/api/realtime-token", async (req, res) => {
           prefix_padding_ms: 350,
           silence_duration_ms: 1800
         },
-        tools: [
-          {
-            type: "function",
-            name: "web_search",
-            description: "ALWAYS use this tool to search the internet for ANY real-time information. You MUST use this for: finding locations (gas stations, campgrounds, restaurants), current weather, prices, hours of operation, directions, news, or anything that might change over time. Never guess at specific addresses, phone numbers, or prices - always search first.",
-            parameters: {
-              type: "object",
-              properties: { query: { type: "string", description: "Search query - be specific including location if relevant" } },
-              required: ["query"]
-            }
-          }
-        ],
-        tool_choice: "auto"
+        tools: []
       }),
     });
 
@@ -187,98 +176,26 @@ function isLiveQuery(s) {
   return /\b(today|now|latest|breaking|news|headline|earnings|release|score|stocks?|market|price|forecast|weather|traffic|open now)\b/i.test(s);
 }
 
+function demoLiveInfoReply() {
+  return "This demo does not fetch live internet info like current hours, phone numbers, directions, or addresses. If you want live lookup added to your chatbot, we can absolutely build that.";
+}
+
 async function askWithWebSearch({ prompt, contextSize = "medium" }) {
-  console.log(`📡 [Responses API] Web search for: "${prompt}"`);
-
-  try {
-    // Use OpenAI Responses API with built-in web_search_preview tool
-    console.log(`📡 [Responses API] Calling openai.responses.create...`);
-    const response = await openai.responses.create({
-      model: "gpt-4o",
-      tools: [{ type: "web_search_preview" }],
-      input: prompt,
-      instructions: getJohnnyPersona()
-    });
-
-    console.log(`📡 [Responses API] Raw response keys:`, Object.keys(response));
-    console.log(`📡 [Responses API] output_text exists:`, !!response.output_text);
-    console.log(`📡 [Responses API] output array length:`, response.output?.length || 0);
-
-    // Debug: log output structure
-    if (response.output) {
-      response.output.forEach((item, i) => {
-        console.log(`📡 [Responses API] output[${i}].type:`, item.type);
-        // Log the full structure of web_search_call to find citation property
-        if (item.type === "web_search_call") {
-          console.log(`📡 [Responses API] web_search_call keys:`, Object.keys(item));
-          console.log(`📡 [Responses API] web_search_call full:`, JSON.stringify(item, null, 2));
-        }
-      });
-    }
-
-    // Extract text from the response
-    let text = "";
-    const cites = [];
-
-    // Process output items
-    if (response.output) {
-      for (const item of response.output) {
-        if (item.type === "message" && item.content) {
-          for (const content of item.content) {
-            if (content.type === "output_text") {
-              text += content.text;
-            }
-          }
-        }
-        // Collect citations from web search results
-        if (item.type === "web_search_call" && item.search_results) {
-          for (const result of item.search_results) {
-            cites.push({ url: result.url, title: result.title });
-          }
-        }
-      }
-    }
-
-    // Fallback to output_text if available
-    if (!text && response.output_text) {
-      text = response.output_text;
-    }
-
-    console.log(`✅ [Responses API] Got response with ${cites.length} citations, text length: ${text.length}`);
-    return { text, cites };
-
-  } catch (err) {
-    console.error("🔥 [Responses API] Search failed:", err.message);
-    console.error("🔥 [Responses API] Full error:", JSON.stringify(err, null, 2));
-    // Fallback to regular completion
-    const fallback = await openai.chat.completions.create({
-      model: OPENAI_LIVE_MODEL,
-      messages: [
-        { role: "system", content: getJohnnyPersona() },
-        { role: "user", content: prompt }
-      ]
-    });
-    return { text: fallback.choices[0]?.message?.content || "", cites: [] };
-  }
+  console.log(`📡 [Responses API] Live search disabled in demo mode for: "${prompt}"`);
+  return { text: demoLiveInfoReply(), cites: [] };
 }
 
 /**
  * VOICE SEARCH ENDPOINT
- * Uses OpenAI Responses API with web_search_preview for real-time data.
+ * Demo-safe response for live-info requests.
  */
 app.post("/api/voice-search", async (req, res) => {
   try {
     const { query = "" } = req.body || {};
     if (!query) return res.status(400).json({ error: "Missing query" });
 
-    console.log(`🌐 [Voice Search] Searching for: "${query}"`);
-
-    const { text, cites } = await askWithWebSearch({
-      prompt: query
-    });
-
-    console.log(`✅ [Voice Search] Returning answer with ${cites.length} sources`);
-    res.json({ result: text, sources: cites });
+    console.log(`🌐 [Voice Search] Demo mode live-info request: "${query}"`);
+    res.json({ result: demoLiveInfoReply(), sources: [] });
   } catch (err) {
     console.error("❌ Voice Search Error:", err);
     res.status(500).json({ error: "Search failed" });
@@ -295,8 +212,7 @@ app.post("/api/chat", async (req, res) => {
     }
 
     if (isLiveQuery(s)) {
-      const { text, cites } = await askWithWebSearch({ prompt: s });
-      return res.json({ reply: text, sources: cites });
+      return res.json({ reply: demoLiveInfoReply(), sources: [] });
     }
     const completion = await openai.chat.completions.create({
       model: OPENAI_CHAT_MODEL,
