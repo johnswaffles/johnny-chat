@@ -116,7 +116,7 @@ class VoiceWidget {
         this.textInput = document.getElementById('voice-text-input');
         this.fileInput = document.getElementById('file-input');
 
-        if (container) {
+        if (container && window.matchMedia('(max-width: 600px)').matches) {
             container.classList.add('minimized');
         }
     }
