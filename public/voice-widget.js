@@ -488,7 +488,7 @@ class VoiceWidget {
             // Always trigger an initial reaction so the user knows Johnny is connected
             const prompt = (this.messages.length > 0)
                 ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session."
-                : "Introduce yourself as Johnny from justaskjohnny.com - mowing. Keep the greeting short and friendly. Let them know you're here to answer questions about mowing, pricing, scheduling, service area, and current offers. Mention that if they want to talk about AI, chatbots, bots, automation, voice tools, vision tools, or other tech services, they should use the contact form so we can follow up the right way. At the END of your greeting, you MUST say exactly: 'Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.'";
+                : "Say exactly: 'Hi, I'm Johnny's AI assistant and am here to help.' Then tell them that if they want to talk about AI, chatbots, bots, automation, voice tools, vision tools, or other tech services, they should use the contact form so we can follow up the right way. At the END of your greeting, you MUST say exactly: 'Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.'";
 
             if (!this.isTextInitiated) {
                 // 1s Delay for Mobile AEC Convergence
