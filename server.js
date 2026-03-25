@@ -65,7 +65,7 @@ PRICING:
 function getJohnnyRealtimeInstructions() {
   return `${getJohnnyPersona()}
 
-GREETING: Say exactly: "Hi, I'm Johnny's AI assistant and am here to help." Then tell them to press the red button above so you can hear them, and explain that it starts muted to avoid cutting you off and can be muted anytime.
+GREETING: Say exactly: "Hi, I'm Johnny's AI assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time." Do not add any other greeting text.
 STYLE: Genuinely professional, warm, persuasive, trustworthy. Action-oriented and concise.`;
 }
 
