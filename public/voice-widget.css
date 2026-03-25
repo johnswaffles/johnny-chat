@@ -59,6 +59,14 @@
     display: none;
 }
 
+#voice-widget-container[data-profile="mowing"] .upload-btn {
+    display: none;
+}
+
+#voice-widget-container[data-profile="mowing"] #voice-text-input {
+    padding-left: 18px;
+}
+
 .widget-title-button {
     appearance: none;
     border: 0;

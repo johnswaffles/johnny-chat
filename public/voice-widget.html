@@ -6,6 +6,25 @@
     <title>Johnny - AI Assistant</title>
     <meta name="description" content="Talk to Johnny, your AI-powered customer service assistant for justaskjohnny.com - mowing.">
     <link rel="stylesheet" href="/voice-widget.css">
+    <script>
+        (function () {
+            const queryProfile = new URLSearchParams(window.location.search).get('profile');
+            const hostProfile = String(window.location.hostname || '').toLowerCase().includes('618help.com') ? 'mowing' : 'ai';
+            const profile = queryProfile === 'mowing' || queryProfile === 'ai' ? queryProfile : hostProfile;
+            const isMowing = profile === 'mowing';
+            document.title = isMowing ? 'Johnny - Mowing Assistant' : 'Johnny - AI Assistant';
+            const meta = document.querySelector('meta[name="description"]');
+            if (meta) {
+                meta.setAttribute(
+                    'content',
+                    isMowing
+                        ? 'Talk to Johnny, your mowing assistant for 618help.com.'
+                        : 'Talk to Johnny, your AI assistant for custom chatbots, websites, and business tech.'
+                );
+            }
+            document.documentElement.dataset.johnnyWidgetProfile = isMowing ? 'mowing' : 'ai';
+        })();
+    </script>
     <style>
         /* Reset for standalone page */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

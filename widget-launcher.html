@@ -264,6 +264,39 @@
     const header = document.getElementById('johnny-widget-header');
     const isMobile = () => window.innerWidth <= 600;
 
+    function normalizeJohnnyProfile(value) {
+      const profile = String(value || "").toLowerCase().trim();
+      if (profile === "mowing" || profile === "ai") return profile;
+      return "";
+    }
+
+    function detectJohnnyProfile() {
+      const explicit = normalizeJohnnyProfile(window.JOHNNY_WIDGET_PROFILE || document.body?.dataset?.johnnyWidgetProfile || document.documentElement?.dataset?.johnnyWidgetProfile);
+      if (explicit) return explicit;
+
+      const queryProfile = normalizeJohnnyProfile(new URL(window.location.href).searchParams.get("profile"));
+      if (queryProfile) return queryProfile;
+
+      const host = String(window.location.hostname || "").toLowerCase();
+      if (host.includes("618help.com")) return "mowing";
+      return "ai";
+    }
+
+    const profile = detectJohnnyProfile();
+    const widgetTitleText = profile === "mowing" ? "Johnny - Mowing Assistant" : "Johnny's AI Assistant";
+
+    const widgetFrame = document.getElementById('johnny-widget-frame');
+    if (widgetFrame) {
+      const widgetUrl = new URL('https://justaskjohnny.com/widget');
+      widgetUrl.searchParams.set('profile', profile);
+      widgetFrame.src = widgetUrl.toString();
+    }
+
+    const widgetTitle = document.querySelector('#johnny-widget-title span:last-child');
+    if (widgetTitle) {
+      widgetTitle.textContent = widgetTitleText;
+    }
+
     function positionShellDefault() {
       if (!shell) return;
       if (isMobile()) {

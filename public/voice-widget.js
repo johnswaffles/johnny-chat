@@ -2,6 +2,35 @@
  * VOICE WIDGET LOGIC (OpenAI Realtime WebRTC)
  */
 
+function normalizeJohnnyWidgetProfile(value) {
+    const profile = String(value || "").toLowerCase().trim();
+    if (profile === "mowing" || profile === "ai") return profile;
+    return "";
+}
+
+function detectJohnnyWidgetProfile() {
+    const globalProfile = normalizeJohnnyWidgetProfile(window.JOHNNY_WIDGET_PROFILE || window.johnnyWidgetProfile || document.documentElement?.dataset?.johnnyWidgetProfile);
+    if (globalProfile) return globalProfile;
+
+    const searchProfile = normalizeJohnnyWidgetProfile(new URL(window.location.href).searchParams.get("profile"));
+    if (searchProfile) return searchProfile;
+
+    const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
+    if (scriptTag) {
+        try {
+            const scriptUrl = new URL(scriptTag.src, window.location.href);
+            const scriptProfile = normalizeJohnnyWidgetProfile(scriptTag.dataset?.profile || scriptUrl.searchParams.get("profile"));
+            if (scriptProfile) return scriptProfile;
+        } catch (err) {
+            console.warn("Could not parse Johnny widget profile from script tag", err);
+        }
+    }
+
+    const host = String(window.location.hostname || "").toLowerCase();
+    if (host.includes("618help.com")) return "mowing";
+    return "ai";
+}
+
 class VoiceWidget {
     constructor() {
         this.pc = null;
@@ -18,6 +47,10 @@ class VoiceWidget {
         this.isTextInitiated = false;
         this.pendingHangup = false;
         this.remoteAudioEl = null;
+        this.profile = detectJohnnyWidgetProfile();
+        this.allowUploads = this.profile === "ai";
+        this.widgetTitleText = this.profile === "mowing" ? "Johnny - Mowing Assistant" : "Johnny's AI Assistant";
+        window.johnnyWidgetProfile = this.profile;
 
         if (this.isEditor()) {
             console.log("🛠️ Johnny: Editor mode detected. Disabling widget to avoid blocking tools.");
@@ -43,13 +76,14 @@ class VoiceWidget {
 
         const container = document.createElement('div');
         container.id = 'voice-widget-container';
+        container.dataset.profile = this.profile;
         document.body.insertAdjacentElement('afterbegin', container);
 
         container.innerHTML = `
             <div class="widget-header" id="widget-header">
-                <button class="widget-title-button" id="widget-title-button" type="button" aria-label="Open chat">
+                <button class="widget-title-button" id="widget-title-button" type="button" aria-label="${this.profile === 'mowing' ? 'Open mowing chat' : 'Open AI chat'}">
                     <span class="status-dot"></span>
-                    <span class="widget-title-text">Johnny - click here to chat</span>
+                    <span class="widget-title-text">${this.widgetTitleText}</span>
                     <span class="widget-title-icon" aria-hidden="true">💬</span>
                 </button>
                 <div class="widget-actions">
@@ -91,7 +125,7 @@ class VoiceWidget {
                     <div class="chat-history" id="chat-history"></div>
                 </div>
                 <div class="input-area">
-                    <div class="input-wrapper">
+                <div class="input-wrapper">
                         <label for="file-input" class="upload-btn" id="upload-label">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path>
@@ -115,6 +149,11 @@ class VoiceWidget {
         this.muteBtn = document.getElementById('mute-btn');
         this.textInput = document.getElementById('voice-text-input');
         this.fileInput = document.getElementById('file-input');
+        this.uploadLabel = document.getElementById('upload-label');
+
+        if (this.fileInput && !this.allowUploads) {
+            this.fileInput.disabled = true;
+        }
 
         if (container && window.matchMedia('(max-width: 600px)').matches) {
             container.classList.add('minimized');
@@ -155,7 +194,7 @@ class VoiceWidget {
         }
 
         if (this.fileInput) {
-            this.fileInput.onchange = (e) => this.handleFileUpload(e);
+            this.fileInput.onchange = this.allowUploads ? (e) => this.handleFileUpload(e) : null;
         }
 
         const minBtn = document.getElementById('minimize-btn');
@@ -167,7 +206,7 @@ class VoiceWidget {
             minBtn.innerText = minimized ? '💬' : '_';
             minBtn.title = minimized ? 'Open chat' : 'Minimize';
             if (titleBtn) {
-                titleBtn.setAttribute('aria-label', minimized ? 'Open chat' : 'Chat widget header');
+                titleBtn.setAttribute('aria-label', minimized ? (this.profile === 'mowing' ? 'Open mowing chat' : 'Open AI chat') : (this.profile === 'mowing' ? 'Mowing chat widget header' : 'AI chat widget header'));
             }
         };
 
@@ -227,6 +266,20 @@ class VoiceWidget {
     }
 
     async handleFileUpload(e) {
+        if (!this.allowUploads) {
+            const noteBubble = this.createMessageBubble('assistant');
+            noteBubble.innerHTML = `<i>For mowing photos, please use the contact form instead.</i>`;
+            this.scrollToBottom();
+            setTimeout(() => {
+                const wrapper = noteBubble.parentElement;
+                if (wrapper && wrapper.parentElement) {
+                    wrapper.remove();
+                }
+            }, 3500);
+            e.target.value = "";
+            return;
+        }
+
         const files = e.target.files;
         if (!files || files.length === 0) return;
         const fileList = Array.from(files);
@@ -325,6 +378,14 @@ class VoiceWidget {
         }));
     }
 
+    getGreetingPrompt() {
+        if (this.profile === "mowing") {
+            return "Say exactly: 'Hi, I'm Johnny's mowing assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.' Do not add any other greeting text.";
+        }
+
+        return "Say exactly: 'Hi, I'm Johnny's AI assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.' Do not add any other greeting text.";
+    }
+
     async sendTextMessage(text) {
         console.log("📤 Sending Text Message:", text);
 
@@ -382,8 +443,11 @@ class VoiceWidget {
             this.updateState('connecting');
             const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
             const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+            const tokenUrl = new URL(`${backendUrl}/api/realtime-token`);
+            tokenUrl.searchParams.set("t", Date.now().toString());
+            tokenUrl.searchParams.set("profile", this.profile);
 
-            const tokenRes = await fetch(`${backendUrl}/api/realtime-token?t=${Date.now()}`, { method: 'POST' });
+            const tokenRes = await fetch(tokenUrl.toString(), { method: 'POST' });
             if (!tokenRes.ok) throw new Error("Token fetch failed");
 
             const data = await tokenRes.json();
@@ -489,7 +553,7 @@ class VoiceWidget {
             // Always trigger an initial reaction so the user knows Johnny is connected
             const prompt = (this.messages.length > 0)
                 ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session."
-                : "Say exactly: 'Hi, I'm Johnny's AI assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.' Do not add any other greeting text.";
+                : this.getGreetingPrompt();
 
             if (!this.isTextInitiated) {
                 // 1s Delay for Mobile AEC Convergence
