@@ -6,6 +6,7 @@
 
   This adds a floating "Talk to Johnny" button.
   When clicked, it opens the AI widget as a movable floating panel above the page.
+  The widget iframe is loaded from the Render app so it can reach the live backend.
 -->
 
 <style>
@@ -249,7 +250,7 @@
     </div>
     <iframe
       id="johnny-widget-frame"
-      src="https://justaskjohnny.com/widget"
+      src="about:blank"
       allow="microphone; autoplay"
       loading="lazy"
     ></iframe>
@@ -263,6 +264,7 @@
     const overlay = document.getElementById('johnny-overlay');
     const header = document.getElementById('johnny-widget-header');
     const isMobile = () => window.innerWidth <= 600;
+    const widgetBaseUrl = String(window.JOHNNY_WIDGET_BASE_URL || 'https://johnny-chat.onrender.com').replace(/\/+$/, '');
 
     function normalizeJohnnyProfile(value) {
       const profile = String(value || "").toLowerCase().trim();
@@ -287,9 +289,9 @@
 
     const widgetFrame = document.getElementById('johnny-widget-frame');
     if (widgetFrame) {
-      const widgetUrl = new URL('https://justaskjohnny.com/widget');
-      widgetUrl.searchParams.set('profile', profile);
-      widgetFrame.src = widgetUrl.toString();
+    const widgetUrl = new URL(`${widgetBaseUrl}/voice-widget.html`);
+    widgetUrl.searchParams.set('profile', profile);
+    widgetFrame.src = widgetUrl.toString();
     }
 
     const widgetTitle = document.querySelector('#johnny-widget-title span:last-child');
