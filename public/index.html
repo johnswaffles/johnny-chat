@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Johnny</title>
+  <meta name="description" content="Johnny's websites and assistant demo.">
+  <script>
+    (function () {
+      const host = String(window.location.hostname || "").toLowerCase();
+      const target = host.includes("618help.com") ? "/help-mowing/" : "/chatbots/";
+      if (window.location.pathname !== target) {
+        window.location.replace(target);
+      }
+    })();
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0; url=/chatbots/">
+  </noscript>
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>
