@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import OpenAI, { toFile } from "openai";
+import nodemailer from "nodemailer";
 import { createRequire } from "module";
 import http from "http";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -15,7 +16,14 @@ const {
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
   MAX_UPLOAD_MB = "40",
-  CORS_ORIGIN = ""
+  CORS_ORIGIN = "",
+  CONTACT_TO_EMAIL = "",
+  CONTACT_FROM_EMAIL = "",
+  SMTP_HOST = "",
+  SMTP_PORT = "587",
+  SMTP_USER = "",
+  SMTP_PASS = "",
+  SMTP_SECURE = "false"
 } = process.env;
 
 if (!OPENAI_API_KEY) {
@@ -221,6 +229,99 @@ app.use((req, res, next) => {
 app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({ ok: true, realtimeModel: OPENAI_REALTIME_MODEL, imageModel: OPENAI_IMAGE_MODEL }));
+
+function compactText(value) {
+  return String(value || "").replace(/\r\n/g, "\n").trim();
+}
+
+function createContactTransport() {
+  if (!CONTACT_TO_EMAIL || !CONTACT_FROM_EMAIL || !SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT || 587),
+    secure: String(SMTP_SECURE || "false").toLowerCase() === "true",
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS
+    }
+  });
+}
+
+const contactUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: Math.max(1, Number(MAX_UPLOAD_MB)) * 1024 * 1024,
+    files: 5
+  }
+});
+
+app.post("/api/contact", contactUpload.array("attachments", 5), async (req, res) => {
+  try {
+    const body = req.body || {};
+    const name = compactText(body.name);
+    const email = compactText(body.email);
+    const phone = compactText(body.phone);
+    const topic = compactText(body.topic) || "General question";
+    const company = compactText(body.company);
+    const message = compactText(body.message);
+    const profile = normalizeWidgetProfile(body.profile) || inferWidgetProfile(req);
+    const pageUrl = compactText(body.page_url) || compactText(req.headers.referer || req.headers.origin || "");
+    const files = Array.isArray(req.files) ? req.files : [];
+
+    if (!name || !email || !message) {
+      return res.status(400).json({ ok: false, error: "Name, email, and message are required." });
+    }
+
+    const transport = createContactTransport();
+    if (!transport) {
+      return res.status(503).json({
+        ok: false,
+        error: "Contact email is not configured yet. Please add SMTP and destination email settings."
+      });
+    }
+
+    const subjectBits = [
+      profile === "mowing" ? "Mowing" : "AI / Website",
+      topic,
+      name
+    ].filter(Boolean);
+
+    const text = [
+      "New Johnny contact submission",
+      `Profile: ${profile || "unknown"}`,
+      `Name: ${name}`,
+      `Email: ${email}`,
+      phone ? `Phone: ${phone}` : null,
+      company ? `Company / Property: ${company}` : null,
+      `Topic: ${topic}`,
+      pageUrl ? `Page URL: ${pageUrl}` : null,
+      "",
+      "Message:",
+      message
+    ].filter(Boolean).join("\n");
+
+    await transport.sendMail({
+      from: CONTACT_FROM_EMAIL,
+      to: CONTACT_TO_EMAIL,
+      replyTo: email,
+      subject: `[Johnny Contact] ${subjectBits.join(" - ")}`,
+      text,
+      attachments: files.map((file) => ({
+        filename: file.originalname || "attachment",
+        content: file.buffer,
+        contentType: file.mimetype
+      }))
+    });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ Contact email error:", err);
+    return res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
 
 function isLiveQuery(s) {
   return /\b(today|now|latest|breaking|news|headline|earnings|release|score|stocks?|market|price|forecast|weather|traffic|open now)\b/i.test(s);
