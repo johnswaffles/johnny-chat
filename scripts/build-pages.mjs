@@ -112,15 +112,20 @@ function insertBeforeBodyEnd(html, snippet) {
 
 function siteNav(profile, active, brandOverride = "") {
   const brand = brandOverride || (profile === "mowing" ? "618help.com" : "justaskjohnny.com");
+  const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
+  const chatbotsHref = profile === "mowing" ? "https://justaskjohnny.com" : "/chatbots/";
+  const mowingHref = profile === "mowing" ? "/help-mowing/" : "https://618help.com";
+  const cozyHref = "/cozy-builder/";
+  const contactHref = "/contact/";
   return `
   <header class="johnny-site-nav">
-    <a class="johnny-site-brand" href="/">${brand}</a>
+    <a class="johnny-site-brand" href="${homeHref}">${brand}</a>
     <nav class="johnny-site-links" aria-label="Site">
-      <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="/">Home</a>
-      <a class="johnny-site-link ${active === "chatbots" ? "active" : ""}" href="/chatbots/">Chatbots</a>
-      <a class="johnny-site-link ${active === "mowing" ? "active" : ""}" href="/help-mowing/">Mowing</a>
-      <a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="/cozy-builder/">Cozy Builder</a>
-      <a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="/contact/">Contact</a>
+      <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>
+      <a class="johnny-site-link ${active === "chatbots" ? "active" : ""}" href="${chatbotsHref}">Chatbots</a>
+      <a class="johnny-site-link ${active === "mowing" ? "active" : ""}" href="${mowingHref}">Mowing</a>
+      <a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}">Cozy Builder</a>
+      <a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>
     </nav>
   </header>`;
 }
