@@ -743,7 +743,7 @@ function createContactPage() {
   </style>
 </head>
 <body>
-${siteNav("ai", "contact", "Johnny")}
+${siteNav("ai", "contact", "justaskjohnny.com")}
   <main class="page">
     <div class="profile-badge" data-profile-badge>Contact Johnny</div>
     <div class="hero">
@@ -857,9 +857,29 @@ ${siteNav("ai", "contact", "Johnny")}
       const status = document.getElementById("contact-status");
       const submit = form.querySelector('button[type="submit"]');
       const topicSelect = document.getElementById("topic");
+      const navBrand = document.querySelector(".johnny-site-brand");
+      const navLinks = document.querySelectorAll(".johnny-site-link");
+      const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
+      const chatbotsHref = isMowing ? "https://justaskjohnny.com" : "https://justaskjohnny.com/chatbots/";
+      const mowingHref = isMowing ? "https://618help.com" : "https://618help.com/help-mowing/";
+      const cozyHref = "/cozy-builder/";
+      const contactHref = "/contact/";
 
       profileField.value = profile;
       pageUrlField.value = window.location.href;
+
+      if (navBrand) {
+        navBrand.textContent = isMowing ? "618help.com" : "justaskjohnny.com";
+        navBrand.href = homeHref;
+      }
+
+      if (navLinks.length >= 5) {
+        navLinks[0].href = homeHref;
+        navLinks[1].href = chatbotsHref;
+        navLinks[2].href = mowingHref;
+        navLinks[3].href = cozyHref;
+        navLinks[4].href = contactHref;
+      }
 
       if (isMowing) {
         badge.textContent = "Mowing contact form";
