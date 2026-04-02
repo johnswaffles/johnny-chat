@@ -390,8 +390,8 @@
         <span class="eyebrow" data-eyebrow>Contact Form</span>
         <h1 data-title>Tell Johnny what you need.</h1>
         <p data-lead>
-          Use this form for mowing quotes, service questions, or a custom AI / website project.
-          Pictures and screenshots are welcome if they help explain the job.
+          Use this form for chatbot projects, websites, and custom AI ideas.
+          Screenshots and examples are welcome if they help explain the concept.
         </p>
 
         <div class="hero-actions">
@@ -404,7 +404,7 @@
           <ul class="checklist" data-checklist>
             <li>Your name and best contact info.</li>
             <li>What you need help with and when you want to start.</li>
-            <li>Photos, screenshots, or yard pictures if they help.</li>
+            <li>Screenshots, examples, or reference material if they help.</li>
           </ul>
         </div>
 
@@ -495,6 +495,7 @@
       const form = document.getElementById("contact-form");
       const status = document.getElementById("contact-status");
       const submit = form.querySelector('button[type="submit"]');
+      const topicSelect = document.getElementById("topic");
 
       profileField.value = profile;
       pageUrlField.value = window.location.href;
@@ -521,6 +522,11 @@
           "<li>What you want the chatbot or website to do.</li>",
           "<li>Any screenshots, examples, or reference material.</li>"
         ].join("");
+        [...topicSelect.options].forEach((option) => {
+          if (option.value === "Mowing quote") {
+            option.remove();
+          }
+        });
       }
 
       form.addEventListener("submit", async (event) => {
