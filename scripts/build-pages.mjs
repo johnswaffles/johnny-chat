@@ -373,7 +373,7 @@ ${siteNav("ai", "cozy", "Cozy Builder")}
 
         <div class="hero-actions">
           <a class="button button-primary" href="/godot-playtest/" target="_blank" rel="noopener">Open full game</a>
-          <a class="button button-secondary" href="/">Back home</a>
+          <a class="button button-secondary" href="https://justaskjohnny.com">Back home</a>
         </div>
 
         <div class="info-card">
@@ -403,8 +403,8 @@ ${siteNav("ai", "cozy", "Cozy Builder")}
           <iframe src="/godot-playtest/" title="Cozy Builder game" loading="lazy"></iframe>
         </div>
         <div class="link-row">
-          <a class="button button-secondary" href="/chatbots/">AI site</a>
-          <a class="button button-secondary" href="/help-mowing/">Mowing site</a>
+          <a class="button button-secondary" href="https://justaskjohnny.com">AI site</a>
+          <a class="button button-secondary" href="https://618help.com">Mowing site</a>
           <a class="button button-secondary" href="/contact/">Contact</a>
         </div>
       </section>
