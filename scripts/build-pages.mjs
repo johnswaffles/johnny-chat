@@ -865,13 +865,18 @@ ${siteNav("ai", "contact", "Johnny")}
         badge.textContent = "Mowing contact form";
         eyebrow.textContent = "Mowing contact";
         title.textContent = "Tell us about the yard.";
-        lead.textContent = "Use this form for mowing quotes, service questions, or photos of the property if they help explain the job.";
+        lead.textContent = "Use this form for mowing quotes, service questions, scheduling, or photos of the property if they help explain the job.";
         goodToKnow.textContent = "If you’re not sure about the area, accessibility, or property details, just tell us what you know and we’ll sort it out.";
         checklist.innerHTML = [
           "<li>How big the property is, and whether it is flat or hilly.</li>",
           "<li>Any trees, fences, gates, or other obstacles.</li>",
           "<li>What days or timing work best for you.</li>"
         ].join("");
+        [...topicSelect.options].forEach((option) => {
+          if (option.value === "AI / chatbot build" || option.value === "Website design") {
+            option.remove();
+          }
+        });
       } else {
         badge.textContent = "AI and website contact form";
         eyebrow.textContent = "AI / website contact";
