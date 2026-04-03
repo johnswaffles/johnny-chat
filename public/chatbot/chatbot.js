@@ -7,25 +7,61 @@
   const imageDbName = "gpt54_images_v1";
   const imageStore = "images";
 
+  const noopClassList = {
+    add() {},
+    remove() {},
+    toggle() { return false; },
+    contains() { return false; }
+  };
+
+  const noopElement = new Proxy(function () {}, {
+    get(_target, prop) {
+      if (prop === "classList") return noopClassList;
+      if (prop === "style") return {};
+      if (prop === "dataset") return {};
+      if (prop === "files") return [];
+      if (prop === "value") return "";
+      if (prop === "innerHTML") return "";
+      if (prop === "textContent") return "";
+      if (prop === "children") return [];
+      if (prop === "childElementCount") return 0;
+      if (prop === "scrollHeight" || prop === "scrollTop" || prop === "clientHeight" || prop === "offsetHeight" || prop === "offsetWidth") return 0;
+      if (prop === "addEventListener" || prop === "removeEventListener" || prop === "appendChild" || prop === "prepend" || prop === "replaceChild" || prop === "removeChild" || prop === "setAttribute" || prop === "removeAttribute" || prop === "focus" || prop === "click" || prop === "scrollIntoView" || prop === "select" || prop === "setSelectionRange" || prop === "blur") {
+        return () => {};
+      }
+      if (prop === "querySelector") return () => null;
+      if (prop === "querySelectorAll") return () => [];
+      if (prop === "closest") return () => null;
+      return undefined;
+    },
+    set() {
+      return true;
+    }
+  });
+
+  function getEl(id) {
+    return document.getElementById(id) || noopElement;
+  }
+
   const el = {
-    search: document.getElementById("search"),
-    clearSearch: document.getElementById("clear-search"),
-    promptDeck: document.getElementById("prompt-deck"),
-    recentImages: document.getElementById("recent-images"),
-    clearImages: document.getElementById("clear-images"),
-    conversationList: document.getElementById("conversation-list"),
-    messages: document.getElementById("messages"),
-    attachmentPreview: document.getElementById("attachment-preview"),
-    input: document.getElementById("input"),
-    sendBtn: document.getElementById("send-btn"),
-    attachBtn: document.getElementById("attach-btn"),
-    fileInput: document.getElementById("file-input"),
-    modal: document.getElementById("modal"),
-    modalImage: document.getElementById("modal-image"),
-    closeModal: document.getElementById("close-modal"),
-    newChatRail: document.getElementById("new-chat-rail"),
-    newChatRail2: document.getElementById("new-chat-rail-2"),
-    newChatMain: document.getElementById("new-chat-main")
+    search: getEl("search"),
+    clearSearch: getEl("clear-search"),
+    promptDeck: getEl("prompt-deck"),
+    recentImages: getEl("recent-images"),
+    clearImages: getEl("clear-images"),
+    conversationList: getEl("conversation-list"),
+    messages: getEl("messages"),
+    attachmentPreview: getEl("attachment-preview"),
+    input: getEl("input"),
+    sendBtn: getEl("send-btn"),
+    attachBtn: getEl("attach-btn"),
+    fileInput: getEl("file-input"),
+    modal: getEl("modal"),
+    modalImage: getEl("modal-image"),
+    closeModal: getEl("close-modal"),
+    newChatRail: getEl("new-chat-rail"),
+    newChatRail2: getEl("new-chat-rail-2"),
+    newChatMain: getEl("new-chat-main")
   };
 
   document.title = "GPT 5.4";
