@@ -113,8 +113,9 @@ function insertBeforeBodyEnd(html, snippet) {
 function siteNav(profile, active, brandOverride = "") {
   const brand = brandOverride || (profile === "mowing" ? "618help.com" : "justaskjohnny.com");
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
-  const chatbotsHref = "/chatbot/";
+  const chatbotsHref = "https://justaskjohnny.com";
   const mowingHref = profile === "mowing" ? "/help-mowing/" : "https://618help.com";
+  const gptHref = "/chatbot/";
   const cozyHref = "/cozy-builder/";
   const contactHref = "/contact/";
   return `
@@ -124,6 +125,7 @@ function siteNav(profile, active, brandOverride = "") {
       <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>
       <a class="johnny-site-link ${active === "chatbots" ? "active" : ""}" href="${chatbotsHref}">Chatbots</a>
       <a class="johnny-site-link ${active === "mowing" ? "active" : ""}" href="${mowingHref}">Mowing</a>
+      <a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.4</a>
       <a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}">Cozy Builder</a>
       <a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>
     </nav>
@@ -756,7 +758,7 @@ ${siteNav("ai", "contact", "justaskjohnny.com")}
         </p>
 
         <div class="hero-actions">
-          <a class="button button-primary" href="/chatbot/">See the AI side</a>
+          <a class="button button-primary" href="https://justaskjohnny.com">See the AI side</a>
           <a class="button button-secondary" href="/help-mowing/">See mowing</a>
         </div>
 
@@ -860,8 +862,9 @@ ${siteNav("ai", "contact", "justaskjohnny.com")}
       const navBrand = document.querySelector(".johnny-site-brand");
       const navLinks = document.querySelectorAll(".johnny-site-link");
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
-      const chatbotsHref = "/chatbot/";
+      const chatbotsHref = "https://justaskjohnny.com";
       const mowingHref = isMowing ? "https://618help.com" : "https://618help.com/help-mowing/";
+      const gptHref = "/chatbot/";
       const cozyHref = "/cozy-builder/";
       const contactHref = "/contact/";
 
@@ -877,8 +880,9 @@ ${siteNav("ai", "contact", "justaskjohnny.com")}
         navLinks[0].href = homeHref;
         navLinks[1].href = chatbotsHref;
         navLinks[2].href = mowingHref;
-        navLinks[3].href = cozyHref;
-        navLinks[4].href = contactHref;
+        navLinks[3].href = gptHref;
+        navLinks[4].href = cozyHref;
+        navLinks[5].href = contactHref;
       }
 
       if (isMowing) {
@@ -973,7 +977,7 @@ async function main() {
 
   const aiClean = aiSource.replace(/<\/html>\s*[\s\S]*$/i, "</html>");
   let aiPage = insertBeforeHeadEnd(aiClean, sharedNavStyles);
-  aiPage = insertAfterBodyOpen(aiPage, siteNav("ai", "chatbots"));
+  aiPage = insertAfterBodyOpen(aiPage, siteNav("ai", "home"));
   aiPage = insertBeforeBodyEnd(aiPage, widgetSnippet("ai"));
 
   await mkdir(path.join(publicDir, "chatbots"), { recursive: true });

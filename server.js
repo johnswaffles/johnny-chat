@@ -32,7 +32,7 @@ if (!OPENAI_API_KEY) {
 
 function normalizeWidgetProfile(value) {
   const profile = String(value || "").toLowerCase().trim();
-  if (profile === "mowing" || profile === "ai") return profile;
+  if (profile === "mowing" || profile === "ai" || profile === "gpt54") return profile;
   return "";
 }
 
@@ -46,11 +46,15 @@ function inferWidgetProfile(reqOrValue) {
   if (fromQuery) return fromQuery;
 
   const originOrHost = String(req.headers?.origin || req.headers?.referer || req.headers?.host || "").toLowerCase();
+  if (originOrHost.includes("/chatbot")) return "gpt54";
   if (originOrHost.includes("618help.com")) return "mowing";
   return "ai";
 }
 
 function getJohnnyGreeting(profile = "ai") {
+  if (profile === "gpt54") {
+    return "Hello. I'm GPT 5.4. What can I help you with today?";
+  }
   return profile === "mowing"
     ? "Hi, I'm Johnny's mowing assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time."
     : "Hi, I'm Johnny's AI assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.";
@@ -60,6 +64,18 @@ function getJohnnyPersona(profile = "ai") {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+
+  if (profile === "gpt54") {
+    return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
+
+You are GPT 5.4, a standalone general-purpose assistant.
+Your job is to answer clearly, helpfully, and directly across writing, planning, analysis, brainstorming, coding, and image understanding.
+Do not mention Johnny, any website, any business brand, or any external page unless the user explicitly brings it up.
+Keep the tone calm, polished, and concise. Ask at most one follow-up question only if it is essential.
+If the user asks for current live information, explain that this demo does not browse the web and give a general answer instead.
+If the user uploads an image, describe what is visible and infer the likely request in a neutral way.
+Do not frame the experience as tied to a specific company or website.`;
+  }
 
   if (profile === "mowing") {
     return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
@@ -284,7 +300,7 @@ app.post("/api/contact", contactUpload.array("attachments", 5), async (req, res)
     }
 
     const subjectBits = [
-      profile === "mowing" ? "Mowing" : "AI / Website",
+      profile === "mowing" ? "Mowing" : profile === "gpt54" ? "GPT 5.4" : "AI / Website",
       topic,
       name
     ].filter(Boolean);
@@ -411,6 +427,7 @@ const upload = multer({
 
 app.post("/upload", upload.array("files", 8), async (req, res) => {
   try {
+    const profile = normalizeWidgetProfile(req.body?.profile) || inferWidgetProfile(req);
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ detail: "No files" });
 
@@ -425,13 +442,16 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
         const dataUrl = `data:${f.mimetype};base64,${b64}`;
 
         console.log(`📡 [Upload] Sending to Vision (Chat API): ${OPENAI_VISION_MODEL}`);
+        const imagePrompt = profile === "gpt54"
+          ? "Analyze this image for a standalone general-purpose assistant. Identify what the image appears to show, what type of document/object/scene it is, and what the user most likely wants to do next. If it is unclear or irrelevant, say so politely. Return JSON with keys: is_relevant_image (boolean), short_reply (string), scene_summary (string), image_type (product|furniture|room|storefront|sign|menu|document|screen|other|unknown), key_objects (array of strings), likely_user_need (string), confidence (low|medium|high), and follow_up (string)."
+          : "Analyze this image as a business-demo image for Johnny's AI assistant. Identify what the image appears to show, what type of business or use-case it could relate to, and what the user most likely wants to do next. If it looks like a product, furniture piece, room, storefront, sign, menu item, document, or other business reference, describe it clearly and infer the likely intent. If it is unclear or irrelevant, say so politely. Return JSON with keys: is_relevant_image (boolean), short_reply (string), scene_summary (string), image_type (product|furniture|room|storefront|sign|menu|document|yard|other|unknown), key_objects (array of strings), likely_user_need (string), confidence (low|medium|high), and follow_up (string).";
         const vision = await openai.chat.completions.create({
           model: OPENAI_VISION_MODEL,
           messages: [
             {
               role: "user",
               content: [
-                { type: "text", text: "Analyze this image as a business-demo image for Johnny's AI assistant. Identify what the image appears to show, what type of business or use-case it could relate to, and what the user most likely wants to do next. If it looks like a product, furniture piece, room, storefront, sign, menu item, document, or other business reference, describe it clearly and infer the likely intent. If it is unclear or irrelevant, say so politely. Return JSON with keys: is_relevant_image (boolean), short_reply (string), scene_summary (string), image_type (product|furniture|room|storefront|sign|menu|document|yard|other|unknown), key_objects (array of strings), likely_user_need (string), confidence (low|medium|high), and follow_up (string)." },
+                { type: "text", text: imagePrompt },
                 { type: "image_url", image_url: { url: dataUrl } }
               ]
             }
@@ -446,8 +466,8 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
           const res = JSON.parse(content);
           if (res.text) fullText += (fullText ? "\n" : "") + res.text;
           if (res.description) descriptions.push(res.description);
-          if (res.scene_summary) descriptions.push(`Yard analysis: ${res.scene_summary}`);
-          if (res.short_reply) descriptions.push(`Johnny says: ${res.short_reply}`);
+          if (res.scene_summary) descriptions.push(`${profile === "gpt54" ? "Scene summary" : "Yard analysis"}: ${res.scene_summary}`);
+          if (res.short_reply) descriptions.push(`${profile === "gpt54" ? "Assistant says" : "Johnny says"}: ${res.short_reply}`);
           imageAnalyses.push(res);
         } catch (e) {
           console.warn("⚠️ [Upload] JSON parse failed, using raw content.");
@@ -485,10 +505,13 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
     if (fullText && descriptions.some(d => d.includes("PDF"))) {
       console.log("🧠 [Upload] Generating automatic detailed summary for PDF...");
       try {
+        const summarySystemPrompt = profile === "gpt54"
+          ? "You are a careful document assistant. Provide a detailed, structured summary of the provided document. Use bullet points for key facts, followed by a short executive summary."
+          : "You are Johnny's analytical brain. Provide a detailed, structured summary of the provided document. Use bullet points for key facts, followed by a punchy executive summary. Keep Johnny's tone: sharp and authoritative.";
         const sumComp = await openai.chat.completions.create({
           model: OPENAI_CHAT_MODEL,
           messages: [
-            { role: "system", content: "You are Johnny's analytical brain. Provide a detailed, structured summary of the provided document. Use bullet points for key facts, followed by a punchy executive summary. Keep Johnny's tone: sharp and authoritative." },
+            { role: "system", content: summarySystemPrompt },
             { role: "user", content: fullText.slice(0, 50000) }
           ]
         });

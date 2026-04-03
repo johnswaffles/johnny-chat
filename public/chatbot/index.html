@@ -3,161 +3,100 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Johnny Chat</title>
-  <meta name="description" content="A dedicated Johnny chatbot page with frosted glass styling, uploads, saved chats, and image generation.">
+  <title>GPT 5.4</title>
+  <meta name="description" content="A standalone GPT 5.4 chat workspace with a polished ChatGPT-style interface, saved threads, file uploads, and image generation.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script>
-    (function () {
-      const host = String(window.location.hostname || "").toLowerCase();
-      document.documentElement.dataset.profile = host.includes("618help.com") ? "mowing" : "ai";
-    })();
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./chatbot.css">
   <script defer src="./chatbot.js"></script>
 </head>
 <body>
-  <header class="site-nav">
-    <a class="site-brand" id="site-brand" href="/">Johnny</a>
-    <nav class="site-links" aria-label="Site">
-      <a class="site-link" id="nav-home" href="/">Home</a>
-      <a class="site-link active" id="nav-chatbots" href="/chatbot/">Chatbots</a>
-      <a class="site-link" id="nav-mowing" href="/">Mowing</a>
-      <a class="site-link" id="nav-cozy" href="/cozy-builder/">Cozy Builder</a>
-      <a class="site-link" id="nav-contact" href="/contact/">Contact</a>
-    </nav>
-  </header>
-
-  <main class="page">
-    <section class="hero">
-      <div class="glass hero-copy">
-        <div class="eyebrow" id="hero-eyebrow">Johnny Chat</div>
-        <h1 id="hero-title">A chatbot that feels like a product, not a widget.</h1>
-        <p id="hero-lead">
-          Use this page to demo custom assistants, file-aware chats, and fast back-and-forth role-play that makes the build feel alive.
-        </p>
-
-        <div class="hero-actions">
-          <button class="button button-primary" data-action="new-chat" type="button">New chat</button>
-          <button class="button button-secondary" data-action="attach" type="button">Upload files</button>
-          <button class="button button-secondary" data-action="image" type="button">Make an image</button>
+  <div class="app-shell">
+    <aside class="rail">
+      <div class="rail-top">
+        <div>
+          <div class="brand">GPT 5.4</div>
+          <div class="rail-subtitle">Standalone assistant workspace</div>
         </div>
-
-        <div class="tile-grid">
-          <article class="tile">
-            <h3 id="tile-1-title">Fast replies</h3>
-            <p id="tile-1-copy">Keep the chat focused, useful, and quick enough to impress on first try.</p>
-          </article>
-          <article class="tile">
-            <h3 id="tile-2-title">File aware</h3>
-            <p id="tile-2-copy">Upload PDFs, screenshots, menus, or photos and let the assistant use that context.</p>
-          </article>
-          <article class="tile">
-            <h3 id="tile-3-title">Saved threads</h3>
-            <p id="tile-3-copy">Keep conversations local so the page feels more like a real tool and less like a blank box.</p>
-          </article>
-          <article class="tile">
-            <h3 id="tile-4-title">Glass polish</h3>
-            <p id="tile-4-copy">Translucent frosted tiles, soft gradients, and clean spacing to make the bot feel premium.</p>
-          </article>
-        </div>
+        <button id="new-chat-rail" class="pill-button" type="button">New chat</button>
       </div>
 
-      <aside class="glass hero-aside">
-        <div class="aside-card">
-          <span class="section-label">Mode</span>
-          <h2 id="mode-title">Johnny Chat</h2>
-          <p id="mode-copy">This page adapts to the host domain so the same chatbot can feel right on both websites.</p>
-        </div>
+      <label class="search">
+        <span class="sr-only">Search conversations</span>
+        <input id="search" type="search" placeholder="Search conversations" autocomplete="off">
+      </label>
 
-        <div class="aside-grid">
-          <div class="mini-card">
-            <strong>Images</strong>
-            <span>Generate or analyze visual ideas.</span>
-          </div>
-          <div class="mini-card">
-            <strong>Uploads</strong>
-            <span>Docs, screenshots, and property photos.</span>
-          </div>
-          <div class="mini-card">
-            <strong>Memory</strong>
-            <span>Saved conversations on this device.</span>
-          </div>
-          <div class="mini-card">
-            <strong>Role-play</strong>
-            <span>Practice business conversations naturally.</span>
-          </div>
-        </div>
-      </aside>
-    </section>
-
-    <section class="workspace">
-      <aside class="glass sidebar">
-        <div class="sidebar-head">
+      <section class="rail-card">
+        <div class="card-head">
           <div>
-            <span class="section-label">Conversations</span>
-            <h2 id="sidebar-title">Chat history</h2>
+            <div class="eyebrow">Quick start</div>
+            <h2>Prompt ideas</h2>
           </div>
-          <button class="button button-small" data-action="new-chat" type="button">New chat</button>
+          <button id="clear-search" class="pill-button pill-muted" type="button">Clear</button>
         </div>
-
-        <div class="search-row">
-          <input id="search" type="search" placeholder="Search titles..." autocomplete="off">
-          <button class="button button-small button-secondary" id="clearSearch" type="button">Clear</button>
-        </div>
-
-        <div class="sidebar-note" id="sidebar-note">
-          Select a conversation, or start fresh with a prompt chip below.
-        </div>
-
-        <div class="recent-panel">
-          <div class="recent-head">
-            <div>
-              <span class="section-label">Recent images</span>
-              <h3>Saved on this device</h3>
-            </div>
-            <button class="button button-small button-secondary" id="clear-images" type="button">Clear</button>
-          </div>
-          <div class="recent-images" id="recent-images"></div>
-        </div>
-
         <div class="prompt-deck" id="prompt-deck"></div>
-        <div class="conversation-list" id="conversation-list"></div>
-      </aside>
+      </section>
 
-      <section class="glass chat-shell">
-        <div class="chat-topbar">
-          <div class="status-stack">
-            <span class="status-chip" id="status-chip">Ready</span>
-            <span class="status-chip subtle" id="status-chip-2">OpenAI-backed</span>
+      <section class="rail-card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">Recent images</div>
+            <h2>Saved here</h2>
           </div>
-          <div class="chat-title">
-            <span class="chat-title-kicker" id="chat-kicker">Johnny</span>
-            <strong id="chat-title">Live chat</strong>
-          </div>
+          <button id="clear-images" class="pill-button pill-muted" type="button">Clear</button>
         </div>
+        <div class="recent-images" id="recent-images"></div>
+      </section>
 
+      <section class="rail-card grow">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">Conversations</div>
+            <h2>History</h2>
+          </div>
+          <button id="new-chat-rail-2" class="pill-button" type="button">New chat</button>
+        </div>
+        <div class="conversation-list" id="conversation-list"></div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="status-group">
+          <span class="status-pill">GPT 5.4</span>
+          <span class="status-pill subtle">Private workspace</span>
+        </div>
+        <div class="headline">
+          <h1>ChatGPT-style assistant</h1>
+          <p>Clean threads, file uploads, image generation, and a focused chat experience with no site branding.</p>
+        </div>
+        <button id="new-chat-main" class="pill-button" type="button">New chat</button>
+      </header>
+
+      <section class="chat-shell">
         <div class="messages" id="messages" aria-live="polite"></div>
         <div class="attachment-preview" id="attachment-preview"></div>
 
         <div class="composer">
-          <button id="attach-btn" class="icon-btn" type="button" title="Attach files">📎</button>
-          <textarea id="input" rows="1" placeholder="Ask a question or drop in a file..."></textarea>
-          <button id="send-btn" class="button button-primary" type="button">Send</button>
+          <button id="attach-btn" class="icon-button" type="button" title="Attach files">📎</button>
+          <textarea id="input" rows="1" placeholder="Ask something or drop in a file..."></textarea>
+          <button id="send-btn" class="send-button" type="button">Send</button>
           <input id="file-input" type="file" multiple accept=".pdf,image/png,image/jpeg,image/webp" hidden>
         </div>
 
-        <div class="footer-note" id="footer-note">
-          Tip: type <code>/image</code> before a prompt to generate artwork from the chat.
+        <div class="footer-note">
+          Tip: type <code>/image</code> before a prompt to generate artwork.
         </div>
       </section>
-    </section>
-  </main>
+    </main>
+  </div>
 
   <div class="modal" id="modal" aria-hidden="true">
     <button class="modal-close" id="close-modal" type="button" aria-label="Close preview">×</button>
     <img id="modal-image" alt="">
   </div>
+
+  <span class="sr-only">Standalone GPT 5.4 chat page.</span>
 </body>
 </html>
