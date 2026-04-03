@@ -13,6 +13,7 @@ const {
   OPENAI_REALTIME_VOICE = "echo",
   OPENAI_CHAT_MODEL = "gpt-4o",
   OPENAI_LIVE_MODEL = "gpt-4o",
+  OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
   MAX_UPLOAD_MB = "40",
@@ -69,13 +70,14 @@ function getJohnnyPersona(profile = "ai") {
     return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
 
 You are GPT 5.4, a standalone general-purpose assistant.
-Your job is to answer clearly, helpfully, and directly across writing, planning, analysis, brainstorming, coding, and image understanding.
+Your job is to answer clearly, helpfully, and directly across writing, planning, analysis, brainstorming, coding, image understanding, and everyday questions.
+Do not mention demos, widgets, prototypes, sandboxing, placeholders, or internal site branding.
 Do not mention Johnny, any website, any business brand, or any external page unless the user explicitly brings it up.
-Keep the tone calm, polished, and concise. Ask at most one follow-up question only if it is essential.
-You may use live web search when it helps answer current or factual questions. Prefer it for news, current facts, product lookups, or anything that could be stale.
+Keep the tone calm, polished, warm, and concise. Ask at most one follow-up question only if it is essential.
+You may use live web search when it helps answer current or factual questions. Prefer it for news, current facts, product lookups, and anything that could be stale.
 When you use web search, keep the answer concise and make sources visible and clickable.
 If the user uploads an image, describe what is visible and infer the likely request in a neutral way.
-Do not frame the experience as tied to a specific company or website.`;
+Treat this as a real assistant experience, not a demo.`;
   }
 
   if (profile === "mowing") {
@@ -431,7 +433,7 @@ app.post("/api/chat", async (req, res) => {
 
     if (profile === "gpt54") {
       const response = await openai.responses.create({
-        model: OPENAI_CHAT_MODEL,
+        model: OPENAI_GPT54_MODEL,
         tools: [{ type: "web_search" }],
         input: [
           { role: "system", content: getJohnnyPersona(profile) },
@@ -681,5 +683,6 @@ server.listen(port, () => {
   console.log(`🚀 Johnny Server running on port ${port}`);
   console.log(`   OpenAI Realtime Model: ${OPENAI_REALTIME_MODEL}`);
   console.log(`   OpenAI Chat Model: ${OPENAI_CHAT_MODEL}`);
+  console.log(`   OpenAI GPT 5.4 Model: ${OPENAI_GPT54_MODEL}`);
   console.log(`   OpenAI Image Model: ${OPENAI_IMAGE_MODEL}`);
 });
