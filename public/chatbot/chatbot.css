@@ -77,9 +77,10 @@ textarea {
 }
 
 .app-shell {
-  width: min(1440px, calc(100vw - 24px));
-  min-height: calc(100vh - 24px);
-  margin: 12px auto;
+  width: calc(100vw - 16px);
+  max-width: 1880px;
+  min-height: calc(100vh - 16px);
+  margin: 8px auto;
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 14px;
@@ -475,7 +476,7 @@ textarea:focus {
 
 .message {
   position: relative;
-  max-width: min(820px, 92%);
+  max-width: min(1120px, 96%);
   padding: 16px 18px;
   border-radius: 22px;
   line-height: 1.7;
@@ -848,7 +849,7 @@ textarea {
 
 @media (max-width: 760px) {
   .app-shell {
-    width: min(100vw - 14px, 1440px);
+    width: calc(100vw - 14px);
     margin: 7px auto;
   }
 
