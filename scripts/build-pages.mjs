@@ -554,13 +554,6 @@ function createContactPage() {
       font-size: 16px;
     }
 
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
     .button {
       display: inline-flex;
       align-items: center;
@@ -745,7 +738,7 @@ function createContactPage() {
   </style>
 </head>
 <body>
-${siteNav("ai", "contact", "justaskjohnny.com")}
+${siteNav("ai", "contact")}
   <main class="page">
     <div class="profile-badge" data-profile-badge>Contact Johnny</div>
     <div class="hero">
@@ -756,11 +749,6 @@ ${siteNav("ai", "contact", "justaskjohnny.com")}
           Use this form for chatbot projects, websites, and custom AI ideas.
           Screenshots and examples are welcome if they help explain the concept.
         </p>
-
-        <div class="hero-actions">
-          <a class="button button-primary" href="https://justaskjohnny.com">See the AI side</a>
-          <a class="button button-secondary" href="/help-mowing/">See mowing</a>
-        </div>
 
         <div class="info-card">
           <h2>What to include</h2>
@@ -843,7 +831,7 @@ ${siteNav("ai", "contact", "justaskjohnny.com")}
       const host = String(window.location.hostname || "").toLowerCase();
       const isMowing = host.includes("618help.com");
       const profile = isMowing ? "mowing" : "ai";
-      const apiBase = String(window.JOHNNY_CONTACT_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\/+$/, "");
+      const apiBase = String(window.JOHNNY_CONTACT_API_BASE_URL || "https://johnny-chat.onrender.com").replace(new RegExp("/+$"), "");
 
       window.JOHNNY_WIDGET_PROFILE = profile;
 
@@ -876,7 +864,7 @@ ${siteNav("ai", "contact", "justaskjohnny.com")}
         navBrand.href = homeHref;
       }
 
-      if (navLinks.length >= 5) {
+      if (navLinks.length >= 6) {
         navLinks[0].href = homeHref;
         navLinks[1].href = chatbotsHref;
         navLinks[2].href = mowingHref;
@@ -918,6 +906,8 @@ ${siteNav("ai", "contact", "justaskjohnny.com")}
           }
         });
       }
+
+      document.body.dataset.navReady = "1";
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
