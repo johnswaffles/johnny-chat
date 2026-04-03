@@ -78,11 +78,11 @@ textarea {
 
 .app-shell {
   width: calc(100vw - 16px);
-  max-width: 1880px;
+  max-width: 1980px;
   min-height: calc(100vh - 16px);
   margin: 8px auto;
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 300px minmax(0, 1fr) 92px;
   gap: 14px;
 }
 
@@ -95,6 +95,89 @@ textarea {
   backdrop-filter: blur(24px) saturate(160%);
   box-shadow: var(--shadow);
   overflow: hidden;
+}
+
+.dock {
+  min-height: 0;
+}
+
+.dock-frame {
+  position: sticky;
+  top: 8px;
+  height: calc(100vh - 16px);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(14, 19, 30, 0.72), rgba(7, 10, 16, 0.88));
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.dock-frame::before,
+.dock-frame::after {
+  content: "";
+  position: absolute;
+  inset: auto;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.dock-frame::before {
+  width: 150px;
+  height: 150px;
+  top: -20px;
+  right: -60px;
+  background: radial-gradient(circle, rgba(118, 184, 255, 0.2), transparent 68%);
+}
+
+.dock-frame::after {
+  width: 180px;
+  height: 180px;
+  bottom: -60px;
+  left: -70px;
+  background: radial-gradient(circle, rgba(102, 230, 177, 0.16), transparent 66%);
+}
+
+.dock-orb {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.18) 38%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(118, 184, 255, 0.8), rgba(102, 230, 177, 0.3) 58%, rgba(7, 10, 16, 0.3) 70%);
+  box-shadow:
+    0 0 0 1px rgba(118, 184, 255, 0.24),
+    0 0 28px rgba(118, 184, 255, 0.24),
+    0 0 52px rgba(102, 230, 177, 0.14);
+}
+
+.dock-button {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  border: 1px solid rgba(118, 184, 255, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  color: var(--ink);
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.dock-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(118, 184, 255, 0.32);
+  background: linear-gradient(180deg, rgba(118, 184, 255, 0.16), rgba(102, 230, 177, 0.08));
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.24),
+    0 0 0 4px rgba(118, 184, 255, 0.1);
 }
 
 .rail {
@@ -393,7 +476,7 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 18px;
+  padding: 14px;
 }
 
 .topbar {
@@ -401,11 +484,14 @@ textarea:focus {
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
-  padding: 16px 18px;
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: var(--shadow-soft);
+  padding: 18px 20px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 35% 10%, rgba(118, 184, 255, 0.14), transparent 25%),
+    radial-gradient(circle at 90% 0%, rgba(102, 230, 177, 0.1), transparent 22%),
+    rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow);
 }
 
 .status-group {
@@ -453,12 +539,12 @@ textarea:focus {
 }
 
 .chat-shell {
-  margin-top: 14px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
   min-height: 0;
   flex: 1;
-  border-radius: var(--radius-xl);
+  border-radius: 34px;
   background: linear-gradient(180deg, rgba(10, 14, 21, 0.88), rgba(5, 8, 13, 0.96));
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: var(--shadow);
@@ -468,15 +554,15 @@ textarea:focus {
 .messages {
   flex: 1;
   overflow: auto;
-  padding: 18px;
+  padding: 20px;
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 14px;
 }
 
 .message {
   position: relative;
-  max-width: min(1120px, 96%);
+  max-width: min(1220px, 98%);
   padding: 16px 18px;
   border-radius: 22px;
   line-height: 1.7;
@@ -844,6 +930,10 @@ textarea {
 
   .main {
     order: 1;
+  }
+
+  .dock {
+    display: none;
   }
 }
 
