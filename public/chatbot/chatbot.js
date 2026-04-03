@@ -313,11 +313,27 @@
       .join("\n\n");
   }
 
-  function appendBubble(role, content) {
+  function appendBubble(role, content, meta = {}) {
     const bubble = document.createElement("div");
     bubble.className = `message ${role}`;
     bubble.dataset.raw = content;
     bubble.innerHTML = pretty(content);
+
+    if (role === "assistant" && Array.isArray(meta.sources) && meta.sources.length) {
+      const sources = document.createElement("div");
+      sources.className = "source-rail";
+      meta.sources.forEach((source) => {
+        if (!source || !source.url) return;
+        const link = document.createElement("a");
+        link.className = "source-chip";
+        link.href = source.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = source.title || source.url;
+        sources.appendChild(link);
+      });
+      if (sources.childElementCount) bubble.appendChild(sources);
+    }
 
     if (role === "assistant") {
       const actions = document.createElement("div");
@@ -341,6 +357,25 @@
     el.messages.scrollTop = el.messages.scrollHeight;
   }
 
+  function appendSources(container, sources = []) {
+    if (!Array.isArray(sources) || !sources.length || !container) return;
+    const rail = document.createElement("div");
+    rail.className = "source-rail";
+
+    sources.forEach((source) => {
+      if (!source || !source.url) return;
+      const link = document.createElement("a");
+      link.className = "source-chip";
+      link.href = source.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = source.title || source.url;
+      rail.appendChild(link);
+    });
+
+    if (rail.childElementCount) container.appendChild(rail);
+  }
+
   function showThinking(label) {
     const wrap = document.createElement("div");
     const bubble = document.createElement("div");
@@ -351,9 +386,10 @@
     el.messages.scrollTop = el.messages.scrollHeight;
     return {
       wrap,
-      replace(content) {
+      replace(content, meta = {}) {
         bubble.dataset.raw = content;
         bubble.innerHTML = `<div>${pretty(content)}</div>`;
+        appendSources(bubble, meta.sources);
         const actions = document.createElement("div");
         actions.className = "message-actions";
         const copy = document.createElement("button");
@@ -743,7 +779,7 @@
       });
       const data = await res.json().catch(() => ({}));
       const reply = data.reply || data.detail || "(no reply)";
-      thinking.replace(reply);
+      thinking.replace(reply, { sources: data.sources || [] });
       convo.messages.push({ role: "assistant", content: reply });
       convo.updatedAt = nowISO();
       save();

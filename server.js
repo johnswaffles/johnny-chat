@@ -72,7 +72,8 @@ You are GPT 5.4, a standalone general-purpose assistant.
 Your job is to answer clearly, helpfully, and directly across writing, planning, analysis, brainstorming, coding, and image understanding.
 Do not mention Johnny, any website, any business brand, or any external page unless the user explicitly brings it up.
 Keep the tone calm, polished, and concise. Ask at most one follow-up question only if it is essential.
-If the user asks for current live information, explain that this demo does not browse the web and give a general answer instead.
+You may use live web search when it helps answer current or factual questions. Prefer it for news, current facts, product lookups, or anything that could be stale.
+When you use web search, keep the answer concise and make sources visible and clickable.
 If the user uploads an image, describe what is visible and infer the likely request in a neutral way.
 Do not frame the experience as tied to a specific company or website.`;
   }
@@ -148,6 +149,44 @@ function getJohnnyRealtimeInstructions(profile = "ai") {
 GREETING: Say exactly: "${getJohnnyGreeting(profile)}" Do not add any other greeting text.
 GUARDRAIL: If the user asks about unrelated trivia or general knowledge, do not answer it. Briefly redirect them back to AI and business-tech help.
 STYLE: Genuinely professional, warm, persuasive, trustworthy. Action-oriented and concise.`;
+}
+
+function extractResponseText(response) {
+  if (typeof response?.output_text === "string" && response.output_text.trim()) {
+    return response.output_text.trim();
+  }
+
+  const parts = [];
+  for (const item of response?.output || []) {
+    if (item?.type !== "message" || !Array.isArray(item.content)) continue;
+    for (const content of item.content) {
+      if (content?.type === "output_text" && typeof content.text === "string") {
+        parts.push(content.text);
+      }
+    }
+  }
+  return parts.join("\n").trim();
+}
+
+function extractResponseSources(response) {
+  const sources = [];
+  const seen = new Set();
+
+  for (const item of response?.output || []) {
+    if (item?.type !== "message" || !Array.isArray(item.content)) continue;
+    for (const content of item.content) {
+      for (const annotation of content?.annotations || []) {
+        if (annotation?.type !== "url_citation" || !annotation.url || seen.has(annotation.url)) continue;
+        seen.add(annotation.url);
+        sources.push({
+          title: annotation.title || annotation.url,
+          url: annotation.url
+        });
+      }
+    }
+  }
+
+  return sources;
 }
 
 const app = express();
@@ -386,9 +425,26 @@ app.post("/api/chat", async (req, res) => {
       return res.json({ reply: "You're here. I'm here. Let's make this conversation worth both our time.", sources: [] });
     }
 
-    if (isLiveQuery(s)) {
+    if (profile !== "gpt54" && isLiveQuery(s)) {
       return res.json({ reply: demoLiveInfoReply(), sources: [] });
     }
+
+    if (profile === "gpt54") {
+      const response = await openai.responses.create({
+        model: OPENAI_CHAT_MODEL,
+        tools: [{ type: "web_search" }],
+        input: [
+          { role: "system", content: getJohnnyPersona(profile) },
+          ...history.slice(-20),
+          { role: "user", content: s }
+        ]
+      });
+      return res.json({
+        reply: extractResponseText(response) || "(no reply)",
+        sources: extractResponseSources(response)
+      });
+    }
+
     const completion = await openai.chat.completions.create({
       model: OPENAI_CHAT_MODEL,
       messages: [

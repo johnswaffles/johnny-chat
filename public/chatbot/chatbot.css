@@ -518,6 +518,32 @@ textarea:focus {
   text-decoration: underline;
 }
 
+.source-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(118, 184, 255, 0.18);
+  background: rgba(118, 184, 255, 0.08);
+  color: #cfe8ff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.source-chip:hover {
+  background: rgba(118, 184, 255, 0.14);
+  border-color: rgba(118, 184, 255, 0.3);
+}
+
 .message-actions {
   display: flex;
   justify-content: flex-end;
