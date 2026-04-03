@@ -113,7 +113,7 @@ function insertBeforeBodyEnd(html, snippet) {
 function siteNav(profile, active, brandOverride = "") {
   const brand = brandOverride || (profile === "mowing" ? "618help.com" : "justaskjohnny.com");
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
-  const chatbotsHref = profile === "mowing" ? "https://justaskjohnny.com" : "/chatbots/";
+  const chatbotsHref = "/chatbot/";
   const mowingHref = profile === "mowing" ? "/help-mowing/" : "https://618help.com";
   const cozyHref = "/cozy-builder/";
   const contactHref = "/contact/";
@@ -756,7 +756,7 @@ ${siteNav("ai", "contact", "justaskjohnny.com")}
         </p>
 
         <div class="hero-actions">
-          <a class="button button-primary" href="/chatbots/">See the AI side</a>
+          <a class="button button-primary" href="/chatbot/">See the AI side</a>
           <a class="button button-secondary" href="/help-mowing/">See mowing</a>
         </div>
 
@@ -860,7 +860,7 @@ ${siteNav("ai", "contact", "justaskjohnny.com")}
       const navBrand = document.querySelector(".johnny-site-brand");
       const navLinks = document.querySelectorAll(".johnny-site-link");
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
-      const chatbotsHref = isMowing ? "https://justaskjohnny.com" : "https://justaskjohnny.com/chatbots/";
+      const chatbotsHref = "/chatbot/";
       const mowingHref = isMowing ? "https://618help.com" : "https://618help.com/help-mowing/";
       const cozyHref = "/cozy-builder/";
       const contactHref = "/contact/";
