@@ -14,7 +14,7 @@ const {
   OPENAI_CHAT_MODEL = "gpt-4o",
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
-  OPENAI_GPT54_REASONING_EFFORT = "high",
+  OPENAI_GPT54_REASONING_EFFORT = "",
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
   MAX_UPLOAD_MB = "40",
@@ -433,10 +433,14 @@ app.post("/api/chat", async (req, res) => {
     }
 
     if (profile === "gpt54") {
+      const reasoningConfig = OPENAI_GPT54_REASONING_EFFORT
+        ? { reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT } }
+        : {};
+
       const response = await openai.responses.create({
         model: OPENAI_GPT54_MODEL,
-        reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT },
         tools: [{ type: "web_search" }],
+        ...reasoningConfig,
         input: [
           { role: "system", content: getJohnnyPersona(profile) },
           ...history.slice(-20),
