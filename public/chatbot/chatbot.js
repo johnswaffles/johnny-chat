@@ -61,11 +61,7 @@
     closeModal: getEl("close-modal"),
     newChatRail: getEl("new-chat-rail"),
     newChatRail2: getEl("new-chat-rail-2"),
-    newChatMain: getEl("new-chat-main"),
-    dockSearch: getEl("dock-search"),
-    dockHistory: getEl("dock-history"),
-    dockImages: getEl("dock-images"),
-    dockNew: getEl("dock-new")
+    newChatMain: getEl("new-chat-main")
   };
 
   document.title = "GPT 5.4";
@@ -540,12 +536,6 @@
     });
   }
 
-  function scrollRailSection(selector) {
-    const target = document.querySelector(selector);
-    if (!target) return;
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
   async function rememberImage(url) {
     await putStoredImage({
       id: uid(),
@@ -859,17 +849,6 @@
   el.newChatRail.addEventListener("click", newChat);
   el.newChatRail2.addEventListener("click", newChat);
   el.newChatMain.addEventListener("click", newChat);
-  el.dockSearch.addEventListener("click", () => {
-    el.search.focus();
-    el.search.select?.();
-  });
-  el.dockHistory.addEventListener("click", () => {
-    scrollRailSection(".rail-card.grow");
-  });
-  el.dockImages.addEventListener("click", () => {
-    scrollRailSection(".rail-card:nth-of-type(2)");
-  });
-  el.dockNew.addEventListener("click", newChat);
 
   document.addEventListener("click", () => closeMenus(null));
 
