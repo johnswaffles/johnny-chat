@@ -373,6 +373,29 @@
     };
   }
 
+  function showFileReview(label, detail) {
+    const wrap = document.createElement("div");
+    const bubble = document.createElement("div");
+    bubble.className = "message assistant file-review";
+    bubble.innerHTML = `
+      <div class="file-review-orb" aria-hidden="true">
+        <i></i><i></i><i></i><i></i>
+      </div>
+      <div class="file-review-copy">
+        <div class="file-review-title">${esc(label || "Reading uploaded file")}</div>
+        <div class="file-review-detail">${esc(detail || "Checking images, text, and structure...")}</div>
+      </div>`;
+    wrap.appendChild(bubble);
+    el.messages.appendChild(wrap);
+    el.messages.scrollTop = el.messages.scrollHeight;
+    return {
+      wrap,
+      remove() {
+        if (wrap.parentNode) wrap.remove();
+      }
+    };
+  }
+
   function resizeInput() {
     el.input.style.height = "auto";
     el.input.style.height = `${Math.min(el.input.scrollHeight, 180)}px`;
@@ -676,11 +699,18 @@
     if (db.pendingFiles.length) {
       const fileNames = db.pendingFiles.map((file) => file.name).join(", ");
       displayText = displayText ? `${displayText}\n\n(Attached: ${fileNames})` : `[Attached: ${fileNames}]`;
+      const fileReview = showFileReview(
+        db.pendingFiles.length === 1 ? "Reading your file" : `Reading ${db.pendingFiles.length} files`,
+        "Checking the upload before I answer..."
+      );
       try {
         const uploaded = await uploadFiles(db.pendingFiles);
         context = uploaded.context ? `\n\nAttachment context:\n${uploaded.context}` : "";
       } catch (err) {
+        fileReview.remove();
         appendBubble("assistant", `Upload failed: ${err.message || err}`);
+      } finally {
+        fileReview.remove();
       }
       db.pendingFiles = [];
       renderAttachments();

@@ -570,6 +570,73 @@ textarea:focus {
   50% { transform: scaleY(1.7); opacity: 1; }
 }
 
+.file-review {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.file-review-orb {
+  position: relative;
+  flex: 0 0 60px;
+  width: 60px;
+  height: 60px;
+}
+
+.file-review-orb::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(102, 230, 177, 0.95), rgba(118, 184, 255, 0.2) 58%, transparent 72%);
+  filter: blur(0.2px);
+  box-shadow:
+    0 0 0 1px rgba(102, 230, 177, 0.22),
+    0 0 24px rgba(102, 230, 177, 0.18);
+}
+
+.file-review-orb i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 2px;
+  margin-left: -13px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(102, 230, 177, 0), rgba(102, 230, 177, 1), rgba(118, 184, 255, 1), rgba(118, 184, 255, 0));
+  transform-origin: center;
+  animation: scan 1.8s linear infinite;
+}
+
+.file-review-orb i:nth-child(1) { --angle: 0deg; }
+.file-review-orb i:nth-child(2) { --angle: 45deg; animation-delay: -0.45s; }
+.file-review-orb i:nth-child(3) { --angle: 90deg; animation-delay: -0.9s; }
+.file-review-orb i:nth-child(4) { --angle: 135deg; animation-delay: -1.35s; }
+
+@keyframes scan {
+  0% { transform: rotate(var(--angle, 0deg)) translateX(-2px) scaleX(0.7); opacity: 0.25; }
+  50% { transform: rotate(var(--angle, 0deg)) translateX(0) scaleX(1); opacity: 1; }
+  100% { transform: rotate(var(--angle, 0deg)) translateX(2px) scaleX(0.7); opacity: 0.25; }
+}
+
+.file-review-copy {
+  min-width: 0;
+}
+
+.file-review-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.file-review-detail {
+  margin-top: 4px;
+  color: var(--copy);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .attachment-preview {
   display: none;
   padding: 0 18px 12px;
