@@ -69,7 +69,7 @@
   window.JOHNNY_CHAT_PROFILE = profile;
 
   const promptIdeas = [
-    "Draft a polished reply to a customer.",
+    "Help me shop for the top 5 best-reviewed options from reputable brands, compare price, key pros and cons, and recommend the best overall pick.",
     "Summarize a long message into bullets.",
     "Analyze a screenshot or PDF.",
     "Generate a fresh image concept."
