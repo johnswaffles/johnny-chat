@@ -40,6 +40,12 @@ body {
   overflow-x: hidden;
 }
 
+@media (min-width: 761px) {
+  body {
+    overflow: hidden;
+  }
+}
+
 body::before {
   content: "";
   position: fixed;
@@ -79,7 +85,7 @@ textarea {
 .app-shell {
   width: calc(100vw - 16px);
   max-width: 1880px;
-  min-height: calc(100vh - 16px);
+  height: calc(100vh - 16px);
   margin: 8px auto;
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -836,6 +842,8 @@ textarea {
 @media (max-width: 1120px) {
   .app-shell {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: calc(100vh - 16px);
   }
 
   .rail {
@@ -851,6 +859,8 @@ textarea {
   .app-shell {
     width: calc(100vw - 14px);
     margin: 7px auto;
+    height: auto;
+    min-height: calc(100vh - 14px);
   }
 
   .rail,

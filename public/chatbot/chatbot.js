@@ -437,6 +437,14 @@
     el.input.style.height = `${Math.min(el.input.scrollHeight, 180)}px`;
   }
 
+  function focusComposer() {
+    try {
+      el.input.focus({ preventScroll: true });
+    } catch {
+      el.input.focus();
+    }
+  }
+
   function openModal(src) {
     el.modalImage.src = src;
     el.modal.classList.add("show");
@@ -796,7 +804,7 @@
     save();
     renderSidebar();
     renderChat();
-    el.input.focus();
+    focusComposer();
   }
 
   el.search.addEventListener("input", renderConversations);
@@ -861,6 +869,7 @@
     if (!active.messages.length) {
       initialGreeting(active);
     }
+    requestAnimationFrame(() => focusComposer());
   }
 
   initialize();
