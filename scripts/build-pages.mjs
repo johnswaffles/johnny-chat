@@ -171,22 +171,12 @@ async function collectWasmFiles(dir, out = []) {
 
 async function compressPublicWasmAssets() {
   const wasmFiles = await collectWasmFiles(publicDir);
-  const headerBlocks = [];
 
   for (const filePath of wasmFiles) {
     const raw = await readFile(filePath);
-    if (!isGzipBuffer(raw)) {
-      await writeFile(filePath, gzipSync(raw, { level: 9 }));
-    }
-
-    const relative = path.relative(publicDir, filePath).split(path.sep).join("/");
-    headerBlocks.push(
-      `/${relative}\n  Content-Type: application/wasm\n  Content-Encoding: gzip`
-    );
-  }
-
-  if (headerBlocks.length > 0) {
-    await writeFile(path.join(publicDir, "_headers"), `${headerBlocks.join("\n\n")}\n`, "utf8");
+    const gzPath = `${filePath}.gz`;
+    await writeFile(gzPath, gzipSync(raw, { level: 9 }));
+    await rm(filePath);
   }
 }
 
