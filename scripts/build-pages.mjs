@@ -4,7 +4,10 @@ import path from "node:path";
 const root = process.cwd();
 const publicDir = path.join(root, "public");
 const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
-const cozyExportTargetDir = path.join(publicDir, "cozy-builder");
+const cozyExportTargetDirs = [
+  path.join(publicDir, "cozy-builder"),
+  path.join(publicDir, "cozy-builder-game"),
+];
 
 const widgetSnippet = (profile) => `
   <script>
@@ -118,7 +121,7 @@ function siteNav(profile, active, brandOverride = "") {
   const chatbotsHref = "https://justaskjohnny.com";
   const mowingHref = profile === "mowing" ? "/help-mowing/" : "https://618help.com";
   const gptHref = "/chatbot/";
-  const cozyHref = "/cozy-builder/";
+  const cozyHref = "/cozy-builder-game/";
   const contactHref = "/contact/";
   return `
   <header class="johnny-site-nav">
@@ -142,8 +145,10 @@ async function syncCozyBuilderBuild() {
     // When the local Godot export source is unavailable, keep the checked-in files intact.
     return;
   }
-  await rm(cozyExportTargetDir, { recursive: true, force: true });
-  await cp(cozyExportSourceDir, cozyExportTargetDir, { recursive: true });
+  for (const targetDir of cozyExportTargetDirs) {
+    await rm(targetDir, { recursive: true, force: true });
+    await cp(cozyExportSourceDir, targetDir, { recursive: true });
+  }
 }
 
 function createRootRedirectPage() {
@@ -583,7 +588,7 @@ ${siteNav("ai", "contact")}
       const chatbotsHref = "https://justaskjohnny.com";
       const mowingHref = isMowing ? "https://618help.com" : "https://618help.com/help-mowing/";
       const gptHref = "/chatbot/";
-      const cozyHref = "/cozy-builder/";
+      const cozyHref = "/cozy-builder-game/";
       const contactHref = "/contact/";
 
       profileField.value = profile;
