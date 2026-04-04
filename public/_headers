@@ -1,0 +1,11 @@
+/cozy-builder/index.wasm
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+
+/cozy-builder-game/index.wasm
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+
+/godot-playtest/index.wasm
+  Content-Type: application/wasm
+  Content-Encoding: gzip

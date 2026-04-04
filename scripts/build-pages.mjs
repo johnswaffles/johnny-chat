@@ -1,5 +1,6 @@
-import { access, readFile, writeFile, mkdir, rm, cp } from "node:fs/promises";
+import { access, readFile, writeFile, mkdir, rm, cp, readdir } from "node:fs/promises";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 
 const root = process.cwd();
 const publicDir = path.join(root, "public");
@@ -148,6 +149,44 @@ async function syncCozyBuilderBuild() {
   for (const targetDir of cozyExportTargetDirs) {
     await rm(targetDir, { recursive: true, force: true });
     await cp(cozyExportSourceDir, targetDir, { recursive: true });
+  }
+}
+
+function isGzipBuffer(buffer) {
+  return buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
+}
+
+async function collectWasmFiles(dir, out = []) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await collectWasmFiles(fullPath, out);
+    } else if (entry.isFile() && fullPath.endsWith(".wasm")) {
+      out.push(fullPath);
+    }
+  }
+  return out;
+}
+
+async function compressPublicWasmAssets() {
+  const wasmFiles = await collectWasmFiles(publicDir);
+  const headerBlocks = [];
+
+  for (const filePath of wasmFiles) {
+    const raw = await readFile(filePath);
+    if (!isGzipBuffer(raw)) {
+      await writeFile(filePath, gzipSync(raw, { level: 9 }));
+    }
+
+    const relative = path.relative(publicDir, filePath).split(path.sep).join("/");
+    headerBlocks.push(
+      `/${relative}\n  Content-Type: application/wasm\n  Content-Encoding: gzip`
+    );
+  }
+
+  if (headerBlocks.length > 0) {
+    await writeFile(path.join(publicDir, "_headers"), `${headerBlocks.join("\n\n")}\n`, "utf8");
   }
 }
 
@@ -731,6 +770,7 @@ ${widgetSnippet("mowing")}
   await writeFile(path.join(publicDir, "help-mowing", "index.html"), mowingHtml, "utf8");
   await writeFile(path.join(publicDir, "contact", "index.html"), createContactPage(), "utf8");
   await writeFile(path.join(publicDir, "index.html"), createRootRedirectPage(), "utf8");
+  await compressPublicWasmAssets();
 
   console.log("Pages build files generated.");
 }
