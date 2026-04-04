@@ -20,6 +20,8 @@ into:
 
 That means `/cozy-builder/` serves the actual Godot export directly from Cloudflare Pages.
 
+If the local export source folder is not available during a build, the generator leaves the committed `public/cozy-builder` files alone so Cloudflare can deploy from the repo alone.
+
 ## Future Update Workflow
 
 1. Update the game in `/Users/johnshopinski/Documents/New project/cozy-builder-godot`.

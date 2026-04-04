@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, rm, cp } from "node:fs/promises";
+import { access, readFile, writeFile, mkdir, rm, cp } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
@@ -135,6 +135,13 @@ function siteNav(profile, active, brandOverride = "") {
 }
 
 async function syncCozyBuilderBuild() {
+  try {
+    await access(cozyExportSourceDir);
+  } catch {
+    // Cloudflare Pages only needs the committed build artifact already in public/cozy-builder.
+    // When the local Godot export source is unavailable, keep the checked-in files intact.
+    return;
+  }
   await rm(cozyExportTargetDir, { recursive: true, force: true });
   await cp(cozyExportSourceDir, cozyExportTargetDir, { recursive: true });
 }
