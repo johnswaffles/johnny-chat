@@ -730,6 +730,15 @@ ${widgetSnippet("mowing")}
   await writeFile(path.join(publicDir, "help-mowing", "index.html"), mowingHtml, "utf8");
   await writeFile(path.join(publicDir, "contact", "index.html"), createContactPage(), "utf8");
   await writeFile(path.join(publicDir, "cozy-builder", "index.html"), createCozyRedirectPage(), "utf8");
+  await writeFile(
+    path.join(publicDir, "_redirects"),
+    [
+      "/cozy-builder /godot-playtest/ 301",
+      "/cozy-builder/ /godot-playtest/ 301",
+      "/cozy-builder/* /godot-playtest/:splat 301"
+    ].join("\n") + "\n",
+    "utf8"
+  );
   await writeFile(path.join(publicDir, "index.html"), createRootRedirectPage(), "utf8");
 
   console.log("Pages build files generated.");

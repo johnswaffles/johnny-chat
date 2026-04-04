@@ -1,0 +1,3 @@
+/cozy-builder /godot-playtest/ 301
+/cozy-builder/ /godot-playtest/ 301
+/cozy-builder/* /godot-playtest/:splat 301
