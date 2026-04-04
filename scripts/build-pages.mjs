@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, cp } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
@@ -116,7 +116,7 @@ function siteNav(profile, active, brandOverride = "") {
   const chatbotsHref = "https://justaskjohnny.com";
   const mowingHref = profile === "mowing" ? "/help-mowing/" : "https://618help.com";
   const gptHref = "/chatbot/";
-  const cozyHref = "/cozy-builder/";
+  const cozyHref = "/godot-playtest/";
   const contactHref = "/contact/";
   return `
   <header class="johnny-site-nav">
@@ -132,286 +132,20 @@ function siteNav(profile, active, brandOverride = "") {
   </header>`;
 }
 
-function createCozyBuilderPage() {
+function createCozyRedirectPage() {
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0; url=/godot-playtest/">
   <title>Cozy Builder</title>
-  <meta name="description" content="Launch the shared Cozy Builder city-building game from either Johnny site.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  ${sharedNavStyles}
-  <style>
-    :root {
-      --bg: #f6f4ed;
-      --bg-2: #edf3e7;
-      --ink: #102015;
-      --copy: #5b6b60;
-      --line: rgba(16, 32, 21, 0.1);
-      --green: #2d6f40;
-      --green-2: #4b8d5c;
-      --green-deep: #164426;
-      --card: rgba(255, 255, 255, 0.84);
-      --shadow: 0 30px 80px rgba(22, 54, 31, 0.12);
-    }
-
-    * { box-sizing: border-box; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      margin: 0;
-      font-family: "Plus Jakarta Sans", Arial, sans-serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at 0% 0%, rgba(122, 176, 106, 0.22), transparent 30%),
-        radial-gradient(circle at 100% 8%, rgba(199, 166, 95, 0.14), transparent 26%),
-        linear-gradient(180deg, #f8f7f1 0%, var(--bg-2) 42%, #f6f4ec 100%);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    .page {
-      width: min(1200px, calc(100vw - 32px));
-      margin: 0 auto;
-      padding: 20px 0 40px;
-    }
-
-    .hero {
-      display: grid;
-      grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
-      gap: 20px;
-      align-items: start;
-      margin-top: 10px;
-    }
-
-    .panel {
-      background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(251,249,241,0.78));
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(18px);
-      border-radius: 30px;
-    }
-
-    .hero-copy {
-      padding: 32px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(45, 111, 64, 0.08);
-      color: var(--green-deep);
-      border: 1px solid rgba(45, 111, 64, 0.12);
-      font-weight: 800;
-      font-size: 12px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-    }
-
-    .eyebrow::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
-    }
-
-    .hero-copy h1 {
-      margin: 16px 0 0;
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: clamp(42px, 6vw, 80px);
-      line-height: 0.92;
-      letter-spacing: -0.05em;
-      max-width: 10ch;
-    }
-
-    .hero-copy p,
-    .info-card p {
-      color: var(--copy);
-      line-height: 1.75;
-      font-size: 16px;
-    }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 52px;
-      padding: 0 20px;
-      border-radius: 999px;
-      border: 1px solid transparent;
-      font: inherit;
-      font-weight: 800;
-      font-size: 15px;
-      cursor: pointer;
-      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
-      text-decoration: none;
-    }
-
-    .button:hover {
-      transform: translateY(-1px);
-      filter: brightness(1.02);
-    }
-
-    .button-primary {
-      background: linear-gradient(135deg, var(--green) 0%, var(--green-2) 100%);
-      color: #fffdf7;
-      box-shadow: 0 14px 28px rgba(47, 122, 68, 0.24);
-    }
-
-    .button-secondary {
-      background: rgba(255,255,255,0.88);
-      color: var(--ink);
-      border-color: rgba(16, 32, 21, 0.08);
-    }
-
-    .info-card {
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(255, 255, 255, 0.82);
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      box-shadow: 0 16px 32px rgba(17, 38, 22, 0.08);
-      margin-top: 12px;
-    }
-
-    .info-card h2 {
-      margin: 0 0 8px;
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: 24px;
-      line-height: 1.05;
-      letter-spacing: -0.03em;
-    }
-
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .game-shell {
-      padding: 18px;
-    }
-
-    .game-shell h2 {
-      margin: 0;
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: 30px;
-      line-height: 1;
-      letter-spacing: -0.04em;
-    }
-
-    .game-shell p {
-      margin: 10px 0 0;
-      color: var(--copy);
-      line-height: 1.7;
-    }
-
-    .game-frame {
-      margin-top: 16px;
-      width: 100%;
-      aspect-ratio: 16 / 10;
-      min-height: 560px;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      border-radius: 24px;
-      overflow: hidden;
-      background: #000;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
-    }
-
-    .game-frame iframe {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border: 0;
-      background: #000;
-    }
-
-    .link-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    @media (max-width: 980px) {
-      .hero { grid-template-columns: 1fr; }
-      .feature-grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 760px) {
-      .page { width: min(100vw - 20px, 1200px); padding: 14px 0 24px; }
-      .hero-copy, .game-shell { padding: 22px; }
-      .game-frame { min-height: 480px; }
-    }
-  </style>
+  <script>
+    window.location.replace('/godot-playtest/');
+  </script>
 </head>
 <body>
-${siteNav("ai", "cozy", "Cozy Builder")}
-  <main class="page">
-    <div class="hero">
-      <section class="panel hero-copy">
-        <span class="eyebrow">Shared game</span>
-        <h1>Cozy Builder</h1>
-        <p>
-          One city-builder, two domains. Johnny can use the same Cozy Builder experience from both the AI site and the mowing site,
-          so the game stays in one place and the links stay clean.
-        </p>
-
-        <div class="hero-actions">
-          <a class="button button-primary" href="/godot-playtest/" target="_blank" rel="noopener">Open full game</a>
-          <a class="button button-secondary" href="https://justaskjohnny.com">Back home</a>
-        </div>
-
-        <div class="info-card">
-          <h2>How we wired it</h2>
-          <p>
-            This page is shared across both websites and simply launches the same Godot web export. That means one game build,
-            one update path, and matching access from both domains.
-          </p>
-        </div>
-
-        <div class="feature-grid">
-          <div class="info-card">
-            <h2>For justaskjohnny.com</h2>
-            <p>The Cozy Builder link lives beside chatbots, contact, and the AI service pages.</p>
-          </div>
-          <div class="info-card">
-            <h2>For 618help.com</h2>
-            <p>The same link works from the mowing side so both sites can send people to the same game.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel game-shell">
-        <h2>Play it here</h2>
-        <p>Use the embedded version below, or open the full game in a new tab if you want the native game experience.</p>
-        <div class="game-frame">
-          <iframe src="/godot-playtest/" title="Cozy Builder game" loading="lazy"></iframe>
-        </div>
-        <div class="link-row">
-          <a class="button button-secondary" href="https://justaskjohnny.com">AI site</a>
-          <a class="button button-secondary" href="https://618help.com">Mowing site</a>
-          <a class="button button-secondary" href="/contact/">Contact</a>
-        </div>
-      </section>
-    </div>
-  </main>
+  <p>Redirecting to Cozy Builder...</p>
 </body>
 </html>`;
 }
@@ -853,7 +587,7 @@ ${siteNav("ai", "contact")}
       const chatbotsHref = "https://justaskjohnny.com";
       const mowingHref = isMowing ? "https://618help.com" : "https://618help.com/help-mowing/";
       const gptHref = "/chatbot/";
-      const cozyHref = "/cozy-builder/";
+      const cozyHref = "/godot-playtest/";
       const contactHref = "/contact/";
 
       profileField.value = profile;
@@ -995,7 +729,7 @@ ${widgetSnippet("mowing")}
 
   await writeFile(path.join(publicDir, "help-mowing", "index.html"), mowingHtml, "utf8");
   await writeFile(path.join(publicDir, "contact", "index.html"), createContactPage(), "utf8");
-  await cp(path.join(publicDir, "godot-playtest") + "/.", path.join(publicDir, "cozy-builder"), { recursive: true, force: true });
+  await writeFile(path.join(publicDir, "cozy-builder", "index.html"), createCozyRedirectPage(), "utf8");
   await writeFile(path.join(publicDir, "index.html"), createRootRedirectPage(), "utf8");
 
   console.log("Pages build files generated.");
