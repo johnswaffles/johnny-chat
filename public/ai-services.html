@@ -332,6 +332,7 @@
       max-width: 70ch;
     }
 
+    .cards-2,
     .cards-3,
     .cards-4 {
       display: grid;
@@ -339,6 +340,7 @@
       margin-top: 18px;
     }
 
+    .cards-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .cards-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
@@ -464,6 +466,7 @@
         grid-template-columns: 1fr;
       }
 
+      .cards-2,
       .cards-3,
       .cards-4,
       .process,
@@ -493,6 +496,7 @@
         font-size: clamp(38px, 13vw, 58px);
       }
 
+      .cards-2,
       .cards-3,
       .cards-4,
       .process,
@@ -516,7 +520,7 @@
         <h1>Custom AI that feels like a real part of your team.</h1>
         <p>
           We build polished websites and ultra-useful AI assistants for companies that want more than a generic bot.
-          Think text-to-text, voice-to-voice, vision, and custom knowledge working together so your team and your customers get answers fast.
+          Think text-to-text, voice-to-voice, vision, and custom knowledge working together so your team, your members, and your customers get answers fast.
         </p>
 
         <div class="hero-actions">
@@ -639,6 +643,25 @@
         <article class="info-card">
           <h3>Growing teams</h3>
           <p>Answer the same questions faster, keep responses consistent, and free your staff for higher-value work.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section panel reveal">
+      <div class="eyebrow">Also a great fit</div>
+      <h2>Churches and everyday people can get a lot out of a personal AI assistant.</h2>
+      <p class="lead">
+        We can shape the assistant for a church office, a ministry team, or a normal person who just wants a smarter, more personal assistant than the default tools on a phone.
+      </p>
+
+      <div class="cards-2">
+        <article class="info-card">
+          <h3>Churches</h3>
+          <p>Great for church secretaries, prayer request intake, event reminders, volunteer coordination, sermon notes, counseling follow-up, member FAQs, and weekend service info.</p>
+        </article>
+        <article class="info-card">
+          <h3>Everyday use</h3>
+          <p>Perfect for a personal assistant that remembers your preferences, helps you write, plan, organize life, answer questions, and feel far more capable than a basic Siri-style helper.</p>
         </article>
       </div>
     </section>
