@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, cp } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
@@ -116,7 +116,7 @@ function siteNav(profile, active, brandOverride = "") {
   const chatbotsHref = "https://justaskjohnny.com";
   const mowingHref = profile === "mowing" ? "/help-mowing/" : "https://618help.com";
   const gptHref = "/chatbot/";
-  const cozyHref = "/godot-playtest/";
+  const cozyHref = "/cozy-builder/";
   const contactHref = "/contact/";
   return `
   <header class="johnny-site-nav">
@@ -853,7 +853,7 @@ ${siteNav("ai", "contact")}
       const chatbotsHref = "https://justaskjohnny.com";
       const mowingHref = isMowing ? "https://618help.com" : "https://618help.com/help-mowing/";
       const gptHref = "/chatbot/";
-      const cozyHref = "/godot-playtest/";
+      const cozyHref = "/cozy-builder/";
       const contactHref = "/contact/";
 
       profileField.value = profile;
@@ -973,6 +973,7 @@ async function main() {
   await mkdir(path.join(publicDir, "chatbots"), { recursive: true });
   await mkdir(path.join(publicDir, "help-mowing"), { recursive: true });
   await mkdir(path.join(publicDir, "contact"), { recursive: true });
+  await mkdir(path.join(publicDir, "cozy-builder"), { recursive: true });
 
   await writeFile(path.join(publicDir, "chatbots", "index.html"), aiPage, "utf8");
 
@@ -994,6 +995,7 @@ ${widgetSnippet("mowing")}
 
   await writeFile(path.join(publicDir, "help-mowing", "index.html"), mowingHtml, "utf8");
   await writeFile(path.join(publicDir, "contact", "index.html"), createContactPage(), "utf8");
+  await cp(path.join(publicDir, "godot-playtest") + "/.", path.join(publicDir, "cozy-builder"), { recursive: true, force: true });
   await writeFile(path.join(publicDir, "index.html"), createRootRedirectPage(), "utf8");
 
   console.log("Pages build files generated.");
