@@ -528,6 +528,19 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 	Config.prototype.getModuleConfig = function (loadPath, response) {
 		let r = response;
 		const gdext = this.gdextensionLibs;
+		function decodeWasmResponse(res) {
+			return res.arrayBuffer().then(function (buffer) {
+				const bytes = new Uint8Array(buffer);
+				if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
+					if (typeof (DecompressionStream) === 'undefined') {
+						throw new Error('This browser cannot decompress the Cozy Builder wasm package.');
+					}
+					const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+					return new Response(stream).arrayBuffer();
+				}
+				return buffer;
+			});
+		}
 		return {
 			'print': this.onPrint,
 			'printErr': this.onPrintError,
@@ -539,14 +552,16 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 				function done(result) {
 					onSuccess(result['instance'], result['module']);
 				}
-				if (typeof (WebAssembly.instantiateStreaming) !== 'undefined') {
-					WebAssembly.instantiateStreaming(Promise.resolve(r), imports).then(done);
-				} else {
-					r.arrayBuffer().then(function (buffer) {
-						WebAssembly.instantiate(buffer, imports).then(done);
-					});
-				}
+				const wasmResponse = r;
 				r = null;
+				decodeWasmResponse(wasmResponse)
+					.then(function (buffer) {
+						return WebAssembly.instantiate(buffer, imports);
+					})
+					.then(done, function (reason) {
+						err(`wasm instantiation failed: ${reason}`);
+						throw reason;
+					});
 				return {};
 			},
 			'locateFile': function (path) {
