@@ -1,8 +1,10 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rm, cp } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
 const publicDir = path.join(root, "public");
+const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
+const cozyExportTargetDir = path.join(publicDir, "cozy-builder");
 
 const widgetSnippet = (profile) => `
   <script>
@@ -132,166 +134,9 @@ function siteNav(profile, active, brandOverride = "") {
   </header>`;
 }
 
-function createCozyBuilderPage() {
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cozy Builder</title>
-  <meta name="description" content="Play Cozy Builder from Johnny's Cloudflare site.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  ${sharedNavStyles}
-  <style>
-    :root {
-      --bg: #f6f4ed;
-      --bg-2: #edf3e7;
-      --ink: #102015;
-      --copy: #5b6b60;
-      --line: rgba(16, 32, 21, 0.1);
-      --green: #2d6f40;
-      --green-2: #4b8d5c;
-      --green-deep: #164426;
-      --shadow: 0 30px 80px rgba(22, 54, 31, 0.12);
-    }
-
-    * { box-sizing: border-box; }
-    html, body { min-height: 100%; }
-    body {
-      margin: 0;
-      font-family: "Plus Jakarta Sans", Arial, sans-serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at 0% 0%, rgba(122, 176, 106, 0.22), transparent 30%),
-        radial-gradient(circle at 100% 8%, rgba(199, 166, 95, 0.14), transparent 26%),
-        linear-gradient(180deg, #f8f7f1 0%, var(--bg-2) 42%, #f6f4ec 100%);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    .page {
-      width: min(1280px, calc(100vw - 28px));
-      margin: 0 auto;
-      padding: 18px 0 30px;
-    }
-
-    .hero {
-      display: grid;
-      gap: 16px;
-    }
-
-    .panel {
-      background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(251,249,241,0.78));
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(18px);
-      border-radius: 26px;
-    }
-
-    .copy {
-      padding: 22px 24px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(45, 111, 64, 0.08);
-      color: var(--green-deep);
-      border: 1px solid rgba(45, 111, 64, 0.12);
-      font-weight: 800;
-      font-size: 12px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-    }
-
-    .eyebrow::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
-    }
-
-    .copy h1 {
-      margin: 14px 0 0;
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: clamp(42px, 6vw, 74px);
-      line-height: 0.95;
-      letter-spacing: -0.05em;
-    }
-
-    .copy p {
-      margin: 14px 0 0;
-      color: var(--copy);
-      line-height: 1.7;
-      font-size: 16px;
-      max-width: 60ch;
-    }
-
-    .game-wrap {
-      padding: 14px;
-    }
-
-    .game-frame {
-      width: 100%;
-      min-height: 85vh;
-      min-height: 760px;
-      border: 0;
-      border-radius: 20px;
-      overflow: hidden;
-      background: #08131d;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
-    }
-
-    .game-frame iframe {
-      display: block;
-      width: 100%;
-      height: 100%;
-      min-height: 85vh;
-      min-height: 760px;
-      border: 0;
-      background: #08131d;
-    }
-
-    @media (max-width: 760px) {
-      .page { width: min(100vw - 16px, 1280px); padding: 12px 0 18px; }
-      .copy { padding: 18px 18px 20px; }
-      .game-wrap { padding: 10px; }
-      .game-frame, .game-frame iframe { min-height: 72vh; }
-    }
-  </style>
-</head>
-<body>
-${siteNav("ai", "cozy", "Cozy Builder")}
-  <main class="page">
-    <section class="hero">
-      <div class="panel copy">
-        <span class="eyebrow">Shared game</span>
-        <h1>Cozy Builder</h1>
-        <p>
-          This is the live game. It loads the same Cozy Builder experience from the Cloudflare site so both domains can send users here directly.
-        </p>
-      </div>
-      <div class="panel game-wrap">
-        <iframe
-          class="game-frame"
-          src="https://my-backend-api-1niy.onrender.com/godot-playtest/"
-          title="Cozy Builder Godot Playtest"
-          loading="lazy"
-          allow="fullscreen"
-          referrerpolicy="strict-origin-when-cross-origin">
-        </iframe>
-      </div>
-    </section>
-  </main>
-</body>
-</html>`;
+async function syncCozyBuilderBuild() {
+  await rm(cozyExportTargetDir, { recursive: true, force: true });
+  await cp(cozyExportSourceDir, cozyExportTargetDir, { recursive: true });
 }
 
 function createRootRedirectPage() {
@@ -851,7 +696,7 @@ async function main() {
   await mkdir(path.join(publicDir, "chatbots"), { recursive: true });
   await mkdir(path.join(publicDir, "help-mowing"), { recursive: true });
   await mkdir(path.join(publicDir, "contact"), { recursive: true });
-  await mkdir(path.join(publicDir, "cozy-builder"), { recursive: true });
+  await syncCozyBuilderBuild();
 
   await writeFile(path.join(publicDir, "chatbots", "index.html"), aiPage, "utf8");
 
@@ -873,7 +718,6 @@ ${widgetSnippet("mowing")}
 
   await writeFile(path.join(publicDir, "help-mowing", "index.html"), mowingHtml, "utf8");
   await writeFile(path.join(publicDir, "contact", "index.html"), createContactPage(), "utf8");
-  await writeFile(path.join(publicDir, "cozy-builder", "index.html"), createCozyBuilderPage(), "utf8");
   await writeFile(path.join(publicDir, "index.html"), createRootRedirectPage(), "utf8");
 
   console.log("Pages build files generated.");

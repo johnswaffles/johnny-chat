@@ -1,243 +1,220 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cozy Builder</title>
-  <meta name="description" content="Play Cozy Builder from Johnny's Cloudflare site.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <style>
-    .johnny-site-nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin: 0 0 18px;
-      padding: 14px 18px;
-      border-radius: 22px;
-      background: rgba(255, 255, 255, 0.82);
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      box-shadow: 0 18px 40px rgba(24, 61, 34, 0.08);
-      backdrop-filter: blur(12px);
-      position: sticky;
-      top: 14px;
-      z-index: 20;
-    }
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<title>Cozy Builder Godot</title>
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
 
-    .johnny-site-brand {
-      color: #102015;
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      text-decoration: none;
-      white-space: nowrap;
-    }
+body {
+	color: white;
+	background-color: black;
+	overflow: hidden;
+	touch-action: none;
+}
 
-    .johnny-site-links {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 10px;
-    }
+#canvas {
+	display: block;
+}
 
-    .johnny-site-link {
-      display: inline-flex;
-      align-items: center;
-      min-height: 36px;
-      padding: 0 14px;
-      border-radius: 999px;
-      color: #102015;
-      font-size: 14px;
-      font-weight: 700;
-      text-decoration: none;
-      border: 1px solid transparent;
-      transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
-    }
+#canvas:focus {
+	outline: none;
+}
 
-    .johnny-site-link:hover {
-      transform: translateY(-1px);
-      border-color: rgba(16, 32, 21, 0.08);
-      background: rgba(255, 255, 255, 0.88);
-    }
+#status, #status-splash, #status-progress {
+	position: absolute;
+	left: 0;
+	right: 0;
+}
 
-    .johnny-site-link.active {
-      background: linear-gradient(135deg, rgba(45, 111, 64, 0.14), rgba(75, 141, 92, 0.14));
-      border-color: rgba(45, 111, 64, 0.18);
-      color: #184526;
-    }
+#status, #status-splash {
+	top: 0;
+	bottom: 0;
+}
 
-    @media (max-width: 760px) {
-      .johnny-site-nav {
-        flex-direction: column;
-        align-items: flex-start;
-      }
+#status {
+	background-color: #242424;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	visibility: hidden;
+}
 
-      .johnny-site-links {
-        justify-content: flex-start;
-      }
-    }
-  </style>
-  <style>
-    :root {
-      --bg: #f6f4ed;
-      --bg-2: #edf3e7;
-      --ink: #102015;
-      --copy: #5b6b60;
-      --line: rgba(16, 32, 21, 0.1);
-      --green: #2d6f40;
-      --green-2: #4b8d5c;
-      --green-deep: #164426;
-      --shadow: 0 30px 80px rgba(22, 54, 31, 0.12);
-    }
+#status-splash {
+	max-height: 100%;
+	max-width: 100%;
+	margin: auto;
+}
 
-    * { box-sizing: border-box; }
-    html, body { min-height: 100%; }
-    body {
-      margin: 0;
-      font-family: "Plus Jakarta Sans", Arial, sans-serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at 0% 0%, rgba(122, 176, 106, 0.22), transparent 30%),
-        radial-gradient(circle at 100% 8%, rgba(199, 166, 95, 0.14), transparent 26%),
-        linear-gradient(180deg, #f8f7f1 0%, var(--bg-2) 42%, #f6f4ec 100%);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+#status-splash.show-image--false {
+	display: none;
+}
 
-    .page {
-      width: min(1280px, calc(100vw - 28px));
-      margin: 0 auto;
-      padding: 18px 0 30px;
-    }
+#status-splash.fullsize--true {
+	height: 100%;
+	width: 100%;
+	object-fit: contain;
+}
 
-    .hero {
-      display: grid;
-      gap: 16px;
-    }
+#status-splash.use-filter--false {
+	image-rendering: pixelated;
+}
 
-    .panel {
-      background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(251,249,241,0.78));
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(18px);
-      border-radius: 26px;
-    }
+#status-progress, #status-notice {
+	display: none;
+}
 
-    .copy {
-      padding: 22px 24px;
-    }
+#status-progress {
+	bottom: 10%;
+	width: 50%;
+	margin: 0 auto;
+}
 
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(45, 111, 64, 0.08);
-      color: var(--green-deep);
-      border: 1px solid rgba(45, 111, 64, 0.12);
-      font-weight: 800;
-      font-size: 12px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-    }
+#status-notice {
+	background-color: #5b3943;
+	border-radius: 0.5rem;
+	border: 1px solid #9b3943;
+	color: #e0e0e0;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	line-height: 1.3;
+	margin: 0 2rem;
+	overflow: hidden;
+	padding: 1rem;
+	text-align: center;
+	z-index: 1;
+}
+		</style>
+		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 
-    .eyebrow::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
-    }
+	</head>
+	<body>
+		<canvas id="canvas">
+			Your browser does not support the canvas tag.
+		</canvas>
 
-    .copy h1 {
-      margin: 14px 0 0;
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: clamp(42px, 6vw, 74px);
-      line-height: 0.95;
-      letter-spacing: -0.05em;
-    }
+		<noscript>
+			Your browser does not support JavaScript.
+		</noscript>
 
-    .copy p {
-      margin: 14px 0 0;
-      color: var(--copy);
-      line-height: 1.7;
-      font-size: 16px;
-      max-width: 60ch;
-    }
+		<div id="status">
+			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="index.png" alt="">
+			<progress id="status-progress"></progress>
+			<div id="status-notice"></div>
+		</div>
 
-    .game-wrap {
-      padding: 14px;
-    }
+		<script src="index.js"></script>
+		<script>
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":23015028,"index.wasm":37685705},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_THREADS_ENABLED = false;
+const engine = new Engine(GODOT_CONFIG);
 
-    .game-frame {
-      width: 100%;
-      min-height: 85vh;
-      min-height: 760px;
-      border: 0;
-      border-radius: 20px;
-      overflow: hidden;
-      background: #08131d;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
-    }
+(function () {
+	const statusOverlay = document.getElementById('status');
+	const statusProgress = document.getElementById('status-progress');
+	const statusNotice = document.getElementById('status-notice');
 
-    .game-frame iframe {
-      display: block;
-      width: 100%;
-      height: 100%;
-      min-height: 85vh;
-      min-height: 760px;
-      border: 0;
-      background: #08131d;
-    }
+	let initializing = true;
+	let statusMode = '';
 
-    @media (max-width: 760px) {
-      .page { width: min(100vw - 16px, 1280px); padding: 12px 0 18px; }
-      .copy { padding: 18px 18px 20px; }
-      .game-wrap { padding: 10px; }
-      .game-frame, .game-frame iframe { min-height: 72vh; }
-    }
-  </style>
-</head>
-<body>
+	function setStatusMode(mode) {
+		if (statusMode === mode || !initializing) {
+			return;
+		}
+		if (mode === 'hidden') {
+			statusOverlay.remove();
+			initializing = false;
+			return;
+		}
+		statusOverlay.style.visibility = 'visible';
+		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+		statusMode = mode;
+	}
 
-  <header class="johnny-site-nav">
-    <a class="johnny-site-brand" href="https://justaskjohnny.com">Cozy Builder</a>
-    <nav class="johnny-site-links" aria-label="Site">
-      <a class="johnny-site-link " href="https://justaskjohnny.com">Home</a>
-      <a class="johnny-site-link " href="https://justaskjohnny.com">Chatbots</a>
-      <a class="johnny-site-link " href="https://618help.com">Mowing</a>
-      <a class="johnny-site-link " href="/chatbot/">GPT 5.4</a>
-      <a class="johnny-site-link active" href="/cozy-builder/">Cozy Builder</a>
-      <a class="johnny-site-link " href="/contact/">Contact</a>
-    </nav>
-  </header>
-  <main class="page">
-    <section class="hero">
-      <div class="panel copy">
-        <span class="eyebrow">Shared game</span>
-        <h1>Cozy Builder</h1>
-        <p>
-          This is the live game. It loads the same Cozy Builder experience from the Cloudflare site so both domains can send users here directly.
-        </p>
-      </div>
-      <div class="panel game-wrap">
-        <iframe
-          class="game-frame"
-          src="https://my-backend-api-1niy.onrender.com/godot-playtest/"
-          title="Cozy Builder Godot Playtest"
-          loading="lazy"
-          allow="fullscreen"
-          referrerpolicy="strict-origin-when-cross-origin">
-        </iframe>
-      </div>
-    </section>
-  </main>
-</body>
+	function setStatusNotice(text) {
+		while (statusNotice.lastChild) {
+			statusNotice.removeChild(statusNotice.lastChild);
+		}
+		const lines = text.split('\n');
+		lines.forEach((line) => {
+			statusNotice.appendChild(document.createTextNode(line));
+			statusNotice.appendChild(document.createElement('br'));
+		});
+	}
+
+	function displayFailureNotice(err) {
+		console.error(err);
+		if (err instanceof Error) {
+			setStatusNotice(err.message);
+		} else if (typeof err === 'string') {
+			setStatusNotice(err);
+		} else {
+			setStatusNotice('An unknown error occurred.');
+		}
+		setStatusMode('notice');
+		initializing = false;
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
+			let serviceWorkerRegistrationPromise;
+			try {
+				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
+			} catch (err) {
+				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
+			}
+			// There's a chance that installing the service worker would fix the issue
+			Promise.race([
+				serviceWorkerRegistrationPromise.then((registration) => {
+					if (registration != null) {
+						return Promise.reject(new Error('Service worker already exists.'));
+					}
+					return registration;
+				}).then(() => engine.installServiceWorker()),
+				// For some reason, `getRegistration()` can stall
+				new Promise((resolve) => {
+					setTimeout(() => resolve(), 2000);
+				}),
+			]).then(() => {
+				// Reload if there was no error.
+				window.location.reload();
+			}).catch((err) => {
+				console.error('Error while registering service worker:', err);
+			});
+		} else {
+			// Display the message as usual
+			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
+			displayFailureNotice(missingMsg + missing.join('\n'));
+		}
+	} else {
+		setStatusMode('progress');
+		engine.startGame({
+			'onProgress': function (current, total) {
+				if (current > 0 && total > 0) {
+					statusProgress.value = current;
+					statusProgress.max = total;
+				} else {
+					statusProgress.removeAttribute('value');
+					statusProgress.removeAttribute('max');
+				}
+			},
+		}).then(() => {
+			setStatusMode('hidden');
+		}, displayFailureNotice);
+	}
+}());
+		</script>
+	</body>
 </html>
+
