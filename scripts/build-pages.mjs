@@ -119,8 +119,6 @@ function insertBeforeBodyEnd(html, snippet) {
 function siteNav(profile, active, brandOverride = "") {
   const brand = brandOverride || (profile === "mowing" ? "618help.com" : "justaskjohnny.com");
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
-  const chatbotsHref = "https://justaskjohnny.com";
-  const mowingHref = profile === "mowing" ? "/help-mowing/" : "https://618help.com";
   const gptHref = "/chatbot/";
   const cozyHref = "/cozy-builder-game/";
   const contactHref = "/contact/";
@@ -129,10 +127,8 @@ function siteNav(profile, active, brandOverride = "") {
     <a class="johnny-site-brand" href="${homeHref}">${brand}</a>
     <nav class="johnny-site-links" aria-label="Site">
       <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>
-      <a class="johnny-site-link ${active === "chatbots" ? "active" : ""}" href="${chatbotsHref}">Chatbots</a>
-      <a class="johnny-site-link ${active === "mowing" ? "active" : ""}" href="${mowingHref}">Mowing</a>
       <a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.4</a>
-      <a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}">Cozy Builder</a>
+      <a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
       <a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>
     </nav>
   </header>`;
@@ -614,8 +610,6 @@ ${siteNav("ai", "contact")}
       const navBrand = document.querySelector(".johnny-site-brand");
       const navLinks = document.querySelectorAll(".johnny-site-link");
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
-      const chatbotsHref = "https://justaskjohnny.com";
-      const mowingHref = isMowing ? "https://618help.com" : "https://618help.com/help-mowing/";
       const gptHref = "/chatbot/";
       const cozyHref = "/cozy-builder-game/";
       const contactHref = "/contact/";
@@ -628,13 +622,11 @@ ${siteNav("ai", "contact")}
         navBrand.href = homeHref;
       }
 
-      if (navLinks.length >= 6) {
+      if (navLinks.length >= 4) {
         navLinks[0].href = homeHref;
-        navLinks[1].href = chatbotsHref;
-        navLinks[2].href = mowingHref;
-        navLinks[3].href = gptHref;
-        navLinks[4].href = cozyHref;
-        navLinks[5].href = contactHref;
+        navLinks[1].href = gptHref;
+        navLinks[2].href = cozyHref;
+        navLinks[3].href = contactHref;
       }
 
       if (isMowing) {
