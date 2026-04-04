@@ -20,6 +20,8 @@ const {
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = "",
   CONTACT_TO_EMAIL = "",
+  CONTACT_TO_EMAIL_AI = "",
+  CONTACT_TO_EMAIL_MOWING = "",
   CONTACT_FROM_EMAIL = "",
   SMTP_HOST = "",
   SMTP_PORT = "587",
@@ -292,8 +294,18 @@ function compactText(value) {
   return String(value || "").replace(/\r\n/g, "\n").trim();
 }
 
+function getContactRecipient(profile) {
+  if (profile === "mowing") {
+    return CONTACT_TO_EMAIL_MOWING || CONTACT_TO_EMAIL;
+  }
+  if (profile === "ai" || profile === "gpt54") {
+    return CONTACT_TO_EMAIL_AI || CONTACT_TO_EMAIL;
+  }
+  return CONTACT_TO_EMAIL || CONTACT_TO_EMAIL_AI || CONTACT_TO_EMAIL_MOWING;
+}
+
 function createContactTransport() {
-  if (!CONTACT_TO_EMAIL || !CONTACT_FROM_EMAIL || !SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+  if (!CONTACT_FROM_EMAIL || !SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     return null;
   }
 
@@ -328,16 +340,17 @@ app.post("/api/contact", contactUpload.array("attachments", 5), async (req, res)
     const profile = normalizeWidgetProfile(body.profile) || inferWidgetProfile(req);
     const pageUrl = compactText(body.page_url) || compactText(req.headers.referer || req.headers.origin || "");
     const files = Array.isArray(req.files) ? req.files : [];
+    const toEmail = getContactRecipient(profile);
 
     if (!name || !email || !message) {
       return res.status(400).json({ ok: false, error: "Name, email, and message are required." });
     }
 
     const transport = createContactTransport();
-    if (!transport) {
+    if (!transport || !toEmail) {
       return res.status(503).json({
         ok: false,
-        error: "Contact email is not configured yet. Please add SMTP and destination email settings."
+        error: "Contact email is not configured yet. Please add SMTP settings and a destination inbox for this site."
       });
     }
 
@@ -363,7 +376,7 @@ app.post("/api/contact", contactUpload.array("attachments", 5), async (req, res)
 
     await transport.sendMail({
       from: CONTACT_FROM_EMAIL,
-      to: CONTACT_TO_EMAIL,
+      to: toEmail,
       replyTo: email,
       subject: `[Johnny Contact] ${subjectBits.join(" - ")}`,
       text,
