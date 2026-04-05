@@ -858,14 +858,19 @@
         statusEl.textContent = "Deleting post...";
         statusEl.classList.remove("error");
         try {
-          const response = await fetch(postsUrl + "/" + encodeURIComponent(id), {
-            method: "DELETE",
+          const response = await fetch(postsUrl + "/" + encodeURIComponent(id) + "/delete", {
+            method: "POST",
             headers: authHeaders({ Accept: "application/json" })
           });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload.ok) {
             throw new Error(payload.error || payload.detail || "Could not delete this post.");
           }
+          posts = posts.filter((post) => post.id !== id);
+          if (!posts.some((post) => post.id === selectedId)) {
+            selectedId = posts[0] ? posts[0].id : "";
+          }
+          render();
           statusEl.textContent = "Post removed.";
           await loadPosts();
         } catch (err) {

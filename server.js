@@ -575,6 +575,27 @@ app.delete("/api/618chat/posts/:id", async (req, res) => {
   }
 });
 
+app.post("/api/618chat/posts/:id/delete", async (req, res) => {
+  try {
+    if (!isBoardAdminRequest(req)) {
+      return res.status(403).json({ ok: false, error: "Forbidden." });
+    }
+
+    const id = String(req.params.id || "").trim();
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "Post id is required." });
+    }
+
+    const current = await readPublicBoardPosts();
+    const next = current.filter((post) => post.id !== id);
+    await writePublicBoardPosts(next);
+    res.json({ ok: true, posts: next });
+  } catch (err) {
+    console.error("❌ 618chat delete error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
 app.delete("/api/618chat/posts", async (req, res) => {
   try {
     if (!PUBLIC_BOARD_ADMIN_TOKEN) {
