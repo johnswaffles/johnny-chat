@@ -175,15 +175,15 @@ function create618ChatPage() {
     a { color: inherit; text-decoration: none; }
     button, input, textarea { font: inherit; }
     .page {
-      width: min(1280px, calc(100vw - 32px));
+      width: min(1600px, calc(100vw - 12px));
       margin: 0 auto;
-      padding: 18px 0 36px;
+      padding: 12px 0 32px;
     }
     .intro {
       margin-top: 14px;
       display: grid;
-      grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
-      gap: 18px;
+      grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.25fr);
+      gap: 12px;
       align-items: stretch;
     }
     .panel {
@@ -451,7 +451,7 @@ function create618ChatPage() {
       .intro, .layout { grid-template-columns: 1fr; }
     }
     @media (max-width: 760px) {
-      .page { width: min(100vw - 20px, 1280px); padding: 14px 0 24px; }
+      .page { width: min(100vw - 10px, 1600px); padding: 12px 0 24px; }
       .hero, .board { padding: 20px; }
       .detail-title { font-size: 28px; }
       .hero h1 { max-width: none; }
@@ -533,7 +533,7 @@ ${siteNav("mowing", "618chat")}
 
   <script>
     (function () {
-      const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\/+$/, "");
+      const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\\/+$/, "");
       const postsUrl = apiBase + "/api/618chat/posts";
       const authorInput = document.getElementById("author");
       const messageInput = document.getElementById("message");
@@ -556,9 +556,9 @@ ${siteNav("mowing", "618chat")}
       }
 
       function makeTitle(message) {
-        const clean = String(message || "").replace(/\s+/g, " ").trim().replace(/[.!?\s]+$/g, "");
+        const clean = String(message || "").replace(/\\s+/g, " ").trim().replace(/[.!?\\s]+$/g, "");
         if (!clean) return "Untitled note";
-        const firstSentence = clean.split(/(?<=[.!?])\s+/)[0] || clean;
+        const firstSentence = clean.split(/(?<=[.!?])\\s+/)[0] || clean;
         const words = firstSentence.split(" ").slice(0, 7).join(" ");
         let title = words || clean.split(" ").slice(0, 7).join(" ");
         title = title.replace(/[,;:]+/g, "").trim();
@@ -582,7 +582,7 @@ ${siteNav("mowing", "618chat")}
       }
 
       function excerpt(value) {
-        return String(value || "").replace(/\s+/g, " ").trim().slice(0, 120);
+        return String(value || "").replace(/\\s+/g, " ").trim().slice(0, 120);
       }
 
       function selectPost(id) {
@@ -628,7 +628,7 @@ ${siteNav("mowing", "618chat")}
         readerEl.innerHTML =
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
           '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + '</div>' +
-          '<div class="detail-body">' + escapeHTML(post.message).replace(/\n/g, "<br>") + '</div>';
+          '<div class="detail-body">' + escapeHTML(post.message).replace(/\\n/g, "<br>") + '</div>';
       }
 
       function renderPosts() {
@@ -712,6 +712,9 @@ ${siteNav("mowing", "618chat")}
 
       render();
       loadPosts();
+      setInterval(() => {
+        if (!document.hidden) loadPosts();
+      }, 15000);
       setTimeout(() => messageInput.focus(), 100);
     })();
   </script>
