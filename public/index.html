@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>618chat.com</title>
-  <meta name="description" content="A cozy public note board for 618chat.com. Leave a note, auto-generate a title, and click posts to read them.">
+  <meta name="description" content="An anonymous conversation space for 618chat.com. Share what is on your mind, keep your privacy, and read respectful public posts.">
   
   <style>
     .johnny-site-nav {
@@ -427,35 +427,36 @@
     <a class="johnny-site-brand" href="/" aria-label="618chat.com home">618chat.com</a>
     <nav class="johnny-site-links" aria-label="Site">
       <a class="johnny-site-link active" href="/">Home</a>
-      <a class="johnny-site-link" href="#compose">Leave a note</a>
-      <a class="johnny-site-link" href="#posts">Recent posts</a>
+      <a class="johnny-site-link" href="#compose">Write a post</a>
+      <a class="johnny-site-link" href="#posts">Recent conversations</a>
       <a class="johnny-site-link" href="#about">About</a>
     </nav>
   </header>
   <main class="page">
     <section class="intro">
       <div class="panel hero">
-        <span class="eyebrow">Public note board</span>
-        <h1>Leave a note. Read the board. Keep it cozy.</h1>
+        <span class="eyebrow">Anonymous conversation</span>
+        <h1>Speak honestly. Read with care. Keep it respectful.</h1>
         <p>
-          618chat is a public, cozy message board for quick notes, ideas, reminders, and little thoughts you want to share.
-          Posts are titled automatically and stay easy to browse.
+          This space was created for honest, anonymous conversation. Sometimes the easiest way to open up is without the usual barriers, expectations, or pressure of everyday life.
+          Here, people can talk about what they are feeling, share what is weighing on them, and connect with others in a real and meaningful way.
         </p>
         <div class="pill-row">
-          <div class="pill"><strong>Public</strong> community board</div>
+          <div class="pill"><strong>Anonymous</strong> by design</div>
+          <div class="pill"><strong>Respect</strong> and understanding</div>
           <div class="pill"><strong>Auto</strong> title generation</div>
-          <div class="pill"><strong>Free</strong> to browse</div>
+          <div class="pill"><strong>Public</strong> to browse</div>
         </div>
         <div class="hero-actions">
-          <a class="button button-primary" href="#compose">Write a note</a>
-          <a class="button button-secondary" href="#posts">Browse posts</a>
+          <a class="button button-primary" href="#compose">Write a post</a>
+          <a class="button button-secondary" href="#posts">Read conversations</a>
         </div>
         <div class="meta-card" id="about">
-          <h2>What this board is for</h2>
+          <h2>What this space is for</h2>
           <ul>
-            <li>Quick notes, ideas, reminders, and cozy updates.</li>
-            <li>Message titles are created automatically from the first useful words.</li>
-            <li>Posts are shared publicly so everyone can read the same board.</li>
+            <li>Honest, anonymous conversation without the usual pressure.</li>
+            <li>Positivity, respect, and understanding in every post.</li>
+            <li>Please avoid posting personal information like your real name, phone number, email address, home address, or anything else that could identify you offline.</li>
           </ul>
         </div>
       </div>
@@ -464,13 +465,13 @@
         <div class="board-top">
           <div>
             <h2>Post a message</h2>
-            <p>Write something short or long. We’ll give it a title and add it to the board.</p>
+            <p>Write something short or long. We’ll give it a title and add it to the conversation board.</p>
           </div>
         </div>
         <div class="layout">
           <section class="composer" aria-label="New post" id="compose">
             <h3>New post</h3>
-            <p>Keep it friendly. Titles are generated automatically from the first useful words.</p>
+            <p>Keep it honest and respectful. Titles are generated automatically from the first useful words.</p>
             <form id="board-form">
               <div class="field">
                 <label for="author">Name</label>
@@ -478,13 +479,13 @@
               </div>
               <div class="field">
                 <label for="message">Message</label>
-                <textarea id="message" name="message" required placeholder="Write a note for the board..."></textarea>
+                <textarea id="message" name="message" required placeholder="Share what is on your mind..."></textarea>
               </div>
               <div class="form-actions">
-                <button class="button button-primary" type="submit">Add message</button>
+                <button class="button button-primary" type="submit">Share post</button>
               </div>
               <div class="status" id="board-status" aria-live="polite"></div>
-              <div class="hint">Posts are shared publicly with everyone who visits 618chat.</div>
+              <div class="hint">Please avoid sharing personal information such as your real name, phone number, email address, home address, or anything that could identify you offline.</div>
             </form>
           </section>
 
@@ -498,7 +499,7 @@
         <div class="list" style="margin-top: 14px;" id="posts">
           <div class="board-top" style="align-items: center;">
             <div>
-              <h3>Recent posts</h3>
+              <h3>Recent conversations</h3>
               <p>The newest message appears first. Select a post to read it in full.</p>
             </div>
           </div>
@@ -569,7 +570,7 @@
 
       async function loadPosts() {
         loading = true;
-        statusEl.textContent = "Loading public posts...";
+        statusEl.textContent = "Loading conversations...";
         try {
           const response = await fetch(postsUrl, { headers: { Accept: "application/json" } });
           const payload = await response.json().catch(() => ({}));
@@ -581,7 +582,7 @@
             selectedId = posts[0] ? posts[0].id : "";
           }
           loading = false;
-          statusEl.textContent = posts.length ? "Public board loaded." : "No posts yet. Be the first to add one.";
+          statusEl.textContent = posts.length ? "Conversation board loaded." : "No posts yet. Be the first to start a conversation.";
           statusEl.classList.remove("error");
           render();
         } catch (err) {
@@ -596,7 +597,7 @@
         if (!post) {
           readerEl.className = "empty-state";
           readerEl.innerHTML = loading
-            ? "Loading the public board..."
+            ? "Loading the conversation board..."
             : "No posts yet. Add the first message on the left and it will appear here.";
           return;
         }
@@ -612,13 +613,13 @@
         postsEl.innerHTML = "";
 
         if (loading) {
-          postsEl.innerHTML = '<div class="empty-state">Loading the public board...</div>';
+          postsEl.innerHTML = '<div class="empty-state">Loading the conversation board...</div>';
           renderReader(null);
           return;
         }
 
         if (!posts.length) {
-          postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to add the first message. Titles are created automatically when you post.</div>';
+          postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to start the first conversation. Titles are created automatically when you post.</div>';
           renderReader(null);
           return;
         }
@@ -656,7 +657,7 @@
           return;
         }
 
-        statusEl.textContent = "Posting to the public board...";
+          statusEl.textContent = "Posting to the conversation board...";
         statusEl.classList.remove("error");
         form.querySelector('button[type="submit"]').disabled = true;
 
@@ -673,7 +674,7 @@
             posts = [payload.post, ...posts.filter((post) => post.id !== payload.post.id)];
             selectedId = payload.post.id;
             form.reset();
-            statusEl.textContent = "Message added to the public board.";
+            statusEl.textContent = "Message added to the conversation board.";
             statusEl.classList.remove("error");
             render();
             messageInput.focus();
