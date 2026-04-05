@@ -3,15 +3,418 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Johnny</title>
-  <meta name="description" content="Johnny's websites and assistant demo.">
+  <title>618chat.com</title>
+  <meta name="description" content="A cozy public note board for 618chat.com. Leave a note, auto-generate a title, and click posts to read them.">
+  
+  <style>
+    .johnny-site-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 0 0 18px;
+      padding: 14px 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      box-shadow: 0 18px 40px rgba(24, 61, 34, 0.08);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 14px;
+      z-index: 20;
+    }
+
+    .johnny-site-brand {
+      color: #102015;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .johnny-site-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .johnny-site-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      color: #102015;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+    }
+
+    .johnny-site-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(16, 32, 21, 0.08);
+      background: rgba(255, 255, 255, 0.88);
+    }
+
+    .johnny-site-link.active {
+      background: linear-gradient(135deg, rgba(45, 111, 64, 0.14), rgba(75, 141, 92, 0.14));
+      border-color: rgba(45, 111, 64, 0.18);
+      color: #184526;
+    }
+
+    @media (max-width: 760px) {
+      .johnny-site-nav {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .johnny-site-links {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+  <style>
+    :root {
+      --bg: #f4f6ed;
+      --bg-2: #e8efde;
+      --ink: #102015;
+      --copy: #5b6b60;
+      --line: rgba(16, 32, 21, 0.1);
+      --green: #2d6f40;
+      --green-2: #4f8f5f;
+      --green-deep: #174425;
+      --card: rgba(255, 255, 255, 0.86);
+      --shadow: 0 28px 74px rgba(22, 54, 31, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Plus Jakarta Sans", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(122, 176, 106, 0.2), transparent 26%),
+        radial-gradient(circle at 100% 10%, rgba(199, 166, 95, 0.12), transparent 24%),
+        linear-gradient(180deg, #f8f8f0 0%, var(--bg-2) 42%, var(--bg) 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea { font: inherit; }
+    .page {
+      width: min(1600px, calc(100vw - 12px));
+      margin: 0 auto;
+      padding: 12px 0 32px;
+    }
+    .intro {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.25fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(249,250,244,0.8));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      border-radius: 28px;
+    }
+    .hero { padding: 30px; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(45, 111, 64, 0.08);
+      border: 1px solid rgba(45, 111, 64, 0.12);
+      color: var(--green-deep);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
+    }
+    .hero h1 {
+      margin: 16px 0 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(44px, 6.4vw, 84px);
+      line-height: 0.9;
+      letter-spacing: -0.06em;
+      max-width: 10ch;
+    }
+    .hero p {
+      margin: 16px 0 0;
+      color: var(--copy);
+      line-height: 1.8;
+      font-size: 16px;
+      max-width: 58ch;
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--copy);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .pill strong { color: var(--green-deep); }
+    .meta-card {
+      padding: 20px;
+      margin-top: 14px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(16,32,21,0.08);
+      box-shadow: 0 16px 34px rgba(17, 38, 22, 0.08);
+    }
+    .meta-card h2 {
+      margin: 0 0 8px;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+    .meta-card p,
+    .meta-card li {
+      color: var(--copy);
+      line-height: 1.75;
+      font-size: 15px;
+    }
+    .meta-card ul { margin: 10px 0 0; padding-left: 18px; }
+    .board { padding: 24px; }
+    .board-top {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .board-top h2, .board-top h3 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .board-top h2 { font-size: 30px; }
+    .board-top h3 { font-size: 24px; }
+    .board-top p {
+      margin: 10px 0 0;
+      color: var(--copy);
+      line-height: 1.7;
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 16px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      color: var(--ink);
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+    }
+    .button:hover { transform: translateY(-1px); }
+    .button-primary {
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-2) 100%);
+      color: #fffdf7;
+      box-shadow: 0 14px 28px rgba(47, 122, 68, 0.24);
+    }
+    .button-secondary {
+      background: rgba(255,255,255,0.84);
+      border-color: rgba(16,32,21,0.08);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .composer, .reader, .list {
+      border-radius: 22px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(16,32,21,0.08);
+      box-shadow: 0 16px 34px rgba(17, 38, 22, 0.08);
+    }
+    .composer, .reader, .list { padding: 18px; }
+    .composer h3, .reader h3, .list h3 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+    .composer p, .reader p, .list p {
+      color: var(--copy);
+      line-height: 1.7;
+    }
+    .field { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    label {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #365041;
+    }
+    input, textarea {
+      width: 100%;
+      border: 1px solid rgba(16, 32, 21, 0.12);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.92);
+      color: var(--ink);
+      padding: 14px 16px;
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+    input:focus, textarea:focus {
+      border-color: rgba(45, 111, 64, 0.55);
+      box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.12);
+    }
+    .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+    }
+    .hint { font-size: 14px; color: var(--copy); line-height: 1.6; }
+    .posts {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .post-button {
+      width: 100%;
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.9);
+      padding: 14px 16px;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .post-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(45, 111, 64, 0.34);
+      box-shadow: 0 10px 24px rgba(17, 38, 22, 0.08);
+    }
+    .post-button.active {
+      border-color: rgba(45, 111, 64, 0.44);
+      background: linear-gradient(180deg, rgba(245, 250, 244, 0.96), rgba(235, 244, 231, 0.92));
+    }
+    .post-title {
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 18px;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin: 0 0 6px;
+    }
+    .post-meta {
+      font-size: 13px;
+      color: var(--copy);
+    }
+    .post-excerpt {
+      margin-top: 8px;
+      color: var(--copy);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .detail-title {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 34px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+    .detail-meta { margin-top: 10px; color: var(--copy); font-size: 14px; }
+    .detail-body {
+      margin-top: 16px;
+      padding: 18px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(247,249,243,0.94));
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      white-space: pre-wrap;
+      line-height: 1.75;
+      color: var(--ink);
+      min-height: 220px;
+    }
+    .empty-state {
+      padding: 20px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.86);
+      border: 1px dashed rgba(45, 111, 64, 0.22);
+      color: var(--copy);
+      line-height: 1.75;
+    }
+    .status {
+      min-height: 1.4em;
+      font-size: 14px;
+      color: var(--green-deep);
+    }
+    .status.error { color: #9b1c1c; }
+    @media (max-width: 1020px) {
+      .intro, .layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .page { width: min(100vw - 10px, 1600px); padding: 12px 0 24px; }
+      .hero, .board { padding: 20px; }
+      .detail-title { font-size: 28px; }
+      .hero h1 { max-width: none; }
+    }
+  </style>
+
+  <style>
+    html:not(.root-ready) body {
+      visibility: hidden;
+    }
+  </style>
   <script>
     (function () {
       const host = String(window.location.hostname || "").toLowerCase();
-      const target = host.includes("618help.com") ? "/help-mowing/" : "/chatbots/";
-      if (window.location.pathname !== target) {
-        window.location.replace(target);
+      const isChatSite = host.includes("618chat.com");
+      if (!isChatSite) {
+        const target = host.includes("618help.com") ? "/help-mowing/" : "/chatbots/";
+        if (window.location.pathname !== target) {
+          window.location.replace(target);
+        }
+        return;
       }
+      document.documentElement.classList.add("root-ready");
     })();
   </script>
   <noscript>
@@ -19,6 +422,278 @@
   </noscript>
 </head>
 <body>
-  <p>Redirecting...</p>
+
+  <header class="johnny-site-nav">
+    <a class="johnny-site-brand" href="/" aria-label="618chat.com home">618chat.com</a>
+    <nav class="johnny-site-links" aria-label="Site">
+      <a class="johnny-site-link active" href="/">Home</a>
+      <a class="johnny-site-link" href="#compose">Leave a note</a>
+      <a class="johnny-site-link" href="#posts">Recent posts</a>
+      <a class="johnny-site-link" href="#about">About</a>
+    </nav>
+  </header>
+  <main class="page">
+    <section class="intro">
+      <div class="panel hero">
+        <span class="eyebrow">Public note board</span>
+        <h1>Leave a note. Read the board. Keep it cozy.</h1>
+        <p>
+          618chat is a public, cozy message board for quick notes, ideas, reminders, and little thoughts you want to share.
+          Posts are titled automatically and stay easy to browse.
+        </p>
+        <div class="pill-row">
+          <div class="pill"><strong>Public</strong> community board</div>
+          <div class="pill"><strong>Auto</strong> title generation</div>
+          <div class="pill"><strong>Free</strong> to browse</div>
+        </div>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#compose">Write a note</a>
+          <a class="button button-secondary" href="#posts">Browse posts</a>
+        </div>
+        <div class="meta-card" id="about">
+          <h2>What this board is for</h2>
+          <ul>
+            <li>Quick notes, ideas, reminders, and cozy updates.</li>
+            <li>Message titles are created automatically from the first useful words.</li>
+            <li>Posts are shared publicly so everyone can read the same board.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel board">
+        <div class="board-top">
+          <div>
+            <h2>Post a message</h2>
+            <p>Write something short or long. We’ll give it a title and add it to the board.</p>
+          </div>
+        </div>
+        <div class="layout">
+          <section class="composer" aria-label="New post" id="compose">
+            <h3>New post</h3>
+            <p>Keep it friendly. Titles are generated automatically from the first useful words.</p>
+            <form id="board-form">
+              <div class="field">
+                <label for="author">Name</label>
+                <input id="author" name="author" autocomplete="name" placeholder="Anonymous">
+              </div>
+              <div class="field">
+                <label for="message">Message</label>
+                <textarea id="message" name="message" required placeholder="Write a note for the board..."></textarea>
+              </div>
+              <div class="form-actions">
+                <button class="button button-primary" type="submit">Add message</button>
+              </div>
+              <div class="status" id="board-status" aria-live="polite"></div>
+              <div class="hint">Posts are shared publicly with everyone who visits 618chat.</div>
+            </form>
+          </section>
+
+          <section class="reader" aria-label="Selected post">
+            <h3>Read a post</h3>
+            <p>Click any card on the left to open the full message here.</p>
+            <div id="post-reader" class="empty-state">No posts yet. Add the first message on the left and it will appear here.</div>
+          </section>
+        </div>
+
+        <div class="list" style="margin-top: 14px;" id="posts">
+          <div class="board-top" style="align-items: center;">
+            <div>
+              <h3>Recent posts</h3>
+              <p>The newest message appears first. Select a post to read it in full.</p>
+            </div>
+          </div>
+          <div id="posts" class="posts"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\/+$/, "");
+      const postsUrl = apiBase + "/api/618chat/posts";
+      const authorInput = document.getElementById("author");
+      const messageInput = document.getElementById("message");
+      const form = document.getElementById("board-form");
+      const postsEl = document.getElementById("posts");
+      const readerEl = document.getElementById("post-reader");
+      const statusEl = document.getElementById("board-status");
+
+      let selectedId = "";
+      let posts = [];
+      let loading = true;
+
+      function escapeHTML(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function makeTitle(message) {
+        const clean = String(message || "").replace(/\s+/g, " ").trim().replace(/[.!?\s]+$/g, "");
+        if (!clean) return "Untitled note";
+        const firstSentence = clean.split(/(?<=[.!?])\s+/)[0] || clean;
+        const words = firstSentence.split(" ").slice(0, 7).join(" ");
+        let title = words || clean.split(" ").slice(0, 7).join(" ");
+        title = title.replace(/[,;:]+/g, "").trim();
+        if (!title) return "Untitled note";
+        title = title.charAt(0).toUpperCase() + title.slice(1);
+        if (title.length > 48) title = title.slice(0, 45).trim() + "…";
+        return title;
+      }
+
+      function formatDate(value) {
+        try {
+          return new Date(value).toLocaleString([], {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit"
+          });
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function excerpt(value) {
+        return String(value || "").replace(/\s+/g, " ").trim().slice(0, 120);
+      }
+
+      function selectPost(id) {
+        selectedId = id;
+        render();
+      }
+
+      async function loadPosts() {
+        loading = true;
+        statusEl.textContent = "Loading public posts...";
+        try {
+          const response = await fetch(postsUrl, { headers: { Accept: "application/json" } });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || payload.detail || "Could not load posts.");
+          }
+          posts = Array.isArray(payload.posts) ? payload.posts : [];
+          if (!selectedId || !posts.some((post) => post.id === selectedId)) {
+            selectedId = posts[0] ? posts[0].id : "";
+          }
+          loading = false;
+          statusEl.textContent = posts.length ? "Public board loaded." : "No posts yet. Be the first to add one.";
+          statusEl.classList.remove("error");
+          render();
+        } catch (err) {
+          loading = false;
+          statusEl.textContent = err.message || "Could not load posts.";
+          statusEl.classList.add("error");
+          render();
+        }
+      }
+
+      function renderReader(post) {
+        if (!post) {
+          readerEl.className = "empty-state";
+          readerEl.innerHTML = loading
+            ? "Loading the public board..."
+            : "No posts yet. Add the first message on the left and it will appear here.";
+          return;
+        }
+
+        readerEl.className = "";
+        readerEl.innerHTML =
+          '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
+          '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + '</div>' +
+          '<div class="detail-body">' + escapeHTML(post.message).replace(/\n/g, "<br>") + '</div>';
+      }
+
+      function renderPosts() {
+        postsEl.innerHTML = "";
+
+        if (loading) {
+          postsEl.innerHTML = '<div class="empty-state">Loading the public board...</div>';
+          renderReader(null);
+          return;
+        }
+
+        if (!posts.length) {
+          postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to add the first message. Titles are created automatically when you post.</div>';
+          renderReader(null);
+          return;
+        }
+
+        const current = posts.find((post) => post.id === selectedId) || posts[0];
+        if (!selectedId || !posts.some((post) => post.id === selectedId)) {
+          selectedId = current.id;
+        }
+        renderReader(current);
+
+        posts.forEach((post) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "post-button" + (post.id === selectedId ? " active" : "");
+          button.innerHTML =
+            '<div class="post-title">' + escapeHTML(post.title) + '</div>' +
+            '<div class="post-meta">' + escapeHTML(post.author || "Anonymous") + ' • ' + escapeHTML(formatDate(post.createdAt)) + '</div>' +
+            '<div class="post-excerpt">' + escapeHTML(excerpt(post.message)) + (post.message.length > 120 ? "…" : "") + '</div>';
+          button.addEventListener("click", () => selectPost(post.id));
+          postsEl.appendChild(button);
+        });
+      }
+
+      function render() {
+        renderPosts();
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const message = String(messageInput.value || "").trim();
+        const author = String(authorInput.value || "").trim();
+        if (!message) {
+          statusEl.textContent = "Please add a message first.";
+          statusEl.classList.add("error");
+          return;
+        }
+
+        statusEl.textContent = "Posting to the public board...";
+        statusEl.classList.remove("error");
+        form.querySelector('button[type="submit"]').disabled = true;
+
+        fetch(postsUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ author, message })
+        })
+          .then((response) => response.json().then((payload) => ({ response, payload })))
+          .then(({ response, payload }) => {
+            if (!response.ok || !payload.ok || !payload.post) {
+              throw new Error(payload.error || payload.detail || "Could not add the post.");
+            }
+            posts = [payload.post, ...posts.filter((post) => post.id !== payload.post.id)];
+            selectedId = payload.post.id;
+            form.reset();
+            statusEl.textContent = "Message added to the public board.";
+            statusEl.classList.remove("error");
+            render();
+            messageInput.focus();
+          })
+          .catch((err) => {
+            statusEl.textContent = err.message || "Could not add the post.";
+            statusEl.classList.add("error");
+          })
+          .finally(() => {
+            form.querySelector('button[type="submit"]').disabled = false;
+          });
+      });
+
+      render();
+      loadPosts();
+      setInterval(() => {
+        if (!document.hidden) loadPosts();
+      }, 15000);
+      setTimeout(() => messageInput.focus(), 100);
+    })();
+  </script>
 </body>
 </html>

@@ -121,7 +121,6 @@ function siteNav(profile, active, brandOverride = "") {
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
   const gptHref = "/chatbot/";
   const cozyHref = "/cozy-builder-game/";
-  const boardHref = "/618chat/";
   const contactHref = "/contact/";
   return `
   <header class="johnny-site-nav">
@@ -130,8 +129,20 @@ function siteNav(profile, active, brandOverride = "") {
       <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>
       <a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.4</a>
       <a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
-      ${profile === "mowing" ? `<a class="johnny-site-link ${active === "618chat" ? "active" : ""}" href="${boardHref}">618chat</a>` : ""}
       <a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>
+    </nav>
+  </header>`;
+}
+
+function chatSiteNav(active) {
+  return `
+  <header class="johnny-site-nav">
+    <a class="johnny-site-brand" href="/" aria-label="618chat.com home">618chat.com</a>
+    <nav class="johnny-site-links" aria-label="Site">
+      <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="/">Home</a>
+      <a class="johnny-site-link" href="#compose">Leave a note</a>
+      <a class="johnny-site-link" href="#posts">Recent posts</a>
+      <a class="johnny-site-link" href="#about">About</a>
     </nav>
   </header>`;
 }
@@ -142,8 +153,8 @@ function create618ChatPage() {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>618chat</title>
-  <meta name="description" content="A cozy sandbox message board for the 618help.com mowing site. Leave a note, auto-generate a title, and click posts to read them.">
+  <title>618chat.com</title>
+  <meta name="description" content="A cozy public note board for 618chat.com. Leave a note, auto-generate a title, and click posts to read them.">
   ${sharedNavStyles}
   <style>
     :root {
@@ -232,6 +243,12 @@ function create618ChatPage() {
       max-width: 58ch;
     }
     .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .hero-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
@@ -459,26 +476,31 @@ function create618ChatPage() {
   </style>
 </head>
 <body>
-${siteNav("mowing", "618chat")}
+${chatSiteNav("home")}
   <main class="page">
     <section class="intro">
       <div class="panel hero">
-        <span class="eyebrow">618chat sandbox</span>
+        <span class="eyebrow">Public note board</span>
         <h1>Leave a note. Read the board. Keep it cozy.</h1>
         <p>
-          This is a simple message board for the mowing site. Posts live in your browser, get an auto-generated title, and can be opened from the list whenever you want to read them.
+          618chat is a public, cozy message board for quick notes, ideas, reminders, and little thoughts you want to share.
+          Posts are titled automatically and stay easy to browse.
         </p>
         <div class="pill-row">
-          <div class="pill"><strong>Local</strong> browser storage</div>
+          <div class="pill"><strong>Public</strong> community board</div>
           <div class="pill"><strong>Auto</strong> title generation</div>
-          <div class="pill"><strong>Click</strong> to read posts</div>
+          <div class="pill"><strong>Free</strong> to browse</div>
         </div>
-        <div class="meta-card">
+        <div class="hero-actions">
+          <a class="button button-primary" href="#compose">Write a note</a>
+          <a class="button button-secondary" href="#posts">Browse posts</a>
+        </div>
+        <div class="meta-card" id="about">
           <h2>What this board is for</h2>
           <ul>
-            <li>Quick notes, ideas, or test posts for the mowing site.</li>
-            <li>Message titles are created automatically from the post text.</li>
-            <li>Posts are stored in this browser only, so it stays sandboxed.</li>
+            <li>Quick notes, ideas, reminders, and cozy updates.</li>
+            <li>Message titles are created automatically from the first useful words.</li>
+            <li>Posts are shared publicly so everyone can read the same board.</li>
           </ul>
         </div>
       </div>
@@ -491,7 +513,7 @@ ${siteNav("mowing", "618chat")}
           </div>
         </div>
         <div class="layout">
-          <section class="composer" aria-label="New post">
+          <section class="composer" aria-label="New post" id="compose">
             <h3>New post</h3>
             <p>Keep it friendly. Titles are generated automatically from the first useful words.</p>
             <form id="board-form">
@@ -518,7 +540,7 @@ ${siteNav("mowing", "618chat")}
           </section>
         </div>
 
-        <div class="list" style="margin-top: 14px;">
+        <div class="list" style="margin-top: 14px;" id="posts">
           <div class="board-top" style="align-items: center;">
             <div>
               <h3>Recent posts</h3>
@@ -764,31 +786,32 @@ async function compressPublicWasmAssets() {
   }
 }
 
-function createRootRedirectPage() {
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Johnny</title>
-  <meta name="description" content="Johnny's websites and assistant demo.">
+function createRootLandingPage(chatPageHtml) {
+  const hostGuard = `
+  <style>
+    html:not(.root-ready) body {
+      visibility: hidden;
+    }
+  </style>
   <script>
     (function () {
       const host = String(window.location.hostname || "").toLowerCase();
-      const target = host.includes("618help.com") ? "/help-mowing/" : "/chatbots/";
-      if (window.location.pathname !== target) {
-        window.location.replace(target);
+      const isChatSite = host.includes("618chat.com");
+      if (!isChatSite) {
+        const target = host.includes("618help.com") ? "/help-mowing/" : "/chatbots/";
+        if (window.location.pathname !== target) {
+          window.location.replace(target);
+        }
+        return;
       }
+      document.documentElement.classList.add("root-ready");
     })();
   </script>
   <noscript>
     <meta http-equiv="refresh" content="0; url=/chatbots/">
-  </noscript>
-</head>
-<body>
-  <p>Redirecting...</p>
-</body>
-</html>`;
+  </noscript>`;
+
+  return insertBeforeHeadEnd(chatPageHtml, hostGuard);
 }
 
 function createContactPage() {
@@ -1210,12 +1233,11 @@ ${siteNav("ai", "contact")}
         navBrand.href = homeHref;
       }
 
-      if (isMowing && navLinks.length >= 5) {
+      if (isMowing && navLinks.length >= 4) {
         navLinks[0].href = homeHref;
         navLinks[1].href = gptHref;
         navLinks[2].href = cozyHref;
-        navLinks[3].href = "/618chat/";
-        navLinks[4].href = contactHref;
+        navLinks[3].href = contactHref;
       } else if (navLinks.length >= 4) {
         navLinks[0].href = homeHref;
         navLinks[1].href = gptHref;
@@ -1347,7 +1369,7 @@ ${widgetSnippet("mowing")}
   await writeFile(path.join(publicDir, "help-mowing", "index.html"), mowingHtml, "utf8");
   await writeFile(path.join(publicDir, "618chat", "index.html"), create618ChatPage(), "utf8");
   await writeFile(path.join(publicDir, "contact", "index.html"), createContactPage(), "utf8");
-  await writeFile(path.join(publicDir, "index.html"), createRootRedirectPage(), "utf8");
+  await writeFile(path.join(publicDir, "index.html"), createRootLandingPage(create618ChatPage()), "utf8");
   await compressPublicWasmAssets();
 
   console.log("Pages build files generated.");

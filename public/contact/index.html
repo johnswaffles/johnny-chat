@@ -372,7 +372,6 @@
       <a class="johnny-site-link " href="https://justaskjohnny.com">Home</a>
       <a class="johnny-site-link " href="/chatbot/">GPT 5.4</a>
       <a class="johnny-site-link " href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
-      
       <a class="johnny-site-link active" href="/contact/">Contact</a>
     </nav>
   </header>
@@ -499,12 +498,11 @@
         navBrand.href = homeHref;
       }
 
-      if (isMowing && navLinks.length >= 5) {
+      if (isMowing && navLinks.length >= 4) {
         navLinks[0].href = homeHref;
         navLinks[1].href = gptHref;
         navLinks[2].href = cozyHref;
-        navLinks[3].href = "/618chat/";
-        navLinks[4].href = contactHref;
+        navLinks[3].href = contactHref;
       } else if (navLinks.length >= 4) {
         navLinks[0].href = homeHref;
         navLinks[1].href = gptHref;
