@@ -5,6 +5,8 @@ import OpenAI, { toFile } from "openai";
 import nodemailer from "nodemailer";
 import { createRequire } from "module";
 import http from "http";
+import path from "node:path";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const {
@@ -27,7 +29,10 @@ const {
   SMTP_PORT = "587",
   SMTP_USER = "",
   SMTP_PASS = "",
-  SMTP_SECURE = "false"
+  SMTP_SECURE = "false",
+  PUBLIC_BOARD_STORE_PATH = "/var/data/618chat-posts.json",
+  PUBLIC_BOARD_MAX_POSTS = "300",
+  PUBLIC_BOARD_ADMIN_TOKEN = ""
 } = process.env;
 
 if (!OPENAI_API_KEY) {
@@ -217,7 +222,7 @@ app.use(cors({
   origin: true,
   credentials: true,
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token"]
 }));
 
 app.use(express.text({ type: "application/sdp" }));
@@ -297,6 +302,56 @@ app.get("/health", (_req, res) => res.json({ ok: true, realtimeModel: OPENAI_REA
 
 function compactText(value) {
   return String(value || "").replace(/\r\n/g, "\n").trim();
+}
+
+function publicBoardLimit() {
+  const value = Number(PUBLIC_BOARD_MAX_POSTS || 300);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 300;
+}
+
+function normalizeBoardTitle(message) {
+  const clean = compactText(message).replace(/[.!?\s]+$/g, "");
+  if (!clean) return "Untitled note";
+  const firstSentence = clean.split(/(?<=[.!?])\s+/)[0] || clean;
+  let title = firstSentence.split(" ").slice(0, 7).join(" ");
+  title = title.replace(/[,;:]+/g, "").trim();
+  if (!title) title = clean.split(" ").slice(0, 7).join(" ").trim();
+  if (!title) return "Untitled note";
+  title = title.charAt(0).toUpperCase() + title.slice(1);
+  if (title.length > 48) title = title.slice(0, 45).trim() + "…";
+  return title;
+}
+
+function normalizeBoardPost(post) {
+  const message = compactText(post?.message);
+  if (!message) return null;
+  const author = compactText(post?.author) || "Anonymous";
+  const title = compactText(post?.title) || normalizeBoardTitle(message);
+  const createdAt = compactText(post?.createdAt) || new Date().toISOString();
+  const id = compactText(post?.id) || `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return { id, title, author, message, createdAt };
+}
+
+async function readPublicBoardPosts() {
+  try {
+    const raw = await readFile(PUBLIC_BOARD_STORE_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeBoardPost).filter(Boolean);
+  } catch (err) {
+    if (err?.code === "ENOENT") return [];
+    throw err;
+  }
+}
+
+async function writePublicBoardPosts(posts) {
+  const normalized = (Array.isArray(posts) ? posts : []).map(normalizeBoardPost).filter(Boolean).slice(0, publicBoardLimit());
+  const dir = path.dirname(PUBLIC_BOARD_STORE_PATH);
+  await mkdir(dir, { recursive: true });
+  const tmpPath = `${PUBLIC_BOARD_STORE_PATH}.tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await writeFile(tmpPath, JSON.stringify(normalized, null, 2), "utf8");
+  await rename(tmpPath, PUBLIC_BOARD_STORE_PATH);
+  return normalized;
 }
 
 function getContactRecipient(profile) {
@@ -396,6 +451,62 @@ app.post("/api/contact", contactUpload.array("attachments", 5), async (req, res)
   } catch (err) {
     console.error("❌ Contact email error:", err);
     return res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.get("/api/618chat/posts", async (_req, res) => {
+  try {
+    const posts = await readPublicBoardPosts();
+    res.json({ ok: true, posts });
+  } catch (err) {
+    console.error("❌ 618chat read error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/618chat/posts", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const author = compactText(body.author) || "Anonymous";
+    const message = compactText(body.message);
+    if (!message) {
+      return res.status(400).json({ ok: false, error: "Message is required." });
+    }
+
+    const post = normalizeBoardPost({
+      author,
+      message,
+      title: body.title || normalizeBoardTitle(message)
+    });
+
+    if (!post) {
+      return res.status(400).json({ ok: false, error: "Message is required." });
+    }
+
+    const current = await readPublicBoardPosts();
+    const next = [post, ...current].slice(0, publicBoardLimit());
+    await writePublicBoardPosts(next);
+    res.json({ ok: true, post, posts: next });
+  } catch (err) {
+    console.error("❌ 618chat write error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.delete("/api/618chat/posts", async (req, res) => {
+  try {
+    const token = String(req.headers["x-admin-token"] || req.query.token || "");
+    if (!PUBLIC_BOARD_ADMIN_TOKEN) {
+      return res.status(503).json({ ok: false, error: "Board admin token is not configured." });
+    }
+    if (token !== PUBLIC_BOARD_ADMIN_TOKEN) {
+      return res.status(403).json({ ok: false, error: "Forbidden." });
+    }
+    await writePublicBoardPosts([]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("❌ 618chat clear error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
   }
 });
 

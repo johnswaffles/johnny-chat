@@ -449,10 +449,9 @@
               </div>
               <div class="form-actions">
                 <button class="button button-primary" type="submit">Add message</button>
-                <button class="button button-secondary" type="button" id="clear-board">Clear board</button>
               </div>
               <div class="status" id="board-status" aria-live="polite"></div>
-              <div class="hint">Posts stay on this device. Refreshing the page will keep them here unless you clear the board.</div>
+              <div class="hint">Posts are shared publicly with everyone who visits 618chat.</div>
             </form>
           </section>
 
@@ -478,31 +477,18 @@
 
   <script>
     (function () {
-      const STORAGE_KEY = "johnny_618chat_posts_v1";
+      const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(//+$/, "");
+      const postsUrl = apiBase + "/api/618chat/posts";
       const authorInput = document.getElementById("author");
       const messageInput = document.getElementById("message");
       const form = document.getElementById("board-form");
       const postsEl = document.getElementById("posts");
       const readerEl = document.getElementById("post-reader");
       const statusEl = document.getElementById("board-status");
-      const clearBtn = document.getElementById("clear-board");
 
       let selectedId = "";
-      let posts = loadPosts();
-
-      function loadPosts() {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          const parsed = raw ? JSON.parse(raw) : [];
-          return Array.isArray(parsed) ? parsed : [];
-        } catch (_) {
-          return [];
-        }
-      }
-
-      function savePosts() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-      }
+      let posts = [];
+      let loading = true;
 
       function escapeHTML(value) {
         return String(value || "")
@@ -548,10 +534,37 @@
         render();
       }
 
+      async function loadPosts() {
+        loading = true;
+        statusEl.textContent = "Loading public posts...";
+        try {
+          const response = await fetch(postsUrl, { headers: { Accept: "application/json" } });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || payload.detail || "Could not load posts.");
+          }
+          posts = Array.isArray(payload.posts) ? payload.posts : [];
+          if (!selectedId || !posts.some((post) => post.id === selectedId)) {
+            selectedId = posts[0] ? posts[0].id : "";
+          }
+          loading = false;
+          statusEl.textContent = posts.length ? "Public board loaded." : "No posts yet. Be the first to add one.";
+          statusEl.classList.remove("error");
+          render();
+        } catch (err) {
+          loading = false;
+          statusEl.textContent = err.message || "Could not load posts.";
+          statusEl.classList.add("error");
+          render();
+        }
+      }
+
       function renderReader(post) {
         if (!post) {
           readerEl.className = "empty-state";
-          readerEl.innerHTML = "No posts yet. Add the first message on the left and it will appear here.";
+          readerEl.innerHTML = loading
+            ? "Loading the public board..."
+            : "No posts yet. Add the first message on the left and it will appear here.";
           return;
         }
 
@@ -565,6 +578,12 @@
 
       function renderPosts() {
         postsEl.innerHTML = "";
+
+        if (loading) {
+          postsEl.innerHTML = '<div class="empty-state">Loading the public board...</div>';
+          renderReader(null);
+          return;
+        }
 
         if (!posts.length) {
           postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to add the first message. Titles are created automatically when you post.</div>';
@@ -605,41 +624,39 @@
           return;
         }
 
-        const post = {
-          id: "post_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
-          title: makeTitle(message),
-          author: author || "Anonymous",
-          message,
-          createdAt: new Date().toISOString()
-        };
-
-        posts = [post, ...posts];
-        selectedId = post.id;
-        savePosts();
-
-        form.reset();
-        statusEl.textContent = "Message added to the board.";
+        statusEl.textContent = "Posting to the public board...";
         statusEl.classList.remove("error");
-        render();
-        messageInput.focus();
-      });
+        form.querySelector('button[type="submit"]').disabled = true;
 
-      clearBtn.addEventListener("click", () => {
-        const ok = window.confirm("Clear all 618chat messages from this browser?");
-        if (!ok) return;
-        posts = [];
-        selectedId = "";
-        savePosts();
-        render();
-        statusEl.textContent = "Board cleared.";
-        statusEl.classList.remove("error");
+        fetch(postsUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ author, message })
+        })
+          .then((response) => response.json().then((payload) => ({ response, payload })))
+          .then(({ response, payload }) => {
+            if (!response.ok || !payload.ok || !payload.post) {
+              throw new Error(payload.error || payload.detail || "Could not add the post.");
+            }
+            posts = [payload.post, ...posts.filter((post) => post.id !== payload.post.id)];
+            selectedId = payload.post.id;
+            form.reset();
+            statusEl.textContent = "Message added to the public board.";
+            statusEl.classList.remove("error");
+            render();
+            messageInput.focus();
+          })
+          .catch((err) => {
+            statusEl.textContent = err.message || "Could not add the post.";
+            statusEl.classList.add("error");
+          })
+          .finally(() => {
+            form.querySelector('button[type="submit"]').disabled = false;
+          });
       });
-
-      if (posts.length) {
-        selectedId = posts[0].id;
-      }
 
       render();
+      loadPosts();
       setTimeout(() => messageInput.focus(), 100);
     })();
   </script>
