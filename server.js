@@ -32,6 +32,7 @@ const {
   SMTP_SECURE = "false",
   PUBLIC_BOARD_STORE_PATH = "/var/data/618chat-posts.json",
   PUBLIC_BOARD_MAX_POSTS = "300",
+  PUBLIC_BOARD_FLAG_THRESHOLD = "10",
   PUBLIC_BOARD_ADMIN_TOKEN = ""
 } = process.env;
 
@@ -309,6 +310,11 @@ function publicBoardLimit() {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 300;
 }
 
+function publicBoardFlagThreshold() {
+  const value = Number(PUBLIC_BOARD_FLAG_THRESHOLD || 10);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 10;
+}
+
 function normalizeBoardTitle(message) {
   const clean = compactText(message).replace(/[.!?\s]+$/g, "");
   if (!clean) return "Untitled note";
@@ -329,7 +335,12 @@ function normalizeBoardPost(post) {
   const title = compactText(post?.title) || normalizeBoardTitle(message);
   const createdAt = compactText(post?.createdAt) || new Date().toISOString();
   const id = compactText(post?.id) || `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  return { id, title, author, message, createdAt };
+  const flags = Math.max(0, Number(post?.flags || 0) || 0);
+  const hidden = Boolean(post?.hidden) || flags >= publicBoardFlagThreshold();
+  const hiddenAt = compactText(post?.hiddenAt) || (hidden ? new Date().toISOString() : "");
+  const hiddenReason = compactText(post?.hiddenReason) || (hidden ? "Community flag review" : "");
+  const updatedAt = compactText(post?.updatedAt) || createdAt;
+  return { id, title, author, message, createdAt, updatedAt, flags, hidden, hiddenAt, hiddenReason };
 }
 
 async function readPublicBoardPosts() {
@@ -352,6 +363,14 @@ async function writePublicBoardPosts(posts) {
   await writeFile(tmpPath, JSON.stringify(normalized, null, 2), "utf8");
   await rename(tmpPath, PUBLIC_BOARD_STORE_PATH);
   return normalized;
+}
+
+function getBoardAdminToken(req) {
+  return String(req.headers["x-admin-token"] || req.query.token || "").trim();
+}
+
+function isBoardAdminRequest(req) {
+  return Boolean(PUBLIC_BOARD_ADMIN_TOKEN) && getBoardAdminToken(req) === PUBLIC_BOARD_ADMIN_TOKEN;
 }
 
 function getContactRecipient(profile) {
@@ -457,7 +476,14 @@ app.post("/api/contact", contactUpload.array("attachments", 5), async (req, res)
 app.get("/api/618chat/posts", async (_req, res) => {
   try {
     const posts = await readPublicBoardPosts();
-    res.json({ ok: true, posts });
+    const admin = isBoardAdminRequest(_req);
+    const visiblePosts = admin ? posts : posts.filter((post) => !post.hidden);
+    res.json({
+      ok: true,
+      posts: visiblePosts,
+      admin,
+      flagThreshold: publicBoardFlagThreshold()
+    });
   } catch (err) {
     console.error("❌ 618chat read error:", err);
     res.status(500).json({ ok: false, error: String(err.message || err) });
@@ -476,7 +502,10 @@ app.post("/api/618chat/posts", async (req, res) => {
     const post = normalizeBoardPost({
       author,
       message,
-      title: body.title || normalizeBoardTitle(message)
+      title: body.title || normalizeBoardTitle(message),
+      flags: 0,
+      hidden: false,
+      updatedAt: new Date().toISOString()
     });
 
     if (!post) {
@@ -493,13 +522,65 @@ app.post("/api/618chat/posts", async (req, res) => {
   }
 });
 
+app.post("/api/618chat/posts/:id/flag", async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "Post id is required." });
+    }
+
+    const current = await readPublicBoardPosts();
+    const idx = current.findIndex((post) => post.id === id);
+    if (idx === -1) {
+      return res.status(404).json({ ok: false, error: "Post not found." });
+    }
+
+    const threshold = publicBoardFlagThreshold();
+    const updated = { ...current[idx] };
+    updated.flags = Math.max(0, Number(updated.flags || 0) || 0) + 1;
+    updated.updatedAt = new Date().toISOString();
+    if (updated.flags >= threshold) {
+      updated.hidden = true;
+      updated.hiddenAt = updated.hiddenAt || updated.updatedAt;
+      updated.hiddenReason = updated.hiddenReason || "Community flag review";
+    }
+
+    current[idx] = normalizeBoardPost(updated);
+    const next = await writePublicBoardPosts(current);
+    res.json({ ok: true, post: next.find((post) => post.id === id) || null, posts: next, hidden: Boolean(updated.hidden) });
+  } catch (err) {
+    console.error("❌ 618chat flag error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.delete("/api/618chat/posts/:id", async (req, res) => {
+  try {
+    if (!isBoardAdminRequest(req)) {
+      return res.status(403).json({ ok: false, error: "Forbidden." });
+    }
+
+    const id = String(req.params.id || "").trim();
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "Post id is required." });
+    }
+
+    const current = await readPublicBoardPosts();
+    const next = current.filter((post) => post.id !== id);
+    await writePublicBoardPosts(next);
+    res.json({ ok: true, posts: next });
+  } catch (err) {
+    console.error("❌ 618chat delete error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
 app.delete("/api/618chat/posts", async (req, res) => {
   try {
-    const token = String(req.headers["x-admin-token"] || req.query.token || "");
     if (!PUBLIC_BOARD_ADMIN_TOKEN) {
       return res.status(503).json({ ok: false, error: "Board admin token is not configured." });
     }
-    if (token !== PUBLIC_BOARD_ADMIN_TOKEN) {
+    if (!isBoardAdminRequest(req)) {
       return res.status(403).json({ ok: false, error: "Forbidden." });
     }
     await writePublicBoardPosts([]);

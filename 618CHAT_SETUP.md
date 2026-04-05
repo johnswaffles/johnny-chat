@@ -6,6 +6,7 @@ Use these settings on the shared Render backend so `618chat` is public for every
 - `PUBLIC_BOARD_STORE_PATH=/var/data/618chat-posts.json`
 - `PUBLIC_BOARD_ADMIN_TOKEN=<long random secret>`
 - `PUBLIC_BOARD_MAX_POSTS=300`
+- `PUBLIC_BOARD_FLAG_THRESHOLD=10`
 
 ## Recommended Render disk
 - Mount a persistent disk at `/var/data`
@@ -14,7 +15,11 @@ Use these settings on the shared Render backend so `618chat` is public for every
 ## How the page works
 - `GET /api/618chat/posts` loads the board for everyone
 - `POST /api/618chat/posts` adds a public post
-- `DELETE /api/618chat/posts` clears the board only when `x-admin-token` matches `PUBLIC_BOARD_ADMIN_TOKEN`
+- `POST /api/618chat/posts/:id/flag` increments the flag count for a post
+- When a post reaches `PUBLIC_BOARD_FLAG_THRESHOLD`, it becomes hidden from the public board and only the admin can see it
+- `DELETE /api/618chat/posts/:id` removes a single post only when `x-admin-token` matches `PUBLIC_BOARD_ADMIN_TOKEN`
+- `DELETE /api/618chat/posts` clears the whole board only when `x-admin-token` matches `PUBLIC_BOARD_ADMIN_TOKEN`
+- On the page, click **Moderate** and enter the admin token to unlock the admin controls
 
 ## Notes
 - The public board lives in the shared `johnny-chat` backend on Render.
