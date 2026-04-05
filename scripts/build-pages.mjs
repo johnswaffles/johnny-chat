@@ -469,12 +469,12 @@ function create618ChatPage() {
     .mini-action {
       min-height: 30px;
       min-width: 30px;
-      padding: 0 10px;
+      padding: 0 9px;
       border-radius: 999px;
       border: 1px solid rgba(16, 32, 21, 0.08);
-      background: rgba(255, 255, 255, 0.94);
+      background: rgba(255, 255, 255, 0.88);
       color: var(--ink);
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 800;
       cursor: pointer;
       display: inline-flex;
@@ -487,7 +487,7 @@ function create618ChatPage() {
       box-shadow: 0 8px 18px rgba(17, 38, 22, 0.08);
     }
     .mini-action.flagged {
-      background: rgba(45, 111, 64, 0.08);
+      background: rgba(45, 111, 64, 0.09);
       border-color: rgba(45, 111, 64, 0.18);
       color: var(--green-deep);
     }
@@ -556,6 +556,17 @@ function create618ChatPage() {
       .hero, .board { padding: 20px; }
       .detail-title { font-size: 28px; }
       .hero h1 { max-width: none; }
+      .post-actions {
+        top: 8px;
+        right: 8px;
+        gap: 6px;
+      }
+      .mini-action {
+        min-height: 28px;
+        min-width: 28px;
+        padding: 0 8px;
+        font-size: 12px;
+      }
     }
   </style>
 </head>
@@ -579,7 +590,7 @@ ${chatSiteNav("home")}
         <div class="hero-actions">
           <a class="button button-primary" href="#compose">Write a post</a>
           <a class="button button-secondary" href="#recent-posts">Read conversations</a>
-          <button class="button button-secondary" id="moderation-toggle" type="button">Moderate</button>
+          <button class="button button-secondary" id="moderation-toggle" type="button" title="Enter the moderator secret to unlock admin controls">Moderate</button>
         </div>
         <div class="meta-card" id="about">
           <h2>What this space is for</h2>
@@ -616,7 +627,7 @@ ${chatSiteNav("home")}
               </div>
               <div class="status" id="board-status" aria-live="polite"></div>
               <div class="hint">Please avoid sharing personal information such as your real name, phone number, email address, home address, or anything that could identify you offline.</div>
-              <div class="moderation-note">When a post reaches 10 flags, it moves to under review so only the administrator can view it.</div>
+              <div class="moderation-note">When a post reaches 10 flags, it moves to under review so only the administrator can view it. Click Moderate and enter the admin secret to unlock delete controls.</div>
             </form>
           </section>
 
