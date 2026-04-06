@@ -190,6 +190,63 @@ function create618ChatPage() {
       margin: 0 auto;
       padding: 12px 0 32px;
     }
+    body.gate-locked {
+      overflow: hidden;
+    }
+    .age-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(245, 248, 238, 0.82);
+      backdrop-filter: blur(18px);
+    }
+    .age-gate[hidden] { display: none; }
+    .age-gate-panel {
+      width: min(660px, 100%);
+      padding: 28px;
+      border-radius: 30px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,241,0.94));
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      box-shadow: 0 30px 80px rgba(22, 54, 31, 0.18);
+    }
+    .age-gate-panel h2 {
+      margin: 14px 0 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+    .age-gate-panel p {
+      margin: 14px 0 0;
+      color: var(--copy);
+      line-height: 1.8;
+      font-size: 16px;
+    }
+    .age-gate-note {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(45, 111, 64, 0.08);
+      border: 1px solid rgba(45, 111, 64, 0.14);
+      color: var(--green-deep);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+    .age-gate-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .button-danger {
+      background: linear-gradient(135deg, #8f2d2d 0%, #c04a4a 100%);
+      color: #fffdf7;
+      box-shadow: 0 14px 28px rgba(143, 45, 45, 0.22);
+    }
     .intro {
       margin-top: 14px;
       display: grid;
@@ -571,6 +628,22 @@ function create618ChatPage() {
   </style>
 </head>
 <body>
+  <div class="age-gate" id="age-gate" hidden>
+    <div class="age-gate-panel" role="dialog" aria-modal="true" aria-labelledby="age-gate-title">
+      <span class="eyebrow">18+ only</span>
+      <h2 id="age-gate-title">Before you enter 618chat</h2>
+      <p>
+        This space is for adults who want honest, anonymous conversation. Please be thoughtful, respectful, and keep your privacy in mind.
+      </p>
+      <div class="age-gate-note">
+        Please do not share your real name, phone number, email address, home address, or anything else that could identify you offline.
+      </div>
+      <div class="age-gate-actions">
+        <button class="button button-primary" id="age-gate-enter" type="button">Yes, enter site</button>
+        <button class="button button-danger" id="age-gate-leave" type="button">No, leave</button>
+      </div>
+    </div>
+  </div>
 ${chatSiteNav("home")}
   <main class="page">
     <section class="intro">
@@ -655,8 +728,12 @@ ${chatSiteNav("home")}
     (function () {
       const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\\/+$/, "");
       const postsUrl = apiBase + "/api/618chat/posts";
+      const ageGateKey = "618chat_age_gate_accepted";
       const adminTokenKey = "618chat_admin_token";
       const flaggedKey = "618chat_flagged_posts";
+      const ageGate = document.getElementById("age-gate");
+      const ageGateEnter = document.getElementById("age-gate-enter");
+      const ageGateLeave = document.getElementById("age-gate-leave");
       const authorInput = document.getElementById("author");
       const messageInput = document.getElementById("message");
       const form = document.getElementById("board-form");
@@ -672,6 +749,7 @@ ${chatSiteNav("home")}
       let adminToken = String(window.localStorage.getItem(adminTokenKey) || "").trim();
       let adminMode = Boolean(adminToken);
       let flagThreshold = 10;
+      let ageGateAccepted = String(window.localStorage.getItem(ageGateKey) || "") === "yes";
 
       function escapeHTML(value) {
         return String(value || "")
@@ -735,6 +813,23 @@ ${chatSiteNav("home")}
         }
         render();
         loadPosts();
+      }
+
+      function showAgeGate() {
+        document.body.classList.add("gate-locked");
+        if (ageGate) ageGate.hidden = false;
+      }
+
+      function hideAgeGate() {
+        document.body.classList.remove("gate-locked");
+        if (ageGate) ageGate.hidden = true;
+      }
+
+      function enterSite() {
+        ageGateAccepted = true;
+        window.localStorage.setItem(ageGateKey, "yes");
+        hideAgeGate();
+        setTimeout(() => messageInput.focus(), 50);
       }
 
       function authHeaders(baseHeaders = {}) {
@@ -998,6 +1093,11 @@ ${chatSiteNav("home")}
       render();
       loadPosts();
       updateModerationNote();
+      if (!ageGateAccepted) {
+        showAgeGate();
+      } else {
+        hideAgeGate();
+      }
       if (moderationToggle) {
         moderationToggle.addEventListener("click", () => {
           if (adminMode) {
@@ -1010,12 +1110,107 @@ ${chatSiteNav("home")}
           }
         });
       }
+      if (ageGateEnter) {
+        ageGateEnter.addEventListener("click", enterSite);
+      }
+      if (ageGateLeave) {
+        ageGateLeave.addEventListener("click", () => {
+          window.location.replace("/no-entry/");
+        });
+      }
       setInterval(() => {
         if (!document.hidden) loadPosts();
       }, 15000);
-      setTimeout(() => messageInput.focus(), 100);
+      if (ageGateAccepted) {
+        setTimeout(() => messageInput.focus(), 100);
+      }
     })();
   </script>
+</body>
+</html>`;
+}
+
+function createNoEntryPage() {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>18+ Notice</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7ef;
+      --ink: #102015;
+      --copy: #5b6b60;
+      --card: rgba(255,255,255,0.92);
+      --line: rgba(16,32,21,0.1);
+      --green: #2d6f40;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, rgba(122,176,106,0.18), transparent 28%), linear-gradient(180deg, #fafbf4 0%, var(--bg) 100%);
+      color: var(--ink);
+      font-family: "Plus Jakarta Sans", Arial, sans-serif;
+      padding: 20px;
+    }
+    .card {
+      width: min(560px, 100%);
+      padding: 28px;
+      border-radius: 28px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: 0 24px 70px rgba(22,54,31,0.12);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(45,111,64,0.08);
+      color: #174425;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 6px rgba(45,111,64,0.12);
+    }
+    h1 {
+      margin: 16px 0 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(30px, 4vw, 44px);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+    p {
+      margin: 14px 0 0;
+      color: var(--copy);
+      line-height: 1.8;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card" aria-label="Age notice">
+    <span class="eyebrow">Not for this visit</span>
+    <h1>Thanks for checking out 618chat.</h1>
+    <p>
+      This space is for adults only. If this was not the right fit, you can close this tab or head back when you are ready.
+    </p>
+  </main>
 </body>
 </html>`;
 }
@@ -1644,6 +1839,8 @@ ${widgetSnippet("mowing")}
 
   await writeFile(path.join(publicDir, "help-mowing", "index.html"), mowingHtml, "utf8");
   await writeFile(path.join(publicDir, "618chat", "index.html"), create618ChatPage(), "utf8");
+  await mkdir(path.join(publicDir, "no-entry"), { recursive: true });
+  await writeFile(path.join(publicDir, "no-entry", "index.html"), createNoEntryPage(), "utf8");
   await writeFile(path.join(publicDir, "contact", "index.html"), createContactPage(), "utf8");
   await writeFile(path.join(publicDir, "index.html"), createRootLandingPage(create618ChatPage()), "utf8");
   await compressPublicWasmAssets();

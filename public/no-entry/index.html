@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>18+ Notice</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7ef;
+      --ink: #102015;
+      --copy: #5b6b60;
+      --card: rgba(255,255,255,0.92);
+      --line: rgba(16,32,21,0.1);
+      --green: #2d6f40;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, rgba(122,176,106,0.18), transparent 28%), linear-gradient(180deg, #fafbf4 0%, var(--bg) 100%);
+      color: var(--ink);
+      font-family: "Plus Jakarta Sans", Arial, sans-serif;
+      padding: 20px;
+    }
+    .card {
+      width: min(560px, 100%);
+      padding: 28px;
+      border-radius: 28px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: 0 24px 70px rgba(22,54,31,0.12);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(45,111,64,0.08);
+      color: #174425;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 6px rgba(45,111,64,0.12);
+    }
+    h1 {
+      margin: 16px 0 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(30px, 4vw, 44px);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+    p {
+      margin: 14px 0 0;
+      color: var(--copy);
+      line-height: 1.8;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card" aria-label="Age notice">
+    <span class="eyebrow">Not for this visit</span>
+    <h1>Thanks for checking out 618chat.</h1>
+    <p>
+      This space is for adults only. If this was not the right fit, you can close this tab or head back when you are ready.
+    </p>
+  </main>
+</body>
+</html>

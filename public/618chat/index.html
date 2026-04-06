@@ -113,6 +113,63 @@
       margin: 0 auto;
       padding: 12px 0 32px;
     }
+    body.gate-locked {
+      overflow: hidden;
+    }
+    .age-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(245, 248, 238, 0.82);
+      backdrop-filter: blur(18px);
+    }
+    .age-gate[hidden] { display: none; }
+    .age-gate-panel {
+      width: min(660px, 100%);
+      padding: 28px;
+      border-radius: 30px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,241,0.94));
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      box-shadow: 0 30px 80px rgba(22, 54, 31, 0.18);
+    }
+    .age-gate-panel h2 {
+      margin: 14px 0 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+    .age-gate-panel p {
+      margin: 14px 0 0;
+      color: var(--copy);
+      line-height: 1.8;
+      font-size: 16px;
+    }
+    .age-gate-note {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(45, 111, 64, 0.08);
+      border: 1px solid rgba(45, 111, 64, 0.14);
+      color: var(--green-deep);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+    .age-gate-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .button-danger {
+      background: linear-gradient(135deg, #8f2d2d 0%, #c04a4a 100%);
+      color: #fffdf7;
+      box-shadow: 0 14px 28px rgba(143, 45, 45, 0.22);
+    }
     .intro {
       margin-top: 14px;
       display: grid;
@@ -494,6 +551,22 @@
   </style>
 </head>
 <body>
+  <div class="age-gate" id="age-gate" hidden>
+    <div class="age-gate-panel" role="dialog" aria-modal="true" aria-labelledby="age-gate-title">
+      <span class="eyebrow">18+ only</span>
+      <h2 id="age-gate-title">Before you enter 618chat</h2>
+      <p>
+        This space is for adults who want honest, anonymous conversation. Please be thoughtful, respectful, and keep your privacy in mind.
+      </p>
+      <div class="age-gate-note">
+        Please do not share your real name, phone number, email address, home address, or anything else that could identify you offline.
+      </div>
+      <div class="age-gate-actions">
+        <button class="button button-primary" id="age-gate-enter" type="button">Yes, enter site</button>
+        <button class="button button-danger" id="age-gate-leave" type="button">No, leave</button>
+      </div>
+    </div>
+  </div>
 
   <header class="johnny-site-nav">
     <a class="johnny-site-brand" href="/" aria-label="618chat.com home">618chat.com</a>
@@ -587,8 +660,12 @@
     (function () {
       const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\/+$/, "");
       const postsUrl = apiBase + "/api/618chat/posts";
+      const ageGateKey = "618chat_age_gate_accepted";
       const adminTokenKey = "618chat_admin_token";
       const flaggedKey = "618chat_flagged_posts";
+      const ageGate = document.getElementById("age-gate");
+      const ageGateEnter = document.getElementById("age-gate-enter");
+      const ageGateLeave = document.getElementById("age-gate-leave");
       const authorInput = document.getElementById("author");
       const messageInput = document.getElementById("message");
       const form = document.getElementById("board-form");
@@ -604,6 +681,7 @@
       let adminToken = String(window.localStorage.getItem(adminTokenKey) || "").trim();
       let adminMode = Boolean(adminToken);
       let flagThreshold = 10;
+      let ageGateAccepted = String(window.localStorage.getItem(ageGateKey) || "") === "yes";
 
       function escapeHTML(value) {
         return String(value || "")
@@ -667,6 +745,23 @@
         }
         render();
         loadPosts();
+      }
+
+      function showAgeGate() {
+        document.body.classList.add("gate-locked");
+        if (ageGate) ageGate.hidden = false;
+      }
+
+      function hideAgeGate() {
+        document.body.classList.remove("gate-locked");
+        if (ageGate) ageGate.hidden = true;
+      }
+
+      function enterSite() {
+        ageGateAccepted = true;
+        window.localStorage.setItem(ageGateKey, "yes");
+        hideAgeGate();
+        setTimeout(() => messageInput.focus(), 50);
       }
 
       function authHeaders(baseHeaders = {}) {
@@ -930,6 +1025,11 @@
       render();
       loadPosts();
       updateModerationNote();
+      if (!ageGateAccepted) {
+        showAgeGate();
+      } else {
+        hideAgeGate();
+      }
       if (moderationToggle) {
         moderationToggle.addEventListener("click", () => {
           if (adminMode) {
@@ -942,10 +1042,20 @@
           }
         });
       }
+      if (ageGateEnter) {
+        ageGateEnter.addEventListener("click", enterSite);
+      }
+      if (ageGateLeave) {
+        ageGateLeave.addEventListener("click", () => {
+          window.location.replace("/no-entry/");
+        });
+      }
       setInterval(() => {
         if (!document.hidden) loadPosts();
       }, 15000);
-      setTimeout(() => messageInput.focus(), 100);
+      if (ageGateAccepted) {
+        setTimeout(() => messageInput.focus(), 100);
+      }
     })();
   </script>
 </body>
