@@ -328,6 +328,51 @@ function normalizeBoardTitle(message) {
   return title;
 }
 
+async function generateBoardTitle(message) {
+  const fallback = normalizeBoardTitle(message);
+  if (!OPENAI_API_KEY) return fallback;
+
+  try {
+    const response = await openai.responses.create({
+      model: OPENAI_CHAT_MODEL,
+      temperature: 0.9,
+      max_output_tokens: 24,
+      input: [
+        {
+          role: "system",
+          content: [
+            "Create a memorable title for an anonymous community post.",
+            "Return only the title.",
+            "Aim for 3 to 8 words.",
+            "Make it feel polished, warm, and a little poetic.",
+            "Do not use quotes, hashtags, emojis, or punctuation at the end.",
+            "Do not include personal information, names, or contact details.",
+            "If the post is very short or vague, still make the title interesting and readable."
+          ].join(" ")
+        },
+        {
+          role: "user",
+          content: `Post text:\n${compactText(message).slice(0, 6000)}`
+        }
+      ]
+    });
+
+    const raw = String(response.output_text || "").trim();
+    const title = raw
+      .replace(/^["'“”]+|["'“”]+$/g, "")
+      .replace(/[\r\n]+/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/[.!?]+$/g, "")
+      .trim();
+
+    if (!title) return fallback;
+    return title.length > 64 ? `${title.slice(0, 61).trim()}…` : title;
+  } catch (err) {
+    console.warn("⚠️ 618chat title generation failed:", err?.message || err);
+    return fallback;
+  }
+}
+
 function normalizeBoardPost(post) {
   const message = compactText(post?.message);
   if (!message) return null;
@@ -499,10 +544,11 @@ app.post("/api/618chat/posts", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Message is required." });
     }
 
+    const title = compactText(body.title) || await generateBoardTitle(message);
     const post = normalizeBoardPost({
       author,
       message,
-      title: body.title || normalizeBoardTitle(message),
+      title,
       flags: 0,
       hidden: false,
       updatedAt: new Date().toISOString()

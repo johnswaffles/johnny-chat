@@ -657,7 +657,7 @@ ${chatSiteNav("home")}
         <div class="pill-row">
           <div class="pill"><strong>Anonymous</strong> by design</div>
           <div class="pill"><strong>Respect</strong> and understanding</div>
-          <div class="pill"><strong>Auto</strong> title generation</div>
+          <div class="pill"><strong>AI-crafted</strong> titles</div>
           <div class="pill"><strong>Public</strong> to browse</div>
         </div>
         <div class="hero-actions">
@@ -685,7 +685,7 @@ ${chatSiteNav("home")}
         <div class="layout">
           <section class="composer" aria-label="New post" id="compose">
             <h3>New post</h3>
-            <p>Keep it honest and respectful. Titles are generated automatically from the first useful words.</p>
+            <p>Keep it honest and respectful. Johnny's chat model will craft a memorable title for your post.</p>
             <form id="board-form">
               <div class="field">
                 <label for="author">Name</label>
@@ -958,7 +958,7 @@ ${chatSiteNav("home")}
         }
 
         if (!posts.length) {
-          postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to start the first conversation. Titles are created automatically when you post.</div>';
+          postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to start the first conversation. Johnny\'s chat model will craft the title when you post.</div>';
           renderReader(null);
           return;
         }
