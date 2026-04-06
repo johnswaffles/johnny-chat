@@ -336,18 +336,21 @@ async function generateBoardTitle(message) {
     const response = await openai.responses.create({
       model: OPENAI_CHAT_MODEL,
       temperature: 0.9,
-      max_output_tokens: 24,
+      max_output_tokens: 18,
       input: [
         {
           role: "system",
           content: [
             "Create a memorable title for an anonymous community post.",
             "Return only the title.",
-            "Aim for 3 to 8 words.",
+            "Aim for 3 to 9 words.",
             "Make it feel polished, warm, and a little poetic.",
+            "Use the mood or meaning of the post, not just its first few words.",
+            "Avoid generic lead-ins like 'I did what I thought' or 'A post about'.",
             "Do not use quotes, hashtags, emojis, or punctuation at the end.",
             "Do not include personal information, names, or contact details.",
-            "If the post is very short or vague, still make the title interesting and readable."
+            "If the post is very short or vague, still make the title interesting and readable.",
+            "Prefer titles a human would actually click."
           ].join(" ")
         },
         {
@@ -383,6 +386,28 @@ async function generateBoardTitleWithTimeout(message, timeoutMs = 1400) {
     return await Promise.race([titlePromise, timeoutPromise]);
   } catch {
     return fallback;
+  }
+}
+
+async function saveBoardTitleLater(postId, message) {
+  try {
+    const title = compactText(await generateBoardTitle(message));
+    if (!title) return;
+
+    const current = await readPublicBoardPosts();
+    const idx = current.findIndex((post) => post.id === postId);
+    if (idx === -1) return;
+
+    const next = current.slice();
+    const nextPost = { ...next[idx] };
+    if (compactText(nextPost.title) === title) return;
+
+    nextPost.title = title;
+    nextPost.updatedAt = new Date().toISOString();
+    next[idx] = normalizeBoardPost(nextPost);
+    await writePublicBoardPosts(next);
+  } catch (err) {
+    console.warn("⚠️ 618chat post title refresh failed:", err?.message || err);
   }
 }
 
@@ -557,7 +582,7 @@ app.post("/api/618chat/posts", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Message is required." });
     }
 
-    const title = compactText(body.title) || await generateBoardTitleWithTimeout(message);
+    const title = compactText(body.title) || normalizeBoardTitle(message);
     const post = normalizeBoardPost({
       author,
       message,
@@ -574,6 +599,7 @@ app.post("/api/618chat/posts", async (req, res) => {
     const current = await readPublicBoardPosts();
     const next = [post, ...current].slice(0, publicBoardLimit());
     await writePublicBoardPosts(next);
+    void saveBoardTitleLater(post.id, message);
     res.json({ ok: true, post, posts: next });
   } catch (err) {
     console.error("❌ 618chat write error:", err);

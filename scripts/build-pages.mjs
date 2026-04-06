@@ -1080,6 +1080,9 @@ ${chatSiteNav("home")}
             statusEl.classList.remove("error");
             render();
             messageInput.focus();
+            window.setTimeout(() => {
+              if (!document.hidden) loadPosts();
+            }, 2500);
           })
           .catch((err) => {
             statusEl.textContent = err.message || "Could not add the post.";
