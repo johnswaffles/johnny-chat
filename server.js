@@ -373,6 +373,19 @@ async function generateBoardTitle(message) {
   }
 }
 
+async function generateBoardTitleWithTimeout(message, timeoutMs = 1400) {
+  const fallback = normalizeBoardTitle(message);
+  const titlePromise = generateBoardTitle(message);
+  const timeoutPromise = new Promise((resolve) => {
+    setTimeout(() => resolve(fallback), Math.max(250, Number(timeoutMs) || 1400));
+  });
+  try {
+    return await Promise.race([titlePromise, timeoutPromise]);
+  } catch {
+    return fallback;
+  }
+}
+
 function normalizeBoardPost(post) {
   const message = compactText(post?.message);
   if (!message) return null;
@@ -544,7 +557,7 @@ app.post("/api/618chat/posts", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Message is required." });
     }
 
-    const title = compactText(body.title) || await generateBoardTitle(message);
+    const title = compactText(body.title) || await generateBoardTitleWithTimeout(message);
     const post = normalizeBoardPost({
       author,
       message,
