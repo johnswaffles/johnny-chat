@@ -316,36 +316,67 @@ function publicBoardFlagThreshold() {
 }
 
 function normalizeBoardTitle(message) {
-  const clean = compactText(message).replace(/[.!?\s]+$/g, "");
-  if (!clean) return "Untitled note";
-  const firstSentence = clean.split(/(?<=[.!?])\s+/)[0] || clean;
-  let title = firstSentence.split(" ").slice(0, 7).join(" ");
-  title = title.replace(/[,;:]+/g, "").trim();
-  if (!title) title = clean.split(" ").slice(0, 7).join(" ").trim();
-  if (!title) return "Untitled note";
-  title = title.charAt(0).toUpperCase() + title.slice(1);
-  if (title.length > 48) title = title.slice(0, 45).trim() + "…";
-  return title;
+  const clean = compactText(message);
+  if (!clean) return "Community note";
+  return "Community note";
+}
+
+function looksLikeWeakBoardTitle(title, message) {
+  const candidate = compactText(title).toLowerCase();
+  const source = compactText(message).toLowerCase();
+  if (!candidate) return true;
+  if (candidate === "community note" || candidate === "untitled note" || candidate === "pending title") return true;
+
+  const candidateWords = candidate.replace(/[^\p{L}\p{N}\s']/gu, " ").split(/\s+/).filter(Boolean);
+  const sourceWords = source.replace(/[^\p{L}\p{N}\s']/gu, " ").split(/\s+/).filter(Boolean);
+  if (!candidateWords.length || !sourceWords.length) return false;
+
+  const candidatePrefix = candidateWords.slice(0, 5).join(" ");
+  const sourcePrefix = sourceWords.slice(0, 5).join(" ");
+  if (candidatePrefix && sourcePrefix && candidatePrefix === sourcePrefix) return true;
+
+  const overlap = candidateWords.filter((word) => sourceWords.includes(word)).length;
+  const overlapRatio = overlap / Math.max(1, candidateWords.length);
+  return candidateWords.length <= 7 && overlapRatio >= 0.8;
 }
 
 async function generateBoardTitle(message) {
+  return generateBoardTitleFromPrompt(message, false);
+}
+
+async function generateBoardTitleWithTimeout(message, timeoutMs = 1400) {
+  const fallback = normalizeBoardTitle(message);
+  const titlePromise = generateBoardTitle(message);
+  const timeoutPromise = new Promise((resolve) => {
+    setTimeout(() => resolve(fallback), Math.max(250, Number(timeoutMs) || 1400));
+  });
+  try {
+    return await Promise.race([titlePromise, timeoutPromise]);
+  } catch {
+    return fallback;
+  }
+}
+
+async function generateBoardTitleFromPrompt(message, stronger = false) {
   const fallback = normalizeBoardTitle(message);
   if (!OPENAI_API_KEY) return fallback;
 
   try {
     const response = await openai.responses.create({
       model: OPENAI_CHAT_MODEL,
-      temperature: 0.9,
-      max_output_tokens: 18,
+      temperature: stronger ? 1 : 0.9,
+      max_output_tokens: 22,
       input: [
         {
           role: "system",
           content: [
-            "Create a memorable title for an anonymous community post.",
+            "Create a memorable title for an anonymous adults-only community post.",
+            "Adult language and consensual adult conversation are allowed on this board.",
             "Return only the title.",
             "Aim for 3 to 9 words.",
             "Make it feel polished, warm, and a little poetic.",
             "Use the mood or meaning of the post, not just its first few words.",
+            "Do not reuse the opening words of the post unless the title is genuinely transformed.",
             "Avoid generic lead-ins like 'I did what I thought' or 'A post about'.",
             "Do not use quotes, hashtags, emojis, or punctuation at the end.",
             "Do not include personal information, names, or contact details.",
@@ -368,7 +399,9 @@ async function generateBoardTitle(message) {
       .replace(/[.!?]+$/g, "")
       .trim();
 
-    if (!title) return fallback;
+    if (!title || looksLikeWeakBoardTitle(title, message)) {
+      return fallback;
+    }
     return title.length > 64 ? `${title.slice(0, 61).trim()}…` : title;
   } catch (err) {
     console.warn("⚠️ 618chat title generation failed:", err?.message || err);
@@ -376,15 +409,46 @@ async function generateBoardTitle(message) {
   }
 }
 
-async function generateBoardTitleWithTimeout(message, timeoutMs = 1400) {
-  const fallback = normalizeBoardTitle(message);
-  const titlePromise = generateBoardTitle(message);
-  const timeoutPromise = new Promise((resolve) => {
-    setTimeout(() => resolve(fallback), Math.max(250, Number(timeoutMs) || 1400));
-  });
+async function assessBoardPostSafety(message) {
+  const fallback = { hidden: false, reason: "" };
+  if (!OPENAI_API_KEY) return fallback;
+
   try {
-    return await Promise.race([titlePromise, timeoutPromise]);
-  } catch {
+    const response = await openai.responses.create({
+      model: OPENAI_CHAT_MODEL,
+      temperature: 0,
+      max_output_tokens: 80,
+      input: [
+        {
+          role: "system",
+          content: [
+            "You moderate an anonymous adults-only community board.",
+            "Adult language and consensual adult conversation are allowed.",
+            "Hide only if the post contains threats, harassment, hate targeted at protected groups, doxxing, child sexual content, non-consensual sexual content, explicit instructions for illegal acts, scams, spam, or self-harm instructions.",
+            "If the post is merely adult, emotional, rude, or political but not dangerous, allow it.",
+            "Return only JSON with keys action and reason.",
+            "action must be either allow or review.",
+            "reason should be a short phrase if action is review, otherwise an empty string."
+          ].join(" ")
+        },
+        {
+          role: "user",
+          content: `Post text:\n${compactText(message).slice(0, 6000)}`
+        }
+      ]
+    });
+
+    const raw = String(response.output_text || "").trim();
+    const jsonText = raw.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+    const parsed = JSON.parse(jsonText);
+    const action = String(parsed?.action || "").toLowerCase();
+    const reason = compactText(parsed?.reason);
+    if (action === "review") {
+      return { hidden: true, reason: reason || "Policy review" };
+    }
+    return fallback;
+  } catch (err) {
+    console.warn("⚠️ 618chat safety review failed:", err?.message || err);
     return fallback;
   }
 }
@@ -582,13 +646,15 @@ app.post("/api/618chat/posts", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Message is required." });
     }
 
+    const review = await assessBoardPostSafety(message);
     const title = compactText(body.title) || normalizeBoardTitle(message);
     const post = normalizeBoardPost({
       author,
       message,
       title,
       flags: 0,
-      hidden: false,
+      hidden: review.hidden,
+      hiddenReason: review.hidden ? review.reason : "",
       updatedAt: new Date().toISOString()
     });
 
