@@ -958,7 +958,7 @@ ${chatSiteNav("home")}
         }
 
         if (!posts.length) {
-          postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to start the first conversation. Johnny\'s chat model will craft the title when you post.</div>';
+          postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to start the first conversation. Johnny&apos;s chat model will craft the title when you post.</div>';
           renderReader(null);
           return;
         }
