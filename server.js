@@ -508,11 +508,13 @@ function normalizeBoardComment(comment) {
   const parentId = compactText(comment?.parentId) || "";
   const flags = Math.max(0, Number(comment?.flags || 0) || 0);
   const supports = Math.max(0, Number(comment?.supports || 0) || 0);
+  const pinned = Boolean(comment?.pinned);
+  const pinnedAt = compactText(comment?.pinnedAt) || (pinned ? createdAt : "");
   const hidden = Boolean(comment?.hidden) || flags >= publicBoardFlagThreshold();
   const hiddenAt = compactText(comment?.hiddenAt) || (hidden ? new Date().toISOString() : "");
   const hiddenReason = compactText(comment?.hiddenReason) || (hidden ? "Community flag review" : "");
   const updatedAt = compactText(comment?.updatedAt) || createdAt;
-  return { id, parentId, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason };
+  return { id, parentId, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason, pinned, pinnedAt };
 }
 
 function normalizeBoardPost(post) {
@@ -524,6 +526,8 @@ function normalizeBoardPost(post) {
   const id = compactText(post?.id) || `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const flags = Math.max(0, Number(post?.flags || 0) || 0);
   const supports = Math.max(0, Number(post?.supports || 0) || 0);
+  const pinned = Boolean(post?.pinned);
+  const pinnedAt = compactText(post?.pinnedAt) || (pinned ? createdAt : "");
   const hidden = Boolean(post?.hidden) || flags >= publicBoardFlagThreshold();
   const hiddenAt = compactText(post?.hiddenAt) || (hidden ? new Date().toISOString() : "");
   const hiddenReason = compactText(post?.hiddenReason) || (hidden ? "Community flag review" : "");
@@ -531,7 +535,7 @@ function normalizeBoardPost(post) {
   const comments = Array.isArray(post?.comments)
     ? post.comments.map(normalizeBoardComment).filter(Boolean).slice(0, BOARD_COMMENT_LIMIT)
     : [];
-  return { id, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason, comments };
+  return { id, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason, pinned, pinnedAt, comments };
 }
 
 function mutateBoardItems(posts, targetId, handler) {
@@ -601,6 +605,7 @@ function buildBoardStats(posts) {
     totalPosts: 0,
     hiddenCount: 0,
     flaggedCount: 0,
+    pinnedCount: 0,
     totalComments: 0,
     hiddenComments: 0,
     flaggedComments: 0,
@@ -611,6 +616,7 @@ function buildBoardStats(posts) {
   (Array.isArray(posts) ? posts : []).forEach((post) => {
     stats.totalPosts += 1;
     stats.supportCount += Math.max(0, Number(post?.supports || 0) || 0);
+    if (post?.pinned) stats.pinnedCount = (stats.pinnedCount || 0) + 1;
     const flags = Math.max(0, Number(post?.flags || 0) || 0);
     if (post?.hidden) stats.hiddenCount += 1;
     if (flags >= threshold) stats.flaggedCount += 1;
@@ -954,6 +960,41 @@ app.post("/api/618chat/items/:id/flag", async (req, res) => {
     res.json({ ok: true, post: next.find((post) => post.id === id) || null, posts: next, hidden: Boolean(result.item?.hidden) });
   } catch (err) {
     console.error("❌ 618chat flag error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/618chat/items/:id/pin", async (req, res) => {
+  try {
+    if (!isBoardAdminRequest(req)) {
+      return res.status(403).json({ ok: false, error: "Forbidden." });
+    }
+
+    const id = String(req.params.id || "").trim();
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "Post id is required." });
+    }
+
+    const body = req.body || {};
+    const pinned = body?.pinned === undefined ? true : Boolean(body.pinned);
+    const current = await readPublicBoardPosts();
+    const result = mutateBoardItems(current, id, ({ item }) => ({
+      item: {
+        ...item,
+        pinned,
+        pinnedAt: pinned ? (item.pinnedAt || new Date().toISOString()) : "",
+        updatedAt: new Date().toISOString()
+      }
+    }));
+
+    if (!result.changed) {
+      return res.status(404).json({ ok: false, error: "Item not found." });
+    }
+
+    const next = await writePublicBoardPosts(result.posts);
+    res.json({ ok: true, post: next.find((post) => post.id === id) || null, posts: next, pinned: Boolean(result.item?.pinned) });
+  } catch (err) {
+    console.error("❌ 618chat pin error:", err);
     res.status(500).json({ ok: false, error: String(err.message || err) });
   }
 });

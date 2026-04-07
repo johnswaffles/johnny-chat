@@ -418,6 +418,15 @@
       border-color: rgba(45, 111, 64, 0.44);
       background: linear-gradient(180deg, rgba(245, 250, 244, 0.96), rgba(235, 244, 231, 0.92));
     }
+    .post-card.pinned {
+      border-color: rgba(152, 118, 36, 0.28);
+      box-shadow: 0 14px 30px rgba(152, 118, 36, 0.08);
+    }
+    .post-card.pinned .post-title::before {
+      content: "📌";
+      margin-right: 8px;
+      font-size: 16px;
+    }
     .post-open {
       width: 100%;
       border: 0;
@@ -562,6 +571,98 @@
       flex-wrap: wrap;
       gap: 8px;
     }
+    .moderation-bulk {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(16, 32, 21, 0.08);
+    }
+    .moderation-bulk[hidden] {
+      display: none;
+    }
+    .moderation-bulk .bulk-status {
+      margin-right: auto;
+      color: var(--copy);
+      font-size: 13px;
+    }
+    .moderation-bulk label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .moderation-bulk input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #2d6f40;
+    }
+    .spotlight {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,245,0.94));
+      display: grid;
+      gap: 12px;
+    }
+    .spotlight[hidden] {
+      display: none;
+    }
+    .spotlight-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .spotlight-head h4 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+    .spotlight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .spotlight-card {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      background: rgba(255,255,255,0.92);
+      display: grid;
+      gap: 8px;
+    }
+    .spotlight-card h5 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+    .spotlight-card p {
+      margin: 0;
+      color: var(--copy);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .spotlight-card .spotlight-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .spotlight-card .spotlight-actions .button {
+      min-height: 34px;
+      padding: 0 12px;
+      font-size: 13px;
+    }
     .comment-list {
       margin-top: 22px;
       display: grid;
@@ -692,6 +793,28 @@
       margin-left: auto;
       display: inline-flex;
       flex-wrap: wrap;
+    }
+    .post-footer .mini-action {
+      min-width: 38px;
+    }
+    .post-footer .mini-action[data-action="share"] {
+      background: linear-gradient(180deg, rgba(232, 244, 255, 0.98), rgba(222, 239, 251, 0.92));
+      border-color: rgba(57, 105, 154, 0.16);
+      color: #2a587f;
+    }
+    .post-footer .mini-action[data-action="pin"],
+    .post-footer .mini-action[data-action="pin"].active {
+      background: linear-gradient(180deg, rgba(255, 246, 219, 0.98), rgba(247, 233, 193, 0.92));
+      border-color: rgba(152, 118, 36, 0.18);
+      color: #8d6714;
+    }
+    .post-footer .mini-action[data-action="pin"].active {
+      box-shadow: 0 10px 18px rgba(152, 118, 36, 0.12);
+    }
+    .status-badge.pin {
+      background: rgba(152, 118, 36, 0.1);
+      border: 1px solid rgba(152, 118, 36, 0.18);
+      color: #8d6714;
     }
     .mini-action {
       min-height: 36px;
@@ -1030,6 +1153,7 @@
               <span id="results-count" class="status-badge">0 shown</span>
             </div>
           </div>
+          <div id="spotlight" class="spotlight" hidden></div>
           <div id="posts" class="posts"></div>
         </div>
       </div>
@@ -1056,6 +1180,7 @@
       const statusEl = document.getElementById("board-status");
       const summaryTextEl = document.getElementById("board-summary-text");
       const moderationPanelEl = document.getElementById("moderation-panel");
+      const spotlightEl = document.getElementById("spotlight");
       const postSearchInput = document.getElementById("post-search");
       const timeFilterEl = document.getElementById("time-filter");
       const sortFilterEl = document.getElementById("sort-filter");
@@ -1078,6 +1203,7 @@
         totalPosts: 0,
         hiddenCount: 0,
         flaggedCount: 0,
+        pinnedCount: 0,
         totalComments: 0,
         hiddenComments: 0,
         flaggedComments: 0,
@@ -1088,6 +1214,7 @@
       let adminMode = Boolean(adminToken);
       let flagThreshold = 10;
       let ageGateAccepted = String(window.localStorage.getItem(ageGateKey) || "") === "yes";
+      let moderationSelection = new Set();
       const supportedKey = "618chat_supported_items";
 
       function escapeHTML(value) {
@@ -1253,8 +1380,117 @@
       }
 
       function selectPost(id) {
-        selectedId = id;
+        selectedId = String(id || "").trim();
+        syncSelectedPostUrl(selectedId);
         render();
+      }
+
+      function getSelectedPostFromUrl() {
+        try {
+          return new URL(window.location.href).searchParams.get("post") || "";
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function syncSelectedPostUrl(id) {
+        if (!window.history || typeof window.history.replaceState !== "function") return;
+        try {
+          const url = new URL(window.location.href);
+          if (id) {
+            url.searchParams.set("post", id);
+          } else {
+            url.searchParams.delete("post");
+          }
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        } catch (_) {
+          // Ignore URL sync issues.
+        }
+      }
+
+      function copyPostLink(postId) {
+        const id = String(postId || "").trim();
+        if (!id) return;
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set("post", id);
+          const value = url.toString();
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            navigator.clipboard.writeText(value);
+            statusEl.textContent = "Share link copied to clipboard.";
+          } else {
+            window.prompt("Copy this link:", value);
+          }
+          statusEl.classList.remove("error");
+        } catch (err) {
+          statusEl.textContent = err?.message || "Could not copy the share link.";
+          statusEl.classList.add("error");
+        }
+      }
+
+      selectedId = getSelectedPostFromUrl();
+
+      async function setPinnedState(id, pinned) {
+        try {
+          const key = String(id || "").trim();
+          if (!adminMode || !adminToken || !key) return;
+          const response = await fetch(itemsUrl + "/" + encodeURIComponent(key) + "/pin", {
+            method: "POST",
+            headers: authHeaders({
+              Accept: "application/json",
+              "Content-Type": "application/json"
+            }),
+            body: JSON.stringify({ pinned: Boolean(pinned) })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || payload.detail || "Could not update pin state.");
+          }
+          await loadPosts();
+        } catch (err) {
+          statusEl.textContent = err?.message || "Could not update pin state.";
+          statusEl.classList.add("error");
+        }
+      }
+
+      async function runModerationBulk(action, ids, confirmMessage) {
+        const uniqueIds = Array.from(new Set((Array.isArray(ids) ? ids : []).map((value) => String(value || "").trim()).filter(Boolean)));
+        if (!uniqueIds.length) {
+          statusEl.textContent = "Select one or more items first.";
+          statusEl.classList.remove("error");
+          return;
+        }
+        if (confirmMessage && !window.confirm(confirmMessage)) return;
+
+        statusEl.textContent = action === "pin"
+          ? "Updating pins..."
+          : action === "restore"
+            ? "Restoring selected items..."
+            : "Deleting selected items...";
+        statusEl.classList.remove("error");
+
+        try {
+          for (const key of uniqueIds) {
+            const response = await fetch(itemsUrl + "/" + encodeURIComponent(key) + "/" + action, {
+              method: "POST",
+              headers: authHeaders({ Accept: "application/json" })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.ok) {
+              throw new Error(payload.error || payload.detail || ("Could not " + action + " one of the selected items."));
+            }
+          }
+          moderationSelection = new Set();
+          await loadPosts();
+          statusEl.textContent = action === "pin"
+            ? "Selected items pinned."
+            : action === "restore"
+              ? "Selected items restored."
+              : "Selected items deleted.";
+        } catch (err) {
+          statusEl.textContent = err.message || ("Could not " + action + " the selected items.");
+          statusEl.classList.add("error");
+        }
       }
 
       function getPostById(id) {
@@ -1286,12 +1522,18 @@
       }
 
       function comparePosts(left, right) {
+        const leftPinned = Boolean(left.pinned);
+        const rightPinned = Boolean(right.pinned);
         const leftSupports = Number(left.supports || 0) || 0;
         const rightSupports = Number(right.supports || 0) || 0;
         const leftFlags = Number(left.flags || 0) || 0;
         const rightFlags = Number(right.flags || 0) || 0;
         const leftTime = new Date(left.createdAt || 0).getTime() || 0;
         const rightTime = new Date(right.createdAt || 0).getTime() || 0;
+
+        if (leftPinned !== rightPinned) {
+          return rightPinned - leftPinned;
+        }
 
         if (sortFilter === "supported") {
           if (rightSupports !== leftSupports) return rightSupports - leftSupports;
@@ -1314,6 +1556,21 @@
         return filtered.sort(comparePosts);
       }
 
+      function getSpotlightPosts(sourcePosts) {
+        const weekMs = 7 * 24 * 60 * 60 * 1000;
+        const cutoff = Date.now() - weekMs;
+        return (Array.isArray(sourcePosts) ? sourcePosts : [])
+          .filter((post) => !post.hidden && (new Date(post.createdAt || 0).getTime() || 0) >= cutoff)
+          .sort((left, right) => {
+            const leftSupports = Number(left.supports || 0) || 0;
+            const rightSupports = Number(right.supports || 0) || 0;
+            if (rightSupports !== leftSupports) return rightSupports - leftSupports;
+            if (Boolean(left.pinned) !== Boolean(right.pinned)) return Boolean(right.pinned) - Boolean(left.pinned);
+            return (new Date(right.createdAt || 0).getTime() || 0) - (new Date(left.createdAt || 0).getTime() || 0);
+          })
+          .slice(0, 3);
+      }
+
       function collectModerationItems(sourcePosts) {
         const items = [];
         (Array.isArray(sourcePosts) ? sourcePosts : []).forEach((post) => {
@@ -1326,6 +1583,7 @@
               author: post.author || "Anonymous",
               flags: postFlags,
               supports: Number(post.supports || 0) || 0,
+              pinned: Boolean(post.pinned),
               hidden: Boolean(post.hidden),
               createdAt: post.createdAt,
               updatedAt: post.updatedAt,
@@ -1343,6 +1601,7 @@
                 author: comment.author || "Anonymous",
                 flags: commentFlags,
                 supports: Number(comment.supports || 0) || 0,
+                pinned: Boolean(comment.pinned),
                 hidden: Boolean(comment.hidden),
                 createdAt: comment.createdAt,
                 updatedAt: comment.updatedAt,
@@ -1367,6 +1626,7 @@
           totalPosts: 0,
           hiddenCount: 0,
           flaggedCount: 0,
+          pinnedCount: 0,
           totalComments: 0,
           hiddenComments: 0,
           flaggedComments: 0,
@@ -1376,6 +1636,7 @@
         (Array.isArray(sourcePosts) ? sourcePosts : []).forEach((post) => {
           stats.totalPosts += 1;
           stats.supportCount += Number(post.supports || 0) || 0;
+          if (post.pinned) stats.pinnedCount += 1;
           const postFlags = Number(post.flags || 0) || 0;
           if (post.hidden) stats.hiddenCount += 1;
           if (postFlags >= flagThreshold) stats.flaggedCount += 1;
@@ -1475,14 +1736,17 @@
         readerEl.className = "";
         const supportCount = Number(post.supports || 0) || 0;
         const postHidden = Boolean(post.hidden);
+        const postPinned = Boolean(post.pinned);
         readerEl.innerHTML =
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
           '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + '</div>' +
           '<div class="detail-body">' + escapeHTML(formatDisplayedMessage(post.message)).replace(/\n/g, "<br>") + '</div>' +
           '<div class="comment-card-footer" style="padding: 12px 0 0; margin: 0;">' +
-            '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + '</span>' +
+            '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (postPinned ? ' · Pinned' : '') + '</span>' +
             '<div class="actions">' +
               '<button type="button" class="mini-action ' + (isSupported(post.id) ? "supported" : "") + '" data-reader-action="support" aria-label="Support post">♥</button>' +
+              '<button type="button" class="mini-action" data-reader-action="share" aria-label="Copy share link">↗</button>' +
+              (adminMode ? '<button type="button" class="mini-action ' + (postPinned ? "active" : "") + '" data-reader-action="pin" aria-label="' + (postPinned ? "Unpin post" : "Pin post") + '">📌</button>' : "") +
               (adminMode && postHidden ? '<button type="button" class="mini-action" data-reader-action="restore" aria-label="Restore post">↺</button>' : "") +
               (adminMode ? '<button type="button" class="mini-action danger" data-reader-action="delete" aria-label="Delete post">✕</button>' : "") +
             '</div>' +
@@ -1502,6 +1766,22 @@
             event.preventDefault();
             event.stopPropagation();
             deleteItem(post.id);
+          });
+        }
+        const readerShareBtn = readerEl.querySelector('[data-reader-action="share"]');
+        if (readerShareBtn) {
+          readerShareBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            copyPostLink(post.id);
+          });
+        }
+        const readerPinBtn = readerEl.querySelector('[data-reader-action="pin"]');
+        if (readerPinBtn) {
+          readerPinBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void setPinnedState(post.id, !postPinned);
           });
         }
         const readerRestoreBtn = readerEl.querySelector('[data-reader-action="restore"]');
@@ -1587,9 +1867,54 @@
         }
       }
 
+      function renderSpotlight(sourcePosts) {
+        if (!spotlightEl) return;
+        const postsForSpotlight = getSpotlightPosts(sourcePosts);
+        if (!postsForSpotlight.length) {
+          spotlightEl.hidden = true;
+          spotlightEl.innerHTML = "";
+          return;
+        }
+
+        spotlightEl.hidden = false;
+        spotlightEl.innerHTML =
+          '<div class="spotlight-head">' +
+            '<div>' +
+              '<h4>Top this week</h4>' +
+              '<p style="margin:6px 0 0;color:var(--copy);">A quick look at the posts getting the most support right now.</p>' +
+            '</div>' +
+            '<span class="status-badge">Community spotlight</span>' +
+          '</div>' +
+          '<div class="spotlight-grid">' +
+            postsForSpotlight.map((post) => {
+              const excerptText = String(formatDisplayedMessage(post.message) || "").replace(/\n/g, " ");
+              return (
+                '<article class="spotlight-card">' +
+                  '<div class="spotlight-actions">' +
+                    '<span class="status-badge ' + (post.pinned ? "pin" : "") + '">' + (post.pinned ? "Pinned" : "Trending") + '</span>' +
+                    '<button type="button" class="button button-secondary" data-spotlight-open="' + escapeHTML(post.id) + '">Open</button>' +
+                  '</div>' +
+                  '<h5>' + escapeHTML(post.title) + '</h5>' +
+                  '<p>By ' + escapeHTML(post.author || "Anonymous") + ' • ' + escapeHTML(formatDate(post.createdAt)) + '</p>' +
+                  '<p>' + escapeHTML(excerptText.slice(0, 140)) + (excerptText.length > 140 ? "…" : "") + '</p>' +
+                '</article>'
+              );
+            }).join("") +
+          '</div>';
+
+        spotlightEl.querySelectorAll("[data-spotlight-open]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const id = button.getAttribute("data-spotlight-open");
+            if (id) selectPost(id);
+          });
+        });
+      }
+
       function createPostCard(post) {
         const card = document.createElement("article");
-        card.className = "post-card" + (post.id === selectedId ? " active" : "");
+        card.className = "post-card" + (post.id === selectedId ? " active" : "") + (post.pinned ? " pinned" : "");
         const hiddenLabel = post.hidden ? '<span class="status-badge review">Under review</span>' : "";
         const flagLabel = typeof post.flags === "number" && post.flags > 0
           ? '<span class="status-badge">' + post.flags + ' flag' + (post.flags === 1 ? "" : "s") + '</span>'
@@ -1597,12 +1922,15 @@
         const supportLabel = typeof post.supports === "number" && post.supports > 0
           ? '<span class="status-badge support">' + post.supports + ' support' + (post.supports === 1 ? "" : "s") + '</span>'
           : "";
+        const pinLabel = post.pinned ? '<span class="status-badge pin">Pinned</span>' : "";
         const adminDelete = adminMode ? '<button type="button" class="mini-action danger" data-action="delete" aria-label="Delete post">✕</button>' : "";
         const adminRestore = adminMode && post.hidden ? '<button type="button" class="mini-action" data-action="restore" aria-label="Restore post">↺</button>' : "";
+        const adminPin = adminMode ? '<button type="button" class="mini-action ' + (post.pinned ? "active" : "") + '" data-action="pin" aria-label="' + (post.pinned ? "Unpin post" : "Pin post") + '">📌</button>' : "";
         const replyBtn = '<button type="button" class="mini-action" data-action="reply" aria-label="Reply to post">↩</button>';
         const supportBtn = '<button type="button" class="mini-action ' + (isSupported(post.id) ? "supported" : "") + '" data-action="support" aria-label="Support post">♥</button>';
+        const shareBtn = '<button type="button" class="mini-action" data-action="share" aria-label="Copy share link">↗</button>';
         const flagClass = isFlagged(post.id) ? "flagged" : "";
-        const footerBadges = [hiddenLabel, supportLabel, flagLabel].filter(Boolean).join("");
+        const footerBadges = [pinLabel, hiddenLabel, supportLabel, flagLabel].filter(Boolean).join("");
         card.innerHTML =
           '<button type="button" class="post-open">' +
             '<div class="post-title">' + escapeHTML(post.title) + '</div>' +
@@ -1616,7 +1944,9 @@
             '<div class="actions">' +
               replyBtn +
               supportBtn +
+              shareBtn +
               '<button type="button" class="mini-action ' + flagClass + '" data-action="flag" aria-label="Flag post">⚑</button>' +
+              adminPin +
               adminRestore +
               adminDelete +
             '</div>' +
@@ -1655,6 +1985,22 @@
             supportItem(post.id);
           });
         }
+        const shareBtnEl = card.querySelector('[data-action="share"]');
+        if (shareBtnEl) {
+          shareBtnEl.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            copyPostLink(post.id);
+          });
+        }
+        const pinBtnEl = card.querySelector('[data-action="pin"]');
+        if (pinBtnEl) {
+          pinBtnEl.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void setPinnedState(post.id, !post.pinned);
+          });
+        }
         return card;
       }
 
@@ -1686,7 +2032,9 @@
           postsEl.innerHTML = '<div class="empty-state">' + emptyMessage + '</div>';
           if (selectedId && !visiblePosts.some((post) => post.id === selectedId)) {
             selectedId = "";
+            syncSelectedPostUrl(selectedId);
           }
+          renderSpotlight(visiblePosts);
           renderReader(null);
           updateListSummary(visiblePosts.length);
           return;
@@ -1695,11 +2043,14 @@
         const current = visiblePosts.find((post) => post.id === selectedId) || visiblePosts[0];
         if (!selectedId || !posts.some((post) => post.id === selectedId)) {
           selectedId = current.id;
+          syncSelectedPostUrl(selectedId);
         }
         if (!visiblePosts.some((post) => post.id === selectedId)) {
           selectedId = current.id;
+          syncSelectedPostUrl(selectedId);
         }
         renderReader(current);
+        renderSpotlight(visiblePosts);
 
         visiblePosts.forEach((post) => {
           postsEl.appendChild(createPostCard(post));
@@ -1737,9 +2088,17 @@
             '<div class="moderation-stats">' +
               '<span class="status-badge">Posts ' + stats.totalPosts + '</span>' +
               '<span class="status-badge">Comments ' + stats.totalComments + '</span>' +
+              '<span class="status-badge pin">Pinned ' + (stats.pinnedCount || 0) + '</span>' +
               '<span class="status-badge review">Queue ' + stats.queueCount + '</span>' +
               '<span class="status-badge">Supports ' + stats.supportCount + '</span>' +
             '</div>' +
+          '</div>' +
+          '<div class="moderation-bulk">' +
+            '<span class="bulk-status">Select items in the queue, then apply a bulk action.</span>' +
+            '<label><input type="checkbox" data-moderation-bulk-select-all> Select all</label>' +
+            '<button class="button button-secondary" type="button" data-moderation-bulk-action="pin">Pin selected</button>' +
+            '<button class="button button-secondary" type="button" data-moderation-bulk-action="restore">Restore selected</button>' +
+            '<button class="button button-danger" type="button" data-moderation-bulk-action="delete">Delete selected</button>' +
           '</div>' +
           '<div class="moderation-queue">' +
             (queue.length
@@ -1757,11 +2116,13 @@
                           '<span class="status-badge">' + item.supports + ' support' + (item.supports === 1 ? "" : "s") + '</span>' +
                         '</div>' +
                       '</div>' +
+                      '<label><input type="checkbox" data-moderation-select="' + escapeHTML(item.id) + '"> Select this item</label>' +
                       '<p>By ' + escapeHTML(item.author || "Anonymous") + ' • ' + escapeHTML(formatDate(item.updatedAt || item.createdAt)) + '</p>' +
                       '<p>' + escapeHTML(String(item.message || "").slice(0, 180)) + (String(item.message || "").length > 180 ? "…" : "") + '</p>' +
                       (item.parentTitle ? '<p style="font-size: 13px;">Reply on <strong>' + escapeHTML(item.parentTitle) + '</strong></p>' : '') +
                       '<div class="moderation-actions">' +
                         '<button class="button button-secondary" type="button" data-moderation-action="open" data-item-id="' + escapeHTML(item.id) + '">Open</button>' +
+                        '<button class="button button-secondary" type="button" data-moderation-action="pin" data-item-id="' + escapeHTML(item.id) + '">' + (item.pinned ? "Unpin" : "Pin") + '</button>' +
                         '<button class="button button-secondary" type="button" data-moderation-action="restore" data-item-id="' + escapeHTML(item.id) + '">Restore</button>' +
                         '<button class="button button-danger" type="button" data-moderation-action="delete" data-item-id="' + escapeHTML(item.id) + '">Delete</button>' +
                       '</div>' +
@@ -1781,11 +2142,50 @@
             if (action === "open") {
               const target = findPostByItemId(itemId);
               if (target) selectPost(target.id);
+            } else if (action === "pin") {
+              const target = findPostByItemId(itemId);
+              if (target) void setPinnedState(target.id, !target.pinned);
             } else if (action === "restore") {
               restoreItem(itemId);
             } else if (action === "delete") {
               deleteItem(itemId);
             }
+          });
+        });
+        moderationPanelEl.querySelectorAll("[data-moderation-select]").forEach((checkbox) => {
+          const itemId = checkbox.getAttribute("data-moderation-select");
+          if (itemId) {
+            checkbox.checked = moderationSelection.has(itemId);
+          }
+          checkbox.addEventListener("change", () => {
+            const key = String(itemId || "").trim();
+            if (!key) return;
+            if (checkbox.checked) {
+              moderationSelection.add(key);
+            } else {
+              moderationSelection.delete(key);
+            }
+          });
+        });
+        const bulkSelectAll = moderationPanelEl.querySelector("[data-moderation-bulk-select-all]");
+        if (bulkSelectAll) {
+          bulkSelectAll.checked = queue.length > 0 && queue.every((item) => moderationSelection.has(item.id));
+          bulkSelectAll.addEventListener("change", () => {
+            if (bulkSelectAll.checked) {
+              queue.forEach((item) => moderationSelection.add(item.id));
+            } else {
+              moderationSelection = new Set();
+            }
+            renderModerationPanel();
+          });
+        }
+        moderationPanelEl.querySelectorAll("[data-moderation-bulk-action]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const action = button.getAttribute("data-moderation-bulk-action");
+            if (!action) return;
+            const ids = queue.filter((item) => moderationSelection.has(item.id)).map((item) => item.id);
+            const prefix = action === "pin" ? "Pin" : action === "restore" ? "Restore" : "Delete";
+            void runModerationBulk(action, ids, prefix + " the selected items?");
           });
         });
       }
