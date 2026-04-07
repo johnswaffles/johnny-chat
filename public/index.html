@@ -369,17 +369,32 @@
       align-items: center;
       margin-top: 14px;
     }
-    .hint { font-size: 14px; color: var(--copy); line-height: 1.6; }
-    .moderation-note {
-      margin-top: 12px;
+    .reply-banner {
+      display: none;
+      margin: 0 0 12px;
       padding: 12px 14px;
       border-radius: 16px;
       background: rgba(45, 111, 64, 0.08);
-      border: 1px solid rgba(45, 111, 64, 0.14);
+      border: 1px solid rgba(45, 111, 64, 0.16);
       color: var(--green-deep);
       font-size: 14px;
       line-height: 1.6;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
     }
+    .reply-banner strong { font-weight: 800; }
+    .reply-banner .reply-clear {
+      border: 0;
+      background: rgba(255,255,255,0.85);
+      color: var(--green-deep);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .reply-banner.show { display: flex; }
+    .hint { font-size: 14px; color: var(--copy); line-height: 1.6; }
     .posts {
       display: grid;
       gap: 10px;
@@ -427,6 +442,53 @@
       margin-top: 8px;
       color: var(--copy);
       line-height: 1.6;
+      font-size: 14px;
+    }
+    .comment-list {
+      margin-top: 18px;
+      display: grid;
+      gap: 10px;
+    }
+    .comment-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .comment-heading h4 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+    .comment-card {
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.9);
+      overflow: hidden;
+    }
+    .comment-card summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      display: grid;
+      gap: 4px;
+    }
+    .comment-card summary::-webkit-details-marker { display: none; }
+    .comment-card-title {
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+    }
+    .comment-card-meta {
+      color: var(--copy);
+      font-size: 13px;
+    }
+    .comment-card .detail-body {
+      margin: 0 14px 14px;
+      min-height: 0;
       font-size: 14px;
     }
     .post-card-meta {
@@ -612,8 +674,8 @@
         <div class="pill-row">
           <div class="pill"><strong>Anonymous</strong> by design</div>
           <div class="pill"><strong>Respect</strong> and understanding</div>
-          <div class="pill"><strong>AI-crafted</strong> titles</div>
           <div class="pill"><strong>Public</strong> to browse</div>
+          <div class="pill"><strong>Thoughtful</strong> titles</div>
         </div>
         <div class="hero-actions">
           <a class="button button-primary" href="#compose">Write a post</a>
@@ -640,8 +702,12 @@
         <div class="layout">
           <section class="composer" aria-label="New post" id="compose">
             <h3>New post</h3>
-            <p>Keep it honest and respectful. Johnny's chat model will craft a memorable title for your post.</p>
+            <p>Keep it honest and respectful. Your post will get a thoughtful title when you share it.</p>
             <form id="board-form">
+              <div id="reply-banner" class="reply-banner" hidden>
+                <div>Replying to <strong id="reply-target-label">this post</strong>.</div>
+                <button class="reply-clear" id="reply-clear" type="button">Cancel reply</button>
+              </div>
               <div class="field">
                 <label for="author">Name</label>
                 <input id="author" name="author" autocomplete="name" placeholder="Anonymous">
@@ -655,7 +721,6 @@
               </div>
               <div class="status" id="board-status" aria-live="polite"></div>
               <div class="hint">Please avoid sharing personal information such as your real name, phone number, email address, home address, or anything that could identify you offline.</div>
-              <div class="moderation-note">When a post reaches 10 flags, it moves to under review so only the administrator can view it. Click Moderate and enter the admin secret to unlock delete controls.</div>
             </form>
           </section>
 
@@ -663,6 +728,7 @@
             <h3>Read a post</h3>
             <p>Click any card on the left to open the full message here.</p>
             <div id="post-reader" class="empty-state">No posts yet. Add the first message on the left and it will appear here.</div>
+            <div id="comment-list" class="comment-list" hidden></div>
           </section>
         </div>
 
@@ -694,11 +760,16 @@
       const form = document.getElementById("board-form");
       const postsEl = document.getElementById("posts");
       const readerEl = document.getElementById("post-reader");
+      const commentListEl = document.getElementById("comment-list");
       const statusEl = document.getElementById("board-status");
       const moderationToggle = document.getElementById("moderation-toggle");
-      const moderationNote = document.querySelector(".moderation-note");
+      const replyBanner = document.getElementById("reply-banner");
+      const replyTargetLabel = document.getElementById("reply-target-label");
+      const replyClear = document.getElementById("reply-clear");
+      const submitButton = form.querySelector('button[type="submit"]');
 
       let selectedId = "";
+      let replyTargetId = "";
       let posts = [];
       let loading = true;
       let adminToken = String(window.localStorage.getItem(adminTokenKey) || "").trim();
@@ -795,12 +866,6 @@
         return headers;
       }
 
-      function updateModerationNote() {
-        if (!moderationNote) return;
-        const threshold = Number(flagThreshold || 10) || 10;
-        moderationNote.textContent = "When a post reaches " + threshold + " flag" + (threshold === 1 ? "" : "s") + ", it moves to under review so only the administrator can view it.";
-      }
-
       function isFlagged(id) {
         return readFlaggedIds().includes(String(id));
       }
@@ -808,6 +873,42 @@
       function selectPost(id) {
         selectedId = id;
         render();
+      }
+
+      function getPostById(id) {
+        return posts.find((post) => post.id === id) || null;
+      }
+
+      function clearReplyTarget() {
+        replyTargetId = "";
+        updateReplyTargetUI();
+        render();
+      }
+
+      function beginReply(post) {
+        if (!post) return;
+        replyTargetId = post.id;
+        selectedId = post.id;
+        updateReplyTargetUI();
+        render();
+        messageInput.focus();
+      }
+
+      function updateReplyTargetUI() {
+        if (!replyBanner || !replyTargetLabel) return;
+        const target = replyTargetId ? getPostById(replyTargetId) : null;
+        if (target) {
+          replyBanner.hidden = false;
+          replyBanner.classList.add("show");
+          replyTargetLabel.textContent = target.title || "this post";
+          if (submitButton) submitButton.textContent = "Share comment";
+          messageInput.placeholder = "Write a comment for this post...";
+        } else {
+          replyBanner.hidden = true;
+          replyBanner.classList.remove("show");
+          if (submitButton) submitButton.textContent = "Share post";
+          messageInput.placeholder = "Share what is on your mind...";
+        }
       }
 
       async function loadPosts() {
@@ -825,9 +926,11 @@
           }
           posts = Array.isArray(payload.posts) ? payload.posts : [];
           flagThreshold = Number(payload.flagThreshold || 10) || 10;
-          updateModerationNote();
           if (!selectedId || !posts.some((post) => post.id === selectedId)) {
             selectedId = posts[0] ? posts[0].id : "";
+          }
+          if (replyTargetId && !posts.some((post) => post.id === replyTargetId)) {
+            clearReplyTarget();
           }
           loading = false;
           statusEl.textContent = adminMode
@@ -846,6 +949,10 @@
       function renderReader(post) {
         if (!post) {
           readerEl.className = "empty-state";
+          if (commentListEl) {
+            commentListEl.hidden = true;
+            commentListEl.innerHTML = "";
+          }
           readerEl.innerHTML = loading
             ? "Loading the conversation board..."
             : "No posts yet. Add the first message on the left and it will appear here.";
@@ -857,6 +964,29 @@
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
           '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + '</div>' +
           '<div class="detail-body">' + escapeHTML(post.message).replace(/\n/g, "<br>") + '</div>';
+
+        if (commentListEl) {
+          const comments = Array.isArray(post.comments) ? post.comments.filter((comment) => !comment.hidden) : [];
+          if (!comments.length) {
+            commentListEl.hidden = true;
+            commentListEl.innerHTML = "";
+          } else {
+            commentListEl.hidden = false;
+            commentListEl.innerHTML =
+              '<div class="comment-heading"><h4>Replies</h4><span class="status-badge">' + comments.length + '</span></div>' +
+              comments.map((comment) => {
+                return (
+                  '<details class="comment-card">' +
+                    '<summary>' +
+                      '<div class="comment-card-title">' + escapeHTML(comment.title) + '</div>' +
+                      '<div class="comment-card-meta">Posted by ' + escapeHTML(comment.author || "Anonymous") + ' on ' + escapeHTML(formatDate(comment.createdAt)) + '</div>' +
+                    '</summary>' +
+                    '<div class="detail-body">' + escapeHTML(comment.message).replace(/\n/g, "<br>") + '</div>' +
+                  '</details>'
+                );
+              }).join("");
+          }
+        }
       }
 
       function createPostCard(post) {
@@ -867,11 +997,12 @@
           ? '<span class="status-badge">' + post.flags + ' flag' + (post.flags === 1 ? "" : "s") + '</span>'
           : "";
         const adminDelete = adminMode ? '<button type="button" class="mini-action danger" data-action="delete" aria-label="Delete post">✕</button>' : "";
+        const replyBtn = '<button type="button" class="mini-action" data-action="reply" aria-label="Reply to post">↩</button>';
         const flagClass = isFlagged(post.id) ? "flagged" : "";
-        const excerptSuffix = post.message.length > 120 ? "…" : "";
         card.innerHTML =
           '<div class="post-actions">' +
             adminDelete +
+            replyBtn +
             '<button type="button" class="mini-action ' + flagClass + '" data-action="flag" aria-label="Flag post">⚑</button>' +
           '</div>' +
           '<button type="button" class="post-open">' +
@@ -880,7 +1011,6 @@
               '<span>' + escapeHTML(post.author || "Anonymous") + ' • ' + escapeHTML(formatDate(post.createdAt)) + '</span>' +
               '<span>' + (hiddenLabel || flagLabel || "") + '</span>' +
             '</div>' +
-            '<div class="post-excerpt">' + escapeHTML(excerpt(post.message)) + excerptSuffix + '</div>' +
           '</button>';
 
         card.querySelector(".post-open").addEventListener("click", () => selectPost(post.id));
@@ -900,6 +1030,14 @@
             deletePost(post.id);
           });
         }
+        const replyBtnEl = card.querySelector('[data-action="reply"]');
+        if (replyBtnEl) {
+          replyBtnEl.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            beginReply(post);
+          });
+        }
         return card;
       }
 
@@ -913,7 +1051,7 @@
         }
 
         if (!posts.length) {
-          postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to start the first conversation. Johnny&apos;s chat model will craft the title when you post.</div>';
+          postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to start the first conversation.</div>';
           renderReader(null);
           return;
         }
@@ -1002,6 +1140,7 @@
         if (moderationToggle) {
           moderationToggle.textContent = adminMode ? "Exit moderation" : "Moderate";
         }
+        updateReplyTargetUI();
       }
 
       form.addEventListener("submit", (event) => {
@@ -1014,23 +1153,33 @@
           return;
         }
 
-          statusEl.textContent = "Posting to the conversation board...";
+        statusEl.textContent = replyTargetId ? "Posting your reply..." : "Posting to the conversation board...";
         statusEl.classList.remove("error");
-        form.querySelector('button[type="submit"]').disabled = true;
+        submitButton.disabled = true;
 
-        fetch(postsUrl, {
+        const targetId = replyTargetId;
+        const endpoint = targetId ? postsUrl + "/" + encodeURIComponent(targetId) + "/comments" : postsUrl;
+        fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ author, message })
         })
           .then((response) => response.json().then((payload) => ({ response, payload })))
           .then(({ response, payload }) => {
-            if (!response.ok || !payload.ok || !payload.post) {
+            if (!response.ok || !payload.ok || !(payload.post || payload.comment)) {
               throw new Error(payload.error || payload.detail || "Could not add the post.");
             }
-            posts = [payload.post, ...posts.filter((post) => post.id !== payload.post.id)];
-            selectedId = payload.post.id;
+            if (targetId) {
+              const nextPost = payload.post || null;
+              posts = posts.map((post) => post.id === targetId && nextPost ? nextPost : post);
+              selectedId = targetId;
+            } else {
+              const nextPost = payload.post;
+              posts = [nextPost, ...posts.filter((post) => post.id !== nextPost.id)];
+              selectedId = nextPost.id;
+            }
             form.reset();
+            clearReplyTarget();
             statusEl.textContent = "Message added to the conversation board.";
             statusEl.classList.remove("error");
             render();
@@ -1044,13 +1193,16 @@
             statusEl.classList.add("error");
           })
           .finally(() => {
-            form.querySelector('button[type="submit"]').disabled = false;
+            submitButton.disabled = false;
           });
       });
 
+      if (replyClear) {
+        replyClear.addEventListener("click", clearReplyTarget);
+      }
+
       render();
       loadPosts();
-      updateModerationNote();
       if (!ageGateAccepted) {
         showAgeGate();
       } else {

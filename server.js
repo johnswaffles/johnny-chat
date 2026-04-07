@@ -315,6 +315,11 @@ function publicBoardFlagThreshold() {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 10;
 }
 
+function publicBoardCommentLimit() {
+  const value = Number(PUBLIC_BOARD_COMMENT_LIMIT || 50);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 50;
+}
+
 function normalizeBoardTitle(message) {
   const clean = compactText(message);
   if (!clean) return "Community note";
@@ -459,20 +464,53 @@ async function saveBoardTitleLater(postId, message) {
     if (!title) return;
 
     const current = await readPublicBoardPosts();
-    const idx = current.findIndex((post) => post.id === postId);
-    if (idx === -1) return;
+    let changed = false;
+    const next = current.map((post) => {
+      if (post.id === postId) {
+        const nextPost = { ...post };
+        if (compactText(nextPost.title) === title) return post;
+        nextPost.title = title;
+        nextPost.updatedAt = new Date().toISOString();
+        changed = true;
+        return normalizeBoardPost(nextPost);
+      }
 
-    const next = current.slice();
-    const nextPost = { ...next[idx] };
-    if (compactText(nextPost.title) === title) return;
+      const comments = Array.isArray(post.comments) ? post.comments : [];
+      const commentIdx = comments.findIndex((comment) => comment.id === postId);
+      if (commentIdx === -1) return post;
 
-    nextPost.title = title;
-    nextPost.updatedAt = new Date().toISOString();
-    next[idx] = normalizeBoardPost(nextPost);
+      const nextPost = { ...post, comments: comments.slice() };
+      const nextComment = { ...nextPost.comments[commentIdx] };
+      if (compactText(nextComment.title) === title) return post;
+      nextComment.title = title;
+      nextComment.updatedAt = new Date().toISOString();
+      nextPost.comments[commentIdx] = normalizeBoardComment(nextComment);
+      nextPost.updatedAt = new Date().toISOString();
+      changed = true;
+      return normalizeBoardPost(nextPost);
+    });
+
+    if (!changed) return;
     await writePublicBoardPosts(next);
   } catch (err) {
     console.warn("⚠️ 618chat post title refresh failed:", err?.message || err);
   }
+}
+
+function normalizeBoardComment(comment) {
+  const message = compactText(comment?.message);
+  if (!message) return null;
+  const author = compactText(comment?.author) || "Anonymous";
+  const title = compactText(comment?.title) || normalizeBoardTitle(message);
+  const createdAt = compactText(comment?.createdAt) || new Date().toISOString();
+  const id = compactText(comment?.id) || `comment_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const parentId = compactText(comment?.parentId) || "";
+  const flags = Math.max(0, Number(comment?.flags || 0) || 0);
+  const hidden = Boolean(comment?.hidden) || flags >= publicBoardFlagThreshold();
+  const hiddenAt = compactText(comment?.hiddenAt) || (hidden ? new Date().toISOString() : "");
+  const hiddenReason = compactText(comment?.hiddenReason) || (hidden ? "Community flag review" : "");
+  const updatedAt = compactText(comment?.updatedAt) || createdAt;
+  return { id, parentId, title, author, message, createdAt, updatedAt, flags, hidden, hiddenAt, hiddenReason };
 }
 
 function normalizeBoardPost(post) {
@@ -487,7 +525,10 @@ function normalizeBoardPost(post) {
   const hiddenAt = compactText(post?.hiddenAt) || (hidden ? new Date().toISOString() : "");
   const hiddenReason = compactText(post?.hiddenReason) || (hidden ? "Community flag review" : "");
   const updatedAt = compactText(post?.updatedAt) || createdAt;
-  return { id, title, author, message, createdAt, updatedAt, flags, hidden, hiddenAt, hiddenReason };
+  const comments = Array.isArray(post?.comments)
+    ? post.comments.map(normalizeBoardComment).filter(Boolean).slice(0, publicBoardCommentLimit())
+    : [];
+  return { id, title, author, message, createdAt, updatedAt, flags, hidden, hiddenAt, hiddenReason, comments };
 }
 
 async function readPublicBoardPosts() {
@@ -624,7 +665,10 @@ app.get("/api/618chat/posts", async (_req, res) => {
   try {
     const posts = await readPublicBoardPosts();
     const admin = isBoardAdminRequest(_req);
-    const visiblePosts = admin ? posts : posts.filter((post) => !post.hidden);
+    const visiblePosts = (admin ? posts : posts.filter((post) => !post.hidden)).map((post) => {
+      const comments = admin ? (post.comments || []) : (post.comments || []).filter((comment) => !comment.hidden);
+      return { ...post, comments };
+    });
     res.json({
       ok: true,
       posts: visiblePosts,
@@ -669,6 +713,63 @@ app.post("/api/618chat/posts", async (req, res) => {
     res.json({ ok: true, post, posts: next });
   } catch (err) {
     console.error("❌ 618chat write error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/618chat/posts/:id/comments", async (req, res) => {
+  try {
+    const parentId = String(req.params.id || "").trim();
+    if (!parentId) {
+      return res.status(400).json({ ok: false, error: "Parent post id is required." });
+    }
+
+    const body = req.body || {};
+    const author = compactText(body.author) || "Anonymous";
+    const message = compactText(body.message);
+    if (!message) {
+      return res.status(400).json({ ok: false, error: "Message is required." });
+    }
+
+    const review = await assessBoardPostSafety(message);
+    const title = compactText(body.title) || normalizeBoardTitle(message);
+    const comment = normalizeBoardComment({
+      parentId,
+      author,
+      message,
+      title,
+      flags: 0,
+      hidden: review.hidden,
+      hiddenReason: review.hidden ? review.reason : "",
+      updatedAt: new Date().toISOString()
+    });
+
+    if (!comment) {
+      return res.status(400).json({ ok: false, error: "Message is required." });
+    }
+
+    const current = await readPublicBoardPosts();
+    const idx = current.findIndex((post) => post.id === parentId);
+    if (idx === -1) {
+      return res.status(404).json({ ok: false, error: "Parent post not found." });
+    }
+
+    const next = current.slice();
+    const parent = { ...next[idx] };
+    const nextComments = [comment, ...((Array.isArray(parent.comments) ? parent.comments : []))].slice(0, publicBoardCommentLimit());
+    parent.comments = nextComments;
+    parent.updatedAt = new Date().toISOString();
+    next[idx] = normalizeBoardPost(parent);
+    const saved = await writePublicBoardPosts(next);
+    void saveBoardTitleLater(comment.id, message);
+    res.json({
+      ok: true,
+      comment,
+      post: saved.find((post) => post.id === parentId) || null,
+      posts: saved
+    });
+  } catch (err) {
+    console.error("❌ 618chat comment write error:", err);
     res.status(500).json({ ok: false, error: String(err.message || err) });
   }
 });
