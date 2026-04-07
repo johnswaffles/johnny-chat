@@ -1094,6 +1094,7 @@ ${chatSiteNav("home")}
       let searchQuery = "";
       let timeFilter = "all";
       let sortFilter = "newest";
+      let lastSubmission = null;
       let boardStats = {
         totalPosts: 0,
         hiddenCount: 0,
@@ -1177,6 +1178,31 @@ ${chatSiteNav("home")}
 
       function isSupported(id) {
         return readSupportedIds().includes(String(id));
+      }
+
+      function rememberSubmission(item, kind) {
+        if (!item) return;
+        lastSubmission = {
+          id: item.id,
+          kind: kind || "post",
+          title: item.title || "Untitled note",
+          author: item.author || "Anonymous",
+          message: item.message || "",
+          createdAt: item.createdAt || new Date().toISOString(),
+          updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
+          flags: Number(item.flags || 0) || 0,
+          supports: Number(item.supports || 0) || 0,
+          hidden: Boolean(item.hidden),
+          hiddenReason: item.hiddenReason || ""
+        };
+      }
+
+      function clearSubmissionReminderIfVisible() {
+        if (!lastSubmission) return;
+        const current = posts.find((post) => post.id === lastSubmission.id) || null;
+        if (current && !current.hidden) {
+          lastSubmission = null;
+        }
       }
 
       function setAdminToken(token) {
@@ -1674,7 +1700,7 @@ ${chatSiteNav("home")}
       function updateListSummary(count) {
         if (!resultsCountEl || !summaryTextEl) return;
         const total = adminMode ? posts.length : posts.filter((post) => !post.hidden).length;
-        const queryNote = searchQuery.trim() ? " for \"" + searchQuery.trim() + "\"" : "";
+        const queryNote = searchQuery.trim() ? ' for "' + searchQuery.trim() + '"' : "";
         resultsCountEl.textContent = String(count) + " shown";
         summaryTextEl.textContent = total
           ? String(count) + " of " + String(total) + " conversations shown" + queryNote + "."
