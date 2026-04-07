@@ -519,6 +519,12 @@
       background: #2d6f40;
       box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
     }
+    .comment-card-mobile-note {
+      display: none;
+      margin-top: 6px;
+      color: var(--copy);
+      font-size: 12px;
+    }
     .post-card-meta {
       display: flex;
       align-items: center;
@@ -626,6 +632,21 @@
       .hero, .board { padding: 20px; }
       .detail-title { font-size: 28px; }
       .hero h1 { max-width: none; }
+      .comment-list {
+        padding-left: 10px;
+      }
+      .comment-heading h4 {
+        font-size: 20px;
+      }
+      .comment-card summary {
+        padding: 12px 14px;
+      }
+      .comment-card .detail-body {
+        margin: 0 12px 12px 14px;
+      }
+      .comment-card-mobile-note {
+        display: block;
+      }
       .post-actions {
         top: 8px;
         right: 8px;
@@ -1003,13 +1024,15 @@
             commentListEl.innerHTML =
               '<div class="comment-heading"><h4>Replies</h4><span class="status-badge">' + comments.length + '</span></div>' +
               comments.map((comment) => {
+                const mobileOpen = window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
                 return (
-                  '<details class="comment-card">' +
+                  '<details class="comment-card"' + (mobileOpen ? "" : " open") + '>' +
                     '<summary>' +
                       '<div class="comment-card-title">' + escapeHTML(comment.title) + '</div>' +
                       '<div class="comment-card-meta">Posted by ' + escapeHTML(comment.author || "Anonymous") + ' on ' + escapeHTML(formatDate(comment.createdAt)) + '</div>' +
                     '</summary>' +
                     '<div class="detail-body">' + escapeHTML(comment.message).replace(/\n/g, "<br>") + '</div>' +
+                    '<div class="comment-card-mobile-note">Tap to collapse or expand this reply.</div>' +
                   '</details>'
                 );
               }).join("");
