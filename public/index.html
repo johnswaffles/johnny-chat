@@ -634,18 +634,38 @@
       .hero h1 { max-width: none; }
       .comment-list {
         padding-left: 10px;
+        gap: 8px;
       }
       .comment-heading h4 {
         font-size: 20px;
       }
       .comment-card summary {
-        padding: 12px 14px;
+        padding: 10px 12px;
+        gap: 3px;
+      }
+      .comment-card-title {
+        font-size: 16px;
+      }
+      .comment-card-meta {
+        font-size: 12px;
       }
       .comment-card .detail-body {
-        margin: 0 12px 12px 14px;
+        margin: 0 10px 10px 12px;
+        padding: 12px 14px;
+        font-size: 13px;
+        line-height: 1.65;
+        border-radius: 12px;
       }
       .comment-card-mobile-note {
         display: block;
+        margin: 0 12px 12px 12px;
+      }
+      .comment-card summary::before {
+        top: 16px;
+        left: -8px;
+        width: 8px;
+        height: 8px;
+        box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.12);
       }
       .post-actions {
         top: 8px;
