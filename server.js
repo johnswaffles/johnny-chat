@@ -506,11 +506,12 @@ function normalizeBoardComment(comment) {
   const id = compactText(comment?.id) || `comment_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const parentId = compactText(comment?.parentId) || "";
   const flags = Math.max(0, Number(comment?.flags || 0) || 0);
+  const supports = Math.max(0, Number(comment?.supports || 0) || 0);
   const hidden = Boolean(comment?.hidden) || flags >= publicBoardFlagThreshold();
   const hiddenAt = compactText(comment?.hiddenAt) || (hidden ? new Date().toISOString() : "");
   const hiddenReason = compactText(comment?.hiddenReason) || (hidden ? "Community flag review" : "");
   const updatedAt = compactText(comment?.updatedAt) || createdAt;
-  return { id, parentId, title, author, message, createdAt, updatedAt, flags, hidden, hiddenAt, hiddenReason };
+  return { id, parentId, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason };
 }
 
 function normalizeBoardPost(post) {
@@ -521,6 +522,7 @@ function normalizeBoardPost(post) {
   const createdAt = compactText(post?.createdAt) || new Date().toISOString();
   const id = compactText(post?.id) || `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const flags = Math.max(0, Number(post?.flags || 0) || 0);
+  const supports = Math.max(0, Number(post?.supports || 0) || 0);
   const hidden = Boolean(post?.hidden) || flags >= publicBoardFlagThreshold();
   const hiddenAt = compactText(post?.hiddenAt) || (hidden ? new Date().toISOString() : "");
   const hiddenReason = compactText(post?.hiddenReason) || (hidden ? "Community flag review" : "");
@@ -528,7 +530,100 @@ function normalizeBoardPost(post) {
   const comments = Array.isArray(post?.comments)
     ? post.comments.map(normalizeBoardComment).filter(Boolean).slice(0, publicBoardCommentLimit())
     : [];
-  return { id, title, author, message, createdAt, updatedAt, flags, hidden, hiddenAt, hiddenReason, comments };
+  return { id, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason, comments };
+}
+
+function mutateBoardItems(posts, targetId, handler) {
+  const id = compactText(targetId);
+  if (!id) return { posts: Array.isArray(posts) ? posts : [], item: null, changed: false };
+
+  let changed = false;
+  let item = null;
+
+  const nextPosts = (Array.isArray(posts) ? posts : []).map((post) => {
+    const currentPost = normalizeBoardPost(post);
+    if (!currentPost) return null;
+
+    if (currentPost.id === id) {
+      const result = handler({ kind: "post", item: { ...currentPost } }) || {};
+      if (result.deleted) {
+        changed = true;
+        item = result.item || currentPost;
+        return null;
+      }
+      if (result.item) {
+        const nextPost = normalizeBoardPost(result.item);
+        if (nextPost) {
+          changed = true;
+          item = nextPost;
+          return nextPost;
+        }
+      }
+      return currentPost;
+    }
+
+    const comments = Array.isArray(currentPost.comments) ? currentPost.comments : [];
+    let postChanged = false;
+    const nextComments = comments.map((comment) => {
+      if (comment.id !== id) return comment;
+      const result = handler({ kind: "comment", item: { ...comment }, parent: currentPost }) || {};
+      if (result.deleted) {
+        changed = true;
+        postChanged = true;
+        item = result.item || comment;
+        return null;
+      }
+      if (result.item) {
+        const nextComment = normalizeBoardComment(result.item);
+        if (nextComment) {
+          changed = true;
+          postChanged = true;
+          item = nextComment;
+          return nextComment;
+        }
+      }
+      return comment;
+    }).filter(Boolean);
+
+    if (postChanged) {
+      changed = true;
+      return normalizeBoardPost({ ...currentPost, comments: nextComments, updatedAt: new Date().toISOString() });
+    }
+    return currentPost;
+  }).filter(Boolean);
+
+  return { posts: nextPosts, item, changed };
+}
+
+function buildBoardStats(posts) {
+  const stats = {
+    totalPosts: 0,
+    hiddenCount: 0,
+    flaggedCount: 0,
+    totalComments: 0,
+    hiddenComments: 0,
+    flaggedComments: 0,
+    supportCount: 0,
+    queueCount: 0
+  };
+  const threshold = publicBoardFlagThreshold();
+  (Array.isArray(posts) ? posts : []).forEach((post) => {
+    stats.totalPosts += 1;
+    stats.supportCount += Math.max(0, Number(post?.supports || 0) || 0);
+    const flags = Math.max(0, Number(post?.flags || 0) || 0);
+    if (post?.hidden) stats.hiddenCount += 1;
+    if (flags >= threshold) stats.flaggedCount += 1;
+    if (post?.hidden || flags >= threshold) stats.queueCount += 1;
+    (Array.isArray(post?.comments) ? post.comments : []).forEach((comment) => {
+      stats.totalComments += 1;
+      stats.supportCount += Math.max(0, Number(comment?.supports || 0) || 0);
+      const commentFlags = Math.max(0, Number(comment?.flags || 0) || 0);
+      if (comment?.hidden) stats.hiddenComments += 1;
+      if (commentFlags >= threshold) stats.flaggedComments += 1;
+      if (comment?.hidden || commentFlags >= threshold) stats.queueCount += 1;
+    });
+  });
+  return stats;
 }
 
 async function readPublicBoardPosts() {
@@ -673,7 +768,8 @@ app.get("/api/618chat/posts", async (_req, res) => {
       ok: true,
       posts: visiblePosts,
       admin,
-      flagThreshold: publicBoardFlagThreshold()
+      flagThreshold: publicBoardFlagThreshold(),
+      stats: buildBoardStats(posts)
     });
   } catch (err) {
     console.error("❌ 618chat read error:", err);
@@ -776,32 +872,145 @@ app.post("/api/618chat/posts/:id/comments", async (req, res) => {
 
 app.post("/api/618chat/posts/:id/flag", async (req, res) => {
   try {
+    const current = await readPublicBoardPosts();
+    const id = String(req.params.id || "").trim();
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "Post id is required." });
+    }
+
+    const result = mutateBoardItems(current, id, ({ item }) => {
+      const nextItem = { ...item };
+      nextItem.flags = Math.max(0, Number(nextItem.flags || 0) || 0) + 1;
+      nextItem.updatedAt = new Date().toISOString();
+      if (nextItem.flags >= publicBoardFlagThreshold()) {
+        nextItem.hidden = true;
+        nextItem.hiddenAt = nextItem.hiddenAt || nextItem.updatedAt;
+        nextItem.hiddenReason = nextItem.hiddenReason || "Community flag review";
+      }
+      return { item: nextItem };
+    });
+
+    if (!result.changed) {
+      return res.status(404).json({ ok: false, error: "Post not found." });
+    }
+    const next = await writePublicBoardPosts(result.posts);
+    res.json({ ok: true, post: next.find((post) => post.id === id) || null, posts: next, hidden: Boolean(result.item?.hidden) });
+  } catch (err) {
+    console.error("❌ 618chat flag error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/618chat/items/:id/support", async (req, res) => {
+  try {
     const id = String(req.params.id || "").trim();
     if (!id) {
       return res.status(400).json({ ok: false, error: "Post id is required." });
     }
 
     const current = await readPublicBoardPosts();
-    const idx = current.findIndex((post) => post.id === id);
-    if (idx === -1) {
-      return res.status(404).json({ ok: false, error: "Post not found." });
+    const result = mutateBoardItems(current, id, ({ item }) => ({
+      item: {
+        ...item,
+        supports: Math.max(0, Number(item?.supports || 0) || 0) + 1,
+        updatedAt: new Date().toISOString()
+      }
+    }));
+    if (!result.changed) {
+      return res.status(404).json({ ok: false, error: "Item not found." });
+    }
+    const next = await writePublicBoardPosts(result.posts);
+    res.json({ ok: true, post: next.find((post) => post.id === id) || null, posts: next, item: result.item || null });
+  } catch (err) {
+    console.error("❌ 618chat support error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/618chat/items/:id/flag", async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "Post id is required." });
     }
 
-    const threshold = publicBoardFlagThreshold();
-    const updated = { ...current[idx] };
-    updated.flags = Math.max(0, Number(updated.flags || 0) || 0) + 1;
-    updated.updatedAt = new Date().toISOString();
-    if (updated.flags >= threshold) {
-      updated.hidden = true;
-      updated.hiddenAt = updated.hiddenAt || updated.updatedAt;
-      updated.hiddenReason = updated.hiddenReason || "Community flag review";
+    const current = await readPublicBoardPosts();
+    const result = mutateBoardItems(current, id, ({ item }) => {
+      const nextItem = { ...item };
+      nextItem.flags = Math.max(0, Number(nextItem.flags || 0) || 0) + 1;
+      nextItem.updatedAt = new Date().toISOString();
+      if (nextItem.flags >= publicBoardFlagThreshold()) {
+        nextItem.hidden = true;
+        nextItem.hiddenAt = nextItem.hiddenAt || nextItem.updatedAt;
+        nextItem.hiddenReason = nextItem.hiddenReason || "Community flag review";
+      }
+      return { item: nextItem };
+    });
+    if (!result.changed) {
+      return res.status(404).json({ ok: false, error: "Item not found." });
     }
-
-    current[idx] = normalizeBoardPost(updated);
-    const next = await writePublicBoardPosts(current);
-    res.json({ ok: true, post: next.find((post) => post.id === id) || null, posts: next, hidden: Boolean(updated.hidden) });
+    const next = await writePublicBoardPosts(result.posts);
+    res.json({ ok: true, post: next.find((post) => post.id === id) || null, posts: next, hidden: Boolean(result.item?.hidden) });
   } catch (err) {
     console.error("❌ 618chat flag error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/618chat/items/:id/delete", async (req, res) => {
+  try {
+    if (!isBoardAdminRequest(req)) {
+      return res.status(403).json({ ok: false, error: "Forbidden." });
+    }
+
+    const id = String(req.params.id || "").trim();
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "Item id is required." });
+    }
+
+    const current = await readPublicBoardPosts();
+    const result = mutateBoardItems(current, id, () => ({ deleted: true }));
+    if (!result.changed) {
+      return res.status(404).json({ ok: false, error: "Item not found." });
+    }
+
+    const next = await writePublicBoardPosts(result.posts);
+    res.json({ ok: true, posts: next });
+  } catch (err) {
+    console.error("❌ 618chat delete error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/618chat/items/:id/restore", async (req, res) => {
+  try {
+    if (!isBoardAdminRequest(req)) {
+      return res.status(403).json({ ok: false, error: "Forbidden." });
+    }
+
+    const id = String(req.params.id || "").trim();
+    if (!id) {
+      return res.status(400).json({ ok: false, error: "Item id is required." });
+    }
+
+    const current = await readPublicBoardPosts();
+    const result = mutateBoardItems(current, id, ({ item }) => ({
+      item: {
+        ...item,
+        flags: 0,
+        hidden: false,
+        hiddenAt: "",
+        hiddenReason: "",
+        updatedAt: new Date().toISOString()
+      }
+    }));
+    if (!result.changed) {
+      return res.status(404).json({ ok: false, error: "Item not found." });
+    }
+    const next = await writePublicBoardPosts(result.posts);
+    res.json({ ok: true, post: next.find((post) => post.id === id) || null, posts: next, item: result.item || null });
+  } catch (err) {
+    console.error("❌ 618chat restore error:", err);
     res.status(500).json({ ok: false, error: String(err.message || err) });
   }
 });
@@ -814,12 +1023,16 @@ app.delete("/api/618chat/posts/:id", async (req, res) => {
 
     const id = String(req.params.id || "").trim();
     if (!id) {
-      return res.status(400).json({ ok: false, error: "Post id is required." });
+      return res.status(400).json({ ok: false, error: "Item id is required." });
     }
 
     const current = await readPublicBoardPosts();
-    const next = current.filter((post) => post.id !== id);
-    await writePublicBoardPosts(next);
+    const result = mutateBoardItems(current, id, () => ({ deleted: true }));
+    if (!result.changed) {
+      return res.status(404).json({ ok: false, error: "Item not found." });
+    }
+
+    const next = await writePublicBoardPosts(result.posts);
     res.json({ ok: true, posts: next });
   } catch (err) {
     console.error("❌ 618chat delete error:", err);
@@ -835,12 +1048,16 @@ app.post("/api/618chat/posts/:id/delete", async (req, res) => {
 
     const id = String(req.params.id || "").trim();
     if (!id) {
-      return res.status(400).json({ ok: false, error: "Post id is required." });
+      return res.status(400).json({ ok: false, error: "Item id is required." });
     }
 
     const current = await readPublicBoardPosts();
-    const next = current.filter((post) => post.id !== id);
-    await writePublicBoardPosts(next);
+    const result = mutateBoardItems(current, id, () => ({ deleted: true }));
+    if (!result.changed) {
+      return res.status(404).json({ ok: false, error: "Item not found." });
+    }
+
+    const next = await writePublicBoardPosts(result.posts);
     res.json({ ok: true, posts: next });
   } catch (err) {
     console.error("❌ 618chat delete error:", err);

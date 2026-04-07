@@ -444,6 +444,124 @@
       line-height: 1.6;
       font-size: 14px;
     }
+    .board-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr);
+      gap: 12px;
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,245,0.94));
+    }
+    .toolbar-field {
+      display: grid;
+      gap: 8px;
+    }
+    .toolbar-field label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(34, 58, 42, 0.68);
+    }
+    .toolbar-field input,
+    .toolbar-field select {
+      width: 100%;
+      border: 1px solid rgba(16, 32, 21, 0.12);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.96);
+      padding: 12px 14px;
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+    }
+    .toolbar-field input:focus,
+    .toolbar-field select:focus {
+      border-color: rgba(45, 111, 64, 0.38);
+      box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.08);
+    }
+    .toolbar-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .board-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      color: var(--copy);
+      font-size: 13px;
+    }
+    .moderation-panel {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(176, 56, 45, 0.14);
+      background: linear-gradient(180deg, rgba(255, 248, 246, 0.96), rgba(250, 242, 239, 0.94));
+      display: grid;
+      gap: 12px;
+    }
+    .moderation-panel[hidden] {
+      display: none;
+    }
+    .moderation-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .moderation-head h4 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      letter-spacing: -0.03em;
+      font-size: 20px;
+    }
+    .moderation-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .moderation-queue {
+      display: grid;
+      gap: 10px;
+    }
+    .moderation-item {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(176, 56, 45, 0.12);
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 8px 20px rgba(17, 38, 22, 0.04);
+    }
+    .moderation-item-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .moderation-item h5 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      letter-spacing: -0.03em;
+      font-size: 16px;
+    }
+    .moderation-item p {
+      margin: 0;
+      color: var(--copy);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+    .moderation-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
     .comment-list {
       margin-top: 22px;
       display: grid;
@@ -512,6 +630,21 @@
       border-radius: 14px;
       background: rgba(255,255,255,0.9);
     }
+    .comment-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 0 14px 14px 18px;
+      color: var(--copy);
+      font-size: 13px;
+    }
+    .comment-card-footer .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
     .comment-card summary::before {
       content: "";
       position: absolute;
@@ -561,6 +694,11 @@
       align-items: center;
       justify-content: center;
       transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    }
+    .mini-action.supported {
+      background: rgba(255, 229, 235, 0.98);
+      border-color: rgba(157, 24, 53, 0.16);
+      color: #9d1835;
     }
     .mini-action:hover {
       transform: translateY(-1px);
@@ -673,6 +811,20 @@
       .comment-card-mobile-note {
         display: none;
       }
+      .board-toolbar {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .toolbar-row {
+        grid-template-columns: 1fr 1fr;
+      }
+      .board-summary {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .moderation-actions {
+        gap: 6px;
+      }
       .comment-card summary::before {
         top: 15px;
         left: -7px;
@@ -757,6 +909,35 @@
             <h2>Post a message</h2>
             <p>Write something short or long. We’ll give it a title and add it to the conversation board.</p>
           </div>
+          <div class="board-summary">
+            <span class="status-badge">Live updates</span>
+            <span id="board-summary-text">Watching for new posts.</span>
+          </div>
+        </div>
+        <div class="board-toolbar" aria-label="Search and filter conversations">
+          <div class="toolbar-field">
+            <label for="post-search">Search conversations</label>
+            <input id="post-search" type="search" placeholder="Search title, author, message, replies, or date">
+          </div>
+          <div class="toolbar-row">
+            <div class="toolbar-field">
+              <label for="time-filter">Date range</label>
+              <select id="time-filter">
+                <option value="all">All time</option>
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="365">Last year</option>
+              </select>
+            </div>
+            <div class="toolbar-field">
+              <label for="sort-filter">Sort by</label>
+              <select id="sort-filter">
+                <option value="newest">Newest first</option>
+                <option value="supported">Most supported</option>
+                <option value="flagged">Most flagged</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="layout">
           <section class="composer" aria-label="New post" id="compose">
@@ -790,12 +971,16 @@
             <div id="comment-list" class="comment-list" hidden></div>
           </section>
         </div>
+        <div id="moderation-panel" class="moderation-panel" hidden></div>
 
         <div class="list" style="margin-top: 14px;" id="recent-posts">
           <div class="board-top" style="align-items: center;">
             <div>
               <h3>Recent conversations</h3>
               <p>The newest message appears first. Select a post to read it in full.</p>
+            </div>
+            <div class="board-summary">
+              <span id="results-count" class="status-badge">0 shown</span>
             </div>
           </div>
           <div id="posts" class="posts"></div>
@@ -808,6 +993,7 @@
     (function () {
       const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\/+$/, "");
       const postsUrl = apiBase + "/api/618chat/posts";
+      const itemsUrl = apiBase + "/api/618chat/items";
       const ageGateKey = "618chat_age_gate_accepted";
       const adminTokenKey = "618chat_admin_token";
       const flaggedKey = "618chat_flagged_posts";
@@ -821,6 +1007,12 @@
       const readerEl = document.getElementById("post-reader");
       const commentListEl = document.getElementById("comment-list");
       const statusEl = document.getElementById("board-status");
+      const summaryTextEl = document.getElementById("board-summary-text");
+      const moderationPanelEl = document.getElementById("moderation-panel");
+      const postSearchInput = document.getElementById("post-search");
+      const timeFilterEl = document.getElementById("time-filter");
+      const sortFilterEl = document.getElementById("sort-filter");
+      const resultsCountEl = document.getElementById("results-count");
       const moderationToggle = document.getElementById("moderation-toggle");
       const replyBanner = document.getElementById("reply-banner");
       const replyTargetLabel = document.getElementById("reply-target-label");
@@ -831,10 +1023,24 @@
       let replyTargetId = "";
       let posts = [];
       let loading = true;
+      let searchQuery = "";
+      let timeFilter = "all";
+      let sortFilter = "newest";
+      let boardStats = {
+        totalPosts: 0,
+        hiddenCount: 0,
+        flaggedCount: 0,
+        totalComments: 0,
+        hiddenComments: 0,
+        flaggedComments: 0,
+        supportCount: 0,
+        queueCount: 0
+      };
       let adminToken = String(window.localStorage.getItem(adminTokenKey) || "").trim();
       let adminMode = Boolean(adminToken);
       let flagThreshold = 10;
       let ageGateAccepted = String(window.localStorage.getItem(ageGateKey) || "") === "yes";
+      const supportedKey = "618chat_supported_items";
 
       function escapeHTML(value) {
         return String(value || "")
@@ -888,6 +1094,23 @@
         window.localStorage.setItem(flaggedKey, JSON.stringify(Array.from(new Set(ids))));
       }
 
+      function readSupportedIds() {
+        try {
+          const parsed = JSON.parse(window.localStorage.getItem(supportedKey) || "[]");
+          return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function writeSupportedIds(ids) {
+        window.localStorage.setItem(supportedKey, JSON.stringify(Array.from(new Set(ids))));
+      }
+
+      function isSupported(id) {
+        return readSupportedIds().includes(String(id));
+      }
+
       function setAdminToken(token) {
         adminToken = String(token || "").trim();
         adminMode = Boolean(adminToken);
@@ -938,6 +1161,136 @@
         return posts.find((post) => post.id === id) || null;
       }
 
+      function getSearchBlob(post) {
+        const parts = [
+          post.title,
+          post.author,
+          post.message,
+          formatDate(post.createdAt),
+          formatDate(post.updatedAt)
+        ];
+        (Array.isArray(post.comments) ? post.comments : []).forEach((comment) => {
+          parts.push(comment.title, comment.author, comment.message, formatDate(comment.createdAt), formatDate(comment.updatedAt));
+        });
+        return parts.filter(Boolean).join(" ").toLowerCase();
+      }
+
+      function isWithinTimeFilter(post) {
+        if (timeFilter === "all") return true;
+        const days = Number(timeFilter || 0) || 0;
+        if (!days) return true;
+        const postedAt = new Date(post.createdAt || Date.now()).getTime();
+        if (!Number.isFinite(postedAt)) return true;
+        const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+        return postedAt >= cutoff;
+      }
+
+      function comparePosts(left, right) {
+        const leftSupports = Number(left.supports || 0) || 0;
+        const rightSupports = Number(right.supports || 0) || 0;
+        const leftFlags = Number(left.flags || 0) || 0;
+        const rightFlags = Number(right.flags || 0) || 0;
+        const leftTime = new Date(left.createdAt || 0).getTime() || 0;
+        const rightTime = new Date(right.createdAt || 0).getTime() || 0;
+
+        if (sortFilter === "supported") {
+          if (rightSupports !== leftSupports) return rightSupports - leftSupports;
+          return rightTime - leftTime;
+        }
+        if (sortFilter === "flagged") {
+          if (rightFlags !== leftFlags) return rightFlags - leftFlags;
+          return rightTime - leftTime;
+        }
+        return rightTime - leftTime;
+      }
+
+      function applyBoardFilters(sourcePosts) {
+        const query = String(searchQuery || "").trim().toLowerCase();
+        const filtered = (Array.isArray(sourcePosts) ? sourcePosts : []).filter((post) => {
+          if (!isWithinTimeFilter(post)) return false;
+          if (!query) return true;
+          return getSearchBlob(post).includes(query);
+        });
+        return filtered.sort(comparePosts);
+      }
+
+      function collectModerationItems(sourcePosts) {
+        const items = [];
+        (Array.isArray(sourcePosts) ? sourcePosts : []).forEach((post) => {
+          const postFlags = Number(post.flags || 0) || 0;
+          if (post.hidden || postFlags >= flagThreshold) {
+            items.push({
+              kind: "post",
+              id: post.id,
+              title: post.title,
+              author: post.author || "Anonymous",
+              flags: postFlags,
+              supports: Number(post.supports || 0) || 0,
+              hidden: Boolean(post.hidden),
+              createdAt: post.createdAt,
+              updatedAt: post.updatedAt,
+              message: post.message,
+              parentTitle: ""
+            });
+          }
+          (Array.isArray(post.comments) ? post.comments : []).forEach((comment) => {
+            const commentFlags = Number(comment.flags || 0) || 0;
+            if (comment.hidden || commentFlags >= flagThreshold) {
+              items.push({
+                kind: "comment",
+                id: comment.id,
+                title: comment.title,
+                author: comment.author || "Anonymous",
+                flags: commentFlags,
+                supports: Number(comment.supports || 0) || 0,
+                hidden: Boolean(comment.hidden),
+                createdAt: comment.createdAt,
+                updatedAt: comment.updatedAt,
+                message: comment.message,
+                parentTitle: post.title || "",
+                parentId: post.id
+              });
+            }
+          });
+        });
+        return items.sort((left, right) => {
+          const hiddenLeft = left.hidden ? 1 : 0;
+          const hiddenRight = right.hidden ? 1 : 0;
+          if (hiddenLeft !== hiddenRight) return hiddenRight - hiddenLeft;
+          if ((right.flags || 0) !== (left.flags || 0)) return (right.flags || 0) - (left.flags || 0);
+          return new Date(right.updatedAt || right.createdAt || 0).getTime() - new Date(left.updatedAt || left.createdAt || 0).getTime();
+        });
+      }
+
+      function deriveBoardStats(sourcePosts) {
+        const stats = {
+          totalPosts: 0,
+          hiddenCount: 0,
+          flaggedCount: 0,
+          totalComments: 0,
+          hiddenComments: 0,
+          flaggedComments: 0,
+          supportCount: 0,
+          queueCount: 0
+        };
+        (Array.isArray(sourcePosts) ? sourcePosts : []).forEach((post) => {
+          stats.totalPosts += 1;
+          stats.supportCount += Number(post.supports || 0) || 0;
+          const postFlags = Number(post.flags || 0) || 0;
+          if (post.hidden) stats.hiddenCount += 1;
+          if (postFlags >= flagThreshold) stats.flaggedCount += 1;
+          (Array.isArray(post.comments) ? post.comments : []).forEach((comment) => {
+            stats.totalComments += 1;
+            stats.supportCount += Number(comment.supports || 0) || 0;
+            const commentFlags = Number(comment.flags || 0) || 0;
+            if (comment.hidden) stats.hiddenComments += 1;
+            if (commentFlags >= flagThreshold) stats.flaggedComments += 1;
+          });
+        });
+        stats.queueCount = collectModerationItems(sourcePosts).length;
+        return stats;
+      }
+
       function clearReplyTarget() {
         replyTargetId = "";
         updateReplyTargetUI();
@@ -985,6 +1338,7 @@
           }
           posts = Array.isArray(payload.posts) ? payload.posts : [];
           flagThreshold = Number(payload.flagThreshold || 10) || 10;
+          boardStats = payload.stats || deriveBoardStats(posts);
           if (!selectedId || !posts.some((post) => post.id === selectedId)) {
             selectedId = posts[0] ? posts[0].id : "";
           }
@@ -1019,13 +1373,50 @@
         }
 
         readerEl.className = "";
+        const supportCount = Number(post.supports || 0) || 0;
+        const postHidden = Boolean(post.hidden);
         readerEl.innerHTML =
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
           '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + '</div>' +
-          '<div class="detail-body">' + escapeHTML(post.message).replace(/\n/g, "<br>") + '</div>';
+          '<div class="detail-body">' + escapeHTML(post.message).replace(/\n/g, "<br>") + '</div>' +
+          '<div class="comment-card-footer" style="padding: 12px 0 0; margin: 0;">' +
+            '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + '</span>' +
+            '<div class="actions">' +
+              '<button type="button" class="mini-action ' + (isSupported(post.id) ? "supported" : "") + '" data-reader-action="support" aria-label="Support post">♥</button>' +
+              (adminMode && postHidden ? '<button type="button" class="mini-action" data-reader-action="restore" aria-label="Restore post">↺</button>' : "") +
+              (adminMode ? '<button type="button" class="mini-action danger" data-reader-action="delete" aria-label="Delete post">✕</button>' : "") +
+            '</div>' +
+          '</div>';
+
+        const readerSupportBtn = readerEl.querySelector('[data-reader-action="support"]');
+        if (readerSupportBtn) {
+          readerSupportBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            supportItem(post.id);
+          });
+        }
+        const readerDeleteBtn = readerEl.querySelector('[data-reader-action="delete"]');
+        if (readerDeleteBtn) {
+          readerDeleteBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteItem(post.id);
+          });
+        }
+        const readerRestoreBtn = readerEl.querySelector('[data-reader-action="restore"]');
+        if (readerRestoreBtn) {
+          readerRestoreBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            restoreItem(post.id);
+          });
+        }
 
         if (commentListEl) {
-          const comments = Array.isArray(post.comments) ? post.comments.filter((comment) => !comment.hidden) : [];
+          const comments = Array.isArray(post.comments)
+            ? post.comments.filter((comment) => adminMode ? true : !comment.hidden)
+            : [];
           if (!comments.length) {
             commentListEl.hidden = true;
             commentListEl.innerHTML = "";
@@ -1035,6 +1426,8 @@
               '<div class="comment-heading"><h4>Replies</h4><span class="status-badge">' + comments.length + '</span></div>' +
               comments.map((comment) => {
                 const mobileOpen = window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
+                const supportCount = Number(comment.supports || 0) || 0;
+                const commentHidden = Boolean(comment.hidden);
                 return (
                   '<details class="comment-card"' + (mobileOpen ? "" : " open") + '>' +
                     '<summary>' +
@@ -1042,10 +1435,54 @@
                       '<div class="comment-card-meta">Posted by <span class="comment-card-meta-author">' + escapeHTML(comment.author || "Anonymous") + '</span> <span class="comment-card-meta-date">on ' + escapeHTML(formatDate(comment.createdAt)) + '</span></div>' +
                     '</summary>' +
                     '<div class="detail-body">' + escapeHTML(comment.message).replace(/\n/g, "<br>") + '</div>' +
-                    '<div class="comment-card-mobile-note">Tap to collapse or expand this reply.</div>' +
+                    '<div class="comment-card-footer">' +
+                      '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (commentHidden ? ' · Under review' : '') + '</span>' +
+                      '<div class="actions">' +
+                        '<button type="button" class="mini-action ' + (isSupported(comment.id) ? "supported" : "") + '" data-comment-action="support" aria-label="Support reply">♥</button>' +
+                        '<button type="button" class="mini-action" data-comment-action="flag" aria-label="Flag reply">⚑</button>' +
+                        (adminMode && commentHidden ? '<button type="button" class="mini-action" data-comment-action="restore" aria-label="Restore reply">↺</button>' : "") +
+                        (adminMode ? '<button type="button" class="mini-action danger" data-comment-action="delete" aria-label="Delete reply">✕</button>' : "") +
+                      '</div>' +
+                    '</div>' +
+                    '<div class="comment-card-mobile-note">Tap to open this reply.</div>' +
                   '</details>'
                 );
               }).join("");
+            commentListEl.querySelectorAll(".comment-card").forEach((card, index) => {
+              const comment = comments[index];
+              const supportBtn = card.querySelector('[data-comment-action="support"]');
+              if (supportBtn) {
+                supportBtn.addEventListener("click", (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  supportItem(comment.id);
+                });
+              }
+              const flagBtn = card.querySelector('[data-comment-action="flag"]');
+              if (flagBtn) {
+                flagBtn.addEventListener("click", (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  flagItem(comment.id);
+                });
+              }
+              const restoreBtn = card.querySelector('[data-comment-action="restore"]');
+              if (restoreBtn) {
+                restoreBtn.addEventListener("click", (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  restoreItem(comment.id);
+                });
+              }
+              const deleteBtn = card.querySelector('[data-comment-action="delete"]');
+              if (deleteBtn) {
+                deleteBtn.addEventListener("click", (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  deleteItem(comment.id);
+                });
+              }
+            });
           }
         }
       }
@@ -1057,20 +1494,27 @@
         const flagLabel = typeof post.flags === "number" && post.flags > 0
           ? '<span class="status-badge">' + post.flags + ' flag' + (post.flags === 1 ? "" : "s") + '</span>'
           : "";
+        const supportLabel = typeof post.supports === "number" && post.supports > 0
+          ? '<span class="status-badge support">' + post.supports + ' support' + (post.supports === 1 ? "" : "s") + '</span>'
+          : "";
         const adminDelete = adminMode ? '<button type="button" class="mini-action danger" data-action="delete" aria-label="Delete post">✕</button>' : "";
+        const adminRestore = adminMode && post.hidden ? '<button type="button" class="mini-action" data-action="restore" aria-label="Restore post">↺</button>' : "";
         const replyBtn = '<button type="button" class="mini-action" data-action="reply" aria-label="Reply to post">↩</button>';
+        const supportBtn = '<button type="button" class="mini-action ' + (isSupported(post.id) ? "supported" : "") + '" data-action="support" aria-label="Support post">♥</button>';
         const flagClass = isFlagged(post.id) ? "flagged" : "";
         card.innerHTML =
           '<div class="post-actions">' +
             adminDelete +
+            adminRestore +
             replyBtn +
+            supportBtn +
             '<button type="button" class="mini-action ' + flagClass + '" data-action="flag" aria-label="Flag post">⚑</button>' +
           '</div>' +
           '<button type="button" class="post-open">' +
             '<div class="post-title">' + escapeHTML(post.title) + '</div>' +
             '<div class="post-card-meta">' +
               '<span>' + escapeHTML(post.author || "Anonymous") + ' • ' + escapeHTML(formatDate(post.createdAt)) + '</span>' +
-              '<span>' + (hiddenLabel || flagLabel || "") + '</span>' +
+              '<span>' + (hiddenLabel || supportLabel || flagLabel || "") + '</span>' +
             '</div>' +
           '</button>';
 
@@ -1080,7 +1524,7 @@
           flagBtn.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
-            flagPost(post.id);
+            flagItem(post.id);
           });
         }
         const deleteBtn = card.querySelector('[data-action="delete"]');
@@ -1088,7 +1532,7 @@
           deleteBtn.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
-            deletePost(post.id);
+            deleteItem(post.id);
           });
         }
         const replyBtnEl = card.querySelector('[data-action="reply"]');
@@ -1097,6 +1541,14 @@
             event.preventDefault();
             event.stopPropagation();
             beginReply(post);
+          });
+        }
+        const supportBtnEl = card.querySelector('[data-action="support"]');
+        if (supportBtnEl) {
+          supportBtnEl.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            supportItem(post.id);
           });
         }
         return card;
@@ -1108,21 +1560,31 @@
         if (loading) {
           postsEl.innerHTML = '<div class="empty-state">Loading the conversation board...</div>';
           renderReader(null);
+          updateListSummary(0);
           return;
         }
 
         if (!posts.length) {
           postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to start the first conversation.</div>';
           renderReader(null);
+          updateListSummary(0);
           return;
         }
 
-        const visiblePosts = adminMode ? posts : posts.filter((post) => !post.hidden);
+        const basePosts = adminMode ? posts : posts.filter((post) => !post.hidden);
+        const visiblePosts = applyBoardFilters(basePosts);
         if (!visiblePosts.length) {
-          postsEl.innerHTML = adminMode
-            ? '<div class="empty-state">No posts are available yet.</div>'
-            : '<div class="empty-state">No visible posts yet. Be the first to start a conversation.</div>';
+          const emptyMessage = searchQuery.trim()
+            ? "No conversations matched your search and filters."
+            : (adminMode
+                ? "No posts are available yet."
+                : "No visible posts yet. Be the first to start a conversation.");
+          postsEl.innerHTML = '<div class="empty-state">' + emptyMessage + '</div>';
+          if (selectedId && !visiblePosts.some((post) => post.id === selectedId)) {
+            selectedId = "";
+          }
           renderReader(null);
+          updateListSummary(visiblePosts.length);
           return;
         }
 
@@ -1130,73 +1592,184 @@
         if (!selectedId || !posts.some((post) => post.id === selectedId)) {
           selectedId = current.id;
         }
+        if (!visiblePosts.some((post) => post.id === selectedId)) {
+          selectedId = current.id;
+        }
         renderReader(current);
 
         visiblePosts.forEach((post) => {
           postsEl.appendChild(createPostCard(post));
         });
+        updateListSummary(visiblePosts.length);
       }
 
-      async function flagPost(id) {
+      function updateListSummary(count) {
+        if (!resultsCountEl || !summaryTextEl) return;
+        const total = adminMode ? posts.length : posts.filter((post) => !post.hidden).length;
+        const queryNote = searchQuery.trim() ? " for "" + searchQuery.trim() + """ : "";
+        resultsCountEl.textContent = String(count) + " shown";
+        summaryTextEl.textContent = total
+          ? String(count) + " of " + String(total) + " conversations shown" + queryNote + "."
+          : "Watching for new posts.";
+      }
+
+      function renderModerationPanel() {
+        if (!moderationPanelEl) return;
+        if (!adminMode) {
+          moderationPanelEl.hidden = true;
+          moderationPanelEl.innerHTML = "";
+          return;
+        }
+
+        const queue = collectModerationItems(posts);
+        const stats = boardStats || deriveBoardStats(posts);
+        moderationPanelEl.hidden = false;
+        moderationPanelEl.innerHTML =
+          '<div class="moderation-head">' +
+            '<div>' +
+              '<h4>Moderator dashboard</h4>' +
+              '<p style="margin:6px 0 0;color:var(--copy);">Quick review for hidden, flagged, or fresh items.</p>' +
+            '</div>' +
+            '<div class="moderation-stats">' +
+              '<span class="status-badge">Posts ' + stats.totalPosts + '</span>' +
+              '<span class="status-badge">Comments ' + stats.totalComments + '</span>' +
+              '<span class="status-badge review">Queue ' + stats.queueCount + '</span>' +
+              '<span class="status-badge">Supports ' + stats.supportCount + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="moderation-queue">' +
+            (queue.length
+              ? queue.map((item) => {
+                  const reviewLabel = item.hidden ? "Under review" : (item.flags > 0 ? item.flags + " flag" + (item.flags === 1 ? "" : "s") : "Needs attention");
+                  return (
+                    '<article class="moderation-item">' +
+                      '<div class="moderation-item-top">' +
+                        '<div>' +
+                          '<span class="status-badge review">' + escapeHTML(reviewLabel) + '</span>' +
+                          '<h5>' + escapeHTML(item.title || "Untitled note") + '</h5>' +
+                        '</div>' +
+                        '<div class="moderation-stats">' +
+                          '<span class="status-badge">' + escapeHTML(item.kind === "comment" ? "Reply" : "Post") + '</span>' +
+                          '<span class="status-badge">' + item.supports + ' support' + (item.supports === 1 ? "" : "s") + '</span>' +
+                        '</div>' +
+                      '</div>' +
+                      '<p>By ' + escapeHTML(item.author || "Anonymous") + ' • ' + escapeHTML(formatDate(item.updatedAt || item.createdAt)) + '</p>' +
+                      '<p>' + escapeHTML(String(item.message || "").slice(0, 180)) + (String(item.message || "").length > 180 ? "…" : "") + '</p>' +
+                      (item.parentTitle ? '<p style="font-size: 13px;">Reply on <strong>' + escapeHTML(item.parentTitle) + '</strong></p>' : '') +
+                      '<div class="moderation-actions">' +
+                        '<button class="button button-secondary" type="button" data-moderation-action="open" data-item-id="' + escapeHTML(item.id) + '">Open</button>' +
+                        '<button class="button button-secondary" type="button" data-moderation-action="restore" data-item-id="' + escapeHTML(item.id) + '">Restore</button>' +
+                        '<button class="button button-danger" type="button" data-moderation-action="delete" data-item-id="' + escapeHTML(item.id) + '">Delete</button>' +
+                      '</div>' +
+                    '</article>'
+                  );
+                }).join("")
+              : '<div class="empty-state">Nothing is waiting for review right now.</div>')
+          + '</div>';
+
+        moderationPanelEl.querySelectorAll("[data-moderation-action]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const action = button.getAttribute("data-moderation-action");
+            const itemId = button.getAttribute("data-item-id");
+            if (!itemId) return;
+            if (action === "open") {
+              const target = findPostByItemId(itemId);
+              if (target) selectPost(target.id);
+            } else if (action === "restore") {
+              restoreItem(itemId);
+            } else if (action === "delete") {
+              deleteItem(itemId);
+            }
+          });
+        });
+      }
+
+      function findPostByItemId(id) {
+        const targetId = String(id || "").trim();
+        if (!targetId) return null;
+        for (const post of posts) {
+          if (post.id === targetId) return post;
+          const comments = Array.isArray(post.comments) ? post.comments : [];
+          if (comments.some((comment) => comment.id === targetId)) return post;
+        }
+        return null;
+      }
+
+      async function mutateItem(id, action, confirmMessage) {
+        const key = String(id || "").trim();
+        if (!key) return;
+        if (confirmMessage && !window.confirm(confirmMessage)) return;
+        statusEl.textContent = action === "support"
+          ? "Sharing support..."
+          : action === "flag"
+            ? "Sending flag..."
+            : action === "restore"
+              ? "Restoring item..."
+              : "Deleting item...";
+        statusEl.classList.remove("error");
+        try {
+          const response = await fetch(itemsUrl + "/" + encodeURIComponent(key) + "/" + action, {
+            method: "POST",
+            headers: authHeaders({ Accept: "application/json" })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || payload.detail || ("Could not " + action + " this item."));
+          }
+          if (action === "flag") {
+            writeFlaggedIds([...readFlaggedIds(), key]);
+            statusEl.textContent = payload.hidden ? "Thanks. That item reached the review threshold." : "Thanks. The item was flagged.";
+          } else if (action === "support") {
+            writeSupportedIds([...readSupportedIds(), key]);
+            statusEl.textContent = "Thanks for the support.";
+          } else if (action === "restore") {
+            statusEl.textContent = "Item restored.";
+          } else {
+            statusEl.textContent = "Item removed.";
+          }
+          await loadPosts();
+        } catch (err) {
+          statusEl.textContent = err.message || ("Could not " + action + " this item.");
+          statusEl.classList.add("error");
+        }
+      }
+
+      function supportItem(id) {
         if (!id) return;
         const key = String(id);
-        if (isFlagged(key)) {
-          statusEl.textContent = "You already flagged this post from this browser.";
+        if (isSupported(key)) {
+          statusEl.textContent = "You already supported this item from this browser.";
           statusEl.classList.remove("error");
           return;
         }
-        statusEl.textContent = "Sending flag...";
-        statusEl.classList.remove("error");
-        try {
-          const response = await fetch(postsUrl + "/" + encodeURIComponent(key) + "/flag", {
-            method: "POST",
-            headers: authHeaders({ Accept: "application/json" })
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok || !payload.ok) {
-            throw new Error(payload.error || payload.detail || "Could not flag this post.");
-          }
-          writeFlaggedIds([...readFlaggedIds(), key]);
-          if (payload.hidden) {
-            statusEl.textContent = "Thanks. This post reached the review threshold.";
-          } else {
-            statusEl.textContent = "Thanks. The post was flagged.";
-          }
-          await loadPosts();
-        } catch (err) {
-          statusEl.textContent = err.message || "Could not flag this post.";
-          statusEl.classList.add("error");
-        }
+        void mutateItem(key, "support");
       }
 
-      async function deletePost(id) {
-        if (!adminMode || !adminToken) return;
-        if (!window.confirm("Delete this post permanently?")) return;
-        statusEl.textContent = "Deleting post...";
-        statusEl.classList.remove("error");
-        try {
-          const response = await fetch(postsUrl + "/" + encodeURIComponent(id) + "/delete", {
-            method: "POST",
-            headers: authHeaders({ Accept: "application/json" })
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok || !payload.ok) {
-            throw new Error(payload.error || payload.detail || "Could not delete this post.");
-          }
-          posts = posts.filter((post) => post.id !== id);
-          if (!posts.some((post) => post.id === selectedId)) {
-            selectedId = posts[0] ? posts[0].id : "";
-          }
-          render();
-          statusEl.textContent = "Post removed.";
-          await loadPosts();
-        } catch (err) {
-          statusEl.textContent = err.message || "Could not delete this post.";
-          statusEl.classList.add("error");
+      function flagItem(id) {
+        if (!id) return;
+        const key = String(id);
+        if (isFlagged(key)) {
+          statusEl.textContent = "You already flagged this item from this browser.";
+          statusEl.classList.remove("error");
+          return;
         }
+        void mutateItem(key, "flag");
+      }
+
+      function restoreItem(id) {
+        if (!adminMode || !adminToken) return;
+        void mutateItem(id, "restore", "Restore this item?");
+      }
+
+      function deleteItem(id) {
+        if (!adminMode || !adminToken) return;
+        void mutateItem(id, "delete", "Delete this item permanently?");
       }
 
       function render() {
+        renderModerationPanel();
         renderPosts();
         if (moderationToggle) {
           moderationToggle.textContent = adminMode ? "Exit moderation" : "Moderate";
@@ -1262,6 +1835,25 @@
         replyClear.addEventListener("click", clearReplyTarget);
       }
 
+      if (postSearchInput) {
+        postSearchInput.addEventListener("input", () => {
+          searchQuery = postSearchInput.value || "";
+          render();
+        });
+      }
+      if (timeFilterEl) {
+        timeFilterEl.addEventListener("change", () => {
+          timeFilter = timeFilterEl.value || "all";
+          render();
+        });
+      }
+      if (sortFilterEl) {
+        sortFilterEl.addEventListener("change", () => {
+          sortFilter = sortFilterEl.value || "newest";
+          render();
+        });
+      }
+
       render();
       loadPosts();
       if (!ageGateAccepted) {
@@ -1291,7 +1883,13 @@
       }
       setInterval(() => {
         if (!document.hidden) loadPosts();
-      }, 15000);
+      }, 5000);
+      window.addEventListener("focus", () => {
+        if (!document.hidden) loadPosts();
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) loadPosts();
+      });
       if (ageGateAccepted) {
         setTimeout(() => messageInput.focus(), 100);
       }
