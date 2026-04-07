@@ -748,13 +748,27 @@ function create618ChatPage() {
       color: var(--copy);
       font-size: 13px;
     }
-    .post-actions {
-      position: absolute;
-      top: 10px;
-      right: 10px;
+    .post-footer {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(16, 32, 21, 0.08);
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .post-footer-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .post-footer .actions {
       gap: 6px;
-      z-index: 2;
+      margin-left: auto;
+      display: inline-flex;
+      flex-wrap: wrap;
     }
     .mini-action {
       min-height: 36px;
@@ -794,6 +808,11 @@ function create618ChatPage() {
       border-color: rgba(45, 111, 64, 0.14);
       color: var(--green-deep);
     }
+    .mini-action[data-action="reply"],
+    .mini-action[data-comment-action="support"],
+    .mini-action[data-action="support"] {
+      box-shadow: 0 10px 18px rgba(157, 24, 53, 0.08);
+    }
     .mini-action[data-action="restore"],
     .mini-action[data-reader-action="restore"],
     .mini-action[data-comment-action="restore"] {
@@ -806,6 +825,10 @@ function create618ChatPage() {
       background: linear-gradient(180deg, rgba(255, 247, 225, 0.98), rgba(248, 237, 204, 0.92));
       border-color: rgba(158, 114, 19, 0.16);
       color: #8b650d;
+    }
+    .mini-action[data-action="flag"],
+    .mini-action[data-comment-action="flag"] {
+      min-width: 38px;
     }
     .mini-action.flagged {
       background: rgba(45, 111, 64, 0.09);
@@ -935,10 +958,8 @@ function create618ChatPage() {
         height: 7px;
         box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.1);
       }
-      .post-actions {
-        top: 8px;
-        right: 8px;
-        gap: 6px;
+      .post-footer {
+        gap: 8px;
       }
       .mini-action {
         min-height: 28px;
@@ -1649,21 +1670,25 @@ ${chatSiteNav("home")}
         const replyBtn = '<button type="button" class="mini-action" data-action="reply" aria-label="Reply to post">↩</button>';
         const supportBtn = '<button type="button" class="mini-action ' + (isSupported(post.id) ? "supported" : "") + '" data-action="support" aria-label="Support post">♥</button>';
         const flagClass = isFlagged(post.id) ? "flagged" : "";
+        const footerBadges = [hiddenLabel, supportLabel, flagLabel].filter(Boolean).join("");
         card.innerHTML =
-          '<div class="post-actions">' +
-            adminDelete +
-            adminRestore +
-            replyBtn +
-            supportBtn +
-            '<button type="button" class="mini-action ' + flagClass + '" data-action="flag" aria-label="Flag post">⚑</button>' +
-          '</div>' +
           '<button type="button" class="post-open">' +
             '<div class="post-title">' + escapeHTML(post.title) + '</div>' +
             '<div class="post-card-meta">' +
               '<span>' + escapeHTML(post.author || "Anonymous") + ' • ' + escapeHTML(formatDate(post.createdAt)) + '</span>' +
-              '<span>' + (hiddenLabel || supportLabel || flagLabel || "") + '</span>' +
             '</div>' +
           '</button>';
+        card.innerHTML +=
+          '<div class="post-footer">' +
+            '<div class="post-footer-badges">' + footerBadges + '</div>' +
+            '<div class="actions">' +
+              replyBtn +
+              supportBtn +
+              '<button type="button" class="mini-action ' + flagClass + '" data-action="flag" aria-label="Flag post">⚑</button>' +
+              adminRestore +
+              adminDelete +
+            '</div>' +
+          '</div>';
 
         card.querySelector(".post-open").addEventListener("click", () => selectPost(post.id));
         const flagBtn = card.querySelector('[data-action="flag"]');
