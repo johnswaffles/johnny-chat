@@ -7,6 +7,7 @@ Use these settings on the shared Render backend so `618chat` is public for every
 - `PUBLIC_BOARD_ADMIN_TOKEN=<long random secret>`
 - `PUBLIC_BOARD_MAX_POSTS=300`
 - `PUBLIC_BOARD_FLAG_THRESHOLD=10`
+- `PUBLIC_BOARD_COMMENT_LIMIT=50`
 
 ## Recommended Render disk
 - Mount a persistent disk at `/var/data`

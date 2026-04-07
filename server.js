@@ -33,8 +33,14 @@ const {
   PUBLIC_BOARD_STORE_PATH = "/var/data/618chat-posts.json",
   PUBLIC_BOARD_MAX_POSTS = "300",
   PUBLIC_BOARD_FLAG_THRESHOLD = "10",
+  PUBLIC_BOARD_COMMENT_LIMIT = "50",
   PUBLIC_BOARD_ADMIN_TOKEN = ""
 } = process.env;
+
+const BOARD_COMMENT_LIMIT = (() => {
+  const value = Number(PUBLIC_BOARD_COMMENT_LIMIT || 50);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 50;
+})();
 
 if (!OPENAI_API_KEY) {
   console.warn("OPENAI_API_KEY missing - Realtime and AI features will be disabled.");
@@ -315,11 +321,6 @@ function publicBoardFlagThreshold() {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 10;
 }
 
-function publicBoardCommentLimit() {
-  const value = Number(PUBLIC_BOARD_COMMENT_LIMIT || 50);
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 50;
-}
-
 function normalizeBoardTitle(message) {
   const clean = compactText(message);
   if (!clean) return "Community note";
@@ -528,7 +529,7 @@ function normalizeBoardPost(post) {
   const hiddenReason = compactText(post?.hiddenReason) || (hidden ? "Community flag review" : "");
   const updatedAt = compactText(post?.updatedAt) || createdAt;
   const comments = Array.isArray(post?.comments)
-    ? post.comments.map(normalizeBoardComment).filter(Boolean).slice(0, publicBoardCommentLimit())
+    ? post.comments.map(normalizeBoardComment).filter(Boolean).slice(0, BOARD_COMMENT_LIMIT)
     : [];
   return { id, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason, comments };
 }
@@ -852,7 +853,7 @@ app.post("/api/618chat/posts/:id/comments", async (req, res) => {
 
     const next = current.slice();
     const parent = { ...next[idx] };
-    const nextComments = [comment, ...((Array.isArray(parent.comments) ? parent.comments : []))].slice(0, publicBoardCommentLimit());
+    const nextComments = [comment, ...((Array.isArray(parent.comments) ? parent.comments : []))].slice(0, BOARD_COMMENT_LIMIT);
     parent.comments = nextComments;
     parent.updatedAt = new Date().toISOString();
     next[idx] = normalizeBoardPost(parent);
