@@ -1150,6 +1150,33 @@ ${chatSiteNav("home")}
         return String(value || "").replace(/\\s+/g, " ").trim().slice(0, 120);
       }
 
+      function formatDisplayedMessage(value) {
+        const raw = String(value || "").replace(/\r\n/g, "\n");
+        const lines = raw
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean);
+        const cleaned = lines.filter((line) => {
+          if (/^Posted by\\s+.+\\s+on\\s+.+$/i.test(line)) return false;
+          if (/^Posted on\\s+.+$/i.test(line)) return false;
+          if (/^By\\s+.+\\s+•\\s+.+$/i.test(line)) return false;
+          return true;
+        });
+
+        if (cleaned.length > 1) {
+          const first = cleaned[0];
+          const rest = cleaned.slice(1).join(" ").toLowerCase();
+          const firstLower = first.toLowerCase();
+          const firstWordCount = first.split(/\\s+/).filter(Boolean).length;
+          const looksLikeLeadIn = firstWordCount <= 8 && first.length <= 80 && !/[.!?]$/.test(first);
+          if (looksLikeLeadIn && rest.includes(firstLower)) {
+            cleaned.shift();
+          }
+        }
+
+        return cleaned.join("\n");
+      }
+
       function readFlaggedIds() {
         try {
           const parsed = JSON.parse(window.localStorage.getItem(flaggedKey) || "[]");
@@ -1472,7 +1499,7 @@ ${chatSiteNav("home")}
         readerEl.innerHTML =
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
           '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + '</div>' +
-          '<div class="detail-body">' + escapeHTML(post.message).replace(/\\n/g, "<br>") + '</div>' +
+          '<div class="detail-body">' + escapeHTML(formatDisplayedMessage(post.message)).replace(/\\n/g, "<br>") + '</div>' +
           '<div class="comment-card-footer" style="padding: 12px 0 0; margin: 0;">' +
             '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + '</span>' +
             '<div class="actions">' +
@@ -1528,7 +1555,7 @@ ${chatSiteNav("home")}
                       '<div class="comment-card-title">' + escapeHTML(comment.title) + '</div>' +
                       '<div class="comment-card-meta">Posted by <span class="comment-card-meta-author">' + escapeHTML(comment.author || "Anonymous") + '</span> <span class="comment-card-meta-date">on ' + escapeHTML(formatDate(comment.createdAt)) + '</span></div>' +
                     '</summary>' +
-                    '<div class="detail-body">' + escapeHTML(comment.message).replace(/\\n/g, "<br>") + '</div>' +
+                    '<div class="detail-body">' + escapeHTML(formatDisplayedMessage(comment.message)).replace(/\\n/g, "<br>") + '</div>' +
                     '<div class="comment-card-footer">' +
                       '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (commentHidden ? ' · Under review' : '') + '</span>' +
                       '<div class="actions">' +
