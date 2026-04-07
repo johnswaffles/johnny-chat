@@ -501,6 +501,10 @@
       color: var(--copy);
       font-size: 13px;
     }
+    .comment-card-meta-author,
+    .comment-card-meta-date {
+      display: inline;
+    }
     .comment-card .detail-body {
       margin: 0 14px 14px 18px;
       min-height: 0;
@@ -634,38 +638,47 @@
       .hero h1 { max-width: none; }
       .comment-list {
         padding-left: 10px;
-        gap: 8px;
+        gap: 7px;
       }
       .comment-heading h4 {
         font-size: 20px;
       }
       .comment-card summary {
-        padding: 10px 12px;
-        gap: 3px;
+        padding: 9px 12px;
+        gap: 2px;
       }
       .comment-card-title {
         font-size: 16px;
+        line-height: 1.15;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
       }
       .comment-card-meta {
-        font-size: 12px;
+        font-size: 11px;
+        line-height: 1.35;
+        opacity: 0.9;
+      }
+      .comment-card-meta-date {
+        display: none;
       }
       .comment-card .detail-body {
-        margin: 0 10px 10px 12px;
-        padding: 12px 14px;
-        font-size: 13px;
-        line-height: 1.65;
+        margin: 0 9px 10px 11px;
+        padding: 11px 13px;
+        font-size: 12px;
+        line-height: 1.6;
         border-radius: 12px;
       }
       .comment-card-mobile-note {
-        display: block;
-        margin: 0 12px 12px 12px;
+        display: none;
       }
       .comment-card summary::before {
-        top: 16px;
-        left: -8px;
-        width: 8px;
-        height: 8px;
-        box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.12);
+        top: 15px;
+        left: -7px;
+        width: 7px;
+        height: 7px;
+        box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.1);
       }
       .post-actions {
         top: 8px;
@@ -1026,7 +1039,7 @@
                   '<details class="comment-card"' + (mobileOpen ? "" : " open") + '>' +
                     '<summary>' +
                       '<div class="comment-card-title">' + escapeHTML(comment.title) + '</div>' +
-                      '<div class="comment-card-meta">Posted by ' + escapeHTML(comment.author || "Anonymous") + ' on ' + escapeHTML(formatDate(comment.createdAt)) + '</div>' +
+                      '<div class="comment-card-meta">Posted by <span class="comment-card-meta-author">' + escapeHTML(comment.author || "Anonymous") + '</span> <span class="comment-card-meta-date">on ' + escapeHTML(formatDate(comment.createdAt)) + '</span></div>' +
                     '</summary>' +
                     '<div class="detail-body">' + escapeHTML(comment.message).replace(/\n/g, "<br>") + '</div>' +
                     '<div class="comment-card-mobile-note">Tap to collapse or expand this reply.</div>' +
