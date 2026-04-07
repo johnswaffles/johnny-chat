@@ -1159,6 +1159,15 @@ ${chatSiteNav("home")}
           </div>
           <div class="toolbar-row">
             <div class="toolbar-field">
+              <label for="topic-filter">Topic</label>
+              <select id="topic-filter">
+                <option value="all">All topics</option>
+                <option value="General">General</option>
+                <option value="Friendship">Friendship</option>
+                <option value="Friendship+">Friendship+</option>
+              </select>
+            </div>
+            <div class="toolbar-field">
               <label for="time-filter">Date range</label>
               <select id="time-filter">
                 <option value="all">All time</option>
@@ -1185,6 +1194,14 @@ ${chatSiteNav("home")}
               <div id="reply-banner" class="reply-banner" hidden>
                 <div>Replying to <strong id="reply-target-label">this post</strong>.</div>
                 <button class="reply-clear" id="reply-clear" type="button">Cancel reply</button>
+              </div>
+              <div class="field">
+                <label for="topic">Topic</label>
+                <select id="topic" name="topic">
+                  <option value="General">General</option>
+                  <option value="Friendship">Friendship</option>
+                  <option value="Friendship+">Friendship+</option>
+                </select>
               </div>
               <div class="field">
                 <label for="author">Name</label>
@@ -1240,6 +1257,7 @@ ${chatSiteNav("home")}
       const ageGateEnter = document.getElementById("age-gate-enter");
       const ageGateLeave = document.getElementById("age-gate-leave");
       const authorInput = document.getElementById("author");
+      const topicSelect = document.getElementById("topic");
       const messageInput = document.getElementById("message");
       const form = document.getElementById("board-form");
       const postsEl = document.getElementById("posts");
@@ -1250,6 +1268,7 @@ ${chatSiteNav("home")}
       const moderationPanelEl = document.getElementById("moderation-panel");
       const spotlightEl = document.getElementById("spotlight");
       const postSearchInput = document.getElementById("post-search");
+      const topicFilterEl = document.getElementById("topic-filter");
       const timeFilterEl = document.getElementById("time-filter");
       const sortFilterEl = document.getElementById("sort-filter");
       const resultsCountEl = document.getElementById("results-count");
@@ -1264,6 +1283,7 @@ ${chatSiteNav("home")}
       let posts = [];
       let loading = true;
       let searchQuery = "";
+      let topicFilter = "all";
       let timeFilter = "all";
       let sortFilter = "newest";
       let lastSubmission = null;
@@ -1569,12 +1589,13 @@ ${chatSiteNav("home")}
         const parts = [
           post.title,
           post.author,
+          post.topic,
           post.message,
           formatDate(post.createdAt),
           formatDate(post.updatedAt)
         ];
         (Array.isArray(post.comments) ? post.comments : []).forEach((comment) => {
-          parts.push(comment.title, comment.author, comment.message, formatDate(comment.createdAt), formatDate(comment.updatedAt));
+          parts.push(comment.title, comment.author, comment.topic, comment.message, formatDate(comment.createdAt), formatDate(comment.updatedAt));
         });
         return parts.filter(Boolean).join(" ").toLowerCase();
       }
@@ -1587,6 +1608,11 @@ ${chatSiteNav("home")}
         if (!Number.isFinite(postedAt)) return true;
         const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
         return postedAt >= cutoff;
+      }
+
+      function isWithinTopicFilter(post) {
+        if (topicFilter === "all") return true;
+        return String(post.topic || "General") === topicFilter;
       }
 
       function comparePosts(left, right) {
@@ -1617,6 +1643,7 @@ ${chatSiteNav("home")}
       function applyBoardFilters(sourcePosts) {
         const query = String(searchQuery || "").trim().toLowerCase();
         const filtered = (Array.isArray(sourcePosts) ? sourcePosts : []).filter((post) => {
+          if (!isWithinTopicFilter(post)) return false;
           if (!isWithinTimeFilter(post)) return false;
           if (!query) return true;
           return getSearchBlob(post).includes(query);
@@ -1651,6 +1678,7 @@ ${chatSiteNav("home")}
               author: post.author || "Anonymous",
               flags: postFlags,
               supports: Number(post.supports || 0) || 0,
+              topic: post.topic || "General",
               pinned: Boolean(post.pinned),
               hidden: Boolean(post.hidden),
               createdAt: post.createdAt,
@@ -1669,6 +1697,7 @@ ${chatSiteNav("home")}
                 author: comment.author || "Anonymous",
                 flags: commentFlags,
                 supports: Number(comment.supports || 0) || 0,
+                topic: comment.topic || "General",
                 pinned: Boolean(comment.pinned),
                 hidden: Boolean(comment.hidden),
                 createdAt: comment.createdAt,
@@ -1805,9 +1834,10 @@ ${chatSiteNav("home")}
         const supportCount = Number(post.supports || 0) || 0;
         const postHidden = Boolean(post.hidden);
         const postPinned = Boolean(post.pinned);
+        const postTopic = String(post.topic || "General").trim();
         readerEl.innerHTML =
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
-          '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + '</div>' +
+          '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + ' · ' + escapeHTML(postTopic) + '</div>' +
           '<div class="detail-body">' + escapeHTML(formatDisplayedMessage(post.message)).replace(/\\n/g, "<br>") + '</div>' +
           '<div class="comment-card-footer" style="padding: 12px 0 0; margin: 0;">' +
             '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (postPinned ? ' · Pinned' : '') + '</span>' +
@@ -1959,6 +1989,7 @@ ${chatSiteNav("home")}
               return (
                 '<article class="spotlight-card">' +
                   '<div class="spotlight-actions">' +
+                    '<span class="status-badge">' + escapeHTML(post.topic || "General") + '</span>' +
                     '<span class="status-badge ' + (post.pinned ? "pin" : "") + '">' + (post.pinned ? "Pinned" : "Trending") + '</span>' +
                     '<button type="button" class="button button-secondary" data-spotlight-open="' + escapeHTML(post.id) + '">Open</button>' +
                   '</div>' +
@@ -1990,6 +2021,7 @@ ${chatSiteNav("home")}
         const supportLabel = typeof post.supports === "number" && post.supports > 0
           ? '<span class="status-badge support">' + post.supports + ' support' + (post.supports === 1 ? "" : "s") + '</span>'
           : "";
+        const topicLabel = '<span class="status-badge">' + escapeHTML(post.topic || "General") + '</span>';
         const pinLabel = post.pinned ? '<span class="status-badge pin">Pinned</span>' : "";
         const adminDelete = adminMode ? '<button type="button" class="mini-action danger" data-action="delete" aria-label="Delete post">✕</button>' : "";
         const adminRestore = adminMode && post.hidden ? '<button type="button" class="mini-action" data-action="restore" aria-label="Restore post">↺</button>' : "";
@@ -1998,7 +2030,7 @@ ${chatSiteNav("home")}
         const supportBtn = '<button type="button" class="mini-action ' + (isSupported(post.id) ? "supported" : "") + '" data-action="support" aria-label="Support post">♥</button>';
         const shareBtn = '<button type="button" class="mini-action" data-action="share" aria-label="Copy share link">↗</button>';
         const flagClass = isFlagged(post.id) ? "flagged" : "";
-        const footerBadges = [pinLabel, hiddenLabel, supportLabel, flagLabel].filter(Boolean).join("");
+        const footerBadges = [topicLabel, pinLabel, hiddenLabel, supportLabel, flagLabel].filter(Boolean).join("");
         card.innerHTML =
           '<button type="button" class="post-open">' +
             '<div class="post-title">' + escapeHTML(post.title) + '</div>' +
@@ -2172,18 +2204,19 @@ ${chatSiteNav("home")}
             (queue.length
               ? queue.map((item) => {
                   const reviewLabel = item.hidden ? "Under review" : (item.flags > 0 ? item.flags + " flag" + (item.flags === 1 ? "" : "s") : "Needs attention");
-                  return (
-                    '<article class="moderation-item">' +
-                      '<div class="moderation-item-top">' +
-                        '<div>' +
-                          '<span class="status-badge review">' + escapeHTML(reviewLabel) + '</span>' +
-                          '<h5>' + escapeHTML(item.title || "Untitled note") + '</h5>' +
-                        '</div>' +
-                        '<div class="moderation-stats">' +
-                          '<span class="status-badge">' + escapeHTML(item.kind === "comment" ? "Reply" : "Post") + '</span>' +
-                          '<span class="status-badge">' + item.supports + ' support' + (item.supports === 1 ? "" : "s") + '</span>' +
-                        '</div>' +
-                      '</div>' +
+              return (
+                '<article class="moderation-item">' +
+                  '<div class="moderation-item-top">' +
+                    '<div>' +
+                      '<span class="status-badge review">' + escapeHTML(reviewLabel) + '</span>' +
+                      '<h5>' + escapeHTML(item.title || "Untitled note") + '</h5>' +
+                    '</div>' +
+                    '<div class="moderation-stats">' +
+                      '<span class="status-badge">' + escapeHTML(item.kind === "comment" ? "Reply" : "Post") + '</span>' +
+                      '<span class="status-badge">' + escapeHTML(item.topic || "General") + '</span>' +
+                      '<span class="status-badge">' + item.supports + ' support' + (item.supports === 1 ? "" : "s") + '</span>' +
+                    '</div>' +
+                  '</div>' +
                       '<label><input type="checkbox" data-moderation-select="' + escapeHTML(item.id) + '"> Select this item</label>' +
                       '<p>By ' + escapeHTML(item.author || "Anonymous") + ' • ' + escapeHTML(formatDate(item.updatedAt || item.createdAt)) + '</p>' +
                       '<p>' + escapeHTML(String(item.message || "").slice(0, 180)) + (String(item.message || "").length > 180 ? "…" : "") + '</p>' +
@@ -2353,6 +2386,7 @@ ${chatSiteNav("home")}
         event.preventDefault();
         const message = String(messageInput.value || "").trim();
         const author = String(authorInput.value || "").trim();
+        const topic = String(topicSelect?.value || "General").trim() || "General";
         if (!message) {
           statusEl.textContent = "Please add a message first.";
           statusEl.classList.add("error");
@@ -2365,10 +2399,11 @@ ${chatSiteNav("home")}
 
         const targetId = replyTargetId;
         const endpoint = targetId ? postsUrl + "/" + encodeURIComponent(targetId) + "/comments" : postsUrl;
+        const postTopic = targetId ? String(getPostById(targetId)?.topic || topic || "General").trim() || "General" : topic;
         fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ author, message })
+          body: JSON.stringify({ author, message, topic: postTopic })
         })
           .then((response) => response.json().then((payload) => ({ response, payload })))
           .then(({ response, payload }) => {
@@ -2410,6 +2445,12 @@ ${chatSiteNav("home")}
       if (postSearchInput) {
         postSearchInput.addEventListener("input", () => {
           searchQuery = postSearchInput.value || "";
+          render();
+        });
+      }
+      if (topicFilterEl) {
+        topicFilterEl.addEventListener("change", () => {
+          topicFilter = topicFilterEl.value || "all";
           render();
         });
       }

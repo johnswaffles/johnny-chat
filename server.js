@@ -503,6 +503,7 @@ function normalizeBoardComment(comment) {
   if (!message) return null;
   const author = compactText(comment?.author) || "Anonymous";
   const title = compactText(comment?.title) || normalizeBoardTitle(message);
+  const topic = compactText(comment?.topic) || "";
   const createdAt = compactText(comment?.createdAt) || new Date().toISOString();
   const id = compactText(comment?.id) || `comment_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const parentId = compactText(comment?.parentId) || "";
@@ -514,7 +515,7 @@ function normalizeBoardComment(comment) {
   const hiddenAt = compactText(comment?.hiddenAt) || (hidden ? new Date().toISOString() : "");
   const hiddenReason = compactText(comment?.hiddenReason) || (hidden ? "Community flag review" : "");
   const updatedAt = compactText(comment?.updatedAt) || createdAt;
-  return { id, parentId, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason, pinned, pinnedAt };
+  return { id, parentId, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason, pinned, pinnedAt, topic };
 }
 
 function normalizeBoardPost(post) {
@@ -522,6 +523,7 @@ function normalizeBoardPost(post) {
   if (!message) return null;
   const author = compactText(post?.author) || "Anonymous";
   const title = compactText(post?.title) || normalizeBoardTitle(message);
+  const topic = compactText(post?.topic) || "General";
   const createdAt = compactText(post?.createdAt) || new Date().toISOString();
   const id = compactText(post?.id) || `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const flags = Math.max(0, Number(post?.flags || 0) || 0);
@@ -535,7 +537,7 @@ function normalizeBoardPost(post) {
   const comments = Array.isArray(post?.comments)
     ? post.comments.map(normalizeBoardComment).filter(Boolean).slice(0, BOARD_COMMENT_LIMIT)
     : [];
-  return { id, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason, pinned, pinnedAt, comments };
+  return { id, title, author, message, createdAt, updatedAt, flags, supports, hidden, hiddenAt, hiddenReason, pinned, pinnedAt, topic, comments };
 }
 
 function mutateBoardItems(posts, targetId, handler) {
@@ -789,6 +791,7 @@ app.post("/api/618chat/posts", async (req, res) => {
     const body = req.body || {};
     const author = compactText(body.author) || "Anonymous";
     const message = compactText(body.message);
+    const topic = compactText(body.topic) || "General";
     if (!message) {
       return res.status(400).json({ ok: false, error: "Message is required." });
     }
@@ -799,6 +802,7 @@ app.post("/api/618chat/posts", async (req, res) => {
       author,
       message,
       title,
+      topic,
       flags: 0,
       hidden: review.hidden,
       hiddenReason: review.hidden ? review.reason : "",
@@ -836,11 +840,13 @@ app.post("/api/618chat/posts/:id/comments", async (req, res) => {
 
     const review = await assessBoardPostSafety(message);
     const title = compactText(body.title) || normalizeBoardTitle(message);
+    const parentTopic = compactText(body.topic) || "";
     const comment = normalizeBoardComment({
       parentId,
       author,
       message,
       title,
+      topic: parentTopic,
       flags: 0,
       hidden: review.hidden,
       hiddenReason: review.hidden ? review.reason : "",
