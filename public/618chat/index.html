@@ -1109,12 +1109,9 @@
       }
 
       function formatDisplayedMessage(value) {
-        const raw = String(value || "").replace(/
-/g, "
-");
+        const raw = String(value || "").replace(/\r\n/g, "\n");
         const lines = raw
-          .split("
-")
+          .split("\n")
           .map((line) => line.trim())
           .filter(Boolean);
         const cleaned = lines.filter((line) => {
@@ -1135,8 +1132,7 @@
           }
         }
 
-        return cleaned.join("
-");
+        return cleaned.join("\n");
       }
 
       function readFlaggedIds() {

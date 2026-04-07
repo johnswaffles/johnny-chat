@@ -1177,9 +1177,9 @@ ${chatSiteNav("home")}
       }
 
       function formatDisplayedMessage(value) {
-        const raw = String(value || "").replace(/\r\n/g, "\n");
+        const raw = String(value || "").replace(/\\r\\n/g, "\\n");
         const lines = raw
-          .split("\n")
+          .split("\\n")
           .map((line) => line.trim())
           .filter(Boolean);
         const cleaned = lines.filter((line) => {
@@ -1200,7 +1200,7 @@ ${chatSiteNav("home")}
           }
         }
 
-        return cleaned.join("\n");
+        return cleaned.join("\\n");
       }
 
       function readFlaggedIds() {
