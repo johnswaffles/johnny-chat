@@ -1567,13 +1567,13 @@
     <div class="community-widget-shell">
       <button id="community-launcher" class="community-launcher" type="button">
         <span class="community-launcher-dot" aria-hidden="true"></span>
-        <span>Quick chat</span>
+        <span>Powered by ChatGPT</span>
       </button>
       <section id="community-panel" class="community-widget-panel" hidden aria-label="Floating chat helper">
         <div class="community-widget-header" id="community-drag-handle">
           <div class="community-widget-title">
-            <strong>Quick chat</strong>
-            <span>A tiny helper for thoughts, writing, and board questions.</span>
+            <strong>Powered by ChatGPT</strong>
+            <span>Ask for a quick thought, writing help, or a board question.</span>
           </div>
           <div class="community-widget-controls">
             <button id="community-reset" class="community-widget-mini" type="button" title="Start over">New</button>
@@ -1583,9 +1583,9 @@
         <div class="community-widget-body">
           <div id="community-messages" class="community-widget-messages"></div>
           <form id="community-form" class="community-widget-form">
-            <textarea id="community-input" class="community-widget-input" placeholder="Ask a quick question..." maxlength="1000"></textarea>
+            <textarea id="community-input" class="community-widget-input" placeholder="Powered by ChatGPT" maxlength="1000"></textarea>
             <div class="community-widget-actions">
-              <div id="community-status" class="community-widget-status">Ask for a quick thought or a little help writing something.</div>
+              <div id="community-status" class="community-widget-status">Powered by ChatGPT.</div>
               <button class="button button-primary" type="submit">Send</button>
             </div>
           </form>
@@ -1916,7 +1916,7 @@
         if (!communityMessages) return;
         communityMessages.innerHTML = "";
         if (!communityHistory.length) {
-          communityMessages.innerHTML = '<div class="community-widget-empty">Ask for a quick thought, a little writing help, or a simple explanation. This widget is text-only and stays small on the page.</div>';
+          communityMessages.innerHTML = '<div class="community-widget-empty">Powered by ChatGPT. Ask for a quick thought, a little writing help, or a simple explanation. This widget is text-only and stays small on the page.</div>';
           return;
         }
         communityHistory.forEach((item) => appendCommunityMessage(item.role, item.content));
@@ -1934,7 +1934,7 @@
         communityLauncher.hidden = true;
         ensureCommunityWidgetVisible();
         renderCommunityMessages();
-        setCommunityStatus(communityHistory.length ? "Ask another quick question." : "Ask for a quick thought or a little help writing something.");
+        setCommunityStatus(communityHistory.length ? "Powered by ChatGPT. Ask another quick question." : "Powered by ChatGPT.");
         if (communityInput) {
           setTimeout(() => communityInput.focus(), 20);
         }
@@ -1944,7 +1944,7 @@
         if (!communityPanel || !communityLauncher) return;
         communityPanel.hidden = true;
         communityLauncher.hidden = false;
-        setCommunityStatus("Ask for a quick thought or a little help writing something.");
+        setCommunityStatus("Powered by ChatGPT.");
       }
 
       function resetCommunityWidget() {
