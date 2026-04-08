@@ -118,6 +118,7 @@ Keep responses concise, but still useful and thoughtful.
 If the user asks about the 618chat board itself, explain that it is an anonymous conversation space where people can post, read, and reply.
 If the user asks for help writing a post or reply, offer a short draft or suggestion.
 You may answer normal adult conversation in a respectful way, but never help with illegal, harmful, or exploitative instructions.
+You may use live web search when it helps answer current facts, practical lookups, or anything that could be stale.
 Ask at most one follow-up question only if it is truly needed.`;
   }
 
@@ -1359,13 +1360,13 @@ app.post("/api/chat", async (req, res) => {
       return res.json({ reply: demoLiveInfoReply(), sources: [] });
     }
 
-    if (profile === "gpt54") {
+    if (profile === "gpt54" || profile === "community") {
       const reasoningConfig = OPENAI_GPT54_REASONING_EFFORT
         ? { reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT } }
         : {};
 
       const response = await openai.responses.create({
-        model: OPENAI_GPT54_MODEL,
+        model: profile === "gpt54" ? OPENAI_GPT54_MODEL : OPENAI_CHAT_MODEL,
         tools: [{ type: "web_search" }],
         ...reasoningConfig,
         input: [

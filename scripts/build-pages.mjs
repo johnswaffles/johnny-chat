@@ -1612,7 +1612,7 @@ ${chatSiteNav("home")}
     <div class="community-widget-shell">
       <button id="community-launcher" class="community-launcher" type="button">
         <span class="community-launcher-dot" aria-hidden="true"></span>
-        <span>Powered by ChatGPT</span>
+        <span>Chat</span>
       </button>
       <section id="community-panel" class="community-widget-panel" hidden aria-label="Floating chat helper">
         <div class="community-widget-header" id="community-drag-handle">
@@ -1628,9 +1628,9 @@ ${chatSiteNav("home")}
         <div class="community-widget-body">
           <div id="community-messages" class="community-widget-messages"></div>
           <form id="community-form" class="community-widget-form">
-            <textarea id="community-input" class="community-widget-input" placeholder="Powered by ChatGPT" maxlength="1000"></textarea>
+            <textarea id="community-input" class="community-widget-input" placeholder="Ask anything..." maxlength="1000"></textarea>
             <div class="community-widget-actions">
-              <div id="community-status" class="community-widget-status">Powered by ChatGPT.</div>
+              <div id="community-status" class="community-widget-status">Ask anything or try a quick question.</div>
               <button class="button button-primary" type="submit">Send</button>
             </div>
           </form>
@@ -1961,7 +1961,7 @@ ${chatSiteNav("home")}
         if (!communityMessages) return;
         communityMessages.innerHTML = "";
         if (!communityHistory.length) {
-          communityMessages.innerHTML = '<div class="community-widget-empty">Powered by ChatGPT. Ask for a quick thought, a little writing help, or a simple explanation. This widget is text-only and stays small on the page.</div>';
+          communityMessages.innerHTML = '<div class="community-widget-empty">Ask for a quick thought, a little writing help, or a simple explanation. This widget is text-only and stays small on the page.</div>';
           return;
         }
         communityHistory.forEach((item) => appendCommunityMessage(item.role, item.content));
@@ -1979,7 +1979,7 @@ ${chatSiteNav("home")}
         communityLauncher.hidden = true;
         ensureCommunityWidgetVisible();
         renderCommunityMessages();
-        setCommunityStatus(communityHistory.length ? "Powered by ChatGPT. Ask another quick question." : "Powered by ChatGPT.");
+        setCommunityStatus(communityHistory.length ? "Ask another quick question." : "Ask anything or try a quick question.");
         if (communityInput) {
           setTimeout(() => communityInput.focus(), 20);
         }
@@ -1989,7 +1989,7 @@ ${chatSiteNav("home")}
         if (!communityPanel || !communityLauncher) return;
         communityPanel.hidden = true;
         communityLauncher.hidden = false;
-        setCommunityStatus("Powered by ChatGPT.");
+        setCommunityStatus("Ask anything or try a quick question.");
       }
 
       function resetCommunityWidget() {
