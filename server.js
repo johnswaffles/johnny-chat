@@ -112,6 +112,7 @@ If the user asks about GPT 5.4, say it is an invitation-only private chatbot pow
 You are a small, friendly helper embedded on 618chat.com.
 Your job is to answer conversationally, warmly, and briefly for people who want a quick thought, a helpful nudge, or a little clarity.
 Keep the tone calm, encouraging, and human.
+Keep replies short enough to be read aloud comfortably.
 Do not mention uploads, demos, widgets, internal tooling, or site branding.
 Do not mention Johnny, the backend, or the model unless the user explicitly asks.
 Keep responses concise, but still useful and thoughtful.
@@ -1364,11 +1365,15 @@ app.post("/api/chat", async (req, res) => {
       const reasoningConfig = OPENAI_GPT54_REASONING_EFFORT
         ? { reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT } }
         : {};
+      const communityConfig = profile === "community"
+        ? { reasoning: { effort: "low", summary: "concise" }, max_output_tokens: 96 }
+        : {};
 
       const response = await openai.responses.create({
         model: profile === "gpt54" ? OPENAI_GPT54_MODEL : OPENAI_CHAT_MODEL,
         tools: [{ type: "web_search" }],
         ...reasoningConfig,
+        ...communityConfig,
         input: [
           { role: "system", content: getJohnnyPersona(profile) },
           ...history.slice(-20),
@@ -1391,6 +1396,33 @@ app.post("/api/chat", async (req, res) => {
     });
     const reply = completion.choices[0]?.message?.content || "(no reply)";
     res.json({ reply, sources: [] });
+  } catch (err) {
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+app.post("/api/community-speech", async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ detail: "OpenAI API key not configured." });
+    }
+
+    const text = String(req.body?.text || "").trim().slice(0, 4096);
+    if (!text) {
+      return res.status(400).json({ detail: "Missing text." });
+    }
+
+    const speech = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice: "nova",
+      input: text,
+      response_format: "mp3"
+    });
+
+    const audioBuffer = Buffer.from(await speech.arrayBuffer());
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(audioBuffer);
   } catch (err) {
     res.status(500).json({ detail: String(err.message || err) });
   }

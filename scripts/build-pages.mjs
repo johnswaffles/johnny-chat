@@ -1689,6 +1689,7 @@ ${chatSiteNav("home")}
       const communityInput = document.getElementById("community-input");
       const communityMessages = document.getElementById("community-messages");
       const communityStatus = document.getElementById("community-status");
+      const communitySpeech = { audio: null, objectUrl: "" };
 
       let selectedId = "";
       let replyTargetId = "";
@@ -1973,6 +1974,60 @@ ${chatSiteNav("home")}
         communityStatus.classList.toggle("error", Boolean(isError));
       }
 
+      function stopCommunitySpeech() {
+        if (communitySpeech.audio) {
+          try {
+            communitySpeech.audio.pause();
+            communitySpeech.audio.src = "";
+          } catch (_) {
+            // Ignore audio cleanup issues.
+          }
+          communitySpeech.audio = null;
+        }
+        if (communitySpeech.objectUrl) {
+          URL.revokeObjectURL(communitySpeech.objectUrl);
+          communitySpeech.objectUrl = "";
+        }
+      }
+
+      async function speakCommunityReply(text) {
+        const spokenText = String(text || "").trim();
+        if (!spokenText) return;
+
+        stopCommunitySpeech();
+        setCommunityStatus("Reading aloud...");
+
+        try {
+          const response = await fetch(apiBase + "/api/community-speech", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ text: spokenText })
+          });
+          if (!response.ok) {
+            throw new Error("Could not start audio.");
+          }
+
+          const blob = await response.blob();
+          const audio = new Audio();
+          audio.preload = "auto";
+          audio.playsInline = true;
+          audio.src = URL.createObjectURL(blob);
+          communitySpeech.audio = audio;
+          communitySpeech.objectUrl = audio.src;
+          audio.onended = () => {
+            stopCommunitySpeech();
+            setCommunityStatus("Ask anything or try a quick question.");
+          };
+          await audio.play();
+        } catch (_) {
+          stopCommunitySpeech();
+          setCommunityStatus("Ask anything or try a quick question.");
+        }
+      }
+
       function openCommunityWidget() {
         if (!communityPanel || !communityLauncher) return;
         communityPanel.hidden = false;
@@ -1989,6 +2044,7 @@ ${chatSiteNav("home")}
         if (!communityPanel || !communityLauncher) return;
         communityPanel.hidden = true;
         communityLauncher.hidden = false;
+        stopCommunitySpeech();
         setCommunityStatus("Ask anything or try a quick question.");
       }
 
@@ -1996,6 +2052,7 @@ ${chatSiteNav("home")}
         communityHistory = [];
         saveCommunityHistory();
         renderCommunityMessages();
+        stopCommunitySpeech();
         setCommunityStatus("Fresh start. Ask me anything.");
         if (communityInput) {
           communityInput.value = "";
@@ -2045,7 +2102,7 @@ ${chatSiteNav("home")}
           communityHistory.push({ role: "assistant", content: reply });
           saveCommunityHistory();
           appendCommunityMessage("assistant", reply);
-          setCommunityStatus("Ready when you are.");
+          await speakCommunityReply(reply);
         } catch (err) {
           thinking.remove();
           communityHistory.pop();
