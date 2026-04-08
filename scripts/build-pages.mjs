@@ -155,19 +155,22 @@ function create618ChatPage() {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>618chat.com</title>
   <meta name="description" content="An anonymous conversation space for 618chat.com. Share what is on your mind, keep your privacy, and read respectful public posts.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   ${sharedNavStyles}
   <style>
     :root {
-      --bg: #f4f6ed;
-      --bg-2: #e8efde;
-      --ink: #102015;
-      --copy: #5b6b60;
-      --line: rgba(16, 32, 21, 0.1);
-      --green: #2d6f40;
-      --green-2: #4f8f5f;
-      --green-deep: #174425;
-      --card: rgba(255, 255, 255, 0.86);
-      --shadow: 0 28px 74px rgba(22, 54, 31, 0.12);
+      --bg: #0d1412;
+      --bg-2: #13201b;
+      --ink: #f4eee4;
+      --copy: rgba(236, 229, 215, 0.78);
+      --line: rgba(255, 255, 255, 0.1);
+      --green: #96a894;
+      --green-2: #738a7a;
+      --green-deep: #edf1e7;
+      --card: rgba(11, 18, 16, 0.44);
+      --shadow: 0 34px 92px rgba(0, 0, 0, 0.34);
     }
 
     * { box-sizing: border-box; }
@@ -177,18 +180,67 @@ function create618ChatPage() {
       color: var(--ink);
       font-family: "Plus Jakarta Sans", Arial, sans-serif;
       background:
-        radial-gradient(circle at 10% 0%, rgba(122, 176, 106, 0.2), transparent 26%),
-        radial-gradient(circle at 100% 10%, rgba(199, 166, 95, 0.12), transparent 24%),
-        linear-gradient(180deg, #f8f8f0 0%, var(--bg-2) 42%, var(--bg) 100%);
+        radial-gradient(circle at 50% 2%, rgba(255, 248, 220, 0.28), transparent 18%),
+        radial-gradient(circle at 14% 20%, rgba(73, 102, 86, 0.38), transparent 28%),
+        radial-gradient(circle at 86% 16%, rgba(73, 102, 86, 0.3), transparent 26%),
+        radial-gradient(circle at 18% 84%, rgba(7, 14, 12, 0.9), transparent 30%),
+        radial-gradient(circle at 82% 84%, rgba(7, 14, 12, 0.88), transparent 30%),
+        linear-gradient(180deg, #203129 0%, #12201a 45%, #0b1210 100%);
       min-height: 100vh;
       overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 14%, rgba(255, 248, 226, 0.25), transparent 14%),
+        radial-gradient(circle at 50% 13%, rgba(255, 248, 226, 0.12), transparent 28%),
+        radial-gradient(circle at 22% 30%, rgba(33, 52, 43, 0.55), transparent 22%),
+        radial-gradient(circle at 78% 28%, rgba(33, 52, 43, 0.42), transparent 22%),
+        radial-gradient(circle at 14% 76%, rgba(14, 22, 18, 0.92), transparent 28%),
+        radial-gradient(circle at 88% 80%, rgba(14, 22, 18, 0.92), transparent 28%);
+      opacity: 0.95;
+      filter: blur(2px);
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 76px),
+        repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 88px),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02) 16%, rgba(255, 255, 255, 0));
+      mix-blend-mode: screen;
+      opacity: 0.18;
     }
     a { color: inherit; text-decoration: none; }
     button, input, textarea { font: inherit; }
     .page {
-      width: min(1600px, calc(100vw - 12px));
+      width: min(1620px, calc(100vw - 12px));
       margin: 0 auto;
       padding: 12px 0 32px;
+    }
+    .johnny-site-nav {
+      background: rgba(10, 16, 15, 0.42);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(18px) saturate(130%);
+    }
+    .johnny-site-brand,
+    .johnny-site-link {
+      color: var(--ink);
+    }
+    .johnny-site-link:hover {
+      border-color: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05);
+    }
+    .johnny-site-link.active {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.08);
+      color: var(--ink);
     }
     body.gate-locked {
       overflow: hidden;
@@ -209,13 +261,14 @@ function create618ChatPage() {
       width: min(660px, 100%);
       padding: 28px;
       border-radius: 30px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,241,0.94));
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      box-shadow: 0 30px 80px rgba(22, 54, 31, 0.18);
+      background: linear-gradient(180deg, rgba(18, 28, 25, 0.95), rgba(10, 16, 15, 0.92));
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
     }
     .age-gate-panel h2 {
       margin: 14px 0 0;
-      font-family: "Outfit", Arial, sans-serif;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 600;
       font-size: clamp(28px, 4vw, 42px);
       line-height: 1;
       letter-spacing: -0.05em;
@@ -230,9 +283,9 @@ function create618ChatPage() {
       margin-top: 14px;
       padding: 14px 16px;
       border-radius: 18px;
-      background: rgba(45, 111, 64, 0.08);
-      border: 1px solid rgba(45, 111, 64, 0.14);
-      color: var(--green-deep);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--ink);
       line-height: 1.7;
       font-size: 15px;
     }
@@ -250,27 +303,40 @@ function create618ChatPage() {
     .intro {
       margin-top: 14px;
       display: grid;
-      grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.25fr);
+      grid-template-columns: minmax(0, 0.95fr) minmax(440px, 1.2fr);
       gap: 12px;
       align-items: stretch;
     }
     .panel {
-      background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(249,250,244,0.8));
-      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(16, 25, 23, 0.56), rgba(10, 16, 15, 0.42));
+      border: 1px solid rgba(255, 255, 255, 0.08);
       box-shadow: var(--shadow);
-      backdrop-filter: blur(18px);
-      border-radius: 28px;
+      backdrop-filter: blur(22px) saturate(130%);
+      border-radius: 30px;
+      overflow: hidden;
     }
-    .hero { padding: 30px; }
+    .hero { padding: 30px; position: relative; }
+    .hero::before,
+    .board::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 245, 220, 0.16), transparent 16%),
+        radial-gradient(circle at 0% 100%, rgba(6, 10, 8, 0.32), transparent 24%),
+        radial-gradient(circle at 100% 100%, rgba(6, 10, 8, 0.32), transparent 24%);
+      opacity: 0.8;
+    }
     .eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 10px;
       padding: 10px 14px;
       border-radius: 999px;
-      background: rgba(45, 111, 64, 0.08);
-      border: 1px solid rgba(45, 111, 64, 0.12);
-      color: var(--green-deep);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--ink);
       text-transform: uppercase;
       letter-spacing: 0.16em;
       font-size: 12px;
@@ -281,15 +347,16 @@ function create618ChatPage() {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
+      background: #d9e4c8;
+      box-shadow: 0 0 0 6px rgba(255,255,255,0.06);
     }
     .hero h1 {
       margin: 16px 0 0;
-      font-family: "Outfit", Arial, sans-serif;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 600;
       font-size: clamp(44px, 6.4vw, 84px);
-      line-height: 0.9;
-      letter-spacing: -0.06em;
+      line-height: 0.88;
+      letter-spacing: -0.05em;
       max-width: 10ch;
     }
     .hero p {
@@ -304,6 +371,8 @@ function create618ChatPage() {
       flex-wrap: wrap;
       gap: 10px;
       margin-top: 18px;
+      position: relative;
+      z-index: 1;
     }
     .hero-actions {
       display: flex;
@@ -318,24 +387,28 @@ function create618ChatPage() {
       min-height: 38px;
       padding: 0 14px;
       border-radius: 999px;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
       color: var(--copy);
       font-size: 14px;
       font-weight: 700;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.12);
     }
-    .pill strong { color: var(--green-deep); }
+    .pill strong { color: var(--ink); }
     .meta-card {
       padding: 20px;
       margin-top: 14px;
       border-radius: 22px;
-      background: rgba(255,255,255,0.82);
-      border: 1px solid rgba(16,32,21,0.08);
-      box-shadow: 0 16px 34px rgba(17, 38, 22, 0.08);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.16);
+      backdrop-filter: blur(18px);
     }
     .meta-card h2 {
       margin: 0 0 8px;
-      font-family: "Outfit", Arial, sans-serif;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 600;
       font-size: 22px;
       letter-spacing: -0.03em;
     }
@@ -347,24 +420,31 @@ function create618ChatPage() {
     }
     .meta-card ul { margin: 10px 0 0; padding-left: 18px; }
     .board { padding: 24px; }
+    .board { position: relative; }
     .board-top {
       display: flex;
       align-items: start;
       justify-content: space-between;
       gap: 12px;
+      position: relative;
+      z-index: 1;
     }
     .board-top h2, .board-top h3 {
       margin: 0;
-      font-family: "Outfit", Arial, sans-serif;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 600;
       letter-spacing: -0.04em;
       line-height: 1;
     }
-    .board-top h2 { font-size: 30px; }
-    .board-top h3 { font-size: 24px; }
+    .board-top h2 { font-size: 34px; }
+    .board-top h3 { font-size: 28px; }
     .board-top p {
       margin: 10px 0 0;
       color: var(--copy);
       line-height: 1.7;
+    }
+    .board > .board-top .board-summary {
+      display: none;
     }
     .button {
       display: inline-flex;
@@ -374,21 +454,23 @@ function create618ChatPage() {
       padding: 0 16px;
       border: 1px solid transparent;
       border-radius: 999px;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.06);
       color: var(--ink);
       font-weight: 800;
       cursor: pointer;
-      transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+      transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      backdrop-filter: blur(12px);
     }
     .button:hover { transform: translateY(-1px); }
     .button-primary {
-      background: linear-gradient(135deg, var(--green) 0%, var(--green-2) 100%);
-      color: #fffdf7;
-      box-shadow: 0 14px 28px rgba(47, 122, 68, 0.24);
+      background: linear-gradient(135deg, rgba(131, 156, 139, 0.9) 0%, rgba(92, 113, 100, 0.9) 100%);
+      color: #f7f2e9;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
     }
     .button-secondary {
-      background: rgba(255,255,255,0.84);
-      border-color: rgba(16,32,21,0.08);
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.1);
+      color: var(--ink);
     }
     .layout {
       display: grid;
@@ -397,16 +479,20 @@ function create618ChatPage() {
       margin-top: 14px;
     }
     .composer, .reader, .list {
-      border-radius: 22px;
-      background: rgba(255,255,255,0.82);
-      border: 1px solid rgba(16,32,21,0.08);
-      box-shadow: 0 16px 34px rgba(17, 38, 22, 0.08);
+      border-radius: 24px;
+      background: rgba(10, 16, 15, 0.38);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(18px) saturate(130%);
+      position: relative;
+      z-index: 1;
     }
     .composer, .reader, .list { padding: 18px; }
     .composer h3, .reader h3, .list h3 {
       margin: 0;
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: 22px;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 28px;
+      font-weight: 600;
       letter-spacing: -0.03em;
     }
     .composer p, .reader p, .list p {
@@ -423,21 +509,22 @@ function create618ChatPage() {
     }
     input, textarea {
       width: 100%;
-      border: 1px solid rgba(16, 32, 21, 0.12);
+      border: 1px solid rgba(255,255,255,0.1);
       border-radius: 18px;
-      background: rgba(255,255,255,0.92);
+      background: rgba(255,255,255,0.04);
       color: var(--ink);
       padding: 14px 16px;
       outline: none;
-      transition: border-color 160ms ease, box-shadow 160ms ease;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
     }
     textarea {
       min-height: 160px;
       resize: vertical;
     }
     input:focus, textarea:focus {
-      border-color: rgba(45, 111, 64, 0.55);
-      box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.12);
+      border-color: rgba(202, 217, 197, 0.48);
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.06);
     }
     .form-actions {
       display: flex;
@@ -451,9 +538,9 @@ function create618ChatPage() {
       margin: 0 0 12px;
       padding: 12px 14px;
       border-radius: 16px;
-      background: rgba(45, 111, 64, 0.08);
-      border: 1px solid rgba(45, 111, 64, 0.16);
-      color: var(--green-deep);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--ink);
       font-size: 14px;
       line-height: 1.6;
       align-items: center;
@@ -463,8 +550,8 @@ function create618ChatPage() {
     .reply-banner strong { font-weight: 800; }
     .reply-banner .reply-clear {
       border: 0;
-      background: rgba(255,255,255,0.85);
-      color: var(--green-deep);
+      background: rgba(255,255,255,0.08);
+      color: var(--ink);
       border-radius: 999px;
       padding: 6px 10px;
       font-weight: 800;
@@ -480,24 +567,26 @@ function create618ChatPage() {
     .post-card {
       position: relative;
       overflow: hidden;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(14, 22, 20, 0.55), rgba(9, 15, 14, 0.42));
+      color: var(--ink);
       box-shadow: 0 0 0 rgba(0,0,0,0);
       transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      backdrop-filter: blur(18px) saturate(130%);
     }
     .post-card:hover {
       transform: translateY(-1px);
-      border-color: rgba(45, 111, 64, 0.34);
-      box-shadow: 0 10px 24px rgba(17, 38, 22, 0.08);
+      border-color: rgba(255,255,255,0.14);
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
     }
     .post-card.active {
-      border-color: rgba(45, 111, 64, 0.44);
-      background: linear-gradient(180deg, rgba(245, 250, 244, 0.96), rgba(235, 244, 231, 0.92));
+      border-color: rgba(202, 217, 197, 0.28);
+      background: linear-gradient(180deg, rgba(20, 30, 27, 0.68), rgba(12, 19, 17, 0.52));
     }
     .post-card.pinned {
-      border-color: rgba(152, 118, 36, 0.28);
-      box-shadow: 0 14px 30px rgba(152, 118, 36, 0.08);
+      border-color: rgba(206, 190, 145, 0.28);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
     }
     .post-card.pinned .post-title::before {
       content: "📌";
@@ -514,10 +603,10 @@ function create618ChatPage() {
       color: inherit;
     }
     .post-title {
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: 18px;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: -0.04em;
       margin: 0 0 6px;
     }
     .post-meta {
@@ -530,15 +619,42 @@ function create618ChatPage() {
       line-height: 1.6;
       font-size: 14px;
     }
+    .post-read-more {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      color: #c7d4c5;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
     .board-toolbar {
       display: grid;
-      grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr);
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr);
       gap: 12px;
       margin-top: 14px;
       padding: 14px;
       border-radius: 18px;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,245,0.94));
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(10, 16, 15, 0.45), rgba(7, 12, 11, 0.36));
+      backdrop-filter: blur(18px) saturate(130%);
+      align-items: start;
+    }
+    .board-toolbar .toolbar-field:first-child {
+      grid-column: 2;
+      width: 100%;
+    }
+    .board-toolbar .toolbar-field:first-child label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
     .toolbar-field {
       display: grid;
@@ -549,14 +665,14 @@ function create618ChatPage() {
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: rgba(34, 58, 42, 0.68);
+      color: rgba(244, 238, 228, 0.7);
     }
     .toolbar-field input,
     .toolbar-field select {
       width: 100%;
-      border: 1px solid rgba(16, 32, 21, 0.12);
+      border: 1px solid rgba(255,255,255,0.1);
       border-radius: 14px;
-      background: rgba(255,255,255,0.96);
+      background: rgba(255,255,255,0.04);
       padding: 12px 14px;
       color: var(--ink);
       font: inherit;
@@ -564,12 +680,13 @@ function create618ChatPage() {
     }
     .toolbar-field input:focus,
     .toolbar-field select:focus {
-      border-color: rgba(45, 111, 64, 0.38);
-      box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.08);
+      border-color: rgba(202, 217, 197, 0.32);
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.05);
     }
     .toolbar-row {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
     }
     .board-summary {
@@ -580,6 +697,65 @@ function create618ChatPage() {
       margin-top: 12px;
       color: var(--copy);
       font-size: 13px;
+    }
+    .page-kicker {
+      margin-top: 4px;
+      padding: 14px 18px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(10, 16, 15, 0.36);
+      backdrop-filter: blur(18px) saturate(130%);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 2;
+    }
+    .page-kicker-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-family: "Plus Jakarta Sans", Arial, sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+    }
+    .page-kicker-mark {
+      display: inline-flex;
+      width: 34px;
+      height: 34px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #dfe7d5;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+    }
+    .page-kicker-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--copy);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .page-kicker-live-label {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(244,238,228,0.78);
+      font-size: 11px;
+      font-weight: 800;
     }
     .moderation-panel {
       margin-top: 14px;
@@ -683,8 +859,8 @@ function create618ChatPage() {
       margin-top: 14px;
       padding: 14px;
       border-radius: 18px;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,245,0.94));
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(10, 16, 15, 0.46), rgba(7, 12, 11, 0.34));
       display: grid;
       gap: 12px;
     }
@@ -712,8 +888,8 @@ function create618ChatPage() {
     .spotlight-card {
       padding: 14px;
       border-radius: 16px;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
       display: grid;
       gap: 8px;
     }
@@ -744,8 +920,8 @@ function create618ChatPage() {
       margin-top: 14px;
       padding: 14px;
       border-radius: 18px;
-      border: 1px solid rgba(45, 111, 64, 0.12);
-      background: linear-gradient(180deg, rgba(244,250,244,0.96), rgba(255,255,255,0.96));
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(10, 16, 15, 0.46), rgba(7, 12, 11, 0.34));
       display: grid;
       gap: 12px;
     }
@@ -768,8 +944,8 @@ function create618ChatPage() {
     .featured-card {
       padding: 14px;
       border-radius: 16px;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      background: rgba(255,255,255,0.94);
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
       display: grid;
       gap: 8px;
     }
@@ -800,10 +976,10 @@ function create618ChatPage() {
       gap: 10px;
     }
     .topic-page-card {
-      border: 1px solid rgba(16, 32, 21, 0.08);
+      border: 1px solid rgba(255,255,255,0.08);
       border-radius: 16px;
       padding: 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(247,250,245,0.95));
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
       text-align: left;
       cursor: pointer;
       color: var(--ink);
@@ -811,17 +987,17 @@ function create618ChatPage() {
       font: inherit;
       display: grid;
       gap: 6px;
-      box-shadow: 0 8px 18px rgba(17, 38, 22, 0.04);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.12);
       transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
     }
     .topic-page-card:hover {
       transform: translateY(-1px);
-      box-shadow: 0 12px 24px rgba(17, 38, 22, 0.08);
-      border-color: rgba(45, 111, 64, 0.18);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.18);
+      border-color: rgba(255,255,255,0.14);
     }
     .topic-page-card.active {
-      border-color: rgba(45, 111, 64, 0.28);
-      background: linear-gradient(180deg, rgba(233, 246, 239, 0.98), rgba(245, 250, 243, 0.96));
+      border-color: rgba(202, 217, 197, 0.28);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
     }
     .topic-page-title {
       font-family: "Outfit", Arial, sans-serif;
@@ -850,10 +1026,10 @@ function create618ChatPage() {
       display: grid;
       gap: 4px;
       text-align: left;
-      border: 1px solid rgba(16, 32, 21, 0.08);
+      border: 1px solid rgba(255,255,255,0.08);
       border-radius: 14px;
       padding: 10px 12px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(247,250,245,0.96));
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
       color: var(--ink);
       cursor: pointer;
       appearance: none;
@@ -904,7 +1080,7 @@ function create618ChatPage() {
       display: grid;
       gap: 10px;
       padding-left: 16px;
-      border-left: 2px solid rgba(45, 111, 64, 0.18);
+      border-left: 2px solid rgba(255,255,255,0.12);
     }
     .comment-heading {
       display: flex;
@@ -921,22 +1097,22 @@ function create618ChatPage() {
     }
     .comment-card {
       position: relative;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      border-left: 4px solid rgba(45, 111, 64, 0.36);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-left: 4px solid rgba(174, 196, 180, 0.38);
       border-radius: 16px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(245,250,243,0.94));
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
       overflow: hidden;
-      box-shadow: 0 8px 18px rgba(17, 38, 22, 0.04);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.14);
       transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
     }
     .comment-card:hover {
       transform: translateY(-1px);
-      border-color: rgba(45, 111, 64, 0.22);
-      box-shadow: 0 12px 24px rgba(17, 38, 22, 0.08);
+      border-color: rgba(255,255,255,0.14);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.18);
     }
     .comment-card[open] {
-      border-color: rgba(45, 111, 64, 0.24);
-      box-shadow: 0 12px 24px rgba(17, 38, 22, 0.08);
+      border-color: rgba(255,255,255,0.14);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.18);
     }
     .comment-card summary {
       list-style: none;
@@ -990,8 +1166,8 @@ function create618ChatPage() {
       width: 10px;
       height: 10px;
       border-radius: 999px;
-      background: #2d6f40;
-      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
+      background: #b4c6b7;
+      box-shadow: 0 0 0 6px rgba(255,255,255,0.05);
     }
     .comment-card-mobile-note {
       display: none;
@@ -1011,7 +1187,7 @@ function create618ChatPage() {
     .post-footer {
       margin-top: 14px;
       padding-top: 14px;
-      border-top: 1px solid rgba(16, 32, 21, 0.08);
+      border-top: 1px solid rgba(255,255,255,0.08);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1034,31 +1210,31 @@ function create618ChatPage() {
       min-width: 38px;
     }
     .post-footer .mini-action[data-action="share"] {
-      background: linear-gradient(180deg, rgba(232, 244, 255, 0.98), rgba(222, 239, 251, 0.92));
-      border-color: rgba(57, 105, 154, 0.16);
-      color: #2a587f;
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: #d8e4de;
     }
     .post-footer .mini-action[data-action="pin"],
     .post-footer .mini-action[data-action="pin"].active {
-      background: linear-gradient(180deg, rgba(255, 246, 219, 0.98), rgba(247, 233, 193, 0.92));
-      border-color: rgba(152, 118, 36, 0.18);
-      color: #8d6714;
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: #dfd4b6;
     }
     .post-footer .mini-action[data-action="pin"].active {
-      box-shadow: 0 10px 18px rgba(152, 118, 36, 0.12);
+      box-shadow: 0 10px 18px rgba(0,0,0,0.14);
     }
     .status-badge.pin {
-      background: rgba(152, 118, 36, 0.1);
-      border: 1px solid rgba(152, 118, 36, 0.18);
-      color: #8d6714;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #efe0b8;
     }
     .mini-action {
-      min-height: 36px;
-      min-width: 36px;
-      padding: 0 10px;
-      border-radius: 14px;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(245, 248, 242, 0.9));
+      min-height: 32px;
+      min-width: 32px;
+      padding: 0 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05);
       color: var(--ink);
       font-size: 15px;
       font-weight: 900;
@@ -1067,12 +1243,12 @@ function create618ChatPage() {
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(10px);
-      box-shadow: 0 10px 18px rgba(17, 38, 22, 0.06);
+      box-shadow: 0 10px 18px rgba(0,0,0,0.1);
       transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
     }
     .mini-action:hover {
       transform: translateY(-1px);
-      box-shadow: 0 14px 24px rgba(17, 38, 22, 0.1);
+      box-shadow: 0 14px 24px rgba(0,0,0,0.16);
     }
     .mini-action:active {
       transform: translateY(0);
@@ -1081,14 +1257,14 @@ function create618ChatPage() {
     .mini-action[data-action="support"],
     .mini-action[data-reader-action="support"],
     .mini-action[data-comment-action="support"] {
-      background: linear-gradient(180deg, rgba(255, 239, 244, 0.98), rgba(255, 229, 236, 0.92));
-      border-color: rgba(157, 24, 53, 0.16);
-      color: #9d1835;
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: #dfd4c0;
     }
     .mini-action[data-action="reply"] {
-      background: linear-gradient(180deg, rgba(233, 246, 239, 0.98), rgba(225, 241, 231, 0.92));
-      border-color: rgba(45, 111, 64, 0.14);
-      color: var(--green-deep);
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: var(--ink);
     }
     .mini-action[data-action="reply"],
     .mini-action[data-comment-action="support"],
@@ -1098,36 +1274,36 @@ function create618ChatPage() {
     .mini-action[data-action="mute"],
     .mini-action[data-reader-action="mute"],
     .mini-action[data-comment-action="mute"] {
-      background: linear-gradient(180deg, rgba(243, 244, 246, 0.98), rgba(234, 236, 239, 0.92));
-      border-color: rgba(74, 85, 104, 0.16);
-      color: #475569;
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: #c2c8c0;
     }
     .mini-action[data-action="restore"],
     .mini-action[data-reader-action="restore"],
     .mini-action[data-comment-action="restore"] {
-      background: linear-gradient(180deg, rgba(233, 246, 239, 0.98), rgba(225, 241, 231, 0.92));
-      border-color: rgba(45, 111, 64, 0.14);
-      color: var(--green-deep);
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: #d7e5d8;
     }
     .mini-action[data-action="flag"],
     .mini-action[data-comment-action="flag"] {
-      background: linear-gradient(180deg, rgba(255, 247, 225, 0.98), rgba(248, 237, 204, 0.92));
-      border-color: rgba(158, 114, 19, 0.16);
-      color: #8b650d;
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: #dccaa0;
     }
     .mini-action[data-action="flag"],
     .mini-action[data-comment-action="flag"] {
       min-width: 38px;
     }
     .mini-action.flagged {
-      background: rgba(45, 111, 64, 0.09);
-      border-color: rgba(45, 111, 64, 0.18);
-      color: var(--green-deep);
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.12);
+      color: #f0e6cf;
     }
     .mini-action.danger {
-      background: linear-gradient(180deg, rgba(255, 237, 237, 0.98), rgba(247, 224, 224, 0.92));
-      border-color: rgba(155, 28, 28, 0.18);
-      color: #9b1c1c;
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      color: #f0b1b1;
     }
     .status-badge {
       display: inline-flex;
@@ -1140,19 +1316,21 @@ function create618ChatPage() {
       font-weight: 800;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      background: rgba(45, 111, 64, 0.08);
-      color: var(--green-deep);
+      background: rgba(255,255,255,0.05);
+      color: var(--ink);
+      border: 1px solid rgba(255,255,255,0.08);
     }
     .status-badge.review {
-      background: rgba(155, 28, 28, 0.08);
-      color: #9b1c1c;
-      border: 1px solid rgba(155, 28, 28, 0.16);
+      background: rgba(255,255,255,0.06);
+      color: #f2c0c0;
+      border: 1px solid rgba(255,255,255,0.08);
     }
     .detail-title {
       margin: 0;
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: 34px;
-      line-height: 1;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 600;
+      font-size: 38px;
+      line-height: 0.98;
       letter-spacing: -0.04em;
     }
     .detail-meta { margin-top: 10px; color: var(--copy); font-size: 14px; }
@@ -1160,8 +1338,8 @@ function create618ChatPage() {
       margin-top: 16px;
       padding: 18px;
       border-radius: 18px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(247,249,243,0.94));
-      border: 1px solid rgba(16, 32, 21, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
+      border: 1px solid rgba(255,255,255,0.08);
       white-space: pre-wrap;
       line-height: 1.75;
       color: var(--ink);
@@ -1170,8 +1348,8 @@ function create618ChatPage() {
     .empty-state {
       padding: 20px;
       border-radius: 18px;
-      background: rgba(255,255,255,0.86);
-      border: 1px dashed rgba(45, 111, 64, 0.22);
+      background: rgba(255,255,255,0.04);
+      border: 1px dashed rgba(255,255,255,0.14);
       color: var(--copy);
       line-height: 1.75;
     }
@@ -1183,12 +1361,25 @@ function create618ChatPage() {
     .status.error { color: #9b1c1c; }
     @media (max-width: 1020px) {
       .intro, .layout { grid-template-columns: 1fr; }
+      .page-kicker {
+        align-items: flex-start;
+      }
+      .page-kicker-live {
+        margin-left: 0;
+      }
     }
     @media (max-width: 760px) {
       .page { width: min(100vw - 10px, 1600px); padding: 12px 0 24px; }
       .hero, .board { padding: 20px; }
       .detail-title { font-size: 28px; }
       .hero h1 { max-width: none; }
+      .page-kicker {
+        padding: 12px 14px;
+        border-radius: 20px;
+      }
+      .page-kicker-brand {
+        font-size: 16px;
+      }
       .comment-list {
         padding-left: 10px;
         gap: 7px;
@@ -1230,8 +1421,12 @@ function create618ChatPage() {
         grid-template-columns: 1fr;
         gap: 10px;
       }
+      .board-toolbar .toolbar-field:first-child {
+        grid-column: auto;
+        width: 100%;
+      }
       .toolbar-row {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
       }
       .topic-pages-grid {
         grid-template-columns: 1fr;
@@ -1295,13 +1490,22 @@ function create618ChatPage() {
   </div>
 ${chatSiteNav("home")}
   <main class="page">
+    <div class="page-kicker">
+      <div class="page-kicker-brand">
+        <span class="page-kicker-mark" aria-hidden="true">◌</span>
+        <span><strong>Anonymous</strong> Conversations</span>
+      </div>
+      <div class="page-kicker-live">
+        <span class="page-kicker-live-label">LIVE Updates:</span>
+        <span id="board-summary-top">Watching for new posts.</span>
+      </div>
+    </div>
     <section class="intro">
       <div class="panel hero">
         <span class="eyebrow">Anonymous conversation</span>
         <h1>Speak honestly. Read with care. Keep it respectful.</h1>
         <p>
-          This space was created for honest, anonymous conversation. Sometimes the easiest way to open up is without the usual barriers, expectations, or pressure of everyday life.
-          Here, people can talk about what they are feeling, share what is weighing on them, and connect with others in a real and meaningful way.
+          Honest, anonymous space where you can share what’s weighing on you without judgment and connect with others who understand.
         </p>
         <div class="pill-row">
           <div class="pill"><strong>Anonymous</strong> by design</div>
@@ -1310,16 +1514,16 @@ ${chatSiteNav("home")}
           <div class="pill"><strong>Thoughtful</strong> titles</div>
         </div>
         <div class="hero-actions">
-          <a class="button button-primary" href="#compose">Write a post</a>
-          <a class="button button-secondary" href="#recent-posts">Read conversations</a>
+          <a class="button button-primary" href="#compose">Ask a question</a>
+          <a class="button button-secondary" href="#recent-posts">Browse posts</a>
           <button class="button button-secondary" id="moderation-toggle" type="button" title="Enter the moderator secret to unlock admin controls">Moderate</button>
         </div>
         <div class="meta-card" id="about">
-          <h2>What this space is for</h2>
+          <h2>What we’re about</h2>
           <ul>
             <li>Honest, anonymous conversation without the usual pressure.</li>
             <li>Positivity, respect, and understanding in every post.</li>
-            <li>Please avoid posting personal information like your real name, phone number, email address, home address, or anything else that could identify you offline.</li>
+            <li>Thoughtful, meaningful titles that make posts easy to browse.</li>
           </ul>
         </div>
       </div>
@@ -1327,8 +1531,8 @@ ${chatSiteNav("home")}
       <div class="panel board">
         <div class="board-top">
           <div>
-            <h2>Post a message</h2>
-            <p>Write something short or long. We’ll give it a title and add it to the conversation board.</p>
+            <h2>Create post</h2>
+            <p>Write what’s on your mind. We’ll shape it into a title and add it to the board.</p>
           </div>
           <div class="board-summary">
             <span class="status-badge">Live updates</span>
@@ -1418,7 +1622,7 @@ ${chatSiteNav("home")}
         <div class="list" style="margin-top: 14px;" id="recent-posts">
           <div class="board-top" style="align-items: center;">
             <div>
-              <h3>Recent conversations</h3>
+              <h3>Recent posts</h3>
               <p>The newest message appears first. Select a post to read it in full.</p>
             </div>
             <div class="board-summary">
@@ -1477,6 +1681,7 @@ ${chatSiteNav("home")}
       const replyTargetLabel = document.getElementById("reply-target-label");
       const replyClear = document.getElementById("reply-clear");
       const submitButton = form.querySelector('button[type="submit"]');
+      const boardSummaryTopEl = document.getElementById("board-summary-top");
 
       let selectedId = "";
       let replyTargetId = "";
@@ -2587,12 +2792,15 @@ ${chatSiteNav("home")}
         const flagClass = isFlagged(post.id) ? "flagged" : "";
         const footerBadges = [topicLabel, pinLabel, hiddenLabel, supportLabel, flagLabel].filter(Boolean).join("");
         const replyPreviews = renderReplyPreviews(post);
+        const messageExcerpt = escapeHTML(excerpt(formatDisplayedMessage(post.message)).slice(0, 220));
         card.innerHTML =
           '<button type="button" class="post-open">' +
             '<div class="post-title">' + escapeHTML(post.title) + '</div>' +
             '<div class="post-card-meta">' +
               '<span>' + escapeHTML(post.author || "Anonymous") + ' • ' + escapeHTML(formatDate(post.createdAt)) + '</span>' +
             '</div>' +
+            '<div class="post-excerpt">' + messageExcerpt + '</div>' +
+            '<span class="post-read-more">Read full post →</span>' +
           '</button>';
         if (replyPreviews) {
           card.innerHTML += replyPreviews;
@@ -2754,10 +2962,16 @@ ${chatSiteNav("home")}
         if (!resultsCountEl || !summaryTextEl) return;
         const total = adminMode ? posts.length : posts.filter((post) => !post.hidden).length;
         const queryNote = searchQuery.trim() ? ' for "' + searchQuery.trim() + '"' : "";
+        const liveText = total
+          ? String(count) + " conversation" + (count === 1 ? "" : "s") + " now"
+          : "Watching for new posts.";
         resultsCountEl.textContent = String(count) + " shown";
         summaryTextEl.textContent = total
           ? String(count) + " of " + String(total) + " conversations shown" + queryNote + "."
           : "Watching for new posts.";
+        if (boardSummaryTopEl) {
+          boardSummaryTopEl.textContent = total ? liveText : "Watching for new posts.";
+        }
       }
 
       function renderModerationPanel() {
