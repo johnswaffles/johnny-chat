@@ -31,8 +31,10 @@ const {
   SMTP_PASS = "",
   SMTP_SECURE = "false",
   PUBLIC_BOARD_STORE_PATH = "/var/data/618chat-posts.json",
+  PUBLIC_BOARD_RATE_LIMIT_PATH = "/var/data/618chat-rate-limit.json",
   PUBLIC_BOARD_MAX_POSTS = "300",
   PUBLIC_BOARD_FLAG_THRESHOLD = "10",
+  PUBLIC_BOARD_POST_DAILY_LIMIT = "2",
   PUBLIC_BOARD_COMMENT_LIMIT = "50",
   PUBLIC_BOARD_ADMIN_TOKEN = ""
 } = process.env;
@@ -41,6 +43,14 @@ const BOARD_COMMENT_LIMIT = (() => {
   const value = Number(PUBLIC_BOARD_COMMENT_LIMIT || 50);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 50;
 })();
+
+const BOARD_POST_DAILY_LIMIT = (() => {
+  const value = Number(PUBLIC_BOARD_POST_DAILY_LIMIT || 2);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 2;
+})();
+
+const BOARD_TIME_ZONE = "America/Chicago";
+let boardRateLedgerLock = Promise.resolve();
 
 const BOARD_WELCOME_POST_ID = "618chat_welcome";
 const BOARD_WELCOME_POST_MESSAGE = [
@@ -684,6 +694,91 @@ function getBoardAdminToken(req) {
   return String(req.headers["x-admin-token"] || req.query.token || "").trim();
 }
 
+function getBoardClientId(req, body = {}) {
+  const raw = String(
+    req.headers["x-618chat-client-id"] ||
+    body.clientId ||
+    req.ip ||
+    req.socket?.remoteAddress ||
+    ""
+  ).trim();
+  if (raw) return raw.slice(0, 128);
+  const agent = String(req.headers["user-agent"] || "unknown").trim().slice(0, 120);
+  return `anon:${agent || "unknown"}`;
+}
+
+function getBoardDayKey(date = new Date()) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: BOARD_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(date);
+  } catch (_) {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
+async function readBoardRateLedger() {
+  try {
+    const raw = await readFile(PUBLIC_BOARD_RATE_LIMIT_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { clients: {} };
+    }
+    if (!parsed.clients || typeof parsed.clients !== "object") {
+      parsed.clients = {};
+    }
+    return parsed;
+  } catch (err) {
+    if (err?.code === "ENOENT") return { clients: {} };
+    throw err;
+  }
+}
+
+async function writeBoardRateLedger(ledger) {
+  const normalized = ledger && typeof ledger === "object" && !Array.isArray(ledger) ? ledger : { clients: {} };
+  const dir = path.dirname(PUBLIC_BOARD_RATE_LIMIT_PATH);
+  await mkdir(dir, { recursive: true });
+  const tmpPath = `${PUBLIC_BOARD_RATE_LIMIT_PATH}.tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await writeFile(tmpPath, JSON.stringify(normalized, null, 2), "utf8");
+  await rename(tmpPath, PUBLIC_BOARD_RATE_LIMIT_PATH);
+  return normalized;
+}
+
+async function consumeBoardDailyPostSlot(req, body = {}) {
+  const next = boardRateLedgerLock.then(async () => {
+    if (isBoardAdminRequest(req)) {
+      return { allowed: true, admin: true, remaining: BOARD_POST_DAILY_LIMIT };
+    }
+
+    const clientId = getBoardClientId(req, body);
+    const day = getBoardDayKey();
+    const ledger = await readBoardRateLedger();
+    const clients = ledger.clients || {};
+    const entry = clients[clientId] && typeof clients[clientId] === "object" ? { ...clients[clientId] } : { day, count: 0 };
+    if (entry.day !== day) {
+      entry.day = day;
+      entry.count = 0;
+    }
+
+    const current = Math.max(0, Number(entry.count || 0) || 0);
+    if (current >= BOARD_POST_DAILY_LIMIT) {
+      return { allowed: false, remaining: 0, count: current, limit: BOARD_POST_DAILY_LIMIT, reset: `${day}T00:00:00-05:00` };
+    }
+
+    entry.count = current + 1;
+    entry.updatedAt = new Date().toISOString();
+    clients[clientId] = entry;
+    ledger.clients = clients;
+    await writeBoardRateLedger(ledger);
+    return { allowed: true, admin: false, remaining: Math.max(0, BOARD_POST_DAILY_LIMIT - entry.count) };
+  });
+  boardRateLedgerLock = next.catch(() => {});
+  return next;
+}
+
 function createBoardWelcomePost() {
   return normalizeBoardPost({
     id: BOARD_WELCOME_POST_ID,
@@ -846,6 +941,17 @@ app.post("/api/618chat/posts", async (req, res) => {
     const topic = compactText(body.topic) || "General";
     if (!message) {
       return res.status(400).json({ ok: false, error: "Message is required." });
+    }
+
+    const quota = await consumeBoardDailyPostSlot(req, body);
+    if (!quota.allowed) {
+      return res.status(429).json({
+        ok: false,
+        error: "You have reached the two-post limit for today. Please come back tomorrow.",
+        limit: quota.limit || BOARD_POST_DAILY_LIMIT,
+        remaining: quota.remaining ?? 0,
+        reset: quota.reset || ""
+      });
     }
 
     const review = await assessBoardPostSafety(message);

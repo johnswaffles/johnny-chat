@@ -1446,6 +1446,7 @@ ${chatSiteNav("home")}
       const flaggedKey = "618chat_flagged_posts";
       const draftKey = "618chat_draft_v3";
       const mutedKey = "618chat_muted_authors_v1";
+      const clientIdKey = "618chat_client_id_v1";
       const ageGate = document.getElementById("age-gate");
       const ageGateEnter = document.getElementById("age-gate-enter");
       const ageGateLeave = document.getElementById("age-gate-leave");
@@ -1488,6 +1489,7 @@ ${chatSiteNav("home")}
       let lastSubmission = null;
       let personalDraft = readDraft();
       let mutedAuthors = new Set(readMutedAuthors());
+      let anonymousClientId = readClientId();
       let boardStats = {
         totalPosts: 0,
         hiddenCount: 0,
@@ -1580,6 +1582,16 @@ ${chatSiteNav("home")}
         } catch (_) {
           return fallback;
         }
+      }
+
+      function readClientId() {
+        const existing = String(window.localStorage.getItem(clientIdKey) || "").trim();
+        if (existing) return existing;
+        const value = (window.crypto && typeof window.crypto.randomUUID === "function")
+          ? window.crypto.randomUUID()
+          : "anon-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+        window.localStorage.setItem(clientIdKey, value);
+        return value;
       }
 
       function normalizeMutedAuthor(value) {
@@ -1832,6 +1844,7 @@ ${chatSiteNav("home")}
         if (adminMode && adminToken) {
           headers["x-admin-token"] = adminToken;
         }
+        headers["x-618chat-client-id"] = anonymousClientId;
         return headers;
       }
 
@@ -2982,7 +2995,7 @@ ${chatSiteNav("home")}
         const postTopic = targetId ? String(getPostById(targetId)?.topic || topic || "General").trim() || "General" : topic;
         fetch(endpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ author, message, topic: postTopic })
         })
           .then((response) => response.json().then((payload) => ({ response, payload })))
