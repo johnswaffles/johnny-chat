@@ -71,7 +71,7 @@ if (!OPENAI_API_KEY) {
 
 function normalizeWidgetProfile(value) {
   const profile = String(value || "").toLowerCase().trim();
-  if (profile === "mowing" || profile === "ai" || profile === "gpt54") return profile;
+  if (profile === "mowing" || profile === "ai" || profile === "gpt54" || profile === "community") return profile;
   return "";
 }
 
@@ -105,6 +105,21 @@ function getJohnnyPersona(profile = "ai") {
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
   const cozyBuilderNote = `If the user asks about Cozy Builder, say it is a free, relaxing low-poly town-builder game Johnny made as an experiment. It has cozy music, is playable for free, and still has a lot left unfinished, but the game is there for anyone to enjoy.
 If the user asks about GPT 5.4, say it is an invitation-only private chatbot powered by OpenAI's latest model. It is separate from the public widgets and intended for approved users.`;
+
+  if (profile === "community") {
+    return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
+
+You are a small, friendly helper embedded on 618chat.com.
+Your job is to answer conversationally, warmly, and briefly for people who want a quick thought, a helpful nudge, or a little clarity.
+Keep the tone calm, encouraging, and human.
+Do not mention uploads, demos, widgets, internal tooling, or site branding.
+Do not mention Johnny, the backend, or the model unless the user explicitly asks.
+Keep responses concise, but still useful and thoughtful.
+If the user asks about the 618chat board itself, explain that it is an anonymous conversation space where people can post, read, and reply.
+If the user asks for help writing a post or reply, offer a short draft or suggestion.
+You may answer normal adult conversation in a respectful way, but never help with illegal, harmful, or exploitative instructions.
+Ask at most one follow-up question only if it is truly needed.`;
+  }
 
   if (profile === "gpt54") {
     return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
@@ -1333,14 +1348,14 @@ app.post("/api/voice-search", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { input = "", history = [] } = req.body || {};
-    const profile = inferWidgetProfile(req);
-    const s = String(input || "");
+  const profile = inferWidgetProfile(req);
+  const s = String(input || "");
 
     if (s.trim() === "[system_greet]") {
       return res.json({ reply: "You're here. I'm here. Let's make this conversation worth both our time.", sources: [] });
     }
 
-    if (profile !== "gpt54" && isLiveQuery(s)) {
+    if (profile !== "gpt54" && profile !== "community" && isLiveQuery(s)) {
       return res.json({ reply: demoLiveInfoReply(), sources: [] });
     }
 

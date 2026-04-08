@@ -675,38 +675,192 @@
       padding: 0 12px;
       font-size: 13px;
     }
-    .featured {
-      margin-top: 14px;
-      padding: 14px;
-      border-radius: 18px;
-      border: 1px solid rgba(45, 111, 64, 0.12);
-      background: linear-gradient(180deg, rgba(244,250,244,0.96), rgba(255,255,255,0.96));
-      display: grid;
-      gap: 12px;
+    .community-widget {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: min(340px, calc(100vw - 24px));
+      z-index: 90;
+      pointer-events: none;
+      display: flex;
+      justify-content: flex-end;
     }
-    .featured[hidden] {
+    .community-widget-shell {
+      width: 100%;
+      pointer-events: auto;
+      display: grid;
+      justify-items: end;
+      gap: 8px;
+    }
+    .community-launcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 52px;
+      padding: 0 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(16, 32, 21, 0.1);
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,248,242,0.95));
+      color: var(--ink);
+      font: inherit;
+      font-weight: 800;
+      box-shadow: 0 18px 36px rgba(17, 38, 22, 0.12);
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+    }
+    .community-launcher-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #2d6f40, #4d8b5c);
+      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
+      flex: 0 0 auto;
+    }
+    .community-widget-panel {
+      width: 100%;
+      border-radius: 22px;
+      border: 1px solid rgba(16, 32, 21, 0.1);
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,245,0.94));
+      box-shadow: 0 24px 48px rgba(17, 38, 22, 0.18);
+      backdrop-filter: blur(16px) saturate(135%);
+      overflow: hidden;
+      display: grid;
+      gap: 10px;
+    }
+    .community-widget-panel[hidden] {
       display: none;
     }
-    .featured-head {
+    .community-widget-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px 0;
+      cursor: grab;
+      user-select: none;
+    }
+    .community-widget-header:active {
+      cursor: grabbing;
+    }
+    .community-widget-title {
+      display: grid;
+      gap: 3px;
+      padding-right: 8px;
+    }
+    .community-widget-title strong {
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 16px;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+    .community-widget-title span {
+      color: var(--copy);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .community-widget-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
+    .community-widget-mini {
+      min-height: 32px;
+      min-width: 32px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(16, 32, 21, 0.1);
+      background: rgba(255,255,255,0.88);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .community-widget-body {
+      padding: 0 14px 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .community-widget-messages {
+      display: grid;
+      gap: 8px;
+      max-height: 230px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+    .community-widget-empty {
+      margin: 2px 0 0;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px dashed rgba(45, 111, 64, 0.18);
+      background: rgba(255,255,255,0.78);
+      color: var(--copy);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .community-widget-message {
+      max-width: 88%;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      background: rgba(255,255,255,0.92);
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--ink);
+      box-shadow: 0 8px 16px rgba(17, 38, 22, 0.05);
+    }
+    .community-widget-message.user {
+      margin-left: auto;
+      background: linear-gradient(180deg, rgba(233, 246, 239, 0.96), rgba(224, 240, 230, 0.94));
+      border-color: rgba(45, 111, 64, 0.14);
+    }
+    .community-widget-message.assistant {
+      margin-right: auto;
+    }
+    .community-widget-meta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--copy);
+      opacity: 0.86;
+    }
+    .community-widget-form {
+      display: grid;
+      gap: 8px;
+    }
+    .community-widget-input {
+      min-height: 74px;
+      max-height: 140px;
+      resize: vertical;
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(16, 32, 21, 0.1);
+      background: rgba(255,255,255,0.9);
+      padding: 12px 14px;
+      font: inherit;
+      color: var(--ink);
+      line-height: 1.5;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+    .community-widget-input:focus {
+      outline: none;
+      border-color: rgba(45, 111, 64, 0.3);
+      box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.1);
+    }
+    .community-widget-actions {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
       flex-wrap: wrap;
     }
-    .featured-head h4 {
-      margin: 0;
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: 20px;
-      line-height: 1.1;
+    .community-widget-status {
+      color: var(--copy);
+      font-size: 12px;
+      line-height: 1.4;
+      min-height: 1.4em;
     }
-    .featured-card {
-      padding: 14px;
-      border-radius: 16px;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      background: rgba(255,255,255,0.94);
-      display: grid;
-      gap: 8px;
+    .community-widget-status.error {
+      color: #9b1c1c;
     }
     .topic-pages {
       margin-top: 14px;
@@ -1171,7 +1325,6 @@
       .topic-pages-grid {
         grid-template-columns: 1fr;
       }
-      .featured,
       .spotlight {
         padding: 12px;
       }
@@ -1207,6 +1360,14 @@
         min-width: 28px;
         padding: 0 8px;
         font-size: 12px;
+      }
+      .community-widget {
+        right: 10px;
+        bottom: 10px;
+        width: min(100vw - 18px, 340px);
+      }
+      .community-widget-message {
+        max-width: 94%;
       }
     }
   </style>
@@ -1372,13 +1533,43 @@
             </div>
           </div>
           <div id="topic-pages" class="topic-pages" hidden></div>
-          <div id="featured" class="featured" hidden></div>
           <div id="spotlight" class="spotlight" hidden></div>
           <div id="posts" class="posts"></div>
         </div>
       </div>
     </section>
   </main>
+
+  <div id="community-widget" class="community-widget">
+    <div class="community-widget-shell">
+      <button id="community-launcher" class="community-launcher" type="button">
+        <span class="community-launcher-dot" aria-hidden="true"></span>
+        <span>Quick chat</span>
+      </button>
+      <section id="community-panel" class="community-widget-panel" hidden aria-label="Floating chat helper">
+        <div class="community-widget-header" id="community-drag-handle">
+          <div class="community-widget-title">
+            <strong>Quick chat</strong>
+            <span>A tiny helper for thoughts, writing, and board questions.</span>
+          </div>
+          <div class="community-widget-controls">
+            <button id="community-reset" class="community-widget-mini" type="button" title="Start over">New</button>
+            <button id="community-minimize" class="community-widget-mini" type="button" title="Minimize">−</button>
+          </div>
+        </div>
+        <div class="community-widget-body">
+          <div id="community-messages" class="community-widget-messages"></div>
+          <form id="community-form" class="community-widget-form">
+            <textarea id="community-input" class="community-widget-input" placeholder="Ask a quick question..." maxlength="1000"></textarea>
+            <div class="community-widget-actions">
+              <div id="community-status" class="community-widget-status">Ask for a quick thought or a little help writing something.</div>
+              <button class="button button-primary" type="submit">Send</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
 
   <script>
     (function () {
@@ -1404,7 +1595,6 @@
       const statusEl = document.getElementById("board-status");
       const summaryTextEl = document.getElementById("board-summary-text");
       const moderationPanelEl = document.getElementById("moderation-panel");
-      const featuredEl = document.getElementById("featured");
       const topicPagesEl = document.getElementById("topic-pages");
       const spotlightEl = document.getElementById("spotlight");
       const postSearchInput = document.getElementById("post-search");
@@ -1421,6 +1611,16 @@
       const replyTargetLabel = document.getElementById("reply-target-label");
       const replyClear = document.getElementById("reply-clear");
       const submitButton = form.querySelector('button[type="submit"]');
+      const communityWidgetRoot = document.getElementById("community-widget");
+      const communityLauncher = document.getElementById("community-launcher");
+      const communityPanel = document.getElementById("community-panel");
+      const communityDragHandle = document.getElementById("community-drag-handle");
+      const communityResetBtn = document.getElementById("community-reset");
+      const communityMinimizeBtn = document.getElementById("community-minimize");
+      const communityForm = document.getElementById("community-form");
+      const communityInput = document.getElementById("community-input");
+      const communityMessages = document.getElementById("community-messages");
+      const communityStatus = document.getElementById("community-status");
 
       let selectedId = "";
       let replyTargetId = "";
@@ -1434,6 +1634,8 @@
       let personalDraft = readDraft();
       let mutedAuthors = new Set(readMutedAuthors());
       let anonymousClientId = readClientId();
+      let communityHistory = readCommunityHistory();
+      let communityDragging = null;
       let boardStats = {
         totalPosts: 0,
         hiddenCount: 0,
@@ -1451,6 +1653,8 @@
       let ageGateAccepted = String(window.localStorage.getItem(ageGateKey) || "") === "yes";
       let moderationSelection = new Set();
       const supportedKey = "618chat_supported_items";
+      const communityWidgetKey = "618chat_community_widget_v1";
+      const communityHistoryKey = "618chat_community_history_v1";
 
       function escapeHTML(value) {
         return String(value || "")
@@ -1600,6 +1804,221 @@
         if (draftStatusEl) {
           draftStatusEl.textContent = "Draft cleared.";
         }
+      }
+
+      function readCommunityHistory() {
+        try {
+          const parsed = JSON.parse(window.localStorage.getItem(communityHistoryKey) || "[]");
+          if (!Array.isArray(parsed)) return [];
+          return parsed
+            .map((item) => ({
+              role: String(item?.role || ""),
+              content: String(item?.content || "").trim()
+            }))
+            .filter((item) => item.role === "user" || item.role === "assistant");
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function saveCommunityHistory() {
+        window.localStorage.setItem(communityHistoryKey, JSON.stringify(communityHistory.slice(-12)));
+      }
+
+      function readCommunityWidgetPlacement() {
+        try {
+          const parsed = JSON.parse(window.localStorage.getItem(communityWidgetKey) || "null");
+          if (parsed && Number.isFinite(Number(parsed.left)) && Number.isFinite(Number(parsed.top))) {
+            return { left: Number(parsed.left), top: Number(parsed.top) };
+          }
+        } catch (_) {
+          // Ignore localStorage parse issues.
+        }
+        return {
+          left: Math.max(12, window.innerWidth - 360),
+          top: Math.max(12, window.innerHeight - 460)
+        };
+      }
+
+      function saveCommunityWidgetPlacement(placement) {
+        window.localStorage.setItem(communityWidgetKey, JSON.stringify({
+          left: Math.max(12, Math.round(Number(placement?.left) || 0)),
+          top: Math.max(12, Math.round(Number(placement?.top) || 0))
+        }));
+      }
+
+      function getCommunityWidgetBounds() {
+        if (!communityWidgetRoot) return { width: 340, height: 440 };
+        const rect = communityPanel && !communityPanel.hidden
+          ? communityWidgetRoot.getBoundingClientRect()
+          : communityLauncher.getBoundingClientRect();
+        return {
+          width: Math.max(communityWidgetRoot.offsetWidth || rect.width || 340, 280),
+          height: Math.max(rect.height || 64, communityPanel && !communityPanel.hidden ? 440 : 64)
+        };
+      }
+
+      function placeCommunityWidget(left, top) {
+        if (!communityWidgetRoot) return;
+        const bounds = getCommunityWidgetBounds();
+        const nextLeft = Math.min(Math.max(12, Number(left) || 0), Math.max(12, window.innerWidth - bounds.width - 12));
+        const nextTop = Math.min(Math.max(12, Number(top) || 0), Math.max(12, window.innerHeight - bounds.height - 12));
+        communityWidgetRoot.style.left = nextLeft + "px";
+        communityWidgetRoot.style.top = nextTop + "px";
+        communityWidgetRoot.style.right = "auto";
+        communityWidgetRoot.style.bottom = "auto";
+        saveCommunityWidgetPlacement({ left: nextLeft, top: nextTop });
+      }
+
+      function ensureCommunityWidgetVisible() {
+        if (!communityWidgetRoot) return;
+        const current = {
+          left: parseFloat(communityWidgetRoot.style.left || "0") || 0,
+          top: parseFloat(communityWidgetRoot.style.top || "0") || 0
+        };
+        const stored = readCommunityWidgetPlacement();
+        placeCommunityWidget(current.left || stored.left, current.top || stored.top);
+      }
+
+      function appendCommunityMessage(role, text) {
+        if (!communityMessages) return;
+        const row = document.createElement("div");
+        row.className = "community-widget-message " + (role === "user" ? "user" : "assistant");
+        row.textContent = String(text || "").trim();
+        communityMessages.appendChild(row);
+        communityMessages.scrollTop = communityMessages.scrollHeight;
+      }
+
+      function renderCommunityMessages() {
+        if (!communityMessages) return;
+        communityMessages.innerHTML = "";
+        if (!communityHistory.length) {
+          communityMessages.innerHTML = '<div class="community-widget-empty">Ask for a quick thought, a little writing help, or a simple explanation. This widget is text-only and stays small on the page.</div>';
+          return;
+        }
+        communityHistory.forEach((item) => appendCommunityMessage(item.role, item.content));
+      }
+
+      function setCommunityStatus(message, isError = false) {
+        if (!communityStatus) return;
+        communityStatus.textContent = String(message || "");
+        communityStatus.classList.toggle("error", Boolean(isError));
+      }
+
+      function openCommunityWidget() {
+        if (!communityPanel || !communityLauncher) return;
+        communityPanel.hidden = false;
+        communityLauncher.hidden = true;
+        ensureCommunityWidgetVisible();
+        renderCommunityMessages();
+        setCommunityStatus(communityHistory.length ? "Ask another quick question." : "Ask for a quick thought or a little help writing something.");
+        if (communityInput) {
+          setTimeout(() => communityInput.focus(), 20);
+        }
+      }
+
+      function closeCommunityWidget() {
+        if (!communityPanel || !communityLauncher) return;
+        communityPanel.hidden = true;
+        communityLauncher.hidden = false;
+        setCommunityStatus("Ask for a quick thought or a little help writing something.");
+      }
+
+      function resetCommunityWidget() {
+        communityHistory = [];
+        saveCommunityHistory();
+        renderCommunityMessages();
+        setCommunityStatus("Fresh start. Ask me anything.");
+        if (communityInput) {
+          communityInput.value = "";
+          communityInput.style.height = "auto";
+          communityInput.focus();
+        }
+      }
+
+      async function sendCommunityMessage(text) {
+        const message = String(text || "").trim();
+        if (!message || !communityMessages) return;
+
+        communityHistory.push({ role: "user", content: message });
+        saveCommunityHistory();
+        appendCommunityMessage("user", message);
+        setCommunityStatus("Thinking...");
+        if (communityInput) {
+          communityInput.value = "";
+          communityInput.style.height = "auto";
+        }
+
+        const thinking = document.createElement("div");
+        thinking.className = "community-widget-message assistant";
+        thinking.textContent = "Thinking…";
+        communityMessages.appendChild(thinking);
+        communityMessages.scrollTop = communityMessages.scrollHeight;
+
+        try {
+          const response = await fetch(apiBase + "/api/chat", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              input: message,
+              history: communityHistory.slice(0, -1).slice(-10),
+              profile: "community"
+            })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(payload.detail || payload.error || "Could not send the message.");
+          }
+          const reply = String(payload.reply || "(no reply)").trim();
+          thinking.remove();
+          communityHistory.push({ role: "assistant", content: reply });
+          saveCommunityHistory();
+          appendCommunityMessage("assistant", reply);
+          setCommunityStatus("Ready when you are.");
+        } catch (err) {
+          thinking.remove();
+          communityHistory.pop();
+          saveCommunityHistory();
+          setCommunityStatus(err.message || "Could not send the message.", true);
+        }
+      }
+
+      function handleCommunityWidgetDragStart(event) {
+        if (!communityWidgetRoot || !communityPanel || communityPanel.hidden) return;
+        const pointer = event.touches ? event.touches[0] : event;
+        if (!pointer) return;
+        const rect = communityWidgetRoot.getBoundingClientRect();
+        communityDragging = {
+          offsetX: pointer.clientX - rect.left,
+          offsetY: pointer.clientY - rect.top
+        };
+        event.preventDefault();
+      }
+
+      function handleCommunityWidgetDragMove(event) {
+        if (!communityDragging || !communityWidgetRoot) return;
+        const pointer = event.touches ? event.touches[0] : event;
+        if (!pointer) return;
+        const bounds = getCommunityWidgetBounds();
+        const nextLeft = pointer.clientX - communityDragging.offsetX;
+        const nextTop = pointer.clientY - communityDragging.offsetY;
+        const clampedLeft = Math.min(Math.max(12, nextLeft), Math.max(12, window.innerWidth - bounds.width - 12));
+        const clampedTop = Math.min(Math.max(12, nextTop), Math.max(12, window.innerHeight - bounds.height - 12));
+        communityWidgetRoot.style.left = clampedLeft + "px";
+        communityWidgetRoot.style.top = clampedTop + "px";
+        communityWidgetRoot.style.right = "auto";
+        communityWidgetRoot.style.bottom = "auto";
+      }
+
+      function handleCommunityWidgetDragEnd() {
+        if (!communityDragging || !communityWidgetRoot) return;
+        const left = parseFloat(communityWidgetRoot.style.left || "0") || 0;
+        const top = parseFloat(communityWidgetRoot.style.top || "0") || 0;
+        saveCommunityWidgetPlacement({ left, top });
+        communityDragging = null;
       }
 
       function getTopicFromUrl() {
@@ -2063,49 +2482,6 @@
             event.stopPropagation();
             const nextTopic = button.getAttribute("data-topic-page") || "all";
             setTopicFilter(nextTopic, nextTopic !== "all");
-          });
-        });
-      }
-
-      function renderFeatured(sourcePosts) {
-        if (!featuredEl) return;
-        const featured = getFeaturedPost(sourcePosts);
-        if (!featured) {
-          featuredEl.hidden = true;
-          featuredEl.innerHTML = "";
-          return;
-        }
-        featuredEl.hidden = false;
-        featuredEl.innerHTML =
-          '<div class="featured-head">' +
-            '<div>' +
-              '<h4>Featured today</h4>' +
-              '<p style="margin:6px 0 0;color:var(--copy);">A single post lifted up for the day.</p>' +
-            '</div>' +
-            '<span class="status-badge pin">Featured</span>' +
-          '</div>' +
-          '<article class="featured-card">' +
-            '<div class="spotlight-actions">' +
-              '<span class="status-badge">' + escapeHTML(featured.topic || "General") + '</span>' +
-              '<span class="status-badge">' + escapeHTML(featured.author || "Anonymous") + '</span>' +
-              '<button type="button" class="button button-secondary" data-featured-open="' + escapeHTML(featured.id) + '">Open</button>' +
-            '</div>' +
-            '<h5>' + escapeHTML(featured.title) + '</h5>' +
-            '<p>' + escapeHTML(formatDate(featured.createdAt)) + ' • ' + (Number(featured.supports || 0) || 0) + ' support' + ((Number(featured.supports || 0) || 0) === 1 ? "" : "s") + '</p>' +
-            '<p>' + escapeHTML(excerpt(formatDisplayedMessage(featured.message)).slice(0, 180)) + '</p>' +
-          '</article>';
-        featuredEl.querySelectorAll("[data-featured-open]").forEach((button) => {
-          button.addEventListener("click", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const id = button.getAttribute("data-featured-open");
-            if (id) {
-              const target = getPostById(id);
-              if (target?.topic) {
-                setTopicFilter(target.topic, true);
-              }
-              selectPost(id);
-            }
           });
         });
       }
@@ -2643,10 +3019,6 @@
             topicPagesEl.hidden = true;
             topicPagesEl.innerHTML = "";
           }
-          if (featuredEl) {
-            featuredEl.hidden = true;
-            featuredEl.innerHTML = "";
-          }
           renderReader(null);
           updateListSummary(0);
           return;
@@ -2655,7 +3027,6 @@
         const basePosts = adminMode ? posts : posts.filter((post) => !post.hidden);
         const visiblePosts = applyBoardFilters(basePosts);
         renderTopicPages(basePosts);
-        renderFeatured(basePosts);
         if (!visiblePosts.length) {
           const emptyMessage = searchQuery.trim()
             ? "No conversations matched your search and filters."
@@ -2666,9 +3037,6 @@
           if (selectedId && !visiblePosts.some((post) => post.id === selectedId)) {
             selectedId = "";
             syncSelectedPostUrl(selectedId);
-          }
-          if (featuredEl) {
-            featuredEl.hidden = !featuredEl.innerHTML;
           }
           renderSpotlight(visiblePosts);
           renderReader(null);
@@ -3059,6 +3427,55 @@
           window.location.replace("/no-entry/");
         });
       }
+      if (communityWidgetRoot) {
+        placeCommunityWidget(readCommunityWidgetPlacement().left, readCommunityWidgetPlacement().top);
+        openCommunityWidget();
+      }
+      if (communityLauncher) {
+        communityLauncher.addEventListener("click", openCommunityWidget);
+      }
+      if (communityMinimizeBtn) {
+        communityMinimizeBtn.addEventListener("click", closeCommunityWidget);
+      }
+      if (communityResetBtn) {
+        communityResetBtn.addEventListener("click", resetCommunityWidget);
+      }
+      if (communityForm) {
+        communityForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          await sendCommunityMessage(String(communityInput?.value || ""));
+        });
+      }
+      if (communityInput) {
+        communityInput.addEventListener("input", () => {
+          communityInput.style.height = "auto";
+          communityInput.style.height = Math.min(communityInput.scrollHeight, 140) + "px";
+        });
+        communityInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            if (communityForm && typeof communityForm.requestSubmit === "function") {
+              communityForm.requestSubmit();
+            } else if (communityForm) {
+              communityForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+            }
+          }
+        });
+      }
+      if (communityDragHandle) {
+        communityDragHandle.addEventListener("pointerdown", (event) => {
+          if (event.target instanceof Element && event.target.closest("button")) return;
+          handleCommunityWidgetDragStart(event);
+        });
+      }
+      window.addEventListener("pointermove", handleCommunityWidgetDragMove);
+      window.addEventListener("pointerup", handleCommunityWidgetDragEnd);
+      window.addEventListener("pointercancel", handleCommunityWidgetDragEnd);
+      window.addEventListener("resize", () => {
+        if (communityWidgetRoot) {
+          ensureCommunityWidgetVisible();
+        }
+      });
       setInterval(() => {
         if (!document.hidden) loadPosts();
       }, 5000);
