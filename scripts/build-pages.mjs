@@ -421,7 +421,8 @@ function create618ChatPage() {
       text-transform: uppercase;
       color: #365041;
     }
-    input, textarea {
+    input, textarea,
+    .field select {
       width: 100%;
       border: 1px solid rgba(16, 32, 21, 0.12);
       border-radius: 18px;
@@ -431,11 +432,22 @@ function create618ChatPage() {
       outline: none;
       transition: border-color 160ms ease, box-shadow 160ms ease;
     }
+    .field select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding-right: 42px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235b6b60' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      background-size: 12px 12px;
+      cursor: pointer;
+    }
     textarea {
       min-height: 160px;
       resize: vertical;
     }
-    input:focus, textarea:focus {
+    input:focus, textarea:focus, .field select:focus {
       border-color: rgba(45, 111, 64, 0.55);
       box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.12);
     }
