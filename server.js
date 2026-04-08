@@ -252,7 +252,13 @@ app.use(cors({
   origin: true,
   credentials: true,
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Token"]
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Admin-Token",
+    "x-admin-token",
+    "x-618chat-client-id"
+  ]
 }));
 
 app.use(express.text({ type: "application/sdp" }));
