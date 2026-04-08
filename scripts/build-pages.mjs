@@ -740,6 +740,165 @@ function create618ChatPage() {
       padding: 0 12px;
       font-size: 13px;
     }
+    .featured {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(45, 111, 64, 0.12);
+      background: linear-gradient(180deg, rgba(244,250,244,0.96), rgba(255,255,255,0.96));
+      display: grid;
+      gap: 12px;
+    }
+    .featured[hidden] {
+      display: none;
+    }
+    .featured-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .featured-head h4 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+    .featured-card {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      background: rgba(255,255,255,0.94);
+      display: grid;
+      gap: 8px;
+    }
+    .topic-pages {
+      margin-top: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .topic-pages[hidden] {
+      display: none;
+    }
+    .topic-pages-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .topic-pages-head h4 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+    .topic-pages-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .topic-page-card {
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      border-radius: 16px;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(247,250,245,0.95));
+      text-align: left;
+      cursor: pointer;
+      color: var(--ink);
+      appearance: none;
+      font: inherit;
+      display: grid;
+      gap: 6px;
+      box-shadow: 0 8px 18px rgba(17, 38, 22, 0.04);
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    }
+    .topic-page-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(17, 38, 22, 0.08);
+      border-color: rgba(45, 111, 64, 0.18);
+    }
+    .topic-page-card.active {
+      border-color: rgba(45, 111, 64, 0.28);
+      background: linear-gradient(180deg, rgba(233, 246, 239, 0.98), rgba(245, 250, 243, 0.96));
+    }
+    .topic-page-title {
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+    .topic-page-count {
+      color: var(--copy);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .reply-previews {
+      margin: 12px 0 0;
+      display: grid;
+      gap: 8px;
+    }
+    .reply-previews-head {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--green-deep);
+    }
+    .reply-preview {
+      display: grid;
+      gap: 4px;
+      text-align: left;
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(247,250,245,0.96));
+      color: var(--ink);
+      cursor: pointer;
+      appearance: none;
+      font: inherit;
+    }
+    .reply-preview:hover {
+      border-color: rgba(45, 111, 64, 0.16);
+      box-shadow: 0 10px 18px rgba(17, 38, 22, 0.06);
+    }
+    .reply-preview-title {
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+    .reply-preview-meta {
+      color: var(--copy);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .reply-preview-body {
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.45;
+      opacity: 0.9;
+    }
+    .draft-row {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .draft-status {
+      color: var(--copy);
+      font-size: 13px;
+    }
+    .muted-summary {
+      background: rgba(45, 111, 64, 0.08);
+    }
+    .board-summary .button {
+      min-height: 30px;
+      padding: 0 10px;
+      font-size: 13px;
+    }
     .comment-list {
       margin-top: 22px;
       display: grid;
@@ -936,6 +1095,13 @@ function create618ChatPage() {
     .mini-action[data-action="support"] {
       box-shadow: 0 10px 18px rgba(157, 24, 53, 0.08);
     }
+    .mini-action[data-action="mute"],
+    .mini-action[data-reader-action="mute"],
+    .mini-action[data-comment-action="mute"] {
+      background: linear-gradient(180deg, rgba(243, 244, 246, 0.98), rgba(234, 236, 239, 0.92));
+      border-color: rgba(74, 85, 104, 0.16);
+      color: #475569;
+    }
     .mini-action[data-action="restore"],
     .mini-action[data-reader-action="restore"],
     .mini-action[data-comment-action="restore"] {
@@ -1067,12 +1233,29 @@ function create618ChatPage() {
       .toolbar-row {
         grid-template-columns: 1fr 1fr;
       }
+      .topic-pages-grid {
+        grid-template-columns: 1fr;
+      }
+      .featured,
+      .spotlight {
+        padding: 12px;
+      }
+      .reply-previews {
+        margin-top: 10px;
+      }
+      .reply-preview {
+        padding: 9px 10px;
+      }
       .board-summary {
         flex-direction: column;
         align-items: flex-start;
+        gap: 6px;
       }
       .moderation-actions {
         gap: 6px;
+      }
+      .draft-row {
+        align-items: flex-start;
       }
       .comment-card summary::before {
         top: 15px;
@@ -1216,6 +1399,10 @@ ${chatSiteNav("home")}
               </div>
               <div class="status" id="board-status" aria-live="polite"></div>
               <div class="hint">Please avoid sharing personal information such as your real name, phone number, email address, home address, or anything that could identify you offline.</div>
+              <div class="draft-row">
+                <span class="draft-status" id="draft-status">Drafts save locally on this device.</span>
+                <button class="button button-secondary" id="draft-clear" type="button">Clear draft</button>
+              </div>
             </form>
           </section>
 
@@ -1236,8 +1423,12 @@ ${chatSiteNav("home")}
             </div>
             <div class="board-summary">
               <span id="results-count" class="status-badge">0 shown</span>
+              <span id="muted-summary" class="status-badge muted-summary">Muted 0</span>
+              <button id="muted-clear" class="button button-secondary" type="button">Clear muted</button>
             </div>
           </div>
+          <div id="topic-pages" class="topic-pages" hidden></div>
+          <div id="featured" class="featured" hidden></div>
           <div id="spotlight" class="spotlight" hidden></div>
           <div id="posts" class="posts"></div>
         </div>
@@ -1253,6 +1444,8 @@ ${chatSiteNav("home")}
       const ageGateKey = "618chat_age_gate_accepted";
       const adminTokenKey = "618chat_admin_token";
       const flaggedKey = "618chat_flagged_posts";
+      const draftKey = "618chat_draft_v3";
+      const mutedKey = "618chat_muted_authors_v1";
       const ageGate = document.getElementById("age-gate");
       const ageGateEnter = document.getElementById("age-gate-enter");
       const ageGateLeave = document.getElementById("age-gate-leave");
@@ -1266,12 +1459,18 @@ ${chatSiteNav("home")}
       const statusEl = document.getElementById("board-status");
       const summaryTextEl = document.getElementById("board-summary-text");
       const moderationPanelEl = document.getElementById("moderation-panel");
+      const featuredEl = document.getElementById("featured");
+      const topicPagesEl = document.getElementById("topic-pages");
       const spotlightEl = document.getElementById("spotlight");
       const postSearchInput = document.getElementById("post-search");
       const topicFilterEl = document.getElementById("topic-filter");
       const timeFilterEl = document.getElementById("time-filter");
       const sortFilterEl = document.getElementById("sort-filter");
       const resultsCountEl = document.getElementById("results-count");
+      const mutedSummaryEl = document.getElementById("muted-summary");
+      const mutedClearBtn = document.getElementById("muted-clear");
+      const draftStatusEl = document.getElementById("draft-status");
+      const draftClearBtn = document.getElementById("draft-clear");
       const moderationToggle = document.getElementById("moderation-toggle");
       const replyBanner = document.getElementById("reply-banner");
       const replyTargetLabel = document.getElementById("reply-target-label");
@@ -1287,6 +1486,8 @@ ${chatSiteNav("home")}
       let timeFilter = "all";
       let sortFilter = "newest";
       let lastSubmission = null;
+      let personalDraft = readDraft();
+      let mutedAuthors = new Set(readMutedAuthors());
       let boardStats = {
         totalPosts: 0,
         hiddenCount: 0,
@@ -1369,6 +1570,177 @@ ${chatSiteNav("home")}
         }
 
         return cleaned.join("\\n");
+      }
+
+      function readJsonStorage(key, fallback) {
+        try {
+          const parsed = JSON.parse(window.localStorage.getItem(key) || "null");
+          if (parsed === null || parsed === undefined) return fallback;
+          return parsed;
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      function normalizeMutedAuthor(value) {
+        return String(value || "").trim().toLowerCase();
+      }
+
+      function readMutedAuthors() {
+        const parsed = readJsonStorage(mutedKey, []);
+        return Array.isArray(parsed)
+          ? parsed.map((value) => normalizeMutedAuthor(value)).filter(Boolean)
+          : [];
+      }
+
+      function writeMutedAuthors(list) {
+        const next = Array.from(new Set((Array.isArray(list) ? list : []).map((value) => normalizeMutedAuthor(value)).filter(Boolean)));
+        window.localStorage.setItem(mutedKey, JSON.stringify(next));
+        mutedAuthors = new Set(next);
+        updatePersonalControls();
+      }
+
+      function isMutedAuthor(author) {
+        const key = normalizeMutedAuthor(author);
+        if (!key) return false;
+        return mutedAuthors.has(key);
+      }
+
+      function readDraft() {
+        const parsed = readJsonStorage(draftKey, null);
+        if (!parsed || typeof parsed !== "object") {
+          return { author: "", topic: "General", message: "", replyTargetId: "" };
+        }
+        return {
+          author: String(parsed.author || ""),
+          topic: String(parsed.topic || "General"),
+          message: String(parsed.message || ""),
+          replyTargetId: String(parsed.replyTargetId || ""),
+          updatedAt: String(parsed.updatedAt || "")
+        };
+      }
+
+      function writeDraft(nextDraft) {
+        const draft = {
+          author: String(nextDraft?.author || ""),
+          topic: String(nextDraft?.topic || "General"),
+          message: String(nextDraft?.message || ""),
+          replyTargetId: String(nextDraft?.replyTargetId || ""),
+          updatedAt: new Date().toISOString()
+        };
+        window.localStorage.setItem(draftKey, JSON.stringify(draft));
+        personalDraft = draft;
+        updateDraftStatus();
+      }
+
+      function clearDraft() {
+        window.localStorage.removeItem(draftKey);
+        personalDraft = { author: "", topic: "General", message: "", replyTargetId: "" };
+        if (form) {
+          form.reset();
+        }
+        replyTargetId = "";
+        updateReplyTargetUI();
+        if (draftStatusEl) {
+          draftStatusEl.textContent = "Draft cleared.";
+        }
+      }
+
+      function getTopicFromUrl() {
+        try {
+          return new URL(window.location.href).searchParams.get("topic") || "";
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function syncTopicUrl(value) {
+        if (!window.history || typeof window.history.replaceState !== "function") return;
+        try {
+          const url = new URL(window.location.href);
+          const next = String(value || "").trim();
+          if (next && next !== "all") {
+            url.searchParams.set("topic", next);
+          } else {
+            url.searchParams.delete("topic");
+          }
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        } catch (_) {
+          // Ignore URL sync issues.
+        }
+      }
+
+      function setTopicFilter(nextTopic, syncComposer = false) {
+        topicFilter = String(nextTopic || "all").trim() || "all";
+        if (topicFilterEl) {
+          topicFilterEl.value = topicFilter;
+        }
+        if (syncComposer && topicSelect && topicFilter !== "all") {
+          topicSelect.value = topicFilter;
+        }
+        syncTopicUrl(topicFilter);
+        render();
+      }
+
+      function updateDraftStatus() {
+        if (!draftStatusEl) return;
+        const hasDraft = Boolean((personalDraft?.message || "").trim() || (personalDraft?.author || "").trim() || (personalDraft?.replyTargetId || "").trim());
+        const replyNote = personalDraft?.replyTargetId ? " Reply draft saved." : "";
+        draftStatusEl.textContent = hasDraft
+          ? "Draft saved locally." + replyNote
+          : "Drafts save locally on this device.";
+      }
+
+      function applyDraftToForm() {
+        const hasDraft = Boolean((personalDraft?.message || "").trim() || (personalDraft?.author || "").trim() || (personalDraft?.replyTargetId || "").trim());
+        if (!hasDraft) {
+          updateDraftStatus();
+          return;
+        }
+        if (authorInput && !String(authorInput.value || "").trim() && personalDraft.author) {
+          authorInput.value = personalDraft.author;
+        }
+        if (topicSelect && personalDraft.topic) {
+          topicSelect.value = personalDraft.topic;
+        }
+        if (messageInput && !String(messageInput.value || "").trim() && personalDraft.message) {
+          messageInput.value = personalDraft.message;
+        }
+        if (personalDraft.replyTargetId) {
+          replyTargetId = personalDraft.replyTargetId;
+        }
+        updateReplyTargetUI();
+        updateDraftStatus();
+      }
+
+      function saveDraftFromForm() {
+        writeDraft({
+          author: String(authorInput?.value || ""),
+          topic: String(topicSelect?.value || "General"),
+          message: String(messageInput?.value || ""),
+          replyTargetId
+        });
+      }
+
+      function muteAuthor(author) {
+        const key = normalizeMutedAuthor(author);
+        if (!key) return;
+        const next = new Set(readMutedAuthors());
+        next.add(key);
+        writeMutedAuthors(Array.from(next));
+        statusEl.textContent = 'Muted "' + String(author || "Anonymous") + '" on this device.';
+        statusEl.classList.remove("error");
+        loadPosts();
+      }
+
+      function unmuteAuthor(author) {
+        const key = normalizeMutedAuthor(author);
+        if (!key) return;
+        const next = readMutedAuthors().filter((value) => value !== key);
+        writeMutedAuthors(next);
+        statusEl.textContent = 'Unmuted "' + String(author || "Anonymous") + '".';
+        statusEl.classList.remove("error");
+        loadPosts();
       }
 
       function readFlaggedIds() {
@@ -1645,6 +2017,7 @@ ${chatSiteNav("home")}
         const filtered = (Array.isArray(sourcePosts) ? sourcePosts : []).filter((post) => {
           if (!isWithinTopicFilter(post)) return false;
           if (!isWithinTimeFilter(post)) return false;
+          if (!adminMode && isMutedAuthor(post.author)) return false;
           if (!query) return true;
           return getSearchBlob(post).includes(query);
         });
@@ -1664,6 +2037,120 @@ ${chatSiteNav("home")}
             return (new Date(right.createdAt || 0).getTime() || 0) - (new Date(left.createdAt || 0).getTime() || 0);
           })
           .slice(0, 3);
+      }
+
+      function getFeaturedPost(sourcePosts) {
+        const dayMs = 24 * 60 * 60 * 1000;
+        const cutoff = Date.now() - dayMs;
+        const recent = (Array.isArray(sourcePosts) ? sourcePosts : [])
+          .filter((post) => !post.hidden && (new Date(post.createdAt || 0).getTime() || 0) >= cutoff)
+          .sort((left, right) => {
+            const leftSupports = Number(left.supports || 0) || 0;
+            const rightSupports = Number(right.supports || 0) || 0;
+            if (rightSupports !== leftSupports) return rightSupports - leftSupports;
+            if (Boolean(left.pinned) !== Boolean(right.pinned)) return Boolean(right.pinned) - Boolean(left.pinned);
+            return (new Date(right.createdAt || 0).getTime() || 0) - (new Date(left.createdAt || 0).getTime() || 0);
+          });
+        if (recent.length) return recent[0];
+        const allVisible = (Array.isArray(sourcePosts) ? sourcePosts : [])
+          .filter((post) => !post.hidden)
+          .sort(comparePosts);
+        return allVisible[0] || null;
+      }
+
+      function getTopicCounts(sourcePosts) {
+        const counts = new Map();
+        (Array.isArray(sourcePosts) ? sourcePosts : []).forEach((post) => {
+          const topic = String(post.topic || "General").trim() || "General";
+          counts.set(topic, (counts.get(topic) || 0) + 1);
+        });
+        return counts;
+      }
+
+      function updatePersonalControls() {
+        const mutedCount = readMutedAuthors().length;
+        if (mutedSummaryEl) {
+          mutedSummaryEl.textContent = mutedCount ? ("Muted " + mutedCount) : "Muted 0";
+        }
+        if (mutedClearBtn) {
+          mutedClearBtn.disabled = mutedCount === 0;
+        }
+        updateDraftStatus();
+      }
+
+      function renderTopicPages(sourcePosts) {
+        if (!topicPagesEl) return;
+        const counts = getTopicCounts(sourcePosts);
+        const topics = ["General", "Friendship", "Friendship+"];
+        const allCount = (Array.isArray(sourcePosts) ? sourcePosts : []).length;
+        topicPagesEl.hidden = !allCount;
+        topicPagesEl.innerHTML = allCount
+          ? '<div class="topic-pages-head"><h4>Browse topics</h4><span class="status-badge">Topic pages</span></div>' +
+            '<div class="topic-pages-grid">' +
+              [
+                { key: "all", label: "All topics", count: allCount },
+                ...topics.map((topic) => ({ key: topic, label: topic, count: counts.get(topic) || 0 }))
+              ].map((item) => {
+                const active = topicFilter === item.key;
+                return '<button type="button" class="topic-page-card' + (active ? " active" : "") + '" data-topic-page="' + escapeHTML(item.key) + '">' +
+                  '<span class="topic-page-title">' + escapeHTML(item.label) + '</span>' +
+                  '<span class="topic-page-count">' + item.count + ' post' + (item.count === 1 ? "" : "s") + '</span>' +
+                '</button>';
+              }).join("") +
+            '</div>'
+          : "";
+
+        topicPagesEl.querySelectorAll("[data-topic-page]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const nextTopic = button.getAttribute("data-topic-page") || "all";
+            setTopicFilter(nextTopic, nextTopic !== "all");
+          });
+        });
+      }
+
+      function renderFeatured(sourcePosts) {
+        if (!featuredEl) return;
+        const featured = getFeaturedPost(sourcePosts);
+        if (!featured) {
+          featuredEl.hidden = true;
+          featuredEl.innerHTML = "";
+          return;
+        }
+        featuredEl.hidden = false;
+        featuredEl.innerHTML =
+          '<div class="featured-head">' +
+            '<div>' +
+              '<h4>Featured today</h4>' +
+              '<p style="margin:6px 0 0;color:var(--copy);">A single post lifted up for the day.</p>' +
+            '</div>' +
+            '<span class="status-badge pin">Featured</span>' +
+          '</div>' +
+          '<article class="featured-card">' +
+            '<div class="spotlight-actions">' +
+              '<span class="status-badge">' + escapeHTML(featured.topic || "General") + '</span>' +
+              '<span class="status-badge">' + escapeHTML(featured.author || "Anonymous") + '</span>' +
+              '<button type="button" class="button button-secondary" data-featured-open="' + escapeHTML(featured.id) + '">Open</button>' +
+            '</div>' +
+            '<h5>' + escapeHTML(featured.title) + '</h5>' +
+            '<p>' + escapeHTML(formatDate(featured.createdAt)) + ' • ' + (Number(featured.supports || 0) || 0) + ' support' + ((Number(featured.supports || 0) || 0) === 1 ? "" : "s") + '</p>' +
+            '<p>' + escapeHTML(excerpt(formatDisplayedMessage(featured.message)).slice(0, 180)) + '</p>' +
+          '</article>';
+        featuredEl.querySelectorAll("[data-featured-open]").forEach((button) => {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const id = button.getAttribute("data-featured-open");
+            if (id) {
+              const target = getPostById(id);
+              if (target?.topic) {
+                setTopicFilter(target.topic, true);
+              }
+              selectPost(id);
+            }
+          });
+        });
       }
 
       function collectModerationItems(sourcePosts) {
@@ -1835,6 +2322,7 @@ ${chatSiteNav("home")}
         const postHidden = Boolean(post.hidden);
         const postPinned = Boolean(post.pinned);
         const postTopic = String(post.topic || "General").trim();
+        const authorMuted = isMutedAuthor(post.author);
         readerEl.innerHTML =
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
           '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + ' · ' + escapeHTML(postTopic) + '</div>' +
@@ -1844,6 +2332,7 @@ ${chatSiteNav("home")}
             '<div class="actions">' +
               '<button type="button" class="mini-action ' + (isSupported(post.id) ? "supported" : "") + '" data-reader-action="support" aria-label="Support post">♥</button>' +
               '<button type="button" class="mini-action" data-reader-action="share" aria-label="Copy share link">↗</button>' +
+              '<button type="button" class="mini-action" data-reader-action="mute" aria-label="' + (authorMuted ? "Unmute author" : "Mute author") + '">' + (authorMuted ? "☰" : "⦸") + '</button>' +
               (adminMode ? '<button type="button" class="mini-action ' + (postPinned ? "active" : "") + '" data-reader-action="pin" aria-label="' + (postPinned ? "Unpin post" : "Pin post") + '">📌</button>' : "") +
               (adminMode && postHidden ? '<button type="button" class="mini-action" data-reader-action="restore" aria-label="Restore post">↺</button>' : "") +
               (adminMode ? '<button type="button" class="mini-action danger" data-reader-action="delete" aria-label="Delete post">✕</button>' : "") +
@@ -1874,6 +2363,18 @@ ${chatSiteNav("home")}
             copyPostLink(post.id);
           });
         }
+        const readerMuteBtn = readerEl.querySelector('[data-reader-action="mute"]');
+        if (readerMuteBtn) {
+          readerMuteBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (isMutedAuthor(post.author)) {
+              unmuteAuthor(post.author);
+            } else {
+              muteAuthor(post.author);
+            }
+          });
+        }
         const readerPinBtn = readerEl.querySelector('[data-reader-action="pin"]');
         if (readerPinBtn) {
           readerPinBtn.addEventListener("click", (event) => {
@@ -1893,7 +2394,7 @@ ${chatSiteNav("home")}
 
         if (commentListEl) {
           const comments = Array.isArray(post.comments)
-            ? post.comments.filter((comment) => adminMode ? true : !comment.hidden)
+            ? post.comments.filter((comment) => (adminMode ? true : !comment.hidden) && (adminMode || !isMutedAuthor(comment.author)))
             : [];
           if (!comments.length) {
             commentListEl.hidden = true;
@@ -1918,6 +2419,7 @@ ${chatSiteNav("home")}
                       '<div class="actions">' +
                         '<button type="button" class="mini-action ' + (isSupported(comment.id) ? "supported" : "") + '" data-comment-action="support" aria-label="Support reply">♥</button>' +
                         '<button type="button" class="mini-action" data-comment-action="flag" aria-label="Flag reply">⚑</button>' +
+                        '<button type="button" class="mini-action" data-comment-action="mute" aria-label="' + (isMutedAuthor(comment.author) ? "Unmute author" : "Mute author") + '">' + (isMutedAuthor(comment.author) ? "☰" : "⦸") + '</button>' +
                         (adminMode && commentHidden ? '<button type="button" class="mini-action" data-comment-action="restore" aria-label="Restore reply">↺</button>' : "") +
                         (adminMode ? '<button type="button" class="mini-action danger" data-comment-action="delete" aria-label="Delete reply">✕</button>' : "") +
                       '</div>' +
@@ -1950,6 +2452,18 @@ ${chatSiteNav("home")}
                   event.preventDefault();
                   event.stopPropagation();
                   restoreItem(comment.id);
+                });
+              }
+              const muteBtn = card.querySelector('[data-comment-action="mute"]');
+              if (muteBtn) {
+                muteBtn.addEventListener("click", (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (isMutedAuthor(comment.author)) {
+                    unmuteAuthor(comment.author);
+                  } else {
+                    muteAuthor(comment.author);
+                  }
                 });
               }
               const deleteBtn = card.querySelector('[data-comment-action="delete"]');
@@ -2006,9 +2520,34 @@ ${chatSiteNav("home")}
             event.preventDefault();
             event.stopPropagation();
             const id = button.getAttribute("data-spotlight-open");
-            if (id) selectPost(id);
+            if (id) {
+              const target = getPostById(id);
+              if (target?.topic) {
+                setTopicFilter(target.topic, true);
+              }
+              selectPost(id);
+            }
           });
         });
+      }
+
+      function renderReplyPreviews(post) {
+        const comments = Array.isArray(post?.comments)
+          ? post.comments.filter((comment) => (adminMode ? true : !comment.hidden) && (adminMode || !isMutedAuthor(comment.author)))
+          : [];
+        const previews = comments.slice(0, 2);
+        if (!previews.length) return "";
+        return '<div class="reply-previews">' +
+          '<div class="reply-previews-head">Latest replies</div>' +
+          previews.map((comment) => {
+            const body = excerpt(formatDisplayedMessage(comment.message));
+            return '<button type="button" class="reply-preview" data-preview-id="' + escapeHTML(comment.id) + '">' +
+              '<span class="reply-preview-title">' + escapeHTML(comment.title || "Untitled reply") + '</span>' +
+              '<span class="reply-preview-meta">By ' + escapeHTML(comment.author || "Anonymous") + ' • ' + escapeHTML(formatDate(comment.createdAt)) + '</span>' +
+              '<span class="reply-preview-body">' + escapeHTML(body) + '</span>' +
+            '</button>';
+          }).join("") +
+        '</div>';
       }
 
       function createPostCard(post) {
@@ -2026,11 +2565,15 @@ ${chatSiteNav("home")}
         const adminDelete = adminMode ? '<button type="button" class="mini-action danger" data-action="delete" aria-label="Delete post">✕</button>' : "";
         const adminRestore = adminMode && post.hidden ? '<button type="button" class="mini-action" data-action="restore" aria-label="Restore post">↺</button>' : "";
         const adminPin = adminMode ? '<button type="button" class="mini-action ' + (post.pinned ? "active" : "") + '" data-action="pin" aria-label="' + (post.pinned ? "Unpin post" : "Pin post") + '">📌</button>' : "";
+        const muteLabel = isMutedAuthor(post.author) ? "Unmute author" : "Mute author";
+        const muteIcon = isMutedAuthor(post.author) ? "☰" : "⦸";
+        const muteBtn = '<button type="button" class="mini-action" data-action="mute" aria-label="' + muteLabel + '">' + muteIcon + '</button>';
         const replyBtn = '<button type="button" class="mini-action" data-action="reply" aria-label="Reply to post">↩</button>';
         const supportBtn = '<button type="button" class="mini-action ' + (isSupported(post.id) ? "supported" : "") + '" data-action="support" aria-label="Support post">♥</button>';
         const shareBtn = '<button type="button" class="mini-action" data-action="share" aria-label="Copy share link">↗</button>';
         const flagClass = isFlagged(post.id) ? "flagged" : "";
         const footerBadges = [topicLabel, pinLabel, hiddenLabel, supportLabel, flagLabel].filter(Boolean).join("");
+        const replyPreviews = renderReplyPreviews(post);
         card.innerHTML =
           '<button type="button" class="post-open">' +
             '<div class="post-title">' + escapeHTML(post.title) + '</div>' +
@@ -2038,6 +2581,9 @@ ${chatSiteNav("home")}
               '<span>' + escapeHTML(post.author || "Anonymous") + ' • ' + escapeHTML(formatDate(post.createdAt)) + '</span>' +
             '</div>' +
           '</button>';
+        if (replyPreviews) {
+          card.innerHTML += replyPreviews;
+        }
         card.innerHTML +=
           '<div class="post-footer">' +
             '<div class="post-footer-badges">' + footerBadges + '</div>' +
@@ -2046,6 +2592,7 @@ ${chatSiteNav("home")}
               supportBtn +
               shareBtn +
               '<button type="button" class="mini-action ' + flagClass + '" data-action="flag" aria-label="Flag post">⚑</button>' +
+              muteBtn +
               adminPin +
               adminRestore +
               adminDelete +
@@ -2093,6 +2640,18 @@ ${chatSiteNav("home")}
             copyPostLink(post.id);
           });
         }
+        const muteBtnEl = card.querySelector('[data-action="mute"]');
+        if (muteBtnEl) {
+          muteBtnEl.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (isMutedAuthor(post.author)) {
+              unmuteAuthor(post.author);
+            } else {
+              muteAuthor(post.author);
+            }
+          });
+        }
         const pinBtnEl = card.querySelector('[data-action="pin"]');
         if (pinBtnEl) {
           pinBtnEl.addEventListener("click", (event) => {
@@ -2101,6 +2660,13 @@ ${chatSiteNav("home")}
             void setPinnedState(post.id, !post.pinned);
           });
         }
+        card.querySelectorAll("[data-preview-id]").forEach((preview) => {
+          preview.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            selectPost(post.id);
+          });
+        });
         return card;
       }
 
@@ -2116,6 +2682,14 @@ ${chatSiteNav("home")}
 
         if (!posts.length) {
           postsEl.innerHTML = '<div class="empty-state">No posts yet. Use the form above to start the first conversation.</div>';
+          if (topicPagesEl) {
+            topicPagesEl.hidden = true;
+            topicPagesEl.innerHTML = "";
+          }
+          if (featuredEl) {
+            featuredEl.hidden = true;
+            featuredEl.innerHTML = "";
+          }
           renderReader(null);
           updateListSummary(0);
           return;
@@ -2123,6 +2697,8 @@ ${chatSiteNav("home")}
 
         const basePosts = adminMode ? posts : posts.filter((post) => !post.hidden);
         const visiblePosts = applyBoardFilters(basePosts);
+        renderTopicPages(basePosts);
+        renderFeatured(basePosts);
         if (!visiblePosts.length) {
           const emptyMessage = searchQuery.trim()
             ? "No conversations matched your search and filters."
@@ -2133,6 +2709,9 @@ ${chatSiteNav("home")}
           if (selectedId && !visiblePosts.some((post) => post.id === selectedId)) {
             selectedId = "";
             syncSelectedPostUrl(selectedId);
+          }
+          if (featuredEl) {
+            featuredEl.hidden = !featuredEl.innerHTML;
           }
           renderSpotlight(visiblePosts);
           renderReader(null);
@@ -2376,6 +2955,7 @@ ${chatSiteNav("home")}
       function render() {
         renderModerationPanel();
         renderPosts();
+        updatePersonalControls();
         if (moderationToggle) {
           moderationToggle.textContent = adminMode ? "Exit moderation" : "Moderate";
         }
@@ -2421,6 +3001,7 @@ ${chatSiteNav("home")}
             }
             form.reset();
             clearReplyTarget();
+            clearDraft();
             statusEl.textContent = "Message added to the conversation board.";
             statusEl.classList.remove("error");
             render();
@@ -2442,6 +3023,23 @@ ${chatSiteNav("home")}
         replyClear.addEventListener("click", clearReplyTarget);
       }
 
+      if (draftClearBtn) {
+        draftClearBtn.addEventListener("click", () => {
+          clearDraft();
+          render();
+        });
+      }
+
+      if (mutedClearBtn) {
+        mutedClearBtn.addEventListener("click", () => {
+          writeMutedAuthors([]);
+          statusEl.textContent = "Muted authors cleared on this device.";
+          statusEl.classList.remove("error");
+          render();
+          loadPosts();
+        });
+      }
+
       if (postSearchInput) {
         postSearchInput.addEventListener("input", () => {
           searchQuery = postSearchInput.value || "";
@@ -2450,8 +3048,7 @@ ${chatSiteNav("home")}
       }
       if (topicFilterEl) {
         topicFilterEl.addEventListener("change", () => {
-          topicFilter = topicFilterEl.value || "all";
-          render();
+          setTopicFilter(topicFilterEl.value || "all");
         });
       }
       if (timeFilterEl) {
@@ -2468,6 +3065,17 @@ ${chatSiteNav("home")}
       }
 
       render();
+      if (topicFilterEl) {
+        const topicFromUrl = getTopicFromUrl();
+        if (topicFromUrl) {
+          topicFilterEl.value = topicFromUrl;
+          topicFilter = topicFromUrl;
+        }
+      }
+      if (topicSelect && topicFilter !== "all") {
+        topicSelect.value = topicFilter;
+      }
+      applyDraftToForm();
       loadPosts();
       if (!ageGateAccepted) {
         showAgeGate();
@@ -2506,6 +3114,12 @@ ${chatSiteNav("home")}
       if (ageGateAccepted) {
         setTimeout(() => messageInput.focus(), 100);
       }
+
+      [authorInput, topicSelect, messageInput].forEach((field) => {
+        if (!field) return;
+        field.addEventListener("input", saveDraftFromForm);
+        field.addEventListener("change", saveDraftFromForm);
+      });
     })();
   </script>
 </body>

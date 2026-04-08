@@ -42,6 +42,19 @@ const BOARD_COMMENT_LIMIT = (() => {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 50;
 })();
 
+const BOARD_WELCOME_POST_ID = "618chat_welcome";
+const BOARD_WELCOME_POST_MESSAGE = [
+  "Welcome to 618chat.",
+  "",
+  "This space was created for honest, anonymous conversation. Share what is on your mind, listen with care, and treat one another with respect.",
+  "",
+  "You are welcome to talk about what you are carrying, what you are learning, and what matters to you. The best conversations here are the ones that feel thoughtful, supportive, and real.",
+  "",
+  "Please keep your privacy in mind and avoid posting your real name, phone number, email address, home address, or anything else that could identify you offline.",
+  "",
+  "If you're new, start wherever feels easiest. If a topic matters to you, there is room for it here."
+].join("\n");
+
 if (!OPENAI_API_KEY) {
   console.warn("OPENAI_API_KEY missing - Realtime and AI features will be disabled.");
 }
@@ -640,9 +653,19 @@ async function readPublicBoardPosts() {
     const raw = await readFile(PUBLIC_BOARD_STORE_PATH, "utf8");
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map(normalizeBoardPost).filter(Boolean);
+    const normalized = parsed.map(normalizeBoardPost).filter(Boolean);
+    const seeded = ensureBoardWelcomePost(normalized);
+    if (seeded.length !== normalized.length) {
+      await writePublicBoardPosts(seeded);
+      return seeded;
+    }
+    return normalized;
   } catch (err) {
-    if (err?.code === "ENOENT") return [];
+    if (err?.code === "ENOENT") {
+      const seeded = ensureBoardWelcomePost([]);
+      await writePublicBoardPosts(seeded);
+      return seeded;
+    }
     throw err;
   }
 }
@@ -659,6 +682,35 @@ async function writePublicBoardPosts(posts) {
 
 function getBoardAdminToken(req) {
   return String(req.headers["x-admin-token"] || req.query.token || "").trim();
+}
+
+function createBoardWelcomePost() {
+  return normalizeBoardPost({
+    id: BOARD_WELCOME_POST_ID,
+    title: "Welcome to 618chat",
+    author: "Johnny",
+    message: BOARD_WELCOME_POST_MESSAGE,
+    createdAt: "2026-04-07T05:00:00.000Z",
+    updatedAt: "2026-04-07T05:00:00.000Z",
+    topic: "General",
+    flags: 0,
+    supports: 0,
+    hidden: false,
+    hiddenReason: "",
+    pinned: true,
+    pinnedAt: "2026-04-07T05:00:00.000Z",
+    comments: []
+  });
+}
+
+function ensureBoardWelcomePost(posts) {
+  const list = Array.isArray(posts) ? posts.slice() : [];
+  if (list.some((post) => post?.id === BOARD_WELCOME_POST_ID)) {
+    return list;
+  }
+  const welcome = createBoardWelcomePost();
+  if (!welcome) return list;
+  return [welcome, ...list];
 }
 
 function isBoardAdminRequest(req) {
