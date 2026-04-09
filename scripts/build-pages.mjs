@@ -1534,7 +1534,6 @@ ${chatSiteNav("home")}
               <select id="topic-filter">
                 <option value="all">All topics</option>
                 <option value="General">General</option>
-                <option value="Friendship">Friendship</option>
                 <option value="Friendship+">Friendship+</option>
               </select>
             </div>
@@ -1570,7 +1569,6 @@ ${chatSiteNav("home")}
                 <label for="topic">Topic</label>
                 <select id="topic" name="topic">
                   <option value="General">General</option>
-                  <option value="Friendship">Friendship</option>
                   <option value="Friendship+">Friendship+</option>
                 </select>
               </div>
@@ -2613,7 +2611,7 @@ ${chatSiteNav("home")}
       function renderTopicPages(sourcePosts) {
         if (!topicPagesEl) return;
         const counts = getTopicCounts(sourcePosts);
-        const topics = ["General", "Friendship", "Friendship+"];
+        const topics = ["General", "Friendship+"];
         const allCount = (Array.isArray(sourcePosts) ? sourcePosts : []).length;
         topicPagesEl.hidden = !allCount;
         topicPagesEl.innerHTML = allCount
@@ -2914,11 +2912,10 @@ ${chatSiteNav("home")}
             commentListEl.innerHTML =
               '<div class="comment-heading"><h4>Replies</h4><span class="status-badge">' + comments.length + '</span></div>' +
               comments.map((comment) => {
-                const mobileOpen = window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
                 const supportCount = Number(comment.supports || 0) || 0;
                 const commentHidden = Boolean(comment.hidden);
                 return (
-                  '<details class="comment-card"' + (mobileOpen ? "" : " open") + '>' +
+                  '<details class="comment-card">' +
                     '<summary>' +
                       '<div class="comment-card-title">' + escapeHTML(comment.title) + '</div>' +
                       '<div class="comment-card-meta">Posted by <span class="comment-card-meta-author">' + escapeHTML(comment.author || "Anonymous") + '</span> <span class="comment-card-meta-date">on ' + escapeHTML(formatDate(comment.createdAt)) + '</span></div>' +
