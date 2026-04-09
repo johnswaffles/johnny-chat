@@ -1617,7 +1617,7 @@ ${chatSiteNav("home")}
       <section id="community-panel" class="community-widget-panel" hidden aria-label="Floating chat helper">
         <div class="community-widget-header" id="community-drag-handle">
           <div class="community-widget-title">
-            <strong>Powered by ChatGPT</strong>
+            <strong>Powered by ChatGPT 5.4</strong>
             <span>Ask for a quick thought, writing help, or a board question.</span>
           </div>
           <div class="community-widget-controls">
@@ -2805,6 +2805,7 @@ ${chatSiteNav("home")}
           '<div class="comment-card-footer" style="padding: 12px 0 0; margin: 0;">' +
             '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (postPinned ? ' · Pinned' : '') + '</span>' +
             '<div class="actions">' +
+              '<button type="button" class="mini-action" data-reader-action="reply" aria-label="Reply to post">↩</button>' +
               '<button type="button" class="mini-action ' + (isSupported(post.id) ? "supported" : "") + '" data-reader-action="support" aria-label="Support post">♥</button>' +
               '<button type="button" class="mini-action" data-reader-action="share" aria-label="Copy share link">↗</button>' +
               '<button type="button" class="mini-action" data-reader-action="mute" aria-label="' + (authorMuted ? "Unmute author" : "Mute author") + '">' + (authorMuted ? "☰" : "⦸") + '</button>' +
@@ -2820,6 +2821,14 @@ ${chatSiteNav("home")}
             event.preventDefault();
             event.stopPropagation();
             supportItem(post.id);
+          });
+        }
+        const readerReplyBtn = readerEl.querySelector('[data-reader-action="reply"]');
+        if (readerReplyBtn) {
+          readerReplyBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            beginReply(post);
           });
         }
         const readerDeleteBtn = readerEl.querySelector('[data-reader-action="delete"]');
