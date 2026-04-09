@@ -199,6 +199,19 @@
       font-size: 12px;
       font-weight: 800;
     }
+    .eyebrow-button {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .eyebrow-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(45, 111, 64, 0.08);
+    }
     .eyebrow::before {
       content: "";
       width: 8px;
@@ -1362,8 +1375,10 @@
         font-size: 12px;
       }
       .community-widget {
+        top: 10px;
         right: 10px;
-        bottom: 10px;
+        bottom: auto;
+        left: auto;
         width: min(100vw - 18px, 340px);
       }
       .community-widget-message {
@@ -1417,7 +1432,7 @@
     <a class="johnny-site-brand" href="/" aria-label="618chat.com home">618chat.com</a>
     <nav class="johnny-site-links" aria-label="Site">
       <a class="johnny-site-link active" href="/">Home</a>
-      <a class="johnny-site-link" href="#compose">Write a post</a>
+      <a class="johnny-site-link" href="#compose" data-compose-jump>Write a post</a>
       <a class="johnny-site-link" href="#recent-posts">Recent conversations</a>
       <a class="johnny-site-link" href="#about">About</a>
     </nav>
@@ -1425,7 +1440,7 @@
   <main class="page">
     <section class="intro">
       <div class="panel hero">
-        <span class="eyebrow">Anonymous conversation</span>
+        <button class="eyebrow eyebrow-button" type="button" data-compose-jump>Anonymous conversation</button>
         <h1>Speak honestly. Read with care. Keep it respectful.</h1>
         <p>
           This space was created for honest, anonymous conversation. Sometimes the easiest way to open up is without the usual barriers, expectations, or pressure of everyday life.
@@ -1438,7 +1453,7 @@
           <div class="pill"><strong>Thoughtful</strong> titles</div>
         </div>
         <div class="hero-actions">
-          <a class="button button-primary" href="#compose">Write a post</a>
+          <a class="button button-primary" href="#compose" data-compose-jump>Write a post</a>
           <a class="button button-secondary" href="#recent-posts">Read conversations</a>
           <button class="button button-secondary" id="moderation-toggle" type="button" title="Enter the moderator secret to unlock admin controls">Moderate</button>
         </div>
@@ -1556,7 +1571,6 @@
             </div>
           </div>
           <div id="topic-pages" class="topic-pages" hidden></div>
-          <div id="spotlight" class="spotlight" hidden></div>
           <div id="posts" class="posts"></div>
         </div>
       </div>
@@ -2698,6 +2712,18 @@
         }
       }
 
+      function jumpToComposer() {
+        const composeSection = document.getElementById("compose");
+        if (composeSection && typeof composeSection.scrollIntoView === "function") {
+          composeSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        window.setTimeout(() => {
+          if (messageInput) {
+            messageInput.focus({ preventScroll: true });
+          }
+        }, 100);
+      }
+
       async function loadPosts() {
         loading = true;
         statusEl.textContent = adminMode ? "Loading conversations in moderation mode..." : "Loading conversations...";
@@ -3534,10 +3560,22 @@
         });
       }
       if (communityWidgetRoot) {
-        placeCommunityWidget(readCommunityWidgetPlacement().left, readCommunityWidgetPlacement().top);
-        openCommunityWidget();
+        const isCompactViewport = window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
+        if (isCompactViewport) {
+          placeCommunityWidget(window.innerWidth - 12, 12);
+          closeCommunityWidget();
+        } else {
+          placeCommunityWidget(readCommunityWidgetPlacement().left, readCommunityWidgetPlacement().top);
+          openCommunityWidget();
+        }
       }
       updateCommunityVoiceButton();
+      document.querySelectorAll("[data-compose-jump]").forEach((trigger) => {
+        trigger.addEventListener("click", (event) => {
+          event.preventDefault();
+          jumpToComposer();
+        });
+      });
       if (communityLauncher) {
         communityLauncher.addEventListener("click", openCommunityWidget);
       }
