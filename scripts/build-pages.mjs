@@ -1502,14 +1502,6 @@ ${chatSiteNav("home")}
           <a class="button button-secondary" href="#recent-posts">Read conversations</a>
           <button class="button button-secondary" id="moderation-toggle" type="button" title="Enter the moderator secret to unlock admin controls">Moderate</button>
         </div>
-        <div class="meta-card" id="about">
-          <h2>What this space is for</h2>
-          <ul>
-            <li>Honest, anonymous conversation without the usual pressure.</li>
-            <li>Positivity, respect, and understanding in every post.</li>
-            <li>Please avoid posting personal information like your real name, phone number, email address, home address, or anything else that could identify you offline.</li>
-          </ul>
-        </div>
       </div>
 
       <div class="panel board">
