@@ -907,6 +907,36 @@ function create618ChatPage() {
     .community-widget-message.assistant {
       margin-right: auto;
     }
+    .community-widget-message-body {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .community-widget-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .community-widget-source {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(45, 111, 64, 0.18);
+      background: rgba(233, 246, 239, 0.92);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      max-width: 100%;
+    }
+    .community-widget-source span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .community-widget-meta {
       margin-top: 4px;
       font-size: 11px;
@@ -1890,7 +1920,8 @@ ${chatSiteNav("home")}
           return parsed
             .map((item) => ({
               role: String(item?.role || ""),
-              content: String(item?.content || "").trim()
+              content: String(item?.content || "").trim(),
+              sources: Array.isArray(item?.sources) ? normalizeCommunitySources(item.sources) : []
             }))
             .filter((item) => item.role === "user" || item.role === "assistant");
         } catch (_) {
@@ -1900,6 +1931,41 @@ ${chatSiteNav("home")}
 
       function saveCommunityHistory() {
         window.localStorage.setItem(communityHistoryKey, JSON.stringify(communityHistory.slice(-12)));
+      }
+
+      function normalizeCommunityText(text) {
+        return String(text || "")
+          .replace(/\r\n/g, "\n")
+          .replace(/\*\*(.*?)\*\*/g, "$1")
+          .replace(/__(.*?)__/g, "$1")
+          .replace(/\*(.*?)\*/g, "$1")
+          .replace(/_(.*?)_/g, "$1")
+          .replace(/\`([^\`]+)\`/g, "$1")
+          .replace(/^\s*[-*+]\s+/gm, "• ")
+          .replace(/^\s*\d+\.\s+/gm, "• ")
+          .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+          .replace(/\s{2,}/g, " ")
+          .replace(/\n{3,}/g, "\n\n")
+          .trim();
+      }
+
+      function normalizeCommunitySources(sources) {
+        if (!Array.isArray(sources)) return [];
+        return sources
+          .map((item) => {
+            const url = String(item?.url || "").trim();
+            if (!url) return null;
+            try {
+              const parsed = new URL(url);
+              const host = parsed.hostname.replace(/^www\./i, "");
+              const label = host || String(item?.title || "").trim() || "Source";
+              return { label, url };
+            } catch (_) {
+              return null;
+            }
+          })
+          .filter(Boolean)
+          .slice(0, 3);
       }
 
       function readCommunityWidgetPlacement() {
@@ -1961,9 +2027,33 @@ ${chatSiteNav("home")}
         if (!communityMessages) return;
         const row = document.createElement("div");
         row.className = "community-widget-message " + (role === "user" ? "user" : "assistant");
-        row.textContent = String(text || "").trim();
+        const body = document.createElement("div");
+        body.className = "community-widget-message-body";
+        body.textContent = role === "assistant" ? normalizeCommunityText(text) : String(text || "").trim();
+        row.appendChild(body);
         communityMessages.appendChild(row);
         communityMessages.scrollTop = communityMessages.scrollHeight;
+        return row;
+      }
+
+      function appendCommunitySources(row, sources) {
+        const safeSources = normalizeCommunitySources(sources);
+        if (!row || !safeSources.length) return;
+        const container = document.createElement("div");
+        container.className = "community-widget-sources";
+        safeSources.forEach((source) => {
+          const link = document.createElement("a");
+          link.className = "community-widget-source";
+          link.href = source.url;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.title = source.url;
+          const label = document.createElement("span");
+          label.textContent = source.label;
+          link.appendChild(label);
+          container.appendChild(link);
+        });
+        row.appendChild(container);
       }
 
       function renderCommunityMessages() {
@@ -1973,7 +2063,12 @@ ${chatSiteNav("home")}
           communityMessages.innerHTML = '<div class="community-widget-empty">Ask for a quick thought, a little writing help, or a simple explanation. This widget is text-only and stays small on the page.</div>';
           return;
         }
-        communityHistory.forEach((item) => appendCommunityMessage(item.role, item.content));
+        communityHistory.forEach((item) => {
+          const row = appendCommunityMessage(item.role, item.content);
+          if (item.role === "assistant") {
+            appendCommunitySources(row, item.sources);
+          }
+        });
       }
 
       function setCommunityStatus(message, isError = false) {
@@ -1999,14 +2094,38 @@ ${chatSiteNav("home")}
           }
           communitySpeech.audio = null;
         }
+        communitySpeech.pausedByMute = false;
         if (communitySpeech.objectUrl) {
           URL.revokeObjectURL(communitySpeech.objectUrl);
           communitySpeech.objectUrl = "";
         }
       }
 
+      function pauseCommunitySpeech() {
+        if (!communitySpeech.audio) return;
+        try {
+          communitySpeech.audio.pause();
+          communitySpeech.pausedByMute = true;
+          setCommunityStatus("Voice paused.");
+        } catch (_) {
+          // Ignore pause failures.
+        }
+      }
+
+      async function resumeCommunitySpeech() {
+        if (!communitySpeech.audio || !communitySpeech.pausedByMute) return;
+        try {
+          await communitySpeech.audio.play();
+          communitySpeech.pausedByMute = false;
+          setCommunityStatus("Reading aloud...");
+        } catch (_) {
+          stopCommunitySpeech();
+          setCommunityStatus("Ask anything or try a quick question.");
+        }
+      }
+
       async function speakCommunityReply(text) {
-        const spokenText = String(text || "").trim();
+        const spokenText = normalizeCommunityText(text);
         if (!spokenText || communityVoiceMuted) return;
 
         stopCommunitySpeech();
@@ -2032,6 +2151,7 @@ ${chatSiteNav("home")}
           audio.src = URL.createObjectURL(blob);
           communitySpeech.audio = audio;
           communitySpeech.objectUrl = audio.src;
+          communitySpeech.pausedByMute = false;
           audio.onended = () => {
             stopCommunitySpeech();
             setCommunityStatus("Ask anything or try a quick question.");
@@ -2114,11 +2234,13 @@ ${chatSiteNav("home")}
           if (!response.ok) {
             throw new Error(payload.detail || payload.error || "Could not send the message.");
           }
-          const reply = String(payload.reply || "(no reply)").trim();
+          const reply = normalizeCommunityText(payload.reply || "(no reply)");
+          const sources = normalizeCommunitySources(payload.sources);
           thinking.remove();
-          communityHistory.push({ role: "assistant", content: reply });
+          communityHistory.push({ role: "assistant", content: reply, sources });
           saveCommunityHistory();
-          appendCommunityMessage("assistant", reply);
+          const row = appendCommunityMessage("assistant", reply);
+          appendCommunitySources(row, sources);
           if (communityVoiceMuted) {
             setCommunityStatus("Ask anything or try a quick question.");
           } else {
@@ -3617,7 +3739,11 @@ ${chatSiteNav("home")}
         communityVoiceToggleBtn.addEventListener("click", () => {
           communityVoiceMuted = !communityVoiceMuted;
           window.localStorage.setItem(communityVoiceMutedKey, communityVoiceMuted ? "1" : "0");
-          if (communityVoiceMuted) stopCommunitySpeech();
+          if (communityVoiceMuted) {
+            pauseCommunitySpeech();
+          } else {
+            resumeCommunitySpeech();
+          }
           updateCommunityVoiceButton();
         });
       }
