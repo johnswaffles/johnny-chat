@@ -1621,6 +1621,7 @@ ${chatSiteNav("home")}
             <span>Ask for a quick thought, writing help, or a board question.</span>
           </div>
           <div class="community-widget-controls">
+            <button id="community-voice-toggle" class="community-widget-mini" type="button" title="Toggle voice">🔊</button>
             <button id="community-reset" class="community-widget-mini" type="button" title="Start over">New</button>
             <button id="community-minimize" class="community-widget-mini" type="button" title="Minimize">−</button>
           </div>
@@ -1683,6 +1684,7 @@ ${chatSiteNav("home")}
       const communityLauncher = document.getElementById("community-launcher");
       const communityPanel = document.getElementById("community-panel");
       const communityDragHandle = document.getElementById("community-drag-handle");
+      const communityVoiceToggleBtn = document.getElementById("community-voice-toggle");
       const communityResetBtn = document.getElementById("community-reset");
       const communityMinimizeBtn = document.getElementById("community-minimize");
       const communityForm = document.getElementById("community-form");
@@ -1690,6 +1692,7 @@ ${chatSiteNav("home")}
       const communityMessages = document.getElementById("community-messages");
       const communityStatus = document.getElementById("community-status");
       const communitySpeech = { audio: null, objectUrl: "" };
+      const communityVoiceMutedKey = "618chat_community_voice_muted_v1";
 
       let selectedId = "";
       let replyTargetId = "";
@@ -1705,6 +1708,7 @@ ${chatSiteNav("home")}
       let anonymousClientId = readClientId();
       let communityHistory = readCommunityHistory();
       let communityDragging = null;
+      let communityVoiceMuted = String(window.localStorage.getItem(communityVoiceMutedKey) || "") === "1";
       let boardStats = {
         totalPosts: 0,
         hiddenCount: 0,
@@ -1974,6 +1978,13 @@ ${chatSiteNav("home")}
         communityStatus.classList.toggle("error", Boolean(isError));
       }
 
+      function updateCommunityVoiceButton() {
+        if (!communityVoiceToggleBtn) return;
+        communityVoiceToggleBtn.textContent = communityVoiceMuted ? "🔇" : "🔊";
+        communityVoiceToggleBtn.title = communityVoiceMuted ? "Turn voice on" : "Turn voice off";
+        communityVoiceToggleBtn.setAttribute("aria-pressed", communityVoiceMuted ? "true" : "false");
+      }
+
       function stopCommunitySpeech() {
         if (communitySpeech.audio) {
           try {
@@ -1992,7 +2003,7 @@ ${chatSiteNav("home")}
 
       async function speakCommunityReply(text) {
         const spokenText = String(text || "").trim();
-        if (!spokenText) return;
+        if (!spokenText || communityVoiceMuted) return;
 
         stopCommunitySpeech();
         setCommunityStatus("Reading aloud...");
@@ -2034,6 +2045,7 @@ ${chatSiteNav("home")}
         communityLauncher.hidden = true;
         ensureCommunityWidgetVisible();
         renderCommunityMessages();
+        updateCommunityVoiceButton();
         setCommunityStatus(communityHistory.length ? "Ask another quick question." : "Ask anything or try a quick question.");
         if (communityInput) {
           setTimeout(() => communityInput.focus(), 20);
@@ -2053,6 +2065,7 @@ ${chatSiteNav("home")}
         saveCommunityHistory();
         renderCommunityMessages();
         stopCommunitySpeech();
+        updateCommunityVoiceButton();
         setCommunityStatus("Fresh start. Ask me anything.");
         if (communityInput) {
           communityInput.value = "";
@@ -2102,7 +2115,11 @@ ${chatSiteNav("home")}
           communityHistory.push({ role: "assistant", content: reply });
           saveCommunityHistory();
           appendCommunityMessage("assistant", reply);
-          await speakCommunityReply(reply);
+          if (communityVoiceMuted) {
+            setCommunityStatus("Ask anything or try a quick question.");
+          } else {
+            await speakCommunityReply(reply);
+          }
         } catch (err) {
           thinking.remove();
           communityHistory.pop();
@@ -3556,8 +3573,17 @@ ${chatSiteNav("home")}
         placeCommunityWidget(readCommunityWidgetPlacement().left, readCommunityWidgetPlacement().top);
         openCommunityWidget();
       }
+      updateCommunityVoiceButton();
       if (communityLauncher) {
         communityLauncher.addEventListener("click", openCommunityWidget);
+      }
+      if (communityVoiceToggleBtn) {
+        communityVoiceToggleBtn.addEventListener("click", () => {
+          communityVoiceMuted = !communityVoiceMuted;
+          window.localStorage.setItem(communityVoiceMutedKey, communityVoiceMuted ? "1" : "0");
+          if (communityVoiceMuted) stopCommunitySpeech();
+          updateCommunityVoiceButton();
+        });
       }
       if (communityMinimizeBtn) {
         communityMinimizeBtn.addEventListener("click", closeCommunityWidget);

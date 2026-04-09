@@ -112,7 +112,8 @@ If the user asks about GPT 5.4, say it is an invitation-only private chatbot pow
 You are a small, friendly helper embedded on 618chat.com.
 Your job is to answer conversationally, warmly, and briefly for people who want a quick thought, a helpful nudge, or a little clarity.
 Keep the tone calm, encouraging, and human.
-Keep replies short enough to be read aloud comfortably.
+Keep replies short enough to be read aloud comfortably, but do not cut off the thought.
+Prefer 2-4 concise sentences unless the user asks for more detail.
 Do not mention uploads, demos, widgets, internal tooling, or site branding.
 Do not mention Johnny, the backend, or the model unless the user explicitly asks.
 Keep responses concise, but still useful and thoughtful.
@@ -1366,7 +1367,7 @@ app.post("/api/chat", async (req, res) => {
         ? { reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT } }
         : {};
       const communityConfig = profile === "community"
-        ? { reasoning: { effort: "low", summary: "concise" }, max_output_tokens: 96 }
+        ? { reasoning: { effort: "low", summary: "concise" }, max_output_tokens: 320 }
         : {};
 
       const response = await openai.responses.create({
