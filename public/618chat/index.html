@@ -1608,7 +1608,7 @@
 
   <script>
     (function () {
-      const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\/+$/, "");
+      const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\\/+$/, "");
       const postsUrl = apiBase + "/api/618chat/posts";
       const itemsUrl = apiBase + "/api/618chat/items";
       const ageGateKey = "618chat_age_gate_accepted";
@@ -1705,9 +1705,9 @@
       }
 
       function makeTitle(message) {
-        const clean = String(message || "").replace(/\s+/g, " ").trim().replace(/[.!?\s]+$/g, "");
+        const clean = String(message || "").replace(/\\s+/g, " ").trim().replace(/[.!?\\s]+$/g, "");
         if (!clean) return "Untitled note";
-        const firstSentence = clean.split(/(?<=[.!?])\s+/)[0] || clean;
+        const firstSentence = clean.split(/(?<=[.!?])\\s+/)[0] || clean;
         const words = firstSentence.split(" ").slice(0, 7).join(" ");
         let title = words || clean.split(" ").slice(0, 7).join(" ");
         title = title.replace(/[,;:]+/g, "").trim();
@@ -1731,19 +1731,19 @@
       }
 
       function excerpt(value) {
-        return String(value || "").replace(/\s+/g, " ").trim().slice(0, 120);
+        return String(value || "").replace(/\\s+/g, " ").trim().slice(0, 120);
       }
 
       function formatDisplayedMessage(value) {
-        const raw = String(value || "").replace(/\r\n/g, "\n");
+        const raw = String(value || "").replace(/\\r\\n/g, "\\n");
         const lines = raw
-          .split("\n")
+          .split("\\n")
           .map((line) => line.trim())
           .filter(Boolean);
         const cleaned = lines.filter((line) => {
-          if (/^Posted by\s+.+\s+on\s+.+$/i.test(line)) return false;
-          if (/^Posted on\s+.+$/i.test(line)) return false;
-          if (/^By\s+.+\s+•\s+.+$/i.test(line)) return false;
+          if (/^Posted by\\s+.+\\s+on\\s+.+$/i.test(line)) return false;
+          if (/^Posted on\\s+.+$/i.test(line)) return false;
+          if (/^By\\s+.+\\s+•\\s+.+$/i.test(line)) return false;
           return true;
         });
 
@@ -1751,14 +1751,14 @@
           const first = cleaned[0];
           const rest = cleaned.slice(1).join(" ").toLowerCase();
           const firstLower = first.toLowerCase();
-          const firstWordCount = first.split(/\s+/).filter(Boolean).length;
+          const firstWordCount = first.split(/\\s+/).filter(Boolean).length;
           const looksLikeLeadIn = firstWordCount <= 8 && first.length <= 80 && !/[.!?]$/.test(first);
           if (looksLikeLeadIn && rest.includes(firstLower)) {
             cleaned.shift();
           }
         }
 
-        return cleaned.join("\n");
+        return cleaned.join("\\n");
       }
 
       function readJsonStorage(key, fallback) {
@@ -1867,22 +1867,17 @@
 
       function normalizeCommunityText(text) {
         return String(text || "")
-          .replace(/
-/g, "
-")
-          .replace(/**(.*?)**/g, "$1")
+          .replace(/\r\n/g, "\n")
+          .replace(/\*\*(.*?)\*\*/g, "$1")
           .replace(/__(.*?)__/g, "$1")
-          .replace(/*(.*?)*/g, "$1")
+          .replace(/\*(.*?)\*/g, "$1")
           .replace(/_(.*?)_/g, "$1")
-          .replace(/`([^`]+)`/g, "$1")
-          .replace(/^s*[-*+]s+/gm, "• ")
-          .replace(/^s*d+.s+/gm, "• ")
-          .replace(/[(.*?)]((.*?))/g, "$1")
-          .replace(/s{2,}/g, " ")
-          .replace(/
-{3,}/g, "
-
-")
+          .replace(/\`([^\`]+)\`/g, "$1")
+          .replace(/^\s*[-*+]\s+/gm, "• ")
+          .replace(/^\s*\d+\.\s+/gm, "• ")
+          .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+          .replace(/\s{2,}/g, " ")
+          .replace(/\n{3,}/g, "\n\n")
           .trim();
       }
 
@@ -1894,7 +1889,7 @@
             if (!url) return null;
             try {
               const parsed = new URL(url);
-              const host = parsed.hostname.replace(/^www./i, "");
+              const host = parsed.hostname.replace(/^www\./i, "");
               const label = host || String(item?.title || "").trim() || "Source";
               return { label, url };
             } catch (_) {
@@ -2887,7 +2882,7 @@
         readerEl.innerHTML =
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
           '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + ' · ' + escapeHTML(postTopic) + '</div>' +
-          '<div class="detail-body">' + escapeHTML(formatDisplayedMessage(post.message)).replace(/\n/g, "<br>") + '</div>' +
+          '<div class="detail-body">' + escapeHTML(formatDisplayedMessage(post.message)).replace(/\\n/g, "<br>") + '</div>' +
           '<div class="comment-card-footer" style="padding: 12px 0 0; margin: 0;">' +
             '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (postPinned ? ' · Pinned' : '') + '</span>' +
             '<div class="actions">' +
@@ -2982,7 +2977,7 @@
                       '<div class="comment-card-title">' + escapeHTML(comment.title) + '</div>' +
                       '<div class="comment-card-meta">Posted by <span class="comment-card-meta-author">' + escapeHTML(comment.author || "Anonymous") + '</span> <span class="comment-card-meta-date">on ' + escapeHTML(formatDate(comment.createdAt)) + '</span></div>' +
                     '</summary>' +
-                    '<div class="detail-body">' + escapeHTML(formatDisplayedMessage(comment.message)).replace(/\n/g, "<br>") + '</div>' +
+                    '<div class="detail-body">' + escapeHTML(formatDisplayedMessage(comment.message)).replace(/\\n/g, "<br>") + '</div>' +
                     '<div class="comment-card-footer">' +
                       '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (commentHidden ? ' · Under review' : '') + '</span>' +
                       '<div class="actions">' +
@@ -3068,7 +3063,7 @@
           '</div>' +
           '<div class="spotlight-grid">' +
             postsForSpotlight.map((post) => {
-              const excerptText = String(formatDisplayedMessage(post.message) || "").replace(/\n/g, " ");
+              const excerptText = String(formatDisplayedMessage(post.message) || "").replace(/\\n/g, " ");
               return (
                 '<article class="spotlight-card">' +
                   '<div class="spotlight-actions">' +
