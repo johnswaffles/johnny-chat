@@ -2378,6 +2378,17 @@
         }
       }
 
+      function ensureVisibleAfterSubmission(post) {
+        if (!post) return;
+        const filteredPosts = applyBoardFilters(adminMode ? posts : posts.filter((item) => !item.hidden));
+        if (filteredPosts.some((item) => item.id === post.id)) return;
+        searchQuery = "";
+        if (postSearchInput) {
+          postSearchInput.value = "";
+        }
+        setTopicFilter("all");
+      }
+
       function setAdminToken(token) {
         adminToken = String(token || "").trim();
         adminMode = Boolean(adminToken);
@@ -3544,15 +3555,24 @@
               const nextPost = payload.post || null;
               posts = posts.map((post) => post.id === targetId && nextPost ? nextPost : post);
               selectedId = targetId;
+              if (nextPost) {
+                rememberSubmission(nextPost, "comment");
+              }
             } else {
               const nextPost = payload.post;
               posts = [nextPost, ...posts.filter((post) => post.id !== nextPost.id)];
               selectedId = nextPost.id;
+              rememberSubmission(nextPost, "post");
+              ensureVisibleAfterSubmission(nextPost);
             }
             form.reset();
             clearReplyTarget();
             clearDraft();
-            statusEl.textContent = "Message added to the conversation board.";
+            statusEl.textContent = targetId
+              ? "Reply added to the conversation board."
+              : (payload.post?.hidden
+                  ? "Message received and sent for review."
+                  : "Message added to the conversation board.");
             statusEl.classList.remove("error");
             render();
             messageInput.focus();
