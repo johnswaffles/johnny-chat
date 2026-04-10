@@ -1608,7 +1608,7 @@
 
   <script>
     (function () {
-      const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\\/+$/, "");
+      const apiBase = String(window.JOHNNY_PUBLIC_BOARD_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\/+$/, "");
       const postsUrl = apiBase + "/api/618chat/posts";
       const itemsUrl = apiBase + "/api/618chat/items";
       const ageGateKey = "618chat_age_gate_accepted";
