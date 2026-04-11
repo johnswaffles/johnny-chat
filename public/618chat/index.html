@@ -3104,11 +3104,9 @@
         return '<div class="reply-previews">' +
           '<div class="reply-previews-head">Latest replies</div>' +
           previews.map((comment) => {
-            const body = excerpt(formatDisplayedMessage(comment.message));
             return '<button type="button" class="reply-preview" data-preview-id="' + escapeHTML(comment.id) + '">' +
               '<span class="reply-preview-title">' + escapeHTML(comment.title || "Untitled reply") + '</span>' +
               '<span class="reply-preview-meta">By ' + escapeHTML(comment.author || "Anonymous") + ' • ' + escapeHTML(formatDate(comment.createdAt)) + '</span>' +
-              '<span class="reply-preview-body">' + escapeHTML(body) + '</span>' +
             '</button>';
           }).join("") +
         '</div>';
