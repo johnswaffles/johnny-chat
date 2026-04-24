@@ -1,0 +1,14 @@
+/cozy-builder/index.wasm
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+  Cache-Control: public, max-age=0, must-revalidate
+
+/cozy-builder-game/index.wasm
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+  Cache-Control: public, max-age=0, must-revalidate
+
+/godot-playtest/index.wasm
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+  Cache-Control: public, max-age=0, must-revalidate

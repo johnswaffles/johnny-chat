@@ -5,6 +5,7 @@ import OpenAI, { toFile } from "openai";
 import nodemailer from "nodemailer";
 import { createRequire } from "module";
 import http from "http";
+import { createReadStream } from "node:fs";
 import path from "node:path";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -364,11 +365,10 @@ app.get(GODOT_WASM_ROUTES, (req, res, next) => {
   res.setHeader("Content-Type", "application/wasm");
   res.setHeader("Content-Encoding", "gzip");
   res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
-  res.sendFile(compressedPath, (err) => {
-    if (err) {
-      next(err);
-    }
-  });
+  res.removeHeader("Content-Length");
+  createReadStream(compressedPath)
+    .on("error", next)
+    .pipe(res);
 });
 
 app.use(express.static("public"));

@@ -3932,6 +3932,8 @@ async function syncCozyBuilderBuild() {
 }
 
 async function patchGodotWasmLoader() {
+  const stockStreamingBlock = `var response=fetch(binaryFile,{credentials:"same-origin"});var instantiationResult=await WebAssembly.instantiateStreaming(response,imports);return instantiationResult`;
+  const gzipSafeStreamingBlock = `var response=await fetch(binaryFile,{credentials:"same-origin"});var buffer=await response.arrayBuffer();var bytes=new Uint8Array(buffer);if(bytes.length>=2&&bytes[0]===31&&bytes[1]===139&&typeof DecompressionStream!=="undefined"){var stream=new Response(buffer).body.pipeThrough(new DecompressionStream("gzip"));buffer=await new Response(stream).arrayBuffer()}var instantiationResult=await WebAssembly.instantiate(buffer,imports);return instantiationResult`;
   const stockInstantiateBlock = `				if (typeof (WebAssembly.instantiateStreaming) !== 'undefined') {
 					WebAssembly.instantiateStreaming(Promise.resolve(r), imports).then(done);
 				} else {
@@ -3959,13 +3961,36 @@ async function patchGodotWasmLoader() {
     } catch {
       continue;
     }
-    if (source.includes(gzipSafeInstantiateBlock)) {
+    if (source.includes(gzipSafeInstantiateBlock) && source.includes(gzipSafeStreamingBlock)) {
       continue;
     }
-    if (!source.includes(stockInstantiateBlock)) {
+    let patched = source;
+    if (patched.includes(stockStreamingBlock)) {
+      patched = patched.replace(stockStreamingBlock, gzipSafeStreamingBlock);
+    }
+    if (patched.includes(stockInstantiateBlock)) {
+      patched = patched.replace(stockInstantiateBlock, gzipSafeInstantiateBlock);
+    }
+    if (patched === source) {
       throw new Error(`Could not patch Godot WASM loader in ${loaderPath}`);
     }
-    await writeFile(loaderPath, source.replace(stockInstantiateBlock, gzipSafeInstantiateBlock), "utf8");
+    await writeFile(loaderPath, patched, "utf8");
+  }
+}
+
+async function patchGodotHtmlCacheBust() {
+  const version = Date.now().toString(36);
+  for (const targetDir of cozyExportTargetDirs) {
+    const htmlPath = path.join(targetDir, "index.html");
+    try {
+      var source = await readFile(htmlPath, "utf8");
+    } catch {
+      continue;
+    }
+    const patched = source.replace(/<script src="index\.js(?:\?v=[^"]*)?"><\/script>/, `<script src="index.js?v=${version}"></script>`);
+    if (patched !== source) {
+      await writeFile(htmlPath, patched, "utf8");
+    }
   }
 }
 
@@ -4559,6 +4584,7 @@ async function main() {
   await mkdir(path.join(publicDir, "contact"), { recursive: true });
   await syncCozyBuilderBuild();
   await patchGodotWasmLoader();
+  await patchGodotHtmlCacheBust();
 
   await writeFile(path.join(publicDir, "chatbots", "index.html"), aiPage, "utf8");
 

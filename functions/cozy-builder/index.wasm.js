@@ -12,6 +12,7 @@ async function serveCompressedWasm(context, compressedPath) {
   headers.set("Content-Type", "application/wasm");
   headers.set("Content-Encoding", "gzip");
   headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+  headers.delete("Content-Length");
 
   return new Response(assetResponse.body, {
     status: assetResponse.status,
