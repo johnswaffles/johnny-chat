@@ -81,16 +81,20 @@
   </style>
   <style>
     :root {
-      --bg: #f4f6ed;
-      --bg-2: #e8efde;
-      --ink: #102015;
-      --copy: #5b6b60;
+      --bg: #f6f1e8;
+      --bg-2: #e7efe1;
+      --ink: #111a14;
+      --copy: #56645c;
       --line: rgba(16, 32, 21, 0.1);
       --green: #2d6f40;
       --green-2: #4f8f5f;
       --green-deep: #174425;
+      --teal: #3f9f99;
+      --amber: #d4a245;
+      --rose: #b75c6d;
+      --paper: #fffaf0;
       --card: rgba(255, 255, 255, 0.86);
-      --shadow: 0 28px 74px rgba(22, 54, 31, 0.12);
+      --shadow: 0 30px 80px rgba(22, 54, 31, 0.13);
     }
 
     * { box-sizing: border-box; }
@@ -100,18 +104,49 @@
       color: var(--ink);
       font-family: "Plus Jakarta Sans", Arial, sans-serif;
       background:
-        radial-gradient(circle at 10% 0%, rgba(122, 176, 106, 0.2), transparent 26%),
-        radial-gradient(circle at 100% 10%, rgba(199, 166, 95, 0.12), transparent 24%),
-        linear-gradient(180deg, #f8f8f0 0%, var(--bg-2) 42%, var(--bg) 100%);
+        radial-gradient(circle at 9% 0%, rgba(122, 176, 106, 0.24), transparent 27%),
+        radial-gradient(circle at 86% 8%, rgba(63, 159, 153, 0.18), transparent 24%),
+        radial-gradient(circle at 100% 38%, rgba(212, 162, 69, 0.16), transparent 28%),
+        linear-gradient(180deg, #fbfaf3 0%, var(--bg-2) 45%, var(--bg) 100%);
       min-height: 100vh;
       overflow-x: hidden;
     }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(17, 26, 20, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(17, 26, 20, 0.035) 1px, transparent 1px);
+      background-size: 46px 46px;
+      mask-image: radial-gradient(circle at 50% 10%, black, transparent 72%);
+      z-index: -2;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      width: 480px;
+      height: 480px;
+      right: -180px;
+      top: 160px;
+      border-radius: 999px;
+      pointer-events: none;
+      background:
+        radial-gradient(circle, rgba(63, 159, 153, 0.15), transparent 64%),
+        radial-gradient(circle at 34% 34%, rgba(183, 92, 109, 0.12), transparent 58%);
+      z-index: -1;
+    }
     a { color: inherit; text-decoration: none; }
     button, input, textarea { font: inherit; }
+    .johnny-site-nav {
+      width: min(1380px, calc(100vw - 24px));
+      margin: 12px auto 0;
+    }
     .page {
-      width: min(1600px, calc(100vw - 12px));
+      width: min(1380px, calc(100vw - 24px));
       margin: 0 auto;
-      padding: 12px 0 32px;
+      padding: 14px 0 42px;
     }
     body.gate-locked {
       overflow: hidden;
@@ -171,28 +206,57 @@
       box-shadow: 0 14px 28px rgba(143, 45, 45, 0.22);
     }
     .intro {
-      margin-top: 14px;
+      margin-top: 18px;
       display: grid;
-      grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.25fr);
-      gap: 12px;
+      grid-template-columns: minmax(0, 0.84fr) minmax(440px, 1.16fr);
+      gap: 18px;
       align-items: stretch;
     }
     .panel {
-      background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(249,250,244,0.8));
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.88), rgba(249,250,244,0.78)),
+        radial-gradient(circle at 100% 0%, rgba(63,159,153,0.12), transparent 32%);
       border: 1px solid var(--line);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
-      border-radius: 28px;
+      border-radius: 32px;
     }
-    .hero { padding: 30px; }
+    .hero {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .hero::before {
+      width: 260px;
+      height: 260px;
+      right: -120px;
+      top: -90px;
+      background: radial-gradient(circle, rgba(63, 159, 153, 0.2), transparent 68%);
+    }
+    .hero::after {
+      width: 230px;
+      height: 230px;
+      left: -110px;
+      bottom: -120px;
+      background: radial-gradient(circle, rgba(212, 162, 69, 0.18), transparent 70%);
+    }
     .eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 10px;
       padding: 10px 14px;
       border-radius: 999px;
-      background: rgba(45, 111, 64, 0.08);
-      border: 1px solid rgba(45, 111, 64, 0.12);
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(45, 111, 64, 0.14);
       color: var(--green-deep);
       text-transform: uppercase;
       letter-spacing: 0.16em;
@@ -217,8 +281,8 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
+      background: linear-gradient(135deg, var(--green), var(--teal));
+      box-shadow: 0 0 0 6px rgba(63, 159, 153, 0.12);
     }
     .hero h1 {
       margin: 16px 0 0;
@@ -226,13 +290,17 @@
       font-size: clamp(44px, 6.4vw, 84px);
       line-height: 0.9;
       letter-spacing: -0.06em;
-      max-width: 10ch;
+      max-width: 10.5ch;
+      background: linear-gradient(135deg, #0b1d12 0%, #173f26 52%, #3f8b57 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
     .hero p {
       margin: 16px 0 0;
       color: var(--copy);
       line-height: 1.8;
-      font-size: 16px;
+      font-size: 17px;
       max-width: 58ch;
     }
     .pill-row {
@@ -255,12 +323,44 @@
       padding: 0 14px;
       border-radius: 999px;
       border: 1px solid rgba(16, 32, 21, 0.08);
-      background: rgba(255, 255, 255, 0.88);
+      background: rgba(255, 255, 255, 0.82);
       color: var(--copy);
       font-size: 14px;
       font-weight: 700;
     }
     .pill strong { color: var(--green-deep); }
+    .community-pulse-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 22px;
+    }
+    .community-pulse-card {
+      min-height: 108px;
+      padding: 16px;
+      border-radius: 22px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.62)),
+        radial-gradient(circle at 86% 0%, rgba(63,159,153,0.14), transparent 54%);
+      border: 1px solid rgba(16,32,21,0.08);
+      box-shadow: 0 14px 28px rgba(17, 38, 22, 0.07);
+    }
+    .community-pulse-card strong {
+      display: block;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      color: var(--green-deep);
+    }
+    .community-pulse-card span {
+      display: block;
+      margin-top: 8px;
+      color: var(--copy);
+      font-size: 12px;
+      line-height: 1.45;
+      font-weight: 750;
+    }
     .meta-card {
       padding: 20px;
       margin-top: 14px;
@@ -282,7 +382,23 @@
       font-size: 15px;
     }
     .meta-card ul { margin: 10px 0 0; padding-left: 18px; }
-    .board { padding: 24px; }
+    .board {
+      padding: 26px;
+      position: relative;
+      overflow: hidden;
+    }
+    .board::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 80% 0%, rgba(212,162,69,0.16), transparent 30%),
+        radial-gradient(circle at 0% 100%, rgba(63,159,153,0.12), transparent 32%);
+    }
+    .board > * {
+      position: relative;
+    }
     .board-top {
       display: flex;
       align-items: start;
@@ -318,9 +434,9 @@
     }
     .button:hover { transform: translateY(-1px); }
     .button-primary {
-      background: linear-gradient(135deg, var(--green) 0%, var(--green-2) 100%);
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-2) 72%, var(--teal) 100%);
       color: #fffdf7;
-      box-shadow: 0 14px 28px rgba(47, 122, 68, 0.24);
+      box-shadow: 0 16px 32px rgba(47, 122, 68, 0.26);
     }
     .button-secondary {
       background: rgba(255,255,255,0.84);
@@ -687,223 +803,6 @@
       min-height: 34px;
       padding: 0 12px;
       font-size: 13px;
-    }
-    .community-widget {
-      position: fixed;
-      right: 18px;
-      bottom: 18px;
-      width: min(340px, calc(100vw - 24px));
-      z-index: 90;
-      pointer-events: none;
-      display: flex;
-      justify-content: flex-end;
-    }
-    .community-widget-shell {
-      width: 100%;
-      pointer-events: auto;
-      display: grid;
-      justify-items: end;
-      gap: 8px;
-    }
-    .community-launcher {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      min-height: 52px;
-      padding: 0 16px;
-      border-radius: 18px;
-      border: 1px solid rgba(16, 32, 21, 0.1);
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,248,242,0.95));
-      color: var(--ink);
-      font: inherit;
-      font-weight: 800;
-      box-shadow: 0 18px 36px rgba(17, 38, 22, 0.12);
-      backdrop-filter: blur(12px);
-      cursor: pointer;
-    }
-    .community-launcher-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, #2d6f40, #4d8b5c);
-      box-shadow: 0 0 0 6px rgba(45, 111, 64, 0.12);
-      flex: 0 0 auto;
-    }
-    .community-widget-panel {
-      width: 100%;
-      border-radius: 22px;
-      border: 1px solid rgba(16, 32, 21, 0.1);
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,245,0.94));
-      box-shadow: 0 24px 48px rgba(17, 38, 22, 0.18);
-      backdrop-filter: blur(16px) saturate(135%);
-      overflow: hidden;
-      display: grid;
-      gap: 10px;
-    }
-    .community-widget-panel[hidden] {
-      display: none;
-    }
-    .community-widget-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 14px 0;
-      cursor: grab;
-      user-select: none;
-    }
-    .community-widget-header:active {
-      cursor: grabbing;
-    }
-    .community-widget-title {
-      display: grid;
-      gap: 3px;
-      padding-right: 8px;
-    }
-    .community-widget-title strong {
-      font-family: "Outfit", Arial, sans-serif;
-      font-size: 16px;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-    }
-    .community-widget-title span {
-      color: var(--copy);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-    .community-widget-controls {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      flex: 0 0 auto;
-    }
-    .community-widget-mini {
-      min-height: 32px;
-      min-width: 32px;
-      padding: 0 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(16, 32, 21, 0.1);
-      background: rgba(255,255,255,0.88);
-      color: var(--ink);
-      font: inherit;
-      font-weight: 800;
-      cursor: pointer;
-    }
-    .community-widget-body {
-      padding: 0 14px 14px;
-      display: grid;
-      gap: 10px;
-    }
-    .community-widget-messages {
-      display: grid;
-      gap: 8px;
-      max-height: 230px;
-      overflow: auto;
-      padding-right: 2px;
-    }
-    .community-widget-empty {
-      margin: 2px 0 0;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px dashed rgba(45, 111, 64, 0.18);
-      background: rgba(255,255,255,0.78);
-      color: var(--copy);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-    .community-widget-message {
-      max-width: 88%;
-      padding: 10px 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(16, 32, 21, 0.08);
-      background: rgba(255,255,255,0.92);
-      font-size: 13px;
-      line-height: 1.55;
-      color: var(--ink);
-      box-shadow: 0 8px 16px rgba(17, 38, 22, 0.05);
-    }
-    .community-widget-message.user {
-      margin-left: auto;
-      background: linear-gradient(180deg, rgba(233, 246, 239, 0.96), rgba(224, 240, 230, 0.94));
-      border-color: rgba(45, 111, 64, 0.14);
-    }
-    .community-widget-message.assistant {
-      margin-right: auto;
-    }
-    .community-widget-message-body {
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .community-widget-sources {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 8px;
-    }
-    .community-widget-source {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      min-height: 28px;
-      padding: 0 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(45, 111, 64, 0.18);
-      background: rgba(233, 246, 239, 0.92);
-      color: var(--ink);
-      font-size: 12px;
-      font-weight: 700;
-      text-decoration: none;
-      max-width: 100%;
-    }
-    .community-widget-source span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .community-widget-meta {
-      margin-top: 4px;
-      font-size: 11px;
-      color: var(--copy);
-      opacity: 0.86;
-    }
-    .community-widget-form {
-      display: grid;
-      gap: 8px;
-    }
-    .community-widget-input {
-      min-height: 74px;
-      max-height: 140px;
-      resize: vertical;
-      width: 100%;
-      border-radius: 16px;
-      border: 1px solid rgba(16, 32, 21, 0.1);
-      background: rgba(255,255,255,0.9);
-      padding: 12px 14px;
-      font: inherit;
-      color: var(--ink);
-      line-height: 1.5;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
-    }
-    .community-widget-input:focus {
-      outline: none;
-      border-color: rgba(45, 111, 64, 0.3);
-      box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.1);
-    }
-    .community-widget-actions {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .community-widget-status {
-      color: var(--copy);
-      font-size: 12px;
-      line-height: 1.4;
-      min-height: 1.4em;
-    }
-    .community-widget-status.error {
-      color: #9b1c1c;
     }
     .topic-pages {
       margin-top: 14px;
@@ -1317,10 +1216,12 @@
       .intro, .layout { grid-template-columns: 1fr; }
     }
     @media (max-width: 760px) {
-      .page { width: min(100vw - 10px, 1600px); padding: 12px 0 24px; }
+      .johnny-site-nav { width: min(100vw - 12px, 680px); }
+      .page { width: min(100vw - 12px, 680px); padding: 12px 0 28px; }
       .hero, .board { padding: 20px; }
       .detail-title { font-size: 28px; }
       .hero h1 { max-width: none; }
+      .community-pulse-grid { grid-template-columns: 1fr; }
       .comment-list {
         padding-left: 10px;
         gap: 7px;
@@ -1404,16 +1305,6 @@
         padding: 0 8px;
         font-size: 12px;
       }
-      .community-widget {
-        top: 10px;
-        right: 10px;
-        bottom: auto;
-        left: auto;
-        width: min(100vw - 18px, 340px);
-      }
-      .community-widget-message {
-        max-width: 94%;
-      }
     }
   </style>
 </head>
@@ -1458,6 +1349,20 @@
           <div class="pill"><strong>Respect</strong> and understanding</div>
           <div class="pill"><strong>Public</strong> to browse</div>
           <div class="pill"><strong>Thoughtful</strong> titles</div>
+        </div>
+        <div class="community-pulse-grid" aria-label="618chat principles">
+          <div class="community-pulse-card">
+            <strong>Private first</strong>
+            <span>Use a nickname or stay anonymous. Keep identifying details off the board.</span>
+          </div>
+          <div class="community-pulse-card">
+            <strong>Real replies</strong>
+            <span>Read, support, reply, and keep the conversation human.</span>
+          </div>
+          <div class="community-pulse-card">
+            <strong>Gentle rules</strong>
+            <span>Adults only, respectful tone, and moderation tools if something crosses the line.</span>
+          </div>
         </div>
         <div class="hero-actions">
           <a class="button button-primary" href="#compose" data-compose-jump>Write a post</a>
@@ -1574,37 +1479,6 @@
     </section>
   </main>
 
-  <div id="community-widget" class="community-widget">
-    <div class="community-widget-shell">
-      <button id="community-launcher" class="community-launcher" type="button">
-        <span class="community-launcher-dot" aria-hidden="true"></span>
-        <span>Chat</span>
-      </button>
-      <section id="community-panel" class="community-widget-panel" hidden aria-label="Floating chat helper">
-        <div class="community-widget-header" id="community-drag-handle">
-          <div class="community-widget-title">
-            <strong>Powered by ChatGPT 5.5</strong>
-            <span>Ask for a quick thought, writing help, or a board question.</span>
-          </div>
-          <div class="community-widget-controls">
-            <button id="community-voice-toggle" class="community-widget-mini" type="button" title="Toggle voice">🔊</button>
-            <button id="community-reset" class="community-widget-mini" type="button" title="Start over">New</button>
-            <button id="community-minimize" class="community-widget-mini" type="button" title="Minimize">−</button>
-          </div>
-        </div>
-        <div class="community-widget-body">
-          <div id="community-messages" class="community-widget-messages"></div>
-          <form id="community-form" class="community-widget-form">
-            <textarea id="community-input" class="community-widget-input" placeholder="Ask anything..." maxlength="1000"></textarea>
-            <div class="community-widget-actions">
-              <div id="community-status" class="community-widget-status">Ask anything or try a quick question.</div>
-              <button class="button button-primary" type="submit">Send</button>
-            </div>
-          </form>
-        </div>
-      </section>
-    </div>
-  </div>
 
   <script>
     (function () {
@@ -1646,20 +1520,6 @@
       const replyTargetLabel = document.getElementById("reply-target-label");
       const replyClear = document.getElementById("reply-clear");
       const submitButton = form.querySelector('button[type="submit"]');
-      const communityWidgetRoot = document.getElementById("community-widget");
-      const communityLauncher = document.getElementById("community-launcher");
-      const communityPanel = document.getElementById("community-panel");
-      const communityDragHandle = document.getElementById("community-drag-handle");
-      const communityVoiceToggleBtn = document.getElementById("community-voice-toggle");
-      const communityResetBtn = document.getElementById("community-reset");
-      const communityMinimizeBtn = document.getElementById("community-minimize");
-      const communityForm = document.getElementById("community-form");
-      const communityInput = document.getElementById("community-input");
-      const communityMessages = document.getElementById("community-messages");
-      const communityStatus = document.getElementById("community-status");
-      const communitySpeech = { audio: null, objectUrl: "" };
-      const communityVoiceMutedKey = "618chat_community_voice_muted_v1";
-
       let selectedId = "";
       let replyTargetId = "";
       let posts = [];
@@ -1672,9 +1532,6 @@
       let personalDraft = readDraft();
       let mutedAuthors = new Set(readMutedAuthors());
       let anonymousClientId = readClientId();
-      let communityHistory = readCommunityHistory();
-      let communityDragging = null;
-      let communityVoiceMuted = String(window.localStorage.getItem(communityVoiceMutedKey) || "") === "1";
       let boardStats = {
         totalPosts: 0,
         hiddenCount: 0,
@@ -1692,9 +1549,6 @@
       let ageGateAccepted = String(window.localStorage.getItem(ageGateKey) || "") === "yes";
       let moderationSelection = new Set();
       const supportedKey = "618chat_supported_items";
-      const communityWidgetKey = "618chat_community_widget_v1";
-      const communityHistoryKey = "618chat_community_history_v1";
-
       function escapeHTML(value) {
         return String(value || "")
           .replace(/&/g, "&amp;")
@@ -1843,382 +1697,6 @@
         if (draftStatusEl) {
           draftStatusEl.textContent = "Draft cleared.";
         }
-      }
-
-      function readCommunityHistory() {
-        try {
-          const parsed = JSON.parse(window.localStorage.getItem(communityHistoryKey) || "[]");
-          if (!Array.isArray(parsed)) return [];
-          return parsed
-            .map((item) => ({
-              role: String(item?.role || ""),
-              content: String(item?.content || "").trim(),
-              sources: Array.isArray(item?.sources) ? normalizeCommunitySources(item.sources) : []
-            }))
-            .filter((item) => item.role === "user" || item.role === "assistant");
-        } catch (_) {
-          return [];
-        }
-      }
-
-      function saveCommunityHistory() {
-        window.localStorage.setItem(communityHistoryKey, JSON.stringify(communityHistory.slice(-12)));
-      }
-
-      function normalizeCommunityText(text) {
-        return String(text || "")
-          .replace(/\r\n/g, "\n")
-          .replace(/\*\*(.*?)\*\*/g, "$1")
-          .replace(/__(.*?)__/g, "$1")
-          .replace(/\*(.*?)\*/g, "$1")
-          .replace(/_(.*?)_/g, "$1")
-          .replace(/\`([^\`]+)\`/g, "$1")
-          .replace(/^\s*[-*+]\s+/gm, "• ")
-          .replace(/^\s*\d+\.\s+/gm, "• ")
-          .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
-          .replace(/\s{2,}/g, " ")
-          .replace(/\n{3,}/g, "\n\n")
-          .trim();
-      }
-
-      function normalizeCommunitySources(sources) {
-        if (!Array.isArray(sources)) return [];
-        return sources
-          .map((item) => {
-            const url = String(item?.url || "").trim();
-            if (!url) return null;
-            try {
-              const parsed = new URL(url);
-              const host = parsed.hostname.replace(/^www\./i, "");
-              const label = host || String(item?.title || "").trim() || "Source";
-              return { label, url };
-            } catch (_) {
-              return null;
-            }
-          })
-          .filter(Boolean)
-          .slice(0, 3);
-      }
-
-      function readCommunityWidgetPlacement() {
-        try {
-          const parsed = JSON.parse(window.localStorage.getItem(communityWidgetKey) || "null");
-          if (parsed && Number.isFinite(Number(parsed.left)) && Number.isFinite(Number(parsed.top))) {
-            return { left: Number(parsed.left), top: Number(parsed.top) };
-          }
-        } catch (_) {
-          // Ignore localStorage parse issues.
-        }
-        return {
-          left: Math.max(12, window.innerWidth - 360),
-          top: Math.max(12, window.innerHeight - 460)
-        };
-      }
-
-      function saveCommunityWidgetPlacement(placement) {
-        window.localStorage.setItem(communityWidgetKey, JSON.stringify({
-          left: Math.max(12, Math.round(Number(placement?.left) || 0)),
-          top: Math.max(12, Math.round(Number(placement?.top) || 0))
-        }));
-      }
-
-      function getCommunityWidgetBounds() {
-        if (!communityWidgetRoot) return { width: 340, height: 440 };
-        const rect = communityPanel && !communityPanel.hidden
-          ? communityWidgetRoot.getBoundingClientRect()
-          : communityLauncher.getBoundingClientRect();
-        return {
-          width: Math.max(communityWidgetRoot.offsetWidth || rect.width || 340, 280),
-          height: Math.max(rect.height || 64, communityPanel && !communityPanel.hidden ? 440 : 64)
-        };
-      }
-
-      function placeCommunityWidget(left, top) {
-        if (!communityWidgetRoot) return;
-        const bounds = getCommunityWidgetBounds();
-        const nextLeft = Math.min(Math.max(12, Number(left) || 0), Math.max(12, window.innerWidth - bounds.width - 12));
-        const nextTop = Math.min(Math.max(12, Number(top) || 0), Math.max(12, window.innerHeight - bounds.height - 12));
-        communityWidgetRoot.style.left = nextLeft + "px";
-        communityWidgetRoot.style.top = nextTop + "px";
-        communityWidgetRoot.style.right = "auto";
-        communityWidgetRoot.style.bottom = "auto";
-        saveCommunityWidgetPlacement({ left: nextLeft, top: nextTop });
-      }
-
-      function ensureCommunityWidgetVisible() {
-        if (!communityWidgetRoot) return;
-        const current = {
-          left: parseFloat(communityWidgetRoot.style.left || "0") || 0,
-          top: parseFloat(communityWidgetRoot.style.top || "0") || 0
-        };
-        const stored = readCommunityWidgetPlacement();
-        placeCommunityWidget(current.left || stored.left, current.top || stored.top);
-      }
-
-      function appendCommunityMessage(role, text) {
-        if (!communityMessages) return;
-        const row = document.createElement("div");
-        row.className = "community-widget-message " + (role === "user" ? "user" : "assistant");
-        const body = document.createElement("div");
-        body.className = "community-widget-message-body";
-        body.textContent = role === "assistant" ? normalizeCommunityText(text) : String(text || "").trim();
-        row.appendChild(body);
-        communityMessages.appendChild(row);
-        communityMessages.scrollTop = communityMessages.scrollHeight;
-        return row;
-      }
-
-      function appendCommunitySources(row, sources) {
-        const safeSources = normalizeCommunitySources(sources);
-        if (!row || !safeSources.length) return;
-        const container = document.createElement("div");
-        container.className = "community-widget-sources";
-        safeSources.forEach((source) => {
-          const link = document.createElement("a");
-          link.className = "community-widget-source";
-          link.href = source.url;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.title = source.url;
-          const label = document.createElement("span");
-          label.textContent = source.label;
-          link.appendChild(label);
-          container.appendChild(link);
-        });
-        row.appendChild(container);
-      }
-
-      function renderCommunityMessages() {
-        if (!communityMessages) return;
-        communityMessages.innerHTML = "";
-        if (!communityHistory.length) {
-          communityMessages.innerHTML = '<div class="community-widget-empty">Ask for a quick thought, a little writing help, or a simple explanation. This widget is text-only and stays small on the page.</div>';
-          return;
-        }
-        communityHistory.forEach((item) => {
-          const row = appendCommunityMessage(item.role, item.content);
-          if (item.role === "assistant") {
-            appendCommunitySources(row, item.sources);
-          }
-        });
-      }
-
-      function setCommunityStatus(message, isError = false) {
-        if (!communityStatus) return;
-        communityStatus.textContent = String(message || "");
-        communityStatus.classList.toggle("error", Boolean(isError));
-      }
-
-      function updateCommunityVoiceButton() {
-        if (!communityVoiceToggleBtn) return;
-        communityVoiceToggleBtn.textContent = communityVoiceMuted ? "🔇" : "🔊";
-        communityVoiceToggleBtn.title = communityVoiceMuted ? "Turn voice on" : "Turn voice off";
-        communityVoiceToggleBtn.setAttribute("aria-pressed", communityVoiceMuted ? "true" : "false");
-      }
-
-      function stopCommunitySpeech() {
-        if (communitySpeech.audio) {
-          try {
-            communitySpeech.audio.pause();
-            communitySpeech.audio.src = "";
-          } catch (_) {
-            // Ignore audio cleanup issues.
-          }
-          communitySpeech.audio = null;
-        }
-        communitySpeech.pausedByMute = false;
-        if (communitySpeech.objectUrl) {
-          URL.revokeObjectURL(communitySpeech.objectUrl);
-          communitySpeech.objectUrl = "";
-        }
-      }
-
-      function pauseCommunitySpeech() {
-        if (!communitySpeech.audio) return;
-        try {
-          communitySpeech.audio.pause();
-          communitySpeech.pausedByMute = true;
-          setCommunityStatus("Voice paused.");
-        } catch (_) {
-          // Ignore pause failures.
-        }
-      }
-
-      async function resumeCommunitySpeech() {
-        if (!communitySpeech.audio || !communitySpeech.pausedByMute) return;
-        try {
-          await communitySpeech.audio.play();
-          communitySpeech.pausedByMute = false;
-          setCommunityStatus("Reading aloud...");
-        } catch (_) {
-          stopCommunitySpeech();
-          setCommunityStatus("Ask anything or try a quick question.");
-        }
-      }
-
-      async function speakCommunityReply(text) {
-        const spokenText = normalizeCommunityText(text);
-        if (!spokenText || communityVoiceMuted) return;
-
-        stopCommunitySpeech();
-        setCommunityStatus("Reading aloud...");
-
-        try {
-          const response = await fetch(apiBase + "/api/community-speech", {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ text: spokenText })
-          });
-          if (!response.ok) {
-            throw new Error("Could not start audio.");
-          }
-
-          const blob = await response.blob();
-          const audio = new Audio();
-          audio.preload = "auto";
-          audio.playsInline = true;
-          audio.src = URL.createObjectURL(blob);
-          communitySpeech.audio = audio;
-          communitySpeech.objectUrl = audio.src;
-          communitySpeech.pausedByMute = false;
-          audio.onended = () => {
-            stopCommunitySpeech();
-            setCommunityStatus("Ask anything or try a quick question.");
-          };
-          await audio.play();
-        } catch (_) {
-          stopCommunitySpeech();
-          setCommunityStatus("Ask anything or try a quick question.");
-        }
-      }
-
-      function openCommunityWidget() {
-        if (!communityPanel || !communityLauncher) return;
-        communityPanel.hidden = false;
-        communityLauncher.hidden = true;
-        ensureCommunityWidgetVisible();
-        renderCommunityMessages();
-        updateCommunityVoiceButton();
-        setCommunityStatus(communityHistory.length ? "Ask another quick question." : "Ask anything or try a quick question.");
-        if (communityInput) {
-          setTimeout(() => communityInput.focus(), 20);
-        }
-      }
-
-      function closeCommunityWidget() {
-        if (!communityPanel || !communityLauncher) return;
-        communityPanel.hidden = true;
-        communityLauncher.hidden = false;
-        stopCommunitySpeech();
-        setCommunityStatus("Ask anything or try a quick question.");
-      }
-
-      function resetCommunityWidget() {
-        communityHistory = [];
-        saveCommunityHistory();
-        renderCommunityMessages();
-        stopCommunitySpeech();
-        updateCommunityVoiceButton();
-        setCommunityStatus("Fresh start. Ask me anything.");
-        if (communityInput) {
-          communityInput.value = "";
-          communityInput.style.height = "auto";
-          communityInput.focus();
-        }
-      }
-
-      async function sendCommunityMessage(text) {
-        const message = String(text || "").trim();
-        if (!message || !communityMessages) return;
-
-        communityHistory.push({ role: "user", content: message });
-        saveCommunityHistory();
-        appendCommunityMessage("user", message);
-        setCommunityStatus("Thinking...");
-        if (communityInput) {
-          communityInput.value = "";
-          communityInput.style.height = "auto";
-        }
-
-        const thinking = document.createElement("div");
-        thinking.className = "community-widget-message assistant";
-        thinking.textContent = "Thinking…";
-        communityMessages.appendChild(thinking);
-        communityMessages.scrollTop = communityMessages.scrollHeight;
-
-        try {
-          const response = await fetch(apiBase + "/api/chat", {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              input: message,
-              history: communityHistory.slice(0, -1).slice(-10),
-              profile: "community"
-            })
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok) {
-            throw new Error(payload.detail || payload.error || "Could not send the message.");
-          }
-          const reply = normalizeCommunityText(payload.reply || "(no reply)");
-          const sources = normalizeCommunitySources(payload.sources);
-          thinking.remove();
-          communityHistory.push({ role: "assistant", content: reply, sources });
-          saveCommunityHistory();
-          const row = appendCommunityMessage("assistant", reply);
-          appendCommunitySources(row, sources);
-          if (communityVoiceMuted) {
-            setCommunityStatus("Ask anything or try a quick question.");
-          } else {
-            await speakCommunityReply(reply);
-          }
-        } catch (err) {
-          thinking.remove();
-          communityHistory.pop();
-          saveCommunityHistory();
-          setCommunityStatus(err.message || "Could not send the message.", true);
-        }
-      }
-
-      function handleCommunityWidgetDragStart(event) {
-        if (!communityWidgetRoot || !communityPanel || communityPanel.hidden) return;
-        const pointer = event.touches ? event.touches[0] : event;
-        if (!pointer) return;
-        const rect = communityWidgetRoot.getBoundingClientRect();
-        communityDragging = {
-          offsetX: pointer.clientX - rect.left,
-          offsetY: pointer.clientY - rect.top
-        };
-        event.preventDefault();
-      }
-
-      function handleCommunityWidgetDragMove(event) {
-        if (!communityDragging || !communityWidgetRoot) return;
-        const pointer = event.touches ? event.touches[0] : event;
-        if (!pointer) return;
-        const bounds = getCommunityWidgetBounds();
-        const nextLeft = pointer.clientX - communityDragging.offsetX;
-        const nextTop = pointer.clientY - communityDragging.offsetY;
-        const clampedLeft = Math.min(Math.max(12, nextLeft), Math.max(12, window.innerWidth - bounds.width - 12));
-        const clampedTop = Math.min(Math.max(12, nextTop), Math.max(12, window.innerHeight - bounds.height - 12));
-        communityWidgetRoot.style.left = clampedLeft + "px";
-        communityWidgetRoot.style.top = clampedTop + "px";
-        communityWidgetRoot.style.right = "auto";
-        communityWidgetRoot.style.bottom = "auto";
-      }
-
-      function handleCommunityWidgetDragEnd() {
-        if (!communityDragging || !communityWidgetRoot) return;
-        const left = parseFloat(communityWidgetRoot.style.left || "0") || 0;
-        const top = parseFloat(communityWidgetRoot.style.top || "0") || 0;
-        saveCommunityWidgetPlacement({ left, top });
-        communityDragging = null;
       }
 
       function getTopicFromUrl() {
@@ -3665,79 +3143,11 @@
           window.location.replace("/no-entry/");
         });
       }
-      if (communityWidgetRoot) {
-        const isCompactViewport = window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
-        if (isCompactViewport) {
-          placeCommunityWidget(window.innerWidth - 12, 12);
-          closeCommunityWidget();
-        } else {
-          placeCommunityWidget(readCommunityWidgetPlacement().left, readCommunityWidgetPlacement().top);
-          openCommunityWidget();
-        }
-      }
-      updateCommunityVoiceButton();
       document.querySelectorAll("[data-compose-jump]").forEach((trigger) => {
         trigger.addEventListener("click", (event) => {
           event.preventDefault();
           jumpToComposer();
         });
-      });
-      if (communityLauncher) {
-        communityLauncher.addEventListener("click", openCommunityWidget);
-      }
-      if (communityVoiceToggleBtn) {
-        communityVoiceToggleBtn.addEventListener("click", () => {
-          communityVoiceMuted = !communityVoiceMuted;
-          window.localStorage.setItem(communityVoiceMutedKey, communityVoiceMuted ? "1" : "0");
-          if (communityVoiceMuted) {
-            pauseCommunitySpeech();
-          } else {
-            resumeCommunitySpeech();
-          }
-          updateCommunityVoiceButton();
-        });
-      }
-      if (communityMinimizeBtn) {
-        communityMinimizeBtn.addEventListener("click", closeCommunityWidget);
-      }
-      if (communityResetBtn) {
-        communityResetBtn.addEventListener("click", resetCommunityWidget);
-      }
-      if (communityForm) {
-        communityForm.addEventListener("submit", async (event) => {
-          event.preventDefault();
-          await sendCommunityMessage(String(communityInput?.value || ""));
-        });
-      }
-      if (communityInput) {
-        communityInput.addEventListener("input", () => {
-          communityInput.style.height = "auto";
-          communityInput.style.height = Math.min(communityInput.scrollHeight, 140) + "px";
-        });
-        communityInput.addEventListener("keydown", (event) => {
-          if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            if (communityForm && typeof communityForm.requestSubmit === "function") {
-              communityForm.requestSubmit();
-            } else if (communityForm) {
-              communityForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-            }
-          }
-        });
-      }
-      if (communityDragHandle) {
-        communityDragHandle.addEventListener("pointerdown", (event) => {
-          if (event.target instanceof Element && event.target.closest("button")) return;
-          handleCommunityWidgetDragStart(event);
-        });
-      }
-      window.addEventListener("pointermove", handleCommunityWidgetDragMove);
-      window.addEventListener("pointerup", handleCommunityWidgetDragEnd);
-      window.addEventListener("pointercancel", handleCommunityWidgetDragEnd);
-      window.addEventListener("resize", () => {
-        if (communityWidgetRoot) {
-          ensureCommunityWidgetVisible();
-        }
       });
       setInterval(() => {
         if (!document.hidden) loadPosts();
