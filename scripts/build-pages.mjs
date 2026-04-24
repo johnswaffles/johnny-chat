@@ -3930,6 +3930,44 @@ async function syncCozyBuilderBuild() {
   }
 }
 
+async function patchGodotWasmLoader() {
+  const stockInstantiateBlock = `				if (typeof (WebAssembly.instantiateStreaming) !== 'undefined') {
+					WebAssembly.instantiateStreaming(Promise.resolve(r), imports).then(done);
+				} else {
+					r.arrayBuffer().then(function (buffer) {
+						WebAssembly.instantiate(buffer, imports).then(done);
+					});
+				}`;
+  const gzipSafeInstantiateBlock = `				r.arrayBuffer().then(function (buffer) {
+					const bytes = new Uint8Array(buffer);
+					const needsDecompression = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+					if (needsDecompression && typeof (DecompressionStream) !== 'undefined') {
+						const response = new Response(buffer);
+						const decompressed = response.body.pipeThrough(new DecompressionStream("gzip"));
+						return new Response(decompressed).arrayBuffer();
+					}
+					return buffer;
+				}).then(function (buffer) {
+					WebAssembly.instantiate(buffer, imports).then(done);
+				});`;
+
+  for (const targetDir of cozyExportTargetDirs) {
+    const loaderPath = path.join(targetDir, "index.js");
+    try {
+      var source = await readFile(loaderPath, "utf8");
+    } catch {
+      continue;
+    }
+    if (source.includes(gzipSafeInstantiateBlock)) {
+      continue;
+    }
+    if (!source.includes(stockInstantiateBlock)) {
+      throw new Error(`Could not patch Godot WASM loader in ${loaderPath}`);
+    }
+    await writeFile(loaderPath, source.replace(stockInstantiateBlock, gzipSafeInstantiateBlock), "utf8");
+  }
+}
+
 function isGzipBuffer(buffer) {
   return buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
 }
@@ -4519,6 +4557,7 @@ async function main() {
   await mkdir(path.join(publicDir, "618chat"), { recursive: true });
   await mkdir(path.join(publicDir, "contact"), { recursive: true });
   await syncCozyBuilderBuild();
+  await patchGodotWasmLoader();
 
   await writeFile(path.join(publicDir, "chatbots", "index.html"), aiPage, "utf8");
 
