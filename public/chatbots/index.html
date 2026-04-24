@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Services for Business | justaskjohnny.com - mowing</title>
+  <title>AI Services for Business | justaskjohnny.com</title>
   <meta
     name="description"
     content="Custom websites, voice AI, text chatbots, and vision-enabled assistants built on OpenAI models and shaped around your business."
@@ -22,7 +22,11 @@
       --green-2: #4b8d5c;
       --green-deep: #164426;
       --gold: #c7a65f;
+      --cyan: #50c9d6;
+      --orange: #f0a85b;
+      --violet: #8b7be8;
       --card: rgba(255, 255, 255, 0.8);
+      --glass: rgba(255, 255, 255, 0.68);
       --shadow: 0 30px 80px rgba(22, 54, 31, 0.12);
     }
 
@@ -37,8 +41,9 @@
       font-family: "Plus Jakarta Sans", Arial, sans-serif;
       color: var(--ink);
       background:
-        radial-gradient(circle at 0% 0%, rgba(122, 176, 106, 0.22), transparent 30%),
-        radial-gradient(circle at 100% 8%, rgba(199, 166, 95, 0.14), transparent 26%),
+        radial-gradient(circle at 0% 0%, rgba(122, 176, 106, 0.26), transparent 30%),
+        radial-gradient(circle at 78% 4%, rgba(80, 201, 214, 0.16), transparent 24%),
+        radial-gradient(circle at 100% 8%, rgba(199, 166, 95, 0.16), transparent 26%),
         linear-gradient(180deg, #f8f7f1 0%, var(--bg-2) 42%, #f6f4ec 100%);
       min-height: 100vh;
       overflow-x: hidden;
@@ -57,13 +62,30 @@
       mask-image: radial-gradient(circle at center, black, transparent 85%);
     }
 
+    body::after {
+      content: "";
+      position: fixed;
+      width: 420px;
+      height: 420px;
+      right: -160px;
+      top: 170px;
+      border-radius: 999px;
+      pointer-events: none;
+      background:
+        radial-gradient(circle, rgba(80, 201, 214, 0.16), transparent 62%),
+        radial-gradient(circle at 35% 35%, rgba(240, 168, 91, 0.14), transparent 52%);
+      filter: blur(10px);
+      opacity: 0.8;
+      z-index: -1;
+    }
+
     a {
       color: inherit;
       text-decoration: none;
     }
 
     .page {
-      width: min(1200px, calc(100vw - 32px));
+      width: min(1220px, calc(100vw - 32px));
       margin: 0 auto;
       padding: 28px 0 40px;
       position: relative;
@@ -95,7 +117,7 @@
 
     .hero {
       display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+      grid-template-columns: minmax(0, 1.08fr) minmax(390px, 0.92fr);
       gap: 20px;
       align-items: stretch;
       margin-top: 20px;
@@ -106,11 +128,26 @@
       border: 1px solid var(--line);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
+      position: relative;
     }
 
     .hero-copy {
       border-radius: 32px;
       padding: 34px;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .hero-copy::after {
+      content: "";
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      right: -120px;
+      bottom: -150px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(80, 201, 214, 0.18), transparent 68%);
+      z-index: -1;
     }
 
     .hero-copy h1 {
@@ -120,6 +157,10 @@
       line-height: 0.92;
       letter-spacing: -0.05em;
       max-width: 11ch;
+      background: linear-gradient(135deg, #092012 0%, #143b22 55%, #2f7a48 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     .hero-copy p {
@@ -149,6 +190,7 @@
       font-weight: 800;
       font-size: 15px;
       cursor: pointer;
+      gap: 8px;
       transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease, background 180ms ease;
       will-change: transform;
     }
@@ -161,13 +203,49 @@
     .button-primary {
       background: linear-gradient(135deg, var(--green) 0%, var(--green-2) 100%);
       color: #fffdf7;
-      box-shadow: 0 14px 28px rgba(47, 122, 68, 0.24);
+      box-shadow: 0 16px 34px rgba(47, 122, 68, 0.28);
     }
 
     .button-secondary {
       background: rgba(255,255,255,0.86);
       color: var(--ink);
       border-color: rgba(16, 32, 21, 0.08);
+    }
+
+    .hero-kpis {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .hero-kpi {
+      min-height: 86px;
+      padding: 14px;
+      border-radius: 22px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.62)),
+        radial-gradient(circle at 80% 0%, rgba(80, 201, 214, 0.14), transparent 50%);
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      box-shadow: 0 14px 28px rgba(17, 38, 22, 0.07);
+    }
+
+    .hero-kpi strong {
+      display: block;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      color: var(--green-deep);
+    }
+
+    .hero-kpi span {
+      display: block;
+      margin-top: 8px;
+      color: var(--copy);
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 700;
     }
 
     .hero-points {
@@ -204,12 +282,12 @@
     .hero-visual {
       border-radius: 32px;
       overflow: hidden;
-      padding: 22px;
+      padding: 24px;
       position: relative;
       isolation: isolate;
       min-height: 100%;
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto auto 1fr auto;
       gap: 16px;
     }
 
@@ -219,6 +297,7 @@
       inset: 0;
       background:
         radial-gradient(circle at 50% 20%, rgba(255,255,255,0.9), transparent 22%),
+        radial-gradient(circle at 20% 90%, rgba(80,201,214,0.18), transparent 32%),
         radial-gradient(circle at 90% 0%, rgba(199,166,95,0.18), transparent 28%),
         linear-gradient(180deg, rgba(236,244,226,0.85), rgba(250,248,240,0.9));
       z-index: -2;
@@ -232,6 +311,146 @@
         linear-gradient(135deg, rgba(255,255,255,0.25), transparent 40%),
         linear-gradient(180deg, transparent 0%, rgba(10, 24, 13, 0.08) 100%);
       z-index: -1;
+    }
+
+    .ai-cockpit {
+      position: relative;
+      min-height: 286px;
+      border-radius: 30px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 48%, rgba(12, 35, 24, 0.92), rgba(8, 21, 17, 0.98) 57%, #07110f 100%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 28px 60px rgba(12, 31, 18, 0.18);
+    }
+
+    .ai-cockpit::before,
+    .ai-cockpit::after {
+      content: "";
+      position: absolute;
+      inset: 24px;
+      border-radius: 999px;
+      border: 1px solid rgba(80, 201, 214, 0.26);
+      animation: orbitDrift 12s linear infinite;
+    }
+
+    .ai-cockpit::after {
+      inset: 58px;
+      border-color: rgba(240, 168, 91, 0.24);
+      animation-duration: 18s;
+      animation-direction: reverse;
+    }
+
+    .cockpit-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.055) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: radial-gradient(circle at center, black, transparent 72%);
+      opacity: 0.5;
+    }
+
+    .cockpit-core {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 132px;
+      height: 132px;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: #fffdf7;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      background:
+        radial-gradient(circle at 38% 30%, rgba(255,255,255,0.26), transparent 30%),
+        linear-gradient(135deg, rgba(45,111,64,0.92), rgba(80,201,214,0.72));
+      box-shadow: 0 0 38px rgba(80, 201, 214, 0.32), inset 0 0 0 1px rgba(255,255,255,0.22);
+    }
+
+    .cockpit-core span {
+      display: block;
+      margin-top: 2px;
+      color: rgba(255,255,255,0.78);
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .cockpit-node,
+    .cockpit-message {
+      position: absolute;
+      border-radius: 999px;
+      color: #f8fbf5;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.09);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 34px rgba(0,0,0,0.18);
+      font-weight: 800;
+    }
+
+    .cockpit-node {
+      padding: 9px 12px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .node-voice { left: 24px; top: 36px; }
+    .node-vision { right: 24px; top: 50px; }
+    .node-leads { left: 34px; bottom: 54px; }
+    .node-data { right: 28px; bottom: 42px; }
+
+    .cockpit-message {
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      width: min(82%, 300px);
+      padding: 12px 14px;
+      border-radius: 18px;
+      font-size: 13px;
+      line-height: 1.4;
+      background: rgba(255,255,255,0.12);
+    }
+
+    .cockpit-signal {
+      position: absolute;
+      left: 50%;
+      top: 34px;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 5px;
+      align-items: end;
+    }
+
+    .cockpit-signal i {
+      display: block;
+      width: 5px;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--gold);
+      animation: signalBars 1.1s ease-in-out infinite;
+    }
+
+    .cockpit-signal i:nth-child(2) { height: 22px; animation-delay: 120ms; }
+    .cockpit-signal i:nth-child(3) { height: 17px; animation-delay: 240ms; }
+    .cockpit-signal i:nth-child(4) { height: 26px; animation-delay: 360ms; }
+
+    @keyframes orbitDrift {
+      from { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(1.04); }
+      to { transform: rotate(360deg) scale(1); }
+    }
+
+    @keyframes signalBars {
+      0%, 100% { opacity: 0.55; transform: scaleY(0.78); }
+      50% { opacity: 1; transform: scaleY(1.12); }
     }
 
     .stack-title {
@@ -267,9 +486,30 @@
     .stack-card {
       padding: 16px;
       border-radius: 22px;
-      background: rgba(255,255,255,0.82);
+      background: rgba(255,255,255,0.84);
       border: 1px solid rgba(16, 32, 21, 0.08);
       box-shadow: 0 16px 32px rgba(17, 38, 22, 0.08);
+      position: relative;
+      overflow: hidden;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .stack-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(45, 111, 64, 0.2);
+      box-shadow: 0 22px 44px rgba(17, 38, 22, 0.12);
+    }
+
+    .stack-card::after {
+      content: attr(data-tag);
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      color: rgba(45,111,64,0.35);
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.16em;
     }
 
     .stack-card strong {
@@ -350,6 +590,13 @@
       border-radius: 24px;
       padding: 20px;
       box-shadow: var(--shadow);
+      transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .info-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(45,111,64,0.18);
+      box-shadow: 0 28px 60px rgba(22, 54, 31, 0.13);
     }
 
     .info-card h3 {
@@ -460,6 +707,23 @@
       transform: translateY(0);
     }
 
+    #voice-widget-container.johnny-spotlight {
+      animation: johnnySpotlight 820ms ease;
+    }
+
+    @keyframes johnnySpotlight {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      35% { transform: translate3d(-6px, -6px, 0) scale(1.015); }
+      70% { transform: translate3d(3px, 2px, 0) scale(1.005); }
+    }
+
+    @media (min-width: 1500px) {
+      body:has(#voice-widget-container) .page {
+        margin-left: max(24px, calc((100vw - 1220px) / 2 - 150px));
+        margin-right: auto;
+      }
+    }
+
     @media (max-width: 1080px) {
       .hero,
       .cta-band {
@@ -472,6 +736,10 @@
       .process,
       .stack-grid {
         grid-template-columns: 1fr 1fr;
+      }
+
+      .hero-kpis {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -494,6 +762,10 @@
 
       .hero-copy h1 {
         font-size: clamp(38px, 13vw, 58px);
+      }
+
+      .ai-cockpit {
+        min-height: 240px;
       }
 
       .cards-2,
@@ -607,8 +879,23 @@
           Think text-to-text, voice-to-voice, vision, and custom knowledge working together so your team, your members, and your customers get answers fast.
         </p>
 
+        <div class="hero-kpis" aria-label="AI service highlights">
+          <div class="hero-kpi">
+            <strong>Voice</strong>
+            <span>Realtime conversations for websites and customer intake.</span>
+          </div>
+          <div class="hero-kpi">
+            <strong>Vision</strong>
+            <span>Photo, screenshot, menu, document, and job-site understanding.</span>
+          </div>
+          <div class="hero-kpi">
+            <strong>Tools</strong>
+            <span>Forms, lead capture, knowledge, workflows, and handoff logic.</span>
+          </div>
+        </div>
+
         <div class="hero-actions">
-          <button class="button button-primary" type="button" data-johnny-open-widget>Talk to Johnny by clicking Johnny's AI assistant chatbot on the page</button>
+          <button class="button button-primary" type="button" data-johnny-open-widget onclick="window.johnnyOpenInlineAssistant && window.johnnyOpenInlineAssistant(event)">Try the live AI assistant</button>
           <a class="button button-secondary" href="https://www.justaskjohnny.com/contact">Request a build plan</a>
         </div>
 
@@ -626,20 +913,31 @@
           <span>OpenAI API + your business</span>
         </div>
 
+        <div class="ai-cockpit" aria-hidden="true">
+          <div class="cockpit-grid"></div>
+          <div class="cockpit-signal"><i></i><i></i><i></i><i></i></div>
+          <div class="cockpit-node node-voice">Voice</div>
+          <div class="cockpit-node node-vision">Vision</div>
+          <div class="cockpit-node node-leads">Leads</div>
+          <div class="cockpit-node node-data">Knowledge</div>
+          <div class="cockpit-core">Johnny<span>AI system</span></div>
+          <div class="cockpit-message">Visitor: "Can this assistant answer questions, qualify leads, and understand uploads?"</div>
+        </div>
+
         <div class="stack-grid">
-          <div class="stack-card">
+          <div class="stack-card" data-tag="01">
             <strong>Voice AI</strong>
             <p>Voice-to-voice assistants for phones, websites, and customer chats that feel immediate and human.</p>
           </div>
-          <div class="stack-card">
+          <div class="stack-card" data-tag="02">
             <strong>Text AI</strong>
             <p>Text-to-text support for quotes, FAQ, lead capture, intake, and internal team help.</p>
           </div>
-          <div class="stack-card">
+          <div class="stack-card" data-tag="03">
             <strong>Vision AI</strong>
             <p>Let customers upload photos of a yard, a product, a document, or a workspace and get useful feedback instantly.</p>
           </div>
-          <div class="stack-card">
+          <div class="stack-card" data-tag="04">
             <strong>Business brain</strong>
             <p>Train the assistant on your services, pricing, rules, and tone so it sounds like your company.</p>
           </div>
@@ -794,7 +1092,7 @@
       </div>
 
       <div class="cta-actions">
-        <button class="button button-light" type="button" data-johnny-open-widget>Talk to Johnny by clicking Johnny's AI assistant chatbot on the page</button>
+        <button class="button button-light" type="button" data-johnny-open-widget onclick="window.johnnyOpenInlineAssistant && window.johnnyOpenInlineAssistant(event)">Open the live assistant</button>
         <a class="button button-ghost" href="https://www.justaskjohnny.com/contact">Get a quote</a>
       </div>
     </section>
@@ -821,6 +1119,51 @@
           item.classList.add('is-visible');
         });
       }
+    })();
+  </script>
+
+  <script>
+    (function () {
+      function openJohnnyAssistant(event, attempt) {
+        const widget = document.getElementById("voice-widget-container");
+        if (!widget) {
+          if ((attempt || 0) < 10) {
+            window.setTimeout(function () {
+              openJohnnyAssistant(event, (attempt || 0) + 1);
+            }, 100);
+          }
+          return;
+        }
+
+        if (event) event.preventDefault();
+        widget.classList.remove("minimized");
+        widget.classList.remove("johnny-spotlight");
+        void widget.offsetWidth;
+        widget.classList.add("johnny-spotlight");
+        window.setTimeout(function () {
+          widget.classList.remove("johnny-spotlight");
+        }, 900);
+
+        const input = document.getElementById("voice-text-input");
+        if (input) {
+          window.setTimeout(function () {
+            input.focus();
+          }, 120);
+        }
+      }
+
+      document.addEventListener("click", function (event) {
+        const trigger = event.target.closest("[data-johnny-open-widget]");
+        if (!trigger) return;
+        openJohnnyAssistant(event, 0);
+      }, true);
+
+      window.johnnyOpenInlineAssistant = openJohnnyAssistant;
+      document.querySelectorAll("[data-johnny-open-widget]").forEach(function (trigger) {
+        trigger.addEventListener("click", function (event) {
+          openJohnnyAssistant(event, 0);
+        });
+      });
     })();
   </script>
 
