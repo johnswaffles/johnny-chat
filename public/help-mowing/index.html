@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>618help.com - Mowing</title>
-  <meta name="description" content="Johnny's mowing service for the Mount Vernon area.">
+  <title>Mount Vernon Mowing | 618help.com</title>
+  <meta name="description" content="Local Mount Vernon mowing, weed eating, recurring lawn care, and larger-property service checks from Johnny and the 618help crew.">
   
   <style>
     .johnny-site-nav {
@@ -85,197 +85,445 @@
   <header class="johnny-site-nav">
     <a class="johnny-site-brand" href="https://618help.com">618help.com</a>
     <nav class="johnny-site-links" aria-label="Site">
-      <a class="johnny-site-link " href="https://618help.com">Home</a>
+      <a class="johnny-site-link active" href="https://618help.com">Home</a>
       <a class="johnny-site-link " href="/chatbot/">GPT 5.5</a>
       <a class="johnny-site-link " href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
       <a class="johnny-site-link " href="/contact/">Contact</a>
     </nav>
   </header>
 <!--
-  JOHNNY LANDING SECTION
-  Paste this into a Squarespace Code Block inside an existing page section.
-  Keep your normal Squarespace page layout, and place the widget launcher
-  once in Footer Injection or one page-wide Code Block.
+  618HELP MOWING LANDING SECTION
+  Source for /help-mowing/. Keep widget injection in the page shell/build step.
 -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
+  body:has(#johnny-landing) {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 6% 0%, rgba(111, 180, 92, 0.24), transparent 28%),
+      radial-gradient(circle at 95% 7%, rgba(235, 180, 89, 0.18), transparent 24%),
+      linear-gradient(180deg, #f9f7ed 0%, #eaf3df 46%, #f6f1df 100%);
+    color: #102015;
+  }
+
+  body:has(#johnny-landing)::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(16, 32, 21, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16, 32, 21, 0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(circle at 50% 18%, black, transparent 78%);
+    z-index: -2;
+  }
+
+  body:has(#johnny-landing) .johnny-site-nav {
+    width: min(1220px, calc(100vw - 32px));
+    margin: 14px auto 18px;
+  }
+
   #johnny-landing {
     --ink: #102015;
-    --copy: #55645a;
-    --line: rgba(16, 32, 21, 0.09);
+    --copy: #59675d;
+    --muted: #788579;
+    --line: rgba(16, 32, 21, 0.1);
     --green: #2d6f40;
-    --green-deep: #184526;
-    --gold: #b88d42;
-    --cream: #f8f5eb;
-    --card: rgba(255, 255, 255, 0.76);
-    --shadow: 0 34px 90px rgba(24, 61, 34, 0.12);
+    --green-2: #65a957;
+    --green-deep: #143c22;
+    --grass: #8fc878;
+    --grass-dark: #447e3c;
+    --gold: #d49a45;
+    --sun: #f2d06b;
+    --cream: #fffaf0;
+    --card: rgba(255, 255, 255, 0.78);
+    --glass: rgba(255, 255, 255, 0.68);
+    --shadow: 0 34px 90px rgba(24, 61, 34, 0.13);
+    width: min(1220px, calc(100vw - 32px));
+    margin: 0 auto 42px;
     font-family: "Plus Jakarta Sans", Arial, sans-serif;
     color: var(--ink);
-    border-radius: 32px;
+    border-radius: 34px;
     overflow: hidden;
+    position: relative;
+    isolation: isolate;
     background:
-      radial-gradient(circle at 0% 0%, rgba(110, 170, 96, 0.18), transparent 28%),
-      radial-gradient(circle at 100% 10%, rgba(184, 141, 66, 0.14), transparent 26%),
-      linear-gradient(180deg, #f6f7f0 0%, #eef4e7 48%, #f7f4e8 100%);
+      radial-gradient(circle at 0% 0%, rgba(125, 197, 96, 0.24), transparent 30%),
+      radial-gradient(circle at 92% 8%, rgba(212, 154, 69, 0.18), transparent 28%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(241, 248, 231, 0.82));
+    border: 1px solid rgba(16, 32, 21, 0.08);
     box-shadow: var(--shadow);
     padding: 24px;
   }
 
-  #johnny-landing * { box-sizing: border-box; }
+  #johnny-landing::before,
+  #johnny-landing::after {
+    content: "";
+    position: absolute;
+    border-radius: 999px;
+    pointer-events: none;
+    z-index: -1;
+  }
 
+  #johnny-landing::before {
+    width: 480px;
+    height: 480px;
+    right: -180px;
+    top: -170px;
+    background: radial-gradient(circle, rgba(242, 208, 107, 0.38), transparent 68%);
+    filter: blur(2px);
+  }
+
+  #johnny-landing::after {
+    width: 460px;
+    height: 460px;
+    left: -220px;
+    bottom: 12%;
+    background: radial-gradient(circle, rgba(101, 169, 87, 0.22), transparent 70%);
+  }
+
+  #johnny-landing * { box-sizing: border-box; }
   #johnny-landing a { color: inherit; text-decoration: none; }
+  #johnny-landing button { font: inherit; }
 
   .johnny-hero {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+    grid-template-columns: minmax(0, 1.05fr) minmax(390px, 0.95fr);
     gap: 20px;
     align-items: stretch;
   }
 
   .johnny-hero-copy,
   .johnny-hero-visual,
-  .johnny-panel {
-    background: rgba(255, 255, 255, 0.76);
+  .johnny-panel,
+  .johnny-card,
+  .johnny-route-card,
+  .johnny-step {
+    background: var(--card);
     border: 1px solid var(--line);
     box-shadow: var(--shadow);
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(16px);
   }
 
   .johnny-hero-copy {
-    border-radius: 28px;
-    padding: 28px;
+    border-radius: 30px;
+    padding: 34px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .johnny-hero-copy::after {
+    content: "";
+    position: absolute;
+    right: -90px;
+    bottom: -130px;
+    width: 300px;
+    height: 300px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(101, 169, 87, 0.18), transparent 72%);
+    pointer-events: none;
   }
 
   .johnny-kicker,
   .johnny-tag {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-family: "Outfit", Arial, sans-serif;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 900;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--green);
+    color: var(--green-deep);
+  }
+
+  .johnny-kicker::before,
+  .johnny-tag::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--green-2), var(--gold));
+    box-shadow: 0 0 0 6px rgba(101, 169, 87, 0.13);
   }
 
   .johnny-hero h1,
   .johnny-panel h2 {
-    margin: 10px 0 0;
+    margin: 12px 0 0;
     font-family: "Outfit", Arial, sans-serif;
-    line-height: 0.95;
-    letter-spacing: -0.04em;
+    line-height: 0.92;
+    letter-spacing: -0.055em;
   }
 
   .johnny-hero h1 {
-    font-size: clamp(44px, 6vw, 84px);
-    max-width: 11ch;
+    font-size: clamp(48px, 6vw, 88px);
+    max-width: 10.5ch;
+    background: linear-gradient(135deg, #0c2113 0%, #174626 54%, #3d8b44 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
-  .johnny-hero p,
-  .johnny-panel p,
-  .johnny-card p {
+  .johnny-lede {
+    max-width: 680px;
+    margin: 22px 0 0;
     color: var(--copy);
-    line-height: 1.75;
-    font-size: 16px;
+    line-height: 1.78;
+    font-size: 17px;
   }
 
   .johnny-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    margin-top: 24px;
+    margin-top: 26px;
   }
 
   .johnny-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 52px;
-    padding: 0 20px;
+    gap: 8px;
+    min-height: 54px;
+    padding: 0 22px;
     border-radius: 999px;
     border: 1px solid transparent;
     font-size: 15px;
-    font-weight: 800;
+    font-weight: 900;
     cursor: pointer;
-    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
-    font-family: inherit;
+    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease, background 180ms ease;
   }
 
   .johnny-button:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     filter: brightness(1.02);
   }
 
   .johnny-button-primary {
-    background: linear-gradient(135deg, var(--green) 0%, #4b8d5c 100%);
     color: #fffdf7;
-    box-shadow: 0 14px 28px rgba(47, 122, 68, 0.22);
+    background: linear-gradient(135deg, var(--green) 0%, #4f985d 100%);
+    box-shadow: 0 16px 34px rgba(47, 122, 68, 0.27);
   }
 
   .johnny-button-secondary {
-    background: rgba(255, 255, 255, 0.82);
     color: var(--ink);
-    border-color: rgba(15, 31, 18, 0.08);
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(15, 31, 18, 0.1);
   }
 
   .johnny-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    margin-top: 20px;
+    margin-top: 24px;
   }
 
   .johnny-chip {
     display: inline-flex;
     align-items: center;
-    min-height: 38px;
+    min-height: 40px;
     padding: 0 14px;
     border-radius: 999px;
     border: 1px solid rgba(15, 31, 18, 0.08);
     background: rgba(255, 255, 255, 0.72);
     color: var(--copy);
     font-size: 13px;
+    font-weight: 800;
+  }
+
+  .johnny-mini-proof {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .johnny-proof-item {
+    min-height: 96px;
+    padding: 16px;
+    border-radius: 22px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,255,255,0.56)),
+      radial-gradient(circle at 82% 0%, rgba(101, 169, 87, 0.15), transparent 56%);
+    border: 1px solid rgba(16, 32, 21, 0.08);
+  }
+
+  .johnny-proof-item strong {
+    display: block;
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 24px;
+    letter-spacing: -0.04em;
+  }
+
+  .johnny-proof-item span {
+    display: block;
+    margin-top: 6px;
+    color: var(--copy);
+    font-size: 12px;
+    line-height: 1.4;
     font-weight: 700;
   }
 
   .johnny-hero-visual {
+    border-radius: 30px;
+    overflow: hidden;
+    position: relative;
+    min-height: 620px;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    background:
+      radial-gradient(circle at 50% 24%, rgba(255,255,255,0.55), transparent 28%),
+      linear-gradient(180deg, rgba(241,248,231,0.94), rgba(255,250,237,0.86));
+  }
+
+  .johnny-lawn-scene {
+    position: relative;
+    min-height: 430px;
+    margin: 18px;
     border-radius: 28px;
     overflow: hidden;
-    display: grid;
-    grid-template-rows: 1.05fr auto;
-  }
-
-  .johnny-sheen {
-    min-height: 220px;
-    position: relative;
-    overflow: hidden;
     background:
-      radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.12), transparent 28%),
-      linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)),
-      repeating-linear-gradient(-18deg, #7bb66e 0 30px, #5f9f55 30px 60px, #457f42 60px 90px);
+      linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0)),
+      repeating-linear-gradient(-18deg, #89c876 0 34px, #70b763 34px 68px, #579b50 68px 102px);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.28), 0 24px 54px rgba(20, 60, 34, 0.2);
   }
 
-  .johnny-sheen::after {
+  .johnny-lawn-scene::before {
     content: "";
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(180deg, rgba(11, 30, 12, 0.08) 0%, rgba(11, 30, 12, 0.18) 100%);
-    pointer-events: none;
+      radial-gradient(circle at 24% 20%, rgba(255,255,255,0.28), transparent 10%),
+      radial-gradient(circle at 78% 76%, rgba(16,32,21,0.18), transparent 24%),
+      linear-gradient(180deg, rgba(12, 38, 17, 0.02), rgba(12, 38, 17, 0.18));
+  }
+
+  .johnny-mow-lines {
+    position: absolute;
+    inset: 24px;
+    border-radius: 24px;
+    border: 2px solid rgba(255,255,255,0.5);
+    background:
+      linear-gradient(90deg, transparent 0 24%, rgba(255,255,255,0.22) 24% 25%, transparent 25% 49%, rgba(255,255,255,0.22) 49% 50%, transparent 50% 74%, rgba(255,255,255,0.22) 74% 75%, transparent 75%);
+    opacity: 0.78;
+  }
+
+  .johnny-route-path {
+    position: absolute;
+    left: 12%;
+    right: 13%;
+    top: 30%;
+    height: 42%;
+    border: 7px solid rgba(255, 250, 240, 0.74);
+    border-left-color: transparent;
+    border-radius: 28px;
+    transform: rotate(-8deg);
+    filter: drop-shadow(0 10px 18px rgba(18, 55, 27, 0.16));
+  }
+
+  .johnny-mower {
+    position: absolute;
+    left: 36%;
+    top: 48%;
+    width: 136px;
+    height: 76px;
+    transform: rotate(-14deg);
+    animation: mowerFloat 4.4s ease-in-out infinite;
+    filter: drop-shadow(0 18px 20px rgba(12, 38, 18, 0.26));
+  }
+
+  .johnny-mower::before {
+    content: "";
+    position: absolute;
+    inset: 16px 14px 10px;
+    border-radius: 18px 22px 18px 18px;
+    background: linear-gradient(135deg, #1f6e39, #5cb85c);
+    border: 3px solid rgba(14, 62, 31, 0.34);
+  }
+
+  .johnny-mower::after {
+    content: "";
+    position: absolute;
+    width: 58px;
+    height: 28px;
+    left: 43px;
+    top: 5px;
+    border-radius: 12px 12px 5px 5px;
+    background: linear-gradient(180deg, #f3d867, #d99d3b);
+    box-shadow: 54px 48px 0 -12px #163d24, -30px 47px 0 -12px #163d24;
+  }
+
+  .johnny-wheel {
+    position: absolute;
+    bottom: 3px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: radial-gradient(circle at center, #f8f5eb 0 20%, #173b25 21% 100%);
+    border: 3px solid rgba(255,255,255,0.7);
+  }
+
+  .johnny-wheel.one { left: 16px; }
+  .johnny-wheel.two { right: 16px; }
+
+  .johnny-yard-card {
+    position: absolute;
+    width: 178px;
+    min-height: 104px;
+    padding: 14px;
+    border-radius: 22px;
+    color: #fffaf0;
+    background: rgba(15, 40, 22, 0.82);
+    border: 1px solid rgba(255,255,255,0.16);
+    box-shadow: 0 18px 42px rgba(13, 37, 20, 0.24);
+    backdrop-filter: blur(12px);
+  }
+
+  .johnny-yard-card strong {
+    display: block;
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 30px;
+    letter-spacing: -0.04em;
+  }
+
+  .johnny-yard-card span {
+    display: block;
+    color: rgba(255,250,240,0.78);
+    font-size: 12px;
+    line-height: 1.45;
+    font-weight: 700;
+  }
+
+  .johnny-yard-card.route { left: 22px; top: 22px; }
+  .johnny-yard-card.rate { right: 22px; bottom: 22px; }
+
+  .johnny-sun {
+    position: absolute;
+    right: 42px;
+    top: 34px;
+    width: 92px;
+    height: 92px;
+    border-radius: 999px;
+    background: radial-gradient(circle, #ffe98c 0 36%, rgba(242, 208, 107, 0.36) 37% 64%, transparent 65%);
+    filter: blur(0.2px);
+    animation: sunPulse 5s ease-in-out infinite;
   }
 
   .johnny-hero-stats {
-    padding: 18px;
+    padding: 0 18px 18px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
 
   .johnny-stat {
-    background: rgba(255, 255, 255, 0.66);
+    background: rgba(255, 255, 255, 0.72);
     border: 1px solid rgba(15, 31, 18, 0.08);
     border-radius: 22px;
     padding: 16px;
@@ -285,12 +533,38 @@
     display: block;
     margin-bottom: 6px;
     font-family: "Outfit", Arial, sans-serif;
-    font-size: 18px;
+    font-size: 19px;
+    letter-spacing: -0.03em;
   }
 
   .johnny-stat span {
     color: var(--copy);
     line-height: 1.55;
+    font-size: 14px;
+  }
+
+  .johnny-section-title {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 20px;
+    margin: 26px 4px 14px;
+  }
+
+  .johnny-section-title h2 {
+    margin: 0;
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: clamp(30px, 4vw, 52px);
+    letter-spacing: -0.055em;
+    line-height: 0.96;
+  }
+
+  .johnny-section-title p {
+    max-width: 440px;
+    margin: 0;
+    color: var(--copy);
+    line-height: 1.65;
+    font-weight: 650;
   }
 
   .johnny-panels {
@@ -302,170 +576,593 @@
 
   .johnny-card,
   .johnny-panel {
-    border-radius: 24px;
+    border-radius: 26px;
     padding: 20px;
   }
 
   .johnny-card {
-    background: var(--card);
-    border: 1px solid var(--line);
-    box-shadow: var(--shadow);
+    min-height: 250px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .johnny-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(45, 111, 64, 0.2);
+    box-shadow: 0 32px 70px rgba(24, 61, 34, 0.15);
+  }
+
+  .johnny-card::after {
+    content: attr(data-number);
+    position: absolute;
+    right: 14px;
+    top: 10px;
+    color: rgba(45, 111, 64, 0.2);
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 54px;
+    font-weight: 900;
+    letter-spacing: -0.08em;
   }
 
   .johnny-card h3 {
-    margin: 0 0 10px;
+    position: relative;
+    z-index: 1;
+    margin: 12px 0 10px;
     font-family: "Outfit", Arial, sans-serif;
-    font-size: 24px;
+    font-size: 26px;
     line-height: 1.02;
+    letter-spacing: -0.035em;
   }
 
-  .johnny-panel {
+  .johnny-card p,
+  .johnny-panel p,
+  .johnny-step p {
+    position: relative;
+    z-index: 1;
+    color: var(--copy);
+    line-height: 1.72;
+    font-size: 15px;
+  }
+
+  .johnny-split {
+    display: grid;
+    grid-template-columns: 0.92fr 1.08fr;
+    gap: 14px;
     margin-top: 14px;
   }
 
-  .johnny-cta {
-    padding: 24px;
-    text-align: center;
-    background:
-      radial-gradient(circle at 50% 0%, rgba(110, 170, 96, 0.14), transparent 34%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(247, 244, 232, 0.92));
+  .johnny-panel {
+    position: relative;
+    overflow: hidden;
   }
 
   .johnny-panel h2 {
-    font-size: clamp(32px, 4vw, 52px);
+    font-size: clamp(34px, 4.2vw, 58px);
+    max-width: 12ch;
   }
 
-  .johnny-panel code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    background: rgba(16, 32, 21, 0.06);
-    padding: 0.15em 0.4em;
+  .johnny-compare {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .johnny-compare-item {
+    min-height: 170px;
+    padding: 18px;
+    border-radius: 24px;
+    background: rgba(255,255,255,0.68);
+    border: 1px solid rgba(16,32,21,0.08);
+  }
+
+  .johnny-compare-item strong {
+    display: block;
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 30px;
+    letter-spacing: -0.05em;
+  }
+
+  .johnny-compare-item span {
+    display: block;
+    margin-top: 8px;
+    color: var(--copy);
+    line-height: 1.55;
+    font-weight: 700;
+  }
+
+  .johnny-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .johnny-step {
+    border-radius: 26px;
+    padding: 20px;
+    min-height: 190px;
+  }
+
+  .johnny-step strong {
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 16px;
+    color: #fffaf0;
+    background: linear-gradient(135deg, var(--green), var(--green-2));
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 18px;
+  }
+
+  .johnny-step h3 {
+    margin: 14px 0 8px;
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 24px;
+    letter-spacing: -0.03em;
+  }
+
+  .johnny-route-card {
+    border-radius: 30px;
+    padding: 22px;
+    min-height: 420px;
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.55)),
+      radial-gradient(circle at 90% 8%, rgba(212,154,69,0.18), transparent 34%);
+  }
+
+  .johnny-route-map {
+    position: relative;
+    height: 252px;
+    margin-top: 18px;
+    border-radius: 26px;
+    background:
+      linear-gradient(90deg, transparent 47%, rgba(255,255,255,0.88) 47% 53%, transparent 53%),
+      linear-gradient(0deg, transparent 46%, rgba(255,255,255,0.88) 46% 54%, transparent 54%),
+      repeating-linear-gradient(135deg, #85bf70 0 30px, #73ae63 30px 60px);
+    border: 1px solid rgba(16, 32, 21, 0.08);
+    overflow: hidden;
+  }
+
+  .johnny-pin {
+    position: absolute;
+    width: 18px;
+    height: 18px;
     border-radius: 999px;
-    color: var(--green-deep);
+    background: var(--gold);
+    box-shadow: 0 0 0 7px rgba(212,154,69,0.18), 0 12px 20px rgba(16,32,21,0.18);
   }
 
-  .johnny-panel .johnny-actions {
-    justify-content: center;
+  .johnny-pin.one { left: 18%; top: 28%; }
+  .johnny-pin.two { right: 24%; top: 22%; background: var(--green); }
+  .johnny-pin.three { left: 46%; bottom: 23%; background: #fffaf0; }
+
+  .johnny-route-line {
+    position: absolute;
+    left: 20%;
+    top: 34%;
+    width: 58%;
+    height: 36%;
+    border: 5px dashed rgba(20, 60, 34, 0.34);
+    border-left-color: transparent;
+    border-radius: 22px;
+    transform: rotate(-6deg);
   }
 
-  .johnny-cta p {
-    max-width: 760px;
+  .johnny-list {
+    display: grid;
+    gap: 10px;
+    margin: 18px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .johnny-list li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    color: var(--copy);
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  .johnny-list li::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    margin-top: 6px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--green-2), var(--gold));
+  }
+
+  .johnny-cta {
+    margin-top: 14px;
+    padding: 32px;
+    text-align: center;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(242, 208, 107, 0.22), transparent 34%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(247, 244, 232, 0.92));
+  }
+
+  .johnny-cta h2 {
+    max-width: 780px;
     margin-left: auto;
     margin-right: auto;
   }
 
-  @media (max-width: 1024px) {
-    .johnny-hero { grid-template-columns: 1fr; }
-    .johnny-panels { grid-template-columns: 1fr; }
+  .johnny-cta p {
+    max-width: 760px;
+    margin: 18px auto 0;
+  }
+
+  .johnny-cta .johnny-actions {
+    justify-content: center;
+  }
+
+  #voice-widget-container.johnny-spotlight {
+    animation: johnnySpotlight 820ms ease;
+  }
+
+  @keyframes mowerFloat {
+    0%, 100% { transform: translate3d(-6px, 2px, 0) rotate(-14deg); }
+    50% { transform: translate3d(8px, -5px, 0) rotate(-10deg); }
+  }
+
+  @keyframes sunPulse {
+    0%, 100% { transform: scale(1); opacity: 0.86; }
+    50% { transform: scale(1.08); opacity: 1; }
+  }
+
+  @keyframes johnnySpotlight {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    35% { transform: translate3d(-6px, -6px, 0) scale(1.015); }
+    70% { transform: translate3d(3px, 2px, 0) scale(1.005); }
+  }
+
+  @media (min-width: 1500px) {
+    body:has(#voice-widget-container) #johnny-landing {
+      margin-left: max(24px, calc((100vw - 1220px) / 2 - 150px));
+      margin-right: auto;
+    }
+  }
+
+  @media (max-width: 1080px) {
+    .johnny-hero,
+    .johnny-split {
+      grid-template-columns: 1fr;
+    }
+
+    .johnny-panels,
+    .johnny-steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .johnny-hero-visual {
+      min-height: 520px;
+    }
   }
 
   @media (max-width: 760px) {
-    #johnny-landing { padding: 16px; border-radius: 24px; }
+    body:has(#johnny-landing) .johnny-site-nav {
+      width: min(100% - 16px, 520px);
+      margin-top: 8px;
+      border-radius: 24px;
+    }
+
+    #johnny-landing {
+      width: min(100% - 12px, 520px);
+      padding: 12px;
+      border-radius: 28px;
+      margin-bottom: 120px;
+    }
+
     .johnny-hero-copy,
     .johnny-hero-visual,
-    .johnny-panel { border-radius: 22px; }
-    .johnny-hero-copy { padding: 22px; }
-    .johnny-hero h1 { font-size: clamp(38px, 13vw, 58px); max-width: none; }
+    .johnny-panel,
+    .johnny-card,
+    .johnny-route-card,
+    .johnny-step {
+      border-radius: 24px;
+    }
+
+    .johnny-hero-copy,
+    .johnny-panel,
+    .johnny-card,
+    .johnny-route-card,
+    .johnny-step {
+      padding: 22px;
+    }
+
+    .johnny-hero h1 {
+      font-size: clamp(40px, 13vw, 62px);
+      max-width: none;
+    }
+
+    .johnny-lede {
+      font-size: 16px;
+    }
+
+    .johnny-mini-proof,
     .johnny-hero-stats,
-    .johnny-panels { grid-template-columns: 1fr; }
+    .johnny-panels,
+    .johnny-steps,
+    .johnny-compare {
+      grid-template-columns: 1fr;
+    }
+
+    .johnny-section-title {
+      display: block;
+      margin-top: 22px;
+    }
+
+    .johnny-section-title p {
+      margin-top: 10px;
+    }
+
+    .johnny-hero-visual {
+      min-height: 500px;
+    }
+
+    .johnny-lawn-scene {
+      min-height: 340px;
+      margin: 12px;
+    }
+
+    .johnny-yard-card {
+      width: 150px;
+    }
+
+    .johnny-yard-card strong {
+      font-size: 24px;
+    }
+
+    .johnny-mower {
+      left: 27%;
+      top: 47%;
+      transform: scale(0.86) rotate(-14deg);
+    }
+
+    .johnny-actions .johnny-button {
+      width: 100%;
+    }
   }
 </style>
 
 <section id="johnny-landing">
   <div class="johnny-hero">
     <div class="johnny-hero-copy">
-      <span class="johnny-kicker">618help.com - mowing</span>
-      <h1>Your time and money matter. Don't spend them on an expensive mower.</h1>
-      <p>
-        We’re local, dependable, and we do the work ourselves. No subcontractors, no excuses. We help homeowners in the
-        Mount Vernon, Illinois area keep their property neat with mowing, weed eating, and dependable scheduling.
+      <span class="johnny-kicker">Mount Vernon lawn care</span>
+      <h1>Clean yards without losing your weekend.</h1>
+      <p class="johnny-lede">
+        Local mowing, weed eating, and dependable scheduling for the Mount Vernon, Illinois area. We do the work ourselves with commercial equipment, clear communication, and no subcontractor shuffle.
       </p>
 
       <div class="johnny-actions">
-        <button class="johnny-button johnny-button-primary" type="button" data-johnny-open-widget>
-          Tap the floating widget to talk to Johnny
+        <button class="johnny-button johnny-button-primary" type="button" data-johnny-open-widget onclick="window.johnnyOpenMowingAssistant && window.johnnyOpenMowingAssistant(event)">
+          Ask Johnny for a mowing quote
         </button>
         <a class="johnny-button johnny-button-secondary" href="https://www.618help.com/contact">
-          Get a Quote
+          Open contact form
         </a>
       </div>
 
-      <div class="johnny-chips">
-        <span class="johnny-chip">Mowing: $75/hour</span>
+      <div class="johnny-chips" aria-label="Mowing service highlights">
+        <span class="johnny-chip">$75/hour mowing</span>
         <span class="johnny-chip">Weed eating included</span>
         <span class="johnny-chip">Mount Vernon area</span>
+        <span class="johnny-chip">5+ acre jobs considered</span>
+      </div>
+
+      <div class="johnny-mini-proof">
+        <div class="johnny-proof-item">
+          <strong>Local</strong>
+          <span>Based around Mount Vernon, not a distant lead seller.</span>
+        </div>
+        <div class="johnny-proof-item">
+          <strong>Direct</strong>
+          <span>Talk to Johnny and get a real answer on fit and scheduling.</span>
+        </div>
+        <div class="johnny-proof-item">
+          <strong>Reliable</strong>
+          <span>Commercial John Deere equipment and serious route planning.</span>
+        </div>
       </div>
     </div>
 
-    <div class="johnny-hero-visual">
-      <div class="johnny-sheen"></div>
+    <div class="johnny-hero-visual" aria-label="Mowing route preview">
+      <div class="johnny-lawn-scene">
+        <div class="johnny-sun"></div>
+        <div class="johnny-mow-lines"></div>
+        <div class="johnny-route-path"></div>
+        <div class="johnny-yard-card route">
+          <strong>Route</strong>
+          <span>Weekly and recurring mowing around Mount Vernon.</span>
+        </div>
+        <div class="johnny-yard-card rate">
+          <strong>$75/hr</strong>
+          <span>Clear hourly mowing rate. Ask about current package offers.</span>
+        </div>
+        <div class="johnny-mower" aria-hidden="true">
+          <span class="johnny-wheel one"></span>
+          <span class="johnny-wheel two"></span>
+        </div>
+      </div>
       <div class="johnny-hero-stats">
         <div class="johnny-stat">
           <strong>Fast response</strong>
-          <span>Use the contact button and we’ll get back to you.</span>
+          <span>Use the assistant or contact form and we will get back to you.</span>
         </div>
         <div class="johnny-stat">
-          <strong>Local service</strong>
-          <span>We serve the Mount Vernon area and we’re from the Mount Vernon area.</span>
+          <strong>Simple quote path</strong>
+          <span>Tell us the property size, location, and what needs cut.</span>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="johnny-panels">
-    <div class="johnny-card">
-      <span class="johnny-tag">Services</span>
-      <h3>Mount Vernon mowing, done by our own crew.</h3>
-      <p>We are not a St. Louis company sending out subcontractors. We’re local to Mount Vernon, we do the work ourselves, and we show up ready to keep your property looking clean and cared for.</p>
-    </div>
-    <div class="johnny-card">
-      <span class="johnny-tag">Value</span>
-      <h3>Keep the mower money in the bank.</h3>
-      <p>Instead of spending up to $10,000-$15,000 on a mower and losing more time to upkeep, let Johnny handle the cutting with top-of-the-line John Deere commercial mowers. You keep the cash, skip the hassle, and get your weekends back.</p>
-    </div>
-    <div class="johnny-card">
-      <span class="johnny-tag">Area</span>
-      <h3>Service-area check.</h3>
-      <p>If you’re in the Mount Vernon area, ask Johnny right away. If you’re not sure, use the contact button and we’ll confirm.</p>
-    </div>
+  <div class="johnny-section-title">
+    <h2>What makes it feel easier.</h2>
+    <p>Less mystery, less chasing, and less weekend lost to fuel, blades, belts, and sweating through another mow.</p>
   </div>
 
   <div class="johnny-panels">
-    <div class="johnny-card">
-      <span class="johnny-tag">Weekly Deal</span>
-      <h3>Buy three mows and get the fourth half off.</h3>
-      <p>Ask about the current offer when you contact us. It’s a simple way to save on regular mowing and stay on schedule.</p>
+    <div class="johnny-card" data-number="01">
+      <span class="johnny-tag">Services</span>
+      <h3>Mowing by our own local crew.</h3>
+      <p>We are not a St. Louis company sending random subcontractors. We are local to Mount Vernon, we do the work ourselves, and we care about repeatable quality.</p>
     </div>
-    <div class="johnny-card">
-      <span class="johnny-tag">Big Properties</span>
-      <h3>Large lawns can still qualify.</h3>
-      <p>If your property is 5 acres or more, still reach out. Johnny and the team may travel further for larger jobs, so don’t rule yourself out.</p>
+    <div class="johnny-card" data-number="02">
+      <span class="johnny-tag">Value</span>
+      <h3>Keep mower money in the bank.</h3>
+      <p>A good mower can run $10,000-$15,000 before maintenance, storage, fuel, and lost time. Let Johnny handle the cutting while you keep your weekend.</p>
     </div>
-    <div class="johnny-card">
-      <span class="johnny-tag">Coming Soon</span>
-      <h3>Brush hog and light tractor work.</h3>
-      <p>We’re working toward more land-clearing help, including brush hog service and light tractor work in the future.</p>
+    <div class="johnny-card" data-number="03">
+      <span class="johnny-tag">Schedule</span>
+      <h3>Built for repeat service.</h3>
+      <p>Ask about recurring mowing and the current offer: buy three mows and get the fourth half off. Regular upkeep is where clean yards stay easy.</p>
     </div>
-    <div class="johnny-card">
+    <div class="johnny-card" data-number="04">
       <span class="johnny-tag">Equipment</span>
-      <h3>We buy top-grade John Deere commercial mowers.</h3>
-      <p>We get our mowers from the local John Deere tractor implement, not big-box stores with cheap parts that wear out fast. We buy the best commercial equipment because quality matters, schedules matter, and we mean business when we say we won’t miss your mowing day.</p>
+      <h3>Commercial John Deere mowers.</h3>
+      <p>We buy from the local John Deere tractor implement, not cheap big-box equipment. Better tools help us protect the schedule and the finished look.</p>
+    </div>
+  </div>
+
+  <div class="johnny-split">
+    <div class="johnny-panel">
+      <span class="johnny-tag">Cost reality</span>
+      <h2>Buying the mower is only the first bill.</h2>
+      <p>When you hire a dependable local mowing crew, you are not just buying a cut. You are buying back storage space, maintenance time, repair headaches, and the pressure to mow right when your yard needs it.</p>
+      <div class="johnny-compare">
+        <div class="johnny-compare-item">
+          <strong>$10k-$15k</strong>
+          <span>Possible commercial mower cost before fuel, upkeep, blades, belts, storage, and repairs.</span>
+        </div>
+        <div class="johnny-compare-item">
+          <strong>$75/hr</strong>
+          <span>Clear mowing rate with weed eating included for local jobs that fit the route.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="johnny-route-card">
+      <span class="johnny-tag">Service area</span>
+      <h2>Mount Vernon first. Bigger properties considered.</h2>
+      <p>If you are near Mount Vernon, ask Johnny right away. If your property is 5 acres or more, still reach out because larger jobs may make sense farther out.</p>
+      <div class="johnny-route-map" aria-hidden="true">
+        <span class="johnny-route-line"></span>
+        <span class="johnny-pin one"></span>
+        <span class="johnny-pin two"></span>
+        <span class="johnny-pin three"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="johnny-section-title">
+    <h2>How to get started.</h2>
+    <p>Give us the basic details and we can quickly tell you if the job fits the route.</p>
+  </div>
+
+  <div class="johnny-steps">
+    <div class="johnny-step">
+      <strong>1</strong>
+      <h3>Tell us where.</h3>
+      <p>Send the property location or service area. Photos help if the yard is unusual, overgrown, or hard to describe.</p>
+    </div>
+    <div class="johnny-step">
+      <strong>2</strong>
+      <h3>Describe the cut.</h3>
+      <p>Tell us mowing area, weed eating needs, gates, slopes, frequency, and whether it is a one-time or recurring job.</p>
+    </div>
+    <div class="johnny-step">
+      <strong>3</strong>
+      <h3>Get a route answer.</h3>
+      <p>Johnny can help check fit, explain the current offer, and point you to the contact form when you are ready.</p>
+    </div>
+  </div>
+
+  <div class="johnny-split">
+    <div class="johnny-panel">
+      <span class="johnny-tag">Included</span>
+      <h2>A cleaner finish, not just shorter grass.</h2>
+      <ul class="johnny-list">
+        <li>Mowing with commercial equipment.</li>
+        <li>Weed eating included with the mowing service.</li>
+        <li>Scheduling for repeat customers when the route fits.</li>
+        <li>Large-property conversation for 5-acre-plus jobs.</li>
+      </ul>
+    </div>
+    <div class="johnny-panel">
+      <span class="johnny-tag">Coming next</span>
+      <h2>More outdoor help is planned.</h2>
+      <p>We are working toward more land-care services, including brush hog work and light tractor help. If that is what you need, ask anyway so we know what local customers are looking for.</p>
+      <div class="johnny-actions">
+        <button class="johnny-button johnny-button-secondary" type="button" data-johnny-open-widget onclick="window.johnnyOpenMowingAssistant && window.johnnyOpenMowingAssistant(event)">
+          Ask about future services
+        </button>
+      </div>
     </div>
   </div>
 
   <div class="johnny-panel johnny-cta">
-    <span class="johnny-tag">Need a Quote?</span>
-    <h2>If you have a mowing question, we’ll help you figure out the answer.</h2>
-    <p>
-      Ask about pricing, service area, weed eating, the 3-weeks-upfront deal, larger properties, or what services may be coming next.
-    </p>
+    <span class="johnny-tag">Need a quote?</span>
+    <h2>If you have a mowing question, Johnny can help you figure out the next move.</h2>
+    <p>Ask about pricing, service area, weed eating, the current three-mow offer, larger properties, or what information to include for a faster quote.</p>
     <div class="johnny-actions">
-      <a class="johnny-button johnny-button-primary" href="https://www.618help.com/contact">
-        Get My Quote
+      <button class="johnny-button johnny-button-primary" type="button" data-johnny-open-widget onclick="window.johnnyOpenMowingAssistant && window.johnnyOpenMowingAssistant(event)">
+        Chat with Johnny now
+      </button>
+      <a class="johnny-button johnny-button-secondary" href="https://www.618help.com/contact">
+        Get my quote
       </a>
     </div>
   </div>
-
 </section>
+
+<script>
+  (function () {
+    function openJohnnyMowingAssistant(event, attempt) {
+      const widget = document.getElementById("voice-widget-container");
+      if (!widget) {
+        if ((attempt || 0) < 10) {
+          window.setTimeout(function () {
+            openJohnnyMowingAssistant(event, (attempt || 0) + 1);
+          }, 100);
+        }
+        return;
+      }
+
+      if (event) event.preventDefault();
+      widget.classList.remove("minimized");
+      widget.classList.remove("johnny-spotlight");
+      void widget.offsetWidth;
+      widget.classList.add("johnny-spotlight");
+      window.setTimeout(function () {
+        widget.classList.remove("johnny-spotlight");
+      }, 900);
+
+      const input = document.getElementById("voice-text-input");
+      if (input) {
+        window.setTimeout(function () {
+          input.focus();
+        }, 120);
+      }
+    }
+
+    document.addEventListener("click", function (event) {
+      const trigger = event.target.closest("[data-johnny-open-widget]");
+      if (!trigger) return;
+      openJohnnyMowingAssistant(event, 0);
+    }, true);
+
+    window.johnnyOpenMowingAssistant = openJohnnyMowingAssistant;
+  })();
+</script>
 
 
   <script>

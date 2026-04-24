@@ -4593,12 +4593,12 @@ async function main() {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>618help.com - Mowing</title>
-  <meta name="description" content="Johnny's mowing service for the Mount Vernon area.">
+  <title>Mount Vernon Mowing | 618help.com</title>
+  <meta name="description" content="Local Mount Vernon mowing, weed eating, recurring lawn care, and larger-property service checks from Johnny and the 618help crew.">
   ${sharedNavStyles}
 </head>
 <body>
-${siteNav("mowing", "mowing")}
+${siteNav("mowing", "home")}
 ${mowingSource}
 ${widgetSnippet("mowing")}
 </body>
