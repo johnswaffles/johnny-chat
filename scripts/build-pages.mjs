@@ -1278,7 +1278,7 @@ function create618ChatPage() {
     }
     .detail-body-preview {
       min-height: 0;
-      max-height: 310px;
+      max-height: 210px;
       overflow: hidden;
       position: relative;
     }
@@ -1615,7 +1615,7 @@ ${chatSiteNav("home")}
       const draftKey = "618chat_draft_v3";
       const mutedKey = "618chat_muted_authors_v1";
       const clientIdKey = "618chat_client_id_v1";
-      const readerPreviewLimit = 620;
+      const readerPreviewLimit = 360;
       const ageGate = document.getElementById("age-gate");
       const ageGateEnter = document.getElementById("age-gate-enter");
       const ageGateLeave = document.getElementById("age-gate-leave");
