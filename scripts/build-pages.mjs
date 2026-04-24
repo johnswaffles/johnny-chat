@@ -8,6 +8,7 @@ const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest")
 const cozyExportTargetDirs = [
   path.join(publicDir, "cozy-builder"),
   path.join(publicDir, "cozy-builder-game"),
+  path.join(publicDir, "godot-playtest"),
 ];
 
 const widgetSnippet = (profile) => `

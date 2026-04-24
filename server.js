@@ -353,6 +353,24 @@ app.use((req, res, next) => {
   next();
 });
 
+const GODOT_WASM_ROUTES = [
+  "/cozy-builder/index.wasm",
+  "/cozy-builder-game/index.wasm",
+  "/godot-playtest/index.wasm",
+];
+
+app.get(GODOT_WASM_ROUTES, (req, res, next) => {
+  const compressedPath = path.join(process.cwd(), "public", `${req.path.slice(1)}.gz`);
+  res.setHeader("Content-Type", "application/wasm");
+  res.setHeader("Content-Encoding", "gzip");
+  res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+  res.sendFile(compressedPath, (err) => {
+    if (err) {
+      next(err);
+    }
+  });
+});
+
 app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({ ok: true, realtimeModel: OPENAI_REALTIME_MODEL, imageModel: OPENAI_IMAGE_MODEL }));
