@@ -93,7 +93,7 @@ function inferWidgetProfile(reqOrValue) {
 
 function getJohnnyGreeting(profile = "ai") {
   if (profile === "gpt54") {
-    return "Hello. I'm GPT 5.4. What can I help you with today?";
+    return "Hello. I'm GPT 5.5. What can I help you with today?";
   }
   return profile === "mowing"
     ? "Hi, I'm Johnny's mowing assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time."
@@ -105,7 +105,7 @@ function getJohnnyPersona(profile = "ai") {
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
   const cozyBuilderNote = `If the user asks about Cozy Builder, say it is a free, relaxing low-poly town-builder game Johnny made as an experiment. It has cozy music, is playable for free, and still has a lot left unfinished, but the game is there for anyone to enjoy.
-If the user asks about GPT 5.4, say it is an invitation-only private chatbot powered by OpenAI's latest model. It is separate from the public widgets and intended for approved users.`;
+If the user asks about GPT 5.5, say it is an invitation-only private chatbot powered by OpenAI's latest model. It is separate from the public widgets and intended for approved users.`;
 
   if (profile === "community") {
     return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
@@ -131,7 +131,7 @@ Ask at most one follow-up question only if it is truly needed.`;
   if (profile === "gpt54") {
     return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
 
-You are GPT 5.4, a standalone general-purpose assistant.
+You are GPT 5.5, a standalone general-purpose assistant.
 Your job is to answer clearly, helpfully, and directly across writing, planning, analysis, brainstorming, coding, image understanding, and everyday questions.
 Do not mention demos, widgets, prototypes, sandboxing, placeholders, or internal site branding.
 Do not mention Johnny, any website, any business brand, or any external page unless the user explicitly brings it up.
@@ -918,7 +918,7 @@ app.post("/api/contact", contactUpload.array("attachments", 5), async (req, res)
     }
 
     const subjectBits = [
-      profile === "mowing" ? "Mowing" : profile === "gpt54" ? "GPT 5.4" : "AI / Website",
+      profile === "mowing" ? "Mowing" : profile === "gpt54" ? "GPT 5.5" : "AI / Website",
       topic,
       name
     ].filter(Boolean);
@@ -1671,7 +1671,7 @@ server.listen(port, () => {
   console.log(`🚀 Johnny Server running on port ${port}`);
   console.log(`   OpenAI Realtime Model: ${OPENAI_REALTIME_MODEL}`);
   console.log(`   OpenAI Chat Model: ${OPENAI_CHAT_MODEL}`);
-  console.log(`   OpenAI GPT 5.4 Model: ${OPENAI_GPT54_MODEL}`);
-  console.log(`   OpenAI GPT 5.4 Reasoning Effort: ${OPENAI_GPT54_REASONING_EFFORT}`);
+  console.log(`   OpenAI GPT 5.5 Model: ${OPENAI_GPT54_MODEL}`);
+  console.log(`   OpenAI GPT 5.5 Reasoning Effort: ${OPENAI_GPT54_REASONING_EFFORT}`);
   console.log(`   OpenAI Image Model: ${OPENAI_IMAGE_MODEL}`);
 });

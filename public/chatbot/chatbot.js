@@ -64,7 +64,7 @@
     newChatMain: getEl("new-chat-main")
   };
 
-  document.title = "GPT 5.4";
+  document.title = "GPT 5.5";
   document.documentElement.dataset.profile = profile;
   window.JOHNNY_CHAT_PROFILE = profile;
 
@@ -138,7 +138,7 @@
       if (found) return found;
     }
     if (!db.convos.length) {
-      db.convos.unshift(newConversation("GPT 5.4"));
+      db.convos.unshift(newConversation("GPT 5.5"));
     }
     db.activeId = db.convos[0].id;
     save();
@@ -258,7 +258,7 @@
           if (db.activeId === conv.id) {
             db.activeId = db.convos[0]?.id || "";
             if (!db.activeId) {
-              db.convos.unshift(newConversation("GPT 5.4"));
+              db.convos.unshift(newConversation("GPT 5.5"));
               db.activeId = db.convos[0].id;
             }
           }
@@ -798,7 +798,7 @@
   }
 
   function newChat() {
-    const convo = newConversation("GPT 5.4");
+    const convo = newConversation("GPT 5.5");
     db.convos.unshift(convo);
     db.activeId = convo.id;
     save();

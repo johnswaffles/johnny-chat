@@ -128,7 +128,7 @@ function siteNav(profile, active, brandOverride = "") {
     <a class="johnny-site-brand" href="${homeHref}">${brand}</a>
     <nav class="johnny-site-links" aria-label="Site">
       <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>
-      <a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.4</a>
+      <a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>
       <a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
       <a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>
     </nav>
@@ -1652,7 +1652,7 @@ ${chatSiteNav("home")}
       <section id="community-panel" class="community-widget-panel" hidden aria-label="Floating chat helper">
         <div class="community-widget-header" id="community-drag-handle">
           <div class="community-widget-title">
-            <strong>Powered by ChatGPT 5.4</strong>
+            <strong>Powered by ChatGPT 5.5</strong>
             <span>Ask for a quick thought, writing help, or a board question.</span>
           </div>
           <div class="community-widget-controls">
