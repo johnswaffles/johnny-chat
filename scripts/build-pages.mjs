@@ -5,11 +5,20 @@ import { gzipSync } from "node:zlib";
 const root = process.cwd();
 const publicDir = path.join(root, "public");
 const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
+const rpgExportSourceDir = path.resolve(root, "..", "public", "tiny-hero-quest");
 const cozyExportTargetDirs = [
   path.join(publicDir, "cozy-builder"),
   path.join(publicDir, "cozy-builder-game"),
   path.join(publicDir, "godot-playtest"),
 ];
+const rpgExportTargetDirs = [
+  path.join(publicDir, "tiny-hero-quest"),
+];
+const godotExportGroups = [
+  { sourceDir: cozyExportSourceDir, targetDirs: cozyExportTargetDirs },
+  { sourceDir: rpgExportSourceDir, targetDirs: rpgExportTargetDirs },
+];
+const godotExportTargetDirs = godotExportGroups.flatMap((group) => group.targetDirs);
 
 const widgetSnippet = (profile) => `
   <script>
@@ -122,6 +131,7 @@ function siteNav(profile, active, brandOverride = "") {
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
   const gptHref = "/chatbot/";
   const cozyHref = "/cozy-builder-game/";
+  const rpgHref = "/tiny-hero-quest/";
   const contactHref = "/contact/";
   return `
   <header class="johnny-site-nav">
@@ -130,6 +140,7 @@ function siteNav(profile, active, brandOverride = "") {
       <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>
       <a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>
       <a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
+      <a class="johnny-site-link ${active === "rpg" ? "active" : ""}" href="${rpgHref}" target="_blank" rel="noopener noreferrer">Hero RPG</a>
       <a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>
     </nav>
   </header>`;
@@ -3411,17 +3422,19 @@ function createNoEntryPage() {
 </html>`;
 }
 
-async function syncCozyBuilderBuild() {
-  try {
-    await access(cozyExportSourceDir);
-  } catch {
-    // Cloudflare Pages only needs the committed build artifact already in public/cozy-builder.
-    // When the local Godot export source is unavailable, keep the checked-in files intact.
-    return;
-  }
-  for (const targetDir of cozyExportTargetDirs) {
-    await rm(targetDir, { recursive: true, force: true });
-    await cp(cozyExportSourceDir, targetDir, { recursive: true });
+async function syncGodotBuilds() {
+  for (const group of godotExportGroups) {
+    try {
+      await access(group.sourceDir);
+    } catch {
+      // Cloudflare Pages only needs the committed build artifacts already in public.
+      // When a local Godot export source is unavailable, keep the checked-in files intact.
+      continue;
+    }
+    for (const targetDir of group.targetDirs) {
+      await rm(targetDir, { recursive: true, force: true });
+      await cp(group.sourceDir, targetDir, { recursive: true });
+    }
   }
 }
 
@@ -3448,7 +3461,7 @@ async function patchGodotWasmLoader() {
 					WebAssembly.instantiate(buffer, imports).then(done);
 				});`;
 
-  for (const targetDir of cozyExportTargetDirs) {
+  for (const targetDir of godotExportTargetDirs) {
     const loaderPath = path.join(targetDir, "index.js");
     try {
       var source = await readFile(loaderPath, "utf8");
@@ -3474,7 +3487,7 @@ async function patchGodotWasmLoader() {
 
 async function patchGodotHtmlCacheBust() {
   const version = Date.now().toString(36);
-  for (const targetDir of cozyExportTargetDirs) {
+  for (const targetDir of godotExportTargetDirs) {
     const htmlPath = path.join(targetDir, "index.html");
     try {
       var source = await readFile(htmlPath, "utf8");
@@ -3953,6 +3966,7 @@ ${siteNav("ai", "contact")}
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
       const gptHref = "/chatbot/";
       const cozyHref = "/cozy-builder-game/";
+      const rpgHref = "/tiny-hero-quest/";
       const contactHref = "/contact/";
 
       profileField.value = profile;
@@ -3963,16 +3977,12 @@ ${siteNav("ai", "contact")}
         navBrand.href = homeHref;
       }
 
-      if (isMowing && navLinks.length >= 4) {
+      if (navLinks.length >= 5) {
         navLinks[0].href = homeHref;
         navLinks[1].href = gptHref;
         navLinks[2].href = cozyHref;
-        navLinks[3].href = contactHref;
-      } else if (navLinks.length >= 4) {
-        navLinks[0].href = homeHref;
-        navLinks[1].href = gptHref;
-        navLinks[2].href = cozyHref;
-        navLinks[3].href = contactHref;
+        navLinks[3].href = rpgHref;
+        navLinks[4].href = contactHref;
       }
 
       if (isMowing) {
@@ -4076,7 +4086,7 @@ async function main() {
   await mkdir(path.join(publicDir, "help-mowing"), { recursive: true });
   await mkdir(path.join(publicDir, "618chat"), { recursive: true });
   await mkdir(path.join(publicDir, "contact"), { recursive: true });
-  await syncCozyBuilderBuild();
+  await syncGodotBuilds();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
 
