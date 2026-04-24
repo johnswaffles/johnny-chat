@@ -1198,6 +1198,61 @@
       color: var(--ink);
       min-height: 220px;
     }
+    .detail-body-preview {
+      min-height: 0;
+      max-height: 310px;
+      overflow: hidden;
+      position: relative;
+    }
+    .detail-body-preview.is-truncated::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 76px;
+      border-radius: 0 0 18px 18px;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(247,249,243,0), rgba(247,249,243,0.98));
+    }
+    .reader-more {
+      margin-top: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(45, 111, 64, 0.16);
+      background: rgba(255,255,255,0.82);
+      overflow: hidden;
+    }
+    .reader-more summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 13px 16px;
+      font-family: "Outfit", Arial, sans-serif;
+      font-weight: 900;
+      color: var(--green-deep);
+      background: linear-gradient(135deg, rgba(45, 111, 64, 0.08), rgba(226, 186, 107, 0.12));
+    }
+    .reader-more summary::-webkit-details-marker { display: none; }
+    .reader-more summary::after {
+      content: " +";
+      color: var(--green);
+      font-weight: 900;
+    }
+    .reader-more[open] summary::after { content: " -"; }
+    .reader-more .detail-body {
+      margin: 0;
+      border: 0;
+      border-top: 1px solid rgba(16, 32, 21, 0.08);
+      border-radius: 0;
+      min-height: 0;
+      max-height: 520px;
+      overflow: auto;
+    }
+    .reader-preview-note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
     .empty-state {
       padding: 20px;
       border-radius: 18px;
@@ -1514,6 +1569,7 @@
       const draftKey = "618chat_draft_v3";
       const mutedKey = "618chat_muted_authors_v1";
       const clientIdKey = "618chat_client_id_v1";
+      const readerPreviewLimit = 620;
       const ageGate = document.getElementById("age-gate");
       const ageGateEnter = document.getElementById("age-gate-enter");
       const ageGateLeave = document.getElementById("age-gate-leave");
@@ -1636,6 +1692,26 @@
         }
 
         return cleaned.join("\\n");
+      }
+
+      function getReaderPreview(value) {
+        const full = formatDisplayedMessage(value);
+        const paragraphs = full
+          .split(/\\n\\s*\\n|\\n/)
+          .map((paragraph) => paragraph.trim())
+          .filter(Boolean);
+        let preview = paragraphs[0] || full.trim();
+        let truncated = paragraphs.length > 1;
+
+        if (preview.length > readerPreviewLimit) {
+          preview = preview
+            .slice(0, readerPreviewLimit)
+            .trim()
+            .replace(/[\\s,;:.-]+$/g, "") + "...";
+          truncated = true;
+        }
+
+        return { full, preview, truncated };
       }
 
       function readJsonStorage(key, fallback) {
@@ -2380,10 +2456,18 @@
         const postPinned = Boolean(post.pinned);
         const postTopic = String(post.topic || "General").trim();
         const authorMuted = isMutedAuthor(post.author);
+        const preview = getReaderPreview(post.message);
         readerEl.innerHTML =
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
           '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + ' · ' + escapeHTML(postTopic) + '</div>' +
-          '<div class="detail-body">' + escapeHTML(formatDisplayedMessage(post.message)).replace(/\\n/g, "<br>") + '</div>' +
+          '<div class="detail-body detail-body-preview ' + (preview.truncated ? "is-truncated" : "") + '">' + escapeHTML(preview.preview).replace(/\\n/g, "<br>") + '</div>' +
+          (preview.truncated
+            ? '<p class="reader-preview-note">Showing a short preview so the page stays easy to scan.</p>' +
+              '<details class="reader-more">' +
+                '<summary>Read full post</summary>' +
+                '<div class="detail-body">' + escapeHTML(preview.full).replace(/\\n/g, "<br>") + '</div>' +
+              '</details>'
+            : '') +
           '<div class="comment-card-footer" style="padding: 12px 0 0; margin: 0;">' +
             '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (postPinned ? ' · Pinned' : '') + '</span>' +
             '<div class="actions">' +
