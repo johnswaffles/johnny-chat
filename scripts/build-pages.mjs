@@ -3575,9 +3575,6 @@ async function compressPublicWasmAssets() {
     const raw = await readFile(filePath);
     const gzPath = `${filePath}.gz`;
     await writeFile(gzPath, gzipSync(raw, { level: 9 }));
-    if (filePath.includes(`${path.sep}tiny-hero-quest${path.sep}`)) {
-      continue;
-    }
     await rm(filePath);
   }
 }
