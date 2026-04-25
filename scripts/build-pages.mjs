@@ -3516,8 +3516,16 @@ async function patchTinyHeroQuestAssetOrigins() {
   const sideWasmUrl = `${assetBase}.side.wasm?v=${version}`;
   const audioWorkletUrl = `${assetBase}.audio.worklet.js?v=${version}`;
   const audioPositionWorkletUrl = `${assetBase}.audio.position.worklet.js?v=${version}`;
-  let patched = source.replace(
-    "loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);",
+
+  let patched = source
+    .replace(/\n\t\t\t\tconst packSource = this\.config\.mainPack \|\| "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.pck\?v=[^"]+";/g, "")
+    .replace(/loadPromise = preloader\.loadPromise\("https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.wasm\?v=[^"]+", size, true\);/g, "loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);")
+    .replace(/return "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.audio\.worklet\.js\?v=[^"]+";/g, "return `${loadPath}.audio.worklet.js`;")
+    .replace(/return "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.audio\.position\.worklet\.js\?v=[^"]+";/g, "return `${loadPath}.audio.position.worklet.js`;")
+    .replace(/return "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.side\.wasm\?v=[^"]+";/g, "return `${loadPath}.side.wasm`;")
+    .replace(/return "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.wasm\?v=[^"]+";/g, "return `${loadPath}.wasm`;")
+    .replace(
+      "loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);",
     `loadPromise = preloader.loadPromise("${wasmUrl}", size, true);`
   );
   patched = patched.replace(
