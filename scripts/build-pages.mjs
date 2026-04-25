@@ -3501,6 +3501,29 @@ async function patchGodotHtmlCacheBust() {
   }
 }
 
+async function patchTinyHeroQuestWasmCacheBust() {
+  const loaderPath = path.join(publicDir, "tiny-hero-quest", "index.js");
+  try {
+    var source = await readFile(loaderPath, "utf8");
+  } catch {
+    return;
+  }
+
+  const version = Date.now().toString(36);
+  let patched = source.replace(
+    "loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);",
+    `loadPromise = preloader.loadPromise(\`\${loadPath}.wasm?v=${version}\`, size, true);`
+  );
+  patched = patched.replace(
+    "return `${loadPath}.wasm`;",
+    `return \`\${loadPath}.wasm?v=${version}\`;`
+  );
+
+  if (patched !== source) {
+    await writeFile(loaderPath, patched, "utf8");
+  }
+}
+
 function isGzipBuffer(buffer) {
   return buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
 }
@@ -4092,6 +4115,7 @@ async function main() {
   await syncGodotBuilds();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
+  await patchTinyHeroQuestWasmCacheBust();
 
   await writeFile(path.join(publicDir, "chatbots", "index.html"), aiPage, "utf8");
 

@@ -568,7 +568,7 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 				} else if (path.endsWith('.side.wasm')) {
 					return `${loadPath}.side.wasm`;
 				} else if (path.endsWith('.wasm')) {
-					return `${loadPath}.wasm`;
+					return `${loadPath}.wasm?v=modool1z`;
 				}
 				return path;
 			},
@@ -671,7 +671,7 @@ const Engine = (function () {
 	Engine.load = function (basePath, size) {
 		if (loadPromise == null) {
 			loadPath = basePath;
-			loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);
+			loadPromise = preloader.loadPromise(`${loadPath}.wasm?v=modool1z`, size, true);
 			requestAnimationFrame(preloader.animateProgress);
 		}
 		return loadPromise;
