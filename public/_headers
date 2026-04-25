@@ -12,8 +12,3 @@
   Content-Type: application/wasm
   Content-Encoding: gzip
   Cache-Control: public, max-age=0, must-revalidate
-
-/tiny-hero-quest/index.wasm
-  Content-Type: application/wasm
-  Content-Encoding: gzip
-  Cache-Control: public, max-age=0, must-revalidate
