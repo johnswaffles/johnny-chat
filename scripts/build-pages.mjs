@@ -3501,7 +3501,7 @@ async function patchGodotHtmlCacheBust() {
   }
 }
 
-async function patchTinyHeroQuestWasmCacheBust() {
+async function patchTinyHeroQuestAssetOrigins() {
   const loaderPath = path.join(publicDir, "tiny-hero-quest", "index.js");
   try {
     var source = await readFile(loaderPath, "utf8");
@@ -3510,13 +3510,40 @@ async function patchTinyHeroQuestWasmCacheBust() {
   }
 
   const version = Date.now().toString(36);
+  const assetBase = "https://johnny-chat.onrender.com/tiny-hero-quest/index";
+  const wasmUrl = `${assetBase}.wasm?v=${version}`;
+  const packUrl = `${assetBase}.pck?v=${version}`;
+  const sideWasmUrl = `${assetBase}.side.wasm?v=${version}`;
+  const audioWorkletUrl = `${assetBase}.audio.worklet.js?v=${version}`;
+  const audioPositionWorkletUrl = `${assetBase}.audio.position.worklet.js?v=${version}`;
   let patched = source.replace(
     "loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);",
-    `loadPromise = preloader.loadPromise(\`\${loadPath}.wasm?v=${version}\`, size, true);`
+    `loadPromise = preloader.loadPromise("${wasmUrl}", size, true);`
+  );
+  patched = patched.replace(
+    "const pack = this.config.mainPack || `${exe}.pck`;",
+    `const pack = this.config.mainPack || \`\${exe}.pck\`;
+\t\t\t\tconst packSource = this.config.mainPack || "${packUrl}";`
+  );
+  patched = patched.replace(
+    "this.preloadFile(pack, pack),",
+    "this.preloadFile(packSource, pack),"
+  );
+  patched = patched.replace(
+    "return `${loadPath}.audio.worklet.js`;",
+    `return "${audioWorkletUrl}";`
+  );
+  patched = patched.replace(
+    "return `${loadPath}.audio.position.worklet.js`;",
+    `return "${audioPositionWorkletUrl}";`
+  );
+  patched = patched.replace(
+    "return `${loadPath}.side.wasm`;",
+    `return "${sideWasmUrl}";`
   );
   patched = patched.replace(
     "return `${loadPath}.wasm`;",
-    `return \`\${loadPath}.wasm?v=${version}\`;`
+    `return "${wasmUrl}";`
   );
 
   if (patched !== source) {
@@ -4115,7 +4142,7 @@ async function main() {
   await syncGodotBuilds();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
-  await patchTinyHeroQuestWasmCacheBust();
+  await patchTinyHeroQuestAssetOrigins();
 
   await writeFile(path.join(publicDir, "chatbots", "index.html"), aiPage, "utf8");
 
