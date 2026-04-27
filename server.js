@@ -25,6 +25,7 @@ const {
   CONTACT_TO_EMAIL = "",
   CONTACT_TO_EMAIL_AI = "",
   CONTACT_TO_EMAIL_MOWING = "",
+  CONTACT_TO_EMAIL_FOOD = "",
   CONTACT_FROM_EMAIL = "",
   SMTP_HOST = "",
   SMTP_PORT = "587",
@@ -72,7 +73,7 @@ if (!OPENAI_API_KEY) {
 
 function normalizeWidgetProfile(value) {
   const profile = String(value || "").toLowerCase().trim();
-  if (profile === "mowing" || profile === "ai" || profile === "gpt54" || profile === "community") return profile;
+  if (profile === "mowing" || profile === "ai" || profile === "gpt54" || profile === "community" || profile === "food") return profile;
   return "";
 }
 
@@ -87,6 +88,7 @@ function inferWidgetProfile(reqOrValue) {
 
   const originOrHost = String(req.headers?.origin || req.headers?.referer || req.headers?.host || "").toLowerCase();
   if (originOrHost.includes("/chatbot")) return "gpt54";
+  if (originOrHost.includes("618food.com")) return "food";
   if (originOrHost.includes("618help.com")) return "mowing";
   return "ai";
 }
@@ -862,6 +864,9 @@ function getContactRecipient(profile) {
   if (profile === "mowing") {
     return CONTACT_TO_EMAIL_MOWING || CONTACT_TO_EMAIL;
   }
+  if (profile === "food") {
+    return CONTACT_TO_EMAIL_FOOD || CONTACT_TO_EMAIL_AI || CONTACT_TO_EMAIL;
+  }
   if (profile === "ai" || profile === "gpt54") {
     return CONTACT_TO_EMAIL_AI || CONTACT_TO_EMAIL;
   }
@@ -919,7 +924,7 @@ app.post("/api/contact", contactUpload.array("attachments", 5), async (req, res)
     }
 
     const subjectBits = [
-      profile === "mowing" ? "Mowing" : profile === "gpt54" ? "GPT 5.5" : "AI / Website",
+      profile === "mowing" ? "Mowing" : profile === "food" ? "618FOOD" : profile === "gpt54" ? "GPT 5.5" : "AI / Website",
       topic,
       name
     ].filter(Boolean);

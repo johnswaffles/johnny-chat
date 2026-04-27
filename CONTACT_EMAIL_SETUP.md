@@ -20,9 +20,17 @@ When you are ready to wire the AI site, add:
 
 You can keep the same SMTP sender if you want both sites to use the same Gmail account.
 
+## 618food.com
+Food contact submissions use the same backend as the mowing and AI contact forms:
+
+- `CONTACT_TO_EMAIL_FOOD=johnswaffles@gmail.com`
+
+If this is not set, food submissions fall back to `CONTACT_TO_EMAIL_AI`, then `CONTACT_TO_EMAIL`.
+
 ## Notes
 
 - The backend chooses the recipient from the contact form `profile` field.
 - Mowing submissions route to `CONTACT_TO_EMAIL_MOWING`.
+- Food submissions route to `CONTACT_TO_EMAIL_FOOD`.
 - AI submissions route to `CONTACT_TO_EMAIL_AI`.
 - If a profile-specific variable is missing, the backend falls back to `CONTACT_TO_EMAIL`.
