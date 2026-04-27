@@ -133,15 +133,23 @@ function siteNav(profile, active, brandOverride = "") {
   const cozyHref = "/cozy-builder-game/";
   const rpgHref = "/tiny-hero-quest/";
   const contactHref = "/contact/";
+  const links = profile === "mowing"
+    ? [
+        `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
+        `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
+      ]
+    : [
+        `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
+        `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>`,
+        `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>`,
+        `<a class="johnny-site-link ${active === "rpg" ? "active" : ""}" href="${rpgHref}" target="_blank" rel="noopener noreferrer">Hero RPG</a>`,
+        `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
+      ];
   return `
   <header class="johnny-site-nav">
     <a class="johnny-site-brand" href="${homeHref}">${brand}</a>
     <nav class="johnny-site-links" aria-label="Site">
-      <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>
-      <a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>
-      <a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
-      <a class="johnny-site-link ${active === "rpg" ? "active" : ""}" href="${rpgHref}" target="_blank" rel="noopener noreferrer">Hero RPG</a>
-      <a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>
+      ${links.join("\n      ")}
     </nav>
   </header>`;
 }
@@ -4020,6 +4028,7 @@ ${siteNav("ai", "contact")}
       const submit = form.querySelector('button[type="submit"]');
       const topicSelect = document.getElementById("topic");
       const navBrand = document.querySelector(".johnny-site-brand");
+      const navMenu = document.querySelector(".johnny-site-links");
       const navLinks = document.querySelectorAll(".johnny-site-link");
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
       const gptHref = "/chatbot/";
@@ -4035,7 +4044,12 @@ ${siteNav("ai", "contact")}
         navBrand.href = homeHref;
       }
 
-      if (navLinks.length >= 5) {
+      if (isMowing && navMenu) {
+        navMenu.innerHTML = [
+          '<a class="johnny-site-link" href="' + homeHref + '">Home</a>',
+          '<a class="johnny-site-link active" href="' + contactHref + '">Contact</a>'
+        ].join("");
+      } else if (navLinks.length >= 5) {
         navLinks[0].href = homeHref;
         navLinks[1].href = gptHref;
         navLinks[2].href = cozyHref;
