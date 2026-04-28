@@ -588,131 +588,128 @@
     font-weight: 750;
   }
 
-  .johnny-service-zone {
-    position: relative;
-    min-height: 260px;
+  .johnny-savings-chart {
     margin-top: 18px;
+    padding: 16px;
     border-radius: 26px;
     overflow: hidden;
     border: 1px solid rgba(16, 32, 21, 0.08);
     background:
-      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.86) 0 14%, transparent 15%),
-      radial-gradient(circle at 50% 50%, rgba(181, 223, 107, 0.24) 0 29%, transparent 30%),
-      radial-gradient(circle at 50% 50%, rgba(105, 169, 87, 0.22) 0 48%, transparent 49%),
-      radial-gradient(circle at 50% 50%, rgba(216, 158, 71, 0.16) 0 68%, transparent 69%),
-      linear-gradient(135deg, rgba(241, 207, 109, 0.22), rgba(105, 169, 87, 0.2)),
-      repeating-linear-gradient(135deg, rgba(105, 169, 87, 0.2) 0 24px, rgba(255,255,255,0.18) 24px 48px);
+      radial-gradient(circle at 100% 0%, rgba(241, 207, 109, 0.24), transparent 30%),
+      linear-gradient(180deg, rgba(255,255,255,0.82), rgba(248, 244, 229, 0.88));
   }
 
-  .johnny-service-zone::before {
-    content: "";
-    position: absolute;
-    inset: 20px;
-    border-radius: 24px;
-    border: 1px dashed rgba(18, 55, 31, 0.16);
-    pointer-events: none;
-  }
-
-  .johnny-zone-ring {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    border-radius: 999px;
-    transform: translate(-50%, -50%);
-    border: 2px solid rgba(18, 55, 31, 0.16);
-    background: rgba(255,255,255,0.08);
-  }
-
-  .johnny-zone-ring.one {
-    width: 42%;
-    aspect-ratio: 1;
-  }
-
-  .johnny-zone-ring.two {
-    width: 64%;
-    aspect-ratio: 1;
-    border-style: dashed;
-  }
-
-  .johnny-zone-ring.three {
-    width: 86%;
-    aspect-ratio: 1;
-    border-color: rgba(216, 158, 71, 0.22);
-  }
-
-  .johnny-zone-center {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 138px;
-    height: 138px;
-    transform: translate(-50%, -50%);
-    border-radius: 999px;
+  .johnny-savings-total {
     display: grid;
-    place-items: center;
-    text-align: center;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: end;
+    padding: 18px;
+    border-radius: 22px;
     color: #fffdf7;
     background:
-      radial-gradient(circle at 38% 28%, rgba(255,255,255,0.22), transparent 28%),
-      linear-gradient(135deg, var(--green), var(--green-deep));
-    box-shadow: 0 18px 34px rgba(18, 55, 31, 0.28), 0 0 0 10px rgba(255,255,255,0.22);
-    font-family: "Outfit", Arial, sans-serif;
-    font-size: 22px;
-    font-weight: 900;
-    letter-spacing: -0.04em;
-    line-height: 0.95;
+      radial-gradient(circle at 8% 0%, rgba(181, 223, 107, 0.22), transparent 36%),
+      linear-gradient(135deg, var(--green-deep), #1f5c2f);
+    box-shadow: 0 18px 34px rgba(18, 55, 31, 0.22);
   }
 
-  .johnny-zone-center small {
+  .johnny-savings-total span {
     display: block;
-    margin-top: 7px;
     color: rgba(255,253,247,0.78);
-    font-size: 10px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
-
-  .johnny-zone-label {
-    position: absolute;
-    padding: 10px 12px;
-    border-radius: 999px;
-    color: var(--green-deep);
-    background: rgba(255,255,255,0.82);
-    border: 1px solid rgba(16,32,21,0.08);
-    box-shadow: 0 12px 22px rgba(16,32,21,0.08);
     font-size: 12px;
     font-weight: 900;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.13em;
     text-transform: uppercase;
   }
 
-  .johnny-zone-label.local {
-    left: 18px;
-    top: 18px;
+  .johnny-savings-total strong {
+    display: block;
+    margin-top: 8px;
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: clamp(34px, 4vw, 54px);
+    line-height: 0.88;
+    letter-spacing: -0.06em;
   }
 
-  .johnny-zone-label.acres {
-    right: 18px;
-    top: 72px;
+  .johnny-savings-total em {
+    color: rgba(255,253,247,0.78);
+    font-style: normal;
+    font-size: 13px;
+    font-weight: 800;
   }
 
-  .johnny-zone-label.photos {
-    left: 18px;
-    bottom: 18px;
-  }
-
-  .johnny-zone-dot {
-    position: absolute;
-    width: 14px;
-    height: 14px;
+  .johnny-savings-meter {
+    grid-column: 1 / -1;
+    height: 12px;
+    overflow: hidden;
     border-radius: 999px;
-    background: var(--gold);
-    box-shadow: 0 0 0 8px rgba(216,158,71,0.18), 0 12px 20px rgba(16,32,21,0.18);
+    background: rgba(255,255,255,0.16);
   }
 
-  .johnny-zone-dot.one { left: 28%; top: 37%; }
-  .johnny-zone-dot.two { right: 24%; top: 34%; background: var(--green); }
-  .johnny-zone-dot.three { left: 60%; bottom: 24%; background: #fffaf0; }
+  .johnny-savings-meter span {
+    display: block;
+    width: 78%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--sun), var(--lime));
+    box-shadow: 0 0 22px rgba(181, 223, 107, 0.4);
+  }
+
+  .johnny-savings-table {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .johnny-savings-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    align-items: center;
+    min-height: 52px;
+    padding: 10px 12px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.68);
+    border: 1px solid rgba(16,32,21,0.07);
+  }
+
+  .johnny-savings-row.header {
+    min-height: auto;
+    background: rgba(18, 55, 31, 0.08);
+    color: var(--green-deep);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .johnny-savings-row b {
+    color: var(--green-deep);
+    font-size: 13px;
+  }
+
+  .johnny-savings-row span {
+    color: var(--copy);
+    font-size: 13px;
+    line-height: 1.35;
+    font-weight: 750;
+  }
+
+  .johnny-savings-row .good {
+    color: var(--green-deep);
+  }
+
+  .johnny-savings-note {
+    margin: 12px 0 0;
+    padding: 13px 14px;
+    border-radius: 18px;
+    color: var(--green-deep);
+    background: rgba(181, 223, 107, 0.18);
+    border: 1px solid rgba(18, 55, 31, 0.08);
+    font-size: 13px;
+    font-weight: 850;
+    line-height: 1.55;
+  }
 
   .johnny-steps {
     display: grid;
@@ -900,51 +897,19 @@
       object-position: center 70%;
     }
 
-    .johnny-service-zone {
-      min-height: 340px;
+    .johnny-savings-total {
+      grid-template-columns: 1fr;
+      align-items: start;
     }
 
-    .johnny-zone-ring.one {
-      width: 58%;
+    .johnny-savings-row {
+      grid-template-columns: 1fr;
+      gap: 4px;
+      align-items: start;
     }
 
-    .johnny-zone-ring.two {
-      width: 78%;
-    }
-
-    .johnny-zone-ring.three {
-      width: 98%;
-    }
-
-    .johnny-zone-center {
-      top: 54%;
-      width: 112px;
-      height: 112px;
-      font-size: 18px;
-    }
-
-    .johnny-zone-label {
-      padding: 8px 9px;
-      font-size: 10px;
-      letter-spacing: 0.05em;
-      max-width: 150px;
-    }
-
-    .johnny-zone-label.local {
-      left: 12px;
-      top: 12px;
-    }
-
-    .johnny-zone-label.acres {
-      right: 12px;
-      top: 56px;
-      max-width: 132px;
-      text-align: right;
-    }
-
-    .johnny-zone-label.photos {
-      left: 12px;
-      bottom: 12px;
+    .johnny-savings-row.header {
+      display: none;
     }
 
     .johnny-actions .johnny-button {
@@ -1050,20 +1015,50 @@
       </div>
 
       <div class="johnny-panel">
-        <span class="johnny-tag">Service area</span>
-        <h2>Mount Vernon first. Bigger jobs considered.</h2>
-        <p>If you are near Mount Vernon, ask Johnny right away. If your property is five acres or more, still reach out because larger jobs may make sense farther out.</p>
-        <div class="johnny-service-zone" aria-hidden="true">
-          <span class="johnny-zone-ring three"></span>
-          <span class="johnny-zone-ring two"></span>
-          <span class="johnny-zone-ring one"></span>
-          <span class="johnny-zone-center">Mt Vernon<small>home base</small></span>
-          <span class="johnny-zone-label local">Local route first</span>
-          <span class="johnny-zone-label acres">5+ acre jobs considered</span>
-          <span class="johnny-zone-label photos">Photos help quote faster</span>
-          <span class="johnny-zone-dot one"></span>
-          <span class="johnny-zone-dot two"></span>
-          <span class="johnny-zone-dot three"></span>
+        <span class="johnny-tag">Savings view</span>
+        <h2>The cheapest mower is the one you do not have to own.</h2>
+        <p>Hiring the cut out keeps the big equipment bill, surprise repairs, storage space, fuel runs, and Saturday heat off your plate.</p>
+        <div class="johnny-savings-chart" aria-label="Mower ownership cost comparison">
+          <div class="johnny-savings-total">
+            <div>
+              <span>Potential equipment cost avoided</span>
+              <strong>$10k-$15k+</strong>
+            </div>
+            <em>before upkeep</em>
+            <div class="johnny-savings-meter"><span></span></div>
+          </div>
+
+          <div class="johnny-savings-table">
+            <div class="johnny-savings-row header">
+              <span>Expense</span>
+              <span>Own mower</span>
+              <span>Hire Johnny</span>
+            </div>
+            <div class="johnny-savings-row">
+              <b>Equipment</b>
+              <span>$10k-$15k upfront</span>
+              <span class="good">$0 mower purchase</span>
+            </div>
+            <div class="johnny-savings-row">
+              <b>Upkeep</b>
+              <span>Blades, belts, oil, repairs</span>
+              <span class="good">Handled by us</span>
+            </div>
+            <div class="johnny-savings-row">
+              <b>Storage</b>
+              <span>Garage or shed space</span>
+              <span class="good">No equipment at home</span>
+            </div>
+            <div class="johnny-savings-row">
+              <b>Time</b>
+              <span>Weekends, heat, fuel runs</span>
+              <span class="good">You get that time back</span>
+            </div>
+          </div>
+
+          <p class="johnny-savings-note">
+            For many homeowners, the real savings is not just the hourly rate. It is avoiding a major equipment purchase while keeping the yard handled on a repeatable schedule.
+          </p>
         </div>
       </div>
     </div>
