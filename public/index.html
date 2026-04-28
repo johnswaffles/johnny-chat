@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>618chat.com</title>
   <meta name="description" content="An anonymous conversation space for 618chat.com. Share what is on your mind, keep your privacy, and read respectful public posts.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   
   <style>
     .johnny-site-nav {
@@ -1361,6 +1364,265 @@
         font-size: 12px;
       }
     }
+
+    /* 618chat visual refresh */
+    body {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+      background:
+        radial-gradient(circle at 12% -8%, rgba(87, 142, 93, 0.28), transparent 32%),
+        radial-gradient(circle at 88% 3%, rgba(69, 161, 153, 0.2), transparent 28%),
+        radial-gradient(circle at 55% 110%, rgba(215, 161, 76, 0.22), transparent 34%),
+        linear-gradient(135deg, #fbfaf3 0%, #edf5e9 45%, #f8efe1 100%);
+    }
+    .johnny-site-nav {
+      width: min(1460px, calc(100vw - 28px));
+      padding: 12px 14px 12px 16px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.74);
+      box-shadow: 0 24px 70px rgba(21, 48, 29, 0.12);
+    }
+    .johnny-site-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+    }
+    .johnny-site-brand::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: radial-gradient(circle, #58d49a 0 38%, #1e7042 42% 100%);
+      box-shadow: 0 0 0 7px rgba(45, 111, 64, 0.1), 0 0 24px rgba(63, 159, 153, 0.34);
+    }
+    .johnny-site-link {
+      min-height: 40px;
+      padding: 0 16px;
+      background: rgba(255,255,255,0.52);
+      border-color: rgba(16, 32, 21, 0.06);
+    }
+    .page {
+      width: min(1460px, calc(100vw - 28px));
+      padding-top: 16px;
+    }
+    .intro {
+      grid-template-columns: minmax(320px, 0.62fr) minmax(0, 1.38fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .panel {
+      border-color: rgba(16, 32, 21, 0.075);
+      box-shadow: 0 30px 90px rgba(22, 54, 31, 0.14);
+    }
+    .hero {
+      position: sticky;
+      top: 98px;
+      color: #fffdf7;
+      background:
+        radial-gradient(circle at 88% 7%, rgba(242, 190, 91, 0.26), transparent 34%),
+        radial-gradient(circle at 5% 92%, rgba(81, 195, 170, 0.2), transparent 36%),
+        linear-gradient(145deg, #102317 0%, #173d26 55%, #0d1f16 100%);
+      border-color: rgba(255,255,255,0.18);
+      box-shadow: 0 34px 90px rgba(12, 35, 20, 0.26);
+    }
+    .hero::before {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.12) 0 10%, transparent 10% 100%),
+        radial-gradient(circle, rgba(63, 159, 153, 0.24), transparent 68%);
+    }
+    .hero h1 {
+      max-width: 9.7ch;
+      background: linear-gradient(135deg, #fffdf7 0%, #d9f5df 56%, #88d29d 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 24px 70px rgba(0,0,0,0.18);
+    }
+    .hero p {
+      color: rgba(255, 253, 247, 0.82);
+      font-size: 16px;
+    }
+    .hero .eyebrow {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.16);
+      color: #e9f8ed;
+      backdrop-filter: blur(12px);
+    }
+    .hero .pill {
+      color: rgba(255, 253, 247, 0.82);
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.14);
+    }
+    .hero .pill strong {
+      color: #ffffff;
+    }
+    .hero-stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .hero-stat {
+      padding: 14px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.13);
+    }
+    .hero-stat strong {
+      display: block;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 22px;
+      line-height: 1;
+      color: #fff;
+    }
+    .hero-stat span {
+      display: block;
+      margin-top: 7px;
+      color: rgba(255,255,255,0.72);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+    .community-pulse-grid {
+      grid-template-columns: 1fr;
+    }
+    .community-pulse-card {
+      min-height: 0;
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.13);
+      box-shadow: none;
+    }
+    .community-pulse-card strong {
+      color: #fffdf7;
+      font-size: 20px;
+    }
+    .community-pulse-card span {
+      color: rgba(255,255,255,0.72);
+    }
+    .hero .button-secondary {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.16);
+      color: #fffdf7;
+    }
+    .board {
+      padding: 24px;
+      border-radius: 34px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.92), rgba(249,250,243,0.86)),
+        radial-gradient(circle at 94% 0%, rgba(63,159,153,0.14), transparent 32%);
+    }
+    .board-top h2 {
+      font-size: clamp(32px, 4vw, 46px);
+    }
+    .board-top p {
+      max-width: 58ch;
+    }
+    .filter-drawer {
+      margin-top: 14px;
+      border-radius: 22px;
+      border: 1px solid rgba(16,32,21,0.08);
+      background: rgba(255,255,255,0.64);
+      overflow: hidden;
+    }
+    .filter-drawer summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 15px 18px;
+      font-weight: 900;
+      color: var(--green-deep);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .filter-drawer summary::-webkit-details-marker { display: none; }
+    .filter-drawer summary::after {
+      content: "Open";
+      color: var(--copy);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .filter-drawer[open] summary::after { content: "Close"; }
+    .filter-drawer .board-toolbar {
+      margin-top: 0;
+      border: 0;
+      border-top: 1px solid rgba(16,32,21,0.08);
+      border-radius: 0;
+      background: rgba(255,255,255,0.72);
+    }
+    .layout {
+      grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .composer, .reader, .list {
+      border-radius: 26px;
+      background: rgba(255,255,255,0.88);
+    }
+    .reader {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.92), rgba(246,250,244,0.88)),
+        radial-gradient(circle at 100% 0%, rgba(45,111,64,0.08), transparent 30%);
+    }
+    .spotlight {
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at 90% 0%, rgba(212,162,69,0.22), transparent 35%),
+        linear-gradient(135deg, rgba(23,68,37,0.95), rgba(18,45,31,0.96));
+      border-color: rgba(255,255,255,0.16);
+      color: #fffdf7;
+      box-shadow: 0 22px 55px rgba(23, 68, 37, 0.18);
+    }
+    .spotlight h4,
+    .spotlight-card h5 {
+      color: #fffdf7;
+    }
+    .spotlight p {
+      color: rgba(255,255,255,0.76) !important;
+    }
+    .spotlight-card {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.14);
+    }
+    .spotlight .status-badge {
+      background: rgba(255,255,255,0.12);
+      color: #fffdf7;
+    }
+    .post-card {
+      border-radius: 22px;
+      background: rgba(255,255,255,0.92);
+    }
+    .post-title {
+      font-size: 20px;
+    }
+    .detail-body-preview {
+      max-height: 168px;
+    }
+    @media (max-width: 1020px) {
+      .hero {
+        position: relative;
+        top: auto;
+      }
+      .intro, .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 760px) {
+      .johnny-site-nav,
+      .page {
+        width: min(100vw - 12px, 680px);
+      }
+      .hero-stat-row {
+        grid-template-columns: 1fr;
+      }
+      .spotlight-grid {
+        grid-template-columns: 1fr;
+      }
+      .filter-drawer summary {
+        padding: 13px 14px;
+      }
+    }
   </style>
 
   <style>
@@ -1410,7 +1672,6 @@
       <a class="johnny-site-link active" href="/">Home</a>
       <a class="johnny-site-link" href="#compose" data-compose-jump>Write a post</a>
       <a class="johnny-site-link" href="#recent-posts">Recent conversations</a>
-      <a class="johnny-site-link" href="#about">About</a>
     </nav>
   </header>
   <main class="page">
@@ -1419,14 +1680,18 @@
         <button class="eyebrow eyebrow-button" type="button" data-compose-jump>Anonymous conversation</button>
         <h1>Speak honestly. Read with care. Keep it respectful.</h1>
         <p>
-          This space was created for honest, anonymous conversation. Sometimes the easiest way to open up is without the usual barriers, expectations, or pressure of everyday life.
-          Here, people can talk about what they are feeling, share what is weighing on them, and connect with others in a real and meaningful way.
+          A public board for saying the thing that is hard to say elsewhere. Write anonymously, read slowly, and keep the room human.
         </p>
         <div class="pill-row">
           <div class="pill"><strong>Anonymous</strong> by design</div>
           <div class="pill"><strong>Respect</strong> and understanding</div>
           <div class="pill"><strong>Public</strong> to browse</div>
           <div class="pill"><strong>Thoughtful</strong> titles</div>
+        </div>
+        <div class="hero-stat-row" aria-label="How 618chat works">
+          <div class="hero-stat"><strong>18+</strong><span>Adults-only conversation space</span></div>
+          <div class="hero-stat"><strong>No login</strong><span>Use a nickname or stay anonymous</span></div>
+          <div class="hero-stat"><strong>Kind first</strong><span>Support, reply, or flag with care</span></div>
         </div>
         <div class="community-pulse-grid" aria-label="618chat principles">
           <div class="community-pulse-card">
@@ -1452,51 +1717,55 @@
       <div class="panel board">
         <div class="board-top">
           <div>
-            <h2>Post a message</h2>
-            <p>Write something short or long. We’ll give it a title and add it to the conversation board.</p>
+            <h2>Conversation board</h2>
+            <p>Write a post, read what others are carrying, or reply with care. Long posts stay tucked behind read-more controls so the page stays easy to scan.</p>
           </div>
           <div class="board-summary">
             <span class="status-badge">Live updates</span>
             <span id="board-summary-text">Watching for new posts.</span>
           </div>
         </div>
-        <div class="board-toolbar" aria-label="Search and filter conversations">
-          <div class="toolbar-field">
-            <label for="post-search">Search conversations</label>
-            <input id="post-search" type="search" placeholder="Search title, author, message, replies, or date">
+        <details class="filter-drawer">
+          <summary>Search and filter conversations</summary>
+          <div class="board-toolbar" aria-label="Search and filter conversations">
+            <div class="toolbar-field">
+              <label for="post-search">Search conversations</label>
+              <input id="post-search" type="search" placeholder="Search title, author, message, replies, or date">
+            </div>
+            <div class="toolbar-row">
+              <div class="toolbar-field">
+                <label for="topic-filter">Topic</label>
+                <select id="topic-filter">
+                  <option value="all">All topics</option>
+                  <option value="General">General</option>
+                  <option value="Friendship+">Friendship+</option>
+                </select>
+              </div>
+              <div class="toolbar-field">
+                <label for="time-filter">Date range</label>
+                <select id="time-filter">
+                  <option value="all">All time</option>
+                  <option value="7">Last 7 days</option>
+                  <option value="30">Last 30 days</option>
+                  <option value="365">Last year</option>
+                </select>
+              </div>
+              <div class="toolbar-field">
+                <label for="sort-filter">Sort by</label>
+                <select id="sort-filter">
+                  <option value="newest">Newest first</option>
+                  <option value="supported">Most supported</option>
+                  <option value="flagged">Most flagged</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div class="toolbar-row">
-            <div class="toolbar-field">
-              <label for="topic-filter">Topic</label>
-              <select id="topic-filter">
-                <option value="all">All topics</option>
-                <option value="General">General</option>
-                <option value="Friendship+">Friendship+</option>
-              </select>
-            </div>
-            <div class="toolbar-field">
-              <label for="time-filter">Date range</label>
-              <select id="time-filter">
-                <option value="all">All time</option>
-                <option value="7">Last 7 days</option>
-                <option value="30">Last 30 days</option>
-                <option value="365">Last year</option>
-              </select>
-            </div>
-            <div class="toolbar-field">
-              <label for="sort-filter">Sort by</label>
-              <select id="sort-filter">
-                <option value="newest">Newest first</option>
-                <option value="supported">Most supported</option>
-                <option value="flagged">Most flagged</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        </details>
+        <div id="spotlight" class="spotlight" hidden></div>
         <div class="layout">
           <section class="composer" aria-label="New post" id="compose">
-            <h3>New post</h3>
-            <p>Keep it honest and respectful. Your post will get a thoughtful title when you share it.</p>
+            <h3>Write anonymously</h3>
+            <p>Say what is on your mind. 618chat will title it for the board, and you can stay anonymous if you want.</p>
             <form id="board-form">
               <div id="reply-banner" class="reply-banner" hidden>
                 <div>Replying to <strong id="reply-target-label">this post</strong>.</div>
@@ -1530,8 +1799,8 @@
           </section>
 
           <section class="reader" aria-label="Selected post">
-            <h3>Read a post</h3>
-            <p>Click any card on the left to open the full message here.</p>
+            <h3>Selected conversation</h3>
+            <p>Choose a card below to open the preview, read more, support, or reply.</p>
             <div id="post-reader" class="empty-state">No posts yet. Add the first message on the left and it will appear here.</div>
             <div id="comment-list" class="comment-list" hidden></div>
           </section>
@@ -1542,7 +1811,7 @@
           <div class="board-top" style="align-items: center;">
             <div>
               <h3>Recent conversations</h3>
-              <p>The newest message appears first. Select a post to read it in full.</p>
+              <p>Newest posts appear first. Long messages stay compact until someone chooses to read more.</p>
             </div>
             <div class="board-summary">
               <span id="results-count" class="status-badge">0 shown</span>
