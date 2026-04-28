@@ -6,6 +6,7 @@
   const maxHistory = 18;
   const imageDbName = "gpt54_images_v1";
   const imageStore = "images";
+  const sessionCookieName = "gpt54_session";
 
   const noopClassList = {
     add() {},
@@ -41,6 +42,34 @@
 
   function getEl(id) {
     return document.getElementById(id) || noopElement;
+  }
+
+  function readCookie(name) {
+    const prefix = `${name}=`;
+    const found = document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(prefix));
+    if (!found) return "";
+    try {
+      return decodeURIComponent(found.slice(prefix.length));
+    } catch {
+      return found.slice(prefix.length);
+    }
+  }
+
+  function authHeaders(headers = {}) {
+    const next = new Headers(headers);
+    const token = readCookie(sessionCookieName);
+    if (token) next.set("Authorization", `Bearer ${token}`);
+    return next;
+  }
+
+  function apiFetch(url, options = {}) {
+    return fetch(url, {
+      ...options,
+      headers: authHeaders(options.headers)
+    });
   }
 
   const el = {
@@ -628,7 +657,7 @@
     fd.append("profile", profile);
     files.forEach((file) => fd.append("files", file, file.name));
 
-    const res = await fetch(`${apiBase}/upload`, { method: "POST", body: fd });
+    const res = await apiFetch(`${apiBase}/upload`, { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.detail || "Upload failed");
 
@@ -660,10 +689,10 @@
     el.messages.scrollTop = el.messages.scrollHeight;
 
     try {
-      const res = await fetch(`${apiBase}/generate-image`, {
+      const res = await apiFetch(`${apiBase}/generate-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, size: "1024x1024" })
+        body: JSON.stringify({ prompt, size: "1024x1024", profile })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || "Generation failed");
@@ -697,7 +726,7 @@
     const thinking = showThinking("Thinking...");
 
     try {
-      const res = await fetch(`${apiBase}/api/chat`, {
+      const res = await apiFetch(`${apiBase}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -707,14 +736,15 @@
         })
       });
       const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "Please refresh and unlock the chatbot again.");
       const reply = data.reply || "Hello. How can I help today?";
       thinking.replace(reply);
       convo.messages.push({ role: "assistant", content: reply });
       convo.updatedAt = nowISO();
       save();
       renderSidebar();
-    } catch {
-      thinking.replace("Hello. How can I help today?");
+    } catch (err) {
+      thinking.replace(`Error: ${err.message || "Please refresh and unlock the chatbot again."}`);
     }
   }
 
@@ -780,7 +810,7 @@
     try {
       const history = convo.messages.slice(-maxHistory).map((msg) => ({ role: msg.role, content: msg.content }));
       const input = raw + context;
-      const res = await fetch(`${apiBase}/api/chat`, {
+      const res = await apiFetch(`${apiBase}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input, history, profile })

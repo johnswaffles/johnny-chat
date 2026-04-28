@@ -1,6 +1,7 @@
-const CHATBOT_PASSWORD = "ilovepizza";
-const COOKIE_NAME = "gpt54_access";
+const SESSION_COOKIE_NAME = "gpt54_session";
+const LEGACY_COOKIE_NAME = "gpt54_access";
 const COOKIE_MAX_AGE = 60 * 60 * 12;
+const DEFAULT_BACKEND_URL = "https://johnny-chat.onrender.com";
 
 function escapeHtml(value) {
   return String(value || "")
@@ -20,9 +21,52 @@ function parseCookies(cookieHeader) {
       if (index === -1) return acc;
       const name = part.slice(0, index).trim();
       const value = part.slice(index + 1).trim();
-      acc[name] = value;
+      try {
+        acc[name] = decodeURIComponent(value);
+      } catch {
+        acc[name] = value;
+      }
       return acc;
     }, {});
+}
+
+function backendUrl(context) {
+  return String(context.env?.JOHNNY_CHAT_BACKEND_URL || DEFAULT_BACKEND_URL).replace(/\/+$/, "");
+}
+
+async function requestBackend(context, path, body) {
+  const response = await fetch(`${backendUrl(context)}${path}`, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body || {})
+  });
+  const data = await response.json().catch(() => ({}));
+  return {
+    ok: response.ok && data?.ok === true,
+    status: response.status,
+    data
+  };
+}
+
+async function verifySession(context, token) {
+  if (!token) return false;
+  const result = await requestBackend(context, "/api/chatbot-session", { token }).catch(() => null);
+  return result?.ok === true;
+}
+
+async function requestAccess(context, password) {
+  return requestBackend(context, "/api/chatbot-access", { password });
+}
+
+function sessionCookie(token, maxAge = COOKIE_MAX_AGE) {
+  return `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/chatbot/; Max-Age=${Number(maxAge) || COOKIE_MAX_AGE}; SameSite=Lax; Secure`;
+}
+
+function clearLegacyCookie() {
+  return `${LEGACY_COOKIE_NAME}=; Path=/chatbot/; Max-Age=0; HttpOnly; SameSite=Lax; Secure`;
 }
 
 function loginPage(errorMessage = "") {
@@ -181,26 +225,33 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const cookies = parseCookies(request.headers.get("cookie"));
 
-  if (cookies[COOKIE_NAME] === "1") {
+  if (await verifySession(context, cookies[SESSION_COOKIE_NAME])) {
     return next();
   }
 
   if (request.method === "POST") {
     const form = await request.formData().catch(() => null);
     const password = String(form?.get("password") || "");
+    const access = await requestAccess(context, password).catch(() => null);
 
-    if (password === CHATBOT_PASSWORD) {
+    if (access?.ok && access.data?.token) {
+      const headers = new Headers({
+        Location: url.toString(),
+        "Cache-Control": "no-store"
+      });
+      headers.append("Set-Cookie", sessionCookie(access.data.token, access.data.maxAge));
+      headers.append("Set-Cookie", clearLegacyCookie());
       return new Response(null, {
         status: 303,
-        headers: {
-          Location: url.toString(),
-          "Set-Cookie": `${COOKIE_NAME}=1; Path=/chatbot/; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax; Secure`,
-          "Cache-Control": "no-store"
-        }
+        headers
       });
     }
 
-    return new Response(loginPage("That password was not correct. Please try again."), {
+    const message = access?.status === 503
+      ? "Private chatbot access is not configured yet."
+      : "That password was not correct. Please try again.";
+
+    return new Response(loginPage(message), {
       status: 401,
       headers: {
         "Content-Type": "text/html; charset=utf-8",

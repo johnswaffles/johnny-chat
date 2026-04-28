@@ -5,6 +5,7 @@ import OpenAI, { toFile } from "openai";
 import nodemailer from "nodemailer";
 import { createRequire } from "module";
 import http from "http";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
@@ -38,7 +39,8 @@ const {
   PUBLIC_BOARD_FLAG_THRESHOLD = "10",
   PUBLIC_BOARD_POST_DAILY_LIMIT = "2",
   PUBLIC_BOARD_COMMENT_LIMIT = "50",
-  PUBLIC_BOARD_ADMIN_TOKEN = ""
+  PUBLIC_BOARD_ADMIN_TOKEN = "",
+  JOHNNY_CHAT_PASSWORD = ""
 } = process.env;
 
 const BOARD_COMMENT_LIMIT = (() => {
@@ -69,6 +71,63 @@ const BOARD_WELCOME_POST_MESSAGE = [
 
 if (!OPENAI_API_KEY) {
   console.warn("OPENAI_API_KEY missing - Realtime and AI features will be disabled.");
+}
+
+const CHATBOT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+
+function safeStringEqual(a, b) {
+  const left = Buffer.from(String(a || ""), "utf8");
+  const right = Buffer.from(String(b || ""), "utf8");
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+function signChatbotPayload(payload) {
+  return createHmac("sha256", JOHNNY_CHAT_PASSWORD).update(payload).digest("base64url");
+}
+
+function createChatbotSessionToken() {
+  const now = Date.now();
+  const payload = Buffer.from(JSON.stringify({
+    profile: "gpt54",
+    iat: now,
+    exp: now + CHATBOT_SESSION_MAX_AGE_SECONDS * 1000,
+    nonce: randomBytes(16).toString("base64url")
+  })).toString("base64url");
+  return `${payload}.${signChatbotPayload(payload)}`;
+}
+
+function verifyChatbotSessionToken(token) {
+  if (!JOHNNY_CHAT_PASSWORD) return false;
+  const [payload, signature, extra] = String(token || "").split(".");
+  if (!payload || !signature || extra) return false;
+  if (!safeStringEqual(signature, signChatbotPayload(payload))) return false;
+
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    return data?.profile === "gpt54" && Number(data.exp) > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function getBearerToken(req) {
+  const value = String(req.headers?.authorization || "");
+  const match = value.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : "";
+}
+
+function requireChatbotSession(req, res) {
+  if (!JOHNNY_CHAT_PASSWORD) {
+    res.status(503).json({ detail: "Private chatbot password is not configured." });
+    return false;
+  }
+
+  if (!verifyChatbotSessionToken(getBearerToken(req))) {
+    res.status(401).json({ detail: "Private chatbot session required. Please unlock the chatbot again." });
+    return false;
+  }
+
+  return true;
 }
 
 function normalizeWidgetProfile(value) {
@@ -288,6 +347,36 @@ app.use(cors({
 app.use(express.text({ type: "application/sdp" }));
 app.use(express.json({ limit: `${Math.max(1, Number(MAX_UPLOAD_MB))}mb` }));
 app.use(express.urlencoded({ extended: true }));
+
+app.post("/api/chatbot-access", (req, res) => {
+  try {
+    const password = String(req.body?.password || "");
+
+    if (!JOHNNY_CHAT_PASSWORD) {
+      return res.status(503).json({ ok: false, detail: "Private chatbot password is not configured." });
+    }
+
+    if (!safeStringEqual(password, JOHNNY_CHAT_PASSWORD)) {
+      return res.status(401).json({ ok: false, detail: "That password was not correct. Please try again." });
+    }
+
+    res.json({
+      ok: true,
+      token: createChatbotSessionToken(),
+      maxAge: CHATBOT_SESSION_MAX_AGE_SECONDS
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, detail: String(err.message || err) });
+  }
+});
+
+app.post("/api/chatbot-session", (req, res) => {
+  const token = String(req.body?.token || getBearerToken(req) || "");
+  res.json({
+    ok: verifyChatbotSessionToken(token),
+    maxAge: CHATBOT_SESSION_MAX_AGE_SECONDS
+  });
+});
 
 /**
  * REALTIME SESSION TOKEN ENDPOINT
@@ -1378,8 +1467,10 @@ app.post("/api/voice-search", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const { input = "", history = [] } = req.body || {};
-  const profile = inferWidgetProfile(req);
-  const s = String(input || "");
+    const profile = inferWidgetProfile(req);
+    const s = String(input || "");
+
+    if (profile === "gpt54" && !requireChatbotSession(req, res)) return;
 
     if (s.trim() === "[system_greet]") {
       return res.json({ reply: "You're here. I'm here. Let's make this conversation worth both our time.", sources: [] });
@@ -1480,6 +1571,8 @@ const upload = multer({
 app.post("/upload", upload.array("files", 8), async (req, res) => {
   try {
     const profile = normalizeWidgetProfile(req.body?.profile) || inferWidgetProfile(req);
+    if (profile === "gpt54" && !requireChatbotSession(req, res)) return;
+
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ detail: "No files" });
 
@@ -1619,6 +1712,8 @@ app.post("/query", async (req, res) => {
 
 app.post("/generate-image", async (req, res) => {
   try {
+    if (!requireChatbotSession(req, res)) return;
+
     const { prompt = "", size = "1024x1024", quality = "high", background, format } = req.body || {};
     const gen = await openai.images.generate({
       model: OPENAI_IMAGE_MODEL,
@@ -1642,6 +1737,8 @@ const uploadRefs = multer({
 
 app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) => {
   try {
+    if (!requireChatbotSession(req, res)) return;
+
     const { prompt = "", size = "1024x1024", quality = "high", background, input_fidelity } = req.body || {};
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ detail: "No reference images provided" });
