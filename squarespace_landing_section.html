@@ -467,45 +467,42 @@
     font-size: clamp(36px, 4.2vw, 60px);
   }
 
-  .johnny-compare {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 20px;
+  .johnny-savings-panel {
+    margin-top: 14px;
+    padding: clamp(24px, 4vw, 36px);
+    background:
+      radial-gradient(circle at 94% 0%, rgba(241, 207, 109, 0.3), transparent 30%),
+      radial-gradient(circle at 0% 100%, rgba(105, 169, 87, 0.22), transparent 34%),
+      var(--paper);
   }
 
-  .johnny-compare-item {
-    min-height: 160px;
-    padding: 18px;
-    border-radius: 24px;
-    background: rgba(255,255,255,0.68);
-    border: 1px solid rgba(16,32,21,0.08);
+  .johnny-savings-panel h2 {
+    max-width: 17ch;
   }
 
-  .johnny-compare-item strong {
-    display: block;
-    font-family: "Outfit", Arial, sans-serif;
-    font-size: 32px;
-    letter-spacing: -0.05em;
-  }
-
-  .johnny-compare-item span {
-    display: block;
-    margin-top: 8px;
-    color: var(--copy);
-    line-height: 1.5;
-    font-weight: 750;
+  .johnny-savings-intro {
+    max-width: 980px;
+    font-size: clamp(16px, 1.6vw, 19px);
+    line-height: 1.62;
   }
 
   .johnny-savings-chart {
-    margin-top: 18px;
-    padding: 16px;
-    border-radius: 26px;
+    margin-top: 24px;
+    padding: clamp(16px, 3vw, 26px);
+    border-radius: 30px;
     overflow: hidden;
     border: 1px solid rgba(16, 32, 21, 0.08);
     background:
-      radial-gradient(circle at 100% 0%, rgba(241, 207, 109, 0.24), transparent 30%),
-      linear-gradient(180deg, rgba(255,255,255,0.82), rgba(248, 244, 229, 0.88));
+      radial-gradient(circle at 100% 0%, rgba(241, 207, 109, 0.28), transparent 32%),
+      linear-gradient(135deg, rgba(255,255,255,0.9), rgba(244, 239, 217, 0.9));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+  }
+
+  .johnny-savings-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) repeat(2, minmax(170px, 0.42fr));
+    gap: 12px;
+    align-items: stretch;
   }
 
   .johnny-savings-total {
@@ -535,7 +532,7 @@
     display: block;
     margin-top: 8px;
     font-family: "Outfit", Arial, sans-serif;
-    font-size: clamp(34px, 4vw, 54px);
+    font-size: clamp(38px, 5.2vw, 70px);
     line-height: 0.88;
     letter-spacing: -0.06em;
   }
@@ -545,6 +542,7 @@
     font-style: normal;
     font-size: 13px;
     font-weight: 800;
+    text-align: right;
   }
 
   .johnny-savings-meter {
@@ -564,6 +562,88 @@
     box-shadow: 0 0 22px rgba(181, 223, 107, 0.4);
   }
 
+  .johnny-savings-mini {
+    padding: 18px;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(16,32,21,0.08);
+  }
+
+  .johnny-savings-mini span {
+    display: block;
+    color: var(--copy);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+  }
+
+  .johnny-savings-mini strong {
+    display: block;
+    margin-top: 9px;
+    color: var(--green-deep);
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: clamp(26px, 3.5vw, 42px);
+    line-height: 0.92;
+    letter-spacing: -0.05em;
+  }
+
+  .johnny-savings-mini.good {
+    background: rgba(181, 223, 107, 0.18);
+  }
+
+  .johnny-savings-bars {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.58);
+    border: 1px solid rgba(16,32,21,0.07);
+  }
+
+  .johnny-bar-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 0.32fr) minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    color: var(--green-deep);
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .johnny-bar-row strong {
+    white-space: nowrap;
+  }
+
+  .johnny-bar-track {
+    height: 16px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(18, 55, 31, 0.08);
+  }
+
+  .johnny-bar-fill {
+    display: block;
+    width: var(--bar-width);
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--gold), var(--sun));
+    box-shadow: 0 0 20px rgba(216,158,71,0.3);
+  }
+
+  .johnny-bar-fill.good {
+    background: linear-gradient(90deg, var(--green), var(--lime));
+    box-shadow: 0 0 20px rgba(105,169,87,0.28);
+  }
+
+  .johnny-bar-note {
+    color: var(--copy);
+    font-size: 12px;
+    font-weight: 850;
+    text-align: right;
+  }
+
   .johnny-savings-table {
     display: grid;
     gap: 8px;
@@ -572,11 +652,11 @@
 
   .johnny-savings-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 0.7fr 1.15fr 1.15fr;
     gap: 10px;
     align-items: center;
-    min-height: 52px;
-    padding: 10px 12px;
+    min-height: 58px;
+    padding: 11px 13px;
     border-radius: 18px;
     background: rgba(255,255,255,0.68);
     border: 1px solid rgba(16,32,21,0.07);
@@ -618,6 +698,14 @@
     font-size: 13px;
     font-weight: 850;
     line-height: 1.55;
+  }
+
+  .johnny-savings-footnote {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+    font-weight: 750;
   }
 
   .johnny-steps {
@@ -726,6 +814,10 @@
       grid-template-columns: 1fr;
     }
 
+    .johnny-savings-head {
+      grid-template-columns: 1fr;
+    }
+
     .johnny-grid-3,
     .johnny-steps {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -782,7 +874,6 @@
     .johnny-rate-strip,
     .johnny-grid-3,
     .johnny-steps,
-    .johnny-compare,
     .johnny-hero-stats {
       grid-template-columns: 1fr;
     }
@@ -815,6 +906,15 @@
       grid-template-columns: 1fr;
       gap: 4px;
       align-items: start;
+    }
+
+    .johnny-bar-row {
+      grid-template-columns: 1fr;
+      gap: 7px;
+    }
+
+    .johnny-bar-note {
+      text-align: left;
     }
 
     .johnny-savings-row.header {
@@ -906,69 +1006,84 @@
       </div>
     </div>
 
-    <div class="johnny-split">
-      <div class="johnny-panel">
-        <span class="johnny-tag">Cost reality</span>
-        <h2>Buying the mower is only the first bill.</h2>
-        <p>Hiring a dependable local mowing crew buys back storage space, maintenance time, repair headaches, and the pressure to mow the exact week your yard needs it.</p>
-        <div class="johnny-compare">
-          <div class="johnny-compare-item">
-            <strong>$10k-$15k</strong>
-            <span>Possible commercial mower cost before the hidden expenses.</span>
-          </div>
-          <div class="johnny-compare-item">
-            <strong>$75/hr</strong>
-            <span>Clear local mowing rate with weed eating included.</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="johnny-panel">
-        <span class="johnny-tag">Savings view</span>
-        <h2>The cheapest mower is the one you do not have to own.</h2>
-        <p>Hiring the cut out keeps the big equipment bill, surprise repairs, storage space, fuel runs, and Saturday heat off your plate.</p>
-        <div class="johnny-savings-chart" aria-label="Mower ownership cost comparison">
+    <div class="johnny-panel johnny-savings-panel">
+      <span class="johnny-tag">Cost reality</span>
+      <h2>The mower payment is only the first bill.</h2>
+      <p class="johnny-savings-intro">
+        A $10k-$15k mower financed over a typical 48-month term can land around $11.7k-$17.6k after bank interest, before fuel, blades, belts, repairs, storage, and the weekend hours you never get back.
+      </p>
+      <div class="johnny-savings-chart" aria-label="Mower ownership cost comparison">
+        <div class="johnny-savings-head">
           <div class="johnny-savings-total">
             <div>
-              <span>Potential equipment cost avoided</span>
-              <strong>$10k-$15k+</strong>
+              <span>Estimated mower payoff</span>
+              <strong>$11.7k-$17.6k</strong>
             </div>
-            <em>before upkeep</em>
+            <em>48 months at 8% APR</em>
             <div class="johnny-savings-meter"><span></span></div>
           </div>
-
-          <div class="johnny-savings-table">
-            <div class="johnny-savings-row header">
-              <span>Expense</span>
-              <span>Own mower</span>
-              <span>Hire Johnny</span>
-            </div>
-            <div class="johnny-savings-row">
-              <b>Equipment</b>
-              <span>$10k-$15k upfront</span>
-              <span class="good">$0 mower purchase</span>
-            </div>
-            <div class="johnny-savings-row">
-              <b>Upkeep</b>
-              <span>Blades, belts, oil, repairs</span>
-              <span class="good">Handled by us</span>
-            </div>
-            <div class="johnny-savings-row">
-              <b>Storage</b>
-              <span>Garage or shed space</span>
-              <span class="good">No equipment at home</span>
-            </div>
-            <div class="johnny-savings-row">
-              <b>Time</b>
-              <span>Weekends, heat, fuel runs</span>
-              <span class="good">You get that time back</span>
-            </div>
+          <div class="johnny-savings-mini">
+            <span>Bank interest alone</span>
+            <strong>$1.7k-$2.6k</strong>
           </div>
-
-          <p class="johnny-savings-note">
-            For many homeowners, the real savings is not just the hourly rate. It is avoiding a major equipment purchase while keeping the yard handled on a repeatable schedule.
-          </p>
+          <div class="johnny-savings-mini good">
+            <span>Johnny's clear rate</span>
+            <strong>$75/hr</strong>
+          </div>
         </div>
+
+        <div class="johnny-savings-bars" aria-label="Cost impact comparison">
+          <div class="johnny-bar-row">
+            <strong>Buy the mower</strong>
+            <div class="johnny-bar-track"><span class="johnny-bar-fill" style="--bar-width: 100%;"></span></div>
+            <span class="johnny-bar-note">$11.7k-$17.6k before upkeep</span>
+          </div>
+          <div class="johnny-bar-row">
+            <strong>Hire Johnny</strong>
+            <div class="johnny-bar-track"><span class="johnny-bar-fill good" style="--bar-width: 26%;"></span></div>
+            <span class="johnny-bar-note">Pay for the cut, not the machine</span>
+          </div>
+        </div>
+
+        <div class="johnny-savings-table">
+          <div class="johnny-savings-row header">
+            <span>Cost bucket</span>
+            <span>Buy the mower</span>
+            <span>Hire Johnny</span>
+          </div>
+          <div class="johnny-savings-row">
+            <b>Loan payoff</b>
+            <span>About $11.7k-$17.6k on a 48-month example</span>
+            <span class="good">$0 mower debt</span>
+          </div>
+          <div class="johnny-savings-row">
+            <b>Interest</b>
+            <span>About $1.7k-$2.6k paid to the bank</span>
+            <span class="good">$0 bank interest</span>
+          </div>
+          <div class="johnny-savings-row">
+            <b>Upkeep</b>
+            <span>Oil, blades, belts, repairs, downtime</span>
+            <span class="good">Handled by the mowing crew</span>
+          </div>
+          <div class="johnny-savings-row">
+            <b>Storage + fuel</b>
+            <span>Garage space, cans, trips, mess</span>
+            <span class="good">No equipment sitting at home</span>
+          </div>
+          <div class="johnny-savings-row">
+            <b>Your time</b>
+            <span>Hot weekends spent mowing and trimming</span>
+            <span class="good">You get the weekend back</span>
+          </div>
+        </div>
+
+        <p class="johnny-savings-note">
+          The smart move is not always owning the biggest machine. It is keeping the yard clean without taking on a mower loan, repair risk, storage problem, and another weekend chore.
+        </p>
+        <p class="johnny-savings-footnote">
+          Estimate only: 48 months at 8% APR, $0 down, before taxes, fees, maintenance, fuel, storage, and repairs. Actual financing terms vary.
+        </p>
       </div>
     </div>
 
