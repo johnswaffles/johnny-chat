@@ -1352,6 +1352,57 @@ function create618ChatPage() {
       font-size: 13px;
       line-height: 1.45;
     }
+    .reader-expand-button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      width: 100%;
+      min-height: 50px;
+      margin-top: 12px;
+      padding: 0 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(45, 111, 64, 0.18);
+      background:
+        linear-gradient(135deg, rgba(45, 111, 64, 0.1), rgba(226, 186, 107, 0.16)),
+        rgba(255,255,255,0.9);
+      color: var(--green-deep);
+      cursor: pointer;
+      font-family: "Outfit", Arial, sans-serif;
+      font-weight: 900;
+      text-align: left;
+      box-shadow: 0 12px 28px rgba(21, 48, 29, 0.08);
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    }
+    .reader-expand-button::after {
+      content: "+";
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: rgba(45, 111, 64, 0.12);
+      color: var(--green);
+      flex: 0 0 auto;
+    }
+    .reader-expand-button[aria-expanded="true"]::after {
+      content: "-";
+    }
+    .reader-expand-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(45, 111, 64, 0.28);
+      box-shadow: 0 16px 34px rgba(21, 48, 29, 0.12);
+    }
+    .reader-full-body {
+      margin-top: 12px;
+      min-height: 0;
+      max-height: min(58vh, 620px);
+      overflow: auto;
+      scroll-behavior: smooth;
+    }
+    .reader-full-body[hidden] {
+      display: none;
+    }
     .empty-state {
       padding: 20px;
       border-radius: 18px;
@@ -1472,6 +1523,8 @@ function create618ChatPage() {
         linear-gradient(135deg, #fbfaf3 0%, #edf5e9 45%, #f8efe1 100%);
     }
     .johnny-site-nav {
+      position: relative;
+      top: auto;
       width: min(1460px, calc(100vw - 28px));
       padding: 12px 14px 12px 16px;
       border-radius: 28px;
@@ -2735,6 +2788,13 @@ ${chatSiteNav("home")}
         }, 100);
       }
 
+      function scrollToReader() {
+        const readerSection = document.querySelector(".reader");
+        if (readerSection && typeof readerSection.scrollIntoView === "function") {
+          readerSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+
       async function loadPosts() {
         loading = true;
         statusEl.textContent = adminMode ? "Loading conversations in moderation mode..." : "Loading conversations...";
@@ -2797,10 +2857,8 @@ ${chatSiteNav("home")}
           '<div class="detail-body detail-body-preview ' + (preview.truncated ? "is-truncated" : "") + '">' + escapeHTML(preview.preview).replace(/\\n/g, "<br>") + '</div>' +
           (preview.truncated
             ? '<p class="reader-preview-note">Showing a short preview so the page stays easy to scan.</p>' +
-              '<details class="reader-more">' +
-                '<summary>Read full post</summary>' +
-                '<div class="detail-body">' + escapeHTML(preview.full).replace(/\\n/g, "<br>") + '</div>' +
-              '</details>'
+              '<button type="button" class="reader-expand-button" data-reader-action="expand-full" aria-expanded="false">Read full post</button>' +
+              '<div class="detail-body reader-full-body" hidden>' + escapeHTML(preview.full).replace(/\\n/g, "<br>") + '</div>'
             : '') +
           '<div class="comment-card-footer" style="padding: 12px 0 0; margin: 0;">' +
             '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (postPinned ? ' · Pinned' : '') + '</span>' +
@@ -2821,6 +2879,18 @@ ${chatSiteNav("home")}
             event.preventDefault();
             event.stopPropagation();
             supportItem(post.id);
+          });
+        }
+        const readerExpandBtn = readerEl.querySelector('[data-reader-action="expand-full"]');
+        const readerFullBody = readerEl.querySelector(".reader-full-body");
+        if (readerExpandBtn && readerFullBody) {
+          readerExpandBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const shouldOpen = readerFullBody.hidden;
+            readerFullBody.hidden = !shouldOpen;
+            readerExpandBtn.setAttribute("aria-expanded", String(shouldOpen));
+            readerExpandBtn.textContent = shouldOpen ? "Hide full post" : "Read full post";
           });
         }
         const readerReplyBtn = readerEl.querySelector('[data-reader-action="reply"]');
@@ -2988,7 +3058,7 @@ ${chatSiteNav("home")}
                   '<div class="spotlight-actions">' +
                     '<span class="status-badge">' + escapeHTML(post.topic || "General") + '</span>' +
                     '<span class="status-badge ' + (post.pinned ? "pin" : "") + '">' + (post.pinned ? "Pinned" : "Trending") + '</span>' +
-                    '<button type="button" class="button button-secondary" data-spotlight-open="' + escapeHTML(post.id) + '">Open</button>' +
+                    '<button type="button" class="button button-secondary" data-spotlight-open="' + escapeHTML(post.id) + '" aria-label="Read spotlight post: ' + escapeHTML(post.title) + '">Read this</button>' +
                   '</div>' +
                   '<h5>' + escapeHTML(post.title) + '</h5>' +
                   '<p>By ' + escapeHTML(post.author || "Anonymous") + ' • ' + escapeHTML(formatDate(post.createdAt)) + '</p>' +
@@ -3004,11 +3074,8 @@ ${chatSiteNav("home")}
             event.stopPropagation();
             const id = button.getAttribute("data-spotlight-open");
             if (id) {
-              const target = getPostById(id);
-              if (target?.topic) {
-                setTopicFilter(target.topic, true);
-              }
               selectPost(id);
+              window.setTimeout(scrollToReader, 50);
             }
           });
         });
