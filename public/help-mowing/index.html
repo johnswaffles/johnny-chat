@@ -588,7 +588,7 @@
     font-weight: 750;
   }
 
-  .johnny-route-map {
+  .johnny-service-zone {
     position: relative;
     min-height: 260px;
     margin-top: 18px;
@@ -596,50 +596,123 @@
     overflow: hidden;
     border: 1px solid rgba(16, 32, 21, 0.08);
     background:
-      linear-gradient(90deg, transparent 47%, rgba(255,255,255,0.86) 47% 53%, transparent 53%),
-      linear-gradient(0deg, transparent 46%, rgba(255,255,255,0.86) 46% 54%, transparent 54%),
-      repeating-linear-gradient(135deg, #86be70 0 30px, #75ad62 30px 60px);
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.86) 0 14%, transparent 15%),
+      radial-gradient(circle at 50% 50%, rgba(181, 223, 107, 0.24) 0 29%, transparent 30%),
+      radial-gradient(circle at 50% 50%, rgba(105, 169, 87, 0.22) 0 48%, transparent 49%),
+      radial-gradient(circle at 50% 50%, rgba(216, 158, 71, 0.16) 0 68%, transparent 69%),
+      linear-gradient(135deg, rgba(241, 207, 109, 0.22), rgba(105, 169, 87, 0.2)),
+      repeating-linear-gradient(135deg, rgba(105, 169, 87, 0.2) 0 24px, rgba(255,255,255,0.18) 24px 48px);
   }
 
-  .johnny-route-map::after {
-    content: "Mount Vernon route";
+  .johnny-service-zone::before {
+    content: "";
     position: absolute;
-    left: 16px;
-    bottom: 16px;
+    inset: 20px;
+    border-radius: 24px;
+    border: 1px dashed rgba(18, 55, 31, 0.16);
+    pointer-events: none;
+  }
+
+  .johnny-zone-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(18, 55, 31, 0.16);
+    background: rgba(255,255,255,0.08);
+  }
+
+  .johnny-zone-ring.one {
+    width: 42%;
+    aspect-ratio: 1;
+  }
+
+  .johnny-zone-ring.two {
+    width: 64%;
+    aspect-ratio: 1;
+    border-style: dashed;
+  }
+
+  .johnny-zone-ring.three {
+    width: 86%;
+    aspect-ratio: 1;
+    border-color: rgba(216, 158, 71, 0.22);
+  }
+
+  .johnny-zone-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 138px;
+    height: 138px;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: #fffdf7;
+    background:
+      radial-gradient(circle at 38% 28%, rgba(255,255,255,0.22), transparent 28%),
+      linear-gradient(135deg, var(--green), var(--green-deep));
+    box-shadow: 0 18px 34px rgba(18, 55, 31, 0.28), 0 0 0 10px rgba(255,255,255,0.22);
+    font-family: "Outfit", Arial, sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+  }
+
+  .johnny-zone-center small {
+    display: block;
+    margin-top: 7px;
+    color: rgba(255,253,247,0.78);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .johnny-zone-label {
+    position: absolute;
     padding: 10px 12px;
     border-radius: 999px;
     color: var(--green-deep);
-    background: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.82);
+    border: 1px solid rgba(16,32,21,0.08);
+    box-shadow: 0 12px 22px rgba(16,32,21,0.08);
     font-size: 12px;
     font-weight: 900;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
-  .johnny-pin {
+  .johnny-zone-label.local {
+    left: 18px;
+    top: 18px;
+  }
+
+  .johnny-zone-label.acres {
+    right: 18px;
+    top: 72px;
+  }
+
+  .johnny-zone-label.photos {
+    left: 18px;
+    bottom: 18px;
+  }
+
+  .johnny-zone-dot {
     position: absolute;
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     border-radius: 999px;
     background: var(--gold);
-    box-shadow: 0 0 0 7px rgba(216,158,71,0.18), 0 12px 20px rgba(16,32,21,0.18);
+    box-shadow: 0 0 0 8px rgba(216,158,71,0.18), 0 12px 20px rgba(16,32,21,0.18);
   }
 
-  .johnny-pin.one { left: 18%; top: 28%; }
-  .johnny-pin.two { right: 24%; top: 22%; background: var(--green); }
-  .johnny-pin.three { left: 46%; bottom: 23%; background: #fffaf0; }
-
-  .johnny-route-line {
-    position: absolute;
-    left: 20%;
-    top: 34%;
-    width: 58%;
-    height: 36%;
-    border: 5px dashed rgba(20, 60, 34, 0.34);
-    border-left-color: transparent;
-    border-radius: 22px;
-    transform: rotate(-6deg);
-  }
+  .johnny-zone-dot.one { left: 28%; top: 37%; }
+  .johnny-zone-dot.two { right: 24%; top: 34%; background: var(--green); }
+  .johnny-zone-dot.three { left: 60%; bottom: 24%; background: #fffaf0; }
 
   .johnny-steps {
     display: grid;
@@ -827,6 +900,53 @@
       object-position: center 70%;
     }
 
+    .johnny-service-zone {
+      min-height: 340px;
+    }
+
+    .johnny-zone-ring.one {
+      width: 58%;
+    }
+
+    .johnny-zone-ring.two {
+      width: 78%;
+    }
+
+    .johnny-zone-ring.three {
+      width: 98%;
+    }
+
+    .johnny-zone-center {
+      top: 54%;
+      width: 112px;
+      height: 112px;
+      font-size: 18px;
+    }
+
+    .johnny-zone-label {
+      padding: 8px 9px;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      max-width: 150px;
+    }
+
+    .johnny-zone-label.local {
+      left: 12px;
+      top: 12px;
+    }
+
+    .johnny-zone-label.acres {
+      right: 12px;
+      top: 56px;
+      max-width: 132px;
+      text-align: right;
+    }
+
+    .johnny-zone-label.photos {
+      left: 12px;
+      bottom: 12px;
+    }
+
     .johnny-actions .johnny-button {
       width: 100%;
     }
@@ -933,11 +1053,17 @@
         <span class="johnny-tag">Service area</span>
         <h2>Mount Vernon first. Bigger jobs considered.</h2>
         <p>If you are near Mount Vernon, ask Johnny right away. If your property is five acres or more, still reach out because larger jobs may make sense farther out.</p>
-        <div class="johnny-route-map" aria-hidden="true">
-          <span class="johnny-route-line"></span>
-          <span class="johnny-pin one"></span>
-          <span class="johnny-pin two"></span>
-          <span class="johnny-pin three"></span>
+        <div class="johnny-service-zone" aria-hidden="true">
+          <span class="johnny-zone-ring three"></span>
+          <span class="johnny-zone-ring two"></span>
+          <span class="johnny-zone-ring one"></span>
+          <span class="johnny-zone-center">Mt Vernon<small>home base</small></span>
+          <span class="johnny-zone-label local">Local route first</span>
+          <span class="johnny-zone-label acres">5+ acre jobs considered</span>
+          <span class="johnny-zone-label photos">Photos help quote faster</span>
+          <span class="johnny-zone-dot one"></span>
+          <span class="johnny-zone-dot two"></span>
+          <span class="johnny-zone-dot three"></span>
         </div>
       </div>
     </div>
