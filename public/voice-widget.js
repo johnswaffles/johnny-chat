@@ -155,7 +155,12 @@ class VoiceWidget {
             this.fileInput.disabled = true;
         }
 
-        if (container && window.matchMedia('(max-width: 600px)').matches) {
+        const startMinimized =
+            window.JOHNNY_WIDGET_START_MINIMIZED === true ||
+            window.johnnyWidgetStartMinimized === true ||
+            String(document.documentElement?.dataset?.johnnyWidgetStartMinimized || "").toLowerCase() === "true";
+
+        if (container && (startMinimized || window.matchMedia('(max-width: 600px)').matches)) {
             container.classList.add('minimized');
         }
     }

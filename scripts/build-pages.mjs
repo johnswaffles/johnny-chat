@@ -23,6 +23,7 @@ const godotExportTargetDirs = godotExportGroups.flatMap((group) => group.targetD
 const widgetSnippet = (profile) => `
   <script>
     window.JOHNNY_WIDGET_PROFILE = "${profile}";
+    ${profile === "mowing" ? "window.JOHNNY_WIDGET_START_MINIMIZED = true;" : ""}
   </script>
   <link rel="stylesheet" href="https://johnny-chat.onrender.com/voice-widget.css">
   <script src="https://johnny-chat.onrender.com/voice-widget.js"></script>`;
@@ -4349,8 +4350,6 @@ ${siteNav("ai", "contact")}
       const profile = isMowing ? "mowing" : "ai";
       const apiBase = String(window.JOHNNY_CONTACT_API_BASE_URL || "https://johnny-chat.onrender.com").replace(new RegExp("/+$"), "");
 
-      window.JOHNNY_WIDGET_PROFILE = profile;
-
       const badge = document.querySelector("[data-profile-badge]");
       const eyebrow = document.querySelector("[data-eyebrow]");
       const title = document.querySelector("[data-title]");
@@ -4465,13 +4464,6 @@ ${siteNav("ai", "contact")}
       });
     })();
   </script>
-  <script>
-    (function () {
-      window.JOHNNY_WIDGET_PROFILE = String(window.location.hostname || "").toLowerCase().includes("618help.com") ? "mowing" : "ai";
-    })();
-  </script>
-  <link rel="stylesheet" href="https://johnny-chat.onrender.com/voice-widget.css">
-  <script src="https://johnny-chat.onrender.com/voice-widget.js"></script>
 </body>
 </html>`;
 }
