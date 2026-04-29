@@ -205,6 +205,36 @@ class VoiceWidget {
         const minBtn = document.getElementById('minimize-btn');
         const titleBtn = document.getElementById('widget-title-button');
         const container = document.getElementById('voice-widget-container');
+        const fitWidgetInViewport = () => {
+            if (!container) return;
+
+            const margin = 12;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const rect = container.getBoundingClientRect();
+
+            if (!container.style.left && !container.style.top) return;
+
+            const nextLeft = Math.min(Math.max(rect.left, margin), Math.max(margin, viewportWidth - rect.width - margin));
+            const nextTop = Math.min(Math.max(rect.top, margin), Math.max(margin, viewportHeight - rect.height - margin));
+
+            container.style.left = `${nextLeft}px`;
+            container.style.top = `${nextTop}px`;
+            container.style.right = 'auto';
+            container.style.bottom = 'auto';
+        };
+        const openWidget = () => {
+            if (!container) return;
+
+            container.classList.remove('minimized');
+            window.requestAnimationFrame(() => {
+                fitWidgetInViewport();
+                const focusTarget = this.textInput || this.btn;
+                if (focusTarget && typeof focusTarget.focus === 'function') {
+                    focusTarget.focus({ preventScroll: true });
+                }
+            });
+        };
         const syncChrome = () => {
             if (!container || !minBtn) return;
             const minimized = container.classList.contains('minimized');
@@ -216,18 +246,33 @@ class VoiceWidget {
         };
 
         if (minBtn) {
-            minBtn.onclick = () => {
+            minBtn.onclick = (e) => {
+                e.stopPropagation();
                 container.classList.toggle('minimized');
+                window.requestAnimationFrame(fitWidgetInViewport);
                 syncChrome();
             };
         }
 
         if (titleBtn) {
-            titleBtn.onclick = () => {
+            titleBtn.onclick = (e) => {
+                e.stopPropagation();
                 if (!container.classList.contains('minimized')) return;
-                container.classList.remove('minimized');
+                openWidget();
                 syncChrome();
             };
+        }
+
+        if (container) {
+            container.addEventListener('click', (e) => {
+                if (!container.classList.contains('minimized')) return;
+                e.preventDefault();
+                openWidget();
+                syncChrome();
+            });
+
+            window.addEventListener('resize', fitWidgetInViewport);
+            window.addEventListener('orientationchange', () => window.setTimeout(fitWidgetInViewport, 150));
         }
 
         syncChrome();
@@ -264,7 +309,8 @@ class VoiceWidget {
             document.addEventListener('mouseup', () => {
                 if (isDragging) {
                     isDragging = false;
-                    container.style.transition = 'height 0.3s ease, border-radius 0.3s ease';
+                    container.style.transition = 'width 0.3s ease, height 0.3s ease, border-radius 0.3s ease, top 0.3s ease, left 0.3s ease, right 0.3s ease, bottom 0.3s ease';
+                    fitWidgetInViewport();
                 }
             });
         }
