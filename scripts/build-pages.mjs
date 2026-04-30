@@ -131,6 +131,7 @@ function siteNav(profile, active, brandOverride = "") {
   const brand = brandOverride || (profile === "mowing" ? "618help.com" : "justaskjohnny.com");
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
   const gptHref = "/chatbot/";
+  const storyHref = "/storyforge/";
   const cozyHref = "/cozy-builder-game/";
   const rpgHref = "/tiny-hero-quest/";
   const contactHref = "/contact/";
@@ -142,6 +143,7 @@ function siteNav(profile, active, brandOverride = "") {
     : [
         `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
         `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>`,
+        `<a class="johnny-site-link ${active === "storyforge" ? "active" : ""}" href="${storyHref}">StoryForge</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>`,
         `<a class="johnny-site-link ${active === "rpg" ? "active" : ""}" href="${rpgHref}" target="_blank" rel="noopener noreferrer">Hero RPG</a>`,
         `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
@@ -4367,6 +4369,7 @@ ${siteNav("ai", "contact")}
       const navLinks = document.querySelectorAll(".johnny-site-link");
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
       const gptHref = "/chatbot/";
+      const storyHref = "/storyforge/";
       const cozyHref = "/cozy-builder-game/";
       const rpgHref = "/tiny-hero-quest/";
       const contactHref = "/contact/";
@@ -4384,12 +4387,13 @@ ${siteNav("ai", "contact")}
           '<a class="johnny-site-link" href="' + homeHref + '">Home</a>',
           '<a class="johnny-site-link active" href="' + contactHref + '">Contact</a>'
         ].join("");
-      } else if (navLinks.length >= 5) {
+      } else if (navLinks.length >= 6) {
         navLinks[0].href = homeHref;
         navLinks[1].href = gptHref;
-        navLinks[2].href = cozyHref;
-        navLinks[3].href = rpgHref;
-        navLinks[4].href = contactHref;
+        navLinks[2].href = storyHref;
+        navLinks[3].href = cozyHref;
+        navLinks[4].href = rpgHref;
+        navLinks[5].href = contactHref;
       }
 
       if (isMowing) {

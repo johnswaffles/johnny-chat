@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StoryForge | justaskjohnny.com</title>
+  <meta name="description" content="StoryForge is an AI driven interactive story app with generated scenes, art styles, and branching choices.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./storyforge.css?v=20260430-1">
+</head>
+<body>
+  <header class="johnny-site-nav">
+    <a class="johnny-site-brand" href="https://justaskjohnny.com">justaskjohnny.com</a>
+    <nav class="johnny-site-links" aria-label="Site">
+      <a class="johnny-site-link" href="https://justaskjohnny.com">Home</a>
+      <a class="johnny-site-link" href="/chatbot/">GPT 5.5</a>
+      <a class="johnny-site-link active" href="/storyforge/">StoryForge</a>
+      <a class="johnny-site-link" href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
+      <a class="johnny-site-link" href="/tiny-hero-quest/" target="_blank" rel="noopener noreferrer">Hero RPG</a>
+      <a class="johnny-site-link" href="/contact/">Contact</a>
+    </nav>
+  </header>
+
+  <main class="story-shell">
+    <section class="setup-bar" aria-label="Story setup">
+      <div class="setup-group">
+        <div class="setup-label">World</div>
+        <div class="choice-row" data-genre-options></div>
+      </div>
+      <div class="setup-group">
+        <div class="setup-label">Artwork</div>
+        <div class="choice-row" data-style-options></div>
+      </div>
+      <button class="primary-action" type="button" data-open-seed>Forge Story</button>
+    </section>
+
+    <section class="story-stage" aria-live="polite">
+      <div class="art-panel">
+        <img class="story-art" data-story-image alt="Generated story artwork" hidden>
+        <div class="art-empty" data-art-empty>
+          <span>StoryForge</span>
+        </div>
+        <div class="art-status" data-art-status>Ready</div>
+      </div>
+
+      <article class="story-panel">
+        <div class="story-tags">
+          <span data-genre-tag>Cyberpunk</span>
+          <span data-style-tag>Watercolor</span>
+        </div>
+        <h1 data-story-title>StoryForge</h1>
+        <div class="story-copy" data-story-copy>
+          <p>A fresh story is waiting at the edge of the forge.</p>
+          <p>Pick a world, pick an art style, and strike the first spark.</p>
+        </div>
+        <div class="choice-grid" data-choice-grid></div>
+        <div class="story-actions">
+          <button type="button" class="ghost-action" data-back disabled>Back</button>
+          <button type="button" class="ghost-action" data-remix>Mix Setup</button>
+          <button type="button" class="ghost-action" data-clear>Clear</button>
+        </div>
+      </article>
+    </section>
+
+    <aside class="story-timeline" aria-label="Story timeline">
+      <div class="timeline-head">
+        <h2>Path</h2>
+        <span data-step-count>0 scenes</span>
+      </div>
+      <div class="timeline-list" data-timeline-list>
+        <button type="button" class="timeline-item active">The beginning</button>
+      </div>
+    </aside>
+  </main>
+
+  <div class="seed-modal" data-seed-modal hidden>
+    <div class="modal-scrim" data-close-seed></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="seed-title">
+      <h2 id="seed-title">Give StoryForge a spark</h2>
+      <textarea data-seed-input rows="5" maxlength="1200" placeholder="A runaway courier finds a city under the rain..."></textarea>
+      <div class="modal-actions">
+        <button type="button" class="ghost-action" data-ai-start>Make It All AI Generated</button>
+        <button type="button" class="primary-action" data-seed-start>Use My Idea</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="./storyforge.js?v=20260430-1"></script>
+</body>
+</html>

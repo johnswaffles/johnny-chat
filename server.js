@@ -19,6 +19,7 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_GPT54_REASONING_EFFORT = "",
+  OPENAI_STORY_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
   OPENAI_TTS_MODEL = "gpt-4o-mini-tts",
@@ -174,6 +175,7 @@ function emptyJohnnyChatUsage() {
       transcriptions: 0,
       uploads: 0,
       images: 0,
+      storyforge: 0,
       libraryItems: 0,
       deepResearch: 0,
       actions: 0,
@@ -544,6 +546,100 @@ function extractResponseSources(response) {
   }
 
   return sources;
+}
+
+const STORYFORGE_GENRES = [
+  "Cyberpunk",
+  "Fantasy",
+  "Mystery",
+  "Space Opera",
+  "Cozy Adventure",
+  "Horror",
+  "Western",
+  "Superhero"
+];
+
+const STORYFORGE_ART_STYLES = [
+  "Watercolor",
+  "Comic Book",
+  "Cinematic",
+  "Pixel Art",
+  "Noir Ink",
+  "Claymation",
+  "Anime",
+  "Oil Painting"
+];
+
+function clampStoryForgeText(value, max = 1200) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+function normalizeStoryForgeOption(value, options, fallback) {
+  const candidate = clampStoryForgeText(value, 80).toLowerCase();
+  return options.find((option) => option.toLowerCase() === candidate) || fallback;
+}
+
+function parseStoryForgeJson(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const withoutFence = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+    try {
+      return JSON.parse(withoutFence);
+    } catch {
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) return null;
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        return null;
+      }
+    }
+  }
+}
+
+function normalizeStoryForgeChoice(choice, index) {
+  const source = choice && typeof choice === "object" ? choice : {};
+  const label = clampStoryForgeText(source.label || source.title || source.text, 80);
+  const prompt = clampStoryForgeText(source.prompt || source.action || label, 180);
+  return {
+    label: label || ["Take the risk", "Follow the clue", "Change the plan"][index] || "Keep going",
+    prompt: prompt || label || "Continue the story"
+  };
+}
+
+function normalizeStoryForgePayload(payload, genre) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  const fallbackTitle = `${genre} Story`;
+  const choices = Array.isArray(source.choices)
+    ? source.choices.slice(0, 3).map(normalizeStoryForgeChoice)
+    : [];
+
+  while (choices.length < 3) {
+    choices.push(normalizeStoryForgeChoice({}, choices.length));
+  }
+
+  return {
+    title: clampStoryForgeText(source.title, 90) || fallbackTitle,
+    scene: String(source.scene || "").replace(/\r\n/g, "\n").trim().slice(0, 1800) || [
+      "The scene opens with a strange signal, a locked choice, and a world waiting for a first brave move.",
+      "A path appears ahead, but it will not stay open for long."
+    ].join("\n\n"),
+    imagePrompt: clampStoryForgeText(source.image_prompt || source.imagePrompt, 1200) || `A dramatic ${genre} scene with a clear main character and a choice ahead.`,
+    choices
+  };
+}
+
+function normalizeStoryForgeHistory(history) {
+  if (!Array.isArray(history)) return [];
+  return history.slice(-6).map((entry) => ({
+    title: clampStoryForgeText(entry?.title, 90),
+    scene: clampStoryForgeText(entry?.scene, 1000),
+    selectedChoice: clampStoryForgeText(entry?.selectedChoice || entry?.choice, 180)
+  })).filter((entry) => entry.title || entry.scene || entry.selectedChoice);
 }
 
 const app = express();
@@ -1774,6 +1870,97 @@ app.post("/api/voice-search", async (req, res) => {
   } catch (err) {
     console.error("❌ Voice Search Error:", err);
     res.status(500).json({ error: "Search failed" });
+  }
+});
+
+app.post("/api/storyforge/turn", async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ detail: "OpenAI API key not configured." });
+    }
+
+    const genre = normalizeStoryForgeOption(req.body?.genre, STORYFORGE_GENRES, "Cyberpunk");
+    const artStyle = normalizeStoryForgeOption(req.body?.artStyle || req.body?.style, STORYFORGE_ART_STYLES, "Watercolor");
+    const seed = clampStoryForgeText(req.body?.seed, 1200);
+    const selectedChoice = clampStoryForgeText(req.body?.choice, 220);
+    const history = normalizeStoryForgeHistory(req.body?.history);
+
+    const promptPayload = {
+      mode: history.length ? "continue" : "start",
+      genre,
+      artStyle,
+      seed,
+      selectedChoice,
+      storySoFar: history
+    };
+
+    const completion = await openai.chat.completions.create({
+      model: OPENAI_STORY_MODEL,
+      temperature: 0.9,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: [
+            "You are StoryForge, an interactive fiction engine for a simple web app.",
+            "Return only valid JSON with keys: title, scene, image_prompt, choices.",
+            "The JSON must be one object. Do not use markdown.",
+            "Write scene as exactly two short paragraphs separated by a blank line.",
+            "Keep the story vivid, accessible, and family-safe unless the user's seed clearly asks for a darker but non-graphic mood.",
+            "End every scene at an active decision point.",
+            "choices must contain exactly three objects, each with label and prompt.",
+            "Make the three choices meaningfully different: bold, clever, and strange.",
+            "image_prompt should describe one square illustration for the current scene. Do not include text, logos, captions, UI, watermarks, or speech bubbles."
+          ].join(" ")
+        },
+        {
+          role: "user",
+          content: `Create the next StoryForge turn from this JSON request:\n${JSON.stringify(promptPayload)}`
+        }
+      ]
+    });
+
+    const parsed = parseStoryForgeJson(completion.choices[0]?.message?.content);
+    const story = normalizeStoryForgePayload(parsed, genre);
+    let imageB64 = "";
+    let imageUrl = "";
+    let imageError = "";
+
+    try {
+      const imagePrompt = [
+        "Create one finished square illustration for an interactive story app.",
+        `Genre: ${genre}. Art style: ${artStyle}.`,
+        story.imagePrompt,
+        "No readable text, logos, captions, UI panels, borders, watermarks, or speech bubbles."
+      ].join("\n");
+
+      const generated = await openai.images.generate({
+        model: OPENAI_IMAGE_MODEL,
+        prompt: imagePrompt,
+        size: "1024x1024",
+        quality: "high"
+      });
+
+      imageB64 = generated.data?.[0]?.b64_json || "";
+      imageUrl = generated.data?.[0]?.url || "";
+      void recordJohnnyChatUsage("images", { model: OPENAI_IMAGE_MODEL, route: "/api/storyforge/turn" });
+    } catch (imageErr) {
+      imageError = String(imageErr.message || imageErr);
+      console.warn("StoryForge image generation failed:", imageError);
+      void recordJohnnyChatUsage("errors", { route: "/api/storyforge/turn:image", message: imageError });
+    }
+
+    void recordJohnnyChatUsage("storyforge", { genre, artStyle });
+    res.json({
+      ok: true,
+      story,
+      image_b64: imageB64,
+      image_url: imageUrl,
+      image_error: imageError
+    });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/storyforge/turn", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
   }
 });
 
