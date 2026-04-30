@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/chatbot/chatbot.css?v=20260428-2">
-  <script defer src="/chatbot/chatbot.js?v=20260428-4"></script>
+  <link rel="stylesheet" href="/chatbot/chatbot.css?v=20260430-1">
+  <script defer src="/chatbot/chatbot.js?v=20260430-1"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -44,7 +44,10 @@
           <h1>JohnnyChat</h1>
           <p>Private GPT 5.5 workspace</p>
         </div>
-        <button id="new-chat-main" class="pill-button" type="button">New chat</button>
+        <div class="topbar-actions">
+          <button id="voice-toggle" class="pill-button pill-muted voice-toggle" type="button" aria-pressed="false" title="Toggle AI-generated voice">AI voice off</button>
+          <button id="new-chat-main" class="pill-button" type="button">New chat</button>
+        </div>
       </header>
 
       <section class="chat-shell">

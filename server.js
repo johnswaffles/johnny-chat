@@ -21,6 +21,9 @@ const {
   OPENAI_GPT54_REASONING_EFFORT = "",
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
+  OPENAI_TTS_MODEL = "gpt-4o-mini-tts",
+  OPENAI_TTS_VOICE = "coral",
+  OPENAI_TTS_INSTRUCTIONS = "Speak in an emotive, friendly, natural tone.",
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = "",
   CONTACT_TO_EMAIL = "",
@@ -74,6 +77,21 @@ if (!OPENAI_API_KEY) {
 }
 
 const CHATBOT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+const TTS_VOICES = new Set([
+  "alloy",
+  "ash",
+  "ballad",
+  "cedar",
+  "coral",
+  "echo",
+  "fable",
+  "marin",
+  "nova",
+  "onyx",
+  "sage",
+  "shimmer",
+  "verse"
+]);
 
 function safeStringEqual(a, b) {
   const left = Buffer.from(String(a || ""), "utf8");
@@ -128,6 +146,15 @@ function requireChatbotSession(req, res) {
   }
 
   return true;
+}
+
+function normalizeTtsText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, 4096);
+}
+
+function normalizeTtsVoice(value) {
+  const voice = String(value || OPENAI_TTS_VOICE || "coral").toLowerCase().trim();
+  return TTS_VOICES.has(voice) ? voice : "coral";
 }
 
 function normalizeWidgetProfile(value) {
@@ -1539,6 +1566,42 @@ app.post("/api/community-speech", async (req, res) => {
     });
 
     const audioBuffer = Buffer.from(await speech.arrayBuffer());
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(audioBuffer);
+  } catch (err) {
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+app.post("/api/chatbot-tts", async (req, res) => {
+  try {
+    if (!requireChatbotSession(req, res)) return;
+
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ detail: "OpenAI API key not configured." });
+    }
+
+    const text = normalizeTtsText(req.body?.text);
+    if (!text) {
+      return res.status(400).json({ detail: "Missing text." });
+    }
+
+    const model = String(OPENAI_TTS_MODEL || "gpt-4o-mini-tts").trim();
+    const speechConfig = {
+      model,
+      voice: normalizeTtsVoice(req.body?.voice),
+      input: text,
+      response_format: "mp3"
+    };
+
+    if (OPENAI_TTS_INSTRUCTIONS && model.includes("gpt-4o")) {
+      speechConfig.instructions = OPENAI_TTS_INSTRUCTIONS;
+    }
+
+    const speech = await openai.audio.speech.create(speechConfig);
+    const audioBuffer = Buffer.from(await speech.arrayBuffer());
+
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "no-store");
     res.send(audioBuffer);

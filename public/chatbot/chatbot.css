@@ -79,7 +79,8 @@ button {
 .rail-top,
 .card-head,
 .topbar,
-.composer {
+.composer,
+.topbar-actions {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -139,11 +140,17 @@ button {
 }
 
 .pill-button:hover,
+.voice-toggle.active,
 .icon-button:hover,
 .send-button:hover,
 .menu-button:hover,
 .copy-btn:hover {
   background: var(--surface-3);
+}
+
+.voice-toggle.active {
+  border-color: rgba(125, 211, 176, 0.34);
+  color: var(--accent);
 }
 
 .search input {
@@ -427,6 +434,7 @@ textarea:focus {
 
 .message-actions {
   display: flex;
+  gap: 7px;
   justify-content: flex-end;
   margin-top: 10px;
 }
@@ -437,6 +445,11 @@ textarea:focus {
   border: 1px solid var(--line);
   background: transparent;
   color: var(--muted);
+}
+
+.speak-btn.playing {
+  border-color: rgba(125, 211, 176, 0.34);
+  color: var(--accent);
 }
 
 .think {
@@ -685,6 +698,7 @@ textarea {
 
   .topbar {
     min-height: 64px;
+    gap: 10px;
   }
 
   .headline h1 {
@@ -697,6 +711,31 @@ textarea {
 
   .message {
     max-width: 100%;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .voice-toggle {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    overflow: hidden;
+    color: transparent;
+  }
+
+  .voice-toggle.active {
+    color: transparent;
+  }
+
+  .voice-toggle::before {
+    content: "AI";
+    color: var(--copy);
+  }
+
+  .voice-toggle.active::before {
+    color: var(--accent);
   }
 
   .composer {

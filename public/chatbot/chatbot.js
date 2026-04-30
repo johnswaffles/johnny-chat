@@ -7,6 +7,8 @@
   const imageDbName = "gpt54_images_v1";
   const imageStore = "images";
   const sessionCookieName = "gpt54_session";
+  const ttsStoreKey = "gpt54_tts_enabled";
+  const ttsVoice = "coral";
 
   const noopClassList = {
     add() {},
@@ -90,7 +92,8 @@
     closeModal: getEl("close-modal"),
     newChatRail: getEl("new-chat-rail"),
     newChatRail2: getEl("new-chat-rail-2"),
-    newChatMain: getEl("new-chat-main")
+    newChatMain: getEl("new-chat-main"),
+    voiceToggle: getEl("voice-toggle")
   };
 
   document.title = "GPT 5.5";
@@ -109,7 +112,11 @@
     activeId: localStorage.getItem(activeKey) || "",
     imageDbPromise: null,
     currentMenu: null,
-    pendingFiles: []
+    pendingFiles: [],
+    ttsEnabled: readJSON(ttsStoreKey, false) === true,
+    currentAudio: null,
+    currentAudioUrl: "",
+    currentSpeakButton: null
   };
 
   if (!Array.isArray(db.convos)) db.convos = [];
@@ -218,6 +225,133 @@
 
     flushBullets();
     return parts.join("") || "<p></p>";
+  }
+
+  function speechText(value) {
+    return String(value || "")
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, "")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/```[\s\S]*?```/g, " code block omitted ")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/[#>*_~]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 4096);
+  }
+
+  function updateVoiceToggle() {
+    el.voiceToggle.textContent = db.ttsEnabled ? "AI voice on" : "AI voice off";
+    el.voiceToggle.setAttribute("aria-pressed", db.ttsEnabled ? "true" : "false");
+    el.voiceToggle.classList.toggle("active", db.ttsEnabled);
+  }
+
+  function resetSpeakButtons() {
+    document.querySelectorAll(".speak-btn").forEach((button) => {
+      button.disabled = false;
+      button.classList.remove("playing");
+      button.textContent = "▶";
+      button.title = "Play AI voice";
+    });
+  }
+
+  function stopSpeech() {
+    if (db.currentAudio) {
+      db.currentAudio.pause();
+      db.currentAudio.src = "";
+    }
+    if (db.currentAudioUrl) URL.revokeObjectURL(db.currentAudioUrl);
+    db.currentAudio = null;
+    db.currentAudioUrl = "";
+    db.currentSpeakButton = null;
+    resetSpeakButtons();
+  }
+
+  async function speakText(content, button) {
+    if (button && db.currentSpeakButton === button && db.currentAudio && !db.currentAudio.paused) {
+      stopSpeech();
+      return;
+    }
+
+    const text = speechText(content);
+    if (!text) return;
+
+    stopSpeech();
+    if (button) {
+      button.disabled = true;
+      button.textContent = "...";
+      button.title = "Preparing AI voice";
+    }
+
+    try {
+      const res = await apiFetch(`${apiBase}/api/chatbot-tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, voice: ttsVoice, profile })
+      });
+      const data = res.ok ? null : await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || "AI voice failed");
+
+      const blob = await res.blob();
+      if (!blob.size) throw new Error("AI voice returned no audio");
+
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      db.currentAudio = audio;
+      db.currentAudioUrl = url;
+      db.currentSpeakButton = button || null;
+
+      audio.addEventListener("ended", stopSpeech, { once: true });
+      audio.addEventListener("error", stopSpeech, { once: true });
+
+      if (button) {
+        button.disabled = false;
+        button.classList.add("playing");
+        button.textContent = "■";
+        button.title = "Stop AI voice";
+      }
+
+      await audio.play();
+    } catch (err) {
+      stopSpeech();
+      if (button) {
+        button.disabled = false;
+        button.textContent = "!";
+        button.title = err.message || "AI voice failed";
+        setTimeout(() => {
+          button.textContent = "▶";
+          button.title = "Play AI voice";
+        }, 1400);
+      }
+    }
+  }
+
+  function appendMessageActions(bubble, content) {
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+
+    const speak = document.createElement("button");
+    speak.type = "button";
+    speak.className = "copy-btn speak-btn";
+    speak.textContent = "▶";
+    speak.title = "Play AI voice";
+    speak.setAttribute("aria-label", "Play AI-generated voice");
+    speak.addEventListener("click", () => speakText(content, speak));
+
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "copy-btn";
+    copy.textContent = "⧉";
+    copy.title = "Copy message";
+    copy.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(content || "");
+      copy.textContent = "✓";
+      setTimeout(() => {
+        copy.textContent = "⧉";
+      }, 1200);
+    });
+
+    actions.append(speak, copy);
+    bubble.appendChild(actions);
   }
 
   function closeMenus(except) {
@@ -365,21 +499,7 @@
     }
 
     if (role === "assistant") {
-      const actions = document.createElement("div");
-      actions.className = "message-actions";
-      const copy = document.createElement("button");
-      copy.type = "button";
-      copy.className = "copy-btn";
-      copy.textContent = "⧉";
-      copy.addEventListener("click", async () => {
-        await navigator.clipboard.writeText(content || "");
-        copy.textContent = "✓";
-        setTimeout(() => {
-          copy.textContent = "⧉";
-        }, 1200);
-      });
-      actions.appendChild(copy);
-      bubble.appendChild(actions);
+      appendMessageActions(bubble, content);
     }
 
     el.messages.appendChild(bubble);
@@ -419,21 +539,7 @@
         bubble.dataset.raw = content;
         bubble.innerHTML = `<div>${pretty(content)}</div>`;
         appendSources(bubble, meta.sources);
-        const actions = document.createElement("div");
-        actions.className = "message-actions";
-        const copy = document.createElement("button");
-        copy.type = "button";
-        copy.className = "copy-btn";
-        copy.textContent = "⧉";
-        copy.addEventListener("click", async () => {
-          await navigator.clipboard.writeText(content || "");
-          copy.textContent = "✓";
-          setTimeout(() => {
-            copy.textContent = "⧉";
-          }, 1200);
-        });
-        actions.appendChild(copy);
-        bubble.appendChild(actions);
+        appendMessageActions(bubble, content);
       }
     };
   }
@@ -825,6 +931,7 @@
       convo.updatedAt = nowISO();
       save();
       renderSidebar();
+      if (db.ttsEnabled) speakText(reply);
     } catch (err) {
       thinking.replace(`Error: ${err.message || err}`);
     }
@@ -849,6 +956,13 @@
   el.clearImages.addEventListener("click", async () => {
     await clearStoredImages();
     await renderRecentImages();
+  });
+
+  el.voiceToggle.addEventListener("click", () => {
+    db.ttsEnabled = !db.ttsEnabled;
+    localStorage.setItem(ttsStoreKey, JSON.stringify(db.ttsEnabled));
+    if (!db.ttsEnabled) stopSpeech();
+    updateVoiceToggle();
   });
 
   el.sendBtn.addEventListener("click", sendMessage);
@@ -897,6 +1011,7 @@
     renderSidebar();
     await renderRecentImages();
     renderChat();
+    updateVoiceToggle();
     resizeInput();
     requestAnimationFrame(() => focusComposer());
   }
