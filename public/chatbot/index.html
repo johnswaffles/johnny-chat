@@ -4,20 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GPT 5.5</title>
-  <meta name="description" content="A standalone GPT 5.5 chat workspace with a polished ChatGPT-style interface, saved threads, file uploads, and image generation.">
+  <meta name="description" content="A private JohnnyChat workspace.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/chatbot/chatbot.css?v=20260403-1">
-  <script defer src="/chatbot/chatbot.js?v=20260428-1"></script>
+  <link rel="stylesheet" href="/chatbot/chatbot.css?v=20260428-2">
+  <script defer src="/chatbot/chatbot.js?v=20260428-4"></script>
 </head>
 <body>
   <div class="app-shell">
     <aside class="rail">
       <div class="rail-top">
         <div>
-          <div class="brand">GPT 5.5</div>
-          <div class="rail-subtitle">Standalone assistant workspace</div>
+          <div class="brand">JohnnyChat</div>
+          <div class="rail-subtitle">Private GPT 5.5</div>
         </div>
         <button id="new-chat-rail" class="pill-button" type="button">New chat</button>
       </div>
@@ -27,35 +27,12 @@
         <input id="search" type="search" placeholder="Search conversations" autocomplete="off">
       </label>
 
-      <section class="rail-card">
-        <div class="card-head">
-          <div>
-            <div class="eyebrow">Quick start</div>
-            <h2>Prompt ideas</h2>
-          </div>
-          <button id="clear-search" class="pill-button pill-muted" type="button">Clear</button>
-        </div>
-        <div class="prompt-deck" id="prompt-deck"></div>
-      </section>
-
-      <section class="rail-card">
-        <div class="card-head">
-          <div>
-            <div class="eyebrow">Recent images</div>
-            <h2>Saved here</h2>
-          </div>
-          <button id="clear-images" class="pill-button pill-muted" type="button">Clear</button>
-        </div>
-        <div class="recent-images" id="recent-images"></div>
-      </section>
-
       <section class="rail-card grow">
         <div class="card-head">
           <div>
-            <div class="eyebrow">Conversations</div>
-            <h2>History</h2>
+            <h2>Chats</h2>
           </div>
-          <button id="new-chat-rail-2" class="pill-button" type="button">New chat</button>
+          <button id="clear-search" class="pill-button pill-muted" type="button">Clear</button>
         </div>
         <div class="conversation-list" id="conversation-list"></div>
       </section>
@@ -63,15 +40,11 @@
 
     <main class="main">
       <header class="topbar">
-        <div class="status-group">
-          <span class="status-pill">GPT 5.5</span>
-          <span class="status-pill subtle">Private workspace</span>
-        </div>
         <div class="headline">
-          <h1>JohnnyChat powered by the latest version of ChatGPT</h1>
-          <p>If you have suggestions, text them to Johnny and he'll update the model.</p>
+          <h1>JohnnyChat</h1>
+          <p>Private GPT 5.5 workspace</p>
         </div>
-        <button id="new-chat-main" class="pill-button pill-danger" type="button">Start a new chat</button>
+        <button id="new-chat-main" class="pill-button" type="button">New chat</button>
       </header>
 
       <section class="chat-shell">
@@ -85,9 +58,6 @@
           <input id="file-input" type="file" multiple accept=".pdf,image/png,image/jpeg,image/webp" hidden>
         </div>
 
-        <div class="footer-note">
-          Tip: type <code>/image</code> before a prompt to generate artwork.
-        </div>
       </section>
     </main>
   </div>

@@ -721,8 +721,6 @@
 
   async function initialGreeting(convo) {
     if (!convo || convo.greeted) return;
-    convo.greeted = true;
-    save();
     const thinking = showThinking("Thinking...");
 
     try {
@@ -739,11 +737,14 @@
       if (!res.ok) throw new Error(data.detail || "Please refresh and unlock the chatbot again.");
       const reply = data.reply || "Hello. How can I help today?";
       thinking.replace(reply);
+      convo.greeted = true;
       convo.messages.push({ role: "assistant", content: reply });
       convo.updatedAt = nowISO();
       save();
       renderSidebar();
     } catch (err) {
+      convo.greeted = false;
+      save();
       thinking.replace(`Error: ${err.message || "Please refresh and unlock the chatbot again."}`);
     }
   }
@@ -752,6 +753,8 @@
     el.messages.innerHTML = "";
     const convo = getActive();
     if (!convo.messages || !convo.messages.length) {
+      convo.greeted = false;
+      save();
       initialGreeting(convo);
       return;
     }
@@ -895,10 +898,6 @@
     await renderRecentImages();
     renderChat();
     resizeInput();
-    const active = getActive();
-    if (!active.messages.length) {
-      initialGreeting(active);
-    }
     requestAnimationFrame(() => focusComposer());
   }
 
