@@ -24,6 +24,7 @@ const {
   OPENAI_TTS_MODEL = "gpt-4o-mini-tts",
   OPENAI_TTS_VOICE = "coral",
   OPENAI_TTS_INSTRUCTIONS = "Speak in an emotive, friendly, natural tone.",
+  OPENAI_TRANSCRIBE_MODEL = "gpt-4o-transcribe",
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = "",
   CONTACT_TO_EMAIL = "",
@@ -43,6 +44,7 @@ const {
   PUBLIC_BOARD_POST_DAILY_LIMIT = "2",
   PUBLIC_BOARD_COMMENT_LIMIT = "50",
   PUBLIC_BOARD_ADMIN_TOKEN = "",
+  JOHNNY_CHAT_USAGE_PATH = "/var/data/johnny-chat-usage.json",
   JOHNNY_CHAT_PASSWORD = ""
 } = process.env;
 
@@ -77,6 +79,7 @@ if (!OPENAI_API_KEY) {
 }
 
 const CHATBOT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+let johnnyChatUsageLock = Promise.resolve();
 const TTS_VOICES = new Set([
   "alloy",
   "ash",
@@ -155,6 +158,107 @@ function normalizeTtsText(value) {
 function normalizeTtsVoice(value) {
   const voice = String(value || OPENAI_TTS_VOICE || "coral").toLowerCase().trim();
   return TTS_VOICES.has(voice) ? voice : "coral";
+}
+
+function emptyJohnnyChatUsage() {
+  return {
+    startedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    totals: {
+      sessions: 0,
+      chats: 0,
+      streamedChats: 0,
+      tts: 0,
+      transcriptions: 0,
+      uploads: 0,
+      images: 0,
+      errors: 0
+    },
+    recentEvents: [],
+    recentErrors: []
+  };
+}
+
+async function readJohnnyChatUsage() {
+  try {
+    const raw = await readFile(JOHNNY_CHAT_USAGE_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    const base = emptyJohnnyChatUsage();
+    return {
+      ...base,
+      ...parsed,
+      totals: { ...base.totals, ...(parsed?.totals || {}) },
+      recentEvents: Array.isArray(parsed?.recentEvents) ? parsed.recentEvents : [],
+      recentErrors: Array.isArray(parsed?.recentErrors) ? parsed.recentErrors : []
+    };
+  } catch {
+    return emptyJohnnyChatUsage();
+  }
+}
+
+async function writeJohnnyChatUsage(usage) {
+  await mkdir(path.dirname(JOHNNY_CHAT_USAGE_PATH), { recursive: true });
+  await writeFile(JOHNNY_CHAT_USAGE_PATH, JSON.stringify(usage, null, 2));
+}
+
+function recordJohnnyChatUsage(type, detail = {}) {
+  johnnyChatUsageLock = johnnyChatUsageLock
+    .then(async () => {
+      const usage = await readJohnnyChatUsage();
+      const now = new Date().toISOString();
+      usage.updatedAt = now;
+      usage.totals[type] = Number(usage.totals[type] || 0) + 1;
+      usage.recentEvents.unshift({
+        type,
+        at: now,
+        detail: Object.fromEntries(
+          Object.entries(detail || {}).map(([key, value]) => [key, String(value || "").slice(0, 180)])
+        )
+      });
+      usage.recentEvents = usage.recentEvents.slice(0, 60);
+
+      if (type === "errors") {
+        usage.recentErrors.unshift({
+          at: now,
+          route: String(detail.route || "unknown").slice(0, 120),
+          message: String(detail.message || "Unknown error").slice(0, 500)
+        });
+        usage.recentErrors = usage.recentErrors.slice(0, 20);
+      }
+
+      await writeJohnnyChatUsage(usage);
+    })
+    .catch((err) => {
+      console.warn("JohnnyChat usage record failed:", err.message || err);
+    });
+  return johnnyChatUsageLock;
+}
+
+function sendSse(res, event, data = {}) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function getGpt54ResponseConfig(profile, history, input, extra = {}) {
+  const reasoningConfig = OPENAI_GPT54_REASONING_EFFORT
+    ? { reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT } }
+    : {};
+  const communityConfig = profile === "community"
+    ? { reasoning: { effort: "low", summary: "concise" }, max_output_tokens: 512 }
+    : {};
+
+  return {
+    model: profile === "gpt54" ? OPENAI_GPT54_MODEL : OPENAI_CHAT_MODEL,
+    tools: [{ type: "web_search" }],
+    ...reasoningConfig,
+    ...communityConfig,
+    ...extra,
+    input: [
+      { role: "system", content: getJohnnyPersona(profile) },
+      ...history.slice(-20),
+      { role: "user", content: String(input || "") }
+    ]
+  };
 }
 
 function normalizeWidgetProfile(value) {
@@ -392,7 +496,9 @@ app.post("/api/chatbot-access", (req, res) => {
       token: createChatbotSessionToken(),
       maxAge: CHATBOT_SESSION_MAX_AGE_SECONDS
     });
+    void recordJohnnyChatUsage("sessions", { route: "/api/chatbot-access" });
   } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chatbot-access", message: err.message || err });
     res.status(500).json({ ok: false, detail: String(err.message || err) });
   }
 });
@@ -403,6 +509,16 @@ app.post("/api/chatbot-session", (req, res) => {
     ok: verifyChatbotSessionToken(token),
     maxAge: CHATBOT_SESSION_MAX_AGE_SECONDS
   });
+});
+
+app.get("/api/chatbot-usage", async (req, res) => {
+  try {
+    if (!requireChatbotSession(req, res)) return;
+    res.json(await readJohnnyChatUsage());
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chatbot-usage", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
+  }
 });
 
 /**
@@ -1508,24 +1624,8 @@ app.post("/api/chat", async (req, res) => {
     }
 
     if (profile === "gpt54" || profile === "community") {
-      const reasoningConfig = OPENAI_GPT54_REASONING_EFFORT
-        ? { reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT } }
-        : {};
-      const communityConfig = profile === "community"
-        ? { reasoning: { effort: "low", summary: "concise" }, max_output_tokens: 512 }
-        : {};
-
-      const response = await openai.responses.create({
-        model: profile === "gpt54" ? OPENAI_GPT54_MODEL : OPENAI_CHAT_MODEL,
-        tools: [{ type: "web_search" }],
-        ...reasoningConfig,
-        ...communityConfig,
-        input: [
-          { role: "system", content: getJohnnyPersona(profile) },
-          ...history.slice(-20),
-          { role: "user", content: s }
-        ]
-      });
+      if (profile === "gpt54") void recordJohnnyChatUsage("chats", { mode: "json" });
+      const response = await openai.responses.create(getGpt54ResponseConfig(profile, history, s));
       return res.json({
         reply: extractResponseText(response) || "(no reply)",
         sources: extractResponseSources(response)
@@ -1543,6 +1643,58 @@ app.post("/api/chat", async (req, res) => {
     const reply = completion.choices[0]?.message?.content || "(no reply)";
     res.json({ reply, sources: [] });
   } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chat", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+app.post("/api/chat-stream", async (req, res) => {
+  const { input = "", history = [] } = req.body || {};
+  const profile = inferWidgetProfile(req);
+  const s = String(input || "");
+
+  try {
+    if (profile !== "gpt54") {
+      return res.status(400).json({ detail: "Streaming is only enabled for the private chatbot." });
+    }
+    if (!requireChatbotSession(req, res)) return;
+
+    if (s.trim() === "[system_greet]") {
+      return res.json({ reply: "You're here. I'm here. Let's make this conversation worth both our time.", sources: [] });
+    }
+
+    void recordJohnnyChatUsage("streamedChats", { mode: "sse" });
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    const stream = await openai.responses.create(getGpt54ResponseConfig(profile, history, s, { stream: true }));
+    let reply = "";
+    let sources = [];
+
+    for await (const event of stream) {
+      if (event?.type === "response.output_text.delta") {
+        const delta = event.delta || "";
+        reply += delta;
+        sendSse(res, "delta", { delta });
+      } else if (event?.type === "response.completed") {
+        sources = extractResponseSources(event.response);
+      } else if (event?.type === "error") {
+        sendSse(res, "error", { detail: event.error?.message || "Streaming failed" });
+      }
+    }
+
+    sendSse(res, "done", { reply: reply || "(no reply)", sources });
+    res.end();
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chat-stream", message: err.message || err });
+    if (res.headersSent) {
+      sendSse(res, "error", { detail: String(err.message || err) });
+      sendSse(res, "done", { reply: "" });
+      res.end();
+      return;
+    }
     res.status(500).json({ detail: String(err.message || err) });
   }
 });
@@ -1574,6 +1726,11 @@ app.post("/api/community-speech", async (req, res) => {
   }
 });
 
+const voiceUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: Math.max(1, Number(MAX_UPLOAD_MB)) * 1024 * 1024 }
+});
+
 app.post("/api/chatbot-tts", async (req, res) => {
   try {
     if (!requireChatbotSession(req, res)) return;
@@ -1601,11 +1758,42 @@ app.post("/api/chatbot-tts", async (req, res) => {
 
     const speech = await openai.audio.speech.create(speechConfig);
     const audioBuffer = Buffer.from(await speech.arrayBuffer());
+    void recordJohnnyChatUsage("tts", { voice: speechConfig.voice, model });
 
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "no-store");
     res.send(audioBuffer);
   } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chatbot-tts", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+app.post("/api/chatbot-transcribe", voiceUpload.single("audio"), async (req, res) => {
+  try {
+    if (!requireChatbotSession(req, res)) return;
+
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ detail: "OpenAI API key not configured." });
+    }
+
+    if (!req.file?.buffer?.length) {
+      return res.status(400).json({ detail: "Missing audio." });
+    }
+
+    const audioFile = await toFile(req.file.buffer, req.file.originalname || "voice.webm", {
+      type: req.file.mimetype || "audio/webm"
+    });
+    const transcription = await openai.audio.transcriptions.create({
+      model: OPENAI_TRANSCRIBE_MODEL,
+      file: audioFile,
+      prompt: "Transcribe a private chatbot voice note. Preserve clear punctuation and ordinary filler words only when meaningful."
+    });
+
+    void recordJohnnyChatUsage("transcriptions", { model: OPENAI_TRANSCRIBE_MODEL });
+    res.json({ text: String(transcription.text || "").trim() });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chatbot-transcribe", message: err.message || err });
     res.status(500).json({ detail: String(err.message || err) });
   }
 });
@@ -1735,8 +1923,10 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
       summary: autoSummary.trim(),
       imageAnalysis: imageAnalyses
     });
+    if (profile === "gpt54") void recordJohnnyChatUsage("uploads", { files: files.length });
   } catch (e) {
     console.error("🚨 [Upload] Fatal Error:", e);
+    void recordJohnnyChatUsage("errors", { route: "/upload", message: e.message || e });
     res.status(500).json({ detail: String(e.message || e) });
   }
 });
@@ -1787,8 +1977,10 @@ app.post("/generate-image", async (req, res) => {
       ...(format ? { response_format: format } : {})
     });
     const b64 = gen.data?.[0]?.b64_json || "";
+    void recordJohnnyChatUsage("images", { model: OPENAI_IMAGE_MODEL });
     res.json({ image_b64: b64 });
   } catch (e) {
+    void recordJohnnyChatUsage("errors", { route: "/generate-image", message: e.message || e });
     res.status(500).json({ detail: String(e.message || e) });
   }
 });
@@ -1823,8 +2015,10 @@ app.post("/generate-image-edit", uploadRefs.array("refs", 5), async (req, res) =
     });
 
     const b64 = result.data?.[0]?.b64_json || "";
+    void recordJohnnyChatUsage("images", { model: OPENAI_IMAGE_MODEL, mode: "edit" });
     res.json({ image_b64: b64 });
   } catch (e) {
+    void recordJohnnyChatUsage("errors", { route: "/generate-image-edit", message: e.message || e });
     res.status(500).json({ detail: String(e.message || e) });
   }
 });

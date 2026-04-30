@@ -6,9 +6,15 @@
   const maxHistory = 18;
   const imageDbName = "gpt54_images_v1";
   const imageStore = "images";
+  const ttsStore = "tts_audio";
   const sessionCookieName = "gpt54_session";
   const ttsStoreKey = "gpt54_tts_enabled";
-  const ttsVoice = "coral";
+  const ttsVoiceKey = "gpt54_tts_voice";
+  const defaultTtsVoice = "cedar";
+  const ttsVoices = new Set(["alloy", "ash", "ballad", "cedar", "coral", "echo", "fable", "marin", "nova", "onyx", "sage", "shimmer", "verse"]);
+  const ttsCacheVersion = "v1";
+  const ttsCacheMax = 60;
+  const workspaceContextMax = 24000;
 
   const noopClassList = {
     add() {},
@@ -93,7 +99,16 @@
     newChatRail: getEl("new-chat-rail"),
     newChatRail2: getEl("new-chat-rail-2"),
     newChatMain: getEl("new-chat-main"),
-    voiceToggle: getEl("voice-toggle")
+    voiceToggle: getEl("voice-toggle"),
+    voiceSelect: getEl("voice-select"),
+    micBtn: getEl("mic-btn"),
+    workspaceFiles: getEl("workspace-files"),
+    clearWorkspace: getEl("clear-workspace"),
+    statsToggle: getEl("stats-toggle"),
+    statsPanel: getEl("stats-panel"),
+    statsBody: getEl("stats-body"),
+    closeStats: getEl("close-stats"),
+    refreshStats: getEl("refresh-stats")
   };
 
   document.title = "GPT 5.5";
@@ -114,9 +129,14 @@
     currentMenu: null,
     pendingFiles: [],
     ttsEnabled: readJSON(ttsStoreKey, false) === true,
+    ttsVoice: normalizeVoice(localStorage.getItem(ttsVoiceKey) || defaultTtsVoice),
     currentAudio: null,
     currentAudioUrl: "",
-    currentSpeakButton: null
+    currentSpeakButton: null,
+    mediaRecorder: null,
+    mediaStream: null,
+    voiceChunks: [],
+    isRecording: false
   };
 
   if (!Array.isArray(db.convos)) db.convos = [];
@@ -164,6 +184,7 @@
       createdAt: nowISO(),
       updatedAt: nowISO(),
       greeted: false,
+      files: [],
       messages: []
     };
   }
@@ -171,14 +192,20 @@
   function getActive() {
     if (db.activeId) {
       const found = db.convos.find((item) => item && item.id === db.activeId);
-      if (found) return found;
+      if (found) return ensureConversation(found);
     }
     if (!db.convos.length) {
       db.convos.unshift(newConversation("GPT 5.5"));
     }
     db.activeId = db.convos[0].id;
     save();
-    return db.convos[0];
+    return ensureConversation(db.convos[0]);
+  }
+
+  function ensureConversation(convo) {
+    if (!convo.messages || !Array.isArray(convo.messages)) convo.messages = [];
+    if (!convo.files || !Array.isArray(convo.files)) convo.files = [];
+    return convo;
   }
 
   function setTitle(convo, firstText) {
@@ -225,6 +252,11 @@
 
     flushBullets();
     return parts.join("") || "<p></p>";
+  }
+
+  function normalizeVoice(value) {
+    const voice = String(value || "").toLowerCase().trim();
+    return ttsVoices.has(voice) ? voice : defaultTtsVoice;
   }
 
   function speechText(value) {
@@ -274,6 +306,7 @@
 
     const text = speechText(content);
     if (!text) return;
+    const cacheId = await speechCacheId(text);
 
     stopSpeech();
     if (button) {
@@ -283,15 +316,21 @@
     }
 
     try {
-      const res = await apiFetch(`${apiBase}/api/chatbot-tts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voice: ttsVoice, profile })
-      });
-      const data = res.ok ? null : await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.detail || "AI voice failed");
+      let blob = await getCachedSpeech(cacheId);
+      if (!blob) {
+        const res = await apiFetch(`${apiBase}/api/chatbot-tts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, voice: db.ttsVoice, profile })
+        });
+        const data = res.ok ? null : await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.detail || "AI voice failed");
 
-      const blob = await res.blob();
+        blob = await res.blob();
+        await putCachedSpeech(cacheId, blob);
+        await trimCachedSpeech(ttsCacheMax);
+      }
+
       if (!blob.size) throw new Error("AI voice returned no audio");
 
       const url = URL.createObjectURL(blob);
@@ -325,24 +364,22 @@
     }
   }
 
-  function appendMessageActions(bubble, content) {
+  function makeActionButton(label, title, onClick, extraClass = "") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `copy-btn${extraClass ? ` ${extraClass}` : ""}`;
+    button.textContent = label;
+    button.title = title;
+    button.setAttribute("aria-label", title);
+    button.addEventListener("click", onClick);
+    return button;
+  }
+
+  function appendMessageActions(bubble, content, meta = {}) {
     const actions = document.createElement("div");
     actions.className = "message-actions";
 
-    const speak = document.createElement("button");
-    speak.type = "button";
-    speak.className = "copy-btn speak-btn";
-    speak.textContent = "▶";
-    speak.title = "Play AI voice";
-    speak.setAttribute("aria-label", "Play AI-generated voice");
-    speak.addEventListener("click", () => speakText(content, speak));
-
-    const copy = document.createElement("button");
-    copy.type = "button";
-    copy.className = "copy-btn";
-    copy.textContent = "⧉";
-    copy.title = "Copy message";
-    copy.addEventListener("click", async () => {
+    const copy = makeActionButton("⧉", "Copy message", async () => {
       await navigator.clipboard.writeText(content || "");
       copy.textContent = "✓";
       setTimeout(() => {
@@ -350,7 +387,39 @@
       }, 1200);
     });
 
-    actions.append(speak, copy);
+    if (meta.role === "assistant") {
+      const speak = makeActionButton("▶", "Play AI voice", () => speakText(content, speak), "speak-btn");
+      actions.append(speak);
+    }
+
+    actions.append(copy);
+
+    if (Number.isInteger(meta.index)) {
+      const edit = makeActionButton("✎", "Edit message", () => editMessage(meta.index));
+      const retry = makeActionButton("↻", "Retry from here", () => retryFrom(meta.index));
+      const branch = makeActionButton("⎇", "Branch from here", () => branchFrom(meta.index));
+      const del = makeActionButton("×", "Delete message", () => deleteMessage(meta.index), "danger-btn");
+      actions.append(edit, retry);
+      if (meta.role === "assistant") {
+        actions.append(makeActionButton("+", "Continue answer", () => continueFrom(meta.index)));
+      }
+      actions.append(branch, del);
+    }
+
+    bubble.appendChild(actions);
+  }
+
+  function appendCopyOnlyAction(bubble, content) {
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+    const copy = makeActionButton("⧉", "Copy message", async () => {
+      await navigator.clipboard.writeText(content || "");
+      copy.textContent = "✓";
+      setTimeout(() => {
+        copy.textContent = "⧉";
+      }, 1200);
+    });
+    actions.append(copy);
     bubble.appendChild(actions);
   }
 
@@ -468,6 +537,7 @@
 
   function renderSidebar() {
     renderConversations();
+    renderWorkspaceFiles();
   }
 
   function transcript(convo) {
@@ -498,8 +568,8 @@
       if (sources.childElementCount) bubble.appendChild(sources);
     }
 
-    if (role === "assistant") {
-      appendMessageActions(bubble, content);
+    if (role === "assistant" || role === "user") {
+      appendMessageActions(bubble, content, { ...meta, role });
     }
 
     el.messages.appendChild(bubble);
@@ -539,7 +609,11 @@
         bubble.dataset.raw = content;
         bubble.innerHTML = `<div>${pretty(content)}</div>`;
         appendSources(bubble, meta.sources);
-        appendMessageActions(bubble, content);
+        appendMessageActions(bubble, content, { ...meta, role: "assistant" });
+      },
+      update(content) {
+        bubble.dataset.raw = content;
+        bubble.innerHTML = `<div>${pretty(content || "Thinking...")}</div>`;
       }
     };
   }
@@ -596,17 +670,86 @@
     if (!("indexedDB" in window)) return null;
     if (db.imageDbPromise) return db.imageDbPromise;
     db.imageDbPromise = new Promise((resolve) => {
-      const req = indexedDB.open(imageDbName, 1);
+      const req = indexedDB.open(imageDbName, 2);
       req.onupgradeneeded = (event) => {
         const database = event.target.result;
         if (!database.objectStoreNames.contains(imageStore)) {
           database.createObjectStore(imageStore, { keyPath: "id" });
+        }
+        if (!database.objectStoreNames.contains(ttsStore)) {
+          database.createObjectStore(ttsStore, { keyPath: "id" });
         }
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
     });
     return db.imageDbPromise;
+  }
+
+  async function speechCacheId(text) {
+    const value = `${ttsCacheVersion}|${db.ttsVoice}|${text}`;
+    if (window.crypto?.subtle && window.TextEncoder) {
+      const bytes = new TextEncoder().encode(value);
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+    return value.split("").reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) | 0, 0).toString(16);
+  }
+
+  async function getCachedSpeech(id) {
+    const database = await openImageDb();
+    if (!database || !database.objectStoreNames.contains(ttsStore)) return null;
+    return new Promise((resolve) => {
+      const tx = database.transaction(ttsStore, "readwrite");
+      const store = tx.objectStore(ttsStore);
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const item = req.result;
+        if (!item?.blob) {
+          resolve(null);
+          return;
+        }
+        item.lastUsedAt = nowISO();
+        store.put(item);
+        resolve(item.blob);
+      };
+      req.onerror = () => resolve(null);
+    });
+  }
+
+  async function putCachedSpeech(id, blob) {
+    const database = await openImageDb();
+    if (!database || !database.objectStoreNames.contains(ttsStore)) return;
+    return new Promise((resolve) => {
+      const tx = database.transaction(ttsStore, "readwrite");
+      tx.objectStore(ttsStore).put({
+        id,
+        blob,
+        createdAt: nowISO(),
+        lastUsedAt: nowISO()
+      });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+
+  async function trimCachedSpeech(max) {
+    const database = await openImageDb();
+    if (!database || !database.objectStoreNames.contains(ttsStore)) return;
+    await new Promise((resolve) => {
+      const tx = database.transaction(ttsStore, "readwrite");
+      const store = tx.objectStore(ttsStore);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const items = req.result || [];
+        items
+          .sort((a, b) => new Date(b.lastUsedAt || b.createdAt || 0) - new Date(a.lastUsedAt || a.createdAt || 0))
+          .slice(max)
+          .forEach((item) => store.delete(item.id));
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
   }
 
   async function getStoredImages() {
@@ -727,6 +870,72 @@
     });
   }
 
+  function workspaceContext(convo) {
+    ensureConversation(convo);
+    const parts = (convo.files || [])
+      .filter((file) => file && file.context)
+      .slice(-8)
+      .map((file, index) => {
+        const title = file.title || (Array.isArray(file.names) ? file.names.join(", ") : "Uploaded file");
+        return `File ${index + 1}: ${title}\nUploaded: ${file.createdAt || "unknown"}\n${String(file.context || "").slice(0, 10000)}`;
+      });
+    return parts.join("\n\n").slice(0, workspaceContextMax);
+  }
+
+  function rememberWorkspaceFiles(convo, files, uploaded) {
+    ensureConversation(convo);
+    const names = files.map((file) => file.name || "uploaded file");
+    const context = String(uploaded?.context || "").trim();
+    if (!context) return;
+    convo.files.push({
+      id: uid(),
+      title: names.length === 1 ? names[0] : `${names.length} files`,
+      names,
+      bytes: files.reduce((sum, file) => sum + Number(file.size || 0), 0),
+      createdAt: nowISO(),
+      context: context.slice(0, 18000)
+    });
+    convo.files = convo.files.slice(-12);
+    save();
+    renderWorkspaceFiles();
+  }
+
+  function renderWorkspaceFiles() {
+    const convo = getActive();
+    ensureConversation(convo);
+    el.workspaceFiles.innerHTML = "";
+
+    if (!convo.files.length) {
+      const empty = document.createElement("div");
+      empty.className = "workspace-empty";
+      empty.textContent = "No files in this chat.";
+      el.workspaceFiles.appendChild(empty);
+      return;
+    }
+
+    convo.files.slice().reverse().forEach((file) => {
+      const item = document.createElement("div");
+      item.className = "workspace-file";
+
+      const copy = document.createElement("div");
+      copy.innerHTML = `<strong>${esc(file.title || "Uploaded file")}</strong><span>${esc(new Date(file.createdAt || Date.now()).toLocaleDateString())}</span>`;
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "menu-button";
+      remove.textContent = "×";
+      remove.title = "Remove file from chat";
+      remove.addEventListener("click", () => {
+        convo.files = convo.files.filter((itemFile) => itemFile.id !== file.id);
+        save();
+        renderWorkspaceFiles();
+      });
+
+      item.append(copy, remove);
+      el.workspaceFiles.appendChild(item);
+    });
+  }
+
   async function extractPdfText(file) {
     const buffer = await file.arrayBuffer();
     if (!window.pdfjsLib) {
@@ -787,6 +996,86 @@
     };
   }
 
+  async function readSseResponse(res, onDelta) {
+    if (!res.body) {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "Chat failed");
+      return data;
+    }
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || "Chat failed");
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let finalData = { reply: "", sources: [] };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const chunks = buffer.split("\n\n");
+      buffer = chunks.pop() || "";
+
+      chunks.forEach((chunk) => {
+        const event = (chunk.match(/^event:\s*(.+)$/m) || [])[1] || "message";
+        const dataLine = (chunk.match(/^data:\s*(.+)$/m) || [])[1] || "{}";
+        const data = JSON.parse(dataLine);
+        if (event === "delta" && data.delta) onDelta(data.delta);
+        if (event === "done") finalData = data;
+        if (event === "error") throw new Error(data.detail || "Streaming failed");
+      });
+    }
+
+    return finalData;
+  }
+
+  async function requestAssistant(convo, input, thinking) {
+    const history = convo.messages.slice(-maxHistory, -1).map((msg) => ({ role: msg.role, content: msg.content }));
+    let streamed = "";
+
+    try {
+      const res = await apiFetch(`${apiBase}/api/chat-stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input, history, profile })
+      });
+      const data = await readSseResponse(res, (delta) => {
+        streamed += delta;
+        thinking.update(streamed);
+      });
+      const reply = data.reply || streamed || "(no reply)";
+      const assistantIndex = convo.messages.length;
+      thinking.replace(reply, { index: assistantIndex, sources: data.sources || [] });
+      convo.messages.push({ role: "assistant", content: reply, sources: data.sources || [] });
+      convo.updatedAt = nowISO();
+      save();
+      renderSidebar();
+      if (db.ttsEnabled) speakText(reply);
+      return reply;
+    } catch (streamErr) {
+      const res = await apiFetch(`${apiBase}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input, history, profile })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || streamErr.message || "Chat failed");
+      const reply = data.reply || data.detail || "(no reply)";
+      const assistantIndex = convo.messages.length;
+      thinking.replace(reply, { index: assistantIndex, sources: data.sources || [] });
+      convo.messages.push({ role: "assistant", content: reply, sources: data.sources || [] });
+      convo.updatedAt = nowISO();
+      save();
+      renderSidebar();
+      if (db.ttsEnabled) speakText(reply);
+      return reply;
+    }
+  }
+
   async function generateImage(prompt, convo) {
     const loader = document.createElement("div");
     loader.className = "message assistant";
@@ -842,7 +1131,7 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || "Please refresh and unlock the chatbot again.");
       const reply = data.reply || "Hello. How can I help today?";
-      thinking.replace(reply);
+      thinking.replace(reply, { index: convo.messages.length });
       convo.greeted = true;
       convo.messages.push({ role: "assistant", content: reply });
       convo.updatedAt = nowISO();
@@ -864,7 +1153,7 @@
       initialGreeting(convo);
       return;
     }
-    convo.messages.forEach((msg) => appendBubble(msg.role, msg.content));
+    convo.messages.forEach((msg, index) => appendBubble(msg.role, msg.content, { index, sources: msg.sources || [] }));
   }
 
   async function sendMessage() {
@@ -877,9 +1166,9 @@
     setTitle(convo, raw || db.pendingFiles.map((file) => file.name).join(", "));
 
     let displayText = raw;
-    let context = "";
 
     if (db.pendingFiles.length) {
+      const filesForWorkspace = db.pendingFiles.slice();
       const fileNames = db.pendingFiles.map((file) => file.name).join(", ");
       displayText = displayText ? `${displayText}\n\n(Attached: ${fileNames})` : `[Attached: ${fileNames}]`;
       const fileReview = showFileReview(
@@ -888,7 +1177,7 @@
       );
       try {
         const uploaded = await uploadFiles(db.pendingFiles);
-        context = uploaded.context ? `\n\nAttachment context:\n${uploaded.context}` : "";
+        rememberWorkspaceFiles(convo, filesForWorkspace, uploaded);
       } catch (err) {
         fileReview.remove();
         appendBubble("assistant", `Upload failed: ${err.message || err}`);
@@ -900,7 +1189,7 @@
     }
 
     if (raw.startsWith("/image ")) {
-      appendBubble("user", raw);
+      appendBubble("user", raw, { index: convo.messages.length });
       convo.messages.push({ role: "user", content: raw });
       convo.updatedAt = nowISO();
       save();
@@ -909,7 +1198,7 @@
       return;
     }
 
-    appendBubble("user", displayText || "(attachment only)");
+    appendBubble("user", displayText || "(attachment only)", { index: convo.messages.length });
     convo.messages.push({ role: "user", content: raw || "[attachment only]" });
     convo.updatedAt = nowISO();
     save();
@@ -917,24 +1206,106 @@
 
     const thinking = showThinking("Thinking...");
     try {
-      const history = convo.messages.slice(-maxHistory).map((msg) => ({ role: msg.role, content: msg.content }));
-      const input = raw + context;
-      const res = await apiFetch(`${apiBase}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input, history, profile })
-      });
-      const data = await res.json().catch(() => ({}));
-      const reply = data.reply || data.detail || "(no reply)";
-      thinking.replace(reply, { sources: data.sources || [] });
-      convo.messages.push({ role: "assistant", content: reply });
-      convo.updatedAt = nowISO();
-      save();
-      renderSidebar();
-      if (db.ttsEnabled) speakText(reply);
+      const filesContext = workspaceContext(convo);
+      const input = `${raw || "Please analyze the uploaded file or continue from the current context."}${filesContext ? `\n\nConversation file workspace:\n${filesContext}` : ""}`;
+      await requestAssistant(convo, input, thinking);
     } catch (err) {
       thinking.replace(`Error: ${err.message || err}`);
     }
+  }
+
+  async function regenerateFrom(index, instruction) {
+    const convo = getActive();
+    ensureConversation(convo);
+    const lastUserIndex = (() => {
+      for (let i = Math.min(index, convo.messages.length - 1); i >= 0; i -= 1) {
+        if (convo.messages[i]?.role === "user") return i;
+      }
+      return -1;
+    })();
+    if (lastUserIndex < 0) return;
+
+    const userText = instruction || convo.messages[lastUserIndex].content || "";
+    convo.messages = convo.messages.slice(0, lastUserIndex + 1);
+    convo.updatedAt = nowISO();
+    save();
+    renderChat();
+    renderSidebar();
+
+    const thinking = showThinking("Thinking...");
+    const filesContext = workspaceContext(convo);
+    const input = `${userText}${filesContext ? `\n\nConversation file workspace:\n${filesContext}` : ""}`;
+    try {
+      await requestAssistant(convo, input, thinking);
+    } catch (err) {
+      thinking.replace(`Error: ${err.message || err}`);
+    }
+  }
+
+  function editMessage(index) {
+    const convo = getActive();
+    const msg = convo.messages[index];
+    if (!msg) return;
+    const next = window.prompt("Edit message", msg.content || "");
+    if (next === null) return;
+    msg.content = next.trim();
+    msg.sources = [];
+    convo.updatedAt = nowISO();
+    save();
+
+    if (msg.role === "user") {
+      regenerateFrom(index, next.trim());
+      return;
+    }
+
+    renderChat();
+    renderSidebar();
+  }
+
+  function retryFrom(index) {
+    regenerateFrom(index);
+  }
+
+  async function continueFrom(index) {
+    const convo = getActive();
+    ensureConversation(convo);
+    convo.messages = convo.messages.slice(0, index + 1);
+    convo.messages.push({ role: "user", content: "Continue from your previous answer." });
+    convo.updatedAt = nowISO();
+    save();
+    renderChat();
+    renderSidebar();
+
+    const thinking = showThinking("Thinking...");
+    try {
+      await requestAssistant(convo, "Continue from your previous answer.", thinking);
+    } catch (err) {
+      thinking.replace(`Error: ${err.message || err}`);
+    }
+  }
+
+  function branchFrom(index) {
+    const source = getActive();
+    ensureConversation(source);
+    const convo = newConversation(`${source.title || "Chat"} branch`);
+    convo.messages = source.messages.slice(0, index + 1).map((msg) => ({ ...msg }));
+    convo.files = (source.files || []).map((file) => ({ ...file, names: Array.isArray(file.names) ? file.names.slice() : [] }));
+    convo.greeted = true;
+    db.convos.unshift(convo);
+    db.activeId = convo.id;
+    save();
+    renderSidebar();
+    renderChat();
+  }
+
+  function deleteMessage(index) {
+    const convo = getActive();
+    ensureConversation(convo);
+    convo.messages.splice(index, 1);
+    convo.updatedAt = nowISO();
+    save();
+    renderChat();
+    renderSidebar();
   }
 
   function newChat() {
@@ -945,6 +1316,130 @@
     renderSidebar();
     renderChat();
     focusComposer();
+  }
+
+  async function stopVoiceCapture() {
+    if (db.mediaRecorder && db.mediaRecorder.state !== "inactive") {
+      db.mediaRecorder.stop();
+    }
+  }
+
+  async function startVoiceCapture() {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      appendBubble("assistant", "Voice input is not available in this browser.");
+      return;
+    }
+
+    if (db.isRecording) {
+      await stopVoiceCapture();
+      return;
+    }
+
+    try {
+      db.voiceChunks = [];
+      db.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      db.mediaRecorder = new MediaRecorder(db.mediaStream);
+      db.isRecording = true;
+      el.micBtn.classList.add("recording");
+      el.micBtn.textContent = "■";
+      el.micBtn.title = "Stop recording";
+
+      db.mediaRecorder.addEventListener("dataavailable", (event) => {
+        if (event.data?.size) db.voiceChunks.push(event.data);
+      });
+
+      db.mediaRecorder.addEventListener("stop", async () => {
+        db.isRecording = false;
+        el.micBtn.classList.remove("recording");
+        el.micBtn.textContent = "🎙";
+        el.micBtn.title = "Record voice";
+        db.mediaStream?.getTracks().forEach((track) => track.stop());
+        db.mediaStream = null;
+
+        const blob = new Blob(db.voiceChunks, { type: db.mediaRecorder?.mimeType || "audio/webm" });
+        db.voiceChunks = [];
+        if (!blob.size) return;
+
+        el.micBtn.disabled = true;
+        el.micBtn.textContent = "...";
+        try {
+          const fd = new FormData();
+          fd.append("audio", blob, "voice.webm");
+          const res = await apiFetch(`${apiBase}/api/chatbot-transcribe`, { method: "POST", body: fd });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || "Transcription failed");
+          const text = String(data.text || "").trim();
+          if (text) {
+            el.input.value = el.input.value ? `${el.input.value.trim()} ${text}` : text;
+            resizeInput();
+            focusComposer();
+          }
+        } catch (err) {
+          appendBubble("assistant", `Voice input failed: ${err.message || err}`);
+        } finally {
+          el.micBtn.disabled = false;
+          el.micBtn.textContent = "🎙";
+        }
+      });
+
+      db.mediaRecorder.start();
+    } catch (err) {
+      db.isRecording = false;
+      el.micBtn.classList.remove("recording");
+      appendBubble("assistant", `Voice input failed: ${err.message || err}`);
+    }
+  }
+
+  function formatNumber(value) {
+    return new Intl.NumberFormat().format(Number(value || 0));
+  }
+
+  async function loadStats() {
+    el.statsBody.innerHTML = `<div class="workspace-empty">Loading usage...</div>`;
+    const res = await apiFetch(`${apiBase}/api/chatbot-usage`, { method: "GET" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Could not load stats");
+
+    const totals = data.totals || {};
+    const cards = [
+      ["Sessions", totals.sessions],
+      ["Chats", totals.chats],
+      ["Streams", totals.streamedChats],
+      ["TTS", totals.tts],
+      ["Voice notes", totals.transcriptions],
+      ["Uploads", totals.uploads],
+      ["Images", totals.images],
+      ["Errors", totals.errors]
+    ];
+
+    const recentErrors = (data.recentErrors || [])
+      .slice(0, 5)
+      .map((err) => `<div class="stats-error"><strong>${esc(err.route || "error")}</strong><span>${esc(err.message || "")}</span></div>`)
+      .join("");
+
+    el.statsBody.innerHTML = `
+      <div class="stats-grid">
+        ${cards.map(([label, value]) => `<div class="stats-card"><span>${esc(label)}</span><strong>${formatNumber(value)}</strong></div>`).join("")}
+      </div>
+      <div class="stats-meta">Updated ${esc(data.updatedAt ? new Date(data.updatedAt).toLocaleString() : "not yet")}</div>
+      <h3>Recent errors</h3>
+      ${recentErrors || `<div class="workspace-empty">No recent errors.</div>`}
+    `;
+  }
+
+  async function openStats() {
+    el.statsPanel.classList.add("show");
+    el.statsPanel.setAttribute("aria-hidden", "false");
+    try {
+      await loadStats();
+    } catch (err) {
+      el.statsBody.innerHTML = `<div class="workspace-empty">Stats failed: ${esc(err.message || err)}</div>`;
+    }
+  }
+
+  function closeStats() {
+    el.statsPanel.classList.remove("show");
+    el.statsPanel.setAttribute("aria-hidden", "true");
   }
 
   el.search.addEventListener("input", renderConversations);
@@ -958,6 +1453,13 @@
     await renderRecentImages();
   });
 
+  el.clearWorkspace.addEventListener("click", () => {
+    const convo = getActive();
+    convo.files = [];
+    save();
+    renderWorkspaceFiles();
+  });
+
   el.voiceToggle.addEventListener("click", () => {
     db.ttsEnabled = !db.ttsEnabled;
     localStorage.setItem(ttsStoreKey, JSON.stringify(db.ttsEnabled));
@@ -965,8 +1467,20 @@
     updateVoiceToggle();
   });
 
+  el.voiceSelect.value = db.ttsVoice;
+  el.voiceSelect.addEventListener("change", () => {
+    db.ttsVoice = normalizeVoice(el.voiceSelect.value);
+    el.voiceSelect.value = db.ttsVoice;
+    localStorage.setItem(ttsVoiceKey, db.ttsVoice);
+    stopSpeech();
+  });
+
   el.sendBtn.addEventListener("click", sendMessage);
   el.attachBtn.addEventListener("click", () => el.fileInput.click());
+  el.micBtn.addEventListener("click", startVoiceCapture);
+  el.statsToggle.addEventListener("click", openStats);
+  el.closeStats.addEventListener("click", closeStats);
+  el.refreshStats.addEventListener("click", loadStats);
   el.fileInput.addEventListener("change", () => {
     const files = Array.from(el.fileInput.files || []);
     if (!files.length) return;

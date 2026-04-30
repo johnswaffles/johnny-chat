@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/chatbot/chatbot.css?v=20260430-1">
-  <script defer src="/chatbot/chatbot.js?v=20260430-1"></script>
+  <link rel="stylesheet" href="/chatbot/chatbot.css?v=20260430-2">
+  <script defer src="/chatbot/chatbot.js?v=20260430-4"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -26,6 +26,16 @@
         <span class="sr-only">Search conversations</span>
         <input id="search" type="search" placeholder="Search conversations" autocomplete="off">
       </label>
+
+      <section class="rail-card workspace-card">
+        <div class="card-head">
+          <div>
+            <h2>Files</h2>
+          </div>
+          <button id="clear-workspace" class="pill-button pill-muted" type="button">Clear</button>
+        </div>
+        <div class="workspace-files" id="workspace-files"></div>
+      </section>
 
       <section class="rail-card grow">
         <div class="card-head">
@@ -45,7 +55,26 @@
           <p>Private GPT 5.5 workspace</p>
         </div>
         <div class="topbar-actions">
+          <label class="voice-select-wrap">
+            <span>Voice</span>
+            <select id="voice-select" aria-label="AI voice">
+              <option value="alloy">Alloy</option>
+              <option value="ash">Ash</option>
+              <option value="ballad">Ballad</option>
+              <option value="cedar" selected>Cedar</option>
+              <option value="coral">Coral</option>
+              <option value="echo">Echo</option>
+              <option value="fable">Fable</option>
+              <option value="marin">Marin</option>
+              <option value="nova">Nova</option>
+              <option value="onyx">Onyx</option>
+              <option value="sage">Sage</option>
+              <option value="shimmer">Shimmer</option>
+              <option value="verse">Verse</option>
+            </select>
+          </label>
           <button id="voice-toggle" class="pill-button pill-muted voice-toggle" type="button" aria-pressed="false" title="Toggle AI-generated voice">AI voice off</button>
+          <button id="stats-toggle" class="pill-button pill-muted" type="button">Stats</button>
           <button id="new-chat-main" class="pill-button" type="button">New chat</button>
         </div>
       </header>
@@ -56,6 +85,7 @@
 
         <div class="composer">
           <button id="attach-btn" class="icon-button" type="button" title="Attach files">📎</button>
+          <button id="mic-btn" class="icon-button mic-button" type="button" title="Record voice">🎙</button>
           <textarea id="input" rows="1" placeholder="Ask something or drop in a file..."></textarea>
           <button id="send-btn" class="send-button" type="button">Send</button>
           <input id="file-input" type="file" multiple accept=".pdf,image/png,image/jpeg,image/webp" hidden>
@@ -69,6 +99,18 @@
     <button class="modal-close" id="close-modal" type="button" aria-label="Close preview">×</button>
     <img id="modal-image" alt="">
   </div>
+
+  <aside class="stats-panel" id="stats-panel" aria-hidden="true">
+    <div class="stats-panel-head">
+      <div>
+        <h2>Usage</h2>
+        <p>Private chatbot activity</p>
+      </div>
+      <button id="close-stats" class="modal-close" type="button" aria-label="Close usage panel">×</button>
+    </div>
+    <div class="stats-body" id="stats-body"></div>
+    <button id="refresh-stats" class="pill-button" type="button">Refresh</button>
+  </aside>
 
   <span class="sr-only">Standalone GPT 5.5 chat page.</span>
 </body>
