@@ -847,6 +847,67 @@ app.post("/api/realtime-token", async (req, res) => {
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
 
+function tinyHeroFairyFallback(event, fallback) {
+  const fallbackText = compactText(fallback);
+  if (fallbackText) return fallbackText.slice(0, 180);
+  const eventText = compactText(event).toLowerCase();
+  if (eventText.includes("firebolt")) return "Clean spellwork. Very orange, very confident, mildly rude to the wallpaper.";
+  if (eventText.includes("gold")) return "Floor money again. This mansion has either ghosts or terrible accounting.";
+  if (eventText.includes("opened")) return "Aha. Another secret liberated from the tyranny of furniture.";
+  if (eventText.includes("empty")) return "Nothing here except atmosphere, dust, and your impressive commitment to poking things.";
+  return "I have reviewed the situation and remain charmingly suspicious.";
+}
+
+app.post("/api/tiny-hero/fairy", async (req, res) => {
+  const event = compactText(req.body?.event).slice(0, 180);
+  const fallback = tinyHeroFairyFallback(event, req.body?.fallback);
+  const extra = req.body?.extra && typeof req.body.extra === "object" ? req.body.extra : {};
+  const hero = req.body?.hero && typeof req.body.hero === "object" ? req.body.hero : {};
+  const inventory = Array.isArray(req.body?.inventory) ? req.body.inventory.slice(0, 12).map((item) => compactText(item).slice(0, 80)).filter(Boolean) : [];
+
+  if (!OPENAI_API_KEY) {
+    return res.json({ ok: true, reply: fallback, source: "fallback" });
+  }
+
+  try {
+    const response = await openai.responses.create({
+      model: process.env.OPENAI_FAIRY_MODEL || OPENAI_CHAT_MODEL,
+      temperature: 0.9,
+      max_output_tokens: 70,
+      input: [
+        {
+          role: "system",
+          content: [
+            "You are Pip, a tiny fairy companion in a browser RPG about a wizard exploring a huge haunted mansion.",
+            "Your job is to say clever, witty, smart one-liners about what the wizard is doing.",
+            "Be playful, observant, and lightly sarcastic, but never cruel to the player.",
+            "Keep every reply to one short sentence, ideally 8 to 22 words.",
+            "Do not use markdown, emojis, quotes, stage directions, or character labels.",
+            "Do not mention OpenAI, APIs, prompts, servers, or that you are an AI.",
+            "Tie the joke to the current event, room object, reward, spell, danger, or inventory when possible."
+          ].join(" ")
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            event,
+            fallback,
+            extra,
+            hero,
+            inventory
+          })
+        }
+      ]
+    });
+
+    const reply = compactText(extractResponseText(response)).replace(/^Pip:\s*/i, "").slice(0, 180);
+    res.json({ ok: true, reply: reply || fallback, source: reply ? "openai" : "fallback" });
+  } catch (err) {
+    console.warn("Tiny Hero fairy reply failed:", err?.message || err);
+    res.json({ ok: true, reply: fallback, source: "fallback" });
+  }
+});
+
 // Allow iframe embedding from any origin
 app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "ALLOWALL");
