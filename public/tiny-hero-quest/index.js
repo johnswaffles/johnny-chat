@@ -558,17 +558,17 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 				if (!path.startsWith('godot.')) {
 					return path;
 				} else if (path.endsWith('.audio.worklet.js')) {
-					return "https://johnny-chat.onrender.com/tiny-hero-quest/index.audio.worklet.js?v=molo5qlw";
+					return "https://johnny-chat.onrender.com/tiny-hero-quest/index.audio.worklet.js?v=molr6h71";
 				} else if (path.endsWith('.audio.position.worklet.js')) {
-					return "https://johnny-chat.onrender.com/tiny-hero-quest/index.audio.position.worklet.js?v=molo5qlw";
+					return "https://johnny-chat.onrender.com/tiny-hero-quest/index.audio.position.worklet.js?v=molr6h71";
 				} else if (path.endsWith('.js')) {
 					return `${loadPath}.js`;
 				} else if (path in gdext) {
 					return path;
 				} else if (path.endsWith('.side.wasm')) {
-					return "https://johnny-chat.onrender.com/tiny-hero-quest/index.side.wasm?v=molo5qlw";
+					return "https://johnny-chat.onrender.com/tiny-hero-quest/index.side.wasm?v=molr6h71";
 				} else if (path.endsWith('.wasm')) {
-					return "https://johnny-chat.onrender.com/tiny-hero-quest/index.wasm?v=molo5qlw";
+					return "https://johnny-chat.onrender.com/tiny-hero-quest/index.wasm?v=molr6h71";
 				}
 				return path;
 			},
@@ -671,7 +671,7 @@ const Engine = (function () {
 	Engine.load = function (basePath, size) {
 		if (loadPromise == null) {
 			loadPath = basePath;
-			loadPromise = preloader.loadPromise("https://johnny-chat.onrender.com/tiny-hero-quest/index.wasm?v=molo5qlw", size, true);
+			loadPromise = preloader.loadPromise("https://johnny-chat.onrender.com/tiny-hero-quest/index.wasm?v=molr6h71", size, true);
 			requestAnimationFrame(preloader.animateProgress);
 		}
 		return loadPromise;
@@ -826,7 +826,7 @@ const Engine = (function () {
 				// Add main-pack argument.
 				const exe = this.config.executable;
 				const pack = this.config.mainPack || `${exe}.pck`;
-				const packSource = this.config.mainPack || "https://johnny-chat.onrender.com/tiny-hero-quest/index.pck?v=molo5qlw";
+				const packSource = this.config.mainPack || "https://johnny-chat.onrender.com/tiny-hero-quest/index.pck?v=molr6h71";
 				this.config.args = ['--main-pack', pack].concat(this.config.args);
 				// Start and init with execName as loadPath if not inited.
 				const me = this;
