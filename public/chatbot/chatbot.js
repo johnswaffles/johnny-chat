@@ -3,6 +3,8 @@
   const apiBase = String(window.JOHNNY_CHAT_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\/+$/, "");
   const storeKey = "gpt54_convos_v1";
   const activeKey = `${storeKey}_active`;
+  const projectStoreKey = "gpt54_projects_v1";
+  const activeProjectKey = "gpt54_project_active";
   const maxHistory = 18;
   const imageDbName = "gpt54_images_v1";
   const imageStore = "images";
@@ -15,6 +17,7 @@
   const ttsCacheVersion = "v1";
   const ttsCacheMax = 60;
   const workspaceContextMax = 24000;
+  const libraryContextMax = 18000;
 
   const noopClassList = {
     add() {},
@@ -109,6 +112,16 @@
     statsBody: getEl("stats-body"),
     closeStats: getEl("close-stats"),
     refreshStats: getEl("refresh-stats")
+    ,projectSelect: getEl("project-select")
+    ,newProject: getEl("new-project")
+    ,projectNotes: getEl("project-notes")
+    ,librarySearch: getEl("library-search")
+    ,libraryList: getEl("library-list")
+    ,addKnowledge: getEl("add-knowledge")
+    ,researchToggle: getEl("research-toggle")
+    ,actionsToggle: getEl("actions-toggle")
+    ,actionsPanel: getEl("actions-panel")
+    ,closeActions: getEl("close-actions")
   };
 
   document.title = "GPT 5.5";
@@ -125,6 +138,10 @@
   const db = {
     convos: readJSON(storeKey, []),
     activeId: localStorage.getItem(activeKey) || "",
+    projects: normalizeProjects(readJSON(projectStoreKey, [])),
+    activeProjectId: localStorage.getItem(activeProjectKey) || "",
+    libraryItems: [],
+    researchMode: false,
     imageDbPromise: null,
     currentMenu: null,
     pendingFiles: [],
@@ -140,6 +157,10 @@
   };
 
   if (!Array.isArray(db.convos)) db.convos = [];
+  if (!db.projects.some((project) => project.id === db.activeProjectId)) {
+    db.activeProjectId = db.projects[0].id;
+    localStorage.setItem(activeProjectKey, db.activeProjectId);
+  }
 
   promptIdeas.forEach((text) => {
     const button = document.createElement("button");
@@ -166,7 +187,33 @@
 
   function save() {
     localStorage.setItem(storeKey, JSON.stringify(db.convos));
+    localStorage.setItem(projectStoreKey, JSON.stringify(db.projects));
+    if (db.activeProjectId) localStorage.setItem(activeProjectKey, db.activeProjectId);
     if (db.activeId) localStorage.setItem(activeKey, db.activeId);
+  }
+
+  function normalizeProjects(projects) {
+    const items = Array.isArray(projects) ? projects.filter(Boolean) : [];
+    if (!items.length) {
+      return [{
+        id: "general",
+        title: "General",
+        notes: "",
+        createdAt: nowISO(),
+        updatedAt: nowISO()
+      }];
+    }
+    return items.map((project) => ({
+      id: String(project.id || uid()),
+      title: String(project.title || "Untitled project").slice(0, 80),
+      notes: String(project.notes || ""),
+      createdAt: project.createdAt || nowISO(),
+      updatedAt: project.updatedAt || nowISO()
+    }));
+  }
+
+  function getActiveProject() {
+    return db.projects.find((project) => project.id === db.activeProjectId) || db.projects[0];
   }
 
   function uid() {
@@ -183,6 +230,7 @@
       title: title || "(new conversation)",
       createdAt: nowISO(),
       updatedAt: nowISO(),
+      projectId: db?.activeProjectId || "general",
       greeted: false,
       files: [],
       messages: []
@@ -192,11 +240,15 @@
   function getActive() {
     if (db.activeId) {
       const found = db.convos.find((item) => item && item.id === db.activeId);
-      if (found) return ensureConversation(found);
+      if (found && ensureConversation(found).projectId === db.activeProjectId) return found;
     }
-    if (!db.convos.length) {
-      db.convos.unshift(newConversation("GPT 5.5"));
+    const projectConvo = db.convos.find((item) => item && ensureConversation(item).projectId === db.activeProjectId);
+    if (projectConvo) {
+      db.activeId = projectConvo.id;
+      save();
+      return projectConvo;
     }
+    db.convos.unshift(newConversation("GPT 5.5"));
     db.activeId = db.convos[0].id;
     save();
     return ensureConversation(db.convos[0]);
@@ -205,6 +257,7 @@
   function ensureConversation(convo) {
     if (!convo.messages || !Array.isArray(convo.messages)) convo.messages = [];
     if (!convo.files || !Array.isArray(convo.files)) convo.files = [];
+    if (!convo.projectId) convo.projectId = db.activeProjectId || "general";
     return convo;
   }
 
@@ -436,6 +489,7 @@
 
     db.convos
       .slice()
+      .filter((conv) => ensureConversation(conv).projectId === db.activeProjectId)
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
       .filter((conv) => {
         if (!q) return true;
@@ -536,8 +590,109 @@
   }
 
   function renderSidebar() {
+    renderProjects();
     renderConversations();
     renderWorkspaceFiles();
+  }
+
+  function renderProjects() {
+    el.projectSelect.innerHTML = "";
+    db.projects.forEach((project) => {
+      const option = document.createElement("option");
+      option.value = project.id;
+      option.textContent = project.title;
+      el.projectSelect.appendChild(option);
+    });
+    el.projectSelect.value = db.activeProjectId;
+    el.projectNotes.value = getActiveProject()?.notes || "";
+  }
+
+  function updateResearchToggle() {
+    el.researchToggle.classList.toggle("active", db.researchMode);
+    el.researchToggle.setAttribute("aria-pressed", db.researchMode ? "true" : "false");
+  }
+
+  function libraryText(items = []) {
+    return items
+      .map((item, index) => {
+        const tags = Array.isArray(item.tags) && item.tags.length ? `\nTags: ${item.tags.join(", ")}` : "";
+        return `Saved knowledge ${index + 1}: ${item.title}${tags}\n${String(item.content || "").slice(0, 5000)}`;
+      })
+      .join("\n\n")
+      .slice(0, libraryContextMax);
+  }
+
+  function renderLibraryList() {
+    el.libraryList.innerHTML = "";
+    if (!db.libraryItems.length) {
+      const empty = document.createElement("div");
+      empty.className = "workspace-empty";
+      empty.textContent = "No matching knowledge yet.";
+      el.libraryList.appendChild(empty);
+      return;
+    }
+
+    db.libraryItems.slice(0, 8).forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "library-item";
+      const copy = document.createElement("div");
+      copy.innerHTML = `<strong>${esc(item.title || "Knowledge")}</strong><span>${esc(item.projectTitle || item.kind || "saved")}</span>`;
+
+      const use = document.createElement("button");
+      use.type = "button";
+      use.className = "menu-button";
+      use.textContent = "+";
+      use.title = "Add to this chat";
+      use.addEventListener("click", () => {
+        const convo = getActive();
+        ensureConversation(convo);
+        convo.files.push({
+          id: uid(),
+          title: item.title,
+          names: [item.title],
+          createdAt: nowISO(),
+          context: item.content || ""
+        });
+        save();
+        renderWorkspaceFiles();
+      });
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "menu-button danger-btn";
+      remove.textContent = "×";
+      remove.title = "Delete knowledge";
+      remove.addEventListener("click", async () => {
+        await apiFetch(`${apiBase}/api/chatbot-library/${encodeURIComponent(item.id)}`, { method: "DELETE" });
+        await loadLibrary();
+      });
+
+      row.append(copy, use, remove);
+      el.libraryList.appendChild(row);
+    });
+  }
+
+  async function loadLibrary(query = el.librarySearch.value || "") {
+    const params = new URLSearchParams({
+      q: query,
+      projectId: db.activeProjectId,
+      limit: "40"
+    });
+    const res = await apiFetch(`${apiBase}/api/chatbot-library?${params.toString()}`, { method: "GET" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Could not load library");
+    db.libraryItems = Array.isArray(data.items) ? data.items : [];
+    renderLibraryList();
+    return db.libraryItems;
+  }
+
+  async function getLibraryContext(query) {
+    try {
+      const items = await loadLibrary(query);
+      return libraryText(items.slice(0, 6));
+    } catch {
+      return "";
+    }
   }
 
   function transcript(convo) {
@@ -931,7 +1086,26 @@
         renderWorkspaceFiles();
       });
 
-      item.append(copy, remove);
+      const saveBtn = document.createElement("button");
+      saveBtn.type = "button";
+      saveBtn.className = "menu-button";
+      saveBtn.textContent = "★";
+      saveBtn.title = "Save file to library";
+      saveBtn.addEventListener("click", async () => {
+        try {
+          await saveKnowledge({
+            title: file.title || "Uploaded file",
+            content: file.context || "",
+            kind: "file",
+            source: "chat upload",
+            tags: ["upload"]
+          });
+        } catch (err) {
+          appendBubble("assistant", `Could not save file to library: ${err.message || err}`);
+        }
+      });
+
+      item.append(copy, saveBtn, remove);
       el.workspaceFiles.appendChild(item);
     });
   }
@@ -1031,6 +1205,48 @@
     }
 
     return finalData;
+  }
+
+  async function composeAssistantInput(convo, promptText) {
+    const project = getActiveProject();
+    const filesContext = workspaceContext(convo);
+    const knowledgeContext = await getLibraryContext(promptText || project?.title || "");
+    return [
+      String(promptText || "Please continue.").trim(),
+      project ? `Project workspace:\nName: ${project.title}\nNotes: ${project.notes || "(none)"}` : "",
+      filesContext ? `Conversation file workspace:\n${filesContext}` : "",
+      knowledgeContext ? `Saved knowledge library:\n${knowledgeContext}` : ""
+    ].filter(Boolean).join("\n\n");
+  }
+
+  async function runDeepResearch(convo, question, thinking) {
+    const project = getActiveProject();
+    const library = await getLibraryContext(question);
+    const history = convo.messages.slice(-maxHistory, -1).map((msg) => ({ role: msg.role, content: msg.content }));
+    const res = await apiFetch(`${apiBase}/api/deep-research`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question,
+        history,
+        profile,
+        projectId: db.activeProjectId,
+        projectTitle: project?.title || "",
+        projectNotes: project?.notes || "",
+        library
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Deep research failed");
+    const reply = data.reply || "(no report)";
+    const assistantIndex = convo.messages.length;
+    thinking.replace(reply, { index: assistantIndex, sources: data.sources || [] });
+    convo.messages.push({ role: "assistant", content: reply, sources: data.sources || [] });
+    convo.updatedAt = nowISO();
+    save();
+    renderSidebar();
+    if (db.ttsEnabled) speakText(reply);
+    return reply;
   }
 
   async function requestAssistant(convo, input, thinking) {
@@ -1206,9 +1422,13 @@
 
     const thinking = showThinking("Thinking...");
     try {
-      const filesContext = workspaceContext(convo);
-      const input = `${raw || "Please analyze the uploaded file or continue from the current context."}${filesContext ? `\n\nConversation file workspace:\n${filesContext}` : ""}`;
-      await requestAssistant(convo, input, thinking);
+      const basePrompt = raw || "Please analyze the uploaded file or continue from the current context.";
+      if (db.researchMode) {
+        await runDeepResearch(convo, basePrompt, thinking);
+      } else {
+        const input = await composeAssistantInput(convo, basePrompt);
+        await requestAssistant(convo, input, thinking);
+      }
     } catch (err) {
       thinking.replace(`Error: ${err.message || err}`);
     }
@@ -1233,9 +1453,8 @@
     renderSidebar();
 
     const thinking = showThinking("Thinking...");
-    const filesContext = workspaceContext(convo);
-    const input = `${userText}${filesContext ? `\n\nConversation file workspace:\n${filesContext}` : ""}`;
     try {
+      const input = await composeAssistantInput(convo, userText);
       await requestAssistant(convo, input, thinking);
     } catch (err) {
       thinking.replace(`Error: ${err.message || err}`);
@@ -1278,7 +1497,8 @@
 
     const thinking = showThinking("Thinking...");
     try {
-      await requestAssistant(convo, "Continue from your previous answer.", thinking);
+      const input = await composeAssistantInput(convo, "Continue from your previous answer.");
+      await requestAssistant(convo, input, thinking);
     } catch (err) {
       thinking.replace(`Error: ${err.message || err}`);
     }
@@ -1316,6 +1536,122 @@
     renderSidebar();
     renderChat();
     focusComposer();
+  }
+
+  async function saveKnowledge({ title, content, kind = "note", source = "manual", tags = [] }) {
+    const project = getActiveProject();
+    const res = await apiFetch(`${apiBase}/api/chatbot-library`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        content,
+        kind,
+        source,
+        tags,
+        projectId: db.activeProjectId,
+        projectTitle: project?.title || ""
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Could not save knowledge");
+    await loadLibrary(title || "");
+    return data.item;
+  }
+
+  async function addKnowledgeManually() {
+    const title = window.prompt("Knowledge title");
+    if (!title) return;
+    const content = window.prompt("Knowledge text");
+    if (!content) return;
+    try {
+      await saveKnowledge({ title, content, kind: "note", source: "manual" });
+    } catch (err) {
+      appendBubble("assistant", `Could not save knowledge: ${err.message || err}`);
+    }
+  }
+
+  function downloadText(filename, text, type = "text/plain") {
+    const blob = new Blob([text], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportMarkdown() {
+    const convo = getActive();
+    const project = getActiveProject();
+    const content = [
+      `# ${convo.title || "JohnnyChat Conversation"}`,
+      "",
+      `Project: ${project?.title || "General"}`,
+      `Exported: ${new Date().toLocaleString()}`,
+      "",
+      transcript(convo)
+    ].join("\n");
+    downloadText(`${(convo.title || "johnnychat").replace(/[^\w\-]+/g, "_")}.md`, content, "text/markdown");
+  }
+
+  function exportHtml() {
+    const convo = getActive();
+    const project = getActiveProject();
+    const body = (convo.messages || []).map((msg) => `<section><h2>${esc(String(msg.role || "assistant").toUpperCase())}</h2>${pretty(msg.content || "")}</section>`).join("\n");
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(convo.title || "JohnnyChat")}</title><style>body{font-family:Georgia,serif;max-width:820px;margin:40px auto;line-height:1.6;color:#1b1f24}section{border-top:1px solid #ddd;padding:18px 0}h1,h2{font-family:Arial,sans-serif}</style></head><body><h1>${esc(convo.title || "JohnnyChat")}</h1><p>Project: ${esc(project?.title || "General")}</p>${body}</body></html>`;
+    downloadText(`${(convo.title || "johnnychat").replace(/[^\w\-]+/g, "_")}.html`, html, "text/html");
+  }
+
+  async function runAction(command) {
+    const convo = getActive();
+    apiFetch(`${apiBase}/api/chatbot-action`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command })
+    }).catch(() => {});
+    const labels = {
+      summary: "Summarize this conversation into a crisp executive summary with key decisions, useful details, and open questions.",
+      tasks: "Turn this conversation into a prioritized task list with owners, next actions, and dependencies where obvious.",
+      quote: "Draft a professional quote or estimate from this conversation. Include assumptions and a clear next-step section.",
+      email: "Draft a polished email based on this conversation. Keep it useful, direct, and ready to send.",
+      website: "Draft strong website copy from this conversation. Include headline options, service copy, FAQ ideas, and calls to action."
+    };
+
+    if (command === "markdown") return exportMarkdown();
+    if (command === "html") return exportHtml();
+    if (command === "library") {
+      await saveKnowledge({
+        title: convo.title || "Saved conversation",
+        content: transcript(convo),
+        kind: "conversation",
+        source: "chat transcript",
+        tags: ["conversation"]
+      });
+      const reply = "Saved this conversation to the knowledge library.";
+      appendBubble("assistant", reply, { index: convo.messages.length });
+      convo.messages.push({ role: "assistant", content: reply });
+      save();
+      return;
+    }
+
+    const prompt = labels[command];
+    if (!prompt) return;
+
+    appendBubble("user", `[Action] ${prompt}`, { index: convo.messages.length });
+    convo.messages.push({ role: "user", content: `[Action] ${prompt}` });
+    save();
+    renderSidebar();
+
+    const thinking = showThinking("Working...");
+    try {
+      const input = await composeAssistantInput(convo, `${prompt}\n\nConversation:\n${transcript(convo).slice(0, 24000)}`);
+      await requestAssistant(convo, input, thinking);
+    } catch (err) {
+      thinking.replace(`Action failed: ${err.message || err}`);
+    }
   }
 
   async function stopVoiceCapture() {
@@ -1409,6 +1745,9 @@
       ["Voice notes", totals.transcriptions],
       ["Uploads", totals.uploads],
       ["Images", totals.images],
+      ["Library", totals.libraryItems],
+      ["Research", totals.deepResearch],
+      ["Actions", totals.actions],
       ["Errors", totals.errors]
     ];
 
@@ -1448,6 +1787,49 @@
     renderConversations();
   });
 
+  el.projectSelect.addEventListener("change", async () => {
+    db.activeProjectId = el.projectSelect.value || db.projects[0].id;
+    localStorage.setItem(activeProjectKey, db.activeProjectId);
+    db.activeId = "";
+    save();
+    renderSidebar();
+    renderChat();
+    await loadLibrary().catch(() => {});
+  });
+
+  el.newProject.addEventListener("click", () => {
+    const title = window.prompt("Project name");
+    if (!title) return;
+    const project = {
+      id: uid(),
+      title: title.trim().slice(0, 80) || "Untitled project",
+      notes: "",
+      createdAt: nowISO(),
+      updatedAt: nowISO()
+    };
+    db.projects.unshift(project);
+    db.activeProjectId = project.id;
+    db.activeId = "";
+    save();
+    renderSidebar();
+    renderChat();
+  });
+
+  el.projectNotes.addEventListener("input", () => {
+    const project = getActiveProject();
+    if (!project) return;
+    project.notes = String(el.projectNotes.value || "");
+    project.updatedAt = nowISO();
+    save();
+  });
+
+  el.librarySearch.addEventListener("input", () => {
+    clearTimeout(db.librarySearchTimer);
+    db.librarySearchTimer = setTimeout(() => loadLibrary().catch(() => {}), 250);
+  });
+
+  el.addKnowledge.addEventListener("click", addKnowledgeManually);
+
   el.clearImages.addEventListener("click", async () => {
     await clearStoredImages();
     await renderRecentImages();
@@ -1475,12 +1857,28 @@
     stopSpeech();
   });
 
+  el.researchToggle.addEventListener("click", () => {
+    db.researchMode = !db.researchMode;
+    updateResearchToggle();
+  });
+
   el.sendBtn.addEventListener("click", sendMessage);
   el.attachBtn.addEventListener("click", () => el.fileInput.click());
   el.micBtn.addEventListener("click", startVoiceCapture);
   el.statsToggle.addEventListener("click", openStats);
   el.closeStats.addEventListener("click", closeStats);
   el.refreshStats.addEventListener("click", loadStats);
+  el.actionsToggle.addEventListener("click", () => {
+    el.actionsPanel.classList.add("show");
+    el.actionsPanel.setAttribute("aria-hidden", "false");
+  });
+  el.closeActions.addEventListener("click", () => {
+    el.actionsPanel.classList.remove("show");
+    el.actionsPanel.setAttribute("aria-hidden", "true");
+  });
+  el.actionsPanel.querySelectorAll("[data-command]").forEach((button) => {
+    button.addEventListener("click", () => runAction(button.getAttribute("data-command")));
+  });
   el.fileInput.addEventListener("change", () => {
     const files = Array.from(el.fileInput.files || []);
     if (!files.length) return;
@@ -1524,8 +1922,10 @@
   async function initialize() {
     renderSidebar();
     await renderRecentImages();
+    await loadLibrary().catch(() => {});
     renderChat();
     updateVoiceToggle();
+    updateResearchToggle();
     resizeInput();
     requestAnimationFrame(() => focusComposer());
   }

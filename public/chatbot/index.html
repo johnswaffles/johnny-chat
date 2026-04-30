@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/chatbot/chatbot.css?v=20260430-2">
-  <script defer src="/chatbot/chatbot.js?v=20260430-4"></script>
+  <link rel="stylesheet" href="/chatbot/chatbot.css?v=20260430-3">
+  <script defer src="/chatbot/chatbot.js?v=20260430-5"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -27,6 +27,17 @@
         <input id="search" type="search" placeholder="Search conversations" autocomplete="off">
       </label>
 
+      <section class="rail-card project-card">
+        <div class="card-head">
+          <div>
+            <h2>Project</h2>
+          </div>
+          <button id="new-project" class="pill-button pill-muted" type="button">New</button>
+        </div>
+        <select id="project-select" class="project-select" aria-label="Project workspace"></select>
+        <textarea id="project-notes" class="project-notes" rows="3" placeholder="Project notes..."></textarea>
+      </section>
+
       <section class="rail-card workspace-card">
         <div class="card-head">
           <div>
@@ -35,6 +46,17 @@
           <button id="clear-workspace" class="pill-button pill-muted" type="button">Clear</button>
         </div>
         <div class="workspace-files" id="workspace-files"></div>
+      </section>
+
+      <section class="rail-card library-card">
+        <div class="card-head">
+          <div>
+            <h2>Library</h2>
+          </div>
+          <button id="add-knowledge" class="pill-button pill-muted" type="button">Add</button>
+        </div>
+        <input id="library-search" class="library-search" type="search" placeholder="Search saved knowledge" autocomplete="off">
+        <div class="library-list" id="library-list"></div>
       </section>
 
       <section class="rail-card grow">
@@ -74,6 +96,8 @@
             </select>
           </label>
           <button id="voice-toggle" class="pill-button pill-muted voice-toggle" type="button" aria-pressed="false" title="Toggle AI-generated voice">AI voice off</button>
+          <button id="research-toggle" class="pill-button pill-muted" type="button" aria-pressed="false">Research</button>
+          <button id="actions-toggle" class="pill-button pill-muted" type="button">Actions</button>
           <button id="stats-toggle" class="pill-button pill-muted" type="button">Stats</button>
           <button id="new-chat-main" class="pill-button" type="button">New chat</button>
         </div>
@@ -110,6 +134,26 @@
     </div>
     <div class="stats-body" id="stats-body"></div>
     <button id="refresh-stats" class="pill-button" type="button">Refresh</button>
+  </aside>
+
+  <aside class="actions-panel" id="actions-panel" aria-hidden="true">
+    <div class="stats-panel-head">
+      <div>
+        <h2>Actions</h2>
+        <p>Turn this chat into work</p>
+      </div>
+      <button id="close-actions" class="modal-close" type="button" aria-label="Close actions panel">×</button>
+    </div>
+    <div class="action-grid">
+      <button type="button" data-command="summary">Summarize chat</button>
+      <button type="button" data-command="tasks">Make task list</button>
+      <button type="button" data-command="quote">Draft quote</button>
+      <button type="button" data-command="email">Draft email</button>
+      <button type="button" data-command="website">Website copy</button>
+      <button type="button" data-command="library">Save to library</button>
+      <button type="button" data-command="markdown">Export Markdown</button>
+      <button type="button" data-command="html">Export HTML</button>
+    </div>
   </aside>
 
   <span class="sr-only">Standalone GPT 5.5 chat page.</span>

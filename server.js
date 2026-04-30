@@ -45,6 +45,7 @@ const {
   PUBLIC_BOARD_COMMENT_LIMIT = "50",
   PUBLIC_BOARD_ADMIN_TOKEN = "",
   JOHNNY_CHAT_USAGE_PATH = "/var/data/johnny-chat-usage.json",
+  JOHNNY_CHAT_LIBRARY_PATH = "/var/data/johnny-chat-library.json",
   JOHNNY_CHAT_PASSWORD = ""
 } = process.env;
 
@@ -80,6 +81,7 @@ if (!OPENAI_API_KEY) {
 
 const CHATBOT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
 let johnnyChatUsageLock = Promise.resolve();
+let johnnyChatLibraryLock = Promise.resolve();
 const TTS_VOICES = new Set([
   "alloy",
   "ash",
@@ -172,6 +174,9 @@ function emptyJohnnyChatUsage() {
       transcriptions: 0,
       uploads: 0,
       images: 0,
+      libraryItems: 0,
+      deepResearch: 0,
+      actions: 0,
       errors: 0
     },
     recentEvents: [],
@@ -232,6 +237,99 @@ function recordJohnnyChatUsage(type, detail = {}) {
       console.warn("JohnnyChat usage record failed:", err.message || err);
     });
   return johnnyChatUsageLock;
+}
+
+function emptyJohnnyChatLibrary() {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    items: []
+  };
+}
+
+async function readJohnnyChatLibrary() {
+  try {
+    const raw = await readFile(JOHNNY_CHAT_LIBRARY_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    return {
+      ...emptyJohnnyChatLibrary(),
+      ...parsed,
+      items: Array.isArray(parsed?.items) ? parsed.items : []
+    };
+  } catch {
+    return emptyJohnnyChatLibrary();
+  }
+}
+
+async function writeJohnnyChatLibrary(library) {
+  await mkdir(path.dirname(JOHNNY_CHAT_LIBRARY_PATH), { recursive: true });
+  await writeFile(JOHNNY_CHAT_LIBRARY_PATH, JSON.stringify(library, null, 2));
+}
+
+function normalizeLibraryTags(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 12);
+  }
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function createLibraryItem(input = {}) {
+  const now = new Date().toISOString();
+  return {
+    id: `lib_${randomBytes(8).toString("hex")}`,
+    title: String(input.title || "Untitled knowledge").trim().slice(0, 160) || "Untitled knowledge",
+    kind: String(input.kind || "note").trim().slice(0, 40) || "note",
+    projectId: String(input.projectId || "").trim().slice(0, 100),
+    projectTitle: String(input.projectTitle || "").trim().slice(0, 160),
+    source: String(input.source || "").trim().slice(0, 240),
+    tags: normalizeLibraryTags(input.tags),
+    content: String(input.content || "").trim().slice(0, 60000),
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function libraryTerms(query) {
+  return [...new Set(String(query || "").toLowerCase().match(/[a-z0-9][a-z0-9'-]{2,}/g) || [])].slice(0, 16);
+}
+
+function scoreLibraryItem(item, terms, projectId = "") {
+  const title = String(item.title || "").toLowerCase();
+  const tags = (item.tags || []).join(" ").toLowerCase();
+  const content = String(item.content || "").toLowerCase();
+  let score = projectId && item.projectId === projectId ? 8 : 0;
+  if (!terms.length) return score + new Date(item.updatedAt || item.createdAt || 0).getTime() / 10000000000000;
+  terms.forEach((term) => {
+    if (title.includes(term)) score += 8;
+    if (tags.includes(term)) score += 5;
+    if (content.includes(term)) score += 1;
+  });
+  return score;
+}
+
+function selectLibraryItems(items, query, projectId = "", limit = 8) {
+  const terms = libraryTerms(query);
+  return (items || [])
+    .map((item) => ({ item, score: scoreLibraryItem(item, terms, projectId) }))
+    .filter(({ item, score }) => score > 0 || !terms.length || (projectId && item.projectId === projectId))
+    .sort((a, b) => b.score - a.score || new Date(b.item.updatedAt || b.item.createdAt || 0) - new Date(a.item.updatedAt || a.item.createdAt || 0))
+    .slice(0, limit)
+    .map(({ item }) => item);
+}
+
+function libraryContext(items, maxChars = 22000) {
+  return (items || [])
+    .map((item, index) => {
+      const tags = Array.isArray(item.tags) && item.tags.length ? `\nTags: ${item.tags.join(", ")}` : "";
+      const project = item.projectTitle ? `\nProject: ${item.projectTitle}` : "";
+      return `Knowledge ${index + 1}: ${item.title}${project}${tags}\nSource: ${item.source || item.kind || "library"}\n${String(item.content || "").slice(0, 5000)}`;
+    })
+    .join("\n\n")
+    .slice(0, maxChars);
 }
 
 function sendSse(res, event, data = {}) {
@@ -465,7 +563,7 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: true,
   credentials: true,
-  methods: ["GET", "POST", "OPTIONS"],
+  methods: ["GET", "POST", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
     "Authorization",
@@ -517,6 +615,78 @@ app.get("/api/chatbot-usage", async (req, res) => {
     res.json(await readJohnnyChatUsage());
   } catch (err) {
     void recordJohnnyChatUsage("errors", { route: "/api/chatbot-usage", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+app.get("/api/chatbot-library", async (req, res) => {
+  try {
+    if (!requireChatbotSession(req, res)) return;
+    const query = String(req.query?.q || "");
+    const projectId = String(req.query?.projectId || "");
+    const library = await readJohnnyChatLibrary();
+    const items = selectLibraryItems(library.items, query, projectId, Number(req.query?.limit || 40));
+    res.json({ items, total: library.items.length, updatedAt: library.updatedAt });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chatbot-library", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+app.post("/api/chatbot-library", async (req, res) => {
+  try {
+    if (!requireChatbotSession(req, res)) return;
+    const item = createLibraryItem(req.body || {});
+    if (!item.content) {
+      return res.status(400).json({ detail: "Knowledge content is required." });
+    }
+
+    await (johnnyChatLibraryLock = johnnyChatLibraryLock.catch(() => {}).then(async () => {
+      const library = await readJohnnyChatLibrary();
+      library.items.unshift(item);
+      library.items = library.items.slice(0, 500);
+      library.updatedAt = new Date().toISOString();
+      await writeJohnnyChatLibrary(library);
+    }));
+
+    void recordJohnnyChatUsage("libraryItems", { title: item.title, kind: item.kind });
+    res.json({ ok: true, item });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chatbot-library", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+app.delete("/api/chatbot-library/:id", async (req, res) => {
+  try {
+    if (!requireChatbotSession(req, res)) return;
+    const id = String(req.params.id || "");
+    let removed = false;
+
+    await (johnnyChatLibraryLock = johnnyChatLibraryLock.catch(() => {}).then(async () => {
+      const library = await readJohnnyChatLibrary();
+      const before = library.items.length;
+      library.items = library.items.filter((item) => item.id !== id);
+      removed = library.items.length !== before;
+      library.updatedAt = new Date().toISOString();
+      await writeJohnnyChatLibrary(library);
+    }));
+
+    if (!removed) return res.status(404).json({ detail: "Knowledge item not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chatbot-library/:id", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+app.post("/api/chatbot-action", (req, res) => {
+  try {
+    if (!requireChatbotSession(req, res)) return;
+    void recordJohnnyChatUsage("actions", { command: req.body?.command || "unknown" });
+    res.json({ ok: true });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/chatbot-action", message: err.message || err });
     res.status(500).json({ detail: String(err.message || err) });
   }
 });
@@ -1695,6 +1865,59 @@ app.post("/api/chat-stream", async (req, res) => {
       res.end();
       return;
     }
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+app.post("/api/deep-research", async (req, res) => {
+  try {
+    const { question = "", history = [], projectTitle = "", projectNotes = "", library = "" } = req.body || {};
+    const profile = inferWidgetProfile(req);
+    const query = String(question || "").trim();
+
+    if (profile !== "gpt54") {
+      return res.status(400).json({ detail: "Deep research is only enabled for the private chatbot." });
+    }
+    if (!requireChatbotSession(req, res)) return;
+    if (!query) {
+      return res.status(400).json({ detail: "Research question is required." });
+    }
+
+    const lib = await readJohnnyChatLibrary();
+    const matchedLibrary = libraryContext(selectLibraryItems(lib.items, query, String(req.body?.projectId || ""), 8));
+    const suppliedLibrary = String(library || "").slice(0, 16000);
+    const response = await openai.responses.create({
+      model: OPENAI_GPT54_MODEL,
+      tools: [{ type: "web_search" }],
+      input: [
+        {
+          role: "system",
+          content: [
+            getJohnnyPersona("gpt54"),
+            "",
+            "Deep research mode: produce a careful, source-aware report. Be direct and practical. Prefer structured headings. Include a short answer first, then findings, comparison tables when useful, risks or caveats, and concrete next steps. Use web search for current facts and cite sources through URL citations. Do not invent citations."
+          ].join("\n")
+        },
+        ...history.slice(-10),
+        {
+          role: "user",
+          content: [
+            `Research question: ${query}`,
+            projectTitle ? `Project: ${projectTitle}` : "",
+            projectNotes ? `Project notes:\n${String(projectNotes).slice(0, 5000)}` : "",
+            suppliedLibrary || matchedLibrary ? `Private knowledge context:\n${[suppliedLibrary, matchedLibrary].filter(Boolean).join("\n\n")}` : ""
+          ].filter(Boolean).join("\n\n")
+        }
+      ]
+    });
+
+    void recordJohnnyChatUsage("deepResearch", { question: query });
+    res.json({
+      reply: extractResponseText(response) || "(no report)",
+      sources: extractResponseSources(response)
+    });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/deep-research", message: err.message || err });
     res.status(500).json({ detail: String(err.message || err) });
   }
 });

@@ -158,6 +158,30 @@ button {
   cursor: pointer;
 }
 
+.project-select,
+.project-notes,
+.library-search {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+}
+
+.project-select,
+.library-search {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.project-notes {
+  min-height: 72px;
+  padding: 10px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
 .voice-select-wrap select:focus {
   border-color: rgba(125, 211, 176, 0.58);
   box-shadow: 0 0 0 3px rgba(125, 211, 176, 0.12);
@@ -180,6 +204,11 @@ button {
 .voice-toggle.active {
   border-color: rgba(125, 211, 176, 0.34);
   color: var(--accent);
+}
+
+#research-toggle.active {
+  border-color: rgba(156, 200, 255, 0.34);
+  color: var(--accent-2);
 }
 
 .search input {
@@ -276,9 +305,10 @@ textarea:focus {
   overflow: auto;
 }
 
-.workspace-file {
+.workspace-file,
+.library-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 8px;
   padding: 9px 9px;
@@ -287,19 +317,27 @@ textarea:focus {
   background: var(--surface);
 }
 
+.library-item {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
 .workspace-file strong,
 .workspace-file span,
+.library-item strong,
+.library-item span,
 .workspace-empty {
   display: block;
   overflow-wrap: anywhere;
 }
 
-.workspace-file strong {
+.workspace-file strong,
+.library-item strong {
   font-size: 13px;
   line-height: 1.3;
 }
 
 .workspace-file span,
+.library-item span,
 .workspace-empty {
   margin-top: 3px;
   color: var(--muted);
@@ -742,7 +780,8 @@ textarea {
   font-size: 24px;
 }
 
-.stats-panel {
+.stats-panel,
+.actions-panel {
   position: fixed;
   top: 0;
   right: 0;
@@ -758,7 +797,8 @@ textarea {
   box-shadow: var(--shadow);
 }
 
-.stats-panel.show {
+.stats-panel.show,
+.actions-panel.show {
   display: grid;
 }
 
@@ -769,17 +809,20 @@ textarea {
   gap: 12px;
 }
 
-.stats-panel .modal-close {
+.stats-panel .modal-close,
+.actions-panel .modal-close {
   position: static;
   flex: 0 0 auto;
 }
 
 .stats-panel h2,
-.stats-panel h3 {
+.stats-panel h3,
+.actions-panel h2 {
   margin: 0;
 }
 
-.stats-panel h2 {
+.stats-panel h2,
+.actions-panel h2 {
   font-size: 22px;
 }
 
@@ -791,6 +834,7 @@ textarea {
 }
 
 .stats-panel p,
+.actions-panel p,
 .stats-meta {
   margin: 4px 0 0;
   color: var(--muted);
@@ -838,6 +882,27 @@ textarea {
   margin-bottom: 5px;
   color: var(--danger);
   font-size: 13px;
+}
+
+.action-grid {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.action-grid button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.action-grid button:hover {
+  background: var(--surface-2);
 }
 
 ::-webkit-scrollbar {
