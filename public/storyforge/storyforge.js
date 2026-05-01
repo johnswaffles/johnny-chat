@@ -22,7 +22,8 @@
   ];
 
   const storageKey = "storyforge-state-v1";
-  const apiBase = window.location.protocol === "file:" ? "https://justaskjohnny.com" : "";
+  const defaultApiBase = "https://johnny-chat.onrender.com";
+  const apiBase = getApiBase();
   const refs = {
     genreOptions: document.querySelector("[data-genre-options]"),
     styleOptions: document.querySelector("[data-style-options]"),
@@ -49,6 +50,16 @@
 
   let state = loadState();
   let loading = false;
+
+  function getApiBase() {
+    const override = String(window.STORYFORGE_API_BASE_URL || "").replace(/\/+$/, "");
+    if (override) return override;
+
+    const host = String(window.location.hostname || "").toLowerCase();
+    if (window.location.protocol === "file:") return defaultApiBase;
+    if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".onrender.com")) return "";
+    return defaultApiBase;
+  }
 
   function defaultState() {
     return {
