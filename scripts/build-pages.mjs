@@ -5,18 +5,13 @@ import { gzipSync } from "node:zlib";
 const root = process.cwd();
 const publicDir = path.join(root, "public");
 const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
-const rpgExportSourceDir = path.resolve(root, "..", "public", "tiny-hero-quest");
 const cozyExportTargetDirs = [
   path.join(publicDir, "cozy-builder"),
   path.join(publicDir, "cozy-builder-game"),
   path.join(publicDir, "godot-playtest"),
 ];
-const rpgExportTargetDirs = [
-  path.join(publicDir, "tiny-hero-quest"),
-];
 const godotExportGroups = [
   { sourceDir: cozyExportSourceDir, targetDirs: cozyExportTargetDirs },
-  { sourceDir: rpgExportSourceDir, targetDirs: rpgExportTargetDirs },
 ];
 const godotExportTargetDirs = godotExportGroups.flatMap((group) => group.targetDirs);
 
@@ -131,9 +126,7 @@ function siteNav(profile, active, brandOverride = "") {
   const brand = brandOverride || (profile === "mowing" ? "618help.com" : "justaskjohnny.com");
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
   const gptHref = "/chatbot/";
-  const storyHref = "/storyforge/";
   const cozyHref = "/cozy-builder-game/";
-  const rpgHref = "/tiny-hero-quest/";
   const contactHref = "/contact/";
   const links = profile === "mowing"
     ? [
@@ -143,9 +136,7 @@ function siteNav(profile, active, brandOverride = "") {
     : [
         `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
         `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>`,
-        `<a class="johnny-site-link ${active === "storyforge" ? "active" : ""}" href="${storyHref}">StoryForge</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>`,
-        `<a class="johnny-site-link ${active === "rpg" ? "active" : ""}" href="${rpgHref}" target="_blank" rel="noopener noreferrer">Hero RPG</a>`,
         `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
       ];
   return `
@@ -3848,64 +3839,6 @@ async function patchGodotHtmlCacheBust() {
   }
 }
 
-async function patchTinyHeroQuestAssetOrigins() {
-  const loaderPath = path.join(publicDir, "tiny-hero-quest", "index.js");
-  try {
-    var source = await readFile(loaderPath, "utf8");
-  } catch {
-    return;
-  }
-
-  const version = Date.now().toString(36);
-  const assetBase = "https://johnny-chat.onrender.com/tiny-hero-quest/index";
-  const wasmUrl = `${assetBase}.wasm?v=${version}`;
-  const packUrl = `${assetBase}.pck?v=${version}`;
-  const sideWasmUrl = `${assetBase}.side.wasm?v=${version}`;
-  const audioWorkletUrl = `${assetBase}.audio.worklet.js?v=${version}`;
-  const audioPositionWorkletUrl = `${assetBase}.audio.position.worklet.js?v=${version}`;
-
-  let patched = source
-    .replace(/\n\t\t\t\tconst packSource = this\.config\.mainPack \|\| "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.pck\?v=[^"]+";/g, "")
-    .replace(/loadPromise = preloader\.loadPromise\("https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.wasm\?v=[^"]+", size, true\);/g, "loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);")
-    .replace(/return "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.audio\.worklet\.js\?v=[^"]+";/g, "return `${loadPath}.audio.worklet.js`;")
-    .replace(/return "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.audio\.position\.worklet\.js\?v=[^"]+";/g, "return `${loadPath}.audio.position.worklet.js`;")
-    .replace(/return "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.side\.wasm\?v=[^"]+";/g, "return `${loadPath}.side.wasm`;")
-    .replace(/return "https:\/\/johnny-chat\.onrender\.com\/tiny-hero-quest\/index\.wasm\?v=[^"]+";/g, "return `${loadPath}.wasm`;")
-    .replace(
-      "loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);",
-    `loadPromise = preloader.loadPromise("${wasmUrl}", size, true);`
-  );
-  patched = patched.replace(
-    "const pack = this.config.mainPack || `${exe}.pck`;",
-    `const pack = this.config.mainPack || \`\${exe}.pck\`;
-\t\t\t\tconst packSource = this.config.mainPack || "${packUrl}";`
-  );
-  patched = patched.replace(
-    "this.preloadFile(pack, pack),",
-    "this.preloadFile(packSource, pack),"
-  );
-  patched = patched.replace(
-    "return `${loadPath}.audio.worklet.js`;",
-    `return "${audioWorkletUrl}";`
-  );
-  patched = patched.replace(
-    "return `${loadPath}.audio.position.worklet.js`;",
-    `return "${audioPositionWorkletUrl}";`
-  );
-  patched = patched.replace(
-    "return `${loadPath}.side.wasm`;",
-    `return "${sideWasmUrl}";`
-  );
-  patched = patched.replace(
-    "return `${loadPath}.wasm`;",
-    `return "${wasmUrl}";`
-  );
-
-  if (patched !== source) {
-    await writeFile(loaderPath, patched, "utf8");
-  }
-}
-
 function isGzipBuffer(buffer) {
   return buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
 }
@@ -4369,9 +4302,7 @@ ${siteNav("ai", "contact")}
       const navLinks = document.querySelectorAll(".johnny-site-link");
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
       const gptHref = "/chatbot/";
-      const storyHref = "/storyforge/";
       const cozyHref = "/cozy-builder-game/";
-      const rpgHref = "/tiny-hero-quest/";
       const contactHref = "/contact/";
 
       profileField.value = profile;
@@ -4387,13 +4318,11 @@ ${siteNav("ai", "contact")}
           '<a class="johnny-site-link" href="' + homeHref + '">Home</a>',
           '<a class="johnny-site-link active" href="' + contactHref + '">Contact</a>'
         ].join("");
-      } else if (navLinks.length >= 6) {
+      } else if (navLinks.length >= 4) {
         navLinks[0].href = homeHref;
         navLinks[1].href = gptHref;
-        navLinks[2].href = storyHref;
-        navLinks[3].href = cozyHref;
-        navLinks[4].href = rpgHref;
-        navLinks[5].href = contactHref;
+        navLinks[2].href = cozyHref;
+        navLinks[3].href = contactHref;
       }
 
       if (isMowing) {
@@ -4493,7 +4422,6 @@ async function main() {
   await syncGodotBuilds();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
-  await patchTinyHeroQuestAssetOrigins();
 
   await writeFile(path.join(publicDir, "chatbots", "index.html"), aiPage, "utf8");
 

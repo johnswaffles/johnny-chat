@@ -19,11 +19,7 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_GPT54_REASONING_EFFORT = "",
-  OPENAI_STORY_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_IMAGE_MODEL = "dall-e-3",
-  OPENAI_STORYFORGE_IMAGE_MODEL = OPENAI_IMAGE_MODEL,
-  STORYFORGE_IMAGE_SIZE = "1024x1024",
-  STORYFORGE_IMAGE_QUALITY = "medium",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
   OPENAI_TTS_MODEL = "gpt-4o-mini-tts",
   OPENAI_TTS_VOICE = "coral",
@@ -178,7 +174,6 @@ function emptyJohnnyChatUsage() {
       transcriptions: 0,
       uploads: 0,
       images: 0,
-      storyforge: 0,
       libraryItems: 0,
       deepResearch: 0,
       actions: 0,
@@ -551,118 +546,6 @@ function extractResponseSources(response) {
   return sources;
 }
 
-const STORYFORGE_GENRES = [
-  "Cyberpunk",
-  "Fantasy",
-  "Mystery",
-  "Space Opera",
-  "Cozy Adventure",
-  "Horror",
-  "Western",
-  "Superhero"
-];
-
-const STORYFORGE_ART_STYLES = [
-  "Watercolor",
-  "Comic Book",
-  "Cinematic",
-  "Pixel Art",
-  "Noir Ink",
-  "Claymation",
-  "Anime",
-  "Oil Painting"
-];
-
-function clampStoryForgeText(value, max = 1200) {
-  return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
-}
-
-function normalizeStoryForgeOption(value, options, fallback) {
-  const candidate = clampStoryForgeText(value, 80).toLowerCase();
-  return options.find((option) => option.toLowerCase() === candidate) || fallback;
-}
-
-function buildStoryForgeImageRequest(prompt) {
-  const model = clampStoryForgeText(OPENAI_STORYFORGE_IMAGE_MODEL || OPENAI_IMAGE_MODEL, 80) || OPENAI_IMAGE_MODEL;
-  const requestedQuality = clampStoryForgeText(STORYFORGE_IMAGE_QUALITY, 24).toLowerCase() || "medium";
-  const request = {
-    model,
-    prompt,
-    size: clampStoryForgeText(STORYFORGE_IMAGE_SIZE, 24) || "1024x1024"
-  };
-
-  if (model.toLowerCase().includes("dall-e-3")) {
-    request.quality = requestedQuality === "hd" || requestedQuality === "high" ? "hd" : "standard";
-  } else {
-    request.quality = ["low", "medium", "high", "auto"].includes(requestedQuality) ? requestedQuality : "medium";
-  }
-
-  return request;
-}
-
-function parseStoryForgeJson(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const withoutFence = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-    try {
-      return JSON.parse(withoutFence);
-    } catch {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (!match) return null;
-      try {
-        return JSON.parse(match[0]);
-      } catch {
-        return null;
-      }
-    }
-  }
-}
-
-function normalizeStoryForgeChoice(choice, index) {
-  const source = choice && typeof choice === "object" ? choice : {};
-  const label = clampStoryForgeText(source.label || source.title || source.text, 80);
-  const prompt = clampStoryForgeText(source.prompt || source.action || label, 180);
-  return {
-    label: label || ["Take the risk", "Follow the clue", "Change the plan"][index] || "Keep going",
-    prompt: prompt || label || "Continue the story"
-  };
-}
-
-function normalizeStoryForgePayload(payload, genre) {
-  const source = payload && typeof payload === "object" ? payload : {};
-  const fallbackTitle = `${genre} Story`;
-  const choices = Array.isArray(source.choices)
-    ? source.choices.slice(0, 3).map(normalizeStoryForgeChoice)
-    : [];
-
-  while (choices.length < 3) {
-    choices.push(normalizeStoryForgeChoice({}, choices.length));
-  }
-
-  return {
-    title: clampStoryForgeText(source.title, 90) || fallbackTitle,
-    scene: String(source.scene || "").replace(/\r\n/g, "\n").trim().slice(0, 1800) || [
-      "The scene opens with a strange signal, a locked choice, and a world waiting for a first brave move.",
-      "A path appears ahead, but it will not stay open for long."
-    ].join("\n\n"),
-    imagePrompt: clampStoryForgeText(source.image_prompt || source.imagePrompt, 1200) || `A dramatic ${genre} scene with a clear main character and a choice ahead.`,
-    choices
-  };
-}
-
-function normalizeStoryForgeHistory(history) {
-  if (!Array.isArray(history)) return [];
-  return history.slice(-6).map((entry) => ({
-    title: clampStoryForgeText(entry?.title, 90),
-    scene: clampStoryForgeText(entry?.scene, 1000),
-    selectedChoice: clampStoryForgeText(entry?.selectedChoice || entry?.choice, 180)
-  })).filter((entry) => entry.title || entry.scene || entry.selectedChoice);
-}
-
 const app = express();
 
 /**
@@ -868,67 +751,6 @@ app.post("/api/realtime-token", async (req, res) => {
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
 
-function tinyHeroFairyFallback(event, fallback) {
-  const fallbackText = compactText(fallback);
-  if (fallbackText) return fallbackText.slice(0, 180);
-  const eventText = compactText(event).toLowerCase();
-  if (eventText.includes("firebolt")) return "Clean spellwork. Very orange, very confident, mildly rude to the wallpaper.";
-  if (eventText.includes("gold")) return "Floor money again. This mansion has either ghosts or terrible accounting.";
-  if (eventText.includes("opened")) return "Aha. Another secret liberated from the tyranny of furniture.";
-  if (eventText.includes("empty")) return "Nothing here except atmosphere, dust, and your impressive commitment to poking things.";
-  return "I have reviewed the situation and remain charmingly suspicious.";
-}
-
-app.post("/api/tiny-hero/fairy", async (req, res) => {
-  const event = compactText(req.body?.event).slice(0, 180);
-  const fallback = tinyHeroFairyFallback(event, req.body?.fallback);
-  const extra = req.body?.extra && typeof req.body.extra === "object" ? req.body.extra : {};
-  const hero = req.body?.hero && typeof req.body.hero === "object" ? req.body.hero : {};
-  const inventory = Array.isArray(req.body?.inventory) ? req.body.inventory.slice(0, 12).map((item) => compactText(item).slice(0, 80)).filter(Boolean) : [];
-
-  if (!OPENAI_API_KEY) {
-    return res.json({ ok: true, reply: fallback, source: "fallback" });
-  }
-
-  try {
-    const response = await openai.responses.create({
-      model: process.env.OPENAI_FAIRY_MODEL || OPENAI_CHAT_MODEL,
-      temperature: 0.9,
-      max_output_tokens: 70,
-      input: [
-        {
-          role: "system",
-          content: [
-            "You are Pip, a tiny fairy companion in a browser RPG about a wizard exploring a huge haunted mansion.",
-            "Your job is to say clever, witty, smart one-liners about what the wizard is doing.",
-            "Be playful, observant, and lightly sarcastic, but never cruel to the player.",
-            "Keep every reply to one short sentence, ideally 8 to 22 words.",
-            "Do not use markdown, emojis, quotes, stage directions, or character labels.",
-            "Do not mention OpenAI, APIs, prompts, servers, or that you are an AI.",
-            "Tie the joke to the current event, room object, reward, spell, danger, or inventory when possible."
-          ].join(" ")
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            event,
-            fallback,
-            extra,
-            hero,
-            inventory
-          })
-        }
-      ]
-    });
-
-    const reply = compactText(extractResponseText(response)).replace(/^Pip:\s*/i, "").slice(0, 180);
-    res.json({ ok: true, reply: reply || fallback, source: reply ? "openai" : "fallback" });
-  } catch (err) {
-    console.warn("Tiny Hero fairy reply failed:", err?.message || err);
-    res.json({ ok: true, reply: fallback, source: "fallback" });
-  }
-});
-
 // Allow iframe embedding from any origin
 app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "ALLOWALL");
@@ -940,7 +762,6 @@ const GODOT_WASM_ROUTES = [
   "/cozy-builder/index.wasm",
   "/cozy-builder-game/index.wasm",
   "/godot-playtest/index.wasm",
-  "/tiny-hero-quest/index.wasm",
 ];
 
 app.get(GODOT_WASM_ROUTES, (req, res, next) => {
@@ -1952,92 +1773,6 @@ app.post("/api/voice-search", async (req, res) => {
   } catch (err) {
     console.error("❌ Voice Search Error:", err);
     res.status(500).json({ error: "Search failed" });
-  }
-});
-
-app.post("/api/storyforge/turn", async (req, res) => {
-  try {
-    if (!OPENAI_API_KEY) {
-      return res.status(503).json({ detail: "OpenAI API key not configured." });
-    }
-
-    const genre = normalizeStoryForgeOption(req.body?.genre, STORYFORGE_GENRES, "Cyberpunk");
-    const artStyle = normalizeStoryForgeOption(req.body?.artStyle || req.body?.style, STORYFORGE_ART_STYLES, "Watercolor");
-    const seed = clampStoryForgeText(req.body?.seed, 1200);
-    const selectedChoice = clampStoryForgeText(req.body?.choice, 220);
-    const history = normalizeStoryForgeHistory(req.body?.history);
-
-    const promptPayload = {
-      mode: history.length ? "continue" : "start",
-      genre,
-      artStyle,
-      seed,
-      selectedChoice,
-      storySoFar: history
-    };
-
-    const completion = await openai.chat.completions.create({
-      model: OPENAI_STORY_MODEL,
-      temperature: 0.9,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: [
-            "You are StoryForge, an interactive fiction engine for a simple web app.",
-            "Return only valid JSON with keys: title, scene, image_prompt, choices.",
-            "The JSON must be one object. Do not use markdown.",
-            "Write scene as exactly two short paragraphs separated by a blank line.",
-            "Keep the story vivid, accessible, and family-safe unless the user's seed clearly asks for a darker but non-graphic mood.",
-            "End every scene at an active decision point.",
-            "choices must contain exactly three objects, each with label and prompt.",
-            "Make the three choices meaningfully different: bold, clever, and strange.",
-            "image_prompt should describe one square illustration for the current scene. Do not include text, logos, captions, UI, watermarks, or speech bubbles."
-          ].join(" ")
-        },
-        {
-          role: "user",
-          content: `Create the next StoryForge turn from this JSON request:\n${JSON.stringify(promptPayload)}`
-        }
-      ]
-    });
-
-    const parsed = parseStoryForgeJson(completion.choices[0]?.message?.content);
-    const story = normalizeStoryForgePayload(parsed, genre);
-    let imageB64 = "";
-    let imageUrl = "";
-    let imageError = "";
-
-    try {
-      const imagePrompt = [
-        "Create one finished square illustration for an interactive story app.",
-        `Genre: ${genre}. Art style: ${artStyle}.`,
-        story.imagePrompt,
-        "No readable text, logos, captions, UI panels, borders, watermarks, or speech bubbles."
-      ].join("\n");
-
-      const generated = await openai.images.generate(buildStoryForgeImageRequest(imagePrompt));
-
-      imageB64 = generated.data?.[0]?.b64_json || "";
-      imageUrl = generated.data?.[0]?.url || "";
-      void recordJohnnyChatUsage("images", { model: OPENAI_STORYFORGE_IMAGE_MODEL || OPENAI_IMAGE_MODEL, route: "/api/storyforge/turn" });
-    } catch (imageErr) {
-      imageError = String(imageErr.message || imageErr);
-      console.warn("StoryForge image generation failed:", imageError);
-      void recordJohnnyChatUsage("errors", { route: "/api/storyforge/turn:image", message: imageError });
-    }
-
-    void recordJohnnyChatUsage("storyforge", { genre, artStyle });
-    res.json({
-      ok: true,
-      story,
-      image_b64: imageB64,
-      image_url: imageUrl,
-      image_error: imageError
-    });
-  } catch (err) {
-    void recordJohnnyChatUsage("errors", { route: "/api/storyforge/turn", message: err.message || err });
-    res.status(500).json({ detail: String(err.message || err) });
   }
 });
 
