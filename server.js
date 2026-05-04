@@ -21,6 +21,9 @@ const {
   OPENAI_GPT54_REASONING_EFFORT = "",
   OPENAI_STORY_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_IMAGE_MODEL = "dall-e-3",
+  OPENAI_STORYFORGE_IMAGE_MODEL = OPENAI_IMAGE_MODEL,
+  STORYFORGE_IMAGE_SIZE = "1024x1024",
+  STORYFORGE_IMAGE_QUALITY = "medium",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
   OPENAI_TTS_MODEL = "gpt-4o-mini-tts",
   OPENAI_TTS_VOICE = "coral",
@@ -577,6 +580,24 @@ function clampStoryForgeText(value, max = 1200) {
 function normalizeStoryForgeOption(value, options, fallback) {
   const candidate = clampStoryForgeText(value, 80).toLowerCase();
   return options.find((option) => option.toLowerCase() === candidate) || fallback;
+}
+
+function buildStoryForgeImageRequest(prompt) {
+  const model = clampStoryForgeText(OPENAI_STORYFORGE_IMAGE_MODEL || OPENAI_IMAGE_MODEL, 80) || OPENAI_IMAGE_MODEL;
+  const requestedQuality = clampStoryForgeText(STORYFORGE_IMAGE_QUALITY, 24).toLowerCase() || "medium";
+  const request = {
+    model,
+    prompt,
+    size: clampStoryForgeText(STORYFORGE_IMAGE_SIZE, 24) || "1024x1024"
+  };
+
+  if (model.toLowerCase().includes("dall-e-3")) {
+    request.quality = requestedQuality === "hd" || requestedQuality === "high" ? "hd" : "standard";
+  } else {
+    request.quality = ["low", "medium", "high", "auto"].includes(requestedQuality) ? requestedQuality : "medium";
+  }
+
+  return request;
 }
 
 function parseStoryForgeJson(value) {
@@ -1995,16 +2016,11 @@ app.post("/api/storyforge/turn", async (req, res) => {
         "No readable text, logos, captions, UI panels, borders, watermarks, or speech bubbles."
       ].join("\n");
 
-      const generated = await openai.images.generate({
-        model: OPENAI_IMAGE_MODEL,
-        prompt: imagePrompt,
-        size: "1024x1024",
-        quality: "high"
-      });
+      const generated = await openai.images.generate(buildStoryForgeImageRequest(imagePrompt));
 
       imageB64 = generated.data?.[0]?.b64_json || "";
       imageUrl = generated.data?.[0]?.url || "";
-      void recordJohnnyChatUsage("images", { model: OPENAI_IMAGE_MODEL, route: "/api/storyforge/turn" });
+      void recordJohnnyChatUsage("images", { model: OPENAI_STORYFORGE_IMAGE_MODEL || OPENAI_IMAGE_MODEL, route: "/api/storyforge/turn" });
     } catch (imageErr) {
       imageError = String(imageErr.message || imageErr);
       console.warn("StoryForge image generation failed:", imageError);

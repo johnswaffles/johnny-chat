@@ -24,6 +24,12 @@
   const storageKey = "storyforge-state-v1";
   const defaultApiBase = "https://johnny-chat.onrender.com";
   const apiBase = getApiBase();
+  const loadingMessages = [
+    "Forging the next scene",
+    "Creating your story",
+    "Painting the next picture",
+    "Weaving choices into place"
+  ];
   const refs = {
     genreOptions: document.querySelector("[data-genre-options]"),
     styleOptions: document.querySelector("[data-style-options]"),
@@ -50,6 +56,8 @@
 
   let state = loadState();
   let loading = false;
+  let loadingMessageIndex = 0;
+  let loadingMessageTimer = null;
 
   function getApiBase() {
     const override = String(window.STORYFORGE_API_BASE_URL || "").replace(/\/+$/, "");
@@ -103,6 +111,31 @@
     } catch {
       // Local storage can fill quickly with generated art, so the app keeps running without persistence.
     }
+  }
+
+  function currentLoadingMessage() {
+    return loadingMessages[loadingMessageIndex % loadingMessages.length];
+  }
+
+  function startLoadingMessages() {
+    stopLoadingMessages();
+    loadingMessageIndex = 0;
+    loadingMessageTimer = window.setInterval(() => {
+      if (!loading) {
+        stopLoadingMessages();
+        return;
+      }
+      loadingMessageIndex = (loadingMessageIndex + 1) % loadingMessages.length;
+      render();
+    }, 9000);
+  }
+
+  function stopLoadingMessages() {
+    if (loadingMessageTimer) {
+      window.clearInterval(loadingMessageTimer);
+      loadingMessageTimer = null;
+    }
+    loadingMessageIndex = 0;
   }
 
   function makeId() {
@@ -198,7 +231,9 @@
     refs.choiceGrid.innerHTML = "";
 
     if (loading) {
-      ["Forging the next scene", "Painting the moment", "Sharpening the choices"].forEach((label) => {
+      const start = loadingMessageIndex % loadingMessages.length;
+      [0, 1, 2].forEach((offset) => {
+        const label = loadingMessages[(start + offset) % loadingMessages.length];
         const button = document.createElement("button");
         button.type = "button";
         button.className = "choice-button";
@@ -231,7 +266,7 @@
     }
 
     if (loading) {
-      refs.artStatus.textContent = "Forging";
+      refs.artStatus.textContent = currentLoadingMessage();
       return;
     }
 
@@ -291,7 +326,8 @@
     if (loading) return;
     loading = true;
     state.error = "";
-    refs.artStatus.textContent = "Forging";
+    refs.artStatus.textContent = currentLoadingMessage();
+    startLoadingMessages();
     if (state.currentIndex < state.scenes.length - 1) {
       state.scenes = state.scenes.slice(0, state.currentIndex + 1);
     }
@@ -343,6 +379,7 @@
       state.error = err.message || "StoryForge stalled.";
     } finally {
       loading = false;
+      stopLoadingMessages();
       render();
     }
   }
