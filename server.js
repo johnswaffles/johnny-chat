@@ -547,6 +547,36 @@ function extractResponseSources(response) {
 }
 
 const app = express();
+const CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
+const CORS_ALLOWED_HEADERS = [
+  "Content-Type",
+  "Authorization",
+  "X-Admin-Token",
+  "x-admin-token",
+  "x-618chat-client-id"
+];
+
+app.use((req, res, next) => {
+  const origin = String(req.headers.origin || "");
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.vary("Origin");
+  }
+
+  const requestedHeaders = String(req.headers["access-control-request-headers"] || "");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", CORS_METHODS.join(","));
+  res.setHeader("Access-Control-Allow-Headers", requestedHeaders || CORS_ALLOWED_HEADERS.join(","));
+  res.setHeader("Access-Control-Max-Age", "86400");
+  if (requestedHeaders) res.vary("Access-Control-Request-Headers");
+
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return;
+  }
+
+  next();
+});
 
 /**
  * HYPER-VERBOSE LOGGING
@@ -563,14 +593,8 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: true,
   credentials: true,
-  methods: ["GET", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Admin-Token",
-    "x-admin-token",
-    "x-618chat-client-id"
-  ]
+  methods: CORS_METHODS,
+  allowedHeaders: CORS_ALLOWED_HEADERS
 }));
 
 app.use(express.text({ type: "application/sdp" }));

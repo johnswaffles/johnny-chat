@@ -83,6 +83,34 @@
     });
   }
 
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function isRetryableFetchError(err) {
+    return err instanceof TypeError || /failed to fetch|network|load failed/i.test(String(err?.message || err || ""));
+  }
+
+  function isRetryableResponse(res) {
+    return res && (res.status === 502 || res.status === 503 || res.status === 504);
+  }
+
+  async function apiFetchWithRetry(url, options = {}, attempts = 3) {
+    let lastError = null;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        const res = await apiFetch(url, options);
+        if (!isRetryableResponse(res) || attempt === attempts - 1) return res;
+        await wait(700 * (attempt + 1));
+      } catch (err) {
+        lastError = err;
+        if (!isRetryableFetchError(err) || attempt === attempts - 1) throw err;
+        await wait(700 * (attempt + 1));
+      }
+    }
+    throw lastError || new Error("Request failed");
+  }
+
   const el = {
     search: getEl("search"),
     clearSearch: getEl("clear-search"),
@@ -1254,7 +1282,7 @@
     let streamed = "";
 
     try {
-      const res = await apiFetch(`${apiBase}/api/chat-stream`, {
+      const res = await apiFetchWithRetry(`${apiBase}/api/chat-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input, history, profile })
@@ -1273,7 +1301,7 @@
       if (db.ttsEnabled) speakText(reply);
       return reply;
     } catch (streamErr) {
-      const res = await apiFetch(`${apiBase}/api/chat`, {
+      const res = await apiFetchWithRetry(`${apiBase}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input, history, profile })
@@ -1300,7 +1328,7 @@
     el.messages.scrollTop = el.messages.scrollHeight;
 
     try {
-      const res = await apiFetch(`${apiBase}/generate-image`, {
+      const res = await apiFetchWithRetry(`${apiBase}/generate-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, size: "1024x1024", profile })
@@ -1321,7 +1349,7 @@
       img.addEventListener("click", () => openModal(src));
       bubble.appendChild(img);
       el.messages.replaceChild(bubble, loader);
-      convo.messages.push({ role: "assistant", content: "[Generated Image]" });
+      convo.messages.push({ role: "assistant", content: `[Generated Image]\nPrompt: ${prompt}` });
       convo.updatedAt = nowISO();
       save();
       renderSidebar();
