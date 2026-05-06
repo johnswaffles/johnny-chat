@@ -1781,11 +1781,28 @@
     el.statsPanel.setAttribute("aria-hidden", "true");
   }
 
-  el.search.addEventListener("input", renderConversations);
-  el.clearSearch.addEventListener("click", () => {
+  function clearProjectChats() {
+    const projectId = db.activeProjectId || "general";
+    const projectChats = db.convos.filter((conv) => conv && ensureConversation(conv).projectId === projectId);
+    if (!projectChats.length && !el.search.value) return;
+
+    const confirmed = window.confirm("Clear all chats in this project?");
+    if (!confirmed) return;
+
+    db.convos = db.convos.filter((conv) => conv && ensureConversation(conv).projectId !== projectId);
+    const fresh = newConversation("GPT 5.5");
+    fresh.projectId = projectId;
+    db.convos.unshift(fresh);
+    db.activeId = fresh.id;
     el.search.value = "";
-    renderConversations();
-  });
+    stopSpeech();
+    save();
+    renderSidebar();
+    renderChat();
+  }
+
+  el.search.addEventListener("input", renderConversations);
+  el.clearSearch.addEventListener("click", clearProjectChats);
 
   el.projectSelect.addEventListener("change", async () => {
     db.activeProjectId = el.projectSelect.value || db.projects[0].id;
