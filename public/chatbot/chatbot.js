@@ -18,6 +18,7 @@
   const ttsCacheMax = 60;
   const workspaceContextMax = 24000;
   const libraryContextMax = 18000;
+  const visualMemoryMax = 1800;
 
   const noopClassList = {
     add() {},
@@ -286,6 +287,7 @@
     if (!convo.messages || !Array.isArray(convo.messages)) convo.messages = [];
     if (!convo.files || !Array.isArray(convo.files)) convo.files = [];
     if (!convo.projectId) convo.projectId = db.activeProjectId || "general";
+    if (!convo.visualMemory || typeof convo.visualMemory !== "object") convo.visualMemory = null;
     return convo;
   }
 
@@ -729,11 +731,27 @@
       .join("\n\n");
   }
 
+  async function addStoredImagePreview(bubble, imageId) {
+    const item = await getStoredImage(imageId);
+    if (!item?.url || !bubble.isConnected) return;
+
+    const img = document.createElement("img");
+    img.src = item.url;
+    img.alt = item.prompt || "Generated image";
+    img.style.width = "100%";
+    img.style.borderRadius = "18px";
+    img.style.cursor = "pointer";
+    img.style.marginBottom = "12px";
+    img.addEventListener("click", () => openModal(item.url));
+    bubble.prepend(img);
+  }
+
   function appendBubble(role, content, meta = {}) {
     const bubble = document.createElement("div");
     bubble.className = `message ${role}`;
     bubble.dataset.raw = content;
     bubble.innerHTML = pretty(content);
+    if (role === "assistant" && meta.imageId) addStoredImagePreview(bubble, meta.imageId);
 
     if (role === "assistant" && Array.isArray(meta.sources) && meta.sources.length) {
       const sources = document.createElement("div");
@@ -946,6 +964,24 @@
     });
   }
 
+  async function getStoredImage(id) {
+    if (!id) return null;
+    const database = await openImageDb();
+    if (!database) return null;
+    return new Promise((resolve) => {
+      const tx = database.transaction(imageStore, "readonly");
+      const req = tx.objectStore(imageStore).get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  }
+
+  async function getLatestStoredImage() {
+    const items = await getStoredImages();
+    items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return items[0] || null;
+  }
+
   async function putStoredImage(entry) {
     const database = await openImageDb();
     if (!database) return;
@@ -999,20 +1035,25 @@
       const img = document.createElement("img");
       img.className = "recent-image";
       img.src = item.url;
-      img.alt = "Recent generated image";
+      img.alt = item.prompt || "Recent generated image";
       img.addEventListener("click", () => openModal(item.url));
       el.recentImages.appendChild(img);
     });
   }
 
-  async function rememberImage(url) {
-    await putStoredImage({
+  async function rememberImage(url, meta = {}) {
+    const entry = {
       id: uid(),
       url,
+      prompt: String(meta.prompt || "").slice(0, 4000),
+      sourcePrompt: String(meta.sourcePrompt || "").slice(0, 4000),
+      revisionInstruction: String(meta.revisionInstruction || "").slice(0, 1200),
       createdAt: nowISO()
-    });
+    };
+    await putStoredImage(entry);
     await trimStoredImages(24);
     await renderRecentImages();
+    return entry;
   }
 
   function renderAttachments() {
@@ -1235,12 +1276,152 @@
     return finalData;
   }
 
+  function parseGeneratedImagePrompt(content) {
+    const text = String(content || "");
+    if (!/\[Generated Image\]/i.test(text)) return "";
+    const match = text.match(/Prompt:\s*([\s\S]*?)(?:\n(?:Revision request|Previous prompt|Source prompt):|$)/i);
+    return String(match?.[1] || "").trim();
+  }
+
+  function updateVisualMemory(convo, memory = {}) {
+    ensureConversation(convo);
+    convo.visualMemory = {
+      kind: "generated-image",
+      imageId: String(memory.imageId || ""),
+      prompt: String(memory.prompt || "").slice(0, 4000),
+      sourcePrompt: String(memory.sourcePrompt || "").slice(0, 4000),
+      revisionInstruction: String(memory.revisionInstruction || "").slice(0, 1200),
+      updatedAt: nowISO()
+    };
+  }
+
+  function latestVisualMemory(convo) {
+    ensureConversation(convo);
+    for (let index = convo.messages.length - 1; index >= 0; index -= 1) {
+      const msg = convo.messages[index];
+      if (!msg || msg.role !== "assistant") continue;
+      const prompt = String(msg.imagePrompt || parseGeneratedImagePrompt(msg.content) || "");
+      if (!msg.imageId && !prompt) continue;
+      return {
+        imageId: String(msg.imageId || convo.visualMemory?.imageId || ""),
+        prompt: (prompt || convo.visualMemory?.prompt || "").slice(0, 4000),
+        sourcePrompt: String(msg.sourcePrompt || convo.visualMemory?.sourcePrompt || "").slice(0, 4000),
+        revisionInstruction: String(msg.revisionInstruction || convo.visualMemory?.revisionInstruction || "").slice(0, 1200),
+        index
+      };
+    }
+    if (!convo.messages.length && (convo.visualMemory?.prompt || convo.visualMemory?.imageId)) {
+      return {
+        ...convo.visualMemory,
+        index: -1
+      };
+    }
+    return null;
+  }
+
+  function userTurnsSinceVisual(convo, memory) {
+    if (!memory || !Number.isInteger(memory.index) || memory.index < 0) return 0;
+    return convo.messages.slice(memory.index + 1).filter((msg) => msg?.role === "user").length;
+  }
+
+  function hasVisualReference(text) {
+    return /\b(it|this|that|same|previous|last|image|picture|photo|scene|art|artwork|her|him|them|background|foreground)\b/i.test(String(text || ""));
+  }
+
+  function hasVisualEditIntent(text) {
+    return /\b(add|remove|change|make|turn|replace|edit|revise|update|redo|regenerate|draw|create|put|place|give|keep|move|color|recolor|style|stylize|zoom|crop|blend|fix)\b/i.test(String(text || ""));
+  }
+
+  function hasStrongVisualEditIntent(text) {
+    return /\b(add|remove|replace|edit|revise|redo|regenerate|draw|recolor|stylize|zoom|crop|blend)\b/i.test(String(text || ""));
+  }
+
+  function hasVisualSpecificDetail(text) {
+    return /\b(background|foreground|hair|eyes|face|shirt|dress|hat|person|woman|man|girl|boy|cat|dog|color|lighting|pose|style|scene|watercolor|comic|cinematic|anime|pixel|noir|oil painting)\b/i.test(String(text || ""));
+  }
+
+  function hasLikelyVisualContextIntent(text) {
+    return hasVisualReference(text) || hasStrongVisualEditIntent(text) || hasVisualSpecificDetail(text);
+  }
+
+  function looksLikeDiscussionOnly(text) {
+    const value = String(text || "").trim();
+    if (!/^(what|how|why|where|when|who|should)\b/i.test(value)) return false;
+    return !/\b(add|remove|make|edit|revise|generate|draw|create|replace|redo|regenerate)\b/i.test(value);
+  }
+
+  function isImageRevisionRequest(promptText, convo) {
+    const text = String(promptText || "").trim();
+    if (!text || text.startsWith("/")) return false;
+    if (looksLikeDiscussionOnly(text)) return false;
+    const memory = latestVisualMemory(convo);
+    if (!memory?.prompt && !memory?.imageId) return false;
+    const turns = userTurnsSinceVisual(convo, memory);
+    if (turns > 3 && !hasVisualReference(text)) return false;
+    return hasVisualEditIntent(text) && (
+      hasVisualReference(text)
+      || hasStrongVisualEditIntent(text)
+      || (turns <= 1 && hasVisualSpecificDetail(text))
+    );
+  }
+
+  function buildVisualContext(convo, promptText) {
+    const memory = latestVisualMemory(convo);
+    if (!memory?.prompt && !memory?.imageId) return "";
+    const turns = userTurnsSinceVisual(convo, memory);
+    if (turns > 1 && !hasLikelyVisualContextIntent(promptText)) return "";
+    if (turns > 3 && !hasVisualReference(promptText)) return "";
+
+    return [
+      "Recent visual context:",
+      "The user may be referring to the latest generated image when they say it, this, that, the picture, the image, her, him, them, or the scene.",
+      memory.prompt ? `Latest image prompt: ${memory.prompt.slice(0, visualMemoryMax)}` : "",
+      memory.sourcePrompt ? `Previous prompt before the latest revision: ${memory.sourcePrompt.slice(0, visualMemoryMax)}` : "",
+      memory.revisionInstruction ? `Most recent requested image change: ${memory.revisionInstruction}` : "",
+      "If the current request is a visual follow-up, resolve short references against this latest image unless the user clearly changed topics."
+    ].filter(Boolean).join("\n");
+  }
+
+  function generatedImageContent(prompt, revisionInstruction = "") {
+    return [
+      "[Generated Image]",
+      `Prompt: ${prompt}`,
+      revisionInstruction ? `Revision request: ${revisionInstruction}` : ""
+    ].filter(Boolean).join("\n");
+  }
+
+  function buildRevisionPrompt(memory, instruction) {
+    return [
+      "Create a revised version of the latest generated image.",
+      memory.prompt ? `Latest image prompt: ${memory.prompt}` : "",
+      memory.sourcePrompt ? `Earlier source prompt: ${memory.sourcePrompt}` : "",
+      `User's requested change: ${instruction}`,
+      "Preserve the same main subject, composition, mood, and style unless the requested change explicitly says otherwise. Apply the requested change clearly."
+    ].filter(Boolean).join("\n");
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    const match = String(dataUrl || "").match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+    if (!match) return null;
+    const mime = match[1] || "image/png";
+    const encoded = match[3] || "";
+    if (match[2]) {
+      const binary = atob(encoded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: mime });
+    }
+    return new Blob([decodeURIComponent(encoded)], { type: mime });
+  }
+
   async function composeAssistantInput(convo, promptText) {
     const project = getActiveProject();
     const filesContext = workspaceContext(convo);
     const knowledgeContext = await getLibraryContext(promptText || project?.title || "");
+    const visualContext = buildVisualContext(convo, promptText);
     return [
       String(promptText || "Please continue.").trim(),
+      visualContext,
       project ? `Project workspace:\nName: ${project.title}\nNotes: ${project.notes || "(none)"}` : "",
       filesContext ? `Conversation file workspace:\n${filesContext}` : "",
       knowledgeContext ? `Saved knowledge library:\n${knowledgeContext}` : ""
@@ -1320,6 +1501,28 @@
     }
   }
 
+  async function readImagePayload(res, fallback = "Generation failed") {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || fallback);
+    const b64 = String(data.image_b64 || "");
+    if (!b64) throw new Error("The image service returned no image.");
+    return b64;
+  }
+
+  function renderGeneratedImage(src, prompt, loader) {
+    const bubble = document.createElement("div");
+    bubble.className = "message assistant";
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = prompt;
+    img.style.width = "100%";
+    img.style.borderRadius = "18px";
+    img.style.cursor = "pointer";
+    img.addEventListener("click", () => openModal(src));
+    bubble.appendChild(img);
+    el.messages.replaceChild(bubble, loader);
+  }
+
   async function generateImage(prompt, convo) {
     const loader = document.createElement("div");
     loader.className = "message assistant";
@@ -1333,28 +1536,98 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, size: "1024x1024", profile })
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || "Generation failed");
-      const src = `data:image/png;base64,${data.image_b64}`;
-      await rememberImage(src);
+      const b64 = await readImagePayload(res);
+      const src = `data:image/png;base64,${b64}`;
+      const entry = await rememberImage(src, { prompt });
 
-      const bubble = document.createElement("div");
-      bubble.className = "message assistant";
-      const img = document.createElement("img");
-      img.src = src;
-      img.alt = prompt;
-      img.style.width = "100%";
-      img.style.borderRadius = "18px";
-      img.style.cursor = "pointer";
-      img.addEventListener("click", () => openModal(src));
-      bubble.appendChild(img);
-      el.messages.replaceChild(bubble, loader);
-      convo.messages.push({ role: "assistant", content: `[Generated Image]\nPrompt: ${prompt}` });
+      renderGeneratedImage(src, prompt, loader);
+      convo.messages.push({
+        role: "assistant",
+        content: generatedImageContent(prompt),
+        imageId: entry.id,
+        imagePrompt: prompt
+      });
+      updateVisualMemory(convo, { imageId: entry.id, prompt });
       convo.updatedAt = nowISO();
       save();
       renderSidebar();
     } catch (err) {
       loader.innerHTML = `<span style="color:#ffb9b9;">Generation failed: ${esc(err.message || err)}</span>`;
+    }
+  }
+
+  async function generateImageRevision(instruction, convo) {
+    const memory = latestVisualMemory(convo);
+    const prompt = buildRevisionPrompt(memory || {}, instruction);
+    const loader = document.createElement("div");
+    loader.className = "message assistant";
+    loader.innerHTML = `<strong>Editing image...</strong><div class="conversation-meta">${esc(instruction)}</div>`;
+    el.messages.appendChild(loader);
+    el.messages.scrollTop = el.messages.scrollHeight;
+
+    try {
+      let b64 = "";
+      let editError = null;
+      const reference = await getStoredImage(memory?.imageId) || await getLatestStoredImage();
+      const referenceBlob = dataUrlToBlob(reference?.url);
+
+      if (referenceBlob) {
+        try {
+          const fd = new FormData();
+          fd.append("prompt", prompt);
+          fd.append("size", "1024x1024");
+          fd.append("quality", "high");
+          fd.append("refs", referenceBlob, "latest-image.png");
+          const editRes = await apiFetchWithRetry(`${apiBase}/generate-image-edit`, {
+            method: "POST",
+            body: fd
+          });
+          b64 = await readImagePayload(editRes, "Image edit failed");
+        } catch (err) {
+          editError = err;
+        }
+      }
+
+      if (!b64) {
+        const fallbackPrompt = [
+          prompt,
+          editError ? "Reference-image editing was unavailable, so recreate the scene from the prompt and requested change as closely as possible." : ""
+        ].filter(Boolean).join("\n");
+        const res = await apiFetchWithRetry(`${apiBase}/generate-image`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: fallbackPrompt, size: "1024x1024", profile })
+        });
+        b64 = await readImagePayload(res);
+      }
+
+      const src = `data:image/png;base64,${b64}`;
+      const entry = await rememberImage(src, {
+        prompt,
+        sourcePrompt: memory?.prompt || "",
+        revisionInstruction: instruction
+      });
+
+      renderGeneratedImage(src, prompt, loader);
+      convo.messages.push({
+        role: "assistant",
+        content: generatedImageContent(prompt, instruction),
+        imageId: entry.id,
+        imagePrompt: prompt,
+        sourcePrompt: memory?.prompt || "",
+        revisionInstruction: instruction
+      });
+      updateVisualMemory(convo, {
+        imageId: entry.id,
+        prompt,
+        sourcePrompt: memory?.prompt || "",
+        revisionInstruction: instruction
+      });
+      convo.updatedAt = nowISO();
+      save();
+      renderSidebar();
+    } catch (err) {
+      loader.innerHTML = `<span style="color:#ffb9b9;">Image edit failed: ${esc(err.message || err)}</span>`;
     }
   }
 
@@ -1397,7 +1670,11 @@
       initialGreeting(convo);
       return;
     }
-    convo.messages.forEach((msg, index) => appendBubble(msg.role, msg.content, { index, sources: msg.sources || [] }));
+    convo.messages.forEach((msg, index) => appendBubble(msg.role, msg.content, {
+      index,
+      sources: msg.sources || [],
+      imageId: msg.imageId || ""
+    }));
   }
 
   async function sendMessage() {
@@ -1410,6 +1687,7 @@
     setTitle(convo, raw || db.pendingFiles.map((file) => file.name).join(", "));
 
     let displayText = raw;
+    const hadPendingFiles = db.pendingFiles.length > 0;
 
     if (db.pendingFiles.length) {
       const filesForWorkspace = db.pendingFiles.slice();
@@ -1442,11 +1720,18 @@
       return;
     }
 
+    const shouldReviseImage = raw && !hadPendingFiles && !db.researchMode && isImageRevisionRequest(raw, convo);
+
     appendBubble("user", displayText || "(attachment only)", { index: convo.messages.length });
     convo.messages.push({ role: "user", content: raw || "[attachment only]" });
     convo.updatedAt = nowISO();
     save();
     renderSidebar();
+
+    if (shouldReviseImage) {
+      await generateImageRevision(raw, convo);
+      return;
+    }
 
     const thinking = showThinking("Thinking...");
     try {
