@@ -785,7 +785,6 @@ app.use((req, res, next) => {
 const GODOT_WASM_ROUTES = [
   "/cozy-builder/index.wasm",
   "/cozy-builder-game/index.wasm",
-  "/cozy-town-tycoon/index.wasm",
   "/godot-playtest/index.wasm",
 ];
 
