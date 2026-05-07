@@ -127,7 +127,6 @@ function siteNav(profile, active, brandOverride = "") {
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
   const gptHref = "/chatbot/";
   const cozyHref = "/cozy-builder-game/";
-  const townGameHref = "/cozy-town-tycoon/";
   const contactHref = "/contact/";
   const links = profile === "mowing"
     ? [
@@ -138,7 +137,6 @@ function siteNav(profile, active, brandOverride = "") {
         `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
         `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>`,
-        `<a class="johnny-site-link ${active === "town-game" ? "active" : ""}" href="${townGameHref}">Town Tycoon</a>`,
         `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
       ];
   return `
@@ -4305,7 +4303,6 @@ ${siteNav("ai", "contact")}
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
       const gptHref = "/chatbot/";
       const cozyHref = "/cozy-builder-game/";
-      const townGameHref = "/cozy-town-tycoon/";
       const contactHref = "/contact/";
 
       profileField.value = profile;
@@ -4321,12 +4318,11 @@ ${siteNav("ai", "contact")}
           '<a class="johnny-site-link" href="' + homeHref + '">Home</a>',
           '<a class="johnny-site-link active" href="' + contactHref + '">Contact</a>'
         ].join("");
-      } else if (navLinks.length >= 5) {
+      } else if (navLinks.length >= 4) {
         navLinks[0].href = homeHref;
         navLinks[1].href = gptHref;
         navLinks[2].href = cozyHref;
-        navLinks[3].href = townGameHref;
-        navLinks[4].href = contactHref;
+        navLinks[3].href = contactHref;
       }
 
       if (isMowing) {
