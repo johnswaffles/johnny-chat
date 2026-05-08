@@ -499,10 +499,14 @@ class VoiceWidget {
             tokenUrl.searchParams.set("profile", this.profile);
 
             const tokenRes = await fetch(tokenUrl.toString(), { method: 'POST' });
-            if (!tokenRes.ok) throw new Error("Token fetch failed");
+            if (!tokenRes.ok) {
+                const detail = await tokenRes.text().catch(() => "");
+                throw new Error(`Token fetch failed${detail ? `: ${detail.slice(0, 240)}` : ""}`);
+            }
 
             const data = await tokenRes.json();
-            const EPHEMERAL_KEY = data.client_secret.value;
+            const EPHEMERAL_KEY = data.client_secret?.value || data.value;
+            if (!EPHEMERAL_KEY) throw new Error("Token fetch failed: no ephemeral key returned");
 
             this.stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
@@ -559,14 +563,17 @@ class VoiceWidget {
             const offer = await this.pc.createOffer();
             await this.pc.setLocalDescription(offer);
 
-            const model = data.model || "gpt-4o-realtime-preview";
-            const realtimeRes = await fetch(`https://api.openai.com/v1/realtime?model=${model}`, {
+            const realtimeUrl = data.realtime_url || "https://api.openai.com/v1/realtime/calls";
+            const realtimeRes = await fetch(realtimeUrl, {
                 method: 'POST',
                 body: offer.sdp,
                 headers: { Authorization: `Bearer ${EPHEMERAL_KEY}`, "Content-Type": "application/sdp" }
             });
 
-            if (!realtimeRes.ok) throw new Error("OpenAI Handshake Error");
+            if (!realtimeRes.ok) {
+                const detail = await realtimeRes.text().catch(() => "");
+                throw new Error(`OpenAI Handshake Error${detail ? `: ${detail.slice(0, 240)}` : ""}`);
+            }
             const answerSdp = await realtimeRes.text();
             await this.pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
@@ -590,7 +597,7 @@ class VoiceWidget {
                     item: {
                         type: "message",
                         role: msg.role,
-                        content: [{ type: "text", text: msg.text }]
+                        content: [{ type: msg.role === "user" ? "input_text" : "text", text: msg.text }]
                     }
                 }));
             }
@@ -622,17 +629,21 @@ class VoiceWidget {
 
     onDataChannelMessage(msg) {
         switch (msg.type) {
+            case 'conversation.item.added':
             case 'conversation.item.created':
+            case 'response.output_item.added':
+            case 'response.output_item.created': {
                 // PRE-CREATE bubbles for every item (User or Assistant)
-                if (!this.itemBubbles.has(msg.item.id)) {
-                    const role = msg.item.role === 'user' ? 'user' : 'assistant';
+                const item = msg.item || msg.output_item;
+                if (item && !this.itemBubbles.has(item.id)) {
+                    const role = item.role === 'user' ? 'user' : 'assistant';
                     // We don't create for 'function_call' items unless we want to log them
-                    if (msg.item.type === 'message') {
+                    if (item.type === 'message') {
                         const bubble = this.createMessageBubble(role);
-                        this.itemBubbles.set(msg.item.id, bubble);
+                        this.itemBubbles.set(item.id, bubble);
 
                         // If it's a text message that already has content (like text input), show it!
-                        const textContent = msg.item.content?.find(c => c.type === 'input_text' || c.type === 'text');
+                        const textContent = item.content?.find(c => c.type === 'input_text' || c.type === 'text');
                         if (textContent) {
                             bubble.innerText = textContent.text;
                             this.scrollToBottom();
@@ -640,6 +651,7 @@ class VoiceWidget {
                     }
                 }
                 break;
+            }
             case 'conversation.item.input_audio_transcription.completed': {
                 const bubble = this.itemBubbles.get(msg.item_id);
                 if (bubble && msg.transcript) {

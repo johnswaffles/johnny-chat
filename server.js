@@ -15,6 +15,7 @@ const {
   OPENAI_API_KEY,
   OPENAI_REALTIME_MODEL = "gpt-realtime-1.5",
   OPENAI_REALTIME_VOICE = "echo",
+  OPENAI_REALTIME_REASONING_EFFORT = "",
   OPENAI_CHAT_MODEL = "gpt-4o",
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
@@ -732,24 +733,39 @@ app.post("/api/realtime-token", async (req, res) => {
     const modelToUse = OPENAI_REALTIME_MODEL || "gpt-realtime-1.5";
     console.log(`📡 [Realtime] Requesting session for model: ${modelToUse}`);
 
-    const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
+    const session = {
+      type: "realtime",
+      model: modelToUse,
+      instructions: getJohnnyRealtimeInstructions(profile),
+      output_modalities: ["audio"],
+      audio: {
+        input: {
+          transcription: { model: OPENAI_TRANSCRIBE_MODEL },
+          turn_detection: { type: "server_vad" }
+        },
+        output: {
+          voice: OPENAI_REALTIME_VOICE
+        }
+      },
+      tools: []
+    };
+
+    if (modelToUse === "gpt-realtime-2") {
+      session.reasoning = { effort: OPENAI_REALTIME_REASONING_EFFORT || "low" };
+    }
+
+    const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: modelToUse,
-        voice: OPENAI_REALTIME_VOICE,
-        instructions: getJohnnyRealtimeInstructions(profile),
-        input_audio_transcription: { model: "whisper-1" },
-        turn_detection: {
-          type: "server_vad",
-          threshold: 0.72,
-          prefix_padding_ms: 350,
-          silence_duration_ms: 1800
+        expires_after: {
+          anchor: "created_at",
+          seconds: 600
         },
-        tools: []
+        session
       }),
     });
 
@@ -766,7 +782,19 @@ app.post("/api/realtime-token", async (req, res) => {
 
     const data = await response.json();
     console.log("✅ [Realtime] Ephemeral token generated for Scout.");
-    res.json(data);
+    res.json({
+      id: data.session?.id || "",
+      object: data.session?.object || "realtime.session",
+      model: data.session?.model || modelToUse,
+      session: data.session || null,
+      client_secret: data.client_secret || {
+        value: data.value,
+        expires_at: data.expires_at
+      },
+      value: data.value,
+      expires_at: data.expires_at,
+      realtime_url: "https://api.openai.com/v1/realtime/calls"
+    });
   } catch (err) {
     console.error("🔥 [Realtime] Session Crash:", err);
     res.status(500).json({ detail: String(err.message || err) });
