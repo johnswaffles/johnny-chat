@@ -21,7 +21,7 @@ const widgetSnippet = (profile) => `
     ${profile === "mowing" ? "window.JOHNNY_WIDGET_START_MINIMIZED = true;" : ""}
   </script>
   <link rel="stylesheet" href="https://johnny-chat.onrender.com/voice-widget.css">
-  <script src="https://johnny-chat.onrender.com/voice-widget.js"></script>`;
+  <script src="https://johnny-chat.onrender.com/voice-widget.js?v=realtime2-tools"></script>`;
 
 const sharedNavStyles = `
   <style>

@@ -41,12 +41,14 @@ class VoiceWidget {
         this.activeAssistantBubble = null;
         this.activeUserBubble = null;
         this.itemBubbles = new Map(); // Link item IDs to message bubbles
+        this.handledFunctionCalls = new Set();
         this.messages = [];
         this.isMuted = false;
         this.pendingUpload = null;
         this.isTextInitiated = false;
         this.pendingHangup = false;
         this.remoteAudioEl = null;
+        this.realtimeModel = "";
         this.profile = detectJohnnyWidgetProfile();
         this.allowUploads = this.profile === "ai";
         this.widgetTitleText = this.profile === "mowing" ? "Johnny - Mowing Assistant" : "Johnny's AI Assistant";
@@ -316,6 +318,55 @@ class VoiceWidget {
         }
     }
 
+    getBackendUrl() {
+        const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
+        return scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+    }
+
+    escapeHtml(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(reader.error || new Error("Could not read image"));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async buildRealtimeImageInputs(files) {
+        const imageFiles = Array.from(files || [])
+            .filter(file => file.type.startsWith("image/") && file.size <= 8 * 1024 * 1024)
+            .slice(0, 2);
+
+        const inputs = [];
+        for (const file of imageFiles) {
+            try {
+                const imageUrl = await this.readFileAsDataUrl(file);
+                if (imageUrl) inputs.push({ type: "input_image", image_url: imageUrl });
+            } catch (err) {
+                console.warn("Could not prepare direct Realtime image input", err);
+            }
+        }
+        return inputs;
+    }
+
+    parseFunctionArguments(raw) {
+        if (!raw) return {};
+        if (typeof raw === "object") return raw;
+        try {
+            return JSON.parse(String(raw));
+        } catch {
+            return {};
+        }
+    }
+
     async handleFileUpload(e) {
         if (!this.allowUploads) {
             const noteBubble = this.createMessageBubble('assistant');
@@ -338,6 +389,7 @@ class VoiceWidget {
         const hasPdf = fileList.some(file => file.type === "application/pdf");
 
         const formData = new FormData();
+        formData.append('profile', this.profile);
         for (const file of files) {
             formData.append('files', file);
         }
@@ -351,8 +403,8 @@ class VoiceWidget {
         this.scrollToBottom();
 
         try {
-            const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
-            const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+            const backendUrl = this.getBackendUrl();
+            const imageInputs = hasImage ? await this.buildRealtimeImageInputs(fileList) : [];
             const res = await fetch(`${backendUrl}/upload`, {
                 method: 'POST',
                 body: formData
@@ -365,7 +417,8 @@ class VoiceWidget {
                 description: data.description || "None",
                 summary: data.summary || null,
                 isPdf: (data.description || "").includes("PDF"),
-                imageAnalysis: Array.isArray(data.imageAnalysis) ? data.imageAnalysis : []
+                imageAnalysis: Array.isArray(data.imageAnalysis) ? data.imageAnalysis : [],
+                imageInputs
             };
             this.pendingUpload = contentObj;
 
@@ -412,12 +465,19 @@ class VoiceWidget {
             }
         }
 
+        const supportsDirectImages = /^gpt-realtime(?:-2)?$/.test(this.realtimeModel);
+        const directImageInputs = supportsDirectImages && Array.isArray(content.imageInputs) ? content.imageInputs : [];
+        const contentParts = [
+            { type: "input_text", text: userMsg },
+            ...directImageInputs
+        ];
+
         this.dc.send(JSON.stringify({
             type: "conversation.item.create",
             item: {
                 type: "message",
                 role: "user",
-                content: [{ type: "input_text", text: userMsg }]
+                content: contentParts
             }
         }));
 
@@ -479,6 +539,7 @@ class VoiceWidget {
         if (this.history) this.history.innerHTML = "";
         this.messages = [];
         this.itemBubbles.clear();
+        this.handledFunctionCalls.clear();
     }
 
     toggleMute() {
@@ -492,8 +553,7 @@ class VoiceWidget {
     async startSession() {
         try {
             this.updateState('connecting');
-            const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
-            const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+            const backendUrl = this.getBackendUrl();
             const tokenUrl = new URL(`${backendUrl}/api/realtime-token`);
             tokenUrl.searchParams.set("t", Date.now().toString());
             tokenUrl.searchParams.set("profile", this.profile);
@@ -507,6 +567,7 @@ class VoiceWidget {
             const data = await tokenRes.json();
             const EPHEMERAL_KEY = data.client_secret?.value || data.value;
             if (!EPHEMERAL_KEY) throw new Error("Token fetch failed: no ephemeral key returned");
+            this.realtimeModel = String(data.model || data.session?.model || "");
 
             this.stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
@@ -677,6 +738,10 @@ class VoiceWidget {
                 // Capture the assistant response into messages
                 if (msg.response && msg.response.output) {
                     msg.response.output.forEach(item => {
+                        if (item.type === 'function_call') {
+                            this.handleFunctionCall(item);
+                            return;
+                        }
                         if (item.type === 'message' && item.role === 'assistant') {
                             const bubble = this.itemBubbles.get(item.id);
                             if (bubble && bubble.innerText) {
@@ -704,34 +769,106 @@ class VoiceWidget {
     }
 
     async handleFunctionCall(msg) {
-        if (msg.name === 'web_search') {
+        const name = msg.name || msg.function?.name || "";
+        const callId = msg.call_id || msg.callId || msg.id || "";
+        const callKey = callId || `${name}:${msg.arguments || ""}`;
+        if (this.handledFunctionCalls.has(callKey)) return;
+        this.handledFunctionCalls.add(callKey);
+
+        if (name === 'wait_for_user') {
+            if (callId && this.dc?.readyState === 'open') {
+                this.dc.send(JSON.stringify({
+                    type: "conversation.item.create",
+                    item: {
+                        type: "function_call_output",
+                        call_id: callId,
+                        output: JSON.stringify({ ok: true, action: "wait" })
+                    }
+                }));
+            }
+            return;
+        }
+
+        if (name === 'search_web' || name === 'web_search') {
             const searchBubble = this.createMessageBubble('assistant');
-            searchBubble.innerHTML = `<i>Loading demo contact details...</i>`;
+            searchBubble.innerHTML = `<i>Searching live web...</i>`;
             this.scrollToBottom();
 
             try {
+                const args = this.parseFunctionArguments(msg.arguments);
+                const query = String(args.query || args.search_query || args.q || "").trim();
+                if (!query) throw new Error("Search query was empty");
+                if (this.profile !== "ai") throw new Error("Live search is not enabled for this widget");
+
+                const recentContext = this.messages
+                    .slice(-6)
+                    .map(item => `${item.role}: ${item.text}`)
+                    .join("\n")
+                    .slice(0, 3000);
+                const res = await fetch(`${this.getBackendUrl()}/api/realtime-search`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query, context: recentContext, profile: this.profile })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || data.detail || "Search failed");
+
+                const sources = Array.isArray(data.sources) ? data.sources.slice(0, 4) : [];
+                const output = {
+                    answer: data.result || "I searched, but I could not find a clear answer.",
+                    sources
+                };
+
                 this.dc.send(JSON.stringify({
                     type: "conversation.item.create",
                     item: {
                         type: "function_call_output",
-                        call_id: msg.call_id,
-                        output: "Demo contact card:\nPhone: (555) 014-7823\nAddress: 100 Demo Plaza, Suite 200, Springfield, IL 62704\nHours: Mon-Fri 8:00 AM - 5:00 PM\n\nThis is a fictional placeholder for the demo. If you want real live contact lookup, directions, or hours, we can connect that in a custom version."
+                        call_id: callId,
+                        output: JSON.stringify(output)
                     }
                 }));
-                this.dc.send(JSON.stringify({ type: "response.create" }));
+
+                if (sources.length) {
+                    searchBubble.innerHTML = [
+                        `<strong>Live sources</strong>`,
+                        ...sources.map(source => `<a href="${this.escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(source.title || source.url)}</a>`)
+                    ].join("<br>");
+                } else {
+                    searchBubble.innerHTML = `<i>Live search complete.</i>`;
+                    setTimeout(() => {
+                        const wrapper = searchBubble.parentElement;
+                        if (wrapper && wrapper.parentElement) wrapper.remove();
+                    }, 2500);
+                }
+
+                this.dc.send(JSON.stringify({
+                    type: "response.create",
+                    response: {
+                        instructions: "Answer using the search_web result. Keep it concise and natural for voice. Do not read raw URLs aloud. Mention that sources are shown in the chat if sources were returned."
+                    }
+                }));
             } catch (err) {
-                console.error("Live-info guardrail failed", err);
+                console.error("Live search failed", err);
                 this.dc.send(JSON.stringify({
                     type: "conversation.item.create",
                     item: {
                         type: "function_call_output",
-                        call_id: msg.call_id,
-                        output: "Demo contact card:\nPhone: (555) 014-7823\nAddress: 100 Demo Plaza, Suite 200, Springfield, IL 62704\nHours: Mon-Fri 8:00 AM - 5:00 PM\n\nThis is a fictional placeholder for the demo. If you want real live contact lookup, directions, or hours, we can connect that in a custom version."
+                        call_id: callId,
+                        output: JSON.stringify({
+                            error: "Search failed",
+                            message: err.message || "Live search was unavailable."
+                        })
                     }
                 }));
-                this.dc.send(JSON.stringify({ type: "response.create" }));
+                searchBubble.innerHTML = `<i>Live search was unavailable.</i>`;
+                this.dc.send(JSON.stringify({
+                    type: "response.create",
+                    response: {
+                        instructions: "Briefly explain that live search was unavailable and offer to continue without it or use the contact form for follow-up."
+                    }
+                }));
             } finally {
-                searchBubble.remove();
+                this.scrollToBottom();
             }
         }
     }
@@ -775,8 +912,7 @@ class VoiceWidget {
         console.log("⏹️ Stopping Session...");
         // Send summary before stopping if we have messages
         if (this.messages.length > 0) {
-            const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
-            const backendUrl = scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
+            const backendUrl = this.getBackendUrl();
 
             // Fire and forget summary
             fetch(`${backendUrl}/api/record-call-summary`, {

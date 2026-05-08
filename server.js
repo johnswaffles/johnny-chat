@@ -20,6 +20,7 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_GPT54_REASONING_EFFORT = "",
+  OPENAI_REALTIME_SEARCH_MODEL = "",
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
   OPENAI_TTS_MODEL = "gpt-4o-mini-tts",
@@ -49,6 +50,8 @@ const {
   JOHNNY_CHAT_LIBRARY_PATH = "/var/data/johnny-chat-library.json",
   JOHNNY_CHAT_PASSWORD = ""
 } = process.env;
+
+const REALTIME_SEARCH_MODEL = OPENAI_REALTIME_SEARCH_MODEL || OPENAI_GPT54_MODEL || OPENAI_CHAT_MODEL;
 
 const BOARD_COMMENT_LIMIT = (() => {
   const value = Number(PUBLIC_BOARD_COMMENT_LIMIT || 50);
@@ -491,21 +494,80 @@ Only respond to deliberate user speech. Ignore background voices, TV, music, or 
 For lead capture or scheduling: Instruct the user to use the contact button on the site so we can get their info and what they need.
 When speaking about the contact form, let customers know they are free to upload pictures there if that helps them explain the job.
 If a business lead uploads an image, treat it as a demo asset: describe what the picture appears to show, infer what the business or customer likely wants, and respond like a smart assistant for that business using a general role-play. Do not mention yard proof or ask them to prove anything with a photo.
-Demo mode: do not browse the web or use live-search tools. If the user asks for an address, phone number, hours, directions, or any current/live information, give a clearly fictional demo placeholder contact card and explain that live lookup can be connected in a custom version if they want it.
+Live information: If a live search tool is available, use it for current AI, business-tech, product, pricing, API, company, or practical lookup questions where stale information could hurt the answer. If no search tool is available, do not invent current facts; say live lookup can be connected or direct them to the contact form.
 Keep responses clear, concise, and helpful. Do not frame the experience as entertainment.
 
 PRICING:
 - If they ask about pricing for a custom AI or website build, ask what they need and direct them to the contact form for a tailored quote.
 - Pricing should be presented as scope-based and custom, not one-size-fits-all.
 
-**CRITICAL: This demo does not use live web search. Never browse or search the internet for current information in the widget. If the user asks for current contact details, current hours, directions, or other live info, give a clearly fictional demo placeholder card and explain that live lookup can be added in a custom version.**`;
+TOOL RULES: Use only tools that are explicitly provided in the current session. Do not invent, assume, simulate, or rename tools. Only say a lookup or action was completed after the tool returns successfully.`;
+}
+
+function getRealtimeTools(profile = "ai") {
+  const tools = [
+    {
+      type: "function",
+      name: "wait_for_user",
+      description: "Call this when the latest audio is silence, background noise, TV audio, music, side conversation, or speech that is not clearly addressed to Johnny. This ends the turn without a spoken reply.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      }
+    }
+  ];
+
+  if (profile === "ai") {
+    tools.push({
+      type: "function",
+      name: "search_web",
+      description: "Search the live web for current or factual AI, technology, product, pricing, company, API, documentation, or practical lookup information. Use this only when fresh information matters or the user explicitly asks to search.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "A focused web search query based on the user's latest request."
+          }
+        },
+        required: ["query"]
+      }
+    });
+  }
+
+  return tools;
 }
 
 function getJohnnyRealtimeInstructions(profile = "ai") {
+  const guardrail = profile === "mowing"
+    ? "If the user asks unrelated trivia or general knowledge, politely redirect back to mowing, weed eating, quotes, scheduling, or the contact form."
+    : "If the user asks unrelated trivia or general knowledge, briefly redirect back to AI, websites, chatbots, automation, voice tools, vision tools, or custom builds.";
+  const tools = profile === "ai"
+    ? `TOOLS:
+- You have search_web for live web lookup. Use it only when current or factual information matters, when the user explicitly asks you to search, or when a stale answer could mislead them.
+- Before search_web, say one very short preamble such as "I'll check that." Do not describe private reasoning.
+- After search_web returns, answer from the tool result. Do not read raw URLs aloud; summarize the result and mention that sources are shown in the chat when available.
+- Do not use search_web for mowing, lawn service, or six one eight help dot com questions. Redirect those to the mowing site/contact form.
+- You have wait_for_user for silence, background noise, TV, music, or side conversation. After calling wait_for_user, do not speak.`
+    : `TOOLS:
+- This mowing widget does not have live web search. Do not claim to search the internet.
+- You have wait_for_user for silence, background noise, TV, music, or side conversation. After calling wait_for_user, do not speak.
+- For current mowing availability, quotes, scheduling, addresses, phone details, or customer-specific questions, direct users to the page's Contact/Get My Quote form.`;
+
   return `${getJohnnyPersona(profile)}
 
+REALTIME 2 BEHAVIOR:
+- Respond like a voice agent: brief, natural, and useful.
+- For direct answers, use 1-2 short sentences. Ask one question at a time.
+- For multi-step requests or tool use, reason before acting, but do not reveal private reasoning.
+- Only respond to clear speech or text. If the user is clearly addressing you but the audio is unclear, ask them to repeat it clearly.
+- Use only the tools explicitly provided in this session. Do not invent, assume, simulate, or rename tools.
+
+${tools}
+
 GREETING: Say exactly: "${getJohnnyGreeting(profile)}" Do not add any other greeting text.
-GUARDRAIL: If the user asks about unrelated trivia or general knowledge, do not answer it. Briefly redirect them back to AI and business-tech help.
+GUARDRAIL: ${guardrail}
 STYLE: Genuinely professional, warm, persuasive, trustworthy. Action-oriented and concise.`;
 }
 
@@ -529,20 +591,27 @@ function extractResponseText(response) {
 function extractResponseSources(response) {
   const sources = [];
   const seen = new Set();
+  const addSource = (source = {}) => {
+    const url = source.url || source.uri;
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    sources.push({
+      title: source.title || url,
+      url
+    });
+  };
 
   for (const item of response?.output || []) {
     if (item?.type !== "message" || !Array.isArray(item.content)) continue;
     for (const content of item.content) {
       for (const annotation of content?.annotations || []) {
-        if (annotation?.type !== "url_citation" || !annotation.url || seen.has(annotation.url)) continue;
-        seen.add(annotation.url);
-        sources.push({
-          title: annotation.title || annotation.url,
-          url: annotation.url
-        });
+        if (annotation?.type !== "url_citation") continue;
+        addSource(annotation);
       }
     }
   }
+
+  for (const source of response?.sources || []) addSource(source);
 
   return sources;
 }
@@ -733,6 +802,7 @@ app.post("/api/realtime-token", async (req, res) => {
     const modelToUse = OPENAI_REALTIME_MODEL || "gpt-realtime-1.5";
     console.log(`📡 [Realtime] Requesting session for model: ${modelToUse}`);
 
+    const realtimeTools = getRealtimeTools(profile);
     const session = {
       type: "realtime",
       model: modelToUse,
@@ -741,13 +811,14 @@ app.post("/api/realtime-token", async (req, res) => {
       audio: {
         input: {
           transcription: { model: OPENAI_TRANSCRIBE_MODEL },
-          turn_detection: { type: "server_vad" }
+          turn_detection: { type: modelToUse === "gpt-realtime-2" ? "semantic_vad" : "server_vad" }
         },
         output: {
           voice: OPENAI_REALTIME_VOICE
         }
       },
-      tools: []
+      tools: realtimeTools,
+      tool_choice: "auto"
     };
 
     if (modelToUse === "gpt-realtime-2") {
@@ -1806,25 +1877,88 @@ function demoLiveInfoReply() {
   ].join("\n");
 }
 
-async function askWithWebSearch({ prompt, contextSize = "medium" }) {
-  console.log(`📡 [Responses API] Live search disabled in demo mode for: "${prompt}"`);
-  return { text: demoLiveInfoReply(), cites: [] };
+async function askWithWebSearch({ prompt, context = "", contextSize = "medium" }) {
+  const query = compactText(prompt).slice(0, 1000);
+  const contextText = compactText(context).slice(0, 4000);
+  if (!query) return { text: "I need a search question first.", cites: [] };
+
+  console.log(`📡 [Responses API] Realtime search via ${REALTIME_SEARCH_MODEL}: "${query}"`);
+  const response = await openai.responses.create({
+    model: REALTIME_SEARCH_MODEL,
+    store: false,
+    tools: [{ type: "web_search", search_context_size: contextSize }],
+    input: [
+      {
+        role: "system",
+        content: [
+          "You are a live web-search helper for Johnny's public AI widget.",
+          "Answer the user's question with current, factual information.",
+          "Keep the answer concise enough for a voice assistant to speak.",
+          "Use sources from web search. Do not invent citations or current facts.",
+          "Do not answer mowing or lawn-service questions; those should go to the mowing contact form."
+        ].join("\n")
+      },
+      {
+        role: "user",
+        content: contextText
+          ? `${query}\n\nRecent conversation context:\n${contextText}`
+          : query
+      }
+    ]
+  });
+
+  return {
+    text: extractResponseText(response) || "I searched, but I could not find a clear answer.",
+    cites: extractResponseSources(response).slice(0, 6)
+  };
 }
 
 /**
  * VOICE SEARCH ENDPOINT
- * Demo-safe response for live-info requests.
+ * Live-search bridge for the AI Realtime widget only.
  */
 app.post("/api/voice-search", async (req, res) => {
   try {
-    const { query = "" } = req.body || {};
+    const { query = "", profile: rawProfile = "" } = req.body || {};
+    const profile = normalizeWidgetProfile(rawProfile) || inferWidgetProfile(req);
     if (!query) return res.status(400).json({ error: "Missing query" });
+    if (profile !== "ai") {
+      return res.status(403).json({
+        result: "Live search is not enabled for this widget. For mowing details, please use the contact form.",
+        sources: []
+      });
+    }
 
-    console.log(`🌐 [Voice Search] Demo mode live-info request: "${query}"`);
-    res.json({ result: demoLiveInfoReply(), sources: [] });
+    console.log(`🌐 [Voice Search] AI widget live search: "${query}"`);
+    const result = await askWithWebSearch({ prompt: query, contextSize: "medium" });
+    res.json({ result: result.text, sources: result.cites });
   } catch (err) {
     console.error("❌ Voice Search Error:", err);
     res.status(500).json({ error: "Search failed" });
+  }
+});
+
+app.post("/api/realtime-search", async (req, res) => {
+  try {
+    const { query = "", context = "", profile: rawProfile = "" } = req.body || {};
+    const profile = normalizeWidgetProfile(rawProfile) || inferWidgetProfile(req);
+    const cleanQuery = compactText(query).slice(0, 1000);
+    const cleanContext = compactText(context).slice(0, 4000);
+
+    if (!cleanQuery) return res.status(400).json({ error: "Missing query" });
+    if (!OPENAI_API_KEY) return res.status(503).json({ error: "OpenAI API key not configured" });
+    if (profile !== "ai") {
+      return res.status(403).json({
+        result: "Live search is not enabled for this widget. For mowing details, please use the contact form.",
+        sources: []
+      });
+    }
+
+    const result = await askWithWebSearch({ prompt: cleanQuery, context: cleanContext, contextSize: "medium" });
+    res.json({ result: result.text, sources: result.cites });
+  } catch (err) {
+    console.error("❌ Realtime Search Error:", err);
+    res.status(500).json({ error: "Search failed", detail: String(err.message || err) });
   }
 });
 
