@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Timekeeper | justaskjohnny.com</title>
-  <meta name="description" content="Track personal time, unavailable time, breaks, and lunch during the work week.">
+  <meta name="description" content="Track personal time during the work week.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -110,10 +110,7 @@
     }
 
     .app-shell {
-      display: grid;
-      grid-template-columns: minmax(300px, 0.88fr) minmax(0, 1.12fr);
-      gap: 18px;
-      align-items: start;
+      display: block;
     }
 
     .panel {
@@ -126,7 +123,7 @@
 
     .hero {
       padding: 26px;
-      min-height: 100%;
+      min-height: 0;
     }
 
     .eyebrow {
@@ -170,36 +167,6 @@
       font-size: 17px;
       line-height: 1.7;
       max-width: 58ch;
-    }
-
-    .limit-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 18px;
-    }
-
-    .limit-card {
-      padding: 16px;
-      border: 1px solid rgba(17, 25, 20, 0.09);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.76);
-    }
-
-    .limit-card span {
-      display: block;
-      color: var(--copy);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .limit-card strong {
-      display: block;
-      margin-top: 8px;
-      font-size: 28px;
-      font-family: "Outfit", Arial, sans-serif;
     }
 
     .controls {
@@ -295,6 +262,7 @@
     .dashboard {
       display: grid;
       gap: 18px;
+      margin-top: 18px;
     }
 
     .stats {
@@ -459,7 +427,6 @@
     }
 
     @media (max-width: 1100px) {
-      .app-shell { grid-template-columns: 1fr; }
       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
@@ -476,7 +443,7 @@
         padding-bottom: 28px;
       }
       .hero, .controls, .table-panel { padding: 16px; }
-      .form-grid, .stats, .week-strip, .limit-grid { grid-template-columns: 1fr; }
+      .form-grid, .stats, .week-strip { grid-template-columns: 1fr; }
       .field.wide { grid-column: auto; }
       .quick-add { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .entry { grid-template-columns: 1fr auto; }
@@ -502,109 +469,73 @@
         <span class="eyebrow">Work Time Tracker</span>
         <h1>Timekeeper</h1>
         <p>
-          Track personal time first, with optional unavailable, break, and lunch entries when you want the full picture.
+          Track personal time against your daily and weekly limits.
         </p>
-
-        <div class="limit-grid" aria-label="Personal time limits">
-          <div class="limit-card">
-            <span>Daily personal limit</span>
-            <strong>10 min</strong>
+        <section class="dashboard" aria-label="Timekeeper dashboard">
+          <div class="stats">
+            <article class="panel stat">
+              <div>
+                <h2>Today Personal</h2>
+                <strong id="today-personal">0m</strong>
+              </div>
+              <div class="meter" aria-hidden="true"><span id="today-meter"></span></div>
+            </article>
+            <article class="panel stat">
+              <div>
+                <h2>Week Personal</h2>
+                <strong id="week-personal">0m</strong>
+              </div>
+              <div class="meter" aria-hidden="true"><span id="week-meter"></span></div>
+            </article>
           </div>
-          <div class="limit-card">
-            <span>Weekly personal limit</span>
-            <strong>50 min</strong>
-          </div>
-        </div>
-      </section>
 
-      <section class="dashboard" aria-label="Timekeeper dashboard">
-        <div class="stats">
-          <article class="panel stat">
-            <div>
-              <h2>Today Personal</h2>
-              <strong id="today-personal">0m</strong>
-            </div>
-            <div class="meter" aria-hidden="true"><span id="today-meter"></span></div>
-          </article>
-          <article class="panel stat">
-            <div>
-              <h2>Week Personal</h2>
-              <strong id="week-personal">0m</strong>
-            </div>
-            <div class="meter" aria-hidden="true"><span id="week-meter"></span></div>
-          </article>
-          <article class="panel stat">
-            <div>
-              <h2>Unavailable</h2>
-              <strong id="week-unavailable">0m</strong>
-            </div>
-            <span class="pill">This week</span>
-          </article>
-          <article class="panel stat">
-            <div>
-              <h2>Break + Lunch</h2>
-              <strong id="week-breaks">0m</strong>
-            </div>
-            <span class="pill">This week</span>
-          </article>
-        </div>
+          <section class="panel controls" aria-label="Add time">
+            <form id="entry-form">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="entry-date">Date</label>
+                  <input id="entry-date" name="date" type="date" required>
+                </div>
+                <div class="field">
+                  <label for="entry-minutes">Minutes</label>
+                  <input id="entry-minutes" name="minutes" type="number" inputmode="numeric" min="0" max="480" step="1" value="5" required>
+                </div>
+                <div class="field">
+                  <label for="entry-seconds">Seconds</label>
+                  <input id="entry-seconds" name="seconds" type="number" inputmode="numeric" min="0" max="59" step="1" value="0">
+                </div>
+                <div class="field wide">
+                  <label for="entry-note">Note</label>
+                  <input id="entry-note" name="note" maxlength="80" placeholder="Optional">
+                </div>
+              </div>
+              <div class="button-row" style="margin-top: 12px;">
+                <button class="button button-primary" type="submit">Add time</button>
+                <button class="button" type="button" id="export-csv">Export CSV</button>
+                <button class="button button-danger" type="button" id="clear-week">Clear week</button>
+              </div>
+            </form>
 
-        <section class="panel controls" aria-label="Add time">
-          <form id="entry-form">
-            <div class="form-grid">
-              <div class="field">
-                <label for="entry-date">Date</label>
-                <input id="entry-date" name="date" type="date" required>
-              </div>
-              <div class="field">
-                <label for="entry-type">Type</label>
-                <select id="entry-type" name="type">
-                  <option value="personal">Personal</option>
-                  <option value="unavailable">Unavailable</option>
-                  <option value="break">Break</option>
-                  <option value="lunch">Lunch</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="entry-minutes">Minutes</label>
-                <input id="entry-minutes" name="minutes" type="number" inputmode="numeric" min="0" max="480" step="1" value="5" required>
-              </div>
-              <div class="field">
-                <label for="entry-seconds">Seconds</label>
-                <input id="entry-seconds" name="seconds" type="number" inputmode="numeric" min="0" max="59" step="1" value="0">
-              </div>
-              <div class="field wide">
-                <label for="entry-note">Note</label>
-                <input id="entry-note" name="note" maxlength="80" placeholder="Optional">
+            <div>
+              <label>Quick personal add</label>
+              <div class="quick-add" aria-label="Quick add personal time">
+                <button type="button" data-quick="1">+1m</button>
+                <button type="button" data-quick="3">+3m</button>
+                <button type="button" data-quick="5">+5m</button>
+                <button type="button" data-quick="10">+10m</button>
+                <button type="button" data-quick="15">+15m</button>
               </div>
             </div>
-            <div class="button-row" style="margin-top: 12px;">
-              <button class="button button-primary" type="submit">Add time</button>
-              <button class="button" type="button" id="export-csv">Export CSV</button>
-              <button class="button button-danger" type="button" id="clear-week">Clear week</button>
-            </div>
-          </form>
+          </section>
 
-          <div>
-            <label>Quick personal add</label>
-            <div class="quick-add" aria-label="Quick add personal time">
-              <button type="button" data-quick="1">+1m</button>
-              <button type="button" data-quick="3">+3m</button>
-              <button type="button" data-quick="5">+5m</button>
-              <button type="button" data-quick="10">+10m</button>
-              <button type="button" data-quick="15">+15m</button>
+          <section class="panel table-panel">
+            <div class="table-head">
+              <h2>This week</h2>
+              <span class="pill" id="week-label"></span>
             </div>
-          </div>
-        </section>
-
-        <section class="panel table-panel">
-          <div class="table-head">
-            <h2>This week</h2>
-            <span class="pill" id="week-label"></span>
-          </div>
-          <div class="week-strip" id="week-strip" aria-label="Personal time by day"></div>
-          <div class="entries" id="entries"></div>
+            <div class="week-strip" id="week-strip" aria-label="Personal time by day"></div>
+            <div class="entries" id="entries"></div>
+          </section>
         </section>
       </section>
     </div>
@@ -616,16 +547,11 @@
       const PERSONAL_DAILY_LIMIT = 10;
       const PERSONAL_WEEKLY_LIMIT = 50;
       const typeLabels = {
-        personal: "Personal",
-        unavailable: "Unavailable",
-        break: "Break",
-        lunch: "Lunch",
-        other: "Other"
+        personal: "Personal"
       };
 
       const form = document.getElementById("entry-form");
       const dateInput = document.getElementById("entry-date");
-      const typeInput = document.getElementById("entry-type");
       const minutesInput = document.getElementById("entry-minutes");
       const secondsInput = document.getElementById("entry-seconds");
       const noteInput = document.getElementById("entry-note");
@@ -634,8 +560,6 @@
       const weekLabel = document.getElementById("week-label");
       const todayPersonal = document.getElementById("today-personal");
       const weekPersonal = document.getElementById("week-personal");
-      const weekUnavailable = document.getElementById("week-unavailable");
-      const weekBreaks = document.getElementById("week-breaks");
       const todayMeter = document.getElementById("today-meter");
       const weekMeter = document.getElementById("week-meter");
 
@@ -737,13 +661,8 @@
         const weekList = weekEntryList();
         const todayPersonalTotal = sum(weekList.filter((entry) => entry.date === todayKey), "personal");
         const weekPersonalTotal = sum(weekList, "personal");
-        const unavailableTotal = sum(weekList, "unavailable");
-        const breakTotal = sum(weekList, "break") + sum(weekList, "lunch");
-
         todayPersonal.textContent = formatShortDuration(todayPersonalTotal);
         weekPersonal.textContent = formatShortDuration(weekPersonalTotal);
-        weekUnavailable.textContent = formatShortDuration(unavailableTotal);
-        weekBreaks.textContent = formatShortDuration(breakTotal);
         setMeter(todayMeter, todayPersonalTotal, PERSONAL_DAILY_LIMIT);
         setMeter(weekMeter, weekPersonalTotal, PERSONAL_WEEKLY_LIMIT);
 
@@ -826,11 +745,10 @@
 
       form.addEventListener("submit", function (event) {
         event.preventDefault();
-        addEntry(typeInput.value, minutesInput.value, secondsInput.value, noteInput.value);
+        addEntry("personal", minutesInput.value, secondsInput.value, noteInput.value);
         noteInput.value = "";
         minutesInput.value = "5";
         secondsInput.value = "0";
-        typeInput.value = "personal";
       });
 
       document.querySelectorAll("[data-quick]").forEach((button) => {
