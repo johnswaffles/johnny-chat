@@ -568,7 +568,11 @@
               </div>
               <div class="field">
                 <label for="entry-minutes">Minutes</label>
-                <input id="entry-minutes" name="minutes" type="number" inputmode="numeric" min="1" max="480" step="1" value="5" required>
+                <input id="entry-minutes" name="minutes" type="number" inputmode="numeric" min="0" max="480" step="1" value="5" required>
+              </div>
+              <div class="field">
+                <label for="entry-seconds">Seconds</label>
+                <input id="entry-seconds" name="seconds" type="number" inputmode="numeric" min="0" max="59" step="1" value="0">
               </div>
               <div class="field wide">
                 <label for="entry-note">Note</label>
@@ -623,6 +627,7 @@
       const dateInput = document.getElementById("entry-date");
       const typeInput = document.getElementById("entry-type");
       const minutesInput = document.getElementById("entry-minutes");
+      const secondsInput = document.getElementById("entry-seconds");
       const noteInput = document.getElementById("entry-note");
       const entriesEl = document.getElementById("entries");
       const weekStrip = document.getElementById("week-strip");
@@ -666,12 +671,31 @@
         });
       }
 
-      function formatMinutes(total) {
-        const minutes = Math.max(0, Number(total) || 0);
+      function entrySeconds(entry) {
+        if (Number.isFinite(Number(entry.totalSeconds))) {
+          return Math.max(0, Math.round(Number(entry.totalSeconds)));
+        }
+        return Math.max(0, Math.round(Number(entry.minutes || 0) * 60 + Number(entry.seconds || 0)));
+      }
+
+      function formatDuration(totalSeconds) {
+        const secondsTotal = Math.max(0, Math.round(Number(totalSeconds) || 0));
+        const minutes = Math.floor(secondsTotal / 60);
+        const seconds = secondsTotal % 60;
         if (minutes < 60) return minutes + "m";
         const hours = Math.floor(minutes / 60);
         const rest = minutes % 60;
-        return rest ? hours + "h " + rest + "m" : hours + "h";
+        const base = rest ? hours + "h " + rest + "m" : hours + "h";
+        return seconds ? base + " " + seconds + "s" : base;
+      }
+
+      function formatShortDuration(totalSeconds) {
+        const secondsTotal = Math.max(0, Math.round(Number(totalSeconds) || 0));
+        const minutes = Math.floor(secondsTotal / 60);
+        const seconds = secondsTotal % 60;
+        if (!seconds) return formatDuration(secondsTotal);
+        if (!minutes) return seconds + "s";
+        return minutes + "m " + seconds + "s";
       }
 
       function loadEntries() {
@@ -699,13 +723,13 @@
       function sum(list, type) {
         return list
           .filter((entry) => entry.type === type)
-          .reduce((total, entry) => total + Number(entry.minutes || 0), 0);
+          .reduce((total, entry) => total + entrySeconds(entry), 0);
       }
 
       function setMeter(el, value, limit) {
-        const pct = Math.min(100, Math.round((value / limit) * 100));
+        const pct = Math.min(100, Math.round((value / (limit * 60)) * 100));
         el.style.width = pct + "%";
-        el.classList.toggle("over", value > limit);
+        el.classList.toggle("over", value > limit * 60);
       }
 
       function render() {
@@ -716,10 +740,10 @@
         const unavailableTotal = sum(weekList, "unavailable");
         const breakTotal = sum(weekList, "break") + sum(weekList, "lunch");
 
-        todayPersonal.textContent = formatMinutes(todayPersonalTotal);
-        weekPersonal.textContent = formatMinutes(weekPersonalTotal);
-        weekUnavailable.textContent = formatMinutes(unavailableTotal);
-        weekBreaks.textContent = formatMinutes(breakTotal);
+        todayPersonal.textContent = formatShortDuration(todayPersonalTotal);
+        weekPersonal.textContent = formatShortDuration(weekPersonalTotal);
+        weekUnavailable.textContent = formatShortDuration(unavailableTotal);
+        weekBreaks.textContent = formatShortDuration(breakTotal);
         setMeter(todayMeter, todayPersonalTotal, PERSONAL_DAILY_LIMIT);
         setMeter(weekMeter, weekPersonalTotal, PERSONAL_WEEKLY_LIMIT);
 
@@ -728,7 +752,7 @@
         weekStrip.innerHTML = days.map((date) => {
           const key = toDateKey(date);
           const dayPersonalTotal = sum(weekList.filter((entry) => entry.date === key), "personal");
-          return '<div class="day"><b>' + date.toLocaleDateString([], { weekday: "short" }) + '</b><strong>' + formatMinutes(dayPersonalTotal) + '</strong></div>';
+          return '<div class="day"><b>' + date.toLocaleDateString([], { weekday: "short" }) + '</b><strong>' + formatShortDuration(dayPersonalTotal) + '</strong></div>';
         }).join("");
 
         if (!weekList.length) {
@@ -742,7 +766,7 @@
           return [
             '<article class="entry">',
             '<div class="entry-main">',
-            '<strong>' + escapeHtml(typeLabels[entry.type] || "Other") + ' - ' + formatMinutes(entry.minutes) + '</strong>',
+            '<strong>' + escapeHtml(typeLabels[entry.type] || "Other") + ' - ' + formatShortDuration(entrySeconds(entry)) + '</strong>',
             '<span>' + date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) + ' - ' + note + '</span>',
             '</div>',
             '<span class="pill">' + escapeHtml(typeLabels[entry.type] || "Other") + '</span>',
@@ -761,12 +785,17 @@
           .replace(/'/g, "&#039;");
       }
 
-      function addEntry(type, minutes, note) {
+      function addEntry(type, minutes, seconds, note) {
+        const cleanMinutes = Math.max(0, Math.round(Number(minutes) || 0));
+        const cleanSeconds = Math.max(0, Math.min(59, Math.round(Number(seconds) || 0)));
+        const totalSeconds = Math.max(1, cleanMinutes * 60 + cleanSeconds);
         entries.push({
           id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
           date: dateInput.value || toDateKey(new Date()),
           type,
-          minutes: Math.max(1, Math.round(Number(minutes) || 1)),
+          minutes: Math.floor(totalSeconds / 60),
+          seconds: totalSeconds % 60,
+          totalSeconds,
           note: String(note || "").trim(),
           createdAt: Date.now()
         });
@@ -775,10 +804,12 @@
       }
 
       function exportCsv() {
-        const rows = [["date", "type", "minutes", "note"]].concat(entries.map((entry) => [
+        const rows = [["date", "type", "minutes", "seconds", "total_seconds", "note"]].concat(entries.map((entry) => [
           entry.date,
           typeLabels[entry.type] || entry.type,
-          entry.minutes,
+          Math.floor(entrySeconds(entry) / 60),
+          entrySeconds(entry) % 60,
+          entrySeconds(entry),
           entry.note || ""
         ]));
         const csv = rows.map((row) => row.map((cell) => '"' + String(cell).replace(/"/g, '""') + '"').join(",")).join("\n");
@@ -795,15 +826,16 @@
 
       form.addEventListener("submit", function (event) {
         event.preventDefault();
-        addEntry(typeInput.value, minutesInput.value, noteInput.value);
+        addEntry(typeInput.value, minutesInput.value, secondsInput.value, noteInput.value);
         noteInput.value = "";
         minutesInput.value = "5";
+        secondsInput.value = "0";
         typeInput.value = "personal";
       });
 
       document.querySelectorAll("[data-quick]").forEach((button) => {
         button.addEventListener("click", function () {
-          addEntry("personal", button.dataset.quick, "Quick add");
+          addEntry("personal", button.dataset.quick, 0, "Quick add");
         });
       });
 
