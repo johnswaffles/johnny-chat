@@ -551,10 +551,54 @@ class VoiceWidget {
     }
 
     resetChat() {
+        this.stopPlayback();
         if (this.history) this.history.innerHTML = "";
         this.messages = [];
         this.itemBubbles.clear();
         this.handledFunctionCalls.clear();
+    }
+
+    stopPlayback() {
+        if (this.remoteAudioEl) {
+            try {
+                this.remoteAudioEl.pause();
+                this.remoteAudioEl.srcObject = null;
+                this.remoteAudioEl.removeAttribute('src');
+                this.remoteAudioEl.load();
+            } catch (err) {
+                console.warn("Could not fully stop remote audio", err);
+            }
+            this.remoteAudioEl.remove();
+            this.remoteAudioEl = null;
+        }
+
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+
+        if (this.dc) {
+            try {
+                if (this.dc.readyState === 'open') this.dc.close();
+            } catch (err) {
+                console.warn("Could not close Johnny data channel", err);
+            }
+            this.dc = null;
+        }
+
+        if (this.pc) {
+            try {
+                this.pc.getSenders().forEach(sender => sender.track?.stop());
+                this.pc.close();
+            } catch (err) {
+                console.warn("Could not close Johnny peer connection", err);
+            }
+            this.pc = null;
+        }
+
+        this.activeAssistantBubble = null;
+        this.activeUserBubble = null;
+        this.updateState('idle');
     }
 
     toggleMute() {
@@ -567,6 +611,7 @@ class VoiceWidget {
 
     async startSession() {
         try {
+            this.pendingHangup = false;
             this.updateState('connecting');
             const backendUrl = this.getBackendUrl();
             const tokenUrl = new URL(`${backendUrl}/api/realtime-token`);
@@ -940,14 +985,7 @@ class VoiceWidget {
             }).catch(e => console.error("Summary failed", e));
         }
 
-        if (this.stream) this.stream.getTracks().forEach(t => t.stop());
-        if (this.pc) this.pc.close();
-        if (this.remoteAudioEl) {
-            this.remoteAudioEl.srcObject = null;
-            this.remoteAudioEl.remove();
-            this.remoteAudioEl = null;
-        }
-        this.updateState('idle');
+        this.stopPlayback();
     }
 }
 
