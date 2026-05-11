@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timekeeper | justaskjohnny.com</title>
+  <meta name="description" content="Track personal time, unavailable time, breaks, and lunch during the work week.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f5ed;
+      --ink: #111914;
+      --copy: #5b665f;
+      --line: rgba(17, 25, 20, 0.12);
+      --paper: rgba(255, 255, 255, 0.9);
+      --green: #2d6f40;
+      --mint: #5ec5a2;
+      --blue: #356f8f;
+      --amber: #c9972e;
+      --red: #a13b43;
+      --shadow: 0 24px 70px rgba(30, 54, 38, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Plus Jakarta Sans", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(94, 197, 162, 0.2), transparent 28%),
+        radial-gradient(circle at 88% 12%, rgba(201, 151, 46, 0.18), transparent 24%),
+        linear-gradient(145deg, #fbfaf3 0%, #eaf1e6 46%, var(--bg) 100%);
+      overflow-x: hidden;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+
+    .johnny-site-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: min(1380px, calc(100vw - 24px));
+      margin: 12px auto 0;
+      padding: 14px 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      box-shadow: 0 18px 40px rgba(24, 61, 34, 0.08);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 14px;
+      z-index: 20;
+    }
+
+    .johnny-site-brand {
+      color: #102015;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .johnny-site-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .johnny-site-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      color: #102015;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+    }
+
+    .johnny-site-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(16, 32, 21, 0.08);
+      background: rgba(255, 255, 255, 0.88);
+    }
+
+    .johnny-site-link.active {
+      background: linear-gradient(135deg, rgba(45, 111, 64, 0.14), rgba(75, 141, 92, 0.14));
+      border-color: rgba(45, 111, 64, 0.18);
+      color: #184526;
+    }
+
+    .page {
+      width: min(1380px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 18px 0 48px;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.88fr) minmax(0, 1.12fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(250,249,242,0.82));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      padding: 26px;
+      min-height: 100%;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(45, 111, 64, 0.08);
+      border: 1px solid rgba(45, 111, 64, 0.13);
+      color: #174425;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 0 5px rgba(94, 197, 162, 0.18);
+    }
+
+    h1, h2, h3 {
+      font-family: "Outfit", Arial, sans-serif;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+
+    h1 {
+      margin: 16px 0 0;
+      font-size: clamp(42px, 7vw, 86px);
+    }
+
+    .hero p {
+      margin: 14px 0 0;
+      color: var(--copy);
+      font-size: 17px;
+      line-height: 1.7;
+      max-width: 58ch;
+    }
+
+    .limit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .limit-card {
+      padding: 16px;
+      border: 1px solid rgba(17, 25, 20, 0.09);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.76);
+    }
+
+    .limit-card span {
+      display: block;
+      color: var(--copy);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .limit-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 28px;
+      font-family: "Outfit", Arial, sans-serif;
+    }
+
+    .controls {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field.wide { grid-column: span 2; }
+
+    label {
+      color: #365042;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    input, select {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid rgba(17, 25, 20, 0.13);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.92);
+      color: var(--ink);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(45, 111, 64, 0.52);
+      box-shadow: 0 0 0 4px rgba(45, 111, 64, 0.11);
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 16px;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      font-weight: 800;
+      background: rgba(255,255,255,0.86);
+      color: var(--ink);
+      transition: transform 160ms ease, filter 160ms ease, border-color 160ms ease;
+    }
+
+    .button:hover { transform: translateY(-1px); filter: brightness(1.02); }
+    .button-primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--green), var(--blue));
+      box-shadow: 0 14px 30px rgba(45, 111, 64, 0.22);
+    }
+    .button-danger {
+      color: #fff;
+      background: linear-gradient(135deg, #8d2c34, var(--red));
+    }
+
+    .quick-add {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .quick-add button {
+      min-height: 42px;
+      border-radius: 14px;
+      border: 1px solid rgba(17, 25, 20, 0.1);
+      background: rgba(255,255,255,0.78);
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .dashboard {
+      display: grid;
+      gap: 18px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      padding: 18px;
+      min-height: 148px;
+      display: grid;
+      align-content: space-between;
+    }
+
+    .stat h2 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--copy);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 12px;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 0.96;
+    }
+
+    .meter {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(17, 25, 20, 0.09);
+      margin-top: 14px;
+    }
+
+    .meter span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--mint), var(--amber));
+      transition: width 180ms ease, background 180ms ease;
+    }
+
+    .meter span.over { background: linear-gradient(90deg, var(--amber), var(--red)); }
+
+    .table-panel {
+      padding: 18px;
+    }
+
+    .table-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .table-head h2 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    .week-strip {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .day {
+      padding: 12px 8px;
+      border: 1px solid rgba(17, 25, 20, 0.09);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.72);
+      min-height: 92px;
+    }
+
+    .day b {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--copy);
+      letter-spacing: 0.08em;
+    }
+
+    .day strong {
+      display: block;
+      margin-top: 10px;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 26px;
+    }
+
+    .entries {
+      display: grid;
+      gap: 8px;
+    }
+
+    .entry {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid rgba(17, 25, 20, 0.08);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.72);
+    }
+
+    .entry-main {
+      min-width: 0;
+    }
+
+    .entry-main strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .entry-main span {
+      display: block;
+      margin-top: 3px;
+      color: var(--copy);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: rgba(53, 111, 143, 0.1);
+      color: #234f68;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .delete {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      border: 1px solid rgba(161, 59, 67, 0.2);
+      background: rgba(161, 59, 67, 0.08);
+      color: var(--red);
+      font-weight: 900;
+    }
+
+    .empty {
+      padding: 20px;
+      border: 1px dashed rgba(17, 25, 20, 0.16);
+      border-radius: 18px;
+      color: var(--copy);
+      background: rgba(255,255,255,0.46);
+    }
+
+    @media (max-width: 1100px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .johnny-site-nav {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .johnny-site-links {
+        justify-content: flex-start;
+      }
+      .page {
+        width: min(100vw - 20px, 1380px);
+        padding-bottom: 28px;
+      }
+      .hero, .controls, .table-panel { padding: 16px; }
+      .form-grid, .stats, .week-strip, .limit-grid { grid-template-columns: 1fr; }
+      .field.wide { grid-column: auto; }
+      .quick-add { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .entry { grid-template-columns: 1fr auto; }
+      .entry .pill { justify-self: start; }
+    }
+  </style>
+</head>
+<body>
+  <header class="johnny-site-nav">
+    <a class="johnny-site-brand" href="https://justaskjohnny.com">justaskjohnny.com</a>
+    <nav class="johnny-site-links" aria-label="Site">
+      <a class="johnny-site-link" href="https://justaskjohnny.com">Home</a>
+      <a class="johnny-site-link" href="/chatbot/">GPT 5.5</a>
+      <a class="johnny-site-link" href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
+      <a class="johnny-site-link active" href="/timekeeper/">Timekeeper</a>
+      <a class="johnny-site-link" href="/contact/">Contact</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <div class="app-shell">
+      <section class="panel hero">
+        <span class="eyebrow">Work Time Tracker</span>
+        <h1>Timekeeper</h1>
+        <p>
+          Track personal time first, with optional unavailable, break, and lunch entries when you want the full picture.
+        </p>
+
+        <div class="limit-grid" aria-label="Personal time limits">
+          <div class="limit-card">
+            <span>Daily personal limit</span>
+            <strong>10 min</strong>
+          </div>
+          <div class="limit-card">
+            <span>Weekly personal limit</span>
+            <strong>50 min</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard" aria-label="Timekeeper dashboard">
+        <div class="stats">
+          <article class="panel stat">
+            <div>
+              <h2>Today Personal</h2>
+              <strong id="today-personal">0m</strong>
+            </div>
+            <div class="meter" aria-hidden="true"><span id="today-meter"></span></div>
+          </article>
+          <article class="panel stat">
+            <div>
+              <h2>Week Personal</h2>
+              <strong id="week-personal">0m</strong>
+            </div>
+            <div class="meter" aria-hidden="true"><span id="week-meter"></span></div>
+          </article>
+          <article class="panel stat">
+            <div>
+              <h2>Unavailable</h2>
+              <strong id="week-unavailable">0m</strong>
+            </div>
+            <span class="pill">This week</span>
+          </article>
+          <article class="panel stat">
+            <div>
+              <h2>Break + Lunch</h2>
+              <strong id="week-breaks">0m</strong>
+            </div>
+            <span class="pill">This week</span>
+          </article>
+        </div>
+
+        <section class="panel controls" aria-label="Add time">
+          <form id="entry-form">
+            <div class="form-grid">
+              <div class="field">
+                <label for="entry-date">Date</label>
+                <input id="entry-date" name="date" type="date" required>
+              </div>
+              <div class="field">
+                <label for="entry-type">Type</label>
+                <select id="entry-type" name="type">
+                  <option value="personal">Personal</option>
+                  <option value="unavailable">Unavailable</option>
+                  <option value="break">Break</option>
+                  <option value="lunch">Lunch</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="entry-minutes">Minutes</label>
+                <input id="entry-minutes" name="minutes" type="number" inputmode="numeric" min="1" max="480" step="1" value="5" required>
+              </div>
+              <div class="field wide">
+                <label for="entry-note">Note</label>
+                <input id="entry-note" name="note" maxlength="80" placeholder="Optional">
+              </div>
+            </div>
+            <div class="button-row" style="margin-top: 12px;">
+              <button class="button button-primary" type="submit">Add time</button>
+              <button class="button" type="button" id="export-csv">Export CSV</button>
+              <button class="button button-danger" type="button" id="clear-week">Clear week</button>
+            </div>
+          </form>
+
+          <div>
+            <label>Quick personal add</label>
+            <div class="quick-add" aria-label="Quick add personal time">
+              <button type="button" data-quick="1">+1m</button>
+              <button type="button" data-quick="3">+3m</button>
+              <button type="button" data-quick="5">+5m</button>
+              <button type="button" data-quick="10">+10m</button>
+              <button type="button" data-quick="15">+15m</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="table-head">
+            <h2>This week</h2>
+            <span class="pill" id="week-label"></span>
+          </div>
+          <div class="week-strip" id="week-strip" aria-label="Personal time by day"></div>
+          <div class="entries" id="entries"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = "johnny-timekeeper-entries-v1";
+      const PERSONAL_DAILY_LIMIT = 10;
+      const PERSONAL_WEEKLY_LIMIT = 50;
+      const typeLabels = {
+        personal: "Personal",
+        unavailable: "Unavailable",
+        break: "Break",
+        lunch: "Lunch",
+        other: "Other"
+      };
+
+      const form = document.getElementById("entry-form");
+      const dateInput = document.getElementById("entry-date");
+      const typeInput = document.getElementById("entry-type");
+      const minutesInput = document.getElementById("entry-minutes");
+      const noteInput = document.getElementById("entry-note");
+      const entriesEl = document.getElementById("entries");
+      const weekStrip = document.getElementById("week-strip");
+      const weekLabel = document.getElementById("week-label");
+      const todayPersonal = document.getElementById("today-personal");
+      const weekPersonal = document.getElementById("week-personal");
+      const weekUnavailable = document.getElementById("week-unavailable");
+      const weekBreaks = document.getElementById("week-breaks");
+      const todayMeter = document.getElementById("today-meter");
+      const weekMeter = document.getElementById("week-meter");
+
+      let entries = loadEntries();
+
+      function pad(value) {
+        return String(value).padStart(2, "0");
+      }
+
+      function toDateKey(date) {
+        return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
+      }
+
+      function fromDateKey(key) {
+        const parts = String(key).split("-").map(Number);
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+
+      function startOfWeek(date) {
+        const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const day = copy.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        copy.setDate(copy.getDate() + diff);
+        return copy;
+      }
+
+      function getWeekDays() {
+        const start = startOfWeek(new Date());
+        return Array.from({ length: 7 }, (_, index) => {
+          const date = new Date(start);
+          date.setDate(start.getDate() + index);
+          return date;
+        });
+      }
+
+      function formatMinutes(total) {
+        const minutes = Math.max(0, Number(total) || 0);
+        if (minutes < 60) return minutes + "m";
+        const hours = Math.floor(minutes / 60);
+        const rest = minutes % 60;
+        return rest ? hours + "h " + rest + "m" : hours + "h";
+      }
+
+      function loadEntries() {
+        try {
+          const raw = window.localStorage.getItem(STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function saveEntries() {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      }
+
+      function weekEntryList() {
+        const days = getWeekDays().map(toDateKey);
+        const daySet = new Set(days);
+        return entries
+          .filter((entry) => daySet.has(entry.date))
+          .sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.createdAt - a.createdAt);
+      }
+
+      function sum(list, type) {
+        return list
+          .filter((entry) => entry.type === type)
+          .reduce((total, entry) => total + Number(entry.minutes || 0), 0);
+      }
+
+      function setMeter(el, value, limit) {
+        const pct = Math.min(100, Math.round((value / limit) * 100));
+        el.style.width = pct + "%";
+        el.classList.toggle("over", value > limit);
+      }
+
+      function render() {
+        const todayKey = toDateKey(new Date());
+        const weekList = weekEntryList();
+        const todayPersonalTotal = sum(weekList.filter((entry) => entry.date === todayKey), "personal");
+        const weekPersonalTotal = sum(weekList, "personal");
+        const unavailableTotal = sum(weekList, "unavailable");
+        const breakTotal = sum(weekList, "break") + sum(weekList, "lunch");
+
+        todayPersonal.textContent = formatMinutes(todayPersonalTotal);
+        weekPersonal.textContent = formatMinutes(weekPersonalTotal);
+        weekUnavailable.textContent = formatMinutes(unavailableTotal);
+        weekBreaks.textContent = formatMinutes(breakTotal);
+        setMeter(todayMeter, todayPersonalTotal, PERSONAL_DAILY_LIMIT);
+        setMeter(weekMeter, weekPersonalTotal, PERSONAL_WEEKLY_LIMIT);
+
+        const days = getWeekDays();
+        weekLabel.textContent = days[0].toLocaleDateString([], { month: "short", day: "numeric" }) + " - " + days[6].toLocaleDateString([], { month: "short", day: "numeric" });
+        weekStrip.innerHTML = days.map((date) => {
+          const key = toDateKey(date);
+          const dayPersonalTotal = sum(weekList.filter((entry) => entry.date === key), "personal");
+          return '<div class="day"><b>' + date.toLocaleDateString([], { weekday: "short" }) + '</b><strong>' + formatMinutes(dayPersonalTotal) + '</strong></div>';
+        }).join("");
+
+        if (!weekList.length) {
+          entriesEl.innerHTML = '<div class="empty">No time logged this week yet.</div>';
+          return;
+        }
+
+        entriesEl.innerHTML = weekList.map((entry) => {
+          const date = fromDateKey(entry.date);
+          const note = entry.note ? escapeHtml(entry.note) : "No note";
+          return [
+            '<article class="entry">',
+            '<div class="entry-main">',
+            '<strong>' + escapeHtml(typeLabels[entry.type] || "Other") + ' - ' + formatMinutes(entry.minutes) + '</strong>',
+            '<span>' + date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) + ' - ' + note + '</span>',
+            '</div>',
+            '<span class="pill">' + escapeHtml(typeLabels[entry.type] || "Other") + '</span>',
+            '<button class="delete" type="button" aria-label="Delete entry" data-delete="' + entry.id + '">x</button>',
+            '</article>'
+          ].join("");
+        }).join("");
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function addEntry(type, minutes, note) {
+        entries.push({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+          date: dateInput.value || toDateKey(new Date()),
+          type,
+          minutes: Math.max(1, Math.round(Number(minutes) || 1)),
+          note: String(note || "").trim(),
+          createdAt: Date.now()
+        });
+        saveEntries();
+        render();
+      }
+
+      function exportCsv() {
+        const rows = [["date", "type", "minutes", "note"]].concat(entries.map((entry) => [
+          entry.date,
+          typeLabels[entry.type] || entry.type,
+          entry.minutes,
+          entry.note || ""
+        ]));
+        const csv = rows.map((row) => row.map((cell) => '"' + String(cell).replace(/"/g, '""') + '"').join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "timekeeper.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      dateInput.value = toDateKey(new Date());
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        addEntry(typeInput.value, minutesInput.value, noteInput.value);
+        noteInput.value = "";
+        minutesInput.value = "5";
+        typeInput.value = "personal";
+      });
+
+      document.querySelectorAll("[data-quick]").forEach((button) => {
+        button.addEventListener("click", function () {
+          addEntry("personal", button.dataset.quick, "Quick add");
+        });
+      });
+
+      entriesEl.addEventListener("click", function (event) {
+        const button = event.target.closest("[data-delete]");
+        if (!button) return;
+        entries = entries.filter((entry) => entry.id !== button.dataset.delete);
+        saveEntries();
+        render();
+      });
+
+      document.getElementById("export-csv").addEventListener("click", exportCsv);
+
+      document.getElementById("clear-week").addEventListener("click", function () {
+        if (!window.confirm("Clear this week's Timekeeper entries?")) return;
+        const weekIds = new Set(weekEntryList().map((entry) => entry.id));
+        entries = entries.filter((entry) => !weekIds.has(entry.id));
+        saveEntries();
+        render();
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
