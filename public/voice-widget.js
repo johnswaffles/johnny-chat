@@ -27,6 +27,8 @@ function detectJohnnyWidgetProfile() {
     }
 
     const host = String(window.location.hostname || "").toLowerCase();
+    const path = String(window.location.pathname || "").toLowerCase();
+    if (path.includes("/nova-chat")) return "nova";
     if (host.includes("618help.com")) return "mowing";
     return "ai";
 }
@@ -505,6 +507,10 @@ class VoiceWidget {
     }
 
     getGreetingPrompt() {
+        if (this.profile === "nova") {
+            return "Say exactly: 'Hey Johnny. I am here, sharp, and ready. What are we figuring out first?' Do not add any other greeting text.";
+        }
+
         if (this.profile === "mowing") {
             return "Say exactly: 'Hi, I'm Johnny's mowing assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.' Do not add any other greeting text.";
         }
