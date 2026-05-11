@@ -4,7 +4,7 @@
 
 function normalizeJohnnyWidgetProfile(value) {
     const profile = String(value || "").toLowerCase().trim();
-    if (profile === "mowing" || profile === "ai") return profile;
+    if (profile === "mowing" || profile === "ai" || profile === "nova") return profile;
     return "";
 }
 
@@ -50,8 +50,12 @@ class VoiceWidget {
         this.remoteAudioEl = null;
         this.realtimeModel = "";
         this.profile = detectJohnnyWidgetProfile();
-        this.allowUploads = this.profile === "ai";
-        this.widgetTitleText = this.profile === "mowing" ? "Johnny - Mowing Assistant" : "Johnny's AI Assistant";
+        this.allowUploads = this.profile === "ai" || this.profile === "nova";
+        this.widgetTitleText = this.profile === "nova"
+            ? "Nova Chat"
+            : this.profile === "mowing"
+                ? "Johnny - Mowing Assistant"
+                : "Johnny's AI Assistant";
         window.johnnyWidgetProfile = this.profile;
 
         if (this.isEditor()) {
@@ -60,6 +64,16 @@ class VoiceWidget {
         }
 
         this.init();
+    }
+
+    getAuthHeaders(base = {}) {
+        const token = String(
+            window.JOHNNY_CHAT_SESSION_TOKEN ||
+            window.johnnyChatSessionToken ||
+            sessionStorage.getItem('johnny_nova_chat_token') ||
+            ''
+        ).trim();
+        return token ? { ...base, Authorization: `Bearer ${token}` } : base;
     }
 
     isEditor() {
@@ -83,7 +97,7 @@ class VoiceWidget {
 
         container.innerHTML = `
             <div class="widget-header" id="widget-header">
-                <button class="widget-title-button" id="widget-title-button" type="button" aria-label="${this.profile === 'mowing' ? 'Open mowing chat' : 'Open AI chat'}">
+                <button class="widget-title-button" id="widget-title-button" type="button" aria-label="${this.profile === 'nova' ? 'Open Nova Chat' : this.profile === 'mowing' ? 'Open mowing chat' : 'Open AI chat'}">
                     <span class="status-dot"></span>
                     <span class="widget-title-text">${this.widgetTitleText}</span>
                     <span class="widget-title-icon" aria-hidden="true">💬</span>
@@ -407,6 +421,7 @@ class VoiceWidget {
             const imageInputs = hasImage ? await this.buildRealtimeImageInputs(fileList) : [];
             const res = await fetch(`${backendUrl}/upload`, {
                 method: 'POST',
+                headers: this.getAuthHeaders(),
                 body: formData
             });
             const data = await res.json();
@@ -558,7 +573,10 @@ class VoiceWidget {
             tokenUrl.searchParams.set("t", Date.now().toString());
             tokenUrl.searchParams.set("profile", this.profile);
 
-            const tokenRes = await fetch(tokenUrl.toString(), { method: 'POST' });
+            const tokenRes = await fetch(tokenUrl.toString(), {
+                method: 'POST',
+                headers: this.getAuthHeaders()
+            });
             if (!tokenRes.ok) {
                 const detail = await tokenRes.text().catch(() => "");
                 throw new Error(`Token fetch failed${detail ? `: ${detail.slice(0, 240)}` : ""}`);
@@ -798,7 +816,7 @@ class VoiceWidget {
                 const args = this.parseFunctionArguments(msg.arguments);
                 const query = String(args.query || args.search_query || args.q || "").trim();
                 if (!query) throw new Error("Search query was empty");
-                if (this.profile !== "ai") throw new Error("Live search is not enabled for this widget");
+                if (this.profile !== "ai" && this.profile !== "nova") throw new Error("Live search is not enabled for this widget");
 
                 const recentContext = this.messages
                     .slice(-6)
@@ -807,7 +825,7 @@ class VoiceWidget {
                     .slice(0, 3000);
                 const res = await fetch(`${this.getBackendUrl()}/api/realtime-search`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ query, context: recentContext, profile: this.profile })
                 });
                 const data = await res.json().catch(() => ({}));

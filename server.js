@@ -365,7 +365,7 @@ function getGpt54ResponseConfig(profile, history, input, extra = {}) {
 
 function normalizeWidgetProfile(value) {
   const profile = String(value || "").toLowerCase().trim();
-  if (profile === "mowing" || profile === "ai" || profile === "gpt54" || profile === "community" || profile === "food") return profile;
+  if (profile === "mowing" || profile === "ai" || profile === "nova" || profile === "gpt54" || profile === "community" || profile === "food") return profile;
   return "";
 }
 
@@ -379,6 +379,7 @@ function inferWidgetProfile(reqOrValue) {
   if (fromQuery) return fromQuery;
 
   const originOrHost = String(req.headers?.origin || req.headers?.referer || req.headers?.host || "").toLowerCase();
+  if (originOrHost.includes("/nova-chat")) return "nova";
   if (originOrHost.includes("/chatbot")) return "gpt54";
   if (originOrHost.includes("618food.com")) return "food";
   if (originOrHost.includes("618help.com")) return "mowing";
@@ -386,6 +387,9 @@ function inferWidgetProfile(reqOrValue) {
 }
 
 function getJohnnyGreeting(profile = "ai") {
+  if (profile === "nova") {
+    return "Hello. I'm Nova Chat, your private Realtime 2 test assistant. What can I help you with?";
+  }
   if (profile === "gpt54") {
     return "Hello. I'm GPT 5.5. What can I help you with today?";
   }
@@ -435,6 +439,24 @@ You may use live web search when it helps answer current or factual questions. P
 When you use web search, keep the answer concise and make sources visible and clickable.
 If the user uploads an image, describe what is visible and infer the likely request in a neutral way.
 Treat this as a real assistant experience, not a demo.`;
+  }
+
+  if (profile === "nova") {
+    return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
+
+You are Nova Chat, Johnny's private unlocked Realtime 2 test assistant.
+You are a general-purpose assistant for the approved user after password unlock.
+Your job is to help with writing, planning, troubleshooting, analysis, brainstorming, coding, image understanding, document understanding, research, decisions, personal productivity, and everyday questions.
+Do not behave like a sales widget. Do not redirect back to AI services unless the user specifically asks about Johnny's business.
+Do not mention demos, prototypes, sandboxing, public widget limits, or internal implementation.
+Be direct, capable, warm, and practical.
+Ask at most one follow-up question when needed. If the request is clear, act.
+You may use live web search when current information matters, when the user asks you to search, or when a factual answer could be stale.
+When you use web search, answer from the tool result and keep sources visible/clickable in the chat.
+If the user uploads an image, describe what is visible, infer what they likely want, and help with the next step.
+If the user uploads a PDF or document, summarize it, answer questions about it, and help extract decisions, action items, or useful structure.
+Keep voice responses concise by default, but provide depth when the user asks for it.
+Use only tools explicitly provided in this session. Do not invent actions or claim a lookup happened until a tool returns.`;
   }
 
   if (profile === "mowing") {
@@ -518,11 +540,13 @@ function getRealtimeTools(profile = "ai") {
     }
   ];
 
-  if (profile === "ai") {
+  if (profile === "ai" || profile === "nova") {
     tools.push({
       type: "function",
       name: "search_web",
-      description: "Search the live web for current or factual AI, technology, product, pricing, company, API, documentation, or practical lookup information. Use this only when fresh information matters or the user explicitly asks to search.",
+      description: profile === "nova"
+        ? "Search the live web for current facts, research, product information, documentation, news, companies, APIs, prices, recommendations, or any practical lookup where fresh information matters."
+        : "Search the live web for current or factual AI, technology, product, pricing, company, API, documentation, or practical lookup information. Use this only when fresh information matters or the user explicitly asks to search.",
       parameters: {
         type: "object",
         properties: {
@@ -540,15 +564,17 @@ function getRealtimeTools(profile = "ai") {
 }
 
 function getJohnnyRealtimeInstructions(profile = "ai") {
-  const guardrail = profile === "mowing"
+  const guardrail = profile === "nova"
+    ? "This is a private unlocked assistant. Help broadly and safely. Do not redirect to business topics unless the user asks."
+    : profile === "mowing"
     ? "If the user asks unrelated trivia or general knowledge, politely redirect back to mowing, weed eating, quotes, scheduling, or the contact form."
     : "If the user asks unrelated trivia or general knowledge, briefly redirect back to AI, websites, chatbots, automation, voice tools, vision tools, or custom builds.";
-  const tools = profile === "ai"
+  const tools = profile === "ai" || profile === "nova"
     ? `TOOLS:
 - You have search_web for live web lookup. Use it only when current or factual information matters, when the user explicitly asks you to search, or when a stale answer could mislead them.
 - Before search_web, say one very short preamble such as "I'll check that." Do not describe private reasoning.
 - After search_web returns, answer from the tool result. Do not read raw URLs aloud; summarize the result and mention that sources are shown in the chat when available.
-- Do not use search_web for mowing, lawn service, or six one eight help dot com questions. Redirect those to the mowing site/contact form.
+- ${profile === "nova" ? "For Nova Chat, search is allowed for broad personal, technical, creative, research, and practical questions." : "Do not use search_web for mowing, lawn service, or six one eight help dot com questions. Redirect those to the mowing site/contact form."}
 - You have wait_for_user for silence, background noise, TV, music, or side conversation. After calling wait_for_user, do not speak.`
     : `TOOLS:
 - This mowing widget does not have live web search. Do not claim to search the internet.
@@ -793,6 +819,7 @@ app.post("/api/realtime-token", async (req, res) => {
   try {
     console.log("📥 [Realtime] Creating Ephemeral Session Token...");
     const profile = inferWidgetProfile(req);
+    if (profile === "nova" && !requireChatbotSession(req, res)) return;
 
     if (!OPENAI_API_KEY) {
       console.error("❌ [Realtime] OPENAI_API_KEY is missing!");
@@ -1891,11 +1918,12 @@ async function askWithWebSearch({ prompt, context = "", contextSize = "medium" }
       {
         role: "system",
         content: [
-          "You are a live web-search helper for Johnny's public AI widget.",
+          "You are a live web-search helper for Johnny's AI widgets.",
           "Answer the user's question with current, factual information.",
           "Keep the answer concise enough for a voice assistant to speak.",
           "Use sources from web search. Do not invent citations or current facts.",
-          "Do not answer mowing or lawn-service questions; those should go to the mowing contact form."
+          "For public AI widgets, do not answer mowing or lawn-service questions; those should go to the mowing contact form.",
+          "For Nova Chat, answer broad private-assistant research questions directly."
         ].join("\n")
       },
       {
@@ -1922,7 +1950,8 @@ app.post("/api/voice-search", async (req, res) => {
     const { query = "", profile: rawProfile = "" } = req.body || {};
     const profile = normalizeWidgetProfile(rawProfile) || inferWidgetProfile(req);
     if (!query) return res.status(400).json({ error: "Missing query" });
-    if (profile !== "ai") {
+    if (profile === "nova" && !requireChatbotSession(req, res)) return;
+    if (profile !== "ai" && profile !== "nova") {
       return res.status(403).json({
         result: "Live search is not enabled for this widget. For mowing details, please use the contact form.",
         sources: []
@@ -1947,7 +1976,8 @@ app.post("/api/realtime-search", async (req, res) => {
 
     if (!cleanQuery) return res.status(400).json({ error: "Missing query" });
     if (!OPENAI_API_KEY) return res.status(503).json({ error: "OpenAI API key not configured" });
-    if (profile !== "ai") {
+    if (profile === "nova" && !requireChatbotSession(req, res)) return;
+    if (profile !== "ai" && profile !== "nova") {
       return res.status(403).json({
         result: "Live search is not enabled for this widget. For mowing details, please use the contact form.",
         sources: []
@@ -2230,7 +2260,7 @@ const upload = multer({
 app.post("/upload", upload.array("files", 8), async (req, res) => {
   try {
     const profile = normalizeWidgetProfile(req.body?.profile) || inferWidgetProfile(req);
-    if (profile === "gpt54" && !requireChatbotSession(req, res)) return;
+    if ((profile === "gpt54" || profile === "nova") && !requireChatbotSession(req, res)) return;
 
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ detail: "No files" });
@@ -2246,7 +2276,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
         const dataUrl = `data:${f.mimetype};base64,${b64}`;
 
         console.log(`📡 [Upload] Sending to Vision (Chat API): ${OPENAI_VISION_MODEL}`);
-        const imagePrompt = profile === "gpt54"
+        const imagePrompt = profile === "gpt54" || profile === "nova"
           ? "Analyze this image for a standalone general-purpose assistant. Identify what the image appears to show, what type of document/object/scene it is, and what the user most likely wants to do next. If it is unclear or irrelevant, say so politely. Return JSON with keys: is_relevant_image (boolean), short_reply (string), scene_summary (string), image_type (product|furniture|room|storefront|sign|menu|document|screen|other|unknown), key_objects (array of strings), likely_user_need (string), confidence (low|medium|high), and follow_up (string)."
           : "Analyze this image as a business-demo image for Johnny's AI assistant. Identify what the image appears to show, what type of business or use-case it could relate to, and what the user most likely wants to do next. If it looks like a product, furniture piece, room, storefront, sign, menu item, document, or other business reference, describe it clearly and infer the likely intent. If it is unclear or irrelevant, say so politely. Return JSON with keys: is_relevant_image (boolean), short_reply (string), scene_summary (string), image_type (product|furniture|room|storefront|sign|menu|document|yard|other|unknown), key_objects (array of strings), likely_user_need (string), confidence (low|medium|high), and follow_up (string).";
         const vision = await openai.chat.completions.create({
@@ -2270,8 +2300,8 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
           const res = JSON.parse(content);
           if (res.text) fullText += (fullText ? "\n" : "") + res.text;
           if (res.description) descriptions.push(res.description);
-          if (res.scene_summary) descriptions.push(`${profile === "gpt54" ? "Scene summary" : "Yard analysis"}: ${res.scene_summary}`);
-          if (res.short_reply) descriptions.push(`${profile === "gpt54" ? "Assistant says" : "Johnny says"}: ${res.short_reply}`);
+          if (res.scene_summary) descriptions.push(`${profile === "gpt54" || profile === "nova" ? "Scene summary" : "Yard analysis"}: ${res.scene_summary}`);
+          if (res.short_reply) descriptions.push(`${profile === "gpt54" || profile === "nova" ? "Assistant says" : "Johnny says"}: ${res.short_reply}`);
           imageAnalyses.push(res);
         } catch (e) {
           console.warn("⚠️ [Upload] JSON parse failed, using raw content.");
@@ -2309,7 +2339,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
     if (fullText && descriptions.some(d => d.includes("PDF"))) {
       console.log("🧠 [Upload] Generating automatic detailed summary for PDF...");
       try {
-        const summarySystemPrompt = profile === "gpt54"
+        const summarySystemPrompt = profile === "gpt54" || profile === "nova"
           ? "You are a careful document assistant. Provide a detailed, structured summary of the provided document. Use bullet points for key facts, followed by a short executive summary."
           : "You are Johnny's analytical brain. Provide a detailed, structured summary of the provided document. Use bullet points for key facts, followed by a punchy executive summary. Keep Johnny's tone: sharp and authoritative.";
         const sumComp = await openai.chat.completions.create({
@@ -2331,7 +2361,7 @@ app.post("/upload", upload.array("files", 8), async (req, res) => {
       summary: autoSummary.trim(),
       imageAnalysis: imageAnalyses
     });
-    if (profile === "gpt54") void recordJohnnyChatUsage("uploads", { files: files.length });
+    if (profile === "gpt54" || profile === "nova") void recordJohnnyChatUsage("uploads", { files: files.length, profile });
   } catch (e) {
     console.error("🚨 [Upload] Fatal Error:", e);
     void recordJohnnyChatUsage("errors", { route: "/upload", message: e.message || e });

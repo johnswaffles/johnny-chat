@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en" data-johnny-widget-profile="nova">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nova Chat | justaskjohnny.com</title>
+  <meta name="description" content="Private Nova Chat workspace for testing Realtime 2 with voice, uploads, and live search.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/voice-widget.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07110f;
+      --panel: rgba(13, 24, 22, 0.82);
+      --panel-strong: rgba(17, 32, 30, 0.96);
+      --line: rgba(164, 229, 213, 0.22);
+      --text: #ecfff9;
+      --muted: #a7bdb6;
+      --mint: #5ef6cb;
+      --aqua: #58d7ff;
+      --gold: #ffd66e;
+      --danger: #ff897d;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        linear-gradient(125deg, rgba(94, 246, 203, 0.18), transparent 32%),
+        radial-gradient(circle at 82% 18%, rgba(88, 215, 255, 0.18), transparent 28%),
+        linear-gradient(180deg, #081512 0%, #030605 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.82), transparent 82%);
+    }
+
+    .johnny-site-nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      width: min(1380px, calc(100% - 32px));
+      margin: 14px auto 0;
+      padding: 14px 18px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      background: rgba(245, 252, 247, 0.94);
+      color: #07110f;
+      box-shadow: 0 20px 70px rgba(0,0,0,0.25);
+      backdrop-filter: blur(18px);
+    }
+
+    .johnny-site-brand {
+      color: #07110f;
+      font-weight: 900;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .johnny-site-links {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .johnny-site-link {
+      color: #07110f;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 10px 14px;
+      border-radius: 999px;
+    }
+
+    .johnny-site-link.active {
+      background: #dff0e7;
+      box-shadow: inset 0 0 0 1px #b7d2c3;
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      width: min(1380px, calc(100% - 32px));
+      margin: 34px auto 72px;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(360px, 0.62fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .hero,
+    .unlock,
+    .capability {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 28px 90px rgba(0,0,0,0.35);
+      backdrop-filter: blur(22px);
+    }
+
+    .hero {
+      min-height: 640px;
+      border-radius: 26px;
+      padding: clamp(28px, 4vw, 56px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .status-pill {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border: 1px solid rgba(94, 246, 203, 0.32);
+      border-radius: 999px;
+      background: rgba(94, 246, 203, 0.1);
+      color: #c9fff1;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status-pill::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--mint);
+      box-shadow: 0 0 18px var(--mint);
+    }
+
+    h1 {
+      margin: 48px 0 16px;
+      font-size: clamp(58px, 10vw, 136px);
+      line-height: 0.88;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 760px;
+      color: #d9eee8;
+      font-size: clamp(20px, 2.4vw, 30px);
+      line-height: 1.38;
+      font-weight: 650;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 44px;
+    }
+
+    .capability {
+      min-height: 112px;
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .capability strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 17px;
+    }
+
+    .capability span {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.42;
+      font-weight: 650;
+    }
+
+    .unlock {
+      border-radius: 26px;
+      padding: 28px;
+      min-height: 640px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .unlock-card {
+      padding: 28px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.13);
+      background: var(--panel-strong);
+    }
+
+    .unlock-card h2 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      letter-spacing: 0;
+    }
+
+    .unlock-card p {
+      margin: 0 0 22px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #cfe7df;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .password-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    input {
+      width: 100%;
+      min-height: 54px;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 14px;
+      padding: 0 15px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(94, 246, 203, 0.72);
+      box-shadow: 0 0 0 4px rgba(94, 246, 203, 0.12);
+    }
+
+    button {
+      min-height: 54px;
+      border: 0;
+      border-radius: 14px;
+      padding: 0 20px;
+      background: linear-gradient(135deg, var(--mint), var(--aqua));
+      color: #03100d;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.66;
+    }
+
+    .message {
+      min-height: 20px;
+      margin-top: 14px;
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .workspace {
+      display: none;
+      margin-top: 24px;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(94, 246, 203, 0.24);
+      background: rgba(94, 246, 203, 0.08);
+    }
+
+    .workspace[data-unlocked="true"] {
+      display: block;
+    }
+
+    .workspace h3 {
+      margin: 0 0 10px;
+      font-size: 22px;
+    }
+
+    .workspace p {
+      margin: 0;
+      color: #cbe5dd;
+    }
+
+    @media (max-width: 980px) {
+      .johnny-site-nav {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .johnny-site-links {
+        justify-content: flex-start;
+      }
+
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .hero,
+      .unlock {
+        min-height: auto;
+      }
+
+      .feature-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 620px) {
+      .johnny-site-nav,
+      main {
+        width: min(100% - 20px, 1380px);
+      }
+
+      .feature-grid,
+      .password-row {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: clamp(50px, 18vw, 82px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="johnny-site-nav">
+    <a class="johnny-site-brand" href="https://justaskjohnny.com">justaskjohnny.com</a>
+    <nav class="johnny-site-links" aria-label="Site">
+      <a class="johnny-site-link" href="https://justaskjohnny.com">Home</a>
+      <a class="johnny-site-link" href="/chatbot/">GPT 5.5</a>
+      <a class="johnny-site-link active" href="/nova-chat/">Nova Chat</a>
+      <a class="johnny-site-link" href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
+      <a class="johnny-site-link" href="/timekeeper/">Timekeeper</a>
+      <a class="johnny-site-link" href="/contact/">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="shell">
+      <section class="hero" aria-labelledby="nova-title">
+        <div>
+          <div class="status-pill">Private Realtime 2 Lab</div>
+          <h1 id="nova-title">Nova Chat</h1>
+          <p class="lead">An unlocked private assistant for testing Realtime 2 with voice, live search, pictures, PDFs, and wide-open everyday help.</p>
+        </div>
+        <div class="feature-grid" aria-label="Nova Chat capabilities">
+          <div class="capability"><strong>Voice</strong><span>Talk naturally through the same realtime widget system.</span></div>
+          <div class="capability"><strong>Search</strong><span>Ask for current web research when fresh facts matter.</span></div>
+          <div class="capability"><strong>Uploads</strong><span>Drop in pictures or PDFs and ask follow-up questions.</span></div>
+          <div class="capability"><strong>Unlocked</strong><span>General help without the public sales-widget guardrails.</span></div>
+        </div>
+      </section>
+
+      <section class="unlock" aria-label="Unlock Nova Chat">
+        <div class="unlock-card">
+          <h2>Unlock Nova</h2>
+          <p>Use the same password as the GPT 5.5 page. After unlock, the Nova Chat widget can request realtime sessions, search, and uploads with the private token.</p>
+          <form id="unlock-form" autocomplete="off">
+            <label for="nova-password">Password</label>
+            <div class="password-row">
+              <input id="nova-password" name="password" type="password" autocomplete="current-password" required>
+              <button id="unlock-button" type="submit">Enter</button>
+            </div>
+            <div class="message" id="unlock-message" role="status" aria-live="polite"></div>
+          </form>
+          <div class="workspace" id="workspace">
+            <h3>Nova is ready.</h3>
+            <p>Use the chat widget in the corner for voice, text, uploads, and live search testing.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const tokenKey = "johnny_nova_chat_token";
+      const form = document.getElementById("unlock-form");
+      const password = document.getElementById("nova-password");
+      const button = document.getElementById("unlock-button");
+      const message = document.getElementById("unlock-message");
+      const workspace = document.getElementById("workspace");
+
+      window.JOHNNY_WIDGET_PROFILE = "nova";
+      window.johnnyWidgetProfile = "nova";
+      window.JOHNNY_WIDGET_START_MINIMIZED = false;
+
+      function setMessage(text, isError = true) {
+        message.textContent = text || "";
+        message.style.color = isError ? "var(--danger)" : "var(--mint)";
+      }
+
+      function loadNovaWidget(token) {
+        window.JOHNNY_CHAT_SESSION_TOKEN = token;
+        window.johnnyChatSessionToken = token;
+        sessionStorage.setItem(tokenKey, token);
+        workspace.dataset.unlocked = "true";
+        form.style.display = "none";
+        setMessage("Unlocked.", false);
+
+        if (document.querySelector('script[data-nova-widget="true"]')) return;
+        const script = document.createElement("script");
+        script.src = "/voice-widget.js?v=nova-chat";
+        script.async = true;
+        script.dataset.profile = "nova";
+        script.dataset.novaWidget = "true";
+        document.body.appendChild(script);
+      }
+
+      async function verifyToken(token) {
+        if (!token) return false;
+        try {
+          const res = await fetch("/api/chatbot-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token })
+          });
+          const data = await res.json().catch(() => ({}));
+          return Boolean(res.ok && data.ok);
+        } catch {
+          return false;
+        }
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        button.disabled = true;
+        setMessage("Checking password...", false);
+        try {
+          const res = await fetch("/api/chatbot-access", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: password.value })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.ok || !data.token) throw new Error(data.detail || "Password was not accepted.");
+          loadNovaWidget(data.token);
+        } catch (err) {
+          setMessage(err.message || "Could not unlock Nova Chat.");
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      verifyToken(sessionStorage.getItem(tokenKey)).then((ok) => {
+        if (ok) loadNovaWidget(sessionStorage.getItem(tokenKey));
+      });
+    })();
+  </script>
+</body>
+</html>

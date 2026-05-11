@@ -126,6 +126,7 @@ function siteNav(profile, active, brandOverride = "") {
   const brand = brandOverride || (profile === "mowing" ? "618help.com" : "justaskjohnny.com");
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
   const gptHref = "/chatbot/";
+  const novaHref = "/nova-chat/";
   const cozyHref = "/cozy-builder-game/";
   const timekeeperHref = "/timekeeper/";
   const contactHref = "/contact/";
@@ -137,6 +138,7 @@ function siteNav(profile, active, brandOverride = "") {
     : [
         `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
         `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>`,
+        `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}">Nova Chat</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>`,
         `<a class="johnny-site-link ${active === "timekeeper" ? "active" : ""}" href="${timekeeperHref}">Timekeeper</a>`,
         `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
@@ -4304,6 +4306,7 @@ ${siteNav("ai", "contact")}
       const navLinks = document.querySelectorAll(".johnny-site-link");
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
       const gptHref = "/chatbot/";
+      const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
       const timekeeperHref = "/timekeeper/";
       const contactHref = "/contact/";
@@ -4326,6 +4329,7 @@ ${siteNav("ai", "contact")}
           const label = String(link.textContent || "").trim().toLowerCase();
           if (label === "home") link.href = homeHref;
           if (label === "gpt 5.5") link.href = gptHref;
+          if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
           if (label === "timekeeper") link.href = timekeeperHref;
           if (label === "contact") link.href = contactHref;

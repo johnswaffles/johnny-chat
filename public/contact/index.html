@@ -371,6 +371,7 @@
     <nav class="johnny-site-links" aria-label="Site">
       <a class="johnny-site-link " href="https://justaskjohnny.com">Home</a>
       <a class="johnny-site-link " href="/chatbot/">GPT 5.5</a>
+      <a class="johnny-site-link " href="/nova-chat/">Nova Chat</a>
       <a class="johnny-site-link " href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
       <a class="johnny-site-link " href="/timekeeper/">Timekeeper</a>
       <a class="johnny-site-link active" href="/contact/">Contact</a>
@@ -487,6 +488,7 @@
       const navLinks = document.querySelectorAll(".johnny-site-link");
       const homeHref = isMowing ? "https://618help.com" : "https://justaskjohnny.com";
       const gptHref = "/chatbot/";
+      const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
       const timekeeperHref = "/timekeeper/";
       const contactHref = "/contact/";
@@ -509,6 +511,7 @@
           const label = String(link.textContent || "").trim().toLowerCase();
           if (label === "home") link.href = homeHref;
           if (label === "gpt 5.5") link.href = gptHref;
+          if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
           if (label === "timekeeper") link.href = timekeeperHref;
           if (label === "contact") link.href = contactHref;
