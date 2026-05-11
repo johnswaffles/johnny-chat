@@ -400,6 +400,7 @@
   <script>
     (() => {
       const tokenKey = "johnny_nova_chat_token";
+      const apiBase = String(window.JOHNNY_CHAT_API_BASE_URL || "https://johnny-chat.onrender.com").replace(/\/+$/, "");
       const form = document.getElementById("unlock-form");
       const password = document.getElementById("nova-password");
       const button = document.getElementById("unlock-button");
@@ -425,7 +426,7 @@
 
         if (document.querySelector('script[data-nova-widget="true"]')) return;
         const script = document.createElement("script");
-        script.src = "/voice-widget.js?v=nova-chat";
+        script.src = `${apiBase}/voice-widget.js?v=nova-chat`;
         script.async = true;
         script.dataset.profile = "nova";
         script.dataset.novaWidget = "true";
@@ -435,9 +436,10 @@
       async function verifyToken(token) {
         if (!token) return false;
         try {
-          const res = await fetch("/api/chatbot-session", {
+          const res = await fetch(`${apiBase}/api/chatbot-session`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            mode: "cors",
             body: JSON.stringify({ token })
           });
           const data = await res.json().catch(() => ({}));
@@ -452,9 +454,10 @@
         button.disabled = true;
         setMessage("Checking password...", false);
         try {
-          const res = await fetch("/api/chatbot-access", {
+          const res = await fetch(`${apiBase}/api/chatbot-access`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            mode: "cors",
             body: JSON.stringify({ password: password.value })
           });
           const data = await res.json().catch(() => ({}));
