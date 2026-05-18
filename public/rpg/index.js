@@ -666,7 +666,18 @@ const Engine = (function () {
 	Engine.load = function (basePath, size) {
 		if (loadPromise == null) {
 			loadPath = basePath;
-			loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);
+			loadPromise = preloader.loadPromise(`${loadPath}.wasm.gz`, size, true).then(async function (response) {
+				const probe = new Uint8Array(await response.clone().arrayBuffer(), 0, 2);
+				const isGzip = probe[0] === 0x1f && probe[1] === 0x8b;
+				if (isGzip && typeof DecompressionStream !== 'undefined') {
+					return new Response(response.body.pipeThrough(new DecompressionStream('gzip')), {
+						'headers': [['content-type', 'application/wasm']],
+					});
+				}
+				return new Response(response.body, {
+					'headers': [['content-type', 'application/wasm']],
+				});
+			});
 			requestAnimationFrame(preloader.animateProgress);
 		}
 		return loadPromise;
