@@ -1,7 +1,9 @@
 extends CharacterBody2D
 
 signal defeated(enemy: Node)
+signal effect_requested(kind: String, origin: Vector2)
 
+const PixelArt = preload("res://scripts/pixel_art.gd")
 const GRAVITY := 1600.0
 
 var target: Node2D
@@ -16,6 +18,7 @@ var patrol_max := 0.0
 var direction := -1.0
 var attack_cooldown := 0.0
 var is_boss := false
+var sprite: AnimatedSprite2D
 
 func configure(kind: String, min_x: float, max_x: float) -> void:
 	enemy_type = kind
@@ -65,77 +68,90 @@ func _physics_process(delta: float) -> void:
 
 	velocity.x = desired * speed
 	scale.x = abs(scale.x) * (1.0 if desired >= 0.0 else -1.0)
+	if sprite and sprite.animation != "fly" and abs(velocity.x) > 1.0:
+		sprite.play("walk")
 	move_and_slide()
 
 func take_damage(amount: int) -> void:
 	hp -= amount
+	effect_requested.emit("hit", global_position + Vector2(0, -32))
 	modulate = Color("#ffef99")
+	scale.y = 0.9
 	var tween := create_tween()
 	tween.tween_property(self, "modulate", Color.WHITE, 0.14)
+	tween.parallel().tween_property(self, "scale:y", abs(scale.y) / max(abs(scale.y), 0.01), 0.16)
 	if is_boss:
 		GameState.boss_hp = max(0, hp)
 	if hp <= 0:
+		effect_requested.emit("defeat", global_position + Vector2(0, -28))
 		defeated.emit(self)
 
 func _try_hit_player() -> void:
 	if attack_cooldown > 0.0:
 		return
 	attack_cooldown = 0.9 if not is_boss else 1.25
+	if sprite:
+		sprite.play("attack")
 	if target and target.has_method("take_damage"):
 		target.take_damage(damage)
 
 func _build_visual() -> void:
-	var size := 1.0
+	var size := 3.3
 	if is_boss:
-		size = 1.8
-	scale = Vector2(size, size)
-
-	var body_color := Color("#7fc95b")
-	if enemy_type == "bat":
-		body_color = Color("#9859c8")
-	elif enemy_type == "guard":
-		body_color = Color("#b45d45")
-	elif enemy_type == "boss":
-		body_color = Color("#d65a4a")
-
-	var body := Polygon2D.new()
-	body.polygon = PackedVector2Array([Vector2(-24, -36), Vector2(24, -36), Vector2(30, 26), Vector2(-30, 26)])
-	body.color = body_color
-	add_child(body)
-
-	var head := Polygon2D.new()
-	head.polygon = PackedVector2Array([Vector2(-17, -64), Vector2(17, -64), Vector2(20, -36), Vector2(-20, -36)])
-	head.color = body_color.lightened(0.14)
-	add_child(head)
-
-	var eye_l := Polygon2D.new()
-	eye_l.polygon = PackedVector2Array([Vector2(-10, -53), Vector2(-4, -53), Vector2(-4, -47), Vector2(-10, -47)])
-	eye_l.color = Color("#fff4bd")
-	add_child(eye_l)
-
-	var eye_r := Polygon2D.new()
-	eye_r.polygon = PackedVector2Array([Vector2(5, -53), Vector2(11, -53), Vector2(11, -47), Vector2(5, -47)])
-	eye_r.color = Color("#fff4bd")
-	add_child(eye_r)
-
-	if enemy_type == "bat":
-		var wing_l := Polygon2D.new()
-		wing_l.polygon = PackedVector2Array([Vector2(-24, -28), Vector2(-62, -52), Vector2(-42, -12)])
-		wing_l.color = Color("#6c3e98")
-		add_child(wing_l)
-		var wing_r := Polygon2D.new()
-		wing_r.polygon = PackedVector2Array([Vector2(24, -28), Vector2(62, -52), Vector2(42, -12)])
-		wing_r.color = Color("#6c3e98")
-		add_child(wing_r)
-	else:
-		var weapon := Polygon2D.new()
-		weapon.polygon = PackedVector2Array([Vector2(26, -26), Vector2(66, -31), Vector2(68, -25), Vector2(28, -17)])
-		weapon.color = Color("#ded6c0")
-		add_child(weapon)
+		size = 5.0
+	sprite = AnimatedSprite2D.new()
+	sprite.sprite_frames = _build_frames()
+	sprite.animation = "fly" if enemy_type == "bat" else "walk"
+	sprite.play()
+	sprite.scale = Vector2(size, size)
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(sprite)
 
 	var collision := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(55, 90)
+	shape.size = Vector2(55 if not is_boss else 86, 90 if not is_boss else 128)
 	collision.shape = shape
-	collision.position = Vector2(0, -12)
+	collision.position = Vector2(0, -12 if not is_boss else -34)
 	add_child(collision)
+
+func _build_frames() -> SpriteFrames:
+	var frames := SpriteFrames.new()
+	for anim in ["walk", "fly", "attack"]:
+		frames.add_animation(anim)
+		frames.set_animation_loop(anim, true)
+		frames.set_animation_speed(anim, 6.0)
+	for i in range(3):
+		frames.add_frame("walk", _enemy_frame("walk", i))
+		frames.add_frame("fly", _enemy_frame("fly", i))
+		frames.add_frame("attack", _enemy_frame("attack", i))
+	return frames
+
+func _enemy_frame(pose: String, step: int) -> Texture2D:
+	var body_color := Color("#78c85a")
+	var shade := Color("#31543a")
+	var eye := Color("#fff0a0")
+	if enemy_type == "bat":
+		body_color = Color("#9162d4")
+		shade = Color("#50307d")
+	elif enemy_type == "guard":
+		body_color = Color("#bd6a47")
+		shade = Color("#6a362c")
+	elif enemy_type == "boss":
+		body_color = Color("#d85a4f")
+		shade = Color("#67283b")
+	var bob := 0
+	if enemy_type == "bat":
+		bob = -1 if step == 1 else 1
+	var foot: int = [-1, 1, 0][step]
+	var weapon_len := 10 if pose != "attack" else 16
+	return PixelArt.texture(36, 36, Color.TRANSPARENT, [
+		{"x": 8, "y": 15 + bob, "w": 18, "h": 15, "color": body_color},
+		{"x": 10, "y": 9 + bob, "w": 14, "h": 9, "color": body_color.lightened(0.12)},
+		{"x": 8, "y": 27, "w": 6, "h": 5 + foot, "color": shade},
+		{"x": 21, "y": 27, "w": 6, "h": 5 - foot, "color": shade},
+		{"x": 12, "y": 13 + bob, "w": 3, "h": 3, "color": eye},
+		{"x": 21, "y": 13 + bob, "w": 3, "h": 3, "color": eye},
+		{"x": 24, "y": 18, "w": weapon_len, "h": 2, "color": Color("#d8d1bd")},
+		{"x": 5, "y": 17 + bob, "w": 5, "h": 6, "color": shade},
+		{"x": 25, "y": 17 + bob, "w": 5, "h": 6, "color": shade},
+	])
