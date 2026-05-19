@@ -129,7 +129,6 @@ function siteNav(profile, active, brandOverride = "") {
   const novaHref = "/nova-chat/";
   const cozyHref = "/cozy-builder-game/";
   const timekeeperHref = "/timekeeper/";
-  const rpgHref = "/rpg/";
   const contactHref = "/contact/";
   const links = profile === "mowing"
     ? [
@@ -142,7 +141,6 @@ function siteNav(profile, active, brandOverride = "") {
         `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}">Nova Chat</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>`,
         `<a class="johnny-site-link ${active === "timekeeper" ? "active" : ""}" href="${timekeeperHref}">Timekeeper</a>`,
-        `<a class="johnny-site-link ${active === "rpg" ? "active" : ""}" href="${rpgHref}">RPG</a>`,
         `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
       ];
   return `
@@ -4311,7 +4309,6 @@ ${siteNav("ai", "contact")}
       const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
       const timekeeperHref = "/timekeeper/";
-      const rpgHref = "/rpg/";
       const contactHref = "/contact/";
 
       profileField.value = profile;
@@ -4335,7 +4332,6 @@ ${siteNav("ai", "contact")}
           if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
           if (label === "timekeeper") link.href = timekeeperHref;
-          if (label === "rpg") link.href = rpgHref;
           if (label === "contact") link.href = contactHref;
         });
       }
