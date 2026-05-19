@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sim: Little World Engine</title>
+  <meta name="description" content="A living miniature ecosystem simulation with evolving creatures, weather, seasons, tools, and disasters.">
+  <link rel="stylesheet" href="/sim/sim.css">
+</head>
+<body>
+  <header class="sim-nav">
+    <a class="brand" href="/">justaskjohnny.com</a>
+    <nav aria-label="Site navigation">
+      <a href="/">Home</a>
+      <a href="/chatbot/">GPT 5.5</a>
+      <a href="/nova-chat/">Nova Chat</a>
+      <a href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
+      <a href="/timekeeper/">Timekeeper</a>
+      <a class="active" href="/sim/">Sim</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </header>
+
+  <main class="sim-shell">
+    <section class="hero panel">
+      <div>
+        <p class="eyebrow">Artificial ecosystem sandbox</p>
+        <h1>Sim: Little World Engine</h1>
+        <p>Seed a miniature world, tune time, add life, trigger disasters, and watch generations adapt or collapse.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="playPause" class="primary" title="Pause or resume the fixed-step simulation.">Pause</button>
+        <button id="newWorld" title="Generate a new replayable world from the seed box.">New World</button>
+      </div>
+    </section>
+
+    <section class="sim-grid">
+      <aside class="toolbar panel" aria-label="World tools">
+        <h2>Tools</h2>
+        <div id="toolButtons" class="tool-list"></div>
+        <label class="field">
+          <span>Seed</span>
+          <input id="seedInput" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field">
+          <span>Time rate <b id="rateLabel">1x</b></span>
+          <input id="rateSlider" type="range" min="0" max="8" step="1" value="3">
+        </label>
+        <div class="disasters">
+          <h3>Disasters</h3>
+          <button data-disaster="drought" title="Starts a harsh dry spell that kills weak moss and raises thirst.">Drought</button>
+          <button data-disaster="rain" title="Floods water back into the world and helps Sunmoss spread.">Heavy rain</button>
+          <button data-disaster="plague" title="A disease wave hits crowded animal populations.">Plague</button>
+          <button data-disaster="meteor" title="Drops a destructive rock scar into the world.">Meteor</button>
+          <button data-disaster="predators" title="Adds a temporary burst of Thornbacks.">Predator bloom</button>
+          <button id="rebalance" title="Gently adds missing resources if the ecosystem has fully crashed.">Rebalance World</button>
+        </div>
+      </aside>
+
+      <section class="world-card panel">
+        <div class="world-topline">
+          <div>
+            <strong id="clockLabel">Tick 0 · Day 1 · Spring · Year 1</strong>
+            <span id="weatherLabel">sunny</span>
+          </div>
+          <div class="legend">
+            <span><i class="sunmoss"></i>Sunmoss</span>
+            <span><i class="glowmite"></i>Glowmites</span>
+            <span><i class="thornback"></i>Thornbacks</span>
+            <span><i class="rotshroom"></i>Rotshrooms</span>
+          </div>
+        </div>
+        <canvas id="worldCanvas" width="960" height="620" aria-label="Living ecosystem simulation"></canvas>
+      </section>
+
+      <aside class="dashboard panel">
+        <h2>Live World</h2>
+        <div id="warnings" class="warnings"></div>
+        <div id="stats" class="stats"></div>
+      </aside>
+    </section>
+
+    <section class="timeline panel">
+      <div class="timeline-head">
+        <h2>Population Timeline</h2>
+        <p>Last 300 samples with event markers.</p>
+      </div>
+      <canvas id="graphCanvas" width="1200" height="220" aria-label="Population graph"></canvas>
+    </section>
+  </main>
+
+  <script src="/sim/sim.js" defer></script>
+</body>
+</html>
