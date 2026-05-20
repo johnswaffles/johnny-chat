@@ -6,7 +6,7 @@ const CELL := 12.0
 const WORLD_OFFSET := Vector2(260, 148)
 const WORLD_SIZE := Vector2(GRID_W * CELL, GRID_H * CELL)
 const HISTORY_MAX := 300
-const SPEEDS: Array[float] = [0.0, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 25.0, 50.0]
+const SPEEDS: Array[float] = [0.0, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 25.0, 50.0, 100.0]
 const TOOLS := ["Sunmoss", "Glowmites", "Thornbacks", "Water", "Fertile Soil", "Rock", "Eraser"]
 const SEASONS := ["Spring", "Summer", "Autumn", "Winter"]
 
@@ -630,7 +630,7 @@ func _sample_history() -> void:
 
 func _update_ui() -> void:
 	var stats := _stats()
-	clock_label.text = "Tick %d - Day %d - %s - Year %d" % [tick, day, SEASONS[season], year]
+	clock_label.text = "Day %d - %s - Year %d" % [day, SEASONS[season], year]
 	weather_label.text = "%s - drought %d%%" % [weather, int(drought * 100.0)]
 	stats_label.text = "[b]Sunmoss[/b] %d cells\n[b]Glowmites[/b] %d\n[b]Thornbacks[/b] %d\n[b]Rotshrooms[/b] %d\n\n[b]Glowmite traits[/b]\nspeed %.2f\nvision %.2f\nfertility %.2f\n\n[b]Thornback traits[/b]\nspeed %.2f\naggression %.2f\nmetabolism %.2f\n\n[b]Soil[/b] %d%%\n[b]Water[/b] %d%%\n[b]Stability[/b] %d/100" % [stats.moss, stats.glow, stats.thorn, stats.rot, stats.glow_speed, stats.glow_vision, stats.glow_fertility, stats.thorn_speed, stats.thorn_aggression, stats.thorn_metabolism, int(stats.nutrients * 100.0), int(stats.water * 100.0), int(stats.stability)]
 
