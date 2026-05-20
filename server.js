@@ -915,6 +915,7 @@ const GODOT_WASM_ROUTES = [
   "/cozy-builder/index.wasm",
   "/cozy-builder-game/index.wasm",
   "/godot-playtest/index.wasm",
+  "/sim/index.wasm",
 ];
 
 app.get(GODOT_WASM_ROUTES, (req, res, next) => {
