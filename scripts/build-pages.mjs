@@ -132,7 +132,7 @@ function siteNav(profile, active, brandOverride = "") {
   const novaHref = "/nova-chat/";
   const cozyHref = "/cozy-builder-game/";
   const timekeeperHref = "/timekeeper/";
-  const simHref = "/sim-live/";
+  const simHref = "/sim/";
   const contactHref = "/contact/";
   const links = profile === "mowing"
     ? [
@@ -163,7 +163,7 @@ function chatSiteNav(active) {
     <a class="johnny-site-brand" href="/" aria-label="618chat.com home">618chat.com</a>
     <nav class="johnny-site-links" aria-label="Site">
       <a class="johnny-site-link ${active === "home" ? "active" : ""}" href="/">Home</a>
-      <a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="/sim-live/">Sim</a>
+      <a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="/sim/">Sim</a>
       <a class="johnny-site-link" href="#compose" data-compose-jump>Write a post</a>
       <a class="johnny-site-link" href="#recent-posts">Recent conversations</a>
     </nav>
@@ -4322,7 +4322,7 @@ ${siteNav("ai", "contact")}
       const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
       const timekeeperHref = "/timekeeper/";
-      const simHref = "/sim-live/";
+      const simHref = "/sim/";
       const contactHref = "/contact/";
 
       profileField.value = profile;

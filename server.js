@@ -939,22 +939,24 @@ function sendSimAsset(req, res, next, assetName) {
   });
 }
 
-app.get(["/sim", "/sim/", "/sim/index.html"], (_req, res) => {
+function sendSimIndex(_req, res, next) {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
-  res.redirect(302, "/sim-live/");
-});
+  setSimAssetHeaders(res, "index.html");
+  res.sendFile(path.join(process.cwd(), "public", "sim", "index.html"), (err) => {
+    if (err) next?.(err);
+  });
+}
 
 app.get("/sim/:asset", (req, res, next) => {
   const assetName = String(req.params.asset || "");
   sendSimAsset(req, res, next, assetName);
 });
 
-app.get(["/sim-live", "/sim-live/", "/sim-live/index.html"], (_req, res) => {
-  setSimAssetHeaders(res, "index.html");
-  res.sendFile(path.join(process.cwd(), "public", "sim", "index.html"));
-});
+app.get(["/sim", "/sim/", "/sim/index.html"], sendSimIndex);
+
+app.get(["/sim-live", "/sim-live/", "/sim-live/index.html"], sendSimIndex);
 
 app.get(["/sim-live/:asset", "/sim-assets/:asset"], (req, res, next) => {
   const assetName = String(req.params.asset || "");
