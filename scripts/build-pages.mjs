@@ -13,7 +13,10 @@ const cozyExportTargetDirs = [
 const godotExportGroups = [
   { sourceDir: cozyExportSourceDir, targetDirs: cozyExportTargetDirs },
 ];
-const godotExportTargetDirs = godotExportGroups.flatMap((group) => group.targetDirs);
+const godotExportTargetDirs = [
+  ...godotExportGroups.flatMap((group) => group.targetDirs),
+  path.join(publicDir, "sim"),
+];
 
 const widgetSnippet = (profile) => `
   <script>
