@@ -928,13 +928,7 @@ function setSimAssetHeaders(res, assetName = "") {
   }
 }
 
-app.get(["/sim", "/sim/", "/sim/index.html"], (_req, res) => {
-  setSimAssetHeaders(res, "index.html");
-  res.sendFile(path.join(process.cwd(), "public", "sim", "index.html"));
-});
-
-app.get("/sim/:asset", (req, res, next) => {
-  const assetName = String(req.params.asset || "");
+function sendSimAsset(req, res, next, assetName) {
   if (!/^[a-zA-Z0-9._-]+$/.test(assetName)) {
     next();
     return;
@@ -943,6 +937,26 @@ app.get("/sim/:asset", (req, res, next) => {
   res.sendFile(path.join(process.cwd(), "public", "sim", assetName), (err) => {
     if (err) next(err);
   });
+}
+
+app.get(["/sim", "/sim/", "/sim/index.html"], (_req, res) => {
+  setSimAssetHeaders(res, "index.html");
+  res.sendFile(path.join(process.cwd(), "public", "sim", "index.html"));
+});
+
+app.get("/sim/:asset", (req, res, next) => {
+  const assetName = String(req.params.asset || "");
+  sendSimAsset(req, res, next, assetName);
+});
+
+app.get(["/sim-live", "/sim-live/", "/sim-live/index.html"], (_req, res) => {
+  setSimAssetHeaders(res, "index.html");
+  res.sendFile(path.join(process.cwd(), "public", "sim", "index.html"));
+});
+
+app.get(["/sim-live/:asset", "/sim-assets/:asset"], (req, res, next) => {
+  const assetName = String(req.params.asset || "");
+  sendSimAsset(req, res, next, assetName);
 });
 
 app.get(GODOT_WASM_ROUTES, (req, res, next) => {

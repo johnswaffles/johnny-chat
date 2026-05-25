@@ -671,7 +671,20 @@ const Engine = (function () {
 	Engine.load = function (basePath, size) {
 		if (loadPromise == null) {
 			loadPath = basePath;
-			loadPromise = preloader.loadPromise(`${loadPath}.wasm?v=sim-engine-20260525c`, size, true);
+			const wasmUrl = `/sim-assets/${loadPath}.wasm?v=sim-engine-20260525d`;
+			loadPromise = preloader.loadPromise(wasmUrl, size, true).then(async function (response) {
+				const buffer = await response.arrayBuffer();
+				const bytes = new Uint8Array(buffer);
+				const validWasm = bytes.length >= 4 && bytes[0] === 0x00 && bytes[1] === 0x61 && bytes[2] === 0x73 && bytes[3] === 0x6d;
+				if (!validWasm) {
+					const firstBytes = Array.from(bytes.slice(0, 4)).map(function (byte) {
+						return byte.toString(16).padStart(2, '0');
+					}).join(' ');
+					const preview = new TextDecoder().decode(bytes.slice(0, 220)).replace(/\s+/g, ' ').slice(0, 220);
+					throw new Error(`SIM WASM fetch returned invalid bytes from ${response.url || wasmUrl}. First bytes: ${firstBytes}. Preview: ${preview}`);
+				}
+				return new Response(buffer, { 'headers': [['content-type', 'application/wasm']] });
+			});
 			requestAnimationFrame(preloader.animateProgress);
 		}
 		return loadPromise;
