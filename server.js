@@ -7,7 +7,6 @@ import { createRequire } from "module";
 import http from "http";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { createGunzip } from "node:zlib";
 import path from "node:path";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -921,14 +920,13 @@ const GODOT_WASM_ROUTES = [
 
 app.get(GODOT_WASM_ROUTES, (req, res, next) => {
   const compressedPath = path.join(process.cwd(), "public", `${req.path.slice(1)}.gz`);
-  const source = createReadStream(compressedPath);
-  const gunzip = createGunzip();
   res.setHeader("Content-Type", "application/wasm");
+  res.setHeader("Content-Encoding", "gzip");
   res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
   res.removeHeader("Content-Length");
-  source.on("error", next);
-  gunzip.on("error", next);
-  source.pipe(gunzip).pipe(res);
+  createReadStream(compressedPath)
+    .on("error", next)
+    .pipe(res);
 });
 
 app.use(express.static("public"));
