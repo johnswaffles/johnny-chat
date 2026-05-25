@@ -3868,8 +3868,14 @@ async function collectWasmFiles(dir, out = []) {
 
 async function compressPublicWasmAssets() {
   const wasmFiles = await collectWasmFiles(publicDir);
+  const uncompressedWasmFiles = new Set([
+    path.join(publicDir, "sim", "index.wasm"),
+  ]);
 
   for (const filePath of wasmFiles) {
+    if (uncompressedWasmFiles.has(filePath)) {
+      continue;
+    }
     const raw = await readFile(filePath);
     const gzPath = `${filePath}.gz`;
     await writeFile(gzPath, gzipSync(raw, { level: 9 }));
