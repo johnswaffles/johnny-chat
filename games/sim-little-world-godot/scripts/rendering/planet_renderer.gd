@@ -16,6 +16,7 @@ func draw_background(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 
 func draw_world(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 	canvas.draw_rect(Rect2(PlanetSimulation.WORLD_OFFSET, PlanetSimulation.WORLD_SIZE), Color("#04182b"))
+	var busy_world := sim.organisms.size() > 90
 	for y in range(PlanetSimulation.GRID_H):
 		for x in range(PlanetSimulation.GRID_W):
 			var c := sim.cell(x, y)
@@ -43,15 +44,15 @@ func draw_world(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 				var shimmer := 0.018 + sin(float(x) * 0.72 + float(y) * 0.33 + sim.tick * 0.018) * 0.009
 				if shimmer > 0.017 and (x * 5 + y * 7 + int(sim.tick / 10)) % 4 == 0:
 					canvas.draw_circle(center, 5.2 + sediment * 2.5, Color(0.72, 0.96, 1.0, shimmer))
-			if c.microbes > 0.17:
-				draw_microbe_mat(canvas, pos, c, sim.tick)
-			if c.fungus > 0.04:
-				draw_fungal_bloom(canvas, pos, c)
+			if c.microbes > 0.17 and (not busy_world or (x + y + sim.tick) % 2 == 0):
+				draw_microbe_mat(canvas, pos, c, sim.tick, busy_world)
+			if c.fungus > 0.04 and (not busy_world or (x * 3 + y + sim.tick) % 2 == 0):
+				draw_fungal_bloom(canvas, pos, c, busy_world)
 			if c.vent:
 				draw_vent(canvas, pos, sim.tick)
 
 
-func draw_microbe_mat(canvas: CanvasItem, pos: Vector2, c: Dictionary, tick: int) -> void:
+func draw_microbe_mat(canvas: CanvasItem, pos: Vector2, c: Dictionary, tick: int, simplified := false) -> void:
 	var pulse := 0.76 + sin(tick * 0.03 + c.sediment * 6.0) * 0.16
 	var alpha: float = 0.08 + c.microbes * 0.36
 	var offset := Vector2(3.0 + c.sediment * 6.0, 4.0 + sin(c.sediment * 5.4) * 2.8)
@@ -60,16 +61,19 @@ func draw_microbe_mat(canvas: CanvasItem, pos: Vector2, c: Dictionary, tick: int
 	canvas.draw_circle(center, radius, Color(0.14, 0.76, 0.54, alpha * 0.38))
 	canvas.draw_circle(center + Vector2(3.2, -1.8), radius * 0.42, Color(0.72, 1.0, 0.5, alpha * pulse))
 	canvas.draw_circle(center + Vector2(-2.8, 2.2), radius * 0.32, Color(0.16, 0.86, 0.82, alpha * 0.72))
+	if simplified:
+		return
 	for i in range(3):
 		var bend := sin(float(i) * 2.3 + c.sediment * 7.0 + tick * 0.014) * 2.2
 		var y := -radius * 0.35 + i * radius * 0.33
 		canvas.draw_line(center + Vector2(-radius * 0.48, y), center + Vector2(radius * 0.52, y + bend), Color(0.74, 1.0, 0.66, alpha * 0.18), 1.0)
 
 
-func draw_fungal_bloom(canvas: CanvasItem, pos: Vector2, c: Dictionary) -> void:
+func draw_fungal_bloom(canvas: CanvasItem, pos: Vector2, c: Dictionary, simplified := false) -> void:
 	var alpha: float = 0.16 + c.fungus * 0.48
 	canvas.draw_circle(pos + Vector2(6.0, 6.0), 2.0 + c.fungus * 5.0, Color(0.76, 0.35, 1.0, alpha))
-	canvas.draw_circle(pos + Vector2(8.0, 6.5), 0.8 + c.fungus * 1.8, Color(1.0, 0.68, 1.0, alpha * 0.9))
+	if not simplified:
+		canvas.draw_circle(pos + Vector2(8.0, 6.5), 0.8 + c.fungus * 1.8, Color(1.0, 0.68, 1.0, alpha * 0.9))
 
 
 func draw_vent(canvas: CanvasItem, pos: Vector2, tick: int) -> void:
@@ -81,17 +85,20 @@ func draw_vent(canvas: CanvasItem, pos: Vector2, tick: int) -> void:
 
 func draw_organisms(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 	for organism in sim.organisms:
-		var p: Vector2 = PlanetSimulation.WORLD_OFFSET + organism.pos
+		var p: Vector2 = PlanetSimulation.WORLD_OFFSET + organism.prev_pos.lerp(organism.pos, sim.render_alpha)
+		var draw_vel: Vector2 = organism.prev_vel.lerp(organism.vel, sim.render_alpha)
+		if draw_vel.length_squared() < 0.0001:
+			draw_vel = organism.vel
 		match organism.kind:
 			"amoeboid":
-				draw_amoeboid(canvas, p, organism, sim.tick)
+				draw_amoeboid(canvas, p, organism, sim.tick, draw_vel)
 			"grazer":
-				draw_grazer(canvas, p, organism, sim.tick)
+				draw_grazer(canvas, p, organism, sim.tick, draw_vel)
 			"predator":
-				draw_predator(canvas, p, organism, sim.tick)
+				draw_predator(canvas, p, organism, sim.tick, draw_vel)
 
 
-func draw_amoeboid(canvas: CanvasItem, p: Vector2, organism: Dictionary, tick: int) -> void:
+func draw_amoeboid(canvas: CanvasItem, p: Vector2, organism: Dictionary, tick: int, draw_vel: Vector2) -> void:
 	var r: float = 4.2 + organism.size * 2.1
 	var wobble := sin(tick * 0.08 + organism.generation) * 0.9
 	var pts := PackedVector2Array()
@@ -101,11 +108,11 @@ func draw_amoeboid(canvas: CanvasItem, p: Vector2, organism: Dictionary, tick: i
 		pts.append(p + Vector2(cos(a), sin(a)) * rr)
 	canvas.draw_circle(p, r * 1.75, Color(0.25, 0.95, 1.0, 0.12))
 	canvas.draw_colored_polygon(pts, Color(0.38, 0.92, 1.0, 0.72))
-	canvas.draw_circle(p + organism.vel * 2.2, 1.1, Color(0.88, 1.0, 1.0, 0.86))
+	canvas.draw_circle(p + draw_vel * 2.2, 1.1, Color(0.88, 1.0, 1.0, 0.86))
 
 
-func draw_grazer(canvas: CanvasItem, p: Vector2, organism: Dictionary, tick: int) -> void:
-	var angle: float = organism.vel.angle()
+func draw_grazer(canvas: CanvasItem, p: Vector2, organism: Dictionary, tick: int, draw_vel: Vector2) -> void:
+	var angle: float = draw_vel.angle()
 	var forward := Vector2(cos(angle), sin(angle))
 	var side := Vector2(-forward.y, forward.x)
 	var length: float = 8.5 + organism.size * 4.0
@@ -126,8 +133,8 @@ func draw_grazer(canvas: CanvasItem, p: Vector2, organism: Dictionary, tick: int
 	canvas.draw_circle(p + forward * length * 0.76, 1.2, Color(0.98, 1.0, 0.82, 0.9))
 
 
-func draw_predator(canvas: CanvasItem, p: Vector2, organism: Dictionary, tick: int) -> void:
-	var angle: float = organism.vel.angle()
+func draw_predator(canvas: CanvasItem, p: Vector2, organism: Dictionary, tick: int, draw_vel: Vector2) -> void:
+	var angle: float = draw_vel.angle()
 	var forward := Vector2(cos(angle), sin(angle))
 	var side := Vector2(-forward.y, forward.x)
 	var length: float = 10.0 + organism.size * 4.6

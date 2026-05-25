@@ -15,6 +15,7 @@ var running := true
 var speed_index := 3
 var sim_accumulator := 0.0
 var paint_down := false
+const SIM_STEP := 1.0 / 30.0
 
 var ui: CanvasLayer
 var stats_label: RichTextLabel
@@ -40,12 +41,15 @@ func _process(delta: float) -> void:
 	if running:
 		sim_accumulator += delta * PlanetSimulation.SPEEDS[speed_index]
 		var guard := 0
-		while sim_accumulator >= 1.0 / 30.0 and guard < 90:
-			sim.step(1.0 / 30.0)
-			sim_accumulator -= 1.0 / 30.0
+		while sim_accumulator >= SIM_STEP and guard < 90:
+			sim.step(SIM_STEP)
+			sim_accumulator -= SIM_STEP
 			guard += 1
+		sim.render_alpha = clamp(sim_accumulator / SIM_STEP, 0.0, 1.0)
 		if sim.tick % 10 == 0:
 			_update_ui()
+	else:
+		sim.render_alpha = 1.0
 	queue_redraw()
 
 

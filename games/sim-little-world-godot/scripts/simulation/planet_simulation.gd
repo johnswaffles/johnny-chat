@@ -34,6 +34,7 @@ var climate_heat := 0.44
 var oxygen := 0.012
 var co2 := 0.91
 var selected_tool := 0
+var render_alpha := 1.0
 
 
 func new_world(new_seed: String) -> void:
@@ -108,6 +109,9 @@ func _create_cell(x: int, y: int) -> Dictionary:
 
 func step(delta: float) -> void:
 	tick += 1
+	for organism in organisms:
+		organism.prev_pos = organism.pos
+		organism.prev_vel = organism.vel
 	day = int(tick / 180) + 1
 	year = int((day - 1) / 48) + 1
 	season = int(((day - 1) % 48) / 12)
@@ -304,7 +308,9 @@ func spawn(kind: String, pos: Vector2, parent = null):
 	var organism := {
 		"kind": kind,
 		"pos": pos,
+		"prev_pos": pos,
 		"vel": _random_vec(1.0).normalized(),
+		"prev_vel": Vector2.ZERO,
 		"energy": 84.0,
 		"age": 0.0,
 		"cooldown": rng.randf_range(1.0, 8.0),
