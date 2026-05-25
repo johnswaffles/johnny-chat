@@ -3870,6 +3870,7 @@ async function compressPublicWasmAssets() {
   const wasmFiles = await collectWasmFiles(publicDir);
   const uncompressedWasmFiles = new Set([
     path.join(publicDir, "sim", "index.wasm"),
+    path.join(publicDir, "sim", "sim-engine-20260525c.wasm"),
   ]);
 
   for (const filePath of wasmFiles) {

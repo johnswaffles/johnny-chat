@@ -671,7 +671,7 @@ const Engine = (function () {
 	Engine.load = function (basePath, size) {
 		if (loadPromise == null) {
 			loadPath = basePath;
-			loadPromise = preloader.loadPromise(`${loadPath}.wasm?v=sim-direct-20260525b`, size, true);
+			loadPromise = preloader.loadPromise(`${loadPath}.wasm?v=sim-engine-20260525c`, size, true);
 			requestAnimationFrame(preloader.animateProgress);
 		}
 		return loadPromise;
