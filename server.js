@@ -940,8 +940,10 @@ function sendSimAsset(req, res, next, assetName) {
 }
 
 app.get(["/sim", "/sim/", "/sim/index.html"], (_req, res) => {
-  setSimAssetHeaders(res, "index.html");
-  res.sendFile(path.join(process.cwd(), "public", "sim", "index.html"));
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.redirect(302, "/sim-live/");
 });
 
 app.get("/sim/:asset", (req, res, next) => {
