@@ -917,6 +917,34 @@ const GODOT_WASM_ROUTES = [
   "/godot-playtest/index.wasm",
 ];
 
+function setSimAssetHeaders(res, assetName = "") {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  if (assetName.endsWith(".wasm")) {
+    res.setHeader("Content-Type", "application/wasm");
+  } else if (assetName.endsWith(".pck")) {
+    res.setHeader("Content-Type", "application/octet-stream");
+  }
+}
+
+app.get(["/sim", "/sim/", "/sim/index.html"], (_req, res) => {
+  setSimAssetHeaders(res, "index.html");
+  res.sendFile(path.join(process.cwd(), "public", "sim", "index.html"));
+});
+
+app.get("/sim/:asset", (req, res, next) => {
+  const assetName = String(req.params.asset || "");
+  if (!/^[a-zA-Z0-9._-]+$/.test(assetName)) {
+    next();
+    return;
+  }
+  setSimAssetHeaders(res, assetName);
+  res.sendFile(path.join(process.cwd(), "public", "sim", assetName), (err) => {
+    if (err) next(err);
+  });
+});
+
 app.get(GODOT_WASM_ROUTES, (req, res, next) => {
   const compressedPath = path.join(process.cwd(), "public", `${req.path.slice(1)}.gz`);
   res.setHeader("Content-Type", "application/wasm");
