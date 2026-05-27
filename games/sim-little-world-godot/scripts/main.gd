@@ -219,8 +219,7 @@ func _select_tool(index: int) -> void:
 	for i in range(tool_buttons.size()):
 		tool_buttons[i].button_pressed = i == index
 	if tool_state_label:
-		var tool_name := PlanetSimulation.TOOLS[index]
-		tool_state_label.text = "%s active\nClick or drag on the planet." % tool_name
+		tool_state_label.text = "%s active\nClick or drag on the planet." % str(PlanetSimulation.TOOLS[index])
 
 
 func _update_ui() -> void:
