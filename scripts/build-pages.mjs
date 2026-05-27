@@ -4,6 +4,7 @@ import { gzipSync } from "node:zlib";
 
 const root = process.cwd();
 const publicDir = path.join(root, "public");
+const isPagesBuild = process.env.CF_PAGES === "1" || process.env.CF_PAGES === "true";
 const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
 const cozyExportTargetDirs = [
   path.join(publicDir, "cozy-builder"),
@@ -3881,6 +3882,12 @@ async function compressPublicWasmAssets() {
     const gzPath = `${filePath}.gz`;
     await writeFile(gzPath, gzipSync(raw, { level: 9 }));
     await rm(filePath);
+  }
+
+  if (isPagesBuild) {
+    for (const filePath of uncompressedWasmFiles) {
+      await rm(filePath, { force: true });
+    }
   }
 }
 
