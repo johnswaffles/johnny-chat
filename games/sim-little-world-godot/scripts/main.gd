@@ -23,6 +23,7 @@ var clock_label: Label
 var weather_label: Label
 var event_label: RichTextLabel
 var seed_edit: LineEdit
+var tool_state_label: Label
 var graph: Control
 var tool_buttons: Array[Button] = []
 
@@ -109,6 +110,14 @@ func _build_ui() -> void:
 		b.pressed.connect(_select_tool.bind(i))
 		tool_buttons.append(b)
 	_select_tool(0)
+
+	tool_state_label = Label.new()
+	tool_state_label.position = Vector2(38, 540)
+	tool_state_label.size = Vector2(176, 32)
+	tool_state_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tool_state_label.add_theme_font_size_override("font_size", 12)
+	tool_state_label.add_theme_color_override("font_color", Color("#b5dbe3"))
+	ui.add_child(tool_state_label)
 
 	_header("SEED", Vector2(38, 562))
 	seed_edit = LineEdit.new()
@@ -209,6 +218,9 @@ func _select_tool(index: int) -> void:
 	sim.select_tool(index)
 	for i in range(tool_buttons.size()):
 		tool_buttons[i].button_pressed = i == index
+	if tool_state_label:
+		var tool_name := PlanetSimulation.TOOLS[index]
+		tool_state_label.text = "%s active\nClick or drag on the planet." % tool_name
 
 
 func _update_ui() -> void:

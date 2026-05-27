@@ -84,9 +84,10 @@ func draw_vent(canvas: CanvasItem, pos: Vector2, tick: int) -> void:
 
 
 func draw_organisms(canvas: CanvasItem, sim: PlanetSimulation) -> void:
+	var t := sim.render_alpha * sim.render_alpha * (3.0 - 2.0 * sim.render_alpha)
 	for organism in sim.organisms:
-		var p: Vector2 = PlanetSimulation.WORLD_OFFSET + organism.prev_pos.lerp(organism.pos, sim.render_alpha)
-		var draw_vel: Vector2 = organism.prev_vel.lerp(organism.vel, sim.render_alpha)
+		var p: Vector2 = PlanetSimulation.WORLD_OFFSET + organism.prev_pos.lerp(organism.pos, t)
+		var draw_vel: Vector2 = organism.prev_vel.lerp(organism.vel, t)
 		if draw_vel.length_squared() < 0.0001:
 			draw_vel = organism.vel
 		match organism.kind:
