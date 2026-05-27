@@ -12,10 +12,10 @@ var graph_renderer := PopulationGraph.new()
 var glass := GlassTheme.new()
 
 var running := true
-var speed_index := 3
 var sim_accumulator := 0.0
 var paint_down := false
 const SIM_STEP := 1.0 / 30.0
+const SIM_SPEED := 1.0
 
 var ui: CanvasLayer
 var stats_label: RichTextLabel
@@ -23,7 +23,6 @@ var clock_label: Label
 var weather_label: Label
 var event_label: RichTextLabel
 var seed_edit: LineEdit
-var speed_label: Label
 var graph: Control
 var tool_buttons: Array[Button] = []
 
@@ -39,7 +38,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if running:
-		sim_accumulator += delta * PlanetSimulation.SPEEDS[speed_index]
+		sim_accumulator += delta * SIM_SPEED
 		var guard := 0
 		while sim_accumulator >= SIM_STEP and guard < 90:
 			sim.step(SIM_STEP)
@@ -84,7 +83,7 @@ func _build_ui() -> void:
 	ui.add_child(title)
 
 	var subtitle := Label.new()
-	subtitle.text = "Planetary evolution lab - seed primordial life, tune time, and watch an alien Earth become alive."
+	subtitle.text = "Planetary evolution lab - seed primordial life and watch an alien Earth become alive."
 	subtitle.position = Vector2(44, 80)
 	subtitle.modulate = Color("#a7c9d2")
 	ui.add_child(subtitle)
@@ -117,25 +116,6 @@ func _build_ui() -> void:
 	seed_edit.position = Vector2(38, 590)
 	seed_edit.size = Vector2(176, 36)
 	ui.add_child(seed_edit)
-
-	_header("TIME SCALE", Vector2(38, 644))
-	speed_label = Label.new()
-	speed_label.position = Vector2(38, 670)
-	speed_label.add_theme_color_override("font_color", Color("#d5fff4"))
-	ui.add_child(speed_label)
-	var speed := HSlider.new()
-	speed.position = Vector2(38, 696)
-	speed.size = Vector2(176, 32)
-	speed.min_value = 0
-	speed.max_value = PlanetSimulation.SPEEDS.size() - 1
-	speed.step = 1
-	speed.value = speed_index
-	speed.value_changed.connect(func(value: float) -> void:
-		speed_index = int(value)
-		_update_speed_label()
-	)
-	ui.add_child(speed)
-	_update_speed_label()
 
 	_panel(Vector2(1186, 140), Vector2(236, 724), Color(0.018, 0.038, 0.052, 0.78))
 	_header("PLANET STATUS", Vector2(1208, 160))
@@ -229,11 +209,6 @@ func _select_tool(index: int) -> void:
 	sim.select_tool(index)
 	for i in range(tool_buttons.size()):
 		tool_buttons[i].button_pressed = i == index
-
-
-func _update_speed_label() -> void:
-	var rate := PlanetSimulation.SPEEDS[speed_index]
-	speed_label.text = "paused" if rate == 0.0 else "%.2fx" % rate
 
 
 func _update_ui() -> void:
