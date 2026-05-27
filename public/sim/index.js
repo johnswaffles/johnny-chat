@@ -671,7 +671,7 @@ const Engine = (function () {
 	Engine.load = function (basePath, size) {
 		if (loadPromise == null) {
 			loadPath = basePath;
-			const wasmUrl = `/sim-assets/${loadPath}.wasm?v=sim-engine-20260525d`;
+			const wasmUrl = `./${loadPath}.wasm?v=sim-engine-20260525d`;
 			loadPromise = preloader.loadPromise(wasmUrl, size, true).then(async function (response) {
 				const buffer = await response.arrayBuffer();
 				const bytes = new Uint8Array(buffer);

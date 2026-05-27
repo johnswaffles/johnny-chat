@@ -12,3 +12,26 @@
   Content-Type: application/wasm
   Content-Encoding: gzip
   Cache-Control: public, max-age=0, must-revalidate
+
+/sim
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/sim/
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/sim/index.html
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/sim/index.js
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/sim/index.pck
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/sim/index.wasm
+  Content-Type: application/wasm
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/sim/sim-engine-20260525c.wasm
+  Content-Type: application/wasm
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
