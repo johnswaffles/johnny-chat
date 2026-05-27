@@ -1,13 +1,14 @@
-const RENDER_WASM_URL = "https://johnny-chat.onrender.com/sim/sim-engine-20260525c.wasm";
+const LOCAL_GZ_URL = "/sim/index.wasm.gz";
 
-async function proxySimWasm() {
-  const response = await fetch(RENDER_WASM_URL);
+async function proxySimWasm(baseUrl) {
+  const response = await fetch(new URL(LOCAL_GZ_URL, baseUrl));
   if (!response.ok) {
     return response;
   }
 
   const headers = new Headers(response.headers);
   headers.set("Content-Type", "application/wasm");
+  headers.set("Content-Encoding", "gzip");
   headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   headers.set("Pragma", "no-cache");
   headers.set("Expires", "0");
@@ -19,6 +20,6 @@ async function proxySimWasm() {
   });
 }
 
-export async function onRequest() {
-  return proxySimWasm();
+export async function onRequest(context) {
+  return proxySimWasm(context.request.url);
 }
