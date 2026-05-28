@@ -292,7 +292,8 @@ func move_organism(organism: Dictionary, target: Vector2, speed: float, delta: f
 	var dir: Vector2 = (target - organism.pos).normalized()
 	if dir.length() == 0.0:
 		dir = _random_vec(1.0).normalized()
-	organism.vel = organism.vel.lerp(dir, 0.07).normalized()
+	var turn_rate := clamp(0.03 + speed * 0.00012, 0.035, 0.055)
+	organism.vel = organism.vel.lerp(dir, turn_rate).normalized()
 	var next: Vector2 = organism.pos + organism.vel * speed * delta
 	var c := cell_at_world(next)
 	if _is_blocking_terrain(c.type) and not c.vent:

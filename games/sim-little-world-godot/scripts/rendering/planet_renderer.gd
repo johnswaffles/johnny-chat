@@ -90,6 +90,7 @@ func draw_organisms(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 		var draw_vel: Vector2 = organism.prev_vel.lerp(organism.vel, t)
 		if draw_vel.length_squared() < 0.0001:
 			draw_vel = organism.vel
+		p += draw_vel * float(organism.get("speed", 1.0)) * 0.16 * (t - 0.5)
 		match organism.kind:
 			"amoeboid":
 				draw_amoeboid(canvas, p, organism, sim.tick, draw_vel)
