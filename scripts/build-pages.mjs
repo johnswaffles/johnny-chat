@@ -2900,8 +2900,7 @@ ${chatSiteNav("home")}
           });
         }
         const readerExpandBtn = readerEl.querySelector('[data-reader-action="expand-full"]');
-        const readerFullBody = readerEl.querySelector(".reader-full-body");
-        if (readerExpandBtn && readerFullBody) {
+        if (readerExpandBtn) {
           readerExpandBtn.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
