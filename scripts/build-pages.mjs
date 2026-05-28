@@ -3674,7 +3674,7 @@ ${chatSiteNav("home")}
       });
       setInterval(() => {
         if (!document.hidden) loadPosts();
-      }, 5000);
+      }, 120000);
       window.addEventListener("focus", () => {
         if (!document.hidden) loadPosts();
       });
