@@ -1585,12 +1585,14 @@ function create618ChatPage() {
         radial-gradient(circle, rgba(63, 159, 153, 0.24), transparent 68%);
     }
     .hero h1 {
-      max-width: 9.7ch;
+      max-width: 11.2ch;
       background: linear-gradient(135deg, #fffdf7 0%, #d9f5df 56%, #88d29d 100%);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
       text-shadow: 0 24px 70px rgba(0,0,0,0.18);
+      font-size: clamp(40px, 5.4vw, 76px);
+      line-height: 0.94;
     }
     .hero p {
       color: rgba(255, 253, 247, 0.82);
