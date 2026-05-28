@@ -1993,6 +1993,7 @@ ${chatSiteNav("home")}
       const replyClear = document.getElementById("reply-clear");
       const submitButton = form.querySelector('button[type="submit"]');
       let selectedId = "";
+      let readerFullPostExpanded = false;
       let replyTargetId = "";
       let posts = [];
       let loading = true;
@@ -2397,7 +2398,11 @@ ${chatSiteNav("home")}
       }
 
       function selectPost(id) {
-        selectedId = String(id || "").trim();
+        const nextId = String(id || "").trim();
+        if (selectedId !== nextId) {
+          readerFullPostExpanded = false;
+        }
+        selectedId = nextId;
         syncSelectedPostUrl(selectedId);
         render();
       }
@@ -2817,8 +2822,13 @@ ${chatSiteNav("home")}
           posts = Array.isArray(payload.posts) ? payload.posts : [];
           flagThreshold = Number(payload.flagThreshold || 10) || 10;
           boardStats = payload.stats || deriveBoardStats(posts);
+          let nextSelectedId = selectedId;
           if (!selectedId || !posts.some((post) => post.id === selectedId)) {
-            selectedId = posts[0] ? posts[0].id : "";
+            nextSelectedId = posts[0] ? posts[0].id : "";
+          }
+          if (nextSelectedId !== selectedId) {
+            readerFullPostExpanded = false;
+            selectedId = nextSelectedId;
           }
           if (replyTargetId && !posts.some((post) => post.id === replyTargetId)) {
             clearReplyTarget();
@@ -2857,14 +2867,16 @@ ${chatSiteNav("home")}
         const postTopic = String(post.topic || "General").trim();
         const authorMuted = isMutedAuthor(post.author);
         const preview = getReaderPreview(post.message);
+        const readerExpanded = readerFullPostExpanded && selectedId === post.id;
         readerEl.innerHTML =
           '<h3 class="detail-title">' + escapeHTML(post.title) + '</h3>' +
           '<div class="detail-meta">Posted by ' + escapeHTML(post.author || "Anonymous") + ' on ' + escapeHTML(formatDate(post.createdAt)) + ' · ' + escapeHTML(postTopic) + '</div>' +
-          '<div class="detail-body detail-body-preview ' + (preview.truncated ? "is-truncated" : "") + '">' + escapeHTML(preview.preview).replace(/\\n/g, "<br>") + '</div>' +
+          '<div class="detail-body detail-body-preview ' + (preview.truncated && !readerExpanded ? "is-truncated" : "") + '">' + escapeHTML(preview.preview).replace(/\\n/g, "<br>") + '</div>' +
           (preview.truncated
-            ? '<p class="reader-preview-note">Showing a short preview so the page stays easy to scan.</p>' +
-              '<button type="button" class="reader-expand-button" data-reader-action="expand-full" aria-expanded="false">Read full post</button>' +
-              '<div class="detail-body reader-full-body" hidden>' + escapeHTML(preview.full).replace(/\\n/g, "<br>") + '</div>'
+            ? (readerExpanded
+              ? '<div class="detail-body reader-full-body">' + escapeHTML(preview.full).replace(/\\n/g, "<br>") + '</div>'
+              : '<p class="reader-preview-note">Showing a short preview so the page stays easy to scan.</p>' +
+                '<button type="button" class="reader-expand-button" data-reader-action="expand-full" aria-expanded="false">Read full post</button>') 
             : '') +
           '<div class="comment-card-footer" style="padding: 12px 0 0; margin: 0;">' +
             '<span>' + supportCount + ' support' + (supportCount === 1 ? "" : "s") + (postPinned ? ' · Pinned' : '') + '</span>' +
@@ -2893,10 +2905,8 @@ ${chatSiteNav("home")}
           readerExpandBtn.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
-            const shouldOpen = readerFullBody.hidden;
-            readerFullBody.hidden = !shouldOpen;
-            readerExpandBtn.setAttribute("aria-expanded", String(shouldOpen));
-            readerExpandBtn.textContent = shouldOpen ? "Hide full post" : "Read full post";
+            readerFullPostExpanded = true;
+            render();
           });
         }
         const readerReplyBtn = readerEl.querySelector('[data-reader-action="reply"]');
