@@ -1962,7 +1962,7 @@ ${chatSiteNav("home")}
       const draftKey = "618chat_draft_v3";
       const mutedKey = "618chat_muted_authors_v1";
       const clientIdKey = "618chat_client_id_v1";
-      const readerPreviewLimit = 360;
+      const readerPreviewLimit = 3600;
       const ageGate = document.getElementById("age-gate");
       const ageGateEnter = document.getElementById("age-gate-enter");
       const ageGateLeave = document.getElementById("age-gate-leave");
@@ -2853,6 +2853,13 @@ ${chatSiteNav("home")}
       }
 
       async function loadPosts() {
+        const preserveScrollX = window.scrollX || 0;
+        const preserveScrollY = window.scrollY || 0;
+        const restoreScroll = () => {
+          if (typeof window.scrollTo === "function") {
+            window.scrollTo(preserveScrollX, preserveScrollY);
+          }
+        };
         loading = true;
         statusEl.textContent = adminMode ? "Loading conversations in moderation mode..." : "Loading conversations...";
         try {
@@ -2885,11 +2892,13 @@ ${chatSiteNav("home")}
             : (posts.length ? "Conversation board loaded." : "No posts yet. Be the first to start a conversation.");
           statusEl.classList.remove("error");
           render();
+          window.requestAnimationFrame(restoreScroll);
         } catch (err) {
           loading = false;
           statusEl.textContent = err.message || "Could not load posts.";
           statusEl.classList.add("error");
           render();
+          window.requestAnimationFrame(restoreScroll);
         }
       }
 
