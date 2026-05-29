@@ -2032,16 +2032,62 @@ ${chatSiteNav("home")}
       }
 
       function makeTitle(message) {
-        const clean = String(message || "").replace(/\\s+/g, " ").trim().replace(/[.!?\\s]+$/g, "");
-        if (!clean) return "Untitled note";
-        const firstSentence = clean.split(/(?<=[.!?])\\s+/)[0] || clean;
-        const words = firstSentence.split(" ").slice(0, 7).join(" ");
-        let title = words || clean.split(" ").slice(0, 7).join(" ");
-        title = title.replace(/[,;:]+/g, "").trim();
-        if (!title) return "Untitled note";
-        title = title.charAt(0).toUpperCase() + title.slice(1);
-        if (title.length > 48) title = title.slice(0, 45).trim() + "…";
-        return title;
+        const clean = String(message || "")
+          .replace(/\\r\\n/g, "\\n")
+          .replace(/\\t/g, " ")
+          .replace(/[ \\u00A0]{2,}/g, " ")
+          .trim();
+        if (!clean) return "A Quiet Note";
+
+        const stripLeadIn = (value) => {
+          const lines = String(value || "").split("\\n");
+          const first = (lines[0] || "").trim().toLowerCase();
+          if (/^integrated\\s+(?:the\\s+)?(?:explanation|summary|description|post|message|writeup)\\b/.test(first)) {
+            return lines.slice(1).join("\\n").trim() || value;
+          }
+          if (/^(?:here(?:'s| is)|this is)\\s+(?:the\\s+)?(?:full\\s+)?(?:post|message|explanation|summary|writeup)\\b/.test(first)) {
+            return lines.slice(1).join("\\n").trim() || value;
+          }
+          return value;
+        };
+
+        const source = stripLeadIn(clean).replace(/[^\p{L}\p{N}\\s']/gu, " ").toLowerCase();
+        const tokens = source.split(/\\s+/).filter(Boolean);
+        const stop = new Set(["a","an","and","are","as","at","be","but","by","for","from","how","i","if","in","into","is","it","its","just","my","of","on","or","our","so","that","the","their","this","to","too","up","us","was","we","what","when","where","which","who","why","with","you","your","people","ready","serious","oriented","call","full","post","message","summary","description","writeup","rewrite","rewritten"]);
+        const weights = new Map([["welcome",6],["service",6],["discipline",6],["disciplined",6],["devotion",5],["order",5],["obedience",5],["respect",5],["care",4],["support",4],["hope",4],["quiet",3],["path",5],["journey",5],["story",4],["note",3],["conversation",4],["community",4],["change",4],["healing",5],["growth",5],["future",4],["work",3],["home",4],["love",4],["truth",5],["voice",4],["help",5],["build",4],["create",4],["fresh",3],["start",4],["faith",4],["wisdom",4],["peace",5]]);
+        const pickKeywords = (max) => {
+          const scored = tokens.map((word, index) => ({ word, index, score: (weights.get(word) || 0) + (stop.has(word) ? -4 : 0) }));
+          const picked = [];
+          for (const item of scored.sort((a, b) => b.score - a.score || a.index - b.index)) {
+            if (!item.score || stop.has(item.word) || picked.includes(item.word)) continue;
+            picked.push(item.word);
+            if (picked.length >= max) break;
+          }
+          if (picked.length < max) {
+            for (const word of tokens) {
+              if (stop.has(word) || picked.includes(word)) continue;
+              picked.push(word);
+              if (picked.length >= max) break;
+            }
+          }
+          return picked.slice(0, max).map((word) => word.charAt(0).toUpperCase() + word.slice(1));
+        };
+
+        const keywords = pickKeywords(2);
+        const lower = source;
+        if (/\\bwelcome\\b/.test(lower)) {
+          return keywords.length ? "Welcome to " + keywords.join(" ") : "Welcome to 618chat";
+        }
+        if (/\\b(call for|call to)\\b/.test(lower)) {
+          return keywords.length >= 2 ? "A Call for " + keywords[0] + " and " + keywords[1] : keywords.length ? "A Call for " + keywords[0] : "A Call for Something Better";
+        }
+        if (/\\b(need help|looking for help|need)\\b/.test(lower)) {
+          return keywords.length >= 2 ? "Need Help With " + keywords[0] + " and " + keywords[1] : keywords.length ? "Need Help With " + keywords[0] : "Need Help";
+        }
+        if (/\\b(path|journey|road|way)\\b/.test(lower)) {
+          return keywords.length >= 2 ? "On the Path to " + keywords[0] + " and " + keywords[1] : keywords.length ? "On the Path to " + keywords[0] : "On the Path Forward";
+        }
+        return keywords.length >= 2 ? "A Quiet Note on " + keywords[0] + " and " + keywords[1] : keywords.length ? "A Quiet Note on " + keywords[0] : "A Quiet Note";
       }
 
       function formatDate(value) {
