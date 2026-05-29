@@ -1032,8 +1032,33 @@ function buildBoardFallbackTitle(message) {
   return title || "Thoughtful note";
 }
 
-function sanitizeBoardMessageLocally(message) {
+function stripBoardMetaLeadIn(message) {
   const clean = compactText(message)
+    .replace(/\r\n/g, "\n")
+    .replace(/\t/g, " ")
+    .replace(/[ \u00A0]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  if (!clean) return "";
+
+  const lines = clean.split("\n");
+  const firstLine = compactText(lines[0]).replace(/\s+/g, " ");
+  const isLeadIn = [
+    /^integrated\s+(?:the\s+)?(?:explanation|summary|description|post|message|writeup)\b.*:?\s*$/i,
+    /^(?:here(?:'s| is)|this is)\s+(?:the\s+)?(?:full\s+)?(?:post|message|explanation|summary|writeup)\b.*:?\s*$/i,
+    /^(?:rewritten|rewrote|rewrite|updated|edited)\b.*:?\s*$/i,
+    /^(?:post|message|description|summary|explanation|writeup)\s*:\s*$/i
+  ].some((pattern) => pattern.test(firstLine));
+
+  if (!isLeadIn || lines.length < 2) return clean;
+
+  const rest = lines.slice(1).join("\n").trim();
+  return rest || clean;
+}
+
+function sanitizeBoardMessageLocally(message) {
+  const clean = stripBoardMetaLeadIn(message)
     .replace(/\r\n/g, "\n")
     .replace(/\t/g, " ")
     .replace(/[ \u00A0]{2,}/g, " ")
@@ -1045,11 +1070,13 @@ function sanitizeBoardMessageLocally(message) {
 }
 
 function normalizeGeneratedBoardTitle(title, message) {
-  const fallback = buildBoardFallbackTitle(message);
+  const sourceMessage = stripBoardMetaLeadIn(message);
+  const fallback = buildBoardFallbackTitle(sourceMessage);
   const clean = compactText(title)
     .replace(/^["'“”]+|["'“”]+$/g, "")
     .replace(/[\r\n]+/g, " ")
     .replace(/\s+/g, " ")
+    .replace(/\b(integrated|explanation|summary|description|writeup|rewrite|rewritten|full post)\b/ig, "")
     .replace(/[.!?]+$/g, "")
     .trim();
 
@@ -1061,6 +1088,7 @@ function normalizeGeneratedBoardTitle(title, message) {
   if (/^[^a-z0-9]*$/.test(clean)) return fallback;
   if (/\b(\w+)\s+\1\b/i.test(clean)) return fallback;
   if (/^(and|or|but|to|of|for|with|from|at|by|in)\b/i.test(clean)) return fallback;
+  if (/\b(explanation|summary|description|writeup|rewrite|rewritten|full post|community note|untitled note|pending title)\b/i.test(clean)) return fallback;
   if (clean.split(/\s+/).length < 2) return fallback;
   if (/[,:;]\s*$/.test(clean)) return fallback;
 
@@ -1069,7 +1097,7 @@ function normalizeGeneratedBoardTitle(title, message) {
     .map((word) => word ? word[0].toUpperCase() + word.slice(1) : word)
     .join(" ");
 
-  return looksLikeWeakBoardTitle(candidate, message) ? fallback : candidate;
+  return looksLikeWeakBoardTitle(candidate, sourceMessage) ? fallback : candidate;
 }
 
 function normalizeBoardTitle(message) {
@@ -1078,9 +1106,10 @@ function normalizeBoardTitle(message) {
 
 function looksLikeWeakBoardTitle(title, message) {
   const candidate = compactText(title).toLowerCase();
-  const source = compactText(message).toLowerCase();
+  const source = stripBoardMetaLeadIn(message).toLowerCase();
   if (!candidate) return true;
   if (candidate === "community note" || candidate === "untitled note" || candidate === "pending title") return true;
+  if (/\b(explanation|summary|description|writeup|rewrite|rewritten|full post)\b/i.test(candidate)) return true;
 
   const candidateWords = candidate.replace(/[^\p{L}\p{N}\s']/gu, " ").split(/\s+/).filter(Boolean);
   const sourceWords = source.replace(/[^\p{L}\p{N}\s']/gu, " ").split(/\s+/).filter(Boolean);
@@ -1303,7 +1332,9 @@ async function generateBoardTitleFromPrompt(message, stronger = false) {
             "Prefer a complete noun phrase or short sentence that reads smoothly.",
             "Aim for 3 to 9 words.",
             "Make it feel polished, warm, and a little poetic.",
-            "Use the mood or meaning of the post, not just its first few words.",
+            "Use the mood, promise, or main topic of the post, not just its first few words.",
+            "Do not summarize the editing process or rewrite process.",
+            "Do not produce titles that sound like labels such as explanation, summary, description, writeup, or full post.",
             "Do not reuse the opening words of the post unless the title is genuinely transformed.",
             "Avoid generic lead-ins like 'I did what I thought' or 'A post about'.",
             "Do not use generic titles like Community note, Untitled note, or Pending title.",
@@ -1325,6 +1356,7 @@ async function generateBoardTitleFromPrompt(message, stronger = false) {
       .replace(/^["'“”]+|["'“”]+$/g, "")
       .replace(/[\r\n]+/g, " ")
       .replace(/\s+/g, " ")
+      .replace(/\b(integrated|explanation|summary|description|writeup|rewrite|rewritten|full post)\b/ig, "")
       .replace(/[.!?]+$/g, "")
       .trim();
 
@@ -1388,10 +1420,10 @@ async function saveBoardTitleLater(postId, message) {
 }
 
 function normalizeBoardComment(comment) {
-  const message = compactText(comment?.message);
+  const message = sanitizeBoardMessageLocally(comment?.message) || compactText(comment?.message);
   if (!message) return null;
   const author = compactText(comment?.author) || "Anonymous";
-  const title = compactText(comment?.title) || normalizeBoardTitle(message);
+  const title = normalizeGeneratedBoardTitle(compactText(comment?.title), message);
   const topic = compactText(comment?.topic) || "";
   const createdAt = compactText(comment?.createdAt) || new Date().toISOString();
   const id = compactText(comment?.id) || `comment_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1408,10 +1440,10 @@ function normalizeBoardComment(comment) {
 }
 
 function normalizeBoardPost(post) {
-  const message = compactText(post?.message);
+  const message = sanitizeBoardMessageLocally(post?.message) || compactText(post?.message);
   if (!message) return null;
   const author = compactText(post?.author) || "Anonymous";
-  const title = compactText(post?.title) || normalizeBoardTitle(message);
+  const title = normalizeGeneratedBoardTitle(compactText(post?.title), message);
   const topic = compactText(post?.topic) || "General";
   const createdAt = compactText(post?.createdAt) || new Date().toISOString();
   const id = compactText(post?.id) || `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
