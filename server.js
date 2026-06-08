@@ -8,8 +8,14 @@ import http from "http";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
 import path from "node:path";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { execFile as execFileCallback } from "node:child_process";
+import { promisify } from "node:util";
+import os from "node:os";
+import { DatabaseSync } from "node:sqlite";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+const execFile = promisify(execFileCallback);
 
 const {
   OPENAI_API_KEY,
@@ -48,6 +54,7 @@ const {
   PUBLIC_BOARD_ADMIN_TOKEN = "",
   JOHNNY_CHAT_USAGE_PATH = "/var/data/johnny-chat-usage.json",
   JOHNNY_CHAT_LIBRARY_PATH = "/var/data/johnny-chat-library.json",
+  STORY_EDITOR_DB_PATH = "/var/data/story-editor.sqlite",
   JOHNNY_CHAT_PASSWORD = ""
 } = process.env;
 
@@ -2319,6 +2326,539 @@ app.delete("/api/618chat/posts", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ 618chat clear error:", err);
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+const storyUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: Math.max(1, Number(MAX_UPLOAD_MB)) * 1024 * 1024 }
+});
+
+let storyDbReady = null;
+
+function storyId(prefix = "story") {
+  return `${prefix}_${randomBytes(8).toString("hex")}`;
+}
+
+function storyNow() {
+  return new Date().toISOString();
+}
+
+function requireStoryEditorSession(req, res) {
+  return requireChatbotSession(req, res);
+}
+
+function normalizeStoryText(value, max = 200000) {
+  return String(value || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\t/g, " ")
+    .replace(/[ \u00A0]+$/gm, "")
+    .replace(/\n{4,}/g, "\n\n\n")
+    .trim()
+    .slice(0, max);
+}
+
+function sqliteLiteral(value) {
+  if (value === null || value === undefined) return "NULL";
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+async function sqliteRun(sql) {
+  await mkdir(path.dirname(STORY_EDITOR_DB_PATH), { recursive: true });
+  const db = new DatabaseSync(STORY_EDITOR_DB_PATH);
+  try {
+    const text = String(sql || "").trim();
+    if (/^select\b/i.test(text)) {
+      return db.prepare(text).all();
+    }
+    db.exec(text);
+    return [];
+  } finally {
+    db.close();
+  }
+}
+
+async function ensureStoryDb() {
+  if (!storyDbReady) {
+    storyDbReady = sqliteRun(`
+      PRAGMA journal_mode=WAL;
+      CREATE TABLE IF NOT EXISTS story_projects (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        filename TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS story_sections (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        chapter_index INTEGER NOT NULL,
+        scene_index INTEGER NOT NULL,
+        paragraph_index INTEGER NOT NULL,
+        line_index INTEGER NOT NULL DEFAULT 0,
+        kind TEXT NOT NULL,
+        label TEXT,
+        original_text TEXT NOT NULL,
+        edited_text TEXT,
+        summary TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS story_bible (
+        project_id TEXT PRIMARY KEY,
+        characters TEXT NOT NULL DEFAULT '[]',
+        settings TEXT NOT NULL DEFAULT '[]',
+        timeline TEXT NOT NULL DEFAULT '[]',
+        plot_threads TEXT NOT NULL DEFAULT '[]',
+        tone_rules TEXT NOT NULL DEFAULT '[]',
+        continuity_notes TEXT NOT NULL DEFAULT '[]',
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS story_edits (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        section_id TEXT NOT NULL,
+        mode TEXT NOT NULL,
+        prompt TEXT,
+        suggestion TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        decided_at TEXT
+      );
+    `);
+  }
+  return storyDbReady;
+}
+
+async function storyQuery(sql) {
+  await ensureStoryDb();
+  return sqliteRun(sql);
+}
+
+async function storyExec(statements) {
+  await ensureStoryDb();
+  return sqliteRun(Array.isArray(statements) ? statements.join("\n") : statements);
+}
+
+function parseJsonField(value, fallback = []) {
+  try {
+    const parsed = JSON.parse(String(value || ""));
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeBibleRow(row = {}) {
+  return {
+    characters: parseJsonField(row.characters),
+    settings: parseJsonField(row.settings),
+    timeline: parseJsonField(row.timeline),
+    plotThreads: parseJsonField(row.plot_threads),
+    toneRules: parseJsonField(row.tone_rules),
+    continuityNotes: parseJsonField(row.continuity_notes),
+    updatedAt: row.updated_at || ""
+  };
+}
+
+function splitManuscript(text) {
+  const clean = normalizeStoryText(text, 1000000);
+  const blocks = clean.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+  const sections = [];
+  let chapterIndex = 1;
+  let sceneIndex = 1;
+  let paragraphIndex = 0;
+  let currentChapterTitle = "Chapter 1";
+  let currentSceneTitle = "Scene 1";
+
+  for (const block of blocks) {
+    if (/^(chapter|prologue|epilogue)\b[\s\d:.-]*/i.test(block) && block.length < 120) {
+      currentChapterTitle = block;
+      chapterIndex += sections.length ? 1 : 0;
+      sceneIndex = 1;
+      paragraphIndex = 0;
+      sections.push({
+        id: storyId("sec"),
+        kind: "chapter",
+        chapterIndex,
+        sceneIndex,
+        paragraphIndex: 0,
+        lineIndex: 0,
+        label: currentChapterTitle,
+        originalText: block
+      });
+      continue;
+    }
+
+    if (/^(\*\s*){3,}$|^#{1,3}\s|^scene\b/i.test(block) && block.length < 160) {
+      currentSceneTitle = /^#{1,3}\s/.test(block) ? block.replace(/^#{1,3}\s*/, "") : block;
+      sceneIndex += paragraphIndex ? 1 : 0;
+      paragraphIndex = 0;
+      sections.push({
+        id: storyId("sec"),
+        kind: "scene",
+        chapterIndex,
+        sceneIndex,
+        paragraphIndex: 0,
+        lineIndex: 0,
+        label: currentSceneTitle,
+        originalText: block
+      });
+      continue;
+    }
+
+    paragraphIndex += 1;
+    const sentences = block
+      .split(/(?<=[.!?]["')\]]?)\s+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    sections.push({
+      id: storyId("sec"),
+      kind: "paragraph",
+      chapterIndex,
+      sceneIndex,
+      paragraphIndex,
+      lineIndex: 0,
+      label: `${currentChapterTitle} / ${currentSceneTitle} / P${paragraphIndex}`,
+      originalText: block,
+      lines: sentences.map((line, index) => ({
+        id: storyId("line"),
+        kind: "line",
+        chapterIndex,
+        sceneIndex,
+        paragraphIndex,
+        lineIndex: index + 1,
+        label: `Line ${index + 1}`,
+        originalText: line
+      }))
+    });
+  }
+
+  return sections;
+}
+
+async function extractPdfText(buffer) {
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+  const pdfDocument = await loadingTask.promise;
+  let extractedText = "";
+  for (let i = 1; i <= pdfDocument.numPages; i += 1) {
+    const page = await pdfDocument.getPage(i);
+    const textContent = await page.getTextContent();
+    extractedText += textContent.items.map((item) => item.str || "").join(" ") + "\n\n";
+  }
+  return normalizeStoryText(extractedText, 1000000);
+}
+
+function xmlDecode(value) {
+  return String(value || "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+async function extractDocxText(buffer) {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "story-docx-"));
+  const filePath = path.join(dir, "input.docx");
+  try {
+    await writeFile(filePath, buffer);
+    const { stdout } = await execFile("unzip", ["-p", filePath, "word/document.xml"], { maxBuffer: 40 * 1024 * 1024 });
+    const paragraphs = String(stdout || "")
+      .split(/<\/w:p>/)
+      .map((paragraphXml) => {
+        const parts = [...paragraphXml.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)].map((match) => xmlDecode(match[1]));
+        return parts.join("");
+      })
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return normalizeStoryText(paragraphs.join("\n\n"), 1000000);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function extractStoryText(file) {
+  const name = String(file?.originalname || "").toLowerCase();
+  const type = String(file?.mimetype || "").toLowerCase();
+  if (type.includes("pdf") || name.endsWith(".pdf")) return extractPdfText(file.buffer);
+  if (name.endsWith(".docx") || type.includes("wordprocessingml")) return extractDocxText(file.buffer);
+  return normalizeStoryText(file.buffer.toString("utf8"), 1000000);
+}
+
+async function getStoryBible(projectId) {
+  const rows = await storyQuery(`SELECT * FROM story_bible WHERE project_id = ${sqliteLiteral(projectId)} LIMIT 1;`);
+  if (rows[0]) return normalizeBibleRow(rows[0]);
+  const now = storyNow();
+  await storyExec(`INSERT INTO story_bible (project_id, updated_at) VALUES (${sqliteLiteral(projectId)}, ${sqliteLiteral(now)});`);
+  return normalizeBibleRow({ updated_at: now });
+}
+
+async function summarizeChapter(projectId, chapterIndex) {
+  const rows = await storyQuery(`
+    SELECT original_text, edited_text FROM story_sections
+    WHERE project_id = ${sqliteLiteral(projectId)} AND chapter_index = ${Number(chapterIndex) || 1} AND kind = 'paragraph'
+    ORDER BY paragraph_index ASC LIMIT 80;
+  `);
+  const text = rows.map((row) => row.edited_text || row.original_text).join("\n\n").slice(0, 16000);
+  if (!text || !OPENAI_API_KEY) return text.slice(0, 1200);
+  const response = await openai.responses.create({
+    model: OPENAI_CHAT_MODEL,
+    max_output_tokens: 350,
+    input: [
+      { role: "system", content: "Summarize this fiction chapter for continuity-aware paragraph editing. Include plot movement, emotional arc, character status, setting, and unresolved threads. Be concise." },
+      { role: "user", content: text }
+    ]
+  });
+  return extractResponseText(response) || text.slice(0, 1200);
+}
+
+function storyModeInstruction(mode) {
+  const modes = {
+    line: "Line edit for clarity, rhythm, specificity, and sentence-level flow.",
+    grammar: "Fix grammar, punctuation, tense slips, and awkward phrasing while changing as little as possible.",
+    deepen: "Deepen prose with sensory detail, emotional texture, and subtext while preserving the author's voice.",
+    expand: "Expand the scene only where the selected text needs room to breathe; do not invent major plot events.",
+    dialogue: "Polish dialogue for voice, subtext, cadence, and attribution while preserving intent.",
+    pacing: "Check pacing and tighten or relax the paragraph as needed.",
+    continuity: "Check continuity against the supplied context and Story Bible; suggest only text that fits."
+  };
+  return modes[mode] || modes.line;
+}
+
+async function buildDocxBuffer(title, paragraphs) {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "story-export-"));
+  try {
+    await mkdir(path.join(dir, "_rels"), { recursive: true });
+    await mkdir(path.join(dir, "word", "_rels"), { recursive: true });
+    const esc = (value) => String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    const body = paragraphs.map((paragraph) => {
+      const lines = String(paragraph || "").split("\n");
+      const runs = lines.map((line, index) => `${index ? "<w:br/>" : ""}<w:t xml:space="preserve">${esc(line)}</w:t>`).join("");
+      return `<w:p><w:r>${runs}</w:r></w:p>`;
+    }).join("");
+    await writeFile(path.join(dir, "[Content_Types].xml"), `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+    await writeFile(path.join(dir, "_rels", ".rels"), `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+    await writeFile(path.join(dir, "word", "document.xml"), `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${esc(title || "Edited Manuscript")}</w:t></w:r></w:p>${body}<w:sectPr/></w:body></w:document>`);
+    await writeFile(path.join(dir, "word", "_rels", "document.xml.rels"), `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>`);
+    const output = path.join(os.tmpdir(), `${storyId("manuscript")}.docx`);
+    await execFile("zip", ["-qr", output, "."], { cwd: dir, maxBuffer: 10 * 1024 * 1024 });
+    const data = await readFile(output);
+    await rm(output, { force: true });
+    return data;
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+app.get("/api/story-editor/projects", async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    const projects = await storyQuery("SELECT id, title, filename, created_at AS createdAt, updated_at AS updatedAt FROM story_projects ORDER BY updated_at DESC;");
+    res.json({ ok: true, projects });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.get("/api/story-editor/projects/:id", async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    const projectId = String(req.params.id || "");
+    const projects = await storyQuery(`SELECT id, title, filename, created_at AS createdAt, updated_at AS updatedAt FROM story_projects WHERE id = ${sqliteLiteral(projectId)} LIMIT 1;`);
+    if (!projects[0]) return res.status(404).json({ ok: false, error: "Project not found." });
+    const sections = await storyQuery(`
+      SELECT id, chapter_index AS chapterIndex, scene_index AS sceneIndex, paragraph_index AS paragraphIndex,
+        line_index AS lineIndex, kind, label, original_text AS originalText, edited_text AS editedText,
+        summary, updated_at AS updatedAt
+      FROM story_sections WHERE project_id = ${sqliteLiteral(projectId)}
+      ORDER BY chapter_index, scene_index, paragraph_index, line_index;
+    `);
+    const edits = await storyQuery(`
+      SELECT id, section_id AS sectionId, mode, prompt, suggestion, status, created_at AS createdAt, decided_at AS decidedAt
+      FROM story_edits WHERE project_id = ${sqliteLiteral(projectId)}
+      ORDER BY created_at DESC LIMIT 80;
+    `);
+    const bible = await getStoryBible(projectId);
+    res.json({ ok: true, project: projects[0], sections, bible, edits });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/story-editor/upload", storyUpload.single("manuscript"), async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    if (!req.file?.buffer?.length) return res.status(400).json({ ok: false, error: "Upload a TXT, DOCX, or PDF manuscript." });
+    const text = await extractStoryText(req.file);
+    if (!text) return res.status(400).json({ ok: false, error: "Could not extract text from that file." });
+
+    const projectId = storyId("project");
+    const now = storyNow();
+    const title = String(req.body?.title || req.file.originalname || "Untitled manuscript").replace(/\.(txt|docx|pdf)$/i, "").slice(0, 160);
+    const sections = splitManuscript(text);
+    const statements = [
+      "BEGIN;",
+      `INSERT INTO story_projects (id, title, filename, created_at, updated_at) VALUES (${sqliteLiteral(projectId)}, ${sqliteLiteral(title)}, ${sqliteLiteral(req.file.originalname)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`,
+      `INSERT INTO story_bible (project_id, updated_at) VALUES (${sqliteLiteral(projectId)}, ${sqliteLiteral(now)});`
+    ];
+    for (const section of sections) {
+      statements.push(`INSERT INTO story_sections (id, project_id, chapter_index, scene_index, paragraph_index, line_index, kind, label, original_text, created_at, updated_at) VALUES (${sqliteLiteral(section.id)}, ${sqliteLiteral(projectId)}, ${section.chapterIndex}, ${section.sceneIndex}, ${section.paragraphIndex}, ${section.lineIndex || 0}, ${sqliteLiteral(section.kind)}, ${sqliteLiteral(section.label)}, ${sqliteLiteral(section.originalText)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`);
+      for (const line of section.lines || []) {
+        statements.push(`INSERT INTO story_sections (id, project_id, chapter_index, scene_index, paragraph_index, line_index, kind, label, original_text, created_at, updated_at) VALUES (${sqliteLiteral(line.id)}, ${sqliteLiteral(projectId)}, ${line.chapterIndex}, ${line.sceneIndex}, ${line.paragraphIndex}, ${line.lineIndex}, ${sqliteLiteral(line.kind)}, ${sqliteLiteral(line.label)}, ${sqliteLiteral(line.originalText)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`);
+      }
+    }
+    statements.push("COMMIT;");
+    await storyExec(statements);
+    res.json({ ok: true, projectId, title, sections: sections.length });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.put("/api/story-editor/projects/:id/bible", async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    const projectId = String(req.params.id || "");
+    const body = req.body || {};
+    const now = storyNow();
+    await storyExec(`
+      INSERT INTO story_bible (project_id, characters, settings, timeline, plot_threads, tone_rules, continuity_notes, updated_at)
+      VALUES (${sqliteLiteral(projectId)}, ${sqliteLiteral(JSON.stringify(body.characters || []))}, ${sqliteLiteral(JSON.stringify(body.settings || []))}, ${sqliteLiteral(JSON.stringify(body.timeline || []))}, ${sqliteLiteral(JSON.stringify(body.plotThreads || []))}, ${sqliteLiteral(JSON.stringify(body.toneRules || []))}, ${sqliteLiteral(JSON.stringify(body.continuityNotes || []))}, ${sqliteLiteral(now)})
+      ON CONFLICT(project_id) DO UPDATE SET
+        characters = excluded.characters,
+        settings = excluded.settings,
+        timeline = excluded.timeline,
+        plot_threads = excluded.plot_threads,
+        tone_rules = excluded.tone_rules,
+        continuity_notes = excluded.continuity_notes,
+        updated_at = excluded.updated_at;
+    `);
+    res.json({ ok: true, bible: await getStoryBible(projectId) });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/story-editor/projects/:id/edit", async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    if (!OPENAI_API_KEY) return res.status(503).json({ ok: false, error: "OpenAI API key is not configured." });
+    const projectId = String(req.params.id || "");
+    const sectionId = String(req.body?.sectionId || "");
+    const mode = String(req.body?.mode || "line").replace(/[^a-z-]/g, "");
+    const rows = await storyQuery(`
+      SELECT * FROM story_sections WHERE project_id = ${sqliteLiteral(projectId)} AND id = ${sqliteLiteral(sectionId)} LIMIT 1;
+    `);
+    const section = rows[0];
+    if (!section) return res.status(404).json({ ok: false, error: "Section not found." });
+    if (section.kind !== "paragraph" && section.kind !== "scene") {
+      return res.status(400).json({ ok: false, error: "Select a paragraph or scene for editing." });
+    }
+
+    const nearby = await storyQuery(`
+      SELECT kind, label, original_text AS originalText, edited_text AS editedText FROM story_sections
+      WHERE project_id = ${sqliteLiteral(projectId)}
+        AND kind = 'paragraph'
+        AND chapter_index = ${Number(section.chapter_index)}
+        AND scene_index = ${Number(section.scene_index)}
+        AND paragraph_index BETWEEN ${Math.max(1, Number(section.paragraph_index) - 3)} AND ${Number(section.paragraph_index) + 3}
+      ORDER BY paragraph_index ASC;
+    `);
+    const previousAccepted = await storyQuery(`
+      SELECT suggestion FROM story_edits
+      WHERE project_id = ${sqliteLiteral(projectId)} AND status = 'accepted'
+      ORDER BY decided_at DESC LIMIT 10;
+    `);
+    const bible = await getStoryBible(projectId);
+    const chapterSummary = await summarizeChapter(projectId, section.chapter_index);
+    const selectedText = section.edited_text || section.original_text;
+    const response = await openai.responses.create({
+      model: OPENAI_CHAT_MODEL,
+      max_output_tokens: 1800,
+      input: [
+        {
+          role: "system",
+          content: [
+            "You are Story Editor, a deep fiction editor working paragraph-by-paragraph.",
+            "Never rewrite the whole manuscript. Only edit the selected paragraph or scene.",
+            "Preserve the author's voice, POV, tense, rhythm, and intent.",
+            "Improve clarity, depth, pacing, emotion, dialogue, and continuity according to the selected mode.",
+            "Return only the revised selected text, with no preface, no bullets, and no explanation."
+          ].join(" ")
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            mode,
+            modeInstruction: storyModeInstruction(mode),
+            selectedText,
+            nearbyContext: nearby.map((item) => item.editedText || item.originalText).join("\n\n"),
+            chapterSummary,
+            storyBible: bible,
+            previousAcceptedEdits: previousAccepted.map((item) => item.suggestion),
+            userNote: String(req.body?.note || "").slice(0, 1200)
+          }, null, 2)
+        }
+      ]
+    });
+    const suggestion = normalizeStoryText(extractResponseText(response), 100000);
+    const editId = storyId("edit");
+    const now = storyNow();
+    await storyExec(`INSERT INTO story_edits (id, project_id, section_id, mode, prompt, suggestion, status, created_at) VALUES (${sqliteLiteral(editId)}, ${sqliteLiteral(projectId)}, ${sqliteLiteral(sectionId)}, ${sqliteLiteral(mode)}, ${sqliteLiteral(req.body?.note || "")}, ${sqliteLiteral(suggestion)}, 'pending', ${sqliteLiteral(now)});`);
+    res.json({ ok: true, edit: { id: editId, sectionId, mode, suggestion, status: "pending", createdAt: now } });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/story-editor/edits/:id/:decision", async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    const editId = String(req.params.id || "");
+    const decision = String(req.params.decision || "");
+    if (decision !== "accept" && decision !== "reject") return res.status(400).json({ ok: false, error: "Use accept or reject." });
+    const rows = await storyQuery(`SELECT * FROM story_edits WHERE id = ${sqliteLiteral(editId)} LIMIT 1;`);
+    const edit = rows[0];
+    if (!edit) return res.status(404).json({ ok: false, error: "Edit not found." });
+    const status = decision === "accept" ? "accepted" : "rejected";
+    const now = storyNow();
+    const statements = [
+      "BEGIN;",
+      `UPDATE story_edits SET status = ${sqliteLiteral(status)}, decided_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(editId)};`
+    ];
+    if (status === "accepted") {
+      statements.push(`UPDATE story_sections SET edited_text = ${sqliteLiteral(edit.suggestion)}, updated_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(edit.section_id)};`);
+    }
+    statements.push("COMMIT;");
+    await storyExec(statements);
+    res.json({ ok: true, status });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.get("/api/story-editor/projects/:id/export.docx", async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    const projectId = String(req.params.id || "");
+    const projects = await storyQuery(`SELECT title FROM story_projects WHERE id = ${sqliteLiteral(projectId)} LIMIT 1;`);
+    const title = projects[0]?.title || "Edited Manuscript";
+    const sections = await storyQuery(`
+      SELECT kind, original_text AS originalText, edited_text AS editedText FROM story_sections
+      WHERE project_id = ${sqliteLiteral(projectId)} AND kind IN ('chapter', 'scene', 'paragraph')
+      ORDER BY chapter_index, scene_index, paragraph_index, line_index;
+    `);
+    const paragraphs = sections.map((section) => section.editedText || section.originalText);
+    const docx = await buildDocxBuffer(title, paragraphs);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", `attachment; filename="${title.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80) || "manuscript"}-edited.docx"`);
+    res.send(docx);
+  } catch (err) {
     res.status(500).json({ ok: false, error: String(err.message || err) });
   }
 });

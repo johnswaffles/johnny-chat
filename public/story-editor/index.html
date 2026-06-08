@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Story Editor | justaskjohnny.com</title>
+  <meta name="description" content="Private paragraph-by-paragraph fiction editing workspace.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Source+Serif+4:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./story-editor.css?v=20260605-1">
+  <script defer src="./story-editor.js?v=20260605-1"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <a href="https://justaskjohnny.com">justaskjohnny.com</a>
+        <h1>Story Editor</h1>
+      </div>
+
+      <nav class="top-links" aria-label="Site">
+        <a href="https://justaskjohnny.com">Home</a>
+        <a href="/chatbot/">GPT 5.5</a>
+        <a class="active" href="/story-editor/">Story Editor</a>
+        <a href="/nova-chat/">Nova Chat</a>
+        <a href="/contact/">Contact</a>
+      </nav>
+
+      <section class="panel upload-panel">
+        <h2>Manuscript</h2>
+        <form id="upload-form">
+          <input id="title-input" name="title" placeholder="Project title">
+          <label class="file-pick">
+            <input id="file-input" name="manuscript" type="file" accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
+            <span>Choose TXT, DOCX, or PDF</span>
+          </label>
+          <button type="submit">Upload and split</button>
+        </form>
+        <div class="status" id="upload-status"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Projects</h2>
+          <button id="refresh-projects" type="button">Refresh</button>
+        </div>
+        <div class="project-list" id="project-list"></div>
+      </section>
+    </aside>
+
+    <main class="workspace">
+      <header class="workspace-head">
+        <div>
+          <p class="eyebrow">Paragraph workflow</p>
+          <h2 id="project-title">No manuscript loaded</h2>
+        </div>
+        <div class="head-actions">
+          <select id="mode-select" aria-label="Editing mode">
+            <option value="line">Line edit</option>
+            <option value="grammar">Grammar edit</option>
+            <option value="deepen">Deepen prose</option>
+            <option value="expand">Expand scene</option>
+            <option value="dialogue">Dialogue polish</option>
+            <option value="pacing">Pacing check</option>
+            <option value="continuity">Continuity check</option>
+          </select>
+          <button id="export-docx" type="button">Export DOCX</button>
+        </div>
+      </header>
+
+      <section class="bible-grid" aria-label="Story Bible">
+        <label>Characters<textarea id="bible-characters" rows="4" placeholder="One per line, or paste notes"></textarea></label>
+        <label>Settings<textarea id="bible-settings" rows="4"></textarea></label>
+        <label>Timeline<textarea id="bible-timeline" rows="4"></textarea></label>
+        <label>Plot threads<textarea id="bible-plot" rows="4"></textarea></label>
+        <label>Tone/style rules<textarea id="bible-tone" rows="4"></textarea></label>
+        <label>Continuity notes<textarea id="bible-continuity" rows="4"></textarea></label>
+        <button id="save-bible" type="button">Save Story Bible</button>
+      </section>
+
+      <section class="editor-grid">
+        <aside class="paragraph-panel">
+          <div class="panel-head">
+            <h2>Paragraphs</h2>
+            <input id="section-filter" type="search" placeholder="Filter">
+          </div>
+          <div class="section-list" id="section-list"></div>
+        </aside>
+
+        <section class="edit-panel">
+          <div class="split-editor">
+            <article class="text-pane">
+              <h3>Original</h3>
+              <div id="original-text" class="manuscript-text empty">Select a paragraph to begin.</div>
+            </article>
+            <article class="text-pane suggestion-pane">
+              <h3>AI suggestion</h3>
+              <div id="suggestion-text" class="manuscript-text empty">Suggestions appear here.</div>
+            </article>
+          </div>
+
+          <div class="request-box">
+            <textarea id="edit-note" rows="3" placeholder="Optional note for this paragraph only"></textarea>
+            <div class="request-actions">
+              <button id="request-edit" type="button">Request edit</button>
+              <button id="accept-edit" type="button" disabled>Accept</button>
+              <button id="reject-edit" type="button" disabled>Reject</button>
+            </div>
+          </div>
+
+          <section class="versions">
+            <h3>Versions</h3>
+            <div id="version-list"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
