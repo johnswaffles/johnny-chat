@@ -166,15 +166,69 @@
       font-weight: 650;
     }
     .assistant-card {
-      display: grid;
-      grid-template-rows: auto 1fr auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      justify-content: space-between;
       min-height: 100%;
       padding: 22px;
       background: linear-gradient(180deg, #ffffff 0%, #f7f3ea 100%);
     }
     .assistant-card h2 {
-      margin-top: 14px;
+      margin-top: 0;
       font-size: 30px;
+    }
+    .assistant-card p {
+      margin: 0;
+    }
+    .handoff-box {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+    .handoff-box strong {
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 18px;
+    }
+    .handoff-box ul {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .handoff-box li {
+      color: var(--copy);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .mini-note-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .mini-note {
+      min-height: 112px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfaf6;
+    }
+    .mini-note strong {
+      display: block;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 18px;
+      line-height: 1.1;
+    }
+    .mini-note span {
+      display: block;
+      margin-top: 8px;
+      color: var(--copy);
+      font-size: 13px;
+      line-height: 1.45;
     }
     .assistant-card p,
     .panel p,
@@ -188,7 +242,7 @@
     .chat-preview {
       display: grid;
       gap: 10px;
-      margin-top: 22px;
+      margin-top: 0;
     }
     .message {
       max-width: 92%;
@@ -467,6 +521,14 @@
           <span class="tag">Example</span>
           <h2>Customer asks. Johnny sorts it out.</h2>
           <p>A lightweight assistant can be trained around your real hours, services, policies, and preferred follow-up process.</p>
+          <div class="handoff-box">
+            <strong>What your team receives</strong>
+            <ul>
+              <li>Customer name and best contact method.</li>
+              <li>Reservation, appointment, quote, or question type.</li>
+              <li>Timing, party size, service notes, and special requests.</li>
+            </ul>
+          </div>
           <div class="chat-preview">
             <div class="message">
               <strong>Customer</strong>
@@ -479,6 +541,16 @@
             <div class="message">
               <strong>Owner view</strong>
               Reservation request, party size, dietary note, name, phone, and preferred time in one clean message.
+            </div>
+          </div>
+          <div class="mini-note-grid" aria-label="Assistant fit notes">
+            <div class="mini-note">
+              <strong>Busy hours</strong>
+              <span>Let Johnny handle repeat questions while your team stays with customers.</span>
+            </div>
+            <div class="mini-note">
+              <strong>Clean follow-up</strong>
+              <span>Each request can arrive with the details you need to respond faster.</span>
             </div>
           </div>
         </aside>
