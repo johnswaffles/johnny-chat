@@ -581,9 +581,7 @@
 
       function startOfWeek(date) {
         const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-        const day = copy.getDay();
-        const diff = day === 0 ? -6 : 1 - day;
-        copy.setDate(copy.getDate() + diff);
+        copy.setDate(copy.getDate() - copy.getDay());
         return copy;
       }
 
