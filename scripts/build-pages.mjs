@@ -129,6 +129,7 @@ function insertBeforeBodyEnd(html, snippet) {
 function siteNav(profile, active, brandOverride = "") {
   const brand = brandOverride || (profile === "mowing" ? "618help.com" : "justaskjohnny.com");
   const homeHref = profile === "mowing" ? "https://618help.com" : "https://justaskjohnny.com";
+  const aiHelperHref = "/ai-helper/";
   const gptHref = "/chatbot/";
   const storyHref = "/story-editor/";
   const novaHref = "/nova-chat/";
@@ -157,6 +158,7 @@ function siteNav(profile, active, brandOverride = "") {
       ]
     : [
         `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
+        `<a class="johnny-site-link ${active === "ai-helper" ? "active" : ""}" href="${aiHelperHref}" ${newTab}>AI Helper</a>`,
         `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}" ${newTab}>GPT 5.5</a>`,
         `<a class="johnny-site-link ${active === "story" ? "active" : ""}" href="${storyHref}" ${newTab}>Story Editor</a>`,
         `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}" ${newTab}>Nova Chat</a>`,
@@ -4531,18 +4533,23 @@ ${siteNav("ai", "contact")}
 async function main() {
   const aiSourcePath = path.join(publicDir, "ai-services.html");
   const mowingSourcePath = path.join(root, "squarespace_landing_section.html");
+  const personalHomeSourcePath = path.join(publicDir, "chatbots", "index.html");
+  const rootHomeSourcePath = path.join(publicDir, "index.html");
 
-  const [aiSource, mowingSource] = await Promise.all([
+  const [aiSource, mowingSource, personalHomeSource, rootHomeSource] = await Promise.all([
     readFile(aiSourcePath, "utf8"),
-    readFile(mowingSourcePath, "utf8")
+    readFile(mowingSourcePath, "utf8"),
+    readFile(personalHomeSourcePath, "utf8"),
+    readFile(rootHomeSourcePath, "utf8")
   ]);
 
   const aiClean = aiSource.replace(/<\/html>\s*[\s\S]*$/i, "</html>");
   let aiPage = insertBeforeHeadEnd(aiClean, sharedNavStyles);
-  aiPage = insertAfterBodyOpen(aiPage, siteNav("ai", "home"));
+  aiPage = insertAfterBodyOpen(aiPage, siteNav("ai", "ai-helper"));
   aiPage = insertBeforeBodyEnd(aiPage, widgetSnippet("ai"));
 
   await mkdir(path.join(publicDir, "chatbots"), { recursive: true });
+  await mkdir(path.join(publicDir, "ai-helper"), { recursive: true });
   await mkdir(path.join(publicDir, "help-mowing"), { recursive: true });
   await mkdir(path.join(publicDir, "618chat"), { recursive: true });
   await mkdir(path.join(publicDir, "contact"), { recursive: true });
@@ -4550,7 +4557,8 @@ async function main() {
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
 
-  await writeFile(path.join(publicDir, "chatbots", "index.html"), aiPage, "utf8");
+  await writeFile(path.join(publicDir, "ai-helper", "index.html"), aiPage, "utf8");
+  await writeFile(path.join(publicDir, "chatbots", "index.html"), personalHomeSource, "utf8");
 
   const mowingHtml = `<!doctype html>
 <html lang="en">
@@ -4573,7 +4581,7 @@ ${widgetSnippet("mowing")}
   await mkdir(path.join(publicDir, "no-entry"), { recursive: true });
   await writeFile(path.join(publicDir, "no-entry", "index.html"), createNoEntryPage(), "utf8");
   await writeFile(path.join(publicDir, "contact", "index.html"), createContactPage(), "utf8");
-  await writeFile(path.join(publicDir, "index.html"), createRootLandingPage(create618ChatPage()), "utf8");
+  await writeFile(path.join(publicDir, "index.html"), rootHomeSource, "utf8");
   await compressPublicWasmAssets();
 
   console.log("Pages build files generated.");
