@@ -5,6 +5,7 @@ const PlanetRenderer = preload("res://scripts/rendering/planet_renderer.gd")
 const PopulationGraph = preload("res://scripts/graphs/population_graph.gd")
 const GlassTheme = preload("res://scripts/ui/glass_theme.gd")
 const OceanHazeShader = preload("res://shaders/ocean_haze.gdshader")
+const MUSIC_STREAM_PATH := "res://assets/audio/Sunrise Over Tiny Blocks (2).mp3"
 
 var sim := PlanetSimulation.new()
 var renderer := PlanetRenderer.new()
@@ -26,11 +27,16 @@ var seed_edit: LineEdit
 var tool_state_label: Label
 var graph: Control
 var tool_buttons: Array[Button] = []
+var music_player: AudioStreamPlayer
+var music_button: Button
+var music_start_pending := false
+var music_enabled := true
 
 
 func _ready() -> void:
 	sim.seed_text = "planet-%d" % randi_range(1000, 999999)
 	_build_haze_overlay()
+	_create_music_player()
 	_build_ui()
 	sim.new_world(sim.seed_text)
 	_update_ui()
@@ -54,6 +60,7 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	_maybe_start_music_from_user_gesture(event)
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		paint_down = event.pressed
 		if event.pressed:
@@ -89,11 +96,14 @@ func _build_ui() -> void:
 	subtitle.modulate = Color("#a7c9d2")
 	ui.add_child(subtitle)
 
-	var play := _button("Pause", Vector2(1188, 40), Vector2(92, 48))
+	var play := _button("Pause", Vector2(1096, 40), Vector2(86, 48))
 	play.pressed.connect(func() -> void:
 		running = not running
 		play.text = "Pause" if running else "Play"
 	)
+
+	music_button = _button("Music On", Vector2(1190, 40), Vector2(92, 48))
+	music_button.pressed.connect(_toggle_music)
 
 	var fresh := _button("New World", Vector2(1290, 40), Vector2(112, 48))
 	fresh.pressed.connect(func() -> void:
@@ -183,6 +193,60 @@ func _build_haze_overlay() -> void:
 	material.shader = OceanHazeShader
 	haze.material = material
 	add_child(haze)
+
+
+func _create_music_player() -> void:
+	music_player = AudioStreamPlayer.new()
+	music_player.volume_db = -12.0
+	add_child(music_player)
+	_load_music_stream()
+	music_start_pending = music_player.stream != null
+
+
+func _load_music_stream() -> void:
+	if not is_instance_valid(music_player):
+		return
+	if not ResourceLoader.exists(MUSIC_STREAM_PATH):
+		music_player.stream = null
+		return
+	var stream := load(MUSIC_STREAM_PATH)
+	if stream is AudioStreamMP3:
+		stream.loop = true
+	music_player.stream = stream
+
+
+func _maybe_start_music_from_user_gesture(event: InputEvent) -> void:
+	if not music_start_pending or not music_enabled:
+		return
+	if not is_instance_valid(music_player) or music_player.stream == null:
+		return
+	var should_start := false
+	if event is InputEventKey and event.pressed and not event.echo:
+		should_start = true
+	elif event is InputEventMouseButton and event.pressed:
+		should_start = true
+	elif event is InputEventScreenTouch and event.pressed:
+		should_start = true
+	if not should_start:
+		return
+	music_start_pending = false
+	if not music_player.playing:
+		music_player.play()
+
+
+func _toggle_music() -> void:
+	if not is_instance_valid(music_player):
+		return
+	if music_player.stream == null:
+		_load_music_stream()
+	music_enabled = not music_enabled
+	if music_enabled and music_player.stream != null:
+		music_start_pending = false
+		music_player.play()
+	else:
+		music_player.stop()
+	if music_button:
+		music_button.text = "Music On" if music_enabled else "Music Off"
 
 
 func _button(text: String, pos: Vector2, size: Vector2) -> Button:

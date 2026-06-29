@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bl3oc7cn18g62"
+path="res://.godot/imported/Sunrise Over Tiny Blocks (2).mp3-4df672e6283c9c5b27cd59038c1f852f.mp3str"
+
+[deps]
+
+source_file="res://assets/audio/Sunrise Over Tiny Blocks (2).mp3"
+dest_files=["res://.godot/imported/Sunrise Over Tiny Blocks (2).mp3-4df672e6283c9c5b27cd59038c1f852f.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
