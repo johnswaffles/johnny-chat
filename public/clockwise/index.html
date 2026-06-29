@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clockwise | justaskjohnny.com</title>
+  <meta name="description" content="A live schedule tracker with policy checkpoint alerts and PO reminder timers.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f7ef;
+      --ink: #101612;
+      --copy: #59645d;
+      --line: rgba(16, 22, 18, 0.12);
+      --green: #266a3b;
+      --teal: #198d87;
+      --amber: #c58b21;
+      --red: #a43d44;
+      --blue: #315f8c;
+      --shadow: 0 28px 80px rgba(21, 48, 34, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Plus Jakarta Sans", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(25, 141, 135, 0.2), transparent 28%),
+        radial-gradient(circle at 92% 14%, rgba(197, 139, 33, 0.18), transparent 24%),
+        linear-gradient(145deg, #fbfbf5 0%, #e9f1e7 48%, var(--bg) 100%);
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+
+    .johnny-site-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: min(1380px, calc(100vw - 24px));
+      margin: 12px auto 0;
+      padding: 14px 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(16, 32, 21, 0.08);
+      box-shadow: 0 18px 40px rgba(24, 61, 34, 0.08);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 14px;
+      z-index: 20;
+    }
+
+    .johnny-site-brand {
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .johnny-site-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .johnny-site-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+    }
+
+    .johnny-site-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(16, 32, 21, 0.08);
+      background: rgba(255, 255, 255, 0.88);
+    }
+
+    .johnny-site-link.active {
+      background: linear-gradient(135deg, rgba(38, 106, 59, 0.14), rgba(25, 141, 135, 0.14));
+      border-color: rgba(38, 106, 59, 0.18);
+      color: #174425;
+    }
+
+    .page {
+      width: min(1380px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 18px 0 48px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.93), rgba(249,250,244,0.84));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      padding: 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .timer-stage {
+      min-height: 560px;
+      padding: 28px;
+      display: grid;
+      align-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .timer-stage::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -26% auto;
+      width: 440px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: conic-gradient(from 140deg, rgba(38,106,59,0.22), rgba(25,141,135,0.16), rgba(197,139,33,0.2), rgba(38,106,59,0.22));
+      opacity: 0.72;
+      z-index: -1;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(38, 106, 59, 0.08);
+      border: 1px solid rgba(38, 106, 59, 0.14);
+      color: #174425;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    h1, h2 {
+      margin: 0;
+      font-family: "Outfit", Arial, sans-serif;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      margin-top: 18px;
+      font-size: clamp(44px, 7vw, 96px);
+    }
+
+    .lede {
+      margin: 14px 0 0;
+      max-width: 62ch;
+      color: var(--copy);
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    .timer {
+      margin: 24px 0;
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: clamp(68px, 10vw, 138px);
+      font-weight: 900;
+      line-height: 0.9;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status-row, .button-row, .milestones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .status-pill, .milestone {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.76);
+      border: 1px solid rgba(16,22,18,0.1);
+      color: #33443a;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .milestone.hit {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--green), var(--teal));
+    }
+
+    .button {
+      min-height: 48px;
+      padding: 0 18px;
+      border: 1px solid rgba(16,22,18,0.1);
+      border-radius: 15px;
+      background: rgba(255,255,255,0.88);
+      color: var(--ink);
+      font-weight: 900;
+      transition: transform 160ms ease, filter 160ms ease;
+    }
+
+    .button:hover { transform: translateY(-1px); filter: brightness(1.02); }
+    .button-primary {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--green), var(--teal));
+      box-shadow: 0 16px 34px rgba(38, 106, 59, 0.24);
+    }
+    .button-danger {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, #8e3036, var(--red));
+    }
+
+    .side {
+      display: grid;
+      gap: 18px;
+    }
+
+    .card {
+      padding: 20px;
+    }
+
+    .card h2 {
+      font-size: 28px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: #365042;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    input, select {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid rgba(17,25,20,0.13);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.94);
+      color: var(--ink);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(38, 106, 59, 0.5);
+      box-shadow: 0 0 0 4px rgba(38, 106, 59, 0.11);
+    }
+
+    .reminders {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .reminder {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 13px;
+      border: 1px solid rgba(16,22,18,0.09);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.7);
+    }
+
+    .reminder strong, .reminder span {
+      display: block;
+      overflow-wrap: anywhere;
+    }
+
+    .reminder span {
+      margin-top: 4px;
+      color: var(--copy);
+      font-size: 13px;
+    }
+
+    .reminder-time {
+      font-family: "Outfit", Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: var(--blue);
+    }
+
+    .empty {
+      margin-top: 14px;
+      padding: 16px;
+      border: 1px dashed rgba(16,22,18,0.16);
+      border-radius: 16px;
+      color: var(--copy);
+      background: rgba(255,255,255,0.5);
+    }
+
+    .alert {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      width: min(560px, calc(100vw - 28px));
+      transform: translate(-50%, 140%);
+      padding: 16px 18px;
+      border-radius: 20px;
+      color: #fff;
+      background: linear-gradient(135deg, #193d29, #16736e);
+      box-shadow: 0 24px 70px rgba(18, 54, 40, 0.26);
+      font-weight: 900;
+      transition: transform 220ms ease;
+      z-index: 50;
+    }
+
+    .alert.show { transform: translate(-50%, 0); }
+
+    @media (max-width: 980px) {
+      .hero { grid-template-columns: 1fr; }
+      .timer-stage { min-height: 480px; }
+    }
+
+    @media (max-width: 760px) {
+      .johnny-site-nav { flex-direction: column; align-items: flex-start; }
+      .johnny-site-links { justify-content: flex-start; }
+      .page { width: min(100vw - 20px, 1380px); padding-bottom: 28px; }
+      .hero, .timer-stage, .card { padding: 16px; }
+      .timer { font-size: clamp(54px, 19vw, 92px); }
+      .reminder { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="johnny-site-nav">
+    <a class="johnny-site-brand" href="https://justaskjohnny.com">justaskjohnny.com</a>
+    <nav class="johnny-site-links" aria-label="Site">
+      <a class="johnny-site-link" href="https://justaskjohnny.com">Home</a>
+      <a class="johnny-site-link" href="/chatbot/">GPT 5.5</a>
+      <a class="johnny-site-link" href="/story-editor/" target="_blank" rel="noopener noreferrer">Story Editor</a>
+      <a class="johnny-site-link" href="/nova-chat/">Nova Chat</a>
+      <a class="johnny-site-link" href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
+      <a class="johnny-site-link active" href="/clockwise/">Clockwise</a>
+      <a class="johnny-site-link" href="/timekeeper/">Timekeeper</a>
+      <a class="johnny-site-link" href="/sim/" target="_blank" rel="noopener noreferrer">Sim</a>
+      <a class="johnny-site-link" href="/contact/">Contact</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="panel hero">
+      <div class="panel timer-stage">
+        <div>
+          <span class="eyebrow">Schedule Tracker</span>
+          <h1>Clockwise</h1>
+          <p class="lede">Start at zero, keep the policy checkpoints visible, and park PO or reference follow-ups in one sharp little command center.</p>
+        </div>
+
+        <div>
+          <div class="timer" id="main-timer">00:00:00</div>
+          <div class="status-row">
+            <span class="status-pill" id="timer-state">Ready</span>
+            <span class="status-pill" id="next-policy">Next policy check: 15:00</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="milestones" aria-label="Policy milestones">
+            <span class="milestone" data-minute="15">15 min</span>
+            <span class="milestone" data-minute="30">30 min</span>
+            <span class="milestone" data-minute="45">45 min</span>
+            <span class="milestone" data-minute="60">60 min</span>
+          </div>
+          <div class="button-row" style="margin-top: 16px;">
+            <button class="button button-primary" type="button" id="start-pause">Start</button>
+            <button class="button" type="button" id="mark-now">Mark now</button>
+            <button class="button button-danger" type="button" id="reset">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="side">
+        <section class="panel card">
+          <h2>PO reminder</h2>
+          <form id="reminder-form" class="form-grid">
+            <label for="reference">PO or reference number
+              <input id="reference" autocomplete="off" maxlength="80" placeholder="PO-12345" required>
+            </label>
+            <label for="duration">Remind me in
+              <select id="duration">
+                <option value="300">5 minutes</option>
+                <option value="600">10 minutes</option>
+                <option value="900" selected>15 minutes</option>
+                <option value="1800">30 minutes</option>
+                <option value="2700">45 minutes</option>
+                <option value="3600">60 minutes</option>
+                <option value="7200">2 hours</option>
+              </select>
+            </label>
+            <button class="button button-primary" type="submit">Set reminder</button>
+          </form>
+          <div id="reminders" class="reminders"></div>
+          <div id="empty-reminders" class="empty">No PO reminders running right now.</div>
+        </section>
+
+        <section class="panel card">
+          <h2>Session marks</h2>
+          <div id="marks" class="reminders"></div>
+          <div id="empty-marks" class="empty">Tap Mark now when something important happens.</div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <div class="alert" id="alert" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      const POLICY_MINUTES = [15, 30, 45, 60];
+      const REMINDER_KEY = "clockwise-reminders-v1";
+      const MARK_KEY = "clockwise-marks-v1";
+      const timerEl = document.getElementById("main-timer");
+      const stateEl = document.getElementById("timer-state");
+      const nextPolicyEl = document.getElementById("next-policy");
+      const startPause = document.getElementById("start-pause");
+      const reset = document.getElementById("reset");
+      const markNow = document.getElementById("mark-now");
+      const reminderForm = document.getElementById("reminder-form");
+      const referenceInput = document.getElementById("reference");
+      const durationSelect = document.getElementById("duration");
+      const remindersEl = document.getElementById("reminders");
+      const emptyReminders = document.getElementById("empty-reminders");
+      const marksEl = document.getElementById("marks");
+      const emptyMarks = document.getElementById("empty-marks");
+      const alertEl = document.getElementById("alert");
+      const milestoneEls = Array.from(document.querySelectorAll("[data-minute]"));
+
+      let startedAt = 0;
+      let elapsedBeforeStart = 0;
+      let running = false;
+      let firedPolicy = new Set();
+      let reminders = load(REMINDER_KEY);
+      let marks = load(MARK_KEY);
+      let alertTimer = 0;
+
+      function load(key) {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function save(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+
+      function elapsedMs() {
+        return elapsedBeforeStart + (running ? Date.now() - startedAt : 0);
+      }
+
+      function format(totalSeconds) {
+        const seconds = Math.max(0, Math.floor(totalSeconds));
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+      }
+
+      function speak(message) {
+        if (!("speechSynthesis" in window)) return;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(message));
+      }
+
+      function notify(message) {
+        alertEl.textContent = message;
+        alertEl.classList.add("show");
+        clearTimeout(alertTimer);
+        alertTimer = setTimeout(() => alertEl.classList.remove("show"), 5200);
+        speak(message);
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("Clockwise", { body: message });
+        }
+      }
+
+      function requestNotifications() {
+        if ("Notification" in window && Notification.permission === "default") {
+          Notification.requestPermission();
+        }
+      }
+
+      function tick() {
+        const seconds = Math.floor(elapsedMs() / 1000);
+        timerEl.textContent = format(seconds);
+        stateEl.textContent = running ? "Running" : seconds ? "Paused" : "Ready";
+        startPause.textContent = running ? "Pause" : "Start";
+
+        const next = POLICY_MINUTES.find((minute) => seconds < minute * 60);
+        nextPolicyEl.textContent = next ? "Next policy check: " + next + ":00" : "Policy checkpoints complete";
+
+        POLICY_MINUTES.forEach((minute) => {
+          const hit = seconds >= minute * 60;
+          const el = milestoneEls.find((item) => Number(item.dataset.minute) === minute);
+          if (el) el.classList.toggle("hit", hit);
+          if (hit && !firedPolicy.has(minute)) {
+            firedPolicy.add(minute);
+            notify(minute + " minute policy check. Follow the required step now.");
+          }
+        });
+
+        const now = Date.now();
+        reminders.forEach((reminder) => {
+          if (!reminder.done && now >= reminder.dueAt) {
+            reminder.done = true;
+            notify("Reminder for " + reminder.reference + " is due now.");
+          }
+        });
+        reminders = reminders.filter((reminder) => !reminder.done || now - reminder.dueAt < 60000);
+        save(REMINDER_KEY, reminders);
+        renderReminders();
+      }
+
+      function renderReminders() {
+        const now = Date.now();
+        emptyReminders.hidden = reminders.length > 0;
+        remindersEl.innerHTML = reminders.map((reminder) => {
+          const remaining = Math.max(0, Math.ceil((reminder.dueAt - now) / 1000));
+          return '<article class="reminder"><div><strong>' + escapeHtml(reminder.reference) + '</strong><span>Due ' + new Date(reminder.dueAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + '</span></div><div class="reminder-time">' + format(remaining).slice(3) + '</div></article>';
+        }).join("");
+      }
+
+      function renderMarks() {
+        emptyMarks.hidden = marks.length > 0;
+        marksEl.innerHTML = marks.slice(0, 8).map((mark) => {
+          return '<article class="reminder"><div><strong>' + escapeHtml(mark.time) + '</strong><span>' + escapeHtml(mark.when) + '</span></div><button class="button" type="button" data-delete-mark="' + mark.id + '">Clear</button></article>';
+        }).join("");
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      startPause.addEventListener("click", () => {
+        requestNotifications();
+        if (running) {
+          elapsedBeforeStart = elapsedMs();
+          running = false;
+        } else {
+          startedAt = Date.now();
+          running = true;
+        }
+        tick();
+      });
+
+      reset.addEventListener("click", () => {
+        if (elapsedMs() > 0 && !confirm("Reset the Clockwise timer to zero?")) return;
+        startedAt = 0;
+        elapsedBeforeStart = 0;
+        running = false;
+        firedPolicy = new Set();
+        tick();
+      });
+
+      markNow.addEventListener("click", () => {
+        marks.unshift({
+          id: Date.now().toString(36),
+          time: format(Math.floor(elapsedMs() / 1000)),
+          when: new Date().toLocaleString()
+        });
+        marks = marks.slice(0, 12);
+        save(MARK_KEY, marks);
+        renderMarks();
+      });
+
+      reminderForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        requestNotifications();
+        const reference = referenceInput.value.trim();
+        if (!reference) return;
+        const seconds = Number(durationSelect.value) || 900;
+        reminders.unshift({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+          reference,
+          dueAt: Date.now() + seconds * 1000,
+          done: false
+        });
+        save(REMINDER_KEY, reminders);
+        referenceInput.value = "";
+        renderReminders();
+        notify("Reminder set for " + reference + ".");
+      });
+
+      marksEl.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-delete-mark]");
+        if (!button) return;
+        marks = marks.filter((mark) => mark.id !== button.dataset.deleteMark);
+        save(MARK_KEY, marks);
+        renderMarks();
+      });
+
+      tick();
+      renderMarks();
+      setInterval(tick, 1000);
+    })();
+  </script>
+</body>
+</html>

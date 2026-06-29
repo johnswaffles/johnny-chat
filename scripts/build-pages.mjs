@@ -133,6 +133,7 @@ function siteNav(profile, active, brandOverride = "") {
   const storyHref = "/story-editor/";
   const novaHref = "/nova-chat/";
   const cozyHref = "/cozy-builder-game/";
+  const clockwiseHref = "/clockwise/";
   const timekeeperHref = "/timekeeper/";
   const simHref = "/sim/";
   const contactHref = "/contact/";
@@ -147,6 +148,7 @@ function siteNav(profile, active, brandOverride = "") {
         `<a class="johnny-site-link ${active === "story" ? "active" : ""}" href="${storyHref}" target="_blank" rel="noopener noreferrer">Story Editor</a>`,
         `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}">Nova Chat</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>`,
+        `<a class="johnny-site-link ${active === "clockwise" ? "active" : ""}" href="${clockwiseHref}">Clockwise</a>`,
         `<a class="johnny-site-link ${active === "timekeeper" ? "active" : ""}" href="${timekeeperHref}">Timekeeper</a>`,
         `<a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="${simHref}" target="_blank" rel="noopener noreferrer">Sim</a>`,
         `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
@@ -4396,6 +4398,7 @@ ${siteNav("ai", "contact")}
       const storyHref = "/story-editor/";
       const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
+      const clockwiseHref = "/clockwise/";
       const timekeeperHref = "/timekeeper/";
       const simHref = "/sim/";
       const contactHref = "/contact/";
@@ -4425,6 +4428,7 @@ ${siteNav("ai", "contact")}
           }
           if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
+          if (label === "clockwise") link.href = clockwiseHref;
           if (label === "timekeeper") link.href = timekeeperHref;
           if (label === "sim") {
             link.href = simHref;
