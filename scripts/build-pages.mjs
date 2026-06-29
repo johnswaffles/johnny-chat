@@ -137,6 +137,19 @@ function siteNav(profile, active, brandOverride = "") {
   const timekeeperHref = "/timekeeper/";
   const simHref = "/sim/";
   const contactHref = "/contact/";
+  const newTab = 'target="_blank" rel="noopener noreferrer"';
+  const homeOnly = `
+  <header class="johnny-site-nav">
+    <span class="johnny-site-brand">${brand}</span>
+    <nav class="johnny-site-links" aria-label="Site">
+      <a class="johnny-site-link" href="${homeHref}">Home</a>
+    </nav>
+  </header>`;
+
+  if (profile !== "mowing" && active !== "home") {
+    return homeOnly;
+  }
+
   const links = profile === "mowing"
     ? [
         `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
@@ -144,14 +157,14 @@ function siteNav(profile, active, brandOverride = "") {
       ]
     : [
         `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
-        `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>`,
-        `<a class="johnny-site-link ${active === "story" ? "active" : ""}" href="${storyHref}" target="_blank" rel="noopener noreferrer">Story Editor</a>`,
-        `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}">Nova Chat</a>`,
-        `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>`,
-        `<a class="johnny-site-link ${active === "clockwise" ? "active" : ""}" href="${clockwiseHref}">Clockwise</a>`,
-        `<a class="johnny-site-link ${active === "timekeeper" ? "active" : ""}" href="${timekeeperHref}">Timekeeper</a>`,
-        `<a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="${simHref}" target="_blank" rel="noopener noreferrer">Sim</a>`,
-        `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
+        `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}" ${newTab}>GPT 5.5</a>`,
+        `<a class="johnny-site-link ${active === "story" ? "active" : ""}" href="${storyHref}" ${newTab}>Story Editor</a>`,
+        `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}" ${newTab}>Nova Chat</a>`,
+        `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" ${newTab}>Cozy Builder</a>`,
+        `<a class="johnny-site-link ${active === "clockwise" ? "active" : ""}" href="${clockwiseHref}" ${newTab}>Clockwise</a>`,
+        `<a class="johnny-site-link ${active === "timekeeper" ? "active" : ""}" href="${timekeeperHref}" ${newTab}>Timekeeper</a>`,
+        `<a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="${simHref}" ${newTab}>Sim</a>`,
+        `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}" ${newTab}>Contact</a>`
       ];
   return `
   <header class="johnny-site-nav">
