@@ -403,6 +403,9 @@
             <label for="reference">PO or reference number
               <input id="reference" autocomplete="off" maxlength="80" placeholder="PO-12345" required>
             </label>
+            <label for="reminder-note">Notes
+              <input id="reminder-note" autocomplete="off" maxlength="140" placeholder="Optional context">
+            </label>
             <label for="duration">Remind me in
               <select id="duration">
                 <option value="300">5 minutes</option>
@@ -444,6 +447,7 @@
       const markNow = document.getElementById("mark-now");
       const reminderForm = document.getElementById("reminder-form");
       const referenceInput = document.getElementById("reference");
+      const reminderNoteInput = document.getElementById("reminder-note");
       const durationSelect = document.getElementById("duration");
       const remindersEl = document.getElementById("reminders");
       const emptyReminders = document.getElementById("empty-reminders");
@@ -544,7 +548,8 @@
         emptyReminders.hidden = reminders.length > 0;
         remindersEl.innerHTML = reminders.map((reminder) => {
           const remaining = Math.max(0, Math.ceil((reminder.dueAt - now) / 1000));
-          return '<article class="reminder"><div><strong>' + escapeHtml(reminder.reference) + '</strong><span>Due ' + new Date(reminder.dueAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + '</span></div><div class="reminder-time">' + format(remaining).slice(3) + '</div></article>';
+          const note = reminder.note ? '<span>' + escapeHtml(reminder.note) + '</span>' : '';
+          return '<article class="reminder"><div><strong>' + escapeHtml(reminder.reference) + '</strong><span>Due ' + new Date(reminder.dueAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + '</span>' + note + '</div><div class="reminder-time">' + format(remaining).slice(3) + '</div></article>';
         }).join("");
       }
 
@@ -601,15 +606,18 @@
         requestNotifications();
         const reference = referenceInput.value.trim();
         if (!reference) return;
+        const note = reminderNoteInput.value.trim();
         const seconds = Number(durationSelect.value) || 900;
         reminders.unshift({
           id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
           reference,
+          note,
           dueAt: Date.now() + seconds * 1000,
           done: false
         });
         save(REMINDER_KEY, reminders);
         referenceInput.value = "";
+        reminderNoteInput.value = "";
         renderReminders();
         notify("Reminder set for " + reference + ".");
       });
