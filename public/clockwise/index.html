@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Clockwise | justaskjohnny.com</title>
-  <meta name="description" content="A live schedule tracker with policy checkpoint alerts and PO reminder timers.">
+  <meta name="description" content="A live schedule tracker with call marks and reference reminder timers.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -351,7 +351,7 @@
         <div>
           <span class="eyebrow">Schedule Tracker</span>
           <h1>Clockwise</h1>
-          <p class="lede">Start at zero, mark each important call, and park PO or reference follow-ups in one sharp little command center.</p>
+          <p class="lede">Start at zero, mark each important call, and keep reference follow-ups in one sharp little command center.</p>
         </div>
 
         <div>
@@ -374,19 +374,19 @@
 
       <aside class="side">
         <section class="panel card">
-          <h2>PO reminder</h2>
+          <h2>Reference Radar</h2>
           <form id="reminder-form" class="form-grid">
-            <label for="reference">PO or reference number
-              <input id="reference" autocomplete="off" maxlength="80" placeholder="PO-12345" required>
+            <label for="reference">PO, phone number or other reference number
+              <input id="reference" autocomplete="off" maxlength="80" placeholder="PO-12345   or   555-123-4567" required>
             </label>
             <label for="reminder-note">Notes
               <input id="reminder-note" autocomplete="off" maxlength="140" placeholder="Optional context">
             </label>
             <label for="duration">Remind me in
               <select id="duration">
-                <option value="300">5 minutes</option>
+                <option value="300" selected>5 minutes</option>
                 <option value="600">10 minutes</option>
-                <option value="900" selected>15 minutes</option>
+                <option value="900">15 minutes</option>
                 <option value="1800">30 minutes</option>
                 <option value="2700">45 minutes</option>
                 <option value="3600">60 minutes</option>
@@ -396,7 +396,7 @@
             <button class="button button-primary" type="submit">Set reminder</button>
           </form>
           <div id="reminders" class="reminders"></div>
-          <div id="empty-reminders" class="empty">No PO reminders running right now.</div>
+          <div id="empty-reminders" class="empty">No reference reminders running right now.</div>
         </section>
 
         <section class="panel card">
