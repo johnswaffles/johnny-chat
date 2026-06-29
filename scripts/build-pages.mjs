@@ -144,11 +144,11 @@ function siteNav(profile, active, brandOverride = "") {
     : [
         `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
         `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}">GPT 5.5</a>`,
-        `<a class="johnny-site-link ${active === "story" ? "active" : ""}" href="${storyHref}">Story Editor</a>`,
+        `<a class="johnny-site-link ${active === "story" ? "active" : ""}" href="${storyHref}" target="_blank" rel="noopener noreferrer">Story Editor</a>`,
         `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}">Nova Chat</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" target="_blank" rel="noopener noreferrer">Cozy Builder</a>`,
         `<a class="johnny-site-link ${active === "timekeeper" ? "active" : ""}" href="${timekeeperHref}">Timekeeper</a>`,
-        `<a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="${simHref}">Sim</a>`,
+        `<a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="${simHref}" target="_blank" rel="noopener noreferrer">Sim</a>`,
         `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}">Contact</a>`
       ];
   return `
@@ -4418,11 +4418,19 @@ ${siteNav("ai", "contact")}
           const label = String(link.textContent || "").trim().toLowerCase();
           if (label === "home") link.href = homeHref;
           if (label === "gpt 5.5") link.href = gptHref;
-          if (label === "story editor") link.href = storyHref;
+          if (label === "story editor") {
+            link.href = storyHref;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+          }
           if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
           if (label === "timekeeper") link.href = timekeeperHref;
-          if (label === "sim") link.href = simHref;
+          if (label === "sim") {
+            link.href = simHref;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+          }
           if (label === "contact") link.href = contactHref;
         });
       }
