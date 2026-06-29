@@ -183,30 +183,11 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .status-row, .button-row, .milestones {
+    .button-row, .mark-grid {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       align-items: center;
-    }
-
-    .status-pill, .milestone {
-      display: inline-flex;
-      align-items: center;
-      min-height: 34px;
-      padding: 0 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.76);
-      border: 1px solid rgba(16,22,18,0.1);
-      color: #33443a;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    .milestone.hit {
-      color: #fff;
-      border-color: transparent;
-      background: linear-gradient(135deg, var(--green), var(--teal));
     }
 
     .button {
@@ -370,28 +351,23 @@
         <div>
           <span class="eyebrow">Schedule Tracker</span>
           <h1>Clockwise</h1>
-          <p class="lede">Start at zero, keep the policy checkpoints visible, and park PO or reference follow-ups in one sharp little command center.</p>
+          <p class="lede">Start at zero, mark each important call, and park PO or reference follow-ups in one sharp little command center.</p>
         </div>
 
         <div>
           <div class="timer" id="main-timer">00:00:00</div>
-          <div class="status-row">
-            <span class="status-pill" id="timer-state">Ready</span>
-            <span class="status-pill" id="next-policy">Next policy check: 15:00</span>
-          </div>
         </div>
 
         <div>
-          <div class="milestones" aria-label="Policy milestones">
-            <span class="milestone" data-minute="15">15 min</span>
-            <span class="milestone" data-minute="30">30 min</span>
-            <span class="milestone" data-minute="45">45 min</span>
-            <span class="milestone" data-minute="60">60 min</span>
-          </div>
-          <div class="button-row" style="margin-top: 16px;">
+          <div class="button-row">
             <button class="button button-primary" type="button" id="start-pause">Start</button>
-            <button class="button" type="button" id="mark-now">Mark now</button>
             <button class="button button-danger" type="button" id="reset">Reset</button>
+          </div>
+          <div class="mark-grid" style="margin-top: 12px;">
+            <button class="button" type="button" data-mark-label="Call provider">Call provider</button>
+            <button class="button" type="button" data-mark-label="Call customer">Call customer</button>
+            <button class="button" type="button" data-mark-label="Call partner">Call partner</button>
+            <button class="button" type="button" data-mark-label="Call for UDA quote">Call for UDA quote</button>
           </div>
         </div>
       </div>
@@ -426,7 +402,7 @@
         <section class="panel card">
           <h2>Session marks</h2>
           <div id="marks" class="reminders"></div>
-          <div id="empty-marks" class="empty">Tap Mark now when something important happens.</div>
+          <div id="empty-marks" class="empty">Tap a call mark when something important happens.</div>
         </section>
       </aside>
     </section>
@@ -436,15 +412,12 @@
 
   <script>
     (function () {
-      const POLICY_MINUTES = [15, 30, 45, 60];
       const REMINDER_KEY = "clockwise-reminders-v1";
       const MARK_KEY = "clockwise-marks-v1";
       const timerEl = document.getElementById("main-timer");
-      const stateEl = document.getElementById("timer-state");
-      const nextPolicyEl = document.getElementById("next-policy");
       const startPause = document.getElementById("start-pause");
       const reset = document.getElementById("reset");
-      const markNow = document.getElementById("mark-now");
+      const markButtons = Array.from(document.querySelectorAll("[data-mark-label]"));
       const reminderForm = document.getElementById("reminder-form");
       const referenceInput = document.getElementById("reference");
       const reminderNoteInput = document.getElementById("reminder-note");
@@ -454,12 +427,10 @@
       const marksEl = document.getElementById("marks");
       const emptyMarks = document.getElementById("empty-marks");
       const alertEl = document.getElementById("alert");
-      const milestoneEls = Array.from(document.querySelectorAll("[data-minute]"));
 
       let startedAt = 0;
       let elapsedBeforeStart = 0;
       let running = false;
-      let firedPolicy = new Set();
       let reminders = load(REMINDER_KEY);
       let marks = load(MARK_KEY);
       let alertTimer = 0;
@@ -515,21 +486,7 @@
       function tick() {
         const seconds = Math.floor(elapsedMs() / 1000);
         timerEl.textContent = format(seconds);
-        stateEl.textContent = running ? "Running" : seconds ? "Paused" : "Ready";
         startPause.textContent = running ? "Pause" : "Start";
-
-        const next = POLICY_MINUTES.find((minute) => seconds < minute * 60);
-        nextPolicyEl.textContent = next ? "Next policy check: " + next + ":00" : "Policy checkpoints complete";
-
-        POLICY_MINUTES.forEach((minute) => {
-          const hit = seconds >= minute * 60;
-          const el = milestoneEls.find((item) => Number(item.dataset.minute) === minute);
-          if (el) el.classList.toggle("hit", hit);
-          if (hit && !firedPolicy.has(minute)) {
-            firedPolicy.add(minute);
-            notify(minute + " minute policy check. Follow the required step now.");
-          }
-        });
 
         const now = Date.now();
         reminders.forEach((reminder) => {
@@ -556,7 +513,8 @@
       function renderMarks() {
         emptyMarks.hidden = marks.length > 0;
         marksEl.innerHTML = marks.slice(0, 8).map((mark) => {
-          return '<article class="reminder"><div><strong>' + escapeHtml(mark.time) + '</strong><span>' + escapeHtml(mark.when) + '</span></div><button class="button" type="button" data-delete-mark="' + mark.id + '">Clear</button></article>';
+          const label = mark.label || "Mark";
+          return '<article class="reminder"><div><strong>' + escapeHtml(label) + '</strong><span>' + escapeHtml(mark.time) + ' - ' + escapeHtml(mark.when) + '</span></div><button class="button" type="button" data-delete-mark="' + mark.id + '">Clear</button></article>';
         }).join("");
       }
 
@@ -586,19 +544,23 @@
         startedAt = 0;
         elapsedBeforeStart = 0;
         running = false;
-        firedPolicy = new Set();
         tick();
       });
 
-      markNow.addEventListener("click", () => {
+      function addMark(label) {
         marks.unshift({
           id: Date.now().toString(36),
+          label,
           time: format(Math.floor(elapsedMs() / 1000)),
           when: new Date().toLocaleString()
         });
         marks = marks.slice(0, 12);
         save(MARK_KEY, marks);
         renderMarks();
+      }
+
+      markButtons.forEach((button) => {
+        button.addEventListener("click", () => addMark(button.dataset.markLabel || "Mark"));
       });
 
       reminderForm.addEventListener("submit", (event) => {
