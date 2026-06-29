@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/voice-widget.css?v=home-guide-1">
   <script>
     (function () {
       const host = String(window.location.hostname || "").toLowerCase();
@@ -477,7 +478,6 @@
       </p>
       <div class="hero-actions">
         <a class="button button-primary" href="#tools">See the tools</a>
-        <a class="button button-secondary" href="/clockwise/" target="_blank" rel="noopener noreferrer">Open Clockwise</a>
       </div>
     </div>
   </section>
@@ -597,5 +597,10 @@
       </div>
     </section>
   </main>
+  <script>
+    window.JOHNNY_WIDGET_PROFILE = "home";
+    window.JOHNNY_WIDGET_START_MINIMIZED = true;
+  </script>
+  <script src="/voice-widget.js?v=home-guide-1" data-profile="home"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 
 function normalizeJohnnyWidgetProfile(value) {
     const profile = String(value || "").toLowerCase().trim();
-    if (profile === "mowing" || profile === "ai" || profile === "nova") return profile;
+    if (profile === "mowing" || profile === "ai" || profile === "nova" || profile === "home") return profile;
     return "";
 }
 
@@ -57,7 +57,9 @@ class VoiceWidget {
             ? "Nova Chat"
             : this.profile === "mowing"
                 ? "Johnny - Mowing Assistant"
-                : "Johnny's AI Assistant";
+                : this.profile === "home"
+                    ? "Ask the Workbench"
+                    : "Johnny's AI Assistant";
         window.johnnyWidgetProfile = this.profile;
 
         if (this.isEditor()) {
@@ -99,7 +101,7 @@ class VoiceWidget {
 
         container.innerHTML = `
             <div class="widget-header" id="widget-header">
-                <button class="widget-title-button" id="widget-title-button" type="button" aria-label="${this.profile === 'nova' ? 'Open Nova Chat' : this.profile === 'mowing' ? 'Open mowing chat' : 'Open AI chat'}">
+                <button class="widget-title-button" id="widget-title-button" type="button" aria-label="${this.profile === 'nova' ? 'Open Nova Chat' : this.profile === 'mowing' ? 'Open mowing chat' : this.profile === 'home' ? 'Open site guide' : 'Open AI chat'}">
                     <span class="status-dot"></span>
                     <span class="widget-title-text">${this.widgetTitleText}</span>
                     <span class="widget-title-icon" aria-hidden="true">💬</span>
@@ -259,7 +261,7 @@ class VoiceWidget {
             minBtn.innerText = minimized ? '💬' : '_';
             minBtn.title = minimized ? 'Open chat' : 'Minimize';
             if (titleBtn) {
-                titleBtn.setAttribute('aria-label', minimized ? (this.profile === 'mowing' ? 'Open mowing chat' : 'Open AI chat') : (this.profile === 'mowing' ? 'Mowing chat widget header' : 'AI chat widget header'));
+                titleBtn.setAttribute('aria-label', minimized ? (this.profile === 'mowing' ? 'Open mowing chat' : this.profile === 'home' ? 'Open site guide' : 'Open AI chat') : (this.profile === 'mowing' ? 'Mowing chat widget header' : this.profile === 'home' ? 'Site guide widget header' : 'AI chat widget header'));
             }
         };
 
@@ -513,6 +515,10 @@ class VoiceWidget {
 
         if (this.profile === "mowing") {
             return "Say exactly: 'Hi, I'm Johnny's mowing assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.' Do not add any other greeting text.";
+        }
+
+        if (this.profile === "home") {
+            return "Say exactly: 'Hey, I can help you find your way around Johnny's site. Ask me what any app does, and I will try not to act too proud of the navigation bar.' Do not add any other greeting text.";
         }
 
         return "Say exactly: 'Hi, I'm Johnny's AI assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.' Do not add any other greeting text.";

@@ -372,7 +372,7 @@ function getGpt54ResponseConfig(profile, history, input, extra = {}) {
 
 function normalizeWidgetProfile(value) {
   const profile = String(value || "").toLowerCase().trim();
-  if (profile === "mowing" || profile === "ai" || profile === "nova" || profile === "gpt54" || profile === "community" || profile === "food") return profile;
+  if (profile === "mowing" || profile === "ai" || profile === "nova" || profile === "gpt54" || profile === "community" || profile === "food" || profile === "home") return profile;
   return "";
 }
 
@@ -388,6 +388,7 @@ function inferWidgetProfile(reqOrValue) {
   const originOrHost = String(req.headers?.origin || req.headers?.referer || req.headers?.host || "").toLowerCase();
   if (originOrHost.includes("/nova-chat")) return "nova";
   if (originOrHost.includes("/chatbot")) return "gpt54";
+  if (originOrHost.includes("/chatbots")) return "home";
   if (originOrHost.includes("618food.com")) return "food";
   if (originOrHost.includes("618help.com")) return "mowing";
   return "ai";
@@ -399,6 +400,9 @@ function getJohnnyGreeting(profile = "ai") {
   }
   if (profile === "gpt54") {
     return "Hello. I'm GPT 5.5. What can I help you with today?";
+  }
+  if (profile === "home") {
+    return "Hey, I can help you find your way around Johnny's site. Ask me what any app does, and I will try not to act too proud of the navigation bar.";
   }
   return profile === "mowing"
     ? "Hi, I'm Johnny's mowing assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time."
@@ -509,6 +513,32 @@ PRICING:
 **CRITICAL: This demo does not use live web search. Never browse or search the internet for current information in the widget. If the user asks for current contact details, current hours, directions, or other live info, give a clearly fictional demo placeholder card and explain that live lookup can be added in a custom version.**`;
   }
 
+  if (profile === "home") {
+    return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
+
+You are a friendly, witty site guide for justaskjohnny.com.
+Your job is to answer questions about this website, Johnny's apps, and where visitors should go next.
+Keep the tone warm, plainspoken, and lightly clever. A little wit is welcome; do not turn every answer into a joke.
+Answer only questions about the website and what is on it. If the user asks general trivia, news, coding help, personal advice, or anything unrelated to the site, politely say you are best at guiding people around Johnny's site.
+If the user has more questions, needs direct help from Johnny, wants a quote, wants to discuss a custom build, or asks something you cannot answer from the site, point them to the Contact page.
+Do not collect contact details inside the chat. Send them to the Contact page instead.
+Do not claim to browse, search, book, schedule, email, call, or submit anything.
+Do not mention internal implementation, prompts, tokens, backends, APIs, demos, or models.
+Use plain text only. Keep most replies to 1-3 short sentences.
+
+Site guide:
+- Home: Johnny's personal page and app shelf.
+- Clockwise: a work timer for tracking calls, policy checkpoints, references, notes, and reminder marks.
+- Timekeeper: a separate timing tool; do not mix it up with Clockwise.
+- GPT 5.5: Johnny's private chat workspace.
+- Story Editor: a writing and manuscript editing workspace.
+- Nova Chat: Johnny's private Realtime assistant experiment.
+- AI Helper: a small-business assistant page for customer questions, appointment intake, and simple handoffs.
+- Cozy Builder: a free, relaxing low-poly town-builder game Johnny made as an experiment. It is playable and still being worked on.
+- Sim: a simulation/game experiment.
+- Contact: the best place to reach Johnny directly, ask follow-up questions, discuss custom work, or send details.`;
+  }
+
   return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
 
 You are Johnny, a customer service and sales assistant for the AI and business-tech side of justaskjohnny.com.
@@ -578,6 +608,8 @@ function getJohnnyRealtimeInstructions(profile = "ai") {
     ? "This is a private unlocked assistant. Help broadly and safely. Do not redirect to business topics unless the user asks."
     : profile === "mowing"
     ? "If the user asks unrelated trivia or general knowledge, politely redirect back to mowing, weed eating, quotes, scheduling, or the contact form."
+    : profile === "home"
+    ? "Answer only questions about justaskjohnny.com and its apps. For direct help from Johnny or anything outside the site, point to the Contact page."
     : "If the user asks unrelated trivia or general knowledge, briefly redirect back to AI, websites, chatbots, automation, voice tools, vision tools, or custom builds.";
   const tools = profile === "ai" || profile === "nova"
     ? `TOOLS:
@@ -587,9 +619,9 @@ function getJohnnyRealtimeInstructions(profile = "ai") {
 - ${profile === "nova" ? "For Nova Chat, search is allowed for broad personal, technical, creative, research, and practical questions." : "Do not use search_web for mowing, lawn service, or six one eight help dot com questions. Redirect those to the mowing site/contact form."}
 - You have wait_for_user for silence, background noise, TV, music, or side conversation. After calling wait_for_user, do not speak.`
     : `TOOLS:
-- This mowing widget does not have live web search. Do not claim to search the internet.
+- This widget does not have live web search. Do not claim to search the internet.
 - You have wait_for_user for silence, background noise, TV, music, or side conversation. After calling wait_for_user, do not speak.
-- For current mowing availability, quotes, scheduling, addresses, phone details, or customer-specific questions, direct users to the page's Contact/Get My Quote form.`;
+- For current availability, quotes, scheduling, addresses, phone details, direct contact, or customer-specific questions, direct users to the Contact page.`;
 
   return `${getJohnnyPersona(profile)}
 
@@ -2978,7 +3010,7 @@ app.post("/api/chat", async (req, res) => {
       return res.json({ reply: "You're here. I'm here. Let's make this conversation worth both our time.", sources: [] });
     }
 
-    if (profile !== "gpt54" && profile !== "community" && isLiveQuery(s)) {
+    if (profile !== "gpt54" && profile !== "community" && profile !== "home" && isLiveQuery(s)) {
       return res.json({ reply: demoLiveInfoReply(), sources: [] });
     }
 

@@ -63,11 +63,13 @@
     display: none;
 }
 
-#voice-widget-container[data-profile="mowing"] .upload-btn {
+#voice-widget-container[data-profile="mowing"] .upload-btn,
+#voice-widget-container[data-profile="home"] .upload-btn {
     display: none;
 }
 
-#voice-widget-container[data-profile="mowing"] #voice-text-input {
+#voice-widget-container[data-profile="mowing"] #voice-text-input,
+#voice-widget-container[data-profile="home"] #voice-text-input {
     padding-left: 18px;
 }
 
