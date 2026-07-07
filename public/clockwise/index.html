@@ -233,6 +233,13 @@
       margin-top: 16px;
     }
 
+    .duration-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(120px, 0.7fr);
+      gap: 10px;
+      align-items: end;
+    }
+
     label {
       display: grid;
       gap: 7px;
@@ -376,6 +383,7 @@
       h1 { font-size: clamp(34px, 12vw, 56px); }
       .lede { font-size: 14px; line-height: 1.45; }
       .timer { font-size: clamp(54px, 19vw, 92px); }
+      .duration-grid { grid-template-columns: 1fr; }
       .reminder { grid-template-columns: 1fr; }
     }
   </style>
@@ -400,17 +408,22 @@
             <label for="reminder-note">Notes
               <input id="reminder-note" autocomplete="off" maxlength="140" placeholder="Optional context">
             </label>
-            <label for="duration">Remind me in
-              <select id="duration">
-                <option value="300" selected>5 minutes</option>
-                <option value="600">10 minutes</option>
-                <option value="900">15 minutes</option>
-                <option value="1800">30 minutes</option>
-                <option value="2700">45 minutes</option>
-                <option value="3600">60 minutes</option>
-                <option value="7200">2 hours</option>
-              </select>
-            </label>
+            <div class="duration-grid">
+              <label for="duration">Remind me in
+                <select id="duration">
+                  <option value="300" selected>5 minutes</option>
+                  <option value="600">10 minutes</option>
+                  <option value="900">15 minutes</option>
+                  <option value="1800">30 minutes</option>
+                  <option value="2700">45 minutes</option>
+                  <option value="3600">60 minutes</option>
+                  <option value="7200">2 hours</option>
+                </select>
+              </label>
+              <label for="custom-duration">Custom minutes
+                <input id="custom-duration" type="number" min="1" max="1440" inputmode="numeric" placeholder="ex. 7">
+              </label>
+            </div>
             <button class="button button-primary" type="submit">Set reminder</button>
           </form>
           <div id="reminders" class="reminders"></div>
@@ -468,6 +481,7 @@
       const referenceInput = document.getElementById("reference");
       const reminderNoteInput = document.getElementById("reminder-note");
       const durationSelect = document.getElementById("duration");
+      const customDurationInput = document.getElementById("custom-duration");
       const remindersEl = document.getElementById("reminders");
       const emptyReminders = document.getElementById("empty-reminders");
       const marksEl = document.getElementById("marks");
@@ -619,7 +633,8 @@
         const reference = referenceInput.value.trim();
         if (!reference) return;
         const note = reminderNoteInput.value.trim();
-        const seconds = Number(durationSelect.value) || 900;
+        const customMinutes = Number(customDurationInput.value);
+        const seconds = customMinutes > 0 ? customMinutes * 60 : Number(durationSelect.value) || 900;
         reminders.unshift({
           id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
           reference,
@@ -630,6 +645,7 @@
         save(REMINDER_KEY, reminders);
         referenceInput.value = "";
         reminderNoteInput.value = "";
+        customDurationInput.value = "";
         renderReminders();
         notify("Reminder set for " + reference + ".");
       });
