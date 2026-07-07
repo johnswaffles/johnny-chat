@@ -495,6 +495,7 @@
       let running = false;
       let reminders = load(REMINDER_KEY);
       let marks = load(MARK_KEY);
+      let alertQueue = [];
 
       function load(key) {
         try {
@@ -527,13 +528,44 @@
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(message));
       }
 
-      function notify(message) {
-        alertMessageEl.textContent = message;
+      function showSystemNotification(message) {
+        if (!("Notification" in window) || Notification.permission !== "granted") return;
+        new Notification("Clockwise UDA Timer", {
+          body: message,
+          tag: "clockwise-" + Date.now() + "-" + Math.random().toString(36).slice(2),
+          requireInteraction: true
+        });
+      }
+
+      function showNextAlert() {
+        if (alertEl.classList.contains("show") || !alertQueue.length) return;
+        alertMessageEl.textContent = alertQueue.shift();
         alertEl.classList.add("show");
-        speak(message);
-        if ("Notification" in window && Notification.permission === "granted") {
-          new Notification("Clockwise", { body: message });
+      }
+
+      function notify(message, options) {
+        const settings = options || {};
+        if (settings.system !== false) {
+          showSystemNotification(message);
         }
+        alertQueue.push(message);
+        showNextAlert();
+        if (settings.speak !== false) {
+          speak(message);
+        }
+      }
+
+      function notifyDueReminder(reminder) {
+        const message = "Reminder for " + reminder.reference + " is due now.";
+        showSystemNotification(message);
+        alertQueue.push(message);
+        showNextAlert();
+        speak(message);
+      }
+
+      function dismissAlert() {
+        alertEl.classList.remove("show");
+        window.setTimeout(showNextAlert, 240);
       }
 
       function requestNotifications() {
@@ -551,7 +583,7 @@
         reminders.forEach((reminder) => {
           if (!reminder.done && now >= reminder.dueAt) {
             reminder.done = true;
-            notify("Reminder for " + reminder.reference + " is due now.");
+            notifyDueReminder(reminder);
           }
         });
         save(REMINDER_KEY, reminders);
@@ -624,7 +656,7 @@
       });
 
       alertClose.addEventListener("click", () => {
-        alertEl.classList.remove("show");
+        dismissAlert();
       });
 
       reminderForm.addEventListener("submit", (event) => {
@@ -647,7 +679,7 @@
         reminderNoteInput.value = "";
         customDurationInput.value = "";
         renderReminders();
-        notify("Reminder set for " + reference + ".");
+        notify("Reminder set for " + reference + ".", { system: false, speak: false });
       });
 
       marksEl.addEventListener("click", (event) => {
