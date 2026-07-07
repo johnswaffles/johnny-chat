@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Clockwise | justaskjohnny.com</title>
+  <title>Clockwise UDA Timer | justaskjohnny.com</title>
   <meta name="description" content="A live schedule tracker with call marks and reference reminder timers.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -112,7 +112,7 @@
     .hero {
       padding: 24px;
       display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+      grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.1fr);
       gap: 18px;
       align-items: stretch;
     }
@@ -388,31 +388,6 @@
 
   <main class="page">
     <section class="panel hero">
-      <div class="panel timer-stage">
-        <div>
-          <span class="eyebrow">Schedule Tracker</span>
-          <h1>Clockwise</h1>
-          <p class="lede">Start at zero, mark each important call, and keep reference follow-ups in one sharp little command center.</p>
-        </div>
-
-        <div>
-          <div class="timer" id="main-timer">00:00:00</div>
-        </div>
-
-        <div>
-          <div class="button-row">
-            <button class="button button-primary" type="button" id="start-pause">Start</button>
-            <button class="button button-danger" type="button" id="reset">Reset</button>
-          </div>
-          <div class="mark-grid" style="margin-top: 12px;">
-            <button class="button" type="button" data-mark-label="Call provider">Call provider</button>
-            <button class="button" type="button" data-mark-label="Call customer">Call customer</button>
-            <button class="button" type="button" data-mark-label="Call partner">Call partner</button>
-            <button class="button" type="button" data-mark-label="Call for UDA quote">Call for UDA quote</button>
-          </div>
-        </div>
-      </div>
-
       <aside class="side">
         <section class="panel card">
           <h2>Reference Radar</h2>
@@ -446,6 +421,31 @@
           <div id="empty-marks" class="empty">Tap a call mark when something important happens.</div>
         </section>
       </aside>
+
+      <div class="panel timer-stage">
+        <div>
+          <span class="eyebrow">Schedule Tracker</span>
+          <h1>Clockwise UDA Timer</h1>
+          <p class="lede">Start at zero, mark each important call, and keep reference follow-ups in one sharp little command center.</p>
+        </div>
+
+        <div>
+          <div class="timer" id="main-timer">00:00:00</div>
+        </div>
+
+        <div>
+          <div class="button-row">
+            <button class="button button-primary" type="button" id="start-pause">Start</button>
+            <button class="button button-danger" type="button" id="reset">Reset</button>
+          </div>
+          <div class="mark-grid" style="margin-top: 12px;">
+            <button class="button" type="button" data-mark-label="Call provider">Call provider</button>
+            <button class="button" type="button" data-mark-label="Call customer">Call customer</button>
+            <button class="button" type="button" data-mark-label="Call partner">Call partner</button>
+            <button class="button" type="button" data-mark-label="Call for UDA quote">Call for UDA quote</button>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
