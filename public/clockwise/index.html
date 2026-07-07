@@ -295,6 +295,31 @@
       color: var(--blue);
     }
 
+    .reminder.due {
+      border-color: rgba(164, 61, 68, 0.24);
+      background: rgba(255, 247, 239, 0.9);
+    }
+
+    .reminder.due .reminder-time {
+      color: var(--red);
+    }
+
+    .reminder-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-button {
+      width: 42px;
+      height: 42px;
+      min-height: 42px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 22px;
+      line-height: 1;
+    }
+
     .empty {
       margin-top: 14px;
       padding: 16px;
@@ -311,6 +336,7 @@
       width: min(560px, calc(100vw - 28px));
       transform: translate(-50%, 140%);
       padding: 16px 18px;
+      padding-right: 58px;
       border-radius: 20px;
       color: #fff;
       background: linear-gradient(135deg, #193d29, #16736e);
@@ -321,6 +347,21 @@
     }
 
     .alert.show { transform: translate(-50%, 0); }
+
+    .alert-close {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      width: 34px;
+      height: 34px;
+      transform: translateY(-50%);
+      border: 1px solid rgba(255,255,255,0.28);
+      border-radius: 50%;
+      color: #fff;
+      background: rgba(255,255,255,0.12);
+      font-size: 22px;
+      line-height: 1;
+    }
 
     @media (max-width: 980px) {
       .hero { grid-template-columns: 1fr; }
@@ -408,7 +449,10 @@
     </section>
   </main>
 
-  <div class="alert" id="alert" role="status" aria-live="polite"></div>
+  <div class="alert" id="alert" role="status" aria-live="polite">
+    <span id="alert-message"></span>
+    <button class="alert-close" id="alert-close" type="button" aria-label="Close reminder alert">&times;</button>
+  </div>
 
   <script>
     (function () {
@@ -427,13 +471,14 @@
       const marksEl = document.getElementById("marks");
       const emptyMarks = document.getElementById("empty-marks");
       const alertEl = document.getElementById("alert");
+      const alertMessageEl = document.getElementById("alert-message");
+      const alertClose = document.getElementById("alert-close");
 
       let startedAt = 0;
       let elapsedBeforeStart = 0;
       let running = false;
       let reminders = load(REMINDER_KEY);
       let marks = load(MARK_KEY);
-      let alertTimer = 0;
 
       function load(key) {
         try {
@@ -467,10 +512,8 @@
       }
 
       function notify(message) {
-        alertEl.textContent = message;
+        alertMessageEl.textContent = message;
         alertEl.classList.add("show");
-        clearTimeout(alertTimer);
-        alertTimer = setTimeout(() => alertEl.classList.remove("show"), 5200);
         speak(message);
         if ("Notification" in window && Notification.permission === "granted") {
           new Notification("Clockwise", { body: message });
@@ -495,7 +538,6 @@
             notify("Reminder for " + reminder.reference + " is due now.");
           }
         });
-        reminders = reminders.filter((reminder) => !reminder.done || now - reminder.dueAt < 60000);
         save(REMINDER_KEY, reminders);
         renderReminders();
       }
@@ -506,7 +548,9 @@
         remindersEl.innerHTML = reminders.map((reminder) => {
           const remaining = Math.max(0, Math.ceil((reminder.dueAt - now) / 1000));
           const note = reminder.note ? '<span>' + escapeHtml(reminder.note) + '</span>' : '';
-          return '<article class="reminder"><div><strong>' + escapeHtml(reminder.reference) + '</strong><span>Due ' + new Date(reminder.dueAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + '</span>' + note + '</div><div class="reminder-time">' + format(remaining).slice(3) + '</div></article>';
+          const status = reminder.done ? "Due now" : format(remaining).slice(3);
+          const dueClass = reminder.done ? " due" : "";
+          return '<article class="reminder' + dueClass + '"><div><strong>' + escapeHtml(reminder.reference) + '</strong><span>Due ' + new Date(reminder.dueAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + '</span>' + note + '</div><div class="reminder-actions"><div class="reminder-time">' + status + '</div><button class="button icon-button" type="button" data-delete-reminder="' + reminder.id + '" aria-label="Close reminder for ' + escapeHtml(reminder.reference) + '">&times;</button></div></article>';
         }).join("");
       }
 
@@ -563,6 +607,10 @@
         button.addEventListener("click", () => addMark(button.dataset.markLabel || "Mark"));
       });
 
+      alertClose.addEventListener("click", () => {
+        alertEl.classList.remove("show");
+      });
+
       reminderForm.addEventListener("submit", (event) => {
         event.preventDefault();
         requestNotifications();
@@ -590,6 +638,14 @@
         marks = marks.filter((mark) => mark.id !== button.dataset.deleteMark);
         save(MARK_KEY, marks);
         renderMarks();
+      });
+
+      remindersEl.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-delete-reminder]");
+        if (!button) return;
+        reminders = reminders.filter((reminder) => reminder.id !== button.dataset.deleteReminder);
+        save(REMINDER_KEY, reminders);
+        renderReminders();
       });
 
       tick();
