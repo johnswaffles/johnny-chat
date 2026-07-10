@@ -1,4 +1,4 @@
-import { access, readFile, writeFile, mkdir, rm, cp, readdir } from "node:fs/promises";
+import { access, readFile, writeFile, mkdir, rm, cp, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
 
@@ -3939,9 +3939,9 @@ async function routeOversizedGodotAssetsForPages() {
 
   const remoteBase = "https://johnny-chat.onrender.com";
   const routes = [
-    { dir: "cozy-builder", packSize: 31187368 },
-    { dir: "cozy-builder-game", packSize: 31187368 },
-    { dir: "godot-playtest", packSize: 31187368 },
+    { dir: "cozy-builder" },
+    { dir: "cozy-builder-game" },
+    { dir: "godot-playtest" },
   ];
 
   for (const route of routes) {
@@ -3949,11 +3949,16 @@ async function routeOversizedGodotAssetsForPages() {
     const htmlPath = path.join(targetDir, "index.html");
     const packPath = path.join(targetDir, "index.pck");
     try {
+      const packInfo = await stat(packPath);
+      // Cloudflare Pages accepts individual assets up to 25 MiB. Small clean
+      // builds should remain entirely on Pages; only legacy/oversized packs
+      // need Render as an asset origin.
+      if (packInfo.size <= 25 * 1024 * 1024) continue;
       const source = await readFile(htmlPath, "utf8");
       const packUrl = `${remoteBase}/${route.dir}/index.pck`;
       const patched = source.replace(
         /"executable":"index","experimentalVK":false,"fileSizes":\{"index\.pck":\d+,/,
-        `"executable":"index","mainPack":"${packUrl}","experimentalVK":false,"fileSizes":{"${packUrl}":${route.packSize},`,
+        `"executable":"index","mainPack":"${packUrl}","experimentalVK":false,"fileSizes":{"${packUrl}":${packInfo.size},`,
       );
       if (patched === source && !source.includes(`"mainPack":"${packUrl}"`)) {
         throw new Error(`Could not configure the remote Godot pack in ${htmlPath}`);
