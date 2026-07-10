@@ -3934,6 +3934,38 @@ async function patchGodotHtmlCacheBust() {
   }
 }
 
+async function routeOversizedGodotAssetsForPages() {
+  if (!isPagesBuild) return;
+
+  const remoteBase = "https://johnny-chat.onrender.com";
+  const routes = [
+    { dir: "cozy-builder", packSize: 31187368 },
+    { dir: "cozy-builder-game", packSize: 31187368 },
+    { dir: "godot-playtest", packSize: 31187368 },
+  ];
+
+  for (const route of routes) {
+    const targetDir = path.join(publicDir, route.dir);
+    const htmlPath = path.join(targetDir, "index.html");
+    const packPath = path.join(targetDir, "index.pck");
+    try {
+      const source = await readFile(htmlPath, "utf8");
+      const packUrl = `${remoteBase}/${route.dir}/index.pck`;
+      const patched = source.replace(
+        /"executable":"index","experimentalVK":false,"fileSizes":\{"index\.pck":\d+,/,
+        `"executable":"index","mainPack":"${packUrl}","experimentalVK":false,"fileSizes":{"${packUrl}":${route.packSize},`,
+      );
+      if (patched === source && !source.includes(`"mainPack":"${packUrl}"`)) {
+        throw new Error(`Could not configure the remote Godot pack in ${htmlPath}`);
+      }
+      await writeFile(htmlPath, patched, "utf8");
+      await rm(packPath, { force: true });
+    } catch (err) {
+      if (err?.code !== "ENOENT") throw err;
+    }
+  }
+}
+
 function isGzipBuffer(buffer) {
   return buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b;
 }
@@ -4556,6 +4588,7 @@ async function main() {
   await syncGodotBuilds();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
+  await routeOversizedGodotAssetsForPages();
 
   await writeFile(path.join(publicDir, "ai-helper", "index.html"), aiPage, "utf8");
   await writeFile(path.join(publicDir, "chatbots", "index.html"), personalHomeSource, "utf8");
