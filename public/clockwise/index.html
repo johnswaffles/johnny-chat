@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Clockwise UDA Timer | justaskjohnny.com</title>
-  <meta name="description" content="A live schedule tracker with call marks and reference reminder timers.">
+  <title>Clockwise | justaskjohnny.com</title>
+  <meta name="description" content="A unified call timer, reminder radar, session marker, and personal-time tracker.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -387,6 +387,7 @@
       .reminder { grid-template-columns: 1fr; }
     }
   </style>
+  <link rel="stylesheet" href="/future-theme.css?v=1">
 </head>
 <body>
   <header class="johnny-site-nav">
@@ -440,8 +441,8 @@
       <div class="panel timer-stage">
         <div>
           <span class="eyebrow">Schedule Tracker</span>
-          <h1>Clockwise UDA Timer</h1>
-          <p class="lede">Start at zero, mark each important call, and keep reference follow-ups in one sharp little command center.</p>
+          <h1>Clockwise</h1>
+          <p class="lede">Track the call, mark important moments, manage reference follow-ups, and keep personal time visible in one command center.</p>
         </div>
 
         <div>
@@ -463,6 +464,44 @@
       </div>
     </section>
   </main>
+
+  <section class="personal-workspace" id="personal-time" aria-labelledby="personal-time-title">
+    <div class="personal-head">
+      <div><span class="eyebrow">Personal tracker</span><h2 id="personal-time-title">Personal Time</h2></div>
+      <p>Keep personal minutes visible without leaving Clockwise. Your existing Timekeeper history appears here automatically.</p>
+    </div>
+    <div class="personal-grid">
+      <div>
+        <div class="personal-stats">
+          <article class="personal-card personal-stat"><span>Today</span><strong id="personal-today">0m</strong><div class="meter"><span id="personal-today-meter"></span></div></article>
+          <article class="personal-card personal-stat"><span>This week</span><strong id="personal-week-total">0m</strong><div class="meter"><span id="personal-week-meter"></span></div></article>
+        </div>
+        <form class="personal-card" id="personal-form">
+          <div class="personal-form-grid">
+            <label>Date<input id="personal-date" type="date" required></label>
+            <label>Minutes<input id="personal-minutes" type="number" min="0" max="480" value="5" required></label>
+            <label>Seconds<input id="personal-seconds" type="number" min="0" max="59" value="0"></label>
+            <label class="wide">Note<input id="personal-note" maxlength="80" placeholder="Optional context"></label>
+          </div>
+          <div class="personal-actions">
+            <button class="button-primary" type="submit">Add time</button>
+            <button type="button" id="personal-log-timer">Log Clockwise timer</button>
+            <button type="button" id="personal-export">Export CSV</button>
+            <button class="button-danger" type="button" id="personal-clear">Clear week</button>
+          </div>
+          <div class="personal-quick" aria-label="Quick add personal time">
+            <button type="button" data-personal-quick="1">+1m</button><button type="button" data-personal-quick="3">+3m</button><button type="button" data-personal-quick="5">+5m</button><button type="button" data-personal-quick="10">+10m</button><button type="button" data-personal-quick="15">+15m</button>
+          </div>
+          <p id="personal-status" aria-live="polite" style="margin:12px 0 0">Ready to track.</p>
+        </form>
+      </div>
+      <article class="personal-card">
+        <div class="personal-head" style="margin-bottom:0"><h3>This week</h3><span id="personal-week-label"></span></div>
+        <div class="personal-week" id="personal-week-strip"></div>
+        <div class="personal-entries" id="personal-entries"></div>
+      </article>
+    </div>
+  </section>
 
   <div class="alert" id="alert" role="status" aria-live="polite">
     <span id="alert-message"></span>
@@ -513,6 +552,7 @@
       function elapsedMs() {
         return elapsedBeforeStart + (running ? Date.now() - startedAt : 0);
       }
+      window.clockwiseElapsedSeconds = () => Math.floor(elapsedMs() / 1000);
 
       function format(totalSeconds) {
         const seconds = Math.max(0, Math.floor(totalSeconds));
@@ -530,7 +570,7 @@
 
       function showSystemNotification(message) {
         if (!("Notification" in window) || Notification.permission !== "granted") return;
-        new Notification("Clockwise UDA Timer", {
+        new Notification("Clockwise", {
           body: message,
           tag: "clockwise-" + Date.now() + "-" + Math.random().toString(36).slice(2),
           requireInteraction: true
@@ -701,6 +741,55 @@
       tick();
       renderMarks();
       setInterval(tick, 1000);
+    })();
+  </script>
+  <script>
+    (function () {
+      const STORAGE_KEY = "johnny-timekeeper-entries-v1";
+      const DAILY_LIMIT_SECONDS = 10 * 60;
+      const WEEKLY_LIMIT_SECONDS = 50 * 60;
+      const form = document.getElementById("personal-form");
+      const dateInput = document.getElementById("personal-date");
+      const minutesInput = document.getElementById("personal-minutes");
+      const secondsInput = document.getElementById("personal-seconds");
+      const noteInput = document.getElementById("personal-note");
+      const entriesEl = document.getElementById("personal-entries");
+      let entries = load();
+
+      const pad = (value) => String(value).padStart(2, "0");
+      const dateKey = (date) => date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
+      const fromKey = (key) => { const p = String(key).split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+      const startOfWeek = (date) => { const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate()); copy.setDate(copy.getDate() - copy.getDay()); return copy; };
+      const weekDays = () => { const start = startOfWeek(new Date()); return Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; }); };
+      const entrySeconds = (entry) => Number.isFinite(Number(entry.totalSeconds)) ? Math.max(0, Math.round(Number(entry.totalSeconds))) : Math.max(0, Math.round(Number(entry.minutes || 0) * 60 + Number(entry.seconds || 0)));
+      const duration = (total) => { const value = Math.max(0, Math.round(total)); const h = Math.floor(value / 3600); const m = Math.floor((value % 3600) / 60); const s = value % 60; if (h) return h + "h " + m + "m"; if (m) return m + "m" + (s ? " " + s + "s" : ""); return s + "s"; };
+      const escapeHtml = (value) => String(value || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+      function load() { try { const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); return Array.isArray(parsed) ? parsed : []; } catch { return []; } }
+      function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+      function currentWeek() { const keys = new Set(weekDays().map(dateKey)); return entries.filter((entry) => keys.has(entry.date)).sort((a,b) => String(b.date).localeCompare(String(a.date)) || Number(b.createdAt) - Number(a.createdAt)); }
+      function setStatus(message) { document.getElementById("personal-status").textContent = message; }
+      function add(totalSeconds, note, date) { const total = Math.max(1, Math.round(totalSeconds)); entries.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,7), date: date || dateKey(new Date()), type: "personal", minutes: Math.floor(total / 60), seconds: total % 60, totalSeconds: total, note: String(note || "").trim(), createdAt: Date.now() }); save(); render(); setStatus("Added " + duration(total) + " to personal time."); }
+      function setMeter(id, value, limit) { document.getElementById(id).style.width = Math.min(100, Math.round(value / limit * 100)) + "%"; }
+      function render() {
+        const days = weekDays(); const list = currentWeek(); const today = dateKey(new Date());
+        const todayTotal = list.filter((e) => e.date === today).reduce((sum,e) => sum + entrySeconds(e), 0);
+        const weekTotal = list.reduce((sum,e) => sum + entrySeconds(e), 0);
+        document.getElementById("personal-today").textContent = duration(todayTotal);
+        document.getElementById("personal-week-total").textContent = duration(weekTotal);
+        setMeter("personal-today-meter", todayTotal, DAILY_LIMIT_SECONDS); setMeter("personal-week-meter", weekTotal, WEEKLY_LIMIT_SECONDS);
+        document.getElementById("personal-week-label").textContent = days[0].toLocaleDateString([], {month:"short",day:"numeric"}) + " – " + days[6].toLocaleDateString([], {month:"short",day:"numeric"});
+        document.getElementById("personal-week-strip").innerHTML = days.map((day) => { const total = list.filter((e) => e.date === dateKey(day)).reduce((sum,e) => sum + entrySeconds(e),0); return '<div class="personal-day"><b>' + day.toLocaleDateString([],{weekday:"short"}) + '</b><strong>' + duration(total) + '</strong></div>'; }).join("");
+        entriesEl.innerHTML = list.length ? list.map((entry) => '<div class="personal-entry"><div><strong>' + duration(entrySeconds(entry)) + '</strong><span>' + fromKey(entry.date).toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"}) + ' · ' + escapeHtml(entry.note || "Personal time") + '</span></div><button class="button-danger" data-personal-delete="' + entry.id + '" aria-label="Delete entry">×</button></div>').join("") : '<div class="empty">No personal time logged this week.</div>';
+      }
+      function exportCsv() { const rows = [["date","minutes","seconds","total_seconds","note"], ...entries.map((e) => [e.date, Math.floor(entrySeconds(e)/60), entrySeconds(e)%60, entrySeconds(e), e.note || ""])]; const csv = rows.map((row) => row.map((cell) => '"' + String(cell).replace(/"/g,'""') + '"').join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv],{type:"text/csv"})); const link = document.createElement("a"); link.href = url; link.download = "clockwise-personal-time.csv"; link.click(); URL.revokeObjectURL(url); setStatus("CSV export created."); }
+      dateInput.value = dateKey(new Date());
+      form.addEventListener("submit", (event) => { event.preventDefault(); add(Number(minutesInput.value || 0) * 60 + Number(secondsInput.value || 0), noteInput.value, dateInput.value); noteInput.value = ""; });
+      document.querySelectorAll("[data-personal-quick]").forEach((button) => button.addEventListener("click", () => add(Number(button.dataset.personalQuick) * 60, "Quick add", dateInput.value)));
+      document.getElementById("personal-log-timer").addEventListener("click", () => { const total = Number(window.clockwiseElapsedSeconds?.() || 0); if (!total) return alert("Start the Clockwise timer before logging it."); add(total, "Clockwise timer", dateInput.value); });
+      document.getElementById("personal-export").addEventListener("click", exportCsv);
+      document.getElementById("personal-clear").addEventListener("click", () => { if (!confirm("Clear this week's personal-time entries?")) return; const ids = new Set(currentWeek().map((e) => e.id)); entries = entries.filter((e) => !ids.has(e.id)); save(); render(); setStatus("This week's personal time was cleared."); });
+      entriesEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-delete]"); if (!button) return; entries = entries.filter((e) => e.id !== button.dataset.personalDelete); save(); render(); });
+      render();
     })();
   </script>
 </body>

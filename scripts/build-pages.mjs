@@ -147,7 +147,6 @@ function siteNav(profile, active, brandOverride = "") {
   const cozyHref = "/cozy-builder-game/";
   const firstEmberHref = "/first-ember/";
   const clockwiseHref = "/clockwise/";
-  const timekeeperHref = "/timekeeper/";
   const simHref = "/sim/";
   const contactHref = "/contact/";
   const newTab = 'target="_blank" rel="noopener noreferrer"';
@@ -177,7 +176,6 @@ function siteNav(profile, active, brandOverride = "") {
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" ${newTab}>Cozy Builder</a>`,
         `<a class="johnny-site-link ${active === "first-ember" ? "active" : ""}" href="${firstEmberHref}" ${newTab}>First Ember</a>`,
         `<a class="johnny-site-link ${active === "clockwise" ? "active" : ""}" href="${clockwiseHref}" ${newTab}>Clockwise</a>`,
-        `<a class="johnny-site-link ${active === "timekeeper" ? "active" : ""}" href="${timekeeperHref}" ${newTab}>Timekeeper</a>`,
         `<a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="${simHref}" ${newTab}>Sim</a>`,
         `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}" ${newTab}>Contact</a>`
       ];
@@ -4063,6 +4061,7 @@ function createContactPage() {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/future-theme.css?v=1">
   ${sharedNavStyles}
   <style>
     :root {
@@ -4463,7 +4462,6 @@ ${siteNav("ai", "contact")}
       const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
       const clockwiseHref = "/clockwise/";
-      const timekeeperHref = "/timekeeper/";
       const simHref = "/sim/";
       const contactHref = "/contact/";
 
@@ -4493,7 +4491,6 @@ ${siteNav("ai", "contact")}
           if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
           if (label === "clockwise") link.href = clockwiseHref;
-          if (label === "timekeeper") link.href = timekeeperHref;
           if (label === "sim") {
             link.href = simHref;
             link.target = "_blank";
