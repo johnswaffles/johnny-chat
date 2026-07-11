@@ -72,9 +72,9 @@ function loginPage(errorMessage = "") {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Story Editor Access</title>
   <style>
-    :root { color-scheme: dark; --bg: #080a0d; --panel: rgba(255,255,255,.08); --line: rgba(255,255,255,.13); --ink: #f4f1e8; --copy: rgba(244,241,232,.68); --accent: #e8c46f; }
+    :root { color-scheme: dark; --bg: #05060a; --panel: rgba(255,255,255,.08); --line: rgba(69,215,255,.18); --ink: #f4f7ff; --copy: #98a4bb; --accent: #45d7ff; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Inter, system-ui, sans-serif; color: var(--ink); background: radial-gradient(circle at 20% 12%, rgba(232,196,111,.2), transparent 24%), radial-gradient(circle at 84% 20%, rgba(92,169,153,.18), transparent 24%), linear-gradient(180deg, #111419, var(--bg)); padding: 24px; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Inter, system-ui, sans-serif; color: var(--ink); background: radial-gradient(circle at 20% 12%, rgba(69,215,255,.18), transparent 24%), radial-gradient(circle at 84% 20%, rgba(169,140,255,.16), transparent 24%), linear-gradient(180deg, #10131d, var(--bg)); padding: 24px; }
     .card { width: min(460px, 100%); padding: 30px; border: 1px solid var(--line); border-radius: 24px; background: linear-gradient(180deg, rgba(20,22,27,.92), rgba(10,12,15,.96)); box-shadow: 0 24px 80px rgba(0,0,0,.45); }
     .eyebrow { color: var(--accent); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
     h1 { margin: 14px 0 8px; font-size: 36px; line-height: 1; }
@@ -82,7 +82,7 @@ function loginPage(errorMessage = "") {
     form { margin-top: 20px; display: grid; gap: 14px; }
     label { display: grid; gap: 8px; font-weight: 800; }
     input { min-height: 48px; padding: 0 15px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.06); color: var(--ink); font: inherit; }
-    button { min-height: 48px; border: 0; border-radius: 999px; background: linear-gradient(135deg, #e8c46f, #5ca999); color: #0a0d0c; font: inherit; font-weight: 900; cursor: pointer; }
+    button { min-height: 48px; border: 0; border-radius: 999px; background: linear-gradient(135deg, #a9efff, #45d7ff); color: #031116; font: inherit; font-weight: 900; cursor: pointer; }
     .error { margin-top: 14px; color: #ffb9b9; font-weight: 800; }
   </style>
 </head>

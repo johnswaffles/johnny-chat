@@ -88,7 +88,7 @@ function loginPage(errorMessage = "") {
       --line: rgba(255, 255, 255, 0.12);
       --ink: #eff3f7;
       --copy: rgba(233, 240, 247, 0.72);
-      --accent: #66e6b1;
+      --accent: #45d7ff;
       --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
     }
 
@@ -102,9 +102,9 @@ function loginPage(errorMessage = "") {
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       color: var(--ink);
       background:
-        radial-gradient(circle at 12% 12%, rgba(102, 230, 177, 0.18), transparent 22%),
-        radial-gradient(circle at 86% 10%, rgba(118, 184, 255, 0.16), transparent 20%),
-        radial-gradient(circle at 50% 100%, rgba(157, 124, 255, 0.1), transparent 24%),
+        radial-gradient(circle at 12% 12%, rgba(69, 215, 255, 0.18), transparent 22%),
+        radial-gradient(circle at 86% 10%, rgba(169, 140, 255, 0.16), transparent 20%),
+        radial-gradient(circle at 50% 100%, rgba(139, 168, 255, 0.1), transparent 24%),
         linear-gradient(180deg, var(--bg) 0%, #0d1320 48%, #06090f 100%);
       padding: 24px;
     }
@@ -125,7 +125,7 @@ function loginPage(errorMessage = "") {
       gap: 10px;
       padding: 8px 12px;
       border-radius: 999px;
-      background: rgba(102, 230, 177, 0.08);
+      background: rgba(69, 215, 255, 0.08);
       color: var(--accent);
       font-size: 12px;
       font-weight: 800;
@@ -181,7 +181,7 @@ function loginPage(errorMessage = "") {
       min-height: 48px;
       border: none;
       border-radius: 999px;
-      background: linear-gradient(135deg, #66e6b1, #76b8ff);
+      background: linear-gradient(135deg, #a9efff, #45d7ff);
       color: #081018;
       font: inherit;
       font-weight: 800;
