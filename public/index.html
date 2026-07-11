@@ -530,6 +530,7 @@
     .eyebrow { display: block; margin-bottom: 15px; color: var(--ember); font-size: 11px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
 
     .feature-grid { display: grid; grid-template-columns: 1.45fr .78fr; grid-template-rows: 330px 330px; gap: 18px; }
+    .feature-grid-compact { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 390px; }
     .project-card { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; min-height: 280px; padding: clamp(24px, 3vw, 42px); border: 1px solid rgba(255,255,255,.1); border-radius: 24px; background: #10241b; isolation: isolate; transition: transform .35s ease, border-color .35s ease; }
     .project-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,.24); }
     .project-card::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .75; transition: transform .7s ease, opacity .35s ease; }
@@ -569,6 +570,7 @@
     @media (max-width: 920px) {
       .feature-grid { grid-template-columns: 1fr; grid-template-rows: 570px 290px 290px; }
       .ember-card { grid-row: auto; }
+      .feature-grid-compact { grid-template-columns: 1fr; grid-template-rows: 320px 320px; }
       .shelf { grid-template-columns: repeat(2, 1fr); }
       .section-head { grid-template-columns: 1fr; }
     }
@@ -579,6 +581,7 @@
       .hero h1 { font-size: 54px; }
       .page { padding-top: 70px; gap: 70px; }
       .feature-grid { grid-template-rows: 510px 300px 300px; }
+      .feature-grid-compact { grid-template-rows: 300px 300px; }
       .project-card { border-radius: 18px; }
       .shelf { grid-template-columns: 1fr; }
       footer { flex-direction: column; }
@@ -600,7 +603,6 @@
       <a class="johnny-site-link" href="/story-editor/" target="_blank" rel="noopener noreferrer">Story Editor</a>
       <a class="johnny-site-link" href="/nova-chat/" target="_blank" rel="noopener noreferrer">Nova Chat</a>
       <a class="johnny-site-link" href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
-      <a class="johnny-site-link" href="/first-ember/" target="_blank" rel="noopener noreferrer">First Ember</a>
       <a class="johnny-site-link" href="/clockwise/" target="_blank" rel="noopener noreferrer">Clockwise</a>
       <a class="johnny-site-link" href="/timekeeper/" target="_blank" rel="noopener noreferrer">Timekeeper</a>
       <a class="johnny-site-link" href="/sim/" target="_blank" rel="noopener noreferrer">Sim</a>
@@ -617,7 +619,6 @@
       </p>
       <div class="hero-actions">
         <a class="button button-primary" href="#featured">Explore the work</a>
-        <a class="button button-secondary" href="/first-ember/">Play First Ember ↗</a>
       </div>
       <div class="hero-note"><i></i> Built, tested, and always evolving</div>
     </div>
@@ -629,11 +630,7 @@
         <div><span class="eyebrow">Featured builds</span><h2>Made to be used.</h2></div>
         <p>Not case studies trapped behind glass. These are working experiments you can open, play, and explore right now.</p>
       </div>
-      <div class="feature-grid" style="margin-top:32px">
-        <a class="project-card ember-card" href="/first-ember/">
-          <span class="status">● Now playable</span>
-          <div class="project-meta"><div><span>Prehistoric survival game</span><h3>First Ember</h3><p>Gather, endure, and protect the first fragile spark of a new human story.</p></div><b class="project-arrow">↗</b></div>
-        </a>
+      <div class="feature-grid feature-grid-compact" style="margin-top:32px">
         <a class="project-card helper-card" href="/ai-helper/">
           <span>Practical AI</span>
           <div class="project-meta"><div><h3>AI Helper</h3><p>Clear answers and useful handoffs for everyday business.</p></div><b class="project-arrow">↗</b></div>
@@ -665,10 +662,11 @@
     <footer><span>© 2026 Johnny</span><span>Built from curiosity in Illinois.</span></footer>
   </main>
   <script>
+    window.JOHNNY_CHAT_API_BASE_URL = "https://johnny-chat.onrender.com";
     window.JOHNNY_WIDGET_PROFILE = "home";
     window.JOHNNY_WIDGET_START_MINIMIZED = true;
   </script>
-  <script src="/voice-widget.js?v=home-guide-1" data-profile="home"></script>
+  <script src="/voice-widget.js?v=home-guide-2" data-profile="home"></script>
   <script>
     const hero = document.querySelector('.hero');
     hero?.addEventListener('pointermove', (event) => {

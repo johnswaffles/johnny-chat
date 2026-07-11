@@ -91,6 +91,9 @@ if (!OPENAI_API_KEY) {
 }
 
 const CHATBOT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+const HOME_WORKBENCH_DAILY_SESSION_LIMIT = 8;
+const HOME_WORKBENCH_WINDOW_MS = 24 * 60 * 60 * 1000;
+const homeWorkbenchSessions = new Map();
 let johnnyChatUsageLock = Promise.resolve();
 let johnnyChatLibraryLock = Promise.resolve();
 const TTS_VOICES = new Set([
@@ -108,6 +111,40 @@ const TTS_VOICES = new Set([
   "shimmer",
   "verse"
 ]);
+
+function getRequestClientKey(req) {
+  const forwarded = String(req.headers?.["cf-connecting-ip"] || req.headers?.["x-forwarded-for"] || "")
+    .split(",")[0]
+    .trim();
+  return forwarded || String(req.ip || req.socket?.remoteAddress || "unknown");
+}
+
+function consumeHomeWorkbenchSession(req) {
+  const now = Date.now();
+  const key = getRequestClientKey(req);
+  const current = homeWorkbenchSessions.get(key);
+  const entry = !current || now - current.startedAt >= HOME_WORKBENCH_WINDOW_MS
+    ? { startedAt: now, count: 0 }
+    : current;
+
+  if (entry.count >= HOME_WORKBENCH_DAILY_SESSION_LIMIT) {
+    return {
+      allowed: false,
+      limit: HOME_WORKBENCH_DAILY_SESSION_LIMIT,
+      remaining: 0,
+      retryAfterSeconds: Math.max(60, Math.ceil((entry.startedAt + HOME_WORKBENCH_WINDOW_MS - now) / 1000))
+    };
+  }
+
+  entry.count += 1;
+  homeWorkbenchSessions.set(key, entry);
+  return {
+    allowed: true,
+    limit: HOME_WORKBENCH_DAILY_SESSION_LIMIT,
+    remaining: Math.max(0, HOME_WORKBENCH_DAILY_SESSION_LIMIT - entry.count),
+    retryAfterSeconds: 0
+  };
+}
 
 function safeStringEqual(a, b) {
   const left = Buffer.from(String(a || ""), "utf8");
@@ -862,6 +899,18 @@ app.post("/api/realtime-token", async (req, res) => {
     console.log("📥 [Realtime] Creating Ephemeral Session Token...");
     const profile = inferWidgetProfile(req);
     if (profile === "nova" && !requireChatbotSession(req, res)) return;
+    if (profile === "home") {
+      const quota = consumeHomeWorkbenchSession(req);
+      res.setHeader("X-Workbench-Limit", String(quota.limit));
+      res.setHeader("X-Workbench-Remaining", String(quota.remaining));
+      if (!quota.allowed) {
+        res.setHeader("Retry-After", String(quota.retryAfterSeconds));
+        return res.status(429).json({
+          error: "Workbench visit limit reached",
+          detail: "The Workbench guide has reached its session limit for today. Please come back tomorrow or use the Contact page."
+        });
+      }
+    }
 
     if (!OPENAI_API_KEY) {
       console.error("❌ [Realtime] OPENAI_API_KEY is missing!");

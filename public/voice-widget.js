@@ -49,6 +49,8 @@ class VoiceWidget {
         this.pendingUpload = null;
         this.isTextInitiated = false;
         this.pendingHangup = false;
+        this.homeTurnCount = 0;
+        this.homeTurnLimit = 16;
         this.remoteAudioEl = null;
         this.realtimeModel = "";
         this.profile = detectJohnnyWidgetProfile();
@@ -337,6 +339,8 @@ class VoiceWidget {
     }
 
     getBackendUrl() {
+        const configuredUrl = String(window.JOHNNY_CHAT_API_BASE_URL || window.johnnyChatApiBaseUrl || "").trim();
+        if (configuredUrl) return configuredUrl.replace(/\/+$/, "");
         const scriptTag = document.querySelector('script[src*="voice-widget.js"]');
         return scriptTag ? new URL(scriptTag.src).origin : window.location.origin;
     }
@@ -527,6 +531,8 @@ class VoiceWidget {
     async sendTextMessage(text) {
         console.log("📤 Sending Text Message:", text);
 
+        if (!this.allowHomeTurn()) return;
+
         // 1. Ensure session is active
         if (this.state === 'idle') {
             this.isTextInitiated = true;
@@ -560,6 +566,19 @@ class VoiceWidget {
 
         // Request a response
         this.dc.send(JSON.stringify({ type: "response.create" }));
+    }
+
+    allowHomeTurn() {
+        if (this.profile !== "home") return true;
+        if (this.homeTurnCount >= this.homeTurnLimit) {
+            const bubble = this.createMessageBubble('assistant');
+            bubble.textContent = "That is the Workbench limit for this visit. You can still explore the site, or use Contact if you need Johnny directly.";
+            this.scrollToBottom();
+            if (this.statusLabel) this.statusLabel.innerText = "VISIT LIMIT REACHED";
+            return false;
+        }
+        this.homeTurnCount += 1;
+        return true;
     }
 
     resetChat() {
@@ -636,6 +655,9 @@ class VoiceWidget {
             });
             if (!tokenRes.ok) {
                 const detail = await tokenRes.text().catch(() => "");
+                if (tokenRes.status === 429 && this.statusLabel) {
+                    this.statusLabel.innerText = "DAILY LIMIT REACHED";
+                }
                 throw new Error(`Token fetch failed${detail ? `: ${detail.slice(0, 240)}` : ""}`);
             }
 
@@ -717,7 +739,11 @@ class VoiceWidget {
         } catch (err) {
             console.error("🔥 Johnny Error:", err);
             this.updateState('error');
-            if (this.statusLabel) this.statusLabel.innerText = "CONNECTION ISSUE";
+            if (this.statusLabel) {
+                this.statusLabel.innerText = String(err?.message || "").includes("visit limit")
+                    ? "DAILY LIMIT REACHED"
+                    : "CONNECTION ISSUE";
+            }
         }
     }
 
