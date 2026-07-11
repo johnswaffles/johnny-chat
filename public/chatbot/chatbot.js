@@ -153,7 +153,7 @@
     ,closeActions: getEl("close-actions")
   };
 
-  document.title = "GPT 5.5";
+  document.title = "GPT 5.6";
   document.documentElement.dataset.profile = profile;
   window.JOHNNY_CHAT_PROFILE = profile;
 
@@ -277,7 +277,7 @@
       save();
       return projectConvo;
     }
-    db.convos.unshift(newConversation("GPT 5.5"));
+    db.convos.unshift(newConversation("GPT 5.6"));
     db.activeId = db.convos[0].id;
     save();
     return ensureConversation(db.convos[0]);
@@ -574,7 +574,7 @@
           if (db.activeId === conv.id) {
             db.activeId = db.convos[0]?.id || "";
             if (!db.activeId) {
-              db.convos.unshift(newConversation("GPT 5.5"));
+              db.convos.unshift(newConversation("GPT 5.6"));
               db.activeId = db.convos[0].id;
             }
           }
@@ -1842,7 +1842,7 @@
   }
 
   function newChat() {
-    const convo = newConversation("GPT 5.5");
+    const convo = newConversation("GPT 5.6");
     db.convos.unshift(convo);
     db.activeId = convo.id;
     save();
@@ -2103,7 +2103,7 @@
     if (!confirmed) return;
 
     db.convos = db.convos.filter((conv) => conv && ensureConversation(conv).projectId !== projectId);
-    const fresh = newConversation("GPT 5.5");
+    const fresh = newConversation("GPT 5.6");
     fresh.projectId = projectId;
     db.convos.unshift(fresh);
     db.activeId = fresh.id;

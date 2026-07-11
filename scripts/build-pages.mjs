@@ -171,7 +171,7 @@ function siteNav(profile, active, brandOverride = "") {
     : [
         `<a class="johnny-site-link ${active === "home" ? "active" : ""}" href="${homeHref}">Home</a>`,
         `<a class="johnny-site-link ${active === "ai-helper" ? "active" : ""}" href="${aiHelperHref}" ${newTab}>AI Helper</a>`,
-        `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}" ${newTab}>GPT 5.5</a>`,
+        `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}" ${newTab}>GPT 5.6</a>`,
         `<a class="johnny-site-link ${active === "story" ? "active" : ""}" href="${storyHref}" ${newTab}>Story Editor</a>`,
         `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}" ${newTab}>Nova Chat</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" ${newTab}>Cozy Builder</a>`,
@@ -4484,7 +4484,7 @@ ${siteNav("ai", "contact")}
         navLinks.forEach((link) => {
           const label = String(link.textContent || "").trim().toLowerCase();
           if (label === "home") link.href = homeHref;
-          if (label === "gpt 5.5") link.href = gptHref;
+          if (label === "gpt 5.6") link.href = gptHref;
           if (label === "story editor") {
             link.href = storyHref;
             link.target = "_blank";

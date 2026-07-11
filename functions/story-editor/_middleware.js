@@ -90,7 +90,7 @@ function loginPage(errorMessage = "") {
   <main class="card">
     <div class="eyebrow">Story Editor</div>
     <h1>Enter the access password</h1>
-    <p>This fiction editing workspace uses the same private access as GPT 5.5.</p>
+    <p>This fiction editing workspace uses the same private access as GPT 5.6.</p>
     <form method="post">
       <label>Password <input type="password" name="password" autocomplete="current-password" autofocus></label>
       <button type="submit">Unlock Story Editor</button>

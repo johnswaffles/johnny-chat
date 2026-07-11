@@ -79,7 +79,7 @@ function loginPage(errorMessage = "") {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GPT 5.5 Access</title>
+  <title>GPT 5.6 Access</title>
   <style>
     :root {
       color-scheme: dark;
@@ -203,7 +203,7 @@ function loginPage(errorMessage = "") {
 </head>
 <body>
   <div class="card">
-    <div class="eyebrow">GPT 5.5</div>
+    <div class="eyebrow">GPT 5.6</div>
     <h1>Enter the access password</h1>
     <p>This page is private.</p>
     <form method="post">
@@ -211,7 +211,7 @@ function loginPage(errorMessage = "") {
         Password
         <input type="password" name="password" autocomplete="current-password" autofocus>
       </label>
-      <button type="submit">Unlock GPT 5.5</button>
+      <button type="submit">Unlock GPT 5.6</button>
     </form>
     ${errorHtml}
     <div class="fine-print">If you need access, use the password you were given.</div>

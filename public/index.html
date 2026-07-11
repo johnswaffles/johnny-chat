@@ -453,11 +453,16 @@
   </style>
   <style>
     :root {
-      --night: #07110d;
-      --night-soft: #10251b;
-      --cream: #f7f2e5;
-      --ember: #f29b45;
-      --mint: #9ad7ae;
+      --night: #05060a;
+      --night-soft: #11131c;
+      --cream: #f4f7ff;
+      --ember: #45d7ff;
+      --mint: #a98cff;
+      --gold: #45d7ff;
+      --green: #45d7ff;
+      --teal: #7c6cff;
+      --blue: #8ba8ff;
+      --plum: #a98cff;
     }
 
     body { overflow-x: hidden; background: var(--night); }
@@ -476,14 +481,14 @@
       width: min(1440px, calc(100vw - 28px));
       border-radius: 18px;
       color: var(--cream);
-      background: rgba(7, 17, 13, .78);
+      background: rgba(5, 6, 10, .82);
       border-color: rgba(255,255,255,.11);
       box-shadow: 0 18px 70px rgba(0,0,0,.24);
     }
     .johnny-site-brand, .johnny-site-link { color: var(--cream); }
     .johnny-site-brand::before { content: "●"; color: var(--ember); margin-right: 9px; }
     .johnny-site-link:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.12); }
-    .johnny-site-link.active { color: #fff; background: rgba(242,155,69,.15); border-color: rgba(242,155,69,.3); }
+    .johnny-site-link.active { color: #fff; background: rgba(69,215,255,.12); border-color: rgba(69,215,255,.34); box-shadow: inset 0 0 22px rgba(69,215,255,.08); }
 
     .hero {
       width: min(1440px, calc(100vw - 28px));
@@ -493,9 +498,9 @@
       align-items: stretch;
       border-color: rgba(255,255,255,.13);
       background:
-        radial-gradient(circle at var(--mx, 72%) var(--my, 40%), rgba(242,155,69,.18), transparent 25%),
-        linear-gradient(90deg, rgba(4,10,7,.94) 0%, rgba(5,13,9,.73) 42%, rgba(5,13,9,.12) 78%),
-        linear-gradient(0deg, rgba(4,10,7,.88) 0%, transparent 46%),
+        radial-gradient(circle at var(--mx, 72%) var(--my, 40%), rgba(69,215,255,.22), transparent 25%),
+        linear-gradient(90deg, rgba(3,4,9,.96) 0%, rgba(5,7,14,.76) 42%, rgba(5,7,14,.16) 78%),
+        linear-gradient(0deg, rgba(3,4,9,.92) 0%, transparent 46%),
         url("/home/johnny-workbench.png") center / cover no-repeat;
     }
     .hero::after {
@@ -503,7 +508,7 @@
       position: absolute;
       inset: auto 0 0;
       height: 40%;
-      background: linear-gradient(transparent, rgba(7,17,13,.96));
+      background: linear-gradient(transparent, rgba(5,6,10,.97));
       pointer-events: none;
     }
     .hero-content { position: relative; z-index: 2; align-self: end; width: min(960px, 100%); padding: clamp(30px, 6vw, 88px); }
@@ -512,8 +517,8 @@
     .lede { max-width: 690px; font-size: clamp(17px, 1.4vw, 21px); }
     .hero-actions { gap: 14px; }
     .button { min-height: 56px; padding: 0 23px; border-radius: 999px; }
-    .button-primary { color: #112018; background: var(--cream); box-shadow: none; }
-    .button-primary:hover { background: #fff; }
+    .button-primary { color: #031116; background: linear-gradient(135deg, #a9efff, #45d7ff); box-shadow: 0 0 34px rgba(69,215,255,.18); }
+    .button-primary:hover { background: linear-gradient(135deg, #d2f8ff, #6ee2ff); }
     .button-secondary { border-color: rgba(255,255,255,.26); }
     .hero-note { display: flex; align-items: center; gap: 10px; margin-top: 22px; color: rgba(255,255,255,.66); font-size: 13px; font-weight: 700; }
     .hero-note i { width: 32px; height: 1px; background: var(--ember); }
@@ -535,13 +540,13 @@
     .project-meta span { font-size: 11px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
     .project-arrow { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 auto; border-radius: 50%; color: #101a14; background: var(--cream); font-size: 22px; transition: transform .25s ease; }
     .project-card:hover .project-arrow { transform: rotate(-35deg); }
-    .ember-card { grid-row: 1 / 3; background: #351711; }
-    .ember-card::before { background: radial-gradient(circle at 70% 24%, rgba(255,184,80,.68), transparent 17%), radial-gradient(circle at 65% 35%, rgba(197,60,27,.48), transparent 32%), linear-gradient(145deg, transparent 20%, rgba(0,0,0,.72)), url('/first-ember/index.png') center / cover no-repeat; }
+    .ember-card { grid-row: 1 / 3; background: #10121b; }
+    .ember-card::before { background: radial-gradient(circle at 70% 24%, rgba(69,215,255,.38), transparent 20%), radial-gradient(circle at 65% 35%, rgba(126,92,255,.34), transparent 34%), linear-gradient(145deg, transparent 20%, rgba(0,0,0,.76)), url('/first-ember/index.png') center / cover no-repeat; filter: saturate(.72) contrast(1.08); }
     .ember-card .status { width: fit-content; padding: 8px 12px; border-radius: 999px; background: rgba(8,15,10,.62); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(10px); }
-    .helper-card { background: #0d3433; }
-    .helper-card::before { background: radial-gradient(circle at 80% 15%, rgba(75,225,208,.25), transparent 35%), linear-gradient(140deg, transparent, rgba(1,12,12,.74)); }
-    .story-card { background: #29213c; }
-    .story-card::before { background: radial-gradient(circle at 78% 16%, rgba(189,141,244,.24), transparent 36%), linear-gradient(140deg, transparent, rgba(9,5,18,.76)); }
+    .helper-card { background: #0b1720; }
+    .helper-card::before { background: radial-gradient(circle at 80% 15%, rgba(69,215,255,.28), transparent 35%), linear-gradient(140deg, transparent, rgba(2,7,15,.8)); }
+    .story-card { background: #161225; }
+    .story-card::before { background: radial-gradient(circle at 78% 16%, rgba(169,140,255,.3), transparent 36%), linear-gradient(140deg, transparent, rgba(6,4,14,.82)); }
 
     .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
     .shelf a { min-height: 210px; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; border-radius: 18px; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.09); transition: background .25s, transform .25s; }
@@ -551,10 +556,10 @@
     .shelf p { margin: 10px 0 0; color: rgba(247,242,229,.58); line-height: 1.5; }
     .shelf b { color: var(--ember); font-size: 20px; }
 
-    .manifesto { position: relative; overflow: hidden; padding: clamp(35px, 7vw, 90px); border-radius: 28px; color: #132018; background: var(--cream); }
-    .manifesto::after { content: "J"; position: absolute; right: -2vw; bottom: -10vw; color: rgba(25,70,45,.055); font: 900 min(46vw, 650px)/1 "Outfit"; }
+    .manifesto { position: relative; overflow: hidden; padding: clamp(35px, 7vw, 90px); border-radius: 28px; color: #f4f7ff; background: linear-gradient(135deg, #121622, #090b12); border: 1px solid rgba(69,215,255,.18); box-shadow: inset 0 1px rgba(255,255,255,.06), 0 0 70px rgba(69,215,255,.05); }
+    .manifesto::after { content: "J"; position: absolute; right: -2vw; bottom: -10vw; color: rgba(69,215,255,.045); font: 900 min(46vw, 650px)/1 "Outfit"; }
     .manifesto blockquote { position: relative; z-index: 1; max-width: 1050px; margin: 0; font: 800 clamp(38px, 5.6vw, 76px)/1.03 "Outfit"; letter-spacing: -.045em; }
-    .manifesto blockquote span { color: #2b7848; }
+    .manifesto blockquote span { color: #45d7ff; text-shadow: 0 0 30px rgba(69,215,255,.16); }
     .manifesto p { position: relative; z-index: 1; margin: 28px 0 0; font-weight: 800; }
 
     .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s ease; }
@@ -591,7 +596,7 @@
     <nav class="johnny-site-links" aria-label="Site">
       <a class="johnny-site-link active" href="https://justaskjohnny.com">Home</a>
       <a class="johnny-site-link" href="/ai-helper/" target="_blank" rel="noopener noreferrer">AI Helper</a>
-      <a class="johnny-site-link" href="/chatbot/" target="_blank" rel="noopener noreferrer">GPT 5.5</a>
+      <a class="johnny-site-link" href="/chatbot/" target="_blank" rel="noopener noreferrer">GPT 5.6</a>
       <a class="johnny-site-link" href="/story-editor/" target="_blank" rel="noopener noreferrer">Story Editor</a>
       <a class="johnny-site-link" href="/nova-chat/" target="_blank" rel="noopener noreferrer">Nova Chat</a>
       <a class="johnny-site-link" href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Cozy Builder</a>
@@ -643,7 +648,7 @@
     <section class="reveal">
       <div class="section-head"><div><span class="eyebrow">The app shelf</span><h2>Pick a rabbit hole.</h2></div><p>Work tools, conversation experiments, clocks, worlds, and whatever useful idea earns a place next.</p></div>
       <div class="shelf" style="margin-top:32px">
-        <a href="/chatbot/"><div><small>Private AI</small><h3>GPT 5.5</h3><p>A focused workspace for questions, drafts, files, and getting unstuck.</p></div><b>Open ↗</b></a>
+        <a href="/chatbot/"><div><small>Private AI</small><h3>GPT 5.6</h3><p>A focused workspace for questions, drafts, files, and getting unstuck.</p></div><b>Open ↗</b></a>
         <a href="/nova-chat/"><div><small>Experiment</small><h3>Nova Chat</h3><p>A different kind of conversational surface with a personality of its own.</p></div><b>Open ↗</b></a>
         <a href="/clockwise/"><div><small>Work tracker</small><h3>Clockwise</h3><p>Keep calls, marks, reminders, and important moments in view.</p></div><b>Open ↗</b></a>
         <a href="/cozy-builder-game/"><div><small>Playable world</small><h3>Cozy Builder</h3><p>A warm little building experiment made for curious wandering.</p></div><b>Play ↗</b></a>
@@ -657,7 +662,7 @@
       <blockquote>I notice the friction, take it apart, and build something <span>better to use.</span></blockquote>
       <p>Fix it. Test it. Make it useful. Then make it feel great.</p>
     </section>
-    <footer><span>© 2026 Johnny Shopinski</span><span>Built from curiosity in Illinois.</span></footer>
+    <footer><span>© 2026 Johnny</span><span>Built from curiosity in Illinois.</span></footer>
   </main>
   <script>
     window.JOHNNY_WIDGET_PROFILE = "home";
