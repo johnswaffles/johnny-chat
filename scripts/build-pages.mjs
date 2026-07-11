@@ -1,11 +1,13 @@
 import { access, readFile, writeFile, mkdir, rm, cp, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
+import { createHash } from "node:crypto";
 
 const root = process.cwd();
 const publicDir = path.join(root, "public");
 const isPagesBuild = process.env.CF_PAGES === "1" || process.env.CF_PAGES === "true";
 const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
+const firstEmberExportSourceDir = path.resolve(root, "..", "first-ember-godot", "build", "web");
 const cozyExportTargetDirs = [
   path.join(publicDir, "cozy-builder"),
   path.join(publicDir, "cozy-builder-game"),
@@ -13,10 +15,19 @@ const cozyExportTargetDirs = [
 ];
 const godotExportGroups = [
   { sourceDir: cozyExportSourceDir, targetDirs: cozyExportTargetDirs },
+  { sourceDir: firstEmberExportSourceDir, targetDirs: [path.join(publicDir, "first-ember")] },
 ];
 const godotExportTargetDirs = [
   ...godotExportGroups.flatMap((group) => group.targetDirs),
   path.join(publicDir, "sim"),
+];
+const godotRemotePackRoutes = [
+  { dir: "cozy-builder" },
+  { dir: "cozy-builder-game" },
+  { dir: "godot-playtest" },
+  // First Ember always uses the split Pages/Render architecture, even while
+  // its early package remains below Cloudflare's individual-file limit.
+  { dir: "first-ember", forceRemotePack: true, useBuildIdentifier: true },
 ];
 
 const widgetSnippet = (profile) => `
@@ -3938,13 +3949,7 @@ async function routeOversizedGodotAssetsForPages() {
   if (!isPagesBuild) return;
 
   const remoteBase = "https://johnny-chat.onrender.com";
-  const routes = [
-    { dir: "cozy-builder" },
-    { dir: "cozy-builder-game" },
-    { dir: "godot-playtest" },
-  ];
-
-  for (const route of routes) {
+  for (const route of godotRemotePackRoutes) {
     const targetDir = path.join(publicDir, route.dir);
     const htmlPath = path.join(targetDir, "index.html");
     const packPath = path.join(targetDir, "index.pck");
@@ -3953,9 +3958,14 @@ async function routeOversizedGodotAssetsForPages() {
       // Cloudflare Pages accepts individual assets up to 25 MiB. Small clean
       // builds should remain entirely on Pages; only legacy/oversized packs
       // need Render as an asset origin.
-      if (packInfo.size <= 25 * 1024 * 1024) continue;
+      if (!route.forceRemotePack && packInfo.size <= 25 * 1024 * 1024) continue;
       const source = await readFile(htmlPath, "utf8");
-      const packUrl = `${remoteBase}/${route.dir}/index.pck`;
+      let packUrl = `${remoteBase}/${route.dir}/index.pck`;
+      if (route.useBuildIdentifier) {
+        const packBytes = await readFile(packPath);
+        const buildId = createHash("sha256").update(packBytes).digest("hex").slice(0, 12);
+        packUrl += `?v=${buildId}`;
+      }
       const patched = source.replace(
         /"executable":"index","experimentalVK":false,"fileSizes":\{"index\.pck":\d+,/,
         `"executable":"index","mainPack":"${packUrl}","experimentalVK":false,"fileSizes":{"${packUrl}":${packInfo.size},`,

@@ -13,6 +13,17 @@
   Content-Encoding: gzip
   Cache-Control: public, max-age=0, must-revalidate
 
+/first-ember/index.wasm
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+  Cache-Control: public, max-age=0, must-revalidate
+
+/first-ember/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/first-ember/index.js
+  Cache-Control: public, max-age=0, must-revalidate
+
 /sim
   Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
 

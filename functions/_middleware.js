@@ -2,6 +2,7 @@ const WASM_ASSET_MAP = new Map([
   ["/cozy-builder/index.wasm", "/cozy-builder/index.wasm.gz"],
   ["/cozy-builder-game/index.wasm", "/cozy-builder-game/index.wasm.gz"],
   ["/godot-playtest/index.wasm", "/godot-playtest/index.wasm.gz"],
+  ["/first-ember/index.wasm", "/first-ember/index.wasm.gz"],
 ]);
 
 async function serveCompressedWasm(context, requestPath, compressedPath) {

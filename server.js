@@ -954,7 +954,16 @@ const GODOT_WASM_ROUTES = [
   "/cozy-builder/index.wasm",
   "/cozy-builder-game/index.wasm",
   "/godot-playtest/index.wasm",
+  "/first-ember/index.wasm",
 ];
+
+app.get("/first-ember/index.pck", (req, res, next) => {
+  res.setHeader("Content-Type", "application/octet-stream");
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.sendFile(path.join(process.cwd(), "public", "first-ember", "index.pck"), (err) => {
+    if (err) next(err);
+  });
+});
 
 function setSimAssetHeaders(res, assetName = "") {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
