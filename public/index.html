@@ -451,6 +451,139 @@
       .button { width: 100%; }
     }
   </style>
+  <style>
+    :root {
+      --night: #07110d;
+      --night-soft: #10251b;
+      --cream: #f7f2e5;
+      --ember: #f29b45;
+      --mint: #9ad7ae;
+    }
+
+    body { overflow-x: hidden; background: var(--night); }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      opacity: .16;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+    }
+
+    .johnny-site-nav {
+      width: min(1440px, calc(100vw - 28px));
+      border-radius: 18px;
+      color: var(--cream);
+      background: rgba(7, 17, 13, .78);
+      border-color: rgba(255,255,255,.11);
+      box-shadow: 0 18px 70px rgba(0,0,0,.24);
+    }
+    .johnny-site-brand, .johnny-site-link { color: var(--cream); }
+    .johnny-site-brand::before { content: "●"; color: var(--ember); margin-right: 9px; }
+    .johnny-site-link:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.12); }
+    .johnny-site-link.active { color: #fff; background: rgba(242,155,69,.15); border-color: rgba(242,155,69,.3); }
+
+    .hero {
+      width: min(1440px, calc(100vw - 28px));
+      min-height: min(790px, calc(100svh - 104px));
+      margin-top: 14px;
+      border-radius: 24px;
+      align-items: stretch;
+      border-color: rgba(255,255,255,.13);
+      background:
+        radial-gradient(circle at var(--mx, 72%) var(--my, 40%), rgba(242,155,69,.18), transparent 25%),
+        linear-gradient(90deg, rgba(4,10,7,.94) 0%, rgba(5,13,9,.73) 42%, rgba(5,13,9,.12) 78%),
+        linear-gradient(0deg, rgba(4,10,7,.88) 0%, transparent 46%),
+        url("/home/johnny-workbench.png") center / cover no-repeat;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 40%;
+      background: linear-gradient(transparent, rgba(7,17,13,.96));
+      pointer-events: none;
+    }
+    .hero-content { position: relative; z-index: 2; align-self: end; width: min(960px, 100%); padding: clamp(30px, 6vw, 88px); }
+    .hero h1 { max-width: 900px; font-size: clamp(58px, 7.6vw, 114px); line-height: .88; letter-spacing: -.055em; text-wrap: balance; }
+    .hero h1 em { color: var(--ember); font-style: normal; }
+    .lede { max-width: 690px; font-size: clamp(17px, 1.4vw, 21px); }
+    .hero-actions { gap: 14px; }
+    .button { min-height: 56px; padding: 0 23px; border-radius: 999px; }
+    .button-primary { color: #112018; background: var(--cream); box-shadow: none; }
+    .button-primary:hover { background: #fff; }
+    .button-secondary { border-color: rgba(255,255,255,.26); }
+    .hero-note { display: flex; align-items: center; gap: 10px; margin-top: 22px; color: rgba(255,255,255,.66); font-size: 13px; font-weight: 700; }
+    .hero-note i { width: 32px; height: 1px; background: var(--ember); }
+
+    .page { width: min(1320px, calc(100vw - 32px)); padding: 100px 0 90px; gap: 90px; color: var(--cream); }
+    .section-head { display: grid; grid-template-columns: 1fr minmax(280px, 520px); align-items: end; gap: 40px; }
+    .section-head h2 { font-size: clamp(44px, 6vw, 82px); letter-spacing: -.045em; }
+    .section-head p { margin: 0; color: rgba(247,242,229,.65); font-size: 17px; line-height: 1.7; }
+    .eyebrow { display: block; margin-bottom: 15px; color: var(--ember); font-size: 11px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
+
+    .feature-grid { display: grid; grid-template-columns: 1.45fr .78fr; grid-template-rows: 330px 330px; gap: 18px; }
+    .project-card { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; min-height: 280px; padding: clamp(24px, 3vw, 42px); border: 1px solid rgba(255,255,255,.1); border-radius: 24px; background: #10241b; isolation: isolate; transition: transform .35s ease, border-color .35s ease; }
+    .project-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,.24); }
+    .project-card::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .75; transition: transform .7s ease, opacity .35s ease; }
+    .project-card:hover::before { transform: scale(1.04); opacity: .95; }
+    .project-card h3 { font-size: clamp(34px, 4vw, 62px); letter-spacing: -.04em; }
+    .project-card p { max-width: 500px; margin: 12px 0 0; color: rgba(255,255,255,.72); line-height: 1.55; }
+    .project-meta { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+    .project-meta span { font-size: 11px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    .project-arrow { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 auto; border-radius: 50%; color: #101a14; background: var(--cream); font-size: 22px; transition: transform .25s ease; }
+    .project-card:hover .project-arrow { transform: rotate(-35deg); }
+    .ember-card { grid-row: 1 / 3; background: #351711; }
+    .ember-card::before { background: radial-gradient(circle at 70% 24%, rgba(255,184,80,.68), transparent 17%), radial-gradient(circle at 65% 35%, rgba(197,60,27,.48), transparent 32%), linear-gradient(145deg, transparent 20%, rgba(0,0,0,.72)), url('/first-ember/index.png') center / cover no-repeat; }
+    .ember-card .status { width: fit-content; padding: 8px 12px; border-radius: 999px; background: rgba(8,15,10,.62); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(10px); }
+    .helper-card { background: #0d3433; }
+    .helper-card::before { background: radial-gradient(circle at 80% 15%, rgba(75,225,208,.25), transparent 35%), linear-gradient(140deg, transparent, rgba(1,12,12,.74)); }
+    .story-card { background: #29213c; }
+    .story-card::before { background: radial-gradient(circle at 78% 16%, rgba(189,141,244,.24), transparent 36%), linear-gradient(140deg, transparent, rgba(9,5,18,.76)); }
+
+    .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .shelf a { min-height: 210px; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; border-radius: 18px; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.09); transition: background .25s, transform .25s; }
+    .shelf a:hover { transform: translateY(-4px); background: rgba(255,255,255,.09); }
+    .shelf small { color: var(--mint); font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
+    .shelf h3 { margin-top: 12px; font-size: 31px; }
+    .shelf p { margin: 10px 0 0; color: rgba(247,242,229,.58); line-height: 1.5; }
+    .shelf b { color: var(--ember); font-size: 20px; }
+
+    .manifesto { position: relative; overflow: hidden; padding: clamp(35px, 7vw, 90px); border-radius: 28px; color: #132018; background: var(--cream); }
+    .manifesto::after { content: "J"; position: absolute; right: -2vw; bottom: -10vw; color: rgba(25,70,45,.055); font: 900 min(46vw, 650px)/1 "Outfit"; }
+    .manifesto blockquote { position: relative; z-index: 1; max-width: 1050px; margin: 0; font: 800 clamp(38px, 5.6vw, 76px)/1.03 "Outfit"; letter-spacing: -.045em; }
+    .manifesto blockquote span { color: #2b7848; }
+    .manifesto p { position: relative; z-index: 1; margin: 28px 0 0; font-weight: 800; }
+
+    .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+    footer { display: flex; justify-content: space-between; gap: 24px; padding-top: 10px; color: rgba(247,242,229,.55); font-size: 13px; }
+
+    @media (max-width: 920px) {
+      .feature-grid { grid-template-columns: 1fr; grid-template-rows: 570px 290px 290px; }
+      .ember-card { grid-row: auto; }
+      .shelf { grid-template-columns: repeat(2, 1fr); }
+      .section-head { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .johnny-site-nav { width: calc(100vw - 20px); border-radius: 14px; }
+      .hero { width: calc(100vw - 20px); min-height: 650px; border-radius: 18px; }
+      .hero-content { padding: 25px; }
+      .hero h1 { font-size: 54px; }
+      .page { padding-top: 70px; gap: 70px; }
+      .feature-grid { grid-template-rows: 510px 300px 300px; }
+      .project-card { border-radius: 18px; }
+      .shelf { grid-template-columns: 1fr; }
+      footer { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
 </head>
 <body>
   <header class="johnny-site-nav">
@@ -473,135 +606,75 @@
   <section class="hero" aria-label="Johnny's workbench">
     <div class="hero-content">
       <span class="kicker">Johnny's digital workbench</span>
-      <h1>Useful little builds for real life.</h1>
+      <h1>Ideas become <em>useful</em> here.</h1>
       <p class="lede">
-        I'm Johnny. I like fixing things, tinkering with ideas, and turning everyday friction into tools I can actually use. This is where my work helpers, AI experiments, writing tools, and game prototypes live.
+        Welcome to my digital workbench—a growing collection of practical AI tools, focused work apps, writing experiments, and playable worlds built from real curiosity.
       </p>
       <div class="hero-actions">
-        <a class="button button-primary" href="#tools">See the tools</a>
+        <a class="button button-primary" href="#featured">Explore the work</a>
+        <a class="button button-secondary" href="/first-ember/">Play First Ember ↗</a>
       </div>
+      <div class="hero-note"><i></i> Built, tested, and always evolving</div>
     </div>
   </section>
 
   <main class="page">
-    <section class="intro-band">
-      <div class="panel bio-panel">
-        <div>
-          <span class="section-kicker">About me</span>
-          <h2>I build by noticing what keeps slowing me down.</h2>
-          <p>
-            Some people keep a junk drawer. I keep a growing shelf of apps and experiments. If a workflow feels clunky, I want to take it apart, understand it, and put it back together in a way that saves time the next time around.
-          </p>
-          <p>
-            These projects are personal, practical, and a little restless. They help with work calls, writing, AI experiments, customer intake, and small games that let me test ideas in a different way.
-          </p>
-        </div>
-        <div class="quick-strip">
-          <strong>Fix it. Test it. Make it useful.</strong>
-          <span>That is the pattern behind most of what lands here.</span>
-        </div>
+    <section id="featured" class="reveal">
+      <div class="section-head">
+        <div><span class="eyebrow">Featured builds</span><h2>Made to be used.</h2></div>
+        <p>Not case studies trapped behind glass. These are working experiments you can open, play, and explore right now.</p>
       </div>
-
-      <div class="stats" aria-label="What Johnny builds">
-        <article class="stat-card">
-          <strong>Work</strong>
-          <span>Tools for tracking calls, reminders, references, and the details that are easy to lose during a busy day.</span>
-        </article>
-        <article class="stat-card">
-          <strong>Ideas</strong>
-          <span>AI helpers, writing spaces, and experiments that make rough thoughts easier to shape into something usable.</span>
-        </article>
-        <article class="stat-card">
-          <strong>Play</strong>
-          <span>Game prototypes and little worlds for exploring systems, building mechanics, and visual direction.</span>
-        </article>
+      <div class="feature-grid" style="margin-top:32px">
+        <a class="project-card ember-card" href="/first-ember/">
+          <span class="status">● Now playable</span>
+          <div class="project-meta"><div><span>Prehistoric survival game</span><h3>First Ember</h3><p>Gather, endure, and protect the first fragile spark of a new human story.</p></div><b class="project-arrow">↗</b></div>
+        </a>
+        <a class="project-card helper-card" href="/ai-helper/">
+          <span>Practical AI</span>
+          <div class="project-meta"><div><h3>AI Helper</h3><p>Clear answers and useful handoffs for everyday business.</p></div><b class="project-arrow">↗</b></div>
+        </a>
+        <a class="project-card story-card" href="/story-editor/">
+          <span>Writing studio</span>
+          <div class="project-meta"><div><h3>Story Editor</h3><p>Shape a manuscript one focused passage at a time.</p></div><b class="project-arrow">↗</b></div>
+        </a>
       </div>
     </section>
 
-    <div id="tools" class="section-title">
-      <h2>The app shelf.</h2>
-      <p>Everything here started as a practical itch: something I wanted to track, clean up, test, write, automate, or understand better.</p>
-    </div>
-
-    <section class="tools" aria-label="Johnny's apps">
-      <article class="tool-card">
-        <div>
-          <span class="tag">Work tracker</span>
-          <h3>Clockwise</h3>
-          <p>A call timer with reference reminders and custom call marks for keeping track of what happened and when.</p>
-        </div>
-        <a class="tool-link" href="/clockwise/" target="_blank" rel="noopener noreferrer">Open Clockwise</a>
-      </article>
-      <article class="tool-card">
-        <div>
-          <span class="tag">Private AI</span>
-          <h3>GPT 5.5</h3>
-          <p>My private chat workspace for questions, drafts, project notes, files, and getting unstuck quickly.</p>
-        </div>
-        <a class="tool-link" href="/chatbot/" target="_blank" rel="noopener noreferrer">Open GPT 5.5</a>
-      </article>
-      <article class="tool-card">
-        <div>
-          <span class="tag">Local business</span>
-          <h3>AI Helper</h3>
-          <p>A small-business assistant page for customer questions, appointment intake, and simple handoffs.</p>
-        </div>
-        <a class="tool-link" href="/ai-helper/" target="_blank" rel="noopener noreferrer">Open AI Helper</a>
-      </article>
-      <article class="tool-card">
-        <div>
-          <span class="tag">Writing</span>
-          <h3>Story Editor</h3>
-          <p>A paragraph-by-paragraph editing space for drafts, rewrites, and shaping a manuscript without losing the thread.</p>
-        </div>
-        <a class="tool-link" href="/story-editor/" target="_blank" rel="noopener noreferrer">Open Story Editor</a>
-      </article>
-      <article class="tool-card">
-        <div>
-          <span class="tag">Chat experiment</span>
-          <h3>Nova Chat</h3>
-          <p>A different conversation surface for trying out how a focused assistant can feel and behave.</p>
-        </div>
-        <a class="tool-link" href="/nova-chat/" target="_blank" rel="noopener noreferrer">Open Nova Chat</a>
-      </article>
-      <article class="tool-card">
-        <div>
-          <span class="tag">Games</span>
-          <h3>Cozy Builder</h3>
-          <p>A playable experiment in building, simulation, and making little worlds feel pleasant to poke around in.</p>
-        </div>
-        <a class="tool-link" href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer">Open Cozy Builder</a>
-      </article>
-    </section>
-
-    <section class="panel wide-panel">
-      <div>
-        <span class="section-kicker">How it grows</span>
-        <h2>A living shelf, not a finished portfolio.</h2>
-        <p>
-          The site changes as the tools change. A timer gets a notes field. A homepage becomes more personal. A game export gets another pass. The point is to keep improving the things that make work and life a little easier to handle.
-        </p>
-      </div>
-      <div class="timeline" aria-label="Johnny's build pattern">
-        <div class="timeline-item">
-          <strong>Notice</strong>
-          <span>Find the repeated annoyance, missing note, or clunky step that keeps coming back.</span>
-        </div>
-        <div class="timeline-item">
-          <strong>Build</strong>
-          <span>Make a focused version that solves the real problem before making it fancy.</span>
-        </div>
-        <div class="timeline-item">
-          <strong>Tune</strong>
-          <span>Use it, fix the rough edges, and let the next practical need shape the next version.</span>
-        </div>
+    <section class="reveal">
+      <div class="section-head"><div><span class="eyebrow">The app shelf</span><h2>Pick a rabbit hole.</h2></div><p>Work tools, conversation experiments, clocks, worlds, and whatever useful idea earns a place next.</p></div>
+      <div class="shelf" style="margin-top:32px">
+        <a href="/chatbot/"><div><small>Private AI</small><h3>GPT 5.5</h3><p>A focused workspace for questions, drafts, files, and getting unstuck.</p></div><b>Open ↗</b></a>
+        <a href="/nova-chat/"><div><small>Experiment</small><h3>Nova Chat</h3><p>A different kind of conversational surface with a personality of its own.</p></div><b>Open ↗</b></a>
+        <a href="/clockwise/"><div><small>Work tracker</small><h3>Clockwise</h3><p>Keep calls, marks, reminders, and important moments in view.</p></div><b>Open ↗</b></a>
+        <a href="/cozy-builder-game/"><div><small>Playable world</small><h3>Cozy Builder</h3><p>A warm little building experiment made for curious wandering.</p></div><b>Play ↗</b></a>
+        <a href="/timekeeper/"><div><small>Time tool</small><h3>Timekeeper</h3><p>A focused way to see and manage the shape of your time.</p></div><b>Open ↗</b></a>
+        <a href="/sim/"><div><small>Simulation</small><h3>Living World</h3><p>Watch systems, weather, and life unfold across a tiny planet.</p></div><b>Explore ↗</b></a>
       </div>
     </section>
+
+    <section class="manifesto reveal">
+      <span class="eyebrow">The reason behind it</span>
+      <blockquote>I notice the friction, take it apart, and build something <span>better to use.</span></blockquote>
+      <p>Fix it. Test it. Make it useful. Then make it feel great.</p>
+    </section>
+    <footer><span>© 2026 Johnny Shopinski</span><span>Built from curiosity in Illinois.</span></footer>
   </main>
   <script>
     window.JOHNNY_WIDGET_PROFILE = "home";
     window.JOHNNY_WIDGET_START_MINIMIZED = true;
   </script>
   <script src="/voice-widget.js?v=home-guide-1" data-profile="home"></script>
+  <script>
+    const hero = document.querySelector('.hero');
+    hero?.addEventListener('pointermove', (event) => {
+      const box = hero.getBoundingClientRect();
+      hero.style.setProperty('--mx', `${((event.clientX - box.left) / box.width) * 100}%`);
+      hero.style.setProperty('--my', `${((event.clientY - box.top) / box.height) * 100}%`);
+    });
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add('visible'));
+    }, { threshold: .12 });
+    document.querySelectorAll('.reveal').forEach((element) => revealObserver.observe(element));
+  </script>
 </body>
 </html>
