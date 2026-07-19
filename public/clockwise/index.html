@@ -387,7 +387,7 @@
       .reminder { grid-template-columns: 1fr; }
     }
   </style>
-  <link rel="stylesheet" href="/future-theme.css?v=2">
+  <link rel="stylesheet" href="/future-theme.css?v=3">
 </head>
 <body class="clockwise-page">
   <header class="johnny-site-nav">
@@ -400,7 +400,7 @@
   <main class="page">
     <section class="panel hero">
       <aside class="side">
-        <section class="panel card">
+        <section class="panel card radar-card">
           <h2>Reference Radar</h2>
           <form id="reminder-form" class="form-grid">
             <label for="reference">PO, phone number or other reference number
@@ -431,7 +431,7 @@
           <div id="empty-reminders" class="empty">No reference reminders running right now.</div>
         </section>
 
-        <section class="panel card">
+        <section class="panel card marks-card">
           <h2>Session marks</h2>
           <div id="marks" class="reminders"></div>
           <div id="empty-marks" class="empty">Tap a call mark when something important happens.</div>
@@ -446,19 +446,24 @@
           </div>
           <h1>Clockwise</h1>
           <p class="lede">Track the call, mark important moments, manage reference follow-ups, and keep personal time visible in one command center.</p>
+          <div class="clockwise-facts" aria-label="Clockwise tracker details">
+            <span><i></i>Sunday → Saturday</span>
+            <span><i></i>Saved on this device</span>
+          </div>
         </div>
 
         <div class="timer-face">
           <span class="timer-orbit" aria-hidden="true"></span>
           <div class="timer" id="main-timer">00:00:00</div>
-          <div class="timer-caption"><span>Focused session</span><span>Local to this device</span></div>
+          <div class="timer-caption"><span>Focused session</span><span id="local-clock">Local time · --:--</span></div>
         </div>
 
-        <div>
+        <div class="timer-controls">
           <div class="button-row">
             <button class="button button-primary" type="button" id="start-pause">Start</button>
             <button class="button button-danger" type="button" id="reset">Reset</button>
           </div>
+          <div class="mark-heading"><span>Quick session marks</span><small>Timestamped automatically</small></div>
           <div class="mark-grid" style="margin-top: 12px;">
             <button class="button" type="button" data-mark-label="Call provider">Call provider</button>
             <button class="button" type="button" data-mark-label="Call customer">Call customer</button>
@@ -473,7 +478,7 @@
   <section class="personal-workspace" id="personal-time" aria-labelledby="personal-time-title">
     <div class="personal-head">
       <div><span class="eyebrow">Personal tracker</span><h2 id="personal-time-title">Personal Time</h2></div>
-      <p>Keep personal minutes visible without leaving Clockwise. Your existing Timekeeper history appears here automatically.</p>
+      <div class="personal-intro"><span class="personal-sync"><i></i>History saved</span><p>Keep personal minutes visible without leaving Clockwise. Your existing Timekeeper history appears here automatically.</p></div>
     </div>
     <div class="personal-grid">
       <div>
@@ -534,6 +539,8 @@
       const timerEl = document.getElementById("main-timer");
       const timerState = document.getElementById("timer-state");
       const timerReady = timerState.closest(".clockwise-ready");
+      const timerStage = document.querySelector(".timer-stage");
+      const localClock = document.getElementById("local-clock");
       const startPause = document.getElementById("start-pause");
       const reset = document.getElementById("reset");
       const markButtons = Array.from(document.querySelectorAll("[data-mark-label]"));
@@ -641,6 +648,9 @@
         startPause.textContent = running ? "Pause" : "Start";
         timerState.textContent = running ? "Running" : (seconds ? "Paused" : "Ready");
         timerReady.classList.toggle("is-running", running);
+        timerStage.classList.toggle("is-running", running);
+        timerStage.classList.toggle("has-time", seconds > 0);
+        localClock.textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + " · local";
 
         const now = Date.now();
         reminders.forEach((reminder) => {
@@ -824,9 +834,9 @@
         document.getElementById("personal-week-label").textContent = weekRange(viewedWeekStart) + " · Sunday–Saturday";
         document.getElementById("personal-next-week").disabled = dateKey(viewedWeekStart) >= dateKey(currentWeekStart);
         document.getElementById("personal-current-week").disabled = isCurrentWeek(viewedWeekStart);
-        document.getElementById("personal-week-strip").innerHTML = days.map((day) => { const total = list.filter((e) => e.date === dateKey(day)).reduce((sum,e) => sum + entrySeconds(e),0); const todayClass = dateKey(day) === today ? " is-today" : ""; return '<div class="personal-day' + todayClass + '"><b>' + day.toLocaleDateString([],{weekday:"short"}) + '</b><strong>' + duration(total) + '</strong></div>'; }).join("");
+        document.getElementById("personal-week-strip").innerHTML = days.map((day) => { const total = list.filter((e) => e.date === dateKey(day)).reduce((sum,e) => sum + entrySeconds(e),0); const todayClass = dateKey(day) === today ? " is-today" : ""; const progress = Math.min(100, Math.round(total / DAILY_LIMIT_SECONDS * 100)); return '<div class="personal-day' + todayClass + '" style="--day-progress:' + progress + '%"><b>' + day.toLocaleDateString([],{weekday:"short"}) + '</b><strong>' + duration(total) + '</strong><span class="personal-day-meter"><i></i></span></div>'; }).join("");
         entriesEl.innerHTML = list.length ? list.map((entry) => '<div class="personal-entry"><div><strong>' + duration(entrySeconds(entry)) + '</strong><span>' + fromKey(entry.date).toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"}) + ' · ' + escapeHtml(entry.note || "Personal time") + '</span></div><button class="button-danger" data-personal-delete="' + entry.id + '" aria-label="Delete entry">×</button></div>').join("") : '<div class="empty">No personal time logged for this Sunday–Saturday week.</div>';
-        historyEl.innerHTML = historyWeeks().map((weekStart) => { const weekEntries = entriesForWeek(weekStart); const total = weekEntries.reduce((sum,entry) => sum + entrySeconds(entry),0); const active = dateKey(weekStart) === dateKey(viewedWeekStart) ? " is-active" : ""; return '<button class="personal-history-week' + active + '" type="button" data-personal-week="' + dateKey(weekStart) + '"><span>' + weekRange(weekStart) + '</span><strong>' + duration(total) + '</strong><small>' + weekEntries.length + (weekEntries.length === 1 ? " entry" : " entries") + ' · Sun–Sat</small></button>'; }).join("");
+        historyEl.innerHTML = historyWeeks().map((weekStart) => { const weekEntries = entriesForWeek(weekStart); const total = weekEntries.reduce((sum,entry) => sum + entrySeconds(entry),0); const progress = Math.min(100, Math.round(total / WEEKLY_LIMIT_SECONDS * 100)); const active = dateKey(weekStart) === dateKey(viewedWeekStart) ? " is-active" : ""; return '<button class="personal-history-week' + active + '" type="button" data-personal-week="' + dateKey(weekStart) + '" style="--week-progress:' + progress + '%"><span>' + weekRange(weekStart) + '</span><strong>' + duration(total) + '</strong><span class="personal-history-meter"><i></i></span><small>' + weekEntries.length + (weekEntries.length === 1 ? " entry" : " entries") + ' · Sun–Sat</small></button>'; }).join("");
       }
       function exportCsv() { const rows = [["date","minutes","seconds","total_seconds","note"], ...entries.map((e) => [e.date, Math.floor(entrySeconds(e)/60), entrySeconds(e)%60, entrySeconds(e), e.note || ""])]; const csv = rows.map((row) => row.map((cell) => '"' + String(cell).replace(/"/g,'""') + '"').join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv],{type:"text/csv"})); const link = document.createElement("a"); link.href = url; link.download = "clockwise-personal-time.csv"; link.click(); URL.revokeObjectURL(url); setStatus("CSV export created."); }
       dateInput.value = dateKey(new Date());
