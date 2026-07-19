@@ -387,9 +387,9 @@
       .reminder { grid-template-columns: 1fr; }
     }
   </style>
-  <link rel="stylesheet" href="/future-theme.css?v=1">
+  <link rel="stylesheet" href="/future-theme.css?v=2">
 </head>
-<body>
+<body class="clockwise-page">
   <header class="johnny-site-nav">
     <span class="johnny-site-brand">justaskjohnny.com</span>
     <nav class="johnny-site-links" aria-label="Site">
@@ -440,13 +440,18 @@
 
       <div class="panel timer-stage">
         <div>
-          <span class="eyebrow">Schedule Tracker</span>
+          <div class="clockwise-kicker-row">
+            <span class="eyebrow">Schedule Tracker</span>
+            <span class="clockwise-ready"><i></i><span id="timer-state">Ready</span></span>
+          </div>
           <h1>Clockwise</h1>
           <p class="lede">Track the call, mark important moments, manage reference follow-ups, and keep personal time visible in one command center.</p>
         </div>
 
-        <div>
+        <div class="timer-face">
+          <span class="timer-orbit" aria-hidden="true"></span>
           <div class="timer" id="main-timer">00:00:00</div>
+          <div class="timer-caption"><span>Focused session</span><span>Local to this device</span></div>
         </div>
 
         <div>
@@ -495,12 +500,26 @@
           <p id="personal-status" aria-live="polite" style="margin:12px 0 0">Ready to track.</p>
         </form>
       </div>
-      <article class="personal-card">
-        <div class="personal-head" style="margin-bottom:0"><h3>This week</h3><span id="personal-week-label"></span></div>
+      <article class="personal-card personal-week-card">
+        <div class="personal-week-heading">
+          <div><span class="personal-overline" id="personal-week-kicker">Current cycle</span><h3 id="personal-week-title">This week</h3><span id="personal-week-label"></span></div>
+          <div class="personal-week-controls" aria-label="Choose week">
+            <button type="button" id="personal-previous-week" aria-label="Show previous week">←</button>
+            <button type="button" id="personal-current-week">This week</button>
+            <button type="button" id="personal-next-week" aria-label="Show next week">→</button>
+          </div>
+        </div>
         <div class="personal-week" id="personal-week-strip"></div>
         <div class="personal-entries" id="personal-entries"></div>
       </article>
     </div>
+    <section class="personal-history-shell" aria-labelledby="personal-history-title">
+      <div class="personal-history-head">
+        <div><span class="personal-overline">Saved automatically</span><h3 id="personal-history-title">Previous weeks</h3></div>
+        <p>Every Sunday–Saturday record stays on this device. Select a week to review or edit it.</p>
+      </div>
+      <div class="personal-history" id="personal-history"></div>
+    </section>
   </section>
 
   <div class="alert" id="alert" role="status" aria-live="polite">
@@ -513,6 +532,8 @@
       const REMINDER_KEY = "clockwise-reminders-v1";
       const MARK_KEY = "clockwise-marks-v1";
       const timerEl = document.getElementById("main-timer");
+      const timerState = document.getElementById("timer-state");
+      const timerReady = timerState.closest(".clockwise-ready");
       const startPause = document.getElementById("start-pause");
       const reset = document.getElementById("reset");
       const markButtons = Array.from(document.querySelectorAll("[data-mark-label]"));
@@ -618,6 +639,8 @@
         const seconds = Math.floor(elapsedMs() / 1000);
         timerEl.textContent = format(seconds);
         startPause.textContent = running ? "Pause" : "Start";
+        timerState.textContent = running ? "Running" : (seconds ? "Paused" : "Ready");
+        timerReady.classList.toggle("is-running", running);
 
         const now = Date.now();
         reminders.forEach((reminder) => {
@@ -748,38 +771,62 @@
       const STORAGE_KEY = "johnny-timekeeper-entries-v1";
       const DAILY_LIMIT_SECONDS = 10 * 60;
       const WEEKLY_LIMIT_SECONDS = 50 * 60;
+      const HISTORY_WEEK_COUNT = 8;
       const form = document.getElementById("personal-form");
       const dateInput = document.getElementById("personal-date");
       const minutesInput = document.getElementById("personal-minutes");
       const secondsInput = document.getElementById("personal-seconds");
       const noteInput = document.getElementById("personal-note");
       const entriesEl = document.getElementById("personal-entries");
+      const historyEl = document.getElementById("personal-history");
       let entries = load();
 
       const pad = (value) => String(value).padStart(2, "0");
       const dateKey = (date) => date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
-      const fromKey = (key) => { const p = String(key).split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); };
-      const startOfWeek = (date) => { const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate()); copy.setDate(copy.getDate() - copy.getDay()); return copy; };
-      const weekDays = () => { const start = startOfWeek(new Date()); return Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; }); };
+      const fromKey = (key) => { const p = String(key).split("-").map(Number); return new Date(p[0], p[1] - 1, p[2], 12); };
+      const startOfWeek = (date) => { const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12); copy.setDate(copy.getDate() - copy.getDay()); return copy; };
+      const addDays = (date, amount) => { const copy = new Date(date); copy.setDate(copy.getDate() + amount); return copy; };
+      const weekDays = (weekStart) => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
       const entrySeconds = (entry) => Number.isFinite(Number(entry.totalSeconds)) ? Math.max(0, Math.round(Number(entry.totalSeconds))) : Math.max(0, Math.round(Number(entry.minutes || 0) * 60 + Number(entry.seconds || 0)));
       const duration = (total) => { const value = Math.max(0, Math.round(total)); const h = Math.floor(value / 3600); const m = Math.floor((value % 3600) / 60); const s = value % 60; if (h) return h + "h " + m + "m"; if (m) return m + "m" + (s ? " " + s + "s" : ""); return s + "s"; };
       const escapeHtml = (value) => String(value || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
       function load() { try { const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); return Array.isArray(parsed) ? parsed : []; } catch { return []; } }
       function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
-      function currentWeek() { const keys = new Set(weekDays().map(dateKey)); return entries.filter((entry) => keys.has(entry.date)).sort((a,b) => String(b.date).localeCompare(String(a.date)) || Number(b.createdAt) - Number(a.createdAt)); }
+      const currentWeekStart = startOfWeek(new Date());
+      let viewedWeekStart = new Date(currentWeekStart);
+      function entriesForWeek(weekStart) { const keys = new Set(weekDays(weekStart).map(dateKey)); return entries.filter((entry) => keys.has(entry.date)).sort((a,b) => String(b.date).localeCompare(String(a.date)) || Number(b.createdAt) - Number(a.createdAt)); }
+      function isCurrentWeek(weekStart) { return dateKey(weekStart) === dateKey(currentWeekStart); }
+      function weekRange(weekStart) { const end = addDays(weekStart, 6); const startLabel = weekStart.toLocaleDateString([], {month:"short",day:"numeric"}); const endLabel = end.toLocaleDateString([], weekStart.getFullYear() === end.getFullYear() ? {month:"short",day:"numeric"} : {month:"short",day:"numeric",year:"numeric"}); return startLabel + " – " + endLabel; }
       function setStatus(message) { document.getElementById("personal-status").textContent = message; }
-      function add(totalSeconds, note, date) { const total = Math.max(1, Math.round(totalSeconds)); entries.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,7), date: date || dateKey(new Date()), type: "personal", minutes: Math.floor(total / 60), seconds: total % 60, totalSeconds: total, note: String(note || "").trim(), createdAt: Date.now() }); save(); render(); setStatus("Added " + duration(total) + " to personal time."); }
+      function add(totalSeconds, note, date) { const total = Math.max(1, Math.round(totalSeconds)); const entryDate = date || dateKey(new Date()); entries.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,7), date: entryDate, type: "personal", minutes: Math.floor(total / 60), seconds: total % 60, totalSeconds: total, note: String(note || "").trim(), createdAt: Date.now() }); viewedWeekStart = startOfWeek(fromKey(entryDate)); save(); render(); setStatus("Added " + duration(total) + " to " + weekRange(viewedWeekStart) + "."); }
       function setMeter(id, value, limit) { document.getElementById(id).style.width = Math.min(100, Math.round(value / limit * 100)) + "%"; }
+      function historyWeeks() {
+        const keys = new Set();
+        for (let i = 1; i <= HISTORY_WEEK_COUNT; i += 1) keys.add(dateKey(addDays(currentWeekStart, -7 * i)));
+        entries.forEach((entry) => { if (!entry.date) return; const key = dateKey(startOfWeek(fromKey(entry.date))); if (key < dateKey(currentWeekStart)) keys.add(key); });
+        return Array.from(keys).sort((a,b) => b.localeCompare(a)).map(fromKey);
+      }
+      function selectWeek(weekStart, updateDate) {
+        viewedWeekStart = startOfWeek(weekStart);
+        if (updateDate) dateInput.value = isCurrentWeek(viewedWeekStart) ? dateKey(new Date()) : dateKey(viewedWeekStart);
+        render();
+      }
       function render() {
-        const days = weekDays(); const list = currentWeek(); const today = dateKey(new Date());
-        const todayTotal = list.filter((e) => e.date === today).reduce((sum,e) => sum + entrySeconds(e), 0);
-        const weekTotal = list.reduce((sum,e) => sum + entrySeconds(e), 0);
+        const days = weekDays(viewedWeekStart); const list = entriesForWeek(viewedWeekStart); const today = dateKey(new Date());
+        const currentList = entriesForWeek(currentWeekStart);
+        const todayTotal = entries.filter((e) => e.date === today).reduce((sum,e) => sum + entrySeconds(e), 0);
+        const weekTotal = currentList.reduce((sum,e) => sum + entrySeconds(e), 0);
         document.getElementById("personal-today").textContent = duration(todayTotal);
         document.getElementById("personal-week-total").textContent = duration(weekTotal);
         setMeter("personal-today-meter", todayTotal, DAILY_LIMIT_SECONDS); setMeter("personal-week-meter", weekTotal, WEEKLY_LIMIT_SECONDS);
-        document.getElementById("personal-week-label").textContent = days[0].toLocaleDateString([], {month:"short",day:"numeric"}) + " – " + days[6].toLocaleDateString([], {month:"short",day:"numeric"});
-        document.getElementById("personal-week-strip").innerHTML = days.map((day) => { const total = list.filter((e) => e.date === dateKey(day)).reduce((sum,e) => sum + entrySeconds(e),0); return '<div class="personal-day"><b>' + day.toLocaleDateString([],{weekday:"short"}) + '</b><strong>' + duration(total) + '</strong></div>'; }).join("");
-        entriesEl.innerHTML = list.length ? list.map((entry) => '<div class="personal-entry"><div><strong>' + duration(entrySeconds(entry)) + '</strong><span>' + fromKey(entry.date).toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"}) + ' · ' + escapeHtml(entry.note || "Personal time") + '</span></div><button class="button-danger" data-personal-delete="' + entry.id + '" aria-label="Delete entry">×</button></div>').join("") : '<div class="empty">No personal time logged this week.</div>';
+        document.getElementById("personal-week-kicker").textContent = isCurrentWeek(viewedWeekStart) ? "Current cycle" : "Saved week";
+        document.getElementById("personal-week-title").textContent = isCurrentWeek(viewedWeekStart) ? "This week" : "Week of " + days[0].toLocaleDateString([], {month:"short",day:"numeric"});
+        document.getElementById("personal-week-label").textContent = weekRange(viewedWeekStart) + " · Sunday–Saturday";
+        document.getElementById("personal-next-week").disabled = dateKey(viewedWeekStart) >= dateKey(currentWeekStart);
+        document.getElementById("personal-current-week").disabled = isCurrentWeek(viewedWeekStart);
+        document.getElementById("personal-week-strip").innerHTML = days.map((day) => { const total = list.filter((e) => e.date === dateKey(day)).reduce((sum,e) => sum + entrySeconds(e),0); const todayClass = dateKey(day) === today ? " is-today" : ""; return '<div class="personal-day' + todayClass + '"><b>' + day.toLocaleDateString([],{weekday:"short"}) + '</b><strong>' + duration(total) + '</strong></div>'; }).join("");
+        entriesEl.innerHTML = list.length ? list.map((entry) => '<div class="personal-entry"><div><strong>' + duration(entrySeconds(entry)) + '</strong><span>' + fromKey(entry.date).toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"}) + ' · ' + escapeHtml(entry.note || "Personal time") + '</span></div><button class="button-danger" data-personal-delete="' + entry.id + '" aria-label="Delete entry">×</button></div>').join("") : '<div class="empty">No personal time logged for this Sunday–Saturday week.</div>';
+        historyEl.innerHTML = historyWeeks().map((weekStart) => { const weekEntries = entriesForWeek(weekStart); const total = weekEntries.reduce((sum,entry) => sum + entrySeconds(entry),0); const active = dateKey(weekStart) === dateKey(viewedWeekStart) ? " is-active" : ""; return '<button class="personal-history-week' + active + '" type="button" data-personal-week="' + dateKey(weekStart) + '"><span>' + weekRange(weekStart) + '</span><strong>' + duration(total) + '</strong><small>' + weekEntries.length + (weekEntries.length === 1 ? " entry" : " entries") + ' · Sun–Sat</small></button>'; }).join("");
       }
       function exportCsv() { const rows = [["date","minutes","seconds","total_seconds","note"], ...entries.map((e) => [e.date, Math.floor(entrySeconds(e)/60), entrySeconds(e)%60, entrySeconds(e), e.note || ""])]; const csv = rows.map((row) => row.map((cell) => '"' + String(cell).replace(/"/g,'""') + '"').join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv],{type:"text/csv"})); const link = document.createElement("a"); link.href = url; link.download = "clockwise-personal-time.csv"; link.click(); URL.revokeObjectURL(url); setStatus("CSV export created."); }
       dateInput.value = dateKey(new Date());
@@ -787,7 +834,11 @@
       document.querySelectorAll("[data-personal-quick]").forEach((button) => button.addEventListener("click", () => add(Number(button.dataset.personalQuick) * 60, "Quick add", dateInput.value)));
       document.getElementById("personal-log-timer").addEventListener("click", () => { const total = Number(window.clockwiseElapsedSeconds?.() || 0); if (!total) return alert("Start the Clockwise timer before logging it."); add(total, "Clockwise timer", dateInput.value); });
       document.getElementById("personal-export").addEventListener("click", exportCsv);
-      document.getElementById("personal-clear").addEventListener("click", () => { if (!confirm("Clear this week's personal-time entries?")) return; const ids = new Set(currentWeek().map((e) => e.id)); entries = entries.filter((e) => !ids.has(e.id)); save(); render(); setStatus("This week's personal time was cleared."); });
+      document.getElementById("personal-previous-week").addEventListener("click", () => selectWeek(addDays(viewedWeekStart, -7), true));
+      document.getElementById("personal-current-week").addEventListener("click", () => selectWeek(currentWeekStart, true));
+      document.getElementById("personal-next-week").addEventListener("click", () => { if (!isCurrentWeek(viewedWeekStart)) selectWeek(addDays(viewedWeekStart, 7), true); });
+      historyEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-week]"); if (!button) return; selectWeek(fromKey(button.dataset.personalWeek), true); document.querySelector(".personal-week-card").scrollIntoView({behavior:"smooth",block:"center"}); });
+      document.getElementById("personal-clear").addEventListener("click", () => { const list = entriesForWeek(viewedWeekStart); if (!list.length) return setStatus("There is no personal time to clear for this week."); if (!confirm("Clear personal-time entries for " + weekRange(viewedWeekStart) + "?")) return; const ids = new Set(list.map((e) => e.id)); entries = entries.filter((e) => !ids.has(e.id)); save(); render(); setStatus("Personal time for " + weekRange(viewedWeekStart) + " was cleared."); });
       entriesEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-delete]"); if (!button) return; entries = entries.filter((e) => e.id !== button.dataset.personalDelete); save(); render(); });
       render();
     })();
