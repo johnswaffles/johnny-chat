@@ -400,7 +400,7 @@
       .reminder { grid-template-columns: 1fr; }
     }
   </style>
-  <link rel="stylesheet" href="/future-theme.css?v=3">
+  <link rel="stylesheet" href="/future-theme.css?v=4">
 </head>
 <body class="clockwise-page">
   <header class="johnny-site-nav">
@@ -531,12 +531,6 @@
           </div>
           <div class="personal-actions">
             <button class="button-primary" type="submit">Add time</button>
-            <button type="button" id="personal-log-timer">Log Clockwise timer</button>
-            <button type="button" id="personal-export">Export CSV</button>
-            <button class="button-danger" type="button" id="personal-clear">Clear week</button>
-          </div>
-          <div class="personal-quick" aria-label="Quick add personal time">
-            <button type="button" data-personal-quick="1">+1m</button><button type="button" data-personal-quick="3">+3m</button><button type="button" data-personal-quick="5">+5m</button><button type="button" data-personal-quick="10">+10m</button><button type="button" data-personal-quick="15">+15m</button>
           </div>
           <p id="personal-status" aria-live="polite" style="margin:12px 0 0">Ready to track.</p>
         </form>
@@ -562,6 +556,51 @@
       <div class="personal-history" id="personal-history"></div>
     </section>
   </section>
+
+  <dialog class="personal-editor" id="personal-editor" aria-labelledby="personal-editor-title">
+    <div class="personal-editor-shell">
+      <span class="personal-editor-orbit" aria-hidden="true"></span>
+      <header class="personal-editor-head">
+        <div>
+          <span class="personal-overline">Sunday–Saturday time portal</span>
+          <h2 id="personal-editor-title">Edit week</h2>
+          <p id="personal-editor-range"></p>
+        </div>
+        <button class="personal-editor-close" id="personal-editor-close" type="button" aria-label="Close time editor">&times;</button>
+      </header>
+      <div class="personal-editor-summary" aria-label="Selected week summary">
+        <div><span>Week total</span><strong id="personal-editor-week-total">0s</strong></div>
+        <div><span>Entries</span><strong id="personal-editor-week-count">0</strong></div>
+        <p>Select any day, then add a new record or refine one that is already there.</p>
+      </div>
+      <div class="personal-editor-layout">
+        <nav class="personal-editor-days" id="personal-editor-days" aria-label="Days in selected week"></nav>
+        <section class="personal-editor-day-panel" aria-labelledby="personal-editor-day-title">
+          <div class="personal-editor-day-head">
+            <div>
+              <span class="personal-overline" id="personal-editor-day-kicker">Selected day</span>
+              <h3 id="personal-editor-day-title">Sunday</h3>
+            </div>
+            <strong id="personal-editor-day-total">0s</strong>
+          </div>
+          <div class="personal-editor-entries" id="personal-editor-entries"></div>
+          <form class="personal-editor-form" id="personal-editor-form">
+            <input id="personal-editor-entry-id" type="hidden">
+            <div class="personal-editor-form-heading">
+              <div><span class="personal-overline" id="personal-editor-form-kicker">New record</span><h4 id="personal-editor-form-title">Add time to this day</h4></div>
+              <button id="personal-editor-cancel" type="button" hidden>Cancel edit</button>
+            </div>
+            <div class="personal-editor-form-grid">
+              <label>Minutes<input id="personal-editor-minutes" type="number" min="0" max="480" value="5" required></label>
+              <label>Seconds<input id="personal-editor-seconds" type="number" min="0" max="59" value="0"></label>
+              <label class="wide">Note<input id="personal-editor-note" maxlength="80" placeholder="Optional context"></label>
+            </div>
+            <button class="button-primary personal-editor-submit" id="personal-editor-submit" type="submit">Add time</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </dialog>
 
   <div class="alert" id="alert" role="status" aria-live="polite" aria-hidden="true" inert>
     <span id="alert-message"></span>
@@ -1092,6 +1131,15 @@
       const noteInput = document.getElementById("personal-note");
       const entriesEl = document.getElementById("personal-entries");
       const historyEl = document.getElementById("personal-history");
+      const weekStripEl = document.getElementById("personal-week-strip");
+      const editor = document.getElementById("personal-editor");
+      const editorDaysEl = document.getElementById("personal-editor-days");
+      const editorEntriesEl = document.getElementById("personal-editor-entries");
+      const editorForm = document.getElementById("personal-editor-form");
+      const editorEntryId = document.getElementById("personal-editor-entry-id");
+      const editorMinutes = document.getElementById("personal-editor-minutes");
+      const editorSeconds = document.getElementById("personal-editor-seconds");
+      const editorNote = document.getElementById("personal-editor-note");
       let entries = load();
 
       const pad = (value) => String(value).padStart(2, "0");
@@ -1107,6 +1155,8 @@
       function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch { /* Keep tracking available even when browser storage is unavailable. */ } }
       const currentWeekStart = startOfWeek(new Date());
       let viewedWeekStart = new Date(currentWeekStart);
+      let editorWeekStart = new Date(currentWeekStart);
+      let editorDayKey = dateKey(new Date());
       function entriesForWeek(weekStart) { const keys = new Set(weekDays(weekStart).map(dateKey)); return entries.filter((entry) => keys.has(entry.date)).sort((a,b) => String(b.date).localeCompare(String(a.date)) || Number(b.createdAt) - Number(a.createdAt)); }
       function isCurrentWeek(weekStart) { return dateKey(weekStart) === dateKey(currentWeekStart); }
       function weekRange(weekStart) { const end = addDays(weekStart, 6); const startLabel = weekStart.toLocaleDateString([], {month:"short",day:"numeric"}); const endLabel = end.toLocaleDateString([], weekStart.getFullYear() === end.getFullYear() ? {month:"short",day:"numeric"} : {month:"short",day:"numeric",year:"numeric"}); return startLabel + " – " + endLabel; }
@@ -1137,22 +1187,114 @@
         document.getElementById("personal-week-label").textContent = weekRange(viewedWeekStart) + " · Sunday–Saturday";
         document.getElementById("personal-next-week").disabled = dateKey(viewedWeekStart) >= dateKey(currentWeekStart);
         document.getElementById("personal-current-week").disabled = isCurrentWeek(viewedWeekStart);
-        document.getElementById("personal-week-strip").innerHTML = days.map((day) => { const total = list.filter((e) => e.date === dateKey(day)).reduce((sum,e) => sum + entrySeconds(e),0); const todayClass = dateKey(day) === today ? " is-today" : ""; return '<div class="personal-day' + todayClass + '"><b>' + day.toLocaleDateString([],{weekday:"short"}) + '</b><strong>' + duration(total) + '</strong></div>'; }).join("");
-        entriesEl.innerHTML = list.length ? list.map((entry) => '<div class="personal-entry"><div><strong>' + duration(entrySeconds(entry)) + '</strong><span>' + fromKey(entry.date).toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"}) + ' · ' + escapeHtml(entry.note || "Personal time") + '</span></div><button class="button-danger" data-personal-delete="' + entry.id + '" aria-label="Delete entry">×</button></div>').join("") : '<div class="empty">No personal time logged for this Sunday–Saturday week.</div>';
-        historyEl.innerHTML = historyWeeks().map((weekStart) => { const weekEntries = entriesForWeek(weekStart); const total = weekEntries.reduce((sum,entry) => sum + entrySeconds(entry),0); const active = dateKey(weekStart) === dateKey(viewedWeekStart) ? " is-active" : ""; return '<button class="personal-history-week' + active + '" type="button" data-personal-week="' + dateKey(weekStart) + '"><span>' + weekRange(weekStart) + '</span><strong>' + duration(total) + '</strong><small>' + weekEntries.length + (weekEntries.length === 1 ? " entry" : " entries") + ' · Sun–Sat</small></button>'; }).join("");
+        weekStripEl.innerHTML = days.map((day) => { const key = dateKey(day); const total = list.filter((e) => e.date === key).reduce((sum,e) => sum + entrySeconds(e),0); const todayClass = key === today ? " is-today" : ""; return '<button class="personal-day' + todayClass + '" type="button" data-personal-day="' + key + '" aria-label="Open ' + day.toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"}) + '"><b>' + day.toLocaleDateString([],{weekday:"short"}) + '</b><strong>' + duration(total) + '</strong><span>Open day ↗</span></button>'; }).join("");
+        entriesEl.innerHTML = list.length ? list.map((entry) => '<div class="personal-entry"><div><strong>' + duration(entrySeconds(entry)) + '</strong><span>' + fromKey(entry.date).toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"}) + ' · ' + escapeHtml(entry.note || "Personal time") + '</span></div><small>Open its day to edit</small></div>').join("") : '<div class="empty">No personal time logged for this Sunday–Saturday week. Select a day above to add some.</div>';
+        historyEl.innerHTML = historyWeeks().map((weekStart) => { const weekEntries = entriesForWeek(weekStart); const total = weekEntries.reduce((sum,entry) => sum + entrySeconds(entry),0); const active = dateKey(weekStart) === dateKey(viewedWeekStart) ? " is-active" : ""; return '<button class="personal-history-week' + active + '" type="button" data-personal-week="' + dateKey(weekStart) + '"><span>' + weekRange(weekStart) + '</span><strong>' + duration(total) + '</strong><small>' + weekEntries.length + (weekEntries.length === 1 ? " entry" : " entries") + ' · Sun–Sat</small><em>Edit week ↗</em></button>'; }).join("");
+        if (editor.open) renderEditor();
       }
-      function exportCsv() { const rows = [["date","minutes","seconds","total_seconds","note"], ...entries.map((e) => [e.date, Math.floor(entrySeconds(e)/60), entrySeconds(e)%60, entrySeconds(e), e.note || ""])]; const csv = rows.map((row) => row.map((cell) => '"' + String(cell).replace(/"/g,'""') + '"').join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv],{type:"text/csv"})); const link = document.createElement("a"); link.href = url; link.download = "clockwise-personal-time.csv"; link.click(); URL.revokeObjectURL(url); setStatus("CSV export created."); }
+
+      function resetEditorForm() {
+        editorEntryId.value = "";
+        editorMinutes.value = "5";
+        editorSeconds.value = "0";
+        editorNote.value = "";
+        document.getElementById("personal-editor-form-kicker").textContent = "New record";
+        document.getElementById("personal-editor-form-title").textContent = "Add time to this day";
+        document.getElementById("personal-editor-submit").textContent = "Add time";
+        document.getElementById("personal-editor-cancel").hidden = true;
+      }
+
+      function renderEditor() {
+        const days = weekDays(editorWeekStart);
+        const weekList = entriesForWeek(editorWeekStart);
+        if (!days.some((day) => dateKey(day) === editorDayKey)) editorDayKey = dateKey(days[0]);
+        const selectedDay = days.find((day) => dateKey(day) === editorDayKey) || days[0];
+        const dayList = weekList.filter((entry) => entry.date === editorDayKey).sort((a,b) => Number(b.createdAt) - Number(a.createdAt));
+        const weekTotal = weekList.reduce((sum, entry) => sum + entrySeconds(entry), 0);
+        const dayTotal = dayList.reduce((sum, entry) => sum + entrySeconds(entry), 0);
+        document.getElementById("personal-editor-title").textContent = isCurrentWeek(editorWeekStart) ? "Edit this week" : "Edit saved week";
+        document.getElementById("personal-editor-range").textContent = weekRange(editorWeekStart) + " · Sunday–Saturday";
+        document.getElementById("personal-editor-week-total").textContent = duration(weekTotal);
+        document.getElementById("personal-editor-week-count").textContent = String(weekList.length);
+        document.getElementById("personal-editor-day-title").textContent = selectedDay.toLocaleDateString([], { weekday:"long", month:"long", day:"numeric" });
+        document.getElementById("personal-editor-day-kicker").textContent = editorDayKey === dateKey(new Date()) ? "Today" : "Selected day";
+        document.getElementById("personal-editor-day-total").textContent = duration(dayTotal);
+        editorDaysEl.innerHTML = days.map((day) => { const key = dateKey(day); const records = weekList.filter((entry) => entry.date === key); const total = records.reduce((sum, entry) => sum + entrySeconds(entry), 0); const active = key === editorDayKey ? " is-active" : ""; return '<button class="personal-editor-day' + active + '" type="button" data-editor-day="' + key + '"><span><b>' + day.toLocaleDateString([], {weekday:"short"}) + '</b><small>' + day.toLocaleDateString([], {month:"short",day:"numeric"}) + '</small></span><strong>' + duration(total) + '</strong><i>' + records.length + (records.length === 1 ? " record" : " records") + '</i></button>'; }).join("");
+        editorEntriesEl.innerHTML = dayList.length ? dayList.map((entry) => '<article class="personal-editor-entry"><div><strong>' + duration(entrySeconds(entry)) + '</strong><span>' + escapeHtml(entry.note || "Personal time") + '</span></div><div class="personal-editor-entry-actions"><button type="button" data-editor-edit="' + entry.id + '">Edit</button><button class="button-danger" type="button" data-editor-delete="' + entry.id + '">Delete</button></div></article>').join("") : '<div class="personal-editor-empty"><span>＋</span><strong>This day is open</strong><p>Add the first personal-time record below.</p></div>';
+        if (editorEntryId.value && !entries.some((entry) => entry.id === editorEntryId.value)) resetEditorForm();
+      }
+
+      function openEditor(weekStart, selectedKey) {
+        editorWeekStart = startOfWeek(weekStart);
+        const weekList = entriesForWeek(editorWeekStart);
+        editorDayKey = selectedKey || weekList[0]?.date || dateKey(editorWeekStart);
+        resetEditorForm();
+        if (!editor.open) editor.showModal();
+        renderEditor();
+      }
+
+      function editEntry(id) {
+        const entry = entries.find((item) => item.id === id);
+        if (!entry) return;
+        editorDayKey = entry.date;
+        editorEntryId.value = entry.id;
+        editorMinutes.value = String(Math.floor(entrySeconds(entry) / 60));
+        editorSeconds.value = String(entrySeconds(entry) % 60);
+        editorNote.value = entry.note || "";
+        document.getElementById("personal-editor-form-kicker").textContent = "Editing record";
+        document.getElementById("personal-editor-form-title").textContent = "Refine this time entry";
+        document.getElementById("personal-editor-submit").textContent = "Save changes";
+        document.getElementById("personal-editor-cancel").hidden = false;
+        renderEditor();
+        editorMinutes.focus();
+      }
+
       dateInput.value = dateKey(new Date());
       form.addEventListener("submit", (event) => { event.preventDefault(); add(Number(minutesInput.value || 0) * 60 + Number(secondsInput.value || 0), noteInput.value, dateInput.value); noteInput.value = ""; });
-      document.querySelectorAll("[data-personal-quick]").forEach((button) => button.addEventListener("click", () => add(Number(button.dataset.personalQuick) * 60, "Quick add", dateInput.value)));
-      document.getElementById("personal-log-timer").addEventListener("click", () => { const total = Number(window.clockwiseElapsedSeconds?.() || 0); if (!total) return alert("Start the Clockwise timer before logging it."); add(total, "Clockwise timer", dateInput.value); });
-      document.getElementById("personal-export").addEventListener("click", exportCsv);
       document.getElementById("personal-previous-week").addEventListener("click", () => selectWeek(addDays(viewedWeekStart, -7), true));
       document.getElementById("personal-current-week").addEventListener("click", () => selectWeek(currentWeekStart, true));
       document.getElementById("personal-next-week").addEventListener("click", () => { if (!isCurrentWeek(viewedWeekStart)) selectWeek(addDays(viewedWeekStart, 7), true); });
-      historyEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-week]"); if (!button) return; selectWeek(fromKey(button.dataset.personalWeek), true); document.querySelector(".personal-week-card").scrollIntoView({behavior:"smooth",block:"center"}); });
-      document.getElementById("personal-clear").addEventListener("click", () => { const list = entriesForWeek(viewedWeekStart); if (!list.length) return setStatus("There is no personal time to clear for this week."); if (!confirm("Clear personal-time entries for " + weekRange(viewedWeekStart) + "?")) return; const ids = new Set(list.map((e) => e.id)); entries = entries.filter((e) => !ids.has(e.id)); save(); window.ClockwiseCloud?.changed("entries", Array.from(ids)); render(); setStatus("Personal time for " + weekRange(viewedWeekStart) + " was cleared."); });
-      entriesEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-delete]"); if (!button) return; const deletedId = button.dataset.personalDelete; entries = entries.filter((e) => e.id !== deletedId); save(); window.ClockwiseCloud?.changed("entries", [deletedId]); render(); });
+      weekStripEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-day]"); if (!button) return; openEditor(viewedWeekStart, button.dataset.personalDay); });
+      historyEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-week]"); if (!button) return; const weekStart = fromKey(button.dataset.personalWeek); selectWeek(weekStart, true); openEditor(weekStart); });
+      editorDaysEl.addEventListener("click", (event) => { const button = event.target.closest("[data-editor-day]"); if (!button) return; editorDayKey = button.dataset.editorDay; resetEditorForm(); renderEditor(); });
+      editorEntriesEl.addEventListener("click", (event) => {
+        const editButton = event.target.closest("[data-editor-edit]");
+        if (editButton) return editEntry(editButton.dataset.editorEdit);
+        const deleteButton = event.target.closest("[data-editor-delete]");
+        if (!deleteButton) return;
+        const entry = entries.find((item) => item.id === deleteButton.dataset.editorDelete);
+        if (!entry || !confirm("Delete this " + duration(entrySeconds(entry)) + " time record?")) return;
+        entries = entries.filter((item) => item.id !== entry.id);
+        save();
+        window.ClockwiseCloud?.changed("entries", [entry.id]);
+        if (editorEntryId.value === entry.id) resetEditorForm();
+        render();
+        setStatus("Deleted a time record from " + fromKey(entry.date).toLocaleDateString([], {month:"short",day:"numeric"}) + ".");
+      });
+      editorForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const total = Math.max(0, Math.round(Number(editorMinutes.value || 0) * 60 + Number(editorSeconds.value || 0)));
+        if (!total) { editorMinutes.focus(); return; }
+        const id = editorEntryId.value;
+        if (!id) {
+          add(total, editorNote.value, editorDayKey);
+          editorWeekStart = startOfWeek(fromKey(editorDayKey));
+          setStatus("Added " + duration(total) + " to " + fromKey(editorDayKey).toLocaleDateString([], {weekday:"long",month:"short",day:"numeric"}) + ".");
+        } else {
+          const index = entries.findIndex((entry) => entry.id === id);
+          if (index >= 0) entries[index] = { ...entries[index], minutes: Math.floor(total / 60), seconds: total % 60, totalSeconds: total, note: editorNote.value.trim(), updatedAt: Date.now() };
+          save();
+          window.ClockwiseCloud?.changed("entries");
+          render();
+          setStatus("Updated " + fromKey(editorDayKey).toLocaleDateString([], {weekday:"long",month:"short",day:"numeric"}) + ".");
+        }
+        resetEditorForm();
+        renderEditor();
+      });
+      document.getElementById("personal-editor-cancel").addEventListener("click", () => { resetEditorForm(); renderEditor(); });
+      document.getElementById("personal-editor-close").addEventListener("click", () => editor.close());
+      editor.addEventListener("click", (event) => { if (event.target === editor) editor.close(); });
+      editor.addEventListener("close", resetEditorForm);
       window.ClockwiseCloud?.register("entries", {
         getItems: () => entries,
         setItems: (items) => { entries = Array.isArray(items) ? items : []; save(); render(); }
