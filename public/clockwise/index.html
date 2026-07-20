@@ -400,7 +400,7 @@
       .reminder { grid-template-columns: 1fr; }
     }
   </style>
-  <link rel="stylesheet" href="/future-theme.css?v=2">
+  <link rel="stylesheet" href="/future-theme.css?v=3">
 </head>
 <body class="clockwise-page">
   <header class="johnny-site-nav">
@@ -464,7 +464,7 @@
         <div class="timer-face">
           <span class="timer-orbit" aria-hidden="true"></span>
           <div class="timer" id="main-timer">00:00:00</div>
-          <div class="timer-caption"><span>Focused session</span><span>Local to this device</span></div>
+          <div class="timer-caption"><span>Focused session</span><span>Local + cloud when connected</span></div>
         </div>
 
         <div>
@@ -488,6 +488,34 @@
       <div><span class="eyebrow">Personal tracker</span><h2 id="personal-time-title">Personal Time</h2></div>
       <p>Keep personal minutes visible without leaving Clockwise. Your existing Timekeeper history appears here automatically.</p>
     </div>
+    <section class="clockwise-cloud" aria-labelledby="clockwise-cloud-title">
+      <div class="clockwise-cloud-copy">
+        <div class="clockwise-cloud-heading">
+          <span class="clockwise-cloud-icon" aria-hidden="true">☁</span>
+          <div>
+            <span class="personal-overline">Render backup</span>
+            <h3 id="clockwise-cloud-title">Cloud recovery</h3>
+          </div>
+          <span class="clockwise-cloud-badge" id="clockwise-cloud-badge">Local only</span>
+        </div>
+        <p id="clockwise-cloud-detail">Connect a private recovery key to protect personal weeks, reminders, and session marks when browser history is erased.</p>
+      </div>
+      <div class="clockwise-cloud-setup">
+        <label for="clockwise-cloud-key">Private recovery key</label>
+        <div class="clockwise-cloud-key-row">
+          <input id="clockwise-cloud-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a saved key to restore">
+          <button type="button" id="clockwise-cloud-show">Show</button>
+        </div>
+        <div class="clockwise-cloud-actions">
+          <button class="button-primary" type="button" id="clockwise-cloud-create">Create backup</button>
+          <button type="button" id="clockwise-cloud-connect">Connect key</button>
+          <button type="button" id="clockwise-cloud-sync" hidden>Sync now</button>
+          <button type="button" id="clockwise-cloud-copy" hidden>Copy key</button>
+          <button type="button" id="clockwise-cloud-disconnect" hidden>Disconnect</button>
+        </div>
+        <small>Keep this key somewhere outside your browser. It is required to restore after browser data is cleared.</small>
+      </div>
+    </section>
     <div class="personal-grid">
       <div>
         <div class="personal-stats">
@@ -529,7 +557,7 @@
     <section class="personal-history-shell" aria-labelledby="personal-history-title">
       <div class="personal-history-head">
         <div><span class="personal-overline">Saved automatically</span><h3 id="personal-history-title">Previous weeks</h3></div>
-        <p>Every Sunday–Saturday record stays on this device. Select a week to review or edit it.</p>
+        <p>Every Sunday–Saturday record saves locally and is backed up to Render when Cloud recovery is connected.</p>
       </div>
       <div class="personal-history" id="personal-history"></div>
     </section>
@@ -539,6 +567,247 @@
     <span id="alert-message"></span>
     <button class="alert-close" id="alert-close" type="button" aria-label="Close reminder alert">&times;</button>
   </div>
+
+  <script>
+    (function () {
+      const COLLECTIONS = ["entries", "reminders", "marks"];
+      const KEY_STORAGE = "clockwise-cloud-recovery-key-v1";
+      const TOMBSTONE_PREFIX = "clockwise-cloud-tombstones-v1-";
+      const localHost = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      const API_BASE = String(window.CLOCKWISE_API_BASE_URL || (localHost ? location.origin : "https://johnny-chat.onrender.com")).replace(/\/$/, "");
+      const keyInput = document.getElementById("clockwise-cloud-key");
+      const badge = document.getElementById("clockwise-cloud-badge");
+      const detail = document.getElementById("clockwise-cloud-detail");
+      const createButton = document.getElementById("clockwise-cloud-create");
+      const connectButton = document.getElementById("clockwise-cloud-connect");
+      const syncButton = document.getElementById("clockwise-cloud-sync");
+      const copyButton = document.getElementById("clockwise-cloud-copy");
+      const disconnectButton = document.getElementById("clockwise-cloud-disconnect");
+      const showButton = document.getElementById("clockwise-cloud-show");
+      const adapters = {};
+      let recoveryKey = readStorage(KEY_STORAGE);
+      let tombstones = loadTombstones(recoveryKey);
+      let syncTimer = 0;
+      let syncing = false;
+      let syncAgain = false;
+      let changeVersion = 0;
+
+      function readStorage(key) {
+        try { return String(localStorage.getItem(key) || ""); } catch { return ""; }
+      }
+
+      function writeStorage(key, value) {
+        try { localStorage.setItem(key, value); } catch { /* The page still works when storage is unavailable. */ }
+      }
+
+      function removeStorage(key) {
+        try { localStorage.removeItem(key); } catch { /* The page still works when storage is unavailable. */ }
+      }
+
+      function tombstoneKey(key) {
+        return TOMBSTONE_PREFIX + String(key || "local").slice(-18);
+      }
+
+      function emptyTombstones() {
+        return Object.fromEntries(COLLECTIONS.map((name) => [name, []]));
+      }
+
+      function loadTombstones(key) {
+        try {
+          const parsed = JSON.parse(readStorage(tombstoneKey(key)) || "{}");
+          return Object.fromEntries(COLLECTIONS.map((name) => [name, Array.isArray(parsed[name]) ? parsed[name] : []]));
+        } catch {
+          return emptyTombstones();
+        }
+      }
+
+      function saveTombstones() {
+        if (recoveryKey) writeStorage(tombstoneKey(recoveryKey), JSON.stringify(tombstones));
+      }
+
+      function validKey(value) {
+        return /^[A-Za-z0-9_-]{24,200}$/.test(String(value || "").trim());
+      }
+
+      function generateKey() {
+        const bytes = new Uint8Array(24);
+        crypto.getRandomValues(bytes);
+        const encoded = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+        return "cw_" + encoded;
+      }
+
+      function setState(state, message) {
+        badge.className = "clockwise-cloud-badge" + (state ? " is-" + state : "");
+        badge.textContent = state === "synced" ? "Backed up" : state === "syncing" ? "Syncing" : state === "offline" ? "Saved locally" : "Local only";
+        detail.textContent = message;
+      }
+
+      function renderControls() {
+        const connected = Boolean(recoveryKey);
+        if (connected) keyInput.value = recoveryKey;
+        createButton.hidden = connected;
+        connectButton.hidden = connected;
+        syncButton.hidden = !connected;
+        copyButton.hidden = !connected;
+        disconnectButton.hidden = !connected;
+        if (!connected) setState("", "Connect a private recovery key to protect personal weeks, reminders, and session marks when browser history is erased.");
+      }
+
+      function itemTimestamp(item) {
+        const timestamp = Math.round(Number(item?.updatedAt || item?.createdAt || 0));
+        return Number.isFinite(timestamp) && timestamp > 946684800000 ? timestamp : 0;
+      }
+
+      function upgradeItems(items) {
+        let changed = false;
+        const now = Date.now();
+        const upgraded = (Array.isArray(items) ? items : []).map((item) => {
+          const updatedAt = Math.round(Number(item?.updatedAt || 0));
+          if (Number.isFinite(updatedAt) && updatedAt > 946684800000) return item;
+          changed = true;
+          const createdAt = Number(item?.createdAt) || now;
+          return { ...item, createdAt, updatedAt: createdAt };
+        });
+        return { items: upgraded, changed };
+      }
+
+      function mergeTombstones(remote) {
+        for (const name of COLLECTIONS) {
+          const newest = new Map();
+          for (const entry of [...(tombstones[name] || []), ...(Array.isArray(remote?.[name]) ? remote[name] : [])]) {
+            if (!entry?.id) continue;
+            const deletedAt = Math.round(Number(entry.deletedAt) || 0);
+            if (deletedAt > Number(newest.get(entry.id)?.deletedAt || 0)) newest.set(entry.id, { id: String(entry.id), deletedAt });
+          }
+          tombstones[name] = Array.from(newest.values());
+        }
+        saveTombstones();
+      }
+
+      function mergedItems(name, remoteItems) {
+        const newest = new Map();
+        for (const item of [...(Array.isArray(remoteItems) ? remoteItems : []), ...(adapters[name]?.getItems() || [])]) {
+          if (!item?.id) continue;
+          const current = newest.get(item.id);
+          if (!current || itemTimestamp(item) >= itemTimestamp(current)) newest.set(item.id, item);
+        }
+        const deleted = new Map((tombstones[name] || []).map((entry) => [entry.id, Number(entry.deletedAt) || 0]));
+        return Array.from(newest.values()).filter((item) => itemTimestamp(item) > Number(deleted.get(item.id) || 0));
+      }
+
+      async function syncNow() {
+        if (!recoveryKey) return;
+        if (syncing) {
+          syncAgain = true;
+          return;
+        }
+        syncing = true;
+        syncAgain = false;
+        const startedVersion = changeVersion;
+        setState("syncing", "Sending the latest Clockwise records to your private Render backup…");
+        try {
+          const collections = Object.fromEntries(COLLECTIONS.map((name) => [name, adapters[name]?.getItems() || []]));
+          const response = await fetch(API_BASE + "/api/clockwise-sync", {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + recoveryKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ collections, tombstones })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.ok) throw new Error(data.detail || "Cloud backup is temporarily unavailable.");
+          mergeTombstones(data.tombstones);
+          for (const name of COLLECTIONS) {
+            if (adapters[name]) adapters[name].setItems(mergedItems(name, data.collections?.[name]));
+          }
+          const time = new Date(data.syncedAt || Date.now()).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+          setState("synced", "Everything on this page is backed up. Last synced " + time + ".");
+        } catch (error) {
+          setState("offline", String(error?.message || "Cloud backup is temporarily unavailable.") + " Your browser copy is still saved.");
+        } finally {
+          syncing = false;
+          if (syncAgain || changeVersion !== startedVersion) scheduleSync(250);
+        }
+      }
+
+      function scheduleSync(delay) {
+        if (!recoveryKey) return;
+        clearTimeout(syncTimer);
+        syncTimer = window.setTimeout(syncNow, Number(delay) || 700);
+      }
+
+      function connect(value, created) {
+        const nextKey = String(value || "").trim();
+        if (!validKey(nextKey)) {
+          setState("offline", "That recovery key is incomplete. Paste the full key and try again.");
+          keyInput.focus();
+          return;
+        }
+        recoveryKey = nextKey;
+        writeStorage(KEY_STORAGE, recoveryKey);
+        tombstones = loadTombstones(recoveryKey);
+        keyInput.value = recoveryKey;
+        renderControls();
+        setState("syncing", created ? "Recovery key created. Save a copy outside this browser while the first backup finishes…" : "Recovery key connected. Restoring anything saved under this key…");
+        scheduleSync(10);
+      }
+
+      window.ClockwiseCloud = {
+        register(name, adapter) {
+          if (!COLLECTIONS.includes(name) || !adapter) return;
+          adapters[name] = adapter;
+          const upgraded = upgradeItems(adapter.getItems());
+          if (upgraded.changed) adapter.setItems(upgraded.items);
+          if (Object.keys(adapters).length === COLLECTIONS.length) scheduleSync(120);
+        },
+        changed(name, deletedIds) {
+          if (!COLLECTIONS.includes(name)) return;
+          changeVersion += 1;
+          const deletedAt = Date.now();
+          for (const id of Array.isArray(deletedIds) ? deletedIds : []) {
+            if (!id) continue;
+            tombstones[name] = (tombstones[name] || []).filter((entry) => entry.id !== id);
+            tombstones[name].push({ id: String(id), deletedAt });
+          }
+          saveTombstones();
+          if (recoveryKey) {
+            setState("syncing", "Saved here. Updating your Render backup…");
+            scheduleSync(650);
+          }
+        },
+        syncNow
+      };
+
+      createButton.addEventListener("click", () => connect(generateKey(), true));
+      connectButton.addEventListener("click", () => connect(keyInput.value, false));
+      keyInput.addEventListener("keydown", (event) => { if (event.key === "Enter" && !recoveryKey) connect(keyInput.value, false); });
+      syncButton.addEventListener("click", syncNow);
+      copyButton.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(recoveryKey);
+          setState("synced", "Recovery key copied. Store it somewhere safe outside this browser.");
+        } catch {
+          keyInput.type = "text";
+          keyInput.select();
+          setState("synced", "Copy the selected recovery key and store it somewhere safe.");
+        }
+      });
+      showButton.addEventListener("click", () => {
+        keyInput.type = keyInput.type === "password" ? "text" : "password";
+        showButton.textContent = keyInput.type === "password" ? "Show" : "Hide";
+      });
+      disconnectButton.addEventListener("click", () => {
+        if (!confirm("Disconnect cloud recovery on this browser? Your local records will stay here.")) return;
+        recoveryKey = "";
+        tombstones = emptyTombstones();
+        removeStorage(KEY_STORAGE);
+        keyInput.value = "";
+        renderControls();
+      });
+      window.addEventListener("online", () => scheduleSync(100));
+      window.setInterval(() => { if (recoveryKey) scheduleSync(10); }, 60000);
+      renderControls();
+      if (recoveryKey) setState("syncing", "Cloud recovery connected. Checking your Render backup…");
+    })();
+  </script>
 
   <script>
     (function () {
@@ -580,7 +849,7 @@
       }
 
       function save(key, value) {
-        localStorage.setItem(key, JSON.stringify(value));
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Keep the live page usable if browser storage is unavailable. */ }
       }
 
       function elapsedMs() {
@@ -660,13 +929,19 @@
         timerReady.classList.toggle("is-running", running);
 
         const now = Date.now();
+        let changed = false;
         reminders.forEach((reminder) => {
           if (!reminder.done && now >= reminder.dueAt) {
             reminder.done = true;
+            reminder.updatedAt = now;
+            changed = true;
             notifyDueReminder(reminder);
           }
         });
-        save(REMINDER_KEY, reminders);
+        if (changed) {
+          save(REMINDER_KEY, reminders);
+          window.ClockwiseCloud?.changed("reminders");
+        }
         renderReminders();
       }
 
@@ -720,14 +995,19 @@
       });
 
       function addMark(label) {
+        const now = Date.now();
         marks.unshift({
-          id: Date.now().toString(36),
+          id: now.toString(36) + Math.random().toString(36).slice(2, 7),
           label,
           time: format(Math.floor(elapsedMs() / 1000)),
-          when: new Date().toLocaleString()
+          when: new Date(now).toLocaleString(),
+          createdAt: now,
+          updatedAt: now
         });
+        const removedIds = marks.slice(12).map((mark) => mark.id);
         marks = marks.slice(0, 12);
         save(MARK_KEY, marks);
+        window.ClockwiseCloud?.changed("marks", removedIds);
         renderMarks();
       }
 
@@ -747,14 +1027,18 @@
         const note = reminderNoteInput.value.trim();
         const customMinutes = Number(customDurationInput.value);
         const seconds = customMinutes > 0 ? customMinutes * 60 : Number(durationSelect.value) || 900;
+        const now = Date.now();
         reminders.unshift({
-          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+          id: now.toString(36) + Math.random().toString(36).slice(2, 7),
           reference,
           note,
-          dueAt: Date.now() + seconds * 1000,
-          done: false
+          dueAt: now + seconds * 1000,
+          done: false,
+          createdAt: now,
+          updatedAt: now
         });
         save(REMINDER_KEY, reminders);
+        window.ClockwiseCloud?.changed("reminders");
         referenceInput.value = "";
         reminderNoteInput.value = "";
         customDurationInput.value = "";
@@ -765,19 +1049,31 @@
       marksEl.addEventListener("click", (event) => {
         const button = event.target.closest("[data-delete-mark]");
         if (!button) return;
+        const deletedId = button.dataset.deleteMark;
         marks = marks.filter((mark) => mark.id !== button.dataset.deleteMark);
         save(MARK_KEY, marks);
+        window.ClockwiseCloud?.changed("marks", [deletedId]);
         renderMarks();
       });
 
       remindersEl.addEventListener("click", (event) => {
         const button = event.target.closest("[data-delete-reminder]");
         if (!button) return;
+        const deletedId = button.dataset.deleteReminder;
         reminders = reminders.filter((reminder) => reminder.id !== button.dataset.deleteReminder);
         save(REMINDER_KEY, reminders);
+        window.ClockwiseCloud?.changed("reminders", [deletedId]);
         renderReminders();
       });
 
+      window.ClockwiseCloud?.register("reminders", {
+        getItems: () => reminders,
+        setItems: (items) => { reminders = Array.isArray(items) ? items : []; save(REMINDER_KEY, reminders); renderReminders(); }
+      });
+      window.ClockwiseCloud?.register("marks", {
+        getItems: () => marks,
+        setItems: (items) => { marks = (Array.isArray(items) ? items : []).sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0)).slice(0, 12); save(MARK_KEY, marks); renderMarks(); }
+      });
       tick();
       renderMarks();
       setInterval(tick, 1000);
@@ -808,14 +1104,14 @@
       const duration = (total) => { const value = Math.max(0, Math.round(total)); const h = Math.floor(value / 3600); const m = Math.floor((value % 3600) / 60); const s = value % 60; if (h) return h + "h " + m + "m"; if (m) return m + "m" + (s ? " " + s + "s" : ""); return s + "s"; };
       const escapeHtml = (value) => String(value || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
       function load() { try { const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); return Array.isArray(parsed) ? parsed : []; } catch { return []; } }
-      function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+      function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch { /* Keep tracking available even when browser storage is unavailable. */ } }
       const currentWeekStart = startOfWeek(new Date());
       let viewedWeekStart = new Date(currentWeekStart);
       function entriesForWeek(weekStart) { const keys = new Set(weekDays(weekStart).map(dateKey)); return entries.filter((entry) => keys.has(entry.date)).sort((a,b) => String(b.date).localeCompare(String(a.date)) || Number(b.createdAt) - Number(a.createdAt)); }
       function isCurrentWeek(weekStart) { return dateKey(weekStart) === dateKey(currentWeekStart); }
       function weekRange(weekStart) { const end = addDays(weekStart, 6); const startLabel = weekStart.toLocaleDateString([], {month:"short",day:"numeric"}); const endLabel = end.toLocaleDateString([], weekStart.getFullYear() === end.getFullYear() ? {month:"short",day:"numeric"} : {month:"short",day:"numeric",year:"numeric"}); return startLabel + " – " + endLabel; }
       function setStatus(message) { document.getElementById("personal-status").textContent = message; }
-      function add(totalSeconds, note, date) { const total = Math.max(1, Math.round(totalSeconds)); const entryDate = date || dateKey(new Date()); entries.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,7), date: entryDate, type: "personal", minutes: Math.floor(total / 60), seconds: total % 60, totalSeconds: total, note: String(note || "").trim(), createdAt: Date.now() }); viewedWeekStart = startOfWeek(fromKey(entryDate)); save(); render(); setStatus("Added " + duration(total) + " to " + weekRange(viewedWeekStart) + "."); }
+      function add(totalSeconds, note, date) { const total = Math.max(1, Math.round(totalSeconds)); const entryDate = date || dateKey(new Date()); const now = Date.now(); entries.push({ id: now.toString(36) + Math.random().toString(36).slice(2,7), date: entryDate, type: "personal", minutes: Math.floor(total / 60), seconds: total % 60, totalSeconds: total, note: String(note || "").trim(), createdAt: now, updatedAt: now }); viewedWeekStart = startOfWeek(fromKey(entryDate)); save(); window.ClockwiseCloud?.changed("entries"); render(); setStatus("Added " + duration(total) + " to " + weekRange(viewedWeekStart) + "."); }
       function setMeter(id, value, limit) { document.getElementById(id).style.width = Math.min(100, Math.round(value / limit * 100)) + "%"; }
       function historyWeeks() {
         const keys = new Set();
@@ -855,8 +1151,12 @@
       document.getElementById("personal-current-week").addEventListener("click", () => selectWeek(currentWeekStart, true));
       document.getElementById("personal-next-week").addEventListener("click", () => { if (!isCurrentWeek(viewedWeekStart)) selectWeek(addDays(viewedWeekStart, 7), true); });
       historyEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-week]"); if (!button) return; selectWeek(fromKey(button.dataset.personalWeek), true); document.querySelector(".personal-week-card").scrollIntoView({behavior:"smooth",block:"center"}); });
-      document.getElementById("personal-clear").addEventListener("click", () => { const list = entriesForWeek(viewedWeekStart); if (!list.length) return setStatus("There is no personal time to clear for this week."); if (!confirm("Clear personal-time entries for " + weekRange(viewedWeekStart) + "?")) return; const ids = new Set(list.map((e) => e.id)); entries = entries.filter((e) => !ids.has(e.id)); save(); render(); setStatus("Personal time for " + weekRange(viewedWeekStart) + " was cleared."); });
-      entriesEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-delete]"); if (!button) return; entries = entries.filter((e) => e.id !== button.dataset.personalDelete); save(); render(); });
+      document.getElementById("personal-clear").addEventListener("click", () => { const list = entriesForWeek(viewedWeekStart); if (!list.length) return setStatus("There is no personal time to clear for this week."); if (!confirm("Clear personal-time entries for " + weekRange(viewedWeekStart) + "?")) return; const ids = new Set(list.map((e) => e.id)); entries = entries.filter((e) => !ids.has(e.id)); save(); window.ClockwiseCloud?.changed("entries", Array.from(ids)); render(); setStatus("Personal time for " + weekRange(viewedWeekStart) + " was cleared."); });
+      entriesEl.addEventListener("click", (event) => { const button = event.target.closest("[data-personal-delete]"); if (!button) return; const deletedId = button.dataset.personalDelete; entries = entries.filter((e) => e.id !== deletedId); save(); window.ClockwiseCloud?.changed("entries", [deletedId]); render(); });
+      window.ClockwiseCloud?.register("entries", {
+        getItems: () => entries,
+        setItems: (items) => { entries = Array.isArray(items) ? items : []; save(); render(); }
+      });
       render();
     })();
   </script>

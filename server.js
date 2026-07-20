@@ -5,7 +5,7 @@ import OpenAI, { toFile } from "openai";
 import nodemailer from "nodemailer";
 import { createRequire } from "module";
 import http from "http";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -55,6 +55,7 @@ const {
   JOHNNY_CHAT_USAGE_PATH = "/var/data/johnny-chat-usage.json",
   JOHNNY_CHAT_LIBRARY_PATH = "/var/data/johnny-chat-library.json",
   STORY_EDITOR_DB_PATH = "/var/data/story-editor.sqlite",
+  CLOCKWISE_DB_PATH = "/var/data/clockwise.sqlite",
   JOHNNY_CHAT_PASSWORD = ""
 } = process.env;
 
@@ -199,6 +200,242 @@ function requireChatbotSession(req, res) {
   }
 
   return true;
+}
+
+const CLOCKWISE_COLLECTIONS = ["entries", "reminders", "marks"];
+const CLOCKWISE_COLLECTION_LIMITS = {
+  entries: 2500,
+  reminders: 300,
+  marks: 300
+};
+let clockwiseDbReady = null;
+
+function clockwiseOwnerHash(recoveryKey) {
+  return createHash("sha256")
+    .update("clockwise-recovery-v1\0", "utf8")
+    .update(String(recoveryKey || ""), "utf8")
+    .digest("hex");
+}
+
+function requireClockwiseOwner(req, res) {
+  const recoveryKey = getBearerToken(req);
+  if (recoveryKey.length < 24 || recoveryKey.length > 200 || !/^[A-Za-z0-9_-]+$/.test(recoveryKey)) {
+    res.status(401).json({ ok: false, detail: "A valid Clockwise recovery key is required." });
+    return "";
+  }
+
+  return clockwiseOwnerHash(recoveryKey);
+}
+
+function clockwiseTimestamp(value, fallback = Date.now()) {
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed) || parsed < 946684800000) return fallback;
+  return Math.min(parsed, Date.now() + 5 * 60 * 1000);
+}
+
+function clockwiseReminderTimestamp(value, fallback = Date.now()) {
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed) || parsed < 946684800000) return fallback;
+  return Math.min(parsed, Date.now() + 366 * 24 * 60 * 60 * 1000);
+}
+
+function clockwiseText(value, max) {
+  return String(value || "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").trim().slice(0, max);
+}
+
+function normalizeClockwiseItem(collection, value) {
+  if (!value || typeof value !== "object") return null;
+  const id = clockwiseText(value.id, 120);
+  if (!id || !/^[A-Za-z0-9_.:-]+$/.test(id)) return null;
+  const updatedAt = clockwiseTimestamp(value.updatedAt, Date.now());
+  const createdAt = clockwiseTimestamp(value.createdAt, updatedAt);
+
+  if (collection === "entries") {
+    const totalSeconds = Math.max(0, Math.min(86400, Math.round(Number(value.totalSeconds) || (Number(value.minutes) || 0) * 60 + (Number(value.seconds) || 0))));
+    const date = clockwiseText(value.date, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || totalSeconds < 1) return null;
+    return {
+      id,
+      date,
+      type: "personal",
+      minutes: Math.floor(totalSeconds / 60),
+      seconds: totalSeconds % 60,
+      totalSeconds,
+      note: clockwiseText(value.note, 80),
+      createdAt,
+      updatedAt
+    };
+  }
+
+  if (collection === "reminders") {
+    const reference = clockwiseText(value.reference, 120);
+    if (!reference) return null;
+    return {
+      id,
+      reference,
+      note: clockwiseText(value.note, 240),
+      dueAt: clockwiseReminderTimestamp(value.dueAt, updatedAt),
+      done: Boolean(value.done),
+      createdAt,
+      updatedAt
+    };
+  }
+
+  if (collection === "marks") {
+    return {
+      id,
+      label: clockwiseText(value.label || "Mark", 120),
+      time: clockwiseText(value.time, 24),
+      when: clockwiseText(value.when, 120),
+      createdAt,
+      updatedAt
+    };
+  }
+
+  return null;
+}
+
+function normalizeClockwiseTombstone(value) {
+  if (!value || typeof value !== "object") return null;
+  const id = clockwiseText(value.id, 120);
+  if (!id || !/^[A-Za-z0-9_.:-]+$/.test(id)) return null;
+  return { id, deletedAt: clockwiseTimestamp(value.deletedAt, Date.now()) };
+}
+
+async function ensureClockwiseDb() {
+  if (!clockwiseDbReady) {
+    clockwiseDbReady = (async () => {
+      await mkdir(path.dirname(CLOCKWISE_DB_PATH), { recursive: true });
+      const db = new DatabaseSync(CLOCKWISE_DB_PATH);
+      try {
+        db.exec(`
+          PRAGMA journal_mode=WAL;
+          CREATE TABLE IF NOT EXISTS clockwise_items (
+            owner_hash TEXT NOT NULL,
+            collection TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            payload TEXT,
+            updated_at INTEGER NOT NULL DEFAULT 0,
+            deleted_at INTEGER,
+            PRIMARY KEY (owner_hash, collection, item_id)
+          );
+          CREATE INDEX IF NOT EXISTS clockwise_owner_items
+            ON clockwise_items (owner_hash, collection);
+        `);
+      } finally {
+        db.close();
+      }
+    })().catch((error) => {
+      clockwiseDbReady = null;
+      throw error;
+    });
+  }
+  await clockwiseDbReady;
+}
+
+async function withClockwiseDb(callback) {
+  await ensureClockwiseDb();
+  const db = new DatabaseSync(CLOCKWISE_DB_PATH);
+  try {
+    db.exec("PRAGMA busy_timeout=5000;");
+    return callback(db);
+  } finally {
+    db.close();
+  }
+}
+
+function readClockwiseWorkspace(db, ownerHash) {
+  const collections = Object.fromEntries(CLOCKWISE_COLLECTIONS.map((name) => [name, []]));
+  const tombstones = Object.fromEntries(CLOCKWISE_COLLECTIONS.map((name) => [name, []]));
+  const rows = db.prepare(`
+    SELECT collection, item_id, payload, updated_at, deleted_at
+    FROM clockwise_items
+    WHERE owner_hash = ?
+    ORDER BY updated_at ASC
+  `).all(ownerHash);
+
+  for (const row of rows) {
+    if (!CLOCKWISE_COLLECTIONS.includes(row.collection)) continue;
+    const deletedAt = Number(row.deleted_at || 0);
+    const updatedAt = Number(row.updated_at || 0);
+    if (deletedAt >= updatedAt) {
+      tombstones[row.collection].push({ id: row.item_id, deletedAt });
+      continue;
+    }
+    try {
+      const item = JSON.parse(row.payload || "null");
+      if (item) collections[row.collection].push(item);
+    } catch {
+      // Ignore a malformed row without preventing the rest of the workspace from restoring.
+    }
+  }
+
+  return { collections, tombstones };
+}
+
+async function mergeClockwiseWorkspace(ownerHash, body) {
+  const incomingCollections = {};
+  const incomingTombstones = {};
+
+  for (const collection of CLOCKWISE_COLLECTIONS) {
+    const rawItems = Array.isArray(body?.collections?.[collection]) ? body.collections[collection] : [];
+    const rawTombstones = Array.isArray(body?.tombstones?.[collection]) ? body.tombstones[collection] : [];
+    if (rawItems.length > CLOCKWISE_COLLECTION_LIMITS[collection] || rawTombstones.length > CLOCKWISE_COLLECTION_LIMITS[collection] * 2) {
+      const error = new Error(`Too many ${collection} records in one Clockwise sync.`);
+      error.statusCode = 413;
+      throw error;
+    }
+    incomingCollections[collection] = rawItems.map((item) => normalizeClockwiseItem(collection, item)).filter(Boolean);
+    incomingTombstones[collection] = rawTombstones.map(normalizeClockwiseTombstone).filter(Boolean);
+  }
+
+  return withClockwiseDb((db) => {
+    const getRow = db.prepare(`
+      SELECT updated_at, deleted_at FROM clockwise_items
+      WHERE owner_hash = ? AND collection = ? AND item_id = ?
+    `);
+    const upsertActive = db.prepare(`
+      INSERT INTO clockwise_items (owner_hash, collection, item_id, payload, updated_at, deleted_at)
+      VALUES (?, ?, ?, ?, ?, NULL)
+      ON CONFLICT(owner_hash, collection, item_id) DO UPDATE SET
+        payload = excluded.payload,
+        updated_at = excluded.updated_at,
+        deleted_at = NULL
+    `);
+    const upsertDeleted = db.prepare(`
+      INSERT INTO clockwise_items (owner_hash, collection, item_id, payload, updated_at, deleted_at)
+      VALUES (?, ?, ?, NULL, 0, ?)
+      ON CONFLICT(owner_hash, collection, item_id) DO UPDATE SET
+        payload = NULL,
+        deleted_at = excluded.deleted_at
+    `);
+
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const collection of CLOCKWISE_COLLECTIONS) {
+        for (const item of incomingCollections[collection]) {
+          const existing = getRow.get(ownerHash, collection, item.id);
+          const newestExisting = Math.max(Number(existing?.updated_at || 0), Number(existing?.deleted_at || 0));
+          if (item.updatedAt > newestExisting) {
+            upsertActive.run(ownerHash, collection, item.id, JSON.stringify(item), item.updatedAt);
+          }
+        }
+        for (const tombstone of incomingTombstones[collection]) {
+          const existing = getRow.get(ownerHash, collection, tombstone.id);
+          const newestExisting = Math.max(Number(existing?.updated_at || 0), Number(existing?.deleted_at || 0));
+          if (tombstone.deletedAt >= newestExisting) {
+            upsertDeleted.run(ownerHash, collection, tombstone.id, tombstone.deletedAt);
+          }
+        }
+      }
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+
+    return readClockwiseWorkspace(db, ownerHash);
+  });
 }
 
 function normalizeTtsText(value) {
@@ -758,7 +995,11 @@ app.use((req, res, next) => {
  */
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  const safeHeaders = { ...req.headers };
+  for (const name of ["authorization", "cookie", "x-admin-token", "x-618chat-client-id"]) {
+    if (safeHeaders[name]) safeHeaders[name] = "[redacted]";
+  }
+  console.log("Headers:", JSON.stringify(safeHeaders, null, 2));
   next();
 });
 
@@ -806,6 +1047,36 @@ app.post("/api/chatbot-session", (req, res) => {
     ok: verifyChatbotSessionToken(token),
     maxAge: CHATBOT_SESSION_MAX_AGE_SECONDS
   });
+});
+
+app.get("/api/clockwise-sync", async (req, res) => {
+  try {
+    const ownerHash = requireClockwiseOwner(req, res);
+    if (!ownerHash) return;
+    const workspace = await withClockwiseDb((db) => readClockwiseWorkspace(db, ownerHash));
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ ok: true, ...workspace, syncedAt: Date.now() });
+  } catch (error) {
+    console.error("Clockwise restore failed:", error);
+    res.status(500).json({ ok: false, detail: "Clockwise could not restore the cloud backup right now." });
+  }
+});
+
+app.post("/api/clockwise-sync", async (req, res) => {
+  try {
+    const ownerHash = requireClockwiseOwner(req, res);
+    if (!ownerHash) return;
+    const workspace = await mergeClockwiseWorkspace(ownerHash, req.body);
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ ok: true, ...workspace, syncedAt: Date.now() });
+  } catch (error) {
+    console.error("Clockwise sync failed:", error);
+    const status = Number(error?.statusCode) || 500;
+    res.status(status).json({
+      ok: false,
+      detail: status === 413 ? String(error.message || error) : "Clockwise could not save to the cloud right now. Your browser copy is still safe."
+    });
+  }
 });
 
 app.get("/api/chatbot-usage", async (req, res) => {
