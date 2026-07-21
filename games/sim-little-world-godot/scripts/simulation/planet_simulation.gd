@@ -3,16 +3,19 @@ extends RefCounted
 const EvolutionModel = preload("res://scripts/evolution/evolution_model.gd")
 const WeatherModel = preload("res://scripts/weather/weather_model.gd")
 
-const GRID_W := 92
-const GRID_H := 58
-const CELL := 12.0
-const WORLD_OFFSET := Vector2(260, 148)
+const GRID_W := 66
+const GRID_H := 40
+const CELL := 14.0
+const WORLD_OFFSET := Vector2(246, 140)
 const WORLD_SIZE := Vector2(GRID_W * CELL, GRID_H * CELL)
 const HISTORY_MAX := 300
-const BUCKET_SIZE := 72.0
-const SPEEDS: Array[float] = [0.0, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 25.0, 50.0, 100.0]
+const BUCKET_SIZE := 70.0
+const MAX_ORGANISMS := 160
+const KIND_CAPS := {"amoeboid": 104, "grazer": 42, "predator": 14}
 const TOOLS := ["Cyanobacteria", "Amoeboids", "Grazers", "Predatory Swimmers", "Tidal Nutrients", "Volcanic Rock", "Hydrothermal Vent", "Eraser"]
+const TOOL_COSTS: Array[int] = [2, 9, 13, 18, 4, 3, 8, 1]
 const DISASTERS := ["Heat Pulse", "Monsoon", "Viral Bloom", "Impact Event", "Predator Surge", "Seed Recovery"]
+const DISASTER_COSTS: Array[int] = [14, 12, 10, 20, 16, 18]
 
 var cells: Array[Dictionary] = []
 var organisms: Array[Dictionary] = []
@@ -35,6 +38,11 @@ var oxygen := 0.012
 var co2 := 0.91
 var selected_tool := 0
 var render_alpha := 1.0
+var catalyst := 72.0
+var catalyst_max := 100.0
+var reduced_motion := false
+var hover_cell := Vector2i(-1, -1)
+var tool_uses: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0]
 
 
 func new_world(new_seed: String) -> void:
@@ -49,6 +57,9 @@ func new_world(new_seed: String) -> void:
 	climate_heat = 0.44
 	oxygen = 0.012
 	co2 = 0.91
+	catalyst = 72.0
+	hover_cell = Vector2i(-1, -1)
+	tool_uses = [0, 0, 0, 0, 0, 0, 0, 0]
 	cells.clear()
 	organisms.clear()
 	history.clear()
@@ -59,14 +70,12 @@ func new_world(new_seed: String) -> void:
 		for x in range(GRID_W):
 			cells.append(_create_cell(x, y))
 
-	for i in range(240):
-		paint_cell(rng.randi_range(4, GRID_W - 5), rng.randi_range(4, GRID_H - 5), "Cyanobacteria", 3, false)
-	for i in range(26):
-		spawn("amoeboid", _random_open_water_pos())
 	for i in range(12):
-		spawn("grazer", _random_open_water_pos())
+		paint_cell(rng.randi_range(4, GRID_W - 5), rng.randi_range(4, GRID_H - 5), "Cyanobacteria", 2, false)
+	for i in range(8):
+		spawn("amoeboid", _random_open_water_pos())
 	for i in range(3):
-		spawn("predator", _random_open_water_pos())
+		spawn("grazer", _random_open_water_pos())
 	_sample_history()
 
 
@@ -96,7 +105,7 @@ func _create_cell(x: int, y: int) -> Dictionary:
 	return {
 		"type": terrain,
 		"depth": depth,
-		"microbes": rng.randf_range(0.16, 0.48) if _is_life_terrain(terrain) and rng.randf() < 0.36 else 0.0,
+		"microbes": rng.randf_range(0.08, 0.24) if _is_life_terrain(terrain) and rng.randf() < 0.045 else 0.0,
 		"nutrients": 1.1 if vent else rng.randf_range(0.32, 0.92),
 		"water": 1.0 if terrain != "basalt" and terrain != "volcanic" else rng.randf_range(0.18, 0.48),
 		"decay": 0.0,
@@ -109,6 +118,7 @@ func _create_cell(x: int, y: int) -> Dictionary:
 
 func step(delta: float) -> void:
 	tick += 1
+	catalyst = min(catalyst_max, catalyst + delta * 0.72)
 	for organism in organisms:
 		organism.prev_pos = organism.pos
 		organism.prev_vel = organism.vel
@@ -119,7 +129,8 @@ func step(delta: float) -> void:
 	if weather_timer <= 0:
 		roll_weather()
 
-	_update_cells(delta)
+	if tick % 3 == 0:
+		_update_cells(delta * 3.0)
 	_rebuild_spatial()
 	for organism in organisms:
 		if organism.dead:
@@ -154,10 +165,11 @@ func roll_weather() -> void:
 			climate_heat = clamp(climate_heat - 0.07, 0.0, 1.0)
 
 
-func _update_cells(_delta: float) -> void:
+func _update_cells(delta: float) -> void:
+	var rate: float = delta * 20.0
 	var season_growth: float = [1.22, 0.9, 1.05, 0.68][season]
 	var day_light: float = (sin(float(tick) * 0.006) + 1.0) * 0.5
-	var rain: float = 0.006 if _is_rain_weather(weather) else -0.001
+	var rain: float = (0.006 if _is_rain_weather(weather) else -0.001) * rate
 	var heat_stress: float = max(0.0, climate_heat - 0.68) * 0.55
 	var microbe_total := 0.0
 	var decay_total := 0.0
@@ -168,32 +180,33 @@ func _update_cells(_delta: float) -> void:
 				cell.water = 1.0
 			else:
 				cell.water = clamp(cell.water + rain, 0.0, 1.0)
-			cell.temperature = clamp(cell.temperature * 0.994 + (climate_heat + (0.18 if cell.vent else 0.0)) * 0.006, 0.0, 1.0)
+			cell.temperature = clamp(cell.temperature * (1.0 - 0.006 * rate) + (climate_heat + (0.18 if cell.vent else 0.0)) * 0.006 * rate, 0.0, 1.0)
 			if cell.vent:
-				cell.nutrients = clamp(cell.nutrients + 0.006, 0.0, 1.45)
+				cell.nutrients = clamp(cell.nutrients + 0.006 * rate, 0.0, 1.45)
 			if cell.decay > 0.0:
-				cell.fungus = clamp(cell.fungus + cell.decay * 0.011, 0.0, 1.0)
-				cell.nutrients = clamp(cell.nutrients + cell.decay * 0.008, 0.0, 1.45)
-				cell.decay = max(0.0, cell.decay - 0.006)
+				cell.fungus = clamp(cell.fungus + cell.decay * 0.011 * rate, 0.0, 1.0)
+				cell.nutrients = clamp(cell.nutrients + cell.decay * 0.008 * rate, 0.0, 1.45)
+				cell.decay = max(0.0, cell.decay - 0.006 * rate)
 			else:
-				cell.fungus = max(0.0, cell.fungus - 0.001)
+				cell.fungus = max(0.0, cell.fungus - 0.001 * rate)
 			if _is_life_terrain(cell.type) and cell.water > 0.4:
-				var shallow_bonus: float = 1.22 if _is_shallow_terrain(cell.type) else 0.82
-				var photosynthesis: float = (day_light * 0.78 + cell.nutrients * 0.56 - heat_stress) * 0.0038 * season_growth * shallow_bonus
-				cell.microbes = clamp(cell.microbes + photosynthesis - max(0.0, cell.microbes - 0.88) * 0.002, 0.0, 1.0)
-				cell.nutrients = clamp(cell.nutrients - cell.microbes * 0.00062, 0.0, 1.45)
-				if cell.microbes > 0.38 and rng.randf() < 0.014 * season_growth:
-					var nx := clampi(x + rng.randi_range(-1, 1), 0, GRID_W - 1)
-					var ny := clampi(y + rng.randi_range(-1, 1), 0, GRID_H - 1)
-					var neighbor := cell(nx, ny)
-					if _is_life_terrain(neighbor.type) and neighbor.water > 0.45:
-						neighbor.microbes = clamp(neighbor.microbes + 0.055, 0.0, 1.0)
+				if cell.microbes > 0.001:
+					var shallow_bonus: float = 1.22 if _is_shallow_terrain(cell.type) else 0.82
+					var photosynthesis: float = (day_light * 0.78 + cell.nutrients * 0.56 - heat_stress) * 0.0032 * season_growth * shallow_bonus * rate
+					cell.microbes = clamp(cell.microbes + photosynthesis - max(0.0, cell.microbes - 0.88) * 0.002 * rate, 0.0, 1.0)
+					cell.nutrients = clamp(cell.nutrients - cell.microbes * 0.00062 * rate, 0.0, 1.45)
+					if cell.microbes > 0.38 and rng.randf() < 0.006 * season_growth * rate:
+						var nx := clampi(x + rng.randi_range(-1, 1), 0, GRID_W - 1)
+						var ny := clampi(y + rng.randi_range(-1, 1), 0, GRID_H - 1)
+						var neighbor := cell(nx, ny)
+						if _is_life_terrain(neighbor.type) and neighbor.water > 0.45:
+							neighbor.microbes = clamp(neighbor.microbes + 0.045, 0.0, 1.0)
 			elif cell.microbes > 0.0:
-				cell.microbes = max(0.0, cell.microbes - 0.002 - heat_stress * 0.002)
+				cell.microbes = max(0.0, cell.microbes - (0.002 + heat_stress * 0.002) * rate)
 			microbe_total += cell.microbes
 			decay_total += cell.decay + cell.fungus
-	oxygen = clamp(oxygen + microbe_total / float(cells.size()) * 0.00034 - float(organisms.size()) * 0.000003, 0.0, 1.0)
-	co2 = clamp(co2 - oxygen * 0.00018 + decay_total / float(cells.size()) * 0.00008, 0.04, 1.0)
+	oxygen = clamp(oxygen + (microbe_total / float(cells.size()) * 0.00034 - float(organisms.size()) * 0.000003) * rate, 0.0, 1.0)
+	co2 = clamp(co2 + (-oxygen * 0.00018 + decay_total / float(cells.size()) * 0.00008) * rate, 0.04, 1.0)
 
 
 func _update_amoeboid(amoeba: Dictionary, delta: float) -> void:
@@ -218,7 +231,7 @@ func _update_amoeboid(amoeba: Dictionary, delta: float) -> void:
 		var snack: float = min(c.fungus, 0.008)
 		c.fungus -= snack
 		amoeba.energy = clamp(amoeba.energy + snack * 80.0, 0.0, 140.0)
-	if amoeba.energy > 92.0 and amoeba.cooldown <= 0.0 and local_count(amoeba.pos, "amoeboid", 42.0) < 9:
+	if amoeba.energy > 96.0 and amoeba.cooldown <= 0.0 and organisms.size() < MAX_ORGANISMS and local_count(amoeba.pos, "amoeboid", 42.0) < 7:
 		var child = spawn("amoeboid", amoeba.pos + _random_vec(18.0), amoeba)
 		if child:
 			child.energy = 45.0
@@ -253,7 +266,7 @@ func _update_grazer(grazer: Dictionary, delta: float) -> void:
 		var scavenge: float = min(c.decay, 0.014)
 		c.decay -= scavenge
 		grazer.energy = clamp(grazer.energy + scavenge * 85.0, 0.0, 155.0)
-	if grazer.energy > 118.0 and grazer.cooldown <= 0.0 and local_count(grazer.pos, "grazer", 70.0) < 7:
+	if grazer.energy > 122.0 and grazer.cooldown <= 0.0 and organisms.size() < MAX_ORGANISMS and local_count(grazer.pos, "grazer", 70.0) < 5:
 		var child = spawn("grazer", grazer.pos + _random_vec(22.0), grazer)
 		if child:
 			child.energy = 58.0
@@ -278,7 +291,7 @@ func _update_predator(predator: Dictionary, delta: float) -> void:
 			predator.energy = clamp(predator.energy + 38.0 + prey.size * 14.0, 0.0, 170.0)
 		else:
 			predator.energy -= 5.0
-	if predator.energy > 138.0 and predator.cooldown <= 0.0 and local_count(predator.pos, "predator", 94.0) < 4:
+	if predator.energy > 142.0 and predator.cooldown <= 0.0 and organisms.size() < MAX_ORGANISMS and local_count(predator.pos, "predator", 94.0) < 3:
 		var child = spawn("predator", predator.pos + _random_vec(28.0), predator)
 		if child:
 			child.energy = 68.0
@@ -303,6 +316,8 @@ func move_organism(organism: Dictionary, target: Vector2, speed: float, delta: f
 
 
 func spawn(kind: String, pos: Vector2, parent = null):
+	if organisms.size() >= MAX_ORGANISMS or _kind_count(kind) >= int(KIND_CAPS.get(kind, MAX_ORGANISMS)):
+		return null
 	var c := cell_at_world(pos)
 	if _is_blocking_terrain(c.type) and not c.vent:
 		return null
@@ -392,21 +407,29 @@ func paint_cell(cx: int, cy: int, tool: String, radius: int, update_events: bool
 					c.fungus = 0.0
 					c.vent = false
 	if tool == "Amoeboids":
-		for i in range(10):
+		for i in range(4):
 			spawn("amoeboid", Vector2(cx * CELL, cy * CELL) + _random_vec(24.0))
 	elif tool == "Grazers":
-		for i in range(5):
+		for i in range(2):
 			spawn("grazer", Vector2(cx * CELL, cy * CELL) + _random_vec(26.0))
 	elif tool == "Predatory Swimmers":
-		for i in range(3):
-			spawn("predator", Vector2(cx * CELL, cy * CELL) + _random_vec(28.0))
+		spawn("predator", Vector2(cx * CELL, cy * CELL) + _random_vec(20.0))
 	elif tool == "Eraser":
 		organisms = organisms.filter(func(organism: Dictionary) -> bool: return (organism.pos / CELL).distance_to(Vector2(cx, cy)) > radius + 2)
 	if update_events:
 		events.append({"day": day, "type": "Tool: " + tool})
+		if events.size() > 80:
+			events.pop_front()
 
 
-func disaster(label: String) -> void:
+func disaster(label: String) -> Dictionary:
+	var index := DISASTERS.find(label)
+	if index < 0:
+		return {"ok": false, "message": "Unknown world event"}
+	var cost: float = DISASTER_COSTS[index]
+	if catalyst < cost:
+		return {"ok": false, "message": "Need %d Catalyst for %s" % [int(cost), label]}
+	catalyst -= cost
 	events.append({"day": day, "type": label})
 	match label:
 		"Heat Pulse":
@@ -440,6 +463,7 @@ func disaster(label: String) -> void:
 				spawn("predator", _random_open_water_pos())
 		"Seed Recovery":
 			rebalance()
+	return {"ok": true, "message": "%s triggered — watch the food web" % label}
 
 
 func rebalance() -> void:
@@ -502,6 +526,13 @@ func stats() -> Dictionary:
 		"predators": predators,
 	}
 	var biodiversity := evolution.biodiversity_score(raw)
+	var foundation_score: float = clamp(float(microbe_cells) / 420.0, 0.0, 1.0) * 26.0
+	var consumer_score: float = clamp(float(amoeboids) / 28.0, 0.0, 1.0) * 18.0
+	var grazer_score: float = clamp(float(grazers) / 12.0, 0.0, 1.0) * 17.0
+	var predator_score: float = clamp(float(predators) / 4.0, 0.0, 1.0) * 12.0
+	var crowding_penalty: float = max(0.0, float(organisms.size() - 112)) * 0.35
+	var starvation_penalty: float = max(0.0, float(amoeboids + grazers * 2) - float(microbe_cells) * 0.11) * 0.22
+	var stability: float = clamp(foundation_score + consumer_score + grazer_score + predator_score + biodiversity * 0.27 - crowding_penalty - starvation_penalty, 0.0, 100.0)
 	return {
 		"microbes": microbe_cells,
 		"fungal": fungal_cells,
@@ -518,6 +549,8 @@ func stats() -> Dictionary:
 		"co2": co2,
 		"climate_heat": climate_heat,
 		"biodiversity": biodiversity,
+		"stability": stability,
+		"population": organisms.size(),
 		"max_generation": max_generation,
 	}
 
@@ -557,13 +590,32 @@ func select_tool(index: int) -> void:
 	selected_tool = clampi(index, 0, TOOLS.size() - 1)
 
 
-func tool_at_screen(screen_pos: Vector2) -> void:
+func tool_at_screen(screen_pos: Vector2) -> Dictionary:
 	var local := screen_pos - WORLD_OFFSET
 	if local.x < 0.0 or local.y < 0.0 or local.x >= WORLD_SIZE.x or local.y >= WORLD_SIZE.y:
-		return
+		return {"ok": false, "message": "Move the brush inside the ocean"}
+	var cost: float = TOOL_COSTS[selected_tool]
+	if catalyst < cost:
+		return {"ok": false, "message": "Catalyst depleted — pause and let it recharge"}
 	var x := int(local.x / CELL)
 	var y := int(local.y / CELL)
-	paint_cell(x, y, TOOLS[selected_tool], 3)
+	catalyst -= cost
+	tool_uses[selected_tool] += 1
+	paint_cell(x, y, TOOLS[selected_tool], 2)
+	return {"ok": true, "message": "%s placed  •  −%d Catalyst" % [TOOLS[selected_tool], int(cost)]}
+
+
+func set_hover_screen(screen_pos: Vector2) -> void:
+	var local := screen_pos - WORLD_OFFSET
+	if local.x < 0.0 or local.y < 0.0 or local.x >= WORLD_SIZE.x or local.y >= WORLD_SIZE.y:
+		hover_cell = Vector2i(-1, -1)
+		return
+	hover_cell = Vector2i(int(local.x / CELL), int(local.y / CELL))
+
+
+func is_screen_in_world(screen_pos: Vector2) -> bool:
+	var local := screen_pos - WORLD_OFFSET
+	return local.x >= 0.0 and local.y >= 0.0 and local.x < WORLD_SIZE.x and local.y < WORLD_SIZE.y
 
 
 func cell(x: int, y: int) -> Dictionary:
@@ -657,6 +709,14 @@ func _bucket_key(pos: Vector2) -> Vector2i:
 	return Vector2i(int(pos.x / BUCKET_SIZE), int(pos.y / BUCKET_SIZE))
 
 
+func _kind_count(kind: String) -> int:
+	var count := 0
+	for organism in organisms:
+		if not organism.dead and organism.kind == kind:
+			count += 1
+	return count
+
+
 func _random_open_water_pos() -> Vector2:
 	for i in range(80):
 		var pos := Vector2(rng.randf_range(80.0, WORLD_SIZE.x - 80.0), rng.randf_range(80.0, WORLD_SIZE.y - 80.0))
@@ -673,8 +733,12 @@ func _random_vec(radius: float) -> Vector2:
 
 
 func _noise(x: int, y: int) -> float:
-	var noise := sin(float(x) * 12.9898 + float(y) * 78.233 + float(abs(hash(seed_text)) % 9999)) * 43758.5453
-	return noise - floor(noise)
+	var phase := float(abs(hash(seed_text)) % 10000) * 0.001
+	var broad := sin(float(x) * 0.15 + phase) * 0.34
+	broad += cos(float(y) * 0.18 - phase * 0.72) * 0.28
+	broad += sin(float(x + y) * 0.075 + phase * 0.31) * 0.22
+	var detail := sin(float(x) * 0.57 + float(y) * 0.39 + phase * 1.7) * 0.16
+	return clamp(0.5 + (broad + detail) * 0.54, 0.0, 1.0)
 
 
 func _is_ocean_terrain(terrain: String) -> bool:

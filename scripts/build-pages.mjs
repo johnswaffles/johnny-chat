@@ -3945,6 +3945,46 @@ async function patchGodotHtmlCacheBust() {
   }
 }
 
+async function patchSimLoadingScreen() {
+  const htmlPath = path.join(publicDir, "sim", "index.html");
+  let source;
+  try {
+    source = await readFile(htmlPath, "utf8");
+  } catch {
+    return;
+  }
+  if (source.includes("little-world-loading-screen")) return;
+  const brandedStyles = `
+/* little-world-loading-screen */
+#status {
+  background: radial-gradient(circle at 50% 35%, #103b43 0%, #061723 42%, #020812 100%);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+#status-splash { display: none !important; }
+#status::before {
+  content: "LITTLE WORLD: GENESIS\\A Preparing a young ocean…";
+  white-space: pre;
+  color: #effff9;
+  text-align: center;
+  font-size: clamp(18px, 2.4vw, 30px);
+  font-weight: 700;
+  line-height: 1.8;
+  letter-spacing: 0.08em;
+}
+#status-progress {
+  position: relative;
+  inset: auto;
+  width: min(360px, 56vw);
+  height: 5px;
+  margin: 24px auto 0;
+  accent-color: #63f7ce;
+}
+`;
+  const patched = source.replace("\t\t</style>", `${brandedStyles}\n\t\t</style>`);
+  if (patched === source) throw new Error(`Could not brand Sim loading screen in ${htmlPath}`);
+  await writeFile(htmlPath, patched, "utf8");
+}
+
 async function routeOversizedGodotAssetsForPages() {
   if (!isPagesBuild) return;
 
@@ -4602,6 +4642,7 @@ async function main() {
   await syncGodotBuilds();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
+  await patchSimLoadingScreen();
   await routeOversizedGodotAssetsForPages();
 
   await writeFile(path.join(publicDir, "ai-helper", "index.html"), aiPage, "utf8");
