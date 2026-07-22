@@ -156,7 +156,65 @@ func draw_overlay(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 	var night: float = max(0.0, cos(fmod(sim.tick, 240.0) / 240.0 * TAU)) * 0.11
 	if night > 0.02:
 		canvas.draw_rect(Rect2(PlanetSimulation.WORLD_OFFSET, PlanetSimulation.WORLD_SIZE), Color(0.01, 0.02, 0.09, night))
+	_draw_hotspot(canvas, sim)
+	_draw_action_effects(canvas, sim)
 	_draw_brush_cursor(canvas, sim)
+
+
+func _draw_hotspot(canvas: CanvasItem, sim: PlanetSimulation) -> void:
+	if not sim.hotspot_active or sim.hotspot_cell.x < 0:
+		return
+	var center := PlanetSimulation.WORLD_OFFSET + (Vector2(sim.hotspot_cell) + Vector2(0.5, 0.5)) * PlanetSimulation.CELL
+	var pulse := 0.0 if sim.reduced_motion else sin(sim.tick * 0.08) * 5.0
+	var radius := 38.0 + pulse
+	var color := Color(1.0, 0.82, 0.3, 0.8)
+	canvas.draw_circle(center, radius + 10.0, Color(1.0, 0.75, 0.22, 0.045))
+	var diamond := PackedVector2Array([
+		center + Vector2(0, -radius),
+		center + Vector2(radius, 0),
+		center + Vector2(0, radius),
+		center + Vector2(-radius, 0),
+		center + Vector2(0, -radius),
+	])
+	canvas.draw_polyline(diamond, color, 2.0)
+	canvas.draw_line(center - Vector2(9, 0), center + Vector2(9, 0), Color(1.0, 0.93, 0.58, 0.75), 1.0)
+	canvas.draw_line(center - Vector2(0, 9), center + Vector2(0, 9), Color(1.0, 0.93, 0.58, 0.75), 1.0)
+
+
+func _draw_action_effects(canvas: CanvasItem, sim: PlanetSimulation) -> void:
+	for effect in sim.action_effects:
+		var age: float = effect.age
+		var progress: float = clamp(age / 1.25, 0.0, 1.0)
+		var center: Vector2 = PlanetSimulation.WORLD_OFFSET + Vector2(effect.pos)
+		var color: Color = _tool_effect_color(int(effect.tool))
+		color.a = (1.0 - progress) * 0.65
+		var radius: float = 10.0 + progress * 42.0
+		canvas.draw_rect(Rect2(center - Vector2(radius, radius), Vector2(radius * 2.0, radius * 2.0)), color, false, 2.0)
+		if sim.reduced_motion:
+			continue
+		for i in range(5):
+			var angle := float(i) / 5.0 * TAU + float(effect.tool) * 0.47
+			var particle_pos: Vector2 = center + Vector2(cos(angle), sin(angle)) * radius * 0.68
+			canvas.draw_circle(particle_pos, 2.2 * (1.0 - progress), color)
+
+
+func _tool_effect_color(tool: int) -> Color:
+	match tool:
+		0:
+			return Color("#69f39a")
+		1:
+			return Color("#67eaff")
+		2:
+			return Color("#c5e66f")
+		3:
+			return Color("#ff7148")
+		4:
+			return Color("#55dfb2")
+		5:
+			return Color("#ff9b62")
+		6:
+			return Color("#ffc85b")
+	return Color("#d5f3f7")
 
 
 func _draw_brush_cursor(canvas: CanvasItem, sim: PlanetSimulation) -> void:

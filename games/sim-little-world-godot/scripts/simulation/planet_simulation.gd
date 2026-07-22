@@ -43,6 +43,9 @@ var catalyst_max := 100.0
 var reduced_motion := false
 var hover_cell := Vector2i(-1, -1)
 var tool_uses: Array[int] = [0, 0, 0, 0, 0, 0, 0, 0]
+var action_effects: Array[Dictionary] = []
+var hotspot_cell := Vector2i(-1, -1)
+var hotspot_active := false
 
 
 func new_world(new_seed: String) -> void:
@@ -60,6 +63,9 @@ func new_world(new_seed: String) -> void:
 	catalyst = 72.0
 	hover_cell = Vector2i(-1, -1)
 	tool_uses = [0, 0, 0, 0, 0, 0, 0, 0]
+	action_effects.clear()
+	hotspot_cell = Vector2i(-1, -1)
+	hotspot_active = false
 	cells.clear()
 	organisms.clear()
 	history.clear()
@@ -118,6 +124,9 @@ func _create_cell(x: int, y: int) -> Dictionary:
 
 func step(delta: float) -> void:
 	tick += 1
+	for effect in action_effects:
+		effect.age += delta
+	action_effects = action_effects.filter(func(effect: Dictionary) -> bool: return effect.age < 1.25)
 	catalyst = min(catalyst_max, catalyst + delta * 0.72)
 	for organism in organisms:
 		organism.prev_pos = organism.pos
@@ -602,7 +611,15 @@ func tool_at_screen(screen_pos: Vector2) -> Dictionary:
 	catalyst -= cost
 	tool_uses[selected_tool] += 1
 	paint_cell(x, y, TOOLS[selected_tool], 2)
-	return {"ok": true, "message": "%s placed  •  −%d Catalyst" % [TOOLS[selected_tool], int(cost)]}
+	var world_pos := Vector2(x * CELL + CELL * 0.5, y * CELL + CELL * 0.5)
+	action_effects.append({"pos": world_pos, "age": 0.0, "tool": selected_tool})
+	return {
+		"ok": true,
+		"message": "%s placed  •  −%d Catalyst" % [TOOLS[selected_tool], int(cost)],
+		"tool": selected_tool,
+		"cell": Vector2i(x, y),
+		"world_pos": world_pos,
+	}
 
 
 func set_hover_screen(screen_pos: Vector2) -> void:
@@ -616,6 +633,32 @@ func set_hover_screen(screen_pos: Vector2) -> void:
 func is_screen_in_world(screen_pos: Vector2) -> bool:
 	var local := screen_pos - WORLD_OFFSET
 	return local.x >= 0.0 and local.y >= 0.0 and local.x < WORLD_SIZE.x and local.y < WORLD_SIZE.y
+
+
+func inspect_at_screen(screen_pos: Vector2) -> Dictionary:
+	var local := screen_pos - WORLD_OFFSET
+	if local.x < 0.0 or local.y < 0.0 or local.x >= WORLD_SIZE.x or local.y >= WORLD_SIZE.y:
+		return {}
+	var nearest_organism: Dictionary = {}
+	var best_distance := 48.0 * 48.0
+	for organism in organisms:
+		if organism.dead:
+			continue
+		var distance: float = local.distance_squared_to(organism.pos)
+		if distance < best_distance:
+			best_distance = distance
+			nearest_organism = organism
+	var inspected_cell := cell_at_world(local)
+	return {
+		"organism": nearest_organism,
+		"cell": inspected_cell,
+		"cell_pos": Vector2i(int(local.x / CELL), int(local.y / CELL)),
+	}
+
+
+func set_hotspot(cell_position: Vector2i, active: bool) -> void:
+	hotspot_cell = Vector2i(clampi(cell_position.x, 3, GRID_W - 4), clampi(cell_position.y, 3, GRID_H - 4))
+	hotspot_active = active
 
 
 func cell(x: int, y: int) -> Dictionary:
