@@ -50,6 +50,11 @@ var current_crisis := ""
 var last_crisis_notice_tick := -1000
 var inspector_resume_running := false
 var inspector_victory := false
+var help_open := false
+var coach_tip_key := ""
+var coach_seen_key := ""
+var coach_action_kind := ""
+var coach_action_value := ""
 
 var ui: CanvasLayer
 var intro_overlay: Control
@@ -78,6 +83,11 @@ var inspector_overlay: Control
 var inspector_title: Label
 var inspector_label: RichTextLabel
 var inspector_button: Button
+var help_button: Button
+var help_panel: Panel
+var help_title: Label
+var help_body: RichTextLabel
+var help_action_button: Button
 
 
 func _ready() -> void:
@@ -131,6 +141,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_ESCAPE:
 				if inspector_overlay and inspector_overlay.visible:
 					_close_inspector()
+				elif help_open:
+					_toggle_help()
+			KEY_H:
+				_toggle_help()
 			KEY_SPACE:
 				_toggle_running()
 			KEY_N:
@@ -179,6 +193,9 @@ func _build_ui() -> void:
 	score_label = _label("SCORE 000000", Vector2(820, 31), 16, Color("#ffe38a"))
 	combo_label = _label("", Vector2(820, 64), 13, Color("#88f5d2"))
 
+	help_button = _button("HELP", Vector2(932, 39), Vector2(102, 46))
+	help_button.tooltip_text = "Open the real-time Help Coach (H)"
+	help_button.pressed.connect(_toggle_help)
 	play_button = _button("Play", Vector2(1042, 39), Vector2(82, 46))
 	play_button.pressed.connect(_toggle_running)
 	speed_button = _button("1x", Vector2(1132, 39), Vector2(66, 46))
@@ -216,7 +233,7 @@ func _build_ui() -> void:
 	motion_button = _button("Reduced Motion: Off", Vector2(32, 636), Vector2(182, 34))
 	motion_button.add_theme_font_size_override("font_size", 12)
 	motion_button.pressed.connect(_toggle_motion)
-	var keys := _label("Space pause  •  [ ] speed\n1–8 tools  •  M motion\nRight-click inspect", Vector2(34, 688), 12, Color("#7897a2"))
+	var keys := _label("Space pause  •  [ ] speed\n1–8 tools  •  H live help\nRight-click inspect", Vector2(34, 688), 12, Color("#7897a2"))
 	keys.size = Vector2(176, 60)
 
 	_panel(Vector2(1186, 126), Vector2(238, 668), Color(0.012, 0.03, 0.042, 0.9))
@@ -272,6 +289,7 @@ func _build_ui() -> void:
 	toast_label.modulate.a = 0.0
 
 	_select_tool(0)
+	_build_help_coach()
 	_build_intro()
 	_build_inspector()
 
@@ -299,7 +317,7 @@ func _build_intro() -> void:
 	_intro_step(card, "01", "Seed the shallows", "Paint cyanobacteria and nutrient-rich tidepools.", 232)
 	_intro_step(card, "02", "Build a balanced web", "Add drifters, grazers, then predators as missions unlock.", 326)
 	_intro_step(card, "03", "Protect the planet", "Watch Stability, oxygen, and population history—not just raw growth.", 420)
-	var note := _child_label(card, "Tips: alternate tools quickly for combo bonuses, work inside gold hotspots,\nand right-click a creature to inspect its evolving traits.", Vector2(50, 506), 13, Color("#8fd8c6"))
+	var note := _child_label(card, "Open HELP anytime for one exact next step. You can also alternate tools for combos,\nwork inside gold hotspots, and right-click creatures to inspect their traits.", Vector2(50, 506), 13, Color("#8fd8c6"))
 	note.size = Vector2(660, 40)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var launch := Button.new()
@@ -309,6 +327,48 @@ func _build_intro() -> void:
 	glass.style_button(launch, Color(0.06, 0.58, 0.44, 0.9))
 	launch.pressed.connect(_start_game)
 	card.add_child(launch)
+
+
+func _build_help_coach() -> void:
+	help_panel = Panel.new()
+	help_panel.position = Vector2(770, 132)
+	help_panel.size = Vector2(392, 490)
+	help_panel.visible = false
+	help_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	glass.style_panel(help_panel, Color(0.012, 0.045, 0.061, 0.98), Color(0.35, 1.0, 0.78, 0.55))
+	ui.add_child(help_panel)
+	_child_label(help_panel, "LIVE HELP COACH", Vector2(24, 18), 14, Color("#63f7ce"))
+	var live := _child_label(help_panel, "LIVE  •  watching your world", Vector2(24, 43), 11, Color("#75d7c1"))
+	live.size = Vector2(210, 20)
+	var minimize := Button.new()
+	minimize.text = "—"
+	minimize.position = Vector2(332, 16)
+	minimize.size = Vector2(38, 34)
+	minimize.focus_mode = Control.FOCUS_NONE
+	minimize.tooltip_text = "Minimize Help Coach"
+	glass.style_button(minimize, Color(0.06, 0.22, 0.25, 0.9))
+	minimize.pressed.connect(_toggle_help)
+	help_panel.add_child(minimize)
+	help_title = _child_label(help_panel, "Your next move", Vector2(24, 72), 22, Color("#f1fffb"))
+	help_title.size = Vector2(342, 58)
+	help_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	help_body = RichTextLabel.new()
+	help_body.position = Vector2(24, 128)
+	help_body.size = Vector2(344, 280)
+	help_body.bbcode_enabled = true
+	help_body.fit_content = false
+	help_body.scroll_active = false
+	help_body.add_theme_font_size_override("normal_font_size", 13)
+	help_body.add_theme_font_size_override("bold_font_size", 14)
+	help_panel.add_child(help_body)
+	help_action_button = Button.new()
+	help_action_button.text = "SHOW ME WHAT TO USE"
+	help_action_button.position = Vector2(24, 422)
+	help_action_button.size = Vector2(344, 46)
+	help_action_button.focus_mode = Control.FOCUS_NONE
+	glass.style_button(help_action_button, Color(0.06, 0.58, 0.44, 0.95))
+	help_action_button.pressed.connect(_run_coach_action)
+	help_panel.add_child(help_action_button)
 
 
 func _build_inspector() -> void:
@@ -360,7 +420,8 @@ func _start_game() -> void:
 	play_button.text = "Pause"
 	if field_study_index < 0:
 		_start_field_study()
-	_show_toast("Mission 1: seed the shallows", Color("#63f7ce"))
+	_update_ui()
+	_show_toast("Mission 1: seed the shallows  •  Open HELP for live guidance", Color("#63f7ce"), 3.2)
 
 
 func _reset_world(announce := true) -> void:
@@ -393,9 +454,16 @@ func _reset_fun_systems() -> void:
 	achievements.clear()
 	current_crisis = ""
 	last_crisis_notice_tick = -1000
+	help_open = false
+	coach_tip_key = ""
+	coach_seen_key = ""
+	coach_action_kind = ""
+	coach_action_value = ""
 	sim.set_hotspot(Vector2i(-1, -1), false)
 	if inspector_overlay:
 		inspector_overlay.visible = false
+	if help_panel:
+		help_panel.visible = false
 
 
 func _toggle_running() -> void:
@@ -762,8 +830,292 @@ func _update_ui() -> void:
 		]
 	else:
 		field_label.text = "FIELD STUDY  •  launches with the expedition"
+	_update_help_coach(s)
 	_update_tool_locks()
 	graph.queue_redraw()
+
+
+func _toggle_help() -> void:
+	if not help_panel:
+		return
+	help_open = not help_open
+	help_panel.visible = help_open
+	_update_help_coach(sim.stats())
+	if help_open:
+		coach_seen_key = coach_tip_key
+		help_button.text = "HELP • OPEN"
+
+
+func _update_help_coach(s: Dictionary) -> void:
+	if not help_button or not help_panel:
+		return
+	var tip: Dictionary = _coach_tip(s)
+	var next_key := "%d:%s" % [mission_stage, str(tip.get("key", "guide"))]
+	coach_tip_key = next_key
+	coach_action_kind = str(tip.get("action_kind", ""))
+	coach_action_value = str(tip.get("action_value", ""))
+	var button_text := str(tip.get("button", ""))
+
+	if coach_action_kind == "tool":
+		var tool_index := int(coach_action_value)
+		if sim.catalyst < PlanetSimulation.TOOL_COSTS[tool_index]:
+			tip.title = "Let Catalyst recharge"
+			tip.action = "Keep the ocean running. Catalyst refills automatically; when it reaches %d, use %s." % [PlanetSimulation.TOOL_COSTS[tool_index], TOOL_SHORT_NAMES[tool_index]]
+			tip.why = "Every intervention costs Catalyst. Waiting briefly is part of keeping the simulation under control."
+			tip.status = "Catalyst %d/%d  •  Need %d" % [int(sim.catalyst), int(sim.catalyst_max), PlanetSimulation.TOOL_COSTS[tool_index]]
+			coach_tip_key = "%d:recharge:%d" % [mission_stage, tool_index]
+			coach_action_kind = "speed"
+			coach_action_value = "2"
+			button_text = "RUN AT 2X TO RECHARGE"
+		elif not running:
+			coach_action_kind = "tool_resume"
+			button_text = "SELECT %s + RESUME" % TOOL_SHORT_NAMES[tool_index].to_upper()
+	if not running and coach_action_kind == "":
+		coach_action_kind = "resume"
+		coach_action_value = ""
+		button_text = "RESUME SIMULATION"
+
+	help_title.text = str(tip.get("title", "Your next move"))
+	help_body.text = "[color=#8defff]DO THIS NOW[/color]\n[b]%s[/b]\n\n[color=#8fafb7]WHY[/color]\n%s\n\n[color=#ffe38a]LIVE READOUT[/color]\n%s\n\n[color=#75d7c1]BONUS[/color]  %s" % [
+		str(tip.get("action", "Watch the world and follow the current mission.")),
+		str(tip.get("why", "The coach will update when the planet needs a different intervention.")),
+		str(tip.get("status", "The planet is being monitored.")),
+		_coach_bonus_text(),
+	]
+	help_action_button.visible = coach_action_kind != ""
+	help_action_button.text = button_text if button_text != "" else "TAKE THE NEXT STEP"
+	if help_open:
+		coach_seen_key = coach_tip_key
+		help_button.text = "HELP • OPEN"
+	else:
+		help_button.text = "HELP" if coach_tip_key == coach_seen_key else "HELP • NEW"
+
+
+func _coach_tip(s: Dictionary) -> Dictionary:
+	if not started:
+		return {
+			"key": "launch", "title": "Begin the expedition",
+			"action": "Read the three mission principles, then choose AWAKEN THE OCEAN.",
+			"why": "The Help Coach will start tracking the world as soon as the simulation begins.",
+			"status": "The young ocean is waiting.", "action_kind": "", "button": "",
+		}
+	if current_crisis != "":
+		return _crisis_coach_tip(s)
+	return _mission_coach_tip(s)
+
+
+func _mission_coach_tip(s: Dictionary) -> Dictionary:
+	match mission_stage:
+		0:
+			if sim.tool_uses[0] < 3:
+				return {
+					"key": "m0-seed", "title": "Seed the first living mats",
+					"action": "Choose Cyano Mats, then click three separate green shallow-water areas. Aim inside the gold diamond when practical.",
+					"why": "Cyanobacteria are the food-web foundation and gradually add oxygen to the atmosphere.",
+					"status": "Placements %d/3  •  Living mats %d/260" % [sim.tool_uses[0], int(s.microbes)],
+					"action_kind": "tool", "action_value": "0", "button": "SELECT CYANO MATS",
+				}
+			if int(s.microbes) < 260:
+				return {
+					"key": "m0-grow", "title": "Help the first colony spread",
+					"action": "Add Tidal Nutrients beside existing bright-green mats, then let the ocean run until the mat count reaches 260.",
+					"why": "Nutrients make shallow habitat productive without adding consumers that could eat the new colony.",
+					"status": "Living mats %d/260  •  Catalyst %d/100" % [int(s.microbes), int(sim.catalyst)],
+					"action_kind": "tool", "action_value": "4", "button": "SELECT TIDAL NUTRIENTS",
+				}
+		1:
+			if sim.tool_uses[1] < 3:
+				return {
+					"key": "m1-drifters", "title": "Introduce the first consumers",
+					"action": "Choose Amoeboids and place them near—not directly on top of—large cyanobacteria patches three times.",
+					"why": "Drifters turn microbial abundance into a moving population and begin the evolutionary food web.",
+					"status": "Drifter uses %d/3  •  Drifters %d/18" % [sim.tool_uses[1], int(s.amoeboids)],
+					"action_kind": "tool", "action_value": "1", "button": "SELECT AMOEBOIDS",
+				}
+			if sim.tool_uses[2] < 2:
+				return {
+					"key": "m1-grazers", "title": "Add a second consumer layer",
+					"action": "Choose Grazers and place two small groups beside well-fed green mats. Spread the groups apart.",
+					"why": "A second consumer creates competition and raises biodiversity, but concentrated grazers can strip one area bare.",
+					"status": "Grazer uses %d/2  •  Grazers %d/7" % [sim.tool_uses[2], int(s.grazers)],
+					"action_kind": "tool", "action_value": "2", "button": "SELECT GRAZERS",
+				}
+			if int(s.microbes) < 220:
+				return {
+					"key": "m1-food", "title": "Rebuild the food supply",
+					"action": "Paint Cyano Mats into empty shallow zones before adding more consumers.",
+					"why": "The mission cannot complete while the food foundation is below 220 living mats.",
+					"status": "Living mats %d/220" % int(s.microbes),
+					"action_kind": "tool", "action_value": "0", "button": "SELECT CYANO MATS",
+				}
+			return {
+				"key": "m1-wait", "title": "Let the young food web reproduce",
+				"action": "Run at 2x and watch the counts. Avoid adding more grazers while the populations grow toward their targets.",
+				"why": "You have placed the required organisms; reproduction now needs time and a steady food supply.",
+				"status": "Drifters %d/18  •  Grazers %d/7  •  Mats %d/220" % [int(s.amoeboids), int(s.grazers), int(s.microbes)],
+				"action_kind": "speed", "action_value": "2", "button": "RUN AT 2X",
+			}
+		2:
+			if sim.tool_uses[3] < 3:
+				return {
+					"key": "m2-hunters", "title": "Complete the food web",
+					"action": "Choose Predators and place three small groups near—but not inside—the densest consumer swarms.",
+					"why": "Hunters control overcrowding and create selection pressure without immediately wiping out their prey.",
+					"status": "Predator uses %d/3  •  Hunters %d/3" % [sim.tool_uses[3], int(s.predators)],
+					"action_kind": "tool", "action_value": "3", "button": "SELECT PREDATORS",
+				}
+			if int(s.predators) < 3:
+				return {
+					"key": "m2-breed", "title": "Give the hunters time",
+					"action": "Run at 2x and let surviving predators feed and reproduce. Keep an eye on Stability.",
+					"why": "Placements are complete, but the mission needs three living hunters at the same time.",
+					"status": "Hunters %d/3  •  Stability %d/52" % [int(s.predators), int(s.stability)],
+					"action_kind": "speed", "action_value": "2", "button": "RUN AT 2X",
+				}
+			if float(s.stability) < 52.0:
+				return {
+					"key": "m2-stability", "title": "Restore ecosystem balance",
+					"action": "Add Tidal Nutrients to a depleted shallow zone, then stop placing organisms while Stability recovers.",
+					"why": "The complete food web must remain alive and balanced, not merely contain every species.",
+					"status": "Stability %d/52  •  Mats %d" % [int(s.stability), int(s.microbes)],
+					"action_kind": "tool", "action_value": "4", "button": "SELECT TIDAL NUTRIENTS",
+				}
+		3:
+			if float(s.oxygen) < 0.035:
+				return {
+					"key": "m3-oxygen", "title": "Turn the ocean into an oxygen engine",
+					"action": "Expand Cyano Mats across several empty shallow regions, then let them photosynthesize at 2x speed.",
+					"why": "A broad, surviving microbial layer raises oxygen more reliably than one overcrowded patch.",
+					"status": "O₂ %.1f/3.5%%  •  Mats %d" % [float(s.oxygen) * 100.0, int(s.microbes)],
+					"action_kind": "tool", "action_value": "0", "button": "SELECT CYANO MATS",
+				}
+			if float(s.biodiversity) < 62.0:
+				var diversity_tool := _field_study_tool_or(4)
+				return {
+					"key": "m3-diversity", "title": "Create more ecological variety",
+					"action": "Use %s in a new part of the map, preferably inside the gold field-study hotspot, then alternate with another unlocked tool." % TOOL_SHORT_NAMES[diversity_tool],
+					"why": "New habitat patterns and varied interventions raise biodiversity faster than repeating one action.",
+					"status": "Biodiversity %d/62  •  O₂ %.1f/3.5%%" % [int(s.biodiversity), float(s.oxygen) * 100.0],
+					"action_kind": "tool", "action_value": str(diversity_tool), "button": "SELECT %s" % TOOL_SHORT_NAMES[diversity_tool].to_upper(),
+				}
+		4:
+			if int(s.max_generation) < 4:
+				return {
+					"key": "m4-generation", "title": "Let evolution do its work",
+					"action": "Run at 2x. Avoid large interventions while successful organisms reproduce into Generation 4.",
+					"why": "Generations advance through survival and reproduction, so this objective needs time more than new placements.",
+					"status": "Highest generation %d/4  •  Stability %d/68" % [int(s.max_generation), int(s.stability)],
+					"action_kind": "speed", "action_value": "2", "button": "RUN AT 2X",
+				}
+			if float(s.stability) < 68.0:
+				return {
+					"key": "m4-stability", "title": "Make the mature world resilient",
+					"action": "Add Tidal Nutrients to a quiet shallow area, then let the world settle without adding more animals.",
+					"why": "A mature biosphere earns its final grade by recovering balance, not by maximizing population.",
+					"status": "Stability %d/68  •  Biodiversity %d/72" % [int(s.stability), int(s.biodiversity)],
+					"action_kind": "tool", "action_value": "4", "button": "SELECT TIDAL NUTRIENTS",
+				}
+			if float(s.biodiversity) < 72.0:
+				var final_tool := _field_study_tool_or(6)
+				return {
+					"key": "m4-diversity", "title": "Add one last source of variety",
+					"action": "Use %s once in an underused region, then wait and watch whether biodiversity rises." % TOOL_SHORT_NAMES[final_tool],
+					"why": "Small, varied habitat changes are safer than flooding a mature ecosystem with more organisms.",
+					"status": "Biodiversity %d/72  •  Stability %d/68" % [int(s.biodiversity), int(s.stability)],
+					"action_kind": "tool", "action_value": str(final_tool), "button": "SELECT %s" % TOOL_SHORT_NAMES[final_tool].to_upper(),
+				}
+	return {
+		"key": "endless", "title": "Explore your living planet",
+		"action": "Inspect evolved creatures, complete field studies, or begin a new world and chase a higher grade.",
+		"why": "The campaign objectives are complete; the simulation now belongs to you.",
+		"status": "Score %06d  •  Discoveries %d/5  •  Badges %d" % [score, discoveries.size(), achievements.size()],
+		"action_kind": "", "button": "",
+	}
+
+
+func _crisis_coach_tip(s: Dictionary) -> Dictionary:
+	if current_crisis.begins_with("Ocean overheating"):
+		return {
+			"key": "crisis-heat", "title": "Cool the ocean now",
+			"action": "Trigger Monsoon once, then stop adding volcanic rock while the heat falls.",
+			"why": "Excess heat lowers survival across the whole food web and can erase mission progress quickly.",
+			"status": "Heat %.0f%%  •  Stability %d/100" % [float(s.climate_heat) * 100.0, int(s.stability)],
+			"action_kind": "event", "action_value": "Monsoon", "button": "TRIGGER MONSOON",
+		}
+	if current_crisis.begins_with("Overcrowding"):
+		if TOOL_UNLOCK_STAGE[3] <= mission_stage:
+			return {
+				"key": "crisis-crowding", "title": "Reduce overcrowding safely",
+				"action": "Add one small Predator group beside the largest consumer swarm, then wait before adding anything else.",
+				"why": "A few hunters can control runaway consumers without the blunt damage of a global event.",
+				"status": "Population %d  •  Hunters %d" % [int(s.population), int(s.predators)],
+				"action_kind": "tool", "action_value": "3", "button": "SELECT PREDATORS",
+			}
+		return {
+			"key": "crisis-crowding-event", "title": "Thin the overcrowded population",
+			"action": "Trigger Viral Bloom once, then let the surviving food web recover before placing more organisms.",
+			"why": "Predators are still locked, so a controlled population event is the available emergency brake.",
+			"status": "Population %d  •  Stability %d/100" % [int(s.population), int(s.stability)],
+			"action_kind": "event", "action_value": "Viral Bloom", "button": "TRIGGER VIRAL BLOOM",
+		}
+	if current_crisis.begins_with("Food web starving"):
+		return {
+			"key": "crisis-food", "title": "Feed the food web",
+			"action": "Paint Cyano Mats into two empty shallow regions. Do not add more animals until the warning clears.",
+			"why": "Consumers are eating microbial food faster than the mats can regrow.",
+			"status": "Mats %d  •  Consumers %d" % [int(s.microbes), int(s.amoeboids) + int(s.grazers)],
+			"action_kind": "tool", "action_value": "0", "button": "SELECT CYANO MATS",
+		}
+	return {
+		"key": "crisis-consumers", "title": "Restore the missing hunter layer",
+		"action": "Place one small Predator group near the densest drifters and grazers, then let it establish.",
+		"why": "Unchecked consumers destabilize the food web when no predators are present.",
+		"status": "Consumers %d  •  Hunters %d" % [int(s.amoeboids) + int(s.grazers), int(s.predators)],
+		"action_kind": "tool", "action_value": "3", "button": "SELECT PREDATORS",
+	}
+
+
+func _coach_bonus_text() -> String:
+	if field_study_index < 0:
+		return "Gold hotspots give double field-study progress."
+	var study: Dictionary = FIELD_STUDIES[field_study_index]
+	return "%s: use %s in the gold diamond (%d/%d)." % [
+		str(study.title), TOOL_SHORT_NAMES[int(study.tool)], field_study_progress, int(study.goal),
+	]
+
+
+func _field_study_tool_or(fallback: int) -> int:
+	if field_study_index >= 0:
+		var study: Dictionary = FIELD_STUDIES[field_study_index]
+		var tool_index := int(study.tool)
+		if TOOL_UNLOCK_STAGE[tool_index] <= mission_stage:
+			return tool_index
+	return fallback
+
+
+func _run_coach_action() -> void:
+	match coach_action_kind:
+		"tool", "tool_resume":
+			var tool_index := int(coach_action_value)
+			_select_tool(tool_index)
+			if coach_action_kind == "tool_resume" and not running:
+				running = true
+				play_button.text = "Pause"
+			_show_toast("Help Coach selected %s — minimize HELP, then follow the highlighted step" % TOOL_SHORT_NAMES[tool_index], Color("#8defff"), 3.0)
+		"resume":
+			if not running:
+				running = true
+				play_button.text = "Pause"
+			_show_toast("Simulation resumed — the coach is still watching", Color("#8defff"), 2.4)
+		"speed":
+			speed_index = clampi(int(coach_action_value), 0, SPEEDS.size() - 1)
+			running = true
+			play_button.text = "Pause"
+			speed_button.text = "%gx" % SPEEDS[speed_index]
+			_show_toast("Help Coach set the ocean to %gx" % SPEEDS[speed_index], Color("#8defff"), 2.4)
+		"event":
+			_trigger_event(coach_action_value)
+	_update_ui()
 
 
 func _update_tool_locks() -> void:
