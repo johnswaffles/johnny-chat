@@ -9,6 +9,8 @@ const MUSIC_STREAM_PATH := "res://assets/audio/Sunrise Over Tiny Blocks (2).mp3"
 const VIEW_SIZE := Vector2(1440, 810)
 const SIM_STEP := 1.0 / 20.0
 const RENDER_STEP := 1.0 / 30.0
+const MAX_SIM_STEPS_PER_FRAME := 5
+const MAX_FRAME_DELTA := 0.1
 const SPEEDS: Array[float] = [0.5, 1.0, 2.0, 4.0]
 const TOOL_UNLOCK_STAGE: Array[int] = [0, 1, 1, 2, 0, 2, 0, 0]
 const TOOL_SHORT_NAMES := ["Cyano Mats", "Amoeboids", "Grazers", "Predators", "Tidal Nutrients", "Volcanic Rock", "Hydrothermal Vent", "Eraser"]
@@ -112,9 +114,12 @@ func _process(delta: float) -> void:
 			toast_label.modulate.a = 0.0
 
 	if running and started:
-		sim_accumulator += delta * SPEEDS[speed_index]
+		# Never preserve an unbounded backlog. On a slow frame it is better for
+		# simulated time to soften briefly than for catch-up work to starve input.
+		var scaled_delta: float = min(delta, MAX_FRAME_DELTA) * SPEEDS[speed_index]
+		sim_accumulator = min(sim_accumulator + scaled_delta, SIM_STEP * MAX_SIM_STEPS_PER_FRAME)
 		var guard := 0
-		while sim_accumulator >= SIM_STEP and guard < 10:
+		while sim_accumulator >= SIM_STEP and guard < MAX_SIM_STEPS_PER_FRAME:
 			sim.step(SIM_STEP)
 			sim_accumulator -= SIM_STEP
 			guard += 1
@@ -126,9 +131,16 @@ func _process(delta: float) -> void:
 	else:
 		sim.render_alpha = 1.0
 
-	render_accumulator += delta
-	if render_accumulator >= (RENDER_STEP * (1.5 if reduced_motion else 1.0)):
-		render_accumulator = fmod(render_accumulator, RENDER_STEP)
+	render_accumulator += min(delta, MAX_FRAME_DELTA)
+	var render_interval := RENDER_STEP
+	if sim.organisms.size() >= 118:
+		render_interval *= 2.0
+	elif sim.organisms.size() >= 82:
+		render_interval *= 1.5
+	if reduced_motion:
+		render_interval *= 1.5
+	if render_accumulator >= render_interval:
+		render_accumulator = fmod(render_accumulator, render_interval)
 		queue_redraw()
 
 
@@ -353,8 +365,8 @@ func _build_help_coach() -> void:
 	help_title.size = Vector2(342, 58)
 	help_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help_body = RichTextLabel.new()
-	help_body.position = Vector2(24, 128)
-	help_body.size = Vector2(344, 280)
+	help_body.position = Vector2(24, 140)
+	help_body.size = Vector2(344, 268)
 	help_body.bbcode_enabled = true
 	help_body.fit_content = false
 	help_body.scroll_active = false
@@ -476,8 +488,8 @@ func _toggle_running() -> void:
 
 func _change_speed(direction := 1) -> void:
 	speed_index = posmod(speed_index + direction, SPEEDS.size())
-	speed_button.text = "%gx" % SPEEDS[speed_index]
-	_show_toast("Simulation speed: %gx" % SPEEDS[speed_index], Color("#8cdef2"))
+	speed_button.text = _speed_text()
+	_show_toast("Simulation speed: %s" % _speed_text(), Color("#8cdef2"))
 
 
 func _toggle_motion() -> void:
@@ -644,7 +656,7 @@ func _update_crisis(s: Dictionary) -> void:
 func _detect_crisis(s: Dictionary) -> String:
 	if float(s.climate_heat) >= 0.72:
 		return "Ocean overheating — use Monsoon or expand tidal water"
-	if int(s.population) >= 150:
+	if int(s.population) >= 112:
 		return "Overcrowding — add predators or trigger a Viral Bloom"
 	var food_demand: float = float(s.amoeboids) + float(s.grazers) * 2.2
 	if int(s.population) > 30 and float(s.microbes) < food_demand * 1.8:
@@ -1052,7 +1064,7 @@ func _crisis_coach_tip(s: Dictionary) -> Dictionary:
 				"action_kind": "tool", "action_value": "3", "button": "SELECT PREDATORS",
 			}
 		return {
-			"key": "crisis-crowding-event", "title": "Thin the overcrowded population",
+			"key": "crisis-crowding-event", "title": "Thin the population",
 			"action": "Trigger Viral Bloom once, then let the surviving food web recover before placing more organisms.",
 			"why": "Predators are still locked, so a controlled population event is the available emergency brake.",
 			"status": "Population %d  •  Stability %d/100" % [int(s.population), int(s.stability)],
@@ -1111,11 +1123,18 @@ func _run_coach_action() -> void:
 			speed_index = clampi(int(coach_action_value), 0, SPEEDS.size() - 1)
 			running = true
 			play_button.text = "Pause"
-			speed_button.text = "%gx" % SPEEDS[speed_index]
-			_show_toast("Help Coach set the ocean to %gx" % SPEEDS[speed_index], Color("#8defff"), 2.4)
+			speed_button.text = _speed_text()
+			_show_toast("Help Coach set the ocean to %s" % _speed_text(), Color("#8defff"), 2.4)
 		"event":
 			_trigger_event(coach_action_value)
 	_update_ui()
+
+
+func _speed_text() -> String:
+	var value := SPEEDS[speed_index]
+	if is_equal_approx(value, floor(value)):
+		return "%dx" % int(value)
+	return "%.1fx" % value
 
 
 func _update_tool_locks() -> void:

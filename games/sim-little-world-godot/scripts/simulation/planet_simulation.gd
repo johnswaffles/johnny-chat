@@ -10,8 +10,8 @@ const WORLD_OFFSET := Vector2(246, 140)
 const WORLD_SIZE := Vector2(GRID_W * CELL, GRID_H * CELL)
 const HISTORY_MAX := 300
 const BUCKET_SIZE := 70.0
-const MAX_ORGANISMS := 160
-const KIND_CAPS := {"amoeboid": 104, "grazer": 42, "predator": 14}
+const MAX_ORGANISMS := 128
+const KIND_CAPS := {"amoeboid": 84, "grazer": 34, "predator": 10}
 const TOOLS := ["Cyanobacteria", "Amoeboids", "Grazers", "Predatory Swimmers", "Tidal Nutrients", "Volcanic Rock", "Hydrothermal Vent", "Eraser"]
 const TOOL_COSTS: Array[int] = [2, 9, 13, 18, 4, 3, 8, 1]
 const DISASTERS := ["Heat Pulse", "Monsoon", "Viral Bloom", "Impact Event", "Predator Surge", "Seed Recovery"]
@@ -539,7 +539,7 @@ func stats() -> Dictionary:
 	var consumer_score: float = clamp(float(amoeboids) / 28.0, 0.0, 1.0) * 18.0
 	var grazer_score: float = clamp(float(grazers) / 12.0, 0.0, 1.0) * 17.0
 	var predator_score: float = clamp(float(predators) / 4.0, 0.0, 1.0) * 12.0
-	var crowding_penalty: float = max(0.0, float(organisms.size() - 112)) * 0.35
+	var crowding_penalty: float = max(0.0, float(organisms.size() - 96)) * 0.35
 	var starvation_penalty: float = max(0.0, float(amoeboids + grazers * 2) - float(microbe_cells) * 0.11) * 0.22
 	var stability: float = clamp(foundation_score + consumer_score + grazer_score + predator_score + biodiversity * 0.27 - crowding_penalty - starvation_penalty, 0.0, 100.0)
 	return {

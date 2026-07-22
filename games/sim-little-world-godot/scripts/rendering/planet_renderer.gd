@@ -17,7 +17,8 @@ func draw_background(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 
 func draw_world(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 	canvas.draw_rect(Rect2(PlanetSimulation.WORLD_OFFSET, PlanetSimulation.WORLD_SIZE), Color("#061b2b"))
-	var busy_world := sim.organisms.size() > 105
+	var busy_world := sim.organisms.size() >= 82
+	var saturated_world := sim.organisms.size() >= 118
 	for y in range(PlanetSimulation.GRID_H):
 		for x in range(PlanetSimulation.GRID_W):
 			var c := sim.cell(x, y)
@@ -27,19 +28,27 @@ func draw_world(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 			var variation: float = (float(c.sediment) - 0.5) * 0.045
 			canvas.draw_rect(tile, color.lightened(max(0.0, variation)).darkened(max(0.0, -variation)))
 
-			if c.type == "tidal" or c.type == "shallow":
-				canvas.draw_rect(Rect2(pos + Vector2(2, 2), Vector2(PlanetSimulation.CELL - 4, 2)), Color(0.55, 0.94, 0.72, 0.055 + c.nutrients * 0.025))
-			elif c.type == "volcanic":
-				canvas.draw_line(pos + Vector2(3, 10), pos + Vector2(11, 4), Color(0.96, 0.48, 0.29, 0.18), 1.0)
-			elif c.type == "deep_ocean" and (x * 7 + y * 11) % 19 == 0:
-				canvas.draw_line(pos + Vector2(3, 6), pos + Vector2(9, 6), Color(0.5, 0.85, 0.96, 0.08), 1.0)
+			# Mature worlds are already visually dense. Drop decorative primitives
+			# before they can monopolize the browser's render thread.
+			if not saturated_world:
+				if c.type == "tidal" or c.type == "shallow":
+					canvas.draw_rect(Rect2(pos + Vector2(2, 2), Vector2(PlanetSimulation.CELL - 4, 2)), Color(0.55, 0.94, 0.72, 0.055 + c.nutrients * 0.025))
+				elif c.type == "volcanic":
+					canvas.draw_line(pos + Vector2(3, 10), pos + Vector2(11, 4), Color(0.96, 0.48, 0.29, 0.18), 1.0)
+				elif c.type == "deep_ocean" and (x * 7 + y * 11) % 19 == 0:
+					canvas.draw_line(pos + Vector2(3, 6), pos + Vector2(9, 6), Color(0.5, 0.85, 0.96, 0.08), 1.0)
 
-			if x < PlanetSimulation.GRID_W - 1 and sim.cell(x + 1, y).type != c.type:
-				canvas.draw_line(pos + Vector2(PlanetSimulation.CELL, 1), pos + Vector2(PlanetSimulation.CELL, PlanetSimulation.CELL - 1), Color(0.54, 0.88, 0.84, 0.065), 1.0)
-			if y < PlanetSimulation.GRID_H - 1 and sim.cell(x, y + 1).type != c.type:
-				canvas.draw_line(pos + Vector2(1, PlanetSimulation.CELL), pos + Vector2(PlanetSimulation.CELL - 1, PlanetSimulation.CELL), Color(0.54, 0.88, 0.84, 0.055), 1.0)
+				if x < PlanetSimulation.GRID_W - 1 and sim.cell(x + 1, y).type != c.type:
+					canvas.draw_line(pos + Vector2(PlanetSimulation.CELL, 1), pos + Vector2(PlanetSimulation.CELL, PlanetSimulation.CELL - 1), Color(0.54, 0.88, 0.84, 0.065), 1.0)
+				if y < PlanetSimulation.GRID_H - 1 and sim.cell(x, y + 1).type != c.type:
+					canvas.draw_line(pos + Vector2(1, PlanetSimulation.CELL), pos + Vector2(PlanetSimulation.CELL - 1, PlanetSimulation.CELL), Color(0.54, 0.88, 0.84, 0.055), 1.0)
 
-			if c.microbes > 0.11 and (not busy_world or (x + y) % 2 == 0):
+			var draw_mat: bool = c.microbes > 0.11
+			if saturated_world:
+				draw_mat = draw_mat and (x * 3 + y * 5) % 4 == 0
+			elif busy_world:
+				draw_mat = draw_mat and (x + y) % 2 == 0
+			if draw_mat:
 				draw_microbe_mat(canvas, pos, c, sim.tick, busy_world or sim.reduced_motion)
 			if c.fungus > 0.08 and (not busy_world or (x + y) % 3 == 0):
 				draw_fungal_bloom(canvas, pos, c)
@@ -52,11 +61,13 @@ func draw_microbe_mat(canvas: CanvasItem, pos: Vector2, c: Dictionary, tick: int
 	var alpha: float = 0.16 + c.microbes * 0.5
 	var center := pos + Vector2(7.0, 7.0)
 	var radius: float = 2.2 + c.microbes * 3.2
+	if simplified:
+		canvas.draw_circle(center, radius + 0.8, Color(0.32, 0.9, 0.55, alpha * pulse))
+		return
 	canvas.draw_circle(center, radius + 2.5, Color(0.08, 0.8, 0.56, alpha * 0.16))
 	canvas.draw_circle(center, radius, Color(0.42, 0.94, 0.55, alpha * pulse))
-	if not simplified:
-		canvas.draw_circle(center + Vector2(-3.8, 2.3), radius * 0.42, Color(0.1, 0.9, 0.8, alpha * 0.82))
-		canvas.draw_circle(center + Vector2(3.4, -2.0), radius * 0.3, Color(0.8, 1.0, 0.58, alpha))
+	canvas.draw_circle(center + Vector2(-3.8, 2.3), radius * 0.42, Color(0.1, 0.9, 0.8, alpha * 0.82))
+	canvas.draw_circle(center + Vector2(3.4, -2.0), radius * 0.3, Color(0.8, 1.0, 0.58, alpha))
 
 
 func draw_fungal_bloom(canvas: CanvasItem, pos: Vector2, c: Dictionary) -> void:
