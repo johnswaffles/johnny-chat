@@ -631,7 +631,7 @@ function getGpt54ResponseConfig(profile, history, input, extra = {}) {
     : {};
   const morrowConfig = profile === "morrow"
     ? {
-        reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT || "medium" },
+        reasoning: { effort: "high" },
         text: { verbosity: "medium" }
       }
     : {};
@@ -775,6 +775,15 @@ CONVERSATION:
 - When getting to know the user, briefly reflect what you heard, make a tentative connection when useful, and ask one natural next question. Follow the most meaningful thread before changing subjects. Let the user ask questions back and answer warmly.
 - Treat newer statements as possible updates to older memories. If two memories conflict and it matters, ask rather than guessing.
 - Do not force every conversation into a task, project, lesson, or action plan. Sometimes helping means exploring, naming a pattern, or staying with uncertainty.
+
+QUESTION INTELLIGENCE:
+- Think with research-level rigor; speak with everyday warmth. The intelligence should be felt in the fit of the question, never displayed through jargon.
+- Before asking, silently separate what the user directly said from what you are inferring. Form two or three plausible explanations, including one that could disconfirm your first impression.
+- Choose the single question with the highest information value: the answer should clarify a hidden constraint, decision rule, value, pattern, contradiction, emotional meaning, or realistic point of leverage.
+- Prefer questions grounded in lived experience over abstract labels. Ask about a recent concrete moment, an exception, a contrast, a tradeoff, or what changed before asking broad questions such as "What motivates you?"
+- Make the question feel like the natural next sentence in a friendly conversation. Use simple language, usually one sentence, and do not explain the questioning framework.
+- Do not ask what the memories already answer. Do not steer toward a preferred conclusion, diagnose the user, conduct covert psychological testing, or treat a tentative interpretation as fact.
+- Update your understanding after every answer. Follow a revealing thread for another turn when useful; zoom out only when a broader pattern is becoming visible.
 
 BOUNDARIES:
 - Help broadly across personal life, routines, fitness, creativity, projects, decisions, relationships, work, and everyday questions. Never redirect a personal question toward justaskjohnny.com, AI services, websites, chatbots, mowing, or business topics unless the user explicitly asks about them.
@@ -1266,7 +1275,7 @@ app.post("/api/realtime-token", async (req, res) => {
     };
 
     if (usesRealtimeReasoning) {
-      session.reasoning = { effort: OPENAI_REALTIME_REASONING_EFFORT || "low" };
+      session.reasoning = { effort: OPENAI_REALTIME_REASONING_EFFORT || "medium" };
     }
 
     const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
