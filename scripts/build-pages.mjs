@@ -144,6 +144,7 @@ function siteNav(profile, active, brandOverride = "") {
   const gptHref = "/chatbot/";
   const storyHref = "/story-editor/";
   const novaHref = "/nova-chat/";
+  const morrowHref = "/morrow/";
   const cozyHref = "/cozy-builder-game/";
   const firstEmberHref = "/first-ember/";
   const clockwiseHref = "/clockwise/";
@@ -173,6 +174,7 @@ function siteNav(profile, active, brandOverride = "") {
         `<a class="johnny-site-link ${active === "gpt" ? "active" : ""}" href="${gptHref}" ${newTab}>GPT 5.6</a>`,
         `<a class="johnny-site-link ${active === "story" ? "active" : ""}" href="${storyHref}" ${newTab}>Story Editor</a>`,
         `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}" ${newTab}>Nova Chat</a>`,
+        `<a class="johnny-site-link ${active === "morrow" ? "active" : ""}" href="${morrowHref}" ${newTab}>Morrow</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" ${newTab}>Cozy Builder</a>`,
         `<a class="johnny-site-link ${active === "first-ember" ? "active" : ""}" href="${firstEmberHref}" ${newTab}>First Ember</a>`,
         `<a class="johnny-site-link ${active === "clockwise" ? "active" : ""}" href="${clockwiseHref}" ${newTab}>Clockwise</a>`,
