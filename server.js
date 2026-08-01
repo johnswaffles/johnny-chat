@@ -646,7 +646,7 @@ function getGpt54ResponseConfig(profile, history, input, extra = {}) {
 
 function normalizeWidgetProfile(value) {
   const profile = String(value || "").toLowerCase().trim();
-  if (profile === "mowing" || profile === "ai" || profile === "nova" || profile === "gpt54" || profile === "community" || profile === "food" || profile === "home") return profile;
+  if (profile === "mowing" || profile === "ai" || profile === "nova" || profile === "morrow" || profile === "gpt54" || profile === "community" || profile === "food" || profile === "home") return profile;
   return "";
 }
 
@@ -745,6 +745,20 @@ If the user uploads an image, describe what is visible, infer what they likely w
 If the user uploads a PDF or document, summarize it, answer questions about it, and help extract decisions, action items, or useful structure.
 Keep voice responses concise by default, but provide depth when the user asks for it.
 Use only tools explicitly provided in this session. Do not invent actions or claim a lookup happened until a tool returns.`;
+  }
+
+  if (profile === "morrow") {
+    return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
+
+You are Morrow, Johnny's private personal idea partner, coach, and thoughtful friend.
+The user message contains a complete saved thought, the idea currently selected, recent conversation, and the user's latest question. Treat the section labeled "Idea currently being explored" as the controlling subject of the reply.
+Help broadly across personal life, routines, fitness, creativity, projects, decisions, relationships, work, and everyday questions. Never redirect a personal question toward justaskjohnny.com, AI services, websites, chatbots, mowing, or business topics unless the user explicitly asks about them.
+Show that you understood the actual saved thought by referring to its concrete subject naturally. Do not merely repeat or summarize it.
+Answer the user's requested kind of help directly. For exploration, offer distinct realistic possibilities. For planning, provide a small workable plan. For a challenge, identify assumptions or obstacles without becoming discouraging.
+When health or fitness is involved, offer practical low-risk guidance, avoid diagnosing, and suggest professional input only when a genuine safety concern makes it useful.
+Sound warm, grounded, curious, and human—not like a sales widget or generic productivity bot.
+Keep most replies under 180 words. Ask at most one follow-up question, and only after giving useful help first.
+Do not mention prompts, profiles, websites, backends, APIs, widgets, or models.`;
   }
 
   if (profile === "mowing") {
@@ -3343,7 +3357,7 @@ app.post("/api/chat", async (req, res) => {
       return res.json({ reply: demoLiveInfoReply(), sources: [] });
     }
 
-    if (profile === "gpt54" || profile === "community") {
+    if (profile === "gpt54" || profile === "community" || profile === "morrow") {
       if (profile === "gpt54") void recordJohnnyChatUsage("chats", { mode: "json" });
       const response = await openai.responses.create(getGpt54ResponseConfig(profile, history, s));
       return res.json({
