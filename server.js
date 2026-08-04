@@ -1258,7 +1258,7 @@ app.post("/api/realtime-token", async (req, res) => {
   try {
     console.log("📥 [Realtime] Creating Ephemeral Session Token...");
     const profile = inferWidgetProfile(req);
-    if (profile === "nova" && !requireChatbotSession(req, res)) return;
+    if ((profile === "nova" || profile === "morrow") && !requireChatbotSession(req, res)) return;
     if (profile === "home") {
       const quota = consumeHomeWorkbenchSession(req);
       res.setHeader("X-Workbench-Limit", String(quota.limit));
@@ -3425,7 +3425,7 @@ app.post("/api/chat", async (req, res) => {
     const profile = inferWidgetProfile(req);
     const s = String(input || "");
 
-    if (profile === "gpt54" && !requireChatbotSession(req, res)) return;
+    if ((profile === "gpt54" || profile === "morrow") && !requireChatbotSession(req, res)) return;
 
     if (s.trim() === "[system_greet]") {
       return res.json({ reply: "You're here. I'm here. Let's make this conversation worth both our time.", sources: [] });
