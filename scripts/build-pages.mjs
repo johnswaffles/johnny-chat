@@ -3911,6 +3911,8 @@ async function patchGodotWasmLoader() {
 				}).then(function (buffer) {
 					WebAssembly.instantiate(buffer, imports).then(done);
 				});`;
+  const stockWasmRequest = 'preloader.loadPromise(`${loadPath}.wasm`, size, true);';
+  const directGzipWasmRequest = 'preloader.loadPromise(`${loadPath}.wasm.gz`, size, true);';
 
   for (const targetDir of godotExportTargetDirs) {
     const loaderPath = path.join(targetDir, "index.js");
@@ -3919,20 +3921,30 @@ async function patchGodotWasmLoader() {
     } catch {
       continue;
     }
-    if (source.includes(gzipSafeInstantiateBlock) && source.includes(gzipSafeStreamingBlock)) {
-      continue;
-    }
     let patched = source;
-    if (patched.includes(stockStreamingBlock)) {
-      patched = patched.replace(stockStreamingBlock, gzipSafeStreamingBlock);
+    const hasGzipLoader = patched.includes(gzipSafeInstantiateBlock) && patched.includes(gzipSafeStreamingBlock);
+    if (!hasGzipLoader) {
+      if (patched.includes(stockStreamingBlock)) {
+        patched = patched.replace(stockStreamingBlock, gzipSafeStreamingBlock);
+      }
+      if (patched.includes(stockInstantiateBlock)) {
+        patched = patched.replace(stockInstantiateBlock, gzipSafeInstantiateBlock);
+      }
     }
-    if (patched.includes(stockInstantiateBlock)) {
-      patched = patched.replace(stockInstantiateBlock, gzipSafeInstantiateBlock);
+    // Glade requests the committed gzip asset directly. This makes the game
+    // independent of whether a Pages Function has finished routing the clean
+    // `.wasm` URL during a new deployment.
+    if (path.basename(targetDir) === "glade" && patched.includes(stockWasmRequest)) {
+      patched = patched.replace(stockWasmRequest, directGzipWasmRequest);
     }
-    if (patched === source) {
+    const hasPatchedGzipLoader = patched.includes(gzipSafeInstantiateBlock) && patched.includes(gzipSafeStreamingBlock);
+    const hasDirectGladeRequest = path.basename(targetDir) !== "glade" || patched.includes(directGzipWasmRequest);
+    if (!hasPatchedGzipLoader || !hasDirectGladeRequest) {
       throw new Error(`Could not patch Godot WASM loader in ${loaderPath}`);
     }
-    await writeFile(loaderPath, patched, "utf8");
+    if (patched !== source) {
+      await writeFile(loaderPath, patched, "utf8");
+    }
   }
 }
 
