@@ -13,6 +13,11 @@
   Content-Encoding: gzip
   Cache-Control: public, max-age=0, must-revalidate
 
+/glade/index.wasm
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+  Cache-Control: public, max-age=0, must-revalidate
+
 /first-ember/index.wasm
   Content-Type: application/wasm
   Content-Encoding: gzip

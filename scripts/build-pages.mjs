@@ -7,6 +7,7 @@ const root = process.cwd();
 const publicDir = path.join(root, "public");
 const isPagesBuild = process.env.CF_PAGES === "1" || process.env.CF_PAGES === "true";
 const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
+const gladeExportSourceDir = path.resolve(root, "..", "public", "glade-playtest");
 const firstEmberExportSourceDir = path.resolve(root, "..", "first-ember-godot", "build", "web");
 const cozyExportTargetDirs = [
   path.join(publicDir, "cozy-builder"),
@@ -15,6 +16,7 @@ const cozyExportTargetDirs = [
 ];
 const godotExportGroups = [
   { sourceDir: cozyExportSourceDir, targetDirs: cozyExportTargetDirs },
+  { sourceDir: gladeExportSourceDir, targetDirs: [path.join(publicDir, "glade")] },
   { sourceDir: firstEmberExportSourceDir, targetDirs: [path.join(publicDir, "first-ember")] },
 ];
 const godotExportTargetDirs = [
@@ -25,6 +27,7 @@ const godotRemotePackRoutes = [
   { dir: "cozy-builder" },
   { dir: "cozy-builder-game" },
   { dir: "godot-playtest" },
+  { dir: "glade" },
   // First Ember always uses the split Pages/Render architecture, even while
   // its early package remains below Cloudflare's individual-file limit.
   { dir: "first-ember", forceRemotePack: true, useBuildIdentifier: true },
@@ -146,6 +149,7 @@ function siteNav(profile, active, brandOverride = "") {
   const novaHref = "/nova-chat/";
   const morrowHref = "/morrow/";
   const cozyHref = "/cozy-builder-game/";
+  const gladeHref = "/glade/";
   const firstEmberHref = "/first-ember/";
   const clockwiseHref = "/clockwise/";
   const simHref = "/sim/";
@@ -176,6 +180,7 @@ function siteNav(profile, active, brandOverride = "") {
         `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}" ${newTab}>Nova Chat</a>`,
         `<a class="johnny-site-link ${active === "morrow" ? "active" : ""}" href="${morrowHref}" ${newTab}>Morrow</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" ${newTab}>Cozy Builder</a>`,
+        `<a class="johnny-site-link ${active === "glade" ? "active" : ""}" href="${gladeHref}" ${newTab}>Glade</a>`,
         `<a class="johnny-site-link ${active === "first-ember" ? "active" : ""}" href="${firstEmberHref}" ${newTab}>First Ember</a>`,
         `<a class="johnny-site-link ${active === "clockwise" ? "active" : ""}" href="${clockwiseHref}" ${newTab}>Clockwise</a>`,
         `<a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="${simHref}" ${newTab}>Sim</a>`,
@@ -4503,6 +4508,7 @@ ${siteNav("ai", "contact")}
       const storyHref = "/story-editor/";
       const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
+      const gladeHref = "/glade/";
       const clockwiseHref = "/clockwise/";
       const simHref = "/sim/";
       const contactHref = "/contact/";
@@ -4532,6 +4538,7 @@ ${siteNav("ai", "contact")}
           }
           if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
+          if (label === "glade") link.href = gladeHref;
           if (label === "clockwise") link.href = clockwiseHref;
           if (label === "sim") {
             link.href = simHref;
