@@ -3964,6 +3964,38 @@ async function patchGodotHtmlCacheBust() {
   }
 }
 
+async function patchGladeLocalFileRedirect() {
+  const targetDir = path.join(publicDir, "glade");
+  const htmlPath = path.join(targetDir, "index.html");
+  let source;
+  try {
+    source = await readFile(htmlPath, "utf8");
+  } catch {
+    return;
+  }
+  if (source.includes("data-glade-local-file-redirect")) return;
+
+  const loaderMatch = source.match(/<script src="(index\.js(?:\?v=[^"]*)?)"><\/script>/);
+  if (!loaderMatch || !source.includes("<script>\nconst GODOT_CONFIG")) {
+    throw new Error(`Could not add Glade local-file redirect in ${htmlPath}`);
+  }
+
+  const loaderSource = loaderMatch[1];
+  let patched = source.replace(
+    loaderMatch[0],
+    `<script data-glade-local-file-redirect>\nif (window.location.protocol === "file:") {\n\twindow.location.replace("https://justaskjohnny.com/glade/");\n} else {\n\tdocument.write('<script src="${loaderSource}"><\\/script>');\n}\n</script>`
+  );
+  patched = patched.replace(
+    "<script>\nconst GODOT_CONFIG",
+    '<script>\nif (window.location.protocol !== "file:") {\nconst GODOT_CONFIG'
+  );
+  patched = patched.replace(
+    "\n\t\t</script>\n\t</body>",
+    "\n}\n\t\t</script>\n\t</body>"
+  );
+  await writeFile(htmlPath, patched, "utf8");
+}
+
 async function patchSimLoadingScreen() {
   const htmlPath = path.join(publicDir, "sim", "index.html");
   let source;
@@ -4663,6 +4695,7 @@ async function main() {
   await syncGodotBuilds();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
+  await patchGladeLocalFileRedirect();
   await patchSimLoadingScreen();
   await routeOversizedGodotAssetsForPages();
 
