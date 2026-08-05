@@ -29,10 +29,12 @@ const {
   OPENAI_REALTIME_SEARCH_MODEL = "",
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
+  OPENAI_MORROW_VISION_MODEL = "",
   OPENAI_TTS_MODEL = "gpt-4o-mini-tts",
   OPENAI_TTS_VOICE = "coral",
   OPENAI_TTS_INSTRUCTIONS = "Speak in an emotive, friendly, natural tone.",
-  OPENAI_TRANSCRIBE_MODEL = "gpt-4o-transcribe",
+  OPENAI_TRANSCRIBE_MODEL = "gpt-transcribe",
+  OPENAI_MORROW_TRANSCRIBE_MODEL = "",
   MAX_UPLOAD_MB = "40",
   CORS_ORIGIN = "",
   CONTACT_TO_EMAIL = "",
@@ -60,6 +62,8 @@ const {
 } = process.env;
 
 const REALTIME_SEARCH_MODEL = OPENAI_REALTIME_SEARCH_MODEL || OPENAI_GPT54_MODEL || OPENAI_CHAT_MODEL;
+const MORROW_VISION_MODEL = OPENAI_MORROW_VISION_MODEL || OPENAI_GPT54_MODEL || "gpt-5.6-sol";
+const MORROW_TRANSCRIBE_MODEL = OPENAI_MORROW_TRANSCRIBE_MODEL || "gpt-transcribe";
 
 const BOARD_COMMENT_LIMIT = (() => {
   const value = Number(PUBLIC_BOARD_COMMENT_LIMIT || 50);
@@ -1442,7 +1446,14 @@ app.get(GODOT_WASM_ROUTES, (req, res, next) => {
 
 app.use(express.static("public"));
 
-app.get("/health", (_req, res) => res.json({ ok: true, release: "morrow-companion-v1", realtimeModel: OPENAI_REALTIME_MODEL, imageModel: OPENAI_IMAGE_MODEL }));
+app.get("/health", (_req, res) => res.json({
+  ok: true,
+  release: "morrow-multimodal-v1",
+  realtimeModel: OPENAI_REALTIME_MODEL,
+  imageModel: OPENAI_IMAGE_MODEL,
+  morrowVisionModel: MORROW_VISION_MODEL,
+  transcriptionModel: MORROW_TRANSCRIBE_MODEL
+}));
 
 function compactText(value) {
   return String(value || "").replace(/\r\n/g, "\n").trim();
@@ -3655,16 +3666,114 @@ app.post("/api/chatbot-transcribe", voiceUpload.single("audio"), async (req, res
     const audioFile = await toFile(req.file.buffer, req.file.originalname || "voice.webm", {
       type: req.file.mimetype || "audio/webm"
     });
+    const transcriptionModel = req.body?.profile === "morrow" ? MORROW_TRANSCRIBE_MODEL : OPENAI_TRANSCRIBE_MODEL;
     const transcription = await openai.audio.transcriptions.create({
-      model: OPENAI_TRANSCRIBE_MODEL,
+      model: transcriptionModel,
       file: audioFile,
-      prompt: "Transcribe a private chatbot voice note. Preserve clear punctuation and ordinary filler words only when meaningful."
+      prompt: String(req.body?.prompt || "Transcribe a private chatbot voice note. Preserve clear punctuation and ordinary filler words only when meaningful.").trim().slice(0, 500)
     });
 
-    void recordJohnnyChatUsage("transcriptions", { model: OPENAI_TRANSCRIBE_MODEL });
+    void recordJohnnyChatUsage("transcriptions", { model: transcriptionModel });
     res.json({ text: String(transcription.text || "").trim() });
   } catch (err) {
     void recordJohnnyChatUsage("errors", { route: "/api/chatbot-transcribe", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
+  }
+});
+
+const morrowUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024, files: 1 }
+});
+
+function parseMorrowAttachmentResult(value) {
+  const clean = String(value || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const parsed = JSON.parse(clean);
+  return {
+    summary: String(parsed?.summary || "").trim().slice(0, 1600),
+    captureText: String(parsed?.capture_text || "").trim().slice(0, 6000),
+    conversationContext: String(parsed?.conversation_context || "").trim().slice(0, 8000),
+    documentType: String(parsed?.document_type || "other").trim().slice(0, 60)
+  };
+}
+
+app.post("/api/morrow-analyze-upload", morrowUpload.single("file"), async (req, res) => {
+  try {
+    if (!requireChatbotSession(req, res)) return;
+    if (!OPENAI_API_KEY) return res.status(503).json({ detail: "OpenAI API key not configured." });
+    if (!req.file?.buffer?.length) return res.status(400).json({ detail: "Choose a picture or PDF first." });
+
+    const mimeType = String(req.file.mimetype || "").toLowerCase();
+    const isImage = ["image/png", "image/jpeg", "image/webp", "image/gif"].includes(mimeType);
+    const isPdf = mimeType === "application/pdf";
+    if (!isImage && !isPdf) return res.status(415).json({ detail: "Morrow can read PNG, JPEG, WEBP, GIF, and PDF files." });
+
+    const purpose = req.body?.purpose === "conversation" ? "conversation" : "capture";
+    const userContext = String(req.body?.context || "").trim().slice(0, 1800);
+    const base64 = req.file.buffer.toString("base64");
+    const filePart = isPdf
+      ? {
+          type: "input_file",
+          filename: String(req.file.originalname || "document.pdf").slice(0, 180),
+          file_data: `data:application/pdf;base64,${base64}`,
+          detail: "high"
+        }
+      : {
+          type: "input_image",
+          image_url: `data:${mimeType};base64,${base64}`,
+          detail: "high"
+        };
+    const task = purpose === "capture"
+      ? `Turn this attachment into useful plain-language material for Morrow, a private second brain. The result will be passed to a separate organizer that decides which list it belongs on.
+- For a food, pantry, grocery, receipt, shelf, or shopping-list image, identify only reasonably visible items and write capture_text as clear grocery entries. Preserve quantities and brands when readable. Mark uncertain readings briefly instead of guessing.
+- For an idea, sketch, whiteboard, screenshot, handwritten note, or work document, preserve the useful details, names, dates, decisions, and action items. Do not invent tasks that are not present.
+- For a PDF, understand both its text and page images. Give a concise summary and extract concrete action items or reference details that would be useful later.
+- Never identify an unknown person or infer sensitive traits, health, beliefs, finances, or private facts from appearance.
+- capture_text must stand alone and be ready to save. Do not address the user or ask a follow-up question.`
+      : `Understand this attachment so Morrow can discuss it naturally with the user in an ongoing private conversation.
+- Describe the relevant visual or document content precisely, including readable text, important objects, relationships, quantities, dates, and action items.
+- For a PDF, use both its text and page images and surface the most relevant key points.
+- conversation_context must stand alone as faithful context for another model. Separate direct observations from uncertain interpretations.
+- Never identify an unknown person or infer sensitive traits, health, beliefs, finances, or private facts from appearance.`;
+    const prompt = `${task}\n\nOptional context from the user: ${userContext || "None provided."}`;
+    const response = await openai.responses.create({
+      model: MORROW_VISION_MODEL,
+      reasoning: { effort: "high" },
+      max_output_tokens: 2200,
+      text: {
+        verbosity: "medium",
+        format: {
+          type: "json_schema",
+          name: "morrow_attachment",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              summary: { type: "string" },
+              capture_text: { type: "string" },
+              conversation_context: { type: "string" },
+              document_type: { type: "string", enum: ["food_or_groceries", "receipt", "handwritten_note", "document", "screenshot", "idea_or_sketch", "photo", "other"] }
+            },
+            required: ["summary", "capture_text", "conversation_context", "document_type"]
+          }
+        }
+      },
+      input: [{ role: "user", content: [{ type: "input_text", text: prompt }, filePart] }]
+    });
+    const result = parseMorrowAttachmentResult(extractResponseText(response));
+    if (!result.summary && !result.captureText && !result.conversationContext) throw new Error("Morrow could not find usable content in that attachment.");
+    void recordJohnnyChatUsage("vision", { model: MORROW_VISION_MODEL, purpose, mimeType });
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      filename: String(req.file.originalname || "attachment").slice(0, 180),
+      mediaType: isPdf ? "pdf" : "image",
+      model: MORROW_VISION_MODEL,
+      ...result
+    });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/morrow-analyze-upload", message: err.message || err });
     res.status(500).json({ detail: String(err.message || err) });
   }
 });
@@ -3904,5 +4013,8 @@ server.listen(port, () => {
   console.log(`   OpenAI Chat Model: ${OPENAI_CHAT_MODEL}`);
   console.log(`   OpenAI GPT 5.6 Model: ${OPENAI_GPT54_MODEL}`);
   console.log(`   OpenAI GPT 5.6 Reasoning Effort: ${OPENAI_GPT54_REASONING_EFFORT}`);
+  console.log(`   Morrow Vision/PDF Model: ${MORROW_VISION_MODEL}`);
+  console.log(`   Transcription Model: ${OPENAI_TRANSCRIBE_MODEL}`);
+  console.log(`   Morrow Transcription Model: ${MORROW_TRANSCRIBE_MODEL}`);
   console.log(`   OpenAI Image Model: ${OPENAI_IMAGE_MODEL}`);
 });
