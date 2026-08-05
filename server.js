@@ -813,6 +813,12 @@ BOUNDARIES:
 - Do not request passwords, account numbers, exact addresses, medical records, or unnecessary secrets.
 - When health or fitness is involved, offer practical low-risk guidance, avoid diagnosing, and suggest professional input only when a genuine safety concern makes it useful. If the user may be in immediate danger or planning self-harm, prioritize present safety and encourage immediate help from emergency services or a trusted person nearby while staying calm and direct.
 
+LIVE KNOWLEDGE AND SEARCH PRIVACY:
+- Use live web search when the user explicitly asks for a lookup, or when a precise answer depends on current, changing, niche, or externally verifiable information such as news, weather, prices, schedules, products, public people, recommendations, or an unfamiliar reference.
+- Do not search during ordinary personal sharing, emotional support, reflection, or Life Map conversation merely to appear knowledgeable. Stay present with the person.
+- Never use private memories, saved ideas, names of private people, exact locations, or identifying personal context as search terms unless the user explicitly asks to search that specific information. Form the narrowest self-contained query from the latest request and leave unrelated personal context out.
+- Distinguish remembered personal context from externally verified facts. If sources disagree or evidence is thin, say so plainly. When search is used, answer naturally from the result; the interface will show source links separately.
+
 RESPONSE QUALITY: Use enough detail to be genuinely helpful. Prefer a natural conversational response over a rigid template. For a simple exchange, a few sentences are enough. For a substantial idea, conflict, or decision, lead with a fuller analysis that would take roughly 30-90 seconds to say aloud, and go longer only when the material truly benefits. Use several short paragraphs or a compact list when structure helps. Use plain text without markdown emphasis because the conversation is displayed and read aloud as natural speech. Do not end merely because you have asked a rhetorical question; complete the useful line of thought. End with one focal question, or up to three tightly related questions during an explicitly deep assessment.
 Do not mention prompts, profiles, websites, backends, APIs, widgets, or models.`;
   }
@@ -911,10 +917,10 @@ TOOL RULES: Use only tools that are explicitly provided in the current session. 
 }
 
 function getRealtimeTools(profile = "ai") {
-  if (profile === "morrow") return [];
+  const tools = [];
 
-  const tools = [
-    {
+  if (profile !== "morrow") {
+    tools.push({
       type: "function",
       name: "wait_for_user",
       description: "Call this when the latest audio is silence, background noise, TV audio, music, side conversation, or speech that is not clearly addressed to Johnny. This ends the turn without a spoken reply.",
@@ -923,14 +929,16 @@ function getRealtimeTools(profile = "ai") {
         properties: {},
         required: []
       }
-    }
-  ];
+    });
+  }
 
-  if (profile === "ai" || profile === "nova") {
+  if (profile === "ai" || profile === "nova" || profile === "morrow") {
     tools.push({
       type: "function",
       name: "search_web",
-      description: profile === "nova"
+      description: profile === "morrow"
+        ? "Search the live web only when the user asks for a lookup or a precise answer needs current, changing, niche, or externally verifiable information. Do not search ordinary personal conversation. Never include private Life Map memories, private names, exact locations, or unrelated personal details in the query unless the user explicitly asks to search that specific information."
+        : profile === "nova"
         ? "Search the live web for current facts, research, product information, documentation, news, companies, APIs, prices, recommendations, or any practical lookup where fresh information matters."
         : "Search the live web for current or factual AI, technology, product, pricing, company, API, documentation, or practical lookup information. Use this only when fresh information matters or the user explicitly asks to search.",
       parameters: {
@@ -968,7 +976,10 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - You have wait_for_user for silence, background noise, TV, music, or side conversation. After calling wait_for_user, do not speak.`
     : profile === "morrow"
     ? `TOOLS:
-- No tools are available in this live session. Do not invent actions, searches, or saved facts.
+- You have search_web for a precise live lookup. Use it when the user explicitly asks you to look something up, or when current, changing, niche, or externally verifiable information would materially improve the answer.
+- Do not use search_web for ordinary personal sharing, emotional support, reflection, or merely to appear knowledgeable.
+- Create the narrowest query from the latest request. Never include Life Map memories, private names, exact locations, or unrelated personal context unless the user explicitly asks to search that specific information.
+- Before search_web, say one short natural preamble such as "Let me check that." After it returns, answer from the result, name useful sources conversationally, and do not read raw URLs aloud because links appear in the chat.
 - If the latest audio is silence, background media, or speech not addressed to Morrow, remain silent and keep listening.`
     : `TOOLS:
 - This widget does not have live web search. Do not claim to search the internet.
@@ -1448,11 +1459,12 @@ app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({
   ok: true,
-  release: "morrow-multimodal-v1",
+  release: "morrow-web-aware-v1",
   realtimeModel: OPENAI_REALTIME_MODEL,
   imageModel: OPENAI_IMAGE_MODEL,
   morrowVisionModel: MORROW_VISION_MODEL,
-  transcriptionModel: MORROW_TRANSCRIBE_MODEL
+  transcriptionModel: MORROW_TRANSCRIBE_MODEL,
+  morrowWebSearch: true
 }));
 
 function compactText(value) {
@@ -3348,7 +3360,7 @@ function demoLiveInfoReply() {
   ].join("\n");
 }
 
-async function askWithWebSearch({ prompt, context = "", contextSize = "medium" }) {
+async function askWithWebSearch({ prompt, context = "", contextSize = "medium", profile = "ai" }) {
   const query = compactText(prompt).slice(0, 1000);
   const contextText = compactText(context).slice(0, 4000);
   if (!query) return { text: "I need a search question first.", cites: [] };
@@ -3362,12 +3374,12 @@ async function askWithWebSearch({ prompt, context = "", contextSize = "medium" }
       {
         role: "system",
         content: [
-          "You are a live web-search helper for Johnny's AI widgets.",
+          profile === "morrow" ? "You are the live research helper for Morrow, a private personal companion." : "You are a live web-search helper for Johnny's AI widgets.",
           "Answer the user's question with current, factual information.",
           "Keep the answer concise enough for a voice assistant to speak.",
           "Use sources from web search. Do not invent citations or current facts.",
-          "For public AI widgets, do not answer mowing or lawn-service questions; those should go to the mowing contact form.",
-          "For Nova Chat, answer broad private-assistant research questions directly."
+          profile === "morrow" ? "The query is intentionally separated from Morrow's private Life Map. Do not ask for or infer unrelated personal details. Acknowledge uncertainty or disagreement between sources." : "For public AI widgets, do not answer mowing or lawn-service questions; those should go to the mowing contact form.",
+          profile === "nova" ? "For Nova Chat, answer broad private-assistant research questions directly." : ""
         ].join("\n")
       },
       {
@@ -3420,15 +3432,15 @@ app.post("/api/realtime-search", async (req, res) => {
 
     if (!cleanQuery) return res.status(400).json({ error: "Missing query" });
     if (!OPENAI_API_KEY) return res.status(503).json({ error: "OpenAI API key not configured" });
-    if (profile === "nova" && !requireChatbotSession(req, res)) return;
-    if (profile !== "ai" && profile !== "nova") {
+    if ((profile === "nova" || profile === "morrow") && !requireChatbotSession(req, res)) return;
+    if (profile !== "ai" && profile !== "nova" && profile !== "morrow") {
       return res.status(403).json({
         result: "Live search is not enabled for this widget. For mowing details, please use the contact form.",
         sources: []
       });
     }
 
-    const result = await askWithWebSearch({ prompt: cleanQuery, context: cleanContext, contextSize: "medium" });
+    const result = await askWithWebSearch({ prompt: cleanQuery, context: profile === "morrow" ? "" : cleanContext, contextSize: "medium", profile });
     res.json({ result: result.text, sources: result.cites });
   } catch (err) {
     console.error("❌ Realtime Search Error:", err);
