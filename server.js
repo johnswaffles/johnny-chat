@@ -966,6 +966,33 @@ function getRealtimeTools(profile = "ai") {
     });
   }
 
+  if (profile === "morrow") {
+    tools.push({
+      type: "function",
+      name: "manage_list",
+      description: "Add a concrete item or idea to Morrow's lists, or remove a particular saved item, only when the user explicitly asks for that change. Resolve words like that, it, or this idea from the conversation before calling. Do not call this for ordinary sharing or merely discussing an idea.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["add", "remove"],
+            description: "The exact list mutation the user requested."
+          },
+          itemText: {
+            type: "string",
+            description: "Standalone content to add, or the shortest exact identifying phrase to remove. Never pass only that, it, or this."
+          },
+          listName: {
+            type: "string",
+            description: "The requested list name, matched to the supplied list context when possible. Use an empty string when the user did not name a list."
+          }
+        },
+        required: ["action", "itemText", "listName"]
+      }
+    });
+  }
+
   return tools;
 }
 
@@ -1012,6 +1039,8 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Meet emotion without generic validation. Reflect one specific meaning, detail, or tension. Do not rush to fixing, forced optimism, or a next experiment unless that support style was requested.
 - Follow the user's thread across turns and never leave an active concern to gather background. If there is no active concern, use the supplied Life Map gaps to ask one direct, concrete question and then follow that answer naturally. Ordinary details matter.
 - Do not bury a useful answer or question under a long preamble. It is natural to simply ask “Who are the people you rely on most?” or “What does a good workday look like for you?”
+- When the user explicitly asks to add an idea or item to a list, or remove a particular saved item, call manage_list. Resolve conversational references into standalone itemText before calling. Never claim a list changed until the tool confirms it.
+- Do not call manage_list merely because the user shares an idea, mentions groceries, discusses a task, or asks what to do. Saving and removing require an explicit request.
 - Use remembered details naturally when relevant, never to perform memory or surprise the user.
 - Do not fill time, repeat yourself, or continue after the response has reached a natural stopping point.
 - The user may interrupt at any time. Treat interruption as collaboration, stop cleanly, and listen.
@@ -1477,9 +1506,10 @@ app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({
   ok: true,
-  release: "morrow-living-voice-v2",
+  release: "morrow-companion-list-tools-v3",
   realtimeModel: OPENAI_REALTIME_MODEL,
   morrowRealtimeVoices: Array.from(REALTIME_VOICES),
+  morrowListTools: true,
   imageModel: OPENAI_IMAGE_MODEL,
   morrowVisionModel: MORROW_VISION_MODEL,
   transcriptionModel: MORROW_TRANSCRIBE_MODEL,
