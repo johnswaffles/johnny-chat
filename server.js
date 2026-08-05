@@ -1442,7 +1442,7 @@ app.get(GODOT_WASM_ROUTES, (req, res, next) => {
 
 app.use(express.static("public"));
 
-app.get("/health", (_req, res) => res.json({ ok: true, realtimeModel: OPENAI_REALTIME_MODEL, imageModel: OPENAI_IMAGE_MODEL }));
+app.get("/health", (_req, res) => res.json({ ok: true, release: "morrow-companion-v1", realtimeModel: OPENAI_REALTIME_MODEL, imageModel: OPENAI_IMAGE_MODEL }));
 
 function compactText(value) {
   return String(value || "").replace(/\r\n/g, "\n").trim();
