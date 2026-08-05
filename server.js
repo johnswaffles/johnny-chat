@@ -1477,8 +1477,9 @@ app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({
   ok: true,
-  release: "morrow-web-aware-v1",
+  release: "morrow-living-voice-v2",
   realtimeModel: OPENAI_REALTIME_MODEL,
+  morrowRealtimeVoices: Array.from(REALTIME_VOICES),
   imageModel: OPENAI_IMAGE_MODEL,
   morrowVisionModel: MORROW_VISION_MODEL,
   transcriptionModel: MORROW_TRANSCRIBE_MODEL,
