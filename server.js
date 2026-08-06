@@ -1011,6 +1011,46 @@ function getRealtimeTools(profile = "ai") {
         required: ["action", "itemText", "listName"]
       }
     });
+    tools.push({
+      type: "function",
+      name: "manage_clockwise",
+      description: "Update Morrow's Clockwise workspace only when the user explicitly asks to log personal time, save a PO number/customer phone/work reference in Reference Radar, or set a callback/follow-up reminder. Resolve conversational references before calling. Do not use manage_list for these Clockwise records.",
+      parameters: {
+        type: "object",
+        properties: {
+          kind: {
+            type: "string",
+            enum: ["personal_time", "reference", "reminder"],
+            description: "The Clockwise record requested by the user."
+          },
+          durationMinutes: {
+            type: "number",
+            description: "Complete personal-time duration in minutes. Use zero for references and reminders."
+          },
+          occurredOn: {
+            type: "string",
+            description: "Personal-time calendar date as YYYY-MM-DD. Use an empty string when not applicable."
+          },
+          note: {
+            type: "string",
+            description: "Concise standalone context for the record, without inventing details."
+          },
+          reference: {
+            type: "string",
+            description: "Standalone PO number, customer phone number, customer/callback label, or other work reference. Use an empty string for personal time."
+          },
+          remindInMinutes: {
+            type: "number",
+            description: "Relative callback or follow-up delay in minutes. Use zero when the user did not request a timed reminder."
+          },
+          dueAt: {
+            type: "string",
+            description: "ISO 8601 reminder time for a specific clock-time request. Use an empty string for relative reminders or when not applicable."
+          }
+        },
+        required: ["kind", "durationMinutes", "occurredOn", "note", "reference", "remindInMinutes", "dueAt"]
+      }
+    });
   }
 
   return tools;
@@ -1063,6 +1103,8 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - The Life Map never becomes full. After every area has context, keep learning through the least-documented area, changed facts, names, routines, preferences, and specific follow-ups.
 - When the user explicitly asks to add an idea or item to a list, or remove a particular saved item, call manage_list. Resolve conversational references into standalone itemText before calling. Never claim a list changed until the tool confirms it.
 - Do not call manage_list merely because the user shares an idea, mentions groceries, discusses a task, or asks what to do. Saving and removing require an explicit request.
+- When the user explicitly asks to log personal time, save a PO number or customer phone number in Reference Radar, or schedule a customer callback/follow-up, call manage_clockwise. Convert the full duration to minutes, preserve the work reference exactly, and resolve conversational words such as “them” or “that customer” from the active conversation before calling.
+- Reference Radar is a dedicated work list inside Clockwise. Use manage_clockwise—not manage_list—when a timed reminder, PO number, customer phone number, or callback is involved. Never claim Clockwise changed until the tool confirms it.
 - Use remembered details naturally when relevant, never to perform memory or surprise the user.
 - Do not fill time, repeat yourself, or continue after the response has reached a natural stopping point.
 - The user may interrupt at any time. Treat interruption as collaboration, stop cleanly, and listen.
@@ -1528,7 +1570,7 @@ app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({
   ok: true,
-  release: "morrow-companion-conversation-continuity-v6",
+  release: "morrow-clockwise-voice-tools-v7",
   realtimeModel: OPENAI_REALTIME_MODEL,
   morrowRealtimeVoices: Array.from(REALTIME_VOICES),
   morrowListTools: true,
@@ -1538,6 +1580,8 @@ app.get("/health", (_req, res) => res.json({
   morrowUltraDirect: true,
   morrowConversationArchive: true,
   morrowConversationRecall: true,
+  morrowClockwiseTools: true,
+  morrowReferenceRadar: true,
   imageModel: OPENAI_IMAGE_MODEL,
   morrowVisionModel: MORROW_VISION_MODEL,
   transcriptionModel: MORROW_TRANSCRIBE_MODEL,
