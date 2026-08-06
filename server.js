@@ -951,18 +951,18 @@ TOOL RULES: Use only tools that are explicitly provided in the current session. 
 function getRealtimeTools(profile = "ai") {
   const tools = [];
 
-  if (profile !== "morrow") {
-    tools.push({
-      type: "function",
-      name: "wait_for_user",
-      description: "Call this when the latest audio is silence, background noise, TV audio, music, side conversation, or speech that is not clearly addressed to Johnny. This ends the turn without a spoken reply.",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: []
-      }
-    });
-  }
+  tools.push({
+    type: "function",
+    name: "wait_for_user",
+    description: profile === "morrow"
+      ? "Call this when the latest audio is wind, rustling, silence, background noise, TV audio, music, side conversation, or speech that is not clearly addressed to Morrow. This ends the turn without a spoken reply and keeps listening for clear user speech."
+      : "Call this when the latest audio is silence, background noise, TV audio, music, side conversation, or speech that is not clearly addressed to Johnny. This ends the turn without a spoken reply.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: []
+    }
+  });
 
   if (profile === "ai" || profile === "nova" || profile === "morrow") {
     tools.push({
@@ -1182,6 +1182,7 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - If the original email request explicitly says “just send it,” “send it now,” “don't read it back,” “no need to read it,” or equivalent, set delivery to send_now. Otherwise set delivery to ask; after the draft returns, ask exactly one sentence: “Would you like me to read it back before I send it, or send it now?” Do not read the body before the user chooses and do not split that choice into two questions.
 - While an email draft is pending, “no” and “nope” mean skip the readback and send now, just like “send it,” “just send it,” “yes,” or “go ahead”; call send_personal_email with action send. Only unmistakable cancellation language—“cancel,” “don't send it,” “do not send it,” or “never mind”—stops the email. If the user asks for a readback, read the complete subject and body faithfully, then ask the single short question “Send it?” Never claim an email was sent before the tool confirms success. The destination is fixed to the user's private inbox and must never be requested, changed, or invented.
 - Use remembered details naturally when relevant, never to perform memory or surprise the user.
+- Wind, rustling, fans, traffic, bumps, background media, and side conversation are not turns. Call wait_for_user and say nothing unless the user is clearly addressing Morrow. If a real utterance is partly masked, ask for a repeat once rather than guessing from the noise.
 - Do not fill time, repeat yourself, or continue after the response has reached a natural stopping point.
 - The user may interrupt at any time. Treat interruption as collaboration, stop cleanly, and listen.
 - Ask exactly one question at a time in Companion mode. In thinking mode, still default to one focal question.
@@ -1491,6 +1492,16 @@ app.post("/api/realtime-token", async (req, res) => {
       : REALTIME_VOICES.has(configuredVoice) ? configuredVoice : "marin";
     const safetyIdentifier = String(req.body?.safetyIdentifier || "");
     const usesRealtimeReasoning = /^gpt-realtime-2(?:\.|$)/.test(modelToUse);
+    const turnDetection = profile === "morrow"
+      ? {
+          type: "server_vad",
+          threshold: 0.72,
+          prefix_padding_ms: 420,
+          silence_duration_ms: 900,
+          create_response: true,
+          interrupt_response: true
+        }
+      : { type: usesRealtimeReasoning ? "semantic_vad" : "server_vad" };
     const session = {
       type: "realtime",
       model: modelToUse,
@@ -1499,7 +1510,8 @@ app.post("/api/realtime-token", async (req, res) => {
       audio: {
         input: {
           transcription: { model: OPENAI_TRANSCRIBE_MODEL },
-          turn_detection: { type: usesRealtimeReasoning ? "semantic_vad" : "server_vad" }
+          ...(profile === "morrow" ? { noise_reduction: { type: "near_field" } } : {}),
+          turn_detection: turnDetection
         },
         output: {
           voice: realtimeVoice
