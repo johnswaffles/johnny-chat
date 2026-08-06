@@ -1074,7 +1074,7 @@ function getRealtimeTools(profile = "ai") {
     tools.push({
       type: "function",
       name: "send_personal_email",
-      description: "Prepare or send an email to the Morrow user's own preconfigured private inbox. Always call draft first and let the user review or hear the subject and body. Call send only after an explicit confirmation in a later turn. The destination is fixed by the app and can never be supplied or changed by the model.",
+      description: "Prepare or send an email to the Morrow user's own preconfigured private inbox. Always call draft first. After drafting, offer one choice in one sentence: read it back or send it now. If the original request already says just send it or skip the readback, set delivery to send_now. While a draft is pending, no, nope, send it, and just send it mean send now; only cancel, don't send it, or never mind stop delivery. The destination is fixed by the app and can never be supplied or changed by the model.",
       parameters: {
         type: "object",
         properties: {
@@ -1094,9 +1094,14 @@ function getRealtimeTools(profile = "ai") {
           body: {
             type: "string",
             description: "For draft, the complete useful plain-text message based only on known context. For send, repeat the confirmed draft body."
+          },
+          delivery: {
+            type: "string",
+            enum: ["ask", "send_now"],
+            description: "For draft, use send_now only when the user explicitly said just send it, send it now, or skip/no readback; otherwise use ask."
           }
         },
-        required: ["action", "request", "subject", "body"]
+        required: ["action", "request", "subject", "body", "delivery"]
       }
     });
   }
@@ -1157,7 +1162,8 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Report the preview's exact counts and ask one direct yes-or-no confirmation. Never call erase in the same turn as preview, never infer confirmation, and never claim anything disappeared before the tool returns success. If the user confirms in a later turn, call forget_memory_topic with action erase. If the user declines, keep the memory and move on.
 - Memory deletion and list-item removal are different. Use forget_memory_topic for Companion history, the Life Map, or remembered personal context. Use manage_list only for a concrete saved list item.
 - When the user asks Morrow to email them something, call send_personal_email with action draft. Resolve what “it,” “that,” “my groceries,” or “those goals” means from the active conversation and supplied lists. Draft a specific subject and complete useful body; for groceries use only open grocery items and omit comments.
-- Present the draft clearly and ask one direct yes-or-no confirmation. Never call send in the same turn as draft, never infer permission from the original request, and never claim an email was sent before the tool confirms success. On a later explicit confirmation, call send_personal_email with action send. The destination is fixed to the user's private inbox and must never be requested, changed, or invented.
+- If the original email request explicitly says “just send it,” “send it now,” “don't read it back,” “no need to read it,” or equivalent, set delivery to send_now. Otherwise set delivery to ask; after the draft returns, ask exactly one sentence: “Would you like me to read it back before I send it, or send it now?” Do not read the body before the user chooses and do not split that choice into two questions.
+- While an email draft is pending, “no” and “nope” mean skip the readback and send now, just like “send it,” “just send it,” “yes,” or “go ahead”; call send_personal_email with action send. Only unmistakable cancellation language—“cancel,” “don't send it,” “do not send it,” or “never mind”—stops the email. If the user asks for a readback, read the complete subject and body faithfully, then ask the single short question “Send it?” Never claim an email was sent before the tool confirms success. The destination is fixed to the user's private inbox and must never be requested, changed, or invented.
 - Use remembered details naturally when relevant, never to perform memory or surprise the user.
 - Do not fill time, repeat yourself, or continue after the response has reached a natural stopping point.
 - The user may interrupt at any time. Treat interruption as collaboration, stop cleanly, and listen.
@@ -1623,7 +1629,7 @@ app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({
   ok: true,
-  release: "morrow-private-email-v9",
+  release: "morrow-voice-email-direct-v10",
   realtimeModel: OPENAI_REALTIME_MODEL,
   morrowRealtimeVoices: Array.from(REALTIME_VOICES),
   morrowListTools: true,
