@@ -989,6 +989,21 @@ function getRealtimeTools(profile = "ai") {
   if (profile === "morrow") {
     tools.push({
       type: "function",
+      name: "recall_conversation",
+      description: "Search the user's private saved Companion conversations when they refer to an older discussion, an ambiguous event, exact prior wording, or something not clearly present in the compact startup context. Use the most specific subject, person, event, date, or phrase available. This searches private Morrow memory, not the public web.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "A focused standalone description of the prior conversation to recall, including any known subject, event, person, relative date, or remembered phrase."
+          }
+        },
+        required: ["query"]
+      }
+    });
+    tools.push({
+      type: "function",
       name: "manage_list",
       description: "Add a concrete item or idea to Morrow's lists, or remove a particular saved item, only when the user explicitly asks for that change. Resolve words like that, it, or this idea from the conversation before calling. Do not call this for ordinary sharing or merely discussing an idea.",
       parameters: {
@@ -1132,6 +1147,7 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Do not use search_web for ordinary personal sharing, emotional support, reflection, or merely to appear knowledgeable.
 - Create the narrowest query from the latest request. Never include Life Map memories, private names, exact locations, or unrelated personal context unless the user explicitly asks to search that specific information.
 - Before search_web, say one short natural preamble such as "Let me check that." After it returns, answer from the result, name useful sources conversationally, and do not read raw URLs aloud because links appear in the chat.
+- You start with an instant compact Companion brief and recent conversation continuity. When the user asks about an older discussion, exact prior wording, or an ambiguous “that thing the other day” that the compact context does not resolve, call recall_conversation with a focused private-memory query. Do not use public web search for private recall and do not guess.
 - If the latest audio is silence, background media, or speech not addressed to Morrow, remain silent and keep listening.`
     : `TOOLS:
 - This widget does not have live web search. Do not claim to search the internet.
@@ -1154,6 +1170,7 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Do not bury a useful answer or question under a long preamble. It is natural to simply ask “Who are the people you rely on most?” or “What does a good workday look like for you?”
 - Never ask “what comes up,” “how does that land,” “what feels present,” “what feels alive,” or “what would it look like” when a direct factual question can do the job.
 - The Life Map never becomes full. After every area has context, keep learning through the least-documented area, changed facts, names, routines, preferences, and specific follow-ups.
+- Begin from the supplied instant Companion brief without narrating that it loaded or delaying the greeting. If an earlier conversation is not clearly available in the compact continuity context, call recall_conversation and reconstruct it from the returned private archive.
 - When the user explicitly asks to add an idea or item to a list, or remove a particular saved item, call manage_list. Resolve conversational references into standalone itemText before calling. Never claim a list changed until the tool confirms it.
 - Do not call manage_list merely because the user shares an idea, mentions groceries, discusses a task, or asks what to do. Saving and removing require an explicit request.
 - When the user explicitly asks to log personal time, save a PO number or customer phone number in Reference Radar, or schedule a customer callback/follow-up, call manage_clockwise. Convert the full duration to minutes, preserve the work reference exactly, and resolve conversational words such as “them” or “that customer” from the active conversation before calling.
@@ -1629,7 +1646,7 @@ app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({
   ok: true,
-  release: "morrow-voice-email-direct-v10",
+  release: "morrow-living-cube-fast-brief-v11",
   realtimeModel: OPENAI_REALTIME_MODEL,
   morrowRealtimeVoices: Array.from(REALTIME_VOICES),
   morrowListTools: true,
@@ -1642,6 +1659,8 @@ app.get("/health", (_req, res) => res.json({
   morrowUltraDirect: true,
   morrowConversationArchive: true,
   morrowConversationRecall: true,
+  morrowInstantCompanionBrief: true,
+  morrowOnDemandConversationRecall: true,
   morrowClockwiseTools: true,
   morrowReferenceRadar: true,
   imageModel: OPENAI_IMAGE_MODEL,
