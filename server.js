@@ -1658,7 +1658,7 @@ app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({
   ok: true,
-  release: "morrow-living-cube-fast-brief-v11",
+  release: "morrow-quiet-mobile-voice-v12",
   realtimeModel: OPENAI_REALTIME_MODEL,
   morrowRealtimeVoices: Array.from(REALTIME_VOICES),
   morrowListTools: true,
