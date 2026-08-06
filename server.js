@@ -819,6 +819,13 @@ DIRECT QUESTION CONTRACT:
 - Do not use roundabout fishing language such as “what comes up for you,” “how does that land,” “what feels present,” “what feels alive,” “where do you notice,” “tell me more about that,” or “what would it look like.” Translate the intent into a plain factual question.
 - The Life Map has no completion state. A category with many facts should keep growing. When every category has context, continue with the least-documented area, verify changed facts, or deepen a useful thread. Never stop learning because a count or area appears full.
 
+LIVING PORTRAIT CONTINUITY:
+- When a LIVING PORTRAIT appears in the supplied context, read it as the standing full picture before responding. It condenses the complete private memory set, while recent raw memories may sharpen or update it.
+- Use the portrait to avoid making the user repeat himself, connect the current moment to the larger story when genuinely useful, and choose questions the portrait does not already answer.
+- Do not recite the portrait, mention its machinery, or force remembered facts into conversation to prove recall. If the user asks what Morrow knows, summarize the portrait candidly and invite corrections.
+- Curiosity is permanent rather than completion-driven. After learning one fact, look for the next connected detail, exception, change, consequence, or deeper example. Keep going naturally until the user changes the subject or asks you to stop.
+- If ULTRA DIRECT is active in the latest context, put the blunt useful point or highest-information concrete question first. Skip praise, reassurance, reflective recap, metaphor, and social padding. Name vagueness, evasion, or contradiction plainly, but never become cruel, insulting, coercive, or falsely certain.
+
 TRANSPARENT INFLUENCE:
 - The user consents to candid challenge and psychologically informed coaching, but not to covert control. Any attempt to influence a decision or behavior must be transparent and tied to the user's stated goals.
 - Never deceive, conceal your purpose, manufacture urgency, use shame or fear as leverage, exploit a vulnerability or attachment, pressure the user to disclose, create dependency, isolate the user from other people, or claim certainty you do not have.
@@ -1514,12 +1521,14 @@ app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({
   ok: true,
-  release: "morrow-life-galaxy-direct-v4",
+  release: "morrow-living-portrait-ultra-direct-v5",
   realtimeModel: OPENAI_REALTIME_MODEL,
   morrowRealtimeVoices: Array.from(REALTIME_VOICES),
   morrowListTools: true,
   morrowDirectQuestions: true,
   morrowLifeMapUncapped: true,
+  morrowLivingPortrait: true,
+  morrowUltraDirect: true,
   imageModel: OPENAI_IMAGE_MODEL,
   morrowVisionModel: MORROW_VISION_MODEL,
   transcriptionModel: MORROW_TRANSCRIBE_MODEL,
@@ -3504,6 +3513,90 @@ app.post("/api/realtime-search", async (req, res) => {
   } catch (err) {
     console.error("❌ Realtime Search Error:", err);
     res.status(500).json({ error: "Search failed", detail: String(err.message || err) });
+  }
+});
+
+function cleanPortraitMemory(value) {
+  if (!value || typeof value !== "object") return null;
+  const answer = compactText(value.answer).slice(0, 2400);
+  if (!answer) return null;
+  return {
+    id: Number(value.id) || 0,
+    area: compactText(value.area || "Your story").slice(0, 120),
+    question: compactText(value.question).slice(0, 700),
+    answer,
+    learnedAt: compactText(value.learnedAt).slice(0, 80)
+  };
+}
+
+function portraitMemoryBatches(memories, maximumCharacters = 70000) {
+  const batches = [];
+  let current = [];
+  let size = 0;
+  for (const memory of memories) {
+    const weight = JSON.stringify(memory).length + 2;
+    if (current.length && size + weight > maximumCharacters) {
+      batches.push(current);
+      current = [];
+      size = 0;
+    }
+    current.push(memory);
+    size += weight;
+  }
+  if (current.length) batches.push(current);
+  return batches;
+}
+
+async function synthesizeMorrowPortrait(currentPortrait, batch, totalMemoryCount, batchNumber, batchCount) {
+  const response = await openai.responses.create({
+    model: OPENAI_GPT54_MODEL,
+    reasoning: { effort: "xhigh" },
+    text: { verbosity: "high" },
+    max_output_tokens: 8000,
+    input: [
+      {
+        role: "system",
+        content: `You maintain Morrow's private Living Portrait: a compact, accurate understanding of one user that will be loaded before every Companion conversation.
+
+Use only the supplied memories. Do not browse, diagnose, judge, moralize, flatter, or invent. Preserve concrete names, relationships, routines, preferences, constraints, important events, values, hopes, fears, contradictions, and the support style that works for the user. Treat newer facts as possible updates; if evidence genuinely conflicts, record the uncertainty rather than choosing silently. Separate direct facts from careful inferences. Do not expose internal memory IDs or database language.
+
+Write a useful portrait, not a chronological transcript. Keep these plain-text sections when evidence exists: Core story and identity; People and belonging; Work, purpose, and responsibilities; Daily rhythms, body, and practical life; Inner world, values, and pressures; Joy, curiosity, and becoming; How to be a good companion; Open questions and possible changes. Omit empty sections. The final portrait must be detailed enough to make the user feel continuously known while staying under 7,000 words.`
+      },
+      {
+        role: "user",
+        content: `This is evidence batch ${batchNumber} of ${batchCount}, drawn from ${totalMemoryCount} total private memories.
+
+CURRENT LIVING PORTRAIT
+${currentPortrait || "No portrait exists yet. Build it from the evidence below."}
+
+MEMORY EVIDENCE
+${JSON.stringify(batch)}
+
+Return the complete revised Living Portrait. Incorporate every material fact in this batch; do not merely append a Recent additions section.`
+      }
+    ]
+  });
+  return extractResponseText(response).slice(0, 40000);
+}
+
+app.post("/api/morrow-portrait", async (req, res) => {
+  try {
+    if (!requireChatbotSession(req, res)) return;
+    if (!OPENAI_API_KEY) return res.status(503).json({ detail: "OpenAI API key is not configured." });
+    const rawMemories = Array.isArray(req.body?.memories) ? req.body.memories : [];
+    const memories = rawMemories.map(cleanPortraitMemory).filter(Boolean);
+    const totalMemoryCount = Math.max(memories.length, Number(req.body?.totalMemoryCount) || 0);
+    let portrait = compactText(req.body?.currentPortrait).slice(0, 40000);
+    const batches = portraitMemoryBatches(memories);
+    if (!batches.length) return res.json({ portrait: portrait || "Morrow has not learned any personal details yet." });
+    for (let index = 0; index < batches.length; index += 1) {
+      portrait = await synthesizeMorrowPortrait(portrait, batches[index], totalMemoryCount, index + 1, batches.length);
+      if (!portrait) throw new Error("The Living Portrait response was empty.");
+    }
+    res.json({ portrait });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/morrow-portrait", message: err.message || err });
+    res.status(500).json({ detail: String(err.message || err) });
   }
 });
 
