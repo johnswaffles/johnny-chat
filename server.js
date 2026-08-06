@@ -2604,19 +2604,17 @@ function maskEmailAddress(value) {
 
 const MORROW_EMAIL_DRAFT_SCHEMA = {
   type: "json_schema",
-  json_schema: {
-    name: "morrow_personal_email_draft",
-    description: "A private email draft prepared for the Morrow user's own inbox.",
-    strict: true,
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        subject: { type: "string", description: "A specific, useful email subject without a prefix." },
-        body: { type: "string", description: "The complete plain-text email body." }
-      },
-      required: ["subject", "body"]
-    }
+  name: "morrow_personal_email_draft",
+  description: "A private email draft prepared for the Morrow user's own inbox.",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      subject: { type: "string", description: "A specific, useful email subject without a prefix." },
+      body: { type: "string", description: "The complete plain-text email body." }
+    },
+    required: ["subject", "body"]
   }
 };
 
