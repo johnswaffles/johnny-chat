@@ -1051,6 +1051,26 @@ function getRealtimeTools(profile = "ai") {
         required: ["kind", "durationMinutes", "occurredOn", "note", "reference", "remindInMinutes", "dueAt"]
       }
     });
+    tools.push({
+      type: "function",
+      name: "forget_memory_topic",
+      description: "Control the user's private Companion memory when the user explicitly asks to forget or erase a subject, event, or past conversation. Always call preview first. Preview finds complete matching conversations and related Life Map memories. Call erase only after the user gives an explicit yes-or-no confirmation in a later turn. Never use this tool to remove an ordinary list item.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["preview", "erase"],
+            description: "Use preview for the original deletion request. Use erase only after the preview was reported and the user explicitly confirmed it."
+          },
+          request: {
+            type: "string",
+            description: "A standalone description of what should be forgotten, preserving whether the user means one dated conversation or every conversation and memory about the subject."
+          }
+        },
+        required: ["action", "request"]
+      }
+    });
   }
 
   return tools;
@@ -1105,6 +1125,9 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Do not call manage_list merely because the user shares an idea, mentions groceries, discusses a task, or asks what to do. Saving and removing require an explicit request.
 - When the user explicitly asks to log personal time, save a PO number or customer phone number in Reference Radar, or schedule a customer callback/follow-up, call manage_clockwise. Convert the full duration to minutes, preserve the work reference exactly, and resolve conversational words such as “them” or “that customer” from the active conversation before calling.
 - Reference Radar is a dedicated work list inside Clockwise. Use manage_clockwise—not manage_list—when a timed reminder, PO number, customer phone number, or callback is involved. Never claim Clockwise changed until the tool confirms it.
+- When the user asks to forget or erase a topic, event, or earlier conversation from Morrow's memory, call forget_memory_topic with action preview. Preserve whether the request means one particular dated conversation or every occurrence of the subject. This is semantic deletion of complete matching conversations and related Life Map facts, not a word search.
+- Report the preview's exact counts and ask one direct yes-or-no confirmation. Never call erase in the same turn as preview, never infer confirmation, and never claim anything disappeared before the tool returns success. If the user confirms in a later turn, call forget_memory_topic with action erase. If the user declines, keep the memory and move on.
+- Memory deletion and list-item removal are different. Use forget_memory_topic for Companion history, the Life Map, or remembered personal context. Use manage_list only for a concrete saved list item.
 - Use remembered details naturally when relevant, never to perform memory or surprise the user.
 - Do not fill time, repeat yourself, or continue after the response has reached a natural stopping point.
 - The user may interrupt at any time. Treat interruption as collaboration, stop cleanly, and listen.
@@ -1570,10 +1593,11 @@ app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({
   ok: true,
-  release: "morrow-clockwise-voice-tools-v7",
+  release: "morrow-private-memory-control-v8",
   realtimeModel: OPENAI_REALTIME_MODEL,
   morrowRealtimeVoices: Array.from(REALTIME_VOICES),
   morrowListTools: true,
+  morrowMemoryControl: true,
   morrowDirectQuestions: true,
   morrowLifeMapUncapped: true,
   morrowLivingPortrait: true,
