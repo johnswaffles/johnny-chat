@@ -64,6 +64,7 @@ const {
 const REALTIME_SEARCH_MODEL = OPENAI_REALTIME_SEARCH_MODEL || OPENAI_GPT54_MODEL || OPENAI_CHAT_MODEL;
 const MORROW_VISION_MODEL = OPENAI_MORROW_VISION_MODEL || OPENAI_GPT54_MODEL || "gpt-5.6-sol";
 const MORROW_TRANSCRIBE_MODEL = OPENAI_MORROW_TRANSCRIBE_MODEL || "gpt-transcribe";
+const MORROW_REALTIME_MODEL = "gpt-realtime-2.1-mini";
 
 const BOARD_COMMENT_LIMIT = (() => {
   const value = Number(PUBLIC_BOARD_COMMENT_LIMIT || 50);
@@ -1480,7 +1481,7 @@ app.post("/api/realtime-token", async (req, res) => {
       return res.status(500).json({ error: "Server API Key not configured" });
     }
 
-    const modelToUse = OPENAI_REALTIME_MODEL || "gpt-realtime-2.1";
+    const modelToUse = profile === "morrow" ? MORROW_REALTIME_MODEL : OPENAI_REALTIME_MODEL || "gpt-realtime-2.1";
     console.log(`📡 [Realtime] Requesting session for model: ${modelToUse}`);
 
     const realtimeTools = getRealtimeTools(profile);
@@ -1660,6 +1661,7 @@ app.get("/health", (_req, res) => res.json({
   ok: true,
   release: "morrow-quiet-mobile-voice-v12",
   realtimeModel: OPENAI_REALTIME_MODEL,
+  morrowRealtimeModel: MORROW_REALTIME_MODEL,
   morrowRealtimeVoices: Array.from(REALTIME_VOICES),
   morrowListTools: true,
   morrowMemoryControl: true,
