@@ -791,7 +791,7 @@
         <p>Not case studies trapped behind glass. These are working experiments you can open, play, and explore right now.</p>
       </div>
       <div class="feature-grid feature-grid-compact" style="margin-top:32px">
-        <a class="project-card helper-card" href="/ai-helper/">
+        <a class="project-card helper-card" href="/ai-helper/" target="_blank" rel="noopener noreferrer">
           <span>Practical AI</span>
           <div class="project-meta"><div><h3>AI Helper</h3><p>Clear answers and useful handoffs for everyday business.</p></div><b class="project-arrow">↗</b></div>
         </a>
@@ -805,13 +805,13 @@
     <section class="reveal">
       <div class="section-head"><div><span class="eyebrow">The app shelf</span><h2>Pick a rabbit hole.</h2></div><p>Work tools, conversation experiments, clocks, worlds, and whatever useful idea earns a place next.</p></div>
       <div class="shelf" style="margin-top:32px">
-        <a href="/chatbot/"><div><small>Private AI</small><h3>GPT 5.6</h3><p>A focused workspace for questions, drafts, files, and getting unstuck.</p></div><b>Open ↗</b></a>
-        <a href="/nova-chat/"><div><small>Experiment</small><h3>Nova Chat</h3><p>A different kind of conversational surface with a personality of its own.</p></div><b>Open ↗</b></a>
+        <a href="/chatbot/" target="_blank" rel="noopener noreferrer"><div><small>Private AI</small><h3>GPT 5.6</h3><p>A focused workspace for questions, drafts, files, and getting unstuck.</p></div><b>Open ↗</b></a>
+        <a href="/nova-chat/" target="_blank" rel="noopener noreferrer"><div><small>Experiment</small><h3>Nova Chat</h3><p>A different kind of conversational surface with a personality of its own.</p></div><b>Open ↗</b></a>
         <a href="/morrow/" target="_blank" rel="noopener noreferrer"><div><small>Private second brain</small><h3>Morrow</h3><p>Capture ideas by voice, save them for later, and explore them with an AI thought partner.</p></div><b>Open ↗</b></a>
-        <a href="/clockwise/"><div><small>Unified time workspace</small><h3>Clockwise</h3><p>Track calls, reminders, important marks, and personal time in one place.</p></div><b>Open ↗</b></a>
-        <a href="/cozy-builder-game/"><div><small>Playable world</small><h3>Cozy Builder</h3><p>A warm little building experiment made for curious wandering.</p></div><b>Play ↗</b></a>
-        <a href="/glade/"><div><small>Creative sandbox</small><h3>Glade</h3><p>Doodle cottages, walls, paths, ponds, and gardens in a living storybook meadow.</p></div><b>Create ↗</b></a>
-        <a href="/sim/"><div><small>Simulation</small><h3>Living World</h3><p>Watch systems, weather, and life unfold across a tiny planet.</p></div><b>Explore ↗</b></a>
+        <a href="/clockwise/" target="_blank" rel="noopener noreferrer"><div><small>Unified time workspace</small><h3>Clockwise</h3><p>Track calls, reminders, important marks, and personal time in one place.</p></div><b>Open ↗</b></a>
+        <a href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer"><div><small>Playable world</small><h3>Cozy Builder</h3><p>A warm little building experiment made for curious wandering.</p></div><b>Play ↗</b></a>
+        <a href="/glade/" target="_blank" rel="noopener noreferrer"><div><small>Creative sandbox</small><h3>Glade</h3><p>Doodle cottages, walls, paths, ponds, and gardens in a living storybook meadow.</p></div><b>Create ↗</b></a>
+        <a href="/sim/" target="_blank" rel="noopener noreferrer"><div><small>Simulation</small><h3>Living World</h3><p>Watch systems, weather, and life unfold across a tiny planet.</p></div><b>Explore ↗</b></a>
       </div>
     </section>
 
@@ -842,7 +842,16 @@
     }, { threshold: .12 });
     document.querySelectorAll('.reveal').forEach((element) => revealObserver.observe(element));
 
-    document.querySelectorAll('a[href="/story-editor/"], a[href="/first-ember/"]').forEach((link) => {
+    document.querySelectorAll('a[href]').forEach((link) => {
+      const href = String(link.getAttribute('href') || '').trim();
+      if (!href || href.startsWith('#')) return;
+
+      const destination = new URL(href, window.location.href);
+      const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+      const destinationPath = destination.pathname.replace(/\/+$/, '') || '/';
+      const pointsToCurrentPage = destination.origin === window.location.origin && destinationPath === currentPath;
+      if (pointsToCurrentPage) return;
+
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
     });

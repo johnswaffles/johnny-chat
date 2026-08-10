@@ -177,10 +177,13 @@ class VoiceWidget {
             this.fileInput.disabled = true;
         }
 
-        const startMinimized =
-            window.JOHNNY_WIDGET_START_MINIMIZED === true ||
-            window.johnnyWidgetStartMinimized === true ||
-            String(document.documentElement?.dataset?.johnnyWidgetStartMinimized || "").toLowerCase() === "true";
+        const configuredStartMinimized =
+            window.JOHNNY_WIDGET_START_MINIMIZED ??
+            window.johnnyWidgetStartMinimized ??
+            document.documentElement?.dataset?.johnnyWidgetStartMinimized;
+        const startMinimized = configuredStartMinimized === undefined
+            ? true
+            : configuredStartMinimized === true || String(configuredStartMinimized).toLowerCase() === "true";
 
         if (container && (startMinimized || window.matchMedia('(max-width: 600px)').matches)) {
             container.classList.add('minimized');

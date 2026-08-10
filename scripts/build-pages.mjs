@@ -36,7 +36,7 @@ const godotRemotePackRoutes = [
 const widgetSnippet = (profile) => `
   <script>
     window.JOHNNY_WIDGET_PROFILE = "${profile}";
-    ${profile === "mowing" ? "window.JOHNNY_WIDGET_START_MINIMIZED = true;" : ""}
+    window.JOHNNY_WIDGET_START_MINIMIZED = true;
   </script>
   <link rel="stylesheet" href="https://johnny-chat.onrender.com/voice-widget.css">
   <script src="https://johnny-chat.onrender.com/voice-widget.js?v=realtime2-tools"></script>`;
