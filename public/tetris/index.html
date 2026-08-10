@@ -47,10 +47,15 @@
           <span class="panel-label">Score</span>
           <strong id="score">0</strong>
           <div class="level-row"><span>Level <b id="level">1</b></span><span><b id="lines">0</b> lines</span></div>
+          <div class="streak-row"><span id="combo">Combo —</span><b id="back-to-back"></b></div>
         </div>
         <div class="mini-card">
-          <span class="panel-label">Next up</span>
-          <canvas id="next-canvas" width="120" height="120" aria-label="Next piece"></canvas>
+          <span class="panel-label">Next pieces</span>
+          <div class="next-stack" aria-label="Next three pieces">
+            <canvas id="next-canvas" width="120" height="58" aria-label="Next piece"></canvas>
+            <canvas id="next-canvas-1" width="120" height="58" aria-label="Second next piece"></canvas>
+            <canvas id="next-canvas-2" width="120" height="58" aria-label="Third next piece"></canvas>
+          </div>
         </div>
         <div class="mini-card">
           <span class="panel-label">Hold</span>
@@ -95,7 +100,7 @@
       <button data-action="down" type="button" aria-label="Soft drop">↓</button>
       <button data-action="drop" type="button" aria-label="Hard drop">Drop</button>
     </section>
-    <p class="tip">7-piece bag • ghost piece • hold queue • local high score</p>
+    <p class="tip">7-piece bag • SRS rotation • ghost piece • hold queue • combos • local high score</p>
   </main>
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>

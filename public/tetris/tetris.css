@@ -205,7 +205,11 @@ body::before {
 }
 .level-row { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font: 500 10px/1 var(--mono); }
 .level-row b { color: var(--yellow); font-weight: 500; }
+.streak-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 11px; color: var(--muted); font: 500 9px/1 var(--mono); }
+.streak-row b { color: var(--pink); font-weight: 500; letter-spacing: .08em; }
 .mini-card canvas { display: block; width: 120px; height: 120px; margin: 12px auto 0; }
+.next-stack { display: grid; gap: 4px; margin-top: 12px; padding: 5px 0; border-radius: 9px; background: rgba(255,255,255,.018); }
+.next-stack canvas { width: 120px; height: 58px; margin: 0 auto; }
 .mini-action, .music-button, .secondary-button {
   width: 100%;
   margin-top: 10px;
@@ -315,6 +319,7 @@ kbd {
   .left-panel, .right-panel { grid-template-columns: 1fr 1fr; gap: 9px; }
   .mini-card, .stat-card { padding: 12px; }
   .mini-card canvas { width: 92px; height: 92px; }
+  .next-stack canvas { width: 92px; height: 44px; }
   .touch-controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin: 14px auto 0; }
   .touch-controls button { min-height: 42px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: rgba(15, 20, 37, .84); font: 700 16px/1 var(--font); }
   .touch-controls button:last-child { font-size: 11px; color: var(--cyan); }
