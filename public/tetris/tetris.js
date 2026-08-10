@@ -652,9 +652,13 @@
     if (event.key === "ArrowRight") heldKeys.delete("right");
     if (event.key === "ArrowDown") heldKeys.delete("down");
   });
+  const pauseWhenBackgrounded = () => {
+    if (running && !paused && !gameOver) togglePause();
+  };
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden && running && !paused && !gameOver) togglePause();
+    if (document.hidden) pauseWhenBackgrounded();
   });
+  window.addEventListener("blur", pauseWhenBackgrounded);
   window.addEventListener("pagehide", () => music.pause());
   music.addEventListener("play", updateMusicButton);
   music.addEventListener("pause", updateMusicButton);
