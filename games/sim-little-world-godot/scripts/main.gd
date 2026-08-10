@@ -57,6 +57,12 @@ var coach_tip_key := ""
 var coach_seen_key := ""
 var coach_action_kind := ""
 var coach_action_value := ""
+var pulse_open := false
+var pulse_unread := false
+var pulse_snapshot: Dictionary = {}
+var pulse_trend: Dictionary = {}
+var pulse_last_tick := -1
+var pointer_position := Vector2.ZERO
 
 var ui: CanvasLayer
 var intro_overlay: Control
@@ -90,6 +96,14 @@ var help_panel: Panel
 var help_title: Label
 var help_body: RichTextLabel
 var help_action_button: Button
+var placement_panel: Panel
+var placement_title: Label
+var placement_body: Label
+var pulse_button: Button
+var pulse_panel: Panel
+var pulse_title: Label
+var pulse_body: RichTextLabel
+var pulse_action_button: Button
 
 
 func _ready() -> void:
@@ -155,6 +169,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					_close_inspector()
 				elif help_open:
 					_toggle_help()
+				elif pulse_open:
+					_toggle_pulse()
 			KEY_H:
 				_toggle_help()
 			KEY_SPACE:
@@ -170,18 +186,24 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8:
 				_select_tool(event.keycode - KEY_1)
 	if event is InputEventMouseMotion:
+		pointer_position = event.position
 		sim.set_hover_screen(event.position)
+		_update_placement_preview(event.position)
 		if paint_down and paint_cooldown <= 0.0:
 			_use_selected_tool(event.position)
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		paint_down = event.pressed
 		if event.pressed:
+			pointer_position = event.position
 			sim.set_hover_screen(event.position)
+			_update_placement_preview(event.position)
 			_use_selected_tool(event.position)
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 		_open_inspector(event.position)
 	if event is InputEventScreenTouch:
+		pointer_position = event.position
 		sim.set_hover_screen(event.position)
+		_update_placement_preview(event.position)
 		if event.pressed:
 			_use_selected_tool(event.position)
 
@@ -261,6 +283,10 @@ func _build_ui() -> void:
 	ui.add_child(mission_label)
 
 	_header("PLANET HEALTH", Vector2(1206, 332))
+	pulse_button = _button("PULSE", Vector2(1324, 326), Vector2(80, 30))
+	pulse_button.add_theme_font_size_override("font_size", 11)
+	pulse_button.tooltip_text = "Open Planet Pulse: see what changed and why"
+	pulse_button.pressed.connect(_toggle_pulse)
 	stats_label = RichTextLabel.new()
 	stats_label.position = Vector2(1206, 362)
 	stats_label.size = Vector2(198, 208)
@@ -301,7 +327,9 @@ func _build_ui() -> void:
 	toast_label.modulate.a = 0.0
 
 	_select_tool(0)
+	_build_placement_preview()
 	_build_help_coach()
+	_build_planet_pulse()
 	_build_intro()
 	_build_inspector()
 
@@ -381,6 +409,64 @@ func _build_help_coach() -> void:
 	glass.style_button(help_action_button, Color(0.06, 0.58, 0.44, 0.95))
 	help_action_button.pressed.connect(_run_coach_action)
 	help_panel.add_child(help_action_button)
+
+
+func _build_placement_preview() -> void:
+	placement_panel = Panel.new()
+	placement_panel.size = Vector2(342, 104)
+	placement_panel.visible = false
+	placement_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glass.style_panel(placement_panel, Color(0.008, 0.033, 0.045, 0.96), Color(0.35, 1.0, 0.78, 0.48))
+	ui.add_child(placement_panel)
+	placement_title = _child_label(placement_panel, "", Vector2(16, 10), 13, Color("#66ffc7"))
+	placement_title.size = Vector2(310, 22)
+	placement_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	placement_body = _child_label(placement_panel, "", Vector2(16, 35), 12, Color("#c0d9dd"))
+	placement_body.size = Vector2(310, 62)
+	placement_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	placement_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _build_planet_pulse() -> void:
+	pulse_panel = Panel.new()
+	pulse_panel.position = Vector2(770, 132)
+	pulse_panel.size = Vector2(392, 490)
+	pulse_panel.visible = false
+	pulse_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	glass.style_panel(pulse_panel, Color(0.012, 0.045, 0.061, 0.98), Color(0.42, 0.88, 1.0, 0.58))
+	ui.add_child(pulse_panel)
+	_child_label(pulse_panel, "PLANET PULSE", Vector2(24, 18), 14, Color("#8defff"))
+	var live := _child_label(pulse_panel, "LIVE  •  cause-and-effect report", Vector2(24, 43), 11, Color("#75d7c1"))
+	live.size = Vector2(250, 20)
+	var minimize := Button.new()
+	minimize.text = "—"
+	minimize.position = Vector2(332, 16)
+	minimize.size = Vector2(38, 34)
+	minimize.focus_mode = Control.FOCUS_NONE
+	minimize.tooltip_text = "Minimize Planet Pulse"
+	glass.style_button(minimize, Color(0.06, 0.22, 0.25, 0.9))
+	minimize.pressed.connect(_toggle_pulse)
+	pulse_panel.add_child(minimize)
+	pulse_title = _child_label(pulse_panel, "Your world is waking up", Vector2(24, 72), 22, Color("#f1fffb"))
+	pulse_title.size = Vector2(342, 54)
+	pulse_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pulse_body = RichTextLabel.new()
+	pulse_body.position = Vector2(24, 132)
+	pulse_body.size = Vector2(344, 276)
+	pulse_body.bbcode_enabled = true
+	pulse_body.fit_content = false
+	pulse_body.scroll_active = false
+	pulse_body.add_theme_font_size_override("normal_font_size", 13)
+	pulse_body.add_theme_font_size_override("bold_font_size", 14)
+	pulse_panel.add_child(pulse_body)
+	pulse_action_button = Button.new()
+	pulse_action_button.text = "OPEN COACH FOR THE NEXT MOVE"
+	pulse_action_button.position = Vector2(24, 422)
+	pulse_action_button.size = Vector2(344, 46)
+	pulse_action_button.focus_mode = Control.FOCUS_NONE
+	glass.style_button(pulse_action_button, Color(0.05, 0.42, 0.56, 0.95))
+	pulse_action_button.pressed.connect(_open_coach_from_pulse)
+	pulse_panel.add_child(pulse_action_button)
 
 
 func _build_inspector() -> void:
@@ -471,11 +557,21 @@ func _reset_fun_systems() -> void:
 	coach_seen_key = ""
 	coach_action_kind = ""
 	coach_action_value = ""
+	pulse_open = false
+	pulse_unread = false
+	pulse_snapshot = sim.stats().duplicate()
+	pulse_trend = {"stability": 0.0, "oxygen": 0.0, "population": 0, "biodiversity": 0.0, "microbes": 0}
+	pulse_last_tick = sim.tick
+	sim.events.append({"day": sim.day, "type": "Expedition began"})
 	sim.set_hotspot(Vector2i(-1, -1), false)
 	if inspector_overlay:
 		inspector_overlay.visible = false
 	if help_panel:
 		help_panel.visible = false
+	if pulse_panel:
+		pulse_panel.visible = false
+	if placement_panel:
+		placement_panel.visible = false
 
 
 func _toggle_running() -> void:
@@ -484,6 +580,7 @@ func _toggle_running() -> void:
 	running = not running
 	play_button.text = "Pause" if running else "Play"
 	_show_toast("Simulation resumed" if running else "Simulation paused", Color("#d9f7ef"))
+	_update_placement_preview(pointer_position)
 
 
 func _change_speed(direction := 1) -> void:
@@ -509,6 +606,7 @@ func _select_tool(index: int) -> void:
 	for i in range(tool_buttons.size()):
 		tool_buttons[i].button_pressed = i == index
 	_show_toast("%s selected — %d Catalyst per use" % [TOOL_SHORT_NAMES[index], PlanetSimulation.TOOL_COSTS[index]], Color("#aef8e3"))
+	_update_placement_preview(pointer_position)
 
 
 func _use_selected_tool(position: Vector2) -> void:
@@ -521,7 +619,63 @@ func _use_selected_tool(position: Vector2) -> void:
 		_show_toast("%s%s" % [result.message, fun_message], Color("#aef8e3"), 1.15)
 	else:
 		_show_toast(result.message, Color("#ffbd91"), 1.4)
+	_update_placement_preview(position)
 	_update_ui()
+
+
+func _update_placement_preview(position: Vector2) -> void:
+	if not placement_panel:
+		return
+	var blocked_by_overlay := help_open or pulse_open or (inspector_overlay and inspector_overlay.visible)
+	var preview: Dictionary = sim.preview_at_screen(position)
+	if not started or blocked_by_overlay or preview.is_empty():
+		placement_panel.visible = false
+		return
+	var quality := str(preview.get("quality", "USEFUL"))
+	var title_color := Color("#66ffc7")
+	if not bool(preview.get("valid", true)):
+		title_color = Color("#ff7770")
+	elif quality == "RISKY" or quality == "LOW IMPACT":
+		title_color = Color("#ffd36f")
+	placement_title.add_theme_color_override("font_color", title_color)
+	placement_title.text = "%s  •  %s  •  %d CATALYST" % [quality, TOOL_SHORT_NAMES[int(preview.tool)].to_upper(), int(preview.cost)]
+	var relevance := _placement_relevance(Vector2i(preview.cell))
+	if not running:
+		relevance = "PAUSED  •  Resume the ocean before placing this intervention."
+	placement_body.text = "%s\n%s" % [str(preview.effect), relevance]
+	var card_position := position + Vector2(18, 18)
+	if card_position.x + placement_panel.size.x > PlanetSimulation.WORLD_OFFSET.x + PlanetSimulation.WORLD_SIZE.x:
+		card_position.x = position.x - placement_panel.size.x - 18.0
+	if card_position.y + placement_panel.size.y > PlanetSimulation.WORLD_OFFSET.y + PlanetSimulation.WORLD_SIZE.y:
+		card_position.y = position.y - placement_panel.size.y - 18.0
+	card_position.x = clamp(card_position.x, PlanetSimulation.WORLD_OFFSET.x + 8.0, PlanetSimulation.WORLD_OFFSET.x + PlanetSimulation.WORLD_SIZE.x - placement_panel.size.x - 8.0)
+	card_position.y = clamp(card_position.y, PlanetSimulation.WORLD_OFFSET.y + 8.0, PlanetSimulation.WORLD_OFFSET.y + PlanetSimulation.WORLD_SIZE.y - placement_panel.size.y - 8.0)
+	placement_panel.position = card_position
+	placement_panel.visible = true
+
+
+func _placement_relevance(cell_pos: Vector2i) -> String:
+	if field_study_index >= 0:
+		var study: Dictionary = FIELD_STUDIES[field_study_index]
+		if sim.selected_tool == int(study.tool):
+			if sim.hotspot_active and Vector2(cell_pos).distance_to(Vector2(sim.hotspot_cell)) <= 4.2:
+				return "GOLD HOTSPOT  •  Double field-study progress here."
+			return "FIELD STUDY  •  Counts once; the gold diamond counts twice."
+	var mission_move := false
+	match mission_stage:
+		0:
+			mission_move = sim.selected_tool == 0
+		1:
+			mission_move = sim.selected_tool == 0 or sim.selected_tool == 1 or sim.selected_tool == 2
+		2:
+			mission_move = sim.selected_tool == 3 or sim.selected_tool == 4
+		3:
+			mission_move = sim.selected_tool == 0
+		4:
+			mission_move = sim.selected_tool == 4
+	if mission_move:
+		return "MISSION MOVE  •  Directly supports the current objective."
+	return "ECOSYSTEM MOVE  •  Open Planet Pulse afterward to see the result."
 
 
 func _trigger_event(event_name: String) -> void:
@@ -529,6 +683,7 @@ func _trigger_event(event_name: String) -> void:
 		return
 	var result: Dictionary = sim.disaster(event_name)
 	if result.ok:
+		pulse_unread = true
 		_show_toast(result.message, Color("#ffca8c"), 2.2)
 	else:
 		_show_toast(result.message, Color("#ff9f91"), 1.6)
@@ -597,6 +752,7 @@ func _update_fun_systems() -> void:
 	if not started:
 		return
 	var s := sim.stats()
+	_update_pulse_trend(s)
 	score += int(clamp((float(s.stability) - 30.0) / 22.0, 0.0, 3.0))
 	_check_discoveries(s)
 	_update_crisis(s)
@@ -666,6 +822,120 @@ func _detect_crisis(s: Dictionary) -> String:
 	return ""
 
 
+func _update_pulse_trend(s: Dictionary) -> void:
+	if pulse_snapshot.is_empty():
+		pulse_snapshot = s.duplicate()
+		pulse_last_tick = sim.tick
+		return
+	if sim.tick - pulse_last_tick < 40:
+		return
+	pulse_trend = {
+		"stability": float(s.stability) - float(pulse_snapshot.stability),
+		"oxygen": float(s.oxygen) - float(pulse_snapshot.oxygen),
+		"population": int(s.population) - int(pulse_snapshot.population),
+		"biodiversity": float(s.biodiversity) - float(pulse_snapshot.biodiversity),
+		"microbes": int(s.microbes) - int(pulse_snapshot.microbes),
+	}
+	var meaningful: bool = abs(float(pulse_trend.stability)) >= 1.0 \
+		or abs(int(pulse_trend.population)) >= 3 \
+		or abs(float(pulse_trend.biodiversity)) >= 1.5 \
+		or abs(int(pulse_trend.microbes)) >= 18
+	if meaningful and not pulse_open:
+		pulse_unread = true
+	pulse_snapshot = s.duplicate()
+	pulse_last_tick = sim.tick
+
+
+func _update_planet_pulse(s: Dictionary) -> void:
+	if not pulse_button or not pulse_panel:
+		return
+	pulse_button.text = "PULSE • OPEN" if pulse_open else ("PULSE • NEW" if pulse_unread else "PULSE")
+	pulse_title.text = _pulse_headline(s)
+	var stability_delta := float(pulse_trend.get("stability", 0.0))
+	var population_delta := int(pulse_trend.get("population", 0))
+	var oxygen_delta := float(pulse_trend.get("oxygen", 0.0)) * 100.0
+	var diversity_delta := float(pulse_trend.get("biodiversity", 0.0))
+	var recent := ""
+	var event_count := 0
+	for i in range(sim.events.size() - 1, -1, -1):
+		var entry: Dictionary = sim.events[i]
+		var event_text := str(entry.get("type", "World changed"))
+		if event_text.begins_with("Tool: "):
+			event_text = "Placed " + event_text.trim_prefix("Tool: ")
+		recent += "Day %d  •  %s\n" % [int(entry.get("day", sim.day)), event_text]
+		event_count += 1
+		if event_count >= 3:
+			break
+	if recent == "":
+		recent = "Day %d  •  The expedition is beginning.\n" % sim.day
+	pulse_body.text = "[color=#8defff]SINCE THE LAST PULSE[/color]\n%s   %s\n%s   %s\n\n[color=#75d7c1]WHY[/color]\n[b]Strongest support[/b]  %s\n[b]Main pressure[/b]  %s\n\n[color=#ffe38a]WORLD CHRONICLE[/color]\n%s" % [
+		_pulse_delta("Stability", stability_delta, "", 1),
+		_pulse_delta("Population", float(population_delta), "", 0),
+		_pulse_delta("O₂", oxygen_delta, "%", 2),
+		_pulse_delta("Diversity", diversity_delta, "", 1),
+		_pulse_support(s),
+		_pulse_pressure(s),
+		recent,
+	]
+
+
+func _pulse_headline(s: Dictionary) -> String:
+	if current_crisis != "":
+		return "The world needs intervention"
+	var stability_delta := float(pulse_trend.get("stability", 0.0))
+	if stability_delta <= -2.0:
+		return "Stability is slipping"
+	if float(s.stability) >= 68.0 and stability_delta >= 0.0:
+		return "The food web is finding balance"
+	if int(s.microbes) < 180:
+		return "Life needs a stronger foundation"
+	if int(s.predators) == 0 and int(s.amoeboids) + int(s.grazers) >= 30:
+		return "The food web is missing hunters"
+	return "The young biosphere is taking shape"
+
+
+func _pulse_support(s: Dictionary) -> String:
+	var name := "microbial foundation"
+	var value := float(s.foundation_score)
+	if float(s.consumer_score) > value:
+		name = "drifter population"
+		value = float(s.consumer_score)
+	if float(s.grazer_score) > value:
+		name = "grazer layer"
+		value = float(s.grazer_score)
+	if float(s.predator_score) > value:
+		name = "predator balance"
+		value = float(s.predator_score)
+	if float(s.diversity_score) > value:
+		name = "biodiversity"
+		value = float(s.diversity_score)
+	return "%s (+%.1f stability)" % [name.capitalize(), value]
+
+
+func _pulse_pressure(s: Dictionary) -> String:
+	if float(s.climate_heat) >= 0.68:
+		return "Heat is stressing every layer"
+	if float(s.crowding_penalty) >= 1.0 and float(s.crowding_penalty) >= float(s.starvation_penalty):
+		return "Crowding costs −%.1f stability" % float(s.crowding_penalty)
+	if float(s.starvation_penalty) >= 1.0:
+		return "Food shortage costs −%.1f stability" % float(s.starvation_penalty)
+	if float(s.foundation_score) < 12.0:
+		return "Too little microbial habitat"
+	if int(s.predators) == 0 and int(s.amoeboids) + int(s.grazers) >= 30:
+		return "Consumers lack a hunter layer"
+	return "No major pressure detected"
+
+
+func _pulse_delta(label: String, value: float, suffix: String, digits: int) -> String:
+	var threshold := 0.005 if suffix == "%" else 0.05
+	if abs(value) < threshold:
+		return "[color=#8fafb7]%s steady[/color]" % label
+	var direction := "rising" if value > 0.0 else "falling"
+	var color := "#66ffc7" if value > 0.0 else "#ff9a83"
+	var formatted := (("%+.0f" % value) if digits == 0 else (("%+.2f" % value) if digits == 2 else ("%+.1f" % value))) + suffix
+	return "[color=%s]%s %s %s[/color]" % [color, label, direction, formatted]
+
+
 func _unlock_badge(badge: String) -> void:
 	if achievements.has(badge):
 		return
@@ -702,6 +972,8 @@ func _open_inspector(position: Vector2) -> void:
 			float(organism.age), float(organism.speed), float(organism.armor), float(organism.sensory),
 			float(organism.fertility), float(organism.camouflage),
 		]
+	if placement_panel:
+		placement_panel.visible = false
 	inspector_overlay.visible = true
 
 
@@ -728,6 +1000,7 @@ func _close_inspector() -> void:
 	else:
 		running = inspector_resume_running
 		play_button.text = "Pause" if running else "Play"
+	_update_placement_preview(pointer_position)
 
 
 func _finish_world(s: Dictionary) -> void:
@@ -842,8 +1115,10 @@ func _update_ui() -> void:
 		]
 	else:
 		field_label.text = "FIELD STUDY  •  launches with the expedition"
+	_update_planet_pulse(s)
 	_update_help_coach(s)
 	_update_tool_locks()
+	_update_placement_preview(pointer_position)
 	graph.queue_redraw()
 
 
@@ -851,11 +1126,38 @@ func _toggle_help() -> void:
 	if not help_panel:
 		return
 	help_open = not help_open
+	if help_open and pulse_open:
+		pulse_open = false
+		pulse_panel.visible = false
 	help_panel.visible = help_open
 	_update_help_coach(sim.stats())
 	if help_open:
 		coach_seen_key = coach_tip_key
 		help_button.text = "HELP • OPEN"
+	_update_planet_pulse(sim.stats())
+	_update_placement_preview(pointer_position)
+
+
+func _toggle_pulse() -> void:
+	if not pulse_panel:
+		return
+	pulse_open = not pulse_open
+	if pulse_open and help_open:
+		help_open = false
+		help_panel.visible = false
+		_update_help_coach(sim.stats())
+	pulse_panel.visible = pulse_open
+	if pulse_open:
+		pulse_unread = false
+	_update_planet_pulse(sim.stats())
+	_update_placement_preview(pointer_position)
+
+
+func _open_coach_from_pulse() -> void:
+	if pulse_open:
+		_toggle_pulse()
+	if not help_open:
+		_toggle_help()
 
 
 func _update_help_coach(s: Dictionary) -> void:

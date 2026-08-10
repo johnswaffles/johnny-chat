@@ -559,6 +559,13 @@ func stats() -> Dictionary:
 		"climate_heat": climate_heat,
 		"biodiversity": biodiversity,
 		"stability": stability,
+		"foundation_score": foundation_score,
+		"consumer_score": consumer_score,
+		"grazer_score": grazer_score,
+		"predator_score": predator_score,
+		"diversity_score": biodiversity * 0.27,
+		"crowding_penalty": crowding_penalty,
+		"starvation_penalty": starvation_penalty,
 		"population": organisms.size(),
 		"max_generation": max_generation,
 	}
@@ -603,11 +610,12 @@ func tool_at_screen(screen_pos: Vector2) -> Dictionary:
 	var local := screen_pos - WORLD_OFFSET
 	if local.x < 0.0 or local.y < 0.0 or local.x >= WORLD_SIZE.x or local.y >= WORLD_SIZE.y:
 		return {"ok": false, "message": "Move the brush inside the ocean"}
-	var cost: float = TOOL_COSTS[selected_tool]
-	if catalyst < cost:
-		return {"ok": false, "message": "Catalyst depleted — pause and let it recharge"}
 	var x := int(local.x / CELL)
 	var y := int(local.y / CELL)
+	var preview := placement_preview_at_cell(Vector2i(x, y))
+	if not bool(preview.valid):
+		return {"ok": false, "message": str(preview.effect)}
+	var cost: float = TOOL_COSTS[selected_tool]
 	catalyst -= cost
 	tool_uses[selected_tool] += 1
 	paint_cell(x, y, TOOLS[selected_tool], 2)
@@ -620,6 +628,152 @@ func tool_at_screen(screen_pos: Vector2) -> Dictionary:
 		"cell": Vector2i(x, y),
 		"world_pos": world_pos,
 	}
+
+
+func preview_at_screen(screen_pos: Vector2) -> Dictionary:
+	var local := screen_pos - WORLD_OFFSET
+	if local.x < 0.0 or local.y < 0.0 or local.x >= WORLD_SIZE.x or local.y >= WORLD_SIZE.y:
+		return {}
+	return placement_preview_at_cell(Vector2i(int(local.x / CELL), int(local.y / CELL)))
+
+
+func placement_preview_at_cell(cell_pos: Vector2i) -> Dictionary:
+	if cell_pos.x < 0 or cell_pos.y < 0 or cell_pos.x >= GRID_W or cell_pos.y >= GRID_H:
+		return {}
+	var target: Dictionary = cell(cell_pos.x, cell_pos.y)
+	var tool: String = TOOLS[selected_tool]
+	var cost: int = TOOL_COSTS[selected_tool]
+	var terrain: String = str(target.type).replace("_", " ").capitalize()
+	var preview: Dictionary = {
+		"valid": true,
+		"quality": "USEFUL",
+		"effect": "This intervention will reshape the selected area.",
+		"terrain": terrain,
+		"cost": cost,
+		"tool": selected_tool,
+		"cell": cell_pos,
+	}
+	if catalyst < cost:
+		preview.valid = false
+		preview.quality = "WAIT"
+		preview.effect = "Need %d Catalyst — let the simulation recharge." % cost
+		return preview
+
+	var local_microbes := _preview_average(cell_pos, "microbes", 2)
+	var local_nutrients := _preview_average(cell_pos, "nutrients", 2)
+	var world_pos := (Vector2(cell_pos) + Vector2(0.5, 0.5)) * CELL
+	var nearby_consumers := _preview_organism_count(world_pos, ["amoeboid", "grazer"], 86.0)
+	var nearby_life := _preview_organism_count(world_pos, ["amoeboid", "grazer", "predator"], 62.0)
+
+	match tool:
+		"Cyanobacteria":
+			if not _is_life_terrain(str(target.type)):
+				preview.valid = false
+				preview.quality = "NO EFFECT"
+				preview.effect = "Mats cannot root here — aim for green shallow, shelf, or tidal water."
+			elif local_microbes >= 0.72:
+				preview.quality = "LOW IMPACT"
+				preview.effect = "This mat is already dense; a new shallow patch will help more."
+			elif local_nutrients >= 0.62:
+				preview.quality = "IDEAL"
+				preview.effect = "Fertile shallows: strong food growth and rising oxygen."
+			else:
+				preview.effect = "Adds a new food-and-oxygen foundation to this habitat."
+		"Amoeboids":
+			if _is_blocking_terrain(str(target.type)) and not bool(target.vent):
+				preview.valid = false
+				preview.quality = "NO HABITAT"
+				preview.effect = "Drifters need open water — choose water beside bright-green mats."
+			elif local_microbes >= 0.24:
+				preview.quality = "IDEAL"
+				preview.effect = "Food is abundant here; four drifters should establish quickly."
+			elif local_microbes < 0.055:
+				preview.quality = "RISKY"
+				preview.effect = "Almost no food nearby; these drifters may starve."
+			else:
+				preview.effect = "Adds four drifters near a modest food supply."
+		"Grazers":
+			if _is_blocking_terrain(str(target.type)) and not bool(target.vent):
+				preview.valid = false
+				preview.quality = "NO HABITAT"
+				preview.effect = "Grazers need open water and nearby microbial food."
+			elif local_microbes >= 0.34:
+				preview.quality = "IDEAL"
+				preview.effect = "Rich feeding ground: two grazers can join the web safely."
+			elif local_microbes < 0.11:
+				preview.quality = "RISKY"
+				preview.effect = "Food is sparse; grazers could strip this patch bare."
+			else:
+				preview.effect = "Adds two grazers to a moderate feeding ground."
+		"Predatory Swimmers":
+			if _is_blocking_terrain(str(target.type)) and not bool(target.vent):
+				preview.valid = false
+				preview.quality = "NO HABITAT"
+				preview.effect = "Hunters need open water — move beside a consumer swarm."
+			elif nearby_consumers >= 5:
+				preview.quality = "IDEAL"
+				preview.effect = "Prey is concentrated here; one hunter can reduce crowding."
+			elif nearby_consumers == 0:
+				preview.quality = "RISKY"
+				preview.effect = "No prey detected nearby; this hunter may starve."
+			else:
+				preview.effect = "Some prey is nearby, but this is not the strongest hunting ground."
+		"Tidal Nutrients":
+			if _is_blocking_terrain(str(target.type)):
+				preview.valid = false
+				preview.quality = "NO EFFECT"
+				preview.effect = "Nutrients cannot convert solid rock — choose open water."
+			elif local_nutrients >= 1.12:
+				preview.quality = "LOW IMPACT"
+				preview.effect = "This water is already nutrient-rich; enrich a depleted zone instead."
+			elif local_microbes >= 0.1:
+				preview.quality = "IDEAL"
+				preview.effect = "Feeds an active mat and creates productive tidal habitat."
+			else:
+				preview.effect = "Creates a fertile tidal nursery for future mats."
+		"Volcanic Rock":
+			if local_microbes > 0.12 or nearby_life > 0:
+				preview.quality = "RISKY"
+				preview.effect = "Raises blocking rock here and will destroy nearby habitat."
+			else:
+				preview.effect = "Raises a volcanic barrier that reshapes currents and habitat."
+		"Hydrothermal Vent":
+			if local_microbes > 0.32 or nearby_life > 2:
+				preview.quality = "RISKY"
+				preview.effect = "Creates a rich vent, but replaces an already-living patch."
+			else:
+				preview.quality = "IDEAL"
+				preview.effect = "Creates a concentrated nutrient refuge and new niche."
+		"Eraser":
+			if local_microbes < 0.02 and nearby_life == 0 and str(target.type) == "shelf":
+				preview.valid = false
+				preview.quality = "NOTHING HERE"
+				preview.effect = "Nothing meaningful to clear in this area."
+			else:
+				preview.quality = "RISKY" if local_microbes > 0.1 or nearby_life > 0 else "USEFUL"
+				preview.effect = "Clears terrain, mats, and nearby organisms from this area."
+	return preview
+
+
+func _preview_average(center: Vector2i, property: String, radius: int) -> float:
+	var total := 0.0
+	var samples := 0
+	for y in range(center.y - radius, center.y + radius + 1):
+		for x in range(center.x - radius, center.x + radius + 1):
+			if x < 0 or y < 0 or x >= GRID_W or y >= GRID_H:
+				continue
+			total += float(cell(x, y).get(property, 0.0))
+			samples += 1
+	return total / max(1, samples)
+
+
+func _preview_organism_count(pos: Vector2, kinds: Array, radius: float) -> int:
+	var count := 0
+	var radius_squared := radius * radius
+	for organism in organisms:
+		if not organism.dead and kinds.has(str(organism.kind)) and pos.distance_squared_to(organism.pos) <= radius_squared:
+			count += 1
+	return count
 
 
 func set_hover_screen(screen_pos: Vector2) -> void:

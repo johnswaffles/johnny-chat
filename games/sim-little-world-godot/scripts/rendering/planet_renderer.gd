@@ -231,12 +231,28 @@ func _tool_effect_color(tool: int) -> Color:
 func _draw_brush_cursor(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 	if sim.hover_cell.x < 0:
 		return
+	var preview: Dictionary = sim.placement_preview_at_cell(sim.hover_cell)
+	if preview.is_empty():
+		return
+	var quality := str(preview.get("quality", "USEFUL"))
+	var color := Color("#66ffc7")
+	if not bool(preview.get("valid", true)):
+		color = Color("#ff6f68")
+	elif quality == "RISKY" or quality == "LOW IMPACT":
+		color = Color("#ffd36f")
 	var radius := 2
 	var top_left := Vector2(max(0, sim.hover_cell.x - radius), max(0, sim.hover_cell.y - radius))
 	var bottom_right := Vector2(min(PlanetSimulation.GRID_W, sim.hover_cell.x + radius + 1), min(PlanetSimulation.GRID_H, sim.hover_cell.y + radius + 1))
 	var rect := Rect2(PlanetSimulation.WORLD_OFFSET + top_left * PlanetSimulation.CELL, (bottom_right - top_left) * PlanetSimulation.CELL)
-	canvas.draw_rect(rect, Color(0.42, 1.0, 0.78, 0.05))
-	canvas.draw_rect(rect, Color(0.55, 1.0, 0.84, 0.7), false, 1.5)
+	var fill := color
+	fill.a = 0.07
+	var border := color
+	border.a = 0.92
+	canvas.draw_rect(rect, fill)
+	canvas.draw_rect(rect, border, false, 2.0)
+	var center := rect.get_center()
+	canvas.draw_line(center - Vector2(7, 0), center + Vector2(7, 0), border, 1.2)
+	canvas.draw_line(center - Vector2(0, 7), center + Vector2(0, 7), border, 1.2)
 
 
 func terrain_color(c: Dictionary, sim: PlanetSimulation) -> Color:
