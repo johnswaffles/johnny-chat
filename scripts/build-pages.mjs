@@ -3964,6 +3964,34 @@ async function patchGodotHtmlCacheBust() {
   }
 }
 
+async function patchGodotAudioFocus() {
+  const gameNames = new Map([
+    ["cozy-builder", "cozy-builder"],
+    ["cozy-builder-game", "cozy-builder"],
+    ["godot-playtest", "cozy-builder"],
+    ["glade", "glade"],
+    ["first-ember", "first-ember"],
+    ["sim", "sim"]
+  ]);
+  for (const targetDir of godotExportTargetDirs) {
+    const gameName = gameNames.get(path.basename(targetDir));
+    if (!gameName) continue;
+    const htmlPath = path.join(targetDir, "index.html");
+    let source;
+    try {
+      source = await readFile(htmlPath, "utf8");
+    } catch {
+      continue;
+    }
+    if (source.includes("data-johnny-audio-focus")) continue;
+    const marker = "</body>";
+    if (!source.includes(marker)) throw new Error("Could not add audio focus to " + htmlPath);
+    const snippet = "\n<script data-johnny-audio-focus src=\"/audio-focus.js?v=1\"></script>\n"
+      + "<script data-johnny-audio-focus-init>window.JohnnyAudioFocus?.claim(\"" + gameName + "\");</script>";
+    await writeFile(htmlPath, source.replace(marker, snippet + "\n" + marker), "utf8");
+  }
+}
+
 async function patchGladeLocalFileRedirect() {
   const targetDir = path.join(publicDir, "glade");
   const htmlPath = path.join(targetDir, "index.html");
@@ -4695,6 +4723,7 @@ async function main() {
   await syncGodotBuilds();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
+  await patchGodotAudioFocus();
   await patchGladeLocalFileRedirect();
   await patchSimLoadingScreen();
   await routeOversizedGodotAssetsForPages();

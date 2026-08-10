@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090d1a">
+  <title>Tetris — Johnny's Game Shelf</title>
+  <link rel="stylesheet" href="/tetris/tetris.css">
+</head>
+<body>
+  <div class="aurora aurora-one"></div>
+  <div class="aurora aurora-two"></div>
+  <header class="site-nav">
+    <a class="brand" href="/">justaskjohnny.com</a>
+    <nav class="nav-links" aria-label="Site">
+      <a href="/">Home</a>
+      <details class="games-menu">
+        <summary>Games</summary>
+        <div class="games-panel">
+          <div class="games-heading"><span>Johnny's arcade</span><strong>Pick a world</strong></div>
+          <a href="/cozy-builder-game/">Cozy Builder <small>Town-building game</small></a>
+          <a href="/glade/">Glade <small>Creative sandbox</small></a>
+          <a href="/first-ember/">First Ember <small>Playable adventure</small></a>
+          <a href="/sim/">Sim <small>Living world simulation</small></a>
+          <a class="current" href="/tetris/">Tetris <small>Classic block puzzle</small></a>
+        </div>
+      </details>
+    </nav>
+  </header>
+
+  <main class="game-shell">
+    <section class="game-intro">
+      <div>
+        <p class="eyebrow">A tiny arcade ritual</p>
+        <h1>Tetris<span>∞</span></h1>
+        <p class="lede">Stack clean. Think ahead. Keep the rhythm.</p>
+      </div>
+      <div class="game-status" aria-live="polite">
+        <span class="status-dot"></span>
+        <span id="status-text">Ready when you are</span>
+      </div>
+    </section>
+
+    <section class="arcade" aria-label="Tetris game">
+      <aside class="side-panel left-panel">
+        <div class="stat-card score-card">
+          <span class="panel-label">Score</span>
+          <strong id="score">0</strong>
+          <div class="level-row"><span>Level <b id="level">1</b></span><span><b id="lines">0</b> lines</span></div>
+        </div>
+        <div class="mini-card">
+          <span class="panel-label">Next up</span>
+          <canvas id="next-canvas" width="120" height="120" aria-label="Next piece"></canvas>
+        </div>
+        <div class="mini-card">
+          <span class="panel-label">Hold</span>
+          <canvas id="hold-canvas" width="120" height="120" aria-label="Held piece"></canvas>
+          <button id="hold-button" class="mini-action" type="button">Hold <kbd>C</kbd></button>
+        </div>
+      </aside>
+
+      <div class="board-wrap">
+        <div class="board-glow"></div>
+        <canvas id="board" width="300" height="600" tabindex="0" aria-label="Tetris board"></canvas>
+        <div id="board-overlay" class="board-overlay">
+          <p class="overlay-kicker">TETRIS</p>
+          <h2 id="overlay-title">Ready?</h2>
+          <p id="overlay-copy">Press start, then use the arrow keys or the controls below.</p>
+          <button id="start-button" class="primary-button" type="button">Start game</button>
+        </div>
+      </div>
+
+      <aside class="side-panel right-panel">
+        <div class="mini-card music-card">
+          <div class="music-heading"><span class="panel-label">Soundtrack</span><span class="equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div>
+          <p>Johnny's cozy theme</p>
+          <button id="music-button" class="music-button" type="button" aria-pressed="true">Music: off</button>
+        </div>
+        <div class="mini-card controls-card">
+          <span class="panel-label">Controls</span>
+          <div class="control-row"><kbd>←</kbd><kbd>→</kbd><span>Move</span></div>
+          <div class="control-row"><kbd>↑</kbd><span>Rotate</span></div>
+          <div class="control-row"><kbd>↓</kbd><span>Soft drop</span></div>
+          <div class="control-row"><kbd>Space</kbd><span>Hard drop</span></div>
+          <div class="control-row"><kbd>P</kbd><span>Pause</span></div>
+        </div>
+        <button id="pause-button" class="secondary-button" type="button">Pause game</button>
+      </aside>
+    </section>
+
+    <section class="touch-controls" aria-label="Touch controls">
+      <button data-action="left" type="button" aria-label="Move left">←</button>
+      <button data-action="rotate" type="button" aria-label="Rotate">↻</button>
+      <button data-action="right" type="button" aria-label="Move right">→</button>
+      <button data-action="down" type="button" aria-label="Soft drop">↓</button>
+      <button data-action="drop" type="button" aria-label="Hard drop">Drop</button>
+    </section>
+    <p class="tip">7-piece bag • ghost piece • hold queue • local high score</p>
+  </main>
+
+  <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
+  <script src="/audio-focus.js?v=1"></script>
+  <script src="/tetris/tetris.js"></script>
+</body>
+</html>

@@ -759,11 +759,23 @@
             <a class="johnny-app-link" href="/nova-chat/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">◇</span><span class="johnny-app-copy"><strong>Nova Chat</strong><small>Realtime experiment</small></span><span class="johnny-app-arrow">↗</span></a>
             <a class="johnny-app-link" href="/morrow/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">◌</span><span class="johnny-app-copy"><strong>Morrow</strong><small>Private second brain</small></span><span class="johnny-app-arrow">↗</span></a>
             <a class="johnny-app-link" href="/clockwise/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">◷</span><span class="johnny-app-copy"><strong>Clockwise</strong><small>Time workspace</small></span><span class="johnny-app-arrow">↗</span></a>
-            <a class="johnny-app-link" href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">⌂</span><span class="johnny-app-copy"><strong>Cozy Builder</strong><small>Town-building game</small></span><span class="johnny-app-arrow">↗</span></a>
-            <a class="johnny-app-link" href="/glade/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">♧</span><span class="johnny-app-copy"><strong>Glade</strong><small>Creative sandbox</small></span><span class="johnny-app-arrow">↗</span></a>
-            <a class="johnny-app-link" href="/first-ember/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">◆</span><span class="johnny-app-copy"><strong>First Ember</strong><small>Playable adventure</small></span><span class="johnny-app-arrow">↗</span></a>
-            <a class="johnny-app-link" href="/sim/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">◎</span><span class="johnny-app-copy"><strong>Sim</strong><small>Living world simulation</small></span><span class="johnny-app-arrow">↗</span></a>
             <a class="johnny-app-link" href="/contact/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">↗</span><span class="johnny-app-copy"><strong>Contact</strong><small>Get in touch</small></span><span class="johnny-app-arrow">↗</span></a>
+          </div>
+        </div>
+      </details>
+      <details class="johnny-apps-menu johnny-games-menu">
+        <summary class="johnny-site-link johnny-apps-trigger">Games</summary>
+        <div class="johnny-apps-panel">
+          <div class="johnny-apps-heading">
+            <div><span>Johnny's arcade</span><strong>Pick a world</strong></div>
+            <small>Opens in a new tab</small>
+          </div>
+          <div class="johnny-apps-grid">
+            <a class="johnny-app-link" data-game-launch href="/cozy-builder-game/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">⌂</span><span class="johnny-app-copy"><strong>Cozy Builder</strong><small>Town-building game</small></span><span class="johnny-app-arrow">↗</span></a>
+            <a class="johnny-app-link" data-game-launch href="/glade/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">♧</span><span class="johnny-app-copy"><strong>Glade</strong><small>Creative sandbox</small></span><span class="johnny-app-arrow">↗</span></a>
+            <a class="johnny-app-link" data-game-launch href="/first-ember/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">◆</span><span class="johnny-app-copy"><strong>First Ember</strong><small>Playable adventure</small></span><span class="johnny-app-arrow">↗</span></a>
+            <a class="johnny-app-link" data-game-launch href="/sim/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">◎</span><span class="johnny-app-copy"><strong>Sim</strong><small>Living world simulation</small></span><span class="johnny-app-arrow">↗</span></a>
+            <a class="johnny-app-link" data-game-launch href="/tetris/" target="_blank" rel="noopener noreferrer"><span class="johnny-app-icon">▦</span><span class="johnny-app-copy"><strong>Tetris</strong><small>Classic block puzzle</small></span><span class="johnny-app-arrow">↗</span></a>
           </div>
         </div>
       </details>
@@ -822,7 +834,7 @@
     </section>
     <footer><span>© 2026 Johnny</span><span>Built from curiosity in Illinois.</span></footer>
   </main>
-  <audio id="home-music" src="/home/cozy-builder-theme.mp3" autoplay loop preload="auto"></audio>
+  <audio id="home-music" data-johnny-music src="/home/cozy-builder-theme.mp3" autoplay loop preload="auto"></audio>
   <button class="music-control" id="music-control" type="button" data-playing="false" aria-label="Toggle background music">Music: starting</button>
   <script>
     window.JOHNNY_CHAT_API_BASE_URL = "https://johnny-chat.onrender.com";
@@ -830,6 +842,7 @@
     window.JOHNNY_WIDGET_START_MINIMIZED = true;
   </script>
   <script src="/voice-widget.js?v=home-guide-2" data-profile="home"></script>
+  <script src="/audio-focus.js?v=1"></script>
   <script>
     const hero = document.querySelector('.hero');
     hero?.addEventListener('pointermove', (event) => {
@@ -856,15 +869,17 @@
       link.rel = 'noopener noreferrer';
     });
 
-    const appsMenu = document.querySelector('.johnny-apps-menu');
+    const menus = [...document.querySelectorAll('.johnny-apps-menu')];
     document.addEventListener('click', (event) => {
-      if (appsMenu?.open && !appsMenu.contains(event.target)) appsMenu.removeAttribute('open');
+      menus.forEach((menu) => {
+        if (menu.open && !menu.contains(event.target)) menu.removeAttribute('open');
+      });
     });
-    appsMenu?.addEventListener('keydown', (event) => {
+    menus.forEach((menu) => menu.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
-      appsMenu.removeAttribute('open');
-      appsMenu.querySelector('summary')?.focus();
-    });
+      menu.removeAttribute('open');
+      menu.querySelector('summary')?.focus();
+    }));
 
     const homeMusic = document.getElementById('home-music');
     const musicControl = document.getElementById('music-control');
