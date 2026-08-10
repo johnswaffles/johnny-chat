@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090d1a">
   <title>Tetris — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/tetris/tetris.css?v=a7259c2">
+  <link rel="stylesheet" href="/tetris/tetris.css?v=classic-ui-1">
 </head>
 <body>
   <div class="aurora aurora-one"></div>
@@ -48,6 +48,8 @@
           <strong id="score">0</strong>
           <div class="level-row"><span>Level <b id="level">1</b></span><span><b id="lines">0</b> lines</span></div>
           <div class="streak-row"><span id="combo">Combo —</span><b id="back-to-back"></b></div>
+          <div class="level-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><span id="level-progress-bar"></span></div>
+          <span id="level-progress-copy" class="level-progress-copy">0/10 to level 2</span>
         </div>
         <div class="mini-card">
           <span class="panel-label">Next pieces</span>
@@ -67,6 +69,7 @@
       <div class="board-wrap">
         <div class="board-glow"></div>
         <canvas id="board" width="300" height="600" tabindex="0" aria-label="Tetris board"></canvas>
+        <div id="line-clear-badge" class="line-clear-badge" aria-live="polite" aria-atomic="true"></div>
         <div id="board-overlay" class="board-overlay">
           <p class="overlay-kicker">TETRIS</p>
           <h2 id="overlay-title">Ready?</h2>
@@ -105,6 +108,6 @@
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=a7259c2"></script>
+  <script src="/tetris/tetris.js?v=classic-ui-1"></script>
 </body>
 </html>

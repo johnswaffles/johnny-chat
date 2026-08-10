@@ -29,6 +29,8 @@
   const LOCK_DELAY = 500;
   const MAX_LOCK_RESETS = 15;
   const CLEAR_ANIMATION = 220;
+  const CLEAR_FEEDBACK_DURATION = 620;
+  const IMPACT_FEEDBACK_DURATION = 150;
   const DAS_DELAY = 140;
   const ARR_INTERVAL = 45;
   const JLSTZ_KICKS = {
@@ -61,6 +63,9 @@
   const levelElement = document.getElementById("level");
   const comboElement = document.getElementById("combo");
   const backToBackElement = document.getElementById("back-to-back");
+  const levelProgressBar = document.getElementById("level-progress-bar");
+  const levelProgressCopy = document.getElementById("level-progress-copy");
+  const levelProgressElement = document.querySelector(".level-progress");
   const statusText = document.getElementById("status-text");
   const statusElement = document.querySelector(".game-status");
   const overlay = document.getElementById("board-overlay");
@@ -69,6 +74,7 @@
   const startButton = document.getElementById("start-button");
   const pauseButton = document.getElementById("pause-button");
   const holdButton = document.getElementById("hold-button");
+  const lineClearBadge = document.getElementById("line-clear-badge");
   const music = document.getElementById("game-music");
   const musicButton = document.getElementById("music-button");
 
@@ -92,6 +98,10 @@
   let lockResets = 0;
   let pendingClear = null;
   let pendingClearTimer = 0;
+  let lineClearFx = null;
+  let impactFlashTimer = 0;
+  let impactCells = [];
+  let effectParticles = [];
   let musicEnabled = true;
   let audioContext = null;
   let highScore = Number(localStorage.getItem("johnny-tetris-high-score") || 0);
@@ -171,6 +181,59 @@
     } catch (error) {
       // Sound effects are a nice-to-have; browsers can block Web Audio until a gesture.
     }
+  };
+
+  const lineClearLabel = (cleared) => ["", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS!"][cleared] || "LINE CLEAR";
+
+  const beginLineClearFeedback = (cleared, rows) => {
+    lineClearFx = { timer: CLEAR_FEEDBACK_DURATION, total: CLEAR_FEEDBACK_DURATION };
+    lineClearBadge.textContent = lineClearLabel(cleared);
+    lineClearBadge.dataset.visible = "true";
+    rows.forEach((row) => {
+      for (let x = 0; x < COLS; x += 1) {
+        const color = COLORS[board[row][x]] || "#ffffff";
+        for (let index = 0; index < 2; index += 1) {
+          effectParticles.push({
+            x: (x + .5) * CELL,
+            y: (row + .5) * CELL,
+            vx: (Math.random() - .5) * .18,
+            vy: -.16 - Math.random() * .12,
+            size: 2 + Math.random() * 3,
+            color,
+            life: 320 + Math.random() * 180,
+            maxLife: 500
+          });
+        }
+      }
+    });
+  };
+
+  const beginLockFeedback = (piece) => {
+    impactFlashTimer = IMPACT_FEEDBACK_DURATION;
+    impactCells = [];
+    for (let y = 0; y < piece.matrix.length; y += 1) {
+      for (let x = 0; x < piece.matrix[y].length; x += 1) {
+        if (piece.matrix[y][x] && piece.y + y >= 0) impactCells.push({ x: piece.x + x, y: piece.y + y });
+      }
+    }
+  };
+
+  const advanceEffects = (elapsed) => {
+    if (lineClearFx) {
+      lineClearFx.timer -= elapsed;
+      if (lineClearFx.timer <= 0) {
+        lineClearFx = null;
+        lineClearBadge.dataset.visible = "false";
+      }
+    }
+    impactFlashTimer = Math.max(0, impactFlashTimer - elapsed);
+    effectParticles = effectParticles.filter((particle) => {
+      particle.life -= elapsed;
+      particle.x += particle.vx * elapsed;
+      particle.y += particle.vy * elapsed;
+      particle.vy += .00045 * elapsed;
+      return particle.life > 0;
+    });
   };
 
   const isGrounded = () => current && collides(current, 0, 1);
@@ -288,7 +351,10 @@
     if (perfectClear && cleared) statusText.textContent = "Perfect clear!";
     if (combo > 0 && cleared) statusText.textContent += "  Combo x" + (combo + 1);
     updateStats();
-    if (cleared) playTone(tSpin ? 620 : cleared === 4 ? 720 : 520, .16, "triangle", .035);
+    if (cleared) {
+      playTone(tSpin ? 620 : cleared === 4 ? 720 : 520, .16, "triangle", .035);
+      if (cleared > 1) window.setTimeout(() => playTone(cleared === 4 ? 940 : 760, .12, "sine", .024), 70);
+    }
     if (perfectClear && cleared) playTone(880, .22, "sine", .03);
   };
 
@@ -311,6 +377,8 @@
   const lockPiece = () => {
     if (!current || pendingClear) return;
     const tSpin = detectTSpin();
+    beginLockFeedback(current);
+    playTone(120, .045, "square", .01);
     for (let y = 0; y < current.matrix.length; y += 1) {
       for (let x = 0; x < current.matrix[y].length; x += 1) {
         if (!current.matrix[y][x]) continue;
@@ -331,6 +399,7 @@
     if (rows.length) {
       pendingClear = { rows, tSpin };
       pendingClearTimer = CLEAR_ANIMATION;
+      beginLineClearFeedback(rows.length, rows);
     } else {
       applyScore(0, tSpin, false);
       spawnNext();
@@ -384,6 +453,12 @@
     lockResets = 0;
     pendingClear = null;
     pendingClearTimer = 0;
+    lineClearFx = null;
+    impactFlashTimer = 0;
+    impactCells = [];
+    effectParticles = [];
+    lineClearBadge.dataset.visible = "false";
+    lineClearBadge.textContent = "";
     gameOver = false;
     paused = false;
     fillQueue();
@@ -453,6 +528,10 @@
     levelElement.textContent = String(level);
     if (comboElement) comboElement.textContent = combo >= 0 ? "Combo x" + (combo + 1) : "Combo —";
     if (backToBackElement) backToBackElement.textContent = backToBack ? "B2B" : "";
+    const levelLines = lines % 10;
+    if (levelProgressBar) levelProgressBar.style.width = (levelLines * 10) + "%";
+    if (levelProgressCopy) levelProgressCopy.textContent = levelLines + "/10 to level " + (level + 1);
+    if (levelProgressElement) levelProgressElement.setAttribute("aria-valuenow", String(levelLines));
   };
 
   const drawCell = (context, x, y, color, alpha = 1, size = CELL, offsetX = 0, offsetY = 0) => {
@@ -460,13 +539,35 @@
     context.globalAlpha = alpha;
     const left = offsetX + x * size;
     const top = offsetY + y * size;
+    const inset = Math.max(1, size * .055);
     const gradient = context.createLinearGradient(left, top, left + size, top + size);
     gradient.addColorStop(0, color);
-    gradient.addColorStop(1, "#ffffff22");
+    gradient.addColorStop(.55, color);
+    gradient.addColorStop(1, "#ffffff38");
     context.fillStyle = gradient;
-    context.fillRect(left + 1, top + 1, size - 2, size - 2);
-    context.fillStyle = "#ffffff55";
-    context.fillRect(left + 4, top + 3, size - 8, 2);
+    context.fillRect(left + inset, top + inset, size - inset * 2, size - inset * 2);
+    context.fillStyle = "#ffffff66";
+    context.fillRect(left + inset + Math.max(2, size * .1), top + inset + Math.max(1, size * .08), size - inset * 2 - Math.max(4, size * .2), Math.max(1, size * .07));
+    context.fillStyle = "#00000030";
+    context.fillRect(left + inset + Math.max(2, size * .1), top + size - inset - Math.max(3, size * .14), size - inset * 2 - Math.max(4, size * .2), Math.max(1, size * .07));
+    context.strokeStyle = "#06101f55";
+    context.lineWidth = Math.max(1, size * .045);
+    context.strokeRect(left + inset + .5, top + inset + .5, size - inset * 2 - 1, size - inset * 2 - 1);
+    context.restore();
+  };
+
+  const drawGhostPiece = (context, piece) => {
+    if (!piece) return;
+    context.save();
+    context.globalAlpha = .38;
+    context.strokeStyle = COLORS[piece.type];
+    context.lineWidth = 2;
+    for (let y = 0; y < piece.matrix.length; y += 1) {
+      for (let x = 0; x < piece.matrix[y].length; x += 1) {
+        if (!piece.matrix[y][x] || piece.y + y < 0) continue;
+        context.strokeRect(piece.x * CELL + x * CELL + 5, piece.y * CELL + y * CELL + 5, CELL - 10, CELL - 10);
+      }
+    }
     context.restore();
   };
 
@@ -481,8 +582,14 @@
 
   const draw = () => {
     boardContext.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
-    boardContext.fillStyle = "#080d1d";
+    const boardGradient = boardContext.createLinearGradient(0, 0, 0, boardCanvas.height);
+    boardGradient.addColorStop(0, "#0c1429");
+    boardGradient.addColorStop(.55, "#080d1d");
+    boardGradient.addColorStop(1, "#060a16");
+    boardContext.fillStyle = boardGradient;
     boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+    boardContext.fillStyle = "rgba(105,231,255,.018)";
+    for (let y = 0; y < ROWS; y += 2) boardContext.fillRect(0, y * CELL, boardCanvas.width, CELL);
     boardContext.strokeStyle = "rgba(157, 180, 255, .08)";
     boardContext.lineWidth = 1;
     for (let x = 0; x <= COLS; x += 1) {
@@ -497,6 +604,11 @@
       boardContext.lineTo(COLS * CELL, y * CELL + .5);
       boardContext.stroke();
     }
+    const vignette = boardContext.createRadialGradient(boardCanvas.width / 2, boardCanvas.height * .4, 80, boardCanvas.width / 2, boardCanvas.height / 2, boardCanvas.height * .72);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(1, "rgba(0,0,0,.28)");
+    boardContext.fillStyle = vignette;
+    boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
     for (let y = 0; y < ROWS; y += 1) {
       for (let x = 0; x < COLS; x += 1) {
         if (board[y][x]) drawCell(boardContext, x, y, COLORS[board[y][x]]);
@@ -507,10 +619,25 @@
       boardContext.fillStyle = "rgba(255,255,255," + pulse.toFixed(3) + ")";
       pendingClear.rows.forEach((row) => boardContext.fillRect(0, row * CELL, COLS * CELL, CELL));
     }
+    if (impactFlashTimer > 0) {
+      boardContext.save();
+      boardContext.globalAlpha = impactFlashTimer / IMPACT_FEEDBACK_DURATION;
+      boardContext.strokeStyle = "rgba(255,255,255,.8)";
+      boardContext.lineWidth = 2;
+      impactCells.forEach(({ x, y }) => boardContext.strokeRect(x * CELL + 3, y * CELL + 3, CELL - 6, CELL - 6));
+      boardContext.restore();
+    }
+    effectParticles.forEach((particle) => {
+      boardContext.save();
+      boardContext.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+      boardContext.fillStyle = particle.color;
+      boardContext.fillRect(particle.x, particle.y, particle.size, particle.size);
+      boardContext.restore();
+    });
     if (current && running && !gameOver && !pendingClear) {
       const ghost = { ...current, matrix: cloneMatrix(current.matrix) };
       while (!collides(ghost, 0, 1)) ghost.y += 1;
-      drawPiece(boardContext, ghost, .17);
+      drawGhostPiece(boardContext, ghost);
       drawPiece(boardContext, current);
     }
   };
@@ -577,6 +704,7 @@
     if (!lastFrame) lastFrame = timestamp;
     const elapsed = Math.min(100, timestamp - lastFrame);
     lastFrame = timestamp;
+    if (!paused) advanceEffects(elapsed);
     if (running && !paused && !gameOver) {
       if (pendingClear) {
         pendingClearTimer -= elapsed;

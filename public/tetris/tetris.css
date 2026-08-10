@@ -207,6 +207,9 @@ body::before {
 .level-row b { color: var(--yellow); font-weight: 500; }
 .streak-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 11px; color: var(--muted); font: 500 9px/1 var(--mono); }
 .streak-row b { color: var(--pink); font-weight: 500; letter-spacing: .08em; }
+.level-progress { height: 4px; margin-top: 14px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.08); }
+.level-progress span { display: block; width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--violet)); box-shadow: 0 0 12px rgba(105,231,255,.5); transition: width .28s ease; }
+.level-progress-copy { display: block; margin-top: 6px; color: rgba(140,150,182,.8); font: 500 8px/1 var(--mono); text-align: right; }
 .mini-card canvas { display: block; width: 120px; height: 120px; margin: 12px auto 0; }
 .next-stack { display: grid; gap: 4px; margin-top: 12px; padding: 5px 0; border-radius: 9px; background: rgba(255,255,255,.018); }
 .next-stack canvas { width: 120px; height: 58px; margin: 0 auto; }
@@ -263,6 +266,9 @@ kbd {
   background: #080d1d;
   box-shadow: 0 0 0 9px rgba(105, 231, 255, .025), 0 0 80px rgba(105, 231, 255, .11);
 }
+.line-clear-badge { position: absolute; top: 43%; left: 50%; z-index: 3; min-width: 150px; padding: 10px 14px; border: 1px solid rgba(255,255,255,.34); border-radius: 999px; color: #07101d; background: linear-gradient(135deg, #fff8c8, #69e7ff); box-shadow: 0 0 34px rgba(105,231,255,.45); font: 800 13px/1 var(--font); letter-spacing: .18em; opacity: 0; pointer-events: none; text-align: center; transform: translate(-50%, 12px) scale(.8); }
+.line-clear-badge[data-visible="true"] { animation: line-clear-pop .62s cubic-bezier(.2,.8,.25,1) both; }
+@keyframes line-clear-pop { 0% { opacity: 0; transform: translate(-50%, 12px) scale(.72); } 25% { opacity: 1; transform: translate(-50%, 0) scale(1.08); } 65% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -12px) scale(.96); } }
 .board-glow { position: absolute; inset: 12% -30%; z-index: -1; background: linear-gradient(180deg, rgba(105, 231, 255, .08), transparent 60%); filter: blur(35px); pointer-events: none; }
 #board { display: block; width: 300px; height: 600px; border-radius: 11px; outline: none; }
 .board-overlay {
@@ -321,6 +327,11 @@ kbd {
   .mini-card canvas { width: 92px; height: 92px; }
   .next-stack canvas { width: 92px; height: 44px; }
   .touch-controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin: 14px auto 0; }
-  .touch-controls button { min-height: 42px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: rgba(15, 20, 37, .84); font: 700 16px/1 var(--font); }
+.touch-controls button { min-height: 42px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: rgba(15, 20, 37, .84); font: 700 16px/1 var(--font); }
   .touch-controls button:last-child { font-size: 11px; color: var(--cyan); }
+}
+button:active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) {
+  .line-clear-badge[data-visible="true"] { animation: none; opacity: 1; transform: translate(-50%, 0) scale(1); }
+  .level-progress span { transition: none; }
 }
