@@ -32,7 +32,9 @@ button, a, summary { -webkit-tap-highlight-color:transparent; }
 .game-heading h1 { text-shadow:0 10px 38px rgba(101,226,166,.1); }
 .area-pill i { animation:area-breathe 2.8s ease-in-out infinite; }
 .game-frame { border-color:var(--line-strong); background:linear-gradient(145deg,rgba(20,48,39,.76),rgba(5,15,14,.88)); box-shadow:0 34px 110px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.08); }
+.game-frame { align-items:start; }
 .canvas-wrap { border-color:rgba(167,240,192,.28); background:radial-gradient(circle at 50% 30%,rgba(66,132,102,.13),transparent 58%),#0a1c17; box-shadow:0 0 0 8px rgba(167,240,192,.035),0 0 80px rgba(92,211,150,.13),inset 0 1px rgba(255,255,255,.08); }
+.canvas-wrap { align-self:start; }
 .canvas-wrap::after { box-shadow:inset 0 0 100px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.06); }
 .hud-card { border-color:rgba(192,231,204,.2); background:linear-gradient(145deg,rgba(8,24,21,.78),rgba(6,16,15,.72)); box-shadow:0 12px 30px rgba(0,0,0,.12),inset 0 1px rgba(255,255,255,.04); transition:border-color .2s ease,transform .2s ease,background .2s ease; }
 .hud-card:hover { border-color:rgba(167,240,192,.3); background:linear-gradient(145deg,rgba(12,32,27,.84),rgba(6,17,15,.76)); transform:translateY(-1px); }

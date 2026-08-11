@@ -285,7 +285,9 @@
 
   const startArea = (area, announce = true) => {
     state.area = area;
-    state.spawnGrace = area === "overworld" ? 3.2 : 0;
+    // Give the player a calm read of each outdoor arrival before enemies wake up.
+    // This keeps the opening and post-dungeon return readable without changing combat rules.
+    state.spawnGrace = area === "overworld" ? 5 : 0;
     if (area === "dungeon") {
       state.roomTransition = .72;
       state.roomTransitionLabel = dungeonRoomName();
@@ -1065,9 +1067,10 @@
   document.getElementById("victory-close").addEventListener("click", () => { state.mode = "playing"; hideScreens(); canvas.focus(); updateHud(); });
   document.getElementById("reset-save").addEventListener("click", () => { if (window.confirm("Erase your Mosswake save?")) resetProgress(); });
   ui.dialogueSpeed.addEventListener("click", () => { const speeds = [36, 52, 110]; const current = speeds.indexOf(state.dialogueSpeed); state.dialogueSpeed = speeds[(current + 1 + speeds.length) % speeds.length]; updateDialogueSpeedLabel(); saveData(); });
-  window.addEventListener("keydown", (event) => { const key = event.key.toLowerCase(); if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","j","k","e","l","p","enter"," "].includes(key)) event.preventDefault(); if (!keys.has(key)) justPressed.add(key); keys.add(key); if (key === "e" || key === "enter") interact(); if (key === "l") useRootlight(); if (key === "p") { if (state.mode === "playing") { state.mode = "paused"; ui.pause.classList.remove("hidden"); } else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); } updateHud(); } });
+  window.addEventListener("keydown", (event) => { const key = event.key.toLowerCase(); if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","j","k","e","l","p","escape","enter"," "].includes(key)) event.preventDefault(); if (!keys.has(key)) justPressed.add(key); keys.add(key); if (key === "e" || key === "enter") interact(); if (key === "l") useRootlight(); if (key === "p" || key === "escape") { if (state.mode === "playing") { state.mode = "paused"; ui.pause.classList.remove("hidden"); } else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); canvas.focus(); } updateHud(); } });
   window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur", () => { keys.clear(); if (state.mode === "playing") { state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) { keys.clear(); if (state.mode === "playing") { state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } } });
 
   const frame = (timestamp) => { const dt = Math.min(.05, (timestamp - lastFrame) / 1000 || 0); lastFrame = timestamp; update(dt); draw(timestamp / 1000); window.requestAnimationFrame(frame); };
   updateDialogueSpeedLabel(); updateHud(); if (!hasSave()) document.getElementById("continue-game").disabled = true; else document.getElementById("continue-game").disabled = false; window.requestAnimationFrame(frame);
