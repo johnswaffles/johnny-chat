@@ -86,3 +86,10 @@ button, a, summary { -webkit-tap-highlight-color:transparent; }
 @keyframes toast-settle { from { opacity:0; transform:translate(-50%,-8px) scale(.97); } to { opacity:1; transform:translate(-50%,0) scale(1); } }
 @keyframes health-pop { 0% { transform:scale(.92); } 58% { transform:scale(1.08); } 100% { transform:scale(1); } }
 @media (prefers-reduced-motion:reduce) { .area-pill i,.heart:not(.empty),.hearts.health-pop .heart { animation:none; } .hud-card,.primary-button,.secondary-button,.quiet-button,.dialogue-speed,.toast { transition:none; } .toast.visible { animation:none; } }
+
+/* Final visual pass: a restrained glass edge and a warmer focus on the playable scene. */
+.canvas-wrap::before { position:absolute; inset:0; z-index:1; border-radius:18px; content:""; background:linear-gradient(180deg,rgba(211,250,209,.08),transparent 18%,transparent 76%,rgba(4,13,11,.12)); pointer-events:none; }
+.screen-card::after { position:absolute; width:300px; height:300px; top:8%; left:50%; border:1px solid rgba(255,215,123,.06); border-radius:50%; content:""; transform:translateX(-50%) rotate(-18deg); box-shadow:0 0 80px rgba(142,242,207,.05); pointer-events:none; }
+.game-heading h1 span { text-shadow:0 0 24px rgba(255,215,123,.42); }
+.area-pill { padding:8px 11px; border:1px solid rgba(167,240,192,.14); border-radius:999px; background:rgba(7,20,17,.35); }
+@media (prefers-reduced-motion:reduce) { .screen-card::after { display:none; } }
