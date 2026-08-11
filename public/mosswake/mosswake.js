@@ -30,8 +30,30 @@
       if (!AudioCtor) return;
       audioContext = audioContext || new AudioCtor();
       if (audioContext.state === "suspended") audioContext.resume();
-      const now = audioContext.currentTime; const notes = kind === "relic" ? [392, 523.25, 783.99] : kind === "cache" ? [261.63, 392, 659.25] : kind === "boss-enter" ? [98, 130.81, 196, 146.83] : kind === "phase" ? [130.81, 196, 293.66, 440] : kind === "defeat" ? [392, 523.25, 659.25, 783.99] : [220, 329.63, 493.88];
-      notes.forEach((frequency, index) => { const oscillator = audioContext.createOscillator(); const gain = audioContext.createGain(); oscillator.type = kind === "pulse" || kind === "phase" ? "sine" : "triangle"; oscillator.frequency.setValueAtTime(frequency, now + index * .07); gain.gain.setValueAtTime(.0001, now + index * .07); gain.gain.exponentialRampToValueAtTime(kind === "relic" || kind === "defeat" ? .07 : .045, now + index * .07 + .015); gain.gain.exponentialRampToValueAtTime(.0001, now + index * .07 + .24); oscillator.connect(gain).connect(audioContext.destination); oscillator.start(now + index * .07); oscillator.stop(now + index * .07 + .26); });
+      const recipes = {
+        attack: { notes: [180, 265], step: .025, length: .12, gain: .026, type: "triangle" },
+        dash: { notes: [220, 330], step: .018, length: .13, gain: .024, type: "sine" },
+        hit: { notes: [310, 440], step: .025, length: .16, gain: .04, type: "triangle" },
+        kill: { notes: [392, 523.25], step: .045, length: .22, gain: .045, type: "triangle" },
+        hurt: { notes: [116, 82], step: .035, length: .2, gain: .05, type: "sawtooth" },
+        pickup: { notes: [523.25, 783.99], step: .06, length: .24, gain: .045, type: "sine" },
+        chest: { notes: [261.63, 392, 659.25], step: .055, length: .3, gain: .05, type: "triangle" },
+        door: { notes: [146.83, 220], step: .08, length: .34, gain: .038, type: "sine" },
+        dialogue: { notes: [392], step: 0, length: .1, gain: .018, type: "sine" },
+        relic: { notes: [392, 523.25, 783.99], step: .07, length: .26, gain: .07, type: "triangle" },
+        cache: { notes: [261.63, 392, 659.25], step: .07, length: .26, gain: .055, type: "triangle" },
+        "boss-enter": { notes: [98, 130.81, 196, 146.83], step: .09, length: .38, gain: .06, type: "sine" },
+        phase: { notes: [130.81, 196, 293.66, 440], step: .07, length: .3, gain: .055, type: "sine" },
+        defeat: { notes: [196, 261.63, 329.63], step: .09, length: .4, gain: .055, type: "sine" },
+        victory: { notes: [392, 523.25, 659.25, 783.99], step: .08, length: .42, gain: .065, type: "sine" },
+        pulse: { notes: [220, 329.63, 493.88], step: .07, length: .24, gain: .045, type: "sine" }
+      };
+      const recipe = recipes[kind] || recipes.pulse; const now = audioContext.currentTime;
+      recipe.notes.forEach((frequency, index) => {
+        const oscillator = audioContext.createOscillator(); const gain = audioContext.createGain(); const start = now + index * recipe.step;
+        oscillator.type = recipe.type; oscillator.frequency.setValueAtTime(frequency, start); gain.gain.setValueAtTime(.0001, start); gain.gain.exponentialRampToValueAtTime(recipe.gain, start + .012); gain.gain.exponentialRampToValueAtTime(.0001, start + recipe.length);
+        oscillator.connect(gain).connect(audioContext.destination); oscillator.start(start); oscillator.stop(start + recipe.length + .02);
+      });
     } catch (error) { /* Sound is a progressive enhancement; visuals remain complete without it. */ }
   };
 
@@ -49,7 +71,7 @@
     dialogueSpeed: 52, spawnGrace: 0, dungeonIntro: 0, dungeonEntranceSeen: false, roomTransition: 0, roomTransitionLabel: "", hazardCooldown: 0, ashCacheOpened: false, ashShortcutOpen: false,
     rootlightLantern: false, rootlightTested: false, rootlightGalleryOpen: false, rootlightGalleryCacheOpened: false, rootlightMoonBridge: false, rootlightWaterway: false, rootlightGateOpen: false, rootlightCacheOpened: false, itemReveal: 0,
     bossIntroSeen: false, bossEntrance: 0, bossPhase: 1, bossPhaseShift: 0, bossArenaPulse: 0, bossDefeatTimer: 0, bossDefeatX: 600, bossDefeatY: 285, bossRewardClaimed: false,
-    lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0, visualClock: 0, pickupPulse: 0, saveError: false
+    lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0, visualClock: 0, pickupPulse: 0, hitStop: 0, chestOpening: 0, chestOpenX: 0, chestOpenY: 0, saveError: false
   };
   let enemies = [];
   let projectiles = [];
@@ -112,7 +134,8 @@
     { id: "brindle", name: "Brindle", role: "Pond ferrier", portrait: "brindle", x: 540, y: 585, baseX: 540, baseY: 585, behavior: "pace", phase: 2.4, facing: 1, route: [{ x: 520, y: 582 }, { x: 572, y: 605 }, { x: 525, y: 625 }] },
     { id: "lumen", name: "Lumen", role: "Shrine cartographer", portrait: "lumen", x: 1235, y: 305, baseX: 1235, baseY: 305, behavior: "map", phase: 4.1, facing: -1 }
   ];
-  let camera = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0 };
+  let camera = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0, shakePhase: 0 };
+  let previousHealthKey = `${player.hp}/${player.maxHp}`;
   let lastFrame = 0;
 
   const ui = {
@@ -137,7 +160,7 @@
   const setDialogue = (speaker, text, portrait = "rowan") => {
     const lines = Array.isArray(text) ? text : [text];
     state.dialogue = { speaker, lines, portrait, index: 0, charIndex: 0, complete: false };
-    ui.dialogue.classList.remove("closing"); ui.dialogue.classList.add("visible"); renderDialogueLine();
+    ui.dialogue.classList.remove("closing"); ui.dialogue.classList.add("visible"); playSfx("dialogue"); renderDialogueLine();
   };
   const closeDialogue = () => {
     state.dialogue = null; ui.dialogue.classList.remove("visible"); ui.dialogue.classList.add("closing");
@@ -178,7 +201,7 @@
     try {
       const data = normaliseSave(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
       if (!data) return false;
-      Object.assign(state, data, { mode: "playing", dialogue: null, toastTimer: 0, saveError: false });
+      Object.assign(state, data, { mode: "playing", dialogue: null, toastTimer: 0, hitStop: 0, chestOpening: 0, saveError: false });
       if (state.ashCacheOpened && !state.rootlightLantern) state.rootlightLantern = true;
       // Migrate older victories into the permanent Heartseed Echo reward.
       if (state.bossDefeated && !state.bossRewardClaimed) state.bossRewardClaimed = true;
@@ -201,7 +224,7 @@
   const resetProgress = () => {
     try { localStorage.removeItem(STORAGE_KEY); state.saveError = false; } catch (error) { state.saveError = true; }
     state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0;
-    state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dialogueSpeed = 52; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; state.bossIntroSeen = false; state.bossEntrance = 0; state.bossPhase = 1; state.bossPhaseShift = 0; state.bossArenaPulse = 0; state.bossDefeatTimer = 0; state.bossDefeatX = 600; state.bossDefeatY = 285; state.bossRewardClaimed = false; state.visualClock = 0; state.pickupPulse = 0;
+    state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dialogueSpeed = 52; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; state.bossIntroSeen = false; state.bossEntrance = 0; state.bossPhase = 1; state.bossPhaseShift = 0; state.bossArenaPulse = 0; state.bossDefeatTimer = 0; state.bossDefeatX = 600; state.bossDefeatY = 285; state.bossRewardClaimed = false; state.visualClock = 0; state.pickupPulse = 0; state.hitStop = 0; state.chestOpening = 0; state.chestOpenX = 0; state.chestOpenY = 0;
     player.maxHp = 6; player.hp = player.maxHp; player.x = 390; player.y = 500; resetPlayerMotion(); startArea("overworld", false); state.mode = "title"; hideScreens(); ui.title.classList.remove("hidden"); restoreTitlePresentation(); updateHud();
   };
 
@@ -213,7 +236,7 @@
   const triggerImpact = (x, y, color = COLORS.gold, strength = 1) => {
     spawnParticle(x, y, color, strength > 1 ? 12 : 7, strength > 1 ? 150 : 105, "impact");
     particles.push({ x, y, vx: 0, vy: 0, life: .18 + strength * .04, maxLife: .18 + strength * .04, size: 12 + strength * 8, color, kind: "ring", rotation: 0 });
-    state.impactFlash = Math.max(state.impactFlash, .045 * strength); camera.shake = Math.max(camera.shake, .045 * strength);
+    state.impactFlash = Math.max(state.impactFlash, .045 * strength); state.hitStop = Math.max(state.hitStop, Math.min(.075, .018 + strength * .02)); camera.shake = Math.max(camera.shake, .045 * strength); camera.shakePhase += 1.1 + strength;
   };
   const updateEnvironment = (dt) => {
     const touchables = [...environment.grasses, ...environment.flowers];
@@ -256,18 +279,18 @@
     drops.push({ x: enemy.x, y: enemy.y, ...enemy.drop, life: 24, phase: rand(0, 6.28), bob: rand(0, 6.28) });
   };
   const spawnEnemyDeath = (enemy) => {
-    enemy.dead = true; spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 34 : 12); spawnParticle(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 20 : 9, enemy.type === "boss" ? 170 : 110, "impact"); particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.4 : .65, maxLife: enemy.type === "boss" ? 1.4 : .65, size: enemy.type === "boss" ? 38 : 21, color: enemy.type === "boss" ? COLORS.gold : enemy.color, kind: "death-ring", rotation: 0 }); triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, enemy.type === "boss" ? 1.45 : 1); spawnDrop(enemy);
+    enemy.dead = true; if (enemy.type !== "boss") playSfx("kill"); spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 34 : 12); spawnParticle(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 20 : 9, enemy.type === "boss" ? 170 : 110, "impact"); particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.4 : .65, maxLife: enemy.type === "boss" ? 1.4 : .65, size: enemy.type === "boss" ? 38 : 21, color: enemy.type === "boss" ? COLORS.gold : enemy.color, kind: "death-ring", rotation: 0 }); triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, enemy.type === "boss" ? 1.45 : 1); spawnDrop(enemy);
   };
   const updateDrops = (dt) => {
     drops = drops.filter((drop) => {
       drop.life -= dt; drop.bob += dt * 4;
-      if (distance(player, drop) < 25 && state.mode === "playing") { state.loot += 1; state.pickupPulse = .7; showToast(`${drop.name} collected`, 1100); spawnParticle(drop.x, drop.y, drop.color, 8, 60, "spark"); triggerImpact(drop.x, drop.y, drop.color, .72); saveData(); updateHud(); return false; }
+      if (distance(player, drop) < 25 && state.mode === "playing") { state.loot += 1; state.pickupPulse = .7; playSfx("pickup"); showToast(`${drop.name} collected`, 1100); spawnParticle(drop.x, drop.y, drop.color, 8, 60, "spark"); triggerImpact(drop.x, drop.y, drop.color, .72); saveData(); updateHud(); return false; }
       return drop.life > 0;
     });
   };
   const addDiscovery = (label) => {
     state.discoveries = Math.min(state.discoveryTotal, (state.discoveries || 0) + 1);
-    showToast(`${label} · discovery ${state.discoveries}/${state.discoveryTotal}`, 2200);
+    playSfx("cache"); showToast(`${label} · discovery ${state.discoveries}/${state.discoveryTotal}`, 2200);
     saveData(); updateHud();
   };
   const talkToNpc = (npc) => {
@@ -459,12 +482,12 @@
   };
   const attack = () => {
     if (state.mode !== "playing" || state.dialogue || player.dash > 0) return;
-    if (player.attackCooldown > 0) { player.attackBuffer = .13; return; }
+    if (player.attackCooldown > 0) { player.attackBuffer = .18; return; }
     const direction = readMoveInput();
     const facing = direction.x || direction.y ? direction : normalized(player.facingX, player.facingY);
-    player.attack = .34; player.attackElapsed = 0; player.attackCooldown = .38; player.attackBuffer = 0; player.attackHitRegistered = false;
+    player.attack = .34; player.attackElapsed = 0; player.attackCooldown = .36; player.attackBuffer = 0; player.attackHitRegistered = false;
     player.attackDirectionX = facing.x; player.attackDirectionY = facing.y; player.targetFacingX = facing.x; player.targetFacingY = facing.y;
-    spawnDust(player.x - facing.x * 10, player.y - facing.y * 10, 3, "#d7c594");
+    playSfx("attack"); spawnDust(player.x - facing.x * 10, player.y - facing.y * 10, 3, "#d7c594");
   };
   const resolveAttackHit = () => {
     if (player.attackHitRegistered) return;
@@ -476,7 +499,7 @@
       const dot = (offsetX / range) * hit.direction.x + (offsetY / range) * hit.direction.y;
       if (distance(hit, enemy) > hit.radius + enemy.radius || dot < cosHalfAngle) return;
       const knockback = enemy.type === "boss" ? 95 : enemy.type === "warden" ? 135 : 190;
-      enemy.hp -= 1; enemy.hitFlash = .2; enemy.hitStun = enemy.type === "boss" ? .12 : .2;
+      enemy.hp -= 1; enemy.hitFlash = .2; enemy.hitStun = enemy.type === "boss" ? .14 : .22;
       enemy.velocityX = hit.direction.x * knockback; enemy.velocityY = hit.direction.y * knockback;
       spawnParticle(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 12 : 8, 125, "impact");
       triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.rose : COLORS.gold, enemy.type === "boss" ? 1.35 : 1);
@@ -488,9 +511,10 @@
         if (enemy.type === "boss") beginBossDefeat(enemy);
       }
     });
+    if (hitCount > 0) playSfx("hit");
     breakables().forEach((object) => {
       if (!object.broken && distance(hit, object) < 38 && ((object.x - player.x) * hit.direction.x + (object.y - player.y) * hit.direction.y) > 0) {
-        object.broken = true; spawnLeaves(object.x, object.y, 14); triggerImpact(object.x, object.y, COLORS.moss, .8);
+        object.broken = true; playSfx("hit"); spawnLeaves(object.x, object.y, 14); triggerImpact(object.x, object.y, COLORS.moss, .8);
         if (object.id === "root-ivy") { state.secretFound = true; showToast("The old roots part · a blue seam glows at the shrine"); updateObjective(); saveData(); }
         if (object.id === "pond-ivy") { state.southPassageOpen = true; showToast("The reeds fall away · something watches the grove"); spawnHiddenEncounter(); updateObjective(); saveData(); }
         if (object.id === "reed-cache") { state.reedCacheFound = true; state.lanternLens = true; addDiscovery("Dewglass lens recovered"); }
@@ -513,33 +537,35 @@
     return false;
   };
   const obtainRootlight = () => {
-    state.ashCacheOpened = true; state.ashShortcutOpen = true; state.rootlightLantern = true; state.rootlightTested = false; state.loot += 1; state.itemReveal = 3.8; player.rootlightCooldown = 0; player.velocityX = 0; player.velocityY = 0; playSfx("relic"); spawnLeaves(180, 635, 28); spawnParticle(180, 635, COLORS.gold, 24, 120, "spark"); triggerImpact(180, 635, COLORS.gold, 1.45); camera.shake = Math.max(camera.shake, .12); showToast("Moonwake Lantern acquired · press L", 2800); saveData(); updateHud();
+    state.ashCacheOpened = true; state.ashShortcutOpen = true; state.rootlightLantern = true; state.rootlightTested = false; state.loot += 1; state.itemReveal = 3.8; player.rootlightCooldown = 0; player.velocityX = 0; player.velocityY = 0; playSfx("relic"); spawnLeaves(180, 635, 28); spawnParticle(180, 635, COLORS.gold, 24, 120, "spark"); triggerImpact(180, 635, COLORS.gold, 1.45); camera.shake = Math.max(camera.shake, .12); state.pickupPulse = .7; showToast("Moonwake Lantern acquired · press L", 2800); saveData(); updateHud();
   };
   const useRootlight = () => {
     if (state.mode !== "playing" || state.dialogue || state.itemReveal > 0 || !state.rootlightLantern) return;
     if (player.rootlightCooldown > 0) { showToast("The lantern is still gathering moonlight", 750); return; }
     player.rootlightPulse = .7; player.rootlightCooldown = 1.05; player.attack = 0; player.attackHitRegistered = true; playSfx("pulse"); spawnParticle(player.x, player.y, COLORS.gold, 18, 105, "spark"); particles.push({ x: player.x, y: player.y, vx: 0, vy: 0, life: .62, maxLife: .62, size: 24, color: COLORS.mint, kind: "rootlight-ring", rotation: 0 }); camera.shake = Math.max(camera.shake, .05);
     const node = nearestRootlightNode(118); if (node) activateRootlightNode(node);
+    let rootlightHit = false;
     enemies.forEach((enemy) => {
       if (enemy.dead || distance(enemy, player) > (enemy.type === "boss" ? 180 : 132)) return;
       enemy.hidden = false; enemy.alerted = true; enemy.hitFlash = .28; enemy.hitStun = enemy.type === "boss" ? .48 : .62; enemy.telegraph = 0; enemy.state = "recover"; enemy.stateTimer = enemy.type === "boss" ? .52 : .34; enemy.attackCooldown = Math.max(enemy.attackCooldown, .72);
-      const direction = normalized(enemy.x - player.x, enemy.y - player.y); enemy.velocityX = direction.x * (enemy.type === "boss" ? 125 : 175); enemy.velocityY = direction.y * (enemy.type === "boss" ? 125 : 175); enemy.phaseExposed = enemy.type === "boss" ? .9 : 0; const rootlightDamage = enemy.type === "boss" && enemy.phase === 2 ? 2 : 1; enemy.hp -= rootlightDamage; spawnParticle(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 14 : 8, 110, "impact"); triggerImpact(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 1.1 : .75); if (enemy.type === "boss" && enemy.phase === 2) showToast("Rootlight cracks the guardian's unbound heart", 1500);
+      const direction = normalized(enemy.x - player.x, enemy.y - player.y); enemy.velocityX = direction.x * (enemy.type === "boss" ? 125 : 175); enemy.velocityY = direction.y * (enemy.type === "boss" ? 125 : 175); enemy.phaseExposed = enemy.type === "boss" ? .9 : 0; const rootlightDamage = enemy.type === "boss" && enemy.phase === 2 ? 2 : 1; enemy.hp -= rootlightDamage; rootlightHit = true; spawnParticle(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 14 : 8, 110, "impact"); triggerImpact(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 1.1 : .75); if (enemy.type === "boss" && enemy.phase === 2) showToast("Rootlight cracks the guardian's unbound heart", 1500);
       if (enemy.hp <= 0) { spawnEnemyDeath(enemy); if (enemy.type === "warden") { state.miniBossDefeated = true; showToast("Rootlight breaks the Warden's guard", 1800); } if (enemy.type === "boss") beginBossDefeat(enemy); saveData(); }
     });
+    if (rootlightHit) playSfx("hit");
   };
   const dash = () => {
     if (state.mode !== "playing" || state.dialogue || player.dashCooldown > 0 || player.hurt > 0) return;
     const direction = readMoveInput(); const facing = direction.x || direction.y ? direction : normalized(player.facingX, player.facingY);
     player.dash = .22; player.dashCooldown = .68; player.invulnerable = .25; player.dashDirectionX = facing.x; player.dashDirectionY = facing.y; player.attack = 0; player.attackHitRegistered = true;
-    player.velocityX = facing.x * 470; player.velocityY = facing.y * 470; spawnDust(player.x, player.y + 10, 8, "#b6c7b1"); spawnParticle(player.x, player.y, COLORS.mint, 10, 75, "spark"); camera.shake = Math.max(camera.shake, .035);
+    playSfx("dash"); player.velocityX = facing.x * 470; player.velocityY = facing.y * 470; spawnDust(player.x, player.y + 10, 8, "#b6c7b1"); spawnParticle(player.x, player.y, COLORS.mint, 10, 75, "spark"); camera.shake = Math.max(camera.shake, .035);
   };
 
-  const hurtPlayer = (amount, source) => {
+  const hurtPlayer = (amount, source, impactColor = COLORS.rose) => {
     if (player.invulnerable > 0 || player.hurt > 0 || state.mode !== "playing") return;
-    player.hp = Math.max(0, player.hp - amount); player.hurt = .2; player.invulnerable = .72; player.attack = 0; player.attackCooldown = .18;
+    player.hp = Math.max(0, player.hp - amount); player.hurt = .24; player.invulnerable = .72; player.attack = 0; player.attackCooldown = .18; state.hitStop = Math.max(state.hitStop, .07); playSfx("hurt");
     const direction = normalized(player.x - source.x, player.y - source.y, -player.facingX, -player.facingY);
     player.velocityX = direction.x * 235; player.velocityY = direction.y * 235; camera.shake = Math.max(camera.shake, .13);
-    triggerImpact(player.x, player.y, COLORS.rose, 1.25); spawnParticle(player.x, player.y, COLORS.rose, 12, 135, "impact"); updateHud();
+    triggerImpact(player.x, player.y, impactColor, 1.25); spawnParticle(player.x, player.y, impactColor, 12, 135, "impact"); updateHud();
     if (player.hp <= 0) { state.mode = "dead"; hideScreens(); ui.title.classList.remove("hidden"); ui.title.querySelector(".screen-kicker").textContent = "THE LANTERN WENT OUT"; ui.title.querySelector("h2").textContent = "The roots took you"; ui.title.querySelector("p:not(.screen-kicker)").textContent = "Start again at the outpost. The shrine will still be waiting."; document.getElementById("new-game").textContent = "Restart"; document.getElementById("continue-game").classList.add("hidden"); updateHud(); }
   };
 
@@ -555,25 +581,25 @@
       const npc = nearestNpc(); if (npc) { talkToNpc(npc); return; }
       const rootNode = nearestRootlightNode(72); if (rootNode && !state.rootlightLantern) { activateRootlightNode(rootNode); return; }
       if (distance(player, { x: 1350, y: 235 }) < 120) { enterDungeon(); return; }
-      if (distance(player, { x: 1240, y: 745 }) < 70 && !state.chestOpened) { state.chestOpened = true; state.key = true; spawnLeaves(1240, 745, 18); showToast("You found an old brass key"); saveData(); updateHud(); return; }
-      if (distance(player, { x: 1450, y: 665 }) < 78 && state.rootlightGateOpen && !state.rootlightCacheOpened) { state.rootlightCacheOpened = true; state.loot += 1; playSfx("cache"); spawnLeaves(1450, 665, 20); triggerImpact(1450, 665, COLORS.gold, 1.1); showToast("Moonroot cache found · the old road has more secrets", 2200); saveData(); updateHud(); return; }
+      if (distance(player, { x: 1240, y: 745 }) < 70 && !state.chestOpened) { state.chestOpened = true; state.key = true; state.chestOpening = .44; state.chestOpenX = 1240; state.chestOpenY = 745; state.pickupPulse = .7; playSfx("chest"); spawnLeaves(1240, 745, 18); showToast("You found an old brass key"); saveData(); updateHud(); return; }
+      if (distance(player, { x: 1450, y: 665 }) < 78 && state.rootlightGateOpen && !state.rootlightCacheOpened) { state.rootlightCacheOpened = true; state.loot += 1; state.chestOpening = .44; state.chestOpenX = 1450; state.chestOpenY = 665; state.pickupPulse = .7; playSfx("cache"); spawnLeaves(1450, 665, 20); triggerImpact(1450, 665, COLORS.gold, 1.1); showToast("Moonroot cache found · the old road has more secrets", 2200); saveData(); updateHud(); return; }
       if (distance(player, { x: 1060, y: 830 }) < 70 && state.southPassageOpen && !state.hiddenChestOpened && !enemies.some((enemy) => enemy.encounter === "hidden-cache" && !enemy.dead)) {
-        state.hiddenChestOpened = true; state.lanternSeed = true; player.maxHp = 6 + (state.heartChestOpened ? 1 : 0) + 1; player.hp = player.maxHp; state.discoveries = Math.min(state.discoveryTotal, (state.discoveries || 0) + 1); spawnLeaves(1060, 830, 24); triggerImpact(1060, 830, COLORS.gold, 1.2); showToast(`Lantern seed found · maximum health increased · discovery ${state.discoveries}/${state.discoveryTotal}`, 2600); saveData(); updateHud(); return;
+        state.hiddenChestOpened = true; state.lanternSeed = true; player.maxHp = 6 + (state.heartChestOpened ? 1 : 0) + 1; player.hp = player.maxHp; state.discoveries = Math.min(state.discoveryTotal, (state.discoveries || 0) + 1); state.chestOpening = .44; state.chestOpenX = 1060; state.chestOpenY = 830; state.pickupPulse = .7; playSfx("relic"); spawnLeaves(1060, 830, 24); triggerImpact(1060, 830, COLORS.gold, 1.2); showToast(`Lantern seed found · maximum health increased · discovery ${state.discoveries}/${state.discoveryTotal}`, 2600); saveData(); updateHud(); return;
       }
     } else {
       const key = `${state.roomX}-${state.roomY}`;
       const rootNode = nearestRootlightNode(72); if (rootNode && !state.rootlightLantern) { activateRootlightNode(rootNode); return; }
-      if (key === "0-0" && distance(player, { x: 600, y: 390 }) < 80 && !state.chestOpened) { state.chestOpened = true; state.key = true; showToast("Brass key acquired"); spawnLeaves(600, 390, 20); saveData(); updateHud(); return; }
-      if (key === "1-0" && distance(player, { x: 600, y: 380 }) < 80 && !state.switches) { state.switches = true; showToast("The moon switch unlocks the lower gate"); spawnLeaves(600, 380, 20); saveData(); updateHud(); return; }
-      if (key === "0-1" && distance(player, { x: 600, y: 390 }) < 80 && !state.heartChestOpened) { state.heartChestOpened = true; player.maxHp += 1; player.hp = player.maxHp; showToast("Heartseed shard · maximum health increased"); saveData(); updateHud(); return; }
-      if (key === "0-0" && state.rootlightGalleryOpen && distance(player, { x: 990, y: 640 }) < 88 && !state.rootlightGalleryCacheOpened) { state.rootlightGalleryCacheOpened = true; state.loot += 1; playSfx("cache"); spawnLeaves(990, 640, 20); triggerImpact(990, 640, COLORS.gold, 1.1); showToast("Gallery cache found · the lantern reveals what stone forgot", 2200); saveData(); updateHud(); return; }
+      if (key === "0-0" && distance(player, { x: 600, y: 390 }) < 80 && !state.chestOpened) { state.chestOpened = true; state.key = true; state.chestOpening = .44; state.chestOpenX = 600; state.chestOpenY = 390; state.pickupPulse = .7; playSfx("chest"); showToast("Brass key acquired"); spawnLeaves(600, 390, 20); saveData(); updateHud(); return; }
+      if (key === "1-0" && distance(player, { x: 600, y: 380 }) < 80 && !state.switches) { state.switches = true; playSfx("door"); state.pickupPulse = .45; showToast("The moon switch unlocks the lower gate"); spawnLeaves(600, 380, 20); saveData(); updateHud(); return; }
+      if (key === "0-1" && distance(player, { x: 600, y: 390 }) < 80 && !state.heartChestOpened) { state.heartChestOpened = true; player.maxHp += 1; player.hp = player.maxHp; state.chestOpening = .44; state.chestOpenX = 600; state.chestOpenY = 390; state.pickupPulse = .7; playSfx("relic"); showToast("Heartseed shard · maximum health increased"); saveData(); updateHud(); return; }
+      if (key === "0-0" && state.rootlightGalleryOpen && distance(player, { x: 990, y: 640 }) < 88 && !state.rootlightGalleryCacheOpened) { state.rootlightGalleryCacheOpened = true; state.loot += 1; state.chestOpening = .44; state.chestOpenX = 990; state.chestOpenY = 640; state.pickupPulse = .7; playSfx("cache"); spawnLeaves(990, 640, 20); triggerImpact(990, 640, COLORS.gold, 1.1); showToast("Gallery cache found · the lantern reveals what stone forgot", 2200); saveData(); updateHud(); return; }
       if (key === "1-1" && distance(player, { x: 180, y: 635 }) < 92 && !state.ashCacheOpened) { obtainRootlight(); return; }
       if (key === "2-1" && state.bossDefeated && distance(player, { x: 600, y: 150 }) < 100) { showVictory(); return; }
     }
     showToast("Nothing answers from here", 900);
   };
 
-  const enterDungeon = () => { state.area = "dungeon"; state.roomX = 0; state.roomY = 0; player.x = ROOM.width / 2; player.y = ROOM.height - 100; startArea("dungeon"); saveData(); updateObjective(); };
+  const enterDungeon = () => { playSfx("door"); state.area = "dungeon"; state.roomX = 0; state.roomY = 0; player.x = ROOM.width / 2; player.y = ROOM.height - 100; startArea("dungeon"); saveData(); updateObjective(); };
   const transitionDungeon = (dx, dy) => {
     const from = `${state.roomX}-${state.roomY}`; const targetX = state.roomX + dx; const targetY = state.roomY + dy;
     if (from === "0-0" && dy < 0 || from === "0-1" && dy > 0) { if (from === "0-1") { state.area = "overworld"; startArea("overworld"); return; } }
@@ -584,12 +610,12 @@
     if (from === "1-1" && dx > 0 && !state.key) { showToast("A brass keyhole bars this door"); return; }
     if (from === "1-1" && dx > 0 && state.key && !state.miniBossDefeated) { showToast("The Root Warden must fall before this shortcut opens"); return; }
     if (from === "2-0" && dy > 0 && !state.miniBossDefeated) { showToast("The Warden still guards the lower gate"); return; }
-    state.roomX = targetX; state.roomY = targetY; const entryX = dx > 0 ? 80 : dx < 0 ? ROOM.width - 80 : ROOM.width / 2; const entryY = dy > 0 ? 80 : dy < 0 ? ROOM.height - 80 : ROOM.height / 2; state.transitionCooldown = .5; startArea("dungeon"); player.x = entryX; player.y = entryY; resetPlayerMotion(); saveData(); updateObjective();
+    playSfx("door"); state.roomX = targetX; state.roomY = targetY; const entryX = dx > 0 ? 80 : dx < 0 ? ROOM.width - 80 : ROOM.width / 2; const entryY = dy > 0 ? 80 : dy < 0 ? ROOM.height - 80 : ROOM.height / 2; state.transitionCooldown = .5; startArea("dungeon"); player.x = entryX; player.y = entryY; resetPlayerMotion(); saveData(); updateObjective();
   };
 
   const enemyMove = (enemy, dx, dy, speed, dt) => { const direction = normalized(dx, dy, 0, 0); moveEntityBy(enemy, direction.x * speed * dt, direction.y * speed * dt); };
   const beginEnemyTelegraph = (enemy, type, duration) => { enemy.state = type; enemy.stateTimer = duration; enemy.telegraph = duration; enemy.telegraphType = type; spawnParticle(enemy.x, enemy.y, type === "rangedWindup" ? COLORS.wisp : COLORS.gold, 3, 24, "spark"); };
-  const resolveEnemyMelee = (enemy, reach = 10, damage = enemy.damage) => { if (distance(enemy, player) < enemy.radius + player.radius + reach) { hurtPlayer(damage, enemy); triggerImpact(player.x, player.y, enemy.color, enemy.type === "thornback" ? 1.2 : .72); return true; } return false; };
+  const resolveEnemyMelee = (enemy, reach = 10, damage = enemy.damage) => { if (distance(enemy, player) < enemy.radius + player.radius + reach) { hurtPlayer(damage, enemy, enemy.color); return true; } return false; };
   const fireWispBolt = (enemy) => {
     const direction = normalized(enemy.aimX, enemy.aimY, player.x - enemy.x, player.y - enemy.y);
     projectiles.push({ owner: "enemy", kind: "moonbolt", x: enemy.x, y: enemy.y, vx: direction.x * 165, vy: direction.y * 165, life: 2.5, radius: 7, color: COLORS.wisp, damage: enemy.damage });
@@ -625,7 +651,7 @@
   };
   const updateCharger = (enemy, dist, dt) => {
     if (enemy.state === "chargeWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.state = "charging"; enemy.stateTimer = .38; enemy.telegraph = 0; enemy.velocityX = direction.x * 300; enemy.velocityY = direction.y * 300; spawnDust(enemy.x, enemy.y + 10, 8, "#d6a16f"); } return; }
-    if (enemy.state === "charging") { enemy.stateTimer -= dt; if (distance(enemy, player) < enemy.radius + player.radius + 12) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.thorn, 1.2); enemy.state = "recover"; enemy.stateTimer = .55; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "recover"; enemy.stateTimer = .45; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } return; }
+    if (enemy.state === "charging") { enemy.stateTimer -= dt; if (distance(enemy, player) < enemy.radius + player.radius + 12) { hurtPlayer(enemy.damage, enemy, COLORS.thorn); enemy.state = "recover"; enemy.stateTimer = .55; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "recover"; enemy.stateTimer = .45; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } return; }
     if (enemy.state === "recover") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "chase"; return; }
     if (dist < enemy.detectionRange && enemy.attackCooldown <= 0) { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; beginEnemyTelegraph(enemy, "chargeWindup", .68); return; }
     if (dist < 320) enemyMove(enemy, player.x - enemy.x, player.y - enemy.y, enemy.speed, dt); else updateEnemyIdle(enemy, dt);
@@ -641,7 +667,7 @@
   };
   const updateAmbusher = (enemy, dist, dt) => {
     if (enemy.state === "ambushWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.state = "pounce"; enemy.stateTimer = .3; enemy.telegraph = 0; enemy.velocityX = direction.x * 235; enemy.velocityY = direction.y * 235; } return; }
-    if (enemy.state === "pounce") { enemy.stateTimer -= dt; if (distance(enemy, player) < enemy.radius + player.radius + 10) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.moth, .9); enemy.state = "retreat"; enemy.stateTimer = .7; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "retreat"; enemy.stateTimer = .55; enemy.attackCooldown = enemy.attackRate; } return; }
+    if (enemy.state === "pounce") { enemy.stateTimer -= dt; if (distance(enemy, player) < enemy.radius + player.radius + 10) { hurtPlayer(enemy.damage, enemy, COLORS.moth); enemy.state = "retreat"; enemy.stateTimer = .7; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "retreat"; enemy.stateTimer = .55; enemy.attackCooldown = enemy.attackRate; } return; }
     if (enemy.state === "retreat") { enemy.stateTimer -= dt; enemyMove(enemy, enemy.x - player.x, enemy.y - player.y, enemy.speed * 1.5, dt); if (enemy.stateTimer <= 0 && dist > 150) { enemy.state = "idle"; enemy.alerted = false; enemy.hidden = true; enemy.stateTimer = 1.4; } return; }
     if (!enemy.alerted && dist < enemy.detectionRange) { enemy.alerted = true; enemy.hidden = false; enemy.state = "ambushWindup"; enemy.stateTimer = .42; enemy.telegraph = .42; enemy.telegraphType = "ambushWindup"; spawnLeaves(enemy.x, enemy.y, 8); spawnParticle(enemy.x, enemy.y, COLORS.moth, 8, 45, "spark"); return; }
     if (enemy.alerted && dist < enemy.detectionRange && enemy.attackCooldown <= 0) { enemy.state = "ambushWindup"; enemy.stateTimer = .42; enemy.telegraph = .42; }
@@ -658,7 +684,7 @@
     state.bossPhase = enemy.phase; enemy.orbit += dt * (enemy.phase === 2 ? 1.7 : .8);
     if (enemy.state === "phaseShift") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "orbit"; return; }
     if (enemy.state === "bossWindup" || enemy.state === "bossSlamWindup" || enemy.state === "bossRainWindup" || enemy.state === "bossDashWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { if (enemy.state === "bossWindup") fireBossVolley(enemy); else if (enemy.state === "bossSlamWindup") fireBossSlam(enemy); else if (enemy.state === "bossRainWindup") fireBossRootRain(enemy); else { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.velocityX = 0; enemy.velocityY = 0; enemy.state = "bossDashing"; enemy.stateTimer = enemy.phase === 2 ? .58 : .46; spawnDust(enemy.x, enemy.y + 18, 15, enemy.phase === 2 ? "#d66b92" : "#bd8c72"); } enemy.attackCooldown = enemy.phase === 2 ? .62 : 1.05; enemy.telegraph = 0; } return; }
-    if (enemy.state === "bossDashing") { enemy.stateTimer -= dt; const dashSpeed = enemy.phase === 2 ? 420 : 340; moveEntityBy(enemy, enemy.chargeX * dashSpeed * dt, enemy.chargeY * dashSpeed * dt); if (distance(enemy, player) < enemy.radius + player.radius + 16) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.rose, 1.35); } if (enemy.stateTimer <= 0) { enemy.state = "bossRecover"; enemy.stateTimer = enemy.phase === 2 ? .34 : .5; enemy.velocityX = 0; enemy.velocityY = 0; } return; }
+    if (enemy.state === "bossDashing") { enemy.stateTimer -= dt; const dashSpeed = enemy.phase === 2 ? 420 : 340; moveEntityBy(enemy, enemy.chargeX * dashSpeed * dt, enemy.chargeY * dashSpeed * dt); if (distance(enemy, player) < enemy.radius + player.radius + 16) hurtPlayer(enemy.damage, enemy, COLORS.rose); if (enemy.stateTimer <= 0) { enemy.state = "bossRecover"; enemy.stateTimer = enemy.phase === 2 ? .34 : .5; enemy.velocityX = 0; enemy.velocityY = 0; } return; }
     if (enemy.state === "bossRecover") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "orbit"; return; }
     if (dist > 185) moveEntityBy(enemy, Math.cos(enemy.orbit) * enemy.speed * dt, Math.sin(enemy.orbit) * enemy.speed * dt);
     else { const tangent = { x: -(player.y - enemy.y), y: player.x - enemy.x }; enemyMove(enemy, tangent.x, tangent.y, enemy.phase === 2 ? enemy.speed * 1.1 : enemy.speed * .7, dt); }
@@ -707,7 +733,7 @@
       player.visualState = "dash"; player.dash -= dt; tryMove(player.velocityX * dt, player.velocityY * dt); player.velocityX = player.dashDirectionX * 470; player.velocityY = player.dashDirectionY * 470;
       if (Math.random() < .6) spawnDust(player.x, player.y + 12, 1, "#b6c7b1");
     } else {
-      const attackMovement = player.attack > 0 ? .52 : 1; const maxSpeed = 185 * attackMovement; const acceleration = hasInput ? 1120 : 1480;
+      const attackMovement = player.attack > 0 ? .52 : 1; const maxSpeed = 185 * attackMovement; const acceleration = hasInput ? 1380 : 1840;
       const desiredX = hasInput ? input.x * maxSpeed : 0; const desiredY = hasInput ? input.y * maxSpeed : 0;
       player.velocityX = moveToward(player.velocityX, desiredX, acceleration * dt); player.velocityY = moveToward(player.velocityY, desiredY, acceleration * dt);
       if (player.hurt > 0) { player.velocityX = moveToward(player.velocityX, 0, 650 * dt); player.velocityY = moveToward(player.velocityY, 0, 650 * dt); }
@@ -721,7 +747,7 @@
       if (player.attackElapsed >= .075 && !player.attackHitRegistered) resolveAttackHit();
     }
     if (player.attack <= 0 && player.visualState === "attack") player.visualState = hasInput ? "move" : "idle";
-    player.velocityX = moveToward(player.velocityX, 0, player.dash > 0 ? 0 : 520 * dt); player.velocityY = moveToward(player.velocityY, 0, player.dash > 0 ? 0 : 520 * dt);
+    player.velocityX = moveToward(player.velocityX, 0, player.dash > 0 ? 0 : 660 * dt); player.velocityY = moveToward(player.velocityY, 0, player.dash > 0 ? 0 : 660 * dt);
   };
 
   const updateDungeonHazards = () => {
@@ -738,9 +764,10 @@
   const update = (dt) => {
     // Pause and end screens must freeze timers, hazards, particles, and boss sequences.
     if (state.mode !== "playing") return;
+    if (state.hitStop > 0) { state.hitStop = Math.max(0, state.hitStop - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); updateCamera(dt); justPressed.clear(); return; }
     if (state.toastTimer > 0) { state.toastTimer -= dt * 1000; if (state.toastTimer <= 0) ui.toast.classList.remove("visible"); }
-    const bossDefeatWasRunning = state.bossDefeatTimer > 0; state.visualClock += dt; state.impactFlash = Math.max(0, state.impactFlash - dt); state.pickupPulse = Math.max(0, (state.pickupPulse || 0) - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); state.spawnGrace = Math.max(0, (state.spawnGrace || 0) - dt); state.dungeonIntro = Math.max(0, (state.dungeonIntro || 0) - dt); state.roomTransition = Math.max(0, (state.roomTransition || 0) - dt); state.hazardCooldown = Math.max(0, (state.hazardCooldown || 0) - dt); state.itemReveal = Math.max(0, (state.itemReveal || 0) - dt); state.bossEntrance = Math.max(0, (state.bossEntrance || 0) - dt); state.bossPhaseShift = Math.max(0, (state.bossPhaseShift || 0) - dt); state.bossArenaPulse = Math.max(0, (state.bossArenaPulse || 0) - dt); state.bossDefeatTimer = Math.max(0, (state.bossDefeatTimer || 0) - dt);
-    if (bossDefeatWasRunning && state.bossDefeatTimer <= 0 && state.mode === "playing") { playSfx("defeat"); showVictory(); }
+    const bossDefeatWasRunning = state.bossDefeatTimer > 0; state.visualClock += dt; state.impactFlash = Math.max(0, state.impactFlash - dt); state.pickupPulse = Math.max(0, (state.pickupPulse || 0) - dt); state.chestOpening = Math.max(0, (state.chestOpening || 0) - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); state.spawnGrace = Math.max(0, (state.spawnGrace || 0) - dt); state.dungeonIntro = Math.max(0, (state.dungeonIntro || 0) - dt); state.roomTransition = Math.max(0, (state.roomTransition || 0) - dt); state.hazardCooldown = Math.max(0, (state.hazardCooldown || 0) - dt); state.itemReveal = Math.max(0, (state.itemReveal || 0) - dt); state.bossEntrance = Math.max(0, (state.bossEntrance || 0) - dt); state.bossPhaseShift = Math.max(0, (state.bossPhaseShift || 0) - dt); state.bossArenaPulse = Math.max(0, (state.bossArenaPulse || 0) - dt); state.bossDefeatTimer = Math.max(0, (state.bossDefeatTimer || 0) - dt);
+    if (bossDefeatWasRunning && state.bossDefeatTimer <= 0 && state.mode === "playing") { playSfx("victory"); showVictory(); }
     leaves.forEach((leaf) => { leaf.y += leaf.speed * dt; leaf.x += Math.sin(leaf.phase + leaf.y * .01) * dt * 3; if (leaf.y > WORLD.height + 20) leaf.y = -10; });
     particles = particles.filter((particle) => { particle.life -= dt; particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.vy += 45 * dt; return particle.life > 0; });
     updateEnvironment(dt);
@@ -757,7 +784,7 @@
     justPressed.clear(); updateHud();
   };
 
-  const updateCamera = (dt) => { const maxX = (state.area === "overworld" ? WORLD.width : ROOM.width) - WIDTH; const maxY = (state.area === "overworld" ? WORLD.height : ROOM.height) - HEIGHT; const lookAheadX = clamp(player.velocityX * .16, -42, 42); const lookAheadY = clamp(player.velocityY * .12, -30, 30); const targetX = clamp(player.x + lookAheadX - WIDTH / 2, 0, Math.max(0, maxX)); const targetY = clamp(player.y + lookAheadY - HEIGHT / 2, 0, Math.max(0, maxY)); const smoothing = 1 - Math.pow(.0008, dt); camera.x += (targetX - camera.x) * smoothing; camera.y += (targetY - camera.y) * smoothing; const shakeEase = camera.shake ? rand(-camera.shake, camera.shake) * 11 : 0; camera.shakeX += (shakeEase - camera.shakeX) * Math.min(1, dt * 20); camera.shakeY += ((camera.shake ? rand(-camera.shake, camera.shake) * 8 : 0) - camera.shakeY) * Math.min(1, dt * 20); };
+  const updateCamera = (dt) => { const maxX = (state.area === "overworld" ? WORLD.width : ROOM.width) - WIDTH; const maxY = (state.area === "overworld" ? WORLD.height : ROOM.height) - HEIGHT; const lookAheadX = clamp(player.velocityX * .16, -42, 42); const lookAheadY = clamp(player.velocityY * .12, -30, 30); const targetX = clamp(player.x + lookAheadX - WIDTH / 2, 0, Math.max(0, maxX)); const targetY = clamp(player.y + lookAheadY - HEIGHT / 2, 0, Math.max(0, maxY)); const smoothing = 1 - Math.pow(.0008, dt); camera.x += (targetX - camera.x) * smoothing; camera.y += (targetY - camera.y) * smoothing; camera.shakePhase += dt * (28 + camera.shake * 36); const shakeAmount = camera.shake * 11; const shakeTargetX = Math.sin(camera.shakePhase * 1.7) * shakeAmount; const shakeTargetY = Math.cos(camera.shakePhase * 2.1) * shakeAmount * .7; camera.shakeX += (shakeTargetX - camera.shakeX) * Math.min(1, dt * 20); camera.shakeY += (shakeTargetY - camera.shakeY) * Math.min(1, dt * 20); };
 
   const drawShadow = (x, y, rx, ry, alpha = .3) => { ctx.save(); const shadow = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry) * 1.35); shadow.addColorStop(0, `rgba(4,13,10,${alpha})`); shadow.addColorStop(.62, `rgba(4,13,10,${alpha * .48})`); shadow.addColorStop(1, "rgba(4,13,10,0)"); ctx.fillStyle = shadow; ctx.beginPath(); ctx.ellipse(x, y, rx * 1.25, ry * 1.35, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
   const drawGrassBase = (time) => {
@@ -889,7 +916,18 @@
     environment.grasses.filter((grass) => grass.y > 560).forEach((grass) => drawGrassTuft(grass, time, true));
     [[585, 730], [975, 735], [1060, 565]].forEach(([x, y], i) => { const sway = Math.sin(time * 2 + i) * .12; ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.strokeStyle = i === 2 ? "#78b979" : "#6fae69"; ctx.lineWidth = 3; for (let n = -1; n <= 1; n += 1) { ctx.beginPath(); ctx.moveTo(n * 8, 18); ctx.quadraticCurveTo(n * 9, 0, n * 13, -22); ctx.stroke(); } ctx.restore(); });
   };
-  const drawChest = (x, y, open, time = state.visualClock) => { const bob = open ? Math.sin(time * 2.6 + x) * 1.2 : 0; drawShadow(x, y + 14, 25, 7, .35); ctx.save(); ctx.translate(0, bob); if (open) { const glow = ctx.createRadialGradient(x, y - 18, 1, x, y - 18, 44); glow.addColorStop(0, "rgba(255,225,145,.34)"); glow.addColorStop(1, "rgba(255,225,145,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 18, 44, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = open ? "#55423c" : "#a87845"; ctx.fillRect(x - 22, y - 9, 44, 25); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.strokeRect(x - 22, y - 9, 44, 25); ctx.fillStyle = open ? "#846b58" : "#d2a65b"; ctx.beginPath(); ctx.arc(x, y - 7, 22, Math.PI, 0); ctx.fill(); ctx.strokeStyle = "rgba(28,47,37,.62)"; ctx.stroke(); ctx.fillStyle = open ? "rgba(255,215,123,.5)" : "rgba(235,194,106,.65)"; ctx.fillRect(x - 16, y - 4, 32, 4); if (open) { ctx.fillStyle = "rgba(255,215,123,.5)"; ctx.fillRect(x - 16, y - 21, 32, 8); ctx.strokeStyle = "rgba(255,246,202,.6)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 18, y - 22); ctx.lineTo(x + 18, y - 22); ctx.stroke(); } ctx.fillStyle = COLORS.gold; ctx.fillRect(x - 3, y + 1, 6, 8); ctx.fillStyle = "#573d32"; ctx.fillRect(x - 17, y + 13, 5, 4); ctx.fillRect(x + 12, y + 13, 5, 4); ctx.restore(); };
+  const drawChest = (x, y, open, time = state.visualClock) => {
+    const isOpening = open && state.chestOpening > 0 && Math.hypot(x - state.chestOpenX, y - state.chestOpenY) < 2;
+    const reveal = open ? (isOpening ? clamp(1 - state.chestOpening / .44, 0, 1) : 1) : 0;
+    const bob = reveal > 0 ? Math.sin(time * 2.6 + x) * 1.2 : 0; const lidY = y - 7 - reveal * 13;
+    drawShadow(x, y + 14, 25, 7, .35); ctx.save(); ctx.translate(0, bob);
+    if (reveal > 0) { const glow = ctx.createRadialGradient(x, lidY - 10, 1, x, lidY - 10, 44 + reveal * 18); glow.addColorStop(0, `rgba(255,225,145,${.18 + reveal * .18})`); glow.addColorStop(1, "rgba(255,225,145,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, lidY - 10, 44 + reveal * 18, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = open ? "#55423c" : "#a87845"; ctx.fillRect(x - 22, y - 9, 44, 25); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.strokeRect(x - 22, y - 9, 44, 25);
+    ctx.fillStyle = open ? "#846b58" : "#d2a65b"; ctx.beginPath(); ctx.arc(x, lidY, 22, Math.PI, 0); ctx.fill(); ctx.strokeStyle = "rgba(28,47,37,.62)"; ctx.stroke();
+    ctx.fillStyle = open ? `rgba(255,215,123,${.22 + reveal * .28})` : "rgba(235,194,106,.65)"; ctx.fillRect(x - 16, y - 4, 32, 4);
+    if (reveal > .08) { ctx.fillStyle = `rgba(255,215,123,${.2 + reveal * .3})`; ctx.fillRect(x - 16, lidY - 14, 32, 8); ctx.strokeStyle = "rgba(255,246,202,.6)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 18, lidY - 15); ctx.lineTo(x + 18, lidY - 15); ctx.stroke(); }
+    ctx.fillStyle = COLORS.gold; ctx.fillRect(x - 3, y + 1, 6, 8); ctx.fillStyle = "#573d32"; ctx.fillRect(x - 17, y + 13, 5, 4); ctx.fillRect(x + 12, y + 13, 5, 4); ctx.restore();
+  };
   const drawCampfire = (x, y, time) => { const glow = ctx.createRadialGradient(x, y, 1, x, y, 60); glow.addColorStop(0, "rgba(255,208,116,.35)"); glow.addColorStop(1, "rgba(255,208,116,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 60, 0, Math.PI * 2); ctx.fill(); drawShadow(x, y + 7, 19, 5, .26); ctx.strokeStyle = "#80543a"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x - 11, y + 4); ctx.lineTo(x + 11, y - 4); ctx.moveTo(x - 10, y - 4); ctx.lineTo(x + 10, y + 4); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.moveTo(x, y - 25 + Math.sin(time * 8) * 2); ctx.quadraticCurveTo(x + 13, y - 10, x, y + 2); ctx.quadraticCurveTo(x - 13, y - 10, x, y - 25 + Math.sin(time * 8) * 2); ctx.fill(); ctx.fillStyle = "#fff0b0"; ctx.beginPath(); ctx.arc(x, y - 10, 5, 0, Math.PI * 2); ctx.fill(); };
   const drawMapTable = (x, y, time) => { drawShadow(x, y + 11, 24, 6, .25); ctx.fillStyle = "#6f4b39"; ctx.fillRect(x - 20, y - 5, 40, 8); ctx.fillRect(x - 16, y + 3, 4, 18); ctx.fillRect(x + 12, y + 3, 4, 18); ctx.fillStyle = "#d5c28d"; ctx.fillRect(x - 13, y - 10, 26, 8); ctx.strokeStyle = "rgba(71,112,93,.75)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 8, y - 8); ctx.lineTo(x - 2, y - 4); ctx.lineTo(x + 4, y - 8); ctx.lineTo(x + 10, y - 3); ctx.stroke(); ctx.fillStyle = `rgba(255,215,123,${.35 + Math.sin(time * 3) * .1})`; ctx.beginPath(); ctx.arc(x + 18, y - 8, 3, 0, Math.PI * 2); ctx.fill(); };
   const drawPondBasket = (x, y, time) => { ctx.save(); ctx.translate(x, y + Math.sin(time * 1.7) * .5); ctx.fillStyle = "#b17b4d"; ctx.beginPath(); ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#e2bd78"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -2, 10, Math.PI, 0); ctx.stroke(); ctx.restore(); };
@@ -1022,7 +1060,7 @@
   const drawProjectile = (projectile) => { ctx.save(); const speed = Math.hypot(projectile.vx, projectile.vy) || 1; const trail = projectile.kind === "shockwave" ? 26 : projectile.kind === "root-lance" ? 34 : 20; ctx.globalAlpha = .18; ctx.strokeStyle = projectile.color; ctx.lineWidth = projectile.radius * .9; ctx.beginPath(); ctx.moveTo(projectile.x, projectile.y); ctx.lineTo(projectile.x - projectile.vx / speed * trail, projectile.y - projectile.vy / speed * trail); ctx.stroke(); ctx.globalAlpha = .95; ctx.fillStyle = projectile.color; ctx.shadowColor = projectile.color; ctx.shadowBlur = 12; if (projectile.kind === "shockwave") { ctx.translate(projectile.x, projectile.y); ctx.rotate(Math.atan2(projectile.vy, projectile.vx)); ctx.fillRect(-12, -3, 24, 6); ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 2; ctx.strokeRect(-14, -5, 28, 10); } else if (projectile.kind === "root-lance") { ctx.translate(projectile.x, projectile.y); ctx.rotate(Math.atan2(projectile.vy, projectile.vx)); ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(-7, -6); ctx.lineTo(-3, 0); ctx.lineTo(-7, 6); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(214,255,220,.7)"; ctx.lineWidth = 2; ctx.stroke(); } else { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius + 3, 0, Math.PI * 2); ctx.stroke(); } ctx.restore(); };
   const drawAttackTrail = () => {
     if (player.attack <= 0) return;
-    const progress = clamp(player.attackElapsed / .34, 0, 1); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
+    const linearProgress = clamp(player.attackElapsed / .34, 0, 1); const progress = 1 - Math.pow(1 - linearProgress, 2.2); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
     ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.lineCap = "round";
     const start = -1.02 + progress * .22; const end = -.92 + progress * 1.92; const fade = clamp((player.attack < .12 ? player.attack / .12 : 1), 0, 1);
     ctx.globalAlpha = .16 + fade * .42; ctx.strokeStyle = "#fff5d2"; ctx.lineWidth = 15; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
@@ -1115,13 +1153,13 @@
     if (ui.discovery) ui.discovery.textContent = `${state.discoveries || 0}/${state.discoveryTotal || 3}`;
     if (ui.ability) { ui.ability.textContent = state.rootlightLantern ? (player.rootlightCooldown > 0 ? `Moonwake Lantern · ${player.rootlightCooldown.toFixed(1)}s` : "Moonwake Lantern · L ready") : "Rootlight dormant"; ui.ability.classList.toggle("ready", Boolean(state.rootlightLantern && player.rootlightCooldown <= 0)); }
     ui.save.textContent = state.saveError ? "Save unavailable" : state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : state.mode === "victory" ? "Complete" : state.mode === "dead" ? "Run ended" : "Paused";
-    ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); }
+    const healthKey = `${player.hp}/${player.maxHp}`; const healthChanged = healthKey !== previousHealthKey; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); } if (healthChanged) { ui.hearts.classList.remove("health-pop"); void ui.hearts.offsetWidth; ui.hearts.classList.add("health-pop"); window.setTimeout(() => ui.hearts.classList.remove("health-pop"), 300); previousHealthKey = healthKey; }
     ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective();
   };
   const updateDialogueSpeedLabel = () => { if (!ui.dialogueSpeed) return; const speed = state.dialogueSpeed || 52; ui.dialogueSpeed.textContent = `Text: ${speed >= 100 ? "fast" : speed <= 36 ? "slow" : "normal"}`; };
   const showVictory = () => { state.mode = "victory"; hideScreens(); ui.victory.classList.remove("hidden"); updateHud(); };
 
-  const startGame = (continueGame) => { hideScreens(); restoreTitlePresentation(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.saveError = false; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; state.bossIntroSeen = false; state.bossEntrance = 0; state.bossPhase = 1; state.bossPhaseShift = 0; state.bossArenaPulse = 0; state.bossDefeatTimer = 0; state.bossDefeatX = 600; state.bossDefeatY = 285; state.bossRewardClaimed = false; state.visualClock = 0; state.pickupPulse = 0; player.maxHp = 6; player.hp = player.maxHp; resetPlayerMotion(); startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
+  const startGame = (continueGame) => { hideScreens(); restoreTitlePresentation(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.saveError = false; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; state.bossIntroSeen = false; state.bossEntrance = 0; state.bossPhase = 1; state.bossPhaseShift = 0; state.bossArenaPulse = 0; state.bossDefeatTimer = 0; state.bossDefeatX = 600; state.bossDefeatY = 285; state.bossRewardClaimed = false; state.visualClock = 0; state.pickupPulse = 0; state.hitStop = 0; state.chestOpening = 0; state.chestOpenX = 0; state.chestOpenY = 0; player.maxHp = 6; player.hp = player.maxHp; resetPlayerMotion(); startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
 
   document.getElementById("new-game").addEventListener("click", () => startGame(false));
   document.getElementById("continue-game").addEventListener("click", () => startGame(true));
@@ -1130,7 +1168,7 @@
   document.getElementById("reset-save").addEventListener("click", () => { if (window.confirm("Erase your Mosswake save?")) resetProgress(); });
   ui.dialogueSpeed.addEventListener("click", () => { const speeds = [36, 52, 110]; const current = speeds.indexOf(state.dialogueSpeed); state.dialogueSpeed = speeds[(current + 1 + speeds.length) % speeds.length]; updateDialogueSpeedLabel(); saveData(); });
   canvas.addEventListener("pointerdown", () => canvas.focus());
-  window.addEventListener("keydown", (event) => { const key = event.key.toLowerCase(); const target = event.target instanceof HTMLElement ? event.target : null; if (target && target.closest("button, a, input, textarea, select, summary")) return; if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","j","k","e","l","p","escape","enter"," "].includes(key)) event.preventDefault(); if (!keys.has(key)) justPressed.add(key); keys.add(key); if (key === "e" || key === "enter") interact(); if (key === "l") useRootlight(); if (key === "p" || key === "escape") { if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); } else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); canvas.focus(); } updateHud(); } });
+  window.addEventListener("keydown", (event) => { const key = event.key.toLowerCase(); const target = event.target instanceof HTMLElement ? event.target : null; if (target && target.closest("button, a, input, textarea, select, summary")) return; if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","j","k","e","l","p","escape","enter"," "].includes(key)) event.preventDefault(); const wasDown = keys.has(key); if (!wasDown) justPressed.add(key); keys.add(key); if (!wasDown && (key === "e" || key === "enter")) interact(); if (!wasDown && key === "l") useRootlight(); if (!wasDown && (key === "p" || key === "escape")) { if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); } else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); canvas.focus(); } updateHud(); } });
   window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur", () => { keys.clear(); if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } });
   document.addEventListener("visibilitychange", () => { if (document.hidden) { keys.clear(); if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } } });
