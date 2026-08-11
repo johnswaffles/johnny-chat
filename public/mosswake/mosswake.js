@@ -33,7 +33,8 @@
     miniBossDefeated: false, bossDefeated: false, reward: false, secretFound: false, chestOpened: false, heartChestOpened: false, loot: 0,
     rowanClue: false, rowanRewarded: false, southPassageOpen: false, reedCacheFound: false, hiddenChestOpened: false,
     optionalGuardDefeated: false, lanternLens: false, lanternSeed: false, discoveries: 0, discoveryTotal: 3,
-    dialogueSpeed: 52, spawnGrace: 0, lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0
+    dialogueSpeed: 52, spawnGrace: 0, dungeonIntro: 0, dungeonEntranceSeen: false, roomTransition: 0, roomTransitionLabel: "", hazardCooldown: 0, ashCacheOpened: false, ashShortcutOpen: false,
+    lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0
   };
   let enemies = [];
   let projectiles = [];
@@ -161,7 +162,7 @@
   const resetProgress = () => {
     localStorage.removeItem(STORAGE_KEY);
     state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0;
-    state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dialogueSpeed = 52;
+    state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dialogueSpeed = 52; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false;
     player.maxHp = 6; player.hp = player.maxHp; player.x = 390; player.y = 500; startArea("overworld", false); state.mode = "title"; hideScreens(); ui.title.classList.remove("hidden"); updateHud();
   };
 
@@ -269,6 +270,14 @@
   const startArea = (area, announce = true) => {
     state.area = area;
     state.spawnGrace = area === "overworld" ? 3.2 : 0;
+    if (area === "dungeon") {
+      state.roomTransition = .72;
+      state.roomTransitionLabel = dungeonRoomName();
+      if (`${state.roomX}-${state.roomY}` === "0-0" && !state.dungeonEntranceSeen) {
+        state.dungeonIntro = 3.4;
+        state.dungeonEntranceSeen = true;
+      }
+    }
     enemies = []; projectiles = []; drops = []; particles = [];
     if (area === "overworld") {
       player.x = 390; player.y = 500;
@@ -292,12 +301,12 @@
 
   const spawnDungeonEnemies = () => {
     const key = `${state.roomX}-${state.roomY}`;
-    if (key === "0-0") { spawnEnemy("mossling", 330, 285); spawnEnemy("mossling", 820, 420); }
-    if (key === "1-0") { spawnEnemy("wisp", 350, 360); spawnEnemy("wisp", 850, 270); }
-    if (key === "2-0" && !state.miniBossDefeated) spawnEnemy("warden", 600, 360);
-    if (key === "0-1") { spawnEnemy("mossling", 280, 260); spawnEnemy("wisp", 850, 520); }
-    if (key === "1-1") spawnEnemy("wisp", 620, 330);
-    if (key === "2-1" && !state.bossDefeated) spawnEnemy("boss", 600, 285);
+    if (key === "0-0") { spawnEnemy("mossling", 300, 300, { group: "gallery-scouts" }); spawnEnemy("mossling", 860, 460, { group: "gallery-scouts" }); }
+    if (key === "1-0") { spawnEnemy("wisp", 300, 270, { guardRadius: 70 }); spawnEnemy("wisp", 900, 470, { guardRadius: 70 }); }
+    if (key === "2-0" && !state.miniBossDefeated) { spawnEnemy("warden", 600, 360, { attackCooldown: .9 }); spawnEnemy("mossling", 420, 560, { group: "garden-sprouts" }); spawnEnemy("mossling", 780, 560, { group: "garden-sprouts" }); }
+    if (key === "0-1") { spawnEnemy("mossling", 235, 250); spawnEnemy("mossling", 940, 570); spawnEnemy("wisp", 900, 260, { guardRadius: 55 }); }
+    if (key === "1-1" && !state.ashCacheOpened) { spawnEnemy("wisp", 620, 300); spawnEnemy("moth", 920, 610, { hidden: true, guardRadius: 48 }); }
+    if (key === "2-1" && !state.bossDefeated) spawnEnemy("boss", 600, 285, { attackCooldown: 1.2 });
   };
 
   const overworldObstacles = () => [
@@ -308,9 +317,19 @@
   const dungeonObstacles = () => {
     const walls = [{ x: 0, y: 0, w: ROOM.width, h: 35 }, { x: 0, y: ROOM.height - 35, w: ROOM.width, h: 35 }, { x: 0, y: 0, w: 35, h: ROOM.height }, { x: ROOM.width - 35, y: 0, w: 35, h: ROOM.height }];
     const key = `${state.roomX}-${state.roomY}`;
+    if (key === "0-0") walls.push({ x: 270, y: 190, w: 54, h: 120, type: "pillar" }, { x: 876, y: 190, w: 54, h: 120, type: "pillar" });
+    if (key === "1-0") walls.push({ x: 270, y: 210, w: 54, h: 150, type: "pillar" }, { x: 876, y: 210, w: 54, h: 150, type: "pillar" }, { x: 490, y: 540, w: 220, h: 34, type: "broken-wall" });
+    if (key === "2-0") walls.push({ x: 230, y: 190, w: 46, h: 130, type: "pillar" }, { x: 924, y: 190, w: 46, h: 130, type: "pillar" }, { x: 260, y: 510, w: 120, h: 34, type: "fallen-stone" }, { x: 820, y: 510, w: 120, h: 34, type: "fallen-stone" });
     if (key === "0-1") walls.push({ x: 300, y: 210, w: 80, h: 180, type: "pillar" }, { x: 820, y: 400, w: 80, h: 180, type: "pillar" });
-    if (key === "1-1") walls.push({ x: 300, y: 180, w: 600, h: 28, type: "wall" });
+    if (key === "1-1") walls.push({ x: 300, y: 180, w: 600, h: 28, type: "wall" }, { x: 250, y: 510, w: 110, h: 34, type: "debris" }, { x: 840, y: 510, w: 110, h: 34, type: "debris" });
+    if (key === "2-1") walls.push({ x: 220, y: 170, w: 45, h: 180, type: "pillar" }, { x: 935, y: 170, w: 45, h: 180, type: "pillar" });
     return walls;
+  };
+  const dungeonHazards = () => {
+    const key = `${state.roomX}-${state.roomY}`;
+    if (key === "0-1") return [{ x: 410, y: 250, w: 380, h: 280, damage: 1, color: COLORS.water, label: "deep water" }];
+    if (key === "1-1") return [{ x: 420, y: 250, w: 110, h: 250, damage: 1, color: "#b65345", label: "ember trench" }, { x: 670, y: 250, w: 110, h: 250, damage: 1, color: "#b65345", label: "ember trench" }];
+    return [];
   };
   const circleRectCollision = (circle, rect) => {
     const x = clamp(circle.x, rect.x, rect.x + rect.w); const y = clamp(circle.y, rect.y, rect.y + rect.h);
@@ -322,6 +341,7 @@
     if (state.area === "overworld" && !state.secretFound && circleRectCollision(next, { x: 1300, y: 720, w: 170, h: 42 })) return true;
     if (state.area === "overworld" && !state.southPassageOpen && circleRectCollision(next, { x: 980, y: 742, w: 180, h: 148 })) return true;
     if (state.area === "dungeon" && state.roomX === 1 && state.roomY === 0 && !state.switches && next.y > ROOM.height - 90) return true;
+    if (state.area === "dungeon" && state.roomX === 1 && state.roomY === 1 && !state.ashShortcutOpen && next.x < 90 && next.y < 245) return true;
     return false;
   };
 
@@ -421,6 +441,7 @@
       if (key === "0-0" && distance(player, { x: 600, y: 390 }) < 80 && !state.chestOpened) { state.chestOpened = true; state.key = true; showToast("Brass key acquired"); spawnLeaves(600, 390, 20); saveData(); updateHud(); return; }
       if (key === "1-0" && distance(player, { x: 600, y: 380 }) < 80 && !state.switches) { state.switches = true; showToast("The moon switch unlocks the lower gate"); spawnLeaves(600, 380, 20); saveData(); updateHud(); return; }
       if (key === "0-1" && distance(player, { x: 600, y: 390 }) < 80 && !state.heartChestOpened) { state.heartChestOpened = true; player.maxHp += 1; player.hp = player.maxHp; showToast("Heartseed shard · maximum health increased"); saveData(); updateHud(); return; }
+      if (key === "1-1" && distance(player, { x: 180, y: 635 }) < 92 && !state.ashCacheOpened) { state.ashCacheOpened = true; state.ashShortcutOpen = true; state.loot += 1; showToast("Sootglass cache opened · a hidden shortcut wakes", 2400); spawnLeaves(180, 635, 22); triggerImpact(180, 635, "#ffb26b", 1.1); saveData(); updateHud(); return; }
       if (key === "2-1" && state.bossDefeated && distance(player, { x: 600, y: 150 }) < 100) { showVictory(); return; }
     }
     showToast("Nothing answers from here", 900);
@@ -432,9 +453,11 @@
     if (from === "0-0" && dy < 0 || from === "0-1" && dy > 0) { if (from === "0-1") { state.area = "overworld"; startArea("overworld"); return; } }
     if (targetX < 0 || targetX > 2 || targetY < 0 || targetY > 1) return;
     if (from === "1-0" && dy > 0 && !state.switches) { showToast("The moon switch is still dark"); return; }
+    if (from === "1-1" && dx < 0 && !state.ashShortcutOpen) { showToast("Sootglass seals the flooded vault — search the broken wall"); return; }
     if (from === "1-1" && dx > 0 && !state.key) { showToast("A brass keyhole bars this door"); return; }
+    if (from === "1-1" && dx > 0 && state.key && !state.miniBossDefeated) { showToast("The Root Warden must fall before this shortcut opens"); return; }
     if (from === "2-0" && dy > 0 && !state.miniBossDefeated) { showToast("The Warden still guards the lower gate"); return; }
-    state.roomX = targetX; state.roomY = targetY; player.x = dx > 0 ? 80 : dx < 0 ? ROOM.width - 80 : ROOM.width / 2; player.y = dy > 0 ? 80 : dy < 0 ? ROOM.height - 80 : ROOM.height / 2; state.transitionCooldown = .5; startArea("dungeon"); saveData(); updateObjective();
+    state.roomX = targetX; state.roomY = targetY; const entryX = dx > 0 ? 80 : dx < 0 ? ROOM.width - 80 : ROOM.width / 2; const entryY = dy > 0 ? 80 : dy < 0 ? ROOM.height - 80 : ROOM.height / 2; state.transitionCooldown = .5; startArea("dungeon"); player.x = entryX; player.y = entryY; resetPlayerMotion(); saveData(); updateObjective();
   };
 
   const enemyMove = (enemy, dx, dy, speed, dt) => { const direction = normalized(dx, dy, 0, 0); enemy.x += direction.x * speed * dt; enemy.y += direction.y * speed * dt; };
@@ -552,16 +575,27 @@
     player.velocityX = moveToward(player.velocityX, 0, player.dash > 0 ? 0 : 520 * dt); player.velocityY = moveToward(player.velocityY, 0, player.dash > 0 ? 0 : 520 * dt);
   };
 
+  const updateDungeonHazards = () => {
+    if (state.area !== "dungeon" || state.hazardCooldown > 0 || player.invulnerable > 0) return;
+    const hazard = dungeonHazards().find((rect) => circleRectCollision(player, rect));
+    if (!hazard) return;
+    state.hazardCooldown = .72;
+    const source = { x: player.x - player.facingX * 20, y: player.y - player.facingY * 20 };
+    hurtPlayer(hazard.damage, source);
+    spawnParticle(player.x, player.y, hazard.color, 7, 65, hazard.label === "deep water" ? "spark" : "impact");
+    showToast(hazard.label === "deep water" ? "The flooded vault bites at your boots" : "Ash vents flare — keep moving", 900);
+  };
+
   const update = (dt) => {
     if (state.toastTimer > 0) { state.toastTimer -= dt * 1000; if (state.toastTimer <= 0) ui.toast.classList.remove("visible"); }
-    state.impactFlash = Math.max(0, state.impactFlash - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); state.spawnGrace = Math.max(0, (state.spawnGrace || 0) - dt);
+    state.impactFlash = Math.max(0, state.impactFlash - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); state.spawnGrace = Math.max(0, (state.spawnGrace || 0) - dt); state.dungeonIntro = Math.max(0, (state.dungeonIntro || 0) - dt); state.roomTransition = Math.max(0, (state.roomTransition || 0) - dt); state.hazardCooldown = Math.max(0, (state.hazardCooldown || 0) - dt);
     leaves.forEach((leaf) => { leaf.y += leaf.speed * dt; leaf.x += Math.sin(leaf.phase + leaf.y * .01) * dt * 3; if (leaf.y > WORLD.height + 20) leaf.y = -10; });
     particles = particles.filter((particle) => { particle.life -= dt; particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.vy += 45 * dt; return particle.life > 0; });
     updateEnvironment(dt);
     updateNpcs(dt);
     if (state.dialogue) { updateDialogue(dt); justPressed.clear(); updateCamera(dt); return; }
     if (state.mode !== "playing") return;
-    updatePlayer(dt); updateEnemies(dt); updateDrops(dt);
+    updatePlayer(dt); updateDungeonHazards(); updateEnemies(dt); updateDrops(dt);
     if (state.area === "dungeon" && state.transitionCooldown <= 0) {
       if (player.x < 42) transitionDungeon(-1, 0); else if (player.x > ROOM.width - 42) transitionDungeon(1, 0); else if (player.y < 42) transitionDungeon(0, -1); else if (player.y > ROOM.height - 42) transitionDungeon(0, 1);
     }
@@ -713,23 +747,70 @@
   };
   const drawEntrance = (x, y, time) => { ctx.fillStyle = "#342d3e"; ctx.beginPath(); ctx.arc(x, y, 50, Math.PI, 0); ctx.lineTo(x + 50, y + 50); ctx.lineTo(x - 50, y + 50); ctx.closePath(); ctx.fill(); ctx.fillStyle = `rgba(95,238,206,${.28 + Math.sin(time * 2) * .08})`; ctx.beginPath(); ctx.arc(x, y + 6, 32, Math.PI, 0); ctx.lineTo(x + 32, y + 45); ctx.lineTo(x - 32, y + 45); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#8ef2cf"; ctx.lineWidth = 2; ctx.stroke(); };
 
-  const drawDungeon = (time) => {
-    ctx.fillStyle = COLORS.dungeon; ctx.fillRect(0, 0, ROOM.width, ROOM.height); ctx.fillStyle = "rgba(170,220,192,.05)"; for (let y = 40; y < ROOM.height - 35; y += 40) for (let x = 40; x < ROOM.width - 35; x += 40) ctx.fillRect(x, y, 1, ROOM.height - 75);
-    const key = `${state.roomX}-${state.roomY}`; ctx.fillStyle = COLORS.dungeonLight; dungeonObstacles().forEach((wall) => ctx.fillRect(wall.x, wall.y, wall.w, wall.h));
-    ctx.strokeStyle = "rgba(196,249,205,.17)"; ctx.lineWidth = 2; ctx.strokeRect(35, 35, ROOM.width - 70, ROOM.height - 70);
-    for (let x = 100; x < ROOM.width - 100; x += 140) drawTorch(x, 68, time);
-    if (key === "0-0") { drawChest(600, 390, state.chestOpened); drawRune(600, 160, "KEY"); }
-    if (key === "1-0") { drawSwitch(600, 380, state.switches, time); drawRune(600, 150, "MOON"); }
-    if (key === "0-1") { drawWater({ x: 430, y: 280, w: 340, h: 220 }, time); drawChest(600, 390, state.heartChestOpened); drawRune(600, 150, "HEART"); }
-    if (key === "1-1") { ctx.fillStyle = "rgba(255,136,95,.16)"; ctx.fillRect(410, 240, 380, 260); drawRune(600, 370, "LOCK"); }
-    if (key === "2-0") drawRune(600, 140, state.miniBossDefeated ? "OPEN" : "WARDEN");
-    if (key === "2-1") { drawRune(600, 130, state.bossDefeated ? "HEARTSEED" : "SANCTUM"); if (state.bossDefeated) drawReward(600, 230, time); }
-    drawDungeonDoors(time);
+  const dungeonRoomTint = (key) => ({ "0-0": ["#172424", "#2b4b46"], "1-0": ["#151f2d", "#30445b"], "2-0": ["#20251f", "#3d5140"], "0-1": ["#142b32", "#2c5b60"], "1-1": ["#2b1d25", "#5a3a38"], "2-1": ["#271c30", "#533451"] }[key] || [COLORS.dungeon, COLORS.dungeonLight]);
+  const drawDungeonMasonry = (time, key) => {
+    const [base, stone] = dungeonRoomTint(key); const wash = ctx.createLinearGradient(0, 0, 0, ROOM.height); wash.addColorStop(0, base); wash.addColorStop(1, "#101a1b"); ctx.fillStyle = wash; ctx.fillRect(0, 0, ROOM.width, ROOM.height);
+    ctx.globalAlpha = .22; ctx.fillStyle = stone;
+    for (let row = 0; row < 12; row += 1) for (let col = 0; col < 16; col += 1) { const offset = row % 2 ? 26 : 0; const x = col * 80 - offset; const y = row * 64 + 38; ctx.fillRect(x + 2, y + 2, 74, 58); }
+    ctx.globalAlpha = .16; ctx.strokeStyle = "#a7c5ac"; ctx.lineWidth = 2;
+    for (let i = 0; i < 13; i += 1) { const x = 75 + ((i * 97) % 1040); const y = 100 + ((i * 53) % 560); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 12 + (i % 3) * 8, y + 5); ctx.lineTo(x + 7, y + 18 + (i % 2) * 8); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "rgba(196,249,205,.2)"; ctx.lineWidth = 3; ctx.strokeRect(35, 35, ROOM.width - 70, ROOM.height - 70);
+    ctx.strokeStyle = "rgba(10,18,18,.55)"; ctx.lineWidth = 12; ctx.strokeRect(47, 47, ROOM.width - 94, ROOM.height - 94);
+    for (let x = 100; x < ROOM.width - 100; x += 180) drawTorch(x, 68, time);
   };
+  const drawDungeonRoots = (time, anchors = []) => {
+    anchors.forEach(([x, y, length, flip], index) => { const sway = Math.sin(time * .8 + index) * 2; ctx.save(); ctx.translate(x, y); ctx.scale(flip || 1, 1); ctx.strokeStyle = index % 2 ? "#557e63" : "#70966a"; ctx.globalAlpha = .78; ctx.lineWidth = 9; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(24, length * .2 + sway, -18, length * .62, 10, length); ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = "#a3bd78"; ctx.beginPath(); ctx.moveTo(3, 5); ctx.bezierCurveTo(26, length * .25, -8, length * .6, 12, length - 4); ctx.stroke(); ctx.restore(); });
+  };
+  const drawDungeonHazardVisual = (time) => {
+    dungeonHazards().forEach((hazard, index) => {
+      if (hazard.label === "deep water") { drawWater(hazard, time); ctx.save(); ctx.globalAlpha = .5; ctx.strokeStyle = "#8bd8c3"; ctx.lineWidth = 2; for (let i = 0; i < 7; i += 1) { const y = hazard.y + 26 + i * 39 + Math.sin(time * 1.4 + i) * 4; ctx.beginPath(); ctx.moveTo(hazard.x + 15, y); ctx.quadraticCurveTo(hazard.x + hazard.w / 2, y - 7, hazard.x + hazard.w - 15, y); ctx.stroke(); } ctx.restore(); }
+      else { ctx.save(); ctx.fillStyle = "rgba(191,73,53,.22)"; ctx.fillRect(hazard.x, hazard.y, hazard.w, hazard.h); ctx.globalAlpha = .78; for (let i = 0; i < 14; i += 1) { const x = hazard.x + 14 + ((i * 41) % Math.max(20, hazard.w - 24)); const y = hazard.y + hazard.h - 10 - ((time * (26 + i) + i * 37) % Math.max(30, hazard.h - 20)); ctx.fillStyle = i % 2 ? "#f28b5d" : "#ffd37d"; ctx.beginPath(); ctx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+      if (index === 0) { ctx.fillStyle = "rgba(255,230,168,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(hazard.label.toUpperCase(), hazard.x + hazard.w / 2, hazard.y - 12); }
+    });
+  };
+  const drawDungeonRoomProps = (time, key) => {
+    if (key === "0-0") {
+      drawDungeonRoots(time, [[110, 72, 185, 1], [1080, 72, 185, -1], [95, 650, -130, 1], [1100, 650, -130, -1]]);
+      ctx.fillStyle = "#3c5148"; ctx.fillRect(350, 305, 500, 16); ctx.fillStyle = "#718f75"; ctx.fillRect(350, 302, 500, 4); drawChest(600, 390, state.chestOpened); drawRune(600, 160, "KEY");
+      ctx.fillStyle = "rgba(213,255,209,.4)"; ctx.font = "12px DM Mono"; ctx.textAlign = "center"; ctx.fillText("THE FIRST LOCK REMEMBERS BRASS", 600, 470);
+    } else if (key === "1-0") {
+      drawDungeonRoots(time, [[120, 90, 150, 1], [1080, 90, 150, -1]]);
+      const moon = ctx.createRadialGradient(600, 205, 5, 600, 205, 200); moon.addColorStop(0, "rgba(179,220,255,.16)"); moon.addColorStop(1, "rgba(179,220,255,0)"); ctx.fillStyle = moon; ctx.fillRect(330, 70, 540, 360);
+      ctx.strokeStyle = "rgba(192,225,255,.2)"; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(600, 200, 130, Math.PI, Math.PI * 2); ctx.stroke(); drawSwitch(600, 380, state.switches, time); drawRune(600, 150, state.switches ? "MOON LIT" : "MOON");
+      ctx.fillStyle = "rgba(218,240,255,.5)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.switches ? "THE LOWER GATE BREATHES" : "A SWITCH SLEEPS BELOW THE MOON", 600, 474);
+    } else if (key === "2-0") {
+      drawDungeonRoots(time, [[100, 100, 230, 1], [1100, 100, 230, -1], [170, 680, -170, 1], [1030, 680, -170, -1]]);
+      ctx.save(); ctx.globalAlpha = .35; ctx.strokeStyle = "#8ab879"; ctx.lineWidth = 3; ctx.setLineDash([8, 9]); ctx.beginPath(); ctx.arc(600, 390, 210 + Math.sin(time * 1.5) * 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); drawRune(600, 140, state.miniBossDefeated ? "OPEN" : "WARDEN");
+      ctx.fillStyle = "rgba(192,231,166,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.miniBossDefeated ? "A LIVING ROOT BRIDGE LEADS SOUTH" : "THE GARDEN KEEPS ITS OWN LAW", 600, 700);
+    } else if (key === "0-1") {
+      drawDungeonRoots(time, [[105, 100, 160, 1], [1060, 650, -180, -1]]); drawDungeonHazardVisual(time); drawChest(600, 390, state.heartChestOpened); drawRune(600, 150, "HEART");
+      ctx.fillStyle = "#566e68"; ctx.fillRect(130, 540, 200, 18); ctx.fillRect(870, 230, 200, 18); ctx.fillStyle = "#9bb7a3"; ctx.fillRect(150, 535, 160, 5); ctx.fillRect(890, 225, 160, 5);
+      ctx.fillStyle = "rgba(188,239,218,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.heartChestOpened ? "THE WATER REMEMBERS YOUR FOOTSTEPS" : "CROSS THE FLOOD · TAKE ONLY WHAT YOU NEED", 600, 690);
+    } else if (key === "1-1") {
+      drawDungeonRoots(time, [[105, 70, 200, 1], [1080, 70, 200, -1]]); drawDungeonHazardVisual(time);
+      ctx.fillStyle = "#6d4b43"; ctx.fillRect(420, 180, 360, 20); ctx.fillStyle = "#b88363"; ctx.fillRect(440, 177, 120, 4); ctx.fillRect(620, 177, 120, 4);
+      ctx.fillStyle = state.ashCacheOpened ? "rgba(255,190,116,.33)" : "rgba(255,126,95,.24)"; ctx.beginPath(); ctx.arc(180, 635, 58 + Math.sin(time * 2) * 3, 0, Math.PI * 2); ctx.fill(); drawChest(180, 635, state.ashCacheOpened); drawRune(180, 552, state.ashCacheOpened ? "SHORTCUT" : "CACHE"); drawRune(600, 370, "ASH GATE");
+      ctx.fillStyle = "rgba(255,202,164,.48)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.ashCacheOpened ? "THE ASH LIFT OPENS A QUIET WAY BACK" : "LOOK BEHIND THE BROKEN WALL", 600, 690);
+    } else if (key === "2-1") {
+      drawDungeonRoots(time, [[90, 82, 180, 1], [1110, 82, 180, -1]]); drawRune(600, 130, state.bossDefeated ? "HEARTSEED" : "SANCTUM");
+      ctx.save(); ctx.globalAlpha = .4; ctx.strokeStyle = state.bossDefeated ? "#ffd77b" : "#b95a90"; ctx.lineWidth = 4; for (let i = 0; i < 3; i += 1) { ctx.beginPath(); ctx.arc(600, 370, 85 + i * 42 + Math.sin(time * 1.4 + i) * 3, 0, Math.PI * 2); ctx.stroke(); } ctx.restore();
+      ctx.fillStyle = "#66506b"; ctx.fillRect(500, 170, 200, 18); ctx.fillStyle = "#b39ac2"; ctx.fillRect(540, 164, 120, 6); if (state.bossDefeated) drawReward(600, 230, time); else { ctx.fillStyle = "rgba(239,186,224,.44)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("THE HEARTSEED WAITS BEYOND THE GUARDIAN", 600, 700); }
+    }
+  };
+  const drawDungeon = (time) => { const key = `${state.roomX}-${state.roomY}`; drawDungeonMasonry(time, key); ctx.fillStyle = COLORS.dungeonLight; dungeonObstacles().forEach((wall) => { ctx.fillRect(wall.x, wall.y, wall.w, wall.h); ctx.fillStyle = "rgba(188,220,190,.18)"; ctx.fillRect(wall.x + 5, wall.y + 5, Math.max(0, wall.w - 10), 5); ctx.fillStyle = COLORS.dungeonLight; }); drawDungeonRoomProps(time, key); drawDungeonDoors(time); drawDungeonMotes(time); };
   const drawTorch = (x, y, time) => { ctx.fillStyle = "#6d4934"; ctx.fillRect(x - 4, y, 8, 30); const glow = ctx.createRadialGradient(x, y, 2, x, y, 75); glow.addColorStop(0, "rgba(255,214,123,.45)"); glow.addColorStop(1, "rgba(255,214,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 75, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(x, y - 6 + Math.sin(time * 8 + x) * 2, 7, 0, Math.PI * 2); ctx.fill(); };
   const drawRune = (x, y, label) => { ctx.fillStyle = "rgba(142,242,207,.07)"; ctx.beginPath(); ctx.arc(x, y, 42, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(142,242,207,.34)"; ctx.stroke(); ctx.fillStyle = "rgba(214,255,220,.45)"; ctx.font = "10px DM Mono"; ctx.textAlign = "center"; ctx.fillText(label, x, y + 4); };
   const drawSwitch = (x, y, active, time) => { ctx.fillStyle = active ? "#8ef2cf" : "#546b64"; ctx.beginPath(); ctx.arc(x, y, 25 + Math.sin(time * 4) * 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = active ? "#f6fff1" : "#243b37"; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill(); };
-  const drawDungeonDoors = (time) => { [[ROOM.width / 2, 35, 70, 20],[ROOM.width / 2, ROOM.height - 35, 70, 20],[35, ROOM.height / 2, 20, 70],[ROOM.width - 35, ROOM.height / 2, 20, 70]].forEach(([x,y,w,h]) => { ctx.fillStyle = `rgba(142,242,207,${.12 + Math.sin(time * 3 + x) * .04})`; ctx.fillRect(x - w / 2, y - h / 2, w, h); }); };
+  const drawDungeonMotes = (time) => { ctx.save(); for (let i = 0; i < 24; i += 1) { const x = 75 + ((i * 149) % 1050) + Math.sin(time * (.18 + (i % 3) * .04) + i) * 12; const y = 80 + ((i * 83) % 620) + Math.cos(time * .23 + i) * 9; const alpha = .16 + (Math.sin(time * 1.7 + i) + 1) * .09; ctx.globalAlpha = alpha; ctx.fillStyle = i % 4 === 0 ? "#ffd77b" : "#a8d6bd"; ctx.beginPath(); ctx.arc(x, y, i % 4 === 0 ? 2 : 1.4, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); };
+  const drawDungeonDoors = (time) => {
+    const key = `${state.roomX}-${state.roomY}`; const doors = [{ side: "north", x: ROOM.width / 2, y: 35, w: 120, h: 34 }, { side: "south", x: ROOM.width / 2, y: ROOM.height - 35, w: 120, h: 34 }, { side: "west", x: 35, y: ROOM.height / 2, w: 34, h: 120 }, { side: "east", x: ROOM.width - 35, y: ROOM.height / 2, w: 34, h: 120 }];
+    doors.forEach((door) => {
+      let open = true; let locked = false; if (key === "0-0" && door.side === "east") { open = state.key; locked = !state.key; } if (key === "1-0" && door.side === "south") { open = state.switches; locked = !state.switches; } if (key === "2-0" && door.side === "south") { open = state.miniBossDefeated; locked = !state.miniBossDefeated; } if (key === "1-1" && door.side === "west" && !state.ashShortcutOpen) { open = false; locked = true; } if (key === "1-1" && door.side === "east") { open = state.key && state.miniBossDefeated; locked = !open; }
+      ctx.save(); ctx.translate(door.x, door.y); const horizontal = door.side === "north" || door.side === "south"; if (horizontal) { ctx.fillStyle = open ? "rgba(142,242,207,.22)" : "rgba(75,56,55,.8)"; ctx.fillRect(-door.w / 2, -door.h / 2, door.w, door.h); ctx.strokeStyle = open ? "rgba(142,242,207,.65)" : "rgba(208,143,103,.5)"; ctx.lineWidth = 3; ctx.strokeRect(-door.w / 2, -door.h / 2, door.w, door.h); if (locked) { ctx.strokeStyle = "#c88a6a"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-18, -10); ctx.lineTo(18, 10); ctx.moveTo(18, -10); ctx.lineTo(-18, 10); ctx.stroke(); } } else { ctx.fillStyle = open ? "rgba(142,242,207,.22)" : "rgba(75,56,55,.8)"; ctx.fillRect(-door.w / 2, -door.h / 2, door.w, door.h); ctx.strokeStyle = open ? "rgba(142,242,207,.65)" : "rgba(208,143,103,.5)"; ctx.lineWidth = 3; ctx.strokeRect(-door.w / 2, -door.h / 2, door.w, door.h); if (locked) { ctx.strokeStyle = "#c88a6a"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-10, -18); ctx.lineTo(10, 18); ctx.moveTo(10, -18); ctx.lineTo(-10, 18); ctx.stroke(); } } ctx.restore();
+    });
+    ctx.fillStyle = "rgba(216,255,220,.42)"; ctx.font = "10px DM Mono"; ctx.textAlign = "center"; if (key === "0-0" && !state.key) ctx.fillText("BRASS LOCK", ROOM.width - 122, ROOM.height / 2 - 76); if (key === "1-0" && !state.switches) ctx.fillText("MOON GATE", ROOM.width / 2, ROOM.height - 76); if (key === "2-0" && !state.miniBossDefeated) ctx.fillText("WARDEN GATE", ROOM.width / 2, ROOM.height - 76); if (key === "1-1" && !state.ashShortcutOpen) ctx.fillText("ASH LIFT", 112, 286);
+  };
   const drawReward = (x, y, time) => { const glow = ctx.createRadialGradient(x, y, 2, x, y, 90); glow.addColorStop(0, "rgba(255,215,123,.5)"); glow.addColorStop(1, "rgba(255,215,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 90, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(x, y + Math.sin(time * 3) * 5, 18, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fff8c7"; ctx.beginPath(); ctx.arc(x - 5, y - 5, 6, 0, Math.PI * 2); ctx.fill(); };
 
   const drawEnemy = (enemy, time) => {
@@ -801,14 +882,32 @@
     drawPlayer(time); if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); ctx.restore();
     const light = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, 80, WIDTH / 2, HEIGHT / 2, 480); light.addColorStop(0, "rgba(0,0,0,0)"); light.addColorStop(1, state.area === "dungeon" ? "rgba(2,8,8,.38)" : "rgba(4,13,9,.2)"); ctx.fillStyle = light; ctx.fillRect(0, 0, WIDTH, HEIGHT);
     if (state.impactFlash > 0) { ctx.fillStyle = `rgba(255,246,210,${state.impactFlash * 1.8})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); }
+    if (state.area === "dungeon" && state.roomTransition > 0) { const alpha = clamp(state.roomTransition / .72, 0, 1); ctx.fillStyle = `rgba(5,10,11,${alpha * .9})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.globalAlpha = clamp((.72 - state.roomTransition) * 5, 0, 1); ctx.fillStyle = "#d8efcf"; ctx.font = "700 20px Outfit"; ctx.textAlign = "center"; ctx.fillText(state.roomTransitionLabel, WIDTH / 2, HEIGHT / 2 - 8); ctx.fillStyle = "rgba(214,255,220,.65)"; ctx.font = "11px DM Mono"; ctx.fillText("THE HOLLOW SHRINE", WIDTH / 2, HEIGHT / 2 + 20); ctx.restore(); }
+    if (state.area === "dungeon" && state.dungeonIntro > 0) { const progress = clamp((3.4 - state.dungeonIntro) / 3.4, 0, 1); const alpha = state.dungeonIntro > 2.7 ? .92 : clamp(state.dungeonIntro / 2.7, 0, .92); ctx.fillStyle = `rgba(3,7,8,${alpha})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.globalAlpha = clamp(progress * 2.3, 0, 1); ctx.fillStyle = "#e8efcf"; ctx.font = "700 27px Outfit"; ctx.textAlign = "center"; ctx.fillText("THE HOLLOW SHRINE", WIDTH / 2, HEIGHT / 2 - 18); ctx.fillStyle = "#c89d77"; ctx.font = "11px DM Mono"; ctx.fillText("THE ROOTS CLOSE BEHIND YOU", WIDTH / 2, HEIGHT / 2 + 16); ctx.fillStyle = "rgba(214,255,220,.56)"; ctx.font = "10px DM Mono"; ctx.fillText("E · interact   J / SPACE · strike   K · dodge", WIDTH / 2, HEIGHT / 2 + 46); ctx.restore(); }
   };
 
-  const updateObjective = () => { if (state.area === "overworld") { if (!state.rowanClue) { ui.objective.textContent = "Find Rowan at the outpost"; ui.objectiveCopy.textContent = "The blue moths gather where the old path breaks."; } else if (!state.southPassageOpen) { ui.objective.textContent = "Search the low pond"; ui.objectiveCopy.textContent = "Three pale stones point toward a curtain of ivy. Steel can open what a path cannot."; } else if (!state.hiddenChestOpened) { ui.objective.textContent = "Reach the hidden grove"; ui.objectiveCopy.textContent = state.optionalGuardDefeated ? "The thornback is gone. Something old glints beneath the lantern leaves." : "A slow thornback guards the lantern leaves. Watch its warning ring."; } else { ui.objective.textContent = "Enter the Hollow Shrine"; ui.objectiveCopy.textContent = "The lantern seed warms your palm. A blue seam glows behind the old outpost."; } } else { const key = `${state.roomX}-${state.roomY}`; if (key === "0-0") { ui.objective.textContent = state.key ? "Reach the Moon Switch Hall" : "Search the Root Gallery"; ui.objectiveCopy.textContent = state.key ? "The brass key hums when you face east." : "A forgotten chest waits beneath the shrine glyph."; } else if (key === "1-0") { ui.objective.textContent = state.switches ? "Find the Warden's Garden" : "Wake the moon switch"; ui.objectiveCopy.textContent = state.switches ? "The lower gate is open." : "Stand near the silver disk and press E."; } else if (key === "2-0") { ui.objective.textContent = state.miniBossDefeated ? "Descend to the Sanctum" : "Defeat the Root Warden"; ui.objectiveCopy.textContent = "Its bark armor cracks after every clean sword hit."; } else if (key === "2-1") { ui.objective.textContent = state.bossDefeated ? "Claim the Heartseed" : "Silence the Hollow Guardian"; ui.objectiveCopy.textContent = "The guardian changes its rhythm when its light turns rose."; } else { ui.objective.textContent = "Explore the shrine"; ui.objectiveCopy.textContent = "Every room remembers a different season."; } } };
+  const updateObjective = () => {
+    if (state.area === "overworld") {
+      if (!state.rowanClue) { ui.objective.textContent = "Find Rowan at the outpost"; ui.objectiveCopy.textContent = "The blue moths gather where the old path breaks."; }
+      else if (!state.southPassageOpen) { ui.objective.textContent = "Search the low pond"; ui.objectiveCopy.textContent = "Three pale stones point toward a curtain of ivy. Steel can open what a path cannot."; }
+      else if (!state.hiddenChestOpened) { ui.objective.textContent = "Reach the hidden grove"; ui.objectiveCopy.textContent = state.optionalGuardDefeated ? "The thornback is gone. Something old glints beneath the lantern leaves." : "A slow thornback guards the lantern leaves. Watch its warning ring."; }
+      else { ui.objective.textContent = "Enter the Hollow Shrine"; ui.objectiveCopy.textContent = "The lantern seed warms your palm. A blue seam glows behind the old outpost."; }
+      return;
+    }
+    const key = `${state.roomX}-${state.roomY}`;
+    if (key === "0-0") { ui.objective.textContent = state.key ? "Choose a route in the Moon Switch Hall" : "Find the brass key"; ui.objectiveCopy.textContent = state.key ? "The east lock is awake. The first room taught you what a key can change." : "The root gallery is quiet on purpose. Search beneath the shrine glyph."; }
+    else if (key === "1-0") { ui.objective.textContent = state.switches ? "Choose your descent" : "Wake the moon switch"; ui.objectiveCopy.textContent = state.switches ? "The lower gate opens south; the garden path waits east." : "Stand near the silver disk and press E. Its light will feed the lower gate."; }
+    else if (key === "2-0") { ui.objective.textContent = state.miniBossDefeated ? "Take the living shortcut" : "Defeat the Root Warden"; ui.objectiveCopy.textContent = state.miniBossDefeated ? "The warden's roots now form a direct descent to the sanctum." : "Its bark armor cracks after every clean sword hit. Read the ring, then step in."; }
+    else if (key === "0-1") { ui.objective.textContent = state.heartChestOpened ? "Leave the flooded vault" : "Cross the flooded vault"; ui.objectiveCopy.textContent = state.heartChestOpened ? "The heartseed shard steadies your pulse. Find the dry stone at the north." : "Deep water slows the feet and bites once per breath. The chest is worth the crossing."; }
+    else if (key === "1-1") { ui.objective.textContent = state.ashCacheOpened ? "Use the ash shortcut" : "Search the ash antechamber"; ui.objectiveCopy.textContent = state.ashCacheOpened ? "The sootglass cache woke a quiet lift behind the broken wall." : "Two ember trenches divide the room. Look left of the damaged wall for a secret cache."; }
+    else if (key === "2-1") { ui.objective.textContent = state.bossDefeated ? "Claim the Heartseed" : "Silence the Hollow Guardian"; ui.objectiveCopy.textContent = state.bossDefeated ? "The shrine is quiet. Approach the heartseed altar." : "The guardian changes its rhythm when its light turns rose. Keep the outer ring clear."; }
+    else { ui.objective.textContent = "Explore the shrine"; ui.objectiveCopy.textContent = "Every room remembers a different season."; }
+  };
   const updateHud = () => { ui.area.textContent = state.area === "overworld" ? "Lanternwood" : "Hollow Shrine"; ui.room.textContent = state.area === "overworld" ? "Outpost field" : dungeonRoomName(); ui.seed.textContent = state.reward ? "1" : "0"; ui.keys.textContent = state.key ? "1" : "0"; ui.loot.textContent = state.loot || "0"; if (ui.discovery) ui.discovery.textContent = `${state.discoveries || 0}/${state.discoveryTotal || 3}`; ui.save.textContent = state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : "Paused"; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); } ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective(); };
   const updateDialogueSpeedLabel = () => { if (!ui.dialogueSpeed) return; const speed = state.dialogueSpeed || 52; ui.dialogueSpeed.textContent = `Text: ${speed >= 100 ? "fast" : speed <= 36 ? "slow" : "normal"}`; };
   const showVictory = () => { state.mode = "victory"; hideScreens(); ui.victory.classList.remove("hidden"); updateHud(); };
 
-  const startGame = (continueGame) => { hideScreens(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; player.maxHp = 6; player.hp = player.maxHp; startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
+  const startGame = (continueGame) => { hideScreens(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; player.maxHp = 6; player.hp = player.maxHp; startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
 
   document.getElementById("new-game").addEventListener("click", () => startGame(false));
   document.getElementById("continue-game").addEventListener("click", () => startGame(true));
