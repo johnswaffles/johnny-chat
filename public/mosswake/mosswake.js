@@ -20,6 +20,35 @@
     lightWarm: "#ffd77b", lightCool: "#8ef2cf", lightRose: "#ff9a9d", paper: "#f3f6df",
     shadow: "rgba(4,13,10,.34)", shadowDeep: "rgba(4,13,10,.52)", outlineWidth: 2
   };
+  // Generated artwork is optional: the manifest can turn a painted sprite on without
+  // changing collision, AI, animation state, or room composition. Missing entries keep
+  // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=1";
+  const loadedAssets = new Map();
+  const loadOptionalAsset = (key, spec) => {
+    if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
+    const image = new Image(); image.decoding = "async";
+    image.onload = () => loadedAssets.set(key, { image, spec });
+    image.onerror = () => loadedAssets.delete(key);
+    image.src = `/mosswake/assets/${spec.src.replace(/^\//, "")}`;
+  };
+  const loadOptionalAssets = () => {
+    fetch(ASSET_MANIFEST_URL, { credentials: "same-origin", cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((manifest) => Object.entries(manifest?.sprites || {}).forEach(([key, spec]) => loadOptionalAsset(key, spec)))
+      .catch(() => { /* Art is progressive enhancement; the procedural pass stays playable. */ });
+  };
+  const drawOptionalSprite = (key, x, y, options = {}) => {
+    const entry = loadedAssets.get(key); if (!entry || !entry.image.complete || !entry.image.naturalWidth) return false;
+    const { image, spec } = entry; const frameWidth = Number(spec.frameWidth) || image.naturalWidth; const frameHeight = Number(spec.frameHeight) || image.naturalHeight;
+    const columns = Math.max(1, Number(spec.columns) || Math.floor(image.naturalWidth / frameWidth)); const frameCount = Math.max(1, Number(spec.frames) || Math.floor(image.naturalWidth / frameWidth) * Math.floor(image.naturalHeight / frameHeight));
+    const frame = ((Number.isFinite(options.frame) ? options.frame : Math.floor(state.visualClock * (Number(spec.fps) || 8))) % frameCount + frameCount) % frameCount;
+    const sx = (frame % columns) * frameWidth; const sy = Math.floor(frame / columns) * frameHeight;
+    const dw = Number(options.width) || Number(spec.displayWidth) || frameWidth; const dh = Number(options.height) || Number(spec.displayHeight) || frameHeight;
+    const anchorX = Number.isFinite(options.anchorX) ? options.anchorX : Number.isFinite(spec.anchorX) ? spec.anchorX : .5; const anchorY = Number.isFinite(options.anchorY) ? options.anchorY : Number.isFinite(spec.anchorY) ? spec.anchorY : .82;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(options.rotation || 0); ctx.scale(options.flipX ? -1 : 1, 1); ctx.globalAlpha *= Number.isFinite(options.alpha) ? options.alpha : 1;
+    ctx.drawImage(image, sx, sy, frameWidth, frameHeight, -dw * anchorX, -dh * anchorY, dw, dh); ctx.restore(); return true;
+  };
   const keys = new Set();
   const justPressed = new Set();
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -989,6 +1018,7 @@
     ][variant];
     drawShadow(x, y + 57 * s, 30 * s, 10 * s, layer === "front" ? .45 : .3);
     if (layer !== "back") drawDirectionalShadow(x, y + 48 * s, 56 * s, 17 * s, layer === "front" ? .09 : .06, .2);
+    const treeFrame = variant * 4 + Math.floor((time * 3 + phase) % 4); if (drawOptionalSprite(`tree-${layer}`, x, y + 58 * s, { frame: treeFrame, width: 176 * s * depth, height: 220 * s * depth, anchorX: .5, anchorY: .98 })) return;
     ctx.save(); ctx.globalAlpha = depth; ctx.translate(x, y); ctx.rotate(sway); ctx.scale(s, s);
     ctx.fillStyle = "#6e4935"; ctx.beginPath(); ctx.moveTo(-10, 5); ctx.lineTo(9, 5); ctx.lineTo(14, 58); ctx.lineTo(-15, 58); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = "#aa7048"; ctx.fillRect(-3, 8, 5, 44); ctx.fillStyle = "rgba(33,56,39,.22)"; ctx.fillRect(8, 13, 5, 41);
@@ -1440,10 +1470,17 @@
     if (enemy.hidden) { ctx.save(); ctx.globalAlpha = .16 + Math.sin(time * 2 + enemy.orbit) * .04; drawShadow(enemy.x, enemy.y + 9, 15, 5, .35); ctx.fillStyle = "#8e76a5"; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y, 8, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
     const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 1.5 : 0; const moving = enemy.motionSpeed > 5; const bob = moving ? Math.sin(enemy.walk) * (enemy.type === "moth" ? 2.6 : 1.4) : Math.sin(enemy.animTime * 1.7) * .45; const windup = enemy.telegraph > 0 ? clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1) : 0; const facing = enemy.facingX < -.15 ? -1 : 1;
     const shadowScale = enemy.type === "boss" ? (enemy.phase === 2 ? 1.5 : 1.35) : 1; drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92) * shadowScale, enemy.radius * (moving ? .34 : .3) * shadowScale, enemy.type === "boss" ? .44 : .36);
+    const customEnemyKey = enemy.type === "boss" ? "boss" : `enemy-${enemy.type}`;
+    const customEnemyBase = enemy.type === "boss" ? (enemy.phase === 2 ? 32 : 0) : enemy.type === "warden" ? 0 : enemy.type === "thornback" ? 8 : enemy.type === "moth" ? 16 : enemy.type === "wisp" ? 24 : 32;
+    const customEnemyFrame = customEnemyBase + Math.floor((moving ? enemy.walk * 1.2 : time * 4) % 8);
+    const customEnemy = drawOptionalSprite(customEnemyKey, enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil, { frame: customEnemyFrame, width: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : enemy.radius * 2.45, height: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : enemy.radius * 2.45, flipX: facing < 0, alpha: enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1 });
     ctx.save(); ctx.translate(enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil); ctx.scale(facing, 1); ctx.globalAlpha = enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1; ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2;
     const color = enemy.color; const squash = enemy.hitStun > 0 ? .86 : enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "bossDashing" ? 1.12 : 1; const stretch = enemy.hitStun > 0 ? 1.1 : enemy.state === "chargeWindup" || enemy.state === "bossDashWindup" ? .86 : 1;
     ctx.scale(squash, stretch);
-    if (enemy.type === "boss") {
+    if (customEnemy) {
+      // The optional sheet is already positioned in world space; keep the procedural
+      // branch below dormant while leaving telegraphs and health bars unchanged.
+    } else if (enemy.type === "boss") {
       const phaseTwo = enemy.phase === 2; const bossScale = phaseTwo ? 1.42 : 1.26; const float = Math.sin(time * (phaseTwo ? 2.8 : 1.8) + enemy.orbit) * (phaseTwo ? 3.4 : 2.2); const bossRadius = enemy.radius + Math.sin(time * (phaseTwo ? 8 : 5)) * (phaseTwo ? 3 : 2); ctx.translate(0, -float); ctx.scale(bossScale, bossScale);
       const aura = ctx.createRadialGradient(0, 0, 8, 0, 0, phaseTwo ? 70 : 60); aura.addColorStop(0, phaseTwo ? "rgba(255,93,141,.25)" : "rgba(174,222,183,.16)"); aura.addColorStop(.55, phaseTwo ? "rgba(191,63,119,.1)" : "rgba(126,175,156,.06)"); aura.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = aura; ctx.beginPath(); ctx.arc(0, 0, phaseTwo ? 70 : 60, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = phaseTwo ? "#512342" : "#465667"; ctx.beginPath(); ctx.moveTo(0, -43); ctx.lineTo(16, -30); ctx.lineTo(31, -23); ctx.lineTo(37, 7); ctx.lineTo(27, 35); ctx.lineTo(14, 28); ctx.lineTo(0, 48); ctx.lineTo(-14, 28); ctx.lineTo(-27, 35); ctx.lineTo(-37, 7); ctx.lineTo(-31, -23); ctx.lineTo(-16, -30); ctx.closePath(); ctx.fill();
@@ -1470,7 +1507,7 @@
     } else {
       const hop = moving ? Math.abs(Math.sin(enemy.walk)) * 2 : 0; ctx.translate(0, -hop); ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 3, enemy.radius + 1, enemy.radius - 1, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#80bb71"; ctx.beginPath(); ctx.arc(-8, -8, 6, 0, Math.PI * 2); ctx.arc(8, -8, 6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#17362e"; ctx.beginPath(); ctx.arc(-5, -1, 3, 0, Math.PI * 2); ctx.arc(5, -1, 3, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(239,255,217,.4)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-9, 12); ctx.lineTo(-11, 17); ctx.moveTo(9, 12); ctx.lineTo(11, 17); ctx.stroke();
     }
-    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.strokeStyle = enemy.type === "boss" && enemy.phase === 2 ? "rgba(255,213,220,.72)" : "rgba(239,255,217,.34)"; ctx.lineWidth = enemy.type === "boss" ? 3 : 2; ctx.beginPath(); ctx.arc(0, 0, enemy.radius * .86, -2.55, -1.05); ctx.stroke(); ctx.restore();
+    if (!customEnemy) { ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.strokeStyle = enemy.type === "boss" && enemy.phase === 2 ? "rgba(255,213,220,.72)" : "rgba(239,255,217,.34)"; ctx.lineWidth = enemy.type === "boss" ? 3 : 2; ctx.beginPath(); ctx.arc(0, 0, enemy.radius * .86, -2.55, -1.05); ctx.stroke(); } ctx.restore();
     if (enemy.type === "boss" && enemy.phaseExposed > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.phaseExposed * 1.8, 0, .95); ctx.strokeStyle = COLORS.mint; ctx.shadowColor = COLORS.mint; ctx.shadowBlur = 16; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 15 + Math.sin(time * 18) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,246,210,.9)"; ctx.lineWidth = 2; for (let i = 0; i < 4; i += 1) { const angle = time * 2 + i * Math.PI / 2; ctx.beginPath(); ctx.moveTo(enemy.x + Math.cos(angle) * 10, enemy.y + Math.sin(angle) * 10); ctx.lineTo(enemy.x + Math.cos(angle + .3) * (enemy.radius + 12), enemy.y + Math.sin(angle + .3) * (enemy.radius + 12)); ctx.stroke(); } ctx.restore(); }
     if (enemy.hitStun > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.hitStun * 5, 0, .85); ctx.strokeStyle = "#fff7dc"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 5 + Math.sin(time * 30) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     if (enemy.telegraph > 0) {
@@ -1492,6 +1529,7 @@
   const drawProjectile = (projectile) => {
     ctx.save();
     const speed = Math.hypot(projectile.vx, projectile.vy) || 1; const angle = Math.atan2(projectile.vy, projectile.vx);
+    const projectileFrame = Math.floor(state.visualClock * 12) % 4; if (drawOptionalSprite(`projectile-${projectile.kind}`, projectile.x, projectile.y, { frame: projectileFrame, width: projectile.kind === "shockwave" ? 48 : 42, height: projectile.kind === "shockwave" ? 32 : 24, rotation: angle, anchorX: .5, anchorY: .5 })) { ctx.restore(); return; }
     const trail = projectile.kind === "shockwave" ? (projectile.bossAttack ? 42 : 31) : projectile.kind === "root-lance" ? (projectile.bossAttack ? 48 : 38) : projectile.kind === "rosebolt" ? (projectile.bossAttack ? 36 : 28) : 22;
     ctx.globalAlpha = projectile.bossAttack ? .28 : projectile.kind === "shockwave" ? .22 : .18; ctx.strokeStyle = projectile.color; ctx.lineWidth = projectile.bossAttack ? 5 : projectile.kind === "shockwave" ? 5 : 4; ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(projectile.x, projectile.y); ctx.lineTo(projectile.x - projectile.vx / speed * trail, projectile.y - projectile.vy / speed * trail); ctx.stroke();
@@ -1517,6 +1555,7 @@
   const drawAttackTrail = () => {
     if (player.attack <= 0) return;
     const linearProgress = clamp(player.attackElapsed / .34, 0, 1); const progress = 1 - Math.pow(1 - linearProgress, 2.2); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
+    const slashFrame = Math.floor(linearProgress * 8); if (drawOptionalSprite("fx-slash", player.x, player.y, { frame: slashFrame, width: 96, height: 64, rotation: angle, anchorX: .22, anchorY: .5, alpha: clamp(player.attack / .12, 0, 1) })) return;
     ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.lineCap = "round";
     const anticipation = clamp(linearProgress / .2, 0, 1); const start = -1.02 + progress * .22; const end = -.92 + progress * 1.92; const fade = clamp((player.attack < .12 ? player.attack / .12 : 1), 0, 1);
     if (linearProgress < .3) { ctx.globalAlpha = .18 + anticipation * .24; ctx.strokeStyle = "rgba(255,231,164,.72)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(20, 0, 31, -1.55, -1.05); ctx.stroke(); }
@@ -1550,16 +1589,22 @@
     const bob = player.visualState === "move" ? Math.sin(player.walk) * 2 : player.visualState === "idle" ? Math.sin(time * 2.2) * .7 : player.visualState === "attack" ? Math.sin(player.attackElapsed * 22) * .45 : 0;
     const lean = player.visualState === "hurt" ? -.12 : player.visualState === "attack" ? .08 : 0;
     drawShadow(player.x, player.y + 16, player.visualState === "dash" ? 25 : 19, player.visualState === "dash" ? 5 : 7, .36);
-    ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
-    const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
-    ctx.scale(player.facingX < -.2 ? -1 : 1, 1);
-    ctx.fillStyle = player.visualState === "dash" ? "#89d8c7" : "#3d6780"; ctx.beginPath(); ctx.ellipse(0, 1, 15, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = ART.ink; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = COLORS.player; ctx.beginPath(); ctx.arc(0, -14, 10, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(37,48,40,.72)"; ctx.stroke();
-    ctx.fillStyle = "#4a302c"; ctx.beginPath(); ctx.arc(0, -19, 11, Math.PI, 0); ctx.fill();
-    ctx.fillStyle = "#d8f0c6"; ctx.fillRect(-13, 1, 26, 4);
-    ctx.fillStyle = "rgba(255,255,255,.38)"; ctx.fillRect(-7, -22, 3, 3); ctx.strokeStyle = "rgba(205,247,216,.34)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 1, 13, Math.PI * 1.12, Math.PI * 1.82); ctx.stroke();
-    if (player.visualState === "dash") { ctx.strokeStyle = "rgba(182,255,225,.8)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 1, 21, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.restore(); ctx.globalAlpha = 1;
+    const playerAnimationBase = player.visualState === "move" ? 8 : player.visualState === "attack" ? 16 : player.visualState === "dash" ? 24 : player.visualState === "hurt" ? 28 : 0;
+    const playerFrame = playerAnimationBase + Math.floor((player.visualState === "attack" ? player.attackElapsed * 18 : time * 5) % (player.visualState === "attack" ? 6 : 8));
+    const customPlayer = drawOptionalSprite("player", player.x, player.y + bob, { frame: playerFrame, width: player.visualState === "dash" ? 72 : 64, height: player.visualState === "dash" ? 58 : 64, flipX: player.facingX < -.2, rotation: lean + (player.visualState === "dash" ? Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2 : 0), alpha: flicker ? .48 : 1 });
+    if (!customPlayer) {
+      ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
+      const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
+      ctx.scale(player.facingX < -.2 ? -1 : 1, 1);
+      ctx.fillStyle = player.visualState === "dash" ? "#89d8c7" : "#3d6780"; ctx.beginPath(); ctx.ellipse(0, 1, 15, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = ART.ink; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = COLORS.player; ctx.beginPath(); ctx.arc(0, -14, 10, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(37,48,40,.72)"; ctx.stroke();
+      ctx.fillStyle = "#4a302c"; ctx.beginPath(); ctx.arc(0, -19, 11, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = "#d8f0c6"; ctx.fillRect(-13, 1, 26, 4);
+      ctx.fillStyle = "rgba(255,255,255,.38)"; ctx.fillRect(-7, -22, 3, 3); ctx.strokeStyle = "rgba(205,247,216,.34)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 1, 13, Math.PI * 1.12, Math.PI * 1.82); ctx.stroke();
+      if (player.visualState === "dash") { ctx.strokeStyle = "rgba(182,255,225,.8)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 1, 21, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
     const attackProgress = player.visualState === "attack" ? clamp(player.attackElapsed / .34, 0, 1) : 0; const attackAngle = player.visualState === "attack" ? Math.atan2(player.attackDirectionY, player.attackDirectionX) : Math.atan2(player.facingY, player.facingX); const swordSweep = player.visualState === "attack" ? -1.08 + attackProgress * 1.86 : .12;
     ctx.save(); ctx.translate(player.x, player.y + bob - 1); ctx.rotate(attackAngle + swordSweep); ctx.globalAlpha = player.visualState === "hurt" ? .55 : 1; ctx.strokeStyle = "#6e4937"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(13, 0); ctx.stroke(); ctx.fillStyle = player.visualState === "attack" ? "#fff1ba" : "#e5d59f"; ctx.beginPath(); ctx.moveTo(10, -3); ctx.lineTo(39, -2); ctx.lineTo(44, 0); ctx.lineTo(39, 2); ctx.lineTo(10, 3); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(40,59,49,.72)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "#b58355"; ctx.fillRect(8, -5, 5, 10); ctx.restore();
     if (state.rootlightLantern) { const bob = Math.sin(time * 3.4) * 3; const glow = ctx.createRadialGradient(player.x + 15, player.y - 18 + bob, 1, player.x + 15, player.y - 18 + bob, 32); glow.addColorStop(0, "rgba(255,238,166,.72)"); glow.addColorStop(1, "rgba(142,242,207,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 32, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffe9a4"; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 5 + Math.sin(time * 5) * .8, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(142,242,207,.65)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 9, 0, Math.PI * 2); ctx.stroke(); }
@@ -1668,5 +1713,5 @@
 
 
   const frame = (timestamp) => { const dt = Math.min(.05, (timestamp - lastFrame) / 1000 || 0); lastFrame = timestamp; update(dt); draw(timestamp / 1000); window.requestAnimationFrame(frame); };
-  updateDialogueSpeedLabel(); updateHud(); if (!hasSave()) document.getElementById("continue-game").disabled = true; else document.getElementById("continue-game").disabled = false; window.requestAnimationFrame(frame);
+  loadOptionalAssets(); updateDialogueSpeedLabel(); updateHud(); if (!hasSave()) document.getElementById("continue-game").disabled = true; else document.getElementById("continue-game").disabled = false; window.requestAnimationFrame(frame);
 })();
