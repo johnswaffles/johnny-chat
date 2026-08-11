@@ -28,8 +28,8 @@
       if (!AudioCtor) return;
       audioContext = audioContext || new AudioCtor();
       if (audioContext.state === "suspended") audioContext.resume();
-      const now = audioContext.currentTime; const notes = kind === "relic" ? [392, 523.25, 783.99] : kind === "cache" ? [261.63, 392, 659.25] : [220, 329.63, 493.88];
-      notes.forEach((frequency, index) => { const oscillator = audioContext.createOscillator(); const gain = audioContext.createGain(); oscillator.type = kind === "pulse" ? "sine" : "triangle"; oscillator.frequency.setValueAtTime(frequency, now + index * .07); gain.gain.setValueAtTime(.0001, now + index * .07); gain.gain.exponentialRampToValueAtTime(kind === "relic" ? .07 : .045, now + index * .07 + .015); gain.gain.exponentialRampToValueAtTime(.0001, now + index * .07 + .24); oscillator.connect(gain).connect(audioContext.destination); oscillator.start(now + index * .07); oscillator.stop(now + index * .07 + .26); });
+      const now = audioContext.currentTime; const notes = kind === "relic" ? [392, 523.25, 783.99] : kind === "cache" ? [261.63, 392, 659.25] : kind === "boss-enter" ? [98, 130.81, 196, 146.83] : kind === "phase" ? [130.81, 196, 293.66, 440] : kind === "defeat" ? [392, 523.25, 659.25, 783.99] : [220, 329.63, 493.88];
+      notes.forEach((frequency, index) => { const oscillator = audioContext.createOscillator(); const gain = audioContext.createGain(); oscillator.type = kind === "pulse" || kind === "phase" ? "sine" : "triangle"; oscillator.frequency.setValueAtTime(frequency, now + index * .07); gain.gain.setValueAtTime(.0001, now + index * .07); gain.gain.exponentialRampToValueAtTime(kind === "relic" || kind === "defeat" ? .07 : .045, now + index * .07 + .015); gain.gain.exponentialRampToValueAtTime(.0001, now + index * .07 + .24); oscillator.connect(gain).connect(audioContext.destination); oscillator.start(now + index * .07); oscillator.stop(now + index * .07 + .26); });
     } catch (error) { /* Sound is a progressive enhancement; visuals remain complete without it. */ }
   };
 
@@ -46,6 +46,7 @@
     optionalGuardDefeated: false, lanternLens: false, lanternSeed: false, discoveries: 0, discoveryTotal: 3,
     dialogueSpeed: 52, spawnGrace: 0, dungeonIntro: 0, dungeonEntranceSeen: false, roomTransition: 0, roomTransitionLabel: "", hazardCooldown: 0, ashCacheOpened: false, ashShortcutOpen: false,
     rootlightLantern: false, rootlightTested: false, rootlightGalleryOpen: false, rootlightGalleryCacheOpened: false, rootlightMoonBridge: false, rootlightWaterway: false, rootlightGateOpen: false, rootlightCacheOpened: false, itemReveal: 0,
+    bossIntroSeen: false, bossEntrance: 0, bossPhase: 1, bossPhaseShift: 0, bossArenaPulse: 0, bossDefeatTimer: 0, bossDefeatX: 600, bossDefeatY: 285, bossRewardClaimed: false,
     lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0
   };
   let enemies = [];
@@ -164,7 +165,9 @@
       if (!data) return false;
       Object.assign(state, data, { mode: "playing", dialogue: null, toastTimer: 0 });
       if (state.ashCacheOpened && !state.rootlightLantern) state.rootlightLantern = true;
-      player.maxHp = 6 + (state.heartChestOpened ? 1 : 0) + (state.lanternSeed ? 1 : 0);
+      // Migrate older victories into the permanent Heartseed Echo reward.
+      if (state.bossDefeated && !state.bossRewardClaimed) state.bossRewardClaimed = true;
+      player.maxHp = 6 + (state.heartChestOpened ? 1 : 0) + (state.lanternSeed ? 1 : 0) + (state.bossRewardClaimed ? 1 : 0);
       player.hp = clamp(Number(data.hp) || player.maxHp, 1, player.maxHp);
       if (state.area === "dungeon") { player.x = ROOM.width / 2; player.y = ROOM.height - 100; } else { player.x = 390; player.y = 500; }
       startArea(state.area, false);
@@ -175,7 +178,7 @@
   const resetProgress = () => {
     localStorage.removeItem(STORAGE_KEY);
     state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0;
-    state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dialogueSpeed = 52; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0;
+    state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dialogueSpeed = 52; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; state.bossIntroSeen = false; state.bossEntrance = 0; state.bossPhase = 1; state.bossPhaseShift = 0; state.bossArenaPulse = 0; state.bossDefeatTimer = 0; state.bossDefeatX = 600; state.bossDefeatY = 285; state.bossRewardClaimed = false;
     player.maxHp = 6; player.hp = player.maxHp; player.x = 390; player.y = 500; resetPlayerMotion(); startArea("overworld", false); state.mode = "title"; hideScreens(); ui.title.classList.remove("hidden"); updateHud();
   };
 
@@ -268,7 +271,7 @@
       warden: { hp: 9, maxHp: 9, speed: 22, radius: 25, color: COLORS.warden, damage: 2, behavior: "warden", detectionRange: 380, attackRange: 48, attackRate: 1.2, drop: { name: "Root sigil", color: COLORS.warden, kind: "sigil" } },
       boss: { hp: 16, maxHp: 16, speed: 28, radius: 39, color: COLORS.boss, damage: 2, behavior: "boss", detectionRange: 520, attackRange: 190, attackRate: 1.25, drop: { name: "Heartseed echo", color: COLORS.gold, kind: "echo" } }
     }[type];
-    enemies.push({ id: makeId(type), type, x, y, homeX: x, homeY: y, ...config, ...options, velocityX: 0, velocityY: 0, attackCooldown: options.attackCooldown ?? rand(.25, config.attackRate), hitFlash: 0, hitStun: 0, telegraph: 0, telegraphType: "", state: "idle", stateTimer: rand(.2, .7), phase: 1, dead: false, alerted: false, hidden: type === "moth", orbit: rand(0, 6.28), chargeX: 0, chargeY: 0, aimX: 0, aimY: 0 });
+    enemies.push({ id: makeId(type), type, x, y, homeX: x, homeY: y, ...config, ...options, velocityX: 0, velocityY: 0, attackCooldown: options.attackCooldown ?? rand(.25, config.attackRate), hitFlash: 0, hitStun: 0, telegraph: 0, telegraphType: "", state: "idle", stateTimer: rand(.2, .7), phase: 1, attackPattern: 0, phaseNotice: 0, dead: false, alerted: false, hidden: type === "moth", orbit: rand(0, 6.28), chargeX: 0, chargeY: 0, aimX: 0, aimY: 0 });
   };
   const spawnHiddenEncounter = () => {
     if (state.area !== "overworld" || !state.southPassageOpen || state.optionalGuardDefeated || enemies.some((enemy) => enemy.encounter === "hidden-cache" && !enemy.dead)) return;
@@ -290,6 +293,7 @@
         state.dungeonIntro = 3.4;
         state.dungeonEntranceSeen = true;
       }
+      if (`${state.roomX}-${state.roomY}` === "2-1" && !state.bossDefeated && !state.bossIntroSeen) { state.bossEntrance = 3.8; state.bossIntroSeen = true; state.bossPhase = 1; playSfx("boss-enter"); }
     }
     enemies = []; projectiles = []; drops = []; particles = [];
     if (area === "overworld") {
@@ -388,6 +392,30 @@
     const center = { x: player.x + direction.x * 31, y: player.y + direction.y * 31 };
     return { ...center, radius: 46, direction, halfAngle: .88 };
   };
+  const beginBossDefeat = (enemy) => {
+    if (state.bossDefeatTimer > 0 || state.bossDefeated) return;
+    state.bossDefeatTimer = 5.8;
+    state.bossDefeatX = enemy.x;
+    state.bossDefeatY = enemy.y;
+    state.bossPhase = 2;
+    state.bossArenaPulse = 2.2;
+    state.bossDefeated = true;
+    state.reward = true;
+    if (!state.bossRewardClaimed) {
+      state.bossRewardClaimed = true;
+      player.maxHp += 1;
+      player.hp = player.maxHp;
+      showToast("Heartseed Echo claimed · maximum health increased", 3200);
+    }
+    playSfx("defeat");
+    spawnLeaves(enemy.x, enemy.y, 44);
+    spawnParticle(enemy.x, enemy.y, COLORS.gold, 34, 185, "impact");
+    particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: 2.4, maxLife: 2.4, size: 28, color: COLORS.rose, kind: "ring", rotation: 0 });
+    triggerImpact(enemy.x, enemy.y, COLORS.gold, 1.8);
+    camera.shake = Math.max(camera.shake, .3);
+    saveData();
+    updateHud();
+  };
   const attack = () => {
     if (state.mode !== "playing" || state.dialogue || player.dash > 0) return;
     if (player.attackCooldown > 0) { player.attackBuffer = .13; return; }
@@ -416,7 +444,7 @@
         spawnEnemyDeath(enemy);
         if (enemy.encounter === "hidden-cache") { state.optionalGuardDefeated = true; showToast("The grove is safe · the old chest waits beneath the lantern leaves", 2200); saveData(); }
         if (enemy.type === "warden") { state.miniBossDefeated = true; showToast("The Warden yields · the sanctum opens"); saveData(); }
-        if (enemy.type === "boss") { state.bossDefeated = true; state.reward = true; showVictory(); saveData(); }
+        if (enemy.type === "boss") beginBossDefeat(enemy);
       }
     });
     breakables().forEach((object) => {
@@ -454,8 +482,8 @@
     enemies.forEach((enemy) => {
       if (enemy.dead || distance(enemy, player) > (enemy.type === "boss" ? 180 : 132)) return;
       enemy.hidden = false; enemy.alerted = true; enemy.hitFlash = .28; enemy.hitStun = enemy.type === "boss" ? .48 : .62; enemy.telegraph = 0; enemy.state = "recover"; enemy.stateTimer = enemy.type === "boss" ? .52 : .34; enemy.attackCooldown = Math.max(enemy.attackCooldown, .72);
-      const direction = normalized(enemy.x - player.x, enemy.y - player.y); enemy.velocityX = direction.x * (enemy.type === "boss" ? 125 : 175); enemy.velocityY = direction.y * (enemy.type === "boss" ? 125 : 175); enemy.hp -= 1; spawnParticle(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 14 : 8, 110, "impact"); triggerImpact(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 1.1 : .75);
-      if (enemy.hp <= 0) { spawnEnemyDeath(enemy); if (enemy.type === "warden") { state.miniBossDefeated = true; showToast("Rootlight breaks the Warden's guard", 1800); } if (enemy.type === "boss") { state.bossDefeated = true; state.reward = true; showVictory(); } saveData(); }
+      const direction = normalized(enemy.x - player.x, enemy.y - player.y); enemy.velocityX = direction.x * (enemy.type === "boss" ? 125 : 175); enemy.velocityY = direction.y * (enemy.type === "boss" ? 125 : 175); enemy.phaseExposed = enemy.type === "boss" ? .9 : 0; const rootlightDamage = enemy.type === "boss" && enemy.phase === 2 ? 2 : 1; enemy.hp -= rootlightDamage; spawnParticle(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 14 : 8, 110, "impact"); triggerImpact(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 1.1 : .75); if (enemy.type === "boss" && enemy.phase === 2) showToast("Rootlight cracks the guardian's unbound heart", 1500);
+      if (enemy.hp <= 0) { spawnEnemyDeath(enemy); if (enemy.type === "warden") { state.miniBossDefeated = true; showToast("Rootlight breaks the Warden's guard", 1800); } if (enemy.type === "boss") beginBossDefeat(enemy); saveData(); }
     });
   };
   const dash = () => {
@@ -530,6 +558,16 @@
     for (let i = 0; i < count; i += 1) { const angle = center + (i - (count - 1) / 2) * .22; projectiles.push({ owner: "enemy", kind: "rosebolt", x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 125, vy: Math.sin(angle) * 125, life: 2.4, radius: 7, color: enemy.phase === 2 ? COLORS.rose : COLORS.gold, damage: enemy.damage }); }
     spawnParticle(enemy.x, enemy.y, enemy.phase === 2 ? COLORS.rose : COLORS.gold, 14, 75, "spark");
   };
+  const fireBossSlam = (enemy) => {
+    const count = enemy.phase === 2 ? 12 : 8; const offset = enemy.phase === 2 ? Math.PI / 12 : 0;
+    for (let i = 0; i < count; i += 1) { const angle = offset + i * Math.PI * 2 / count; projectiles.push({ owner: "enemy", kind: "shockwave", x: enemy.x, y: enemy.y, vx: Math.cos(angle) * (enemy.phase === 2 ? 145 : 118), vy: Math.sin(angle) * (enemy.phase === 2 ? 145 : 118), life: 2.1, radius: 8, color: enemy.phase === 2 ? COLORS.rose : COLORS.gold, damage: 1 }); }
+    state.bossArenaPulse = .9; spawnParticle(enemy.x, enemy.y, enemy.phase === 2 ? COLORS.rose : COLORS.gold, enemy.phase === 2 ? 28 : 18, 150, "impact"); camera.shake = Math.max(camera.shake, enemy.phase === 2 ? .2 : .12);
+  };
+  const fireBossRootRain = (enemy) => {
+    const count = enemy.phase === 2 ? 6 : 3; const center = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    for (let i = 0; i < count; i += 1) { const angle = center + (i - (count - 1) / 2) * .3; projectiles.push({ owner: "enemy", kind: "root-lance", x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 175, vy: Math.sin(angle) * 175, life: 2.3, radius: 9, color: COLORS.mint, damage: 1 }); }
+    spawnLeaves(enemy.x, enemy.y, enemy.phase === 2 ? 22 : 12); spawnParticle(enemy.x, enemy.y, COLORS.mint, 18, 105, "spark");
+  };
   const updateEnemyIdle = (enemy, dt) => {
     enemy.stateTimer -= dt; enemy.orbit += dt * .35;
     const guardRadius = enemy.guardRadius || 30; const targetX = enemy.homeX + Math.cos(enemy.orbit) * Math.min(guardRadius, 28); const targetY = enemy.homeY + Math.sin(enemy.orbit * .8) * Math.min(guardRadius, 18);
@@ -573,16 +611,28 @@
     if (dist < enemy.detectionRange) enemyMove(enemy, player.x - enemy.x, player.y - enemy.y, enemy.speed, dt); else updateEnemyIdle(enemy, dt);
   };
   const updateBoss = (enemy, dist, dt) => {
-    enemy.phase = enemy.hp <= enemy.maxHp / 2 ? 2 : 1; enemy.orbit += dt * (enemy.phase === 2 ? 1.6 : .8);
-    if (enemy.state === "bossWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { fireBossVolley(enemy); enemy.attackCooldown = enemy.phase === 2 ? .8 : 1.25; enemy.state = "orbit"; enemy.telegraph = 0; } return; }
-    if (dist > 180) { enemy.x += Math.cos(enemy.orbit) * enemy.speed * dt; enemy.y += Math.sin(enemy.orbit) * enemy.speed * dt; }
-    if (dist < enemy.detectionRange && enemy.attackCooldown <= 0) beginEnemyTelegraph(enemy, "bossWindup", enemy.phase === 2 ? .55 : .7);
+    const desiredPhase = enemy.hp <= enemy.maxHp / 2 ? 2 : 1;
+    if (desiredPhase !== enemy.phase) { enemy.phase = desiredPhase; state.bossPhase = desiredPhase; state.bossPhaseShift = 1.85; state.bossArenaPulse = 1.85; enemy.state = "phaseShift"; enemy.stateTimer = .2; enemy.telegraph = 0; enemy.attackCooldown = 1.1; playSfx("phase"); camera.shake = Math.max(camera.shake, .24); spawnLeaves(enemy.x, enemy.y, 34); spawnParticle(enemy.x, enemy.y, COLORS.rose, 28, 170, "impact"); return; }
+    state.bossPhase = enemy.phase; enemy.orbit += dt * (enemy.phase === 2 ? 1.7 : .8);
+    if (enemy.state === "phaseShift") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "orbit"; return; }
+    if (enemy.state === "bossWindup" || enemy.state === "bossSlamWindup" || enemy.state === "bossRainWindup" || enemy.state === "bossDashWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { if (enemy.state === "bossWindup") fireBossVolley(enemy); else if (enemy.state === "bossSlamWindup") fireBossSlam(enemy); else if (enemy.state === "bossRainWindup") fireBossRootRain(enemy); else { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.velocityX = direction.x * (enemy.phase === 2 ? 420 : 340); enemy.velocityY = direction.y * (enemy.phase === 2 ? 420 : 340); enemy.state = "bossDashing"; enemy.stateTimer = enemy.phase === 2 ? .58 : .46; spawnDust(enemy.x, enemy.y + 18, 15, enemy.phase === 2 ? "#d66b92" : "#bd8c72"); } enemy.attackCooldown = enemy.phase === 2 ? .62 : 1.05; enemy.telegraph = 0; } return; }
+    if (enemy.state === "bossDashing") { enemy.stateTimer -= dt; enemy.x = clamp(enemy.x + enemy.velocityX * dt, 86, ROOM.width - 86); enemy.y = clamp(enemy.y + enemy.velocityY * dt, 106, ROOM.height - 106); enemy.velocityX = 0; enemy.velocityY = 0; if (distance(enemy, player) < enemy.radius + player.radius + 16) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.rose, 1.35); } if (enemy.stateTimer <= 0) { enemy.state = "bossRecover"; enemy.stateTimer = enemy.phase === 2 ? .34 : .5; } return; }
+    if (enemy.state === "bossRecover") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "orbit"; return; }
+    if (dist > 185) { enemy.x += Math.cos(enemy.orbit) * enemy.speed * dt; enemy.y += Math.sin(enemy.orbit) * enemy.speed * dt; }
+    else { const tangent = { x: -(player.y - enemy.y), y: player.x - enemy.x }; enemyMove(enemy, tangent.x, tangent.y, enemy.phase === 2 ? enemy.speed * 1.1 : enemy.speed * .7, dt); }
+    if (dist < enemy.detectionRange && enemy.attackCooldown <= 0) {
+      const patternCount = enemy.phase === 2 ? 4 : 3; const pattern = enemy.attackPattern % patternCount; enemy.attackPattern += 1;
+      if (pattern === 0) beginEnemyTelegraph(enemy, "bossWindup", enemy.phase === 2 ? .48 : .68);
+      else if (pattern === 1) beginEnemyTelegraph(enemy, "bossSlamWindup", enemy.phase === 2 ? .7 : .86);
+      else if (pattern === 2) beginEnemyTelegraph(enemy, "bossDashWindup", enemy.phase === 2 ? .52 : .72);
+      else beginEnemyTelegraph(enemy, "bossRainWindup", .72);
+    }
   };
   const updateEnemies = (dt) => {
     if (state.spawnGrace > 0) return;
     enemies.forEach((enemy) => {
       if (enemy.dead) return;
-      enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.hitStun = Math.max(0, enemy.hitStun - dt); enemy.attackCooldown -= dt; enemy.telegraph = Math.max(0, enemy.telegraph - dt);
+      enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.hitStun = Math.max(0, enemy.hitStun - dt); enemy.phaseExposed = Math.max(0, (enemy.phaseExposed || 0) - dt); enemy.attackCooldown -= dt; enemy.telegraph = Math.max(0, enemy.telegraph - dt);
       if (enemy.hitStun > 0) { enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt; enemy.velocityX = moveToward(enemy.velocityX, 0, 760 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 760 * dt); return; }
       const dist = distance(enemy, player);
       if (!enemy.alerted && enemy.behavior !== "ambush" && dist <= enemy.detectionRange) { enemy.alerted = true; enemy.state = "alert"; enemy.stateTimer = .16; spawnParticle(enemy.x, enemy.y, enemy.color, 4, 28, "spark"); if (enemy.group) enemies.forEach((ally) => { if (ally.group === enemy.group && distance(enemy, ally) < 175) ally.alerted = true; }); }
@@ -645,14 +695,15 @@
 
   const update = (dt) => {
     if (state.toastTimer > 0) { state.toastTimer -= dt * 1000; if (state.toastTimer <= 0) ui.toast.classList.remove("visible"); }
-    state.impactFlash = Math.max(0, state.impactFlash - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); state.spawnGrace = Math.max(0, (state.spawnGrace || 0) - dt); state.dungeonIntro = Math.max(0, (state.dungeonIntro || 0) - dt); state.roomTransition = Math.max(0, (state.roomTransition || 0) - dt); state.hazardCooldown = Math.max(0, (state.hazardCooldown || 0) - dt); state.itemReveal = Math.max(0, (state.itemReveal || 0) - dt);
+    const bossDefeatWasRunning = state.bossDefeatTimer > 0; state.impactFlash = Math.max(0, state.impactFlash - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); state.spawnGrace = Math.max(0, (state.spawnGrace || 0) - dt); state.dungeonIntro = Math.max(0, (state.dungeonIntro || 0) - dt); state.roomTransition = Math.max(0, (state.roomTransition || 0) - dt); state.hazardCooldown = Math.max(0, (state.hazardCooldown || 0) - dt); state.itemReveal = Math.max(0, (state.itemReveal || 0) - dt); state.bossEntrance = Math.max(0, (state.bossEntrance || 0) - dt); state.bossPhaseShift = Math.max(0, (state.bossPhaseShift || 0) - dt); state.bossArenaPulse = Math.max(0, (state.bossArenaPulse || 0) - dt); state.bossDefeatTimer = Math.max(0, (state.bossDefeatTimer || 0) - dt);
+    if (bossDefeatWasRunning && state.bossDefeatTimer <= 0 && state.mode === "playing") { playSfx("defeat"); showVictory(); }
     leaves.forEach((leaf) => { leaf.y += leaf.speed * dt; leaf.x += Math.sin(leaf.phase + leaf.y * .01) * dt * 3; if (leaf.y > WORLD.height + 20) leaf.y = -10; });
     particles = particles.filter((particle) => { particle.life -= dt; particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.vy += 45 * dt; return particle.life > 0; });
     updateEnvironment(dt);
     updateNpcs(dt);
     if (state.dialogue) { updateDialogue(dt); justPressed.clear(); updateCamera(dt); return; }
     if (state.mode !== "playing") return;
-    if (state.itemReveal > 0) { updateCamera(dt); justPressed.clear(); updateHud(); return; }
+    if (state.itemReveal > 0 || state.bossEntrance > 0 || state.bossPhaseShift > 0 || state.bossDefeatTimer > 0) { updateCamera(dt); justPressed.clear(); updateHud(); return; }
     updatePlayer(dt); updateDungeonHazards(); updateEnemies(dt); updateDrops(dt);
     if (state.area === "dungeon" && state.transitionCooldown <= 0) {
       if (player.x < 42) transitionDungeon(-1, 0); else if (player.x > ROOM.width - 42) transitionDungeon(1, 0); else if (player.y < 42) transitionDungeon(0, -1); else if (player.y > ROOM.height - 42) transitionDungeon(0, 1);
@@ -830,6 +881,15 @@
       if (index === 0) { ctx.fillStyle = "rgba(255,230,168,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(hazard.label.toUpperCase(), hazard.x + hazard.w / 2, hazard.y - 12); }
     });
   };
+  const drawBossArenaEffects = (time) => {
+    const phaseTwo = state.bossPhase === 2; const pylonColor = phaseTwo ? "#d66b92" : "#8ab879"; [[350, 270], [850, 270], [350, 560], [850, 560]].forEach(([x, y], index) => { const pulse = Math.sin(time * 2.3 + index) * 2; ctx.save(); ctx.globalAlpha = .72; drawShadow(x, y + 18, 28, 8, .35); ctx.fillStyle = "#3e4650"; ctx.fillRect(x - 13, y - 28, 26, 46); ctx.fillStyle = pylonColor; ctx.fillRect(x - 7, y - 25, 14, 38); ctx.strokeStyle = phaseTwo ? "rgba(255,154,157,.7)" : "rgba(142,242,207,.6)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y - 6, 22 + pulse, 0, Math.PI * 2); ctx.stroke(); if (state.bossArenaPulse > 0) { ctx.globalAlpha = state.bossArenaPulse * .35; ctx.fillStyle = phaseTwo ? "#ff9a9d" : "#ffd77b"; ctx.beginPath(); ctx.arc(x, y - 6, 38 + pulse, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); });
+    if (phaseTwo) { ctx.save(); ctx.globalAlpha = .34; ctx.strokeStyle = "#d66b92"; ctx.lineWidth = 5; for (let i = 0; i < 8; i += 1) { const angle = time * .35 + i * Math.PI / 4; ctx.beginPath(); ctx.moveTo(600 + Math.cos(angle) * 120, 370 + Math.sin(angle) * 120); ctx.lineTo(600 + Math.cos(angle) * 250, 370 + Math.sin(angle) * 250); ctx.stroke(); } ctx.restore(); }
+  };
+  const drawBossDefeatRemnant = (time) => {
+    if (state.bossDefeatTimer <= 0) return;
+    const progress = clamp((5.8 - state.bossDefeatTimer) / 5.8, 0, 1); const fade = clamp(1 - progress * 1.18, 0, 1); const radius = 39 * (1 - progress * .72);
+    ctx.save(); ctx.translate(state.bossDefeatX, state.bossDefeatY); ctx.globalAlpha = fade; ctx.rotate(progress * .55); ctx.fillStyle = "#5d315d"; ctx.beginPath(); ctx.arc(0, 0, Math.max(3, radius), 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = COLORS.rose; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, radius + 8 + Math.sin(time * 10) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 2; for (let i = 0; i < 8; i += 1) { const angle = i * Math.PI / 4 + time * .8; ctx.beginPath(); ctx.moveTo(Math.cos(angle) * 9, Math.sin(angle) * 9); ctx.lineTo(Math.cos(angle) * (radius + 24), Math.sin(angle) * (radius + 24)); ctx.stroke(); } ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(0, 0, 8 + Math.sin(time * 9) * 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  };
   const drawDungeonRoomProps = (time, key) => {
     if (key === "0-0") {
       drawDungeonRoots(time, [[110, 72, 185, 1], [1080, 72, 185, -1], [95, 650, -130, 1], [1100, 650, -130, -1]]);
@@ -854,12 +914,12 @@
       ctx.fillStyle = state.ashCacheOpened ? "rgba(255,190,116,.33)" : "rgba(255,126,95,.24)"; ctx.beginPath(); ctx.arc(180, 635, 58 + Math.sin(time * 2) * 3, 0, Math.PI * 2); ctx.fill(); drawChest(180, 635, state.ashCacheOpened); drawRune(180, 552, state.ashCacheOpened ? "LANTERN" : "CACHE"); drawRune(360, 635, state.rootlightTested ? "AWAKE" : "TRY HERE"); drawRune(600, 370, "ASH GATE");
       ctx.fillStyle = "rgba(255,202,164,.48)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.ashCacheOpened ? "THE ASH LIFT OPENS A QUIET WAY BACK" : "LOOK BEHIND THE BROKEN WALL", 600, 690);
     } else if (key === "2-1") {
-      drawDungeonRoots(time, [[90, 82, 180, 1], [1110, 82, 180, -1]]); drawRune(600, 130, state.bossDefeated ? "HEARTSEED" : "SANCTUM");
+      drawDungeonRoots(time, [[90, 82, 180, 1], [1110, 82, 180, -1]]); drawBossArenaEffects(time); drawRune(600, 130, state.bossDefeated ? "HEARTSEED" : state.bossPhase === 2 ? "HEART UNBOUND" : "SANCTUM");
       ctx.save(); ctx.globalAlpha = .4; ctx.strokeStyle = state.bossDefeated ? "#ffd77b" : "#b95a90"; ctx.lineWidth = 4; for (let i = 0; i < 3; i += 1) { ctx.beginPath(); ctx.arc(600, 370, 85 + i * 42 + Math.sin(time * 1.4 + i) * 3, 0, Math.PI * 2); ctx.stroke(); } ctx.restore();
       ctx.fillStyle = "#66506b"; ctx.fillRect(500, 170, 200, 18); ctx.fillStyle = "#b39ac2"; ctx.fillRect(540, 164, 120, 6); if (state.bossDefeated) drawReward(600, 230, time); else { ctx.fillStyle = "rgba(239,186,224,.44)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("THE HEARTSEED WAITS BEYOND THE GUARDIAN", 600, 700); }
     }
   };
-  const drawDungeon = (time) => { const key = `${state.roomX}-${state.roomY}`; drawDungeonMasonry(time, key); ctx.fillStyle = COLORS.dungeonLight; dungeonObstacles().forEach((wall) => { ctx.fillRect(wall.x, wall.y, wall.w, wall.h); ctx.fillStyle = "rgba(188,220,190,.18)"; ctx.fillRect(wall.x + 5, wall.y + 5, Math.max(0, wall.w - 10), 5); ctx.fillStyle = COLORS.dungeonLight; }); drawDungeonRoomProps(time, key); drawDungeonDoors(time); drawDungeonMotes(time); };
+  const drawDungeon = (time) => { const key = `${state.roomX}-${state.roomY}`; drawDungeonMasonry(time, key); ctx.fillStyle = COLORS.dungeonLight; dungeonObstacles().forEach((wall) => { ctx.fillRect(wall.x, wall.y, wall.w, wall.h); ctx.fillStyle = "rgba(188,220,190,.18)"; ctx.fillRect(wall.x + 5, wall.y + 5, Math.max(0, wall.w - 10), 5); ctx.fillStyle = COLORS.dungeonLight; }); drawDungeonRoomProps(time, key); if (key === "2-1" && state.bossPhase === 2 && !state.bossDefeated) { const roseWash = ctx.createRadialGradient(600, 370, 70, 600, 370, 520); roseWash.addColorStop(0, "rgba(177,45,91,.18)"); roseWash.addColorStop(1, "rgba(177,45,91,0)"); ctx.fillStyle = roseWash; ctx.fillRect(50, 50, ROOM.width - 100, ROOM.height - 100); } drawBossDefeatRemnant(time); drawDungeonDoors(time); drawDungeonMotes(time); };
   const drawTorch = (x, y, time) => { ctx.fillStyle = "#6d4934"; ctx.fillRect(x - 4, y, 8, 30); const glow = ctx.createRadialGradient(x, y, 2, x, y, 75); glow.addColorStop(0, "rgba(255,214,123,.45)"); glow.addColorStop(1, "rgba(255,214,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 75, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(x, y - 6 + Math.sin(time * 8 + x) * 2, 7, 0, Math.PI * 2); ctx.fill(); };
   const drawRune = (x, y, label) => { ctx.fillStyle = "rgba(142,242,207,.07)"; ctx.beginPath(); ctx.arc(x, y, 42, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(142,242,207,.34)"; ctx.stroke(); ctx.fillStyle = "rgba(214,255,220,.45)"; ctx.font = "10px DM Mono"; ctx.textAlign = "center"; ctx.fillText(label, x, y + 4); };
   const drawSwitch = (x, y, active, time) => { ctx.fillStyle = active ? "#8ef2cf" : "#546b64"; ctx.beginPath(); ctx.arc(x, y, 25 + Math.sin(time * 4) * 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = active ? "#f6fff1" : "#243b37"; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill(); };
@@ -881,24 +941,27 @@
     drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * (enemy.hitStun > 0 ? 1.04 : .9), enemy.radius * .3, .36);
     ctx.save(); if (enemy.hitFlash > 0) ctx.globalAlpha = .55 + Math.sin(enemy.hitFlash * 35) * .45;
     const color = enemy.color;
-    if (enemy.type === "boss") { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius + Math.sin(time * 5) * 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#512d58"; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y - 6, enemy.radius * .6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(enemy.x - 13 + recoil, enemy.y - 11, 8, 5); ctx.fillRect(enemy.x + 5 + recoil, enemy.y - 11, 8, 5); }
+    if (enemy.type === "boss") { const bossRadius = enemy.radius + Math.sin(time * (enemy.phase === 2 ? 8 : 5)) * (enemy.phase === 2 ? 3 : 2); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, bossRadius, 0, Math.PI * 2); ctx.fill(); if (enemy.phase === 2) { ctx.save(); ctx.strokeStyle = "rgba(255,154,157,.78)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, bossRadius + 10 + Math.sin(time * 7) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "#d66b92"; for (let i = 0; i < 6; i += 1) { const angle = time * .8 + i * Math.PI / 3; ctx.beginPath(); ctx.moveTo(enemy.x + recoil + Math.cos(angle) * (bossRadius - 2), enemy.y + Math.sin(angle) * (bossRadius - 2)); ctx.lineTo(enemy.x + recoil + Math.cos(angle) * (bossRadius + 15), enemy.y + Math.sin(angle) * (bossRadius + 15)); ctx.lineTo(enemy.x + recoil + Math.cos(angle + .18) * (bossRadius - 1), enemy.y + Math.sin(angle + .18) * (bossRadius - 1)); ctx.closePath(); ctx.fill(); } ctx.restore(); } ctx.fillStyle = "#512d58"; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y - 6, enemy.radius * .6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = enemy.phase === 2 ? COLORS.rose : COLORS.gold; ctx.fillRect(enemy.x - 13 + recoil, enemy.y - 11, 8, 5); ctx.fillRect(enemy.x + 5 + recoil, enemy.y - 11, 8, 5); }
     else if (enemy.type === "warden") { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(enemy.x + recoil, enemy.y - 30); ctx.lineTo(enemy.x + 25 + recoil, enemy.y + 22); ctx.lineTo(enemy.x - 25 + recoil, enemy.y + 22); ctx.closePath(); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y - 3, 8, 0, Math.PI * 2); ctx.fill(); }
     else if (enemy.type === "thornback") { ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(enemy.x + recoil, enemy.y, enemy.radius + 4, enemy.radius - 2, -.08, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#7d543d"; for (let i = -1; i <= 1; i += 1) { ctx.beginPath(); ctx.moveTo(enemy.x + recoil + i * 9, enemy.y - 10); ctx.lineTo(enemy.x + recoil + i * 9 + 5, enemy.y - 22); ctx.lineTo(enemy.x + recoil + i * 9 + 10, enemy.y - 8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = "#2c4135"; ctx.beginPath(); ctx.arc(enemy.x + recoil + 7, enemy.y - 2, 3, 0, Math.PI * 2); ctx.fill(); }
     else if (enemy.type === "moth") { ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(enemy.x + recoil - 8, enemy.y - 3, 11, 7, -.45, 0, Math.PI * 2); ctx.ellipse(enemy.x + recoil + 8, enemy.y - 3, 11, 7, .45, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#583b62"; ctx.beginPath(); ctx.ellipse(enemy.x + recoil, enemy.y + 2, 4, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffe7a2"; ctx.beginPath(); ctx.arc(enemy.x + recoil - 2, enemy.y - 1, 2, 0, Math.PI * 2); ctx.arc(enemy.x + recoil + 2, enemy.y - 1, 2, 0, Math.PI * 2); ctx.fill(); }
     else { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#17362e"; ctx.beginPath(); ctx.arc(enemy.x - 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.arc(enemy.x + 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.fill(); if (enemy.type === "wisp") { ctx.strokeStyle = "rgba(220,207,255,.6)"; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = "rgba(235,220,255,.28)"; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius + 7 + Math.sin(time * 5) * 2, 0, Math.PI * 2); ctx.fill(); } }
     ctx.restore();
+    if (enemy.type === "boss" && enemy.phaseExposed > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.phaseExposed * 1.8, 0, .95); ctx.strokeStyle = COLORS.mint; ctx.shadowColor = COLORS.mint; ctx.shadowBlur = 16; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 15 + Math.sin(time * 18) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,246,210,.9)"; ctx.lineWidth = 2; for (let i = 0; i < 4; i += 1) { const angle = time * 2 + i * Math.PI / 2; ctx.beginPath(); ctx.moveTo(enemy.x + Math.cos(angle) * 10, enemy.y + Math.sin(angle) * 10); ctx.lineTo(enemy.x + Math.cos(angle + .3) * (enemy.radius + 12), enemy.y + Math.sin(angle + .3) * (enemy.radius + 12)); ctx.stroke(); } ctx.restore(); }
     if (enemy.hitStun > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.hitStun * 5, 0, .85); ctx.strokeStyle = "#fff7dc"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 5 + Math.sin(time * 30) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     if (enemy.telegraph > 0) {
       const progress = clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1); ctx.save(); ctx.globalAlpha = .3 + progress * .5; ctx.lineWidth = 3;
       if (enemy.telegraphType === "chargeWindup") { ctx.strokeStyle = "#ffb875"; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 9 + Math.sin(time * 15) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = "rgba(255,195,125,.75)"; ctx.beginPath(); ctx.moveTo(enemy.x, enemy.y); ctx.lineTo(enemy.x + enemy.chargeX * 110, enemy.y + enemy.chargeY * 110); ctx.stroke(); }
-      else if (enemy.telegraphType === "rangedWindup" || enemy.telegraphType === "bossWindup") { ctx.strokeStyle = enemy.telegraphType === "bossWindup" ? "#ff9a9d" : "#d9c8ff"; ctx.beginPath(); ctx.moveTo(enemy.x, enemy.y); ctx.lineTo(enemy.x + (enemy.aimX || player.x - enemy.x), enemy.y + (enemy.aimY || player.y - enemy.y)); ctx.stroke(); ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 9 + Math.sin(time * 12) * 2, 0, Math.PI * 2); ctx.stroke(); }
+      else if (enemy.telegraphType === "rangedWindup" || enemy.telegraphType === "bossWindup" || enemy.telegraphType === "bossRainWindup") { ctx.strokeStyle = enemy.telegraphType === "bossRainWindup" ? "#8ef2cf" : enemy.telegraphType === "bossWindup" ? "#ff9a9d" : "#d9c8ff"; ctx.beginPath(); ctx.moveTo(enemy.x, enemy.y); ctx.lineTo(enemy.x + (enemy.aimX || player.x - enemy.x), enemy.y + (enemy.aimY || player.y - enemy.y)); ctx.stroke(); ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 9 + Math.sin(time * 12) * 2, 0, Math.PI * 2); ctx.stroke(); }
+      else if (enemy.telegraphType === "bossSlamWindup") { ctx.strokeStyle = enemy.phase === 2 ? "#ff9a9d" : "#ffd77b"; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, 42 + (1 - progress) * 170, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 12 + Math.sin(time * 13) * 3, 0, Math.PI * 2); ctx.stroke(); }
+      else if (enemy.telegraphType === "bossDashWindup") { ctx.strokeStyle = enemy.phase === 2 ? "#ff9a9d" : "#ffb875"; ctx.beginPath(); ctx.moveTo(enemy.x, enemy.y); ctx.lineTo(enemy.x + (enemy.chargeX || player.x - enemy.x) * 260, enemy.y + (enemy.chargeY || player.y - enemy.y) * 260); ctx.stroke(); ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 12 + Math.sin(time * 15) * 3, 0, Math.PI * 2); ctx.stroke(); }
       else { ctx.strokeStyle = enemy.type === "moth" ? "#efb7dc" : "#fff0bb"; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 8 + (1 - progress) * 15, 0, Math.PI * 2); ctx.stroke(); }
       ctx.restore();
     }
     if (enemy.type === "warden" || enemy.type === "boss") { ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2, 4); ctx.fillStyle = enemy.color; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2 * (enemy.hp / enemy.maxHp), 4); }
   };
   const drawDrop = (drop, time) => { const bob = Math.sin(time * 4 + drop.bob) * 4; ctx.save(); ctx.translate(drop.x, drop.y + bob); ctx.globalAlpha = clamp(drop.life / 2, .35, 1); const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 22); glow.addColorStop(0, `${drop.color}88`); glow.addColorStop(1, `${drop.color}00`); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = drop.color; ctx.rotate(time * 1.8 + drop.phase); ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(7, 0); ctx.lineTo(0, 8); ctx.lineTo(-7, 0); ctx.closePath(); ctx.fill(); ctx.restore(); };
-  const drawProjectile = (projectile) => { ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = projectile.color; ctx.shadowColor = projectile.color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius + 3, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); };
+  const drawProjectile = (projectile) => { ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = projectile.color; ctx.shadowColor = projectile.color; ctx.shadowBlur = 12; if (projectile.kind === "shockwave") { ctx.translate(projectile.x, projectile.y); ctx.rotate(Math.atan2(projectile.vy, projectile.vx)); ctx.fillRect(-12, -3, 24, 6); ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 2; ctx.strokeRect(-14, -5, 28, 10); } else if (projectile.kind === "root-lance") { ctx.translate(projectile.x, projectile.y); ctx.rotate(Math.atan2(projectile.vy, projectile.vx)); ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(-7, -6); ctx.lineTo(-3, 0); ctx.lineTo(-7, 6); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(214,255,220,.7)"; ctx.lineWidth = 2; ctx.stroke(); } else { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius + 3, 0, Math.PI * 2); ctx.stroke(); } ctx.restore(); };
   const drawAttackTrail = () => {
     if (player.attack <= 0) return;
     const progress = clamp(player.attackElapsed / .34, 0, 1); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
@@ -938,6 +1001,11 @@
     if (player.rootlightPulse > 0) { const pulse = 1 - player.rootlightPulse / .7; ctx.save(); ctx.globalAlpha = .25 + player.rootlightPulse * .7; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + pulse * 80, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     drawAttackTrail();
   };
+  const drawBossHud = (time) => {
+    if (state.area !== "dungeon" || `${state.roomX}-${state.roomY}` !== "2-1" || state.bossDefeated) return;
+    const boss = enemies.find((enemy) => enemy.type === "boss" && !enemy.dead); const hp = boss ? Math.max(0, boss.hp) : state.bossDefeatTimer > 0 ? 0 : 16; const maxHp = boss ? boss.maxHp : 16; const phase = boss ? boss.phase : state.bossPhase;
+    const x = 130; const y = 22; const w = WIDTH - 260; const h = 18; ctx.save(); ctx.globalAlpha = state.bossEntrance > 0 ? .7 : 1; ctx.fillStyle = "rgba(5,10,11,.78)"; ctx.beginPath(); ctx.roundRect(x - 13, y - 19, w + 26, 74, 13); ctx.fill(); ctx.strokeStyle = phase === 2 ? "rgba(255,154,157,.65)" : "rgba(214,255,220,.25)"; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(x, y, w, h); const bar = ctx.createLinearGradient(x, y, x + w, y); bar.addColorStop(0, phase === 2 ? "#c95d83" : "#a94f75"); bar.addColorStop(1, phase === 2 ? "#ff9a9d" : "#d78b70"); ctx.fillStyle = bar; ctx.fillRect(x, y, w * (hp / maxHp), h); ctx.strokeStyle = "rgba(255,246,210,.7)"; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, h); for (let i = 1; i < 2; i += 1) { ctx.strokeStyle = "rgba(255,255,255,.36)"; ctx.beginPath(); ctx.moveTo(x + w * i / 2, y); ctx.lineTo(x + w * i / 2, y + h); ctx.stroke(); } ctx.textAlign = "left"; ctx.fillStyle = "#f3f6df"; ctx.font = "700 12px Outfit"; ctx.fillText("HOLLOW GUARDIAN", x, y - 7); ctx.textAlign = "right"; ctx.fillStyle = phase === 2 ? "#ffb8bd" : "#d8efcf"; ctx.font = "700 10px DM Mono"; ctx.fillText(phase === 2 ? "PHASE II · HEART UNBOUND" : "PHASE I · THE WATCHER", x + w, y - 7); ctx.restore();
+  };
 
   const draw = (time) => {
     ctx.clearRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.translate(-camera.x + camera.shakeX, -camera.y + camera.shakeY);
@@ -945,11 +1013,15 @@
     leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { ctx.fillStyle = "rgba(213,246,174,.55)"; ctx.fillRect(leaf.x, leaf.y, 3, 7); } });
     const entities = [...enemies].sort((a, b) => a.y - b.y); entities.forEach((enemy) => drawEnemy(enemy, time)); drops.forEach((drop) => drawDrop(drop, time)); projectiles.forEach((projectile) => drawProjectile(projectile));
     drawPlayer(time); if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); ctx.restore();
+    drawBossHud(time);
     const light = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, 80, WIDTH / 2, HEIGHT / 2, 480); light.addColorStop(0, "rgba(0,0,0,0)"); light.addColorStop(1, state.area === "dungeon" ? "rgba(2,8,8,.38)" : "rgba(4,13,9,.2)"); ctx.fillStyle = light; ctx.fillRect(0, 0, WIDTH, HEIGHT);
     if (state.impactFlash > 0) { ctx.fillStyle = `rgba(255,246,210,${state.impactFlash * 1.8})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); }
     if (state.area === "dungeon" && state.roomTransition > 0) { const alpha = clamp(state.roomTransition / .72, 0, 1); ctx.fillStyle = `rgba(5,10,11,${alpha * .9})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.globalAlpha = clamp((.72 - state.roomTransition) * 5, 0, 1); ctx.fillStyle = "#d8efcf"; ctx.font = "700 20px Outfit"; ctx.textAlign = "center"; ctx.fillText(state.roomTransitionLabel, WIDTH / 2, HEIGHT / 2 - 8); ctx.fillStyle = "rgba(214,255,220,.65)"; ctx.font = "11px DM Mono"; ctx.fillText("THE HOLLOW SHRINE", WIDTH / 2, HEIGHT / 2 + 20); ctx.restore(); }
     if (state.area === "dungeon" && state.dungeonIntro > 0) { const progress = clamp((3.4 - state.dungeonIntro) / 3.4, 0, 1); const alpha = state.dungeonIntro > 2.7 ? .92 : clamp(state.dungeonIntro / 2.7, 0, .92); ctx.fillStyle = `rgba(3,7,8,${alpha})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.globalAlpha = clamp(progress * 2.3, 0, 1); ctx.fillStyle = "#e8efcf"; ctx.font = "700 27px Outfit"; ctx.textAlign = "center"; ctx.fillText("THE HOLLOW SHRINE", WIDTH / 2, HEIGHT / 2 - 18); ctx.fillStyle = "#c89d77"; ctx.font = "11px DM Mono"; ctx.fillText("THE ROOTS CLOSE BEHIND YOU", WIDTH / 2, HEIGHT / 2 + 16); ctx.fillStyle = "rgba(214,255,220,.56)"; ctx.font = "10px DM Mono"; ctx.fillText("E · interact   J / SPACE · strike   K · dodge", WIDTH / 2, HEIGHT / 2 + 46); ctx.restore(); }
     if (state.itemReveal > 0) { const progress = clamp((3.8 - state.itemReveal) / 3.8, 0, 1); const fade = clamp(Math.min(progress * 3, (state.itemReveal) * 2.2), 0, 1); ctx.fillStyle = `rgba(5,10,11,${.84 * fade})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.globalAlpha = clamp(progress * 2.8, 0, 1); const cx = WIDTH / 2; const cy = HEIGHT / 2 - 72; const radius = 35 + Math.sin(progress * Math.PI) * 14; const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, 110); glow.addColorStop(0, "rgba(255,239,168,.78)"); glow.addColorStop(1, "rgba(142,242,207,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, 110, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#8ef2cf"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 1.7 * progress); ctx.stroke(); ctx.fillStyle = "#ffe9a4"; ctx.beginPath(); ctx.arc(cx, cy, 15 + Math.sin(progress * 13) * 2, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#fff7cf"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "#f3f6df"; ctx.font = "700 25px Outfit"; ctx.textAlign = "center"; ctx.fillText("MOONWAKE LANTERN", cx, cy + 92); ctx.fillStyle = "rgba(214,255,220,.72)"; ctx.font = "12px DM Mono"; ctx.fillText("Press L to pulse Rootlight", cx, cy + 122); ctx.fillStyle = "rgba(255,215,123,.72)"; ctx.font = "10px DM Mono"; ctx.fillText("The light reveals paths, stuns the hollow, and wakes old seals.", cx, cy + 148); ctx.restore(); }
+    if (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === "2-1" && state.bossEntrance > 0) { const progress = clamp((3.8 - state.bossEntrance) / 3.8, 0, 1); const alpha = clamp(state.bossEntrance / 2.8, 0, .9); ctx.fillStyle = `rgba(8,5,13,${alpha})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.globalAlpha = clamp(progress * 2.8, 0, 1); ctx.fillStyle = "#f3d4df"; ctx.font = "700 28px Outfit"; ctx.textAlign = "center"; ctx.fillText("THE HOLLOW GUARDIAN", WIDTH / 2, HEIGHT / 2 - 28); ctx.fillStyle = "#ff9a9d"; ctx.font = "11px DM Mono"; ctx.fillText("HEARTSEED SANCTUM · LAST WARD", WIDTH / 2, HEIGHT / 2 + 10); ctx.fillStyle = "rgba(214,255,220,.6)"; ctx.font = "10px DM Mono"; ctx.fillText("Watch the rings. Let the lantern answer the heart.", WIDTH / 2, HEIGHT / 2 + 38); ctx.restore(); }
+    if (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === "2-1" && state.bossPhaseShift > 0) { const pulse = .16 + (Math.sin(state.bossPhaseShift * 13) + 1) * .08; ctx.fillStyle = `rgba(177,45,91,${pulse})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.globalAlpha = clamp((1.85 - state.bossPhaseShift) * 2.4, 0, 1); ctx.fillStyle = "#ffb8bd"; ctx.font = "700 28px Outfit"; ctx.textAlign = "center"; ctx.fillText("PHASE II", WIDTH / 2, HEIGHT / 2 - 20); ctx.fillStyle = "#f3d4df"; ctx.font = "12px DM Mono"; ctx.fillText("THE HEART UNBOUND", WIDTH / 2, HEIGHT / 2 + 16); ctx.restore(); }
+    if (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === "2-1" && state.bossDefeatTimer > 0) { const progress = clamp((5.8 - state.bossDefeatTimer) / 5.8, 0, 1); ctx.fillStyle = `rgba(18,8,18,${.18 + progress * .26})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.globalAlpha = clamp(progress * 2.2, 0, 1); ctx.translate(WIDTH / 2, HEIGHT / 2 - 28); ctx.rotate(progress * .3); ctx.strokeStyle = "#ffd77b"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 45 + progress * 35, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "#f3f6df"; ctx.font = "700 28px Outfit"; ctx.textAlign = "center"; ctx.fillText("THE GUARDIAN FALLS", 0, 92); ctx.fillStyle = "#ffd77b"; ctx.font = "11px DM Mono"; ctx.fillText("THE HEARTSEED REMEMBERS YOU", 0, 118); ctx.restore(); }
   };
 
   const updateObjective = () => {
@@ -974,7 +1046,7 @@
   const updateDialogueSpeedLabel = () => { if (!ui.dialogueSpeed) return; const speed = state.dialogueSpeed || 52; ui.dialogueSpeed.textContent = `Text: ${speed >= 100 ? "fast" : speed <= 36 ? "slow" : "normal"}`; };
   const showVictory = () => { state.mode = "victory"; hideScreens(); ui.victory.classList.remove("hidden"); updateHud(); };
 
-  const startGame = (continueGame) => { hideScreens(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; player.maxHp = 6; player.hp = player.maxHp; resetPlayerMotion(); startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
+  const startGame = (continueGame) => { hideScreens(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; state.bossIntroSeen = false; state.bossEntrance = 0; state.bossPhase = 1; state.bossPhaseShift = 0; state.bossArenaPulse = 0; state.bossDefeatTimer = 0; state.bossDefeatX = 600; state.bossDefeatY = 285; state.bossRewardClaimed = false; player.maxHp = 6; player.hp = player.maxHp; resetPlayerMotion(); startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
 
   document.getElementById("new-game").addEventListener("click", () => startGame(false));
   document.getElementById("continue-game").addEventListener("click", () => startGame(true));
