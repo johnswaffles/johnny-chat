@@ -56,6 +56,21 @@ Mosswake currently renders its first playable slice with layered canvas primitiv
 20. Paint the Heartseed Sanctum set pieces as separate layers: four `guardian-pylon` states (quiet, charged, phase-II, spent), `boss-arena-rings`, and a `heartseed-echo` reward sprite. Keep the four pylons modular so the arena can be reused in later shrine rooms.
 21. Paint authored boss telegraphs and payoff effects: `guardian-volley`, `guardian-slam`, `guardian-dash`, `rootlight-exposure`, `guardian-phase-break`, and `guardian-defeat` sheets. The current canvas primitives are temporary readability assets and can be swapped without changing attack timing or hitboxes.
 
+## CUSTOM GRAPHICS TO GENERATE NEXT
+
+Prioritized by visual impact on the playable demo. All files should be exported with premultiplied-alpha-safe transparent backgrounds and no baked-in cast shadows; runtime lighting and camera response remain in `mosswake.js`.
+
+1. **Hollow Guardian hero sheet** — `160×160 px` cells, transparent PNG/WebP, orthographic 3/4 top-down with four facing directions. Phase I and II palettes on one aligned sheet; 6 idle/orbit frames, 4 hit/recoil frames, 8 defeat-collapse frames, and 4 phase-break frames.
+2. **Warden player sheet** — `96×96 px` cells, transparent, four directions (N/E/S/W). 6 idle frames, 8 walk frames, 6 sword frames, 5 dodge frames, 3 hurt frames; keep feet on a shared 72 px ground line for clean shadow placement.
+3. **Lantern-blade combat effects** — `192×128 px` transparent cells, direction-agnostic radial slash with a separate 4-direction contact variant. 8 swing frames, 4 hit-spark frames, 6 Rootlight pulse frames, plus a 2-frame soft glow mask.
+4. **Guardian arena kit** — `256×256 px` transparent modular layers: pylon body, pylon crystal, arena ring, phase-II spokes, and spent-state debris. Provide quiet/charged/rose/spent variants; no baked floor shadow.
+5. **Boss telegraph and defeat effects** — `192×192 px` transparent sheets, top-down centered. 6 volley arcs, 6 slam rings, 5 dash lane markers, 6 mint Rootlight-exposure cracks, 8 phase-break shards, and 10 defeat motes.
+6. **Water and shoreline tiles** — `128×128 px` seamless opaque water tiles plus `128×64 px` transparent shoreline overlays. Three water-depth palettes, 6 ripple frames, 4 foam/shore frames, and 2 reflected-light frames; tile in all directions.
+7. **Layered tree and canopy set** — `192×240 px` transparent, orthographic 3/4. Back/mid/front silhouettes for oak, birch, and ancient-root trees; 4 sway frames per layer and separate 2-frame leaf shimmer masks.
+8. **Foliage and environmental motion pack** — `96×96 px` transparent cells, top-down. Meadow tuft, fern, reed, flower cluster, mushroom, fallen log, and breakable ivy; 2 idle frames plus 3 player-contact/rustle frames for each.
+9. **NPC portrait and sprite families** — `128×128 px` transparent bust portraits (neutral/talking/reacting, 3 frames each) and `80×96 px` transparent top-down sprites for Rowan, Tansy, Brindle, and Lumen (4 directions, 4 idle/walk frames, 2 work frames).
+10. **Interface and reward icon set** — `64×64 px` transparent icons for heart/full-heart/empty-heart, key, Heartseed Echo, Moonwake Lantern, discovery, and map marker (2 glow frames each); plus a `960×160 px` transparent 9-slice dialogue/menu frame with 2 state accents (mint and rose).
+
 ## Temporary feel pass
 
 The current movement, outdoor, and enemy passes intentionally use the same art-first, replaceable approach as First Ember: the player, blade arc, dodge trail, dust, hit stars, impact rings, shadows, trees, plants, water edge, wildlife, enemy silhouettes, telegraphs, and drops are generated as crisp canvas primitives. This keeps the first encounters readable while final sprite sheets are being painted. The named slots above are the exact custom graphics to generate later; no gameplay collision, pathing, AI behavior, or timing depends on a temporary shape.
