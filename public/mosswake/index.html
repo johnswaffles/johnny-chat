@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1516">
+  <title>Mosswake — The Hollow Shrine</title>
+  <link rel="stylesheet" href="/mosswake/mosswake.css?v=1">
+</head>
+<body>
+  <div class="sky-glow sky-glow-one"></div>
+  <div class="sky-glow sky-glow-two"></div>
+  <header class="game-nav">
+    <a class="brand" href="/">justaskjohnny.com</a>
+    <nav class="nav-links" aria-label="Site">
+      <a href="/">Home</a>
+      <details class="games-menu">
+        <summary>Games</summary>
+        <div class="games-panel">
+          <div class="games-heading"><span>Johnny's arcade</span><strong>Pick a world</strong></div>
+          <a href="/cozy-builder-game/">Cozy Builder <small>Town-building game</small></a>
+          <a href="/glade/">Glade <small>Creative sandbox</small></a>
+          <a href="/first-ember/">First Ember <small>Playable adventure</small></a>
+          <a href="/mosswake/" class="current">Mosswake <small>Top-down adventure</small></a>
+          <a href="/sim/">Sim <small>Living world simulation</small></a>
+          <a href="/tetris/">Tetris <small>Classic block puzzle</small></a>
+        </div>
+      </details>
+    </nav>
+  </header>
+
+  <main class="game-shell">
+    <section class="game-heading">
+      <div>
+        <p class="eyebrow">An original adventure</p>
+        <h1>Mosswake <span>✦</span></h1>
+        <p class="lede">The Hollow Shrine remembers your name.</p>
+      </div>
+      <div class="area-pill"><i></i><span id="area-label">Lanternwood</span></div>
+    </section>
+
+    <section class="game-frame" aria-label="Mosswake game">
+      <div class="canvas-wrap">
+        <canvas id="game-canvas" width="960" height="600" tabindex="0" aria-label="Mosswake adventure world"></canvas>
+        <div id="screen-vignette" aria-hidden="true"></div>
+        <div id="toast" class="toast" aria-live="polite"></div>
+        <div id="dialogue" class="dialogue" aria-live="polite">
+          <span id="dialogue-speaker" class="dialogue-speaker"></span>
+          <p id="dialogue-text"></p>
+          <span class="dialogue-hint">E / Enter to continue</span>
+        </div>
+        <div id="title-screen" class="screen-card">
+          <p class="screen-kicker">THE LANTERNWOOD CHRONICLE</p>
+          <h2>Mosswake</h2>
+          <p>Follow the blue moths through Lanternwood, then wake the buried shrine before the roots close over it.</p>
+          <div class="screen-actions">
+            <button id="new-game" class="primary-button" type="button">New game</button>
+            <button id="continue-game" class="secondary-button" type="button">Continue</button>
+          </div>
+          <small>WASD / arrows move · J or Space swings · K dashes · E interacts · P pauses</small>
+        </div>
+        <div id="pause-screen" class="screen-card hidden">
+          <p class="screen-kicker">LANTERNWOOD IS WAITING</p>
+          <h2>Paused</h2>
+          <p>Your place is safe beneath the leaves.</p>
+          <button id="resume-game" class="primary-button" type="button">Resume</button>
+        </div>
+        <div id="victory-screen" class="screen-card hidden">
+          <p class="screen-kicker">THE SHRINE REMEMBERS</p>
+          <h2>Heartseed found</h2>
+          <p>The Hollow Shrine opens a path into a much larger adventure.</p>
+          <button id="victory-close" class="primary-button" type="button">Keep exploring</button>
+        </div>
+      </div>
+      <aside class="hud">
+        <div class="hud-card hero-card">
+          <div class="hud-topline"><span class="hud-label">Warden</span><span id="save-state">Not started</span></div>
+          <div id="hearts" class="hearts" aria-label="Health"></div>
+          <div class="resource-row"><span>Heartseed</span><b id="seed-count">0</b><span>Keys</span><b id="key-count">0</b></div>
+        </div>
+        <div class="hud-card objective-card">
+          <span class="hud-label">Current thread</span>
+          <strong id="objective">Find Rowan at the outpost</strong>
+          <p id="objective-copy">The blue moths gather where the old path breaks.</p>
+        </div>
+        <div class="hud-card map-card">
+          <div class="hud-topline"><span class="hud-label">Field notes</span><span id="room-label">Lanternwood</span></div>
+          <div id="map-dots" class="map-dots" aria-label="Exploration map"></div>
+          <p>Explore, listen, and look for places the light does not reach.</p>
+        </div>
+        <div class="hud-card controls-card">
+          <span class="hud-label">Controls</span>
+          <div><kbd>WASD</kbd><span>Move</span></div>
+          <div><kbd>J</kbd><span>Sword</span><kbd>K</kbd><span>Dash</span></div>
+          <div><kbd>E</kbd><span>Talk / open</span><kbd>P</kbd><span>Pause</span></div>
+        </div>
+        <button id="reset-save" class="quiet-button" type="button">Erase save</button>
+      </aside>
+    </section>
+    <p class="footer-note">A small original world by Johnny · custom art can be dropped into <code>mosswake/assets</code> as it grows.</p>
+  </main>
+  <script src="/mosswake/mosswake.js?v=1"></script>
+</body>
+</html>
