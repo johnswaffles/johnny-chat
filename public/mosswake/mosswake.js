@@ -305,6 +305,7 @@
         else if (npc.behavior === "watch") npc.facing = Math.sin(npc.clock * .35 + npc.phase) > 0 ? 1 : -1;
       }
       npc.work = Math.sin(npc.clock * (npc.behavior === "map" ? 2.8 : 4) + npc.phase);
+      npc.animTime = npc.clock * (npc.behavior === "pace" ? 5.2 : 2.2);
     });
   };
   const nearestNpc = (radius = 68) => {
@@ -316,7 +317,10 @@
     drops.push({ x: enemy.x, y: enemy.y, ...enemy.drop, life: 24, phase: rand(0, 6.28), bob: rand(0, 6.28) });
   };
   const spawnEnemyDeath = (enemy) => {
-    enemy.dead = true; if (enemy.type !== "boss") playSfx("kill"); spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 34 : 12); spawnParticle(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 20 : 9, enemy.type === "boss" ? 170 : 110, "impact"); particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.4 : .65, maxLife: enemy.type === "boss" ? 1.4 : .65, size: enemy.type === "boss" ? 38 : 21, color: enemy.type === "boss" ? COLORS.gold : enemy.color, kind: "death-ring", rotation: 0 }); triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, enemy.type === "boss" ? 1.45 : 1); spawnDrop(enemy);
+    enemy.dead = true; enemy.deathTimer = enemy.type === "boss" ? 1.4 : .58; enemy.deathMax = enemy.deathTimer; enemy.velocityX = 0; enemy.velocityY = 0;
+    if (enemy.type !== "boss") playSfx("kill"); spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 34 : 12); spawnParticle(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 20 : 9, enemy.type === "boss" ? 170 : 110, "impact"); particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.4 : .65, maxLife: enemy.type === "boss" ? 1.4 : .65, size: enemy.type === "boss" ? 38 : 21, color: enemy.type === "boss" ? COLORS.gold : enemy.color, kind: "death-ring", rotation: 0 });
+    particles.push({ x: enemy.x, y: enemy.y - 5, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.25 : .48, maxLife: enemy.type === "boss" ? 1.25 : .48, size: enemy.type === "boss" ? 42 : 22, color: enemy.type === "boss" ? COLORS.rose : enemy.color, kind: "death-shards", rotation: 0 });
+    triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, enemy.type === "boss" ? 1.45 : 1); spawnDrop(enemy);
   };
   const updateDrops = (dt) => {
     drops = drops.filter((drop) => {
@@ -354,7 +358,7 @@
       warden: { hp: 9, maxHp: 9, speed: 22, radius: 25, color: COLORS.warden, damage: 2, behavior: "warden", detectionRange: 380, attackRange: 48, attackRate: 1.2, drop: { name: "Root sigil", color: COLORS.warden, kind: "sigil" } },
       boss: { hp: 16, maxHp: 16, speed: 28, radius: 39, color: COLORS.boss, damage: 2, behavior: "boss", detectionRange: 520, attackRange: 190, attackRate: 1.25, drop: { name: "Heartseed echo", color: COLORS.gold, kind: "echo" } }
     }[type];
-    enemies.push({ id: makeId(type), type, x, y, homeX: x, homeY: y, ...config, ...options, velocityX: 0, velocityY: 0, attackCooldown: options.attackCooldown ?? rand(.25, config.attackRate), hitFlash: 0, hitStun: 0, telegraph: 0, telegraphType: "", state: "idle", stateTimer: rand(.2, .7), phase: 1, attackPattern: 0, phaseNotice: 0, dead: false, alerted: false, hidden: type === "moth", orbit: rand(0, 6.28), chargeX: 0, chargeY: 0, aimX: 0, aimY: 0 });
+    enemies.push({ id: makeId(type), type, x, y, homeX: x, homeY: y, ...config, ...options, velocityX: 0, velocityY: 0, attackCooldown: options.attackCooldown ?? rand(.25, config.attackRate), hitFlash: 0, hitStun: 0, telegraph: 0, telegraphType: "", state: "idle", stateTimer: rand(.2, .7), phase: 1, attackPattern: 0, phaseNotice: 0, dead: false, deathTimer: 0, alerted: false, hidden: type === "moth", orbit: rand(0, 6.28), chargeX: 0, chargeY: 0, aimX: 0, aimY: 0, facingX: 1, facingY: 0, walk: rand(0, 6.28), animTime: rand(0, 6.28), motionSpeed: 0, presentationPrevX: x, presentationPrevY: y });
   };
   const spawnHiddenEncounter = () => {
     if (state.area !== "overworld" || !state.southPassageOpen || state.optionalGuardDefeated || enemies.some((enemy) => enemy.encounter === "hidden-cache" && !enemy.dead)) return;
@@ -531,7 +535,8 @@
     player.attackHitRegistered = true;
     const hit = swordHitbox(); const cosHalfAngle = Math.cos(hit.halfAngle); let hitCount = 0;
     enemies.forEach((enemy) => {
-      if (enemy.dead) return;
+      if (enemy.dead) { enemy.deathTimer = Math.max(0, enemy.deathTimer - dt); return; }
+      enemy.presentationPrevX = enemy.x; enemy.presentationPrevY = enemy.y;
       const offsetX = enemy.x - player.x; const offsetY = enemy.y - player.y; const range = Math.hypot(offsetX, offsetY) || 1;
       const dot = (offsetX / range) * hit.direction.x + (offsetY / range) * hit.direction.y;
       if (distance(hit, enemy) > hit.radius + enemy.radius || dot < cosHalfAngle) return;
@@ -651,6 +656,12 @@
   };
 
   const enemyMove = (enemy, dx, dy, speed, dt) => { const direction = normalized(dx, dy, 0, 0); moveEntityBy(enemy, direction.x * speed * dt, direction.y * speed * dt); };
+  const updateEnemyPresentation = (enemy, dt) => {
+    const dx = enemy.x - enemy.presentationPrevX; const dy = enemy.y - enemy.presentationPrevY; const distanceMoved = Math.hypot(dx, dy); const speed = distanceMoved / Math.max(dt, .001);
+    enemy.motionSpeed = speed; enemy.animTime += dt; enemy.walk += dt * (speed > 5 ? 5.5 + Math.min(5, speed * .018) : .9);
+    if (speed > 5) { enemy.facingX = dx / Math.max(distanceMoved, .001); enemy.facingY = dy / Math.max(distanceMoved, .001); }
+    enemy.presentationPrevX = enemy.x; enemy.presentationPrevY = enemy.y;
+  };
   const beginEnemyTelegraph = (enemy, type, duration) => { enemy.state = type; enemy.stateTimer = duration; enemy.telegraph = duration; enemy.telegraphType = type; spawnParticle(enemy.x, enemy.y, type === "rangedWindup" ? COLORS.wisp : COLORS.gold, 3, 24, "spark"); };
   const resolveEnemyMelee = (enemy, reach = 10, damage = enemy.damage) => { if (distance(enemy, player) < enemy.radius + player.radius + reach) { hurtPlayer(damage, enemy, enemy.color); return true; } return false; };
   const fireWispBolt = (enemy) => {
@@ -738,7 +749,7 @@
     enemies.forEach((enemy) => {
       if (enemy.dead) return;
       enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.hitStun = Math.max(0, enemy.hitStun - dt); enemy.phaseExposed = Math.max(0, (enemy.phaseExposed || 0) - dt); enemy.attackCooldown -= dt; enemy.telegraph = Math.max(0, enemy.telegraph - dt);
-      if (enemy.hitStun > 0) { moveEntityBy(enemy, enemy.velocityX * dt, enemy.velocityY * dt); enemy.velocityX = moveToward(enemy.velocityX, 0, 760 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 760 * dt); return; }
+      if (enemy.hitStun > 0) { moveEntityBy(enemy, enemy.velocityX * dt, enemy.velocityY * dt); enemy.velocityX = moveToward(enemy.velocityX, 0, 760 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 760 * dt); updateEnemyPresentation(enemy, dt); return; }
       const dist = distance(enemy, player);
       if (!enemy.alerted && enemy.behavior !== "ambush" && dist <= enemy.detectionRange) { enemy.alerted = true; enemy.state = "alert"; enemy.stateTimer = .16; spawnParticle(enemy.x, enemy.y, enemy.color, 4, 28, "spark"); if (enemy.group) enemies.forEach((ally) => { if (ally.group === enemy.group && distance(enemy, ally) < 175) ally.alerted = true; }); }
       if (enemy.state === "alert") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = enemy.behavior === "ranged" ? "orbit" : "chase"; return; }
@@ -749,9 +760,9 @@
       else if (enemy.behavior === "warden") updateWarden(enemy, dist, dt);
       else updateBoss(enemy, dist, dt);
       enemy.velocityX = moveToward(enemy.velocityX, 0, 820 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 820 * dt);
-      moveEntityBy(enemy, enemy.velocityX * dt, enemy.velocityY * dt);
+      moveEntityBy(enemy, enemy.velocityX * dt, enemy.velocityY * dt); updateEnemyPresentation(enemy, dt);
     });
-    enemies = enemies.filter((enemy) => !enemy.dead);
+    enemies = enemies.filter((enemy) => !enemy.dead || enemy.deathTimer > 0);
     const maxX = state.area === "overworld" ? WORLD.width : ROOM.width; const maxY = state.area === "overworld" ? WORLD.height : ROOM.height;
     projectiles = projectiles.filter((projectile) => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (collidesWorld({ ...projectile, radius: projectile.radius })) return false; if (distance(projectile, player) < projectile.radius + player.radius) { hurtPlayer(projectile.damage || 1, projectile); return false; } return projectile.life > 0 && projectile.x > 0 && projectile.y > 0 && projectile.x < maxX && projectile.y < maxY; });
   };
@@ -1065,9 +1076,10 @@
   const drawMapTable = (x, y, time) => { drawShadow(x, y + 11, 24, 6, .25); ctx.fillStyle = "#6f4b39"; ctx.fillRect(x - 20, y - 5, 40, 8); ctx.fillRect(x - 16, y + 3, 4, 18); ctx.fillRect(x + 12, y + 3, 4, 18); ctx.fillStyle = "#d5c28d"; ctx.fillRect(x - 13, y - 10, 26, 8); ctx.strokeStyle = "rgba(71,112,93,.75)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 8, y - 8); ctx.lineTo(x - 2, y - 4); ctx.lineTo(x + 4, y - 8); ctx.lineTo(x + 10, y - 3); ctx.stroke(); ctx.fillStyle = `rgba(255,215,123,${.35 + Math.sin(time * 3) * .1})`; ctx.beginPath(); ctx.arc(x + 18, y - 8, 3, 0, Math.PI * 2); ctx.fill(); };
   const drawPondBasket = (x, y, time) => { ctx.save(); ctx.translate(x, y + Math.sin(time * 1.7) * .5); ctx.fillStyle = "#b17b4d"; ctx.beginPath(); ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#e2bd78"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -2, 10, Math.PI, 0); ctx.stroke(); ctx.restore(); };
   const drawNpc = (npc, time) => {
-    const bob = Math.sin(time * 2.4 + npc.phase) * (npc.behavior === "pace" ? 1.2 : .8); const x = npc.x; const y = npc.y + bob;
-    drawShadow(x, y + 18, npc.id === "brindle" ? 20 : 18, 7, .32);
+    const bob = Math.sin(time * 2.4 + npc.phase) * (npc.behavior === "pace" ? 1.2 : .8); const npcAnimTime = npc.animTime || 0; const stride = npc.behavior === "pace" ? Math.sin(npcAnimTime) * 2 : Math.sin(npcAnimTime) * .45; const x = npc.x; const y = npc.y + bob;
+    drawShadow(x, y + 18, (npc.id === "brindle" ? 20 : 18) * (1 + Math.abs(stride) * .025), 7, .32);
     ctx.save(); ctx.translate(x, y); ctx.scale(npc.facing || 1, 1);
+    ctx.fillStyle = npc.id === "brindle" ? "#315b58" : "#4a3c43"; ctx.fillRect(-10 - stride, 8, 7, 8); ctx.fillRect(3 + stride, 8, 7, 8);
     if (npc.id === "rowan") {
       ctx.fillStyle = "#365c78"; ctx.beginPath(); ctx.moveTo(-16, 9); ctx.quadraticCurveTo(-14, -9, 0, -15); ctx.quadraticCurveTo(14, -9, 16, 9); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#233d59"; ctx.beginPath(); ctx.moveTo(-16, -14); ctx.lineTo(0, -28); ctx.lineTo(16, -14); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#d7a77b"; ctx.beginPath(); ctx.arc(0, -23, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(-12, 1, 24, 5); ctx.fillStyle = "#91e1c1"; ctx.fillRect(-4, -25, 3, 3);
     } else if (npc.id === "tansy") {
@@ -1077,6 +1089,7 @@
     } else {
       ctx.fillStyle = "#765c8e"; ctx.beginPath(); ctx.moveTo(-15, 10); ctx.lineTo(-11, -13); ctx.lineTo(0, -17); ctx.lineTo(12, -13); ctx.lineTo(16, 10); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#e0bd89"; ctx.beginPath(); ctx.arc(0, -23, 9, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#2e2e4a"; ctx.fillRect(-11, -29, 22, 5); ctx.fillStyle = "#d7c99a"; ctx.fillRect(9, -1, 8, 10); ctx.strokeStyle = "#e8d6a3"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -23, 12, 0, Math.PI * 2); ctx.stroke();
     }
+    if (npc.behavior === "fire" || npc.behavior === "map") { const npcWork = npc.work || 0; ctx.strokeStyle = npc.behavior === "fire" ? "#e6b774" : "#d7c99a"; ctx.globalAlpha = .72; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-12, 1); ctx.lineTo(-16, 5 + npcWork * 4); ctx.moveTo(12, 1); ctx.lineTo(16, 5 - npcWork * 4); ctx.stroke(); }
     ctx.restore();
     if (npc.near && state.mode === "playing" && !state.dialogue) { const lift = Math.sin(time * 4 + npc.phase) * 2; ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = "rgba(7,20,18,.9)"; ctx.strokeStyle = "rgba(214,255,220,.45)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x - 17, y - 69 + lift, 34, 22, 8); ctx.fill(); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.font = "700 11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("E", x, y - 54 + lift); ctx.fillStyle = "rgba(243,246,223,.82)"; ctx.font = "500 9px Outfit"; ctx.fillText(npc.name, x, y - 76 + lift); ctx.restore(); }
   };
@@ -1190,20 +1203,31 @@
   const drawReward = (x, y, time) => { const bob = Math.sin(time * 2.7) * 5; const glow = ctx.createRadialGradient(x, y + bob, 2, x, y + bob, 104); glow.addColorStop(0, "rgba(255,225,145,.58)"); glow.addColorStop(.45, "rgba(255,215,123,.18)"); glow.addColorStop(1, "rgba(255,215,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y + bob, 104, 0, Math.PI * 2); ctx.fill(); ctx.save(); ctx.translate(x, y + bob); ctx.rotate(time * .8); ctx.strokeStyle = "rgba(255,245,193,.58)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 28 + Math.sin(time * 2) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 0); ctx.lineTo(0, 20); ctx.lineTo(-15, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#fff8c7"; ctx.beginPath(); ctx.arc(-5, -6, 6, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
 
   const drawEnemy = (enemy, time) => {
-    if (enemy.dead) return;
+    if (enemy.dead) {
+      const progress = clamp(1 - enemy.deathTimer / Math.max(.01, enemy.deathMax || .6), 0, 1); const fade = 1 - progress; drawShadow(enemy.x, enemy.y + 8, enemy.radius * (1.2 - progress * .4), enemy.radius * .28, .28 * fade);
+      ctx.save(); ctx.globalAlpha = fade; ctx.translate(enemy.x, enemy.y - progress * 16); ctx.rotate(progress * 1.4); ctx.scale(.82 + progress * .8, .82 + progress * .8); ctx.strokeStyle = enemy.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, enemy.radius * .75, 0, Math.PI * 2); ctx.stroke(); for (let i = 0; i < 6; i += 1) { const angle = i * Math.PI / 3; const length = enemy.radius * (.7 + progress * .8); ctx.fillStyle = i % 2 ? enemy.color : "#fff2c4"; ctx.beginPath(); ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5); ctx.lineTo(Math.cos(angle + .16) * length, Math.sin(angle + .16) * length); ctx.lineTo(Math.cos(angle - .16) * length, Math.sin(angle - .16) * length); ctx.closePath(); ctx.fill(); } ctx.restore(); return;
+    }
     if (enemy.hidden) { ctx.save(); ctx.globalAlpha = .16 + Math.sin(time * 2 + enemy.orbit) * .04; drawShadow(enemy.x, enemy.y + 9, 15, 5, .35); ctx.fillStyle = "#8e76a5"; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y, 8, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
-    const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 2 : 0;
-    drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * (enemy.hitStun > 0 ? 1.04 : .9), enemy.radius * .3, .36);
-    ctx.save(); ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2; if (enemy.hitFlash > 0) ctx.globalAlpha = .55 + Math.sin(enemy.hitFlash * 35) * .45;
-    const color = enemy.color;
-    if (enemy.type === "boss") { const bossRadius = enemy.radius + Math.sin(time * (enemy.phase === 2 ? 8 : 5)) * (enemy.phase === 2 ? 3 : 2); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, bossRadius, 0, Math.PI * 2); ctx.fill(); if (enemy.phase === 2) { ctx.save(); ctx.strokeStyle = "rgba(255,154,157,.78)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, bossRadius + 10 + Math.sin(time * 7) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "#d66b92"; for (let i = 0; i < 6; i += 1) { const angle = time * .8 + i * Math.PI / 3; ctx.beginPath(); ctx.moveTo(enemy.x + recoil + Math.cos(angle) * (bossRadius - 2), enemy.y + Math.sin(angle) * (bossRadius - 2)); ctx.lineTo(enemy.x + recoil + Math.cos(angle) * (bossRadius + 15), enemy.y + Math.sin(angle) * (bossRadius + 15)); ctx.lineTo(enemy.x + recoil + Math.cos(angle + .18) * (bossRadius - 1), enemy.y + Math.sin(angle + .18) * (bossRadius - 1)); ctx.closePath(); ctx.fill(); } ctx.restore(); } ctx.fillStyle = "#512d58"; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y - 6, enemy.radius * .6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = enemy.phase === 2 ? COLORS.rose : COLORS.gold; ctx.fillRect(enemy.x - 13 + recoil, enemy.y - 11, 8, 5); ctx.fillRect(enemy.x + 5 + recoil, enemy.y - 11, 8, 5); }
-    else if (enemy.type === "warden") { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(enemy.x + recoil, enemy.y - 30); ctx.lineTo(enemy.x + 25 + recoil, enemy.y + 22); ctx.lineTo(enemy.x - 25 + recoil, enemy.y + 22); ctx.closePath(); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y - 3, 8, 0, Math.PI * 2); ctx.fill(); }
-    else if (enemy.type === "thornback") { ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(enemy.x + recoil, enemy.y, enemy.radius + 4, enemy.radius - 2, -.08, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#7d543d"; for (let i = -1; i <= 1; i += 1) { ctx.beginPath(); ctx.moveTo(enemy.x + recoil + i * 9, enemy.y - 10); ctx.lineTo(enemy.x + recoil + i * 9 + 5, enemy.y - 22); ctx.lineTo(enemy.x + recoil + i * 9 + 10, enemy.y - 8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = "#2c4135"; ctx.beginPath(); ctx.arc(enemy.x + recoil + 7, enemy.y - 2, 3, 0, Math.PI * 2); ctx.fill(); }
-    else if (enemy.type === "moth") { ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(enemy.x + recoil - 8, enemy.y - 3, 11, 7, -.45, 0, Math.PI * 2); ctx.ellipse(enemy.x + recoil + 8, enemy.y - 3, 11, 7, .45, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#583b62"; ctx.beginPath(); ctx.ellipse(enemy.x + recoil, enemy.y + 2, 4, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffe7a2"; ctx.beginPath(); ctx.arc(enemy.x + recoil - 2, enemy.y - 1, 2, 0, Math.PI * 2); ctx.arc(enemy.x + recoil + 2, enemy.y - 1, 2, 0, Math.PI * 2); ctx.fill(); }
-    else { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#17362e"; ctx.beginPath(); ctx.arc(enemy.x - 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.arc(enemy.x + 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.fill(); if (enemy.type === "wisp") { ctx.strokeStyle = "rgba(220,207,255,.6)"; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = "rgba(235,220,255,.28)"; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius + 7 + Math.sin(time * 5) * 2, 0, Math.PI * 2); ctx.fill(); } }
-    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
-    ctx.strokeStyle = enemy.type === "boss" && enemy.phase === 2 ? "rgba(255,213,220,.72)" : "rgba(239,255,217,.34)"; ctx.lineWidth = enemy.type === "boss" ? 3 : 2; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius * .86, -2.55, -1.05); ctx.stroke();
-    ctx.restore();
+    const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 2 : 0; const moving = enemy.motionSpeed > 5; const bob = moving ? Math.sin(enemy.walk) * (enemy.type === "moth" ? 2.6 : 1.4) : Math.sin(enemy.animTime * 1.7) * .45; const windup = enemy.telegraph > 0 ? clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1) : 0; const facing = enemy.facingX < -.15 ? -1 : 1;
+    drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92), enemy.radius * (moving ? .34 : .3), .36);
+    ctx.save(); ctx.translate(enemy.x + recoil, enemy.y + bob); ctx.scale(facing, 1); ctx.globalAlpha = enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1; ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2;
+    const color = enemy.color; const squash = enemy.hitStun > 0 ? .86 : enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "bossDashing" ? 1.12 : 1; const stretch = enemy.hitStun > 0 ? 1.1 : enemy.state === "chargeWindup" || enemy.state === "bossDashWindup" ? .86 : 1;
+    ctx.scale(squash, stretch);
+    if (enemy.type === "boss") {
+      const bossRadius = enemy.radius + Math.sin(time * (enemy.phase === 2 ? 8 : 5)) * (enemy.phase === 2 ? 3 : 2); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, bossRadius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#512d58"; ctx.beginPath(); ctx.arc(0, -6, enemy.radius * .6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = enemy.phase === 2 ? COLORS.rose : COLORS.gold; ctx.fillRect(-13, -11, 8, 5); ctx.fillRect(5, -11, 8, 5); ctx.strokeStyle = enemy.phase === 2 ? "rgba(255,154,157,.78)" : "rgba(255,220,169,.46)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, bossRadius + 7 + Math.sin(time * 5) * 2, 0, Math.PI * 2); ctx.stroke();
+      if (enemy.phase === 2) { ctx.fillStyle = "#d66b92"; for (let i = 0; i < 6; i += 1) { const angle = time * .8 + i * Math.PI / 3; ctx.beginPath(); ctx.moveTo(Math.cos(angle) * (bossRadius - 2), Math.sin(angle) * (bossRadius - 2)); ctx.lineTo(Math.cos(angle) * (bossRadius + 15), Math.sin(angle) * (bossRadius + 15)); ctx.lineTo(Math.cos(angle + .18) * (bossRadius - 1), Math.sin(angle + .18) * (bossRadius - 1)); ctx.closePath(); ctx.fill(); } }
+    } else if (enemy.type === "warden") {
+      ctx.fillStyle = "#2e493f"; ctx.beginPath(); ctx.moveTo(-21, 22); ctx.lineTo(-25, -10); ctx.lineTo(-13, -30); ctx.lineTo(0, -38); ctx.lineTo(13, -30); ctx.lineTo(25, -10); ctx.lineTo(21, 22); ctx.closePath(); ctx.fill(); ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(26, 20); ctx.lineTo(0, 27); ctx.lineTo(-26, 20); ctx.closePath(); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(0, -3, 8, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(239,255,217,.55)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-18, 15); ctx.lineTo(-29, 27); ctx.moveTo(18, 15); ctx.lineTo(29, 27); ctx.stroke();
+    } else if (enemy.type === "thornback") {
+      const tilt = enemy.state === "chargeWindup" ? -.12 : .02; ctx.rotate(tilt); ctx.fillStyle = "#405a46"; ctx.beginPath(); ctx.ellipse(0, 3, enemy.radius + 6, enemy.radius - 1, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, -1, enemy.radius + 3, enemy.radius - 4, -.08, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#7d543d"; for (let i = -1; i <= 1; i += 1) { ctx.beginPath(); ctx.moveTo(i * 10, -10); ctx.lineTo(i * 10 + 6, -24); ctx.lineTo(i * 10 + 12, -8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = "#2c4135"; ctx.beginPath(); ctx.arc(10, -2, 3, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(225,240,194,.35)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-15, 14); ctx.lineTo(-19, 22); ctx.moveTo(15, 14); ctx.lineTo(19, 22); ctx.stroke();
+    } else if (enemy.type === "moth") {
+      const flap = .58 + Math.abs(Math.sin(enemy.animTime * 10)) * .42; ctx.scale(1, flap); ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(-9, -3, 12, 8, -.45, 0, Math.PI * 2); ctx.ellipse(9, -3, 12, 8, .45, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#583b62"; ctx.beginPath(); ctx.ellipse(0, 3, 4, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(241,208,235,.65)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-2, -6); ctx.quadraticCurveTo(-9, -18, -13, -19); ctx.moveTo(2, -6); ctx.quadraticCurveTo(9, -18, 13, -19); ctx.stroke(); ctx.fillStyle = "#ffe7a2"; ctx.beginPath(); ctx.arc(-2, -1, 2, 0, Math.PI * 2); ctx.arc(2, -1, 2, 0, Math.PI * 2); ctx.fill();
+    } else if (enemy.type === "wisp") {
+      const pulse = 1 + Math.sin(enemy.animTime * 4) * .08; ctx.scale(pulse, pulse); ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(0, -enemy.radius - 5); ctx.quadraticCurveTo(enemy.radius + 4, -3, 0, enemy.radius + 7); ctx.quadraticCurveTo(-enemy.radius - 4, -3, 0, -enemy.radius - 5); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(220,207,255,.72)"; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = "rgba(235,220,255,.24)"; ctx.beginPath(); ctx.arc(0, 0, enemy.radius + 7 + Math.sin(time * 5) * 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fbf1c2"; ctx.beginPath(); ctx.arc(-4, -2, 2, 0, Math.PI * 2); ctx.arc(4, -2, 2, 0, Math.PI * 2); ctx.fill();
+    } else {
+      const hop = moving ? Math.abs(Math.sin(enemy.walk)) * 2 : 0; ctx.translate(0, -hop); ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 3, enemy.radius + 1, enemy.radius - 1, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#80bb71"; ctx.beginPath(); ctx.arc(-8, -8, 6, 0, Math.PI * 2); ctx.arc(8, -8, 6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#17362e"; ctx.beginPath(); ctx.arc(-5, -1, 3, 0, Math.PI * 2); ctx.arc(5, -1, 3, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(239,255,217,.4)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-9, 12); ctx.lineTo(-11, 17); ctx.moveTo(9, 12); ctx.lineTo(11, 17); ctx.stroke();
+    }
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.strokeStyle = enemy.type === "boss" && enemy.phase === 2 ? "rgba(255,213,220,.72)" : "rgba(239,255,217,.34)"; ctx.lineWidth = enemy.type === "boss" ? 3 : 2; ctx.beginPath(); ctx.arc(0, 0, enemy.radius * .86, -2.55, -1.05); ctx.stroke(); ctx.restore();
     if (enemy.type === "boss" && enemy.phaseExposed > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.phaseExposed * 1.8, 0, .95); ctx.strokeStyle = COLORS.mint; ctx.shadowColor = COLORS.mint; ctx.shadowBlur = 16; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 15 + Math.sin(time * 18) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,246,210,.9)"; ctx.lineWidth = 2; for (let i = 0; i < 4; i += 1) { const angle = time * 2 + i * Math.PI / 2; ctx.beginPath(); ctx.moveTo(enemy.x + Math.cos(angle) * 10, enemy.y + Math.sin(angle) * 10); ctx.lineTo(enemy.x + Math.cos(angle + .3) * (enemy.radius + 12), enemy.y + Math.sin(angle + .3) * (enemy.radius + 12)); ctx.stroke(); } ctx.restore(); }
     if (enemy.hitStun > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.hitStun * 5, 0, .85); ctx.strokeStyle = "#fff7dc"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 5 + Math.sin(time * 30) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     if (enemy.telegraph > 0) {
@@ -1223,10 +1247,12 @@
     if (player.attack <= 0) return;
     const linearProgress = clamp(player.attackElapsed / .34, 0, 1); const progress = 1 - Math.pow(1 - linearProgress, 2.2); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
     ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.lineCap = "round";
-    const start = -1.02 + progress * .22; const end = -.92 + progress * 1.92; const fade = clamp((player.attack < .12 ? player.attack / .12 : 1), 0, 1);
+    const anticipation = clamp(linearProgress / .2, 0, 1); const start = -1.02 + progress * .22; const end = -.92 + progress * 1.92; const fade = clamp((player.attack < .12 ? player.attack / .12 : 1), 0, 1);
+    if (linearProgress < .3) { ctx.globalAlpha = .18 + anticipation * .24; ctx.strokeStyle = "rgba(255,231,164,.72)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(20, 0, 31, -1.55, -1.05); ctx.stroke(); }
     ctx.globalAlpha = .16 + fade * .42; ctx.strokeStyle = "#fff5d2"; ctx.lineWidth = 15; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
     ctx.globalAlpha = .95 * fade; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
     ctx.globalAlpha = .92 * fade; ctx.strokeStyle = "#fff9dd"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
+    if (linearProgress > .16) { const tipX = Math.cos(end) * 58; const tipY = Math.sin(end) * 58; ctx.globalAlpha = fade * .72; ctx.fillStyle = "#fff4c8"; ctx.beginPath(); ctx.arc(tipX, tipY, 2.5 + fade * 2, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
   };
   const drawParticle = (particle) => {
@@ -1234,6 +1260,7 @@
     ctx.save(); ctx.globalAlpha = alpha; ctx.translate(particle.x, particle.y);
     if (particle.kind === "ring") { ctx.strokeStyle = particle.color; ctx.lineWidth = 3 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.45 + progress * .9), 0, Math.PI * 2); ctx.stroke(); }
     else if (particle.kind === "death-ring") { ctx.strokeStyle = particle.color; ctx.shadowColor = particle.color; ctx.shadowBlur = 10; ctx.lineWidth = 4 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.25 + progress * 1.55), 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; }
+    else if (particle.kind === "death-shards") { ctx.rotate(progress * 1.5); ctx.strokeStyle = particle.color; ctx.lineWidth = 2 * alpha; for (let i = 0; i < 6; i += 1) { const angle = i * Math.PI / 3; const inner = particle.size * (.18 + progress * .12); const outer = particle.size * (.55 + progress * .7); ctx.beginPath(); ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner); ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer); ctx.stroke(); } }
     else if (particle.kind === "rootlight-ring") { ctx.strokeStyle = particle.color; ctx.shadowColor = particle.color; ctx.shadowBlur = 14; ctx.lineWidth = 5 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.4 + progress * 5.2), 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; }
     else if (particle.kind === "dust") { ctx.fillStyle = particle.color; ctx.scale(1 + progress * .55, .65); ctx.beginPath(); ctx.ellipse(0, 0, particle.size, particle.size * .55, 0, 0, Math.PI * 2); ctx.fill(); }
     else if (particle.kind === "leaf") { ctx.rotate(particle.rotation + progress * 2); ctx.fillStyle = particle.color; ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size * .62); }
@@ -1243,11 +1270,12 @@
   };
   const drawPlayer = (time) => {
     const flicker = player.invulnerable > 0 && Math.floor(player.invulnerable * 24) % 2 === 0; if (flicker && player.dash <= 0) ctx.globalAlpha = .48;
-    const bob = player.visualState === "move" ? Math.sin(player.walk) * 2 : player.visualState === "idle" ? Math.sin(time * 2.2) * .7 : 0;
+    const bob = player.visualState === "move" ? Math.sin(player.walk) * 2 : player.visualState === "idle" ? Math.sin(time * 2.2) * .7 : player.visualState === "attack" ? Math.sin(player.attackElapsed * 22) * .45 : 0;
     const lean = player.visualState === "hurt" ? -.12 : player.visualState === "attack" ? .08 : 0;
     drawShadow(player.x, player.y + 16, player.visualState === "dash" ? 25 : 19, player.visualState === "dash" ? 5 : 7, .36);
     ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
     const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
+    ctx.scale(player.facingX < -.2 ? -1 : 1, 1);
     ctx.fillStyle = player.visualState === "dash" ? "#89d8c7" : "#3d6780"; ctx.beginPath(); ctx.ellipse(0, 1, 15, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = ART.ink; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = COLORS.player; ctx.beginPath(); ctx.arc(0, -14, 10, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(37,48,40,.72)"; ctx.stroke();
     ctx.fillStyle = "#4a302c"; ctx.beginPath(); ctx.arc(0, -19, 11, Math.PI, 0); ctx.fill();
@@ -1255,6 +1283,8 @@
     ctx.fillStyle = "rgba(255,255,255,.38)"; ctx.fillRect(-7, -22, 3, 3); ctx.strokeStyle = "rgba(205,247,216,.34)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 1, 13, Math.PI * 1.12, Math.PI * 1.82); ctx.stroke();
     if (player.visualState === "dash") { ctx.strokeStyle = "rgba(182,255,225,.8)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 1, 21, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore(); ctx.globalAlpha = 1;
+    const attackProgress = player.visualState === "attack" ? clamp(player.attackElapsed / .34, 0, 1) : 0; const attackAngle = player.visualState === "attack" ? Math.atan2(player.attackDirectionY, player.attackDirectionX) : Math.atan2(player.facingY, player.facingX); const swordSweep = player.visualState === "attack" ? -1.08 + attackProgress * 1.86 : .12;
+    ctx.save(); ctx.translate(player.x, player.y + bob - 1); ctx.rotate(attackAngle + swordSweep); ctx.globalAlpha = player.visualState === "hurt" ? .55 : 1; ctx.strokeStyle = "#6e4937"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(13, 0); ctx.stroke(); ctx.fillStyle = player.visualState === "attack" ? "#fff1ba" : "#e5d59f"; ctx.beginPath(); ctx.moveTo(10, -3); ctx.lineTo(39, -2); ctx.lineTo(44, 0); ctx.lineTo(39, 2); ctx.lineTo(10, 3); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(40,59,49,.72)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "#b58355"; ctx.fillRect(8, -5, 5, 10); ctx.restore();
     if (state.rootlightLantern) { const bob = Math.sin(time * 3.4) * 3; const glow = ctx.createRadialGradient(player.x + 15, player.y - 18 + bob, 1, player.x + 15, player.y - 18 + bob, 32); glow.addColorStop(0, "rgba(255,238,166,.72)"); glow.addColorStop(1, "rgba(142,242,207,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 32, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffe9a4"; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 5 + Math.sin(time * 5) * .8, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(142,242,207,.65)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 9, 0, Math.PI * 2); ctx.stroke(); }
     if (player.rootlightPulse > 0) { const pulse = 1 - player.rootlightPulse / .7; ctx.save(); ctx.globalAlpha = .25 + player.rootlightPulse * .7; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + pulse * 80, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     drawAttackTrail();
