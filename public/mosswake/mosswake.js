@@ -161,9 +161,20 @@
     } catch (error) { state.saveError = true; return false; }
   };
   const hasSave = () => { try { return Boolean(localStorage.getItem(STORAGE_KEY)); } catch (error) { return false; } };
+  const normaliseSave = (value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const save = { ...value };
+    save.area = value.area === "dungeon" ? "dungeon" : "overworld";
+    const roomX = Number(value.roomX); const roomY = Number(value.roomY); const hp = Number(value.hp);
+    save.roomX = Number.isFinite(roomX) ? clamp(Math.trunc(roomX), 0, 2) : 0;
+    save.roomY = Number.isFinite(roomY) ? clamp(Math.trunc(roomY), 0, 1) : 0;
+    save.hp = Number.isFinite(hp) ? clamp(hp, 1, 12) : 6;
+    save.roomVisited = value.roomVisited && typeof value.roomVisited === "object" && !Array.isArray(value.roomVisited) ? value.roomVisited : { overworld: true };
+    return save;
+  };
   const loadData = () => {
     try {
-      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      const data = normaliseSave(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
       if (!data) return false;
       Object.assign(state, data, { mode: "playing", dialogue: null, toastTimer: 0, saveError: false });
       if (state.ashCacheOpened && !state.rootlightLantern) state.rootlightLantern = true;
