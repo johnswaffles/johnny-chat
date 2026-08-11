@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1516">
   <title>Mosswake — The Hollow Shrine</title>
-  <link rel="stylesheet" href="/mosswake/mosswake.css?v=1">
+  <link rel="stylesheet" href="/mosswake/mosswake.css?v=2">
 </head>
 <body>
   <div class="sky-glow sky-glow-one"></div>
@@ -45,9 +45,12 @@
         <div id="screen-vignette" aria-hidden="true"></div>
         <div id="toast" class="toast" aria-live="polite"></div>
         <div id="dialogue" class="dialogue" aria-live="polite">
-          <span id="dialogue-speaker" class="dialogue-speaker"></span>
-          <p id="dialogue-text"></p>
-          <span class="dialogue-hint">E / Enter to continue</span>
+          <div id="dialogue-portrait" class="dialogue-portrait" aria-hidden="true"><span id="dialogue-portrait-mark">R</span></div>
+          <div class="dialogue-content">
+            <span id="dialogue-speaker" class="dialogue-speaker"></span>
+            <p id="dialogue-text"></p>
+            <div class="dialogue-footer"><span id="dialogue-hint" class="dialogue-hint">E / Enter · reveal</span><button id="dialogue-speed" class="dialogue-speed" type="button" title="Cycle dialogue text speed">Text: normal</button></div>
+          </div>
         </div>
         <div id="title-screen" class="screen-card">
           <p class="screen-kicker">THE LANTERNWOOD CHRONICLE</p>
@@ -101,6 +104,6 @@
     </section>
     <p class="footer-note">A small original world by Johnny · custom art can be dropped into <code>mosswake/assets</code> as it grows.</p>
   </main>
-  <script src="/mosswake/mosswake.js?v=5"></script>
+  <script src="/mosswake/mosswake.js?v=6"></script>
 </body>
 </html>

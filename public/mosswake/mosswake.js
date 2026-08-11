@@ -33,7 +33,7 @@
     miniBossDefeated: false, bossDefeated: false, reward: false, secretFound: false, chestOpened: false, heartChestOpened: false, loot: 0,
     rowanClue: false, rowanRewarded: false, southPassageOpen: false, reedCacheFound: false, hiddenChestOpened: false,
     optionalGuardDefeated: false, lanternLens: false, lanternSeed: false, discoveries: 0, discoveryTotal: 3,
-    lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0
+    dialogueSpeed: 52, spawnGrace: 0, lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0
   };
   let enemies = [];
   let projectiles = [];
@@ -90,22 +90,58 @@
       { x: 900, y: 548, phase: 3.7 }, { x: 1010, y: 470, phase: 5.2 }, { x: 1240, y: 420, phase: 2.1 }, { x: 1430, y: 600, phase: .9 }, { x: 1530, y: 520, phase: 4.8 }
     ]
   };
+  const npcs = [
+    { id: "rowan", name: "Rowan", role: "Outpost keeper", portrait: "rowan", x: 460, y: 380, baseX: 460, baseY: 380, behavior: "watch", phase: .3, facing: 1 },
+    { id: "tansy", name: "Tansy", role: "Lantern cook", portrait: "tansy", x: 620, y: 356, baseX: 620, baseY: 356, behavior: "fire", phase: 1.2, facing: 1 },
+    { id: "brindle", name: "Brindle", role: "Pond ferrier", portrait: "brindle", x: 540, y: 585, baseX: 540, baseY: 585, behavior: "pace", phase: 2.4, facing: 1, route: [{ x: 520, y: 582 }, { x: 572, y: 605 }, { x: 525, y: 625 }] },
+    { id: "lumen", name: "Lumen", role: "Shrine cartographer", portrait: "lumen", x: 1235, y: 305, baseX: 1235, baseY: 305, behavior: "map", phase: 4.1, facing: -1 }
+  ];
   let camera = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0 };
   let lastFrame = 0;
 
   const ui = {
     title: document.getElementById("title-screen"), pause: document.getElementById("pause-screen"), victory: document.getElementById("victory-screen"),
-    dialogue: document.getElementById("dialogue"), speaker: document.getElementById("dialogue-speaker"), dialogueText: document.getElementById("dialogue-text"),
+    dialogue: document.getElementById("dialogue"), speaker: document.getElementById("dialogue-speaker"), dialogueText: document.getElementById("dialogue-text"), dialogueHint: document.getElementById("dialogue-hint"), portrait: document.getElementById("dialogue-portrait"), portraitMark: document.getElementById("dialogue-portrait-mark"), dialogueSpeed: document.getElementById("dialogue-speed"),
     toast: document.getElementById("toast"), area: document.getElementById("area-label"), room: document.getElementById("room-label"), objective: document.getElementById("objective"),
     objectiveCopy: document.getElementById("objective-copy"), hearts: document.getElementById("hearts"), seed: document.getElementById("seed-count"), keys: document.getElementById("key-count"), loot: document.getElementById("loot-count"), discovery: document.getElementById("discovery-count"), save: document.getElementById("save-state"), map: document.getElementById("map-dots")
   };
 
   const showToast = (message, duration = 2200) => { ui.toast.textContent = message; ui.toast.classList.add("visible"); state.toastTimer = duration; };
   const hideScreens = () => [ui.title, ui.pause, ui.victory].forEach((screen) => screen.classList.add("hidden"));
-  const setDialogue = (speaker, text) => { state.dialogue = { speaker, text }; ui.speaker.textContent = speaker; ui.dialogueText.textContent = text; ui.dialogue.classList.add("visible"); };
-  const closeDialogue = () => { state.dialogue = null; ui.dialogue.classList.remove("visible"); };
+  const dialoguePortraitLetter = (portrait) => ({ rowan: "R", tansy: "T", brindle: "B", lumen: "L" }[portrait] || "?");
+  const renderDialogueLine = () => {
+    if (!state.dialogue) return;
+    const line = state.dialogue.lines[state.dialogue.index] || "";
+    ui.speaker.textContent = state.dialogue.speaker;
+    ui.dialogueText.textContent = line.slice(0, Math.floor(state.dialogue.charIndex));
+    ui.dialogueHint.textContent = state.dialogue.complete ? (state.dialogue.index < state.dialogue.lines.length - 1 ? "E / Enter · next" : "E / Enter · close") : "E / Enter · reveal";
+    ui.portrait.dataset.character = state.dialogue.portrait || "rowan";
+    ui.portraitMark.textContent = dialoguePortraitLetter(state.dialogue.portrait);
+  };
+  const setDialogue = (speaker, text, portrait = "rowan") => {
+    const lines = Array.isArray(text) ? text : [text];
+    state.dialogue = { speaker, lines, portrait, index: 0, charIndex: 0, complete: false };
+    ui.dialogue.classList.remove("closing"); ui.dialogue.classList.add("visible"); renderDialogueLine();
+  };
+  const closeDialogue = () => {
+    state.dialogue = null; ui.dialogue.classList.remove("visible"); ui.dialogue.classList.add("closing");
+    window.setTimeout(() => { if (!state.dialogue) ui.dialogue.classList.remove("closing"); }, 220);
+  };
+  const advanceDialogue = () => {
+    if (!state.dialogue) return;
+    if (!state.dialogue.complete) { state.dialogue.charIndex = state.dialogue.lines[state.dialogue.index].length; state.dialogue.complete = true; renderDialogueLine(); return; }
+    if (state.dialogue.index < state.dialogue.lines.length - 1) { state.dialogue.index += 1; state.dialogue.charIndex = 0; state.dialogue.complete = false; renderDialogueLine(); return; }
+    closeDialogue();
+  };
+  const updateDialogue = (dt) => {
+    if (!state.dialogue || state.dialogue.complete) return;
+    const line = state.dialogue.lines[state.dialogue.index] || "";
+    state.dialogue.charIndex = Math.min(line.length, state.dialogue.charIndex + dt * (state.dialogueSpeed || 52));
+    if (state.dialogue.charIndex >= line.length) state.dialogue.complete = true;
+    renderDialogueLine();
+  };
   const saveData = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, mode: "playing", hp: player.hp, area: state.area, roomX: state.roomX, roomY: state.roomY }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, dialogue: null, mode: "playing", hp: player.hp, area: state.area, roomX: state.roomX, roomY: state.roomY }));
     state.lastSave = 0;
   };
   const hasSave = () => Boolean(localStorage.getItem(STORAGE_KEY));
@@ -125,7 +161,7 @@
   const resetProgress = () => {
     localStorage.removeItem(STORAGE_KEY);
     state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0;
-    state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0;
+    state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dialogueSpeed = 52;
     player.maxHp = 6; player.hp = player.maxHp; player.x = 390; player.y = 500; startArea("overworld", false); state.mode = "title"; hideScreens(); ui.title.classList.remove("hidden"); updateHud();
   };
 
@@ -154,6 +190,27 @@
       } else item.touched = false;
     });
   };
+  const updateNpcs = (dt) => {
+    npcs.forEach((npc) => {
+      npc.clock = (npc.clock || 0) + dt;
+      const playerNear = state.area === "overworld" && distance(player, npc) < 92;
+      npc.near = playerNear;
+      if (npc.behavior === "pace") {
+        const route = npc.route; const travel = 3.8; const routeTime = npc.clock / travel; const segment = Math.floor(routeTime) % route.length; const next = route[(segment + 1) % route.length]; const current = route[segment]; const blend = routeTime - Math.floor(routeTime); const eased = blend * blend * (3 - 2 * blend);
+        const previousX = npc.x; npc.x = current.x + (next.x - current.x) * eased; npc.y = current.y + (next.y - current.y) * eased; npc.facing = npc.x >= previousX ? 1 : -1;
+      } else {
+        npc.x = npc.baseX + Math.sin(npc.clock * .7 + npc.phase) * (npc.behavior === "fire" ? 3 : 1.5);
+        npc.y = npc.baseY + Math.sin(npc.clock * 1.35 + npc.phase) * (npc.behavior === "fire" ? 1.5 : 1);
+        if (playerNear) npc.facing = player.x >= npc.x ? 1 : -1;
+        else if (npc.behavior === "watch") npc.facing = Math.sin(npc.clock * .35 + npc.phase) > 0 ? 1 : -1;
+      }
+      npc.work = Math.sin(npc.clock * (npc.behavior === "map" ? 2.8 : 4) + npc.phase);
+    });
+  };
+  const nearestNpc = (radius = 68) => {
+    if (state.area !== "overworld") return null;
+    return npcs.reduce((nearest, npc) => { const range = distance(player, npc); return range < radius && (!nearest || range < nearest.range) ? { npc, range } : nearest; }, null)?.npc || null;
+  };
   const spawnDrop = (enemy) => {
     if (!enemy.drop) return;
     drops.push({ x: enemy.x, y: enemy.y, ...enemy.drop, life: 24, phase: rand(0, 6.28), bob: rand(0, 6.28) });
@@ -172,6 +229,20 @@
     state.discoveries = Math.min(state.discoveryTotal, (state.discoveries || 0) + 1);
     showToast(`${label} · discovery ${state.discoveries}/${state.discoveryTotal}`, 2200);
     saveData(); updateHud();
+  };
+  const talkToNpc = (npc) => {
+    if (npc.id === "rowan") {
+      if (!state.rowanClue) { state.rowanClue = true; setDialogue(npc.name, ["The moths are not leading you away, Warden.", "Three pale stones point past the low pond; ivy hides the way."], npc.portrait); showToast("Rowan shared a quiet clue", 1600); saveData(); updateObjective(); return; }
+      if (state.southPassageOpen && !state.rowanRewarded) { state.rowanRewarded = true; state.lanternLens = true; addDiscovery("Rowan's lantern chart recovered"); setDialogue(npc.name, ["You found the old seam.", "Keep this chart: places the lantern cannot reach are often worth remembering."], npc.portrait); return; }
+      setDialogue(npc.name, state.hiddenChestOpened ? ["The seed chose you. That is rarer than courage.", "Try not to let the shrine hear you brag about it."] : state.southPassageOpen ? ["The hidden grove has woken.", "Listen for the thornback's slow steps before you reach for the old chest."] : ["The broken stones end at a curtain of ivy.", "Steel can open what a path cannot."], npc.portrait); return;
+    }
+    if (npc.id === "tansy") {
+      setDialogue(npc.name, state.lanternSeed ? ["That glow in your pocket? Not a firefly.", "If it starts humming, put it near the stew. Everything tastes better after a shrine scare."] : state.southPassageOpen ? ["I heard the reeds fall from all the way over here.", "Leave the grove a little quieter than you found it, will you?"] : ["I keep the outpost warm and Rowan honest.", "The blue moths never land near my fire. Smart little things."], npc.portrait); return;
+    }
+    if (npc.id === "brindle") {
+      setDialogue(npc.name, state.reedCacheFound ? ["Dewglass lens, eh? I wondered where that old glint went.", "Look through it at dusk; the pond remembers paths the day forgets."] : state.southPassageOpen ? ["The waterline changed when you opened the ivy.", "Something with a shell is sulking in the lantern leaves now."] : ["I ferry messages around the low pond.", "Three pale stones are not a path unless you know which way they lean."], npc.portrait); return;
+    }
+    setDialogue(npc.name, state.bossDefeated ? ["The shrine's light has changed. My map is finally becoming obsolete.", "Good. A map should never get the last word."] : state.lanternLens ? ["The chart and the lens agree. That is unusual.", "There is more under this green than roots and old stone."] : ["I map the shrine by lantern reflections, not roads.", "If a firefly avoids a patch of moss, I draw a question mark."], npc.portrait);
   };
 
   const spawnEnemy = (type, x, y, options = {}) => {
@@ -197,6 +268,7 @@
 
   const startArea = (area, announce = true) => {
     state.area = area;
+    state.spawnGrace = area === "overworld" ? 3.2 : 0;
     enemies = []; projectiles = []; drops = []; particles = [];
     if (area === "overworld") {
       player.x = 390; player.y = 500;
@@ -336,13 +408,9 @@
   ] : [];
   const interact = () => {
     if (state.mode !== "playing") return;
-    if (state.dialogue) { closeDialogue(); return; }
+    if (state.dialogue) { advanceDialogue(); return; }
     if (state.area === "overworld") {
-      if (distance(player, { x: 460, y: 380 }) < 75) {
-        if (!state.rowanClue) { state.rowanClue = true; setDialogue("Rowan, keeper of the outpost", "The moths are not leading you away, Warden. They are leading you under. Three pale stones point past the low pond; ivy hides the way."); showToast("Rowan shared a quiet clue", 1600); saveData(); updateObjective(); return; }
-        if (state.southPassageOpen && !state.rowanRewarded) { state.rowanRewarded = true; state.lanternLens = true; addDiscovery("Rowan's lantern chart recovered"); setDialogue("Rowan, keeper of the outpost", "You found the old seam. Keep this chart: places the lantern cannot reach are often the places worth remembering."); return; }
-        setDialogue("Rowan, keeper of the outpost", state.southPassageOpen ? "The hidden grove has woken. Listen for the thornback's slow steps." : "The broken stones end at a curtain of ivy. Steel can open what a path cannot."); return;
-      }
+      const npc = nearestNpc(); if (npc) { talkToNpc(npc); return; }
       if (distance(player, { x: 1350, y: 235 }) < 120) { enterDungeon(); return; }
       if (distance(player, { x: 1240, y: 745 }) < 70 && !state.chestOpened) { state.chestOpened = true; state.key = true; spawnLeaves(1240, 745, 18); showToast("You found an old brass key"); saveData(); updateHud(); return; }
       if (distance(player, { x: 1060, y: 830 }) < 70 && state.southPassageOpen && !state.hiddenChestOpened && !enemies.some((enemy) => enemy.encounter === "hidden-cache" && !enemy.dead)) {
@@ -431,6 +499,7 @@
     if (dist < enemy.detectionRange && enemy.attackCooldown <= 0) beginEnemyTelegraph(enemy, "bossWindup", enemy.phase === 2 ? .55 : .7);
   };
   const updateEnemies = (dt) => {
+    if (state.spawnGrace > 0) return;
     enemies.forEach((enemy) => {
       if (enemy.dead) return;
       enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.hitStun = Math.max(0, enemy.hitStun - dt); enemy.attackCooldown -= dt; enemy.telegraph = Math.max(0, enemy.telegraph - dt);
@@ -485,11 +554,13 @@
 
   const update = (dt) => {
     if (state.toastTimer > 0) { state.toastTimer -= dt * 1000; if (state.toastTimer <= 0) ui.toast.classList.remove("visible"); }
-    state.impactFlash = Math.max(0, state.impactFlash - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8);
+    state.impactFlash = Math.max(0, state.impactFlash - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); state.spawnGrace = Math.max(0, (state.spawnGrace || 0) - dt);
     leaves.forEach((leaf) => { leaf.y += leaf.speed * dt; leaf.x += Math.sin(leaf.phase + leaf.y * .01) * dt * 3; if (leaf.y > WORLD.height + 20) leaf.y = -10; });
     particles = particles.filter((particle) => { particle.life -= dt; particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.vy += 45 * dt; return particle.life > 0; });
     updateEnvironment(dt);
-    if (state.mode !== "playing" || state.dialogue) return;
+    updateNpcs(dt);
+    if (state.dialogue) { updateDialogue(dt); justPressed.clear(); updateCamera(dt); return; }
+    if (state.mode !== "playing") return;
     updatePlayer(dt); updateEnemies(dt); updateDrops(dt);
     if (state.area === "dungeon" && state.transitionCooldown <= 0) {
       if (player.x < 42) transitionDungeon(-1, 0); else if (player.x > ROOM.width - 42) transitionDungeon(1, 0); else if (player.y < 42) transitionDungeon(0, -1); else if (player.y > ROOM.height - 42) transitionDungeon(0, 1);
@@ -610,7 +681,7 @@
     environment.rocks.forEach(drawRock); environment.logs.forEach(drawLog); drawExplorationClues(time); drawHiddenGrovePreview(time);
     environment.grasses.forEach((grass) => drawGrassTuft(grass, time)); environment.flowers.forEach((flower) => drawFlower(flower, time));
     if (!state.chestOpened) drawChest(1240, 745, false); else drawChest(1240, 745, true);
-    drawNpc(460, 380); drawEntrance(1312, 210, time);
+    drawCampfire(npcs[1].x - 24, npcs[1].y + 18, time); drawMapTable(npcs[3].x + 24, npcs[3].y + 18, time); drawPondBasket(npcs[2].x - 14, npcs[2].y + 14, time); npcs.forEach((npc) => drawNpc(npc, time)); drawEntrance(1312, 210, time);
     ctx.fillStyle = "rgba(255,226,166,.42)"; ctx.fillRect(420, 365, 78, 4); ctx.fillStyle = "#7a573e"; ctx.fillRect(453, 340, 5, 28); ctx.fillStyle = "#d3ad6d"; ctx.beginPath(); ctx.moveTo(458, 341); ctx.lineTo(493, 350); ctx.lineTo(458, 359); ctx.closePath(); ctx.fill();
     environment.birds.forEach((bird) => drawBird(bird, time)); environment.butterflies.forEach((butterfly) => drawButterfly(butterfly, time)); environment.fireflies.forEach((firefly) => drawFirefly(firefly, time));
     breakables().forEach((object) => drawBreakable(object, time));
@@ -621,7 +692,25 @@
     [[585, 730], [975, 735], [1060, 565]].forEach(([x, y], i) => { const sway = Math.sin(time * 2 + i) * .12; ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.strokeStyle = i === 2 ? "#78b979" : "#6fae69"; ctx.lineWidth = 3; for (let n = -1; n <= 1; n += 1) { ctx.beginPath(); ctx.moveTo(n * 8, 18); ctx.quadraticCurveTo(n * 9, 0, n * 13, -22); ctx.stroke(); } ctx.restore(); });
   };
   const drawChest = (x, y, open) => { drawShadow(x, y + 14, 25, 7, .35); ctx.fillStyle = open ? "#5c483b" : "#a87845"; ctx.fillRect(x - 22, y - 9, 44, 25); ctx.fillStyle = open ? "#775e50" : "#d2a65b"; ctx.beginPath(); ctx.arc(x, y - 7, 22, Math.PI, 0); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(x - 3, y + 1, 6, 8); };
-  const drawNpc = (x, y) => { drawShadow(x, y + 18, 18, 7, .32); ctx.fillStyle = "#475f81"; ctx.beginPath(); ctx.arc(x, y - 12, 13, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d7a77b"; ctx.beginPath(); ctx.arc(x, y - 28, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(x - 11, y - 5, 22, 6); };
+  const drawCampfire = (x, y, time) => { const glow = ctx.createRadialGradient(x, y, 1, x, y, 60); glow.addColorStop(0, "rgba(255,208,116,.35)"); glow.addColorStop(1, "rgba(255,208,116,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 60, 0, Math.PI * 2); ctx.fill(); drawShadow(x, y + 7, 19, 5, .26); ctx.strokeStyle = "#80543a"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x - 11, y + 4); ctx.lineTo(x + 11, y - 4); ctx.moveTo(x - 10, y - 4); ctx.lineTo(x + 10, y + 4); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.moveTo(x, y - 25 + Math.sin(time * 8) * 2); ctx.quadraticCurveTo(x + 13, y - 10, x, y + 2); ctx.quadraticCurveTo(x - 13, y - 10, x, y - 25 + Math.sin(time * 8) * 2); ctx.fill(); ctx.fillStyle = "#fff0b0"; ctx.beginPath(); ctx.arc(x, y - 10, 5, 0, Math.PI * 2); ctx.fill(); };
+  const drawMapTable = (x, y, time) => { drawShadow(x, y + 11, 24, 6, .25); ctx.fillStyle = "#6f4b39"; ctx.fillRect(x - 20, y - 5, 40, 8); ctx.fillRect(x - 16, y + 3, 4, 18); ctx.fillRect(x + 12, y + 3, 4, 18); ctx.fillStyle = "#d5c28d"; ctx.fillRect(x - 13, y - 10, 26, 8); ctx.strokeStyle = "rgba(71,112,93,.75)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 8, y - 8); ctx.lineTo(x - 2, y - 4); ctx.lineTo(x + 4, y - 8); ctx.lineTo(x + 10, y - 3); ctx.stroke(); ctx.fillStyle = `rgba(255,215,123,${.35 + Math.sin(time * 3) * .1})`; ctx.beginPath(); ctx.arc(x + 18, y - 8, 3, 0, Math.PI * 2); ctx.fill(); };
+  const drawPondBasket = (x, y, time) => { ctx.save(); ctx.translate(x, y + Math.sin(time * 1.7) * .5); ctx.fillStyle = "#b17b4d"; ctx.beginPath(); ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#e2bd78"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -2, 10, Math.PI, 0); ctx.stroke(); ctx.restore(); };
+  const drawNpc = (npc, time) => {
+    const bob = Math.sin(time * 2.4 + npc.phase) * (npc.behavior === "pace" ? 1.2 : .8); const x = npc.x; const y = npc.y + bob;
+    drawShadow(x, y + 18, npc.id === "brindle" ? 20 : 18, 7, .32);
+    ctx.save(); ctx.translate(x, y); ctx.scale(npc.facing || 1, 1);
+    if (npc.id === "rowan") {
+      ctx.fillStyle = "#365c78"; ctx.beginPath(); ctx.moveTo(-16, 9); ctx.quadraticCurveTo(-14, -9, 0, -15); ctx.quadraticCurveTo(14, -9, 16, 9); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#233d59"; ctx.beginPath(); ctx.moveTo(-16, -14); ctx.lineTo(0, -28); ctx.lineTo(16, -14); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#d7a77b"; ctx.beginPath(); ctx.arc(0, -23, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(-12, 1, 24, 5); ctx.fillStyle = "#91e1c1"; ctx.fillRect(-4, -25, 3, 3);
+    } else if (npc.id === "tansy") {
+      ctx.fillStyle = "#b8684d"; ctx.beginPath(); ctx.arc(0, -20, 12, Math.PI, 0); ctx.fill(); ctx.fillStyle = "#ddba83"; ctx.beginPath(); ctx.arc(0, -21, 9, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d07a52"; ctx.fillRect(-15, -4, 30, 15); ctx.fillStyle = "#f0dfb2"; ctx.fillRect(-9, -5, 18, 18); ctx.fillStyle = "#bd684d"; ctx.fillRect(-13, -5, 26, 4); ctx.fillStyle = "#7e4d3d"; ctx.fillRect(8, -18, 3, 3);
+    } else if (npc.id === "brindle") {
+      ctx.fillStyle = "#4d8d87"; ctx.beginPath(); ctx.ellipse(0, 1, 16, 17, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d7ad76"; ctx.beginPath(); ctx.arc(0, -18, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#324d4e"; ctx.fillRect(-14, -27, 28, 5); ctx.fillRect(-7, -31, 14, 5); ctx.fillStyle = "#e3c57e"; ctx.fillRect(-14, 4, 8, 5); ctx.fillRect(6, 4, 8, 5); ctx.fillStyle = "#233f3d"; ctx.fillRect(-5, -19, 3, 3);
+    } else {
+      ctx.fillStyle = "#765c8e"; ctx.beginPath(); ctx.moveTo(-15, 10); ctx.lineTo(-11, -13); ctx.lineTo(0, -17); ctx.lineTo(12, -13); ctx.lineTo(16, 10); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#e0bd89"; ctx.beginPath(); ctx.arc(0, -23, 9, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#2e2e4a"; ctx.fillRect(-11, -29, 22, 5); ctx.fillStyle = "#d7c99a"; ctx.fillRect(9, -1, 8, 10); ctx.strokeStyle = "#e8d6a3"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -23, 12, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+    if (npc.near && state.mode === "playing" && !state.dialogue) { const lift = Math.sin(time * 4 + npc.phase) * 2; ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = "rgba(7,20,18,.9)"; ctx.strokeStyle = "rgba(214,255,220,.45)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x - 17, y - 69 + lift, 34, 22, 8); ctx.fill(); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.font = "700 11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("E", x, y - 54 + lift); ctx.fillStyle = "rgba(243,246,223,.82)"; ctx.font = "500 9px Outfit"; ctx.fillText(npc.name, x, y - 76 + lift); ctx.restore(); }
+  };
   const drawEntrance = (x, y, time) => { ctx.fillStyle = "#342d3e"; ctx.beginPath(); ctx.arc(x, y, 50, Math.PI, 0); ctx.lineTo(x + 50, y + 50); ctx.lineTo(x - 50, y + 50); ctx.closePath(); ctx.fill(); ctx.fillStyle = `rgba(95,238,206,${.28 + Math.sin(time * 2) * .08})`; ctx.beginPath(); ctx.arc(x, y + 6, 32, Math.PI, 0); ctx.lineTo(x + 32, y + 45); ctx.lineTo(x - 32, y + 45); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#8ef2cf"; ctx.lineWidth = 2; ctx.stroke(); };
 
   const drawDungeon = (time) => {
@@ -716,6 +805,7 @@
 
   const updateObjective = () => { if (state.area === "overworld") { if (!state.rowanClue) { ui.objective.textContent = "Find Rowan at the outpost"; ui.objectiveCopy.textContent = "The blue moths gather where the old path breaks."; } else if (!state.southPassageOpen) { ui.objective.textContent = "Search the low pond"; ui.objectiveCopy.textContent = "Three pale stones point toward a curtain of ivy. Steel can open what a path cannot."; } else if (!state.hiddenChestOpened) { ui.objective.textContent = "Reach the hidden grove"; ui.objectiveCopy.textContent = state.optionalGuardDefeated ? "The thornback is gone. Something old glints beneath the lantern leaves." : "A slow thornback guards the lantern leaves. Watch its warning ring."; } else { ui.objective.textContent = "Enter the Hollow Shrine"; ui.objectiveCopy.textContent = "The lantern seed warms your palm. A blue seam glows behind the old outpost."; } } else { const key = `${state.roomX}-${state.roomY}`; if (key === "0-0") { ui.objective.textContent = state.key ? "Reach the Moon Switch Hall" : "Search the Root Gallery"; ui.objectiveCopy.textContent = state.key ? "The brass key hums when you face east." : "A forgotten chest waits beneath the shrine glyph."; } else if (key === "1-0") { ui.objective.textContent = state.switches ? "Find the Warden's Garden" : "Wake the moon switch"; ui.objectiveCopy.textContent = state.switches ? "The lower gate is open." : "Stand near the silver disk and press E."; } else if (key === "2-0") { ui.objective.textContent = state.miniBossDefeated ? "Descend to the Sanctum" : "Defeat the Root Warden"; ui.objectiveCopy.textContent = "Its bark armor cracks after every clean sword hit."; } else if (key === "2-1") { ui.objective.textContent = state.bossDefeated ? "Claim the Heartseed" : "Silence the Hollow Guardian"; ui.objectiveCopy.textContent = "The guardian changes its rhythm when its light turns rose."; } else { ui.objective.textContent = "Explore the shrine"; ui.objectiveCopy.textContent = "Every room remembers a different season."; } } };
   const updateHud = () => { ui.area.textContent = state.area === "overworld" ? "Lanternwood" : "Hollow Shrine"; ui.room.textContent = state.area === "overworld" ? "Outpost field" : dungeonRoomName(); ui.seed.textContent = state.reward ? "1" : "0"; ui.keys.textContent = state.key ? "1" : "0"; ui.loot.textContent = state.loot || "0"; if (ui.discovery) ui.discovery.textContent = `${state.discoveries || 0}/${state.discoveryTotal || 3}`; ui.save.textContent = state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : "Paused"; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); } ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective(); };
+  const updateDialogueSpeedLabel = () => { if (!ui.dialogueSpeed) return; const speed = state.dialogueSpeed || 52; ui.dialogueSpeed.textContent = `Text: ${speed >= 100 ? "fast" : speed <= 36 ? "slow" : "normal"}`; };
   const showVictory = () => { state.mode = "victory"; hideScreens(); ui.victory.classList.remove("hidden"); updateHud(); };
 
   const startGame = (continueGame) => { hideScreens(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; player.maxHp = 6; player.hp = player.maxHp; startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
@@ -725,10 +815,11 @@
   document.getElementById("resume-game").addEventListener("click", () => { state.mode = "playing"; hideScreens(); canvas.focus(); });
   document.getElementById("victory-close").addEventListener("click", () => { state.mode = "playing"; hideScreens(); canvas.focus(); updateHud(); });
   document.getElementById("reset-save").addEventListener("click", () => { if (window.confirm("Erase your Mosswake save?")) resetProgress(); });
+  ui.dialogueSpeed.addEventListener("click", () => { const speeds = [36, 52, 110]; const current = speeds.indexOf(state.dialogueSpeed); state.dialogueSpeed = speeds[(current + 1 + speeds.length) % speeds.length]; updateDialogueSpeedLabel(); saveData(); });
   window.addEventListener("keydown", (event) => { const key = event.key.toLowerCase(); if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","j","k","e","p","enter"," "].includes(key)) event.preventDefault(); if (!keys.has(key)) justPressed.add(key); keys.add(key); if (key === "e" || key === "enter") interact(); if (key === "p") { if (state.mode === "playing") { state.mode = "paused"; ui.pause.classList.remove("hidden"); } else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); } updateHud(); } });
   window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur", () => { keys.clear(); if (state.mode === "playing") { state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } });
 
   const frame = (timestamp) => { const dt = Math.min(.05, (timestamp - lastFrame) / 1000 || 0); lastFrame = timestamp; update(dt); draw(timestamp / 1000); window.requestAnimationFrame(frame); };
-  updateHud(); if (!hasSave()) document.getElementById("continue-game").disabled = true; else document.getElementById("continue-game").disabled = false; window.requestAnimationFrame(frame);
+  updateDialogueSpeedLabel(); updateHud(); if (!hasSave()) document.getElementById("continue-game").disabled = true; else document.getElementById("continue-game").disabled = false; window.requestAnimationFrame(frame);
 })();
