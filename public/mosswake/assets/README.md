@@ -66,6 +66,7 @@ Mosswake currently renders its first playable slice with layered canvas primitiv
 30. Dungeon architecture kit: paint 192×192 transparent modules for wall caps, four-way arches, pillars, stairs, cracked lintels, and broken stone. Provide 4 stone variants and 3 damage states while preserving a shared 96 px floor anchor.
 31. Dungeon storytelling props: paint 128×128 transparent layers for damaged statues, root ribs, ancient carvings, ritual inlays, abandoned offerings, and brass/sootglass machinery. Keep each prop separable so room composition can change without redrawing the floor.
 32. Dungeon hazard and interaction kit: paint 128×128 transparent sheets for torch brackets, ember vents, water leaks, switch pedestals, locked doors, open doors, rubble piles, and chest states. Provide 3–6 frames only for flame, leak, ember, and glow loops; leave lighting unbaked.
+33. Boss event art: paint a 160×160 transparent `hollow-guardian` sheet with a broad mantle silhouette, crown/antler profile, readable heart core, phase-I armor, phase-II cracked armor, hit-recoil, phase-break, and defeat-collapse frames. Keep the feet/ground anchor aligned with the current 39 px gameplay radius so the larger visual silhouette never changes collision or telegraph ranges.
 
 ## CUSTOM GRAPHICS TO GENERATE NEXT
 
@@ -98,6 +99,7 @@ Prioritized by visual impact on the playable demo. All files should be exported 
 25. **Dungeon room landmark props** — `128×128 px` transparent cells, orthographic 3/4: damaged guardian statue, root rib, brass carving, moon disk, ritual inlay, sootglass machine, altar, offering bundle, and rubble cluster. Provide intact, damaged, and awakened states where appropriate; each appears as a separate composited prop in one of the six rooms.
 26. **Dungeon doors, hazards, and puzzle objects** — `128×128 px` transparent cells: arch doorway, locked gate, open threshold, switch pedestal, chest, deep-water edge, ember trench lip, leaking wall, and torch bracket. Flame/leak/ember/glow elements need 3–6 frames; structural pieces are static and shadow-free so runtime lighting can tint them.
 27. **Dungeon atmosphere sheets** — `256×256 px` transparent masks for torchlight, cool moon shaft, green rootlight, warm ember haze, water ripple, drifting dust, and room-transition veil. Provide 4 torch frames, 3 smoke frames, 4 water frames, 3 ember frames, and 3 fog frames; use as additive layers above the painted stone kit.
+28. **Hollow Guardian event sheet** — `160×160 px` transparent orthographic 3/4 cells. Provide phase-I and phase-II silhouettes with 6 idle/orbit frames, 4 hit-reaction frames, 5 attack anticipation frames, 4 phase-break frames, and 8 defeat-collapse frames. Phase II should visibly expose a rose heart core, broken mantle plates, floating shards, and larger crown/antler shapes. Used in the Heartseed Sanctum; replace the procedural canvas boss without changing enemy radius, attack timing, or telegraph logic.
 
 ## Temporary feel pass
 
@@ -116,6 +118,8 @@ The character presentation pass keeps the same runtime-driven workflow: facing b
 The professional-feel pass keeps that restraint in motion: buffered sword input, faster release deceleration, a short hit-stop on meaningful impacts, eased deterministic camera shake, action-specific sound hooks, animated chest lids, fresh-press interaction handling, and a small health-change pulse. These are timing and feedback layers around the same named art slots, so final sprite sheets can replace the procedural silhouettes without changing gameplay tuning.
 
 The combat visual pass keeps ordinary contact deliberately small: directional 2–6 pixel sparks, a sub-quarter-second ring, a brief white glint, light dust at the enemy's feet, and a short directional recoil. Wisp bolts, guardian volleys, shockwaves, and root lances use distinct silhouettes and leave a compact impact mark when they meet the world or player. Boss slams, phase breaks, and defeat moments are allowed a larger ring, stronger shake, and longer-lived motes so the hierarchy is clear without making every hit loud.
+
+The boss event pass gives the Hollow Guardian a dedicated visual hierarchy: a larger grounded shadow, mantle-and-crown silhouette, readable heart core, authored altar backdrop, phase-specific arena lighting, fan/impact/lane telegraphs, rose phase-break shards, and a longer defeat payoff. These are runtime layers around the same hitboxes and cooldowns, so generated boss sheets can replace the temporary drawing without retuning the encounter.
 
 The environment animation pass is bounded and layered: water uses a few clipped wave bands and short bank highlights, tree crowns drift independently over grounded shadows, grass patches use deterministic seeded blades, and only the nearest touched patch receives a rustle pulse and dust. Leaves, pollen, birds, butterflies, and fireflies stay sparse; outdoor-only updates are skipped in dungeon rooms to keep the canvas budget stable.
 
