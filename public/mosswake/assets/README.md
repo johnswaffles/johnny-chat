@@ -57,41 +57,11 @@ The optional `player`, `boss`, `enemy-*`, `tree-back`, `tree-mid`, `tree-front`,
 | `ui/` | `heart`, `key`, `map-marker`, `dialogue-frame` | 48×48 / 9-slice frame |
 | `portraits/` | `rowan`, `tansy`, `brindle`, `lumen` | 96×96 transparent busts, neutral/talk/event expressions |
 
-## Art TODO
+## Completion audit status
 
-1. Replace player and enemy silhouettes with a consistent hand-painted sprite pass.
-2. Add dedicated four-direction idle/walk/attack/hurt/death frames for mossling, thornback, moon-wisp, and ambush-moth.
-3. Paint a 6–8 frame `weapons/lantern-blade` swing sheet with a clean leading edge and contact spark.
-4. Paint `enemy-effects/charge-ring`, `ranged-line`, `ambush-reveal`, and `drop-mote` sheets so telegraphs and rewards feel authored.
-5. Add `effects/dust`, `effects/hit-star`, `effects/impact-ring`, and `effects/dash-trail` sheets at 2x resolution.
-6. Paint modular terrain edges so paths, pond banks, and dungeon doors tile without seams.
-7. Add back/mid/foreground tree silhouettes, meadow tufts, shoreline reeds, fallen logs, and landmark props as separate layers.
-8. Add three unique building facades for the outpost, shrine, and cabin while preserving their collision footprints.
-9. Add small looping effects: water shimmer, moth glow, fireflies, butterfly wings, songbird flaps, torch smoke, sword arc, and chest sparkle.
-10. Export with transparent backgrounds and avoid baked-in shadows; lighting, hit flashes, camera response, and enemy telegraphs are runtime-driven.
-11. Paint exploration-specific props as modular layers: a low-contrast three-stone clue trail, a tangled ivy gate with a readable broken state, a chest silhouette that can be glimpsed before it is reachable, and small chart/lens/seed pickup icons.
-12. Keep secret props visually discoverable through composition rather than UI markers: use value contrast, a gap in the reeds, a warm glint, and a distinctive landmark silhouette instead of arrows or floating labels.
-13. Paint NPCs as modular sprite families: each character needs a silhouette that reads at gameplay scale, a four-direction idle/walk set, a small work loop, and a talk portrait that preserves the same palette and face shape.
-14. Keep portrait backgrounds transparent and expression-driven. The temporary letter portraits in the dialogue box are placeholders for these four named files, so art can be swapped without touching dialogue timing, state checks, or interaction ranges.
-15. Dungeon art pass: paint six room kits with a shared ancient-stone trim but distinct silhouettes — root ribs and brass chest for `root-gallery`, moon shafts and silver disk for `moon-hall`, circular root arena for `warden-garden`, shallow water and heartseed chest for `flooded-vault`, ember trenches and a sootglass cache for `ashen-antechamber`, and a three-ring altar for `heartseed-sanctum`.
-16. Add modular dungeon atmosphere sheets: `torch-flame`, `torch-smoke`, `water-ripple`, `ember-vent`, `moss-vine`, `stone-crack`, `door-lock`, `door-open`, and `room-transition`. Keep all lighting and particles unbaked so the runtime can animate them.
-17. Signature item art: paint a `moonwake-lantern` held/orbiting sprite with a warm inner ember and mint ring, plus a 6–8 frame `rootlight-pulse` effect. The temporary canvas version is intentionally shape-readable so the item can be swapped without changing the L-key ability, node anchors, or boss timing.
-18. Paint `rootlight-seal` states (dormant, awakened, broken) and a `moonroot-cache` open/closed pair. These props should look like environmental discoveries, not quest markers: low contrast before the lantern and a warm response after the pulse.
-19. Boss presentation pass: paint `hollow-guardian` phase-I and phase-II sprite sheets (128×128, 6 idle/turn frames, 4 hit frames, 8 collapse frames) with a readable rose “heart unbound” silhouette for phase II.
-20. Paint the Heartseed Sanctum set pieces as separate layers: four `guardian-pylon` states (quiet, charged, phase-II, spent), `boss-arena-rings`, and a `heartseed-echo` reward sprite. Keep the four pylons modular so the arena can be reused in later shrine rooms.
-21. Paint authored boss telegraphs and payoff effects: `guardian-volley`, `guardian-slam`, `guardian-dash`, `rootlight-exposure`, `guardian-phase-break`, and `guardian-defeat` sheets. The current canvas primitives are temporary readability assets and can be swapped without changing attack timing or hitboxes.
-22. Paint a lighting-only modular set: `torch-flame`, `torch-smoke`, `lantern-glow`, `campfire-flame`, `sun-shaft`, `canopy-dapple`, `dungeon-fog`, and `room-transition` masks. Keep the masks transparent and shadow-free so the browser can tint, pulse, and composite them per room.
-23. Character presentation pass: paint facing-aware sheets for the warden, mossling, thornback, moon-wisp, ambush-moth, Root Warden, Hollow Guardian, Rowan, Tansy, Brindle, and Lumen. Keep feet aligned to one ground line and export anticipation, hurt, and defeat frames separately from the base idle/walk loops.
-24. Combat feedback pass: paint a compact `combat-sparks` sheet (64×64 transparent, 6 directional shards), a `combat-ring` sheet (96×96 transparent, 4 expanding frames), and an `impact-glint` sheet (48×48 transparent, 3 crisp frames). Keep these small and fast so ordinary sword hits read as contact rather than an explosion.
-25. Projectile pass: paint separate `moonbolt`, `rosebolt`, `shockwave`, and `root-lance` sheets at 64×32 transparent cells. Provide 4 travel frames and 3 impact frames for each, with a clear leading point and a short tapered trail that matches its gameplay direction.
-26. Enemy recoil/death pass: paint 4 hit-recoil frames and 6 defeat frames per outdoor enemy at 80×80 transparent cells, plus a 128×128 transparent `guardian-slam-ring` and `guardian-phase-break` sheet. Keep impact bursts centered on the enemy ground anchor so runtime knockback and shadows stay aligned.
-27. Environment motion pass: paint a 128×128 seamless water surface with 6 ripple frames, 4 shoreline foam frames, and 3 reflected-light frames; keep the shoreline overlay separate from the opaque tile so pond shapes remain editable.
-28. Tree silhouette pass: paint back/mid/front canopy families at 192×240 transparent cells for oak, birch, and ancient-root variants. Provide 4 sway frames per layer plus a 2-frame dapple mask; keep trunks and ground shadows separate.
-29. Grass interaction pass: paint 96×96 transparent meadow, fern, reed, flower, and weed clusters with 2 idle frames and 3 player-rustle frames. Preserve a shared ground anchor so the runtime can trigger contact motion without changing collision footprints.
-30. Dungeon architecture kit: paint 192×192 transparent modules for wall caps, four-way arches, pillars, stairs, cracked lintels, and broken stone. Provide 4 stone variants and 3 damage states while preserving a shared 96 px floor anchor.
-31. Dungeon storytelling props: paint 128×128 transparent layers for damaged statues, root ribs, ancient carvings, ritual inlays, abandoned offerings, and brass/sootglass machinery. Keep each prop separable so room composition can change without redrawing the floor.
-32. Dungeon hazard and interaction kit: paint 128×128 transparent sheets for torch brackets, ember vents, water leaks, switch pedestals, locked doors, open doors, rubble piles, and chest states. Provide 3–6 frames only for flame, leak, ember, and glow loops; leave lighting unbaked.
-33. Boss event art: paint a 160×160 transparent `hollow-guardian` sheet with a broad mantle silhouette, crown/antler profile, readable heart core, phase-I armor, phase-II cracked armor, hit-recoil, phase-break, and defeat-collapse frames. Keep the feet/ground anchor aligned with the current 39 px gameplay radius so the larger visual silhouette never changes collision or telegraph ranges.
+The first-section renderer is visually coherent and performance-safe, but its important silhouettes are still procedural by design. The only graphics that block a genuinely final custom-art pass are the ten ranked replacements in **GRAPHICS TO GENERATE NEXT** below, led by the player, Hollow Guardian, combat FX, water, trees, dungeon architecture, and NPCs. The older broad wishlist has been removed so this document does not imply that dozens of small assets are release blockers.
+
+Until those files exist, the procedural renderer remains the intentional fallback for player/enemy bodies, NPC portraits, props, terrain, water, dungeon structure, item icons, and effects. It is readable and polished enough for playtesting, but those specific categories should not be described as final custom artwork.
 
 ## GRAPHICS TO GENERATE NEXT
 
