@@ -75,6 +75,8 @@
   const pauseButton = document.getElementById("pause-button");
   const holdButton = document.getElementById("hold-button");
   const lineClearBadge = document.getElementById("line-clear-badge");
+  const gameOverFlash = document.getElementById("game-over-flash");
+  const boardWrap = document.querySelector(".board-wrap");
   const music = document.getElementById("game-music");
   const musicButton = document.getElementById("music-button");
 
@@ -99,6 +101,7 @@
   let pendingClear = null;
   let pendingClearTimer = 0;
   let lineClearFx = null;
+  let gameOverFx = null;
   let impactFlashTimer = 0;
   let impactCells = [];
   let effectParticles = [];
@@ -187,7 +190,9 @@
 
   const beginLineClearFeedback = (cleared, rows) => {
     lineClearFx = { timer: CLEAR_FEEDBACK_DURATION, total: CLEAR_FEEDBACK_DURATION };
+    boardWrap.dataset.state = "clear";
     lineClearBadge.textContent = lineClearLabel(cleared);
+    lineClearBadge.dataset.tier = String(cleared);
     lineClearBadge.dataset.visible = "true";
     rows.forEach((row) => {
       for (let x = 0; x < COLS; x += 1) {
@@ -218,12 +223,39 @@
     }
   };
 
+  const beginGameOverFeedback = () => {
+    gameOverFx = { timer: 1150, total: 1150 };
+    gameOverFlash.dataset.active = "true";
+    boardWrap.dataset.state = "over";
+    board.forEach((row, y) => row.forEach((type, x) => {
+      if (!type || Math.random() > .42) return;
+      effectParticles.push({
+        x: (x + .5) * CELL,
+        y: (y + .5) * CELL,
+        vx: (Math.random() - .5) * .28,
+        vy: -.2 - Math.random() * .16,
+        size: 2 + Math.random() * 4,
+        color: COLORS[type],
+        life: 650 + Math.random() * 500,
+        maxLife: 1150
+      });
+    }));
+  };
+
   const advanceEffects = (elapsed) => {
     if (lineClearFx) {
       lineClearFx.timer -= elapsed;
       if (lineClearFx.timer <= 0) {
         lineClearFx = null;
         lineClearBadge.dataset.visible = "false";
+        if (!gameOver) boardWrap.dataset.state = "playing";
+      }
+    }
+    if (gameOverFx) {
+      gameOverFx.timer -= elapsed;
+      if (gameOverFx.timer <= 0) {
+        gameOverFx = null;
+        gameOverFlash.dataset.active = "false";
       }
     }
     impactFlashTimer = Math.max(0, impactFlashTimer - elapsed);
@@ -458,7 +490,12 @@
     impactCells = [];
     effectParticles = [];
     lineClearBadge.dataset.visible = "false";
+    lineClearBadge.dataset.tier = "";
     lineClearBadge.textContent = "";
+    gameOverFx = null;
+    gameOverFlash.dataset.active = "false";
+    boardWrap.dataset.state = "";
+    overlay.dataset.state = "";
     gameOver = false;
     paused = false;
     fillQueue();
@@ -472,6 +509,9 @@
     running = true;
     paused = false;
     ensureAudio();
+    boardWrap.dataset.state = "playing";
+    gameOverFlash.dataset.active = "false";
+    overlay.dataset.state = "";
     overlay.classList.add("hidden");
     pauseButton.textContent = "Pause game";
     pauseButton.dataset.paused = "false";
@@ -500,6 +540,7 @@
     pauseButton.dataset.paused = String(paused);
     statusElement.dataset.state = paused ? "paused" : "playing";
     statusText.textContent = paused ? "Paused — breathe" : "Stay in the flow";
+    overlay.dataset.state = "";
     if (paused) setOverlay("Paused", "Your stack is safe. Resume when you are ready.", "Resume");
     else overlay.classList.add("hidden");
     draw();
@@ -511,6 +552,7 @@
     pendingClear = null;
     pendingClearTimer = 0;
     heldKeys.clear();
+    beginGameOverFeedback();
     statusElement.dataset.state = "over";
     statusText.textContent = "The stack is full";
     playTone(80, .25, "sawtooth", .03);
@@ -518,7 +560,8 @@
       highScore = score;
       localStorage.setItem("johnny-tetris-high-score", String(highScore));
     }
-    setOverlay("Game over", "Score " + score.toLocaleString() + ". Your high score is " + highScore.toLocaleString() + ".", "Play again");
+    overlay.dataset.state = "over";
+    setOverlay("Stack reached", "Score " + score.toLocaleString() + ". Your high score is " + highScore.toLocaleString() + ".", "Play again");
     draw();
   };
 
@@ -618,6 +661,14 @@
       const pulse = .22 + .25 * (1 - pendingClearTimer / CLEAR_ANIMATION);
       boardContext.fillStyle = "rgba(255,255,255," + pulse.toFixed(3) + ")";
       pendingClear.rows.forEach((row) => boardContext.fillRect(0, row * CELL, COLS * CELL, CELL));
+      const clearProgress = 1 - pendingClearTimer / CLEAR_ANIMATION;
+      const sweepX = (clearProgress * 1.35 - .15) * boardCanvas.width;
+      const sweep = boardContext.createLinearGradient(sweepX - 34, 0, sweepX + 34, 0);
+      sweep.addColorStop(0, "rgba(255,255,255,0)");
+      sweep.addColorStop(.5, "rgba(255,255,255,.8)");
+      sweep.addColorStop(1, "rgba(105,231,255,0)");
+      boardContext.fillStyle = sweep;
+      pendingClear.rows.forEach((row) => boardContext.fillRect(sweepX - 34, row * CELL, 68, CELL));
     }
     if (impactFlashTimer > 0) {
       boardContext.save();
@@ -634,6 +685,18 @@
       boardContext.fillRect(particle.x, particle.y, particle.size, particle.size);
       boardContext.restore();
     });
+    if (gameOverFx) {
+      const progress = 1 - gameOverFx.timer / gameOverFx.total;
+      const sweepY = (progress * 1.3 - .15) * boardCanvas.height;
+      boardContext.save();
+      boardContext.fillStyle = "rgba(255,55,129," + Math.max(0, .16 * (1 - progress)).toFixed(3) + ")";
+      boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+      boardContext.fillStyle = "rgba(255,210,235,.52)";
+      boardContext.fillRect(0, sweepY, boardCanvas.width, 3);
+      boardContext.fillStyle = "rgba(255,55,129,.2)";
+      boardContext.fillRect(0, sweepY + 4, boardCanvas.width, 12);
+      boardContext.restore();
+    }
     if (current && running && !gameOver && !pendingClear) {
       const ghost = { ...current, matrix: cloneMatrix(current.matrix) };
       while (!collides(ghost, 0, 1)) ghost.y += 1;
