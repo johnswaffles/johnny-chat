@@ -60,6 +60,9 @@ Mosswake currently renders its first playable slice with layered canvas primitiv
 24. Combat feedback pass: paint a compact `combat-sparks` sheet (64×64 transparent, 6 directional shards), a `combat-ring` sheet (96×96 transparent, 4 expanding frames), and an `impact-glint` sheet (48×48 transparent, 3 crisp frames). Keep these small and fast so ordinary sword hits read as contact rather than an explosion.
 25. Projectile pass: paint separate `moonbolt`, `rosebolt`, `shockwave`, and `root-lance` sheets at 64×32 transparent cells. Provide 4 travel frames and 3 impact frames for each, with a clear leading point and a short tapered trail that matches its gameplay direction.
 26. Enemy recoil/death pass: paint 4 hit-recoil frames and 6 defeat frames per outdoor enemy at 80×80 transparent cells, plus a 128×128 transparent `guardian-slam-ring` and `guardian-phase-break` sheet. Keep impact bursts centered on the enemy ground anchor so runtime knockback and shadows stay aligned.
+27. Environment motion pass: paint a 128×128 seamless water surface with 6 ripple frames, 4 shoreline foam frames, and 3 reflected-light frames; keep the shoreline overlay separate from the opaque tile so pond shapes remain editable.
+28. Tree silhouette pass: paint back/mid/front canopy families at 192×240 transparent cells for oak, birch, and ancient-root variants. Provide 4 sway frames per layer plus a 2-frame dapple mask; keep trunks and ground shadows separate.
+29. Grass interaction pass: paint 96×96 transparent meadow, fern, reed, flower, and weed clusters with 2 idle frames and 3 player-rustle frames. Preserve a shared ground anchor so the runtime can trigger contact motion without changing collision footprints.
 
 ## CUSTOM GRAPHICS TO GENERATE NEXT
 
@@ -85,6 +88,9 @@ Prioritized by visual impact on the playable demo. All files should be exported 
 18. **Projectile family sheet** — `64×32 px` transparent cells for `moonbolt`, `rosebolt`, `shockwave`, and `root-lance`: 4 travel frames and 3 impact frames per type. Orient each sheet along its flight vector and keep a 2–4 px tapered trail so magic reads clearly at gameplay scale.
 19. **Enemy reaction/death sheet** — `80×80 px` transparent cells per outdoor enemy: 4 recoil frames, 3 flash frames, and 6 defeat/dissolve frames. Keep feet on the same ground line as the base sheet; provide separate color accents for moss, thorn, wisp, and moth silhouettes.
 20. **Boss impact and phase sheet** — `128×128 px` transparent cells for guardian slam rings, rose volley bursts, Rootlight exposure cracks, phase-break shards, and defeat motes. Supply 5–8 frames per effect, centered on the arena anchor, with a strong but controlled rose/gold hierarchy.
+21. **Water surface and shoreline kit** — `128×128 px` opaque seamless water tile plus `128×64 px` transparent shoreline overlays. Provide 6 ripple frames, 4 foam/edge frames, and 3 reflected-light frames; use upper-left highlights and no baked cast shadow. Used by the outdoor ponds and flooded vault.
+22. **Layered tree family** — `192×240 px` transparent back/mid/front cells for oak, birch, and ancient-root silhouettes. Supply 4 sway frames per layer and a 2-frame dapple mask; preserve a shared trunk/ground anchor for foreground overlap and runtime shadows.
+23. **Grass and reed interaction pack** — `96×96 px` transparent cells for meadow tuft, fern, reed, flower cluster, weed, and shoreline grass. Provide 2 idle frames and 3 player-rustle frames per prop; used in outdoor clearings, pond edges, and the hidden grove.
 
 ## Temporary feel pass
 
@@ -103,6 +109,8 @@ The character presentation pass keeps the same runtime-driven workflow: facing b
 The professional-feel pass keeps that restraint in motion: buffered sword input, faster release deceleration, a short hit-stop on meaningful impacts, eased deterministic camera shake, action-specific sound hooks, animated chest lids, fresh-press interaction handling, and a small health-change pulse. These are timing and feedback layers around the same named art slots, so final sprite sheets can replace the procedural silhouettes without changing gameplay tuning.
 
 The combat visual pass keeps ordinary contact deliberately small: directional 2–6 pixel sparks, a sub-quarter-second ring, a brief white glint, light dust at the enemy's feet, and a short directional recoil. Wisp bolts, guardian volleys, shockwaves, and root lances use distinct silhouettes and leave a compact impact mark when they meet the world or player. Boss slams, phase breaks, and defeat moments are allowed a larger ring, stronger shake, and longer-lived motes so the hierarchy is clear without making every hit loud.
+
+The environment animation pass is bounded and layered: water uses a few clipped wave bands and short bank highlights, tree crowns drift independently over grounded shadows, grass patches use deterministic seeded blades, and only the nearest touched patch receives a rustle pulse and dust. Leaves, pollen, birds, butterflies, and fireflies stay sparse; outdoor-only updates are skipped in dungeon rooms to keep the canvas budget stable.
 
 The game code owns collision, state, camera, and layout. Art replacements should preserve the named anchor points in `mosswake.js` so content remains editable and performance stays predictable.
 

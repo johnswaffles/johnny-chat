@@ -133,6 +133,14 @@
       { x: 1015, y: 422, s: .86, phase: 2.8 }, { x: 1165, y: 360, s: 1.15, phase: .7 }, { x: 1425, y: 535, s: 1.25, phase: 4.7 },
       { x: 1460, y: 760, s: .9, phase: 1.1 }, { x: 930, y: 890, s: 1.05, phase: 3.8 }, { x: 390, y: 830, s: .75, phase: 5.8 }
     ],
+    grassPatches: [
+      { x: 150, y: 420, radius: 62, density: 8, scale: .82, tone: "#6eae61", phase: .4, seed: 11 },
+      { x: 430, y: 355, radius: 54, density: 6, scale: .68, tone: "#579254", phase: 1.8, seed: 23 },
+      { x: 720, y: 430, radius: 74, density: 9, scale: .74, tone: "#72b968", phase: 3.1, seed: 37 },
+      { x: 1030, y: 400, radius: 58, density: 7, scale: .66, tone: "#5a9a57", phase: 4.7, seed: 49 },
+      { x: 1240, y: 680, radius: 86, density: 10, scale: .8, tone: "#6aab5f", phase: 2.6, seed: 61 },
+      { x: 420, y: 820, radius: 68, density: 7, scale: .7, tone: "#4e8951", phase: 5.4, seed: 73 }
+    ],
     flowers: [
       { x: 108, y: 348, s: .9, color: "#f4d57a", phase: .8 }, { x: 138, y: 364, s: .65, color: "#e7a7c6", phase: 2.1 },
       { x: 205, y: 425, s: .7, color: "#b9d9f2", phase: 4.5 }, { x: 315, y: 570, s: .75, color: "#f1b36b", phase: 1.8 },
@@ -315,6 +323,17 @@
           if (Math.random() < .45) spawnParticle(item.x, item.y, item.color || "#b2e898", 2, 22, "leaf");
         }
       } else item.touched = false;
+    });
+    environment.grassPatches.forEach((patch) => {
+      patch.rustle = Math.max(0, (patch.rustle || 0) - dt * 2.4);
+      const near = state.area === "overworld" && distance(player, patch) < patch.radius;
+      if (near) {
+        patch.rustle = Math.max(patch.rustle, .62);
+        if (!patch.touched) {
+          patch.touched = true;
+          spawnDust(player.x, player.y + 8, 2, "#b7ad82");
+        }
+      } else patch.touched = false;
     });
   };
   const updateNpcs = (dt) => {
@@ -852,7 +871,7 @@
     if (state.toastTimer > 0) { state.toastTimer -= dt * 1000; if (state.toastTimer <= 0) ui.toast.classList.remove("visible"); }
     const bossDefeatWasRunning = state.bossDefeatTimer > 0; state.visualClock += dt; state.impactFlash = Math.max(0, state.impactFlash - dt); state.pickupPulse = Math.max(0, (state.pickupPulse || 0) - dt); state.chestOpening = Math.max(0, (state.chestOpening || 0) - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); state.spawnGrace = Math.max(0, (state.spawnGrace || 0) - dt); state.dungeonIntro = Math.max(0, (state.dungeonIntro || 0) - dt); state.roomTransition = Math.max(0, (state.roomTransition || 0) - dt); state.hazardCooldown = Math.max(0, (state.hazardCooldown || 0) - dt); state.itemReveal = Math.max(0, (state.itemReveal || 0) - dt); state.bossEntrance = Math.max(0, (state.bossEntrance || 0) - dt); state.bossPhaseShift = Math.max(0, (state.bossPhaseShift || 0) - dt); state.bossArenaPulse = Math.max(0, (state.bossArenaPulse || 0) - dt); state.bossDefeatTimer = Math.max(0, (state.bossDefeatTimer || 0) - dt);
     if (bossDefeatWasRunning && state.bossDefeatTimer <= 0 && state.mode === "playing") { playSfx("victory"); showVictory(); }
-    leaves.forEach((leaf) => { leaf.y += leaf.speed * dt; leaf.x += Math.sin(leaf.phase + leaf.y * .01) * dt * 3; if (leaf.y > WORLD.height + 20) leaf.y = -10; });
+    if (state.area === "overworld") leaves.forEach((leaf) => { leaf.y += leaf.speed * dt; leaf.x += Math.sin(leaf.phase + leaf.y * .01) * dt * 3; if (leaf.y > WORLD.height + 20) leaf.y = -10; });
     particles = particles.filter((particle) => { particle.life -= dt; particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.vy += 45 * dt; return particle.life > 0; });
     updateEnvironment(dt);
     updateNpcs(dt);
@@ -955,16 +974,26 @@
     ctx.globalAlpha = 1;
   };
   const drawTree = (tree, time, layer = "mid") => {
-    const { x, y, s, phase = 0 } = tree; const sway = Math.sin(time * .55 + phase) * .018; const depth = layer === "back" ? .68 : layer === "front" ? 1.08 : .9;
-    const canopyA = layer === "back" ? "#4f9662" : layer === "front" ? "#3c7d54" : "#478f5c"; const canopyB = layer === "back" ? "#71b878" : layer === "front" ? "#5da86b" : "#64ad70";
+    const { x, y, s, phase = 0 } = tree; const variant = tree.variant ?? Math.floor(hash01(Math.floor(x), Math.floor(y)) * 3); const sway = Math.sin(time * .55 + phase) * .018; const depth = layer === "back" ? .66 : layer === "front" ? 1.08 : .9;
+    const canopyA = layer === "back" ? ["#4f9662", "#4b8d61", "#568f63"][variant] : layer === "front" ? ["#3c7d54", "#39744f", "#427b52"][variant] : ["#478f5c", "#438857", "#4d8f5e"][variant];
+    const canopyB = layer === "back" ? ["#71b878", "#69ad74", "#79bd7d"][variant] : layer === "front" ? ["#5da86b", "#58a166", "#67b170"][variant] : ["#64ad70", "#5fa76b", "#6db778"][variant];
+    const crowns = [
+      [[-31, 6, 27], [22, 5, 34], [0, -25, 43], [-8, 25, 38], [31, -19, 24]],
+      [[-35, 3, 25], [24, 8, 30], [-7, -28, 40], [8, 20, 35], [34, -14, 22]],
+      [[-27, 8, 30], [28, 1, 28], [2, -22, 46], [-12, 26, 34], [25, -25, 25]]
+    ][variant];
     drawShadow(x, y + 57 * s, 30 * s, 10 * s, layer === "front" ? .45 : .3);
     if (layer !== "back") drawDirectionalShadow(x, y + 48 * s, 56 * s, 17 * s, layer === "front" ? .09 : .06, .2);
     ctx.save(); ctx.globalAlpha = depth; ctx.translate(x, y); ctx.rotate(sway); ctx.scale(s, s);
     ctx.fillStyle = "#6e4935"; ctx.beginPath(); ctx.moveTo(-10, 5); ctx.lineTo(9, 5); ctx.lineTo(14, 58); ctx.lineTo(-15, 58); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = "#aa7048"; ctx.fillRect(-3, 8, 5, 44); ctx.fillStyle = "rgba(33,56,39,.22)"; ctx.fillRect(8, 13, 5, 41);
-    [[-29, 5, 29], [22, 4, 34], [0, -24, 43], [-5, 27, 38], [30, -20, 25]].forEach(([ox, oy, radius], i) => {
-      ctx.fillStyle = i % 2 ? canopyA : canopyB; ctx.beginPath(); ctx.arc(ox, oy, radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(22,61,43,.24)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = "rgba(56,83,52,.68)"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-5, 42); ctx.quadraticCurveTo(-20, 28, -24, 16); ctx.moveTo(5, 37); ctx.quadraticCurveTo(19, 24, 25, 10); ctx.stroke();
+    crowns.forEach(([ox, oy, radius], i) => {
+      const crownSway = Math.sin(time * .72 + phase + i * .9) * (i === 2 ? 1.6 : .9);
+      ctx.save(); ctx.translate(crownSway, i === 2 ? Math.sin(time * .48 + phase) * .7 : 0); ctx.fillStyle = i % 2 ? canopyA : canopyB; ctx.beginPath(); ctx.arc(ox, oy, radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(22,61,43,.24)"; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = "rgba(224,255,194,.14)"; ctx.beginPath(); ctx.arc(ox - 9, oy - 10, radius * .32, 0, Math.PI * 2); ctx.fill();
+      if ((i + variant) % 3 === 0 && layer !== "back") { ctx.fillStyle = "rgba(29,76,48,.2)"; ctx.beginPath(); ctx.arc(ox + 8, oy + radius * .48, radius * .45, 0, Math.PI); ctx.fill(); }
+      ctx.restore();
     });
     ctx.fillStyle = "rgba(17,56,42,.22)"; ctx.beginPath(); ctx.ellipse(0, 35, 36, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(72,61,45,.62)"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-10, 52); ctx.quadraticCurveTo(-25, 59, -30, 64); ctx.moveTo(10, 52); ctx.quadraticCurveTo(25, 59, 30, 64); ctx.stroke(); ctx.restore();
   };
@@ -986,23 +1015,27 @@
   const drawWater = (rect, time) => {
     ctx.save(); const water = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + rect.h); water.addColorStop(0, "#438f8c"); water.addColorStop(.48, "#2d7476"); water.addColorStop(1, "#234f5f"); ctx.fillStyle = water; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
     const depth = ctx.createLinearGradient(rect.x, rect.y, rect.x + rect.w, rect.y); depth.addColorStop(0, "rgba(205,255,222,.16)"); depth.addColorStop(.5, "rgba(205,255,222,0)"); depth.addColorStop(1, "rgba(4,34,43,.2)"); ctx.fillStyle = depth; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-    ctx.strokeStyle = "rgba(164,246,216,.3)"; ctx.lineWidth = 2;
-    for (let y = rect.y + 18; y < rect.y + rect.h; y += 28) { ctx.beginPath(); for (let x = rect.x; x < rect.x + rect.w; x += 24) { ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 10, y + Math.sin(time * 2 + x * .03 + y) * 3, x + 20, y); } ctx.stroke(); }
-    ctx.fillStyle = "rgba(226,255,218,.15)"; for (let i = 0; i < 5; i += 1) { const x = rect.x + ((time * (9 + i * 2) + i * 74) % (rect.w + 80)) - 40; ctx.fillRect(x, rect.y + 22 + i * 27, 34, 3); }
-    ctx.globalAlpha = .42; ctx.strokeStyle = "rgba(193,239,197,.55)"; ctx.lineWidth = 2; for (let i = 0; i < 4; i += 1) { const y = rect.y + 9 + i * Math.max(16, rect.h - 18) / 3; ctx.beginPath(); ctx.moveTo(rect.x + 6, y + Math.sin(time * 1.5 + i) * 2); ctx.quadraticCurveTo(rect.x + rect.w * .5, y - 4, rect.x + rect.w - 6, y + Math.sin(time * 1.3 + i) * 2); ctx.stroke(); }
+    ctx.strokeStyle = "rgba(164,246,216,.25)"; ctx.lineWidth = 2;
+    for (let y = rect.y + 18; y < rect.y + rect.h; y += 28) { ctx.beginPath(); for (let x = rect.x; x < rect.x + rect.w; x += 24) { const wave = Math.sin(time * 1.8 + x * .03 + y * .06) * 3; ctx.moveTo(x, y + wave); ctx.quadraticCurveTo(x + 10, y - wave * .65, x + 20, y + wave); } ctx.stroke(); }
+    ctx.fillStyle = "rgba(226,255,218,.14)"; for (let i = 0; i < 5; i += 1) { const x = rect.x + ((time * (9 + i * 2) + i * 74) % (rect.w + 80)) - 40; ctx.fillRect(x, rect.y + 22 + i * 27 + Math.sin(time * .8 + i) * 2, 34, 3); }
+    ctx.globalAlpha = .36; ctx.strokeStyle = "rgba(193,239,197,.55)"; ctx.lineWidth = 2; for (let i = 0; i < 4; i += 1) { const y = rect.y + 9 + i * Math.max(16, rect.h - 18) / 3; ctx.beginPath(); ctx.moveTo(rect.x + 6, y + Math.sin(time * 1.5 + i) * 2); ctx.quadraticCurveTo(rect.x + rect.w * .5, y - 4, rect.x + rect.w - 6, y + Math.sin(time * 1.3 + i) * 2); ctx.stroke(); }
     ctx.restore();
   };
   const drawPond = (rect, time, shallow = false) => {
     ctx.save(); ctx.fillStyle = "rgba(11,47,43,.32)"; ctx.beginPath(); ctx.roundRect(rect.x - 8, rect.y + 8, rect.w + 16, rect.h + 12, 22); ctx.fill();
     const shape = () => { ctx.beginPath(); ctx.moveTo(rect.x + 18, rect.y + 14); ctx.quadraticCurveTo(rect.x + rect.w * .28, rect.y - 6, rect.x + rect.w * .55, rect.y + 12); ctx.quadraticCurveTo(rect.x + rect.w + 12, rect.y + 8, rect.x + rect.w - 6, rect.y + rect.h * .52); ctx.quadraticCurveTo(rect.x + rect.w - 18, rect.y + rect.h + 10, rect.x + rect.w * .58, rect.y + rect.h - 2); ctx.quadraticCurveTo(rect.x + 16, rect.y + rect.h + 8, rect.x + 5, rect.y + rect.h * .58); ctx.closePath(); };
     shape(); const water = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + rect.h); water.addColorStop(0, shallow ? "#4b938e" : "#357d7d"); water.addColorStop(1, "#285766"); ctx.fillStyle = water; ctx.fill();
-    ctx.save(); shape(); ctx.clip(); ctx.strokeStyle = "rgba(167,249,218,.33)"; ctx.lineWidth = 2;
-    for (let y = rect.y + 22; y < rect.y + rect.h + 20; y += 28) { ctx.beginPath(); for (let x = rect.x - 30; x < rect.x + rect.w + 30; x += 28) { ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 12, y + Math.sin(time * 2.4 + x * .03 + y) * 3, x + 24, y); } ctx.stroke(); }
-    ctx.fillStyle = "rgba(237,255,213,.2)"; for (let i = 0; i < 6; i += 1) { const x = rect.x + ((time * (12 + i) + i * 81) % (rect.w + 90)) - 35; ctx.fillRect(x, rect.y + 24 + i * 24, 38, 3); } ctx.restore();
-    ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 8; shape(); ctx.stroke(); ctx.strokeStyle = "rgba(196,213,162,.7)"; ctx.lineWidth = 3; shape(); ctx.stroke(); ctx.save(); shape(); ctx.clip(); ctx.globalAlpha = .48; ctx.strokeStyle = "rgba(226,255,218,.7)"; ctx.lineWidth = 2; for (let i = 0; i < 5; i += 1) { const y = rect.y + 27 + i * 25 + Math.sin(time * 1.2 + i) * 4; ctx.beginPath(); ctx.moveTo(rect.x - 10, y); ctx.quadraticCurveTo(rect.x + rect.w * .5, y - 6, rect.x + rect.w + 10, y + 2); ctx.stroke(); }
-    ctx.globalAlpha = .34; ctx.fillStyle = "#d8e7b4"; for (let i = 0; i < 4; i += 1) { const x = rect.x + rect.w * (.18 + i * .22) + Math.sin(time * .7 + i) * 8; const y = rect.y + rect.h * (.28 + (i % 2) * .32); ctx.beginPath(); ctx.ellipse(x, y, 8 + (i % 2) * 4, 3, -.18, 0, Math.PI * 2); ctx.fill(); }
-    ctx.globalAlpha = .22; ctx.strokeStyle = "#e5f4ca"; ctx.lineWidth = 1.5; for (let i = 0; i < 5; i += 1) { const x = rect.x + 26 + ((i * 67 + time * 9) % Math.max(30, rect.w - 42)); const y = rect.y + 18 + ((i * 31) % Math.max(24, rect.h - 28)); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 18, y - 3); ctx.stroke(); }
-    ctx.restore(); ctx.restore();
+    ctx.save(); shape(); ctx.clip(); ctx.strokeStyle = "rgba(167,249,218,.28)"; ctx.lineWidth = 2;
+    for (let y = rect.y + 22; y < rect.y + rect.h + 20; y += 28) { ctx.beginPath(); for (let x = rect.x - 30; x < rect.x + rect.w + 30; x += 28) { const wave = Math.sin(time * 2.15 + x * .03 + y) * 3; ctx.moveTo(x, y + wave); ctx.quadraticCurveTo(x + 12, y - wave, x + 24, y + wave); } ctx.stroke(); }
+    ctx.fillStyle = "rgba(237,255,213,.2)"; for (let i = 0; i < 6; i += 1) { const x = rect.x + ((time * (12 + i) + i * 81) % (rect.w + 90)) - 35; ctx.fillRect(x, rect.y + 24 + i * 24 + Math.sin(time * .9 + i) * 2, 38, 3); }
+    ctx.globalAlpha = .42; ctx.strokeStyle = "rgba(226,255,218,.7)"; ctx.lineWidth = 2; for (let i = 0; i < 5; i += 1) { const y = rect.y + 27 + i * 25 + Math.sin(time * 1.2 + i) * 4; ctx.beginPath(); ctx.moveTo(rect.x - 10, y); ctx.quadraticCurveTo(rect.x + rect.w * .5, y - 6, rect.x + rect.w + 10, y + 2); ctx.stroke(); }
+    // Short, irregular highlights sit just inside the bank instead of outlining the pond uniformly.
+    ctx.globalAlpha = .28; ctx.strokeStyle = "#f0e2b4"; ctx.lineWidth = 2; for (let i = 0; i < 8; i += 1) { const x = rect.x + 18 + ((i * 53) % Math.max(30, rect.w - 36)); const y = rect.y + (i % 2 ? rect.h - 12 : 12) + Math.sin(time * .8 + i) * 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 8, y - 3, x + 16, y); ctx.stroke(); }
+    ctx.globalAlpha = .28; ctx.fillStyle = "#d8e7b4"; for (let i = 0; i < 4; i += 1) { const x = rect.x + rect.w * (.18 + i * .22) + Math.sin(time * .7 + i) * 8; const y = rect.y + rect.h * (.28 + (i % 2) * .32); ctx.beginPath(); ctx.ellipse(x, y, 8 + (i % 2) * 4, 3, -.18, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 8; shape(); ctx.stroke(); ctx.strokeStyle = "rgba(196,213,162,.7)"; ctx.lineWidth = 3; shape(); ctx.stroke();
+    ctx.save(); shape(); ctx.clip(); ctx.globalAlpha = .5; ctx.strokeStyle = "rgba(240,226,178,.68)"; ctx.lineWidth = 2; ctx.setLineDash([9, 18]); ctx.lineDashOffset = Math.sin(time * .35) * 12; shape(); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+    ctx.restore();
   };
   const drawPath = (time) => {
     ctx.save(); ctx.globalAlpha = .42; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 86; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-30, 500); ctx.quadraticCurveTo(430, 433, 760, 515); ctx.quadraticCurveTo(1110, 590, 1630, 450); ctx.stroke();
@@ -1023,6 +1056,18 @@
     [[-8, "#5f9e5a"], [-3, "#77b866"], [3, "#4d8950"], [8, "#83c56d"]].forEach(([offset, color], i) => { ctx.strokeStyle = color; ctx.lineWidth = i % 2 ? 3 : 2; ctx.beginPath(); ctx.moveTo(offset, 8); ctx.quadraticCurveTo(offset - 2, -4, offset + (i - 1.5) * 3, -18 - (i % 2) * 4); ctx.stroke(); });
     ctx.restore();
   };
+  const drawGrassPatch = (patch, time, foreground = false) => {
+    const rustle = patch.rustle || 0; const density = patch.density + (patch.seed % 3); const scale = patch.scale || .7;
+    ctx.save(); ctx.globalAlpha = foreground ? .58 : .72;
+    for (let i = 0; i < density; i += 1) {
+      const angle = hash01(patch.seed, i) * Math.PI * 2; const radius = 8 + hash01(patch.seed + i * 3, 4) * patch.radius; const x = patch.x + Math.cos(angle) * radius; const y = patch.y + Math.sin(angle) * radius * .48; const s = scale * (.72 + hash01(patch.seed + i, 9) * .56); const phase = patch.phase + i * .73; const sway = Math.sin(time * (1.4 + hash01(i, patch.seed) * .7) + phase) * .1 + rustle * Math.sin(time * 18 + phase) * .42;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.scale(s, s); const hue = i % 3; const colors = [patch.tone || "#66a95d", shadeHex(patch.tone || "#66a95d", .1), shadeHex(patch.tone || "#66a95d", -.1)];
+      for (let blade = 0; blade < 3; blade += 1) { const offset = (blade - 1) * 5; ctx.strokeStyle = colors[(blade + hue) % colors.length]; ctx.lineWidth = blade === 1 ? 2.5 : 2; ctx.beginPath(); ctx.moveTo(offset, 7); ctx.quadraticCurveTo(offset - 2, -2, offset + (blade - 1) * 4, -14 - (blade % 2) * 4); ctx.stroke(); }
+      if (i % 5 === 0 && !foreground) { ctx.fillStyle = "rgba(231,211,139,.7)"; ctx.beginPath(); ctx.arc(3, -14, 2, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+    }
+    ctx.restore();
+  };
   const drawFlower = (flower, time) => {
     const rustle = flower.rustle || 0; const sway = Math.sin(time * 1.8 + flower.phase) * .08 + rustle * Math.sin(time * 18 + flower.phase) * .3;
     ctx.save(); ctx.translate(flower.x, flower.y); ctx.rotate(sway); ctx.scale(flower.s, flower.s); ctx.strokeStyle = "#6f9b58"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 10); ctx.quadraticCurveTo(-2, -2, 0, -11); ctx.stroke(); ctx.fillStyle = flower.color; for (let i = 0; i < 4; i += 1) { ctx.beginPath(); ctx.ellipse(Math.cos(i * 1.57) * 4, -13 + Math.sin(i * 1.57) * 4, 4, 2.5, i * 1.57, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = "#ffe8a4"; ctx.beginPath(); ctx.arc(0, -13, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
@@ -1033,6 +1078,14 @@
   const drawButterfly = (item, time) => { const x = item.x + Math.sin(time * item.speed + item.phase) * item.range; const y = item.y + Math.cos(time * item.speed * .8 + item.phase) * 16; const flap = .65 + Math.abs(Math.sin(time * 9 + item.phase)) * .35; ctx.save(); ctx.translate(x, y); ctx.scale(1, flap); ctx.globalAlpha = .78; ctx.fillStyle = item.color; ctx.beginPath(); ctx.ellipse(-4, 0, 5, 3, -.35, 0, Math.PI * 2); ctx.ellipse(4, 0, 5, 3, .35, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#4d463a"; ctx.fillRect(-1, -2, 2, 5); ctx.restore(); };
   const drawBird = (item, time) => { const x = item.x + Math.sin(time * item.speed + item.phase) * item.range; const y = item.y + Math.sin(time * item.speed * 1.8 + item.phase) * 14; const flap = Math.sin(time * 5 + item.phase) * 3; ctx.save(); ctx.translate(x, y); ctx.scale(item.scale, item.scale); ctx.strokeStyle = "rgba(24,57,49,.7)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, flap); ctx.quadraticCurveTo(-4, -5, 0, 0); ctx.quadraticCurveTo(5, -5, 11, flap); ctx.stroke(); ctx.restore(); };
   const drawFirefly = (item, time) => { const glow = .35 + (Math.sin(time * 2.6 + item.phase) + 1) * .25; const x = item.x + Math.sin(time * .35 + item.phase) * 12; const y = item.y + Math.cos(time * .45 + item.phase) * 10; const gradient = ctx.createRadialGradient(x, y, 0, x, y, 18); gradient.addColorStop(0, `rgba(241,255,156,${glow})`); gradient.addColorStop(1, "rgba(241,255,156,0)"); ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = `rgba(255,255,185,${glow + .2})`; ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill(); };
+  const drawPollen = (time) => {
+    ctx.save(); ctx.globalAlpha = .2; ctx.fillStyle = "#f1e6aa";
+    for (let i = 0; i < 18; i += 1) {
+      const x = 54 + ((i * 197 + time * (2.4 + i % 3)) % (WORLD.width - 108)); const y = 128 + ((i * 113 + Math.sin(time * .25 + i) * 22) % 760); const drift = Math.sin(time * .6 + i * 1.7) * 5; const radius = i % 4 === 0 ? 1.7 : 1.1;
+      ctx.beginPath(); ctx.arc(x + drift, y, radius, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  };
   const drawExplorationClues = (time) => {
     const stones = [[968, 704, .8], [1001, 718, .62], [1031, 734, .48]];
     stones.forEach(([x, y, scale], index) => { ctx.save(); ctx.translate(x, y); ctx.rotate(-.18 + Math.sin(time * .7 + index) * .03); ctx.scale(scale, scale); ctx.fillStyle = index === 2 ? "#d6d4a5" : "#aaa986"; ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "rgba(239,240,194,.45)"; ctx.beginPath(); ctx.ellipse(-3, -2, 6, 2.5, -.15, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
@@ -1075,24 +1128,24 @@
     environment.treesBack.forEach((tree) => drawTree(tree, time, "back"));
     drawDappleShadows(time);
     drawPond({ x: 610, y: 650, w: 360, h: 150 }, time); drawPond({ x: 1080, y: 510, w: 260, h: 90 }, time + 1, true);
-    environment.shoreStones.forEach((stone) => { drawShadow(stone.x, stone.y + 4, 13 * stone.s, 4 * stone.s, .18); ctx.fillStyle = "#b2b596"; ctx.beginPath(); ctx.ellipse(stone.x, stone.y, 13 * stone.s, 6 * stone.s, -.15, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "rgba(238,240,195,.28)"; ctx.beginPath(); ctx.ellipse(stone.x - 3, stone.y - 2, 5 * stone.s, 2 * stone.s, -.15, 0, Math.PI * 2); ctx.fill(); });
+    environment.shoreStones.forEach((stone, index) => { const tone = ["#b2b596", "#9da98e", "#c0bd9a"][index % 3]; drawShadow(stone.x, stone.y + 4, 13 * stone.s, 4 * stone.s, .18); ctx.fillStyle = tone; ctx.beginPath(); ctx.ellipse(stone.x, stone.y, 13 * stone.s, 6 * stone.s, -.15 + Math.sin(time * .4 + index) * .015, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(42,79,69,.22)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "rgba(238,240,195,.28)"; ctx.beginPath(); ctx.ellipse(stone.x - 3, stone.y - 2, 5 * stone.s, 2 * stone.s, -.15, 0, Math.PI * 2); ctx.fill(); if (index % 3 === 0) { ctx.strokeStyle = "rgba(225,244,199,.5)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(stone.x + 4, stone.y + 3, 8 * stone.s, -.25, .58); ctx.stroke(); } });
     environment.treesMid.forEach((tree) => drawTree(tree, time, "mid"));
     environment.bushes.filter((bush) => bush.y < 600).forEach((bush) => drawBush(bush, time)); environment.fences.filter((fence) => fence.y < 600).forEach(drawFence); environment.ruins.filter((ruin) => ruin.y < 600).forEach((ruin) => drawRuin(ruin, time)); environment.signs.filter((sign) => sign.y < 600).forEach(drawSign);
     drawHouse(800, 90, 300, 165, "#d5c99e", "#a56e4e"); drawHouse(1140, 100, 190, 135, "#9fb88b", "#6a8e70");
     drawLantern(790, 290, time); drawLantern(1115, 282, time + 1); drawLantern(1280, 172, time + 2);
     ctx.fillStyle = "#6c4d3a"; ctx.fillRect(1280, 180, 64, 64); ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.strokeRect(1280, 180, 64, 64); ctx.fillStyle = "rgba(130,241,215,.42)"; ctx.fillRect(1290, 190, 44, 44); ctx.fillStyle = "#e5d59f"; ctx.fillRect(1303, 246, 20, 7);
     environment.rocks.forEach(drawRock); environment.logs.forEach(drawLog); drawExplorationClues(time); drawHiddenGrovePreview(time); drawRootlightOverworld(time);
-    environment.grasses.forEach((grass) => drawGrassTuft(grass, time)); environment.flowers.forEach((flower) => drawFlower(flower, time)); drawMeadowClusters(time);
+    environment.grassPatches.filter((patch) => patch.y <= 560).forEach((patch) => drawGrassPatch(patch, time)); environment.grasses.forEach((grass) => drawGrassTuft(grass, time)); environment.flowers.forEach((flower) => drawFlower(flower, time)); drawMeadowClusters(time);
     if (!state.chestOpened) drawChest(1240, 745, false); else drawChest(1240, 745, true);
     drawCampfire(npcs[1].x - 24, npcs[1].y + 18, time); drawMapTable(npcs[3].x + 24, npcs[3].y + 18, time); drawPondBasket(npcs[2].x - 14, npcs[2].y + 14, time); npcs.forEach((npc) => drawNpc(npc, time)); drawEntrance(1312, 210, time);
     environment.signs.filter((sign) => sign.y >= 600).forEach(drawSign);
-    environment.birds.forEach((bird) => drawBird(bird, time)); environment.butterflies.forEach((butterfly) => drawButterfly(butterfly, time)); environment.fireflies.forEach((firefly) => drawFirefly(firefly, time));
+    environment.birds.forEach((bird) => drawBird(bird, time)); environment.butterflies.forEach((butterfly) => drawButterfly(butterfly, time)); environment.fireflies.forEach((firefly) => drawFirefly(firefly, time)); drawPollen(time);
     breakables().forEach((object) => drawBreakable(object, time)); drawOutdoorLighting(time);
   };
   const drawOutdoorForeground = (time) => {
     environment.treesFront.forEach((tree) => drawTree(tree, time, "front"));
     environment.bushes.filter((bush) => bush.y >= 600).forEach((bush) => drawBush(bush, time, true)); environment.fences.filter((fence) => fence.y >= 600).forEach(drawFence); environment.ruins.filter((ruin) => ruin.y >= 600).forEach((ruin) => drawRuin(ruin, time));
-    environment.grasses.filter((grass) => grass.y > 560).forEach((grass) => drawGrassTuft(grass, time, true));
+    environment.grassPatches.filter((patch) => patch.y > 560).forEach((patch) => drawGrassPatch(patch, time, true)); environment.grasses.filter((grass) => grass.y > 560).forEach((grass) => drawGrassTuft(grass, time, true));
     drawLeafCluster(70, 560, 1.2, "#467e55", time, .4); drawLeafCluster(1510, 505, .95, "#3d744f", time, 1.4); drawLeafCluster(1180, 846, 1.05, "#558c58", time, 2.7);
     [[585, 730], [975, 735], [1060, 565]].forEach(([x, y], i) => { const sway = Math.sin(time * 2 + i) * .12; ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.strokeStyle = i === 2 ? "#78b979" : "#6fae69"; ctx.lineWidth = 3; for (let n = -1; n <= 1; n += 1) { ctx.beginPath(); ctx.moveTo(n * 8, 18); ctx.quadraticCurveTo(n * 9, 0, n * 13, -22); ctx.stroke(); } ctx.restore(); });
   };
@@ -1369,7 +1422,7 @@
   const draw = (time) => {
     ctx.clearRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.translate(-camera.x + camera.shakeX, -camera.y + camera.shakeY);
     if (state.area === "overworld") drawOverworld(time); else drawDungeon(time);
-    leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { ctx.save(); ctx.translate(leaf.x, leaf.y); ctx.rotate(Math.sin(leaf.phase + leaf.y * .02) * .5); ctx.globalAlpha = .38 + hash01(Math.floor(leaf.x), Math.floor(leaf.y)) * .2; ctx.fillStyle = leaf.phase % 2 > 1 ? "#b6df8b" : "#d3edac"; ctx.beginPath(); ctx.moveTo(0, -5); ctx.quadraticCurveTo(5, -1, 1, 6); ctx.quadraticCurveTo(-4, 1, 0, -5); ctx.fill(); ctx.restore(); } });
+    leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { const scale = .62 + hash01(Math.floor(leaf.x), Math.floor(leaf.y)) * .5; ctx.save(); ctx.translate(leaf.x, leaf.y); ctx.rotate(Math.sin(leaf.phase + leaf.y * .02) * .5 + Math.sin(state.visualClock * .8 + leaf.phase) * .12); ctx.scale(scale, .68 + scale * .18); ctx.globalAlpha = .3 + hash01(Math.floor(leaf.x), Math.floor(leaf.y)) * .24; ctx.fillStyle = leaf.phase % 2 > 1 ? "#b6df8b" : "#d3edac"; ctx.beginPath(); ctx.moveTo(0, -5); ctx.quadraticCurveTo(5, -1, 1, 6); ctx.quadraticCurveTo(-4, 1, 0, -5); ctx.fill(); ctx.restore(); } });
     const entities = [...enemies].sort((a, b) => a.y - b.y); entities.forEach((enemy) => drawEnemy(enemy, time)); drops.forEach((drop) => drawDrop(drop, time)); projectiles.forEach((projectile) => drawProjectile(projectile));
     drawPlayer(time); if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); ctx.restore();
     drawAmbientOverlay(time);
