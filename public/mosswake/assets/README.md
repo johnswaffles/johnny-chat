@@ -55,6 +55,7 @@ Mosswake currently renders its first playable slice with layered canvas primitiv
 19. Boss presentation pass: paint `hollow-guardian` phase-I and phase-II sprite sheets (128×128, 6 idle/turn frames, 4 hit frames, 8 collapse frames) with a readable rose “heart unbound” silhouette for phase II.
 20. Paint the Heartseed Sanctum set pieces as separate layers: four `guardian-pylon` states (quiet, charged, phase-II, spent), `boss-arena-rings`, and a `heartseed-echo` reward sprite. Keep the four pylons modular so the arena can be reused in later shrine rooms.
 21. Paint authored boss telegraphs and payoff effects: `guardian-volley`, `guardian-slam`, `guardian-dash`, `rootlight-exposure`, `guardian-phase-break`, and `guardian-defeat` sheets. The current canvas primitives are temporary readability assets and can be swapped without changing attack timing or hitboxes.
+22. Paint a lighting-only modular set: `torch-flame`, `torch-smoke`, `lantern-glow`, `campfire-flame`, `sun-shaft`, `canopy-dapple`, `dungeon-fog`, and `room-transition` masks. Keep the masks transparent and shadow-free so the browser can tint, pulse, and composite them per room.
 
 ## CUSTOM GRAPHICS TO GENERATE NEXT
 
@@ -71,6 +72,7 @@ Prioritized by visual impact on the playable demo. All files should be exported 
 9. **NPC portrait and sprite families** — `128×128 px` transparent bust portraits (neutral/talking/reacting, 3 frames each) and `80×96 px` transparent top-down sprites for Rowan, Tansy, Brindle, and Lumen (4 directions, 4 idle/walk frames, 2 work frames).
 10. **Interface and reward icon set** — `64×64 px` transparent icons for heart/full-heart/empty-heart, key, Heartseed Echo, Moonwake Lantern, discovery, and map marker (2 glow frames each); plus a `960×160 px` transparent 9-slice dialogue/menu frame with 2 state accents (mint and rose).
 11. **Unified terrain material kit** — `128×128 px` opaque seamless grass, compacted path, and dungeon floor tiles plus `128×64 px` transparent edge overlays. Keep one ink value, one upper-left highlight, and one lower-right occlusion pass across all materials; include 4 grass/path variants, 4 stone variants, 6 water ripples, and 4 shoreline frames.
+12. **Lighting and atmosphere mask pack** — `256×256 px` transparent masks for torch/campfire/lantern pools, `384×256 px` transparent canopy sun-shafts, and `512×256 px` transparent dungeon fog wisps. Supply 4 flame frames, 4 smoke frames, 3 dapple frames, 4 fog frames, and 3 entrance/exit veil frames; keep shadows unbaked so runtime direction and falloff remain editable.
 
 ## Temporary feel pass
 
@@ -81,6 +83,8 @@ The latest art-direction pass adds restrained inked silhouettes, more varied gra
 The major visual pass adds authored meadow color fields, compacted path wear and stepping stones, shoreline reflection marks, facade gradients and window bounce light, localized lantern/campfire/rootlight pools, atmospheric horizon haze, foreground leaf clusters, and a distinct focal medallion/light language for each dungeon room. These runtime layers are deliberately low-contrast and remain separate from gameplay state, so they can be removed or replaced by painted terrain, prop, and lighting assets one slot at a time.
 
 The handcrafted outdoor pass replaces the evenly spaced read with authored composition anchors: clustered tree lines, small clearings, irregular shore stones, layered bushes, broken fences, two readable signposts, quiet ruins, cliff silhouettes, dappled canopy shadows, and local meadow clusters. The fixed anchors are intentional and editable; ambient motion (wind, leaf drift, water, insects, and soft shadow drift) is kept sparse so landmarks remain legible.
+
+The lighting pass treats atmosphere as a composition system rather than a dark overlay: the overworld gets an upper-left sun direction, moving canopy gaps, warm landmark pools, and sparse dust motes; the shrine gets torch falloff, room-tinted pools, floor-hugging fog, localized edge falloff, and a vignetted entrance/exit veil. Contact shadows stay soft and offset down-right, and all effect counts are bounded for browser performance.
 
 The professional-feel pass keeps that restraint in motion: buffered sword input, faster release deceleration, a short hit-stop on meaningful impacts, eased deterministic camera shake, action-specific sound hooks, animated chest lids, fresh-press interaction handling, and a small health-change pulse. These are timing and feedback layers around the same named art slots, so final sprite sheets can replace the procedural silhouettes without changing gameplay tuning.
 
