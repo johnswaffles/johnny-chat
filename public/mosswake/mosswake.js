@@ -275,6 +275,33 @@
     particles.push({ x, y, vx: 0, vy: 0, life: .18 + strength * .04, maxLife: .18 + strength * .04, size: 12 + strength * 8, color, kind: "ring", rotation: 0 });
     state.impactFlash = Math.max(state.impactFlash, .045 * strength); state.hitStop = Math.max(state.hitStop, Math.min(.075, .018 + strength * .02)); camera.shake = Math.max(camera.shake, .045 * strength); camera.shakePhase += 1.1 + strength;
   };
+  // Combat impacts are intentionally tighter than exploration feedback: a short, directional
+  // burst reads as contact without turning every sword swing into a particle cloud.
+  const spawnCombatSparks = (x, y, color, direction = null, count = 5, speed = 110, size = 7) => {
+    const base = direction && (direction.x || direction.y) ? Math.atan2(direction.y, direction.x) : null;
+    for (let i = 0; i < count; i += 1) {
+      const angle = base === null ? rand(-Math.PI, Math.PI) : base + rand(-.76, .76);
+      const velocity = rand(speed * .68, speed * 1.08);
+      const life = rand(.16, .29);
+      particles.push({ x: x + rand(-2, 2), y: y + rand(-2, 2), vx: Math.cos(angle) * velocity, vy: Math.sin(angle) * velocity, life, maxLife: life, size: rand(size * .7, size * 1.25), color, kind: "combat-spark", rotation: angle });
+    }
+  };
+  const triggerCombatImpact = (x, y, color = COLORS.gold, strength = 1, direction = null) => {
+    const count = strength >= 1.3 ? 8 : strength >= 1 ? 6 : 4;
+    spawnCombatSparks(x, y, color, direction, count, strength >= 1.3 ? 148 : 112, strength >= 1.3 ? 8 : 6);
+    const life = .13 + strength * .035;
+    particles.push({ x, y, vx: 0, vy: 0, life, maxLife: life, size: 8 + strength * 5, color, kind: "combat-ring", rotation: direction ? Math.atan2(direction.y, direction.x) : 0 });
+    particles.push({ x, y, vx: 0, vy: 0, life: .09 + strength * .025, maxLife: .09 + strength * .025, size: 3 + strength * 2, color: "#fff7d2", kind: "impact-glint", rotation: direction ? Math.atan2(direction.y, direction.x) : 0 });
+    state.impactFlash = Math.max(state.impactFlash, .018 * strength); state.hitStop = Math.max(state.hitStop, Math.min(.065, .012 + strength * .018)); camera.shake = Math.max(camera.shake, .024 * strength); camera.shakePhase += .75 + strength * .55;
+  };
+  const spawnProjectileImpact = (projectile) => {
+    const direction = normalized(-projectile.vx, -projectile.vy, 0, 0);
+    const bossAttack = projectile.kind === "shockwave" || projectile.kind === "rosebolt" || projectile.kind === "root-lance";
+    const count = projectile.kind === "shockwave" ? 6 : bossAttack ? 5 : 3;
+    spawnCombatSparks(projectile.x, projectile.y, projectile.color, direction, count, bossAttack ? 120 : 88, bossAttack ? 7 : 5);
+    const life = bossAttack ? .22 : .16;
+    particles.push({ x: projectile.x, y: projectile.y, vx: 0, vy: 0, life, maxLife: life, size: bossAttack ? 13 : 9, color: projectile.color, kind: "projectile-impact", rotation: Math.atan2(projectile.vy, projectile.vx) });
+  };
   const updateEnvironment = (dt) => {
     const touchables = [...environment.grasses, ...environment.flowers];
     touchables.forEach((item) => {
@@ -318,9 +345,12 @@
   };
   const spawnEnemyDeath = (enemy) => {
     enemy.dead = true; enemy.deathTimer = enemy.type === "boss" ? 1.4 : .58; enemy.deathMax = enemy.deathTimer; enemy.velocityX = 0; enemy.velocityY = 0;
-    if (enemy.type !== "boss") playSfx("kill"); spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 34 : 12); spawnParticle(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 20 : 9, enemy.type === "boss" ? 170 : 110, "impact"); particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.4 : .65, maxLife: enemy.type === "boss" ? 1.4 : .65, size: enemy.type === "boss" ? 38 : 21, color: enemy.type === "boss" ? COLORS.gold : enemy.color, kind: "death-ring", rotation: 0 });
+    if (enemy.type !== "boss") playSfx("kill");
+    spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 26 : 6);
+    spawnCombatSparks(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, null, enemy.type === "boss" ? 12 : 5, enemy.type === "boss" ? 175 : 120, enemy.type === "boss" ? 10 : 6);
+    particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.4 : .65, maxLife: enemy.type === "boss" ? 1.4 : .65, size: enemy.type === "boss" ? 38 : 21, color: enemy.type === "boss" ? COLORS.gold : enemy.color, kind: "death-ring", rotation: 0 });
     particles.push({ x: enemy.x, y: enemy.y - 5, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.25 : .48, maxLife: enemy.type === "boss" ? 1.25 : .48, size: enemy.type === "boss" ? 42 : 22, color: enemy.type === "boss" ? COLORS.rose : enemy.color, kind: "death-shards", rotation: 0 });
-    triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, enemy.type === "boss" ? 1.45 : 1); spawnDrop(enemy);
+    triggerCombatImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, enemy.type === "boss" ? 1.55 : 1.02); spawnDrop(enemy);
   };
   const updateDrops = (dt) => {
     drops = drops.filter((drop) => {
@@ -358,7 +388,7 @@
       warden: { hp: 9, maxHp: 9, speed: 22, radius: 25, color: COLORS.warden, damage: 2, behavior: "warden", detectionRange: 380, attackRange: 48, attackRate: 1.2, drop: { name: "Root sigil", color: COLORS.warden, kind: "sigil" } },
       boss: { hp: 16, maxHp: 16, speed: 28, radius: 39, color: COLORS.boss, damage: 2, behavior: "boss", detectionRange: 520, attackRange: 190, attackRate: 1.25, drop: { name: "Heartseed echo", color: COLORS.gold, kind: "echo" } }
     }[type];
-    enemies.push({ id: makeId(type), type, x, y, homeX: x, homeY: y, ...config, ...options, velocityX: 0, velocityY: 0, attackCooldown: options.attackCooldown ?? rand(.25, config.attackRate), hitFlash: 0, hitStun: 0, telegraph: 0, telegraphType: "", state: "idle", stateTimer: rand(.2, .7), phase: 1, attackPattern: 0, phaseNotice: 0, dead: false, deathTimer: 0, alerted: false, hidden: type === "moth", orbit: rand(0, 6.28), chargeX: 0, chargeY: 0, aimX: 0, aimY: 0, facingX: 1, facingY: 0, walk: rand(0, 6.28), animTime: rand(0, 6.28), motionSpeed: 0, presentationPrevX: x, presentationPrevY: y });
+    enemies.push({ id: makeId(type), type, x, y, homeX: x, homeY: y, ...config, ...options, velocityX: 0, velocityY: 0, attackCooldown: options.attackCooldown ?? rand(.25, config.attackRate), hitFlash: 0, hitStun: 0, hitDirectionX: 1, hitDirectionY: 0, recoilX: 0, recoilY: 0, telegraph: 0, telegraphType: "", state: "idle", stateTimer: rand(.2, .7), phase: 1, attackPattern: 0, phaseNotice: 0, dead: false, deathTimer: 0, alerted: false, hidden: type === "moth", orbit: rand(0, 6.28), chargeX: 0, chargeY: 0, aimX: 0, aimY: 0, facingX: 1, facingY: 0, walk: rand(0, 6.28), animTime: rand(0, 6.28), motionSpeed: 0, presentationPrevX: x, presentationPrevY: y });
   };
   const spawnHiddenEncounter = () => {
     if (state.area !== "overworld" || !state.southPassageOpen || state.optionalGuardDefeated || enemies.some((enemy) => enemy.encounter === "hidden-cache" && !enemy.dead)) return;
@@ -513,10 +543,11 @@
       showToast("Heartseed Echo claimed · maximum health increased", 3200);
     }
     playSfx("defeat");
-    spawnLeaves(enemy.x, enemy.y, 44);
-    spawnParticle(enemy.x, enemy.y, COLORS.gold, 34, 185, "impact");
+    spawnLeaves(enemy.x, enemy.y, 30);
+    spawnCombatSparks(enemy.x, enemy.y, COLORS.gold, null, 18, 190, 11);
+    spawnCombatSparks(enemy.x, enemy.y, COLORS.rose, null, 10, 140, 7);
     particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: 2.4, maxLife: 2.4, size: 28, color: COLORS.rose, kind: "ring", rotation: 0 });
-    triggerImpact(enemy.x, enemy.y, COLORS.gold, 1.8);
+    triggerCombatImpact(enemy.x, enemy.y, COLORS.gold, 1.8);
     camera.shake = Math.max(camera.shake, .3);
     saveData();
     updateHud();
@@ -535,16 +566,17 @@
     player.attackHitRegistered = true;
     const hit = swordHitbox(); const cosHalfAngle = Math.cos(hit.halfAngle); let hitCount = 0;
     enemies.forEach((enemy) => {
-      if (enemy.dead) { enemy.deathTimer = Math.max(0, enemy.deathTimer - dt); return; }
-      enemy.presentationPrevX = enemy.x; enemy.presentationPrevY = enemy.y;
+      if (enemy.dead) return;
       const offsetX = enemy.x - player.x; const offsetY = enemy.y - player.y; const range = Math.hypot(offsetX, offsetY) || 1;
       const dot = (offsetX / range) * hit.direction.x + (offsetY / range) * hit.direction.y;
       if (distance(hit, enemy) > hit.radius + enemy.radius || dot < cosHalfAngle) return;
       const knockback = enemy.type === "boss" ? 95 : enemy.type === "warden" ? 135 : 190;
       enemy.hp -= 1; enemy.hitFlash = .2; enemy.hitStun = enemy.type === "boss" ? .14 : .22;
       enemy.velocityX = hit.direction.x * knockback; enemy.velocityY = hit.direction.y * knockback;
-      spawnParticle(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 12 : 8, 125, "impact");
-      triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.rose : COLORS.gold, enemy.type === "boss" ? 1.35 : 1);
+      enemy.hitDirectionX = hit.direction.x; enemy.hitDirectionY = hit.direction.y; enemy.recoilX = hit.direction.x * (enemy.type === "boss" ? 5 : 9); enemy.recoilY = hit.direction.y * (enemy.type === "boss" ? 5 : 9);
+      const impactColor = enemy.type === "boss" ? COLORS.rose : enemy.color;
+      triggerCombatImpact(enemy.x, enemy.y, impactColor, enemy.type === "boss" ? 1.3 : .86, hit.direction);
+      spawnDust(enemy.x - hit.direction.x * 5, enemy.y + enemy.radius * .62, enemy.type === "boss" ? 4 : 2, enemy.type === "boss" ? "#c79283" : "#c6b38f");
       hitCount += 1;
       if (enemy.hp <= 0) {
         spawnEnemyDeath(enemy);
@@ -562,7 +594,7 @@
         if (object.id === "reed-cache") { state.reedCacheFound = true; state.lanternLens = true; addDiscovery("Dewglass lens recovered"); }
       }
     });
-    if (hitCount === 0) { spawnParticle(hit.x, hit.y, COLORS.gold, 3, 70, "spark"); camera.shake = Math.max(camera.shake, .018); }
+    if (hitCount === 0) { spawnCombatSparks(hit.x, hit.y, COLORS.gold, hit.direction, 2, 68, 4); camera.shake = Math.max(camera.shake, .014); }
   };
   const activateRootlightNode = (node) => {
     if (!node) return false;
@@ -590,7 +622,7 @@
     enemies.forEach((enemy) => {
       if (enemy.dead || distance(enemy, player) > (enemy.type === "boss" ? 180 : 132)) return;
       enemy.hidden = false; enemy.alerted = true; enemy.hitFlash = .28; enemy.hitStun = enemy.type === "boss" ? .48 : .62; enemy.telegraph = 0; enemy.state = "recover"; enemy.stateTimer = enemy.type === "boss" ? .52 : .34; enemy.attackCooldown = Math.max(enemy.attackCooldown, .72);
-      const direction = normalized(enemy.x - player.x, enemy.y - player.y); enemy.velocityX = direction.x * (enemy.type === "boss" ? 125 : 175); enemy.velocityY = direction.y * (enemy.type === "boss" ? 125 : 175); enemy.phaseExposed = enemy.type === "boss" ? .9 : 0; const rootlightDamage = enemy.type === "boss" && enemy.phase === 2 ? 2 : 1; enemy.hp -= rootlightDamage; rootlightHit = true; spawnParticle(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 14 : 8, 110, "impact"); triggerImpact(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 1.1 : .75); if (enemy.type === "boss" && enemy.phase === 2) showToast("Rootlight cracks the guardian's unbound heart", 1500);
+      const direction = normalized(enemy.x - player.x, enemy.y - player.y); enemy.velocityX = direction.x * (enemy.type === "boss" ? 125 : 175); enemy.velocityY = direction.y * (enemy.type === "boss" ? 125 : 175); enemy.hitDirectionX = direction.x; enemy.hitDirectionY = direction.y; enemy.recoilX = direction.x * (enemy.type === "boss" ? 6 : 10); enemy.recoilY = direction.y * (enemy.type === "boss" ? 6 : 10); enemy.phaseExposed = enemy.type === "boss" ? .9 : 0; const rootlightDamage = enemy.type === "boss" && enemy.phase === 2 ? 2 : 1; enemy.hp -= rootlightDamage; rootlightHit = true; triggerCombatImpact(enemy.x, enemy.y, COLORS.gold, enemy.type === "boss" ? 1.18 : .72, direction); spawnCombatSparks(enemy.x, enemy.y, COLORS.mint, direction, enemy.type === "boss" ? 4 : 2, 95, 5); if (enemy.type === "boss" && enemy.phase === 2) showToast("Rootlight cracks the guardian's unbound heart", 1500);
       if (enemy.hp <= 0) { spawnEnemyDeath(enemy); if (enemy.type === "warden") { state.miniBossDefeated = true; showToast("Rootlight breaks the Warden's guard", 1800); } if (enemy.type === "boss") beginBossDefeat(enemy); saveData(); }
     });
     if (rootlightHit) playSfx("hit");
@@ -607,7 +639,7 @@
     player.hp = Math.max(0, player.hp - amount); player.hurt = .24; player.invulnerable = .72; player.attack = 0; player.attackCooldown = .18; state.hitStop = Math.max(state.hitStop, .07); playSfx("hurt");
     const direction = normalized(player.x - source.x, player.y - source.y, -player.facingX, -player.facingY);
     player.velocityX = direction.x * 235; player.velocityY = direction.y * 235; camera.shake = Math.max(camera.shake, .13);
-    triggerImpact(player.x, player.y, impactColor, 1.25); spawnParticle(player.x, player.y, impactColor, 12, 135, "impact"); updateHud();
+    triggerCombatImpact(player.x, player.y, impactColor, 1.18, direction); spawnDust(player.x, player.y + 12, 4, "#b78f83"); updateHud();
     if (player.hp <= 0) { state.mode = "dead"; hideScreens(); ui.title.classList.remove("hidden"); ui.title.querySelector(".screen-kicker").textContent = "THE LANTERN WENT OUT"; ui.title.querySelector("h2").textContent = "The roots took you"; ui.title.querySelector("p:not(.screen-kicker)").textContent = "Start again at the outpost. The shrine will still be waiting."; document.getElementById("new-game").textContent = "Restart"; document.getElementById("continue-game").classList.add("hidden"); updateHud(); }
   };
 
@@ -667,22 +699,25 @@
   const fireWispBolt = (enemy) => {
     const direction = normalized(enemy.aimX, enemy.aimY, player.x - enemy.x, player.y - enemy.y);
     projectiles.push({ owner: "enemy", kind: "moonbolt", x: enemy.x, y: enemy.y, vx: direction.x * 165, vy: direction.y * 165, life: 2.5, radius: 7, color: COLORS.wisp, damage: enemy.damage });
-    spawnParticle(enemy.x, enemy.y, COLORS.wisp, 10, 65, "spark");
+    spawnCombatSparks(enemy.x, enemy.y, COLORS.wisp, direction, 4, 70, 5);
   };
   const fireBossVolley = (enemy) => {
     const count = enemy.phase === 2 ? 5 : 3; const center = Math.atan2(player.y - enemy.y, player.x - enemy.x);
     for (let i = 0; i < count; i += 1) { const angle = center + (i - (count - 1) / 2) * .22; projectiles.push({ owner: "enemy", kind: "rosebolt", x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 125, vy: Math.sin(angle) * 125, life: 2.4, radius: 7, color: enemy.phase === 2 ? COLORS.rose : COLORS.gold, damage: enemy.damage }); }
-    spawnParticle(enemy.x, enemy.y, enemy.phase === 2 ? COLORS.rose : COLORS.gold, 14, 75, "spark");
+    spawnCombatSparks(enemy.x, enemy.y, enemy.phase === 2 ? COLORS.rose : COLORS.gold, { x: Math.cos(center), y: Math.sin(center) }, enemy.phase === 2 ? 7 : 5, 86, 6);
   };
   const fireBossSlam = (enemy) => {
     const count = enemy.phase === 2 ? 12 : 8; const offset = enemy.phase === 2 ? Math.PI / 12 : 0;
     for (let i = 0; i < count; i += 1) { const angle = offset + i * Math.PI * 2 / count; projectiles.push({ owner: "enemy", kind: "shockwave", x: enemy.x, y: enemy.y, vx: Math.cos(angle) * (enemy.phase === 2 ? 145 : 118), vy: Math.sin(angle) * (enemy.phase === 2 ? 145 : 118), life: 2.1, radius: 8, color: enemy.phase === 2 ? COLORS.rose : COLORS.gold, damage: 1 }); }
-    state.bossArenaPulse = .9; spawnParticle(enemy.x, enemy.y, enemy.phase === 2 ? COLORS.rose : COLORS.gold, enemy.phase === 2 ? 28 : 18, 150, "impact"); camera.shake = Math.max(camera.shake, enemy.phase === 2 ? .2 : .12);
+    const impactColor = enemy.phase === 2 ? COLORS.rose : COLORS.gold;
+    state.bossArenaPulse = .9; spawnCombatSparks(enemy.x, enemy.y, impactColor, null, enemy.phase === 2 ? 12 : 8, enemy.phase === 2 ? 180 : 145, 9);
+    particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: enemy.phase === 2 ? .62 : .48, maxLife: enemy.phase === 2 ? .62 : .48, size: enemy.phase === 2 ? 58 : 48, color: impactColor, kind: "boss-slam-ring", rotation: 0 });
+    camera.shake = Math.max(camera.shake, enemy.phase === 2 ? .18 : .1);
   };
   const fireBossRootRain = (enemy) => {
     const count = enemy.phase === 2 ? 6 : 3; const center = Math.atan2(player.y - enemy.y, player.x - enemy.x);
     for (let i = 0; i < count; i += 1) { const angle = center + (i - (count - 1) / 2) * .3; projectiles.push({ owner: "enemy", kind: "root-lance", x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 175, vy: Math.sin(angle) * 175, life: 2.3, radius: 9, color: COLORS.mint, damage: 1 }); }
-    spawnLeaves(enemy.x, enemy.y, enemy.phase === 2 ? 22 : 12); spawnParticle(enemy.x, enemy.y, COLORS.mint, 18, 105, "spark");
+    spawnLeaves(enemy.x, enemy.y, enemy.phase === 2 ? 14 : 8); spawnCombatSparks(enemy.x, enemy.y, COLORS.mint, { x: Math.cos(center), y: Math.sin(center) }, enemy.phase === 2 ? 8 : 5, 108, 6);
   };
   const updateEnemyIdle = (enemy, dt) => {
     enemy.stateTimer -= dt; enemy.orbit += dt * .35;
@@ -728,7 +763,7 @@
   };
   const updateBoss = (enemy, dist, dt) => {
     const desiredPhase = enemy.hp <= enemy.maxHp / 2 ? 2 : 1;
-    if (desiredPhase !== enemy.phase) { enemy.phase = desiredPhase; state.bossPhase = desiredPhase; state.bossPhaseShift = 1.85; state.bossArenaPulse = 1.85; enemy.state = "phaseShift"; enemy.stateTimer = .2; enemy.telegraph = 0; enemy.attackCooldown = 1.1; playSfx("phase"); camera.shake = Math.max(camera.shake, .24); spawnLeaves(enemy.x, enemy.y, 34); spawnParticle(enemy.x, enemy.y, COLORS.rose, 28, 170, "impact"); return; }
+    if (desiredPhase !== enemy.phase) { enemy.phase = desiredPhase; state.bossPhase = desiredPhase; state.bossPhaseShift = 1.85; state.bossArenaPulse = 1.85; enemy.state = "phaseShift"; enemy.stateTimer = .2; enemy.telegraph = 0; enemy.attackCooldown = 1.1; playSfx("phase"); camera.shake = Math.max(camera.shake, .24); spawnLeaves(enemy.x, enemy.y, 22); spawnCombatSparks(enemy.x, enemy.y, COLORS.rose, null, 14, 180, 9); particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: 1.05, maxLife: 1.05, size: 64, color: COLORS.rose, kind: "boss-slam-ring", rotation: 0 }); return; }
     state.bossPhase = enemy.phase; enemy.orbit += dt * (enemy.phase === 2 ? 1.7 : .8);
     if (enemy.state === "phaseShift") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "orbit"; return; }
     if (enemy.state === "bossWindup" || enemy.state === "bossSlamWindup" || enemy.state === "bossRainWindup" || enemy.state === "bossDashWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { if (enemy.state === "bossWindup") fireBossVolley(enemy); else if (enemy.state === "bossSlamWindup") fireBossSlam(enemy); else if (enemy.state === "bossRainWindup") fireBossRootRain(enemy); else { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.velocityX = 0; enemy.velocityY = 0; enemy.state = "bossDashing"; enemy.stateTimer = enemy.phase === 2 ? .58 : .46; spawnDust(enemy.x, enemy.y + 18, 15, enemy.phase === 2 ? "#d66b92" : "#bd8c72"); } enemy.attackCooldown = enemy.phase === 2 ? .62 : 1.05; enemy.telegraph = 0; } return; }
@@ -749,6 +784,7 @@
     enemies.forEach((enemy) => {
       if (enemy.dead) return;
       enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.hitStun = Math.max(0, enemy.hitStun - dt); enemy.phaseExposed = Math.max(0, (enemy.phaseExposed || 0) - dt); enemy.attackCooldown -= dt; enemy.telegraph = Math.max(0, enemy.telegraph - dt);
+      enemy.recoilX = moveToward(enemy.recoilX || 0, 0, 72 * dt); enemy.recoilY = moveToward(enemy.recoilY || 0, 0, 72 * dt);
       if (enemy.hitStun > 0) { moveEntityBy(enemy, enemy.velocityX * dt, enemy.velocityY * dt); enemy.velocityX = moveToward(enemy.velocityX, 0, 760 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 760 * dt); updateEnemyPresentation(enemy, dt); return; }
       const dist = distance(enemy, player);
       if (!enemy.alerted && enemy.behavior !== "ambush" && dist <= enemy.detectionRange) { enemy.alerted = true; enemy.state = "alert"; enemy.stateTimer = .16; spawnParticle(enemy.x, enemy.y, enemy.color, 4, 28, "spark"); if (enemy.group) enemies.forEach((ally) => { if (ally.group === enemy.group && distance(enemy, ally) < 175) ally.alerted = true; }); }
@@ -764,7 +800,7 @@
     });
     enemies = enemies.filter((enemy) => !enemy.dead || enemy.deathTimer > 0);
     const maxX = state.area === "overworld" ? WORLD.width : ROOM.width; const maxY = state.area === "overworld" ? WORLD.height : ROOM.height;
-    projectiles = projectiles.filter((projectile) => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (collidesWorld({ ...projectile, radius: projectile.radius })) return false; if (distance(projectile, player) < projectile.radius + player.radius) { hurtPlayer(projectile.damage || 1, projectile); return false; } return projectile.life > 0 && projectile.x > 0 && projectile.y > 0 && projectile.x < maxX && projectile.y < maxY; });
+    projectiles = projectiles.filter((projectile) => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (collidesWorld({ ...projectile, radius: projectile.radius })) { spawnProjectileImpact(projectile); return false; } if (distance(projectile, player) < projectile.radius + player.radius) { spawnProjectileImpact(projectile); hurtPlayer(projectile.damage || 1, projectile); return false; } return projectile.life > 0 && projectile.x > 0 && projectile.y > 0 && projectile.x < maxX && projectile.y < maxY; });
   };
 
   const updatePlayer = (dt) => {
@@ -1208,9 +1244,9 @@
       ctx.save(); ctx.globalAlpha = fade; ctx.translate(enemy.x, enemy.y - progress * 16); ctx.rotate(progress * 1.4); ctx.scale(.82 + progress * .8, .82 + progress * .8); ctx.strokeStyle = enemy.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, enemy.radius * .75, 0, Math.PI * 2); ctx.stroke(); for (let i = 0; i < 6; i += 1) { const angle = i * Math.PI / 3; const length = enemy.radius * (.7 + progress * .8); ctx.fillStyle = i % 2 ? enemy.color : "#fff2c4"; ctx.beginPath(); ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5); ctx.lineTo(Math.cos(angle + .16) * length, Math.sin(angle + .16) * length); ctx.lineTo(Math.cos(angle - .16) * length, Math.sin(angle - .16) * length); ctx.closePath(); ctx.fill(); } ctx.restore(); return;
     }
     if (enemy.hidden) { ctx.save(); ctx.globalAlpha = .16 + Math.sin(time * 2 + enemy.orbit) * .04; drawShadow(enemy.x, enemy.y + 9, 15, 5, .35); ctx.fillStyle = "#8e76a5"; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y, 8, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
-    const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 2 : 0; const moving = enemy.motionSpeed > 5; const bob = moving ? Math.sin(enemy.walk) * (enemy.type === "moth" ? 2.6 : 1.4) : Math.sin(enemy.animTime * 1.7) * .45; const windup = enemy.telegraph > 0 ? clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1) : 0; const facing = enemy.facingX < -.15 ? -1 : 1;
+    const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 1.5 : 0; const moving = enemy.motionSpeed > 5; const bob = moving ? Math.sin(enemy.walk) * (enemy.type === "moth" ? 2.6 : 1.4) : Math.sin(enemy.animTime * 1.7) * .45; const windup = enemy.telegraph > 0 ? clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1) : 0; const facing = enemy.facingX < -.15 ? -1 : 1;
     drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92), enemy.radius * (moving ? .34 : .3), .36);
-    ctx.save(); ctx.translate(enemy.x + recoil, enemy.y + bob); ctx.scale(facing, 1); ctx.globalAlpha = enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1; ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2;
+    ctx.save(); ctx.translate(enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil); ctx.scale(facing, 1); ctx.globalAlpha = enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1; ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2;
     const color = enemy.color; const squash = enemy.hitStun > 0 ? .86 : enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "bossDashing" ? 1.12 : 1; const stretch = enemy.hitStun > 0 ? 1.1 : enemy.state === "chargeWindup" || enemy.state === "bossDashWindup" ? .86 : 1;
     ctx.scale(squash, stretch);
     if (enemy.type === "boss") {
@@ -1242,7 +1278,29 @@
     if (enemy.type === "warden" || enemy.type === "boss") { ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2, 4); ctx.fillStyle = enemy.color; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2 * (enemy.hp / enemy.maxHp), 4); }
   };
   const drawDrop = (drop, time) => { const bob = Math.sin(time * 4 + drop.bob) * 4; ctx.save(); ctx.translate(drop.x, drop.y + bob); ctx.globalAlpha = clamp(drop.life / 2, .35, 1); const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 30); glow.addColorStop(0, `${drop.color}99`); glow.addColorStop(1, `${drop.color}00`); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = `${drop.color}66`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 12 + Math.sin(time * 3 + drop.phase) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = drop.color; ctx.rotate(time * 1.8 + drop.phase); ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(8, 0); ctx.lineTo(0, 10); ctx.lineTo(-8, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = "rgba(255,255,235,.86)"; ctx.beginPath(); ctx.arc(-2, -3, 2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
-  const drawProjectile = (projectile) => { ctx.save(); const speed = Math.hypot(projectile.vx, projectile.vy) || 1; const trail = projectile.kind === "shockwave" ? 26 : projectile.kind === "root-lance" ? 34 : 20; ctx.globalAlpha = .18; ctx.strokeStyle = projectile.color; ctx.lineWidth = projectile.radius * .9; ctx.beginPath(); ctx.moveTo(projectile.x, projectile.y); ctx.lineTo(projectile.x - projectile.vx / speed * trail, projectile.y - projectile.vy / speed * trail); ctx.stroke(); ctx.globalAlpha = .95; ctx.fillStyle = projectile.color; ctx.shadowColor = projectile.color; ctx.shadowBlur = 12; if (projectile.kind === "shockwave") { ctx.translate(projectile.x, projectile.y); ctx.rotate(Math.atan2(projectile.vy, projectile.vx)); ctx.fillRect(-12, -3, 24, 6); ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 2; ctx.strokeRect(-14, -5, 28, 10); } else if (projectile.kind === "root-lance") { ctx.translate(projectile.x, projectile.y); ctx.rotate(Math.atan2(projectile.vy, projectile.vx)); ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(-7, -6); ctx.lineTo(-3, 0); ctx.lineTo(-7, 6); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(214,255,220,.7)"; ctx.lineWidth = 2; ctx.stroke(); } else { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius + 3, 0, Math.PI * 2); ctx.stroke(); } ctx.restore(); };
+  const drawProjectile = (projectile) => {
+    ctx.save();
+    const speed = Math.hypot(projectile.vx, projectile.vy) || 1; const angle = Math.atan2(projectile.vy, projectile.vx);
+    const trail = projectile.kind === "shockwave" ? 31 : projectile.kind === "root-lance" ? 38 : projectile.kind === "rosebolt" ? 28 : 22;
+    ctx.globalAlpha = projectile.kind === "shockwave" ? .22 : .18; ctx.strokeStyle = projectile.color; ctx.lineWidth = projectile.kind === "shockwave" ? 5 : 4; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(projectile.x, projectile.y); ctx.lineTo(projectile.x - projectile.vx / speed * trail, projectile.y - projectile.vy / speed * trail); ctx.stroke();
+    ctx.globalAlpha = .96; ctx.fillStyle = projectile.color; ctx.shadowColor = projectile.color; ctx.shadowBlur = projectile.kind === "shockwave" ? 14 : 10;
+    ctx.translate(projectile.x, projectile.y); ctx.rotate(angle);
+    if (projectile.kind === "shockwave") {
+      ctx.fillStyle = projectile.color; ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-5, -5); ctx.lineTo(-12, 0); ctx.lineTo(-5, 5); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.72)"; ctx.lineWidth = 1.6; ctx.stroke();
+    } else if (projectile.kind === "root-lance") {
+      ctx.fillStyle = projectile.color; ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-7, -7); ctx.lineTo(-3, 0); ctx.lineTo(-7, 7); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(214,255,220,.78)"; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "rgba(255,255,235,.72)"; ctx.fillRect(-1, -2, 7, 4);
+    } else if (projectile.kind === "rosebolt") {
+      ctx.fillStyle = projectile.color; ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(0, -8); ctx.lineTo(-8, 0); ctx.lineTo(0, 8); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(255,239,211,.78)"; ctx.lineWidth = 1.6; ctx.stroke(); ctx.fillStyle = "#fff4ca"; ctx.beginPath(); ctx.arc(1, 0, 2.4, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.fillStyle = projectile.color; ctx.beginPath(); ctx.arc(0, 0, projectile.radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.beginPath(); ctx.arc(2, -2, 2.2, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, projectile.radius + 3, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  };
   const drawAttackTrail = () => {
     if (player.attack <= 0) return;
     const linearProgress = clamp(player.attackElapsed / .34, 0, 1); const progress = 1 - Math.pow(1 - linearProgress, 2.2); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
@@ -1258,7 +1316,12 @@
   const drawParticle = (particle) => {
     const alpha = clamp(particle.life / particle.maxLife, 0, 1); const progress = 1 - alpha;
     ctx.save(); ctx.globalAlpha = alpha; ctx.translate(particle.x, particle.y);
-    if (particle.kind === "ring") { ctx.strokeStyle = particle.color; ctx.lineWidth = 3 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.45 + progress * .9), 0, Math.PI * 2); ctx.stroke(); }
+    if (particle.kind === "combat-spark") { ctx.rotate(particle.rotation); ctx.strokeStyle = particle.color; ctx.lineWidth = Math.max(1, particle.size * .26) * alpha; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-particle.size * .22, 0); ctx.lineTo(particle.size * (.62 + progress * .5), 0); ctx.stroke(); ctx.lineCap = "butt"; }
+    else if (particle.kind === "combat-ring") { ctx.strokeStyle = particle.color; ctx.globalAlpha = alpha * .84; ctx.lineWidth = Math.max(1.2, 3 * alpha); ctx.beginPath(); ctx.arc(0, 0, particle.size * (.2 + progress * 1.7), 0, Math.PI * 2); ctx.stroke(); }
+    else if (particle.kind === "impact-glint") { ctx.rotate(particle.rotation); ctx.strokeStyle = particle.color; ctx.lineWidth = 2 * alpha; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-particle.size * 1.8, 0); ctx.lineTo(particle.size * 1.8, 0); ctx.moveTo(0, -particle.size * 1.8); ctx.lineTo(0, particle.size * 1.8); ctx.stroke(); ctx.lineCap = "butt"; }
+    else if (particle.kind === "projectile-impact") { ctx.rotate(particle.rotation); ctx.strokeStyle = particle.color; ctx.globalAlpha = alpha * .8; ctx.lineWidth = 2 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.25 + progress * 1.1), 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = particle.color; ctx.beginPath(); ctx.moveTo(particle.size * .7, 0); ctx.lineTo(-particle.size * .35, particle.size * .35); ctx.lineTo(-particle.size * .2, 0); ctx.lineTo(-particle.size * .35, -particle.size * .35); ctx.closePath(); ctx.fill(); }
+    else if (particle.kind === "boss-slam-ring") { ctx.strokeStyle = particle.color; ctx.globalAlpha = alpha * .65; ctx.shadowColor = particle.color; ctx.shadowBlur = 12; ctx.lineWidth = 4 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.12 + progress * 1.9), 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; }
+    else if (particle.kind === "ring") { ctx.strokeStyle = particle.color; ctx.lineWidth = 3 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.45 + progress * .9), 0, Math.PI * 2); ctx.stroke(); }
     else if (particle.kind === "death-ring") { ctx.strokeStyle = particle.color; ctx.shadowColor = particle.color; ctx.shadowBlur = 10; ctx.lineWidth = 4 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.25 + progress * 1.55), 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; }
     else if (particle.kind === "death-shards") { ctx.rotate(progress * 1.5); ctx.strokeStyle = particle.color; ctx.lineWidth = 2 * alpha; for (let i = 0; i < 6; i += 1) { const angle = i * Math.PI / 3; const inner = particle.size * (.18 + progress * .12); const outer = particle.size * (.55 + progress * .7); ctx.beginPath(); ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner); ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer); ctx.stroke(); } }
     else if (particle.kind === "rootlight-ring") { ctx.strokeStyle = particle.color; ctx.shadowColor = particle.color; ctx.shadowBlur = 14; ctx.lineWidth = 5 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.4 + progress * 5.2), 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; }
