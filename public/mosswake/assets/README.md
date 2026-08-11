@@ -27,6 +27,7 @@ Mosswake currently renders its first playable slice with layered canvas primitiv
 | `dungeon/` | `room-border`, `gate`, `switch`, `chest`, `heartseed` | 96×96 modular pieces |
 | `weapons/` | `lantern-blade`, `impact-arc` | 96×48, 5 attack frames |
 | `items/` | `brass-key`, `heartseed-shard`, `moth-token` | 32×32, 2 glow frames |
+| `exploration/` | `pale-stone-clue`, `ivy-gate`, `hidden-chest`, `lantern-chart`, `lantern-seed`, `dewglass-lens` | 64×64–128×96, intact/broken/open/glow variants |
 | `effects/` | `slash`, `dash-trail`, `hit-spark`, `telegraph`, `portal` | 96×96, transparent sprite sheets |
 | `ui/` | `heart`, `key`, `map-marker`, `dialogue-frame` | 48×48 / 9-slice frame |
 
@@ -42,6 +43,8 @@ Mosswake currently renders its first playable slice with layered canvas primitiv
 8. Add three unique building facades for the outpost, shrine, and cabin while preserving their collision footprints.
 9. Add small looping effects: water shimmer, moth glow, fireflies, butterfly wings, songbird flaps, torch smoke, sword arc, and chest sparkle.
 10. Export with transparent backgrounds and avoid baked-in shadows; lighting, hit flashes, camera response, and enemy telegraphs are runtime-driven.
+11. Paint exploration-specific props as modular layers: a low-contrast three-stone clue trail, a tangled ivy gate with a readable broken state, a chest silhouette that can be glimpsed before it is reachable, and small chart/lens/seed pickup icons.
+12. Keep secret props visually discoverable through composition rather than UI markers: use value contrast, a gap in the reeds, a warm glint, and a distinctive landmark silhouette instead of arrows or floating labels.
 
 ## Temporary feel pass
 
