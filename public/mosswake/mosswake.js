@@ -92,16 +92,40 @@
   let leaves = Array.from({ length: 65 }, () => ({ x: rand(0, WORLD.width), y: rand(0, WORLD.height), speed: rand(5, 16), phase: rand(0, 6.28) }));
   const environment = {
     treesBack: [
-      { x: 80, y: 88, s: 1.45, phase: .4 }, { x: 270, y: 125, s: 1.15, phase: 2.1 }, { x: 520, y: 82, s: 1.35, phase: 4.8 },
-      { x: 760, y: 110, s: 1.6, phase: 1.4 }, { x: 1030, y: 72, s: 1.2, phase: 3.7 }, { x: 1330, y: 88, s: 1.55, phase: 5.2 }, { x: 1535, y: 110, s: 1.25, phase: 2.8 }
+      { x: 70, y: 90, s: 1.45, phase: .4 }, { x: 126, y: 148, s: 1.02, phase: 1.2 }, { x: 205, y: 105, s: 1.25, phase: 2.1 }, { x: 324, y: 136, s: .86, phase: 3.2 },
+      { x: 520, y: 82, s: 1.35, phase: 4.8 }, { x: 594, y: 132, s: .94, phase: 5.6 }, { x: 734, y: 94, s: 1.55, phase: 1.4 }, { x: 782, y: 152, s: .82, phase: 2.3 },
+      { x: 1018, y: 72, s: 1.2, phase: 3.7 }, { x: 1086, y: 126, s: .88, phase: 4.4 }, { x: 1308, y: 88, s: 1.55, phase: 5.2 }, { x: 1402, y: 136, s: .95, phase: .9 }, { x: 1535, y: 110, s: 1.25, phase: 2.8 }
     ],
     treesMid: [
-      { x: 125, y: 248, s: 1.05, phase: 2.3 }, { x: 360, y: 282, s: .86, phase: 4.2 }, { x: 545, y: 336, s: 1.12, phase: 1.1 },
-      { x: 740, y: 356, s: .78, phase: 3.5 }, { x: 1040, y: 330, s: 1.12, phase: 5.5 }, { x: 1465, y: 315, s: 1.24, phase: 2.2 },
-      { x: 1510, y: 690, s: 1.08, phase: 4.6 }, { x: 250, y: 772, s: 1.18, phase: .8 }, { x: 1045, y: 835, s: .92, phase: 3.1 }
+      { x: 125, y: 248, s: 1.05, phase: 2.3 }, { x: 164, y: 292, s: .78, phase: 3.1 }, { x: 242, y: 268, s: 1.18, phase: 3.8 },
+      { x: 360, y: 282, s: .86, phase: 4.2 }, { x: 545, y: 336, s: 1.12, phase: 1.1 }, { x: 740, y: 356, s: .78, phase: 3.5 }, { x: 1040, y: 330, s: 1.12, phase: 5.5 },
+      { x: 1110, y: 380, s: .82, phase: 1.1 }, { x: 1465, y: 315, s: 1.24, phase: 2.2 }, { x: 1510, y: 690, s: 1.08, phase: 4.6 }, { x: 250, y: 772, s: 1.18, phase: .8 },
+      { x: 330, y: 824, s: .86, phase: 1.9 }, { x: 1045, y: 835, s: .92, phase: 3.1 }
     ],
     treesFront: [
       { x: 145, y: 900, s: 1.3, phase: 1.7 }, { x: 510, y: 930, s: 1.05, phase: 5.1 }, { x: 1245, y: 900, s: 1.4, phase: 3.6 }, { x: 1530, y: 900, s: 1.1, phase: .2 }
+    ],
+    bushes: [
+      { x: 115, y: 318, s: 1.1, variant: 0, phase: .2 }, { x: 164, y: 298, s: .8, variant: 1, phase: 1.4 }, { x: 215, y: 328, s: 1.25, variant: 0, phase: 2.6 },
+      { x: 342, y: 344, s: .85, variant: 2, phase: 4.1 }, { x: 376, y: 327, s: .72, variant: 0, phase: 5.2 },
+      { x: 1328, y: 350, s: 1.1, variant: 1, phase: 1.8 }, { x: 1380, y: 332, s: .72, variant: 0, phase: 3.3 }, { x: 1450, y: 366, s: 1.24, variant: 2, phase: 5.4 },
+      { x: 1320, y: 755, s: .95, variant: 0, phase: .7 }, { x: 1410, y: 728, s: 1.18, variant: 1, phase: 2.2 }, { x: 1490, y: 770, s: .76, variant: 2, phase: 4.5 }
+    ],
+    cliffs: [
+      { x: 30, y: 190, w: 250, h: 74, phase: .4 }, { x: 1240, y: 42, w: 320, h: 66, phase: 2.7 }, { x: 1410, y: 610, w: 190, h: 58, phase: 4.4 }
+    ],
+    fences: [
+      { x: 330, y: 318, length: 118, angle: -.08, posts: 4 }, { x: 1120, y: 735, length: 146, angle: .12, posts: 5 }, { x: 150, y: 670, length: 88, angle: -.22, posts: 3 }
+    ],
+    ruins: [
+      { x: 1322, y: 410, s: 1, phase: .2 }, { x: 875, y: 285, s: .76, phase: 2.6 }
+    ],
+    signs: [
+      { x: 420, y: 354, angle: -.08, label: "OUTPOST" }, { x: 1080, y: 628, angle: .12, label: "LOW POND" }
+    ],
+    clearings: [
+      { x: 230, y: 380, rx: 135, ry: 62, tone: "#467b50", rotation: -.12 }, { x: 480, y: 300, rx: 112, ry: 48, tone: "#2b5741", rotation: .16 },
+      { x: 1280, y: 690, rx: 180, ry: 72, tone: "#477b50", rotation: -.2 }
     ],
     grasses: [
       { x: 65, y: 355, s: 1.1, phase: .2 }, { x: 180, y: 410, s: .8, phase: 2.2 }, { x: 305, y: 560, s: 1.25, phase: 4.1 },
@@ -124,8 +148,9 @@
       { x: 265, y: 700, length: 92, angle: -.16, s: 1 }, { x: 850, y: 612, length: 112, angle: .12, s: .9 }, { x: 1350, y: 790, length: 80, angle: -.5, s: .8 }
     ],
     shoreStones: [
-      { x: 620, y: 648, s: .7 }, { x: 690, y: 642, s: .55 }, { x: 770, y: 646, s: .8 }, { x: 850, y: 655, s: .6 },
-      { x: 950, y: 676, s: .65 }, { x: 1080, y: 555, s: .5 }, { x: 1160, y: 552, s: .72 }, { x: 1260, y: 554, s: .58 }
+      { x: 620, y: 665, s: .7 }, { x: 648, y: 680, s: .45 }, { x: 704, y: 653, s: .8 }, { x: 774, y: 663, s: .55 },
+      { x: 815, y: 686, s: .72 }, { x: 901, y: 674, s: .5 }, { x: 958, y: 700, s: .82 }, { x: 1068, y: 550, s: .48 },
+      { x: 1105, y: 542, s: .65 }, { x: 1194, y: 557, s: .78 }, { x: 1268, y: 543, s: .5 }, { x: 1324, y: 568, s: .72 }
     ],
     butterflies: [
       { x: 230, y: 300, phase: .3, speed: .8, range: 34, color: "#f2c47e" }, { x: 630, y: 380, phase: 2.4, speed: 1.05, range: 27, color: "#e8a5c4" },
@@ -820,6 +845,53 @@
     ctx.strokeStyle = "rgba(222,255,193,.24)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-27, 2); ctx.quadraticCurveTo(-8, -4, 9, -7); ctx.moveTo(1, 9); ctx.quadraticCurveTo(12, 3, 22, -1); ctx.stroke();
     ctx.restore();
   };
+  const drawBush = (bush, time, foreground = false) => {
+    const palette = [
+      ["#3d7b50", "#65a563"], ["#477f56", "#78b66c"], ["#376b4b", "#5e9b5d"]
+    ][bush.variant || 0]; const depth = foreground ? .96 : .86; const sway = Math.sin(time * 1.25 + bush.phase) * .035;
+    ctx.save(); ctx.globalAlpha = depth; ctx.translate(bush.x, bush.y); ctx.rotate(sway); ctx.scale(bush.s || 1, bush.s || 1); drawShadow(0, 11, 28, 8, .27);
+    ctx.fillStyle = palette[0]; ctx.beginPath(); ctx.ellipse(-20, 0, 22, 14, -.22, 0, Math.PI * 2); ctx.ellipse(0, -8, 25, 17, .08, 0, Math.PI * 2); ctx.ellipse(23, 3, 19, 12, .3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.beginPath(); ctx.ellipse(-20, 0, 22, 14, -.22, 0, Math.PI * 2); ctx.ellipse(0, -8, 25, 17, .08, 0, Math.PI * 2); ctx.ellipse(23, 3, 19, 12, .3, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = palette[1]; ctx.beginPath(); ctx.arc(-10, -8, 7, 0, Math.PI * 2); ctx.arc(8, -14, 8, 0, Math.PI * 2); ctx.arc(18, -1, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(224,255,194,.18)"; ctx.beginPath(); ctx.arc(-8, -14, 4, 0, Math.PI * 2); ctx.arc(9, -20, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  };
+  const drawCliff = (cliff, time) => {
+    ctx.save(); ctx.translate(cliff.x, cliff.y); ctx.rotate(Math.sin(time * .12 + cliff.phase) * .008); drawShadow(cliff.w * .5, cliff.h + 12, cliff.w * .48, 9, .22);
+    ctx.fillStyle = "#315644"; ctx.beginPath(); ctx.moveTo(0, cliff.h); ctx.lineTo(12, 18); ctx.quadraticCurveTo(cliff.w * .3, -4, cliff.w * .55, 12); ctx.quadraticCurveTo(cliff.w * .78, -1, cliff.w, 16); ctx.lineTo(cliff.w - 6, cliff.h); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = "#52785a"; ctx.beginPath(); ctx.moveTo(9, 18); ctx.quadraticCurveTo(cliff.w * .3, -3, cliff.w * .55, 11); ctx.quadraticCurveTo(cliff.w * .78, -1, cliff.w - 6, 16); ctx.lineTo(cliff.w - 14, 26); ctx.quadraticCurveTo(cliff.w * .72, 13, cliff.w * .52, 25); ctx.quadraticCurveTo(cliff.w * .28, 10, 16, 28); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(175,205,157,.24)"; ctx.lineWidth = 2; for (let i = 0; i < 3; i += 1) { const x = 30 + i * (cliff.w - 60) / 2; ctx.beginPath(); ctx.moveTo(x, 38); ctx.lineTo(x - 9, cliff.h - 8); ctx.stroke(); } ctx.restore();
+  };
+  const drawFence = (fence) => {
+    ctx.save(); ctx.translate(fence.x, fence.y); ctx.rotate(fence.angle); drawShadow(0, 8, fence.length * .45, 6, .23);
+    ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(-fence.length / 2, -6); ctx.lineTo(fence.length / 2, -6); ctx.moveTo(-fence.length / 2, 8); ctx.lineTo(fence.length / 2, 8); ctx.stroke();
+    ctx.strokeStyle = "#a9794d"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-fence.length / 2, -6); ctx.lineTo(fence.length / 2, -6); ctx.moveTo(-fence.length / 2, 8); ctx.lineTo(fence.length / 2, 8); ctx.stroke();
+    for (let i = 0; i < fence.posts; i += 1) { const x = -fence.length / 2 + i * fence.length / (fence.posts - 1); ctx.fillStyle = "#745039"; ctx.fillRect(x - 4, -16, 8, 34); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.strokeRect(x - 4, -16, 8, 34); ctx.fillStyle = "#b18455"; ctx.fillRect(x - 2, -13, 3, 8); } ctx.restore();
+  };
+  const drawRuin = (ruin, time) => {
+    ctx.save(); ctx.translate(ruin.x, ruin.y); ctx.scale(ruin.s, ruin.s); drawShadow(0, 18, 42, 9, .3);
+    ctx.fillStyle = "#657b70"; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-42, 11); ctx.lineTo(-36, -19); ctx.lineTo(-15, -31); ctx.lineTo(8, -19); ctx.lineTo(39, -28); ctx.lineTo(45, 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#91a28b"; ctx.fillRect(-32, -17, 18, 9); ctx.fillRect(9, -18, 25, 8); ctx.fillStyle = "#4e685c"; ctx.fillRect(-25, -5, 18, 17); ctx.fillRect(5, -2, 22, 14);
+    ctx.strokeStyle = "#8fba72"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, -28); ctx.quadraticCurveTo(2, -15 + Math.sin(time * 1.5) * 2, 12, -2); ctx.stroke(); ctx.fillStyle = "#76ab69"; ctx.beginPath(); ctx.arc(-9, -19, 5, 0, Math.PI * 2); ctx.arc(5, -10, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  };
+  const drawSign = (sign) => {
+    ctx.save(); ctx.translate(sign.x, sign.y); ctx.rotate(sign.angle); drawShadow(0, 11, 14, 5, .24); ctx.fillStyle = "#714d38"; ctx.fillRect(-3, -25, 6, 38); ctx.fillStyle = "#b7834f"; ctx.beginPath(); ctx.moveTo(-27, -29); ctx.lineTo(23, -29); ctx.lineTo(29, -18); ctx.lineTo(23, -7); ctx.lineTo(-27, -7); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "rgba(246,222,166,.7)"; ctx.font = "700 7px DM Mono"; ctx.textAlign = "center"; ctx.fillText(sign.label, -1, -17); ctx.restore();
+  };
+  const drawClearing = (clearing, time) => {
+    ctx.save(); ctx.translate(clearing.x, clearing.y); ctx.rotate(clearing.rotation); ctx.globalAlpha = .32 + Math.sin(time * .2 + clearing.x) * .015; ctx.fillStyle = clearing.tone; ctx.beginPath(); ctx.ellipse(0, 0, clearing.rx, clearing.ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = .36; ctx.strokeStyle = "rgba(186,218,157,.22)"; ctx.lineWidth = 2; ctx.setLineDash([3, 13]); ctx.beginPath(); ctx.ellipse(0, 0, clearing.rx * .8, clearing.ry * .68, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+  };
+  const drawDappleShadows = (time) => {
+    ctx.save(); ctx.globalAlpha = .1; ctx.fillStyle = "#153c2f";
+    [[180,270,100,32,.2],[480,360,88,26,1.4],[1020,350,120,38,2.6],[1420,430,105,30,4.2]].forEach(([x,y,rx,ry,phase]) => { const drift = Math.sin(time * .16 + phase) * 12; ctx.beginPath(); ctx.ellipse(x + drift, y, rx, ry, .18, 0, Math.PI * 2); ctx.fill(); }); ctx.restore();
+  };
+  const drawMeadowClusters = (time) => {
+    [[150, 365, 4, 30, .3], [300, 405, 3, 25, 1.7], [585, 405, 4, 28, 3.1], [1180, 390, 3, 26, 4.4], [1435, 540, 4, 34, 5.2]].forEach(([x, y, count, spread, phase], clusterIndex) => {
+      for (let i = 0; i < count; i += 1) {
+        const angle = hash01(clusterIndex * 13 + i, 3) * Math.PI * 2; const radius = 8 + hash01(clusterIndex * 17 + i, 7) * spread;
+        drawGrassTuft({ x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius * .5, s: .5 + hash01(i, clusterIndex) * .42, phase: phase + i }, time);
+        if (i % 2 === 0) drawFlower({ x: x + Math.cos(angle + .5) * (radius + 6), y: y + Math.sin(angle + .5) * (radius + 6) * .5, s: .42 + hash01(i, 12) * .22, phase: phase + i + .6, color: i % 4 === 0 ? "#e8b7c5" : "#ecd28a" }, time);
+      }
+    });
+  };
   const drawGrassBase = (time) => {
     const wash = ctx.createLinearGradient(0, 0, WORLD.width, WORLD.height); wash.addColorStop(0, "#3b7650"); wash.addColorStop(.45, "#315f45"); wash.addColorStop(1, "#274c3b");
     ctx.fillStyle = wash; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
@@ -943,24 +1015,27 @@
     const haze = ctx.createLinearGradient(0, 80, 0, 360); haze.addColorStop(0, "rgba(207,246,196,.08)"); haze.addColorStop(1, "rgba(207,246,196,0)"); ctx.fillStyle = haze; ctx.fillRect(0, 0, WORLD.width, 360);
   };
   const drawOverworld = (time) => {
-    drawGrassBase(time); drawPath(time);
+    drawGrassBase(time); environment.clearings.forEach((clearing) => drawClearing(clearing, time)); environment.cliffs.forEach((cliff) => drawCliff(cliff, time)); drawPath(time);
     environment.treesBack.forEach((tree) => drawTree(tree, time, "back"));
+    drawDappleShadows(time);
     drawPond({ x: 610, y: 650, w: 360, h: 150 }, time); drawPond({ x: 1080, y: 510, w: 260, h: 90 }, time + 1, true);
     environment.shoreStones.forEach((stone) => { ctx.fillStyle = "#b2b596"; ctx.beginPath(); ctx.ellipse(stone.x, stone.y, 13 * stone.s, 6 * stone.s, -.15, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "rgba(238,240,195,.28)"; ctx.beginPath(); ctx.ellipse(stone.x - 3, stone.y - 2, 5 * stone.s, 2 * stone.s, -.15, 0, Math.PI * 2); ctx.fill(); });
     environment.treesMid.forEach((tree) => drawTree(tree, time, "mid"));
+    environment.bushes.filter((bush) => bush.y < 600).forEach((bush) => drawBush(bush, time)); environment.fences.filter((fence) => fence.y < 600).forEach(drawFence); environment.ruins.filter((ruin) => ruin.y < 600).forEach((ruin) => drawRuin(ruin, time)); environment.signs.filter((sign) => sign.y < 600).forEach(drawSign);
     drawHouse(800, 90, 300, 165, "#d5c99e", "#a56e4e"); drawHouse(1140, 100, 190, 135, "#9fb88b", "#6a8e70");
     drawLantern(790, 290, time); drawLantern(1115, 282, time + 1); drawLantern(1280, 172, time + 2);
     ctx.fillStyle = "#6c4d3a"; ctx.fillRect(1280, 180, 64, 64); ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.strokeRect(1280, 180, 64, 64); ctx.fillStyle = "rgba(130,241,215,.42)"; ctx.fillRect(1290, 190, 44, 44); ctx.fillStyle = "#e5d59f"; ctx.fillRect(1303, 246, 20, 7);
     environment.rocks.forEach(drawRock); environment.logs.forEach(drawLog); drawExplorationClues(time); drawHiddenGrovePreview(time); drawRootlightOverworld(time);
-    environment.grasses.forEach((grass) => drawGrassTuft(grass, time)); environment.flowers.forEach((flower) => drawFlower(flower, time));
+    environment.grasses.forEach((grass) => drawGrassTuft(grass, time)); environment.flowers.forEach((flower) => drawFlower(flower, time)); drawMeadowClusters(time);
     if (!state.chestOpened) drawChest(1240, 745, false); else drawChest(1240, 745, true);
     drawCampfire(npcs[1].x - 24, npcs[1].y + 18, time); drawMapTable(npcs[3].x + 24, npcs[3].y + 18, time); drawPondBasket(npcs[2].x - 14, npcs[2].y + 14, time); npcs.forEach((npc) => drawNpc(npc, time)); drawEntrance(1312, 210, time);
-    ctx.fillStyle = "rgba(255,226,166,.42)"; ctx.fillRect(420, 365, 78, 4); ctx.fillStyle = "#7a573e"; ctx.fillRect(453, 340, 5, 28); ctx.fillStyle = "#d3ad6d"; ctx.beginPath(); ctx.moveTo(458, 341); ctx.lineTo(493, 350); ctx.lineTo(458, 359); ctx.closePath(); ctx.fill();
+    environment.signs.filter((sign) => sign.y >= 600).forEach(drawSign);
     environment.birds.forEach((bird) => drawBird(bird, time)); environment.butterflies.forEach((butterfly) => drawButterfly(butterfly, time)); environment.fireflies.forEach((firefly) => drawFirefly(firefly, time));
     breakables().forEach((object) => drawBreakable(object, time)); drawOutdoorLighting(time);
   };
   const drawOutdoorForeground = (time) => {
     environment.treesFront.forEach((tree) => drawTree(tree, time, "front"));
+    environment.bushes.filter((bush) => bush.y >= 600).forEach((bush) => drawBush(bush, time, true)); environment.fences.filter((fence) => fence.y >= 600).forEach(drawFence); environment.ruins.filter((ruin) => ruin.y >= 600).forEach((ruin) => drawRuin(ruin, time));
     environment.grasses.filter((grass) => grass.y > 560).forEach((grass) => drawGrassTuft(grass, time, true));
     drawLeafCluster(70, 560, 1.2, "#467e55", time, .4); drawLeafCluster(1510, 505, .95, "#3d744f", time, 1.4); drawLeafCluster(1180, 846, 1.05, "#558c58", time, 2.7);
     [[585, 730], [975, 735], [1060, 565]].forEach(([x, y], i) => { const sway = Math.sin(time * 2 + i) * .12; ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.strokeStyle = i === 2 ? "#78b979" : "#6fae69"; ctx.lineWidth = 3; for (let n = -1; n <= 1; n += 1) { ctx.beginPath(); ctx.moveTo(n * 8, 18); ctx.quadraticCurveTo(n * 9, 0, n * 13, -22); ctx.stroke(); } ctx.restore(); });
@@ -1181,7 +1256,7 @@
   const draw = (time) => {
     ctx.clearRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.translate(-camera.x + camera.shakeX, -camera.y + camera.shakeY);
     if (state.area === "overworld") drawOverworld(time); else drawDungeon(time);
-    leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { ctx.fillStyle = "rgba(213,246,174,.55)"; ctx.fillRect(leaf.x, leaf.y, 3, 7); } });
+    leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { ctx.save(); ctx.translate(leaf.x, leaf.y); ctx.rotate(Math.sin(leaf.phase + leaf.y * .02) * .5); ctx.globalAlpha = .38 + hash01(Math.floor(leaf.x), Math.floor(leaf.y)) * .2; ctx.fillStyle = leaf.phase % 2 > 1 ? "#b6df8b" : "#d3edac"; ctx.beginPath(); ctx.moveTo(0, -5); ctx.quadraticCurveTo(5, -1, 1, 6); ctx.quadraticCurveTo(-4, 1, 0, -5); ctx.fill(); ctx.restore(); } });
     const entities = [...enemies].sort((a, b) => a.y - b.y); entities.forEach((enemy) => drawEnemy(enemy, time)); drops.forEach((drop) => drawDrop(drop, time)); projectiles.forEach((projectile) => drawProjectile(projectile));
     drawPlayer(time); if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); ctx.restore();
     drawAmbientOverlay(time);
