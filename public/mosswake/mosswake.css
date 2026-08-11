@@ -41,6 +41,7 @@ button, a, summary { -webkit-tap-highlight-color:transparent; }
 .hero-card { background:linear-gradient(145deg,rgba(26,64,47,.82),rgba(8,23,20,.78)); }
 .hearts { min-height:19px; align-items:center; }
 .heart { transform:rotate(-45deg) scale(.92); transition:transform .18s ease,background .2s ease,filter .2s ease; filter:drop-shadow(0 3px 4px rgba(0,0,0,.18)); }
+.heart:not(.empty) { background:linear-gradient(145deg,#ffd8ce 0%,#ff9a9d 58%,#c65d7b 100%); box-shadow:0 0 13px rgba(255,154,157,.32),inset 2px -2px 0 rgba(153,55,83,.18),inset -2px 2px 0 rgba(255,255,255,.22); }
 .heart:not(.empty) { animation:heart-glimmer 3.4s ease-in-out infinite; }
 .heart:nth-child(2n) { animation-delay:-1.3s; }
 .heart.empty { border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.1); }
