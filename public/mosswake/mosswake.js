@@ -1202,6 +1202,82 @@
     ctx.strokeStyle = "rgba(10,18,18,.55)"; ctx.lineWidth = 12; ctx.strokeRect(47, 47, ROOM.width - 94, ROOM.height - 94);
     for (let x = 100; x < ROOM.width - 100; x += 180) drawTorch(x, 68, time);
   };
+  const drawDungeonArch = (x, y, rotation = 0, color = "#6b8479", broken = false) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rotation); drawShadow(0, 32, 54, 8, .24);
+    ctx.fillStyle = "#1a2929"; ctx.beginPath(); ctx.arc(0, 0, 62, Math.PI, 0); ctx.lineTo(62, 42); ctx.lineTo(44, 42); ctx.lineTo(44, 8); ctx.arc(0, 0, 44, 0, Math.PI, true); ctx.lineTo(-44, 42); ctx.lineTo(-62, 42); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(0, 0, 53, Math.PI, 0); ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = "rgba(202,231,193,.34)"; ctx.beginPath(); ctx.arc(0, -2, 45, Math.PI, 0); ctx.stroke();
+    ctx.fillStyle = color; ctx.fillRect(-56, 7, 14, 38); ctx.fillRect(42, 7, 14, 38); ctx.fillStyle = "rgba(222,239,203,.18)"; ctx.fillRect(-51, 12, 4, 26); ctx.fillRect(47, 12, 4, 26);
+    ctx.strokeStyle = broken ? "rgba(218,150,116,.7)" : "rgba(19,45,38,.6)"; ctx.lineWidth = broken ? 3 : 2; ctx.beginPath(); ctx.moveTo(-27, -33); ctx.lineTo(-18, -18); ctx.lineTo(-28, -2); ctx.moveTo(17, -23); ctx.lineTo(7, -8); ctx.lineTo(19, 7); ctx.stroke();
+    if (broken) { ctx.fillStyle = "#52665c"; ctx.beginPath(); ctx.moveTo(-18, -45); ctx.lineTo(-2, -53); ctx.lineTo(9, -43); ctx.lineTo(3, -31); ctx.lineTo(-12, -32); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+  };
+  const drawDungeonPillar = (x, y, w = 54, h = 130, color = "#6d887d", cracked = false) => {
+    ctx.save(); ctx.translate(x, y); drawShadow(0, h * .5 + 12, w * .56, 8, .28);
+    const body = ctx.createLinearGradient(-w / 2, 0, w / 2, 0); body.addColorStop(0, "#3b514d"); body.addColorStop(.18, color); body.addColorStop(.72, color); body.addColorStop(1, "#293a3a"); ctx.fillStyle = body; ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.strokeStyle = "rgba(13,33,31,.72)"; ctx.lineWidth = 2; ctx.strokeRect(-w / 2, -h / 2, w, h); ctx.fillStyle = "#859b88"; ctx.fillRect(-w / 2 - 8, -h / 2 - 7, w + 16, 13); ctx.fillStyle = "#3a5149"; ctx.fillRect(-w / 2 - 12, h / 2 - 5, w + 24, 13); ctx.fillStyle = "rgba(226,241,207,.2)"; ctx.fillRect(-w / 2 + 6, -h / 2 + 9, 5, h - 22);
+    ctx.strokeStyle = cracked ? "rgba(224,155,122,.7)" : "rgba(19,48,41,.45)"; ctx.lineWidth = cracked ? 2.5 : 1.5; ctx.beginPath(); ctx.moveTo(-8, -h * .3); ctx.lineTo(3, -h * .12); ctx.lineTo(-4, h * .02); ctx.lineTo(9, h * .2); ctx.stroke(); if (cracked) { ctx.beginPath(); ctx.moveTo(17, -h * .05); ctx.lineTo(7, h * .16); ctx.lineTo(16, h * .32); ctx.stroke(); }
+    ctx.restore();
+  };
+  const drawDungeonRubble = (x, y, scale = 1, seed = 1) => {
+    ctx.save(); ctx.translate(x, y); drawShadow(0, 10 * scale, 28 * scale, 6 * scale, .24);
+    for (let i = 0; i < 5; i += 1) { const px = (hash01(seed, i) - .5) * 52 * scale; const py = (hash01(seed + 3, i) - .5) * 19 * scale; const size = (5 + hash01(seed + 8, i) * 10) * scale; ctx.save(); ctx.translate(px, py); ctx.rotate(hash01(seed + 12, i) * Math.PI); ctx.fillStyle = i % 2 ? "#657a70" : "#829387"; ctx.beginPath(); ctx.moveTo(-size, size * .45); ctx.lineTo(-size * .55, -size * .55); ctx.lineTo(size * .35, -size); ctx.lineTo(size, size * .18); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(16,38,34,.55)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore(); }
+    ctx.restore();
+  };
+  const drawDungeonCarving = (x, y, radius = 34, color = "#8db7a1", label = "") => {
+    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = .7; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = .34; ctx.beginPath(); ctx.arc(0, 0, radius * .66, -.5, Math.PI * 1.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-radius * .55, 0); ctx.lineTo(0, -radius * .42); ctx.lineTo(radius * .55, 0); ctx.moveTo(-radius * .35, radius * .28); ctx.lineTo(0, radius * .5); ctx.lineTo(radius * .35, radius * .28); ctx.stroke(); if (label) { ctx.globalAlpha = .8; ctx.fillStyle = color; ctx.font = "700 8px DM Mono"; ctx.textAlign = "center"; ctx.fillText(label, 0, 3); } ctx.restore();
+  };
+  const drawDungeonStatue = (x, y, scale = 1, damaged = false, time = 0) => {
+    ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); drawShadow(0, 22, 28, 7, .3); ctx.fillStyle = "#485b57"; ctx.fillRect(-21, 10, 42, 12); ctx.fillStyle = "#71877c"; ctx.beginPath(); ctx.moveTo(-14, 12); ctx.lineTo(-10, -24); ctx.lineTo(0, -36); ctx.lineTo(11, -23); ctx.lineTo(15, 12); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(16,38,34,.7)"; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "#92aa94"; ctx.beginPath(); ctx.arc(0, -25, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#334844"; ctx.fillRect(-11, -7, 22, 5); ctx.strokeStyle = damaged ? "rgba(220,142,115,.75)" : "rgba(26,58,49,.52)"; ctx.lineWidth = damaged ? 3 : 1.5; ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(4, -2); ctx.lineTo(-2, 14); ctx.stroke(); if (damaged) { ctx.fillStyle = "#394a47"; ctx.beginPath(); ctx.moveTo(4, -40); ctx.lineTo(17, -34); ctx.lineTo(11, -22); ctx.closePath(); ctx.fill(); } ctx.globalAlpha = .35 + Math.sin(time * 2 + x) * .08; ctx.fillStyle = COLORS.mint; ctx.beginPath(); ctx.arc(0, -25, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  };
+  const drawDungeonMachine = (x, y, scale = 1, active = false, time = 0) => {
+    ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); drawShadow(0, 22, 40, 8, .25); ctx.fillStyle = "#354747"; ctx.fillRect(-35, -12, 70, 35); ctx.strokeStyle = "#172c2b"; ctx.lineWidth = 3; ctx.strokeRect(-35, -12, 70, 35); ctx.fillStyle = "#73897d"; ctx.fillRect(-24, -5, 48, 7); ctx.strokeStyle = active ? COLORS.mint : "#9c755e"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 7, 13 + Math.sin(time * 2.2) * 1.5, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-9, 7); ctx.lineTo(9, 7); ctx.moveTo(0, -2); ctx.lineTo(0, 16); ctx.stroke(); ctx.fillStyle = active ? COLORS.mint : "#c88662"; ctx.beginPath(); ctx.arc(0, 7, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#84988a"; ctx.fillRect(-44, 17, 88, 8); ctx.restore();
+  };
+  const drawDungeonFloorInlay = (x, y, rx, ry, color, style = "ring", time = 0) => {
+    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = .38; ctx.strokeStyle = color; ctx.lineWidth = 3; if (style === "ring") { ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, Math.sin(time * .15) * .02, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(0, 0, rx * .72, ry * .62, 0, 0, Math.PI * 2); ctx.stroke(); } else if (style === "channel") { ctx.beginPath(); ctx.moveTo(-rx, -ry * .2); ctx.quadraticCurveTo(-rx * .35, -ry, rx * .35, -ry * .15); ctx.quadraticCurveTo(rx * .65, ry * .35, rx, ry * .08); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-rx * .7, ry * .32); ctx.lineTo(rx * .72, ry * .32); ctx.stroke(); } else { ctx.beginPath(); ctx.moveTo(-rx, -ry); ctx.lineTo(0, -ry * .45); ctx.lineTo(rx, -ry); ctx.lineTo(rx * .65, ry); ctx.lineTo(0, ry * .45); ctx.lineTo(-rx * .65, ry); ctx.closePath(); ctx.stroke(); } ctx.globalAlpha = .22; ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, rx * .35, ry * .22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  };
+  const drawDungeonArchitecture = (time, key) => {
+    const [base, stone] = dungeonRoomTint(key); const accent = key === "1-1" ? "#d99072" : key === "2-1" ? "#c77e99" : key === "1-0" ? "#9ebce0" : "#8ebaa1";
+    ctx.save(); ctx.globalAlpha = .28; ctx.fillStyle = "#0b1718"; ctx.fillRect(55, 55, ROOM.width - 110, 16); ctx.fillRect(55, ROOM.height - 71, ROOM.width - 110, 16); ctx.fillRect(55, 55, 16, ROOM.height - 110); ctx.fillRect(ROOM.width - 71, 55, 16, ROOM.height - 110); ctx.restore();
+    drawDungeonArch(600, 58, 0, stone, key === "1-1"); drawDungeonArch(600, 742, Math.PI, stone, key === "0-1"); drawDungeonArch(58, 400, -Math.PI / 2, stone, key === "1-1"); drawDungeonArch(1142, 400, Math.PI / 2, stone, key === "0-0");
+    if (key === "0-0") {
+      drawDungeonPillar(297, 250, 54, 120, "#68867b", true); drawDungeonPillar(903, 250, 54, 120, "#68867b", false); drawDungeonFloorInlay(600, 430, 265, 150, "#8bb8a2", "ring", time); drawDungeonCarving(600, 135, 46, accent, "BRASS"); drawDungeonCarving(1020, 620, 34, accent, "ROOT"); drawDungeonRubble(350, 340, 1.1, 5); drawDungeonRubble(845, 515, .8, 9);
+    } else if (key === "1-0") {
+      drawDungeonPillar(297, 285, 54, 150, "#60788b", false); drawDungeonPillar(903, 285, 54, 150, "#60788b", true); drawDungeonFloorInlay(600, 400, 380, 72, "#96b9df", "channel", time); drawDungeonMachine(600, 248, .85, state.switches, time); drawDungeonCarving(600, 114, 44, accent, "MOON"); drawDungeonRubble(430, 565, .8, 12); drawDungeonRubble(770, 565, .8, 17);
+    } else if (key === "2-0") {
+      drawDungeonPillar(253, 255, 46, 130, "#74866e", true); drawDungeonPillar(947, 255, 46, 130, "#74866e", true); drawDungeonFloorInlay(600, 400, 235, 175, "#8bb879", "ring", time); drawDungeonStatue(168, 430, .9, true, time); drawDungeonStatue(1032, 430, .9, false, time); drawDungeonRubble(300, 575, .9, 21); drawDungeonRubble(900, 575, .9, 26); drawDungeonCarving(600, 140, 48, accent, "WARDEN");
+    } else if (key === "0-1") {
+      drawDungeonPillar(340, 300, 80, 180, "#5b8588", true); drawDungeonPillar(860, 490, 80, 180, "#5b8588", false); drawDungeonFloorInlay(600, 390, 310, 190, "#6ed0c4", "channel", time); drawDungeonCarving(600, 135, 44, accent, "TIDE"); drawDungeonRubble(220, 615, .85, 31); drawDungeonRubble(980, 205, .75, 34); ctx.save(); ctx.globalAlpha = .34; ctx.strokeStyle = "#9de3d5"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(180, 58); ctx.bezierCurveTo(180, 140 + Math.sin(time) * 4, 210, 165, 240, 215); ctx.stroke(); ctx.beginPath(); ctx.moveTo(960, 58); ctx.bezierCurveTo(956, 130, 930, 160, 900, 208); ctx.stroke(); ctx.restore();
+    } else if (key === "1-1") {
+      drawDungeonPillar(195, 150, 48, 110, "#75554d", true); drawDungeonPillar(1005, 150, 48, 110, "#75554d", true); drawDungeonFloorInlay(600, 600, 350, 90, "#b8735d", "channel", time); drawDungeonMachine(600, 130, .9, state.rootlightTested, time); drawDungeonStatue(1010, 390, .82, true, time); drawDungeonCarving(600, 228, 42, accent, "ASH"); drawDungeonRubble(360, 220, 1.15, 41); drawDungeonRubble(840, 220, 1.1, 45);
+    } else if (key === "2-1") {
+      drawDungeonPillar(242, 260, 45, 180, "#74566f", true); drawDungeonPillar(958, 260, 45, 180, "#74566f", true); drawDungeonFloorInlay(600, 390, 270, 210, state.bossPhase === 2 ? "#d66b92" : "#be8aae", "ring", time); drawDungeonCarving(600, 126, 54, accent, state.bossDefeated ? "OPEN" : "HEART"); drawDungeonStatue(160, 470, .85, true, time); drawDungeonStatue(1040, 470, .85, true, time); drawDungeonRubble(290, 625, .9, 51); drawDungeonRubble(910, 625, .9, 56);
+    }
+    ctx.save(); ctx.globalAlpha = .22; ctx.strokeStyle = "rgba(224,240,208,.5)"; ctx.lineWidth = 1.5; for (let i = 0; i < 8; i += 1) { const x = 120 + i * 137; ctx.beginPath(); ctx.moveTo(x, 77); ctx.lineTo(x + 18, 88); ctx.lineTo(x + 10, 101); ctx.stroke(); } ctx.restore();
+  };
+  const drawDungeonObstacles = (time, key) => {
+    dungeonObstacles().forEach((wall, index) => {
+      const boundary = wall.x === 0 || wall.y === 0 || wall.x + wall.w === ROOM.width || wall.y + wall.h === ROOM.height;
+      const pillar = wall.type === "pillar";
+      const base = boundary ? "#435a55" : pillar ? "#60776d" : wall.type === "wall" ? "#596f68" : "#566861";
+      const stone = ctx.createLinearGradient(wall.x, wall.y, wall.x + wall.w, wall.y + wall.h);
+      stone.addColorStop(0, base); stone.addColorStop(.46, boundary ? "#304644" : "#526960"); stone.addColorStop(1, "#263b3b");
+      ctx.fillStyle = stone; ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+      ctx.strokeStyle = "rgba(11,27,27,.78)"; ctx.lineWidth = boundary ? 3 : 2; ctx.strokeRect(wall.x + 1, wall.y + 1, Math.max(0, wall.w - 2), Math.max(0, wall.h - 2));
+      ctx.fillStyle = "rgba(224,241,214,.15)"; ctx.fillRect(wall.x + 5, wall.y + 5, Math.max(0, wall.w - 10), Math.min(5, Math.max(0, wall.h - 10)));
+      if (boundary) {
+        ctx.fillStyle = "rgba(6,16,17,.42)"; ctx.fillRect(wall.x, wall.y + wall.h - 10, wall.w, 10);
+        ctx.strokeStyle = "rgba(155,188,164,.18)"; ctx.lineWidth = 1.5;
+        for (let notch = 0; notch < 5; notch += 1) { const p = (notch + 1) * Math.max(24, wall.w / 6); ctx.beginPath(); ctx.moveTo(wall.x + p, wall.y + 9); ctx.lineTo(wall.x + p + 11, wall.y + 19); ctx.stroke(); }
+      } else if (pillar) {
+        ctx.fillStyle = "rgba(217,236,208,.2)"; ctx.fillRect(wall.x + 8, wall.y + 11, 5, Math.max(0, wall.h - 22));
+        ctx.fillStyle = "#758b7d"; ctx.fillRect(wall.x - 8, wall.y - 7, wall.w + 16, 10); ctx.fillStyle = "#354a46"; ctx.fillRect(wall.x - 10, wall.y + wall.h - 4, wall.w + 20, 10);
+        ctx.strokeStyle = "rgba(226,156,121,.58)"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(wall.x + wall.w * .48, wall.y + 20); ctx.lineTo(wall.x + wall.w * .28, wall.y + wall.h * .46); ctx.lineTo(wall.x + wall.w * .62, wall.y + wall.h * .7); ctx.stroke();
+      } else {
+        ctx.strokeStyle = "rgba(214,157,123,.45)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(wall.x + wall.w * .18, wall.y + wall.h * .2); ctx.lineTo(wall.x + wall.w * .42, wall.y + wall.h * .6); ctx.lineTo(wall.x + wall.w * .3, wall.y + wall.h * .9); ctx.moveTo(wall.x + wall.w * .72, wall.y + wall.h * .12); ctx.lineTo(wall.x + wall.w * .6, wall.y + wall.h * .44); ctx.stroke();
+      }
+      if (wall.type === "broken-wall" || wall.type === "fallen-stone" || wall.type === "debris") drawDungeonRubble(wall.x + wall.w / 2, wall.y + wall.h / 2 + 10, wall.type === "debris" ? .9 : .72, index + key.length * 3);
+    });
+  };
   const drawDungeonFloorFocus = (time, key) => {
     const focus = { "0-0": [600, 390, "#8ef2cf"], "1-0": [600, 380, "#b8d9ff"], "2-0": [600, 390, "#b5df91"], "0-1": [600, 390, "#79d3cc"], "1-1": [600, 390, "#ffb37f"], "2-1": [600, 370, state.bossPhase === 2 ? "#ff7c99" : "#d995b8"] }[key] || [600, 390, "#8ef2cf"];
     const [x, y, color] = focus; ctx.save(); ctx.globalCompositeOperation = "screen"; drawLightPool(x, y, key === "2-1" ? 330 : 250, color, key === "2-1" ? .07 : .035); ctx.restore();
@@ -1229,12 +1305,21 @@
     ctx.save(); ctx.globalAlpha = key === "2-1" ? .22 : .16; const edge = ctx.createRadialGradient(ROOM.width / 2, ROOM.height * .46, 180, ROOM.width / 2, ROOM.height * .46, 760); edge.addColorStop(0, "rgba(0,0,0,0)"); edge.addColorStop(.68, "rgba(5,10,12,.08)"); edge.addColorStop(1, "rgba(3,7,9,.82)"); ctx.fillStyle = edge; ctx.fillRect(0, 0, ROOM.width, ROOM.height); ctx.restore();
   };
   const drawDungeonRoots = (time, anchors = []) => {
-    anchors.forEach(([x, y, length, flip], index) => { const sway = Math.sin(time * .8 + index) * 2; ctx.save(); ctx.translate(x, y); ctx.scale(flip || 1, 1); ctx.strokeStyle = index % 2 ? "#557e63" : "#70966a"; ctx.globalAlpha = .78; ctx.lineWidth = 9; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(24, length * .2 + sway, -18, length * .62, 10, length); ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = "#a3bd78"; ctx.beginPath(); ctx.moveTo(3, 5); ctx.bezierCurveTo(26, length * .25, -8, length * .6, 12, length - 4); ctx.stroke(); ctx.restore(); });
+    anchors.forEach(([x, y, length, flip], index) => {
+      const sway = Math.sin(time * .8 + index) * 2; ctx.save(); ctx.translate(x, y); ctx.scale(flip || 1, 1); ctx.strokeStyle = index % 2 ? "#557e63" : "#70966a"; ctx.globalAlpha = .78; ctx.lineWidth = 9; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(24, length * .2 + sway, -18, length * .62, 10, length); ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = "#a3bd78"; ctx.beginPath(); ctx.moveTo(3, 5); ctx.bezierCurveTo(26, length * .25, -8, length * .6, 12, length - 4); ctx.stroke();
+      ctx.globalAlpha = .64; ctx.lineWidth = 5; ctx.strokeStyle = "#557e63"; ctx.beginPath(); ctx.moveTo(8, length * .42); ctx.bezierCurveTo(-22, length * .35, -35, length * .5, -46, length * .7); ctx.moveTo(5, length * .7); ctx.bezierCurveTo(29, length * .62, 40, length * .8, 48, length * .94); ctx.stroke();
+      ctx.fillStyle = "#8eaa72"; ctx.globalAlpha = .72; ctx.beginPath(); ctx.arc(10, length, 5, 0, Math.PI * 2); ctx.arc(-45, length * .7, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    });
   };
   const drawDungeonHazardVisual = (time) => {
     dungeonHazards().forEach((hazard, index) => {
-      if (hazard.label === "deep water") { drawWater(hazard, time); ctx.save(); ctx.globalAlpha = .5; ctx.strokeStyle = "#8bd8c3"; ctx.lineWidth = 2; for (let i = 0; i < 7; i += 1) { const y = hazard.y + 26 + i * 39 + Math.sin(time * 1.4 + i) * 4; ctx.beginPath(); ctx.moveTo(hazard.x + 15, y); ctx.quadraticCurveTo(hazard.x + hazard.w / 2, y - 7, hazard.x + hazard.w - 15, y); ctx.stroke(); } ctx.restore(); }
-      else { ctx.save(); ctx.fillStyle = "rgba(191,73,53,.22)"; ctx.fillRect(hazard.x, hazard.y, hazard.w, hazard.h); ctx.globalAlpha = .78; for (let i = 0; i < 14; i += 1) { const x = hazard.x + 14 + ((i * 41) % Math.max(20, hazard.w - 24)); const y = hazard.y + hazard.h - 10 - ((time * (26 + i) + i * 37) % Math.max(30, hazard.h - 20)); ctx.fillStyle = i % 2 ? "#f28b5d" : "#ffd37d"; ctx.beginPath(); ctx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+      if (hazard.label === "deep water") {
+        ctx.save(); ctx.fillStyle = "rgba(7,24,28,.55)"; ctx.fillRect(hazard.x - 10, hazard.y - 10, hazard.w + 20, hazard.h + 20); ctx.strokeStyle = "rgba(144,220,196,.38)"; ctx.lineWidth = 4; ctx.strokeRect(hazard.x - 6, hazard.y - 6, hazard.w + 12, hazard.h + 12); ctx.restore();
+        drawWater(hazard, time); ctx.save(); ctx.globalAlpha = .5; ctx.strokeStyle = "#8bd8c3"; ctx.lineWidth = 2; for (let i = 0; i < 7; i += 1) { const y = hazard.y + 26 + i * 39 + Math.sin(time * 1.4 + i) * 4; ctx.beginPath(); ctx.moveTo(hazard.x + 15, y); ctx.quadraticCurveTo(hazard.x + hazard.w / 2, y - 7, hazard.x + hazard.w - 15, y); ctx.stroke(); } ctx.globalAlpha = .32; ctx.fillStyle = "#c8f0d3"; for (let i = 0; i < 6; i += 1) { const x = hazard.x + 25 + ((i * 71) % Math.max(30, hazard.w - 50)); const y = hazard.y + 20 + ((i * 53) % Math.max(30, hazard.h - 40)); ctx.beginPath(); ctx.ellipse(x, y, 12 + (i % 2) * 5, 3, .12, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
+      } else {
+        ctx.save(); ctx.fillStyle = "rgba(191,73,53,.22)"; ctx.fillRect(hazard.x, hazard.y, hazard.w, hazard.h); ctx.strokeStyle = "rgba(232,151,104,.62)"; ctx.lineWidth = 4; ctx.strokeRect(hazard.x - 4, hazard.y - 4, hazard.w + 8, hazard.h + 8); ctx.fillStyle = "rgba(41,28,28,.7)"; ctx.fillRect(hazard.x - 4, hazard.y - 4, hazard.w + 8, 10); ctx.fillRect(hazard.x - 4, hazard.y + hazard.h - 6, hazard.w + 8, 10); ctx.globalAlpha = .78; for (let i = 0; i < 14; i += 1) { const x = hazard.x + 14 + ((i * 41) % Math.max(20, hazard.w - 24)); const y = hazard.y + hazard.h - 10 - ((time * (26 + i) + i * 37) % Math.max(30, hazard.h - 20)); ctx.fillStyle = i % 2 ? "#f28b5d" : "#ffd37d"; ctx.beginPath(); ctx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2); ctx.fill(); } ctx.restore();
+      }
       if (index === 0) { ctx.fillStyle = "rgba(255,230,168,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(hazard.label.toUpperCase(), hazard.x + hazard.w / 2, hazard.y - 12); }
     });
   };
@@ -1276,16 +1361,40 @@
       ctx.fillStyle = "#66506b"; ctx.fillRect(500, 170, 200, 18); ctx.fillStyle = "#b39ac2"; ctx.fillRect(540, 164, 120, 6); if (state.bossDefeated) drawReward(600, 230, time); else { ctx.fillStyle = "rgba(239,186,224,.44)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("THE HEARTSEED WAITS BEYOND THE GUARDIAN", 600, 700); }
     }
   };
-  const drawDungeon = (time) => { const key = `${state.roomX}-${state.roomY}`; drawDungeonMasonry(time, key); drawDungeonFloorFocus(time, key); ctx.fillStyle = COLORS.dungeonLight; dungeonObstacles().forEach((wall) => { ctx.fillRect(wall.x, wall.y, wall.w, wall.h); ctx.fillStyle = "rgba(188,220,190,.18)"; ctx.fillRect(wall.x + 5, wall.y + 5, Math.max(0, wall.w - 10), 5); ctx.fillStyle = COLORS.dungeonLight; }); drawDungeonRoomProps(time, key); if (key === "2-1" && state.bossPhase === 2 && !state.bossDefeated) { const roseWash = ctx.createRadialGradient(600, 370, 70, 600, 370, 520); roseWash.addColorStop(0, "rgba(177,45,91,.18)"); roseWash.addColorStop(1, "rgba(177,45,91,0)"); ctx.fillStyle = roseWash; ctx.fillRect(50, 50, ROOM.width - 100, ROOM.height - 100); } drawDungeonAtmosphere(time, key); drawBossDefeatRemnant(time); drawDungeonDoors(time); drawDungeonMotes(time); drawDungeonLighting(time, key); };
+  const drawDungeon = (time) => {
+    const key = `${state.roomX}-${state.roomY}`;
+    drawDungeonMasonry(time, key);
+    drawDungeonFloorFocus(time, key);
+    drawDungeonObstacles(time, key);
+    drawDungeonArchitecture(time, key);
+    drawDungeonRoomProps(time, key);
+    if (key === "2-1" && state.bossPhase === 2 && !state.bossDefeated) { const roseWash = ctx.createRadialGradient(600, 370, 70, 600, 370, 520); roseWash.addColorStop(0, "rgba(177,45,91,.18)"); roseWash.addColorStop(1, "rgba(177,45,91,0)"); ctx.fillStyle = roseWash; ctx.fillRect(50, 50, ROOM.width - 100, ROOM.height - 100); }
+    drawDungeonAtmosphere(time, key);
+    drawBossDefeatRemnant(time);
+    drawDungeonDoors(time);
+    drawDungeonMotes(time);
+    drawDungeonLighting(time, key);
+  };
   const drawTorch = (x, y, time) => { const flicker = Math.sin(time * 8 + x) * 2; drawDirectionalShadow(x, y + 25, 30, 7, .1, -.16); ctx.fillStyle = "#6d4934"; ctx.fillRect(x - 4, y, 8, 30); ctx.fillStyle = "#a7774a"; ctx.fillRect(x - 2, y + 3, 3, 24); const glow = ctx.createRadialGradient(x, y - 2, 2, x, y - 2, 82); glow.addColorStop(0, "rgba(255,214,123,.5)"); glow.addColorStop(.28, "rgba(255,172,91,.16)"); glow.addColorStop(1, "rgba(255,214,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 2, 82, 0, Math.PI * 2); ctx.fill(); const flame = ctx.createLinearGradient(x, y - 21 + flicker, x, y + 3); flame.addColorStop(0, "#fff5be"); flame.addColorStop(.42, COLORS.gold); flame.addColorStop(1, "#df714c"); ctx.fillStyle = flame; ctx.beginPath(); ctx.moveTo(x, y - 24 + flicker); ctx.quadraticCurveTo(x + 11, y - 10, x, y + 2); ctx.quadraticCurveTo(x - 11, y - 10, x, y - 24 + flicker); ctx.fill(); ctx.save(); ctx.globalAlpha = .18; ctx.strokeStyle = "#d0d7bd"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 5, y - 22); ctx.quadraticCurveTo(x + 14, y - 38 + Math.sin(time * 1.2 + x) * 3, x + 4, y - 51); ctx.stroke(); ctx.restore(); };
-  const drawRune = (x, y, label) => { ctx.fillStyle = "rgba(142,242,207,.07)"; ctx.beginPath(); ctx.arc(x, y, 42, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(142,242,207,.34)"; ctx.stroke(); ctx.fillStyle = "rgba(214,255,220,.45)"; ctx.font = "10px DM Mono"; ctx.textAlign = "center"; ctx.fillText(label, x, y + 4); };
-  const drawSwitch = (x, y, active, time) => { ctx.fillStyle = active ? "#8ef2cf" : "#546b64"; ctx.beginPath(); ctx.arc(x, y, 25 + Math.sin(time * 4) * 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = active ? "#f6fff1" : "#243b37"; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill(); };
+  const drawRune = (x, y, label) => { ctx.save(); ctx.globalAlpha = .85; ctx.fillStyle = "rgba(142,242,207,.07)"; ctx.beginPath(); ctx.arc(x, y, 42, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(142,242,207,.34)"; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = .5; ctx.strokeStyle = "rgba(197,246,211,.5)"; ctx.lineWidth = 1; for (let i = 0; i < 6; i += 1) { const angle = i * Math.PI / 3; ctx.beginPath(); ctx.moveTo(x + Math.cos(angle) * 31, y + Math.sin(angle) * 31); ctx.lineTo(x + Math.cos(angle) * 36, y + Math.sin(angle) * 36); ctx.stroke(); } ctx.fillStyle = "rgba(214,255,220,.55)"; ctx.font = "10px DM Mono"; ctx.textAlign = "center"; ctx.fillText(label, x, y + 4); ctx.restore(); };
+  const drawSwitch = (x, y, active, time) => { const pulse = Math.sin(time * 4) * 2; drawShadow(x, y + 18, 28, 7, .28); ctx.fillStyle = "#3c504b"; ctx.fillRect(x - 32, y + 12, 64, 10); ctx.fillStyle = active ? "#7bbd9b" : "#546b64"; ctx.beginPath(); ctx.arc(x, y, 27 + pulse, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = active ? "rgba(234,255,213,.84)" : "rgba(198,216,197,.35)"; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = active ? "#f6fff1" : "#243b37"; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = active ? "#ffd77b" : "#6d8a7c"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 7, y + 1); ctx.lineTo(x + 7, y - 6); ctx.stroke(); if (active) { ctx.save(); ctx.globalAlpha = .16; ctx.fillStyle = COLORS.mint; ctx.beginPath(); ctx.arc(x, y, 52 + pulse, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } };
   const drawDungeonMotes = (time) => { ctx.save(); for (let i = 0; i < 24; i += 1) { const x = 75 + ((i * 149) % 1050) + Math.sin(time * (.18 + (i % 3) * .04) + i) * 12; const y = 80 + ((i * 83) % 620) + Math.cos(time * .23 + i) * 9; const alpha = .16 + (Math.sin(time * 1.7 + i) + 1) * .09; ctx.globalAlpha = alpha; ctx.fillStyle = i % 4 === 0 ? "#ffd77b" : "#a8d6bd"; ctx.beginPath(); ctx.arc(x, y, i % 4 === 0 ? 2 : 1.4, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); };
   const drawDungeonDoors = (time) => {
     const key = `${state.roomX}-${state.roomY}`; const doors = [{ side: "north", x: ROOM.width / 2, y: 35, w: 120, h: 34 }, { side: "south", x: ROOM.width / 2, y: ROOM.height - 35, w: 120, h: 34 }, { side: "west", x: 35, y: ROOM.height / 2, w: 34, h: 120 }, { side: "east", x: ROOM.width - 35, y: ROOM.height / 2, w: 34, h: 120 }];
     doors.forEach((door) => {
       let open = true; let locked = false; if (key === "0-0" && door.side === "east") { open = state.key; locked = !state.key; } if (key === "1-0" && door.side === "south") { open = state.switches; locked = !state.switches; } if (key === "2-0" && door.side === "south") { open = state.miniBossDefeated; locked = !state.miniBossDefeated; } if (key === "1-1" && door.side === "west" && !state.ashShortcutOpen) { open = false; locked = true; } if (key === "1-1" && door.side === "east") { open = state.key && state.miniBossDefeated; locked = !open; }
-      ctx.save(); ctx.translate(door.x, door.y); const horizontal = door.side === "north" || door.side === "south"; if (horizontal) { ctx.fillStyle = open ? "rgba(142,242,207,.22)" : "rgba(75,56,55,.8)"; ctx.fillRect(-door.w / 2, -door.h / 2, door.w, door.h); ctx.strokeStyle = open ? "rgba(142,242,207,.65)" : "rgba(208,143,103,.5)"; ctx.lineWidth = 3; ctx.strokeRect(-door.w / 2, -door.h / 2, door.w, door.h); if (locked) { ctx.strokeStyle = "#c88a6a"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-18, -10); ctx.lineTo(18, 10); ctx.moveTo(18, -10); ctx.lineTo(-18, 10); ctx.stroke(); } } else { ctx.fillStyle = open ? "rgba(142,242,207,.22)" : "rgba(75,56,55,.8)"; ctx.fillRect(-door.w / 2, -door.h / 2, door.w, door.h); ctx.strokeStyle = open ? "rgba(142,242,207,.65)" : "rgba(208,143,103,.5)"; ctx.lineWidth = 3; ctx.strokeRect(-door.w / 2, -door.h / 2, door.w, door.h); if (locked) { ctx.strokeStyle = "#c88a6a"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-10, -18); ctx.lineTo(10, 18); ctx.moveTo(10, -18); ctx.lineTo(-10, 18); ctx.stroke(); } } ctx.restore();
+      const horizontal = door.side === "north" || door.side === "south"; const drawX = horizontal ? door.x : (door.side === "west" ? 58 : ROOM.width - 58); const drawY = horizontal ? (door.side === "north" ? 58 : ROOM.height - 58) : door.y;
+      ctx.save(); ctx.translate(drawX, drawY); const dw = door.w; const dh = door.h;
+      ctx.fillStyle = "#142323"; ctx.fillRect(-dw / 2, -dh / 2, dw, dh);
+      if (open) {
+        const opening = ctx.createLinearGradient(0, -dh / 2, 0, dh / 2); opening.addColorStop(0, "rgba(11,24,25,.94)"); opening.addColorStop(1, "rgba(36,74,67,.62)"); ctx.fillStyle = opening; ctx.fillRect(-dw / 2 + 6, -dh / 2 + 5, dw - 12, dh - 10);
+        ctx.strokeStyle = "rgba(142,242,207,.74)"; ctx.lineWidth = 3; ctx.strokeRect(-dw / 2 + 4, -dh / 2 + 3, dw - 8, dh - 6); ctx.fillStyle = "rgba(142,242,207,.18)"; ctx.fillRect(-dw / 2 + 12, -dh / 2 + 8, dw - 24, 5);
+      } else {
+        const gate = ctx.createLinearGradient(0, -dh / 2, 0, dh / 2); gate.addColorStop(0, "#72564e"); gate.addColorStop(1, "#3f373a"); ctx.fillStyle = gate; ctx.fillRect(-dw / 2 + 4, -dh / 2 + 3, dw - 8, dh - 6); ctx.strokeStyle = "rgba(222,164,123,.62)"; ctx.lineWidth = 3; ctx.strokeRect(-dw / 2 + 4, -dh / 2 + 3, dw - 8, dh - 6);
+        ctx.strokeStyle = "rgba(42,30,31,.75)"; ctx.lineWidth = 2; const slats = horizontal ? 4 : 3; for (let i = 1; i < slats; i += 1) { const p = horizontal ? -dh / 2 + (dh / slats) * i : -dw / 2 + (dw / slats) * i; ctx.beginPath(); if (horizontal) { ctx.moveTo(-dw / 2 + 7, p); ctx.lineTo(dw / 2 - 7, p); } else { ctx.moveTo(p, -dh / 2 + 7); ctx.lineTo(p, dh / 2 - 7); } ctx.stroke(); }
+        ctx.strokeStyle = "#c88a6a"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-dw * .3, -dh * .28); ctx.lineTo(dw * .3, dh * .28); ctx.moveTo(dw * .3, -dh * .28); ctx.lineTo(-dw * .3, dh * .28); ctx.stroke(); ctx.fillStyle = "#d4a46a"; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#5b3b34"; ctx.fillRect(-2, -5, 4, 8);
+      }
+      ctx.restore();
     });
     ctx.fillStyle = "rgba(216,255,220,.42)"; ctx.font = "10px DM Mono"; ctx.textAlign = "center"; if (key === "0-0" && !state.key) ctx.fillText("BRASS LOCK", ROOM.width - 122, ROOM.height / 2 - 76); if (key === "1-0" && !state.switches) ctx.fillText("MOON GATE", ROOM.width / 2, ROOM.height - 76); if (key === "2-0" && !state.miniBossDefeated) ctx.fillText("WARDEN GATE", ROOM.width / 2, ROOM.height - 76); if (key === "1-1" && !state.ashShortcutOpen) ctx.fillText("ASH LIFT", 112, 286);
   };
