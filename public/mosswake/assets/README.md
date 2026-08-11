@@ -17,9 +17,11 @@ Mosswake currently renders its first playable slice with layered canvas primitiv
 | `bosses/` | `root-warden`, `hollow-guardian` | 128×128, telegraph + hurt + defeat frames |
 | `npcs/` | `rowan`, `outpost-trader` | 64×80, idle + talk frames |
 | `terrain/` | `grass`, `path`, `water`, `stone-floor`, `stone-wall` | 96×96 seamless tiles |
-| `trees/` | `oak`, `birch`, `ancient-root` | 128×160, 2 seasonal variants |
-| `plants/` | `mothflower`, `fern`, `reed`, `mushroom` | 48×48, 2 sway frames |
-| `rocks/` | `moss-rock`, `rune-stone`, `breakable-bramble` | 64×64, intact + broken |
+| `trees/` | `oak`, `birch`, `ancient-root`, `grove-canopy` | 128×160, 2 seasonal variants, back/mid/foreground silhouettes |
+| `plants/` | `mothflower`, `fern`, `reed`, `mushroom`, `meadow-tuft` | 48×48, 2 sway frames, touched/rustled variation |
+| `rocks/` | `moss-rock`, `rune-stone`, `shore-stone`, `breakable-bramble` | 64×64, intact + broken |
+| `landmarks/` | `fallen-log`, `lantern-post`, `trail-sign`, `pond-edge` | 96×96 modular pieces, transparent shadows |
+| `wildlife/` | `butterfly`, `songbird`, `firefly` | 32×32, 4-frame loops, warm/cool color variants |
 | `buildings/` | `outpost`, `shrine`, `cabin` | 256×192, roof/wall/door layers |
 | `dungeon/` | `room-border`, `gate`, `switch`, `chest`, `heartseed` | 96×96 modular pieces |
 | `weapons/` | `lantern-blade`, `impact-arc` | 96×48, 5 attack frames |
@@ -34,12 +36,13 @@ Mosswake currently renders its first playable slice with layered canvas primitiv
 3. Paint a 6–8 frame `weapons/lantern-blade` swing sheet with a clean leading edge and contact spark.
 4. Add `effects/dust`, `effects/hit-star`, `effects/impact-ring`, and `effects/dash-trail` sheets at 2x resolution.
 5. Paint modular terrain edges so paths, pond banks, and dungeon doors tile without seams.
-6. Add three unique building facades for the outpost, shrine, and cabin while preserving their collision footprints.
-7. Add small looping effects: water shimmer, moth glow, torch smoke, sword arc, and chest sparkle.
-8. Export with transparent backgrounds and avoid baked-in shadows; lighting, hit flashes, and camera response are runtime-driven.
+6. Add back/mid/foreground tree silhouettes, meadow tufts, shoreline reeds, fallen logs, and landmark props as separate layers.
+7. Add three unique building facades for the outpost, shrine, and cabin while preserving their collision footprints.
+8. Add small looping effects: water shimmer, moth glow, fireflies, butterfly wings, songbird flaps, torch smoke, sword arc, and chest sparkle.
+9. Export with transparent backgrounds and avoid baked-in shadows; lighting, hit flashes, and camera response are runtime-driven.
 
 ## Temporary feel pass
 
-The current movement pass intentionally uses the same art-first, replaceable approach as First Ember: the player, blade arc, dodge trail, dust, hit stars, impact rings, shadows, and enemy recoil are generated as crisp canvas primitives. This keeps the first ten seconds responsive while the final sprite sheets are being painted. The named slots above are the exact custom graphics to generate later; no gameplay collision or timing depends on a temporary shape.
+The current movement and outdoor passes intentionally use the same art-first, replaceable approach as First Ember: the player, blade arc, dodge trail, dust, hit stars, impact rings, shadows, trees, plants, water edge, wildlife, and landmark props are generated as crisp canvas primitives. This keeps the first ten seconds responsive and the outdoor composition readable while final sprite sheets are being painted. The named slots above are the exact custom graphics to generate later; no gameplay collision, pathing, or timing depends on a temporary shape.
 
 The game code owns collision, state, camera, and layout. Art replacements should preserve the named anchor points in `mosswake.js` so content remains editable and performance stays predictable.
