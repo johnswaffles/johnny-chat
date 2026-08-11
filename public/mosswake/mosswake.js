@@ -11,7 +11,7 @@
   const COLORS = {
     grass: "#355e45", grassLight: "#417254", grassDark: "#294936", path: "#b49b6f", water: "#236d72",
     waterLight: "#5cb6a5", wood: "#76523b", stone: "#77867b", dungeon: "#283334", dungeonLight: "#344547",
-    moss: "#83d27d", wisp: "#b8a6ff", warden: "#d78b70", boss: "#b95a90", gold: "#ffd77b", player: "#e9c08c"
+    moss: "#83d27d", thorn: "#cf9a70", wisp: "#b8a6ff", moth: "#dc9bc4", warden: "#d78b70", boss: "#b95a90", gold: "#ffd77b", player: "#e9c08c"
   };
   const keys = new Set();
   const justPressed = new Set();
@@ -30,11 +30,12 @@
   };
   const state = {
     mode: "title", area: "overworld", roomX: 0, roomY: 0, roomVisited: { overworld: true }, key: false, switches: false,
-    miniBossDefeated: false, bossDefeated: false, reward: false, secretFound: false, chestOpened: false, heartChestOpened: false,
+    miniBossDefeated: false, bossDefeated: false, reward: false, secretFound: false, chestOpened: false, heartChestOpened: false, loot: 0,
     lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0
   };
   let enemies = [];
   let projectiles = [];
+  let drops = [];
   let particles = [];
   let leaves = Array.from({ length: 65 }, () => ({ x: rand(0, WORLD.width), y: rand(0, WORLD.height), speed: rand(5, 16), phase: rand(0, 6.28) }));
   const environment = {
@@ -94,7 +95,7 @@
     title: document.getElementById("title-screen"), pause: document.getElementById("pause-screen"), victory: document.getElementById("victory-screen"),
     dialogue: document.getElementById("dialogue"), speaker: document.getElementById("dialogue-speaker"), dialogueText: document.getElementById("dialogue-text"),
     toast: document.getElementById("toast"), area: document.getElementById("area-label"), room: document.getElementById("room-label"), objective: document.getElementById("objective"),
-    objectiveCopy: document.getElementById("objective-copy"), hearts: document.getElementById("hearts"), seed: document.getElementById("seed-count"), keys: document.getElementById("key-count"), save: document.getElementById("save-state"), map: document.getElementById("map-dots")
+    objectiveCopy: document.getElementById("objective-copy"), hearts: document.getElementById("hearts"), seed: document.getElementById("seed-count"), keys: document.getElementById("key-count"), loot: document.getElementById("loot-count"), save: document.getElementById("save-state"), map: document.getElementById("map-dots")
   };
 
   const showToast = (message, duration = 2200) => { ui.toast.textContent = message; ui.toast.classList.add("visible"); state.toastTimer = duration; };
@@ -121,7 +122,7 @@
 
   const resetProgress = () => {
     localStorage.removeItem(STORAGE_KEY);
-    state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false;
+    state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0;
     player.hp = player.maxHp; player.x = 390; player.y = 500; startArea("overworld", false); state.mode = "title"; hideScreens(); ui.title.classList.remove("hidden"); updateHud();
   };
 
@@ -150,15 +151,31 @@
       } else item.touched = false;
     });
   };
+  const spawnDrop = (enemy) => {
+    if (!enemy.drop) return;
+    drops.push({ x: enemy.x, y: enemy.y, ...enemy.drop, life: 24, phase: rand(0, 6.28), bob: rand(0, 6.28) });
+  };
+  const spawnEnemyDeath = (enemy) => {
+    enemy.dead = true; spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 34 : 12); spawnParticle(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 20 : 9, enemy.type === "boss" ? 170 : 110, "impact"); triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, enemy.type === "boss" ? 1.45 : 1); spawnDrop(enemy);
+  };
+  const updateDrops = (dt) => {
+    drops = drops.filter((drop) => {
+      drop.life -= dt; drop.bob += dt * 4;
+      if (distance(player, drop) < 25 && state.mode === "playing") { state.loot += 1; showToast(`${drop.name} collected`, 1100); spawnParticle(drop.x, drop.y, drop.color, 8, 60, "spark"); saveData(); updateHud(); return false; }
+      return drop.life > 0;
+    });
+  };
 
-  const spawnEnemy = (type, x, y) => {
+  const spawnEnemy = (type, x, y, options = {}) => {
     const config = {
-      mossling: { hp: 2, maxHp: 2, speed: 45, radius: 14, color: COLORS.moss, damage: 1 },
-      wisp: { hp: 2, maxHp: 2, speed: 30, radius: 13, color: COLORS.wisp, damage: 1 },
-      warden: { hp: 9, maxHp: 9, speed: 22, radius: 25, color: COLORS.warden, damage: 2 },
-      boss: { hp: 16, maxHp: 16, speed: 28, radius: 39, color: COLORS.boss, damage: 2 }
+      mossling: { hp: 2, maxHp: 2, speed: 48, radius: 14, color: COLORS.moss, damage: 1, behavior: "skirmish", detectionRange: 250, attackRange: 35, attackRate: 1.1, drop: { name: "Moss mote", color: COLORS.moss, kind: "mote" } },
+      thornback: { hp: 4, maxHp: 4, speed: 56, radius: 18, color: COLORS.thorn, damage: 2, behavior: "charger", detectionRange: 360, attackRange: 32, attackRate: 1.8, drop: { name: "Bark shard", color: "#d6a16f", kind: "bark" } },
+      wisp: { hp: 3, maxHp: 3, speed: 42, radius: 13, color: COLORS.wisp, damage: 1, behavior: "ranged", detectionRange: 430, attackRange: 210, attackRate: 1.8, drop: { name: "Moon spark", color: COLORS.wisp, kind: "moon" } },
+      moth: { hp: 3, maxHp: 3, speed: 68, radius: 12, color: COLORS.moth, damage: 1, behavior: "ambush", detectionRange: 175, attackRange: 42, attackRate: 1.25, drop: { name: "Moth dust", color: "#eeb7dc", kind: "dust" } },
+      warden: { hp: 9, maxHp: 9, speed: 22, radius: 25, color: COLORS.warden, damage: 2, behavior: "warden", detectionRange: 380, attackRange: 48, attackRate: 1.2, drop: { name: "Root sigil", color: COLORS.warden, kind: "sigil" } },
+      boss: { hp: 16, maxHp: 16, speed: 28, radius: 39, color: COLORS.boss, damage: 2, behavior: "boss", detectionRange: 520, attackRange: 190, attackRate: 1.25, drop: { name: "Heartseed echo", color: COLORS.gold, kind: "echo" } }
     }[type];
-    enemies.push({ id: makeId(type), type, x, y, ...config, velocityX: 0, velocityY: 0, attackCooldown: rand(.2, 1), hitFlash: 0, hitStun: 0, phase: 1, dead: false, orbit: rand(0, 6.28) });
+    enemies.push({ id: makeId(type), type, x, y, homeX: x, homeY: y, ...config, ...options, velocityX: 0, velocityY: 0, attackCooldown: options.attackCooldown ?? rand(.25, config.attackRate), hitFlash: 0, hitStun: 0, telegraph: 0, telegraphType: "", state: "idle", stateTimer: rand(.2, .7), phase: 1, dead: false, alerted: false, hidden: type === "moth", orbit: rand(0, 6.28), chargeX: 0, chargeY: 0, aimX: 0, aimY: 0 });
   };
 
   const resetPlayerMotion = () => {
@@ -168,10 +185,13 @@
 
   const startArea = (area, announce = true) => {
     state.area = area;
-    enemies = []; projectiles = []; particles = [];
+    enemies = []; projectiles = []; drops = []; particles = [];
     if (area === "overworld") {
       player.x = 390; player.y = 500;
-      spawnEnemy("mossling", 770, 500); spawnEnemy("mossling", 1120, 660); spawnEnemy("wisp", 1270, 300);
+      spawnEnemy("mossling", 650, 455, { group: "meadow-pack" }); spawnEnemy("mossling", 705, 470, { group: "meadow-pack" }); spawnEnemy("mossling", 740, 430, { group: "meadow-pack" });
+      spawnEnemy("thornback", 905, 520, { guardRadius: 120, encounter: "bridge-guard" });
+      spawnEnemy("wisp", 1145, 340, { guardRadius: 150, encounter: "lantern-grove" });
+      spawnEnemy("moth", 1280, 745, { guardRadius: 90, encounter: "chest-ambush" });
       if (announce) showToast("LAN TERNWOOD · the moths are listening");
     } else {
       player.x = ROOM.width / 2; player.y = ROOM.height - 90;
@@ -263,7 +283,7 @@
       triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.rose : COLORS.gold, enemy.type === "boss" ? 1.35 : 1);
       hitCount += 1;
       if (enemy.hp <= 0) {
-        enemy.dead = true; spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 30 : 10);
+        spawnEnemyDeath(enemy);
         if (enemy.type === "warden") { state.miniBossDefeated = true; showToast("The Warden yields · the sanctum opens"); saveData(); }
         if (enemy.type === "boss") { state.bossDefeated = true; state.reward = true; showVictory(); saveData(); }
       }
@@ -318,29 +338,87 @@
     state.roomX = targetX; state.roomY = targetY; player.x = dx > 0 ? 80 : dx < 0 ? ROOM.width - 80 : ROOM.width / 2; player.y = dy > 0 ? 80 : dy < 0 ? ROOM.height - 80 : ROOM.height / 2; state.transitionCooldown = .5; startArea("dungeon"); saveData(); updateObjective();
   };
 
+  const enemyMove = (enemy, dx, dy, speed, dt) => { const direction = normalized(dx, dy, 0, 0); enemy.x += direction.x * speed * dt; enemy.y += direction.y * speed * dt; };
+  const beginEnemyTelegraph = (enemy, type, duration) => { enemy.state = type; enemy.stateTimer = duration; enemy.telegraph = duration; enemy.telegraphType = type; spawnParticle(enemy.x, enemy.y, type === "rangedWindup" ? COLORS.wisp : COLORS.gold, 3, 24, "spark"); };
+  const resolveEnemyMelee = (enemy, reach = 10, damage = enemy.damage) => { if (distance(enemy, player) < enemy.radius + player.radius + reach) { hurtPlayer(damage, enemy); triggerImpact(player.x, player.y, enemy.color, enemy.type === "thornback" ? 1.2 : .72); return true; } return false; };
+  const fireWispBolt = (enemy) => {
+    const direction = normalized(enemy.aimX, enemy.aimY, player.x - enemy.x, player.y - enemy.y);
+    projectiles.push({ owner: "enemy", kind: "moonbolt", x: enemy.x, y: enemy.y, vx: direction.x * 165, vy: direction.y * 165, life: 2.5, radius: 7, color: COLORS.wisp, damage: enemy.damage });
+    spawnParticle(enemy.x, enemy.y, COLORS.wisp, 10, 65, "spark");
+  };
+  const fireBossVolley = (enemy) => {
+    const count = enemy.phase === 2 ? 5 : 3; const center = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    for (let i = 0; i < count; i += 1) { const angle = center + (i - (count - 1) / 2) * .22; projectiles.push({ owner: "enemy", kind: "rosebolt", x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 125, vy: Math.sin(angle) * 125, life: 2.4, radius: 7, color: enemy.phase === 2 ? COLORS.rose : COLORS.gold, damage: enemy.damage }); }
+    spawnParticle(enemy.x, enemy.y, enemy.phase === 2 ? COLORS.rose : COLORS.gold, 14, 75, "spark");
+  };
+  const updateEnemyIdle = (enemy, dt) => {
+    enemy.stateTimer -= dt; enemy.orbit += dt * .35;
+    const guardRadius = enemy.guardRadius || 30; const targetX = enemy.homeX + Math.cos(enemy.orbit) * Math.min(guardRadius, 28); const targetY = enemy.homeY + Math.sin(enemy.orbit * .8) * Math.min(guardRadius, 18);
+    enemy.x += (targetX - enemy.x) * Math.min(1, dt * 1.5); enemy.y += (targetY - enemy.y) * Math.min(1, dt * 1.5);
+    if (enemy.stateTimer <= 0) enemy.stateTimer = rand(1.2, 2.8);
+  };
+  const updateSkirmisher = (enemy, dist, dt) => {
+    if (enemy.state === "meleeWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { resolveEnemyMelee(enemy, 9); enemy.attackCooldown = enemy.attackRate; enemy.state = "recover"; enemy.stateTimer = .24; enemy.telegraph = 0; } return; }
+    if (enemy.state === "recover") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "chase"; return; }
+    if (dist < enemy.attackRange + player.radius + 8 && enemy.attackCooldown <= 0) { beginEnemyTelegraph(enemy, "meleeWindup", .24); return; }
+    if (dist < 260) { enemy.state = "chase"; enemyMove(enemy, player.x - enemy.x, player.y - enemy.y, enemy.speed, dt); }
+    else updateEnemyIdle(enemy, dt);
+  };
+  const updateCharger = (enemy, dist, dt) => {
+    if (enemy.state === "chargeWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.state = "charging"; enemy.stateTimer = .38; enemy.telegraph = 0; enemy.velocityX = direction.x * 300; enemy.velocityY = direction.y * 300; spawnDust(enemy.x, enemy.y + 10, 8, "#d6a16f"); } return; }
+    if (enemy.state === "charging") { enemy.stateTimer -= dt; enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt; if (distance(enemy, player) < enemy.radius + player.radius + 12) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.thorn, 1.2); enemy.state = "recover"; enemy.stateTimer = .55; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "recover"; enemy.stateTimer = .45; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } return; }
+    if (enemy.state === "recover") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "chase"; return; }
+    if (dist < enemy.detectionRange && enemy.attackCooldown <= 0) { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; beginEnemyTelegraph(enemy, "chargeWindup", .68); return; }
+    if (dist < 320) enemyMove(enemy, player.x - enemy.x, player.y - enemy.y, enemy.speed, dt); else updateEnemyIdle(enemy, dt);
+  };
+  const updateRanged = (enemy, dist, dt) => {
+    if (enemy.state === "rangedWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { fireWispBolt(enemy); enemy.attackCooldown = enemy.attackRate; enemy.state = "recover"; enemy.stateTimer = .22; enemy.telegraph = 0; } return; }
+    if (enemy.state === "recover") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "orbit"; return; }
+    enemy.orbit += dt * .7;
+    if (dist < 145) enemyMove(enemy, enemy.x - player.x, enemy.y - player.y, enemy.speed * 1.35, dt);
+    else if (dist > 260) enemyMove(enemy, player.x - enemy.x, player.y - enemy.y, enemy.speed, dt);
+    else { const tangent = { x: -(player.y - enemy.y), y: player.x - enemy.x }; enemyMove(enemy, tangent.x, tangent.y, enemy.speed * .6, dt); }
+    if (dist < enemy.detectionRange && enemy.attackCooldown <= 0) { enemy.aimX = player.x - enemy.x; enemy.aimY = player.y - enemy.y; beginEnemyTelegraph(enemy, "rangedWindup", .48); }
+  };
+  const updateAmbusher = (enemy, dist, dt) => {
+    if (enemy.state === "ambushWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.state = "pounce"; enemy.stateTimer = .3; enemy.telegraph = 0; enemy.velocityX = direction.x * 235; enemy.velocityY = direction.y * 235; } return; }
+    if (enemy.state === "pounce") { enemy.stateTimer -= dt; enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt; if (distance(enemy, player) < enemy.radius + player.radius + 10) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.moth, .9); enemy.state = "retreat"; enemy.stateTimer = .7; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "retreat"; enemy.stateTimer = .55; enemy.attackCooldown = enemy.attackRate; } return; }
+    if (enemy.state === "retreat") { enemy.stateTimer -= dt; enemyMove(enemy, enemy.x - player.x, enemy.y - player.y, enemy.speed * 1.5, dt); if (enemy.stateTimer <= 0 && dist > 150) { enemy.state = "idle"; enemy.alerted = false; enemy.hidden = true; enemy.stateTimer = 1.4; } return; }
+    if (!enemy.alerted && dist < enemy.detectionRange) { enemy.alerted = true; enemy.hidden = false; enemy.state = "ambushWindup"; enemy.stateTimer = .42; enemy.telegraph = .42; enemy.telegraphType = "ambushWindup"; spawnLeaves(enemy.x, enemy.y, 8); spawnParticle(enemy.x, enemy.y, COLORS.moth, 8, 45, "spark"); return; }
+    if (enemy.alerted && dist < enemy.detectionRange && enemy.attackCooldown <= 0) { enemy.state = "ambushWindup"; enemy.stateTimer = .42; enemy.telegraph = .42; }
+    else if (!enemy.alerted) updateEnemyIdle(enemy, dt);
+  };
+  const updateWarden = (enemy, dist, dt) => {
+    if (enemy.state === "meleeWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { resolveEnemyMelee(enemy, 14, enemy.damage); enemy.attackCooldown = enemy.attackRate; enemy.state = "recover"; enemy.stateTimer = .35; enemy.telegraph = 0; } return; }
+    if (dist < enemy.attackRange + player.radius + 12 && enemy.attackCooldown <= 0) { beginEnemyTelegraph(enemy, "meleeWindup", .38); return; }
+    if (dist < enemy.detectionRange) enemyMove(enemy, player.x - enemy.x, player.y - enemy.y, enemy.speed, dt); else updateEnemyIdle(enemy, dt);
+  };
+  const updateBoss = (enemy, dist, dt) => {
+    enemy.phase = enemy.hp <= enemy.maxHp / 2 ? 2 : 1; enemy.orbit += dt * (enemy.phase === 2 ? 1.6 : .8);
+    if (enemy.state === "bossWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { fireBossVolley(enemy); enemy.attackCooldown = enemy.phase === 2 ? .8 : 1.25; enemy.state = "orbit"; enemy.telegraph = 0; } return; }
+    if (dist > 180) { enemy.x += Math.cos(enemy.orbit) * enemy.speed * dt; enemy.y += Math.sin(enemy.orbit) * enemy.speed * dt; }
+    if (dist < enemy.detectionRange && enemy.attackCooldown <= 0) beginEnemyTelegraph(enemy, "bossWindup", enemy.phase === 2 ? .55 : .7);
+  };
   const updateEnemies = (dt) => {
     enemies.forEach((enemy) => {
       if (enemy.dead) return;
-      enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.hitStun = Math.max(0, enemy.hitStun - dt); enemy.attackCooldown -= dt;
-      if (enemy.hitStun > 0) {
-        enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt;
-        enemy.velocityX = moveToward(enemy.velocityX, 0, 760 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 760 * dt);
-        return;
-      }
+      enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.hitStun = Math.max(0, enemy.hitStun - dt); enemy.attackCooldown -= dt; enemy.telegraph = Math.max(0, enemy.telegraph - dt);
+      if (enemy.hitStun > 0) { enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt; enemy.velocityX = moveToward(enemy.velocityX, 0, 760 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 760 * dt); return; }
       const dist = distance(enemy, player);
-      if (enemy.type === "boss") {
-        enemy.phase = enemy.hp <= enemy.maxHp / 2 ? 2 : 1; enemy.orbit += dt * (enemy.phase === 2 ? 1.6 : .8);
-        if (dist > 180) { enemy.x += Math.cos(enemy.orbit) * enemy.speed * dt; enemy.y += Math.sin(enemy.orbit) * enemy.speed * dt; }
-        if (enemy.attackCooldown <= 0) { enemy.attackCooldown = enemy.phase === 2 ? .8 : 1.25; for (let i = 0; i < (enemy.phase === 2 ? 5 : 3); i += 1) { const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x) + (i - 1) * .22; projectiles.push({ x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 115, vy: Math.sin(angle) * 115, life: 2, radius: 7, color: enemy.phase === 2 ? COLORS.rose : COLORS.gold }); } spawnParticle(enemy.x, enemy.y, enemy.phase === 2 ? COLORS.rose : COLORS.gold, 12, 70); }
-      } else if (dist < 300 && dist > enemy.radius + player.radius + 4) {
-        const dx = (player.x - enemy.x) / dist; const dy = (player.y - enemy.y) / dist; enemy.x += dx * enemy.speed * dt; enemy.y += dy * enemy.speed * dt;
-      }
+      if (!enemy.alerted && enemy.behavior !== "ambush" && dist <= enemy.detectionRange) { enemy.alerted = true; enemy.state = "alert"; enemy.stateTimer = .16; spawnParticle(enemy.x, enemy.y, enemy.color, 4, 28, "spark"); if (enemy.group) enemies.forEach((ally) => { if (ally.group === enemy.group && distance(enemy, ally) < 175) ally.alerted = true; }); }
+      if (enemy.state === "alert") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = enemy.behavior === "ranged" ? "orbit" : "chase"; return; }
+      if (enemy.behavior === "skirmish") updateSkirmisher(enemy, dist, dt);
+      else if (enemy.behavior === "charger") updateCharger(enemy, dist, dt);
+      else if (enemy.behavior === "ranged") updateRanged(enemy, dist, dt);
+      else if (enemy.behavior === "ambush") updateAmbusher(enemy, dist, dt);
+      else if (enemy.behavior === "warden") updateWarden(enemy, dist, dt);
+      else updateBoss(enemy, dist, dt);
       enemy.velocityX = moveToward(enemy.velocityX, 0, 820 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 820 * dt);
       enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt;
-      if (dist < enemy.radius + player.radius + 9 && enemy.attackCooldown <= 0) { enemy.attackCooldown = enemy.type === "warden" ? 1.1 : .95; hurtPlayer(enemy.damage, enemy); }
     });
     enemies = enemies.filter((enemy) => !enemy.dead);
-    projectiles = projectiles.filter((projectile) => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (distance(projectile, player) < projectile.radius + player.radius) { hurtPlayer(1, projectile); return false; } return projectile.life > 0 && projectile.x > 0 && projectile.y > 0 && projectile.x < ROOM.width && projectile.y < ROOM.height; });
+    const maxX = state.area === "overworld" ? WORLD.width : ROOM.width; const maxY = state.area === "overworld" ? WORLD.height : ROOM.height;
+    projectiles = projectiles.filter((projectile) => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (distance(projectile, player) < projectile.radius + player.radius) { hurtPlayer(projectile.damage || 1, projectile); return false; } return projectile.life > 0 && projectile.x > 0 && projectile.y > 0 && projectile.x < maxX && projectile.y < maxY; });
   };
 
   const updatePlayer = (dt) => {
@@ -381,7 +459,7 @@
     particles = particles.filter((particle) => { particle.life -= dt; particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.vy += 45 * dt; return particle.life > 0; });
     updateEnvironment(dt);
     if (state.mode !== "playing" || state.dialogue) return;
-    updatePlayer(dt); updateEnemies(dt);
+    updatePlayer(dt); updateEnemies(dt); updateDrops(dt);
     if (state.area === "dungeon" && state.transitionCooldown <= 0) {
       if (player.x < 42) transitionDungeon(-1, 0); else if (player.x > ROOM.width - 42) transitionDungeon(1, 0); else if (player.y < 42) transitionDungeon(0, -1); else if (player.y > ROOM.height - 42) transitionDungeon(0, 1);
     }
@@ -515,17 +593,29 @@
 
   const drawEnemy = (enemy, time) => {
     if (enemy.dead) return;
+    if (enemy.hidden) { ctx.save(); ctx.globalAlpha = .16 + Math.sin(time * 2 + enemy.orbit) * .04; drawShadow(enemy.x, enemy.y + 9, 15, 5, .35); ctx.fillStyle = "#8e76a5"; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y, 8, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
     const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 2 : 0;
     drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * (enemy.hitStun > 0 ? 1.04 : .9), enemy.radius * .3, .36);
     ctx.save(); if (enemy.hitFlash > 0) ctx.globalAlpha = .55 + Math.sin(enemy.hitFlash * 35) * .45;
     const color = enemy.color;
     if (enemy.type === "boss") { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius + Math.sin(time * 5) * 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#512d58"; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y - 6, enemy.radius * .6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(enemy.x - 13 + recoil, enemy.y - 11, 8, 5); ctx.fillRect(enemy.x + 5 + recoil, enemy.y - 11, 8, 5); }
     else if (enemy.type === "warden") { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(enemy.x + recoil, enemy.y - 30); ctx.lineTo(enemy.x + 25 + recoil, enemy.y + 22); ctx.lineTo(enemy.x - 25 + recoil, enemy.y + 22); ctx.closePath(); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y - 3, 8, 0, Math.PI * 2); ctx.fill(); }
-    else { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#17362e"; ctx.beginPath(); ctx.arc(enemy.x - 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.arc(enemy.x + 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.fill(); if (enemy.type === "wisp") { ctx.strokeStyle = "rgba(220,207,255,.6)"; ctx.lineWidth = 3; ctx.stroke(); } }
+    else if (enemy.type === "thornback") { ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(enemy.x + recoil, enemy.y, enemy.radius + 4, enemy.radius - 2, -.08, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#7d543d"; for (let i = -1; i <= 1; i += 1) { ctx.beginPath(); ctx.moveTo(enemy.x + recoil + i * 9, enemy.y - 10); ctx.lineTo(enemy.x + recoil + i * 9 + 5, enemy.y - 22); ctx.lineTo(enemy.x + recoil + i * 9 + 10, enemy.y - 8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = "#2c4135"; ctx.beginPath(); ctx.arc(enemy.x + recoil + 7, enemy.y - 2, 3, 0, Math.PI * 2); ctx.fill(); }
+    else if (enemy.type === "moth") { ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(enemy.x + recoil - 8, enemy.y - 3, 11, 7, -.45, 0, Math.PI * 2); ctx.ellipse(enemy.x + recoil + 8, enemy.y - 3, 11, 7, .45, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#583b62"; ctx.beginPath(); ctx.ellipse(enemy.x + recoil, enemy.y + 2, 4, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffe7a2"; ctx.beginPath(); ctx.arc(enemy.x + recoil - 2, enemy.y - 1, 2, 0, Math.PI * 2); ctx.arc(enemy.x + recoil + 2, enemy.y - 1, 2, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#17362e"; ctx.beginPath(); ctx.arc(enemy.x - 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.arc(enemy.x + 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.fill(); if (enemy.type === "wisp") { ctx.strokeStyle = "rgba(220,207,255,.6)"; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = "rgba(235,220,255,.28)"; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius + 7 + Math.sin(time * 5) * 2, 0, Math.PI * 2); ctx.fill(); } }
     ctx.restore();
     if (enemy.hitStun > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.hitStun * 5, 0, .85); ctx.strokeStyle = "#fff7dc"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 5 + Math.sin(time * 30) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    if (enemy.telegraph > 0) {
+      const progress = clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1); ctx.save(); ctx.globalAlpha = .3 + progress * .5; ctx.lineWidth = 3;
+      if (enemy.telegraphType === "chargeWindup") { ctx.strokeStyle = "#ffb875"; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 9 + Math.sin(time * 15) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = "rgba(255,195,125,.75)"; ctx.beginPath(); ctx.moveTo(enemy.x, enemy.y); ctx.lineTo(enemy.x + enemy.chargeX * 110, enemy.y + enemy.chargeY * 110); ctx.stroke(); }
+      else if (enemy.telegraphType === "rangedWindup" || enemy.telegraphType === "bossWindup") { ctx.strokeStyle = enemy.telegraphType === "bossWindup" ? "#ff9a9d" : "#d9c8ff"; ctx.beginPath(); ctx.moveTo(enemy.x, enemy.y); ctx.lineTo(enemy.x + (enemy.aimX || player.x - enemy.x), enemy.y + (enemy.aimY || player.y - enemy.y)); ctx.stroke(); ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 9 + Math.sin(time * 12) * 2, 0, Math.PI * 2); ctx.stroke(); }
+      else { ctx.strokeStyle = enemy.type === "moth" ? "#efb7dc" : "#fff0bb"; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 8 + (1 - progress) * 15, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.restore();
+    }
     if (enemy.type === "warden" || enemy.type === "boss") { ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2, 4); ctx.fillStyle = enemy.color; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2 * (enemy.hp / enemy.maxHp), 4); }
   };
+  const drawDrop = (drop, time) => { const bob = Math.sin(time * 4 + drop.bob) * 4; ctx.save(); ctx.translate(drop.x, drop.y + bob); ctx.globalAlpha = clamp(drop.life / 2, .35, 1); const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 22); glow.addColorStop(0, `${drop.color}88`); glow.addColorStop(1, `${drop.color}00`); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = drop.color; ctx.rotate(time * 1.8 + drop.phase); ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(7, 0); ctx.lineTo(0, 8); ctx.lineTo(-7, 0); ctx.closePath(); ctx.fill(); ctx.restore(); };
+  const drawProjectile = (projectile) => { ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = projectile.color; ctx.shadowColor = projectile.color; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius + 3, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); };
   const drawAttackTrail = () => {
     if (player.attack <= 0) return;
     const progress = clamp(player.attackElapsed / .34, 0, 1); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
@@ -566,17 +656,17 @@
     ctx.clearRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.translate(-camera.x + camera.shakeX, -camera.y + camera.shakeY);
     if (state.area === "overworld") drawOverworld(time); else drawDungeon(time);
     leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { ctx.fillStyle = "rgba(213,246,174,.55)"; ctx.fillRect(leaf.x, leaf.y, 3, 7); } });
-    const entities = [...enemies].sort((a, b) => a.y - b.y); entities.forEach((enemy) => drawEnemy(enemy, time)); projectiles.forEach((projectile) => { ctx.fillStyle = projectile.color; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2); ctx.fill(); });
+    const entities = [...enemies].sort((a, b) => a.y - b.y); entities.forEach((enemy) => drawEnemy(enemy, time)); drops.forEach((drop) => drawDrop(drop, time)); projectiles.forEach((projectile) => drawProjectile(projectile));
     drawPlayer(time); if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); ctx.restore();
     const light = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, 80, WIDTH / 2, HEIGHT / 2, 480); light.addColorStop(0, "rgba(0,0,0,0)"); light.addColorStop(1, state.area === "dungeon" ? "rgba(2,8,8,.38)" : "rgba(4,13,9,.2)"); ctx.fillStyle = light; ctx.fillRect(0, 0, WIDTH, HEIGHT);
     if (state.impactFlash > 0) { ctx.fillStyle = `rgba(255,246,210,${state.impactFlash * 1.8})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); }
   };
 
   const updateObjective = () => { if (state.area === "overworld") { ui.objective.textContent = state.secretFound ? "Enter the Hollow Shrine" : "Find Rowan at the outpost"; ui.objectiveCopy.textContent = state.secretFound ? "A blue seam glows behind the old outpost." : "The blue moths gather where the old path breaks."; } else { const key = `${state.roomX}-${state.roomY}`; if (key === "0-0") { ui.objective.textContent = state.key ? "Reach the Moon Switch Hall" : "Search the Root Gallery"; ui.objectiveCopy.textContent = state.key ? "The brass key hums when you face east." : "A forgotten chest waits beneath the shrine glyph."; } else if (key === "1-0") { ui.objective.textContent = state.switches ? "Find the Warden's Garden" : "Wake the moon switch"; ui.objectiveCopy.textContent = state.switches ? "The lower gate is open." : "Stand near the silver disk and press E."; } else if (key === "2-0") { ui.objective.textContent = state.miniBossDefeated ? "Descend to the Sanctum" : "Defeat the Root Warden"; ui.objectiveCopy.textContent = "Its bark armor cracks after every clean sword hit."; } else if (key === "2-1") { ui.objective.textContent = state.bossDefeated ? "Claim the Heartseed" : "Silence the Hollow Guardian"; ui.objectiveCopy.textContent = "The guardian changes its rhythm when its light turns rose."; } else { ui.objective.textContent = "Explore the shrine"; ui.objectiveCopy.textContent = "Every room remembers a different season."; } } };
-  const updateHud = () => { ui.area.textContent = state.area === "overworld" ? "Lanternwood" : "Hollow Shrine"; ui.room.textContent = state.area === "overworld" ? "Outpost field" : dungeonRoomName(); ui.seed.textContent = state.reward ? "1" : "0"; ui.keys.textContent = state.key ? "1" : "0"; ui.save.textContent = state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : "Paused"; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); } ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective(); };
+  const updateHud = () => { ui.area.textContent = state.area === "overworld" ? "Lanternwood" : "Hollow Shrine"; ui.room.textContent = state.area === "overworld" ? "Outpost field" : dungeonRoomName(); ui.seed.textContent = state.reward ? "1" : "0"; ui.keys.textContent = state.key ? "1" : "0"; ui.loot.textContent = state.loot || "0"; ui.save.textContent = state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : "Paused"; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); } ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective(); };
   const showVictory = () => { state.mode = "victory"; hideScreens(); ui.victory.classList.remove("hidden"); updateHud(); };
 
-  const startGame = (continueGame) => { hideScreens(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; player.maxHp = 6; player.hp = player.maxHp; startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
+  const startGame = (continueGame) => { hideScreens(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; player.maxHp = 6; player.hp = player.maxHp; startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
 
   document.getElementById("new-game").addEventListener("click", () => startGame(false));
   document.getElementById("continue-game").addEventListener("click", () => startGame(true));
