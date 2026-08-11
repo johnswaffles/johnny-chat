@@ -47,7 +47,7 @@
     dialogueSpeed: 52, spawnGrace: 0, dungeonIntro: 0, dungeonEntranceSeen: false, roomTransition: 0, roomTransitionLabel: "", hazardCooldown: 0, ashCacheOpened: false, ashShortcutOpen: false,
     rootlightLantern: false, rootlightTested: false, rootlightGalleryOpen: false, rootlightGalleryCacheOpened: false, rootlightMoonBridge: false, rootlightWaterway: false, rootlightGateOpen: false, rootlightCacheOpened: false, itemReveal: 0,
     bossIntroSeen: false, bossEntrance: 0, bossPhase: 1, bossPhaseShift: 0, bossArenaPulse: 0, bossDefeatTimer: 0, bossDefeatX: 600, bossDefeatY: 285, bossRewardClaimed: false,
-    lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0, visualClock: 0, pickupPulse: 0
+    lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0, visualClock: 0, pickupPulse: 0, saveError: false
   };
   let enemies = [];
   let projectiles = [];
@@ -155,15 +155,17 @@
     renderDialogueLine();
   };
   const saveData = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, dialogue: null, mode: "playing", hp: player.hp, area: state.area, roomX: state.roomX, roomY: state.roomY }));
-    state.lastSave = 0;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, dialogue: null, mode: "playing", hp: player.hp, area: state.area, roomX: state.roomX, roomY: state.roomY }));
+      state.lastSave = 0; state.saveError = false; return true;
+    } catch (error) { state.saveError = true; return false; }
   };
-  const hasSave = () => Boolean(localStorage.getItem(STORAGE_KEY));
+  const hasSave = () => { try { return Boolean(localStorage.getItem(STORAGE_KEY)); } catch (error) { return false; } };
   const loadData = () => {
     try {
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (!data) return false;
-      Object.assign(state, data, { mode: "playing", dialogue: null, toastTimer: 0 });
+      Object.assign(state, data, { mode: "playing", dialogue: null, toastTimer: 0, saveError: false });
       if (state.ashCacheOpened && !state.rootlightLantern) state.rootlightLantern = true;
       // Migrate older victories into the permanent Heartseed Echo reward.
       if (state.bossDefeated && !state.bossRewardClaimed) state.bossRewardClaimed = true;
@@ -172,14 +174,22 @@
       if (state.area === "dungeon") { player.x = ROOM.width / 2; player.y = ROOM.height - 100; } else { player.x = 390; player.y = 500; }
       startArea(state.area, false);
       return true;
-    } catch (error) { localStorage.removeItem(STORAGE_KEY); return false; }
+    } catch (error) { try { localStorage.removeItem(STORAGE_KEY); } catch (removeError) { /* Storage may be unavailable in private browsing. */ } state.saveError = true; return false; }
+  };
+
+  const restoreTitlePresentation = () => {
+    ui.title.querySelector(".screen-kicker").textContent = "THE LANTERNWOOD CHRONICLE";
+    ui.title.querySelector("h2").textContent = "Mosswake";
+    ui.title.querySelector("p:not(.screen-kicker)").textContent = "Follow the blue moths through Lanternwood, then wake the buried shrine before the roots close over it.";
+    const newGameButton = document.getElementById("new-game"); const continueButton = document.getElementById("continue-game");
+    newGameButton.textContent = "New game"; continueButton.classList.remove("hidden"); continueButton.disabled = !hasSave();
   };
 
   const resetProgress = () => {
-    localStorage.removeItem(STORAGE_KEY);
+    try { localStorage.removeItem(STORAGE_KEY); state.saveError = false; } catch (error) { state.saveError = true; }
     state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0;
     state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dialogueSpeed = 52; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; state.bossIntroSeen = false; state.bossEntrance = 0; state.bossPhase = 1; state.bossPhaseShift = 0; state.bossArenaPulse = 0; state.bossDefeatTimer = 0; state.bossDefeatX = 600; state.bossDefeatY = 285; state.bossRewardClaimed = false; state.visualClock = 0; state.pickupPulse = 0;
-    player.maxHp = 6; player.hp = player.maxHp; player.x = 390; player.y = 500; resetPlayerMotion(); startArea("overworld", false); state.mode = "title"; hideScreens(); ui.title.classList.remove("hidden"); updateHud();
+    player.maxHp = 6; player.hp = player.maxHp; player.x = 390; player.y = 500; resetPlayerMotion(); startArea("overworld", false); state.mode = "title"; hideScreens(); ui.title.classList.remove("hidden"); restoreTitlePresentation(); updateHud();
   };
 
   const spawnParticle = (x, y, color, count = 5, speed = 75, kind = "spark") => {
@@ -281,6 +291,7 @@
   const resetPlayerMotion = () => {
     player.velocityX = 0; player.velocityY = 0; player.attack = 0; player.attackElapsed = 0; player.attackCooldown = 0;
     player.attackBuffer = 0; player.dash = 0; player.dashCooldown = 0; player.rootlightPulse = 0; player.rootlightCooldown = 0; player.invulnerable = 0; player.hurt = 0;
+    player.visualState = "idle"; player.walk = 0;
   };
 
   const startArea = (area, announce = true) => {
@@ -345,6 +356,15 @@
     if (key === "2-1") walls.push({ x: 220, y: 170, w: 45, h: 180, type: "pillar" }, { x: 935, y: 170, w: 45, h: 180, type: "pillar" });
     return walls;
   };
+  const lockedDungeonDoors = () => {
+    const key = `${state.roomX}-${state.roomY}`; const doors = [];
+    if (key === "0-0" && !state.key) doors.push({ x: 1138, y: 332, w: 62, h: 136, type: "locked-door" });
+    if (key === "1-0" && !state.switches) doors.push({ x: 532, y: 738, w: 136, h: 62, type: "locked-door" });
+    if (key === "2-0" && !state.miniBossDefeated) doors.push({ x: 532, y: 738, w: 136, h: 62, type: "locked-door" });
+    if (key === "1-1" && !state.ashShortcutOpen) doors.push({ x: 0, y: 332, w: 62, h: 136, type: "locked-door" });
+    if (key === "1-1" && !(state.key && state.miniBossDefeated)) doors.push({ x: 1138, y: 332, w: 62, h: 136, type: "locked-door" });
+    return doors;
+  };
   const dungeonHazards = () => {
     const key = `${state.roomX}-${state.roomY}`;
     if (key === "0-1" && !state.rootlightWaterway) return [{ x: 410, y: 250, w: 380, h: 280, damage: 1, color: COLORS.water, label: "deep water" }];
@@ -374,11 +394,17 @@
     if (state.area === "dungeon" && state.roomX === 1 && state.roomY === 1 && !state.ashShortcutOpen && next.x < 90 && next.y < 245) return true;
     return false;
   };
+  const collidesEnemyWorld = (next) => collidesWorld(next) || lockedDungeonDoors().some((rect) => circleRectCollision(next, rect));
 
   const tryMove = (dx, dy) => {
     const nextX = { ...player, x: player.x + dx }; const nextY = { ...player, y: player.y + dy };
     if (!collidesWorld(nextX)) player.x = clamp(nextX.x, player.radius, (state.area === "overworld" ? WORLD.width : ROOM.width) - player.radius);
     if (!collidesWorld(nextY)) player.y = clamp(nextY.y, player.radius, (state.area === "overworld" ? WORLD.height : ROOM.height) - player.radius);
+  };
+  const moveEntityBy = (entity, dx, dy) => {
+    const nextX = { ...entity, x: entity.x + dx }; const nextY = { ...entity, y: entity.y + dy }; const maxX = (state.area === "overworld" ? WORLD.width : ROOM.width) - entity.radius; const maxY = (state.area === "overworld" ? WORLD.height : ROOM.height) - entity.radius;
+    if (!collidesEnemyWorld(nextX)) entity.x = clamp(nextX.x, entity.radius, maxX);
+    if (!collidesEnemyWorld(nextY)) entity.y = clamp(nextY.y, entity.radius, maxY);
   };
 
   const readMoveInput = () => {
@@ -501,7 +527,7 @@
     const direction = normalized(player.x - source.x, player.y - source.y, -player.facingX, -player.facingY);
     player.velocityX = direction.x * 235; player.velocityY = direction.y * 235; camera.shake = Math.max(camera.shake, .13);
     triggerImpact(player.x, player.y, COLORS.rose, 1.25); spawnParticle(player.x, player.y, COLORS.rose, 12, 135, "impact"); updateHud();
-    if (player.hp <= 0) { state.mode = "dead"; hideScreens(); ui.title.classList.remove("hidden"); ui.title.querySelector(".screen-kicker").textContent = "THE LANTERN WENT OUT"; ui.title.querySelector("h2").textContent = "The roots took you"; ui.title.querySelector("p:not(.screen-kicker)").textContent = "Start again at the outpost. The shrine will still be waiting."; document.getElementById("new-game").textContent = "Restart"; document.getElementById("continue-game").classList.add("hidden"); }
+    if (player.hp <= 0) { state.mode = "dead"; hideScreens(); ui.title.classList.remove("hidden"); ui.title.querySelector(".screen-kicker").textContent = "THE LANTERN WENT OUT"; ui.title.querySelector("h2").textContent = "The roots took you"; ui.title.querySelector("p:not(.screen-kicker)").textContent = "Start again at the outpost. The shrine will still be waiting."; document.getElementById("new-game").textContent = "Restart"; document.getElementById("continue-game").classList.add("hidden"); updateHud(); }
   };
 
   const breakables = () => state.area === "overworld" ? [
@@ -539,6 +565,7 @@
     const from = `${state.roomX}-${state.roomY}`; const targetX = state.roomX + dx; const targetY = state.roomY + dy;
     if (from === "0-0" && dy < 0 || from === "0-1" && dy > 0) { if (from === "0-1") { state.area = "overworld"; startArea("overworld"); return; } }
     if (targetX < 0 || targetX > 2 || targetY < 0 || targetY > 1) return;
+    if (from === "0-0" && dx > 0 && !state.key) { showToast("A brass lock holds the east door — search beneath the shrine glyph"); return; }
     if (from === "1-0" && dy > 0 && !state.switches) { showToast("The moon switch is still dark"); return; }
     if (from === "1-1" && dx < 0 && !state.ashShortcutOpen) { showToast("Sootglass seals the flooded vault — search the broken wall"); return; }
     if (from === "1-1" && dx > 0 && !state.key) { showToast("A brass keyhole bars this door"); return; }
@@ -547,7 +574,7 @@
     state.roomX = targetX; state.roomY = targetY; const entryX = dx > 0 ? 80 : dx < 0 ? ROOM.width - 80 : ROOM.width / 2; const entryY = dy > 0 ? 80 : dy < 0 ? ROOM.height - 80 : ROOM.height / 2; state.transitionCooldown = .5; startArea("dungeon"); player.x = entryX; player.y = entryY; resetPlayerMotion(); saveData(); updateObjective();
   };
 
-  const enemyMove = (enemy, dx, dy, speed, dt) => { const direction = normalized(dx, dy, 0, 0); enemy.x += direction.x * speed * dt; enemy.y += direction.y * speed * dt; };
+  const enemyMove = (enemy, dx, dy, speed, dt) => { const direction = normalized(dx, dy, 0, 0); moveEntityBy(enemy, direction.x * speed * dt, direction.y * speed * dt); };
   const beginEnemyTelegraph = (enemy, type, duration) => { enemy.state = type; enemy.stateTimer = duration; enemy.telegraph = duration; enemy.telegraphType = type; spawnParticle(enemy.x, enemy.y, type === "rangedWindup" ? COLORS.wisp : COLORS.gold, 3, 24, "spark"); };
   const resolveEnemyMelee = (enemy, reach = 10, damage = enemy.damage) => { if (distance(enemy, player) < enemy.radius + player.radius + reach) { hurtPlayer(damage, enemy); triggerImpact(player.x, player.y, enemy.color, enemy.type === "thornback" ? 1.2 : .72); return true; } return false; };
   const fireWispBolt = (enemy) => {
@@ -573,7 +600,7 @@
   const updateEnemyIdle = (enemy, dt) => {
     enemy.stateTimer -= dt; enemy.orbit += dt * .35;
     const guardRadius = enemy.guardRadius || 30; const targetX = enemy.homeX + Math.cos(enemy.orbit) * Math.min(guardRadius, 28); const targetY = enemy.homeY + Math.sin(enemy.orbit * .8) * Math.min(guardRadius, 18);
-    enemy.x += (targetX - enemy.x) * Math.min(1, dt * 1.5); enemy.y += (targetY - enemy.y) * Math.min(1, dt * 1.5);
+    const blend = Math.min(1, dt * 1.5); moveEntityBy(enemy, (targetX - enemy.x) * blend, (targetY - enemy.y) * blend);
     if (enemy.stateTimer <= 0) enemy.stateTimer = rand(1.2, 2.8);
   };
   const updateSkirmisher = (enemy, dist, dt) => {
@@ -585,7 +612,7 @@
   };
   const updateCharger = (enemy, dist, dt) => {
     if (enemy.state === "chargeWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.state = "charging"; enemy.stateTimer = .38; enemy.telegraph = 0; enemy.velocityX = direction.x * 300; enemy.velocityY = direction.y * 300; spawnDust(enemy.x, enemy.y + 10, 8, "#d6a16f"); } return; }
-    if (enemy.state === "charging") { enemy.stateTimer -= dt; enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt; if (distance(enemy, player) < enemy.radius + player.radius + 12) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.thorn, 1.2); enemy.state = "recover"; enemy.stateTimer = .55; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "recover"; enemy.stateTimer = .45; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } return; }
+    if (enemy.state === "charging") { enemy.stateTimer -= dt; if (distance(enemy, player) < enemy.radius + player.radius + 12) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.thorn, 1.2); enemy.state = "recover"; enemy.stateTimer = .55; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "recover"; enemy.stateTimer = .45; enemy.velocityX = 0; enemy.velocityY = 0; enemy.attackCooldown = enemy.attackRate; } return; }
     if (enemy.state === "recover") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "chase"; return; }
     if (dist < enemy.detectionRange && enemy.attackCooldown <= 0) { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; beginEnemyTelegraph(enemy, "chargeWindup", .68); return; }
     if (dist < 320) enemyMove(enemy, player.x - enemy.x, player.y - enemy.y, enemy.speed, dt); else updateEnemyIdle(enemy, dt);
@@ -601,7 +628,7 @@
   };
   const updateAmbusher = (enemy, dist, dt) => {
     if (enemy.state === "ambushWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.state = "pounce"; enemy.stateTimer = .3; enemy.telegraph = 0; enemy.velocityX = direction.x * 235; enemy.velocityY = direction.y * 235; } return; }
-    if (enemy.state === "pounce") { enemy.stateTimer -= dt; enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt; if (distance(enemy, player) < enemy.radius + player.radius + 10) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.moth, .9); enemy.state = "retreat"; enemy.stateTimer = .7; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "retreat"; enemy.stateTimer = .55; enemy.attackCooldown = enemy.attackRate; } return; }
+    if (enemy.state === "pounce") { enemy.stateTimer -= dt; if (distance(enemy, player) < enemy.radius + player.radius + 10) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.moth, .9); enemy.state = "retreat"; enemy.stateTimer = .7; enemy.attackCooldown = enemy.attackRate; } else if (enemy.stateTimer <= 0) { enemy.state = "retreat"; enemy.stateTimer = .55; enemy.attackCooldown = enemy.attackRate; } return; }
     if (enemy.state === "retreat") { enemy.stateTimer -= dt; enemyMove(enemy, enemy.x - player.x, enemy.y - player.y, enemy.speed * 1.5, dt); if (enemy.stateTimer <= 0 && dist > 150) { enemy.state = "idle"; enemy.alerted = false; enemy.hidden = true; enemy.stateTimer = 1.4; } return; }
     if (!enemy.alerted && dist < enemy.detectionRange) { enemy.alerted = true; enemy.hidden = false; enemy.state = "ambushWindup"; enemy.stateTimer = .42; enemy.telegraph = .42; enemy.telegraphType = "ambushWindup"; spawnLeaves(enemy.x, enemy.y, 8); spawnParticle(enemy.x, enemy.y, COLORS.moth, 8, 45, "spark"); return; }
     if (enemy.alerted && dist < enemy.detectionRange && enemy.attackCooldown <= 0) { enemy.state = "ambushWindup"; enemy.stateTimer = .42; enemy.telegraph = .42; }
@@ -617,10 +644,10 @@
     if (desiredPhase !== enemy.phase) { enemy.phase = desiredPhase; state.bossPhase = desiredPhase; state.bossPhaseShift = 1.85; state.bossArenaPulse = 1.85; enemy.state = "phaseShift"; enemy.stateTimer = .2; enemy.telegraph = 0; enemy.attackCooldown = 1.1; playSfx("phase"); camera.shake = Math.max(camera.shake, .24); spawnLeaves(enemy.x, enemy.y, 34); spawnParticle(enemy.x, enemy.y, COLORS.rose, 28, 170, "impact"); return; }
     state.bossPhase = enemy.phase; enemy.orbit += dt * (enemy.phase === 2 ? 1.7 : .8);
     if (enemy.state === "phaseShift") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "orbit"; return; }
-    if (enemy.state === "bossWindup" || enemy.state === "bossSlamWindup" || enemy.state === "bossRainWindup" || enemy.state === "bossDashWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { if (enemy.state === "bossWindup") fireBossVolley(enemy); else if (enemy.state === "bossSlamWindup") fireBossSlam(enemy); else if (enemy.state === "bossRainWindup") fireBossRootRain(enemy); else { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.velocityX = direction.x * (enemy.phase === 2 ? 420 : 340); enemy.velocityY = direction.y * (enemy.phase === 2 ? 420 : 340); enemy.state = "bossDashing"; enemy.stateTimer = enemy.phase === 2 ? .58 : .46; spawnDust(enemy.x, enemy.y + 18, 15, enemy.phase === 2 ? "#d66b92" : "#bd8c72"); } enemy.attackCooldown = enemy.phase === 2 ? .62 : 1.05; enemy.telegraph = 0; } return; }
-    if (enemy.state === "bossDashing") { enemy.stateTimer -= dt; enemy.x = clamp(enemy.x + enemy.velocityX * dt, 86, ROOM.width - 86); enemy.y = clamp(enemy.y + enemy.velocityY * dt, 106, ROOM.height - 106); enemy.velocityX = 0; enemy.velocityY = 0; if (distance(enemy, player) < enemy.radius + player.radius + 16) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.rose, 1.35); } if (enemy.stateTimer <= 0) { enemy.state = "bossRecover"; enemy.stateTimer = enemy.phase === 2 ? .34 : .5; } return; }
+    if (enemy.state === "bossWindup" || enemy.state === "bossSlamWindup" || enemy.state === "bossRainWindup" || enemy.state === "bossDashWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { if (enemy.state === "bossWindup") fireBossVolley(enemy); else if (enemy.state === "bossSlamWindup") fireBossSlam(enemy); else if (enemy.state === "bossRainWindup") fireBossRootRain(enemy); else { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.velocityX = 0; enemy.velocityY = 0; enemy.state = "bossDashing"; enemy.stateTimer = enemy.phase === 2 ? .58 : .46; spawnDust(enemy.x, enemy.y + 18, 15, enemy.phase === 2 ? "#d66b92" : "#bd8c72"); } enemy.attackCooldown = enemy.phase === 2 ? .62 : 1.05; enemy.telegraph = 0; } return; }
+    if (enemy.state === "bossDashing") { enemy.stateTimer -= dt; const dashSpeed = enemy.phase === 2 ? 420 : 340; moveEntityBy(enemy, enemy.chargeX * dashSpeed * dt, enemy.chargeY * dashSpeed * dt); if (distance(enemy, player) < enemy.radius + player.radius + 16) { hurtPlayer(enemy.damage, enemy); triggerImpact(player.x, player.y, COLORS.rose, 1.35); } if (enemy.stateTimer <= 0) { enemy.state = "bossRecover"; enemy.stateTimer = enemy.phase === 2 ? .34 : .5; enemy.velocityX = 0; enemy.velocityY = 0; } return; }
     if (enemy.state === "bossRecover") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "orbit"; return; }
-    if (dist > 185) { enemy.x += Math.cos(enemy.orbit) * enemy.speed * dt; enemy.y += Math.sin(enemy.orbit) * enemy.speed * dt; }
+    if (dist > 185) moveEntityBy(enemy, Math.cos(enemy.orbit) * enemy.speed * dt, Math.sin(enemy.orbit) * enemy.speed * dt);
     else { const tangent = { x: -(player.y - enemy.y), y: player.x - enemy.x }; enemyMove(enemy, tangent.x, tangent.y, enemy.phase === 2 ? enemy.speed * 1.1 : enemy.speed * .7, dt); }
     if (dist < enemy.detectionRange && enemy.attackCooldown <= 0) {
       const patternCount = enemy.phase === 2 ? 4 : 3; const pattern = enemy.attackPattern % patternCount; enemy.attackPattern += 1;
@@ -635,7 +662,7 @@
     enemies.forEach((enemy) => {
       if (enemy.dead) return;
       enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.hitStun = Math.max(0, enemy.hitStun - dt); enemy.phaseExposed = Math.max(0, (enemy.phaseExposed || 0) - dt); enemy.attackCooldown -= dt; enemy.telegraph = Math.max(0, enemy.telegraph - dt);
-      if (enemy.hitStun > 0) { enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt; enemy.velocityX = moveToward(enemy.velocityX, 0, 760 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 760 * dt); return; }
+      if (enemy.hitStun > 0) { moveEntityBy(enemy, enemy.velocityX * dt, enemy.velocityY * dt); enemy.velocityX = moveToward(enemy.velocityX, 0, 760 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 760 * dt); return; }
       const dist = distance(enemy, player);
       if (!enemy.alerted && enemy.behavior !== "ambush" && dist <= enemy.detectionRange) { enemy.alerted = true; enemy.state = "alert"; enemy.stateTimer = .16; spawnParticle(enemy.x, enemy.y, enemy.color, 4, 28, "spark"); if (enemy.group) enemies.forEach((ally) => { if (ally.group === enemy.group && distance(enemy, ally) < 175) ally.alerted = true; }); }
       if (enemy.state === "alert") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = enemy.behavior === "ranged" ? "orbit" : "chase"; return; }
@@ -646,11 +673,11 @@
       else if (enemy.behavior === "warden") updateWarden(enemy, dist, dt);
       else updateBoss(enemy, dist, dt);
       enemy.velocityX = moveToward(enemy.velocityX, 0, 820 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 820 * dt);
-      enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt;
+      moveEntityBy(enemy, enemy.velocityX * dt, enemy.velocityY * dt);
     });
     enemies = enemies.filter((enemy) => !enemy.dead);
     const maxX = state.area === "overworld" ? WORLD.width : ROOM.width; const maxY = state.area === "overworld" ? WORLD.height : ROOM.height;
-    projectiles = projectiles.filter((projectile) => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (distance(projectile, player) < projectile.radius + player.radius) { hurtPlayer(projectile.damage || 1, projectile); return false; } return projectile.life > 0 && projectile.x > 0 && projectile.y > 0 && projectile.x < maxX && projectile.y < maxY; });
+    projectiles = projectiles.filter((projectile) => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (collidesWorld({ ...projectile, radius: projectile.radius })) return false; if (distance(projectile, player) < projectile.radius + player.radius) { hurtPlayer(projectile.damage || 1, projectile); return false; } return projectile.life > 0 && projectile.x > 0 && projectile.y > 0 && projectile.x < maxX && projectile.y < maxY; });
   };
 
   const updatePlayer = (dt) => {
@@ -696,6 +723,8 @@
   };
 
   const update = (dt) => {
+    // Pause and end screens must freeze timers, hazards, particles, and boss sequences.
+    if (state.mode !== "playing") return;
     if (state.toastTimer > 0) { state.toastTimer -= dt * 1000; if (state.toastTimer <= 0) ui.toast.classList.remove("visible"); }
     const bossDefeatWasRunning = state.bossDefeatTimer > 0; state.visualClock += dt; state.impactFlash = Math.max(0, state.impactFlash - dt); state.pickupPulse = Math.max(0, (state.pickupPulse || 0) - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); state.spawnGrace = Math.max(0, (state.spawnGrace || 0) - dt); state.dungeonIntro = Math.max(0, (state.dungeonIntro || 0) - dt); state.roomTransition = Math.max(0, (state.roomTransition || 0) - dt); state.hazardCooldown = Math.max(0, (state.hazardCooldown || 0) - dt); state.itemReveal = Math.max(0, (state.itemReveal || 0) - dt); state.bossEntrance = Math.max(0, (state.bossEntrance || 0) - dt); state.bossPhaseShift = Math.max(0, (state.bossPhaseShift || 0) - dt); state.bossArenaPulse = Math.max(0, (state.bossArenaPulse || 0) - dt); state.bossDefeatTimer = Math.max(0, (state.bossDefeatTimer || 0) - dt);
     if (bossDefeatWasRunning && state.bossDefeatTimer <= 0 && state.mode === "playing") { playSfx("defeat"); showVictory(); }
@@ -705,7 +734,7 @@
     updateNpcs(dt);
     if (state.dialogue) { updateDialogue(dt); justPressed.clear(); updateCamera(dt); return; }
     if (state.mode !== "playing") return;
-    if (state.itemReveal > 0 || state.bossEntrance > 0 || state.bossPhaseShift > 0 || state.bossDefeatTimer > 0) { updateCamera(dt); justPressed.clear(); updateHud(); return; }
+    if (state.itemReveal > 0 || state.roomTransition > 0 || state.bossEntrance > 0 || state.bossPhaseShift > 0 || state.bossDefeatTimer > 0) { updateCamera(dt); justPressed.clear(); updateHud(); return; }
     updatePlayer(dt); updateDungeonHazards(); updateEnemies(dt); updateDrops(dt);
     if (state.area === "dungeon" && state.transitionCooldown <= 0) {
       if (player.x < 42) transitionDungeon(-1, 0); else if (player.x > ROOM.width - 42) transitionDungeon(1, 0); else if (player.y < 42) transitionDungeon(0, -1); else if (player.y > ROOM.height - 42) transitionDungeon(0, 1);
@@ -1055,11 +1084,20 @@
     else if (key === "2-1") { ui.objective.textContent = state.bossDefeated ? "Claim the Heartseed" : "Silence the Hollow Guardian"; ui.objectiveCopy.textContent = state.bossDefeated ? "The shrine is quiet. Approach the heartseed altar." : "The guardian changes its rhythm when its light turns rose. Keep the outer ring clear."; }
     else { ui.objective.textContent = "Explore the shrine"; ui.objectiveCopy.textContent = "Every room remembers a different season."; }
   };
-  const updateHud = () => { ui.area.textContent = state.area === "overworld" ? "Lanternwood" : "Hollow Shrine"; ui.room.textContent = state.area === "overworld" ? "Outpost field" : dungeonRoomName(); ui.seed.textContent = state.reward ? "1" : "0"; ui.keys.textContent = state.key ? "1" : "0"; ui.loot.textContent = state.loot || "0"; if (ui.discovery) ui.discovery.textContent = `${state.discoveries || 0}/${state.discoveryTotal || 3}`; if (ui.ability) { ui.ability.textContent = state.rootlightLantern ? (player.rootlightCooldown > 0 ? `Moonwake Lantern · ${player.rootlightCooldown.toFixed(1)}s` : "Moonwake Lantern · L ready") : "Rootlight dormant"; ui.ability.classList.toggle("ready", Boolean(state.rootlightLantern && player.rootlightCooldown <= 0)); } ui.save.textContent = state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : "Paused"; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); } ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective(); };
+  const updateHud = () => {
+    ui.area.textContent = state.area === "overworld" ? "Lanternwood" : "Hollow Shrine";
+    ui.room.textContent = state.area === "overworld" ? "Outpost field" : dungeonRoomName();
+    ui.seed.textContent = state.reward ? "1" : "0"; ui.keys.textContent = state.key ? "1" : "0"; ui.loot.textContent = state.loot || "0";
+    if (ui.discovery) ui.discovery.textContent = `${state.discoveries || 0}/${state.discoveryTotal || 3}`;
+    if (ui.ability) { ui.ability.textContent = state.rootlightLantern ? (player.rootlightCooldown > 0 ? `Moonwake Lantern · ${player.rootlightCooldown.toFixed(1)}s` : "Moonwake Lantern · L ready") : "Rootlight dormant"; ui.ability.classList.toggle("ready", Boolean(state.rootlightLantern && player.rootlightCooldown <= 0)); }
+    ui.save.textContent = state.saveError ? "Save unavailable" : state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : state.mode === "victory" ? "Complete" : state.mode === "dead" ? "Run ended" : "Paused";
+    ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); }
+    ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective();
+  };
   const updateDialogueSpeedLabel = () => { if (!ui.dialogueSpeed) return; const speed = state.dialogueSpeed || 52; ui.dialogueSpeed.textContent = `Text: ${speed >= 100 ? "fast" : speed <= 36 ? "slow" : "normal"}`; };
   const showVictory = () => { state.mode = "victory"; hideScreens(); ui.victory.classList.remove("hidden"); updateHud(); };
 
-  const startGame = (continueGame) => { hideScreens(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; state.bossIntroSeen = false; state.bossEntrance = 0; state.bossPhase = 1; state.bossPhaseShift = 0; state.bossArenaPulse = 0; state.bossDefeatTimer = 0; state.bossDefeatX = 600; state.bossDefeatY = 285; state.bossRewardClaimed = false; state.visualClock = 0; state.pickupPulse = 0; player.maxHp = 6; player.hp = player.maxHp; resetPlayerMotion(); startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
+  const startGame = (continueGame) => { hideScreens(); restoreTitlePresentation(); if (continueGame && loadData()) { state.mode = "playing"; } else { state.mode = "playing"; state.saveError = false; state.area = "overworld"; state.roomX = 0; state.roomY = 0; state.roomVisited = { overworld: true }; state.key = false; state.switches = false; state.miniBossDefeated = false; state.bossDefeated = false; state.reward = false; state.secretFound = false; state.chestOpened = false; state.heartChestOpened = false; state.loot = 0; state.rowanClue = false; state.rowanRewarded = false; state.southPassageOpen = false; state.reedCacheFound = false; state.hiddenChestOpened = false; state.optionalGuardDefeated = false; state.lanternLens = false; state.lanternSeed = false; state.discoveries = 0; state.dungeonIntro = 0; state.dungeonEntranceSeen = false; state.roomTransition = 0; state.roomTransitionLabel = ""; state.hazardCooldown = 0; state.ashCacheOpened = false; state.ashShortcutOpen = false; state.rootlightLantern = false; state.rootlightTested = false; state.rootlightGalleryOpen = false; state.rootlightGalleryCacheOpened = false; state.rootlightMoonBridge = false; state.rootlightWaterway = false; state.rootlightGateOpen = false; state.rootlightCacheOpened = false; state.itemReveal = 0; state.bossIntroSeen = false; state.bossEntrance = 0; state.bossPhase = 1; state.bossPhaseShift = 0; state.bossArenaPulse = 0; state.bossDefeatTimer = 0; state.bossDefeatX = 600; state.bossDefeatY = 285; state.bossRewardClaimed = false; state.visualClock = 0; state.pickupPulse = 0; player.maxHp = 6; player.hp = player.maxHp; resetPlayerMotion(); startArea("overworld"); saveData(); } canvas.focus(); updateHud(); };
 
   document.getElementById("new-game").addEventListener("click", () => startGame(false));
   document.getElementById("continue-game").addEventListener("click", () => startGame(true));
@@ -1067,10 +1105,11 @@
   document.getElementById("victory-close").addEventListener("click", () => { state.mode = "playing"; hideScreens(); canvas.focus(); updateHud(); });
   document.getElementById("reset-save").addEventListener("click", () => { if (window.confirm("Erase your Mosswake save?")) resetProgress(); });
   ui.dialogueSpeed.addEventListener("click", () => { const speeds = [36, 52, 110]; const current = speeds.indexOf(state.dialogueSpeed); state.dialogueSpeed = speeds[(current + 1 + speeds.length) % speeds.length]; updateDialogueSpeedLabel(); saveData(); });
-  window.addEventListener("keydown", (event) => { const key = event.key.toLowerCase(); if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","j","k","e","l","p","escape","enter"," "].includes(key)) event.preventDefault(); if (!keys.has(key)) justPressed.add(key); keys.add(key); if (key === "e" || key === "enter") interact(); if (key === "l") useRootlight(); if (key === "p" || key === "escape") { if (state.mode === "playing") { state.mode = "paused"; ui.pause.classList.remove("hidden"); } else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); canvas.focus(); } updateHud(); } });
+  canvas.addEventListener("pointerdown", () => canvas.focus());
+  window.addEventListener("keydown", (event) => { const key = event.key.toLowerCase(); const target = event.target instanceof HTMLElement ? event.target : null; if (target && target.closest("button, a, input, textarea, select, summary")) return; if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","j","k","e","l","p","escape","enter"," "].includes(key)) event.preventDefault(); if (!keys.has(key)) justPressed.add(key); keys.add(key); if (key === "e" || key === "enter") interact(); if (key === "l") useRootlight(); if (key === "p" || key === "escape") { if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); } else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); canvas.focus(); } updateHud(); } });
   window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
-  window.addEventListener("blur", () => { keys.clear(); if (state.mode === "playing") { state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } });
-  document.addEventListener("visibilitychange", () => { if (document.hidden) { keys.clear(); if (state.mode === "playing") { state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } } });
+  window.addEventListener("blur", () => { keys.clear(); if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) { keys.clear(); if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } } });
 
   const frame = (timestamp) => { const dt = Math.min(.05, (timestamp - lastFrame) / 1000 || 0); lastFrame = timestamp; update(dt); draw(timestamp / 1000); window.requestAnimationFrame(frame); };
   updateDialogueSpeedLabel(); updateHud(); if (!hasSave()) document.getElementById("continue-game").disabled = true; else document.getElementById("continue-game").disabled = false; window.requestAnimationFrame(frame);
