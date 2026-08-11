@@ -30,10 +30,16 @@ Mosswake currently renders its first playable slice with layered canvas primitiv
 ## Art TODO
 
 1. Replace player and enemy silhouettes with a consistent hand-painted sprite pass.
-2. Add four-direction walk/attack frames and a readable rose telegraph for boss attacks.
-3. Paint modular terrain edges so paths, pond banks, and dungeon doors tile without seams.
-4. Add three unique building facades for the outpost, shrine, and cabin while preserving their collision footprints.
-5. Add small looping effects: water shimmer, moth glow, torch smoke, sword arc, and chest sparkle.
-6. Export at 2x resolution with transparent backgrounds and avoid baked-in shadows; lighting is runtime-driven.
+2. Add four-direction walk/attack/dodge frames and a readable rose telegraph for boss attacks.
+3. Paint a 6–8 frame `weapons/lantern-blade` swing sheet with a clean leading edge and contact spark.
+4. Add `effects/dust`, `effects/hit-star`, `effects/impact-ring`, and `effects/dash-trail` sheets at 2x resolution.
+5. Paint modular terrain edges so paths, pond banks, and dungeon doors tile without seams.
+6. Add three unique building facades for the outpost, shrine, and cabin while preserving their collision footprints.
+7. Add small looping effects: water shimmer, moth glow, torch smoke, sword arc, and chest sparkle.
+8. Export with transparent backgrounds and avoid baked-in shadows; lighting, hit flashes, and camera response are runtime-driven.
+
+## Temporary feel pass
+
+The current movement pass intentionally uses the same art-first, replaceable approach as First Ember: the player, blade arc, dodge trail, dust, hit stars, impact rings, shadows, and enemy recoil are generated as crisp canvas primitives. This keeps the first ten seconds responsive while the final sprite sheets are being painted. The named slots above are the exact custom graphics to generate later; no gameplay collision or timing depends on a temporary shape.
 
 The game code owns collision, state, camera, and layout. Art replacements should preserve the named anchor points in `mosswake.js` so content remains editable and performance stays predictable.

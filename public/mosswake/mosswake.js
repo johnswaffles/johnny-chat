@@ -16,21 +16,28 @@
   const keys = new Set();
   const justPressed = new Set();
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const moveToward = (current, target, amount) => current < target ? Math.min(current + amount, target) : Math.max(current - amount, target);
+  const normalized = (x, y, fallbackX = 1, fallbackY = 0) => { const length = Math.hypot(x, y); return length ? { x: x / length, y: y / length } : { x: fallbackX, y: fallbackY }; };
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const rand = (min, max) => min + Math.random() * (max - min);
   const makeId = (prefix) => prefix + Math.random().toString(36).slice(2, 8);
 
-  const player = { x: 390, y: 500, radius: 14, hp: 6, maxHp: 6, facingX: 1, facingY: 0, attack: 0, attackCooldown: 0, dash: 0, dashCooldown: 0, invulnerable: 0, hurt: 0, walk: 0 };
+  const player = {
+    x: 390, y: 500, radius: 14, hp: 6, maxHp: 6,
+    velocityX: 0, velocityY: 0, facingX: 1, facingY: 0, targetFacingX: 1, targetFacingY: 0,
+    attack: 0, attackElapsed: 0, attackCooldown: 0, attackBuffer: 0, attackDirectionX: 1, attackDirectionY: 0, attackHitRegistered: false,
+    dash: 0, dashCooldown: 0, dashDirectionX: 1, dashDirectionY: 0, invulnerable: 0, hurt: 0, walk: 0, animTime: 0, visualState: "idle"
+  };
   const state = {
     mode: "title", area: "overworld", roomX: 0, roomY: 0, roomVisited: { overworld: true }, key: false, switches: false,
     miniBossDefeated: false, bossDefeated: false, reward: false, secretFound: false, chestOpened: false, heartChestOpened: false,
-    lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0
+    lastSave: 0, toastTimer: 0, dialogue: null, transitionCooldown: 0, impactFlash: 0
   };
   let enemies = [];
   let projectiles = [];
   let particles = [];
   let leaves = Array.from({ length: 65 }, () => ({ x: rand(0, WORLD.width), y: rand(0, WORLD.height), speed: rand(5, 16), phase: rand(0, 6.28) }));
-  let camera = { x: 0, y: 0 };
+  let camera = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0 };
   let lastFrame = 0;
 
   const ui = {
@@ -68,10 +75,16 @@
     player.hp = player.maxHp; player.x = 390; player.y = 500; startArea("overworld", false); state.mode = "title"; hideScreens(); ui.title.classList.remove("hidden"); updateHud();
   };
 
-  const spawnParticle = (x, y, color, count = 5, speed = 75) => {
-    for (let i = 0; i < count; i += 1) particles.push({ x, y, vx: rand(-speed, speed), vy: rand(-speed, speed), life: rand(.25, .65), maxLife: .65, size: rand(2, 5), color });
+  const spawnParticle = (x, y, color, count = 5, speed = 75, kind = "spark") => {
+    for (let i = 0; i < count; i += 1) particles.push({ x, y, vx: rand(-speed, speed), vy: rand(-speed, speed), life: rand(.25, .65), maxLife: .65, size: rand(2, 5), color, kind, rotation: rand(-Math.PI, Math.PI) });
   };
-  const spawnLeaves = (x, y, count = 8) => { for (let i = 0; i < count; i += 1) particles.push({ x, y, vx: rand(-25, 25), vy: rand(-45, -10), life: rand(.45, .9), maxLife: .9, size: rand(3, 7), color: i % 2 ? "#b2e898" : "#ffd27a" }); };
+  const spawnLeaves = (x, y, count = 8) => { for (let i = 0; i < count; i += 1) particles.push({ x, y, vx: rand(-45, 45), vy: rand(-75, -18), life: rand(.45, .9), maxLife: .9, size: rand(3, 7), color: i % 2 ? "#b2e898" : "#ffd27a", kind: "leaf", rotation: rand(-Math.PI, Math.PI) }); };
+  const spawnDust = (x, y, count = 6, color = "#d5c39b") => { for (let i = 0; i < count; i += 1) particles.push({ x: x + rand(-7, 7), y: y + rand(-4, 4), vx: rand(-35, 35), vy: rand(-28, -4), life: rand(.22, .45), maxLife: .45, size: rand(4, 9), color, kind: "dust", rotation: 0 }); };
+  const triggerImpact = (x, y, color = COLORS.gold, strength = 1) => {
+    spawnParticle(x, y, color, strength > 1 ? 12 : 7, strength > 1 ? 150 : 105, "impact");
+    particles.push({ x, y, vx: 0, vy: 0, life: .18 + strength * .04, maxLife: .18 + strength * .04, size: 12 + strength * 8, color, kind: "ring", rotation: 0 });
+    state.impactFlash = Math.max(state.impactFlash, .045 * strength); camera.shake = Math.max(camera.shake, .045 * strength);
+  };
 
   const spawnEnemy = (type, x, y) => {
     const config = {
@@ -80,7 +93,12 @@
       warden: { hp: 9, maxHp: 9, speed: 22, radius: 25, color: COLORS.warden, damage: 2 },
       boss: { hp: 16, maxHp: 16, speed: 28, radius: 39, color: COLORS.boss, damage: 2 }
     }[type];
-    enemies.push({ id: makeId(type), type, x, y, ...config, attackCooldown: rand(.2, 1), hitFlash: 0, phase: 1, dead: false, orbit: rand(0, 6.28) });
+    enemies.push({ id: makeId(type), type, x, y, ...config, velocityX: 0, velocityY: 0, attackCooldown: rand(.2, 1), hitFlash: 0, hitStun: 0, phase: 1, dead: false, orbit: rand(0, 6.28) });
+  };
+
+  const resetPlayerMotion = () => {
+    player.velocityX = 0; player.velocityY = 0; player.attack = 0; player.attackElapsed = 0; player.attackCooldown = 0;
+    player.attackBuffer = 0; player.dash = 0; player.dashCooldown = 0; player.invulnerable = 0; player.hurt = 0;
   };
 
   const startArea = (area, announce = true) => {
@@ -95,6 +113,7 @@
       spawnDungeonEnemies();
       if (announce) showToast(dungeonRoomName());
     }
+    resetPlayerMotion();
     state.roomVisited[state.area === "dungeon" ? `dungeon-${state.roomX}-${state.roomY}` : "overworld"] = true;
     updateHud();
   };
@@ -141,32 +160,67 @@
     if (!collidesWorld(nextY)) player.y = clamp(nextY.y, player.radius, (state.area === "overworld" ? WORLD.height : ROOM.height) - player.radius);
   };
 
-  const swordHitbox = () => ({ x: player.x + player.facingX * 30, y: player.y + player.facingY * 30, radius: 35 });
+  const readMoveInput = () => {
+    let x = 0; let y = 0;
+    if (keys.has("a") || keys.has("arrowleft")) x -= 1;
+    if (keys.has("d") || keys.has("arrowright")) x += 1;
+    if (keys.has("w") || keys.has("arrowup")) y -= 1;
+    if (keys.has("s") || keys.has("arrowdown")) y += 1;
+    return normalized(x, y, 0, 0);
+  };
+  const swordHitbox = () => {
+    const direction = normalized(player.attackDirectionX, player.attackDirectionY, player.facingX, player.facingY);
+    const center = { x: player.x + direction.x * 31, y: player.y + direction.y * 31 };
+    return { ...center, radius: 46, direction, halfAngle: .88 };
+  };
   const attack = () => {
-    if (state.mode !== "playing" || state.dialogue || player.attackCooldown > 0 || player.dash > 0) return;
-    player.attack = .22; player.attackCooldown = .34; spawnParticle(player.x + player.facingX * 20, player.y + player.facingY * 20, COLORS.gold, 4, 45);
-    const hit = swordHitbox();
+    if (state.mode !== "playing" || state.dialogue || player.dash > 0) return;
+    if (player.attackCooldown > 0) { player.attackBuffer = .13; return; }
+    const direction = readMoveInput();
+    const facing = direction.x || direction.y ? direction : normalized(player.facingX, player.facingY);
+    player.attack = .34; player.attackElapsed = 0; player.attackCooldown = .38; player.attackBuffer = 0; player.attackHitRegistered = false;
+    player.attackDirectionX = facing.x; player.attackDirectionY = facing.y; player.targetFacingX = facing.x; player.targetFacingY = facing.y;
+    spawnDust(player.x - facing.x * 10, player.y - facing.y * 10, 3, "#d7c594");
+  };
+  const resolveAttackHit = () => {
+    if (player.attackHitRegistered) return;
+    player.attackHitRegistered = true;
+    const hit = swordHitbox(); const cosHalfAngle = Math.cos(hit.halfAngle); let hitCount = 0;
     enemies.forEach((enemy) => {
-      if (enemy.dead || distance(hit, enemy) > hit.radius + enemy.radius) return;
-      enemy.hp -= 1; enemy.hitFlash = .16; enemy.x += player.facingX * 18; enemy.y += player.facingY * 18; spawnParticle(enemy.x, enemy.y, enemy.color, 8, 95);
+      if (enemy.dead) return;
+      const offsetX = enemy.x - player.x; const offsetY = enemy.y - player.y; const range = Math.hypot(offsetX, offsetY) || 1;
+      const dot = (offsetX / range) * hit.direction.x + (offsetY / range) * hit.direction.y;
+      if (distance(hit, enemy) > hit.radius + enemy.radius || dot < cosHalfAngle) return;
+      const knockback = enemy.type === "boss" ? 95 : enemy.type === "warden" ? 135 : 190;
+      enemy.hp -= 1; enemy.hitFlash = .2; enemy.hitStun = enemy.type === "boss" ? .12 : .2;
+      enemy.velocityX = hit.direction.x * knockback; enemy.velocityY = hit.direction.y * knockback;
+      spawnParticle(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 12 : 8, 125, "impact");
+      triggerImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.rose : COLORS.gold, enemy.type === "boss" ? 1.35 : 1);
+      hitCount += 1;
       if (enemy.hp <= 0) {
-        enemy.dead = true; spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 30 : 8);
+        enemy.dead = true; spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 30 : 10);
         if (enemy.type === "warden") { state.miniBossDefeated = true; showToast("The Warden yields · the sanctum opens"); saveData(); }
         if (enemy.type === "boss") { state.bossDefeated = true; state.reward = true; showVictory(); saveData(); }
       }
     });
     breakables().forEach((object) => {
-      if (!object.broken && distance(hit, object) < 38) { object.broken = true; spawnLeaves(object.x, object.y, 12); if (object.secret) { state.secretFound = true; showToast("A hidden path opens beneath the ivy"); } }
+      if (!object.broken && distance(hit, object) < 38 && ((object.x - player.x) * hit.direction.x + (object.y - player.y) * hit.direction.y) > 0) { object.broken = true; spawnLeaves(object.x, object.y, 14); triggerImpact(object.x, object.y, COLORS.moss, .8); if (object.secret) { state.secretFound = true; showToast("A hidden path opens beneath the ivy"); } }
     });
+    if (hitCount === 0) { spawnParticle(hit.x, hit.y, COLORS.gold, 3, 70, "spark"); camera.shake = Math.max(camera.shake, .018); }
   };
   const dash = () => {
-    if (state.mode !== "playing" || state.dialogue || player.dashCooldown > 0) return;
-    player.dash = .18; player.dashCooldown = .8; player.invulnerable = .36; spawnParticle(player.x, player.y, COLORS.mint, 10, 60);
+    if (state.mode !== "playing" || state.dialogue || player.dashCooldown > 0 || player.hurt > 0) return;
+    const direction = readMoveInput(); const facing = direction.x || direction.y ? direction : normalized(player.facingX, player.facingY);
+    player.dash = .22; player.dashCooldown = .68; player.invulnerable = .25; player.dashDirectionX = facing.x; player.dashDirectionY = facing.y; player.attack = 0; player.attackHitRegistered = true;
+    player.velocityX = facing.x * 470; player.velocityY = facing.y * 470; spawnDust(player.x, player.y + 10, 8, "#b6c7b1"); spawnParticle(player.x, player.y, COLORS.mint, 10, 75, "spark"); camera.shake = Math.max(camera.shake, .035);
   };
 
   const hurtPlayer = (amount, source) => {
     if (player.invulnerable > 0 || player.hurt > 0 || state.mode !== "playing") return;
-    player.hp = Math.max(0, player.hp - amount); player.hurt = .45; player.invulnerable = .7; const dx = player.x - source.x; const dy = player.y - source.y; const length = Math.hypot(dx, dy) || 1; tryMove((dx / length) * 32, (dy / length) * 32); spawnParticle(player.x, player.y, COLORS.rose, 12, 120); updateHud();
+    player.hp = Math.max(0, player.hp - amount); player.hurt = .2; player.invulnerable = .72; player.attack = 0; player.attackCooldown = .18;
+    const direction = normalized(player.x - source.x, player.y - source.y, -player.facingX, -player.facingY);
+    player.velocityX = direction.x * 235; player.velocityY = direction.y * 235; camera.shake = Math.max(camera.shake, .13);
+    triggerImpact(player.x, player.y, COLORS.rose, 1.25); spawnParticle(player.x, player.y, COLORS.rose, 12, 135, "impact"); updateHud();
     if (player.hp <= 0) { state.mode = "dead"; hideScreens(); ui.title.classList.remove("hidden"); ui.title.querySelector(".screen-kicker").textContent = "THE LANTERN WENT OUT"; ui.title.querySelector("h2").textContent = "The roots took you"; ui.title.querySelector("p:not(.screen-kicker)").textContent = "Start again at the outpost. The shrine will still be waiting."; document.getElementById("new-game").textContent = "Restart"; document.getElementById("continue-game").classList.add("hidden"); }
   };
 
@@ -202,7 +256,12 @@
   const updateEnemies = (dt) => {
     enemies.forEach((enemy) => {
       if (enemy.dead) return;
-      enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.attackCooldown -= dt;
+      enemy.hitFlash = Math.max(0, enemy.hitFlash - dt); enemy.hitStun = Math.max(0, enemy.hitStun - dt); enemy.attackCooldown -= dt;
+      if (enemy.hitStun > 0) {
+        enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt;
+        enemy.velocityX = moveToward(enemy.velocityX, 0, 760 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 760 * dt);
+        return;
+      }
       const dist = distance(enemy, player);
       if (enemy.type === "boss") {
         enemy.phase = enemy.hp <= enemy.maxHp / 2 ? 2 : 1; enemy.orbit += dt * (enemy.phase === 2 ? 1.6 : .8);
@@ -211,6 +270,8 @@
       } else if (dist < 300 && dist > enemy.radius + player.radius + 4) {
         const dx = (player.x - enemy.x) / dist; const dy = (player.y - enemy.y) / dist; enemy.x += dx * enemy.speed * dt; enemy.y += dy * enemy.speed * dt;
       }
+      enemy.velocityX = moveToward(enemy.velocityX, 0, 820 * dt); enemy.velocityY = moveToward(enemy.velocityY, 0, 820 * dt);
+      enemy.x += enemy.velocityX * dt; enemy.y += enemy.velocityY * dt;
       if (dist < enemy.radius + player.radius + 9 && enemy.attackCooldown <= 0) { enemy.attackCooldown = enemy.type === "warden" ? 1.1 : .95; hurtPlayer(enemy.damage, enemy); }
     });
     enemies = enemies.filter((enemy) => !enemy.dead);
@@ -218,15 +279,39 @@
   };
 
   const updatePlayer = (dt) => {
-    player.attack = Math.max(0, player.attack - dt); player.attackCooldown = Math.max(0, player.attackCooldown - dt); player.dashCooldown = Math.max(0, player.dashCooldown - dt); player.invulnerable = Math.max(0, player.invulnerable - dt); player.hurt = Math.max(0, player.hurt - dt); state.transitionCooldown = Math.max(0, state.transitionCooldown - dt);
+    player.attackCooldown = Math.max(0, player.attackCooldown - dt); player.attackBuffer = Math.max(0, player.attackBuffer - dt); player.dashCooldown = Math.max(0, player.dashCooldown - dt); player.invulnerable = Math.max(0, player.invulnerable - dt); player.hurt = Math.max(0, player.hurt - dt); state.transitionCooldown = Math.max(0, state.transitionCooldown - dt);
     if (justPressed.has("j") || justPressed.has(" ")) attack(); if (justPressed.has("k")) dash();
-    let dx = 0; let dy = 0; if (keys.has("a") || keys.has("arrowleft")) dx -= 1; if (keys.has("d") || keys.has("arrowright")) dx += 1; if (keys.has("w") || keys.has("arrowup")) dy -= 1; if (keys.has("s") || keys.has("arrowdown")) dy += 1;
-    if (dx || dy) { const length = Math.hypot(dx, dy); dx /= length; dy /= length; player.facingX = dx; player.facingY = dy; player.walk += dt * 8; const speed = player.dash > 0 ? 390 : 145; tryMove(dx * speed * dt, dy * speed * dt); if (Math.random() < .12) particles.push({ x: player.x, y: player.y + 13, vx: rand(-8, 8), vy: rand(6, 18), life: .3, maxLife: .3, size: rand(2, 4), color: "#c9b88a" }); }
-    if (player.dash > 0) { player.dash -= dt; tryMove(player.facingX * 390 * dt, player.facingY * 390 * dt); }
+    if (player.attackBuffer > 0 && player.attackCooldown <= 0) attack();
+    const input = readMoveInput(); const hasInput = input.x || input.y;
+    if (hasInput) { player.targetFacingX = input.x; player.targetFacingY = input.y; }
+    const facingBlend = 1 - Math.pow(.0005, dt);
+    player.facingX = moveToward(player.facingX, player.targetFacingX, facingBlend); player.facingY = moveToward(player.facingY, player.targetFacingY, facingBlend);
+    const facingLength = Math.hypot(player.facingX, player.facingY) || 1; player.facingX /= facingLength; player.facingY /= facingLength;
+    player.animTime += dt;
+    if (player.dash > 0) {
+      player.visualState = "dash"; player.dash -= dt; tryMove(player.velocityX * dt, player.velocityY * dt); player.velocityX = player.dashDirectionX * 470; player.velocityY = player.dashDirectionY * 470;
+      if (Math.random() < .6) spawnDust(player.x, player.y + 12, 1, "#b6c7b1");
+    } else {
+      const attackMovement = player.attack > 0 ? .52 : 1; const maxSpeed = 185 * attackMovement; const acceleration = hasInput ? 1120 : 1480;
+      const desiredX = hasInput ? input.x * maxSpeed : 0; const desiredY = hasInput ? input.y * maxSpeed : 0;
+      player.velocityX = moveToward(player.velocityX, desiredX, acceleration * dt); player.velocityY = moveToward(player.velocityY, desiredY, acceleration * dt);
+      if (player.hurt > 0) { player.velocityX = moveToward(player.velocityX, 0, 650 * dt); player.velocityY = moveToward(player.velocityY, 0, 650 * dt); }
+      tryMove(player.velocityX * dt, player.velocityY * dt);
+      const speed = Math.hypot(player.velocityX, player.velocityY);
+      if (speed > 10) { player.walk += dt * (7 + speed * .02); if (Math.random() < .08) spawnDust(player.x, player.y + 12, 1); }
+      player.visualState = player.hurt > 0 ? "hurt" : player.attack > 0 ? "attack" : speed > 10 ? "move" : "idle";
+    }
+    if (player.attack > 0) {
+      player.attackElapsed += dt; player.attack = Math.max(0, player.attack - dt);
+      if (player.attackElapsed >= .075 && !player.attackHitRegistered) resolveAttackHit();
+    }
+    if (player.attack <= 0 && player.visualState === "attack") player.visualState = hasInput ? "move" : "idle";
+    player.velocityX = moveToward(player.velocityX, 0, player.dash > 0 ? 0 : 520 * dt); player.velocityY = moveToward(player.velocityY, 0, player.dash > 0 ? 0 : 520 * dt);
   };
 
   const update = (dt) => {
     if (state.toastTimer > 0) { state.toastTimer -= dt * 1000; if (state.toastTimer <= 0) ui.toast.classList.remove("visible"); }
+    state.impactFlash = Math.max(0, state.impactFlash - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8);
     leaves.forEach((leaf) => { leaf.y += leaf.speed * dt; leaf.x += Math.sin(leaf.phase + leaf.y * .01) * dt * 3; if (leaf.y > WORLD.height + 20) leaf.y = -10; });
     particles = particles.filter((particle) => { particle.life -= dt; particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.vy += 45 * dt; return particle.life > 0; });
     if (state.mode !== "playing" || state.dialogue) return;
@@ -239,7 +324,7 @@
     justPressed.clear(); updateHud();
   };
 
-  const updateCamera = (dt) => { const maxX = (state.area === "overworld" ? WORLD.width : ROOM.width) - WIDTH; const maxY = (state.area === "overworld" ? WORLD.height : ROOM.height) - HEIGHT; const targetX = clamp(player.x - WIDTH / 2, 0, Math.max(0, maxX)); const targetY = clamp(player.y - HEIGHT / 2, 0, Math.max(0, maxY)); camera.x += (targetX - camera.x) * Math.min(1, dt * 5); camera.y += (targetY - camera.y) * Math.min(1, dt * 5); };
+  const updateCamera = (dt) => { const maxX = (state.area === "overworld" ? WORLD.width : ROOM.width) - WIDTH; const maxY = (state.area === "overworld" ? WORLD.height : ROOM.height) - HEIGHT; const targetX = clamp(player.x - WIDTH / 2, 0, Math.max(0, maxX)); const targetY = clamp(player.y - HEIGHT / 2, 0, Math.max(0, maxY)); camera.x += (targetX - camera.x) * Math.min(1, dt * 6); camera.y += (targetY - camera.y) * Math.min(1, dt * 6); camera.shakeX = camera.shake ? rand(-camera.shake, camera.shake) * 14 : 0; camera.shakeY = camera.shake ? rand(-camera.shake, camera.shake) * 14 : 0; };
 
   const drawShadow = (x, y, rx, ry, alpha = .3) => { ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = "#06110d"; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
   const drawTree = (x, y, scale = 1) => { drawShadow(x, y + 48 * scale, 32 * scale, 11 * scale, .38); ctx.fillStyle = "#765036"; ctx.fillRect(x - 8 * scale, y + 9 * scale, 16 * scale, 48 * scale); ctx.fillStyle = "#9b6a43"; ctx.fillRect(x - 3 * scale, y + 10 * scale, 5 * scale, 43 * scale); [[-26,5,30],[20,3,34],[0,-22,42],[-2,28,37]].forEach(([ox, oy, radius], i) => { ctx.fillStyle = i % 2 ? "#4d9b62" : "#68b870"; ctx.beginPath(); ctx.arc(x + ox * scale, y + oy * scale, radius * scale, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "rgba(210,255,190,.16)"; ctx.beginPath(); ctx.arc(x + (ox - 8) * scale, y + (oy - 8) * scale, radius * .35 * scale, 0, Math.PI * 2); ctx.fill(); }); };
@@ -282,11 +367,64 @@
   const drawDungeonDoors = (time) => { [[ROOM.width / 2, 35, 70, 20],[ROOM.width / 2, ROOM.height - 35, 70, 20],[35, ROOM.height / 2, 20, 70],[ROOM.width - 35, ROOM.height / 2, 20, 70]].forEach(([x,y,w,h]) => { ctx.fillStyle = `rgba(142,242,207,${.12 + Math.sin(time * 3 + x) * .04})`; ctx.fillRect(x - w / 2, y - h / 2, w, h); }); };
   const drawReward = (x, y, time) => { const glow = ctx.createRadialGradient(x, y, 2, x, y, 90); glow.addColorStop(0, "rgba(255,215,123,.5)"); glow.addColorStop(1, "rgba(255,215,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 90, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(x, y + Math.sin(time * 3) * 5, 18, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fff8c7"; ctx.beginPath(); ctx.arc(x - 5, y - 5, 6, 0, Math.PI * 2); ctx.fill(); };
 
-  const drawEnemy = (enemy, time) => { if (enemy.dead) return; drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * .9, enemy.radius * .3, .36); ctx.save(); if (enemy.hitFlash > 0) ctx.globalAlpha = .55 + Math.sin(enemy.hitFlash * 35) * .45; const color = enemy.color; if (enemy.type === "boss") { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + Math.sin(time * 5) * 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#512d58"; ctx.beginPath(); ctx.arc(enemy.x, enemy.y - 6, enemy.radius * .6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(enemy.x - 13, enemy.y - 11, 8, 5); ctx.fillRect(enemy.x + 5, enemy.y - 11, 8, 5); } else if (enemy.type === "warden") { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(enemy.x, enemy.y - 30); ctx.lineTo(enemy.x + 25, enemy.y + 22); ctx.lineTo(enemy.x - 25, enemy.y + 22); ctx.closePath(); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(enemy.x, enemy.y - 3, 8, 0, Math.PI * 2); ctx.fill(); } else { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#17362e"; ctx.beginPath(); ctx.arc(enemy.x - 5, enemy.y - 2, 3, 0, Math.PI * 2); ctx.arc(enemy.x + 5, enemy.y - 2, 3, 0, Math.PI * 2); ctx.fill(); if (enemy.type === "wisp") { ctx.strokeStyle = "rgba(220,207,255,.6)"; ctx.lineWidth = 3; ctx.stroke(); } } ctx.restore(); if (enemy.type === "warden" || enemy.type === "boss") { ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2, 4); ctx.fillStyle = enemy.color; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2 * (enemy.hp / enemy.maxHp), 4); } };
-  const drawPlayer = (time) => { if (player.invulnerable > 0 && Math.floor(player.invulnerable * 22) % 2 === 0) return; drawShadow(player.x, player.y + 14, 19, 7, .36); const bob = Math.sin(player.walk) * (player.walk ? 2 : 0); ctx.fillStyle = "#3d6780"; ctx.beginPath(); ctx.arc(player.x, player.y + bob, 15, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.player; ctx.beginPath(); ctx.arc(player.x, player.y - 14 + bob, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#4a302c"; ctx.beginPath(); ctx.arc(player.x, player.y - 19 + bob, 11, Math.PI, 0); ctx.fill(); ctx.fillStyle = "#d8f0c6"; ctx.fillRect(player.x - 13, player.y + 1 + bob, 26, 4); if (player.attack > 0) { ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(Math.atan2(player.facingY, player.facingX)); ctx.strokeStyle = "#fff5d2"; ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.beginPath(); ctx.arc(22, 0, 29, -.9, .9); ctx.stroke(); ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(22, 0, 29, -.9, .9); ctx.stroke(); ctx.restore(); } };
+  const drawEnemy = (enemy, time) => {
+    if (enemy.dead) return;
+    const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 2 : 0;
+    drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * (enemy.hitStun > 0 ? 1.04 : .9), enemy.radius * .3, .36);
+    ctx.save(); if (enemy.hitFlash > 0) ctx.globalAlpha = .55 + Math.sin(enemy.hitFlash * 35) * .45;
+    const color = enemy.color;
+    if (enemy.type === "boss") { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius + Math.sin(time * 5) * 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#512d58"; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y - 6, enemy.radius * .6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(enemy.x - 13 + recoil, enemy.y - 11, 8, 5); ctx.fillRect(enemy.x + 5 + recoil, enemy.y - 11, 8, 5); }
+    else if (enemy.type === "warden") { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(enemy.x + recoil, enemy.y - 30); ctx.lineTo(enemy.x + 25 + recoil, enemy.y + 22); ctx.lineTo(enemy.x - 25 + recoil, enemy.y + 22); ctx.closePath(); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y - 3, 8, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(enemy.x + recoil, enemy.y, enemy.radius, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#17362e"; ctx.beginPath(); ctx.arc(enemy.x - 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.arc(enemy.x + 5 + recoil, enemy.y - 2, 3, 0, Math.PI * 2); ctx.fill(); if (enemy.type === "wisp") { ctx.strokeStyle = "rgba(220,207,255,.6)"; ctx.lineWidth = 3; ctx.stroke(); } }
+    ctx.restore();
+    if (enemy.hitStun > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.hitStun * 5, 0, .85); ctx.strokeStyle = "#fff7dc"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 5 + Math.sin(time * 30) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    if (enemy.type === "warden" || enemy.type === "boss") { ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2, 4); ctx.fillStyle = enemy.color; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2 * (enemy.hp / enemy.maxHp), 4); }
+  };
+  const drawAttackTrail = () => {
+    if (player.attack <= 0) return;
+    const progress = clamp(player.attackElapsed / .34, 0, 1); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
+    ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.lineCap = "round";
+    const start = -1.02 + progress * .22; const end = -.92 + progress * 1.92; const fade = clamp((player.attack < .12 ? player.attack / .12 : 1), 0, 1);
+    ctx.globalAlpha = .16 + fade * .42; ctx.strokeStyle = "#fff5d2"; ctx.lineWidth = 15; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
+    ctx.globalAlpha = .95 * fade; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
+    ctx.globalAlpha = .92 * fade; ctx.strokeStyle = "#fff9dd"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
+    ctx.restore();
+  };
+  const drawParticle = (particle) => {
+    const alpha = clamp(particle.life / particle.maxLife, 0, 1); const progress = 1 - alpha;
+    ctx.save(); ctx.globalAlpha = alpha; ctx.translate(particle.x, particle.y);
+    if (particle.kind === "ring") { ctx.strokeStyle = particle.color; ctx.lineWidth = 3 * alpha; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.45 + progress * .9), 0, Math.PI * 2); ctx.stroke(); }
+    else if (particle.kind === "dust") { ctx.fillStyle = particle.color; ctx.scale(1 + progress * .55, .65); ctx.beginPath(); ctx.ellipse(0, 0, particle.size, particle.size * .55, 0, 0, Math.PI * 2); ctx.fill(); }
+    else if (particle.kind === "leaf") { ctx.rotate(particle.rotation + progress * 2); ctx.fillStyle = particle.color; ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size * .62); }
+    else if (particle.kind === "impact") { ctx.rotate(particle.rotation); ctx.fillStyle = particle.color; ctx.beginPath(); ctx.moveTo(0, -particle.size); ctx.lineTo(particle.size * .28, 0); ctx.lineTo(0, particle.size); ctx.lineTo(-particle.size * .28, 0); ctx.closePath(); ctx.fill(); }
+    else { ctx.fillStyle = particle.color; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.45 + alpha * .45), 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  };
+  const drawPlayer = (time) => {
+    const flicker = player.invulnerable > 0 && Math.floor(player.invulnerable * 24) % 2 === 0; if (flicker && player.dash <= 0) ctx.globalAlpha = .48;
+    const bob = player.visualState === "move" ? Math.sin(player.walk) * 2 : player.visualState === "idle" ? Math.sin(time * 2.2) * .7 : 0;
+    const lean = player.visualState === "hurt" ? -.12 : player.visualState === "attack" ? .08 : 0;
+    drawShadow(player.x, player.y + 16, player.visualState === "dash" ? 25 : 19, player.visualState === "dash" ? 5 : 7, .36);
+    ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
+    const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
+    ctx.fillStyle = player.visualState === "dash" ? "#89d8c7" : "#3d6780"; ctx.beginPath(); ctx.ellipse(0, 1, 15, 16, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = COLORS.player; ctx.beginPath(); ctx.arc(0, -14, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#4a302c"; ctx.beginPath(); ctx.arc(0, -19, 11, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = "#d8f0c6"; ctx.fillRect(-13, 1, 26, 4);
+    ctx.fillStyle = "rgba(255,255,255,.38)"; ctx.fillRect(-7, -22, 3, 3);
+    if (player.visualState === "dash") { ctx.strokeStyle = "rgba(182,255,225,.8)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 1, 21, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.restore(); ctx.globalAlpha = 1; drawAttackTrail();
+  };
 
   const draw = (time) => {
-    ctx.clearRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.translate(-camera.x, -camera.y); if (state.area === "overworld") drawOverworld(time); else drawDungeon(time); leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { ctx.fillStyle = "rgba(213,246,174,.55)"; ctx.fillRect(leaf.x, leaf.y, 3, 7); } }); const entities = [...enemies].sort((a, b) => a.y - b.y); entities.forEach((enemy) => drawEnemy(enemy, time)); projectiles.forEach((projectile) => { ctx.fillStyle = projectile.color; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2); ctx.fill(); }); drawPlayer(time); particles.forEach((particle) => { ctx.save(); ctx.globalAlpha = clamp(particle.life / particle.maxLife, 0, 1); ctx.fillStyle = particle.color; ctx.fillRect(particle.x, particle.y, particle.size, particle.size); ctx.restore(); }); ctx.restore(); const light = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, 80, WIDTH / 2, HEIGHT / 2, 480); light.addColorStop(0, "rgba(0,0,0,0)"); light.addColorStop(1, state.area === "dungeon" ? "rgba(2,8,8,.38)" : "rgba(4,13,9,.2)"); ctx.fillStyle = light; ctx.fillRect(0, 0, WIDTH, HEIGHT); };
+    ctx.clearRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.translate(-camera.x + camera.shakeX, -camera.y + camera.shakeY);
+    if (state.area === "overworld") drawOverworld(time); else drawDungeon(time);
+    leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { ctx.fillStyle = "rgba(213,246,174,.55)"; ctx.fillRect(leaf.x, leaf.y, 3, 7); } });
+    const entities = [...enemies].sort((a, b) => a.y - b.y); entities.forEach((enemy) => drawEnemy(enemy, time)); projectiles.forEach((projectile) => { ctx.fillStyle = projectile.color; ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2); ctx.fill(); });
+    drawPlayer(time); particles.forEach(drawParticle); ctx.restore();
+    const light = ctx.createRadialGradient(WIDTH / 2, HEIGHT / 2, 80, WIDTH / 2, HEIGHT / 2, 480); light.addColorStop(0, "rgba(0,0,0,0)"); light.addColorStop(1, state.area === "dungeon" ? "rgba(2,8,8,.38)" : "rgba(4,13,9,.2)"); ctx.fillStyle = light; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    if (state.impactFlash > 0) { ctx.fillStyle = `rgba(255,246,210,${state.impactFlash * 1.8})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); }
+  };
 
   const updateObjective = () => { if (state.area === "overworld") { ui.objective.textContent = state.secretFound ? "Enter the Hollow Shrine" : "Find Rowan at the outpost"; ui.objectiveCopy.textContent = state.secretFound ? "A blue seam glows behind the old outpost." : "The blue moths gather where the old path breaks."; } else { const key = `${state.roomX}-${state.roomY}`; if (key === "0-0") { ui.objective.textContent = state.key ? "Reach the Moon Switch Hall" : "Search the Root Gallery"; ui.objectiveCopy.textContent = state.key ? "The brass key hums when you face east." : "A forgotten chest waits beneath the shrine glyph."; } else if (key === "1-0") { ui.objective.textContent = state.switches ? "Find the Warden's Garden" : "Wake the moon switch"; ui.objectiveCopy.textContent = state.switches ? "The lower gate is open." : "Stand near the silver disk and press E."; } else if (key === "2-0") { ui.objective.textContent = state.miniBossDefeated ? "Descend to the Sanctum" : "Defeat the Root Warden"; ui.objectiveCopy.textContent = "Its bark armor cracks after every clean sword hit."; } else if (key === "2-1") { ui.objective.textContent = state.bossDefeated ? "Claim the Heartseed" : "Silence the Hollow Guardian"; ui.objectiveCopy.textContent = "The guardian changes its rhythm when its light turns rose."; } else { ui.objective.textContent = "Explore the shrine"; ui.objectiveCopy.textContent = "Every room remembers a different season."; } } };
   const updateHud = () => { ui.area.textContent = state.area === "overworld" ? "Lanternwood" : "Hollow Shrine"; ui.room.textContent = state.area === "overworld" ? "Outpost field" : dungeonRoomName(); ui.seed.textContent = state.reward ? "1" : "0"; ui.keys.textContent = state.key ? "1" : "0"; ui.save.textContent = state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : "Paused"; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); } ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective(); };
