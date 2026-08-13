@@ -752,9 +752,10 @@
   const action = (name) => {
     if (name === "left") move(-1);
     if (name === "right") move(1);
-    if (name === "rotate") rotate();
+    if (name === "rotate" || name === "up") rotate();
     if (name === "down") softDrop();
     if (name === "drop") hardDrop();
+    if (name === "hold") hold();
   };
 
   const repeatAction = (key) => {

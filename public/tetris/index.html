@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090d1a">
   <title>Tetris — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/tetris/tetris.css?v=classic-fx-2">
+  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-1">
 </head>
 <body>
   <div class="aurora aurora-one"></div>
@@ -67,7 +67,9 @@
         </div>
       </aside>
 
-      <div class="board-wrap">
+      <div class="board-column">
+        <div class="board-topline"><span>PLAYFIELD</span><span>10 × 20 GRID</span></div>
+        <div class="board-wrap">
         <div class="board-glow"></div>
         <canvas id="board" width="300" height="600" tabindex="0" aria-label="Tetris board"></canvas>
         <div id="line-clear-badge" class="line-clear-badge" aria-live="polite" aria-atomic="true"></div>
@@ -78,6 +80,8 @@
           <p id="overlay-copy">Press start, then use the arrow keys or the controls below.</p>
           <button id="start-button" class="primary-button" type="button">Start game</button>
         </div>
+        </div>
+        <div class="board-bottomline"><span>7-PIECE BAG</span><span>SRS ROTATION</span><span>GHOST GUIDE</span></div>
       </div>
 
       <aside class="side-panel right-panel">
@@ -99,17 +103,23 @@
     </section>
 
     <section class="touch-controls" aria-label="Touch controls">
-      <button data-action="left" type="button" aria-label="Move left">←</button>
-      <button data-action="rotate" type="button" aria-label="Rotate">↻</button>
-      <button data-action="right" type="button" aria-label="Move right">→</button>
-      <button data-action="down" type="button" aria-label="Soft drop">↓</button>
-      <button data-action="drop" type="button" aria-label="Hard drop">Drop</button>
+      <div class="d-pad" aria-label="Move controls">
+        <button data-action="up" type="button" aria-label="Rotate">↑</button>
+        <button data-action="left" type="button" aria-label="Move left">←</button>
+        <button data-action="down" type="button" aria-label="Soft drop">↓</button>
+        <button data-action="right" type="button" aria-label="Move right">→</button>
+      </div>
+      <div class="action-pad" aria-label="Action controls">
+        <button data-action="rotate" type="button" aria-label="Rotate piece"><b>A</b><span>Rotate</span></button>
+        <button data-action="hold" type="button" aria-label="Hold piece"><b>B</b><span>Hold</span></button>
+      </div>
+      <button data-action="drop" class="drop-control" type="button" aria-label="Hard drop"><b>DROP</b><span>Hard drop</span></button>
     </section>
     <p class="tip">7-piece bag • SRS rotation • ghost piece • hold queue • combos • local high score</p>
   </main>
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=classic-fx-2"></script>
+  <script src="/tetris/tetris.js?v=remaster-2026-1"></script>
 </body>
 </html>

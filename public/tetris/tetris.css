@@ -351,3 +351,121 @@ button:active { transform: translateY(1px); }
   .game-over-flash[data-active="true"], .board-wrap[data-state="over"] #board { animation: none; }
   .level-progress span { transition: none; }
 }
+
+/* 2026 remaster shell: the game logic stays in tetris.js; this layer only
+   gives the classic board a richer arcade cabinet and a purpose-built phone UI. */
+.site-nav {
+  border-color: rgba(105, 231, 255, .2);
+  background: linear-gradient(110deg, rgba(10, 15, 31, .86), rgba(17, 14, 39, .76));
+  box-shadow: 0 22px 80px rgba(0, 0, 0, .34), 0 0 0 1px rgba(178, 140, 255, .04), inset 0 1px rgba(255, 255, 255, .07);
+}
+.game-shell { width: min(1240px, calc(100vw - 40px)); padding-top: 62px; }
+.game-intro h1 { font-size: clamp(68px, 9vw, 112px); text-shadow: 0 0 44px rgba(105, 231, 255, .12); }
+.game-intro h1 span { text-shadow: 0 0 30px rgba(105, 231, 255, .5); }
+.game-status { padding: 11px 14px; border: 1px solid rgba(105, 231, 255, .14); border-radius: 999px; background: rgba(11, 16, 34, .64); box-shadow: inset 0 1px rgba(255,255,255,.05); }
+.arcade {
+  grid-template-columns: 210px minmax(340px, 1fr) 210px;
+  gap: 28px;
+  margin-top: 42px;
+  padding: 30px;
+  border-color: rgba(105, 231, 255, .18);
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(105, 231, 255, .1), transparent 33%),
+    linear-gradient(145deg, rgba(24, 30, 57, .78), rgba(8, 12, 27, .84));
+  box-shadow: 0 32px 110px rgba(0, 0, 0, .34), inset 0 1px rgba(255, 255, 255, .08), inset 0 -1px rgba(105, 231, 255, .05);
+}
+.stat-card, .mini-card {
+  border-color: rgba(160, 182, 255, .2);
+  background: linear-gradient(145deg, rgba(15, 21, 42, .84), rgba(9, 13, 28, .68));
+  box-shadow: inset 0 1px rgba(255,255,255,.045), 0 14px 36px rgba(0,0,0,.12);
+}
+.score-card { position: relative; overflow: hidden; }
+.score-card::after { position: absolute; right: -30px; bottom: -42px; width: 110px; height: 110px; border-radius: 50%; background: rgba(105,231,255,.09); content: ""; filter: blur(2px); }
+.score-card strong { color: #fff; text-shadow: 0 0 20px rgba(105, 231, 255, .18); }
+.board-column { display: flex; min-width: 0; flex-direction: column; align-items: center; }
+.board-topline, .board-bottomline { display: flex; width: 100%; justify-content: space-between; gap: 12px; color: rgba(140,150,182,.72); font: 500 9px/1 var(--mono); letter-spacing: .14em; }
+.board-topline { margin: 0 0 12px; padding: 0 5px; }
+.board-topline span:first-child { color: var(--cyan); }
+.board-bottomline { margin-top: 14px; justify-content: center; color: rgba(140,150,182,.54); font-size: 8px; }
+.board-bottomline span:not(:last-child)::after { margin-left: 12px; color: rgba(105,231,255,.44); content: "•"; }
+.board-wrap {
+  width: 340px;
+  height: 680px;
+  border-color: rgba(105, 231, 255, .36);
+  border-radius: 18px;
+  background: #060a17;
+  box-shadow: 0 0 0 10px rgba(105, 231, 255, .035), 0 0 0 1px rgba(178,140,255,.12), 0 0 90px rgba(105, 231, 255, .18), 0 28px 60px rgba(0,0,0,.3);
+}
+#board { width: 340px; height: 680px; border-radius: 17px; }
+.board-overlay { background: rgba(5, 9, 21, .78); }
+.board-overlay h2 { font-size: 36px; text-shadow: 0 0 30px rgba(105,231,255,.26); }
+.primary-button { min-height: 48px; padding: 0 28px; background: linear-gradient(135deg, #d5fbff, #69e7ff 60%, #a98cff); box-shadow: 0 0 38px rgba(105, 231, 255, .28); }
+.secondary-button { border-color: rgba(105,231,255,.22); background: rgba(105,231,255,.07); }
+
+@media (max-width: 960px) and (min-width: 681px) {
+  .game-shell { width: min(900px, calc(100vw - 28px)); }
+  .arcade { grid-template-columns: 170px minmax(300px, 1fr) 170px; gap: 14px; padding: 20px; }
+  .board-wrap, #board { width: 300px; height: 600px; }
+}
+
+@media (max-width: 680px) {
+  html, body { min-height: 100dvh; background: #070a16; }
+  body { overscroll-behavior: none; }
+  .site-nav { display: none; }
+  .game-shell { width: 100%; min-height: 100dvh; padding: max(14px, env(safe-area-inset-top)) 10px calc(18px + env(safe-area-inset-bottom)); }
+  .game-intro { align-items: center; flex-direction: row; gap: 12px; }
+  .game-intro > div:first-child { min-width: 0; }
+  .eyebrow { font-size: 8px; letter-spacing: .14em; }
+  .game-intro h1 { margin-top: 9px; font-size: clamp(42px, 14vw, 64px); }
+  .lede { display: none; }
+  .game-status { flex: 0 0 auto; margin: 0; padding: 8px 10px; font-size: 9px; }
+  .arcade { display: grid; grid-template-columns: 1fr; gap: 9px; margin-top: 14px; padding: 9px; border-radius: 24px; background: linear-gradient(145deg, rgba(18,24,47,.9), rgba(7,10,22,.96)); }
+  .left-panel { order: 0; display: grid; grid-template-columns: 1.14fr .93fr .93fr; gap: 6px; }
+  .board-column { order: 1; }
+  .right-panel { display: none; }
+  .stat-card, .mini-card { min-width: 0; padding: 10px; border-radius: 14px; }
+  .panel-label { font-size: 8px; letter-spacing: .12em; }
+  .score-card strong { margin: 8px 0 8px; font-size: 25px; }
+  .level-row { font-size: 8px; }
+  .streak-row, .level-progress, .level-progress-copy { display: none; }
+  .mini-card canvas { width: 62px; height: 62px; margin-top: 6px; }
+  .next-stack { gap: 1px; margin-top: 5px; padding: 2px 0; }
+  .next-stack canvas { width: 70px; height: 27px; }
+  .mini-action { display: none; }
+  .board-topline { margin-bottom: 7px; padding: 0 3px; font-size: 7px; }
+  .board-wrap, #board { width: min(360px, calc(100vw - 36px)); height: auto; aspect-ratio: 1 / 2; }
+  .board-wrap { border-radius: 16px; box-shadow: 0 0 0 7px rgba(105,231,255,.035), 0 0 60px rgba(105,231,255,.16), 0 20px 48px rgba(0,0,0,.32); }
+  #board { border-radius: 15px; }
+  .board-bottomline { margin-top: 9px; font-size: 6px; letter-spacing: .1em; }
+  .board-bottomline span:not(:last-child)::after { margin-left: 6px; }
+  .board-overlay { padding: 18px; }
+  .board-overlay h2 { margin: 11px 0 6px; font-size: 28px; }
+  .board-overlay p:not(.overlay-kicker) { font-size: 11px; }
+  .primary-button { min-height: 42px; margin-top: 18px; padding: 0 21px; font-size: 11px; }
+  .touch-controls { position: sticky; bottom: 8px; z-index: 8; display: grid; grid-template-columns: 1.1fr 1fr .92fr; align-items: center; gap: 8px; width: min(360px, calc(100vw - 26px)); margin: 10px auto 0; padding: 10px; border: 1px solid rgba(105,231,255,.2); border-radius: 22px; background: rgba(9,13,28,.88); box-shadow: 0 16px 40px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.07); backdrop-filter: blur(18px); }
+  .d-pad { display: grid; grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(2, 30px); gap: 3px; justify-content: center; }
+  .touch-controls button { min-height: 30px; border: 1px solid rgba(160,182,255,.23); border-radius: 9px; color: var(--text); background: linear-gradient(145deg, rgba(57,65,95,.8), rgba(20,25,48,.92)); box-shadow: inset 0 1px rgba(255,255,255,.13), 0 3px 8px rgba(0,0,0,.22); font: 700 16px/1 var(--font); touch-action: manipulation; }
+  .d-pad button:nth-child(1) { grid-column: 2; grid-row: 1; }
+  .d-pad button:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .d-pad button:nth-child(3) { grid-column: 2; grid-row: 2; }
+  .d-pad button:nth-child(4) { grid-column: 3; grid-row: 2; }
+  .action-pad { display: flex; justify-content: center; gap: 6px; }
+  .action-pad button { width: 43px; height: 43px; min-height: 43px; border-radius: 50%; color: #07101d; background: radial-gradient(circle at 35% 28%, #ffd7ee, #ff73be 58%, #9c67d7); border-color: rgba(255,255,255,.3); box-shadow: 0 0 18px rgba(255,115,190,.25), inset 0 2px rgba(255,255,255,.45); }
+  .action-pad button:nth-child(2) { color: #07101d; background: radial-gradient(circle at 35% 28%, #efffd2, #b4dd72 58%, #4e9d86); box-shadow: 0 0 18px rgba(154,220,141,.2), inset 0 2px rgba(255,255,255,.45); }
+  .action-pad b { display: block; font: 800 15px/1 var(--font); }
+  .action-pad span, .drop-control span { display: block; margin-top: 3px; font: 500 6px/1 var(--mono); letter-spacing: .04em; }
+  .drop-control { min-height: 48px !important; color: var(--cyan) !important; background: linear-gradient(145deg, rgba(21,52,73,.9), rgba(11,24,47,.95)) !important; }
+  .drop-control b { display: block; font: 800 10px/1 var(--font); letter-spacing: .08em; }
+  .tip { display: none; }
+}
+
+@media (max-width: 380px) {
+  .game-shell { padding-left: 7px; padding-right: 7px; }
+  .arcade { padding: 7px; }
+  .left-panel { gap: 4px; }
+  .stat-card, .mini-card { padding: 8px; }
+  .touch-controls { width: calc(100vw - 14px); gap: 5px; padding: 8px; }
+  .d-pad { grid-template-columns: repeat(3, 27px); grid-template-rows: repeat(2, 27px); }
+  .action-pad button { width: 38px; height: 38px; min-height: 38px; }
+}
