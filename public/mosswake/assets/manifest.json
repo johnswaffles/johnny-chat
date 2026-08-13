@@ -1,5 +1,5 @@
 {
-  "version": 13,
+  "version": 14,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -52,6 +52,7 @@
     "portrait-tansy": { "src": "npcs/portraits/tansy-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
     "portrait-brindle": { "src": "npcs/portraits/brindle-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
     "portrait-lumen": { "src": "npcs/portraits/lumen-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
+    "portrait-trader": { "src": "npcs/portraits/trader-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
     "enemy-mossling": {
       "src": "enemies/mossling-sheet-generated-v1.png",
       "frameWidth": 312,

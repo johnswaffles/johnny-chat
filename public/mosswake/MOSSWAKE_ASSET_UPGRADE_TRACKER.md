@@ -32,7 +32,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 - Generated `assets/npcs/named-npc-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas for Tansy, Brindle, Lumen, and the outpost trader: front idle, walking/back, work, and talk/reaction rows. The keyed RGB source remains beside it for future matte refinement.
 - Added `npc-named` plus three 96×96 portrait files to the manifest. Tansy, Brindle, and Lumen now render through the generated family in the overworld; dialogue portraits use their generated bust crops while Rowan keeps the existing Rowan reference sheet.
-- Preserved NPC schedules, proximity interaction, dialogue text, save behavior, and procedural fallback. Bumped the manifest and page cache keys to `manifest.json?v=13` and `mosswake.js?v=38`.
+- Preserved NPC schedules, proximity interaction, dialogue text, save behavior, and procedural fallback. Added the trader portrait slot for future outpost use and bumped the manifest and page cache keys to `manifest.json?v=14` and `mosswake.js?v=39`.
 - Local syntax, manifest, RGBA/alpha, startup, NPC asset-load, dialogue portrait, and console smoke checks passed. Public edge should be verified after cache rollover.
 
 ### 2026-08-13 — Dungeon architecture kit
