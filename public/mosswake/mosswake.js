@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=10";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=11";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -163,12 +163,12 @@
       { x: 1460, y: 760, s: .9, phase: 1.1 }, { x: 930, y: 890, s: 1.05, phase: 3.8 }, { x: 390, y: 830, s: .75, phase: 5.8 }
     ],
     grassPatches: [
-      { x: 150, y: 420, radius: 62, density: 8, scale: .82, tone: "#6eae61", phase: .4, seed: 11 },
-      { x: 430, y: 355, radius: 54, density: 6, scale: .68, tone: "#579254", phase: 1.8, seed: 23 },
-      { x: 720, y: 430, radius: 74, density: 9, scale: .74, tone: "#72b968", phase: 3.1, seed: 37 },
-      { x: 1030, y: 400, radius: 58, density: 7, scale: .66, tone: "#5a9a57", phase: 4.7, seed: 49 },
-      { x: 1240, y: 680, radius: 86, density: 10, scale: .8, tone: "#6aab5f", phase: 2.6, seed: 61 },
-      { x: 420, y: 820, radius: 68, density: 7, scale: .7, tone: "#4e8951", phase: 5.4, seed: 73 }
+      { x: 150, y: 420, radius: 62, density: 8, scale: .82, tone: "#6eae61", phase: .4, seed: 11, foliageFrame: 0 },
+      { x: 430, y: 355, radius: 54, density: 6, scale: .68, tone: "#579254", phase: 1.8, seed: 23, foliageFrame: 1 },
+      { x: 720, y: 430, radius: 74, density: 9, scale: .74, tone: "#72b968", phase: 3.1, seed: 37, foliageFrame: 4 },
+      { x: 1030, y: 400, radius: 58, density: 7, scale: .66, tone: "#5a9a57", phase: 4.7, seed: 49, foliageFrame: 5 },
+      { x: 1240, y: 680, radius: 86, density: 10, scale: .8, tone: "#6aab5f", phase: 2.6, seed: 61, foliageFrame: 2 },
+      { x: 420, y: 820, radius: 68, density: 7, scale: .7, tone: "#4e8951", phase: 5.4, seed: 73, foliageFrame: 6 }
     ],
     flowers: [
       { x: 108, y: 348, s: .9, color: "#f4d57a", phase: .8 }, { x: 138, y: 364, s: .65, color: "#e7a7c6", phase: 2.1 },
@@ -1100,12 +1100,19 @@
   };
   const drawGrassTuft = (item, time, foreground = false) => {
     const rustle = item.rustle || 0; const sway = Math.sin(time * 2.2 + item.phase) * .12 + rustle * Math.sin(time * 22 + item.phase) * .36;
+    const foliageFrame = Number.isFinite(item.foliageFrame) ? item.foliageFrame : Math.abs(Math.floor((item.x * .17 + item.y * .07) % 4));
+    if (drawOptionalSprite("outdoor-foliage", item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * 52, height: (item.s || 1) * 52, anchorX: .5, anchorY: .92, alpha: foreground ? .76 : .94, rotation: sway * .32 })) return;
     ctx.save(); ctx.translate(item.x, item.y); ctx.rotate(sway); ctx.scale(item.s || 1, item.s || 1); ctx.globalAlpha = foreground ? .72 : .92;
     [[-8, "#5f9e5a"], [-3, "#77b866"], [3, "#4d8950"], [8, "#83c56d"]].forEach(([offset, color], i) => { ctx.strokeStyle = color; ctx.lineWidth = i % 2 ? 3 : 2; ctx.beginPath(); ctx.moveTo(offset, 8); ctx.quadraticCurveTo(offset - 2, -4, offset + (i - 1.5) * 3, -18 - (i % 2) * 4); ctx.stroke(); });
     ctx.restore();
   };
   const drawGrassPatch = (patch, time, foreground = false) => {
     const rustle = patch.rustle || 0; const density = patch.density + (patch.seed % 3); const scale = patch.scale || .7;
+    if (loadedAssets.has("outdoor-foliage")) {
+      const frameBase = Number.isFinite(patch.foliageFrame) ? patch.foliageFrame : 0;
+      const frame = frameBase + (rustle > .2 ? Math.floor(time * 3) % 2 : 0);
+      if (drawOptionalSprite("outdoor-foliage", patch.x, patch.y + 8, { frame, width: 82 * scale, height: 82 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .62 : .78, rotation: Math.sin(time * .7 + patch.phase) * .025 })) return;
+    }
     ctx.save(); ctx.globalAlpha = foreground ? .58 : .72;
     for (let i = 0; i < density; i += 1) {
       const angle = hash01(patch.seed, i) * Math.PI * 2; const radius = 8 + hash01(patch.seed + i * 3, 4) * patch.radius; const x = patch.x + Math.cos(angle) * radius; const y = patch.y + Math.sin(angle) * radius * .48; const s = scale * (.72 + hash01(patch.seed + i, 9) * .56); const phase = patch.phase + i * .73; const sway = Math.sin(time * (1.4 + hash01(i, patch.seed) * .7) + phase) * .1 + rustle * Math.sin(time * 18 + phase) * .42;
@@ -1118,10 +1125,12 @@
   };
   const drawFlower = (flower, time) => {
     const rustle = flower.rustle || 0; const sway = Math.sin(time * 1.8 + flower.phase) * .08 + rustle * Math.sin(time * 18 + flower.phase) * .3;
+    const foliageFrame = 8 + (Number.isFinite(flower.foliageFrame) ? flower.foliageFrame % 4 : Math.abs(Math.floor((flower.x * .11 + flower.y * .05) % 4)));
+    if (drawOptionalSprite("outdoor-foliage", flower.x, flower.y + 6, { frame: foliageFrame, width: (flower.s || 1) * 52, height: (flower.s || 1) * 52, anchorX: .5, anchorY: .92, alpha: .94, rotation: sway * .4 })) return;
     ctx.save(); ctx.translate(flower.x, flower.y); ctx.rotate(sway); ctx.scale(flower.s, flower.s); ctx.strokeStyle = "#6f9b58"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 10); ctx.quadraticCurveTo(-2, -2, 0, -11); ctx.stroke(); ctx.fillStyle = flower.color; for (let i = 0; i < 4; i += 1) { ctx.beginPath(); ctx.ellipse(Math.cos(i * 1.57) * 4, -13 + Math.sin(i * 1.57) * 4, 4, 2.5, i * 1.57, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = "#ffe8a4"; ctx.beginPath(); ctx.arc(0, -13, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   };
   const drawRock = (rock) => { ctx.save(); ctx.translate(rock.x, rock.y); ctx.scale(rock.s, rock.s); drawShadow(0, 10, 20, 7, .3); ctx.fillStyle = rock.tone; ctx.beginPath(); ctx.moveTo(-22, 8); ctx.quadraticCurveTo(-24, -10, -8, -17); ctx.quadraticCurveTo(10, -23, 24, -4); ctx.quadraticCurveTo(25, 10, 7, 13); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.stroke(); ctx.fillStyle = "rgba(211,235,197,.2)"; ctx.beginPath(); ctx.ellipse(-7, -8, 10, 5, -.2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
-  const drawLog = (log) => { ctx.save(); ctx.translate(log.x, log.y); ctx.rotate(log.angle); ctx.scale(log.s, log.s); drawShadow(0, 12, log.length * .45, 6, .32); ctx.fillStyle = "#684735"; ctx.fillRect(-log.length / 2, -10, log.length, 20); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.strokeRect(-log.length / 2, -10, log.length, 20); ctx.fillStyle = "#986b4a"; ctx.fillRect(-log.length / 2 + 12, -7, log.length - 24, 5); ctx.fillStyle = "#b58459"; ctx.beginPath(); ctx.ellipse(-log.length / 2, 0, 11, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#6f4937"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-log.length / 2, 0, 6, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "#5c8f59"; ctx.beginPath(); ctx.arc(-14, -11, 8, 0, Math.PI * 2); ctx.arc(5, -12, 6, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
+  const drawLog = (log) => { ctx.save(); ctx.translate(log.x, log.y); ctx.rotate(log.angle); ctx.scale(log.s, log.s); drawShadow(0, 12, log.length * .45, 6, .32); if (drawOptionalSprite("outdoor-foliage", 0, 3, { frame: 12 + (log.variant || 0) % 2, width: log.length * 1.05, height: 64, anchorX: .5, anchorY: .86 })) { ctx.restore(); return; } ctx.fillStyle = "#684735"; ctx.fillRect(-log.length / 2, -10, log.length, 20); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.strokeRect(-log.length / 2, -10, log.length, 20); ctx.fillStyle = "#986b4a"; ctx.fillRect(-log.length / 2 + 12, -7, log.length - 24, 5); ctx.fillStyle = "#b58459"; ctx.beginPath(); ctx.ellipse(-log.length / 2, 0, 11, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#6f4937"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-log.length / 2, 0, 6, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "#5c8f59"; ctx.beginPath(); ctx.arc(-14, -11, 8, 0, Math.PI * 2); ctx.arc(5, -12, 6, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
   const drawLantern = (x, y, time) => { const pulse = .72 + Math.sin(time * 7 + x) * .12; drawShadow(x, y + 7, 10, 4, .18); const glow = ctx.createRadialGradient(x, y - 24, 1, x, y - 24, 62); glow.addColorStop(0, "rgba(255,213,125,.38)"); glow.addColorStop(.35, "rgba(255,185,102,.12)"); glow.addColorStop(1, "rgba(255,213,125,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 24, 62, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#543c32"; ctx.fillRect(x - 3, y - 22, 6, 26); ctx.fillStyle = "#a87b4c"; ctx.fillRect(x - 10, y - 28, 20, 7); ctx.strokeStyle = "rgba(31,54,42,.7)"; ctx.lineWidth = 2; ctx.strokeRect(x - 10, y - 28, 20, 13); ctx.fillStyle = `rgba(255,215,133,${pulse})`; ctx.beginPath(); ctx.arc(x, y - 25, 6 + Math.sin(time * 5 + x) * .7, 0, Math.PI * 2); ctx.fill(); };
   const drawButterfly = (item, time) => { const x = item.x + Math.sin(time * item.speed + item.phase) * item.range; const y = item.y + Math.cos(time * item.speed * .8 + item.phase) * 16; const flap = .65 + Math.abs(Math.sin(time * 9 + item.phase)) * .35; ctx.save(); ctx.translate(x, y); ctx.scale(1, flap); ctx.globalAlpha = .78; ctx.fillStyle = item.color; ctx.beginPath(); ctx.ellipse(-4, 0, 5, 3, -.35, 0, Math.PI * 2); ctx.ellipse(4, 0, 5, 3, .35, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#4d463a"; ctx.fillRect(-1, -2, 2, 5); ctx.restore(); };
   const drawBird = (item, time) => { const x = item.x + Math.sin(time * item.speed + item.phase) * item.range; const y = item.y + Math.sin(time * item.speed * 1.8 + item.phase) * 14; const flap = Math.sin(time * 5 + item.phase) * 3; ctx.save(); ctx.translate(x, y); ctx.scale(item.scale, item.scale); ctx.strokeStyle = "rgba(24,57,49,.7)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, flap); ctx.quadraticCurveTo(-4, -5, 0, 0); ctx.quadraticCurveTo(5, -5, 11, flap); ctx.stroke(); ctx.restore(); };
@@ -1153,6 +1162,8 @@
   const drawBreakable = (object, time) => {
     if (object.broken) return;
     const sway = Math.sin(time * 2.4 + object.x) * .08;
+    const foliageFrame = object.id === "reed-cache" ? 5 : object.id === "pond-ivy" ? 15 : 14;
+    if (drawOptionalSprite("outdoor-foliage", object.x, object.y + 8, { frame: foliageFrame, width: object.id === "reed-cache" ? 68 : 78, height: object.id === "reed-cache" ? 68 : 78, anchorX: .5, anchorY: .9, alpha: .96, rotation: sway * .28 })) return;
     ctx.save(); ctx.translate(object.x, object.y); ctx.rotate(sway); ctx.fillStyle = object.id === "reed-cache" ? "#527d55" : "#477d52"; ctx.beginPath(); ctx.arc(0, 0, 21, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = object.id === "reed-cache" ? "#d3b076" : "#a5d977"; ctx.beginPath(); ctx.arc(-8, -7, 7, 0, Math.PI * 2); ctx.arc(8, -4, 4, 0, Math.PI * 2); ctx.fill(); if (object.id === "reed-cache") { ctx.strokeStyle = "rgba(240,222,163,.58)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.stroke(); } ctx.restore();
   };
   const drawRootlightOverworld = (time) => {

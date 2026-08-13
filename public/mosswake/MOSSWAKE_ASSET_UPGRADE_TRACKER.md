@@ -22,11 +22,18 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Priority | Family | Current status | Recommended next action |
 | --- | --- | --- | --- |
 | 1 | Boss telegraph and defeat FX | Integrated / tested | Keep the atlas as the Guardian effect reference; only refine for a readability defect |
-| 2 | Outdoor foliage | Procedural authored clusters | Generate modular grass, fern, reed, flower, mushroom, log, and ivy rustle states |
+| 2 | Outdoor foliage | Integrated / tested | Keep the foliage atlas as the outdoor prop reference; add a second seasonal sheet only if a later visual review shows repetition |
 | 3 | Dungeon architecture | Procedural room construction | Generate modular stone, roots, arches, statues, and rubble |
 | 4 | Remaining NPCs and portraits | Procedural fallback except Rowan | Generate Tansy, Brindle, Lumen, and compact dialogue busts |
 
 ## Current iteration log
+
+### 2026-08-13 — Outdoor foliage interaction family
+
+- Generated `assets/plants/outdoor-foliage-interaction-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas with meadow tufts, fern/reed clumps, flower and mushroom clusters, fallen logs, and tangled ivy bundles. The keyed RGB source remains beside it for future matte refinement.
+- Added the `outdoor-foliage` manifest slot. Outdoor grass patches, individual tufts, flowers, logs, and breakable ivy now use the painted modular silhouettes with deterministic frame selection and small rustle animation; the existing procedural primitives remain the safe fallback.
+- Preserved collision footprints, secret interactions, foreground layering, and ambient timing. Bumped the manifest and page cache keys to `manifest.json?v=11` and `mosswake.js?v=36`.
+- Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks are required after this integration.
 
 ### 2026-08-13 — Hollow Guardian telegraph and defeat FX
 

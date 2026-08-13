@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -108,6 +108,18 @@
       "displayHeight": 180,
       "anchorX": 0.5,
       "anchorY": 0.5
+    },
+    "outdoor-foliage": {
+      "src": "plants/outdoor-foliage-interaction-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 5,
+      "displayWidth": 58,
+      "displayHeight": 58,
+      "anchorX": 0.5,
+      "anchorY": 0.92
     },
     "water-surface": {
       "src": "terrain/water-surface-generated-v1.png",
