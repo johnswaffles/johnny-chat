@@ -86,7 +86,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - The encounter sweep found that the sword trail was drawn inside the player actor pass. When the player crossed an enemy contact plane, that enemy could cover part of the authored slash and make the hit read weakly.
 - Added a shared player presentation-bob helper and moved the painted/procedural sword trail to the post-actor combat-FX layer. The trail keeps the exact grounded `+8px` position while now remaining readable above actor silhouettes.
 - No artwork or gameplay systems changed. Attack hitboxes, direction, cooldown, timing, movement, actor depth, and foreground foliage layering remain unchanged.
-- `node --check`, `git diff --check`, local start/attack visual smoke, and console warning/error checks pass. Public deployment verification is pending.
+- `node --check`, `git diff --check`, local start/attack visual smoke, and console warning/error checks pass. Live public start/attack smoke after deployment also passes with no console warnings or errors.
 
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
