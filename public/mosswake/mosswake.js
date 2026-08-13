@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=1";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=2";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1207,19 +1207,25 @@
   const drawNpc = (npc, time) => {
     const bob = Math.sin(time * 2.4 + npc.phase) * (npc.behavior === "pace" ? 1.2 : .8); const npcAnimTime = npc.animTime || 0; const stride = npc.behavior === "pace" ? Math.sin(npcAnimTime) * 2 : Math.sin(npcAnimTime) * .45; const x = npc.x; const y = npc.y + bob;
     drawShadow(x, y + 18, (npc.id === "brindle" ? 20 : 18) * (1 + Math.abs(stride) * .025), 7, .32);
-    ctx.save(); ctx.translate(x, y); ctx.scale(npc.facing || 1, 1);
-    ctx.fillStyle = npc.id === "brindle" ? "#315b58" : "#4a3c43"; ctx.fillRect(-10 - stride, 8, 7, 8); ctx.fillRect(3 + stride, 8, 7, 8);
-    if (npc.id === "rowan") {
-      ctx.fillStyle = "#365c78"; ctx.beginPath(); ctx.moveTo(-16, 9); ctx.quadraticCurveTo(-14, -9, 0, -15); ctx.quadraticCurveTo(14, -9, 16, 9); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#233d59"; ctx.beginPath(); ctx.moveTo(-16, -14); ctx.lineTo(0, -28); ctx.lineTo(16, -14); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#d7a77b"; ctx.beginPath(); ctx.arc(0, -23, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(-12, 1, 24, 5); ctx.fillStyle = "#91e1c1"; ctx.fillRect(-4, -25, 3, 3);
-    } else if (npc.id === "tansy") {
-      ctx.fillStyle = "#b8684d"; ctx.beginPath(); ctx.arc(0, -20, 12, Math.PI, 0); ctx.fill(); ctx.fillStyle = "#ddba83"; ctx.beginPath(); ctx.arc(0, -21, 9, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d07a52"; ctx.fillRect(-15, -4, 30, 15); ctx.fillStyle = "#f0dfb2"; ctx.fillRect(-9, -5, 18, 18); ctx.fillStyle = "#bd684d"; ctx.fillRect(-13, -5, 26, 4); ctx.fillStyle = "#7e4d3d"; ctx.fillRect(8, -18, 3, 3);
-    } else if (npc.id === "brindle") {
-      ctx.fillStyle = "#4d8d87"; ctx.beginPath(); ctx.ellipse(0, 1, 16, 17, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d7ad76"; ctx.beginPath(); ctx.arc(0, -18, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#324d4e"; ctx.fillRect(-14, -27, 28, 5); ctx.fillRect(-7, -31, 14, 5); ctx.fillStyle = "#e3c57e"; ctx.fillRect(-14, 4, 8, 5); ctx.fillRect(6, 4, 8, 5); ctx.fillStyle = "#233f3d"; ctx.fillRect(-5, -19, 3, 3);
-    } else {
-      ctx.fillStyle = "#765c8e"; ctx.beginPath(); ctx.moveTo(-15, 10); ctx.lineTo(-11, -13); ctx.lineTo(0, -17); ctx.lineTo(12, -13); ctx.lineTo(16, 10); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#e0bd89"; ctx.beginPath(); ctx.arc(0, -23, 9, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#2e2e4a"; ctx.fillRect(-11, -29, 22, 5); ctx.fillStyle = "#d7c99a"; ctx.fillRect(9, -1, 8, 10); ctx.strokeStyle = "#e8d6a3"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -23, 12, 0, Math.PI * 2); ctx.stroke();
+    const customNpcKey = `npc-${npc.id}`;
+    const facingFrame = npc.facing < 0 ? 2 : npc.facing > 0 ? 0 : 1;
+    const customNpcFrame = state.dialogue && npc.near ? 12 + Math.floor((npc.clock || 0) * 4) % 4 : npc.behavior === "map" ? 8 + Math.floor((npc.clock || 0) * 2.6) % 4 : npc.behavior === "pace" ? 4 + Math.floor((npc.animTime || 0) * 1.4) % 4 : facingFrame;
+    const customNpc = drawOptionalSprite(customNpcKey, x, y, { frame: customNpcFrame, width: 52, height: 70, flipX: npc.facing < 0, alpha: npc.near ? 1 : .98 });
+    if (!customNpc) {
+      ctx.save(); ctx.translate(x, y); ctx.scale(npc.facing || 1, 1);
+      ctx.fillStyle = npc.id === "brindle" ? "#315b58" : "#4a3c43"; ctx.fillRect(-10 - stride, 8, 7, 8); ctx.fillRect(3 + stride, 8, 7, 8);
+      if (npc.id === "rowan") {
+        ctx.fillStyle = "#365c78"; ctx.beginPath(); ctx.moveTo(-16, 9); ctx.quadraticCurveTo(-14, -9, 0, -15); ctx.quadraticCurveTo(14, -9, 16, 9); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#233d59"; ctx.beginPath(); ctx.moveTo(-16, -14); ctx.lineTo(0, -28); ctx.lineTo(16, -14); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#d7a77b"; ctx.beginPath(); ctx.arc(0, -23, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = COLORS.gold; ctx.fillRect(-12, 1, 24, 5); ctx.fillStyle = "#91e1c1"; ctx.fillRect(-4, -25, 3, 3);
+      } else if (npc.id === "tansy") {
+        ctx.fillStyle = "#b8684d"; ctx.beginPath(); ctx.arc(0, -20, 12, Math.PI, 0); ctx.fill(); ctx.fillStyle = "#ddba83"; ctx.beginPath(); ctx.arc(0, -21, 9, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d07a52"; ctx.fillRect(-15, -4, 30, 15); ctx.fillStyle = "#f0dfb2"; ctx.fillRect(-9, -5, 18, 18); ctx.fillStyle = "#bd684d"; ctx.fillRect(-13, -5, 26, 4); ctx.fillStyle = "#7e4d3d"; ctx.fillRect(8, -18, 3, 3);
+      } else if (npc.id === "brindle") {
+        ctx.fillStyle = "#4d8d87"; ctx.beginPath(); ctx.ellipse(0, 1, 16, 17, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d7ad76"; ctx.beginPath(); ctx.arc(0, -18, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#324d4e"; ctx.fillRect(-14, -27, 28, 5); ctx.fillRect(-7, -31, 14, 5); ctx.fillStyle = "#e3c57e"; ctx.fillRect(-14, 4, 8, 5); ctx.fillRect(6, 4, 8, 5); ctx.fillStyle = "#233f3d"; ctx.fillRect(-5, -19, 3, 3);
+      } else {
+        ctx.fillStyle = "#765c8e"; ctx.beginPath(); ctx.moveTo(-15, 10); ctx.lineTo(-11, -13); ctx.lineTo(0, -17); ctx.lineTo(12, -13); ctx.lineTo(16, 10); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#e0bd89"; ctx.beginPath(); ctx.arc(0, -23, 9, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#2e2e4a"; ctx.fillRect(-11, -29, 22, 5); ctx.fillStyle = "#d7c99a"; ctx.fillRect(9, -1, 8, 10); ctx.strokeStyle = "#e8d6a3"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -23, 12, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (npc.behavior === "fire" || npc.behavior === "map") { const npcWork = npc.work || 0; ctx.strokeStyle = npc.behavior === "fire" ? "#e6b774" : "#d7c99a"; ctx.globalAlpha = .72; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-12, 1); ctx.lineTo(-16, 5 + npcWork * 4); ctx.moveTo(12, 1); ctx.lineTo(16, 5 - npcWork * 4); ctx.stroke(); }
+      ctx.restore();
     }
-    if (npc.behavior === "fire" || npc.behavior === "map") { const npcWork = npc.work || 0; ctx.strokeStyle = npc.behavior === "fire" ? "#e6b774" : "#d7c99a"; ctx.globalAlpha = .72; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-12, 1); ctx.lineTo(-16, 5 + npcWork * 4); ctx.moveTo(12, 1); ctx.lineTo(16, 5 - npcWork * 4); ctx.stroke(); }
-    ctx.restore();
     if (npc.near && state.mode === "playing" && !state.dialogue) { const lift = Math.sin(time * 4 + npc.phase) * 2; ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = "rgba(7,20,18,.9)"; ctx.strokeStyle = "rgba(214,255,220,.45)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x - 17, y - 69 + lift, 34, 22, 8); ctx.fill(); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.font = "700 11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("E", x, y - 54 + lift); ctx.fillStyle = "rgba(243,246,223,.82)"; ctx.font = "500 9px Outfit"; ctx.fillText(npc.name, x, y - 76 + lift); ctx.restore(); }
   };
   const nearestInteractionHint = () => {
@@ -1507,7 +1513,8 @@
     const shadowScale = enemy.type === "boss" ? (enemy.phase === 2 ? 1.5 : 1.35) : 1; drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92) * shadowScale, enemy.radius * (moving ? .34 : .3) * shadowScale, enemy.type === "boss" ? .44 : .36);
     const customEnemyKey = enemy.type === "boss" ? "boss" : `enemy-${enemy.type}`;
     const customEnemyBase = enemy.type === "boss" ? (enemy.phase === 2 ? 32 : 0) : enemy.type === "warden" ? 0 : enemy.type === "thornback" ? 8 : enemy.type === "moth" ? 16 : enemy.type === "wisp" ? 24 : 32;
-    const customEnemyFrame = customEnemyBase + Math.floor((moving ? enemy.walk * 1.2 : time * 4) % 8);
+    const mosslingFrame = enemy.hitStun > 0 ? 12 + Math.floor(time * 6) % 2 : (enemy.state === "chargeWindup" || enemy.state === "pounce" || enemy.state === "charging") ? 8 + Math.floor(time * 8) % 4 : moving ? 4 + Math.floor(enemy.walk * 1.2) % 4 : Math.floor(time * 4) % 4;
+    const customEnemyFrame = enemy.type === "mossling" ? mosslingFrame : customEnemyBase + Math.floor((moving ? enemy.walk * 1.2 : time * 4) % 8);
     const customEnemy = drawOptionalSprite(customEnemyKey, enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil, { frame: customEnemyFrame, width: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : enemy.radius * 2.45, height: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : enemy.radius * 2.45, flipX: facing < 0, alpha: enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1 });
     ctx.save(); ctx.translate(enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil); ctx.scale(facing, 1); ctx.globalAlpha = enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1; ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2;
     const color = enemy.color; const squash = enemy.hitStun > 0 ? .86 : enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "bossDashing" ? 1.12 : 1; const stretch = enemy.hitStun > 0 ? 1.1 : enemy.state === "chargeWindup" || enemy.state === "bossDashWindup" ? .86 : 1;
@@ -1624,9 +1631,11 @@
     const bob = player.visualState === "move" ? Math.sin(player.walk) * 2 : player.visualState === "idle" ? Math.sin(time * 2.2) * .7 : player.visualState === "attack" ? Math.sin(player.attackElapsed * 22) * .45 : 0;
     const lean = player.visualState === "hurt" ? -.12 : player.visualState === "attack" ? .08 : 0;
     drawShadow(player.x, player.y + 16, player.visualState === "dash" ? 25 : 19, player.visualState === "dash" ? 5 : 7, .36);
-    const playerAnimationBase = player.visualState === "move" ? 8 : player.visualState === "attack" ? 16 : player.visualState === "dash" ? 24 : player.visualState === "hurt" ? 28 : 0;
-    const playerFrame = playerAnimationBase + Math.floor((player.visualState === "attack" ? player.attackElapsed * 18 : time * 5) % (player.visualState === "attack" ? 6 : 8));
-    const customPlayer = drawOptionalSprite("player", player.x, player.y + bob, { frame: playerFrame, width: player.visualState === "dash" ? 72 : 64, height: player.visualState === "dash" ? 58 : 64, flipX: player.facingX < -.2, rotation: lean + (player.visualState === "dash" ? Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2 : 0), alpha: flicker ? .48 : 1 });
+    const facingFrame = player.facingY < -.35 ? 4 : player.facingY > .35 ? 0 : 2;
+    const playerFrame = player.visualState === "move" ? 8 + Math.floor((time * 10) % 8) : player.visualState === "attack" ? 16 + Math.floor((player.attackElapsed * 22) % 8) : player.visualState === "dash" ? 24 + Math.floor((time * 14) % 5) : player.visualState === "hurt" ? 28 + Math.floor((time * 9) % 4) : facingFrame;
+    // The generated sheet already contains the blade, lantern, and action silhouettes.
+    // Keep the procedural sword only for the fallback so replacement art never doubles it.
+    const customPlayer = drawOptionalSprite("player", player.x, player.y + bob, { frame: playerFrame, width: player.visualState === "dash" ? 58 : 52, height: player.visualState === "dash" ? 76 : 70, flipX: player.facingX < -.2, rotation: lean, alpha: flicker ? .48 : 1 });
     if (!customPlayer) {
       ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
       const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
@@ -1641,7 +1650,9 @@
     }
     ctx.globalAlpha = 1;
     const attackProgress = player.visualState === "attack" ? clamp(player.attackElapsed / .34, 0, 1) : 0; const attackAngle = player.visualState === "attack" ? Math.atan2(player.attackDirectionY, player.attackDirectionX) : Math.atan2(player.facingY, player.facingX); const swordSweep = player.visualState === "attack" ? -1.08 + attackProgress * 1.86 : .12;
-    ctx.save(); ctx.translate(player.x, player.y + bob - 1); ctx.rotate(attackAngle + swordSweep); ctx.globalAlpha = player.visualState === "hurt" ? .55 : 1; ctx.strokeStyle = "#6e4937"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(13, 0); ctx.stroke(); ctx.fillStyle = player.visualState === "attack" ? "#fff1ba" : "#e5d59f"; ctx.beginPath(); ctx.moveTo(10, -3); ctx.lineTo(39, -2); ctx.lineTo(44, 0); ctx.lineTo(39, 2); ctx.lineTo(10, 3); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(40,59,49,.72)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "#b58355"; ctx.fillRect(8, -5, 5, 10); ctx.restore();
+    if (!customPlayer) {
+      ctx.save(); ctx.translate(player.x, player.y + bob - 1); ctx.rotate(attackAngle + swordSweep); ctx.globalAlpha = player.visualState === "hurt" ? .55 : 1; ctx.strokeStyle = "#6e4937"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(13, 0); ctx.stroke(); ctx.fillStyle = player.visualState === "attack" ? "#fff1ba" : "#e5d59f"; ctx.beginPath(); ctx.moveTo(10, -3); ctx.lineTo(39, -2); ctx.lineTo(44, 0); ctx.lineTo(39, 2); ctx.lineTo(10, 3); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(40,59,49,.72)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "#b58355"; ctx.fillRect(8, -5, 5, 10); ctx.restore();
+    }
     if (state.rootlightLantern) { const bob = Math.sin(time * 3.4) * 3; const glow = ctx.createRadialGradient(player.x + 15, player.y - 18 + bob, 1, player.x + 15, player.y - 18 + bob, 32); glow.addColorStop(0, "rgba(255,238,166,.72)"); glow.addColorStop(1, "rgba(142,242,207,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 32, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffe9a4"; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 5 + Math.sin(time * 5) * .8, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(142,242,207,.65)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 9, 0, Math.PI * 2); ctx.stroke(); }
     if (player.rootlightPulse > 0) { const pulse = 1 - player.rootlightPulse / .7; ctx.save(); ctx.globalAlpha = .25 + player.rootlightPulse * .7; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + pulse * 80, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     drawAttackTrail();

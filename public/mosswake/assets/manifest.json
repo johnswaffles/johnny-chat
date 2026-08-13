@@ -1,4 +1,41 @@
 {
-  "version": 1,
-  "sprites": {}
+  "version": 2,
+  "sprites": {
+    "player": {
+      "src": "player/warden-sheet-generated-v1.png",
+      "frameWidth": 192,
+      "frameHeight": 256,
+      "columns": 8,
+      "frames": 32,
+      "fps": 10,
+      "displayWidth": 52,
+      "displayHeight": 70,
+      "anchorX": 0.5,
+      "anchorY": 0.88
+    },
+    "npc-rowan": {
+      "src": "npcs/rowan-sheet-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 7,
+      "displayWidth": 52,
+      "displayHeight": 70,
+      "anchorX": 0.5,
+      "anchorY": 0.88
+    },
+    "enemy-mossling": {
+      "src": "enemies/mossling-sheet-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 8,
+      "displayWidth": 34,
+      "displayHeight": 34,
+      "anchorX": 0.5,
+      "anchorY": 0.84
+    }
+  }
 }
