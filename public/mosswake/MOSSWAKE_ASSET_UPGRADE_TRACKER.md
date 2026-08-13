@@ -79,7 +79,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - The dungeon encounter sweep showed that the shared actor sort still compared raw entity centers even though the player, NPCs, and painted enemies use different visual ground offsets. Near-crossings could therefore be ordered a few pixels away from the feet/shadow plane.
 - Added a small render-only `actorDepthY()` helper: player depth uses its `+8px` painted presentation, NPC depth uses its `+11px` feet line, and enemies use their authored world contact plane. The existing foreground foliage pass remains last for deliberate occlusion.
 - No artwork or gameplay systems changed. Collision, AI, attack timing, telegraphs, hitboxes, anchors, and shadows remain untouched.
-- `node --check`, `git diff --check`, local start/movement/attack smoke, and console warning/error checks pass. Public deployment verification is pending.
+- `node --check`, `git diff --check`, local start/movement/attack smoke, and console warning/error checks pass. Live public start/movement/attack smoke after deployment also passes with no console warnings or errors.
 
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
