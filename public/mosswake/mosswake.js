@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=20";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=21";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1050,6 +1050,11 @@
   };
   const drawHouse = (x, y, w, h, color, accent = "#b97b58") => {
     drawShadow(x + w / 2, y + h + 14, w * .5, 15, .34);
+    // Painted structures are a presentation layer only: collision rectangles and
+    // authored house coordinates remain unchanged, with the procedural facade below
+    // kept as a reliable fallback when the atlas is unavailable.
+    const structureFrame = x > 1000 ? 9 : 1;
+    if (drawOptionalSprite("structures", x + w / 2, y + h + 4, { frame: structureFrame, width: w * 1.06, height: h * 1.18, anchorX: .5, anchorY: .91, alpha: .98 })) return;
     ctx.fillStyle = "rgba(11,35,27,.24)"; ctx.fillRect(x - 8, y + 38, w + 16, h - 30);
     const wall = ctx.createLinearGradient(x, y + 30, x + w, y + h); wall.addColorStop(0, shadeHex(color, .04)); wall.addColorStop(.7, color); wall.addColorStop(1, shadeHex(color, -.16));
     ctx.fillStyle = wall; ctx.fillRect(x, y + 30, w, h - 30); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.strokeRect(x, y + 30, w, h - 30);
@@ -1307,7 +1312,11 @@
     ctx.fillStyle = COLORS.gold; ctx.font = "700 11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(hint.label, hint.x - width / 2 + 15, y + 4);
     ctx.fillStyle = "rgba(243,246,223,.84)"; ctx.font = "500 9px Outfit"; ctx.fillText(hint.text, hint.x + 10, y + 4); ctx.restore();
   };
-  const drawEntrance = (x, y, time) => { ctx.fillStyle = "#342d3e"; ctx.beginPath(); ctx.arc(x, y, 50, Math.PI, 0); ctx.lineTo(x + 50, y + 50); ctx.lineTo(x - 50, y + 50); ctx.closePath(); ctx.fill(); ctx.fillStyle = `rgba(95,238,206,${.28 + Math.sin(time * 2) * .08})`; ctx.beginPath(); ctx.arc(x, y + 6, 32, Math.PI, 0); ctx.lineTo(x + 32, y + 45); ctx.lineTo(x - 32, y + 45); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#8ef2cf"; ctx.lineWidth = 2; ctx.stroke(); };
+  const drawEntrance = (x, y, time) => {
+    drawShadow(x, y + 50, 58, 13, .34);
+    if (drawOptionalSprite("structures", x, y + 38, { frame: 7, width: 148, height: 138, anchorX: .5, anchorY: .91, alpha: .98 })) { drawLightPool(x, y + 30, 88, COLORS.mint, .09); return; }
+    ctx.fillStyle = "#342d3e"; ctx.beginPath(); ctx.arc(x, y, 50, Math.PI, 0); ctx.lineTo(x + 50, y + 50); ctx.lineTo(x - 50, y + 50); ctx.closePath(); ctx.fill(); ctx.fillStyle = `rgba(95,238,206,${.28 + Math.sin(time * 2) * .08})`; ctx.beginPath(); ctx.arc(x, y + 6, 32, Math.PI, 0); ctx.lineTo(x + 32, y + 45); ctx.lineTo(x - 32, y + 45); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#8ef2cf"; ctx.lineWidth = 2; ctx.stroke();
+  };
 
   const dungeonRoomTint = (key) => ({ "0-0": ["#172424", "#2b4b46"], "1-0": ["#151f2d", "#30445b"], "2-0": ["#20251f", "#3d5140"], "0-1": ["#142b32", "#2c5b60"], "1-1": ["#2b1d25", "#5a3a38"], "2-1": ["#271c30", "#533451"] }[key] || [COLORS.dungeon, COLORS.dungeonLight]);
   const drawDungeonMasonry = (time, key) => {

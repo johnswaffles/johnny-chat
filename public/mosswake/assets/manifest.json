@@ -1,5 +1,5 @@
 {
-  "version": 20,
+  "version": 21,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -24,6 +24,18 @@
       "displayHeight": 72,
       "anchorX": 0.5,
       "anchorY": 0.5
+    },
+    "structures": {
+      "src": "buildings/mosswake-structure-family-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 2,
+      "displayWidth": 220,
+      "displayHeight": 190,
+      "anchorX": 0.5,
+      "anchorY": 0.92
     },
     "player": {
       "src": "player/warden-sheet-generated-v1.png",

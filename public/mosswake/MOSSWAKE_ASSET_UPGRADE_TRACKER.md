@@ -20,6 +20,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | HUD and pickup icons | `assets/ui-icons-generated-v1.png` | Hearts, key, Heartseed, Rootlight, discovery, map, drop, sword, dash, lock, and star states | Integrated / tested | Keep the icon atlas as the UI reference; refine only if a later readability pass finds a specific small-size issue |
 | Dialogue and screen surface family | `assets/ui/ui-panels-generated-v1.png` | Dialogue, title, pause, victory, portrait frame, button, objective, map, ability, toast, and divider surface states | Integrated / pending live visual check | Keep typography and contrast in CSS; replace individual atlas cells later without touching game flow |
 | Collectibles and exploration items | `assets/items/exploration-items-generated-v1.png` | Key, Heartseed, lantern seed, Dewglass lens, moth token, moonroot cache, hidden chest, and Rootlight lantern states | Integrated / pending live visual check | Keep the atlas as the item reference; replace individual cells only when a specific silhouette or matte issue is found |
+| Outpost, cabin, shrine, and entrance structures | `assets/buildings/mosswake-structure-family-generated-v1.png` | Lit/intact/damaged/open outpost, shrine, cabin, roof/wall modules, lantern doorway, root arch | Integrated / pending live visual check | Keep the structure atlas as the building-scale reference; retain procedural facades as fallback |
 | Hollow Guardian | `assets/bosses/hollow-guardian-sheet-generated-v1.png` | Phase I idle/attack, phase II transformed attack, phase-break, stagger, defeat | Integrated / tested | Keep the generated sheet as the boss reference; only refine if a focused arena review finds a real readability issue |
 
 ## High-value environment and effects queue
@@ -73,6 +74,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Generated `assets/items/exploration-items-generated-v1.png` as a 1254×1254 chroma-key source normalized to a 1248×1248 RGBA 4×4 atlas. Cells cover brass key, Heartseed shard, lantern seed, Dewglass lens, moth token, moonroot cache, hidden chest, and dormant/awakened Rootlight lantern states with idle and pickup/glow variants.
 - Added the `exploration-items` manifest slot. Chest and cache presentation now selects the painted item family by authored world location and progression state; opening animation, shadows, reward flags, interaction ranges, and procedural/dungeon-landmark fallbacks remain unchanged.
 - Bumped manifest/runtime cache keys to `manifest.json?v=20` and `mosswake.js?v=45`. The source and alpha atlas remain together under `assets/items/` for future cell-level replacement.
+- Local syntax, manifest, alpha validation, and diff checks passed. Live visual smoke testing is the next required step after deployment.
+
+### 2026-08-13 — Outpost, cabin, shrine, and entrance structure atlas
+
+- Generated `assets/buildings/mosswake-structure-family-generated-v1.png` as a 1254×1254 chroma-key source normalized to a 1248×1248 RGBA 4×4 atlas. Cells cover lit/intact/damaged/open outpost facades, moonlit/damaged/open shrine facades, cabin variants, roof/wall modules, a lantern doorway, and a root-wrapped entrance arch.
+- Added the `structures` manifest slot. The two outdoor house facades now use authored outpost/cabin frames, and the shrine entrance uses the painted open facade with a runtime light pool; collision geometry, navigation, labels, and the procedural fallback remain unchanged.
+- Bumped manifest/runtime cache keys to `manifest.json?v=21` and `mosswake.js?v=46`. Source and alpha atlas remain together under `assets/buildings/` for future cell-level replacement.
 - Local syntax, manifest, alpha validation, and diff checks passed. Live visual smoke testing is the next required step after deployment.
 
 ### 2026-08-13 — Named NPC family and portraits
