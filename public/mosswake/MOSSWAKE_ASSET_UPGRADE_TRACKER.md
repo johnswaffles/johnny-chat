@@ -37,7 +37,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - The next dungeon readability pass identified a transition-layer weakness rather than a missing asset: the new room and its respawned actors were visible through the center of the location veil at the first frame, making the chamber change feel like a title card over a sudden scene pop.
 - Tightened the existing 0.72-second room transition so it starts with a clean opaque beat, then reveals the new chamber through a controlled radial opening. The location label and progress rule now track that reveal, preserving a readable handoff without exposing actors before the room is ready.
 - No new artwork or gameplay systems were needed. Dungeon geometry, room spawn positions, transition timing, controls, collision, enemy AI, and fallback rendering remain unchanged.
-- `node --check` passed. Local browser smoke and public deployment verification remain the final gates for this iteration.
+- `node --check` and local browser movement/attack smoke passed. Public `/mosswake/?qa=a658f3c` startup smoke also passed with no console warnings or errors; the full dungeon transition remains the next targeted traversal check.
 
 ## 2026-08-13 — Repeating visual director pass: Guardian grounding repair
 
