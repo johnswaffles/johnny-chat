@@ -33,7 +33,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Generated `assets/plants/outdoor-foliage-interaction-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas with meadow tufts, fern/reed clumps, flower and mushroom clusters, fallen logs, and tangled ivy bundles. The keyed RGB source remains beside it for future matte refinement.
 - Added the `outdoor-foliage` manifest slot. Outdoor grass patches, individual tufts, flowers, logs, and breakable ivy now use the painted modular silhouettes with deterministic frame selection and small rustle animation; the existing procedural primitives remain the safe fallback.
 - Preserved collision footprints, secret interactions, foreground layering, and ambient timing. Bumped the manifest and page cache keys to `manifest.json?v=11` and `mosswake.js?v=36`.
-- Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks are required after this integration.
+- Local syntax, manifest, RGBA/alpha, startup, asset-load, and outdoor gameplay smoke checks passed with no console warnings or errors. The public edge was still serving v35/v10 at handoff; verify v36/v11 after the hosting cache rolls forward.
 
 ### 2026-08-13 — Hollow Guardian telegraph and defeat FX
 
