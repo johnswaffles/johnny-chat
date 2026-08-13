@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=22";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=23";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -118,7 +118,7 @@
   let projectiles = [];
   let drops = [];
   let particles = [];
-  let leaves = Array.from({ length: 65 }, () => ({ x: rand(0, WORLD.width), y: rand(0, WORLD.height), speed: rand(5, 16), phase: rand(0, 6.28) }));
+  let leaves = Array.from({ length: 42 }, () => ({ x: rand(0, WORLD.width), y: rand(0, WORLD.height), speed: rand(5, 16), phase: rand(0, 6.28) }));
   const environment = {
     treesBack: [
       { x: 70, y: 90, s: 1.45, phase: .4 }, { x: 126, y: 148, s: 1.02, phase: 1.2 }, { x: 205, y: 105, s: 1.25, phase: 2.1 }, { x: 324, y: 136, s: .86, phase: 3.2 },
@@ -203,7 +203,7 @@
     ]
   };
   const npcs = [
-    { id: "rowan", name: "Rowan", role: "Outpost keeper", portrait: "rowan", x: 460, y: 380, baseX: 460, baseY: 380, behavior: "watch", phase: .3, facing: 1 },
+    { id: "rowan", name: "Rowan", role: "Outpost keeper", portrait: "rowan", x: 460, y: 380, baseX: 460, baseY: 380, behavior: "pace", phase: .3, facing: 1, route: [{ x: 460, y: 380 }, { x: 492, y: 374 }, { x: 486, y: 404 }, { x: 452, y: 400 }] },
     { id: "tansy", name: "Tansy", role: "Lantern cook", portrait: "tansy", x: 620, y: 356, baseX: 620, baseY: 356, behavior: "fire", phase: 1.2, facing: 1 },
     { id: "brindle", name: "Brindle", role: "Pond ferrier", portrait: "brindle", x: 540, y: 585, baseX: 540, baseY: 585, behavior: "pace", phase: 2.4, facing: 1, route: [{ x: 520, y: 582 }, { x: 572, y: 605 }, { x: 525, y: 625 }] },
     { id: "lumen", name: "Lumen", role: "Shrine cartographer", portrait: "lumen", x: 1235, y: 305, baseX: 1235, baseY: 305, behavior: "map", phase: 4.1, facing: -1 }
@@ -384,7 +384,7 @@
       const playerNear = state.area === "overworld" && distance(player, npc) < 92;
       npc.near = playerNear;
       if (npc.behavior === "pace") {
-        const route = npc.route; const travel = 3.8; const routeTime = npc.clock / travel; const segment = Math.floor(routeTime) % route.length; const next = route[(segment + 1) % route.length]; const current = route[segment]; const blend = routeTime - Math.floor(routeTime); const eased = blend * blend * (3 - 2 * blend);
+        const route = npc.route; const travel = npc.id === "rowan" ? 5.2 : 3.8; const routeTime = npc.clock / travel; const segment = Math.floor(routeTime) % route.length; const next = route[(segment + 1) % route.length]; const current = route[segment]; const blend = routeTime - Math.floor(routeTime); const eased = blend * blend * (3 - 2 * blend);
         const previousX = npc.x; npc.x = current.x + (next.x - current.x) * eased; npc.y = current.y + (next.y - current.y) * eased; npc.facing = npc.x >= previousX ? 1 : -1;
       } else {
         npc.x = npc.baseX + Math.sin(npc.clock * .7 + npc.phase) * (npc.behavior === "fire" ? 3 : 1.5);
@@ -966,6 +966,8 @@
       ["#3d7b50", "#65a563"], ["#477f56", "#78b66c"], ["#376b4b", "#5e9b5d"]
     ][bush.variant || 0]; const depth = foreground ? .96 : .86; const sway = Math.sin(time * .72 + bush.phase) * .018;
     ctx.save(); ctx.globalAlpha = depth; ctx.translate(bush.x, bush.y); ctx.rotate(sway); ctx.scale(bush.s || 1, bush.s || 1); drawShadow(0, 11, 28, 8, .27);
+    const bushFrame = 8 + (Number.isFinite(bush.variant) ? Math.max(0, Math.min(3, bush.variant)) : Math.floor(hash01(bush.x, bush.y) * 4));
+    if (drawOptionalSprite("outdoor-ground", 0, 12, { frame: bushFrame, width: 92, height: 88, anchorX: .5, anchorY: .9, alpha: foreground ? .98 : .92 })) { ctx.restore(); return; }
     ctx.fillStyle = palette[0]; ctx.beginPath(); ctx.ellipse(-20, 0, 22, 14, -.22, 0, Math.PI * 2); ctx.ellipse(0, -8, 25, 17, .08, 0, Math.PI * 2); ctx.ellipse(23, 3, 19, 12, .3, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.beginPath(); ctx.ellipse(-20, 0, 22, 14, -.22, 0, Math.PI * 2); ctx.ellipse(0, -8, 25, 17, .08, 0, Math.PI * 2); ctx.ellipse(23, 3, 19, 12, .3, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = palette[1]; ctx.beginPath(); ctx.arc(-10, -8, 7, 0, Math.PI * 2); ctx.arc(8, -14, 8, 0, Math.PI * 2); ctx.arc(18, -1, 6, 0, Math.PI * 2); ctx.fill();
@@ -1010,28 +1012,40 @@
     [[180,270,100,32,.2],[480,360,88,26,1.4],[1020,350,120,38,2.6],[1420,430,105,30,4.2]].forEach(([x,y,rx,ry,phase]) => { const drift = Math.sin(time * .16 + phase) * 12; ctx.beginPath(); ctx.ellipse(x + drift, y, rx, ry, .18, 0, Math.PI * 2); ctx.fill(); }); ctx.restore();
   };
   const drawMeadowClusters = (time) => {
-    [[150, 365, 4, 30, .3], [300, 405, 3, 25, 1.7], [585, 405, 4, 28, 3.1], [1180, 390, 3, 26, 4.4], [1435, 540, 4, 34, 5.2]].forEach(([x, y, count, spread, phase], clusterIndex) => {
+    [[150, 365, 2, 30, .3], [300, 405, 2, 25, 1.7], [585, 405, 2, 28, 3.1], [1180, 390, 2, 26, 4.4], [1435, 540, 2, 34, 5.2]].forEach(([x, y, count, spread, phase], clusterIndex) => {
       for (let i = 0; i < count; i += 1) {
         const angle = hash01(clusterIndex * 13 + i, 3) * Math.PI * 2; const radius = 8 + hash01(clusterIndex * 17 + i, 7) * spread;
         drawGrassTuft({ x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius * .5, s: .5 + hash01(i, clusterIndex) * .42, phase: phase + i }, time);
-        if (i % 2 === 0) drawFlower({ x: x + Math.cos(angle + .5) * (radius + 6), y: y + Math.sin(angle + .5) * (radius + 6) * .5, s: .42 + hash01(i, 12) * .22, phase: phase + i + .6, color: i % 4 === 0 ? "#e8b7c5" : "#ecd28a" }, time);
+        if (i === 0) drawFlower({ x: x + Math.cos(angle + .5) * (radius + 6), y: y + Math.sin(angle + .5) * (radius + 6) * .5, s: .42 + hash01(i, 12) * .22, phase: phase + i + .6, color: i % 4 === 0 ? "#e8b7c5" : "#ecd28a" }, time);
       }
     });
   };
+  const mainRoadY = (x) => {
+    const points = [[0, 490], [430, 423], [760, 505], [1110, 580], [1600, 440]];
+    const clampedX = clamp(x, points[0][0], points[points.length - 1][0]);
+    for (let i = 1; i < points.length; i += 1) {
+      if (clampedX <= points[i][0]) {
+        const [x0, y0] = points[i - 1]; const [x1, y1] = points[i]; const t = (clampedX - x0) / (x1 - x0);
+        return y0 + (y1 - y0) * (t * t * (3 - 2 * t));
+      }
+    }
+    return points[points.length - 1][1];
+  };
+  const isMainRoadZone = (x, y, margin = 38) => Math.abs(y - mainRoadY(x)) < margin;
   const drawGrassBase = (time) => {
     const wash = ctx.createLinearGradient(0, 0, WORLD.width, WORLD.height); wash.addColorStop(0, "#3b7650"); wash.addColorStop(.45, "#315f45"); wash.addColorStop(1, "#274c3b");
     ctx.fillStyle = wash; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
     drawGroundBloom(290, 220, 290, 120, "#91d878", .12, -.2); drawGroundBloom(930, 300, 330, 150, "#214b3b", .11, .16); drawGroundBloom(1320, 760, 360, 145, "#a0d37a", .08, -.1);
     ctx.globalAlpha = .16; ctx.fillStyle = "#8fca75";
     [[180,190,230,90],[530,420,310,130],[1060,320,250,160],[1350,760,330,150],[380,820,240,110]].forEach(([x,y,rx,ry], i) => { ctx.save(); ctx.translate(x, y); ctx.rotate(i * .43); ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
-    ctx.globalAlpha = .1; ctx.fillStyle = "#b8dc87";
-    for (let i = 0; i < 52; i += 1) { const x = (i * 173) % WORLD.width; const y = (i * 97 + 38) % WORLD.height; const lean = (hash01(i, 4) - .5) * .35; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(time * .2 + i) * .2 + lean); ctx.fillRect(0, 0, 2 + (i % 3), 8 + (i % 4) * 2); ctx.restore(); }
+    ctx.globalAlpha = .06; ctx.fillStyle = "#b8dc87";
+    for (let i = 0; i < 30; i += 1) { const x = (i * 173) % WORLD.width; const y = (i * 97 + 38) % WORLD.height; const lean = (hash01(i, 4) - .5) * .28; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(time * .14 + i) * .1 + lean); ctx.fillRect(0, 0, 2 + (i % 3), 7 + (i % 4) * 2); ctx.restore(); }
     ctx.globalAlpha = .09;
     for (let i = 0; i < 34; i += 1) { const x = 34 + ((i * 271) % (WORLD.width - 68)); const y = 72 + ((i * 149) % (WORLD.height - 144)); const radius = 8 + hash01(i, 7) * 13; ctx.fillStyle = i % 3 === 0 ? "#8fc875" : i % 3 === 1 ? "#274d3b" : "#d1d89b"; ctx.beginPath(); ctx.ellipse(x, y, radius * 1.7, radius * .45, hash01(i, 9) * Math.PI, 0, Math.PI * 2); ctx.fill(); }
     ctx.globalAlpha = 1;
   };
   const drawTree = (tree, time, layer = "mid") => {
-    const { x, y, s, phase = 0 } = tree; const variant = tree.variant ?? Math.floor(hash01(Math.floor(x), Math.floor(y)) * 3); const sway = Math.sin(time * .32 + phase) * .008; const depth = layer === "back" ? .66 : layer === "front" ? 1.08 : .9;
+    const { x, y, s, phase = 0 } = tree; const variant = tree.variant ?? Math.floor(hash01(Math.floor(x), Math.floor(y)) * 3); const sway = Math.sin(time * .18 + phase) * .003; const depth = layer === "back" ? .66 : layer === "front" ? 1.08 : .9;
     const canopyA = layer === "back" ? ["#4f9662", "#4b8d61", "#568f63"][variant] : layer === "front" ? ["#3c7d54", "#39744f", "#427b52"][variant] : ["#478f5c", "#438857", "#4d8f5e"][variant];
     const canopyB = layer === "back" ? ["#71b878", "#69ad74", "#79bd7d"][variant] : layer === "front" ? ["#5da86b", "#58a166", "#67b170"][variant] : ["#64ad70", "#5fa76b", "#6db778"][variant];
     const crowns = [
@@ -1043,7 +1057,7 @@
     if (layer !== "back") drawDirectionalShadow(x, y + 48 * s, 56 * s, 17 * s, layer === "front" ? .09 : .06, .2);
     // The authored tree cells are subtle variations, not a four-frame dance cycle.
     // Hold each pose long enough that the player registers wind only peripherally.
-    const treeMotion = [0, 1, 2, 1][Math.floor((time * .72 + phase * .37) % 4)];
+    const treeMotion = [0, 1, 1, 1][Math.floor((time * .34 + phase * .19) % 4)];
     const layerBase = layer === "back" ? 0 : layer === "front" && variant === 2 ? 12 : layer === "front" ? 8 : 4;
     const treeFrame = layerBase + treeMotion;
     // The generated tree artwork has about 10% transparent padding below the roots.
@@ -1054,8 +1068,8 @@
     ctx.fillStyle = "#aa7048"; ctx.fillRect(-3, 8, 5, 44); ctx.fillStyle = "rgba(33,56,39,.22)"; ctx.fillRect(8, 13, 5, 41);
     ctx.strokeStyle = "rgba(56,83,52,.68)"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-5, 42); ctx.quadraticCurveTo(-20, 28, -24, 16); ctx.moveTo(5, 37); ctx.quadraticCurveTo(19, 24, 25, 10); ctx.stroke();
     crowns.forEach(([ox, oy, radius], i) => {
-      const crownSway = Math.sin(time * .36 + phase + i * .9) * (i === 2 ? .65 : .34);
-      ctx.save(); ctx.translate(crownSway, i === 2 ? Math.sin(time * .48 + phase) * .7 : 0); ctx.fillStyle = i % 2 ? canopyA : canopyB; ctx.beginPath(); ctx.arc(ox, oy, radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(22,61,43,.24)"; ctx.lineWidth = 2; ctx.stroke();
+      const crownSway = Math.sin(time * .2 + phase + i * .9) * (i === 2 ? .22 : .11);
+      ctx.save(); ctx.translate(crownSway, i === 2 ? Math.sin(time * .28 + phase) * .24 : 0); ctx.fillStyle = i % 2 ? canopyA : canopyB; ctx.beginPath(); ctx.arc(ox, oy, radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(22,61,43,.24)"; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = "rgba(224,255,194,.14)"; ctx.beginPath(); ctx.arc(ox - 9, oy - 10, radius * .32, 0, Math.PI * 2); ctx.fill();
       if ((i + variant) % 3 === 0 && layer !== "back") { ctx.fillStyle = "rgba(29,76,48,.2)"; ctx.beginPath(); ctx.arc(ox + 8, oy + radius * .48, radius * .45, 0, Math.PI); ctx.fill(); }
       ctx.restore();
@@ -1131,24 +1145,31 @@
         drawOptionalSprite("outdoor-props", x, y, { frame, width: 118, height: 94, anchorX: .5, anchorY: .5, rotation: Math.PI / 2 + angle, alpha: .72 });
       });
     }
+    if (loadedAssets.has("outdoor-ground")) {
+      [[155, 477, 4, -.14], [438, 446, 5, -.08], [735, 507, 6, .08], [1034, 555, 7, .12], [1338, 487, 4, -.12]].forEach(([x, y, frame, angle]) => {
+        drawOptionalSprite("outdoor-ground", x, y, { frame, width: 106, height: 126, anchorX: .5, anchorY: .5, rotation: angle, alpha: .82 });
+      });
+    }
     ctx.restore();
   };
   const drawGrassTuft = (item, time, foreground = false) => {
+    if (state.area === "overworld" && isMainRoadZone(item.x, item.y, 70)) return;
     const rustle = item.rustle || 0; const sway = Math.sin(time * 1.05 + item.phase) * .045 + rustle * Math.sin(time * 18 + item.phase) * .26;
-    const foliageFrame = Number.isFinite(item.foliageFrame) ? item.foliageFrame : Math.abs(Math.floor((item.x * .17 + item.y * .07) % 4));
-    if (drawOptionalSprite("outdoor-foliage", item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * 52, height: (item.s || 1) * 52, anchorX: .5, anchorY: .92, alpha: foreground ? .76 : .94, rotation: sway * .32 })) return;
+    const foliageFrame = Number.isFinite(item.foliageFrame) ? item.foliageFrame % 4 : Math.abs(Math.floor((item.x * .17 + item.y * .07) % 4));
+    if (drawOptionalSprite("outdoor-ground", item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * 58, height: (item.s || 1) * 58, anchorX: .5, anchorY: .92, alpha: foreground ? .78 : .94, rotation: sway * .2 })) return;
     ctx.save(); ctx.translate(item.x, item.y); ctx.rotate(sway); ctx.scale(item.s || 1, item.s || 1); ctx.globalAlpha = foreground ? .72 : .92;
     [[-8, "#5f9e5a"], [-3, "#77b866"], [3, "#4d8950"], [8, "#83c56d"]].forEach(([offset, color], i) => { ctx.strokeStyle = color; ctx.lineWidth = i % 2 ? 3 : 2; ctx.beginPath(); ctx.moveTo(offset, 8); ctx.quadraticCurveTo(offset - 2, -4, offset + (i - 1.5) * 3, -18 - (i % 2) * 4); ctx.stroke(); });
     ctx.restore();
   };
   const drawGrassPatch = (patch, time, foreground = false) => {
+    if (state.area === "overworld" && isMainRoadZone(patch.x, patch.y, Math.min(78, patch.radius * .9))) return;
     const rustle = patch.rustle || 0; const density = patch.density + (patch.seed % 3); const scale = patch.scale || .7;
-    if (loadedAssets.has("outdoor-foliage")) {
-      const frameBase = Number.isFinite(patch.foliageFrame) ? patch.foliageFrame : 0;
+    if (loadedAssets.has("outdoor-ground")) {
+      const frameBase = Number.isFinite(patch.foliageFrame) ? patch.foliageFrame % 4 : 0;
       const frame = frameBase + (rustle > .2 ? Math.floor(time * 3) % 2 : 0);
-      if (drawOptionalSprite("outdoor-foliage", patch.x, patch.y + 8, { frame, width: 82 * scale, height: 82 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .62 : .78, rotation: Math.sin(time * .42 + patch.phase) * .01 })) return;
+      if (drawOptionalSprite("outdoor-ground", patch.x, patch.y + 8, { frame, width: 86 * scale, height: 86 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .64 : .8, rotation: Math.sin(time * .42 + patch.phase) * .006 })) return;
     }
-    ctx.save(); ctx.globalAlpha = foreground ? .58 : .72;
+    ctx.save(); ctx.globalAlpha = foreground ? .48 : .62;
     for (let i = 0; i < density; i += 1) {
       const angle = hash01(patch.seed, i) * Math.PI * 2; const radius = 8 + hash01(patch.seed + i * 3, 4) * patch.radius; const x = patch.x + Math.cos(angle) * radius; const y = patch.y + Math.sin(angle) * radius * .48; const s = scale * (.72 + hash01(patch.seed + i, 9) * .56); const phase = patch.phase + i * .73; const sway = Math.sin(time * (0.72 + hash01(i, patch.seed) * .32) + phase) * .045 + rustle * Math.sin(time * 15 + phase) * .3;
       ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.scale(s, s); const hue = i % 3; const colors = [patch.tone || "#66a95d", shadeHex(patch.tone || "#66a95d", .1), shadeHex(patch.tone || "#66a95d", -.1)];
@@ -1278,7 +1299,7 @@
   const drawMapTable = (x, y, time) => { drawShadow(x, y + 11, 24, 6, .25); ctx.fillStyle = "#6f4b39"; ctx.fillRect(x - 20, y - 5, 40, 8); ctx.fillRect(x - 16, y + 3, 4, 18); ctx.fillRect(x + 12, y + 3, 4, 18); ctx.fillStyle = "#d5c28d"; ctx.fillRect(x - 13, y - 10, 26, 8); ctx.strokeStyle = "rgba(71,112,93,.75)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 8, y - 8); ctx.lineTo(x - 2, y - 4); ctx.lineTo(x + 4, y - 8); ctx.lineTo(x + 10, y - 3); ctx.stroke(); ctx.fillStyle = `rgba(255,215,123,${.35 + Math.sin(time * 3) * .1})`; ctx.beginPath(); ctx.arc(x + 18, y - 8, 3, 0, Math.PI * 2); ctx.fill(); };
   const drawPondBasket = (x, y, time) => { ctx.save(); ctx.translate(x, y + Math.sin(time * 1.7) * .5); ctx.fillStyle = "#b17b4d"; ctx.beginPath(); ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#e2bd78"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -2, 10, Math.PI, 0); ctx.stroke(); ctx.restore(); };
   const drawNpc = (npc, time) => {
-    const bob = Math.sin(time * 1.15 + npc.phase) * (npc.behavior === "pace" ? .36 : .22); const npcAnimTime = npc.animTime || 0; const stride = npc.behavior === "pace" ? Math.sin(npcAnimTime) * 2 : Math.sin(npcAnimTime) * .45; const x = npc.x; const y = npc.y + bob;
+    const bob = Math.sin(time * 1.15 + npc.phase) * (npc.behavior === "pace" ? .16 : .12); const npcAnimTime = npc.animTime || 0; const stride = npc.behavior === "pace" ? Math.sin(npcAnimTime) * 2 : Math.sin(npcAnimTime) * .45; const x = npc.x; const y = npc.y + bob;
     // NPCs are anchored at their feet; keep the contact shadow directly beneath
     // the sprite instead of making idle breathing read as hovering.
     const groundedY = y + 11;
@@ -1288,11 +1309,11 @@
     const namedIndex = npc.id === "tansy" ? 0 : npc.id === "brindle" ? 1 : npc.id === "lumen" ? 2 : 3;
     const customNpcFrame = npc.id === "rowan"
       ? (state.dialogue && npc.near ? 12 + Math.floor((npc.clock || 0) * 4) % 4 : npc.behavior === "map" ? 8 + Math.floor((npc.clock || 0) * 2.6) % 4 : npc.behavior === "pace" ? 4 + Math.floor((npc.animTime || 0) * 1.4) % 4 : facingFrame)
-      : (state.dialogue && npc.near ? 12 + namedIndex : npc.behavior === "map" || npc.behavior === "fire" ? 8 + namedIndex : npc.behavior === "pace" ? 4 + namedIndex : namedIndex);
+      : (state.dialogue && npc.near ? 12 + namedIndex : npc.behavior === "map" || npc.behavior === "fire" ? 8 + namedIndex : npc.behavior === "pace" ? (Math.floor((npc.animTime || 0) * .72) % 2 ? 4 + namedIndex : namedIndex) : namedIndex);
     const npcBottoms = npc.id === "rowan"
       ? [0.965, 0.971, 0.974, 0.974, 1, 1, 0.84, 1, 1, 1, 1, 1, 0.827, 0.824, 0.821, 0.827]
       : [1, 0.997, 1, 1, 0.949, 0.955, 0.965, 0.978, 1, 1, 1, 1, 0.901, 0.897, 0.897, 0.907];
-    const customNpc = drawOptionalSprite(customNpcKey, x, groundedY, { frame: customNpcFrame, width: npc.id === "brindle" ? 58 : 56, height: 74, anchorY: npcBottoms[customNpcFrame] || .96, flipX: npc.facing < 0 && npc.id === "rowan", alpha: npc.near ? 1 : .98 });
+    const customNpc = drawOptionalSprite(customNpcKey, x, groundedY, { frame: customNpcFrame, width: npc.id === "brindle" ? 58 : 56, height: 74, anchorY: npcBottoms[customNpcFrame] || .96, flipX: npc.facing < 0, alpha: npc.near ? 1 : .98 });
     if (!customNpc) {
       ctx.save(); ctx.translate(x, y); ctx.scale(npc.facing || 1, 1);
       ctx.fillStyle = npc.id === "brindle" ? "#315b58" : "#4a3c43"; ctx.fillRect(-10 - stride, 8, 7, 8); ctx.fillRect(3 + stride, 8, 7, 8);
@@ -1848,7 +1869,7 @@
     const playerSpriteKey = player.visualState === "move" ? "player-run" : player.visualState === "attack" ? "player-attack" : "player";
     const directionalAttackFrame = attackDirection === "down" ? 0 : attackDirection === "up" ? 4 : attackDirection === "right" ? 8 : 12;
     const spriteFrame = player.visualState === "attack" ? directionalAttackFrame + Math.min(3, Math.floor((player.attackElapsed / .34) * 4)) : playerFrame;
-    const customPlayer = drawOptionalSprite(playerSpriteKey, player.x, player.y + bob + 8, { frame: spriteFrame, width: player.visualState === "dash" ? 58 : player.visualState === "attack" ? 58 : 52, height: player.visualState === "dash" ? 76 : player.visualState === "attack" ? 74 : 70, anchorY: player.visualState === "attack" ? .94 : playerAnchor, flipX: (player.visualState === "move" || player.visualState === "attack") ? false : player.facingX < -.2, rotation: lean, alpha: flicker ? .48 : 1 });
+    const customPlayer = drawOptionalSprite(playerSpriteKey, player.x, player.y + bob + 8, { frame: spriteFrame, width: player.visualState === "dash" ? 58 : player.visualState === "attack" ? 58 : 52, height: player.visualState === "dash" ? 76 : player.visualState === "attack" ? 74 : 70, anchorY: player.visualState === "attack" ? .94 : playerAnchor, flipX: false, rotation: lean, alpha: flicker ? .48 : 1 });
     if (!customPlayer) {
       ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
       const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);

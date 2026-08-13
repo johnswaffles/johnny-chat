@@ -39,6 +39,14 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - No new artwork or gameplay systems were needed. Dungeon geometry, room spawn positions, transition timing, controls, collision, enemy AI, and fallback rendering remain unchanged.
 - `node --check` and local browser movement/attack smoke passed. Public `/mosswake/?qa=a658f3c` startup smoke also passed with no console warnings or errors; the full dungeon transition remains the next targeted traversal check.
 
+## 2026-08-13 — Reusable visual QA pass: outdoor density, grounding, and animation
+
+- Inspected the live opening and running overworld at gameplay scale. The main remaining weaknesses were visual competition on the road, placeholder-like procedural grass/bush treatment, trees moving too actively, and Rowan reading as a static floater while holding his map.
+- Generated `assets/terrain/outdoor-ground-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas. Rows provide meadow grass, worn trail cards, mossy bush variants, and transitional ground details. The keyed/generated source is retained beside it for future matte refinement.
+- Added the `outdoor-ground` manifest slot (manifest v23) and routed grass tufts, grass patches, bushes, and sparse road repairs through the atlas while preserving procedural fallbacks, collision, authored routes, and runtime shadows. Grass and patches now suppress themselves inside the road ribbon so the path reads as a deliberate walkable surface rather than a grassy overlay.
+- Reduced ambient foliage clutter and tree motion: fewer background blades/leaves, lower sway amplitude, slower tree frame cadence, and calmer procedural crowns. Rowan now follows a short outpost route with a slower, readable walk cycle; named NPC walk frames also alternate rather than remaining on a single pose. Player custom sprites no longer apply an extra horizontal flip to directional sheets, and all attack-direction mapping remains driven by the captured attack vector.
+- `node --check`, manifest/alpha validation, local startup/movement/attack smoke, and live overworld smoke passed with no console warnings or errors. A final public verification follows the push.
+
 ## 2026-08-13 — Repeating visual director pass: Guardian grounding repair
 
 - Inspected the live overworld, current renderer, tracker handoff, and strongest approved character/environment references before selecting a target. No new art was generated because the remaining high-impact defect was technical rather than an inadequate asset.
