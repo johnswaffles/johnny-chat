@@ -1620,7 +1620,12 @@
     if (enemy.dead) {
       const progress = clamp(1 - enemy.deathTimer / Math.max(.01, enemy.deathMax || .6), 0, 1); const fade = 1 - progress; drawShadow(enemy.x, enemy.y + 8, enemy.radius * (1.2 - progress * .4), enemy.radius * .28, .28 * fade);
       if (enemy.type === "boss" && loadedAssets.has("boss")) {
-        drawOptionalSprite("boss", enemy.x, enemy.y - progress * 16, { frame: progress < .28 ? 14 : 15, width: 126 - progress * 18, height: 126 - progress * 18, alpha: fade, rotation: progress * .55 });
+        // Guardian collapse cells have intentionally different silhouettes and
+        // transparent margins. Keep their visible rubble line on the same ground
+        // plane while the separate death offset supplies the upward dissolve.
+        const bossDeathBottoms = [0.92, 0.929, 0.939, 0.929, 0.872, 0.865, 0.862, 0.885, 0.859, 0.856, 0.856, 0.853, 0.827, 0.83, 0.856, 0.856];
+        const deathFrame = progress < .28 ? 14 : 15;
+        drawOptionalSprite("boss", enemy.x, enemy.y - progress * 16, { frame: deathFrame, width: 126 - progress * 18, height: 126 - progress * 18, anchorY: bossDeathBottoms[deathFrame], alpha: fade, rotation: progress * .55 });
         return;
       }
       if (["thornback", "wisp", "moth", "warden"].includes(enemy.type) && loadedAssets.has("enemy-family")) {
@@ -1645,8 +1650,13 @@
     const customEnemyFrame = enemy.type === "boss" ? bossFrame : enemy.type === "mossling" ? mosslingFrame : familyEnemy ? customEnemyBase + familyState : 0;
     const familySize = enemy.type === "warden" ? 54 : enemy.type === "moth" ? 38 : enemy.type === "thornback" ? 52 : enemy.type === "wisp" ? 42 : enemy.radius * 2.45;
     const enemyBottoms = [0.942, 0.962, 1, 0.952, 0.856, 0.824, 0.843, 0.856, 0.782, 0.779, 0.843, 0.792, 0.763, 0.75, 0.804, 0.753];
+    // Measured alpha bottoms for the Guardian’s four idle, attack, phase-two,
+    // and stagger frames. Without this, transparent padding made phase changes
+    // look like a vertical hop even though the enemy world position was stable.
+    const bossBottoms = [0.92, 0.929, 0.939, 0.929, 0.872, 0.865, 0.862, 0.885, 0.859, 0.856, 0.856, 0.853, 0.827, 0.83, 0.856, 0.856];
     const familyAnchor = familyEnemy ? enemyBottoms[customEnemyFrame] || .86 : undefined;
-    const customEnemy = drawOptionalSprite(customEnemyKey, enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil, { frame: customEnemyFrame, width: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, height: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, anchorY: familyAnchor, flipX: facing < 0, alpha: enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1 });
+    const customAnchor = enemy.type === "boss" ? bossBottoms[customEnemyFrame] || .86 : familyAnchor;
+    const customEnemy = drawOptionalSprite(customEnemyKey, enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil, { frame: customEnemyFrame, width: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, height: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, anchorY: customAnchor, flipX: facing < 0, alpha: enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1 });
     ctx.save(); ctx.translate(enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil); ctx.scale(facing, 1); ctx.globalAlpha = enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1; ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2;
     const color = enemy.color; const squash = enemy.hitStun > 0 ? .86 : enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "bossDashing" ? 1.12 : 1; const stretch = enemy.hitStun > 0 ? 1.1 : enemy.state === "chargeWindup" || enemy.state === "bossDashWindup" ? .86 : 1;
     ctx.scale(squash, stretch);
