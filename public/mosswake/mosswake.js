@@ -1652,7 +1652,15 @@
     }
     if (enemy.hidden) { ctx.save(); ctx.globalAlpha = .16 + Math.sin(time * 2 + enemy.orbit) * .04; drawShadow(enemy.x, enemy.y + 9, 15, 5, .35); ctx.fillStyle = "#8e76a5"; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y, 8, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
     const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 1.5 : 0; const moving = enemy.motionSpeed > 5; const bob = moving ? Math.sin(enemy.walk) * (enemy.type === "moth" ? 1.05 : .55) : Math.sin(enemy.animTime * 1.15) * .2; const windup = enemy.telegraph > 0 ? clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1) : 0; const facing = enemy.facingX < -.15 ? -1 : 1;
-    const shadowScale = enemy.type === "boss" ? (enemy.phase === 2 ? 1.5 : 1.35) : 1; drawShadow(enemy.x, groundedShadowY, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92) * shadowScale, enemy.radius * (moving ? .34 : .3) * shadowScale, enemy.type === "boss" ? .44 : .36);
+    const shadowScale = enemy.type === "boss" ? (enemy.phase === 2 ? 1.5 : 1.35) : 1;
+    // Match the contact shadow to the same bob/recoil presentation offset as the
+    // painted body. This prevents a hopping Mossling or knocked-back Wisp from
+    // leaving its shadow behind while still preserving the authored death plane.
+    const presentedShadowX = enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil;
+    const presentedShadowY = paintedEnemy
+      ? enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil - 1
+      : groundedShadowY;
+    drawShadow(presentedShadowX, presentedShadowY, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92) * shadowScale, enemy.radius * (moving ? .34 : .3) * shadowScale, enemy.type === "boss" ? .44 : .36);
     const familyEnemy = ["thornback", "wisp", "moth", "warden"].includes(enemy.type);
     const customEnemyKey = enemy.type === "boss" ? "boss" : familyEnemy ? "enemy-family" : `enemy-${enemy.type}`;
     const customEnemyBase = enemy.type === "boss" ? (enemy.phase === 2 ? 32 : 0) : enemy.type === "thornback" ? 0 : enemy.type === "wisp" ? 4 : enemy.type === "moth" ? 8 : enemy.type === "warden" ? 12 : 0;

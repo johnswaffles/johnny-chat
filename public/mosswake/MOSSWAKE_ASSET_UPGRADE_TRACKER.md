@@ -46,6 +46,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Mossling deaths now use the authored recoil/dissolve cells from `enemy-mossling` instead of falling through to the generic procedural death burst. Existing combat timing, hitboxes, AI, drops, telegraphs, and fallback rendering remain unchanged.
 - Local syntax, diff, and browser smoke checks passed with no console errors or warnings. Public deployment verification is the final gate for this iteration.
 
+## 2026-08-13 — Repeating visual director pass: enemy motion-shadow alignment
+
+- Performed the requested second visual sweep around the enemy grounding changes. The remaining visible mismatch was that hopping, recoil, and knockback moved the painted enemy body while its shadow stayed at the old position.
+- Updated `drawEnemy()` so painted enemy shadows share the same bob/recoil presentation offset as their sprites. Death shadows intentionally remain on the authored ground plane for a stable dissolve.
+- Preserved all enemy art, animation timing, AI, collision, combat feedback, and fallback branches. No new artwork was necessary.
+- Local syntax, diff, and browser smoke checks pass with no console errors or warnings. Public deployment verification is the final gate for this iteration.
+
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
 - Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.
