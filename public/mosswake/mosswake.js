@@ -1821,9 +1821,10 @@
     else { ctx.fillStyle = particle.color; ctx.beginPath(); ctx.arc(0, 0, particle.size * (.45 + alpha * .45), 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
   };
+  const playerPresentationBob = (time) => player.visualState === "move" ? Math.sin(player.walk) * 2 : player.visualState === "idle" ? Math.sin(time * 2.2) * .7 : player.visualState === "attack" ? Math.sin(player.attackElapsed * 22) * .45 : 0;
   const drawPlayer = (time) => {
     const flicker = player.invulnerable > 0 && Math.floor(player.invulnerable * 24) % 2 === 0; if (flicker && player.dash <= 0) ctx.globalAlpha = .48;
-    const bob = player.visualState === "move" ? Math.sin(player.walk) * 2 : player.visualState === "idle" ? Math.sin(time * 2.2) * .7 : player.visualState === "attack" ? Math.sin(player.attackElapsed * 22) * .45 : 0;
+    const bob = playerPresentationBob(time);
     const lean = player.visualState === "hurt" ? -.12 : player.visualState === "attack" ? .08 : 0;
     drawShadow(player.x, player.y + 5, player.visualState === "dash" ? 25 : 19, player.visualState === "dash" ? 5 : 7, .36);
     const facingFrame = player.facingY < -.35 ? 4 : player.facingY > .35 ? 0 : 2;
@@ -1872,10 +1873,6 @@
       const customPulse = drawOptionalSprite("fx-impact", player.x, player.y, { frame: pulseFrame, width: 88 + pulse * 82, height: 88 + pulse * 82, anchorX: .5, anchorY: .5, alpha: clamp(player.rootlightPulse * 2.1, 0, 1) });
       if (!customPulse) { ctx.save(); ctx.globalAlpha = .25 + player.rootlightPulse * .7; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + pulse * 80, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     }
-    // Keep the sword trail on the same presented coordinate as the painted
-    // attack sprite; otherwise the authored blade and its FX visibly separate
-    // during the grounded +8px player presentation offset.
-    drawAttackTrail(player.x, player.y + bob + 8);
   };
   const drawAmbientOverlay = (time) => {
     const dungeon = state.area === "dungeon"; const bossRoom = dungeon && `${state.roomX}-${state.roomY}` === "2-1"; const warm = dungeon ? (bossRoom && state.bossPhase === 2 ? "rgba(187,70,104,.11)" : "rgba(86,163,128,.06)") : "rgba(80,177,116,.05)";
@@ -1934,6 +1931,9 @@
       { kind: "player", actor: player }
     ].sort((a, b) => actorDepthY(a) - actorDepthY(b));
     actorEntities.forEach((entry) => { if (entry.kind === "player") drawPlayer(time); else if (entry.kind === "npc") drawNpc(entry.actor, time); else drawEnemy(entry.actor, time); });
+    // Combat FX sits above the actor pass so a sword sweep remains readable when
+    // the player's contact plane crosses an enemy's contact plane.
+    drawAttackTrail(player.x, player.y + playerPresentationBob(time) + 8);
     drops.forEach((drop) => drawDrop(drop, time)); projectiles.forEach((projectile) => drawProjectile(projectile));
     if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); drawInteractionHint(time); ctx.restore();
     drawAmbientOverlay(time);

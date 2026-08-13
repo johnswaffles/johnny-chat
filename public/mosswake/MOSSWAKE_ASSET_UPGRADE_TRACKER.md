@@ -81,6 +81,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - No artwork or gameplay systems changed. Collision, AI, attack timing, telegraphs, hitboxes, anchors, and shadows remain untouched.
 - `node --check`, `git diff --check`, local start/movement/attack smoke, and console warning/error checks pass. Live public start/movement/attack smoke after deployment also passes with no console warnings or errors.
 
+## 2026-08-13 — Repeating visual director pass: combat FX occlusion
+
+- The encounter sweep found that the sword trail was drawn inside the player actor pass. When the player crossed an enemy contact plane, that enemy could cover part of the authored slash and make the hit read weakly.
+- Added a shared player presentation-bob helper and moved the painted/procedural sword trail to the post-actor combat-FX layer. The trail keeps the exact grounded `+8px` position while now remaining readable above actor silhouettes.
+- No artwork or gameplay systems changed. Attack hitboxes, direction, cooldown, timing, movement, actor depth, and foreground foliage layering remain unchanged.
+- `node --check`, `git diff --check`, local start/attack visual smoke, and console warning/error checks pass. Public deployment verification is pending.
+
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
 - Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.
