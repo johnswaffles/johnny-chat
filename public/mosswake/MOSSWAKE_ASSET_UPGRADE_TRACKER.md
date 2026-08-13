@@ -31,6 +31,14 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 ## Current iteration log
 
+### 2026-08-13 — Heartseed Sanctum arena kit
+
+- Generated `assets/dungeon/heartseed-sanctum-kit-generated-v1.png` as a 4×4 transparent atlas with quiet, charged, rose-phase, and spent altar/pylon/ring states plus four modular sanctum details.
+- Added the `sanctum-kit` manifest slot and progressive renderer hooks for the boss altar, four pylons, and four ring segments. Procedural drawing remains the fallback when the asset is unavailable.
+- Kept combat geometry, telegraphs, arena coordinates, lighting, and boss timing unchanged; only the visual presentation layer now uses the painted kit.
+- Bumped the page cache key to `mosswake.js?v=30` so the new renderer is fetched after deployment.
+- Local syntax, manifest, alpha, startup, and console smoke checks passed. A live deployment check remains pending until the push completes.
+
 ### 2026-08-13 — Hollow Guardian sprite family
 
 - Generated a consistent 4×4 boss sheet with a charcoal/moss phase, rose-heart phase, attack poses, phase-break reveal, stagger, and collapse.
