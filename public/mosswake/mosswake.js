@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=8";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=9";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -401,8 +401,8 @@
     if (enemy.type !== "boss") playSfx("kill");
     spawnLeaves(enemy.x, enemy.y, enemy.type === "boss" ? 26 : 6);
     spawnCombatSparks(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, null, enemy.type === "boss" ? 12 : 5, enemy.type === "boss" ? 175 : 120, enemy.type === "boss" ? 10 : 6);
-    particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.4 : .65, maxLife: enemy.type === "boss" ? 1.4 : .65, size: enemy.type === "boss" ? 38 : 21, color: enemy.type === "boss" ? COLORS.gold : enemy.color, kind: "death-ring", rotation: 0 });
-    particles.push({ x: enemy.x, y: enemy.y - 5, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.25 : .48, maxLife: enemy.type === "boss" ? 1.25 : .48, size: enemy.type === "boss" ? 42 : 22, color: enemy.type === "boss" ? COLORS.rose : enemy.color, kind: "death-shards", rotation: 0 });
+    particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.4 : .65, maxLife: enemy.type === "boss" ? 1.4 : .65, size: enemy.type === "boss" ? 38 : 21, color: enemy.type === "boss" ? COLORS.gold : enemy.color, kind: "death-ring", rotation: 0, bossFx: enemy.type === "boss" });
+    particles.push({ x: enemy.x, y: enemy.y - 5, vx: 0, vy: 0, life: enemy.type === "boss" ? 1.25 : .48, maxLife: enemy.type === "boss" ? 1.25 : .48, size: enemy.type === "boss" ? 42 : 22, color: enemy.type === "boss" ? COLORS.rose : enemy.color, kind: "death-shards", rotation: 0, bossFx: enemy.type === "boss" });
     triggerCombatImpact(enemy.x, enemy.y, enemy.type === "boss" ? COLORS.gold : enemy.color, enemy.type === "boss" ? 1.55 : 1.02); spawnDrop(enemy);
   };
   const updateDrops = (dt) => {
@@ -821,7 +821,7 @@
   };
   const updateBoss = (enemy, dist, dt) => {
     const desiredPhase = enemy.hp <= enemy.maxHp / 2 ? 2 : 1;
-    if (desiredPhase !== enemy.phase) { enemy.phase = desiredPhase; state.bossPhase = desiredPhase; state.bossPhaseShift = 1.85; state.bossArenaPulse = 1.85; enemy.state = "phaseShift"; enemy.stateTimer = .2; enemy.telegraph = 0; enemy.attackCooldown = 1.1; playSfx("phase"); camera.shake = Math.max(camera.shake, .24); spawnLeaves(enemy.x, enemy.y, 22); spawnCombatSparks(enemy.x, enemy.y, COLORS.rose, null, 14, 180, 9); spawnBossPhaseBreak(enemy); particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: 1.05, maxLife: 1.05, size: 64, color: COLORS.rose, kind: "boss-slam-ring", rotation: 0 }); return; }
+    if (desiredPhase !== enemy.phase) { enemy.phase = desiredPhase; state.bossPhase = desiredPhase; state.bossPhaseShift = 1.85; state.bossArenaPulse = 1.85; enemy.state = "phaseShift"; enemy.stateTimer = .2; enemy.telegraph = 0; enemy.attackCooldown = 1.1; playSfx("phase"); camera.shake = Math.max(camera.shake, .24); spawnLeaves(enemy.x, enemy.y, 22); spawnCombatSparks(enemy.x, enemy.y, COLORS.rose, null, 14, 180, 9); spawnBossPhaseBreak(enemy); particles.push({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: 1.05, maxLife: 1.05, size: 64, color: COLORS.rose, kind: "boss-slam-ring", rotation: 0, phasePulse: true }); return; }
     state.bossPhase = enemy.phase; enemy.orbit += dt * (enemy.phase === 2 ? 1.7 : .8);
     if (enemy.state === "phaseShift") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) enemy.state = "orbit"; return; }
     if (enemy.state === "bossWindup" || enemy.state === "bossSlamWindup" || enemy.state === "bossRainWindup" || enemy.state === "bossDashWindup") { enemy.stateTimer -= dt; if (enemy.stateTimer <= 0) { if (enemy.state === "bossWindup") fireBossVolley(enemy); else if (enemy.state === "bossSlamWindup") fireBossSlam(enemy); else if (enemy.state === "bossRainWindup") fireBossRootRain(enemy); else { const direction = normalized(player.x - enemy.x, player.y - enemy.y); enemy.chargeX = direction.x; enemy.chargeY = direction.y; enemy.velocityX = 0; enemy.velocityY = 0; enemy.state = "bossDashing"; enemy.stateTimer = enemy.phase === 2 ? .58 : .46; spawnDust(enemy.x, enemy.y + 18, 15, enemy.phase === 2 ? "#d66b92" : "#bd8c72"); } enemy.attackCooldown = enemy.phase === 2 ? .62 : 1.05; enemy.telegraph = 0; } return; }
@@ -1575,7 +1575,23 @@
     if (enemy.type === "boss" && enemy.phaseExposed > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.phaseExposed * 1.8, 0, .95); ctx.strokeStyle = COLORS.mint; ctx.shadowColor = COLORS.mint; ctx.shadowBlur = 16; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 15 + Math.sin(time * 18) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,246,210,.9)"; ctx.lineWidth = 2; for (let i = 0; i < 4; i += 1) { const angle = time * 2 + i * Math.PI / 2; ctx.beginPath(); ctx.moveTo(enemy.x + Math.cos(angle) * 10, enemy.y + Math.sin(angle) * 10); ctx.lineTo(enemy.x + Math.cos(angle + .3) * (enemy.radius + 12), enemy.y + Math.sin(angle + .3) * (enemy.radius + 12)); ctx.stroke(); } ctx.restore(); }
     if (enemy.hitStun > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.hitStun * 5, 0, .85); ctx.strokeStyle = "#fff7dc"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 5 + Math.sin(time * 30) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     if (enemy.telegraph > 0) {
-      const progress = clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1); ctx.save(); ctx.globalAlpha = .3 + progress * .5; ctx.lineWidth = 3;
+      const progress = clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1);
+      if (enemy.type === "boss" && loadedAssets.has("boss-fx")) {
+        const reveal = 1 - progress;
+        if (enemy.telegraphType === "bossWindup") {
+          const targetAngle = Math.atan2((enemy.aimY || player.y - enemy.y), (enemy.aimX || player.x - enemy.x));
+          drawOptionalSprite("boss-fx", enemy.x, enemy.y, { frame: Math.min(3, Math.floor(reveal * 4)), width: 176, height: 150, anchorX: .16, anchorY: .62, rotation: targetAngle, alpha: .28 + progress * .4 });
+        } else if (enemy.telegraphType === "bossSlamWindup") {
+          drawOptionalSprite("boss-fx", enemy.x, enemy.y, { frame: 4 + Math.min(3, Math.floor(reveal * 4)), width: 176 + reveal * 48, height: 176 + reveal * 48, anchorX: .5, anchorY: .5, alpha: .24 + progress * .42 });
+        } else if (enemy.telegraphType === "bossDashWindup") {
+          const dashAngle = Math.atan2(Number.isFinite(enemy.chargeY) ? enemy.chargeY : player.y - enemy.y, Number.isFinite(enemy.chargeX) ? enemy.chargeX : player.x - enemy.x);
+          drawOptionalSprite("boss-fx", enemy.x, enemy.y, { frame: 8 + Math.min(2, Math.floor(reveal * 3)), width: 206, height: 104, anchorX: .16, anchorY: .5, rotation: dashAngle, alpha: .24 + progress * .38 });
+        } else if (enemy.telegraphType === "bossRainWindup") {
+          const rainAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+          drawOptionalSprite("boss-fx", player.x, player.y, { frame: 11, width: 118, height: 118, anchorX: .5, anchorY: .5, rotation: rainAngle, alpha: .18 + progress * .38 });
+        }
+      }
+      ctx.save(); ctx.globalAlpha = .3 + progress * .5; ctx.lineWidth = 3;
       if (enemy.telegraphType === "chargeWindup") { ctx.strokeStyle = "#ffb875"; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 9 + Math.sin(time * 15) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = "rgba(255,195,125,.75)"; ctx.beginPath(); ctx.moveTo(enemy.x, enemy.y); ctx.lineTo(enemy.x + enemy.chargeX * 110, enemy.y + enemy.chargeY * 110); ctx.stroke(); }
       else if (enemy.telegraphType === "rangedWindup" || enemy.telegraphType === "bossWindup" || enemy.telegraphType === "bossRainWindup") {
         const bossTelegraph = enemy.telegraphType !== "rangedWindup"; const targetX = enemy.telegraphType === "bossRainWindup" ? player.x : enemy.x + (enemy.aimX || player.x - enemy.x); const targetY = enemy.telegraphType === "bossRainWindup" ? player.y : enemy.y + (enemy.aimY || player.y - enemy.y); const angle = Math.atan2(targetY - enemy.y, targetX - enemy.x); ctx.strokeStyle = enemy.telegraphType === "bossRainWindup" ? "#8ef2cf" : enemy.telegraphType === "bossWindup" ? "#ff9a9d" : "#d9c8ff"; ctx.beginPath(); ctx.moveTo(enemy.x, enemy.y); ctx.lineTo(targetX, targetY); ctx.stroke(); ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + (bossTelegraph ? 15 : 9) + Math.sin(time * 12) * 2, 0, Math.PI * 2); ctx.stroke();
@@ -1633,6 +1649,10 @@
   };
   const drawParticle = (particle) => {
     const alpha = clamp(particle.life / particle.maxLife, 0, 1); const progress = 1 - alpha;
+    // Boss-specific art is optional; the procedural branches below remain the fallback.
+    if (particle.kind === "boss-slam-ring" && drawOptionalSprite("boss-fx", particle.x, particle.y, { frame: particle.phasePulse ? 11 : 4 + Math.min(3, Math.floor(progress * 4)), width: particle.phasePulse ? 208 : particle.size * (1.8 + progress * .95), height: particle.phasePulse ? 150 : particle.size * (1.8 + progress * .95), anchorX: .5, anchorY: .5, alpha: alpha * (particle.phasePulse ? .88 : .72), rotation: particle.phasePulse ? progress * .4 : 0 })) return;
+    if (particle.kind === "death-ring" && particle.bossFx && drawOptionalSprite("boss-fx", particle.x, particle.y, { frame: 15, width: 220 * (1 - progress * .12), height: 190 * (1 - progress * .12), anchorX: .5, anchorY: .58, alpha: alpha * .86, rotation: progress * .25 })) return;
+    if (particle.kind === "death-shards" && particle.bossFx && drawOptionalSprite("boss-fx", particle.x, particle.y, { frame: 13, width: 178 * (1 - progress * .2), height: 178 * (1 - progress * .2), anchorX: .5, anchorY: .5, alpha: alpha * .9, rotation: progress * -.35 })) return;
     ctx.save(); ctx.globalAlpha = alpha; ctx.translate(particle.x, particle.y);
     if (particle.kind === "combat-spark") { ctx.rotate(particle.rotation); ctx.strokeStyle = particle.color; ctx.lineWidth = Math.max(1, particle.size * .26) * alpha; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-particle.size * .22, 0); ctx.lineTo(particle.size * (.62 + progress * .5), 0); ctx.stroke(); ctx.lineCap = "butt"; }
     else if (particle.kind === "combat-ring") { ctx.strokeStyle = particle.color; ctx.globalAlpha = alpha * .84; ctx.lineWidth = Math.max(1.2, 3 * alpha); ctx.beginPath(); ctx.arc(0, 0, particle.size * (.2 + progress * 1.7), 0, Math.PI * 2); ctx.stroke(); }

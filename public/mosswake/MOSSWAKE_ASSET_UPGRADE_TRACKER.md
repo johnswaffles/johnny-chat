@@ -21,12 +21,19 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 | Priority | Family | Current status | Recommended next action |
 | --- | --- | --- | --- |
-| 1 | Boss telegraph and defeat FX | Procedural fan arcs, slam rings, phase shards, and defeat motes | Generate one readable transparent effect family for the Guardian encounter |
+| 1 | Boss telegraph and defeat FX | Integrated / tested | Keep the atlas as the Guardian effect reference; only refine for a readability defect |
 | 2 | Outdoor foliage | Procedural authored clusters | Generate modular grass, fern, reed, flower, mushroom, log, and ivy rustle states |
 | 3 | Dungeon architecture | Procedural room construction | Generate modular stone, roots, arches, statues, and rubble |
 | 4 | Remaining NPCs and portraits | Procedural fallback except Rowan | Generate Tansy, Brindle, Lumen, and compact dialogue busts |
 
 ## Current iteration log
+
+### 2026-08-13 — Hollow Guardian telegraph and defeat FX
+
+- Generated `assets/effects/guardian-telegraph-fx-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas with rose/gold volley fans, expanding vine slam rings, dash-lane markers, Rootlight exposure cracks, phase-break shards, and green defeat motes. The keyed RGB source remains beside it for future matte refinement.
+- Added the `boss-fx` manifest slot and progressive renderer hooks. Guardian volley, slam, dash, and rain windups now receive painted silhouettes; phase-break and boss defeat particles use the painted payoff frames. Procedural telegraph lines and particle shapes remain the safe fallback when the atlas is unavailable.
+- Kept attack geometry, telegraph durations, hitboxes, cooldowns, camera shake, and sound unchanged. Bumped the manifest and page cache keys to `manifest.json?v=9` and `mosswake.js?v=34`.
+- Local syntax, manifest, RGBA/alpha, startup, and console smoke checks are the next verification step after this integration.
 
 ### 2026-08-13 — Heartseed Sanctum arena kit
 

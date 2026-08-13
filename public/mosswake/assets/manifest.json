@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -94,6 +94,18 @@
       "fps": 10,
       "displayWidth": 96,
       "displayHeight": 96,
+      "anchorX": 0.5,
+      "anchorY": 0.5
+    },
+    "boss-fx": {
+      "src": "effects/guardian-telegraph-fx-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 12,
+      "displayWidth": 180,
+      "displayHeight": 180,
       "anchorX": 0.5,
       "anchorY": 0.5
     },
