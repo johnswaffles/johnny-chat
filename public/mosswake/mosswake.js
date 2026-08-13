@@ -1227,14 +1227,14 @@
     const candidates = [];
     const add = (x, y, radius, label, text) => { const range = distance(player, { x, y }); if (range < radius) candidates.push({ x, y, range, label, text }); };
     if (state.area === "overworld") {
-      if (!state.rootlightLantern) add(1450, 580, 72, "E", "AWAKEN GATE");
+      if (!state.rootlightLantern) add(1450, 580, 72, "E", "CHECK GATE");
       if (distance(player, { x: 1350, y: 235 }) < 120) add(1312, 210, 120, "E", "ENTER SHRINE");
       if (!state.chestOpened) add(1240, 745, 70, "E", "OPEN CHEST");
       if (state.rootlightGateOpen && !state.rootlightCacheOpened) add(1450, 665, 78, "E", "SEARCH CACHE");
       if (state.southPassageOpen && !state.hiddenChestOpened && !enemies.some((enemy) => enemy.encounter === "hidden-cache" && !enemy.dead)) add(1060, 830, 70, "E", "SEARCH GROVE");
     } else {
       const key = `${state.roomX}-${state.roomY}`;
-      const node = nearestRootlightNode(72); if (node && !state.rootlightLantern) add(node.x, node.y, 72, "E", "AWAKEN");
+      const node = nearestRootlightNode(72); if (node && !state.rootlightLantern) add(node.x, node.y, 72, "E", "CHECK SIGIL");
       if (key === "0-0" && !state.chestOpened) add(600, 390, 80, "E", "OPEN CHEST");
       if (key === "1-0" && !state.switches) add(600, 380, 80, "E", "ACTIVATE");
       if (key === "0-1" && !state.heartChestOpened) add(600, 390, 80, "E", "OPEN CHEST");
