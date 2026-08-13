@@ -10,11 +10,13 @@ Hearthwild now ships a small custom illustrated pass layered over the procedural
 - Palette: moss, fern, sage, bark brown, clay terracotta, wheat, river teal, ember gold, and moonlit blue-green, with a deliberately muted saturation range.
 - Lighting: warm upper-right daylight, long soft grounding shadows, amber firelight, and blue night ambience; every custom sprite is designed to sit inside the same light family as the map.
 - Layering: terrain and worn paths first, physical resources and props next, buildings by depth, animals, then villagers, badges, and weather/light overlays.
-- Motion: source atlases are 4×3 families; state selection is data-driven and canvas animation supplies bob, walk phase, wind, firelight, and weather response.
+- Motion: identity atlases are 4×3 families and action atlases are 4×4 frame families; state selection is data-driven and canvas animation supplies bob, walk phase, wind, firelight, and weather response.
 
 ## Generated atlases
 
 - `villagers/villager-atlas-v2.png` — 4×3 identity/activity/age atlas.
+- `villagers/villager-motion-atlas-v1.png` — 4×4 walk and carrying frames with four recurring villager identities.
+- `villagers/villager-action-atlas-v1.png` — 4×4 pickup, lift, place, and hammering frames.
 - `buildings/building-atlas-v3.png` — 4×3 structures and construction stages.
 - `animals/animal-atlas-v2.png` — 4×3 wildlife states and ambient life.
 - `terrain/world-detail-atlas-v3.png` — resources, paths, puddles, fire/smoke, lantern, and birds.
@@ -30,7 +32,7 @@ The replacement seams are kept explicit for future expansion:
 - `effects/` — fire, smoke, dust, rain, ripples, and completion bursts.
 - `ui/` — icons, portraits, badges, and discovery art.
 
-The v2 villager and animal atlases plus the v3 building, world-detail, and growth-prop atlases and v1 effects atlas are the current production pass for the character, building, wildlife, settlement-growth, and simulation-motion seams. The procedural renderer still supplies terrain shading, seasonal variation, weather, firelight, trails, and any future states that are not yet represented by a sprite.
+The v2 villager atlas, v1 villager motion/action atlases, v2 animal atlas, v3 building/world-detail/growth-prop atlases, and v1 effects atlas are the current production pass for the character, building, wildlife, settlement-growth, and simulation-motion seams. The procedural renderer still supplies terrain shading, seasonal variation, weather, firelight, trails, and any future states that are not yet represented by a sprite.
 
 The previous v1 atlases remain in the asset folders as comparison/provenance references; they are not loaded by the runtime.
 
@@ -38,7 +40,7 @@ The source renders are kept in `atlas/` as regeneration references; runtime file
 
 Keep custom graphics grouped by role:
 
-- `villagers/` — idle, walk, gather, carry, eat, rest, and build sheets.
+- `villagers/` — identity, walk, carry, pickup, drop, eat, rest, and build sheets.
 - `trees/`, `vegetation/`, `resources/` — node families and depleted states.
 - `buildings/` — foundation, frame, and completed structure stages.
 - `terrain/` — meadow, clearing, water, shore, and path textures.

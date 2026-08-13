@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "style": {
     "camera": "top-down 2D storybook settlement view with a consistent orthographic painted-map language",
     "renderScale": "56px world cell; atlas families are 4x3 with transparent padding",
@@ -13,6 +13,20 @@
       "rows": 3,
       "states": ["idle/walk", "gather/carry/eat/rest", "build/secure/child/elder"],
       "source": "atlas/villager-source-v2.png"
+    },
+    "villagerMotion": {
+      "path": "villagers/villager-motion-atlas-v1.png",
+      "columns": 4,
+      "rows": 4,
+      "states": ["walk contact", "walk passing", "carry contact", "carry passing"],
+      "source": "villagers/generated/villager-motion-source-v1.png"
+    },
+    "villagerActions": {
+      "path": "villagers/villager-action-atlas-v1.png",
+      "columns": 4,
+      "rows": 4,
+      "states": ["bend pickup", "lift", "place", "hammer construction"],
+      "source": "villagers/generated/villager-action-source-v1.png"
     },
     "buildings": {
       "path": "buildings/building-atlas-v3.png",

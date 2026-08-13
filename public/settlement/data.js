@@ -360,6 +360,8 @@ export const formatActivity = (activity) => {
     idle: "Idle",
     gathering: "Gathering",
     hauling: "Hauling",
+    pickingUp: "Picking up supplies",
+    dropping: "Putting supplies down",
     building: "Building",
     eating: "Eating",
     resting: "Resting",

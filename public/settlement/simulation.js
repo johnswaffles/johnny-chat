@@ -1521,17 +1521,64 @@ const discoverNearbyResources = (state, villager) => {
   }
 };
 
+const REST_SLOT_OFFSETS = [
+  { x: -42, y: 16 }, { x: 38, y: 18 }, { x: -50, y: 52 }, { x: 48, y: 54 },
+  { x: -4, y: 68 }, { x: -68, y: -2 }, { x: 68, y: 2 }, { x: 0, y: -48 }
+];
+
+const restPointFor = (state, building, slotIndex) => {
+  const center = cellCenter(building.x + building.footprint.w / 2 - 0.5, building.y + building.footprint.h / 2 - 0.5);
+  const offset = REST_SLOT_OFFSETS[slotIndex % REST_SLOT_OFFSETS.length];
+  const point = { x: center.x + offset.x, y: center.y + offset.y };
+  const cell = worldToCell(point.x, point.y);
+  if (isWalkable(state, cell.x, cell.y)) return point;
+  const fallback = nearestWalkable(state, cell.x, cell.y);
+  return cellCenter(fallback.x, fallback.y);
+};
+
+const restTargetFor = (building, point) => ({
+  ...building,
+  x: point.x,
+  y: point.y,
+  worldPoint: true,
+  restBuildingId: building.id
+});
+
+const restSlotCrowd = (state, building, point, ignoreVillagerId = "") => state.villagers.filter((candidate) => {
+  if (candidate.id === ignoreVillagerId || !candidate.task || !["rest", "warm"].includes(candidate.task.type)) return false;
+  return candidate.task.targetId === building.id && distance(candidate.task.goal || candidate, point) < 26;
+}).length;
+
 const findRestSite = (state, villager) => {
   const shelters = state.buildings.filter((building) => building.complete && building.kind === "shelter");
   const well = state.buildings.filter((building) => building.complete && building.kind === "well");
   const restSites = [...shelters, ...well];
-  if (!restSites.length) return state.buildings.find((building) => building.complete && building.kind === "campfire");
-  const ranked = restSites.slice().sort((a, b) => distance(villager, a) - distance(villager, b));
-  const reachable = ranked.slice(0, 2).map((building) => {
-    const point = cellCenter(building.x + building.footprint.w / 2 - 0.5, building.y + building.footprint.h / 2 - 0.5);
-    return { building, path: findPath(state, villager, point) };
-  }).filter(({ building, path }) => path.length || distance(villager, cellCenter(building.x, building.y)) <= WORLD.cell * 1.2);
-  return (reachable.length ? reachable.sort((a, b) => a.path.length - b.path.length)[0].building : state.buildings.find((building) => building.complete && building.kind === "campfire"));
+  if (!restSites.length) {
+    const campfire = state.buildings.find((building) => building.complete && building.kind === "campfire");
+    if (!campfire) return null;
+    restSites.push(campfire);
+  }
+  const ranked = restSites.slice().sort((a, b) => {
+    const aCenter = cellCenter(a.x + a.footprint.w / 2 - 0.5, a.y + a.footprint.h / 2 - 0.5);
+    const bCenter = cellCenter(b.x + b.footprint.w / 2 - 0.5, b.y + b.footprint.h / 2 - 0.5);
+    return distance(villager, aCenter) - distance(villager, bCenter);
+  });
+  const reachable = ranked.slice(0, 3).map((building) => {
+    const slots = REST_SLOT_OFFSETS.map((_, slotIndex) => {
+      const point = restPointFor(state, building, slotIndex);
+      return { slotIndex, point, crowd: restSlotCrowd(state, building, point, villager.id), path: findPath(state, villager, point) };
+    });
+    const open = slots.filter(({ crowd, path, point }) => crowd === 0 && (path.length || distance(villager, point) <= WORLD.cell * 1.2));
+    const choices = open.length ? open : slots.filter(({ path, point }) => path.length || distance(villager, point) <= WORLD.cell * 1.2);
+    const choice = (choices.length ? choices : slots).sort((a, b) => {
+      if (a.crowd !== b.crowd) return a.crowd - b.crowd;
+      return a.path.length - b.path.length;
+    })[0];
+    return { building, ...choice };
+  }).filter(({ path, point }) => path.length || distance(villager, point) <= WORLD.cell * 1.2);
+  if (!reachable.length) return null;
+  const choice = reachable.sort((a, b) => (a.crowd - b.crowd) * 100 + a.path.length - b.path.length)[0];
+  return restTargetFor(choice.building, choice.point);
 };
 
 const hasCompleteBuilding = (state, kind) => state.buildings.some((building) => building.complete && building.kind === kind);
@@ -1925,7 +1972,7 @@ const assignTask = (state, villager) => {
   }
   if (night && villager.energy < 68) {
     const restSite = findRestSite(state, villager);
-    if (restSite && startTask(state, villager, "warm", restSite)) return;
+    if (restSite && startTask(state, villager, restSite.kind === "campfire" ? "warm" : "rest", restSite)) return;
   }
 
   // Priority 2: urgent settlement work. Limit the crowd at each foundation.
@@ -1984,7 +2031,7 @@ const assignTask = (state, villager) => {
   }
   if (villager.energy < 48 || late || (raining && villager.restBias > 0.98)) {
     const restSite = findRestSite(state, villager);
-    if (restSite && startTask(state, villager, night || raining ? "warm" : "rest", restSite)) return;
+    if (restSite && startTask(state, villager, night || raining ? (restSite.kind === "campfire" ? "warm" : "rest") : "rest", restSite)) return;
   }
 
   // Priority 5: tiny social lives and low-stakes wandering.
@@ -1996,7 +2043,7 @@ const assignTask = (state, villager) => {
   }
   if (late) {
     const restSite = findRestSite(state, villager);
-    if (restSite && startTask(state, villager, "warm", restSite)) return;
+    if (restSite && startTask(state, villager, restSite.kind === "campfire" ? "warm" : "rest", restSite)) return;
   }
   startTask(state, villager, "wander", chooseWanderTarget(state, villager));
 };
@@ -2078,10 +2125,20 @@ const performTask = (state, villager, dt) => {
   if (task.type === "return") {
     const storage = getBuilding(state, task.targetId) || findStorage(state, villager);
     if (!storage || !villager.carrying) return finishTask(villager, state);
-    villager.activity = "returning";
-    villager.activityDetail = `Carrying ${villager.carrying.amount} ${RESOURCE_META[villager.carrying.type].label.toLowerCase()} back to camp`;
-    villager.lastActivity = villager.activityDetail;
     const carried = villager.carrying;
+    if (task.phase !== "drop") {
+      task.phase = "drop";
+      villager.actionTimer = 0;
+      villager.activity = "dropping";
+      villager.activityDetail = `Putting down ${carried.amount} ${RESOURCE_META[carried.type].label.toLowerCase()}`;
+      villager.lastActivity = villager.activityDetail;
+      return;
+    }
+    villager.activity = "dropping";
+    villager.activityDetail = `Putting down ${carried.amount} ${RESOURCE_META[carried.type].label.toLowerCase()}`;
+    villager.lastActivity = villager.activityDetail;
+    villager.actionTimer += dt;
+    if (villager.actionTimer < 0.58) return;
     const room = Math.floor(storageRoom(state));
     const deposited = Math.min(room, carried.amount);
     state.inventory[carried.type] += deposited;
@@ -2104,6 +2161,19 @@ const performTask = (state, villager, dt) => {
     if (!pile || pile.amount <= 0) return finishTask(villager, state);
     const amount = Math.min(pile.amount, 4, Math.floor(storageRoom(state)));
     if (amount <= 0) return finishTask(villager, state);
+    if (task.phase !== "pickup") {
+      task.phase = "pickup";
+      villager.actionTimer = 0;
+      villager.activity = "pickingUp";
+      villager.activityDetail = `Picking up ${RESOURCE_META[pile.type].label.toLowerCase()}`;
+      villager.lastActivity = villager.activityDetail;
+      return;
+    }
+    villager.actionTimer += dt;
+    villager.activity = "pickingUp";
+    villager.activityDetail = `Picking up ${RESOURCE_META[pile.type].label.toLowerCase()}`;
+    villager.lastActivity = villager.activityDetail;
+    if (villager.actionTimer < 0.52) return;
     pile.amount -= amount;
     villager.carrying = { type: pile.type, amount, purpose: "ground-pile" };
     addActionEffect(state, "pickup", { x: pile.x, y: pile.y }, pile.type);
@@ -2119,9 +2189,19 @@ const performTask = (state, villager, dt) => {
     const building = getBuilding(state, task.targetId);
     if (!building || !villager.carrying) return finishTask(villager, state);
     const material = villager.carrying.type;
-    villager.activity = "hauling";
-    villager.activityDetail = `Carrying ${villager.carrying.amount} ${RESOURCE_META[material].label.toLowerCase()} to the ${BUILDINGS[building.kind].name.toLowerCase()}`;
+    if (task.phase !== "drop") {
+      task.phase = "drop";
+      villager.actionTimer = 0;
+      villager.activity = "dropping";
+      villager.activityDetail = `Putting down ${villager.carrying.amount} ${RESOURCE_META[material].label.toLowerCase()}`;
+      villager.lastActivity = villager.activityDetail;
+      return;
+    }
+    villager.actionTimer += dt;
+    villager.activity = "dropping";
+    villager.activityDetail = `Putting down ${villager.carrying.amount} ${RESOURCE_META[material].label.toLowerCase()}`;
     villager.lastActivity = villager.activityDetail;
+    if (villager.actionTimer < 0.58) return;
     building.materials[material] += villager.carrying.amount;
     addActionEffect(state, "deposit", cellCenter(building.x + building.footprint.w / 2 - 0.5, building.y + building.footprint.h / 2 - 0.5), material);
     villager.carrying = null;

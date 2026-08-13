@@ -29,6 +29,8 @@ let activeSceneLighting = {
 // canvas shapes below without touching simulation state.
 const art = {
   villagers: { src: "./assets/villagers/villager-atlas-v2.png", image: null },
+  villagerMotion: { src: "./assets/villagers/villager-motion-atlas-v1.png", image: null, columns: 4, rows: 4 },
+  villagerActions: { src: "./assets/villagers/villager-action-atlas-v1.png", image: null, columns: 4, rows: 4 },
   buildings: { src: "./assets/buildings/building-atlas-v3.png", image: null },
   animals: { src: "./assets/animals/animal-atlas-v2.png", image: null },
   world: { src: "./assets/terrain/world-detail-atlas-v3.png", image: null },
@@ -45,8 +47,10 @@ Object.values(art).forEach((slot) => {
 
 const atlasSprite = (ctx, slot, column, row, x, y, width, height, options = {}) => {
   if (!slot.image?.naturalWidth) return false;
-  const sourceWidth = slot.image.naturalWidth / 4;
-  const sourceHeight = slot.image.naturalHeight / 3;
+  const columns = Number(options.columns || slot.columns || 4);
+  const rows = Number(options.rows || slot.rows || 3);
+  const sourceWidth = slot.image.naturalWidth / columns;
+  const sourceHeight = slot.image.naturalHeight / rows;
   const flip = Boolean(options.flip);
   ctx.save();
   ctx.globalAlpha = options.alpha ?? 1;
@@ -60,10 +64,12 @@ const atlasSprite = (ctx, slot, column, row, x, y, width, height, options = {}) 
 
 const fitAtlasSprite = (ctx, slot, column, row, centerX, centerY, maxWidth, maxHeight, options = {}) => {
   if (!slot.image?.naturalWidth) return false;
-  const ratio = (slot.image.naturalWidth / 4) / (slot.image.naturalHeight / 3);
+  const columns = Number(options.columns || slot.columns || 4);
+  const rows = Number(options.rows || slot.rows || 3);
+  const ratio = (slot.image.naturalWidth / columns) / (slot.image.naturalHeight / rows);
   const width = Math.min(maxWidth, maxHeight * ratio);
   const height = width / ratio;
-  return atlasSprite(ctx, slot, column, row, centerX - width / 2, centerY - height / 2, width, height, options);
+  return atlasSprite(ctx, slot, column, row, centerX - width / 2, centerY - height / 2, width, height, { ...options, columns, rows });
 };
 
 const roundRect = (ctx, x, y, width, height, radius) => {
@@ -1128,26 +1134,51 @@ const drawMicroEffect = (ctx, effect, clock) => {
   if (!sprite || !microEffectSprite(ctx, sprite.column, sprite.row, effect.x, y, size * pulse, size * pulse, alpha, effect.flip)) return;
 };
 
-const villagerSprite = (villager) => {
+const villagerIdentityColumn = (villager) => {
   const column = Math.max(0, Math.min(3, Number(villager.atlasIndex ?? String(villager.id || "").replace(/\\D/g, "")) - 1 || 0));
-  if (villager.lifeStage === "child" || Number(villager.age) < 13) return [2, 2];
-  if (Number(villager.age) > 58) return [3, 2];
+  return column;
+};
+
+const villagerMotionActivities = new Set(["walking", "returning", "hauling", "wandering", "socializing", "playing"]);
+const villagerActionActivities = new Set(["gathering", "pickingUp", "dropping", "building", "securing", "repairing"]);
+
+const villagerSpriteSpec = (villager) => {
+  const column = villagerIdentityColumn(villager);
+  if (villager.lifeStage === "child" || Number(villager.age) < 13) return { slot: art.villagers, column: 2, row: 2 };
+  if (Number(villager.age) > 58) return { slot: art.villagers, column: 3, row: 2 };
+  const motionFrame = Math.floor(Math.abs(Number(villager.walkPhase) || 0) / Math.PI) % 2;
+  if (villagerMotionActivities.has(villager.activity)) {
+    return { slot: art.villagerMotion, column, row: villager.carrying ? 2 + motionFrame : motionFrame };
+  }
+  if (villagerActionActivities.has(villager.activity)) {
+    const actionTime = Number(villager.actionTimer) || 0;
+    if (villager.activity === "gathering" || villager.activity === "pickingUp") {
+      return { slot: art.villagerActions, column, row: Math.floor(actionTime * 2.2) % 2 };
+    }
+    if (villager.activity === "dropping") {
+      return { slot: art.villagerActions, column, row: actionTime < 0.24 ? 0 : actionTime < 0.48 ? 1 : 2 };
+    }
+    return { slot: art.villagerActions, column, row: 3 };
+  }
   const stateSprites = {
     gathering: [0, 1], hauling: [1, 1], returning: [1, 1], eating: [2, 1], resting: [3, 1], warming: [3, 1],
     building: [0, 2], securing: [1, 2], repairing: [1, 2]
   };
-  return stateSprites[villager.activity] || [column, 0];
+  const [rowColumn, row] = stateSprites[villager.activity] || [column, 0];
+  return { slot: art.villagers, column: rowColumn, row };
 };
 
 const villagerFacingSign = (villager) => Math.cos(Number(villager.facing) || 0) >= 0 ? 1 : -1;
 
-const drawVillagerActivityAction = (ctx, villager, clock, bob = 0) => {
+const drawVillagerActivityAction = (ctx, villager, clock, bob = 0, spriteSpec = null) => {
   const direction = villagerFacingSign(villager);
   const x = villager.x;
   const y = villager.y + bob;
+  const hasMotionSprite = spriteSpec?.slot === art.villagerMotion;
+  const hasActionSprite = spriteSpec?.slot === art.villagerActions;
   const actionPhase = Math.sin((Number(villager.actionTimer) || 0) * 7);
   ctx.save();
-  if (villager.carrying) {
+  if (villager.carrying && !hasMotionSprite && !hasActionSprite) {
     const carry = villager.carrying;
     const position = { wood: [0, 0], stone: [1, 0], food: [2, 0], tools: [3, 0] }[carry.type] || [3, 0];
     const carryX = x + direction * 12;
@@ -1157,7 +1188,7 @@ const drawVillagerActivityAction = (ctx, villager, clock, bob = 0) => {
       ctx.beginPath(); ctx.arc(carryX, carryY, 6, 0, TAU); ctx.fill();
     }
   }
-  if (villager.activity === "gathering") {
+  if (villager.activity === "gathering" && !hasActionSprite) {
     ctx.save();
     ctx.translate(x + direction * 7, y + 2);
     ctx.rotate(direction * (0.52 + actionPhase * 0.24));
@@ -1174,7 +1205,7 @@ const drawVillagerActivityAction = (ctx, villager, clock, bob = 0) => {
       microEffectSprite(ctx, chips[0], chips[1], x + direction * 20, y - 7, 20, 20, 0.34, direction < 0);
     }
   }
-  if (["building", "securing", "repairing"].includes(villager.activity)) {
+  if (["building", "securing", "repairing"].includes(villager.activity) && !hasActionSprite) {
     ctx.save();
     ctx.translate(x + direction * 7, y + 2);
     ctx.rotate(direction * (-0.36 + actionPhase * 0.43));
@@ -1207,19 +1238,20 @@ const drawVillagerActivityAction = (ctx, villager, clock, bob = 0) => {
 };
 
 const drawGeneratedVillager = (ctx, villager, clock) => {
-  if (!art.villagers.image) return false;
-  const [column, row] = villagerSprite(villager);
+  if (!art.villagers.image && !art.villagerMotion.image && !art.villagerActions.image) return false;
+  const spriteSpec = villagerSpriteSpec(villager);
+  if (!spriteSpec?.slot?.image) return false;
   const childScale = villager.lifeStage === "child" ? 0.8 : 1;
-  const moving = ["walking", "returning", "hauling", "wandering", "socializing", "playing", "securing", "repairing"].includes(villager.activity);
+  const moving = villagerMotionActivities.has(villager.activity);
   const bob = Math.sin(villager.walkPhase) * (moving ? 1.4 : 0.45) * childScale;
-  fitAtlasSprite(ctx, art.villagers, column, row, villager.x, villager.y + bob - 3, 54 * childScale, 60 * childScale, { flip: Number(villager.facing) < 0 });
-  drawVillagerActivityAction(ctx, villager, clock, bob - 3);
+  fitAtlasSprite(ctx, spriteSpec.slot, spriteSpec.column, spriteSpec.row, villager.x, villager.y + bob - 3, 54 * childScale, 60 * childScale, { flip: Number(villager.facing) < 0 });
+  drawVillagerActivityAction(ctx, villager, clock, bob - 3, spriteSpec);
   return true;
 };
 
 const drawVillager = (ctx, villager, clock, selected) => {
   const childScale = villager.lifeStage === "child" ? 0.76 : 1;
-  const moving = ["walking", "returning", "hauling", "wandering", "socializing", "playing", "securing", "repairing"].includes(villager.activity);
+  const moving = villagerMotionActivities.has(villager.activity);
   const working = ["gathering", "building"].includes(villager.activity);
   const bob = Math.sin(villager.walkPhase) * (moving ? 2 : working ? 0.9 : 0.6) * childScale;
   const x = villager.x;
@@ -1383,7 +1415,7 @@ const drawClearingField = (ctx) => {
 
 const activityBadge = (villager) => {
   const badges = {
-    gathering: ["✦", "gather"], hauling: ["▰", "carry"], returning: ["↩", "return"],
+    gathering: ["✦", "gather"], hauling: ["▰", "carry"], returning: ["↩", "return"], pickingUp: ["⌄", "pick up"], dropping: ["⌄", "put down"],
     building: ["⚒", "build"], eating: ["●", "eat"], resting: ["z", "rest"], warming: ["✹", "warm"],
     socializing: ["••", "talk"], playing: ["●", "play"], securing: ["⚒", "secure"], repairing: ["↻", "repair"], wandering: ["⌁", "wander"], walking: ["›", "walk"], idle: ["·", "idle"]
   };
@@ -1391,7 +1423,7 @@ const activityBadge = (villager) => {
 };
 
 const drawActivityBadge = (ctx, villager, x, y, selected) => {
-  if (!selected && !["gathering", "hauling", "building", "securing", "repairing", "eating"].includes(villager.activity)) return;
+  if (!selected && !["gathering", "hauling", "building", "securing", "repairing", "pickingUp", "dropping", "eating"].includes(villager.activity)) return;
   const [icon, label] = activityBadge(villager);
   const width = selected ? 78 : 45;
   const left = x - width / 2;

@@ -32,7 +32,7 @@ import {
   timePeriod,
   tick
 } from "./simulation.js";
-import { createRenderer } from "./render.js?v=composition-2";
+import { createRenderer } from "./render.js?v=motion-1";
 
 const canvas = document.querySelector("#settlement-canvas");
 const renderer = createRenderer(canvas);
