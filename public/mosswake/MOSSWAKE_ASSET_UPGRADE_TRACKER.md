@@ -30,14 +30,14 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | 1 | Boss telegraph and defeat FX | Integrated / tested | Keep the atlas as the Guardian effect reference; only refine for a readability defect |
 | 2 | Outdoor foliage | Integrated / tested | Keep the foliage atlas as the outdoor prop reference; add a second seasonal sheet only if a later visual review shows repetition |
 | 3 | Dungeon architecture | Integrated / tested | Landmark/interactable atlas now covers chests, runes, switches, sockets, and reward pedestals |
-| 4 | Outdoor props (fences, paths, signs, rocks) | Integrated / pending live visual check | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
+| 4 | Outdoor props (fences, paths, signs, rocks) | Integrated / tested | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
 
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
 - Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.
 - Added the `outdoor-props` manifest slot. Existing fence, sign, and rock renderers now prefer the painted family, while the long procedural path keeps its collision-safe ribbon and receives sparse painted trail repairs. Labels remain runtime text over the sign art; procedural drawing remains the safe fallback.
 - Corrected the directional player attack renderer so the generated left-facing row is not mirrored, and preserved the repaired feet/contact anchors.
-- Local syntax, manifest, alpha, and diff checks pass. Live visual smoke testing remains the final gate after deployment.
+- Local syntax, manifest, alpha, and diff checks pass. Public visual smoke testing confirmed the atlas loads in the live overworld with no console errors or warnings.
 
 ## 2026-08-13 — Visual integration, grounding, and animation repair
 
