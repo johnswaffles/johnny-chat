@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=7";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=8";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1023,7 +1023,10 @@
     ][variant];
     drawShadow(x, y + 57 * s, 30 * s, 10 * s, layer === "front" ? .45 : .3);
     if (layer !== "back") drawDirectionalShadow(x, y + 48 * s, 56 * s, 17 * s, layer === "front" ? .09 : .06, .2);
-    const treeFrame = variant * 4 + Math.floor((time * 3 + phase) % 4); if (drawOptionalSprite(`tree-${layer}`, x, y + 58 * s, { frame: treeFrame, width: 176 * s * depth, height: 220 * s * depth, anchorX: .5, anchorY: .98 })) return;
+    const swayFrame = Math.floor((time * 3 + phase) % 4);
+    const layerBase = layer === "back" ? 0 : layer === "front" && variant === 2 ? 12 : layer === "front" ? 8 : 4;
+    const treeFrame = layerBase + swayFrame;
+    if (drawOptionalSprite(`tree-${layer}`, x, y + 58 * s, { frame: treeFrame, width: 176 * s * depth, height: 220 * s * depth, anchorX: .5, anchorY: .98 })) return;
     ctx.save(); ctx.globalAlpha = depth; ctx.translate(x, y); ctx.rotate(sway); ctx.scale(s, s);
     ctx.fillStyle = "#6e4935"; ctx.beginPath(); ctx.moveTo(-10, 5); ctx.lineTo(9, 5); ctx.lineTo(14, 58); ctx.lineTo(-15, 58); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = "#aa7048"; ctx.fillRect(-3, 8, 5, 44); ctx.fillStyle = "rgba(33,56,39,.22)"; ctx.fillRect(8, 13, 5, 41);

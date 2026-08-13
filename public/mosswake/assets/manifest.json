@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -120,6 +120,42 @@
       "displayHeight": 72,
       "anchorX": 0.5,
       "anchorY": 0.5
+    },
+    "tree-back": {
+      "src": "trees/lanternwood-tree-family-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 5,
+      "displayWidth": 176,
+      "displayHeight": 220,
+      "anchorX": 0.5,
+      "anchorY": 0.98
+    },
+    "tree-mid": {
+      "src": "trees/lanternwood-tree-family-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 5,
+      "displayWidth": 176,
+      "displayHeight": 220,
+      "anchorX": 0.5,
+      "anchorY": 0.98
+    },
+    "tree-front": {
+      "src": "trees/lanternwood-tree-family-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 5,
+      "displayWidth": 176,
+      "displayHeight": 220,
+      "anchorX": 0.5,
+      "anchorY": 0.98
     }
   }
 }

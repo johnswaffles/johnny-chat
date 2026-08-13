@@ -21,12 +21,10 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 | Priority | Family | Current status | Recommended next action |
 | --- | --- | --- | --- |
-| 1 | Lantern-blade combat FX | Integrated painted slash + Rootlight atlas; procedural fallback retained | Add dedicated boss telegraph/defeat FX when the arena pass reaches the top of the queue |
-| 2 | Water / shoreline | Integrated painted water atlas + shoreline overlay; procedural motion retained | Add a focused flooded-vault readability review, then move to trees |
-| 3 | Layered tree family | Procedural authored silhouettes | Generate trunk/canopy/shadow layers with 4 sway frames |
-| 4 | Outdoor foliage | Procedural authored clusters | Generate modular grass, fern, reed, flower, mushroom, log, and ivy rustle states |
-| 5 | Dungeon architecture | Procedural room construction | Generate modular stone, roots, arches, statues, and rubble |
-| 6 | Remaining NPCs and portraits | Procedural fallback except Rowan | Generate Tansy, Brindle, Lumen, and compact dialogue busts |
+| 1 | Boss telegraph and defeat FX | Procedural fan arcs, slam rings, phase shards, and defeat motes | Generate one readable transparent effect family for the Guardian encounter |
+| 2 | Outdoor foliage | Procedural authored clusters | Generate modular grass, fern, reed, flower, mushroom, log, and ivy rustle states |
+| 3 | Dungeon architecture | Procedural room construction | Generate modular stone, roots, arches, statues, and rubble |
+| 4 | Remaining NPCs and portraits | Procedural fallback except Rowan | Generate Tansy, Brindle, Lumen, and compact dialogue busts |
 
 ## Current iteration log
 
@@ -60,6 +58,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Added `water-surface` and `shoreline` manifest slots. Pond, small pond, and flooded-vault surfaces now draw the painted atlas first while retaining the procedural ripples, clipping, outlines, and fallback when an image has not loaded.
 - Kept collision rectangles, deep-water damage, room geometry, and water timing unchanged. Bumped the manifest and page cache keys to `manifest.json?v=7` and `mosswake.js?v=32`.
 - Local syntax, manifest, image dimensions, alpha, startup, and visual browser smoke checks remain to be run after this integration.
+
+### 2026-08-13 — Layered tree family
+
+- Generated `assets/trees/lanternwood-tree-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas with four sway poses each for a restrained back canopy, mature midground tree, larger foreground tree, and ancient-root variant. The keyed RGB source remains beside it for future matte refinement.
+- Added `tree-back`, `tree-mid`, and `tree-front` manifest slots pointing to the same replaceable family sheet. Existing `drawTree` calls now choose the appropriate four-frame row by layer while preserving authored tree variants, ground anchors, runtime shadows, and procedural fallback.
+- Kept tree placement, collision, camera layering, and ambient motion unchanged. Bumped the manifest and page cache keys to `manifest.json?v=8` and `mosswake.js?v=33`.
+- Local syntax, manifest, alpha, startup, visual browser smoke, and console checks passed after this integration.
 
 ## Production contract
 
