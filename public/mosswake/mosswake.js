@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=9";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=10";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1580,15 +1580,15 @@
         const reveal = 1 - progress;
         if (enemy.telegraphType === "bossWindup") {
           const targetAngle = Math.atan2((enemy.aimY || player.y - enemy.y), (enemy.aimX || player.x - enemy.x));
-          drawOptionalSprite("boss-fx", enemy.x, enemy.y, { frame: Math.min(3, Math.floor(reveal * 4)), width: 176, height: 150, anchorX: .16, anchorY: .62, rotation: targetAngle, alpha: .28 + progress * .4 });
+          drawOptionalSprite("boss-fx", enemy.x, enemy.y, { frame: Math.min(5, Math.floor(reveal * 6)), width: 176, height: 150, anchorX: .16, anchorY: .62, rotation: targetAngle, alpha: .28 + progress * .4 });
         } else if (enemy.telegraphType === "bossSlamWindup") {
-          drawOptionalSprite("boss-fx", enemy.x, enemy.y, { frame: 4 + Math.min(3, Math.floor(reveal * 4)), width: 176 + reveal * 48, height: 176 + reveal * 48, anchorX: .5, anchorY: .5, alpha: .24 + progress * .42 });
+          drawOptionalSprite("boss-fx", enemy.x, enemy.y, { frame: 6 + Math.min(5, Math.floor(reveal * 6)), width: 176 + reveal * 48, height: 176 + reveal * 48, anchorX: .5, anchorY: .5, alpha: .24 + progress * .42 });
         } else if (enemy.telegraphType === "bossDashWindup") {
           const dashAngle = Math.atan2(Number.isFinite(enemy.chargeY) ? enemy.chargeY : player.y - enemy.y, Number.isFinite(enemy.chargeX) ? enemy.chargeX : player.x - enemy.x);
-          drawOptionalSprite("boss-fx", enemy.x, enemy.y, { frame: 8 + Math.min(2, Math.floor(reveal * 3)), width: 206, height: 104, anchorX: .16, anchorY: .5, rotation: dashAngle, alpha: .24 + progress * .38 });
+          drawOptionalSprite("boss-fx", enemy.x, enemy.y, { frame: 12 + Math.min(2, Math.floor(reveal * 3)), width: 206, height: 104, anchorX: .16, anchorY: .5, rotation: dashAngle, alpha: .24 + progress * .38 });
         } else if (enemy.telegraphType === "bossRainWindup") {
           const rainAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-          drawOptionalSprite("boss-fx", player.x, player.y, { frame: 11, width: 118, height: 118, anchorX: .5, anchorY: .5, rotation: rainAngle, alpha: .18 + progress * .38 });
+          drawOptionalSprite("boss-fx", player.x, player.y, { frame: 15 + Math.min(2, Math.floor(reveal * 3)), width: 118, height: 118, anchorX: .5, anchorY: .5, rotation: rainAngle, alpha: .18 + progress * .38 });
         }
       }
       ctx.save(); ctx.globalAlpha = .3 + progress * .5; ctx.lineWidth = 3;
@@ -1650,9 +1650,9 @@
   const drawParticle = (particle) => {
     const alpha = clamp(particle.life / particle.maxLife, 0, 1); const progress = 1 - alpha;
     // Boss-specific art is optional; the procedural branches below remain the fallback.
-    if (particle.kind === "boss-slam-ring" && drawOptionalSprite("boss-fx", particle.x, particle.y, { frame: particle.phasePulse ? 11 : 4 + Math.min(3, Math.floor(progress * 4)), width: particle.phasePulse ? 208 : particle.size * (1.8 + progress * .95), height: particle.phasePulse ? 150 : particle.size * (1.8 + progress * .95), anchorX: .5, anchorY: .5, alpha: alpha * (particle.phasePulse ? .88 : .72), rotation: particle.phasePulse ? progress * .4 : 0 })) return;
-    if (particle.kind === "death-ring" && particle.bossFx && drawOptionalSprite("boss-fx", particle.x, particle.y, { frame: 15, width: 220 * (1 - progress * .12), height: 190 * (1 - progress * .12), anchorX: .5, anchorY: .58, alpha: alpha * .86, rotation: progress * .25 })) return;
-    if (particle.kind === "death-shards" && particle.bossFx && drawOptionalSprite("boss-fx", particle.x, particle.y, { frame: 13, width: 178 * (1 - progress * .2), height: 178 * (1 - progress * .2), anchorX: .5, anchorY: .5, alpha: alpha * .9, rotation: progress * -.35 })) return;
+    if (particle.kind === "boss-slam-ring" && drawOptionalSprite("boss-fx", particle.x, particle.y, { frame: particle.phasePulse ? 18 : 6 + Math.min(5, Math.floor(progress * 6)), width: particle.phasePulse ? 208 : particle.size * (1.8 + progress * .95), height: particle.phasePulse ? 150 : particle.size * (1.8 + progress * .95), anchorX: .5, anchorY: .5, alpha: alpha * (particle.phasePulse ? .88 : .72), rotation: particle.phasePulse ? progress * .4 : 0 })) return;
+    if (particle.kind === "death-ring" && particle.bossFx && drawOptionalSprite("boss-fx", particle.x, particle.y, { frame: 23, width: 220 * (1 - progress * .12), height: 190 * (1 - progress * .12), anchorX: .5, anchorY: .58, alpha: alpha * .86, rotation: progress * .25 })) return;
+    if (particle.kind === "death-shards" && particle.bossFx && drawOptionalSprite("boss-fx", particle.x, particle.y, { frame: 19, width: 178 * (1 - progress * .2), height: 178 * (1 - progress * .2), anchorX: .5, anchorY: .5, alpha: alpha * .9, rotation: progress * -.35 })) return;
     ctx.save(); ctx.globalAlpha = alpha; ctx.translate(particle.x, particle.y);
     if (particle.kind === "combat-spark") { ctx.rotate(particle.rotation); ctx.strokeStyle = particle.color; ctx.lineWidth = Math.max(1, particle.size * .26) * alpha; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-particle.size * .22, 0); ctx.lineTo(particle.size * (.62 + progress * .5), 0); ctx.stroke(); ctx.lineCap = "butt"; }
     else if (particle.kind === "combat-ring") { ctx.strokeStyle = particle.color; ctx.globalAlpha = alpha * .84; ctx.lineWidth = Math.max(1.2, 3 * alpha); ctx.beginPath(); ctx.arc(0, 0, particle.size * (.2 + progress * 1.7), 0, Math.PI * 2); ctx.stroke(); }

@@ -30,10 +30,10 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 ### 2026-08-13 — Hollow Guardian telegraph and defeat FX
 
-- Generated `assets/effects/guardian-telegraph-fx-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas with rose/gold volley fans, expanding vine slam rings, dash-lane markers, Rootlight exposure cracks, phase-break shards, and green defeat motes. The keyed RGB source remains beside it for future matte refinement.
+- Generated `assets/effects/guardian-telegraph-fx-generated-v1.png` as a 1248×1248 RGBA 6×4 atlas (208×312 cells) with rose/gold volley fans, expanding vine slam rings, dash-lane markers, Rootlight exposure cracks, phase-break shards, and green defeat motes. The keyed RGB source remains beside it for future matte refinement.
 - Added the `boss-fx` manifest slot and progressive renderer hooks. Guardian volley, slam, dash, and rain windups now receive painted silhouettes; phase-break and boss defeat particles use the painted payoff frames. Procedural telegraph lines and particle shapes remain the safe fallback when the atlas is unavailable.
-- Kept attack geometry, telegraph durations, hitboxes, cooldowns, camera shake, and sound unchanged. Bumped the manifest and page cache keys to `manifest.json?v=9` and `mosswake.js?v=34`.
-- Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks passed. The public route now serves `mosswake.js?v=34`, manifest v9, and the Guardian FX atlas with no console warnings or errors.
+- Kept attack geometry, telegraph durations, hitboxes, cooldowns, camera shake, and sound unchanged. Corrected the 6×4 atlas frame mapping and bumped the manifest and page cache keys to `manifest.json?v=10` and `mosswake.js?v=35`.
+- Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks passed before this frame-map correction; rerun those checks and verify the public route after the next push.
 
 ### 2026-08-13 — Heartseed Sanctum arena kit
 
