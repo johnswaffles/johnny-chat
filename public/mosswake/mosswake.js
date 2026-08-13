@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=16";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=17";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1632,6 +1632,14 @@
     if (enemy.hitStun > 0) { ctx.save(); ctx.globalAlpha = clamp(enemy.hitStun * 5, 0, .85); ctx.strokeStyle = "#fff7dc"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 5 + Math.sin(time * 30) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     if (enemy.telegraph > 0) {
       const progress = clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1);
+      if (enemy.type !== "boss" && loadedAssets.has("enemy-effects")) {
+        const reveal = 1 - progress;
+        const telegraphFrame = enemy.telegraphType === "chargeWindup" ? Math.min(3, Math.floor(reveal * 4)) : enemy.telegraphType === "rangedWindup" ? 4 + Math.min(3, Math.floor(reveal * 4)) : enemy.telegraphType === "ambushWindup" ? 8 + Math.min(3, Math.floor(reveal * 4)) : 12;
+        const telegraphAngle = enemy.telegraphType === "rangedWindup" ? Math.atan2(enemy.aimY || player.y - enemy.y, enemy.aimX || player.x - enemy.x) : enemy.telegraphType === "chargeWindup" ? Math.atan2(enemy.chargeY || player.y - enemy.y, enemy.chargeX || player.x - enemy.x) : Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        const telegraphWidth = enemy.telegraphType === "rangedWindup" ? 126 : enemy.telegraphType === "chargeWindup" ? 126 : 92;
+        const telegraphHeight = enemy.telegraphType === "ambushWindup" ? 94 : 68;
+        drawOptionalSprite("enemy-effects", enemy.x, enemy.y, { frame: telegraphFrame, width: telegraphWidth, height: telegraphHeight, anchorX: .5, anchorY: .5, rotation: telegraphAngle, alpha: .42 + progress * .24 });
+      }
       if (enemy.type === "boss" && loadedAssets.has("boss-fx")) {
         const reveal = 1 - progress;
         if (enemy.telegraphType === "bossWindup") {
@@ -1661,11 +1669,11 @@
     }
     if (enemy.type === "warden" || enemy.type === "boss") { ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2, 4); ctx.fillStyle = enemy.color; ctx.fillRect(enemy.x - enemy.radius, enemy.y - enemy.radius - 14, enemy.radius * 2 * (enemy.hp / enemy.maxHp), 4); }
   };
-  const drawDrop = (drop, time) => { const bob = Math.sin(time * 4 + drop.bob) * 4; ctx.save(); ctx.translate(drop.x, drop.y + bob); ctx.globalAlpha = clamp(drop.life / 2, .35, 1); const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 30); glow.addColorStop(0, `${drop.color}99`); glow.addColorStop(1, `${drop.color}00`); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = `${drop.color}66`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 12 + Math.sin(time * 3 + drop.phase) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = drop.color; ctx.rotate(time * 1.8 + drop.phase); ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(8, 0); ctx.lineTo(0, 10); ctx.lineTo(-8, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = "rgba(255,255,235,.86)"; ctx.beginPath(); ctx.arc(-2, -3, 2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
+  const drawDrop = (drop, time) => { const bob = Math.sin(time * 4 + drop.bob) * 4; ctx.save(); ctx.translate(drop.x, drop.y + bob); ctx.globalAlpha = clamp(drop.life / 2, .35, 1); const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 30); glow.addColorStop(0, `${drop.color}99`); glow.addColorStop(1, `${drop.color}00`); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill(); const dropFrame = drop.kind === "bark" ? 13 : drop.kind === "moon" ? 14 : drop.kind === "dust" || drop.kind === "sigil" ? 15 : 12; if (drawOptionalSprite("enemy-effects", 0, 0, { frame: dropFrame, width: 38, height: 38, anchorX: .5, anchorY: .5, alpha: .94 })) { ctx.restore(); return; } ctx.strokeStyle = `${drop.color}66`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 12 + Math.sin(time * 3 + drop.phase) * 2, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = drop.color; ctx.rotate(time * 1.8 + drop.phase); ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(8, 0); ctx.lineTo(0, 10); ctx.lineTo(-8, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = "rgba(255,255,235,.86)"; ctx.beginPath(); ctx.arc(-2, -3, 2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
   const drawProjectile = (projectile) => {
     ctx.save();
     const speed = Math.hypot(projectile.vx, projectile.vy) || 1; const angle = Math.atan2(projectile.vy, projectile.vx);
-    const projectileFrame = Math.floor(state.visualClock * 12) % 4; if (drawOptionalSprite(`projectile-${projectile.kind}`, projectile.x, projectile.y, { frame: projectileFrame, width: projectile.kind === "shockwave" ? 48 : 42, height: projectile.kind === "shockwave" ? 32 : 24, rotation: angle, anchorX: .5, anchorY: .5 })) { ctx.restore(); return; }
+    const projectileFrame = Math.floor(state.visualClock * 12) % 4; if (projectile.kind === "moonbolt" && drawOptionalSprite("enemy-effects", projectile.x, projectile.y, { frame: 7, width: 86, height: 30, rotation: angle, anchorX: .72, anchorY: .5, alpha: .95 })) { ctx.restore(); return; } if (drawOptionalSprite(`projectile-${projectile.kind}`, projectile.x, projectile.y, { frame: projectileFrame, width: projectile.kind === "shockwave" ? 48 : 42, height: projectile.kind === "shockwave" ? 32 : 24, rotation: angle, anchorX: .5, anchorY: .5 })) { ctx.restore(); return; }
     const trail = projectile.kind === "shockwave" ? (projectile.bossAttack ? 42 : 31) : projectile.kind === "root-lance" ? (projectile.bossAttack ? 48 : 38) : projectile.kind === "rosebolt" ? (projectile.bossAttack ? 36 : 28) : 22;
     ctx.globalAlpha = projectile.bossAttack ? .28 : projectile.kind === "shockwave" ? .22 : .18; ctx.strokeStyle = projectile.color; ctx.lineWidth = projectile.bossAttack ? 5 : projectile.kind === "shockwave" ? 5 : 4; ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(projectile.x, projectile.y); ctx.lineTo(projectile.x - projectile.vx / speed * trail, projectile.y - projectile.vy / speed * trail); ctx.stroke();

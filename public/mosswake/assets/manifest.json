@@ -1,5 +1,5 @@
 {
-  "version": 16,
+  "version": 17,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -76,6 +76,18 @@
       "displayHeight": 48,
       "anchorX": 0.5,
       "anchorY": 0.86
+    },
+    "enemy-effects": {
+      "src": "enemies/enemy-effects-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 12,
+      "displayWidth": 96,
+      "displayHeight": 72,
+      "anchorX": 0.5,
+      "anchorY": 0.5
     },
     "boss": {
       "src": "bosses/hollow-guardian-sheet-generated-v1.png",
