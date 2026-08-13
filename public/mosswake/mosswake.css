@@ -52,6 +52,15 @@ button, a, summary { -webkit-tap-highlight-color:transparent; }
 .heart:not(.empty) { animation:heart-glimmer 3.4s ease-in-out infinite; }
 .heart:nth-child(2n) { animation-delay:-1.3s; }
 .heart.empty { border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.1); }
+.heart.painted { width:23px; height:23px; border:0; border-radius:0; transform:none; background-color:transparent; background-image:url('/mosswake/assets/ui-icons-generated-v1.png'); background-size:400% 400%; background-position:0 0; filter:drop-shadow(0 3px 4px rgba(0,0,0,.2)); }
+.heart.painted::before,.heart.painted::after { display:none; }
+.heart.painted.empty { background-position:33.3333% 0; opacity:.62; box-shadow:none; }
+.resource-label { display:flex; align-items:center; gap:4px; min-width:0; }
+.hud-icon { display:inline-block; flex:0 0 18px; width:18px; height:18px; background-image:url('/mosswake/assets/ui-icons-generated-v1.png'); background-size:400% 400%; background-position:0 0; background-repeat:no-repeat; filter:drop-shadow(0 2px 3px rgba(0,0,0,.2)); }
+.hud-icon.icon-heartseed { background-position:100% 0; }
+.hud-icon.icon-key { background-position:66.6667% 0; }
+.hud-icon.icon-drop { background-position:0 100%; }
+.hud-icon.icon-discovery { background-position:100% 33.3333%; }
 .loot-row { display:none; }
 .ability-status { box-shadow:inset 0 1px rgba(255,255,255,.04); transition:border-color .2s ease,background .2s ease,box-shadow .2s ease; }
 .ability-status.ready { box-shadow:0 0 22px rgba(255,215,123,.1),inset 0 1px rgba(255,255,255,.06); }

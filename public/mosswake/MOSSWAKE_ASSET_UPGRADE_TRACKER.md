@@ -17,6 +17,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Mossling | `assets/enemies/mossling-sheet-generated-v1.png` | Idle, skitter, pounce, hit recoil | Integrated / tested | Keep as the small-creature reference; refine only for a focused readability defect |
 | Distinct enemy family | `assets/enemies/enemy-family-generated-v1.png` | Thornback, Moon Wisp, Ambush Moth, Rootling/Root Warden; idle, telegraph, attack, hit | Integrated / tested | Keep the family atlas as the roster reference; add specialized death/telegraph FX only if a later encounter review needs them |
 | Enemy combat effects | `assets/enemies/enemy-effects-generated-v1.png` | Charge, ranged, ambush, impact, and four drop feedback states | Integrated / tested | Keep the atlas as the small-enemy feedback reference; refine only if a focused encounter review finds overlap or low contrast |
+| HUD and pickup icons | `assets/ui-icons-generated-v1.png` | Hearts, key, Heartseed, Rootlight, discovery, map, drop, sword, dash, lock, and star states | Integrated / tested | Keep the icon atlas as the UI reference; refine only if a later readability pass finds a specific small-size issue |
 | Hollow Guardian | `assets/bosses/hollow-guardian-sheet-generated-v1.png` | Phase I idle/attack, phase II transformed attack, phase-break, stagger, defeat | Integrated / tested | Keep the generated sheet as the boss reference; only refine if a focused arena review finds a real readability issue |
 
 ## High-value environment and effects queue
@@ -49,6 +50,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Generated `assets/enemies/enemy-effects-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas. Rows cover Thornback charge telegraph, Moon Wisp ranged telegraph/projectile cue, Ambush Moth reveal/pounce, and compact impact/drop feedback (bark, moon spark, moth dust, root sigil). The keyed RGB source remains beside it for future matte refinement.
 - Added the `enemy-effects` manifest slot. Non-boss charge, ranged, and ambush telegraphs now use the painted states; moonbolt projectiles and enemy drops use the matching effect frames. Procedural lines, particles, and projectile art remain the safe fallback, while Guardian boss FX remain on their dedicated atlas.
 - Preserved enemy AI, attack geometry, telegraph durations, hitboxes, collision, drops, and pickup logic. Bumped manifest/page cache keys to `manifest.json?v=17` and `mosswake.js?v=42`.
+- Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks are required after integration; public edge should be verified after cache rollover.
+
+### 2026-08-13 — HUD and pickup icon atlas
+
+- Generated `assets/ui-icons-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas with painted full/empty hearts, key, Heartseed shard, Moonwake Lantern, Rootlight pulse, discovery lens/map marker, enemy drops, sword, dash, lock, and discovery star icons. The generated RGBA source is retained as `ui-icons-generated-v1-keyed.png` for future matte refinement.
+- Added the `ui-icons` manifest slot. HUD hearts now use the painted full/empty states when the atlas is loaded; Heartseed, key, wild-drop, and discovery labels now carry matching painted icon treatments in the DOM. Procedural CSS hearts remain the safe fallback.
+- Preserved health values, save state, resource counts, responsive layout, and accessibility labels. Bumped manifest/page cache keys to `manifest.json?v=18` and `mosswake.js?v=43`.
 - Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks are required after integration; public edge should be verified after cache rollover.
 
 ### 2026-08-13 — Named NPC family and portraits

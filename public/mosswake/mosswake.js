@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=17";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=18";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1852,7 +1852,7 @@
     if (ui.discovery) ui.discovery.textContent = `${state.discoveries || 0}/${state.discoveryTotal || 3}`;
     if (ui.ability) { ui.ability.textContent = state.rootlightLantern ? (player.rootlightCooldown > 0 ? `Moonwake Lantern · ${player.rootlightCooldown.toFixed(1)}s` : "Moonwake Lantern · L ready") : "Rootlight dormant"; ui.ability.classList.toggle("ready", Boolean(state.rootlightLantern && player.rootlightCooldown <= 0)); }
     ui.save.textContent = state.saveError ? "Save unavailable" : state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : state.mode === "victory" ? "Complete" : state.mode === "dead" ? "Run ended" : "Paused";
-    const healthKey = `${player.hp}/${player.maxHp}`; const healthChanged = healthKey !== previousHealthKey; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty"); ui.hearts.appendChild(heart); } if (healthChanged) { ui.hearts.classList.remove("health-pop"); void ui.hearts.offsetWidth; ui.hearts.classList.add("health-pop"); window.setTimeout(() => ui.hearts.classList.remove("health-pop"), 300); previousHealthKey = healthKey; }
+    const healthKey = `${player.hp}/${player.maxHp}`; const healthChanged = healthKey !== previousHealthKey; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty") + (loadedAssets.has("ui-icons") ? " painted" : ""); ui.hearts.appendChild(heart); } if (healthChanged) { ui.hearts.classList.remove("health-pop"); void ui.hearts.offsetWidth; ui.hearts.classList.add("health-pop"); window.setTimeout(() => ui.hearts.classList.remove("health-pop"), 300); previousHealthKey = healthKey; }
     ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective();
   };
   const updateDialogueSpeedLabel = () => { if (!ui.dialogueSpeed) return; const speed = state.dialogueSpeed || 52; ui.dialogueSpeed.textContent = `Text: ${speed >= 100 ? "fast" : speed <= 36 ? "slow" : "normal"}`; };
