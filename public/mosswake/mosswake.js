@@ -1783,13 +1783,13 @@
     if (projectile.bossAttack) { ctx.globalAlpha = .62; ctx.strokeStyle = projectile.phase === 2 ? "#ffd4dc" : "#fff5d0"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-15, -7); ctx.lineTo(-22, 0); ctx.lineTo(-15, 7); ctx.moveTo(15, -7); ctx.lineTo(22, 0); ctx.lineTo(15, 7); ctx.stroke(); }
     ctx.restore();
   };
-  const drawAttackTrail = () => {
+  const drawAttackTrail = (presentedX = player.x, presentedY = player.y) => {
     if (player.attack <= 0) return;
     const linearProgress = clamp(player.attackElapsed / .34, 0, 1); const progress = 1 - Math.pow(1 - linearProgress, 2.2); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
     // The first atlas row is a deliberate four-beat sweep: glint, arc, contact, fade.
     // Rotation keeps the same painted effect readable in all eight movement directions.
-    const slashFrame = Math.min(3, Math.floor(linearProgress * 4)); if (drawOptionalSprite("fx-slash", player.x, player.y, { frame: slashFrame, width: 96, height: 64, rotation: angle, anchorX: .22, anchorY: .5, alpha: clamp(player.attack / .12, 0, 1) })) return;
-    ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.lineCap = "round";
+    const slashFrame = Math.min(3, Math.floor(linearProgress * 4)); if (drawOptionalSprite("fx-slash", presentedX, presentedY, { frame: slashFrame, width: 96, height: 64, rotation: angle, anchorX: .22, anchorY: .5, alpha: clamp(player.attack / .12, 0, 1) })) return;
+    ctx.save(); ctx.translate(presentedX, presentedY); ctx.rotate(angle); ctx.lineCap = "round";
     const anticipation = clamp(linearProgress / .2, 0, 1); const start = -1.02 + progress * .22; const end = -.92 + progress * 1.92; const fade = clamp((player.attack < .12 ? player.attack / .12 : 1), 0, 1);
     if (linearProgress < .3) { ctx.globalAlpha = .18 + anticipation * .24; ctx.strokeStyle = "rgba(255,231,164,.72)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(20, 0, 31, -1.55, -1.05); ctx.stroke(); }
     ctx.globalAlpha = .16 + fade * .42; ctx.strokeStyle = "#fff5d2"; ctx.lineWidth = 15; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
@@ -1872,7 +1872,10 @@
       const customPulse = drawOptionalSprite("fx-impact", player.x, player.y, { frame: pulseFrame, width: 88 + pulse * 82, height: 88 + pulse * 82, anchorX: .5, anchorY: .5, alpha: clamp(player.rootlightPulse * 2.1, 0, 1) });
       if (!customPulse) { ctx.save(); ctx.globalAlpha = .25 + player.rootlightPulse * .7; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + pulse * 80, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
     }
-    drawAttackTrail();
+    // Keep the sword trail on the same presented coordinate as the painted
+    // attack sprite; otherwise the authored blade and its FX visibly separate
+    // during the grounded +8px player presentation offset.
+    drawAttackTrail(player.x, player.y + bob + 8);
   };
   const drawAmbientOverlay = (time) => {
     const dungeon = state.area === "dungeon"; const bossRoom = dungeon && `${state.roomX}-${state.roomY}` === "2-1"; const warm = dungeon ? (bossRoom && state.bossPhase === 2 ? "rgba(187,70,104,.11)" : "rgba(86,163,128,.06)") : "rgba(80,177,116,.05)";

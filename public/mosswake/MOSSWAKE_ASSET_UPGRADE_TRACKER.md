@@ -67,6 +67,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Preserved all actor artwork, anchors, shadows, collision, AI, interaction ranges, combat timing, and fallback renderers. No new artwork was needed.
 - `node --check`, `git diff --check`, local title/start/movement/attack smoke, second visual sweep, and console warning/error checks pass. Live public title/start/movement/attack smoke after deployment also passes with no console warnings or errors.
 
+## 2026-08-13 — Repeating visual director pass: player attack FX grounding
+
+- The dungeon combat sweep found a subtle but high-impact presentation mismatch: the painted Warden attack sprite is rendered on its grounded `+8px` presentation coordinate, while the sword-trail atlas was still centered on the raw player coordinate. During a swing the blade and trail could separate vertically.
+- Routed the painted `fx-slash` atlas and procedural sword fallback through the same presented player coordinate (including idle/movement bob) used by the attack sprite. Hitboxes, attack direction, cooldown, movement, and timing are unchanged.
+- No new artwork was needed; the existing Lantern-blade FX atlas remains the approved reference and stays replaceable through `assets/manifest.json`.
+- `node --check`, `git diff --check`, local start/attack visual smoke, and console warning/error checks pass. Public deployment verification is pending.
+
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
 - Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.
