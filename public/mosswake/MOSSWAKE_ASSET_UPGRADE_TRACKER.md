@@ -56,7 +56,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 - Generated `assets/ui-icons-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas with painted full/empty hearts, key, Heartseed shard, Moonwake Lantern, Rootlight pulse, discovery lens/map marker, enemy drops, sword, dash, lock, and discovery star icons. The generated RGBA source is retained as `ui-icons-generated-v1-keyed.png` for future matte refinement.
 - Added the `ui-icons` manifest slot. HUD hearts now use the painted full/empty states when the atlas is loaded; Heartseed, key, wild-drop, and discovery labels now carry matching painted icon treatments in the DOM. Procedural CSS hearts remain the safe fallback.
-- Preserved health values, save state, resource counts, responsive layout, and accessibility labels. Bumped manifest/page cache keys to `manifest.json?v=18` and `mosswake.js?v=43`.
+- Preserved health values, save state, resource counts, responsive layout, and accessibility labels. Bumped manifest/page/style cache keys to `manifest.json?v=18`, `mosswake.js?v=43`, and `mosswake.css?v=12`.
 - Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks are required after integration; public edge should be verified after cache rollover.
 
 ### 2026-08-13 — Named NPC family and portraits
