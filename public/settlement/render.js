@@ -29,8 +29,8 @@ let activeSceneLighting = {
 // canvas shapes below without touching simulation state.
 const art = {
   villagers: { src: "./assets/villagers/villager-atlas-v2.png", image: null },
-  villagerMotion: { src: "./assets/villagers/villager-motion-atlas-v1.png", image: null, columns: 4, rows: 4 },
-  villagerActions: { src: "./assets/villagers/villager-action-atlas-v1.png", image: null, columns: 4, rows: 4 },
+  villagerMotion: { src: "./assets/villagers/villager-motion-atlas-v2.png", image: null, columns: 4, rows: 4 },
+  villagerActions: { src: "./assets/villagers/villager-action-atlas-v2.png", image: null, columns: 4, rows: 4 },
   buildings: { src: "./assets/buildings/building-atlas-v3.png", image: null },
   animals: { src: "./assets/animals/animal-atlas-v2.png", image: null },
   world: { src: "./assets/terrain/world-detail-atlas-v3.png", image: null },
@@ -49,15 +49,22 @@ const atlasSprite = (ctx, slot, column, row, x, y, width, height, options = {}) 
   if (!slot.image?.naturalWidth) return false;
   const columns = Number(options.columns || slot.columns || 4);
   const rows = Number(options.rows || slot.rows || 3);
-  const sourceWidth = slot.image.naturalWidth / columns;
-  const sourceHeight = slot.image.naturalHeight / rows;
+  // Generated sheets are sometimes not evenly divisible by their grid size.
+  // Integer boundaries prevent Canvas from sampling a neighboring frame's
+  // antialiased pixels, which otherwise shows up as stray shapes above heads.
+  const sourceX = Math.round(column * slot.image.naturalWidth / columns);
+  const sourceY = Math.round(row * slot.image.naturalHeight / rows);
+  const sourceRight = Math.round((column + 1) * slot.image.naturalWidth / columns);
+  const sourceBottom = Math.round((row + 1) * slot.image.naturalHeight / rows);
+  const sourceWidth = sourceRight - sourceX;
+  const sourceHeight = sourceBottom - sourceY;
   const flip = Boolean(options.flip);
   ctx.save();
   ctx.globalAlpha = options.alpha ?? 1;
   ctx.translate(x + width / 2, y + height / 2);
   if (options.rotate) ctx.rotate(Number(options.rotate) * Math.PI / 180);
   ctx.scale(flip ? -1 : 1, 1);
-  ctx.drawImage(slot.image, column * sourceWidth, row * sourceHeight, sourceWidth, sourceHeight, -width / 2, -height / 2, width, height);
+  ctx.drawImage(slot.image, sourceX, sourceY, sourceWidth, sourceHeight, -width / 2, -height / 2, width, height);
   ctx.restore();
   return true;
 };
