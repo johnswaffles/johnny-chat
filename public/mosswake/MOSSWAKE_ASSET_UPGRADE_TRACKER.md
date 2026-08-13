@@ -60,6 +60,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - No new artwork was needed: the existing Mosswake telegraph sheets are visually strong and remain modular/replaceable through the manifest. Combat geometry, telegraph durations, hitboxes, AI, cooldowns, and fallback drawing are unchanged.
 - `node --check public/mosswake/mosswake.js`, `git diff --check`, local startup, asset-load, movement/attack smoke, and console warning/error checks pass. Live public smoke at `/mosswake/` after deployment also passes with no console warnings or errors.
 
+## 2026-08-13 — Repeating visual director pass: shared actor depth ordering
+
+- The running visual sweep exposed a high-impact top-down layering weakness: the player was always painted after every enemy, and NPCs were painted in a separate fixed stage. Crossing actors could therefore read as pasted on top of one another even though their world-space Y positions were different.
+- Replaced the fixed actor order with one sorted depth pass for enemies, overworld NPCs, and the player. The existing foreground foliage pass still runs afterward so tall grass and front trees retain intentional occlusion.
+- Preserved all actor artwork, anchors, shadows, collision, AI, interaction ranges, combat timing, and fallback renderers. No new artwork was needed.
+- `node --check`, `git diff --check`, local title/start/movement/attack smoke, second visual sweep, and console warning/error checks pass. Public deployment verification is pending.
+
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
 - Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.

@@ -1234,7 +1234,7 @@
     environment.rocks.forEach(drawRock); environment.logs.forEach(drawLog); drawExplorationClues(time); drawHiddenGrovePreview(time); drawRootlightOverworld(time);
     environment.grassPatches.filter((patch) => patch.y <= 560).forEach((patch) => drawGrassPatch(patch, time)); environment.grasses.forEach((grass) => drawGrassTuft(grass, time)); environment.flowers.forEach((flower) => drawFlower(flower, time)); drawMeadowClusters(time);
     if (!state.chestOpened) drawChest(1240, 745, false); else drawChest(1240, 745, true);
-    drawCampfire(npcs[1].x - 24, npcs[1].y + 18, time); drawMapTable(npcs[3].x + 24, npcs[3].y + 18, time); drawPondBasket(npcs[2].x - 14, npcs[2].y + 14, time); npcs.forEach((npc) => drawNpc(npc, time)); drawEntrance(1312, 210, time);
+    drawCampfire(npcs[1].x - 24, npcs[1].y + 18, time); drawMapTable(npcs[3].x + 24, npcs[3].y + 18, time); drawPondBasket(npcs[2].x - 14, npcs[2].y + 14, time); drawEntrance(1312, 210, time);
     environment.signs.filter((sign) => sign.y >= 600).forEach(drawSign);
     environment.birds.forEach((bird) => drawBird(bird, time)); environment.butterflies.forEach((butterfly) => drawButterfly(butterfly, time)); environment.fireflies.forEach((firefly) => drawFirefly(firefly, time)); drawPollen(time);
     breakables().forEach((object) => drawBreakable(object, time)); drawOutdoorLighting(time);
@@ -1916,8 +1916,18 @@
     ctx.clearRect(0, 0, WIDTH, HEIGHT); ctx.save(); ctx.translate(-camera.x + camera.shakeX, -camera.y + camera.shakeY);
     if (state.area === "overworld") drawOverworld(time); else drawDungeon(time);
     leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { const scale = .62 + hash01(Math.floor(leaf.x), Math.floor(leaf.y)) * .5; ctx.save(); ctx.translate(leaf.x, leaf.y); ctx.rotate(Math.sin(leaf.phase + leaf.y * .02) * .5 + Math.sin(state.visualClock * .8 + leaf.phase) * .12); ctx.scale(scale, .68 + scale * .18); ctx.globalAlpha = .3 + hash01(Math.floor(leaf.x), Math.floor(leaf.y)) * .24; ctx.fillStyle = leaf.phase % 2 > 1 ? "#b6df8b" : "#d3edac"; ctx.beginPath(); ctx.moveTo(0, -5); ctx.quadraticCurveTo(5, -1, 1, 6); ctx.quadraticCurveTo(-4, 1, 0, -5); ctx.fill(); ctx.restore(); } });
-    const entities = [...enemies].sort((a, b) => a.y - b.y); entities.forEach((enemy) => drawEnemy(enemy, time)); drops.forEach((drop) => drawDrop(drop, time)); projectiles.forEach((projectile) => drawProjectile(projectile));
-    drawPlayer(time); if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); drawInteractionHint(time); ctx.restore();
+    // Use one shared top-down depth pass for living actors. Previously the player
+    // was always painted after every enemy, which made an enemy read as floating
+    // over or behind the player whenever their world-space Y positions crossed.
+    // Keep gameplay/collision order untouched; this only fixes visual layering.
+    const actorEntities = [
+      ...enemies.map((enemy) => ({ kind: "enemy", actor: enemy })),
+      ...(state.area === "overworld" ? npcs.map((npc) => ({ kind: "npc", actor: npc })) : []),
+      { kind: "player", actor: player }
+    ].sort((a, b) => a.actor.y - b.actor.y);
+    actorEntities.forEach((entry) => { if (entry.kind === "player") drawPlayer(time); else if (entry.kind === "npc") drawNpc(entry.actor, time); else drawEnemy(entry.actor, time); });
+    drops.forEach((drop) => drawDrop(drop, time)); projectiles.forEach((projectile) => drawProjectile(projectile));
+    if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); drawInteractionHint(time); ctx.restore();
     drawAmbientOverlay(time);
     drawBossHud(time);
     if (state.impactFlash > 0) { ctx.fillStyle = `rgba(255,246,210,${state.impactFlash * 1.8})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); }
