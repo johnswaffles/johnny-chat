@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -48,6 +48,18 @@
       "displayHeight": 34,
       "anchorX": 0.5,
       "anchorY": 0.84
+    },
+    "boss": {
+      "src": "bosses/hollow-guardian-sheet-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 8,
+      "displayWidth": 116,
+      "displayHeight": 116,
+      "anchorX": 0.5,
+      "anchorY": 0.9
     }
   }
 }

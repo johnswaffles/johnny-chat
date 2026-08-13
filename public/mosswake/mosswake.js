@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=3";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=4";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1506,6 +1506,10 @@
   const drawEnemy = (enemy, time) => {
     if (enemy.dead) {
       const progress = clamp(1 - enemy.deathTimer / Math.max(.01, enemy.deathMax || .6), 0, 1); const fade = 1 - progress; drawShadow(enemy.x, enemy.y + 8, enemy.radius * (1.2 - progress * .4), enemy.radius * .28, .28 * fade);
+      if (enemy.type === "boss" && loadedAssets.has("boss")) {
+        drawOptionalSprite("boss", enemy.x, enemy.y - progress * 16, { frame: progress < .28 ? 14 : 15, width: 126 - progress * 18, height: 126 - progress * 18, alpha: fade, rotation: progress * .55 });
+        return;
+      }
       ctx.save(); ctx.globalAlpha = fade; ctx.translate(enemy.x, enemy.y - progress * 16); ctx.rotate(progress * 1.4); ctx.scale(.82 + progress * .8, .82 + progress * .8); ctx.strokeStyle = enemy.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, enemy.radius * .75, 0, Math.PI * 2); ctx.stroke(); for (let i = 0; i < 6; i += 1) { const angle = i * Math.PI / 3; const length = enemy.radius * (.7 + progress * .8); ctx.fillStyle = i % 2 ? enemy.color : "#fff2c4"; ctx.beginPath(); ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5); ctx.lineTo(Math.cos(angle + .16) * length, Math.sin(angle + .16) * length); ctx.lineTo(Math.cos(angle - .16) * length, Math.sin(angle - .16) * length); ctx.closePath(); ctx.fill(); } ctx.restore(); return;
     }
     if (enemy.hidden) { ctx.save(); ctx.globalAlpha = .16 + Math.sin(time * 2 + enemy.orbit) * .04; drawShadow(enemy.x, enemy.y + 9, 15, 5, .35); ctx.fillStyle = "#8e76a5"; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y, 8, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
@@ -1514,7 +1518,10 @@
     const customEnemyKey = enemy.type === "boss" ? "boss" : `enemy-${enemy.type}`;
     const customEnemyBase = enemy.type === "boss" ? (enemy.phase === 2 ? 32 : 0) : enemy.type === "warden" ? 0 : enemy.type === "thornback" ? 8 : enemy.type === "moth" ? 16 : enemy.type === "wisp" ? 24 : 32;
     const mosslingFrame = enemy.hitStun > 0 ? 12 + Math.floor(time * 6) % 2 : (enemy.state === "chargeWindup" || enemy.state === "pounce" || enemy.state === "charging") ? 8 + Math.floor(time * 8) % 4 : moving ? 4 + Math.floor(enemy.walk * 1.2) % 4 : Math.floor(time * 4) % 4;
-    const customEnemyFrame = enemy.type === "mossling" ? mosslingFrame : customEnemyBase + Math.floor((moving ? enemy.walk * 1.2 : time * 4) % 8);
+    const bossFrame = enemy.phase === 2
+      ? (enemy.dead ? 15 : enemy.phaseExposed > 0 ? 13 : enemy.state === "phaseShift" ? 12 : enemy.state === "bossWindup" || enemy.state === "bossSlamWindup" || enemy.state === "bossRainWindup" || enemy.state === "bossDashWindup" || enemy.state === "bossDashing" ? 8 + Math.floor(time * 7) % 4 : 8 + Math.floor(time * 3) % 4)
+      : (enemy.dead ? 15 : enemy.state === "bossWindup" || enemy.state === "bossSlamWindup" || enemy.state === "bossRainWindup" || enemy.state === "bossDashWindup" || enemy.state === "bossDashing" ? 4 + Math.floor(time * 7) % 4 : Math.floor(time * 3) % 4);
+    const customEnemyFrame = enemy.type === "boss" ? bossFrame : enemy.type === "mossling" ? mosslingFrame : customEnemyBase + Math.floor((moving ? enemy.walk * 1.2 : time * 4) % 8);
     const customEnemy = drawOptionalSprite(customEnemyKey, enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil, { frame: customEnemyFrame, width: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : enemy.radius * 2.45, height: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : enemy.radius * 2.45, flipX: facing < 0, alpha: enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1 });
     ctx.save(); ctx.translate(enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil); ctx.scale(facing, 1); ctx.globalAlpha = enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1; ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2;
     const color = enemy.color; const squash = enemy.hitStun > 0 ? .86 : enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "bossDashing" ? 1.12 : 1; const stretch = enemy.hitStun > 0 ? 1.1 : enemy.state === "chargeWindup" || enemy.state === "bossDashWindup" ? .86 : 1;
