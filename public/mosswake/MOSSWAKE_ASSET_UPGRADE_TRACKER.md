@@ -39,6 +39,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Kept the existing boss sheet, telegraphs, phase logic, collision, and arena composition unchanged. This prevents the Guardian from appearing to hop or float when transparent margins change between attacks and phase transitions.
 - `node --check`, `git diff --check`, local live smoke, public live smoke, and console checks passed. Commit `2d5a2a2` is pushed to `main`.
 
+## 2026-08-13 — Repeating visual director pass: enemy family grounding repair
+
+- Re-audited the running overworld, the prior Guardian handoff, the enemy manifest, and the strongest approved enemy sheets. The next highest-impact weakness was a shared shadow/anchor mismatch across painted enemies rather than missing artwork.
+- Added measured per-frame `mosslingBottoms` for the 16-cell Mossling sheet and moved all painted enemy contact shadows to a shared world-space ground line. Thornback, Moon Wisp, Ambush Moth, Root Warden, Mossling, and Guardian death states now use their actual alpha bottoms.
+- Mossling deaths now use the authored recoil/dissolve cells from `enemy-mossling` instead of falling through to the generic procedural death burst. Existing combat timing, hitboxes, AI, drops, telegraphs, and fallback rendering remain unchanged.
+- Local syntax, diff, and browser smoke checks passed with no console errors or warnings. Public deployment verification is the final gate for this iteration.
+
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
 - Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.

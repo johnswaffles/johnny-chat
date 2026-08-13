@@ -1617,8 +1617,16 @@
   const drawReward = (x, y, time) => { const bob = Math.sin(time * 2.7) * 5; const glow = ctx.createRadialGradient(x, y + bob, 2, x, y + bob, 104); glow.addColorStop(0, "rgba(255,225,145,.58)"); glow.addColorStop(.45, "rgba(255,215,123,.18)"); glow.addColorStop(1, "rgba(255,215,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y + bob, 104, 0, Math.PI * 2); ctx.fill(); if (drawOptionalSprite("dungeon-landmarks", x, y + bob, { frame: 12, width: 112, height: 132, anchorY: .88, alpha: .98 })) return; ctx.save(); ctx.translate(x, y + bob); ctx.rotate(time * .8); ctx.strokeStyle = "rgba(255,245,193,.58)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 28 + Math.sin(time * 2) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 0); ctx.lineTo(0, 20); ctx.lineTo(-15, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#fff8c7"; ctx.beginPath(); ctx.arc(-5, -6, 6, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
 
   const drawEnemy = (enemy, time) => {
+    // All generated enemy cells are anchored at their measured visible base.
+    // Keep the contact shadow on that same world-space plane instead of using the
+    // older radius-based offset that belonged to the procedural silhouettes.
+    const enemyBottoms = [0.942, 0.962, 1, 0.952, 0.856, 0.824, 0.843, 0.856, 0.782, 0.779, 0.843, 0.792, 0.763, 0.75, 0.804, 0.753];
+    const mosslingBottoms = [0.997, 0.997, 0.997, 0.997, 0.942, 0.926, 0.955, 0.946, 0.84, 0.785, 0.856, 0.913, 0.712, 0.712, 0.724, 0.724];
+    const bossBottoms = [0.92, 0.929, 0.939, 0.929, 0.872, 0.865, 0.862, 0.885, 0.859, 0.856, 0.856, 0.853, 0.827, 0.83, 0.856, 0.856];
+    const paintedEnemy = ["boss", "mossling", "thornback", "wisp", "moth", "warden"].includes(enemy.type);
+    const groundedShadowY = paintedEnemy ? enemy.y - 1 : enemy.y + enemy.radius * .44;
     if (enemy.dead) {
-      const progress = clamp(1 - enemy.deathTimer / Math.max(.01, enemy.deathMax || .6), 0, 1); const fade = 1 - progress; drawShadow(enemy.x, enemy.y + 8, enemy.radius * (1.2 - progress * .4), enemy.radius * .28, .28 * fade);
+      const progress = clamp(1 - enemy.deathTimer / Math.max(.01, enemy.deathMax || .6), 0, 1); const fade = 1 - progress; drawShadow(enemy.x, groundedShadowY, enemy.radius * (1.2 - progress * .4), enemy.radius * .28, .28 * fade);
       if (enemy.type === "boss" && loadedAssets.has("boss")) {
         // Guardian collapse cells have intentionally different silhouettes and
         // transparent margins. Keep their visible rubble line on the same ground
@@ -1631,14 +1639,20 @@
       if (["thornback", "wisp", "moth", "warden"].includes(enemy.type) && loadedAssets.has("enemy-family")) {
         const familyBase = enemy.type === "thornback" ? 0 : enemy.type === "wisp" ? 4 : enemy.type === "moth" ? 8 : 12;
         const familySize = enemy.type === "warden" ? 54 : enemy.type === "moth" ? 38 : enemy.type === "thornback" ? 52 : 42;
-        drawOptionalSprite("enemy-family", enemy.x, enemy.y - progress * 10, { frame: familyBase + 3, width: familySize * (1 - progress * .18), height: familySize * (1 - progress * .18), alpha: fade, rotation: progress * .55 });
+        const familyDeathFrame = familyBase + 3;
+        drawOptionalSprite("enemy-family", enemy.x, enemy.y - progress * 10, { frame: familyDeathFrame, width: familySize * (1 - progress * .18), height: familySize * (1 - progress * .18), anchorY: enemyBottoms[familyDeathFrame], alpha: fade, rotation: progress * .55 });
+        return;
+      }
+      if (enemy.type === "mossling" && loadedAssets.has("enemy-mossling")) {
+        const mosslingDeathFrame = progress < .32 ? 12 : 13;
+        drawOptionalSprite("enemy-mossling", enemy.x, enemy.y - progress * 10, { frame: mosslingDeathFrame, width: 34 * (1 - progress * .18), height: 34 * (1 - progress * .18), anchorY: mosslingBottoms[mosslingDeathFrame], alpha: fade, rotation: progress * .55 });
         return;
       }
       ctx.save(); ctx.globalAlpha = fade; ctx.translate(enemy.x, enemy.y - progress * 16); ctx.rotate(progress * 1.4); ctx.scale(.82 + progress * .8, .82 + progress * .8); ctx.strokeStyle = enemy.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, enemy.radius * .75, 0, Math.PI * 2); ctx.stroke(); for (let i = 0; i < 6; i += 1) { const angle = i * Math.PI / 3; const length = enemy.radius * (.7 + progress * .8); ctx.fillStyle = i % 2 ? enemy.color : "#fff2c4"; ctx.beginPath(); ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5); ctx.lineTo(Math.cos(angle + .16) * length, Math.sin(angle + .16) * length); ctx.lineTo(Math.cos(angle - .16) * length, Math.sin(angle - .16) * length); ctx.closePath(); ctx.fill(); } ctx.restore(); return;
     }
     if (enemy.hidden) { ctx.save(); ctx.globalAlpha = .16 + Math.sin(time * 2 + enemy.orbit) * .04; drawShadow(enemy.x, enemy.y + 9, 15, 5, .35); ctx.fillStyle = "#8e76a5"; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y, 8, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
     const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 1.5 : 0; const moving = enemy.motionSpeed > 5; const bob = moving ? Math.sin(enemy.walk) * (enemy.type === "moth" ? 1.05 : .55) : Math.sin(enemy.animTime * 1.15) * .2; const windup = enemy.telegraph > 0 ? clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1) : 0; const facing = enemy.facingX < -.15 ? -1 : 1;
-    const shadowScale = enemy.type === "boss" ? (enemy.phase === 2 ? 1.5 : 1.35) : 1; drawShadow(enemy.x, enemy.y + enemy.radius * .44, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92) * shadowScale, enemy.radius * (moving ? .34 : .3) * shadowScale, enemy.type === "boss" ? .44 : .36);
+    const shadowScale = enemy.type === "boss" ? (enemy.phase === 2 ? 1.5 : 1.35) : 1; drawShadow(enemy.x, groundedShadowY, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92) * shadowScale, enemy.radius * (moving ? .34 : .3) * shadowScale, enemy.type === "boss" ? .44 : .36);
     const familyEnemy = ["thornback", "wisp", "moth", "warden"].includes(enemy.type);
     const customEnemyKey = enemy.type === "boss" ? "boss" : familyEnemy ? "enemy-family" : `enemy-${enemy.type}`;
     const customEnemyBase = enemy.type === "boss" ? (enemy.phase === 2 ? 32 : 0) : enemy.type === "thornback" ? 0 : enemy.type === "wisp" ? 4 : enemy.type === "moth" ? 8 : enemy.type === "warden" ? 12 : 0;
@@ -1649,13 +1663,8 @@
     const familyState = enemy.hitStun > 0 ? 3 : (enemy.state === "chargeWindup" || enemy.state === "rangedWindup" || enemy.state === "ambushWindup" || enemy.state === "meleeWindup") ? 1 : (enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "ranged" || enemy.state === "attack") ? 2 : moving ? 1 + Math.floor(enemy.walk * 1.2) % 2 : 0;
     const customEnemyFrame = enemy.type === "boss" ? bossFrame : enemy.type === "mossling" ? mosslingFrame : familyEnemy ? customEnemyBase + familyState : 0;
     const familySize = enemy.type === "warden" ? 54 : enemy.type === "moth" ? 38 : enemy.type === "thornback" ? 52 : enemy.type === "wisp" ? 42 : enemy.radius * 2.45;
-    const enemyBottoms = [0.942, 0.962, 1, 0.952, 0.856, 0.824, 0.843, 0.856, 0.782, 0.779, 0.843, 0.792, 0.763, 0.75, 0.804, 0.753];
-    // Measured alpha bottoms for the Guardian’s four idle, attack, phase-two,
-    // and stagger frames. Without this, transparent padding made phase changes
-    // look like a vertical hop even though the enemy world position was stable.
-    const bossBottoms = [0.92, 0.929, 0.939, 0.929, 0.872, 0.865, 0.862, 0.885, 0.859, 0.856, 0.856, 0.853, 0.827, 0.83, 0.856, 0.856];
     const familyAnchor = familyEnemy ? enemyBottoms[customEnemyFrame] || .86 : undefined;
-    const customAnchor = enemy.type === "boss" ? bossBottoms[customEnemyFrame] || .86 : familyAnchor;
+    const customAnchor = enemy.type === "boss" ? bossBottoms[customEnemyFrame] || .86 : enemy.type === "mossling" ? mosslingBottoms[customEnemyFrame] || .84 : familyAnchor;
     const customEnemy = drawOptionalSprite(customEnemyKey, enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil, { frame: customEnemyFrame, width: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, height: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, anchorY: customAnchor, flipX: facing < 0, alpha: enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1 });
     ctx.save(); ctx.translate(enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil); ctx.scale(facing, 1); ctx.globalAlpha = enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1; ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2;
     const color = enemy.color; const squash = enemy.hitStun > 0 ? .86 : enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "bossDashing" ? 1.12 : 1; const stretch = enemy.hitStun > 0 ? 1.1 : enemy.state === "chargeWindup" || enemy.state === "bossDashWindup" ? .86 : 1;
