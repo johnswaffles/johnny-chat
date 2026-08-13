@@ -4094,6 +4094,16 @@ async function routeOversizedGodotAssetsForPages() {
       }
       await writeFile(htmlPath, patched, "utf8");
       await rm(packPath, { force: true });
+      // Godot exports sometimes leave timestamped/renamed package backups
+      // beside index.pck (for example, "index 2.pck"). They are not loaded by
+      // the game, but Pages still counts them toward its per-file limit. Once
+      // this route is remote-backed, keep every PCK out of the Pages artifact.
+      if (route.forceRemotePack) {
+        const entries = await readdir(targetDir, { withFileTypes: true });
+        await Promise.all(entries
+          .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".pck"))
+          .map((entry) => rm(path.join(targetDir, entry.name), { force: true })));
+      }
     } catch (err) {
       if (err?.code !== "ENOENT") throw err;
     }

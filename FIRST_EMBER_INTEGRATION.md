@@ -38,3 +38,14 @@ node --check server.js
 ```
 
 For a Pages-mode validation, copy the repository to a disposable directory, run `CF_PAGES=1 npm run build`, then assert that the generated HTML contains the Render `mainPack` URL and that the Pages output no longer contains `index.pck`.
+
+## Pages deployment
+
+Build the Pages artifact with the Render-backed package routing enabled before uploading it:
+
+```sh
+npm run build:pages
+npx wrangler pages deploy public --project-name johnny-chat
+```
+
+The Pages artifact keeps the First Ember HTML/WASM and removes every First Ember `.pck`, including renamed export backups. The generated Godot config points `mainPack` at the immutable package served by Render.
