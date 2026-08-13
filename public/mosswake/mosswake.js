@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=23";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=24";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1148,7 +1148,7 @@
     if (loadedAssets.has("outdoor-ground")) {
       ctx.save(); ctx.globalCompositeOperation = "multiply";
       [[190, 468, 4, -.12], [610, 485, 5, -.06], [970, 548, 6, .08], [1310, 492, 7, -.1]].forEach(([x, y, frame, angle]) => {
-        drawOptionalSprite("outdoor-ground", x, y, { frame, width: 82, height: 102, anchorX: .5, anchorY: .5, rotation: angle, alpha: .44 });
+        drawOptionalSprite("outdoor-ground", x, y, { frame, width: 58, height: 72, anchorX: .5, anchorY: .5, rotation: angle, alpha: .26 });
       });
       ctx.restore();
     }
@@ -1158,18 +1158,24 @@
     if (state.area === "overworld" && isMainRoadZone(item.x, item.y, 70)) return;
     const rustle = item.rustle || 0; const sway = Math.sin(time * 1.05 + item.phase) * .045 + rustle * Math.sin(time * 18 + item.phase) * .26;
     const foliageFrame = Number.isFinite(item.foliageFrame) ? item.foliageFrame % 4 : Math.abs(Math.floor((item.x * .17 + item.y * .07) % 4));
-    if (drawOptionalSprite("outdoor-ground", item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * 58, height: (item.s || 1) * 58, anchorX: .5, anchorY: .92, alpha: foreground ? .78 : .94, rotation: sway * .2 })) return;
+    // Keep the large ground-family cards reserved for intentional bushes and
+    // trail repairs. Grass uses the dedicated foliage atlas so it reads as a
+    // light, walkable edge detail rather than a repeated garden bed.
+    if (drawOptionalSprite("outdoor-foliage", item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * 52, height: (item.s || 1) * 52, anchorX: .5, anchorY: .92, alpha: foreground ? .72 : .86, rotation: sway * .2 })) return;
     ctx.save(); ctx.translate(item.x, item.y); ctx.rotate(sway); ctx.scale(item.s || 1, item.s || 1); ctx.globalAlpha = foreground ? .72 : .92;
     [[-8, "#5f9e5a"], [-3, "#77b866"], [3, "#4d8950"], [8, "#83c56d"]].forEach(([offset, color], i) => { ctx.strokeStyle = color; ctx.lineWidth = i % 2 ? 3 : 2; ctx.beginPath(); ctx.moveTo(offset, 8); ctx.quadraticCurveTo(offset - 2, -4, offset + (i - 1.5) * 3, -18 - (i % 2) * 4); ctx.stroke(); });
     ctx.restore();
   };
   const drawGrassPatch = (patch, time, foreground = false) => {
-    if (state.area === "overworld" && isMainRoadZone(patch.x, patch.y, Math.min(78, patch.radius * .9))) return;
+    // Clear a generous edge band around the authored road. The patch radius is
+    // visual, not collision geometry, so use the larger of the patch edge and
+    // a fixed 70px breathing room to keep the walkable ribbon legible.
+    if (state.area === "overworld" && isMainRoadZone(patch.x, patch.y, Math.max(104, patch.radius * 1.2))) return;
     const rustle = patch.rustle || 0; const density = patch.density + (patch.seed % 3); const scale = patch.scale || .7;
-    if (loadedAssets.has("outdoor-ground")) {
+    if (loadedAssets.has("outdoor-foliage")) {
       const frameBase = Number.isFinite(patch.foliageFrame) ? patch.foliageFrame % 4 : 0;
       const frame = frameBase + (rustle > .2 ? Math.floor(time * 3) % 2 : 0);
-      if (drawOptionalSprite("outdoor-ground", patch.x, patch.y + 8, { frame, width: 86 * scale, height: 86 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .64 : .8, rotation: Math.sin(time * .42 + patch.phase) * .006 })) return;
+      if (drawOptionalSprite("outdoor-foliage", patch.x, patch.y + 8, { frame, width: 52 * scale, height: 52 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .48 : .58, rotation: Math.sin(time * .42 + patch.phase) * .006 })) return;
     }
     ctx.save(); ctx.globalAlpha = foreground ? .48 : .62;
     for (let i = 0; i < density; i += 1) {
@@ -1871,7 +1877,7 @@
     const playerSpriteKey = player.visualState === "move" ? "player-run" : player.visualState === "attack" ? "player-attack" : "player";
     const directionalAttackFrame = attackDirection === "down" ? 0 : attackDirection === "up" ? 4 : attackDirection === "right" ? 8 : 12;
     const spriteFrame = player.visualState === "attack" ? directionalAttackFrame + Math.min(3, Math.floor((player.attackElapsed / .34) * 4)) : playerFrame;
-    const customPlayer = drawOptionalSprite(playerSpriteKey, player.x, player.y + bob + 8, { frame: spriteFrame, width: player.visualState === "dash" ? 58 : player.visualState === "attack" ? 58 : 52, height: player.visualState === "dash" ? 76 : player.visualState === "attack" ? 74 : 70, anchorY: player.visualState === "attack" ? .94 : playerAnchor, flipX: false, rotation: lean, alpha: flicker ? .48 : 1 });
+    const customPlayer = drawOptionalSprite(playerSpriteKey, player.x, player.y + bob + 8, { frame: spriteFrame, width: player.visualState === "dash" ? 58 : player.visualState === "attack" ? 58 : player.visualState === "move" ? 54 : 52, height: player.visualState === "dash" ? 76 : player.visualState === "attack" ? 74 : player.visualState === "move" ? 74 : 70, anchorY: player.visualState === "attack" ? .94 : playerAnchor, flipX: false, rotation: lean, alpha: flicker ? .48 : 1 });
     if (!customPlayer) {
       ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
       const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);

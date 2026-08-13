@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-13 — Reusable visual QA pass: hierarchy and movement scale follow-up
+
+- Re-ran the live opening at gameplay scale after the previous outdoor pass. The ground-family atlas is strong for bushes and worn trail repairs, but its tall meadow cards were visually too assertive when reused for ordinary grass patches; this made portions of the walkable road read as planted beds instead of a clear path.
+- Routed ordinary grass tufts and patches through the existing dedicated `outdoor-foliage` atlas at smaller dimensions and lower alpha. The generated `outdoor-ground` atlas remains reserved for authored bushes and sparse road repairs, preserving its high-detail value without repeating large cards across the field.
+- Normalized the Warden's run presentation to 54×74 (from 52×70) while keeping the existing run-sheet anchors and directional rows. This keeps the character's silhouette and ground contact consistent between idle and movement states without changing collision or movement speed.
+- Bumped cache keys to manifest v24 and page script v48. No new art was generated because the existing foliage family already provides the correct Mosswake material language; the improvement is in assigning each approved family to the right visual role.
+- Local syntax, manifest, alpha, and scoped diff checks passed. The current change is ready for a public smoke after deployment; verify road readability, run-size continuity, and four-direction attacks on the live edge.
+
 ## Status key
 
 - **Integrated / tested** — the asset is loaded by the live renderer and has passed a gameplay smoke test.
