@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -7,6 +7,18 @@
       "frameHeight": 256,
       "columns": 8,
       "frames": 32,
+      "fps": 10,
+      "displayWidth": 52,
+      "displayHeight": 70,
+      "anchorX": 0.5,
+      "anchorY": 0.88
+    },
+    "player-run": {
+      "src": "player/warden-run-sheet-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
       "fps": 10,
       "displayWidth": 52,
       "displayHeight": 70,

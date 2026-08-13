@@ -34,12 +34,13 @@ This pass turns three high-impact living silhouettes into real, replaceable artw
 | Asset | File | Sheet | Runtime use |
 | --- | --- | --- | --- |
 | Lantern Warden | `player/warden-sheet-generated-v1.png` | 8 columns × 4 rows, 192×256 source cells, 32 frames | Idle direction cues, walk, sword, dodge, hurt; drawn at 52×70 with a shared 0.88 feet anchor |
+| Lantern Warden movement | `player/warden-run-sheet-generated-v1.png` | 4 columns × 4 rows, 312×312 source cells, 16 frames | Dedicated south/east/north/west walk cycles; row order is S/E/N/W with four contact-passing-recovery poses each |
 | Rowan | `npcs/rowan-sheet-generated-v1.png` | 4 columns × 4 rows, 312×312 source cells, 16 frames | Outpost keeper idle/turn, walking, map-reading work, talking/reaction; drawn at 52×70 with a shared 0.88 feet anchor |
 | Mossling | `enemies/mossling-sheet-generated-v1.png` | 4 columns × 4 rows, 312×312 source cells, 16 frames | Idle/turn, skitter, pounce, hit recoil; drawn at 34×34 with a shared 0.84 feet anchor |
 
 The `*-keyed.png` companions are the source exports retained for future matte refinement; the alpha PNGs are the only files referenced by the game. Both characters follow the Mosswake art bible below: hand-painted storybook rendering, gentle orthographic 3/4 read, deep-moss edge restraint, parchment highlights, moonlit teal, and upper-left light. Collision, AI, dialogue, and camera code remain unchanged.
 
-The renderer intentionally keeps the procedural body as a safe fallback. This means a slow asset request, an offline preview, or a future rejected frame cannot make Mosswake unplayable. New character sheets should preserve the same ground anchor and can be added with one manifest entry.
+The renderer intentionally keeps the procedural body as a safe fallback. This means a slow asset request, an offline preview, or a future rejected frame cannot make Mosswake unplayable. New character sheets should preserve the same ground anchor and can be added with one manifest entry. Runtime character sprites receive a small ground-plane offset while their contact shadows remain in world space, preventing the painted feet from reading as if they are hovering.
 
 ## Art direction
 

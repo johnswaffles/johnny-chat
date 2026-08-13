@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=2";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=3";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1210,7 +1210,7 @@
     const customNpcKey = `npc-${npc.id}`;
     const facingFrame = npc.facing < 0 ? 2 : npc.facing > 0 ? 0 : 1;
     const customNpcFrame = state.dialogue && npc.near ? 12 + Math.floor((npc.clock || 0) * 4) % 4 : npc.behavior === "map" ? 8 + Math.floor((npc.clock || 0) * 2.6) % 4 : npc.behavior === "pace" ? 4 + Math.floor((npc.animTime || 0) * 1.4) % 4 : facingFrame;
-    const customNpc = drawOptionalSprite(customNpcKey, x, y, { frame: customNpcFrame, width: 52, height: 70, flipX: npc.facing < 0, alpha: npc.near ? 1 : .98 });
+    const customNpc = drawOptionalSprite(customNpcKey, x, y + 8, { frame: customNpcFrame, width: 52, height: 70, flipX: npc.facing < 0, alpha: npc.near ? 1 : .98 });
     if (!customNpc) {
       ctx.save(); ctx.translate(x, y); ctx.scale(npc.facing || 1, 1);
       ctx.fillStyle = npc.id === "brindle" ? "#315b58" : "#4a3c43"; ctx.fillRect(-10 - stride, 8, 7, 8); ctx.fillRect(3 + stride, 8, 7, 8);
@@ -1632,10 +1632,12 @@
     const lean = player.visualState === "hurt" ? -.12 : player.visualState === "attack" ? .08 : 0;
     drawShadow(player.x, player.y + 16, player.visualState === "dash" ? 25 : 19, player.visualState === "dash" ? 5 : 7, .36);
     const facingFrame = player.facingY < -.35 ? 4 : player.facingY > .35 ? 0 : 2;
-    const playerFrame = player.visualState === "move" ? 8 + Math.floor((time * 10) % 8) : player.visualState === "attack" ? 16 + Math.floor((player.attackElapsed * 22) % 8) : player.visualState === "dash" ? 24 + Math.floor((time * 14) % 5) : player.visualState === "hurt" ? 28 + Math.floor((time * 9) % 4) : facingFrame;
+    const movementRow = Math.abs(player.facingX) > Math.abs(player.facingY) ? (player.facingX >= 0 ? 1 : 3) : (player.facingY < 0 ? 2 : 0);
+    const runFrame = movementRow * 4 + Math.floor((player.walk * 1.22) % 4);
+    const playerFrame = player.visualState === "move" ? runFrame : player.visualState === "attack" ? 16 + Math.floor((player.attackElapsed * 22) % 8) : player.visualState === "dash" ? 24 + Math.floor((time * 14) % 5) : player.visualState === "hurt" ? 28 + Math.floor((time * 9) % 4) : facingFrame;
     // The generated sheet already contains the blade, lantern, and action silhouettes.
     // Keep the procedural sword only for the fallback so replacement art never doubles it.
-    const customPlayer = drawOptionalSprite("player", player.x, player.y + bob, { frame: playerFrame, width: player.visualState === "dash" ? 58 : 52, height: player.visualState === "dash" ? 76 : 70, flipX: player.facingX < -.2, rotation: lean, alpha: flicker ? .48 : 1 });
+    const customPlayer = drawOptionalSprite(player.visualState === "move" ? "player-run" : "player", player.x, player.y + bob + 8, { frame: playerFrame, width: player.visualState === "dash" ? 58 : 52, height: player.visualState === "dash" ? 76 : 70, flipX: player.visualState === "move" ? false : player.facingX < -.2, rotation: lean, alpha: flicker ? .48 : 1 });
     if (!customPlayer) {
       ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
       const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
