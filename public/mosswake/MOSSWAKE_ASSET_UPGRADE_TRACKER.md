@@ -23,10 +23,17 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | --- | --- | --- | --- |
 | 1 | Boss telegraph and defeat FX | Integrated / tested | Keep the atlas as the Guardian effect reference; only refine for a readability defect |
 | 2 | Outdoor foliage | Integrated / tested | Keep the foliage atlas as the outdoor prop reference; add a second seasonal sheet only if a later visual review shows repetition |
-| 3 | Dungeon architecture | Procedural room construction | Generate modular stone, roots, arches, statues, and rubble |
+| 3 | Dungeon architecture | Integrated / tested | Expand only with a focused landmark or statue family after the room pass |
 | 4 | Remaining NPCs and portraits | Procedural fallback except Rowan | Generate Tansy, Brindle, Lumen, and compact dialogue busts |
 
 ## Current iteration log
+
+### 2026-08-13 — Dungeon architecture kit
+
+- Generated `assets/dungeon/dungeon-architecture-kit-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas with four moss-covered wall segments, four arched doorways, four pillar states, and four room-detail props (rubble, fallen lintel, torch sconce, root-wrapped statue fragment). The keyed RGB source remains beside it for future matte refinement.
+- Added the `dungeon-architecture` manifest slot. Dungeon arches, interior pillars, rubble/debris clusters, and the repeating torch sconces now use painted modular silhouettes with room-specific frame selection; procedural geometry remains the safe fallback.
+- Preserved collision rectangles, door logic, room composition, lighting falloff, and torch timing. Bumped the manifest and page cache keys to `manifest.json?v=12` and `mosswake.js?v=37`.
+- Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks passed. A public edge check should confirm v37/v12 after the host cache rolls forward.
 
 ### 2026-08-13 — Outdoor foliage interaction family
 

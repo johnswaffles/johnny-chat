@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=11";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=12";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1298,6 +1298,8 @@
     for (let x = 100; x < ROOM.width - 100; x += 180) drawTorch(x, 68, time);
   };
   const drawDungeonArch = (x, y, rotation = 0, color = "#6b8479", broken = false) => {
+    const frame = broken ? 6 : rotation === 0 ? 4 : 5;
+    if (loadedAssets.has("dungeon-architecture")) { drawShadow(x, y + 55, 56, 10, .3); if (drawOptionalSprite("dungeon-architecture", x, y + 6, { frame, width: 144, height: 144, anchorY: .82, rotation })) return; }
     ctx.save(); ctx.translate(x, y); ctx.rotate(rotation); drawShadow(0, 32, 54, 8, .24);
     ctx.fillStyle = "#1a2929"; ctx.beginPath(); ctx.arc(0, 0, 62, Math.PI, 0); ctx.lineTo(62, 42); ctx.lineTo(44, 42); ctx.lineTo(44, 8); ctx.arc(0, 0, 44, 0, Math.PI, true); ctx.lineTo(-44, 42); ctx.lineTo(-62, 42); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = color; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(0, 0, 53, Math.PI, 0); ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = "rgba(202,231,193,.34)"; ctx.beginPath(); ctx.arc(0, -2, 45, Math.PI, 0); ctx.stroke();
@@ -1307,6 +1309,8 @@
     ctx.restore();
   };
   const drawDungeonPillar = (x, y, w = 54, h = 130, color = "#6d887d", cracked = false) => {
+    const frame = cracked ? 10 : 8;
+    if (loadedAssets.has("dungeon-architecture")) { drawShadow(x, y + h * .6, Math.max(28, w * .62), 8, .3); if (drawOptionalSprite("dungeon-architecture", x, y + h * .22, { frame, width: Math.max(78, w * 1.75), height: Math.max(138, h * 1.15), anchorY: .88 })) return; }
     ctx.save(); ctx.translate(x, y); drawShadow(0, h * .5 + 12, w * .56, 8, .28);
     const body = ctx.createLinearGradient(-w / 2, 0, w / 2, 0); body.addColorStop(0, "#3b514d"); body.addColorStop(.18, color); body.addColorStop(.72, color); body.addColorStop(1, "#293a3a"); ctx.fillStyle = body; ctx.fillRect(-w / 2, -h / 2, w, h);
     ctx.strokeStyle = "rgba(13,33,31,.72)"; ctx.lineWidth = 2; ctx.strokeRect(-w / 2, -h / 2, w, h); ctx.fillStyle = "#859b88"; ctx.fillRect(-w / 2 - 8, -h / 2 - 7, w + 16, 13); ctx.fillStyle = "#3a5149"; ctx.fillRect(-w / 2 - 12, h / 2 - 5, w + 24, 13); ctx.fillStyle = "rgba(226,241,207,.2)"; ctx.fillRect(-w / 2 + 6, -h / 2 + 9, 5, h - 22);
@@ -1314,6 +1318,8 @@
     ctx.restore();
   };
   const drawDungeonRubble = (x, y, scale = 1, seed = 1) => {
+    const frame = seed % 3 === 0 ? 15 : seed % 3 === 1 ? 12 : 0;
+    if (loadedAssets.has("dungeon-architecture")) { drawShadow(x, y + 14 * scale, 28 * scale, 7 * scale, .24); if (drawOptionalSprite("dungeon-architecture", x, y + 8 * scale, { frame, width: 128 * scale, height: 128 * scale, anchorY: .86, alpha: .96 })) return; }
     ctx.save(); ctx.translate(x, y); drawShadow(0, 10 * scale, 28 * scale, 6 * scale, .24);
     for (let i = 0; i < 5; i += 1) { const px = (hash01(seed, i) - .5) * 52 * scale; const py = (hash01(seed + 3, i) - .5) * 19 * scale; const size = (5 + hash01(seed + 8, i) * 10) * scale; ctx.save(); ctx.translate(px, py); ctx.rotate(hash01(seed + 12, i) * Math.PI); ctx.fillStyle = i % 2 ? "#657a70" : "#829387"; ctx.beginPath(); ctx.moveTo(-size, size * .45); ctx.lineTo(-size * .55, -size * .55); ctx.lineTo(size * .35, -size); ctx.lineTo(size, size * .18); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(16,38,34,.55)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore(); }
     ctx.restore();
@@ -1504,7 +1510,13 @@
     drawDungeonMotes(time);
     drawDungeonLighting(time, key);
   };
-  const drawTorch = (x, y, time) => { const flicker = Math.sin(time * 8 + x) * 2; drawDirectionalShadow(x, y + 25, 30, 7, .1, -.16); ctx.fillStyle = "#6d4934"; ctx.fillRect(x - 4, y, 8, 30); ctx.fillStyle = "#a7774a"; ctx.fillRect(x - 2, y + 3, 3, 24); const glow = ctx.createRadialGradient(x, y - 2, 2, x, y - 2, 82); glow.addColorStop(0, "rgba(255,214,123,.5)"); glow.addColorStop(.28, "rgba(255,172,91,.16)"); glow.addColorStop(1, "rgba(255,214,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 2, 82, 0, Math.PI * 2); ctx.fill(); const flame = ctx.createLinearGradient(x, y - 21 + flicker, x, y + 3); flame.addColorStop(0, "#fff5be"); flame.addColorStop(.42, COLORS.gold); flame.addColorStop(1, "#df714c"); ctx.fillStyle = flame; ctx.beginPath(); ctx.moveTo(x, y - 24 + flicker); ctx.quadraticCurveTo(x + 11, y - 10, x, y + 2); ctx.quadraticCurveTo(x - 11, y - 10, x, y - 24 + flicker); ctx.fill(); ctx.save(); ctx.globalAlpha = .18; ctx.strokeStyle = "#d0d7bd"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 5, y - 22); ctx.quadraticCurveTo(x + 14, y - 38 + Math.sin(time * 1.2 + x) * 3, x + 4, y - 51); ctx.stroke(); ctx.restore(); };
+  const drawTorch = (x, y, time) => {
+    const flicker = Math.sin(time * 8 + x) * 2;
+    if (drawOptionalSprite("dungeon-architecture", x, y + 18, { frame: 14, width: 92, height: 132, anchorY: .88, alpha: .98 })) {
+      const glow = ctx.createRadialGradient(x, y - 5, 2, x, y - 5, 86); glow.addColorStop(0, "rgba(255,214,123,.42)"); glow.addColorStop(.3, "rgba(255,172,91,.14)"); glow.addColorStop(1, "rgba(255,214,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 5, 86, 0, Math.PI * 2); ctx.fill(); return;
+    }
+    drawDirectionalShadow(x, y + 25, 30, 7, .1, -.16); ctx.fillStyle = "#6d4934"; ctx.fillRect(x - 4, y, 8, 30); ctx.fillStyle = "#a7774a"; ctx.fillRect(x - 2, y + 3, 3, 24); const glow = ctx.createRadialGradient(x, y - 2, 2, x, y - 2, 82); glow.addColorStop(0, "rgba(255,214,123,.5)"); glow.addColorStop(.28, "rgba(255,172,91,.16)"); glow.addColorStop(1, "rgba(255,214,123,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 2, 82, 0, Math.PI * 2); ctx.fill(); const flame = ctx.createLinearGradient(x, y - 21 + flicker, x, y + 3); flame.addColorStop(0, "#fff5be"); flame.addColorStop(.42, COLORS.gold); flame.addColorStop(1, "#df714c"); ctx.fillStyle = flame; ctx.beginPath(); ctx.moveTo(x, y - 24 + flicker); ctx.quadraticCurveTo(x + 11, y - 10, x, y + 2); ctx.quadraticCurveTo(x - 11, y - 10, x, y - 24 + flicker); ctx.fill(); ctx.save(); ctx.globalAlpha = .18; ctx.strokeStyle = "#d0d7bd"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 5, y - 22); ctx.quadraticCurveTo(x + 14, y - 38 + Math.sin(time * 1.2 + x) * 3, x + 4, y - 51); ctx.stroke(); ctx.restore();
+  };
   const drawRune = (x, y, label) => { ctx.save(); ctx.globalAlpha = .85; ctx.fillStyle = "rgba(142,242,207,.07)"; ctx.beginPath(); ctx.arc(x, y, 42, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(142,242,207,.34)"; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = .5; ctx.strokeStyle = "rgba(197,246,211,.5)"; ctx.lineWidth = 1; for (let i = 0; i < 6; i += 1) { const angle = i * Math.PI / 3; ctx.beginPath(); ctx.moveTo(x + Math.cos(angle) * 31, y + Math.sin(angle) * 31); ctx.lineTo(x + Math.cos(angle) * 36, y + Math.sin(angle) * 36); ctx.stroke(); } ctx.fillStyle = "rgba(214,255,220,.55)"; ctx.font = "10px DM Mono"; ctx.textAlign = "center"; ctx.fillText(label, x, y + 4); ctx.restore(); };
   const drawSwitch = (x, y, active, time) => { const pulse = Math.sin(time * 4) * 2; drawShadow(x, y + 18, 28, 7, .28); ctx.fillStyle = "#3c504b"; ctx.fillRect(x - 32, y + 12, 64, 10); ctx.fillStyle = active ? "#7bbd9b" : "#546b64"; ctx.beginPath(); ctx.arc(x, y, 27 + pulse, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = active ? "rgba(234,255,213,.84)" : "rgba(198,216,197,.35)"; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = active ? "#f6fff1" : "#243b37"; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = active ? "#ffd77b" : "#6d8a7c"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 7, y + 1); ctx.lineTo(x + 7, y - 6); ctx.stroke(); if (active) { ctx.save(); ctx.globalAlpha = .16; ctx.fillStyle = COLORS.mint; ctx.beginPath(); ctx.arc(x, y, 52 + pulse, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } };
   const drawDungeonMotes = (time) => { ctx.save(); for (let i = 0; i < 24; i += 1) { const x = 75 + ((i * 149) % 1050) + Math.sin(time * (.18 + (i % 3) * .04) + i) * 12; const y = 80 + ((i * 83) % 620) + Math.cos(time * .23 + i) * 9; const alpha = .16 + (Math.sin(time * 1.7 + i) + 1) * .09; ctx.globalAlpha = alpha; ctx.fillStyle = i % 4 === 0 ? "#ffd77b" : "#a8d6bd"; ctx.beginPath(); ctx.arc(x, y, i % 4 === 0 ? 2 : 1.4, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); };

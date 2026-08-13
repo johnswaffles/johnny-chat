@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -72,6 +72,18 @@
       "displayHeight": 128,
       "anchorX": 0.5,
       "anchorY": 0.82
+    },
+    "dungeon-architecture": {
+      "src": "dungeon/dungeon-architecture-kit-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 4,
+      "displayWidth": 144,
+      "displayHeight": 144,
+      "anchorX": 0.5,
+      "anchorY": 0.9
     },
     "fx-slash": {
       "src": "effects/lantern-blade-fx-generated-v1.png",
