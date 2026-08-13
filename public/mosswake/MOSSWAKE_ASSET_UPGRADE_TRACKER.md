@@ -58,7 +58,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - During the second enemy readability sweep, painted warning sprites and procedural telegraph lines/rings were still anchored to the simulation position while generated enemy bodies and contact shadows used their bob/recoil presentation offset. This could make a charge, ranged aim, or boss windup feel fractionally detached from the moving silhouette.
 - Added one shared presentation coordinate pair in `drawEnemy()` and routed the painted `enemy-effects`/`boss-fx` telegraphs, charge/ranged/boss warning lines, exposure ring, hit ring, body, and painted contact shadow through it. Player-targeted rain markers remain intentionally player-anchored.
 - No new artwork was needed: the existing Mosswake telegraph sheets are visually strong and remain modular/replaceable through the manifest. Combat geometry, telegraph durations, hitboxes, AI, cooldowns, and fallback drawing are unchanged.
-- `node --check public/mosswake/mosswake.js`, `git diff --check`, local startup, asset-load, movement/attack smoke, and console warning/error checks pass. Public edge verification is pending after deployment.
+- `node --check public/mosswake/mosswake.js`, `git diff --check`, local startup, asset-load, movement/attack smoke, and console warning/error checks pass. Live public smoke at `/mosswake/` after deployment also passes with no console warnings or errors.
 
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
