@@ -65,7 +65,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - The running visual sweep exposed a high-impact top-down layering weakness: the player was always painted after every enemy, and NPCs were painted in a separate fixed stage. Crossing actors could therefore read as pasted on top of one another even though their world-space Y positions were different.
 - Replaced the fixed actor order with one sorted depth pass for enemies, overworld NPCs, and the player. The existing foreground foliage pass still runs afterward so tall grass and front trees retain intentional occlusion.
 - Preserved all actor artwork, anchors, shadows, collision, AI, interaction ranges, combat timing, and fallback renderers. No new artwork was needed.
-- `node --check`, `git diff --check`, local title/start/movement/attack smoke, second visual sweep, and console warning/error checks pass. Public deployment verification is pending.
+- `node --check`, `git diff --check`, local title/start/movement/attack smoke, second visual sweep, and console warning/error checks pass. Live public title/start/movement/attack smoke after deployment also passes with no console warnings or errors.
 
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
