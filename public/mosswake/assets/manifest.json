@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -72,6 +72,30 @@
       "displayHeight": 128,
       "anchorX": 0.5,
       "anchorY": 0.82
+    },
+    "fx-slash": {
+      "src": "effects/lantern-blade-fx-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 12,
+      "displayWidth": 96,
+      "displayHeight": 64,
+      "anchorX": 0.22,
+      "anchorY": 0.5
+    },
+    "fx-impact": {
+      "src": "effects/lantern-blade-fx-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 10,
+      "displayWidth": 96,
+      "displayHeight": 96,
+      "anchorX": 0.5,
+      "anchorY": 0.5
     }
   }
 }

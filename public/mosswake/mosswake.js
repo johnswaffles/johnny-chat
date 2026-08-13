@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=5";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=6";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1611,7 +1611,9 @@
   const drawAttackTrail = () => {
     if (player.attack <= 0) return;
     const linearProgress = clamp(player.attackElapsed / .34, 0, 1); const progress = 1 - Math.pow(1 - linearProgress, 2.2); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
-    const slashFrame = Math.floor(linearProgress * 8); if (drawOptionalSprite("fx-slash", player.x, player.y, { frame: slashFrame, width: 96, height: 64, rotation: angle, anchorX: .22, anchorY: .5, alpha: clamp(player.attack / .12, 0, 1) })) return;
+    // The first atlas row is a deliberate four-beat sweep: glint, arc, contact, fade.
+    // Rotation keeps the same painted effect readable in all eight movement directions.
+    const slashFrame = Math.min(3, Math.floor(linearProgress * 4)); if (drawOptionalSprite("fx-slash", player.x, player.y, { frame: slashFrame, width: 96, height: 64, rotation: angle, anchorX: .22, anchorY: .5, alpha: clamp(player.attack / .12, 0, 1) })) return;
     ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.lineCap = "round";
     const anticipation = clamp(linearProgress / .2, 0, 1); const start = -1.02 + progress * .22; const end = -.92 + progress * 1.92; const fade = clamp((player.attack < .12 ? player.attack / .12 : 1), 0, 1);
     if (linearProgress < .3) { ctx.globalAlpha = .18 + anticipation * .24; ctx.strokeStyle = "rgba(255,231,164,.72)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(20, 0, 31, -1.55, -1.05); ctx.stroke(); }
@@ -1670,7 +1672,12 @@
       ctx.save(); ctx.translate(player.x, player.y + bob - 1); ctx.rotate(attackAngle + swordSweep); ctx.globalAlpha = player.visualState === "hurt" ? .55 : 1; ctx.strokeStyle = "#6e4937"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(13, 0); ctx.stroke(); ctx.fillStyle = player.visualState === "attack" ? "#fff1ba" : "#e5d59f"; ctx.beginPath(); ctx.moveTo(10, -3); ctx.lineTo(39, -2); ctx.lineTo(44, 0); ctx.lineTo(39, 2); ctx.lineTo(10, 3); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(40,59,49,.72)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "#b58355"; ctx.fillRect(8, -5, 5, 10); ctx.restore();
     }
     if (state.rootlightLantern) { const bob = Math.sin(time * 3.4) * 3; const glow = ctx.createRadialGradient(player.x + 15, player.y - 18 + bob, 1, player.x + 15, player.y - 18 + bob, 32); glow.addColorStop(0, "rgba(255,238,166,.72)"); glow.addColorStop(1, "rgba(142,242,207,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 32, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffe9a4"; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 5 + Math.sin(time * 5) * .8, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(142,242,207,.65)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(player.x + 15, player.y - 18 + bob, 9, 0, Math.PI * 2); ctx.stroke(); }
-    if (player.rootlightPulse > 0) { const pulse = 1 - player.rootlightPulse / .7; ctx.save(); ctx.globalAlpha = .25 + player.rootlightPulse * .7; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + pulse * 80, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    if (player.rootlightPulse > 0) {
+      const pulse = clamp(1 - player.rootlightPulse / .7, 0, 1);
+      const pulseFrame = 12 + Math.min(3, Math.floor(pulse * 4));
+      const customPulse = drawOptionalSprite("fx-impact", player.x, player.y, { frame: pulseFrame, width: 88 + pulse * 82, height: 88 + pulse * 82, anchorX: .5, anchorY: .5, alpha: clamp(player.rootlightPulse * 2.1, 0, 1) });
+      if (!customPulse) { ctx.save(); ctx.globalAlpha = .25 + player.rootlightPulse * .7; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + pulse * 80, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    }
     drawAttackTrail();
   };
   const drawAmbientOverlay = (time) => {

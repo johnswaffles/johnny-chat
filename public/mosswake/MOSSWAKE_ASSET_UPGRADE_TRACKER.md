@@ -15,14 +15,14 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Lantern Warden | `assets/player/warden-sheet-generated-v1.png`, `assets/player/warden-run-sheet-generated-v1.png` | Idle, 4-direction walk, sword, dash, hurt | Integrated / tested | Replace only if a higher-resolution sheet preserves the same feet anchor |
 | Rowan | `assets/npcs/rowan-sheet-generated-v1.png` | Idle, walk, map work, talk/reaction | Integrated / tested | Add the remaining named NPC sheets using Rowan as the reference |
 | Mossling | `assets/enemies/mossling-sheet-generated-v1.png` | Idle, skitter, pounce, hit recoil | Integrated / tested | Add the distinct thornback, wisp, and moth families |
-| Hollow Guardian | `assets/bosses/hollow-guardian-sheet-generated-v1.png` | Phase I idle/attack, phase II transformed attack, phase-break, stagger, defeat | Integrated / prepared for live test | Review boss scale and phase readability in the sanctum, then add arena prop kit |
+| Hollow Guardian | `assets/bosses/hollow-guardian-sheet-generated-v1.png` | Phase I idle/attack, phase II transformed attack, phase-break, stagger, defeat | Integrated / tested | Keep the generated sheet as the boss reference; only refine if a focused arena review finds a real readability issue |
 
 ## High-value environment and effects queue
 
 | Priority | Family | Current status | Recommended next action |
 | --- | --- | --- | --- |
-| 1 | Hollow Guardian arena kit | Procedural backdrop, pylons, and rings | Generate modular altar/pylon/ring pieces after boss sheet review |
-| 2 | Lantern-blade combat FX | Procedural slash, sparks, Rootlight pulse | Generate a small transparent effects sheet and replace only the slash layer first |
+| 1 | Lantern-blade combat FX | Integrated painted slash + Rootlight atlas; procedural fallback retained | Add dedicated boss telegraph/defeat FX when the arena pass reaches the top of the queue |
+| 2 | Water / shoreline | Procedural animated water and edge marks | Generate seamless water plus shoreline overlays |
 | 3 | Water / shoreline | Procedural animated water and edge marks | Generate seamless water plus shoreline overlays |
 | 4 | Layered tree family | Procedural authored silhouettes | Generate trunk/canopy/shadow layers with 4 sway frames |
 | 5 | Outdoor foliage | Procedural authored clusters | Generate modular grass, fern, reed, flower, mushroom, log, and ivy rustle states |
@@ -46,6 +46,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Added the `boss` manifest slot and phase-aware frame selection in `mosswake.js`. The old procedural boss remains the safe fallback if the sheet fails to load.
 - Kept the procedural telegraphs, health bar, arena lighting, hit reactions, and particles independent from the sheet so combat behavior is unchanged.
 - Local syntax and manifest validation passed. A live visual smoke test is still the next required check after deployment.
+
+### 2026-08-13 — Lantern-blade combat FX
+
+- Generated `assets/effects/lantern-blade-fx-generated-v1.png` as a 1248×1248 RGBA atlas (4×4 cells at 312×312) with four sequential gold sword-sweep frames, four directional contact variants, four mint/gold impact frames, and four rose/mint phase or Rootlight frames. The keyed RGB source remains beside it for future matte refinement.
+- Added `fx-slash` and `fx-impact` manifest slots pointing to the same replaceable atlas. The renderer now uses the first four painted frames for each sword strike and the last four frames for the Moonwake Lantern pulse; procedural arcs remain the safe fallback if the sheet is unavailable.
+- Kept combat timing, hitboxes, cooldowns, audio, and collision unchanged. Direction is still driven by the player attack vector, so the painted slash works for all eight aim directions without duplicating gameplay logic.
+- Bumped the manifest and page cache keys to versions 6 and 31. Local syntax, RGBA/alpha, startup, and browser smoke checks should be rerun after deployment.
 
 ## Production contract
 
