@@ -1146,9 +1146,11 @@
       });
     }
     if (loadedAssets.has("outdoor-ground")) {
-      [[155, 477, 4, -.14], [438, 446, 5, -.08], [735, 507, 6, .08], [1034, 555, 7, .12], [1338, 487, 4, -.12]].forEach(([x, y, frame, angle]) => {
-        drawOptionalSprite("outdoor-ground", x, y, { frame, width: 106, height: 126, anchorX: .5, anchorY: .5, rotation: angle, alpha: .82 });
+      ctx.save(); ctx.globalCompositeOperation = "multiply";
+      [[190, 468, 4, -.12], [610, 485, 5, -.06], [970, 548, 6, .08], [1310, 492, 7, -.1]].forEach(([x, y, frame, angle]) => {
+        drawOptionalSprite("outdoor-ground", x, y, { frame, width: 82, height: 102, anchorX: .5, anchorY: .5, rotation: angle, alpha: .44 });
       });
+      ctx.restore();
     }
     ctx.restore();
   };
