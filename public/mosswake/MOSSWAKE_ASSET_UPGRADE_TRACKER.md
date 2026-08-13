@@ -72,7 +72,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - The dungeon combat sweep found a subtle but high-impact presentation mismatch: the painted Warden attack sprite is rendered on its grounded `+8px` presentation coordinate, while the sword-trail atlas was still centered on the raw player coordinate. During a swing the blade and trail could separate vertically.
 - Routed the painted `fx-slash` atlas and procedural sword fallback through the same presented player coordinate (including idle/movement bob) used by the attack sprite. Hitboxes, attack direction, cooldown, movement, and timing are unchanged.
 - No new artwork was needed; the existing Lantern-blade FX atlas remains the approved reference and stays replaceable through `assets/manifest.json`.
-- `node --check`, `git diff --check`, local start/attack visual smoke, and console warning/error checks pass. Public deployment verification is pending.
+- `node --check`, `git diff --check`, local start/attack visual smoke, and console warning/error checks pass. Live public start/attack smoke after deployment also passes with no console warnings or errors.
 
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
