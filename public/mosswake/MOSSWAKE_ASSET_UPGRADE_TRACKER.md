@@ -53,6 +53,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Preserved all enemy art, animation timing, AI, collision, combat feedback, and fallback branches. No new artwork was necessary.
 - Local syntax, diff, and browser smoke checks pass with no console errors or warnings. Public deployment verification is the final gate for this iteration.
 
+## 2026-08-13 — Repeating visual director pass: telegraph presentation alignment
+
+- During the second enemy readability sweep, painted warning sprites and procedural telegraph lines/rings were still anchored to the simulation position while generated enemy bodies and contact shadows used their bob/recoil presentation offset. This could make a charge, ranged aim, or boss windup feel fractionally detached from the moving silhouette.
+- Added one shared presentation coordinate pair in `drawEnemy()` and routed the painted `enemy-effects`/`boss-fx` telegraphs, charge/ranged/boss warning lines, exposure ring, hit ring, body, and painted contact shadow through it. Player-targeted rain markers remain intentionally player-anchored.
+- No new artwork was needed: the existing Mosswake telegraph sheets are visually strong and remain modular/replaceable through the manifest. Combat geometry, telegraph durations, hitboxes, AI, cooldowns, and fallback drawing are unchanged.
+- `node --check public/mosswake/mosswake.js`, `git diff --check`, local startup, asset-load, movement/attack smoke, and console warning/error checks pass. Public edge verification is pending after deployment.
+
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
 - Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.
