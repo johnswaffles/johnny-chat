@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -60,6 +60,18 @@
       "displayHeight": 116,
       "anchorX": 0.5,
       "anchorY": 0.9
+    },
+    "sanctum-kit": {
+      "src": "dungeon/heartseed-sanctum-kit-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 6,
+      "displayWidth": 128,
+      "displayHeight": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.82
     }
   }
 }

@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=4";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=5";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1407,7 +1407,9 @@
     ctx.globalAlpha = .38; ctx.strokeStyle = accent; ctx.lineWidth = phaseTwo ? 4 : 2; ctx.beginPath(); ctx.arc(600, 272, 82 + Math.sin(time * 1.6) * 2, Math.PI, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(600, 272, 108, Math.PI, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = .6; ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(600, 280, phaseTwo ? 122 : 94, 0, Math.PI * 2); ctx.fill();
     // A broken altar behind the boss makes the arena read as a specific place, not a cleared room.
-    ctx.globalAlpha = .9; ctx.fillStyle = "#3a4248"; ctx.fillRect(518, 238, 164, 24); ctx.fillStyle = "#66736d"; ctx.fillRect(532, 232, 136, 7); ctx.fillStyle = "#26343a"; ctx.fillRect(548, 262, 104, 18); ctx.strokeStyle = "rgba(220,237,211,.22)"; ctx.lineWidth = 2; ctx.strokeRect(548, 262, 104, 18);
+    const altarFrame = state.bossDefeated ? 3 : phaseTwo ? 2 : state.bossArenaPulse > 0 ? 1 : 0;
+    const customAltar = drawSanctumSprite(altarFrame, 600, 270, { width: 238, height: 146, anchorY: .86 });
+    if (!customAltar) { ctx.globalAlpha = .9; ctx.fillStyle = "#3a4248"; ctx.fillRect(518, 238, 164, 24); ctx.fillStyle = "#66736d"; ctx.fillRect(532, 232, 136, 7); ctx.fillStyle = "#26343a"; ctx.fillRect(548, 262, 104, 18); ctx.strokeStyle = "rgba(220,237,211,.22)"; ctx.lineWidth = 2; ctx.strokeRect(548, 262, 104, 18); }
     ctx.strokeStyle = phaseTwo ? "rgba(255,154,157,.7)" : "rgba(184,228,193,.45)"; ctx.lineWidth = phaseTwo ? 3 : 2; ctx.beginPath(); ctx.moveTo(600, 250); ctx.lineTo(600, 296); ctx.moveTo(578, 275); ctx.lineTo(600, 292); ctx.lineTo(622, 275); ctx.stroke();
     ctx.globalAlpha = .55; ctx.strokeStyle = "#627a70"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(335, 190); ctx.lineTo(300, 244); ctx.lineTo(326, 286); ctx.moveTo(865, 190); ctx.lineTo(900, 244); ctx.lineTo(874, 286); ctx.stroke();
     ctx.restore();
@@ -1415,9 +1417,11 @@
       ctx.save(); ctx.globalAlpha = .5; ctx.strokeStyle = "#d66b92"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(344, 205); ctx.lineTo(306, 238); ctx.lineTo(330, 275); ctx.moveTo(856, 205); ctx.lineTo(894, 238); ctx.lineTo(870, 275); ctx.moveTo(424, 565); ctx.lineTo(470, 534); ctx.lineTo(452, 495); ctx.moveTo(776, 565); ctx.lineTo(730, 534); ctx.lineTo(748, 495); ctx.stroke(); ctx.restore();
     }
   };
+  const drawSanctumSprite = (frame, x, y, options = {}) => drawOptionalSprite("sanctum-kit", x, y, { frame, width: options.width || 128, height: options.height || 128, anchorX: .5, anchorY: options.anchorY ?? .82, alpha: options.alpha ?? 1, rotation: options.rotation || 0 });
   const drawBossArenaEffects = (time) => {
     const phaseTwo = state.bossPhase === 2; const pylonColor = phaseTwo ? "#d66b92" : "#8ab879"; const pylonGlow = phaseTwo ? "rgba(255,154,157,.78)" : "rgba(142,242,207,.62)";
     [[350, 270], [850, 270], [350, 560], [850, 560]].forEach(([x, y], index) => {
+      if (drawSanctumSprite(phaseTwo ? 6 : state.bossArenaPulse > 0 ? 5 : 4, x, y - 3, { width: 98, height: 126, anchorY: .9 })) return;
       const pulse = Math.sin(time * 2.3 + index) * 2; ctx.save(); ctx.globalAlpha = .82; drawShadow(x, y + 18, 32, 9, .38);
       ctx.fillStyle = "#303b43"; ctx.fillRect(x - 21, y + 12, 42, 10); ctx.fillStyle = "#596a6b"; ctx.fillRect(x - 16, y - 30, 32, 43); ctx.fillStyle = pylonColor; ctx.fillRect(x - 7, y - 26, 14, 37);
       ctx.strokeStyle = pylonGlow; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y - 6, 22 + pulse, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y - 6, 30 + pulse * .5, 0, Math.PI * 2); ctx.stroke();
@@ -1425,10 +1429,13 @@
       if (state.bossArenaPulse > 0) { ctx.globalAlpha = clamp(state.bossArenaPulse * .38, 0, .45); ctx.fillStyle = phaseTwo ? "#ff9a9d" : "#ffd77b"; ctx.beginPath(); ctx.arc(x, y - 6, 42 + pulse, 0, Math.PI * 2); ctx.fill(); }
       ctx.restore();
     });
-    ctx.save(); ctx.globalAlpha = phaseTwo ? .42 : .2; ctx.strokeStyle = phaseTwo ? "#d66b92" : "#8ab879"; ctx.lineWidth = phaseTwo ? 4 : 2;
-    for (let i = 0; i < 4; i += 1) { const angle = time * (phaseTwo ? .35 : .18) + i * Math.PI / 2; const inner = phaseTwo ? 118 : 138; const outer = phaseTwo ? 286 : 250; ctx.beginPath(); ctx.moveTo(600 + Math.cos(angle) * inner, 370 + Math.sin(angle) * inner); ctx.lineTo(600 + Math.cos(angle) * outer, 370 + Math.sin(angle) * outer); ctx.stroke(); }
-    if (phaseTwo) { ctx.globalAlpha = .28; ctx.lineWidth = 2; for (let i = 0; i < 8; i += 1) { const angle = time * .55 + i * Math.PI / 4; ctx.beginPath(); ctx.moveTo(600 + Math.cos(angle) * 88, 370 + Math.sin(angle) * 88); ctx.lineTo(600 + Math.cos(angle) * 286, 370 + Math.sin(angle) * 286); ctx.stroke(); } }
-    ctx.restore();
+    const ringFrame = state.bossDefeated ? 11 : phaseTwo ? 10 : state.bossArenaPulse > 0 ? 9 : 8;
+    const ringPieces = [[600, 190, 0], [780, 370, Math.PI / 2], [600, 550, Math.PI], [420, 370, -Math.PI / 2]];
+    const customRing = ringPieces.every(([x, y, rotation]) => drawSanctumSprite(ringFrame, x, y, { width: 188, height: 92, anchorY: .5, rotation }));
+    if (!customRing) { ctx.save(); ctx.globalAlpha = phaseTwo ? .42 : .2; ctx.strokeStyle = phaseTwo ? "#d66b92" : "#8ab879"; ctx.lineWidth = phaseTwo ? 4 : 2;
+      for (let i = 0; i < 4; i += 1) { const angle = time * (phaseTwo ? .35 : .18) + i * Math.PI / 2; const inner = phaseTwo ? 118 : 138; const outer = phaseTwo ? 286 : 250; ctx.beginPath(); ctx.moveTo(600 + Math.cos(angle) * inner, 370 + Math.sin(angle) * inner); ctx.lineTo(600 + Math.cos(angle) * outer, 370 + Math.sin(angle) * outer); ctx.stroke(); }
+      if (phaseTwo) { ctx.globalAlpha = .28; ctx.lineWidth = 2; for (let i = 0; i < 8; i += 1) { const angle = time * .55 + i * Math.PI / 4; ctx.beginPath(); ctx.moveTo(600 + Math.cos(angle) * 88, 370 + Math.sin(angle) * 88); ctx.lineTo(600 + Math.cos(angle) * 286, 370 + Math.sin(angle) * 286); ctx.stroke(); } }
+      ctx.restore(); }
   };
   const drawBossDefeatRemnant = (time) => {
     if (state.bossDefeatTimer <= 0) return;
