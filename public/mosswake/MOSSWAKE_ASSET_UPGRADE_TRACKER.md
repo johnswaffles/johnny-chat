@@ -19,6 +19,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Enemy combat effects | `assets/enemies/enemy-effects-generated-v1.png` | Charge, ranged, ambush, impact, and four drop feedback states | Integrated / tested | Keep the atlas as the small-enemy feedback reference; refine only if a focused encounter review finds overlap or low contrast |
 | HUD and pickup icons | `assets/ui-icons-generated-v1.png` | Hearts, key, Heartseed, Rootlight, discovery, map, drop, sword, dash, lock, and star states | Integrated / tested | Keep the icon atlas as the UI reference; refine only if a later readability pass finds a specific small-size issue |
 | Dialogue and screen surface family | `assets/ui/ui-panels-generated-v1.png` | Dialogue, title, pause, victory, portrait frame, button, objective, map, ability, toast, and divider surface states | Integrated / pending live visual check | Keep typography and contrast in CSS; replace individual atlas cells later without touching game flow |
+| Collectibles and exploration items | `assets/items/exploration-items-generated-v1.png` | Key, Heartseed, lantern seed, Dewglass lens, moth token, moonroot cache, hidden chest, and Rootlight lantern states | Integrated / pending live visual check | Keep the atlas as the item reference; replace individual cells only when a specific silhouette or matte issue is found |
 | Hollow Guardian | `assets/bosses/hollow-guardian-sheet-generated-v1.png` | Phase I idle/attack, phase II transformed attack, phase-break, stagger, defeat | Integrated / tested | Keep the generated sheet as the boss reference; only refine if a focused arena review finds a real readability issue |
 
 ## High-value environment and effects queue
@@ -66,6 +67,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Added the `ui-panels` manifest slot and layered the generated surfaces into the dialogue box, portrait frame, title screen, pause screen, and victory screen. HTML text, CSS sizing, contrast, focus states, and all gameplay state remain runtime-owned; the existing CSS surfaces remain the safe fallback. Portraits now use a CSS custom property so generated NPC portrait images are not overwritten by the frame layer.
 - Bumped manifest/page cache keys to `manifest.json?v=19`, `mosswake.js?v=44`, and `mosswake.css?v=13`. Source and normalized RGBA atlas remain together under `assets/ui/` for future cell-level replacement.
 - Local syntax, manifest, RGBA/alpha, and diff checks passed. Live visual smoke testing is the next required step after deployment.
+
+### 2026-08-13 — Collectibles and exploration item atlas
+
+- Generated `assets/items/exploration-items-generated-v1.png` as a 1254×1254 chroma-key source normalized to a 1248×1248 RGBA 4×4 atlas. Cells cover brass key, Heartseed shard, lantern seed, Dewglass lens, moth token, moonroot cache, hidden chest, and dormant/awakened Rootlight lantern states with idle and pickup/glow variants.
+- Added the `exploration-items` manifest slot. Chest and cache presentation now selects the painted item family by authored world location and progression state; opening animation, shadows, reward flags, interaction ranges, and procedural/dungeon-landmark fallbacks remain unchanged.
+- Bumped manifest/runtime cache keys to `manifest.json?v=20` and `mosswake.js?v=45`. The source and alpha atlas remain together under `assets/items/` for future cell-level replacement.
+- Local syntax, manifest, alpha validation, and diff checks passed. Live visual smoke testing is the next required step after deployment.
 
 ### 2026-08-13 — Named NPC family and portraits
 

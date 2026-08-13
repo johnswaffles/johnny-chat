@@ -1,5 +1,5 @@
 {
-  "version": 19,
+  "version": 20,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -10,6 +10,18 @@
       "fps": 1,
       "displayWidth": 312,
       "displayHeight": 312,
+      "anchorX": 0.5,
+      "anchorY": 0.5
+    },
+    "exploration-items": {
+      "src": "items/exploration-items-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 5,
+      "displayWidth": 72,
+      "displayHeight": 72,
       "anchorX": 0.5,
       "anchorY": 0.5
     },

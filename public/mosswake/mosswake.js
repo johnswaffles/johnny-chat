@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=19";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=20";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1224,6 +1224,19 @@
     const reveal = open ? (isOpening ? clamp(1 - state.chestOpening / .44, 0, 1) : 1) : 0;
     const bob = reveal > 0 ? Math.sin(time * 2.6 + x) * 1.2 : 0; const lidY = y - 7 - reveal * 13;
     const hasReward = state.loot > 0 || state.chestOpened || state.heartChestOpened || state.lanternSeed || state.rootlightLantern || state.rootlightCacheOpened || state.rootlightGalleryCacheOpened || state.hiddenChestOpened;
+    const isHiddenChest = Math.abs(x - 1060) < 2 && Math.abs(y - 830) < 2;
+    const isLanternCache = Math.abs(x - 180) < 2 && Math.abs(y - 635) < 2;
+    const isMoonrootCache = (Math.abs(x - 1450) < 2 && Math.abs(y - 665) < 2) || (Math.abs(x - 990) < 2 && Math.abs(y - 640) < 2);
+    const isHeartChest = state.area === "dungeon" && `${state.roomX}-${state.roomY}` === "0-1" && Math.abs(x - 600) < 2 && Math.abs(y - 390) < 2;
+    const isKeyChest = !isHiddenChest && !isLanternCache && !isMoonrootCache && !isHeartChest;
+    const itemFrame = isHiddenChest ? (open ? 13 : 12) : isLanternCache ? (open ? 15 : 14) : isMoonrootCache ? (open ? 11 : 10) : isHeartChest ? (open ? 3 : 2) : (open ? 1 : 0);
+    if (loadedAssets.has("exploration-items")) {
+      const itemGlow = open && (isOpening || reveal > 0) ? (isHeartChest || isLanternCache ? COLORS.gold : COLORS.mint) : null;
+      if (itemGlow) { const glow = ctx.createRadialGradient(x, y + bob, 2, x, y + bob, 54 + reveal * 20); glow.addColorStop(0, `${itemGlow}55`); glow.addColorStop(1, `${itemGlow}00`); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y + bob, 54 + reveal * 20, 0, Math.PI * 2); ctx.fill(); }
+      drawShadow(x, y + 14, isMoonrootCache || isHiddenChest ? 30 : 24, 8, .32);
+      drawOptionalSprite("exploration-items", x, y + bob, { frame: itemFrame, width: isHiddenChest || isMoonrootCache ? 94 : 82, height: isHiddenChest || isMoonrootCache ? 94 : 82, anchorX: .5, anchorY: .82, alpha: .98 });
+      return;
+    }
     const chestFrame = open ? (reveal > .08 && isOpening ? 1 : reveal > .08 && hasReward ? 2 : 3) : 0;
     if (loadedAssets.has("dungeon-landmarks")) { drawShadow(x, y + 14, 30, 8, .34); drawOptionalSprite("dungeon-landmarks", x, y + 2 + bob, { frame: chestFrame, width: 104, height: 104, anchorY: .88, alpha: .98 }); return; }
     drawShadow(x, y + 14, 25, 7, .35); ctx.save(); ctx.translate(0, bob);
