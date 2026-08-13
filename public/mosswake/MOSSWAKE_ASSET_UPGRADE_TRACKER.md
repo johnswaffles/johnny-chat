@@ -32,6 +32,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | 3 | Dungeon architecture | Integrated / tested | Landmark/interactable atlas now covers chests, runes, switches, sockets, and reward pedestals |
 | 4 | Outdoor props (fences, paths, signs, rocks) | Integrated / tested | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
 
+## 2026-08-13 — Repeating visual director pass: room transition reveal
+
+- The next dungeon readability pass identified a transition-layer weakness rather than a missing asset: the new room and its respawned actors were visible through the center of the location veil at the first frame, making the chamber change feel like a title card over a sudden scene pop.
+- Tightened the existing 0.72-second room transition so it starts with a clean opaque beat, then reveals the new chamber through a controlled radial opening. The location label and progress rule now track that reveal, preserving a readable handoff without exposing actors before the room is ready.
+- No new artwork or gameplay systems were needed. Dungeon geometry, room spawn positions, transition timing, controls, collision, enemy AI, and fallback rendering remain unchanged.
+- `node --check` passed. Local browser smoke and public deployment verification remain the final gates for this iteration.
+
 ## 2026-08-13 — Repeating visual director pass: Guardian grounding repair
 
 - Inspected the live overworld, current renderer, tracker handoff, and strongest approved character/environment references before selecting a target. No new art was generated because the remaining high-impact defect was technical rather than an inadequate asset.
