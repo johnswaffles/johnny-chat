@@ -219,7 +219,12 @@
     objectiveCopy: document.getElementById("objective-copy"), hearts: document.getElementById("hearts"), seed: document.getElementById("seed-count"), keys: document.getElementById("key-count"), loot: document.getElementById("loot-count"), discovery: document.getElementById("discovery-count"), ability: document.getElementById("ability-status"), save: document.getElementById("save-state"), map: document.getElementById("map-dots")
   };
 
-  const showToast = (message, duration = 2200) => { ui.toast.textContent = message; ui.toast.classList.add("visible"); state.toastTimer = duration; };
+  const showToast = (message, duration = 2200) => {
+    // Repeated input near a boundary should not restart the toast animation every
+    // frame. Keeping the first message visible makes feedback feel deliberate.
+    if (ui.toast.classList.contains("visible") && ui.toast.textContent === message && state.toastTimer > 0) return;
+    ui.toast.textContent = message; ui.toast.classList.add("visible"); state.toastTimer = duration;
+  };
   const hideScreens = () => [ui.title, ui.pause, ui.victory].forEach((screen) => screen.classList.add("hidden"));
   const dialoguePortraitLetter = (portrait) => ({ rowan: "R", tansy: "T", brindle: "B", lumen: "L" }[portrait] || "?");
   const renderDialogueLine = () => {
@@ -471,7 +476,7 @@
       spawnEnemy("wisp", 1145, 340, { guardRadius: 150, encounter: "lantern-grove" });
       spawnEnemy("moth", 1280, 745, { guardRadius: 90, encounter: "chest-ambush" });
       spawnHiddenEncounter();
-      if (announce) showToast("LAN TERNWOOD · the moths are listening");
+      if (announce) showToast("LANTERNWOOD · the moths are listening");
     } else {
       player.x = ROOM.width / 2; player.y = ROOM.height - 90;
       spawnDungeonEnemies();
@@ -719,7 +724,7 @@
       if (key === "1-1" && distance(player, { x: 180, y: 635 }) < 92 && !state.ashCacheOpened) { obtainRootlight(); return; }
       if (key === "2-1" && state.bossDefeated && distance(player, { x: 600, y: 150 }) < 100) { showVictory(); return; }
     }
-    showToast("Nothing answers from here", 900);
+    showToast("Nothing within reach · move closer to a glow or nameplate", 1200);
   };
 
   const enterDungeon = () => { playSfx("door"); state.area = "dungeon"; state.roomX = 0; state.roomY = 0; player.x = ROOM.width / 2; player.y = ROOM.height - 100; startArea("dungeon"); saveData(); updateObjective(); };
@@ -1217,6 +1222,36 @@
     ctx.restore();
     if (npc.near && state.mode === "playing" && !state.dialogue) { const lift = Math.sin(time * 4 + npc.phase) * 2; ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = "rgba(7,20,18,.9)"; ctx.strokeStyle = "rgba(214,255,220,.45)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x - 17, y - 69 + lift, 34, 22, 8); ctx.fill(); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.font = "700 11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("E", x, y - 54 + lift); ctx.fillStyle = "rgba(243,246,223,.82)"; ctx.font = "500 9px Outfit"; ctx.fillText(npc.name, x, y - 76 + lift); ctx.restore(); }
   };
+  const nearestInteractionHint = () => {
+    if (state.mode !== "playing" || state.dialogue || nearestNpc()) return null;
+    const candidates = [];
+    const add = (x, y, radius, label, text) => { const range = distance(player, { x, y }); if (range < radius) candidates.push({ x, y, range, label, text }); };
+    if (state.area === "overworld") {
+      if (!state.rootlightLantern) add(1450, 580, 72, "E", "AWAKEN GATE");
+      if (distance(player, { x: 1350, y: 235 }) < 120) add(1312, 210, 120, "E", "ENTER SHRINE");
+      if (!state.chestOpened) add(1240, 745, 70, "E", "OPEN CHEST");
+      if (state.rootlightGateOpen && !state.rootlightCacheOpened) add(1450, 665, 78, "E", "SEARCH CACHE");
+      if (state.southPassageOpen && !state.hiddenChestOpened && !enemies.some((enemy) => enemy.encounter === "hidden-cache" && !enemy.dead)) add(1060, 830, 70, "E", "SEARCH GROVE");
+    } else {
+      const key = `${state.roomX}-${state.roomY}`;
+      const node = nearestRootlightNode(72); if (node && !state.rootlightLantern) add(node.x, node.y, 72, "E", "AWAKEN");
+      if (key === "0-0" && !state.chestOpened) add(600, 390, 80, "E", "OPEN CHEST");
+      if (key === "1-0" && !state.switches) add(600, 380, 80, "E", "ACTIVATE");
+      if (key === "0-1" && !state.heartChestOpened) add(600, 390, 80, "E", "OPEN CHEST");
+      if (key === "0-0" && state.rootlightGalleryOpen && !state.rootlightGalleryCacheOpened) add(990, 640, 88, "E", "SEARCH CACHE");
+      if (key === "1-1" && !state.ashCacheOpened) add(180, 635, 92, "E", "TAKE LANTERN");
+      if (key === "2-1" && state.bossDefeated && !state.bossRewardClaimed) add(600, 150, 100, "E", "CLAIM HEARTSEED");
+    }
+    return candidates.sort((a, b) => a.range - b.range)[0] || null;
+  };
+  const drawInteractionHint = (time) => {
+    const hint = nearestInteractionHint(); if (!hint) return;
+    const lift = Math.sin(time * 3.6 + hint.x * .01) * 2; const width = Math.max(76, hint.text.length * 6.4 + 34); const y = hint.y - 45 + lift;
+    ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = "rgba(7,20,18,.92)"; ctx.strokeStyle = "rgba(214,255,220,.42)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(hint.x - width / 2, y - 13, width, 25, 9); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = COLORS.gold; ctx.font = "700 11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(hint.label, hint.x - width / 2 + 15, y + 4);
+    ctx.fillStyle = "rgba(243,246,223,.84)"; ctx.font = "500 9px Outfit"; ctx.fillText(hint.text, hint.x + 10, y + 4); ctx.restore();
+  };
   const drawEntrance = (x, y, time) => { ctx.fillStyle = "#342d3e"; ctx.beginPath(); ctx.arc(x, y, 50, Math.PI, 0); ctx.lineTo(x + 50, y + 50); ctx.lineTo(x - 50, y + 50); ctx.closePath(); ctx.fill(); ctx.fillStyle = `rgba(95,238,206,${.28 + Math.sin(time * 2) * .08})`; ctx.beginPath(); ctx.arc(x, y + 6, 32, Math.PI, 0); ctx.lineTo(x + 32, y + 45); ctx.lineTo(x - 32, y + 45); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#8ef2cf"; ctx.lineWidth = 2; ctx.stroke(); };
 
   const dungeonRoomTint = (key) => ({ "0-0": ["#172424", "#2b4b46"], "1-0": ["#151f2d", "#30445b"], "2-0": ["#20251f", "#3d5140"], "0-1": ["#142b32", "#2c5b60"], "1-1": ["#2b1d25", "#5a3a38"], "2-1": ["#271c30", "#533451"] }[key] || [COLORS.dungeon, COLORS.dungeonLight]);
@@ -1654,7 +1689,7 @@
     if (state.area === "overworld") drawOverworld(time); else drawDungeon(time);
     leaves.forEach((leaf) => { if (state.area === "overworld" && leaf.x > camera.x - 10 && leaf.x < camera.x + WIDTH + 10 && leaf.y > camera.y - 10 && leaf.y < camera.y + HEIGHT + 10) { const scale = .62 + hash01(Math.floor(leaf.x), Math.floor(leaf.y)) * .5; ctx.save(); ctx.translate(leaf.x, leaf.y); ctx.rotate(Math.sin(leaf.phase + leaf.y * .02) * .5 + Math.sin(state.visualClock * .8 + leaf.phase) * .12); ctx.scale(scale, .68 + scale * .18); ctx.globalAlpha = .3 + hash01(Math.floor(leaf.x), Math.floor(leaf.y)) * .24; ctx.fillStyle = leaf.phase % 2 > 1 ? "#b6df8b" : "#d3edac"; ctx.beginPath(); ctx.moveTo(0, -5); ctx.quadraticCurveTo(5, -1, 1, 6); ctx.quadraticCurveTo(-4, 1, 0, -5); ctx.fill(); ctx.restore(); } });
     const entities = [...enemies].sort((a, b) => a.y - b.y); entities.forEach((enemy) => drawEnemy(enemy, time)); drops.forEach((drop) => drawDrop(drop, time)); projectiles.forEach((projectile) => drawProjectile(projectile));
-    drawPlayer(time); if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); ctx.restore();
+    drawPlayer(time); if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); drawInteractionHint(time); ctx.restore();
     drawAmbientOverlay(time);
     drawBossHud(time);
     if (state.impactFlash > 0) { ctx.fillStyle = `rgba(255,246,210,${state.impactFlash * 1.8})`; ctx.fillRect(0, 0, WIDTH, HEIGHT); }
