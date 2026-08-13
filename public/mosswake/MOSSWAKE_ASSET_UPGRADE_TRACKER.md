@@ -12,7 +12,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 | Asset family | Current files | States / directions | Status | Next quality step |
 | --- | --- | --- | --- | --- |
-| Lantern Warden | `assets/player/warden-sheet-generated-v1.png`, `assets/player/warden-run-sheet-generated-v1.png` | Idle, 4-direction walk, sword, dash, hurt | Integrated / tested | Replace only if a higher-resolution sheet preserves the same feet anchor |
+| Lantern Warden | `assets/player/warden-sheet-generated-v1.png`, `assets/player/warden-run-sheet-generated-v1.png`, `assets/player/warden-attack-directions-generated-v1.png` | Idle, 4-direction walk, 4-direction sword attack, dash, hurt | Integrated / tested | Keep the repaired per-frame feet anchors; replace only with a higher-resolution sheet that preserves the same ground line |
 | Rowan | `assets/npcs/rowan-sheet-generated-v1.png` | Idle, walk, map work, talk/reaction | Integrated / tested | Add the remaining named NPC sheets using Rowan as the reference |
 | Mossling | `assets/enemies/mossling-sheet-generated-v1.png` | Idle, skitter, pounce, hit recoil | Integrated / tested | Keep as the small-creature reference; refine only for a focused readability defect |
 | Distinct enemy family | `assets/enemies/enemy-family-generated-v1.png` | Thornback, Moon Wisp, Ambush Moth, Rootling/Root Warden; idle, telegraph, attack, hit | Integrated / tested | Keep the family atlas as the roster reference; add specialized death/telegraph FX only if a later encounter review needs them |
@@ -30,7 +30,23 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | 1 | Boss telegraph and defeat FX | Integrated / tested | Keep the atlas as the Guardian effect reference; only refine for a readability defect |
 | 2 | Outdoor foliage | Integrated / tested | Keep the foliage atlas as the outdoor prop reference; add a second seasonal sheet only if a later visual review shows repetition |
 | 3 | Dungeon architecture | Integrated / tested | Landmark/interactable atlas now covers chests, runes, switches, sockets, and reward pedestals |
-| 4 | Remaining NPCs and portraits | Integrated / tested | Add a dedicated trader only if the outpost needs another interaction |
+| 4 | Outdoor props (fences, paths, signs, rocks) | Integrated / pending live visual check | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
+
+## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
+
+- Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.
+- Added the `outdoor-props` manifest slot. Existing fence, sign, and rock renderers now prefer the painted family, while the long procedural path keeps its collision-safe ribbon and receives sparse painted trail repairs. Labels remain runtime text over the sign art; procedural drawing remains the safe fallback.
+- Corrected the directional player attack renderer so the generated left-facing row is not mirrored, and preserved the repaired feet/contact anchors.
+- Local syntax, manifest, alpha, and diff checks pass. Live visual smoke testing remains the final gate after deployment.
+
+## 2026-08-13 — Visual integration, grounding, and animation repair
+
+- Added `assets/player/warden-attack-directions-generated-v1.png`, a focused 4×4 RGBA attack atlas. It preserves the Lantern Warden reference design and supplies ready/anticipation/impact/recovery sequences for down, up, right, and left attacks. The chroma-key source is retained beside it for future matte refinement.
+- Added the `player-attack` manifest slot and connected attack-frame selection to the existing four-direction attack vector. The attack hitbox, cooldown, movement, sword FX, and fallback renderer remain unchanged; the painted Warden now carries the directional sword action instead of reusing the south-biased row.
+- Repaired grounding by measuring the actual alpha bottom of the generated player, NPC, enemy, tree, and structure cells. Renderer overrides now keep feet, roots, building bases, and contact shadows on the same authored ground line, including action frames with transparent padding.
+- Calmed ambient motion: tree frame cadence is now a slow irregular `[0,1,2,1]` wind cycle, procedural crowns/trunks move less, foliage/bushes/grass/flowers use low-amplitude phase-varied sway, and NPC idle/work bob is restrained. Gameplay actions remain readable and unchanged.
+- Remaining generic-looking fence/path/sign work is documented as a code-native presentation queue rather than duplicated asset generation; these are still replaceable through the existing manifest workflow when a coherent environment-props atlas is produced.
+- Local syntax, manifest parsing, RGBA/alpha validation, and live console smoke checks were run. The public edge should be rechecked after the next deployment for manifest v22 and the new attack atlas.
 
 ## Current iteration log
 

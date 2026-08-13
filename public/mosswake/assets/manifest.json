@@ -1,5 +1,5 @@
 {
-  "version": 21,
+  "version": 22,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -48,6 +48,30 @@
       "displayHeight": 70,
       "anchorX": 0.5,
       "anchorY": 0.88
+    },
+    "player-attack": {
+      "src": "player/warden-attack-directions-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 12,
+      "displayWidth": 58,
+      "displayHeight": 74,
+      "anchorX": 0.5,
+      "anchorY": 0.94
+    },
+    "outdoor-props": {
+      "src": "props/mosswake-props-family-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 1,
+      "displayWidth": 96,
+      "displayHeight": 96,
+      "anchorX": 0.5,
+      "anchorY": 0.9
     },
     "player-run": {
       "src": "player/warden-run-sheet-generated-v1.png",

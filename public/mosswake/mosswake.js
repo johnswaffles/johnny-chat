@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=21";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=22";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -392,8 +392,8 @@
         if (playerNear) npc.facing = player.x >= npc.x ? 1 : -1;
         else if (npc.behavior === "watch") npc.facing = Math.sin(npc.clock * .35 + npc.phase) > 0 ? 1 : -1;
       }
-      npc.work = Math.sin(npc.clock * (npc.behavior === "map" ? 2.8 : 4) + npc.phase);
-      npc.animTime = npc.clock * (npc.behavior === "pace" ? 5.2 : 2.2);
+      npc.work = Math.sin(npc.clock * (npc.behavior === "map" ? 1.45 : 2.2) + npc.phase);
+      npc.animTime = npc.clock * (npc.behavior === "pace" ? 4.6 : 1.6);
     });
   };
   const nearestNpc = (radius = 68) => {
@@ -964,7 +964,7 @@
   const drawBush = (bush, time, foreground = false) => {
     const palette = [
       ["#3d7b50", "#65a563"], ["#477f56", "#78b66c"], ["#376b4b", "#5e9b5d"]
-    ][bush.variant || 0]; const depth = foreground ? .96 : .86; const sway = Math.sin(time * 1.25 + bush.phase) * .035;
+    ][bush.variant || 0]; const depth = foreground ? .96 : .86; const sway = Math.sin(time * .72 + bush.phase) * .018;
     ctx.save(); ctx.globalAlpha = depth; ctx.translate(bush.x, bush.y); ctx.rotate(sway); ctx.scale(bush.s || 1, bush.s || 1); drawShadow(0, 11, 28, 8, .27);
     ctx.fillStyle = palette[0]; ctx.beginPath(); ctx.ellipse(-20, 0, 22, 14, -.22, 0, Math.PI * 2); ctx.ellipse(0, -8, 25, 17, .08, 0, Math.PI * 2); ctx.ellipse(23, 3, 19, 12, .3, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.beginPath(); ctx.ellipse(-20, 0, 22, 14, -.22, 0, Math.PI * 2); ctx.ellipse(0, -8, 25, 17, .08, 0, Math.PI * 2); ctx.ellipse(23, 3, 19, 12, .3, 0, Math.PI * 2); ctx.stroke();
@@ -978,7 +978,11 @@
     ctx.strokeStyle = "rgba(175,205,157,.24)"; ctx.lineWidth = 2; for (let i = 0; i < 3; i += 1) { const x = 30 + i * (cliff.w - 60) / 2; ctx.beginPath(); ctx.moveTo(x, 38); ctx.lineTo(x - 9, cliff.h - 8); ctx.stroke(); } ctx.restore();
   };
   const drawFence = (fence) => {
-    ctx.save(); ctx.translate(fence.x, fence.y); ctx.rotate(fence.angle); drawShadow(0, 8, fence.length * .45, 6, .23);
+    ctx.save(); ctx.translate(fence.x, fence.y); ctx.rotate(fence.angle); drawShadow(0, 8, fence.length * .45, 6, .18);
+    // The painted prop family replaces the old placeholder rails when available.
+    // Keep the procedural fence below as a safe fallback for slow/offline loads.
+    const fenceFrame = Number.isFinite(fence.variant) ? fence.variant : Math.floor(hash01(fence.x, fence.y) * 4);
+    if (drawOptionalSprite("outdoor-props", 0, 8, { frame: Math.max(0, Math.min(3, fenceFrame)), width: Math.max(132, fence.length * 1.22), height: 96, anchorX: .5, anchorY: .88 })) { ctx.restore(); return; }
     ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(-fence.length / 2, -6); ctx.lineTo(fence.length / 2, -6); ctx.moveTo(-fence.length / 2, 8); ctx.lineTo(fence.length / 2, 8); ctx.stroke();
     ctx.strokeStyle = "#a9794d"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-fence.length / 2, -6); ctx.lineTo(fence.length / 2, -6); ctx.moveTo(-fence.length / 2, 8); ctx.lineTo(fence.length / 2, 8); ctx.stroke();
     for (let i = 0; i < fence.posts; i += 1) { const x = -fence.length / 2 + i * fence.length / (fence.posts - 1); ctx.fillStyle = "#745039"; ctx.fillRect(x - 4, -16, 8, 34); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.strokeRect(x - 4, -16, 8, 34); ctx.fillStyle = "#b18455"; ctx.fillRect(x - 2, -13, 3, 8); } ctx.restore();
@@ -990,7 +994,13 @@
     ctx.strokeStyle = "#8fba72"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, -28); ctx.quadraticCurveTo(2, -15 + Math.sin(time * 1.5) * 2, 12, -2); ctx.stroke(); ctx.fillStyle = "#76ab69"; ctx.beginPath(); ctx.arc(-9, -19, 5, 0, Math.PI * 2); ctx.arc(5, -10, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   };
   const drawSign = (sign) => {
-    ctx.save(); ctx.translate(sign.x, sign.y); ctx.rotate(sign.angle); drawShadow(0, 11, 14, 5, .24); ctx.fillStyle = "#714d38"; ctx.fillRect(-3, -25, 6, 38); ctx.fillStyle = "#b7834f"; ctx.beginPath(); ctx.moveTo(-27, -29); ctx.lineTo(23, -29); ctx.lineTo(29, -18); ctx.lineTo(23, -7); ctx.lineTo(-27, -7); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "rgba(246,222,166,.7)"; ctx.font = "700 7px DM Mono"; ctx.textAlign = "center"; ctx.fillText(sign.label, -1, -17); ctx.restore();
+    ctx.save(); ctx.translate(sign.x, sign.y); ctx.rotate(sign.angle); drawShadow(0, 11, 14, 5, .18);
+    const signFrame = sign.lantern ? 11 : hash01(sign.x, sign.y) > .66 ? 11 : 10;
+    if (drawOptionalSprite("outdoor-props", 0, 8, { frame: signFrame, width: 116, height: 112, anchorX: .5, anchorY: .9 })) {
+      // Preserve the authored destination label over the generated sign face.
+      ctx.fillStyle = "rgba(246,222,166,.86)"; ctx.font = "700 7px DM Mono"; ctx.textAlign = "center"; ctx.fillText(sign.label, 0, -18); ctx.restore(); return;
+    }
+    ctx.fillStyle = "#714d38"; ctx.fillRect(-3, -25, 6, 38); ctx.fillStyle = "#b7834f"; ctx.beginPath(); ctx.moveTo(-27, -29); ctx.lineTo(23, -29); ctx.lineTo(29, -18); ctx.lineTo(23, -7); ctx.lineTo(-27, -7); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "rgba(246,222,166,.7)"; ctx.font = "700 7px DM Mono"; ctx.textAlign = "center"; ctx.fillText(sign.label, -1, -17); ctx.restore();
   };
   const drawClearing = (clearing, time) => {
     ctx.save(); ctx.translate(clearing.x, clearing.y); ctx.rotate(clearing.rotation); ctx.globalAlpha = .32 + Math.sin(time * .2 + clearing.x) * .015; ctx.fillStyle = clearing.tone; ctx.beginPath(); ctx.ellipse(0, 0, clearing.rx, clearing.ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = .36; ctx.strokeStyle = "rgba(186,218,157,.22)"; ctx.lineWidth = 2; ctx.setLineDash([3, 13]); ctx.beginPath(); ctx.ellipse(0, 0, clearing.rx * .8, clearing.ry * .68, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
@@ -1021,7 +1031,7 @@
     ctx.globalAlpha = 1;
   };
   const drawTree = (tree, time, layer = "mid") => {
-    const { x, y, s, phase = 0 } = tree; const variant = tree.variant ?? Math.floor(hash01(Math.floor(x), Math.floor(y)) * 3); const sway = Math.sin(time * .55 + phase) * .018; const depth = layer === "back" ? .66 : layer === "front" ? 1.08 : .9;
+    const { x, y, s, phase = 0 } = tree; const variant = tree.variant ?? Math.floor(hash01(Math.floor(x), Math.floor(y)) * 3); const sway = Math.sin(time * .32 + phase) * .008; const depth = layer === "back" ? .66 : layer === "front" ? 1.08 : .9;
     const canopyA = layer === "back" ? ["#4f9662", "#4b8d61", "#568f63"][variant] : layer === "front" ? ["#3c7d54", "#39744f", "#427b52"][variant] : ["#478f5c", "#438857", "#4d8f5e"][variant];
     const canopyB = layer === "back" ? ["#71b878", "#69ad74", "#79bd7d"][variant] : layer === "front" ? ["#5da86b", "#58a166", "#67b170"][variant] : ["#64ad70", "#5fa76b", "#6db778"][variant];
     const crowns = [
@@ -1031,16 +1041,20 @@
     ][variant];
     drawShadow(x, y + 57 * s, 30 * s, 10 * s, layer === "front" ? .45 : .3);
     if (layer !== "back") drawDirectionalShadow(x, y + 48 * s, 56 * s, 17 * s, layer === "front" ? .09 : .06, .2);
-    const swayFrame = Math.floor((time * 3 + phase) % 4);
+    // The authored tree cells are subtle variations, not a four-frame dance cycle.
+    // Hold each pose long enough that the player registers wind only peripherally.
+    const treeMotion = [0, 1, 2, 1][Math.floor((time * .72 + phase * .37) % 4)];
     const layerBase = layer === "back" ? 0 : layer === "front" && variant === 2 ? 12 : layer === "front" ? 8 : 4;
-    const treeFrame = layerBase + swayFrame;
-    if (drawOptionalSprite(`tree-${layer}`, x, y + 58 * s, { frame: treeFrame, width: 176 * s * depth, height: 220 * s * depth, anchorX: .5, anchorY: .98 })) return;
+    const treeFrame = layerBase + treeMotion;
+    // The generated tree artwork has about 10% transparent padding below the roots.
+    // A .90 anchor puts the visible root flare on the same ground line as its shadow.
+    if (drawOptionalSprite(`tree-${layer}`, x, y + 58 * s, { frame: treeFrame, width: 176 * s * depth, height: 220 * s * depth, anchorX: .5, anchorY: .90 })) return;
     ctx.save(); ctx.globalAlpha = depth; ctx.translate(x, y); ctx.rotate(sway); ctx.scale(s, s);
     ctx.fillStyle = "#6e4935"; ctx.beginPath(); ctx.moveTo(-10, 5); ctx.lineTo(9, 5); ctx.lineTo(14, 58); ctx.lineTo(-15, 58); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = "#aa7048"; ctx.fillRect(-3, 8, 5, 44); ctx.fillStyle = "rgba(33,56,39,.22)"; ctx.fillRect(8, 13, 5, 41);
     ctx.strokeStyle = "rgba(56,83,52,.68)"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-5, 42); ctx.quadraticCurveTo(-20, 28, -24, 16); ctx.moveTo(5, 37); ctx.quadraticCurveTo(19, 24, 25, 10); ctx.stroke();
     crowns.forEach(([ox, oy, radius], i) => {
-      const crownSway = Math.sin(time * .72 + phase + i * .9) * (i === 2 ? 1.6 : .9);
+      const crownSway = Math.sin(time * .36 + phase + i * .9) * (i === 2 ? .65 : .34);
       ctx.save(); ctx.translate(crownSway, i === 2 ? Math.sin(time * .48 + phase) * .7 : 0); ctx.fillStyle = i % 2 ? canopyA : canopyB; ctx.beginPath(); ctx.arc(ox, oy, radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(22,61,43,.24)"; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = "rgba(224,255,194,.14)"; ctx.beginPath(); ctx.arc(ox - 9, oy - 10, radius * .32, 0, Math.PI * 2); ctx.fill();
       if ((i + variant) % 3 === 0 && layer !== "back") { ctx.fillStyle = "rgba(29,76,48,.2)"; ctx.beginPath(); ctx.arc(ox + 8, oy + radius * .48, radius * .45, 0, Math.PI); ctx.fill(); }
@@ -1049,12 +1063,13 @@
     ctx.fillStyle = "rgba(17,56,42,.22)"; ctx.beginPath(); ctx.ellipse(0, 35, 36, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(72,61,45,.62)"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-10, 52); ctx.quadraticCurveTo(-25, 59, -30, 64); ctx.moveTo(10, 52); ctx.quadraticCurveTo(25, 59, 30, 64); ctx.stroke(); ctx.restore();
   };
   const drawHouse = (x, y, w, h, color, accent = "#b97b58") => {
-    drawShadow(x + w / 2, y + h + 14, w * .5, 15, .34);
+    drawShadow(x + w / 2, y + h + 9, w * .5, 15, .34);
     // Painted structures are a presentation layer only: collision rectangles and
     // authored house coordinates remain unchanged, with the procedural facade below
     // kept as a reliable fallback when the atlas is unavailable.
     const structureFrame = x > 1000 ? 9 : 1;
-    if (drawOptionalSprite("structures", x + w / 2, y + h + 4, { frame: structureFrame, width: w * 1.06, height: h * 1.18, anchorX: .5, anchorY: .91, alpha: .98 })) return;
+    const structureAnchor = structureFrame >= 8 && structureFrame <= 11 ? .86 : .925;
+    if (drawOptionalSprite("structures", x + w / 2, y + h + 2, { frame: structureFrame, width: w * 1.06, height: h * 1.18, anchorX: .5, anchorY: structureAnchor, alpha: .98 })) return;
     ctx.fillStyle = "rgba(11,35,27,.24)"; ctx.fillRect(x - 8, y + 38, w + 16, h - 30);
     const wall = ctx.createLinearGradient(x, y + 30, x + w, y + h); wall.addColorStop(0, shadeHex(color, .04)); wall.addColorStop(.7, color); wall.addColorStop(1, shadeHex(color, -.16));
     ctx.fillStyle = wall; ctx.fillRect(x, y + 30, w, h - 30); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.strokeRect(x, y + 30, w, h - 30);
@@ -1109,10 +1124,17 @@
     ctx.globalAlpha = .55; ctx.strokeStyle = "rgba(109,84,60,.46)"; ctx.lineWidth = 2; for (let i = 0; i < 11; i += 1) { const x = 40 + i * 142; const y = 488 + Math.sin(x * .011) * 30; ctx.beginPath(); ctx.moveTo(x, y - 13); ctx.quadraticCurveTo(x + 11, y - 17, x + 19, y - 10); ctx.stroke(); }
     ctx.globalAlpha = .7; const pathStones = [[135, 485, -0.25], [338, 448, .18], [572, 477, -.08], [804, 519, .15], [1050, 550, -.18], [1288, 510, .12], [1478, 462, -.2]];
     pathStones.forEach(([x, y, angle], index) => { ctx.save(); ctx.translate(x, y + Math.sin(time * .35 + index) * .4); ctx.rotate(angle); ctx.fillStyle = index % 2 ? "rgba(218,191,142,.5)" : "rgba(119,96,70,.4)"; ctx.beginPath(); ctx.ellipse(0, 0, 10 + index % 3 * 2, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
+    // Painted path cards break up the broad procedural ribbon without changing its
+    // collision shape or route. They are deliberately sparse, like worn trail repairs.
+    if (loadedAssets.has("outdoor-props")) {
+      [[245, 455, 4, -.14], [520, 461, 5, .12], [820, 522, 6, .14], [1115, 548, 7, -.1], [1375, 486, 4, -.18], [302, 596, 5, -.16]].forEach(([x, y, frame, angle]) => {
+        drawOptionalSprite("outdoor-props", x, y, { frame, width: 118, height: 94, anchorX: .5, anchorY: .5, rotation: Math.PI / 2 + angle, alpha: .72 });
+      });
+    }
     ctx.restore();
   };
   const drawGrassTuft = (item, time, foreground = false) => {
-    const rustle = item.rustle || 0; const sway = Math.sin(time * 2.2 + item.phase) * .12 + rustle * Math.sin(time * 22 + item.phase) * .36;
+    const rustle = item.rustle || 0; const sway = Math.sin(time * 1.05 + item.phase) * .045 + rustle * Math.sin(time * 18 + item.phase) * .26;
     const foliageFrame = Number.isFinite(item.foliageFrame) ? item.foliageFrame : Math.abs(Math.floor((item.x * .17 + item.y * .07) % 4));
     if (drawOptionalSprite("outdoor-foliage", item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * 52, height: (item.s || 1) * 52, anchorX: .5, anchorY: .92, alpha: foreground ? .76 : .94, rotation: sway * .32 })) return;
     ctx.save(); ctx.translate(item.x, item.y); ctx.rotate(sway); ctx.scale(item.s || 1, item.s || 1); ctx.globalAlpha = foreground ? .72 : .92;
@@ -1124,11 +1146,11 @@
     if (loadedAssets.has("outdoor-foliage")) {
       const frameBase = Number.isFinite(patch.foliageFrame) ? patch.foliageFrame : 0;
       const frame = frameBase + (rustle > .2 ? Math.floor(time * 3) % 2 : 0);
-      if (drawOptionalSprite("outdoor-foliage", patch.x, patch.y + 8, { frame, width: 82 * scale, height: 82 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .62 : .78, rotation: Math.sin(time * .7 + patch.phase) * .025 })) return;
+      if (drawOptionalSprite("outdoor-foliage", patch.x, patch.y + 8, { frame, width: 82 * scale, height: 82 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .62 : .78, rotation: Math.sin(time * .42 + patch.phase) * .01 })) return;
     }
     ctx.save(); ctx.globalAlpha = foreground ? .58 : .72;
     for (let i = 0; i < density; i += 1) {
-      const angle = hash01(patch.seed, i) * Math.PI * 2; const radius = 8 + hash01(patch.seed + i * 3, 4) * patch.radius; const x = patch.x + Math.cos(angle) * radius; const y = patch.y + Math.sin(angle) * radius * .48; const s = scale * (.72 + hash01(patch.seed + i, 9) * .56); const phase = patch.phase + i * .73; const sway = Math.sin(time * (1.4 + hash01(i, patch.seed) * .7) + phase) * .1 + rustle * Math.sin(time * 18 + phase) * .42;
+      const angle = hash01(patch.seed, i) * Math.PI * 2; const radius = 8 + hash01(patch.seed + i * 3, 4) * patch.radius; const x = patch.x + Math.cos(angle) * radius; const y = patch.y + Math.sin(angle) * radius * .48; const s = scale * (.72 + hash01(patch.seed + i, 9) * .56); const phase = patch.phase + i * .73; const sway = Math.sin(time * (0.72 + hash01(i, patch.seed) * .32) + phase) * .045 + rustle * Math.sin(time * 15 + phase) * .3;
       ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.scale(s, s); const hue = i % 3; const colors = [patch.tone || "#66a95d", shadeHex(patch.tone || "#66a95d", .1), shadeHex(patch.tone || "#66a95d", -.1)];
       for (let blade = 0; blade < 3; blade += 1) { const offset = (blade - 1) * 5; ctx.strokeStyle = colors[(blade + hue) % colors.length]; ctx.lineWidth = blade === 1 ? 2.5 : 2; ctx.beginPath(); ctx.moveTo(offset, 7); ctx.quadraticCurveTo(offset - 2, -2, offset + (blade - 1) * 4, -14 - (blade % 2) * 4); ctx.stroke(); }
       if (i % 5 === 0 && !foreground) { ctx.fillStyle = "rgba(231,211,139,.7)"; ctx.beginPath(); ctx.arc(3, -14, 2, 0, Math.PI * 2); ctx.fill(); }
@@ -1137,12 +1159,12 @@
     ctx.restore();
   };
   const drawFlower = (flower, time) => {
-    const rustle = flower.rustle || 0; const sway = Math.sin(time * 1.8 + flower.phase) * .08 + rustle * Math.sin(time * 18 + flower.phase) * .3;
+    const rustle = flower.rustle || 0; const sway = Math.sin(time * 1.02 + flower.phase) * .035 + rustle * Math.sin(time * 16 + flower.phase) * .24;
     const foliageFrame = 8 + (Number.isFinite(flower.foliageFrame) ? flower.foliageFrame % 4 : Math.abs(Math.floor((flower.x * .11 + flower.y * .05) % 4)));
     if (drawOptionalSprite("outdoor-foliage", flower.x, flower.y + 6, { frame: foliageFrame, width: (flower.s || 1) * 52, height: (flower.s || 1) * 52, anchorX: .5, anchorY: .92, alpha: .94, rotation: sway * .4 })) return;
     ctx.save(); ctx.translate(flower.x, flower.y); ctx.rotate(sway); ctx.scale(flower.s, flower.s); ctx.strokeStyle = "#6f9b58"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 10); ctx.quadraticCurveTo(-2, -2, 0, -11); ctx.stroke(); ctx.fillStyle = flower.color; for (let i = 0; i < 4; i += 1) { ctx.beginPath(); ctx.ellipse(Math.cos(i * 1.57) * 4, -13 + Math.sin(i * 1.57) * 4, 4, 2.5, i * 1.57, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = "#ffe8a4"; ctx.beginPath(); ctx.arc(0, -13, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   };
-  const drawRock = (rock) => { ctx.save(); ctx.translate(rock.x, rock.y); ctx.scale(rock.s, rock.s); drawShadow(0, 10, 20, 7, .3); ctx.fillStyle = rock.tone; ctx.beginPath(); ctx.moveTo(-22, 8); ctx.quadraticCurveTo(-24, -10, -8, -17); ctx.quadraticCurveTo(10, -23, 24, -4); ctx.quadraticCurveTo(25, 10, 7, 13); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.stroke(); ctx.fillStyle = "rgba(211,235,197,.2)"; ctx.beginPath(); ctx.ellipse(-7, -8, 10, 5, -.2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
+  const drawRock = (rock) => { ctx.save(); ctx.translate(rock.x, rock.y); ctx.scale(rock.s, rock.s); drawShadow(0, 10, 20, 7, .24); const rockVariant = Number.isFinite(rock.variant) ? rock.variant : Math.floor(hash01(rock.x, rock.y) * 4); if (drawOptionalSprite("outdoor-props", 0, 8, { frame: 12 + rockVariant % 4, width: 82, height: 76, anchorX: .5, anchorY: .9 })) { ctx.restore(); return; } ctx.fillStyle = rock.tone; ctx.beginPath(); ctx.moveTo(-22, 8); ctx.quadraticCurveTo(-24, -10, -8, -17); ctx.quadraticCurveTo(10, -23, 24, -4); ctx.quadraticCurveTo(25, 10, 7, 13); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.stroke(); ctx.fillStyle = "rgba(211,235,197,.2)"; ctx.beginPath(); ctx.ellipse(-7, -8, 10, 5, -.2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
   const drawLog = (log) => { ctx.save(); ctx.translate(log.x, log.y); ctx.rotate(log.angle); ctx.scale(log.s, log.s); drawShadow(0, 12, log.length * .45, 6, .32); if (drawOptionalSprite("outdoor-foliage", 0, 3, { frame: 12 + (log.variant || 0) % 2, width: log.length * 1.05, height: 64, anchorX: .5, anchorY: .86 })) { ctx.restore(); return; } ctx.fillStyle = "#684735"; ctx.fillRect(-log.length / 2, -10, log.length, 20); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.strokeRect(-log.length / 2, -10, log.length, 20); ctx.fillStyle = "#986b4a"; ctx.fillRect(-log.length / 2 + 12, -7, log.length - 24, 5); ctx.fillStyle = "#b58459"; ctx.beginPath(); ctx.ellipse(-log.length / 2, 0, 11, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#6f4937"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-log.length / 2, 0, 6, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "#5c8f59"; ctx.beginPath(); ctx.arc(-14, -11, 8, 0, Math.PI * 2); ctx.arc(5, -12, 6, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
   const drawLantern = (x, y, time) => { const pulse = .72 + Math.sin(time * 7 + x) * .12; drawShadow(x, y + 7, 10, 4, .18); const glow = ctx.createRadialGradient(x, y - 24, 1, x, y - 24, 62); glow.addColorStop(0, "rgba(255,213,125,.38)"); glow.addColorStop(.35, "rgba(255,185,102,.12)"); glow.addColorStop(1, "rgba(255,213,125,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 24, 62, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#543c32"; ctx.fillRect(x - 3, y - 22, 6, 26); ctx.fillStyle = "#a87b4c"; ctx.fillRect(x - 10, y - 28, 20, 7); ctx.strokeStyle = "rgba(31,54,42,.7)"; ctx.lineWidth = 2; ctx.strokeRect(x - 10, y - 28, 20, 13); ctx.fillStyle = `rgba(255,215,133,${pulse})`; ctx.beginPath(); ctx.arc(x, y - 25, 6 + Math.sin(time * 5 + x) * .7, 0, Math.PI * 2); ctx.fill(); };
   const drawButterfly = (item, time) => { const x = item.x + Math.sin(time * item.speed + item.phase) * item.range; const y = item.y + Math.cos(time * item.speed * .8 + item.phase) * 16; const flap = .65 + Math.abs(Math.sin(time * 9 + item.phase)) * .35; ctx.save(); ctx.translate(x, y); ctx.scale(1, flap); ctx.globalAlpha = .78; ctx.fillStyle = item.color; ctx.beginPath(); ctx.ellipse(-4, 0, 5, 3, -.35, 0, Math.PI * 2); ctx.ellipse(4, 0, 5, 3, .35, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#4d463a"; ctx.fillRect(-1, -2, 2, 5); ctx.restore(); };
@@ -1256,15 +1278,21 @@
   const drawMapTable = (x, y, time) => { drawShadow(x, y + 11, 24, 6, .25); ctx.fillStyle = "#6f4b39"; ctx.fillRect(x - 20, y - 5, 40, 8); ctx.fillRect(x - 16, y + 3, 4, 18); ctx.fillRect(x + 12, y + 3, 4, 18); ctx.fillStyle = "#d5c28d"; ctx.fillRect(x - 13, y - 10, 26, 8); ctx.strokeStyle = "rgba(71,112,93,.75)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 8, y - 8); ctx.lineTo(x - 2, y - 4); ctx.lineTo(x + 4, y - 8); ctx.lineTo(x + 10, y - 3); ctx.stroke(); ctx.fillStyle = `rgba(255,215,123,${.35 + Math.sin(time * 3) * .1})`; ctx.beginPath(); ctx.arc(x + 18, y - 8, 3, 0, Math.PI * 2); ctx.fill(); };
   const drawPondBasket = (x, y, time) => { ctx.save(); ctx.translate(x, y + Math.sin(time * 1.7) * .5); ctx.fillStyle = "#b17b4d"; ctx.beginPath(); ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#e2bd78"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -2, 10, Math.PI, 0); ctx.stroke(); ctx.restore(); };
   const drawNpc = (npc, time) => {
-    const bob = Math.sin(time * 2.4 + npc.phase) * (npc.behavior === "pace" ? 1.2 : .8); const npcAnimTime = npc.animTime || 0; const stride = npc.behavior === "pace" ? Math.sin(npcAnimTime) * 2 : Math.sin(npcAnimTime) * .45; const x = npc.x; const y = npc.y + bob;
-    drawShadow(x, y + 18, (npc.id === "brindle" ? 20 : 18) * (1 + Math.abs(stride) * .025), 7, .32);
+    const bob = Math.sin(time * 1.15 + npc.phase) * (npc.behavior === "pace" ? .36 : .22); const npcAnimTime = npc.animTime || 0; const stride = npc.behavior === "pace" ? Math.sin(npcAnimTime) * 2 : Math.sin(npcAnimTime) * .45; const x = npc.x; const y = npc.y + bob;
+    // NPCs are anchored at their feet; keep the contact shadow directly beneath
+    // the sprite instead of making idle breathing read as hovering.
+    const groundedY = y + 11;
+    drawShadow(x, groundedY, (npc.id === "brindle" ? 20 : 18) * (1 + Math.abs(stride) * .025), 7, .32);
     const customNpcKey = npc.id === "rowan" ? "npc-rowan" : "npc-named";
     const facingFrame = npc.facing < 0 ? 2 : npc.facing > 0 ? 0 : 1;
     const namedIndex = npc.id === "tansy" ? 0 : npc.id === "brindle" ? 1 : npc.id === "lumen" ? 2 : 3;
     const customNpcFrame = npc.id === "rowan"
       ? (state.dialogue && npc.near ? 12 + Math.floor((npc.clock || 0) * 4) % 4 : npc.behavior === "map" ? 8 + Math.floor((npc.clock || 0) * 2.6) % 4 : npc.behavior === "pace" ? 4 + Math.floor((npc.animTime || 0) * 1.4) % 4 : facingFrame)
       : (state.dialogue && npc.near ? 12 + namedIndex : npc.behavior === "map" || npc.behavior === "fire" ? 8 + namedIndex : npc.behavior === "pace" ? 4 + namedIndex : namedIndex);
-    const customNpc = drawOptionalSprite(customNpcKey, x, y + 8, { frame: customNpcFrame, width: npc.id === "brindle" ? 58 : 56, height: 74, flipX: npc.facing < 0 && npc.id === "rowan", alpha: npc.near ? 1 : .98 });
+    const npcBottoms = npc.id === "rowan"
+      ? [0.965, 0.971, 0.974, 0.974, 1, 1, 0.84, 1, 1, 1, 1, 1, 0.827, 0.824, 0.821, 0.827]
+      : [1, 0.997, 1, 1, 0.949, 0.955, 0.965, 0.978, 1, 1, 1, 1, 0.901, 0.897, 0.897, 0.907];
+    const customNpc = drawOptionalSprite(customNpcKey, x, groundedY, { frame: customNpcFrame, width: npc.id === "brindle" ? 58 : 56, height: 74, anchorY: npcBottoms[customNpcFrame] || .96, flipX: npc.facing < 0 && npc.id === "rowan", alpha: npc.near ? 1 : .98 });
     if (!customNpc) {
       ctx.save(); ctx.translate(x, y); ctx.scale(npc.facing || 1, 1);
       ctx.fillStyle = npc.id === "brindle" ? "#315b58" : "#4a3c43"; ctx.fillRect(-10 - stride, 8, 7, 8); ctx.fillRect(3 + stride, 8, 7, 8);
@@ -1313,8 +1341,8 @@
     ctx.fillStyle = "rgba(243,246,223,.84)"; ctx.font = "500 9px Outfit"; ctx.fillText(hint.text, hint.x + 10, y + 4); ctx.restore();
   };
   const drawEntrance = (x, y, time) => {
-    drawShadow(x, y + 50, 58, 13, .34);
-    if (drawOptionalSprite("structures", x, y + 38, { frame: 7, width: 148, height: 138, anchorX: .5, anchorY: .91, alpha: .98 })) { drawLightPool(x, y + 30, 88, COLORS.mint, .09); return; }
+    drawShadow(x, y + 39, 58, 13, .34);
+    if (drawOptionalSprite("structures", x, y + 38, { frame: 7, width: 148, height: 138, anchorX: .5, anchorY: .925, alpha: .98 })) { drawLightPool(x, y + 30, 88, COLORS.mint, .09); return; }
     ctx.fillStyle = "#342d3e"; ctx.beginPath(); ctx.arc(x, y, 50, Math.PI, 0); ctx.lineTo(x + 50, y + 50); ctx.lineTo(x - 50, y + 50); ctx.closePath(); ctx.fill(); ctx.fillStyle = `rgba(95,238,206,${.28 + Math.sin(time * 2) * .08})`; ctx.beginPath(); ctx.arc(x, y + 6, 32, Math.PI, 0); ctx.lineTo(x + 32, y + 45); ctx.lineTo(x - 32, y + 45); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#8ef2cf"; ctx.lineWidth = 2; ctx.stroke();
   };
 
@@ -1604,8 +1632,8 @@
       ctx.save(); ctx.globalAlpha = fade; ctx.translate(enemy.x, enemy.y - progress * 16); ctx.rotate(progress * 1.4); ctx.scale(.82 + progress * .8, .82 + progress * .8); ctx.strokeStyle = enemy.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, enemy.radius * .75, 0, Math.PI * 2); ctx.stroke(); for (let i = 0; i < 6; i += 1) { const angle = i * Math.PI / 3; const length = enemy.radius * (.7 + progress * .8); ctx.fillStyle = i % 2 ? enemy.color : "#fff2c4"; ctx.beginPath(); ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5); ctx.lineTo(Math.cos(angle + .16) * length, Math.sin(angle + .16) * length); ctx.lineTo(Math.cos(angle - .16) * length, Math.sin(angle - .16) * length); ctx.closePath(); ctx.fill(); } ctx.restore(); return;
     }
     if (enemy.hidden) { ctx.save(); ctx.globalAlpha = .16 + Math.sin(time * 2 + enemy.orbit) * .04; drawShadow(enemy.x, enemy.y + 9, 15, 5, .35); ctx.fillStyle = "#8e76a5"; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y, 8, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
-    const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 1.5 : 0; const moving = enemy.motionSpeed > 5; const bob = moving ? Math.sin(enemy.walk) * (enemy.type === "moth" ? 2.6 : 1.4) : Math.sin(enemy.animTime * 1.7) * .45; const windup = enemy.telegraph > 0 ? clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1) : 0; const facing = enemy.facingX < -.15 ? -1 : 1;
-    const shadowScale = enemy.type === "boss" ? (enemy.phase === 2 ? 1.5 : 1.35) : 1; drawShadow(enemy.x, enemy.y + enemy.radius * .7, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92) * shadowScale, enemy.radius * (moving ? .34 : .3) * shadowScale, enemy.type === "boss" ? .44 : .36);
+    const recoil = enemy.hitStun > 0 ? Math.sin(enemy.hitStun * 44) * 1.5 : 0; const moving = enemy.motionSpeed > 5; const bob = moving ? Math.sin(enemy.walk) * (enemy.type === "moth" ? 1.05 : .55) : Math.sin(enemy.animTime * 1.15) * .2; const windup = enemy.telegraph > 0 ? clamp(enemy.telegraph / (enemy.stateTimer || enemy.telegraph), 0, 1) : 0; const facing = enemy.facingX < -.15 ? -1 : 1;
+    const shadowScale = enemy.type === "boss" ? (enemy.phase === 2 ? 1.5 : 1.35) : 1; drawShadow(enemy.x, enemy.y + enemy.radius * .44, enemy.radius * (enemy.hitStun > 0 ? 1.08 : .92) * shadowScale, enemy.radius * (moving ? .34 : .3) * shadowScale, enemy.type === "boss" ? .44 : .36);
     const familyEnemy = ["thornback", "wisp", "moth", "warden"].includes(enemy.type);
     const customEnemyKey = enemy.type === "boss" ? "boss" : familyEnemy ? "enemy-family" : `enemy-${enemy.type}`;
     const customEnemyBase = enemy.type === "boss" ? (enemy.phase === 2 ? 32 : 0) : enemy.type === "thornback" ? 0 : enemy.type === "wisp" ? 4 : enemy.type === "moth" ? 8 : enemy.type === "warden" ? 12 : 0;
@@ -1616,7 +1644,9 @@
     const familyState = enemy.hitStun > 0 ? 3 : (enemy.state === "chargeWindup" || enemy.state === "rangedWindup" || enemy.state === "ambushWindup" || enemy.state === "meleeWindup") ? 1 : (enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "ranged" || enemy.state === "attack") ? 2 : moving ? 1 + Math.floor(enemy.walk * 1.2) % 2 : 0;
     const customEnemyFrame = enemy.type === "boss" ? bossFrame : enemy.type === "mossling" ? mosslingFrame : familyEnemy ? customEnemyBase + familyState : 0;
     const familySize = enemy.type === "warden" ? 54 : enemy.type === "moth" ? 38 : enemy.type === "thornback" ? 52 : enemy.type === "wisp" ? 42 : enemy.radius * 2.45;
-    const customEnemy = drawOptionalSprite(customEnemyKey, enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil, { frame: customEnemyFrame, width: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, height: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, anchorY: familyEnemy ? .86 : undefined, flipX: facing < 0, alpha: enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1 });
+    const enemyBottoms = [0.942, 0.962, 1, 0.952, 0.856, 0.824, 0.843, 0.856, 0.782, 0.779, 0.843, 0.792, 0.763, 0.75, 0.804, 0.753];
+    const familyAnchor = familyEnemy ? enemyBottoms[customEnemyFrame] || .86 : undefined;
+    const customEnemy = drawOptionalSprite(customEnemyKey, enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil, { frame: customEnemyFrame, width: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, height: enemy.type === "boss" ? (enemy.phase === 2 ? 112 : 100) : familyEnemy ? familySize : enemy.radius * 2.45, anchorY: familyAnchor, flipX: facing < 0, alpha: enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1 });
     ctx.save(); ctx.translate(enemy.x + (enemy.recoilX || 0) + enemy.hitDirectionX * recoil, enemy.y + (enemy.recoilY || 0) + bob + enemy.hitDirectionY * recoil); ctx.scale(facing, 1); ctx.globalAlpha = enemy.hitFlash > 0 ? .55 + Math.sin(enemy.hitFlash * 35) * .45 : 1; ctx.shadowColor = ART.inkSoft; ctx.shadowBlur = 2;
     const color = enemy.color; const squash = enemy.hitStun > 0 ? .86 : enemy.state === "charging" || enemy.state === "pounce" || enemy.state === "bossDashing" ? 1.12 : 1; const stretch = enemy.hitStun > 0 ? 1.1 : enemy.state === "chargeWindup" || enemy.state === "bossDashWindup" ? .86 : 1;
     ctx.scale(squash, stretch);
@@ -1761,14 +1791,29 @@
     const flicker = player.invulnerable > 0 && Math.floor(player.invulnerable * 24) % 2 === 0; if (flicker && player.dash <= 0) ctx.globalAlpha = .48;
     const bob = player.visualState === "move" ? Math.sin(player.walk) * 2 : player.visualState === "idle" ? Math.sin(time * 2.2) * .7 : player.visualState === "attack" ? Math.sin(player.attackElapsed * 22) * .45 : 0;
     const lean = player.visualState === "hurt" ? -.12 : player.visualState === "attack" ? .08 : 0;
-    drawShadow(player.x, player.y + 16, player.visualState === "dash" ? 25 : 19, player.visualState === "dash" ? 5 : 7, .36);
+    drawShadow(player.x, player.y + 5, player.visualState === "dash" ? 25 : 19, player.visualState === "dash" ? 5 : 7, .36);
     const facingFrame = player.facingY < -.35 ? 4 : player.facingY > .35 ? 0 : 2;
     const movementRow = Math.abs(player.facingX) > Math.abs(player.facingY) ? (player.facingX >= 0 ? 1 : 3) : (player.facingY < 0 ? 2 : 0);
     const runFrame = movementRow * 4 + Math.floor((player.walk * 1.22) % 4);
-    const playerFrame = player.visualState === "move" ? runFrame : player.visualState === "attack" ? 16 + Math.floor((player.attackElapsed * 22) % 8) : player.visualState === "dash" ? 24 + Math.floor((time * 14) % 5) : player.visualState === "hurt" ? 28 + Math.floor((time * 9) % 4) : facingFrame;
+    // The authored sword row is ordered by readable aim: down, up, right,
+    // left, then a short recovery. Select a four-frame directional slice rather
+    // than cycling the old south-biased eight-frame loop for every attack.
+    const attackDirection = Math.abs(player.attackDirectionX) > Math.abs(player.attackDirectionY)
+      ? (player.attackDirectionX >= 0 ? "right" : "left")
+      : (player.attackDirectionY < 0 ? "up" : "down");
+    const attackSlices = { down: [16, 17, 23, 31], up: [16, 17, 23, 31], right: [18, 19, 20, 23], left: [21, 22, 20, 23] };
+    const attackSlice = attackSlices[attackDirection] || attackSlices.down;
+    const attackFrame = attackSlice[Math.min(3, Math.floor((player.attackElapsed / .34) * attackSlice.length))];
+    const playerFrame = player.visualState === "move" ? runFrame : player.visualState === "attack" ? attackFrame : player.visualState === "dash" ? 24 + Math.floor((time * 14) % 5) : player.visualState === "hurt" ? 28 + Math.floor((time * 9) % 4) : facingFrame;
     // The generated sheet already contains the blade, lantern, and action silhouettes.
     // Keep the procedural sword only for the fallback so replacement art never doubles it.
-    const customPlayer = drawOptionalSprite(player.visualState === "move" ? "player-run" : "player", player.x, player.y + bob + 8, { frame: playerFrame, width: player.visualState === "dash" ? 58 : 52, height: player.visualState === "dash" ? 76 : 70, flipX: player.visualState === "move" ? false : player.facingX < -.2, rotation: lean, alpha: flicker ? .48 : 1 });
+    const playerBottoms = [0.945, 0.965, 0.965, 0.957, 0.965, 0.973, 0.969, 0.949, 0.93, 0.934, 0.945, 0.938, 0.938, 0.938, 0.945, 0.926, 0.879, 0.914, 0.887, 0.902, 0.918, 0.84, 0.949, 0.895, 0.813, 0.809, 0.777, 0.777, 0.844, 0.844, 0.859, 0.887];
+    const runBottoms = [0.923, 0.923, 0.923, 0.923, 0.885, 0.881, 0.875, 0.881, 1, 1, 1, 1, 0.792, 0.795, 0.808, 0.811];
+    const playerAnchor = player.visualState === "move" ? runBottoms[playerFrame] || .92 : playerBottoms[playerFrame] || .92;
+    const playerSpriteKey = player.visualState === "move" ? "player-run" : player.visualState === "attack" ? "player-attack" : "player";
+    const directionalAttackFrame = attackDirection === "down" ? 0 : attackDirection === "up" ? 4 : attackDirection === "right" ? 8 : 12;
+    const spriteFrame = player.visualState === "attack" ? directionalAttackFrame + Math.min(3, Math.floor((player.attackElapsed / .34) * 4)) : playerFrame;
+    const customPlayer = drawOptionalSprite(playerSpriteKey, player.x, player.y + bob + 8, { frame: spriteFrame, width: player.visualState === "dash" ? 58 : player.visualState === "attack" ? 58 : 52, height: player.visualState === "dash" ? 76 : player.visualState === "attack" ? 74 : 70, anchorY: player.visualState === "attack" ? .94 : playerAnchor, flipX: (player.visualState === "move" || player.visualState === "attack") ? false : player.facingX < -.2, rotation: lean, alpha: flicker ? .48 : 1 });
     if (!customPlayer) {
       ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
       const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
