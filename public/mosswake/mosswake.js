@@ -1923,11 +1923,16 @@
     // was always painted after every enemy, which made an enemy read as floating
     // over or behind the player whenever their world-space Y positions crossed.
     // Keep gameplay/collision order untouched; this only fixes visual layering.
+    const actorDepthY = (entry) => entry.kind === "player"
+      ? entry.actor.y + 8
+      : entry.kind === "npc"
+        ? entry.actor.y + 11
+        : entry.actor.y;
     const actorEntities = [
       ...enemies.map((enemy) => ({ kind: "enemy", actor: enemy })),
       ...(state.area === "overworld" ? npcs.map((npc) => ({ kind: "npc", actor: npc })) : []),
       { kind: "player", actor: player }
-    ].sort((a, b) => a.actor.y - b.actor.y);
+    ].sort((a, b) => actorDepthY(a) - actorDepthY(b));
     actorEntities.forEach((entry) => { if (entry.kind === "player") drawPlayer(time); else if (entry.kind === "npc") drawNpc(entry.actor, time); else drawEnemy(entry.actor, time); });
     drops.forEach((drop) => drawDrop(drop, time)); projectiles.forEach((projectile) => drawProjectile(projectile));
     if (state.area === "overworld") drawOutdoorForeground(time); particles.forEach(drawParticle); drawInteractionHint(time); ctx.restore();

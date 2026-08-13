@@ -74,6 +74,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - No new artwork was needed; the existing Lantern-blade FX atlas remains the approved reference and stays replaceable through `assets/manifest.json`.
 - `node --check`, `git diff --check`, local start/attack visual smoke, and console warning/error checks pass. Live public start/attack smoke after deployment also passes with no console warnings or errors.
 
+## 2026-08-13 — Repeating visual director pass: contact-plane actor depth
+
+- The dungeon encounter sweep showed that the shared actor sort still compared raw entity centers even though the player, NPCs, and painted enemies use different visual ground offsets. Near-crossings could therefore be ordered a few pixels away from the feet/shadow plane.
+- Added a small render-only `actorDepthY()` helper: player depth uses its `+8px` painted presentation, NPC depth uses its `+11px` feet line, and enemies use their authored world contact plane. The existing foreground foliage pass remains last for deliberate occlusion.
+- No artwork or gameplay systems changed. Collision, AI, attack timing, telegraphs, hitboxes, anchors, and shadows remain untouched.
+- `node --check`, `git diff --check`, local start/movement/attack smoke, and console warning/error checks pass. Public deployment verification is pending.
+
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
 - Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.
