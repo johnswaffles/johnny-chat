@@ -1,5 +1,5 @@
 {
-  "version": 12,
+  "version": 13,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -37,6 +37,21 @@
       "anchorX": 0.5,
       "anchorY": 0.88
     },
+    "npc-named": {
+      "src": "npcs/named-npc-family-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 7,
+      "displayWidth": 56,
+      "displayHeight": 74,
+      "anchorX": 0.5,
+      "anchorY": 0.9
+    },
+    "portrait-tansy": { "src": "npcs/portraits/tansy-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
+    "portrait-brindle": { "src": "npcs/portraits/brindle-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
+    "portrait-lumen": { "src": "npcs/portraits/lumen-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
     "enemy-mossling": {
       "src": "enemies/mossling-sheet-generated-v1.png",
       "frameWidth": 312,

@@ -24,9 +24,16 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | 1 | Boss telegraph and defeat FX | Integrated / tested | Keep the atlas as the Guardian effect reference; only refine for a readability defect |
 | 2 | Outdoor foliage | Integrated / tested | Keep the foliage atlas as the outdoor prop reference; add a second seasonal sheet only if a later visual review shows repetition |
 | 3 | Dungeon architecture | Integrated / tested | Expand only with a focused landmark or statue family after the room pass |
-| 4 | Remaining NPCs and portraits | Procedural fallback except Rowan | Generate Tansy, Brindle, Lumen, and compact dialogue busts |
+| 4 | Remaining NPCs and portraits | Integrated / tested | Add a dedicated trader only if the outpost needs another interaction |
 
 ## Current iteration log
+
+### 2026-08-13 — Named NPC family and portraits
+
+- Generated `assets/npcs/named-npc-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas for Tansy, Brindle, Lumen, and the outpost trader: front idle, walking/back, work, and talk/reaction rows. The keyed RGB source remains beside it for future matte refinement.
+- Added `npc-named` plus three 96×96 portrait files to the manifest. Tansy, Brindle, and Lumen now render through the generated family in the overworld; dialogue portraits use their generated bust crops while Rowan keeps the existing Rowan reference sheet.
+- Preserved NPC schedules, proximity interaction, dialogue text, save behavior, and procedural fallback. Bumped the manifest and page cache keys to `manifest.json?v=13` and `mosswake.js?v=38`.
+- Local syntax, manifest, RGBA/alpha, startup, NPC asset-load, dialogue portrait, and console smoke checks passed. Public edge should be verified after cache rollover.
 
 ### 2026-08-13 — Dungeon architecture kit
 
