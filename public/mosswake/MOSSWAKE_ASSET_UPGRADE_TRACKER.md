@@ -32,6 +32,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | 3 | Dungeon architecture | Integrated / tested | Landmark/interactable atlas now covers chests, runes, switches, sockets, and reward pedestals |
 | 4 | Outdoor props (fences, paths, signs, rocks) | Integrated / tested | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
 
+## 2026-08-13 — Repeating visual director pass: Guardian grounding repair
+
+- Inspected the live overworld, current renderer, tracker handoff, and strongest approved character/environment references before selecting a target. No new art was generated because the remaining high-impact defect was technical rather than an inadequate asset.
+- Measured the alpha bottoms of all 16 `hollow-guardian-sheet-generated-v1.png` cells and added per-frame `bossBottoms` anchors for idle, attack, phase-two, stagger, and collapse states. Boss death frames now use the same measured grounding while retaining their authored dissolve offset.
+- Kept the existing boss sheet, telegraphs, phase logic, collision, and arena composition unchanged. This prevents the Guardian from appearing to hop or float when transparent margins change between attacks and phase transitions.
+- `node --check`, `git diff --check`, local live smoke, public live smoke, and console checks passed. Commit `2d5a2a2` is pushed to `main`.
+
 ## 2026-08-13 — Visual integration, grounding, and animation repair (continued)
 
 - Generated `assets/props/mosswake-props-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas: four fence variants, four worn trail segments, bridge/rope-bridge pieces, sign and lantern signposts, and four mossy rock clusters. The keyed RGB source remains beside it for future matte refinement.
