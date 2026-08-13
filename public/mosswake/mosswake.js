@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=6";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=7";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1055,6 +1055,7 @@
   const drawWater = (rect, time) => {
     ctx.save(); const water = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + rect.h); water.addColorStop(0, "#438f8c"); water.addColorStop(.48, "#2d7476"); water.addColorStop(1, "#234f5f"); ctx.fillStyle = water; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
     const depth = ctx.createLinearGradient(rect.x, rect.y, rect.x + rect.w, rect.y); depth.addColorStop(0, "rgba(205,255,222,.16)"); depth.addColorStop(.5, "rgba(205,255,222,0)"); depth.addColorStop(1, "rgba(4,34,43,.2)"); ctx.fillStyle = depth; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    drawOptionalSprite("water-surface", rect.x + rect.w / 2, rect.y + rect.h / 2, { frame: Math.floor(time * 7) % 16, width: rect.w + 18, height: rect.h + 18, anchorX: .5, anchorY: .5, alpha: .56 });
     ctx.strokeStyle = "rgba(164,246,216,.25)"; ctx.lineWidth = 2;
     for (let y = rect.y + 18; y < rect.y + rect.h; y += 28) { ctx.beginPath(); for (let x = rect.x; x < rect.x + rect.w; x += 24) { const wave = Math.sin(time * 1.8 + x * .03 + y * .06) * 3; ctx.moveTo(x, y + wave); ctx.quadraticCurveTo(x + 10, y - wave * .65, x + 20, y + wave); } ctx.stroke(); }
     ctx.fillStyle = "rgba(226,255,218,.14)"; for (let i = 0; i < 5; i += 1) { const x = rect.x + ((time * (9 + i * 2) + i * 74) % (rect.w + 80)) - 40; ctx.fillRect(x, rect.y + 22 + i * 27 + Math.sin(time * .8 + i) * 2, 34, 3); }
@@ -1065,7 +1066,7 @@
     ctx.save(); ctx.fillStyle = "rgba(11,47,43,.32)"; ctx.beginPath(); ctx.roundRect(rect.x - 8, rect.y + 8, rect.w + 16, rect.h + 12, 22); ctx.fill();
     const shape = () => { ctx.beginPath(); ctx.moveTo(rect.x + 18, rect.y + 14); ctx.quadraticCurveTo(rect.x + rect.w * .28, rect.y - 6, rect.x + rect.w * .55, rect.y + 12); ctx.quadraticCurveTo(rect.x + rect.w + 12, rect.y + 8, rect.x + rect.w - 6, rect.y + rect.h * .52); ctx.quadraticCurveTo(rect.x + rect.w - 18, rect.y + rect.h + 10, rect.x + rect.w * .58, rect.y + rect.h - 2); ctx.quadraticCurveTo(rect.x + 16, rect.y + rect.h + 8, rect.x + 5, rect.y + rect.h * .58); ctx.closePath(); };
     shape(); const water = ctx.createLinearGradient(rect.x, rect.y, rect.x, rect.y + rect.h); water.addColorStop(0, shallow ? "#4b938e" : "#357d7d"); water.addColorStop(1, "#285766"); ctx.fillStyle = water; ctx.fill();
-    ctx.save(); shape(); ctx.clip(); ctx.strokeStyle = "rgba(167,249,218,.28)"; ctx.lineWidth = 2;
+    ctx.save(); shape(); ctx.clip(); drawOptionalSprite("water-surface", rect.x + rect.w / 2, rect.y + rect.h / 2, { frame: Math.floor(time * 7) % 16, width: rect.w + 28, height: rect.h + 28, anchorX: .5, anchorY: .5, alpha: shallow ? .46 : .56 }); ctx.strokeStyle = "rgba(167,249,218,.28)"; ctx.lineWidth = 2;
     for (let y = rect.y + 22; y < rect.y + rect.h + 20; y += 28) { ctx.beginPath(); for (let x = rect.x - 30; x < rect.x + rect.w + 30; x += 28) { const wave = Math.sin(time * 2.15 + x * .03 + y) * 3; ctx.moveTo(x, y + wave); ctx.quadraticCurveTo(x + 12, y - wave, x + 24, y + wave); } ctx.stroke(); }
     ctx.fillStyle = "rgba(237,255,213,.2)"; for (let i = 0; i < 6; i += 1) { const x = rect.x + ((time * (12 + i) + i * 81) % (rect.w + 90)) - 35; ctx.fillRect(x, rect.y + 24 + i * 24 + Math.sin(time * .9 + i) * 2, 38, 3); }
     ctx.globalAlpha = .42; ctx.strokeStyle = "rgba(226,255,218,.7)"; ctx.lineWidth = 2; for (let i = 0; i < 5; i += 1) { const y = rect.y + 27 + i * 25 + Math.sin(time * 1.2 + i) * 4; ctx.beginPath(); ctx.moveTo(rect.x - 10, y); ctx.quadraticCurveTo(rect.x + rect.w * .5, y - 6, rect.x + rect.w + 10, y + 2); ctx.stroke(); }
@@ -1073,6 +1074,10 @@
     ctx.globalAlpha = .28; ctx.strokeStyle = "#f0e2b4"; ctx.lineWidth = 2; for (let i = 0; i < 8; i += 1) { const x = rect.x + 18 + ((i * 53) % Math.max(30, rect.w - 36)); const y = rect.y + (i % 2 ? rect.h - 12 : 12) + Math.sin(time * .8 + i) * 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 8, y - 3, x + 16, y); ctx.stroke(); }
     ctx.globalAlpha = .28; ctx.fillStyle = "#d8e7b4"; for (let i = 0; i < 4; i += 1) { const x = rect.x + rect.w * (.18 + i * .22) + Math.sin(time * .7 + i) * 8; const y = rect.y + rect.h * (.28 + (i % 2) * .32); ctx.beginPath(); ctx.ellipse(x, y, 8 + (i % 2) * 4, 3, -.18, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
+    if (loadedAssets.has("shoreline")) {
+      const frame = Math.floor(time * 6) % 2 === 0 ? 0 : 7;
+      drawOptionalSprite("shoreline", rect.x + rect.w / 2, rect.y + rect.h - 4, { frame, width: Math.min(rect.w * .92, 330), height: 68, anchorX: .5, anchorY: .56, alpha: .48 });
+    }
     ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 8; shape(); ctx.stroke(); ctx.strokeStyle = "rgba(196,213,162,.7)"; ctx.lineWidth = 3; shape(); ctx.stroke();
     ctx.save(); shape(); ctx.clip(); ctx.globalAlpha = .5; ctx.strokeStyle = "rgba(240,226,178,.68)"; ctx.lineWidth = 2; ctx.setLineDash([9, 18]); ctx.lineDashOffset = Math.sin(time * .35) * 12; shape(); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
     ctx.restore();

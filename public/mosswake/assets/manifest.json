@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "sprites": {
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
@@ -94,6 +94,30 @@
       "fps": 10,
       "displayWidth": 96,
       "displayHeight": 96,
+      "anchorX": 0.5,
+      "anchorY": 0.5
+    },
+    "water-surface": {
+      "src": "terrain/water-surface-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 7,
+      "displayWidth": 256,
+      "displayHeight": 256,
+      "anchorX": 0.5,
+      "anchorY": 0.5
+    },
+    "shoreline": {
+      "src": "terrain/shoreline-overlays-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 8,
+      "fps": 6,
+      "displayWidth": 280,
+      "displayHeight": 72,
       "anchorX": 0.5,
       "anchorY": 0.5
     }

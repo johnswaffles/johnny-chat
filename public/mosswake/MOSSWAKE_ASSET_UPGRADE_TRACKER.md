@@ -22,12 +22,11 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Priority | Family | Current status | Recommended next action |
 | --- | --- | --- | --- |
 | 1 | Lantern-blade combat FX | Integrated painted slash + Rootlight atlas; procedural fallback retained | Add dedicated boss telegraph/defeat FX when the arena pass reaches the top of the queue |
-| 2 | Water / shoreline | Procedural animated water and edge marks | Generate seamless water plus shoreline overlays |
-| 3 | Water / shoreline | Procedural animated water and edge marks | Generate seamless water plus shoreline overlays |
-| 4 | Layered tree family | Procedural authored silhouettes | Generate trunk/canopy/shadow layers with 4 sway frames |
-| 5 | Outdoor foliage | Procedural authored clusters | Generate modular grass, fern, reed, flower, mushroom, log, and ivy rustle states |
-| 6 | Dungeon architecture | Procedural room construction | Generate modular stone, roots, arches, statues, and rubble |
-| 7 | Remaining NPCs and portraits | Procedural fallback except Rowan | Generate Tansy, Brindle, Lumen, and compact dialogue busts |
+| 2 | Water / shoreline | Integrated painted water atlas + shoreline overlay; procedural motion retained | Add a focused flooded-vault readability review, then move to trees |
+| 3 | Layered tree family | Procedural authored silhouettes | Generate trunk/canopy/shadow layers with 4 sway frames |
+| 4 | Outdoor foliage | Procedural authored clusters | Generate modular grass, fern, reed, flower, mushroom, log, and ivy rustle states |
+| 5 | Dungeon architecture | Procedural room construction | Generate modular stone, roots, arches, statues, and rubble |
+| 6 | Remaining NPCs and portraits | Procedural fallback except Rowan | Generate Tansy, Brindle, Lumen, and compact dialogue busts |
 
 ## Current iteration log
 
@@ -53,6 +52,14 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Added `fx-slash` and `fx-impact` manifest slots pointing to the same replaceable atlas. The renderer now uses the first four painted frames for each sword strike and the last four frames for the Moonwake Lantern pulse; procedural arcs remain the safe fallback if the sheet is unavailable.
 - Kept combat timing, hitboxes, cooldowns, audio, and collision unchanged. Direction is still driven by the player attack vector, so the painted slash works for all eight aim directions without duplicating gameplay logic.
 - Bumped the manifest and page cache keys to versions 6 and 31. Local syntax, RGBA/alpha, startup, and browser smoke checks should be rerun after deployment.
+
+### 2026-08-13 — Water and shoreline family
+
+- Generated `assets/terrain/water-surface-generated-v1.png` as a 1248×1248 RGB 4×4 atlas with sixteen cool teal water phases, layered ripples, and restrained parchment reflection streaks.
+- Generated `assets/terrain/shoreline-overlays-generated-v1.png` as a 1248×624 RGBA 4×2 atlas with straight, corner, rocky, reed, and quiet foam shoreline variants. The keyed RGB source remains beside it for future matte refinement.
+- Added `water-surface` and `shoreline` manifest slots. Pond, small pond, and flooded-vault surfaces now draw the painted atlas first while retaining the procedural ripples, clipping, outlines, and fallback when an image has not loaded.
+- Kept collision rectangles, deep-water damage, room geometry, and water timing unchanged. Bumped the manifest and page cache keys to `manifest.json?v=7` and `mosswake.js?v=32`.
+- Local syntax, manifest, image dimensions, alpha, startup, and visual browser smoke checks remain to be run after this integration.
 
 ## Production contract
 
