@@ -1,6 +1,18 @@
 {
-  "version": 18,
+  "version": 19,
   "sprites": {
+    "ui-panels": {
+      "src": "ui/ui-panels-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 1,
+      "displayWidth": 312,
+      "displayHeight": 312,
+      "anchorX": 0.5,
+      "anchorY": 0.5
+    },
     "player": {
       "src": "player/warden-sheet-generated-v1.png",
       "frameWidth": 192,

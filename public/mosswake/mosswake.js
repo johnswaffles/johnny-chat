@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=18";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=19";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -236,10 +236,11 @@
     ui.portrait.dataset.character = state.dialogue.portrait || "rowan";
     ui.portraitMark.textContent = dialoguePortraitLetter(state.dialogue.portrait);
     if (state.dialogue.portrait === "rowan") {
-      ui.portrait.style.backgroundImage = "none";
+      ui.portrait.style.removeProperty("background-image");
+      ui.portrait.style.removeProperty("--portrait-image");
       ui.portrait.classList.remove("painted");
     } else {
-      ui.portrait.style.backgroundImage = `url('/mosswake/assets/npcs/portraits/${state.dialogue.portrait}-portrait-generated-v1.png')`;
+      ui.portrait.style.setProperty("--portrait-image", `url('/mosswake/assets/npcs/portraits/${state.dialogue.portrait}-portrait-generated-v1.png')`);
       ui.portrait.classList.add("painted");
     }
   };

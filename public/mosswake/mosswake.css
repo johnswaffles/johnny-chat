@@ -110,3 +110,14 @@ button, a, summary { -webkit-tap-highlight-color:transparent; }
 .game-heading h1 span { text-shadow:0 0 24px rgba(255,215,123,.42); }
 .area-pill { padding:8px 11px; border:1px solid rgba(167,240,192,.14); border-radius:999px; background:rgba(7,20,17,.35); }
 @media (prefers-reduced-motion:reduce) { .screen-card::after { display:none; } }
+
+/* Generated UI surface family: the atlas is decorative progressive enhancement;
+   typography, contrast, and interaction remain owned by CSS for accessibility. */
+.screen-card { background-image:url('/mosswake/assets/ui/ui-panels-generated-v1.png'),radial-gradient(circle at 50% 36%,rgba(72,150,111,.16),transparent 36%),linear-gradient(145deg,rgba(7,28,21,.9),rgba(5,12,15,.94)); background-size:400% 400%,auto,auto; background-position:33.3333% 33.3333%,center,center; background-repeat:no-repeat; background-blend-mode:soft-light,normal,normal; }
+.pause-card { background-position:0 33.3333%,center,center; }
+.victory-card { background-position:100% 33.3333%,center,center; }
+.dialogue { position:relative; overflow:hidden; background-image:linear-gradient(135deg,rgba(4,20,16,.97),rgba(9,29,25,.94)),url('/mosswake/assets/ui/ui-panels-generated-v1.png'); background-size:auto,400% 400%; background-position:center,0 33.3333%; background-repeat:no-repeat; background-blend-mode:normal,soft-light; }
+.dialogue::before { position:absolute; inset:0; content:""; border:1px solid rgba(255,215,123,.22); border-radius:inherit; background-image:url('/mosswake/assets/ui/ui-panels-generated-v1.png'); background-size:400% 400%; background-position:66.6667% 0; background-repeat:no-repeat; opacity:.22; pointer-events:none; }
+.dialogue > * { position:relative; z-index:1; }
+.dialogue-portrait { background-image:url('/mosswake/assets/ui/ui-panels-generated-v1.png'),linear-gradient(145deg,#355e73,#1f3b4e); background-size:400% 400%,auto; background-position:100% 0,center; background-repeat:no-repeat; }
+.dialogue-portrait.painted { background-image:var(--portrait-image),url('/mosswake/assets/ui/ui-panels-generated-v1.png'),linear-gradient(145deg,#355e73,#1f3b4e); background-size:cover,400% 400%,auto; background-position:center,100% 0,center; }

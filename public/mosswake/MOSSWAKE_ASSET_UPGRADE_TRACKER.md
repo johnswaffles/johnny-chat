@@ -18,6 +18,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Distinct enemy family | `assets/enemies/enemy-family-generated-v1.png` | Thornback, Moon Wisp, Ambush Moth, Rootling/Root Warden; idle, telegraph, attack, hit | Integrated / tested | Keep the family atlas as the roster reference; add specialized death/telegraph FX only if a later encounter review needs them |
 | Enemy combat effects | `assets/enemies/enemy-effects-generated-v1.png` | Charge, ranged, ambush, impact, and four drop feedback states | Integrated / tested | Keep the atlas as the small-enemy feedback reference; refine only if a focused encounter review finds overlap or low contrast |
 | HUD and pickup icons | `assets/ui-icons-generated-v1.png` | Hearts, key, Heartseed, Rootlight, discovery, map, drop, sword, dash, lock, and star states | Integrated / tested | Keep the icon atlas as the UI reference; refine only if a later readability pass finds a specific small-size issue |
+| Dialogue and screen surface family | `assets/ui/ui-panels-generated-v1.png` | Dialogue, title, pause, victory, portrait frame, button, objective, map, ability, toast, and divider surface states | Integrated / pending live visual check | Keep typography and contrast in CSS; replace individual atlas cells later without touching game flow |
 | Hollow Guardian | `assets/bosses/hollow-guardian-sheet-generated-v1.png` | Phase I idle/attack, phase II transformed attack, phase-break, stagger, defeat | Integrated / tested | Keep the generated sheet as the boss reference; only refine if a focused arena review finds a real readability issue |
 
 ## High-value environment and effects queue
@@ -58,6 +59,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Added the `ui-icons` manifest slot. HUD hearts now use the painted full/empty states when the atlas is loaded; Heartseed, key, wild-drop, and discovery labels now carry matching painted icon treatments in the DOM. Procedural CSS hearts remain the safe fallback.
 - Preserved health values, save state, resource counts, responsive layout, and accessibility labels. Bumped manifest/page/style cache keys to `manifest.json?v=18`, `mosswake.js?v=43`, and `mosswake.css?v=12`.
 - Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks are required after integration; public edge should be verified after cache rollover.
+
+### 2026-08-13 — Dialogue and screen surface family
+
+- Generated `assets/ui/ui-panels-generated-v1.png` as a 1254×1254 RGBA source normalized to a 1248×1248 4×4 atlas. Cells cover dialogue framing, NPC portrait frame, title/pause/victory plaques, objective/map/ability surfaces, toast/button plates, lock treatment, and Mosswake dividers/crest details.
+- Added the `ui-panels` manifest slot and layered the generated surfaces into the dialogue box, portrait frame, title screen, pause screen, and victory screen. HTML text, CSS sizing, contrast, focus states, and all gameplay state remain runtime-owned; the existing CSS surfaces remain the safe fallback. Portraits now use a CSS custom property so generated NPC portrait images are not overwritten by the frame layer.
+- Bumped manifest/page cache keys to `manifest.json?v=19`, `mosswake.js?v=44`, and `mosswake.css?v=13`. Source and normalized RGBA atlas remain together under `assets/ui/` for future cell-level replacement.
+- Local syntax, manifest, RGBA/alpha, and diff checks passed. Live visual smoke testing is the next required step after deployment.
 
 ### 2026-08-13 — Named NPC family and portraits
 
