@@ -23,10 +23,17 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | --- | --- | --- | --- |
 | 1 | Boss telegraph and defeat FX | Integrated / tested | Keep the atlas as the Guardian effect reference; only refine for a readability defect |
 | 2 | Outdoor foliage | Integrated / tested | Keep the foliage atlas as the outdoor prop reference; add a second seasonal sheet only if a later visual review shows repetition |
-| 3 | Dungeon architecture | Integrated / tested | Expand only with a focused landmark or statue family after the room pass |
+| 3 | Dungeon architecture | Integrated / tested | Landmark/interactable atlas now covers chests, runes, switches, sockets, and reward pedestals |
 | 4 | Remaining NPCs and portraits | Integrated / tested | Add a dedicated trader only if the outpost needs another interaction |
 
 ## Current iteration log
+
+### 2026-08-13 — Dungeon landmarks and interactive props
+
+- Generated `assets/dungeon/dungeon-landmarks-interactive-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas with chest states, rune/sigil states, moon switch and Rootlight socket states, and reward landmarks. The keyed RGB source remains beside it for future matte refinement.
+- Added the `dungeon-landmarks` manifest slot. Dungeon chests, runes, switches, the overworld Rootlight gate, and the Heartseed reward now use painted modular states with deterministic frame selection; procedural rendering remains the safe fallback.
+- Preserved interaction ranges, save flags, reward logic, telegraph timing, and room geometry. Bumped the manifest and page cache keys to `manifest.json?v=15` and `mosswake.js?v=40`.
+- Local syntax, manifest, RGBA/alpha, startup, asset-load, and console smoke checks passed. Public edge should be verified after cache rollover.
 
 ### 2026-08-13 — Named NPC family and portraits
 
