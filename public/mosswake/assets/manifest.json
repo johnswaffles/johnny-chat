@@ -1,5 +1,5 @@
 {
-  "version": 42,
+  "version": 43,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -156,6 +156,18 @@
       "displayHeight": 32,
       "anchorX": 0.5,
       "anchorY": 0.9
+    },
+    "outdoor-breakables": {
+      "src": "plants/outdoor-breakables-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 1,
+      "displayWidth": 78,
+      "displayHeight": 78,
+      "anchorX": 0.5,
+      "anchorY": 0.92
     },
     "road-family": {
       "src": "terrain/mosswake-road-family-generated-v1.png",

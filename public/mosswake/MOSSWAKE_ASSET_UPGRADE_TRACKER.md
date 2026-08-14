@@ -2,6 +2,15 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Breakable discovery-plant family and NPC/dungeon parity audit
+
+- Re-verified the current player benchmark, all five named overworld NPCs (Rowan, Tansy, Brindle, Lumen, Marlow), the opening outdoor composition, and all six dungeon rooms. The existing NPC inventory remains complete: no dungeon NPC actor is present, and every named overworld NPC has an integrated generated sheet or role/activity family.
+- Promoted the next high-value outside gap: the three breakable discovery objects (`root-ivy`, `pond-ivy`, `reed-cache`) still borrowed generic `outdoor-foliage` cells even though they gate a secret, a traversal passage, and the Dewglass Lens reward.
+- Generated `assets/plants/outdoor-breakables-generated-v1.png` as a normalized 1248×1248 RGBA 4×4 atlas. Cells cover root ivy curtains, pond reeds, dewglass reeds, thorn/flower hedges, vine gates, wet pond weeds, moongrass, root hollows, and snapped/remnant variants. The built-in generation returned alpha directly; no keyed matte is required.
+- Added the `outdoor-breakables` manifest slot at v43 and routed the intact breakable objects through dedicated frames (root ivy 0, pond ivy 8, reed cache 2) before the existing foliage/procedural fallbacks. Their interaction radius, sword detection, broken state, secret flags, passage opening, reward, and collision behavior are unchanged.
+- Fresh outdoor startup loaded the new asset with HTTP 200, rendered the plants at grounded scale, and reported no browser warning/error logs. The exploratory movement smoke reached the existing run-ended screen without a console error; no gameplay tuning was changed.
+- Bumped the route script cache to `mosswake.js?v=80`. Approved NPC sheets, player sheets, shoreline stones, dungeon bridge, and Sanctum assets remain the visual references.
+
 ## 2026-08-14 — Shoreline stone family and water-edge parity QA
 
 - Promoted the next documented gap: `environment.shoreStones` was still a fully procedural ellipse loop while pond/shoreline water and dock already used authored families.
