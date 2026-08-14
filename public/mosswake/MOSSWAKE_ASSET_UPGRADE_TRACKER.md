@@ -8,7 +8,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Added portable `mw1_...` save codes. `Update code` serializes the current progress, `Copy` uses the clipboard when available, and `Restore` validates and rehydrates the save through the existing migration path before autosaving locally.
 - Added Xbox/gamepad polling for left-stick/D-pad movement, A interact/dialogue, X sword, B dash, Y Rootlight, and Menu pause. Keyboard controls remain unchanged.
 - Added a restart action to the pause screen and bumped the page cache keys to CSS v14 / JS v54. The existing modular art pipeline is untouched.
-- Local UI smoke confirmed the drawer is collapsed by default, the erase control is gone, generated codes use the `mw1_` prefix, invalid codes are rejected, and a valid code restores successfully. Hardware-controller verification remains a live-device check.
+- Local and public v54 UI smoke confirmed the drawer is collapsed by default, the erase control is gone, generated codes use the `mw1_` prefix, invalid codes are rejected, and a valid code restores successfully. The live page served CSS v14 / JS v54 with no console warnings or errors. Hardware-controller verification remains a live-device check.
 
 ## 2026-08-13 — Reusable visual QA pass: road hierarchy cleanup
 
