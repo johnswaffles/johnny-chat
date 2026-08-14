@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Outdoor pond dock family
+
+- Audited the live opening after the Rootlight bridge integration. The lower pond had good authored water and shoreline stones, but no strong, readable landmark at the water edge; the remaining gap read as a procedural composition issue rather than a missing gameplay route.
+- Generated `assets/props/outdoor-dock-generated-v1-source.png` (1254×1254 RGB chroma-key source) and prepared `assets/props/outdoor-dock-generated-v1.png` (1254×1254 RGBA) as a replaceable single-cell dock/boardwalk prop in the established Mosswake hand-painted 3/4 top-down language. The source is retained for future matte refinement.
+- Added manifest v32 and layered the dock at the lower pond shoreline as a visual-only landmark. It uses its own `outdoor-dock` key, anchored at the bank, while the existing pond collision remains authoritative so the prop does not create a misleading traversal path.
+- Bumped the page script cache key to `mosswake.js?v=64`; no NPC, combat, save, collision, or room-transition logic changed.
+- `node --check`, manifest/dimension/alpha checks, all 39 asset HTTP requests, fresh outside startup, passive NPC activity review, dock-scale screenshot review, and browser warning/error checks passed. No gameplay, NPC, or dungeon regression was observed.
+
 ## 2026-08-14 — Rootlight bridge presentation integration
 
 - Audited the Moon Switch Hall shortcut after the masonry pass. The generated bridge cell already existed in `assets/dungeon/dungeon-ambient-props-generated-v1.png`, but runtime only displayed it as a small broken fragment even after Rootlight opened the crossing.
@@ -160,7 +168,7 @@ The current game has no dungeon NPC actor; dungeon inhabitants are enemy familie
 | 2 | Outdoor foliage | Integrated / tested | Keep the foliage atlas as the outdoor prop reference; add a second seasonal sheet only if a later visual review shows repetition |
 | 3 | Dungeon architecture | Integrated / tested | Landmark/interactable atlas now covers chests, runes, switches, sockets, and reward pedestals |
 | 4 | Dungeon ambient props | Integrated / tested | Keep the 4×4 storytelling atlas as the dungeon detail reference; replace individual cells only when a room-specific prop needs refinement |
-| 5 | Outdoor props (fences, paths, signs, rocks) | Integrated / tested | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
+| 5 | Outdoor props (fences, paths, signs, rocks, pond dock) | Integrated / tested | Keep the generated prop atlas and dedicated pond dock as the reference; only add a second dock variant if a future shoreline composition needs it |
 | 6 | Dungeon doors and thresholds | Integrated / tested | Keep the lock/open atlas as the doorway reference; refine individual cells only if a room-specific silhouette needs it |
 | 7 | Dungeon hazards | Integrated / tested | Keep the hazard atlas as the water/ember reference; refine only if visual scale or readability needs adjustment |
 | 8 | Dungeon floor family | Integrated / tested | Keep the 4×4 floor atlas as the room-surface reference; refine only if a transition edge or material mismatch appears |

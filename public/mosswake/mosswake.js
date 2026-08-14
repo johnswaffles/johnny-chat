@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=31";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=32";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1342,6 +1342,13 @@
     environment.treesBack.forEach((tree) => drawTree(tree, time, "back"));
     drawDappleShadows(time);
     drawPond({ x: 610, y: 650, w: 360, h: 150 }, time); drawPond({ x: 1080, y: 510, w: 260, h: 90 }, time + 1, true);
+    // A small authored dock gives the lower pond a readable shoreline landmark.
+    // It is intentionally decorative: the pond remains a collision-safe water
+    // boundary, so the dock never implies a new route or changes exploration.
+    if (loadedAssets.has("outdoor-dock")) {
+      drawShadow(800, 812, 74, 11, .2);
+      drawOptionalSprite("outdoor-dock", 800, 812, { frame: 0, width: 220, height: 220, anchorX: .5, anchorY: .96, alpha: .96 });
+    }
     environment.shoreStones.forEach((stone, index) => { const tone = ["#b2b596", "#9da98e", "#c0bd9a"][index % 3]; drawShadow(stone.x, stone.y + 4, 13 * stone.s, 4 * stone.s, .18); ctx.fillStyle = tone; ctx.beginPath(); ctx.ellipse(stone.x, stone.y, 13 * stone.s, 6 * stone.s, -.15 + Math.sin(time * .4 + index) * .015, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(42,79,69,.22)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "rgba(238,240,195,.28)"; ctx.beginPath(); ctx.ellipse(stone.x - 3, stone.y - 2, 5 * stone.s, 2 * stone.s, -.15, 0, Math.PI * 2); ctx.fill(); if (index % 3 === 0) { ctx.strokeStyle = "rgba(225,244,199,.5)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(stone.x + 4, stone.y + 3, 8 * stone.s, -.25, .58); ctx.stroke(); } });
     environment.treesMid.forEach((tree) => drawTree(tree, time, "mid"));
     environment.bushes.filter((bush) => bush.y < 600).forEach((bush) => drawBush(bush, time)); environment.fences.filter((fence) => fence.y < 600).forEach(drawFence); environment.ruins.filter((ruin) => ruin.y < 600).forEach((ruin) => drawRuin(ruin, time)); environment.signs.filter((sign) => sign.y < 600).forEach(drawSign);
