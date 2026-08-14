@@ -1254,8 +1254,17 @@ function getTextsmithSchema(mode) {
   };
 }
 
-function stripTextsmithEmoji(value) {
+function normalizeTextsmithSmsCharacters(value) {
   return String(value || "")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/\u00A0/g, " ");
+}
+
+function stripTextsmithEmoji(value) {
+  return normalizeTextsmithSmsCharacters(value)
     .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Emoji_Modifier}]/gu, "")
     .replace(/[\uFE0E\uFE0F\u200D]/g, "")
     .replace(/[\r\n]+/g, " ")
@@ -1328,13 +1337,14 @@ function textsmithPrompt(mode, draft = "") {
     "When the source contains several useful details, preserve that richness in a comfortably full sentence instead of reducing it to a bare summary.",
     "Shorten only what is required to meet the SMS limit. Never use awkward abbreviations, telegraphic fragments, or vague wording just to save characters.",
     "For a long source, prioritize the recipient's name, the main action, date or time, price, location, commitment, and next step. Remove repeated context, apologies, and nonessential adjectives before removing those useful details.",
+    "Use SMS-safe ASCII punctuation whenever possible: straight apostrophes and quotes, hyphens, and three periods instead of curly punctuation, em dashes, or a single ellipsis.",
     "Never invent information or change the user's meaning.",
     "Never use emoji, emoticons, decorative symbols, hashtags, or markdown. Use ordinary plain text only.",
     split
       ? "Return exactly two complete, coherent SMS messages. Divide the meaning at a natural point, and make each message fit the carrier-safe concatenated SMS budget. Do not add labels, numbering, or explanations."
       : "SINGLE-MESSAGE MODE IS A HARD CONTRACT: return exactly one complete SMS message that fits under 160 characters. For GSM-7 text, stay at or below 159 SMS units; for Unicode text, stay at or below 69 characters. Aim for a comfortably full message near the limit when the source supports it, but never exceed the limit. Never suggest, mention, offer, or recommend splitting into two messages. Never output a second message, a note, or an explanation. If the source is too long, compress it thoughtfully until one rich, natural message fits; do not refuse just because the source is detailed.",
     "Return only JSON in this shape: {\"messages\":[\"message text\"]}.",
-    draft ? `Your previous draft did not satisfy the constraints, likely because it was over the character budget. Produce a shorter compliant rewrite now while keeping the highest-value details. Do not discuss the constraints. Previous draft: ${draft}` : ""
+    draft ? `Your previous draft did not satisfy the constraints, likely because it was over the character budget. Produce one final SMS under 150 ASCII characters now while keeping the highest-value details. Do not discuss the constraints. Previous draft: ${draft}` : ""
   ].filter(Boolean).join(" ");
 }
 
