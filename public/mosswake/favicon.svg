@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mosswake">
+  <rect width="64" height="64" rx="16" fill="#102d25"/>
+  <path d="M17 45c3-14 10-24 22-29 4-2 8-3 11-3-2 9-6 17-13 22-6 4-13 7-20 10Z" fill="#8ef2cf"/>
+  <path d="M17 45c11-8 20-16 30-30" fill="none" stroke="#e5c77b" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="18" cy="45" r="4" fill="#e5c77b"/>
+</svg>

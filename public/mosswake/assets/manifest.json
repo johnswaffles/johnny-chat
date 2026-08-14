@@ -1,5 +1,5 @@
 {
-  "version": 39,
+  "version": 40,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -168,6 +168,18 @@
       "displayHeight": 70,
       "anchorX": 0.5,
       "anchorY": 0.88
+    },
+    "npc-rowan-walk": {
+      "src": "npcs/rowan-directional-walk-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 9,
+      "displayWidth": 58,
+      "displayHeight": 76,
+      "anchorX": 0.5,
+      "anchorY": 0.94
     },
     "npc-named": {
       "src": "npcs/named-npc-family-generated-v1.png",

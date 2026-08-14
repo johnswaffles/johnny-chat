@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Rowan four-direction route-walk family
+
+- Continued the NPC parity audit from the restored bridge and opening density passes. Rowan is the first NPC players meet, but his route previously reused one side-facing walk row even when a route segment or player-facing pause was vertical.
+- Generated `assets/npcs/rowan-directional-walk-generated-v1-source.png` and prepared `assets/npcs/rowan-directional-walk-generated-v1.png` as a normalized 1248×1248 RGBA 4×4 atlas. Rows are Rowan facing down/front, up/back, left, and right; each row has four sequential contact, weight-transfer, passing, and recovery frames.
+- Added manifest v40 and routed Rowan's non-dialogue pacing through `npc-rowan-walk`. Axis-aware selection now uses true up/down/left/right rows with no runtime mirroring, a `.94` feet anchor, and 58×76 presentation scale. His existing named `npc-rowan` talk/map frames remain unchanged.
+- Bumped the page script cache to `mosswake.js?v=74` and added an explicit Mosswake favicon so the browser no longer falls back to a missing `/favicon.ico`. Route points, collision, dialogue, interaction radius, save behavior, and NPC pause/facing logic remain unchanged.
+- Validation passed: `node --check`, atlas alpha/dimension checks, fresh outpost startup, Rowan route screenshots, manifest and sprite requests (including the new atlas), and browser smoke. No dungeon art was regenerated; the dedicated bridge family remains the current dungeon reference.
+
 ## 2026-08-14 — Outside density and dungeon arrival readability pass
 
 - Replayed the opening outpost and the restored Moon Switch Hall after the dedicated bridge-art pass. The largest remaining visual issue was density at the road edge: several authored grass cards and foreground leaf clusters competed with the walkable ribbon and landmarks.
@@ -201,7 +209,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Asset family | Current files | States / directions | Status | Next quality step |
 | --- | --- | --- | --- | --- |
 | Lantern Warden | `assets/player/warden-sheet-generated-v1.png`, `assets/player/warden-run-sheet-generated-v1.png`, `assets/player/warden-attack-directions-generated-v1.png` | Idle, 4-direction walk, 4-direction sword attack, dash, hurt | Integrated / tested | Keep the repaired per-frame feet anchors; replace only with a higher-resolution sheet that preserves the same ground line |
-| Rowan | `assets/npcs/rowan-sheet-generated-v1.png` | Idle, walk, map work, talk/reaction | Integrated / tested | Keep as the primary directional NPC reference |
+| Rowan | `assets/npcs/rowan-sheet-generated-v1.png`, `assets/npcs/rowan-directional-walk-generated-v1.png` | Idle, four-direction walk, map work, talk/reaction | Integrated / tested | Keep both the named talk sheet and the new `.94` feet-anchored walk family as the NPC benchmark |
 | Tansy, Brindle, Lumen | `assets/npcs/tansy-fire-generated-v1.png`, `assets/npcs/brindle-directional-walk-generated-v1.png`, `assets/npcs/lumen-map-generated-v1.png`, `assets/npcs/named-npc-activity-generated-v1.png`, `assets/npcs/named-npc-family-generated-v1.png` | Tansy four-direction fire-side idle/stir, Brindle four-direction route walk, Lumen four-direction map-work loop; named-family talk/reaction | Tansy, Brindle, and Lumen dedicated movement integrated | Keep the three directional sheets aligned to the same `.94` feet anchor and 56×76 scale |
 | Mossling | `assets/enemies/mossling-sheet-generated-v1.png` | Idle, skitter, pounce, hit recoil | Integrated / tested | Keep as the small-creature reference; refine only for a focused readability defect |
 | Distinct enemy family | `assets/enemies/enemy-family-generated-v1.png` | Thornback, Moon Wisp, Ambush Moth, Rootling/Root Warden; idle, telegraph, attack, hit | Integrated / tested | Keep the family atlas as the roster reference; add specialized death/telegraph FX only if a later encounter review needs them |
@@ -216,7 +224,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 | NPC | Location / role | Directions | Idle / walk | Work or special | Talk / grounding | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| Rowan | Outpost keeper, overworld start | Down/up/side via `npc-rowan` | Idle and authored route walk | Map-work row and proximity pause | Talk/reaction frames; measured foot anchor | Integrated / tested |
+| Rowan | Outpost keeper, overworld start | Down/up/left/right via `npc-rowan-walk`; talk/map via `npc-rowan` | Four-direction authored route walk and proximity pause | Map-work row and proximity pause | Talk/reaction frames; `.94` directional feet anchor | Integrated / tested |
 | Tansy | Lantern cook, campfire | Down/up/left/right via `npc-tansy-fire` | Four-frame directional idle/stir loop | Kettle-stir frames and campfire context | Talk portrait and named-family reaction; grounded `.94` directional anchor | Integrated / pending final smoke |
 | Brindle | Pond ferrier, lower path | Down/up/left/right via `npc-brindle-walk` | Four-frame directional route walk | Ferrier prop context | Talk portrait and reaction remain on named-family frames; grounded `.94` directional anchor | Integrated / tested |
 | Lumen | Shrine cartographer, upper field | Down/up/left/right via `npc-lumen-map` | Four-frame directional map-work loop | Open-map, glance, route-trace, reset frames | Talk portrait and named-family reaction; grounded `.94` directional anchor | Integrated / tested |
