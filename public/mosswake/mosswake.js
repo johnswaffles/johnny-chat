@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=33";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=34";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -142,7 +142,7 @@
       { x: 1320, y: 755, s: .95, variant: 0, phase: .7 }, { x: 1410, y: 728, s: 1.18, variant: 1, phase: 2.2 }, { x: 1490, y: 770, s: .76, variant: 2, phase: 4.5 }
     ],
     cliffs: [
-      { x: 30, y: 190, w: 250, h: 74, phase: .4 }, { x: 1240, y: 42, w: 320, h: 66, phase: 2.7 }, { x: 1410, y: 610, w: 190, h: 58, phase: 4.4 }
+      { x: 30, y: 190, w: 250, h: 74, phase: .4, variant: 0 }, { x: 1240, y: 42, w: 320, h: 66, phase: 2.7, variant: 2 }, { x: 1410, y: 610, w: 190, h: 58, phase: 4.4, variant: 6 }
     ],
     fences: [
       { x: 330, y: 318, length: 118, angle: -.08, posts: 4 }, { x: 1120, y: 735, length: 146, angle: .12, posts: 5 }, { x: 150, y: 670, length: 88, angle: -.22, posts: 3 }
@@ -1054,6 +1054,7 @@
   };
   const drawCliff = (cliff, time) => {
     ctx.save(); ctx.translate(cliff.x, cliff.y); ctx.rotate(Math.sin(time * .12 + cliff.phase) * .008); drawShadow(cliff.w * .5, cliff.h + 12, cliff.w * .48, 9, .22);
+    if (drawOptionalSprite("outdoor-cliffs", cliff.w * .5, cliff.h + 3, { frame: Number.isFinite(cliff.variant) ? cliff.variant : 0, width: cliff.w + 18, height: Math.max(124, cliff.h * 2), anchorX: .5, anchorY: .96, alpha: .98 })) { ctx.restore(); return; }
     ctx.fillStyle = "#315644"; ctx.beginPath(); ctx.moveTo(0, cliff.h); ctx.lineTo(12, 18); ctx.quadraticCurveTo(cliff.w * .3, -4, cliff.w * .55, 12); ctx.quadraticCurveTo(cliff.w * .78, -1, cliff.w, 16); ctx.lineTo(cliff.w - 6, cliff.h); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = "#52785a"; ctx.beginPath(); ctx.moveTo(9, 18); ctx.quadraticCurveTo(cliff.w * .3, -3, cliff.w * .55, 11); ctx.quadraticCurveTo(cliff.w * .78, -1, cliff.w - 6, 16); ctx.lineTo(cliff.w - 14, 26); ctx.quadraticCurveTo(cliff.w * .72, 13, cliff.w * .52, 25); ctx.quadraticCurveTo(cliff.w * .28, 10, 16, 28); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = "rgba(175,205,157,.24)"; ctx.lineWidth = 2; for (let i = 0; i < 3; i += 1) { const x = 30 + i * (cliff.w - 60) / 2; ctx.beginPath(); ctx.moveTo(x, 38); ctx.lineTo(x - 9, cliff.h - 8); ctx.stroke(); } ctx.restore();

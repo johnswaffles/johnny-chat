@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Outdoor cliff and ledge family
+
+- Audited the outside composition after the authored ruin pass. The three large cliff silhouettes were still simple procedural wedges, so the upper and southeast edges lacked the same material depth as the generated trees, rocks, dock, and ruin.
+- Generated `assets/terrain/outdoor-cliff-family-generated-v1-source.png` and prepared `assets/terrain/outdoor-cliff-family-generated-v1.png` as a 1254×1254 4×4 atlas. The sixteen cells cover straight ledges, broken corners, root-wrapped shelves, damp waterfall edges, and boulder/lichen variants in the established Mosswake 3/4 top-down language.
+- Added manifest v34 and routed the three existing cliff silhouettes through the optional `outdoor-cliffs` sprite key with distinct authored frames. Collision, world bounds, camera behavior, and placement remain unchanged; the procedural wedge remains a safe fallback while assets load.
+- Bumped the page script cache key to `mosswake.js?v=66`. No NPC, combat, dungeon progression, or save behavior changed.
+- Validation passed: `node --check`, manifest/alpha/dimension checks, all 41 manifest asset requests (38 unique files) returned HTTP 200, fresh outside startup, all six dungeon room restores/screenshots, and browser warning/error checks were clean. No collision, NPC, or dungeon regression was observed.
+
 ## 2026-08-14 — Outdoor ruin landmark family
 
 - Audited the opening composition after the pond dock pass. The authored structures and foliage were strong, but the north-east ruin still rendered as a small procedural stone blob and did not read as a memorable landmark.
@@ -182,6 +190,7 @@ The current game has no dungeon NPC actor; dungeon inhabitants are enemy familie
 | 8 | Dungeon floor family | Integrated / tested | Keep the 4×4 floor atlas as the room-surface reference; refine only if a transition edge or material mismatch appears |
 | 9 | Dungeon masonry family | Integrated / tested | Keep the wall atlas behind authored room pieces; adjust opacity or panel placement only if a specific room edge competes with a landmark |
 | 10 | Rootlight bridge | Integrated / tested | Keep the enlarged active bridge state; refine only if a transition screenshot shows a readability or grounding issue |
+| 11 | Outdoor cliff and ledge family | Integrated / tested | Keep the 4×4 cliff atlas as the outdoor elevation reference; add a new cell only for a specific landmark or material need |
 
 ## 2026-08-13 — Repeating visual director pass: room transition reveal
 
