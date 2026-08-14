@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=46";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=47";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1292,6 +1292,12 @@
     // a fixed 70px breathing room to keep the walkable ribbon legible.
     if (state.area === "overworld" && isMainRoadZone(patch.x, patch.y, Math.max(104, patch.radius * 1.2))) return;
     const rustle = patch.rustle || 0; const density = patch.density + (patch.seed % 3); const scale = patch.scale || .7;
+    if (loadedAssets.has("meadow-edge")) {
+      const frameBase = Number.isFinite(patch.foliageFrame) ? Math.abs(patch.foliageFrame) % 8 : Math.floor(hash01(patch.x, patch.y) * 8);
+      const frame = (frameBase + (rustle > .2 ? Math.floor(time * 2) % 2 : 0)) % 8;
+      drawShadow(patch.x, patch.y + 9, 24 * scale, 6 * scale, foreground ? .14 : .18);
+      if (drawOptionalSprite("meadow-edge", patch.x, patch.y + 7, { frame, width: 72 * scale, height: 60 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .9 : .94, rotation: Math.sin(time * .42 + patch.phase) * .004 })) return;
+    }
     if (loadedAssets.has("outdoor-foliage")) {
       const frameBase = Number.isFinite(patch.foliageFrame) ? patch.foliageFrame % 4 : 0;
       const frame = frameBase + (rustle > .2 ? Math.floor(time * 3) % 2 : 0);

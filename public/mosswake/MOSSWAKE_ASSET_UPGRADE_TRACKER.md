@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Short meadow-edge family and roadside composition pass
+
+- Replayed the fresh Lanternwood opening and Root Gallery against the improved Warden benchmark. NPCs, dungeon story props, road, water, and major landmarks remain cohesive; the most visible remaining mismatch was the repeated translucent grass-patch cards at the road edge, which read as planted beds instead of low meadow detail at gameplay scale.
+- Generated `assets/plants/outdoor-meadow-edge-generated-v1-source.png` (1254×1254 RGB chroma-key source) and prepared `assets/plants/outdoor-meadow-edge-generated-v1.png` (1248×1248 RGBA 4×4 atlas). Rows provide short meadow mats, sparse grass/leaf tufts, low flower-and-moss clusters, and bare/pebbled/mossy path-edge transitions.
+- Added the `meadow-edge` manifest slot at v47. `drawGrassPatch` now prefers the low-profile family with a shared contact shadow, restrained alpha, and eight deterministic frames before falling back to the existing foliage atlas and procedural blades. Patch positions, road exclusion, rustle response, collision, and environment logic are unchanged.
+- The source remains beside the production atlas for future matte refinements. No NPC, enemy, dungeon, or progression behavior changed.
+- Fresh browser startup loaded `mosswake.js?v=84`, `manifest.json?v=47`, and the new atlas with HTTP 200. Lanternwood gameplay visibly uses the grounded meadow-edge family, and Root Gallery still shows the generated story-prop atlas. Movement, sword, dash, save restore, and dungeon-entry smoke produced no browser warning/error logs.
+
 ## 2026-08-14 — Dungeon story-props family and room-detail integration
 
 - Re-audited the current player benchmark, five named NPCs, fresh Lanternwood opening, and all six dungeon room compositions. The main NPC families are now covered; the next visible gap was the repeated procedural story-prop layer behind the authored dungeon architecture: sigil plaques, guardian statues, switch machines, and floor medallions.
