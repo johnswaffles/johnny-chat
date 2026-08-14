@@ -1327,13 +1327,14 @@ function textsmithPrompt(mode, draft = "") {
     "Use the available character budget intelligently. Quality, completeness, and natural phrasing matter more than brevity. Do not make the message unnecessarily short, and do not pad it with filler.",
     "When the source contains several useful details, preserve that richness in a comfortably full sentence instead of reducing it to a bare summary.",
     "Shorten only what is required to meet the SMS limit. Never use awkward abbreviations, telegraphic fragments, or vague wording just to save characters.",
+    "For a long source, prioritize the recipient's name, the main action, date or time, price, location, commitment, and next step. Remove repeated context, apologies, and nonessential adjectives before removing those useful details.",
     "Never invent information or change the user's meaning.",
     "Never use emoji, emoticons, decorative symbols, hashtags, or markdown. Use ordinary plain text only.",
     split
       ? "Return exactly two complete, coherent SMS messages. Divide the meaning at a natural point, and make each message fit the carrier-safe concatenated SMS budget. Do not add labels, numbering, or explanations."
-      : "SINGLE-MESSAGE MODE IS A HARD CONTRACT: return exactly one complete SMS message that fits the carrier-safe single-message budget. Never suggest, mention, offer, or recommend splitting into two messages. Never output a second message, a note, or an explanation. If the source is too long, compress it thoughtfully until one rich, natural message fits.",
+      : "SINGLE-MESSAGE MODE IS A HARD CONTRACT: return exactly one complete SMS message that fits under 160 characters. For GSM-7 text, stay at or below 159 SMS units; for Unicode text, stay at or below 69 characters. Aim for a comfortably full message near the limit when the source supports it, but never exceed the limit. Never suggest, mention, offer, or recommend splitting into two messages. Never output a second message, a note, or an explanation. If the source is too long, compress it thoughtfully until one rich, natural message fits; do not refuse just because the source is detailed.",
     "Return only JSON in this shape: {\"messages\":[\"message text\"]}.",
-    draft ? `Your previous draft did not satisfy the constraints. Revise it without losing important meaning. Previous draft: ${draft}` : ""
+    draft ? `Your previous draft did not satisfy the constraints, likely because it was over the character budget. Produce a shorter compliant rewrite now while keeping the highest-value details. Do not discuss the constraints. Previous draft: ${draft}` : ""
   ].filter(Boolean).join(" ");
 }
 
@@ -4393,7 +4394,7 @@ app.post("/api/textsmith", async (req, res) => {
       messages = await createTextsmithResponse({ input, mode, model });
     }
 
-    for (let attempt = 0; attempt < 2 && !textsmithMessagesFit(messages, mode); attempt += 1) {
+    for (let attempt = 0; attempt < 3 && !textsmithMessagesFit(messages, mode); attempt += 1) {
       messages = await createTextsmithResponse({
         input,
         mode,
