@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=37";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=38";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -207,7 +207,7 @@
     { id: "rowan", name: "Rowan", role: "Outpost keeper", portrait: "rowan", x: 460, y: 380, baseX: 460, baseY: 380, behavior: "pace", phase: .3, facing: 1, route: [{ x: 460, y: 380 }, { x: 492, y: 374 }, { x: 486, y: 404 }, { x: 452, y: 400 }] },
     { id: "tansy", name: "Tansy", role: "Lantern cook", portrait: "tansy", x: 620, y: 356, baseX: 620, baseY: 356, behavior: "fire", phase: 1.2, facing: 1, facingAxis: "y" },
     { id: "brindle", name: "Brindle", role: "Pond ferrier", portrait: "brindle", x: 540, y: 585, baseX: 540, baseY: 585, behavior: "pace", phase: 2.4, facing: 1, facingAxis: "x", route: [{ x: 520, y: 582 }, { x: 572, y: 605 }, { x: 525, y: 625 }] },
-    { id: "lumen", name: "Lumen", role: "Shrine cartographer", portrait: "lumen", x: 1235, y: 305, baseX: 1235, baseY: 305, behavior: "map", phase: 4.1, facing: -1 }
+    { id: "lumen", name: "Lumen", role: "Shrine cartographer", portrait: "lumen", x: 1235, y: 305, baseX: 1235, baseY: 305, behavior: "map", phase: 4.1, facing: 1, facingAxis: "y" }
   ];
   let camera = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0, shakePhase: 0 };
   let previousHealthKey = `${player.hp}/${player.maxHp}`;
@@ -452,6 +452,9 @@
           if (Math.abs(towardX) >= Math.abs(towardY)) { npc.facingAxis = "x"; npc.facing = towardX >= 0 ? 1 : -1; }
           else { npc.facingAxis = "y"; npc.facing = towardY >= 0 ? 1 : -1; }
         } else if (npc.behavior === "fire") {
+          npc.facingAxis = "y"; npc.facing = 1;
+        }
+        else if (npc.behavior === "map") {
           npc.facingAxis = "y"; npc.facing = 1;
         }
         else if (npc.behavior === "watch") npc.facing = Math.sin(npc.clock * .35 + npc.phase) > 0 ? 1 : -1;
@@ -1424,9 +1427,10 @@
     const hasRoleActivity = npc.id !== "rowan" && loadedAssets.has("npc-activity");
     const hasDirectionalBrindle = npc.id === "brindle" && !isTalking && npc.behavior === "pace" && loadedAssets.has("npc-brindle-walk");
     const hasDirectionalTansy = npc.id === "tansy" && !isTalking && npc.behavior === "fire" && loadedAssets.has("npc-tansy-fire");
+    const hasDirectionalLumen = npc.id === "lumen" && !isTalking && npc.behavior === "map" && loadedAssets.has("npc-lumen-map");
     // Keep the expressive named-family talk frames, while each NPC's normal
     // behavior gets a real sequential role loop from the activity atlas.
-    const customNpcKey = npc.id === "rowan" ? "npc-rowan" : hasDirectionalBrindle ? "npc-brindle-walk" : hasDirectionalTansy ? "npc-tansy-fire" : isTalking ? "npc-named" : hasRoleActivity ? "npc-activity" : "npc-named";
+    const customNpcKey = npc.id === "rowan" ? "npc-rowan" : hasDirectionalBrindle ? "npc-brindle-walk" : hasDirectionalTansy ? "npc-tansy-fire" : hasDirectionalLumen ? "npc-lumen-map" : isTalking ? "npc-named" : hasRoleActivity ? "npc-activity" : "npc-named";
     const facingFrame = npc.facing < 0 ? 2 : npc.facing > 0 ? 0 : 1;
     const namedIndex = npc.id === "tansy" ? 0 : npc.id === "brindle" ? 1 : npc.id === "lumen" ? 2 : 3;
     const activityBase = npc.id === "tansy" ? 0 : npc.id === "brindle" ? 4 : npc.id === "lumen" ? 8 : 12;
@@ -1439,17 +1443,20 @@
           : 0);
     const brindleDirectionBase = npc.facingAxis === "y" ? (npc.facing > 0 ? 0 : 4) : (npc.facing > 0 ? 12 : 8);
     const tansyDirectionBase = npc.facingAxis === "y" ? (npc.facing > 0 ? 0 : 4) : (npc.facing > 0 ? 12 : 8);
+    const lumenDirectionBase = npc.facingAxis === "y" ? (npc.facing > 0 ? 0 : 4) : (npc.facing > 0 ? 12 : 8);
     const customNpcFrame = hasDirectionalBrindle
       ? brindleDirectionBase + Math.floor((npc.animTime || 0) * 1.05) % 4
       : hasDirectionalTansy
       ? tansyDirectionBase + Math.floor((npc.clock || 0) * 1.35) % 4
+      : hasDirectionalLumen
+      ? lumenDirectionBase + Math.floor((npc.clock || 0) * 1.35) % 4
       : npc.id === "rowan"
       ? (state.dialogue && npc.near ? 12 + Math.floor((npc.clock || 0) * 4) % 4 : npc.behavior === "map" ? 8 + Math.floor((npc.clock || 0) * 2.6) % 4 : npc.behavior === "pace" ? 4 + Math.floor((npc.animTime || 0) * 1.4) % 4 : facingFrame)
       : (isTalking ? 12 + namedIndex : hasRoleActivity ? activityFrame : npc.behavior === "map" || npc.behavior === "fire" ? 8 + namedIndex : npc.behavior === "pace" ? (Math.floor((npc.animTime || 0) * .72) % 2 ? 4 + namedIndex : namedIndex) : namedIndex);
     const npcBottoms = npc.id === "rowan"
       ? [0.965, 0.971, 0.974, 0.974, 1, 1, 0.84, 1, 1, 1, 1, 1, 0.827, 0.824, 0.821, 0.827]
       : [1, 0.997, 1, 1, 0.949, 0.955, 0.965, 0.978, 1, 1, 1, 1, 0.901, 0.897, 0.897, 0.907];
-    const customNpc = drawOptionalSprite(customNpcKey, x, groundedY, { frame: customNpcFrame, width: npc.id === "brindle" ? 58 : 56, height: hasDirectionalBrindle || hasDirectionalTansy ? 76 : 74, anchorY: hasDirectionalBrindle || hasDirectionalTansy ? .94 : hasRoleActivity && !isTalking ? .92 : (npcBottoms[customNpcFrame] || .96), flipX: hasDirectionalBrindle || hasDirectionalTansy ? false : npc.facing < 0, alpha: npc.near ? 1 : .98 });
+    const customNpc = drawOptionalSprite(customNpcKey, x, groundedY, { frame: customNpcFrame, width: npc.id === "brindle" ? 58 : 56, height: hasDirectionalBrindle || hasDirectionalTansy || hasDirectionalLumen ? 76 : 74, anchorY: hasDirectionalBrindle || hasDirectionalTansy || hasDirectionalLumen ? .94 : hasRoleActivity && !isTalking ? .92 : (npcBottoms[customNpcFrame] || .96), flipX: hasDirectionalBrindle || hasDirectionalTansy || hasDirectionalLumen ? false : npc.facing < 0, alpha: npc.near ? 1 : .98 });
     if (!customNpc) {
       ctx.save(); ctx.translate(x, y); ctx.scale(npc.facing || 1, 1);
       ctx.fillStyle = npc.id === "brindle" ? "#315b58" : "#4a3c43"; ctx.fillRect(-10 - stride, 8, 7, 8); ctx.fillRect(3 + stride, 8, 7, 8);

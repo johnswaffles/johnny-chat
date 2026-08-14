@@ -1,5 +1,5 @@
 {
-  "version": 37,
+  "version": 38,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -207,6 +207,18 @@
     },
     "npc-tansy-fire": {
       "src": "npcs/tansy-fire-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 7,
+      "displayWidth": 56,
+      "displayHeight": 76,
+      "anchorX": 0.5,
+      "anchorY": 0.94
+    },
+    "npc-lumen-map": {
+      "src": "npcs/lumen-map-generated-v1.png",
       "frameWidth": 312,
       "frameHeight": 312,
       "columns": 4,

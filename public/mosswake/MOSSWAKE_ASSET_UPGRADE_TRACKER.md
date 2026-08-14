@@ -2,13 +2,21 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Lumen directional map-work sheet
+
+- Continued the opening NPC parity audit after Tansy's fire-side sheet. Lumen's shared role atlas still used a single map-work presentation, so her map table looked static when approached from different axes.
+- Generated `assets/npcs/lumen-map-generated-v1-source.png` (1254×1254 RGB chroma-key source) and prepared `assets/npcs/lumen-map-generated-v1.png` (1248×1248 RGBA production atlas). Rows are Lumen facing down/front, up/back, left, and right; each row contains four sequential open-map, glance, route-trace, and reset frames.
+- Added manifest v38 and routed only Lumen's non-dialogue cartographer behavior through `npc-lumen-map`. Proximity facing now chooses the dominant world axis; the renderer uses the true directional rows with no horizontal mirror, a `.94` feet anchor, and the same 56×76 presentation scale as the approved NPC sheets. Talk/reaction frames remain on the named family.
+- Collision, map-table placement, dialogue, save behavior, and route logic are unchanged. The generated source stays beside the alpha production atlas for future matte refinement.
+- Validation passed: `node --check`, manifest/alpha/dimension checks, fresh outside startup, Lumen sheet request/integration smoke, and browser warning/error checks. The focused dungeon bridge restore remains a separate follow-up QA item.
+
 ## 2026-08-14 — Tansy directional fire-side work sheet
 
 - Continued the NPC parity audit after Brindle's route sheet. Tansy was still using a shared role atlas with a mirrored/static presentation, even though she is one of the first NPCs players see at the outpost fire.
 - Generated `assets/npcs/tansy-fire-generated-v1-source.png` (1254×1254 RGB chroma-key source) and prepared `assets/npcs/tansy-fire-generated-v1.png` (1248×1248 RGBA production atlas). Rows are Tansy facing down/front, up/back, left, and right; each row contains four sequential settled-idle, weight-shift, kettle-stir, and reset frames.
 - Added manifest v37 and routed only Tansy's non-dialogue fire behavior through `npc-tansy-fire`. Proximity facing now chooses the dominant world axis, so Tansy turns toward the player without mirroring the sprite; her dialogue/reaction frames remain on the named family.
 - Uses a `.94` feet anchor, no runtime flip, and the same 56×76 presentation scale as the approved Brindle sheet. Collision, campfire placement, dialogue, and save behavior are unchanged.
-- Validation pending final browser smoke for the new asset; alpha/dimension checks and syntax will be run before commit.
+- Validation passed: `node --check`, manifest/alpha/dimension checks, fresh outside startup, Tansy sheet request/integration smoke, and browser warning/error checks were clean.
 
 ## 2026-08-14 — Brindle directional movement sheet
 
@@ -178,7 +186,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | --- | --- | --- | --- | --- |
 | Lantern Warden | `assets/player/warden-sheet-generated-v1.png`, `assets/player/warden-run-sheet-generated-v1.png`, `assets/player/warden-attack-directions-generated-v1.png` | Idle, 4-direction walk, 4-direction sword attack, dash, hurt | Integrated / tested | Keep the repaired per-frame feet anchors; replace only with a higher-resolution sheet that preserves the same ground line |
 | Rowan | `assets/npcs/rowan-sheet-generated-v1.png` | Idle, walk, map work, talk/reaction | Integrated / tested | Keep as the primary directional NPC reference |
-| Tansy, Brindle, Lumen | `assets/npcs/tansy-fire-generated-v1.png`, `assets/npcs/brindle-directional-walk-generated-v1.png`, `assets/npcs/named-npc-activity-generated-v1.png`, `assets/npcs/named-npc-family-generated-v1.png` | Tansy four-direction fire-side idle/stir, Brindle four-direction route walk, Lumen map-work loop; named-family talk/reaction | Tansy/Brindle dedicated movement integrated; Lumen shared role loop | Add dedicated Lumen directional map-work only if the next review finds a concrete mismatch |
+| Tansy, Brindle, Lumen | `assets/npcs/tansy-fire-generated-v1.png`, `assets/npcs/brindle-directional-walk-generated-v1.png`, `assets/npcs/lumen-map-generated-v1.png`, `assets/npcs/named-npc-activity-generated-v1.png`, `assets/npcs/named-npc-family-generated-v1.png` | Tansy four-direction fire-side idle/stir, Brindle four-direction route walk, Lumen four-direction map-work loop; named-family talk/reaction | Tansy, Brindle, and Lumen dedicated movement integrated | Keep the three directional sheets aligned to the same `.94` feet anchor and 56×76 scale |
 | Mossling | `assets/enemies/mossling-sheet-generated-v1.png` | Idle, skitter, pounce, hit recoil | Integrated / tested | Keep as the small-creature reference; refine only for a focused readability defect |
 | Distinct enemy family | `assets/enemies/enemy-family-generated-v1.png` | Thornback, Moon Wisp, Ambush Moth, Rootling/Root Warden; idle, telegraph, attack, hit | Integrated / tested | Keep the family atlas as the roster reference; add specialized death/telegraph FX only if a later encounter review needs them |
 | Enemy combat effects | `assets/enemies/enemy-effects-generated-v1.png` | Charge, ranged, ambush, impact, and four drop feedback states | Integrated / tested | Keep the atlas as the small-enemy feedback reference; refine only if a focused encounter review finds overlap or low contrast |
@@ -195,7 +203,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Rowan | Outpost keeper, overworld start | Down/up/side via `npc-rowan` | Idle and authored route walk | Map-work row and proximity pause | Talk/reaction frames; measured foot anchor | Integrated / tested |
 | Tansy | Lantern cook, campfire | Down/up/left/right via `npc-tansy-fire` | Four-frame directional idle/stir loop | Kettle-stir frames and campfire context | Talk portrait and named-family reaction; grounded `.94` directional anchor | Integrated / pending final smoke |
 | Brindle | Pond ferrier, lower path | Down/up/left/right via `npc-brindle-walk` | Four-frame directional route walk | Ferrier prop context | Talk portrait and reaction remain on named-family frames; grounded `.94` directional anchor | Integrated / tested |
-| Lumen | Shrine cartographer, upper field | Front/side family views | Calm idle | Four-frame map-work loop | Talk portrait and named-family reaction; grounded `.92` activity anchor | Integrated / tested |
+| Lumen | Shrine cartographer, upper field | Down/up/left/right via `npc-lumen-map` | Four-frame directional map-work loop | Open-map, glance, route-trace, reset frames | Talk portrait and named-family reaction; grounded `.94` directional anchor | Integrated / tested |
 | Trader (future) | No runtime spawn yet | Portrait prepared only | Not applicable | Cart-tending row prepared in activity atlas | Portrait prepared; runtime NPC, dialogue, and directional body set still absent | Prepared / not spawned |
 
 The current game has no dungeon NPC actor; dungeon inhabitants are enemy families and the Guardian. Do not generate a trader body set until the trader is actually placed in an authored outpost interaction so the new art can be judged in context.
