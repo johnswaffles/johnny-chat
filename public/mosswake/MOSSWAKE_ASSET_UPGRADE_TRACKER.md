@@ -2,6 +2,15 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Dungeon story-props family and room-detail integration
+
+- Re-audited the current player benchmark, five named NPCs, fresh Lanternwood opening, and all six dungeon room compositions. The main NPC families are now covered; the next visible gap was the repeated procedural story-prop layer behind the authored dungeon architecture: sigil plaques, guardian statues, switch machines, and floor medallions.
+- Generated `assets/dungeon/dungeon-story-props-generated-v1-source.png` (1254×1254 RGB chroma-key source) and prepared `assets/dungeon/dungeon-story-props-generated-v1.png` (1248×1248 RGBA 4×4 atlas). Rows are four room sigil plaques, four matching guardian-statue states, four themed switch-machine states, and four thin floor medallions for leaf, moon, tide, and Heartseed motifs.
+- Added the `dungeon-story-props` manifest slot at v46. `drawDungeonCarving`, `drawDungeonStatue`, `drawDungeonMachine`, and `drawDungeonFloorInlay` now prefer the generated atlas with room-aware frame mapping, grounding shadows, and restrained alpha for floor marks. The Ashen Antechamber machine selects its ember state; the existing procedural art remains the safe fallback.
+- No collision, puzzle, room geometry, actor, boss, or progression logic changed. The source remains beside the production atlas so future matte/paint refinements can be compared without changing the runtime contract.
+- Fresh browser startup loaded `mosswake.js?v=83`, `manifest.json?v=46`, and the new atlas with HTTP 200. The browser reported no warning/error logs. A fresh start later reached the existing run-ended screen during passive smoke, with no new console error; dungeon rendering still needs a focused room-entry screenshot in the next pass.
+- Approved player, NPC reaction, architecture, Sanctum, landmark, bridge, and outdoor families remain the visual references.
+
 ## 2026-08-14 — NPC conversational reaction family and discovery-state parity
 
 - Rechecked the player benchmark, all five named NPCs, the fresh Lanternwood opening, Rowan's approach smoke, and the six-room dungeon source/layouts. No approved NPC or dungeon family was regenerated.

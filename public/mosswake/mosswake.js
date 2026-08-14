@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=45";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=46";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1681,16 +1681,25 @@
     for (let i = 0; i < 5; i += 1) { const px = (hash01(seed, i) - .5) * 52 * scale; const py = (hash01(seed + 3, i) - .5) * 19 * scale; const size = (5 + hash01(seed + 8, i) * 10) * scale; ctx.save(); ctx.translate(px, py); ctx.rotate(hash01(seed + 12, i) * Math.PI); ctx.fillStyle = i % 2 ? "#657a70" : "#829387"; ctx.beginPath(); ctx.moveTo(-size, size * .45); ctx.lineTo(-size * .55, -size * .55); ctx.lineTo(size * .35, -size); ctx.lineTo(size, size * .18); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(16,38,34,.55)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore(); }
     ctx.restore();
   };
+  const dungeonStoryFrame = (label = "") => ({ BRASS: 0, ROOT: 0, MOON: 1, TIDE: 2, ASH: 3, WARDEN: 0, HEART: 3, OPEN: 3 }[label] ?? 0);
   const drawDungeonCarving = (x, y, radius = 34, color = "#8db7a1", label = "") => {
+    const frame = dungeonStoryFrame(label);
+    if (drawOptionalSprite("dungeon-story-props", x, y + 5, { frame, width: radius * 2.7, height: radius * 2.7, anchorX: .5, anchorY: .9, alpha: .94 })) { drawShadow(x, y + radius * .9, radius * .72, radius * .18, .24); return; }
     ctx.save(); ctx.translate(x, y); ctx.globalAlpha = .7; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = .34; ctx.beginPath(); ctx.arc(0, 0, radius * .66, -.5, Math.PI * 1.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-radius * .55, 0); ctx.lineTo(0, -radius * .42); ctx.lineTo(radius * .55, 0); ctx.moveTo(-radius * .35, radius * .28); ctx.lineTo(0, radius * .5); ctx.lineTo(radius * .35, radius * .28); ctx.stroke(); if (label) { ctx.globalAlpha = .8; ctx.fillStyle = color; ctx.font = "700 8px DM Mono"; ctx.textAlign = "center"; ctx.fillText(label, 0, 3); } ctx.restore();
   };
   const drawDungeonStatue = (x, y, scale = 1, damaged = false, time = 0) => {
+    const frame = damaged ? 5 : 4;
+    if (drawOptionalSprite("dungeon-story-props", x, y + 8 * scale, { frame, width: 132 * scale, height: 132 * scale, anchorX: .5, anchorY: .92, alpha: .97 })) { drawShadow(x, y + 25 * scale, 28 * scale, 7 * scale, .3); return; }
     ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); drawShadow(0, 22, 28, 7, .3); ctx.fillStyle = "#485b57"; ctx.fillRect(-21, 10, 42, 12); ctx.fillStyle = "#71877c"; ctx.beginPath(); ctx.moveTo(-14, 12); ctx.lineTo(-10, -24); ctx.lineTo(0, -36); ctx.lineTo(11, -23); ctx.lineTo(15, 12); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "rgba(16,38,34,.7)"; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = "#92aa94"; ctx.beginPath(); ctx.arc(0, -25, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#334844"; ctx.fillRect(-11, -7, 22, 5); ctx.strokeStyle = damaged ? "rgba(220,142,115,.75)" : "rgba(26,58,49,.52)"; ctx.lineWidth = damaged ? 3 : 1.5; ctx.beginPath(); ctx.moveTo(-8, -14); ctx.lineTo(4, -2); ctx.lineTo(-2, 14); ctx.stroke(); if (damaged) { ctx.fillStyle = "#394a47"; ctx.beginPath(); ctx.moveTo(4, -40); ctx.lineTo(17, -34); ctx.lineTo(11, -22); ctx.closePath(); ctx.fill(); } ctx.globalAlpha = .35 + Math.sin(time * 2 + x) * .08; ctx.fillStyle = COLORS.mint; ctx.beginPath(); ctx.arc(0, -25, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   };
-  const drawDungeonMachine = (x, y, scale = 1, active = false, time = 0) => {
+  const drawDungeonMachine = (x, y, scale = 1, active = false, time = 0, theme = "moon") => {
+    const frame = theme === "ash" ? 10 : active ? 9 : 8;
+    if (drawOptionalSprite("dungeon-story-props", x, y + 10 * scale, { frame, width: 138 * scale, height: 138 * scale, anchorX: .5, anchorY: .92, alpha: .97 })) { drawShadow(x, y + 27 * scale, 40 * scale, 8 * scale, .25); return; }
     ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); drawShadow(0, 22, 40, 8, .25); ctx.fillStyle = "#354747"; ctx.fillRect(-35, -12, 70, 35); ctx.strokeStyle = "#172c2b"; ctx.lineWidth = 3; ctx.strokeRect(-35, -12, 70, 35); ctx.fillStyle = "#73897d"; ctx.fillRect(-24, -5, 48, 7); ctx.strokeStyle = active ? COLORS.mint : "#9c755e"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 7, 13 + Math.sin(time * 2.2) * 1.5, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-9, 7); ctx.lineTo(9, 7); ctx.moveTo(0, -2); ctx.lineTo(0, 16); ctx.stroke(); ctx.fillStyle = active ? COLORS.mint : "#c88662"; ctx.beginPath(); ctx.arc(0, 7, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#84988a"; ctx.fillRect(-44, 17, 88, 8); ctx.restore();
   };
   const drawDungeonFloorInlay = (x, y, rx, ry, color, style = "ring", time = 0) => {
+    const frame = color === "#96b9df" ? 13 : color === "#6ed0c4" ? 14 : color === "#b8735d" ? 14 : (color === "#be8aae" || color === "#d66b92") ? 15 : 12;
+    if (drawOptionalSprite("dungeon-story-props", x, y, { frame, width: Math.min(520, rx * 1.55), height: Math.min(320, ry * 1.55), anchorX: .5, anchorY: .5, alpha: .14, rotation: Math.sin(time * .15) * .02 })) return;
     ctx.save(); ctx.translate(x, y); ctx.globalAlpha = .38; ctx.strokeStyle = color; ctx.lineWidth = 3; if (style === "ring") { ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, Math.sin(time * .15) * .02, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(0, 0, rx * .72, ry * .62, 0, 0, Math.PI * 2); ctx.stroke(); } else if (style === "channel") { ctx.beginPath(); ctx.moveTo(-rx, -ry * .2); ctx.quadraticCurveTo(-rx * .35, -ry, rx * .35, -ry * .15); ctx.quadraticCurveTo(rx * .65, ry * .35, rx, ry * .08); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-rx * .7, ry * .32); ctx.lineTo(rx * .72, ry * .32); ctx.stroke(); } else { ctx.beginPath(); ctx.moveTo(-rx, -ry); ctx.lineTo(0, -ry * .45); ctx.lineTo(rx, -ry); ctx.lineTo(rx * .65, ry); ctx.lineTo(0, ry * .45); ctx.lineTo(-rx * .65, ry); ctx.closePath(); ctx.stroke(); } ctx.globalAlpha = .22; ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, rx * .35, ry * .22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   };
   const drawDungeonArchitecture = (time, key) => {
@@ -1706,7 +1715,7 @@
     } else if (key === "0-1") {
       drawDungeonPillar(340, 300, 80, 180, "#5b8588", true); drawDungeonPillar(860, 490, 80, 180, "#5b8588", false); drawDungeonFloorInlay(600, 390, 310, 190, "#6ed0c4", "channel", time); drawDungeonCarving(600, 135, 44, accent, "TIDE"); drawDungeonRubble(220, 615, .85, 31); drawDungeonRubble(980, 205, .75, 34); ctx.save(); ctx.globalAlpha = .34; ctx.strokeStyle = "#9de3d5"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(180, 58); ctx.bezierCurveTo(180, 140 + Math.sin(time) * 4, 210, 165, 240, 215); ctx.stroke(); ctx.beginPath(); ctx.moveTo(960, 58); ctx.bezierCurveTo(956, 130, 930, 160, 900, 208); ctx.stroke(); ctx.restore();
     } else if (key === "1-1") {
-      drawDungeonPillar(195, 150, 48, 110, "#75554d", true); drawDungeonPillar(1005, 150, 48, 110, "#75554d", true); drawDungeonFloorInlay(600, 600, 350, 90, "#b8735d", "channel", time); drawDungeonMachine(600, 130, .9, state.rootlightTested, time); drawDungeonStatue(1010, 390, .82, true, time); drawDungeonCarving(600, 228, 42, accent, "ASH"); drawDungeonRubble(360, 220, 1.15, 41); drawDungeonRubble(840, 220, 1.1, 45);
+      drawDungeonPillar(195, 150, 48, 110, "#75554d", true); drawDungeonPillar(1005, 150, 48, 110, "#75554d", true); drawDungeonFloorInlay(600, 600, 350, 90, "#b8735d", "channel", time); drawDungeonMachine(600, 130, .9, state.rootlightTested, time, "ash"); drawDungeonStatue(1010, 390, .82, true, time); drawDungeonCarving(600, 228, 42, accent, "ASH"); drawDungeonRubble(360, 220, 1.15, 41); drawDungeonRubble(840, 220, 1.1, 45);
     } else if (key === "2-1") {
       drawDungeonPillar(242, 260, 45, 180, "#74566f", true); drawDungeonPillar(958, 260, 45, 180, "#74566f", true); drawDungeonFloorInlay(600, 390, 270, 210, state.bossPhase === 2 ? "#d66b92" : "#be8aae", "ring", time); drawDungeonCarving(600, 126, 54, accent, state.bossDefeated ? "OPEN" : "HEART"); drawDungeonStatue(160, 470, .85, true, time); drawDungeonStatue(1040, 470, .85, true, time); drawDungeonRubble(290, 625, .9, 51); drawDungeonRubble(910, 625, .9, 56);
     }
