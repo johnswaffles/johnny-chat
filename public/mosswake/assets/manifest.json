@@ -1,5 +1,5 @@
 {
-  "version": 27,
+  "version": 28,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -230,6 +230,18 @@
       "fps": 4,
       "displayWidth": 144,
       "displayHeight": 144,
+      "anchorX": 0.5,
+      "anchorY": 0.9
+    },
+    "dungeon-doors": {
+      "src": "dungeon/dungeon-doors-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 8,
+      "displayWidth": 124,
+      "displayHeight": 82,
       "anchorX": 0.5,
       "anchorY": 0.9
     },

@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=27";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=28";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1747,6 +1747,16 @@
       let open = true; let locked = false; if (key === "0-0" && door.side === "east") { open = state.key; locked = !state.key; } if (key === "1-0" && door.side === "south") { open = state.switches; locked = !state.switches; } if (key === "2-0" && door.side === "south") { open = state.miniBossDefeated; locked = !state.miniBossDefeated; } if (key === "1-1" && door.side === "west" && !state.ashShortcutOpen) { open = false; locked = true; } if (key === "1-1" && door.side === "east") { open = state.key && state.miniBossDefeated; locked = !open; }
       const horizontal = door.side === "north" || door.side === "south"; const drawX = horizontal ? door.x : (door.side === "west" ? 58 : ROOM.width - 58); const drawY = horizontal ? (door.side === "north" ? 58 : ROOM.height - 58) : door.y;
       ctx.save(); ctx.translate(drawX, drawY); const dw = door.w; const dh = door.h;
+      if (loadedAssets.has("dungeon-doors")) {
+        const openingProgress = clamp((.5 - (state.transitionCooldown || 0)) / .5, 0, 1);
+        const openingFrame = 8 + Math.min(3, Math.floor(openingProgress * 4));
+        const openFrame = door.side === "north" ? 0 : door.side === "south" ? 1 : door.side === "west" ? 2 : 3;
+        const lockedFrame = key === "0-0" && door.side === "east" ? 12 : key === "1-0" && door.side === "south" ? 13 : key === "2-0" && door.side === "south" ? 14 : key === "1-1" && door.side === "west" ? 15 : 12;
+        const frame = open ? ((state.transitionCooldown || 0) > 0 ? openingFrame : openFrame) : lockedFrame;
+        drawOptionalSprite("dungeon-doors", 0, 0, { frame, width: 124, height: 82, anchorX: .5, anchorY: .9, rotation: horizontal ? 0 : Math.PI / 2, alpha: .98 });
+        ctx.restore();
+        return;
+      }
       ctx.fillStyle = "#142323"; ctx.fillRect(-dw / 2, -dh / 2, dw, dh);
       if (open) {
         const opening = ctx.createLinearGradient(0, -dh / 2, 0, dh / 2); opening.addColorStop(0, "rgba(11,24,25,.94)"); opening.addColorStop(1, "rgba(36,74,67,.62)"); ctx.fillStyle = opening; ctx.fillRect(-dw / 2 + 6, -dh / 2 + 5, dw - 12, dh - 10);

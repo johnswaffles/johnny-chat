@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-13 — Dungeon doorway and lock-state atlas
+
+- Audited the Root Gallery door, the Moon Gate, the Warden Gate, the Ash Lift shortcut, and the room transition path. The dungeon architecture kit already covered arches and pillars, but the actual traversable doors were still flat procedural rectangles with text labels.
+- Generated `assets/dungeon/dungeon-doors-generated-v1-source.png` and the normalized `assets/dungeon/dungeon-doors-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas. Cells cover four open thresholds, brass/crossbar/barred/ash-locked barriers, a four-frame opening sequence, and brass/moon/Warden/ash special seals.
+- Added the `dungeon-doors` manifest slot (manifest v28) and routed every dungeon door through the atlas when available. The existing collision and progression booleans remain authoritative; the renderer selects open, locked, or transition frames and rotates the same family for side doors. The procedural door remains a safe fallback.
+- Bumped the page script cache key to `mosswake.js?v=57`. No room geometry, collision, key, switch, shortcut, or save behavior changed.
+- The source and production atlas stay together under `assets/dungeon/` so individual door cells can be replaced later without gameplay rewrites.
+
 ## 2026-08-13 — Named NPC role-activity atlas
 
 - Audited the opening outpost and confirmed Rowan already has a complete directional/route sheet, while Tansy, Brindle, and Lumen were still sharing the family atlas with only static role swaps. The next highest-value gap was believable activity at the exact NPCs players meet in the first minute.
@@ -97,6 +105,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | 3 | Dungeon architecture | Integrated / tested | Landmark/interactable atlas now covers chests, runes, switches, sockets, and reward pedestals |
 | 4 | Dungeon ambient props | Integrated / tested | Keep the 4×4 storytelling atlas as the dungeon detail reference; replace individual cells only when a room-specific prop needs refinement |
 | 5 | Outdoor props (fences, paths, signs, rocks) | Integrated / tested | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
+| 6 | Dungeon doors and thresholds | Integrated / pending focused live door screenshot | Keep the new lock/open atlas as the doorway reference; refine individual cells only if a room-specific silhouette needs it |
 
 ## 2026-08-13 — Repeating visual director pass: room transition reveal
 
