@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Six-room dungeon presentation audit and Guardian grounding fix
+
+- Completed a fresh visual review of all six dungeon rooms against the strongest Moon Switch Hall / bridge benchmark: Root Gallery, Flooded Vault, Moon Switch Hall, Ashen Antechamber, Warden's Garden, and Heartseed Sanctum. The room identities, authored prop families, Rootlight bridge states, hazards, and arena dressing remain cohesive and production-ready; no redundant raster regeneration was warranted.
+- Found and fixed one concrete presentation defect in Heartseed Sanctum: the Guardian spawned at y=285, which placed its sprite beneath the bottom-clamped camera and behind the HTML boss HUD when the player entered from the south. The spawn and fresh-run defeat-remnant defaults now use the sanctum's central ring at y=390, keeping the full boss silhouette and health bar readable before telegraphs begin.
+- Verified the custom Guardian atlas after the placement change. The idle body, health bar, arena ring, and the first gold telegraph now appear together in the intended focal area instead of reading as a floating attack effect with no boss.
+- No new raster artwork was generated. Existing `hollow-guardian-sheet-generated-v1.png`, `guardian-telegraph-fx-generated-v1.png`, and the Heartseed Sanctum kit remain the approved references. Runtime collision, damage, phase logic, victory altar position, and room geometry are unchanged.
+- Bumped the route script cache to `mosswake.js?v=77` for the placement fix. Next pass should continue with the next specific visual gap only after a normal boss approach confirms the new spawn remains readable during phase one and phase two.
+
 ## 2026-08-14 — Tansy dialogue and Moon Switch Hall crossing QA
 
 - Completed the remaining focused NPC smoke for Tansy. Her fire-side directional sheet, interaction prompt, portrait, speaker name, and first dialogue line all render correctly with the existing `.94` ground anchor.
