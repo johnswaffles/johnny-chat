@@ -1,5 +1,5 @@
 {
-  "version": 41,
+  "version": 42,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -142,6 +142,18 @@
       "fps": 1,
       "displayWidth": 92,
       "displayHeight": 78,
+      "anchorX": 0.5,
+      "anchorY": 0.9
+    },
+    "shoreline-stones": {
+      "src": "rocks/mosswake-shoreline-stone-family-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 1,
+      "displayWidth": 42,
+      "displayHeight": 32,
       "anchorX": 0.5,
       "anchorY": 0.9
     },

@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Shoreline stone family and water-edge parity QA
+
+- Promoted the next documented gap: `environment.shoreStones` was still a fully procedural ellipse loop while pond/shoreline water and dock already used authored families.
+- Generated `assets/rocks/mosswake-shoreline-stone-family-generated-v1.png` as a normalized 1248×1248 RGBA 4×4 atlas. The sixteen cells cover wet pebbles, stepping stones, moss crescent, shell cluster, foam-edge stone, cracked slate, water-ring stone, driftwood cluster, lichen pebble, two-stone pair, and flat/amber variants. Built-in generation returned alpha directly; no keyed matte is required.
+- Added the `shoreline-stones` manifest slot at v42 and routed the overworld shoreline pass through it before the old ellipse fallback. Only low-profile frames [0,1,2,3,6,7,8,9,10,11,12,13] are selected so reeds/mineral/leaf-wrapped cells do not clutter the pond edge.
+- Replayed a fresh outdoor opening and restored Heartseed Sanctum. Shoreline props stay grounded on runtime shadows, dock and water remain readable, Guardian + boss HUD remain visible, and browser console logs are clean.
+- Bumped the route script cache to `mosswake.js?v=79`. Collision, water geometry, dock placement, and dungeon logic unchanged.
+
 ## 2026-08-14 — Dedicated Lanternwood rock family and full-room QA
 
 - Promoted the most visible remaining outdoor prop gap: rocks were borrowing four unrelated `outdoor-props` cells, which made small landmarks read like generic clutter beside the authored trees, bridge, foliage, and characters.

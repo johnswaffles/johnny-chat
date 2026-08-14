@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=41";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=42";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1397,7 +1397,24 @@
       drawShadow(800, 812, 74, 11, .2);
       drawOptionalSprite("outdoor-dock", 800, 812, { frame: 0, width: 220, height: 220, anchorX: .5, anchorY: .96, alpha: .96 });
     }
-    environment.shoreStones.forEach((stone, index) => { const tone = ["#b2b596", "#9da98e", "#c0bd9a"][index % 3]; drawShadow(stone.x, stone.y + 4, 13 * stone.s, 4 * stone.s, .18); ctx.fillStyle = tone; ctx.beginPath(); ctx.ellipse(stone.x, stone.y, 13 * stone.s, 6 * stone.s, -.15 + Math.sin(time * .4 + index) * .015, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(42,79,69,.22)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "rgba(238,240,195,.28)"; ctx.beginPath(); ctx.ellipse(stone.x - 3, stone.y - 2, 5 * stone.s, 2 * stone.s, -.15, 0, Math.PI * 2); ctx.fill(); if (index % 3 === 0) { ctx.strokeStyle = "rgba(225,244,199,.5)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(stone.x + 4, stone.y + 3, 8 * stone.s, -.25, .58); ctx.stroke(); } });
+    environment.shoreStones.forEach((stone, index) => {
+      const stoneFrames = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13];
+      const frame = stoneFrames[index % stoneFrames.length];
+      drawShadow(stone.x, stone.y + 4, 13 * stone.s, 4 * stone.s, .18);
+      // Keep the older painted ellipse below as a safe fallback for offline or
+      // slow asset loads. The dedicated family is intentionally low-profile so
+      // it enriches the water edge without turning shoreline details into clutter.
+      if (drawOptionalSprite("shoreline-stones", stone.x, stone.y + 1, {
+        frame,
+        width: 42 * stone.s,
+        height: 32 * stone.s,
+        anchorX: .5,
+        anchorY: .9,
+        alpha: .96,
+        rotation: Math.sin(time * .35 + index) * .012
+      })) return;
+      const tone = ["#b2b596", "#9da98e", "#c0bd9a"][index % 3]; ctx.fillStyle = tone; ctx.beginPath(); ctx.ellipse(stone.x, stone.y, 13 * stone.s, 6 * stone.s, -.15 + Math.sin(time * .4 + index) * .015, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(42,79,69,.22)"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = "rgba(238,240,195,.28)"; ctx.beginPath(); ctx.ellipse(stone.x - 3, stone.y - 2, 5 * stone.s, 2 * stone.s, -.15, 0, Math.PI * 2); ctx.fill(); if (index % 3 === 0) { ctx.strokeStyle = "rgba(225,244,199,.5)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(stone.x + 4, stone.y + 3, 8 * stone.s, -.25, .58); ctx.stroke(); }
+    });
     environment.treesMid.forEach((tree) => drawTree(tree, time, "mid"));
     environment.bushes.filter((bush) => bush.y < 600).forEach((bush) => drawBush(bush, time)); environment.fences.filter((fence) => fence.y < 600).forEach(drawFence); environment.ruins.filter((ruin) => ruin.y < 600).forEach((ruin) => drawRuin(ruin, time)); environment.signs.filter((sign) => sign.y < 600).forEach(drawSign);
     drawHouse(800, 90, 300, 165, "#d5c99e", "#a56e4e"); drawHouse(1140, 100, 190, 135, "#9fb88b", "#6a8e70");
