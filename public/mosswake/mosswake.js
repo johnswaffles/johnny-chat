@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=29";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=30";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1497,6 +1497,25 @@
     ctx.strokeStyle = "rgba(10,18,18,.55)"; ctx.lineWidth = 12; ctx.strokeRect(47, 47, ROOM.width - 94, ROOM.height - 94);
     for (let x = 100; x < ROOM.width - 100; x += 180) drawTorch(x, 68, time);
   };
+  const drawDungeonFloorSurface = (time, key) => {
+    if (!loadedAssets.has("dungeon-floor")) return;
+    const frame = ({ "0-0": 0, "1-0": 5, "2-0": 4, "0-1": 14, "1-1": 10, "2-1": 15 }[key] ?? 0);
+    const phase = Math.sin(time * .22 + key.length) * .015;
+    const patches = [
+      [260, 215, 286, 218, .16, -phase],
+      [600, 402, 360, 276, .13, phase],
+      [940, 590, 286, 218, .15, -phase * .7]
+    ];
+    ctx.save(); ctx.globalCompositeOperation = "multiply";
+    patches.forEach(([x, y, width, height, alpha, rotation]) => {
+      drawOptionalSprite("dungeon-floor", x, y, { frame, width, height, anchorX: .5, anchorY: .5, alpha, rotation });
+    });
+    ctx.restore();
+    // A faint room-specific wash keeps the generated tiles subordinate to the
+    // authored hazards, landmarks, and actor silhouettes drawn afterward.
+    const wash = { "0-0": "rgba(112,170,143,.05)", "1-0": "rgba(135,170,208,.055)", "2-0": "rgba(144,185,123,.05)", "0-1": "rgba(81,188,185,.06)", "1-1": "rgba(194,113,83,.055)", "2-1": "rgba(193,113,159,.06)" }[key] || "rgba(112,170,143,.05)";
+    ctx.save(); ctx.fillStyle = wash; ctx.globalAlpha = .7; ctx.fillRect(72, 72, ROOM.width - 144, ROOM.height - 144); ctx.restore();
+  };
   const drawDungeonArch = (x, y, rotation = 0, color = "#6b8479", broken = false) => {
     const frame = broken ? 6 : rotation === 0 ? 4 : 5;
     if (loadedAssets.has("dungeon-architecture")) { drawShadow(x, y + 55, 56, 10, .3); if (drawOptionalSprite("dungeon-architecture", x, y + 6, { frame, width: 144, height: 144, anchorY: .82, rotation })) return; }
@@ -1748,6 +1767,7 @@
   const drawDungeon = (time) => {
     const key = `${state.roomX}-${state.roomY}`;
     drawDungeonMasonry(time, key);
+    drawDungeonFloorSurface(time, key);
     drawDungeonFloorFocus(time, key);
     drawDungeonObstacles(time, key);
     drawDungeonArchitecture(time, key);
