@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Secondary moonwell ruin landmark
+
+- Continued the outside-world replacement audit after the cliff family pass. The smaller ruin at `(875,285)` was the last obvious procedural landmark and read as a generic stone blob beside the authored northeast moon arch.
+- Generated `assets/props/outdoor-moonwell-generated-v1-source.png` (1536×1024 source) and prepared `assets/props/outdoor-moonwell-generated-v1.png` (1536×1024 RGBA) as a low, broken moonwell shrine with a crescent basin, roots, rubble, flowers, and a restrained mint pool.
+- Added manifest v35 and routed the secondary ruin through the optional `outdoor-moonwell` sprite key. The taller northeast moon arch remains on `outdoor-ruin`, so the two landmarks are related without becoming duplicates.
+- Bumped the page script cache key to `mosswake.js?v=67`; collision, world bounds, NPC routes, dungeon progression, and save behavior remain unchanged.
+- Validation passed: `node --check`, alpha/dimension checks, all 42 manifest asset requests (39 unique files) returned HTTP 200, fresh outside startup, secondary-ruin integration smoke, six dungeon-room restores/screenshots, and browser warning/error checks were clean. No collision, NPC, or dungeon regression was observed.
+
 ## 2026-08-14 — Outdoor cliff and ledge family
 
 - Audited the outside composition after the authored ruin pass. The three large cliff silhouettes were still simple procedural wedges, so the upper and southeast edges lacked the same material depth as the generated trees, rocks, dock, and ruin.

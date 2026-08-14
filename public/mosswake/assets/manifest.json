@@ -1,5 +1,5 @@
 {
-  "version": 34,
+  "version": 35,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -96,6 +96,18 @@
       "displayHeight": 156,
       "anchorX": 0.5,
       "anchorY": 0.9
+    },
+    "outdoor-moonwell": {
+      "src": "props/outdoor-moonwell-generated-v1.png",
+      "frameWidth": 1536,
+      "frameHeight": 1024,
+      "columns": 1,
+      "frames": 1,
+      "fps": 1,
+      "displayWidth": 156,
+      "displayHeight": 104,
+      "anchorX": 0.5,
+      "anchorY": 0.92
     },
     "outdoor-cliffs": {
       "src": "terrain/outdoor-cliff-family-generated-v1.png",
