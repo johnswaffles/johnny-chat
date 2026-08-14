@@ -25,7 +25,7 @@ Example manifest entry:
 }
 ```
 
-The optional `player`, `boss`, `enemy-*`, `tree-back`, `tree-mid`, `tree-front`, `projectile-*`, `fx-slash`, `fx-impact`, `boss-fx`, and `outdoor-foliage` keys already have renderer hooks. No gameplay code needs to change when an approved replacement is swapped in; add a manifest entry and keep the same anchor and cell dimensions.
+The optional `player`, `boss`, `enemy-*`, `tree-back`, `tree-mid`, `tree-front`, `projectile-*`, `fx-slash`, `fx-impact`, `boss-fx`, `outdoor-foliage`, and `dungeon-bridge` keys already have renderer hooks. No gameplay code needs to change when an approved replacement is swapped in; add a manifest entry and keep the same anchor and cell dimensions.
 
 ## Generated character library — current pass
 
@@ -58,6 +58,7 @@ This pass turns three high-impact living silhouettes into real, replaceable artw
 | Tansy fire-side movement | `npcs/tansy-fire-generated-v1.png` | 4 columns × 4 rows, 312×312 source cells, 16 frames | Tansy down/up/left/right idle-and-stir cycles with four sequential role frames; selected only during her non-dialogue campfire behavior and drawn at 56×76 with a `.94` feet anchor |
 | Lumen map-work movement | `npcs/lumen-map-generated-v1.png` | 4 columns × 4 rows, 312×312 source cells, 16 frames | Lumen down/up/left/right open-map, glance, route-trace, and reset cycles; selected only during her non-dialogue cartographer behavior and drawn at 56×76 with a `.94` feet anchor |
 | Dungeon landmarks and interactive props | `dungeon/dungeon-landmarks-interactive-generated-v1.png` | 4 columns × 4 rows, 312×312 source cells, 16 frames | Painted chest, rune, switch, Rootlight socket, Heartseed pedestal, Lantern relic, key, and tablet states; dungeon interaction hooks with procedural fallback |
+| Dungeon bridge threshold family | `dungeon/dungeon-bridge-threshold-generated-v1.png` | 4 columns × 4 rows, 312×312 source cells, 16 frames | Dormant broken bridge, four settled Rootlight-open frames, four awakening frames, and wet/root-wrapped threshold variants; selected for the Moon Switch Hall shortcut at 350×166 with a `.86` anchor and ambient-props fallback |
 
 The `*-keyed.png` companions are the source exports retained for future matte refinement; the alpha PNGs are the only files referenced by the game. Both characters follow the Mosswake art bible below: hand-painted storybook rendering, gentle orthographic 3/4 read, deep-moss edge restraint, parchment highlights, moonlit teal, and upper-left light. Collision, AI, dialogue, and camera code remain unchanged.
 
@@ -95,7 +96,7 @@ The renderer intentionally keeps the procedural body as a safe fallback. This me
 
 ## Completion audit status
 
-The first-section renderer is visually coherent and performance-safe. The player, Rowan, Tansy's directional fire-side movement, Brindle's directional movement, Lumen's directional map-work movement, Mossling, distinct enemy family, enemy combat effects, HUD/pickup icons, Hollow Guardian, Guardian combat FX, Lantern-blade combat FX, water/shoreline family, outdoor cliff family, layered tree family, outdoor foliage family, pond dock, northeast moon arch, and secondary moonwell now use generated, alpha-prepared assets; the procedural fallback remains available for every other living entity and effect. The remaining high-impact replacements are ranked in **GRAPHICS TO GENERATE NEXT (remaining)** below. The persistent production log lives in `MOSSWAKE_ASSET_UPGRADE_TRACKER.md`.
+The first-section renderer is visually coherent and performance-safe. The player, Rowan, Tansy's directional fire-side movement, Brindle's directional movement, Lumen's directional map-work movement, Mossling, distinct enemy family, enemy combat effects, HUD/pickup icons, Hollow Guardian, Guardian combat FX, Lantern-blade combat FX, water/shoreline family, outdoor cliff family, layered tree family, outdoor foliage family, pond dock, northeast moon arch, secondary moonwell, and Moon Switch Hall bridge threshold now use generated, alpha-prepared assets; the procedural fallback remains available for every other living entity and effect. The remaining high-impact replacements are ranked in **GRAPHICS TO GENERATE NEXT (remaining)** below. The persistent production log lives in `MOSSWAKE_ASSET_UPGRADE_TRACKER.md`.
 
 Until those files exist, the procedural renderer remains the intentional fallback for player/enemy bodies, NPC portraits, props, terrain, water, dungeon structure, item icons, and effects. It is readable and polished enough for playtesting, but those specific categories should not be described as final custom artwork.
 

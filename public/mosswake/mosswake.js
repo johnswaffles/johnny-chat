@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=38";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=39";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1773,12 +1773,13 @@
     } else if (key === "1-0") {
       drawDungeonRoots(time, [[120, 90, 150, 1], [1080, 90, 150, -1]]);
       ambient(1, 252, 526, 94, 104, .8); ambient(7, 948, 526, 104, 104, .8);
-      if (state.rootlightMoonBridge && loadedAssets.has("dungeon-ambient-props")) {
-        // The generated bridge cell was previously shown as a tiny broken
-        // plank fragment even after Rootlight opened the shortcut. Promote it
-        // to the readable traversal state without changing collision geometry.
+      if (state.rootlightMoonBridge && (loadedAssets.has("dungeon-bridge") || loadedAssets.has("dungeon-ambient-props"))) {
+        // The dedicated bridge family keeps the shortcut readable as a real
+        // threshold state while the ambient-props cell remains a safe fallback.
         ctx.save(); ctx.globalCompositeOperation = "screen"; drawLightPool(600, 620, 138, COLORS.mint, .075); ctx.restore();
-        drawOptionalSprite("dungeon-ambient-props", 600, 620, { frame: 10, width: 350, height: 166, anchorX: .5, anchorY: .86, alpha: .98 });
+        const bridgeKey = loadedAssets.has("dungeon-bridge") ? "dungeon-bridge" : "dungeon-ambient-props";
+        const bridgeFrame = bridgeKey === "dungeon-bridge" ? 4 + Math.floor(time * 1.4) % 4 : 10;
+        drawOptionalSprite(bridgeKey, 600, 620, { frame: bridgeFrame, width: 350, height: 166, anchorX: .5, anchorY: .86, alpha: .98 });
         ctx.save(); ctx.globalAlpha = .64 + Math.sin(time * 2.2) * .08; ctx.fillStyle = COLORS.mint; for (let i = 0; i < 5; i += 1) { const x = 474 + i * 63; const y = 600 + Math.sin(time * 1.5 + i) * 5; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
       } else {
         ambient(10, 414, 638, 122, 94, .76);

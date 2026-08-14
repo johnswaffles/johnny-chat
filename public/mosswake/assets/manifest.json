@@ -1,5 +1,5 @@
 {
-  "version": 38,
+  "version": 39,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -388,6 +388,18 @@
       "displayHeight": 112,
       "anchorX": 0.5,
       "anchorY": 0.9
+    },
+    "dungeon-bridge": {
+      "src": "dungeon/dungeon-bridge-threshold-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 5,
+      "displayWidth": 350,
+      "displayHeight": 166,
+      "anchorX": 0.5,
+      "anchorY": 0.86
     },
     "fx-slash": {
       "src": "effects/lantern-blade-fx-generated-v1.png",

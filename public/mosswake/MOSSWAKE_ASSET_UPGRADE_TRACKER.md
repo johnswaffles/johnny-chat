@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Moon Switch Hall bridge threshold family
+
+- Continued from the Lumen NPC pass and the focused bridge-restore QA. The opened Moon Switch Hall shortcut was readable, but it still depended on a small ambient-props bridge cell, so the bridge had no dedicated dormant/open/awakening/threshold state family.
+- Generated `assets/dungeon/dungeon-bridge-threshold-generated-v1-source.png` (1254×1254 RGB chroma-key source) and prepared `assets/dungeon/dungeon-bridge-threshold-generated-v1.png` (1248×1248 RGBA production atlas). Rows cover dormant broken planks, four settled Rootlight-open bridges, four sequential awakening frames, and wet/root-wrapped threshold variants.
+- Added manifest v39 and routed the opened bridge through `dungeon-bridge`, cycling the four settled open frames at a restrained cadence. The ambient-props bridge remains the safe fallback; collision, room geometry, shortcut progression, save state, and transition logic are unchanged.
+- The atlas preserves the established dungeon language: cool charcoal stone, weathered umber planks, deep moss, muted brass, and selective mint Rootlight seams. The source remains beside the alpha production atlas for future matte refinement.
+- Validation passed: `node --check`, manifest/alpha/dimension checks, fresh outpost startup, Moon Switch Hall bridge restore, bridge asset request smoke, and browser warning/error checks. A full controlled crossing remains the next traversal-focused QA task.
+
 ## 2026-08-14 — Lumen directional map-work sheet
 
 - Continued the opening NPC parity audit after Tansy's fire-side sheet. Lumen's shared role atlas still used a single map-work presentation, so her map table looked static when approached from different axes.
@@ -221,7 +229,7 @@ The current game has no dungeon NPC actor; dungeon inhabitants are enemy familie
 | 7 | Dungeon hazards | Integrated / tested | Keep the hazard atlas as the water/ember reference; refine only if visual scale or readability needs adjustment |
 | 8 | Dungeon floor family | Integrated / tested | Keep the 4×4 floor atlas as the room-surface reference; refine only if a transition edge or material mismatch appears |
 | 9 | Dungeon masonry family | Integrated / tested | Keep the wall atlas behind authored room pieces; adjust opacity or panel placement only if a specific room edge competes with a landmark |
-| 10 | Rootlight bridge | Integrated / tested | Keep the enlarged active bridge state; refine only if a transition screenshot shows a readability or grounding issue |
+| 10 | Rootlight bridge | Dedicated threshold family integrated / tested | Keep `dungeon-bridge` for dormant/open/awakening states; complete a controlled crossing smoke before considering traversal QA closed |
 | 11 | Outdoor cliff and ledge family | Integrated / tested | Keep the 4×4 cliff atlas as the outdoor elevation reference; add a new cell only for a specific landmark or material need |
 
 ## 2026-08-13 — Repeating visual director pass: room transition reveal
