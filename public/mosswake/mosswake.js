@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=25";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=26";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1656,30 +1656,43 @@
     ctx.save(); ctx.translate(state.bossDefeatX, state.bossDefeatY); ctx.globalAlpha = fade; ctx.rotate(progress * .55); ctx.fillStyle = "#5d315d"; ctx.beginPath(); ctx.arc(0, 0, Math.max(3, radius), 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = COLORS.rose; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, radius + 8 + Math.sin(time * 10) * 3, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 2; for (let i = 0; i < 8; i += 1) { const angle = i * Math.PI / 4 + time * .8; ctx.beginPath(); ctx.moveTo(Math.cos(angle) * 9, Math.sin(angle) * 9); ctx.lineTo(Math.cos(angle) * (radius + 24), Math.sin(angle) * (radius + 24)); ctx.stroke(); } ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(0, 0, 8 + Math.sin(time * 9) * 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   };
   const drawDungeonRoomProps = (time, key) => {
+    // The ambient-props atlas supplies small authored landmarks between the
+    // larger architecture pieces. They are visual-only and intentionally sit
+    // outside collision rectangles so the dungeon remains mechanically stable.
+    const ambient = (frame, x, y, width = 108, height = width, alpha = .9, rotation = 0) => {
+      if (!loadedAssets.has("dungeon-ambient-props")) return false;
+      return drawOptionalSprite("dungeon-ambient-props", x, y, { frame, width, height, anchorY: .9, alpha, rotation });
+    };
     if (key === "0-0") {
       drawDungeonRoots(time, [[110, 72, 185, 1], [1080, 72, 185, -1], [95, 650, -130, 1], [1100, 650, -130, -1]]);
+      ambient(2, 338, 542, 96, 96, .78); ambient(8, 936, 148, 104, 112, .82); ambient(15, 1002, 590, 96, 96, .78);
       ctx.fillStyle = "#3c5148"; ctx.fillRect(350, 305, 500, 16); ctx.fillStyle = "#718f75"; ctx.fillRect(350, 302, 500, 4); drawChest(600, 390, state.chestOpened); drawRune(600, 160, "KEY"); drawRune(990, 640, state.rootlightGalleryOpen ? "OPEN" : "DORMANT"); if (state.rootlightGalleryOpen) drawChest(990, 640, state.rootlightGalleryCacheOpened);
       ctx.fillStyle = "rgba(213,255,209,.4)"; ctx.font = "12px DM Mono"; ctx.textAlign = "center"; ctx.fillText("THE FIRST LOCK REMEMBERS BRASS", 600, 470);
     } else if (key === "1-0") {
       drawDungeonRoots(time, [[120, 90, 150, 1], [1080, 90, 150, -1]]);
+      ambient(1, 252, 526, 94, 104, .8); ambient(7, 948, 526, 104, 104, .8); ambient(10, 414, 638, 122, 94, .76);
       const moon = ctx.createRadialGradient(600, 205, 5, 600, 205, 200); moon.addColorStop(0, "rgba(179,220,255,.16)"); moon.addColorStop(1, "rgba(179,220,255,0)"); ctx.fillStyle = moon; ctx.fillRect(330, 70, 540, 360);
       ctx.strokeStyle = "rgba(192,225,255,.2)"; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(600, 200, 130, Math.PI, Math.PI * 2); ctx.stroke(); drawSwitch(600, 380, state.switches, time); drawRune(600, 150, state.switches ? "MOON LIT" : "MOON");
       drawRune(600, 620, state.rootlightMoonBridge ? "BRIDGE" : "DORMANT"); ctx.fillStyle = "rgba(218,240,255,.5)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.switches ? "THE LOWER GATE BREATHES" : "A SWITCH SLEEPS BELOW THE MOON", 600, 474);
     } else if (key === "2-0") {
       drawDungeonRoots(time, [[100, 100, 230, 1], [1100, 100, 230, -1], [170, 680, -170, 1], [1030, 680, -170, -1]]);
+      ambient(8, 180, 214, 100, 112, .78); ambient(15, 1000, 590, 96, 96, .76); ambient(5, 876, 636, 108, 92, .74);
       ctx.save(); ctx.globalAlpha = .35; ctx.strokeStyle = "#8ab879"; ctx.lineWidth = 3; ctx.setLineDash([8, 9]); ctx.beginPath(); ctx.arc(600, 390, 210 + Math.sin(time * 1.5) * 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); drawRune(600, 140, state.miniBossDefeated ? "OPEN" : "WARDEN");
       ctx.fillStyle = "rgba(192,231,166,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.miniBossDefeated ? "A LIVING ROOT BRIDGE LEADS SOUTH" : "THE GARDEN KEEPS ITS OWN LAW", 600, 700);
     } else if (key === "0-1") {
       drawDungeonRoots(time, [[105, 100, 160, 1], [1060, 650, -180, -1]]); drawDungeonHazardVisual(time); if (state.rootlightWaterway) drawWater({ x: 410, y: 250, w: 380, h: 280 }, time); drawChest(600, 390, state.heartChestOpened); drawRune(600, 150, "HEART");
+      ambient(4, 222, 216, 108, 112, .82); ambient(3, 1002, 176, 96, 112, .76); ambient(9, 982, 616, 104, 104, .74);
       ctx.fillStyle = "#566e68"; ctx.fillRect(130, 540, 200, 18); ctx.fillRect(870, 230, 200, 18); ctx.fillStyle = "#9bb7a3"; ctx.fillRect(150, 535, 160, 5); ctx.fillRect(890, 225, 160, 5);
       drawRune(960, 650, state.rootlightWaterway ? "WATER PARTED" : "DORMANT"); if (state.rootlightWaterway) { ctx.save(); ctx.globalAlpha = .75; ctx.fillStyle = "#c0d4b4"; for (let i = 0; i < 6; i += 1) { const x = 470 + i * 55; const y = 390 + Math.sin(i * 1.7) * 35; ctx.beginPath(); ctx.ellipse(x, y, 18, 9, -.2, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); } ctx.fillStyle = "rgba(188,239,218,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.heartChestOpened ? "THE WATER REMEMBERS YOUR FOOTSTEPS" : "CROSS THE FLOOD · TAKE ONLY WHAT YOU NEED", 600, 690);
     } else if (key === "1-1") {
       drawDungeonRoots(time, [[105, 70, 200, 1], [1080, 70, 200, -1]]); drawDungeonHazardVisual(time);
+      ambient(13, 300, 208, 116, 92, .74); ambient(11, 972, 600, 100, 104, .8); ambient(14, 226, 498, 96, 96, .72);
       ctx.fillStyle = "#6d4b43"; ctx.fillRect(420, 180, 360, 20); ctx.fillStyle = "#b88363"; ctx.fillRect(440, 177, 120, 4); ctx.fillRect(620, 177, 120, 4);
       ctx.fillStyle = state.ashCacheOpened ? "rgba(255,190,116,.33)" : "rgba(255,126,95,.24)"; ctx.beginPath(); ctx.arc(180, 635, 58 + Math.sin(time * 2) * 3, 0, Math.PI * 2); ctx.fill(); drawChest(180, 635, state.ashCacheOpened); drawRune(180, 552, state.ashCacheOpened ? "LANTERN" : "CACHE"); drawRune(360, 635, state.rootlightTested ? "AWAKE" : "TRY HERE"); drawRune(600, 370, "ASH GATE");
       ctx.fillStyle = "rgba(255,202,164,.48)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.ashCacheOpened ? "THE ASH LIFT OPENS A QUIET WAY BACK" : "LOOK BEHIND THE BROKEN WALL", 600, 690);
     } else if (key === "2-1") {
       drawDungeonRoots(time, [[90, 82, 180, 1], [1110, 82, 180, -1]]); drawBossArenaBackdrop(time); drawBossArenaEffects(time); drawRune(600, 130, state.bossDefeated ? "HEARTSEED" : state.bossPhase === 2 ? "HEART UNBOUND" : "SANCTUM");
+      ambient(13, 298, 624, 112, 92, .68); ambient(14, 902, 624, 96, 96, .68);
       ctx.save(); ctx.globalAlpha = .4; ctx.strokeStyle = state.bossDefeated ? "#ffd77b" : "#b95a90"; ctx.lineWidth = 4; for (let i = 0; i < 3; i += 1) { ctx.beginPath(); ctx.arc(600, 370, 85 + i * 42 + Math.sin(time * 1.4 + i) * 3, 0, Math.PI * 2); ctx.stroke(); } ctx.restore();
       ctx.fillStyle = "#66506b"; ctx.fillRect(500, 170, 200, 18); ctx.fillStyle = "#b39ac2"; ctx.fillRect(540, 164, 120, 6); if (state.bossDefeated) drawReward(600, 230, time); else { ctx.fillStyle = "rgba(239,186,224,.44)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("THE HEARTSEED WAITS BEYOND THE GUARDIAN", 600, 700); }
     }

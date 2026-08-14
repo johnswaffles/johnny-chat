@@ -2,6 +2,15 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-13 — Dungeon ambient storytelling prop family
+
+- Audited the live opening, the named NPC family, the dungeon architecture/landmark atlases, and the first three dungeon-room compositions. The NPC family and major dungeon silhouettes are already cohesive and integrated; the remaining visible gap was the “in-between” room detail, where floor props still relied on simple canvas primitives.
+- Generated `assets/dungeon/dungeon-ambient-props-generated-v1-source.png` and the normalized `assets/dungeon/dungeon-ambient-props-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas. Cells cover cracked root medallions, a broken cyan urn, engraved tablets, hanging roots, a leaking basin, a collapsed bench, a shrine fragment, a chain winch, a root-wrapped relief, an explorer satchel, broken bridge planks, an ember bowl, worn stairs, a fallen lintel, a sealed hatch, and luminous mushrooms.
+- Added the `dungeon-ambient-props` manifest slot (manifest v26) and placed small, low-alpha authored details in every dungeon room without changing collision, room geometry, progression, or combat. The existing architecture, landmark, sanctum, and procedural branches remain independent fallbacks.
+- Bumped the page script cache key to `mosswake.js?v=55`. The source and keyed/generated atlas remain together under `assets/dungeon/` so individual cells can be replaced later without changing gameplay code.
+- Local `node --check`, manifest/alpha/dimension validation, `git diff --check`, fresh local title/start smoke, portable-save restoration into Root Gallery/Ashen Antechamber/Heartseed Sanctum, screenshot review, and console warning/error checks passed. The new props read as authored environmental storytelling and do not obscure the boss arena or interactable landmarks.
+- NPC family remains the approved reference: Rowan's sheet and the named family are already loaded and animated in the overworld; no NPC asset was regenerated in this iteration.
+
 ## 2026-08-13 — Player-facing controls, portable saves, and gamepad support
 
 - Replaced the confusing destructive `Erase save` control with a collapsed-by-default `Controls & save` drawer. It contains explicit `Restart game` and `Save / restore` actions, plus an Xbox mapping reference.
@@ -77,7 +86,8 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | 1 | Boss telegraph and defeat FX | Integrated / tested | Keep the atlas as the Guardian effect reference; only refine for a readability defect |
 | 2 | Outdoor foliage | Integrated / tested | Keep the foliage atlas as the outdoor prop reference; add a second seasonal sheet only if a later visual review shows repetition |
 | 3 | Dungeon architecture | Integrated / tested | Landmark/interactable atlas now covers chests, runes, switches, sockets, and reward pedestals |
-| 4 | Outdoor props (fences, paths, signs, rocks) | Integrated / tested | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
+| 4 | Dungeon ambient props | Integrated / tested | Keep the 4×4 storytelling atlas as the dungeon detail reference; replace individual cells only when a room-specific prop needs refinement |
+| 5 | Outdoor props (fences, paths, signs, rocks) | Integrated / tested | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
 
 ## 2026-08-13 — Repeating visual director pass: room transition reveal
 
