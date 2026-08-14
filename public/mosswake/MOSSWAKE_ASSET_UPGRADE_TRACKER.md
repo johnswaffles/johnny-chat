@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Marlow outpost trader runtime integration
+
+- Promoted the prepared trader row from the named NPC activity atlas into a live outpost NPC named Marlow at the east edge of the opening lawn. His cart-tending loop now animates in context instead of remaining an unused future asset.
+- Added a concise state-aware dialogue branch and wired the existing `trader-portrait-generated-v1.png` portrait to the dialogue card. The portrait letter fallback is `M`, while the same asset path remains replaceable through the existing NPC portrait convention.
+- Added the cart behavior's four-frame cadence to the role-activity renderer and bumped the route script cache to `mosswake.js?v=76`. No collision, route, save, combat, or room geometry changed.
+- No new raster artwork was generated in this iteration: the approved `named-npc-activity-generated-v1.png` fourth row and trader portrait were already production-ready. The value was integrating and validating the previously prepared family.
+- Focused interaction smoke passed with Marlow's prompt, portrait, and first dialogue line; the next pass should repeat the final-coordinate approach if needed and continue the Moon Switch Hall bridge crossing with evasive movement.
+
 ## 2026-08-14 — Moon Switch Hall crossing and wisp handoff QA
 
 - Replayed the restored open-bridge route with the current `dungeon-bridge` family. The authored crossing is reachable, the player remains grounded on the planks, the bridge threshold is visually legible, and the existing Rootlight pulse remains available as encounter counterplay.
@@ -218,6 +226,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Lantern Warden | `assets/player/warden-sheet-generated-v1.png`, `assets/player/warden-run-sheet-generated-v1.png`, `assets/player/warden-attack-directions-generated-v1.png` | Idle, 4-direction walk, 4-direction sword attack, dash, hurt | Integrated / tested | Keep the repaired per-frame feet anchors; replace only with a higher-resolution sheet that preserves the same ground line |
 | Rowan | `assets/npcs/rowan-sheet-generated-v1.png`, `assets/npcs/rowan-directional-walk-generated-v1.png` | Idle, four-direction walk, map work, talk/reaction | Integrated / tested | Keep both the named talk sheet and the new `.94` feet-anchored walk family as the NPC benchmark |
 | Tansy, Brindle, Lumen | `assets/npcs/tansy-fire-generated-v1.png`, `assets/npcs/brindle-directional-walk-generated-v1.png`, `assets/npcs/lumen-map-generated-v1.png`, `assets/npcs/named-npc-activity-generated-v1.png`, `assets/npcs/named-npc-family-generated-v1.png` | Tansy four-direction fire-side idle/stir, Brindle four-direction route walk, Lumen four-direction map-work loop; named-family talk/reaction | Tansy, Brindle, and Lumen dedicated movement integrated | Keep the three directional sheets aligned to the same `.94` feet anchor and 56×76 scale |
+| Marlow (outpost trader) | `assets/npcs/named-npc-activity-generated-v1.png` row 4, `assets/npcs/portraits/trader-portrait-generated-v1.png` | Stationary cart-tending role loop; no directional walk required | Four-frame sort/reach/reset/wave cart loop | State-aware dialogue and trader portrait; shared `.92` role anchor | Integrated / focused smoke passed |
 | Mossling | `assets/enemies/mossling-sheet-generated-v1.png` | Idle, skitter, pounce, hit recoil | Integrated / tested | Keep as the small-creature reference; refine only for a focused readability defect |
 | Distinct enemy family | `assets/enemies/enemy-family-generated-v1.png` | Thornback, Moon Wisp, Ambush Moth, Rootling/Root Warden; idle, telegraph, attack, hit | Integrated / tested | Keep the family atlas as the roster reference; add specialized death/telegraph FX only if a later encounter review needs them |
 | Enemy combat effects | `assets/enemies/enemy-effects-generated-v1.png` | Charge, ranged, ambush, impact, and four drop feedback states | Integrated / tested | Keep the atlas as the small-enemy feedback reference; refine only if a focused encounter review finds overlap or low contrast |
@@ -235,9 +244,9 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Tansy | Lantern cook, campfire | Down/up/left/right via `npc-tansy-fire` | Four-frame directional idle/stir loop | Kettle-stir frames and campfire context | Talk portrait and named-family reaction; grounded `.94` directional anchor | Integrated / pending final smoke |
 | Brindle | Pond ferrier, lower path | Down/up/left/right via `npc-brindle-walk` | Four-frame directional route walk | Ferrier prop context | Talk portrait and reaction remain on named-family frames; grounded `.94` directional anchor | Integrated / tested |
 | Lumen | Shrine cartographer, upper field | Down/up/left/right via `npc-lumen-map` | Four-frame directional map-work loop | Open-map, glance, route-trace, reset frames | Talk portrait and named-family reaction; grounded `.94` directional anchor | Integrated / tested |
-| Trader (future) | No runtime spawn yet | Portrait prepared only | Not applicable | Cart-tending row prepared in activity atlas | Portrait prepared; runtime NPC, dialogue, and directional body set still absent | Prepared / not spawned |
+| Marlow | East outpost lawn, cart trader | Stationary role presentation; no directional walk required | Four-frame cart-tending loop via `npc-activity` row 4 | State-aware dialogue, trader portrait, `.92` role anchor | Integrated / focused smoke passed |
 
-The current game has no dungeon NPC actor; dungeon inhabitants are enemy families and the Guardian. Do not generate a trader body set until the trader is actually placed in an authored outpost interaction so the new art can be judged in context.
+The current game has no dungeon NPC actor; dungeon inhabitants are enemy families and the Guardian. Marlow's body set is intentionally limited to the authored cart-tending role row until gameplay gives him a reason to walk or fight.
 
 ## High-value environment and effects queue
 

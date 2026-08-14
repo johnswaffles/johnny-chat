@@ -207,7 +207,11 @@
     { id: "rowan", name: "Rowan", role: "Outpost keeper", portrait: "rowan", x: 460, y: 380, baseX: 460, baseY: 380, behavior: "pace", phase: .3, facing: 1, route: [{ x: 460, y: 380 }, { x: 492, y: 374 }, { x: 486, y: 404 }, { x: 452, y: 400 }] },
     { id: "tansy", name: "Tansy", role: "Lantern cook", portrait: "tansy", x: 620, y: 356, baseX: 620, baseY: 356, behavior: "fire", phase: 1.2, facing: 1, facingAxis: "y" },
     { id: "brindle", name: "Brindle", role: "Pond ferrier", portrait: "brindle", x: 540, y: 585, baseX: 540, baseY: 585, behavior: "pace", phase: 2.4, facing: 1, facingAxis: "x", route: [{ x: 520, y: 582 }, { x: 572, y: 605 }, { x: 525, y: 625 }] },
-    { id: "lumen", name: "Lumen", role: "Shrine cartographer", portrait: "lumen", x: 1235, y: 305, baseX: 1235, baseY: 305, behavior: "map", phase: 4.1, facing: 1, facingAxis: "y" }
+    { id: "lumen", name: "Lumen", role: "Shrine cartographer", portrait: "lumen", x: 1235, y: 305, baseX: 1235, baseY: 305, behavior: "map", phase: 4.1, facing: 1, facingAxis: "y" },
+    // Marlow uses the prepared fourth row of the activity atlas. He is placed
+    // on the edge of the outpost lawn so the cart-tending loop reads as a
+    // deliberate destination without crowding the fire, map table, or road.
+    { id: "marlow", name: "Marlow", role: "Outpost trader", portrait: "trader", x: 752, y: 304, baseX: 752, baseY: 304, behavior: "cart", phase: 5.2, facing: 1, facingAxis: "y" }
   ];
   let camera = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0, shakePhase: 0 };
   let previousHealthKey = `${player.hp}/${player.maxHp}`;
@@ -253,7 +257,7 @@
     else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); canvas.focus(); }
     updateHud();
   };
-  const dialoguePortraitLetter = (portrait) => ({ rowan: "R", tansy: "T", brindle: "B", lumen: "L" }[portrait] || "?");
+  const dialoguePortraitLetter = (portrait) => ({ rowan: "R", tansy: "T", brindle: "B", lumen: "L", trader: "M" }[portrait] || "?");
   const renderDialogueLine = () => {
     if (!state.dialogue) return;
     const line = state.dialogue.lines[state.dialogue.index] || "";
@@ -503,6 +507,9 @@
     }
     if (npc.id === "brindle") {
       setDialogue(npc.name, state.reedCacheFound ? ["Dewglass lens, eh? I wondered where that old glint went.", "Look through it at dusk; the pond remembers paths the day forgets."] : state.southPassageOpen ? ["The waterline changed when you opened the ivy.", "Something with a shell is sulking in the lantern leaves now."] : ["I ferry messages around the low pond.", "Three pale stones are not a path unless you know which way they lean."], npc.portrait); return;
+    }
+    if (npc.id === "marlow") {
+      setDialogue(npc.name, state.bossDefeated ? ["The shrine's heart woke the old routes. My cart can finally travel east again.", "If you find a road that remembers your name, send it my way."] : state.lanternSeed ? ["That glow is not for sale, Warden. Some things choose their keeper.", "I can trade supplies, but the shrine keeps the rarest bargains."] : ["Marlow. I keep this cart moving before the roots close the road.", "Bring me a Moon spark someday; I will tell you which path the map forgot."], npc.portrait); return;
     }
     setDialogue(npc.name, state.bossDefeated ? ["The shrine's light has changed. My map is finally becoming obsolete.", "Good. A map should never get the last word."] : state.lanternLens ? ["The chart and the lens agree. That is unusual.", "There is more under this green than roots and old stone."] : ["I map the shrine by lantern reflections, not roads.", "If a firefly avoids a patch of moss, I draw a question mark."], npc.portrait);
   };
@@ -1442,13 +1449,13 @@
     const facingFrame = npc.facing < 0 ? 2 : npc.facing > 0 ? 0 : 1;
     const namedIndex = npc.id === "tansy" ? 0 : npc.id === "brindle" ? 1 : npc.id === "lumen" ? 2 : 3;
     const activityBase = npc.id === "tansy" ? 0 : npc.id === "brindle" ? 4 : npc.id === "lumen" ? 8 : 12;
-    const activityFrame = activityBase + (npc.behavior === "pace"
-      ? Math.floor((npc.animTime || 0) * 1.05) % 4
-      : npc.behavior === "fire"
-        ? Math.floor((npc.clock || 0) * 1.8) % 4
-        : npc.behavior === "map"
-          ? Math.floor((npc.clock || 0) * 1.35) % 4
-          : 0);
+    const activityFrame = activityBase + (
+      npc.behavior === "pace" ? Math.floor((npc.animTime || 0) * 1.05) % 4
+        : npc.behavior === "fire" ? Math.floor((npc.clock || 0) * 1.8) % 4
+          : npc.behavior === "map" ? Math.floor((npc.clock || 0) * 1.35) % 4
+            : npc.behavior === "cart" ? Math.floor((npc.clock || 0) * 1.1) % 4
+              : 0
+    );
     const rowanDirectionBase = npc.facingAxis === "y" ? (npc.facing > 0 ? 0 : 4) : (npc.facing > 0 ? 12 : 8);
     const brindleDirectionBase = npc.facingAxis === "y" ? (npc.facing > 0 ? 0 : 4) : (npc.facing > 0 ? 12 : 8);
     const tansyDirectionBase = npc.facingAxis === "y" ? (npc.facing > 0 ? 0 : 4) : (npc.facing > 0 ? 12 : 8);
