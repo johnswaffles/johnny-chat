@@ -2,6 +2,13 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Tansy dialogue and Moon Switch Hall crossing QA
+
+- Completed the remaining focused NPC smoke for Tansy. Her fire-side directional sheet, interaction prompt, portrait, speaker name, and first dialogue line all render correctly with the existing `.94` ground anchor.
+- Replayed Moon Switch Hall from an open-bridge save. A straight-line crossing still produces the intended readable combat failure; an evasive route using periodic Rootlight pulses stays alive through the bridge approach while Wisp pressure and the dedicated bridge family remain visible.
+- No new raster artwork was generated because Tansy's directional fire sheet, the NPC activity family, Wisp family, effects atlas, and bridge threshold atlas all meet the current visual benchmark. This pass closed the last pending NPC smoke item and verified the encounter presentation rather than regenerating approved art.
+- No source behavior required changing. The next high-value work should move to a specific visual gap found during a fresh room-by-room review instead of repeating completed NPC sheets.
+
 ## 2026-08-14 — Marlow outpost trader runtime integration
 
 - Promoted the prepared trader row from the named NPC activity atlas into a live outpost NPC named Marlow at the east edge of the opening lawn. His cart-tending loop now animates in context instead of remaining an unused future asset.
@@ -241,7 +248,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | NPC | Location / role | Directions | Idle / walk | Work or special | Talk / grounding | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | Rowan | Outpost keeper, overworld start | Down/up/left/right via `npc-rowan-walk`; talk/map via `npc-rowan` | Four-direction authored route walk and proximity pause | Map-work row and proximity pause | Talk/reaction frames; `.94` directional feet anchor | Integrated / tested |
-| Tansy | Lantern cook, campfire | Down/up/left/right via `npc-tansy-fire` | Four-frame directional idle/stir loop | Kettle-stir frames and campfire context | Talk portrait and named-family reaction; grounded `.94` directional anchor | Integrated / pending final smoke |
+| Tansy | Lantern cook, campfire | Down/up/left/right via `npc-tansy-fire` | Four-frame directional idle/stir loop | Kettle-stir frames and campfire context | Talk portrait and named-family reaction; grounded `.94` directional anchor | Integrated / tested |
 | Brindle | Pond ferrier, lower path | Down/up/left/right via `npc-brindle-walk` | Four-frame directional route walk | Ferrier prop context | Talk portrait and reaction remain on named-family frames; grounded `.94` directional anchor | Integrated / tested |
 | Lumen | Shrine cartographer, upper field | Down/up/left/right via `npc-lumen-map` | Four-frame directional map-work loop | Open-map, glance, route-trace, reset frames | Talk portrait and named-family reaction; grounded `.94` directional anchor | Integrated / tested |
 | Marlow | East outpost lawn, cart trader | Stationary role presentation; no directional walk required | Four-frame cart-tending loop via `npc-activity` row 4 | State-aware dialogue, trader portrait, `.92` role anchor | Integrated / focused smoke passed |
