@@ -10,6 +10,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Bumped cache keys to manifest v24 and page script v48. No new art was generated because the existing foliage family already provides the correct Mosswake material language; the improvement is in assigning each approved family to the right visual role.
 - Local syntax, manifest, alpha, and scoped diff checks passed. The current change is ready for a public smoke after deployment; verify road readability, run-size continuity, and four-direction attacks on the live edge.
 
+## 2026-08-13 — Reusable visual QA pass: NPC acknowledgement polish
+
+- Re-ran the opening and inspected the first Rowan interaction path. Rowan's walk cycle and route were working, but a pacing NPC continued moving while the player stood inside the interaction radius, making the prompt feel detached from the character.
+- Updated `updateNpcs()` so pacing NPCs hold their current route position and face the player while nearby. Their walk timer slows to an idle-friendly cadence during the pause, then the authored route resumes once the player leaves the interaction radius.
+- Preserved route points, collision, dialogue state, interaction radius, and save behavior. No new art was generated because Rowan's existing idle/walk/talk atlas already covers the needed states; this was a presentation-behavior repair.
+- Local syntax and scoped diff checks passed. Public verification should specifically confirm Rowan stops, faces the player, shows the E/name cue, and opens the dialogue without fighting the route.
+
 ## Status key
 
 - **Integrated / tested** — the asset is loaded by the live renderer and has passed a gameplay smoke test.

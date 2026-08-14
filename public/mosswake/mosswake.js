@@ -384,8 +384,18 @@
       const playerNear = state.area === "overworld" && distance(player, npc) < 92;
       npc.near = playerNear;
       if (npc.behavior === "pace") {
-        const route = npc.route; const travel = npc.id === "rowan" ? 5.2 : 3.8; const routeTime = npc.clock / travel; const segment = Math.floor(routeTime) % route.length; const next = route[(segment + 1) % route.length]; const current = route[segment]; const blend = routeTime - Math.floor(routeTime); const eased = blend * blend * (3 - 2 * blend);
-        const previousX = npc.x; npc.x = current.x + (next.x - current.x) * eased; npc.y = current.y + (next.y - current.y) * eased; npc.facing = npc.x >= previousX ? 1 : -1;
+        const route = npc.route; const travel = npc.id === "rowan" ? 5.2 : 3.8;
+        // A nearby passerby gets the NPC's attention. Hold the route position
+        // briefly and turn toward the player so the interaction prompt reads as
+        // a deliberate acknowledgement rather than a prompt attached to a
+        // character who is walking away.
+        if (playerNear) {
+          npc.facing = player.x >= npc.x ? 1 : -1;
+          npc.animTime = npc.clock * 1.05;
+        } else {
+          const routeTime = npc.clock / travel; const segment = Math.floor(routeTime) % route.length; const next = route[(segment + 1) % route.length]; const current = route[segment]; const blend = routeTime - Math.floor(routeTime); const eased = blend * blend * (3 - 2 * blend);
+          const previousX = npc.x; npc.x = current.x + (next.x - current.x) * eased; npc.y = current.y + (next.y - current.y) * eased; npc.facing = npc.x >= previousX ? 1 : -1;
+        }
       } else {
         npc.x = npc.baseX + Math.sin(npc.clock * .7 + npc.phase) * (npc.behavior === "fire" ? 3 : 1.5);
         npc.y = npc.baseY + Math.sin(npc.clock * 1.35 + npc.phase) * (npc.behavior === "fire" ? 1.5 : 1);
