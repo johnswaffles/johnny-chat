@@ -2,6 +2,13 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-13 — Reusable visual QA pass: road hierarchy cleanup
+
+- Replayed the public opening at gameplay scale after the painted road-family rollout. The continuous path was readable, but four leftover `outdoor-ground` cards still crossed the road and read as misplaced meadow beds.
+- Removed only those road overlays. The generated `road-family` atlas remains the modular surface treatment, while the outdoor-ground family continues to serve clearings, bushes, and non-road terrain.
+- No collision, movement, combat, NPC, or save behavior changed. Cache key is now `mosswake.js?v=53` so the live edge can be checked without stale code.
+- Focused validation still required after deployment: compare the opening road at gameplay scale, then run Rowan interaction and one directional sword swing.
+
 ## 2026-08-13 — Reusable visual QA pass: hierarchy and movement scale follow-up
 
 ## 2026-08-13 — Reusable visual QA pass: NPC interaction cue alignment

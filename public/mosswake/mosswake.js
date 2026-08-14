@@ -1167,13 +1167,10 @@
         drawOptionalSprite("outdoor-props", x, y, { frame, width: 118, height: 94, anchorX: .5, anchorY: .5, rotation: Math.PI / 2 + angle, alpha: .72 });
       });
     }
-    if (loadedAssets.has("outdoor-ground")) {
-      ctx.save(); ctx.globalCompositeOperation = "multiply";
-      [[190, 468, 4, -.12], [610, 485, 5, -.06], [970, 548, 6, .08], [1310, 492, 7, -.1]].forEach(([x, y, frame, angle]) => {
-        drawOptionalSprite("outdoor-ground", x, y, { frame, width: 58, height: 72, anchorX: .5, anchorY: .5, rotation: angle, alpha: .26 });
-      });
-      ctx.restore();
-    }
+    // Keep the road material family exclusive to the path. Reusing meadow
+    // cards here made a few patches read as misplaced grass beds and competed
+    // with the walkable silhouette; outdoor-ground remains available for
+    // clearings, bushes, and authored terrain outside the road zone.
     ctx.restore();
   };
   const drawGrassTuft = (item, time, foreground = false) => {
