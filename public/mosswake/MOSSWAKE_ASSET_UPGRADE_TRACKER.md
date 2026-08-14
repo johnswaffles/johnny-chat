@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Dungeon masonry family
+
+- Audited the six dungeon rooms after the floor-family pass. The remaining broad mismatch was the repeated procedural wall field behind the authored architecture, hazards, and actors.
+- Generated `assets/dungeon/dungeon-wall-family-generated-v1-source.png` and normalized `assets/dungeon/dungeon-wall-family-generated-v1.png` as 1254×1254 source / 1248×1248 RGB production 4×4 atlases. Cells cover damp blockwork, rubble courses, root-broken masonry, moonlit blue stone, flooded teal, ash-darkened stone, and rose sanctum stone.
+- Added manifest v31 and layered four restrained wall panels per room through the optional loader. Panels render before masonry details, floor patches, doors, props, hazards, and actors, leaving the existing procedural wall field as a safe fallback and changing no collision or navigation.
+- Bumped the page script cache key to `mosswake.js?v=62` and the manifest request to `manifest.json?v=31`.
+- `node --check`, manifest/dimension validation, scoped diff checks, fresh outside startup, and all six dungeon room screenshots passed final visual verification with no browser warnings or errors.
+
 ## 2026-08-13 — Modular dungeon-floor family
 
 - Audited all six dungeon rooms against the generated player/NPC/architecture/hazard benchmark. The weakest visible gap was the broad procedural floor wash and repeated canvas inlays.
@@ -149,6 +157,7 @@ The current game has no dungeon NPC actor; dungeon inhabitants are enemy familie
 | 6 | Dungeon doors and thresholds | Integrated / tested | Keep the lock/open atlas as the doorway reference; refine individual cells only if a room-specific silhouette needs it |
 | 7 | Dungeon hazards | Integrated / tested | Keep the hazard atlas as the water/ember reference; refine only if visual scale or readability needs adjustment |
 | 8 | Dungeon floor family | Integrated / tested | Keep the 4×4 floor atlas as the room-surface reference; refine only if a transition edge or material mismatch appears |
+| 9 | Dungeon masonry family | Integrated / pending visual QA | Keep the wall atlas behind authored room pieces; adjust opacity or panel placement only if edges compete with landmarks |
 
 ## 2026-08-13 — Repeating visual director pass: room transition reveal
 

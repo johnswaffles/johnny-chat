@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=30";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=31";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1482,6 +1482,13 @@
   const dungeonRoomTint = (key) => ({ "0-0": ["#172424", "#2b4b46"], "1-0": ["#151f2d", "#30445b"], "2-0": ["#20251f", "#3d5140"], "0-1": ["#142b32", "#2c5b60"], "1-1": ["#2b1d25", "#5a3a38"], "2-1": ["#271c30", "#533451"] }[key] || [COLORS.dungeon, COLORS.dungeonLight]);
   const drawDungeonMasonry = (time, key) => {
     const [base, stone] = dungeonRoomTint(key); const wash = ctx.createLinearGradient(0, 0, 0, ROOM.height); wash.addColorStop(0, base); wash.addColorStop(1, "#101a1b"); ctx.fillStyle = wash; ctx.fillRect(0, 0, ROOM.width, ROOM.height);
+    if (loadedAssets.has("dungeon-walls")) {
+      const wallFrames = { "0-0": [0, 1, 2, 3], "1-0": [4, 5, 6, 7], "2-0": [2, 0, 3, 1], "0-1": [12, 13, 12, 13], "1-1": [14, 10, 14, 11], "2-1": [15, 15, 10, 15] }[key] || [0, 1, 2, 3];
+      const wallPatches = [[220, 220, 430, 286], [660, 220, 430, 286], [220, 512, 430, 250], [660, 512, 430, 250]];
+      ctx.save(); ctx.globalAlpha = .28;
+      wallPatches.forEach(([x, y, width, height], index) => drawOptionalSprite("dungeon-walls", x, y, { frame: wallFrames[index], width, height, anchorX: .5, anchorY: .5, alpha: .9 }));
+      ctx.restore();
+    }
     ctx.globalAlpha = .2;
     for (let row = 0; row < 12; row += 1) for (let col = 0; col < 16; col += 1) {
       const offset = row % 2 ? 26 : 0; const x = col * 80 - offset; const y = row * 64 + 38; const tone = hash01(col + key.length, row + key.charCodeAt(0) % 7);
