@@ -1,5 +1,5 @@
 {
-  "version": 43,
+  "version": 44,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -168,6 +168,18 @@
       "displayHeight": 78,
       "anchorX": 0.5,
       "anchorY": 0.92
+    },
+    "waystone-clues": {
+      "src": "rocks/mosswake-waystone-clue-family-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 1,
+      "displayWidth": 44,
+      "displayHeight": 38,
+      "anchorX": 0.5,
+      "anchorY": 0.9
     },
     "road-family": {
       "src": "terrain/mosswake-road-family-generated-v1.png",
