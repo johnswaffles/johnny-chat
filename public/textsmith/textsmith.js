@@ -162,7 +162,7 @@
   el.modeOptions.forEach((button) => button.addEventListener("click", () => setMode(button.dataset.mode)));
   el.rewrite.addEventListener("click", refine);
   el.source.addEventListener("keydown", (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       refine();
     }
