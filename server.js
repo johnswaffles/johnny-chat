@@ -1780,6 +1780,13 @@ app.get(GODOT_WASM_ROUTES, (req, res, next) => {
     .pipe(res);
 });
 
+app.use("/textsmith", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
+
 app.use(express.static("public"));
 
 app.get("/health", (_req, res) => res.json({

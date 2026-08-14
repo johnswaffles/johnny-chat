@@ -51,3 +51,12 @@
 /sim/sim-engine-20260525c.wasm
   Content-Type: application/wasm
   Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/textsmith
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/textsmith/
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/textsmith/*
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
