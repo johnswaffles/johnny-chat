@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Outside density and dungeon arrival readability pass
+
+- Replayed the opening outpost and the restored Moon Switch Hall after the dedicated bridge-art pass. The largest remaining visual issue was density at the road edge: several authored grass cards and foreground leaf clusters competed with the walkable ribbon and landmarks.
+- Reduced meadow-cluster count from two cards per landmark to one, lowered authored grass-patch opacity, and scaled down the three foreground leaf clusters. The generated foliage, road, and ground families remain unchanged; this is a composition correction, not a replacement of approved art.
+- Added a 2.2-second dungeon arrival grace window alongside the existing outdoor grace period. This gives restored/transitioned players time to read the room, bridge, and enemy telegraphs before projectiles can land; combat geometry and damage values remain unchanged.
+- Bumped the page script cache to `mosswake.js?v=73`. No new raster artwork was generated because the remaining gaps were density and encounter-readability issues, not missing visual families.
+- Validation passed: `node --check`, manifest/diff checks, fresh outpost startup, restored open-bridge screenshot, and browser console checks. A controlled bridge crossing still needs a follow-up with the guard encounter handled.
+
 ## 2026-08-14 — Moon Switch Hall bridge threshold family
 
 - Continued from the Lumen NPC pass and the focused bridge-restore QA. The opened Moon Switch Hall shortcut was readable, but it still depended on a small ambient-props bridge cell, so the bridge had no dedicated dormant/open/awakening/threshold state family.

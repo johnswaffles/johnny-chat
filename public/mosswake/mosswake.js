@@ -533,7 +533,10 @@
     state.area = area;
     // Give the player a calm read of each outdoor arrival before enemies wake up.
     // This keeps the opening and post-dungeon return readable without changing combat rules.
-    state.spawnGrace = area === "overworld" ? 5 : 0;
+    // Give dungeon arrivals a short readable beat as well as the outdoor
+    // opening grace. This prevents a restored/transitioned player from being
+    // hit before the room, bridge, and enemy telegraphs can be read.
+    state.spawnGrace = area === "overworld" ? 5 : 2.2;
     if (area === "dungeon") {
       state.roomTransition = .72;
       state.roomTransitionLabel = dungeonRoomName();
@@ -1107,7 +1110,10 @@
     [[180,270,100,32,.2],[480,360,88,26,1.4],[1020,350,120,38,2.6],[1420,430,105,30,4.2]].forEach(([x,y,rx,ry,phase]) => { const drift = Math.sin(time * .16 + phase) * 12; ctx.beginPath(); ctx.ellipse(x + drift, y, rx, ry, .18, 0, Math.PI * 2); ctx.fill(); }); ctx.restore();
   };
   const drawMeadowClusters = (time) => {
-    [[150, 365, 2, 30, .3], [300, 405, 2, 25, 1.7], [585, 405, 2, 28, 3.1], [1180, 390, 2, 26, 4.4], [1435, 540, 2, 34, 5.2]].forEach(([x, y, count, spread, phase], clusterIndex) => {
+    // Keep the authored clearings legible: one small cluster per landmark is
+    // enough to imply a living meadow without rebuilding the road edge as a
+    // wall of grass cards.
+    [[150, 365, 1, 30, .3], [300, 405, 1, 25, 1.7], [585, 405, 1, 28, 3.1], [1180, 390, 1, 26, 4.4], [1435, 540, 1, 34, 5.2]].forEach(([x, y, count, spread, phase], clusterIndex) => {
       for (let i = 0; i < count; i += 1) {
         const angle = hash01(clusterIndex * 13 + i, 3) * Math.PI * 2; const radius = 8 + hash01(clusterIndex * 17 + i, 7) * spread;
         drawGrassTuft({ x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius * .5, s: .5 + hash01(i, clusterIndex) * .42, phase: phase + i }, time);
@@ -1279,7 +1285,7 @@
     if (loadedAssets.has("outdoor-foliage")) {
       const frameBase = Number.isFinite(patch.foliageFrame) ? patch.foliageFrame % 4 : 0;
       const frame = frameBase + (rustle > .2 ? Math.floor(time * 3) % 2 : 0);
-      if (drawOptionalSprite("outdoor-foliage", patch.x, patch.y + 8, { frame, width: 52 * scale, height: 52 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .48 : .58, rotation: Math.sin(time * .42 + patch.phase) * .006 })) return;
+      if (drawOptionalSprite("outdoor-foliage", patch.x, patch.y + 8, { frame, width: 52 * scale, height: 52 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .38 : .46, rotation: Math.sin(time * .42 + patch.phase) * .006 })) return;
     }
     ctx.save(); ctx.globalAlpha = foreground ? .48 : .62;
     for (let i = 0; i < density; i += 1) {
@@ -1383,7 +1389,7 @@
     environment.treesFront.forEach((tree) => drawTree(tree, time, "front"));
     environment.bushes.filter((bush) => bush.y >= 600).forEach((bush) => drawBush(bush, time, true)); environment.fences.filter((fence) => fence.y >= 600).forEach(drawFence); environment.ruins.filter((ruin) => ruin.y >= 600).forEach((ruin) => drawRuin(ruin, time));
     environment.grassPatches.filter((patch) => patch.y > 560).forEach((patch) => drawGrassPatch(patch, time, true)); environment.grasses.filter((grass) => grass.y > 560).forEach((grass) => drawGrassTuft(grass, time, true));
-    drawLeafCluster(70, 560, 1.2, "#467e55", time, .4); drawLeafCluster(1510, 505, .95, "#3d744f", time, 1.4); drawLeafCluster(1180, 846, 1.05, "#558c58", time, 2.7);
+    drawLeafCluster(70, 560, .9, "#467e55", time, .4); drawLeafCluster(1510, 505, .76, "#3d744f", time, 1.4); drawLeafCluster(1180, 846, .84, "#558c58", time, 2.7);
     [[585, 730], [975, 735], [1060, 565]].forEach(([x, y], i) => { const sway = Math.sin(time * 2 + i) * .12; ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.strokeStyle = i === 2 ? "#78b979" : "#6fae69"; ctx.lineWidth = 3; for (let n = -1; n <= 1; n += 1) { ctx.beginPath(); ctx.moveTo(n * 8, 18); ctx.quadraticCurveTo(n * 9, 0, n * 13, -22); ctx.stroke(); } ctx.restore(); });
   };
   const drawChest = (x, y, open, time = state.visualClock) => {
