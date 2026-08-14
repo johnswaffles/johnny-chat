@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TextSmith | justaskjohnny.com</title>
+  <meta name="description" content="Turn rough customer notes into polished SMS messages that use the space well without sounding cramped.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/textsmith/textsmith.css?v=1">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-nav">
+      <a class="brand" href="/">justaskjohnny.com</a>
+      <nav aria-label="Site navigation">
+        <a href="/">Home</a>
+        <a class="active" href="/textsmith/" aria-current="page">TextSmith</a>
+        <a href="/#featured">My Apps</a>
+      </nav>
+    </header>
+
+    <main class="page">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true"></span> Customer message studio</p>
+          <h1>Make every character count.</h1>
+          <p class="lede">Turn a rough note into a polished customer text that keeps the useful detail, sounds like a real person, and fits the message budget.</p>
+          <div class="principles" aria-label="TextSmith principles">
+            <span>Professional by default</span>
+            <span>Never padded with filler</span>
+            <span>No emoji</span>
+          </div>
+        </div>
+        <div class="hero-rule" aria-hidden="true">
+          <span>QUALITY</span>
+          <i></i>
+          <span>FIT</span>
+        </div>
+      </section>
+
+      <section class="studio" aria-label="TextSmith workspace">
+        <section class="panel input-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">01 / Start with the thought</p>
+              <h2>Rough customer text</h2>
+            </div>
+            <span class="input-count" id="input-count">0 / 6,000</span>
+          </div>
+
+          <label class="sr-only" for="source-text">Rough customer text</label>
+          <textarea id="source-text" maxlength="6000" placeholder="Example: I need to let Sarah know her Thursday appointment has to move from 2:00 to 3:00 because of the weather, and thank her for being flexible."></textarea>
+
+          <div class="examples" aria-label="Example messages">
+            <span>Try an example</span>
+            <button type="button" data-example="Let Mike know the estimate is ready, the total is $285, and I can come by Friday afternoon if that works for him.">Estimate follow-up</button>
+            <button type="button" data-example="Tell the customer we received their request and will call them tomorrow morning with an arrival window.">Arrival update</button>
+          </div>
+
+          <div class="mode-block">
+            <div class="mode-heading">
+              <div>
+                <p class="panel-kicker">02 / Choose the fit</p>
+                <h2>Message shape</h2>
+              </div>
+              <span class="mode-budget" id="mode-budget">One SMS</span>
+            </div>
+            <div class="mode-switch" role="group" aria-label="Message shape">
+              <button class="mode-option active" type="button" data-mode="single" aria-pressed="true">
+                <strong>Perfect fit</strong>
+                <small>One complete message</small>
+              </button>
+              <button class="mode-option" type="button" data-mode="split" aria-pressed="false">
+                <strong>Smart split</strong>
+                <small>Two coherent messages</small>
+              </button>
+            </div>
+            <p class="mode-description" id="mode-description">One complete message. TextSmith preserves detail and trims only what is necessary.</p>
+          </div>
+
+          <button class="primary-button" id="rewrite-button" type="button">
+            <span>Refine message</span>
+            <b aria-hidden="true">Enter</b>
+          </button>
+          <p class="keyboard-note">Press Ctrl or Command plus Enter to refine</p>
+        </section>
+
+        <section class="panel output-panel" aria-live="polite">
+          <div class="panel-heading output-heading">
+            <div>
+              <p class="panel-kicker">03 / Keep the meaning</p>
+              <h2>Ready to send</h2>
+            </div>
+            <span class="status-pill" id="status-pill">Waiting</span>
+          </div>
+
+          <div class="result-area" id="result-area">
+            <div class="empty-result">
+              <div class="empty-line empty-line-wide"></div>
+              <div class="empty-line"></div>
+              <div class="empty-line empty-line-short"></div>
+              <p>Your polished message will appear here.</p>
+            </div>
+          </div>
+
+          <div class="output-footer">
+            <div class="model-note"><span class="model-dot"></span><span>Instant model: GPT-5.6 Luna</span></div>
+            <p>SMS budgets vary with punctuation and encoding. TextSmith checks the carrier-safe limit before it returns a result.</p>
+          </div>
+        </section>
+      </section>
+
+      <section class="guardrail-strip" aria-label="TextSmith quality rules">
+        <div><span class="strip-number">A</span><strong>Keep the useful detail</strong><p>Names, dates, prices, promises, and next steps stay intact.</p></div>
+        <div><span class="strip-number">B</span><strong>Shorten with judgment</strong><p>Redundancy goes first. Meaning and human tone stay.</p></div>
+        <div><span class="strip-number">C</span><strong>Check the actual fit</strong><p>The result is counted before it reaches your clipboard.</p></div>
+      </section>
+    </main>
+
+    <footer class="site-footer"><span>TextSmith</span><span>Built for messages that still sound like you.</span></footer>
+  </div>
+  <script src="/textsmith/textsmith.js?v=1"></script>
+</body>
+</html>

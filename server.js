@@ -26,6 +26,8 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_GPT54_REASONING_EFFORT = "",
+  OPENAI_TEXTSMITH_MODEL = "gpt-5.6-luna",
+  OPENAI_TEXTSMITH_FALLBACK_MODEL = "gpt-5.5",
   OPENAI_REALTIME_SEARCH_MODEL = "",
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
@@ -65,6 +67,12 @@ const REALTIME_SEARCH_MODEL = OPENAI_REALTIME_SEARCH_MODEL || OPENAI_GPT54_MODEL
 const MORROW_VISION_MODEL = OPENAI_MORROW_VISION_MODEL || OPENAI_GPT54_MODEL || "gpt-5.6-sol";
 const MORROW_TRANSCRIBE_MODEL = OPENAI_MORROW_TRANSCRIBE_MODEL || "gpt-transcribe";
 const MORROW_REALTIME_MODEL = "gpt-realtime-2.1-mini";
+
+const GSM7_BASIC_CHARS = new Set(Array.from(`@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ\u001bÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà`));
+const GSM7_EXTENDED_CHARS = new Set(["^", "{", "}", "\\", "[", "]", "~", "|", "€"]);
+const textSmithRateLedger = new Map();
+const TEXTSMITH_RATE_WINDOW_MS = 60 * 1000;
+const TEXTSMITH_RATE_LIMIT = 16;
 
 const BOARD_COMMENT_LIMIT = (() => {
   const value = Number(PUBLIC_BOARD_COMMENT_LIMIT || 50);
@@ -1221,6 +1229,123 @@ function extractResponseText(response) {
     }
   }
   return parts.join("\n").trim();
+}
+
+const TEXTSMITH_SCHEMA = {
+  type: "json_schema",
+  name: "textsmith_messages",
+  description: "One or two polished plain-text customer SMS messages.",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      messages: {
+        type: "array",
+        minItems: 1,
+        maxItems: 2,
+        items: { type: "string" }
+      }
+    },
+    required: ["messages"]
+  }
+};
+
+function stripTextsmithEmoji(value) {
+  return String(value || "")
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Emoji_Modifier}]/gu, "")
+    .replace(/[\uFE0E\uFE0F\u200D]/g, "")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;!?])/g, "$1")
+    .trim();
+}
+
+function getTextsmithSmsStats(message, mode = "single") {
+  const text = stripTextsmithEmoji(message);
+  const characters = Array.from(text);
+  const gsm7 = characters.every((character) => GSM7_BASIC_CHARS.has(character) || GSM7_EXTENDED_CHARS.has(character));
+  const units = gsm7
+    ? characters.reduce((total, character) => total + (GSM7_EXTENDED_CHARS.has(character) ? 2 : 1), 0)
+    : characters.length;
+  const limit = mode === "split" ? (gsm7 ? 153 : 67) : (gsm7 ? 159 : 69);
+  return {
+    characters: characters.length,
+    units,
+    encoding: gsm7 ? "GSM-7" : "Unicode",
+    limit,
+    fits: units <= limit
+  };
+}
+
+function normalizeTextsmithMessages(value) {
+  const messages = Array.isArray(value) ? value : [];
+  return messages.map((message) => stripTextsmithEmoji(message)).filter(Boolean);
+}
+
+function textsmithMessagesFit(messages, mode) {
+  if (mode === "split" && messages.length !== 2) return false;
+  if (mode === "single" && messages.length !== 1) return false;
+  return messages.every((message) => getTextsmithSmsStats(message, mode).fits);
+}
+
+function parseTextsmithMessages(raw) {
+  const clean = String(raw || "")
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```$/i, "")
+    .trim();
+  try {
+    const parsed = JSON.parse(clean);
+    return normalizeTextsmithMessages(parsed?.messages);
+  } catch {
+    return normalizeTextsmithMessages(clean.split(/\n+/).filter(Boolean));
+  }
+}
+
+function textsmithRateAllowed(req) {
+  const key = getRequestClientKey(req);
+  const now = Date.now();
+  const recent = (textSmithRateLedger.get(key) || []).filter((timestamp) => now - timestamp < TEXTSMITH_RATE_WINDOW_MS);
+  if (recent.length >= TEXTSMITH_RATE_LIMIT) {
+    textSmithRateLedger.set(key, recent);
+    return false;
+  }
+  recent.push(now);
+  textSmithRateLedger.set(key, recent);
+  return true;
+}
+
+function textsmithPrompt(mode, draft = "") {
+  const split = mode === "split";
+  return [
+    "You are TextSmith, a professional customer-message editor.",
+    "Rewrite the user's rough text into a polished SMS that sounds natural, specific, warm, and professional.",
+    "Preserve every important fact, commitment, date, price, name, request, and call to action.",
+    "Use the available character budget intelligently. Do not make the message unnecessarily short, and do not pad it with filler.",
+    "When the source contains several useful details, preserve that richness in a comfortably full sentence instead of reducing it to a bare summary.",
+    "Shorten only what is required to meet the SMS limit. Never use awkward abbreviations, telegraphic fragments, or vague wording just to save characters.",
+    "Never invent information or change the user's meaning.",
+    "Never use emoji, emoticons, decorative symbols, hashtags, or markdown. Use ordinary plain text only.",
+    split
+      ? "Return exactly two complete, coherent SMS messages. Divide the meaning at a natural point, and make each message fit the carrier-safe concatenated SMS budget. Do not add labels, numbering, or explanations."
+      : "Return exactly one complete SMS message that fits the carrier-safe single-message budget. Do not add labels or explanations.",
+    "Return only JSON in this shape: {\"messages\":[\"message text\"]}.",
+    draft ? `Your previous draft did not satisfy the constraints. Revise it without losing important meaning. Previous draft: ${draft}` : ""
+  ].filter(Boolean).join(" ");
+}
+
+async function createTextsmithResponse({ input, mode, model, draft = "" }) {
+  const response = await openai.responses.create({
+    model,
+    reasoning: { effort: "none" },
+    max_output_tokens: mode === "split" ? 520 : 340,
+    text: { format: TEXTSMITH_SCHEMA },
+    input: [
+      { role: "system", content: textsmithPrompt(mode, draft) },
+      { role: "user", content: `ROUGH CUSTOMER TEXT\n${input}` }
+    ]
+  });
+  return normalizeTextsmithMessages(parseTextsmithMessages(extractResponseText(response)));
 }
 
 function extractResponseSources(response) {
@@ -4234,6 +4359,55 @@ app.post("/api/beautify", async (req, res) => {
     res.json({ pretty: resp.output_text || "" });
   } catch (e) {
     res.status(500).json({ detail: String(e.message || e) });
+  }
+});
+
+app.post("/api/textsmith", async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) return res.status(503).json({ detail: "TextSmith is not configured yet." });
+    if (!textsmithRateAllowed(req)) return res.status(429).json({ detail: "TextSmith is taking a short pause. Try again in a minute." });
+
+    const input = compactText(req.body?.input).replace(/[\r\n]+/g, " ").trim();
+    const mode = req.body?.mode === "split" ? "split" : "single";
+    if (!input) return res.status(400).json({ detail: "Paste the rough customer text first." });
+    if (input.length > 6000) return res.status(413).json({ detail: "Please keep the source text under 6,000 characters." });
+
+    let model = OPENAI_TEXTSMITH_MODEL;
+    let messages;
+    try {
+      messages = await createTextsmithResponse({ input, mode, model });
+    } catch (firstError) {
+      if (!OPENAI_TEXTSMITH_FALLBACK_MODEL || OPENAI_TEXTSMITH_FALLBACK_MODEL === model) throw firstError;
+      console.warn(`TextSmith model ${model} failed; trying fallback ${OPENAI_TEXTSMITH_FALLBACK_MODEL}:`, firstError?.message || firstError);
+      model = OPENAI_TEXTSMITH_FALLBACK_MODEL;
+      messages = await createTextsmithResponse({ input, mode, model });
+    }
+
+    if (!textsmithMessagesFit(messages, mode)) {
+      messages = await createTextsmithResponse({
+        input,
+        mode,
+        model,
+        draft: messages.join(" / ") || "No usable draft was returned."
+      });
+    }
+
+    if (!textsmithMessagesFit(messages, mode)) {
+      return res.status(422).json({ detail: "The message could not be fitted without damaging its meaning. Try the two-message option or remove a little source detail." });
+    }
+
+    void recordJohnnyChatUsage("textsmith", { model, mode });
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      mode,
+      model,
+      messages,
+      stats: messages.map((message) => getTextsmithSmsStats(message, mode))
+    });
+  } catch (err) {
+    void recordJohnnyChatUsage("errors", { route: "/api/textsmith", message: err.message || err });
+    res.status(500).json({ detail: "TextSmith could not prepare that message right now. Please try again." });
   }
 });
 
