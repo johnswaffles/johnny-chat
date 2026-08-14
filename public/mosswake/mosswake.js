@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=24";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=25";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1148,8 +1148,19 @@
     ctx.globalAlpha = .55; ctx.strokeStyle = "rgba(109,84,60,.46)"; ctx.lineWidth = 2; for (let i = 0; i < 11; i += 1) { const x = 40 + i * 142; const y = 488 + Math.sin(x * .011) * 30; ctx.beginPath(); ctx.moveTo(x, y - 13); ctx.quadraticCurveTo(x + 11, y - 17, x + 19, y - 10); ctx.stroke(); }
     ctx.globalAlpha = .7; const pathStones = [[135, 485, -0.25], [338, 448, .18], [572, 477, -.08], [804, 519, .15], [1050, 550, -.18], [1288, 510, .12], [1478, 462, -.2]];
     pathStones.forEach(([x, y, angle], index) => { ctx.save(); ctx.translate(x, y + Math.sin(time * .35 + index) * .4); ctx.rotate(angle); ctx.fillStyle = index % 2 ? "rgba(218,191,142,.5)" : "rgba(119,96,70,.4)"; ctx.beginPath(); ctx.ellipse(0, 0, 10 + index % 3 * 2, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
-    // Painted path cards break up the broad procedural ribbon without changing its
-    // collision shape or route. They are deliberately sparse, like worn trail repairs.
+    // Painted road tiles now carry the visible surface; the procedural ribbon
+    // remains underneath as the collision-safe silhouette and offline fallback.
+    if (loadedAssets.has("road-family")) {
+      const roadTiles = [
+        [90, 479, 1, -.04, 132, 132], [230, 456, 0, -.04, 132, 132], [370, 444, 0, -.04, 132, 132], [510, 466, 2, .08, 132, 132],
+        [650, 490, 0, .12, 132, 132], [790, 522, 0, .16, 132, 132], [930, 548, 0, .16, 132, 132], [1070, 556, 7, .08, 132, 132],
+        [1210, 532, 0, -.02, 132, 132], [1350, 494, 0, -.12, 132, 132], [1490, 462, 0, -.12, 132, 132],
+        [235, 596, 0, -.08, 110, 110], [355, 589, 0, -.08, 110, 110], [475, 599, 0, -.08, 110, 110]
+      ];
+      ctx.save(); ctx.globalAlpha = .82;
+      roadTiles.forEach(([x, y, frame, rotation, width, height]) => drawOptionalSprite("road-family", x, y, { frame, width, height, anchorX: .5, anchorY: .5, rotation, alpha: .86 }));
+      ctx.restore();
+    }
     if (loadedAssets.has("outdoor-props")) {
       [[245, 455, 4, -.14], [520, 461, 5, .12], [820, 522, 6, .14], [1115, 548, 7, -.1], [1375, 486, 4, -.18], [302, 596, 5, -.16]].forEach(([x, y, frame, angle]) => {
         drawOptionalSprite("outdoor-props", x, y, { frame, width: 118, height: 94, anchorX: .5, anchorY: .5, rotation: Math.PI / 2 + angle, alpha: .72 });

@@ -6,6 +6,14 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 ## 2026-08-13 — Reusable visual QA pass: NPC interaction cue alignment
 
+## 2026-08-13 — Reusable visual QA pass: painted road surface family
+
+- Inspected the live opening, movement/combat scale, player run and attack sheets, and the outdoor composition. The strongest remaining visible placeholder was the broad procedural road ribbon: it had a good collision silhouette but still read as a flat painted band compared with the authored trees, fences, rocks, water, and grass.
+- Generated `assets/terrain/mosswake-road-family-generated-v1-keyed.png` and the normalized `assets/terrain/mosswake-road-family-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas. The family supplies worn earth straights, curves, junctions, bridge approach, damp variants, and broken-edge tiles in the established Mosswake palette.
+- Added the `road-family` manifest slot (manifest v25) and layered fourteen sparse tiles over the existing collision-safe road ribbon. The procedural ribbon, path details, and fallback behavior remain underneath, so offline/slow asset loading does not change gameplay or navigation.
+- Bumped the runtime page cache key to `mosswake.js?v=50`. No combat rules changed; the generated Warden directional attack sheet remains the approved combat reference and still owns the sword silhouette.
+- Local syntax, manifest/alpha checks, and live visual smoke should be rerun after deployment. The next focused review is to verify that the road reads as one continuous path at both gameplay scale and the lower branch, without tile seams or excessive visual busyness.
+
 - Replayed the opening and inspected the Rowan approach path. The pacing, facing, and idle behavior were working, but the floating `E`/name cue used the broader 92px acknowledgement radius while `interact()` correctly required the nearest NPC to be within 68px. That made the cue appear before the interaction was actually available.
 - Updated `drawNpc()` so only the nearest NPC inside the real 68px interaction radius receives the prompt. Nearby NPCs still pause/face the player and use their calmer idle timing, preserving the readable acknowledgement without suggesting an unavailable action.
 - No new raster artwork was needed: the existing Rowan/NPC sheets remain the approved visual reference. This is a presentation-contract repair that keeps the modular asset workflow untouched.

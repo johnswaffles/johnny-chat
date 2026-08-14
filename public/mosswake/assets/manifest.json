@@ -1,5 +1,5 @@
 {
-  "version": 24,
+  "version": 25,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -84,6 +84,18 @@
       "displayHeight": 96,
       "anchorX": 0.5,
       "anchorY": 0.9
+    },
+    "road-family": {
+      "src": "terrain/mosswake-road-family-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 1,
+      "displayWidth": 156,
+      "displayHeight": 156,
+      "anchorX": 0.5,
+      "anchorY": 0.5
     },
     "player-run": {
       "src": "player/warden-run-sheet-generated-v1.png",
