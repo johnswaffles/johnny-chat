@@ -1151,14 +1151,16 @@
     // Painted road tiles now carry the visible surface; the procedural ribbon
     // remains underneath as the collision-safe silhouette and offline fallback.
     if (loadedAssets.has("road-family")) {
+      // These cards are deliberately small and sparse. The road's continuous
+      // ribbon remains the readable walkable surface; the atlas only contributes
+      // irregular worn patches so no rectangular tile edges compete with actors.
       const roadTiles = [
-        [90, 479, 1, -.04, 132, 132], [230, 456, 0, -.04, 132, 132], [370, 444, 0, -.04, 132, 132], [510, 466, 2, .08, 132, 132],
-        [650, 490, 0, .12, 132, 132], [790, 522, 0, .16, 132, 132], [930, 548, 0, .16, 132, 132], [1070, 556, 7, .08, 132, 132],
-        [1210, 532, 0, -.02, 132, 132], [1350, 494, 0, -.12, 132, 132], [1490, 462, 0, -.12, 132, 132],
-        [235, 596, 0, -.08, 110, 110], [355, 589, 0, -.08, 110, 110], [475, 599, 0, -.08, 110, 110]
+        [158, 470, 1, -.04, 78, 78], [392, 449, 0, -.04, 72, 72], [640, 491, 2, .10, 76, 76],
+        [888, 536, 0, .14, 72, 72], [1144, 544, 7, .04, 76, 76], [1395, 484, 0, -.12, 72, 72],
+        [300, 596, 0, -.08, 66, 66], [456, 598, 0, -.08, 66, 66]
       ];
-      ctx.save(); ctx.globalAlpha = .82;
-      roadTiles.forEach(([x, y, frame, rotation, width, height]) => drawOptionalSprite("road-family", x, y, { frame, width, height, anchorX: .5, anchorY: .5, rotation, alpha: .86 }));
+      ctx.save(); ctx.globalAlpha = .6;
+      roadTiles.forEach(([x, y, frame, rotation, width, height]) => drawOptionalSprite("road-family", x, y, { frame, width, height, anchorX: .5, anchorY: .5, rotation, alpha: .55 }));
       ctx.restore();
     }
     if (loadedAssets.has("outdoor-props")) {
