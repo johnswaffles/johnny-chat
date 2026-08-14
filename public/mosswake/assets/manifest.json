@@ -1,5 +1,5 @@
 {
-  "version": 28,
+  "version": 29,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -244,6 +244,18 @@
       "displayHeight": 82,
       "anchorX": 0.5,
       "anchorY": 0.9
+    },
+    "dungeon-hazards": {
+      "src": "dungeon/dungeon-hazards-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 5,
+      "displayWidth": 156,
+      "displayHeight": 156,
+      "anchorX": 0.5,
+      "anchorY": 0.5
     },
     "dungeon-landmarks": {
       "src": "dungeon/dungeon-landmarks-interactive-generated-v1.png",

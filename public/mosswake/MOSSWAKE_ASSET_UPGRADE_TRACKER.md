@@ -2,6 +2,13 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-13 — Flooded-vault and ember-trench hazard atlas
+
+- Audited the flooded vault (`0-1`) and Ash Mirror / ember trench room (`1-1`). Their collision and damage logic were already deliberate, but the visible hazards were still large procedural rectangles and repeated line particles.
+- Generated `assets/dungeon/dungeon-hazards-generated-v1-source.png` and normalized `assets/dungeon/dungeon-hazards-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas. Rows cover four deep-water surfaces, four ember-trench surfaces, four splash/flare feedback states, and four water-edge/rune/threshold variants.
+- Added the `dungeon-hazards` manifest slot (manifest v29). Deep water now cycles two authored surface frames; ember trenches cycle four restrained authored states. Collision rectangles, damage, hazard cooldown, Rootlight waterway progression, and procedural fallback behavior remain unchanged.
+- Bumped the page script cache key to `mosswake.js?v=58`. The source and normalized atlas stay together under `assets/dungeon/` for later cell replacement.
+
 ## 2026-08-13 — Dungeon doorway and lock-state atlas
 
 - Audited the Root Gallery door, the Moon Gate, the Warden Gate, the Ash Lift shortcut, and the room transition path. The dungeon architecture kit already covered arches and pillars, but the actual traversable doors were still flat procedural rectangles with text labels.
@@ -105,7 +112,8 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | 3 | Dungeon architecture | Integrated / tested | Landmark/interactable atlas now covers chests, runes, switches, sockets, and reward pedestals |
 | 4 | Dungeon ambient props | Integrated / tested | Keep the 4×4 storytelling atlas as the dungeon detail reference; replace individual cells only when a room-specific prop needs refinement |
 | 5 | Outdoor props (fences, paths, signs, rocks) | Integrated / tested | Keep the generated prop atlas as the reference; add bridge/boardwalk cells only if a later composition pass needs them |
-| 6 | Dungeon doors and thresholds | Integrated / pending focused live door screenshot | Keep the new lock/open atlas as the doorway reference; refine individual cells only if a room-specific silhouette needs it |
+| 6 | Dungeon doors and thresholds | Integrated / tested | Keep the lock/open atlas as the doorway reference; refine individual cells only if a room-specific silhouette needs it |
+| 7 | Dungeon hazards | Integrated / tested | Keep the hazard atlas as the water/ember reference; refine only if visual scale or readability needs adjustment |
 
 ## 2026-08-13 — Repeating visual director pass: room transition reveal
 

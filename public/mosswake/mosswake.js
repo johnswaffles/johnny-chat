@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=28";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=29";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1616,9 +1616,18 @@
   const drawDungeonHazardVisual = (time) => {
     dungeonHazards().forEach((hazard, index) => {
       if (hazard.label === "deep water") {
+        if (loadedAssets.has("dungeon-hazards")) {
+          drawOptionalSprite("dungeon-hazards", hazard.x + hazard.w / 2, hazard.y + hazard.h / 2, { frame: Math.floor(time * 2.2) % 2, width: hazard.w + 42, height: hazard.h + 42, anchorX: .5, anchorY: .5, alpha: .94 });
+          return;
+        }
         ctx.save(); ctx.fillStyle = "rgba(7,24,28,.55)"; ctx.fillRect(hazard.x - 10, hazard.y - 10, hazard.w + 20, hazard.h + 20); ctx.strokeStyle = "rgba(144,220,196,.38)"; ctx.lineWidth = 4; ctx.strokeRect(hazard.x - 6, hazard.y - 6, hazard.w + 12, hazard.h + 12); ctx.restore();
         drawWater(hazard, time); ctx.save(); ctx.globalAlpha = .5; ctx.strokeStyle = "#8bd8c3"; ctx.lineWidth = 2; for (let i = 0; i < 7; i += 1) { const y = hazard.y + 26 + i * 39 + Math.sin(time * 1.4 + i) * 4; ctx.beginPath(); ctx.moveTo(hazard.x + 15, y); ctx.quadraticCurveTo(hazard.x + hazard.w / 2, y - 7, hazard.x + hazard.w - 15, y); ctx.stroke(); } ctx.globalAlpha = .32; ctx.fillStyle = "#c8f0d3"; for (let i = 0; i < 6; i += 1) { const x = hazard.x + 25 + ((i * 71) % Math.max(30, hazard.w - 50)); const y = hazard.y + 20 + ((i * 53) % Math.max(30, hazard.h - 40)); ctx.beginPath(); ctx.ellipse(x, y, 12 + (i % 2) * 5, 3, .12, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
       } else {
+        if (loadedAssets.has("dungeon-hazards")) {
+          const trenchFrame = 4 + Math.floor(time * 2.4 + index * .7) % 4;
+          drawOptionalSprite("dungeon-hazards", hazard.x + hazard.w / 2, hazard.y + hazard.h / 2, { frame: trenchFrame, width: hazard.w + 48, height: hazard.h + 28, anchorX: .5, anchorY: .5, alpha: .94 });
+          return;
+        }
         ctx.save(); ctx.fillStyle = "rgba(191,73,53,.22)"; ctx.fillRect(hazard.x, hazard.y, hazard.w, hazard.h); ctx.strokeStyle = "rgba(232,151,104,.62)"; ctx.lineWidth = 4; ctx.strokeRect(hazard.x - 4, hazard.y - 4, hazard.w + 8, hazard.h + 8); ctx.fillStyle = "rgba(41,28,28,.7)"; ctx.fillRect(hazard.x - 4, hazard.y - 4, hazard.w + 8, 10); ctx.fillRect(hazard.x - 4, hazard.y + hazard.h - 6, hazard.w + 8, 10); ctx.globalAlpha = .78; for (let i = 0; i < 14; i += 1) { const x = hazard.x + 14 + ((i * 41) % Math.max(20, hazard.w - 24)); const y = hazard.y + hazard.h - 10 - ((time * (26 + i) + i * 37) % Math.max(30, hazard.h - 20)); ctx.fillStyle = i % 2 ? "#f28b5d" : "#ffd37d"; ctx.beginPath(); ctx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2); ctx.fill(); } ctx.restore();
       }
       if (index === 0) { ctx.fillStyle = "rgba(255,230,168,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(hazard.label.toUpperCase(), hazard.x + hazard.w / 2, hazard.y - 12); }
