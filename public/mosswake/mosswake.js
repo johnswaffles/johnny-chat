@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=42";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=43";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1362,6 +1362,18 @@
   const drawBreakable = (object, time) => {
     if (object.broken) return;
     const sway = Math.sin(time * 2.4 + object.x) * .08;
+    const breakableFrame = object.id === "root-ivy" ? 0 : object.id === "pond-ivy" ? 8 : 2;
+    const breakableWidth = object.id === "reed-cache" ? 72 : 86;
+    const breakableHeight = object.id === "reed-cache" ? 78 : 86;
+    if (drawOptionalSprite("outdoor-breakables", object.x, object.y + 8, {
+      frame: breakableFrame,
+      width: breakableWidth,
+      height: breakableHeight,
+      anchorX: .5,
+      anchorY: .92,
+      alpha: .98,
+      rotation: sway * .22
+    })) return;
     const foliageFrame = object.id === "reed-cache" ? 5 : object.id === "pond-ivy" ? 15 : 14;
     if (drawOptionalSprite("outdoor-foliage", object.x, object.y + 8, { frame: foliageFrame, width: object.id === "reed-cache" ? 68 : 78, height: object.id === "reed-cache" ? 68 : 78, anchorX: .5, anchorY: .9, alpha: .96, rotation: sway * .28 })) return;
     ctx.save(); ctx.translate(object.x, object.y); ctx.rotate(sway); ctx.fillStyle = object.id === "reed-cache" ? "#527d55" : "#477d52"; ctx.beginPath(); ctx.arc(0, 0, 21, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = object.id === "reed-cache" ? "#d3b076" : "#a5d977"; ctx.beginPath(); ctx.arc(-8, -7, 7, 0, Math.PI * 2); ctx.arc(8, -4, 4, 0, Math.PI * 2); ctx.fill(); if (object.id === "reed-cache") { ctx.strokeStyle = "rgba(240,222,163,.58)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.stroke(); } ctx.restore();
