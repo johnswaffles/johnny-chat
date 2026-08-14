@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=40";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=41";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1313,7 +1313,23 @@
     if (drawOptionalSprite("outdoor-foliage", flower.x, flower.y + 6, { frame: foliageFrame, width: (flower.s || 1) * 52, height: (flower.s || 1) * 52, anchorX: .5, anchorY: .92, alpha: .94, rotation: sway * .4 })) return;
     ctx.save(); ctx.translate(flower.x, flower.y); ctx.rotate(sway); ctx.scale(flower.s, flower.s); ctx.strokeStyle = "#6f9b58"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 10); ctx.quadraticCurveTo(-2, -2, 0, -11); ctx.stroke(); ctx.fillStyle = flower.color; for (let i = 0; i < 4; i += 1) { ctx.beginPath(); ctx.ellipse(Math.cos(i * 1.57) * 4, -13 + Math.sin(i * 1.57) * 4, 4, 2.5, i * 1.57, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = "#ffe8a4"; ctx.beginPath(); ctx.arc(0, -13, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   };
-  const drawRock = (rock) => { ctx.save(); ctx.translate(rock.x, rock.y); ctx.scale(rock.s, rock.s); drawShadow(0, 10, 20, 7, .24); const rockVariant = Number.isFinite(rock.variant) ? rock.variant : Math.floor(hash01(rock.x, rock.y) * 4); if (drawOptionalSprite("outdoor-props", 0, 8, { frame: 12 + rockVariant % 4, width: 82, height: 76, anchorX: .5, anchorY: .9 })) { ctx.restore(); return; } ctx.fillStyle = rock.tone; ctx.beginPath(); ctx.moveTo(-22, 8); ctx.quadraticCurveTo(-24, -10, -8, -17); ctx.quadraticCurveTo(10, -23, 24, -4); ctx.quadraticCurveTo(25, 10, 7, 13); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.stroke(); ctx.fillStyle = "rgba(211,235,197,.2)"; ctx.beginPath(); ctx.ellipse(-7, -8, 10, 5, -.2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
+  const drawRock = (rock) => {
+    ctx.save(); ctx.translate(rock.x, rock.y); ctx.scale(rock.s, rock.s); drawShadow(0, 10, 20, 7, .24);
+    const rockVariant = Number.isFinite(rock.variant) ? rock.variant : Math.floor(hash01(rock.x, rock.y) * 4);
+    // Rocks now have their own replaceable family so the most common small
+    // landmarks no longer borrow unrelated fence/log prop cells. Keep the
+    // original prop family as a safe offline fallback.
+    const rockFrame = Math.max(0, Math.min(15, rockVariant % 16));
+    if (drawOptionalSprite("rock-family", 0, 8, {
+      frame: rockFrame,
+      width: rockFrame >= 8 ? 96 : 92,
+      height: rockFrame >= 8 ? 84 : 78,
+      anchorX: .5,
+      anchorY: .9
+    })) { ctx.restore(); return; }
+    if (drawOptionalSprite("outdoor-props", 0, 8, { frame: 12 + rockVariant % 4, width: 82, height: 76, anchorX: .5, anchorY: .9 })) { ctx.restore(); return; }
+    ctx.fillStyle = rock.tone; ctx.beginPath(); ctx.moveTo(-22, 8); ctx.quadraticCurveTo(-24, -10, -8, -17); ctx.quadraticCurveTo(10, -23, 24, -4); ctx.quadraticCurveTo(25, 10, 7, 13); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.stroke(); ctx.fillStyle = "rgba(211,235,197,.2)"; ctx.beginPath(); ctx.ellipse(-7, -8, 10, 5, -.2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  };
   const drawLog = (log) => { ctx.save(); ctx.translate(log.x, log.y); ctx.rotate(log.angle); ctx.scale(log.s, log.s); drawShadow(0, 12, log.length * .45, 6, .32); if (drawOptionalSprite("outdoor-foliage", 0, 3, { frame: 12 + (log.variant || 0) % 2, width: log.length * 1.05, height: 64, anchorX: .5, anchorY: .86 })) { ctx.restore(); return; } ctx.fillStyle = "#684735"; ctx.fillRect(-log.length / 2, -10, log.length, 20); ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = ART.outlineWidth; ctx.strokeRect(-log.length / 2, -10, log.length, 20); ctx.fillStyle = "#986b4a"; ctx.fillRect(-log.length / 2 + 12, -7, log.length - 24, 5); ctx.fillStyle = "#b58459"; ctx.beginPath(); ctx.ellipse(-log.length / 2, 0, 11, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#6f4937"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-log.length / 2, 0, 6, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "#5c8f59"; ctx.beginPath(); ctx.arc(-14, -11, 8, 0, Math.PI * 2); ctx.arc(5, -12, 6, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
   const drawLantern = (x, y, time) => { const pulse = .72 + Math.sin(time * 7 + x) * .12; drawShadow(x, y + 7, 10, 4, .18); const glow = ctx.createRadialGradient(x, y - 24, 1, x, y - 24, 62); glow.addColorStop(0, "rgba(255,213,125,.38)"); glow.addColorStop(.35, "rgba(255,185,102,.12)"); glow.addColorStop(1, "rgba(255,213,125,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 24, 62, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#543c32"; ctx.fillRect(x - 3, y - 22, 6, 26); ctx.fillStyle = "#a87b4c"; ctx.fillRect(x - 10, y - 28, 20, 7); ctx.strokeStyle = "rgba(31,54,42,.7)"; ctx.lineWidth = 2; ctx.strokeRect(x - 10, y - 28, 20, 13); ctx.fillStyle = `rgba(255,215,133,${pulse})`; ctx.beginPath(); ctx.arc(x, y - 25, 6 + Math.sin(time * 5 + x) * .7, 0, Math.PI * 2); ctx.fill(); };
   const drawButterfly = (item, time) => { const x = item.x + Math.sin(time * item.speed + item.phase) * item.range; const y = item.y + Math.cos(time * item.speed * .8 + item.phase) * 16; const flap = .65 + Math.abs(Math.sin(time * 9 + item.phase)) * .35; ctx.save(); ctx.translate(x, y); ctx.scale(1, flap); ctx.globalAlpha = .78; ctx.fillStyle = item.color; ctx.beginPath(); ctx.ellipse(-4, 0, 5, 3, -.35, 0, Math.PI * 2); ctx.ellipse(4, 0, 5, 3, .35, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#4d463a"; ctx.fillRect(-1, -2, 2, 5); ctx.restore(); };

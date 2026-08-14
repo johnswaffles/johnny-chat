@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Dedicated Lanternwood rock family and full-room QA
+
+- Promoted the most visible remaining outdoor prop gap: rocks were borrowing four unrelated `outdoor-props` cells, which made small landmarks read like generic clutter beside the authored trees, bridge, foliage, and characters.
+- Generated `assets/rocks/mosswake-rock-family-generated-v1.png` as a normalized 1248×1248 RGBA 4×4 atlas. The sixteen cells cover pebble clusters, stepping stones, cracked and moss-capped boulders, slate shards, lichen stones, a moonstone, a standing-stone fragment, and depleted/resource variants. The built-in generation returned alpha directly, so no keyed matte is required.
+- Added the `rock-family` manifest slot at v41 and routed `drawRock` through it before the existing outdoor-prop/procedural fallbacks. Rock placement, shadows, scale inputs, obstacles, and collision geometry are unchanged; the atlas is replaceable cell-by-cell without touching gameplay code.
+- Replayed the fresh outdoor opening and a restored Heartseed Sanctum. The new rocks remain grounded on their runtime shadows, silhouettes stay readable over the road/meadow, the Guardian and boss HUD remain fully visible, and the browser reported no warning/error logs.
+- Bumped the route script cache to `mosswake.js?v=78`. This pass generated new raster art; the current approved references remain the Lanternwood tree family, outdoor foliage family, and the Heartseed Sanctum kit.
+
 ## 2026-08-14 — Six-room dungeon presentation audit and Guardian grounding fix
 
 - Completed a fresh visual review of all six dungeon rooms against the strongest Moon Switch Hall / bridge benchmark: Root Gallery, Flooded Vault, Moon Switch Hall, Ashen Antechamber, Warden's Garden, and Heartseed Sanctum. The room identities, authored prop families, Rootlight bridge states, hazards, and arena dressing remain cohesive and production-ready; no redundant raster regeneration was warranted.
