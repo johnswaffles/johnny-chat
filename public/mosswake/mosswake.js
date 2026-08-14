@@ -403,7 +403,7 @@
         else if (npc.behavior === "watch") npc.facing = Math.sin(npc.clock * .35 + npc.phase) > 0 ? 1 : -1;
       }
       npc.work = Math.sin(npc.clock * (npc.behavior === "map" ? 1.45 : 2.2) + npc.phase);
-      npc.animTime = npc.clock * (npc.behavior === "pace" ? 4.6 : 1.6);
+      npc.animTime = npc.clock * (npc.behavior === "pace" ? (playerNear ? 1.05 : 4.6) : 1.6);
     });
   };
   const nearestNpc = (radius = 68) => {
