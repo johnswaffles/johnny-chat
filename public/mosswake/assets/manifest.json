@@ -1,5 +1,5 @@
 {
-  "version": 32,
+  "version": 33,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -84,6 +84,18 @@
       "displayHeight": 220,
       "anchorX": 0.5,
       "anchorY": 0.96
+    },
+    "outdoor-ruin": {
+      "src": "props/outdoor-ruin-generated-v1.png",
+      "frameWidth": 1254,
+      "frameHeight": 1254,
+      "columns": 1,
+      "frames": 1,
+      "fps": 1,
+      "displayWidth": 156,
+      "displayHeight": 156,
+      "anchorX": 0.5,
+      "anchorY": 0.9
     },
     "outdoor-ground": {
       "src": "terrain/outdoor-ground-family-generated-v1.png",

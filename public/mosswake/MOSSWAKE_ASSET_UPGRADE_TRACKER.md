@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Outdoor ruin landmark family
+
+- Audited the opening composition after the pond dock pass. The authored structures and foliage were strong, but the north-east ruin still rendered as a small procedural stone blob and did not read as a memorable landmark.
+- Generated `assets/props/outdoor-ruin-generated-v1-source.png` (1254×1254 RGB chroma-key source) and prepared `assets/props/outdoor-ruin-generated-v1.png` (1254×1254 RGBA) as a moss-covered moon-arch ruin with rubble and flowers, matching the structure-family reference.
+- Added manifest v33 and routed the north-east ruin through the optional `outdoor-ruin` sprite key. The second, smaller ruin intentionally keeps its procedural fallback so the new landmark remains singular rather than duplicated.
+- Bumped the page script cache key to `mosswake.js?v=65`; no collision, navigation, NPC, combat, or save behavior changed.
+- Validation passed: `node --check`, manifest/dimension/alpha checks, all 40 manifest asset requests (37 unique files) returned HTTP 200, fresh outside startup, authored-ruin integration smoke, all six dungeon room restores/screenshots, and browser warning/error checks were clean. No collision, NPC, or dungeon regression was observed.
+
 ## 2026-08-14 — Outdoor pond dock family
 
 - Audited the live opening after the Rootlight bridge integration. The lower pond had good authored water and shoreline stones, but no strong, readable landmark at the water edge; the remaining gap read as a procedural composition issue rather than a missing gameplay route.

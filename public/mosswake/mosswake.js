@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=32";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=33";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -148,7 +148,7 @@
       { x: 330, y: 318, length: 118, angle: -.08, posts: 4 }, { x: 1120, y: 735, length: 146, angle: .12, posts: 5 }, { x: 150, y: 670, length: 88, angle: -.22, posts: 3 }
     ],
     ruins: [
-      { x: 1322, y: 410, s: 1, phase: .2 }, { x: 875, y: 285, s: .76, phase: 2.6 }
+      { x: 1322, y: 410, s: 1, phase: .2, authored: true }, { x: 875, y: 285, s: .76, phase: 2.6 }
     ],
     signs: [
       { x: 420, y: 354, angle: -.08, label: "OUTPOST" }, { x: 1080, y: 628, angle: .12, label: "LOW POND" }
@@ -1070,6 +1070,7 @@
   };
   const drawRuin = (ruin, time) => {
     ctx.save(); ctx.translate(ruin.x, ruin.y); ctx.scale(ruin.s, ruin.s); drawShadow(0, 18, 42, 9, .3);
+    if (ruin.authored && drawOptionalSprite("outdoor-ruin", 0, 15, { frame: 0, width: 156, height: 156, anchorX: .5, anchorY: .9, alpha: .98 })) { ctx.restore(); return; }
     ctx.fillStyle = "#657b70"; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-42, 11); ctx.lineTo(-36, -19); ctx.lineTo(-15, -31); ctx.lineTo(8, -19); ctx.lineTo(39, -28); ctx.lineTo(45, 12); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = "#91a28b"; ctx.fillRect(-32, -17, 18, 9); ctx.fillRect(9, -18, 25, 8); ctx.fillStyle = "#4e685c"; ctx.fillRect(-25, -5, 18, 17); ctx.fillRect(5, -2, 22, 14);
     ctx.strokeStyle = "#8fba72"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, -28); ctx.quadraticCurveTo(2, -15 + Math.sin(time * 1.5) * 2, 12, -2); ctx.stroke(); ctx.fillStyle = "#76ab69"; ctx.beginPath(); ctx.arc(-9, -19, 5, 0, Math.PI * 2); ctx.arc(5, -10, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
