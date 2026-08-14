@@ -2,6 +2,13 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Moon Switch Hall crossing and wisp handoff QA
+
+- Replayed the restored open-bridge route with the current `dungeon-bridge` family. The authored crossing is reachable, the player remains grounded on the planks, the bridge threshold is visually legible, and the existing Rootlight pulse remains available as encounter counterplay.
+- A straight crossing exposed a pacing edge: the two Moon Wisps could wake as the player reached the bridge, before the upper half of the hall had been read. Extended dungeon-arrival `spawnGrace` from 2.2s to 3s. This changes no enemy damage, detection range, projectile speed, or collision; it only gives the player one readable approach beat after a room restore/transition.
+- No new raster artwork was generated in this iteration because the dedicated bridge threshold atlas and enemy-family/effects atlases are already the correct visual references. The work was a traversal/encounter integration repair, not a replacement of an approved family.
+- Bumped the page script cache key to `mosswake.js?v=75` so the timing fix is explicit at the route edge. The next pass should re-run the same controlled crossing with an evasive movement pattern and confirm the first ranged telegraph remains visible before contact.
+
 ## 2026-08-14 — Rowan four-direction route-walk family
 
 - Continued the NPC parity audit from the restored bridge and opening density passes. Rowan is the first NPC players meet, but his route previously reused one side-facing walk row even when a route segment or player-facing pause was vertical.

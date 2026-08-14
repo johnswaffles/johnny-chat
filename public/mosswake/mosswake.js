@@ -533,10 +533,11 @@
     state.area = area;
     // Give the player a calm read of each outdoor arrival before enemies wake up.
     // This keeps the opening and post-dungeon return readable without changing combat rules.
-    // Give dungeon arrivals a short readable beat as well as the outdoor
-    // opening grace. This prevents a restored/transitioned player from being
-    // hit before the room, bridge, and enemy telegraphs can be read.
-    state.spawnGrace = area === "overworld" ? 5 : 2.2;
+    // Give dungeon arrivals a readable beat as well as the outdoor opening
+    // grace. Three seconds lets a player step onto a newly awakened bridge and
+    // see the wisps' first telegraph before ranged combat can land, without
+    // changing their damage, detection, or attack cadence.
+    state.spawnGrace = area === "overworld" ? 5 : 3;
     if (area === "dungeon") {
       state.roomTransition = .72;
       state.roomTransitionLabel = dungeonRoomName();
