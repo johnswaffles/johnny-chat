@@ -2,6 +2,15 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Waystone exploration-clue family and full parity recheck
+
+- Rechecked the current player benchmark, all five named NPCs, the fresh Lanternwood opening, and the six-room dungeon source/layouts. NPC inventory and dungeon actor coverage remain complete; no approved character family was regenerated.
+- Promoted the next documented outside-world gap: the three pale stones that quietly point toward the hidden grove were still procedural ellipses, weakening one of the game's most important environmental clues.
+- Generated `assets/rocks/mosswake-waystone-clue-family-generated-v1.png` as a normalized 1248×1248 RGBA 4×4 atlas. The sixteen cells cover single moonstones, flat trail stones, pairs, flowered/lichen stones, cracked slate, crescent-marked stones, arrow-like arrangements, stacked markers, and weathered variants. Built-in generation returned alpha directly; no keyed matte is required.
+- Added the `waystone-clues` manifest slot at v44 and routed the three clue positions through dedicated frames [1,3,7] before the original ellipse fallback. Runtime clue coordinates, path hint line, discovery logic, collision, and secret progression are unchanged.
+- Fresh outdoor startup loaded the waystone atlas with HTTP 200, displayed the authored opening, and reported no browser warning/error logs. All six dungeon families remain loaded from their existing generated atlases; no dungeon behavior changed.
+- Bumped the route script cache to `mosswake.js?v=81`. The approved player, NPC, breakable-plant, rock, shoreline, bridge, Guardian, and Sanctum families remain the visual references.
+
 ## 2026-08-14 — Breakable discovery-plant family and NPC/dungeon parity audit
 
 - Re-verified the current player benchmark, all five named overworld NPCs (Rowan, Tansy, Brindle, Lumen, Marlow), the opening outdoor composition, and all six dungeon rooms. The existing NPC inventory remains complete: no dungeon NPC actor is present, and every named overworld NPC has an integrated generated sheet or role/activity family.
