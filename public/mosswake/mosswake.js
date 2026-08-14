@@ -1618,17 +1618,21 @@
       if (hazard.label === "deep water") {
         if (loadedAssets.has("dungeon-hazards")) {
           drawOptionalSprite("dungeon-hazards", hazard.x + hazard.w / 2, hazard.y + hazard.h / 2, { frame: Math.floor(time * 2.2) % 2, width: hazard.w + 42, height: hazard.h + 42, anchorX: .5, anchorY: .5, alpha: .94 });
-          return;
+        } else {
+          ctx.save(); ctx.fillStyle = "rgba(7,24,28,.55)"; ctx.fillRect(hazard.x - 10, hazard.y - 10, hazard.w + 20, hazard.h + 20); ctx.strokeStyle = "rgba(144,220,196,.38)"; ctx.lineWidth = 4; ctx.strokeRect(hazard.x - 6, hazard.y - 6, hazard.w + 12, hazard.h + 12); ctx.restore();
+          drawWater(hazard, time); ctx.save(); ctx.globalAlpha = .5; ctx.strokeStyle = "#8bd8c3"; ctx.lineWidth = 2; for (let i = 0; i < 7; i += 1) { const y = hazard.y + 26 + i * 39 + Math.sin(time * 1.4 + i) * 4; ctx.beginPath(); ctx.moveTo(hazard.x + 15, y); ctx.quadraticCurveTo(hazard.x + hazard.w / 2, y - 7, hazard.x + hazard.w - 15, y); ctx.stroke(); } ctx.globalAlpha = .32; ctx.fillStyle = "#c8f0d3"; for (let i = 0; i < 6; i += 1) { const x = hazard.x + 25 + ((i * 71) % Math.max(30, hazard.w - 50)); const y = hazard.y + 20 + ((i * 53) % Math.max(30, hazard.h - 40)); ctx.beginPath(); ctx.ellipse(x, y, 12 + (i % 2) * 5, 3, .12, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
         }
-        ctx.save(); ctx.fillStyle = "rgba(7,24,28,.55)"; ctx.fillRect(hazard.x - 10, hazard.y - 10, hazard.w + 20, hazard.h + 20); ctx.strokeStyle = "rgba(144,220,196,.38)"; ctx.lineWidth = 4; ctx.strokeRect(hazard.x - 6, hazard.y - 6, hazard.w + 12, hazard.h + 12); ctx.restore();
-        drawWater(hazard, time); ctx.save(); ctx.globalAlpha = .5; ctx.strokeStyle = "#8bd8c3"; ctx.lineWidth = 2; for (let i = 0; i < 7; i += 1) { const y = hazard.y + 26 + i * 39 + Math.sin(time * 1.4 + i) * 4; ctx.beginPath(); ctx.moveTo(hazard.x + 15, y); ctx.quadraticCurveTo(hazard.x + hazard.w / 2, y - 7, hazard.x + hazard.w - 15, y); ctx.stroke(); } ctx.globalAlpha = .32; ctx.fillStyle = "#c8f0d3"; for (let i = 0; i < 6; i += 1) { const x = hazard.x + 25 + ((i * 71) % Math.max(30, hazard.w - 50)); const y = hazard.y + 20 + ((i * 53) % Math.max(30, hazard.h - 40)); ctx.beginPath(); ctx.ellipse(x, y, 12 + (i % 2) * 5, 3, .12, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
+        const feedbackAlpha = clamp((state.hazardCooldown - .34) / .38, 0, .76);
+        if (feedbackAlpha > 0 && loadedAssets.has("dungeon-hazards")) drawOptionalSprite("dungeon-hazards", player.x, player.y - 5, { frame: 8 + Math.floor(time * 10) % 2, width: 94, height: 94, anchorX: .5, anchorY: .5, alpha: feedbackAlpha });
       } else {
         if (loadedAssets.has("dungeon-hazards")) {
           const trenchFrame = 4 + Math.floor(time * 2.4 + index * .7) % 4;
           drawOptionalSprite("dungeon-hazards", hazard.x + hazard.w / 2, hazard.y + hazard.h / 2, { frame: trenchFrame, width: hazard.w + 48, height: hazard.h + 28, anchorX: .5, anchorY: .5, alpha: .94 });
-          return;
+        } else {
+          ctx.save(); ctx.fillStyle = "rgba(191,73,53,.22)"; ctx.fillRect(hazard.x, hazard.y, hazard.w, hazard.h); ctx.strokeStyle = "rgba(232,151,104,.62)"; ctx.lineWidth = 4; ctx.strokeRect(hazard.x - 4, hazard.y - 4, hazard.w + 8, hazard.h + 8); ctx.fillStyle = "rgba(41,28,28,.7)"; ctx.fillRect(hazard.x - 4, hazard.y - 4, hazard.w + 8, 10); ctx.fillRect(hazard.x - 4, hazard.y + hazard.h - 6, hazard.w + 8, 10); ctx.globalAlpha = .78; for (let i = 0; i < 14; i += 1) { const x = hazard.x + 14 + ((i * 41) % Math.max(20, hazard.w - 24)); const y = hazard.y + hazard.h - 10 - ((time * (26 + i) + i * 37) % Math.max(30, hazard.h - 20)); ctx.fillStyle = i % 2 ? "#f28b5d" : "#ffd37d"; ctx.beginPath(); ctx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2); ctx.fill(); } ctx.restore();
         }
-        ctx.save(); ctx.fillStyle = "rgba(191,73,53,.22)"; ctx.fillRect(hazard.x, hazard.y, hazard.w, hazard.h); ctx.strokeStyle = "rgba(232,151,104,.62)"; ctx.lineWidth = 4; ctx.strokeRect(hazard.x - 4, hazard.y - 4, hazard.w + 8, hazard.h + 8); ctx.fillStyle = "rgba(41,28,28,.7)"; ctx.fillRect(hazard.x - 4, hazard.y - 4, hazard.w + 8, 10); ctx.fillRect(hazard.x - 4, hazard.y + hazard.h - 6, hazard.w + 8, 10); ctx.globalAlpha = .78; for (let i = 0; i < 14; i += 1) { const x = hazard.x + 14 + ((i * 41) % Math.max(20, hazard.w - 24)); const y = hazard.y + hazard.h - 10 - ((time * (26 + i) + i * 37) % Math.max(30, hazard.h - 20)); ctx.fillStyle = i % 2 ? "#f28b5d" : "#ffd37d"; ctx.beginPath(); ctx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2); ctx.fill(); } ctx.restore();
+        const feedbackAlpha = clamp((state.hazardCooldown - .34) / .38, 0, .76);
+        if (feedbackAlpha > 0 && loadedAssets.has("dungeon-hazards")) drawOptionalSprite("dungeon-hazards", player.x, player.y - 6, { frame: 10 + Math.floor(time * 7) % 2, width: 86, height: 86, anchorX: .5, anchorY: .5, alpha: feedbackAlpha });
       }
       if (index === 0) { ctx.fillStyle = "rgba(255,230,168,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(hazard.label.toUpperCase(), hazard.x + hazard.w / 2, hazard.y - 12); }
     });
@@ -1701,7 +1705,13 @@
       ctx.save(); ctx.globalAlpha = .35; ctx.strokeStyle = "#8ab879"; ctx.lineWidth = 3; ctx.setLineDash([8, 9]); ctx.beginPath(); ctx.arc(600, 390, 210 + Math.sin(time * 1.5) * 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); drawRune(600, 140, state.miniBossDefeated ? "OPEN" : "WARDEN");
       ctx.fillStyle = "rgba(192,231,166,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.miniBossDefeated ? "A LIVING ROOT BRIDGE LEADS SOUTH" : "THE GARDEN KEEPS ITS OWN LAW", 600, 700);
     } else if (key === "0-1") {
-      drawDungeonRoots(time, [[105, 100, 160, 1], [1060, 650, -180, -1]]); drawDungeonHazardVisual(time); if (state.rootlightWaterway) drawWater({ x: 410, y: 250, w: 380, h: 280 }, time); drawChest(600, 390, state.heartChestOpened); drawRune(600, 150, "HEART");
+      drawDungeonRoots(time, [[105, 100, 160, 1], [1060, 650, -180, -1]]);
+      if (state.rootlightWaterway) {
+        // Cell 3 is the authored Rootlight-parted wet floor. It keeps the
+        // same footprint as the hazard, but removes the damaging water read.
+        if (!drawOptionalSprite("dungeon-hazards", 600, 390, { frame: 3, width: 422, height: 322, anchorX: .5, anchorY: .5, alpha: .92 })) drawWater({ x: 410, y: 250, w: 380, h: 280 }, time);
+      } else drawDungeonHazardVisual(time);
+      drawChest(600, 390, state.heartChestOpened); drawRune(600, 150, "HEART");
       ambient(4, 222, 216, 108, 112, .82); ambient(3, 1002, 176, 96, 112, .76); ambient(9, 982, 616, 104, 104, .74);
       ctx.fillStyle = "#566e68"; ctx.fillRect(130, 540, 200, 18); ctx.fillRect(870, 230, 200, 18); ctx.fillStyle = "#9bb7a3"; ctx.fillRect(150, 535, 160, 5); ctx.fillRect(890, 225, 160, 5);
       drawRune(960, 650, state.rootlightWaterway ? "WATER PARTED" : "DORMANT"); if (state.rootlightWaterway) { ctx.save(); ctx.globalAlpha = .75; ctx.fillStyle = "#c0d4b4"; for (let i = 0; i < 6; i += 1) { const x = 470 + i * 55; const y = 390 + Math.sin(i * 1.7) * 35; ctx.beginPath(); ctx.ellipse(x, y, 18, 9, -.2, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); } ctx.fillStyle = "rgba(188,239,218,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.heartChestOpened ? "THE WATER REMEMBERS YOUR FOOTSTEPS" : "CROSS THE FLOOD · TAKE ONLY WHAT YOU NEED", 600, 690);

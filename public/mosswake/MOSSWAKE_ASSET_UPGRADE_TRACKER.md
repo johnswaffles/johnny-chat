@@ -2,6 +2,13 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-13 — Rootlight-parted water and hazard feedback integration
+
+- Finished the prepared dungeon-hazard family instead of starting a new unrelated asset. Flooded Vault (`0-1`) now swaps to authored atlas frame 3 when Rootlight parts the water, preserving the same footprint while making the safe traversal state visually explicit. The procedural water remains a safe fallback when the atlas is unavailable.
+- Wired atlas feedback cells 8–9 to deep-water damage and cells 10–11 to ember-trench damage. The short hazard cooldown now produces a localized splash or ash-flare response at the player's feet, so taking damage reads as a consequence rather than a silent health change.
+- Kept collision, damage, progression, room layout, and save behavior unchanged. Bumped the page script cache key to `mosswake.js?v=59`; manifest v29 and the existing `assets/dungeon/dungeon-hazards-generated-v1.png` remain the source of truth.
+- `node --check`, manifest validation, scoped diff checks, and local browser smoke passed. The calm Rootlight-parted surface and authored ember trench render correctly; the active water-hazard run reached the damage state without console warnings/errors.
+
 ## 2026-08-13 — Flooded-vault and ember-trench hazard atlas
 
 - Audited the flooded vault (`0-1`) and Ash Mirror / ember trench room (`1-1`). Their collision and damage logic were already deliberate, but the visible hazards were still large procedural rectangles and repeated line particles.
