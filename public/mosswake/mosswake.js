@@ -1155,12 +1155,11 @@
       // ribbon remains the readable walkable surface; the atlas only contributes
       // irregular worn patches so no rectangular tile edges compete with actors.
       const roadTiles = [
-        [158, 470, 1, -.04, 78, 78], [392, 449, 0, -.04, 72, 72], [640, 491, 2, .10, 76, 76],
-        [888, 536, 0, .14, 72, 72], [1144, 544, 7, .04, 76, 76], [1395, 484, 0, -.12, 72, 72],
-        [300, 596, 0, -.08, 66, 66], [456, 598, 0, -.08, 66, 66]
+        [214, 458, 3, -.04, 48, 34], [516, 472, 3, .08, 46, 32], [818, 524, 3, .12, 48, 34],
+        [1138, 542, 3, .02, 46, 32], [1398, 486, 3, -.10, 46, 32], [378, 596, 3, -.08, 44, 30]
       ];
-      ctx.save(); ctx.globalAlpha = .6;
-      roadTiles.forEach(([x, y, frame, rotation, width, height]) => drawOptionalSprite("road-family", x, y, { frame, width, height, anchorX: .5, anchorY: .5, rotation, alpha: .55 }));
+      ctx.save(); ctx.globalCompositeOperation = "multiply"; ctx.globalAlpha = .42;
+      roadTiles.forEach(([x, y, frame, rotation, width, height]) => drawOptionalSprite("road-family", x, y, { frame, width, height, anchorX: .5, anchorY: .5, rotation, alpha: .32 }));
       ctx.restore();
     }
     if (loadedAssets.has("outdoor-props")) {
