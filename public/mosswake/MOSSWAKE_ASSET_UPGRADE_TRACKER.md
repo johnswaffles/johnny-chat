@@ -4,6 +4,13 @@ This is the persistent production record for Mosswake's replaceable visual libra
 
 ## 2026-08-13 — Reusable visual QA pass: hierarchy and movement scale follow-up
 
+## 2026-08-13 — Reusable visual QA pass: NPC interaction cue alignment
+
+- Replayed the opening and inspected the Rowan approach path. The pacing, facing, and idle behavior were working, but the floating `E`/name cue used the broader 92px acknowledgement radius while `interact()` correctly required the nearest NPC to be within 68px. That made the cue appear before the interaction was actually available.
+- Updated `drawNpc()` so only the nearest NPC inside the real 68px interaction radius receives the prompt. Nearby NPCs still pause/face the player and use their calmer idle timing, preserving the readable acknowledgement without suggesting an unavailable action.
+- No new raster artwork was needed: the existing Rowan/NPC sheets remain the approved visual reference. This is a presentation-contract repair that keeps the modular asset workflow untouched.
+- Local syntax, scoped diff, and public startup smoke should be rerun after deployment; the next focused live check is to approach Rowan from outside and then inside the prompt radius, confirming the cue appears exactly when `E` can open his dialogue.
+
 - Re-ran the live opening at gameplay scale after the previous outdoor pass. The ground-family atlas is strong for bushes and worn trail repairs, but its tall meadow cards were visually too assertive when reused for ordinary grass patches; this made portions of the walkable road read as planted beds instead of a clear path.
 - Routed ordinary grass tufts and patches through the existing dedicated `outdoor-foliage` atlas at smaller dimensions and lower alpha. The generated `outdoor-ground` atlas remains reserved for authored bushes and sparse road repairs, preserving its high-detail value without repeating large cards across the field.
 - Normalized the Warden's run presentation to 54×74 (from 52×70) while keeping the existing run-sheet anchors and directional rows. This keeps the character's silhouette and ground contact consistent between idle and movement states without changing collision or movement speed.

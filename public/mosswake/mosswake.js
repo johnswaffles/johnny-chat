@@ -1347,7 +1347,11 @@
       if (npc.behavior === "fire" || npc.behavior === "map") { const npcWork = npc.work || 0; ctx.strokeStyle = npc.behavior === "fire" ? "#e6b774" : "#d7c99a"; ctx.globalAlpha = .72; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-12, 1); ctx.lineTo(-16, 5 + npcWork * 4); ctx.moveTo(12, 1); ctx.lineTo(16, 5 - npcWork * 4); ctx.stroke(); }
       ctx.restore();
     }
-    if (npc.near && state.mode === "playing" && !state.dialogue) { const lift = Math.sin(time * 4 + npc.phase) * 2; ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = "rgba(7,20,18,.9)"; ctx.strokeStyle = "rgba(214,255,220,.45)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x - 17, y - 69 + lift, 34, 22, 8); ctx.fill(); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.font = "700 11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("E", x, y - 54 + lift); ctx.fillStyle = "rgba(243,246,223,.82)"; ctx.font = "500 9px Outfit"; ctx.fillText(npc.name, x, y - 76 + lift); ctx.restore(); }
+    // Keep the prompt tied to the same nearest-NPC target and 68px reach used
+    // by interact(). The wider `near` radius is still useful for facing and
+    // idle animation, but should never imply that E will work from that edge.
+    const interactableNpc = nearestNpc() === npc;
+    if (interactableNpc && state.mode === "playing" && !state.dialogue) { const lift = Math.sin(time * 4 + npc.phase) * 2; ctx.save(); ctx.globalAlpha = .95; ctx.fillStyle = "rgba(7,20,18,.9)"; ctx.strokeStyle = "rgba(214,255,220,.45)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x - 17, y - 69 + lift, 34, 22, 8); ctx.fill(); ctx.stroke(); ctx.fillStyle = COLORS.gold; ctx.font = "700 11px DM Mono"; ctx.textAlign = "center"; ctx.fillText("E", x, y - 54 + lift); ctx.fillStyle = "rgba(243,246,223,.82)"; ctx.font = "500 9px Outfit"; ctx.fillText(npc.name, x, y - 76 + lift); ctx.restore(); }
   };
   const nearestInteractionHint = () => {
     if (state.mode !== "playing" || state.dialogue || nearestNpc()) return null;
