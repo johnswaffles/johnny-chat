@@ -51,6 +51,7 @@
   };
   const keys = new Set();
   const justPressed = new Set();
+  const gamepadState = { vector: { x: 0, y: 0 }, buttons: new Set(), connected: false };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const moveToward = (current, target, amount) => current < target ? Math.min(current + amount, target) : Math.max(current - amount, target);
   const normalized = (x, y, fallbackX = 1, fallbackY = 0) => { const length = Math.hypot(x, y); return length ? { x: x / length, y: y / length } : { x: fallbackX, y: fallbackY }; };
@@ -216,7 +217,7 @@
     title: document.getElementById("title-screen"), pause: document.getElementById("pause-screen"), victory: document.getElementById("victory-screen"),
     dialogue: document.getElementById("dialogue"), speaker: document.getElementById("dialogue-speaker"), dialogueText: document.getElementById("dialogue-text"), dialogueHint: document.getElementById("dialogue-hint"), portrait: document.getElementById("dialogue-portrait"), portraitMark: document.getElementById("dialogue-portrait-mark"), dialogueSpeed: document.getElementById("dialogue-speed"),
     toast: document.getElementById("toast"), area: document.getElementById("area-label"), room: document.getElementById("room-label"), objective: document.getElementById("objective"),
-    objectiveCopy: document.getElementById("objective-copy"), hearts: document.getElementById("hearts"), seed: document.getElementById("seed-count"), keys: document.getElementById("key-count"), loot: document.getElementById("loot-count"), discovery: document.getElementById("discovery-count"), ability: document.getElementById("ability-status"), save: document.getElementById("save-state"), map: document.getElementById("map-dots")
+    objectiveCopy: document.getElementById("objective-copy"), hearts: document.getElementById("hearts"), seed: document.getElementById("seed-count"), keys: document.getElementById("key-count"), loot: document.getElementById("loot-count"), discovery: document.getElementById("discovery-count"), ability: document.getElementById("ability-status"), save: document.getElementById("save-state"), map: document.getElementById("map-dots"), controlsCard: document.getElementById("controls-card"), controlsToggle: document.getElementById("controls-toggle"), controlsContent: document.getElementById("controls-content"), savePanel: document.getElementById("save-panel"), saveCode: document.getElementById("save-code"), saveCodeStatus: document.getElementById("save-code-status")
   };
 
   const showToast = (message, duration = 2200) => {
@@ -226,6 +227,32 @@
     ui.toast.textContent = message; ui.toast.classList.add("visible"); state.toastTimer = duration;
   };
   const hideScreens = () => [ui.title, ui.pause, ui.victory].forEach((screen) => screen.classList.add("hidden"));
+  const setControlsExpanded = (expanded) => {
+    if (!ui.controlsToggle || !ui.controlsContent) return;
+    ui.controlsToggle.setAttribute("aria-expanded", String(expanded)); ui.controlsContent.hidden = !expanded; ui.controlsCard?.classList.toggle("expanded", expanded);
+    const summary = ui.controlsToggle.querySelector(".controls-summary"); if (summary) summary.textContent = expanded ? "Hide" : "Show";
+  };
+  const setSaveCodeStatus = (message, error = false) => { if (!ui.saveCodeStatus) return; ui.saveCodeStatus.textContent = message; ui.saveCodeStatus.classList.toggle("error", error); };
+  const openSavePanel = () => {
+    if (!ui.savePanel || !ui.saveCode) return;
+    ui.savePanel.hidden = false; ui.saveCode.value = encodeSaveCode(); setSaveCodeStatus("Code updated from your current progress.");
+  };
+  const updateSaveCode = () => { if (!ui.saveCode) return; saveData(); ui.saveCode.value = encodeSaveCode(); setSaveCodeStatus("Code updated. Keep a copy outside this browser."); };
+  const copySaveCode = async () => {
+    if (!ui.saveCode) return;
+    if (!ui.saveCode.value.trim()) updateSaveCode();
+    try { await navigator.clipboard.writeText(ui.saveCode.value); setSaveCodeStatus("Copied to clipboard."); }
+    catch (error) { ui.saveCode.focus(); ui.saveCode.select(); setSaveCodeStatus("Code selected — copy it manually."); }
+  };
+  const restoreFromSaveCode = () => {
+    const snapshot = decodeSaveCode(ui.saveCode?.value); if (!snapshot || !applySaveSnapshot(snapshot)) { setSaveCodeStatus("That code is not a valid Mosswake save.", true); return; }
+    hideScreens(); saveData(); canvas.focus(); updateHud(); setSaveCodeStatus("Progress restored. Welcome back, Warden."); showToast("Mosswake save restored", 1800);
+  };
+  const togglePause = () => {
+    if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); }
+    else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); canvas.focus(); }
+    updateHud();
+  };
   const dialoguePortraitLetter = (portrait) => ({ rowan: "R", tansy: "T", brindle: "B", lumen: "L" }[portrait] || "?");
   const renderDialogueLine = () => {
     if (!state.dialogue) return;
@@ -266,11 +293,28 @@
     if (state.dialogue.charIndex >= line.length) state.dialogue.complete = true;
     renderDialogueLine();
   };
+  const createSaveSnapshot = () => ({ ...state, dialogue: null, mode: "playing", hp: player.hp, area: state.area, roomX: state.roomX, roomY: state.roomY });
   const saveData = () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, dialogue: null, mode: "playing", hp: player.hp, area: state.area, roomX: state.roomX, roomY: state.roomY }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(createSaveSnapshot()));
       state.lastSave = 0; state.saveError = false; return true;
     } catch (error) { state.saveError = true; return false; }
+  };
+  const SAVE_CODE_PREFIX = "mw1_";
+  const encodeSaveCode = (snapshot = createSaveSnapshot()) => {
+    const json = JSON.stringify({ game: "mosswake", version: 1, save: snapshot });
+    const bytes = new TextEncoder().encode(json); let binary = "";
+    for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+    const encoded = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+    return SAVE_CODE_PREFIX + encoded;
+  };
+  const decodeSaveCode = (value) => {
+    try {
+      const code = String(value || "").trim(); if (!code.startsWith(SAVE_CODE_PREFIX)) return null;
+      const encoded = code.slice(SAVE_CODE_PREFIX.length).replaceAll("-", "+").replaceAll("_", "/"); const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
+      const binary = atob(padded); const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); const payload = JSON.parse(new TextDecoder().decode(bytes));
+      return payload?.game === "mosswake" && payload?.version === 1 ? payload.save : null;
+    } catch (error) { return null; }
   };
   const hasSave = () => { try { return Boolean(localStorage.getItem(STORAGE_KEY)); } catch (error) { return false; } };
   const normaliseSave = (value) => {
@@ -284,20 +328,20 @@
     save.roomVisited = value.roomVisited && typeof value.roomVisited === "object" && !Array.isArray(value.roomVisited) ? value.roomVisited : { overworld: true };
     return save;
   };
+  const applySaveSnapshot = (value) => {
+    const data = normaliseSave(value); if (!data) return false;
+    Object.assign(state, data, { mode: "playing", dialogue: null, toastTimer: 0, hitStop: 0, chestOpening: 0, saveError: false });
+    if (state.ashCacheOpened && !state.rootlightLantern) state.rootlightLantern = true;
+    // Migrate older victories into the permanent Heartseed Echo reward.
+    if (state.bossDefeated && !state.bossRewardClaimed) state.bossRewardClaimed = true;
+    player.maxHp = 6 + (state.heartChestOpened ? 1 : 0) + (state.lanternSeed ? 1 : 0) + (state.bossRewardClaimed ? 1 : 0);
+    player.hp = clamp(Number(data.hp) || player.maxHp, 1, player.maxHp);
+    if (state.area === "dungeon") { player.x = ROOM.width / 2; player.y = ROOM.height - 100; } else { player.x = 390; player.y = 500; }
+    startArea(state.area, false); return true;
+  };
   const loadData = () => {
-    try {
-      const data = normaliseSave(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
-      if (!data) return false;
-      Object.assign(state, data, { mode: "playing", dialogue: null, toastTimer: 0, hitStop: 0, chestOpening: 0, saveError: false });
-      if (state.ashCacheOpened && !state.rootlightLantern) state.rootlightLantern = true;
-      // Migrate older victories into the permanent Heartseed Echo reward.
-      if (state.bossDefeated && !state.bossRewardClaimed) state.bossRewardClaimed = true;
-      player.maxHp = 6 + (state.heartChestOpened ? 1 : 0) + (state.lanternSeed ? 1 : 0) + (state.bossRewardClaimed ? 1 : 0);
-      player.hp = clamp(Number(data.hp) || player.maxHp, 1, player.maxHp);
-      if (state.area === "dungeon") { player.x = ROOM.width / 2; player.y = ROOM.height - 100; } else { player.x = 390; player.y = 500; }
-      startArea(state.area, false);
-      return true;
-    } catch (error) { try { localStorage.removeItem(STORAGE_KEY); } catch (removeError) { /* Storage may be unavailable in private browsing. */ } state.saveError = true; return false; }
+    try { return applySaveSnapshot(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null")); }
+    catch (error) { try { localStorage.removeItem(STORAGE_KEY); } catch (removeError) { /* Storage may be unavailable in private browsing. */ } state.saveError = true; return false; }
   };
 
   const restoreTitlePresentation = () => {
@@ -585,8 +629,32 @@
     if (!collidesEnemyWorld(nextY)) entity.y = clamp(nextY.y, entity.radius, maxY);
   };
 
+  const pollGamepadInput = () => {
+    if (typeof navigator === "undefined" || typeof navigator.getGamepads !== "function") return;
+    const pad = Array.from(navigator.getGamepads() || []).find(Boolean);
+    if (!pad) { gamepadState.vector = { x: 0, y: 0 }; gamepadState.buttons.clear(); gamepadState.connected = false; return; }
+    gamepadState.connected = true;
+    const axisX = Math.abs(pad.axes?.[0] || 0) > .2 ? pad.axes[0] : 0; const axisY = Math.abs(pad.axes?.[1] || 0) > .2 ? pad.axes[1] : 0;
+    let x = axisX; let y = axisY; const pressed = (index) => Boolean(pad.buttons?.[index]?.pressed || (pad.buttons?.[index]?.value || 0) > .55);
+    if (pressed(14)) x -= 1; if (pressed(15)) x += 1; if (pressed(12)) y -= 1; if (pressed(13)) y += 1;
+    gamepadState.vector = { x: clamp(x, -1, 1), y: clamp(y, -1, 1) };
+    const nextButtons = new Set(); for (let index = 0; index < (pad.buttons?.length || 0); index += 1) if (pressed(index)) nextButtons.add(index);
+    const newlyPressed = (index) => nextButtons.has(index) && !gamepadState.buttons.has(index);
+    if (newlyPressed(0)) {
+      if (state.mode === "title") startGame(hasSave());
+      else if (state.mode === "paused") togglePause();
+      else if (state.mode === "playing") interact();
+    }
+    if (state.mode === "playing") {
+      if (newlyPressed(2)) justPressed.add("j");
+      if (newlyPressed(1)) justPressed.add("k");
+      if (newlyPressed(3)) useRootlight();
+      if (newlyPressed(9)) togglePause();
+    }
+    gamepadState.buttons = nextButtons;
+  };
   const readMoveInput = () => {
-    let x = 0; let y = 0;
+    let x = gamepadState.vector.x; let y = gamepadState.vector.y;
     if (keys.has("a") || keys.has("arrowleft")) x -= 1;
     if (keys.has("d") || keys.has("arrowright")) x += 1;
     if (keys.has("w") || keys.has("arrowup")) y -= 1;
@@ -923,6 +991,7 @@
 
   const update = (dt) => {
     // Pause and end screens must freeze timers, hazards, particles, and boss sequences.
+    pollGamepadInput();
     if (state.mode !== "playing") return;
     if (state.hitStop > 0) { state.hitStop = Math.max(0, state.hitStop - dt); camera.shake = Math.max(0, camera.shake - dt * 1.8); updateCamera(dt); justPressed.clear(); return; }
     if (state.toastTimer > 0) { state.toastTimer -= dt * 1000; if (state.toastTimer <= 0) ui.toast.classList.remove("visible"); }
@@ -2035,12 +2104,19 @@
   document.getElementById("new-game").addEventListener("click", () => startGame(false));
   document.getElementById("continue-game").addEventListener("click", () => startGame(true));
   document.getElementById("resume-game").addEventListener("click", () => { state.mode = "playing"; hideScreens(); canvas.focus(); });
+  document.getElementById("pause-restart")?.addEventListener("click", () => { if (window.confirm("Restart Mosswake from the beginning? Your current save will be replaced.")) startGame(false); });
   document.getElementById("victory-close").addEventListener("click", () => { state.mode = "playing"; hideScreens(); canvas.focus(); updateHud(); });
-  document.getElementById("reset-save").addEventListener("click", () => { if (window.confirm("Erase your Mosswake save?")) resetProgress(); });
+  document.getElementById("restart-game")?.addEventListener("click", () => { if (window.confirm("Restart Mosswake from the beginning? Your current save will be replaced.")) startGame(false); });
+  ui.controlsToggle?.addEventListener("click", () => setControlsExpanded(ui.controlsToggle.getAttribute("aria-expanded") !== "true"));
+  document.getElementById("save-game")?.addEventListener("click", () => { const opening = ui.savePanel.hidden; openSavePanel(); if (!opening) updateSaveCode(); });
+  document.getElementById("update-save-code")?.addEventListener("click", updateSaveCode);
+  document.getElementById("copy-save")?.addEventListener("click", copySaveCode);
+  document.getElementById("restore-save")?.addEventListener("click", restoreFromSaveCode);
   ui.dialogueSpeed.addEventListener("click", () => { const speeds = [36, 52, 110]; const current = speeds.indexOf(state.dialogueSpeed); state.dialogueSpeed = speeds[(current + 1 + speeds.length) % speeds.length]; updateDialogueSpeedLabel(); saveData(); });
   canvas.addEventListener("pointerdown", () => canvas.focus());
-  window.addEventListener("keydown", (event) => { const key = event.key.toLowerCase(); const target = event.target instanceof HTMLElement ? event.target : null; if (target && target.closest("button, a, input, textarea, select, summary")) return; if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","j","k","e","l","p","escape","enter"," "].includes(key)) event.preventDefault(); const wasDown = keys.has(key); if (!wasDown) justPressed.add(key); keys.add(key); if (!wasDown && (key === "e" || key === "enter")) interact(); if (!wasDown && key === "l") useRootlight(); if (!wasDown && (key === "p" || key === "escape")) { if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); } else if (state.mode === "paused") { state.mode = "playing"; ui.pause.classList.add("hidden"); canvas.focus(); } updateHud(); } });
+  window.addEventListener("keydown", (event) => { const key = event.key.toLowerCase(); const target = event.target instanceof HTMLElement ? event.target : null; if (target && target.closest("button, a, input, textarea, select, summary")) return; if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","j","k","e","l","p","escape","enter"," "].includes(key)) event.preventDefault(); const wasDown = keys.has(key); if (!wasDown) justPressed.add(key); keys.add(key); if (!wasDown && (key === "e" || key === "enter")) interact(); if (!wasDown && key === "l") useRootlight(); if (!wasDown && (key === "p" || key === "escape")) togglePause(); });
   window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
+  window.addEventListener("gamepadconnected", () => showToast("Xbox controller connected", 1600));
   window.addEventListener("blur", () => { keys.clear(); if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } });
   document.addEventListener("visibilitychange", () => { if (document.hidden) { keys.clear(); if (state.mode === "playing") { saveData(); state.mode = "paused"; ui.pause.classList.remove("hidden"); updateHud(); } } });
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1516">
   <title>Mosswake — The Hollow Shrine</title>
-  <link rel="stylesheet" href="/mosswake/mosswake.css?v=13">
+  <link rel="stylesheet" href="/mosswake/mosswake.css?v=14">
 </head>
 <body>
   <div class="sky-glow sky-glow-one"></div>
@@ -67,7 +67,10 @@
           <p class="screen-kicker">LANTERNWOOD IS WAITING</p>
           <h2>Paused</h2>
           <p>Your place is safe beneath the leaves.</p>
-          <button id="resume-game" class="primary-button" type="button">Resume</button>
+          <div class="screen-actions">
+            <button id="resume-game" class="primary-button" type="button">Resume</button>
+            <button id="pause-restart" class="secondary-button" type="button">Restart</button>
+          </div>
         </div>
         <div id="victory-screen" class="screen-card victory-card hidden">
           <p class="screen-kicker">THE GUARDIAN REMEMBERS</p>
@@ -95,18 +98,33 @@
           <div id="map-dots" class="map-dots" aria-label="Exploration map"></div>
           <p>Explore, listen, and look for places the light does not reach.</p>
         </div>
-        <div class="hud-card controls-card">
-          <span class="hud-label">Controls</span>
-          <div><kbd>WASD</kbd><span>Move</span></div>
-          <div><kbd>J</kbd><span>Sword</span><kbd>K</kbd><span>Dash</span></div>
-          <div><kbd>E</kbd><span>Talk / open</span><kbd>L</kbd><span>Rootlight</span></div>
-          <div><kbd>P</kbd><span>Pause</span></div>
+        <div class="hud-card controls-card" id="controls-card">
+          <button id="controls-toggle" class="controls-toggle" type="button" aria-expanded="false" aria-controls="controls-content">
+            <span class="hud-label">Controls & save</span><span class="controls-summary">Show</span><span class="controls-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div id="controls-content" class="controls-content" hidden>
+            <div><kbd>WASD</kbd><span>Move</span></div>
+            <div><kbd>J</kbd><span>Sword</span><kbd>K</kbd><span>Dash</span></div>
+            <div><kbd>E</kbd><span>Talk / open</span><kbd>L</kbd><span>Rootlight</span></div>
+            <div><kbd>P</kbd><span>Pause</span></div>
+            <div class="gamepad-note"><i aria-hidden="true"></i><span>Xbox controller: left stick move · X sword · A interact · B dash · Y Rootlight · Menu pause</span></div>
+            <div class="controls-actions">
+              <button id="restart-game" class="secondary-button" type="button">Restart game</button>
+              <button id="save-game" class="secondary-button" type="button">Save / restore</button>
+            </div>
+            <div id="save-panel" class="save-panel" hidden>
+              <label for="save-code">Portable save code</label>
+              <div class="save-code-row"><input id="save-code" type="text" inputmode="latin" autocomplete="off" spellcheck="false" placeholder="Generate a code to keep your progress"><button id="copy-save" class="secondary-button" type="button">Copy</button></div>
+              <div class="save-code-actions"><button id="update-save-code" class="secondary-button" type="button">Update code</button><button id="restore-save" class="primary-button" type="button">Restore</button></div>
+              <small>Keep this code somewhere safe. Paste it here on another device or after clearing browser data.</small>
+              <span id="save-code-status" class="save-code-status" aria-live="polite"></span>
+            </div>
+          </div>
         </div>
-        <button id="reset-save" class="quiet-button" type="button">Erase save</button>
       </aside>
     </section>
     <p class="footer-note">A small original world by Johnny · custom art can be dropped into <code>mosswake/assets</code> as it grows.</p>
   </main>
-  <script src="/mosswake/mosswake.js?v=53"></script>
+  <script src="/mosswake/mosswake.js?v=54"></script>
 </body>
 </html>

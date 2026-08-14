@@ -111,6 +111,36 @@ button, a, summary { -webkit-tap-highlight-color:transparent; }
 .area-pill { padding:8px 11px; border:1px solid rgba(167,240,192,.14); border-radius:999px; background:rgba(7,20,17,.35); }
 @media (prefers-reduced-motion:reduce) { .screen-card::after { display:none; } }
 
+/* Player-facing controls and portable-save drawer. The drawer is collapsed by
+   default so the art remains the primary focus, while restart/restore stay one
+   deliberate click away instead of hiding behind a destructive erase action. */
+.controls-card { gap:0; overflow:hidden; }
+.controls-toggle { display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:9px; width:100%; min-height:36px; padding:0; border:0; color:var(--text); background:transparent; cursor:pointer; text-align:left; }
+.controls-toggle .hud-label { margin:0; }
+.controls-summary { color:var(--muted); font:500 9px/1 var(--mono); text-transform:uppercase; letter-spacing:.08em; }
+.controls-chevron { display:inline-grid; width:22px; height:22px; place-items:center; border:1px solid rgba(167,240,192,.18); border-radius:7px; color:var(--mint); background:rgba(167,240,192,.06); font:700 14px/1 var(--font); transition:transform .2s ease,background .2s ease; }
+.controls-card.expanded .controls-chevron { transform:rotate(180deg); background:rgba(167,240,192,.12); }
+.controls-toggle:focus-visible { outline:2px solid var(--gold); outline-offset:3px; border-radius:6px; }
+.controls-content { display:grid; gap:9px; margin-top:11px; padding-top:11px; border-top:1px solid rgba(192,231,204,.12); }
+.controls-content[hidden], .save-panel[hidden] { display:none; }
+.controls-content > div:not(.gamepad-note):not(.controls-actions):not(.save-panel) { display:grid; grid-template-columns:34px 1fr 34px 1fr; align-items:center; gap:5px; color:var(--muted); font:500 9px/1 var(--mono); }
+.controls-content > div:first-child { grid-template-columns:52px 1fr; }
+.gamepad-note { display:flex; align-items:flex-start; gap:7px; color:rgba(214,255,220,.72); font:500 8px/1.35 var(--mono); }
+.gamepad-note i { flex:0 0 7px; width:7px; height:7px; margin-top:2px; border-radius:50%; background:var(--mint); box-shadow:0 0 9px rgba(142,242,207,.7); }
+.controls-actions, .save-code-actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.controls-actions button, .save-code-actions button { min-height:32px; padding:0 8px; font-size:9px; }
+.save-panel { display:grid; gap:7px; padding:10px; border:1px solid rgba(167,240,192,.16); border-radius:10px; background:rgba(167,240,192,.045); }
+.save-panel label { color:var(--gold); font:700 9px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; }
+.save-code-row { display:grid; grid-template-columns:1fr auto; gap:6px; }
+.save-code-row input { min-width:0; height:32px; padding:0 8px; border:1px solid rgba(167,240,192,.18); border-radius:7px; color:var(--text); background:rgba(2,13,11,.58); font:500 9px/1 var(--mono); }
+.save-code-row input:focus { outline:2px solid rgba(255,215,123,.72); outline-offset:1px; border-color:var(--gold); }
+.save-code-row button { min-height:32px; padding:0 9px; font-size:9px; }
+.save-panel small { color:var(--muted); font:500 8px/1.4 var(--mono); }
+.save-code-status { min-height:12px; color:var(--mint); font:600 8px/1.35 var(--mono); }
+.save-code-status.error { color:var(--rose); }
+@media (max-width:980px) { .controls-content { grid-template-columns:repeat(2,minmax(0,1fr)); }.controls-content > div:not(.gamepad-note):not(.controls-actions):not(.save-panel), .gamepad-note, .controls-actions, .save-panel { grid-column:span 2; }.controls-content > div:not(.gamepad-note):not(.controls-actions):not(.save-panel):first-child { grid-column:span 1; } }
+@media (max-width:580px) { .controls-content { grid-template-columns:1fr; }.controls-content > div:not(.gamepad-note):not(.controls-actions):not(.save-panel), .gamepad-note, .controls-actions, .save-panel { grid-column:auto; } }
+
 /* Generated UI surface family: the atlas is decorative progressive enhancement;
    typography, contrast, and interaction remain owned by CSS for accessibility. */
 .screen-card { background-image:url('/mosswake/assets/ui/ui-panels-generated-v1.png'),radial-gradient(circle at 50% 36%,rgba(72,150,111,.16),transparent 36%),linear-gradient(145deg,rgba(7,28,21,.9),rgba(5,12,15,.94)); background-size:400% 400%,auto,auto; background-position:33.3333% 33.3333%,center,center; background-repeat:no-repeat; background-blend-mode:soft-light,normal,normal; }

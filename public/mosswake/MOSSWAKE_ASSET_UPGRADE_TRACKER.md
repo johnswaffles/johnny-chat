@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-13 — Player-facing controls, portable saves, and gamepad support
+
+- Replaced the confusing destructive `Erase save` control with a collapsed-by-default `Controls & save` drawer. It contains explicit `Restart game` and `Save / restore` actions, plus an Xbox mapping reference.
+- Added portable `mw1_...` save codes. `Update code` serializes the current progress, `Copy` uses the clipboard when available, and `Restore` validates and rehydrates the save through the existing migration path before autosaving locally.
+- Added Xbox/gamepad polling for left-stick/D-pad movement, A interact/dialogue, X sword, B dash, Y Rootlight, and Menu pause. Keyboard controls remain unchanged.
+- Added a restart action to the pause screen and bumped the page cache keys to CSS v14 / JS v54. The existing modular art pipeline is untouched.
+- Local UI smoke confirmed the drawer is collapsed by default, the erase control is gone, generated codes use the `mw1_` prefix, invalid codes are rejected, and a valid code restores successfully. Hardware-controller verification remains a live-device check.
+
 ## 2026-08-13 — Reusable visual QA pass: road hierarchy cleanup
 
 - Replayed the public opening at gameplay scale after the painted road-family rollout. The continuous path was readable, but four leftover `outdoor-ground` cards still crossed the road and read as misplaced meadow beds.
