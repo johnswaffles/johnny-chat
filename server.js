@@ -1231,25 +1231,28 @@ function extractResponseText(response) {
   return parts.join("\n").trim();
 }
 
-const TEXTSMITH_SCHEMA = {
-  type: "json_schema",
-  name: "textsmith_messages",
-  description: "One or two polished plain-text customer SMS messages.",
-  strict: true,
-  schema: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      messages: {
-        type: "array",
-        minItems: 1,
-        maxItems: 2,
-        items: { type: "string" }
-      }
-    },
-    required: ["messages"]
-  }
-};
+function getTextsmithSchema(mode) {
+  const split = mode === "split";
+  return {
+    type: "json_schema",
+    name: split ? "textsmith_split_messages" : "textsmith_single_message",
+    description: split ? "Exactly two polished plain-text customer SMS messages." : "Exactly one polished plain-text customer SMS message.",
+    strict: true,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        messages: {
+          type: "array",
+          minItems: split ? 2 : 1,
+          maxItems: split ? 2 : 1,
+          items: { type: "string" }
+        }
+      },
+      required: ["messages"]
+    }
+  };
+}
 
 function stripTextsmithEmoji(value) {
   return String(value || "")
@@ -1321,14 +1324,14 @@ function textsmithPrompt(mode, draft = "") {
     "You are TextSmith, a professional customer-message editor.",
     "Rewrite the user's rough text into a polished SMS that sounds natural, specific, warm, and professional.",
     "Preserve every important fact, commitment, date, price, name, request, and call to action.",
-    "Use the available character budget intelligently. Do not make the message unnecessarily short, and do not pad it with filler.",
+    "Use the available character budget intelligently. Quality, completeness, and natural phrasing matter more than brevity. Do not make the message unnecessarily short, and do not pad it with filler.",
     "When the source contains several useful details, preserve that richness in a comfortably full sentence instead of reducing it to a bare summary.",
     "Shorten only what is required to meet the SMS limit. Never use awkward abbreviations, telegraphic fragments, or vague wording just to save characters.",
     "Never invent information or change the user's meaning.",
     "Never use emoji, emoticons, decorative symbols, hashtags, or markdown. Use ordinary plain text only.",
     split
       ? "Return exactly two complete, coherent SMS messages. Divide the meaning at a natural point, and make each message fit the carrier-safe concatenated SMS budget. Do not add labels, numbering, or explanations."
-      : "Return exactly one complete SMS message that fits the carrier-safe single-message budget. Do not add labels or explanations.",
+      : "SINGLE-MESSAGE MODE IS A HARD CONTRACT: return exactly one complete SMS message that fits the carrier-safe single-message budget. Never suggest, mention, offer, or recommend splitting into two messages. Never output a second message, a note, or an explanation. If the source is too long, compress it thoughtfully until one rich, natural message fits.",
     "Return only JSON in this shape: {\"messages\":[\"message text\"]}.",
     draft ? `Your previous draft did not satisfy the constraints. Revise it without losing important meaning. Previous draft: ${draft}` : ""
   ].filter(Boolean).join(" ");
@@ -1338,8 +1341,8 @@ async function createTextsmithResponse({ input, mode, model, draft = "" }) {
   const response = await openai.responses.create({
     model,
     reasoning: { effort: "none" },
-    max_output_tokens: mode === "split" ? 520 : 340,
-    text: { format: TEXTSMITH_SCHEMA },
+    max_output_tokens: mode === "split" ? 520 : 380,
+    text: { format: getTextsmithSchema(mode) },
     input: [
       { role: "system", content: textsmithPrompt(mode, draft) },
       { role: "user", content: `ROUGH CUSTOMER TEXT\n${input}` }
@@ -4390,17 +4393,17 @@ app.post("/api/textsmith", async (req, res) => {
       messages = await createTextsmithResponse({ input, mode, model });
     }
 
-    if (!textsmithMessagesFit(messages, mode)) {
+    for (let attempt = 0; attempt < 2 && !textsmithMessagesFit(messages, mode); attempt += 1) {
       messages = await createTextsmithResponse({
         input,
         mode,
         model,
-        draft: messages.join(" / ") || "No usable draft was returned."
+        draft: (mode === "single" ? messages.join(" ") : messages.join(" / ")) || "No usable draft was returned."
       });
     }
 
     if (!textsmithMessagesFit(messages, mode)) {
-      return res.status(422).json({ detail: "The message could not be fitted without damaging its meaning. Try the two-message option or remove a little source detail." });
+      return res.status(422).json({ detail: "The message could not be fitted cleanly without damaging its meaning. Please simplify the source text slightly and try again." });
     }
 
     void recordJohnnyChatUsage("textsmith", { model, mode });
