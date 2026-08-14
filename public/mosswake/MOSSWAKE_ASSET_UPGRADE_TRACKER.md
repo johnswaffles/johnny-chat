@@ -7,7 +7,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Replayed the public opening at gameplay scale after the painted road-family rollout. The continuous path was readable, but four leftover `outdoor-ground` cards still crossed the road and read as misplaced meadow beds.
 - Removed only those road overlays. The generated `road-family` atlas remains the modular surface treatment, while the outdoor-ground family continues to serve clearings, bushes, and non-road terrain.
 - No collision, movement, combat, NPC, or save behavior changed. Cache key is now `mosswake.js?v=53` so the live edge can be checked without stale code.
-- Focused validation still required after deployment: compare the opening road at gameplay scale, then run Rowan interaction and one directional sword swing.
+- Local and public v53 smoke passed: the road remains continuous and readable, every manifest asset returned successfully, the opening rendered at gameplay scale, and the browser reported no warning/error logs. The live page now serves `/mosswake/mosswake.js?v=53`.
 
 ## 2026-08-13 — Reusable visual QA pass: hierarchy and movement scale follow-up
 
