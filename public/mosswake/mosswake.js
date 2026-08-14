@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=26";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=27";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1400,16 +1400,28 @@
     // the sprite instead of making idle breathing read as hovering.
     const groundedY = y + 11;
     drawShadow(x, groundedY, (npc.id === "brindle" ? 20 : 18) * (1 + Math.abs(stride) * .025), 7, .32);
-    const customNpcKey = npc.id === "rowan" ? "npc-rowan" : "npc-named";
+    const isTalking = state.dialogue && npc.near;
+    const hasRoleActivity = npc.id !== "rowan" && loadedAssets.has("npc-activity");
+    // Keep the expressive named-family talk frames, while each NPC's normal
+    // behavior gets a real sequential role loop from the activity atlas.
+    const customNpcKey = npc.id === "rowan" ? "npc-rowan" : isTalking ? "npc-named" : hasRoleActivity ? "npc-activity" : "npc-named";
     const facingFrame = npc.facing < 0 ? 2 : npc.facing > 0 ? 0 : 1;
     const namedIndex = npc.id === "tansy" ? 0 : npc.id === "brindle" ? 1 : npc.id === "lumen" ? 2 : 3;
+    const activityBase = npc.id === "tansy" ? 0 : npc.id === "brindle" ? 4 : npc.id === "lumen" ? 8 : 12;
+    const activityFrame = activityBase + (npc.behavior === "pace"
+      ? Math.floor((npc.animTime || 0) * 1.05) % 4
+      : npc.behavior === "fire"
+        ? Math.floor((npc.clock || 0) * 1.8) % 4
+        : npc.behavior === "map"
+          ? Math.floor((npc.clock || 0) * 1.35) % 4
+          : 0);
     const customNpcFrame = npc.id === "rowan"
       ? (state.dialogue && npc.near ? 12 + Math.floor((npc.clock || 0) * 4) % 4 : npc.behavior === "map" ? 8 + Math.floor((npc.clock || 0) * 2.6) % 4 : npc.behavior === "pace" ? 4 + Math.floor((npc.animTime || 0) * 1.4) % 4 : facingFrame)
-      : (state.dialogue && npc.near ? 12 + namedIndex : npc.behavior === "map" || npc.behavior === "fire" ? 8 + namedIndex : npc.behavior === "pace" ? (Math.floor((npc.animTime || 0) * .72) % 2 ? 4 + namedIndex : namedIndex) : namedIndex);
+      : (isTalking ? 12 + namedIndex : hasRoleActivity ? activityFrame : npc.behavior === "map" || npc.behavior === "fire" ? 8 + namedIndex : npc.behavior === "pace" ? (Math.floor((npc.animTime || 0) * .72) % 2 ? 4 + namedIndex : namedIndex) : namedIndex);
     const npcBottoms = npc.id === "rowan"
       ? [0.965, 0.971, 0.974, 0.974, 1, 1, 0.84, 1, 1, 1, 1, 1, 0.827, 0.824, 0.821, 0.827]
       : [1, 0.997, 1, 1, 0.949, 0.955, 0.965, 0.978, 1, 1, 1, 1, 0.901, 0.897, 0.897, 0.907];
-    const customNpc = drawOptionalSprite(customNpcKey, x, groundedY, { frame: customNpcFrame, width: npc.id === "brindle" ? 58 : 56, height: 74, anchorY: npcBottoms[customNpcFrame] || .96, flipX: npc.facing < 0, alpha: npc.near ? 1 : .98 });
+    const customNpc = drawOptionalSprite(customNpcKey, x, groundedY, { frame: customNpcFrame, width: npc.id === "brindle" ? 58 : 56, height: 74, anchorY: hasRoleActivity && !isTalking ? .92 : (npcBottoms[customNpcFrame] || .96), flipX: npc.facing < 0, alpha: npc.near ? 1 : .98 });
     if (!customNpc) {
       ctx.save(); ctx.translate(x, y); ctx.scale(npc.facing || 1, 1);
       ctx.fillStyle = npc.id === "brindle" ? "#315b58" : "#4a3c43"; ctx.fillRect(-10 - stride, 8, 7, 8); ctx.fillRect(3 + stride, 8, 7, 8);

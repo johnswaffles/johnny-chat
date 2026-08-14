@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-13 — Named NPC role-activity atlas
+
+- Audited the opening outpost and confirmed Rowan already has a complete directional/route sheet, while Tansy, Brindle, and Lumen were still sharing the family atlas with only static role swaps. The next highest-value gap was believable activity at the exact NPCs players meet in the first minute.
+- Generated `assets/npcs/named-npc-activity-generated-v1-source.png` and normalized `assets/npcs/named-npc-activity-generated-v1.png` as a 1248×1248 RGBA 4×4 atlas. Rows are Tansy's four-frame cook loop, Brindle's four-frame walking loop, Lumen's four-frame map-work loop, and a future outpost-trader cart-tending loop.
+- Added the `npc-activity` manifest slot (manifest v27) and routed non-talking named NPCs to their role row. Existing `npc-named` frames remain the talk/reaction fallback, and Rowan's dedicated sheet remains unchanged. Brindle's walk row mirrors for left/right via the existing facing flip.
+- Runtime cache is now `mosswake.js?v=56`; display scale and `.92` activity foot anchor preserve the existing NPC ground line and shadow contract. No collision, route, dialogue, or save logic changed.
+- Source and normalized atlases remain together under `assets/npcs/` for later cell-by-cell replacement without gameplay rewrites.
+
 ## 2026-08-13 — Dungeon ambient storytelling prop family
 
 - Audited the live opening, the named NPC family, the dungeon architecture/landmark atlases, and the first three dungeon-room compositions. The NPC family and major dungeon silhouettes are already cohesive and integrated; the remaining visible gap was the “in-between” room detail, where floor props still relied on simple canvas primitives.
@@ -69,7 +77,8 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Asset family | Current files | States / directions | Status | Next quality step |
 | --- | --- | --- | --- | --- |
 | Lantern Warden | `assets/player/warden-sheet-generated-v1.png`, `assets/player/warden-run-sheet-generated-v1.png`, `assets/player/warden-attack-directions-generated-v1.png` | Idle, 4-direction walk, 4-direction sword attack, dash, hurt | Integrated / tested | Keep the repaired per-frame feet anchors; replace only with a higher-resolution sheet that preserves the same ground line |
-| Rowan | `assets/npcs/rowan-sheet-generated-v1.png` | Idle, walk, map work, talk/reaction | Integrated / tested | Add the remaining named NPC sheets using Rowan as the reference |
+| Rowan | `assets/npcs/rowan-sheet-generated-v1.png` | Idle, walk, map work, talk/reaction | Integrated / tested | Keep as the primary directional NPC reference |
+| Tansy, Brindle, Lumen | `assets/npcs/named-npc-activity-generated-v1.png`, `assets/npcs/named-npc-family-generated-v1.png` | Tansy cook loop, Brindle 4-frame walk (mirrored left/right), Lumen map-work loop; named-family talk/reaction | Integrated / tested | Add dedicated talk/gesture variants only if dialogue review finds a mismatch |
 | Mossling | `assets/enemies/mossling-sheet-generated-v1.png` | Idle, skitter, pounce, hit recoil | Integrated / tested | Keep as the small-creature reference; refine only for a focused readability defect |
 | Distinct enemy family | `assets/enemies/enemy-family-generated-v1.png` | Thornback, Moon Wisp, Ambush Moth, Rootling/Root Warden; idle, telegraph, attack, hit | Integrated / tested | Keep the family atlas as the roster reference; add specialized death/telegraph FX only if a later encounter review needs them |
 | Enemy combat effects | `assets/enemies/enemy-effects-generated-v1.png` | Charge, ranged, ambush, impact, and four drop feedback states | Integrated / tested | Keep the atlas as the small-enemy feedback reference; refine only if a focused encounter review finds overlap or low contrast |
