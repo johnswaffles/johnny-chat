@@ -1,5 +1,5 @@
 {
-  "version": 44,
+  "version": 45,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -248,6 +248,18 @@
       "columns": 4,
       "frames": 16,
       "fps": 8,
+      "displayWidth": 56,
+      "displayHeight": 74,
+      "anchorX": 0.5,
+      "anchorY": 0.92
+    },
+    "npc-reaction": {
+      "src": "npcs/named-npc-reaction-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 7,
       "displayWidth": 56,
       "displayHeight": 74,
       "anchorX": 0.5,

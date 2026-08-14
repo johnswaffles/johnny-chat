@@ -2,6 +2,16 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — NPC conversational reaction family and discovery-state parity
+
+- Rechecked the player benchmark, all five named NPCs, the fresh Lanternwood opening, Rowan's approach smoke, and the six-room dungeon source/layouts. No approved NPC or dungeon family was regenerated.
+- Promoted the next NPC gap: non-Rowan dialogue previously held one `npc-named` talk frame, so Tansy, Brindle, Lumen, and Marlow appeared frozen while speaking.
+- Generated `assets/npcs/named-npc-reaction-generated-v1-source.png` (1254×1254 RGB chroma-key source) and prepared `assets/npcs/named-npc-reaction-generated-v1.png` (1248×1248 RGBA 4×4 atlas). Rows are Tansy, Brindle, Lumen, and Marlow; each row contains four sequential listening, gesture, emphasis, and reset frames. The source remains beside the production atlas.
+- Added the `npc-reaction` manifest slot at v45 and routed non-Rowan dialogue through it with a four-frame cadence at 7 fps and a `.92` grounding anchor. Rowan's dedicated talk sheet, dialogue text/portraits, interaction radius, save behavior, and NPC routes are unchanged.
+- Promoted the already-generated outdoor-breakables remnant cells into the broken-state renderer: root-ivy frame 12, pond-ivy frame 11, and reed-cache frame 15. Broken secrets now leave a subtle grounded remnant instead of silently disappearing; flags, collision, passage opening, and rewards remain unchanged.
+- Fresh browser startup loaded the reaction atlas with HTTP 200 and clean warning/error logs. The targeted movement smoke reached the existing run-ended screen without introducing a console error; no gameplay tuning was changed. Bumped the route script cache to `mosswake.js?v=82`.
+- Approved player, NPC, breakable-plant, waystone, shoreline, rock, bridge, Guardian, and Sanctum families remain the visual references.
+
 ## 2026-08-14 — Waystone exploration-clue family and full parity recheck
 
 - Rechecked the current player benchmark, all five named NPCs, the fresh Lanternwood opening, and the six-room dungeon source/layouts. NPC inventory and dungeon actor coverage remain complete; no approved character family was regenerated.
