@@ -2,6 +2,13 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Rootlight bridge presentation integration
+
+- Audited the Moon Switch Hall shortcut after the masonry pass. The generated bridge cell already existed in `assets/dungeon/dungeon-ambient-props-generated-v1.png`, but runtime only displayed it as a small broken fragment even after Rootlight opened the crossing.
+- Promoted ambient-props frame 10 to a readable 350×166 active bridge state at the opened crossing, with a restrained Rootlight pool and five drifting motes. The locked state keeps the small broken-plank clue plus a dark gap so the change is legible before and after activation.
+- Collision, room geometry, progression, save data, and transition logic remain unchanged. Bumped the page script cache key to `mosswake.js?v=63`; manifest v31 remains authoritative.
+- `node --check`, scoped diff checks, outside startup, Moon Switch Hall locked/open snapshots, all six dungeon-room smoke views, and browser warning/error checks passed after final verification.
+
 ## 2026-08-14 — Dungeon masonry family
 
 - Audited the six dungeon rooms after the floor-family pass. The remaining broad mismatch was the repeated procedural wall field behind the authored architecture, hazards, and actors.
@@ -157,7 +164,8 @@ The current game has no dungeon NPC actor; dungeon inhabitants are enemy familie
 | 6 | Dungeon doors and thresholds | Integrated / tested | Keep the lock/open atlas as the doorway reference; refine individual cells only if a room-specific silhouette needs it |
 | 7 | Dungeon hazards | Integrated / tested | Keep the hazard atlas as the water/ember reference; refine only if visual scale or readability needs adjustment |
 | 8 | Dungeon floor family | Integrated / tested | Keep the 4×4 floor atlas as the room-surface reference; refine only if a transition edge or material mismatch appears |
-| 9 | Dungeon masonry family | Integrated / pending visual QA | Keep the wall atlas behind authored room pieces; adjust opacity or panel placement only if edges compete with landmarks |
+| 9 | Dungeon masonry family | Integrated / tested | Keep the wall atlas behind authored room pieces; adjust opacity or panel placement only if a specific room edge competes with a landmark |
+| 10 | Rootlight bridge | Integrated / tested | Keep the enlarged active bridge state; refine only if a transition screenshot shows a readability or grounding issue |
 
 ## 2026-08-13 — Repeating visual director pass: room transition reveal
 

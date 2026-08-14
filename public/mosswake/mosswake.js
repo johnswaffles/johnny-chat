@@ -1737,7 +1737,18 @@
       ctx.fillStyle = "rgba(213,255,209,.4)"; ctx.font = "12px DM Mono"; ctx.textAlign = "center"; ctx.fillText("THE FIRST LOCK REMEMBERS BRASS", 600, 470);
     } else if (key === "1-0") {
       drawDungeonRoots(time, [[120, 90, 150, 1], [1080, 90, 150, -1]]);
-      ambient(1, 252, 526, 94, 104, .8); ambient(7, 948, 526, 104, 104, .8); ambient(10, 414, 638, 122, 94, .76);
+      ambient(1, 252, 526, 94, 104, .8); ambient(7, 948, 526, 104, 104, .8);
+      if (state.rootlightMoonBridge && loadedAssets.has("dungeon-ambient-props")) {
+        // The generated bridge cell was previously shown as a tiny broken
+        // plank fragment even after Rootlight opened the shortcut. Promote it
+        // to the readable traversal state without changing collision geometry.
+        ctx.save(); ctx.globalCompositeOperation = "screen"; drawLightPool(600, 620, 138, COLORS.mint, .075); ctx.restore();
+        drawOptionalSprite("dungeon-ambient-props", 600, 620, { frame: 10, width: 350, height: 166, anchorX: .5, anchorY: .86, alpha: .98 });
+        ctx.save(); ctx.globalAlpha = .64 + Math.sin(time * 2.2) * .08; ctx.fillStyle = COLORS.mint; for (let i = 0; i < 5; i += 1) { const x = 474 + i * 63; const y = 600 + Math.sin(time * 1.5 + i) * 5; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
+      } else {
+        ambient(10, 414, 638, 122, 94, .76);
+        ctx.save(); ctx.globalAlpha = .32; ctx.fillStyle = "#0e1a1b"; ctx.fillRect(492, 606, 216, 34); ctx.restore();
+      }
       const moon = ctx.createRadialGradient(600, 205, 5, 600, 205, 200); moon.addColorStop(0, "rgba(179,220,255,.16)"); moon.addColorStop(1, "rgba(179,220,255,0)"); ctx.fillStyle = moon; ctx.fillRect(330, 70, 540, 360);
       ctx.strokeStyle = "rgba(192,225,255,.2)"; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(600, 200, 130, Math.PI, Math.PI * 2); ctx.stroke(); drawSwitch(600, 380, state.switches, time); drawRune(600, 150, state.switches ? "MOON LIT" : "MOON");
       drawRune(600, 620, state.rootlightMoonBridge ? "BRIDGE" : "DORMANT"); ctx.fillStyle = "rgba(218,240,255,.5)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.switches ? "THE LOWER GATE BREATHES" : "A SWITCH SLEEPS BELOW THE MOON", 600, 474);
