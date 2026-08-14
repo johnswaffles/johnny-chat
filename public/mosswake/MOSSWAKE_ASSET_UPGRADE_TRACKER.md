@@ -2,6 +2,13 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-13 — Dungeon hazard edge and threshold integration
+
+- Completed the remaining prepared cells in `assets/dungeon/dungeon-hazards-generated-v1.png`. Flooded Vault now has a restrained west-wall inlet, lower-left outflow, and Drowned Sigil accent; Ashen Antechamber now has a north-wall ash threshold and Rootlight seal.
+- These accents are intentionally low-alpha, visual-only, and placed outside collision rectangles so the rooms gain architectural continuity without becoming cluttered or changing navigation. The existing hazard surfaces, damage feedback, doors, and procedural fallbacks remain authoritative.
+- Bumped the page script cache key to `mosswake.js?v=60`. No new raster artwork was generated this pass because these cells were already production-formatted and tracked as prepared; this iteration finished their in-game integration instead.
+- `node --check`, atlas manifest validation, scoped diff checks, and local visual smoke for both rooms passed without console warnings/errors.
+
 ## 2026-08-13 — Rootlight-parted water and hazard feedback integration
 
 - Finished the prepared dungeon-hazard family instead of starting a new unrelated asset. Flooded Vault (`0-1`) now swaps to authored atlas frame 3 when Rootlight parts the water, preserving the same footprint while making the safe traversal state visually explicit. The procedural water remains a safe fallback when the atlas is unavailable.
@@ -109,6 +116,18 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | Collectibles and exploration items | `assets/items/exploration-items-generated-v1.png` | Key, Heartseed, lantern seed, Dewglass lens, moth token, moonroot cache, hidden chest, and Rootlight lantern states | Integrated / pending live visual check | Keep the atlas as the item reference; replace individual cells only when a specific silhouette or matte issue is found |
 | Outpost, cabin, shrine, and entrance structures | `assets/buildings/mosswake-structure-family-generated-v1.png` | Lit/intact/damaged/open outpost, shrine, cabin, roof/wall modules, lantern doorway, root arch | Integrated / pending live visual check | Keep the structure atlas as the building-scale reference; retain procedural facades as fallback |
 | Hollow Guardian | `assets/bosses/hollow-guardian-sheet-generated-v1.png` | Phase I idle/attack, phase II transformed attack, phase-break, stagger, defeat | Integrated / tested | Keep the generated sheet as the boss reference; only refine if a focused arena review finds a real readability issue |
+
+### NPC coverage audit (2026-08-13)
+
+| NPC | Location / role | Directions | Idle / walk | Work or special | Talk / grounding | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| Rowan | Outpost keeper, overworld start | Down/up/side via `npc-rowan` | Idle and authored route walk | Map-work row and proximity pause | Talk/reaction frames; measured foot anchor | Integrated / tested |
+| Tansy | Lantern cook, campfire | Front/side family views | Calm idle | Four-frame cook loop | Talk portrait and named-family reaction; grounded `.92` activity anchor | Integrated / tested |
+| Brindle | Pond ferrier, lower path | Front/side family views, mirrored walk | Four-frame route walk | Ferrier prop context | Talk portrait and reaction; grounded `.92` activity anchor | Integrated / tested |
+| Lumen | Shrine cartographer, upper field | Front/side family views | Calm idle | Four-frame map-work loop | Talk portrait and named-family reaction; grounded `.92` activity anchor | Integrated / tested |
+| Trader (future) | No runtime spawn yet | Portrait prepared only | Not applicable | Cart-tending row prepared in activity atlas | Portrait prepared; runtime NPC, dialogue, and directional body set still absent | Prepared / not spawned |
+
+The current game has no dungeon NPC actor; dungeon inhabitants are enemy families and the Guardian. Do not generate a trader body set until the trader is actually placed in an authored outpost interaction so the new art can be judged in context.
 
 ## High-value environment and effects queue
 

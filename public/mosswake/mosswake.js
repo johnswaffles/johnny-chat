@@ -1637,6 +1637,22 @@
       if (index === 0) { ctx.fillStyle = "rgba(255,230,168,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(hazard.label.toUpperCase(), hazard.x + hazard.w / 2, hazard.y - 12); }
     });
   };
+  const drawDungeonHazardThresholds = (time, key) => {
+    if (!loadedAssets.has("dungeon-hazards")) return;
+    const breathe = .68 + Math.sin(time * .7 + key.length) * .05;
+    if (key === "0-1") {
+      // A small inlet and sigil make the flooded room read as a connected
+      // waterway instead of one isolated rectangle. They are visual-only.
+      drawOptionalSprite("dungeon-hazards", 166, 274, { frame: 13, width: 148, height: 108, anchorX: .5, anchorY: .5, alpha: breathe, rotation: -Math.PI / 2 });
+      drawOptionalSprite("dungeon-hazards", 260, 646, { frame: 12, width: 154, height: 96, anchorX: .5, anchorY: .5, alpha: .58, rotation: .08 });
+      drawOptionalSprite("dungeon-hazards", 960, 650, { frame: 14, width: 94, height: 94, anchorX: .5, anchorY: .5, alpha: .8 });
+    } else if (key === "1-1") {
+      // The ash threshold sits against the north wall, framing the room's
+      // entrance without competing with the two damaging trenches.
+      drawOptionalSprite("dungeon-hazards", 600, 142, { frame: 15, width: 160, height: 106, anchorX: .5, anchorY: .5, alpha: breathe, rotation: 0 });
+      drawOptionalSprite("dungeon-hazards", 360, 635, { frame: 14, width: 88, height: 88, anchorX: .5, anchorY: .5, alpha: .7 });
+    }
+  };
   const drawBossArenaBackdrop = (time) => {
     const phaseTwo = state.bossPhase === 2; const accent = phaseTwo ? "#d66b92" : "#8ab879"; const glow = phaseTwo ? "rgba(255,102,145,.22)" : "rgba(151,222,177,.12)";
     ctx.save();
@@ -1711,12 +1727,13 @@
         // same footprint as the hazard, but removes the damaging water read.
         if (!drawOptionalSprite("dungeon-hazards", 600, 390, { frame: 3, width: 422, height: 322, anchorX: .5, anchorY: .5, alpha: .92 })) drawWater({ x: 410, y: 250, w: 380, h: 280 }, time);
       } else drawDungeonHazardVisual(time);
+      drawDungeonHazardThresholds(time, key);
       drawChest(600, 390, state.heartChestOpened); drawRune(600, 150, "HEART");
       ambient(4, 222, 216, 108, 112, .82); ambient(3, 1002, 176, 96, 112, .76); ambient(9, 982, 616, 104, 104, .74);
       ctx.fillStyle = "#566e68"; ctx.fillRect(130, 540, 200, 18); ctx.fillRect(870, 230, 200, 18); ctx.fillStyle = "#9bb7a3"; ctx.fillRect(150, 535, 160, 5); ctx.fillRect(890, 225, 160, 5);
       drawRune(960, 650, state.rootlightWaterway ? "WATER PARTED" : "DORMANT"); if (state.rootlightWaterway) { ctx.save(); ctx.globalAlpha = .75; ctx.fillStyle = "#c0d4b4"; for (let i = 0; i < 6; i += 1) { const x = 470 + i * 55; const y = 390 + Math.sin(i * 1.7) * 35; ctx.beginPath(); ctx.ellipse(x, y, 18, 9, -.2, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); } ctx.fillStyle = "rgba(188,239,218,.45)"; ctx.font = "11px DM Mono"; ctx.textAlign = "center"; ctx.fillText(state.heartChestOpened ? "THE WATER REMEMBERS YOUR FOOTSTEPS" : "CROSS THE FLOOD · TAKE ONLY WHAT YOU NEED", 600, 690);
     } else if (key === "1-1") {
-      drawDungeonRoots(time, [[105, 70, 200, 1], [1080, 70, 200, -1]]); drawDungeonHazardVisual(time);
+      drawDungeonRoots(time, [[105, 70, 200, 1], [1080, 70, 200, -1]]); drawDungeonHazardVisual(time); drawDungeonHazardThresholds(time, key);
       ambient(13, 300, 208, 116, 92, .74); ambient(11, 972, 600, 100, 104, .8); ambient(14, 226, 498, 96, 96, .72);
       ctx.fillStyle = "#6d4b43"; ctx.fillRect(420, 180, 360, 20); ctx.fillStyle = "#b88363"; ctx.fillRect(440, 177, 120, 4); ctx.fillRect(620, 177, 120, 4);
       ctx.fillStyle = state.ashCacheOpened ? "rgba(255,190,116,.33)" : "rgba(255,126,95,.24)"; ctx.beginPath(); ctx.arc(180, 635, 58 + Math.sin(time * 2) * 3, 0, Math.PI * 2); ctx.fill(); drawChest(180, 635, state.ashCacheOpened); drawRune(180, 552, state.ashCacheOpened ? "LANTERN" : "CACHE"); drawRune(360, 635, state.rootlightTested ? "AWAKE" : "TRY HERE"); drawRune(600, 370, "ASH GATE");
