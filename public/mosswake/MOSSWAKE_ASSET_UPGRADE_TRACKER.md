@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-14 — Brindle directional movement sheet
+
+- Continued the NPC parity audit after the moonwell landmark pass. Brindle is the most visible unfinished moving NPC: he previously used one right-facing activity row mirrored for left movement, so his pole, boots, and body never showed a true up/down/left/right walk.
+- Generated `assets/npcs/brindle-directional-walk-generated-v1-source.png` (1254×1254 chroma-key source) and prepared `assets/npcs/brindle-directional-walk-generated-v1.png` (1248×1248 RGBA production atlas). Rows are Brindle facing down/front, up/back, left, and right; each row has four sequential contact/weight-transfer/passing/recovery frames with a shared foot line.
+- Added manifest v36 and routed only Brindle's non-dialogue pacing state through `npc-brindle-walk`. His existing named-family talk/reaction frames and pond-ferrier context remain unchanged. Route, interaction, collision, dialogue, and save behavior are untouched.
+- Added axis-aware facing selection to Brindle's route and proximity pause so vertical segments use back/front rows and horizontal segments use true left/right artwork; the renderer disables the old horizontal mirror for this sheet and uses a `.94` feet anchor.
+- Validation passed: `node --check`, alpha/dimension checks, fresh outside startup/restart, Brindle sheet request/integration smoke, and browser warning/error checks were clean. The normal QA run still ends when the opening combat grace period expires if the player remains idle, which is existing gameplay behavior rather than an NPC regression.
+
 ## 2026-08-14 — Secondary moonwell ruin landmark
 
 - Continued the outside-world replacement audit after the cliff family pass. The smaller ruin at `(875,285)` was the last obvious procedural landmark and read as a generic stone blob beside the authored northeast moon arch.
@@ -178,7 +186,7 @@ This is the persistent production record for Mosswake's replaceable visual libra
 | --- | --- | --- | --- | --- | --- | --- |
 | Rowan | Outpost keeper, overworld start | Down/up/side via `npc-rowan` | Idle and authored route walk | Map-work row and proximity pause | Talk/reaction frames; measured foot anchor | Integrated / tested |
 | Tansy | Lantern cook, campfire | Front/side family views | Calm idle | Four-frame cook loop | Talk portrait and named-family reaction; grounded `.92` activity anchor | Integrated / tested |
-| Brindle | Pond ferrier, lower path | Front/side family views, mirrored walk | Four-frame route walk | Ferrier prop context | Talk portrait and reaction; grounded `.92` activity anchor | Integrated / tested |
+| Brindle | Pond ferrier, lower path | Down/up/left/right via `npc-brindle-walk` | Four-frame directional route walk | Ferrier prop context | Talk portrait and reaction remain on named-family frames; grounded `.94` directional anchor | Integrated / tested |
 | Lumen | Shrine cartographer, upper field | Front/side family views | Calm idle | Four-frame map-work loop | Talk portrait and named-family reaction; grounded `.92` activity anchor | Integrated / tested |
 | Trader (future) | No runtime spawn yet | Portrait prepared only | Not applicable | Cart-tending row prepared in activity atlas | Portrait prepared; runtime NPC, dialogue, and directional body set still absent | Prepared / not spawned |
 

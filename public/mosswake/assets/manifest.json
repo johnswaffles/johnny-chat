@@ -193,6 +193,18 @@
       "anchorX": 0.5,
       "anchorY": 0.92
     },
+    "npc-brindle-walk": {
+      "src": "npcs/brindle-directional-walk-generated-v1.png",
+      "frameWidth": 312,
+      "frameHeight": 312,
+      "columns": 4,
+      "frames": 16,
+      "fps": 8,
+      "displayWidth": 58,
+      "displayHeight": 76,
+      "anchorX": 0.5,
+      "anchorY": 0.94
+    },
     "portrait-tansy": { "src": "npcs/portraits/tansy-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
     "portrait-brindle": { "src": "npcs/portraits/brindle-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
     "portrait-lumen": { "src": "npcs/portraits/lumen-portrait-generated-v1.png", "frameWidth": 96, "frameHeight": 96, "columns": 1, "frames": 1, "displayWidth": 72, "displayHeight": 72, "anchorX": 0.5, "anchorY": 0.5 },
