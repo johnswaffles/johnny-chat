@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090d1a">
   <title>Tetris — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-3">
+  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-4">
 </head>
 <body>
   <div class="aurora aurora-one"></div>
@@ -99,6 +99,16 @@
           <div class="control-row"><kbd>P</kbd><span>Pause</span></div>
         </div>
         <button id="pause-button" class="secondary-button" type="button">Pause game</button>
+        <div class="speed-card mini-card">
+          <span class="panel-label">Game speed</span>
+          <div id="speed-controls" class="speed-controls" role="group" aria-label="Game speed">
+            <button type="button" data-speed="slow" aria-pressed="false">Slow</button>
+            <button type="button" data-speed="classic" aria-pressed="true">Classic</button>
+            <button type="button" data-speed="fast" aria-pressed="false">Fast</button>
+            <button type="button" data-speed="really-fast" aria-pressed="false">Really fast</button>
+          </div>
+          <p id="speed-caption" class="speed-caption">Classic pace</p>
+        </div>
       </aside>
     </section>
 
@@ -111,7 +121,7 @@
       </div>
       <div class="action-pad" aria-label="Action controls">
         <button data-action="rotate" type="button" aria-label="Rotate piece"><b>A</b><span>Rotate</span></button>
-        <button data-action="hold" type="button" aria-label="Hold piece"><b>B</b><span>Hold</span></button>
+        <button data-action="hold" type="button" aria-label="Hold piece (X)"><b>X</b><span>Hold</span></button>
       </div>
       <button data-action="drop" class="drop-control" type="button" aria-label="Hard drop"><b>DROP</b><span>Hard drop</span></button>
     </section>
@@ -120,6 +130,6 @@
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=remaster-2026-3"></script>
+  <script src="/tetris/tetris.js?v=remaster-2026-4"></script>
 </body>
 </html>
