@@ -724,7 +724,13 @@
     const direction = readMoveInput();
     const facing = direction.x || direction.y ? direction : normalized(player.facingX, player.facingY);
     player.attack = .34; player.attackElapsed = 0; player.attackCooldown = .36; player.attackBuffer = 0; player.attackHitRegistered = false;
-    player.attackDirectionX = facing.x; player.attackDirectionY = facing.y; player.targetFacingX = facing.x; player.targetFacingY = facing.y;
+    // Capture one direction for the entire swing. The body, hitbox, sword
+    // sheet, and trail must all agree even if the player changes input during
+    // the short attack window. Snap the facing immediately so the first
+    // attack frame cannot briefly show the previous direction.
+    player.attackDirectionX = facing.x; player.attackDirectionY = facing.y;
+    player.facingX = facing.x; player.facingY = facing.y;
+    player.targetFacingX = facing.x; player.targetFacingY = facing.y;
     playSfx("attack"); spawnDust(player.x - facing.x * 10, player.y - facing.y * 10, 3, "#d7c594");
   };
   const resolveAttackHit = () => {
@@ -978,7 +984,9 @@
     if (justPressed.has("j") || justPressed.has(" ")) attack(); if (justPressed.has("k")) dash();
     if (player.attackBuffer > 0 && player.attackCooldown <= 0) attack();
     const input = readMoveInput(); const hasInput = input.x || input.y;
-    if (hasInput) { player.targetFacingX = input.x; player.targetFacingY = input.y; }
+    // Do not let held movement rewrite the direction of an active swing. The
+    // next movement frame after recovery will update the target naturally.
+    if (hasInput && player.attack <= 0 && player.dash <= 0) { player.targetFacingX = input.x; player.targetFacingY = input.y; }
     const facingBlend = 1 - Math.pow(.0005, dt);
     player.facingX = moveToward(player.facingX, player.targetFacingX, facingBlend); player.facingY = moveToward(player.facingY, player.targetFacingY, facingBlend);
     const facingLength = Math.hypot(player.facingX, player.facingY) || 1; player.facingX /= facingLength; player.facingY /= facingLength;
@@ -2163,10 +2171,17 @@
   const drawAttackTrail = (presentedX = player.x, presentedY = player.y) => {
     if (player.attack <= 0) return;
     const linearProgress = clamp(player.attackElapsed / .34, 0, 1); const progress = 1 - Math.pow(1 - linearProgress, 2.2); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
+    // The authored effect is painted facing right. Mirroring its local
+    // horizontal axis for left-facing swings preserves the same readable
+    // sweep (rear → tip) instead of rotating the animation 180° and making
+    // the motion play backwards. Adding PI to the rotation keeps the mirrored
+    // local axis aligned with diagonal/left movement vectors as well.
+    const flipTrail = player.attackDirectionX < -.2;
+    const trailRotation = angle + (flipTrail ? Math.PI : 0);
     // The first atlas row is a deliberate four-beat sweep: glint, arc, contact, fade.
-    // Rotation keeps the same painted effect readable in all eight movement directions.
-    const slashFrame = Math.min(3, Math.floor(linearProgress * 4)); if (drawOptionalSprite("fx-slash", presentedX, presentedY, { frame: slashFrame, width: 96, height: 64, rotation: angle, anchorX: .22, anchorY: .5, alpha: clamp(player.attack / .12, 0, 1) })) return;
-    ctx.save(); ctx.translate(presentedX, presentedY); ctx.rotate(angle); ctx.lineCap = "round";
+    // Rotation plus the directional mirror keeps the painted effect readable in all eight movement directions.
+    const slashFrame = Math.min(3, Math.floor(linearProgress * 4)); if (drawOptionalSprite("fx-slash", presentedX, presentedY, { frame: slashFrame, width: 96, height: 64, rotation: trailRotation, anchorX: .22, anchorY: .5, flipX: flipTrail, alpha: clamp(player.attack / .12, 0, 1) })) return;
+    ctx.save(); ctx.translate(presentedX, presentedY); ctx.rotate(trailRotation); if (flipTrail) ctx.scale(-1, 1); ctx.lineCap = "round";
     const anticipation = clamp(linearProgress / .2, 0, 1); const start = -1.02 + progress * .22; const end = -.92 + progress * 1.92; const fade = clamp((player.attack < .12 ? player.attack / .12 : 1), 0, 1);
     if (linearProgress < .3) { ctx.globalAlpha = .18 + anticipation * .24; ctx.strokeStyle = "rgba(255,231,164,.72)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(20, 0, 31, -1.55, -1.05); ctx.stroke(); }
     ctx.globalAlpha = .16 + fade * .42; ctx.strokeStyle = "#fff5d2"; ctx.lineWidth = 15; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
@@ -2204,8 +2219,13 @@
     const bob = playerPresentationBob(time);
     const lean = player.visualState === "hurt" ? -.12 : player.visualState === "attack" ? .08 : 0;
     drawShadow(player.x, player.y + 5, player.visualState === "dash" ? 25 : 19, player.visualState === "dash" ? 5 : 7, .36);
-    const facingFrame = player.facingY < -.35 ? 4 : player.facingY > .35 ? 0 : 2;
-    const movementRow = Math.abs(player.facingX) > Math.abs(player.facingY) ? (player.facingX >= 0 ? 1 : 3) : (player.facingY < 0 ? 2 : 0);
+    // While moving, targetFacing is the immediate input direction. Using the
+    // smoothed facing vector here caused a short but obvious right-facing
+    // frame when the player started moving left (and vice versa).
+    const poseFacingX = player.visualState === "move" ? player.targetFacingX : player.visualState === "attack" ? player.attackDirectionX : player.facingX;
+    const poseFacingY = player.visualState === "move" ? player.targetFacingY : player.visualState === "attack" ? player.attackDirectionY : player.facingY;
+    const facingFrame = poseFacingY < -.35 ? 4 : poseFacingY > .35 ? 0 : 2;
+    const movementRow = Math.abs(poseFacingX) > Math.abs(poseFacingY) ? (poseFacingX >= 0 ? 1 : 3) : (poseFacingY < 0 ? 2 : 0);
     const runFrame = movementRow * 4 + Math.floor((player.walk * 1.22) % 4);
     // The authored sword row is ordered by readable aim: down, up, right,
     // left, then a short recovery. Select a four-frame directional slice rather
@@ -2229,7 +2249,7 @@
     if (!customPlayer) {
       ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
       const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
-      ctx.scale(player.facingX < -.2 ? -1 : 1, 1);
+      ctx.scale(poseFacingX < -.2 ? -1 : 1, 1);
       ctx.fillStyle = player.visualState === "dash" ? "#89d8c7" : "#3d6780"; ctx.beginPath(); ctx.ellipse(0, 1, 15, 16, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = ART.ink; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = COLORS.player; ctx.beginPath(); ctx.arc(0, -14, 10, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(37,48,40,.72)"; ctx.stroke();
       ctx.fillStyle = "#4a302c"; ctx.beginPath(); ctx.arc(0, -19, 11, Math.PI, 0); ctx.fill();

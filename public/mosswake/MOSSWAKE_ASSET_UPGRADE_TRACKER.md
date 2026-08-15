@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-15 — Directional sword trail and player-facing repair
+
+- Repaired the player direction contract in `mosswake.js`: attack start now captures and immediately applies one facing vector, held movement cannot rewrite it mid-swing, and the attack body, hitbox, sword atlas, and trail all use that same vector.
+- The `fx-slash` atlas now mirrors its locally right-facing sweep for left-facing and left-diagonal attacks while preserving the frame progression. The procedural fallback uses the same transform, so a right-to-left swing reads rear-to-tip instead of playing backwards.
+- Movement frames now use the immediate movement target instead of the smoothed turn vector. This removes the one-to-two-frame wrong-facing flash when reversing direction; idle and attack poses retain their intentional facing.
+- No new raster artwork was needed. The existing `assets/player/warden-run-sheet-generated-v1.png`, `assets/player/warden-attack-directions-generated-v1.png`, and `assets/effects/lantern-blade-fx-generated-v1.png` remain the visual references and are still replaceable through the manifest.
+- Bumped the route script cache to `mosswake.js?v=85`. Collision, attack timing, damage, and movement speed are unchanged.
+
 ## 2026-08-14 — Short meadow-edge family and roadside composition pass
 
 - Replayed the fresh Lanternwood opening and Root Gallery against the improved Warden benchmark. NPCs, dungeon story props, road, water, and major landmarks remain cohesive; the most visible remaining mismatch was the repeated translucent grass-patch cards at the road edge, which read as planted beds instead of low meadow detail at gameplay scale.
