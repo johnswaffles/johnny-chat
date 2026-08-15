@@ -470,32 +470,8 @@ button:active { transform: translateY(1px); }
   .action-pad button { width: 38px; height: 38px; min-height: 38px; }
 }
 
-/* Cross-device play controls and a focused play mode. The board engine stays
-   unchanged; this layer makes the same actions reachable by touch everywhere. */
-body[data-play-mode="true"] { overflow: hidden; }
-body[data-play-mode="true"] .site-nav { opacity: 0; pointer-events: none; }
-.game-shell { position: relative; }
-.minimize-button {
-  position: absolute;
-  top: 18px;
-  right: 0;
-  z-index: 10;
-  display: none;
-  align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid rgba(105,231,255,.25);
-  border-radius: 999px;
-  color: var(--muted);
-  background: rgba(10,15,31,.72);
-  box-shadow: 0 8px 24px rgba(0,0,0,.22), inset 0 1px rgba(255,255,255,.08);
-  font: 700 10px/1 var(--mono);
-  cursor: pointer;
-  touch-action: manipulation;
-}
-.minimize-button span:first-child { color: var(--cyan); font-size: 15px; line-height: 0; }
-.minimize-button:hover { color: var(--text); border-color: rgba(105,231,255,.5); }
+/* Cross-device touch controls. The board engine stays unchanged; this layer
+   makes the same actions reachable by touch everywhere. */
 .touch-controls {
   display: grid;
   grid-template-columns: 1.2fr 1fr .95fr;
@@ -538,42 +514,8 @@ body[data-play-mode="true"] .site-nav { opacity: 0; pointer-events: none; }
 .drop-control b { display: block; font: 800 11px/1 var(--font); letter-spacing: .08em; }
 .touch-controls button:active { transform: translateY(2px) scale(.98); filter: brightness(1.16); }
 
-.game-shell[data-play-mode="true"] {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: flex;
-  width: 100%;
-  height: 100dvh;
-  max-width: none;
-  margin: 0;
-  padding: clamp(20px, 3vh, 36px) clamp(20px, 4vw, 62px) calc(18px + env(safe-area-inset-bottom));
-  overflow: auto;
-  background: radial-gradient(circle at 50% 20%, rgba(105,231,255,.12), transparent 43%), linear-gradient(145deg, #090d1a, #070913 60%, #0b1020);
-}
-.game-shell[data-play-mode="true"] .minimize-button { display: inline-flex; top: clamp(14px, 2.2vh, 25px); right: clamp(14px, 2.5vw, 38px); }
-.game-shell[data-play-mode="true"] .game-intro { width: min(1640px, 100%); margin: 0 auto; padding-right: 98px; }
-.game-shell[data-play-mode="true"] .game-intro h1 { font-size: clamp(54px, 6vw, 88px); }
-.game-shell[data-play-mode="true"] .arcade {
-  flex: 1;
-  width: min(1640px, 100%);
-  min-height: 0;
-  margin: 20px auto 0;
-  grid-template-columns: minmax(190px, 250px) minmax(420px, 1fr) minmax(190px, 250px);
-  align-items: center;
-  padding: clamp(20px, 3vw, 40px);
-}
-.game-shell[data-play-mode="true"] .board-wrap,
-.game-shell[data-play-mode="true"] #board { width: min(620px, 46vw, 52dvh); height: auto; aspect-ratio: 1 / 2; }
-.game-shell[data-play-mode="true"] .board-bottomline { margin-top: 10px; }
-.game-shell[data-play-mode="true"] .touch-controls { margin-top: 14px; }
-
 @media (max-width: 960px) and (min-width: 681px) {
   .touch-controls { width: min(610px, calc(100vw - 28px)); }
-  .game-shell[data-play-mode="true"] { padding-left: 14px; padding-right: 14px; }
-  .game-shell[data-play-mode="true"] .arcade { grid-template-columns: minmax(145px, 180px) minmax(320px, 1fr) minmax(145px, 180px); gap: 12px; padding: 18px; }
-  .game-shell[data-play-mode="true"] .board-wrap,
-  .game-shell[data-play-mode="true"] #board { width: min(430px, 44vw, 52dvh); }
 }
 
 @media (max-width: 680px) {
@@ -586,13 +528,4 @@ body[data-play-mode="true"] .site-nav { opacity: 0; pointer-events: none; }
   .action-pad span, .drop-control span { margin-top: 3px; font-size: 6px; }
   .drop-control { min-height: 48px !important; }
   .drop-control b { font-size: 10px; }
-  .game-shell[data-play-mode="true"] { padding: max(14px, env(safe-area-inset-top)) 7px calc(12px + env(safe-area-inset-bottom)); }
-  .game-shell[data-play-mode="true"] .minimize-button { top: max(10px, env(safe-area-inset-top)); right: 8px; min-height: 30px; padding: 0 9px; font-size: 8px; }
-  .game-shell[data-play-mode="true"] .game-intro { padding-right: 80px; }
-  .game-shell[data-play-mode="true"] .game-intro h1 { font-size: clamp(40px, 13vw, 58px); }
-  .game-shell[data-play-mode="true"] .arcade { margin-top: 9px; padding: 7px; }
-  .game-shell[data-play-mode="true"] .board-wrap,
-  .game-shell[data-play-mode="true"] #board { width: min(420px, calc(100vw - 24px)); }
-  .game-shell[data-play-mode="true"] .board-bottomline { display: none; }
-  .game-shell[data-play-mode="true"] .touch-controls { position: sticky; bottom: 6px; z-index: 12; margin-top: 8px; }
 }
