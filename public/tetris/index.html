@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090d1a">
   <title>Tetris — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-8">
+  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-9">
 </head>
 <body>
   <div class="aurora aurora-one"></div>
@@ -52,18 +52,22 @@
           <div class="level-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><span id="level-progress-bar"></span></div>
           <span id="level-progress-copy" class="level-progress-copy">0/10 to level 2</span>
         </div>
-        <div class="mini-card">
-          <span class="panel-label">Next pieces</span>
-          <div class="next-stack" aria-label="Next three pieces">
-            <canvas id="next-canvas" width="120" height="58" aria-label="Next piece"></canvas>
-            <canvas id="next-canvas-1" width="120" height="58" aria-label="Second next piece"></canvas>
-            <canvas id="next-canvas-2" width="120" height="58" aria-label="Third next piece"></canvas>
+        <div class="mini-card next-card">
+          <span class="panel-label">Next piece</span>
+          <div class="next-stack next-stack-single" aria-label="Next piece preview">
+            <canvas id="next-canvas" width="120" height="108" aria-label="Next piece"></canvas>
           </div>
         </div>
-        <div class="mini-card">
-          <span class="panel-label">Hold</span>
-          <canvas id="hold-canvas" width="120" height="120" aria-label="Held piece"></canvas>
-          <button id="hold-button" class="mini-action" type="button">Hold <kbd>C</kbd></button>
+        <div class="mini-card chance-card">
+          <div class="chance-heading">
+            <span class="panel-label">Second chances</span>
+            <strong id="second-chance-count">4 left</strong>
+          </div>
+          <div id="second-chance-meter" class="chance-meter" role="meter" aria-label="Second chances remaining" aria-valuemin="0" aria-valuemax="4" aria-valuenow="4">
+            <i></i><i></i><i></i><i></i>
+          </div>
+          <p class="chance-copy">Erase the last piece and begin again with the piece that was next.</p>
+          <button id="second-chance-button" class="mini-action chance-button" type="button" disabled><span aria-hidden="true">↶</span> Ready after first move</button>
         </div>
       </aside>
 
@@ -127,15 +131,15 @@
       </div>
       <div class="action-pad" aria-label="Action controls">
         <button data-action="rotate" type="button" aria-label="Rotate piece"><b>A</b><span>Rotate</span></button>
-        <button data-action="hold" type="button" aria-label="Hold piece (X)"><b>X</b><span>Hold</span></button>
+        <button data-action="second-chance" type="button" aria-label="Use a second chance"><b>↶</b><span>Chance</span></button>
       </div>
       <button data-action="drop" class="drop-control" type="button" aria-label="Hard drop"><b>DROP</b><span>Hard drop</span></button>
     </section>
-    <p class="tip">7-piece bag • SRS rotation • ghost piece • hold queue • combos • local high score</p>
+    <p class="tip">7-piece bag • SRS rotation • ghost piece • four second chances • combos • local high score</p>
   </main>
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=remaster-2026-8"></script>
+  <script src="/tetris/tetris.js?v=remaster-2026-9"></script>
 </body>
 </html>
