@@ -84,6 +84,11 @@
   const musicButton = document.getElementById("music-button");
   const speedControls = Array.from(document.querySelectorAll("[data-speed]"));
   const speedCaption = document.getElementById("speed-caption");
+  const reactorState = document.getElementById("reactor-state");
+  const reactorMeter = document.getElementById("reactor-meter");
+  const reactorBar = document.getElementById("reactor-bar");
+  const reactorChargeElement = document.getElementById("reactor-charge");
+  const reactorBonus = document.getElementById("reactor-bonus");
 
   const SPEEDS = {
     slow: { multiplier: 1.55, caption: "Slow pace" },
@@ -92,6 +97,9 @@
     "really-fast": { multiplier: .22, caption: "Really fast · hard mode" }
   };
   const MAX_SECOND_CHANCES = 4;
+  const MAX_REACTOR_CHARGE = 100;
+  const OVERDRIVE_MOVES = 5;
+  const REACTOR_GAIN = [0, 25, 50, 75, 100];
 
   let board = [];
   let current = null;
@@ -123,6 +131,8 @@
   let secondChances = MAX_SECOND_CHANCES;
   let moveStartSnapshot = null;
   let lastMoveSnapshot = null;
+  let reactorCharge = 0;
+  let overdriveMoves = 0;
   const heldKeys = new Map();
 
 
@@ -156,7 +166,9 @@
     lines: snapshot.lines,
     level: snapshot.level,
     combo: snapshot.combo,
-    backToBack: snapshot.backToBack
+    backToBack: snapshot.backToBack,
+    reactorCharge: snapshot.reactorCharge,
+    overdriveMoves: snapshot.overdriveMoves
   } : null;
 
   const captureMoveStart = () => ({
@@ -167,7 +179,9 @@
     lines,
     level,
     combo,
-    backToBack
+    backToBack,
+    reactorCharge,
+    overdriveMoves
   });
 
   const matrixFor = (type, rotation = 0) => {
@@ -401,6 +415,7 @@
   };
 
   const applyScore = (cleared, tSpin, perfectClear) => {
+    const overdriveWasActive = overdriveMoves > 0;
     const difficult = cleared === 4 || (tSpin && cleared > 0);
     let points = tSpin ? (T_SPIN_POINTS[cleared] || 0) * level : (LINE_POINTS[cleared] || 0) * level;
     if (cleared > 0) {
@@ -416,6 +431,7 @@
       combo = -1;
     }
     if (perfectClear && cleared) points += 2000 * level;
+    if (overdriveWasActive) points *= 2;
     score += points;
     lines += cleared;
     level = Math.floor(lines / 10) + 1;
@@ -424,6 +440,20 @@
     else if (cleared) statusText.textContent = cleared + " line" + (cleared > 1 ? "s" : "") + " cleared";
     if (perfectClear && cleared) statusText.textContent = "Perfect clear!";
     if (combo > 0 && cleared) statusText.textContent += "  Combo x" + (combo + 1);
+    if (overdriveWasActive) {
+      overdriveMoves = Math.max(0, overdriveMoves - 1);
+      if (cleared) statusText.textContent += " · 2× OVERDRIVE";
+      else statusText.textContent = overdriveMoves ? "Overdrive · " + overdriveMoves + " moves left" : "Overdrive complete · reactor cooling";
+      if (!overdriveMoves) reactorCharge = 0;
+    } else if (cleared) {
+      reactorCharge = Math.min(MAX_REACTOR_CHARGE, reactorCharge + REACTOR_GAIN[cleared]);
+      if (reactorCharge >= MAX_REACTOR_CHARGE) {
+        overdriveMoves = OVERDRIVE_MOVES;
+        statusText.textContent = "REACTOR ONLINE — 2× scoring for 5 moves";
+        playTone(780, .18, "sawtooth", .026);
+        window.setTimeout(() => playTone(1040, .22, "sine", .025), 100);
+      }
+    }
     updateStats();
     if (cleared) {
       playTone(tSpin ? 620 : cleared === 4 ? 720 : 520, .16, "triangle", .035);
@@ -523,6 +553,8 @@
     secondChances = MAX_SECOND_CHANCES;
     moveStartSnapshot = null;
     lastMoveSnapshot = null;
+    reactorCharge = 0;
+    overdriveMoves = 0;
     lineClearBadge.dataset.visible = "false";
     lineClearBadge.dataset.tier = "";
     lineClearBadge.textContent = "";
@@ -547,6 +579,7 @@
 
   const beginGame = () => {
     resetGame();
+    document.body.classList.add("game-active");
     running = true;
     paused = false;
     ensureAudio();
@@ -558,6 +591,7 @@
     pauseButton.dataset.paused = "false";
     statusElement.dataset.state = "playing";
     statusText.textContent = "Stay in the flow";
+    window.scrollTo({ top: 0, behavior: "instant" });
     boardCanvas.focus();
     if (musicEnabled) {
       window.JohnnyAudioFocus?.claim("tetris");
@@ -621,6 +655,23 @@
     }
   };
 
+  const updateReactorUI = () => {
+    const active = overdriveMoves > 0;
+    const charge = active ? MAX_REACTOR_CHARGE : reactorCharge;
+    if (reactorState) reactorState.textContent = active ? "OVERDRIVE" : "CHARGING";
+    if (reactorMeter) reactorMeter.setAttribute("aria-valuenow", String(charge));
+    if (reactorBar) reactorBar.style.width = charge + "%";
+    if (reactorChargeElement) reactorChargeElement.textContent = active ? "2× SCORE" : charge + "%";
+    if (reactorBonus) reactorBonus.textContent = active
+      ? overdriveMoves + " move" + (overdriveMoves === 1 ? "" : "s") + " remaining"
+      : charge ? "Energy stored" : "Clear lines to charge";
+    if (arcadeElement) {
+      arcadeElement.dataset.reactor = active ? "overdrive" : charge > 0 ? "charging" : "idle";
+      arcadeElement.dataset.reactorCharge = String(charge);
+      arcadeElement.dataset.overdriveMoves = String(overdriveMoves);
+    }
+  };
+
   const updateStats = () => {
     scoreElement.textContent = score.toLocaleString();
     linesElement.textContent = String(lines);
@@ -631,6 +682,7 @@
     if (levelProgressBar) levelProgressBar.style.width = (levelLines * 10) + "%";
     if (levelProgressCopy) levelProgressCopy.textContent = levelLines + "/10 to level " + (level + 1);
     if (levelProgressElement) levelProgressElement.setAttribute("aria-valuenow", String(levelLines));
+    updateReactorUI();
     updateAtmosphere();
   };
 
@@ -913,6 +965,8 @@
     level = snapshot.level;
     combo = snapshot.combo;
     backToBack = snapshot.backToBack;
+    reactorCharge = snapshot.reactorCharge;
+    overdriveMoves = snapshot.overdriveMoves;
     current = null;
     moveStartSnapshot = null;
     lastMoveSnapshot = null;
@@ -930,6 +984,7 @@
     running = true;
     paused = false;
     gameOver = false;
+    document.body.classList.add("game-active");
     lineClearBadge.dataset.visible = "false";
     lineClearBadge.dataset.tier = "";
     lineClearBadge.textContent = "";

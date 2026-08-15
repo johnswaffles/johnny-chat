@@ -1205,3 +1205,222 @@ body::before {
   .board-wrap[data-state="second-chance"],
   .board-wrap[data-state="second-chance"] #board { animation: none; }
 }
+
+/* Reactor Cockpit
+   The cabinet becomes a single-screen console after Start: the 10 x 20 board
+   keeps square cells while its size is calculated from the available height. */
+.reactor-console {
+  position: relative;
+  width: 100%;
+  margin: 0 0 9px;
+  padding: 8px 10px 7px;
+  overflow: hidden;
+  border: 1px solid rgba(105,231,255,.2);
+  border-radius: 11px;
+  background:
+    linear-gradient(90deg, rgba(105,231,255,.065), transparent 36%, rgba(178,140,255,.055)),
+    rgba(3,8,20,.78);
+  box-shadow: inset 0 1px rgba(255,255,255,.055), inset 0 -9px 18px rgba(0,0,0,.16);
+}
+.reactor-console::after {
+  position: absolute;
+  inset: 0 auto 0 -35%;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.11), transparent);
+  content: "";
+  opacity: .55;
+  transform: skewX(-18deg);
+  animation: reactor-scan 5.6s ease-in-out infinite;
+  pointer-events: none;
+}
+.reactor-heading, .reactor-meta { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.reactor-heading strong { color: var(--cyan); font: 500 8px/1 var(--mono); letter-spacing: .12em; text-shadow: 0 0 12px rgba(105,231,255,.5); }
+.reactor-meter { position: relative; z-index: 1; height: 6px; margin: 6px 0 5px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; background: rgba(0,0,0,.32); box-shadow: inset 0 2px 5px rgba(0,0,0,.34); }
+.reactor-meter::after { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 2px), rgba(3,8,20,.78) calc(25% - 2px) 25%); content: ""; pointer-events: none; }
+.reactor-meter span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #69e7ff, #b28cff 58%, #ff73be); box-shadow: 0 0 14px rgba(105,231,255,.7); transition: width .48s cubic-bezier(.2,.8,.2,1); }
+.reactor-meta { color: rgba(160,175,215,.62); font: 500 7px/1 var(--mono); letter-spacing: .04em; }
+.reactor-meta span:first-child { color: rgba(215,245,255,.88); }
+
+.arcade[data-reactor="overdrive"] {
+  border-color: rgba(255,214,92,.48);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,214,92,.19), transparent 32%),
+    radial-gradient(circle at 74% 20%, rgba(255,115,190,.12), transparent 25%),
+    linear-gradient(145deg, rgba(30,25,52,.96), rgba(7,10,24,.97));
+  box-shadow: 0 0 0 1px rgba(255,245,196,.08), 0 0 92px rgba(255,214,92,.18), 0 34px 120px rgba(0,0,0,.48), inset 0 1px rgba(255,255,255,.12);
+}
+.arcade[data-reactor="overdrive"] .reactor-console {
+  border-color: rgba(255,224,112,.66);
+  background: linear-gradient(105deg, rgba(255,214,92,.2), rgba(255,115,190,.14) 52%, rgba(105,231,255,.16));
+  box-shadow: inset 0 1px rgba(255,255,255,.14), 0 0 30px rgba(255,214,92,.25);
+  animation: overdrive-console 1.1s ease-in-out infinite alternate;
+}
+.arcade[data-reactor="overdrive"] .reactor-heading strong { color: #fff4b0; text-shadow: 0 0 16px rgba(255,214,92,.9); }
+.arcade[data-reactor="overdrive"] .reactor-meter span { background: linear-gradient(90deg, #fff4b0, #ffcc52 34%, #ff73be 68%, #69e7ff); animation: reactor-flow .8s linear infinite; }
+.arcade[data-reactor="overdrive"] .board-column { border-color: rgba(255,222,100,.58); box-shadow: inset 0 1px rgba(255,255,255,.13), inset 0 0 38px rgba(255,115,190,.08), 0 0 75px rgba(255,214,92,.17), 0 24px 70px rgba(0,0,0,.38); }
+.arcade[data-reactor="overdrive"] .board-wrap { border-color: rgba(255,238,160,.82); box-shadow: 0 0 0 8px rgba(255,214,92,.075), 0 0 0 1px rgba(255,115,190,.28), 0 0 105px rgba(255,214,92,.34), 0 28px 58px rgba(0,0,0,.4); }
+.arcade[data-reactor="overdrive"] .score-card strong { background: linear-gradient(180deg, #fff, #fff2a9 48%, #ff9dc7); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 16px rgba(255,214,92,.55)); }
+@keyframes reactor-scan { 0%, 20% { left: -35%; } 62%, 100% { left: 120%; } }
+@keyframes reactor-flow { to { filter: hue-rotate(22deg) brightness(1.12); } }
+@keyframes overdrive-console { from { filter: brightness(.96); } to { filter: brightness(1.18); } }
+
+body.game-active { height: 100dvh; overflow: hidden; }
+body.game-active .site-nav { display: none; }
+body.game-active .game-shell {
+  display: grid;
+  grid-template-rows: 38px minmax(0, 1fr) 72px;
+  gap: 8px;
+  width: min(1080px, calc(100vw - 18px));
+  height: 100dvh;
+  margin: 0 auto;
+  padding: 8px 0;
+}
+body.game-active .game-intro { align-items: center; min-height: 0; }
+body.game-active .game-intro > div:first-child { display: flex; align-items: baseline; gap: 12px; }
+body.game-active .game-intro .eyebrow, body.game-active .game-intro .lede { display: none; }
+body.game-active .game-intro h1 { margin: 0; font-size: 34px; line-height: 1; letter-spacing: -.06em; }
+body.game-active .game-status { margin: 0; padding: 8px 11px; font-size: 9px; }
+body.game-active .arcade {
+  --cockpit-board-height: clamp(200px, calc(100dvh - 250px), 620px);
+  --cockpit-board-width: calc(var(--cockpit-board-height) / 2);
+  grid-template-columns: minmax(145px, 210px) calc(var(--cockpit-board-width) + 30px) minmax(145px, 210px);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.5vw, 16px);
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  padding: 10px 14px;
+  overflow: hidden;
+  border-radius: 26px;
+}
+body.game-active .side-panel { align-self: center; max-height: 100%; gap: 8px; padding: 0; }
+body.game-active .stat-card, body.game-active .mini-card { padding: 10px; border-radius: 12px; }
+body.game-active .score-card strong { margin: 7px 0 8px; font-size: clamp(25px, 3.2vw, 39px); }
+body.game-active .streak-row { margin-top: 7px; }
+body.game-active .level-progress { margin-top: 8px; }
+body.game-active .next-card .next-stack-single { min-height: 70px; margin-top: 7px; padding: 3px; }
+body.game-active .next-card .next-stack-single canvas { width: 92px; height: 68px; }
+body.game-active .chance-card { min-height: 158px; gap: 6px; }
+body.game-active .chance-meter { padding: 4px; }
+body.game-active .chance-meter i { height: 19px; }
+body.game-active .chance-copy { display: none; }
+body.game-active .chance-button { min-height: 32px; margin-top: 1px; padding: 5px; }
+body.game-active .music-card p { display: none; }
+body.game-active .music-button { margin-top: 7px; }
+body.game-active .controls-card { gap: 5px; }
+body.game-active .control-row { font-size: 8px; }
+body.game-active .control-row kbd { min-height: 17px; font-size: 8px; }
+body.game-active .secondary-button { min-height: 31px; }
+body.game-active .speed-controls { gap: 4px; margin-top: 7px; }
+body.game-active .speed-controls button { min-height: 25px; font-size: 7px; }
+body.game-active .speed-caption { margin-top: 6px; font-size: 7px; }
+body.game-active .board-column { width: calc(var(--cockpit-board-width) + 30px); padding: 9px 14px 9px; border-radius: 23px; }
+body.game-active .board-column::before { inset: 5px; border-radius: 18px; }
+body.game-active .board-topline { margin-bottom: 5px; font-size: 7px; }
+body.game-active .board-bottomline { margin-top: 5px; font-size: 6px; }
+body.game-active .board-wrap, body.game-active #board { width: var(--cockpit-board-width); height: var(--cockpit-board-height); }
+body.game-active .board-wrap { border-radius: 14px; }
+body.game-active #board, body.game-active .board-overlay { border-radius: 13px; }
+body.game-active .reactor-console { margin-bottom: 6px; padding: 5px 8px; border-radius: 9px; }
+body.game-active .reactor-meter { height: 5px; margin: 4px 0; }
+body.game-active .reactor-meta { font-size: 6px; }
+body.game-active .touch-controls {
+  align-self: stretch;
+  width: min(760px, calc(100vw - 24px));
+  height: 72px;
+  margin: 0 auto;
+  padding: 7px 14px;
+  border-radius: 18px;
+}
+body.game-active .d-pad { grid-template-columns: repeat(3, 28px); grid-template-rows: repeat(2, 26px); gap: 3px; }
+body.game-active .touch-controls button { min-height: 26px; }
+body.game-active .action-pad button { width: 44px; height: 44px; min-height: 44px; }
+body.game-active .drop-control { min-height: 46px !important; }
+body.game-active .tip { display: none; }
+
+@media (max-width: 900px) and (min-width: 681px) {
+  body.game-active .game-shell { width: calc(100vw - 12px); }
+  body.game-active .arcade { grid-template-columns: minmax(128px, 145px) calc(var(--cockpit-board-width) + 26px) minmax(128px, 145px); gap: 7px; padding: 8px; }
+  body.game-active .board-column { width: calc(var(--cockpit-board-width) + 26px); padding-right: 12px; padding-left: 12px; }
+  body.game-active .stat-card, body.game-active .mini-card { padding: 8px; }
+  body.game-active .chance-button { font-size: 7px; }
+}
+
+@media (max-width: 680px) {
+  body.game-active .game-shell {
+    grid-template-rows: 34px minmax(0, 1fr) 66px;
+    gap: 5px;
+    width: 100%;
+    padding: max(5px, env(safe-area-inset-top)) 5px max(5px, env(safe-area-inset-bottom));
+  }
+  body.game-active .game-intro { padding: 0 3px; }
+  body.game-active .game-intro h1 { font-size: 27px; }
+  body.game-active .game-status { display: none; }
+  body.game-active .arcade {
+    --cockpit-board-height: clamp(300px, min(calc((100vw - 24px) * 2), calc(100dvh - 304px)), 540px);
+    grid-template-columns: 1fr;
+    grid-template-rows: 61px minmax(0, 1fr);
+    gap: 4px;
+    padding: 5px;
+    overflow: visible;
+    border-radius: 18px;
+  }
+  body.game-active .left-panel {
+    display: grid;
+    grid-template-columns: 1fr .78fr 1.16fr;
+    grid-row: 1;
+    width: 100%;
+    height: 61px;
+    gap: 4px;
+    padding: 0;
+  }
+  body.game-active .left-panel .stat-card, body.game-active .left-panel .mini-card { min-height: 0; height: 61px; padding: 6px 7px; border-radius: 9px; }
+  body.game-active .score-card strong { display: inline; margin: 0 7px 0 0; font-size: 22px; }
+  body.game-active .score-card .level-row { display: inline-flex; font-size: 7px; }
+  body.game-active .score-card .level-row span { padding: 2px 3px; }
+  body.game-active .score-card .level-row span:last-child { display: none; }
+  body.game-active .score-card .streak-row, body.game-active .score-card .level-progress, body.game-active .score-card .level-progress-copy { display: none; }
+  body.game-active .next-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px; }
+  body.game-active .next-card .next-stack-single { min-height: 48px; height: 48px; margin: 0; padding: 0; }
+  body.game-active .next-card .next-stack-single canvas { width: 58px; height: 46px; }
+  body.game-active .chance-card { display: grid; grid-template-columns: 1fr auto; align-content: center; gap: 3px; }
+  body.game-active .chance-heading { display: block; }
+  body.game-active .chance-heading strong { margin-top: 3px; font-size: 6px; }
+  body.game-active .chance-meter { grid-column: 1 / -1; gap: 2px; padding: 2px; }
+  body.game-active .chance-meter i { height: 12px; }
+  body.game-active .chance-button, body.game-active .chance-copy { display: none !important; }
+  body.game-active .board-column { grid-row: 2; width: calc(var(--cockpit-board-width) + 22px); padding: 6px 10px; border-radius: 17px; }
+  body.game-active .board-column::before { border-radius: 13px; }
+  body.game-active .board-topline { margin-bottom: 3px; }
+  body.game-active .board-bottomline { margin-top: 3px; }
+  body.game-active .board-bottomline span:nth-child(n+2) { display: none; }
+  body.game-active .reactor-console { margin-bottom: 4px; padding: 4px 6px; }
+  body.game-active .reactor-heading .panel-label { font-size: 7px; }
+  body.game-active .reactor-heading strong { font-size: 6px; }
+  body.game-active .reactor-meta { font-size: 5px; }
+  body.game-active .right-panel { position: absolute; top: -38px; right: 4px; z-index: 6; display: block; width: auto; padding: 0; }
+  body.game-active .right-panel > * { display: none; }
+  body.game-active .right-panel > .secondary-button { display: grid; width: 34px; min-height: 29px; margin: 0; place-items: center; padding: 0; border-radius: 9px; font-size: 0; }
+  body.game-active .right-panel > .secondary-button::before { content: "Ⅱ"; font-size: 11px; }
+  body.game-active .right-panel > .secondary-button[data-paused="true"]::before { content: "▶"; }
+  body.game-active .touch-controls { width: calc(100vw - 10px); height: 66px; padding: 5px 8px; gap: 6px; border-radius: 15px; }
+  body.game-active .d-pad { grid-template-columns: repeat(3, 25px); grid-template-rows: repeat(2, 24px); gap: 2px; }
+  body.game-active .touch-controls button { min-height: 24px; border-radius: 8px; font-size: 14px; }
+  body.game-active .action-pad button { width: 39px; height: 39px; min-height: 39px; }
+  body.game-active .action-pad b { font-size: 13px; }
+  body.game-active .drop-control { min-height: 42px !important; }
+}
+
+@media (max-height: 600px) {
+  body.game-active .game-shell { grid-template-rows: 30px minmax(0, 1fr) 56px; gap: 4px; padding-top: 4px; padding-bottom: 4px; }
+  body.game-active .game-intro h1 { font-size: 25px; }
+  body.game-active .arcade { --cockpit-board-height: clamp(160px, calc(100dvh - 190px), 350px); padding-top: 4px; padding-bottom: 4px; }
+  body.game-active .touch-controls { height: 56px; padding-top: 3px; padding-bottom: 3px; }
+  body.game-active .reactor-meta { display: none; }
+  body.game-active .reactor-meter { margin-bottom: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reactor-console::after, .arcade[data-reactor="overdrive"] .reactor-console, .arcade[data-reactor="overdrive"] .reactor-meter span { animation: none; }
+}
