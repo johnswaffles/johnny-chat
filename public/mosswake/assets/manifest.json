@@ -50,13 +50,13 @@
       "anchorY": 0.88
     },
     "player-attack": {
-      "src": "player/warden-attack-directions-generated-v1.png",
-      "frameWidth": 312,
+      "src": "player/warden-attack-directions-generated-v3.png",
+      "frameWidth": 432,
       "frameHeight": 312,
       "columns": 4,
       "frames": 16,
       "fps": 12,
-      "displayWidth": 58,
+      "displayWidth": 76,
       "displayHeight": 74,
       "anchorX": 0.5,
       "anchorY": 0.94
