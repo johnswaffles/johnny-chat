@@ -77,6 +77,7 @@
   const lineClearBadge = document.getElementById("line-clear-badge");
   const gameOverFlash = document.getElementById("game-over-flash");
   const boardWrap = document.querySelector(".board-wrap");
+  const arcadeElement = document.querySelector(".arcade");
   const music = document.getElementById("game-music");
   const musicButton = document.getElementById("music-button");
   const speedControls = Array.from(document.querySelectorAll("[data-speed]"));
@@ -202,22 +203,24 @@
   const beginLineClearFeedback = (cleared, rows) => {
     lineClearFx = { timer: CLEAR_FEEDBACK_DURATION, total: CLEAR_FEEDBACK_DURATION };
     boardWrap.dataset.state = "clear";
+    boardWrap.dataset.clearTier = String(cleared);
+    if (arcadeElement) arcadeElement.dataset.clearTier = String(cleared);
     lineClearBadge.textContent = lineClearLabel(cleared);
     lineClearBadge.dataset.tier = String(cleared);
     lineClearBadge.dataset.visible = "true";
     rows.forEach((row) => {
       for (let x = 0; x < COLS; x += 1) {
         const color = COLORS[board[row][x]] || "#ffffff";
-        for (let index = 0; index < 2; index += 1) {
+        for (let index = 0; index < 3; index += 1) {
           effectParticles.push({
             x: (x + .5) * CELL,
             y: (row + .5) * CELL,
-            vx: (Math.random() - .5) * .18,
-            vy: -.16 - Math.random() * .12,
-            size: 2 + Math.random() * 3,
+            vx: (Math.random() - .5) * .28,
+            vy: -.18 - Math.random() * .18,
+            size: 2 + Math.random() * 4,
             color,
-            life: 320 + Math.random() * 180,
-            maxLife: 500
+            life: 420 + Math.random() * 220,
+            maxLife: 640
           });
         }
       }
@@ -259,6 +262,8 @@
       if (lineClearFx.timer <= 0) {
         lineClearFx = null;
         lineClearBadge.dataset.visible = "false";
+        delete boardWrap.dataset.clearTier;
+        if (arcadeElement) delete arcadeElement.dataset.clearTier;
         if (!gameOver) boardWrap.dataset.state = "playing";
       }
     }
@@ -506,6 +511,13 @@
     gameOverFx = null;
     gameOverFlash.dataset.active = "false";
     boardWrap.dataset.state = "";
+    delete boardWrap.dataset.clearTier;
+    boardWrap.dataset.danger = "calm";
+    if (arcadeElement) {
+      delete arcadeElement.dataset.clearTier;
+      arcadeElement.dataset.danger = "calm";
+      arcadeElement.dataset.combo = "idle";
+    }
     overlay.dataset.state = "";
     gameOver = false;
     paused = false;
@@ -576,6 +588,20 @@
     draw();
   };
 
+  const updateAtmosphere = () => {
+    const topOccupiedRow = board.findIndex((row) => row.some(Boolean));
+    const stackHeight = topOccupiedRow < 0 ? 0 : ROWS - topOccupiedRow;
+    const danger = stackHeight >= 16 ? "critical" : stackHeight >= 11 ? "rising" : "calm";
+    const levelHue = (188 + (level - 1) * 22) % 360;
+    boardWrap.dataset.danger = danger;
+    if (arcadeElement) {
+      arcadeElement.dataset.danger = danger;
+      arcadeElement.dataset.combo = combo > 0 ? "active" : "idle";
+      arcadeElement.style.setProperty("--level-hue", String(levelHue));
+      arcadeElement.style.setProperty("--stack-pressure", (stackHeight / ROWS).toFixed(2));
+    }
+  };
+
   const updateStats = () => {
     scoreElement.textContent = score.toLocaleString();
     linesElement.textContent = String(lines);
@@ -586,6 +612,7 @@
     if (levelProgressBar) levelProgressBar.style.width = (levelLines * 10) + "%";
     if (levelProgressCopy) levelProgressCopy.textContent = levelLines + "/10 to level " + (level + 1);
     if (levelProgressElement) levelProgressElement.setAttribute("aria-valuenow", String(levelLines));
+    updateAtmosphere();
   };
 
   const drawCell = (context, x, y, color, alpha = 1, size = CELL, offsetX = 0, offsetY = 0) => {
@@ -593,7 +620,7 @@
     context.globalAlpha = alpha;
     const left = offsetX + x * size;
     const top = offsetY + y * size;
-    const inset = Math.max(1, size * .07);
+    const inset = Math.max(1, size * .045);
     const tileLeft = left + inset;
     const tileTop = top + inset;
     const tileSize = size - inset * 2;
@@ -784,8 +811,13 @@
     effectParticles.forEach((particle) => {
       boardContext.save();
       boardContext.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+      boardContext.globalCompositeOperation = "lighter";
       boardContext.fillStyle = particle.color;
-      boardContext.fillRect(particle.x, particle.y, particle.size, particle.size);
+      boardContext.shadowColor = particle.color;
+      boardContext.shadowBlur = particle.size * 2.5;
+      boardContext.beginPath();
+      boardContext.arc(particle.x, particle.y, particle.size * .62, 0, Math.PI * 2);
+      boardContext.fill();
       boardContext.restore();
     });
     if (gameOverFx) {
