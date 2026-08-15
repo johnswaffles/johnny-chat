@@ -1424,3 +1424,70 @@ body.game-active .tip { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .reactor-console::after, .arcade[data-reactor="overdrive"] .reactor-console, .arcade[data-reactor="overdrive"] .reactor-meter span { animation: none; }
 }
+
+/* Clear, thumb-first controls: labels beat symbols for the rewind action, and
+   the larger hit targets make the cabinet comfortable on a real phone. */
+body.game-active {
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-text-size-adjust: 100%;
+}
+body.game-active .touch-controls,
+body.game-active .touch-controls button,
+body.game-active #board { touch-action: none; }
+body.game-active .game-shell { grid-template-rows: 38px minmax(0, 1fr) 82px; }
+body.game-active .touch-controls {
+  grid-template-columns: 1.15fr 1.5fr 1.05fr;
+  height: 82px;
+  padding: 6px 12px;
+}
+body.game-active .d-pad { grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(2, 30px); gap: 4px; }
+body.game-active .touch-controls button { min-height: 30px; font-size: 20px; }
+body.game-active .action-pad { gap: 8px; }
+body.game-active .action-pad button[data-action="rotate"] { width: 52px; height: 52px; min-height: 52px; border-radius: 50%; }
+body.game-active .action-pad button[data-action="second-chance"] {
+  width: 76px;
+  height: 52px;
+  min-height: 52px;
+  border-radius: 15px;
+  color: #1d1301;
+  background: radial-gradient(circle at 35% 28%, #fff4b0, #ffd65c 56%, #dd7f43);
+  border-color: rgba(255,236,161,.72);
+  box-shadow: 0 0 22px rgba(255,214,92,.3), inset 0 2px rgba(255,255,255,.55), inset 0 -3px rgba(128,61,8,.22);
+}
+body.game-active .action-pad button[data-action="second-chance"] b { font-size: 9px; letter-spacing: .04em; }
+body.game-active .action-pad button[data-action="second-chance"] span { margin-top: 3px; font-size: 8px; letter-spacing: .08em; }
+body.game-active .action-pad button[data-action="second-chance"]:disabled { opacity: .42; filter: grayscale(.55); }
+body.game-active .chance-button {
+  justify-content: center;
+  min-height: 34px;
+  white-space: nowrap;
+  letter-spacing: .08em;
+}
+body.game-active .chance-button > span { font-size: 10px; }
+body.game-active .chance-button[data-ready="true"] { color: #1d1301; }
+body.game-active .chance-button[data-empty="true"] { letter-spacing: .05em; }
+
+@media (max-width: 680px) {
+  body.game-active .game-shell { grid-template-rows: 34px minmax(0, 1fr) 82px; }
+  body.game-active .touch-controls { grid-template-columns: 1.15fr 1.5fr 1.05fr; height: 82px; padding: 5px 8px; gap: 6px; }
+  body.game-active .d-pad { grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(2, 32px); gap: 4px; }
+  body.game-active .touch-controls button { min-height: 32px; border-radius: 9px; font-size: 20px; }
+  body.game-active .action-pad button[data-action="rotate"] { width: 52px; height: 52px; min-height: 52px; }
+  body.game-active .action-pad button[data-action="second-chance"] { width: 76px; height: 52px; min-height: 52px; }
+  body.game-active .drop-control { min-height: 56px !important; }
+  body.game-active .drop-control b { font-size: 12px; }
+  body.game-active .drop-control span { font-size: 7px; }
+}
+
+@media (max-height: 600px) {
+  body.game-active .game-shell { grid-template-rows: 30px minmax(0, 1fr) 66px; }
+  body.game-active .touch-controls { height: 66px; padding-top: 3px; padding-bottom: 3px; }
+  body.game-active .d-pad { grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(2, 27px); gap: 3px; }
+  body.game-active .action-pad button[data-action="rotate"],
+  body.game-active .action-pad button[data-action="second-chance"] { height: 46px; min-height: 46px; }
+  body.game-active .action-pad button[data-action="second-chance"] { width: 70px; }
+  body.game-active .drop-control { min-height: 48px !important; }
+}

@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#090d1a">
   <title>Tetris — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-10">
+  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-11">
 </head>
 <body>
   <div class="aurora aurora-one"></div>
@@ -67,7 +67,7 @@
             <i></i><i></i><i></i><i></i>
           </div>
           <p class="chance-copy">Erase the last piece and begin again with the piece that was next.</p>
-          <button id="second-chance-button" class="mini-action chance-button" type="button" disabled><span aria-hidden="true">↶</span> Ready after first move</button>
+          <button id="second-chance-button" class="mini-action chance-button" type="button" disabled><span>SECOND CHANCE</span></button>
         </div>
       </aside>
 
@@ -141,7 +141,7 @@
       </div>
       <div class="action-pad" aria-label="Action controls">
         <button data-action="rotate" type="button" aria-label="Rotate piece"><b>A</b><span>Rotate</span></button>
-        <button data-action="second-chance" type="button" aria-label="Use a second chance"><b>↶</b><span>Chance</span></button>
+        <button data-action="second-chance" type="button" aria-label="Use a second chance"><b>SECOND</b><span>CHANCE</span></button>
       </div>
       <button data-action="drop" class="drop-control" type="button" aria-label="Hard drop"><b>DROP</b><span>Hard drop</span></button>
     </section>
@@ -150,6 +150,6 @@
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=remaster-2026-10"></script>
+  <script src="/tetris/tetris.js?v=remaster-2026-11"></script>
 </body>
 </html>

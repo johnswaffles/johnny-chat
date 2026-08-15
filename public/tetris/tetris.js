@@ -940,11 +940,9 @@
     }
     if (secondChanceButton) {
       secondChanceButton.disabled = !canUse;
-      secondChanceButton.innerHTML = secondChances <= 0
-        ? '<span aria-hidden="true">×</span> No chances left'
-        : canUse
-          ? '<span aria-hidden="true">↶</span> Use second chance'
-          : '<span aria-hidden="true">↶</span> Ready after first move';
+      secondChanceButton.innerHTML = "<span>SECOND CHANCE</span>";
+      secondChanceButton.dataset.ready = String(canUse);
+      secondChanceButton.dataset.empty = String(secondChances <= 0);
     }
     if (chanceCard) chanceCard.dataset.ready = String(canUse);
     document.querySelectorAll('[data-action="second-chance"]').forEach((button) => {
@@ -1161,6 +1159,15 @@
   });
   window.addEventListener("blur", pauseWhenBackgrounded);
   window.addEventListener("pagehide", () => music.pause());
+  const preventViewportZoom = (event) => {
+    if (document.body.classList.contains("game-active")) event.preventDefault();
+  };
+  document.addEventListener("gesturestart", preventViewportZoom, { passive: false });
+  document.addEventListener("gesturechange", preventViewportZoom, { passive: false });
+  document.addEventListener("gestureend", preventViewportZoom, { passive: false });
+  document.addEventListener("touchmove", (event) => {
+    if (document.body.classList.contains("game-active") && event.touches.length > 1) event.preventDefault();
+  }, { passive: false });
   music.addEventListener("play", updateMusicButton);
   music.addEventListener("pause", updateMusicButton);
   window.addEventListener("johnny:music-focus", updateMusicButton);
