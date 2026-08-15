@@ -722,7 +722,11 @@
     if (state.mode !== "playing" || state.dialogue || player.dash > 0) return;
     if (player.attackCooldown > 0) { player.attackBuffer = .18; return; }
     const direction = readMoveInput();
-    const facing = direction.x || direction.y ? direction : normalized(player.facingX, player.facingY);
+    // When the attack key arrives just after movement is released, the input
+    // vector is zero and the smoothed facing vector may still be crossing the
+    // old direction. Use the remembered target direction so a left run cannot
+    // turn into a right-facing swing during that hand-off frame.
+    const facing = direction.x || direction.y ? direction : normalized(player.targetFacingX, player.targetFacingY, player.facingX, player.facingY);
     player.attack = .34; player.attackElapsed = 0; player.attackCooldown = .36; player.attackBuffer = 0; player.attackHitRegistered = false;
     // Capture one direction for the entire swing. The body, hitbox, sword
     // sheet, and trail must all agree even if the player changes input during
@@ -2222,8 +2226,8 @@
     // While moving, targetFacing is the immediate input direction. Using the
     // smoothed facing vector here caused a short but obvious right-facing
     // frame when the player started moving left (and vice versa).
-    const poseFacingX = player.visualState === "move" ? player.targetFacingX : player.visualState === "attack" ? player.attackDirectionX : player.facingX;
-    const poseFacingY = player.visualState === "move" ? player.targetFacingY : player.visualState === "attack" ? player.attackDirectionY : player.facingY;
+    const poseFacingX = player.visualState === "attack" ? player.attackDirectionX : player.targetFacingX;
+    const poseFacingY = player.visualState === "attack" ? player.attackDirectionY : player.targetFacingY;
     const facingFrame = poseFacingY < -.35 ? 4 : poseFacingY > .35 ? 0 : 2;
     const movementRow = Math.abs(poseFacingX) > Math.abs(poseFacingY) ? (poseFacingX >= 0 ? 1 : 3) : (poseFacingY < 0 ? 2 : 0);
     const runFrame = movementRow * 4 + Math.floor((player.walk * 1.22) % 4);

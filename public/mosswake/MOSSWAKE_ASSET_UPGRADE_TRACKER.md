@@ -2,6 +2,13 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-15 — Remembered movement direction for stop-and-swing handoff
+
+- Follow-up to the directional repair: attacks released immediately after a run now fall back to `targetFacing`, not the still-smoothing `facing` vector. A left run therefore remains left when the player stops and swings.
+- Idle, hurt, and movement poses now use the remembered target direction for rendering; only an active swing overrides it with the captured attack vector. This removes the brief right-facing snap after stopping left.
+- The existing `fx-slash` horizontal mirror/rotation remains in place; it now receives the corrected left-facing vector instead of the stale right-facing vector. No combat damage, collision, or movement speed changed.
+- Bumped the route script cache to `mosswake.js?v=86` and verified the existing player/run/attack atlases remain the approved references.
+
 ## 2026-08-15 — Directional sword trail and player-facing repair
 
 - Repaired the player direction contract in `mosswake.js`: attack start now captures and immediately applies one facing vector, held movement cannot rewrite it mid-swing, and the attack body, hitbox, sword atlas, and trail all use that same vector.
