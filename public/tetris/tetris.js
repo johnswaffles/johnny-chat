@@ -593,35 +593,72 @@
     context.globalAlpha = alpha;
     const left = offsetX + x * size;
     const top = offsetY + y * size;
-    const inset = Math.max(1, size * .055);
-    const gradient = context.createLinearGradient(left, top, left + size, top + size);
-    gradient.addColorStop(0, color);
-    gradient.addColorStop(.55, color);
-    gradient.addColorStop(1, "#ffffff38");
+    const inset = Math.max(1, size * .07);
+    const tileLeft = left + inset;
+    const tileTop = top + inset;
+    const tileSize = size - inset * 2;
+    const radius = Math.min(6, size * .16);
+    const gradient = context.createLinearGradient(tileLeft, tileTop, tileLeft + tileSize, tileTop + tileSize);
+    gradient.addColorStop(0, shiftColor(color, 38));
+    gradient.addColorStop(.22, color);
+    gradient.addColorStop(.72, shiftColor(color, -18));
+    gradient.addColorStop(1, shiftColor(color, -52));
+    const boardTile = size >= CELL;
+    if (boardTile && alpha > .7) {
+      context.shadowColor = rgba(color, .52);
+      context.shadowBlur = Math.max(3, size * .2);
+      context.shadowOffsetY = Math.max(1, size * .035);
+    }
     context.fillStyle = gradient;
-    context.fillRect(left + inset, top + inset, size - inset * 2, size - inset * 2);
-    context.fillStyle = "#ffffff66";
-    context.fillRect(left + inset + Math.max(2, size * .1), top + inset + Math.max(1, size * .08), size - inset * 2 - Math.max(4, size * .2), Math.max(1, size * .07));
-    context.fillStyle = "#00000030";
-    context.fillRect(left + inset + Math.max(2, size * .1), top + size - inset - Math.max(3, size * .14), size - inset * 2 - Math.max(4, size * .2), Math.max(1, size * .07));
-    context.strokeStyle = "#06101f55";
-    context.lineWidth = Math.max(1, size * .045);
-    context.strokeRect(left + inset + .5, top + inset + .5, size - inset * 2 - 1, size - inset * 2 - 1);
+    roundedRectPath(context, tileLeft, tileTop, tileSize, tileSize, radius);
+    context.fill();
+    context.shadowColor = "transparent";
+    context.shadowBlur = 0;
+    // Glassy top-left bevel and a darker lower edge give each block a
+    // physical, jewel-like face instead of a flat colored square.
+    roundedRectPath(context, tileLeft + 1, tileTop + 1, tileSize - 2, Math.max(2, tileSize * .2), Math.max(2, radius - 1));
+    context.fillStyle = "rgba(255,255,255,.28)";
+    context.fill();
+    context.beginPath();
+    context.moveTo(tileLeft + tileSize * .08, tileTop + tileSize * .84);
+    context.lineTo(tileLeft + tileSize * .92, tileTop + tileSize * .84);
+    context.lineTo(tileLeft + tileSize * .84, tileTop + tileSize * .94);
+    context.lineTo(tileLeft + tileSize * .14, tileTop + tileSize * .94);
+    context.closePath();
+    context.fillStyle = "rgba(0,0,0,.22)";
+    context.fill();
+    context.beginPath();
+    context.moveTo(tileLeft + tileSize * .12, tileTop + tileSize * .13);
+    context.lineTo(tileLeft + tileSize * .42, tileTop + tileSize * .13);
+    context.lineTo(tileLeft + tileSize * .24, tileTop + tileSize * .34);
+    context.closePath();
+    context.fillStyle = "rgba(255,255,255,.48)";
+    context.fill();
+    roundedRectPath(context, tileLeft + .5, tileTop + .5, tileSize - 1, tileSize - 1, radius);
+    context.strokeStyle = rgba(shiftColor(color, 65), .72);
+    context.lineWidth = Math.max(1, size * .035);
+    context.stroke();
     context.restore();
   };
 
   const drawGhostPiece = (context, piece) => {
     if (!piece) return;
     context.save();
-    context.globalAlpha = .38;
-    context.strokeStyle = COLORS[piece.type];
+    const color = COLORS[piece.type];
+    context.globalAlpha = .5;
+    context.strokeStyle = rgba(color, .95);
+    context.shadowColor = rgba(color, .8);
+    context.shadowBlur = 9;
     context.lineWidth = 2;
+    context.setLineDash([4, 3]);
     for (let y = 0; y < piece.matrix.length; y += 1) {
       for (let x = 0; x < piece.matrix[y].length; x += 1) {
         if (!piece.matrix[y][x] || piece.y + y < 0) continue;
-        context.strokeRect(piece.x * CELL + x * CELL + 5, piece.y * CELL + y * CELL + 5, CELL - 10, CELL - 10);
+        roundedRectPath(context, piece.x * CELL + x * CELL + 5, piece.y * CELL + y * CELL + 5, CELL - 10, CELL - 10, 4);
+        context.stroke();
       }
     }
+    context.setLineDash([]);
     context.restore();
   };
 
@@ -634,17 +671,62 @@
     }
   };
 
+  // The board stays a crisp 2D canvas, but each tile gets a small material
+  // system: a cool rim, a directional bevel and a soft colored bloom. This
+  // is deliberately generated from the existing piece colors so it never
+  // changes the game state or the palette used by the engine.
+  const colorToRgb = (hex) => {
+    if (hex.startsWith("rgb")) {
+      const channels = hex.match(/\d+/g) || [0, 0, 0];
+      return { r: Number(channels[0]), g: Number(channels[1]), b: Number(channels[2]) };
+    }
+    const value = hex.replace("#", "");
+    const normalized = value.length === 3 ? value.split("").map((part) => part + part).join("") : value;
+    const number = Number.parseInt(normalized, 16);
+    return { r: (number >> 16) & 255, g: (number >> 8) & 255, b: number & 255 };
+  };
+  const rgba = (hex, alpha) => {
+    const { r, g, b } = colorToRgb(hex);
+    return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+  };
+  const shiftColor = (hex, amount) => {
+    const { r, g, b } = colorToRgb(hex);
+    const channel = (value) => Math.max(0, Math.min(255, value + amount));
+    return "rgb(" + channel(r) + "," + channel(g) + "," + channel(b) + ")";
+  };
+  const roundedRectPath = (context, left, top, width, height, radius) => {
+    const r = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(left + r, top);
+    context.lineTo(left + width - r, top);
+    context.quadraticCurveTo(left + width, top, left + width, top + r);
+    context.lineTo(left + width, top + height - r);
+    context.quadraticCurveTo(left + width, top + height, left + width - r, top + height);
+    context.lineTo(left + r, top + height);
+    context.quadraticCurveTo(left, top + height, left, top + height - r);
+    context.lineTo(left, top + r);
+    context.quadraticCurveTo(left, top, left + r, top);
+    context.closePath();
+  };
+
   const draw = () => {
     boardContext.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
     const boardGradient = boardContext.createLinearGradient(0, 0, 0, boardCanvas.height);
-    boardGradient.addColorStop(0, "#0c1429");
-    boardGradient.addColorStop(.55, "#080d1d");
-    boardGradient.addColorStop(1, "#060a16");
+    boardGradient.addColorStop(0, "#111d3a");
+    boardGradient.addColorStop(.28, "#0b1530");
+    boardGradient.addColorStop(.62, "#080d1d");
+    boardGradient.addColorStop(1, "#050812");
     boardContext.fillStyle = boardGradient;
     boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
-    boardContext.fillStyle = "rgba(105,231,255,.018)";
+    const boardFocus = boardContext.createRadialGradient(boardCanvas.width * .52, boardCanvas.height * .16, 8, boardCanvas.width * .52, boardCanvas.height * .16, boardCanvas.height * .78);
+    boardFocus.addColorStop(0, "rgba(105,231,255,.12)");
+    boardFocus.addColorStop(.34, "rgba(105,231,255,.025)");
+    boardFocus.addColorStop(1, "rgba(105,231,255,0)");
+    boardContext.fillStyle = boardFocus;
+    boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+    boardContext.fillStyle = "rgba(105,231,255,.026)";
     for (let y = 0; y < ROWS; y += 2) boardContext.fillRect(0, y * CELL, boardCanvas.width, CELL);
-    boardContext.strokeStyle = "rgba(157, 180, 255, .08)";
+    boardContext.strokeStyle = "rgba(157, 180, 255, .095)";
     boardContext.lineWidth = 1;
     for (let x = 0; x <= COLS; x += 1) {
       boardContext.beginPath();
@@ -652,6 +734,16 @@
       boardContext.lineTo(x * CELL + .5, ROWS * CELL);
       boardContext.stroke();
     }
+    // A slow light sweep makes the cabinet feel powered-on while a game is
+    // running. It is intentionally a single translucent pass over the grid.
+    const sweepProgress = (performance.now() % 5200) / 5200;
+    const sweepX = sweepProgress * (boardCanvas.width + 150) - 75;
+    const boardSweep = boardContext.createLinearGradient(sweepX - 70, 0, sweepX + 70, 0);
+    boardSweep.addColorStop(0, "rgba(105,231,255,0)");
+    boardSweep.addColorStop(.5, "rgba(255,255,255,.06)");
+    boardSweep.addColorStop(1, "rgba(178,140,255,0)");
+    boardContext.fillStyle = boardSweep;
+    boardContext.fillRect(sweepX - 70, 0, 140, boardCanvas.height);
     for (let y = 0; y <= ROWS; y += 1) {
       boardContext.beginPath();
       boardContext.moveTo(0, y * CELL + .5);
