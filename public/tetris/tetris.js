@@ -79,6 +79,15 @@
   const boardWrap = document.querySelector(".board-wrap");
   const music = document.getElementById("game-music");
   const musicButton = document.getElementById("music-button");
+  const speedControls = Array.from(document.querySelectorAll("[data-speed]"));
+  const speedCaption = document.getElementById("speed-caption");
+
+  const SPEEDS = {
+    slow: { multiplier: 1.55, caption: "Slow pace" },
+    classic: { multiplier: 1, caption: "Classic pace" },
+    fast: { multiplier: .62, caption: "Fast pace" },
+    "really-fast": { multiplier: .22, caption: "Really fast · hard mode" }
+  };
 
   let board = [];
   let current = null;
@@ -106,6 +115,7 @@
   let impactCells = [];
   let effectParticles = [];
   let musicEnabled = true;
+  let speedMode = "classic";
   let audioContext = null;
   let highScore = Number(localStorage.getItem("johnny-tetris-high-score") || 0);
   const heldKeys = new Map();
@@ -738,6 +748,19 @@
     musicButton.setAttribute("aria-pressed", String(musicEnabled));
   };
 
+  const updateSpeedControls = () => {
+    speedControls.forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.speed === speedMode));
+    });
+    if (speedCaption) speedCaption.textContent = SPEEDS[speedMode].caption;
+  };
+
+  const setSpeed = (mode) => {
+    if (!SPEEDS[mode]) return;
+    speedMode = mode;
+    updateSpeedControls();
+  };
+
   const toggleMusic = () => {
     musicEnabled = !musicEnabled;
     if (musicEnabled) {
@@ -792,7 +815,8 @@
           }
         });
         fallTimer += elapsed;
-        const interval = Math.max(85, 780 - (level - 1) * 58);
+        const baseInterval = 780 - (level - 1) * 58;
+        const interval = Math.max(42, baseInterval * SPEEDS[speedMode].multiplier);
         if (fallTimer >= interval) {
           fallTimer = 0;
           if (!collides(current, 0, 1)) {
@@ -820,6 +844,7 @@
   pauseButton.addEventListener("click", togglePause);
   holdButton.addEventListener("click", hold);
   musicButton.addEventListener("click", toggleMusic);
+  speedControls.forEach((button) => button.addEventListener("click", () => setSpeed(button.dataset.speed)));
   document.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => action(button.dataset.action));
   });
@@ -859,6 +884,7 @@
 
   resetGame();
   updateMusicButton();
+  updateSpeedControls();
   draw();
   window.requestAnimationFrame(tick);
 })();
