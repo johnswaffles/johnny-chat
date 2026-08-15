@@ -168,8 +168,8 @@
       { x: 430, y: 355, radius: 54, density: 6, scale: .68, tone: "#579254", phase: 1.8, seed: 23, foliageFrame: 1 },
       { x: 720, y: 430, radius: 74, density: 9, scale: .74, tone: "#72b968", phase: 3.1, seed: 37, foliageFrame: 4 },
       { x: 1030, y: 400, radius: 58, density: 7, scale: .66, tone: "#5a9a57", phase: 4.7, seed: 49, foliageFrame: 5 },
-      { x: 1240, y: 680, radius: 86, density: 10, scale: .8, tone: "#6aab5f", phase: 2.6, seed: 61, foliageFrame: 2 },
-      { x: 420, y: 820, radius: 68, density: 7, scale: .7, tone: "#4e8951", phase: 5.4, seed: 73, foliageFrame: 6 }
+      { x: 1240, y: 680, radius: 86, density: 10, scale: .8, tone: "#6aab5f", phase: 2.6, seed: 61, foliageFrame: 2, landmark: true },
+      { x: 420, y: 820, radius: 68, density: 7, scale: .7, tone: "#4e8951", phase: 5.4, seed: 73, foliageFrame: 6, landmark: true }
     ],
     flowers: [
       { x: 108, y: 348, s: .9, color: "#f4d57a", phase: .8 }, { x: 138, y: 364, s: .65, color: "#e7a7c6", phase: 2.1 },
@@ -1142,11 +1142,11 @@
     // Keep the authored clearings legible: one small cluster per landmark is
     // enough to imply a living meadow without rebuilding the road edge as a
     // wall of grass cards.
-    [[150, 365, 1, 30, .3], [300, 405, 1, 25, 1.7], [585, 405, 1, 28, 3.1], [1180, 390, 1, 26, 4.4], [1435, 540, 1, 34, 5.2]].forEach(([x, y, count, spread, phase], clusterIndex) => {
+    [[150, 365, 1, 30, .3], [585, 405, 1, 28, 3.1], [1180, 390, 1, 26, 4.4], [1435, 540, 1, 34, 5.2]].forEach(([x, y, count, spread, phase], clusterIndex) => {
       for (let i = 0; i < count; i += 1) {
         const angle = hash01(clusterIndex * 13 + i, 3) * Math.PI * 2; const radius = 8 + hash01(clusterIndex * 17 + i, 7) * spread;
         drawGrassTuft({ x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius * .5, s: .5 + hash01(i, clusterIndex) * .42, phase: phase + i }, time);
-        if (i === 0) drawFlower({ x: x + Math.cos(angle + .5) * (radius + 6), y: y + Math.sin(angle + .5) * (radius + 6) * .5, s: .42 + hash01(i, 12) * .22, phase: phase + i + .6, color: i % 4 === 0 ? "#e8b7c5" : "#ecd28a" }, time);
+        if (i === 0 && clusterIndex % 2 === 0) drawFlower({ x: x + Math.cos(angle + .5) * (radius + 6), y: y + Math.sin(angle + .5) * (radius + 6) * .5, s: .42 + hash01(i, 12) * .22, phase: phase + i + .6, color: i % 4 === 0 ? "#e8b7c5" : "#ecd28a" }, time);
       }
     });
   };
@@ -1258,69 +1258,79 @@
     ctx.restore();
   };
   const drawPath = (time) => {
-    ctx.save(); ctx.globalAlpha = .42; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 86; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-30, 500); ctx.quadraticCurveTo(430, 433, 760, 515); ctx.quadraticCurveTo(1110, 590, 1630, 450); ctx.stroke();
-    ctx.globalAlpha = 1; ctx.strokeStyle = "#c1a777"; ctx.lineWidth = 78; ctx.beginPath(); ctx.moveTo(-30, 490); ctx.quadraticCurveTo(430, 423, 760, 505); ctx.quadraticCurveTo(1110, 580, 1630, 440); ctx.stroke();
+    ctx.save(); ctx.globalAlpha = .34; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 86; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-30, 500); ctx.quadraticCurveTo(430, 433, 760, 515); ctx.quadraticCurveTo(1110, 590, 1630, 450); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.strokeStyle = "#b28f62"; ctx.lineWidth = 78; ctx.beginPath(); ctx.moveTo(-30, 490); ctx.quadraticCurveTo(430, 423, 760, 505); ctx.quadraticCurveTo(1110, 580, 1630, 440); ctx.stroke();
     ctx.strokeStyle = "rgba(246,222,166,.32)"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-20, 470); ctx.quadraticCurveTo(430, 405, 760, 486); ctx.quadraticCurveTo(1110, 560, 1610, 425); ctx.stroke();
     ctx.globalAlpha = .42; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 42; ctx.beginPath(); ctx.moveTo(85, 620); ctx.quadraticCurveTo(310, 580, 520, 610); ctx.stroke();
     ctx.globalAlpha = 1; ctx.strokeStyle = "#aa9069"; ctx.lineWidth = 34; ctx.beginPath(); ctx.moveTo(85, 614); ctx.quadraticCurveTo(310, 574, 520, 604); ctx.stroke();
     ctx.strokeStyle = "rgba(247,223,170,.25)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(92, 605); ctx.quadraticCurveTo(310, 568, 516, 596); ctx.stroke();
-    for (let i = 0; i < 22; i += 1) { const x = (i * 79 + 30) % 1550; const y = 480 + Math.sin(x * .011) * 30 + Math.sin(time * .4 + i) * 2; ctx.fillStyle = i % 3 ? "rgba(145,119,83,.35)" : "rgba(245,218,163,.38)"; ctx.beginPath(); ctx.ellipse(x, y, 3 + i % 3, 2, 0, 0, Math.PI * 2); ctx.fill(); }
-    ctx.globalAlpha = .55; ctx.strokeStyle = "rgba(109,84,60,.46)"; ctx.lineWidth = 2; for (let i = 0; i < 11; i += 1) { const x = 40 + i * 142; const y = 488 + Math.sin(x * .011) * 30; ctx.beginPath(); ctx.moveTo(x, y - 13); ctx.quadraticCurveTo(x + 11, y - 17, x + 19, y - 10); ctx.stroke(); }
+    for (let i = 0; i < 12; i += 1) { const x = (i * 131 + 68) % 1550; const y = 480 + Math.sin(x * .011) * 30 + Math.sin(time * .28 + i) * 1.4; ctx.fillStyle = i % 3 ? "rgba(145,119,83,.28)" : "rgba(245,218,163,.34)"; ctx.beginPath(); ctx.ellipse(x, y, 3 + i % 3, 1.8, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.globalAlpha = .46; ctx.strokeStyle = "rgba(109,84,60,.38)"; ctx.lineWidth = 2; for (let i = 0; i < 7; i += 1) { const x = 70 + i * 236; const y = 488 + Math.sin(x * .011) * 30; ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.quadraticCurveTo(x + 11, y - 15, x + 19, y - 9); ctx.stroke(); }
     ctx.globalAlpha = .7; const pathStones = [[135, 485, -0.25], [338, 448, .18], [572, 477, -.08], [804, 519, .15], [1050, 550, -.18], [1288, 510, .12], [1478, 462, -.2]];
     pathStones.forEach(([x, y, angle], index) => { ctx.save(); ctx.translate(x, y + Math.sin(time * .35 + index) * .4); ctx.rotate(angle); ctx.fillStyle = index % 2 ? "rgba(218,191,142,.5)" : "rgba(119,96,70,.4)"; ctx.beginPath(); ctx.ellipse(0, 0, 10 + index % 3 * 2, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
     // Painted road tiles now carry the visible surface; the procedural ribbon
     // remains underneath as the collision-safe silhouette and offline fallback.
     if (loadedAssets.has("road-family")) {
-      // These cards are deliberately small and sparse. The road's continuous
-      // ribbon remains the readable walkable surface; the atlas only contributes
-      // irregular worn patches so no rectangular tile edges compete with actors.
       const roadTiles = [
-        [214, 458, 3, -.04, 48, 34], [516, 472, 3, .08, 46, 32], [818, 524, 3, .12, 48, 34],
-        [1138, 542, 3, .02, 46, 32], [1398, 486, 3, -.10, 46, 32], [378, 596, 3, -.08, 44, 30]
+        [155, 466, 1, -.12, 220, 108], [430, 455, 2, -.08, 192, 138], [735, 506, 3, .08, 170, 130],
+        [1015, 552, 7, .11, 210, 148], [1325, 506, 2, -.12, 198, 138]
       ];
-      ctx.save(); ctx.globalCompositeOperation = "multiply"; ctx.globalAlpha = .42;
-      roadTiles.forEach(([x, y, frame, rotation, width, height]) => drawOptionalSprite("road-family", x, y, { frame, width, height, anchorX: .5, anchorY: .5, rotation, alpha: .32 }));
+      // The atlas includes its own grassy border. Clip the large painted pieces
+      // to the authored road corridor so those borders blend into the existing
+      // banks instead of appearing as detached rectangular islands.
+      ctx.save(); ctx.beginPath();
+      ctx.moveTo(-40, 452); ctx.quadraticCurveTo(430, 385, 760, 467); ctx.quadraticCurveTo(1110, 542, 1640, 402);
+      ctx.lineTo(1640, 480); ctx.quadraticCurveTo(1110, 620, 760, 545); ctx.quadraticCurveTo(430, 463, -40, 530); ctx.closePath(); ctx.clip();
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      roadTiles.forEach(([x, y, frame, rotation, width, height]) => drawOptionalSprite("road-family", x, y, { frame, width, height, anchorX: .5, anchorY: .5, rotation, alpha: .62 }));
       ctx.restore();
+      // The lower branch is intentionally quieter: one small side-path cell is
+      // enough to make it feel authored without adding another focal cluster.
+      drawOptionalSprite("road-family", 320, 596, { frame: 13, width: 136, height: 86, anchorX: .5, anchorY: .5, rotation: -.14, alpha: .5 });
     }
-    if (loadedAssets.has("outdoor-props")) {
-      [[245, 455, 4, -.14], [520, 461, 5, .12], [820, 522, 6, .14], [1115, 548, 7, -.1], [1375, 486, 4, -.18], [302, 596, 5, -.16]].forEach(([x, y, frame, angle]) => {
-        drawOptionalSprite("outdoor-props", x, y, { frame, width: 118, height: 94, anchorX: .5, anchorY: .5, rotation: Math.PI / 2 + angle, alpha: .72 });
-      });
-    }
-    // Keep the road material family exclusive to the path. Reusing meadow
-    // cards here made a few patches read as misplaced grass beds and competed
-    // with the walkable silhouette; outdoor-ground remains available for
-    // clearings, bushes, and authored terrain outside the road zone.
+    // Keep the road material family exclusive to the path. The old outdoor-props
+    // cards were decorative logs/roots placed on top of the road and read as
+    // clutter rather than road detail, so the atlas now owns the surface.
     ctx.restore();
   };
   const drawGrassTuft = (item, time, foreground = false) => {
-    if (state.area === "overworld" && isMainRoadZone(item.x, item.y, 70)) return;
+    if (state.area === "overworld" && isMainRoadZone(item.x, item.y, 82)) return;
     const rustle = item.rustle || 0; const sway = Math.sin(time * 1.05 + item.phase) * .045 + rustle * Math.sin(time * 18 + item.phase) * .26;
     const foliageFrame = Number.isFinite(item.foliageFrame) ? item.foliageFrame % 4 : Math.abs(Math.floor((item.x * .17 + item.y * .07) % 4));
     // Keep the large ground-family cards reserved for intentional bushes and
     // trail repairs. Grass uses the dedicated foliage atlas so it reads as a
     // light, walkable edge detail rather than a repeated garden bed.
-    if (drawOptionalSprite("outdoor-foliage", item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * 52, height: (item.s || 1) * 52, anchorX: .5, anchorY: .92, alpha: foreground ? .72 : .86, rotation: sway * .2 })) return;
-    ctx.save(); ctx.translate(item.x, item.y); ctx.rotate(sway); ctx.scale(item.s || 1, item.s || 1); ctx.globalAlpha = foreground ? .72 : .92;
+    if (drawOptionalSprite("outdoor-foliage", item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * 48, height: (item.s || 1) * 48, anchorX: .5, anchorY: .92, alpha: foreground ? .56 : .74, rotation: sway * .2 })) return;
+    ctx.save(); ctx.translate(item.x, item.y); ctx.rotate(sway); ctx.scale(item.s || 1, item.s || 1); ctx.globalAlpha = foreground ? .56 : .78;
     [[-8, "#5f9e5a"], [-3, "#77b866"], [3, "#4d8950"], [8, "#83c56d"]].forEach(([offset, color], i) => { ctx.strokeStyle = color; ctx.lineWidth = i % 2 ? 3 : 2; ctx.beginPath(); ctx.moveTo(offset, 8); ctx.quadraticCurveTo(offset - 2, -4, offset + (i - 1.5) * 3, -18 - (i % 2) * 4); ctx.stroke(); });
     ctx.restore();
   };
   const drawGrassPatch = (patch, time, foreground = false) => {
     // Clear a generous edge band around the authored road. The patch radius is
     // visual, not collision geometry, so use the larger of the patch edge and
-    // a fixed 70px breathing room to keep the walkable ribbon legible.
+    // a fixed 82px breathing room to keep the walkable ribbon legible.
     if (state.area === "overworld" && isMainRoadZone(patch.x, patch.y, Math.max(104, patch.radius * 1.2))) return;
-    const rustle = patch.rustle || 0; const density = patch.density + (patch.seed % 3); const scale = patch.scale || .7;
-    if (loadedAssets.has("meadow-edge")) {
+    const rustle = patch.rustle || 0; const density = Math.max(4, Math.round((patch.density + (patch.seed % 3)) * .7)); const scale = patch.scale || .7;
+    const isLandmark = Boolean(patch.landmark);
+    if (loadedAssets.has("meadow-edge") && isLandmark) {
       const frameBase = Number.isFinite(patch.foliageFrame) ? Math.abs(patch.foliageFrame) % 8 : Math.floor(hash01(patch.x, patch.y) * 8);
       const frame = (frameBase + (rustle > .2 ? Math.floor(time * 2) % 2 : 0)) % 8;
-      drawShadow(patch.x, patch.y + 9, 24 * scale, 6 * scale, foreground ? .14 : .18);
-      if (drawOptionalSprite("meadow-edge", patch.x, patch.y + 7, { frame, width: 72 * scale, height: 60 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .9 : .94, rotation: Math.sin(time * .42 + patch.phase) * .004 })) return;
+      drawShadow(patch.x, patch.y + 9, 26 * scale, 6 * scale, foreground ? .12 : .16);
+      if (drawOptionalSprite("meadow-edge", patch.x, patch.y + 7, { frame, width: 96 * scale, height: 78 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .68 : .74, rotation: Math.sin(time * .42 + patch.phase) * .004 })) return;
     }
     if (loadedAssets.has("outdoor-foliage")) {
       const frameBase = Number.isFinite(patch.foliageFrame) ? patch.foliageFrame % 4 : 0;
-      const frame = frameBase + (rustle > .2 ? Math.floor(time * 3) % 2 : 0);
-      if (drawOptionalSprite("outdoor-foliage", patch.x, patch.y + 8, { frame, width: 52 * scale, height: 52 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .38 : .46, rotation: Math.sin(time * .42 + patch.phase) * .006 })) return;
+      const clusterCount = foreground ? 1 : 2;
+      drawShadow(patch.x, patch.y + 8, 20 * scale, 5 * scale, foreground ? .1 : .14);
+      for (let i = 0; i < clusterCount; i += 1) {
+        const angle = hash01(patch.seed, i + 9) * Math.PI * 2;
+        const radius = i === 0 ? 0 : 8 + hash01(patch.seed + i, 11) * Math.min(24, patch.radius * .3);
+        const x = patch.x + Math.cos(angle) * radius;
+        const y = patch.y + Math.sin(angle) * radius * .42;
+        const frame = (frameBase + i + (rustle > .2 ? Math.floor(time * 2) % 2 : 0)) % 8;
+        drawOptionalSprite("outdoor-foliage", x, y + 8, { frame, width: 44 * scale, height: 48 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .42 : .56, rotation: Math.sin(time * .42 + patch.phase + i) * .006 });
+      }
+      return;
     }
     ctx.save(); ctx.globalAlpha = foreground ? .48 : .62;
     for (let i = 0; i < density; i += 1) {
@@ -1487,7 +1497,10 @@
     drawLantern(790, 290, time); drawLantern(1115, 282, time + 1); drawLantern(1280, 172, time + 2);
     ctx.fillStyle = "#6c4d3a"; ctx.fillRect(1280, 180, 64, 64); ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.strokeRect(1280, 180, 64, 64); ctx.fillStyle = "rgba(130,241,215,.42)"; ctx.fillRect(1290, 190, 44, 44); ctx.fillStyle = "#e5d59f"; ctx.fillRect(1303, 246, 20, 7);
     environment.rocks.forEach(drawRock); environment.logs.forEach(drawLog); drawExplorationClues(time); drawHiddenGrovePreview(time); drawRootlightOverworld(time);
-    environment.grassPatches.filter((patch) => patch.y <= 560).forEach((patch) => drawGrassPatch(patch, time)); environment.grasses.forEach((grass) => drawGrassTuft(grass, time)); environment.flowers.forEach((flower) => drawFlower(flower, time)); drawMeadowClusters(time);
+    environment.grassPatches.filter((patch) => patch.y <= 560).forEach((patch) => drawGrassPatch(patch, time));
+    environment.grasses.filter((grass, index) => index % 2 === 0 || grass.y > 600).forEach((grass) => drawGrassTuft(grass, time));
+    environment.flowers.filter((flower) => !isMainRoadZone(flower.x, flower.y, 84)).forEach((flower) => drawFlower(flower, time));
+    drawMeadowClusters(time);
     if (!state.chestOpened) drawChest(1240, 745, false); else drawChest(1240, 745, true);
     drawCampfire(npcs[1].x - 24, npcs[1].y + 18, time); drawMapTable(npcs[3].x + 24, npcs[3].y + 18, time); drawPondBasket(npcs[2].x - 14, npcs[2].y + 14, time); drawEntrance(1312, 210, time);
     environment.signs.filter((sign) => sign.y >= 600).forEach(drawSign);
@@ -1497,7 +1510,7 @@
   const drawOutdoorForeground = (time) => {
     environment.treesFront.forEach((tree) => drawTree(tree, time, "front"));
     environment.bushes.filter((bush) => bush.y >= 600).forEach((bush) => drawBush(bush, time, true)); environment.fences.filter((fence) => fence.y >= 600).forEach(drawFence); environment.ruins.filter((ruin) => ruin.y >= 600).forEach((ruin) => drawRuin(ruin, time));
-    environment.grassPatches.filter((patch) => patch.y > 560).forEach((patch) => drawGrassPatch(patch, time, true)); environment.grasses.filter((grass) => grass.y > 560).forEach((grass) => drawGrassTuft(grass, time, true));
+    environment.grassPatches.filter((patch) => patch.y > 560).forEach((patch) => drawGrassPatch(patch, time, true)); environment.grasses.filter((grass, index) => grass.y > 560 && index % 2 === 0).forEach((grass) => drawGrassTuft(grass, time, true));
     drawLeafCluster(70, 560, .9, "#467e55", time, .4); drawLeafCluster(1510, 505, .76, "#3d744f", time, 1.4); drawLeafCluster(1180, 846, .84, "#558c58", time, 2.7);
     [[585, 730], [975, 735], [1060, 565]].forEach(([x, y], i) => { const sway = Math.sin(time * 2 + i) * .12; ctx.save(); ctx.translate(x, y); ctx.rotate(sway); ctx.strokeStyle = i === 2 ? "#78b979" : "#6fae69"; ctx.lineWidth = 3; for (let n = -1; n <= 1; n += 1) { ctx.beginPath(); ctx.moveTo(n * 8, 18); ctx.quadraticCurveTo(n * 9, 0, n * 13, -22); ctx.stroke(); } ctx.restore(); });
   };
@@ -2273,7 +2286,7 @@
     const directionalAttackFrame = attackDirection === "down" ? 0 : attackDirection === "up" ? 4 : attackDirection === "right" ? 8 : 12;
     const spriteFrame = player.visualState === "attack" ? directionalAttackFrame + Math.min(3, Math.floor((player.attackElapsed / .34) * 4)) : playerFrame;
     const baseSpriteFlipX = playerSpriteKey === "player" && Math.abs(poseFacingX) > Math.abs(poseFacingY) && poseFacingX < -.35;
-    const customPlayer = drawOptionalSprite(playerSpriteKey, player.x, player.y + bob + 8, { frame: spriteFrame, width: player.visualState === "dash" ? 58 : player.visualState === "attack" ? 58 : player.visualState === "move" ? 54 : 52, height: player.visualState === "dash" ? 76 : player.visualState === "attack" ? 74 : player.visualState === "move" ? 74 : 70, anchorY: player.visualState === "attack" ? .94 : playerAnchor, flipX: baseSpriteFlipX, rotation: lean, alpha: flicker ? .48 : 1 });
+    const customPlayer = drawOptionalSprite(playerSpriteKey, player.x, player.y + bob + 8, { frame: spriteFrame, width: player.visualState === "dash" ? 58 : player.visualState === "attack" ? 80 : player.visualState === "move" ? 54 : 52, height: player.visualState === "dash" ? 76 : player.visualState === "attack" ? 74 : player.visualState === "move" ? 74 : 70, anchorY: player.visualState === "attack" ? .94 : playerAnchor, flipX: baseSpriteFlipX, rotation: lean, alpha: flicker ? .48 : 1 });
     if (!customPlayer) {
       ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
       const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
