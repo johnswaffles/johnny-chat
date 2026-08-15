@@ -235,7 +235,7 @@
   };
 
   const beginGameOverFeedback = () => {
-    gameOverFx = { timer: 1150, total: 1150 };
+    gameOverFx = { timer: 1700, total: 1700 };
     gameOverFlash.dataset.active = "true";
     boardWrap.dataset.state = "over";
     board.forEach((row, y) => row.forEach((type, x) => {
@@ -247,8 +247,8 @@
         vy: -.2 - Math.random() * .16,
         size: 2 + Math.random() * 4,
         color: COLORS[type],
-        life: 650 + Math.random() * 500,
-        maxLife: 1150
+        life: 900 + Math.random() * 800,
+        maxLife: 1700
       });
     }));
   };
@@ -565,14 +565,14 @@
     heldKeys.clear();
     beginGameOverFeedback();
     statusElement.dataset.state = "over";
-    statusText.textContent = "The stack is full";
+    statusText.textContent = "GAME OVER — STACK LIMIT";
     playTone(80, .25, "sawtooth", .03);
     if (score > highScore) {
       highScore = score;
       localStorage.setItem("johnny-tetris-high-score", String(highScore));
     }
     overlay.dataset.state = "over";
-    setOverlay("Stack reached", "Score " + score.toLocaleString() + ". Your high score is " + highScore.toLocaleString() + ".", "Play again");
+    setOverlay("GAME OVER", "Stack limit breached. Score " + score.toLocaleString() + " · Best " + highScore.toLocaleString() + ".", "Run it back");
     draw();
   };
 
