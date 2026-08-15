@@ -2182,15 +2182,21 @@
     // local axis aligned with diagonal/left movement vectors as well.
     const flipTrail = player.attackDirectionX < -.2;
     const trailRotation = angle + (flipTrail ? Math.PI : 0);
+    // The slash atlas is painted around a sword-hand origin, not the actor's
+    // feet. Offset it along the captured attack vector and use a centered
+    // anchor so left/right swings cannot land on the opposite side of the
+    // character just because the source cell has transparent padding.
+    const slashOriginX = presentedX + player.attackDirectionX * 18;
+    const slashOriginY = presentedY + player.attackDirectionY * 14;
     // The first atlas row is a deliberate four-beat sweep: glint, arc, contact, fade.
     // Rotation plus the directional mirror keeps the painted effect readable in all eight movement directions.
-    const slashFrame = Math.min(3, Math.floor(linearProgress * 4)); if (drawOptionalSprite("fx-slash", presentedX, presentedY, { frame: slashFrame, width: 96, height: 64, rotation: trailRotation, anchorX: .22, anchorY: .5, flipX: flipTrail, alpha: clamp(player.attack / .12, 0, 1) })) return;
-    ctx.save(); ctx.translate(presentedX, presentedY); ctx.rotate(trailRotation); if (flipTrail) ctx.scale(-1, 1); ctx.lineCap = "round";
+    const slashFrame = Math.min(3, Math.floor(linearProgress * 4)); if (drawOptionalSprite("fx-slash", slashOriginX, slashOriginY, { frame: slashFrame, width: 96, height: 64, rotation: trailRotation, anchorX: .5, anchorY: .5, flipX: flipTrail, alpha: clamp(player.attack / .12, 0, 1) })) return;
+    ctx.save(); ctx.translate(slashOriginX, slashOriginY); ctx.rotate(trailRotation); if (flipTrail) ctx.scale(-1, 1); ctx.lineCap = "round";
     const anticipation = clamp(linearProgress / .2, 0, 1); const start = -1.02 + progress * .22; const end = -.92 + progress * 1.92; const fade = clamp((player.attack < .12 ? player.attack / .12 : 1), 0, 1);
-    if (linearProgress < .3) { ctx.globalAlpha = .18 + anticipation * .24; ctx.strokeStyle = "rgba(255,231,164,.72)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(20, 0, 31, -1.55, -1.05); ctx.stroke(); }
-    ctx.globalAlpha = .16 + fade * .42; ctx.strokeStyle = "#fff5d2"; ctx.lineWidth = 15; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
-    ctx.globalAlpha = .95 * fade; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
-    ctx.globalAlpha = .92 * fade; ctx.strokeStyle = "#fff9dd"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(20, 0, 37, start, end); ctx.stroke();
+    if (linearProgress < .3) { ctx.globalAlpha = .18 + anticipation * .24; ctx.strokeStyle = "rgba(255,231,164,.72)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 31, -1.55, -1.05); ctx.stroke(); }
+    ctx.globalAlpha = .16 + fade * .42; ctx.strokeStyle = "#fff5d2"; ctx.lineWidth = 15; ctx.beginPath(); ctx.arc(0, 0, 37, start, end); ctx.stroke();
+    ctx.globalAlpha = .95 * fade; ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, 37, start, end); ctx.stroke();
+    ctx.globalAlpha = .92 * fade; ctx.strokeStyle = "#fff9dd"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 37, start, end); ctx.stroke();
     if (linearProgress > .16) { const tipX = Math.cos(end) * 58; const tipY = Math.sin(end) * 58; ctx.globalAlpha = fade * .72; ctx.fillStyle = "#fff4c8"; ctx.beginPath(); ctx.arc(tipX, tipY, 2.5 + fade * 2, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
   };

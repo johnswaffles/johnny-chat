@@ -2,6 +2,12 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-15 — Sword-trail hand anchoring and directional offset
+
+- Corrected the `fx-slash` presentation so the comic-book gleam is positioned from a direction-relative sword-hand origin instead of the actor center. The atlas now uses a centered anchor, preventing transparent source padding from putting the blade beside or behind the Warden.
+- The captured attack vector still controls rotation and left-facing mirroring; the procedural fallback uses the same offset and local origin. The generated directional player-attack sheet remains responsible for the actual sword pose.
+- No hitbox, damage, cooldown, movement, or collision behavior changed. Bumped the route script cache to `mosswake.js?v=87`.
+
 ## 2026-08-15 — Remembered movement direction for stop-and-swing handoff
 
 - Follow-up to the directional repair: attacks released immediately after a run now fall back to `targetFacing`, not the still-smoothing `facing` vector. A left run therefore remains left when the player stops and swings.
