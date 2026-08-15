@@ -805,7 +805,10 @@
   };
   const dash = () => {
     if (state.mode !== "playing" || state.dialogue || player.dashCooldown > 0 || player.hurt > 0) return;
-    const direction = readMoveInput(); const facing = direction.x || direction.y ? direction : normalized(player.facingX, player.facingY);
+    const direction = readMoveInput(); const facing = direction.x || direction.y ? direction : normalized(player.targetFacingX, player.targetFacingY, player.facingX, player.facingY);
+    // A dash is also a facing change. Capture the same vector used for travel
+    // so the first dash frame cannot render the previous idle direction.
+    player.targetFacingX = facing.x; player.targetFacingY = facing.y; player.facingX = facing.x; player.facingY = facing.y;
     player.dash = .22; player.dashCooldown = .68; player.invulnerable = .25; player.dashDirectionX = facing.x; player.dashDirectionY = facing.y; player.attack = 0; player.attackHitRegistered = true;
     playSfx("dash"); player.velocityX = facing.x * 470; player.velocityY = facing.y * 470; spawnDust(player.x, player.y + 10, 8, "#b6c7b1"); spawnParticle(player.x, player.y, COLORS.mint, 10, 75, "spark"); camera.shake = Math.max(camera.shake, .035);
   };
@@ -1012,6 +1015,10 @@
       player.attackElapsed += dt; player.attack = Math.max(0, player.attack - dt);
       if (player.attackElapsed >= .075 && !player.attackHitRegistered) resolveAttackHit();
     }
+    // If the player held a new direction during the swing, apply it on the
+    // recovery frame before switching back to the movement pose. This avoids
+    // one stale-facing frame when attack input and movement overlap.
+    if (player.attack <= 0 && hasInput && player.dash <= 0) { player.targetFacingX = input.x; player.targetFacingY = input.y; }
     if (player.attack <= 0 && player.visualState === "attack") player.visualState = hasInput ? "move" : "idle";
     player.velocityX = moveToward(player.velocityX, 0, player.dash > 0 ? 0 : 660 * dt); player.velocityY = moveToward(player.velocityY, 0, player.dash > 0 ? 0 : 660 * dt);
   };
@@ -2174,6 +2181,11 @@
   };
   const drawAttackTrail = (presentedX = player.x, presentedY = player.y) => {
     if (player.attack <= 0) return;
+    // The authored directional attack sheet already contains the sword and
+    // its green sweep. Drawing fx-slash as a second layer makes the blade look
+    // detached and can present a mirrored, opponent-facing swing. Keep the
+    // generic effect strictly as a fallback for failed/missing attack art.
+    if (loadedAssets.has("player-attack")) return;
     const linearProgress = clamp(player.attackElapsed / .34, 0, 1); const progress = 1 - Math.pow(1 - linearProgress, 2.2); const angle = Math.atan2(player.attackDirectionY, player.attackDirectionX);
     // The authored effect is painted facing right. Mirroring its local
     // horizontal axis for left-facing swings preserves the same readable
@@ -2234,8 +2246,13 @@
     // frame when the player started moving left (and vice versa).
     const poseFacingX = player.visualState === "attack" ? player.attackDirectionX : player.targetFacingX;
     const poseFacingY = player.visualState === "attack" ? player.attackDirectionY : player.targetFacingY;
-    const facingFrame = poseFacingY < -.35 ? 4 : poseFacingY > .35 ? 0 : 2;
     const movementRow = Math.abs(poseFacingX) > Math.abs(poseFacingY) ? (poseFacingX >= 0 ? 1 : 3) : (poseFacingY < 0 ? 2 : 0);
+    // The base sheet's horizontal side pose is authored facing right. Mirror
+    // that pose for a pure left idle/hurt/dash state; the run and attack sheets
+    // have their own left-facing rows and are handled without mirroring.
+    const facingFrame = Math.abs(poseFacingX) > Math.abs(poseFacingY)
+      ? 2
+      : (poseFacingY < -.35 ? 4 : 0);
     const runFrame = movementRow * 4 + Math.floor((player.walk * 1.22) % 4);
     // The authored sword row is ordered by readable aim: down, up, right,
     // left, then a short recovery. Select a four-frame directional slice rather
@@ -2255,7 +2272,8 @@
     const playerSpriteKey = player.visualState === "move" ? "player-run" : player.visualState === "attack" ? "player-attack" : "player";
     const directionalAttackFrame = attackDirection === "down" ? 0 : attackDirection === "up" ? 4 : attackDirection === "right" ? 8 : 12;
     const spriteFrame = player.visualState === "attack" ? directionalAttackFrame + Math.min(3, Math.floor((player.attackElapsed / .34) * 4)) : playerFrame;
-    const customPlayer = drawOptionalSprite(playerSpriteKey, player.x, player.y + bob + 8, { frame: spriteFrame, width: player.visualState === "dash" ? 58 : player.visualState === "attack" ? 58 : player.visualState === "move" ? 54 : 52, height: player.visualState === "dash" ? 76 : player.visualState === "attack" ? 74 : player.visualState === "move" ? 74 : 70, anchorY: player.visualState === "attack" ? .94 : playerAnchor, flipX: false, rotation: lean, alpha: flicker ? .48 : 1 });
+    const baseSpriteFlipX = playerSpriteKey === "player" && Math.abs(poseFacingX) > Math.abs(poseFacingY) && poseFacingX < -.35;
+    const customPlayer = drawOptionalSprite(playerSpriteKey, player.x, player.y + bob + 8, { frame: spriteFrame, width: player.visualState === "dash" ? 58 : player.visualState === "attack" ? 58 : player.visualState === "move" ? 54 : 52, height: player.visualState === "dash" ? 76 : player.visualState === "attack" ? 74 : player.visualState === "move" ? 74 : 70, anchorY: player.visualState === "attack" ? .94 : playerAnchor, flipX: baseSpriteFlipX, rotation: lean, alpha: flicker ? .48 : 1 });
     if (!customPlayer) {
       ctx.save(); ctx.translate(player.x, player.y + bob); ctx.rotate(lean); if (player.visualState === "dash") ctx.rotate(Math.atan2(player.dashDirectionY, player.dashDirectionX) - Math.PI / 2);
       const scale = player.visualState === "dash" ? 1.12 : player.visualState === "hurt" ? .94 : 1; ctx.scale(scale, player.visualState === "dash" ? .72 : 1);
