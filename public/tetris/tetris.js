@@ -68,11 +68,13 @@
   const levelProgressElement = document.querySelector(".level-progress");
   const statusText = document.getElementById("status-text");
   const statusElement = document.querySelector(".game-status");
+  const gameShell = document.querySelector(".game-shell");
   const overlay = document.getElementById("board-overlay");
   const overlayTitle = document.getElementById("overlay-title");
   const overlayCopy = document.getElementById("overlay-copy");
   const startButton = document.getElementById("start-button");
   const pauseButton = document.getElementById("pause-button");
+  const minimizeButton = document.getElementById("minimize-button");
   const holdButton = document.getElementById("hold-button");
   const lineClearBadge = document.getElementById("line-clear-badge");
   const gameOverFlash = document.getElementById("game-over-flash");
@@ -109,6 +111,12 @@
   let audioContext = null;
   let highScore = Number(localStorage.getItem("johnny-tetris-high-score") || 0);
   const heldKeys = new Map();
+
+  const setPlayMode = (expanded) => {
+    gameShell.dataset.playMode = String(expanded);
+    document.body.dataset.playMode = String(expanded);
+    minimizeButton.setAttribute("aria-expanded", String(expanded));
+  };
 
   const cloneMatrix = (matrix) => matrix.map((row) => row.slice());
   const makeBoard = () => Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -508,6 +516,7 @@
     resetGame();
     running = true;
     paused = false;
+    setPlayMode(true);
     ensureAudio();
     boardWrap.dataset.state = "playing";
     gameOverFlash.dataset.active = "false";
@@ -817,6 +826,7 @@
     else beginGame();
   });
   pauseButton.addEventListener("click", togglePause);
+  minimizeButton.addEventListener("click", () => setPlayMode(false));
   holdButton.addEventListener("click", hold);
   musicButton.addEventListener("click", toggleMusic);
   document.querySelectorAll("[data-action]").forEach((button) => {
@@ -857,6 +867,7 @@
   window.addEventListener("johnny:music-focus", updateMusicButton);
 
   resetGame();
+  setPlayMode(false);
   updateMusicButton();
   draw();
   window.requestAnimationFrame(tick);
