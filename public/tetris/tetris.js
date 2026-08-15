@@ -56,8 +56,7 @@
 
   const boardCanvas = document.getElementById("board");
   const boardContext = boardCanvas.getContext("2d");
-  const nextCanvases = [0, 1, 2].map((index) => document.getElementById("next-canvas" + (index ? "-" + index : "")));
-  const holdCanvas = document.getElementById("hold-canvas");
+  const nextCanvases = [document.getElementById("next-canvas")];
   const scoreElement = document.getElementById("score");
   const linesElement = document.getElementById("lines");
   const levelElement = document.getElementById("level");
@@ -73,7 +72,10 @@
   const overlayCopy = document.getElementById("overlay-copy");
   const startButton = document.getElementById("start-button");
   const pauseButton = document.getElementById("pause-button");
-  const holdButton = document.getElementById("hold-button");
+  const secondChanceButton = document.getElementById("second-chance-button");
+  const secondChanceCount = document.getElementById("second-chance-count");
+  const secondChanceMeter = document.getElementById("second-chance-meter");
+  const chanceCard = document.querySelector(".chance-card");
   const lineClearBadge = document.getElementById("line-clear-badge");
   const gameOverFlash = document.getElementById("game-over-flash");
   const boardWrap = document.querySelector(".board-wrap");
@@ -89,12 +91,11 @@
     fast: { multiplier: .62, caption: "Fast pace" },
     "really-fast": { multiplier: .22, caption: "Really fast · hard mode" }
   };
+  const MAX_SECOND_CHANCES = 4;
 
   let board = [];
   let current = null;
   let nextQueue = [];
-  let holdType = null;
-  let canHold = true;
   let bag = [];
   let score = 0;
   let lines = 0;
@@ -119,6 +120,9 @@
   let speedMode = "classic";
   let audioContext = null;
   let highScore = Number(localStorage.getItem("johnny-tetris-high-score") || 0);
+  let secondChances = MAX_SECOND_CHANCES;
+  let moveStartSnapshot = null;
+  let lastMoveSnapshot = null;
   const heldKeys = new Map();
 
 
@@ -143,6 +147,28 @@
   const fillQueue = () => {
     while (nextQueue.length < 5) nextQueue.push(takeType());
   };
+
+  const cloneMoveSnapshot = (snapshot) => snapshot ? {
+    board: snapshot.board.map((row) => row.slice()),
+    nextQueue: snapshot.nextQueue.slice(),
+    bag: snapshot.bag.slice(),
+    score: snapshot.score,
+    lines: snapshot.lines,
+    level: snapshot.level,
+    combo: snapshot.combo,
+    backToBack: snapshot.backToBack
+  } : null;
+
+  const captureMoveStart = () => ({
+    board: board.map((row) => row.slice()),
+    nextQueue: nextQueue.slice(),
+    bag: bag.slice(),
+    score,
+    lines,
+    level,
+    combo,
+    backToBack
+  });
 
   const matrixFor = (type, rotation = 0) => {
     let matrix = cloneMatrix(SHAPES[type]);
@@ -424,6 +450,8 @@
 
   const lockPiece = () => {
     if (!current || pendingClear) return;
+    lastMoveSnapshot = cloneMoveSnapshot(moveStartSnapshot || captureMoveStart());
+    updateSecondChanceUI();
     const tSpin = detectTSpin();
     beginLockFeedback(current);
     playTone(120, .045, "square", .01);
@@ -441,7 +469,6 @@
     }
     const rows = findFullRows();
     current = null;
-    canHold = true;
     lockTimer = 0;
     lockResets = 0;
     if (rows.length) {
@@ -463,34 +490,22 @@
     fallTimer = 0;
     lockTimer = 0;
     lockResets = 0;
-    if (collides(current)) endGame();
-    updateMiniCanvases();
-  };
-
-  const hold = () => {
-    if (!running || paused || gameOver || pendingClear || !canHold || !current) return;
-    const previous = holdType;
-    holdType = current.type;
-    canHold = false;
-    current = previous ? makePiece(previous) : null;
-    if (!current) spawnNext();
-    else {
-      lockTimer = 0;
-      lockResets = 0;
-      if (collides(current)) endGame();
+    boardWrap.dataset.currentPiece = current.type;
+    if (arcadeElement) arcadeElement.dataset.currentPiece = current.type;
+    if (collides(current)) {
+      endGame();
+      updateMiniCanvases();
+      return;
     }
-    playTone(270, .06, "triangle", .016);
+    moveStartSnapshot = captureMoveStart();
     updateMiniCanvases();
-    draw();
   };
 
   const resetGame = () => {
     board = makeBoard();
     current = null;
     nextQueue = [];
-    holdType = null;
     bag = [];
-    canHold = true;
     score = 0;
     lines = 0;
     level = 1;
@@ -505,6 +520,9 @@
     impactFlashTimer = 0;
     impactCells = [];
     effectParticles = [];
+    secondChances = MAX_SECOND_CHANCES;
+    moveStartSnapshot = null;
+    lastMoveSnapshot = null;
     lineClearBadge.dataset.visible = "false";
     lineClearBadge.dataset.tier = "";
     lineClearBadge.textContent = "";
@@ -594,6 +612,7 @@
     const danger = stackHeight >= 16 ? "critical" : stackHeight >= 11 ? "rising" : "calm";
     const levelHue = (188 + (level - 1) * 22) % 360;
     boardWrap.dataset.danger = danger;
+    boardWrap.dataset.stackHeight = String(stackHeight);
     if (arcadeElement) {
       arcadeElement.dataset.danger = danger;
       arcadeElement.dataset.combo = combo > 0 ? "active" : "idle";
@@ -858,11 +877,97 @@
     }
   };
 
+  const updateSecondChanceUI = () => {
+    const canUse = secondChances > 0 && Boolean(lastMoveSnapshot) && (running || gameOver);
+    if (secondChanceCount) secondChanceCount.textContent = secondChances + " left";
+    if (secondChanceMeter) {
+      secondChanceMeter.setAttribute("aria-valuenow", String(secondChances));
+      Array.from(secondChanceMeter.children).forEach((pip, index) => {
+        pip.dataset.active = String(index < secondChances);
+      });
+    }
+    if (secondChanceButton) {
+      secondChanceButton.disabled = !canUse;
+      secondChanceButton.innerHTML = secondChances <= 0
+        ? '<span aria-hidden="true">×</span> No chances left'
+        : canUse
+          ? '<span aria-hidden="true">↶</span> Use second chance'
+          : '<span aria-hidden="true">↶</span> Ready after first move';
+    }
+    if (chanceCard) chanceCard.dataset.ready = String(canUse);
+    document.querySelectorAll('[data-action="second-chance"]').forEach((button) => {
+      button.disabled = !canUse;
+      button.setAttribute("aria-label", canUse ? "Use a second chance" : "Second chance unavailable");
+    });
+  };
+
+  const useSecondChance = () => {
+    if (!lastMoveSnapshot || secondChances <= 0 || (!running && !gameOver)) return;
+    const snapshot = cloneMoveSnapshot(lastMoveSnapshot);
+    secondChances -= 1;
+    board = snapshot.board.map((row) => row.slice());
+    nextQueue = snapshot.nextQueue.slice();
+    bag = snapshot.bag.slice();
+    score = snapshot.score;
+    lines = snapshot.lines;
+    level = snapshot.level;
+    combo = snapshot.combo;
+    backToBack = snapshot.backToBack;
+    current = null;
+    moveStartSnapshot = null;
+    lastMoveSnapshot = null;
+    pendingClear = null;
+    pendingClearTimer = 0;
+    lineClearFx = null;
+    gameOverFx = null;
+    impactFlashTimer = 0;
+    impactCells = [];
+    effectParticles = [];
+    fallTimer = 0;
+    lockTimer = 0;
+    lockResets = 0;
+    heldKeys.clear();
+    running = true;
+    paused = false;
+    gameOver = false;
+    lineClearBadge.dataset.visible = "false";
+    lineClearBadge.dataset.tier = "";
+    lineClearBadge.textContent = "";
+    gameOverFlash.dataset.active = "false";
+    delete boardWrap.dataset.clearTier;
+    boardWrap.dataset.state = "second-chance";
+    if (arcadeElement) delete arcadeElement.dataset.clearTier;
+    overlay.dataset.state = "";
+    overlay.classList.add("hidden");
+    pauseButton.textContent = "Pause game";
+    pauseButton.dataset.paused = "false";
+    statusElement.dataset.state = "playing";
+    statusText.textContent = "Second chance — fresh move";
+    updateStats();
+    spawnNext();
+    updateMiniCanvases();
+    updateSecondChanceUI();
+    if (chanceCard) {
+      chanceCard.dataset.used = "true";
+      window.setTimeout(() => { chanceCard.dataset.used = "false"; }, 720);
+    }
+    playTone(360, .09, "triangle", .025);
+    window.setTimeout(() => playTone(620, .13, "sine", .022), 75);
+    draw();
+    window.setTimeout(() => {
+      if (!gameOver && boardWrap.dataset.state === "second-chance") boardWrap.dataset.state = "playing";
+    }, 720);
+  };
+
   const updateMiniCanvases = () => {
-    nextCanvases.forEach((canvas, index) => drawMiniPiece(canvas, nextQueue[index]));
-    drawMiniPiece(holdCanvas, holdType);
-    holdButton.disabled = !canHold;
-    holdButton.style.opacity = canHold ? "1" : ".45";
+    nextCanvases.forEach((canvas, index) => {
+      const type = nextQueue[index];
+      drawMiniPiece(canvas, type);
+      if (!canvas) return;
+      canvas.dataset.piece = type || "";
+      canvas.setAttribute("aria-label", type ? "Next piece: " + type : "Next piece");
+    });
+    updateSecondChanceUI();
   };
 
   const updateMusicButton = () => {
@@ -903,7 +1008,7 @@
     if (name === "rotate" || name === "up") rotate();
     if (name === "down") softDrop();
     if (name === "drop") hardDrop();
-    if (name === "hold") hold();
+    if (name === "second-chance") useSecondChance();
   };
 
   const repeatAction = (key) => {
@@ -966,7 +1071,7 @@
     else beginGame();
   });
   pauseButton.addEventListener("click", togglePause);
-  holdButton.addEventListener("click", hold);
+  secondChanceButton.addEventListener("click", useSecondChance);
   musicButton.addEventListener("click", toggleMusic);
   speedControls.forEach((button) => button.addEventListener("click", () => setSpeed(button.dataset.speed)));
   document.querySelectorAll("[data-action]").forEach((button) => {
@@ -974,7 +1079,7 @@
   });
   window.addEventListener("keydown", (event) => {
     const key = event.key;
-    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " ", "c", "C", "p", "P"].includes(key)) event.preventDefault();
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " ", "p", "P"].includes(key)) event.preventDefault();
     if (key === "ArrowLeft" || key === "ArrowRight" || key === "ArrowDown") {
       const name = key === "ArrowLeft" ? "left" : key === "ArrowRight" ? "right" : "down";
       if (!heldKeys.has(name)) {
@@ -986,7 +1091,6 @@
     if (event.repeat) return;
     if (key === "ArrowUp") rotate();
     if (key === " ") hardDrop();
-    if (key === "c" || key === "C") hold();
     if (key === "p" || key === "P") togglePause();
   });
   window.addEventListener("keyup", (event) => {
