@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090d1a">
   <title>Tetris — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-5">
+  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-6">
 </head>
 <body>
   <div class="aurora aurora-one"></div>
@@ -77,6 +77,10 @@
         <div id="board-overlay" class="board-overlay">
           <div class="game-over-mark" aria-hidden="true">GAME<br>OVER</div>
           <div class="game-over-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="screen-shatter" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <b></b><b></b><b></b><b></b><b></b><b></b>
+          </div>
           <p class="overlay-kicker">TETRIS</p>
           <h2 id="overlay-title">Ready?</h2>
           <p id="overlay-copy">Press start, then use the arrow keys or the controls below.</p>
@@ -132,6 +136,6 @@
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=remaster-2026-5"></script>
+  <script src="/tetris/tetris.js?v=remaster-2026-6"></script>
 </body>
 </html>
