@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090d1a">
   <title>Tetris — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-9">
+  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-10">
 </head>
 <body>
   <div class="aurora aurora-one"></div>
@@ -73,6 +73,16 @@
 
       <div class="board-column">
         <div class="board-topline"><span>PLAYFIELD</span><span>10 × 20 GRID</span></div>
+        <div class="reactor-console" aria-label="Stack reactor">
+          <div class="reactor-heading">
+            <span class="panel-label">Stack reactor</span>
+            <strong id="reactor-state">Charging</strong>
+          </div>
+          <div id="reactor-meter" class="reactor-meter" role="meter" aria-label="Reactor charge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span id="reactor-bar"></span>
+          </div>
+          <div class="reactor-meta"><span id="reactor-charge">0%</span><span id="reactor-bonus">Clear lines to charge</span></div>
+        </div>
         <div class="board-wrap">
         <div class="board-glow"></div>
         <canvas id="board" width="300" height="600" tabindex="0" aria-label="Tetris board"></canvas>
@@ -135,11 +145,11 @@
       </div>
       <button data-action="drop" class="drop-control" type="button" aria-label="Hard drop"><b>DROP</b><span>Hard drop</span></button>
     </section>
-    <p class="tip">7-piece bag • SRS rotation • ghost piece • four second chances • combos • local high score</p>
+    <p class="tip">7-piece bag • SRS rotation • ghost piece • four second chances • Reactor Overdrive • local high score</p>
   </main>
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=remaster-2026-9"></script>
+  <script src="/tetris/tetris.js?v=remaster-2026-10"></script>
 </body>
 </html>
