@@ -299,7 +299,7 @@ kbd {
 .board-overlay[data-state="over"] { background: radial-gradient(circle at 50% 42%, rgba(94,15,70,.58), rgba(12,5,22,.9) 72%); }
 .board-overlay[data-state="over"] .overlay-kicker { color: var(--pink); text-shadow: 0 0 18px rgba(255,115,190,.7); }
 .board-overlay[data-state="over"] h2 { text-shadow: 0 0 28px rgba(255,115,190,.35); }
-.board-overlay.hidden { display: none; }
+.board-overlay.hidden { visibility: hidden; opacity: 0; pointer-events: none; }
 .overlay-kicker { margin: 0; color: var(--cyan); font: 500 10px/1 var(--mono); letter-spacing: .24em; }
 .board-overlay h2 { margin: 15px 0 8px; font-size: 31px; }
 .board-overlay p:not(.overlay-kicker) { max-width: 215px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
@@ -1438,6 +1438,8 @@ body.game-active .touch-controls,
 body.game-active .touch-controls button,
 body.game-active #board { touch-action: none; }
 body.game-active .game-shell { grid-template-rows: 38px minmax(0, 1fr) 82px; }
+body.game-active .arcade { align-content: start; align-items: start; }
+body.game-active .side-panel { align-self: center; }
 body.game-active .touch-controls {
   grid-template-columns: 1.15fr 1.5fr 1.05fr;
   height: 82px;
@@ -1472,6 +1474,7 @@ body.game-active .chance-button[data-empty="true"] { letter-spacing: .05em; }
 
 @media (max-width: 680px) {
   body.game-active .game-shell { grid-template-rows: 34px minmax(0, 1fr) 82px; }
+  body.game-active .left-panel { align-self: start; }
   body.game-active .touch-controls { grid-template-columns: 1.15fr 1.5fr 1.05fr; height: 82px; padding: 5px 8px; gap: 6px; }
   body.game-active .d-pad { grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(2, 32px); gap: 4px; }
   body.game-active .touch-controls button { min-height: 32px; border-radius: 9px; font-size: 20px; }
