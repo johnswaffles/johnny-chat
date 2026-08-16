@@ -1149,13 +1149,14 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 
 - Expanded the map configuration to `90 x 73`, widened camera travel limits for a map larger than the viewport, lowered the default zoom to keep the enlarged structures readable, and biased the opening camera south so tall building art stays under the HUD boundary.
 - Repositioned the opening Crown Hall, Hearth House, Waystore, Ashen Camp, resources, decorations, villagers, and starting Crown Guard into a sparse larger-world composition.
+- Kept the opening Crown Guard in a clear north-east pocket of the starting settlement so the unit is not hidden beneath the bottom command deck at the default camera framing.
 - Reworked the meadow renderer to repeat the existing original meadow texture inside the projected map diamond instead of stretching one small board across the entire expanded world. No new raster asset was necessary and no visible square terrain card is drawn.
 - Increased building gameplay footprints and art sizes: Crown Hall `6x5 / 440px`, Hearth House `4x3 / 350px`, Waystore `4x3 / 370px`, and Ashen Camp `6x5 / 500px`; the existing collision-clearance contract remains active for pathing, placement, and interaction.
 - Separated the starting Hearth House farther northwest from the Crown Hall so the two large silhouettes do not read as one stacked structure.
 - Added role-based unit spacing data for Villagers, Crown Guards, and Ashen Raiders. Group move spacing, local collision comfort distance, exact-overlap recovery, and production spawn checks now use the role’s personal-space/group-gap values.
 - Added bounded Crown Hall production for the existing two player unit types only: Villager (`50 Food`, `7 sec`) and Crown Guard (`75 Food + 25 Wood`, `11 sec`). The queue is capped at three, respects population housing, spends resources on order, pauses safely when spawn space is blocked, and places new units outside the building using spacing checks.
 - Added bottom command-deck quick menus: `BUILDINGS` opens the existing Hearth House blueprint menu; selecting the Crown Hall reveals `TRAIN UNITS` with Villager and Crown Guard options, queue status, cost feedback, tooltips, and disabled states.
-- Updated the module graph cache marker to `20260816-expansion1` so the expanded config, simulation, renderer, and UI load together.
+- Updated the module graph cache marker to `20260816-expansion2` so the expanded config, simulation, renderer, and UI load together.
 
 ### VALIDATION
 

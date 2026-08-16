@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260816-expansion1';
-import { findPath } from './pathfinding.js?v=20260816-expansion1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260816-expansion1';
+import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260816-expansion2';
+import { findPath } from './pathfinding.js?v=20260816-expansion2';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260816-expansion2';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -123,7 +123,7 @@ export class CrownforgeSimulation {
     this.addUnit('villager', 23, 44.5, 'player');
     this.addUnit('villager', 26, 46, 'player');
     this.addUnit('villager', 29, 44.5, 'player');
-    this.addUnit('soldier', 38, 45.5, 'player');
+    this.addUnit('soldier', 42, 34, 'player');
     // Keep the opening defender between the camp and the stone clearing. The
     // old point overlapped the eastern stone node in projection and made a
     // resource look like an enemy target until the player moved the Raider.
