@@ -73,13 +73,13 @@ These are render sizes before camera zoom. They are visual standards, not new ga
 
 | Family | Current size | Gameplay reference |
 |---|---:|---|
-| Villager | 108 px | collision radius 0.36; building interaction 0.78 |
-| Crown Guard | 98 px | collision radius 0.43; combat range 1.45 |
-| Ashen Raider | 98 px | collision radius 0.44; combat range 1.25 |
+| Villager | 88 px | collision radius 0.36; building interaction 0.78 |
+| Crown Guard | 120 px | collision radius 0.43; combat range 1.45 |
+| Ashen Raider | 120 px | collision radius 0.44; combat range 1.25 |
 | Crown Hall | 246 px | 3 x 3 footprint |
 | Hearth House | 194 px | 2 x 2 footprint |
 | Waystore | 208 px | 2 x 2 footprint |
-| Ashen Camp | 272 px | 3 x 3 footprint |
+| Ashen Camp | 272 px wide, natural 3:2 aspect | 3 x 3 footprint |
 | Tree resource | 142 px base | resource approach distance 1.75 |
 | Berry resource | 115 px base | resource approach distance 1.55 |
 | Stone resource | 126 px base | resource approach distance 1.70 |

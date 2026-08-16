@@ -100,8 +100,14 @@ export class CrownforgeRenderer {
     this.camera.y += dy;
     const halfMapW = ((CONFIG.mapWidth + CONFIG.mapHeight) * CONFIG.tileWidth / 4) * this.camera.zoom;
     const halfMapH = ((CONFIG.mapWidth + CONFIG.mapHeight) * CONFIG.tileHeight / 4) * this.camera.zoom;
-    this.camera.x = Math.max(-halfMapW * 0.35, Math.min(halfMapW * 0.35, this.camera.x));
-    this.camera.y = Math.max(-halfMapH * 0.55, Math.min(halfMapH * 0.55, this.camera.y));
+    const mapWidth = halfMapW * 2;
+    const mapHeight = halfMapH * 2;
+    const horizontalRoom = Math.max(0, (this.width - mapWidth) / 2 + 54);
+    const verticalRoom = Math.max(0, (this.height - mapHeight) / 2 + 54);
+    const horizontalLimit = Math.min(halfMapW * 0.22, horizontalRoom);
+    const verticalLimit = Math.min(halfMapH * 0.3, verticalRoom);
+    this.camera.x = Math.max(-horizontalLimit, Math.min(horizontalLimit, this.camera.x));
+    this.camera.y = Math.max(-verticalLimit, Math.min(verticalLimit, this.camera.y));
   }
 
   zoomAt(factor, screenPoint) {
@@ -123,6 +129,7 @@ export class CrownforgeRenderer {
     this.drawMap(ctx, time);
     this.drawPaths(ctx, simulation);
     this.drawWorldEntities(ctx, simulation, time);
+    this.drawResourceLabels(ctx, simulation);
     this.drawOccludedUnitOverlays(ctx, simulation);
     this.drawWorkFeedback(ctx, simulation, time);
     this.drawCombatFeedback(ctx, simulation, time);
@@ -328,8 +335,9 @@ export class CrownforgeRenderer {
       if (!needsTracking) continue;
       const point = this.worldToScreen(unit);
       const style = UNIT_TYPES[unit.type];
+      const unitSize = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
       this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
-      this.drawHealthBar(ctx, point.x, point.y - (unit.type === 'villager' ? 94 : 86) * this.camera.zoom, 58 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(style.combatAtlas));
+      this.drawHealthBar(ctx, point.x, point.y - unitSize * 0.9 * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(style.combatAtlas));
     }
   }
 
@@ -382,8 +390,11 @@ export class CrownforgeRenderer {
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.imageSmoothingEnabled = true;
-      const destination = { x: screen.x - size / 2, y: screen.y - size * 0.98 };
-      ctx.drawImage(this.enemyCamp, destination.x, destination.y, size, size);
+      const aspect = ENEMY_CAMP_ASSET.width / ENEMY_CAMP_ASSET.height;
+      const width = size;
+      const height = size / aspect;
+      const destination = { x: screen.x - width / 2, y: screen.y - height * 0.98 };
+      ctx.drawImage(this.enemyCamp, destination.x, destination.y, width, height);
       ctx.restore();
       return;
     }
@@ -468,6 +479,9 @@ export class CrownforgeRenderer {
   drawBuilding(ctx, building, time) {
     const point = this.worldToScreen(building);
     const size = this.buildingRenderSize(building);
+    const visualHeight = building.type === 'ashenCamp'
+      ? size * (ENEMY_CAMP_ASSET.height / ENEMY_CAMP_ASSET.width)
+      : size;
     const alpha = building.destroyed ? Math.max(0, 0.7 - building.destroyAge * 0.26) : 1;
     if (!building.destroyed) this.drawBuildingFootprint(ctx, building, building.selected, building.faction === 'enemy' ? '#d86b55' : FACTION.color);
     this.drawBuildingStage(ctx, building, point, size * this.camera.zoom, alpha);
@@ -497,7 +511,7 @@ export class CrownforgeRenderer {
       this.drawConstructionTreatment(ctx, building, point, time);
     }
     this.drawBuildingDamageTreatment(ctx, building, point, size, time);
-    this.drawHealthBar(ctx, point.x, point.y - size * 0.82 * this.camera.zoom, size * 0.58 * this.camera.zoom, building.hp / building.maxHp, building.progress < 1 ? `BUILD ${Math.round(building.progress * 100)}%` : '');
+    this.drawHealthBar(ctx, point.x, point.y - visualHeight * 0.82 * this.camera.zoom, size * 0.58 * this.camera.zoom, building.hp / building.maxHp, building.progress < 1 ? `BUILD ${Math.round(building.progress * 100)}%` : '');
   }
 
   drawBuildingFootprint(ctx, building, selected = false, color = FACTION.color) {
@@ -628,13 +642,47 @@ export class CrownforgeRenderer {
       const alpha = depleted ? 0.32 : 0.82 + ratio * 0.18;
       this.drawEnvironmentAsset(ctx, resource.type, resource.variant, point, size * scale * this.camera.zoom, alpha);
     }
-    const info = RESOURCE_TYPES[resource.resourceType];
-    ctx.save();
-    ctx.font = '600 10px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = depleted ? 'rgba(25, 33, 31, 0.48)' : 'rgba(20, 31, 29, 0.8)';
-    ctx.fillText(depleted ? `${info.label.toUpperCase()}  DEPLETED` : `${info.label.toUpperCase()}  ${Math.max(0, Math.round(resource.amount))}`, point.x, point.y + 18 * this.camera.zoom);
-    ctx.restore();
+  }
+
+  drawResourceLabels(ctx, simulation) {
+    for (const resource of simulation.resourcesNodes) {
+      const point = this.worldToScreen(resource);
+      if (point.x < -80 || point.x > this.width + 80 || point.y < -90 || point.y > this.height + 90) continue;
+      const info = RESOURCE_TYPES[resource.resourceType];
+      const depleted = resource.amount <= 0;
+      const active = simulation.selectedIds.includes(resource.id)
+        || simulation.units.some((unit) => !unit.dead && unit.gatherTarget === resource.id);
+      const label = depleted
+        ? `${info.label.toUpperCase()}  DEPLETED`
+        : active
+          ? `${info.label.toUpperCase()}  ${Math.max(0, Math.round(resource.amount))}`
+          : info.label.toUpperCase();
+      const zoom = this.camera.zoom;
+      const offset = resource.type === 'tree' ? 31 : resource.type === 'berry' ? 27 : 29;
+      const preferredY = point.y + offset * zoom;
+      const labelY = preferredY <= this.height - 12 ? preferredY : point.y - 16 * zoom;
+      ctx.save();
+      ctx.font = '700 9px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const width = Math.max(48, ctx.measureText(label).width + 14);
+      const x = Math.max(width / 2 + 8, Math.min(this.width - width / 2 - 8, point.x));
+      ctx.strokeStyle = `${info.color}${depleted ? '44' : '70'}`;
+      ctx.lineWidth = Math.max(1, 0.8 * zoom);
+      ctx.beginPath();
+      ctx.moveTo(point.x, point.y + 4 * zoom);
+      ctx.lineTo(x, labelY - 9 * zoom);
+      ctx.stroke();
+      ctx.fillStyle = depleted ? 'rgba(17, 28, 28, 0.62)' : 'rgba(15, 27, 28, 0.88)';
+      ctx.beginPath();
+      ctx.roundRect(x - width / 2, labelY - 8 * zoom, width, 16 * zoom, 8 * zoom);
+      ctx.fill();
+      ctx.strokeStyle = `${info.color}${depleted ? '44' : '86'}`;
+      ctx.stroke();
+      ctx.fillStyle = depleted ? '#9ca99d' : '#f1e5bd';
+      ctx.fillText(label, x, labelY);
+      ctx.restore();
+    }
   }
 
   drawDecoration(ctx, decoration) {
@@ -646,7 +694,7 @@ export class CrownforgeRenderer {
   drawUnit(ctx, unit, time) {
     const point = this.worldToScreen(unit);
     const style = UNIT_TYPES[unit.type];
-    const size = unit.type === 'villager' ? 108 : 98;
+    const size = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
     if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
     if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);

@@ -91,18 +91,21 @@ export class CrownforgeSimulation {
     this.addBuilding('townCenter', 11.2, 10.7, 'player');
     this.addBuilding('house', 7.4, 8.1, 'player');
     this.addBuilding('storehouse', 15.6, 10.6, 'player');
-    this.addBuilding('ashenCamp', 26.0, 4.5, 'enemy');
+    // Keep the camp and eastern resource clearing inside a visual safety
+    // margin. The map can pan and zoom, but tall silhouettes should not sit
+    // on the viewport edge where their art is cropped.
+    this.addBuilding('ashenCamp', 24.8, 5.4, 'enemy');
     // Keep the opening wood pair on the Crown Hall's west flank. The old
     // north-west coordinates put both trees behind the Hall's tall sprite in
     // projected depth, making the starting wood look absent even though it
     // remained mechanically targetable.
     this.addResource('tree', 'wood', 4.8, 8.5, 110, 0);
     this.addResource('tree', 'wood', 5.4, 13.0, 110, 1);
-    this.addResource('tree', 'wood', 26.1, 16.8, 110, 2);
+    this.addResource('tree', 'wood', 24.6, 16.3, 110, 2);
     this.addResource('berry', 'food', 19.5, 4.9, 105, 0);
     this.addResource('berry', 'food', 21.8, 5.8, 105, 1);
-    this.addResource('stone', 'stone', 25.2, 10.3, 120, 0);
-    this.addResource('stone', 'stone', 26.7, 11.6, 120, 3);
+    this.addResource('stone', 'stone', 24.4, 10.6, 120, 0);
+    this.addResource('stone', 'stone', 25.8, 12.0, 120, 3);
     this.addDecoration('log', 7.1, 4.9, 0, 0.9);
     this.addDecoration('stump', 4.8, 17.2, 1, 0.85);
     this.addDecoration('flowers', 23.4, 15.8, 2, 0.72);

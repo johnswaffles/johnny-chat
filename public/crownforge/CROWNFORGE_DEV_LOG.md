@@ -814,6 +814,50 @@ This pass completed the player-facing input, command feedback, camera, interface
 
 The player-facing layer now communicates selection, intent, validity, task state, and outcomes coherently across the existing tiny match. The next work should continue polishing this slice rather than widening it.
 
+## WORLD SCALE, LABELS + EDGE-FRAMING PASS — 2026-08-16
+
+### SCOPE
+
+This pass addressed the visible presentation defects reported from the live map screenshot. No new gameplay system, unit, building, resource, map, faction, or artwork family was added.
+
+### WHAT CHANGED
+
+- Rebalanced the current render contract: Villagers now draw at 88 px, while Crown Guards and Ashen Raiders draw at 120 px. Workers read as subordinate to building mass, and combat silhouettes no longer look undersized beside the villagers.
+- Preserved the Ashen Camp's original 3:2 source aspect instead of stretching it into a square destination. Its 272 px runtime width now keeps the generated structure's proportions intact.
+- Moved the Ashen Camp and the eastern stone/wood clearing inward from the map edge so their tall silhouettes and ground details remain inside the playable frame.
+- Reduced the default camera zoom from 0.84 to 0.78 and tightened camera pan limits with viewport-aware breathing room. Zoom and pan still work, but normal camera movement no longer pushes edge assets against the canvas boundary.
+- Removed resource text from the sprite draw pass. Resource labels now render after world entities as compact, color-keyed dark pills connected to the node base, below the artwork rather than across the canopy, bush, or deposit.
+- Resource nodes show their type by default and reveal the live remaining amount while selected or actively gathered. This keeps the map readable without removing useful economy feedback.
+- Updated the art bible and asset manifest with the current worker/combat scales and the preserved Ashen Camp aspect contract.
+
+### ASSET DECISION
+
+No new raster artwork was necessary. The existing original Crownforge assets were coherent; the defects came from draw sizing, aspect handling, label layering, and camera framing.
+
+### VALIDATION
+
+- `node --check` passed for `src/config.js`, `src/simulation.js`, and `src/renderer.js`.
+- `tools/remediation-regression.mjs` passed animation mapping, reset clearance, economy cadence, cargo retask, placement/construction, combat, death, victory, and defeat checks.
+- Fresh local 1280 x 720 browser load was visually inspected after the change. Villagers, Crown Guard, Ashen Camp, trees, berries, stone, labels, UI, and selection markers remained grounded and readable.
+- Zoomed and panned edge checks kept the Ashen Camp, eastern stone deposits, and lower wood resource visually inside the viewport; no resource, building, or unit image was visibly cropped in the tested framing.
+- Browser console warning/error log was empty after fresh reload, zoom, and pan checks.
+
+### KNOWN ISSUES
+
+- At extreme zoom the authored meadow itself can leave the viewport, which is normal RTS camera behavior; the current safety limits keep active edge assets readable in the normal slice framing.
+- Resource labels remain intentionally visible for node recognition. The detailed remaining amount appears only for selected/active nodes to avoid returning to a text-heavy map.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Recheck the new render contract after any future atlas regeneration or camera-angle change.
+2. Keep resource label pills and their below-node anchor stable when adding future resource variants.
+3. Continue the existing non-scope animation-depth backlog only after this visual framing holds up across another live match.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No new civilizations, units, buildings, resources, maps, technologies, campaigns, fog-of-war, minimap, or expanded AI.
+- No new raster family or broad art-library expansion; this defect was solved by using the current Crownforge artwork correctly.
+
 ## TECHNICAL HARDENING + RELEASE CERTIFICATION PASS — 2026-08-16
 
 ### SCOPE

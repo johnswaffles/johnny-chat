@@ -3,7 +3,7 @@ export const CONFIG = {
   mapHeight: 22,
   tileWidth: 52,
   tileHeight: 26,
-  initialZoom: 0.84,
+  initialZoom: 0.78,
   minZoom: 0.62,
   maxZoom: 1.12,
 };
@@ -42,6 +42,7 @@ export const UNIT_TYPES = {
   villager: {
     label: 'Villager',
     asset: 'villager',
+    renderSize: 88,
     speed: 2.9,
     acceleration: 10.5,
     braking: 13.5,
@@ -55,6 +56,7 @@ export const UNIT_TYPES = {
   soldier: {
     label: 'Crown Guard',
     asset: 'soldier',
+    renderSize: 120,
     speed: 2.45,
     radius: 0.43,
     maxHp: 85,
@@ -67,6 +69,7 @@ export const UNIT_TYPES = {
   raider: {
     label: 'Ashen Raider',
     asset: 'raider',
+    renderSize: 120,
     speed: 2.25,
     radius: 0.44,
     maxHp: 72,
