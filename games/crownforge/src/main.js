@@ -1,14 +1,19 @@
-import { BUILDING_TYPES, FACTION, RESOURCE_TYPES } from './config.js?v=20260816-occlusion2';
-import { CrownforgeAudio } from './audio.js?v=20260816-occlusion2';
-import { CrownforgeInput } from './input.js?v=20260816-occlusion2';
-import { CrownforgeRenderer } from './renderer.js?v=20260816-occlusion2';
-import { CrownforgeSimulation } from './simulation.js?v=20260816-occlusion2';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260816-expansion1';
+import { CrownforgeAudio } from './audio.js?v=20260816-expansion1';
+import { CrownforgeInput } from './input.js?v=20260816-expansion1';
+import { CrownforgeRenderer } from './renderer.js?v=20260816-expansion1';
+import { CrownforgeSimulation } from './simulation.js?v=20260816-expansion1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
 const buildMenuToggle = document.querySelector('#build-menu-toggle');
 const buildMenu = document.querySelector('#build-menu');
 const buildButton = document.querySelector('#build-house');
+const trainMenuWrap = document.querySelector('#train-menu-wrap');
+const trainMenuToggle = document.querySelector('#train-menu-toggle');
+const trainMenu = document.querySelector('#train-menu');
+const trainButtons = [...document.querySelectorAll('[data-train-unit]')];
+const trainQueueStatus = document.querySelector('#train-queue-status');
 const cancelBuildButton = document.querySelector('#cancel-build');
 const restartButton = document.querySelector('#restart-game');
 const victoryPanel = document.querySelector('#victory-panel');
@@ -84,6 +89,7 @@ const input = new CrownforgeInput({
   onBuildMode: (mode) => {
     buildMenuToggle.classList.toggle('is-active', Boolean(mode));
     buildMenu.hidden = true;
+    trainMenu.hidden = true;
     cancelBuildButton.hidden = !mode;
   },
   onToast: announce,
@@ -102,10 +108,12 @@ const input = new CrownforgeInput({
     audio.ui();
     controlsPanel.hidden = true;
     buildMenu.hidden = !buildMenu.hidden;
+    trainMenu.hidden = true;
   },
   onEscape: () => {
     audio.ui();
     buildMenu.hidden = true;
+    trainMenu.hidden = true;
     controlsPanel.hidden = true;
   },
 });
@@ -119,6 +127,7 @@ buildMenuToggle.addEventListener('click', () => {
   }
   controlsPanel.hidden = true;
   buildMenu.hidden = !buildMenu.hidden;
+  trainMenu.hidden = true;
 });
 buildButton.addEventListener('click', () => {
   audio.unlock();
@@ -146,11 +155,28 @@ buildButton.addEventListener('click', () => {
   input.setBuildMode('house');
 });
 cancelBuildButton.addEventListener('click', () => input.cancelBuildMode());
+trainMenuToggle.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  if (input.buildMode) input.cancelBuildMode();
+  controlsPanel.hidden = true;
+  buildMenu.hidden = true;
+  trainMenu.hidden = !trainMenu.hidden;
+});
+trainButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    audio.unlock();
+    const result = simulation.queueUnit(button.dataset.trainUnit);
+    if (result.success) audio.ui(); else audio.play('invalid');
+    updateUi();
+  });
+});
 controlsToggle.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
   if (input.buildMode) input.cancelBuildMode();
   buildMenu.hidden = true;
+  trainMenu.hidden = true;
   controlsPanel.hidden = !controlsPanel.hidden;
 });
 restartButton.addEventListener('click', () => {
@@ -160,6 +186,7 @@ restartButton.addEventListener('click', () => {
   audio.reset(simulation);
   input.cancelBuildMode();
   buildMenu.hidden = true;
+  trainMenu.hidden = true;
   controlsPanel.hidden = true;
   victoryPanel.hidden = true;
   victoryPanel.classList.remove('is-defeat');
@@ -203,6 +230,39 @@ function updateUi() {
         ? 'Let the selected villager deposit cargo first'
         : 'Place a Hearth House');
   const selected = simulation.selectedEntities;
+  const productionBuilding = selected.length === 1 && selected[0].kind === 'building'
+    && selected[0].faction === 'player'
+    && selected[0].progress >= 1
+    && !selected[0].destroyed
+    && BUILDING_TYPES[selected[0].type]?.production
+    ? selected[0]
+    : null;
+  trainMenuWrap.hidden = !productionBuilding;
+  if (!productionBuilding) trainMenu.hidden = true;
+  if (productionBuilding) {
+    const queue = productionBuilding.productionQueue ?? [];
+    trainQueueStatus.textContent = queue.length
+      ? `${queue.length} queued · ${Math.round((productionBuilding.productionProgress ?? 0) * 100)}% on current unit`
+      : 'Select a unit to add it to the queue.';
+    trainButtons.forEach((button) => {
+      const type = button.dataset.trainUnit;
+      const blueprint = PRODUCTION_TYPES[type];
+      const queued = queue.filter((order) => order.type === type).length;
+      const affordable = Object.entries(blueprint.cost).every(([key, value]) => simulation.resources[key] >= value);
+      const capacityReady = simulation.population.used < simulation.population.capacity;
+      const available = affordable && capacityReady && queue.length < 3;
+      const detail = button.querySelector(`[data-train-detail="${type}"]`);
+      if (detail) detail.textContent = `${formatCost(blueprint.cost)}  •  ${blueprint.trainTime} SEC${queued ? `  •  ${queued} QUEUED` : ''}`;
+      button.classList.toggle('is-unavailable', !available);
+      setTooltip(button, !capacityReady
+        ? 'Build another Hearth House for more population space'
+        : !affordable
+          ? `Gather the resources needed for a ${blueprint.label}`
+          : queue.length >= 3
+            ? 'The Crown Hall training queue is full'
+            : `Train a ${blueprint.label}`);
+    });
+  }
   document.querySelector('#selection-count').textContent = selected.length ? `${selected.length} SELECTED` : 'NO SELECTION';
   const presentation = selectionPresentation();
   selectionKind.textContent = presentation.kind;
@@ -283,6 +343,8 @@ function selectionStatus() {
       ? 'construction active'
       : blueprint.storage
         ? 'drop-off active'
+        : blueprint.production
+          ? 'unit training active'
         : blueprint.population
           ? 'housing active'
           : blueprint.enemyStructure
@@ -318,6 +380,13 @@ function formatClock(seconds) {
   const minutes = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
   return `DAYBREAK  ${minutes}:${secs}`;
+}
+
+function formatCost(cost) {
+  return Object.entries(cost)
+    .filter(([, value]) => value > 0)
+    .map(([key, value]) => `${value} ${key.toUpperCase()}`)
+    .join(' · ');
 }
 
 let previous = performance.now();

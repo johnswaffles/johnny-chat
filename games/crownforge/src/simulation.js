@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260816-occlusion2';
-import { findPath } from './pathfinding.js?v=20260816-occlusion2';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260816-occlusion2';
+import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260816-expansion1';
+import { findPath } from './pathfinding.js?v=20260816-expansion1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260816-expansion1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -88,42 +88,49 @@ export class CrownforgeSimulation {
   }
 
   _seedWorld() {
-    this.addBuilding('townCenter', 11.2, 10.7, 'player');
-    this.addBuilding('house', 7.4, 8.1, 'player');
-    this.addBuilding('storehouse', 15.6, 10.6, 'player');
+    this.addBuilding('townCenter', 25, 38, 'player');
+    this.addBuilding('house', 10, 29, 'player');
+    this.addBuilding('storehouse', 37, 42, 'player');
     // Keep the camp and eastern resource clearing inside a visual safety
     // margin. The map can pan and zoom, but tall silhouettes should not sit
     // on the viewport edge where their art is cropped.
-    this.addBuilding('ashenCamp', 24.8, 5.4, 'enemy');
+    this.addBuilding('ashenCamp', 72, 21, 'enemy');
     // Keep the opening wood pair on the Crown Hall's west flank. The old
     // north-west coordinates put both trees behind the Hall's tall sprite in
     // projected depth, making the starting wood look absent even though it
     // remained mechanically targetable.
-    this.addResource('tree', 'wood', 3.8, 14.2, 110, 0);
-    this.addResource('tree', 'wood', 5.4, 13.0, 110, 1);
-    this.addResource('tree', 'wood', 24.6, 16.3, 110, 2);
-    this.addResource('berry', 'food', 15.2, 5.8, 105, 0);
-    this.addResource('berry', 'food', 18.5, 10.5, 105, 1);
-    this.addResource('stone', 'stone', 24.4, 10.6, 120, 0);
-    this.addResource('stone', 'stone', 25.8, 12.0, 120, 3);
-    this.addDecoration('log', 7.1, 4.9, 0, 0.9);
-    this.addDecoration('stump', 4.8, 17.2, 1, 0.85);
-    this.addDecoration('flowers', 23.4, 15.8, 2, 0.72);
-    this.addDecoration('pebbles', 17.8, 6.6, 3, 0.7);
+    this.addResource('tree', 'wood', 11.5, 45.5, 110, 0);
+    this.addResource('tree', 'wood', 15.2, 48.2, 110, 1);
+    this.addResource('tree', 'wood', 10.8, 39.2, 110, 2);
+    this.addResource('tree', 'wood', 61, 56, 110, 3);
+    this.addResource('tree', 'wood', 78, 58, 110, 1);
+    this.addResource('berry', 'food', 35.5, 28.5, 105, 0);
+    this.addResource('berry', 'food', 41.5, 40.5, 105, 1);
+    this.addResource('berry', 'food', 57, 30, 105, 2);
+    this.addResource('berry', 'food', 82, 41, 105, 0);
+    this.addResource('stone', 'stone', 49, 50, 120, 0);
+    this.addResource('stone', 'stone', 54, 53, 120, 3);
+    this.addResource('stone', 'stone', 76, 55, 120, 2);
+    this.addDecoration('log', 18, 24, 0, 0.9);
+    this.addDecoration('stump', 8.4, 52, 1, 0.85);
+    this.addDecoration('flowers', 43, 20, 2, 0.72);
+    this.addDecoration('pebbles', 39, 51, 3, 0.7);
+    this.addDecoration('flowers', 64, 38, 0, 0.65);
+    this.addDecoration('pebbles', 83, 29, 1, 0.72);
     // Keep the opening workers on the clear south approach so their authored
     // silhouettes and selection markers are visible at reset rather than
     // mechanically present behind the Crown Hall's tall body.
-    this.addUnit('villager', 8.4, 15.2, 'player');
-    this.addUnit('villager', 10.1, 15.8, 'player');
-    this.addUnit('villager', 11.8, 15.2, 'player');
-    this.addUnit('soldier', 16.4, 13.7, 'player');
+    this.addUnit('villager', 23, 44.5, 'player');
+    this.addUnit('villager', 26, 46, 'player');
+    this.addUnit('villager', 29, 44.5, 'player');
+    this.addUnit('soldier', 38, 45.5, 'player');
     // Keep the opening defender between the camp and the stone clearing. The
     // old point overlapped the eastern stone node in projection and made a
     // resource look like an enemy target until the player moved the Raider.
     // Give the opening Raider a clear patrol pocket west/south of the camp.
     // The camp sprite is intentionally larger than its gameplay footprint, so
     // the old point could disappear behind the tall silhouette at reset.
-    this.addUnit('raider', 22.35, 8.55, 'enemy');
+    this.addUnit('raider', 67.5, 27.5, 'enemy');
   }
 
   addBuilding(type, x, z, faction = 'player', progress = 1) {
@@ -150,6 +157,8 @@ export class CrownforgeSimulation {
       raidClock: 0,
       defendTimer: 0,
       defenseTargetId: null,
+      productionQueue: [],
+      productionProgress: 0,
     };
     this.buildings.push(building);
     return building;
@@ -218,6 +227,7 @@ export class CrownforgeSimulation {
       repathCooldown: 0,
       lastProgressX: x,
       lastProgressZ: z,
+      spacingRole: SPACING_ROLES[type] ?? SPACING_ROLES.villager,
     };
     this.units.push(unit);
     return unit;
@@ -293,7 +303,10 @@ export class CrownforgeSimulation {
       return;
     }
     this.clock += dt;
-    for (const building of this.buildings) this._updateConstruction(building, dt);
+    for (const building of this.buildings) {
+      this._updateConstruction(building, dt);
+      this._updateTraining(building, dt);
+    }
     for (const unit of this.units) this._updateUnit(unit, dt);
     this._resolveUnitCollisions();
     this._updateEnemyAI(dt);
@@ -497,6 +510,56 @@ export class CrownforgeSimulation {
       building.buildAssigned = [];
       this._announce(`${BUILDING_TYPES[building.type].label} complete.`);
     }
+  }
+
+  _updateTraining(building, dt) {
+    const queue = building.productionQueue;
+    if (!Array.isArray(queue) || !queue.length || building.destroyed || building.progress < 1) return;
+    const order = queue[0];
+    const blueprint = PRODUCTION_TYPES[order.type];
+    if (!blueprint) {
+      queue.shift();
+      building.productionProgress = 0;
+      return;
+    }
+    order.elapsed = Math.min(blueprint.trainTime, (order.elapsed ?? 0) + dt);
+    building.productionProgress = order.elapsed / blueprint.trainTime;
+    if (order.elapsed < blueprint.trainTime) return;
+    const spawn = this._findUnitSpawnPoint(building, order.type, queue.length);
+    if (!spawn) {
+      // The queue pauses cleanly when a player packs a building in. It will
+      // resume as soon as an approach point is available instead of creating
+      // a unit inside a structure or silently deleting the order.
+      order.elapsed = blueprint.trainTime;
+      building.productionProgress = 1;
+      return;
+    }
+    const unit = this.addUnit(order.type, spawn.x, spawn.z, 'player');
+    unit.actionLabel = 'Idle';
+    queue.shift();
+    building.productionProgress = queue.length ? 0 : 0;
+    this._announce(`${blueprint.label} ready at the Crown Hall.`);
+  }
+
+  _findUnitSpawnPoint(building, type, queueDepth = 0) {
+    const role = SPACING_ROLES[type] ?? SPACING_ROLES.villager;
+    const blueprint = BUILDING_TYPES[building.type];
+    const radius = Math.max(blueprint.footprint.width, blueprint.footprint.height) / 2
+      + (blueprint.collisionClearance ?? 0) + 1.1;
+    const candidates = [];
+    for (let index = 0; index < 12; index += 1) {
+      const angle = -Math.PI / 2 + index * (TAU / 12);
+      const wobble = (queueDepth % 3) * 0.32;
+      candidates.push({
+        x: clamp(building.x + Math.cos(angle) * (radius + wobble), 0.75, CONFIG.mapWidth - 0.75),
+        z: clamp(building.z + Math.sin(angle) * (radius + wobble), 0.75, CONFIG.mapHeight - 0.75),
+      });
+    }
+    const unitProbe = { type };
+    return candidates.find((point) => {
+      if (this._pointBlockedForUnit(unitProbe, point)) return false;
+      return this.units.every((unit) => unit.dead || distance(point, unit) >= Math.max(role.personalSpace, SPACING_ROLES[unit.type]?.personalSpace ?? 1));
+    }) ?? null;
   }
 
   _updateUnit(unit, dt) {
@@ -1048,7 +1111,11 @@ export class CrownforgeSimulation {
       .sort((a, b) => {
         const aPreferred = a.type === 'storehouse' ? 0 : 1;
         const bPreferred = b.type === 'storehouse' ? 0 : 1;
-        return aPreferred - bPreferred || distance(unit, a) - distance(unit, b);
+        // A drop-off should be chosen for travel time first. The Waystore is
+        // a dedicated resource building, but a nearer Crown Hall is the more
+        // believable answer for a short opening haul and keeps the loop
+        // responsive on the expanded map.
+        return distance(unit, a) - distance(unit, b) || aPreferred - bPreferred;
       });
     for (const storage of storages) {
       const route = this._bestPathToPoints(unit, this._storageApproachPoints(storage));
@@ -1512,9 +1579,11 @@ export class CrownforgeSimulation {
 
   _nearestStorage(point) {
     const storage = this.buildings.filter((building) => !building.destroyed && building.faction === 'player' && building.progress >= 1 && BUILDING_TYPES[building.type].storage);
-    const dedicated = storage.filter((building) => building.type === 'storehouse');
-    const candidates = dedicated.length ? dedicated : storage;
-    return candidates.sort((a, b) => distance(point, a) - distance(point, b))[0] ?? null;
+    return storage.sort((a, b) => {
+      const distanceDelta = distance(point, a) - distance(point, b);
+      if (Math.abs(distanceDelta) > 0.01) return distanceDelta;
+      return (a.type === 'storehouse' ? 0 : 1) - (b.type === 'storehouse' ? 0 : 1);
+    })[0] ?? null;
   }
 
   _cellIntersectsBuilding(cellX, cellZ, building, padding = 0) {
@@ -1614,16 +1683,23 @@ export class CrownforgeSimulation {
     for (let i = 0; i < live.length; i += 1) {
       for (let j = i + 1; j < live.length; j += 1) {
         const a = live[i]; const b = live[j];
-        const minDistance = UNIT_TYPES[a.type].radius + UNIT_TYPES[b.type].radius;
+        const roleDistance = Math.max(
+          SPACING_ROLES[a.type]?.personalSpace ?? UNIT_TYPES[a.type].radius,
+          SPACING_ROLES[b.type]?.personalSpace ?? UNIT_TYPES[b.type].radius,
+        );
+        const minDistance = Math.max(UNIT_TYPES[a.type].radius + UNIT_TYPES[b.type].radius, roleDistance);
         const dx = b.x - a.x; const dz = b.z - a.z; const length = Math.hypot(dx, dz);
         if (!length) {
-          a.x -= 0.02;
-          b.x += 0.02;
+          const bias = ((a.id + b.id) % 8) * 0.12 + 0.08;
+          a.x = clamp(a.x - bias, 0.45, CONFIG.mapWidth - 0.45);
+          b.x = clamp(b.x + bias, 0.45, CONFIG.mapWidth - 0.45);
           continue;
         }
         const nx = dx / length; const nz = dz / length;
         const combatPair = a.command === 'attack' || b.command === 'attack';
-        const comfortDistance = minDistance + (combatPair ? 0.22 : 0.58);
+        const comfortDistance = Math.max(minDistance + (combatPair ? 0.35 : 0.56),
+          SPACING_ROLES[a.type]?.groupGap ?? minDistance,
+          SPACING_ROLES[b.type]?.groupGap ?? minDistance);
         const bothMoving = a.path.length && b.path.length && (a.motionSpeed > 0.08 || b.motionSpeed > 0.08);
         if (bothMoving && length < comfortDistance) {
           const softPush = ((comfortDistance - length) / comfortDistance) * 0.24;
@@ -1835,7 +1911,7 @@ export class CrownforgeSimulation {
       this.lastCommand = `Attack ${BUILDING_TYPES[target.type].label}.`;
       return { kind: 'attack', success: true, target };
     }
-    const spacing = Math.min(1.1, 0.42 + units.length * 0.08);
+    const spacing = Math.min(2.4, Math.max(1.35, 0.72 + units.length * 0.22));
     let routed = 0;
     units.forEach((unit, index) => {
       const angle = (index / Math.max(1, units.length)) * Math.PI * 2;
@@ -1885,6 +1961,39 @@ export class CrownforgeSimulation {
     });
     this._announce(`Hearth House foundation placed. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.`);
     return true;
+  }
+
+  queueUnit(type) {
+    const blueprint = PRODUCTION_TYPES[type];
+    const building = this.selectedEntities.find((entity) => entity.kind === 'building'
+      && entity.faction === 'player'
+      && entity.progress >= 1
+      && !entity.destroyed
+      && entity.type === blueprint?.building) ?? null;
+    if (!blueprint || !building) {
+      this._announce('Select the Crown Hall before training a unit.');
+      return { success: false, kind: 'train' };
+    }
+    const queue = Array.isArray(building.productionQueue) ? building.productionQueue : (building.productionQueue = []);
+    if (queue.length >= 3) {
+      this._announce('The Crown Hall training queue is full.');
+      return { success: false, kind: 'train', building };
+    }
+    const population = this.population;
+    if (population.used >= population.capacity) {
+      this._announce('Build another Hearth House before training more units.');
+      return { success: false, kind: 'train', building };
+    }
+    if (!this._canAfford(blueprint.cost)) {
+      const missing = Object.entries(blueprint.cost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
+      this._announce(`Not enough ${missing} to train a ${blueprint.label}.`);
+      return { success: false, kind: 'train', building };
+    }
+    this._spend(blueprint.cost);
+    queue.push({ type, elapsed: 0 });
+    if (queue.length === 1) building.productionProgress = 0;
+    this._announce(`${blueprint.label} added to the Crown Hall queue.`);
+    return { success: true, kind: 'train', building, type };
   }
 
   _selectedBuilder(point = null) {
@@ -1998,7 +2107,8 @@ export class CrownforgeSimulation {
 
   get population() {
     const housing = this.buildings.filter((building) => building.faction === 'player' && building.progress >= 1).reduce((sum, building) => sum + (BUILDING_TYPES[building.type].population ?? 0), 0);
-    return { used: this.units.filter((unit) => unit.faction === 'player' && !unit.dead).length, capacity: 4 + housing };
+    const queued = this.buildings.reduce((sum, building) => sum + (building.faction === 'player' ? (building.productionQueue?.length ?? 0) : 0), 0);
+    return { used: this.units.filter((unit) => unit.faction === 'player' && !unit.dead).length + queued, capacity: 4 + housing };
   }
 
   _announce(message) {

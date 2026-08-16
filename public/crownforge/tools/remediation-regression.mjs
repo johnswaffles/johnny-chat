@@ -96,7 +96,7 @@ function checkGathering() {
   const tree = simulation.resourcesNodes.find((node) => node.resourceType === 'wood');
   simulation.selectAt({ x: villager.x, z: villager.z });
   simulation.issueContextCommand({ x: tree.x, z: tree.z });
-  advance(simulation, 4.2);
+  advance(simulation, 5.2);
   assert.ok(villager.carryAmount > 0, 'retask scenario reaches carried cargo');
   const cargoBeforeRetask = villager.carryAmount;
   simulation.issueContextCommand({ x: 20, z: 18 });
@@ -106,7 +106,9 @@ function checkGathering() {
 
 function checkConstructionAndPlacement() {
   const simulation = freshSimulation();
-  assert.equal(simulation.getPlacementCheck('house', { x: 11.2, z: 10.7 }).valid, false, 'building overlap rejected');
+  const townCenter = simulation.buildings.find((building) => building.type === 'townCenter');
+  assert.ok(townCenter, 'reset has a Crown Hall');
+  assert.equal(simulation.getPlacementCheck('house', { x: townCenter.x, z: townCenter.z }).valid, false, 'building overlap rejected');
   const tree = simulation.resourcesNodes.find((node) => node.resourceType === 'wood');
   assert.equal(simulation.getPlacementCheck('house', { x: tree.x, z: tree.z }).valid, false, 'resource overlap rejected');
 
@@ -123,7 +125,7 @@ function checkConstructionAndPlacement() {
   assert.ok(house, 'house starts as a construction site');
   // The workers must first walk to the south approach before construction
   // time starts; leave room for that route in the deterministic check.
-  advance(simulation, BUILDING_TYPES.house.buildTime + 10);
+  advance(simulation, BUILDING_TYPES.house.buildTime + 22);
   assert.equal(house.progress, 1, 'house completes through construction simulation');
   assert.equal(house.hp, house.maxHp, 'completed house reaches full health');
 }

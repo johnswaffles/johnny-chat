@@ -1,11 +1,17 @@
 export const CONFIG = {
-  mapWidth: 30,
-  mapHeight: 22,
+  // The first settlement slice now has roughly ten times the walkable area
+  // of the original 30x22 board. The opening remains intentionally sparse;
+  // the extra space is for readable routes, expansion, and combat separation.
+  mapWidth: 90,
+  mapHeight: 73,
   tileWidth: 52,
   tileHeight: 26,
-  initialZoom: 0.78,
-  minZoom: 0.62,
-  maxZoom: 1.12,
+  initialZoom: 0.68,
+  minZoom: 0.36,
+  maxZoom: 1.16,
+  // Bias the opening view toward the south so the enlarged Crown Hall's
+  // roofline remains inside the playable viewport rather than under the HUD.
+  initialCameraWorld: { x: 23, z: 30 },
 };
 
 export const LIGHTING = {
@@ -81,27 +87,51 @@ export const UNIT_TYPES = {
   },
 };
 
+export const SPACING_ROLES = {
+  villager: { personalSpace: 1.08, groupGap: 1.45 },
+  soldier: { personalSpace: 1.28, groupGap: 1.72 },
+  raider: { personalSpace: 1.32, groupGap: 1.78 },
+};
+
+export const PRODUCTION_TYPES = {
+  villager: {
+    label: 'Villager',
+    icon: 'icon-villager',
+    building: 'townCenter',
+    trainTime: 7,
+    cost: { food: 50, wood: 0, stone: 0 },
+  },
+  soldier: {
+    label: 'Crown Guard',
+    icon: 'icon-soldier',
+    building: 'townCenter',
+    trainTime: 11,
+    cost: { food: 75, wood: 25, stone: 0 },
+  },
+};
+
 export const BUILDING_TYPES = {
   townCenter: {
     label: 'Crown Hall',
     function: 'Resource drop-off and settlement core',
     asset: 'townCenter',
     maxHp: 900,
-    footprint: { width: 3, height: 3 },
-    renderSize: 294,
-    collisionClearance: 0.9,
+    footprint: { width: 6, height: 5 },
+    renderSize: 440,
+    collisionClearance: 1.25,
     entrance: 'south',
     completed: true,
     storage: true,
+    production: true,
   },
   house: {
     label: 'Hearth House',
     function: 'Population housing',
     asset: 'house',
     maxHp: 260,
-    footprint: { width: 2, height: 2 },
-    renderSize: 232,
-    collisionClearance: 0.72,
+    footprint: { width: 4, height: 3 },
+    renderSize: 350,
+    collisionClearance: 1.05,
     entrance: 'south',
     buildTime: 7.5,
     cost: { food: 0, wood: 55, stone: 0 },
@@ -112,9 +142,9 @@ export const BUILDING_TYPES = {
     function: 'Resource drop-off',
     asset: 'storehouse',
     maxHp: 420,
-    footprint: { width: 2, height: 2 },
-    renderSize: 250,
-    collisionClearance: 0.78,
+    footprint: { width: 4, height: 3 },
+    renderSize: 370,
+    collisionClearance: 1.12,
     entrance: 'south',
     completed: true,
     storage: true,
@@ -124,9 +154,9 @@ export const BUILDING_TYPES = {
     function: 'Enemy settlement core',
     asset: 'ashenCamp',
     maxHp: 640,
-    footprint: { width: 3, height: 3 },
-    renderSize: 330,
-    collisionClearance: 0.96,
+    footprint: { width: 6, height: 5 },
+    renderSize: 500,
+    collisionClearance: 1.4,
     entrance: 'south',
     spawnDistance: 1.45,
     completed: true,

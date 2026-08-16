@@ -1136,3 +1136,50 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 
 - No new civilizations, buildings, resources, technologies, campaigns, maps, unit types, formations, ranged combat, or broader enemy economy.
 - No replacement terrain system or new environmental catalog; this pass corrected the existing atlas family and its world interaction contract.
+
+## LARGE MAP + SETTLEMENT SCALE + QUICK PRODUCTION PASS — 2026-08-16
+
+### SCOPE DECISION
+
+- Interpreted “10x bigger map” as approximately ten times the playable area: the board is now `90 x 73` world cells instead of `30 x 22` (`6570` versus `660` cells). The map remains intentionally sparse rather than being filled with decorative clutter.
+- Kept Villager, Crown Guard, and Ashen Raider render scale unchanged. Buildings were made dramatically larger and given larger gameplay footprints/clearances so the visual scale is more believable without making a literal 10x sprite multiplier that would swallow the playable camera.
+- No water was added yet. Water would need a walkability/terrain contract to avoid becoming a decorative obstacle that units can path through.
+
+### WHAT CHANGED
+
+- Expanded the map configuration to `90 x 73`, widened camera travel limits for a map larger than the viewport, lowered the default zoom to keep the enlarged structures readable, and biased the opening camera south so tall building art stays under the HUD boundary.
+- Repositioned the opening Crown Hall, Hearth House, Waystore, Ashen Camp, resources, decorations, villagers, and starting Crown Guard into a sparse larger-world composition.
+- Reworked the meadow renderer to repeat the existing original meadow texture inside the projected map diamond instead of stretching one small board across the entire expanded world. No new raster asset was necessary and no visible square terrain card is drawn.
+- Increased building gameplay footprints and art sizes: Crown Hall `6x5 / 440px`, Hearth House `4x3 / 350px`, Waystore `4x3 / 370px`, and Ashen Camp `6x5 / 500px`; the existing collision-clearance contract remains active for pathing, placement, and interaction.
+- Separated the starting Hearth House farther northwest from the Crown Hall so the two large silhouettes do not read as one stacked structure.
+- Added role-based unit spacing data for Villagers, Crown Guards, and Ashen Raiders. Group move spacing, local collision comfort distance, exact-overlap recovery, and production spawn checks now use the role’s personal-space/group-gap values.
+- Added bounded Crown Hall production for the existing two player unit types only: Villager (`50 Food`, `7 sec`) and Crown Guard (`75 Food + 25 Wood`, `11 sec`). The queue is capped at three, respects population housing, spends resources on order, pauses safely when spawn space is blocked, and places new units outside the building using spacing checks.
+- Added bottom command-deck quick menus: `BUILDINGS` opens the existing Hearth House blueprint menu; selecting the Crown Hall reveals `TRAIN UNITS` with Villager and Crown Guard options, queue status, cost feedback, tooltips, and disabled states.
+- Updated the module graph cache marker to `20260816-expansion1` so the expanded config, simulation, renderer, and UI load together.
+
+### VALIDATION
+
+- JavaScript syntax check passed across `src`, `dev`, and `tools`.
+- `git diff --check` passed for the changed source, UI, and regression tool files.
+- `tools/remediation-regression.mjs` passed all animation, gathering, construction, combat, victory, and defeat checks after updating the placement assertion and allowing for longer travel to a valid remote build site.
+- Deterministic 60-second large-map soak: victory completed after the Crown Guard destroyed the Ashen Camp; two queued player units spawned; population ended at `6 / 8`; zero units entered any live building collision bounds; minimum measured live-unit separation was `1.32` world units.
+- Local browser inspection at `1280 x 720` confirmed: larger separated buildings, unchanged human scale, sparse repeated meadow terrain, bottom Buildings menu, Crown Hall Train Units menu, accepted Villager/Crown Guard training orders, completed unit spawn, valid/invalid placement feedback, Escape cancellation, and an empty browser console log.
+
+### KNOWN ISSUES
+
+- The map is now intentionally larger than the opening viewport, so the full resource/camp layout requires camera pan/zoom exploration. Edge scrolling is still not enabled; WASD/arrow and middle-drag remain the camera contract.
+- Buildings are substantially larger and more readable, but the art-to-footprint ratio is still deliberately generous. Future building revisions should preserve the current larger clearances and recheck close zoom before increasing sizes again.
+- Production is intentionally limited to the Crown Hall and the two existing player unit types. There is no generalized production-building framework, queue rally point UI, or multi-building training yet.
+- Water was deferred because it would require real terrain walkability and pathfinding rules, not just a decorative patch.
+- The existing small military roster, capped enemy AI, single biome, and fixed four-direction art standard remain unchanged.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Recheck the larger map at the minimum and maximum camera zooms, especially the expanded resource clearings and Ashen Camp edge framing.
+2. Polish the selected-building production panel with a dedicated queue progress treatment only if it remains useful after more playtesting; keep the current menu compact.
+3. Recheck building placement and construction approach slots around the larger footprints before adding any new structure type.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No new civilizations, ages, technologies, campaigns, maps, biomes, water mechanics, resources, buildings, unit types, formations, ranged combat, diplomacy, multiplayer, fog-of-war, minimap, or broad AI economy.
+- No literal 10x raster enlargement of buildings, no new art catalog, and no new production roster until the current larger settlement remains readable at normal and close zoom.

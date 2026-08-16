@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css?v=20260816-occlusion2" />
+    <link rel="stylesheet" href="./styles.css?v=20260816-expansion1" />
   </head>
   <body>
     <main class="game-shell">
@@ -55,10 +55,19 @@
         <div class="deck-summary"><span class="panel-kicker">COMMAND DECK</span><span class="deck-subtitle">The settlement grows by deliberate orders.</span></div>
         <div class="deck-actions">
           <div class="build-menu-wrap">
-          <button id="build-menu-toggle" class="action-button" title="Open construction menu (B)"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>CONSTRUCTION</b><small>OPEN BUILD MENU <kbd>B</kbd></small></span></button>
-          <div id="build-menu" class="build-menu glass-panel" hidden>
-              <div class="build-menu-kicker">AVAILABLE BLUEPRINT</div>
+            <button id="build-menu-toggle" class="action-button" title="Open buildings menu (B)"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>BUILDINGS</b><small>PLACE STRUCTURES <kbd>B</kbd></small></span></button>
+            <div id="build-menu" class="build-menu glass-panel" hidden>
+              <div class="build-menu-kicker">AVAILABLE BLUEPRINTS</div>
               <button id="build-house" class="build-option" title="Place a Hearth House"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>HEARTH HOUSE</b><small id="build-cost">55 WOOD  •  READY</small></span></button>
+            </div>
+          </div>
+          <div id="train-menu-wrap" class="build-menu-wrap" hidden>
+            <button id="train-menu-toggle" class="action-button" title="Open Crown Hall training menu"><span class="action-mark ui-icon icon-population" aria-hidden="true"></span><span><b>TRAIN UNITS</b><small>OPEN UNIT MENU</small></span></button>
+            <div id="train-menu" class="build-menu production-menu glass-panel" hidden>
+              <div class="build-menu-kicker">CROWN HALL QUEUE</div>
+              <button class="build-option production-option" data-train-unit="villager" title="Train a Villager"><span class="action-mark ui-icon icon-villager" aria-hidden="true"></span><span><b>VILLAGER</b><small data-train-detail="villager">50 FOOD  •  7 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="soldier" title="Train a Crown Guard"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN GUARD</b><small data-train-detail="soldier">75 FOOD · 25 WOOD  •  11 SEC</small></span></button>
+              <small id="train-queue-status" class="train-queue-status">Select a unit to add it to the queue.</small>
             </div>
           </div>
           <div id="placement-readout" class="placement-readout" hidden><span id="placement-icon" class="ui-icon icon-house" aria-hidden="true"></span><span><b id="placement-title">PLACEMENT MODE</b><small id="placement-detail">Move the foundation to a clear site.</small></span></div>
@@ -98,7 +107,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260816-occlusion2"></script>
+    <script type="module" src="./src/main.js?v=20260816-expansion1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

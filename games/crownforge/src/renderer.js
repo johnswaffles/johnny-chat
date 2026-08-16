@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260816-occlusion2';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260816-occlusion2';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260816-expansion1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260816-expansion1';
 
 const TAU = Math.PI * 2;
 
@@ -46,7 +46,8 @@ export class CrownforgeRenderer {
       image.addEventListener('load', () => { this.combatAtlasReady[key] = true; });
       image.src = definition.src;
     }
-    this.camera = { x: 0, y: 12, zoom: CONFIG.initialZoom };
+    this.camera = { x: 0, y: 0, zoom: CONFIG.initialZoom };
+    this.cameraInitialized = false;
     this.pointer = { x: 0, y: 0 };
     this.selectionBox = null;
     this.buildPreview = null;
@@ -69,6 +70,15 @@ export class CrownforgeRenderer {
     this.canvas.width = Math.round(this.width * ratio);
     this.canvas.height = Math.round(this.height * ratio);
     this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    if (!this.cameraInitialized && this.width > 1 && this.height > 1) {
+      const focus = CONFIG.initialCameraWorld ?? { x: CONFIG.mapWidth / 2, z: CONFIG.mapHeight / 2 };
+      const baseX = (focus.x - focus.z - (CONFIG.mapWidth - CONFIG.mapHeight) / 2) * CONFIG.tileWidth / 2;
+      const baseY = (focus.x + focus.z - (CONFIG.mapWidth + CONFIG.mapHeight) / 2) * CONFIG.tileHeight / 2;
+      this.camera.x = -baseX * this.camera.zoom;
+      this.camera.y = -baseY * this.camera.zoom;
+      this.cameraInitialized = true;
+      this.panBy(0, 0);
+    }
   }
 
   setPointer(point) { this.pointer = point; }
@@ -102,10 +112,12 @@ export class CrownforgeRenderer {
     const halfMapH = ((CONFIG.mapWidth + CONFIG.mapHeight) * CONFIG.tileHeight / 4) * this.camera.zoom;
     const mapWidth = halfMapW * 2;
     const mapHeight = halfMapH * 2;
-    const horizontalRoom = Math.max(0, (this.width - mapWidth) / 2 + 54);
-    const verticalRoom = Math.max(0, (this.height - mapHeight) / 2 + 54);
-    const horizontalLimit = Math.min(halfMapW * 0.22, horizontalRoom);
-    const verticalLimit = Math.min(halfMapH * 0.3, verticalRoom);
+    // On a larger RTS board the map is wider than the viewport. Clamp camera
+    // travel to the actual projected map edges so the opening settlement can
+    // be centered while panning still cannot reveal an empty void past the
+    // terrain diamond.
+    const horizontalLimit = Math.max(0, halfMapW - this.width / 2 + 56);
+    const verticalLimit = Math.max(0, halfMapH - this.height / 2 + 56);
     this.camera.x = Math.max(-horizontalLimit, Math.min(horizontalLimit, this.camera.x));
     this.camera.y = Math.max(-verticalLimit, Math.min(verticalLimit, this.camera.y));
   }
@@ -181,7 +193,13 @@ export class CrownforgeRenderer {
     ctx.clip();
     if (this.meadowReady) {
       ctx.globalAlpha = 0.92;
-      ctx.drawImage(this.meadow, minX - 18, minY - 18, maxX - minX + 36, maxY - minY + 36);
+      const pattern = ctx.createPattern(this.meadow, 'repeat');
+      if (pattern) {
+        ctx.fillStyle = pattern;
+        ctx.fillRect(minX - 18, minY - 18, maxX - minX + 36, maxY - minY + 36);
+      } else {
+        ctx.drawImage(this.meadow, minX - 18, minY - 18, maxX - minX + 36, maxY - minY + 36);
+      }
       ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = '#647b4a';
@@ -246,8 +264,8 @@ export class CrownforgeRenderer {
 
   drawPathsOnMap(ctx, time) {
     const paths = [
-      [{ x: 3, z: 20 }, { x: 8, z: 15 }, { x: 12, z: 11 }, { x: 16, z: 8 }],
-      [{ x: 16, z: 8 }, { x: 20, z: 6 }, { x: 26, z: 4 }],
+      [{ x: 6, z: 61 }, { x: 14, z: 51 }, { x: 25, z: 38 }, { x: 37, z: 29 }],
+      [{ x: 37, z: 29 }, { x: 54, z: 23 }, { x: 72, z: 21 }],
     ];
     ctx.save();
     ctx.lineCap = 'round';
