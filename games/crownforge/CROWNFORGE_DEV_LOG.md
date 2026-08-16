@@ -1098,3 +1098,41 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 
 - No new civilizations, buildings, resources, technologies, campaigns, maps, unit types, formations, ranged combat, or broader enemy economy.
 - No new combat system beyond the two existing melee types.
+
+## ATLAS CELL + BUILDING OCCLUSION PASS — 2026-08-16
+
+### WHAT CHANGED
+
+- Repaired the shared 4 x 4 atlas sampler. The previous outward-rounded source rectangles still included a neighboring half-pixel from the 1254px sheets; cells now use a one-pixel interior inset so tree tops, berry bushes, stone deposits, construction art, combat frames, and Villager sheets cannot pull fragments from adjacent cells.
+- Routed legacy Villager atlas states through the same protected sampler so future idle/task/carry sheets receive the same edge treatment.
+- Added art-aware `collisionClearance` to Crown Hall, Hearth House, Waystore, and Ashen Camp. Units now stop outside the visible building silhouette, not merely outside the smaller original gameplay footprint.
+- Expanded building approach points, path blocking, unit constraints, combat approach rings, placement checks, and selection/placement footprints to use the same visual clearance contract.
+- Increased the safe path endpoint tolerance slightly so a route ending at the final open approach cell still resolves to the intended interaction point around an enlarged building instead of leaving a builder one cell short.
+- Bumped the module graph marker to `20260816-occlusion2`.
+
+### VALIDATION
+
+- Full JavaScript syntax check passed.
+- `tools/remediation-regression.mjs` passed all deterministic animation, gathering, construction, combat, victory, and defeat checks.
+- Construction regression now completes with the enlarged collision contract; the builder reaches the approach point and finishes the Hearth House.
+- A 70-second deterministic enemy-AI simulation produced three active Raiders with zero units inside any live building collision bounds.
+- Raider walk animation continues to resolve directional frame columns `[0, 1, 2, 0]` across a short playback sample.
+- Local 1280 x 720 browser inspection at normal and closer zoom showed intact tree tops, clean berry/stone silhouettes, no stray atlas strip beside the Crown Hall, and Raiders outside the enlarged buildings.
+- Local browser runtime logs were empty.
+
+### KNOWN ISSUES
+
+- Close zoom can still place tall authored silhouettes near the browser HUD by design; the world remains clean at the supported default framing.
+- Collision clearance is intentionally conservative around the enlarged building art, so some narrow building arrangements now reject placement or route around a wider perimeter.
+- No new gameplay systems or asset families were added in this pass.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Recheck the collision-clearance values if a future building art revision changes the visible base shape.
+2. Hand-tune the remaining military hit/death animation depth after this render/pathing repair is stable.
+3. Keep the small unit/building roster fixed while completing the existing match loop.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No new civilizations, buildings, resources, technologies, campaigns, maps, unit types, formations, ranged combat, or broader enemy economy.
+- No replacement terrain system or new environmental catalog; this pass corrected the existing atlas family and its world interaction contract.

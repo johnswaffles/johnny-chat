@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260816-raiderpass1';
-import { findPath } from './pathfinding.js?v=20260816-raiderpass1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260816-raiderpass1';
+import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260816-occlusion2';
+import { findPath } from './pathfinding.js?v=20260816-occlusion2';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260816-occlusion2';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -781,8 +781,9 @@ export class CrownforgeSimulation {
 
   _buildingApproachPoints(building, margin = BUILDING_INTERACTION_DISTANCE) {
     const footprint = BUILDING_TYPES[building.type].footprint;
-    const halfWidth = footprint.width / 2 + margin;
-    const halfHeight = footprint.height / 2 + margin;
+    const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
+    const halfWidth = footprint.width / 2 + visualClearance + margin;
+    const halfHeight = footprint.height / 2 + visualClearance + margin;
     const sideVectors = {
       west: { x: -1, z: 0 },
       east: { x: 1, z: 0 },
@@ -811,18 +812,20 @@ export class CrownforgeSimulation {
 
   _distanceToBuildingEdge(point, building) {
     const footprint = BUILDING_TYPES[building.type].footprint;
-    const dx = Math.max(Math.abs(point.x - building.x) - footprint.width / 2, 0);
-    const dz = Math.max(Math.abs(point.z - building.z) - footprint.height / 2, 0);
+    const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
+    const dx = Math.max(Math.abs(point.x - building.x) - footprint.width / 2 - visualClearance, 0);
+    const dz = Math.max(Math.abs(point.z - building.z) - footprint.height / 2 - visualClearance, 0);
     return Math.hypot(dx, dz);
   }
 
   _buildingEntityBounds(building, padding = 0) {
     const footprint = BUILDING_TYPES[building.type].footprint;
+    const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
     return {
-      minX: building.x - footprint.width / 2 - padding,
-      maxX: building.x + footprint.width / 2 + padding,
-      minZ: building.z - footprint.height / 2 - padding,
-      maxZ: building.z + footprint.height / 2 + padding,
+      minX: building.x - footprint.width / 2 - visualClearance - padding,
+      maxX: building.x + footprint.width / 2 + visualClearance + padding,
+      minZ: building.z - footprint.height / 2 - visualClearance - padding,
+      maxZ: building.z + footprint.height / 2 + visualClearance + padding,
     };
   }
 
@@ -884,7 +887,7 @@ export class CrownforgeSimulation {
     }
     // A* may end on a nearby walkable cell when a destination is blocked. Never
     // replace that safe endpoint with the original blocked destination.
-    if (path.length && targetCellOpen && distance(path[path.length - 1], safeTarget) <= 1.1) {
+    if (path.length && targetCellOpen && distance(path[path.length - 1], safeTarget) <= 1.3) {
       path[path.length - 1] = { x: safeTarget.x, z: safeTarget.z };
     }
     return path;
@@ -1127,6 +1130,7 @@ export class CrownforgeSimulation {
   _combatApproachPoints(unit, target) {
     const targetRadius = target.kind === 'building'
       ? Math.max(BUILDING_TYPES[target.type].footprint.width, BUILDING_TYPES[target.type].footprint.height) / 2
+        + (BUILDING_TYPES[target.type].collisionClearance ?? 0)
       : UNIT_TYPES[target.type].radius;
     const ringRadius = Math.max(UNIT_TYPES[unit.type].range - COMBAT_SLOT_MARGIN, UNIT_TYPES[unit.type].radius + targetRadius + 0.08);
     const points = [];
@@ -1895,12 +1899,14 @@ export class CrownforgeSimulation {
   }
 
   _buildingBounds(type, point, padding = 0) {
-    const footprint = BUILDING_TYPES[type].footprint;
+    const blueprint = BUILDING_TYPES[type];
+    const footprint = blueprint.footprint;
+    const clearance = blueprint.collisionClearance ?? 0;
     return {
-      minX: point.x - footprint.width / 2 - padding,
-      maxX: point.x + footprint.width / 2 + padding,
-      minZ: point.z - footprint.height / 2 - padding,
-      maxZ: point.z + footprint.height / 2 + padding,
+      minX: point.x - footprint.width / 2 - clearance - padding,
+      maxX: point.x + footprint.width / 2 + clearance + padding,
+      minZ: point.z - footprint.height / 2 - clearance - padding,
+      maxZ: point.z + footprint.height / 2 + clearance + padding,
     };
   }
 
@@ -1915,18 +1921,22 @@ export class CrownforgeSimulation {
   }
 
   _placementAccessCells(type, point) {
-    const footprint = BUILDING_TYPES[type].footprint;
-    const minX = Math.floor(point.x - footprint.width / 2 - 0.5);
-    const maxX = Math.ceil(point.x + footprint.width / 2 + 0.5);
-    const minZ = Math.floor(point.z - footprint.height / 2 - 0.5);
-    const maxZ = Math.ceil(point.z + footprint.height / 2 + 0.5);
+    const blueprint = BUILDING_TYPES[type];
+    const footprint = blueprint.footprint;
+    const clearance = blueprint.collisionClearance ?? 0;
+    const minX = Math.floor(point.x - footprint.width / 2 - clearance - 0.5);
+    const maxX = Math.ceil(point.x + footprint.width / 2 + clearance + 0.5);
+    const minZ = Math.floor(point.z - footprint.height / 2 - clearance - 0.5);
+    const maxZ = Math.ceil(point.z + footprint.height / 2 + clearance + 0.5);
     const cells = [];
     const bounds = this._buildingBounds(type, point);
     for (let cellX = minX; cellX <= maxX; cellX += 1) {
       for (let cellZ = minZ; cellZ <= maxZ; cellZ += 1) {
         const cellCenter = { x: cellX + 0.5, z: cellZ + 0.5 };
         const insideFootprint = cellCenter.x > bounds.minX && cellCenter.x < bounds.maxX && cellCenter.z > bounds.minZ && cellCenter.z < bounds.maxZ;
-        const nextToFootprint = !insideFootprint && (Math.abs(cellCenter.x - point.x) <= footprint.width / 2 + 1.2) && (Math.abs(cellCenter.z - point.z) <= footprint.height / 2 + 1.2);
+        const nextToFootprint = !insideFootprint
+          && (Math.abs(cellCenter.x - point.x) <= footprint.width / 2 + clearance + 1.2)
+          && (Math.abs(cellCenter.z - point.z) <= footprint.height / 2 + clearance + 1.2);
         if (nextToFootprint) cells.push({ x: cellX, z: cellZ });
       }
     }

@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260816-raiderpass1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260816-raiderpass1';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260816-occlusion2';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260816-occlusion2';
 
 const TAU = Math.PI * 2;
 
@@ -362,13 +362,15 @@ export class CrownforgeRenderer {
   drawAtlasCell(ctx, image, ready, atlas, column, row, screen, size, alpha = 1, yOffset = 0) {
     if (!ready && !(image?.complete && image.naturalWidth > 0)) return false;
     // The generated 4x4 sheets are 1254px wide, so a cell is 313.5px.
-    // Fractional source rectangles can sample a neighboring cell at the
-    // canvas edge and make foliage or stone appear sliced. Round the source
-    // bounds once, keeping each cell self-contained during interpolation.
-    const sourceLeft = Math.floor(column * atlas.width / atlas.columns);
-    const sourceTop = Math.floor(row * atlas.height / atlas.rows);
-    const sourceRight = Math.ceil((column + 1) * atlas.width / atlas.columns);
-    const sourceBottom = Math.ceil((row + 1) * atlas.height / atlas.rows);
+    // Outward rounding still included a neighboring half-pixel at every
+    // boundary, which produced stacked berry/stone fragments and clipped
+    // tree tops. Inset every source cell by one whole source pixel instead;
+    // the authored silhouettes have transparent breathing room and remain
+    // complete while canvas interpolation cannot sample a neighbor.
+    const sourceLeft = Math.ceil(column * atlas.width / atlas.columns) + 1;
+    const sourceTop = Math.ceil(row * atlas.height / atlas.rows) + 1;
+    const sourceRight = Math.floor((column + 1) * atlas.width / atlas.columns) - 1;
+    const sourceBottom = Math.floor((row + 1) * atlas.height / atlas.rows) - 1;
     const cellWidth = sourceRight - sourceLeft;
     const cellHeight = sourceBottom - sourceTop;
     ctx.save();
@@ -451,26 +453,15 @@ export class CrownforgeRenderer {
     const atlasHeight = atlasDefinition.height ?? VILLAGER_ATLASES.height;
     const atlasColumns = Number.isFinite(atlasDefinition.columns) ? atlasDefinition.columns : VILLAGER_ATLASES.columns;
     const atlasRows = Number.isFinite(atlasDefinition.rows) ? atlasDefinition.rows : VILLAGER_ATLASES.rows;
-    const cellWidth = atlasWidth / atlasColumns;
-    const cellHeight = atlasHeight / atlasRows;
     // The atlas already carries the silhouette and contact shadow. Keep the
     // world anchor fixed so idle/task frames never float above the meadow.
     const bob = 0;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(
-      image,
-      frame * cellWidth,
-      row * cellHeight,
-      cellWidth,
-      cellHeight,
-      screen.x - size / 2,
-      screen.y - size * 0.98 + bob,
-      size,
-      size,
-    );
-    ctx.restore();
+    this.drawAtlasCell(ctx, image, true, {
+      width: atlasWidth,
+      height: atlasHeight,
+      columns: atlasColumns,
+      rows: atlasRows,
+    }, frame, row, screen, size, alpha, bob);
   }
 
   drawCombatAsset(ctx, unit, screen, size, alpha = 1) {
@@ -530,7 +521,12 @@ export class CrownforgeRenderer {
   }
 
   drawBuildingFootprint(ctx, building, selected = false, color = FACTION.color) {
-    const footprint = BUILDING_TYPES[building.type].footprint;
+    const blueprint = BUILDING_TYPES[building.type];
+    const clearance = blueprint.collisionClearance ?? 0;
+    const footprint = {
+      width: blueprint.footprint.width + clearance * 2,
+      height: blueprint.footprint.height + clearance * 2,
+    };
     const corners = [
       { x: building.x - footprint.width / 2, z: building.z - footprint.height / 2 },
       { x: building.x + footprint.width / 2, z: building.z - footprint.height / 2 },
