@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260816-worldscale3';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260816-worldscale3';
 
 const TAU = Math.PI * 2;
 
@@ -129,7 +129,6 @@ export class CrownforgeRenderer {
     this.drawMap(ctx, time);
     this.drawPaths(ctx, simulation);
     this.drawWorldEntities(ctx, simulation, time);
-    this.drawResourceLabels(ctx, simulation);
     this.drawOccludedUnitOverlays(ctx, simulation);
     this.drawWorkFeedback(ctx, simulation, time);
     this.drawCombatFeedback(ctx, simulation, time);
@@ -354,8 +353,16 @@ export class CrownforgeRenderer {
 
   drawAtlasCell(ctx, image, ready, atlas, column, row, screen, size, alpha = 1, yOffset = 0) {
     if (!ready && !(image?.complete && image.naturalWidth > 0)) return false;
-    const cellWidth = atlas.width / atlas.columns;
-    const cellHeight = atlas.height / atlas.rows;
+    // The generated 4x4 sheets are 1254px wide, so a cell is 313.5px.
+    // Fractional source rectangles can sample a neighboring cell at the
+    // canvas edge and make foliage or stone appear sliced. Round the source
+    // bounds once, keeping each cell self-contained during interpolation.
+    const sourceLeft = Math.floor(column * atlas.width / atlas.columns);
+    const sourceTop = Math.floor(row * atlas.height / atlas.rows);
+    const sourceRight = Math.ceil((column + 1) * atlas.width / atlas.columns);
+    const sourceBottom = Math.ceil((row + 1) * atlas.height / atlas.rows);
+    const cellWidth = sourceRight - sourceLeft;
+    const cellHeight = sourceBottom - sourceTop;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.imageSmoothingEnabled = true;
@@ -365,8 +372,8 @@ export class CrownforgeRenderer {
     };
     ctx.drawImage(
       image,
-      column * cellWidth,
-      row * cellHeight,
+      sourceLeft,
+      sourceTop,
       cellWidth,
       cellHeight,
       destination.x,
@@ -641,47 +648,6 @@ export class CrownforgeRenderer {
       const scale = depleted ? 0.72 : 0.88 + ratio * 0.12;
       const alpha = depleted ? 0.32 : 0.82 + ratio * 0.18;
       this.drawEnvironmentAsset(ctx, resource.type, resource.variant, point, size * scale * this.camera.zoom, alpha);
-    }
-  }
-
-  drawResourceLabels(ctx, simulation) {
-    for (const resource of simulation.resourcesNodes) {
-      const point = this.worldToScreen(resource);
-      if (point.x < -80 || point.x > this.width + 80 || point.y < -90 || point.y > this.height + 90) continue;
-      const info = RESOURCE_TYPES[resource.resourceType];
-      const depleted = resource.amount <= 0;
-      const active = simulation.selectedIds.includes(resource.id)
-        || simulation.units.some((unit) => !unit.dead && unit.gatherTarget === resource.id);
-      const label = depleted
-        ? `${info.label.toUpperCase()}  DEPLETED`
-        : active
-          ? `${info.label.toUpperCase()}  ${Math.max(0, Math.round(resource.amount))}`
-          : info.label.toUpperCase();
-      const zoom = this.camera.zoom;
-      const offset = resource.type === 'tree' ? 31 : resource.type === 'berry' ? 27 : 29;
-      const preferredY = point.y + offset * zoom;
-      const labelY = preferredY <= this.height - 12 ? preferredY : point.y - 16 * zoom;
-      ctx.save();
-      ctx.font = '700 9px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const width = Math.max(48, ctx.measureText(label).width + 14);
-      const x = Math.max(width / 2 + 8, Math.min(this.width - width / 2 - 8, point.x));
-      ctx.strokeStyle = `${info.color}${depleted ? '44' : '70'}`;
-      ctx.lineWidth = Math.max(1, 0.8 * zoom);
-      ctx.beginPath();
-      ctx.moveTo(point.x, point.y + 4 * zoom);
-      ctx.lineTo(x, labelY - 9 * zoom);
-      ctx.stroke();
-      ctx.fillStyle = depleted ? 'rgba(17, 28, 28, 0.62)' : 'rgba(15, 27, 28, 0.88)';
-      ctx.beginPath();
-      ctx.roundRect(x - width / 2, labelY - 8 * zoom, width, 16 * zoom, 8 * zoom);
-      ctx.fill();
-      ctx.strokeStyle = `${info.color}${depleted ? '44' : '86'}`;
-      ctx.stroke();
-      ctx.fillStyle = depleted ? '#9ca99d' : '#f1e5bd';
-      ctx.fillText(label, x, labelY);
-      ctx.restore();
     }
   }
 

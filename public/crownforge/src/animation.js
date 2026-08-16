@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260816-worldscale3';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'world-z-positive', label: '+Z · screen-left / front' },

@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, RESOURCE_TYPES, UNIT_TYPES } from './config.js';
-import { findPath } from './pathfinding.js';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js';
+import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260816-worldscale3';
+import { findPath } from './pathfinding.js?v=20260816-worldscale3';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260816-worldscale3';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -99,11 +99,11 @@ export class CrownforgeSimulation {
     // north-west coordinates put both trees behind the Hall's tall sprite in
     // projected depth, making the starting wood look absent even though it
     // remained mechanically targetable.
-    this.addResource('tree', 'wood', 4.8, 8.5, 110, 0);
+    this.addResource('tree', 'wood', 3.8, 14.2, 110, 0);
     this.addResource('tree', 'wood', 5.4, 13.0, 110, 1);
     this.addResource('tree', 'wood', 24.6, 16.3, 110, 2);
-    this.addResource('berry', 'food', 19.5, 4.9, 105, 0);
-    this.addResource('berry', 'food', 21.8, 5.8, 105, 1);
+    this.addResource('berry', 'food', 15.2, 5.8, 105, 0);
+    this.addResource('berry', 'food', 18.5, 10.5, 105, 1);
     this.addResource('stone', 'stone', 24.4, 10.6, 120, 0);
     this.addResource('stone', 'stone', 25.8, 12.0, 120, 3);
     this.addDecoration('log', 7.1, 4.9, 0, 0.9);

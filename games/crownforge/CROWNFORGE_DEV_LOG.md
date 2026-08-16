@@ -1025,3 +1025,40 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 ### CURRENT CERTIFICATION
 
 `CONDITIONAL PASS — The vertical slice is stable and playable, but the specified non-blocking quality deficiencies remain.`
+
+## WORLD ASSET FRAMING + BUILDING SCALE PASS — 2026-08-16
+
+### SCOPE
+
+- Removed the world-space resource-node labels completely. Resource identity and carried amounts remain available through selection and settlement UI; no gameplay information was removed.
+- Kept Villager, Crown Guard, and Ashen Raider render sizes unchanged.
+- Enlarged the existing building family only: Crown Hall 294 px, Hearth House 232 px, Waystore 250 px, and Ashen Camp 330 px wide with its natural 3:2 aspect preserved.
+
+### REPAIRS COMPLETED
+
+- Rounded the source rectangles used for the 4 x 4 environment and construction atlases. The source sheets are 1254 px wide, so fractional 313.5 px sampling could bleed a neighboring cell into a tree, berry, or stone edge. Integer source bounds now keep each cell self-contained during canvas interpolation.
+- Repositioned the first west tree to `(3.8, 14.2)` so its full canopy is not buried by the player settlement composition while keeping the deterministic wood route reachable.
+- Separated the two berry nodes to `(15.2, 5.8)` and `(18.5, 10.5)` so their foliage is not visually divided by the Ashen Camp, raider, or the neighboring berry sprite.
+- Added a versioned module/style URL in the Crownforge entry page so the browser and Pages deployment pick up renderer/config changes together rather than retaining an older cached module graph.
+
+### VALIDATION
+
+- Fresh 1280 x 720 local browser load showed no resource labels, unchanged readable human scale, larger buildings, complete tree/bush silhouettes, and no square sprite seams.
+- Normal map framing kept the enlarged Crown Hall and Ashen Camp inside the playable view without topbar clipping.
+- Atlas source-bound change passed syntax and whitespace checks; the deterministic gameplay regression suite remains the required follow-up gate.
+
+### KNOWN ISSUES
+
+- The buildings are intentionally larger than their unchanged gameplay footprints; future building-art work should preserve this visual contract and recheck placement/occlusion before changing collision geometry.
+- Tall-object occlusion is still limited to the existing authored depth treatment; this pass addressed the visible opening composition without adding a new render or gameplay system.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Recheck construction preview and a completed Hearth House at close zoom with the larger building family.
+2. Recheck worker approach readability around the newly separated food clearings.
+3. Keep the current asset catalog and human scale fixed while polishing remaining military response animation depth.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No new resources, buildings, units, civilizations, technologies, campaigns, maps, or AI systems.
+- No new raster family was generated for this pass; the existing Crownforge originals were reframed and rendered without atlas-cell bleeding.

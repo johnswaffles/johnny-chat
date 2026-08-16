@@ -76,10 +76,10 @@ These are render sizes before camera zoom. They are visual standards, not new ga
 | Villager | 88 px | collision radius 0.36; building interaction 0.78 |
 | Crown Guard | 120 px | collision radius 0.43; combat range 1.45 |
 | Ashen Raider | 120 px | collision radius 0.44; combat range 1.25 |
-| Crown Hall | 246 px | 3 x 3 footprint |
-| Hearth House | 194 px | 2 x 2 footprint |
-| Waystore | 208 px | 2 x 2 footprint |
-| Ashen Camp | 272 px wide, natural 3:2 aspect | 3 x 3 footprint |
+| Crown Hall | 294 px | 3 x 3 footprint |
+| Hearth House | 232 px | 2 x 2 footprint |
+| Waystore | 250 px | 2 x 2 footprint |
+| Ashen Camp | 330 px wide, natural 3:2 aspect | 3 x 3 footprint |
 | Tree resource | 142 px base | resource approach distance 1.75 |
 | Berry resource | 115 px base | resource approach distance 1.55 |
 | Stone resource | 126 px base | resource approach distance 1.70 |
@@ -321,10 +321,10 @@ The current battlefield is a single authored meadow board, not a tile editor. It
 
 ### Composition contract
 
-- Opening wood is west of the Crown Hall in a visible two-tree clearing at world positions `(4.8, 8.5)` and `(5.4, 13.0)`.
+- Opening wood is west of the Crown Hall in a visible two-tree clearing at world positions `(3.8, 14.2)` and `(5.4, 13.0)`.
 - The stone clearing remains on the east route at `(25.2, 10.3)` and `(26.7, 11.6)`.
 - The initial Ashen Raider stands between the camp and stone clearing at `(23.5, 8.0)`, never on top of the resource.
-- Berries remain on the northern/eastern route near `(19.5, 4.9)` and `(21.8, 5.8)`.
+- Berries use separated approach clearings at `(15.2, 5.8)` and `(18.5, 10.5)` so neither bush is visually buried by a building, unit, or another resource.
 - The current meadow path is baked artwork and is allowed to suggest settlement wear without implying a separate walkability layer.
 
 ### Ground, depth, and occlusion

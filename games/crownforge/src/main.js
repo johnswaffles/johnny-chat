@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, RESOURCE_TYPES } from './config.js';
-import { CrownforgeAudio } from './audio.js';
-import { CrownforgeInput } from './input.js';
-import { CrownforgeRenderer } from './renderer.js';
-import { CrownforgeSimulation } from './simulation.js';
+import { BUILDING_TYPES, FACTION, RESOURCE_TYPES } from './config.js?v=20260816-worldscale3';
+import { CrownforgeAudio } from './audio.js?v=20260816-worldscale3';
+import { CrownforgeInput } from './input.js?v=20260816-worldscale3';
+import { CrownforgeRenderer } from './renderer.js?v=20260816-worldscale3';
+import { CrownforgeSimulation } from './simulation.js?v=20260816-worldscale3';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
