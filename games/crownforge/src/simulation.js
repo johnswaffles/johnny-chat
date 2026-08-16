@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260816-worldscale3';
-import { findPath } from './pathfinding.js?v=20260816-worldscale3';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260816-worldscale3';
+import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260816-raiderpass1';
+import { findPath } from './pathfinding.js?v=20260816-raiderpass1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260816-raiderpass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -120,7 +120,10 @@ export class CrownforgeSimulation {
     // Keep the opening defender between the camp and the stone clearing. The
     // old point overlapped the eastern stone node in projection and made a
     // resource look like an enemy target until the player moved the Raider.
-    this.addUnit('raider', 23.5, 8.0, 'enemy');
+    // Give the opening Raider a clear patrol pocket west/south of the camp.
+    // The camp sprite is intentionally larger than its gameplay footprint, so
+    // the old point could disappear behind the tall silhouette at reset.
+    this.addUnit('raider', 22.35, 8.55, 'enemy');
   }
 
   addBuilding(type, x, z, faction = 'player', progress = 1) {
@@ -1329,9 +1332,26 @@ export class CrownforgeSimulation {
   _spawnEnemyRaider(camp) {
     const activeRaiders = this.units.filter((unit) => unit.type === 'raider' && unit.faction === 'enemy' && !unit.dead).length;
     if (activeRaiders >= 3) return false;
-    const points = this._buildingApproachPoints(camp, BUILDING_TYPES[camp.type].spawnDistance ?? 1.02);
-    const point = points[(activeRaiders + 1) % points.length];
-    if (this.isBlocked(Math.floor(point.x), Math.floor(point.z))) return false;
+    const spawnDistance = BUILDING_TYPES[camp.type].spawnDistance ?? 1.45;
+    // Keep reinforcements in the open west/south clearing. The generic
+    // entrance points put a Raider underneath the enlarged camp or beside
+    // the berry clearing, which read as stacked sprites instead of a patrol.
+    const points = [
+      { x: camp.x - spawnDistance - 1.2, z: camp.z + spawnDistance + 1.25 },
+      { x: camp.x - spawnDistance - 1.65, z: camp.z + 0.55 },
+      { x: camp.x - 1.0, z: camp.z + spawnDistance + 1.65 },
+    ].map((point) => ({
+      x: clamp(point.x, 0.8, CONFIG.mapWidth - 0.8),
+      z: clamp(point.z, 0.8, CONFIG.mapHeight - 0.8),
+    }));
+    const orderedPoints = points
+      .slice(activeRaiders - 1)
+      .concat(points.slice(0, activeRaiders - 1));
+    const point = orderedPoints.find((candidate) => {
+      if (this.isBlocked(Math.floor(candidate.x), Math.floor(candidate.z))) return false;
+      return this.units.every((unit) => unit.dead || distance(candidate, unit) > 1.1);
+    });
+    if (!point) return false;
     const raider = this.addUnit('raider', point.x, point.z, 'enemy');
     raider.actionLabel = 'Guarding the Ashen Camp';
     this._announce('The Ashen Camp raises another Raider.');

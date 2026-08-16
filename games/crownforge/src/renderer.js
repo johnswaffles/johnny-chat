@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260816-worldscale3';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260816-worldscale3';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260816-raiderpass1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260816-raiderpass1';
 
 const TAU = Math.PI * 2;
 
@@ -323,18 +323,26 @@ export class CrownforgeRenderer {
         const nearStructure = simulation._distanceToBuildingEdge(unit, building) < 2.3;
         return nearStructure && unit.x + unit.z < building.x + building.z - 0.04;
       });
-      const hiddenByTree = simulation.resourcesNodes.find((node) => {
-        if (node.type !== 'tree' || node.amount <= 0) return false;
-        return Math.hypot(unit.x - node.x, unit.z - node.z) < 1.9
+      const hiddenByResource = simulation.resourcesNodes.find((node) => {
+        if (!['tree', 'berry', 'stone'].includes(node.type) || node.amount <= 0) return false;
+        const clearance = node.type === 'berry' ? 1.55 : node.type === 'stone' ? 1.7 : 1.9;
+        return Math.hypot(unit.x - node.x, unit.z - node.z) < clearance
           && unit.x + unit.z < node.x + node.z - 0.04;
       });
-      const hiddenBy = hiddenByBuilding || hiddenByTree;
+      const hiddenBy = hiddenByBuilding || hiddenByResource;
       if (!hiddenBy) continue;
-      const needsTracking = unit.selected || unit.command === 'attack' || unit.hp < unit.maxHp;
+      const needsTracking = unit.selected || unit.command === 'attack' || unit.hp < unit.maxHp || unit.faction === 'enemy';
       if (!needsTracking) continue;
       const point = this.worldToScreen(unit);
       const style = UNIT_TYPES[unit.type];
       const unitSize = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
+      // A tall resource can legitimately win the depth sort, but an active
+      // enemy must remain readable. Repaint only the silhouette here;
+      // selection, health, and attack feedback stay in this final overlay.
+      if (hiddenByResource && (unit.faction === 'enemy' || unit.selected)) {
+        if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
+        else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
+      }
       this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
       this.drawHealthBar(ctx, point.x, point.y - unitSize * 0.9 * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(style.combatAtlas));
     }

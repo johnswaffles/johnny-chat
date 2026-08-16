@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260816-worldscale3';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260816-raiderpass1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'world-z-positive', label: '+Z · screen-left / front' },
@@ -128,10 +128,10 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Ashen Raider',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.raider,
-    atlases: { combat: COMBAT_ATLASES.raider, raiderAttack: COMBAT_ATLASES.raiderAttack },
+    atlases: { combat: COMBAT_ATLASES.raider, raiderWalk: COMBAT_ATLASES.raiderWalk, raiderAttack: COMBAT_ATLASES.raiderAttack },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.idle),
-      walk: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.walk, { fps: 1.4 }),
+      walk: directionalLoop('raiderWalk', { fps: 6.8, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
       attack: actionLoop('raiderAttack', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
       attack_anticipation: actionPhase('raiderAttack', [0, 1]),
       attack_contact: actionPhase('raiderAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),

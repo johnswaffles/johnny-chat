@@ -1062,3 +1062,39 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 
 - No new resources, buildings, units, civilizations, technologies, campaigns, maps, or AI systems.
 - No new raster family was generated for this pass; the existing Crownforge originals were reframed and rendered without atlas-cell bleeding.
+
+## ASHEN RAIDER MOTION + COMBAT FRAMING PASS — 2026-08-16
+
+### WHAT CHANGED
+
+- Added `assets/crownforge-raider-walk-loop-v1.png`, an original 4 x 4 RGBA atlas with four facing rows and four subtle walk phases. The Ashen Raider now uses this loop while moving instead of holding one static walk-row pose.
+- Added `assets/crownforge-raider-attack-loop-v2.png`, an original 4 x 4 RGBA attack atlas with ready, raise, contact, and recovery frames for all four directions. The axe and the full silhouette have deliberate per-cell clearance; no weapon fragment is allowed to bleed into a neighboring frame.
+- Updated the data-driven combat animation definitions so Raider walking runs at a restrained 6.8 fps with footstep timing, while the existing attack timing continues to drive the damage contact event.
+- Moved the opening Raider to a clear patrol pocket at `(22.35, 8.55)` so it does not disappear behind the enlarged Ashen Camp or nearby resource art.
+- Reworked capped Raider reinforcement positions into three deterministic west/south clearing slots. Reinforcements now avoid active units and do not spawn beneath the camp silhouette or beside the berry clearing.
+- Extended the final readability overlay to account for tall berry, stone, and tree sprites. An active enemy that is legitimately behind a resource can redraw its silhouette and health/selection feedback without changing collision or pathfinding.
+- Bumped the Crownforge module graph cache marker to `20260816-raiderpass1` so the new animation definitions and assets load together.
+
+### VALIDATION
+
+- JavaScript syntax check passed across `src`, `dev`, and `tools`.
+- `tools/remediation-regression.mjs` passed all existing animation, gathering, construction, combat, victory, and defeat checks.
+- Direct simulation spawn check produced three separated Raider positions in the west/south clearing; the closest tested pair was 1.45 world units apart, above the combined collision radii.
+- Local 1280 x 720 browser inspection showed the opening Raider visible beside the camp, spawned Raiders readable in the clearing, and the live browser console free of errors or warnings.
+
+### KNOWN ISSUES
+
+- Raider walking is now a real directional loop, but the military hit and death states remain intentionally restrained single-pose responses for this small slice.
+- The new generated Raider loops share the existing Crownforge camera and grounded contact treatment; any future camera-angle change should recheck the four direction rows.
+- The final occlusion repaint prioritizes enemy readability when a tall resource wins depth sorting; it is intentionally limited to active/selected units and does not change world collision.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Hand-tune military hit and death response depth after the Raider walk/attack loop has been playtested against the Crown Guard.
+2. Recheck the enlarged camp and resource clearing at close zoom after any future building-art change.
+3. Keep the unit roster and enemy AI cap unchanged while validating the existing match loop.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No new civilizations, buildings, resources, technologies, campaigns, maps, unit types, formations, ranged combat, or broader enemy economy.
+- No new combat system beyond the two existing melee types.
