@@ -114,6 +114,7 @@
   let paused = false;
   let gameOver = false;
   let lastFrame = 0;
+  let renderTimer = 0;
   let fallTimer = 0;
   let lockTimer = 0;
   let lockResets = 0;
@@ -518,6 +519,7 @@
     current = makePiece(nextQueue.shift());
     fillQueue();
     fallTimer = 0;
+    renderTimer = 0;
     lockTimer = 0;
     lockResets = 0;
     boardWrap.dataset.currentPiece = current.type;
@@ -592,7 +594,6 @@
     statusElement.dataset.state = "playing";
     statusText.textContent = "Stay in the flow";
     window.scrollTo({ top: 0, behavior: "instant" });
-    boardCanvas.focus();
     if (musicEnabled) {
       window.JohnnyAudioFocus?.claim("tetris");
       music.play().catch(() => {});
@@ -1076,6 +1077,7 @@
     lastFrame = timestamp;
     if (!paused) advanceEffects(elapsed);
     if (running && !paused && !gameOver) {
+      renderTimer += elapsed;
       if (pendingClear) {
         pendingClearTimer -= elapsed;
         if (pendingClearTimer <= 0) finishLineClear();
@@ -1114,7 +1116,13 @@
           lockTimer = 0;
         }
       }
-      draw();
+      // The canvas renderer builds several gradients and glow passes per
+      // tile. Rendering at 30fps keeps touch devices responsive without
+      // changing the simulation's timing or piece movement.
+      if (renderTimer >= 33) {
+        renderTimer = 0;
+        draw();
+      }
     }
     window.requestAnimationFrame(tick);
   };
