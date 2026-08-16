@@ -9,6 +9,8 @@ const isPagesBuild = process.env.CF_PAGES === "1" || process.env.CF_PAGES === "t
 const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
 const gladeExportSourceDir = path.resolve(root, "..", "public", "glade-playtest");
 const firstEmberExportSourceDir = path.resolve(root, "..", "first-ember-godot", "build", "web");
+const crownforgeSourceDir = path.join(root, "games", "crownforge");
+const crownforgeTargetDir = path.join(publicDir, "crownforge");
 const cozyExportTargetDirs = [
   path.join(publicDir, "cozy-builder"),
   path.join(publicDir, "cozy-builder-game"),
@@ -150,6 +152,7 @@ function siteNav(profile, active, brandOverride = "") {
   const morrowHref = "/morrow/";
   const cozyHref = "/cozy-builder-game/";
   const gladeHref = "/glade/";
+  const crownforgeHref = "/crownforge/";
   const firstEmberHref = "/first-ember/";
   const clockwiseHref = "/clockwise/";
   const simHref = "/sim/";
@@ -181,6 +184,7 @@ function siteNav(profile, active, brandOverride = "") {
         `<a class="johnny-site-link ${active === "morrow" ? "active" : ""}" href="${morrowHref}" ${newTab}>Morrow</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" ${newTab}>Cozy Builder</a>`,
         `<a class="johnny-site-link ${active === "glade" ? "active" : ""}" href="${gladeHref}" ${newTab}>Glade</a>`,
+        `<a class="johnny-site-link ${active === "crownforge" ? "active" : ""}" href="${crownforgeHref}" ${newTab}>Crownforge</a>`,
         `<a class="johnny-site-link ${active === "first-ember" ? "active" : ""}" href="${firstEmberHref}" ${newTab}>First Ember</a>`,
         `<a class="johnny-site-link ${active === "clockwise" ? "active" : ""}" href="${clockwiseHref}" ${newTab}>Clockwise</a>`,
         `<a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="${simHref}" ${newTab}>Sim</a>`,
@@ -3889,6 +3893,17 @@ async function syncGodotBuilds() {
   }
 }
 
+async function syncCrownforgeBuild() {
+  try {
+    await access(crownforgeSourceDir);
+  } catch {
+    // Keep the checked-in public route intact when a local source checkout is absent.
+    return;
+  }
+  await rm(crownforgeTargetDir, { recursive: true, force: true });
+  await cp(crownforgeSourceDir, crownforgeTargetDir, { recursive: true });
+}
+
 async function patchGodotWasmLoader() {
   const stockStreamingBlock = `var response=fetch(binaryFile,{credentials:"same-origin"});var instantiationResult=await WebAssembly.instantiateStreaming(response,imports);return instantiationResult`;
   const gzipSafeStreamingBlock = `var response=await fetch(binaryFile,{credentials:"same-origin"});var buffer=await response.arrayBuffer();var bytes=new Uint8Array(buffer);if(bytes.length>=2&&bytes[0]===31&&bytes[1]===139&&typeof DecompressionStream!=="undefined"){var stream=new Response(buffer).body.pipeThrough(new DecompressionStream("gzip"));buffer=await new Response(stream).arrayBuffer()}var instantiationResult=await WebAssembly.instantiate(buffer,imports);return instantiationResult`;
@@ -4731,6 +4746,7 @@ async function main() {
   await mkdir(path.join(publicDir, "618chat"), { recursive: true });
   await mkdir(path.join(publicDir, "contact"), { recursive: true });
   await syncGodotBuilds();
+  await syncCrownforgeBuild();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
   await patchGodotAudioFocus();

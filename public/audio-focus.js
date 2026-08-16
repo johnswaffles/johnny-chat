@@ -9,6 +9,7 @@
   const GAME_PATHS = new Set([
     "/cozy-builder-game/",
     "/glade/",
+    "/crownforge/",
     "/first-ember/",
     "/sim/",
     "/tetris/"

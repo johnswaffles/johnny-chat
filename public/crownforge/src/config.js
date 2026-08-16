@@ -1,0 +1,292 @@
+export const CONFIG = {
+  mapWidth: 30,
+  mapHeight: 22,
+  tileWidth: 52,
+  tileHeight: 26,
+  initialZoom: 0.84,
+  minZoom: 0.62,
+  maxZoom: 1.12,
+};
+
+export const LIGHTING = {
+  primary: {
+    label: 'upper-left / front',
+    vector: { x: -0.48, y: -0.88 },
+    shadowVector: { x: 0.48, y: 0.88 },
+    warm: 'rgba(255, 226, 168, 0.055)',
+    highlight: 'rgba(255, 239, 198, 0.03)',
+  },
+  ambient: {
+    color: 'rgba(62, 91, 70, 0.042)',
+    distantHaze: 'rgba(218, 231, 200, 0.035)',
+  },
+  mapEdgeShadow: 'rgba(16, 31, 27, 0.34)',
+};
+
+export const FACTION = {
+  key: 'crownwardens',
+  name: 'The Crownwardens',
+  shortName: 'Crownwardens',
+  color: '#86c4cf',
+  darkColor: '#173844',
+  gold: '#d7aa54',
+};
+
+export const RESOURCE_TYPES = {
+  food: { label: 'Food', color: '#d76649', capacity: 180, gatherAmount: 10, gatherTime: 1.05, interactionDistance: 1.55 },
+  wood: { label: 'Wood', color: '#b98147', capacity: 180, gatherAmount: 12, gatherTime: 1.1, interactionDistance: 1.75 },
+  stone: { label: 'Stone', color: '#9fa8ab', capacity: 120, gatherAmount: 10, gatherTime: 1.2, interactionDistance: 1.7 },
+};
+
+export const UNIT_TYPES = {
+  villager: {
+    label: 'Villager',
+    asset: 'villager',
+    speed: 2.9,
+    acceleration: 10.5,
+    braking: 13.5,
+    radius: 0.36,
+    maxHp: 42,
+    attack: 4,
+    range: 0.95,
+    cooldown: 1.25,
+    attackTiming: { anticipation: 0.2, contact: 0.46, recovery: 0.34 },
+  },
+  soldier: {
+    label: 'Crown Guard',
+    asset: 'soldier',
+    speed: 2.45,
+    radius: 0.43,
+    maxHp: 85,
+    attack: 14,
+    range: 1.45,
+    cooldown: 0.85,
+    attackTiming: { anticipation: 0.24, contact: 0.44, recovery: 0.32 },
+    combatAtlas: 'soldier',
+  },
+  raider: {
+    label: 'Ashen Raider',
+    asset: 'raider',
+    speed: 2.25,
+    radius: 0.44,
+    maxHp: 72,
+    attack: 9,
+    range: 1.25,
+    cooldown: 1.05,
+    attackTiming: { anticipation: 0.22, contact: 0.46, recovery: 0.32 },
+    combatAtlas: 'raider',
+  },
+};
+
+export const BUILDING_TYPES = {
+  townCenter: {
+    label: 'Crown Hall',
+    function: 'Resource drop-off and settlement core',
+    asset: 'townCenter',
+    maxHp: 900,
+    footprint: { width: 3, height: 3 },
+    renderSize: 246,
+    entrance: 'south',
+    completed: true,
+    storage: true,
+  },
+  house: {
+    label: 'Hearth House',
+    function: 'Population housing',
+    asset: 'house',
+    maxHp: 260,
+    footprint: { width: 2, height: 2 },
+    renderSize: 194,
+    entrance: 'south',
+    buildTime: 7.5,
+    cost: { food: 0, wood: 55, stone: 0 },
+    population: 4,
+  },
+  storehouse: {
+    label: 'Waystore',
+    function: 'Resource drop-off',
+    asset: 'storehouse',
+    maxHp: 420,
+    footprint: { width: 2, height: 2 },
+    renderSize: 208,
+    entrance: 'south',
+    completed: true,
+    storage: true,
+  },
+  ashenCamp: {
+    label: 'Ashen Camp',
+    function: 'Enemy settlement core',
+    asset: 'ashenCamp',
+    maxHp: 640,
+    footprint: { width: 3, height: 3 },
+    renderSize: 272,
+    entrance: 'south',
+    spawnDistance: 1.02,
+    completed: true,
+    enemyStructure: true,
+  },
+};
+
+export const ASSET_RECTS = {
+  townCenter: { x: 0, y: 0, width: 418, height: 418 },
+  house: { x: 418, y: 0, width: 418, height: 418 },
+  storehouse: { x: 836, y: 0, width: 418, height: 418 },
+  villager: { x: 0, y: 418, width: 418, height: 418 },
+  soldier: { x: 418, y: 418, width: 418, height: 418 },
+  raider: { x: 836, y: 418, width: 418, height: 418 },
+  tree: { x: 0, y: 836, width: 418, height: 418 },
+  berry: { x: 418, y: 836, width: 418, height: 418 },
+  stone: { x: 836, y: 836, width: 418, height: 418 },
+};
+
+export const ENVIRONMENT_ATLAS = {
+  src: './assets/crownforge-environment-atlas-v2.png?v=3',
+  width: 1254,
+  height: 1254,
+  columns: 4,
+  rows: 4,
+  rowByType: { tree: 0, berry: 1, stone: 2, log: 3, stump: 3, flowers: 3, pebbles: 3 },
+};
+
+export const BUILDING_STAGE_ATLAS = {
+  src: './assets/crownforge-building-stages-v2.png?v=3',
+  width: 1254,
+  height: 1254,
+  columns: 4,
+  rows: 4,
+  columnByType: { townCenter: 0, house: 1, storehouse: 2 },
+  rowByStage: { foundation: 0, partial: 1, nearComplete: 2, complete: 3 },
+};
+
+export const ENEMY_CAMP_ASSET = {
+  src: './assets/crownforge-ashen-camp-v1.png?v=1',
+  width: 1536,
+  height: 1024,
+};
+
+export const VILLAGER_ATLASES = {
+  motion: {
+    src: './assets/villager-motion-atlas.png?v=2',
+    rows: { idle: 0, walk: [1, 2, 3] },
+  },
+  task: {
+    src: './assets/villager-task-atlas.png?v=2',
+    rows: { wood: 0, food: 1, stone: 2, build: 3 },
+  },
+  carry: {
+    src: './assets/villager-carry-atlas.png?v=2',
+    rows: { wood: 0, food: 1, stone: 2, supplies: 3 },
+  },
+  combat: {
+    src: './assets/villager-combat-atlas.png?v=2',
+    rows: { attack: 0, hit: 1, death: 2, idle: 3 },
+  },
+  // Action-loop atlases use frame columns and authored direction rows. The
+  // legacy task/carry/combat sheets remain available for states that are
+  // intentionally single-pose (carry, hit, and death).
+  woodLoop: {
+    src: './assets/villager-gather-wood-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  foodLoop: {
+    src: './assets/villager-gather-food-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  stoneLoop: {
+    src: './assets/villager-gather-stone-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  buildLoop: {
+    src: './assets/villager-construct-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  carryWoodLoop: {
+    src: './assets/villager-carry-wood-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  carryFoodLoop: {
+    src: './assets/villager-carry-food-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  carryStoneLoop: {
+    src: './assets/villager-carry-stone-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  carrySuppliesLoop: {
+    src: './assets/villager-carry-supplies-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  columns: 4,
+  rows: 4,
+  width: 1254,
+  height: 1254,
+};
+
+export const COMBAT_ATLASES = {
+  soldier: {
+    src: './assets/crownforge-soldier-combat-atlas-v1.png?v=1',
+    width: 1243,
+    height: 1265,
+    columns: 4,
+    rows: 4,
+    rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
+  },
+  soldierAttack: {
+    src: './assets/crownforge-soldier-attack-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  raider: {
+    src: './assets/crownforge-raider-combat-atlas-v1.png?v=1',
+    width: 1243,
+    height: 1266,
+    columns: 4,
+    rows: 4,
+    rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
+  },
+  raiderAttack: {
+    src: './assets/crownforge-raider-attack-loop-v1.png?v=1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+};
+
+export const INITIAL_RESOURCES = { food: 165, wood: 150, stone: 90 };
