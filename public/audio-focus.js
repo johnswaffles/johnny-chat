@@ -7,10 +7,20 @@
   const TAB_ID = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
   const CLAIM_TTL = 9000;
   const GAME_PATHS = new Set([
+    "/ai-helper/",
+    "/chatbot/",
+    "/clockwise/",
     "/cozy-builder-game/",
     "/glade/",
+    "/crownforge/",
     "/first-ember/",
+    "/morrow/",
+    "/mosswake/",
+    "/nova-chat/",
+    "/settlement/",
     "/sim/",
+    "/story-editor/",
+    "/textsmith/",
     "/tetris/"
   ]);
   const musicSelector = "audio[data-johnny-music]";
@@ -119,6 +129,13 @@
     try {
       handleMessage(JSON.parse(event.newValue));
     } catch (_) {}
+  });
+
+  // A tab switch on iPhone may not produce a click in the original page. The
+  // Page Visibility signal catches that case while leaving the new app's audio
+  // completely independent.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) pauseLocalMusic();
   });
 
   document.addEventListener("click", (event) => {
