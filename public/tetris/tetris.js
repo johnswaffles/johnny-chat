@@ -84,6 +84,7 @@
   const musicButton = document.getElementById("music-button");
   const speedControls = Array.from(document.querySelectorAll("[data-speed]"));
   const speedCaption = document.getElementById("speed-caption");
+  const mobileSpeedSelect = document.getElementById("mobile-speed-select");
   const reactorState = document.getElementById("reactor-state");
   const reactorMeter = document.getElementById("reactor-meter");
   const reactorBar = document.getElementById("reactor-bar");
@@ -1035,6 +1036,7 @@
     speedControls.forEach((button) => {
       button.setAttribute("aria-pressed", String(button.dataset.speed === speedMode));
     });
+    if (mobileSpeedSelect) mobileSpeedSelect.value = speedMode;
     if (speedCaption) speedCaption.textContent = SPEEDS[speedMode].caption;
   };
 
@@ -1135,6 +1137,7 @@
   secondChanceButton.addEventListener("click", useSecondChance);
   musicButton.addEventListener("click", toggleMusic);
   speedControls.forEach((button) => button.addEventListener("click", () => setSpeed(button.dataset.speed)));
+  mobileSpeedSelect?.addEventListener("change", (event) => setSpeed(event.target.value));
   document.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => action(button.dataset.action));
   });
