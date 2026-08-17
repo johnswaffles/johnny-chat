@@ -119,6 +119,15 @@
           <div class="control-row"><kbd>P</kbd><span>Pause</span></div>
         </div>
         <button id="pause-button" class="secondary-button" type="button">Pause game</button>
+        <label class="mobile-speed-control" for="mobile-speed-select">
+          <span>Speed</span>
+          <select id="mobile-speed-select" aria-label="Game speed">
+            <option value="slow">Slow</option>
+            <option value="classic" selected>Classic</option>
+            <option value="fast">Fast</option>
+            <option value="really-fast">Really fast</option>
+          </select>
+        </label>
         <div class="speed-card mini-card">
           <span class="panel-label">Game speed</span>
           <div id="speed-controls" class="speed-controls" role="group" aria-label="Game speed">
@@ -150,6 +159,6 @@
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=remaster-2026-13"></script>
+  <script src="/tetris/tetris.js?v=remaster-2026-14"></script>
 </body>
 </html>
