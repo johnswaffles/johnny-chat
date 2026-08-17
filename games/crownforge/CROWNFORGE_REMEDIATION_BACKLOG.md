@@ -46,7 +46,7 @@ No backlog item authorizes new content. The next repair target is the matched ex
 
 | ID | Area | Finding | Repair | Evidence | Status |
 |---|---|---|---|---|---|
-| CF-VIS-001 | Environment atlas boundary risk | Raw tree/bush silhouettes touch some source-cell edges. | Kept authored scale; verified live one-pixel inset and added boundary audit. | `tools/visual-integrity-audit.mjs`, local 1280 × 720 map review, deployed verification pending. | VERIFIED LOCALLY / DEPLOYMENT CHECK |
+| CF-VIS-001 | Environment atlas boundary risk | Raw tree/bush silhouettes touch some source-cell edges. | Kept authored scale; verified live one-pixel inset and added boundary audit. | `tools/visual-integrity-audit.mjs`, local and deployed 1280 × 720 map review. | VERIFIED |
 | CF-VIS-002 | Raider attack weapon corruption | v2 crossed source-cell edges and included a detached back-left recovery fragment. | Generated four directional strips, composed padded v3, replaced contact/recovery cells. | v3 has zero unsafe top/left/right cells; viewer screenshot shows connected axe. | FIXED AND VERIFIED LOCALLY |
 | CF-VIS-003 | Viewer/live sampling drift | QA viewer sampled full cells while live renderer inset each cell. | Viewer now shares live one-pixel inset. | All available state/direction combinations load with no missing/pending result. | FIXED |
 | CF-VIS-004 | Combat hit response depth | Raider and soldier hit clips fall back to idle. | Deliberately not expanded in this integrity pass. | Viewer explicitly reports `FALLBACK → idle`. | OPEN P1 |

@@ -271,7 +271,7 @@ No major expansion is recommended. The next repair target is the existing Crown 
 | Current state/direction loading | PASS — all state options exposed by Villager, Crown Guard, and Ashen Raider loaded across four directions with zero missing/pending results. |
 | Local placement and reset | PASS — blueprint menu, valid foundation placement, reset state, and starting clearances were exercised. |
 | Movement stress | PASS — cross lanes, intersections, blocked destination, retask storm, and dynamic blocker recovery. |
-| Live propagation | CONDITIONAL until final push — source marker and v3 asset must be confirmed in the deployed route after commit. |
+| Live propagation | PASS — `main` commit `d8742b1`, integrity1 marker, v3 config reference, matching deployed atlas SHA-256, playable route, and deployed QA viewer verified. |
 | Authored combat response depth | CONDITIONAL — soldier and raider hit states still fall back to idle; this is the next polish target. |
 
 Current result remains **CONDITIONAL PASS**. The slice is stable and visually coherent for the audited scope, but the existing combat response family should be completed before a final art-standard claim or major expansion.

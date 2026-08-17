@@ -1227,7 +1227,7 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 
 1. Generate and integrate matched four-direction hit/death depth for Crown Guard and Ashen Raider.
 2. Recheck rare tall-object interaction occlusion at minimum and maximum zoom if a concrete case is reproduced.
-3. Repeat the deployed visual matrix after the final push.
+3. Repeat the deployed visual matrix after the final push — completed for the `20260816-integrity1` route; keep this as the required check for the next asset pass.
 
 ### WHAT SHOULD NOT BE BUILT YET
 
