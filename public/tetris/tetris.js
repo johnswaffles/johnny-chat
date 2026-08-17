@@ -240,7 +240,7 @@
     }
   };
 
-  const lineClearLabel = (cleared) => ["", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS!"][cleared] || "LINE CLEAR";
+  const lineClearLabel = (cleared) => ["", "SINGLE", "DOUBLE", "TRIPLE", "FOUR LINE CLEAR"][cleared] || "LINE CLEAR";
 
   const beginLineClearFeedback = (cleared, rows) => {
     lineClearFx = { timer: CLEAR_FEEDBACK_DURATION, total: CLEAR_FEEDBACK_DURATION };
@@ -438,7 +438,7 @@
     lines += cleared;
     level = Math.floor(lines / 10) + 1;
     if (tSpin && cleared) statusText.textContent = "T-Spin " + (cleared === 1 ? "single" : cleared === 2 ? "double" : "triple") + "!";
-    else if (cleared === 4) statusText.textContent = "Tetris! Beautiful.";
+    else if (cleared === 4) statusText.textContent = "Four lines! Beautiful.";
     else if (cleared) statusText.textContent = cleared + " line" + (cleared > 1 ? "s" : "") + " cleared";
     if (perfectClear && cleared) statusText.textContent = "Perfect clear!";
     if (combo > 0 && cleared) statusText.textContent += "  Combo x" + (combo + 1);
