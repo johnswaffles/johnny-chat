@@ -161,3 +161,18 @@ See `CROWNFORGE_REMEDIATION_BACKLOG.md` and `CROWNFORGE_POST_AUDIT_CONVERGENCE.m
 **CONDITIONAL PASS — The vertical slice is stable and playable, but the specified non-blocking quality deficiencies remain.**
 
 The current slice is ready for focused polish only. Do not expand content until the existing military response family and direct performance/heap evidence are stronger.
+
+## Visual integrity convergence — 2026-08-16
+
+- Reproduced the Ashen Raider v2 attack atlas defect: weapon pixels crossed source-cell boundaries and the back-left recovery cell contained a detached blade fragment.
+- Rebuilt and integrated `assets/crownforge-raider-attack-loop-v3.png` with transparent cell composition, a connected standalone back-left contact frame, and stable grounding.
+- Updated the developer viewer to use the same one-pixel atlas inset as the live renderer and to report animation fallbacks.
+- Added `tools/visual-integrity-audit.mjs` plus build/asset, visual/spatial, and handoff documentation.
+- Advanced the runtime identity from `20260816-expansion2` to `20260816-integrity1` to prevent stale module/stylesheet responses.
+- Local source checks passed: syntax, `git diff --check`, six remediation regression checks, all available direction/state combinations with zero missing assets, and movement stress scenarios.
+
+### Remaining defects after this convergence pass
+
+1. Crown Guard and Ashen Raider hit states still resolve to idle; this is now explicit in the viewer and remains the highest-priority existing-art repair.
+2. Raw environment atlases have intentional edge contact; the renderer inset and local/live screenshots show no current visible crop, but this remains a regression-sensitive family.
+3. Live push/deploy verification is recorded in `CROWNFORGE_BUILD_ASSET_VERIFICATION.md` and `CROWNFORGE_VISUAL_INTEGRITY_HANDOFF.md` after publication.

@@ -261,3 +261,17 @@ Scores below 9 are not failures of the playable slice. They identify genuine, bo
 **CONDITIONAL PASS — The vertical slice is stable and playable, but the specified non-blocking quality deficiencies remain.**
 
 No major expansion is recommended. The next repair target is the existing Crown Guard/Ashen Raider walk, hit, and death response family.
+
+## Visual integrity certification update — 2026-08-16
+
+| Gate | Result |
+|---|---|
+| Active asset files, dimensions, and placeholder scan | PASS — visual integrity audit found no missing active files, placeholder references, or dimension mismatches. |
+| Marauder attack weapon integrity | PASS — v3 atlas has no unsafe source-cell boundaries and the repaired back-left frames are visually connected. |
+| Current state/direction loading | PASS — all state options exposed by Villager, Crown Guard, and Ashen Raider loaded across four directions with zero missing/pending results. |
+| Local placement and reset | PASS — blueprint menu, valid foundation placement, reset state, and starting clearances were exercised. |
+| Movement stress | PASS — cross lanes, intersections, blocked destination, retask storm, and dynamic blocker recovery. |
+| Live propagation | CONDITIONAL until final push — source marker and v3 asset must be confirmed in the deployed route after commit. |
+| Authored combat response depth | CONDITIONAL — soldier and raider hit states still fall back to idle; this is the next polish target. |
+
+Current result remains **CONDITIONAL PASS**. The slice is stable and visually coherent for the audited scope, but the existing combat response family should be completed before a final art-standard claim or major expansion.

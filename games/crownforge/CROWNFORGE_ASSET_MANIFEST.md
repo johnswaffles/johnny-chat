@@ -247,3 +247,19 @@ The live audit generated and integrated four small worker action families rather
 The live renderer selects these through `ANIMATION_DEFINITIONS.villager` and the shared `animationFrame()` resolver. A screen-front preference was also added to resource interaction-slot scoring so a valid worker position is more likely to remain visible around tall canopies without changing collision or depth sorting.
 
 The generated family was inspected in the developer viewer for all 16 state/direction combinations and in the playable map for Wood, Food, Stone, and Construction. The first wood draft with colored fringe and a checkerboard/matte cleanup draft were rejected; neither is referenced by the runtime.
+
+## Visual integrity asset update — 2026-08-16
+
+### Active replacement
+
+- `assets/crownforge-raider-attack-loop-v3.png` — 1254 × 1254 RGBA, 4 columns × 4 rows; four original directional attack strips, padded frame boundaries, connected back-left contact frame.
+
+### Obsolete runtime reference removed
+
+- `assets/crownforge-raider-attack-loop-v2.png` remains for provenance but is no longer referenced in `src/config.js`.
+
+### Verification contract
+
+- `tools/visual-integrity-audit.mjs` reports no active missing files, no placeholder references, no dimension mismatches, and no unsafe top/left/right cells for the active v3 attack family.
+- The environment atlas has intentional raw edge contact, so the renderer’s one-pixel inset and live visual review remain part of acceptance; it is not globally shrunk as a blind repair.
+- The runtime marker is `20260816-integrity1`; `games/crownforge` and `public/crownforge` must carry the same active asset and marker.

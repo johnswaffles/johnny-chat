@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260816-expansion2';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260816-integrity1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'world-z-positive', label: '+Z · screen-left / front' },
@@ -198,6 +198,8 @@ export function animationFrame(type, state, time = 0, direction = 0) {
     : directionIndex;
   return {
     requestedState,
+    resolvedState: requestedClip.fallback ?? requestedState,
+    fallback: requestedClip.fallback ?? null,
     atlasKey: clip.atlas,
     row: sourceRow,
     column: sourceColumn,

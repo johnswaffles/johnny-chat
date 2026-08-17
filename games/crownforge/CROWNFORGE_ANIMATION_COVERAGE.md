@@ -273,3 +273,13 @@ Unit animation coverage is **8/10**: all gameplay-required current states have d
 ### Remaining quality boundary
 
 The current contract is mechanically release-safe for the tiny slice, but animation quality remains **7/10**: most action, carry, construction, attack, hit, and death rows are single-pose authored clips. The next animation-only pass should improve those existing rows before any new unit, faction, building, or map category is introduced. This is a non-blocking foundation condition and a blocking condition for claiming the final art standard is complete.
+
+## Visual integrity pass — 2026-08-16
+
+- The active Ashen Raider attack clip is now `crownforge-raider-attack-loop-v3.png`, a transparent 4 × 4 atlas with four directional rows and four readable attack phases.
+- The v2 weapon bleed was reproduced, repaired, and inspected at atlas size and runtime size. The v3 boundary audit reports no unsafe top, left, or right cells and no unintended bottom contact.
+- The developer viewer now samples with the live renderer’s one-pixel source inset and reports state fallbacks directly.
+- The complete current state matrix returned zero missing/pending combinations. The only fallback entries are the expected soldier hit → idle and raider hit → idle paths.
+- Marauder walking remains four-directional and loaded through `crownforge-raider-walk-loop-v1.png`; no forced-south or missing-direction behavior was found in the current source.
+
+The next pass should create matched hit/death depth for the existing combat units. Do not add a new unit or animation category before that repair is evaluated.

@@ -317,7 +317,7 @@ export const COMBAT_ATLASES = {
     rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
   },
   raiderAttack: {
-    src: './assets/crownforge-raider-attack-loop-v2.png?v=1',
+    src: './assets/crownforge-raider-attack-loop-v3.png?v=1',
     width: 1254,
     height: 1254,
     columns: 4,
