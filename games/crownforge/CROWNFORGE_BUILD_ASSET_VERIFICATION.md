@@ -41,7 +41,14 @@ shasum -a 256 games/crownforge/assets/crownforge-environment-atlas-v2.png
 shasum -a 256 games/crownforge/assets/crownforge-building-stages-v2.png
 ```
 
-The exact final hashes and pushed commit are recorded in the release section below once the deployment commit exists.
+Recorded final hashes:
+
+- v3 attack: `e64046d45b06cf2a41fbe5e7f7a0bbaea026b28a18e5ebc3c42c6a6e850c78ca`
+- raider walk: `735877403ea3c35e9d1499799731ebfdae18d80eeb665873cee281fdadb34e70`
+- environment: `4a7dd2a5defc8cbc5b67b91c590f75cbc8b1ad0a0dfa48b97687dc2b33151f8c`
+- building stages: `e4e31b4883b9a5d7b78a6d276580b50ff0aa6c8ba705aa37e0ddd7251332d3a3`
+
+The live v3 response produced the same SHA-256 as the local file.
 
 ## Cache and propagation controls
 
@@ -52,10 +59,10 @@ The exact final hashes and pushed commit are recorded in the release section bel
 
 ## Final release record
 
-- Local branch: to be filled after commit
-- Local commit: to be filled after commit
-- Pushed commit: to be filled after push
-- Production build identifier: to be filled after deployment
+- Local branch: `codex/crownforge-visual-integrity`
+- Local commit: `d8742b151685fe4c1d5688f39101d9fc3bcab30f`
+- Pushed commit: `d8742b151685fe4c1d5688f39101d9fc3bcab30f` on `main`
+- Production build identifier: `d8742b1` / runtime marker `20260816-integrity1`
 - Deployed asset-manifest version: `20260816-integrity1`
-- Live cache state: to be filled after live fetch
-- Live result: to be filled after deployed browser verification
+- Live cache state: confirmed; HTML loads `styles.css?v=20260816-integrity1` and `src/main.js?v=20260816-integrity1`.
+- Live result: confirmed at `https://justaskjohnny.com/crownforge/?deploy=integrity1&t=2`; title correct, v3 config/asset loaded, no browser console logs, fresh 1280 × 720 screenshot coherent.

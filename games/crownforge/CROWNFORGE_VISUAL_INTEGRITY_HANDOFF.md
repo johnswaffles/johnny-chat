@@ -108,18 +108,18 @@ This pass verified the existing architecture; it did not replace the depth-sort 
 - Movement stress: cross lanes, intersections, blocked destination, retask storm, and blocker removal all returned PASS.
 - Simulation soak: 3,600 fixed 60 Hz updates completed without a runtime exception; live entities remained bounded and no phase corruption occurred.
 - Existing gameplay regression: all six checks in `remediation-regression.mjs` passed.
-- Deployment tests: pending final commit/push/live verification; record in Section 13.
+- Deployment tests: passed after push; live HTML, config, atlas SHA-256, playable route, and deployed QA viewer were rechecked.
 
 ## 13. BUILD AND DEPLOYMENT STATUS
 
-- Local branch: to be filled after commit
-- Local commit: to be filled after commit
-- Production build identifier: to be filled after push/deploy
-- Pushed commit: to be filled after push
-- Deployed build identifier: to be filled after live fetch
+- Local branch: `codex/crownforge-visual-integrity`
+- Local commit: `d8742b151685fe4c1d5688f39101d9fc3bcab30f`
+- Production build identifier: `d8742b1` / runtime marker `20260816-integrity1`
+- Pushed commit: `d8742b151685fe4c1d5688f39101d9fc3bcab30f` on `main`
+- Deployed build identifier: `20260816-integrity1` confirmed in live HTML and loaded module URL
 - Asset-manifest version: `20260816-integrity1`
-- Cache state: source markers advanced; v3 uses a new filename. Final live cache verification remains required.
-- Live verification result: to be filled after deployment.
+- Cache state: source markers advanced; v3 uses a new filename; live response served the integrity1 marker and v3 asset.
+- Live verification result: PASS — playable route opened at 1280 × 720 with no browser logs; deployed QA viewer loaded raider attack contact direction 2 from `raiderAttack` with no fallback or missing asset.
 
 ## 14. ISSUES FIXED AND VERIFIED
 
