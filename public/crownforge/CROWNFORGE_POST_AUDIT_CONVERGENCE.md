@@ -118,3 +118,7 @@ The game has converged to a stable, coherent, playable small vertical slice and 
 **CONDITIONAL PASS — The vertical slice is stable and playable, but the specified non-blocking quality deficiencies remain.**
 
 No major expansion should begin. The next repair target is the existing Crown Guard/Ashen Raider walk, hit, and death response family.
+
+## Visual integrity convergence — 2026-08-16
+
+This narrow pass focused on the user-reported spatial/art integrity failures and did not add gameplay content. The Ashen Raider v2 attack atlas defect was reproduced at source-cell level, repaired into `crownforge-raider-attack-loop-v3.png`, and checked in the viewer with the live renderer’s one-pixel inset. The complete current animation matrix found no missing/pending assets; hit-state fallbacks remain explicit and documented. Local syntax, remediation regression, construction placement, reset clearance, selection/movement smoke, movement stress, and a 3,600-step simulation soak passed. The runtime marker is now `20260816-integrity1`; final push/live verification is recorded in the visual integrity handoff.

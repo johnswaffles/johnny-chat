@@ -116,10 +116,14 @@ function draw() {
   ctx.beginPath(); ctx.ellipse(groundX, groundY, 250, 80, 0, 0, Math.PI * 2); ctx.fill();
   if (guidesInput.checked) drawGuides(definition, groundX, groundY, size);
   if (image.complete && image.naturalWidth) {
-    const cellWidth = definition.atlasSize.width / definition.atlasSize.columns;
-    const cellHeight = definition.atlasSize.height / definition.atlasSize.rows;
+    const sourceLeft = Math.ceil(frame.column * definition.atlasSize.width / definition.atlasSize.columns) + 1;
+    const sourceTop = Math.ceil(frame.row * definition.atlasSize.height / definition.atlasSize.rows) + 1;
+    const sourceRight = Math.floor((frame.column + 1) * definition.atlasSize.width / definition.atlasSize.columns) - 1;
+    const sourceBottom = Math.floor((frame.row + 1) * definition.atlasSize.height / definition.atlasSize.rows) - 1;
+    const cellWidth = sourceRight - sourceLeft;
+    const cellHeight = sourceBottom - sourceTop;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(image, frame.column * cellWidth, frame.row * cellHeight, cellWidth, cellHeight, groundX - size / 2, groundY - size * .98, size, size);
+    ctx.drawImage(image, sourceLeft, sourceTop, cellWidth, cellHeight, groundX - size / 2, groundY - size * .98, size, size);
   }
   ctx.fillStyle = '#f4e7c2';
   ctx.font = '700 16px Georgia, serif';
@@ -132,7 +136,8 @@ function draw() {
 
   summary.innerHTML = `<strong>${definition.label}</strong> · ${state.replaceAll('_', ' ')} · ${ANIMATION_DIRECTIONS[direction].label}`;
   const ready = Boolean(image?.complete && image.naturalWidth);
-  asset.innerHTML = `<code>${frame.atlasKey}</code> row ${frame.row} / column ${frame.column} · ${frame.frameCount} authored frame${frame.frameCount === 1 ? '' : 's'} · ${ready ? 'asset loaded' : 'asset pending'}`;
+  const fallback = frame.fallback ? ` · FALLBACK → ${frame.fallback}` : '';
+  asset.innerHTML = `<code>${frame.atlasKey}</code> row ${frame.row} / column ${frame.column} · ${frame.frameCount} authored frame${frame.frameCount === 1 ? '' : 's'} · ${ready ? 'asset loaded' : 'asset pending'}${fallback}`;
   geometry.textContent = `pivot ${definition.groundAnchor.x.toFixed(2)},${definition.groundAnchor.y.toFixed(2)} · collision ${definition.collisionRadius.toFixed(2)} · interaction ${definition.interactionRadius.toFixed(2)}`;
 }
 

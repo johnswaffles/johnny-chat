@@ -389,3 +389,9 @@ Generated drafts with colored fringe, checkerboard/matte residue, or large squar
 ### Current visual standard and remaining gap
 
 Villager task, construction, and carry loops now establish the quality standard for existing worker actions. Crown Guard and Ashen Raider attack depth is improved and direction-correct, but their walk, hit, and death rows remain single-pose. The next art pass must complete that existing response family before any new unit or building family is considered.
+
+## Integrity-pass addition — 2026-08-16
+
+The approved marauder attack family is now `crownforge-raider-attack-loop-v3.png`. It is a transparent 4 × 4 sheet composed from four generated directional strips, with each frame padded inside its source cell and aligned to the existing unit ground baseline. The back-left contact frame was generated as a standalone connected-axe pose because the earlier strip contained a detached fragment. The old v2 family is retained only as historical source material and must not be referenced by runtime.
+
+The live renderer and QA viewer now share the same one-pixel atlas-cell inset. Any future generated sheet must be inspected at full atlas size, at runtime size, and in all four directions before integration. Current hit/death depth remains the next visual standard gap; no new art catalog should be generated until it is addressed.

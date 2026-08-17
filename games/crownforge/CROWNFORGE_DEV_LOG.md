@@ -1184,3 +1184,52 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 
 - No new civilizations, ages, technologies, campaigns, maps, biomes, water mechanics, resources, buildings, unit types, formations, ranged combat, diplomacy, multiplayer, fog-of-war, minimap, or broad AI economy.
 - No literal 10x raster enlargement of buildings, no new art catalog, and no new production roster until the current larger settlement remains readable at normal and close zoom.
+
+## VISUAL INTEGRITY AND DEPLOYMENT VERIFICATION — 2026-08-16
+
+### WHAT EXISTS
+
+- The existing small Crownforge slice now runs under the `20260816-integrity1` cache marker.
+- The active Ashen Raider attack family is the new padded RGBA `assets/crownforge-raider-attack-loop-v3.png`.
+- The source-of-truth audit worktree was based on `origin/main` commit `bf54155`; the stale untracked `/New project/crownforge` copy was not used for deployment.
+
+### WHAT WAS COMPLETED
+
+- Reproduced the marauder v2 attack-sheet weapon bleed in the developer viewer.
+- Rebuilt the four-direction, four-frame marauder attack atlas from original generated directional strips.
+- Replaced the defective back-left contact/recovery cells so the axe is connected and no detached blade remains.
+- Made the developer animation viewer use the same one-pixel source-cell inset as the live renderer.
+- Exposed resolved animation state and fallback metadata in the viewer; no fallback is now silent.
+- Added `tools/visual-integrity-audit.mjs` for active-file, placeholder, dimension, direction, fallback, and atlas-boundary checks.
+- Added reproducible atlas composition/patch tools and three audit handoff documents.
+- Re-ran syntax, diff hygiene, remediation regression, movement stress, animation coverage, construction placement, selection, and right-click movement checks.
+
+### KNOWN ISSUES
+
+- Soldier and Ashen Raider hit states still intentionally fall back to idle; this is an explicit visual polish gap, not a missing-file failure.
+- A few raw environment atlas silhouettes touch source-cell edges; the live renderer’s inset and local/live visual review currently prevent visible crops, but this should be rechecked when environment art changes.
+- Browser heap/GPU counters remain unavailable, so no direct memory-stability claim is made.
+
+### ASSETS CREATED
+
+- `assets/crownforge-raider-attack-loop-v3.png` — original generated, padded, connected-weapon marauder attack atlas.
+- Intermediate generated strips and a standalone contact frame were used as preparation inputs and are not runtime assets.
+
+### SYSTEMS CREATED OR UPDATED
+
+- Visual integrity asset audit tool.
+- Atlas composition and transparent-cell replacement tools.
+- Viewer/live source-cell sampling parity.
+- Animation fallback observability.
+- Cache/build identity marker for the repair pass.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Generate and integrate matched four-direction hit/death depth for Crown Guard and Ashen Raider.
+2. Recheck rare tall-object interaction occlusion at minimum and maximum zoom if a concrete case is reproduced.
+3. Repeat the deployed visual matrix after the final push.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No new civilizations, ages, technologies, campaigns, maps, biomes, water systems, resources, buildings, unit classes, formations, ranged combat, or broad AI economy.
+- Do not repeat the completed v3 marauder attack repair or expand the art catalog until the existing combat response family is visually complete.

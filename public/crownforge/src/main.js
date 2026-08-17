@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260816-expansion2';
-import { CrownforgeAudio } from './audio.js?v=20260816-expansion2';
-import { CrownforgeInput } from './input.js?v=20260816-expansion2';
-import { CrownforgeRenderer } from './renderer.js?v=20260816-expansion2';
-import { CrownforgeSimulation } from './simulation.js?v=20260816-expansion2';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260816-integrity1';
+import { CrownforgeAudio } from './audio.js?v=20260816-integrity1';
+import { CrownforgeInput } from './input.js?v=20260816-integrity1';
+import { CrownforgeRenderer } from './renderer.js?v=20260816-integrity1';
+import { CrownforgeSimulation } from './simulation.js?v=20260816-integrity1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
