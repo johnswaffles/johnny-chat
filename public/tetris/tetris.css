@@ -826,6 +826,9 @@ body::before {
 }
 .d-pad { display: grid; grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(2, 42px); gap: 4px; justify-content: center; }
 .touch-controls button {
+  display: grid;
+  place-items: center;
+  align-content: center;
   min-height: 42px;
   border: 1px solid rgba(160,182,255,.25);
   border-radius: 11px;
@@ -843,13 +846,15 @@ body::before {
 .d-pad button:nth-child(3) { grid-column: 2; grid-row: 2; }
 .d-pad button:nth-child(4) { grid-column: 3; grid-row: 2; }
 .action-pad { display: flex; justify-content: center; gap: 9px; }
-.action-pad button { width: 52px; height: 52px; min-height: 52px; border-radius: 50%; color: #07101d; }
+.action-pad button { width: 52px; height: 52px; min-height: 52px; gap: 5px; border-radius: 50%; color: #07101d; }
 .action-pad button:first-child { background: radial-gradient(circle at 35% 28%, #ffd7ee, #ff73be 58%, #9c67d7); border-color: rgba(255,255,255,.3); box-shadow: 0 0 20px rgba(255,115,190,.27), inset 0 2px rgba(255,255,255,.45); }
 .action-pad button:nth-child(2) { background: radial-gradient(circle at 35% 28%, #efffd2, #b4dd72 58%, #4e9d86); border-color: rgba(255,255,255,.3); box-shadow: 0 0 20px rgba(154,220,141,.22), inset 0 2px rgba(255,255,255,.45); }
 .action-pad b { display: block; font: 800 17px/1 var(--font); }
-.action-pad span, .drop-control span { display: block; margin-top: 4px; font: 500 7px/1 var(--mono); letter-spacing: .04em; }
+.action-pad span, .drop-control span { display: block; margin-top: 0; font: 500 7px/1 var(--mono); letter-spacing: .04em; }
 .drop-control { min-height: 56px !important; color: var(--cyan) !important; background: linear-gradient(145deg, rgba(21,52,73,.92), rgba(11,24,47,.96)) !important; }
+.drop-control { gap: 6px; }
 .drop-control b { display: block; font: 800 11px/1 var(--font); letter-spacing: .08em; }
+.mobile-speed-control { display: none; }
 .touch-controls button:active { transform: translateY(2px) scale(.98); filter: brightness(1.16); }
 
 @media (max-width: 960px) and (min-width: 681px) {
@@ -1493,4 +1498,83 @@ body.game-active .chance-button[data-empty="true"] { letter-spacing: .05em; }
   body.game-active .action-pad button[data-action="second-chance"] { height: 46px; min-height: 46px; }
   body.game-active .action-pad button[data-action="second-chance"] { width: 70px; }
   body.game-active .drop-control { min-height: 48px !important; }
+}
+
+/* Desktop control deck: give the physical-looking controls a real console
+   footprint while keeping the phone cockpit compact. */
+@media (min-width: 961px) and (min-height: 601px) {
+  body.game-active .game-shell { grid-template-rows: 38px minmax(0, 1fr) 160px; }
+  body.game-active .arcade { --cockpit-board-height: clamp(260px, calc(100dvh - 330px), 620px); }
+  body.game-active .touch-controls {
+    grid-template-columns: minmax(240px, 1.1fr) minmax(270px, 1.2fr) minmax(210px, .9fr);
+    width: min(920px, calc(100vw - 24px));
+    height: 160px;
+    gap: 18px;
+    padding: 14px 22px;
+    border-radius: 27px;
+  }
+  body.game-active .d-pad { grid-template-columns: repeat(3, 76px); grid-template-rows: repeat(2, 64px); gap: 8px; }
+  body.game-active .touch-controls button { min-height: 64px; border-radius: 16px; font-size: 34px; }
+  body.game-active .action-pad { gap: 18px; }
+  body.game-active .action-pad button[data-action="rotate"] { width: 104px; height: 104px; min-height: 104px; }
+  body.game-active .action-pad button[data-action="second-chance"] { width: 138px; height: 104px; min-height: 104px; border-radius: 24px; }
+  body.game-active .action-pad button[data-action="rotate"] b { font-size: 30px; }
+  body.game-active .action-pad button[data-action="rotate"] span { font-size: 10px; }
+  body.game-active .action-pad button[data-action="second-chance"] b { font-size: 15px; line-height: 1.12; }
+  body.game-active .action-pad button[data-action="second-chance"] span { font-size: 10px; }
+  body.game-active .drop-control { min-height: 112px !important; border-radius: 21px; }
+  body.game-active .drop-control b { font-size: 20px; }
+  body.game-active .drop-control span { font-size: 11px; }
+}
+
+@media (min-width: 681px) and (max-width: 960px) and (min-height: 601px) {
+  body.game-active .game-shell { grid-template-rows: 38px minmax(0, 1fr) 132px; }
+  body.game-active .arcade { --cockpit-board-height: clamp(240px, calc(100dvh - 292px), 520px); }
+  body.game-active .touch-controls {
+    grid-template-columns: minmax(190px, 1.1fr) minmax(215px, 1.2fr) minmax(160px, .9fr);
+    width: calc(100vw - 16px);
+    height: 132px;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 23px;
+  }
+  body.game-active .d-pad { grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(2, 52px); gap: 6px; }
+  body.game-active .touch-controls button { min-height: 52px; border-radius: 13px; font-size: 28px; }
+  body.game-active .action-pad { gap: 10px; }
+  body.game-active .action-pad button[data-action="rotate"] { width: 82px; height: 82px; min-height: 82px; }
+  body.game-active .action-pad button[data-action="second-chance"] { width: 108px; height: 82px; min-height: 82px; border-radius: 19px; }
+  body.game-active .action-pad button[data-action="rotate"] b { font-size: 24px; }
+  body.game-active .action-pad button[data-action="rotate"] span { font-size: 8px; }
+  body.game-active .action-pad button[data-action="second-chance"] b { font-size: 12px; line-height: 1.12; }
+  body.game-active .action-pad button[data-action="second-chance"] span { font-size: 8px; }
+  body.game-active .drop-control { min-height: 92px !important; border-radius: 17px; }
+  body.game-active .drop-control b { font-size: 16px; }
+  body.game-active .drop-control span { font-size: 9px; }
+}
+
+@media (max-width: 680px) {
+  /* Pause and speed live together in the compact mobile header. */
+  body.game-active .right-panel { display: flex; flex-direction: row; align-items: center; gap: 5px; }
+  body.game-active .right-panel > .mobile-speed-control {
+    display: flex;
+    min-height: 29px;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 5px;
+    border: 1px solid rgba(105,231,255,.22);
+    border-radius: 9px;
+    background: rgba(8, 16, 34, .92);
+    box-shadow: inset 0 1px rgba(255,255,255,.08), 0 5px 14px rgba(0,0,0,.24);
+  }
+  body.game-active .mobile-speed-control > span { color: rgba(190,205,240,.78); font: 700 7px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+  body.game-active .mobile-speed-control select {
+    width: 87px;
+    height: 23px;
+    padding: 0 5px;
+    border: 1px solid rgba(105,231,255,.32);
+    border-radius: 6px;
+    color: var(--text);
+    background: rgba(19, 33, 61, .96);
+    font: 700 8px/1 var(--font);
+  }
 }
