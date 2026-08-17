@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#090d1a">
-  <title>Tetris — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-14">
+  <title>Falling Blocks — Johnny's Game Shelf</title>
+  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-15">
 </head>
 <body class="game-active">
   <div class="aurora aurora-one"></div>
@@ -23,7 +23,7 @@
           <a href="/first-ember/">First Ember <small>Playable adventure</small></a>
           <a href="/mosswake/">Mosswake <small>Top-down adventure</small></a>
           <a href="/sim/">Sim <small>Living world simulation</small></a>
-          <a class="current" href="/tetris/">Tetris <small>Classic block puzzle</small></a>
+          <a class="current" href="/tetris/">Falling Blocks <small>Classic block puzzle</small></a>
         </div>
       </details>
     </nav>
@@ -33,7 +33,7 @@
     <section class="game-intro">
       <div>
         <p class="eyebrow">A tiny arcade ritual</p>
-        <h1>Tetris<span>∞</span></h1>
+        <h1>Falling Blocks<span>∞</span></h1>
         <p class="lede">Stack clean. Think ahead. Keep the rhythm.</p>
       </div>
       <div class="game-status" aria-live="polite">
@@ -42,7 +42,7 @@
       </div>
     </section>
 
-    <section class="arcade" aria-label="Tetris game">
+    <section class="arcade" aria-label="Falling Blocks game">
       <aside class="side-panel left-panel">
         <div class="stat-card score-card">
           <span class="panel-label">Score</span>
@@ -85,7 +85,7 @@
         </div>
         <div class="board-wrap">
         <div class="board-glow"></div>
-        <canvas id="board" width="300" height="600" tabindex="0" aria-label="Tetris board"></canvas>
+        <canvas id="board" width="300" height="600" tabindex="0" aria-label="Falling Blocks board"></canvas>
         <div id="line-clear-badge" class="line-clear-badge" aria-live="polite" aria-atomic="true"></div>
         <div id="game-over-flash" class="game-over-flash" aria-hidden="true"></div>
         <div id="board-overlay" class="board-overlay">
@@ -95,7 +95,7 @@
             <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
             <b></b><b></b><b></b><b></b><b></b><b></b>
           </div>
-          <p class="overlay-kicker">TETRIS</p>
+          <p class="overlay-kicker">FALLING BLOCKS</p>
           <h2 id="overlay-title">Ready?</h2>
           <p id="overlay-copy">Press start, then use the arrow keys or the controls below.</p>
           <button id="start-button" class="primary-button" type="button">Start game</button>
@@ -159,6 +159,6 @@
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=remaster-2026-14"></script>
+  <script src="/tetris/tetris.js?v=remaster-2026-15"></script>
 </body>
 </html>
