@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260818-ground1';
-import { findPath } from './pathfinding.js?v=20260818-ground1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260818-ground1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260818-easyroads1';
+import { findPath } from './pathfinding.js?v=20260818-easyroads1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260818-easyroads1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -155,6 +155,7 @@ export class CrownforgeSimulation {
       hitFlash: 0,
       aiClock: 0,
       raidClock: 0,
+      raidCount: 0,
       defendTimer: 0,
       defenseTargetId: null,
       productionQueue: [],
@@ -1350,7 +1351,7 @@ export class CrownforgeSimulation {
           if (target.kind === 'unit') target.healthRevealTimer = 1.6;
           if (target.kind === 'building') {
             target.defenseTargetId = unit.id;
-            target.defendTimer = 8;
+            target.defendTimer = ENEMY_AI.defenseDuration;
             if (target.hp <= 0) this._destroyBuilding(target, unit);
           } else if (target.hp <= 0) {
             this._killUnit(target, unit);
@@ -1402,7 +1403,7 @@ export class CrownforgeSimulation {
 
   _spawnEnemyRaider(camp) {
     const activeRaiders = this.units.filter((unit) => unit.type === 'raider' && unit.faction === 'enemy' && !unit.dead).length;
-    if (activeRaiders >= 3) return false;
+    if (activeRaiders >= ENEMY_AI.maxRaiders) return false;
     const spawnDistance = BUILDING_TYPES[camp.type].spawnDistance ?? 1.45;
     // Keep reinforcements in the open west/south clearing. The generic
     // entrance points put a Raider underneath the enlarged camp or beside
@@ -1448,13 +1449,14 @@ export class CrownforgeSimulation {
       camp.defenseTargetId = null;
     }
 
-    if (camp.aiClock >= 14 && camp.defendTimer <= 0 && !underThreat) {
+    if (camp.aiClock >= ENEMY_AI.reinforcementDelay && camp.defendTimer <= 0 && !underThreat) {
       if (this._spawnEnemyRaider(camp)) camp.aiClock = 0;
-      else camp.aiClock = 12;
+      else camp.aiClock = ENEMY_AI.reinforcementDelay * 0.75;
     }
 
     const playerCore = this.buildings.find((building) => building.type === 'townCenter' && building.faction === 'player' && !building.destroyed && building.hp > 0);
-    if (!playerCore || camp.defendTimer > 0 || camp.raidClock < 24) return;
+    const raidDelay = camp.raidCount > 0 ? ENEMY_AI.followUpRaidDelay : ENEMY_AI.firstRaidDelay;
+    if (!playerCore || camp.defendTimer > 0 || camp.raidClock < raidDelay) return;
     const raider = raiders.find((unit) => unit.command !== 'attack' && !unit.dead);
     if (!raider) return;
     raider.attackTarget = playerCore.id;
@@ -1462,6 +1464,7 @@ export class CrownforgeSimulation {
     raider.actionLabel = 'Raiding Crown Hall';
     if (this._sendUnitToAttack(raider, playerCore, 0)) {
       camp.raidClock = 0;
+      camp.raidCount += 1;
       this._announce('Ashen Raiders are moving on the Crown Hall.');
     }
   }
@@ -1481,7 +1484,7 @@ export class CrownforgeSimulation {
       }
       const targets = this.units.filter((unit) => unit.faction === 'player' && !unit.dead);
       const target = targets.slice().sort((a, b) => this._targetDistance(enemy, a) - this._targetDistance(enemy, b))[0];
-      if (target && distance(enemy, target) < 5.2) {
+      if (target && distance(enemy, target) < ENEMY_AI.awarenessRange) {
         enemy.attackTarget = target.id;
         enemy.attackTargetKind = 'unit';
         enemy.actionLabel = 'Raiding';

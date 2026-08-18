@@ -1308,3 +1308,43 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not expand into new biomes, water simulation, terrain elevation, a large road catalog, new resources, civilizations, ages, technologies, campaigns, or additional unit classes until this small map remains visually coherent under another full-match QA pass.
+
+## ROAD MATERIAL / EASY AI PACING PASS — 2026-08-18
+
+### WHAT WAS COMPLETED
+
+- Replaced the road's flat debug-like stroke treatment with an original Crownforge packed-earth road tile: warm ochre/umber soil, embedded pale stones, and restrained dry-grass variation.
+- Kept the route in world space so its material remains anchored while the camera pans and zooms. The road now layers a soft earth shadow, textured body, worn edge, and small irregular surface marks instead of reading as a placeholder line.
+- Added the generated road tile to both `games/crownforge/assets` and `public/crownforge/assets`, with the `20260818-easyroads1` cache identity.
+- Set the only shipped enemy profile to `easy`: the camp now waits 90 simulation seconds before its first Crown Hall raid, waits 75 seconds between follow-up raids, caps the active Raider force at two, and replaces units on a 32-second cadence when safe.
+- Preserved readable enemy behavior: Raiders retain a 5.2-world-unit local awareness radius, defend when the camp is attacked, and hold a defensive response for 10 seconds. The easier profile gives the player more time without making the enemy blind or inert.
+
+### ASSETS CREATED
+
+- `assets/crownforge-dirt-road-tile-v1.png` — original generated packed-earth material tile for the settlement road.
+
+### SYSTEMS UPDATED
+
+- `src/renderer.js` — world-anchored road material pattern and layered road ribbon.
+- `src/config.js` — single default `easy` enemy pacing profile.
+- `src/simulation.js` — delayed first raid, slower follow-up, capped reinforcements, and preserved local defense/awareness.
+
+### VERIFIED
+
+- Local browser reload at 1280x720 shows the road reading as textured packed earth and remaining aligned with the settlement while zooming.
+- Fresh-match pacing check reached `DAYBREAK 1:22` without the Crown Hall raid announcement; the first raid appeared only after the configured delay threshold. Browser console logs remained empty.
+- `node --check`, `git diff --check`, `tools/visual-integrity-audit.mjs`, and `tools/remediation-regression.mjs` passed.
+
+### KNOWN ISSUES
+
+- The road is intentionally one authored material family for this small map; no second road biome or water crossing was added.
+- There is intentionally no difficulty selector yet. `easy` is the only shipped profile until the opening and full-match pacing have been played through on the deployed build.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Play one complete deployed match from the new opening window and tune only if the first raid still feels too abrupt in real player use.
+2. If a second road texture is ever needed, add it only for a concrete terrain transition rather than broadening the asset catalog.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No new enemy factions, workers, economy optimization, difficulty modes, terrain biomes, water simulation, road network system, buildings, units, technologies, or campaigns.

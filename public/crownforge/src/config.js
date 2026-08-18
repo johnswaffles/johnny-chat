@@ -14,6 +14,20 @@ export const CONFIG = {
   initialCameraWorld: { x: 23, z: 30 },
 };
 
+// The slice currently ships with one readable, forgiving enemy profile. It
+// gives the player time to gather and build while preserving local awareness:
+// Ashen Raiders still respond when the camp is attacked or a player unit gets
+// too close, but the camp does not rush the Crown Hall at match start.
+export const ENEMY_AI = {
+  mode: 'easy',
+  maxRaiders: 2,
+  reinforcementDelay: 32,
+  firstRaidDelay: 90,
+  followUpRaidDelay: 75,
+  awarenessRange: 5.2,
+  defenseDuration: 10,
+};
+
 export const LIGHTING = {
   primary: {
     label: 'upper-left / front',
