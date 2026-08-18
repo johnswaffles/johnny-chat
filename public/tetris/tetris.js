@@ -136,6 +136,8 @@
   let reactorCharge = 0;
   let overdriveMoves = 0;
   const heldKeys = new Map();
+  const crystalTileCache = new Map();
+  let boardBackdrop = null;
 
 
   const cloneMatrix = (matrix) => matrix.map((row) => row.slice());
@@ -688,56 +690,106 @@
     updateAtmosphere();
   };
 
-  const drawCell = (context, x, y, color, alpha = 1, size = CELL, offsetX = 0, offsetY = 0) => {
-    context.save();
-    context.globalAlpha = alpha;
-    const left = offsetX + x * size;
-    const top = offsetY + y * size;
+  const createCrystalTile = (color, size, variant) => {
+    const active = variant === "active";
+    const preview = variant === "preview";
+    const shadowBlur = Math.max(4, size * (active ? .42 : .28));
+    const padding = Math.max(3, Math.ceil(shadowBlur * 1.5));
+    const sprite = document.createElement("canvas");
+    sprite.width = Math.ceil(size + padding * 2);
+    sprite.height = Math.ceil(size + padding * 2);
+    const context = sprite.getContext("2d");
     const inset = Math.max(1, size * .045);
-    const tileLeft = left + inset;
-    const tileTop = top + inset;
+    const tileLeft = padding + inset;
+    const tileTop = padding + inset;
     const tileSize = size - inset * 2;
     const radius = Math.min(6, size * .16);
+
+    context.save();
+    context.shadowColor = rgba(color, active ? .88 : preview ? .7 : .5);
+    context.shadowBlur = shadowBlur;
     const gradient = context.createLinearGradient(tileLeft, tileTop, tileLeft + tileSize, tileTop + tileSize);
-    gradient.addColorStop(0, shiftColor(color, 38));
-    gradient.addColorStop(.22, color);
-    gradient.addColorStop(.72, shiftColor(color, -18));
-    gradient.addColorStop(1, shiftColor(color, -52));
-    const boardTile = size >= CELL;
-    if (boardTile && alpha > .7) {
-      context.shadowColor = rgba(color, .52);
-      context.shadowBlur = Math.max(3, size * .2);
-      context.shadowOffsetY = Math.max(1, size * .035);
-    }
+    gradient.addColorStop(0, shiftColor(color, 62));
+    gradient.addColorStop(.2, shiftColor(color, 24));
+    gradient.addColorStop(.55, color);
+    gradient.addColorStop(.82, shiftColor(color, -25));
+    gradient.addColorStop(1, shiftColor(color, -62));
     context.fillStyle = gradient;
     roundedRectPath(context, tileLeft, tileTop, tileSize, tileSize, radius);
     context.fill();
     context.shadowColor = "transparent";
     context.shadowBlur = 0;
-    // Glassy top-left bevel and a darker lower edge give each block a
-    // physical, jewel-like face instead of a flat colored square.
-    roundedRectPath(context, tileLeft + 1, tileTop + 1, tileSize - 2, Math.max(2, tileSize * .2), Math.max(2, radius - 1));
-    context.fillStyle = "rgba(255,255,255,.28)";
+
+    // A bright inner core and asymmetric facets make each block read like a
+    // small illuminated crystal instead of a painted square.
+    const core = context.createRadialGradient(
+      tileLeft + tileSize * .34,
+      tileTop + tileSize * .28,
+      Math.max(1, tileSize * .04),
+      tileLeft + tileSize * .5,
+      tileTop + tileSize * .52,
+      tileSize * .68
+    );
+    core.addColorStop(0, active ? "rgba(255,255,255,.78)" : "rgba(255,255,255,.55)");
+    core.addColorStop(.22, rgba(shiftColor(color, 42), active ? .48 : .3));
+    core.addColorStop(.7, rgba(color, .08));
+    core.addColorStop(1, "rgba(0,0,0,.24)");
+    roundedRectPath(context, tileLeft + tileSize * .12, tileTop + tileSize * .12, tileSize * .76, tileSize * .76, Math.max(2, radius * .72));
+    context.fillStyle = core;
     context.fill();
+
+    context.globalCompositeOperation = "screen";
     context.beginPath();
-    context.moveTo(tileLeft + tileSize * .08, tileTop + tileSize * .84);
-    context.lineTo(tileLeft + tileSize * .92, tileTop + tileSize * .84);
-    context.lineTo(tileLeft + tileSize * .84, tileTop + tileSize * .94);
-    context.lineTo(tileLeft + tileSize * .14, tileTop + tileSize * .94);
+    context.moveTo(tileLeft + tileSize * .08, tileTop + tileSize * .08);
+    context.lineTo(tileLeft + tileSize * .78, tileTop + tileSize * .08);
+    context.lineTo(tileLeft + tileSize * .58, tileTop + tileSize * .31);
+    context.lineTo(tileLeft + tileSize * .18, tileTop + tileSize * .31);
     context.closePath();
-    context.fillStyle = "rgba(0,0,0,.22)";
+    context.fillStyle = active ? "rgba(255,255,255,.48)" : "rgba(255,255,255,.31)";
     context.fill();
+
+    context.globalCompositeOperation = "source-over";
     context.beginPath();
-    context.moveTo(tileLeft + tileSize * .12, tileTop + tileSize * .13);
-    context.lineTo(tileLeft + tileSize * .42, tileTop + tileSize * .13);
-    context.lineTo(tileLeft + tileSize * .24, tileTop + tileSize * .34);
+    context.moveTo(tileLeft + tileSize * .08, tileTop + tileSize * .72);
+    context.lineTo(tileLeft + tileSize * .28, tileTop + tileSize * .9);
+    context.lineTo(tileLeft + tileSize * .72, tileTop + tileSize * .9);
+    context.lineTo(tileLeft + tileSize * .92, tileTop + tileSize * .72);
     context.closePath();
-    context.fillStyle = "rgba(255,255,255,.48)";
+    context.fillStyle = "rgba(0,0,0,.3)";
     context.fill();
+
+    context.beginPath();
+    context.moveTo(tileLeft + tileSize * .1, tileTop + tileSize * .12);
+    context.lineTo(tileLeft + tileSize * .38, tileTop + tileSize * .12);
+    context.lineTo(tileLeft + tileSize * .2, tileTop + tileSize * .32);
+    context.closePath();
+    context.fillStyle = active ? "rgba(255,255,255,.86)" : "rgba(255,255,255,.62)";
+    context.fill();
+
+    context.beginPath();
+    context.arc(tileLeft + tileSize * .73, tileTop + tileSize * .27, Math.max(.8, size * .035), 0, Math.PI * 2);
+    context.fillStyle = active ? "rgba(255,255,255,.96)" : "rgba(255,255,255,.68)";
+    context.fill();
+
     roundedRectPath(context, tileLeft + .5, tileTop + .5, tileSize - 1, tileSize - 1, radius);
-    context.strokeStyle = rgba(shiftColor(color, 65), .72);
+    context.strokeStyle = rgba(shiftColor(color, 78), active ? .98 : .78);
     context.lineWidth = Math.max(1, size * .035);
     context.stroke();
+    context.restore();
+    return { sprite, padding };
+  };
+
+  const getCrystalTile = (color, size, variant) => {
+    const key = color + ":" + size + ":" + variant;
+    if (!crystalTileCache.has(key)) crystalTileCache.set(key, createCrystalTile(color, size, variant));
+    return crystalTileCache.get(key);
+  };
+
+  const drawCell = (context, x, y, color, alpha = 1, size = CELL, offsetX = 0, offsetY = 0, variant = "locked") => {
+    const { sprite, padding } = getCrystalTile(color, size, variant);
+    context.save();
+    context.globalAlpha = alpha;
+    context.drawImage(sprite, offsetX + x * size - padding, offsetY + y * size - padding);
     context.restore();
   };
 
@@ -745,16 +797,18 @@
     if (!piece) return;
     context.save();
     const color = COLORS[piece.type];
-    context.globalAlpha = .5;
+    context.globalAlpha = .62;
     context.strokeStyle = rgba(color, .95);
+    context.fillStyle = rgba(color, .075);
     context.shadowColor = rgba(color, .8);
-    context.shadowBlur = 9;
-    context.lineWidth = 2;
+    context.shadowBlur = 12;
+    context.lineWidth = 1.7;
     context.setLineDash([4, 3]);
     for (let y = 0; y < piece.matrix.length; y += 1) {
       for (let x = 0; x < piece.matrix[y].length; x += 1) {
         if (!piece.matrix[y][x] || piece.y + y < 0) continue;
         roundedRectPath(context, piece.x * CELL + x * CELL + 5, piece.y * CELL + y * CELL + 5, CELL - 10, CELL - 10, 4);
+        context.fill();
         context.stroke();
       }
     }
@@ -762,11 +816,11 @@
     context.restore();
   };
 
-  const drawPiece = (context, piece, alpha = 1, size = CELL, offsetX = 0, offsetY = 0) => {
+  const drawPiece = (context, piece, alpha = 1, size = CELL, offsetX = 0, offsetY = 0, variant = "active") => {
     if (!piece) return;
     for (let y = 0; y < piece.matrix.length; y += 1) {
       for (let x = 0; x < piece.matrix[y].length; x += 1) {
-        if (piece.matrix[y][x] && piece.y + y >= 0) drawCell(context, piece.x + x, piece.y + y, COLORS[piece.type], alpha, size, offsetX, offsetY);
+        if (piece.matrix[y][x] && piece.y + y >= 0) drawCell(context, piece.x + x, piece.y + y, COLORS[piece.type], alpha, size, offsetX, offsetY, variant);
       }
     }
   };
@@ -809,52 +863,112 @@
     context.closePath();
   };
 
+  const getBoardBackdrop = () => {
+    if (boardBackdrop && boardBackdrop.width === boardCanvas.width && boardBackdrop.height === boardCanvas.height) return boardBackdrop;
+    boardBackdrop = document.createElement("canvas");
+    boardBackdrop.width = boardCanvas.width;
+    boardBackdrop.height = boardCanvas.height;
+    const context = boardBackdrop.getContext("2d");
+    const width = boardBackdrop.width;
+    const height = boardBackdrop.height;
+
+    const depth = context.createLinearGradient(0, 0, 0, height);
+    depth.addColorStop(0, "#111f43");
+    depth.addColorStop(.23, "#0a1733");
+    depth.addColorStop(.58, "#060d20");
+    depth.addColorStop(1, "#02050d");
+    context.fillStyle = depth;
+    context.fillRect(0, 0, width, height);
+
+    const crown = context.createRadialGradient(width * .5, height * .05, 4, width * .5, height * .1, height * .68);
+    crown.addColorStop(0, "rgba(122,241,255,.19)");
+    crown.addColorStop(.28, "rgba(105,231,255,.045)");
+    crown.addColorStop(1, "rgba(105,231,255,0)");
+    context.fillStyle = crown;
+    context.fillRect(0, 0, width, height);
+
+    // Tiny fixed points of light add depth without a particle loop. Their
+    // positions are deterministic, so the backdrop can be rendered once.
+    for (let index = 0; index < 34; index += 1) {
+      const x = 10 + ((index * 73 + index * index * 11) % (width - 20));
+      const y = 12 + ((index * 137 + index * index * 7) % (height - 24));
+      const radius = .45 + (index % 4) * .18;
+      context.beginPath();
+      context.arc(x, y, radius, 0, Math.PI * 2);
+      context.fillStyle = index % 5 === 0 ? "rgba(194,162,255,.2)" : "rgba(168,239,255,.14)";
+      context.fill();
+    }
+
+    context.fillStyle = "rgba(105,231,255,.018)";
+    for (let y = 0; y < ROWS; y += 2) context.fillRect(0, y * CELL, width, CELL);
+    context.strokeStyle = "rgba(157,180,255,.085)";
+    context.lineWidth = 1;
+    for (let x = 0; x <= COLS; x += 1) {
+      context.beginPath();
+      context.moveTo(x * CELL + .5, 0);
+      context.lineTo(x * CELL + .5, height);
+      context.stroke();
+    }
+    for (let y = 0; y <= ROWS; y += 1) {
+      context.beginPath();
+      context.moveTo(0, y * CELL + .5);
+      context.lineTo(width, y * CELL + .5);
+      context.stroke();
+    }
+
+    const rails = context.createLinearGradient(0, 0, width, 0);
+    rails.addColorStop(0, "rgba(105,231,255,.22)");
+    rails.addColorStop(.025, "rgba(105,231,255,.04)");
+    rails.addColorStop(.12, "rgba(105,231,255,0)");
+    rails.addColorStop(.88, "rgba(178,140,255,0)");
+    rails.addColorStop(.975, "rgba(178,140,255,.045)");
+    rails.addColorStop(1, "rgba(178,140,255,.23)");
+    context.fillStyle = rails;
+    context.fillRect(0, 0, width, height);
+
+    const vignette = context.createRadialGradient(width / 2, height * .42, 70, width / 2, height / 2, height * .72);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(.7, "rgba(0,0,0,.06)");
+    vignette.addColorStop(1, "rgba(0,0,0,.42)");
+    context.fillStyle = vignette;
+    context.fillRect(0, 0, width, height);
+    return boardBackdrop;
+  };
+
   const draw = () => {
     boardContext.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
-    const boardGradient = boardContext.createLinearGradient(0, 0, 0, boardCanvas.height);
-    boardGradient.addColorStop(0, "#111d3a");
-    boardGradient.addColorStop(.28, "#0b1530");
-    boardGradient.addColorStop(.62, "#080d1d");
-    boardGradient.addColorStop(1, "#050812");
-    boardContext.fillStyle = boardGradient;
-    boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
-    const boardFocus = boardContext.createRadialGradient(boardCanvas.width * .52, boardCanvas.height * .16, 8, boardCanvas.width * .52, boardCanvas.height * .16, boardCanvas.height * .78);
-    boardFocus.addColorStop(0, "rgba(105,231,255,.12)");
-    boardFocus.addColorStop(.34, "rgba(105,231,255,.025)");
-    boardFocus.addColorStop(1, "rgba(105,231,255,0)");
-    boardContext.fillStyle = boardFocus;
-    boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
-    boardContext.fillStyle = "rgba(105,231,255,.026)";
-    for (let y = 0; y < ROWS; y += 2) boardContext.fillRect(0, y * CELL, boardCanvas.width, CELL);
-    boardContext.strokeStyle = "rgba(157, 180, 255, .095)";
-    boardContext.lineWidth = 1;
-    for (let x = 0; x <= COLS; x += 1) {
-      boardContext.beginPath();
-      boardContext.moveTo(x * CELL + .5, 0);
-      boardContext.lineTo(x * CELL + .5, ROWS * CELL);
-      boardContext.stroke();
+    boardContext.drawImage(getBoardBackdrop(), 0, 0);
+
+    const accent = current ? COLORS[current.type] : "#69e7ff";
+    const topOccupiedRow = board.findIndex((row) => row.some(Boolean));
+    const stackPressure = topOccupiedRow < 0 ? 0 : (ROWS - topOccupiedRow) / ROWS;
+    if (stackPressure > 0) {
+      const stackAura = boardContext.createRadialGradient(
+        boardCanvas.width * .5,
+        boardCanvas.height * 1.02,
+        10,
+        boardCanvas.width * .5,
+        boardCanvas.height * .95,
+        boardCanvas.height * (.22 + stackPressure * .4)
+      );
+      stackAura.addColorStop(0, rgba(accent, .17 + stackPressure * .15));
+      stackAura.addColorStop(.42, rgba(accent, .045 + stackPressure * .08));
+      stackAura.addColorStop(1, rgba(accent, 0));
+      boardContext.fillStyle = stackAura;
+      boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
     }
+
     // A slow light sweep makes the cabinet feel powered-on while a game is
     // running. It is intentionally a single translucent pass over the grid.
     const sweepProgress = (performance.now() % 5200) / 5200;
     const sweepX = sweepProgress * (boardCanvas.width + 150) - 75;
     const boardSweep = boardContext.createLinearGradient(sweepX - 70, 0, sweepX + 70, 0);
-    boardSweep.addColorStop(0, "rgba(105,231,255,0)");
-    boardSweep.addColorStop(.5, "rgba(255,255,255,.06)");
-    boardSweep.addColorStop(1, "rgba(178,140,255,0)");
+    boardSweep.addColorStop(0, rgba(accent, 0));
+    boardSweep.addColorStop(.5, "rgba(255,255,255,.065)");
+    boardSweep.addColorStop(1, rgba(accent, 0));
     boardContext.fillStyle = boardSweep;
     boardContext.fillRect(sweepX - 70, 0, 140, boardCanvas.height);
-    for (let y = 0; y <= ROWS; y += 1) {
-      boardContext.beginPath();
-      boardContext.moveTo(0, y * CELL + .5);
-      boardContext.lineTo(COLS * CELL, y * CELL + .5);
-      boardContext.stroke();
-    }
-    const vignette = boardContext.createRadialGradient(boardCanvas.width / 2, boardCanvas.height * .4, 80, boardCanvas.width / 2, boardCanvas.height / 2, boardCanvas.height * .72);
-    vignette.addColorStop(0, "rgba(0,0,0,0)");
-    vignette.addColorStop(1, "rgba(0,0,0,.28)");
-    boardContext.fillStyle = vignette;
-    boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+
     for (let y = 0; y < ROWS; y += 1) {
       for (let x = 0; x < COLS; x += 1) {
         if (board[y][x]) drawCell(boardContext, x, y, COLORS[board[y][x]]);
@@ -872,6 +986,24 @@
       sweep.addColorStop(1, "rgba(105,231,255,0)");
       boardContext.fillStyle = sweep;
       pendingClear.rows.forEach((row) => boardContext.fillRect(sweepX - 34, row * CELL, 68, CELL));
+      boardContext.save();
+      boardContext.globalCompositeOperation = "lighter";
+      boardContext.strokeStyle = "rgba(178,244,255," + (.75 * (1 - clearProgress)).toFixed(3) + ")";
+      boardContext.shadowColor = "rgba(105,231,255,.9)";
+      boardContext.shadowBlur = 16;
+      boardContext.lineWidth = 1.5 + clearProgress * 4;
+      pendingClear.rows.forEach((row) => {
+        const centerY = row * CELL + CELL * .5;
+        boardContext.beginPath();
+        boardContext.moveTo(0, centerY - clearProgress * CELL * .65);
+        boardContext.lineTo(boardCanvas.width, centerY - clearProgress * CELL * .65);
+        boardContext.stroke();
+        boardContext.beginPath();
+        boardContext.moveTo(0, centerY + clearProgress * CELL * .65);
+        boardContext.lineTo(boardCanvas.width, centerY + clearProgress * CELL * .65);
+        boardContext.stroke();
+      });
+      boardContext.restore();
     }
     if (impactFlashTimer > 0) {
       boardContext.save();
@@ -926,7 +1058,7 @@
     const offsetY = (canvas.height - matrix.length * size) / 2;
     for (let y = 0; y < matrix.length; y += 1) {
       for (let x = 0; x < matrix[y].length; x += 1) {
-        if (matrix[y][x]) drawCell(context, x, y, COLORS[type], 1, size, offsetX, offsetY);
+        if (matrix[y][x]) drawCell(context, x, y, COLORS[type], 1, size, offsetX, offsetY, "preview");
       }
     }
   };
