@@ -1233,3 +1233,44 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 
 - No new civilizations, ages, technologies, campaigns, maps, biomes, water systems, resources, buildings, unit classes, formations, ranged combat, or broad AI economy.
 - Do not repeat the completed v3 marauder attack repair or expand the art catalog until the existing combat response family is visually complete.
+
+## ENVIRONMENT ATLAS FRAMING REPAIR — 2026-08-18
+
+### WHAT EXISTS
+
+- The active environment family now uses `assets/crownforge-environment-atlas-v3.png` through the `20260818-env3` cache marker.
+- The runtime still uses one 4x4 atlas: four trees, four berry bushes, four stone deposits, and four small environmental details.
+
+### WHAT WAS COMPLETED
+
+- Reproduced the earlier tree/bush/stone “cut in half” issue by auditing the exact source rectangles used by `drawAtlasCell`; the previous v2 sheet had silhouettes touching or crossing the lower edge of their source rows.
+- Generated a fresh original Crownforge environment family, removed the generator background, separated the 16 complete objects, and repacked them into equal padded atlas cells.
+- Kept each object fully inside its own cell with clear transparent breathing room on every side, including roots, ground shadows, berries, rock bases, and small-detail silhouettes.
+- Updated both `games/crownforge` and `public/crownforge` asset/config mirrors to the new atlas and cache marker.
+- Re-ran the active-file visual integrity audit: 1254x1254 RGBA, no missing files, no placeholder references, no dimension mismatch, and zero top/side/bottom boundary-contact cells for the active environment atlas.
+- Reloaded the local browser build at 1280x720; the title loaded correctly, the browser console remained empty, and the existing settlement/resources remained visually coherent after the atlas swap.
+
+### ASSETS CREATED
+
+- `assets/crownforge-environment-atlas-v3.png` — original generated and repacked padded 4x4 family for trees, berry bushes, stone deposits, fallen log, stump, flowering plant, and loose stones.
+- The previous `crownforge-environment-atlas-v2.png` remains in the repository for historical comparison but is no longer referenced by the active renderer.
+
+### SYSTEMS CREATED OR UPDATED
+
+- Environment atlas source-cell safety verification.
+- Active environment asset versioning and cache identity.
+- Mirrored source/public asset propagation.
+
+### KNOWN ISSUES
+
+- The 4x4 environment family is now source-cell safe, but the fixed camera can still place very tall world art beneath the HUD at extreme pan/zoom positions; that is viewport layering rather than atlas cropping and should only be changed with a concrete camera-framing pass.
+- The generated family intentionally remains small; no additional tree, bush, stone, or biome catalog was added.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Recheck the deployed environment family at minimum and maximum zoom after the push, especially the western trees and the eastern berry/stone clearing.
+2. If a tall asset is still visually hidden by UI in a normal player camera position, adjust camera safe framing separately from atlas art.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No new biomes, water, terrain system, environmental clutter catalog, resource types, civilizations, buildings, units, technologies, or AI systems.

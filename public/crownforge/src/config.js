@@ -177,7 +177,7 @@ export const ASSET_RECTS = {
 };
 
 export const ENVIRONMENT_ATLAS = {
-  src: './assets/crownforge-environment-atlas-v2.png?v=3',
+  src: './assets/crownforge-environment-atlas-v3.png?v=1',
   width: 1254,
   height: 1254,
   columns: 4,
