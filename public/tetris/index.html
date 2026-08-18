@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#090d1a">
   <title>Falling Blocks — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-16">
+  <link rel="stylesheet" href="/tetris/tetris.css?v=remaster-2026-17">
 </head>
 <body class="game-active">
   <div class="aurora aurora-one"></div>
@@ -106,8 +106,12 @@
       <aside class="side-panel right-panel">
         <div class="mini-card music-card">
           <div class="music-heading"><span class="panel-label">Soundtrack</span><span class="equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div>
-          <p>Johnny's cozy theme</p>
-          <button id="music-button" class="music-button" type="button" aria-pressed="true">Music: off</button>
+          <select id="soundtrack-select" class="soundtrack-select" aria-label="Soundtrack">
+            <option value="cozy">Johnny's Cozy Theme</option>
+            <option value="dreamy-clouds">Dreamy Clouds</option>
+            <option value="neon-dreams">Neon Dreams</option>
+          </select>
+          <button id="music-button" class="music-button" type="button" aria-pressed="true" aria-live="polite">Music: off</button>
         </div>
         <div class="mini-card controls-card">
           <span class="panel-label">Controls</span>
@@ -118,6 +122,14 @@
           <div class="control-row"><kbd>P</kbd><span>Pause</span></div>
         </div>
         <button id="pause-button" class="secondary-button" type="button">Pause game</button>
+        <label class="mobile-soundtrack-control" for="mobile-soundtrack-select">
+          <span>Song</span>
+          <select id="mobile-soundtrack-select" aria-label="Soundtrack">
+            <option value="cozy">Cozy</option>
+            <option value="dreamy-clouds">Dreamy Clouds</option>
+            <option value="neon-dreams">Neon Dreams</option>
+          </select>
+        </label>
         <label class="mobile-speed-control" for="mobile-speed-select">
           <span>Speed</span>
           <select id="mobile-speed-select" aria-label="Game speed">
@@ -155,8 +167,8 @@
     </section>
   </main>
 
-  <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="auto"></audio>
+  <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" loop preload="metadata"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=remaster-2026-16"></script>
+  <script src="/tetris/tetris.js?v=remaster-2026-17"></script>
 </body>
 </html>

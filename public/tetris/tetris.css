@@ -241,6 +241,7 @@ kbd {
 .music-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .music-card p { margin: 13px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .music-button[data-playing="true"] { color: var(--yellow); border-color: rgba(255, 214, 92, .25); background: rgba(255, 214, 92, .08); }
+.music-button[data-error="true"] { color: #ffb0be; border-color: rgba(255,83,128,.38); background: rgba(255,83,128,.1); }
 .equalizer { display: flex; align-items: end; gap: 3px; height: 13px; }
 .equalizer i { width: 3px; height: 5px; border-radius: 2px; background: var(--cyan); }
 .music-button[data-playing="true"] + .equalizer i {}
@@ -1600,6 +1601,98 @@ body.game-active .aurora { animation: none; }
   -webkit-background-clip: text;
   background-clip: text;
   filter: drop-shadow(0 0 22px rgba(var(--piece-rgb), .18));
+}
+
+/* Compact soundtrack selector. One audio element swaps sources on demand, so
+   phones never preload the full music library or sacrifice playfield space. */
+.soundtrack-select,
+.mobile-soundtrack-control select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(105,231,255,.24);
+  color: var(--text);
+  background:
+    linear-gradient(45deg, transparent 50%, rgba(190,220,255,.82) 50%) calc(100% - 13px) calc(50% - 2px) / 4px 4px no-repeat,
+    linear-gradient(135deg, rgba(22,38,68,.96), rgba(10,20,42,.98));
+  box-shadow: inset 0 1px rgba(255,255,255,.08), 0 5px 16px rgba(0,0,0,.2);
+  font: 700 9px/1 var(--font);
+  cursor: pointer;
+}
+.soundtrack-select {
+  width: 100%;
+  min-height: 32px;
+  margin-top: 11px;
+  padding: 0 30px 0 10px;
+  border-radius: 8px;
+}
+.soundtrack-select:focus-visible,
+.mobile-soundtrack-control select:focus-visible {
+  outline: 2px solid rgba(105,231,255,.76);
+  outline-offset: 2px;
+}
+.mobile-soundtrack-control { display: none; }
+body.game-active .soundtrack-select { min-height: 25px; margin-top: 7px; font-size: 8px; }
+body.game-active .music-button { min-height: 25px; margin-top: 5px; }
+
+@media (max-width: 680px) {
+  .right-panel > .mobile-soundtrack-control {
+    display: flex;
+    width: min(380px, calc(100vw - 34px));
+    min-height: 31px;
+    margin: 0 auto;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 6px 4px 9px;
+    border: 1px solid rgba(105,231,255,.22);
+    border-radius: 9px;
+    color: rgba(190,205,240,.8);
+    background: rgba(8,16,34,.9);
+    font: 700 8px/1 var(--mono);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .mobile-soundtrack-control select {
+    min-width: 0;
+    height: 23px;
+    flex: 1;
+    padding: 0 24px 0 7px;
+    border-radius: 6px;
+    font-size: 8px;
+  }
+  body.game-active .game-intro h1 { font-size: 18px; }
+  body.game-active .right-panel > .mobile-soundtrack-control {
+    display: flex;
+    width: auto;
+    min-height: 29px;
+    margin: 0;
+    gap: 0;
+    padding: 3px;
+  }
+  body.game-active .mobile-soundtrack-control > span,
+  body.game-active .mobile-speed-control > span { display: none; }
+  body.game-active .mobile-soundtrack-control select { width: 104px; flex: none; }
+  body.game-active .mobile-soundtrack-control,
+  body.game-active .mobile-speed-control { min-height: 33px; }
+  body.game-active .mobile-soundtrack-control select,
+  body.game-active .mobile-speed-control select { height: 27px; font-size: 9px; }
+  body.game-active .mobile-speed-control { padding: 3px; }
+  body.game-active .mobile-speed-control select { width: 72px; }
+}
+
+@media (max-width: 360px) {
+  body.game-active .game-intro h1 { font-size: 16px; }
+  body.game-active .mobile-soundtrack-control select { width: 96px; }
+  body.game-active .mobile-speed-control select { width: 65px; }
+}
+
+@media (max-width: 340px) {
+  body.game-active .game-intro h1 { font-size: 0; }
+  body.game-active .game-intro h1::before { content: "Blocks∞"; font-size: 16px; }
+}
+
+@media (max-width: 900px) and (min-width: 681px) {
+  body.game-active .right-panel > .music-card { grid-column: 1 / -1; }
+  body.game-active .soundtrack-select { padding-right: 24px; padding-left: 7px; font-size: 7px; }
 }
 .game-intro h1 span { color: rgb(var(--piece-rgb)); }
 

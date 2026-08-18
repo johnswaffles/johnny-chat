@@ -82,6 +82,8 @@
   const arcadeElement = document.querySelector(".arcade");
   const music = document.getElementById("game-music");
   const musicButton = document.getElementById("music-button");
+  const soundtrackSelect = document.getElementById("soundtrack-select");
+  const mobileSoundtrackSelect = document.getElementById("mobile-soundtrack-select");
   const speedControls = Array.from(document.querySelectorAll("[data-speed]"));
   const speedCaption = document.getElementById("speed-caption");
   const mobileSpeedSelect = document.getElementById("mobile-speed-select");
@@ -97,6 +99,12 @@
     fast: { multiplier: .62, caption: "Fast pace" },
     "really-fast": { multiplier: .22, caption: "Really fast · hard mode" }
   };
+  const SOUNDTRACKS = {
+    cozy: { src: "/home/cozy-builder-theme.mp3", label: "Johnny's Cozy Theme" },
+    "dreamy-clouds": { src: "/tetris/audio/dreamy-clouds.mp3", label: "Dreamy Clouds" },
+    "neon-dreams": { src: "/tetris/audio/neon-dreams.mp3", label: "Neon Dreams" }
+  };
+  const SOUNDTRACK_STORAGE_KEY = "johnny-tetris-soundtrack";
   const MAX_SECOND_CHANCES = 4;
   const MAX_REACTOR_CHARGE = 100;
   const OVERDRIVE_MOVES = 5;
@@ -127,6 +135,8 @@
   let impactCells = [];
   let effectParticles = [];
   let musicEnabled = true;
+  let musicError = false;
+  let soundtrackId = localStorage.getItem(SOUNDTRACK_STORAGE_KEY) || "cozy";
   let speedMode = "classic";
   let audioContext = null;
   let highScore = Number(localStorage.getItem("johnny-tetris-high-score") || 0);
@@ -599,7 +609,7 @@
     window.scrollTo({ top: 0, behavior: "instant" });
     if (musicEnabled) {
       window.JohnnyAudioFocus?.claim("tetris");
-      music.play().catch(() => {});
+      music.play().catch(handlePlayRejection);
     }
     draw();
   };
@@ -1158,10 +1168,58 @@
   };
 
   const updateMusicButton = () => {
+    if (musicError) {
+      musicButton.dataset.playing = "false";
+      musicButton.dataset.error = "true";
+      musicButton.textContent = "Track unavailable";
+      musicButton.setAttribute("aria-pressed", String(musicEnabled));
+      return;
+    }
     const playing = musicEnabled && !music.paused;
+    musicButton.dataset.error = "false";
     musicButton.dataset.playing = String(playing);
     musicButton.textContent = playing ? "Music: on" : (musicEnabled ? "Music: paused" : "Music: off");
     musicButton.setAttribute("aria-pressed", String(musicEnabled));
+  };
+
+  const handleMusicError = () => {
+    musicError = true;
+    updateMusicButton();
+  };
+
+  const handlePlayRejection = (error) => {
+    if (error?.name === "AbortError") return;
+    updateMusicButton();
+  };
+
+  const updateSoundtrackControls = () => {
+    if (soundtrackSelect) soundtrackSelect.value = soundtrackId;
+    if (mobileSoundtrackSelect) mobileSoundtrackSelect.value = soundtrackId;
+    music.dataset.track = soundtrackId;
+  };
+
+  const setSoundtrack = (nextId, options = {}) => {
+    if (!SOUNDTRACKS[nextId]) return;
+    const resume = options.resume !== false && musicEnabled
+      && (!music.paused || (musicError && running && !paused && !gameOver));
+    const nextTrack = SOUNDTRACKS[nextId];
+    musicError = false;
+    soundtrackId = nextId;
+    localStorage.setItem(SOUNDTRACK_STORAGE_KEY, soundtrackId);
+    music.pause();
+    if (music.getAttribute("src") !== nextTrack.src) {
+      music.src = nextTrack.src;
+      music.load();
+    }
+    music.setAttribute("aria-label", nextTrack.label + " soundtrack");
+    updateSoundtrackControls();
+    if (resume) {
+      ensureAudio();
+      window.JohnnyAudioFocus?.claim("tetris");
+      music.play().catch(handlePlayRejection);
+    } else {
+      updateMusicButton();
+    }
   };
 
   const updateSpeedControls = () => {
@@ -1180,10 +1238,11 @@
 
   const toggleMusic = () => {
     musicEnabled = !musicEnabled;
+    musicError = false;
     if (musicEnabled) {
       ensureAudio();
       window.JohnnyAudioFocus?.claim("tetris");
-      music.play().catch(() => {});
+      music.play().catch(handlePlayRejection);
     } else {
       music.pause();
     }
@@ -1268,6 +1327,8 @@
   pauseButton.addEventListener("click", togglePause);
   secondChanceButton.addEventListener("click", useSecondChance);
   musicButton.addEventListener("click", toggleMusic);
+  soundtrackSelect?.addEventListener("change", (event) => setSoundtrack(event.target.value));
+  mobileSoundtrackSelect?.addEventListener("change", (event) => setSoundtrack(event.target.value));
   speedControls.forEach((button) => button.addEventListener("click", () => setSpeed(button.dataset.speed)));
   mobileSpeedSelect?.addEventListener("change", (event) => setSpeed(event.target.value));
   document.querySelectorAll("[data-action]").forEach((button) => {
@@ -1314,9 +1375,17 @@
   music.addEventListener("play", updateMusicButton);
   music.addEventListener("pause", updateMusicButton);
   window.addEventListener("johnny:music-focus", updateMusicButton);
+  music.addEventListener("canplay", () => {
+    musicError = false;
+    updateMusicButton();
+  });
+  music.addEventListener("error", handleMusicError);
 
+  if (!SOUNDTRACKS[soundtrackId]) soundtrackId = "cozy";
+  setSoundtrack(soundtrackId, { resume: false });
   resetGame();
   updateMusicButton();
+  updateSoundtrackControls();
   updateSpeedControls();
   draw();
   window.requestAnimationFrame(tick);
