@@ -199,6 +199,18 @@ export const ENVIRONMENT_ATLAS = {
   rowByType: { tree: 0, berry: 1, stone: 2, log: 3, stump: 3, flowers: 3, pebbles: 3 },
 };
 
+export const ROAD_DETAILS_ATLAS = {
+  src: './assets/crownforge-roadside-props-v1.png?v=20260818-roads2',
+  width: 1536,
+  height: 1024,
+  columns: 2,
+  rows: 2,
+  // The source sheet is a 2x2 plate rather than a square atlas so the fence
+  // and sign keep their authored proportions when sampled by the renderer.
+  columnByType: { fence: 0, sign: 1, cargo: 0, lantern: 1 },
+  rowByType: { fence: 0, sign: 0, cargo: 1, lantern: 1 },
+};
+
 export const BUILDING_STAGE_ATLAS = {
   src: './assets/crownforge-building-stages-v2.png?v=3',
   width: 1254,

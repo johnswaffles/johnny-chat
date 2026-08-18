@@ -1,7 +1,83 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260818-easyroads1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260818-easyroads1';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260818-roads2';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260818-roads2';
 
 const TAU = Math.PI * 2;
+
+const ROAD_NETWORK = [
+  {
+    id: 'main-settlement-road',
+    kind: 'main',
+    width: 2.25,
+    patternAlpha: 0.62,
+    points: [
+      { x: 4, z: 65 }, { x: 8, z: 59 }, { x: 13, z: 53 }, { x: 18, z: 48 },
+      { x: 23, z: 44.5 }, { x: 28, z: 44.5 }, { x: 34, z: 46 }, { x: 39, z: 44 },
+      { x: 44, z: 38 }, { x: 50, z: 31 }, { x: 59, z: 25 }, { x: 72, z: 21 },
+    ],
+  },
+  {
+    id: 'house-village-lane',
+    kind: 'lane',
+    width: 1.34,
+    patternAlpha: 0.5,
+    points: [{ x: 18, z: 48 }, { x: 15, z: 44 }, { x: 12, z: 39 }, { x: 8, z: 35 }, { x: 10, z: 31 }],
+  },
+  {
+    id: 'hall-entrance-lane',
+    kind: 'lane',
+    width: 1.28,
+    patternAlpha: 0.5,
+    points: [{ x: 24, z: 44.5 }, { x: 24.6, z: 42.8 }, { x: 25, z: 41.2 }],
+  },
+  {
+    id: 'waystore-lane',
+    kind: 'lane',
+    width: 1.3,
+    patternAlpha: 0.48,
+    points: [{ x: 32.5, z: 45.6 }, { x: 35, z: 44.6 }, { x: 37, z: 44.2 }],
+  },
+  {
+    id: 'north-field-footpath',
+    kind: 'footpath',
+    width: 0.76,
+    patternAlpha: 0.3,
+    points: [{ x: 44, z: 38 }, { x: 42, z: 34 }, { x: 39, z: 31 }, { x: 36.8, z: 28.8 }],
+  },
+  {
+    id: 'stone-footpath',
+    kind: 'footpath',
+    width: 0.72,
+    patternAlpha: 0.28,
+    points: [{ x: 44, z: 38 }, { x: 46, z: 42 }, { x: 48, z: 46.5 }, { x: 49, z: 48.2 }],
+  },
+  {
+    id: 'east-berry-footpath',
+    kind: 'footpath',
+    width: 0.68,
+    patternAlpha: 0.26,
+    points: [{ x: 59, z: 25 }, { x: 59.5, z: 28 }, { x: 57.5, z: 30 }],
+  },
+];
+
+const ROAD_PLAZAS = [
+  { x: 24.8, z: 44.2, width: 4.3, height: 2.1 },
+  { x: 34.3, z: 45.5, width: 3.1, height: 1.55 },
+];
+
+const ROAD_MARKS = [
+  { kind: 'rut', a: { x: 10.5, z: 55 }, b: { x: 13.3, z: 52.5 }, tone: 'rgba(52, 39, 28, 0.34)' },
+  { kind: 'rut', a: { x: 16.5, z: 49.3 }, b: { x: 19.2, z: 47.3 }, tone: 'rgba(53, 40, 28, 0.3)' },
+  { kind: 'rut', a: { x: 29.8, z: 44.8 }, b: { x: 33.1, z: 45.5 }, tone: 'rgba(52, 39, 28, 0.3)' },
+  { kind: 'rut', a: { x: 45.5, z: 36.8 }, b: { x: 48, z: 33.8 }, tone: 'rgba(52, 39, 28, 0.26)' },
+  { kind: 'puddle', x: 20.4, z: 46.1, width: 0.72, height: 0.24, tone: 'rgba(74, 83, 66, 0.42)' },
+  { kind: 'puddle', x: 41.2, z: 41.2, width: 0.52, height: 0.18, tone: 'rgba(68, 78, 64, 0.36)' },
+  { kind: 'prints', x: 39.7, z: 31.1, angle: -0.42 },
+  { kind: 'prints', x: 47.3, z: 45.2, angle: 0.2 },
+  { kind: 'stones', x: 15.2, z: 51.3, size: 0.22 },
+  { kind: 'stones', x: 31.7, z: 44.2, size: 0.18 },
+  { kind: 'stones', x: 53.5, z: 28.5, size: 0.2 },
+  { kind: 'stones', x: 58.8, z: 25.8, size: 0.16 },
+];
 
 export class CrownforgeRenderer {
   constructor(canvas) {
@@ -10,9 +86,11 @@ export class CrownforgeRenderer {
     this.atlas = new Image();
     this.meadow = new Image();
     this.road = new Image();
+    this.roadsideProps = new Image();
     this.atlasReady = false;
     this.meadowReady = false;
     this.roadReady = false;
+    this.roadsidePropsReady = false;
     this.meadowPattern = null;
     this.roadPattern = null;
     this.environmentReady = false;
@@ -31,6 +109,7 @@ export class CrownforgeRenderer {
       this.roadReady = true;
       this.roadPattern = null;
     });
+    this.roadsideProps.addEventListener('load', () => { this.roadsidePropsReady = true; });
     this.environmentAtlas = new Image();
     this.buildingStages = new Image();
     this.enemyCamp = new Image();
@@ -38,8 +117,9 @@ export class CrownforgeRenderer {
     this.buildingStages.addEventListener('load', () => { this.buildingStagesReady = true; });
     this.enemyCamp.addEventListener('load', () => { this.enemyCampReady = true; });
     this.atlas.src = './assets/crownforge-asset-atlas.png';
-    this.meadow.src = './assets/crownforge-grass-tile-v1.png?v=20260818-easyroads1';
-    this.road.src = './assets/crownforge-dirt-road-tile-v1.png?v=20260818-easyroads1';
+    this.meadow.src = './assets/crownforge-grass-tile-v1.png?v=20260818-roads2';
+    this.road.src = './assets/crownforge-dirt-road-tile-v1.png?v=20260818-roads2';
+    this.roadsideProps.src = ROAD_DETAILS_ATLAS.src;
     this.environmentAtlas.src = ENVIRONMENT_ATLAS.src;
     this.buildingStages.src = BUILDING_STAGE_ATLAS.src;
     this.enemyCamp.src = ENEMY_CAMP_ASSET.src;
@@ -64,6 +144,14 @@ export class CrownforgeRenderer {
     this.selectionBox = null;
     this.buildPreview = null;
     this.ripples = [];
+    this.roadsideDetails = [
+      { kind: 'roadside', type: 'fence', x: 7.1, z: 38.2, size: 112, depthBias: 0.3 },
+      { kind: 'roadside', type: 'sign', x: 30.2, z: 45.1, size: 94, depthBias: 0.3 },
+      { kind: 'roadside', type: 'cargo', x: 35.2, z: 46.1, size: 102, depthBias: 0.3 },
+      { kind: 'roadside', type: 'lantern', x: 27.1, z: 41.1, size: 94, depthBias: 0.3 },
+      { kind: 'roadside-shrub', type: 'flowers', variant: 1, x: 17.1, z: 49.7, size: 50, depthBias: 0.2 },
+      { kind: 'roadside-shrub', type: 'flowers', variant: 2, x: 46.7, z: 34.1, size: 46, depthBias: 0.2 },
+    ];
     this.lastRenderTime = 0;
     const query = new URLSearchParams(window.location.search);
     this.diagnostics = query.has('lighting-benchmark');
@@ -293,22 +381,6 @@ export class CrownforgeRenderer {
   }
 
   drawPathsOnMap(ctx, time) {
-    const paths = [
-      [{ x: 6, z: 61 }, { x: 14, z: 51 }, { x: 25, z: 38 }, { x: 37, z: 29 }],
-      [{ x: 37, z: 29 }, { x: 54, z: 23 }, { x: 72, z: 21 }],
-    ];
-    const roadMarks = [
-      { x: 8.8, z: 57.5, width: 0.22, height: 0.1, tone: 'rgba(77, 57, 37, 0.22)' },
-      { x: 12.6, z: 52.5, width: 0.16, height: 0.08, tone: 'rgba(235, 195, 126, 0.2)' },
-      { x: 17.9, z: 46.4, width: 0.24, height: 0.11, tone: 'rgba(77, 57, 37, 0.18)' },
-      { x: 22.5, z: 40.8, width: 0.18, height: 0.09, tone: 'rgba(238, 202, 137, 0.19)' },
-      { x: 28.5, z: 34.4, width: 0.2, height: 0.1, tone: 'rgba(77, 57, 37, 0.18)' },
-      { x: 34.2, z: 30.8, width: 0.14, height: 0.08, tone: 'rgba(235, 195, 126, 0.18)' },
-      { x: 42.5, z: 27.1, width: 0.2, height: 0.09, tone: 'rgba(77, 57, 37, 0.18)' },
-      { x: 50.3, z: 24.2, width: 0.16, height: 0.08, tone: 'rgba(235, 195, 126, 0.18)' },
-      { x: 59.3, z: 22.4, width: 0.22, height: 0.1, tone: 'rgba(77, 57, 37, 0.18)' },
-      { x: 67.2, z: 21.3, width: 0.15, height: 0.08, tone: 'rgba(235, 195, 126, 0.18)' },
-    ];
     const trace = (points) => {
       const projected = points.map((point) => this.worldToScreen(point));
       ctx.beginPath();
@@ -322,22 +394,57 @@ export class CrownforgeRenderer {
       const last = projected[projected.length - 1];
       ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
     };
+    const widthInPixels = (road) => Math.max(4, road.width * 20 * this.camera.zoom);
+    const drawPlaza = (plaza) => {
+      const point = this.worldToScreen(plaza);
+      const radiusX = plaza.width * 16 * this.camera.zoom;
+      const radiusY = plaza.height * 7 * this.camera.zoom;
+      ctx.save();
+      ctx.translate(point.x, point.y);
+      ctx.rotate(-0.06);
+      ctx.beginPath();
+      ctx.ellipse(0, 2.5 * this.camera.zoom, radiusX + 5 * this.camera.zoom, radiusY + 3 * this.camera.zoom, 0, 0, TAU);
+      ctx.fillStyle = 'rgba(48, 37, 27, 0.22)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, TAU);
+      ctx.fillStyle = 'rgba(185, 149, 91, 0.38)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, -0.4 * this.camera.zoom, radiusX - 4 * this.camera.zoom, Math.max(2, radiusY - 2 * this.camera.zoom), 0, 0, TAU);
+      ctx.fillStyle = 'rgba(88, 64, 43, 0.64)';
+      ctx.fill();
+      ctx.restore();
+    };
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    for (const path of paths) {
-      // Layered edges and a world-space material give the road a soft worn
-      // edge and packed-earth body instead of a single debug-like line.
+    for (const plaza of ROAD_PLAZAS) drawPlaza(plaza);
+    for (const road of ROAD_NETWORK) {
+      const baseWidth = widthInPixels(road);
+      const shoulderWidth = baseWidth + (road.kind === 'main' ? 12 : road.kind === 'lane' ? 8 : 5) * this.camera.zoom;
+      // A green-tinted outer feather lets grass blend into the road instead
+      // of leaving a clean painted boundary.
+      trace(road.points);
+      ctx.strokeStyle = road.kind === 'footpath' ? 'rgba(91, 117, 69, 0.3)' : 'rgba(91, 112, 68, 0.18)';
+      ctx.lineWidth = shoulderWidth + 8 * this.camera.zoom;
+      ctx.stroke();
+      // The low shoulder is dusty and irregular, while the center is darker,
+      // compacted earth. Separate layers establish a physical road profile.
       ctx.save();
-      ctx.translate(0, 2.2 * this.camera.zoom);
-      trace(path);
+      ctx.translate(0, 2.5 * this.camera.zoom);
+      trace(road.points);
       ctx.strokeStyle = 'rgba(48, 39, 28, 0.2)';
-      ctx.lineWidth = 24 * this.camera.zoom;
+      ctx.lineWidth = shoulderWidth + 3 * this.camera.zoom;
       ctx.stroke();
       ctx.restore();
-      trace(path);
-      ctx.strokeStyle = 'rgba(116, 79, 47, 0.42)';
-      ctx.lineWidth = 21 * this.camera.zoom;
+      trace(road.points);
+      ctx.strokeStyle = road.kind === 'main' ? 'rgba(193, 158, 96, 0.5)' : 'rgba(176, 145, 89, 0.42)';
+      ctx.lineWidth = shoulderWidth;
+      ctx.stroke();
+      trace(road.points);
+      ctx.strokeStyle = road.kind === 'footpath' ? 'rgba(91, 67, 45, 0.58)' : 'rgba(83, 59, 40, 0.78)';
+      ctx.lineWidth = baseWidth;
       ctx.stroke();
       if (this.roadReady && typeof DOMMatrix === 'function') {
         const roadPattern = this.roadPattern ?? (this.roadPattern = ctx.createPattern(this.road, 'repeat'));
@@ -347,38 +454,74 @@ export class CrownforgeRenderer {
             this.width / 2 + this.camera.x,
             this.height / 2 + this.camera.y,
           ]));
-          trace(path);
-          ctx.globalAlpha = 0.56;
+          trace(road.points);
+          ctx.globalAlpha = road.patternAlpha;
           ctx.strokeStyle = roadPattern;
-          ctx.lineWidth = 17 * this.camera.zoom;
+          ctx.lineWidth = Math.max(2, baseWidth - 2 * this.camera.zoom);
           ctx.stroke();
           ctx.globalAlpha = 1;
         }
       }
-      trace(path);
-      ctx.strokeStyle = 'rgba(190, 143, 80, 0.5)';
-      ctx.lineWidth = 14 * this.camera.zoom;
+      // Short broken highlights keep the shoulders dusty without turning the
+      // road into a bright ribbon.
+      trace(road.points);
+      ctx.setLineDash([18 * this.camera.zoom, 32 * this.camera.zoom]);
+      ctx.lineDashOffset = -time * 0.002 * (road.kind === 'main' ? 0.7 : 0.45);
+      ctx.strokeStyle = `rgba(224, 190, 125, ${road.kind === 'main' ? 0.16 : 0.1})`;
+      ctx.lineWidth = Math.max(1.2, baseWidth * 0.12);
       ctx.stroke();
-      trace(path);
-      ctx.strokeStyle = `rgba(239, 201, 131, ${0.16 + Math.sin(time * 0.001) * 0.018})`;
-      ctx.lineWidth = 6 * this.camera.zoom;
-      ctx.stroke();
+      ctx.setLineDash([]);
     }
-    ctx.globalAlpha = 0.9;
-    for (const mark of roadMarks) {
+    for (const mark of ROAD_MARKS) {
       const point = this.worldToScreen(mark);
-      ctx.beginPath();
-      ctx.ellipse(
-        point.x,
-        point.y,
-        mark.width * 10 * this.camera.zoom,
-        mark.height * 7 * this.camera.zoom,
-        -0.22,
-        0,
-        TAU,
-      );
-      ctx.fillStyle = mark.tone;
-      ctx.fill();
+      ctx.save();
+      if (mark.kind === 'rut') {
+        const start = this.worldToScreen(mark.a);
+        const end = this.worldToScreen(mark.b);
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.strokeStyle = mark.tone;
+        ctx.lineWidth = Math.max(1, 1.6 * this.camera.zoom);
+        ctx.stroke();
+      } else if (mark.kind === 'puddle') {
+        ctx.translate(point.x, point.y);
+        ctx.rotate(-0.18);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, mark.width * 12 * this.camera.zoom, mark.height * 8 * this.camera.zoom, 0, 0, TAU);
+        ctx.fillStyle = mark.tone;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(215, 190, 136, 0.24)';
+        ctx.lineWidth = Math.max(1, this.camera.zoom);
+        ctx.stroke();
+      } else if (mark.kind === 'prints') {
+        ctx.translate(point.x, point.y);
+        ctx.rotate(mark.angle);
+        ctx.fillStyle = 'rgba(54, 42, 31, 0.3)';
+        for (let index = 0; index < 3; index += 1) {
+          const offset = index * 9 * this.camera.zoom;
+          ctx.beginPath();
+          ctx.ellipse(-offset, -offset * 0.5, 2.2 * this.camera.zoom, 1.2 * this.camera.zoom, -0.25, 0, TAU);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(4 * this.camera.zoom - offset, 4 * this.camera.zoom - offset * 0.5, 2.2 * this.camera.zoom, 1.2 * this.camera.zoom, -0.25, 0, TAU);
+          ctx.fill();
+        }
+      } else if (mark.kind === 'stones') {
+        ctx.translate(point.x, point.y);
+        ctx.fillStyle = 'rgba(100, 86, 66, 0.76)';
+        ctx.strokeStyle = 'rgba(57, 46, 36, 0.42)';
+        ctx.lineWidth = Math.max(1, this.camera.zoom);
+        for (let index = 0; index < 3; index += 1) {
+          const offsetX = (index - 1) * 5 * this.camera.zoom;
+          const offsetY = (index % 2) * 2 * this.camera.zoom;
+          ctx.beginPath();
+          ctx.ellipse(offsetX, offsetY, mark.size * (5 - index) * this.camera.zoom, mark.size * (3.2 - index * 0.35) * this.camera.zoom, -0.2 + index * 0.2, 0, TAU);
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -414,10 +557,15 @@ export class CrownforgeRenderer {
   }
 
   drawWorldEntities(ctx, simulation, time) {
-    const kindOrder = { building: 0, resource: 1, decoration: 2, unit: 3 };
+    const kindOrder = { building: 0, resource: 1, roadside: 2, 'roadside-shrub': 2, decoration: 3, unit: 4 };
     const entities = [
       ...simulation.buildings.map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.2 })),
       ...simulation.resourcesNodes.map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.3 })),
+      ...this.roadsideDetails.map((entity, index) => ({
+        ...entity,
+        id: -1000 - index,
+        depth: entity.x + entity.z + (entity.depthBias ?? 0.25),
+      })),
       ...simulation.decorations.map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.34 })),
       ...simulation.units.map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.7 })),
     ].sort((a, b) => a.depth - b.depth || (kindOrder[a.kind] ?? 0) - (kindOrder[b.kind] ?? 0) || a.id - b.id);
@@ -426,6 +574,7 @@ export class CrownforgeRenderer {
       if (entity.destroyed && entity.destroyAge > 2.4) continue;
       if (entity.kind === 'building') this.drawBuilding(ctx, entity, time);
       else if (entity.kind === 'resource') this.drawResource(ctx, entity, time);
+      else if (entity.kind === 'roadside' || entity.kind === 'roadside-shrub') this.drawRoadsideDetail(ctx, entity);
       else if (entity.kind === 'decoration') this.drawDecoration(ctx, entity);
       else this.drawUnit(ctx, entity, time);
     }
@@ -774,6 +923,41 @@ export class CrownforgeRenderer {
     const point = this.worldToScreen(decoration);
     const size = decoration.type === 'log' ? 72 : decoration.type === 'stump' ? 64 : decoration.type === 'flowers' ? 54 : 48;
     this.drawEnvironmentAsset(ctx, decoration.type, decoration.variant, point, size * this.camera.zoom * decoration.scale, 0.92);
+  }
+
+  drawRoadsideDetail(ctx, detail) {
+    const point = this.worldToScreen(detail);
+    if (detail.kind === 'roadside-shrub') {
+      this.drawEnvironmentAsset(ctx, detail.type, detail.variant ?? 0, point, detail.size * this.camera.zoom, 0.76);
+      return;
+    }
+    if (!this.roadsidePropsReady) return;
+    const column = ROAD_DETAILS_ATLAS.columnByType[detail.type] ?? 0;
+    const row = ROAD_DETAILS_ATLAS.rowByType[detail.type] ?? 0;
+    const cellWidth = ROAD_DETAILS_ATLAS.width / ROAD_DETAILS_ATLAS.columns;
+    const cellHeight = ROAD_DETAILS_ATLAS.height / ROAD_DETAILS_ATLAS.rows;
+    const sourceInset = 1;
+    const sourceLeft = column * cellWidth + sourceInset;
+    const sourceTop = row * cellHeight + sourceInset;
+    const sourceWidth = cellWidth - sourceInset * 2;
+    const sourceHeight = cellHeight - sourceInset * 2;
+    const destinationWidth = detail.size * this.camera.zoom;
+    const destinationHeight = destinationWidth * (sourceHeight / sourceWidth);
+    ctx.save();
+    ctx.globalAlpha = 0.96;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(
+      this.roadsideProps,
+      sourceLeft,
+      sourceTop,
+      sourceWidth,
+      sourceHeight,
+      point.x - destinationWidth / 2,
+      point.y - destinationHeight * 0.94,
+      destinationWidth,
+      destinationHeight,
+    );
+    ctx.restore();
   }
 
   drawUnit(ctx, unit, time) {
