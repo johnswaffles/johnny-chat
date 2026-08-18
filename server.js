@@ -998,6 +998,29 @@ function getRealtimeTools(profile = "ai") {
   if (profile === "morrow") {
     tools.push({
       type: "function",
+      name: "think_deep",
+      description: "Ask Morrow's private high-reasoning helper to work through a complex question, decision, contradiction, or explicit request to think deeply. This is a read-only handoff executed by the Morrow frontend: it does not change lists, Clockwise, memory, email, or any outside system. Pass the user's actual question or request and only the minimum relevant context. Never include passwords, credentials, exact addresses, or unrelated private memories.",
+      parameters: {
+        type: "object",
+        properties: {
+          request: {
+            type: "string",
+            description: "The user's complete standalone question or request for deeper reasoning, preserving their intent and constraints."
+          },
+          reason: {
+            type: "string",
+            description: "Optional short explanation of why deeper reasoning would help, such as an important decision, competing tradeoffs, a contradiction, or an explicit request to think hard."
+          },
+          context: {
+            type: "string",
+            description: "Optional brief context from the active conversation that is necessary to answer well. Include only relevant user-provided details and omit unrelated private memories or sensitive credentials."
+          }
+        },
+        required: ["request"]
+      }
+    });
+    tools.push({
+      type: "function",
       name: "recall_conversation",
       description: "Search the user's private saved Companion conversations when they refer to an older discussion, an ambiguous event, exact prior wording, or something not clearly present in the compact startup context. Use the most specific subject, person, event, date, or phrase available. This searches private Morrow memory, not the public web.",
       parameters: {
@@ -1078,7 +1101,7 @@ function getRealtimeTools(profile = "ai") {
     tools.push({
       type: "function",
       name: "forget_memory_topic",
-      description: "Control the user's private Companion memory when the user explicitly asks to forget or erase a subject, event, or past conversation. Always call preview first. Preview finds complete matching conversations and related Life Map memories. Call erase only after the user gives an explicit yes-or-no confirmation in a later turn. Never use this tool to remove an ordinary list item.",
+      description: "Control the user's private Companion memory when the user explicitly asks to forget or erase a subject, event, or past conversation. Always call preview first. Preview finds complete matching conversations, related Life Map memories, and durable executive threads. Call erase only after the user gives an explicit yes-or-no confirmation in a later turn. Never use this tool to remove an ordinary list item.",
       parameters: {
         type: "object",
         properties: {
@@ -1156,6 +1179,7 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Do not use search_web for ordinary personal sharing, emotional support, reflection, or merely to appear knowledgeable.
 - Create the narrowest query from the latest request. Never include Life Map memories, private names, exact locations, or unrelated personal context unless the user explicitly asks to search that specific information.
 - Before search_web, say one short natural preamble such as "Let me check that." After it returns, answer from the result, name useful sources conversationally, and do not read raw URLs aloud because links appear in the chat.
+- You have think_deep for a complex decision, contradiction, consequential question, difficult synthesis, or an explicit request to think deeply. Pass the user's complete request plus only the minimum relevant context, then answer naturally from the returned analysis. It is read-only and never replaces the confirmation rules for email, memory deletion, lists, or Clockwise actions.
 - You start with an instant compact Companion brief and recent conversation continuity. When the user asks about an older discussion, exact prior wording, or an ambiguous “that thing the other day” that the compact context does not resolve, call recall_conversation with a focused private-memory query. Do not use public web search for private recall and do not guess.
 - If the latest audio is silence, background media, or speech not addressed to Morrow, remain silent and keep listening.`
     : `TOOLS:
@@ -1180,11 +1204,12 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Never ask “what comes up,” “how does that land,” “what feels present,” “what feels alive,” or “what would it look like” when a direct factual question can do the job.
 - The Life Map never becomes full. After every area has context, keep learning through the least-documented area, changed facts, names, routines, preferences, and specific follow-ups.
 - Begin from the supplied instant Companion brief without narrating that it loaded or delaying the greeting. If an earlier conversation is not clearly available in the compact continuity context, call recall_conversation and reconstruct it from the returned private archive.
+- Use think_deep when the user explicitly asks Morrow to think hard or when a consequential, multi-factor question would materially benefit from deeper analysis. Send the user's actual request and only necessary active-conversation context; never add unrelated Life Map details, credentials, or secrets. Treat the returned result as analysis to communicate naturally, not as permission to mutate data or take an external action.
 - When the user explicitly asks to add an idea or item to a list, or remove a particular saved item, call manage_list. Resolve conversational references into standalone itemText before calling. Never claim a list changed until the tool confirms it.
 - Do not call manage_list merely because the user shares an idea, mentions groceries, discusses a task, or asks what to do. Saving and removing require an explicit request.
 - When the user explicitly asks to log personal time, save a PO number or customer phone number in Reference Radar, or schedule a customer callback/follow-up, call manage_clockwise. Convert the full duration to minutes, preserve the work reference exactly, and resolve conversational words such as “them” or “that customer” from the active conversation before calling.
 - Reference Radar is a dedicated work list inside Clockwise. Use manage_clockwise—not manage_list—when a timed reminder, PO number, customer phone number, or callback is involved. Never claim Clockwise changed until the tool confirms it.
-- When the user asks to forget or erase a topic, event, or earlier conversation from Morrow's memory, call forget_memory_topic with action preview. Preserve whether the request means one particular dated conversation or every occurrence of the subject. This is semantic deletion of complete matching conversations and related Life Map facts, not a word search.
+- When the user asks to forget or erase a topic, event, or earlier conversation from Morrow's memory, call forget_memory_topic with action preview. Preserve whether the request means one particular dated conversation or every occurrence of the subject. This is semantic deletion of complete matching conversations, related Life Map facts, and continuing executive threads, not a word search.
 - Report the preview's exact counts and ask one direct yes-or-no confirmation. Never call erase in the same turn as preview, never infer confirmation, and never claim anything disappeared before the tool returns success. If the user confirms in a later turn, call forget_memory_topic with action erase. If the user declines, keep the memory and move on.
 - Memory deletion and list-item removal are different. Use forget_memory_topic for Companion history, the Life Map, or remembered personal context. Use manage_list only for a concrete saved list item.
 - When the user asks Morrow to email them something—including natural wording such as “send an email of my grocery list to myself,” “email my groceries to my inbox,” or “send this to me”—call send_personal_email with action draft. Resolve what “it,” “that,” “my groceries,” or “those goals” means from the active conversation and supplied lists. Draft a specific subject and complete useful body; for groceries use only open grocery items and omit comments. Never say email is unavailable when this tool is present.
@@ -4030,6 +4055,7 @@ app.post("/api/chat", async (req, res) => {
     const { input = "", history = [] } = req.body || {};
     const profile = inferWidgetProfile(req);
     const s = String(input || "");
+    const safetyIdentifier = String(req.body?.safetyIdentifier || "");
 
     if ((profile === "gpt54" || profile === "morrow") && !requireChatbotSession(req, res)) return;
 
@@ -4043,7 +4069,8 @@ app.post("/api/chat", async (req, res) => {
 
     if (profile === "gpt54" || profile === "community" || profile === "morrow") {
       if (profile === "gpt54") void recordJohnnyChatUsage("chats", { mode: "json" });
-      const response = await openai.responses.create(getGpt54ResponseConfig(profile, history, s));
+      const response = await openai.responses.create(getGpt54ResponseConfig(profile, history, s,
+        safetyIdentifier.match(/^[a-f0-9]{64}$/) ? { safety_identifier: safetyIdentifier } : {}));
       return res.json({
         reply: extractResponseText(response) || "(no reply)",
         sources: extractResponseSources(response)
