@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260818-env3';
-import { CrownforgeAudio } from './audio.js?v=20260818-env3';
-import { CrownforgeInput } from './input.js?v=20260818-env3';
-import { CrownforgeRenderer } from './renderer.js?v=20260818-env3';
-import { CrownforgeSimulation } from './simulation.js?v=20260818-env3';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260818-ground1';
+import { CrownforgeAudio } from './audio.js?v=20260818-ground1';
+import { CrownforgeInput } from './input.js?v=20260818-ground1';
+import { CrownforgeRenderer } from './renderer.js?v=20260818-ground1';
+import { CrownforgeSimulation } from './simulation.js?v=20260818-ground1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
