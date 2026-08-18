@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260818-env3';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260818-env3';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260818-ground1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260818-ground1';
 
 const TAU = Math.PI * 2;
 
@@ -11,6 +11,7 @@ export class CrownforgeRenderer {
     this.meadow = new Image();
     this.atlasReady = false;
     this.meadowReady = false;
+    this.meadowPattern = null;
     this.environmentReady = false;
     this.buildingStagesReady = false;
     this.enemyCampReady = false;
@@ -19,7 +20,10 @@ export class CrownforgeRenderer {
     this.combatAtlases = {};
     this.combatAtlasReady = {};
     this.atlas.addEventListener('load', () => { this.atlasReady = true; });
-    this.meadow.addEventListener('load', () => { this.meadowReady = true; });
+    this.meadow.addEventListener('load', () => {
+      this.meadowReady = true;
+      this.meadowPattern = null;
+    });
     this.environmentAtlas = new Image();
     this.buildingStages = new Image();
     this.enemyCamp = new Image();
@@ -27,7 +31,7 @@ export class CrownforgeRenderer {
     this.buildingStages.addEventListener('load', () => { this.buildingStagesReady = true; });
     this.enemyCamp.addEventListener('load', () => { this.enemyCampReady = true; });
     this.atlas.src = './assets/crownforge-asset-atlas.png';
-    this.meadow.src = './assets/crownforge-meadow-v2.png?v=1';
+    this.meadow.src = './assets/crownforge-grass-tile-v1.png?v=20260818-ground1';
     this.environmentAtlas.src = ENVIRONMENT_ATLAS.src;
     this.buildingStages.src = BUILDING_STAGE_ATLAS.src;
     this.enemyCamp.src = ENEMY_CAMP_ASSET.src;
@@ -192,12 +196,29 @@ export class CrownforgeRenderer {
     ctx.closePath();
     ctx.clip();
     if (this.meadowReady) {
-      ctx.globalAlpha = 0.92;
-      const pattern = ctx.createPattern(this.meadow, 'repeat');
-      if (pattern) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#758c50';
+      ctx.fill();
+      ctx.globalAlpha = 0.86;
+      // The grass tile is intentionally small and seamless. Anchor its repeat
+      // at the projected world origin and apply the same camera scale and
+      // translation as entities, so the terrain cannot stick to the viewport.
+      const pattern = this.meadowPattern ?? (this.meadowPattern = ctx.createPattern(this.meadow, 'repeat'));
+      const canTransformPattern = pattern && typeof pattern.setTransform === 'function' && typeof DOMMatrix === 'function';
+      if (canTransformPattern) {
+        pattern.setTransform(new DOMMatrix([
+          this.camera.zoom,
+          0,
+          0,
+          this.camera.zoom,
+          this.width / 2 + this.camera.x,
+          this.height / 2 + this.camera.y,
+        ]));
         ctx.fillStyle = pattern;
         ctx.fillRect(minX - 18, minY - 18, maxX - minX + 36, maxY - minY + 36);
       } else {
+        // Older canvas implementations still get a camera-following draw;
+        // this is preferable to a viewport-fixed pattern.
         ctx.drawImage(this.meadow, minX - 18, minY - 18, maxX - minX + 36, maxY - minY + 36);
       }
       ctx.globalAlpha = 1;
@@ -207,6 +228,7 @@ export class CrownforgeRenderer {
     }
     this.drawTerrainWash(ctx, minX, minY, maxX - minX, maxY - minY);
     if (this.daylightEnabled) this.drawDaylightGrade(ctx, minX, minY, maxX - minX, maxY - minY);
+    this.drawPathsOnMap(ctx, time);
     ctx.restore();
 
     ctx.save();
@@ -276,11 +298,14 @@ export class CrownforgeRenderer {
         const screen = this.worldToScreen(point);
         if (index) ctx.lineTo(screen.x, screen.y); else ctx.moveTo(screen.x, screen.y);
       });
-      ctx.strokeStyle = 'rgba(194, 143, 78, 0.44)';
-      ctx.lineWidth = 12 * this.camera.zoom;
+      ctx.strokeStyle = 'rgba(59, 47, 32, 0.18)';
+      ctx.lineWidth = 19 * this.camera.zoom;
       ctx.stroke();
-      ctx.strokeStyle = `rgba(232, 197, 125, ${0.12 + Math.sin(time * 0.001) * 0.02})`;
-      ctx.lineWidth = 4 * this.camera.zoom;
+      ctx.strokeStyle = 'rgba(181, 132, 75, 0.42)';
+      ctx.lineWidth = 14 * this.camera.zoom;
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(242, 207, 132, ${0.17 + Math.sin(time * 0.001) * 0.025})`;
+      ctx.lineWidth = 5 * this.camera.zoom;
       ctx.stroke();
     }
     ctx.restore();

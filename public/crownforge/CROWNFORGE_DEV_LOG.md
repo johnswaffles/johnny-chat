@@ -1274,3 +1274,37 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 ### WHAT SHOULD NOT BE BUILT YET
 
 - No new biomes, water, terrain system, environmental clutter catalog, resource types, civilizations, buildings, units, technologies, or AI systems.
+
+## TERRAIN / CAMERA WORLD-SPACE PASS — 2026-08-18
+
+### CAUSE FOUND
+
+- The ground was rendered from a repeating canvas pattern in screen coordinates while buildings, units, resources, and props used `worldToScreen()`. Camera movement therefore moved the entities over a meadow that was visually glued to the viewport.
+- A world-space road renderer already existed but was not called by the map pass. The previous meadow artwork also contained paths, so repeating it exposed hard texture seams during camera movement.
+
+### WHAT CHANGED
+
+- Added `assets/crownforge-grass-tile-v1.png`, an original Crownforge grass-only tile with restrained wildflowers and stones, generated to repeat cleanly without embedded roads.
+- Cached the grass pattern and anchored it at the projected world origin with the camera zoom and translation. Older canvas implementations fall back to a camera-following map draw rather than a viewport-fixed pattern.
+- Enabled the authored world-space road pass inside the terrain clip, with rounded shadow, surface, and highlight strokes for the settlement-to-camp route and its junction.
+- Bumped the active cache marker to `20260818-ground1` and mirrored the source/runtime changes into `public/crownforge`.
+
+### VERIFIED
+
+- Local 1280x720 browser sweep: initial view, zoom in, zoom out, rapid east/south/west/north camera movement, map-edge views, and tall-object contact all keep terrain, roads, units, resources, and buildings in the same world relationship.
+- Browser console remained empty during reload, zoom, and camera sweeps.
+- Static module syntax, `git diff --check`, and the visual-integrity audit passed; no placeholder references or active environment-atlas boundary contacts were introduced.
+
+### REMAINING WEAKNESSES
+
+- The grass family is intentionally small, so close inspection can still reveal repeated natural detail; no larger biome catalog was added in this focused pass.
+- Tall world art can still sit beneath the HUD at extreme camera framing positions; that is a viewport-safe-framing issue, not terrain drift or atlas cropping.
+- The current slice still has no water surface or terrain-height variation.
+
+### HIGHEST PRIORITY NEXT
+
+- If the next visual pass continues terrain work, add only a restrained second grass variation and a small number of authored dirt transitions after a concrete repetition case is reproduced. Keep camera safe framing separate from terrain art.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not expand into new biomes, water simulation, terrain elevation, a large road catalog, new resources, civilizations, ages, technologies, campaigns, or additional unit classes until this small map remains visually coherent under another full-match QA pass.
