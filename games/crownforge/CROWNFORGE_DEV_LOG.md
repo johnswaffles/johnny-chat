@@ -1348,3 +1348,61 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 ### WHAT SHOULD NOT BE BUILT YET
 
 - No new enemy factions, workers, economy optimization, difficulty modes, terrain biomes, water simulation, road network system, buildings, units, technologies, or campaigns.
+
+## ROAD HIERARCHY / SETTLEMENT ROUTES PASS — 2026-08-18
+
+### WHAT WAS INSPECTED
+
+- Audited the existing road generation in `src/renderer.js` before editing. The old renderer used two straight two-segment strokes with one shared material and did not express entrances, lanes, footpaths, plazas, or lived-in roadside context.
+- Confirmed that roads are renderer-only: simulation pathfinding, walkability, building collision, resource collision, and unit spacing do not read the road art. The visual pass therefore preserves gameplay navigation and collision behavior.
+- Checked the active map layout so the new routes connect the Hearth House, Crown Hall, Waystore, northern food area, stone clearing, and east-side berry route without running beneath building footprints.
+
+### WHAT WAS COMPLETED
+
+- Replaced the old two-path renderer with one shared world-space `ROAD_NETWORK` containing:
+  - a wide main settlement road from the western approach through the settlement toward the Ashen Camp;
+  - narrower curved village lanes for the Hearth House, Crown Hall entrance, and Waystore;
+  - subtle footpaths toward the northern field, stone clearing, and east berry area.
+- Used quadratic curve interpolation and hand-authored control points so routes have gentle bends and irregular settlement flow rather than perfectly straight strips.
+- Added wider dusty plaza treatments at the Crown Hall junction and the Waystore gathering edge. Road layers now separate a green feather, low shadow, light dusty shoulder, dark compacted center, and restrained world-anchored dirt texture.
+- Added intentional wear marks in the existing road system: paired wagon ruts, small puddles, footprint pairs, broken shoulder highlights, and scattered roadside stones. These remain sparse and readable at RTS distance.
+- Generated and integrated one original Crownforge roadside prop family: a 2x2 transparent plate containing a timber fence section, weathered signpost, cargo nook with barrel/crates, and warm settlement lantern. Props are sampled with preserved source proportions and drawn in world depth order, avoiding square stretching or cell cropping.
+- Added a few existing flower/shrub details beside important routes for grass-to-road blending without creating a large environmental catalog or altering gameplay collision.
+- Mirrored the renderer, config, cache marker, generated prop asset, and index changes into `public/crownforge`.
+- Updated `CROWNFORGE_ASSET_MANIFEST.md` with the roadside asset and renderer-owned road surface entry.
+
+### ASSETS CREATED
+
+- `assets/crownforge-roadside-props-v1.png` — original 1536 x 1024 RGBA roadside source plate; clean alpha, 2x2 authored cells, no colored fringe or matte.
+- The existing `assets/crownforge-dirt-road-tile-v1.png` remains the shared packed-earth surface material; this pass uses it across the hierarchy with different widths, alpha, shoulder treatment, and density rather than creating redundant road textures.
+
+### SYSTEMS UPDATED
+
+- `src/renderer.js` — shared road network, curved route tracing, hierarchy-specific widths, plaza widening, material layers, wear marks, roadside prop depth sorting, and transparent prop sampling.
+- `src/config.js` — `ROAD_DETAILS_ATLAS` source definition and cache identity.
+- `src/index.html`, `src/main.js`, `src/animation.js`, `src/simulation.js` — `20260818-roads2` cache marker propagation for the mirrored runtime.
+- `CROWNFORGE_ASSET_MANIFEST.md` — roadside family and road rendering source map.
+
+### VERIFIED
+
+- Reloaded the local browser build at 1280 x 720. The main road is immediately visible at normal zoom, reads as packed earth rather than a thin tan line, and remains visually connected to the settlement entrances.
+- Zoomed in to inspect shoulders, dark centers, plazas, ruts, puddles, footprints, roadside stones, and the generated prop family. No square prop backgrounds, obvious source-cell crops, or console errors appeared.
+- Panned across the settlement and toward the eastern route. The road material, route curves, and roadside details stayed world-anchored while the meadow and buildings moved with the camera.
+- Confirmed source/public mirrors are byte-identical for the changed renderer, config, index, and roadside PNG.
+- Passed `node --check` for every Crownforge source file, `git diff --check`, `tools/visual-integrity-audit.mjs`, and `tools/remediation-regression.mjs`.
+
+### KNOWN ISSUES
+
+- Roads are intentionally visual-only in this pass. They do not yet provide a separate gameplay movement-cost or wagon-navigation layer; adding one would be a larger system change and is not needed for the current slice.
+- The small map reuses one packed-earth material family across the hierarchy. The authored differences currently come from width, alpha, shoulder profile, curves, wear density, and placement rather than a second biome or water-crossing material.
+- The existing UI can still cover very tall world art at extreme camera framing positions. This remains a viewport-safe-framing concern, not road or roadside asset cropping.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Play one complete deployed match with the new route layout and confirm the visual hierarchy still reads during gathering, construction, and the first raid.
+2. If a concrete repetition case appears during normal play, add only a restrained alternate road wear treatment or one more authored junction detail.
+3. Keep building entrance alignment and camera-safe framing as separate focused passes.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No water crossings, road traffic simulation, wagon system, movement-speed modifiers, new biomes, large prop catalog, new resources, civilizations, units, technologies, campaigns, or expanded AI.
