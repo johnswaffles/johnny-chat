@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-wallpass1';
-import { CrownforgeAudio } from './audio.js?v=20260819-wallpass1';
-import { CrownforgeInput } from './input.js?v=20260819-wallpass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260819-wallpass1';
-import { CrownforgeSimulation } from './simulation.js?v=20260819-wallpass1';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-interaction1';
+import { CrownforgeAudio } from './audio.js?v=20260819-interaction1';
+import { CrownforgeInput } from './input.js?v=20260819-interaction1';
+import { CrownforgeRenderer } from './renderer.js?v=20260819-interaction1';
+import { CrownforgeSimulation } from './simulation.js?v=20260819-interaction1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -27,6 +27,8 @@ const controlsMinimize = document.querySelector('#controls-minimize');
 const masterVolume = document.querySelector('#master-volume');
 const effectsVolume = document.querySelector('#effects-volume');
 const reducedMotion = document.querySelector('#reduced-motion');
+const unitSpeed = document.querySelector('#unit-speed');
+const unitSpeedValue = document.querySelector('#unit-speed-value');
 const uiTooltip = document.querySelector('#ui-tooltip');
 const placementReadout = document.querySelector('#placement-readout');
 const placementIcon = document.querySelector('#placement-icon');
@@ -204,6 +206,10 @@ reducedMotion.addEventListener('change', (event) => {
   input.setReducedMotion(event.target.checked);
   audio.ui();
 });
+unitSpeed?.addEventListener('input', (event) => {
+  const value = simulation.setUnitSpeedScale(event.target.value);
+  if (unitSpeedValue) unitSpeedValue.textContent = `${value}×`;
+});
 
 function updateUi() {
   for (const [key, info] of Object.entries(RESOURCE_TYPES)) {
@@ -215,6 +221,8 @@ function updateUi() {
   }
   const population = simulation.population;
   document.querySelector('#population').textContent = `${population.used} / ${population.capacity}`;
+  if (unitSpeed) unitSpeed.value = String(simulation.getUnitSpeedScale());
+  if (unitSpeedValue) unitSpeedValue.textContent = `${simulation.getUnitSpeedScale()}×`;
   document.querySelector('#selection-title').textContent = selectionTitle();
   document.querySelector('#selection-detail').textContent = selectionStatus();
   const preview = renderer.buildPreview;
@@ -232,7 +240,7 @@ function updateUi() {
     const ready = Boolean(builder && affordable && builder.carryAmount <= 0);
     const detail = button.querySelector(`[data-build-detail="${type}"]`);
     const status = !builder ? 'SELECT VILLAGER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
-    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? 'DRAG TO EXTEND  •  ' : ''}${status}`;
+    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? '8-WAY SNAP  •  ' : ''}${status}`;
     button.classList.toggle('is-unavailable', !ready);
     setTooltip(button, !builder
       ? `Select a villager before placing a ${blueprint.label}`
@@ -241,7 +249,7 @@ function updateUi() {
         : !affordable
           ? `Gather the resources needed for a ${blueprint.label}`
           : blueprint.wall
-            ? `Click-drag to place a snapped ${blueprint.label} line`
+            ? `Click-drag to place an 8-way snapped ${blueprint.label} line`
             : `Place a ${blueprint.label}`);
   });
   const selected = simulation.selectedEntities;
@@ -291,7 +299,11 @@ function updateUi() {
     placementReadout.classList.toggle('is-invalid', !valid);
     placementIcon.className = `ui-icon ${valid ? 'icon-house' : 'icon-cancel'}`;
     placementTitle.textContent = valid ? 'FOUNDATION READY' : 'CANNOT PLACE HERE';
-    placementDetail.textContent = valid ? 'Click to place  ·  Esc to cancel' : (preview?.reason ?? 'Move the foundation to a clear site.');
+    placementDetail.textContent = valid
+      ? preview?.type === 'wall'
+        ? `${preview.wallSnapLabel ?? 'SNAPPED'} · ${preview.wallSegments ?? 1} segment${preview.wallSegments === 1 ? '' : 's'} · release to place`
+        : 'Click to place  ·  Esc to cancel'
+      : (preview?.reason ?? 'Move the foundation to a clear site.');
   }
   const outcome = simulation.phase !== 'playing';
   victoryPanel.hidden = !outcome;

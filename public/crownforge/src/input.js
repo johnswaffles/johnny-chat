@@ -145,7 +145,11 @@ export class CrownforgeInput {
       this._setCursor(preview.valid ? 'build-valid' : 'build-invalid');
       return;
     }
-    const entity = this.simulation.getEntityAt(this.renderer.screenToWorld(point));
+    // Keep hover feedback aligned with the forgiving visual-body hit regions
+    // used by renderer selection. The old world-radius test only covered the
+    // unit's ground anchor, which made visible clicks feel offset below/right.
+    const entity = this.renderer.getEntityAtScreen?.(this.simulation, point)
+      ?? this.simulation.getEntityAt(this.renderer.screenToWorld(point));
     const selected = this.simulation.selectedEntities;
     const selectedUnits = selected.filter((candidate) => candidate.kind === 'unit' && candidate.faction === 'player' && !candidate.dead);
     const selectedVillagers = selectedUnits.filter((candidate) => candidate.type === 'villager');

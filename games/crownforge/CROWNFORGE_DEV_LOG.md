@@ -1558,3 +1558,51 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 ### WHAT SHOULD NOT BE BUILT YET
 
 - No additional wall types, gates, towers, fortification upgrades, formations, technologies, ages, civilizations, campaigns, advanced military classes, or expanded AI were added in this pass.
+
+## INTERACTION / FIELD / WALL POLISH PASS — 2026-08-19
+
+### WHAT EXISTS
+
+- The first-age sandbox keeps its deliberately small content set, but wall placement, field scale/layering, unit movement presentation, and selection feedback now meet a clearer RTS interaction standard.
+
+### WHAT WAS COMPLETED
+
+- Expanded the Palisade Wall drag tool from horizontal/vertical placement to eight-way directional snapping. East, west, north, south, and all four diagonal directions use the same authored segment family, with direction-aware preview, collision envelope, pathfinding clearance, construction footprint, and rendering rotation. The snap labels now match the player's screen-up/screen-down drag semantics.
+- Kept wall lines capped at 24 segments and retained one construction record per line so the first-age prototype stays readable and inexpensive to simulate. A screen-space upper-right drag was placed successfully as a clean diagonal run in the browser.
+- Enlarged Grain Fields to an 8 x 6 world footprint with a 500px authored render size. Opening grain plots were repositioned with breathing room so the larger silhouettes do not stack. Completed fields remain ground-walkable and their crop art is depth-sorted below units, allowing Crown Guards and villagers to walk across them rather than behind them.
+- Corrected directional movement presentation. The shared facing calculation now maps movement through the isometric screen axes, and the villager walk sheet's authored row order is explicitly remapped. This keeps Crown Guards and villagers facing the direction of travel, including diagonal screen movement, instead of showing an apparent backward walk.
+- Added a visible Unit Pace control to the Field Manual. The player can set global unit movement from 1x normal speed through 10x sandbox speed; the same scale affects route following and walk-loop playback so faster movement does not leave a frozen or visibly lagging gait.
+- Centered and enlarged visual hit regions for units and buildings. Clicks now use the visible body/silhouette instead of only the ground anchor, and hover cursor feedback uses the same hit region so selection and cursor behavior agree.
+- Bumped the source asset/module cache identity to `interaction1` for the updated field, wall, villager, Crown Guard, and Raider presentation paths.
+
+### SYSTEMS CREATED / UPDATED
+
+- `src/simulation.js` — eight-way wall snap and arbitrary-direction wall bounds, larger field blueprint, opening plot spacing, unit-speed scaling, screen-aware facing calculation, and corrected diagonal sector mapping.
+- `src/renderer.js` — ground-layer field depth, larger grain rendering, arbitrary-direction wall drawing/footprints, visual-body hit testing, and screen-consistent combat/movement direction cues.
+- `src/animation.js` — explicit directional row mapping for the generated villager walk atlas and faster walk-loop playback support.
+- `src/input.js` — cursor hit testing now shares the renderer's visible-body selection regions.
+- `src/main.js`, `index.html`, and `src/config.js` — Unit Pace control, updated wall guidance, field size, and cache identity.
+
+### VERIFIED
+
+- Local browser QA at 1280 x 720 showed the enlarged fields, grounded layering, clean diagonal wall placement, visible-body villager selection, visible-body Crown Hall selection, and the 1x–10x Unit Pace slider.
+- Local browser console logs were empty after reload and interaction.
+- `tools/remediation-regression.mjs` passed all existing economy, construction, combat, victory, and defeat checks.
+- Direct simulation checks passed all eight wall snap sectors, confirmed completed fields do not block movement, and confirmed the enlarged field footprint is active.
+- `node --check` passed for every source file and `git diff --check` passed.
+
+### KNOWN ISSUES
+
+- A wall line is still one building record with shared health and construction progress. Segment-level damage, gates, and wall connectors remain intentionally deferred.
+- Grain Fields currently use one generated field family. More crop variants should wait until normal play demonstrates visible repetition rather than adding another asset family prematurely.
+- Movement speed is intentionally a sandbox-wide control, not a per-unit upgrade or technology system.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Verify the pushed deployment at normal zoom and after panning across the larger fields and diagonal wall runs.
+2. If a specific atlas still shows edge contact or a directional frame mismatch, repair that atlas in isolation rather than expanding the animation catalog.
+3. Review field farmer feedback and wall construction staging in one complete first-age sandbox match.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add new civilizations, ages, technologies, campaigns, advanced military classes, water systems, wall types, gates, towers, or large new resource/building families before this interaction pass remains stable in the deployed slice.

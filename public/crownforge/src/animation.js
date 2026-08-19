@@ -1,10 +1,10 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-wallpass1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-interaction1';
 
 export const ANIMATION_DIRECTIONS = [
-  { index: 0, key: 'world-z-positive', label: '+Z · screen-left / front' },
-  { index: 1, key: 'world-x-positive', label: '+X · screen-right / front' },
-  { index: 2, key: 'world-x-negative', label: '-X · screen-left / back' },
-  { index: 3, key: 'world-z-negative', label: '-Z · screen-right / back' },
+  { index: 0, key: 'screen-down', label: 'screen-down / front' },
+  { index: 1, key: 'screen-right', label: 'screen-right / profile' },
+  { index: 2, key: 'screen-up', label: 'screen-up / back' },
+  { index: 3, key: 'screen-left', label: 'screen-left / profile' },
 ];
 
 export const ANIMATION_EVENTS = {
@@ -47,10 +47,10 @@ const walkClip = (atlas, rows) => ({
   events: { footstep: ANIMATION_EVENT_TIMINGS.footstep },
 });
 
-const directionalLoop = (atlas, { frames = [0, 1, 2, 3], fps = 3.2, loop = true, events = {} } = {}) => ({
+const directionalLoop = (atlas, { frames = [0, 1, 2, 3], fps = 3.2, loop = true, events = {}, directionRows = [0, 1, 2, 3] } = {}) => ({
   atlas,
   layout: 'frame-columns',
-  directionRows: [0, 1, 2, 3],
+  directionRows,
   frames,
   fps,
   loop,
@@ -82,7 +82,9 @@ export const ANIMATION_DEFINITIONS = {
     },
     clips: {
       idle: singleFrame('motion', VILLAGER_ATLASES.motion.rows.idle),
-      walk: directionalLoop('motionLoop', { fps: 7.2, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
+      // The generated villager sheet was authored back, right, front, left;
+      // map it into Crownforge's shared front, right, back, left contract.
+      walk: directionalLoop('motionLoop', { fps: 7.2, directionRows: [2, 1, 0, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
       gather_wood: actionLoop('woodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_food: actionLoop('foodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_stone: actionLoop('stoneLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
@@ -227,7 +229,7 @@ export class CrownforgeAnimationSystem {
     const clip = animationClip(unit.type, nextState);
     const previousTime = unit.animationTime ?? 0;
     const duration = Math.max(0.001, clip.frames.length / Math.max(0.001, clip.fps));
-    const playbackRate = nextState === 'walk' ? Math.max(0, Math.min(1.15, unit.animationPlaybackRate ?? 1)) : 1;
+    const playbackRate = nextState === 'walk' ? Math.max(0, Math.min(2.2, unit.animationPlaybackRate ?? 1)) : 1;
     const nextTime = clip.loop ? (previousTime + delta * playbackRate) % duration : Math.min(duration, previousTime + delta * playbackRate);
     if (nextState === 'walk' && clip.events?.footstep) {
       const thresholds = Array.isArray(clip.events.footstep) ? clip.events.footstep : [clip.events.footstep];

@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-wallpass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-interaction1';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-wallpass1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-interaction1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -27,18 +27,46 @@ const SIMULATION_STEP = 1 / 60;
 const MAX_SIMULATION_STEPS = 8;
 
 const FACING_VECTORS = [
-  { x: 0, z: 1 },
-  { x: 1, z: 0 },
-  { x: -1, z: 0 },
-  { x: 0, z: -1 },
+  { x: 1, z: 1 },
+  { x: 1, z: -1 },
+  { x: -1, z: -1 },
+  { x: -1, z: 1 },
 ];
 
 function directionFromVector(dx, dz, fallback = 0) {
   if (Math.hypot(dx, dz) < 0.001) return fallback;
   const screenX = dx - dz;
   const screenY = dx + dz;
-  if (Math.abs(screenX) < 0.001) return screenY >= 0 ? 1 : 3;
-  return screenY >= 0 ? (screenX < 0 ? 0 : 1) : (screenX < 0 ? 2 : 3);
+  // The generated directional sheets are authored as front, right, back,
+  // left. Prefer side-facing art for diagonal isometric travel so a unit
+  // moving toward screen-right never reads as walking backward.
+  if (Math.abs(screenX) >= Math.abs(screenY) * 0.58) return screenX >= 0 ? 1 : 3;
+  return screenY >= 0 ? 0 : 2;
+}
+
+const WALL_SNAP_DIRECTIONS = [
+  { label: 'EAST', x: 1, z: 0 },
+  { label: 'NORTH-EAST', x: 1, z: -1 },
+  { label: 'NORTH', x: 0, z: -1 },
+  { label: 'NORTH-WEST', x: -1, z: -1 },
+  { label: 'WEST', x: -1, z: 0 },
+  { label: 'SOUTH-WEST', x: -1, z: 1 },
+  { label: 'SOUTH', x: 0, z: 1 },
+  { label: 'SOUTH-EAST', x: 1, z: 1 },
+];
+
+function normalizeWallDirection(direction, fallback = { x: 1, z: 0 }) {
+  const x = Number(direction?.x);
+  const z = Number(direction?.z);
+  const length = Math.hypot(x, z);
+  if (!Number.isFinite(length) || length < 0.001) return { ...fallback };
+  return { x: x / length, z: z / length };
+}
+
+function wallDirectionFromOptions(source = {}) {
+  if (source.wallDirection) return normalizeWallDirection(source.wallDirection);
+  if (source.wallOrientation === 'vertical') return { x: 0, z: 1 };
+  return { x: 1, z: 0 };
 }
 
 function setUnitFacing(unit, dx, dz, force = false) {
@@ -67,6 +95,7 @@ export class CrownforgeSimulation {
   constructor({ onEvent = () => {} } = {}) {
     this.onEvent = onEvent;
     this.animation = new CrownforgeAnimationSystem();
+    this.unitSpeedScale = 1;
     this.reset();
   }
 
@@ -85,6 +114,17 @@ export class CrownforgeSimulation {
     this._seedWorld();
     this.selectedIds = this.units.filter((unit) => unit.type === 'villager').map((unit) => unit.id);
     this._syncSelectionFlags();
+  }
+
+  setUnitSpeedScale(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return this.unitSpeedScale;
+    this.unitSpeedScale = clamp(numeric, 1, 10);
+    return this.unitSpeedScale;
+  }
+
+  getUnitSpeedScale() {
+    return this.unitSpeedScale;
   }
 
   _seedWorld() {
@@ -113,9 +153,11 @@ export class CrownforgeSimulation {
     this.addResource('berry', 'food', 41.5, 40.5, 105, 1);
     this.addResource('berry', 'food', 57, 30, 105, 2);
     this.addResource('berry', 'food', 82, 41, 105, 0);
-    this.addResource('grain', 'food', 50, 25, 220, 0);
-    this.addResource('grain', 'food', 56, 23, 220, 0);
-    this.addResource('grain', 'food', 62, 28, 220, 0);
+    // Large working plots need breathing room so their silhouettes do not
+    // stack into one another at the opening zoom.
+    this.addResource('grain', 'food', 44, 18, 220, 0);
+    this.addResource('grain', 'food', 60, 20, 220, 0);
+    this.addResource('grain', 'food', 55, 35, 220, 0);
     this.addResource('stone', 'stone', 49, 50, 120, 0);
     this.addResource('stone', 'stone', 54, 53, 120, 3);
     this.addResource('stone', 'stone', 76, 55, 120, 2);
@@ -173,6 +215,7 @@ export class CrownforgeSimulation {
       field: Boolean(blueprint.field),
       wallSegments: blueprint.wall ? Math.max(1, Math.round(options.wallSegments ?? 1)) : 1,
       wallOrientation: blueprint.wall ? (options.wallOrientation ?? 'horizontal') : null,
+      wallDirection: blueprint.wall ? wallDirectionFromOptions(options) : null,
       wallStart: blueprint.wall ? (options.wallStart ? { ...options.wallStart } : { x, z }) : null,
       farmerId: null,
       fieldTimer: 0,
@@ -670,7 +713,7 @@ export class CrownforgeSimulation {
     else if (unit.command === 'field') this._updateFieldIntent(unit);
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
     unit.animationPlaybackRate = unit.command === 'move' || unit.visualState === 'walk'
-      ? Math.max(0, Math.min(1.15, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed, 0.01)))
+      ? Math.max(0, Math.min(2.2, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed * this.unitSpeedScale, 0.01)))
       : 1;
     this.animation.update(unit, dt);
   }
@@ -704,7 +747,7 @@ export class CrownforgeSimulation {
       if (length < 0.12) {
         unit.path.shift();
       } else {
-        desiredSpeed = Math.min(blueprint.speed, length / Math.max(dt, 0.001));
+        desiredSpeed = Math.min(blueprint.speed * this.unitSpeedScale, length / Math.max(dt, 0.001));
         desiredX = (dx / length) * desiredSpeed;
         desiredZ = (dz / length) * desiredSpeed;
       }
@@ -934,10 +977,16 @@ export class CrownforgeSimulation {
     if (!blueprint.wall) return { ...blueprint.footprint };
     const source = typeof buildingOrType === 'object' ? buildingOrType : options;
     const segments = Math.max(1, Math.round(source.wallSegments ?? options.wallSegments ?? 1));
-    const orientation = source.wallOrientation ?? options.wallOrientation ?? 'horizontal';
     const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
-    const horizontal = { width: blueprint.footprint.width + (segments - 1) * span, height: blueprint.footprint.height };
-    return orientation === 'vertical' ? { width: horizontal.height, height: horizontal.width } : horizontal;
+    const length = blueprint.footprint.width + (segments - 1) * span;
+    const direction = wallDirectionFromOptions(source);
+    // Placement/pathfinding use a conservative axis-aligned envelope around
+    // the oriented wall. That keeps diagonal runs safe without allowing a
+    // unit to clip through a post at either end.
+    return {
+      width: Math.abs(direction.x) * length + Math.abs(direction.z) * blueprint.footprint.height,
+      height: Math.abs(direction.z) * length + Math.abs(direction.x) * blueprint.footprint.height,
+    };
   }
 
   _buildingApproachPoints(building, margin = BUILDING_INTERACTION_DISTANCE) {
@@ -2074,19 +2123,27 @@ export class CrownforgeSimulation {
     const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
     const deltaX = end.x - start.x;
     const deltaZ = end.z - start.z;
-    const horizontal = Math.abs(deltaX) >= Math.abs(deltaZ);
-    const axis = horizontal ? 'x' : 'z';
-    const delta = axis === 'x' ? deltaX : deltaZ;
-    const direction = delta < -0.05 ? -1 : 1;
+    const dragDistance = Math.hypot(deltaX, deltaZ);
+    const rawAngle = dragDistance > 0.04 ? Math.atan2(deltaZ, deltaX) : 0;
+    // World z increases toward the screen's lower side, while the palette is
+    // named from the player's view (north is screen-up). Negating the angle
+    // keeps a drag toward screen-up/right in the NORTH-EAST sector instead of
+    // silently labeling it SOUTH-EAST.
+    const directionIndex = ((Math.round(-rawAngle / (Math.PI / 4)) % WALL_SNAP_DIRECTIONS.length) + WALL_SNAP_DIRECTIONS.length) % WALL_SNAP_DIRECTIONS.length;
+    const snapped = WALL_SNAP_DIRECTIONS[directionIndex];
+    const direction = normalizeWallDirection(snapped);
+    const projectedDistance = Math.max(0, deltaX * direction.x + deltaZ * direction.z);
+    const distanceAlongWall = Math.max(span, Math.abs(projectedDistance));
+    const segmentCount = Math.max(1, Math.min(24, Math.round(distanceAlongWall / span) + 1));
     const anchor = {
-      x: horizontal ? Math.round(start.x) : Math.round(start.x / span) * span,
-      z: horizontal ? Math.round(start.z / span) * span : Math.round(start.z),
+      x: Math.round(start.x),
+      z: Math.round(start.z),
     };
-    const distanceAlongAxis = Math.abs(axis === 'x' ? deltaX : deltaZ);
-    const segmentCount = Math.max(1, Math.min(24, Math.round(distanceAlongAxis / span) + 1));
+    const orientation = Math.abs(direction.x) > 0.98 ? 'horizontal' : Math.abs(direction.z) > 0.98 ? 'vertical' : 'diagonal';
+    const wallDirection = { ...direction };
     const segments = Array.from({ length: segmentCount }, (_, index) => ({
-      x: anchor.x + (horizontal ? direction * index * span : 0),
-      z: anchor.z + (horizontal ? 0 : direction * index * span),
+      x: anchor.x + wallDirection.x * index * span,
+      z: anchor.z + wallDirection.z * index * span,
     }));
     const world = {
       x: (segments[0].x + segments[segments.length - 1].x) / 2,
@@ -2094,7 +2151,9 @@ export class CrownforgeSimulation {
     };
     const options = {
       wallSegments: segmentCount,
-      wallOrientation: horizontal ? 'horizontal' : 'vertical',
+      wallOrientation: orientation,
+      wallDirection,
+      wallSnapLabel: snapped.label,
       wallStart: segments[0],
     };
     const check = this.getPlacementCheck('wall', world, options);
@@ -2122,6 +2181,7 @@ export class CrownforgeSimulation {
     const building = this.addBuilding('wall', preview.world.x, preview.world.z, 'player', 0.04, {
       wallSegments: preview.wallSegments,
       wallOrientation: preview.wallOrientation,
+      wallDirection: preview.wallDirection,
       wallStart: preview.wallStart,
     });
     let assigned = 0;
