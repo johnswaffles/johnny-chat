@@ -3,116 +3,383 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171625">
   <title>Story Editor | justaskjohnny.com</title>
-  <meta name="description" content="Private paragraph-by-paragraph fiction editing workspace.">
+  <meta name="description" content="A private, focused studio for shaping fiction without losing your voice.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Source+Serif+4:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./story-editor.css?v=20260605-1">
-  <link rel="stylesheet" href="/future-theme.css?v=1">
-  <script defer src="./story-editor.js?v=20260605-1"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&amp;display=optional" rel="stylesheet">
+  <link rel="stylesheet" href="./story-editor.css?v=20260819-autopilot1">
+  <script defer src="./story-editor.js?v=20260819-autopilot1"></script>
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="brand-block">
-        <span>justaskjohnny.com</span>
-        <h1>Story Editor</h1>
+  <div class="studio-shell">
+    <aside class="library-rail" id="library-rail" aria-label="Manuscript library">
+      <div class="rail-brand">
+        <a class="brand-mark" href="https://justaskjohnny.com" aria-label="Go to justaskjohnny.com">
+          <svg viewBox="0 0 36 36" aria-hidden="true"><path d="M9 27c8-1 14-7 18-18-11 4-17 10-18 18Z"/><path d="M11 25c4-4 8-8 14-12"/></svg>
+        </a>
+        <div>
+          <span>Johnny's writing studio</span>
+          <strong>Story Editor</strong>
+        </div>
+        <button class="icon-button rail-close" id="rail-close" type="button" aria-label="Close manuscript library">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
       </div>
 
-      <nav class="top-links" aria-label="Site">
-        <a href="https://justaskjohnny.com">Home</a>
-      </nav>
+      <button class="new-story-button" id="open-upload" type="button">
+        <span class="button-icon" aria-hidden="true">+</span>
+        <span><strong>New manuscript</strong><small>TXT, DOCX, or PDF</small></span>
+      </button>
 
-      <section class="panel upload-panel">
-        <h2>Manuscript</h2>
-        <form id="upload-form">
-          <input id="title-input" name="title" placeholder="Project title">
-          <label class="file-pick">
-            <input id="file-input" name="manuscript" type="file" accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
-            <span>Choose TXT, DOCX, or PDF</span>
-          </label>
-          <button type="submit">Upload and split</button>
-        </form>
-        <div class="status" id="upload-status"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h2>Projects</h2>
-          <button id="refresh-projects" type="button">Refresh</button>
+      <div class="library-heading">
+        <div>
+          <span class="overline">Library</span>
+          <h2>Your stories</h2>
         </div>
-        <div class="project-list" id="project-list"></div>
-      </section>
+        <button class="icon-button" id="refresh-projects" type="button" aria-label="Refresh manuscripts" title="Refresh manuscripts">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+        </button>
+      </div>
+
+      <label class="library-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>
+        <span class="sr-only">Search manuscripts</span>
+        <input id="project-filter" type="search" placeholder="Find a manuscript…" autocomplete="off">
+      </label>
+
+      <div class="project-list" id="project-list" aria-live="polite"></div>
+
+      <div class="rail-footer">
+        <div class="privacy-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <span><strong>Private workspace</strong>Your manuscripts stay behind your access password.</span>
+        </div>
+        <a href="https://justaskjohnny.com">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          Back to justaskjohnny.com
+        </a>
+      </div>
     </aside>
 
-    <main class="workspace">
-      <header class="workspace-head">
-        <div>
-          <p class="eyebrow">Paragraph workflow</p>
-          <h2 id="project-title">No manuscript loaded</h2>
+    <button class="rail-scrim" id="rail-scrim" type="button" aria-label="Close manuscript library"></button>
+
+    <main class="studio-main">
+      <header class="topbar">
+        <div class="topbar-title">
+          <button class="icon-button rail-open" id="rail-open" type="button" aria-label="Open manuscript library">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <div>
+            <span id="project-filename">Story Editor</span>
+            <strong id="project-title">Your quiet place to make every line count.</strong>
+          </div>
         </div>
-        <div class="head-actions">
-          <select id="mode-select" aria-label="Editing mode">
-            <option value="line">Line edit</option>
-            <option value="grammar">Grammar edit</option>
-            <option value="deepen">Deepen prose</option>
-            <option value="expand">Expand scene</option>
-            <option value="dialogue">Dialogue polish</option>
-            <option value="pacing">Pacing check</option>
-            <option value="continuity">Continuity check</option>
-          </select>
-          <button id="export-docx" type="button">Export DOCX</button>
+        <div class="topbar-actions">
+          <button class="secondary-button" id="open-bible" type="button" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z"/></svg>
+            Story Bible
+          </button>
+          <button class="secondary-button" id="export-docx" type="button" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+            Export
+          </button>
         </div>
       </header>
 
-      <section class="bible-grid" aria-label="Story Bible">
-        <label>Characters<textarea id="bible-characters" rows="4" placeholder="One per line, or paste notes"></textarea></label>
-        <label>Settings<textarea id="bible-settings" rows="4"></textarea></label>
-        <label>Timeline<textarea id="bible-timeline" rows="4"></textarea></label>
-        <label>Plot threads<textarea id="bible-plot" rows="4"></textarea></label>
-        <label>Tone/style rules<textarea id="bible-tone" rows="4"></textarea></label>
-        <label>Continuity notes<textarea id="bible-continuity" rows="4"></textarea></label>
-        <button id="save-bible" type="button">Save Story Bible</button>
+      <section class="loading-view" id="loading-view" aria-live="polite">
+        <div class="loading-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <p>Opening your writing studio…</p>
       </section>
 
-      <section class="editor-grid">
-        <aside class="paragraph-panel">
-          <div class="panel-head">
-            <h2>Paragraphs</h2>
-            <input id="section-filter" type="search" placeholder="Filter">
+      <section class="problem-view" id="problem-view" hidden aria-live="assertive">
+        <div class="problem-card">
+          <span class="problem-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 8v5m0 3.5v.5M10.4 4.4 3.2 17a2 2 0 0 0 1.7 3h14.2a2 2 0 0 0 1.7-3L13.6 4.4a1.85 1.85 0 0 0-3.2 0Z"/></svg>
+          </span>
+          <span class="overline">The page is safely paused</span>
+          <h1 id="problem-title">Let’s reconnect your writing studio.</h1>
+          <p id="problem-message">Your manuscript was not changed. Story Editor stopped here instead of repeatedly refreshing the page.</p>
+          <div class="problem-actions">
+            <button class="primary-button" id="retry-startup" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+              Try connecting again
+            </button>
+            <a class="secondary-button" id="reauth-link" href="/story-editor/?reauth=1">Unlock again</a>
           </div>
-          <div class="section-list" id="section-list"></div>
-        </aside>
+          <small>No automatic refreshes will happen from this screen.</small>
+        </div>
+      </section>
 
-        <section class="edit-panel">
-          <div class="split-editor">
-            <article class="text-pane">
-              <h3>Original</h3>
-              <div id="original-text" class="manuscript-text empty">Select a paragraph to begin.</div>
-            </article>
-            <article class="text-pane suggestion-pane">
-              <h3>AI suggestion</h3>
-              <div id="suggestion-text" class="manuscript-text empty">Suggestions appear here.</div>
-            </article>
+      <section class="welcome-view" id="welcome-view" hidden>
+        <div class="welcome-copy">
+          <span class="overline">A better way to revise</span>
+          <h1>Keep your voice.<br><em>Strengthen the story.</em></h1>
+          <p>Bring in a manuscript, describe what you want, and let the editor carry a coherent revision across the whole draft.</p>
+          <button class="primary-button" id="welcome-upload" type="button">
+            Import your first manuscript
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+          </button>
+          <small>No special formatting needed. We’ll organize the draft for you.</small>
+        </div>
+        <div class="welcome-visual" aria-hidden="true">
+          <div class="paper paper-back"><span></span><span></span><span></span></div>
+          <div class="paper paper-front">
+            <div class="paper-kicker">CHAPTER ONE</div>
+            <div class="paper-title"></div>
+            <span></span><span></span><span></span><span></span><span></span>
+            <div class="editor-note"><b>✦</b> The heart of the scene is already here.</div>
           </div>
+        </div>
+      </section>
 
-          <div class="request-box">
-            <textarea id="edit-note" rows="3" placeholder="Optional note for this paragraph only"></textarea>
-            <div class="request-actions">
-              <button id="request-edit" type="button">Request edit</button>
-              <button id="accept-edit" type="button" disabled>Accept</button>
-              <button id="reject-edit" type="button" disabled>Reject</button>
+      <section class="workspace-view" id="workspace-view" hidden>
+        <header class="project-overview">
+          <div class="project-heading">
+            <span class="overline">Current manuscript</span>
+            <h1 id="overview-title">Untitled manuscript</h1>
+            <div class="project-meta" id="project-meta"></div>
+          </div>
+          <div class="progress-card">
+            <div class="progress-copy">
+              <span>Revision progress</span>
+              <strong id="progress-value">0%</strong>
             </div>
+            <div class="progress-track" role="progressbar" aria-label="Revision progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track"><i id="progress-fill"></i></div>
+            <small id="progress-detail">No passages revised yet</small>
           </div>
+        </header>
 
-          <section class="versions">
-            <h3>Versions</h3>
-            <div id="version-list"></div>
-          </section>
+        <section class="autopilot-card" id="autopilot-card" aria-labelledby="autopilot-title">
+          <div class="autopilot-copy">
+            <span class="overline">Full-manuscript autopilot</span>
+            <h2 id="autopilot-title">Give the story a direction. Let the editor carry it.</h2>
+            <p>It will make an editorial plan, choose sensible chunks, carry a continuity handoff between them, and check that interior sections do not accidentally sound like endings.</p>
+          </div>
+          <label class="autopilot-intent-field">
+            <span>What should happen to this manuscript?</span>
+            <textarea id="autopilot-intent" rows="4" placeholder="Example: Turn this into a cinematic Star Trek episode while preserving the emotional spine, or shape it into a compelling bestselling novel."></textarea>
+          </label>
+          <div class="autopilot-actions">
+            <span>Original text stays preserved. Autopilot writes to the revised draft and keeps a run report.</span>
+            <button class="primary-button" id="autopilot-start" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.4 4.6L18 9l-4.6 1.4L12 15l-1.4-4.6L6 9l4.6-1.4L12 3ZM19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15Z"/></svg>
+              Start full-manuscript edit
+            </button>
+          </div>
+          <div class="autopilot-progress" id="autopilot-progress" hidden aria-live="polite">
+            <div class="autopilot-progress-head">
+              <div><span class="overline">Autopilot is working</span><strong id="autopilot-phase">Preparing the manuscript…</strong></div>
+              <b id="autopilot-percent">0%</b>
+            </div>
+            <div class="autopilot-track" role="progressbar" aria-label="Full-manuscript edit progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="autopilot-track"><i id="autopilot-fill"></i></div>
+            <p id="autopilot-message">Reading the manuscript and building a continuity plan.</p>
+            <small id="autopilot-detail">The page can stay open while the model works.</small>
+          </div>
         </section>
+
+        <div class="editor-workspace">
+          <aside class="passage-navigator" aria-label="Passage navigator">
+            <div class="navigator-head">
+              <div>
+                <span class="overline">Manuscript</span>
+                <h2>Passages <b id="passage-count">0</b></h2>
+              </div>
+            </div>
+
+            <label class="passage-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>
+              <span class="sr-only">Search passages</span>
+              <input id="section-filter" type="search" placeholder="Search the manuscript…" autocomplete="off">
+            </label>
+
+            <div class="filter-tabs" role="group" aria-label="Filter passages">
+              <button class="active" type="button" data-section-filter="all">All</button>
+              <button type="button" data-section-filter="todo">To revise</button>
+              <button type="button" data-section-filter="edited">Revised</button>
+            </div>
+
+            <div class="section-list" id="section-list"></div>
+          </aside>
+
+          <section class="editing-stage" id="editing-stage" aria-live="polite">
+            <header class="passage-head">
+              <div>
+                <span class="passage-position" id="passage-position">Choose a passage</span>
+                <h2 id="passage-heading">Ready when you are</h2>
+              </div>
+              <div class="passage-navigation">
+                <button class="icon-button" id="previous-section" type="button" aria-label="Previous passage" title="Previous passage (⌥←)" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <button class="icon-button" id="next-section" type="button" aria-label="Next passage" title="Next passage (⌥→)" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+              </div>
+            </header>
+
+            <div class="split-editor">
+              <article class="text-pane current-pane">
+                <div class="pane-heading">
+                  <div><span class="pane-dot"></span><h3>Current draft</h3></div>
+                  <span id="current-word-count">0 words</span>
+                </div>
+                <div id="original-text" class="manuscript-text empty">
+                  <div class="empty-pane-icon">Aa</div>
+                  <strong>Select a passage to begin.</strong>
+                  <span>Your current draft will appear here.</span>
+                </div>
+              </article>
+
+              <article class="text-pane suggestion-pane">
+                <div class="pane-heading">
+                  <div><span class="pane-dot"></span><h3 id="suggestion-heading">Proposed revision</h3></div>
+                  <span id="suggestion-status">Waiting</span>
+                </div>
+                <div id="suggestion-text" class="manuscript-text empty">
+                  <div class="empty-pane-icon sparkle">✦</div>
+                  <strong>Your revision will appear here.</strong>
+                  <span>Choose an editing lens and generate a suggestion.</span>
+                </div>
+              </article>
+            </div>
+
+            <section class="revision-composer">
+              <div class="composer-heading">
+                <div>
+                  <span class="overline">Direct the edit</span>
+                  <h3>What should this revision improve?</h3>
+                </div>
+                <span class="shortcut-hint">⌘ Enter to generate</span>
+              </div>
+              <div class="composer-grid">
+                <label class="mode-field">
+                  <span>Editing lens</span>
+                  <select id="mode-select" aria-describedby="mode-description">
+                    <option value="line">Line edit</option>
+                    <option value="grammar">Grammar cleanup</option>
+                    <option value="deepen">Deepen the prose</option>
+                    <option value="expand">Expand the scene</option>
+                    <option value="dialogue">Dialogue polish</option>
+                    <option value="pacing">Pacing pass</option>
+                    <option value="continuity">Continuity check</option>
+                  </select>
+                  <small id="mode-description">Sharper sentences, stronger rhythm, and clearer imagery.</small>
+                </label>
+                <label class="note-field">
+                  <span>Optional direction</span>
+                  <textarea id="edit-note" rows="3" placeholder="Example: Make the tension quieter and keep Mara’s dry humor."></textarea>
+                </label>
+              </div>
+              <div class="composer-actions">
+                <span>Your draft is never changed until you approve.</span>
+                <button class="primary-button generate-button" id="request-edit" type="button" disabled>
+                  <span>Generate revision</span>
+                </button>
+              </div>
+            </section>
+
+            <div class="decision-bar" id="decision-bar" hidden>
+              <div>
+                <span>Like this direction?</span>
+                <small>Accept it into your manuscript, or discard it and try again.</small>
+              </div>
+              <div>
+                <button class="ghost-button" id="reject-edit" type="button" disabled>Discard</button>
+                <button class="accept-button" id="accept-edit" type="button" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+                  Use this revision
+                </button>
+              </div>
+            </div>
+
+            <details class="versions" id="versions-panel">
+              <summary>
+                <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6M12 7v5l3 2"/></svg> Revision history</span>
+                <b id="version-count">0</b>
+              </summary>
+              <div id="version-list"></div>
+            </details>
+          </section>
+        </div>
       </section>
     </main>
+  </div>
+
+  <dialog class="studio-dialog upload-dialog" id="upload-dialog">
+    <form id="upload-form" method="dialog">
+      <div class="dialog-head">
+        <div>
+          <span class="overline">Start a new project</span>
+          <h2>Bring in your manuscript</h2>
+          <p>Tell the editor what you want first. It can transform the whole manuscript, or preserve it and strengthen the prose.</p>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-close-dialog aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <label class="title-field">
+        <span>Project title <small>Optional</small></span>
+        <input id="title-input" name="title" placeholder="The name of your story" autocomplete="off">
+      </label>
+
+      <label class="intent-field">
+        <span>What would you like the editor to do? <small>Required</small></span>
+        <textarea id="intent-input" name="intent" rows="4" required placeholder="Example: Turn this into a cinematic Star Trek episode, keeping the emotional core but aligning the world, stakes, and character arcs with Star Trek."></textarea>
+        <small class="field-hint">You can ask for a transformation, a bestselling-novel pass, a faithful deep edit, or anything in between. The editor will decide how to break up a long manuscript.</small>
+      </label>
+
+      <label class="file-drop" id="file-drop">
+        <input id="file-input" name="manuscript" type="file" accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
+        <span class="drop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v5h14v-5"/></svg></span>
+        <strong id="file-prompt">Drop your manuscript here</strong>
+        <span id="file-detail">or click to choose a TXT, DOCX, or PDF</span>
+        <small>Maximum file size: 80 MB</small>
+      </label>
+
+      <div class="dialog-status" id="upload-status" role="status"></div>
+      <div class="dialog-actions">
+        <button class="ghost-button" type="button" data-close-dialog>Cancel</button>
+        <button class="primary-button" id="upload-submit" type="submit">Import manuscript</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="studio-dialog bible-dialog" id="bible-dialog">
+    <form method="dialog">
+      <div class="dialog-head">
+        <div>
+          <span class="overline">Continuity compass</span>
+          <h2>Your Story Bible</h2>
+          <p>Give the editor the truths it should protect across every revision. One note per line works best.</p>
+        </div>
+        <button class="icon-button dialog-close" type="button" data-close-dialog aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="bible-grid">
+        <label><span><b aria-hidden="true">C</b>Characters</span><textarea id="bible-characters" rows="5" placeholder="Mara — detective, avoids conflict with her sister"></textarea></label>
+        <label><span><b aria-hidden="true">S</b>Settings</span><textarea id="bible-settings" rows="5" placeholder="The Ash Hotel — faded seaside hotel, no working elevator"></textarea></label>
+        <label><span><b aria-hidden="true">T</b>Timeline</span><textarea id="bible-timeline" rows="5" placeholder="Thursday evening — storm begins"></textarea></label>
+        <label><span><b aria-hidden="true">P</b>Plot threads</span><textarea id="bible-plot" rows="5" placeholder="The missing room key has not been explained"></textarea></label>
+        <label><span><b aria-hidden="true">V</b>Voice &amp; style</span><textarea id="bible-tone" rows="5" placeholder="Close third-person; spare prose; dry humor"></textarea></label>
+        <label><span><b aria-hidden="true">!</b>Continuity notes</span><textarea id="bible-continuity" rows="5" placeholder="Mara hurt her left hand in chapter two"></textarea></label>
+      </div>
+
+      <div class="dialog-actions bible-actions">
+        <span id="bible-save-state">All notes are up to date.</span>
+        <button class="primary-button" id="save-bible" type="button">Save Story Bible</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span class="toast-icon" aria-hidden="true">✓</span>
+    <p id="toast-message"></p>
+    <button type="button" id="toast-close" aria-label="Dismiss notification">×</button>
   </div>
 </body>
 </html>
