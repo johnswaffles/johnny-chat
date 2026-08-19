@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-interaction1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-unitpass1';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-interaction1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-unitpass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -25,6 +25,21 @@ const UNIT_REPATH_COOLDOWN = 0.42;
 const UNIT_STATIC_CLEARANCE = 0.06;
 const SIMULATION_STEP = 1 / 60;
 const MAX_SIMULATION_STEPS = 8;
+
+export function resourceFootprint(nodeOrType) {
+  const type = typeof nodeOrType === 'string' ? nodeOrType : nodeOrType?.type;
+  const tier = typeof nodeOrType === 'object' ? nodeOrType?.sizeTier ?? 'small' : 'small';
+  return (RESOURCE_FOOTPRINTS[type] ?? 0.8) * (RESOURCE_SIZE_TIERS[tier]?.footprintScale ?? 1);
+}
+
+function resourceInteractionDistance(node, unitType = 'villager') {
+  const base = RESOURCE_TYPES[node.resourceType]?.interactionDistance ?? 1.7;
+  const unitRadius = UNIT_TYPES[unitType]?.radius ?? 0.36;
+  // The worker must be allowed to reach the ring without being pushed back
+  // by the same footprint used by collision. This matters most for groves and
+  // large deposits, whose authored silhouettes are intentionally broad.
+  return Math.max(base, resourceFootprint(node) + unitRadius + UNIT_STATIC_CLEARANCE + 0.12);
+}
 
 const FACING_VECTORS = [
   { x: 1, z: 1 },
@@ -139,30 +154,30 @@ export class CrownforgeSimulation {
     // north-west coordinates put both trees behind the Hall's tall sprite in
     // projected depth, making the starting wood look absent even though it
     // remained mechanically targetable.
-    this.addResource('tree', 'wood', 11.5, 45.5, 110, 0);
-    this.addResource('tree', 'wood', 15.2, 48.2, 110, 1);
-    this.addResource('tree', 'wood', 10.8, 39.2, 110, 2);
-    this.addResource('tree', 'wood', 61, 56, 110, 3);
-    this.addResource('tree', 'wood', 78, 58, 110, 1);
-    this.addResource('grove', 'wood', 14.5, 58, 480, 0);
-    this.addResource('grove', 'wood', 67, 59, 420, 1);
-    this.addResource('tree', 'wood', 20, 61, 135, 2);
-    this.addResource('tree', 'wood', 25, 64, 135, 0);
-    this.addResource('tree', 'wood', 33, 61, 135, 3);
-    this.addResource('berry', 'food', 35.5, 28.5, 105, 0);
-    this.addResource('berry', 'food', 41.5, 40.5, 105, 1);
-    this.addResource('berry', 'food', 57, 30, 105, 2);
-    this.addResource('berry', 'food', 82, 41, 105, 0);
+    this.addResource('tree', 'wood', 11.5, 45.5, 180, 0, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 15.2, 48.2, 180, 1, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 10.8, 39.2, 260, 2, { sizeTier: 'medium' });
+    this.addResource('tree', 'wood', 61, 56, 420, 3, { sizeTier: 'medium' });
+    this.addResource('tree', 'wood', 78, 58, 700, 1, { sizeTier: 'large' });
+    this.addResource('grove', 'wood', 14.5, 58, 480, 0, { sizeTier: 'small' });
+    this.addResource('grove', 'wood', 67, 59, 1100, 1, { sizeTier: 'large' });
+    this.addResource('tree', 'wood', 20, 61, 180, 2, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 25, 64, 260, 0, { sizeTier: 'medium' });
+    this.addResource('tree', 'wood', 33, 61, 180, 3, { sizeTier: 'small' });
+    this.addResource('berry', 'food', 35.5, 28.5, 105, 0, { sizeTier: 'small' });
+    this.addResource('berry', 'food', 41.5, 40.5, 105, 1, { sizeTier: 'small' });
+    this.addResource('berry', 'food', 57, 30, 105, 2, { sizeTier: 'small' });
+    this.addResource('berry', 'food', 82, 41, 105, 0, { sizeTier: 'small' });
     // Large working plots need breathing room so their silhouettes do not
     // stack into one another at the opening zoom.
-    this.addResource('grain', 'food', 44, 18, 220, 0);
-    this.addResource('grain', 'food', 60, 20, 220, 0);
-    this.addResource('grain', 'food', 55, 35, 220, 0);
-    this.addResource('stone', 'stone', 49, 50, 120, 0);
-    this.addResource('stone', 'stone', 54, 53, 120, 3);
-    this.addResource('stone', 'stone', 76, 55, 120, 2);
-    this.addResource('stone', 'stone', 72, 64, 180, 1);
-    this.addResource('stone', 'stone', 84, 61, 180, 0);
+    this.addResource('grain', 'food', 44, 18, 220, 0, { sizeTier: 'small' });
+    this.addResource('grain', 'food', 60, 20, 220, 0, { sizeTier: 'small' });
+    this.addResource('grain', 'food', 55, 35, 220, 0, { sizeTier: 'small' });
+    this.addResource('stone', 'stone', 49, 50, 120, 0, { sizeTier: 'small' });
+    this.addResource('stone', 'stone', 54, 53, 360, 3, { sizeTier: 'medium' });
+    this.addResource('stone', 'stone', 76, 55, 900, 2, { sizeTier: 'large' });
+    this.addResource('stone', 'stone', 72, 64, 360, 1, { sizeTier: 'medium' });
+    this.addResource('stone', 'stone', 84, 61, 900, 0, { sizeTier: 'large' });
     this.addDecoration('log', 18, 24, 0, 0.9);
     this.addDecoration('stump', 8.4, 52, 1, 0.85);
     this.addDecoration('flowers', 43, 20, 2, 0.72);
@@ -294,7 +309,7 @@ export class CrownforgeSimulation {
     return unit;
   }
 
-  addResource(type, resourceType, x, z, amount, variant = 0) {
+  addResource(type, resourceType, x, z, amount, variant = 0, options = {}) {
     this.resourcesNodes.push({
       id: this.nextId++,
       kind: 'resource',
@@ -305,6 +320,7 @@ export class CrownforgeSimulation {
       amount,
       maxAmount: amount,
       variant,
+      sizeTier: options.sizeTier ?? 'small',
       depleted: false,
       reservedSlots: new Map(),
     });
@@ -803,7 +819,7 @@ export class CrownforgeSimulation {
       return;
     }
     const resourceInfo = RESOURCE_TYPES[node.resourceType];
-    const interactionDistance = resourceInfo.interactionDistance ?? 1.7;
+    const interactionDistance = resourceInteractionDistance(node, unit.type);
     if (unit.carryAmount > 0) {
       this._beginReturn(unit);
       return;
@@ -960,10 +976,10 @@ export class CrownforgeSimulation {
     return this.buildings.find((building) => building.id === unit.returnStorageId && !building.destroyed && building.progress >= 1 && building.faction === 'player' && BUILDING_TYPES[building.type].storage) ?? null;
   }
 
-  _resourceInteractionPoint(node, slot) {
+  _resourceInteractionPoint(node, slot, unitType = 'villager') {
     const info = RESOURCE_TYPES[node.resourceType];
     const angle = -Math.PI / 2 + (slot % RESOURCE_SLOT_COUNT) * (TAU / RESOURCE_SLOT_COUNT);
-    const reach = info.interactionDistance ?? 1.7;
+    const reach = resourceInteractionDistance(node, unitType);
     return {
       x: clamp(node.x + Math.cos(angle) * reach, 0.55, CONFIG.mapWidth - 0.55),
       z: clamp(node.z + Math.sin(angle) * reach, 0.55, CONFIG.mapHeight - 0.55),
@@ -1040,7 +1056,7 @@ export class CrownforgeSimulation {
   }
 
   _resourceBlocksPoint(point, node, padding = 0) {
-    const footprint = RESOURCE_FOOTPRINTS[node.type] ?? 0.8;
+    const footprint = resourceFootprint(node);
     return distance(point, node) < footprint + padding;
   }
 
@@ -1054,7 +1070,7 @@ export class CrownforgeSimulation {
   _cellIntersectsResource(cellX, cellZ, node, padding = 0) {
     const closestX = clamp(node.x, cellX, cellX + 1);
     const closestZ = clamp(node.z, cellZ, cellZ + 1);
-    return Math.hypot(node.x - closestX, node.z - closestZ) < (RESOURCE_FOOTPRINTS[node.type] ?? 0.8) + padding;
+    return Math.hypot(node.x - closestX, node.z - closestZ) < resourceFootprint(node) + padding;
   }
 
   _isPathCellBlocked(unit, cellX, cellZ, placement = null, allowedPoint = null) {
@@ -1220,7 +1236,7 @@ export class CrownforgeSimulation {
     const candidateSlots = freeSlots.length ? freeSlots : orderedSlots;
     let route = null;
     for (const slot of candidateSlots) {
-      const point = this._resourceInteractionPoint(node, slot);
+      const point = this._resourceInteractionPoint(node, slot, unit.type);
       const path = this._buildPath(unit, point);
       if (!path) continue;
       // Prefer the screen-front half of a resource ring. The rear slots are
@@ -1244,7 +1260,7 @@ export class CrownforgeSimulation {
     this._reserveResourceSlot(unit, node, route.slot);
     unit.path = route.path;
     unit.routeTarget = route.point;
-    unit.stopDistance = RESOURCE_TYPES[node.resourceType].interactionDistance ?? 1.7;
+    unit.stopDistance = resourceInteractionDistance(node, unit.type);
     unit.pathBlocked = false;
     unit.command = 'gather';
     unit.actionLabel = `Walking to ${RESOURCE_TYPES[node.resourceType].label.toLowerCase()}`;
@@ -1833,7 +1849,7 @@ export class CrownforgeSimulation {
     }
     for (const node of this.resourcesNodes) {
       if (node.amount <= 0) continue;
-      const safeDistance = (RESOURCE_FOOTPRINTS[node.type] ?? 0.8) + radius;
+      const safeDistance = resourceFootprint(node) + radius;
       const dx = unit.x - node.x;
       const dz = unit.z - node.z;
       const length = Math.hypot(dx, dz);
@@ -1907,7 +1923,7 @@ export class CrownforgeSimulation {
       .sort((a, b) => this._distanceToBuildingEdge(point, a) - this._distanceToBuildingEdge(point, b))[0];
     if (buildingHit) return buildingHit;
     return this.resourcesNodes
-      .filter((node) => node.amount > 0 && distance(point, node) <= (RESOURCE_FOOTPRINTS[node.type] ?? radius))
+      .filter((node) => node.amount > 0 && distance(point, node) <= resourceFootprint(node))
       .sort((a, b) => distance(point, a) - distance(point, b))[0] ?? null;
   }
 
@@ -1948,14 +1964,14 @@ export class CrownforgeSimulation {
     this.lastCommand = this.selectedIds.length ? `${this.selectedIds.length} Crownwarden${this.selectedIds.length === 1 ? '' : 's'} selected.` : 'No Crownwardens in that box.';
   }
 
-  issueContextCommand(point) {
+  issueContextCommand(point, forcedTarget = null) {
     const units = this.units.filter((unit) => this.selectedIds.includes(unit.id) && unit.faction === 'player' && !unit.dead);
     if (!units.length) {
       this.lastCommand = 'Select a villager or Crown Guard first.';
       this._announce(this.lastCommand);
       return { kind: 'none', success: false };
     }
-    const target = this.getEntityAt(point);
+    const target = forcedTarget ?? this.getEntityAt(point);
     if (target?.kind === 'resource') {
       const workers = units.filter((unit) => unit.type === 'villager');
       if (!workers.length) {
@@ -2333,7 +2349,7 @@ export class CrownforgeSimulation {
     if (this.buildings.some((building) => !building.destroyed && this._boundsOverlap(bounds, this._buildingEntityBounds(building, 0)))) {
       return { valid: false, reason: 'Another structure is in the way.' };
     }
-    if (this.resourcesNodes.some((node) => this._circleIntersectsBounds(node, RESOURCE_FOOTPRINTS[node.type] ?? 0.8, bounds))) {
+    if (this.resourcesNodes.some((node) => this._circleIntersectsBounds(node, resourceFootprint(node), bounds))) {
       return { valid: false, reason: 'Clear the resource before building here.' };
     }
     if (this.decorations.some((decoration) => this._circleIntersectsBounds(decoration, DECORATION_FOOTPRINTS[decoration.type] ?? 0.45, bounds))) {

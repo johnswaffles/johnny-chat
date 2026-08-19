@@ -79,6 +79,7 @@ function runGathering(step) {
   return {
     wood: simulation.resources.wood,
     remaining: tree.amount,
+    maxAmount: tree.maxAmount,
     carry: villager.carryAmount,
     command: villager.command,
   };
@@ -88,7 +89,7 @@ function checkGathering() {
   const at60 = runGathering(STEP_60HZ);
   const at20 = runGathering(STEP_20HZ);
   assert.ok(at60.wood > INITIAL_RESOURCES.wood, '60 Hz gathering deposits wood');
-  assert.ok(at60.remaining < 110, '60 Hz gathering consumes the node');
+  assert.ok(at60.remaining < at60.maxAmount, '60 Hz gathering consumes the node');
   assert.deepEqual(at20, at60, '20 Hz and 60 Hz gathering converge');
 
   const simulation = freshSimulation();

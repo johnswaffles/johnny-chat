@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-interaction1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-unitpass1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -82,9 +82,10 @@ export const ANIMATION_DEFINITIONS = {
     },
     clips: {
       idle: singleFrame('motion', VILLAGER_ATLASES.motion.rows.idle),
-      // The generated villager sheet was authored back, right, front, left;
-      // map it into Crownforge's shared front, right, back, left contract.
-      walk: directionalLoop('motionLoop', { fps: 7.2, directionRows: [2, 1, 0, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
+      // v3 is authored in the shared Crownforge direction contract: front,
+      // right profile, back, left profile. Keeping the mapping explicit here
+      // prevents a future sheet from silently making villagers walk backward.
+      walk: directionalLoop('motionLoop', { fps: 7.2, directionRows: [0, 1, 2, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
       gather_wood: actionLoop('woodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_food: actionLoop('foodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_stone: actionLoop('stoneLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),

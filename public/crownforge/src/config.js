@@ -67,6 +67,16 @@ export const RESOURCE_TYPES = {
   stone: { label: 'Stone', color: '#9fa8ab', capacity: 9999, gatherAmount: 10, gatherTime: 1.2, interactionDistance: 1.7 },
 };
 
+// Resource size is data, not a one-off art trick. Every future material (for
+// example metal) can opt into the same readable small/medium/large contract:
+// larger silhouettes have a larger interaction footprint and a longer working
+// life while bushes and other small food sources retain their normal scale.
+export const RESOURCE_SIZE_TIERS = {
+  small: { label: 'Small', renderScale: 1, capacityScale: 1, footprintScale: 1 },
+  medium: { label: 'Medium', renderScale: 1.42, capacityScale: 2.2, footprintScale: 1.42 },
+  large: { label: 'Large', renderScale: 2.05, capacityScale: 5, footprintScale: 2.05 },
+};
+
 export const UNIT_TYPES = {
   villager: {
     label: 'Villager',
@@ -140,8 +150,8 @@ export const BUILDING_TYPES = {
     asset: 'townCenter',
     maxHp: 900,
     footprint: { width: 6, height: 5 },
-    renderSize: 440,
-    collisionClearance: 1.25,
+    renderSize: 640,
+    collisionClearance: 1.5,
     entrance: 'south',
     completed: true,
     storage: true,
@@ -167,8 +177,8 @@ export const BUILDING_TYPES = {
     asset: 'barracks',
     maxHp: 480,
     footprint: { width: 5, height: 4 },
-    renderSize: 310,
-    collisionClearance: 1.12,
+    renderSize: 540,
+    collisionClearance: 1.38,
     entrance: 'south',
     buildTime: 10,
     cost: { food: 0, wood: 90, stone: 40 },
@@ -301,13 +311,20 @@ export const TREE_GROVE_ATLAS = {
   rows: 2,
 };
 
+export const LARGE_STONE_ASSET = {
+  src: './assets/crownforge-stone-deposit-large-v1.png?v=20260819-unitpass1',
+  width: 1536,
+  height: 1024,
+};
+
 export const FIRST_AGE_ASSETS = {
-  barracks: { src: './assets/crownforge-barracks-v2.png?v=20260819-interaction1', width: 1536, height: 1024 },
+  townCenter: { src: './assets/crownforge-crown-hall-v2.png?v=20260819-unitpass1', width: 1536, height: 1024 },
+  barracks: { src: './assets/crownforge-barracks-v3.png?v=20260819-unitpass1', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   field: { src: './assets/crownforge-field-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
-  wall: { src: './assets/crownforge-palisade-segment-v2.png?v=20260819-interaction1', width: 1536, height: 1024 },
+  wall: { src: './assets/crownforge-palisade-segment-v2.png?v=20260819-unitpass1', width: 1536, height: 1024 },
 };
 
 export const ROAD_DETAILS_ATLAS = {
@@ -344,9 +361,9 @@ export const VILLAGER_ATLASES = {
     rows: { idle: 0, walk: [1, 2, 3] },
   },
   motionLoop: {
-    src: './assets/crownforge-villager-walk-loop-v2.png?v=20260819-interaction1',
-    width: 1224,
-    height: 1285,
+    src: './assets/crownforge-villager-walk-loop-v3.png?v=20260819-unitpass1',
+    width: 1234,
+    height: 1275,
     columns: 4,
     rows: 4,
     layout: 'frame-columns',
@@ -454,9 +471,9 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
   },
   soldierWalk: {
-    src: './assets/crownforge-soldier-walk-loop-v2.png?v=20260819-interaction1',
-    width: 1254,
-    height: 1254,
+    src: './assets/crownforge-soldier-walk-loop-v3.png?v=20260819-unitpass1',
+    width: 1224,
+    height: 1285,
     columns: 4,
     rows: 4,
     layout: 'frame-columns',
@@ -470,7 +487,7 @@ export const COMBAT_ATLASES = {
     rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
   },
   raiderAttack: {
-    src: './assets/crownforge-raider-attack-loop-v4.png?v=20260819-interaction1',
+    src: './assets/crownforge-raider-attack-loop-v4.png?v=20260819-unitpass1',
     width: 1254,
     height: 1254,
     columns: 4,
@@ -478,7 +495,7 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
   },
   raiderWalk: {
-    src: './assets/crownforge-raider-walk-loop-v2.png?v=20260819-interaction1',
+    src: './assets/crownforge-raider-walk-loop-v2.png?v=20260819-unitpass1',
     width: 1254,
     height: 1254,
     columns: 4,

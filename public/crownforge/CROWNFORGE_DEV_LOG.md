@@ -1606,3 +1606,60 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add new civilizations, ages, technologies, campaigns, advanced military classes, water systems, wall types, gates, towers, or large new resource/building families before this interaction pass remains stable in the deployed slice.
+
+## UNIT / BUILDING / RESOURCE ART QUALITY PASS — 2026-08-19
+
+### WHAT EXISTS
+
+- The first-age sandbox remains content-constrained, but the unit-art and resource presentation now use a reusable production playbook. Crown Hall and Crown Barracks are visually substantial settlement anchors while human unit scale remains unchanged.
+- Wood and stone nodes now carry explicit small, medium, or large tiers. Tier data controls visual scale and collision/interaction footprint; the existing four-stage grove atlas still supplies readable depletion stages.
+
+### WHAT WAS COMPLETED
+
+- Added `CROWNFORGE_ART_PRODUCTION_PLAYBOOK.md` as the repeatable standard for generating, registering, aligning, testing, mirroring, and deploying future Crownforge units, buildings, resources, and animation sheets. It documents the four-row direction contract, passing-frame requirement, fixed feet/shadow baseline, transparency gate, resource-tier contract, and common failure repairs.
+- Replaced the Crown Guard walk loop with an authored four-direction, four-phase sheet whose left/right rows include a readable passing-leg phase. Registered the new dimensions and cache marker.
+- Replaced the villager walk loop with a sheet authored directly in Crownforge's shared front/right/back/left row order. Removed the old back/right/front/left remap that made villagers appear to walk backward.
+- Enlarged the Crown Hall and Crown Barracks presentation with new original transparent cutouts. Buildings are now visually much more impressive without enlarging villagers; their collision clearances were raised to preserve believable approaches around the larger silhouettes.
+- Added a generated large stone deposit cutout and wired it to the large stone tier. Small and medium deposits retain the environment family while large deposits have a distinct, readable silhouette.
+- Made individual trees and groves meaningfully larger than bushes. Seeded small, medium, and large wood/stone examples with capacities that make the larger nodes take longer to deplete. Berry bushes remain at their compact authored scale.
+- Fixed the grove gathering deadlock. Resource collision and worker interaction now derive from the same tier-aware footprint, so villagers stop outside a grove and can actually harvest it.
+- Updated the cache identity to `20260819-unitpass1` for this pass.
+
+### ASSETS CREATED
+
+- `assets/crownforge-crown-hall-v2.png`
+- `assets/crownforge-barracks-v3.png`
+- `assets/crownforge-soldier-walk-loop-v3.png`
+- `assets/crownforge-villager-walk-loop-v3.png`
+- `assets/crownforge-stone-deposit-large-v1.png`
+
+The existing true-alpha `assets/villager-carry-food-loop-v1.png` remains registered. A generated carry-food replacement was rejected because its edited output baked a checkerboard into an RGB image; the playbook records this as an explicit pending asset rather than shipping it.
+
+### SYSTEMS CREATED / UPDATED
+
+- `src/config.js` — tier definitions, dedicated Crown Hall/Barracks/large-stone asset definitions, enlarged building presentation, and new unit atlas metadata.
+- `src/animation.js` — direct villager direction-row contract and stable four-way animation mapping.
+- `src/simulation.js` — tier-aware resource footprints, interaction distances, seeded node tiers/capacities, and grove-safe gathering routes.
+- `src/renderer.js` — tier-scaled resource art, dedicated large-stone rendering, dynamic occlusion clearance, and cache identity.
+- `CROWNFORGE_ART_PRODUCTION_PLAYBOOK.md` — reusable future-art workflow and QA gate.
+
+### VERIFIED
+
+- Generated art was visually inspected before registration. The Crown Hall, Barracks, Crown Guard, villager, and large-stone files are RGBA assets; the rejected carry-food output was not used.
+- Direct source checks and browser visual QA remain required before the pass is considered deployed. The next verification must specifically exercise horizontal Crown Guard walking, all villager directions, food carrying, large-grove gathering, large-stone selection, and enlarged-building path clearance.
+
+### KNOWN ISSUES
+
+- The food-carry state still uses the prior approved true-alpha sheet until a replacement passes the transparency gate. Its headless/shrinking symptom must be rechecked in the browser after the new walk/config cache marker is loaded.
+- Construction still uses the existing shared stage treatment for the newly enlarged Barracks rather than a new bespoke four-stage Barracks sheet. This is a polish follow-up, not a new gameplay system.
+- Large trees/groves and large stone deposits intentionally occupy more pathfinding space. If a specific seeded route becomes awkward, adjust the node location or interaction ring rather than weakening the tier footprint.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Browser-test the new directional sheets and carry-food state at normal and zoomed-in camera scales, including mid-route retasking and deposit.
+2. Review the enlarged Crown Hall/Barracks silhouette against nearby trees and buildings for final depth/clearance tuning.
+3. If carry-food remains visibly cropped, create a true-alpha replacement and validate each of its 16 cells before registration.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add new civilizations, ages, technologies, campaigns, formations, advanced combat classes, metal economy, or a large new asset catalog. Future content should first follow `CROWNFORGE_ART_PRODUCTION_PLAYBOOK.md` and meet the existing vertical-slice quality bar.

@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260819-interaction1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260819-interaction1';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260819-unitpass1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260819-unitpass1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -97,6 +97,7 @@ export class CrownforgeRenderer {
     this.environmentReady = false;
     this.buildingStagesReady = false;
     this.treeGroveReady = false;
+    this.largeStoneReady = false;
     this.firstAgeAssetReady = {};
     this.enemyCampReady = false;
     this.villagerAtlases = {};
@@ -116,10 +117,12 @@ export class CrownforgeRenderer {
     this.environmentAtlas = new Image();
     this.buildingStages = new Image();
     this.treeGroveAtlas = new Image();
+    this.largeStone = new Image();
     this.enemyCamp = new Image();
     this.environmentAtlas.addEventListener('load', () => { this.environmentReady = true; });
     this.buildingStages.addEventListener('load', () => { this.buildingStagesReady = true; });
     this.treeGroveAtlas.addEventListener('load', () => { this.treeGroveReady = true; });
+    this.largeStone.addEventListener('load', () => { this.largeStoneReady = true; });
     this.enemyCamp.addEventListener('load', () => { this.enemyCampReady = true; });
     this.atlas.src = './assets/crownforge-asset-atlas.png';
     this.meadow.src = './assets/crownforge-grass-tile-v1.png?v=20260818-roads2';
@@ -128,6 +131,7 @@ export class CrownforgeRenderer {
     this.environmentAtlas.src = ENVIRONMENT_ATLAS.src;
     this.buildingStages.src = BUILDING_STAGE_ATLAS.src;
     this.treeGroveAtlas.src = TREE_GROVE_ATLAS.src;
+    this.largeStone.src = LARGE_STONE_ASSET.src;
     this.enemyCamp.src = ENEMY_CAMP_ASSET.src;
     this.firstAgeAssets = {};
     for (const [key, definition] of Object.entries(FIRST_AGE_ASSETS)) {
@@ -604,7 +608,8 @@ export class CrownforgeRenderer {
       });
       const hiddenByResource = simulation.resourcesNodes.find((node) => {
         if (!['tree', 'grove', 'berry', 'grain', 'stone'].includes(node.type) || node.amount <= 0) return false;
-        const clearance = node.type === 'berry' || node.type === 'grain' ? 1.55 : node.type === 'stone' ? 1.7 : node.type === 'grove' ? 2.6 : 1.9;
+        const tierScale = RESOURCE_SIZE_TIERS[node.sizeTier ?? 'small']?.footprintScale ?? 1;
+        const clearance = node.type === 'berry' || node.type === 'grain' ? 1.55 : node.type === 'stone' ? 1.7 * tierScale : node.type === 'grove' ? 2.6 * tierScale : 1.9 * tierScale;
         if (node.type === 'grain') return false;
         return Math.hypot(unit.x - node.x, unit.z - node.z) < clearance
           && unit.x + unit.z < node.x + node.z - 0.04;
@@ -670,7 +675,21 @@ export class CrownforgeRenderer {
       })
       .filter(Boolean)
       .sort((a, b) => a.distance - b.distance)[0]?.building;
-    return buildingHit ?? simulation.getEntityAt(world);
+    if (buildingHit) return buildingHit;
+    const resourceHit = simulation.resourcesNodes
+      .filter((resource) => resource.amount > 0)
+      .map((resource) => {
+        const anchor = this.worldToScreen(resource);
+        const tier = RESOURCE_SIZE_TIERS[resource.sizeTier ?? 'small'] ?? RESOURCE_SIZE_TIERS.small;
+        const baseSize = resource.type === 'grove' ? 252 : resource.type === 'grain' ? 360 : resource.type === 'tree' ? 174 : resource.type === 'berry' ? 115 : 132;
+        const size = (resource.type === 'berry' || resource.type === 'grain' ? baseSize : baseSize * tier.renderScale) * this.camera.zoom;
+        const withinX = Math.abs(point.x - anchor.x) <= Math.max(24, size * (resource.type === 'grain' ? 0.58 : 0.5));
+        const withinY = point.y >= anchor.y - size * 1.08 && point.y <= anchor.y + size * 0.14;
+        return withinX && withinY ? { resource, distance: Math.hypot(point.x - anchor.x, point.y - (anchor.y - size * 0.46)) } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.distance - b.distance)[0]?.resource;
+    return resourceHit ?? simulation.getEntityAt(world);
   }
 
   drawAtlasCell(ctx, image, ready, atlas, column, row, screen, size, alpha = 1, yOffset = 0) {
@@ -1055,7 +1074,12 @@ export class CrownforgeRenderer {
 
   drawResource(ctx, resource, time) {
     const point = this.worldToScreen(resource);
-    const size = resource.type === 'grove' ? 212 : resource.type === 'grain' ? 360 : resource.type === 'tree' ? 142 : resource.type === 'berry' ? 115 : 126;
+    const tier = RESOURCE_SIZE_TIERS[resource.sizeTier ?? 'small'] ?? RESOURCE_SIZE_TIERS.small;
+    // Bushes keep their compact authored scale. Trees, groves, and stone use
+    // the tier contract so a player can read both footprint and remaining
+    // work at normal zoom without adding labels to the world.
+    const baseSize = resource.type === 'grove' ? 252 : resource.type === 'grain' ? 360 : resource.type === 'tree' ? 174 : resource.type === 'berry' ? 115 : 132;
+    const size = resource.type === 'berry' || resource.type === 'grain' ? baseSize : baseSize * tier.renderScale;
     const ratio = resource.maxAmount > 0 ? Math.max(0, Math.min(1, resource.amount / resource.maxAmount)) : 0;
     const depleted = resource.amount <= 0;
     if (resource.type === 'grove') {
@@ -1065,6 +1089,14 @@ export class CrownforgeRenderer {
       this.drawFirstAgeAsset(ctx, 'field', point, size * this.camera.zoom, depleted ? 0.3 : 0.9);
     } else if (depleted && resource.type === 'tree') {
       this.drawEnvironmentAsset(ctx, 'stump', 1, point, size * 0.72 * this.camera.zoom, 0.94);
+    } else if (resource.type === 'stone' && resource.sizeTier === 'large' && !depleted && this.largeStoneReady) {
+      const width = size * this.camera.zoom;
+      const height = width * (LARGE_STONE_ASSET.height / LARGE_STONE_ASSET.width);
+      ctx.save();
+      ctx.globalAlpha = 0.86 + ratio * 0.14;
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(this.largeStone, point.x - width / 2, point.y - height * 0.98, width, height);
+      ctx.restore();
     } else if (depleted && resource.type === 'stone') {
       this.drawEnvironmentAsset(ctx, 'pebbles', 3, point, size * 0.7 * this.camera.zoom, 0.76);
     } else {

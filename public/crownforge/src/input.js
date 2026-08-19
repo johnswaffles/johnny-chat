@@ -197,7 +197,11 @@ export class CrownforgeInput {
     }
     if (event.button === 2) {
       const world = this.renderer.screenToWorld(point);
-      const result = this.simulation.issueContextCommand(world);
+      // Use the same forgiving visible-silhouette hit test as selection so a
+      // click on a tree canopy, berry bush, or large stone deposit commands
+      // the node itself rather than falling through to a plain move order.
+      const visualTarget = this.renderer.getEntityAtScreen?.(this.simulation, point);
+      const result = this.simulation.issueContextCommand(world, visualTarget);
       if (result.kind !== 'none') this.renderer.addRipple(world, result.kind === 'attack' ? '#d86b55' : '#86c4cf');
       this.onCommand(result);
       this._updateCursor(point);
