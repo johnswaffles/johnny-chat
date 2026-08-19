@@ -102,7 +102,8 @@
   const SOUNDTRACKS = {
     cozy: { src: "/home/cozy-builder-theme.mp3", label: "Johnny's Cozy Theme" },
     "dreamy-clouds": { src: "/tetris/audio/dreamy-clouds.mp3", label: "Dreamy Clouds" },
-    "neon-dreams": { src: "/tetris/audio/neon-dreams.mp3", label: "Neon Dreams" }
+    "neon-dreams": { src: "/tetris/audio/neon-dreams.mp3", label: "Neon Dreams" },
+    "whimsical-waltz": { src: "/tetris/audio/whimsical-waltz.mp3", label: "Whimsical Waltz" }
   };
   const SOUNDTRACK_STORAGE_KEY = "johnny-tetris-soundtrack";
   const MAX_SECOND_CHANCES = 4;
