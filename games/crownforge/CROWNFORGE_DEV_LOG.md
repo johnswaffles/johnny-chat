@@ -1476,6 +1476,7 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 
 - Removed the authored road network from the opening first-age map. The main settlement road, village lanes, footpaths, plazas, road wear marks, and roadside props no longer render when a new match starts.
 - Added `CONFIG.startingRoads`, a clear first-age switch that keeps the road renderer and its authored data available for a later-age buildable-road feature without changing current pathfinding, collision, or unit movement.
+- Bumped the first-age module URLs to the `roadsfree1` cache version so deployed browsers load the road-free renderer immediately instead of retaining the prior road-enabled JavaScript bundle.
 - Kept the natural meadow, terrain details, buildings, resources, and existing simulation routes unchanged. This pass changes only the initial visual presentation.
 
 ### VERIFIED
