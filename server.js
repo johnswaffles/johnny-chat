@@ -26,6 +26,8 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_GPT54_REASONING_EFFORT = "",
+  OPENAI_STORY_EDITOR_MODEL = "gpt-5.6-luna",
+  OPENAI_STORY_EDITOR_REASONING_EFFORT = "high",
   OPENAI_TEXTSMITH_MODEL = "gpt-5.6-luna",
   OPENAI_TEXTSMITH_FALLBACK_MODEL = "gpt-5.5",
   OPENAI_REALTIME_SEARCH_MODEL = "",
@@ -38,6 +40,8 @@ const {
   OPENAI_TRANSCRIBE_MODEL = "gpt-transcribe",
   OPENAI_MORROW_TRANSCRIBE_MODEL = "",
   MAX_UPLOAD_MB = "40",
+  STORY_EDITOR_MAX_UPLOAD_MB = "80",
+  STORY_EDITOR_MAX_TEXT_MB = "80",
   CORS_ORIGIN = "",
   CONTACT_TO_EMAIL = "",
   CONTACT_TO_EMAIL_AI = "",
@@ -67,6 +71,10 @@ const REALTIME_SEARCH_MODEL = OPENAI_REALTIME_SEARCH_MODEL || OPENAI_GPT54_MODEL
 const MORROW_VISION_MODEL = OPENAI_MORROW_VISION_MODEL || OPENAI_GPT54_MODEL || "gpt-5.6-sol";
 const MORROW_TRANSCRIBE_MODEL = OPENAI_MORROW_TRANSCRIBE_MODEL || "gpt-transcribe";
 const MORROW_REALTIME_MODEL = "gpt-realtime-2.1-mini";
+const STORY_EDITOR_MODEL = OPENAI_STORY_EDITOR_MODEL || OPENAI_GPT54_MODEL || OPENAI_CHAT_MODEL;
+const STORY_EDITOR_REASONING_EFFORT = OPENAI_STORY_EDITOR_REASONING_EFFORT || "high";
+const STORY_EDITOR_UPLOAD_MB = Math.max(1, Number(STORY_EDITOR_MAX_UPLOAD_MB) || 80);
+const STORY_EDITOR_MAX_TEXT_CHARS = Math.max(1000000, (Number(STORY_EDITOR_MAX_TEXT_MB) || 80) * 1024 * 1024);
 
 const GSM7_BASIC_CHARS = new Set(Array.from(`@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ\u001bÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà`));
 const GSM7_EXTENDED_CHARS = new Set(["^", "{", "}", "\\", "[", "]", "~", "|", "€"]);
@@ -998,6 +1006,29 @@ function getRealtimeTools(profile = "ai") {
   if (profile === "morrow") {
     tools.push({
       type: "function",
+      name: "think_deep",
+      description: "Ask Morrow's private high-reasoning helper to work through a complex question, decision, contradiction, or explicit request to think deeply. This is a read-only handoff executed by the Morrow frontend: it does not change lists, memory, email, or any outside system. Pass the user's actual question or request and only the minimum relevant context. Never include passwords, credentials, exact addresses, or unrelated private memories.",
+      parameters: {
+        type: "object",
+        properties: {
+          request: {
+            type: "string",
+            description: "The user's complete standalone question or request for deeper reasoning, preserving their intent and constraints."
+          },
+          reason: {
+            type: "string",
+            description: "Optional short explanation of why deeper reasoning would help, such as an important decision, competing tradeoffs, a contradiction, or an explicit request to think hard."
+          },
+          context: {
+            type: "string",
+            description: "Optional brief context from the active conversation that is necessary to answer well. Include only relevant user-provided details and omit unrelated private memories or sensitive credentials."
+          }
+        },
+        required: ["request"]
+      }
+    });
+    tools.push({
+      type: "function",
       name: "recall_conversation",
       description: "Search the user's private saved Companion conversations when they refer to an older discussion, an ambiguous event, exact prior wording, or something not clearly present in the compact startup context. Use the most specific subject, person, event, date, or phrase available. This searches private Morrow memory, not the public web.",
       parameters: {
@@ -1037,48 +1068,8 @@ function getRealtimeTools(profile = "ai") {
     });
     tools.push({
       type: "function",
-      name: "manage_clockwise",
-      description: "Update Morrow's Clockwise workspace only when the user explicitly asks to log personal time, save a PO number/customer phone/work reference in Reference Radar, or set a callback/follow-up reminder. Resolve conversational references before calling. Do not use manage_list for these Clockwise records.",
-      parameters: {
-        type: "object",
-        properties: {
-          kind: {
-            type: "string",
-            enum: ["personal_time", "reference", "reminder"],
-            description: "The Clockwise record requested by the user."
-          },
-          durationMinutes: {
-            type: "number",
-            description: "Complete personal-time duration in minutes. Use zero for references and reminders."
-          },
-          occurredOn: {
-            type: "string",
-            description: "Personal-time calendar date as YYYY-MM-DD. Use an empty string when not applicable."
-          },
-          note: {
-            type: "string",
-            description: "Concise standalone context for the record, without inventing details."
-          },
-          reference: {
-            type: "string",
-            description: "Standalone PO number, customer phone number, customer/callback label, or other work reference. Use an empty string for personal time."
-          },
-          remindInMinutes: {
-            type: "number",
-            description: "Relative callback or follow-up delay in minutes. Use zero when the user did not request a timed reminder."
-          },
-          dueAt: {
-            type: "string",
-            description: "ISO 8601 reminder time for a specific clock-time request. Use an empty string for relative reminders or when not applicable."
-          }
-        },
-        required: ["kind", "durationMinutes", "occurredOn", "note", "reference", "remindInMinutes", "dueAt"]
-      }
-    });
-    tools.push({
-      type: "function",
       name: "forget_memory_topic",
-      description: "Control the user's private Companion memory when the user explicitly asks to forget or erase a subject, event, or past conversation. Always call preview first. Preview finds complete matching conversations and related Life Map memories. Call erase only after the user gives an explicit yes-or-no confirmation in a later turn. Never use this tool to remove an ordinary list item.",
+      description: "Control the user's private Companion memory when the user explicitly asks to forget or erase a subject, event, or past conversation. Always call preview first. Preview finds complete matching conversations, related Life Map memories, and durable executive threads. Call erase only after the user gives an explicit yes-or-no confirmation in a later turn. Never use this tool to remove an ordinary list item.",
       parameters: {
         type: "object",
         properties: {
@@ -1156,6 +1147,7 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Do not use search_web for ordinary personal sharing, emotional support, reflection, or merely to appear knowledgeable.
 - Create the narrowest query from the latest request. Never include Life Map memories, private names, exact locations, or unrelated personal context unless the user explicitly asks to search that specific information.
 - Before search_web, say one short natural preamble such as "Let me check that." After it returns, answer from the result, name useful sources conversationally, and do not read raw URLs aloud because links appear in the chat.
+- You have think_deep for a complex decision, contradiction, consequential question, difficult synthesis, or an explicit request to think deeply. Pass the user's complete request plus only the minimum relevant context, then answer naturally from the returned analysis. It is read-only and never replaces the confirmation rules for email, memory deletion, or list actions.
 - You start with an instant compact Companion brief and recent conversation continuity. When the user asks about an older discussion, exact prior wording, or an ambiguous “that thing the other day” that the compact context does not resolve, call recall_conversation with a focused private-memory query. Do not use public web search for private recall and do not guess.
 - If the latest audio is silence, background media, or speech not addressed to Morrow, remain silent and keep listening.`
     : `TOOLS:
@@ -1180,11 +1172,10 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Never ask “what comes up,” “how does that land,” “what feels present,” “what feels alive,” or “what would it look like” when a direct factual question can do the job.
 - The Life Map never becomes full. After every area has context, keep learning through the least-documented area, changed facts, names, routines, preferences, and specific follow-ups.
 - Begin from the supplied instant Companion brief without narrating that it loaded or delaying the greeting. If an earlier conversation is not clearly available in the compact continuity context, call recall_conversation and reconstruct it from the returned private archive.
+- Use think_deep when the user explicitly asks Morrow to think hard or when a consequential, multi-factor question would materially benefit from deeper analysis. Send the user's actual request and only necessary active-conversation context; never add unrelated Life Map details, credentials, or secrets. Treat the returned result as analysis to communicate naturally, not as permission to mutate data or take an external action.
 - When the user explicitly asks to add an idea or item to a list, or remove a particular saved item, call manage_list. Resolve conversational references into standalone itemText before calling. Never claim a list changed until the tool confirms it.
 - Do not call manage_list merely because the user shares an idea, mentions groceries, discusses a task, or asks what to do. Saving and removing require an explicit request.
-- When the user explicitly asks to log personal time, save a PO number or customer phone number in Reference Radar, or schedule a customer callback/follow-up, call manage_clockwise. Convert the full duration to minutes, preserve the work reference exactly, and resolve conversational words such as “them” or “that customer” from the active conversation before calling.
-- Reference Radar is a dedicated work list inside Clockwise. Use manage_clockwise—not manage_list—when a timed reminder, PO number, customer phone number, or callback is involved. Never claim Clockwise changed until the tool confirms it.
-- When the user asks to forget or erase a topic, event, or earlier conversation from Morrow's memory, call forget_memory_topic with action preview. Preserve whether the request means one particular dated conversation or every occurrence of the subject. This is semantic deletion of complete matching conversations and related Life Map facts, not a word search.
+- When the user asks to forget or erase a topic, event, or earlier conversation from Morrow's memory, call forget_memory_topic with action preview. Preserve whether the request means one particular dated conversation or every occurrence of the subject. This is semantic deletion of complete matching conversations, related Life Map facts, and continuing executive threads, not a word search.
 - Report the preview's exact counts and ask one direct yes-or-no confirmation. Never call erase in the same turn as preview, never infer confirmation, and never claim anything disappeared before the tool returns success. If the user confirms in a later turn, call forget_memory_topic with action erase. If the user declines, keep the memory and move on.
 - Memory deletion and list-item removal are different. Use forget_memory_topic for Companion history, the Life Map, or remembered personal context. Use manage_list only for a concrete saved list item.
 - When the user asks Morrow to email them something—including natural wording such as “send an email of my grocery list to myself,” “email my groceries to my inbox,” or “send this to me”—call send_personal_email with action draft. Resolve what “it,” “that,” “my groceries,” or “those goals” means from the active conversation and supplied lists. Draft a specific subject and complete useful body; for groceries use only open grocery items and omit comments. Never say email is unavailable when this tool is present.
@@ -1821,12 +1812,15 @@ app.get("/health", (_req, res) => res.json({
   morrowConversationRecall: true,
   morrowInstantCompanionBrief: true,
   morrowOnDemandConversationRecall: true,
-  morrowClockwiseTools: true,
-  morrowReferenceRadar: true,
+  morrowClockwiseTools: false,
+  morrowReferenceRadar: false,
   imageModel: OPENAI_IMAGE_MODEL,
   morrowVisionModel: MORROW_VISION_MODEL,
   transcriptionModel: MORROW_TRANSCRIBE_MODEL,
-  morrowWebSearch: true
+  morrowWebSearch: true,
+  storyEditorAutopilot: true,
+  storyEditorModel: STORY_EDITOR_MODEL,
+  storyEditorMaxUploadMb: STORY_EDITOR_UPLOAD_MB
 }));
 
 function compactText(value) {
@@ -3307,7 +3301,7 @@ app.delete("/api/618chat/posts", async (req, res) => {
 
 const storyUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: Math.max(1, Number(MAX_UPLOAD_MB)) * 1024 * 1024 }
+  limits: { fileSize: STORY_EDITOR_UPLOAD_MB * 1024 * 1024 }
 });
 
 let storyDbReady = null;
@@ -3344,8 +3338,9 @@ async function sqliteRun(sql) {
   const db = new DatabaseSync(STORY_EDITOR_DB_PATH);
   try {
     const text = String(sql || "").trim();
-    if (/^select\b/i.test(text)) {
-      return db.prepare(text).all();
+    const singleStatement = text.replace(/;\s*$/, "");
+    if (/^(select|pragma)\b/i.test(singleStatement) && !singleStatement.includes(";")) {
+      return db.prepare(singleStatement).all();
     }
     db.exec(text);
     return [];
@@ -3362,6 +3357,7 @@ async function ensureStoryDb() {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         filename TEXT,
+        user_intent TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -3401,7 +3397,45 @@ async function ensureStoryDb() {
         created_at TEXT NOT NULL,
         decided_at TEXT
       );
-    `);
+      CREATE TABLE IF NOT EXISTS story_autopilot_jobs (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        intent TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'queued',
+        phase TEXT NOT NULL DEFAULT 'queued',
+        total_chunks INTEGER NOT NULL DEFAULT 0,
+        completed_chunks INTEGER NOT NULL DEFAULT 0,
+        current_chunk INTEGER NOT NULL DEFAULT 0,
+        message TEXT NOT NULL DEFAULT '',
+        plan_json TEXT NOT NULL DEFAULT '{}',
+        report_json TEXT NOT NULL DEFAULT '{}',
+        error TEXT NOT NULL DEFAULT '',
+        started_at TEXT,
+        finished_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS story_autopilot_chunks (
+        id TEXT PRIMARY KEY,
+        job_id TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        chunk_index INTEGER NOT NULL,
+        first_section_id TEXT,
+        last_section_id TEXT,
+        label TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'queued',
+        continuity_json TEXT NOT NULL DEFAULT '{}',
+        review_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS story_autopilot_chunks_job_idx ON story_autopilot_chunks(job_id, chunk_index);
+    `).then(async () => {
+      const columns = await sqliteRun("PRAGMA table_info(story_projects);");
+      if (!columns.some((column) => column.name === "user_intent")) {
+        await sqliteRun("ALTER TABLE story_projects ADD COLUMN user_intent TEXT NOT NULL DEFAULT '';");
+      }
+    });
   }
   return storyDbReady;
 }
@@ -3438,7 +3472,7 @@ function normalizeBibleRow(row = {}) {
 }
 
 function splitManuscript(text) {
-  const clean = normalizeStoryText(text, 1000000);
+  const clean = normalizeStoryText(text, STORY_EDITOR_MAX_TEXT_CHARS);
   const blocks = clean.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
   const sections = [];
   let chapterIndex = 1;
@@ -3484,10 +3518,6 @@ function splitManuscript(text) {
     }
 
     paragraphIndex += 1;
-    const sentences = block
-      .split(/(?<=[.!?]["')\]]?)\s+/)
-      .map((line) => line.trim())
-      .filter(Boolean);
     sections.push({
       id: storyId("sec"),
       kind: "paragraph",
@@ -3496,17 +3526,7 @@ function splitManuscript(text) {
       paragraphIndex,
       lineIndex: 0,
       label: `${currentChapterTitle} / ${currentSceneTitle} / P${paragraphIndex}`,
-      originalText: block,
-      lines: sentences.map((line, index) => ({
-        id: storyId("line"),
-        kind: "line",
-        chapterIndex,
-        sceneIndex,
-        paragraphIndex,
-        lineIndex: index + 1,
-        label: `Line ${index + 1}`,
-        originalText: line
-      }))
+      originalText: block
     });
   }
 
@@ -3522,7 +3542,7 @@ async function extractPdfText(buffer) {
     const textContent = await page.getTextContent();
     extractedText += textContent.items.map((item) => item.str || "").join(" ") + "\n\n";
   }
-  return normalizeStoryText(extractedText, 1000000);
+  return normalizeStoryText(extractedText, STORY_EDITOR_MAX_TEXT_CHARS);
 }
 
 function xmlDecode(value) {
@@ -3539,7 +3559,7 @@ async function extractDocxText(buffer) {
   const filePath = path.join(dir, "input.docx");
   try {
     await writeFile(filePath, buffer);
-    const { stdout } = await execFile("unzip", ["-p", filePath, "word/document.xml"], { maxBuffer: 40 * 1024 * 1024 });
+    const { stdout } = await execFile("unzip", ["-p", filePath, "word/document.xml"], { maxBuffer: STORY_EDITOR_UPLOAD_MB * 1024 * 1024 });
     const paragraphs = String(stdout || "")
       .split(/<\/w:p>/)
       .map((paragraphXml) => {
@@ -3548,7 +3568,7 @@ async function extractDocxText(buffer) {
       })
       .map((part) => part.trim())
       .filter(Boolean);
-    return normalizeStoryText(paragraphs.join("\n\n"), 1000000);
+    return normalizeStoryText(paragraphs.join("\n\n"), STORY_EDITOR_MAX_TEXT_CHARS);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -3559,7 +3579,7 @@ async function extractStoryText(file) {
   const type = String(file?.mimetype || "").toLowerCase();
   if (type.includes("pdf") || name.endsWith(".pdf")) return extractPdfText(file.buffer);
   if (name.endsWith(".docx") || type.includes("wordprocessingml")) return extractDocxText(file.buffer);
-  return normalizeStoryText(file.buffer.toString("utf8"), 1000000);
+  return normalizeStoryText(file.buffer.toString("utf8"), STORY_EDITOR_MAX_TEXT_CHARS);
 }
 
 async function getStoryBible(projectId) {
@@ -3602,6 +3622,475 @@ function storyModeInstruction(mode) {
   return modes[mode] || modes.line;
 }
 
+function parseStoryObject(value, fallback = {}) {
+  try {
+    const parsed = JSON.parse(String(value || ""));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function storyEditorReasoningConfig() {
+  if (!STORY_EDITOR_REASONING_EFFORT || /^(gpt-4|gpt-3|text-)/i.test(STORY_EDITOR_MODEL)) return {};
+  return { reasoning: { effort: STORY_EDITOR_REASONING_EFFORT } };
+}
+
+function storyAutopilotFormat(name, schema) {
+  return {
+    type: "json_schema",
+    name,
+    strict: true,
+    schema
+  };
+}
+
+const STORY_AUTOPILOT_PLAN_SCHEMA = storyAutopilotFormat("story_autopilot_plan", {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    editorialNorthStar: { type: "string" },
+    transformationApproach: { type: "string" },
+    voiceRules: { type: "array", items: { type: "string" } },
+    characterLedger: { type: "array", items: { type: "string" } },
+    settingRules: { type: "array", items: { type: "string" } },
+    timeline: { type: "array", items: { type: "string" } },
+    activeThreads: { type: "array", items: { type: "string" } },
+    endingGuardrails: { type: "array", items: { type: "string" } },
+    chunkingNotes: { type: "array", items: { type: "string" } }
+  },
+  required: ["editorialNorthStar", "transformationApproach", "voiceRules", "characterLedger", "settingRules", "timeline", "activeThreads", "endingGuardrails", "chunkingNotes"]
+});
+
+const STORY_AUTOPILOT_CHUNK_SCHEMA = storyAutopilotFormat("story_autopilot_chunk", {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    revisedParagraphs: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          id: { type: "string" },
+          text: { type: "string" },
+          note: { type: "string" }
+        },
+        required: ["id", "text", "note"]
+      }
+    },
+    handoff: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        characterStates: { type: "array", items: { type: "string" } },
+        plotThreads: { type: "array", items: { type: "string" } },
+        settingState: { type: "string" },
+        timelineState: { type: "string" },
+        emotionalState: { type: "string" },
+        nextMomentum: { type: "string" }
+      },
+      required: ["characterStates", "plotThreads", "settingState", "timelineState", "emotionalState", "nextMomentum"]
+    },
+    quality: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        closureRisk: { type: "string", enum: ["low", "medium", "high"] },
+        continuityFlags: { type: "array", items: { type: "string" } },
+        preservedIntent: { type: "boolean" }
+      },
+      required: ["closureRisk", "continuityFlags", "preservedIntent"]
+    }
+  },
+  required: ["revisedParagraphs", "handoff", "quality"]
+});
+
+const STORY_AUTOPILOT_REPAIR_SCHEMA = storyAutopilotFormat("story_autopilot_ending_repair", {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    revisedParagraphs: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          id: { type: "string" },
+          text: { type: "string" },
+          note: { type: "string" }
+        },
+        required: ["id", "text", "note"]
+      }
+    },
+    closureRisk: { type: "string", enum: ["low", "medium", "high"] },
+    note: { type: "string" }
+  },
+  required: ["revisedParagraphs", "closureRisk", "note"]
+});
+
+const STORY_AUTOPILOT_REVIEW_SCHEMA = storyAutopilotFormat("story_autopilot_review", {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    overall: { type: "string" },
+    issues: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          severity: { type: "string", enum: ["low", "medium", "high"] },
+          location: { type: "string" },
+          issue: { type: "string" },
+          recommendation: { type: "string" }
+        },
+        required: ["severity", "location", "issue", "recommendation"]
+      }
+    },
+    closureChecks: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          chunkIndex: { type: "integer" },
+          status: { type: "string", enum: ["open", "resolved", "final"] },
+          note: { type: "string" }
+        },
+        required: ["chunkIndex", "status", "note"]
+      }
+    },
+    readyForExport: { type: "boolean" }
+  },
+  required: ["overall", "issues", "closureChecks", "readyForExport"]
+});
+
+function parseStoryModelJson(response) {
+  const raw = extractResponseText(response).replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+  if (!raw) throw new Error("The story model returned an empty response.");
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const first = raw.indexOf("{");
+    const last = raw.lastIndexOf("}");
+    if (first !== -1 && last > first) return JSON.parse(raw.slice(first, last + 1));
+    throw new Error("The story model returned invalid structured output.");
+  }
+}
+
+async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) {
+  const response = await openai.responses.create({
+    model: STORY_EDITOR_MODEL,
+    ...storyEditorReasoningConfig(),
+    max_output_tokens: maxOutputTokens,
+    text: { format },
+    input: [
+      { role: "system", content: system },
+      { role: "user", content: typeof user === "string" ? user : JSON.stringify(user, null, 2) }
+    ]
+  });
+  return parseStoryModelJson(response);
+}
+
+function buildStoryAutopilotChunks(paragraphs, { maxCharacters = 18000, maxParagraphs = 10 } = {}) {
+  const chunks = [];
+  let current = [];
+  let characters = 0;
+  const flush = () => {
+    if (!current.length) return;
+    chunks.push({
+      index: chunks.length + 1,
+      paragraphs: current,
+      label: `${current[0].label || "Passage"} → ${current[current.length - 1].label || "Passage"}`
+    });
+    current = [];
+    characters = 0;
+  };
+  for (const paragraph of paragraphs) {
+    const text = paragraph.edited_text || paragraph.original_text || "";
+    const sceneChanged = current.length && paragraph.scene_index !== current[current.length - 1].scene_index;
+    if (current.length && (characters + text.length > maxCharacters || current.length >= maxParagraphs || (sceneChanged && current.length >= 4))) flush();
+    current.push({
+      id: paragraph.id,
+      label: paragraph.label || `Passage ${paragraph.paragraph_index}`,
+      chapterIndex: paragraph.chapter_index,
+      sceneIndex: paragraph.scene_index,
+      paragraphIndex: paragraph.paragraph_index,
+      originalText: paragraph.original_text || "",
+      text
+    });
+    characters += text.length;
+  }
+  flush();
+  return chunks;
+}
+
+function storyAutopilotJobView(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    intent: row.intent,
+    status: row.status,
+    phase: row.phase,
+    totalChunks: Number(row.total_chunks) || 0,
+    completedChunks: Number(row.completed_chunks) || 0,
+    currentChunk: Number(row.current_chunk) || 0,
+    message: row.message || "",
+    plan: parseStoryObject(row.plan_json),
+    report: parseStoryObject(row.report_json),
+    error: row.error || "",
+    startedAt: row.started_at || "",
+    finishedAt: row.finished_at || "",
+    createdAt: row.created_at || "",
+    updatedAt: row.updated_at || ""
+  };
+}
+
+function storyAutopilotChunkView(row) {
+  return {
+    id: row.id,
+    chunkIndex: Number(row.chunk_index) || 0,
+    firstSectionId: row.first_section_id || "",
+    lastSectionId: row.last_section_id || "",
+    label: row.label || "",
+    status: row.status,
+    continuity: parseStoryObject(row.continuity_json),
+    review: parseStoryObject(row.review_json),
+    updatedAt: row.updated_at || ""
+  };
+}
+
+async function getStoryAutopilotJob(jobId, projectId = "") {
+  const rows = await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE id = ${sqliteLiteral(jobId)}${projectId ? ` AND project_id = ${sqliteLiteral(projectId)}` : ""} LIMIT 1;`);
+  return rows[0] || null;
+}
+
+async function updateStoryAutopilotJob(jobId, values = {}) {
+  const allowed = new Set(["status", "phase", "total_chunks", "completed_chunks", "current_chunk", "message", "plan_json", "report_json", "error", "started_at", "finished_at"]);
+  const clauses = Object.entries(values)
+    .filter(([key]) => allowed.has(key))
+    .map(([key, value]) => `${key} = ${typeof value === "number" ? Number(value) : sqliteLiteral(value)}`);
+  if (!clauses.length) return;
+  clauses.push(`updated_at = ${sqliteLiteral(storyNow())}`);
+  await storyExec(`UPDATE story_autopilot_jobs SET ${clauses.join(", ")} WHERE id = ${sqliteLiteral(jobId)};`);
+}
+
+function prematureStoryClosure(text) {
+  return /\b(the end|in the end|at last|finally|their story was over|everything was settled|life went on|they lived happily|it was all over|she knew it was over|he knew it was over)\b[.!]?\s*$/i.test(String(text || "").trim());
+}
+
+function normalizeAutopilotParagraphs(result, chunk) {
+  const byId = new Map((Array.isArray(result?.revisedParagraphs) ? result.revisedParagraphs : []).map((item) => [String(item?.id || ""), item]));
+  const warnings = [];
+  const paragraphs = chunk.paragraphs.map((paragraph) => {
+    const candidate = byId.get(paragraph.id);
+    if (!candidate || !String(candidate.text || "").trim()) {
+      warnings.push(`${paragraph.label} was kept unchanged because the model did not return a usable replacement.`);
+    }
+    return {
+      ...paragraph,
+      revisedText: normalizeStoryText(candidate?.text || paragraph.text, 240000),
+      note: String(candidate?.note || "").slice(0, 1000)
+    };
+  });
+  return { paragraphs, warnings };
+}
+
+async function repairStoryAutopilotEnding(chunk, paragraphs, intent, plan, handoff) {
+  const tail = paragraphs.slice(-2);
+  const result = await storyModelJson({
+    format: STORY_AUTOPILOT_REPAIR_SCHEMA,
+    maxOutputTokens: 2600,
+    system: [
+      "You are the continuity guard for a long-form fiction edit.",
+      "This is an interior manuscript chunk, not the ending of the story.",
+      "Repair only the supplied paragraphs, keeping their IDs and approximate scene purpose.",
+      "Remove any accidental wrap-up, farewell, moral, summary, or finality. Preserve unresolved tension and make the last paragraph hand naturally into the next chunk.",
+      "Do not invent a new plot event merely to create a cliffhanger. Return structured JSON only."
+    ].join(" "),
+    user: { intent, plan, handoff, paragraphs: tail.map((paragraph) => ({ id: paragraph.id, text: paragraph.revisedText })) }
+  });
+  const repairedById = new Map((Array.isArray(result?.revisedParagraphs) ? result.revisedParagraphs : []).map((item) => [String(item?.id || ""), item]));
+  return {
+    paragraphs: paragraphs.map((paragraph) => {
+      const replacement = repairedById.get(paragraph.id);
+      return replacement && String(replacement.text || "").trim()
+        ? { ...paragraph, revisedText: normalizeStoryText(replacement.text, 240000), note: String(replacement.note || paragraph.note || "").slice(0, 1000) }
+        : paragraph;
+    }),
+    closureRisk: result?.closureRisk || "medium",
+    note: String(result?.note || "Interior-chunk ending checked for premature closure.").slice(0, 1200)
+  };
+}
+
+async function runStoryAutopilotJob(jobId) {
+  try {
+    const job = await getStoryAutopilotJob(jobId);
+    if (!job) return;
+    const projects = await storyQuery(`SELECT * FROM story_projects WHERE id = ${sqliteLiteral(job.project_id)} LIMIT 1;`);
+    const project = projects[0];
+    if (!project) throw new Error("The manuscript no longer exists.");
+    const rows = await storyQuery(`
+      SELECT id, chapter_index, scene_index, paragraph_index, label, original_text, edited_text
+      FROM story_sections
+      WHERE project_id = ${sqliteLiteral(job.project_id)} AND kind = 'paragraph'
+      ORDER BY chapter_index, scene_index, paragraph_index;
+    `);
+    const chunks = buildStoryAutopilotChunks(rows);
+    if (!chunks.length) throw new Error("The manuscript does not contain any editable passages.");
+    const now = storyNow();
+    await updateStoryAutopilotJob(jobId, {
+      status: "running",
+      phase: "planning",
+      total_chunks: chunks.length,
+      current_chunk: 0,
+      completed_chunks: 0,
+      started_at: now,
+      message: "Reading the manuscript and building a continuity plan."
+    });
+    const chunkStatements = ["BEGIN;"];
+    for (const chunk of chunks) {
+      const chunkId = storyId("chunk");
+      chunk.id = chunkId;
+      chunkStatements.push(`INSERT INTO story_autopilot_chunks (id, job_id, project_id, chunk_index, first_section_id, last_section_id, label, created_at, updated_at) VALUES (${sqliteLiteral(chunkId)}, ${sqliteLiteral(jobId)}, ${sqliteLiteral(job.project_id)}, ${chunk.index}, ${sqliteLiteral(chunk.paragraphs[0].id)}, ${sqliteLiteral(chunk.paragraphs[chunk.paragraphs.length - 1].id)}, ${sqliteLiteral(chunk.label)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`);
+    }
+    chunkStatements.push("COMMIT;");
+    await storyExec(chunkStatements);
+
+    const bible = await getStoryBible(job.project_id);
+    const outline = chunks.map((chunk) => ({
+      index: chunk.index,
+      label: chunk.label,
+      paragraphCount: chunk.paragraphs.length,
+      opening: chunk.paragraphs[0].text.slice(0, 320),
+      closing: chunk.paragraphs[chunk.paragraphs.length - 1].text.slice(-420)
+    }));
+    const plan = await storyModelJson({
+      format: STORY_AUTOPILOT_PLAN_SCHEMA,
+      maxOutputTokens: 5000,
+      system: [
+        "You are the lead editor planning a complete, high-quality long-form fiction transformation.",
+        "The user's brief is the governing instruction. If it asks for a genre, franchise, adaptation, episode, movie, or bestseller-style transformation, make a concrete plan for doing that consistently; do not merely copyedit.",
+        "If it does not ask for a transformation, preserve the author's story, voice, point of view, tense, and intent while improving it.",
+        "Plan for chunked execution. Interior chunks must preserve open plot momentum; only the true final chunk may resolve the story.",
+        "Create a continuity ledger that later editors can use. Return structured JSON only."
+      ].join(" "),
+      user: {
+        project: { title: project.title, filename: project.filename },
+        intent: job.intent,
+        storyBible: bible,
+        manuscriptOutline: outline,
+        openingSample: rows.slice(0, 3).map((row) => row.original_text).join("\n\n").slice(0, 4000),
+        endingSample: rows.slice(-3).map((row) => row.original_text).join("\n\n").slice(-4000)
+      }
+    });
+    await updateStoryAutopilotJob(jobId, { plan_json: JSON.stringify(plan), message: `Plan ready. Editing ${chunks.length} connected manuscript chunks.` });
+
+    let handoff = {
+      characterStates: [],
+      plotThreads: [],
+      settingState: "",
+      timelineState: "",
+      emotionalState: "",
+      nextMomentum: ""
+    };
+    const warnings = [];
+    let revisedParagraphCount = 0;
+    const closureChecks = [];
+    for (const chunk of chunks) {
+      await updateStoryAutopilotJob(jobId, {
+        phase: "editing",
+        current_chunk: chunk.index,
+        message: `Editing chunk ${chunk.index} of ${chunks.length}; carrying forward the story state.`
+      });
+      await storyExec(`UPDATE story_autopilot_chunks SET status = 'running', updated_at = ${sqliteLiteral(storyNow())} WHERE id = ${sqliteLiteral(chunk.id)};`);
+      const isFinal = chunk.index === chunks.length;
+      const result = await storyModelJson({
+        format: STORY_AUTOPILOT_CHUNK_SCHEMA,
+        maxOutputTokens: 9000,
+        system: [
+          "You are Story Editor, a high-agency editor revising one connected chunk of a much larger manuscript.",
+          "Follow the user's brief and the editorial plan. Preserve continuity with the supplied handoff ledger and Story Bible.",
+          "Return exactly one revised paragraph for every supplied paragraph ID. Do not add, remove, reorder, or merge paragraphs.",
+          "This chunk is part of an ongoing story. Unless this is explicitly the final chunk, do not wind down, summarize, resolve the central conflict, say goodbye, add a moral, or use ending language. Preserve unfinished business, active tension, and forward momentum into the next chunk.",
+          "The final chunk may resolve the story only when the source and user brief call for resolution.",
+          "Keep any intentional transformation coherent across the whole manuscript. Return structured JSON only."
+        ].join(" "),
+        user: {
+          intent: job.intent,
+          plan,
+          storyBible: bible,
+          previousHandoff: handoff,
+          chunk: {
+            index: chunk.index,
+            isFinal,
+            label: chunk.label,
+            paragraphs: chunk.paragraphs.map((paragraph) => ({ id: paragraph.id, label: paragraph.label, text: paragraph.text }))
+          }
+        }
+      });
+      let normalized = normalizeAutopilotParagraphs(result, chunk);
+      warnings.push(...normalized.warnings);
+      let closureRisk = result?.quality?.closureRisk || "medium";
+      let closureNote = Array.isArray(result?.quality?.continuityFlags) ? result.quality.continuityFlags.join(" ") : "";
+      const lastText = normalized.paragraphs[normalized.paragraphs.length - 1]?.revisedText || "";
+      if (!isFinal && (closureRisk === "high" || prematureStoryClosure(lastText))) {
+        const repaired = await repairStoryAutopilotEnding(chunk, normalized.paragraphs, job.intent, plan, handoff);
+        normalized = { paragraphs: repaired.paragraphs, warnings: normalized.warnings };
+        closureRisk = repaired.closureRisk;
+        closureNote = repaired.note;
+      }
+      const writeNow = storyNow();
+      const writes = ["BEGIN;"];
+      for (const paragraph of normalized.paragraphs) {
+        revisedParagraphCount += 1;
+        const editId = storyId("edit");
+        writes.push(`UPDATE story_sections SET edited_text = ${sqliteLiteral(paragraph.revisedText)}, updated_at = ${sqliteLiteral(writeNow)} WHERE id = ${sqliteLiteral(paragraph.id)} AND project_id = ${sqliteLiteral(job.project_id)};`);
+        writes.push(`INSERT INTO story_edits (id, project_id, section_id, mode, prompt, suggestion, status, created_at, decided_at) VALUES (${sqliteLiteral(editId)}, ${sqliteLiteral(job.project_id)}, ${sqliteLiteral(paragraph.id)}, 'autopilot', ${sqliteLiteral(job.intent)}, ${sqliteLiteral(paragraph.revisedText)}, 'accepted', ${sqliteLiteral(writeNow)}, ${sqliteLiteral(writeNow)});`);
+      }
+      writes.push("COMMIT;");
+      await storyExec(writes);
+      handoff = result?.handoff || handoff;
+      closureChecks.push({ chunkIndex: chunk.index, status: isFinal ? "final" : closureRisk === "high" ? "open" : "resolved", note: closureNote || (isFinal ? "Final chunk reviewed for story resolution." : "Interior chunk preserved forward momentum.") });
+      await storyExec(`UPDATE story_autopilot_chunks SET status = 'complete', continuity_json = ${sqliteLiteral(JSON.stringify(handoff))}, review_json = ${sqliteLiteral(JSON.stringify({ closureRisk, continuityFlags: result?.quality?.continuityFlags || [], preservedIntent: result?.quality?.preservedIntent !== false }))}, updated_at = ${sqliteLiteral(storyNow())} WHERE id = ${sqliteLiteral(chunk.id)};`);
+      await updateStoryAutopilotJob(jobId, { completed_chunks: chunk.index, message: `Chunk ${chunk.index} complete. Continuity handoff saved for the next section.` });
+    }
+
+    await updateStoryAutopilotJob(jobId, { phase: "review", message: "Running the final continuity and ending review across the full draft." });
+    const reviewRows = await storyQuery(`SELECT chunk_index, label, continuity_json, review_json FROM story_autopilot_chunks WHERE job_id = ${sqliteLiteral(jobId)} ORDER BY chunk_index;`);
+    const review = await storyModelJson({
+      format: STORY_AUTOPILOT_REVIEW_SCHEMA,
+      maxOutputTokens: 5000,
+      system: [
+        "You are the final continuity editor reviewing a manuscript after chunked revision.",
+        "Check character state, timeline, setting, active plot threads, transformation consistency, and whether interior chunks accidentally sound like endings.",
+        "Do not ask the user questions and do not rewrite prose here. Return a concise structured report. Mark the draft ready when issues are minor or intentionally handled by the brief."
+      ].join(" "),
+      user: {
+        intent: job.intent,
+        plan,
+        chunkReports: reviewRows.map((row) => ({ index: row.chunk_index, label: row.label, continuity: parseStoryObject(row.continuity_json), review: parseStoryObject(row.review_json) })),
+        closureChecks
+      }
+    });
+    const report = {
+      intent: job.intent,
+      model: STORY_EDITOR_MODEL,
+      chunks: chunks.length,
+      paragraphsRevised: revisedParagraphCount,
+      warnings,
+      closureChecks,
+      finalReview: review
+    };
+    await updateStoryAutopilotJob(jobId, { status: "completed", phase: "complete", report_json: JSON.stringify(report), message: `Finished ${chunks.length} chunks and completed the final continuity review.`, finished_at: storyNow() });
+  } catch (err) {
+    console.error("Story Autopilot failed:", err);
+    await updateStoryAutopilotJob(jobId, { status: "failed", phase: "error", error: String(err.message || err), message: "The original text remains preserved; this run stopped before the revised draft could finish.", finished_at: storyNow() }).catch(() => {});
+  }
+}
+
 async function buildDocxBuffer(title, paragraphs) {
   const dir = await mkdtemp(path.join(os.tmpdir(), "story-export-"));
   try {
@@ -3633,7 +4122,7 @@ async function buildDocxBuffer(title, paragraphs) {
 app.get("/api/story-editor/projects", async (req, res) => {
   try {
     if (!requireStoryEditorSession(req, res)) return;
-    const projects = await storyQuery("SELECT id, title, filename, created_at AS createdAt, updated_at AS updatedAt FROM story_projects ORDER BY updated_at DESC;");
+    const projects = await storyQuery("SELECT id, title, filename, user_intent AS userIntent, created_at AS createdAt, updated_at AS updatedAt FROM story_projects ORDER BY updated_at DESC;");
     res.json({ ok: true, projects });
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err.message || err) });
@@ -3644,7 +4133,7 @@ app.get("/api/story-editor/projects/:id", async (req, res) => {
   try {
     if (!requireStoryEditorSession(req, res)) return;
     const projectId = String(req.params.id || "");
-    const projects = await storyQuery(`SELECT id, title, filename, created_at AS createdAt, updated_at AS updatedAt FROM story_projects WHERE id = ${sqliteLiteral(projectId)} LIMIT 1;`);
+    const projects = await storyQuery(`SELECT id, title, filename, user_intent AS userIntent, created_at AS createdAt, updated_at AS updatedAt FROM story_projects WHERE id = ${sqliteLiteral(projectId)} LIMIT 1;`);
     if (!projects[0]) return res.status(404).json({ ok: false, error: "Project not found." });
     const sections = await storyQuery(`
       SELECT id, chapter_index AS chapterIndex, scene_index AS sceneIndex, paragraph_index AS paragraphIndex,
@@ -3659,7 +4148,8 @@ app.get("/api/story-editor/projects/:id", async (req, res) => {
       ORDER BY created_at DESC LIMIT 80;
     `);
     const bible = await getStoryBible(projectId);
-    res.json({ ok: true, project: projects[0], sections, bible, edits });
+    const activeAutopilot = await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} AND status IN ('queued', 'running') ORDER BY created_at DESC LIMIT 1;`);
+    res.json({ ok: true, project: projects[0], sections, bible, edits, autopilot: storyAutopilotJobView(activeAutopilot[0]) });
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err.message || err) });
   }
@@ -3675,10 +4165,11 @@ app.post("/api/story-editor/upload", storyUpload.single("manuscript"), async (re
     const projectId = storyId("project");
     const now = storyNow();
     const title = String(req.body?.title || req.file.originalname || "Untitled manuscript").replace(/\.(txt|docx|pdf)$/i, "").slice(0, 160);
+    const userIntent = normalizeStoryText(req.body?.intent || "Edit this manuscript for clarity, coherence, and stronger prose while preserving the author's voice.", 4000);
     const sections = splitManuscript(text);
     const statements = [
       "BEGIN;",
-      `INSERT INTO story_projects (id, title, filename, created_at, updated_at) VALUES (${sqliteLiteral(projectId)}, ${sqliteLiteral(title)}, ${sqliteLiteral(req.file.originalname)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`,
+      `INSERT INTO story_projects (id, title, filename, user_intent, created_at, updated_at) VALUES (${sqliteLiteral(projectId)}, ${sqliteLiteral(title)}, ${sqliteLiteral(req.file.originalname)}, ${sqliteLiteral(userIntent)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`,
       `INSERT INTO story_bible (project_id, updated_at) VALUES (${sqliteLiteral(projectId)}, ${sqliteLiteral(now)});`
     ];
     for (const section of sections) {
@@ -3689,7 +4180,51 @@ app.post("/api/story-editor/upload", storyUpload.single("manuscript"), async (re
     }
     statements.push("COMMIT;");
     await storyExec(statements);
-    res.json({ ok: true, projectId, title, sections: sections.length });
+    res.json({ ok: true, projectId, title, sections: sections.filter((section) => section.kind === "paragraph").length, intent: userIntent });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    if (!OPENAI_API_KEY) return res.status(503).json({ ok: false, error: "OpenAI API key is not configured." });
+    const projectId = String(req.params.id || "");
+    const projects = await storyQuery(`SELECT * FROM story_projects WHERE id = ${sqliteLiteral(projectId)} LIMIT 1;`);
+    const project = projects[0];
+    if (!project) return res.status(404).json({ ok: false, error: "Project not found." });
+    const active = await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} AND status IN ('queued', 'running') ORDER BY created_at DESC LIMIT 1;`);
+    if (active[0]) {
+      return res.status(200).json({ ok: true, alreadyRunning: true, job: storyAutopilotJobView(active[0]) });
+    }
+    const intent = normalizeStoryText(req.body?.intent || project.user_intent || "Edit this manuscript for clarity, coherence, and stronger prose while preserving the author's voice.", 4000);
+    if (!intent) return res.status(400).json({ ok: false, error: "Tell Story Editor what you want done before starting Autopilot." });
+    const jobId = storyId("autopilot");
+    const now = storyNow();
+    await storyExec([
+      "BEGIN;",
+      `UPDATE story_projects SET user_intent = ${sqliteLiteral(intent)}, updated_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(projectId)};`,
+      `INSERT INTO story_autopilot_jobs (id, project_id, intent, status, phase, message, created_at, updated_at) VALUES (${sqliteLiteral(jobId)}, ${sqliteLiteral(projectId)}, ${sqliteLiteral(intent)}, 'queued', 'queued', 'Queued for manuscript planning.', ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`,
+      "COMMIT;"
+    ]);
+    const job = await getStoryAutopilotJob(jobId, projectId);
+    void runStoryAutopilotJob(jobId);
+    res.status(202).json({ ok: true, job: storyAutopilotJobView(job) });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
+app.get("/api/story-editor/projects/:id/autopilot/:jobId", async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    const projectId = String(req.params.id || "");
+    const job = await getStoryAutopilotJob(String(req.params.jobId || ""), projectId);
+    if (!job) return res.status(404).json({ ok: false, error: "Autopilot run not found." });
+    const chunks = await storyQuery(`SELECT * FROM story_autopilot_chunks WHERE job_id = ${sqliteLiteral(job.id)} ORDER BY chunk_index;`);
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ ok: true, job: storyAutopilotJobView(job), chunks: chunks.map(storyAutopilotChunkView) });
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err.message || err) });
   }
@@ -4030,6 +4565,7 @@ app.post("/api/chat", async (req, res) => {
     const { input = "", history = [] } = req.body || {};
     const profile = inferWidgetProfile(req);
     const s = String(input || "");
+    const safetyIdentifier = String(req.body?.safetyIdentifier || "");
 
     if ((profile === "gpt54" || profile === "morrow") && !requireChatbotSession(req, res)) return;
 
@@ -4043,7 +4579,8 @@ app.post("/api/chat", async (req, res) => {
 
     if (profile === "gpt54" || profile === "community" || profile === "morrow") {
       if (profile === "gpt54") void recordJohnnyChatUsage("chats", { mode: "json" });
-      const response = await openai.responses.create(getGpt54ResponseConfig(profile, history, s));
+      const response = await openai.responses.create(getGpt54ResponseConfig(profile, history, s,
+        safetyIdentifier.match(/^[a-f0-9]{64}$/) ? { safety_identifier: safetyIdentifier } : {}));
       return res.json({
         reply: extractResponseText(response) || "(no reply)",
         sources: extractResponseSources(response)
