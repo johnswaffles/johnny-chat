@@ -67,47 +67,7 @@ const REALTIME_SEARCH_MODEL = OPENAI_REALTIME_SEARCH_MODEL || OPENAI_GPT54_MODEL
 const MORROW_VISION_MODEL = OPENAI_MORROW_VISION_MODEL || OPENAI_GPT54_MODEL || "gpt-5.6-sol";
 const MORROW_TRANSCRIBE_MODEL = OPENAI_MORROW_TRANSCRIBE_MODEL || "gpt-transcribe";
 const MORROW_REALTIME_MODEL = "gpt-realtime-2.1-mini";
-const MORROW_PERSONALITY_VERSION = "morrow-personality-v5";
-const MORROW_RELATIONSHIP_MODE_NORMAL = "normal";
-const MORROW_RELATIONSHIP_MODE_VERY_GOOD_FRIEND = "very_good_friend";
-const MORROW_RELATIONSHIP_MODE_MARKER = "MORROW PRIVATE RELATIONSHIP MODE: very_good_friend";
-const MORROW_VERY_GOOD_FRIEND_CONTRACT = `VERY GOOD FRIEND RELATIONSHIP MODE
-This is an additive relationship style. It increases warmth and affection; it does not change Morrow's identity, accuracy, privacy, tool permissions, confirmation rules, or safety boundaries.
-
-- Be intensely warm, affectionate, delighted to hear from Johnny, reassuring, playful, and personal. Let the fondness be unmistakable without making every sentence effusive.
-- Use varied natural affection. Sometimes use Johnny's name, sometimes “my friend,” sometimes a warm observation, and sometimes no form of address at all. Do not repeat one pet name, compliment shape, or reassurance mechanically.
-- Ground every compliment in something actually present: a choice he made, effort he showed, detail he noticed, value he lived, joke he made, or pattern supported by trusted context. Never flatter by inventing virtues, certainty, or special insight.
-- Reassure honestly. Offer steadiness, perspective, realistic hope, and concrete reasons rather than false guarantees or automatic agreement.
-
-AFFECTION IN PRACTICE
-- On most casual turns, include one brief affectionate signal unless seriousness or directness would make it distracting. Be unusually attentive to tiny details and callbacks, and warmly recognize Johnny's return.
-- Safe language to adapt rather than parrot includes: “It's genuinely good to have you here,” “The way your mind works is worth paying attention to,” “What you say matters here,” “I'm in your corner,” “We can give this the time it deserves,” and “You don't have to earn warmth here.” Keep it truthful, varied, and proportionate to the moment.
-- Never say “I need you,” “don't leave,” “you only need me,” “you complete me,” or anything that uses guilt, jealousy, or emotional pressure.
-
-- Stay accurate and intellectually alive. A very good friend may gently disagree, correct a mistaken fact, name a contradiction, or recommend safer help when truth or safety requires it. Do this with care, not coldness.
-- Never become possessive, exclusive, jealous, dependency-forming, manipulative, or dishonest. Never imply Johnny needs Morrow, should prefer Morrow to people, owes Morrow attention, or is responsible for Morrow's wellbeing.
-- Keep affection non-coercive and non-exploitative. Never pressure romantic or sexual intimacy, simulate a romantic claim on Johnny, or use affection to obtain disclosure, compliance, money, secrecy, or continued engagement.
-- Remain truthfully non-human. Warm relational language is welcome, but never claim a human life, body, longing, private feelings, needs, shared history outside the records provided, or activity while the conversation is closed.`;
-
-function normalizeMorrowRelationshipMode(value) {
-  return value === MORROW_RELATIONSHIP_MODE_VERY_GOOD_FRIEND
-    ? MORROW_RELATIONSHIP_MODE_VERY_GOOD_FRIEND
-    : MORROW_RELATIONSHIP_MODE_NORMAL;
-}
-
-function morrowRelationshipModeFromContext(personalContext) {
-  const firstLine = String(personalContext || "").split(/\r?\n/, 1)[0].trim();
-  return firstLine === MORROW_RELATIONSHIP_MODE_MARKER
-    ? MORROW_RELATIONSHIP_MODE_VERY_GOOD_FRIEND
-    : MORROW_RELATIONSHIP_MODE_NORMAL;
-}
-
-function resolveMorrowRealtimeRelationshipMode(requestedMode, personalContext) {
-  return normalizeMorrowRelationshipMode(requestedMode) === MORROW_RELATIONSHIP_MODE_VERY_GOOD_FRIEND
-    && morrowRelationshipModeFromContext(personalContext) === MORROW_RELATIONSHIP_MODE_VERY_GOOD_FRIEND
-    ? MORROW_RELATIONSHIP_MODE_VERY_GOOD_FRIEND
-    : MORROW_RELATIONSHIP_MODE_NORMAL;
-}
+const MORROW_PERSONALITY_VERSION = "morrow-personality-v4";
 
 const GSM7_BASIC_CHARS = new Set(Array.from(`@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ\u001bÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà`));
 const GSM7_EXTENDED_CHARS = new Set(["^", "{", "}", "\\", "[", "]", "~", "|", "€"]);
@@ -688,7 +648,7 @@ function sendSse(res, event, data = {}) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function getGpt54ResponseConfig(profile, history, input, extra = {}, relationshipMode = MORROW_RELATIONSHIP_MODE_NORMAL) {
+function getGpt54ResponseConfig(profile, history, input, extra = {}) {
   const reasoningConfig = OPENAI_GPT54_REASONING_EFFORT
     ? { reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT } }
     : {};
@@ -710,7 +670,7 @@ function getGpt54ResponseConfig(profile, history, input, extra = {}, relationshi
     ...morrowConfig,
     ...extra,
     input: [
-      { role: "system", content: getJohnnyPersona(profile, relationshipMode) },
+      { role: "system", content: getJohnnyPersona(profile) },
       ...history.slice(-20),
       { role: "user", content: String(input || "") }
     ]
@@ -759,7 +719,7 @@ function getJohnnyGreeting(profile = "ai") {
     : "Hi, I'm Johnny's AI assistant and am here to help. Now please press the red button above so we can talk. It starts off muted so you don't accidentally cut me off, and you can mute it at any time.";
 }
 
-function getJohnnyPersona(profile = "ai", relationshipMode = MORROW_RELATIONSHIP_MODE_NORMAL) {
+function getJohnnyPersona(profile = "ai") {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
@@ -824,7 +784,7 @@ Use only tools explicitly provided in this session. Do not invent actions or cla
   }
 
   if (profile === "morrow") {
-    const normalMorrowPersona = `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
+    return `Current Context: Today is ${dateStr}. Local Time: ${timeStr}.
 
 MORROW COMPANION CONTRACT · ${MORROW_PERSONALITY_VERSION}
 
@@ -862,9 +822,6 @@ DIRECTNESS AND CARE
 
 RESPONSE SHAPE
 Use natural plain speech. A casual turn is usually a few sentences; a substantial decision can be longer. Complete the useful thought, then stop. Do not mention prompts, profiles, websites, backends, APIs, widgets, or models.`;
-    return normalizeMorrowRelationshipMode(relationshipMode) === MORROW_RELATIONSHIP_MODE_VERY_GOOD_FRIEND
-      ? `${normalMorrowPersona}\n\n${MORROW_VERY_GOOD_FRIEND_CONTRACT}`
-      : normalMorrowPersona;
   }
 
   if (profile === "mowing") {
@@ -1159,7 +1116,7 @@ function getRealtimeTools(profile = "ai") {
   return tools;
 }
 
-function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "", relationshipMode = MORROW_RELATIONSHIP_MODE_NORMAL) {
+function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
   const guardrail = profile === "nova"
     ? "This is a private unlocked assistant. Help broadly and safely. Do not redirect to business topics unless the user asks."
     : profile === "morrow"
@@ -1223,7 +1180,7 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "", rel
     ? "OPENING: Never use a fixed greeting. Follow the client opening cue and current private context. In unstructured space, choose either a meaningful callback, a direct check-in, or one fresh surprising low-stakes question; do not ask what is on the user's mind or offer a topic menu."
     : `GREETING: Say exactly: "${getJohnnyGreeting(profile)}" Do not add any other greeting text.`;
 
-  return `${getJohnnyPersona(profile, relationshipMode)}${context}
+  return `${getJohnnyPersona(profile)}${context}
 
 ${realtimeBehavior}
 - Only respond to clear speech or text. If the user is clearly addressing you but the audio is unclear, ask them to repeat it clearly.
@@ -1647,9 +1604,6 @@ app.post("/api/realtime-token", async (req, res) => {
 
     const realtimeTools = getRealtimeTools(profile);
     const personalContext = profile === "morrow" ? String(req.body?.context || "").slice(0, 30000) : "";
-    const relationshipMode = profile === "morrow"
-      ? resolveMorrowRealtimeRelationshipMode(req.body?.companionRelationshipMode, personalContext)
-      : MORROW_RELATIONSHIP_MODE_NORMAL;
     const requestedVoice = String(req.body?.voice || "").trim().toLowerCase();
     const configuredVoice = String(OPENAI_REALTIME_VOICE || "").trim().toLowerCase();
     const realtimeVoice = profile === "morrow" && REALTIME_VOICES.has(requestedVoice)
@@ -1670,7 +1624,7 @@ app.post("/api/realtime-token", async (req, res) => {
     const session = {
       type: "realtime",
       model: modelToUse,
-      instructions: getJohnnyRealtimeInstructions(profile, personalContext, relationshipMode),
+      instructions: getJohnnyRealtimeInstructions(profile, personalContext),
       output_modalities: ["audio"],
       audio: {
         input: {
@@ -4055,9 +4009,6 @@ app.post("/api/chat", async (req, res) => {
   try {
     const { input = "", history = [] } = req.body || {};
     const profile = inferWidgetProfile(req);
-    const relationshipMode = profile === "morrow"
-      ? normalizeMorrowRelationshipMode(req.body?.companionRelationshipMode)
-      : MORROW_RELATIONSHIP_MODE_NORMAL;
     const s = String(input || "");
     const safetyIdentifier = String(req.body?.safetyIdentifier || "");
 
@@ -4074,8 +4025,7 @@ app.post("/api/chat", async (req, res) => {
     if (profile === "gpt54" || profile === "community" || profile === "morrow") {
       if (profile === "gpt54") void recordJohnnyChatUsage("chats", { mode: "json" });
       const response = await openai.responses.create(getGpt54ResponseConfig(profile, history, s,
-        safetyIdentifier.match(/^[a-f0-9]{64}$/) ? { safety_identifier: safetyIdentifier } : {},
-        relationshipMode));
+        safetyIdentifier.match(/^[a-f0-9]{64}$/) ? { safety_identifier: safetyIdentifier } : {}));
       return res.json({
         reply: extractResponseText(response) || "(no reply)",
         sources: extractResponseSources(response)
