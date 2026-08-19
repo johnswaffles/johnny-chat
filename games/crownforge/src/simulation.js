@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260818-roadsfree1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-wallpass1';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260818-roadsfree1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-wallpass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -143,7 +143,7 @@ export class CrownforgeSimulation {
     this.addUnit('raider', 67.5, 27.5, 'enemy');
   }
 
-  addBuilding(type, x, z, faction = 'player', progress = 1) {
+  addBuilding(type, x, z, faction = 'player', progress = 1, options = {}) {
     const blueprint = BUILDING_TYPES[type];
     const building = {
       id: this.nextId++,
@@ -171,6 +171,9 @@ export class CrownforgeSimulation {
       productionQueue: [],
       productionProgress: 0,
       field: Boolean(blueprint.field),
+      wallSegments: blueprint.wall ? Math.max(1, Math.round(options.wallSegments ?? 1)) : 1,
+      wallOrientation: blueprint.wall ? (options.wallOrientation ?? 'horizontal') : null,
+      wallStart: blueprint.wall ? (options.wallStart ? { ...options.wallStart } : { x, z }) : null,
       farmerId: null,
       fieldTimer: 0,
     };
@@ -924,8 +927,21 @@ export class CrownforgeSimulation {
     };
   }
 
+  _buildingFootprint(buildingOrType, options = {}) {
+    const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType?.type;
+    const blueprint = BUILDING_TYPES[type];
+    if (!blueprint) return { width: 1, height: 1 };
+    if (!blueprint.wall) return { ...blueprint.footprint };
+    const source = typeof buildingOrType === 'object' ? buildingOrType : options;
+    const segments = Math.max(1, Math.round(source.wallSegments ?? options.wallSegments ?? 1));
+    const orientation = source.wallOrientation ?? options.wallOrientation ?? 'horizontal';
+    const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
+    const horizontal = { width: blueprint.footprint.width + (segments - 1) * span, height: blueprint.footprint.height };
+    return orientation === 'vertical' ? { width: horizontal.height, height: horizontal.width } : horizontal;
+  }
+
   _buildingApproachPoints(building, margin = BUILDING_INTERACTION_DISTANCE) {
-    const footprint = BUILDING_TYPES[building.type].footprint;
+    const footprint = this._buildingFootprint(building);
     const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
     const halfWidth = footprint.width / 2 + visualClearance + margin;
     const halfHeight = footprint.height / 2 + visualClearance + margin;
@@ -956,7 +972,7 @@ export class CrownforgeSimulation {
   }
 
   _distanceToBuildingEdge(point, building) {
-    const footprint = BUILDING_TYPES[building.type].footprint;
+    const footprint = this._buildingFootprint(building);
     const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
     const dx = Math.max(Math.abs(point.x - building.x) - footprint.width / 2 - visualClearance, 0);
     const dz = Math.max(Math.abs(point.z - building.z) - footprint.height / 2 - visualClearance, 0);
@@ -964,7 +980,7 @@ export class CrownforgeSimulation {
   }
 
   _buildingEntityBounds(building, padding = 0) {
-    const footprint = BUILDING_TYPES[building.type].footprint;
+    const footprint = this._buildingFootprint(building);
     const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
     return {
       minX: building.x - footprint.width / 2 - visualClearance - padding,
@@ -1278,7 +1294,7 @@ export class CrownforgeSimulation {
 
   _combatApproachPoints(unit, target) {
     const targetRadius = target.kind === 'building'
-      ? Math.max(BUILDING_TYPES[target.type].footprint.width, BUILDING_TYPES[target.type].footprint.height) / 2
+      ? Math.max(this._buildingFootprint(target).width, this._buildingFootprint(target).height) / 2
         + (BUILDING_TYPES[target.type].collisionClearance ?? 0)
       : UNIT_TYPES[target.type].radius;
     const ringRadius = Math.max(UNIT_TYPES[unit.type].range - COMBAT_SLOT_MARGIN, UNIT_TYPES[unit.type].radius + targetRadius + 0.08);
@@ -1333,6 +1349,10 @@ export class CrownforgeSimulation {
     unit.attackTarget = target.id;
     unit.attackTargetKind = target.kind;
     if (enteringAttack) this._cancelAttackCycle(unit);
+    unit.attackPhase = 'approach';
+    unit.attackPhaseElapsed = 0;
+    unit.attackEventFired = false;
+    unit.visualState = 'walk';
     unit.attackRepathCooldown = UNIT_REPATH_COOLDOWN;
     unit.actionLabel = `Closing on ${this._targetLabel(target)}`;
     this._resetMovementTracking(unit);
@@ -1709,6 +1729,8 @@ export class CrownforgeSimulation {
   }
 
   _buildingHasCollision(building) {
+    const blueprint = BUILDING_TYPES[building.type];
+    if (blueprint?.walkable && building.progress >= 1 && !building.destroyed) return false;
     return !building.destroyed || building.destroyAge < BUILDING_COLLISION_RELEASE_TIME;
   }
 
@@ -1841,7 +1863,10 @@ export class CrownforgeSimulation {
   }
 
   selectAt(point, additive = false) {
-    const entity = this.getEntityAt(point);
+    this.selectEntity(this.getEntityAt(point), additive);
+  }
+
+  selectEntity(entity, additive = false) {
     if (!additive) this.selectedIds = [];
     if (entity && entity.faction !== 'enemy') {
       if (additive && this.selectedIds.includes(entity.id)) this.selectedIds = this.selectedIds.filter((id) => id !== entity.id);
@@ -2044,6 +2069,75 @@ export class CrownforgeSimulation {
     return { kind: 'move', success: true, target: point };
   }
 
+  getWallLinePreview(start, end) {
+    const blueprint = BUILDING_TYPES.wall;
+    const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
+    const deltaX = end.x - start.x;
+    const deltaZ = end.z - start.z;
+    const horizontal = Math.abs(deltaX) >= Math.abs(deltaZ);
+    const axis = horizontal ? 'x' : 'z';
+    const delta = axis === 'x' ? deltaX : deltaZ;
+    const direction = delta < -0.05 ? -1 : 1;
+    const anchor = {
+      x: horizontal ? Math.round(start.x) : Math.round(start.x / span) * span,
+      z: horizontal ? Math.round(start.z / span) * span : Math.round(start.z),
+    };
+    const distanceAlongAxis = Math.abs(axis === 'x' ? deltaX : deltaZ);
+    const segmentCount = Math.max(1, Math.min(24, Math.round(distanceAlongAxis / span) + 1));
+    const segments = Array.from({ length: segmentCount }, (_, index) => ({
+      x: anchor.x + (horizontal ? direction * index * span : 0),
+      z: anchor.z + (horizontal ? 0 : direction * index * span),
+    }));
+    const world = {
+      x: (segments[0].x + segments[segments.length - 1].x) / 2,
+      z: (segments[0].z + segments[segments.length - 1].z) / 2,
+    };
+    const options = {
+      wallSegments: segmentCount,
+      wallOrientation: horizontal ? 'horizontal' : 'vertical',
+      wallStart: segments[0],
+    };
+    const check = this.getPlacementCheck('wall', world, options);
+    const totalCost = Object.fromEntries(Object.entries(blueprint.cost).map(([key, value]) => [key, value * segmentCount]));
+    if (check.valid && !this._canAfford(totalCost)) {
+      const missing = Object.entries(totalCost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
+      return { type: 'wall', world, segments, ...options, valid: false, reason: `Not enough ${missing} for this ${segmentCount}-segment wall.` };
+    }
+    return { type: 'wall', world, segments, ...options, valid: check.valid, reason: check.reason, totalCost };
+  }
+
+  placeWallLine(start, end) {
+    const preview = this.getWallLinePreview(start, end);
+    if (!preview.valid) {
+      this._announce(preview.reason);
+      return false;
+    }
+    const blueprint = BUILDING_TYPES.wall;
+    const builders = this._selectedBuilders(preview.world).slice(0, CONSTRUCTION_SLOT_COUNT);
+    if (!builders.length) {
+      this._announce('Select a villager before placing a Palisade Wall.');
+      return false;
+    }
+    this._spend(preview.totalCost);
+    const building = this.addBuilding('wall', preview.world.x, preview.world.z, 'player', 0.04, {
+      wallSegments: preview.wallSegments,
+      wallOrientation: preview.wallOrientation,
+      wallStart: preview.wallStart,
+    });
+    let assigned = 0;
+    builders.forEach((builder, index) => {
+      this._interruptWork(builder);
+      builder.postDepositTarget = null;
+      builder.attackTarget = null;
+      builder.attackTargetKind = null;
+      builder.buildTarget = building.id;
+      if (this._sendUnitToBuilding(builder, building, index)) assigned += 1;
+      else builder.buildTarget = null;
+    });
+    this._announce(`${blueprint.label} line placed: ${preview.wallSegments} segment${preview.wallSegments === 1 ? '' : 's'}. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.`);
+    return true;
+  }
+
   placeBuilding(type, point) {
     const blueprint = BUILDING_TYPES[type];
     if (!blueprint) {
@@ -2124,9 +2218,9 @@ export class CrownforgeSimulation {
     return builders.slice().sort((a, b) => distance(a, point) - distance(b, point));
   }
 
-  _buildingBounds(type, point, padding = 0) {
+  _buildingBounds(type, point, padding = 0, options = {}) {
     const blueprint = BUILDING_TYPES[type];
-    const footprint = blueprint.footprint;
+    const footprint = this._buildingFootprint(type, options);
     const clearance = blueprint.collisionClearance ?? 0;
     return {
       minX: point.x - footprint.width / 2 - clearance - padding,
@@ -2146,16 +2240,16 @@ export class CrownforgeSimulation {
     return first.minX < second.maxX && first.maxX > second.minX && first.minZ < second.maxZ && first.maxZ > second.minZ;
   }
 
-  _placementAccessCells(type, point) {
+  _placementAccessCells(type, point, options = {}) {
     const blueprint = BUILDING_TYPES[type];
-    const footprint = blueprint.footprint;
+    const footprint = this._buildingFootprint(type, options);
     const clearance = blueprint.collisionClearance ?? 0;
     const minX = Math.floor(point.x - footprint.width / 2 - clearance - 0.5);
     const maxX = Math.ceil(point.x + footprint.width / 2 + clearance + 0.5);
     const minZ = Math.floor(point.z - footprint.height / 2 - clearance - 0.5);
     const maxZ = Math.ceil(point.z + footprint.height / 2 + clearance + 0.5);
     const cells = [];
-    const bounds = this._buildingBounds(type, point);
+    const bounds = this._buildingBounds(type, point, 0, options);
     for (let cellX = minX; cellX <= maxX; cellX += 1) {
       for (let cellZ = minZ; cellZ <= maxZ; cellZ += 1) {
         const cellCenter = { x: cellX + 0.5, z: cellZ + 0.5 };
@@ -2169,14 +2263,14 @@ export class CrownforgeSimulation {
     return cells;
   }
 
-  getPlacementCheck(type, point) {
+  getPlacementCheck(type, point, options = {}) {
     const blueprint = BUILDING_TYPES[type];
     if (!blueprint || !point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) return { valid: false, reason: 'Move the foundation onto the meadow.' };
-    const bounds = this._buildingBounds(type, point, BUILDING_CLEARANCE);
+    const bounds = this._buildingBounds(type, point, BUILDING_CLEARANCE, options);
     if (bounds.minX < 0.55 || bounds.minZ < 0.55 || bounds.maxX > CONFIG.mapWidth - 0.55 || bounds.maxZ > CONFIG.mapHeight - 0.55) {
       return { valid: false, reason: 'Foundation is outside the meadow.' };
     }
-    if (this.buildings.some((building) => this._buildingHasCollision(building) && this._boundsOverlap(bounds, this._buildingBounds(building.type, building, 0)))) {
+    if (this.buildings.some((building) => !building.destroyed && this._boundsOverlap(bounds, this._buildingEntityBounds(building, 0)))) {
       return { valid: false, reason: 'Another structure is in the way.' };
     }
     if (this.resourcesNodes.some((node) => this._circleIntersectsBounds(node, RESOURCE_FOOTPRINTS[node.type] ?? 0.8, bounds))) {
@@ -2188,8 +2282,8 @@ export class CrownforgeSimulation {
     if (this.units.some((unit) => !unit.dead && this._circleIntersectsBounds(unit, UNIT_TYPES[unit.type].radius + 0.18, bounds))) {
       return { valid: false, reason: 'A unit is standing in the foundation.' };
     }
-    const placement = { type, x: point.x, z: point.z, progress: 1 };
-    const accessCells = this._placementAccessCells(type, point);
+    const placement = { type, x: point.x, z: point.z, progress: 1, ...options };
+    const accessCells = this._placementAccessCells(type, point, options);
     const openAccess = accessCells.filter((cell) => !this.isBlocked(cell.x, cell.z) && !this._buildingBlocksCell(cell.x, cell.z, placement));
     if (openAccess.length < 2) return { valid: false, reason: 'Leave room around the foundation to build.' };
     const builder = this._selectedBuilders(point)[0];

@@ -1496,3 +1496,65 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not restore starting roads, add road traffic, or introduce movement-speed modifiers until road construction is an intentional later-age gameplay feature.
+
+## PALISADE / FIELD / COMBAT PRESENTATION PASS — 2026-08-18
+
+### WHAT EXISTS
+
+- The first-age sandbox now includes one buildable defensive wall family: the Palisade Wall. It remains intentionally small, but the placement interaction supports a useful wall run rather than only isolated segments.
+- Existing Crown Hall, Hearth House, Waystore, utility blueprints, Grain Field, Crown Guard, villagers, and Ashen Raiders remain the only playable content.
+
+### WHAT WAS COMPLETED
+
+- Reworked Palisade Wall placement into a click-drag line tool. The drag chooses the dominant horizontal or vertical axis, snaps the first point and each segment to a three-world-unit span, previews every segment, and places the whole run as one construction job when released.
+- Wall lines respect the existing placement rules: map bounds, resources, decorations, units, buildings, open builder access, pathfinding, and affordability. A run costs per segment and is capped at 24 segments to keep the first-age tool readable.
+- Added runtime wall geometry to collision, pathfinding, interaction distance, combat approach bounds, construction footprints, health/selection outlines, and rendering. Vertical runs rotate the authored segment asset so the line remains visually coherent.
+- Replaced the old lumber-mill-like Barracks image with a generated Crownforge Crown Barracks training hall. Replaced the repeated wall plate with a clean generated palisade segment intended for snap repetition.
+- Made completed Grain Fields ground-walkable. Fields now render in a terrain layer beneath units and no longer occlude villagers or make them appear to walk behind a flat crop patch. Fields still block placement and remain reserved during construction.
+- Expanded building selection information. Selected structures now state health, function, and capability: production type, resource drop-off, housing, field food production, wall defense, or the enemy-core victory role. Tall building artwork is selectable across its visible silhouette, not only at the ground anchor.
+- Added and integrated original directional walk artwork for the villager, Crown Guard, and Ashen Raider. The villager loop is explicitly empty-handed; the soldier and Raider use four directional frames with subtle stride changes. Replaced the Raider attack loop with a more consistent four-direction sheet so attack poses retain the same visual scale and keep the axe inside the frame.
+- Corrected combat approach presentation. Attack orders now force a walk state while the target is out of range or line of sight; attack rings, phase cues, and attack animation only begin after a valid combat approach. Facing continues to update toward the target, so the Guard does not swing at empty air across the map.
+- Mirrored the changed source files and generated assets into `public/crownforge`.
+
+### ASSETS CREATED
+
+- `assets/crownforge-barracks-v2.png` — generated transparent 1536 x 1024 Crown Barracks training hall.
+- `assets/crownforge-palisade-segment-v2.png` — generated transparent 1536 x 1024 repeatable palisade segment.
+- `assets/crownforge-villager-walk-loop-v2.png` — generated transparent 1224 x 1285 empty-handed 4 x 4 directional villager walk loop.
+- `assets/crownforge-soldier-walk-loop-v2.png` — generated transparent 1254 x 1254 four-direction Crown Guard walk loop.
+- `assets/crownforge-raider-walk-loop-v2.png` — generated transparent 1254 x 1254 four-direction Ashen Raider walk loop.
+- `assets/crownforge-raider-attack-loop-v4.png` — generated transparent 1254 x 1254 directional Raider axe attack loop.
+
+### SYSTEMS CREATED / UPDATED
+
+- `src/simulation.js` — dynamic wall-line footprints and placement, wall cost/assignment, wall collision/pathfinding bounds, walkable field collision state, attack approach reset, and entity selection helper.
+- `src/input.js` — wall drag lifecycle, snapped preview updates, release-to-place behavior, and full-silhouette building selection handoff.
+- `src/renderer.js` — field depth layer, wall segment rendering/rotation/preview, aspect-correct first-age asset drawing, combat approach cue suppression, and visual building hit testing.
+- `src/animation.js` — empty-handed villager walk loop and approach-aware attack state resolution.
+- `src/config.js` — wall span, walkable field flag, new Barracks/wall/character asset definitions, and cache identity.
+- `src/main.js` — explicit building capabilities and wall drag guidance in the blueprint menu.
+
+### VERIFIED
+
+- Reloaded the local game at 1280 x 720. The updated Crown Hall selection works from the upper artwork as well as the ground anchor and reports `900 / 900 HP`, resource drop-off, and Villager training capability.
+- Placed a Palisade Wall through the local UI. The generated segment rendered grounded and complete, resources decreased by the segment cost, and the selected villager was assigned to the foundation.
+- Direct simulation checks produced valid five-segment horizontal and vertical previews, confirmed completed fields are walkable, and confirmed an out-of-range soldier attack remains `walk` / `approach` with no damage. A longer combat simulation applied damage only after the soldier reached combat range.
+- Local browser console logs remained empty after reload and interaction. `node --check` passed for all source files and `git diff --check` passed.
+- `tools/visual-integrity-audit.mjs` passed with no missing files or placeholder references. `tools/remediation-regression.mjs` passed all existing economy, construction, combat, victory, and defeat checks.
+- Source/public changed-file and generated-asset mirrors were compared byte-for-byte.
+
+### KNOWN ISSUES
+
+- A wall run is intentionally one building record for this small slice, so all segments share construction progress, health, and selection. Segment-by-segment damage and gates should wait for a real defensive gameplay need.
+- The new walk and attack sheets are dimensionally correct and visually inspected, but the repository audit still reports conservative edge-contact measurements in several generated and legacy atlases. The renderer keeps the existing one-pixel source-cell inset; a future dedicated atlas cleanup can add more transparent padding without changing gameplay.
+- Utility buildings still use the shared construction treatment rather than four bespoke generated foundation images each. The current progress/health feedback is functional and coherent, but construction staging remains the next art-quality opportunity.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Play a complete first-age sandbox match with a multi-segment wall, field farmer, resource gathering, Barracks production, and the first raid in one session.
+2. Tune wall interaction spacing and line cost only if normal play exposes a concrete placement or pathfinding problem.
+3. If animation review still finds visible frame-edge contact, make a focused transparent-padding pass on the specific atlas rather than broadening the animation catalog.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- No additional wall types, gates, towers, fortification upgrades, formations, technologies, ages, civilizations, campaigns, advanced military classes, or expanded AI were added in this pass.

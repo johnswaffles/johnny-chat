@@ -27,6 +27,7 @@ export class CrownforgeInput {
     this.drag = null;
     this.pan = null;
     this.buildMode = null;
+    this.wallDrag = null;
     this.keys = new Set();
     this.reducedMotion = false;
     this._bind();
@@ -75,8 +76,13 @@ export class CrownforgeInput {
   setBuildMode(type) {
     this.buildMode = type;
     const world = this.renderer.screenToWorld(this.pointer);
-    const check = this.simulation.getPlacementCheck(type, world);
-    this.renderer.setBuildPreview({ type, world, valid: check.valid, reason: check.reason });
+    const preview = type === 'wall'
+      ? this.simulation.getWallLinePreview(world, world)
+      : (() => {
+        const check = this.simulation.getPlacementCheck(type, world);
+        return { type, world, valid: check.valid, reason: check.reason };
+      })();
+    this.renderer.setBuildPreview(preview);
     this.onBuildMode(type);
     this._updateCursor(this.pointer);
     this.onToast('Construction menu: choose a clear meadow tile. Press Esc to cancel.');
@@ -84,6 +90,7 @@ export class CrownforgeInput {
 
   cancelBuildMode() {
     this.buildMode = null;
+    this.wallDrag = null;
     this.renderer.setBuildPreview(null);
     this.onBuildMode(null);
     this._updateCursor(this.pointer);
@@ -112,8 +119,13 @@ export class CrownforgeInput {
     }
     if (this.buildMode) {
       const world = this.renderer.screenToWorld(point);
-      const check = this.simulation.getPlacementCheck(this.buildMode, world);
-      this.renderer.setBuildPreview({ type: this.buildMode, world, valid: check.valid, reason: check.reason });
+      const preview = this.buildMode === 'wall' && this.wallDrag
+        ? this.simulation.getWallLinePreview(this.wallDrag.start, world)
+        : (() => {
+          const check = this.simulation.getPlacementCheck(this.buildMode, world);
+          return { type: this.buildMode, world, valid: check.valid, reason: check.reason };
+        })();
+      this.renderer.setBuildPreview(preview);
     }
   }
 
@@ -127,8 +139,10 @@ export class CrownforgeInput {
   _updateCursor(point) {
     if (this.buildMode) {
       const world = this.renderer.screenToWorld(point);
-      const check = this.simulation.getPlacementCheck(this.buildMode, world);
-      this._setCursor(check.valid ? 'build-valid' : 'build-invalid');
+      const preview = this.buildMode === 'wall' && this.wallDrag
+        ? this.simulation.getWallLinePreview(this.wallDrag.start, world)
+        : this.simulation.getPlacementCheck(this.buildMode, world);
+      this._setCursor(preview.valid ? 'build-valid' : 'build-invalid');
       return;
     }
     const entity = this.simulation.getEntityAt(this.renderer.screenToWorld(point));
@@ -160,6 +174,12 @@ export class CrownforgeInput {
     if (event.button === 0) {
       if (this.buildMode) {
         const world = this.renderer.screenToWorld(point);
+        if (this.buildMode === 'wall') {
+          this.wallDrag = { start: world };
+          this.renderer.setBuildPreview(this.simulation.getWallLinePreview(world, world));
+          this.canvas.setPointerCapture(event.pointerId);
+          return;
+        }
         const placed = this.simulation.placeBuilding(this.buildMode, world);
         this.onPlacement({ kind: 'placement', valid: placed });
         if (placed) {
@@ -182,6 +202,20 @@ export class CrownforgeInput {
 
   _up(event) {
     const point = this._point(event);
+    if (this.wallDrag && event.button === 0) {
+      const end = this.renderer.screenToWorld(point);
+      const placed = this.simulation.placeWallLine(this.wallDrag.start, end);
+      this.onPlacement({ kind: 'placement', valid: placed });
+      if (placed) {
+        const preview = this.simulation.getWallLinePreview(this.wallDrag.start, end);
+        this.renderer.addRipple(preview.world, '#d7aa54');
+        this.cancelBuildMode();
+      } else {
+        this.wallDrag = null;
+        this.renderer.setBuildPreview(this.simulation.getWallLinePreview(end, end));
+      }
+      return;
+    }
     if (this.pan) {
       this.pan = null;
       return;
@@ -193,8 +227,9 @@ export class CrownforgeInput {
     if (distance > 8) {
       this.simulation.selectRect(start, point, (unit) => this.renderer.worldToScreen(unit), this.drag.additive);
     } else {
-      const world = this.renderer.screenToWorld(point);
-      this.simulation.selectAt(world, this.drag.additive);
+      const visualEntity = this.renderer.getEntityAtScreen?.(this.simulation, point);
+      if (visualEntity) this.simulation.selectEntity(visualEntity, this.drag.additive);
+      else this.simulation.selectAt(this.renderer.screenToWorld(point), this.drag.additive);
     }
     this.drag = null;
     this.onSelection(this.simulation.selectedEntities);

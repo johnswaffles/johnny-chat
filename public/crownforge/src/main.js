@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260818-roadsfree1';
-import { CrownforgeAudio } from './audio.js?v=20260818-roadsfree1';
-import { CrownforgeInput } from './input.js?v=20260818-roadsfree1';
-import { CrownforgeRenderer } from './renderer.js?v=20260818-roadsfree1';
-import { CrownforgeSimulation } from './simulation.js?v=20260818-roadsfree1';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-wallpass1';
+import { CrownforgeAudio } from './audio.js?v=20260819-wallpass1';
+import { CrownforgeInput } from './input.js?v=20260819-wallpass1';
+import { CrownforgeRenderer } from './renderer.js?v=20260819-wallpass1';
+import { CrownforgeSimulation } from './simulation.js?v=20260819-wallpass1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -232,7 +232,7 @@ function updateUi() {
     const ready = Boolean(builder && affordable && builder.carryAmount <= 0);
     const detail = button.querySelector(`[data-build-detail="${type}"]`);
     const status = !builder ? 'SELECT VILLAGER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
-    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${status}`;
+    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? 'DRAG TO EXTEND  •  ' : ''}${status}`;
     button.classList.toggle('is-unavailable', !ready);
     setTooltip(button, !builder
       ? `Select a villager before placing a ${blueprint.label}`
@@ -240,7 +240,9 @@ function updateUi() {
         ? 'Let the selected villager deposit cargo first'
         : !affordable
           ? `Gather the resources needed for a ${blueprint.label}`
-          : `Place a ${blueprint.label}`);
+          : blueprint.wall
+            ? `Click-drag to place a snapped ${blueprint.label} line`
+            : `Place a ${blueprint.label}`);
   });
   const selected = simulation.selectedEntities;
   const productionBuilding = selected.length === 1 && selected[0].kind === 'building'
@@ -356,17 +358,7 @@ function selectionStatus() {
     const progress = building.progress < 1 ? ` · build ${Math.round(building.progress * 100)}%${stage}` : '';
     const currentFunction = building.progress < 1
       ? 'construction active'
-      : blueprint.storage
-        ? 'drop-off active'
-      : blueprint.production
-          ? 'unit training active'
-        : blueprint.field
-          ? (building.farmerId ? 'one farmer tending' : 'awaiting farmer')
-        : blueprint.population
-          ? 'housing active'
-          : blueprint.enemyStructure
-            ? 'enemy core'
-            : 'structure ready';
+      : buildingAbilityLabel(building, blueprint);
     return `${Math.ceil(building.hp)} / ${building.maxHp} HP${progress} · ${blueprint.function} · ${currentFunction}`;
   }
   const units = entities.filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead);
@@ -391,6 +383,22 @@ function selectionStatus() {
       : `${info.label} depleted · choose another resource`;
   }
   return simulation.lastCommand;
+}
+
+function buildingAbilityLabel(building, blueprint) {
+  if (blueprint.enemyStructure) return 'enemy settlement core · destroy to win';
+  if (blueprint.production) {
+    const products = (blueprint.productionTypes ?? []).map((type) => PRODUCTION_TYPES[type]?.label ?? type).join(' + ');
+    return `trains ${products} · select a unit below`;
+  }
+  if (blueprint.storage) {
+    const resource = building.type === 'lumberMill' ? 'wood' : building.type === 'quarry' ? 'stone' : building.type === 'grainMill' ? 'food' : 'all resources';
+    return `drop-off for ${resource} · shortens return routes`;
+  }
+  if (blueprint.field) return building.farmerId ? 'one farmer tending · generates food' : 'one farmer · awaiting worker';
+  if (blueprint.population) return `housing · adds ${blueprint.population} population space`;
+  if (blueprint.wall) return 'defensive boundary · blocks movement';
+  return 'structure ready · no active command';
 }
 
 function formatClock(seconds) {

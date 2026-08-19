@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260818-roadsfree1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-wallpass1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'world-z-positive', label: '+Z · screen-left / front' },
@@ -67,6 +67,7 @@ export const ANIMATION_DEFINITIONS = {
     atlasSize: { width: VILLAGER_ATLASES.width, height: VILLAGER_ATLASES.height, columns: VILLAGER_ATLASES.columns, rows: VILLAGER_ATLASES.rows },
     atlases: {
       motion: VILLAGER_ATLASES.motion,
+      motionLoop: VILLAGER_ATLASES.motionLoop,
       task: VILLAGER_ATLASES.task,
       carry: VILLAGER_ATLASES.carry,
       combat: VILLAGER_ATLASES.combat,
@@ -81,7 +82,7 @@ export const ANIMATION_DEFINITIONS = {
     },
     clips: {
       idle: singleFrame('motion', VILLAGER_ATLASES.motion.rows.idle),
-      walk: walkClip('motion', VILLAGER_ATLASES.motion.rows.walk),
+      walk: directionalLoop('motionLoop', { fps: 7.2, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
       gather_wood: actionLoop('woodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_food: actionLoop('foodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_stone: actionLoop('stoneLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
@@ -156,6 +157,7 @@ export function resolveAnimationState(unit) {
   if (unit.dead || unit.command === 'dead') return 'death';
   if (unit.hitFlash > 0 && definition.clips.hit) return 'hit';
   if (unit.command === 'attack' || unit.visualState === 'attack') {
+    if (unit.attackPhase === 'approach') return 'walk';
     if (unit.attackPhase === 'anticipation') return 'attack_anticipation';
     if (unit.attackPhase === 'recovery') return 'attack_recovery';
     if (unit.attackPhase === 'contact') return 'attack_contact';

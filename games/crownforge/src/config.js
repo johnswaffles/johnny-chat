@@ -226,6 +226,7 @@ export const BUILDING_TYPES = {
     buildTime: 5,
     cost: { food: 0, wood: 25, stone: 0 },
     field: true,
+    walkable: true,
   },
   wall: {
     label: 'Palisade Wall',
@@ -239,6 +240,7 @@ export const BUILDING_TYPES = {
     buildTime: 4,
     cost: { food: 0, wood: 20, stone: 10 },
     wall: true,
+    wallSegmentSpan: 3,
   },
   storehouse: {
     label: 'Waystore',
@@ -297,12 +299,12 @@ export const TREE_GROVE_ATLAS = {
 };
 
 export const FIRST_AGE_ASSETS = {
-  barracks: { src: './assets/crownforge-barracks-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  barracks: { src: './assets/crownforge-barracks-v2.png?v=20260819-wallpass1', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   field: { src: './assets/crownforge-field-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
-  wall: { src: './assets/crownforge-wall-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  wall: { src: './assets/crownforge-palisade-segment-v2.png?v=20260819-wallpass1', width: 1536, height: 1024 },
 };
 
 export const ROAD_DETAILS_ATLAS = {
@@ -337,6 +339,14 @@ export const VILLAGER_ATLASES = {
   motion: {
     src: './assets/villager-motion-atlas.png?v=2',
     rows: { idle: 0, walk: [1, 2, 3] },
+  },
+  motionLoop: {
+    src: './assets/crownforge-villager-walk-loop-v2.png?v=20260819-wallpass1',
+    width: 1224,
+    height: 1285,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
   },
   task: {
     src: './assets/villager-task-atlas.png?v=2',
@@ -441,9 +451,9 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
   },
   soldierWalk: {
-    src: './assets/crownforge-soldier-walk-loop-v1.png?v=20260818-sandbox1',
-    width: 1236,
-    height: 1272,
+    src: './assets/crownforge-soldier-walk-loop-v2.png?v=20260819-wallpass1',
+    width: 1254,
+    height: 1254,
     columns: 4,
     rows: 4,
     layout: 'frame-columns',
@@ -457,7 +467,7 @@ export const COMBAT_ATLASES = {
     rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
   },
   raiderAttack: {
-    src: './assets/crownforge-raider-attack-loop-v3.png?v=1',
+    src: './assets/crownforge-raider-attack-loop-v4.png?v=20260819-wallpass1',
     width: 1254,
     height: 1254,
     columns: 4,
@@ -465,7 +475,7 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
   },
   raiderWalk: {
-    src: './assets/crownforge-raider-walk-loop-v1.png?v=1',
+    src: './assets/crownforge-raider-walk-loop-v2.png?v=20260819-wallpass1',
     width: 1254,
     height: 1254,
     columns: 4,
