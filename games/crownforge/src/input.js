@@ -160,7 +160,7 @@ export class CrownforgeInput {
     if (event.button === 0) {
       if (this.buildMode) {
         const world = this.renderer.screenToWorld(point);
-        const placed = this.simulation.placeHouse(world);
+        const placed = this.simulation.placeBuilding(this.buildMode, world);
         this.onPlacement({ kind: 'placement', valid: placed });
         if (placed) {
           this.renderer.addRipple(world, '#d7aa54');

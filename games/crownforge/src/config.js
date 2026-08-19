@@ -12,6 +12,11 @@ export const CONFIG = {
   // Bias the opening view toward the south so the enlarged Crown Hall's
   // roofline remains inside the playable viewport rather than under the HUD.
   initialCameraWorld: { x: 23, z: 30 },
+  // The first-age beta sandbox deliberately keeps every currently implemented
+  // blueprint available and leaves generous room for production testing.
+  sandboxMode: true,
+  productionQueueLimit: 100,
+  sandboxPopulationCapacity: 999,
 };
 
 // The slice currently ships with one readable, forgiving enemy profile. It
@@ -53,9 +58,9 @@ export const FACTION = {
 };
 
 export const RESOURCE_TYPES = {
-  food: { label: 'Food', color: '#d76649', capacity: 180, gatherAmount: 10, gatherTime: 1.05, interactionDistance: 1.55 },
-  wood: { label: 'Wood', color: '#b98147', capacity: 180, gatherAmount: 12, gatherTime: 1.1, interactionDistance: 1.75 },
-  stone: { label: 'Stone', color: '#9fa8ab', capacity: 120, gatherAmount: 10, gatherTime: 1.2, interactionDistance: 1.7 },
+  food: { label: 'Food', color: '#d76649', capacity: 9999, gatherAmount: 10, gatherTime: 1.05, interactionDistance: 1.55 },
+  wood: { label: 'Wood', color: '#b98147', capacity: 9999, gatherAmount: 12, gatherTime: 1.1, interactionDistance: 1.75 },
+  stone: { label: 'Stone', color: '#9fa8ab', capacity: 9999, gatherAmount: 10, gatherTime: 1.2, interactionDistance: 1.7 },
 };
 
 export const UNIT_TYPES = {
@@ -112,15 +117,15 @@ export const PRODUCTION_TYPES = {
     label: 'Villager',
     icon: 'icon-villager',
     building: 'townCenter',
-    trainTime: 7,
+    trainTime: 4,
     cost: { food: 50, wood: 0, stone: 0 },
   },
   soldier: {
     label: 'Crown Guard',
     icon: 'icon-soldier',
-    building: 'townCenter',
-    trainTime: 11,
-    cost: { food: 75, wood: 25, stone: 0 },
+    building: 'barracks',
+    trainTime: 6,
+    cost: { food: 40, wood: 15, stone: 0 },
   },
 };
 
@@ -137,6 +142,7 @@ export const BUILDING_TYPES = {
     completed: true,
     storage: true,
     production: true,
+    productionTypes: ['villager'],
   },
   house: {
     label: 'Hearth House',
@@ -150,6 +156,85 @@ export const BUILDING_TYPES = {
     buildTime: 7.5,
     cost: { food: 0, wood: 55, stone: 0 },
     population: 4,
+  },
+  barracks: {
+    label: 'Crown Barracks',
+    function: 'Crown Guard production',
+    asset: 'barracks',
+    maxHp: 480,
+    footprint: { width: 5, height: 4 },
+    renderSize: 310,
+    collisionClearance: 1.12,
+    entrance: 'south',
+    buildTime: 10,
+    cost: { food: 0, wood: 90, stone: 40 },
+    production: true,
+    productionTypes: ['soldier'],
+  },
+  lumberMill: {
+    label: 'Lumber Mill',
+    function: 'Wood drop-off',
+    asset: 'lumberMill',
+    maxHp: 340,
+    footprint: { width: 4, height: 3 },
+    renderSize: 260,
+    collisionClearance: 1.04,
+    entrance: 'south',
+    buildTime: 7,
+    cost: { food: 0, wood: 45, stone: 10 },
+    storage: true,
+  },
+  quarry: {
+    label: 'Stone Quarry',
+    function: 'Stone drop-off',
+    asset: 'quarry',
+    maxHp: 380,
+    footprint: { width: 4, height: 3 },
+    renderSize: 270,
+    collisionClearance: 1.05,
+    entrance: 'south',
+    buildTime: 7,
+    cost: { food: 0, wood: 35, stone: 25 },
+    storage: true,
+  },
+  grainMill: {
+    label: 'Grain Mill',
+    function: 'Food drop-off',
+    asset: 'grainMill',
+    maxHp: 360,
+    footprint: { width: 4, height: 3 },
+    renderSize: 275,
+    collisionClearance: 1.05,
+    entrance: 'south',
+    buildTime: 7,
+    cost: { food: 0, wood: 50, stone: 10 },
+    storage: true,
+  },
+  field: {
+    label: 'Grain Field',
+    function: 'One-farmer food plot',
+    asset: 'field',
+    maxHp: 150,
+    footprint: { width: 3, height: 2 },
+    renderSize: 210,
+    collisionClearance: 0.62,
+    entrance: 'south',
+    buildTime: 5,
+    cost: { food: 0, wood: 25, stone: 0 },
+    field: true,
+  },
+  wall: {
+    label: 'Palisade Wall',
+    function: 'Defensive boundary',
+    asset: 'wall',
+    maxHp: 260,
+    footprint: { width: 3, height: 1 },
+    renderSize: 190,
+    collisionClearance: 0.48,
+    entrance: 'south',
+    buildTime: 4,
+    cost: { food: 0, wood: 20, stone: 10 },
+    wall: true,
   },
   storehouse: {
     label: 'Waystore',
@@ -197,6 +282,23 @@ export const ENVIRONMENT_ATLAS = {
   columns: 4,
   rows: 4,
   rowByType: { tree: 0, berry: 1, stone: 2, log: 3, stump: 3, flowers: 3, pebbles: 3 },
+};
+
+export const TREE_GROVE_ATLAS = {
+  src: './assets/crownforge-tree-grove-depletion-v1.png?v=20260818-sandbox1',
+  width: 1230,
+  height: 1278,
+  columns: 2,
+  rows: 2,
+};
+
+export const FIRST_AGE_ASSETS = {
+  barracks: { src: './assets/crownforge-barracks-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  field: { src: './assets/crownforge-field-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  wall: { src: './assets/crownforge-wall-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
 };
 
 export const ROAD_DETAILS_ATLAS = {
@@ -334,6 +436,14 @@ export const COMBAT_ATLASES = {
     rows: 4,
     layout: 'frame-columns',
   },
+  soldierWalk: {
+    src: './assets/crownforge-soldier-walk-loop-v1.png?v=20260818-sandbox1',
+    width: 1236,
+    height: 1272,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
   raider: {
     src: './assets/crownforge-raider-combat-atlas-v1.png?v=1',
     width: 1243,
@@ -360,4 +470,4 @@ export const COMBAT_ATLASES = {
   },
 };
 
-export const INITIAL_RESOURCES = { food: 165, wood: 150, stone: 90 };
+export const INITIAL_RESOURCES = { food: 5000, wood: 5000, stone: 5000 };

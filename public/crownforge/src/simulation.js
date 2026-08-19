@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260818-roads2';
-import { findPath } from './pathfinding.js?v=20260818-roads2';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260818-roads2';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260818-sandbox1';
+import { findPath } from './pathfinding.js?v=20260818-sandbox1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260818-sandbox1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -12,7 +12,7 @@ const STORAGE_INTERACTION_DISTANCE = 0.78;
 const BUILDING_INTERACTION_DISTANCE = 0.78;
 const PATH_REACH_TOLERANCE = 0.38;
 const BUILDING_CLEARANCE = 0.4;
-const RESOURCE_FOOTPRINTS = { tree: 1.05, berry: 0.82, stone: 0.92 };
+const RESOURCE_FOOTPRINTS = { tree: 1.05, grove: 2.45, berry: 0.82, grain: 1.1, stone: 0.92 };
 const DECORATION_FOOTPRINTS = { log: 0.78, stump: 0.62, flowers: 0.42, pebbles: 0.44 };
 const COMBAT_SLOT_COUNT = 8;
 const COMBAT_SLOT_MARGIN = 0.12;
@@ -89,8 +89,8 @@ export class CrownforgeSimulation {
 
   _seedWorld() {
     this.addBuilding('townCenter', 25, 38, 'player');
-    this.addBuilding('house', 10, 29, 'player');
-    this.addBuilding('storehouse', 37, 42, 'player');
+    this.addBuilding('house', 9, 27, 'player');
+    this.addBuilding('storehouse', 43, 48, 'player');
     // Keep the camp and eastern resource clearing inside a visual safety
     // margin. The map can pan and zoom, but tall silhouettes should not sit
     // on the viewport edge where their art is cropped.
@@ -104,13 +104,23 @@ export class CrownforgeSimulation {
     this.addResource('tree', 'wood', 10.8, 39.2, 110, 2);
     this.addResource('tree', 'wood', 61, 56, 110, 3);
     this.addResource('tree', 'wood', 78, 58, 110, 1);
+    this.addResource('grove', 'wood', 14.5, 58, 480, 0);
+    this.addResource('grove', 'wood', 67, 59, 420, 1);
+    this.addResource('tree', 'wood', 20, 61, 135, 2);
+    this.addResource('tree', 'wood', 25, 64, 135, 0);
+    this.addResource('tree', 'wood', 33, 61, 135, 3);
     this.addResource('berry', 'food', 35.5, 28.5, 105, 0);
     this.addResource('berry', 'food', 41.5, 40.5, 105, 1);
     this.addResource('berry', 'food', 57, 30, 105, 2);
     this.addResource('berry', 'food', 82, 41, 105, 0);
+    this.addResource('grain', 'food', 50, 25, 220, 0);
+    this.addResource('grain', 'food', 56, 23, 220, 0);
+    this.addResource('grain', 'food', 62, 28, 220, 0);
     this.addResource('stone', 'stone', 49, 50, 120, 0);
     this.addResource('stone', 'stone', 54, 53, 120, 3);
     this.addResource('stone', 'stone', 76, 55, 120, 2);
+    this.addResource('stone', 'stone', 72, 64, 180, 1);
+    this.addResource('stone', 'stone', 84, 61, 180, 0);
     this.addDecoration('log', 18, 24, 0, 0.9);
     this.addDecoration('stump', 8.4, 52, 1, 0.85);
     this.addDecoration('flowers', 43, 20, 2, 0.72);
@@ -160,6 +170,9 @@ export class CrownforgeSimulation {
       defenseTargetId: null,
       productionQueue: [],
       productionProgress: 0,
+      field: Boolean(blueprint.field),
+      farmerId: null,
+      fieldTimer: 0,
     };
     this.buildings.push(building);
     return building;
@@ -200,6 +213,7 @@ export class CrownforgeSimulation {
       attackTargetSnapshot: null,
       attackRepathCooldown: 0,
       buildTarget: null,
+      fieldTarget: null,
       attackTimer: 0,
       attackHitApplied: false,
       buildSlot: -1,
@@ -307,6 +321,7 @@ export class CrownforgeSimulation {
     for (const building of this.buildings) {
       this._updateConstruction(building, dt);
       this._updateTraining(building, dt);
+      this._updateField(building, dt);
     }
     for (const unit of this.units) this._updateUnit(unit, dt);
     this._resolveUnitCollisions();
@@ -454,6 +469,11 @@ export class CrownforgeSimulation {
     this._releaseCombatSlot(unit);
     unit.gatherTarget = null;
     unit.buildTarget = null;
+    if (unit.fieldTarget) {
+      const field = this.buildings.find((building) => building.id === unit.fieldTarget);
+      if (field?.farmerId === unit.id) field.farmerId = null;
+    }
+    unit.fieldTarget = null;
     unit.returnStorageId = null;
     unit.attackTarget = null;
     unit.attackTargetKind = null;
@@ -539,7 +559,63 @@ export class CrownforgeSimulation {
     unit.actionLabel = 'Idle';
     queue.shift();
     building.productionProgress = queue.length ? 0 : 0;
-    this._announce(`${blueprint.label} ready at the Crown Hall.`);
+    this._announce(`${blueprint.label} ready at the ${BUILDING_TYPES[building.type]?.label ?? 'building'}.`);
+  }
+
+  _sendUnitToField(unit, field) {
+    const route = this._bestPathToPoints(unit, this._buildingApproachPoints(field, 0.62));
+    if (!route) {
+      unit.path = [];
+      unit.pathBlocked = true;
+      unit.command = 'idle';
+      unit.visualState = 'idle';
+      unit.actionLabel = 'Field route blocked';
+      return false;
+    }
+    unit.fieldTarget = field.id;
+    unit.path = route.path;
+    unit.routeTarget = route.point;
+    unit.stopDistance = 0.62;
+    unit.pathBlocked = false;
+    unit.command = 'field';
+    unit.visualState = 'walk';
+    unit.actionLabel = 'Walking to Grain Field';
+    this._resetMovementTracking(unit);
+    return true;
+  }
+
+  _updateField(building, dt) {
+    if (!building.field || building.destroyed || building.progress < 1) return;
+    let farmer = building.farmerId
+      ? this.units.find((unit) => unit.id === building.farmerId && !unit.dead && unit.faction === 'player')
+      : null;
+    if (!farmer) {
+      const candidate = this.units.find((unit) => unit.type === 'villager' && unit.faction === 'player' && !unit.dead && !unit.carryAmount && unit.command === 'idle' && !unit.buildTarget && !unit.fieldTarget);
+      if (!candidate) return;
+      this._interruptWork(candidate);
+      building.farmerId = candidate.id;
+      farmer = candidate;
+      this._sendUnitToField(farmer, building);
+    }
+    if (farmer.fieldTarget !== building.id || farmer.command !== 'field') return;
+    if (this._distanceToBuildingEdge(farmer, building) > 0.7) {
+      farmer.visualState = 'walk';
+      farmer.actionLabel = 'Walking to Grain Field';
+      if (!farmer.path.length) this._sendUnitToField(farmer, building);
+      return;
+    }
+    farmer.path = [];
+    farmer.velocityX = 0;
+    farmer.velocityZ = 0;
+    setUnitFacing(farmer, building.x - farmer.x, building.z - farmer.z, true);
+    farmer.visualState = 'food';
+    farmer.actionLabel = 'Tending Grain Field';
+    building.fieldTimer = (building.fieldTimer ?? 0) + dt;
+    if (building.fieldTimer >= 3.2) {
+      building.fieldTimer = 0;
+      this.resources.food = Math.min(RESOURCE_TYPES.food.capacity, this.resources.food + 8);
+      this.animation.emit(farmer, ANIMATION_EVENTS.resourceCollected, { resourceType: 'food', fieldId: building.id });
+    }
   }
 
   _findUnitSpawnPoint(building, type, queueDepth = 0) {
@@ -579,14 +655,16 @@ export class CrownforgeSimulation {
     unit.repathCooldown = Math.max(0, unit.repathCooldown - dt);
     unit.attackRepathCooldown = Math.max(0, unit.attackRepathCooldown - dt);
     if (unit.command === 'move') unit.visualState = 'walk';
+    else if (unit.command === 'field') unit.visualState = unit.path.length ? 'walk' : 'food';
     else if (!['gather', 'return', 'attack', 'build'].includes(unit.command)) unit.visualState = 'idle';
-    if (unit.command === 'move' || unit.command === 'gather' || unit.command === 'return' || unit.command === 'attack' || unit.command === 'build') {
+    if (unit.command === 'move' || unit.command === 'gather' || unit.command === 'return' || unit.command === 'attack' || unit.command === 'build' || unit.command === 'field') {
       this._followPath(unit, dt);
     }
     if (unit.command === 'gather') this._updateGathering(unit, dt);
     else if (unit.command === 'return') this._updateReturning(unit);
     else if (unit.command === 'attack') this._updateAttack(unit, dt);
     else if (unit.command === 'build') this._updateBuildingIntent(unit);
+    else if (unit.command === 'field') this._updateFieldIntent(unit);
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
     unit.animationPlaybackRate = unit.command === 'move' || unit.visualState === 'walk'
       ? Math.max(0, Math.min(1.15, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed, 0.01)))
@@ -637,8 +715,11 @@ export class CrownforgeSimulation {
     unit.z = clamp(unit.z + unit.velocityZ * dt, 0.45, CONFIG.mapHeight - 0.45);
     this._constrainUnitPosition(unit, previousX, previousZ);
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
-    if (unit.motionSpeed > 0.12) setUnitFacing(unit, unit.velocityX, unit.velocityZ);
-    else if (desiredSpeed > 0.2) setUnitFacing(unit, desiredX, desiredZ);
+    // Face the authored path direction before collision separation nudges the
+    // body. This prevents a Crown Guard from reading as walking backward when
+    // a nearby unit or obstacle slightly bends its velocity.
+    if (desiredSpeed > 0.2) setUnitFacing(unit, desiredX, desiredZ);
+    else if (unit.motionSpeed > 0.12) setUnitFacing(unit, unit.velocityX, unit.velocityZ);
 
     const moved = Math.hypot(unit.x - unit.lastProgressX, unit.z - unit.lastProgressZ);
     if (unit.path.length && moved < 0.004 && unit.motionSpeed < 0.15) unit.stuckTimer += dt;
@@ -1397,6 +1478,29 @@ export class CrownforgeSimulation {
     }
   }
 
+  _updateFieldIntent(unit) {
+    const field = this.buildings.find((candidate) => candidate.id === unit.fieldTarget && candidate.field && !candidate.destroyed && candidate.progress >= 1);
+    if (!field) {
+      unit.fieldTarget = null;
+      unit.command = 'idle';
+      unit.visualState = 'idle';
+      unit.actionLabel = 'Idle';
+      return;
+    }
+    if (this._distanceToBuildingEdge(unit, field) > 0.7) {
+      unit.actionLabel = 'Walking to Grain Field';
+      unit.visualState = 'walk';
+      if (!unit.path.length) this._sendUnitToField(unit, field);
+      return;
+    }
+    unit.path = [];
+    unit.velocityX = 0;
+    unit.velocityZ = 0;
+    setUnitFacing(unit, field.x - unit.x, field.z - unit.z, true);
+    unit.visualState = 'food';
+    unit.actionLabel = 'Tending Grain Field';
+  }
+
   _enemyCamp() {
     return this.buildings.find((building) => building.type === 'ashenCamp' && building.faction === 'enemy' && !building.destroyed && building.hp > 0) ?? null;
   }
@@ -1914,7 +2018,10 @@ export class CrownforgeSimulation {
       this.lastCommand = `Attack ${BUILDING_TYPES[target.type].label}.`;
       return { kind: 'attack', success: true, target };
     }
-    const spacing = Math.min(2.4, Math.max(1.35, 0.72 + units.length * 0.22));
+    // A single selected unit should land on the cursor location. The ring is
+    // only for groups, where it prevents everyone from collapsing onto one
+    // point while preserving a readable formation.
+    const spacing = units.length === 1 ? 0 : Math.min(2.4, Math.max(1.35, 0.72 + units.length * 0.22));
     let routed = 0;
     units.forEach((unit, index) => {
       const angle = (index / Math.max(1, units.length)) * Math.PI * 2;
@@ -1937,12 +2044,15 @@ export class CrownforgeSimulation {
     return { kind: 'move', success: true, target: point };
   }
 
-  placeHouse(point) {
-    const type = 'house';
+  placeBuilding(type, point) {
     const blueprint = BUILDING_TYPES[type];
+    if (!blueprint) {
+      this._announce('That blueprint is not available in the first-age sandbox.');
+      return false;
+    }
     const builders = this._selectedBuilders(point).slice(0, CONSTRUCTION_SLOT_COUNT);
     if (!builders.length) {
-      this._announce('Select a villager before placing a Hearth House.');
+      this._announce(`Select a villager before placing a ${blueprint.label}.`);
       return false;
     }
     const check = this.getPlacementCheck(type, point);
@@ -1962,8 +2072,12 @@ export class CrownforgeSimulation {
       if (this._sendUnitToBuilding(builder, building, index)) assigned += 1;
       else builder.buildTarget = null;
     });
-    this._announce(`Hearth House foundation placed. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.`);
+    this._announce(`${blueprint.label} foundation placed. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.`);
     return true;
+  }
+
+  placeHouse(point) {
+    return this.placeBuilding('house', point);
   }
 
   queueUnit(type) {
@@ -1974,16 +2088,16 @@ export class CrownforgeSimulation {
       && !entity.destroyed
       && entity.type === blueprint?.building) ?? null;
     if (!blueprint || !building) {
-      this._announce('Select the Crown Hall before training a unit.');
+      this._announce(`Select the ${blueprint ? BUILDING_TYPES[blueprint.building]?.label ?? 'proper production building' : 'proper production building'} before training a unit.`);
       return { success: false, kind: 'train' };
     }
     const queue = Array.isArray(building.productionQueue) ? building.productionQueue : (building.productionQueue = []);
-    if (queue.length >= 3) {
-      this._announce('The Crown Hall training queue is full.');
+    if (queue.length >= CONFIG.productionQueueLimit) {
+      this._announce(`The ${BUILDING_TYPES[building.type].label} training queue is full.`);
       return { success: false, kind: 'train', building };
     }
     const population = this.population;
-    if (population.used >= population.capacity) {
+    if (!CONFIG.sandboxMode && population.used >= population.capacity) {
       this._announce('Build another Hearth House before training more units.');
       return { success: false, kind: 'train', building };
     }
@@ -1995,7 +2109,7 @@ export class CrownforgeSimulation {
     this._spend(blueprint.cost);
     queue.push({ type, elapsed: 0 });
     if (queue.length === 1) building.productionProgress = 0;
-    this._announce(`${blueprint.label} added to the Crown Hall queue.`);
+    this._announce(`${blueprint.label} added to the ${BUILDING_TYPES[building.type].label} queue.`);
     return { success: true, kind: 'train', building, type };
   }
 
@@ -2083,7 +2197,10 @@ export class CrownforgeSimulation {
     if (builder.carryAmount > 0) return { valid: false, reason: 'Let the selected villager deposit cargo first.' };
     const route = this._bestPathToPoints(builder, this._buildingApproachPoints(placement), placement);
     if (!route) return { valid: false, reason: 'The selected villager has no route to the site.' };
-    if (!this._canAfford(blueprint.cost)) return { valid: false, reason: 'Not enough wood for a Hearth House.' };
+    if (!this._canAfford(blueprint.cost)) {
+      const missing = Object.entries(blueprint.cost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
+      return { valid: false, reason: `Not enough ${missing} for a ${blueprint.label}.` };
+    }
     return { valid: true, reason: 'Foundation site ready.' };
   }
 
@@ -2111,7 +2228,7 @@ export class CrownforgeSimulation {
   get population() {
     const housing = this.buildings.filter((building) => building.faction === 'player' && building.progress >= 1).reduce((sum, building) => sum + (BUILDING_TYPES[building.type].population ?? 0), 0);
     const queued = this.buildings.reduce((sum, building) => sum + (building.faction === 'player' ? (building.productionQueue?.length ?? 0) : 0), 0);
-    return { used: this.units.filter((unit) => unit.faction === 'player' && !unit.dead).length + queued, capacity: 4 + housing };
+    return { used: this.units.filter((unit) => unit.faction === 'player' && !unit.dead).length + queued, capacity: CONFIG.sandboxMode ? CONFIG.sandboxPopulationCapacity : 4 + housing };
   }
 
   _announce(message) {

@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260818-roads2';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260818-sandbox1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'world-z-positive', label: '+Z · screen-left / front' },
@@ -107,10 +107,10 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Crown Guard',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.soldier,
-    atlases: { combat: COMBAT_ATLASES.soldier, soldierAttack: COMBAT_ATLASES.soldierAttack },
+    atlases: { combat: COMBAT_ATLASES.soldier, soldierWalk: COMBAT_ATLASES.soldierWalk, soldierAttack: COMBAT_ATLASES.soldierAttack },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.soldier.rowByState.idle),
-      walk: singleFrame('combat', COMBAT_ATLASES.soldier.rowByState.walk, { fps: 1.4 }),
+      walk: directionalLoop('soldierWalk', { fps: 6.8, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
       attack: actionLoop('soldierAttack', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
       attack_anticipation: actionPhase('soldierAttack', [0, 1]),
       attack_contact: actionPhase('soldierAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),

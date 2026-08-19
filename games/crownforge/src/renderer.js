@@ -1,4 +1,4 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS } from './config.js?v=20260818-roads2';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LIGHTING, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260818-sandbox1';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260818-roads2';
 
 const TAU = Math.PI * 2;
@@ -20,7 +20,7 @@ const ROAD_NETWORK = [
     kind: 'lane',
     width: 1.34,
     patternAlpha: 0.5,
-    points: [{ x: 18, z: 48 }, { x: 15, z: 44 }, { x: 12, z: 39 }, { x: 8, z: 35 }, { x: 10, z: 31 }],
+    points: [{ x: 18, z: 48 }, { x: 15, z: 43 }, { x: 11, z: 37 }, { x: 8, z: 32 }, { x: 9, z: 27 }],
   },
   {
     id: 'hall-entrance-lane',
@@ -34,7 +34,7 @@ const ROAD_NETWORK = [
     kind: 'lane',
     width: 1.3,
     patternAlpha: 0.48,
-    points: [{ x: 32.5, z: 45.6 }, { x: 35, z: 44.6 }, { x: 37, z: 44.2 }],
+    points: [{ x: 32.5, z: 45.6 }, { x: 36, z: 46.3 }, { x: 40, z: 47.5 }, { x: 43, z: 48 }],
   },
   {
     id: 'north-field-footpath',
@@ -95,6 +95,8 @@ export class CrownforgeRenderer {
     this.roadPattern = null;
     this.environmentReady = false;
     this.buildingStagesReady = false;
+    this.treeGroveReady = false;
+    this.firstAgeAssetReady = {};
     this.enemyCampReady = false;
     this.villagerAtlases = {};
     this.villagerAtlasReady = {};
@@ -112,9 +114,11 @@ export class CrownforgeRenderer {
     this.roadsideProps.addEventListener('load', () => { this.roadsidePropsReady = true; });
     this.environmentAtlas = new Image();
     this.buildingStages = new Image();
+    this.treeGroveAtlas = new Image();
     this.enemyCamp = new Image();
     this.environmentAtlas.addEventListener('load', () => { this.environmentReady = true; });
     this.buildingStages.addEventListener('load', () => { this.buildingStagesReady = true; });
+    this.treeGroveAtlas.addEventListener('load', () => { this.treeGroveReady = true; });
     this.enemyCamp.addEventListener('load', () => { this.enemyCampReady = true; });
     this.atlas.src = './assets/crownforge-asset-atlas.png';
     this.meadow.src = './assets/crownforge-grass-tile-v1.png?v=20260818-roads2';
@@ -122,7 +126,16 @@ export class CrownforgeRenderer {
     this.roadsideProps.src = ROAD_DETAILS_ATLAS.src;
     this.environmentAtlas.src = ENVIRONMENT_ATLAS.src;
     this.buildingStages.src = BUILDING_STAGE_ATLAS.src;
+    this.treeGroveAtlas.src = TREE_GROVE_ATLAS.src;
     this.enemyCamp.src = ENEMY_CAMP_ASSET.src;
+    this.firstAgeAssets = {};
+    for (const [key, definition] of Object.entries(FIRST_AGE_ASSETS)) {
+      const image = new Image();
+      this.firstAgeAssets[key] = image;
+      this.firstAgeAssetReady[key] = false;
+      image.addEventListener('load', () => { this.firstAgeAssetReady[key] = true; });
+      image.src = definition.src;
+    }
     for (const [key, definition] of Object.entries(VILLAGER_ATLASES)) {
       if (!definition.src) continue;
       const image = new Image();
@@ -588,8 +601,8 @@ export class CrownforgeRenderer {
         return nearStructure && unit.x + unit.z < building.x + building.z - 0.04;
       });
       const hiddenByResource = simulation.resourcesNodes.find((node) => {
-        if (!['tree', 'berry', 'stone'].includes(node.type) || node.amount <= 0) return false;
-        const clearance = node.type === 'berry' ? 1.55 : node.type === 'stone' ? 1.7 : 1.9;
+        if (!['tree', 'grove', 'berry', 'grain', 'stone'].includes(node.type) || node.amount <= 0) return false;
+        const clearance = node.type === 'berry' || node.type === 'grain' ? 1.55 : node.type === 'stone' ? 1.7 : node.type === 'grove' ? 2.6 : 1.9;
         return Math.hypot(unit.x - node.x, unit.z - node.z) < clearance
           && unit.x + unit.z < node.x + node.z - 0.04;
       });
@@ -665,6 +678,25 @@ export class CrownforgeRenderer {
     this.drawAtlasCell(ctx, this.environmentAtlas, this.environmentReady, ENVIRONMENT_ATLAS, column, row, screen, size, alpha);
   }
 
+  drawTreeGroveAsset(ctx, stage, screen, size, alpha = 1) {
+    const safeStage = Math.max(0, Math.min(3, stage ?? 0));
+    const column = safeStage % TREE_GROVE_ATLAS.columns;
+    const row = Math.floor(safeStage / TREE_GROVE_ATLAS.columns);
+    this.drawAtlasCell(ctx, this.treeGroveAtlas, this.treeGroveReady, TREE_GROVE_ATLAS, column, row, screen, size, alpha);
+  }
+
+  drawFirstAgeAsset(ctx, type, screen, size, alpha = 1) {
+    const definition = FIRST_AGE_ASSETS[type];
+    const image = this.firstAgeAssets?.[type];
+    if (!definition || !image || (!this.firstAgeAssetReady[type] && !(image.complete && image.naturalWidth > 0))) return false;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(image, screen.x - size / 2, screen.y - size * 0.98, size, size);
+    ctx.restore();
+    return true;
+  }
+
   drawBuildingStage(ctx, building, screen, size, alpha = 1) {
     if (building.type === 'ashenCamp') {
       if (!this.enemyCampReady) return;
@@ -678,6 +710,10 @@ export class CrownforgeRenderer {
       ctx.drawImage(this.enemyCamp, destination.x, destination.y, width, height);
       ctx.restore();
       return;
+    }
+    if (FIRST_AGE_ASSETS[building.type]) {
+      const constructionAlpha = building.progress >= 1 ? alpha : alpha * (0.28 + building.progress * 0.72);
+      if (this.drawFirstAgeAsset(ctx, building.type, screen, size, constructionAlpha)) return;
     }
     const stage = this.buildingConstructionStage(building);
     const column = BUILDING_STAGE_ATLAS.columnByType[building.type] ?? 1;
@@ -905,10 +941,15 @@ export class CrownforgeRenderer {
 
   drawResource(ctx, resource, time) {
     const point = this.worldToScreen(resource);
-    const size = resource.type === 'tree' ? 142 : resource.type === 'berry' ? 115 : 126;
+    const size = resource.type === 'grove' ? 212 : resource.type === 'grain' ? 178 : resource.type === 'tree' ? 142 : resource.type === 'berry' ? 115 : 126;
     const ratio = resource.maxAmount > 0 ? Math.max(0, Math.min(1, resource.amount / resource.maxAmount)) : 0;
     const depleted = resource.amount <= 0;
-    if (depleted && resource.type === 'tree') {
+    if (resource.type === 'grove') {
+      const stage = ratio > 0.72 ? 0 : ratio > 0.42 ? 1 : ratio > 0.12 ? 2 : 3;
+      this.drawTreeGroveAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.92);
+    } else if (resource.type === 'grain') {
+      this.drawFirstAgeAsset(ctx, 'field', point, size * this.camera.zoom, depleted ? 0.3 : 0.9);
+    } else if (depleted && resource.type === 'tree') {
       this.drawEnvironmentAsset(ctx, 'stump', 1, point, size * 0.72 * this.camera.zoom, 0.94);
     } else if (depleted && resource.type === 'stone') {
       this.drawEnvironmentAsset(ctx, 'pebbles', 3, point, size * 0.7 * this.camera.zoom, 0.76);
@@ -1194,9 +1235,13 @@ export class CrownforgeRenderer {
     const size = this.buildingRenderSize(type) * this.camera.zoom;
     ctx.save();
     ctx.globalAlpha = this.buildPreview.valid ? 0.58 : 0.28;
-    const column = BUILDING_STAGE_ATLAS.columnByType[type] ?? BUILDING_STAGE_ATLAS.columnByType.house;
-    if (!this.drawAtlasCell(ctx, this.buildingStages, this.buildingStagesReady, BUILDING_STAGE_ATLAS, column, BUILDING_STAGE_ATLAS.rowByStage.foundation, point, size, 0.9)) {
-      this.drawAsset(ctx, BUILDING_TYPES[type]?.asset ?? 'house', point, size, 0.9);
+    if (FIRST_AGE_ASSETS[type]) {
+      this.drawFirstAgeAsset(ctx, type, point, size, 0.9);
+    } else {
+      const column = BUILDING_STAGE_ATLAS.columnByType[type] ?? BUILDING_STAGE_ATLAS.columnByType.house;
+      if (!this.drawAtlasCell(ctx, this.buildingStages, this.buildingStagesReady, BUILDING_STAGE_ATLAS, column, BUILDING_STAGE_ATLAS.rowByStage.foundation, point, size, 0.9)) {
+        this.drawAsset(ctx, BUILDING_TYPES[type]?.asset ?? 'house', point, size, 0.9);
+      }
     }
     ctx.globalAlpha = 1;
     this.drawBuildingFootprint(ctx, { type, x: this.buildPreview.world.x, z: this.buildPreview.world.z }, false, this.buildPreview.valid ? '#a6d4a8' : '#e27964');

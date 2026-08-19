@@ -1,14 +1,14 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260818-roads2';
-import { CrownforgeAudio } from './audio.js?v=20260818-roads2';
-import { CrownforgeInput } from './input.js?v=20260818-roads2';
-import { CrownforgeRenderer } from './renderer.js?v=20260818-roads2';
-import { CrownforgeSimulation } from './simulation.js?v=20260818-roads2';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260818-sandbox1';
+import { CrownforgeAudio } from './audio.js?v=20260818-sandbox1';
+import { CrownforgeInput } from './input.js?v=20260818-sandbox1';
+import { CrownforgeRenderer } from './renderer.js?v=20260818-sandbox1';
+import { CrownforgeSimulation } from './simulation.js?v=20260818-sandbox1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
 const buildMenuToggle = document.querySelector('#build-menu-toggle');
 const buildMenu = document.querySelector('#build-menu');
-const buildButton = document.querySelector('#build-house');
+const buildButtons = [...document.querySelectorAll('[data-build-type]')];
 const trainMenuWrap = document.querySelector('#train-menu-wrap');
 const trainMenuToggle = document.querySelector('#train-menu-toggle');
 const trainMenu = document.querySelector('#train-menu');
@@ -23,6 +23,7 @@ const outcomeCopy = document.querySelector('#outcome-copy');
 const outcomeIcon = document.querySelector('#outcome-icon');
 const controlsToggle = document.querySelector('#controls-toggle');
 const controlsPanel = document.querySelector('#controls-panel');
+const controlsMinimize = document.querySelector('#controls-minimize');
 const masterVolume = document.querySelector('#master-volume');
 const effectsVolume = document.querySelector('#effects-volume');
 const reducedMotion = document.querySelector('#reduced-motion');
@@ -106,7 +107,6 @@ const input = new CrownforgeInput({
     }
     audio.unlock();
     audio.ui();
-    controlsPanel.hidden = true;
     buildMenu.hidden = !buildMenu.hidden;
     trainMenu.hidden = true;
   },
@@ -114,7 +114,6 @@ const input = new CrownforgeInput({
     audio.ui();
     buildMenu.hidden = true;
     trainMenu.hidden = true;
-    controlsPanel.hidden = true;
   },
 });
 
@@ -125,19 +124,20 @@ buildMenuToggle.addEventListener('click', () => {
     input.cancelBuildMode();
     return;
   }
-  controlsPanel.hidden = true;
   buildMenu.hidden = !buildMenu.hidden;
   trainMenu.hidden = true;
 });
-buildButton.addEventListener('click', () => {
+function beginBuildingPlacement(type) {
   audio.unlock();
   if (input.buildMode) {
     input.cancelBuildMode();
     return;
   }
+  const blueprint = BUILDING_TYPES[type];
+  if (!blueprint) return;
   const builder = simulation.units.find((unit) => unit.selected && unit.type === 'villager' && unit.faction === 'player' && !unit.dead);
   if (!builder) {
-    announce('Select a villager before placing a Hearth House.');
+    announce(`Select a villager before placing a ${blueprint.label}.`);
     audio.play('invalid');
     return;
   }
@@ -146,20 +146,22 @@ buildButton.addEventListener('click', () => {
     audio.play('invalid');
     return;
   }
-  if (simulation.resources.wood < BUILDING_TYPES.house.cost.wood) {
-    announce('A Hearth House needs 55 wood.');
+  if (!Object.entries(blueprint.cost ?? {}).every(([key, value]) => simulation.resources[key] >= value)) {
+    const missing = Object.entries(blueprint.cost ?? {}).find(([key, value]) => simulation.resources[key] < value)?.[0] ?? 'resources';
+    announce(`Not enough ${missing} for a ${blueprint.label}.`);
     audio.play('invalid');
     return;
   }
-  controlsPanel.hidden = true;
-  input.setBuildMode('house');
+  input.setBuildMode(type);
+}
+buildButtons.forEach((button) => {
+  button.addEventListener('click', () => beginBuildingPlacement(button.dataset.buildType));
 });
 cancelBuildButton.addEventListener('click', () => input.cancelBuildMode());
 trainMenuToggle.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
   if (input.buildMode) input.cancelBuildMode();
-  controlsPanel.hidden = true;
   buildMenu.hidden = true;
   trainMenu.hidden = !trainMenu.hidden;
 });
@@ -179,6 +181,10 @@ controlsToggle.addEventListener('click', () => {
   trainMenu.hidden = true;
   controlsPanel.hidden = !controlsPanel.hidden;
 });
+controlsMinimize?.addEventListener('click', () => {
+  controlsPanel.classList.toggle('is-collapsed');
+  controlsMinimize.setAttribute('aria-expanded', String(!controlsPanel.classList.contains('is-collapsed')));
+});
 restartButton.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
@@ -187,7 +193,6 @@ restartButton.addEventListener('click', () => {
   input.cancelBuildMode();
   buildMenu.hidden = true;
   trainMenu.hidden = true;
-  controlsPanel.hidden = true;
   victoryPanel.hidden = true;
   victoryPanel.classList.remove('is-defeat');
   announce('A fresh Crownforge meadow awaits.');
@@ -218,17 +223,25 @@ function updateUi() {
     : commandLineText();
   document.querySelector('#clock').textContent = formatClock(simulation.clock);
   const builder = simulation.units.find((unit) => unit.selected && unit.type === 'villager' && unit.faction === 'player' && !unit.dead);
-  const hasWood = simulation.resources.wood >= BUILDING_TYPES.house.cost.wood;
-  const buildCost = document.querySelector('#build-cost');
-  buildCost.textContent = `55 WOOD  •  ${!builder ? 'SELECT VILLAGER' : !hasWood ? 'NEED WOOD' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : 'READY'}`;
-  buildButton.classList.toggle('is-unavailable', !builder || !hasWood || builder.carryAmount > 0);
-  setTooltip(buildButton, !builder
-    ? 'Select a villager before placing a Hearth House'
-    : !hasWood
-      ? 'Gather 55 wood before placing a Hearth House'
+  buildButtons.forEach((button) => {
+    const type = button.dataset.buildType;
+    const blueprint = BUILDING_TYPES[type];
+    if (!blueprint) return;
+    const cost = blueprint.cost ?? {};
+    const affordable = Object.entries(cost).every(([key, value]) => simulation.resources[key] >= value);
+    const ready = Boolean(builder && affordable && builder.carryAmount <= 0);
+    const detail = button.querySelector(`[data-build-detail="${type}"]`);
+    const status = !builder ? 'SELECT VILLAGER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
+    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${status}`;
+    button.classList.toggle('is-unavailable', !ready);
+    setTooltip(button, !builder
+      ? `Select a villager before placing a ${blueprint.label}`
       : builder.carryAmount > 0
         ? 'Let the selected villager deposit cargo first'
-        : 'Place a Hearth House');
+        : !affordable
+          ? `Gather the resources needed for a ${blueprint.label}`
+          : `Place a ${blueprint.label}`);
+  });
   const selected = simulation.selectedEntities;
   const productionBuilding = selected.length === 1 && selected[0].kind === 'building'
     && selected[0].faction === 'player'
@@ -250,16 +263,18 @@ function updateUi() {
       const queued = queue.filter((order) => order.type === type).length;
       const affordable = Object.entries(blueprint.cost).every(([key, value]) => simulation.resources[key] >= value);
       const capacityReady = simulation.population.used < simulation.population.capacity;
-      const available = affordable && capacityReady && queue.length < 3;
+      const allowed = BUILDING_TYPES[productionBuilding.type].productionTypes?.includes(type) ?? false;
+      const available = allowed && affordable && capacityReady && queue.length < 100;
       const detail = button.querySelector(`[data-train-detail="${type}"]`);
       if (detail) detail.textContent = `${formatCost(blueprint.cost)}  •  ${blueprint.trainTime} SEC${queued ? `  •  ${queued} QUEUED` : ''}`;
+      button.hidden = !allowed;
       button.classList.toggle('is-unavailable', !available);
       setTooltip(button, !capacityReady
         ? 'Build another Hearth House for more population space'
         : !affordable
           ? `Gather the resources needed for a ${blueprint.label}`
-          : queue.length >= 3
-            ? 'The Crown Hall training queue is full'
+          : queue.length >= 100
+            ? `The ${BUILDING_TYPES[productionBuilding.type].label} training queue is full`
             : `Train a ${blueprint.label}`);
     });
   }
@@ -343,8 +358,10 @@ function selectionStatus() {
       ? 'construction active'
       : blueprint.storage
         ? 'drop-off active'
-        : blueprint.production
+      : blueprint.production
           ? 'unit training active'
+        : blueprint.field
+          ? (building.farmerId ? 'one farmer tending' : 'awaiting farmer')
         : blueprint.population
           ? 'housing active'
           : blueprint.enemyStructure

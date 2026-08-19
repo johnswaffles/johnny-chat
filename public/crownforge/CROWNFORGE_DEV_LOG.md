@@ -1406,3 +1406,66 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 ### WHAT SHOULD NOT BE BUILT YET
 
 - No water crossings, road traffic simulation, wagon system, movement-speed modifiers, new biomes, large prop catalog, new resources, civilizations, units, technologies, campaigns, or expanded AI.
+
+## FIRST-AGE SANDBOX / PRODUCTION & CONTROL PASS — 2026-08-18
+
+### WHAT EXISTS
+
+- The playable first-age slice now starts as a generous experimentation sandbox: Crown Hall, Hearth House, Waystore, three villagers, one Crown Guard, the Ashen Camp, easy enemy pacing, and a larger but still lightly populated map.
+- The Crown Hall is the first production structure. Crown Barracks is the first military production structure. Lumber Mill, Stone Quarry, Grain Mill, Grain Field, and Palisade Wall are available from the first-age blueprint menu.
+- All current first-age blueprints are unlocked from the start. The match begins with 5,000 Food, 5,000 Wood, and 5,000 Stone, a 999 population sandbox capacity, and a 100-order production queue limit.
+
+### WHAT WAS COMPLETED
+
+- Replaced the Crown Guard's single-frame movement fallback with a dedicated four-direction, four-frame walk loop. Direction is chosen from the intended path vector before collision nudges so the guard no longer walks backward or shows a static combat pose while moving.
+- Verified direct right-click movement for both a selected Crown Guard and selected villagers. Group destinations retain spacing rather than collapsing to one point, while a single unit can move directly to the clicked area.
+- Added a compact, lower-left Field Manual panel below First Light Orders. It explains left click, drag, Shift-click, right click, scroll, WASD, middle-drag, and Escape. Its minimize button was tested, and the expanded panel fits above the command deck at 1280x720.
+- Expanded the build menu into a first-age blueprint family: Hearth House, Crown Barracks, Lumber Mill, Stone Quarry, Grain Mill, Grain Field, and Palisade Wall. The menu was moved upward at shorter viewport heights so all seven options remain clear of the command deck.
+- Connected production to the correct building: Crown Hall trains Villagers, Crown Barracks trains Crown Guards, and each queue is limited to the sandbox cap instead of an artificial early prototype cap. Production buttons now hide units that the selected building cannot create.
+- Added a one-farmer Grain Field loop. A completed field claims an idle villager, routes that farmer to a believable field edge, shows tending as a food task, and periodically adds food. Retasking the farmer releases the field cleanly.
+- Spread the default Hearth House and Waystore farther from the Crown Hall and added more wood groves, individual trees, stone clearings, and grain plots without filling the map with clutter.
+- Added a four-stage generated tree-grove depletion sheet: full grove, one tree removed, reduced grove, and cleared stumps/logs. Grove footprints are blocked for pathfinding so villagers interact at the perimeter rather than standing inside the art.
+- Added original transparent first-age art for Crown Barracks, Lumber Mill, Stone Quarry, Grain Mill, Grain Field, and Palisade Wall. They share Crownforge's warm timber, blue-and-gold, grounded isometric treatment and are mirrored into the public game build.
+
+### ASSETS CREATED
+
+- `assets/crownforge-soldier-walk-loop-v1.png` — four-direction Crown Guard movement sheet.
+- `assets/crownforge-tree-grove-depletion-v1.png` — four-stage wood-grove depletion sheet.
+- `assets/crownforge-barracks-v1.png` — Crown Barracks.
+- `assets/crownforge-lumber-mill-v1.png` — Lumber Mill.
+- `assets/crownforge-quarry-v1.png` — Stone Quarry.
+- `assets/crownforge-grain-mill-v1.png` — Grain Mill.
+- `assets/crownforge-field-v1.png` — Grain Field.
+- `assets/crownforge-wall-v1.png` — Palisade Wall.
+
+### SYSTEMS CREATED / UPDATED
+
+- `src/animation.js` and `src/simulation.js` — directional Crown Guard locomotion, intended-vector facing, direct movement, spacing-aware group orders, field assignment, and field production.
+- `src/config.js` — sandbox resources/capacity, first-age building definitions, production definitions, grove atlas, and new generated asset definitions.
+- `src/renderer.js` — grove depletion stages, first-age building rendering, custom build previews, resource footprints, and larger authored utility buildings.
+- `src/main.js`, `src/input.js`, `index.html`, and `styles.css` — first-age blueprint menu, production menu routing, controls panel, minimize behavior, and viewport-safe menu layout.
+
+### VERIFIED
+
+- Local browser playtest at 1280x720: Crown Guard selected and moved by right click in multiple directions; villagers selected by box and moved by right click; no browser console warnings or errors.
+- Local browser playtest: Crown Hall queued a Villager, a Crown Barracks was placed in an open area, construction completed, and the Barracks queue correctly offered a Crown Guard while hiding Villager production.
+- Local browser playtest: a Grain Field was placed and completed. The underlying simulation test confirmed automatic farmer assignment and food production while the farmer was tending the field.
+- Local browser playtest: building menu, production menu, controls minimization, zoom, and keyboard camera pan were exercised at the target viewport. Build and train menus remained clear of the command deck.
+- `node --check` passed for every source file, `git diff --check` passed, `tools/visual-integrity-audit.mjs` passed with no missing files or placeholder references, and `tools/remediation-regression.mjs` passed all existing economy, construction, combat, victory, and defeat checks.
+
+### KNOWN ISSUES
+
+- The visual-integrity audit still reports pre-existing atlas edge-contact cells in older villager/combat sheets and the intentional `hit` to `idle` fallback for soldier and raider damage states. The new Crown Guard walk sheet itself is dimensionally correct and is used only for movement.
+- The new utility buildings use clean authored completed art plus the existing construction treatment/alpha progression. They do not yet have bespoke four-image foundation, partial, near-complete, and completed art for every new blueprint.
+- Grain resource nodes currently share the single generated field rendering. This is sufficient for the sandbox loop; a second grain variant should wait until a real repetition problem appears in play.
+- This remains a first-age sandbox. There are no additional ages, technologies, civilizations, campaigns, advanced military classes, or economy optimization systems.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Play one complete deployed sandbox match after this pass and tune only issues that remain visible in normal resource, construction, production, and first-raid play.
+2. Give the new utility buildings bespoke construction-stage art only after the current production and placement workflows remain stable.
+3. Revisit atlas edge-contact cells and the intentional damage-state fallback as a focused animation cleanup pass.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add new ages, technology trees, civilizations, campaigns, diplomacy, naval systems, advanced formations, siege weapons, multiple enemy economies, or a large building catalog before this first-age sandbox remains reliable and visually coherent in a deployed complete-match test.
