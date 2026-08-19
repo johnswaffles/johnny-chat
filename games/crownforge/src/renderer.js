@@ -157,14 +157,14 @@ export class CrownforgeRenderer {
     this.selectionBox = null;
     this.buildPreview = null;
     this.ripples = [];
-    this.roadsideDetails = [
+    this.roadsideDetails = CONFIG.startingRoads ? [
       { kind: 'roadside', type: 'fence', x: 7.1, z: 38.2, size: 112, depthBias: 0.3 },
       { kind: 'roadside', type: 'sign', x: 30.2, z: 45.1, size: 94, depthBias: 0.3 },
       { kind: 'roadside', type: 'cargo', x: 35.2, z: 46.1, size: 102, depthBias: 0.3 },
       { kind: 'roadside', type: 'lantern', x: 27.1, z: 41.1, size: 94, depthBias: 0.3 },
       { kind: 'roadside-shrub', type: 'flowers', variant: 1, x: 17.1, z: 49.7, size: 50, depthBias: 0.2 },
       { kind: 'roadside-shrub', type: 'flowers', variant: 2, x: 46.7, z: 34.1, size: 46, depthBias: 0.2 },
-    ];
+    ] : [];
     this.lastRenderTime = 0;
     const query = new URLSearchParams(window.location.search);
     this.diagnostics = query.has('lighting-benchmark');
@@ -394,6 +394,7 @@ export class CrownforgeRenderer {
   }
 
   drawPathsOnMap(ctx, time) {
+    if (!CONFIG.startingRoads) return;
     const trace = (points) => {
       const projected = points.map((point) => this.worldToScreen(point));
       ctx.beginPath();

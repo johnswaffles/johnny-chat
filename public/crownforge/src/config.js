@@ -15,6 +15,10 @@ export const CONFIG = {
   // The first-age beta sandbox deliberately keeps every currently implemented
   // blueprint available and leaves generous room for production testing.
   sandboxMode: true,
+  // Roads remain authored content for a later-age build feature. The opening
+  // first-age map starts as an unroaded meadow so the settlement grows from
+  // player decisions rather than presenting a finished route network.
+  startingRoads: false,
   productionQueueLimit: 100,
   sandboxPopulationCapacity: 999,
 };

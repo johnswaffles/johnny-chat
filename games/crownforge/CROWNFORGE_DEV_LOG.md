@@ -1469,3 +1469,29 @@ All six runtime files are clean `1254 x 1254` RGBA atlases. A fringe/matte food 
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add new ages, technology trees, civilizations, campaigns, diplomacy, naval systems, advanced formations, siege weapons, multiple enemy economies, or a large building catalog before this first-age sandbox remains reliable and visually coherent in a deployed complete-match test.
+
+## ROAD-FREE OPENING MAP PASS — 2026-08-18
+
+### WHAT WAS COMPLETED
+
+- Removed the authored road network from the opening first-age map. The main settlement road, village lanes, footpaths, plazas, road wear marks, and roadside props no longer render when a new match starts.
+- Added `CONFIG.startingRoads`, a clear first-age switch that keeps the road renderer and its authored data available for a later-age buildable-road feature without changing current pathfinding, collision, or unit movement.
+- Kept the natural meadow, terrain details, buildings, resources, and existing simulation routes unchanged. This pass changes only the initial visual presentation.
+
+### VERIFIED
+
+- Confirmed the source and public game builds use the same road-free configuration.
+- Confirmed the existing source-level Crownforge audits remain the next required check before deployment.
+
+### KNOWN ISSUES
+
+- Roads are intentionally not available as a player build action yet. The retained road assets and route data are future-age foundation only.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Play the road-free opening at normal zoom and after panning to confirm the meadow remains authored and does not feel visually empty.
+2. When roads return in a later-age pass, make them an explicit buildable object with placement, pathfinding, and construction rules rather than re-enabling a fixed starting network.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not restore starting roads, add road traffic, or introduce movement-speed modifiers until road construction is an intentional later-age gameplay feature.
