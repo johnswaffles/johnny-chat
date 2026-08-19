@@ -240,7 +240,7 @@ function updateUi() {
     const ready = Boolean(builder && affordable && builder.carryAmount <= 0);
     const detail = button.querySelector(`[data-build-detail="${type}"]`);
     const status = !builder ? 'SELECT VILLAGER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
-    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? '8-WAY SNAP  •  ' : ''}${status}`;
+    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? 'DRAG TO AIM  •  8-WAY SNAP  •  ' : ''}${status}`;
     button.classList.toggle('is-unavailable', !ready);
     setTooltip(button, !builder
       ? `Select a villager before placing a ${blueprint.label}`
@@ -249,7 +249,7 @@ function updateUi() {
         : !affordable
           ? `Gather the resources needed for a ${blueprint.label}`
           : blueprint.wall
-            ? `Click-drag to place an 8-way snapped ${blueprint.label} line`
+            ? `Click-drag in any direction; the ${blueprint.label} snaps to the nearest of 8 orientations`
             : `Place a ${blueprint.label}`);
   });
   const selected = simulation.selectedEntities;

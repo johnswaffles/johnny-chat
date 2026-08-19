@@ -11,7 +11,7 @@ export const CONFIG = {
   maxZoom: 1.16,
   // Bias the opening view slightly north so the full Hearth House roofline
   // and the enlarged Crown Hall both sit below the top HUD at reset.
-  initialCameraWorld: { x: 21, z: 25 },
+  initialCameraWorld: { x: 18.5, z: 22.5 },
   // The first-age beta sandbox deliberately keeps every currently implemented
   // blueprint available and leaves generous room for production testing.
   sandboxMode: true,
@@ -149,12 +149,13 @@ export const BUILDING_TYPES = {
     function: 'Resource drop-off and settlement core',
     asset: 'townCenter',
     maxHp: 900,
-    footprint: { width: 6, height: 5 },
-    // Landmark art is intentionally larger than the gameplay footprint. The
-    // footprint stays compact for routing, while this render size makes the
-    // Crown Hall read as the settlement's visual anchor beside villagers.
-    renderSize: 900,
-    collisionClearance: 1.8,
+    // The Crown Hall now owns a broad court-sized footprint so its patio and
+    // entrances can comfortably read as space for a small group of villagers.
+    // Keep the collision footprint aligned with the enlarged landmark rather
+    // than letting units walk through the visible patio or rear wings.
+    footprint: { width: 8, height: 7 },
+    renderSize: 1120,
+    collisionClearance: 2.05,
     entrance: 'south',
     completed: true,
     storage: true,

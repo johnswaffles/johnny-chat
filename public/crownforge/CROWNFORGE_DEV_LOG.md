@@ -186,6 +186,18 @@ Scores are for this deliberately tiny playable slice, not for a future full RTS.
 
 No major expansion is recommended yet. The next work should raise Animation and AI to 8+ while preserving the current asset language, control clarity, and small complete match.
 
+## LANDMARK SCALE AND PALISADE ORIENTATION CLARITY — 2026-08-19
+
+- Enlarged the Crown Hall from a 6x5 gameplay footprint / 900px render size to an 8x7 court-sized footprint / 1120px render size. The villager scale is unchanged; the larger collision clearance keeps units outside the visible patio and rear wings while leaving the landmark visually dominant without clipping its highest tower at the opening camera.
+- Confirmed that Palisade Wall orientation is already complete in the current placement system: choose `PALISADE WALL`, then click-drag from the desired start toward the desired end. The line snaps to the nearest of eight compass directions and builds the full snapped segment run on release.
+- Clarified the wall workflow in the blueprint detail, tooltip, and placement feedback so the direction control is discoverable without adding a separate wall system or changing the existing drag interaction.
+- No new artwork was required; the existing original Crown Hall and Palisade assets remain the canonical Crownforge building family.
+
+### STILL NEEDS WORK
+
+- The Crown Hall is intentionally larger without adding a new camera mode; close zoom and extreme map-edge panning should be rechecked after future landmark art changes.
+- Palisade placement uses drag direction for the eight-way snap and does not yet expose a separate keyboard rotation key; add one only if playtests show drag direction is insufficient.
+
 ## WHAT SHOULD NOT BE BUILT YET
 
 - Additional civilizations, ages, technologies, campaigns, procedural maps, naval systems, ranged units, advanced AI, multiplayer, diplomacy, trading, or large content catalogs.
