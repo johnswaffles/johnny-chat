@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-fieldpass1';
-import { CrownforgeAudio } from './audio.js?v=20260819-fieldpass1';
-import { CrownforgeInput } from './input.js?v=20260819-fieldpass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260819-fieldpass1';
-import { CrownforgeSimulation } from './simulation.js?v=20260819-fieldpass1';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-musicpass1';
+import { CrownforgeAudio } from './audio.js?v=20260819-musicpass1';
+import { CrownforgeInput } from './input.js?v=20260819-musicpass1';
+import { CrownforgeRenderer } from './renderer.js?v=20260819-musicpass1';
+import { CrownforgeSimulation } from './simulation.js?v=20260819-musicpass1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -24,8 +24,8 @@ const outcomeIcon = document.querySelector('#outcome-icon');
 const controlsToggle = document.querySelector('#controls-toggle');
 const controlsPanel = document.querySelector('#controls-panel');
 const controlsMinimize = document.querySelector('#controls-minimize');
-const masterVolume = document.querySelector('#master-volume');
-const effectsVolume = document.querySelector('#effects-volume');
+const musicToggle = document.querySelector('#music-toggle');
+const musicToggleLabel = document.querySelector('#music-toggle-label');
 const reducedMotion = document.querySelector('#reduced-motion');
 const unitSpeed = document.querySelector('#unit-speed');
 const unitSpeedValue = document.querySelector('#unit-speed-value');
@@ -200,8 +200,22 @@ restartButton.addEventListener('click', () => {
   announce('A fresh Crownforge meadow awaits.');
 });
 
-masterVolume.addEventListener('input', (event) => audio.setMasterVolume(event.target.value));
-effectsVolume.addEventListener('input', (event) => audio.setEffectsVolume(event.target.value));
+function updateMusicControl() {
+  if (!musicToggle) return;
+  const muted = audio.isMusicMuted();
+  musicToggle.classList.toggle('is-muted', muted);
+  musicToggle.setAttribute('aria-pressed', String(muted));
+  musicToggleLabel.textContent = muted ? 'MUSIC OFF' : 'MUSIC ON';
+  setTooltip(musicToggle, muted ? 'Unmute Lantern Under Stone' : 'Mute Crownforge music');
+}
+
+musicToggle?.addEventListener('click', () => {
+  audio.unlock();
+  const muted = audio.toggleMusic();
+  updateMusicControl();
+  announce(muted ? 'Crownforge music muted.' : 'Lantern Under Stone is playing.');
+});
+
 reducedMotion.addEventListener('change', (event) => {
   input.setReducedMotion(event.target.checked);
   audio.ui();
@@ -440,5 +454,6 @@ function frame(now) {
 
 window.crownforge = { simulation, renderer, input, audio };
 bindTooltips();
+updateMusicControl();
 announce(`${FACTION.name} are ready. Select a villager, then right-click a resource.`);
 requestAnimationFrame(frame);

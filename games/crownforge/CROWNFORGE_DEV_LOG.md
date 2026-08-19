@@ -65,7 +65,7 @@ Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 - Combat approach pass: attackers choose ring positions around a target, preserve a readable melee distance, and re-route around completed buildings and resource obstacles.
 - Combat feedback pass: attack timing, live health bars, hit-recoil flash, attack rings, target-loss cleanup, retargeting, and staged death removal are now explicit.
 - Combat scope pass: the slice remains one Crown Guard type versus one Ashen Raider type; no additional military roster or advanced combat system was added.
-- No audio layer exists in the prototype yet, so this pass stayed with the existing restrained toast/ripple/visual feedback rather than introducing a partial sound system.
+- Music-only audio pass: added the provided `Lantern Under Stone.mp3` as the looped Crownforge musical bed, with browser-safe first-gesture startup and a compact mute toggle. Procedural oscillator cues are disabled for now; gameplay remains silent until a future recorded effects pass.
 - UI icon pass: added a single original 4x4 transparent icon atlas and replaced the resource letters, construction glyph, outcome glyph, and control symbols with matching Crownforge artwork.
 - Resource clarity pass: Food, Wood, and Stone cards now show semantic icons, live stored/capacity values, colored capacity bars, and native hover titles with the exact stored amount.
 - Selection clarity pass: the intel panel now distinguishes group, worker, combat unit, building, resource node, and no-selection states with matching icons; selected resource nodes report remaining capacity and the intended gather command.
@@ -88,13 +88,13 @@ Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 - The building stages are still four threshold-based visual states; they do not yet have a construction-specific multi-frame worker loop, dust, sound, or a richer phase transition treatment.
 - Combat uses one authored pose per direction and action row rather than a large animation library; the timing and silhouette are readable at current RTS distance, but short multi-frame attack/walk loops should be hand-tuned later.
 - Resource totals have storage caps but no broader food/stone consumption systems yet; this pass intentionally stops at the complete gather/deposit loop.
-- Gathering, deposit, construction, combat, damage, death, placement, outcome, and UI effects now use the restrained procedural cue layer in `src/audio.js`; authored recorded audio and music remain deferred.
+- Procedural gathering, deposit, construction, combat, damage, death, placement, outcome, and UI sound cues are intentionally disabled. Only the looped music bed is active in this pass.
 - The generated villager sheets use a shared four-direction camera treatment; diagonal facing transitions are readable, but the direction-to-cell mapping should be rechecked after any future camera-angle change.
 - The generated villager sheets now use all four authored direction columns in live rendering; the direction-to-cell mapping should still be rechecked after any future camera-angle change.
 - The generated meadow is used as a clipped board texture rather than a fully tile-authored terrain system.
 - Buildings use a single footprint and do not yet support rotation or placement ghost snapping; the current art does not require rotation.
 - The enemy has no workers or economy; its AI is intentionally limited to a capped Raider garrison, slow replacement, local defense, and occasional Crown Hall raids. There is no player AI, fog of war, or ranged combat.
-- No save/load, sound, music, tech tree, population training, multiple maps, or campaign layer exists by design.
+- No save/load, recorded sound effects, tech tree, population training, multiple maps, or campaign layer exists by design.
 - There is no separate main menu yet; the current slice intentionally opens directly into the playable meadow and offers Reset Slice / Play Again.
 - Tooltips now use the Crownforge-styled `#ui-tooltip` surface for existing control/resource explanations; a larger contextual help system remains deferred until there are more commands to explain.
 - Edge scrolling and controller/touch bindings are not implemented; camera movement is currently WASD/arrow, wheel zoom, and middle-drag pan, matching the small desktop slice.
@@ -120,6 +120,7 @@ Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 - `assets/crownforge-raider-combat-atlas-v1.png` — original transparent four-direction Ashen Raider atlas with idle, walk, attack, and death rows.
 - `assets/crownforge-ashen-camp-v1.png` — original transparent Ashen Camp structure with charcoal timber, stone, red-brown shelters, firelight, and a readable enemy pennant.
 - `assets/crownforge-ui-icons-v1.png` — original transparent 4x4 interface icon family for the Crownforge seal, resources, units, construction, commands, health, population, deposit, outcomes, cancel, and controls.
+- `assets/lantern-under-stone.mp3` — provided looped musical bed for the current Crownforge slice.
 - `tools/prepare-villager-atlases.mjs` — repeatable technical matte removal and alpha preparation for the generated sheets.
 - `tools/prepare-world-atlases.mjs` — repeatable neutral-matte removal and alpha preparation for the environment and building-stage sheets.
 - All generated art is original to Crownforge and uses a shared warm historical RTS treatment. No Age of Empires artwork or assets were used.
@@ -132,7 +133,7 @@ Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 - `src/renderer.js` — world projection, terrain surface, depth sorting, generated art rendering, environment/building atlas variants, construction-stage selection, enemy camp rendering, destroyed-structure fade, four-direction villager atlas/state selection with frame-column action loops, directional combat-atlas selection, walk/attack timing accents, hit flash, attack ring, selection/path overlays, placement preview, destination reticles, selection brackets, depleted resource silhouettes, resource capacity labels, compact carried-resource badges, and removal of the developer coordinate overlay.
 - `src/input.js` — RTS pointer commands, selection box, camera controls, construction preview updates, build mode, keyboard shortcuts, cursor-state feedback, Escape/menu cancellation, and removal of the developer-only `G` debug toggle.
 - `src/main.js` — runtime loop, resource and selection presentation, compact construction-menu binding, building selection information, placement readout, controls popover, build readiness messaging, reset/victory handling, and status messaging.
-- `src/audio.js` — gesture-unlocked, deduplicated procedural effects with bounded active voices and reset cleanup.
+- `src/audio.js` — gesture-unlocked looped music playback, mute state, volume control, and quiet compatibility methods for the future recorded-effects layer.
 - Simulation timing hardening — `src/simulation.js` advances gameplay through a bounded fixed 60 Hz step so economy, movement, construction, combat, AI, and animation do not diverge with render cadence; renderer ripple age now advances from measured render time.
 - `index.html` / `styles.css` — Crownforge resource cards, semantic selection identity, Field Manual controls panel, placement readout, original command/outcome icon integration, responsive breakpoints, keyboard hints, and cursor/availability states.
 
@@ -197,6 +198,27 @@ No major expansion is recommended yet. The next work should raise Animation and 
 
 - The Crown Hall is intentionally larger without adding a new camera mode; close zoom and extreme map-edge panning should be rechecked after future landmark art changes.
 - Palisade placement uses drag direction for the eight-way snap and does not yet expose a separate keyboard rotation key; add one only if playtests show drag direction is insufficient.
+
+## MUSIC-ONLY AUDIO PASS — 2026-08-19
+
+### WHAT CHANGED
+
+- Added the provided `Lantern Under Stone.mp3` to the Crownforge asset family as the single looped musical bed.
+- Replaced the procedural oscillator implementation in `src/audio.js` with HTML audio playback. The track loops, starts on the first permitted user gesture, and does not interrupt when the match resets.
+- Added a compact lower-right `MUSIC ON / MUSIC OFF` control with accessible pressed state and synchronized tooltip text.
+- Disabled all temporary UI, movement, gathering, construction, combat, damage, death, placement, victory, defeat, and building-destruction sound cues. Existing call sites remain quiet compatibility methods for a future authored effects pass.
+
+### VALIDATION
+
+- Source and public audio modules pass `node --check`.
+- Both source and public MP3 copies are valid MPEG Layer III audio files.
+- Browser UI check confirmed the music button toggles between `MUSIC ON` and `MUSIC OFF`, updates `aria-pressed`, and updates its tooltip.
+- The existing Crownforge simulation regression remains green.
+
+### STILL NEEDS WORK
+
+- Browser autoplay policy means the music begins after the first user gesture when autoplay is restricted; the control remains available immediately.
+- A dedicated music volume slider and recorded gameplay effects are intentionally deferred until the music-only experience is reviewed in play.
 
 ## WHAT SHOULD NOT BE BUILT YET
 
