@@ -8,6 +8,7 @@
   "scripts": {
     "build": "node scripts/build-pages.mjs",
     "build:pages": "CF_PAGES=1 node scripts/build-pages.mjs",
+    "test": "node --check server.js && node --test tests/*.test.mjs",
     "start": "node server.js",
     "dev": "NODE_ENV=development node server.js"
   },
