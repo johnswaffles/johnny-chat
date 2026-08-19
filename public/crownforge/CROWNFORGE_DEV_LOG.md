@@ -1663,3 +1663,30 @@ The existing true-alpha `assets/villager-carry-food-loop-v1.png` remains registe
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add new civilizations, ages, technologies, campaigns, formations, advanced combat classes, metal economy, or a large new asset catalog. Future content should first follow `CROWNFORGE_ART_PRODUCTION_PLAYBOOK.md` and meet the existing vertical-slice quality bar.
+
+## UNIT / BUILDING / RESOURCE DEPLOYMENT POLISH — 2026-08-19
+
+### WHAT WAS COMPLETED
+
+- Added the final opening-camera adjustment so the enlarged Hearth House roofline and Crown Hall read fully below the top HUD at reset instead of presenting a partial silhouette.
+- Bumped the browser/module and generated-asset cache identity to `20260819-unitpass2` so the deployed site loads the corrected camera and current art together.
+- Rechecked the reusable unit-art workflow: directional rows use the shared front/right/back/left contract, side walks include a passing phase, carry art keeps the full body and feet baseline, and large resource nodes share one tier-aware collision/interaction footprint.
+
+### VERIFIED
+
+- `node --check` passed for every source module.
+- `git diff --check` passed.
+- `tools/remediation-regression.mjs` passed economy, construction, combat, victory, and defeat coverage.
+- `tools/visual-integrity-audit.mjs` passed with no missing files or placeholder references; conservative atlas edge reports remain informational for the existing generated sheets.
+- Source/public Crownforge mirrors were compared byte-for-byte after the cache bump.
+
+### KNOWN ISSUES
+
+- The approved true-alpha food-carry sheet remains in use; the attempted replacement was rejected because its edited output baked a checkerboard into the RGB image.
+- Construction still shares the existing stage treatment for enlarged buildings. Bespoke Barracks foundation stages remain a later visual pass.
+- The small first-age slice intentionally has no new unit roster, ages, metal economy, or advanced AI in this deployment.
+
+### NEXT POLISH
+
+- Continue using `CROWNFORGE_ART_PRODUCTION_PLAYBOOK.md` for every future unit/building/resource asset.
+- In the next focused art pass, replace only the specific atlas cells that fail visual inspection; do not broaden the catalog until the current slice remains stable.
