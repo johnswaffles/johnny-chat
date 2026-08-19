@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-unitpass3';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-fieldpass1';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-unitpass3';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-fieldpass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -670,7 +670,7 @@ export class CrownforgeSimulation {
     farmer.velocityX = 0;
     farmer.velocityZ = 0;
     setUnitFacing(farmer, building.x - farmer.x, building.z - farmer.z, true);
-    farmer.visualState = 'food';
+    farmer.visualState = 'field';
     farmer.actionLabel = 'Tending Grain Field';
     building.fieldTimer = (building.fieldTimer ?? 0) + dt;
     if (building.fieldTimer >= 3.2) {
@@ -1582,7 +1582,7 @@ export class CrownforgeSimulation {
     unit.velocityX = 0;
     unit.velocityZ = 0;
     setUnitFacing(unit, field.x - unit.x, field.z - unit.z, true);
-    unit.visualState = 'food';
+    unit.visualState = 'field';
     unit.actionLabel = 'Tending Grain Field';
   }
 

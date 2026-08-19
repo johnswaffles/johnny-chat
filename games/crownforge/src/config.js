@@ -150,8 +150,11 @@ export const BUILDING_TYPES = {
     asset: 'townCenter',
     maxHp: 900,
     footprint: { width: 6, height: 5 },
-    renderSize: 640,
-    collisionClearance: 1.5,
+    // Landmark art is intentionally larger than the gameplay footprint. The
+    // footprint stays compact for routing, while this render size makes the
+    // Crown Hall read as the settlement's visual anchor beside villagers.
+    renderSize: 900,
+    collisionClearance: 1.8,
     entrance: 'south',
     completed: true,
     storage: true,
@@ -177,8 +180,10 @@ export const BUILDING_TYPES = {
     asset: 'barracks',
     maxHp: 480,
     footprint: { width: 5, height: 4 },
-    renderSize: 540,
-    collisionClearance: 1.38,
+    // Keep the Barracks a substantial military landmark without expanding its
+    // navigation footprint beyond the existing first-age building contract.
+    renderSize: 760,
+    collisionClearance: 1.65,
     entrance: 'south',
     buildTime: 10,
     cost: { food: 0, wood: 90, stone: 40 },
@@ -303,6 +308,17 @@ export const ENVIRONMENT_ATLAS = {
   rowByType: { tree: 0, berry: 1, stone: 2, log: 3, stump: 3, flowers: 3, pebbles: 3 },
 };
 
+// Trees have their own cropped atlas so a tree cell can never sample berries,
+// stone, or a neighboring row. The source family remains the same Crownforge
+// environment treatment; this boundary is a rendering safeguard.
+export const TREE_ATLAS = {
+  src: './assets/crownforge-tree-atlas-v1.png?v=20260819-fieldpass1',
+  width: 1254,
+  height: 313,
+  columns: 4,
+  rows: 1,
+};
+
 export const TREE_GROVE_ATLAS = {
   src: './assets/crownforge-tree-grove-depletion-v1.png?v=20260818-sandbox1',
   width: 1230,
@@ -323,7 +339,7 @@ export const FIRST_AGE_ASSETS = {
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
-  field: { src: './assets/crownforge-field-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  field: { src: './assets/crownforge-field-v2.png?v=20260819-fieldpass1', width: 1536, height: 1024 },
   wall: { src: './assets/crownforge-palisade-segment-v2.png?v=20260819-unitpass3', width: 1536, height: 1024 },
 };
 
@@ -395,6 +411,14 @@ export const VILLAGER_ATLASES = {
     src: './assets/villager-gather-food-loop-v1.png?v=1',
     width: 1254,
     height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  fieldLoop: {
+    src: './assets/crownforge-villager-field-work-loop-v1.png?v=20260819-fieldpass1',
+    width: 1235,
+    height: 1274,
     columns: 4,
     rows: 4,
     layout: 'frame-columns',

@@ -1696,3 +1696,53 @@ The existing true-alpha `assets/villager-carry-food-loop-v1.png` remains registe
 - The first deployed camera correction still left the north Hearth House roofline too close to the HUD. The final opening focus is now `{ x: 21, z: 25 }`, which shifts the settlement down without pushing the Crown Hall into the left information rail.
 - Rechecked the reset at 1280 x 720: the Hearth House roofline is fully visible, the enlarged Crown Hall remains fully readable, and the live console stays empty.
 - Bumped the cache identity to `20260819-unitpass3` for the final deployment artifact.
+
+## LANDMARK SCALE / FIELD WORK / TREE INTEGRITY PASS — 2026-08-19
+
+### WHAT WAS COMPLETED
+
+- Increased the Crown Hall render size from 640 to 900 and Crown Barracks from 540 to 760 while keeping their gameplay footprints separate from their visual silhouettes. Their collision clearances were raised modestly so villagers still route around the larger architecture without changing human-unit scale.
+- Replaced the field plot art with a no-worker transparent cutout. Field workers are now live villagers rather than a person baked into the field image.
+- Added a dedicated `field_work` four-direction, four-frame villager action loop. The rows use front/right/back/left artwork and the phases read as upright contact, reaching, deep bending, and recovery. Field production now uses this state and its live animation events while retaining the existing one-farmer-per-field rule.
+- Cropped the individual tree row into a dedicated tree atlas and routed live tree resources through it. This prevents the mixed environment atlas from sampling berry, stone, or neighboring-row pixels and addresses the half-tree/white-fragment failure mode without changing the approved Crownforge tree family.
+- Added `tools/prepare-generated-assets.mjs` for repeatable true-alpha cleanup of generated field and unit rasters. The field-worker sheet was processed before registration; generated variants with visible colored halos or baked checkerboards were rejected and not shipped.
+- Extended `CROWNFORGE_ART_PRODUCTION_PLAYBOOK.md` with the field-worker contract, baked-worker failure mode, and dedicated-tree-atlas safeguard so future units/buildings/resources follow the same process.
+
+### ASSETS CREATED
+
+- `assets/crownforge-field-v2.png` — transparent field plot with no static worker.
+- `assets/crownforge-villager-field-work-loop-v1.png` — 4x4 directional field-work animation atlas.
+- `assets/crownforge-tree-atlas-v1.png` — isolated four-variant tree row derived from the approved environment family.
+- `tools/prepare-generated-assets.mjs` — repeatable generated-asset alpha cleanup utility.
+
+### SYSTEMS UPDATED
+
+- `src/config.js` — landmark render sizes, tree atlas registration, field-v2 registration, field-loop dimensions, and cache identity `20260819-fieldpass1`.
+- `src/animation.js` — registered `fieldLoop`, added `field_work`, and preserved the shared four-direction mapping.
+- `src/simulation.js` — field farmers now advertise `visualState = 'field'` so the live farmer uses the dedicated loop rather than berry gathering art.
+- `src/renderer.js` — dedicated tree atlas loading/rendering, unchanged tiered resource logic, and larger landmark presentation.
+
+### VERIFIED
+
+- `node --check` passed for every Crownforge source module and the new asset-preparation utility.
+- `git diff --check -- games/crownforge` passed.
+- Browser QA at 1280x720 showed the enlarged Crown Hall, clean no-worker field plot, live field farmer, `Tending Grain Field` status, and increasing Food total from field production.
+- The field worker stayed grounded with a visible selection ring and was not duplicated by the field art. The isolated tree family loaded without clipped atlas neighbors in the wide-camera inspection.
+- The browser console returned no warning or error entries during this pass.
+
+### KNOWN ISSUES
+
+- The generated field-worker sheet is technically clean in the browser after alpha preparation, but its raw preview still contains RGB values in transparent pixels; future raster review should judge the alpha-composited result, not hidden RGB channels.
+- The Crown Hall is intentionally a dominant landmark and can approach the top HUD at high zoom; the gameplay footprint remains smaller and routing-safe.
+- The field system remains intentionally small: one farmer per completed field, no crop-growth stages, and no broader agriculture economy.
+- The individual tree atlas isolates the approved four-tree family; new tree variants should be generated only when they pass the same transparent-background review.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Hand-tune the field-worker frame timing after more close camera inspection, especially the reach-to-bend transition.
+2. Review enlarged Barracks placement and construction-stage readability in a live build, then tune its landmark silhouette only if it still reads too small beside villagers.
+3. Continue checking every generated raster on the actual meadow background at normal zoom and after panning, with transparent halos treated as a release blocker.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add more agriculture buildings, crop types, tree catalogs, civilizations, ages, technologies, campaigns, or advanced military systems until this field/tree/landmark pass remains visually stable in the deployed slice.

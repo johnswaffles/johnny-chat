@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-unitpass3';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-fieldpass1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -73,6 +73,7 @@ export const ANIMATION_DEFINITIONS = {
       combat: VILLAGER_ATLASES.combat,
       woodLoop: VILLAGER_ATLASES.woodLoop,
       foodLoop: VILLAGER_ATLASES.foodLoop,
+      fieldLoop: VILLAGER_ATLASES.fieldLoop,
       stoneLoop: VILLAGER_ATLASES.stoneLoop,
       buildLoop: VILLAGER_ATLASES.buildLoop,
       carryWoodLoop: VILLAGER_ATLASES.carryWoodLoop,
@@ -88,6 +89,7 @@ export const ANIMATION_DEFINITIONS = {
       walk: directionalLoop('motionLoop', { fps: 7.2, directionRows: [0, 1, 2, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
       gather_wood: actionLoop('woodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_food: actionLoop('foodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
+      field_work: actionLoop('fieldLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_stone: actionLoop('stoneLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       construct: actionLoop('buildLoop', { construction_strike: ANIMATION_EVENT_TIMINGS.construction_strike }),
       carry_wood: actionLoop('carryWoodLoop'),
@@ -168,6 +170,7 @@ export function resolveAnimationState(unit) {
   }
   if (unit.command === 'move' || unit.visualState === 'walk') return 'walk';
   if (unit.visualState === 'wood') return 'gather_wood';
+  if (unit.visualState === 'field') return 'field_work';
   if (unit.visualState === 'food') return 'gather_food';
   if (unit.visualState === 'stone') return 'gather_stone';
   if (unit.visualState === 'build') return 'construct';

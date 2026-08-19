@@ -43,6 +43,14 @@ Carry and task sheets are separate action families. A carry state must show a co
 
 Buildings are isolated transparent cutouts with a painted contact shadow or carefully authored base, never a square terrain tile. The art render size can be larger than the gameplay footprint, but `collisionClearance`, selection silhouette, approach points, and pathfinding must be tuned so units do not occupy the visual body. Entrances must face a usable approach side.
 
+Field plots are ground props rather than opaque unit containers. A field asset
+must be a clean transparent cutout with no baked farmer; the farmer is a live
+villager using the `field_work` action loop. The field loop follows the same
+front/right/back/left row contract and uses four readable phases: upright
+contact, reach, deep bend, and recovery. The plot and farmer share the same
+meadow contact language, but the farmer remains the canonical selectable,
+animated entity.
+
 The first-age construction contract is foundation, partial, near-complete, and complete. If a dedicated stage sheet is not yet available, use the existing stage atlas and a restrained progress treatment; log that limitation rather than adding an unreviewed placeholder. Crown Hall and Crown Barracks are the scale anchors for future settlement buildings: villagers stay the same size while the structures read as substantial architecture.
 
 ## Resource contract
@@ -82,6 +90,8 @@ Before accepting an asset family, test:
 - **Worker inside a grove:** collision uses a larger footprint than gathering range. Derive the interaction ring from the same tiered footprint plus unit radius.
 - **Floating art:** the file has a different bottom anchor or a hidden ground patch. Reframe the asset or add a documented renderer y-offset; do not compensate by moving the gameplay entity.
 - **Buildings too small:** increase visual render size and clearance while keeping human scale and gameplay footprint intentional.
+- **Baked field worker:** remove the static person from the field cutout before adding a live farmer, or the plot will appear to contain duplicate workers.
+- **Tree backdrop / row leak:** isolate the tree row into a dedicated atlas when a mixed environment sheet produces white fragments or partial silhouettes; never ship a generated tree export with a colored halo just to fill a missing variant.
 
 ## Current approved examples
 
@@ -92,5 +102,8 @@ Before accepting an asset family, test:
 - Crown Barracks: `assets/crownforge-barracks-v3.png`.
 - Large stone: `assets/crownforge-stone-deposit-large-v1.png`.
 - Grove depletion family: `assets/crownforge-tree-grove-depletion-v1.png`, scaled by the resource tier contract and staged by remaining capacity.
+- Field plot: `assets/crownforge-field-v2.png`, a no-worker transparent plot reserved for the live farmer.
+- Field worker loop: `assets/crownforge-villager-field-work-loop-v1.png`, 4x4 directional upright/reach/bend/recover sheet.
+- Individual tree family: `assets/crownforge-tree-atlas-v1.png`, the isolated clean tree row used to prevent mixed-atlas sampling.
 
 Future units and buildings should follow this file and then add only the smallest new rule needed for their unique silhouette or gameplay interaction.

@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260819-unitpass3';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260819-unitpass3';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260819-fieldpass1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260819-fieldpass1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -95,6 +95,7 @@ export class CrownforgeRenderer {
     this.meadowPattern = null;
     this.roadPattern = null;
     this.environmentReady = false;
+    this.treeAtlasReady = false;
     this.buildingStagesReady = false;
     this.treeGroveReady = false;
     this.largeStoneReady = false;
@@ -115,11 +116,13 @@ export class CrownforgeRenderer {
     });
     this.roadsideProps.addEventListener('load', () => { this.roadsidePropsReady = true; });
     this.environmentAtlas = new Image();
+    this.treeAtlas = new Image();
     this.buildingStages = new Image();
     this.treeGroveAtlas = new Image();
     this.largeStone = new Image();
     this.enemyCamp = new Image();
     this.environmentAtlas.addEventListener('load', () => { this.environmentReady = true; });
+    this.treeAtlas.addEventListener('load', () => { this.treeAtlasReady = true; });
     this.buildingStages.addEventListener('load', () => { this.buildingStagesReady = true; });
     this.treeGroveAtlas.addEventListener('load', () => { this.treeGroveReady = true; });
     this.largeStone.addEventListener('load', () => { this.largeStoneReady = true; });
@@ -129,6 +132,7 @@ export class CrownforgeRenderer {
     this.road.src = './assets/crownforge-dirt-road-tile-v1.png?v=20260818-roads2';
     this.roadsideProps.src = ROAD_DETAILS_ATLAS.src;
     this.environmentAtlas.src = ENVIRONMENT_ATLAS.src;
+    this.treeAtlas.src = TREE_ATLAS.src;
     this.buildingStages.src = BUILDING_STAGE_ATLAS.src;
     this.treeGroveAtlas.src = TREE_GROVE_ATLAS.src;
     this.largeStone.src = LARGE_STONE_ASSET.src;
@@ -734,6 +738,11 @@ export class CrownforgeRenderer {
     this.drawAtlasCell(ctx, this.environmentAtlas, this.environmentReady, ENVIRONMENT_ATLAS, column, row, screen, size, alpha);
   }
 
+  drawTreeAsset(ctx, variant, screen, size, alpha = 1) {
+    const column = Math.max(0, Math.min(TREE_ATLAS.columns - 1, variant ?? 0));
+    this.drawAtlasCell(ctx, this.treeAtlas, this.treeAtlasReady, TREE_ATLAS, column, 0, screen, size, alpha);
+  }
+
   drawTreeGroveAsset(ctx, stage, screen, size, alpha = 1) {
     const safeStage = Math.max(0, Math.min(3, stage ?? 0));
     const column = safeStage % TREE_GROVE_ATLAS.columns;
@@ -1082,6 +1091,8 @@ export class CrownforgeRenderer {
     const size = resource.type === 'berry' || resource.type === 'grain' ? baseSize : baseSize * tier.renderScale;
     const ratio = resource.maxAmount > 0 ? Math.max(0, Math.min(1, resource.amount / resource.maxAmount)) : 0;
     const depleted = resource.amount <= 0;
+    const scale = depleted ? 0.72 : 0.88 + ratio * 0.12;
+    const alpha = depleted ? 0.32 : 0.82 + ratio * 0.18;
     if (resource.type === 'grove') {
       const stage = ratio > 0.72 ? 0 : ratio > 0.42 ? 1 : ratio > 0.12 ? 2 : 3;
       this.drawTreeGroveAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.92);
@@ -1089,6 +1100,8 @@ export class CrownforgeRenderer {
       this.drawFirstAgeAsset(ctx, 'field', point, size * this.camera.zoom, depleted ? 0.3 : 0.9);
     } else if (depleted && resource.type === 'tree') {
       this.drawEnvironmentAsset(ctx, 'stump', 1, point, size * 0.72 * this.camera.zoom, 0.94);
+    } else if (resource.type === 'tree') {
+      this.drawTreeAsset(ctx, resource.variant, point, size * scale * this.camera.zoom, alpha);
     } else if (resource.type === 'stone' && resource.sizeTier === 'large' && !depleted && this.largeStoneReady) {
       const width = size * this.camera.zoom;
       const height = width * (LARGE_STONE_ASSET.height / LARGE_STONE_ASSET.width);
@@ -1100,8 +1113,6 @@ export class CrownforgeRenderer {
     } else if (depleted && resource.type === 'stone') {
       this.drawEnvironmentAsset(ctx, 'pebbles', 3, point, size * 0.7 * this.camera.zoom, 0.76);
     } else {
-      const scale = depleted ? 0.72 : 0.88 + ratio * 0.12;
-      const alpha = depleted ? 0.32 : 0.82 + ratio * 0.18;
       this.drawEnvironmentAsset(ctx, resource.type, resource.variant, point, size * scale * this.camera.zoom, alpha);
     }
   }
