@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-unitpass2';
-import { CrownforgeAudio } from './audio.js?v=20260819-unitpass2';
-import { CrownforgeInput } from './input.js?v=20260819-unitpass2';
-import { CrownforgeRenderer } from './renderer.js?v=20260819-unitpass2';
-import { CrownforgeSimulation } from './simulation.js?v=20260819-unitpass2';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-unitpass3';
+import { CrownforgeAudio } from './audio.js?v=20260819-unitpass3';
+import { CrownforgeInput } from './input.js?v=20260819-unitpass3';
+import { CrownforgeRenderer } from './renderer.js?v=20260819-unitpass3';
+import { CrownforgeSimulation } from './simulation.js?v=20260819-unitpass3';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');

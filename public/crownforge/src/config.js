@@ -11,7 +11,7 @@ export const CONFIG = {
   maxZoom: 1.16,
   // Bias the opening view slightly north so the full Hearth House roofline
   // and the enlarged Crown Hall both sit below the top HUD at reset.
-  initialCameraWorld: { x: 23, z: 27 },
+  initialCameraWorld: { x: 21, z: 25 },
   // The first-age beta sandbox deliberately keeps every currently implemented
   // blueprint available and leaves generous room for production testing.
   sandboxMode: true,
@@ -312,19 +312,19 @@ export const TREE_GROVE_ATLAS = {
 };
 
 export const LARGE_STONE_ASSET = {
-  src: './assets/crownforge-stone-deposit-large-v1.png?v=20260819-unitpass2',
+  src: './assets/crownforge-stone-deposit-large-v1.png?v=20260819-unitpass3',
   width: 1536,
   height: 1024,
 };
 
 export const FIRST_AGE_ASSETS = {
-  townCenter: { src: './assets/crownforge-crown-hall-v2.png?v=20260819-unitpass2', width: 1536, height: 1024 },
-  barracks: { src: './assets/crownforge-barracks-v3.png?v=20260819-unitpass2', width: 1536, height: 1024 },
+  townCenter: { src: './assets/crownforge-crown-hall-v2.png?v=20260819-unitpass3', width: 1536, height: 1024 },
+  barracks: { src: './assets/crownforge-barracks-v3.png?v=20260819-unitpass3', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   field: { src: './assets/crownforge-field-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
-  wall: { src: './assets/crownforge-palisade-segment-v2.png?v=20260819-unitpass2', width: 1536, height: 1024 },
+  wall: { src: './assets/crownforge-palisade-segment-v2.png?v=20260819-unitpass3', width: 1536, height: 1024 },
 };
 
 export const ROAD_DETAILS_ATLAS = {
@@ -361,7 +361,7 @@ export const VILLAGER_ATLASES = {
     rows: { idle: 0, walk: [1, 2, 3] },
   },
   motionLoop: {
-    src: './assets/crownforge-villager-walk-loop-v3.png?v=20260819-unitpass2',
+    src: './assets/crownforge-villager-walk-loop-v3.png?v=20260819-unitpass3',
     width: 1234,
     height: 1275,
     columns: 4,
@@ -471,7 +471,7 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
   },
   soldierWalk: {
-    src: './assets/crownforge-soldier-walk-loop-v3.png?v=20260819-unitpass2',
+    src: './assets/crownforge-soldier-walk-loop-v3.png?v=20260819-unitpass3',
     width: 1224,
     height: 1285,
     columns: 4,
@@ -487,7 +487,7 @@ export const COMBAT_ATLASES = {
     rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
   },
   raiderAttack: {
-    src: './assets/crownforge-raider-attack-loop-v4.png?v=20260819-unitpass2',
+    src: './assets/crownforge-raider-attack-loop-v4.png?v=20260819-unitpass3',
     width: 1254,
     height: 1254,
     columns: 4,
@@ -495,7 +495,7 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
   },
   raiderWalk: {
-    src: './assets/crownforge-raider-walk-loop-v2.png?v=20260819-unitpass2',
+    src: './assets/crownforge-raider-walk-loop-v2.png?v=20260819-unitpass3',
     width: 1254,
     height: 1254,
     columns: 4,

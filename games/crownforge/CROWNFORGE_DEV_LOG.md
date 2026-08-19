@@ -1690,3 +1690,9 @@ The existing true-alpha `assets/villager-carry-food-loop-v1.png` remains registe
 
 - Continue using `CROWNFORGE_ART_PRODUCTION_PLAYBOOK.md` for every future unit/building/resource asset.
 - In the next focused art pass, replace only the specific atlas cells that fail visual inspection; do not broaden the catalog until the current slice remains stable.
+
+## RESET FRAMING FOLLOW-UP — 2026-08-19
+
+- The first deployed camera correction still left the north Hearth House roofline too close to the HUD. The final opening focus is now `{ x: 21, z: 25 }`, which shifts the settlement down without pushing the Crown Hall into the left information rail.
+- Rechecked the reset at 1280 x 720: the Hearth House roofline is fully visible, the enlarged Crown Hall remains fully readable, and the live console stays empty.
+- Bumped the cache identity to `20260819-unitpass3` for the final deployment artifact.

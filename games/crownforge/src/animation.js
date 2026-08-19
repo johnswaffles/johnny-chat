@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-unitpass2';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-unitpass3';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
