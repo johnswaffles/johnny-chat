@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-fieldpass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-hallpass1';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-fieldpass1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-hallpass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -154,8 +154,8 @@ export class CrownforgeSimulation {
     // north-west coordinates put both trees behind the Hall's tall sprite in
     // projected depth, making the starting wood look absent even though it
     // remained mechanically targetable.
-    this.addResource('tree', 'wood', 11.5, 45.5, 180, 0, { sizeTier: 'small' });
-    this.addResource('tree', 'wood', 15.2, 48.2, 180, 1, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 17.5, 53.5, 180, 0, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 12.5, 53.5, 180, 1, { sizeTier: 'small' });
     this.addResource('tree', 'wood', 10.8, 39.2, 260, 2, { sizeTier: 'medium' });
     this.addResource('tree', 'wood', 61, 56, 420, 3, { sizeTier: 'medium' });
     this.addResource('tree', 'wood', 78, 58, 700, 1, { sizeTier: 'large' });
@@ -187,9 +187,9 @@ export class CrownforgeSimulation {
     // Keep the opening workers on the clear south approach so their authored
     // silhouettes and selection markers are visible at reset rather than
     // mechanically present behind the Crown Hall's tall body.
-    this.addUnit('villager', 23, 44.5, 'player');
-    this.addUnit('villager', 26, 46, 'player');
-    this.addUnit('villager', 29, 44.5, 'player');
+    this.addUnit('villager', 25, 54, 'player');
+    this.addUnit('villager', 30, 55, 'player');
+    this.addUnit('villager', 20, 55, 'player');
     this.addUnit('soldier', 42, 34, 'player');
     // Keep the opening defender between the camp and the stone clearing. The
     // old point overlapped the eastern stone node in projection and made a
@@ -1918,13 +1918,18 @@ export class CrownforgeSimulation {
       .filter((unit) => !unit.dead && distance(point, unit) <= radius)
       .sort((a, b) => distance(point, a) - distance(point, b))[0];
     if (unitHit) return unitHit;
+    // A resource clicked directly at its node should remain targetable even
+    // when a monumental structure's expanded edge clearance sits nearby.
+    // This keeps the Crown Hall from swallowing the opening wood command.
+    const resourceHit = this.resourcesNodes
+      .filter((node) => node.amount > 0 && distance(point, node) <= resourceFootprint(node))
+      .sort((a, b) => distance(point, a) - distance(point, b))[0];
+    if (resourceHit) return resourceHit;
     const buildingHit = this.buildings
       .filter((building) => !building.destroyed && building.hp > 0 && this._distanceToBuildingEdge(point, building) <= radius)
       .sort((a, b) => this._distanceToBuildingEdge(point, a) - this._distanceToBuildingEdge(point, b))[0];
     if (buildingHit) return buildingHit;
-    return this.resourcesNodes
-      .filter((node) => node.amount > 0 && distance(point, node) <= resourceFootprint(node))
-      .sort((a, b) => distance(point, a) - distance(point, b))[0] ?? null;
+    return null;
   }
 
   selectAt(point, additive = false) {

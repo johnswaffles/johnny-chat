@@ -218,6 +218,39 @@ No major expansion is recommended yet. The next work should raise Animation and 
 ### STILL NEEDS WORK
 
 - Browser autoplay policy means the music begins after the first user gesture when autoplay is restricted; the control remains available immediately.
+
+## CROWN HALL MONUMENTAL SCALE PASS — 2026-08-19
+
+### WHAT CHANGED
+
+- Enlarged the Crown Hall's rendered landmark size from `1120px` to `11200px` while keeping villager and Crown Guard artwork at the established human scale.
+- Expanded the Crown Hall gameplay footprint from `8×7` to `18×16` world units and increased its clearance so the enormous patio, wings, and tower remain collision-safe rather than becoming a visual layer units can walk through.
+- Moved the three opening villagers to the enlarged Hall's clear south approach so the reset state does not spawn workers inside the new structure footprint.
+
+### STILL NEEDS WORK
+
+- The requested monumental scale is intentionally extreme and should be visually re-evaluated at normal zoom, close zoom, and map-edge panning before the next deployment.
+- If the landmark occupies too much of the opening view during playtesting, adjust the opening camera framing or reduce only the artwork scale after reviewing the live screenshot; do not shrink the villagers to compensate.
+
+## CROWN HALL HIGH-RESOLUTION AND MAP SCALE PASS — 2026-08-19
+
+### WHAT CHANGED
+
+- Generated a new Crown Hall raster, preserving the approved monumental architecture, blue-and-gold Crownwarden palette, three-quarter isometric perspective, flags, towers, courtyard, and grounded lighting.
+- Removed the generated studio checkerboard through a repeatable edge-connected matte cleanup and stored the final asset with real RGBA transparency.
+- Upscaled the cleaned replacement to `4608×3072` so the existing `11200px` world-space landmark draw has substantially more source resolution and no longer relies on the older `1536×1024` texture.
+- Increased the world board from `90×73` to `180×146` while keeping the existing sparse settlement content in place rather than filling the new space with clutter.
+- Lowered the camera minimum zoom from `0.36` to `0.08` and set the opening view to `0.16`, allowing players to frame the enormous Hall and pan across the expanded meadow.
+- Updated the asset dimensions, cache identity, and public mirror so the browser loads the new Hall instead of a cached older raster.
+
+### VALIDATION
+
+- Final Crown Hall asset is a `4608×3072` RGBA PNG with transparent background.
+- Source modules pass syntax checks and the Crownforge regression suite remains green.
+
+### STILL NEEDS WORK
+
+- The new world area is intentionally open and sparse; future terrain content should be added only after the monumental Hall and new camera range are visually reviewed in play.
 - A dedicated music volume slider and recorded gameplay effects are intentionally deferred until the music-only experience is reviewed in play.
 
 ## WHAT SHOULD NOT BE BUILT YET

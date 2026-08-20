@@ -2,16 +2,16 @@ export const CONFIG = {
   // The first settlement slice now has roughly ten times the walkable area
   // of the original 30x22 board. The opening remains intentionally sparse;
   // the extra space is for readable routes, expansion, and combat separation.
-  mapWidth: 90,
-  mapHeight: 73,
+  mapWidth: 180,
+  mapHeight: 146,
   tileWidth: 52,
   tileHeight: 26,
-  initialZoom: 0.68,
-  minZoom: 0.36,
+  initialZoom: 0.16,
+  minZoom: 0.08,
   maxZoom: 1.16,
   // Bias the opening view slightly north so the full Hearth House roofline
   // and the enlarged Crown Hall both sit below the top HUD at reset.
-  initialCameraWorld: { x: 18.5, z: 22.5 },
+  initialCameraWorld: { x: 25, z: 38 },
   // The first-age beta sandbox deliberately keeps every currently implemented
   // blueprint available and leaves generous room for production testing.
   sandboxMode: true,
@@ -149,13 +149,14 @@ export const BUILDING_TYPES = {
     function: 'Resource drop-off and settlement core',
     asset: 'townCenter',
     maxHp: 900,
-    // The Crown Hall now owns a broad court-sized footprint so its patio and
-    // entrances can comfortably read as space for a small group of villagers.
-    // Keep the collision footprint aligned with the enlarged landmark rather
-    // than letting units walk through the visible patio or rear wings.
-    footprint: { width: 8, height: 7 },
-    renderSize: 1120,
-    collisionClearance: 2.05,
+    // The Crown Hall is the settlement's monumental landmark. It is now
+    // intentionally enormous relative to human units: the villagers keep
+    // their established scale while the Hall reads as a true royal complex.
+    // The gameplay footprint grows with the artwork so units cannot walk
+    // through the patio, rear wings, or the enlarged tower silhouette.
+    footprint: { width: 18, height: 16 },
+    renderSize: 11200,
+    collisionClearance: 3.6,
     entrance: 'south',
     completed: true,
     storage: true,
@@ -335,7 +336,7 @@ export const LARGE_STONE_ASSET = {
 };
 
 export const FIRST_AGE_ASSETS = {
-  townCenter: { src: './assets/crownforge-crown-hall-v2.png?v=20260819-unitpass3', width: 1536, height: 1024 },
+  townCenter: { src: './assets/crownforge-crown-hall-v3.png?v=20260819-hallassetpass1', width: 4608, height: 3072 },
   barracks: { src: './assets/crownforge-barracks-v3.png?v=20260819-unitpass3', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
