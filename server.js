@@ -26,8 +26,9 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_GPT54_REASONING_EFFORT = "",
-  OPENAI_STORY_EDITOR_MODEL = "gpt-5.6-luna",
-  OPENAI_STORY_EDITOR_REASONING_EFFORT = "high",
+  OPENAI_STORY_EDITOR_MODEL = "gpt-5.6-sol",
+  OPENAI_STORY_EDITOR_REASONING_EFFORT = "max",
+  OPENAI_STORY_EDITOR_REASONING_MODE = "pro",
   OPENAI_TEXTSMITH_MODEL = "gpt-5.6-luna",
   OPENAI_TEXTSMITH_FALLBACK_MODEL = "gpt-5.5",
   OPENAI_REALTIME_SEARCH_MODEL = "",
@@ -73,7 +74,8 @@ const MORROW_TRANSCRIBE_MODEL = OPENAI_MORROW_TRANSCRIBE_MODEL || "gpt-transcrib
 const MORROW_REALTIME_MODEL = "gpt-realtime-2.1-mini";
 const MORROW_PERSONALITY_VERSION = "morrow-personality-v4";
 const STORY_EDITOR_MODEL = OPENAI_STORY_EDITOR_MODEL || OPENAI_GPT54_MODEL || OPENAI_CHAT_MODEL;
-const STORY_EDITOR_REASONING_EFFORT = OPENAI_STORY_EDITOR_REASONING_EFFORT || "high";
+const STORY_EDITOR_REASONING_EFFORT = OPENAI_STORY_EDITOR_REASONING_EFFORT || "max";
+const STORY_EDITOR_REASONING_MODE = OPENAI_STORY_EDITOR_REASONING_MODE || "pro";
 const STORY_EDITOR_UPLOAD_MB = Math.max(1, Number(STORY_EDITOR_MAX_UPLOAD_MB) || 80);
 const STORY_EDITOR_MAX_TEXT_CHARS = Math.max(1000000, (Number(STORY_EDITOR_MAX_TEXT_MB) || 80) * 1024 * 1024);
 
@@ -1778,6 +1780,8 @@ app.get("/health", (_req, res) => res.json({
   storyEditorAutopilot: true,
   storyEditorModel: STORY_EDITOR_MODEL,
   storyEditorMaxUploadMb: STORY_EDITOR_UPLOAD_MB,
+  storyEditorReasoningEffort: STORY_EDITOR_REASONING_EFFORT,
+  storyEditorReasoningMode: STORY_EDITOR_REASONING_MODE,
   storyEditorProtectedPassthrough: true
 }));
 
@@ -3501,7 +3505,8 @@ function splitManuscript(text) {
 }
 
 const STORY_PROTECTED_PATTERNS = [
-  { label: "magic mushroom or psilocybin reference", pattern: /\b(?:magic\s+mushrooms?|psychedelic\s+mushrooms?|hallucinogenic\s+mushrooms?|shrooms?|psilocybin|psilocin|psilocybe(?:\s+\w+)?)\b/gi }
+  { label: "magic mushroom or psilocybin reference", pattern: /\b(?:magic\s+mushrooms?|psychedelic\s+mushrooms?|hallucinogenic\s+mushrooms?|shrooms?|psilocybin|psilocin|psilocybe(?:\s+\w+)?)\b/gi },
+  { label: "cannabis or marijuana reference", pattern: /\b(?:cannabis|marijuana|marihuana|hashish|thc|cbd|blunt|spliff|joint)\b/gi }
 ];
 
 function classifyStoryProtection(text) {
@@ -3608,7 +3613,8 @@ async function summarizeChapter(projectId, chapterIndex) {
   const text = redactStorySensitiveText(rows.map((row) => row.edited_text || row.original_text).join("\n\n").slice(0, 16000));
   if (!text || !OPENAI_API_KEY) return text.slice(0, 1200);
   const response = await openai.responses.create({
-    model: OPENAI_CHAT_MODEL,
+    model: STORY_EDITOR_MODEL,
+    ...storyEditorReasoningConfig(),
     max_output_tokens: 350,
     input: [
       { role: "system", content: "Summarize this fiction chapter for continuity-aware paragraph editing. Include plot movement, emotional arc, character status, setting, and unresolved threads. Be concise." },
@@ -3642,7 +3648,11 @@ function parseStoryObject(value, fallback = {}) {
 
 function storyEditorReasoningConfig() {
   if (!STORY_EDITOR_REASONING_EFFORT || /^(gpt-4|gpt-3|text-)/i.test(STORY_EDITOR_MODEL)) return {};
-  return { reasoning: { effort: STORY_EDITOR_REASONING_EFFORT } };
+  const reasoning = { effort: STORY_EDITOR_REASONING_EFFORT };
+  if (/^gpt-5\.6(?:-|$)/i.test(STORY_EDITOR_MODEL) && STORY_EDITOR_REASONING_MODE) {
+    reasoning.mode = STORY_EDITOR_REASONING_MODE;
+  }
+  return { reasoning };
 }
 
 function storyAutopilotFormat(name, schema) {
@@ -3803,7 +3813,7 @@ function isStorySafetyRefusal(error) {
 }
 
 async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) {
-  const response = await openai.responses.create({
+  const request = {
     model: STORY_EDITOR_MODEL,
     ...storyEditorReasoningConfig(),
     max_output_tokens: maxOutputTokens,
@@ -3812,7 +3822,19 @@ async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) 
       { role: "system", content: system },
       { role: "user", content: typeof user === "string" ? user : JSON.stringify(user, null, 2) }
     ]
-  });
+  };
+  let response;
+  try {
+    response = await openai.responses.create(request);
+  } catch (error) {
+    const message = String(error?.message || error || "");
+    const hasReasoningMode = Boolean(request.reasoning?.mode);
+    if (!hasReasoningMode || !/reasoning|mode|pro|unsupported|invalid/i.test(message)) throw error;
+    response = await openai.responses.create({
+      ...request,
+      reasoning: { effort: STORY_EDITOR_REASONING_EFFORT }
+    });
+  }
   return parseStoryModelJson(response);
 }
 
@@ -4269,6 +4291,30 @@ app.get("/api/story-editor/projects", async (req, res) => {
   }
 });
 
+app.delete("/api/story-editor/projects/:id", async (req, res) => {
+  try {
+    if (!requireStoryEditorSession(req, res)) return;
+    const projectId = String(req.params.id || "");
+    const projects = await storyQuery(`SELECT id, title FROM story_projects WHERE id = ${sqliteLiteral(projectId)} LIMIT 1;`);
+    if (!projects[0]) return res.status(404).json({ ok: false, error: "Project not found." });
+    const active = await storyQuery(`SELECT id FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} AND status IN ('queued', 'running') LIMIT 1;`);
+    if (active[0]) return res.status(409).json({ ok: false, error: "This manuscript is still being edited. Wait for the run to finish before deleting it." });
+    await storyExec([
+      "BEGIN;",
+      `DELETE FROM story_autopilot_chunks WHERE project_id = ${sqliteLiteral(projectId)};`,
+      `DELETE FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)};`,
+      `DELETE FROM story_edits WHERE project_id = ${sqliteLiteral(projectId)};`,
+      `DELETE FROM story_bible WHERE project_id = ${sqliteLiteral(projectId)};`,
+      `DELETE FROM story_sections WHERE project_id = ${sqliteLiteral(projectId)};`,
+      `DELETE FROM story_projects WHERE id = ${sqliteLiteral(projectId)};`,
+      "COMMIT;"
+    ]);
+    res.json({ ok: true, projectId, title: projects[0].title });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message || err) });
+  }
+});
+
 app.get("/api/story-editor/projects/:id", async (req, res) => {
   try {
     if (!requireStoryEditorSession(req, res)) return;
@@ -4439,7 +4485,8 @@ app.post("/api/story-editor/projects/:id/edit", async (req, res) => {
     const chapterSummary = await summarizeChapter(projectId, section.chapter_index);
     const selectedText = section.edited_text || section.original_text;
     const response = await openai.responses.create({
-      model: OPENAI_CHAT_MODEL,
+      model: STORY_EDITOR_MODEL,
+      ...storyEditorReasoningConfig(),
       max_output_tokens: 1800,
       input: [
         {

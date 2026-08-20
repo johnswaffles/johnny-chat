@@ -41,7 +41,6 @@
     fileInput: document.getElementById("file-input"),
     filePrompt: document.getElementById("file-prompt"),
     fileDetail: document.getElementById("file-detail"),
-    titleInput: document.getElementById("title-input"),
     intentInput: document.getElementById("intent-input"),
     uploadStatus: document.getElementById("upload-status"),
     refreshProjects: document.getElementById("refresh-projects"),
@@ -75,6 +74,7 @@
     openBible: document.getElementById("open-bible"),
     bibleDialog: document.getElementById("bible-dialog"),
     exportDocx: document.getElementById("export-docx"),
+    deleteProject: document.getElementById("delete-project"),
     sectionFilter: document.getElementById("section-filter"),
     sectionFilterButtons: Array.from(document.querySelectorAll("[data-section-filter]")),
     sectionList: document.getElementById("section-list"),
@@ -310,6 +310,7 @@
     renderAutopilot();
     el.openBible.disabled = false;
     el.exportDocx.disabled = false;
+    el.deleteProject.disabled = false;
   }
 
   function autopilotPercent(job) {
@@ -326,7 +327,7 @@
     if (!job) {
       el.autopilotProgress.hidden = true;
       el.autopilotStart.disabled = false;
-      el.autopilotStart.textContent = "Start full-manuscript edit";
+      el.autopilotStart.textContent = "Run full edit";
       return;
     }
     const percent = autopilotPercent(job);
@@ -341,7 +342,7 @@
     };
     el.autopilotProgress.hidden = false;
     el.autopilotStart.disabled = running;
-    el.autopilotStart.textContent = running ? "Autopilot is working…" : job.status === "completed" ? "Run another full edit" : "Try Autopilot again";
+    el.autopilotStart.textContent = running ? "Full edit is working…" : job.status === "completed" ? "Run another full edit" : "Try full edit again";
     el.autopilotPhase.textContent = phaseLabels[job.phase] || "Working through the manuscript";
     el.autopilotPercent.textContent = `${percent}%`;
     el.autopilotFill.style.width = `${percent}%`;
@@ -640,6 +641,7 @@
     if (!state.projects.length) {
       state.project = null;
       state.autopilotJob = null;
+      el.deleteProject.disabled = true;
       window.clearTimeout(state.autopilotTimer);
       showProjectState();
       return;
@@ -671,6 +673,8 @@
       renderEditor();
       showProjectState();
       setLibraryOpen(false);
+      const review = document.getElementById("advanced-workbench");
+      if (review) review.toggleAttribute("open", state.autopilotJob?.status === "completed");
       if (state.autopilotJob?.status === "queued" || state.autopilotJob?.status === "running") pollAutopilot();
     } finally {
       el.editingStage.classList.remove("is-busy");
@@ -699,7 +703,7 @@
     setUploadStatus("Extracting the text and organizing it into passages…");
     try {
       const formData = new FormData();
-      formData.append("title", el.titleInput.value || file.name);
+      formData.append("title", file.name);
       formData.append("intent", intent);
       formData.append("manuscript", file);
       const response = await apiFetch("/api/story-editor/upload", { method: "POST", body: formData });
@@ -712,11 +716,12 @@
       el.uploadForm.reset();
       updateSelectedFile();
       showToast(`${data.title} is ready to edit.`);
+      await startAutopilot();
     } catch (error) {
       setUploadStatus(error.message || "The manuscript could not be imported.", true);
     } finally {
       el.uploadSubmit.disabled = false;
-      el.uploadSubmit.textContent = "Import manuscript";
+      el.uploadSubmit.textContent = "Import & start full edit";
     }
   }
 
@@ -735,6 +740,7 @@
       }
       if (data.job.status === "completed") {
         await loadProject(state.project.id);
+        document.getElementById("advanced-workbench")?.setAttribute("open", "");
         state.autopilotJob = data.job;
         renderOverview();
         showToast("Autopilot finished the manuscript and its continuity review.");
@@ -893,6 +899,28 @@
     }
   }
 
+  async function deleteProject() {
+    if (!state.project || el.deleteProject.disabled) return;
+    const title = state.project.title || "this manuscript";
+    if (!window.confirm(`Delete "${title}" and all of its saved manuscript data? This cannot be undone.`)) return;
+    el.deleteProject.disabled = true;
+    try {
+      const response = await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}`, { method: "DELETE" });
+      const data = await readJsonResponse(response);
+      if (!response.ok || data.ok !== true) throw new Error(data.error || "The manuscript could not be deleted.");
+      window.clearTimeout(state.autopilotTimer);
+      state.project = null;
+      state.autopilotJob = null;
+      state.sections = [];
+      state.edits = [];
+      await loadProjects();
+      showToast(`${data.title || title} was deleted.`);
+    } catch (error) {
+      el.deleteProject.disabled = false;
+      showToast(error.message || "The manuscript could not be deleted.", true);
+    }
+  }
+
   function updateSelectedFile() {
     const file = el.fileInput.files?.[0];
     el.fileDrop.classList.toggle("has-file", Boolean(file));
@@ -904,7 +932,6 @@
     }
     el.filePrompt.textContent = file.name;
     el.fileDetail.textContent = `${formatFileSize(file.size)} · Ready to import`;
-    if (!el.titleInput.value.trim()) el.titleInput.value = file.name.replace(/\.(txt|docx|pdf)$/i, "");
     setUploadStatus("");
   }
 
@@ -944,6 +971,7 @@
   el.acceptEdit.addEventListener("click", () => decideEdit("accept"));
   el.rejectEdit.addEventListener("click", () => decideEdit("reject"));
   el.exportDocx.addEventListener("click", exportDocx);
+  el.deleteProject.addEventListener("click", deleteProject);
   el.toastClose.addEventListener("click", () => {
     el.toast.hidden = true;
     window.clearTimeout(state.toastTimer);
