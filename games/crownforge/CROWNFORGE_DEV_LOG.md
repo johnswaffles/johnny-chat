@@ -1855,3 +1855,44 @@ The existing true-alpha `assets/villager-carry-food-loop-v1.png` remains registe
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add Hall interiors, rear entrances, ramps, elevators, multi-floor navigation, new landmark classes, or a generalized 3-D traversal system until this small stair interaction is visually stable.
+
+## CROWN BARRACKS MONUMENTAL SCALE PASS — 2026-08-19
+
+### WHAT WAS COMPLETED
+
+- Enlarged the Crown Barracks from a 760px render size to 5600px while keeping villagers and Crown Guards at their existing scale. The Barracks now reads as a substantial military landmark rather than a small tile.
+- Expanded the Barracks gameplay footprint from 5x4 to 11x8 and raised its collision clearance from 1.65 to 2.8. Placement, selection, building-edge interaction, production spawning, and pathfinding therefore respect the larger visible structure instead of allowing units to clip through it.
+- Preserved the existing Crown Barracks production behavior, costs, entrance, construction timing, and first-age scope. This is a scale/coherence pass, not a new military system.
+- Kept the existing original Crownforge Barracks RGBA artwork as the canonical asset; no lower-quality replacement or placeholder art was introduced.
+- Bumped the browser/module cache identity to `20260819-barrackspass1` and synchronized the Crownforge source with its `public/crownforge` route mirror.
+
+### SYSTEMS UPDATED
+
+- `src/config.js` — Barracks landmark render size, logical footprint, and collision clearance.
+- `src/renderer.js` — uses the enlarged existing building contract for the visible silhouette, placement preview, and selection hit region.
+- `src/simulation.js` — existing footprint-aware placement, approach, spawn, collision, and pathfinding behavior now uses the enlarged Barracks bounds.
+- `src/main.js`, `src/animation.js`, `index.html` — cache identity for the new scale contract.
+- `tools/remediation-regression.mjs` — added a Barracks landmark-scale and collision-clearance regression.
+
+### VERIFIED
+
+- `node --check` passed for all changed Crownforge modules.
+- The focused Crownforge regression passed gathering, construction, Crown Hall stairs, enlarged Barracks bounds, combat, victory, and defeat checks.
+- `tools/visual-integrity-audit.mjs` passed with no missing files or placeholder references; its existing conservative atlas-edge reports remain informational.
+- Source/public Crownforge files were synchronized for the changed route artifacts.
+
+### KNOWN ISSUES / STILL NEEDS WORK
+
+- The existing four-stage construction family is shared across the current buildings. The enlarged Barracks would benefit from bespoke foundation, partial, and near-complete construction art in a later dedicated asset pass.
+- The Barracks has not gained rotation, a new production roster, or a new military mechanic in this pass.
+- The live in-app browser connection was unavailable for this isolated local preview, so a close visual check of the enlarged Barracks after the next deployed build remains outstanding.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Inspect a placed and completed Barracks at normal zoom, close zoom, and after panning to confirm its roofline, selection bounds, and entrance remain readable beside the Crown Hall.
+2. Hand-tune Barracks construction-stage artwork only if the shared stages look too generic at its new landmark scale.
+3. Recheck Crown Guard spawn spacing around the enlarged south entrance during a live production test.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add more military buildings, unit classes, ages, technologies, civilizations, or production queues until the enlarged Barracks remains visually and mechanically stable in the complete first-age slice.

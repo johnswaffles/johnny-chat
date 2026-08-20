@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-hallpass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-barrackspass1';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-hallpass1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-barrackspass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -295,6 +295,8 @@ export class CrownforgeSimulation {
       animationPlaybackRate: 0,
       animClock: 0,
       visualState: 'idle',
+      stairAccess: false,
+      stairProgress: 0,
       hitFlash: 0,
       healthRevealTimer: 0,
       dead: false,
@@ -541,6 +543,8 @@ export class CrownforgeSimulation {
     unit.attackTargetKind = null;
     unit.attackTimer = 0;
     unit.attackHitApplied = false;
+    unit.stairAccess = false;
+    unit.stairProgress = 0;
     this._cancelAttackCycle(unit);
   }
 
@@ -727,6 +731,7 @@ export class CrownforgeSimulation {
     else if (unit.command === 'attack') this._updateAttack(unit, dt);
     else if (unit.command === 'build') this._updateBuildingIntent(unit);
     else if (unit.command === 'field') this._updateFieldIntent(unit);
+    this._updateStairProgress(unit);
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
     unit.animationPlaybackRate = unit.command === 'move' || unit.visualState === 'walk'
       ? Math.max(0, Math.min(2.2, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed * this.unitSpeedScale, 0.01)))
@@ -1044,6 +1049,84 @@ export class CrownforgeSimulation {
     return Math.hypot(dx, dz);
   }
 
+  _crownHallStairInfo(building) {
+    const access = BUILDING_TYPES[building?.type]?.stairAccess;
+    if (!access || building?.destroyed || building?.progress < 1) return null;
+    const topZ = building.z + access.topOffset;
+    const outerZ = building.z + access.outerOffset;
+    return {
+      topZ: Math.min(topZ, outerZ),
+      outerZ: Math.max(topZ, outerZ),
+      halfWidth: access.width / 2,
+      visualRise: access.visualRise ?? 14,
+      stepCount: access.stepCount ?? 8,
+    };
+  }
+
+  _pointOnCrownHallStairs(point, building, padding = 0) {
+    const stairs = this._crownHallStairInfo(building);
+    if (!stairs) return false;
+    return Math.abs(point.x - building.x) <= stairs.halfWidth + padding
+      && point.z >= stairs.topZ - padding
+      && point.z <= stairs.outerZ + padding;
+  }
+
+  _updateStairProgress(unit) {
+    if (!unit.stairAccess || unit.dead) {
+      unit.stairProgress = 0;
+      unit.stairVisualRise = 0;
+      return 0;
+    }
+    const hall = this.buildings.find((building) => this._pointOnCrownHallStairs(unit, building, 0.2));
+    const stairs = hall ? this._crownHallStairInfo(hall) : null;
+    if (!hall || !stairs) {
+      unit.stairProgress = 0;
+      unit.stairVisualRise = 0;
+      return 0;
+    }
+    unit.stairVisualRise = stairs.visualRise;
+    unit.stairProgress = clamp((stairs.outerZ - unit.z) / Math.max(0.001, stairs.outerZ - stairs.topZ), 0, 1);
+    return unit.stairProgress;
+  }
+
+  _crownHallStairTarget(building, index = 0, total = 1) {
+    const stairs = this._crownHallStairInfo(building);
+    if (!stairs) return null;
+    const lanes = Math.min(3, Math.max(1, total));
+    const lane = index % lanes;
+    const lateral = (lane - (lanes - 1) / 2) * 1.55;
+    return {
+      x: building.x + clamp(lateral, -stairs.halfWidth + 0.7, stairs.halfWidth - 0.7),
+      z: stairs.topZ + 0.2,
+    };
+  }
+
+  _sendUnitToCrownHallStairs(unit, building, index = 0, total = 1) {
+    const target = this._crownHallStairTarget(building, index, total);
+    if (!target) return false;
+    unit.stairAccess = true;
+    const path = this._buildPath(unit, target);
+    if (!path) {
+      unit.stairAccess = false;
+      unit.stairProgress = 0;
+      unit.path = [];
+      unit.pathBlocked = true;
+      unit.command = 'idle';
+      unit.visualState = 'idle';
+      unit.actionLabel = 'Crown Hall steps blocked';
+      return false;
+    }
+    unit.path = path;
+    unit.routeTarget = { ...target };
+    unit.stopDistance = 0;
+    unit.pathBlocked = false;
+    unit.command = 'move';
+    unit.visualState = 'walk';
+    unit.actionLabel = 'Walking Crown Hall steps';
+    this._resetMovementTracking(unit);
+    return true;
+  }
+
   _buildingEntityBounds(building, padding = 0) {
     const footprint = this._buildingFootprint(building);
     const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
@@ -1062,7 +1145,11 @@ export class CrownforgeSimulation {
 
   _pointBlockedForUnit(unit, point, placement = null) {
     const padding = (UNIT_TYPES[unit.type]?.radius ?? 0.4) + UNIT_STATIC_CLEARANCE;
-    if (this.buildings.some((building) => this._buildingHasCollision(building) && this._distanceToBuildingEdge(point, building) < padding)) return true;
+    if (this.buildings.some((building) => {
+      if (!this._buildingHasCollision(building)) return false;
+      if (unit.stairAccess && this._pointOnCrownHallStairs(point, building, padding)) return false;
+      return this._distanceToBuildingEdge(point, building) < padding;
+    })) return true;
     if (placement && this._distanceToBuildingEdge(point, placement) < padding) return true;
     return this.resourcesNodes.some((node) => node.amount > 0 && this._resourceBlocksPoint(point, node, padding));
   }
@@ -1079,6 +1166,7 @@ export class CrownforgeSimulation {
     const padding = (UNIT_TYPES[unit.type]?.radius ?? 0.4) + UNIT_STATIC_CLEARANCE;
     if (this.buildings.some((building) => {
       if (!this._buildingHasCollision(building)) return false;
+      if (unit.stairAccess && this._pointOnCrownHallStairs({ x: cellX + 0.5, z: cellZ + 0.5 }, building, padding + 0.25)) return false;
       if (this._buildingBlocksCell(cellX, cellZ, building)) return true;
       return this._cellIntersectsBuilding(cellX, cellZ, building, padding);
     })) return true;
@@ -1833,6 +1921,7 @@ export class CrownforgeSimulation {
     unit.z = clamp(unit.z, 0.45, CONFIG.mapHeight - 0.45);
     for (const building of this.buildings) {
       if (!this._buildingHasCollision(building)) continue;
+      if (unit.stairAccess && this._pointOnCrownHallStairs(unit, building, radius)) continue;
       const bounds = this._buildingEntityBounds(building, radius);
       if (unit.x <= bounds.minX || unit.x >= bounds.maxX || unit.z <= bounds.minZ || unit.z >= bounds.maxZ) continue;
       const distances = [
@@ -2004,6 +2093,27 @@ export class CrownforgeSimulation {
         ? `Return cargo, then gather ${RESOURCE_TYPES[target.resourceType].label.toLowerCase()}.`
         : `Gather ${RESOURCE_TYPES[target.resourceType].label.toLowerCase()}.`;
       return { kind: 'gather', success: true, target };
+    }
+    if (target?.kind === 'building' && target.faction === 'player' && target.type === 'townCenter' && target.progress >= 1 && !target.destroyed) {
+      let routed = 0;
+      units.forEach((unit, index) => {
+        this._interruptWork(unit);
+        unit.postDepositTarget = null;
+        if (unit.carryAmount > 0) {
+          // Cargo still belongs at the Hall, but a loaded worker should use
+          // the normal drop-off approach so it deposits before climbing.
+          routed += this._beginReturn(unit) ? 1 : 0;
+        } else {
+          routed += this._sendUnitToCrownHallStairs(unit, target, index, units.length) ? 1 : 0;
+        }
+      });
+      if (!routed) {
+        this.lastCommand = 'The Crown Hall steps are blocked.';
+        this._announce(this.lastCommand);
+        return { kind: 'none', success: false, target };
+      }
+      this.lastCommand = 'Walk to the Crown Hall steps.';
+      return { kind: 'move', success: true, target };
     }
     if (target?.kind === 'building' && target.faction === 'player' && target.progress >= 1 && BUILDING_TYPES[target.type].storage) {
       const workers = units.filter((unit) => unit.type === 'villager');

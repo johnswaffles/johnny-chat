@@ -192,11 +192,13 @@ export const BUILDING_TYPES = {
     function: 'Crown Guard production',
     asset: 'barracks',
     maxHp: 480,
-    footprint: { width: 5, height: 4 },
-    // Keep the Barracks a substantial military landmark without expanding its
-    // navigation footprint beyond the existing first-age building contract.
-    renderSize: 760,
-    collisionClearance: 1.65,
+    // Match the Crown Hall landmark contract: the authored silhouette and the
+    // gameplay footprint both grow together, while human units keep their
+    // existing scale. The Barracks is intentionally smaller than the Hall,
+    // but large enough to read as a military anchor at normal RTS zoom.
+    footprint: { width: 11, height: 8 },
+    renderSize: 5600,
+    collisionClearance: 2.8,
     entrance: 'south',
     buildTime: 10,
     cost: { food: 0, wood: 90, stone: 40 },

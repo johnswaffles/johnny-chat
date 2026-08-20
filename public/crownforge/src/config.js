@@ -158,6 +158,17 @@ export const BUILDING_TYPES = {
     renderSize: 11200,
     collisionClearance: 3.6,
     entrance: 'south',
+    // The first-age Hall has a readable south stair run. Units may enter only
+    // this corridor and stop on the top landing; the rest of the monument
+    // remains a solid gameplay obstacle until a future interior system exists.
+    stairAccess: {
+      direction: 'south',
+      width: 9.2,
+      topOffset: 10.0,
+      outerOffset: 18.0,
+      stepCount: 8,
+      visualRise: 14,
+    },
     completed: true,
     storage: true,
     production: true,
@@ -181,11 +192,13 @@ export const BUILDING_TYPES = {
     function: 'Crown Guard production',
     asset: 'barracks',
     maxHp: 480,
-    footprint: { width: 5, height: 4 },
-    // Keep the Barracks a substantial military landmark without expanding its
-    // navigation footprint beyond the existing first-age building contract.
-    renderSize: 760,
-    collisionClearance: 1.65,
+    // Match the Crown Hall landmark contract: the authored silhouette and the
+    // gameplay footprint both grow together, while human units keep their
+    // existing scale. The Barracks is intentionally smaller than the Hall,
+    // but large enough to read as a military anchor at normal RTS zoom.
+    footprint: { width: 11, height: 8 },
+    renderSize: 5600,
+    collisionClearance: 2.8,
     entrance: 'south',
     buildTime: 10,
     cost: { food: 0, wood: 90, stone: 40 },
