@@ -144,6 +144,18 @@
     return response;
   }
 
+  async function readJsonResponse(response) {
+    const raw = await response.text();
+    if (!raw.trim()) {
+      throw new Error(response.ok ? "The manuscript service returned an empty response." : `The manuscript service returned HTTP ${response.status}.`);
+    }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      throw new Error(response.ok ? "The manuscript service returned an unreadable response." : `The manuscript service returned HTTP ${response.status}.`);
+    }
+  }
+
   function escapeHtml(value) {
     return String(value || "")
       .replace(/&/g, "&amp;")
@@ -610,7 +622,7 @@
 
   async function loadProjects() {
     const response = await apiFetch("/api/story-editor/projects");
-    const data = await response.json();
+    const data = await readJsonResponse(response);
     if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not load your manuscripts.");
     state.projects = data.projects || [];
     renderProjects();
@@ -630,7 +642,7 @@
     el.editingStage.classList.add("is-busy");
     try {
       const response = await apiFetch(`/api/story-editor/projects/${encodeURIComponent(id)}`);
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not open that manuscript.");
       state.project = data.project;
       state.sections = data.sections || [];
@@ -680,7 +692,7 @@
       formData.append("intent", intent);
       formData.append("manuscript", file);
       const response = await apiFetch("/api/story-editor/upload", { method: "POST", body: formData });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "The manuscript could not be imported.");
       setUploadStatus(`Ready — ${data.sections} passages found.`);
       await loadProjects();
@@ -702,7 +714,7 @@
     if (!state.project || !state.autopilotJob?.id) return;
     try {
       const response = await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/autopilot/${encodeURIComponent(state.autopilotJob.id)}`);
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not read Autopilot progress.");
       state.autopilotJob = data.job;
       renderAutopilot();
@@ -738,7 +750,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ intent })
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Autopilot could not start.");
       state.project.userIntent = intent;
       state.autopilotJob = data.job;
@@ -770,7 +782,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not save your Story Bible.");
       state.bible = data.bible;
       el.bibleSaveState.textContent = "All notes are up to date.";
@@ -802,7 +814,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sectionId: section.id, mode: el.mode.value, note: el.editNote.value })
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "The revision could not be generated.");
       state.pendingEdit = data.edit;
       state.previewEdit = data.edit;
@@ -828,7 +840,7 @@
     el.rejectEdit.disabled = true;
     try {
       const response = await apiFetch(`/api/story-editor/edits/${encodeURIComponent(state.pendingEdit.id)}/${decision}`, { method: "POST" });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "That decision could not be saved.");
       showToast(decision === "accept" ? "Revision accepted into your manuscript." : "Revision discarded.");
       await loadProject(state.project.id);
