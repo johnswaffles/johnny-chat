@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260819-hallpass1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260819-hallpass1';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260819-hallpass2';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260819-hallpass2';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -263,6 +263,10 @@ export class CrownforgeRenderer {
     this.drawMap(ctx, time);
     this.drawPaths(ctx, simulation);
     this.drawWorldEntities(ctx, simulation, time);
+    // Placement is a planning state, so the monumental Hall gets a quiet
+    // vision overlay after normal depth sorting. This keeps its far side
+    // readable without changing normal gameplay occlusion.
+    this.drawCrownHallPlacementVision(ctx, simulation);
     this.drawOccludedUnitOverlays(ctx, simulation);
     this.drawWorkFeedback(ctx, simulation, time);
     this.drawCombatFeedback(ctx, simulation, time);
@@ -622,7 +626,7 @@ export class CrownforgeRenderer {
       if (!hiddenBy) continue;
       const needsTracking = unit.selected || unit.command === 'attack' || unit.hp < unit.maxHp || unit.faction === 'enemy';
       if (!needsTracking) continue;
-      const point = this.worldToScreen(unit);
+      const point = this.unitScreenPoint(unit);
       const style = UNIT_TYPES[unit.type];
       const unitSize = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
       // A tall resource can legitimately win the depth sort, but an active
@@ -635,6 +639,15 @@ export class CrownforgeRenderer {
       this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
       this.drawHealthBar(ctx, point.x, point.y - unitSize * 0.9 * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(style.combatAtlas));
     }
+  }
+
+  unitScreenPoint(unit) {
+    const point = this.worldToScreen(unit);
+    const rise = Number(unit.stairProgress) > 0
+      ? (Number(unit.stairVisualRise) || 14) * unit.stairProgress * this.camera.zoom
+      : 0;
+    point.y -= rise;
+    return point;
   }
 
   drawAsset(ctx, assetKey, screen, size, alpha = 1) {
@@ -653,7 +666,7 @@ export class CrownforgeRenderer {
     const unitHit = simulation.units
       .filter((unit) => !unit.dead)
       .map((unit) => {
-        const anchor = this.worldToScreen(unit);
+        const anchor = this.unitScreenPoint(unit);
         const style = UNIT_TYPES[unit.type];
         const size = (style.renderSize ?? 120) * this.camera.zoom;
         const withinX = Math.abs(point.x - anchor.x) <= Math.max(22, size * 0.3);
@@ -1159,7 +1172,7 @@ export class CrownforgeRenderer {
   }
 
   drawUnit(ctx, unit, time) {
-    const point = this.worldToScreen(unit);
+    const point = this.unitScreenPoint(unit);
     const style = UNIT_TYPES[unit.type];
     const size = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
@@ -1418,6 +1431,35 @@ export class CrownforgeRenderer {
     ctx.textAlign = 'center';
     ctx.fillStyle = this.buildPreview.valid ? '#d6edc5' : '#ffd0ba';
     ctx.fillText(this.buildPreview.valid ? 'SITE READY' : 'CANNOT PLACE', point.x, point.y + size * 0.2);
+    ctx.restore();
+  }
+
+  drawCrownHallPlacementVision(ctx, simulation) {
+    if (!this.buildPreview) return;
+    const hall = simulation.buildings.find((building) => building.type === 'townCenter' && !building.destroyed && building.progress >= 1);
+    if (!hall) return;
+    const point = this.worldToScreen(hall);
+    const size = this.buildingRenderSize(hall) * this.camera.zoom;
+    const definition = FIRST_AGE_ASSETS.townCenter;
+    const height = definition ? size / (definition.width / definition.height) : size;
+    ctx.save();
+    ctx.globalAlpha = 0.16;
+    if (!this.drawFirstAgeAsset(ctx, 'townCenter', point, size, 0.16)) {
+      ctx.restore();
+      return;
+    }
+    ctx.globalAlpha = 0.78;
+    ctx.strokeStyle = '#a9dfcf';
+    ctx.lineWidth = Math.max(1.2, 2.2 * this.camera.zoom);
+    ctx.setLineDash([12 * this.camera.zoom, 9 * this.camera.zoom]);
+    ctx.strokeRect(point.x - size * 0.53, point.y - height * 0.99, size * 1.06, height * 1.04);
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = 'rgba(169, 223, 207, 0.68)';
+    ctx.lineWidth = Math.max(1, 1.4 * this.camera.zoom);
+    ctx.beginPath();
+    ctx.ellipse(point.x, point.y + height * 0.015, size * 0.47, size * 0.12, 0, 0, TAU);
+    ctx.stroke();
     ctx.restore();
   }
 

@@ -131,6 +131,26 @@ function checkConstructionAndPlacement() {
   assert.equal(house.hp, house.maxHp, 'completed house reaches full health');
 }
 
+function checkCrownHallStairs() {
+  const simulation = freshSimulation();
+  const hall = simulation.buildings.find((building) => building.type === 'townCenter');
+  const villagers = simulation.units.filter((unit) => unit.type === 'villager' && unit.faction === 'player');
+  simulation.selectedIds = villagers.map((unit) => unit.id);
+  const command = simulation.issueContextCommand({ x: hall.x, z: hall.z }, hall);
+  assert.equal(command.success, true, 'group accepts Crown Hall stair order');
+  advance(simulation, 20);
+  const stairs = simulation._crownHallStairInfo(hall);
+  assert.ok(stairs, 'Crown Hall exposes a stair corridor');
+  for (const villager of villagers) {
+    assert.equal(villager.command, 'idle', `villager ${villager.id} stops at the top landing`);
+    assert.equal(villager.stairAccess, true, `villager ${villager.id} retains stair access at the landing`);
+    assert.ok(villager.stairProgress > 0.94, `villager ${villager.id} reaches the upper stair progress`);
+    assert.equal(simulation._pointBlockedForUnit(villager, villager), false, `villager ${villager.id} is not blocked on the stairs`);
+  }
+  assert.equal(simulation._pointBlockedForUnit(villagers[0], { x: hall.x, z: hall.z }), true, 'Hall interior remains blocked');
+  assert.equal(simulation.getPlacementCheck('house', { x: hall.x, z: stairs.outerZ + 2 }).valid, true, 'backside site remains placeable outside Hall footprint');
+}
+
 function checkCombatAndEndStates() {
   const simulation = freshSimulation();
   const soldier = simulation.units.find((unit) => unit.type === 'soldier');
@@ -169,6 +189,7 @@ checkAnimationAtlases();
 checkResetPresentation();
 checkGathering();
 checkConstructionAndPlacement();
+checkCrownHallStairs();
 checkCombatAndEndStates();
 
 console.log(JSON.stringify({
@@ -179,6 +200,7 @@ console.log(JSON.stringify({
     '20 Hz versus 60 Hz gathering convergence',
     'cargo-preserving retask and storage return',
     'placement rejection and house completion',
+    'Crown Hall stair routing, landing stop, and interior collision',
     'melee damage, death timing, victory, defeat',
   ],
 }));

@@ -1813,3 +1813,45 @@ The existing true-alpha `assets/villager-carry-food-loop-v1.png` remains registe
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add more agriculture buildings, crop types, tree catalogs, civilizations, ages, technologies, campaigns, or advanced military systems until this field/tree/landmark pass remains visually stable in the deployed slice.
+
+## CROWN HALL BACKSIDE PLACEMENT / STAIR ACCESS PASS — 2026-08-19
+
+### WHAT WAS COMPLETED
+
+- Added a focused placement-vision state to the existing renderer. While any building or wall placement preview is active, the completed Crown Hall is redrawn after normal depth sorting as a quiet translucent silhouette with a restrained mint outline. This keeps the far side of the monumental building readable for planning without changing normal gameplay occlusion.
+- Kept placement rules unchanged: the Hall's logical footprint, map boundaries, resources, units, and other structures still decide whether a foundation is valid. The vision layer is feedback only, not a collision bypass.
+- Added a dedicated south stair corridor to the Crown Hall's building data. A selected player unit can right-click the Hall to route to one of three spaced lanes and stop at the top landing. Loaded workers still use the existing return/deposit behavior before climbing.
+- Extended the existing pathfinding and collision contract so only units explicitly using the Hall stair command may enter the stair corridor. The rest of the Hall remains solid, units cannot walk into its interior, and new orders clear stair access immediately.
+- Added subtle stair elevation to the unit presentation while a unit traverses the corridor. The unit's selection ring, hit region, health bar, and carried-resource badge follow the raised screen anchor so the character remains readable against the Hall.
+- Documented the new placement-vision and stair-access conventions here so future landmarks can reuse the pattern without inventing ad-hoc collision exceptions.
+
+### SYSTEMS UPDATED
+
+- `src/config.js` — Crown Hall stair-access data and presentation rise.
+- `src/simulation.js` — stair target lanes, path-cell permission, unit collision allowance, progress tracking, and Hall context command.
+- `src/renderer.js` — final placement vision overlay, stair screen anchor, and stair-aware unit hit testing.
+- `src/main.js` / `index.html` — placement feedback copy and cache identity `20260819-hallpass2`.
+
+### VERIFIED
+
+- `node --check` passed for the changed Crownforge modules.
+- A deterministic simulation check routed one villager and then three villagers to the Hall. All reached the top landing around z=48, retained `stairAccess`, reached approximately 99–100% stair progress, stayed separated by the existing spacing system, and were not blocked by the Hall while on the stair corridor.
+- A placement check behind the Hall remained valid when the site was outside the logical footprint, confirming that the new vision layer does not alter construction validation.
+- The local browser preview server was started, but the in-app browser connection rejected the local preview URL in this environment. Live visual inspection of the new overlay remains part of the deployment verification pass.
+
+### KNOWN ISSUES / STILL NEEDS WORK
+
+- The current stair presentation is a controlled first-age approximation: units rise subtly along the corridor but do not yet have bespoke step-by-step leg or climbing artwork. The existing directional walk loops remain the visual standard.
+- The stair corridor is intentionally south-facing and ends at the top landing. No Hall interior, rear-door access, or multi-level building navigation has been introduced.
+- The translucent vision frame uses a clean screen-space silhouette rectangle because the Crown Hall is an unusually large transparent raster; a future landmark-specific outline can replace it if it proves visually too geometric at close zoom.
+- A live browser pass at normal zoom, close zoom, and panned backside placement should be completed after the next clean Pages build.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Verify the translucent Hall vision over several building and wall placement positions in the deployed browser, including sites near the Hall's rear wings.
+2. Tune stair lane spacing and visual rise only if close-camera inspection shows units clipping the step edge or reading as floating.
+3. If the interaction remains valuable, create a landmark-specific stair animation later; do not broaden it into general multi-level pathfinding yet.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add Hall interiors, rear entrances, ramps, elevators, multi-floor navigation, new landmark classes, or a generalized 3-D traversal system until this small stair interaction is visually stable.

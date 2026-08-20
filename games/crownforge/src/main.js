@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-hallpass1';
-import { CrownforgeAudio } from './audio.js?v=20260819-hallpass1';
-import { CrownforgeInput } from './input.js?v=20260819-hallpass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260819-hallpass1';
-import { CrownforgeSimulation } from './simulation.js?v=20260819-hallpass1';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-hallpass2';
+import { CrownforgeAudio } from './audio.js?v=20260819-hallpass2';
+import { CrownforgeInput } from './input.js?v=20260819-hallpass2';
+import { CrownforgeRenderer } from './renderer.js?v=20260819-hallpass2';
+import { CrownforgeSimulation } from './simulation.js?v=20260819-hallpass2';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -316,7 +316,7 @@ function updateUi() {
     placementDetail.textContent = valid
       ? preview?.type === 'wall'
         ? `${preview.wallSnapLabel ?? 'SNAPPED'} · ${preview.wallSegments ?? 1} segment${preview.wallSegments === 1 ? '' : 's'} · release to place`
-        : 'Click to place  ·  Esc to cancel'
+        : 'Click to place  ·  Hall vision active  ·  Esc to cancel'
       : (preview?.reason ?? 'Move the foundation to a clear site.');
   }
   const outcome = simulation.phase !== 'playing';

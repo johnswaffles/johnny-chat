@@ -158,6 +158,17 @@ export const BUILDING_TYPES = {
     renderSize: 11200,
     collisionClearance: 3.6,
     entrance: 'south',
+    // The first-age Hall has a readable south stair run. Units may enter only
+    // this corridor and stop on the top landing; the rest of the monument
+    // remains a solid gameplay obstacle until a future interior system exists.
+    stairAccess: {
+      direction: 'south',
+      width: 9.2,
+      topOffset: 10.0,
+      outerOffset: 18.0,
+      stepCount: 8,
+      visualRise: 14,
+    },
     completed: true,
     storage: true,
     production: true,
