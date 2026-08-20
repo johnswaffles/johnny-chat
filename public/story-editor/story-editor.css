@@ -404,6 +404,7 @@ button[disabled] { cursor: not-allowed; opacity: 0.46; }
 .section-meta { display: flex; align-items: center; justify-content: space-between; gap: 7px; margin-top: 7px; color: var(--muted); font-size: 8px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .edited-badge { display: inline-flex; align-items: center; gap: 4px; color: var(--sage); }
 .edited-badge::before { content: "✓"; }
+.protected-badge { display: inline-flex; align-items: center; color: #9a5d49; font-weight: 800; }
 .section-empty { padding: 28px 15px; color: var(--muted); text-align: center; font-size: 12px; line-height: 1.5; }
 
 .editing-stage { position: relative; min-width: 0; padding: 24px; background: var(--paper); }
@@ -427,6 +428,10 @@ button[disabled] { cursor: not-allowed; opacity: 0.46; }
 .manuscript-text.empty { display: grid; place-items: center; align-content: center; gap: 8px; color: var(--muted); text-align: center; font-family: var(--sans); }
 .manuscript-text.empty strong { color: var(--copy); font-size: 13px; }
 .manuscript-text.empty span { max-width: 240px; font-size: 11px; line-height: 1.5; }
+.manuscript-text.protected-text { display: block; background: linear-gradient(145deg, #fff8f1, #fffdf8); }
+.protected-banner { display: inline-flex; margin-bottom: 18px; padding: 6px 9px; color: #995842; border: 1px solid #e7c3b4; border-radius: 999px; background: #fff0e8; font: 800 9px/1 var(--sans); letter-spacing: .08em; }
+.protected-copy { white-space: pre-wrap; }
+.protected-text > small { display: block; margin-top: 22px; color: #9a8f89; font: 600 10px/1.55 var(--sans); }
 .empty-pane-icon { width: 48px; height: 48px; display: grid; place-items: center; margin-bottom: 5px; color: var(--coral); border: 1px solid #ead8d0; border-radius: 15px; background: var(--coral-soft); font: 600 18px var(--serif); }
 .empty-pane-icon.sparkle { color: var(--plum); border-color: #dcd2f0; background: var(--plum-soft); font-family: var(--sans); }
 .diff-added { margin: 0 1px; color: #3c2c69; background: #e8e0fb; border-radius: 3px; box-shadow: 0 0 0 1px #e8e0fb; }

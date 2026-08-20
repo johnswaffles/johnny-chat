@@ -350,7 +350,7 @@
     const report = job.report || {};
     const review = report.finalReview || {};
     el.autopilotDetail.textContent = job.status === "completed"
-      ? `${job.completedChunks} chunks complete · ${report.paragraphsRevised || 0} passages revised${review.overall ? ` · ${review.overall}` : ""}`
+      ? `${job.completedChunks} chunks complete · ${report.paragraphsRevised || 0} passages revised${report.paragraphsPreserved ? ` · ${report.paragraphsPreserved} passages preserved verbatim` : ""}${review.overall ? ` · ${review.overall}` : ""}`
       : job.status === "failed"
         ? (job.error || "The original manuscript was kept intact.")
         : "The page can stay open while the model works; progress is saved between chunks.";
@@ -388,7 +388,7 @@
         <span class="section-number">${absoluteIndex}</span>
         <span class="section-copy">
           <span class="section-preview">${escapeHtml(preview)}</span>
-          <span class="section-meta"><span>Ch ${section.chapterIndex} · Scene ${section.sceneIndex}</span>${section.editedText ? '<span class="edited-badge">Revised</span>' : ""}</span>
+          <span class="section-meta"><span>Ch ${section.chapterIndex} · Scene ${section.sceneIndex}</span>${section.preserveVerbatim ? '<span class="protected-badge">[Preserved]</span>' : section.editedText ? '<span class="edited-badge">Revised</span>' : ""}</span>
         </span>`;
       button.addEventListener("click", () => selectSection(section.id));
       el.sectionList.appendChild(button);
@@ -477,6 +477,17 @@
   function renderSuggestion(edit) {
     const section = selectedSection();
     const currentText = textFor(section);
+    if (section?.preserveVerbatim) {
+      el.originalText.className = "manuscript-text protected-text";
+      el.originalText.innerHTML = `<div class="protected-banner">[PRESERVED VERBATIM]</div><div class="protected-copy">${escapeHtml(currentText)}</div><small>${escapeHtml(section.preserveReason || "This passage was kept outside model rewriting.")}</small>`;
+      emptyPane(el.suggestionText, "—", "No model revision requested", "The surrounding manuscript can still be edited while this passage remains unchanged.");
+      el.suggestionHeading.textContent = "Protected passage";
+      el.suggestionStatus.textContent = "Preserved";
+      el.decisionBar.hidden = true;
+      el.acceptEdit.disabled = true;
+      el.rejectEdit.disabled = true;
+      return;
+    }
     if (!section || !edit?.suggestion) {
       el.originalText.className = "manuscript-text";
       el.originalText.textContent = currentText;
@@ -506,7 +517,7 @@
     const section = selectedSection();
     const paragraphs = paragraphSections();
     const index = paragraphs.findIndex((item) => item.id === state.selectedId);
-    el.requestEdit.disabled = !section;
+    el.requestEdit.disabled = !section || Boolean(section?.preserveVerbatim);
     el.previousSection.disabled = index <= 0;
     el.nextSection.disabled = index < 0 || index >= paragraphs.length - 1;
     if (!section) {
@@ -816,6 +827,11 @@
       });
       const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "The revision could not be generated.");
+      if (data.protected) {
+        renderEditor();
+        showToast(data.message || "This passage was preserved verbatim.");
+        return;
+      }
       state.pendingEdit = data.edit;
       state.previewEdit = data.edit;
       state.edits.unshift(data.edit);

@@ -1777,7 +1777,8 @@ app.get("/health", (_req, res) => res.json({
   morrowWebSearch: true,
   storyEditorAutopilot: true,
   storyEditorModel: STORY_EDITOR_MODEL,
-  storyEditorMaxUploadMb: STORY_EDITOR_UPLOAD_MB
+  storyEditorMaxUploadMb: STORY_EDITOR_UPLOAD_MB,
+  storyEditorProtectedPassthrough: true
 }));
 
 function compactText(value) {
@@ -3330,6 +3331,8 @@ async function ensureStoryDb() {
         original_text TEXT NOT NULL,
         edited_text TEXT,
         summary TEXT,
+        preserve_verbatim INTEGER NOT NULL DEFAULT 0,
+        preserve_reason TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -3391,6 +3394,13 @@ async function ensureStoryDb() {
       const columns = await sqliteRun("PRAGMA table_info(story_projects);");
       if (!columns.some((column) => column.name === "user_intent")) {
         await sqliteRun("ALTER TABLE story_projects ADD COLUMN user_intent TEXT NOT NULL DEFAULT '';");
+      }
+      const sectionColumns = await sqliteRun("PRAGMA table_info(story_sections);");
+      if (!sectionColumns.some((column) => column.name === "preserve_verbatim")) {
+        await sqliteRun("ALTER TABLE story_sections ADD COLUMN preserve_verbatim INTEGER NOT NULL DEFAULT 0;");
+      }
+      if (!sectionColumns.some((column) => column.name === "preserve_reason")) {
+        await sqliteRun("ALTER TABLE story_sections ADD COLUMN preserve_reason TEXT NOT NULL DEFAULT '';");
       }
     });
   }
@@ -3490,6 +3500,48 @@ function splitManuscript(text) {
   return sections;
 }
 
+const STORY_PROTECTED_PATTERNS = [
+  { label: "magic mushroom or psilocybin reference", pattern: /\b(?:magic\s+mushrooms?|psychedelic\s+mushrooms?|hallucinogenic\s+mushrooms?|shrooms?|psilocybin|psilocin|psilocybe(?:\s+\w+)?)\b/gi }
+];
+
+function classifyStoryProtection(text) {
+  const source = String(text || "");
+  const labels = STORY_PROTECTED_PATTERNS
+    .filter(({ pattern }) => pattern.test(source))
+    .map(({ label }) => label);
+  STORY_PROTECTED_PATTERNS.forEach(({ pattern }) => { pattern.lastIndex = 0; });
+  return {
+    preserveVerbatim: labels.length > 0,
+    preserveReason: labels.length ? `Potentially sensitive material detected: ${[...new Set(labels)].join(", ")}. This passage is preserved verbatim and excluded from model rewriting.` : ""
+  };
+}
+
+function redactStorySensitiveText(value) {
+  let redacted = String(value || "");
+  STORY_PROTECTED_PATTERNS.forEach(({ pattern }) => {
+    redacted = redacted.replace(pattern, "[PROTECTED MATERIAL]");
+    pattern.lastIndex = 0;
+  });
+  return redacted;
+}
+
+function redactStoryModelValue(value) {
+  if (typeof value === "string") return redactStorySensitiveText(value);
+  if (Array.isArray(value)) return value.map((item) => redactStoryModelValue(item));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, redactStoryModelValue(item)]));
+  }
+  return value;
+}
+
+function storySectionProtection(section = {}) {
+  const detected = classifyStoryProtection(section.original_text ?? section.originalText ?? "");
+  return {
+    preserveVerbatim: Boolean(Number(section.preserve_verbatim ?? section.preserveVerbatim) || detected.preserveVerbatim),
+    preserveReason: String(section.preserve_reason || section.preserveReason || detected.preserveReason || "")
+  };
+}
+
 async function extractPdfText(buffer) {
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
   const pdfDocument = await loadingTask.promise;
@@ -3553,7 +3605,7 @@ async function summarizeChapter(projectId, chapterIndex) {
     WHERE project_id = ${sqliteLiteral(projectId)} AND chapter_index = ${Number(chapterIndex) || 1} AND kind = 'paragraph'
     ORDER BY paragraph_index ASC LIMIT 80;
   `);
-  const text = rows.map((row) => row.edited_text || row.original_text).join("\n\n").slice(0, 16000);
+  const text = redactStorySensitiveText(rows.map((row) => row.edited_text || row.original_text).join("\n\n").slice(0, 16000));
   if (!text || !OPENAI_API_KEY) return text.slice(0, 1200);
   const response = await openai.responses.create({
     model: OPENAI_CHAT_MODEL,
@@ -3563,7 +3615,7 @@ async function summarizeChapter(projectId, chapterIndex) {
       { role: "user", content: text }
     ]
   });
-  return extractResponseText(response) || text.slice(0, 1200);
+  return redactStorySensitiveText(extractResponseText(response) || text.slice(0, 1200));
 }
 
 function storyModeInstruction(mode) {
@@ -3724,6 +3776,14 @@ const STORY_AUTOPILOT_REVIEW_SCHEMA = storyAutopilotFormat("story_autopilot_revi
 });
 
 function parseStoryModelJson(response) {
+  const refusal = (response?.output || [])
+    .flatMap((item) => Array.isArray(item?.content) ? item.content : [])
+    .find((content) => content?.type === "refusal" || content?.refusal);
+  if (refusal) {
+    const error = new Error("The story model declined one passage; protected material was preserved and the surrounding edit can continue.");
+    error.storySafetyRefusal = true;
+    throw error;
+  }
   const raw = extractResponseText(response).replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
   if (!raw) throw new Error("The story model returned an empty response.");
   try {
@@ -3734,6 +3794,12 @@ function parseStoryModelJson(response) {
     if (first !== -1 && last > first) return JSON.parse(raw.slice(first, last + 1));
     throw new Error("The story model returned invalid structured output.");
   }
+}
+
+function isStorySafetyRefusal(error) {
+  if (error?.storySafetyRefusal) return true;
+  const message = String(error?.message || error || "");
+  return /\b(?:refus(?:e|ed|al)|safety|policy|moderation|disallowed|blocked|unsafe|harmful|biolog(?:y|ical))\b/i.test(message);
 }
 
 async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) {
@@ -3775,7 +3841,8 @@ function buildStoryAutopilotChunks(paragraphs, { maxCharacters = 18000, maxParag
       sceneIndex: paragraph.scene_index,
       paragraphIndex: paragraph.paragraph_index,
       originalText: paragraph.original_text || "",
-      text
+      text,
+      ...storySectionProtection(paragraph)
     });
     characters += text.length;
   }
@@ -3817,6 +3884,26 @@ function storyAutopilotChunkView(row) {
     review: parseStoryObject(row.review_json),
     updatedAt: row.updated_at || ""
   };
+}
+
+function defaultStoryAutopilotPlan(intent, chunks) {
+  return {
+    editorialNorthStar: redactStorySensitiveText(intent) || "Strengthen the manuscript while preserving its voice and story logic.",
+    transformationApproach: "Continue with a conservative, continuity-aware edit. Potentially sensitive passages remain unchanged and are not sent to the model.",
+    voiceRules: ["Preserve the author's point of view, tense, rhythm, and emotional intent."],
+    characterLedger: [],
+    settingRules: [],
+    timeline: [],
+    activeThreads: [],
+    endingGuardrails: ["Interior chunks must keep forward momentum and must not sound like the ending."],
+    chunkingNotes: [`${chunks.length} manuscript chunks prepared locally. Protected passages are preserved verbatim.`]
+  };
+}
+
+function protectedPassageDescriptors(paragraphs = []) {
+  return paragraphs
+    .filter((paragraph) => paragraph.preserveVerbatim)
+    .map((paragraph) => ({ id: paragraph.id, label: paragraph.label, reason: paragraph.preserveReason || "Potentially sensitive material preserved verbatim." }));
 }
 
 async function getStoryAutopilotJob(jobId, projectId = "") {
@@ -3890,7 +3977,8 @@ async function runStoryAutopilotJob(jobId) {
     const project = projects[0];
     if (!project) throw new Error("The manuscript no longer exists.");
     const rows = await storyQuery(`
-      SELECT id, chapter_index, scene_index, paragraph_index, label, original_text, edited_text
+      SELECT id, chapter_index, scene_index, paragraph_index, label, original_text, edited_text,
+        preserve_verbatim, preserve_reason
       FROM story_sections
       WHERE project_id = ${sqliteLiteral(job.project_id)} AND kind = 'paragraph'
       ORDER BY chapter_index, scene_index, paragraph_index;
@@ -3917,32 +4005,50 @@ async function runStoryAutopilotJob(jobId) {
     await storyExec(chunkStatements);
 
     const bible = await getStoryBible(job.project_id);
+    const protectedParagraphCount = chunks.reduce((total, chunk) => total + chunk.paragraphs.filter((paragraph) => paragraph.preserveVerbatim).length, 0);
+    const editableParagraphCount = chunks.reduce((total, chunk) => total + chunk.paragraphs.filter((paragraph) => !paragraph.preserveVerbatim).length, 0);
+    const warnings = [];
     const outline = chunks.map((chunk) => ({
       index: chunk.index,
       label: chunk.label,
       paragraphCount: chunk.paragraphs.length,
-      opening: chunk.paragraphs[0].text.slice(0, 320),
-      closing: chunk.paragraphs[chunk.paragraphs.length - 1].text.slice(-420)
+      editableParagraphCount: chunk.paragraphs.filter((paragraph) => !paragraph.preserveVerbatim).length,
+      protectedPassages: protectedPassageDescriptors(chunk.paragraphs),
+      opening: redactStorySensitiveText(chunk.paragraphs[0].text.slice(0, 320)),
+      closing: redactStorySensitiveText(chunk.paragraphs[chunk.paragraphs.length - 1].text.slice(-420))
     }));
-    const plan = await storyModelJson({
-      format: STORY_AUTOPILOT_PLAN_SCHEMA,
-      maxOutputTokens: 5000,
-      system: [
-        "You are the lead editor planning a complete, high-quality long-form fiction transformation.",
-        "The user's brief is the governing instruction. If it asks for a genre, franchise, adaptation, episode, movie, or bestseller-style transformation, make a concrete plan for doing that consistently; do not merely copyedit.",
-        "If it does not ask for a transformation, preserve the author's story, voice, point of view, tense, and intent while improving it.",
-        "Plan for chunked execution. Interior chunks must preserve open plot momentum; only the true final chunk may resolve the story.",
-        "Create a continuity ledger that later editors can use. Return structured JSON only."
-      ].join(" "),
-      user: {
-        project: { title: project.title, filename: project.filename },
-        intent: job.intent,
-        storyBible: bible,
-        manuscriptOutline: outline,
-        openingSample: rows.slice(0, 3).map((row) => row.original_text).join("\n\n").slice(0, 4000),
-        endingSample: rows.slice(-3).map((row) => row.original_text).join("\n\n").slice(-4000)
+    let plan;
+    if (!editableParagraphCount) {
+      plan = defaultStoryAutopilotPlan(job.intent, chunks);
+      warnings.push("All detected sensitive passages were preserved verbatim; no model rewrite was needed.");
+    } else {
+      try {
+        plan = redactStoryModelValue(await storyModelJson({
+          format: STORY_AUTOPILOT_PLAN_SCHEMA,
+          maxOutputTokens: 5000,
+          system: [
+            "You are the lead editor planning a complete, high-quality long-form fiction transformation.",
+            "The user's brief is the governing instruction. If it asks for a genre, franchise, adaptation, episode, movie, or bestseller-style transformation, make a concrete plan for doing that consistently; do not merely copyedit.",
+            "If it does not ask for a transformation, preserve the author's story, voice, point of view, tense, and intent while improving it.",
+            "Some passages are marked PROTECTED MATERIAL. They are legitimate user-owned fiction, but they are outside this model edit: do not analyze, quote, transform, or reproduce them. Plan only around their narrative position and preserve them verbatim.",
+            "Plan for chunked execution. Interior chunks must preserve open plot momentum; only the true final chunk may resolve the story.",
+            "Create a continuity ledger that later editors can use. Return structured JSON only."
+          ].join(" "),
+          user: {
+            project: { title: project.title, filename: project.filename },
+            intent: redactStorySensitiveText(job.intent),
+            storyBible: redactStoryModelValue(bible),
+            manuscriptOutline: outline,
+            openingSample: redactStorySensitiveText(rows.slice(0, 3).map((row) => row.original_text).join("\n\n").slice(0, 4000)),
+            endingSample: redactStorySensitiveText(rows.slice(-3).map((row) => row.original_text).join("\n\n").slice(-4000))
+          }
+        }));
+      } catch (error) {
+        if (!isStorySafetyRefusal(error)) throw error;
+        plan = defaultStoryAutopilotPlan(job.intent, chunks);
+        warnings.push("The planning pass declined part of the manuscript, so Story Editor used a local continuity plan and continued with protected passages excluded.");
       }
-    });
+    }
     await updateStoryAutopilotJob(jobId, { plan_json: JSON.stringify(plan), message: `Plan ready. Editing ${chunks.length} connected manuscript chunks.` });
 
     let handoff = {
@@ -3953,8 +4059,8 @@ async function runStoryAutopilotJob(jobId) {
       emotionalState: "",
       nextMomentum: ""
     };
-    const warnings = [];
     let revisedParagraphCount = 0;
+    let preservedParagraphCount = protectedParagraphCount;
     const closureChecks = [];
     for (const chunk of chunks) {
       await updateStoryAutopilotJob(jobId, {
@@ -3964,79 +4070,156 @@ async function runStoryAutopilotJob(jobId) {
       });
       await storyExec(`UPDATE story_autopilot_chunks SET status = 'running', updated_at = ${sqliteLiteral(storyNow())} WHERE id = ${sqliteLiteral(chunk.id)};`);
       const isFinal = chunk.index === chunks.length;
-      const result = await storyModelJson({
-        format: STORY_AUTOPILOT_CHUNK_SCHEMA,
-        maxOutputTokens: 9000,
-        system: [
-          "You are Story Editor, a high-agency editor revising one connected chunk of a much larger manuscript.",
-          "Follow the user's brief and the editorial plan. Preserve continuity with the supplied handoff ledger and Story Bible.",
-          "Return exactly one revised paragraph for every supplied paragraph ID. Do not add, remove, reorder, or merge paragraphs.",
-          "This chunk is part of an ongoing story. Unless this is explicitly the final chunk, do not wind down, summarize, resolve the central conflict, say goodbye, add a moral, or use ending language. Preserve unfinished business, active tension, and forward momentum into the next chunk.",
-          "The final chunk may resolve the story only when the source and user brief call for resolution.",
-          "Keep any intentional transformation coherent across the whole manuscript. Return structured JSON only."
-        ].join(" "),
-        user: {
-          intent: job.intent,
-          plan,
-          storyBible: bible,
-          previousHandoff: handoff,
-          chunk: {
-            index: chunk.index,
-            isFinal,
-            label: chunk.label,
-            paragraphs: chunk.paragraphs.map((paragraph) => ({ id: paragraph.id, label: paragraph.label, text: paragraph.text }))
+      const editableChunk = { ...chunk, paragraphs: chunk.paragraphs.filter((paragraph) => !paragraph.preserveVerbatim) };
+      const protectedPassages = protectedPassageDescriptors(chunk.paragraphs);
+      let result = {
+        revisedParagraphs: [],
+        handoff,
+        quality: {
+          closureRisk: "medium",
+          continuityFlags: protectedPassages.length ? ["Protected passages were preserved verbatim and excluded from model rewriting."] : [],
+          preservedIntent: true
+        }
+      };
+      if (editableChunk.paragraphs.length) {
+        try {
+          result = redactStoryModelValue(await storyModelJson({
+            format: STORY_AUTOPILOT_CHUNK_SCHEMA,
+            maxOutputTokens: 9000,
+            system: [
+              "You are Story Editor, a high-agency editor revising one connected chunk of a much larger manuscript.",
+              "Follow the user's brief and the editorial plan. Preserve continuity with the supplied handoff ledger and Story Bible.",
+              "Return exactly one revised paragraph for every supplied editable paragraph ID. Do not add, remove, reorder, or merge paragraphs.",
+              "Protected passages are intentionally omitted from the editable text. Do not reconstruct, quote, summarize, or transform them; their IDs and narrative position are preserved by the application.",
+              "This chunk is part of an ongoing story. Unless this is explicitly the final chunk, do not wind down, summarize, resolve the central conflict, say goodbye, add a moral, or use ending language. Preserve unfinished business, active tension, and forward momentum into the next chunk.",
+              "The final chunk may resolve the story only when the source and user brief call for resolution.",
+              "Keep any intentional transformation coherent across the whole manuscript. Return structured JSON only."
+            ].join(" "),
+            user: {
+              intent: redactStorySensitiveText(job.intent),
+              plan: redactStoryModelValue(plan),
+              storyBible: redactStoryModelValue(bible),
+              previousHandoff: redactStoryModelValue(handoff),
+              protectedPassages,
+              chunk: {
+                index: chunk.index,
+                isFinal,
+                label: chunk.label,
+                paragraphs: editableChunk.paragraphs.map((paragraph) => ({ id: paragraph.id, label: paragraph.label, text: redactStorySensitiveText(paragraph.text) }))
+              }
+            }
+          }));
+        } catch (error) {
+          if (!isStorySafetyRefusal(error)) throw error;
+          warnings.push(`Chunk ${chunk.index} encountered a model safety refusal; protected material was preserved and a narrower surrounding edit was attempted.`);
+          try {
+            result = redactStoryModelValue(await storyModelJson({
+              format: STORY_AUTOPILOT_CHUNK_SCHEMA,
+              maxOutputTokens: 9000,
+              system: [
+                "Edit only the supplied editable fiction paragraphs for clarity and continuity.",
+                "Protected passages are omitted and must remain untouched by the application.",
+                "Return one revised paragraph for every supplied ID. If a paragraph cannot be safely revised, return its original text unchanged.",
+                "Do not summarize, add plot events, or create an ending in this interior chunk. Return structured JSON only."
+              ].join(" "),
+              user: {
+                chunkIndex: chunk.index,
+                isFinal,
+                protectedPassages,
+                paragraphs: editableChunk.paragraphs.map((paragraph) => ({ id: paragraph.id, text: redactStorySensitiveText(paragraph.text) }))
+              }
+            }));
+          } catch (retryError) {
+            if (!isStorySafetyRefusal(retryError)) throw retryError;
+            warnings.push(`Chunk ${chunk.index} was left unchanged after the narrower safety-preserving retry.`);
+            result = {
+              revisedParagraphs: [],
+              handoff,
+              quality: {
+                closureRisk: "medium",
+                continuityFlags: ["This chunk was preserved unchanged after a model safety refusal."],
+                preservedIntent: true
+              }
+            };
           }
         }
-      });
-      let normalized = normalizeAutopilotParagraphs(result, chunk);
-      warnings.push(...normalized.warnings);
+      }
+      let editableNormalized = normalizeAutopilotParagraphs(result, editableChunk);
+      warnings.push(...editableNormalized.warnings);
       let closureRisk = result?.quality?.closureRisk || "medium";
       let closureNote = Array.isArray(result?.quality?.continuityFlags) ? result.quality.continuityFlags.join(" ") : "";
-      const lastText = normalized.paragraphs[normalized.paragraphs.length - 1]?.revisedText || "";
-      if (!isFinal && (closureRisk === "high" || prematureStoryClosure(lastText))) {
-        const repaired = await repairStoryAutopilotEnding(chunk, normalized.paragraphs, job.intent, plan, handoff);
-        normalized = { paragraphs: repaired.paragraphs, warnings: normalized.warnings };
+      const editableLastText = editableNormalized.paragraphs[editableNormalized.paragraphs.length - 1]?.revisedText || "";
+      if (editableNormalized.paragraphs.length && !isFinal && (closureRisk === "high" || prematureStoryClosure(editableLastText))) {
+        const repaired = await repairStoryAutopilotEnding(editableChunk, editableNormalized.paragraphs, redactStorySensitiveText(job.intent), redactStoryModelValue(plan), redactStoryModelValue(handoff));
+        editableNormalized = { paragraphs: repaired.paragraphs, warnings: editableNormalized.warnings };
         closureRisk = repaired.closureRisk;
         closureNote = repaired.note;
       }
+      const editableById = new Map(editableNormalized.paragraphs.map((paragraph) => [paragraph.id, paragraph]));
+      const normalized = {
+        paragraphs: chunk.paragraphs.map((paragraph) => paragraph.preserveVerbatim
+          ? { ...paragraph, revisedText: paragraph.text, note: "Preserved verbatim; excluded from model rewriting." }
+          : (editableById.get(paragraph.id) || { ...paragraph, revisedText: paragraph.text, note: "Kept unchanged." })),
+        warnings: editableNormalized.warnings
+      };
+      const changedEditableCount = normalized.paragraphs.filter((paragraph) => !paragraph.preserveVerbatim && paragraph.revisedText !== paragraph.text).length;
+      revisedParagraphCount += changedEditableCount;
+      if (!editableChunk.paragraphs.length) closureNote = "Protected passages were preserved verbatim; this chunk was not sent to the model.";
       const writeNow = storyNow();
       const writes = ["BEGIN;"];
       for (const paragraph of normalized.paragraphs) {
-        revisedParagraphCount += 1;
+        if (paragraph.preserveVerbatim) continue;
         const editId = storyId("edit");
         writes.push(`UPDATE story_sections SET edited_text = ${sqliteLiteral(paragraph.revisedText)}, updated_at = ${sqliteLiteral(writeNow)} WHERE id = ${sqliteLiteral(paragraph.id)} AND project_id = ${sqliteLiteral(job.project_id)};`);
         writes.push(`INSERT INTO story_edits (id, project_id, section_id, mode, prompt, suggestion, status, created_at, decided_at) VALUES (${sqliteLiteral(editId)}, ${sqliteLiteral(job.project_id)}, ${sqliteLiteral(paragraph.id)}, 'autopilot', ${sqliteLiteral(job.intent)}, ${sqliteLiteral(paragraph.revisedText)}, 'accepted', ${sqliteLiteral(writeNow)}, ${sqliteLiteral(writeNow)});`);
       }
       writes.push("COMMIT;");
       await storyExec(writes);
-      handoff = result?.handoff || handoff;
+      handoff = redactStoryModelValue(result?.handoff || handoff);
       closureChecks.push({ chunkIndex: chunk.index, status: isFinal ? "final" : closureRisk === "high" ? "open" : "resolved", note: closureNote || (isFinal ? "Final chunk reviewed for story resolution." : "Interior chunk preserved forward momentum.") });
-      await storyExec(`UPDATE story_autopilot_chunks SET status = 'complete', continuity_json = ${sqliteLiteral(JSON.stringify(handoff))}, review_json = ${sqliteLiteral(JSON.stringify({ closureRisk, continuityFlags: result?.quality?.continuityFlags || [], preservedIntent: result?.quality?.preservedIntent !== false }))}, updated_at = ${sqliteLiteral(storyNow())} WHERE id = ${sqliteLiteral(chunk.id)};`);
+      await storyExec(`UPDATE story_autopilot_chunks SET status = 'complete', continuity_json = ${sqliteLiteral(JSON.stringify(handoff))}, review_json = ${sqliteLiteral(JSON.stringify({ closureRisk, continuityFlags: result?.quality?.continuityFlags || [], preservedIntent: result?.quality?.preservedIntent !== false, protectedPassages, protectedOnly: !editableChunk.paragraphs.length }))}, updated_at = ${sqliteLiteral(storyNow())} WHERE id = ${sqliteLiteral(chunk.id)};`);
       await updateStoryAutopilotJob(jobId, { completed_chunks: chunk.index, message: `Chunk ${chunk.index} complete. Continuity handoff saved for the next section.` });
     }
 
     await updateStoryAutopilotJob(jobId, { phase: "review", message: "Running the final continuity and ending review across the full draft." });
     const reviewRows = await storyQuery(`SELECT chunk_index, label, continuity_json, review_json FROM story_autopilot_chunks WHERE job_id = ${sqliteLiteral(jobId)} ORDER BY chunk_index;`);
-    const review = await storyModelJson({
-      format: STORY_AUTOPILOT_REVIEW_SCHEMA,
-      maxOutputTokens: 5000,
-      system: [
-        "You are the final continuity editor reviewing a manuscript after chunked revision.",
-        "Check character state, timeline, setting, active plot threads, transformation consistency, and whether interior chunks accidentally sound like endings.",
-        "Do not ask the user questions and do not rewrite prose here. Return a concise structured report. Mark the draft ready when issues are minor or intentionally handled by the brief."
-      ].join(" "),
-      user: {
-        intent: job.intent,
-        plan,
-        chunkReports: reviewRows.map((row) => ({ index: row.chunk_index, label: row.label, continuity: parseStoryObject(row.continuity_json), review: parseStoryObject(row.review_json) })),
-        closureChecks
+    let review = {
+      overall: "Completed with protected passages preserved verbatim.",
+      issues: [],
+      closureChecks,
+      readyForExport: true
+    };
+    if (editableParagraphCount) {
+      try {
+        review = redactStoryModelValue(await storyModelJson({
+          format: STORY_AUTOPILOT_REVIEW_SCHEMA,
+          maxOutputTokens: 5000,
+          system: [
+            "You are the final continuity editor reviewing a manuscript after chunked revision.",
+            "Check character state, timeline, setting, active plot threads, transformation consistency, and whether interior chunks accidentally sound like endings.",
+            "Protected passages were deliberately excluded from model rewriting and must be treated as preserved, not as missing content.",
+            "Do not ask the user questions and do not rewrite prose here. Return a concise structured report. Mark the draft ready when issues are minor or intentionally handled by the brief."
+          ].join(" "),
+          user: {
+            intent: redactStorySensitiveText(job.intent),
+            plan: redactStoryModelValue(plan),
+            chunkReports: reviewRows.map((row) => ({ index: row.chunk_index, label: row.label, continuity: parseStoryObject(row.continuity_json), review: parseStoryObject(row.review_json) })),
+            closureChecks
+          }
+        }));
+      } catch (error) {
+        if (!isStorySafetyRefusal(error)) throw error;
+        warnings.push("The final review declined part of the manuscript; the edited passages and protected passages were retained, and the run completed without that optional review.");
+        review.overall = "Editing completed; final model review was skipped after a safety refusal.";
+        review.readyForExport = false;
       }
-    });
+    }
     const report = {
       intent: job.intent,
       model: STORY_EDITOR_MODEL,
       chunks: chunks.length,
       paragraphsRevised: revisedParagraphCount,
+      paragraphsPreserved: preservedParagraphCount,
       warnings,
       closureChecks,
       finalReview: review
@@ -4092,13 +4275,13 @@ app.get("/api/story-editor/projects/:id", async (req, res) => {
     const projectId = String(req.params.id || "");
     const projects = await storyQuery(`SELECT id, title, filename, user_intent AS userIntent, created_at AS createdAt, updated_at AS updatedAt FROM story_projects WHERE id = ${sqliteLiteral(projectId)} LIMIT 1;`);
     if (!projects[0]) return res.status(404).json({ ok: false, error: "Project not found." });
-    const sections = await storyQuery(`
+    const sections = (await storyQuery(`
       SELECT id, chapter_index AS chapterIndex, scene_index AS sceneIndex, paragraph_index AS paragraphIndex,
         line_index AS lineIndex, kind, label, original_text AS originalText, edited_text AS editedText,
-        summary, updated_at AS updatedAt
+        summary, preserve_verbatim AS preserveVerbatim, preserve_reason AS preserveReason, updated_at AS updatedAt
       FROM story_sections WHERE project_id = ${sqliteLiteral(projectId)}
       ORDER BY chapter_index, scene_index, paragraph_index, line_index;
-    `);
+    `)).map((section) => ({ ...section, ...storySectionProtection(section) }));
     const edits = await storyQuery(`
       SELECT id, section_id AS sectionId, mode, prompt, suggestion, status, created_at AS createdAt, decided_at AS decidedAt
       FROM story_edits WHERE project_id = ${sqliteLiteral(projectId)}
@@ -4130,9 +4313,11 @@ app.post("/api/story-editor/upload", storyUpload.single("manuscript"), async (re
       `INSERT INTO story_bible (project_id, updated_at) VALUES (${sqliteLiteral(projectId)}, ${sqliteLiteral(now)});`
     ];
     for (const section of sections) {
-      statements.push(`INSERT INTO story_sections (id, project_id, chapter_index, scene_index, paragraph_index, line_index, kind, label, original_text, created_at, updated_at) VALUES (${sqliteLiteral(section.id)}, ${sqliteLiteral(projectId)}, ${section.chapterIndex}, ${section.sceneIndex}, ${section.paragraphIndex}, ${section.lineIndex || 0}, ${sqliteLiteral(section.kind)}, ${sqliteLiteral(section.label)}, ${sqliteLiteral(section.originalText)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`);
+      const protection = storySectionProtection(section);
+      statements.push(`INSERT INTO story_sections (id, project_id, chapter_index, scene_index, paragraph_index, line_index, kind, label, original_text, preserve_verbatim, preserve_reason, created_at, updated_at) VALUES (${sqliteLiteral(section.id)}, ${sqliteLiteral(projectId)}, ${section.chapterIndex}, ${section.sceneIndex}, ${section.paragraphIndex}, ${section.lineIndex || 0}, ${sqliteLiteral(section.kind)}, ${sqliteLiteral(section.label)}, ${sqliteLiteral(section.originalText)}, ${protection.preserveVerbatim ? 1 : 0}, ${sqliteLiteral(protection.preserveReason)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`);
       for (const line of section.lines || []) {
-        statements.push(`INSERT INTO story_sections (id, project_id, chapter_index, scene_index, paragraph_index, line_index, kind, label, original_text, created_at, updated_at) VALUES (${sqliteLiteral(line.id)}, ${sqliteLiteral(projectId)}, ${line.chapterIndex}, ${line.sceneIndex}, ${line.paragraphIndex}, ${line.lineIndex}, ${sqliteLiteral(line.kind)}, ${sqliteLiteral(line.label)}, ${sqliteLiteral(line.originalText)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`);
+        const lineProtection = storySectionProtection(line);
+        statements.push(`INSERT INTO story_sections (id, project_id, chapter_index, scene_index, paragraph_index, line_index, kind, label, original_text, preserve_verbatim, preserve_reason, created_at, updated_at) VALUES (${sqliteLiteral(line.id)}, ${sqliteLiteral(projectId)}, ${line.chapterIndex}, ${line.sceneIndex}, ${line.paragraphIndex}, ${line.lineIndex}, ${sqliteLiteral(line.kind)}, ${sqliteLiteral(line.label)}, ${sqliteLiteral(line.originalText)}, ${lineProtection.preserveVerbatim ? 1 : 0}, ${sqliteLiteral(lineProtection.preserveReason)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`);
       }
     }
     statements.push("COMMIT;");
@@ -4226,6 +4411,15 @@ app.post("/api/story-editor/projects/:id/edit", async (req, res) => {
     if (section.kind !== "paragraph" && section.kind !== "scene") {
       return res.status(400).json({ ok: false, error: "Select a paragraph or scene for editing." });
     }
+    const protection = storySectionProtection(section);
+    if (protection.preserveVerbatim) {
+      return res.json({
+        ok: true,
+        protected: true,
+        sectionId,
+        message: "This passage was marked as potentially sensitive and was preserved verbatim. The surrounding manuscript can still be edited."
+      });
+    }
 
     const nearby = await storyQuery(`
       SELECT kind, label, original_text AS originalText, edited_text AS editedText FROM story_sections
@@ -4264,11 +4458,11 @@ app.post("/api/story-editor/projects/:id/edit", async (req, res) => {
             mode,
             modeInstruction: storyModeInstruction(mode),
             selectedText,
-            nearbyContext: nearby.map((item) => item.editedText || item.originalText).join("\n\n"),
+            nearbyContext: redactStorySensitiveText(nearby.map((item) => item.editedText || item.originalText).join("\n\n")),
             chapterSummary,
-            storyBible: bible,
-            previousAcceptedEdits: previousAccepted.map((item) => item.suggestion),
-            userNote: String(req.body?.note || "").slice(0, 1200)
+            storyBible: redactStoryModelValue(bible),
+            previousAcceptedEdits: previousAccepted.map((item) => redactStorySensitiveText(item.suggestion)),
+            userNote: redactStorySensitiveText(String(req.body?.note || "").slice(0, 1200))
           }, null, 2)
         }
       ]
