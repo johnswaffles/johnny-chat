@@ -149,25 +149,24 @@ export const BUILDING_TYPES = {
     function: 'Resource drop-off and settlement core',
     asset: 'townCenter',
     maxHp: 900,
-    // The Crown Hall is the settlement's monumental landmark. It is now
-    // intentionally enormous relative to human units: the villagers keep
-    // their established scale while the Hall reads as a true royal complex.
-    // The gameplay footprint grows with the artwork so units cannot walk
-    // through the patio, rear wings, or the enlarged tower silhouette.
-    footprint: { width: 18, height: 16 },
-    renderSize: 11200,
-    collisionClearance: 3.6,
+    // Keep the Crown Hall imposing while bringing it back to a readable
+    // first-age landmark proportion. Human units keep their established
+    // scale; the visual and gameplay bounds are reduced together so the
+    // patio, rear wings, and buildable meadow agree with what players see.
+    footprint: { width: 9, height: 8 },
+    renderSize: 5600,
+    collisionClearance: 1.8,
     entrance: 'south',
     // The first-age Hall has a readable south stair run. Units may enter only
     // this corridor and stop on the top landing; the rest of the monument
     // remains a solid gameplay obstacle until a future interior system exists.
     stairAccess: {
       direction: 'south',
-      width: 9.2,
-      topOffset: 10.0,
-      outerOffset: 18.0,
+      width: 4.6,
+      topOffset: 5.0,
+      outerOffset: 9.0,
       stepCount: 8,
-      visualRise: 14,
+      visualRise: 8,
     },
     completed: true,
     storage: true,
@@ -192,13 +191,13 @@ export const BUILDING_TYPES = {
     function: 'Crown Guard production',
     asset: 'barracks',
     maxHp: 480,
-    // Match the Crown Hall landmark contract: the authored silhouette and the
-    // gameplay footprint both grow together, while human units keep their
-    // existing scale. The Barracks is intentionally smaller than the Hall,
-    // but large enough to read as a military anchor at normal RTS zoom.
-    footprint: { width: 11, height: 8 },
-    renderSize: 5600,
-    collisionClearance: 2.8,
+    // The approved Barracks raster contains full-size practice dummies. At
+    // this render width those dummies resolve to the same readable scale as
+    // the live Marauder while the building remains a substantial military
+    // landmark. Human units themselves are not rescaled.
+    footprint: { width: 6, height: 5 },
+    renderSize: 1000,
+    collisionClearance: 1.5,
     entrance: 'south',
     buildTime: 10,
     cost: { food: 0, wood: 90, stone: 40 },

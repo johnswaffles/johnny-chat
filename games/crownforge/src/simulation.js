@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-barrackspass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-proportionspass1';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-barrackspass1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-proportionspass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -165,7 +165,10 @@ export class CrownforgeSimulation {
     this.addResource('tree', 'wood', 25, 64, 260, 0, { sizeTier: 'medium' });
     this.addResource('tree', 'wood', 33, 61, 180, 3, { sizeTier: 'small' });
     this.addResource('berry', 'food', 35.5, 28.5, 105, 0, { sizeTier: 'small' });
-    this.addResource('berry', 'food', 41.5, 40.5, 105, 1, { sizeTier: 'small' });
+    // Keep a clear buildable meadow on the Hall's east flank. This food node
+    // remains close enough to serve the settlement without occupying the
+    // first ring where players expect to place structures.
+    this.addResource('berry', 'food', 49, 40.5, 105, 1, { sizeTier: 'small' });
     this.addResource('berry', 'food', 57, 30, 105, 2, { sizeTier: 'small' });
     this.addResource('berry', 'food', 82, 41, 105, 0, { sizeTier: 'small' });
     // Large working plots need breathing room so their silhouettes do not

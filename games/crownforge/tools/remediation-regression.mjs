@@ -154,16 +154,38 @@ function checkCrownHallStairs() {
 function checkBarracksLandmarkScale() {
   const barracks = BUILDING_TYPES.barracks;
   const hall = BUILDING_TYPES.townCenter;
-  assert.ok(barracks.renderSize >= 5000, 'Barracks uses the enlarged landmark render scale');
+  assert.ok(barracks.renderSize >= 900 && barracks.renderSize <= 1200, 'Barracks practice dummies use the live Marauder reference scale');
   assert.ok(barracks.renderSize < hall.renderSize, 'Crown Hall remains the larger civic landmark');
-  assert.ok(barracks.footprint.width >= 10 && barracks.footprint.height >= 8, 'Barracks gameplay footprint matches its larger silhouette');
-  assert.ok(barracks.collisionClearance >= 2.5, 'Barracks keeps a readable perimeter for units and pathfinding');
+  assert.ok(barracks.footprint.width >= 6 && barracks.footprint.height >= 5, 'Barracks gameplay footprint matches its person-scaled silhouette');
+  assert.ok(barracks.collisionClearance >= 1.4, 'Barracks keeps a readable perimeter for units and pathfinding');
 
   const simulation = freshSimulation();
   const bounds = simulation._buildingEntityBounds({ type: 'barracks', x: 44, z: 42 }, 0);
   const epsilon = 0.01;
   assert.ok(bounds.maxX - bounds.minX >= barracks.footprint.width + barracks.collisionClearance * 2 - epsilon, 'Barracks collision bounds include landmark clearance');
   assert.ok(bounds.maxZ - bounds.minZ >= barracks.footprint.height + barracks.collisionClearance * 2 - epsilon, 'Barracks depth bounds include landmark clearance');
+}
+
+function checkCrownHallProportionsAndBuildableRing() {
+  const hall = BUILDING_TYPES.townCenter;
+  assert.equal(hall.renderSize, 5600, 'Crown Hall render size is reduced by 50%');
+  assert.deepEqual(hall.footprint, { width: 9, height: 8 }, 'Crown Hall gameplay footprint is reduced with its visual scale');
+  assert.equal(hall.collisionClearance, 1.8, 'Crown Hall collision clearance matches the reduced landmark');
+  assert.equal(hall.stairAccess.topOffset, 5, 'Crown Hall stair landing scales with the landmark');
+  assert.equal(hall.stairAccess.outerOffset, 9, 'Crown Hall stair approach scales with the landmark');
+
+  const simulation = freshSimulation();
+  const center = simulation.buildings.find((building) => building.type === 'townCenter');
+  const sites = {
+    north: { x: center.x, z: center.z - 13 },
+    east: { x: center.x + 14, z: center.z },
+    south: { x: center.x, z: center.z + 11 },
+    west: { x: center.x - 20, z: center.z },
+  };
+  for (const [side, point] of Object.entries(sites)) {
+    const check = simulation.getPlacementCheck('house', point);
+    assert.equal(check.valid, true, `Hall has a buildable meadow opening on the ${side} side`);
+  }
 }
 
 function checkCombatAndEndStates() {
@@ -206,6 +228,7 @@ checkGathering();
 checkConstructionAndPlacement();
 checkCrownHallStairs();
 checkBarracksLandmarkScale();
+checkCrownHallProportionsAndBuildableRing();
 checkCombatAndEndStates();
 
 console.log(JSON.stringify({
@@ -217,7 +240,8 @@ console.log(JSON.stringify({
     'cargo-preserving retask and storage return',
     'placement rejection and house completion',
     'Crown Hall stair routing, landing stop, and interior collision',
-    'enlarged Barracks landmark scale and collision clearance',
+    'person-scaled Barracks landmark and collision clearance',
+    'Crown Hall proportion reduction and four-sided buildable ring',
     'melee damage, death timing, victory, defeat',
   ],
 }));

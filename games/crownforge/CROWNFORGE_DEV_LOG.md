@@ -1896,3 +1896,48 @@ The existing true-alpha `assets/villager-carry-food-loop-v1.png` remains registe
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add more military buildings, unit classes, ages, technologies, civilizations, or production queues until the enlarged Barracks remains visually and mechanically stable in the complete first-age slice.
+
+## PROPORTION AND CROWN HALL BUILDABLE RING PASS — 2026-08-20
+
+### WHAT WAS COMPLETED
+
+- Audited the live unit render sizes against the current original Barracks and Crown Hall rasters. Villagers remain at their established scale, and the Crown Guard/Ashen Raider reference scale remains unchanged.
+- Reduced the Crown Hall render size from `11200` to `5600`, exactly 50%, while reducing its logical footprint from `18x16` to `9x8` and its collision clearance from `3.6` to `1.8`. The landmark remains dominant without letting its invisible gameplay bounds consume the surrounding meadow.
+- Scaled the Crown Hall's south stair corridor with the smaller landmark: width `4.6`, top landing offset `5`, outer approach offset `9`, and visual rise `8`. Existing stair access still ends at the top landing and does not open the Hall interior.
+- Recalibrated the Crown Barracks from `5600` to `1000` render size. The target dummies baked into the approved Barracks artwork now resolve near the live Ashen Raider/Crown Guard scale instead of appearing several times larger than a person.
+- Reduced the Barracks gameplay footprint from `11x8` to `6x5` and collision clearance from `2.8` to `1.5` so selection, construction, spawn spacing, and pathfinding follow the new visible proportion.
+- Moved one berry node out of the Hall's first east-side building ring while keeping it close to the settlement as a usable food source. The starting meadow now has tested buildable openings north, east, south, and west of the Hall.
+- No new artwork was generated because the issue was proportion and gameplay bounds; the existing original transparent unit and building assets remain the canonical Crownforge family.
+- Bumped the cache identity to `20260819-proportionspass1` and synchronized the Crownforge source with the `public/crownforge` route mirror.
+
+### SYSTEMS UPDATED
+
+- `src/config.js` — Crown Hall/Barracks visual sizes, gameplay footprints, clearances, and scaled stair data.
+- `src/simulation.js` — east-side starter resource spacing and the existing building-bound/pathfinding contract now use the corrected landmark proportions.
+- `src/renderer.js` — existing render, hit-test, placement-preview, and footprint visuals consume the corrected data without a second scale path.
+- `src/main.js`, `src/animation.js`, `index.html` — cache identity for the proportion pass.
+- `tools/remediation-regression.mjs` — added live Marauder-reference Barracks checks, exact 50% Crown Hall checks, scaled stair checks, and four-sided buildability checks.
+
+### VERIFIED
+
+- `node --check` passed for all changed Crownforge modules.
+- The deterministic Crownforge regression passed gathering, construction, combat, victory, defeat, scaled Hall stairs, person-scaled Barracks bounds, and four-sided Hall building placement.
+- `tools/visual-integrity-audit.mjs` passed with no missing files or placeholder references. Existing conservative atlas-edge reports remain informational and predate this proportion pass.
+- `git diff --check -- games/crownforge` passed.
+- The in-app Browser could not navigate the isolated `file:///private/tmp/crownforge-audit/...` page because of its URL security policy, so a live screenshot pass of the final proportion values remains outstanding for the next allowed preview/deployment surface.
+
+### KNOWN ISSUES / STILL NEEDS WORK
+
+- The Barracks construction stages still use the shared first-age construction family; bespoke Barracks stages can be generated later if the smaller military landmark needs more visual identity.
+- The current proportional calibration is based on the approved transparent raster dimensions and unit render contract. It should receive one normal-zoom and close-zoom visual confirmation once the local preview is available through an allowed browser URL.
+- The Hall's buildable ring is guaranteed by tested open meadow sites; resources and units can still make any individual placement invalid, as intended.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Inspect the corrected Hall/Barracks relationship in a live normal-zoom and close-zoom match.
+2. Place a Barracks, complete it, and queue a Crown Guard to confirm the smaller footprint leaves a clean south entrance and spawn ring.
+3. Place houses and utility buildings on all four Hall sides, then recheck camera framing and unit occlusion.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add more landmark classes, building tiers, civilizations, ages, technologies, or new military units until these proportions and the four-sided buildable Hall ring remain stable in the playable slice.
