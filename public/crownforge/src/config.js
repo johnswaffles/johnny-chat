@@ -12,7 +12,7 @@ export const CONFIG = {
   maxZoom: 1.16,
   // Bias the opening view slightly north so the full Hearth House roofline
   // and the enlarged Crown Hall both sit below the top HUD at reset.
-  initialCameraWorld: { x: 25, z: 38 },
+  initialCameraWorld: { x: 78, z: 82 },
   // The first-age beta sandbox deliberately keeps every currently implemented
   // blueprint available and leaves generous room for production testing.
   sandboxMode: true,
@@ -150,12 +150,11 @@ export const BUILDING_TYPES = {
     function: 'Resource drop-off and settlement core',
     asset: 'townCenter',
     maxHp: 900,
-    // The wooden starter hall is four times the Barracks visual width. Human
-    // units keep their established scale; gameplay bounds remain intentionally
-    // tighter than the broad visual silhouette so the surrounding meadow can
-    // still support expansion.
+    // The first-age Hall is intentionally compact after the landmark-scale
+    // correction. Human units keep their established scale; gameplay bounds
+    // remain generous enough for the south stair approach and future building.
     footprint: { width: 9, height: 8 },
-    renderSize: 4000,
+    renderSize: 400,
     collisionClearance: 1.8,
     entrance: 'south',
     // The first-age Hall has a readable south stair run. Units may enter only

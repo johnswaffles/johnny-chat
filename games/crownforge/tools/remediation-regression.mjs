@@ -163,14 +163,8 @@ function checkConstructionAndPlacement() {
   const tree = simulation.resourcesNodes.find((node) => node.resourceType === 'wood');
   assert.equal(simulation.getPlacementCheck('house', { x: tree.x, z: tree.z }).valid, false, 'resource overlap rejected');
 
-  let placement = null;
-  for (let x = 3; x <= 25 && !placement; x += 1) {
-    for (let z = 3; z <= 19 && !placement; z += 1) {
-      const check = simulation.getPlacementCheck('house', { x, z });
-      if (check.valid) placement = { x, z };
-    }
-  }
-  assert.ok(placement, 'a valid house placement exists');
+  const placement = { x: townCenter.x, z: townCenter.z + 13 };
+  assert.equal(simulation.getPlacementCheck('house', placement).valid, true, 'a valid house placement exists outside the Hall stairs');
   assert.equal(simulation.placeHouse(placement), true, 'house foundation placed');
   const house = simulation.buildings.find((building) => building.type === 'house' && building.progress < 1);
   assert.ok(house, 'house starts as a construction site');
@@ -197,7 +191,7 @@ function checkBlockedDestinationFallback() {
 function checkDynamicBlockerRecovery() {
   const simulation = freshSimulation();
   const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
-  const target = { x: 100, z: 100 };
+  const target = { x: 40, z: 20 };
   const initialPath = simulation._buildPath(villager, target);
   assert.ok(initialPath.length >= 3, 'dynamic blocker scenario starts with a multi-segment route');
   const blockerPoint = initialPath[Math.floor(initialPath.length / 2)];
@@ -234,7 +228,7 @@ function checkBarracksLandmarkScale() {
   const barracks = BUILDING_TYPES.barracks;
   const hall = BUILDING_TYPES.townCenter;
   assert.ok(barracks.renderSize >= 900 && barracks.renderSize <= 1200, 'Barracks practice dummies use the live Marauder reference scale');
-  assert.ok(barracks.renderSize < hall.renderSize, 'Crown Hall remains the larger civic landmark');
+  assert.ok(hall.renderSize < barracks.renderSize, 'Crown Hall now uses the compact first-age landmark scale');
   assert.ok(barracks.footprint.width >= 6 && barracks.footprint.height >= 5, 'Barracks gameplay footprint matches its person-scaled silhouette');
   assert.ok(barracks.collisionClearance >= 1.4, 'Barracks keeps a readable perimeter for units and pathfinding');
 
@@ -247,7 +241,7 @@ function checkBarracksLandmarkScale() {
 
 function checkCrownHallProportionsAndBuildableRing() {
   const hall = BUILDING_TYPES.townCenter;
-  assert.equal(hall.renderSize, BUILDING_TYPES.barracks.renderSize * 4, 'Crown Hall is four times the Barracks visual width');
+  assert.equal(hall.renderSize, 400, 'Crown Hall is reduced to one tenth of its previous visual width');
   assert.deepEqual(hall.footprint, { width: 9, height: 8 }, 'Crown Hall gameplay footprint is reduced with its visual scale');
   assert.equal(hall.collisionClearance, 1.8, 'Crown Hall collision clearance matches the reduced landmark');
   assert.equal(hall.stairAccess.topOffset, 5, 'Crown Hall stair landing scales with the landmark');
@@ -273,7 +267,8 @@ function checkExpandedWorldAndEnemyDistance() {
   assert.equal(CONFIG.mapHeight, 460, 'expanded map height is ten-area scale');
   const hall = simulation.buildings.find((building) => building.type === 'townCenter');
   const camp = simulation.buildings.find((building) => building.type === 'ashenCamp');
-  assert.ok(Math.hypot(camp.x - hall.x, camp.z - hall.z) > 600, 'enemy camp starts across the expanded map');
+  assert.ok(Math.hypot(camp.x - hall.x, camp.z - hall.z) > 500, 'enemy camp starts across the expanded map');
+  assert.ok(hall.x > CONFIG.mapWidth * 0.1 && hall.z > CONFIG.mapHeight * 0.1, 'Crown Hall starts inside the map rather than on the north-west tip');
   assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'wood').length >= 20, 'expanded map has a readable wood family');
   assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'food').length >= 16, 'expanded map has a readable food family');
   assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'stone').length >= 12, 'expanded map has a readable stone family');
@@ -301,14 +296,12 @@ function checkAspectCorrectBuildingFeedback() {
   const renderer = Object.create(CrownforgeRenderer.prototype);
   const hallWidth = BUILDING_TYPES.townCenter.renderSize;
   const barracksWidth = BUILDING_TYPES.barracks.renderSize;
-  assert.equal(
-    renderer.buildingVisualHeight({ type: 'townCenter' }, hallWidth),
-    hallWidth * FIRST_AGE_ASSETS.townCenter.height / FIRST_AGE_ASSETS.townCenter.width,
+  assert.ok(
+    Math.abs(renderer.buildingVisualHeight({ type: 'townCenter' }, hallWidth) - hallWidth * FIRST_AGE_ASSETS.townCenter.height / FIRST_AGE_ASSETS.townCenter.width) < 1e-9,
     'Crown Hall feedback uses its transparent asset aspect ratio',
   );
-  assert.equal(
-    renderer.buildingVisualHeight({ type: 'barracks' }, barracksWidth),
-    barracksWidth * FIRST_AGE_ASSETS.barracks.height / FIRST_AGE_ASSETS.barracks.width,
+  assert.ok(
+    Math.abs(renderer.buildingVisualHeight({ type: 'barracks' }, barracksWidth) - barracksWidth * FIRST_AGE_ASSETS.barracks.height / FIRST_AGE_ASSETS.barracks.width) < 1e-9,
     'Barracks feedback uses its transparent asset aspect ratio',
   );
   assert.notEqual(
@@ -379,7 +372,7 @@ console.log(JSON.stringify({
     'dynamic building blocker route recovery',
     'Crown Hall stair routing, landing stop, and interior collision',
     'person-scaled Barracks landmark and collision clearance',
-    'Crown Hall proportion reduction and four-sided buildable ring',
+    'compact Crown Hall proportion, inward placement, and four-sided buildable ring',
     'expanded map resource clearings and opposite-side enemy camp',
     'cursor-centered zoom anchor in both directions',
     'aspect-correct landmark health and placement feedback',

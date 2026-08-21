@@ -2430,3 +2430,25 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - The verified Crownforge source and public mirror were committed as `d0b6d8c` on `codex/crownforge-live-sync-20260821` and pushed to GitHub.
 - Production promotion was attempted against the correct Cloudflare Pages project, `johnny-chat-5`, but Cloudflare rejected the repository-wide upload before changing production because unrelated `first-ember/index.pck` and `sim/sim-engine-20260525c.wasm` files exceed the 25 MiB Pages file limit.
 - The live custom route remains on the preceding deployed build until a route-preserving deployment path is authorized or the shared site payload is independently repaired. Do not claim this visual pass is live from the Git push alone.
+
+## CROWN HALL COMPACT FRAMING PASS — 2026-08-21
+
+### CHANGE COMPLETED
+
+- Reduced the completed Crown Hall `renderSize` from `4000` to `400`, approximately one tenth of its previous visual width. The Villager, Crown Guard, Marauder, Barracks, resource, and UI scales remain unchanged.
+- Moved the opening Crown Hall from `(25, 38)` to `(78, 82)` inside the expanded meadow and moved the starting Hearth House, Waystore, Villagers, Crown Guard, and opening wood pair with it so the settlement remains coherent and reachable.
+- Recentered the opening camera on the moved settlement at `{ x: 78, z: 82 }`. The Hall is no longer placed on the north-west map tip, and the existing four-sided placement, south stairs, collision, storage, production, and selection systems remain active.
+- Updated the deterministic regression, asset manifest, and development log to record the new compact proportion and inward starting placement. No new gameplay system or artwork was added in this pass.
+
+### VALIDATION
+
+- The existing Crownforge regression must confirm the compact Crown Hall ratio, inward map placement, four-sided buildable ring, stair routing, resource loop, construction, combat, victory, defeat, and reset behavior.
+- Source/public mirrors must remain byte-parity, syntax-clean, and free of missing active assets or placeholder references before promotion.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Inspect the compact Hall at normal zoom and close zoom to confirm its entrance, health bar, selection target, and south stair landing still read clearly beside human units.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add another Crown Hall model, new civic functions, additional ages, or new factions to compensate for this scale correction. First confirm the compact landmark reads correctly in the actual live deployment.

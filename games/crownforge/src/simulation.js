@@ -144,23 +144,22 @@ export class CrownforgeSimulation {
   }
 
   _seedWorld() {
-    this.addBuilding('townCenter', 25, 38, 'player');
-    this.addBuilding('house', 9, 27, 'player');
-    this.addBuilding('storehouse', 43, 48, 'player');
+    this.addBuilding('townCenter', 78, 82, 'player');
+    this.addBuilding('house', 56, 68, 'player');
+    this.addBuilding('storehouse', 102, 93, 'player');
     // Start the enemy on the far opposite side of the expanded diamond. The
     // long open approach creates time to gather and build without making the
     // Raiders blind or removing their ability to defend their camp.
     this.addBuilding('ashenCamp', 516, 414, 'enemy');
-    // Keep the opening wood pair on the Crown Hall's west flank. The old
-    // north-west coordinates put both trees behind the Hall's tall sprite in
-    // projected depth, making the starting wood look absent even though it
-    // remained mechanically targetable.
-    this.addResource('tree', 'wood', 17.5, 53.5, 180, 0, { sizeTier: 'small' });
-    this.addResource('tree', 'wood', 12.5, 53.5, 180, 1, { sizeTier: 'small' });
-    this.addResource('tree', 'wood', 10.8, 39.2, 260, 2, { sizeTier: 'medium' });
-    this.addResource('tree', 'wood', 61, 56, 420, 3, { sizeTier: 'medium' });
-    this.addResource('tree', 'wood', 78, 58, 700, 1, { sizeTier: 'large' });
-    this.addResource('grove', 'wood', 14.5, 58, 480, 0, { sizeTier: 'small' });
+    // Keep the opening wood pair on the Crown Hall's west and south-west
+    // flanks. The starting cluster now sits inside the expanded meadow rather
+    // than on the old north-west tip of the playable diamond.
+    this.addResource('tree', 'wood', 68, 96, 180, 0, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 62, 102, 180, 1, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 64, 88, 260, 2, { sizeTier: 'medium' });
+    this.addResource('tree', 'wood', 95, 105, 420, 3, { sizeTier: 'medium' });
+    this.addResource('tree', 'wood', 120, 107, 700, 1, { sizeTier: 'large' });
+    this.addResource('grove', 'wood', 61, 110, 480, 0, { sizeTier: 'small' });
     this.addResource('grove', 'wood', 67, 59, 1100, 1, { sizeTier: 'large' });
     this.addResource('tree', 'wood', 20, 61, 180, 2, { sizeTier: 'small' });
     this.addResource('tree', 'wood', 25, 64, 260, 0, { sizeTier: 'medium' });
@@ -215,10 +214,10 @@ export class CrownforgeSimulation {
     // Keep the opening workers on the clear south approach so their authored
     // silhouettes and selection markers are visible at reset rather than
     // mechanically present behind the Crown Hall's tall body.
-    this.addUnit('villager', 25, 54, 'player');
-    this.addUnit('villager', 30, 55, 'player');
-    this.addUnit('villager', 20, 55, 'player');
-    this.addUnit('soldier', 42, 34, 'player');
+    this.addUnit('villager', 78, 102, 'player');
+    this.addUnit('villager', 84, 103, 'player');
+    this.addUnit('villager', 72, 103, 'player');
+    this.addUnit('soldier', 98, 82, 'player');
     // Keep the opening defender between the camp and the stone clearing. The
     // old point overlapped the eastern stone node in projection and made a
     // resource look like an enemy target until the player moved the Raider.
