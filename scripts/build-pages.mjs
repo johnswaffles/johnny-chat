@@ -4749,8 +4749,8 @@ async function main() {
   await syncCrownforgeBuild();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
-  await patchGodotAudioFocus();
   await patchGladeLocalFileRedirect();
+  await patchGodotAudioFocus();
   await patchSimLoadingScreen();
   await routeOversizedGodotAssetsForPages();
 
