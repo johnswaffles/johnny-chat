@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css?v=20260818-sandbox1" />
+    <link rel="stylesheet" href="./styles.css?v=20260819-musicpass1" />
   </head>
   <body>
     <main class="game-shell">
@@ -59,6 +59,14 @@
             <div><kbd>Middle-drag</kbd><span>Pan map</span></div>
             <div><kbd>Esc</kbd><span>Close menu / placement</span></div>
           </div>
+          <div class="settings-block unit-speed-setting">
+            <div class="controls-setting-title">UNIT PACE</div>
+            <label class="range-setting" for="unit-speed">
+              <span>Walk speed <output id="unit-speed-value">1×</output></span>
+              <input id="unit-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit walk speed" />
+            </label>
+            <small class="settings-note">1× is normal. Raise it for faster sandbox movement.</small>
+          </div>
         </section>
       </aside>
 
@@ -77,7 +85,7 @@
               <button class="build-option" data-build-type="quarry" title="Place a Stone Quarry"><span class="action-mark ui-icon icon-stone" aria-hidden="true"></span><span><b>STONE QUARRY</b><small data-build-detail="quarry">35 WOOD · 25 STONE  •  READY</small></span></button>
               <button class="build-option" data-build-type="grainMill" title="Place a Grain Mill"><span class="action-mark ui-icon icon-food" aria-hidden="true"></span><span><b>GRAIN MILL</b><small data-build-detail="grainMill">50 WOOD · 10 STONE  •  READY</small></span></button>
               <button class="build-option" data-build-type="field" title="Place a Grain Field"><span class="action-mark ui-icon icon-food" aria-hidden="true"></span><span><b>GRAIN FIELD</b><small data-build-detail="field">25 WOOD  •  READY</small></span></button>
-              <button class="build-option" data-build-type="wall" title="Place a Palisade Wall"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>PALISADE WALL</b><small data-build-detail="wall">20 WOOD · 10 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="wall" title="Click-drag a Palisade Wall in any direction; it snaps to the nearest of 8 orientations"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>PALISADE WALL</b><small data-build-detail="wall">20 WOOD · 10 STONE  •  DRAG TO AIM  •  READY</small></span></button>
             </div>
           </div>
           <div id="train-menu-wrap" class="build-menu-wrap" hidden>
@@ -91,14 +99,13 @@
           </div>
           <div id="placement-readout" class="placement-readout" hidden><span id="placement-icon" class="ui-icon icon-house" aria-hidden="true"></span><span><b id="placement-title">PLACEMENT MODE</b><small id="placement-detail">Move the foundation to a clear site.</small></span></div>
           <button id="controls-toggle" class="secondary-button" title="Show keyboard and mouse controls"><span class="ui-icon icon-controls" aria-hidden="true"></span><span>CONTROLS</span></button>
+          <button id="music-toggle" class="secondary-button music-toggle" type="button" title="Mute Crownforge music" aria-pressed="false"><span class="music-glyph" aria-hidden="true">♫</span><span id="music-toggle-label">MUSIC ON</span></button>
           <button id="cancel-build" class="secondary-button" hidden title="Cancel construction placement (Esc)"><span class="ui-icon icon-cancel" aria-hidden="true"></span><span>ESC CANCEL</span></button>
           <button id="restart-game" class="secondary-button" title="Reset the current Crownforge slice"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>RESET SLICE</span></button>
         </div>
       </section>
 
       <div hidden>
-        <input id="master-volume" type="range" min="0" max="1" step="0.05" value="0.62" aria-label="Master volume" />
-        <input id="effects-volume" type="range" min="0" max="1" step="0.05" value="0.72" aria-label="Effects volume" />
         <input id="reduced-motion" type="checkbox" aria-label="Reduced camera motion" />
       </div>
 
@@ -111,7 +118,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260818-roadsfree1"></script>
+    <script type="module" src="./src/main.js?v=20260821-hallwoodpass2"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

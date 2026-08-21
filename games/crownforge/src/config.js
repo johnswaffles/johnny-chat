@@ -1,17 +1,18 @@
 export const CONFIG = {
-  // The first settlement slice now has roughly ten times the walkable area
-  // of the original 30x22 board. The opening remains intentionally sparse;
-  // the extra space is for readable routes, expansion, and combat separation.
-  mapWidth: 90,
-  mapHeight: 73,
+  // The current green diamond is expanded to roughly ten times its former
+  // area. The extra space is intentionally open so players can read routes,
+  // resource clearings, and the enemy approach instead of entering a cluttered
+  // forest.
+  mapWidth: 560,
+  mapHeight: 460,
   tileWidth: 52,
   tileHeight: 26,
-  initialZoom: 0.68,
-  minZoom: 0.36,
+  initialZoom: 0.16,
+  minZoom: 0.035,
   maxZoom: 1.16,
-  // Bias the opening view toward the south so the enlarged Crown Hall's
-  // roofline remains inside the playable viewport rather than under the HUD.
-  initialCameraWorld: { x: 23, z: 30 },
+  // Bias the opening view slightly north so the full Hearth House roofline
+  // and the enlarged Crown Hall both sit below the top HUD at reset.
+  initialCameraWorld: { x: 78, z: 82 },
   // The first-age beta sandbox deliberately keeps every currently implemented
   // blueprint available and leaves generous room for production testing.
   sandboxMode: true,
@@ -65,6 +66,16 @@ export const RESOURCE_TYPES = {
   food: { label: 'Food', color: '#d76649', capacity: 9999, gatherAmount: 10, gatherTime: 1.05, interactionDistance: 1.55 },
   wood: { label: 'Wood', color: '#b98147', capacity: 9999, gatherAmount: 12, gatherTime: 1.1, interactionDistance: 1.75 },
   stone: { label: 'Stone', color: '#9fa8ab', capacity: 9999, gatherAmount: 10, gatherTime: 1.2, interactionDistance: 1.7 },
+};
+
+// Resource size is data, not a one-off art trick. Every future material (for
+// example metal) can opt into the same readable small/medium/large contract:
+// larger silhouettes have a larger interaction footprint and a longer working
+// life while bushes and other small food sources retain their normal scale.
+export const RESOURCE_SIZE_TIERS = {
+  small: { label: 'Small', renderScale: 1, capacityScale: 1, footprintScale: 1 },
+  medium: { label: 'Medium', renderScale: 1.42, capacityScale: 2.2, footprintScale: 1.42 },
+  large: { label: 'Large', renderScale: 2.05, capacityScale: 5, footprintScale: 2.05 },
 };
 
 export const UNIT_TYPES = {
@@ -139,10 +150,24 @@ export const BUILDING_TYPES = {
     function: 'Resource drop-off and settlement core',
     asset: 'townCenter',
     maxHp: 900,
-    footprint: { width: 6, height: 5 },
-    renderSize: 440,
-    collisionClearance: 1.25,
+    // The first-age Hall is intentionally compact after the landmark-scale
+    // correction. Human units keep their established scale; gameplay bounds
+    // remain generous enough for the south stair approach and future building.
+    footprint: { width: 9, height: 8 },
+    renderSize: 400,
+    collisionClearance: 1.8,
     entrance: 'south',
+    // The first-age Hall has a readable south stair run. Units may enter only
+    // this corridor and stop on the top landing; the rest of the monument
+    // remains a solid gameplay obstacle until a future interior system exists.
+    stairAccess: {
+      direction: 'south',
+      width: 4.6,
+      topOffset: 5.0,
+      outerOffset: 9.0,
+      stepCount: 8,
+      visualRise: 8,
+    },
     completed: true,
     storage: true,
     production: true,
@@ -166,9 +191,13 @@ export const BUILDING_TYPES = {
     function: 'Crown Guard production',
     asset: 'barracks',
     maxHp: 480,
-    footprint: { width: 5, height: 4 },
-    renderSize: 310,
-    collisionClearance: 1.12,
+    // The approved Barracks raster contains full-size practice dummies. At
+    // this render width those dummies resolve to the same readable scale as
+    // the live Marauder while the building remains a substantial military
+    // landmark. Human units themselves are not rescaled.
+    footprint: { width: 6, height: 5 },
+    renderSize: 1000,
+    collisionClearance: 1.5,
     entrance: 'south',
     buildTime: 10,
     cost: { food: 0, wood: 90, stone: 40 },
@@ -219,13 +248,17 @@ export const BUILDING_TYPES = {
     function: 'One-farmer food plot',
     asset: 'field',
     maxHp: 150,
-    footprint: { width: 3, height: 2 },
-    renderSize: 210,
-    collisionClearance: 0.62,
+    // A field is a working plot, not a tiny decorative tile. Its footprint
+    // is intentionally about four times the previous plot area so the crop
+    // rows read as a meaningful part of the settlement at normal zoom.
+    footprint: { width: 8, height: 6 },
+    renderSize: 500,
+    collisionClearance: 0.72,
     entrance: 'south',
     buildTime: 5,
     cost: { food: 0, wood: 25, stone: 0 },
     field: true,
+    walkable: true,
   },
   wall: {
     label: 'Palisade Wall',
@@ -239,6 +272,7 @@ export const BUILDING_TYPES = {
     buildTime: 4,
     cost: { food: 0, wood: 20, stone: 10 },
     wall: true,
+    wallSegmentSpan: 3,
   },
   storehouse: {
     label: 'Waystore',
@@ -288,6 +322,17 @@ export const ENVIRONMENT_ATLAS = {
   rowByType: { tree: 0, berry: 1, stone: 2, log: 3, stump: 3, flowers: 3, pebbles: 3 },
 };
 
+// Trees have their own cropped atlas so a tree cell can never sample berries,
+// stone, or a neighboring row. The source family remains the same Crownforge
+// environment treatment; this boundary is a rendering safeguard.
+export const TREE_ATLAS = {
+  src: './assets/crownforge-tree-atlas-v1.png?v=20260819-fieldpass1',
+  width: 1254,
+  height: 313,
+  columns: 4,
+  rows: 1,
+};
+
 export const TREE_GROVE_ATLAS = {
   src: './assets/crownforge-tree-grove-depletion-v1.png?v=20260818-sandbox1',
   width: 1230,
@@ -296,13 +341,20 @@ export const TREE_GROVE_ATLAS = {
   rows: 2,
 };
 
+export const LARGE_STONE_ASSET = {
+  src: './assets/crownforge-stone-deposit-large-v1.png?v=20260819-unitpass3',
+  width: 1536,
+  height: 1024,
+};
+
 export const FIRST_AGE_ASSETS = {
-  barracks: { src: './assets/crownforge-barracks-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024 },
+  barracks: { src: './assets/crownforge-barracks-v3.png?v=20260819-unitpass3', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
-  field: { src: './assets/crownforge-field-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
-  wall: { src: './assets/crownforge-wall-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
+  field: { src: './assets/crownforge-field-v2.png?v=20260819-fieldpass1', width: 1536, height: 1024 },
+  wall: { src: './assets/crownforge-palisade-segment-v2.png?v=20260819-unitpass3', width: 1536, height: 1024 },
 };
 
 export const ROAD_DETAILS_ATLAS = {
@@ -338,6 +390,14 @@ export const VILLAGER_ATLASES = {
     src: './assets/villager-motion-atlas.png?v=2',
     rows: { idle: 0, walk: [1, 2, 3] },
   },
+  motionLoop: {
+    src: './assets/crownforge-villager-walk-loop-v3.png?v=20260819-unitpass3',
+    width: 1234,
+    height: 1275,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
   task: {
     src: './assets/villager-task-atlas.png?v=2',
     rows: { wood: 0, food: 1, stone: 2, build: 3 },
@@ -350,9 +410,26 @@ export const VILLAGER_ATLASES = {
     src: './assets/villager-combat-atlas.png?v=2',
     rows: { attack: 0, hit: 1, death: 2, idle: 3 },
   },
+  hitLoop: {
+    src: './assets/villager-hit-loop-v1.png?v=20260821-hallwoodpass2',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  deathLoop: {
+    src: './assets/villager-death-loop-v1.png?v=20260821-hallwoodpass2',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
   // Action-loop atlases use frame columns and authored direction rows. The
   // legacy task/carry/combat sheets remain available for states that are
-  // intentionally single-pose (carry, hit, and death).
+  // intentionally single-pose, while newer focused passes can replace a
+  // response family without changing the shared renderer contract.
   woodLoop: {
     src: './assets/villager-gather-wood-loop-v1.png?v=1',
     width: 1254,
@@ -365,6 +442,14 @@ export const VILLAGER_ATLASES = {
     src: './assets/villager-gather-food-loop-v1.png?v=1',
     width: 1254,
     height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  fieldLoop: {
+    src: './assets/crownforge-villager-field-work-loop-v1.png?v=20260819-fieldpass1',
+    width: 1235,
+    height: 1274,
     columns: 4,
     rows: 4,
     layout: 'frame-columns',
@@ -441,9 +526,25 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
   },
   soldierWalk: {
-    src: './assets/crownforge-soldier-walk-loop-v1.png?v=20260818-sandbox1',
-    width: 1236,
-    height: 1272,
+    src: './assets/crownforge-soldier-walk-loop-v3.png?v=20260819-unitpass3',
+    width: 1224,
+    height: 1285,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  soldierHit: {
+    src: './assets/crownforge-soldier-hit-loop-v1.png?v=20260820-hitpass1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  soldierDeath: {
+    src: './assets/crownforge-soldier-death-loop-v1.png?v=20260820-hitpass1',
+    width: 1254,
+    height: 1254,
     columns: 4,
     rows: 4,
     layout: 'frame-columns',
@@ -457,7 +558,7 @@ export const COMBAT_ATLASES = {
     rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
   },
   raiderAttack: {
-    src: './assets/crownforge-raider-attack-loop-v3.png?v=1',
+    src: './assets/crownforge-raider-attack-loop-v4.png?v=20260819-unitpass3',
     width: 1254,
     height: 1254,
     columns: 4,
@@ -465,7 +566,23 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
   },
   raiderWalk: {
-    src: './assets/crownforge-raider-walk-loop-v1.png?v=1',
+    src: './assets/crownforge-raider-walk-loop-v2.png?v=20260819-unitpass3',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  raiderHit: {
+    src: './assets/crownforge-raider-hit-loop-v1.png?v=20260820-hitpass1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  raiderDeath: {
+    src: './assets/crownforge-raider-death-loop-v1.png?v=20260820-hitpass1',
     width: 1254,
     height: 1254,
     columns: 4,

@@ -8,7 +8,7 @@ Scope: Existing units only. No new units, buildings, resources, factions, maps, 
 
 The playable slice has three animated unit families: Villager, Crown Guard, and Ashen Raider. All gameplay-critical states currently used by the simulation have authored artwork in the correct Crownforge asset family. The primary deficiency was architectural: animation state, render frame, and gameplay timers were implicit in renderer conditionals and simulation fields. This pass makes them explicit and adds named event hooks without changing the content scope.
 
-The current art is intentionally restrained at RTS distance. Villager gathering, construction, and carrying now use compact four-frame action loops. Crown Guard and Ashen Raider attack phases now use matched four-frame directional loops; military walk, hit, and death, plus optional Villager hit/death, remain single-pose. Those remaining refinements are identified below rather than hidden behind procedural bobbing or incorrect mirroring.
+The current art is intentionally restrained at RTS distance. Villager gathering, construction, carrying, hit, and death now use compact four-frame action loops. Crown Guard and Ashen Raider walk, attack, hit, and death phases use matched four-frame directional loops; the remaining question is player-visible motion quality, not missing runtime coverage. No procedural bobbing or incorrect mirroring is used to conceal a missing direction.
 
 ## Engine and coordinate conventions
 
@@ -40,46 +40,46 @@ Four directions are the correct current tradeoff for this fixed camera and RTS-d
 | Existing and required states | Idle; walking; gather wood; gather food; mine stone; carry wood; carry food; carry stone; carry supplies; construct; attack; take damage; death. All are required or applicable in the current slice. |
 | Existing artwork | `assets/villager-motion-atlas.png`, `villager-task-atlas.png`, `villager-carry-atlas.png`, `villager-combat-atlas.png`, the four integrated task/build loop atlases, and the four integrated carry loop atlases; all are original, transparent Crownforge sheets. |
 | Directions / missing directions | 4/4 authored camera quadrants for every sheet. No missing gameplay direction. Eight-direction cells are intentionally deferred, not mechanically mirrored. |
-| Frames | Idle 1 pose/direction; walking 3 poses/direction; Wood, Food, Stone, Construct, and each carry state 4 poses/direction; attack 1 pose/direction; hit 1 pose/direction; death 1 pose/direction. Remaining refinement: optional worker-combat/hit/death depth. |
+| Frames | Idle 1 pose/direction; walking 3 poses/direction; Wood, Food, Stone, Construct, and each carry state 4 poses/direction; attack 1 pose/direction; hit 4 poses/direction; death 4 poses/direction. Remaining refinement: optional worker-combat command depth and live visual confirmation. |
 | Dimensions | Source `1254 x 1254` RGBA per atlas; 4 x 4 cells, nominally `313.5 x 313.5` source pixels per cell. Render size is `108` pixels before camera zoom. |
 | Ground anchor / pivot | World position is the feet contact point. Renderer destination begins at `screen.y - size * 0.98`; feet and painted shadow were visually checked against meadow terrain. |
 | Collision footprint | `0.36` simulation radius. Resource interaction distance is type-specific (`1.55` food, `1.70` stone, `1.75` wood); building/storage interaction is `0.78`. |
 | Shadow anchor | Painted contact shadow inside every generated frame; selection ellipse is a separate gameplay/readability marker at `point.y + 6 * zoom`. There is no separate dynamic shadow sprite. |
-| Inconsistencies / deficiencies | Task, construction, and carry loops now have authored anticipation/contact/recovery frames and shared feet baselines. Optional worker combat/hit/death remain deliberately restrained single-pose states. There is no explicit turn clip, and the generated sheets must be rechecked if the camera angle changes. |
+| Inconsistencies / deficiencies | Task, construction, carry, hit, and death loops have authored frames and shared feet baselines. Optional worker-combat command depth and an explicit turn clip remain deferred; generated sheets must be rechecked if the camera angle changes. |
 | Implementation status | Complete state registry in `src/animation.js`; simulation stores `animationState`, `animationTime`, `animationPhase`, `animationFrame`, and recent named events; renderer consumes the registry and live facing. Developer harness covers every state/direction/frame. |
-| Quality score | **8/10** — gameplay coverage, direction correctness, contact timing, and the four worker task loops are solid; carry and optional worker-combat depth remain below the final unit standard. |
+| Quality score | **8/10** — gameplay coverage, direction correctness, contact timing, and the worker task/carry/response loops are solid; optional worker attack depth and live confirmation remain below the final unit standard. |
 
 ### Crown Guard — player basic melee unit
 
 | Field | Coverage |
 |---|---|
 | Existing and required states | Idle; walking; attacking; taking damage; death. All are required by current melee combat. Gathering, carrying, and construction are not applicable. |
-| Existing artwork | `assets/crownforge-soldier-combat-atlas-v1.png`, original transparent combat atlas with idle, walk, attack, and non-graphic death rows. |
+| Existing artwork | `assets/crownforge-soldier-combat-atlas-v1.png` plus the dedicated original transparent attack, hit, and death atlases registered in `src/config.js`. |
 | Directions / missing directions | 4/4 authored camera quadrants. No mechanical mirroring. No gameplay direction is missing for the current camera. |
-| Frames | Idle 1 pose/direction; walk 1 pose/direction; attack 1 pose/direction; death 1 pose/direction. Damage feedback uses the idle fallback plus a live hit-flash ring. Missing refinement: dedicated hit/recoil cell and short multi-frame walk/attack/death loops. |
+| Frames | Idle 1 pose/direction; walk 4 poses/direction; attack 4 poses/direction across anticipation/contact/recovery; hit 4 poses/direction; death 4 poses/direction. Walk uses the active `crownforge-soldier-walk-loop-v3.png` sheet. |
 | Dimensions | Source `1243 x 1265` RGBA; 4 x 4 cells, nominally `310.75 x 316.25` source pixels per cell. Render size is `98` pixels before camera zoom. |
 | Ground anchor / pivot | Same `screen.y - size * 0.98` ground-pivot contract as the villager; the authored shadow stays attached to the feet. |
 | Collision footprint | `0.43` simulation radius; combat range `1.45`; ring-slot placement keeps multiple attackers around a target rather than on one point. |
 | Shadow anchor | Painted in the authored frame; selection ellipse and attack ring are separate renderer overlays. |
-| Inconsistencies / deficiencies | Combat animation has one pose per row and no dedicated damage artwork. Attack damage is now emitted at the named `attack_hit` timing within the cooldown, but the visual attack remains a single pose. |
-| Implementation status | Complete state registry and live direction/frame consumption; hit fallback is explicit and documented; developer harness covers all rows and directions. |
-| Quality score | **7/10** — silhouette, direction, range, and timing are readable; multi-frame attack and damage recovery remain below the future unit standard. |
+| Inconsistencies / deficiencies | Combat response, attack phases, and locomotion have authored directional depth. Final feet-contact and leg-motion judgment still requires an allowed player-visible preview; attack damage remains emitted at the named `attack_hit` timing within the cooldown. |
+| Implementation status | Complete state registry and live direction/frame consumption; walk, hit, and death have explicit no-fallback regression coverage; developer harness covers all rows and directions. |
+| Quality score | **7/10 locally** — the technical frame contract is complete and the silhouette/facing are readable; the score remains below 8 until allowed player-visible walk review confirms motion quality. |
 
 ### Ashen Raider — enemy basic melee unit
 
 | Field | Coverage |
 |---|---|
 | Existing and required states | Idle; walking; attacking; taking damage; death. All are required by the current enemy presence. Gathering, carrying, and construction are not applicable. |
-| Existing artwork | `assets/crownforge-raider-combat-atlas-v1.png`, original transparent combat atlas with idle, walk, attack, and non-graphic death rows. |
+| Existing artwork | `assets/crownforge-raider-combat-atlas-v1.png` plus the dedicated original transparent attack, hit, and death atlases registered in `src/config.js`. |
 | Directions / missing directions | 4/4 authored camera quadrants. No mechanical mirroring. No gameplay direction is missing for the current camera. |
-| Frames | Idle 1 pose/direction; walk 1 pose/direction; attack 1 pose/direction; death 1 pose/direction. Damage feedback uses the idle fallback plus a live hit-flash ring. Missing refinement: dedicated hit/recoil cell and short multi-frame walk/attack/death loops. |
+| Frames | Idle 1 pose/direction; walk 4 poses/direction; attack 4 poses/direction across anticipation/contact/recovery; hit 4 poses/direction; death 4 poses/direction. Walk uses the active `crownforge-raider-walk-loop-v2.png` sheet. |
 | Dimensions | Source `1243 x 1266` RGBA; 4 x 4 cells, nominally `310.75 x 316.5` source pixels per cell. Render size is `98` pixels before camera zoom. |
 | Ground anchor / pivot | Same fixed ground-pivot contract as the player melee unit; live combat direction follows the target vector. |
 | Collision footprint | `0.44` simulation radius; combat range `1.25`; ring-slot placement and collision separation prevent excessive melee stacking. |
 | Shadow anchor | Painted in the authored frame; selection/hostile marker and attack ring are renderer overlays. |
-| Inconsistencies / deficiencies | Same restrained single-pose action treatment as the Crown Guard. There is no dedicated damage row; the hit fallback is intentional and technically explicit. |
-| Implementation status | Complete state registry and live direction/frame consumption; developer harness covers all rows and directions. |
-| Quality score | **7/10** — complete for the tiny enemy role, with the same future action-loop work as the Crown Guard. |
+| Inconsistencies / deficiencies | The same authored locomotion, attack, hit, and death response standard now applies to the Raider. Final feet-contact and leg-motion judgment still requires an allowed player-visible preview; no mechanically mirrored direction is used. |
+| Implementation status | Complete state registry and live direction/frame consumption; walk, hit, and death have explicit no-fallback regression coverage; developer harness covers all rows and directions. |
+| Quality score | **7/10 locally** — complete technical coverage for the tiny enemy role; the score remains below 8 until allowed player-visible walk review confirms motion quality. |
 
 ## Animation architecture implemented
 
@@ -105,13 +105,13 @@ The harness exposes every existing unit, every registered state, all four author
 
 - Integrated `assets/villager-gather-wood-loop-v1.png`, `villager-gather-food-loop-v1.png`, `villager-gather-stone-loop-v1.png`, and `villager-construct-loop-v1.png` after transparent-alpha, scale, baseline, and live-map review.
 - Rejected the first wood-loop draft for a colored fringe and rejected a cleanup draft until the neutral checkerboard matte was removed. Neither rejected file is referenced by the game.
-- The following artwork remains future polish, not hidden completion: villager carry and optional worker-combat/hit/death loops; Crown Guard and Ashen Raider walk/attack/death loops; dedicated melee hit/recoil rows; optional idle variations; and eight-direction variants only if the camera later requires them.
+- The following artwork remains future polish, not hidden completion: optional Villager attack depth, optional idle variations, and eight-direction variants only if the camera later requires them. Crown Guard and Ashen Raider walk sheets are integrated and regression-covered; only their allowed player-visible quality confirmation remains open.
 
 ## Remaining deficiencies and next animation priority
 
-1. Hand-tune villager carry weight shifts and optional worker-combat/hit/death depth while preserving the existing feet/shadow anchor.
-2. Hand-tune one multi-frame melee attack and one dedicated hit/recoil row, then share the timing standard between Crown Guard and Ashen Raider.
-3. Re-audit all task-loop anchors against tree, berry, stone, and building interaction positions at normal and close zoom.
+1. Confirm the integrated Crown Guard and Ashen Raider walk clips in an allowed player-visible preview at normal and close zoom before changing timing or scale.
+2. Re-audit all task, carry, response, and combat anchors against tree, berry, stone, and building interaction positions at normal and close zoom.
+3. Generate a new walk family only if that allowed preview identifies a concrete feet, leg-motion, or framing defect.
 4. Add richer death timing only if the single authored death pose becomes insufficient after the attack loop is improved.
 5. Re-audit all anchors after any camera-angle, render-size, or atlas-generation change.
 
@@ -283,3 +283,45 @@ The current contract is mechanically release-safe for the tiny slice, but animat
 - Marauder walking remains four-directional and loaded through `crownforge-raider-walk-loop-v1.png`; no forced-south or missing-direction behavior was found in the current source.
 
 The next pass should create matched hit/death depth for the existing combat units. Do not add a new unit or animation category before that repair is evaluated.
+
+## MILITARY RESPONSE DEPTH PASS — 2026-08-20 (CURRENT)
+
+The bounded Crown Guard / Ashen Raider response pass is now integrated. Existing four-direction walk and attack loops remain unchanged; this pass adds authored response depth without adding a unit category or changing combat rules.
+
+| Unit | State | Active atlas | Directions | Frames | Runtime timing |
+|---|---|---|---:|---:|---|
+| Crown Guard | Hit / recoil | `crownforge-soldier-hit-loop-v1.png` / `soldierHit` | 4/4 | 4 | 14 fps, non-looping |
+| Crown Guard | Death | `crownforge-soldier-death-loop-v1.png` / `soldierDeath` | 4/4 | 4 | 3 fps, non-looping |
+| Ashen Raider | Hit / recoil | `crownforge-raider-hit-loop-v1.png` / `raiderHit` | 4/4 | 4 | 14 fps, non-looping |
+| Ashen Raider | Death | `crownforge-raider-death-loop-v1.png` / `raiderDeath` | 4/4 | 4 | 3 fps, non-looping |
+
+All four sheets use direction rows `0–3` and frame columns `0–3`, the shared feet/shadow anchor, and the existing renderer inset. Hit and death states resolve without the previous idle fallback. Death cleanup timing remains simulation-owned; the final grounded frame is held until the existing removal window expires.
+
+### Preparation and acceptance
+
+- Generated sheets were inspected for pose separation, weapon/body continuity, feet contact, and directional readability.
+- The first Guard hit draft was rejected because it repeated a walking pose and retained a checkerboard matte. Runtime uses only the cleaned outputs.
+- `tools/prepare-hit-atlases.mjs` performs per-cell border matte flood-fill cleanup and RGBA edge verification before integration.
+- Deterministic regression now asserts four-frame, no-fallback hit and death resolution for all four directions of both military units.
+
+### Remaining boundary
+
+Villager hit/death remain single-pose because worker combat is optional and not central to this slice. Do not expand the military roster or create additional action families until this existing two-unit standard receives allowed live-browser confirmation.
+
+## VILLAGER RESPONSE DEPTH PASS — 2026-08-20 (CURRENT)
+
+The optional Villager combat response is now authored at the same restrained depth as the current military response family. This closes the remaining worker hit/death gap without adding a new unit or combat class.
+
+| Unit | State | Active atlas | Directions | Frames | Runtime timing |
+|---|---|---|---:|---:|---|
+| Villager | Hit / recoil | `villager-hit-loop-v1.png` / `hitLoop` | 4/4 | 4 | 14 fps, non-looping |
+| Villager | Death | `villager-death-loop-v1.png` / `deathLoop` | 4/4 | 4 | 3 fps, non-looping |
+
+The rows use the shared direction order `screen-down`, `screen-right`, `screen-up`, `screen-left`, with frame columns `0–3`. Hit frames keep the woman’s hand axe, teal dress, headscarf, feet, and painted ground shadow coherent. Death frames use a non-graphic stagger, kneel, fall, and grounded final pose. The final death frame holds while the existing simulation cleanup window runs.
+
+### Acceptance
+
+- Direct animation probes resolve all 8 Villager response combinations without fallback.
+- Both sheets are 1254 × 1254 RGBA atlases with zero opaque edge pixels after `tools/prepare-hit-atlases.mjs` cleanup.
+- Source visual-integrity and deterministic regression checks pass.
+- Live browser confirmation remains pending because the in-app Browser blocks the isolated local URL; no unsupported live claim is made.

@@ -1,10 +1,10 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260818-roadsfree1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260821-hallwoodpass2';
 
 export const ANIMATION_DIRECTIONS = [
-  { index: 0, key: 'world-z-positive', label: '+Z · screen-left / front' },
-  { index: 1, key: 'world-x-positive', label: '+X · screen-right / front' },
-  { index: 2, key: 'world-x-negative', label: '-X · screen-left / back' },
-  { index: 3, key: 'world-z-negative', label: '-Z · screen-right / back' },
+  { index: 0, key: 'screen-down', label: 'screen-down / front' },
+  { index: 1, key: 'screen-right', label: 'screen-right / profile' },
+  { index: 2, key: 'screen-up', label: 'screen-up / back' },
+  { index: 3, key: 'screen-left', label: 'screen-left / profile' },
 ];
 
 export const ANIMATION_EVENTS = {
@@ -47,10 +47,10 @@ const walkClip = (atlas, rows) => ({
   events: { footstep: ANIMATION_EVENT_TIMINGS.footstep },
 });
 
-const directionalLoop = (atlas, { frames = [0, 1, 2, 3], fps = 3.2, loop = true, events = {} } = {}) => ({
+const directionalLoop = (atlas, { frames = [0, 1, 2, 3], fps = 3.2, loop = true, events = {}, directionRows = [0, 1, 2, 3] } = {}) => ({
   atlas,
   layout: 'frame-columns',
-  directionRows: [0, 1, 2, 3],
+  directionRows,
   frames,
   fps,
   loop,
@@ -67,23 +67,31 @@ export const ANIMATION_DEFINITIONS = {
     atlasSize: { width: VILLAGER_ATLASES.width, height: VILLAGER_ATLASES.height, columns: VILLAGER_ATLASES.columns, rows: VILLAGER_ATLASES.rows },
     atlases: {
       motion: VILLAGER_ATLASES.motion,
+      motionLoop: VILLAGER_ATLASES.motionLoop,
       task: VILLAGER_ATLASES.task,
       carry: VILLAGER_ATLASES.carry,
       combat: VILLAGER_ATLASES.combat,
       woodLoop: VILLAGER_ATLASES.woodLoop,
       foodLoop: VILLAGER_ATLASES.foodLoop,
+      fieldLoop: VILLAGER_ATLASES.fieldLoop,
       stoneLoop: VILLAGER_ATLASES.stoneLoop,
       buildLoop: VILLAGER_ATLASES.buildLoop,
       carryWoodLoop: VILLAGER_ATLASES.carryWoodLoop,
       carryFoodLoop: VILLAGER_ATLASES.carryFoodLoop,
       carryStoneLoop: VILLAGER_ATLASES.carryStoneLoop,
       carrySuppliesLoop: VILLAGER_ATLASES.carrySuppliesLoop,
+      hitLoop: VILLAGER_ATLASES.hitLoop,
+      deathLoop: VILLAGER_ATLASES.deathLoop,
     },
     clips: {
       idle: singleFrame('motion', VILLAGER_ATLASES.motion.rows.idle),
-      walk: walkClip('motion', VILLAGER_ATLASES.motion.rows.walk),
+      // v3 is authored in the shared Crownforge direction contract: front,
+      // right profile, back, left profile. Keeping the mapping explicit here
+      // prevents a future sheet from silently making villagers walk backward.
+      walk: directionalLoop('motionLoop', { fps: 7.2, directionRows: [0, 1, 2, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
       gather_wood: actionLoop('woodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_food: actionLoop('foodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
+      field_work: actionLoop('fieldLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_stone: actionLoop('stoneLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       construct: actionLoop('buildLoop', { construction_strike: ANIMATION_EVENT_TIMINGS.construction_strike }),
       carry_wood: actionLoop('carryWoodLoop'),
@@ -94,8 +102,8 @@ export const ANIMATION_DEFINITIONS = {
       attack_anticipation: singleFrame('combat', VILLAGER_ATLASES.combat.rows.idle),
       attack_contact: singleFrame('combat', VILLAGER_ATLASES.combat.rows.attack, { events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit } }),
       attack_recovery: singleFrame('combat', VILLAGER_ATLASES.combat.rows.idle),
-      hit: singleFrame('combat', VILLAGER_ATLASES.combat.rows.hit),
-      death: singleFrame('combat', VILLAGER_ATLASES.combat.rows.death, { loop: false }),
+      hit: actionPhase('hitLoop', [0, 1, 2, 3], 14),
+      death: actionPhase('deathLoop', [0, 1, 2, 3], 3.0),
     },
     collisionRadius: 0.36,
     interactionRadius: 0.78,
@@ -107,7 +115,7 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Crown Guard',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.soldier,
-    atlases: { combat: COMBAT_ATLASES.soldier, soldierWalk: COMBAT_ATLASES.soldierWalk, soldierAttack: COMBAT_ATLASES.soldierAttack },
+    atlases: { combat: COMBAT_ATLASES.soldier, soldierWalk: COMBAT_ATLASES.soldierWalk, soldierAttack: COMBAT_ATLASES.soldierAttack, soldierHit: COMBAT_ATLASES.soldierHit, soldierDeath: COMBAT_ATLASES.soldierDeath },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.soldier.rowByState.idle),
       walk: directionalLoop('soldierWalk', { fps: 6.8, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
@@ -115,8 +123,8 @@ export const ANIMATION_DEFINITIONS = {
       attack_anticipation: actionPhase('soldierAttack', [0, 1]),
       attack_contact: actionPhase('soldierAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
       attack_recovery: actionPhase('soldierAttack', [3, 0], 4.8),
-      hit: singleFrame('combat', COMBAT_ATLASES.soldier.rowByState.idle, { fallback: 'idle' }),
-      death: singleFrame('combat', COMBAT_ATLASES.soldier.rowByState.death, { loop: false }),
+      hit: actionPhase('soldierHit', [0, 1, 2, 3], 14),
+      death: actionPhase('soldierDeath', [0, 1, 2, 3], 3.0),
     },
     collisionRadius: 0.43,
     interactionRadius: 0.78,
@@ -128,7 +136,7 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Ashen Raider',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.raider,
-    atlases: { combat: COMBAT_ATLASES.raider, raiderWalk: COMBAT_ATLASES.raiderWalk, raiderAttack: COMBAT_ATLASES.raiderAttack },
+    atlases: { combat: COMBAT_ATLASES.raider, raiderWalk: COMBAT_ATLASES.raiderWalk, raiderAttack: COMBAT_ATLASES.raiderAttack, raiderHit: COMBAT_ATLASES.raiderHit, raiderDeath: COMBAT_ATLASES.raiderDeath },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.idle),
       walk: directionalLoop('raiderWalk', { fps: 6.8, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
@@ -136,8 +144,8 @@ export const ANIMATION_DEFINITIONS = {
       attack_anticipation: actionPhase('raiderAttack', [0, 1]),
       attack_contact: actionPhase('raiderAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
       attack_recovery: actionPhase('raiderAttack', [3, 0], 4.8),
-      hit: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.idle, { fallback: 'idle' }),
-      death: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.death, { loop: false }),
+      hit: actionPhase('raiderHit', [0, 1, 2, 3], 14),
+      death: actionPhase('raiderDeath', [0, 1, 2, 3], 3.0),
     },
     collisionRadius: 0.44,
     interactionRadius: 0.78,
@@ -156,6 +164,7 @@ export function resolveAnimationState(unit) {
   if (unit.dead || unit.command === 'dead') return 'death';
   if (unit.hitFlash > 0 && definition.clips.hit) return 'hit';
   if (unit.command === 'attack' || unit.visualState === 'attack') {
+    if (unit.attackPhase === 'approach') return 'walk';
     if (unit.attackPhase === 'anticipation') return 'attack_anticipation';
     if (unit.attackPhase === 'recovery') return 'attack_recovery';
     if (unit.attackPhase === 'contact') return 'attack_contact';
@@ -163,6 +172,7 @@ export function resolveAnimationState(unit) {
   }
   if (unit.command === 'move' || unit.visualState === 'walk') return 'walk';
   if (unit.visualState === 'wood') return 'gather_wood';
+  if (unit.visualState === 'field') return 'field_work';
   if (unit.visualState === 'food') return 'gather_food';
   if (unit.visualState === 'stone') return 'gather_stone';
   if (unit.visualState === 'build') return 'construct';
@@ -225,7 +235,7 @@ export class CrownforgeAnimationSystem {
     const clip = animationClip(unit.type, nextState);
     const previousTime = unit.animationTime ?? 0;
     const duration = Math.max(0.001, clip.frames.length / Math.max(0.001, clip.fps));
-    const playbackRate = nextState === 'walk' ? Math.max(0, Math.min(1.15, unit.animationPlaybackRate ?? 1)) : 1;
+    const playbackRate = nextState === 'walk' ? Math.max(0, Math.min(2.2, unit.animationPlaybackRate ?? 1)) : 1;
     const nextTime = clip.loop ? (previousTime + delta * playbackRate) % duration : Math.min(duration, previousTime + delta * playbackRate);
     if (nextState === 'walk' && clip.events?.footstep) {
       const thresholds = Array.isArray(clip.events.footstep) ? clip.events.footstep : [clip.events.footstep];

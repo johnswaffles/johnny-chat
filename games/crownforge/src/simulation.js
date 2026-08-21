@@ -1,12 +1,13 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260818-roadsfree1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260821-hallwoodpass2';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260818-roadsfree1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260821-hallwoodpass2';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const moveToward = (value, target, amount) => value < target ? Math.min(value + amount, target) : Math.max(value - amount, target);
 const TAU = Math.PI * 2;
 const RESOURCE_SLOT_COUNT = 6;
+const RESOURCE_READABLE_FRONT_BIAS = -0.05;
 const CONSTRUCTION_SLOT_COUNT = 4;
 const STORAGE_INTERACTION_DISTANCE = 0.78;
 const BUILDING_INTERACTION_DISTANCE = 0.78;
@@ -26,19 +27,62 @@ const UNIT_STATIC_CLEARANCE = 0.06;
 const SIMULATION_STEP = 1 / 60;
 const MAX_SIMULATION_STEPS = 8;
 
+export function resourceFootprint(nodeOrType) {
+  const type = typeof nodeOrType === 'string' ? nodeOrType : nodeOrType?.type;
+  const tier = typeof nodeOrType === 'object' ? nodeOrType?.sizeTier ?? 'small' : 'small';
+  return (RESOURCE_FOOTPRINTS[type] ?? 0.8) * (RESOURCE_SIZE_TIERS[tier]?.footprintScale ?? 1);
+}
+
+function resourceInteractionDistance(node, unitType = 'villager') {
+  const base = RESOURCE_TYPES[node.resourceType]?.interactionDistance ?? 1.7;
+  const unitRadius = UNIT_TYPES[unitType]?.radius ?? 0.36;
+  // The worker must be allowed to reach the ring without being pushed back
+  // by the same footprint used by collision. This matters most for groves and
+  // large deposits, whose authored silhouettes are intentionally broad.
+  return Math.max(base, resourceFootprint(node) + unitRadius + UNIT_STATIC_CLEARANCE + 0.12);
+}
+
 const FACING_VECTORS = [
-  { x: 0, z: 1 },
-  { x: 1, z: 0 },
-  { x: -1, z: 0 },
-  { x: 0, z: -1 },
+  { x: 1, z: 1 },
+  { x: 1, z: -1 },
+  { x: -1, z: -1 },
+  { x: -1, z: 1 },
 ];
 
 function directionFromVector(dx, dz, fallback = 0) {
   if (Math.hypot(dx, dz) < 0.001) return fallback;
   const screenX = dx - dz;
   const screenY = dx + dz;
-  if (Math.abs(screenX) < 0.001) return screenY >= 0 ? 1 : 3;
-  return screenY >= 0 ? (screenX < 0 ? 0 : 1) : (screenX < 0 ? 2 : 3);
+  // The generated directional sheets are authored as front, right, back,
+  // left. Prefer side-facing art for diagonal isometric travel so a unit
+  // moving toward screen-right never reads as walking backward.
+  if (Math.abs(screenX) >= Math.abs(screenY) * 0.58) return screenX >= 0 ? 1 : 3;
+  return screenY >= 0 ? 0 : 2;
+}
+
+const WALL_SNAP_DIRECTIONS = [
+  { label: 'EAST', x: 1, z: 0 },
+  { label: 'NORTH-EAST', x: 1, z: -1 },
+  { label: 'NORTH', x: 0, z: -1 },
+  { label: 'NORTH-WEST', x: -1, z: -1 },
+  { label: 'WEST', x: -1, z: 0 },
+  { label: 'SOUTH-WEST', x: -1, z: 1 },
+  { label: 'SOUTH', x: 0, z: 1 },
+  { label: 'SOUTH-EAST', x: 1, z: 1 },
+];
+
+function normalizeWallDirection(direction, fallback = { x: 1, z: 0 }) {
+  const x = Number(direction?.x);
+  const z = Number(direction?.z);
+  const length = Math.hypot(x, z);
+  if (!Number.isFinite(length) || length < 0.001) return { ...fallback };
+  return { x: x / length, z: z / length };
+}
+
+function wallDirectionFromOptions(source = {}) {
+  if (source.wallDirection) return normalizeWallDirection(source.wallDirection);
+  if (source.wallOrientation === 'vertical') return { x: 0, z: 1 };
+  return { x: 1, z: 0 };
 }
 
 function setUnitFacing(unit, dx, dz, force = false) {
@@ -67,6 +111,7 @@ export class CrownforgeSimulation {
   constructor({ onEvent = () => {} } = {}) {
     this.onEvent = onEvent;
     this.animation = new CrownforgeAnimationSystem();
+    this.unitSpeedScale = 1;
     this.reset();
   }
 
@@ -87,40 +132,79 @@ export class CrownforgeSimulation {
     this._syncSelectionFlags();
   }
 
+  setUnitSpeedScale(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return this.unitSpeedScale;
+    this.unitSpeedScale = clamp(numeric, 1, 10);
+    return this.unitSpeedScale;
+  }
+
+  getUnitSpeedScale() {
+    return this.unitSpeedScale;
+  }
+
   _seedWorld() {
-    this.addBuilding('townCenter', 25, 38, 'player');
-    this.addBuilding('house', 9, 27, 'player');
-    this.addBuilding('storehouse', 43, 48, 'player');
-    // Keep the camp and eastern resource clearing inside a visual safety
-    // margin. The map can pan and zoom, but tall silhouettes should not sit
-    // on the viewport edge where their art is cropped.
-    this.addBuilding('ashenCamp', 72, 21, 'enemy');
-    // Keep the opening wood pair on the Crown Hall's west flank. The old
-    // north-west coordinates put both trees behind the Hall's tall sprite in
-    // projected depth, making the starting wood look absent even though it
-    // remained mechanically targetable.
-    this.addResource('tree', 'wood', 11.5, 45.5, 110, 0);
-    this.addResource('tree', 'wood', 15.2, 48.2, 110, 1);
-    this.addResource('tree', 'wood', 10.8, 39.2, 110, 2);
-    this.addResource('tree', 'wood', 61, 56, 110, 3);
-    this.addResource('tree', 'wood', 78, 58, 110, 1);
-    this.addResource('grove', 'wood', 14.5, 58, 480, 0);
-    this.addResource('grove', 'wood', 67, 59, 420, 1);
-    this.addResource('tree', 'wood', 20, 61, 135, 2);
-    this.addResource('tree', 'wood', 25, 64, 135, 0);
-    this.addResource('tree', 'wood', 33, 61, 135, 3);
-    this.addResource('berry', 'food', 35.5, 28.5, 105, 0);
-    this.addResource('berry', 'food', 41.5, 40.5, 105, 1);
-    this.addResource('berry', 'food', 57, 30, 105, 2);
-    this.addResource('berry', 'food', 82, 41, 105, 0);
-    this.addResource('grain', 'food', 50, 25, 220, 0);
-    this.addResource('grain', 'food', 56, 23, 220, 0);
-    this.addResource('grain', 'food', 62, 28, 220, 0);
-    this.addResource('stone', 'stone', 49, 50, 120, 0);
-    this.addResource('stone', 'stone', 54, 53, 120, 3);
-    this.addResource('stone', 'stone', 76, 55, 120, 2);
-    this.addResource('stone', 'stone', 72, 64, 180, 1);
-    this.addResource('stone', 'stone', 84, 61, 180, 0);
+    this.addBuilding('townCenter', 78, 82, 'player');
+    this.addBuilding('house', 56, 68, 'player');
+    this.addBuilding('storehouse', 102, 93, 'player');
+    // Start the enemy on the far opposite side of the expanded diamond. The
+    // long open approach creates time to gather and build without making the
+    // Raiders blind or removing their ability to defend their camp.
+    this.addBuilding('ashenCamp', 516, 414, 'enemy');
+    // Keep the opening wood pair on the Crown Hall's west and south-west
+    // flanks. The starting cluster now sits inside the expanded meadow rather
+    // than on the old north-west tip of the playable diamond.
+    this.addResource('tree', 'wood', 68, 96, 180, 0, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 62, 102, 180, 1, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 64, 88, 260, 2, { sizeTier: 'medium' });
+    this.addResource('tree', 'wood', 95, 105, 420, 3, { sizeTier: 'medium' });
+    this.addResource('tree', 'wood', 120, 107, 700, 1, { sizeTier: 'large' });
+    this.addResource('grove', 'wood', 61, 110, 480, 0, { sizeTier: 'small' });
+    this.addResource('grove', 'wood', 67, 59, 1100, 1, { sizeTier: 'large' });
+    this.addResource('tree', 'wood', 20, 61, 180, 2, { sizeTier: 'small' });
+    this.addResource('tree', 'wood', 25, 64, 260, 0, { sizeTier: 'medium' });
+    this.addResource('tree', 'wood', 33, 61, 180, 3, { sizeTier: 'small' });
+    this.addResource('berry', 'food', 35.5, 28.5, 105, 0, { sizeTier: 'small' });
+    // Keep a clear buildable meadow on the Hall's east flank. This food node
+    // remains close enough to serve the settlement without occupying the
+    // first ring where players expect to place structures.
+    this.addResource('berry', 'food', 49, 40.5, 105, 1, { sizeTier: 'small' });
+    this.addResource('berry', 'food', 57, 30, 105, 2, { sizeTier: 'small' });
+    this.addResource('berry', 'food', 82, 41, 105, 0, { sizeTier: 'small' });
+    // Large working plots need breathing room so their silhouettes do not
+    // stack into one another at the opening zoom.
+    this.addResource('grain', 'food', 44, 18, 220, 0, { sizeTier: 'small' });
+    this.addResource('grain', 'food', 60, 20, 220, 0, { sizeTier: 'small' });
+    this.addResource('grain', 'food', 55, 35, 220, 0, { sizeTier: 'small' });
+    this.addResource('stone', 'stone', 49, 50, 120, 0, { sizeTier: 'small' });
+    this.addResource('stone', 'stone', 54, 53, 360, 3, { sizeTier: 'medium' });
+    this.addResource('stone', 'stone', 76, 55, 900, 2, { sizeTier: 'large' });
+    this.addResource('stone', 'stone', 72, 64, 360, 1, { sizeTier: 'medium' });
+    this.addResource('stone', 'stone', 84, 61, 900, 0, { sizeTier: 'large' });
+    // The expanded board is intentionally sparse. These small regional
+    // clearings give the larger map useful destinations without stamping a
+    // forest over every open meadow tile.
+    [
+      ['tree', 112, 84, 260, 0, 'medium'], ['tree', 128, 96, 180, 1, 'small'],
+      ['grove', 155, 116, 1100, 0, 'large'], ['tree', 190, 72, 420, 2, 'medium'],
+      ['tree', 225, 150, 260, 3, 'medium'], ['grove', 275, 112, 1100, 1, 'large'],
+      ['tree', 315, 185, 180, 0, 'small'], ['tree', 370, 95, 700, 2, 'large'],
+      ['grove', 410, 180, 1100, 0, 'large'], ['tree', 455, 265, 420, 1, 'medium'],
+      ['tree', 480, 330, 260, 3, 'medium'], ['grove', 438, 390, 1100, 1, 'large'],
+      ['tree', 520, 365, 700, 2, 'large'], ['tree', 300, 400, 420, 0, 'medium'],
+    ].forEach(([type, x, z, amount, variant, sizeTier]) => this.addResource(type, 'wood', x, z, amount, variant, { sizeTier }));
+    [
+      [96, 96, 0], [140, 176, 1], [216, 108, 2], [270, 220, 0],
+      [345, 148, 1], [394, 250, 2], [466, 300, 0], [484, 386, 1],
+    ].forEach(([x, z, variant]) => this.addResource('berry', 'food', x, z, 105, variant, { sizeTier: 'small' }));
+    [
+      [108, 122, 0, 'small'], [180, 185, 1, 'medium'], [246, 118, 2, 'large'],
+      [320, 270, 3, 'medium'], [386, 205, 0, 'large'], [450, 250, 1, 'medium'],
+      [500, 344, 2, 'large'], [430, 430, 3, 'large'],
+    ].forEach(([x, z, variant, sizeTier]) => this.addResource('stone', 'stone', x, z, sizeTier === 'large' ? 900 : sizeTier === 'medium' ? 360 : 120, variant, { sizeTier }));
+    [
+      [104, 35, 0], [168, 52, 0], [250, 70, 1], [330, 105, 2], [415, 135, 3],
+    ].forEach(([x, z, variant]) => this.addResource('grain', 'food', x, z, 220, variant, { sizeTier: 'small' }));
     this.addDecoration('log', 18, 24, 0, 0.9);
     this.addDecoration('stump', 8.4, 52, 1, 0.85);
     this.addDecoration('flowers', 43, 20, 2, 0.72);
@@ -130,20 +214,20 @@ export class CrownforgeSimulation {
     // Keep the opening workers on the clear south approach so their authored
     // silhouettes and selection markers are visible at reset rather than
     // mechanically present behind the Crown Hall's tall body.
-    this.addUnit('villager', 23, 44.5, 'player');
-    this.addUnit('villager', 26, 46, 'player');
-    this.addUnit('villager', 29, 44.5, 'player');
-    this.addUnit('soldier', 42, 34, 'player');
+    this.addUnit('villager', 78, 102, 'player');
+    this.addUnit('villager', 84, 103, 'player');
+    this.addUnit('villager', 72, 103, 'player');
+    this.addUnit('soldier', 98, 82, 'player');
     // Keep the opening defender between the camp and the stone clearing. The
     // old point overlapped the eastern stone node in projection and made a
     // resource look like an enemy target until the player moved the Raider.
     // Give the opening Raider a clear patrol pocket west/south of the camp.
     // The camp sprite is intentionally larger than its gameplay footprint, so
     // the old point could disappear behind the tall silhouette at reset.
-    this.addUnit('raider', 67.5, 27.5, 'enemy');
+    this.addUnit('raider', 508, 403, 'enemy');
   }
 
-  addBuilding(type, x, z, faction = 'player', progress = 1) {
+  addBuilding(type, x, z, faction = 'player', progress = 1, options = {}) {
     const blueprint = BUILDING_TYPES[type];
     const building = {
       id: this.nextId++,
@@ -171,6 +255,10 @@ export class CrownforgeSimulation {
       productionQueue: [],
       productionProgress: 0,
       field: Boolean(blueprint.field),
+      wallSegments: blueprint.wall ? Math.max(1, Math.round(options.wallSegments ?? 1)) : 1,
+      wallOrientation: blueprint.wall ? (options.wallOrientation ?? 'horizontal') : null,
+      wallDirection: blueprint.wall ? wallDirectionFromOptions(options) : null,
+      wallStart: blueprint.wall ? (options.wallStart ? { ...options.wallStart } : { x, z }) : null,
       farmerId: null,
       fieldTimer: 0,
     };
@@ -234,6 +322,8 @@ export class CrownforgeSimulation {
       animationPlaybackRate: 0,
       animClock: 0,
       visualState: 'idle',
+      stairAccess: false,
+      stairProgress: 0,
       hitFlash: 0,
       healthRevealTimer: 0,
       dead: false,
@@ -248,7 +338,7 @@ export class CrownforgeSimulation {
     return unit;
   }
 
-  addResource(type, resourceType, x, z, amount, variant = 0) {
+  addResource(type, resourceType, x, z, amount, variant = 0, options = {}) {
     this.resourcesNodes.push({
       id: this.nextId++,
       kind: 'resource',
@@ -259,6 +349,7 @@ export class CrownforgeSimulation {
       amount,
       maxAmount: amount,
       variant,
+      sizeTier: options.sizeTier ?? 'small',
       depleted: false,
       reservedSlots: new Map(),
     });
@@ -479,6 +570,8 @@ export class CrownforgeSimulation {
     unit.attackTargetKind = null;
     unit.attackTimer = 0;
     unit.attackHitApplied = false;
+    unit.stairAccess = false;
+    unit.stairProgress = 0;
     this._cancelAttackCycle(unit);
   }
 
@@ -608,7 +701,7 @@ export class CrownforgeSimulation {
     farmer.velocityX = 0;
     farmer.velocityZ = 0;
     setUnitFacing(farmer, building.x - farmer.x, building.z - farmer.z, true);
-    farmer.visualState = 'food';
+    farmer.visualState = 'field';
     farmer.actionLabel = 'Tending Grain Field';
     building.fieldTimer = (building.fieldTimer ?? 0) + dt;
     if (building.fieldTimer >= 3.2) {
@@ -665,9 +758,10 @@ export class CrownforgeSimulation {
     else if (unit.command === 'attack') this._updateAttack(unit, dt);
     else if (unit.command === 'build') this._updateBuildingIntent(unit);
     else if (unit.command === 'field') this._updateFieldIntent(unit);
+    this._updateStairProgress(unit);
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
     unit.animationPlaybackRate = unit.command === 'move' || unit.visualState === 'walk'
-      ? Math.max(0, Math.min(1.15, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed, 0.01)))
+      ? Math.max(0, Math.min(2.2, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed * this.unitSpeedScale, 0.01)))
       : 1;
     this.animation.update(unit, dt);
   }
@@ -701,7 +795,7 @@ export class CrownforgeSimulation {
       if (length < 0.12) {
         unit.path.shift();
       } else {
-        desiredSpeed = Math.min(blueprint.speed, length / Math.max(dt, 0.001));
+        desiredSpeed = Math.min(blueprint.speed * this.unitSpeedScale, length / Math.max(dt, 0.001));
         desiredX = (dx / length) * desiredSpeed;
         desiredZ = (dz / length) * desiredSpeed;
       }
@@ -757,7 +851,7 @@ export class CrownforgeSimulation {
       return;
     }
     const resourceInfo = RESOURCE_TYPES[node.resourceType];
-    const interactionDistance = resourceInfo.interactionDistance ?? 1.7;
+    const interactionDistance = resourceInteractionDistance(node, unit.type);
     if (unit.carryAmount > 0) {
       this._beginReturn(unit);
       return;
@@ -914,18 +1008,37 @@ export class CrownforgeSimulation {
     return this.buildings.find((building) => building.id === unit.returnStorageId && !building.destroyed && building.progress >= 1 && building.faction === 'player' && BUILDING_TYPES[building.type].storage) ?? null;
   }
 
-  _resourceInteractionPoint(node, slot) {
+  _resourceInteractionPoint(node, slot, unitType = 'villager') {
     const info = RESOURCE_TYPES[node.resourceType];
     const angle = -Math.PI / 2 + (slot % RESOURCE_SLOT_COUNT) * (TAU / RESOURCE_SLOT_COUNT);
-    const reach = info.interactionDistance ?? 1.7;
+    const reach = resourceInteractionDistance(node, unitType);
     return {
       x: clamp(node.x + Math.cos(angle) * reach, 0.55, CONFIG.mapWidth - 0.55),
       z: clamp(node.z + Math.sin(angle) * reach, 0.55, CONFIG.mapHeight - 0.55),
     };
   }
 
+  _buildingFootprint(buildingOrType, options = {}) {
+    const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType?.type;
+    const blueprint = BUILDING_TYPES[type];
+    if (!blueprint) return { width: 1, height: 1 };
+    if (!blueprint.wall) return { ...blueprint.footprint };
+    const source = typeof buildingOrType === 'object' ? buildingOrType : options;
+    const segments = Math.max(1, Math.round(source.wallSegments ?? options.wallSegments ?? 1));
+    const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
+    const length = blueprint.footprint.width + (segments - 1) * span;
+    const direction = wallDirectionFromOptions(source);
+    // Placement/pathfinding use a conservative axis-aligned envelope around
+    // the oriented wall. That keeps diagonal runs safe without allowing a
+    // unit to clip through a post at either end.
+    return {
+      width: Math.abs(direction.x) * length + Math.abs(direction.z) * blueprint.footprint.height,
+      height: Math.abs(direction.z) * length + Math.abs(direction.x) * blueprint.footprint.height,
+    };
+  }
+
   _buildingApproachPoints(building, margin = BUILDING_INTERACTION_DISTANCE) {
-    const footprint = BUILDING_TYPES[building.type].footprint;
+    const footprint = this._buildingFootprint(building);
     const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
     const halfWidth = footprint.width / 2 + visualClearance + margin;
     const halfHeight = footprint.height / 2 + visualClearance + margin;
@@ -956,15 +1069,93 @@ export class CrownforgeSimulation {
   }
 
   _distanceToBuildingEdge(point, building) {
-    const footprint = BUILDING_TYPES[building.type].footprint;
+    const footprint = this._buildingFootprint(building);
     const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
     const dx = Math.max(Math.abs(point.x - building.x) - footprint.width / 2 - visualClearance, 0);
     const dz = Math.max(Math.abs(point.z - building.z) - footprint.height / 2 - visualClearance, 0);
     return Math.hypot(dx, dz);
   }
 
+  _crownHallStairInfo(building) {
+    const access = BUILDING_TYPES[building?.type]?.stairAccess;
+    if (!access || building?.destroyed || building?.progress < 1) return null;
+    const topZ = building.z + access.topOffset;
+    const outerZ = building.z + access.outerOffset;
+    return {
+      topZ: Math.min(topZ, outerZ),
+      outerZ: Math.max(topZ, outerZ),
+      halfWidth: access.width / 2,
+      visualRise: access.visualRise ?? 14,
+      stepCount: access.stepCount ?? 8,
+    };
+  }
+
+  _pointOnCrownHallStairs(point, building, padding = 0) {
+    const stairs = this._crownHallStairInfo(building);
+    if (!stairs) return false;
+    return Math.abs(point.x - building.x) <= stairs.halfWidth + padding
+      && point.z >= stairs.topZ - padding
+      && point.z <= stairs.outerZ + padding;
+  }
+
+  _updateStairProgress(unit) {
+    if (!unit.stairAccess || unit.dead) {
+      unit.stairProgress = 0;
+      unit.stairVisualRise = 0;
+      return 0;
+    }
+    const hall = this.buildings.find((building) => this._pointOnCrownHallStairs(unit, building, 0.2));
+    const stairs = hall ? this._crownHallStairInfo(hall) : null;
+    if (!hall || !stairs) {
+      unit.stairProgress = 0;
+      unit.stairVisualRise = 0;
+      return 0;
+    }
+    unit.stairVisualRise = stairs.visualRise;
+    unit.stairProgress = clamp((stairs.outerZ - unit.z) / Math.max(0.001, stairs.outerZ - stairs.topZ), 0, 1);
+    return unit.stairProgress;
+  }
+
+  _crownHallStairTarget(building, index = 0, total = 1) {
+    const stairs = this._crownHallStairInfo(building);
+    if (!stairs) return null;
+    const lanes = Math.min(3, Math.max(1, total));
+    const lane = index % lanes;
+    const lateral = (lane - (lanes - 1) / 2) * 1.55;
+    return {
+      x: building.x + clamp(lateral, -stairs.halfWidth + 0.7, stairs.halfWidth - 0.7),
+      z: stairs.topZ + 0.2,
+    };
+  }
+
+  _sendUnitToCrownHallStairs(unit, building, index = 0, total = 1) {
+    const target = this._crownHallStairTarget(building, index, total);
+    if (!target) return false;
+    unit.stairAccess = true;
+    const path = this._buildPath(unit, target);
+    if (!path) {
+      unit.stairAccess = false;
+      unit.stairProgress = 0;
+      unit.path = [];
+      unit.pathBlocked = true;
+      unit.command = 'idle';
+      unit.visualState = 'idle';
+      unit.actionLabel = 'Crown Hall steps blocked';
+      return false;
+    }
+    unit.path = path;
+    unit.routeTarget = { ...target };
+    unit.stopDistance = 0;
+    unit.pathBlocked = false;
+    unit.command = 'move';
+    unit.visualState = 'walk';
+    unit.actionLabel = 'Walking Crown Hall steps';
+    this._resetMovementTracking(unit);
+    return true;
+  }
+
   _buildingEntityBounds(building, padding = 0) {
-    const footprint = BUILDING_TYPES[building.type].footprint;
+    const footprint = this._buildingFootprint(building);
     const visualClearance = BUILDING_TYPES[building.type].collisionClearance ?? 0;
     return {
       minX: building.x - footprint.width / 2 - visualClearance - padding,
@@ -975,13 +1166,17 @@ export class CrownforgeSimulation {
   }
 
   _resourceBlocksPoint(point, node, padding = 0) {
-    const footprint = RESOURCE_FOOTPRINTS[node.type] ?? 0.8;
+    const footprint = resourceFootprint(node);
     return distance(point, node) < footprint + padding;
   }
 
   _pointBlockedForUnit(unit, point, placement = null) {
     const padding = (UNIT_TYPES[unit.type]?.radius ?? 0.4) + UNIT_STATIC_CLEARANCE;
-    if (this.buildings.some((building) => this._buildingHasCollision(building) && this._distanceToBuildingEdge(point, building) < padding)) return true;
+    if (this.buildings.some((building) => {
+      if (!this._buildingHasCollision(building)) return false;
+      if (unit.stairAccess && this._pointOnCrownHallStairs(point, building, padding)) return false;
+      return this._distanceToBuildingEdge(point, building) < padding;
+    })) return true;
     if (placement && this._distanceToBuildingEdge(point, placement) < padding) return true;
     return this.resourcesNodes.some((node) => node.amount > 0 && this._resourceBlocksPoint(point, node, padding));
   }
@@ -989,7 +1184,7 @@ export class CrownforgeSimulation {
   _cellIntersectsResource(cellX, cellZ, node, padding = 0) {
     const closestX = clamp(node.x, cellX, cellX + 1);
     const closestZ = clamp(node.z, cellZ, cellZ + 1);
-    return Math.hypot(node.x - closestX, node.z - closestZ) < (RESOURCE_FOOTPRINTS[node.type] ?? 0.8) + padding;
+    return Math.hypot(node.x - closestX, node.z - closestZ) < resourceFootprint(node) + padding;
   }
 
   _isPathCellBlocked(unit, cellX, cellZ, placement = null, allowedPoint = null) {
@@ -998,6 +1193,7 @@ export class CrownforgeSimulation {
     const padding = (UNIT_TYPES[unit.type]?.radius ?? 0.4) + UNIT_STATIC_CLEARANCE;
     if (this.buildings.some((building) => {
       if (!this._buildingHasCollision(building)) return false;
+      if (unit.stairAccess && this._pointOnCrownHallStairs({ x: cellX + 0.5, z: cellZ + 0.5 }, building, padding + 0.25)) return false;
       if (this._buildingBlocksCell(cellX, cellZ, building)) return true;
       return this._cellIntersectsBuilding(cellX, cellZ, building, padding);
     })) return true;
@@ -1153,9 +1349,9 @@ export class CrownforgeSimulation {
     const orderedSlots = Array.from({ length: RESOURCE_SLOT_COUNT }, (_, offset) => (preferredSlot + offset) % RESOURCE_SLOT_COUNT);
     const freeSlots = orderedSlots.filter((slot) => !node.reservedSlots.has(slot) || node.reservedSlots.get(slot) === unit.id);
     const candidateSlots = freeSlots.length ? freeSlots : orderedSlots;
-    let route = null;
+    const routes = [];
     for (const slot of candidateSlots) {
-      const point = this._resourceInteractionPoint(node, slot);
+      const point = this._resourceInteractionPoint(node, slot, unit.type);
       const path = this._buildPath(unit, point);
       if (!path) continue;
       // Prefer the screen-front half of a resource ring. The rear slots are
@@ -1165,8 +1361,15 @@ export class CrownforgeSimulation {
       // tool pose readable during the work loop.
       const frontBias = (point.x + point.z) - (node.x + node.z);
       const score = path.length * 1.1 + distance(unit, point) * 0.2 - frontBias * 1.35;
-      if (!route || score < route.score) route = { path, point, slot, score };
+      routes.push({ path, point, slot, score, frontBias });
     }
+    // A shorter rear route is still mechanically valid, but it can place a
+    // worker beneath a tall authored canopy. Prefer any free screen-front
+    // approach before comparing path length; only fall back to the full set
+    // when the readable half of the ring is unreachable.
+    const readableRoutes = routes.filter((candidate) => candidate.frontBias >= RESOURCE_READABLE_FRONT_BIAS);
+    const routePool = readableRoutes.length ? readableRoutes : routes;
+    const route = routePool.sort((a, b) => a.score - b.score || a.slot - b.slot)[0] ?? null;
     if (!route) {
       this._releaseResourceSlot(unit);
       unit.command = 'idle';
@@ -1179,7 +1382,7 @@ export class CrownforgeSimulation {
     this._reserveResourceSlot(unit, node, route.slot);
     unit.path = route.path;
     unit.routeTarget = route.point;
-    unit.stopDistance = RESOURCE_TYPES[node.resourceType].interactionDistance ?? 1.7;
+    unit.stopDistance = resourceInteractionDistance(node, unit.type);
     unit.pathBlocked = false;
     unit.command = 'gather';
     unit.actionLabel = `Walking to ${RESOURCE_TYPES[node.resourceType].label.toLowerCase()}`;
@@ -1278,7 +1481,7 @@ export class CrownforgeSimulation {
 
   _combatApproachPoints(unit, target) {
     const targetRadius = target.kind === 'building'
-      ? Math.max(BUILDING_TYPES[target.type].footprint.width, BUILDING_TYPES[target.type].footprint.height) / 2
+      ? Math.max(this._buildingFootprint(target).width, this._buildingFootprint(target).height) / 2
         + (BUILDING_TYPES[target.type].collisionClearance ?? 0)
       : UNIT_TYPES[target.type].radius;
     const ringRadius = Math.max(UNIT_TYPES[unit.type].range - COMBAT_SLOT_MARGIN, UNIT_TYPES[unit.type].radius + targetRadius + 0.08);
@@ -1333,6 +1536,10 @@ export class CrownforgeSimulation {
     unit.attackTarget = target.id;
     unit.attackTargetKind = target.kind;
     if (enteringAttack) this._cancelAttackCycle(unit);
+    unit.attackPhase = 'approach';
+    unit.attackPhaseElapsed = 0;
+    unit.attackEventFired = false;
+    unit.visualState = 'walk';
     unit.attackRepathCooldown = UNIT_REPATH_COOLDOWN;
     unit.actionLabel = `Closing on ${this._targetLabel(target)}`;
     this._resetMovementTracking(unit);
@@ -1497,7 +1704,7 @@ export class CrownforgeSimulation {
     unit.velocityX = 0;
     unit.velocityZ = 0;
     setUnitFacing(unit, field.x - unit.x, field.z - unit.z, true);
-    unit.visualState = 'food';
+    unit.visualState = 'field';
     unit.actionLabel = 'Tending Grain Field';
   }
 
@@ -1709,6 +1916,8 @@ export class CrownforgeSimulation {
   }
 
   _buildingHasCollision(building) {
+    const blueprint = BUILDING_TYPES[building.type];
+    if (blueprint?.walkable && building.progress >= 1 && !building.destroyed) return false;
     return !building.destroyed || building.destroyAge < BUILDING_COLLISION_RELEASE_TIME;
   }
 
@@ -1746,6 +1955,7 @@ export class CrownforgeSimulation {
     unit.z = clamp(unit.z, 0.45, CONFIG.mapHeight - 0.45);
     for (const building of this.buildings) {
       if (!this._buildingHasCollision(building)) continue;
+      if (unit.stairAccess && this._pointOnCrownHallStairs(unit, building, radius)) continue;
       const bounds = this._buildingEntityBounds(building, radius);
       if (unit.x <= bounds.minX || unit.x >= bounds.maxX || unit.z <= bounds.minZ || unit.z >= bounds.maxZ) continue;
       const distances = [
@@ -1762,7 +1972,7 @@ export class CrownforgeSimulation {
     }
     for (const node of this.resourcesNodes) {
       if (node.amount <= 0) continue;
-      const safeDistance = (RESOURCE_FOOTPRINTS[node.type] ?? 0.8) + radius;
+      const safeDistance = resourceFootprint(node) + radius;
       const dx = unit.x - node.x;
       const dz = unit.z - node.z;
       const length = Math.hypot(dx, dz);
@@ -1831,17 +2041,25 @@ export class CrownforgeSimulation {
       .filter((unit) => !unit.dead && distance(point, unit) <= radius)
       .sort((a, b) => distance(point, a) - distance(point, b))[0];
     if (unitHit) return unitHit;
+    // A resource clicked directly at its node should remain targetable even
+    // when a monumental structure's expanded edge clearance sits nearby.
+    // This keeps the Crown Hall from swallowing the opening wood command.
+    const resourceHit = this.resourcesNodes
+      .filter((node) => node.amount > 0 && distance(point, node) <= resourceFootprint(node))
+      .sort((a, b) => distance(point, a) - distance(point, b))[0];
+    if (resourceHit) return resourceHit;
     const buildingHit = this.buildings
       .filter((building) => !building.destroyed && building.hp > 0 && this._distanceToBuildingEdge(point, building) <= radius)
       .sort((a, b) => this._distanceToBuildingEdge(point, a) - this._distanceToBuildingEdge(point, b))[0];
     if (buildingHit) return buildingHit;
-    return this.resourcesNodes
-      .filter((node) => node.amount > 0 && distance(point, node) <= (RESOURCE_FOOTPRINTS[node.type] ?? radius))
-      .sort((a, b) => distance(point, a) - distance(point, b))[0] ?? null;
+    return null;
   }
 
   selectAt(point, additive = false) {
-    const entity = this.getEntityAt(point);
+    this.selectEntity(this.getEntityAt(point), additive);
+  }
+
+  selectEntity(entity, additive = false) {
     if (!additive) this.selectedIds = [];
     if (entity && entity.faction !== 'enemy') {
       if (additive && this.selectedIds.includes(entity.id)) this.selectedIds = this.selectedIds.filter((id) => id !== entity.id);
@@ -1874,14 +2092,14 @@ export class CrownforgeSimulation {
     this.lastCommand = this.selectedIds.length ? `${this.selectedIds.length} Crownwarden${this.selectedIds.length === 1 ? '' : 's'} selected.` : 'No Crownwardens in that box.';
   }
 
-  issueContextCommand(point) {
+  issueContextCommand(point, forcedTarget = null) {
     const units = this.units.filter((unit) => this.selectedIds.includes(unit.id) && unit.faction === 'player' && !unit.dead);
     if (!units.length) {
       this.lastCommand = 'Select a villager or Crown Guard first.';
       this._announce(this.lastCommand);
       return { kind: 'none', success: false };
     }
-    const target = this.getEntityAt(point);
+    const target = forcedTarget ?? this.getEntityAt(point);
     if (target?.kind === 'resource') {
       const workers = units.filter((unit) => unit.type === 'villager');
       if (!workers.length) {
@@ -1909,6 +2127,27 @@ export class CrownforgeSimulation {
         ? `Return cargo, then gather ${RESOURCE_TYPES[target.resourceType].label.toLowerCase()}.`
         : `Gather ${RESOURCE_TYPES[target.resourceType].label.toLowerCase()}.`;
       return { kind: 'gather', success: true, target };
+    }
+    if (target?.kind === 'building' && target.faction === 'player' && target.type === 'townCenter' && target.progress >= 1 && !target.destroyed) {
+      let routed = 0;
+      units.forEach((unit, index) => {
+        this._interruptWork(unit);
+        unit.postDepositTarget = null;
+        if (unit.carryAmount > 0) {
+          // Cargo still belongs at the Hall, but a loaded worker should use
+          // the normal drop-off approach so it deposits before climbing.
+          routed += this._beginReturn(unit) ? 1 : 0;
+        } else {
+          routed += this._sendUnitToCrownHallStairs(unit, target, index, units.length) ? 1 : 0;
+        }
+      });
+      if (!routed) {
+        this.lastCommand = 'The Crown Hall steps are blocked.';
+        this._announce(this.lastCommand);
+        return { kind: 'none', success: false, target };
+      }
+      this.lastCommand = 'Walk to the Crown Hall steps.';
+      return { kind: 'move', success: true, target };
     }
     if (target?.kind === 'building' && target.faction === 'player' && target.progress >= 1 && BUILDING_TYPES[target.type].storage) {
       const workers = units.filter((unit) => unit.type === 'villager');
@@ -2044,6 +2283,86 @@ export class CrownforgeSimulation {
     return { kind: 'move', success: true, target: point };
   }
 
+  getWallLinePreview(start, end) {
+    const blueprint = BUILDING_TYPES.wall;
+    const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
+    const deltaX = end.x - start.x;
+    const deltaZ = end.z - start.z;
+    const dragDistance = Math.hypot(deltaX, deltaZ);
+    const rawAngle = dragDistance > 0.04 ? Math.atan2(deltaZ, deltaX) : 0;
+    // World z increases toward the screen's lower side, while the palette is
+    // named from the player's view (north is screen-up). Negating the angle
+    // keeps a drag toward screen-up/right in the NORTH-EAST sector instead of
+    // silently labeling it SOUTH-EAST.
+    const directionIndex = ((Math.round(-rawAngle / (Math.PI / 4)) % WALL_SNAP_DIRECTIONS.length) + WALL_SNAP_DIRECTIONS.length) % WALL_SNAP_DIRECTIONS.length;
+    const snapped = WALL_SNAP_DIRECTIONS[directionIndex];
+    const direction = normalizeWallDirection(snapped);
+    const projectedDistance = Math.max(0, deltaX * direction.x + deltaZ * direction.z);
+    const distanceAlongWall = Math.max(span, Math.abs(projectedDistance));
+    const segmentCount = Math.max(1, Math.min(24, Math.round(distanceAlongWall / span) + 1));
+    const anchor = {
+      x: Math.round(start.x),
+      z: Math.round(start.z),
+    };
+    const orientation = Math.abs(direction.x) > 0.98 ? 'horizontal' : Math.abs(direction.z) > 0.98 ? 'vertical' : 'diagonal';
+    const wallDirection = { ...direction };
+    const segments = Array.from({ length: segmentCount }, (_, index) => ({
+      x: anchor.x + wallDirection.x * index * span,
+      z: anchor.z + wallDirection.z * index * span,
+    }));
+    const world = {
+      x: (segments[0].x + segments[segments.length - 1].x) / 2,
+      z: (segments[0].z + segments[segments.length - 1].z) / 2,
+    };
+    const options = {
+      wallSegments: segmentCount,
+      wallOrientation: orientation,
+      wallDirection,
+      wallSnapLabel: snapped.label,
+      wallStart: segments[0],
+    };
+    const check = this.getPlacementCheck('wall', world, options);
+    const totalCost = Object.fromEntries(Object.entries(blueprint.cost).map(([key, value]) => [key, value * segmentCount]));
+    if (check.valid && !this._canAfford(totalCost)) {
+      const missing = Object.entries(totalCost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
+      return { type: 'wall', world, segments, ...options, valid: false, reason: `Not enough ${missing} for this ${segmentCount}-segment wall.` };
+    }
+    return { type: 'wall', world, segments, ...options, valid: check.valid, reason: check.reason, totalCost };
+  }
+
+  placeWallLine(start, end) {
+    const preview = this.getWallLinePreview(start, end);
+    if (!preview.valid) {
+      this._announce(preview.reason);
+      return false;
+    }
+    const blueprint = BUILDING_TYPES.wall;
+    const builders = this._selectedBuilders(preview.world).slice(0, CONSTRUCTION_SLOT_COUNT);
+    if (!builders.length) {
+      this._announce('Select a villager before placing a Palisade Wall.');
+      return false;
+    }
+    this._spend(preview.totalCost);
+    const building = this.addBuilding('wall', preview.world.x, preview.world.z, 'player', 0.04, {
+      wallSegments: preview.wallSegments,
+      wallOrientation: preview.wallOrientation,
+      wallDirection: preview.wallDirection,
+      wallStart: preview.wallStart,
+    });
+    let assigned = 0;
+    builders.forEach((builder, index) => {
+      this._interruptWork(builder);
+      builder.postDepositTarget = null;
+      builder.attackTarget = null;
+      builder.attackTargetKind = null;
+      builder.buildTarget = building.id;
+      if (this._sendUnitToBuilding(builder, building, index)) assigned += 1;
+      else builder.buildTarget = null;
+    });
+    this._announce(`${blueprint.label} line placed: ${preview.wallSegments} segment${preview.wallSegments === 1 ? '' : 's'}. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.`);
+    return true;
+  }
+
   placeBuilding(type, point) {
     const blueprint = BUILDING_TYPES[type];
     if (!blueprint) {
@@ -2124,9 +2443,9 @@ export class CrownforgeSimulation {
     return builders.slice().sort((a, b) => distance(a, point) - distance(b, point));
   }
 
-  _buildingBounds(type, point, padding = 0) {
+  _buildingBounds(type, point, padding = 0, options = {}) {
     const blueprint = BUILDING_TYPES[type];
-    const footprint = blueprint.footprint;
+    const footprint = this._buildingFootprint(type, options);
     const clearance = blueprint.collisionClearance ?? 0;
     return {
       minX: point.x - footprint.width / 2 - clearance - padding,
@@ -2146,16 +2465,16 @@ export class CrownforgeSimulation {
     return first.minX < second.maxX && first.maxX > second.minX && first.minZ < second.maxZ && first.maxZ > second.minZ;
   }
 
-  _placementAccessCells(type, point) {
+  _placementAccessCells(type, point, options = {}) {
     const blueprint = BUILDING_TYPES[type];
-    const footprint = blueprint.footprint;
+    const footprint = this._buildingFootprint(type, options);
     const clearance = blueprint.collisionClearance ?? 0;
     const minX = Math.floor(point.x - footprint.width / 2 - clearance - 0.5);
     const maxX = Math.ceil(point.x + footprint.width / 2 + clearance + 0.5);
     const minZ = Math.floor(point.z - footprint.height / 2 - clearance - 0.5);
     const maxZ = Math.ceil(point.z + footprint.height / 2 + clearance + 0.5);
     const cells = [];
-    const bounds = this._buildingBounds(type, point);
+    const bounds = this._buildingBounds(type, point, 0, options);
     for (let cellX = minX; cellX <= maxX; cellX += 1) {
       for (let cellZ = minZ; cellZ <= maxZ; cellZ += 1) {
         const cellCenter = { x: cellX + 0.5, z: cellZ + 0.5 };
@@ -2169,17 +2488,17 @@ export class CrownforgeSimulation {
     return cells;
   }
 
-  getPlacementCheck(type, point) {
+  getPlacementCheck(type, point, options = {}) {
     const blueprint = BUILDING_TYPES[type];
     if (!blueprint || !point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) return { valid: false, reason: 'Move the foundation onto the meadow.' };
-    const bounds = this._buildingBounds(type, point, BUILDING_CLEARANCE);
+    const bounds = this._buildingBounds(type, point, BUILDING_CLEARANCE, options);
     if (bounds.minX < 0.55 || bounds.minZ < 0.55 || bounds.maxX > CONFIG.mapWidth - 0.55 || bounds.maxZ > CONFIG.mapHeight - 0.55) {
       return { valid: false, reason: 'Foundation is outside the meadow.' };
     }
-    if (this.buildings.some((building) => this._buildingHasCollision(building) && this._boundsOverlap(bounds, this._buildingBounds(building.type, building, 0)))) {
+    if (this.buildings.some((building) => !building.destroyed && this._boundsOverlap(bounds, this._buildingEntityBounds(building, 0)))) {
       return { valid: false, reason: 'Another structure is in the way.' };
     }
-    if (this.resourcesNodes.some((node) => this._circleIntersectsBounds(node, RESOURCE_FOOTPRINTS[node.type] ?? 0.8, bounds))) {
+    if (this.resourcesNodes.some((node) => this._circleIntersectsBounds(node, resourceFootprint(node), bounds))) {
       return { valid: false, reason: 'Clear the resource before building here.' };
     }
     if (this.decorations.some((decoration) => this._circleIntersectsBounds(decoration, DECORATION_FOOTPRINTS[decoration.type] ?? 0.45, bounds))) {
@@ -2188,8 +2507,8 @@ export class CrownforgeSimulation {
     if (this.units.some((unit) => !unit.dead && this._circleIntersectsBounds(unit, UNIT_TYPES[unit.type].radius + 0.18, bounds))) {
       return { valid: false, reason: 'A unit is standing in the foundation.' };
     }
-    const placement = { type, x: point.x, z: point.z, progress: 1 };
-    const accessCells = this._placementAccessCells(type, point);
+    const placement = { type, x: point.x, z: point.z, progress: 1, ...options };
+    const accessCells = this._placementAccessCells(type, point, options);
     const openAccess = accessCells.filter((cell) => !this.isBlocked(cell.x, cell.z) && !this._buildingBlocksCell(cell.x, cell.z, placement));
     if (openAccess.length < 2) return { valid: false, reason: 'Leave room around the foundation to build.' };
     const builder = this._selectedBuilders(point)[0];

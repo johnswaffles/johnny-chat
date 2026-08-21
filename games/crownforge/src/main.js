@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260818-roadsfree1';
-import { CrownforgeAudio } from './audio.js?v=20260818-roadsfree1';
-import { CrownforgeInput } from './input.js?v=20260818-roadsfree1';
-import { CrownforgeRenderer } from './renderer.js?v=20260818-roadsfree1';
-import { CrownforgeSimulation } from './simulation.js?v=20260818-roadsfree1';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260821-hallwoodpass2';
+import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
+import { CrownforgeInput } from './input.js?v=20260821-hallwoodpass2';
+import { CrownforgeRenderer } from './renderer.js?v=20260821-hallwoodpass2';
+import { CrownforgeSimulation } from './simulation.js?v=20260821-hallwoodpass2';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -24,9 +24,11 @@ const outcomeIcon = document.querySelector('#outcome-icon');
 const controlsToggle = document.querySelector('#controls-toggle');
 const controlsPanel = document.querySelector('#controls-panel');
 const controlsMinimize = document.querySelector('#controls-minimize');
-const masterVolume = document.querySelector('#master-volume');
-const effectsVolume = document.querySelector('#effects-volume');
+const musicToggle = document.querySelector('#music-toggle');
+const musicToggleLabel = document.querySelector('#music-toggle-label');
 const reducedMotion = document.querySelector('#reduced-motion');
+const unitSpeed = document.querySelector('#unit-speed');
+const unitSpeedValue = document.querySelector('#unit-speed-value');
 const uiTooltip = document.querySelector('#ui-tooltip');
 const placementReadout = document.querySelector('#placement-readout');
 const placementIcon = document.querySelector('#placement-icon');
@@ -198,11 +200,29 @@ restartButton.addEventListener('click', () => {
   announce('A fresh Crownforge meadow awaits.');
 });
 
-masterVolume.addEventListener('input', (event) => audio.setMasterVolume(event.target.value));
-effectsVolume.addEventListener('input', (event) => audio.setEffectsVolume(event.target.value));
+function updateMusicControl() {
+  if (!musicToggle) return;
+  const muted = audio.isMusicMuted();
+  musicToggle.classList.toggle('is-muted', muted);
+  musicToggle.setAttribute('aria-pressed', String(muted));
+  musicToggleLabel.textContent = muted ? 'MUSIC OFF' : 'MUSIC ON';
+  setTooltip(musicToggle, muted ? 'Unmute Lantern Under Stone' : 'Mute Crownforge music');
+}
+
+musicToggle?.addEventListener('click', () => {
+  audio.unlock();
+  const muted = audio.toggleMusic();
+  updateMusicControl();
+  announce(muted ? 'Crownforge music muted.' : 'Lantern Under Stone is playing.');
+});
+
 reducedMotion.addEventListener('change', (event) => {
   input.setReducedMotion(event.target.checked);
   audio.ui();
+});
+unitSpeed?.addEventListener('input', (event) => {
+  const value = simulation.setUnitSpeedScale(event.target.value);
+  if (unitSpeedValue) unitSpeedValue.textContent = `${value}×`;
 });
 
 function updateUi() {
@@ -215,6 +235,8 @@ function updateUi() {
   }
   const population = simulation.population;
   document.querySelector('#population').textContent = `${population.used} / ${population.capacity}`;
+  if (unitSpeed) unitSpeed.value = String(simulation.getUnitSpeedScale());
+  if (unitSpeedValue) unitSpeedValue.textContent = `${simulation.getUnitSpeedScale()}×`;
   document.querySelector('#selection-title').textContent = selectionTitle();
   document.querySelector('#selection-detail').textContent = selectionStatus();
   const preview = renderer.buildPreview;
@@ -232,7 +254,7 @@ function updateUi() {
     const ready = Boolean(builder && affordable && builder.carryAmount <= 0);
     const detail = button.querySelector(`[data-build-detail="${type}"]`);
     const status = !builder ? 'SELECT VILLAGER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
-    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${status}`;
+    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? 'DRAG TO AIM  •  8-WAY SNAP  •  ' : ''}${status}`;
     button.classList.toggle('is-unavailable', !ready);
     setTooltip(button, !builder
       ? `Select a villager before placing a ${blueprint.label}`
@@ -240,7 +262,9 @@ function updateUi() {
         ? 'Let the selected villager deposit cargo first'
         : !affordable
           ? `Gather the resources needed for a ${blueprint.label}`
-          : `Place a ${blueprint.label}`);
+          : blueprint.wall
+            ? `Click-drag in any direction; the ${blueprint.label} snaps to the nearest of 8 orientations`
+            : `Place a ${blueprint.label}`);
   });
   const selected = simulation.selectedEntities;
   const productionBuilding = selected.length === 1 && selected[0].kind === 'building'
@@ -289,7 +313,11 @@ function updateUi() {
     placementReadout.classList.toggle('is-invalid', !valid);
     placementIcon.className = `ui-icon ${valid ? 'icon-house' : 'icon-cancel'}`;
     placementTitle.textContent = valid ? 'FOUNDATION READY' : 'CANNOT PLACE HERE';
-    placementDetail.textContent = valid ? 'Click to place  ·  Esc to cancel' : (preview?.reason ?? 'Move the foundation to a clear site.');
+    placementDetail.textContent = valid
+      ? preview?.type === 'wall'
+        ? `${preview.wallSnapLabel ?? 'SNAPPED'} · ${preview.wallSegments ?? 1} segment${preview.wallSegments === 1 ? '' : 's'} · release to place`
+        : 'Click to place  ·  Hall vision active  ·  Esc to cancel'
+      : (preview?.reason ?? 'Move the foundation to a clear site.');
   }
   const outcome = simulation.phase !== 'playing';
   victoryPanel.hidden = !outcome;
@@ -356,17 +384,7 @@ function selectionStatus() {
     const progress = building.progress < 1 ? ` · build ${Math.round(building.progress * 100)}%${stage}` : '';
     const currentFunction = building.progress < 1
       ? 'construction active'
-      : blueprint.storage
-        ? 'drop-off active'
-      : blueprint.production
-          ? 'unit training active'
-        : blueprint.field
-          ? (building.farmerId ? 'one farmer tending' : 'awaiting farmer')
-        : blueprint.population
-          ? 'housing active'
-          : blueprint.enemyStructure
-            ? 'enemy core'
-            : 'structure ready';
+      : buildingAbilityLabel(building, blueprint);
     return `${Math.ceil(building.hp)} / ${building.maxHp} HP${progress} · ${blueprint.function} · ${currentFunction}`;
   }
   const units = entities.filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead);
@@ -391,6 +409,22 @@ function selectionStatus() {
       : `${info.label} depleted · choose another resource`;
   }
   return simulation.lastCommand;
+}
+
+function buildingAbilityLabel(building, blueprint) {
+  if (blueprint.enemyStructure) return 'enemy settlement core · destroy to win';
+  if (blueprint.production) {
+    const products = (blueprint.productionTypes ?? []).map((type) => PRODUCTION_TYPES[type]?.label ?? type).join(' + ');
+    return `trains ${products} · select a unit below`;
+  }
+  if (blueprint.storage) {
+    const resource = building.type === 'lumberMill' ? 'wood' : building.type === 'quarry' ? 'stone' : building.type === 'grainMill' ? 'food' : 'all resources';
+    return `drop-off for ${resource} · shortens return routes`;
+  }
+  if (blueprint.field) return building.farmerId ? 'one farmer tending · generates food' : 'one farmer · awaiting worker';
+  if (blueprint.population) return `housing · adds ${blueprint.population} population space`;
+  if (blueprint.wall) return 'defensive boundary · blocks movement';
+  return 'structure ready · no active command';
 }
 
 function formatClock(seconds) {
@@ -420,5 +454,6 @@ function frame(now) {
 
 window.crownforge = { simulation, renderer, input, audio };
 bindTooltips();
+updateMusicControl();
 announce(`${FACTION.name} are ready. Select a villager, then right-click a resource.`);
 requestAnimationFrame(frame);
