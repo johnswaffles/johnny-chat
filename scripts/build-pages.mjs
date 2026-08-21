@@ -12,6 +12,11 @@ const gladeExportSourceDir = path.resolve(root, "..", "public", "glade-playtest"
 // Cloudflare keeps the committed public artifact when that sibling checkout is
 // unavailable in the Pages build environment.
 const firstEmberExportSourceDir = path.resolve(root, "..", "johnny-games", "dist", "first-ember");
+// Mosswake's browser-game source now lives in the isolated johnny-games repo.
+// Cloudflare keeps the committed public route when that sibling checkout is
+// unavailable in the Pages build environment.
+const mosswakeSourceDir = path.resolve(root, "..", "johnny-games", "mosswake");
+const mosswakeTargetDir = path.join(publicDir, "mosswake");
 const crownforgeSourceDir = path.join(root, "games", "crownforge");
 const crownforgeTargetDir = path.join(publicDir, "crownforge");
 const cozyExportTargetDirs = [
@@ -3907,6 +3912,17 @@ async function syncCrownforgeBuild() {
   await cp(crownforgeSourceDir, crownforgeTargetDir, { recursive: true });
 }
 
+async function syncMosswakeBuild() {
+  try {
+    await access(mosswakeSourceDir);
+  } catch {
+    // Keep the checked-in public route intact when the isolated source repo is absent.
+    return;
+  }
+  await rm(mosswakeTargetDir, { recursive: true, force: true });
+  await cp(mosswakeSourceDir, mosswakeTargetDir, { recursive: true });
+}
+
 async function patchGodotWasmLoader() {
   const stockStreamingBlock = `var response=fetch(binaryFile,{credentials:"same-origin"});var instantiationResult=await WebAssembly.instantiateStreaming(response,imports);return instantiationResult`;
   const gzipSafeStreamingBlock = `var response=await fetch(binaryFile,{credentials:"same-origin"});var buffer=await response.arrayBuffer();var bytes=new Uint8Array(buffer);if(bytes.length>=2&&bytes[0]===31&&bytes[1]===139&&typeof DecompressionStream!=="undefined"){var stream=new Response(buffer).body.pipeThrough(new DecompressionStream("gzip"));buffer=await new Response(stream).arrayBuffer()}var instantiationResult=await WebAssembly.instantiate(buffer,imports);return instantiationResult`;
@@ -4750,6 +4766,7 @@ async function main() {
   await mkdir(path.join(publicDir, "contact"), { recursive: true });
   await syncGodotBuilds();
   await syncCrownforgeBuild();
+  await syncMosswakeBuild();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
   await patchGladeLocalFileRedirect();
