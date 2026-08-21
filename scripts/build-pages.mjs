@@ -6,7 +6,10 @@ import { createHash } from "node:crypto";
 const root = process.cwd();
 const publicDir = path.join(root, "public");
 const isPagesBuild = process.env.CF_PAGES === "1" || process.env.CF_PAGES === "true";
-const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
+// Cozy Builder source and exports now live in the isolated johnny-games repo.
+// Cloudflare keeps the committed public artifacts when that sibling checkout is
+// unavailable in the Pages build environment.
+const cozyExportSourceDir = path.resolve(root, "..", "johnny-games", "dist", "cozy-builder");
 const gladeExportSourceDir = path.resolve(root, "..", "public", "glade-playtest");
 // First Ember source and exports now live in the isolated johnny-games repo.
 // Cloudflare keeps the committed public artifact when that sibling checkout is
@@ -4019,10 +4022,14 @@ async function patchGodotAudioFocus() {
     }
     if (source.includes("data-johnny-audio-focus")) continue;
     const marker = "</body>";
-    if (!source.includes(marker)) throw new Error("Could not add audio focus to " + htmlPath);
-    const snippet = "\n<script data-johnny-audio-focus src=\"/audio-focus.js?v=1\"></script>\n"
+    const markerIndex = source.indexOf(marker);
+    if (markerIndex === -1) throw new Error("Could not add audio focus to " + htmlPath);
+    const snippet = "<script data-johnny-audio-focus src=\"/audio-focus.js?v=1\"></script>\n"
       + "<script data-johnny-audio-focus-init>window.JohnnyAudioFocus?.claim(\"" + gameName + "\");</script>";
-    await writeFile(htmlPath, source.replace(marker, snippet + "\n" + marker), "utf8");
+    const beforeMarker = source.slice(0, markerIndex).replace(/[ \t\r\n]*$/, "");
+    const afterMarker = source.slice(markerIndex);
+    const patched = `${beforeMarker}\n${snippet}\n${afterMarker}`.replace(/\n+$/, "\n");
+    await writeFile(htmlPath, patched, "utf8");
   }
 }
 
