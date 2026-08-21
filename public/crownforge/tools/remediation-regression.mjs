@@ -3,10 +3,13 @@ import assert from 'node:assert/strict';
 import {
   BUILDING_TYPES,
   COMBAT_ATLASES,
+  CONFIG,
+  FIRST_AGE_ASSETS,
   INITIAL_RESOURCES,
   VILLAGER_ATLASES,
 } from '../src/config.js';
 import { animationFrame } from '../src/animation.js';
+import { CrownforgeRenderer } from '../src/renderer.js';
 import { CrownforgeSimulation } from '../src/simulation.js';
 
 const STEP_60HZ = 1 / 60;
@@ -41,6 +44,13 @@ function checkAnimationAtlases() {
     }
   }
   for (const type of ['soldier', 'raider']) {
+    for (let direction = 0; direction < 4; direction += 1) {
+      const walkFrame = animationFrame(type, 'walk', 0.37, direction);
+      assert.equal(walkFrame.atlasKey, `${type}Walk`, `${type} walk atlas`);
+      assert.equal(walkFrame.frameCount, 4, `${type} walk uses four authored frames`);
+      assert.ok(walkFrame.column >= 0 && walkFrame.column < 4, `${type} walk direction ${direction} frame`);
+      assert.equal(walkFrame.fallback, null, `${type} walk does not fall back to idle`);
+    }
     for (const state of ['attack_anticipation', 'attack_contact', 'attack_recovery']) {
       for (let direction = 0; direction < 4; direction += 1) {
         const frame = animationFrame(type, state, 0.22, direction);
@@ -48,6 +58,28 @@ function checkAnimationAtlases() {
         assert.ok(frame.row >= 0 && frame.row < 4, `${type} ${state} direction ${direction}`);
       }
     }
+    for (let direction = 0; direction < 4; direction += 1) {
+      const frame = animationFrame(type, 'hit', 0.11, direction);
+      assert.equal(frame.atlasKey, `${type}Hit`, `${type} hit atlas`);
+      assert.equal(frame.frameCount, 4, `${type} hit uses four authored recoil frames`);
+      assert.ok(frame.column >= 0 && frame.column < 4, `${type} hit direction ${direction} frame`);
+      assert.equal(frame.fallback, null, `${type} hit does not fall back to idle`);
+      const deathFrame = animationFrame(type, 'death', 0.71, direction);
+      assert.equal(deathFrame.atlasKey, `${type}Death`, `${type} death atlas`);
+      assert.equal(deathFrame.frameCount, 4, `${type} death uses four authored frames`);
+      assert.ok(deathFrame.column >= 0 && deathFrame.column < 4, `${type} death direction ${direction} frame`);
+      assert.equal(deathFrame.fallback, null, `${type} death does not fall back to idle`);
+    }
+  }
+  for (let direction = 0; direction < 4; direction += 1) {
+    const hitFrame = animationFrame('villager', 'hit', 0.11, direction);
+    assert.equal(hitFrame.atlasKey, 'hitLoop', `villager hit atlas direction ${direction}`);
+    assert.equal(hitFrame.frameCount, 4, 'villager hit uses four authored recoil frames');
+    assert.equal(hitFrame.fallback, null, 'villager hit does not fall back to idle');
+    const deathFrame = animationFrame('villager', 'death', 0.71, direction);
+    assert.equal(deathFrame.atlasKey, 'deathLoop', `villager death atlas direction ${direction}`);
+    assert.equal(deathFrame.frameCount, 4, 'villager death uses four authored frames');
+    assert.equal(deathFrame.fallback, null, 'villager death does not fall back to idle');
   }
   for (const atlas of Object.values(VILLAGER_ATLASES)) {
     if (atlas?.src) assert.match(atlas.src, /\.png/);
@@ -105,6 +137,24 @@ function checkGathering() {
   assert.equal(villager.command, 'return', 'retasking cargo sends worker to storage first');
 }
 
+function checkReadableResourceApproaches() {
+  const simulation = freshSimulation();
+  const villager = simulation.units.find((unit) => unit.type === 'villager');
+  const tallNodes = ['tree', 'grove', 'stone']
+    .map((type) => simulation.resourcesNodes.find((node) => node.type === type && node.sizeTier !== 'small'))
+    .filter(Boolean);
+  assert.ok(tallNodes.length > 0, 'reset contains tall resource nodes for readable approach coverage');
+  for (const node of tallNodes) {
+    villager.path = [];
+    villager.gatherTarget = node.id;
+    const routed = simulation._sendUnitToResource(villager, node);
+    assert.equal(routed, true, `${node.type} ${node.sizeTier} has a route`);
+    const frontBias = (villager.routeTarget.x + villager.routeTarget.z) - (node.x + node.z);
+    assert.ok(frontBias >= -0.05, `${node.type} ${node.sizeTier} chooses a readable front approach`);
+    simulation._releaseResourceSlot(villager);
+  }
+}
+
 function checkConstructionAndPlacement() {
   const simulation = freshSimulation();
   const townCenter = simulation.buildings.find((building) => building.type === 'townCenter');
@@ -129,6 +179,35 @@ function checkConstructionAndPlacement() {
   advance(simulation, BUILDING_TYPES.house.buildTime + 22);
   assert.equal(house.progress, 1, 'house completes through construction simulation');
   assert.equal(house.hp, house.maxHp, 'completed house reaches full health');
+}
+
+function checkBlockedDestinationFallback() {
+  const simulation = freshSimulation();
+  const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  const hall = simulation.buildings.find((building) => building.type === 'townCenter' && building.faction === 'player');
+  assert.ok(villager && hall, 'reset has a villager and Crown Hall for blocked-destination coverage');
+
+  const path = simulation._buildPath(villager, { x: hall.x, z: hall.z });
+  assert.ok(path.length > 0, 'blocked building destination resolves to a nearby route');
+  const endpoint = path[path.length - 1];
+  assert.equal(simulation._pointBlockedForUnit(villager, endpoint), false, 'blocked destination route ends outside the building clearance');
+  assert.ok(Math.hypot(endpoint.x - hall.x, endpoint.z - hall.z) > 1, 'blocked destination does not preserve the building center as the endpoint');
+}
+
+function checkDynamicBlockerRecovery() {
+  const simulation = freshSimulation();
+  const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  const target = { x: 100, z: 100 };
+  const initialPath = simulation._buildPath(villager, target);
+  assert.ok(initialPath.length >= 3, 'dynamic blocker scenario starts with a multi-segment route');
+  const blockerPoint = initialPath[Math.floor(initialPath.length / 2)];
+  assert.equal(simulation._sendUnitTo(villager, target, 'move'), true, 'unit accepts the initial movement order');
+  simulation.addBuilding('house', blockerPoint.x, blockerPoint.z, 'player', 1);
+
+  assert.equal(simulation._replanUnit(villager), true, 'unit replans after a new building blocks its route');
+  assert.ok(villager.path.length > 0, 'replanned route remains available');
+  assert.equal(simulation._pointBlockedForUnit(villager, villager.path.at(-1)), false, 'replanned route ends outside static collision');
+  assert.equal(villager.pathBlocked, false, 'dynamic route recovery does not leave the unit flagged as blocked');
 }
 
 function checkCrownHallStairs() {
@@ -168,7 +247,7 @@ function checkBarracksLandmarkScale() {
 
 function checkCrownHallProportionsAndBuildableRing() {
   const hall = BUILDING_TYPES.townCenter;
-  assert.equal(hall.renderSize, 5600, 'Crown Hall render size is reduced by 50%');
+  assert.equal(hall.renderSize, BUILDING_TYPES.barracks.renderSize * 4, 'Crown Hall is four times the Barracks visual width');
   assert.deepEqual(hall.footprint, { width: 9, height: 8 }, 'Crown Hall gameplay footprint is reduced with its visual scale');
   assert.equal(hall.collisionClearance, 1.8, 'Crown Hall collision clearance matches the reduced landmark');
   assert.equal(hall.stairAccess.topOffset, 5, 'Crown Hall stair landing scales with the landmark');
@@ -186,6 +265,57 @@ function checkCrownHallProportionsAndBuildableRing() {
     const check = simulation.getPlacementCheck('house', point);
     assert.equal(check.valid, true, `Hall has a buildable meadow opening on the ${side} side`);
   }
+}
+
+function checkExpandedWorldAndEnemyDistance() {
+  const simulation = freshSimulation();
+  assert.equal(CONFIG.mapWidth, 560, 'expanded map width is ten-area scale');
+  assert.equal(CONFIG.mapHeight, 460, 'expanded map height is ten-area scale');
+  const hall = simulation.buildings.find((building) => building.type === 'townCenter');
+  const camp = simulation.buildings.find((building) => building.type === 'ashenCamp');
+  assert.ok(Math.hypot(camp.x - hall.x, camp.z - hall.z) > 600, 'enemy camp starts across the expanded map');
+  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'wood').length >= 20, 'expanded map has a readable wood family');
+  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'food').length >= 16, 'expanded map has a readable food family');
+  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'stone').length >= 12, 'expanded map has a readable stone family');
+  assert.ok(CONFIG.minZoom < 0.05, 'minimum zoom can frame the expanded map');
+}
+
+function checkCursorCenteredZoom() {
+  const renderer = Object.create(CrownforgeRenderer.prototype);
+  renderer.width = 1280;
+  renderer.height = 720;
+  renderer.camera = { x: 0, y: 0, zoom: CONFIG.initialZoom };
+  const cursor = { x: 380, y: 260 };
+  const anchoredWorld = renderer.screenToWorld(cursor);
+  renderer.zoomAt(1.6, cursor);
+  const zoomedPoint = renderer.worldToScreen(anchoredWorld);
+  assert.ok(Math.abs(zoomedPoint.x - cursor.x) < 0.01, 'zoom keeps the cursor world point horizontally anchored');
+  assert.ok(Math.abs(zoomedPoint.y - cursor.y) < 0.01, 'zoom keeps the cursor world point vertically anchored');
+  renderer.zoomAt(0.625, cursor);
+  const restoredPoint = renderer.worldToScreen(anchoredWorld);
+  assert.ok(Math.abs(restoredPoint.x - cursor.x) < 0.01, 'zoom out keeps the cursor world point horizontally anchored');
+  assert.ok(Math.abs(restoredPoint.y - cursor.y) < 0.01, 'zoom out keeps the cursor world point vertically anchored');
+}
+
+function checkAspectCorrectBuildingFeedback() {
+  const renderer = Object.create(CrownforgeRenderer.prototype);
+  const hallWidth = BUILDING_TYPES.townCenter.renderSize;
+  const barracksWidth = BUILDING_TYPES.barracks.renderSize;
+  assert.equal(
+    renderer.buildingVisualHeight({ type: 'townCenter' }, hallWidth),
+    hallWidth * FIRST_AGE_ASSETS.townCenter.height / FIRST_AGE_ASSETS.townCenter.width,
+    'Crown Hall feedback uses its transparent asset aspect ratio',
+  );
+  assert.equal(
+    renderer.buildingVisualHeight({ type: 'barracks' }, barracksWidth),
+    barracksWidth * FIRST_AGE_ASSETS.barracks.height / FIRST_AGE_ASSETS.barracks.width,
+    'Barracks feedback uses its transparent asset aspect ratio',
+  );
+  assert.notEqual(
+    renderer.buildingVisualHeight({ type: 'townCenter' }, hallWidth),
+    hallWidth,
+    'wide landmark feedback does not fall back to a square height',
+  );
 }
 
 function checkCombatAndEndStates() {
@@ -225,23 +355,34 @@ function checkCombatAndEndStates() {
 checkAnimationAtlases();
 checkResetPresentation();
 checkGathering();
+checkReadableResourceApproaches();
 checkConstructionAndPlacement();
+checkBlockedDestinationFallback();
+checkDynamicBlockerRecovery();
 checkCrownHallStairs();
 checkBarracksLandmarkScale();
 checkCrownHallProportionsAndBuildableRing();
+checkExpandedWorldAndEnemyDistance();
+checkCursorCenteredZoom();
+checkAspectCorrectBuildingFeedback();
 checkCombatAndEndStates();
 
 console.log(JSON.stringify({
   status: 'passed',
   checks: [
-    'directional carry and attack atlas resolution',
+    'directional villager carry/response and military walk/attack/recoil/death atlas resolution',
     'reset villager ground/building clearance',
     '20 Hz versus 60 Hz gathering convergence',
     'cargo-preserving retask and storage return',
     'placement rejection and house completion',
+    'blocked destination fallback outside building clearance',
+    'dynamic building blocker route recovery',
     'Crown Hall stair routing, landing stop, and interior collision',
     'person-scaled Barracks landmark and collision clearance',
     'Crown Hall proportion reduction and four-sided buildable ring',
+    'expanded map resource clearings and opposite-side enemy camp',
+    'cursor-centered zoom anchor in both directions',
+    'aspect-correct landmark health and placement feedback',
     'melee damage, death timing, victory, defeat',
   ],
 }));

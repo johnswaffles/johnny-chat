@@ -42,7 +42,11 @@ export class CrownforgeInput {
     window.addEventListener('pointercancel', (event) => this._up(event));
     this.canvas.addEventListener('wheel', (event) => {
       event.preventDefault();
-      this.renderer.zoomAt(event.deltaY < 0 ? 1.08 : 0.93, this._point(event));
+      const point = this._point(event);
+      const magnitude = Math.min(140, Math.max(1, Math.abs(event.deltaY)));
+      const direction = event.deltaY < 0 ? 1 : -1;
+      const factor = Math.pow(1.0018, direction * magnitude);
+      this.renderer.zoomAt(factor, point);
     }, { passive: false });
     window.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {

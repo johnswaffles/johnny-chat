@@ -1,12 +1,13 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260819-proportionspass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260820-occlusionpass1';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260819-proportionspass1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260820-occlusionpass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const moveToward = (value, target, amount) => value < target ? Math.min(value + amount, target) : Math.max(value - amount, target);
 const TAU = Math.PI * 2;
 const RESOURCE_SLOT_COUNT = 6;
+const RESOURCE_READABLE_FRONT_BIAS = -0.05;
 const CONSTRUCTION_SLOT_COUNT = 4;
 const STORAGE_INTERACTION_DISTANCE = 0.78;
 const BUILDING_INTERACTION_DISTANCE = 0.78;
@@ -146,10 +147,10 @@ export class CrownforgeSimulation {
     this.addBuilding('townCenter', 25, 38, 'player');
     this.addBuilding('house', 9, 27, 'player');
     this.addBuilding('storehouse', 43, 48, 'player');
-    // Keep the camp and eastern resource clearing inside a visual safety
-    // margin. The map can pan and zoom, but tall silhouettes should not sit
-    // on the viewport edge where their art is cropped.
-    this.addBuilding('ashenCamp', 72, 21, 'enemy');
+    // Start the enemy on the far opposite side of the expanded diamond. The
+    // long open approach creates time to gather and build without making the
+    // Raiders blind or removing their ability to defend their camp.
+    this.addBuilding('ashenCamp', 516, 414, 'enemy');
     // Keep the opening wood pair on the Crown Hall's west flank. The old
     // north-west coordinates put both trees behind the Hall's tall sprite in
     // projected depth, making the starting wood look absent even though it
@@ -181,6 +182,30 @@ export class CrownforgeSimulation {
     this.addResource('stone', 'stone', 76, 55, 900, 2, { sizeTier: 'large' });
     this.addResource('stone', 'stone', 72, 64, 360, 1, { sizeTier: 'medium' });
     this.addResource('stone', 'stone', 84, 61, 900, 0, { sizeTier: 'large' });
+    // The expanded board is intentionally sparse. These small regional
+    // clearings give the larger map useful destinations without stamping a
+    // forest over every open meadow tile.
+    [
+      ['tree', 112, 84, 260, 0, 'medium'], ['tree', 128, 96, 180, 1, 'small'],
+      ['grove', 155, 116, 1100, 0, 'large'], ['tree', 190, 72, 420, 2, 'medium'],
+      ['tree', 225, 150, 260, 3, 'medium'], ['grove', 275, 112, 1100, 1, 'large'],
+      ['tree', 315, 185, 180, 0, 'small'], ['tree', 370, 95, 700, 2, 'large'],
+      ['grove', 410, 180, 1100, 0, 'large'], ['tree', 455, 265, 420, 1, 'medium'],
+      ['tree', 480, 330, 260, 3, 'medium'], ['grove', 438, 390, 1100, 1, 'large'],
+      ['tree', 520, 365, 700, 2, 'large'], ['tree', 300, 400, 420, 0, 'medium'],
+    ].forEach(([type, x, z, amount, variant, sizeTier]) => this.addResource(type, 'wood', x, z, amount, variant, { sizeTier }));
+    [
+      [96, 96, 0], [140, 176, 1], [216, 108, 2], [270, 220, 0],
+      [345, 148, 1], [394, 250, 2], [466, 300, 0], [484, 386, 1],
+    ].forEach(([x, z, variant]) => this.addResource('berry', 'food', x, z, 105, variant, { sizeTier: 'small' }));
+    [
+      [108, 122, 0, 'small'], [180, 185, 1, 'medium'], [246, 118, 2, 'large'],
+      [320, 270, 3, 'medium'], [386, 205, 0, 'large'], [450, 250, 1, 'medium'],
+      [500, 344, 2, 'large'], [430, 430, 3, 'large'],
+    ].forEach(([x, z, variant, sizeTier]) => this.addResource('stone', 'stone', x, z, sizeTier === 'large' ? 900 : sizeTier === 'medium' ? 360 : 120, variant, { sizeTier }));
+    [
+      [104, 35, 0], [168, 52, 0], [250, 70, 1], [330, 105, 2], [415, 135, 3],
+    ].forEach(([x, z, variant]) => this.addResource('grain', 'food', x, z, 220, variant, { sizeTier: 'small' }));
     this.addDecoration('log', 18, 24, 0, 0.9);
     this.addDecoration('stump', 8.4, 52, 1, 0.85);
     this.addDecoration('flowers', 43, 20, 2, 0.72);
@@ -200,7 +225,7 @@ export class CrownforgeSimulation {
     // Give the opening Raider a clear patrol pocket west/south of the camp.
     // The camp sprite is intentionally larger than its gameplay footprint, so
     // the old point could disappear behind the tall silhouette at reset.
-    this.addUnit('raider', 67.5, 27.5, 'enemy');
+    this.addUnit('raider', 508, 403, 'enemy');
   }
 
   addBuilding(type, x, z, faction = 'player', progress = 1, options = {}) {
@@ -1325,7 +1350,7 @@ export class CrownforgeSimulation {
     const orderedSlots = Array.from({ length: RESOURCE_SLOT_COUNT }, (_, offset) => (preferredSlot + offset) % RESOURCE_SLOT_COUNT);
     const freeSlots = orderedSlots.filter((slot) => !node.reservedSlots.has(slot) || node.reservedSlots.get(slot) === unit.id);
     const candidateSlots = freeSlots.length ? freeSlots : orderedSlots;
-    let route = null;
+    const routes = [];
     for (const slot of candidateSlots) {
       const point = this._resourceInteractionPoint(node, slot, unit.type);
       const path = this._buildPath(unit, point);
@@ -1337,8 +1362,15 @@ export class CrownforgeSimulation {
       // tool pose readable during the work loop.
       const frontBias = (point.x + point.z) - (node.x + node.z);
       const score = path.length * 1.1 + distance(unit, point) * 0.2 - frontBias * 1.35;
-      if (!route || score < route.score) route = { path, point, slot, score };
+      routes.push({ path, point, slot, score, frontBias });
     }
+    // A shorter rear route is still mechanically valid, but it can place a
+    // worker beneath a tall authored canopy. Prefer any free screen-front
+    // approach before comparing path length; only fall back to the full set
+    // when the readable half of the ring is unreachable.
+    const readableRoutes = routes.filter((candidate) => candidate.frontBias >= RESOURCE_READABLE_FRONT_BIAS);
+    const routePool = readableRoutes.length ? readableRoutes : routes;
+    const route = routePool.sort((a, b) => a.score - b.score || a.slot - b.slot)[0] ?? null;
     if (!route) {
       this._releaseResourceSlot(unit);
       unit.command = 'idle';

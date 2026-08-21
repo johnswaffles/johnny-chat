@@ -1,13 +1,14 @@
 export const CONFIG = {
-  // The first settlement slice now has roughly ten times the walkable area
-  // of the original 30x22 board. The opening remains intentionally sparse;
-  // the extra space is for readable routes, expansion, and combat separation.
-  mapWidth: 180,
-  mapHeight: 146,
+  // The current green diamond is expanded to roughly ten times its former
+  // area. The extra space is intentionally open so players can read routes,
+  // resource clearings, and the enemy approach instead of entering a cluttered
+  // forest.
+  mapWidth: 560,
+  mapHeight: 460,
   tileWidth: 52,
   tileHeight: 26,
   initialZoom: 0.16,
-  minZoom: 0.08,
+  minZoom: 0.035,
   maxZoom: 1.16,
   // Bias the opening view slightly north so the full Hearth House roofline
   // and the enlarged Crown Hall both sit below the top HUD at reset.
@@ -149,12 +150,12 @@ export const BUILDING_TYPES = {
     function: 'Resource drop-off and settlement core',
     asset: 'townCenter',
     maxHp: 900,
-    // Keep the Crown Hall imposing while bringing it back to a readable
-    // first-age landmark proportion. Human units keep their established
-    // scale; the visual and gameplay bounds are reduced together so the
-    // patio, rear wings, and buildable meadow agree with what players see.
+    // The wooden starter hall is four times the Barracks visual width. Human
+    // units keep their established scale; gameplay bounds remain intentionally
+    // tighter than the broad visual silhouette so the surrounding meadow can
+    // still support expansion.
     footprint: { width: 9, height: 8 },
-    renderSize: 5600,
+    renderSize: 4000,
     collisionClearance: 1.8,
     entrance: 'south',
     // The first-age Hall has a readable south stair run. Units may enter only
@@ -348,7 +349,7 @@ export const LARGE_STONE_ASSET = {
 };
 
 export const FIRST_AGE_ASSETS = {
-  townCenter: { src: './assets/crownforge-crown-hall-v3.png?v=20260819-hallassetpass1', width: 4608, height: 3072 },
+  townCenter: { src: './assets/crownforge-crown-hall-starter-v1.png?v=20260820-hallwoodpass1', width: 1536, height: 1024 },
   barracks: { src: './assets/crownforge-barracks-v3.png?v=20260819-unitpass3', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
@@ -410,9 +411,26 @@ export const VILLAGER_ATLASES = {
     src: './assets/villager-combat-atlas.png?v=2',
     rows: { attack: 0, hit: 1, death: 2, idle: 3 },
   },
+  hitLoop: {
+    src: './assets/villager-hit-loop-v1.png?v=20260820-occlusionpass1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  deathLoop: {
+    src: './assets/villager-death-loop-v1.png?v=20260820-occlusionpass1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
   // Action-loop atlases use frame columns and authored direction rows. The
   // legacy task/carry/combat sheets remain available for states that are
-  // intentionally single-pose (carry, hit, and death).
+  // intentionally single-pose, while newer focused passes can replace a
+  // response family without changing the shared renderer contract.
   woodLoop: {
     src: './assets/villager-gather-wood-loop-v1.png?v=1',
     width: 1254,
@@ -516,6 +534,22 @@ export const COMBAT_ATLASES = {
     rows: 4,
     layout: 'frame-columns',
   },
+  soldierHit: {
+    src: './assets/crownforge-soldier-hit-loop-v1.png?v=20260820-hitpass1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  soldierDeath: {
+    src: './assets/crownforge-soldier-death-loop-v1.png?v=20260820-hitpass1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
   raider: {
     src: './assets/crownforge-raider-combat-atlas-v1.png?v=1',
     width: 1243,
@@ -534,6 +568,22 @@ export const COMBAT_ATLASES = {
   },
   raiderWalk: {
     src: './assets/crownforge-raider-walk-loop-v2.png?v=20260819-unitpass3',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  raiderHit: {
+    src: './assets/crownforge-raider-hit-loop-v1.png?v=20260820-hitpass1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  raiderDeath: {
+    src: './assets/crownforge-raider-death-loop-v1.png?v=20260820-hitpass1',
     width: 1254,
     height: 1254,
     columns: 4,

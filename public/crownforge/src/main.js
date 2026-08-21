@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260819-proportionspass1';
-import { CrownforgeAudio } from './audio.js?v=20260819-proportionspass1';
-import { CrownforgeInput } from './input.js?v=20260819-proportionspass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260819-proportionspass1';
-import { CrownforgeSimulation } from './simulation.js?v=20260819-proportionspass1';
+import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260820-occlusionpass1';
+import { CrownforgeAudio } from './audio.js?v=20260820-occlusionpass1';
+import { CrownforgeInput } from './input.js?v=20260820-occlusionpass1';
+import { CrownforgeRenderer } from './renderer.js?v=20260820-occlusionpass1';
+import { CrownforgeSimulation } from './simulation.js?v=20260820-occlusionpass1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');

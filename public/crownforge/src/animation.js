@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260819-proportionspass1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260820-occlusionpass1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -80,6 +80,8 @@ export const ANIMATION_DEFINITIONS = {
       carryFoodLoop: VILLAGER_ATLASES.carryFoodLoop,
       carryStoneLoop: VILLAGER_ATLASES.carryStoneLoop,
       carrySuppliesLoop: VILLAGER_ATLASES.carrySuppliesLoop,
+      hitLoop: VILLAGER_ATLASES.hitLoop,
+      deathLoop: VILLAGER_ATLASES.deathLoop,
     },
     clips: {
       idle: singleFrame('motion', VILLAGER_ATLASES.motion.rows.idle),
@@ -100,8 +102,8 @@ export const ANIMATION_DEFINITIONS = {
       attack_anticipation: singleFrame('combat', VILLAGER_ATLASES.combat.rows.idle),
       attack_contact: singleFrame('combat', VILLAGER_ATLASES.combat.rows.attack, { events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit } }),
       attack_recovery: singleFrame('combat', VILLAGER_ATLASES.combat.rows.idle),
-      hit: singleFrame('combat', VILLAGER_ATLASES.combat.rows.hit),
-      death: singleFrame('combat', VILLAGER_ATLASES.combat.rows.death, { loop: false }),
+      hit: actionPhase('hitLoop', [0, 1, 2, 3], 14),
+      death: actionPhase('deathLoop', [0, 1, 2, 3], 3.0),
     },
     collisionRadius: 0.36,
     interactionRadius: 0.78,
@@ -113,7 +115,7 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Crown Guard',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.soldier,
-    atlases: { combat: COMBAT_ATLASES.soldier, soldierWalk: COMBAT_ATLASES.soldierWalk, soldierAttack: COMBAT_ATLASES.soldierAttack },
+    atlases: { combat: COMBAT_ATLASES.soldier, soldierWalk: COMBAT_ATLASES.soldierWalk, soldierAttack: COMBAT_ATLASES.soldierAttack, soldierHit: COMBAT_ATLASES.soldierHit, soldierDeath: COMBAT_ATLASES.soldierDeath },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.soldier.rowByState.idle),
       walk: directionalLoop('soldierWalk', { fps: 6.8, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
@@ -121,8 +123,8 @@ export const ANIMATION_DEFINITIONS = {
       attack_anticipation: actionPhase('soldierAttack', [0, 1]),
       attack_contact: actionPhase('soldierAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
       attack_recovery: actionPhase('soldierAttack', [3, 0], 4.8),
-      hit: singleFrame('combat', COMBAT_ATLASES.soldier.rowByState.idle, { fallback: 'idle' }),
-      death: singleFrame('combat', COMBAT_ATLASES.soldier.rowByState.death, { loop: false }),
+      hit: actionPhase('soldierHit', [0, 1, 2, 3], 14),
+      death: actionPhase('soldierDeath', [0, 1, 2, 3], 3.0),
     },
     collisionRadius: 0.43,
     interactionRadius: 0.78,
@@ -134,7 +136,7 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Ashen Raider',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.raider,
-    atlases: { combat: COMBAT_ATLASES.raider, raiderWalk: COMBAT_ATLASES.raiderWalk, raiderAttack: COMBAT_ATLASES.raiderAttack },
+    atlases: { combat: COMBAT_ATLASES.raider, raiderWalk: COMBAT_ATLASES.raiderWalk, raiderAttack: COMBAT_ATLASES.raiderAttack, raiderHit: COMBAT_ATLASES.raiderHit, raiderDeath: COMBAT_ATLASES.raiderDeath },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.idle),
       walk: directionalLoop('raiderWalk', { fps: 6.8, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
@@ -142,8 +144,8 @@ export const ANIMATION_DEFINITIONS = {
       attack_anticipation: actionPhase('raiderAttack', [0, 1]),
       attack_contact: actionPhase('raiderAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
       attack_recovery: actionPhase('raiderAttack', [3, 0], 4.8),
-      hit: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.idle, { fallback: 'idle' }),
-      death: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.death, { loop: false }),
+      hit: actionPhase('raiderHit', [0, 1, 2, 3], 14),
+      death: actionPhase('raiderDeath', [0, 1, 2, 3], 3.0),
     },
     collisionRadius: 0.44,
     interactionRadius: 0.78,

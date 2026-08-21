@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260819-proportionspass1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260819-proportionspass1';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260820-occlusionpass1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260820-occlusionpass1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -230,10 +230,12 @@ export class CrownforgeRenderer {
   panBy(dx, dy) {
     this.camera.x += dx;
     this.camera.y += dy;
+    this.clampCamera();
+  }
+
+  clampCamera() {
     const halfMapW = ((CONFIG.mapWidth + CONFIG.mapHeight) * CONFIG.tileWidth / 4) * this.camera.zoom;
     const halfMapH = ((CONFIG.mapWidth + CONFIG.mapHeight) * CONFIG.tileHeight / 4) * this.camera.zoom;
-    const mapWidth = halfMapW * 2;
-    const mapHeight = halfMapH * 2;
     // On a larger RTS board the map is wider than the viewport. Clamp camera
     // travel to the actual projected map edges so the opening settlement can
     // be centered while panning still cannot reveal an empty void past the
@@ -245,12 +247,21 @@ export class CrownforgeRenderer {
   }
 
   zoomAt(factor, screenPoint) {
-    const before = this.screenToWorld(screenPoint);
-    this.camera.zoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, this.camera.zoom * factor));
-    const after = this.screenToWorld(screenPoint);
-    const beforeScreen = this.worldToScreen(before);
-    const afterScreen = this.worldToScreen(after);
-    this.panBy(beforeScreen.x - afterScreen.x, beforeScreen.y - afterScreen.y);
+    const previousZoom = this.camera.zoom;
+    const nextZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, previousZoom * factor));
+    if (Math.abs(nextZoom - previousZoom) < 0.0001) return;
+
+    // Resolve the world point under the cursor before changing scale, then
+    // solve the camera offset directly for that same point. This avoids the
+    // old two-pass correction drifting toward the lower-right when the map
+    // edge clamp is active on the expanded board.
+    const anchoredWorld = this.screenToWorld(screenPoint);
+    const worldX = (anchoredWorld.x - anchoredWorld.z - (CONFIG.mapWidth - CONFIG.mapHeight) / 2) * CONFIG.tileWidth / 2;
+    const worldY = (anchoredWorld.x + anchoredWorld.z - (CONFIG.mapWidth + CONFIG.mapHeight) / 2) * CONFIG.tileHeight / 2;
+    this.camera.zoom = nextZoom;
+    this.camera.x = screenPoint.x - this.width / 2 - worldX * nextZoom;
+    this.camera.y = screenPoint.y - this.height / 2 - worldY * nextZoom;
+    this.clampCamera();
   }
 
   render(simulation, input, time) {
@@ -557,7 +568,7 @@ export class CrownforgeRenderer {
     ctx.save();
     for (const unit of simulation.units) {
       if (!unit.selected || unit.dead || !unit.path.length) continue;
-      const start = this.worldToScreen(unit);
+      const start = this.unitScreenPoint(unit);
       ctx.beginPath();
       ctx.moveTo(start.x, start.y);
       for (const point of unit.path) {
@@ -629,10 +640,12 @@ export class CrownforgeRenderer {
       const point = this.unitScreenPoint(unit);
       const style = UNIT_TYPES[unit.type];
       const unitSize = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
-      // A tall resource can legitimately win the depth sort, but an active
-      // enemy must remain readable. Repaint only the silhouette here;
-      // selection, health, and attack feedback stay in this final overlay.
-      if (hiddenByResource && (unit.faction === 'enemy' || unit.selected)) {
+      // A tall resource or landmark can legitimately win the depth sort, but
+      // a selected, active, damaged, or hostile unit must remain readable.
+      // Repaint the body only for those readable states; idle friendly units
+      // retain the natural depth order and do not pop through architecture.
+      const readableState = unit.selected || unit.command !== 'idle' || unit.faction === 'enemy' || unit.hp < unit.maxHp;
+      if (readableState) {
         if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
         else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
       }
@@ -824,6 +837,12 @@ export class CrownforgeRenderer {
     return BUILDING_TYPES[type]?.renderSize ?? (type === 'ashenCamp' ? 272 : 194);
   }
 
+  buildingVisualHeight(buildingOrType, width) {
+    const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType.type;
+    const definition = FIRST_AGE_ASSETS[type] ?? (type === 'ashenCamp' ? ENEMY_CAMP_ASSET : null);
+    return definition ? width * (definition.height / definition.width) : width;
+  }
+
   buildingFootprint(buildingOrType) {
     const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType.type;
     const blueprint = BUILDING_TYPES[type];
@@ -919,9 +938,7 @@ export class CrownforgeRenderer {
   drawBuilding(ctx, building, time) {
     const point = this.worldToScreen(building);
     const size = this.buildingRenderSize(building);
-    const visualHeight = building.type === 'ashenCamp'
-      ? size * (ENEMY_CAMP_ASSET.height / ENEMY_CAMP_ASSET.width)
-      : size;
+    const visualHeight = this.buildingVisualHeight(building, size);
     const alpha = building.destroyed ? Math.max(0, 0.7 - building.destroyAge * 0.26) : 1;
     if (!building.destroyed) this.drawBuildingFootprint(ctx, building, building.selected, building.faction === 'enemy' ? '#d86b55' : FACTION.color);
     this.drawBuildingStage(ctx, building, point, size * this.camera.zoom, alpha);
@@ -1440,8 +1457,7 @@ export class CrownforgeRenderer {
     if (!hall) return;
     const point = this.worldToScreen(hall);
     const size = this.buildingRenderSize(hall) * this.camera.zoom;
-    const definition = FIRST_AGE_ASSETS.townCenter;
-    const height = definition ? size / (definition.width / definition.height) : size;
+    const height = this.buildingVisualHeight(hall, size);
     ctx.save();
     ctx.globalAlpha = 0.16;
     if (!this.drawFirstAgeAsset(ctx, 'townCenter', point, size, 0.16)) {

@@ -266,3 +266,25 @@ The generated family was inspected in the developer viewer for all 16 state/dire
 - `tools/visual-integrity-audit.mjs` reports no active missing files, no placeholder references, no dimension mismatches, and no unsafe top/left/right cells for the active v3 attack family.
 - The environment atlas has intentional raw edge contact, so the renderer’s one-pixel inset and live visual review remain part of acceptance; it is not globally shrunk as a blind repair.
 - The runtime marker is `20260816-integrity1`; `games/crownforge` and `public/crownforge` must carry the same active asset and marker.
+
+## MILITARY RESPONSE ASSETS — 2026-08-20 (CURRENT ADDITION)
+
+The active Crown Guard and Ashen Raider response family now includes four original transparent RGBA atlases. These are the only runtime outputs from the 2026-08-20 response generation pass:
+
+- `assets/crownforge-soldier-hit-loop-v1.png` — 1254 × 1254, 4 columns × 4 directional rows; stagger/recoil sequence.
+- `assets/crownforge-soldier-death-loop-v1.png` — 1254 × 1254, 4 columns × 4 directional rows; stagger, kneel, fall, grounded defeat sequence.
+- `assets/crownforge-raider-hit-loop-v1.png` — 1254 × 1254, 4 columns × 4 directional rows; readable impact recoil with axe retained in silhouette.
+- `assets/crownforge-raider-death-loop-v1.png` — 1254 × 1254, 4 columns × 4 directional rows; directional defeat sequence with grounded final pose.
+
+They are registered in `src/config.js` as `soldierHit`, `soldierDeath`, `raiderHit`, and `raiderDeath`, and resolved by `src/animation.js` through the existing action-phase contract. The generated checkerboard/matte source is not shipped; `tools/prepare-hit-atlases.mjs` converts the accepted source into clean RGBA output and verifies zero opaque edge pixels before runtime use.
+
+The existing `20260820-hitpass1` module marker identifies this response family. Source and public routes must remain mirrored after any further edit.
+
+## VILLAGER RESPONSE ASSETS — 2026-08-20 (CURRENT ADDITION)
+
+The optional worker-combat response now uses two original transparent RGBA atlases:
+
+- `assets/villager-hit-loop-v1.png` — 1254 × 1254, 4 columns × 4 directional rows; restrained shoulder/weight recoil and recovery.
+- `assets/villager-death-loop-v1.png` — 1254 × 1254, 4 columns × 4 directional rows; standing stagger, kneel, fall, and grounded final pose.
+
+They are registered in `src/config.js` as `VILLAGER_ATLASES.hitLoop` and `VILLAGER_ATLASES.deathLoop`, then consumed by `src/animation.js` as non-looping action phases. Both were prepared from generated studio-matte sheets through `tools/prepare-hit-atlases.mjs`; the raw matte source is not referenced by the runtime. The final files pass RGBA metadata and zero-opaque-edge checks.

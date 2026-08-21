@@ -1941,3 +1941,452 @@ The existing true-alpha `assets/villager-carry-food-loop-v1.png` remains registe
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add more landmark classes, building tiers, civilizations, ages, technologies, or new military units until these proportions and the four-sided buildable Hall ring remain stable in the playable slice.
+
+## CURSOR ZOOM / EXPANDED WORLD / STARTER CROWN HALL PASS — 2026-08-20
+
+### WHAT WAS COMPLETED
+
+- Reworked zoom to solve the camera offset directly from the world point under the cursor. Zoom-in and zoom-out now preserve that point instead of applying a second correction that could drift toward the lower-right on a large board. Wheel input is also delta-aware so a trackpad or mouse wheel feels consistent without adding a second camera path.
+- Expanded the playable meadow from `180x146` to `560x460`, which is approximately ten times the previous map area. The new board is deliberately open rather than densely stamped.
+- Lowered the minimum zoom to `0.035` so the complete expanded diamond can be framed when desired, while keeping the normal opening camera focused on the Crown Hall and starting settlement.
+- Added sparse regional resource clearings across the expanded board: larger tree and grove groups, small/medium/large stone deposits, berry bushes, and grain plots. The original starting cluster remains readable and the new regions provide destinations after panning.
+- Relocated the Ashen Camp and its opening Raider to the far opposite side of the expanded map. The easy AI profile is unchanged; the player now has meaningful time to gather and build before the enemy becomes relevant.
+- Recalibrated the Crown Hall visual width to exactly four times the unchanged Crown Barracks reference (`4000` vs `1000`) without changing villager, Crown Guard, or Barracks scale.
+- Generated and registered `assets/crownforge-crown-hall-starter-v1.png`: an original transparent timber-and-plaster first-age hall with blue-and-gold Crownwarden details, a modest stone foundation, broad porch, and readable stairs. It replaces the previous stone palace silhouette while preserving the existing Hall identity, footprint, storage, production, placement, and stair systems.
+- Bumped the Crownforge cache identity to `20260820-worldpass1` and synchronized the source route with `public/crownforge`.
+
+### ASSETS CREATED
+
+- `assets/crownforge-crown-hall-starter-v1.png` — 1536x1024 RGBA starter Crown Hall cutout with no opaque edge pixels.
+
+### SYSTEMS UPDATED
+
+- `src/config.js` — expanded map dimensions, minimum zoom, four-to-one Hall/Barracks visual relationship, starter Hall asset registration.
+- `src/renderer.js` — direct cursor-anchor zoom solver and shared camera clamp helper.
+- `src/input.js` — delta-aware wheel zoom factors using the active cursor point.
+- `src/simulation.js` — sparse expanded-map resource regions and opposite-side enemy placement.
+- `tools/remediation-regression.mjs` — expanded-world counts, opposite-side distance, minimum-zoom, and cursor-anchor zoom assertions.
+- `CROWNFORGE_ART_PRODUCTION_PLAYBOOK.md` remains the asset contract for the generated Hall cutout and its transparent-background QA.
+
+### VERIFIED
+
+- `node --check` passed for all Crownforge source and tool modules.
+- Source and public deterministic Crownforge regressions passed gathering, construction, stairs, combat, victory/defeat, expanded-world resources, opposite-side enemy placement, and cursor-centered zoom in both directions.
+- Source/public visual-integrity audits passed with no missing files or placeholder references. Existing conservative atlas boundary reports remain informational and predate this pass.
+- The new Hall asset was inspected as RGBA, has a transparent background, and has zero opaque pixels touching the image edge.
+- `git diff --check -- games/crownforge public/crownforge` passed.
+
+### KNOWN ISSUES / STILL NEEDS WORK
+
+- The in-app browser rejected the isolated local preview URL under its URL security policy, so a live screenshot pass of the new Hall, expanded diamond, and wheel behavior remains outstanding until an allowed preview or deployed surface is available.
+- The expanded board intentionally contains broad quiet meadow between resource clearings; it is a larger strategic canvas, not a filled forest.
+- The starter Hall uses one approved completed cutout with the existing construction treatment. Bespoke wooden construction-stage artwork can wait for a focused building-art pass.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Inspect the new wood Hall at normal zoom, close zoom, and after panning to the far camp once the page is available through an allowed browser URL.
+2. Tune the sparse regional resource clearings only if a real pan-and-gather playtest shows a region is too empty or visually repetitive.
+3. Compare the Hall's porch, stair landing, selection silhouette, and buildable ring against the unchanged Barracks in a live match.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add more ages, civilizations, technologies, campaigns, advanced AI, or additional landmark classes during this pass. Keep the larger first-age board and the new starter Hall visually stable before expanding the catalog.
+
+## AUTONOMOUS QUALITY AUDIT / RENDERER READABILITY PASS — 2026-08-20
+
+### CURRENT GAME STATE
+
+- Crownforge remains a browser-first Canvas RTS vertical slice with deterministic simulation, grid pathfinding, original first-age raster assets, and a mirrored source/public route.
+- The playable slice currently includes the Crown Hall, Barracks, Hearth House, storage and resource systems, Villagers, Crown Guards, Marauders, construction, combat, AI camp, expanded meadow, Crown Hall stair access, cursor-centered zoom, building placement, and the existing minimal command UI.
+- This pass intentionally stayed inside the existing content boundary. No civilizations, ages, technology tree, campaigns, advanced AI, new unit roster, or new asset family was added.
+
+### WHAT WAS COMPLETED
+
+- Replaced the renderer's width-as-height landmark feedback assumption with one aspect-aware `buildingVisualHeight()` contract. Crown Hall, Barracks, Ashen Camp, and all registered first-age building assets now place health bars, selection feedback, and placement vision relative to their actual transparent raster proportions.
+- Repaired active-unit readability under occlusion. Selected, moving, gathering, constructing, hostile, and damaged units now receive a controlled readability redraw when a building or resource would otherwise hide their body, while idle friendly units retain natural depth ordering.
+- Aligned path overlays to the raised unit screen anchor so a unit standing on the Crown Hall stair landing does not show its command line starting below its feet.
+- Bumped the Crownforge module cache identity from `20260820-worldpass1` to `20260820-auditpass1` so the renderer, simulation, animation, input, and HTML entry point resolve as one audited build.
+- Added deterministic regression coverage for aspect-correct Crown Hall and Barracks feedback geometry and removed one redundant zoom assertion.
+
+### ASSETS CREATED / INSPECTED
+
+- No new artwork was required for this cycle. The existing Crown Hall starter, Barracks, tree/grove depletion, villager field-work, resource, unit, and UI asset families were inspected at the bitmap level and remain the approved visual source for this slice.
+- The Crown Hall starter and Barracks are transparent RGBA cutouts; the raw asset previews showed no opaque square background. The grove depletion and field-work sheets retain coherent silhouettes and transparent edges.
+
+### VALIDATION COMPLETED
+
+- Source `node --check` passed for every Crownforge source and tool module.
+- Source `tools/remediation-regression.mjs` passed all deterministic checks, including gathering at different frame rates, cargo-preserving retask, construction, Crown Hall stair routing and collision, Barracks scale and clearance, four-sided Hall placement, expanded-world resources, opposite-side camp, cursor-centered zoom, aspect-correct landmark feedback, combat, victory, and defeat.
+- Existing source/public visual-integrity audits passed with `missingFiles: []` and `placeholderReferences: []`. Conservative atlas-edge reports remain informational and are not missing-asset failures.
+- `git diff --check` passed for Crownforge changes.
+- The source/public mirror was synchronized after this pass; the public route receives the same audited source, tools, log, and assets.
+
+### KNOWN ISSUES / RISK-RANKED FOLLOW-UP
+
+1. A player-visible live browser pass is still required for final confirmation of Hall/Barracks health-bar placement, backside placement vision, occluded active units, and stair path overlays. The in-app Browser rejected the isolated local URL under its security policy, so no live screenshot or console claim is made for this cycle.
+2. The visual-integrity audit still reports conservative atlas boundary and bottom-contact warnings for some generated sheets. These are pre-existing informational reports; no missing or placeholder references were found. They should be reviewed during the next allowed live visual pass before changing approved art.
+3. Barracks construction still uses the shared first-age construction family. Bespoke military landmark construction stages remain a polish task, not a blocker for the current slice.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Open an allowed preview or deployed route and inspect the corrected landmark feedback at normal zoom, close zoom, and after panning across the expanded map.
+- Repeat a short player match: select a moving villager behind a building, select a damaged Marauder behind a resource, place a Hall-side building, and route a Crown Guard onto and away from the stair landing.
+- If live inspection confirms a remaining issue, make a target-specific asset or renderer correction and add the corresponding deterministic check before changing unrelated systems.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not expand the first-age content catalog, add additional civilizations, ages, technology trees, campaigns, advanced AI, naval systems, formations, or new combat classes until live visual QA confirms the current landmarks, units, occlusion, and camera behavior are consistently strong.
+
+## MILITARY RESPONSE ANIMATION PASS — 2026-08-20
+
+### CURRENT GAME STATE
+
+Crownforge remains the same small first-age browser RTS slice. This pass stayed inside the existing Crown Guard / Ashen Raider combat family. No new unit, faction, building, resource, AI strategy, or gameplay system was added.
+
+### CHANGES COMPLETED
+
+- Added directional four-frame Crown Guard hit/recoil artwork and connected it to the existing `hit` action state.
+- Added directional four-frame Ashen Raider hit/recoil artwork and connected it to the existing `hit` action state.
+- Added directional four-frame Crown Guard death artwork: stagger, kneel, fall, and grounded final pose.
+- Added directional four-frame Ashen Raider death artwork with the same readable defeat progression.
+- Preserved the existing attack timing, damage rules, death cleanup window, target acquisition, and victory/defeat behavior.
+- Kept the existing directional walk loops and attack anticipation/contact/recovery loops; this was a response-depth pass, not a combat redesign.
+- Added `tools/prepare-hit-atlases.mjs` so generated checkerboard/matte source art is cleaned into transparent RGBA before it can enter runtime.
+- Fixed the cleanup tool’s partial-cell boundary math for 1254-pixel sheets. The accepted outputs now report zero opaque edge pixels.
+- Updated the animation contract, deterministic regression, asset manifest, animation coverage, and remediation backlog.
+
+### ASSETS CREATED / INSPECTED
+
+- `assets/crownforge-soldier-hit-loop-v1.png`
+- `assets/crownforge-soldier-death-loop-v1.png`
+- `assets/crownforge-raider-hit-loop-v1.png`
+- `assets/crownforge-raider-death-loop-v1.png`
+
+The first Guard hit generation was rejected because it repeated a walk-like pose and retained a checkerboard matte. The final four sheets were regenerated or selected for clearer pose separation, prepared through the cleanup script, composited on a meadow-colored QA matte, and visually inspected for transparency, feet contact, directional readability, and weapon continuity. The raw generated matte is not referenced by the game.
+
+### SYSTEMS CREATED / UPDATED
+
+- `src/config.js` — registered `soldierHit`, `soldierDeath`, `raiderHit`, and `raiderDeath` atlases.
+- `src/animation.js` — military hit/death states now use directional non-looping action phases without idle fallback.
+- `tools/remediation-regression.mjs` — asserts four-frame, no-fallback hit/death resolution across all directions for both units.
+- `tools/prepare-hit-atlases.mjs` — per-cell matte cleanup and RGBA edge QA for generated response atlases.
+- `CROWNFORGE_ANIMATION_COVERAGE.md`, `CROWNFORGE_ASSET_MANIFEST.md`, and `CROWNFORGE_REMEDIATION_BACKLOG.md` — current response-family contract and remaining boundary.
+
+### TESTS PERFORMED
+
+- Source syntax checks passed for all changed source and tool modules.
+- Direct animation response probe passed for Soldier/Raider hit and death states in all four directions.
+- Source visual-integrity audit passed with `missingFiles: []` and `placeholderReferences: []`.
+- Source deterministic regression passed gathering convergence, cargo-preserving retask, construction, stair routing/collision, placement, expanded map, cursor-centered zoom, aspect-correct feedback, combat, death timing, victory, and defeat.
+- The source/public mirror was synchronized after this log and documentation update. The public route then passed the same syntax, regression, integrity, parity, and diff checks.
+
+### KNOWN ISSUES / REMAINING WORK
+
+1. The in-app Browser still blocks the isolated `/private/tmp/crownforge-audit` local URL under its security policy. Therefore this pass has no new live screenshot or browser-console claim; the next allowed preview/deployed route must confirm hit/death playback at normal and close zoom.
+2. Conservative atlas-edge reports remain informational for older approved sheets. No missing or placeholder runtime references were found.
+3. Optional Villager hit/death depth remains intentionally single-pose because worker combat is not a central command in this slice.
+4. Rare tall-object occlusion tuning and direct heap/GPU telemetry remain documented backlog items.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+Use an allowed browser preview to inspect a short 1v1 and multi-unit battle at normal and close zoom. Verify hit recoil preserves direction, death holds the grounded final pose before cleanup, and no weapon or shadow fragment clips outside its cell. Only make a target-specific follow-up if that live check finds a real defect.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+Do not add more civilizations, ages, technologies, campaigns, naval systems, formations, new combat categories, or a larger asset catalog. Keep the current two-unit combat family and first-age slice stable until the remaining live visual confirmation is complete.
+
+### FILES CHANGED IN THIS PASS
+
+- `src/config.js`
+- `src/animation.js`
+- `tools/remediation-regression.mjs`
+- `tools/prepare-hit-atlases.mjs`
+- `assets/crownforge-soldier-hit-loop-v1.png`
+- `assets/crownforge-soldier-death-loop-v1.png`
+- `assets/crownforge-raider-hit-loop-v1.png`
+- `assets/crownforge-raider-death-loop-v1.png`
+- this development log and the three supporting audit/manifests above
+- the mirrored copies under `public/crownforge/`
+
+## VILLAGER RESPONSE ANIMATION PASS — 2026-08-20
+
+### CURRENT GAME STATE
+
+Crownforge remains the existing first-age browser RTS slice. This cycle continued the focused animation-quality work and did not add a unit, building, resource, faction, AI strategy, or gameplay system.
+
+### CHANGES COMPLETED
+
+- Added a four-direction, four-frame Villager hit/recoil atlas and connected it to the existing optional worker-combat `hit` state.
+- Added a four-direction, four-frame Villager death atlas with a restrained stagger → kneel → fall → grounded sequence and connected it to the existing `death` state.
+- Preserved the current worker combat damage, target, range, timing, death cleanup, and outcome logic.
+- Added cache identity `20260820-workerpass1` to the active module imports and worker response asset URLs.
+- Extended deterministic animation checks to assert Villager hit/death atlas resolution and no fallback in every authored direction.
+
+### ASSETS CREATED / INSPECTED
+
+- `assets/villager-hit-loop-v1.png`
+- `assets/villager-death-loop-v1.png`
+
+Both generated sheets were visually inspected at atlas scale and composited over a meadow-colored QA matte. The source checkerboard/studio matte was removed with `tools/prepare-hit-atlases.mjs`; final files are clean 1254 × 1254 RGBA outputs with zero opaque edge pixels. The response preserves the existing Crownforge villager identity, tool, clothing colors, feet baseline, shadow treatment, and four-direction order.
+
+### TESTS PERFORMED
+
+- Source syntax checks passed for all changed modules.
+- Direct Villager response probe passed all 4 directions for both hit and death.
+- Source visual-integrity audit passed with `missingFiles: []` and `placeholderReferences: []`.
+- Full source deterministic regression passed gathering convergence, retask/deposit, construction, pathing, stairs, placement, expanded-world setup, camera zoom, combat timing, death cleanup, victory, and defeat.
+- The public mirror was synchronized after this documentation update and passed the same syntax, integrity, parity, diff, and deterministic regression checks.
+
+### PROBLEMS REMAINING
+
+1. The in-app Browser blocks the isolated local URL, so live visual and browser-console confirmation of Villager hit/death playback remains unavailable. No live QA claim is made for this cycle.
+2. Rare tall-object occlusion cases and direct heap/GPU telemetry remain in the existing backlog.
+3. Older audit prose still describes the pre-response single-pose state; the current appended coverage/manifest/backlog sections supersede those notes without rewriting history.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+Use an allowed browser preview to trigger a Villager-versus-Raider encounter at normal and close zoom. Check that recoil preserves direction, the axe remains inside its frame, the death body remains grounded until cleanup, and selection/health feedback stay aligned. Then revisit only any confirmed occlusion or asset-framing defect.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+Do not add new unit classes, factions, ages, technology, campaigns, advanced AI, ranged combat, or large asset families. Keep the current Villager, Crown Guard, and Ashen Raider animation standard stable before expansion.
+
+### FILES CHANGED IN THIS CYCLE
+
+- `src/config.js` — registered Villager hit/death atlases.
+- `src/animation.js` — resolved Villager hit/death through four-frame action phases.
+- `src/main.js`, `src/renderer.js`, `src/simulation.js`, `index.html` — bumped the cycle cache identity.
+- `tools/remediation-regression.mjs` — added Villager response assertions.
+- `assets/villager-hit-loop-v1.png`, `assets/villager-death-loop-v1.png` — new cleaned original response artwork.
+- this log plus the animation coverage, asset manifest, and remediation backlog amendments.
+
+## INTERACTION READABILITY FOLLOW-UP — 2026-08-20
+
+### SCOPE
+
+This audit cycle stayed within the existing first-age slice. No new content, assets, unit classes, buildings, resources, factions, AI behavior, or gameplay systems were added.
+
+### CHANGE COMPLETED
+
+- Tightened resource interaction routing in `src/simulation.js`. When a free approach exists on the screen-front half of a resource ring, that approach now wins before path length is compared. A shorter rear approach is used only when the readable half is unreachable or unavailable.
+- The rule applies to existing tree, grove, berry, grain, and stone interaction slots without changing resource footprints, gathering rates, capacities, collision, or pathfinding boundaries.
+- Added deterministic coverage for representative medium/large tree, grove, and stone approaches so future interaction-slot changes cannot quietly reintroduce tall-canopy occlusion.
+- Bumped the runtime marker to `20260820-occlusionpass1` so the changed simulation and mirrored entry modules are loaded as one audited build.
+
+### ASSETS CREATED
+
+- None. Existing original artwork remains the canonical Crownforge asset family. The correction is a shared interaction-selection rule, not an excuse to add another resource variant.
+
+### VALIDATION
+
+- Source syntax checks passed for `src/simulation.js` and `tools/remediation-regression.mjs`.
+- Full deterministic source regression passed, including the new representative tall-resource readability check, gathering convergence, retask/deposit, placement, construction, stair routing, collision, expanded-map setup, camera zoom, aspect-aware landmark feedback, combat, victory, and defeat.
+- The in-app Browser rejected the isolated `127.0.0.1:4178` preview under its security policy. No live screenshot, frame-by-frame visual claim, or browser-console claim is made for this cycle.
+
+### KNOWN ISSUES
+
+1. A live allowed preview is still required to confirm the new resource-slot preference at normal and close zoom across the expanded map.
+2. Conservative atlas boundary reports for older approved sheets remain informational; the integrity audit still reports no missing files, placeholder references, or dimension mismatches.
+3. Direct heap/GPU telemetry remains unavailable in the current browser test surface.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Re-run the existing wood, grove, food, and stone interaction scenarios in an allowed preview, checking feet contact, tool visibility, selection markers, and building/resource occlusion.
+- Only change the resource clearances or approved artwork if that live pass reproduces a specific visual defect.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add more resource families, civilizations, ages, technology, campaigns, advanced AI, combat classes, or decorative catalogs. Keep the interaction ring and existing first-age asset family stable until live confirmation is available.
+
+## PROGRESS-NOTE RECONCILIATION — 2026-08-20
+
+### SCOPE
+
+The newly supplied continuing-audit brief is byte-for-byte identical to the previous cycle brief. No new gameplay or art scope was authorized. This cycle corrected stale current-status notes so future development passes do not repeat already completed animation work.
+
+### DOCUMENTATION CORRECTIONS
+
+- Updated `CROWNFORGE_REMEDIATION_BACKLOG.md` so Crown Guard and Ashen Raider attack, hit, and death depth are recorded as locally fixed; only military walk depth remains in that animation queue.
+- Updated the backlog’s current work queue and visual-integrity row to remove the obsolete “hit falls back to idle” status.
+- Updated `CROWNFORGE_ANIMATION_COVERAGE.md` so its current coverage tables report the integrated four-frame Villager response and military hit/death clips accurately. Historical audit sections remain preserved as history.
+- Kept the remaining live-preview limitation explicit: the isolated local browser URL is still blocked, so no unsupported player-visible claim was added.
+
+### VALIDATION
+
+- No source behavior changed in this documentation-only cycle.
+- The prior source/public deterministic regression, asset-integrity, syntax, parity, and Crownforge-scoped whitespace checks remain the validation baseline for the current code state.
+
+### WHAT REMAINS
+
+1. Obtain an allowed preview/deployed route for live visual confirmation of the current response clips, resource interaction positions, landmark occlusion, and close-zoom framing.
+2. If live review finds a concrete movement defect, generate only the next matched Crown Guard/Raider walk family and add its regression coverage.
+3. Do not add new civilizations, ages, technologies, campaigns, combat classes, or broad asset catalogs before the current first-age slice receives that live confirmation.
+
+## MILITARY WALK COVERAGE LOCK — 2026-08-20
+
+### SCOPE
+
+This focused pass stayed inside the existing Crown Guard and Ashen Raider animation family. No new units, buildings, resources, factions, AI behavior, or gameplay systems were added.
+
+### WHAT CHANGED
+
+- Confirmed the active runtime uses the original four-direction `crownforge-soldier-walk-loop-v3.png` and `crownforge-raider-walk-loop-v2.png` atlases, each with four authored frames per direction.
+- Added deterministic regression coverage for both military walk states across all four authored directions. The check asserts the correct walk atlas, four-frame count, valid frame columns, and no fallback to idle.
+- Updated the current animation coverage and remediation backlog so the technical walk coverage is not incorrectly reported as single-pose. Historical audit prose remains preserved as history.
+- Kept the existing raster assets unchanged. No new artwork was generated because the active walk sheets already satisfy the current technical directional/frame contract and a speculative replacement would risk breaking the established Crownforge family.
+
+### VALIDATION
+
+- The focused animation contract now covers Villager carry/response, Crown Guard/Raider walk, attack, hit, and death atlas resolution.
+- Source and public syntax checks passed for all source, developer, and tool modules.
+- Source and public `tools/visual-integrity-audit.mjs` passed with `missingFiles: []` and `placeholderReferences: []`; existing conservative atlas boundary reports remain informational.
+- Source and public `tools/remediation-regression.mjs` passed the new military-walk assertions plus gathering, retask/deposit, construction, stairs, collision, expanded-world setup, camera zoom, combat, victory, and defeat checks.
+- Source/public parity and the Crownforge-scoped `git diff --check` passed after the update.
+- The in-app Browser still blocks the isolated local preview under its security policy, so player-visible feet contact, leg motion, scale, and console behavior remain unclaimed until an allowed preview is available.
+
+### KNOWN ISSUES
+
+1. Military walk animation is technically four-frame and directional, but its final visual quality score remains below 8/10 until it is observed in an allowed player-visible preview at normal and close zoom.
+2. Rare tall-object occlusion cases and direct heap/GPU telemetry remain in the existing backlog.
+3. No new asset should be generated unless the allowed preview identifies a specific feet, leg-motion, frame-boundary, or scale defect.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- In an allowed preview, move both military units north, south, east, and west at normal and close zoom. Check that all four walk frames contribute readable leg motion, feet stay grounded, facing follows movement, and the unit scale remains stable during transitions into attack, hit, and death.
+- Only after that observation, adjust timing or generate a matched walk revision if a concrete defect is reproduced.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add more military classes, civilizations, ages, technologies, campaigns, advanced AI, ranged combat, or large asset families. Keep the current first-age unit standard stable until the existing walk and occlusion evidence is complete.
+
+### FILES CHANGED IN THIS CYCLE
+
+- `tools/remediation-regression.mjs` — added four-direction, four-frame, no-fallback walk assertions for Crown Guard and Ashen Raider.
+- `CROWNFORGE_REMEDIATION_BACKLOG.md` — reconciled current walk status and queue language.
+- `CROWNFORGE_ANIMATION_COVERAGE.md` — reconciled current military walk frame counts, scores, and next action.
+- this log — recorded the walk coverage lock and remaining live-preview boundary.
+
+## COMPREHENSIVE AUDIT BASELINE — 2026-08-20
+
+### SCOPE
+
+The supplied continuing-audit brief was applied to the existing Crownforge first-age browser slice. Repository inventory, architecture, current notes, active assets, source/public parity, deterministic gameplay, and the local static route were reviewed. No new content category was added.
+
+### CURRENT INVENTORY
+
+- Engine/rendering: browser-first HTML/CSS with a 2D Canvas renderer and a data-driven JavaScript simulation.
+- Core modules: `src/simulation.js`, `src/pathfinding.js`, `src/animation.js`, `src/renderer.js`, `src/input.js`, `src/main.js`, and `src/audio.js`.
+- Existing gameplay: Crown Hall, Barracks, Hearth House, Waystore, Palisades, fields, Villagers, Crown Guard, Ashen Raider, Ashen Camp, resource gathering, construction, combat, capped enemy behavior, victory/defeat, and reset.
+- Existing QA tools: deterministic simulation regression, visual-integrity audit, movement stress page, animation inspection page, asset preparation scripts, and the source/public mirror.
+- Active visual families inspected: military walk atlases, environment atlas, Crown Hall, Barracks, and the existing original asset registry.
+
+### CHANGES COMPLETED
+
+- Added deterministic coverage for a previously unasserted requirement: a right-click destination inside a solid building must resolve to a nearby reachable endpoint rather than preserve the blocked building center.
+- The new check verifies that the fallback path exists, ends outside unit/building clearance, and is meaningfully displaced from the blocked destination.
+- Corrected the backlog’s current-next-action wording so future cycles do not repeat the already integrated military walk coverage.
+- No runtime behavior or raster art was changed because the baseline did not reproduce a new movement, collision, animation, asset, or gameplay defect.
+
+### TESTS PERFORMED
+
+- Source and public syntax checks passed for all source, developer, and tool modules.
+- Source and public deterministic regressions passed, including the new blocked-destination fallback check, military walk/attack/hit/death atlas resolution, resource cadence, cargo retask, construction, Crown Hall stairs, collision, expanded map setup, cursor-centered zoom, combat, victory, and defeat.
+- Source and public visual-integrity audits passed with `missingFiles: []`, `placeholderReferences: []`, and no animation fallbacks.
+- Source/public parity passed; Crownforge-scoped `git diff --check` passed.
+- Local static route responded `200 OK` for the entry HTML, military walk atlas, and looped MP3 asset.
+- Static asset inspection found no new crop, detached weapon, stacked environment, or inconsistent active-family defect in the reviewed assets.
+
+### PROBLEMS REMAINING
+
+1. The in-app Browser rejects the isolated local preview under its security policy, so player-visible frame-by-frame motion, camera/terrain behavior, and browser-console confirmation remain unclaimed.
+2. Rare tall-object occlusion tuning, direct heap/GPU telemetry, and allowed live visual confirmation remain in the backlog.
+3. Conservative atlas boundary reports remain informational; integrity has no missing files or placeholder references.
+
+### ASSETS REMAINING
+
+- No gameplay-critical asset is currently missing from the active first-age slice. Do not replace the inspected walk, environment, Crown Hall, or Barracks assets without a concrete player-visible defect.
+
+### RECOMMENDED NEXT ACTION
+
+Use an allowed browser or deployed preview to perform the required four-direction movement, camera/terrain, occlusion, and console review. If that review reproduces a specific defect, make one target-specific correction. If it does not, move the first-age slice toward release evidence rather than adding new systems.
+
+### FILES CHANGED IN THIS CYCLE
+
+- `tools/remediation-regression.mjs` — added blocked-destination fallback coverage.
+- `CROWNFORGE_REMEDIATION_BACKLOG.md` — corrected the current queue wording.
+- this log — recorded the comprehensive audit baseline and blockers.
+
+## DYNAMIC OBSTACLE RECOVERY FOLLOW-UP — 2026-08-20
+
+### SCOPE
+
+This supplied audit brief is byte-for-byte identical to the preceding comprehensive brief. The pass stayed inside the existing first-age movement/pathfinding boundary and added no units, buildings, resources, factions, AI strategy, or new artwork.
+
+### CHANGE COMPLETED
+
+- Added deterministic coverage for a building placed after a unit already has a movement route. The test inserts a completed Hearth House across the issued route, triggers the existing replan path, and verifies that the unit keeps a route, ends outside static collision, and is not left flagged as blocked.
+- Kept the existing runtime recovery implementation unchanged because the focused scenario already behaves correctly. This locks the behavior against future pathfinding or placement regressions without adding another movement system.
+- Updated the backlog so the blocked-destination and dynamic-blocker safeguards are recorded as covered rather than repeatedly rediscovered.
+
+### TESTS PERFORMED
+
+- Source deterministic regression passed blocked-destination fallback, dynamic building-blocker recovery, military animation coverage, gathering, construction, stairs, collision, camera zoom, combat, victory, and defeat.
+- The public mirror was synchronized and passed the same deterministic regression, syntax, integrity, parity, and scoped whitespace checks.
+- The player-visible Browser limitation remains unchanged: the isolated local route is rejected by the available in-app Browser, so no unsupported live screenshot or console claim is made.
+
+### PROBLEMS REMAINING
+
+1. Live confirmation of four-direction movement, camera/terrain alignment, resource occlusion, combat response, and browser-console cleanliness still requires an allowed browser or deployed preview.
+2. Rare tall-object occlusion tuning and direct heap/GPU telemetry remain bounded backlog items.
+3. No new raster asset is justified without a concrete visual defect from that allowed preview.
+
+### RECOMMENDED NEXT ACTION
+
+Obtain an allowed player-visible preview and run the existing map-wide movement, interaction, combat, zoom, and restart review. If it reproduces a specific defect, fix only that defect; otherwise preserve the small complete first-age slice for release evidence.
+
+### FILES CHANGED IN THIS CYCLE
+
+- `tools/remediation-regression.mjs` — added dynamic building-blocker recovery coverage.
+- `CROWNFORGE_REMEDIATION_BACKLOG.md` — marked both route safeguards as covered.
+- this log — recorded the follow-up cycle and remaining live-preview blocker.
+
+## IDENTICAL-BRIEF REVALIDATION — 2026-08-20
+
+### SCOPE
+
+The newly supplied audit brief matches the preceding brief byte-for-byte (`SHA-256 1b9e50c80464934a6649395d2817e5d0a3c0c6cd840a169002ab57b485abcc7b`). No new requirement or concrete visual defect was introduced.
+
+### RESULT
+
+- No runtime, gameplay, or raster changes were justified. Existing route-recovery, animation, economy, construction, combat, camera, and UI work remains the current first-age boundary.
+- Source and public visual-integrity audits passed with `missingFiles: []`, `placeholderReferences: []`, and no animation fallbacks.
+- Source/public parity and Crownforge-scoped `git diff --check` passed.
+- The isolated local Browser limitation remains unchanged, so player-visible preview and browser-console claims remain open rather than inferred from static checks.
+
+### NEXT ACTION
+
+Use an allowed player-visible preview for the remaining four-direction military walk, tall-object occlusion, camera, restart, and console review. Do not add new content or generate replacement artwork until that review identifies a specific defect.
+
+## LIVE ROUTE RECONNECTION — 2026-08-21
+
+### WHAT WAS FOUND
+
+- The public custom route `https://justaskjohnny.com/crownforge/` was serving the older `20260818-roadsfree1` build.
+- The newer audited Crownforge source and synchronized public mirror were present in the audit worktree with runtime marker `20260820-occlusionpass1`.
+- The local `wrangler.toml` project name `johnny-chat` is not the project that owns the custom domain. Cloudflare project `johnny-chat-5` owns `justaskjohnny.com`.
+
+### WHAT WAS COMPLETED
+
+- Revalidated the newer source and public mirror before promotion: deterministic regression, syntax, visual-integrity audit, parity, and scoped whitespace checks passed.
+- Deployed the verified `public/` build to Cloudflare Pages project `johnny-chat-5`.
+- Reloaded the custom domain and confirmed it now serves `src/main.js?v=20260820-occlusionpass1` and the matching updated stylesheet.
+
+### LIVE VERIFICATION
+
+- Live title is `Crownforge: Dawn of Kingdoms`.
+- The updated world art, large-map composition, Crown Hall, settlement buildings, resources, units, Field Manual, Unit Pace panel, music control, and command deck are visible after asset load.
+- Browser console verification reported no error, warning, or warn entries.
+
+### SOURCE / DEPLOYMENT RULE
+
+For future Crownforge deployments, deploy the synchronized `public/crownforge` route to Cloudflare project `johnny-chat-5`, which owns the custom domain. Do not infer the owning project from the local `wrangler.toml` name alone.
