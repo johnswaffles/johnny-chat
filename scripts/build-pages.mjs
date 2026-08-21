@@ -8,7 +8,10 @@ const publicDir = path.join(root, "public");
 const isPagesBuild = process.env.CF_PAGES === "1" || process.env.CF_PAGES === "true";
 const cozyExportSourceDir = path.resolve(root, "..", "public", "godot-playtest");
 const gladeExportSourceDir = path.resolve(root, "..", "public", "glade-playtest");
-const firstEmberExportSourceDir = path.resolve(root, "..", "first-ember-godot", "build", "web");
+// First Ember source and exports now live in the isolated johnny-games repo.
+// Cloudflare keeps the committed public artifact when that sibling checkout is
+// unavailable in the Pages build environment.
+const firstEmberExportSourceDir = path.resolve(root, "..", "johnny-games", "dist", "first-ember");
 const crownforgeSourceDir = path.join(root, "games", "crownforge");
 const crownforgeTargetDir = path.join(publicDir, "crownforge");
 const cozyExportTargetDirs = [
