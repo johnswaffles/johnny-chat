@@ -2424,3 +2424,9 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add new ages, civilizations, materials, or additional Crown Hall functions in this pass. The approved boundary remains a small first-age sandbox with one coherent landmark family.
+
+### PUSH / DEPLOY STATUS
+
+- The verified Crownforge source and public mirror were committed as `d0b6d8c` on `codex/crownforge-live-sync-20260821` and pushed to GitHub.
+- Production promotion was attempted against the correct Cloudflare Pages project, `johnny-chat-5`, but Cloudflare rejected the repository-wide upload before changing production because unrelated `first-ember/index.pck` and `sim/sim-engine-20260525c.wasm` files exceed the 25 MiB Pages file limit.
+- The live custom route remains on the preceding deployed build until a route-preserving deployment path is authorized or the shared site payload is independently repaired. Do not claim this visual pass is live from the Git push alone.
