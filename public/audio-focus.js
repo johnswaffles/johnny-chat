@@ -4,6 +4,11 @@
   const CHANNEL_NAME = "johnny-audio-focus";
   const CLAIMS_KEY = "johnny-audio-focus-claims";
   const SIGNAL_KEY = "johnny-audio-focus-signal";
+  const RETIRED_HEARTHWILD_KEYS = [
+    "johnny-hearthwild-save-v1",
+    "johnny-hearthwild-save-v1-backup",
+    "johnny-hearthwild-save-v1-recovery"
+  ];
   const TAB_ID = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
   const CLAIM_TTL = 9000;
   const GAME_PATHS = new Set([
@@ -22,6 +27,13 @@
     "/textsmith/",
     "/tetris/"
   ]);
+
+  RETIRED_HEARTHWILD_KEYS.forEach((key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (_) {}
+  });
+
   const musicSelector = "audio[data-johnny-music]";
   const channel = "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL_NAME) : null;
   let claimed = false;
