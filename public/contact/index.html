@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/future-theme.css?v=1">
   
   <style>
     .johnny-site-nav {
@@ -486,8 +487,8 @@
       const storyHref = "/story-editor/";
       const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
+      const gladeHref = "/glade/";
       const clockwiseHref = "/clockwise/";
-      const timekeeperHref = "/timekeeper/";
       const simHref = "/sim/";
       const contactHref = "/contact/";
 
@@ -508,7 +509,7 @@
         navLinks.forEach((link) => {
           const label = String(link.textContent || "").trim().toLowerCase();
           if (label === "home") link.href = homeHref;
-          if (label === "gpt 5.5") link.href = gptHref;
+          if (label === "gpt 5.6") link.href = gptHref;
           if (label === "story editor") {
             link.href = storyHref;
             link.target = "_blank";
@@ -516,8 +517,8 @@
           }
           if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
+          if (label === "glade") link.href = gladeHref;
           if (label === "clockwise") link.href = clockwiseHref;
-          if (label === "timekeeper") link.href = timekeeperHref;
           if (label === "sim") {
             link.href = simHref;
             link.target = "_blank";

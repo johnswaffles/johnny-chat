@@ -1261,6 +1261,14 @@
     ctx.save(); ctx.globalAlpha = .34; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 86; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-30, 500); ctx.quadraticCurveTo(430, 433, 760, 515); ctx.quadraticCurveTo(1110, 590, 1630, 450); ctx.stroke();
     ctx.globalAlpha = 1; ctx.strokeStyle = "#b28f62"; ctx.lineWidth = 78; ctx.beginPath(); ctx.moveTo(-30, 490); ctx.quadraticCurveTo(430, 423, 760, 505); ctx.quadraticCurveTo(1110, 580, 1630, 440); ctx.stroke();
     ctx.strokeStyle = "rgba(246,222,166,.32)"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-20, 470); ctx.quadraticCurveTo(430, 405, 760, 486); ctx.quadraticCurveTo(1110, 560, 1610, 425); ctx.stroke();
+    // Give the lower branch a readable junction with the main road. This is
+    // visual navigation only; the world collision and route logic remain
+    // unchanged while the two authored path ribbons now read as one network.
+    ctx.globalAlpha = .34; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 50; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(430, 604); ctx.quadraticCurveTo(390, 522, 430, 423); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.strokeStyle = "#aa9069"; ctx.lineWidth = 42; ctx.beginPath(); ctx.moveTo(430, 604); ctx.quadraticCurveTo(390, 522, 430, 423); ctx.stroke();
+    ctx.strokeStyle = "rgba(247,223,170,.23)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(430, 596); ctx.quadraticCurveTo(402, 522, 435, 431); ctx.stroke();
+    ctx.globalAlpha = .42; ctx.strokeStyle = "rgba(109,84,60,.34)"; ctx.lineWidth = 2; [470, 520, 568].forEach((y, index) => { const x = 412 + index * 7; ctx.beginPath(); ctx.moveTo(x - 8, y); ctx.quadraticCurveTo(x + 3, y - 4, x + 14, y); ctx.stroke(); });
+    if (loadedAssets.has("road-family")) drawOptionalSprite("road-family", 430, 514, { frame: 0, width: 112, height: 184, anchorX: .5, anchorY: .5, alpha: .64 });
     ctx.globalAlpha = .42; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 42; ctx.beginPath(); ctx.moveTo(85, 620); ctx.quadraticCurveTo(310, 580, 520, 610); ctx.stroke();
     ctx.globalAlpha = 1; ctx.strokeStyle = "#aa9069"; ctx.lineWidth = 34; ctx.beginPath(); ctx.moveTo(85, 614); ctx.quadraticCurveTo(310, 574, 520, 604); ctx.stroke();
     ctx.strokeStyle = "rgba(247,223,170,.25)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(92, 605); ctx.quadraticCurveTo(310, 568, 516, 596); ctx.stroke();

@@ -2,6 +2,12 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-21 — Lower-road junction readability pass
+
+- Replayed the fresh Lanternwood opening and found that the existing lower path read as a disconnected pale strip instead of a branch from the main road.
+- Added a restrained visual connector with the same edge, wear, and painted `road-family` material as the existing ribbons. The lower path now reads as one coherent navigable network without changing collision, route logic, NPC behavior, progression, or save state.
+- Bumped the route script cache to `mosswake.js?v=88`. The retired Hearthwild/`/settlement/` navigation link remains removed from the source route.
+
 ## 2026-08-15 — Sword-trail hand anchoring and directional offset
 
 - Corrected the `fx-slash` presentation so the comic-book gleam is positioned from a direction-relative sword-hand origin instead of the actor center. The atlas now uses a centered anchor, preventing transparent source padding from putting the blade beside or behind the Warden.
