@@ -2390,3 +2390,37 @@ Use an allowed player-visible preview for the remaining four-direction military 
 ### SOURCE / DEPLOYMENT RULE
 
 For future Crownforge deployments, deploy the synchronized `public/crownforge` route to Cloudflare project `johnny-chat-5`, which owns the custom domain. Do not infer the owning project from the local `wrangler.toml` name alone.
+
+## CROWN HALL FIRST-AGE MATERIAL PASS — 2026-08-21
+
+### SCOPE
+
+- Reworked only the completed Crown Hall landmark art to better match the current first-age technology boundary: timber, woven walling, rope, thatch, packed earth, and restrained Crownwarden cloth accents.
+- Kept the existing gameplay footprint, south stair corridor, construction lifecycle, storage role, Villager production, selection, placement, and collision contracts unchanged.
+
+### CHANGE COMPLETED
+
+- Generated and registered `assets/crownforge-crown-hall-wood-v1.png`, a new original transparent three-quarter Crownforge landmark with a broad timber hall, thatched roof, wooden platforms, watch towers, banners, porch stairs, and grounded terrain contact.
+- The new asset is a versioned sibling; the previous `crownforge-crown-hall-starter-v1.png` remains available for historical comparison and rollback rather than being overwritten.
+- Preserved the intentional scale relationship: Crown Hall `renderSize: 4000` and Crown Barracks `renderSize: 1000`, so the completed Crown Hall reads exactly four times the Barracks reference while Villagers and military units keep their established scale.
+- Updated the runtime cache marker and asset manifest/playbook so source, public mirror, and future asset work all point to the same completed Crown Hall source of truth.
+
+### ASSET CHECK
+
+- Final project asset: `games/crownforge/assets/crownforge-crown-hall-wood-v1.png`.
+- Bitmap metadata: `1536 x 1024`, RGBA, transparent corners, no opaque rectangular background, and preserved grounded contact treatment.
+- The asset was visually inspected before registration; its material language is predominantly wood and thatch rather than large stone-block masonry.
+
+### VALIDATION
+
+- Source and public syntax checks, deterministic regression, visual-integrity audit, source/public parity, and scoped whitespace checks must pass before promotion.
+- Live verification must confirm the new runtime marker, Crown Hall asset request, normal/close zoom readability, four-sided buildability, stair routing, and empty browser console on `https://justaskjohnny.com/crownforge/`.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Recheck the new hall’s transparent silhouette against the top HUD at close zoom and confirm the broad timber footprint still leaves readable resource and construction approaches.
+- If a later construction-art pass is justified, generate dedicated first-age timber lifecycle stages that match this completed landmark instead of reverting to stone-heavy imagery.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add new ages, civilizations, materials, or additional Crown Hall functions in this pass. The approved boundary remains a small first-age sandbox with one coherent landmark family.

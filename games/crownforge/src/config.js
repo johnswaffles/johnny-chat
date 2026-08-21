@@ -349,7 +349,7 @@ export const LARGE_STONE_ASSET = {
 };
 
 export const FIRST_AGE_ASSETS = {
-  townCenter: { src: './assets/crownforge-crown-hall-starter-v1.png?v=20260820-hallwoodpass1', width: 1536, height: 1024 },
+  townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024 },
   barracks: { src: './assets/crownforge-barracks-v3.png?v=20260819-unitpass3', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
@@ -412,7 +412,7 @@ export const VILLAGER_ATLASES = {
     rows: { attack: 0, hit: 1, death: 2, idle: 3 },
   },
   hitLoop: {
-    src: './assets/villager-hit-loop-v1.png?v=20260820-occlusionpass1',
+    src: './assets/villager-hit-loop-v1.png?v=20260821-hallwoodpass2',
     width: 1254,
     height: 1254,
     columns: 4,
@@ -420,7 +420,7 @@ export const VILLAGER_ATLASES = {
     layout: 'frame-columns',
   },
   deathLoop: {
-    src: './assets/villager-death-loop-v1.png?v=20260820-occlusionpass1',
+    src: './assets/villager-death-loop-v1.png?v=20260821-hallwoodpass2',
     width: 1254,
     height: 1254,
     columns: 4,

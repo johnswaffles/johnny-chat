@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260820-occlusionpass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260821-hallwoodpass2';
 import { findPath } from './pathfinding.js?v=20260818-sandbox1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260820-occlusionpass1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260821-hallwoodpass2';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
