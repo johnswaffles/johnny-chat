@@ -2497,3 +2497,28 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not move the entire website to Render, change the root website DNS, or duplicate the Crownforge build in Cloudflare Pages. Keep the narrow `/crownforge/*` redirect pointed at the isolated Render service until a custom-domain decision is explicit.
+
+## FIRST-RAID RESPONSIVENESS PASS — 2026-08-22
+
+### WHAT WAS COMPLETED
+
+- Reproduced the reported freeze in a deterministic passive match: the browser stopped responding at the 90-second first-raid threshold while an Ashen Raider searched for a route to the distant Crown Hall.
+- Replaced the long-map A* open-list sort with a binary min-heap, added an octile heuristic for the eight-way grid, cached blocked-cell checks within each query, and capped expansion work at 60,000 cells so sealed routes cannot monopolize the main thread.
+- Bounded path smoothing to a 48-cell greedy lookahead so continuous collision checks cannot grow quadratically on the expanded map.
+- Fixed combat approach routing to retain its authored combat point instead of comparing a raw A* cell center to the large Crown Hall every tick. The old comparison caused the first raid to recompute eight long routes every simulation frame.
+- Reduced combat route selection to the first reachable free approach slot; normal collision and repath behavior remains responsible for later changes.
+- Bumped the source cache marker to `20260822-pathfix1` and synchronized the `games/crownforge` source with the `public/crownforge` mirror.
+
+### VALIDATION
+
+- A passive 120-second source simulation now completes in about 1.6 seconds total. The former first-raid update exceeded 80 seconds; the repaired first-raid update measured about 466 ms once, with no repeated route stall.
+- `node --check` passed for the changed modules, `tools/remediation-regression.mjs` passed all existing animation, economy, placement, construction, combat, victory, defeat, camera, and map checks, source/public parity passed, and `git diff --check` passed.
+- Render deployment and live-browser verification remain required after the pushed cache-busted build; do not claim the live issue is fixed from local simulation alone.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Recheck the first raid in the deployed browser at normal zoom and confirm the Crown Hall remains responsive while the Raider takes its long approach.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add more AI, units, map clutter, or a second pathfinding system. Keep the current bounded route contract until a new measured stall is found.

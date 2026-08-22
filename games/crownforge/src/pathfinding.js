@@ -10,7 +10,65 @@ const DIRECTIONS = [
 ];
 
 const keyFor = (x, z) => `${x},${z}`;
-const heuristic = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+// The board is intentionally much larger than the original vertical slice.
+// Keep the route search bounded so a bad or sealed-off query can never lock
+// the browser's main thread indefinitely.
+const MAX_SEARCH_NODES = 60000;
+const MAX_SMOOTH_LOOKAHEAD = 48;
+
+// This is the admissible octile distance for the 8-way movement costs above.
+// It gives A* a much stronger directional signal than Euclidean distance on
+// long diagonal routes across the expanded meadow.
+const heuristic = (a, b) => {
+  const dx = Math.abs(a.x - b.x);
+  const dz = Math.abs(a.z - b.z);
+  return Math.max(dx, dz) + (1.42 - 1) * Math.min(dx, dz);
+};
+
+class MinHeap {
+  constructor(compare) {
+    this.items = [];
+    this.compare = compare;
+  }
+
+  get length() {
+    return this.items.length;
+  }
+
+  push(item) {
+    const items = this.items;
+    items.push(item);
+    let index = items.length - 1;
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this.compare(items[parent], items[index]) <= 0) break;
+      [items[parent], items[index]] = [items[index], items[parent]];
+      index = parent;
+    }
+  }
+
+  pop() {
+    const items = this.items;
+    if (!items.length) return null;
+    const first = items[0];
+    const last = items.pop();
+    if (items.length && last) {
+      items[0] = last;
+      let index = 0;
+      while (true) {
+        const left = index * 2 + 1;
+        const right = left + 1;
+        let smallest = index;
+        if (left < items.length && this.compare(items[left], items[smallest]) < 0) smallest = left;
+        if (right < items.length && this.compare(items[right], items[smallest]) < 0) smallest = right;
+        if (smallest === index) break;
+        [items[index], items[smallest]] = [items[smallest], items[index]];
+        index = smallest;
+      }
+    }
+    return first;
+  }
+}
 
 function nearestWalkable(target, isBlocked, width, height) {
   if (!isBlocked(target.x, target.z)) return target;
@@ -51,7 +109,13 @@ function smoothPath(path, isBlocked, segmentClear = segmentIsClear) {
   let anchor = 0;
   while (anchor < path.length) {
     let furthest = anchor + 1;
-    for (let candidate = anchor + 2; candidate < path.length; candidate += 1) {
+    // Long routes across the expanded map can contain hundreds of grid
+    // points. A full quadratic visibility pass makes each route more
+    // expensive than the A* search itself, especially when the caller uses
+    // a precise continuous collision test. A bounded greedy lookahead keeps
+    // the route readable while guaranteeing predictable work.
+    const lookaheadEnd = Math.min(path.length, anchor + MAX_SMOOTH_LOOKAHEAD);
+    for (let candidate = anchor + 2; candidate < lookaheadEnd; candidate += 1) {
       if (segmentClear(path[anchor], path[candidate], isBlocked)) furthest = candidate;
       else break;
     }
@@ -67,20 +131,36 @@ export function findPath(start, target, isBlocked, width, height, options = {}) 
     x: Math.max(0, Math.min(width - 1, Math.round(start.x))),
     z: Math.max(0, Math.min(height - 1, Math.round(start.z))),
   };
+  const blockedCache = new Map();
+  const isCellBlocked = (x, z) => {
+    const key = keyFor(x, z);
+    if (blockedCache.has(key)) return blockedCache.get(key);
+    const blocked = isBlocked(x, z);
+    blockedCache.set(key, blocked);
+    return blocked;
+  };
   const endCell = nearestWalkable({
     x: Math.max(0, Math.min(width - 1, Math.round(target.x))),
     z: Math.max(0, Math.min(height - 1, Math.round(target.z))),
-  }, isBlocked, width, height);
+  }, isCellBlocked, width, height);
 
-  const open = [{ x: startCell.x, z: startCell.z, g: 0, f: 0 }];
+  const compareNodes = (a, b) => a.f - b.f || a.h - b.h || b.g - a.g;
+  const open = new MinHeap(compareNodes);
+  const startHeuristic = heuristic(startCell, endCell);
+  open.push({ x: startCell.x, z: startCell.z, g: 0, h: startHeuristic, f: startHeuristic });
   const cameFrom = new Map();
   const gScore = new Map([[keyFor(startCell.x, startCell.z), 0]]);
   const closed = new Set();
+  let expandedNodes = 0;
 
   while (open.length) {
-    open.sort((a, b) => a.f - b.f);
-    const current = open.shift();
+    const current = open.pop();
+    if (!current) break;
     const currentKey = keyFor(current.x, current.z);
+    if (closed.has(currentKey)) continue;
+    closed.add(currentKey);
+    expandedNodes += 1;
+    if (expandedNodes > MAX_SEARCH_NODES) return [];
     if (current.x === endCell.x && current.z === endCell.z) {
       const path = [];
       let cursor = currentKey;
@@ -92,21 +172,19 @@ export function findPath(start, target, isBlocked, width, height, options = {}) 
       }
       return smoothPath(path, isBlocked, options.segmentClear ?? segmentIsClear);
     }
-    if (closed.has(currentKey)) continue;
-    closed.add(currentKey);
-
     for (const [dx, dz, moveCost] of DIRECTIONS) {
       const nx = current.x + dx;
       const nz = current.z + dz;
       if (nx < 0 || nz < 0 || nx >= width || nz >= height) continue;
-      if (isBlocked(nx, nz)) continue;
-      if (dx !== 0 && dz !== 0 && (isBlocked(current.x + dx, current.z) || isBlocked(current.x, current.z + dz))) continue;
+      if (isCellBlocked(nx, nz)) continue;
+      if (dx !== 0 && dz !== 0 && (isCellBlocked(current.x + dx, current.z) || isCellBlocked(current.x, current.z + dz))) continue;
       const neighborKey = keyFor(nx, nz);
       const tentativeG = current.g + moveCost;
       if (tentativeG >= (gScore.get(neighborKey) ?? Infinity)) continue;
       cameFrom.set(neighborKey, currentKey);
       gScore.set(neighborKey, tentativeG);
-      open.push({ x: nx, z: nz, g: tentativeG, f: tentativeG + heuristic({ x: nx, z: nz }, endCell) });
+      const h = heuristic({ x: nx, z: nz }, endCell);
+      open.push({ x: nx, z: nz, g: tentativeG, h, f: tentativeG + h });
     }
   }
 

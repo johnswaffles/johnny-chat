@@ -1,5 +1,5 @@
 import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260821-hallwoodpass2';
-import { findPath } from './pathfinding.js?v=20260818-sandbox1';
+import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260821-hallwoodpass2';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -1503,14 +1503,18 @@ export class CrownforgeSimulation {
     const reserved = target.combatSlotReservations ?? new Map();
     const freeCandidates = candidates.filter(({ slot }) => !reserved.has(slot) || reserved.get(slot) === unit.id);
     const orderedCandidates = freeCandidates.length ? freeCandidates : candidates;
-    let best = null;
+    // Combat approach points are already ordered from the unit's preferred
+    // slot around the target. The old shortest-path comparison ran a full
+    // long-map A* query for every one of the eight ring positions before
+    // choosing a result. On the first raid that created a multi-second main
+    // thread stall. Take the first reachable free slot and let normal route
+    // blocking/repathing handle later changes.
     for (const candidate of orderedCandidates) {
       const path = this._buildPath(unit, candidate.point);
       if (!path) continue;
-      const score = path.length * 1.1 + distance(unit, candidate.point) * 0.2;
-      if (!best || score < best.score) best = { ...candidate, path, score };
+      return { ...candidate, path };
     }
-    return best;
+    return null;
   }
 
   _sendUnitToAttack(unit, target, slot = 0) {
@@ -1589,8 +1593,16 @@ export class CrownforgeSimulation {
     if (unit.attackPhase === 'approach' && !hasLine) {
       unit.actionLabel = inRange ? 'Seeking an opening' : `Closing on ${this._targetLabel(target)}`;
       unit.visualState = 'walk';
-      const routeTarget = unit.path[unit.path.length - 1];
-      if (!unit.path.length || !routeTarget || this._targetDistance(routeTarget, target) > 1.4) this._sendUnitToAttack(unit, target, unit.attackSlot);
+      // `path[path.length - 1]` is an A* cell center and can be several
+      // tenths inside the target's collision envelope. Comparing that cell
+      // directly to a large building made the first long raid replan every
+      // simulation tick. Keep the authored combat approach point as the
+      // stable route target; only ask A* again after the route is consumed or
+      // the target has moved far enough to invalidate it.
+      const routeTarget = unit.routeTarget;
+      if (!unit.path.length || !routeTarget || this._targetDistance(routeTarget, target) > 1.4) {
+        this._sendUnitToAttack(unit, target, unit.attackSlot);
+      }
       return;
     }
     if (unit.attackPhase !== 'approach' && !hasLine) {
