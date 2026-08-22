@@ -2522,3 +2522,28 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add more AI, units, map clutter, or a second pathfinding system. Keep the current bounded route contract until a new measured stall is found.
+
+## PALISADE RESOURCE PRECEDENCE PASS — 2026-08-22
+
+### WHAT WAS COMPLETED
+
+- Kept the existing eight-way drag snap and multi-segment Palisade Wall workflow, but made wall placement forgiving around natural resources.
+- A snapped wall line now takes precedence over active wood and stone nodes inside its full collision envelope. Those tree, grove, and stone deposits are cleared when the wall is released instead of making the preview invalid.
+- Food nodes, decorations, buildings, units, map boundaries, access space, affordability, and builder routing still reject invalid wall placement. This keeps the convenience rule narrow and prevents walls from erasing gameplay-critical structures or units.
+- Workers gathering a resource that the wall replaces are safely released; carried cargo still returns to storage, while empty-handed workers become idle with a clear status.
+- Placement feedback now reports how many tree/stone nodes will be cleared, and the wall placement toast explains the behavior before the player commits.
+- Bumped the main simulation cache marker to `20260822-wallclear1` and kept the source/public Crownforge mirrors synchronized.
+
+### VALIDATION
+
+- `tools/remediation-regression.mjs` passed the new wall-precedence check and all existing animation, economy, placement, construction, pathfinding, combat, victory, defeat, camera, and map checks.
+- The new regression places a snapped three-segment wall through a medium tree and stone node, confirms the preview is valid, confirms the nodes are removed on release, confirms the active gatherer is safely retasked, and confirms building collision remains enforced.
+- No new artwork or gameplay system was added; the existing Palisade asset and wall construction lifecycle remain canonical.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Verify the live Render build at normal and close zoom with horizontal, diagonal, and north/south wall drags through tree and stone clearings. Confirm the cleared resource silhouettes disappear cleanly and the wall foundation remains grounded.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not let walls erase food plots, decorations, buildings, or units, and do not add gates, towers, segment-level wall damage, or another wall-placement system until this narrow precedence rule remains stable in live play.

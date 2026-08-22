@@ -89,7 +89,9 @@ export class CrownforgeInput {
     this.renderer.setBuildPreview(preview);
     this.onBuildMode(type);
     this._updateCursor(this.pointer);
-    this.onToast('Construction menu: choose a clear meadow tile. Press Esc to cancel.');
+    this.onToast(type === 'wall'
+      ? 'Drag across the meadow to aim the wall. Trees and stone in its path clear on release. Press Esc to cancel.'
+      : 'Construction menu: choose a clear meadow tile. Press Esc to cancel.');
   }
 
   cancelBuildMode() {

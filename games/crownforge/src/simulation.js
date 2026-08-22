@@ -14,6 +14,7 @@ const BUILDING_INTERACTION_DISTANCE = 0.78;
 const PATH_REACH_TOLERANCE = 0.38;
 const BUILDING_CLEARANCE = 0.4;
 const RESOURCE_FOOTPRINTS = { tree: 1.05, grove: 2.45, berry: 0.82, grain: 1.1, stone: 0.92 };
+const WALL_CLEARABLE_RESOURCE_TYPES = new Set(['wood', 'stone']);
 const DECORATION_FOOTPRINTS = { log: 0.78, stump: 0.62, flowers: 0.42, pebbles: 0.44 };
 const COMBAT_SLOT_COUNT = 8;
 const COMBAT_SLOT_MARGIN = 0.12;
@@ -1170,6 +1171,56 @@ export class CrownforgeSimulation {
     return distance(point, node) < footprint + padding;
   }
 
+  _wallClearsResource(node) {
+    return Boolean(node?.amount > 0 && WALL_CLEARABLE_RESOURCE_TYPES.has(node.resourceType));
+  }
+
+  _wallResourceWillBeCleared(node, placement) {
+    if (!placement || placement.type !== 'wall' || !placement.clearResources || !this._wallClearsResource(node)) return false;
+    const bounds = this._buildingBounds('wall', placement, BUILDING_CLEARANCE, placement);
+    return this._circleIntersectsBounds(node, resourceFootprint(node), bounds);
+  }
+
+  _wallResourcesToClear(preview) {
+    if (!preview?.clearResources) return [];
+    const placement = {
+      type: 'wall',
+      x: preview.world.x,
+      z: preview.world.z,
+      progress: 1,
+      ...preview,
+    };
+    return this.resourcesNodes.filter((node) => this._wallResourceWillBeCleared(node, placement));
+  }
+
+  _clearResourcesForWall(preview) {
+    const cleared = this._wallResourcesToClear(preview);
+    if (!cleared.length) return 0;
+    const clearedIds = new Set(cleared.map((node) => node.id));
+    for (const unit of this.units) {
+      if (!clearedIds.has(unit.gatherTarget)) continue;
+      this._releaseResourceSlot(unit);
+      unit.gatherTarget = null;
+      unit.gatherSlot = 0;
+      unit.gatherTimer = 0;
+      unit.gatherEventFired = false;
+      if (unit.carryAmount > 0) {
+        unit.actionLabel = 'Returning cargo';
+        this._beginReturn(unit);
+      } else {
+        unit.path = [];
+        unit.routeTarget = null;
+        unit.command = 'idle';
+        unit.visualState = 'idle';
+        unit.actionLabel = 'Resource cleared for wall';
+      }
+    }
+    this.resourcesNodes = this.resourcesNodes.filter((node) => !clearedIds.has(node.id));
+    this.selectedIds = this.selectedIds.filter((id) => !clearedIds.has(id));
+    this._syncSelectionFlags();
+    return cleared.length;
+  }
+
   _pointBlockedForUnit(unit, point, placement = null) {
     const padding = (UNIT_TYPES[unit.type]?.radius ?? 0.4) + UNIT_STATIC_CLEARANCE;
     if (this.buildings.some((building) => {
@@ -1178,7 +1229,8 @@ export class CrownforgeSimulation {
       return this._distanceToBuildingEdge(point, building) < padding;
     })) return true;
     if (placement && this._distanceToBuildingEdge(point, placement) < padding) return true;
-    return this.resourcesNodes.some((node) => node.amount > 0 && this._resourceBlocksPoint(point, node, padding));
+    return this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)
+      && node.amount > 0 && this._resourceBlocksPoint(point, node, padding));
   }
 
   _cellIntersectsResource(cellX, cellZ, node, padding = 0) {
@@ -1201,7 +1253,8 @@ export class CrownforgeSimulation {
     // Keep the resource's own footprint out of the grid. The precise unit
     // radius is enforced by _constrainUnitPosition so approach cells remain
     // usable for gathering slots around the perimeter.
-    return this.resourcesNodes.some((node) => node.amount > 0 && this._cellIntersectsResource(cellX, cellZ, node));
+    return this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)
+      && node.amount > 0 && this._cellIntersectsResource(cellX, cellZ, node));
   }
 
   _buildPath(unit, target, placement = null) {
@@ -2332,6 +2385,7 @@ export class CrownforgeSimulation {
       wallDirection,
       wallSnapLabel: snapped.label,
       wallStart: segments[0],
+      clearResources: true,
     };
     const check = this.getPlacementCheck('wall', world, options);
     const totalCost = Object.fromEntries(Object.entries(blueprint.cost).map(([key, value]) => [key, value * segmentCount]));
@@ -2339,7 +2393,8 @@ export class CrownforgeSimulation {
       const missing = Object.entries(totalCost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
       return { type: 'wall', world, segments, ...options, valid: false, reason: `Not enough ${missing} for this ${segmentCount}-segment wall.` };
     }
-    return { type: 'wall', world, segments, ...options, valid: check.valid, reason: check.reason, totalCost };
+    const resourceClearCount = this._wallResourcesToClear({ type: 'wall', world, ...options }).length;
+    return { type: 'wall', world, segments, ...options, valid: check.valid, reason: check.reason, totalCost, resourceClearCount };
   }
 
   placeWallLine(start, end) {
@@ -2354,6 +2409,7 @@ export class CrownforgeSimulation {
       this._announce('Select a villager before placing a Palisade Wall.');
       return false;
     }
+    const cleared = this._clearResourcesForWall(preview);
     this._spend(preview.totalCost);
     const building = this.addBuilding('wall', preview.world.x, preview.world.z, 'player', 0.04, {
       wallSegments: preview.wallSegments,
@@ -2371,7 +2427,8 @@ export class CrownforgeSimulation {
       if (this._sendUnitToBuilding(builder, building, index)) assigned += 1;
       else builder.buildTarget = null;
     });
-    this._announce(`${blueprint.label} line placed: ${preview.wallSegments} segment${preview.wallSegments === 1 ? '' : 's'}. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.`);
+    const clearedMessage = cleared ? ` Cleared ${cleared} tree/stone node${cleared === 1 ? '' : 's'} in its path.` : '';
+    this._announce(`${blueprint.label} line placed: ${preview.wallSegments} segment${preview.wallSegments === 1 ? '' : 's'}. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.${clearedMessage}`);
     return true;
   }
 
@@ -2507,10 +2564,12 @@ export class CrownforgeSimulation {
     if (bounds.minX < 0.55 || bounds.minZ < 0.55 || bounds.maxX > CONFIG.mapWidth - 0.55 || bounds.maxZ > CONFIG.mapHeight - 0.55) {
       return { valid: false, reason: 'Foundation is outside the meadow.' };
     }
+    const placement = { type, x: point.x, z: point.z, progress: 1, ...options };
     if (this.buildings.some((building) => !building.destroyed && this._boundsOverlap(bounds, this._buildingEntityBounds(building, 0)))) {
       return { valid: false, reason: 'Another structure is in the way.' };
     }
-    if (this.resourcesNodes.some((node) => this._circleIntersectsBounds(node, resourceFootprint(node), bounds))) {
+    if (this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)
+      && this._circleIntersectsBounds(node, resourceFootprint(node), bounds))) {
       return { valid: false, reason: 'Clear the resource before building here.' };
     }
     if (this.decorations.some((decoration) => this._circleIntersectsBounds(decoration, DECORATION_FOOTPRINTS[decoration.type] ?? 0.45, bounds))) {
@@ -2519,9 +2578,13 @@ export class CrownforgeSimulation {
     if (this.units.some((unit) => !unit.dead && this._circleIntersectsBounds(unit, UNIT_TYPES[unit.type].radius + 0.18, bounds))) {
       return { valid: false, reason: 'A unit is standing in the foundation.' };
     }
-    const placement = { type, x: point.x, z: point.z, progress: 1, ...options };
     const accessCells = this._placementAccessCells(type, point, options);
-    const openAccess = accessCells.filter((cell) => !this.isBlocked(cell.x, cell.z) && !this._buildingBlocksCell(cell.x, cell.z, placement));
+    const openAccess = accessCells.filter((cell) => {
+      const buildingBlocked = this.buildings.some((building) => this._buildingBlocksCell(cell.x, cell.z, building));
+      const resourceBlocked = this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)
+        && node.amount > 0 && this._cellIntersectsResource(cell.x, cell.z, node));
+      return !buildingBlocked && !resourceBlocked && !this._buildingBlocksCell(cell.x, cell.z, placement);
+    });
     if (openAccess.length < 2) return { valid: false, reason: 'Leave room around the foundation to build.' };
     const builder = this._selectedBuilders(point)[0];
     if (!builder) return { valid: false, reason: 'Select a villager to build.' };

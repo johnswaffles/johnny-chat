@@ -2,7 +2,7 @@ import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './con
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260821-hallwoodpass2';
 import { CrownforgeRenderer } from './renderer.js?v=20260821-hallwoodpass2';
-import { CrownforgeSimulation } from './simulation.js?v=20260822-pathfix1';
+import { CrownforgeSimulation } from './simulation.js?v=20260822-wallclear1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -315,7 +315,7 @@ function updateUi() {
     placementTitle.textContent = valid ? 'FOUNDATION READY' : 'CANNOT PLACE HERE';
     placementDetail.textContent = valid
       ? preview?.type === 'wall'
-        ? `${preview.wallSnapLabel ?? 'SNAPPED'} · ${preview.wallSegments ?? 1} segment${preview.wallSegments === 1 ? '' : 's'} · release to place`
+        ? `${preview.wallSnapLabel ?? 'SNAPPED'} · ${preview.wallSegments ?? 1} segment${preview.wallSegments === 1 ? '' : 's'}${preview.resourceClearCount ? ` · clears ${preview.resourceClearCount} tree/stone node${preview.resourceClearCount === 1 ? '' : 's'}` : ''} · release to place`
         : 'Click to place  ·  Hall vision active  ·  Esc to cancel'
       : (preview?.reason ?? 'Move the foundation to a clear site.');
   }

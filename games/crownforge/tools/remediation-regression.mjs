@@ -175,6 +175,30 @@ function checkConstructionAndPlacement() {
   assert.equal(house.hp, house.maxHp, 'completed house reaches full health');
 }
 
+function checkWallResourcePrecedence() {
+  const simulation = freshSimulation();
+  const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  assert.ok(villager, 'reset has a builder for wall resource precedence');
+  simulation.selectedIds = [villager.id];
+  simulation._syncSelectionFlags();
+
+  simulation.addResource('tree', 'wood', 180, 80, 260, 0, { sizeTier: 'medium' });
+  simulation.addResource('stone', 'stone', 184, 80, 360, 0, { sizeTier: 'medium' });
+  const tree = simulation.resourcesNodes.find((node) => node.x === 180 && node.z === 80);
+  const stone = simulation.resourcesNodes.find((node) => node.x === 184 && node.z === 80);
+  assert.ok(tree && stone, 'wall test has tree and stone obstructions');
+
+  simulation.issueContextCommand({ x: tree.x, z: tree.z });
+  const preview = simulation.getWallLinePreview({ x: 178, z: 80 }, { x: 184, z: 80 });
+  assert.equal(preview.valid, true, 'wall preview accepts trees and stone in its snapped path');
+  assert.equal(preview.resourceClearCount, 2, 'wall preview reports clearable tree and stone nodes');
+  assert.equal(simulation.getWallLinePreview({ x: 76, z: 82 }, { x: 84, z: 82 }).valid, false, 'wall still respects building collision');
+  assert.equal(simulation.placeWallLine({ x: 178, z: 80 }, { x: 184, z: 80 }), true, 'wall line places through tree and stone');
+  assert.equal(simulation.resourcesNodes.some((node) => node.id === tree.id || node.id === stone.id), false, 'wall removes tree and stone nodes it replaces');
+  assert.equal(villager.gatherTarget, null, 'cleared resource retasks a worker safely');
+  assert.ok(simulation.buildings.some((building) => building.type === 'wall' && building.wallSegments === 3), 'wall keeps its snapped segment run');
+}
+
 function checkBlockedDestinationFallback() {
   const simulation = freshSimulation();
   const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
@@ -350,6 +374,7 @@ checkResetPresentation();
 checkGathering();
 checkReadableResourceApproaches();
 checkConstructionAndPlacement();
+checkWallResourcePrecedence();
 checkBlockedDestinationFallback();
 checkDynamicBlockerRecovery();
 checkCrownHallStairs();
@@ -368,6 +393,7 @@ console.log(JSON.stringify({
     '20 Hz versus 60 Hz gathering convergence',
     'cargo-preserving retask and storage return',
     'placement rejection and house completion',
+    'wall precedence over trees and stone with safe resource cleanup',
     'blocked destination fallback outside building clearance',
     'dynamic building blocker route recovery',
     'Crown Hall stair routing, landing stop, and interior collision',
