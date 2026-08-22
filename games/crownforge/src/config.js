@@ -150,11 +150,12 @@ export const BUILDING_TYPES = {
     function: 'Resource drop-off and settlement core',
     asset: 'townCenter',
     maxHp: 900,
-    // The first-age Hall is intentionally compact after the landmark-scale
-    // correction. Human units keep their established scale; gameplay bounds
-    // remain generous enough for the south stair approach and future building.
+    // The first-age Hall uses the Crown Barracks render scale as its shared
+    // settlement reference. Human units keep their established scale;
+    // gameplay bounds remain generous enough for the south stair approach and
+    // future building.
     footprint: { width: 9, height: 8 },
-    renderSize: 400,
+    renderSize: 1000,
     collisionClearance: 1.8,
     entrance: 'south',
     // The first-age Hall has a readable south stair run. Units may enter only

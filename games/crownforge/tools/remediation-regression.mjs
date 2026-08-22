@@ -228,7 +228,7 @@ function checkBarracksLandmarkScale() {
   const barracks = BUILDING_TYPES.barracks;
   const hall = BUILDING_TYPES.townCenter;
   assert.ok(barracks.renderSize >= 900 && barracks.renderSize <= 1200, 'Barracks practice dummies use the live Marauder reference scale');
-  assert.ok(hall.renderSize < barracks.renderSize, 'Crown Hall now uses the compact first-age landmark scale');
+  assert.equal(hall.renderSize, barracks.renderSize, 'Crown Hall matches the Barracks visual width');
   assert.ok(barracks.footprint.width >= 6 && barracks.footprint.height >= 5, 'Barracks gameplay footprint matches its person-scaled silhouette');
   assert.ok(barracks.collisionClearance >= 1.4, 'Barracks keeps a readable perimeter for units and pathfinding');
 
@@ -241,7 +241,7 @@ function checkBarracksLandmarkScale() {
 
 function checkCrownHallProportionsAndBuildableRing() {
   const hall = BUILDING_TYPES.townCenter;
-  assert.equal(hall.renderSize, 400, 'Crown Hall is reduced to one tenth of its previous visual width');
+  assert.equal(hall.renderSize, BUILDING_TYPES.barracks.renderSize, 'Crown Hall matches the Barracks visual width');
   assert.deepEqual(hall.footprint, { width: 9, height: 8 }, 'Crown Hall gameplay footprint is reduced with its visual scale');
   assert.equal(hall.collisionClearance, 1.8, 'Crown Hall collision clearance matches the reduced landmark');
   assert.equal(hall.stairAccess.topOffset, 5, 'Crown Hall stair landing scales with the landmark');
@@ -372,7 +372,7 @@ console.log(JSON.stringify({
     'dynamic building blocker route recovery',
     'Crown Hall stair routing, landing stop, and interior collision',
     'person-scaled Barracks landmark and collision clearance',
-    'compact Crown Hall proportion, inward placement, and four-sided buildable ring',
+    'equal Crown Hall/Barracks proportion, inward placement, and four-sided buildable ring',
     'expanded map resource clearings and opposite-side enemy camp',
     'cursor-centered zoom anchor in both directions',
     'aspect-correct landmark health and placement feedback',

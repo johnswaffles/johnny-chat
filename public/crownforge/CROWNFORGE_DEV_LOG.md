@@ -2452,3 +2452,24 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add another Crown Hall model, new civic functions, additional ages, or new factions to compensate for this scale correction. First confirm the compact landmark reads correctly in the actual live deployment.
+
+## CROWN HALL / BARRACKS SCALE ALIGNMENT — 2026-08-21
+
+### CHANGE COMPLETED
+
+- Set the completed Crown Hall `renderSize` from `400` to `1000`, exactly matching the Crown Barracks visual reference.
+- Kept the Crown Hall's corrected inward position `(78,82)`, opening camera framing, settlement spacing, south stair access, gameplay footprint, collision clearance, storage role, Villager production, selection, and placement behavior unchanged.
+- Added no new artwork and no new gameplay system; this pass only restores a shared building-scale contract.
+
+### VALIDATION
+
+- Source and public deterministic regressions, visual-integrity audits, syntax checks, source/public parity, and whitespace checks must pass before promotion.
+- Production deployment must be verified separately because the shared Cloudflare Pages payload has previously been blocked by unrelated oversized files.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Inspect the equal-scale Crown Hall and Barracks together at normal zoom, close zoom, and after panning to confirm their silhouettes, entrances, health bars, selection bounds, and unit approaches remain readable.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add another landmark variant, new age, new faction, or new building function to compensate for this scale alignment. Confirm the existing first-age sandbox reads correctly first.
