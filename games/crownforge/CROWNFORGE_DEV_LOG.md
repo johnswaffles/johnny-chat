@@ -2655,3 +2655,49 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not re-enable housing, a storehouse, Lumber Mill, Stone Quarry, Grain Mill, or another civic building until its gameplay role and first-age Crownforge artwork are both approved.
 - Do not add another age, faction, military roster, or economy layer to fill the newly open meadow. Keep the current small catalog coherent first.
+
+## UPRIGHT PALISADE DIRECTIONAL ART PASS — 2026-08-22
+
+### WHAT WAS COMPLETED
+
+- Replaced the Palisade renderer's screen-plane rotation shortcut. The prior code rotated one upright diagonal fence picture to every snapped angle, which also rotated its stakes and could make completed walls look laid flat or upside down.
+- Added four authored upright screen-space views: diagonal-right, diagonal-left, face-on horizontal, and receding depth. The existing eight world-direction snap contract resolves to these four undirected views, so reversing a drag cannot invert the artwork.
+- Every view keeps sharpened stakes vertical, preserves the fixed upper-left light, and uses the current first-age timber, rope, packed-earth, and restrained Crownwarden blue-and-gold language.
+- Repeated depth-facing panels now draw from farthest to nearest in screen space, preventing a distant panel from painting over a closer one.
+- Removed both edge-connected checker matte and neutral checker cells enclosed between rails/posts. Grass now shows through every open gap without white bars, a rectangular plate, or a pale halo.
+- Added a reusable real-renderer orientation gallery at `tools/wall-orientation-qa.html` and a neutral-matte preparation tool so this exact failure can be caught before future wall art is admitted.
+- Bumped the runtime and asset marker to `20260822-uprightwalls2`.
+
+### ASSETS CREATED
+
+- `assets/crownforge-palisade-diagonal-right-v1.png` — upright wall running upper-left to lower-right.
+- `assets/crownforge-palisade-diagonal-left-v1.png` — independently lit upright wall running upper-right to lower-left.
+- `assets/crownforge-palisade-face-v1.png` — upright face-on horizontal wall.
+- `assets/crownforge-palisade-depth-v1.png` — upright wall receding along the screen-depth axis.
+
+### SYSTEMS CREATED OR CHANGED
+
+- Added `resolveWallVisual(direction)` as the single renderer mapping from eight snapped world directions to four authored upright views.
+- Removed runtime rotation from the first-age wall draw path while leaving placement, snapping, magnetic joining, collision, cost, construction, and pathfinding unchanged.
+- Added deterministic regression coverage for all eight direction-to-art mappings.
+
+### VALIDATION
+
+- `node --check` passed for all changed runtime, regression, and QA modules.
+- `tools/remediation-regression.mjs` passed the full suite, including all eight wall snap directions, tree/stone precedence, magnetic endpoint joins, construction, movement, pathfinding, gathering, combat, victory, and defeat.
+- `tools/visual-integrity-audit.mjs` passed with all four new directional assets present and no placeholder reference.
+- Browser orientation QA rendered diagonal-left, diagonal-right, face-on, and depth-facing completed wall runs at normal and close zoom. Every stake remained upright and all enclosed gaps showed meadow texture.
+- A Palisade was also placed through the real build menu with a formerly problematic reverse drag, completed normally, and remained upright at normal and closer gameplay zoom.
+- Both the real-game test and orientation gallery produced empty warning/error consoles.
+
+### KNOWN ISSUES
+
+- A complete Palisade run remains one shared building record for health and construction progress. This intentional first-slice limitation is unchanged.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Recheck magnetic corners and T-junctions with the new upright views after deployment; adjust only panel overlap if a specific join shows a doubled terminal post.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add gates, towers, stone walls, segment-level damage, wall editing, or another placement system. Keep the corrected Palisade family stable first.

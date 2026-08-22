@@ -90,6 +90,7 @@ Before accepting an asset family, test:
 - **Worker inside a grove:** collision uses a larger footprint than gathering range. Derive the interaction ring from the same tiered footprint plus unit radius.
 - **Floating art:** the file has a different bottom anchor or a hidden ground patch. Reframe the asset or add a documented renderer y-offset; do not compensate by moving the gameplay entity.
 - **Buildings too small:** increase visual render size and clearance while keeping human scale and gameplay footprint intentional.
+- **Wall looks laid down:** a screen-space rotation has tilted the entire standing sprite. Resolve the snapped world direction to an authored upright diagonal-left, diagonal-right, face-on, or depth-facing view; keep every stake vertical and depth-sort repeated panels from far to near.
 - **Baked field worker:** remove the static person from the field cutout before adding a live farmer, or the plot will appear to contain duplicate workers.
 - **Tree backdrop / row leak:** isolate the tree row into a dedicated atlas when a mixed environment sheet produces white fragments or partial silhouettes; never ship a generated tree export with a colored halo just to fill a missing variant.
 
@@ -100,6 +101,7 @@ Before accepting an asset family, test:
 - Villager carry food: `assets/villager-carry-food-loop-v1.png` pending a true-alpha v2 replacement; the existing state is retained until the replacement passes the transparency gate.
 - Crown Hall: `assets/crownforge-crown-hall-wood-v1.png`.
 - Crown Barracks: `assets/crownforge-barracks-first-age-v3.png`.
+- Palisade directional family: `assets/crownforge-palisade-diagonal-right-v1.png`, `assets/crownforge-palisade-diagonal-left-v1.png`, `assets/crownforge-palisade-face-v1.png`, and `assets/crownforge-palisade-depth-v1.png`.
 - Large stone: `assets/crownforge-stone-deposit-large-v1.png`.
 - Grove depletion family: `assets/crownforge-tree-grove-depletion-v1.png`, scaled by the resource tier contract and staged by remaining capacity.
 - Field plot: `assets/crownforge-field-v2.png`, a no-worker transparent plot reserved for the live farmer.

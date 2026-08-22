@@ -1,8 +1,21 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260822-firstagebuildings1';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260822-uprightwalls2';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260821-hallwoodpass2';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+
+export function resolveWallVisual(direction = { x: 1, z: 0 }) {
+  const magnitude = Math.hypot(direction.x, direction.z) || 1;
+  const dx = direction.x / magnitude;
+  const dz = direction.z / magnitude;
+  const screenX = dx - dz;
+  const screenY = (dx + dz) * (CONFIG.tileHeight / CONFIG.tileWidth);
+  if (Math.abs(screenX) < 0.001) return { asset: 'wallDepth', orientation: 'depth' };
+  if (Math.abs(screenY) < 0.001) return { asset: 'wallFace', orientation: 'face' };
+  return screenX * screenY < 0
+    ? { asset: 'wallDiagonalLeft', orientation: 'diagonal-left' }
+    : { asset: 'wall', orientation: 'diagonal-right' };
+}
 
 const ROAD_NETWORK = [
   {
@@ -776,7 +789,7 @@ export class CrownforgeRenderer {
     this.drawAtlasCell(ctx, this.treeGroveAtlas, this.treeGroveReady, TREE_GROVE_ATLAS, column, row, screen, size, alpha);
   }
 
-  drawFirstAgeAsset(ctx, type, screen, size, alpha = 1, rotation = 0) {
+  drawFirstAgeAsset(ctx, type, screen, size, alpha = 1) {
     const definition = FIRST_AGE_ASSETS[type];
     const image = this.firstAgeAssets?.[type];
     if (!definition || !image || (!this.firstAgeAssetReady[type] && !(image.complete && image.naturalWidth > 0))) return false;
@@ -787,7 +800,6 @@ export class CrownforgeRenderer {
     const width = size;
     const height = size / aspect;
     ctx.translate(screen.x, screen.y - height * 0.48);
-    ctx.rotate(rotation);
     ctx.drawImage(image, -width / 2, -height / 2, width, height);
     ctx.restore();
     return true;
@@ -875,18 +887,21 @@ export class CrownforgeRenderer {
       x: building.x - dx * (count - 1) * span / 2,
       z: building.z - dz * (count - 1) * span / 2,
     };
-    const projectedX = dx - dz;
-    const projectedY = (dx + dz) * (CONFIG.tileHeight / CONFIG.tileWidth);
-    const projectedAngle = Math.atan2(projectedY, projectedX);
-    const baseAngle = Math.atan2(CONFIG.tileHeight, CONFIG.tileWidth);
-    const rotation = projectedAngle - baseAngle;
+    const visual = resolveWallVisual(direction);
+    const placements = [];
     for (let index = 0; index < count; index += 1) {
       const world = {
         x: start.x + dx * index * span,
         z: start.z + dz * index * span,
       };
       const point = this.worldToScreen(world);
-      this.drawFirstAgeAsset(ctx, 'wall', point, size, alpha, rotation);
+      placements.push({ point, index });
+    }
+    // Draw the farthest screen-space segment first. This keeps depth-facing
+    // panels interlocked without a distant panel painting over the near one.
+    placements.sort((a, b) => a.point.y - b.point.y || a.index - b.index);
+    for (const placement of placements) {
+      this.drawFirstAgeAsset(ctx, visual.asset, placement.point, size, alpha);
     }
   }
 

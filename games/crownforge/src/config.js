@@ -355,12 +355,18 @@ export const LARGE_STONE_ASSET = {
 
 export const FIRST_AGE_ASSETS = {
   townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024 },
-  barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-firstagebuildings1', width: 1536, height: 1024 },
+  barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   field: { src: './assets/crownforge-field-v2.png?v=20260819-fieldpass1', width: 1536, height: 1024 },
-  wall: { src: './assets/crownforge-palisade-segment-v2.png?v=20260819-unitpass3', width: 1536, height: 1024 },
+  // Palisades use authored screen-space views instead of rotating one flat
+  // picture. Rotating an upright fence also rotates its posts and makes a
+  // completed wall look as if it is lying on the meadow.
+  wall: { src: './assets/crownforge-palisade-diagonal-right-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
+  wallDiagonalLeft: { src: './assets/crownforge-palisade-diagonal-left-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
+  wallFace: { src: './assets/crownforge-palisade-face-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
+  wallDepth: { src: './assets/crownforge-palisade-depth-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
 };
 
 export const ROAD_DETAILS_ATLAS = {

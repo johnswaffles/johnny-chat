@@ -11,7 +11,7 @@ import {
   VILLAGER_ATLASES,
 } from '../src/config.js';
 import { animationFrame } from '../src/animation.js';
-import { CrownforgeRenderer } from '../src/renderer.js';
+import { CrownforgeRenderer, resolveWallVisual } from '../src/renderer.js';
 import { CrownforgeSimulation } from '../src/simulation.js';
 
 const STEP_60HZ = 1 / 60;
@@ -450,6 +450,31 @@ function checkCursorCenteredZoom() {
   assert.ok(Math.abs(restoredPoint.y - cursor.y) < 0.01, 'zoom out keeps the cursor world point vertically anchored');
 }
 
+function checkUprightWallVisuals() {
+  const expectations = [
+    ['EAST', { x: 1, z: 0 }, 'wall'],
+    ['NORTH-EAST', { x: 1, z: -1 }, 'wallFace'],
+    ['NORTH', { x: 0, z: -1 }, 'wallDiagonalLeft'],
+    ['NORTH-WEST', { x: -1, z: -1 }, 'wallDepth'],
+    ['WEST', { x: -1, z: 0 }, 'wall'],
+    ['SOUTH-WEST', { x: -1, z: 1 }, 'wallFace'],
+    ['SOUTH', { x: 0, z: 1 }, 'wallDiagonalLeft'],
+    ['SOUTH-EAST', { x: 1, z: 1 }, 'wallDepth'],
+  ];
+  const usedAssets = new Set();
+  for (const [label, direction, expectedAsset] of expectations) {
+    const visual = resolveWallVisual(direction);
+    assert.equal(visual.asset, expectedAsset, `${label} wall uses its authored upright screen-space view`);
+    assert.ok(FIRST_AGE_ASSETS[visual.asset], `${label} upright wall asset is registered`);
+    usedAssets.add(visual.asset);
+  }
+  assert.deepEqual(
+    [...usedAssets].sort(),
+    ['wall', 'wallDepth', 'wallDiagonalLeft', 'wallFace'].sort(),
+    'eight wall snap directions resolve to four upright undirected views',
+  );
+}
+
 function checkAspectCorrectBuildingFeedback() {
   const renderer = Object.create(CrownforgeRenderer.prototype);
   const hallWidth = BUILDING_TYPES.townCenter.renderSize;
@@ -518,6 +543,7 @@ checkCrownHallProportionsAndBuildableRing();
 checkTravelSpeedIsolation();
 checkExpandedWorldAndEnemyDistance();
 checkCursorCenteredZoom();
+checkUprightWallVisuals();
 checkAspectCorrectBuildingFeedback();
 checkCombatAndEndStates();
 
@@ -541,6 +567,7 @@ console.log(JSON.stringify({
     'regional wood, berry, and stone coverage without prebuilt fields',
     'expanded map and opposite-side enemy camp',
     'cursor-centered zoom anchor in both directions',
+    'four authored upright Palisade views across all eight snap directions',
     'aspect-correct landmark health and placement feedback',
     'melee damage, death timing, victory, defeat',
   ],

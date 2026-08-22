@@ -163,6 +163,7 @@ At normal gameplay zoom, read assets in this order:
 - Ashen Raider: broader dark fur silhouette, red sash, exposed axe head, asymmetrical shoulder mass; hostile identity must read even when health bars are hidden.
 - Crown Hall: broad first-age timber landmark with woven wattle, layered thatch, carved beam ends, blue-and-gold cloth, watch platforms, a strong south stair, and warm entry flame.
 - Crown Barracks: long timber-and-thatch drill hall with an open packed-earth yard, human-scale straw dummies, weapon racks, round shields, and restrained Crownwarden cloth. It belongs to the same material age as the Hall and must not use stone towers or slate roofing.
+- Palisade Wall: vertical sharpened timber stakes, restrained rails and rope, a narrow packed-earth contact strip, and small blue-and-gold bindings. Each projected direction uses an authored upright view; never rotate a completed wall picture in screen space because that turns its posts sideways or upside down.
 - Hearth House and Waystore: retired from the current playable catalog. Their legacy atlas cells remain historical fallback material only and are not visual references for future Crownwarden buildings.
 - Ashen Camp: dark palisade enclosure, red tents, tall horned banner, firelight, bone/trophy accents; it is enemy architecture, not a recolored Crownwarden building.
 - Tree: trunk plus distinct canopy silhouette; four tree variants must not collapse into one cloned circle.
