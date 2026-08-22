@@ -2482,7 +2482,8 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Configured Render to build branch `codex/crownforge-live-sync-20260821` with root directory `games/crownforge`, a no-op static build command, and publish directory `.`.
 - Render deployed commit `6e8f072` successfully and issued the live URL: `https://crownforge-dawn-kingdoms.onrender.com/`.
 - Verified the live page title, Crownforge HUD, resource counters, controls panel, and empty browser error/warning log.
-- Updated the website Games menu and Crownforge featured card source links to open the Render deployment. The existing `/crownforge/` Cloudflare route remains unchanged until its shared-site upload blocker is resolved.
+- Updated the website Games menu and Crownforge featured card source links to open the Render deployment.
+- Added and activated a narrow Cloudflare Redirect Rule for `https://justaskjohnny.com/crownforge/*`, forwarding it to `https://crownforge-dawn-kingdoms.onrender.com/${1}` while preserving query strings. This removes the old Cloudflare game copy from the player path without redeploying the oversized shared website payload.
 
 ### DEPLOYMENT BOUNDARY
 
@@ -2491,8 +2492,8 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 ### WHAT SHOULD BE POLISHED NEXT
 
-- Add a custom subdomain such as `crownforge.justaskjohnny.com` after DNS ownership is confirmed, then verify it against the same Render service.
+- Add a custom subdomain such as `crownforge.justaskjohnny.com` after DNS ownership is confirmed, then verify it against the same Render service. The current website path already resolves to Render.
 
 ### WHAT SHOULD NOT BE BUILT YET
 
-- Do not move the entire website to Render, change the root website DNS, or proxy the old `/crownforge/` path until the isolated deployment has been used and the custom-domain decision is explicit.
+- Do not move the entire website to Render, change the root website DNS, or duplicate the Crownforge build in Cloudflare Pages. Keep the narrow `/crownforge/*` redirect pointed at the isolated Render service until a custom-domain decision is explicit.
