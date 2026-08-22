@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
 import {
   BUILDING_TYPES,
   COMBAT_ATLASES,
   CONFIG,
+  FIRST_AGE_BUILD_BLUEPRINTS,
   FIRST_AGE_ASSETS,
   INITIAL_RESOURCES,
   VILLAGER_ATLASES,
@@ -14,6 +16,7 @@ import { CrownforgeSimulation } from '../src/simulation.js';
 
 const STEP_60HZ = 1 / 60;
 const STEP_20HZ = 1 / 20;
+const INDEX_HTML = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 function advance(simulation, seconds, step = STEP_60HZ) {
   const count = Math.ceil(seconds / step);
@@ -105,6 +108,21 @@ function checkResetPresentation() {
   const simulation = freshSimulation();
   const villagers = simulation.units.filter((unit) => unit.type === 'villager' && unit.faction === 'player');
   assert.equal(villagers.length, 3, 'reset has three player villagers');
+  assert.deepEqual(
+    simulation.buildings.filter((building) => building.faction === 'player').map((building) => building.type),
+    ['townCenter'],
+    'reset begins with the Crown Hall as the only player building',
+  );
+  assert.deepEqual(FIRST_AGE_BUILD_BLUEPRINTS, ['barracks', 'field', 'wall'], 'first-age blueprint catalog stays intentionally small');
+  assert.deepEqual(
+    [...INDEX_HTML.matchAll(/data-build-type="([^"]+)"/g)].map((match) => match[1]),
+    FIRST_AGE_BUILD_BLUEPRINTS,
+    'visible build menu matches the approved first-age blueprint catalog',
+  );
+  const storages = simulation.buildings.filter((building) => building.faction === 'player' && BUILDING_TYPES[building.type].storage);
+  assert.equal(storages.length, 1, 'Crown Hall is the only opening resource drop-off');
+  assert.equal(storages[0].type, 'townCenter', 'opening resource drop-off is the Crown Hall');
+  assert.equal(simulation.placeBuilding('house', { x: 40, z: 40 }), false, 'retired Hearth House cannot be placed through the simulation API');
   for (const villager of villagers) {
     for (const building of simulation.buildings.filter((candidate) => candidate.faction === 'player')) {
       assert.equal(insideBuilding(villager, building), false, `villager ${villager.id} is clear of ${building.type}`);
@@ -147,6 +165,21 @@ function checkGathering() {
   simulation.issueContextCommand({ x: 20, z: 18 });
   assert.equal(villager.carryAmount, cargoBeforeRetask, 'retasking preserves cargo');
   assert.equal(villager.command, 'return', 'retasking cargo sends worker to storage first');
+  const hall = simulation.buildings.find((building) => building.type === 'townCenter');
+  assert.equal(villager.returnStorageId, hall.id, 'retasked cargo returns to the Crown Hall');
+
+  for (const resourceType of ['food', 'wood', 'stone']) {
+    const dropoffSimulation = freshSimulation();
+    const worker = dropoffSimulation.units.find((unit) => unit.type === 'villager');
+    const crownHall = dropoffSimulation.buildings.find((building) => building.type === 'townCenter');
+    const before = dropoffSimulation.resources[resourceType];
+    worker.carryType = resourceType;
+    worker.carryAmount = 5;
+    assert.equal(dropoffSimulation._beginReturn(worker), true, `${resourceType} cargo finds a drop-off route`);
+    assert.equal(worker.returnStorageId, crownHall.id, `${resourceType} cargo targets the Crown Hall`);
+    advance(dropoffSimulation, 20);
+    assert.equal(dropoffSimulation.resources[resourceType], before + 5, `${resourceType} cargo deposits at the Crown Hall`);
+  }
 }
 
 function checkReadableResourceApproaches() {
@@ -171,20 +204,25 @@ function checkConstructionAndPlacement() {
   const simulation = freshSimulation();
   const townCenter = simulation.buildings.find((building) => building.type === 'townCenter');
   assert.ok(townCenter, 'reset has a Crown Hall');
-  assert.equal(simulation.getPlacementCheck('house', { x: townCenter.x, z: townCenter.z }).valid, false, 'building overlap rejected');
+  assert.equal(simulation.getPlacementCheck('barracks', { x: townCenter.x, z: townCenter.z }).valid, false, 'building overlap rejected');
   const tree = simulation.resourcesNodes.find((node) => node.resourceType === 'wood');
-  assert.equal(simulation.getPlacementCheck('house', { x: tree.x, z: tree.z }).valid, false, 'resource overlap rejected');
+  assert.equal(simulation.getPlacementCheck('barracks', { x: tree.x, z: tree.z }).valid, false, 'resource overlap rejected');
 
-  const placement = { x: townCenter.x, z: townCenter.z + 13 };
-  assert.equal(simulation.getPlacementCheck('house', placement).valid, true, 'a valid house placement exists outside the Hall stairs');
-  assert.equal(simulation.placeHouse(placement), true, 'house foundation placed');
-  const house = simulation.buildings.find((building) => building.type === 'house' && building.progress < 1);
-  assert.ok(house, 'house starts as a construction site');
+  const placement = [
+    { x: townCenter.x - 18, z: townCenter.z },
+    { x: townCenter.x + 18, z: townCenter.z },
+    { x: townCenter.x, z: townCenter.z + 17 },
+    { x: townCenter.x, z: townCenter.z - 17 },
+  ].find((point) => simulation.getPlacementCheck('barracks', point).valid);
+  assert.ok(placement, 'a valid Barracks placement exists outside the Hall');
+  assert.equal(simulation.placeBuilding('barracks', placement), true, 'Barracks foundation placed');
+  const barracks = simulation.buildings.find((building) => building.type === 'barracks' && building.progress < 1);
+  assert.ok(barracks, 'Barracks starts as a construction site');
   // The workers must first walk to the south approach before construction
   // time starts; leave room for that route in the deterministic check.
-  advance(simulation, BUILDING_TYPES.house.buildTime + 22);
-  assert.equal(house.progress, 1, 'house completes through construction simulation');
-  assert.equal(house.hp, house.maxHp, 'completed house reaches full health');
+  advance(simulation, BUILDING_TYPES.barracks.buildTime + 35);
+  assert.equal(barracks.progress, 1, 'Barracks completes through construction simulation');
+  assert.equal(barracks.hp, barracks.maxHp, 'completed Barracks reaches full health');
 }
 
 function checkWallResourcePrecedence() {
@@ -255,7 +293,7 @@ function checkDynamicBlockerRecovery() {
   assert.ok(initialPath.length >= 3, 'dynamic blocker scenario starts with a multi-segment route');
   const blockerPoint = initialPath[Math.floor(initialPath.length / 2)];
   assert.equal(simulation._sendUnitTo(villager, target, 'move'), true, 'unit accepts the initial movement order');
-  simulation.addBuilding('house', blockerPoint.x, blockerPoint.z, 'player', 1);
+  simulation.addBuilding('barracks', blockerPoint.x, blockerPoint.z, 'player', 1);
 
   assert.equal(simulation._replanUnit(villager), true, 'unit replans after a new building blocks its route');
   assert.ok(villager.path.length > 0, 'replanned route remains available');
@@ -280,7 +318,7 @@ function checkCrownHallStairs() {
     assert.equal(simulation._pointBlockedForUnit(villager, villager), false, `villager ${villager.id} is not blocked on the stairs`);
   }
   assert.equal(simulation._pointBlockedForUnit(villagers[0], { x: hall.x, z: hall.z }), true, 'Hall interior remains blocked');
-  assert.equal(simulation.getPlacementCheck('house', { x: hall.x, z: stairs.outerZ + 2 }).valid, true, 'backside site remains placeable outside Hall footprint');
+  assert.equal(simulation.getPlacementCheck('wall', { x: hall.x, z: stairs.outerZ + 2 }).valid, true, 'backside site remains placeable outside Hall footprint');
 }
 
 function checkBarracksLandmarkScale() {
@@ -315,7 +353,7 @@ function checkCrownHallProportionsAndBuildableRing() {
     west: { x: center.x - 20, z: center.z },
   };
   for (const [side, point] of Object.entries(sites)) {
-    const check = simulation.getPlacementCheck('house', point);
+    const check = simulation.getPlacementCheck('wall', point);
     assert.equal(check.valid, true, `Hall has a buildable meadow opening on the ${side} side`);
   }
 }
@@ -334,13 +372,13 @@ function checkTravelSpeedIsolation() {
   assert.ok(Math.abs(simulation.clock - 6) < 0.02, 'travel speed does not accelerate the fixed simulation clock');
 
   const obstacleSimulation = movementSandbox();
-  const storehouse = obstacleSimulation.addBuilding('storehouse', 100, 100, 'player');
+  const barracks = obstacleSimulation.addBuilding('barracks', 100, 100, 'player');
   const routedVillager = obstacleSimulation.addUnit('villager', 80, 100, 'player');
   obstacleSimulation.setUnitSpeedScale(10);
   assert.equal(obstacleSimulation._sendUnitTo(routedVillager, { x: 120, z: 100 }, 'move'), true, '10x traveler finds a route around a building');
   advance(obstacleSimulation, 6);
   assert.ok(Math.hypot(routedVillager.x - 120, routedVillager.z - 100) < 0.25, '10x traveler completes the obstacle route');
-  assert.equal(insideBuilding(routedVillager, storehouse, 0.36), false, 'high-speed collision cannot tunnel through a building');
+  assert.equal(insideBuilding(routedVillager, barracks, 0.36), false, 'high-speed collision cannot tunnel through a building');
   assert.equal(routedVillager.stuckTimer, 0, 'completed high-speed route clears stuck tracking');
 
   const groupSimulation = movementSandbox();
@@ -490,7 +528,8 @@ console.log(JSON.stringify({
     'reset villager ground/building clearance',
     '20 Hz versus 60 Hz gathering convergence',
     'cargo-preserving retask and storage return',
-    'placement rejection and house completion',
+    'focused first-age building catalog and Crown Hall-only drop-off routing',
+    'placement rejection and Barracks completion',
     'wall precedence over trees and stone with safe resource cleanup',
     'magnetic wall endpoint snap and connected segment spacing',
     'blocked destination fallback outside building clearance',

@@ -9,6 +9,7 @@ import {
   COMBAT_ATLASES,
   ENEMY_CAMP_ASSET,
   ENVIRONMENT_ATLAS,
+  FIRST_AGE_ASSETS,
   VILLAGER_ATLASES,
 } from '../src/config.js';
 import { ANIMATION_DEFINITIONS, animationFrame } from '../src/animation.js';
@@ -140,6 +141,7 @@ const atlasEntries = [
   ['environment', ENVIRONMENT_ATLAS],
   ['buildingStages', BUILDING_STAGE_ATLAS],
   ['enemyCamp', ENEMY_CAMP_ASSET],
+  ...Object.entries(FIRST_AGE_ASSETS).map(([key, value]) => [`firstAge.${key}`, value]),
   ...Object.entries(VILLAGER_ATLASES)
     .filter(([, value]) => value?.src && value.width && value.height && value.columns && value.rows)
     .map(([key, value]) => [`villager.${key}`, value]),
@@ -175,6 +177,7 @@ const activeSources = [
   ENVIRONMENT_ATLAS.src,
   BUILDING_STAGE_ATLAS.src,
   ENEMY_CAMP_ASSET.src,
+  ...Object.values(FIRST_AGE_ASSETS).map((value) => value?.src).filter(Boolean),
   ...Object.values(VILLAGER_ATLASES).map((value) => value?.src).filter(Boolean),
   ...Object.values(COMBAT_ATLASES).map((value) => value?.src).filter(Boolean),
 ].filter(Boolean).map((src) => src.split('?')[0]);

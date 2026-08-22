@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260821-hallwoodpass2';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260822-firstagebuildings1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260821-hallwoodpass2';
-import { CrownforgeRenderer } from './renderer.js?v=20260821-hallwoodpass2';
-import { CrownforgeSimulation } from './simulation.js?v=20260822-movementresources1';
+import { CrownforgeRenderer } from './renderer.js?v=20260822-firstagebuildings1';
+import { CrownforgeSimulation } from './simulation.js?v=20260822-firstagebuildings1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -136,7 +136,7 @@ function beginBuildingPlacement(type) {
     return;
   }
   const blueprint = BUILDING_TYPES[type];
-  if (!blueprint) return;
+  if (!blueprint || !FIRST_AGE_BUILD_BLUEPRINTS.includes(type)) return;
   const builder = simulation.units.find((unit) => unit.selected && unit.type === 'villager' && unit.faction === 'player' && !unit.dead);
   if (!builder) {
     announce(`Select a villager before placing a ${blueprint.label}.`);
@@ -294,7 +294,7 @@ function updateUi() {
       button.hidden = !allowed;
       button.classList.toggle('is-unavailable', !available);
       setTooltip(button, !capacityReady
-        ? 'Build another Hearth House for more population space'
+        ? 'The settlement has reached its current population limit'
         : !affordable
           ? `Gather the resources needed for a ${blueprint.label}`
           : queue.length >= 100
@@ -415,7 +415,8 @@ function buildingAbilityLabel(building, blueprint) {
   if (blueprint.enemyStructure) return 'enemy settlement core · destroy to win';
   if (blueprint.production) {
     const products = (blueprint.productionTypes ?? []).map((type) => PRODUCTION_TYPES[type]?.label ?? type).join(' + ');
-    return `trains ${products} · select a unit below`;
+    const dropoff = blueprint.storage ? 'drop-off for food, wood, and stone · ' : '';
+    return `${dropoff}trains ${products} · select a unit below`;
   }
   if (blueprint.storage) {
     const resource = building.type === 'lumberMill' ? 'wood' : building.type === 'quarry' ? 'stone' : building.type === 'grainMill' ? 'food' : 'all resources';

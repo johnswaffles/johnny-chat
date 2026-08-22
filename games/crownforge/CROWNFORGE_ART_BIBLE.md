@@ -76,10 +76,9 @@ These are render sizes before camera zoom. They are visual standards, not new ga
 | Villager | 88 px | collision radius 0.36; building interaction 0.78 |
 | Crown Guard | 120 px | collision radius 0.43; combat range 1.45 |
 | Ashen Raider | 120 px | collision radius 0.44; combat range 1.25 |
-| Crown Hall | 294 px | 3 x 3 footprint |
-| Hearth House | 232 px | 2 x 2 footprint |
-| Waystore | 250 px | 2 x 2 footprint |
-| Ashen Camp | 330 px wide, natural 3:2 aspect | 3 x 3 footprint |
+| Crown Hall | 1000 px wide, natural 3:2 aspect | 9 x 8 footprint plus south stair access |
+| Crown Barracks | 1000 px wide, natural 3:2 aspect | 6 x 5 footprint |
+| Ashen Camp | 500 px wide, natural 3:2 aspect | 6 x 5 footprint |
 | Tree resource | 142 px base | resource approach distance 1.75 |
 | Berry resource | 115 px base | resource approach distance 1.55 |
 | Stone resource | 126 px base | resource approach distance 1.70 |
@@ -162,9 +161,9 @@ At normal gameplay zoom, read assets in this order:
 - Villager: teal working dress, cream head covering and sleeves, leather belt pouch, tool or cargo visibly separated from the torso.
 - Crown Guard: compact armored body, blue-teal scarf, round painted shield, upright spear; spear and shield must not disappear into the body at screen-left/right directions.
 - Ashen Raider: broader dark fur silhouette, red sash, exposed axe head, asymmetrical shoulder mass; hostile identity must read even when health bars are hidden.
-- Crown Hall: tall timber-and-stone vertical core, blue pennants, crown finial, warm entry flame.
-- Hearth House: small thatched roof, chimney, timber frame, low domestic scale, planted edge detail.
-- Waystore: heavier stone and timber doorway, barrels, stacked goods, practical storage silhouette.
+- Crown Hall: broad first-age timber landmark with woven wattle, layered thatch, carved beam ends, blue-and-gold cloth, watch platforms, a strong south stair, and warm entry flame.
+- Crown Barracks: long timber-and-thatch drill hall with an open packed-earth yard, human-scale straw dummies, weapon racks, round shields, and restrained Crownwarden cloth. It belongs to the same material age as the Hall and must not use stone towers or slate roofing.
+- Hearth House and Waystore: retired from the current playable catalog. Their legacy atlas cells remain historical fallback material only and are not visual references for future Crownwarden buildings.
 - Ashen Camp: dark palisade enclosure, red tents, tall horned banner, firelight, bone/trophy accents; it is enemy architecture, not a recolored Crownwarden building.
 - Tree: trunk plus distinct canopy silhouette; four tree variants must not collapse into one cloned circle.
 - Berry: low broad bush with visible clusters and leaf mass; depleted art must visibly reduce cluster volume.

@@ -10,11 +10,11 @@ export const CONFIG = {
   initialZoom: 0.16,
   minZoom: 0.035,
   maxZoom: 1.16,
-  // Bias the opening view slightly north so the full Hearth House roofline
-  // and the enlarged Crown Hall both sit below the top HUD at reset.
+  // Keep the first-age Crown Hall below the top HUD with a readable southern
+  // approach and open construction space around the civic core.
   initialCameraWorld: { x: 78, z: 82 },
-  // The first-age beta sandbox deliberately keeps every currently implemented
-  // blueprint available and leaves generous room for production testing.
+  // The beta sandbox keeps generous resources and production capacity, while
+  // the player-facing blueprint list remains intentionally small and coherent.
   sandboxMode: true,
   // Roads remain authored content for a later-age build feature. The opening
   // first-age map starts as an unroaded meadow so the settlement grows from
@@ -302,6 +302,11 @@ export const BUILDING_TYPES = {
   },
 };
 
+// Only these structures belong to the current player-facing first-age build
+// catalog. Retired prototypes remain defined for old saves/audit history, but
+// cannot be placed until they receive an approved Crownforge asset and role.
+export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'field', 'wall']);
+
 export const ASSET_RECTS = {
   townCenter: { x: 0, y: 0, width: 418, height: 418 },
   house: { x: 418, y: 0, width: 418, height: 418 },
@@ -350,7 +355,7 @@ export const LARGE_STONE_ASSET = {
 
 export const FIRST_AGE_ASSETS = {
   townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024 },
-  barracks: { src: './assets/crownforge-barracks-v3.png?v=20260819-unitpass3', width: 1536, height: 1024 },
+  barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-firstagebuildings1', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },

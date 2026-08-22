@@ -99,7 +99,7 @@ Before accepting an asset family, test:
 - Villager walk: `assets/crownforge-villager-walk-loop-v3.png`.
 - Villager carry food: `assets/villager-carry-food-loop-v1.png` pending a true-alpha v2 replacement; the existing state is retained until the replacement passes the transparency gate.
 - Crown Hall: `assets/crownforge-crown-hall-wood-v1.png`.
-- Crown Barracks: `assets/crownforge-barracks-v3.png`.
+- Crown Barracks: `assets/crownforge-barracks-first-age-v3.png`.
 - Large stone: `assets/crownforge-stone-deposit-large-v1.png`.
 - Grove depletion family: `assets/crownforge-tree-grove-depletion-v1.png`, scaled by the resource tier contract and staged by remaining capacity.
 - Field plot: `assets/crownforge-field-v2.png`, a no-worker transparent plot reserved for the live farmer.

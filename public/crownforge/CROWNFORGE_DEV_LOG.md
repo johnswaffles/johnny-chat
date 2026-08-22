@@ -8,7 +8,7 @@ Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 
 - A standalone browser-first Crownforge project under `crownforge/`.
 - One warm, hand-painted isometric meadow map with a Crownwardens starting settlement.
-- The Crownwardens faction, one Town Center (`Crown Hall`), one starting House (`Hearth House`), one starting storage building (`Waystore`), three villagers, one Crown Guard, an Ashen Camp, a small capped Ashen Raider presence, trees, berry bushes, and stone deposits.
+- The Crownwardens faction, one starting Town Center (`Crown Hall`), three villagers, one Crown Guard, an Ashen Camp, a small capped Ashen Raider presence, trees, berry bushes, and stone deposits. The Crown Hall is the only current player resource drop-off.
 - A clean RTS presentation layer: isometric world projection, camera controls, selection highlights, health bars, resource labels, command deck, settlement intel, and victory panel.
 - A compact Crownforge interface language: warm glass panels, parchment/gold/teal accents, and one original generated icon family shared by resources, units, construction, commands, controls, and match outcomes.
 
@@ -20,9 +20,9 @@ Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 - Grid-based A* pathfinding around completed building footprints.
 - Unit collision separation.
 - Villager gathering from wood, food, and stone resource nodes.
-- Carrying and depositing into the nearest completed storage building.
+- Carrying and depositing Food, Wood, and Stone at the completed Crown Hall.
 - Resource counters for Food, Wood, and Stone.
-- Hearth House placement with affordability and footprint checks.
+- Crown Barracks, Grain Field, and Palisade placement with affordability and footprint checks.
 - Construction progress assigned to a selected villager.
 - Basic melee combat with attack ranges, cooldowns, health, and death.
 - Ashen Raider target acquisition when Crownwardens enter its threat radius.
@@ -2608,3 +2608,50 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add another physics mode, simulation-speed control, second pathfinding system, automatic farms, new resource types, or denser map clutter. Keep fields player-built and keep the current regional natural-resource contract stable.
+
+## FIRST-AGE BUILDING COHESION AND CROWN HALL DROP-OFF PASS — 2026-08-22
+
+### WHAT WAS COMPLETED
+
+- Replaced the active stone-and-slate Crown Barracks with `assets/crownforge-barracks-first-age-v3.png`, an original timber-and-thatch longhouse and drill yard generated specifically against the approved wooden Crown Hall language.
+- The new Barracks uses heavy carved timber, wattle, layered golden thatch, rope lashings, packed earth, restrained Crownwarden blue-and-gold cloth, weapon racks, round shields, and three human-scale training dummies. It deliberately contains no stone walls, slate roof, castle tower, or later-age masonry.
+- Kept the approved Barracks gameplay scale, `6 x 5` footprint, `1000` render width, production role, collision clearance, entrance, cost, health, and Crown Guard queue unchanged. This is a visual-cohesion correction, not a new military system.
+- Removed the starting Hearth House and Waystore from reset. The opening player settlement now contains only the Crown Hall, three Villagers, and one Crown Guard.
+- Reduced the player-facing first-age build catalog to `Crown Barracks`, `Grain Field`, and `Palisade Wall`. Hearth House, Waystore, Lumber Mill, Stone Quarry, and Grain Mill remain legacy/future definitions only and cannot be placed through the current UI or the public simulation placement path.
+- Made the Crown Hall the sole current resource drop-off. Food, Wood, and Stone workers all path to the completed Hall, deposit there, and return to work through the existing gathering loop.
+- Updated Crown Hall selection information to communicate both active functions: `drop-off for food, wood, and stone` and `trains Villager`.
+- Added `FIRST_AGE_BUILD_BLUEPRINTS` as the source-of-truth catalog so future buildings must be deliberately admitted instead of appearing because an old definition still exists.
+- Updated the art bible, asset manifest, production playbook, visible First Light order, build menu, runtime cache marker, automated regression, and visual-integrity audit.
+
+### ASSETS CREATED
+
+- `assets/crownforge-barracks-first-age-v3.png` — original `1536 x 1024` RGBA first-age Crown Barracks. The built-in image generator produced the authored timber structure; the established Crownforge edge-connected matte cleanup converted the generator's light checker representation into genuine transparent alpha without replacing the authored silhouette.
+
+### SYSTEMS CREATED OR CHANGED
+
+- Added a constrained first-age blueprint allowlist shared by UI and simulation placement.
+- Simplified resource-storage selection to nearest completed active storage, which currently resolves uniquely to the Crown Hall.
+- Added deterministic coverage for the visible three-blueprint menu, retired-building rejection, reset building inventory, Barracks construction completion, and independent Food/Wood/Stone deposits at the Crown Hall.
+
+### VALIDATION
+
+- `node --check` passed for all changed runtime and audit modules.
+- `tools/remediation-regression.mjs` passed the complete existing suite plus the focused catalog, Hall-only storage, three-resource deposit, and Barracks construction checks.
+- `tools/visual-integrity-audit.mjs` passed with no missing active asset and no placeholder reference; the new Barracks is now included in its active-file inventory.
+- Local browser play confirmed that reset contains no Hearth House or Waystore, the menu exposes only Barracks/Field/Palisade, the new Barracks completes successfully, and its timber/thatch silhouette has no checkerboard, rectangular plate, white fringe, or style mismatch at normal and close zoom.
+- Selecting the Crown Hall reported `900 / 900 HP · Resource drop-off and settlement core · drop-off for food, wood, and stone · trains Villager`, and browser warning/error logs remained empty.
+
+### KNOWN ISSUES
+
+- The Barracks still uses the existing restrained construction-progress reveal rather than a dedicated authored foundation/partial/near-complete family in its new timber design. This is the next appropriate building-art polish; do not substitute the retired mixed-age atlas as if it matched.
+- Legacy Hearth House, Waystore, and specialty drop-off definitions/assets remain in source for historical compatibility and future redesign. They are intentionally unreachable in the playable catalog.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Author a four-stage construction family for the approved timber Barracks while preserving its exact final silhouette, ground anchor, scale, light, and transparent edge.
+- Recheck the new Barracks beside several moving Crown Guards at closer practical gameplay zoom to confirm the practice dummies remain a trustworthy scale reference.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not re-enable housing, a storehouse, Lumber Mill, Stone Quarry, Grain Mill, or another civic building until its gameplay role and first-age Crownforge artwork are both approved.
+- Do not add another age, faction, military roster, or economy layer to fill the newly open meadow. Keep the current small catalog coherent first.

@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260821-hallwoodpass2';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260822-firstagebuildings1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260821-hallwoodpass2';
 
@@ -157,8 +157,9 @@ export class CrownforgeSimulation {
 
   _seedWorld() {
     this.addBuilding('townCenter', 78, 82, 'player');
-    this.addBuilding('house', 56, 68, 'player');
-    this.addBuilding('storehouse', 102, 93, 'player');
+    // The first-age settlement begins with one coherent civic landmark. The
+    // retired Hearth House and Waystore are intentionally absent; until new
+    // support buildings are invented, every resource returns to the Hall.
     // Start the enemy on the far opposite side of the expanded diamond. The
     // long open approach creates time to gather and build without making the
     // Raiders blind or removing their ability to defend their camp.
@@ -1506,15 +1507,7 @@ export class CrownforgeSimulation {
   _findStorageRoute(unit) {
     const storages = this.buildings
       .filter((building) => !building.destroyed && building.faction === 'player' && building.progress >= 1 && BUILDING_TYPES[building.type].storage)
-      .sort((a, b) => {
-        const aPreferred = a.type === 'storehouse' ? 0 : 1;
-        const bPreferred = b.type === 'storehouse' ? 0 : 1;
-        // A drop-off should be chosen for travel time first. The Waystore is
-        // a dedicated resource building, but a nearer Crown Hall is the more
-        // believable answer for a short opening haul and keeps the loop
-        // responsive on the expanded map.
-        return distance(unit, a) - distance(unit, b) || aPreferred - bPreferred;
-      });
+      .sort((a, b) => distance(unit, a) - distance(unit, b));
     for (const storage of storages) {
       const route = this._bestPathToPoints(unit, this._storageApproachPoints(storage));
       if (route) return { storage, path: route.path, slot: route.slot };
@@ -2018,11 +2011,7 @@ export class CrownforgeSimulation {
 
   _nearestStorage(point) {
     const storage = this.buildings.filter((building) => !building.destroyed && building.faction === 'player' && building.progress >= 1 && BUILDING_TYPES[building.type].storage);
-    return storage.sort((a, b) => {
-      const distanceDelta = distance(point, a) - distance(point, b);
-      if (Math.abs(distanceDelta) > 0.01) return distanceDelta;
-      return (a.type === 'storehouse' ? 0 : 1) - (b.type === 'storehouse' ? 0 : 1);
-    })[0] ?? null;
+    return storage.sort((a, b) => distance(point, a) - distance(point, b))[0] ?? null;
   }
 
   _cellIntersectsBuilding(cellX, cellZ, building, padding = 0) {
@@ -2570,7 +2559,7 @@ export class CrownforgeSimulation {
 
   placeBuilding(type, point) {
     const blueprint = BUILDING_TYPES[type];
-    if (!blueprint) {
+    if (!blueprint || !FIRST_AGE_BUILD_BLUEPRINTS.includes(type)) {
       this._announce('That blueprint is not available in the first-age sandbox.');
       return false;
     }
@@ -2600,10 +2589,6 @@ export class CrownforgeSimulation {
     return true;
   }
 
-  placeHouse(point) {
-    return this.placeBuilding('house', point);
-  }
-
   queueUnit(type) {
     const blueprint = PRODUCTION_TYPES[type];
     const building = this.selectedEntities.find((entity) => entity.kind === 'building'
@@ -2622,7 +2607,7 @@ export class CrownforgeSimulation {
     }
     const population = this.population;
     if (!CONFIG.sandboxMode && population.used >= population.capacity) {
-      this._announce('Build another Hearth House before training more units.');
+      this._announce('The settlement has reached its current population limit.');
       return { success: false, kind: 'train', building };
     }
     if (!this._canAfford(blueprint.cost)) {
