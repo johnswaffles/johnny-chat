@@ -2563,6 +2563,7 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - `tools/remediation-regression.mjs` passed the magnetic endpoint check and all existing animation, economy, placement, construction, pathfinding, combat, victory, defeat, camera, and map checks.
 - The new regression places a three-segment wall, drags near its terminal end, confirms the preview moves to the next exact segment center, confirms the connected wall id is recorded, and confirms the connected line places as a separate construction record.
+- The deployed Render build served the new `20260822-wallconnect1` page/module marker; its wall menu and placement toast exposed the auto-connect behavior, and the live placement pass produced no browser warnings or errors.
 - No new artwork or gameplay system was added; the existing Palisade asset, eight-way snap, wall construction lifecycle, and resource precedence rules remain canonical.
 
 ### WHAT SHOULD BE POLISHED NEXT
