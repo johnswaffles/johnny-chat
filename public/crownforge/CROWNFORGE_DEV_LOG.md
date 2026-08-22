@@ -2473,3 +2473,26 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add another landmark variant, new age, new faction, or new building function to compensate for this scale alignment. Confirm the existing first-age sandbox reads correctly first.
+
+## RENDER STATIC DEPLOYMENT — 2026-08-21
+
+### WHAT WAS COMPLETED
+
+- Created an isolated Render Static Site named `crownforge-dawn-kingdoms` from `johnswaffles/johnny-chat`.
+- Configured Render to build branch `codex/crownforge-live-sync-20260821` with root directory `games/crownforge`, a no-op static build command, and publish directory `.`.
+- Render deployed commit `6e8f072` successfully and issued the live URL: `https://crownforge-dawn-kingdoms.onrender.com/`.
+- Verified the live page title, Crownforge HUD, resource counters, controls panel, and empty browser error/warning log.
+- Updated the website Games menu and Crownforge featured card source links to open the Render deployment. The existing `/crownforge/` Cloudflare route remains unchanged until its shared-site upload blocker is resolved.
+
+### DEPLOYMENT BOUNDARY
+
+- Render serves only `games/crownforge`; it does not share the existing `johnny-chat` Node service, Cloudflare Pages payload, or other game routes.
+- Future Crownforge pushes to the configured branch will redeploy this isolated Render site. Do not duplicate or edit a second Crownforge asset copy.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Add a custom subdomain such as `crownforge.justaskjohnny.com` after DNS ownership is confirmed, then verify it against the same Render service.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not move the entire website to Render, change the root website DNS, or proxy the old `/crownforge/` path until the isolated deployment has been used and the custom-domain decision is explicit.
