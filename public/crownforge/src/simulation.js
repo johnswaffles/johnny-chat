@@ -15,6 +15,7 @@ const PATH_REACH_TOLERANCE = 0.38;
 const BUILDING_CLEARANCE = 0.4;
 const RESOURCE_FOOTPRINTS = { tree: 1.05, grove: 2.45, berry: 0.82, grain: 1.1, stone: 0.92 };
 const WALL_CLEARABLE_RESOURCE_TYPES = new Set(['wood', 'stone']);
+const WALL_CONNECT_SNAP_DISTANCE = 3.4;
 const DECORATION_FOOTPRINTS = { log: 0.78, stump: 0.62, flowers: 0.42, pebbles: 0.44 };
 const COMBAT_SLOT_COUNT = 8;
 const COMBAT_SLOT_MARGIN = 0.12;
@@ -2348,6 +2349,57 @@ export class CrownforgeSimulation {
     return { kind: 'move', success: true, target: point };
   }
 
+  _wallEndpointRecords() {
+    const blueprint = BUILDING_TYPES.wall;
+    const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
+    return this.buildings
+      .filter((building) => building.type === 'wall' && building.faction === 'player' && !building.destroyed)
+      .flatMap((building) => {
+        const count = Math.max(1, Math.round(building.wallSegments ?? 1));
+        const direction = wallDirectionFromOptions(building);
+        const start = building.wallStart ?? {
+          x: building.x - direction.x * (count - 1) * span / 2,
+          z: building.z - direction.z * (count - 1) * span / 2,
+        };
+        const end = {
+          x: start.x + direction.x * (count - 1) * span,
+          z: start.z + direction.z * (count - 1) * span,
+        };
+        return [
+          { buildingId: building.id, side: 'start', point: start },
+          { buildingId: building.id, side: 'end', point: end },
+        ];
+      });
+  }
+
+  _nearestWallConnection(point, direction) {
+    const blueprint = BUILDING_TYPES.wall;
+    const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
+    let nearest = null;
+    for (const endpoint of this._wallEndpointRecords()) {
+      // The new segment center sits one segment span away from the existing
+      // terminal center. Testing both signs also allows clean T-junctions and
+      // corners instead of forcing every new wall to extend straight ahead.
+      for (const sign of [1, -1]) {
+        const candidate = {
+          x: endpoint.point.x + direction.x * span * sign,
+          z: endpoint.point.z + direction.z * span * sign,
+        };
+        const distanceToCandidate = distance(point, candidate);
+        if (distanceToCandidate > WALL_CONNECT_SNAP_DISTANCE) continue;
+        if (!nearest || distanceToCandidate < nearest.distance - 0.001) {
+          nearest = {
+            buildingId: endpoint.buildingId,
+            side: endpoint.side,
+            point: candidate,
+            distance: distanceToCandidate,
+          };
+        }
+      }
+    }
+    return nearest;
+  }
+
   getWallLinePreview(start, end) {
     const blueprint = BUILDING_TYPES.wall;
     const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
@@ -2362,13 +2414,36 @@ export class CrownforgeSimulation {
     const directionIndex = ((Math.round(-rawAngle / (Math.PI / 4)) % WALL_SNAP_DIRECTIONS.length) + WALL_SNAP_DIRECTIONS.length) % WALL_SNAP_DIRECTIONS.length;
     const snapped = WALL_SNAP_DIRECTIONS[directionIndex];
     const direction = normalizeWallDirection(snapped);
-    const projectedDistance = Math.max(0, deltaX * direction.x + deltaZ * direction.z);
-    const distanceAlongWall = Math.max(span, Math.abs(projectedDistance));
-    const segmentCount = Math.max(1, Math.min(24, Math.round(distanceAlongWall / span) + 1));
-    const anchor = {
+    const startConnection = this._nearestWallConnection(start, direction);
+    let anchor = startConnection?.point ?? {
       x: Math.round(start.x),
       z: Math.round(start.z),
     };
+    const projectedDistance = (end.x - anchor.x) * direction.x + (end.z - anchor.z) * direction.z;
+    const distanceAlongWall = Math.max(span, Math.abs(projectedDistance));
+    let segmentCount = Math.max(1, Math.min(24, Math.round(distanceAlongWall / span) + 1));
+    let endConnection = null;
+    let proposedEnd = {
+      x: anchor.x + direction.x * (segmentCount - 1) * span,
+      z: anchor.z + direction.z * (segmentCount - 1) * span,
+    };
+    const endCandidate = this._nearestWallConnection(end, direction)
+      ?? this._nearestWallConnection(proposedEnd, direction);
+    if (endCandidate) {
+      const projectedEnd = (endCandidate.point.x - anchor.x) * direction.x + (endCandidate.point.z - anchor.z) * direction.z;
+      if (projectedEnd >= span * 0.75) {
+        segmentCount = Math.max(1, Math.min(24, Math.round(projectedEnd / span) + 1));
+        const snappedAnchor = {
+          x: endCandidate.point.x - direction.x * (segmentCount - 1) * span,
+          z: endCandidate.point.z - direction.z * (segmentCount - 1) * span,
+        };
+        if (!startConnection || distance(snappedAnchor, anchor) <= WALL_CONNECT_SNAP_DISTANCE) {
+          anchor = snappedAnchor;
+          endConnection = endCandidate;
+          proposedEnd = endCandidate.point;
+        }
+      }
+    }
     const orientation = Math.abs(direction.x) > 0.98 ? 'horizontal' : Math.abs(direction.z) > 0.98 ? 'vertical' : 'diagonal';
     const wallDirection = { ...direction };
     const segments = Array.from({ length: segmentCount }, (_, index) => ({
@@ -2386,6 +2461,8 @@ export class CrownforgeSimulation {
       wallSnapLabel: snapped.label,
       wallStart: segments[0],
       clearResources: true,
+      wallConnectionIds: [...new Set([startConnection?.buildingId, endConnection?.buildingId].filter(Boolean))],
+      wallConnectCount: Number(Boolean(startConnection)) + Number(Boolean(endConnection)),
     };
     const check = this.getPlacementCheck('wall', world, options);
     const totalCost = Object.fromEntries(Object.entries(blueprint.cost).map(([key, value]) => [key, value * segmentCount]));
@@ -2565,7 +2642,14 @@ export class CrownforgeSimulation {
       return { valid: false, reason: 'Foundation is outside the meadow.' };
     }
     const placement = { type, x: point.x, z: point.z, progress: 1, ...options };
-    if (this.buildings.some((building) => !building.destroyed && this._boundsOverlap(bounds, this._buildingEntityBounds(building, 0)))) {
+    const connectedWallIds = new Set(blueprint.wall ? (options.wallConnectionIds ?? []) : []);
+    if (this.buildings.some((building) => {
+      if (building.destroyed || !this._boundsOverlap(bounds, this._buildingEntityBounds(building, 0))) return false;
+      // Connected wall runs intentionally overlap their conservative collision
+      // envelopes at the terminal post. Other structures and unrelated wall
+      // crossings remain invalid so the magnet never becomes a bypass.
+      return !(blueprint.wall && building.type === 'wall' && connectedWallIds.has(building.id));
+    })) {
       return { valid: false, reason: 'Another structure is in the way.' };
     }
     if (this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)

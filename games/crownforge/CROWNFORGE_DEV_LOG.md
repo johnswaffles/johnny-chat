@@ -2547,3 +2547,28 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not let walls erase food plots, decorations, buildings, or units, and do not add gates, towers, segment-level wall damage, or another wall-placement system until this narrow precedence rule remains stable in live play.
+
+## PALISADE MAGNETIC CONNECT PASS — 2026-08-22
+
+### WHAT WAS COMPLETED
+
+- Added endpoint magnetism to the existing Palisade Wall drag preview. When the cursor approaches the next segment position beside an existing player wall end, the preview snaps to that exact connection point.
+- Kept the existing eight-way direction snap and applied the same segment spacing to connected horizontal, vertical, diagonal, and corner/T-junction runs.
+- Connected wall envelopes may intentionally overlap at the terminal post; unrelated wall crossings and all non-wall building overlaps remain invalid.
+- The placement readout now reports connected wall ends when the magnetic snap is active. The construction tooltip and placement toast explain the behavior without adding another control mode.
+- Existing tree/stone precedence remains active: clearable wood and stone nodes are removed on release, while food nodes, decorations, units, and buildings remain protected.
+- Bumped the main simulation cache marker to `20260822-wallconnect1` and synchronized the source/public Crownforge mirrors.
+
+### VALIDATION
+
+- `tools/remediation-regression.mjs` passed the magnetic endpoint check and all existing animation, economy, placement, construction, pathfinding, combat, victory, defeat, camera, and map checks.
+- The new regression places a three-segment wall, drags near its terminal end, confirms the preview moves to the next exact segment center, confirms the connected wall id is recorded, and confirms the connected line places as a separate construction record.
+- No new artwork or gameplay system was added; the existing Palisade asset, eight-way snap, wall construction lifecycle, and resource precedence rules remain canonical.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Verify magnetic joins in the deployed browser at normal and close zoom with straight extensions, corners, and T-junctions. Confirm the preview visibly lands on the terminal post before release and that the finished wall does not show a gap or doubled segment.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add gates, towers, segment-level wall damage, wall editing, or freeform spline walls until endpoint magnetism remains stable across the existing eight-way placement contract.

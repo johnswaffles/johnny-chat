@@ -90,7 +90,7 @@ export class CrownforgeInput {
     this.onBuildMode(type);
     this._updateCursor(this.pointer);
     this.onToast(type === 'wall'
-      ? 'Drag across the meadow to aim the wall. Trees and stone in its path clear on release. Press Esc to cancel.'
+      ? 'Drag across the meadow to aim the wall. Nearby wall ends magnetically connect. Trees and stone clear on release. Press Esc to cancel.'
       : 'Construction menu: choose a clear meadow tile. Press Esc to cancel.');
   }
 

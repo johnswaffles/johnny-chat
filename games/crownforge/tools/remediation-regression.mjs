@@ -199,6 +199,29 @@ function checkWallResourcePrecedence() {
   assert.ok(simulation.buildings.some((building) => building.type === 'wall' && building.wallSegments === 3), 'wall keeps its snapped segment run');
 }
 
+function checkWallEndpointMagnetism() {
+  const simulation = freshSimulation();
+  const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  assert.ok(villager, 'reset has a builder for wall endpoint magnetism');
+  simulation.selectedIds = [villager.id];
+  simulation._syncSelectionFlags();
+  const existing = simulation.addBuilding('wall', 183, 180, 'player', 1, {
+    wallSegments: 3,
+    wallOrientation: 'horizontal',
+    wallDirection: { x: 1, z: 0 },
+    wallStart: { x: 180, z: 180 },
+  });
+
+  const preview = simulation.getWallLinePreview({ x: 186.4, z: 180.1 }, { x: 195.2, z: 180.1 });
+  assert.equal(preview.valid, true, 'nearby wall endpoint produces a valid connected preview');
+  assert.equal(preview.wallConnectCount, 1, 'preview reports one magnetic wall connection');
+  assert.deepEqual(preview.wallStart, { x: 189, z: 180 }, 'wall start magnetically moves to the next segment center');
+  assert.deepEqual(preview.segments.at(-1), { x: 195, z: 180 }, 'connected wall preserves exact segment spacing');
+  assert.ok(preview.wallConnectionIds.includes(existing.id), 'preview records the connected wall id');
+  assert.equal(simulation.placeWallLine({ x: 186.4, z: 180.1 }, { x: 195.2, z: 180.1 }), true, 'connected wall line places successfully');
+  assert.equal(simulation.buildings.filter((building) => building.type === 'wall').length, 2, 'connected wall remains a separate construction record');
+}
+
 function checkBlockedDestinationFallback() {
   const simulation = freshSimulation();
   const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
@@ -375,6 +398,7 @@ checkGathering();
 checkReadableResourceApproaches();
 checkConstructionAndPlacement();
 checkWallResourcePrecedence();
+checkWallEndpointMagnetism();
 checkBlockedDestinationFallback();
 checkDynamicBlockerRecovery();
 checkCrownHallStairs();
@@ -394,6 +418,7 @@ console.log(JSON.stringify({
     'cargo-preserving retask and storage return',
     'placement rejection and house completion',
     'wall precedence over trees and stone with safe resource cleanup',
+    'magnetic wall endpoint snap and connected segment spacing',
     'blocked destination fallback outside building clearance',
     'dynamic building blocker route recovery',
     'Crown Hall stair routing, landing stop, and interior collision',
