@@ -26,8 +26,11 @@ const FACING_HYSTERESIS = 0.12;
 const UNIT_STUCK_TIMEOUT = 0.72;
 const UNIT_REPATH_COOLDOWN = 0.42;
 const UNIT_STATIC_CLEARANCE = 0.06;
+const MAX_UNIT_TRAVEL_SUBSTEP = 0.16;
 const SIMULATION_STEP = 1 / 60;
 const MAX_SIMULATION_STEPS = 8;
+const NATURAL_RESOURCE_SECTORS = { columns: 5, rows: 4 };
+const NATURAL_RESOURCE_GAP = 1.7;
 
 export function resourceFootprint(nodeOrType) {
   const type = typeof nodeOrType === 'string' ? nodeOrType : nodeOrType?.type;
@@ -50,6 +53,13 @@ const FACING_VECTORS = [
   { x: -1, z: -1 },
   { x: -1, z: 1 },
 ];
+
+function stableResourceNoise(index, salt = 0) {
+  let value = (Math.imul(index + 1, 374761393) + Math.imul(salt + 1, 668265263) + 0x9e3779b9) >>> 0;
+  value = Math.imul(value ^ (value >>> 13), 1274126177) >>> 0;
+  value ^= value >>> 16;
+  return (value >>> 0) / 4294967296;
+}
 
 function directionFromVector(dx, dz, fallback = 0) {
   if (Math.hypot(dx, dz) < 0.001) return fallback;
@@ -153,60 +163,24 @@ export class CrownforgeSimulation {
     // long open approach creates time to gather and build without making the
     // Raiders blind or removing their ability to defend their camp.
     this.addBuilding('ashenCamp', 516, 414, 'enemy');
-    // Keep the opening wood pair on the Crown Hall's west and south-west
-    // flanks. The starting cluster now sits inside the expanded meadow rather
-    // than on the old north-west tip of the playable diamond.
+    // Keep a compact opening reserve around the Crown Hall while leaving its
+    // build ring readable. The regional pass below supplies the rest of the
+    // map instead of concentrating nearly every useful node here.
     this.addResource('tree', 'wood', 68, 96, 180, 0, { sizeTier: 'small' });
     this.addResource('tree', 'wood', 62, 102, 180, 1, { sizeTier: 'small' });
-    this.addResource('tree', 'wood', 64, 88, 260, 2, { sizeTier: 'medium' });
     this.addResource('tree', 'wood', 95, 105, 420, 3, { sizeTier: 'medium' });
-    this.addResource('tree', 'wood', 120, 107, 700, 1, { sizeTier: 'large' });
-    this.addResource('grove', 'wood', 61, 110, 480, 0, { sizeTier: 'small' });
     this.addResource('grove', 'wood', 67, 59, 1100, 1, { sizeTier: 'large' });
-    this.addResource('tree', 'wood', 20, 61, 180, 2, { sizeTier: 'small' });
-    this.addResource('tree', 'wood', 25, 64, 260, 0, { sizeTier: 'medium' });
-    this.addResource('tree', 'wood', 33, 61, 180, 3, { sizeTier: 'small' });
-    this.addResource('berry', 'food', 35.5, 28.5, 105, 0, { sizeTier: 'small' });
     // Keep a clear buildable meadow on the Hall's east flank. This food node
     // remains close enough to serve the settlement without occupying the
     // first ring where players expect to place structures.
     this.addResource('berry', 'food', 49, 40.5, 105, 1, { sizeTier: 'small' });
-    this.addResource('berry', 'food', 57, 30, 105, 2, { sizeTier: 'small' });
     this.addResource('berry', 'food', 82, 41, 105, 0, { sizeTier: 'small' });
-    // Large working plots need breathing room so their silhouettes do not
-    // stack into one another at the opening zoom.
-    this.addResource('grain', 'food', 44, 18, 220, 0, { sizeTier: 'small' });
-    this.addResource('grain', 'food', 60, 20, 220, 0, { sizeTier: 'small' });
-    this.addResource('grain', 'food', 55, 35, 220, 0, { sizeTier: 'small' });
-    this.addResource('stone', 'stone', 49, 50, 120, 0, { sizeTier: 'small' });
-    this.addResource('stone', 'stone', 54, 53, 360, 3, { sizeTier: 'medium' });
-    this.addResource('stone', 'stone', 76, 55, 900, 2, { sizeTier: 'large' });
     this.addResource('stone', 'stone', 72, 64, 360, 1, { sizeTier: 'medium' });
     this.addResource('stone', 'stone', 84, 61, 900, 0, { sizeTier: 'large' });
-    // The expanded board is intentionally sparse. These small regional
-    // clearings give the larger map useful destinations without stamping a
-    // forest over every open meadow tile.
-    [
-      ['tree', 112, 84, 260, 0, 'medium'], ['tree', 128, 96, 180, 1, 'small'],
-      ['grove', 155, 116, 1100, 0, 'large'], ['tree', 190, 72, 420, 2, 'medium'],
-      ['tree', 225, 150, 260, 3, 'medium'], ['grove', 275, 112, 1100, 1, 'large'],
-      ['tree', 315, 185, 180, 0, 'small'], ['tree', 370, 95, 700, 2, 'large'],
-      ['grove', 410, 180, 1100, 0, 'large'], ['tree', 455, 265, 420, 1, 'medium'],
-      ['tree', 480, 330, 260, 3, 'medium'], ['grove', 438, 390, 1100, 1, 'large'],
-      ['tree', 520, 365, 700, 2, 'large'], ['tree', 300, 400, 420, 0, 'medium'],
-    ].forEach(([type, x, z, amount, variant, sizeTier]) => this.addResource(type, 'wood', x, z, amount, variant, { sizeTier }));
-    [
-      [96, 96, 0], [140, 176, 1], [216, 108, 2], [270, 220, 0],
-      [345, 148, 1], [394, 250, 2], [466, 300, 0], [484, 386, 1],
-    ].forEach(([x, z, variant]) => this.addResource('berry', 'food', x, z, 105, variant, { sizeTier: 'small' }));
-    [
-      [108, 122, 0, 'small'], [180, 185, 1, 'medium'], [246, 118, 2, 'large'],
-      [320, 270, 3, 'medium'], [386, 205, 0, 'large'], [450, 250, 1, 'medium'],
-      [500, 344, 2, 'large'], [430, 430, 3, 'large'],
-    ].forEach(([x, z, variant, sizeTier]) => this.addResource('stone', 'stone', x, z, sizeTier === 'large' ? 900 : sizeTier === 'medium' ? 360 : 120, variant, { sizeTier }));
-    [
-      [104, 35, 0], [168, 52, 0], [250, 70, 1], [330, 105, 2], [415, 135, 3],
-    ].forEach(([x, z, variant]) => this.addResource('grain', 'food', x, z, 220, variant, { sizeTier: 'small' }));
+    // Populate every macro-region with a deterministic mix of natural wood,
+    // berry, and stone nodes. Cultivated Grain Fields are deliberately not
+    // seeded; those remain a player-built settlement choice.
+    this._seedNaturalResourceRegions();
     this.addDecoration('log', 18, 24, 0, 0.9);
     this.addDecoration('stump', 8.4, 52, 1, 0.85);
     this.addDecoration('flowers', 43, 20, 2, 0.72);
@@ -227,6 +201,75 @@ export class CrownforgeSimulation {
     // The camp sprite is intentionally larger than its gameplay footprint, so
     // the old point could disappear behind the tall silhouette at reset.
     this.addUnit('raider', 508, 403, 'enemy');
+  }
+
+  _naturalResourceAmount(type, sizeTier) {
+    if (type === 'berry') return 105;
+    if (type === 'stone') return sizeTier === 'large' ? 900 : sizeTier === 'medium' ? 360 : 120;
+    if (type === 'grove') return sizeTier === 'large' ? 1100 : sizeTier === 'medium' ? 700 : 480;
+    return sizeTier === 'large' ? 700 : sizeTier === 'medium' ? 260 : 180;
+  }
+
+  _naturalResourceSpotClear(type, sizeTier, x, z) {
+    const probe = { type, sizeTier, x, z };
+    const footprint = resourceFootprint(probe);
+    if (x - footprint < 4 || z - footprint < 4 || x + footprint > CONFIG.mapWidth - 4 || z + footprint > CONFIG.mapHeight - 4) return false;
+    if (this.buildings.some((building) => {
+      const bounds = this._buildingEntityBounds(building, footprint + 4);
+      return x > bounds.minX && x < bounds.maxX && z > bounds.minZ && z < bounds.maxZ;
+    })) return false;
+    return this.resourcesNodes.every((node) => distance(probe, node) >= footprint + resourceFootprint(node) + NATURAL_RESOURCE_GAP);
+  }
+
+  _seedNaturalResourceInSector(spec, sector, index, salt) {
+    const sizeTier = spec.sizeTier ?? 'small';
+    const footprint = resourceFootprint({ type: spec.type, sizeTier });
+    const jitterX = (stableResourceNoise(index, salt) - 0.5) * sector.width * 0.14;
+    const jitterZ = (stableResourceNoise(index, salt + 19) - 0.5) * sector.height * 0.14;
+    const baseX = sector.minX + sector.width * spec.u + jitterX;
+    const baseZ = sector.minZ + sector.height * spec.v + jitterZ;
+    const nudge = Math.max(8, footprint + NATURAL_RESOURCE_GAP + 4);
+    const offsets = [
+      [0, 0], [nudge, 0], [-nudge, 0], [0, nudge], [0, -nudge],
+      [nudge, nudge], [-nudge, nudge], [nudge, -nudge], [-nudge, -nudge],
+    ];
+    for (const [offsetX, offsetZ] of offsets) {
+      const x = clamp(baseX + offsetX, sector.minX + footprint + 4, sector.maxX - footprint - 4);
+      const z = clamp(baseZ + offsetZ, sector.minZ + footprint + 4, sector.maxZ - footprint - 4);
+      if (!this._naturalResourceSpotClear(spec.type, sizeTier, x, z)) continue;
+      const variant = Math.floor(stableResourceNoise(index, salt + 37) * 4) % 4;
+      this.addResource(spec.type, spec.resourceType, x, z, this._naturalResourceAmount(spec.type, sizeTier), variant, { sizeTier });
+      return true;
+    }
+    return false;
+  }
+
+  _seedNaturalResourceRegions() {
+    const { columns, rows } = NATURAL_RESOURCE_SECTORS;
+    const sectorWidth = CONFIG.mapWidth / columns;
+    const sectorHeight = CONFIG.mapHeight / rows;
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        const index = row * columns + column;
+        const sector = {
+          minX: column * sectorWidth,
+          maxX: (column + 1) * sectorWidth,
+          minZ: row * sectorHeight,
+          maxZ: (row + 1) * sectorHeight,
+          width: sectorWidth,
+          height: sectorHeight,
+        };
+        const woodTier = index % 5 === 0 ? 'large' : index % 2 === 0 ? 'medium' : 'small';
+        const stoneTier = index % 6 === 0 ? 'large' : index % 2 === 1 ? 'medium' : 'small';
+        this._seedNaturalResourceInSector({ type: 'tree', resourceType: 'wood', sizeTier: woodTier, u: 0.2, v: 0.27 }, sector, index, 3);
+        this._seedNaturalResourceInSector({ type: 'berry', resourceType: 'food', sizeTier: 'small', u: 0.68, v: 0.66 }, sector, index, 7);
+        this._seedNaturalResourceInSector({ type: 'stone', resourceType: 'stone', sizeTier: stoneTier, u: 0.43, v: 0.8 }, sector, index, 11);
+        this._seedNaturalResourceInSector({ type: index % 4 === 0 ? 'grove' : 'tree', resourceType: 'wood', sizeTier: index % 4 === 0 ? 'medium' : 'small', u: 0.8, v: 0.24 }, sector, index, 17);
+        if (index % 2 === 0) {
+          this._seedNaturalResourceInSector({ type: 'berry', resourceType: 'food', sizeTier: 'small', u: 0.26, v: 0.64 }, sector, index, 23);
+        }
+      }
+    }
   }
 
   addBuilding(type, x, z, faction = 'player', progress = 1, options = {}) {
@@ -763,7 +806,7 @@ export class CrownforgeSimulation {
     this._updateStairProgress(unit);
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
     unit.animationPlaybackRate = unit.command === 'move' || unit.visualState === 'walk'
-      ? Math.max(0, Math.min(2.2, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed * this.unitSpeedScale, 0.01)))
+      ? Math.max(0, Math.min(3.2, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed, 0.01)))
       : 1;
     this.animation.update(unit, dt);
   }
@@ -802,14 +845,27 @@ export class CrownforgeSimulation {
         desiredZ = (dz / length) * desiredSpeed;
       }
     }
-    const acceleration = desiredSpeed > 0 ? (blueprint.acceleration ?? 10) : (blueprint.braking ?? 12);
+    // The sandbox dial time-compresses locomotion only. Scaling response by
+    // the square of travel speed preserves the base acceleration/braking
+    // curve in world space instead of giving fast units long, moon-like
+    // glides. Gathering, combat, construction, AI, and the fixed tick remain
+    // on their normal timing.
+    const locomotionResponse = this.unitSpeedScale * this.unitSpeedScale;
+    const acceleration = (desiredSpeed > 0 ? (blueprint.acceleration ?? 10) : (blueprint.braking ?? 12)) * locomotionResponse;
     unit.velocityX = moveToward(unit.velocityX, desiredX, acceleration * dt);
     unit.velocityZ = moveToward(unit.velocityZ, desiredZ, acceleration * dt);
     const previousX = unit.x;
     const previousZ = unit.z;
-    unit.x = clamp(unit.x + unit.velocityX * dt, 0.45, CONFIG.mapWidth - 0.45);
-    unit.z = clamp(unit.z + unit.velocityZ * dt, 0.45, CONFIG.mapHeight - 0.45);
-    this._constrainUnitPosition(unit, previousX, previousZ);
+    const travelDistance = Math.hypot(unit.velocityX, unit.velocityZ) * dt;
+    const travelSteps = Math.max(1, Math.ceil(travelDistance / MAX_UNIT_TRAVEL_SUBSTEP));
+    const travelDt = dt / travelSteps;
+    for (let step = 0; step < travelSteps; step += 1) {
+      const substepX = unit.x;
+      const substepZ = unit.z;
+      unit.x = clamp(unit.x + unit.velocityX * travelDt, 0.45, CONFIG.mapWidth - 0.45);
+      unit.z = clamp(unit.z + unit.velocityZ * travelDt, 0.45, CONFIG.mapHeight - 0.45);
+      this._constrainUnitPosition(unit, substepX, substepZ);
+    }
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
     // Face the authored path direction before collision separation nudges the
     // body. This prevents a Crown Guard from reading as walking backward when
@@ -818,7 +874,10 @@ export class CrownforgeSimulation {
     else if (unit.motionSpeed > 0.12) setUnitFacing(unit, unit.velocityX, unit.velocityZ);
 
     const moved = Math.hypot(unit.x - unit.lastProgressX, unit.z - unit.lastProgressZ);
-    if (unit.path.length && moved < 0.004 && unit.motionSpeed < 0.15) unit.stuckTimer += dt;
+    // Measure actual world progress, not the velocity value. A collision can
+    // hold a fast unit in place while its desired velocity is still large;
+    // that case must still trigger the normal bounded repath.
+    if (unit.path.length && moved < 0.004) unit.stuckTimer += dt;
     else unit.stuckTimer = Math.max(0, unit.stuckTimer - dt * 2);
     unit.lastProgressX = unit.x;
     unit.lastProgressZ = unit.z;

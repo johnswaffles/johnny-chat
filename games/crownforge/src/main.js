@@ -2,7 +2,7 @@ import { BUILDING_TYPES, FACTION, PRODUCTION_TYPES, RESOURCE_TYPES } from './con
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260821-hallwoodpass2';
 import { CrownforgeRenderer } from './renderer.js?v=20260821-hallwoodpass2';
-import { CrownforgeSimulation } from './simulation.js?v=20260822-wallconnect1';
+import { CrownforgeSimulation } from './simulation.js?v=20260822-movementresources1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');

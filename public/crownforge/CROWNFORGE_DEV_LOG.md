@@ -2573,3 +2573,38 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add gates, towers, segment-level wall damage, wall editing, or freeform spline walls until endpoint magnetism remains stable across the existing eight-way placement contract.
+
+## MOVEMENT PHYSICS AND NATURAL RESOURCE DISTRIBUTION PASS — 2026-08-22
+
+### WHAT WAS COMPLETED
+
+- Reframed the `1×–10×` sandbox control as **Travel speed**. It now time-compresses locomotion only; the fixed `60 Hz` simulation, gathering, depositing, construction, combat, production, AI, and match clock keep their normal timing.
+- Scaled acceleration and braking with the travel multiplier so fast units retain the same short world-space start/stop profile instead of drifting with moon-like inertia.
+- Added bounded movement microsteps before static collision resolution. Units moving at `10×` can no longer skip through a building or resource between fixed simulation ticks.
+- Changed stuck detection to measure actual position progress rather than trusting the unit's requested velocity. A unit held by collision now enters the existing bounded repath flow even if its velocity value is still high.
+- Drove walk-cycle playback from actual world travel speed, with a readable upper cap, so accelerated units animate instead of sliding on a slow or static walking pose.
+- Replaced the old sparse hand-placed resource clearings with deterministic `5 × 4` regional seeding. Every one of the 20 map sectors now contains natural wood, berry food, and stone nodes, while retaining small, medium, large, tree, and grove variations from the existing Crownforge asset family.
+- Kept a compact opening reserve near the Crown Hall without concentrating the useful map there. The current reset contains `44` wood nodes, `32` berry-food nodes, and `22` stone nodes.
+- Removed all automatically seeded Grain Field resource nodes. Grain Fields remain available only through player construction, as intended.
+- Updated the player-facing speed note and accessibility label, added deterministic regression coverage, and bumped the runtime marker to `20260822-movementresources1`.
+
+### VALIDATION
+
+- The deterministic regression passes `10×` long-distance movement, fast start/stop response, animation playback, building routing without tunneling, clean destination settlement, stuck-timer recovery, and four-villager formation spacing.
+- The same suite verifies that every `5 × 4` map sector contains wood, berry food, and stone, and rejects both seeded grain nodes and reset-time Field buildings.
+- All existing animation, gathering, construction, wall placement, path recovery, Crown Hall stairs, combat, camera, victory, and defeat checks continue to pass.
+- A passive `120`-second full-world simulation completed in about `2.6` seconds with the expanded natural-node population and did not reproduce the earlier first-raid freeze.
+- Local browser inspection confirmed the renamed control and its travel-only explanation, visible natural-node variety around the settlement, working `10×` selection state, and an empty warning/error console.
+
+### ASSETS CREATED
+
+- None. This pass deliberately reuses the approved Crownforge tree, grove, berry, and stone families rather than introducing another visual style.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Player-test repeated retasking at `1×`, `4×`, and `10×` during live gathering and combat, then adjust only the locomotion cap if a specific unit still feels too abrupt.
+- Inspect several distant map sectors at normal zoom after deployment to tune individual node positions only where silhouettes visually crowd; do not increase the node count without a measured need.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add another physics mode, simulation-speed control, second pathfinding system, automatic farms, new resource types, or denser map clutter. Keep fields player-built and keep the current regional natural-resource contract stable.

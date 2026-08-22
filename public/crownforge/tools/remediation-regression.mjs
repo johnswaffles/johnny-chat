@@ -30,6 +30,18 @@ function freshSimulation() {
   return new CrownforgeSimulation();
 }
 
+function movementSandbox() {
+  const simulation = freshSimulation();
+  simulation.units = [];
+  simulation.buildings = [];
+  simulation.resourcesNodes = [];
+  simulation.decorations = [];
+  simulation._checkVictory = () => {};
+  simulation._updateEnemyAI = () => {};
+  simulation._updateEnemyIntent = () => {};
+  return simulation;
+}
+
 function checkAnimationAtlases() {
   for (const [state, atlasKey] of [
     ['carry_wood', 'carryWoodLoop'],
@@ -308,6 +320,48 @@ function checkCrownHallProportionsAndBuildableRing() {
   }
 }
 
+function checkTravelSpeedIsolation() {
+  const simulation = movementSandbox();
+  const villager = simulation.addUnit('villager', 40, 40, 'player');
+  simulation.setUnitSpeedScale(10);
+  assert.equal(simulation._sendUnitTo(villager, { x: 160, z: 40 }, 'move'), true, '10x travel accepts a long movement order');
+  advance(simulation, 0.25);
+  assert.ok(villager.motionSpeed > 25, '10x travel reaches speed without a long moon-like acceleration glide');
+  assert.ok(villager.animationPlaybackRate >= 3, 'fast travel advances the walk cycle instead of sliding a static pose');
+  advance(simulation, 5.75);
+  assert.ok(Math.hypot(villager.x - 160, villager.z - 40) < 0.2, '10x traveler reaches the ordered destination');
+  assert.equal(villager.command, 'idle', '10x traveler settles cleanly after arrival');
+  assert.ok(Math.abs(simulation.clock - 6) < 0.02, 'travel speed does not accelerate the fixed simulation clock');
+
+  const obstacleSimulation = movementSandbox();
+  const storehouse = obstacleSimulation.addBuilding('storehouse', 100, 100, 'player');
+  const routedVillager = obstacleSimulation.addUnit('villager', 80, 100, 'player');
+  obstacleSimulation.setUnitSpeedScale(10);
+  assert.equal(obstacleSimulation._sendUnitTo(routedVillager, { x: 120, z: 100 }, 'move'), true, '10x traveler finds a route around a building');
+  advance(obstacleSimulation, 6);
+  assert.ok(Math.hypot(routedVillager.x - 120, routedVillager.z - 100) < 0.25, '10x traveler completes the obstacle route');
+  assert.equal(insideBuilding(routedVillager, storehouse, 0.36), false, 'high-speed collision cannot tunnel through a building');
+  assert.equal(routedVillager.stuckTimer, 0, 'completed high-speed route clears stuck tracking');
+
+  const groupSimulation = movementSandbox();
+  const group = [[60, 60], [62, 60], [60, 62], [62, 62]]
+    .map(([x, z]) => groupSimulation.addUnit('villager', x, z, 'player'));
+  groupSimulation.selectedIds = group.map((unit) => unit.id);
+  groupSimulation._syncSelectionFlags();
+  groupSimulation.setUnitSpeedScale(10);
+  assert.equal(groupSimulation.issueContextCommand({ x: 180, z: 140 }).success, true, '10x group movement order succeeds');
+  advance(groupSimulation, 10);
+  for (const unit of group) {
+    assert.ok(Math.hypot(unit.x - 180, unit.z - 140) < 2, `fast group member ${unit.id} reaches formation`);
+    assert.equal(unit.command, 'idle', `fast group member ${unit.id} settles without a stuck loop`);
+  }
+  for (let index = 0; index < group.length; index += 1) {
+    for (let other = index + 1; other < group.length; other += 1) {
+      assert.ok(Math.hypot(group[index].x - group[other].x, group[index].z - group[other].z) >= 1.07, 'fast group preserves personal space');
+    }
+  }
+}
+
 function checkExpandedWorldAndEnemyDistance() {
   const simulation = freshSimulation();
   assert.equal(CONFIG.mapWidth, 560, 'expanded map width is ten-area scale');
@@ -316,9 +370,28 @@ function checkExpandedWorldAndEnemyDistance() {
   const camp = simulation.buildings.find((building) => building.type === 'ashenCamp');
   assert.ok(Math.hypot(camp.x - hall.x, camp.z - hall.z) > 500, 'enemy camp starts across the expanded map');
   assert.ok(hall.x > CONFIG.mapWidth * 0.1 && hall.z > CONFIG.mapHeight * 0.1, 'Crown Hall starts inside the map rather than on the north-west tip');
-  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'wood').length >= 20, 'expanded map has a readable wood family');
-  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'food').length >= 16, 'expanded map has a readable food family');
-  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'stone').length >= 12, 'expanded map has a readable stone family');
+  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'wood').length >= 40, 'expanded map has a readable wood family');
+  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'food').length >= 30, 'expanded map has a readable berry family');
+  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'stone').length >= 20, 'expanded map has a readable stone family');
+  assert.equal(simulation.resourcesNodes.some((node) => node.type === 'grain'), false, 'reset does not seed cultivated Grain Fields');
+  assert.equal(simulation.buildings.some((building) => building.type === 'field'), false, 'fields remain exclusively player-built');
+  const columns = 5;
+  const rows = 4;
+  const sectorWidth = CONFIG.mapWidth / columns;
+  const sectorHeight = CONFIG.mapHeight / rows;
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const nodes = simulation.resourcesNodes.filter((node) => (
+        node.x >= column * sectorWidth
+        && node.x < (column + 1) * sectorWidth
+        && node.z >= row * sectorHeight
+        && node.z < (row + 1) * sectorHeight
+      ));
+      for (const type of ['wood', 'food', 'stone']) {
+        assert.ok(nodes.some((node) => node.resourceType === type), `sector ${column},${row} contains natural ${type}`);
+      }
+    }
+  }
   assert.ok(CONFIG.minZoom < 0.05, 'minimum zoom can frame the expanded map');
 }
 
@@ -404,6 +477,7 @@ checkDynamicBlockerRecovery();
 checkCrownHallStairs();
 checkBarracksLandmarkScale();
 checkCrownHallProportionsAndBuildableRing();
+checkTravelSpeedIsolation();
 checkExpandedWorldAndEnemyDistance();
 checkCursorCenteredZoom();
 checkAspectCorrectBuildingFeedback();
@@ -424,7 +498,9 @@ console.log(JSON.stringify({
     'Crown Hall stair routing, landing stop, and interior collision',
     'person-scaled Barracks landmark and collision clearance',
     'equal Crown Hall/Barracks proportion, inward placement, and four-sided buildable ring',
-    'expanded map resource clearings and opposite-side enemy camp',
+    'travel-only speed scaling, high-speed collision routing, and fast group spacing',
+    'regional wood, berry, and stone coverage without prebuilt fields',
+    'expanded map and opposite-side enemy camp',
     'cursor-centered zoom anchor in both directions',
     'aspect-correct landmark health and placement feedback',
     'melee damage, death timing, victory, defeat',

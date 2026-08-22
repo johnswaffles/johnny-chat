@@ -62,10 +62,10 @@
           <div class="settings-block unit-speed-setting">
             <div class="controls-setting-title">UNIT PACE</div>
             <label class="range-setting" for="unit-speed">
-              <span>Walk speed <output id="unit-speed-value">1×</output></span>
-              <input id="unit-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit walk speed" />
+              <span>Travel speed <output id="unit-speed-value">1×</output></span>
+              <input id="unit-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit travel speed" />
             </label>
-            <small class="settings-note">1× is normal. Raise it for faster sandbox movement.</small>
+            <small class="settings-note">Travel only. Gathering, building, combat, and game timing stay unchanged.</small>
           </div>
         </section>
       </aside>
@@ -118,7 +118,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260822-wallconnect1"></script>
+    <script type="module" src="./src/main.js?v=20260822-movementresources1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>
