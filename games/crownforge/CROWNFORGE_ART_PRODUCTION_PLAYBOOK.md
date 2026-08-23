@@ -126,3 +126,19 @@ The Ore Wash establishes the repeatable pattern for a future Lumber Yard, Grain 
 7. Test placement, construction, selection information, compatible and incompatible cargo routing, local bonus behavior, normal zoom, close zoom, and cold-load readiness before deployment.
 
 Current reference output: `assets/crownforge-ore-wash-v1.png`, `1536 × 1024` RGBA, runtime width `380`, footprint `4 × 3`.
+
+## Matched construction-stage production pattern — 2026-08-23
+
+Use this only after a completed building has passed scale and ground-contact review.
+
+1. Use the completed asset as the strict image reference for every stage; do not independently reinterpret the camera or architecture.
+2. Generate foundation, partial, and near-complete states separately at the exact completed canvas dimensions.
+3. State the intended completion percentage and which structural masses must be absent or present. Construction should progress physically, not by opacity alone.
+4. Preserve the completed footprint center, orientation, entrance side, lighting, palette, and bottom-center anchor in every prompt.
+5. Prepare accepted outputs to true alpha, then audit visible-pixel bounds. Reject any stage with a white/checker plate, halo, cropped edge, or missing ground contact.
+6. Register stages under the completed asset's `constructionStages` data. Do not add building-name conditionals to the main draw loop.
+7. Resolve progress deterministically and keep a loading fallback so a cold cache never produces a missing building.
+8. Play the full transition with real Villagers at normal and close zoom. Compare foundation, partial, near-complete, and complete screenshots for sideways drift, scale jumps, floating shadows, and units entering the visual body.
+9. Add regression for stage thresholds and extend the active-asset audit to include every nested stage file.
+
+Approved reference family: the four-state Ore Wash set, all `1536 × 1024` RGBA, runtime width `380`, and one shared `4 × 3` gameplay footprint.

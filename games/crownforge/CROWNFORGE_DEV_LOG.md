@@ -2811,3 +2811,56 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add Stables, cavalry, a Lumber Mill, Grain Mill, Stone Quarry, mine shaft, mint, market, technology tree, second age, or more resource currencies in the next pass.
 - Do not create a separate processed-Gold inventory. Keep raw Gold as one readable resource until the single Ore Wash loop is proven stable.
+
+## ORE WASH CONSTRUCTION-STAGE AND MULTI-WORKER QUALITY PASS — 2026-08-23
+
+### WHAT EXISTS
+
+- The compact Ore Wash now has a complete authored construction family: foundation, partially constructed, nearly completed, and completed.
+- The renderer selects the family by real building progress while preserving one fixed world anchor, runtime width, footprint, and collision shape.
+- Other existing buildings keep their current construction treatment; this pass does not silently substitute Ore Wash art or introduce a new building catalog.
+
+### WHAT WAS COMPLETED
+
+- Generated three original `1536 × 1024` Ore Wash construction-stage rasters against the approved completed work-site reference.
+- Prepared every accepted generation to true RGBA transparency with `tools/prepare-neutral-matte.mjs`; no checker representation, white plate, square terrain patch, or raw generated source is loaded by the game.
+- Registered the stage family under `FIRST_AGE_ASSETS.oreWash.constructionStages` and bumped the runtime marker to `20260823-orewashstages1`.
+- Added one shared construction-stage resolver: below `10%` uses the staked foundation, `10–67%` uses the open timber frame, `68–99%` uses the nearly finished yard, and `100%` uses the approved completed Ore Wash.
+- Refactored first-age asset drawing so completed and construction-stage images use the same destination rectangle and bottom-center anchor. A restrained fallback remains available while a stage image is still loading and for buildings without a dedicated stage family.
+- Extended the active-asset audit to discover nested construction assets and fail on missing files, dimension drift, empty alpha, or visible pixels touching a crop edge.
+- Extended deterministic economy coverage to three Villagers mining one nearby Gold vein at normal travel speed, using distinct work slots, depositing exact boosted `10 Gold` loads through the Ore Wash, returning to work, staying outside the footprint, retaining local spacing, and avoiding blocked paths.
+
+### KNOWN ISSUES
+
+- The completed water, ore sorting, and cloth remain static artwork. No decorative motion is approved until normal-zoom play shows a readability need.
+- The Ore Wash is intentionally compact. Its stage silhouettes are clearest at ordinary and closer gameplay zoom rather than at the farthest strategic zoom.
+
+### ASSETS CREATED
+
+- `assets/crownforge-ore-wash-foundation-v1.png` — staked packed-earth layout, shallow channels, sleepers, rope, and staged materials with no standing work structure.
+- `assets/crownforge-ore-wash-partial-v1.png` — assembled lower sluice and settling trough with open posts, braces, and unfinished roof framing.
+- `assets/crownforge-ore-wash-near-complete-v1.png` — complete major work surfaces with an unfinished thatch/cloth dressing and remaining construction materials.
+
+### SYSTEMS CREATED
+
+- Nested first-age construction-asset loading and readiness tracking.
+- Data-driven Ore Wash construction-stage resolution shared by browser rendering and deterministic regression.
+- Standalone construction-sprite alpha-bound and crop-margin auditing.
+
+### VALIDATION
+
+- `node --check` passed for all changed runtime and QA modules.
+- `tools/remediation-regression.mjs` passed all `22` focused areas, including the new normal-speed three-Villager Ore Wash loop and every prior movement, pathfinding, collision, economy, construction, wall, camera, combat, victory, and defeat check.
+- `tools/visual-integrity-audit.mjs` passed with no missing file, placeholder reference, stage dimension mismatch, or unsafe construction-stage edge. The new files retain transparent margins of at least `71 px` on every side.
+- Browser play through the real build menu captured the authored Ore Wash at `4%`, `44%`, `84%`, and completion. The stages remained grounded, changed in the correct order, preserved the same site anchor, and completed with three assigned Villagers.
+- Normal and closer browser zoom showed no square background, halo, cut-off artwork, stage jump, unit overlap inside the footprint, or warning/error console entry.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Keep the first-age catalog at four choices and perform one deployed cold-load check of these stages. Adjust only a demonstrated anchor, readability, or loading issue.
+- If the Ore Wash remains stable live, the next approved pass should polish an existing first-age interaction rather than immediately adding Stables, cavalry, or several mills at once.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add Stables, cavalry, a Lumber Mill, Grain Mill, Stone Quarry, mine shaft, mint, market, technology tree, second age, processed-Gold inventory, or another resource currency during this quality pass.
+- Do not add construction smoke, sparks, animated water, or decorative workers merely to make the site busier.

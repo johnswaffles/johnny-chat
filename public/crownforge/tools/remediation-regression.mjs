@@ -14,7 +14,7 @@ import {
   VILLAGER_ATLASES,
 } from '../src/config.js';
 import { animationFrame } from '../src/animation.js';
-import { CrownforgeRenderer, resolveWallVisual } from '../src/renderer.js';
+import { CrownforgeRenderer, resolveFirstAgeConstructionStage, resolveWallVisual } from '../src/renderer.js';
 import { CrownforgeSimulation } from '../src/simulation.js';
 
 const STEP_60HZ = 1 / 60;
@@ -240,9 +240,20 @@ function checkGoldEconomyLoop() {
 
 function checkOreWashEconomySupport() {
   const blueprint = BUILDING_TYPES.oreWash;
+  const asset = FIRST_AGE_ASSETS.oreWash;
   assert.deepEqual(blueprint.acceptsResources, ['gold'], 'Ore Wash accepts only Gold cargo');
   assert.deepEqual(blueprint.gatherBonus, { resourceType: 'gold', radius: 16, multiplier: 1.25 }, 'Ore Wash exposes one non-stacking local Gold bonus');
-  assert.match(FIRST_AGE_ASSETS.oreWash.src, /crownforge-ore-wash-v1\.png/, 'Ore Wash uses its authored first-age asset');
+  assert.match(asset.src, /crownforge-ore-wash-v1\.png/, 'Ore Wash uses its authored first-age asset');
+  assert.deepEqual(Object.keys(asset.constructionStages), ['foundation', 'partial', 'nearComplete'], 'Ore Wash exposes the complete three-stage construction family');
+  for (const [stage, definition] of Object.entries(asset.constructionStages)) {
+    assert.match(definition.src, new RegExp(`crownforge-ore-wash-${stage === 'nearComplete' ? 'near-complete' : stage}-v1\\.png`), `${stage} uses its authored Ore Wash stage`);
+    assert.equal(definition.width, asset.width, `${stage} stage preserves completed-asset width`);
+    assert.equal(definition.height, asset.height, `${stage} stage preserves completed-asset height`);
+  }
+  assert.equal(resolveFirstAgeConstructionStage(0.04), 'foundation', 'new Ore Wash foundations resolve to foundation artwork');
+  assert.equal(resolveFirstAgeConstructionStage(0.3), 'partial', 'active Ore Wash builds resolve to partial artwork');
+  assert.equal(resolveFirstAgeConstructionStage(0.84), 'nearComplete', 'late Ore Wash builds resolve to nearly-complete artwork');
+  assert.equal(resolveFirstAgeConstructionStage(1), 'complete', 'finished Ore Wash resolves to completed artwork');
   assert.equal(PRODUCTION_TYPES.soldier.cost.gold, 10, 'Crown Guard equipment gives Gold an immediate first-age use');
 
   const routing = movementSandbox();
@@ -271,6 +282,51 @@ function checkOreWashEconomySupport() {
   bonus._updateGathering(bonusWorker, RESOURCE_TYPES.gold.gatherTime);
   assert.equal(bonusWorker.carryAmount, 10, 'nearby Ore Wash raises a completed Gold load from 8 to 10');
   assert.equal(bonusNode.amount, 90, 'boosted Gold load is removed from the vein exactly once');
+
+  const multiWash = movementSandbox();
+  const multiWashBuilding = multiWash.addBuilding('oreWash', 20, 20, 'player');
+  multiWash.addResource('gold', 'gold', 28, 20, 420, 0, { sizeTier: 'medium' });
+  const multiWashNode = multiWash.resourcesNodes[0];
+  const multiWashWorkers = [[24, 17], [25, 20], [24, 23]]
+    .map(([x, z]) => multiWash.addUnit('villager', x, z, 'player'));
+  multiWash.resources.gold = 0;
+  multiWash.selectedIds = multiWashWorkers.map((unit) => unit.id);
+  multiWash._syncSelectionFlags();
+  assert.equal(
+    multiWash.issueContextCommand({ x: multiWashNode.x, z: multiWashNode.z }).success,
+    true,
+    'three Villagers can begin the boosted Gold loop together',
+  );
+  assert.equal(
+    new Set(multiWashWorkers.map((unit) => unit.gatherSlot)).size,
+    multiWashWorkers.length,
+    'Ore Wash Gold workers reserve distinct mining positions',
+  );
+  advance(multiWash, 35);
+  assert.ok(multiWash.resources.gold >= 30, 'three Villagers complete Gold deposits through the Ore Wash');
+  assert.equal(multiWash.resources.gold % 10, 0, 'multi-worker Ore Wash deposits retain exact boosted ten-Gold loads');
+  assert.ok(multiWashNode.amount <= 390, 'multi-worker Ore Wash loop removes at least one load per Villager');
+  for (const worker of multiWashWorkers) {
+    assert.equal(worker.pathBlocked, false, `Ore Wash worker ${worker.id} is not stuck`);
+    assert.equal(worker.gatherTarget, multiWashNode.id, `Ore Wash worker ${worker.id} returns to the shared vein`);
+    assert.equal(
+      worker.returnStorageId === null || worker.returnStorageId === multiWashBuilding.id,
+      true,
+      `Ore Wash worker ${worker.id} keeps Gold routed to the Ore Wash`,
+    );
+    assert.equal(insideBuilding(worker, multiWashBuilding), false, `Ore Wash worker ${worker.id} stays outside the work-site footprint`);
+  }
+  for (let first = 0; first < multiWashWorkers.length; first += 1) {
+    for (let second = first + 1; second < multiWashWorkers.length; second += 1) {
+      assert.ok(
+        Math.hypot(
+          multiWashWorkers[first].x - multiWashWorkers[second].x,
+          multiWashWorkers[first].z - multiWashWorkers[second].z,
+        ) > 0.28,
+        'Ore Wash workers retain readable local spacing',
+      );
+    }
+  }
 
   const production = movementSandbox();
   const barracks = production.addBuilding('barracks', 20, 20, 'player');

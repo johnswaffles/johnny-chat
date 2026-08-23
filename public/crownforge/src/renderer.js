@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260822-orewash1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260822-orewash1';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260823-orewashstages1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260823-orewashstages1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -15,6 +15,13 @@ export function resolveWallVisual(direction = { x: 1, z: 0 }) {
   return screenX * screenY < 0
     ? { asset: 'wallDiagonalLeft', orientation: 'diagonal-left' }
     : { asset: 'wall', orientation: 'diagonal-right' };
+}
+
+export function resolveFirstAgeConstructionStage(progress = 1) {
+  if (progress >= 1) return 'complete';
+  if (progress < 0.1) return 'foundation';
+  if (progress < 0.68) return 'partial';
+  return 'nearComplete';
 }
 
 const ROAD_NETWORK = [
@@ -114,6 +121,7 @@ export class CrownforgeRenderer {
     this.largeStoneReady = false;
     this.goldDepositAssetReady = {};
     this.firstAgeAssetReady = {};
+    this.firstAgeConstructionAssetReady = {};
     this.enemyCampReady = false;
     this.villagerAtlases = {};
     this.villagerAtlasReady = {};
@@ -160,12 +168,23 @@ export class CrownforgeRenderer {
       image.src = definition.src;
     }
     this.firstAgeAssets = {};
+    this.firstAgeConstructionAssets = {};
     for (const [key, definition] of Object.entries(FIRST_AGE_ASSETS)) {
       const image = new Image();
       this.firstAgeAssets[key] = image;
       this.firstAgeAssetReady[key] = false;
       image.addEventListener('load', () => { this.firstAgeAssetReady[key] = true; });
       image.src = definition.src;
+      const constructionStages = definition.constructionStages ?? {};
+      this.firstAgeConstructionAssets[key] = {};
+      this.firstAgeConstructionAssetReady[key] = {};
+      for (const [stage, stageDefinition] of Object.entries(constructionStages)) {
+        const stageImage = new Image();
+        this.firstAgeConstructionAssets[key][stage] = stageImage;
+        this.firstAgeConstructionAssetReady[key][stage] = false;
+        stageImage.addEventListener('load', () => { this.firstAgeConstructionAssetReady[key][stage] = true; });
+        stageImage.src = stageDefinition.src;
+      }
     }
     for (const [key, definition] of Object.entries(VILLAGER_ATLASES)) {
       if (!definition.src) continue;
@@ -824,10 +843,8 @@ export class CrownforgeRenderer {
     this.drawAtlasCell(ctx, this.treeGroveAtlas, this.treeGroveReady, TREE_GROVE_ATLAS, column, row, screen, size, alpha);
   }
 
-  drawFirstAgeAsset(ctx, type, screen, size, alpha = 1) {
-    const definition = FIRST_AGE_ASSETS[type];
-    const image = this.firstAgeAssets?.[type];
-    if (!definition || !image || (!this.firstAgeAssetReady[type] && !(image.complete && image.naturalWidth > 0))) return false;
+  drawFirstAgeDefinition(ctx, definition, image, ready, screen, size, alpha = 1) {
+    if (!definition || !image || (!ready && !(image.complete && image.naturalWidth > 0))) return false;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.imageSmoothingEnabled = true;
@@ -838,6 +855,30 @@ export class CrownforgeRenderer {
     ctx.drawImage(image, -width / 2, -height / 2, width, height);
     ctx.restore();
     return true;
+  }
+
+  drawFirstAgeAsset(ctx, type, screen, size, alpha = 1) {
+    return this.drawFirstAgeDefinition(
+      ctx,
+      FIRST_AGE_ASSETS[type],
+      this.firstAgeAssets?.[type],
+      this.firstAgeAssetReady[type],
+      screen,
+      size,
+      alpha,
+    );
+  }
+
+  drawFirstAgeConstructionAsset(ctx, type, stage, screen, size, alpha = 1) {
+    return this.drawFirstAgeDefinition(
+      ctx,
+      FIRST_AGE_ASSETS[type]?.constructionStages?.[stage],
+      this.firstAgeConstructionAssets?.[type]?.[stage],
+      this.firstAgeConstructionAssetReady?.[type]?.[stage],
+      screen,
+      size,
+      alpha,
+    );
   }
 
   drawBuildingStage(ctx, building, screen, size, alpha = 1) {
@@ -859,7 +900,10 @@ export class CrownforgeRenderer {
       return;
     }
     if (FIRST_AGE_ASSETS[building.type]) {
-      const constructionAlpha = building.progress >= 1 ? alpha : alpha * (0.28 + building.progress * 0.72);
+      const constructionStage = resolveFirstAgeConstructionStage(building.progress);
+      if (constructionStage !== 'complete'
+        && this.drawFirstAgeConstructionAsset(ctx, building.type, constructionStage, screen, size, alpha)) return;
+      const constructionAlpha = constructionStage === 'complete' ? alpha : alpha * (0.28 + building.progress * 0.72);
       if (this.drawFirstAgeAsset(ctx, building.type, screen, size, constructionAlpha)) return;
     }
     const stage = this.buildingConstructionStage(building);

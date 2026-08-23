@@ -313,7 +313,10 @@ The built-in image generator authored the family against the approved Crownforge
 ## FIRST-AGE ORE WASH ASSET — 2026-08-22 (CURRENT ADDITION)
 
 - `assets/crownforge-ore-wash-v1.png` — 1536 × 1024 RGBA, compact Gold washing and sorting yard with split-log sluice, shallow troughs, ore baskets, thatched lean-to, rope lashings, packed-earth contact, and restrained blue cloth.
-- Runtime registration: `FIRST_AGE_ASSETS.oreWash` with marker `20260822-orewash1`.
+- `assets/crownforge-ore-wash-foundation-v1.png` — 1536 × 1024 RGBA foundation with stakes, channels, sleepers, rope, and staged timber.
+- `assets/crownforge-ore-wash-partial-v1.png` — 1536 × 1024 RGBA partial structure with lower sluice, trough, braces, and open roof framing.
+- `assets/crownforge-ore-wash-near-complete-v1.png` — 1536 × 1024 RGBA late structure with completed major work surfaces and intentionally unfinished roof/cloth dressing.
+- Runtime registration: `FIRST_AGE_ASSETS.oreWash` and `FIRST_AGE_ASSETS.oreWash.constructionStages` with marker `20260823-orewashstages1`.
 - Runtime width: `380`, intentionally 38% of the `1000`-wide Hall/Barracks landmarks; gameplay footprint: `4 × 3` with `0.9` clearance.
 
-The built-in image generator used the approved wooden Crown Hall and first-age Barracks as style references. The final prompt required a two-worker utilitarian yard, fixed elevated three-quarter perspective, warm upper-left light, no people, no masonry, no industrial machinery, no text, no rectangular ground plate, and a complete uncropped silhouette. The generated RGB checker representation was converted through `tools/prepare-neutral-matte.mjs` into true RGBA transparency; the raw generated source is not referenced by the game.
+The built-in image generator used the approved completed Ore Wash as the strict stage reference after the original completed asset had been approved against the wooden Crown Hall and first-age Barracks. Every stage preserves the same camera, footprint, orientation, light, palette, and bottom-center ground anchor. The generated RGB neutral/checker representations were converted through `tools/prepare-neutral-matte.mjs` into true RGBA transparency; raw generated sources are not referenced by the game. The active visual audit verifies exact dimensions plus transparent crop margins for all three construction stages.

@@ -428,3 +428,16 @@ Approved work-site rules:
 - do not turn a support structure into a mine shaft, furnace complex, stone refinery, merchant market, or later-age factory.
 
 This approval lifts the preceding Gold-pass prohibition only for the compact Ore Wash. Stables, cavalry, other specialty mills, technologies, coins, markets, and age progression remain separate approvals.
+
+## 29. Authored construction-family continuity
+
+The Ore Wash is the first completed reference for a four-state construction family made from independent production artwork rather than a completed building fading into existence. Future approved buildings should follow this rule only after their completed scale, silhouette, footprint, and ground anchor have been accepted.
+
+- **Foundation:** site preparation, stakes, sleepers, shallow excavation, rope, and staged materials; no implausibly finished wall or roof.
+- **Partial:** the functional lower frame begins to read, but braces, open rafters, incomplete surfaces, and unplaced materials make the site unmistakably unfinished.
+- **Nearly complete:** all major structural masses are present while one visible finish layer, roof section, dressing, or work surface remains incomplete.
+- **Complete:** the approved final asset, with no scale or anchor jump from the prior stage.
+
+Every state must preserve one fixed elevated camera, footprint center, orientation, warm upper-left light, transparent canvas dimensions, and bottom-center terrain anchor. A stage may become taller as framing rises, but it must not drift sideways, acquire a square ground plate, change material age, or introduce people baked into the building. Runtime construction health and collision remain data, not painted into the raster.
+
+Current approved family: `crownforge-ore-wash-foundation-v1.png`, `crownforge-ore-wash-partial-v1.png`, `crownforge-ore-wash-near-complete-v1.png`, and `crownforge-ore-wash-v1.png`.

@@ -138,12 +138,57 @@ function atlasBoundaryReport(filePath, atlas) {
   };
 }
 
+function spriteBoundaryReport(filePath, definition) {
+  const image = readPng(filePath);
+  const expected = { width: definition.width, height: definition.height };
+  const bounds = {
+    minX: image.width,
+    minY: image.height,
+    maxX: -1,
+    maxY: -1,
+  };
+  let visiblePixels = 0;
+  for (let y = 0; y < image.height; y += 1) {
+    for (let x = 0; x < image.width; x += 1) {
+      if (image.alphaAt(x, y) <= ALPHA_THRESHOLD) continue;
+      visiblePixels += 1;
+      bounds.minX = Math.min(bounds.minX, x);
+      bounds.minY = Math.min(bounds.minY, y);
+      bounds.maxX = Math.max(bounds.maxX, x);
+      bounds.maxY = Math.max(bounds.maxY, y);
+    }
+  }
+  const margins = visiblePixels ? {
+    top: bounds.minY,
+    right: image.width - 1 - bounds.maxX,
+    bottom: image.height - 1 - bounds.maxY,
+    left: bounds.minX,
+  } : null;
+  return {
+    file: path.relative(ROOT, filePath),
+    actual: { width: image.width, height: image.height },
+    expected,
+    dimensionMismatch: image.width !== expected.width || image.height !== expected.height,
+    visiblePixels,
+    margins,
+    unsafeEdge: !margins || Object.values(margins).some((margin) => margin < UNSAFE_BAND),
+  };
+}
+
+const firstAgeConstructionEntries = Object.entries(FIRST_AGE_ASSETS).flatMap(([type, definition]) => (
+  Object.entries(definition.constructionStages ?? {}).map(([stage, stageDefinition]) => [
+    `firstAge.${type}.construction.${stage}`,
+    stageDefinition,
+  ])
+));
+
 const atlasEntries = [
   ['environment', ENVIRONMENT_ATLAS],
   ['buildingStages', BUILDING_STAGE_ATLAS],
   ['enemyCamp', ENEMY_CAMP_ASSET],
   ...Object.entries(GOLD_DEPOSIT_ASSETS).map(([key, value]) => [`goldDeposit.${key}`, value]),
   ...Object.entries(FIRST_AGE_ASSETS).map(([key, value]) => [`firstAge.${key}`, value]),
+  ...firstAgeConstructionEntries,
   ...Object.entries(VILLAGER_ATLASES)
     .filter(([, value]) => value?.src && value.width && value.height && value.columns && value.rows)
     .map(([key, value]) => [`villager.${key}`, value]),
@@ -152,6 +197,7 @@ const atlasEntries = [
 
 const missingFiles = [];
 const boundaryReports = [];
+const constructionStageReports = [];
 for (const [key, atlas] of atlasEntries) {
   const filePath = assetPath(atlas.src);
   if (!fs.existsSync(filePath)) {
@@ -159,6 +205,11 @@ for (const [key, atlas] of atlasEntries) {
     continue;
   }
   if (atlas.columns && atlas.rows) boundaryReports.push({ key, ...atlasBoundaryReport(filePath, atlas) });
+}
+for (const [key, definition] of firstAgeConstructionEntries) {
+  const filePath = assetPath(definition.src);
+  if (!fs.existsSync(filePath)) continue;
+  constructionStageReports.push({ key, ...spriteBoundaryReport(filePath, definition) });
 }
 
 const animationCoverage = [];
@@ -181,19 +232,26 @@ const activeSources = [
   ENEMY_CAMP_ASSET.src,
   ...Object.values(GOLD_DEPOSIT_ASSETS).map((value) => value?.src).filter(Boolean),
   ...Object.values(FIRST_AGE_ASSETS).map((value) => value?.src).filter(Boolean),
+  ...firstAgeConstructionEntries.map(([, value]) => value?.src).filter(Boolean),
   ...Object.values(VILLAGER_ATLASES).map((value) => value?.src).filter(Boolean),
   ...Object.values(COMBAT_ATLASES).map((value) => value?.src).filter(Boolean),
 ].filter(Boolean).map((src) => src.split('?')[0]);
 const placeholderReferences = activeSources.filter((src) => /placeholder|programmer|temp|debug|generic/i.test(src));
 
 const result = {
-  status: missingFiles.length || boundaryReports.some((report) => report.dimensionMismatch) || placeholderReferences.length ? 'failed' : 'passed',
+  status: missingFiles.length
+    || boundaryReports.some((report) => report.dimensionMismatch)
+    || constructionStageReports.some((report) => report.dimensionMismatch || report.unsafeEdge)
+    || placeholderReferences.length
+    ? 'failed'
+    : 'passed',
   root: ROOT,
   missingFiles,
   placeholderReferences,
   fallbacks,
   animationCombinations: animationCoverage.length,
   boundaryReports,
+  constructionStageReports,
 };
 
 console.log(JSON.stringify(result, null, 2));

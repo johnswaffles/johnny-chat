@@ -395,7 +395,16 @@ export const GOLD_DEPOSIT_ASSETS = {
 export const FIRST_AGE_ASSETS = {
   townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024 },
   barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
-  oreWash: { src: './assets/crownforge-ore-wash-v1.png?v=20260822-orewash1', width: 1536, height: 1024 },
+  oreWash: {
+    src: './assets/crownforge-ore-wash-v1.png?v=20260823-orewashstages1',
+    width: 1536,
+    height: 1024,
+    constructionStages: {
+      foundation: { src: './assets/crownforge-ore-wash-foundation-v1.png?v=20260823-orewashstages1', width: 1536, height: 1024 },
+      partial: { src: './assets/crownforge-ore-wash-partial-v1.png?v=20260823-orewashstages1', width: 1536, height: 1024 },
+      nearComplete: { src: './assets/crownforge-ore-wash-near-complete-v1.png?v=20260823-orewashstages1', width: 1536, height: 1024 },
+    },
+  },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
