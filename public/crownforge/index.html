@@ -92,6 +92,7 @@
             <div id="build-menu" class="build-menu glass-panel" hidden>
               <div class="build-menu-kicker">FIRST-AGE BLUEPRINTS</div>
               <button class="build-option" data-build-type="barracks" title="Place a Crown Barracks"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN BARRACKS</b><small data-build-detail="barracks">90 WOOD · 40 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="oreWash" title="Place an Ore Wash for Gold drop-off and nearby mining support"><span class="action-mark ui-icon icon-gold" aria-hidden="true"></span><span><b>ORE WASH</b><small data-build-detail="oreWash">60 WOOD · 20 STONE  •  READY</small></span></button>
               <button class="build-option" data-build-type="field" title="Place a Grain Field"><span class="action-mark ui-icon icon-food" aria-hidden="true"></span><span><b>GRAIN FIELD</b><small data-build-detail="field">25 WOOD  •  READY</small></span></button>
               <button class="build-option" data-build-type="wall" title="Click-drag a Palisade Wall in any direction; it snaps to the nearest of 8 orientations"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>PALISADE WALL</b><small data-build-detail="wall">20 WOOD · 10 STONE  •  DRAG TO AIM  •  READY</small></span></button>
             </div>
@@ -100,8 +101,8 @@
             <button id="train-menu-toggle" class="action-button" title="Open Crown Hall training menu"><span class="action-mark ui-icon icon-population" aria-hidden="true"></span><span><b>TRAIN UNITS</b><small>OPEN UNIT MENU</small></span></button>
             <div id="train-menu" class="build-menu production-menu glass-panel" hidden>
               <div class="build-menu-kicker">BUILDING QUEUE</div>
-              <button class="build-option production-option" data-train-unit="villager" title="Train a Villager"><span class="action-mark ui-icon icon-villager" aria-hidden="true"></span><span><b>VILLAGER</b><small data-train-detail="villager">50 FOOD  •  7 SEC</small></span></button>
-              <button class="build-option production-option" data-train-unit="soldier" title="Train a Crown Guard"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN GUARD</b><small data-train-detail="soldier">75 FOOD · 25 WOOD  •  11 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="villager" title="Train a Villager"><span class="action-mark ui-icon icon-villager" aria-hidden="true"></span><span><b>VILLAGER</b><small data-train-detail="villager">50 FOOD  •  4 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="soldier" title="Train a Crown Guard"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN GUARD</b><small data-train-detail="soldier">40 FOOD · 15 WOOD · 10 GOLD  •  6 SEC</small></span></button>
               <small id="train-queue-status" class="train-queue-status">Select a unit to add it to the queue.</small>
             </div>
           </div>
@@ -126,7 +127,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260822-goldpass2"></script>
+    <script type="module" src="./src/main.js?v=20260822-orewash1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

@@ -2759,3 +2759,54 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add Stables, cavalry, a Gold processor, Lumber Mill, Grain Mill, Stone Quarry, technology tree, second age, or additional resource currencies in this pass.
 - Do not replace the shared mining motion merely to make Gold look mechanically different; preserve truthful motion reuse and spend new artwork only where the silhouette or carried material actually changes.
+
+## ORE WASH AND FIRST GOLD USE PASS — 2026-08-22
+
+### WHAT EXISTS
+
+- The first-age build catalog now contains exactly four player choices: Crown Barracks, Ore Wash, Grain Field, and Palisade Wall.
+- The Crown Hall remains the universal fallback drop-off for Food, Wood, Stone, and Gold.
+- The compact Ore Wash accepts Gold only. It gives nearby Gold veins a non-stacking `+25%` completed-load yield within `16` world tiles, raising the standard load from `8` to `10`.
+- Crown Guard equipment now costs `40 Food`, `15 Wood`, and `10 Gold`, giving the existing military loop one clear first-age Gold use without adding another unit.
+
+### WHAT WAS COMPLETED
+
+- Generated and integrated one original timber-and-thatch Ore Wash matching the approved wooden Hall and Barracks family.
+- Added explicit `acceptsResources` data to every storage definition and changed automatic return routing to select only a completed compatible drop-off.
+- Kept old specialty storage definitions unreachable, while making their future compatibility explicit: Wood for Lumber Mill, Stone for Quarry, Food for Grain Mill, and all resources for legacy Waystore.
+- Added a generic, strongest-single-source `gatherBonus` rule. Multiple Ore Washes do not stack.
+- Fixed the fallback storage-route record to preserve its chosen approach point.
+- Updated the build menu, Crown Guard production text, building selection information, runtime marker, active-asset inventory, regression coverage, art bible, manifest, and production playbook.
+
+### KNOWN ISSUES
+
+- The Ore Wash currently uses the existing restrained construction-progress reveal. It does not yet have dedicated foundation, partial, and near-complete timber stages.
+- The water and sorting activity inside the completed Ore Wash are static artwork. Add motion only if normal-zoom playtesting shows the work site needs it; do not add decorative animation merely because it is possible.
+- Gold has one intentionally narrow use. There is no processed-Gold currency, technology tree, market, mint, or cavalry economy.
+
+### ASSETS CREATED
+
+- `assets/crownforge-ore-wash-v1.png` — original `1536 × 1024` RGBA first-age Gold work yard. The accepted built-in generation was prepared with `tools/prepare-neutral-matte.mjs` to remove the baked checker representation and preserve a clean transparent silhouette.
+
+### SYSTEMS CREATED
+
+- Resource-compatible storage routing shared by automatic deposits, blocked-route recovery, and nearest-storage selection.
+- Data-driven local gathering support through `gatherBonus` with strongest-only application.
+- First Gold spending through the existing Crown Guard production queue.
+
+### VALIDATION
+
+- `node --check` passed for the changed runtime and regression modules.
+- `tools/remediation-regression.mjs` passed `22` focused areas, including Ore Wash placement/construction, Gold-only routing, Wood rejection and Hall fallback, `8 → 10` local Gold yield, Crown Guard Gold spending, and every prior movement, economy, wall, construction, pathfinding, camera, combat, victory, and defeat check.
+- `tools/visual-integrity-audit.mjs` passed with no missing active file, placeholder reference, fallback, or animation-dimension mismatch across `140` active animation combinations.
+- Local source browser play confirmed the authored Ore Wash in the four-item build menu, valid meadow placement, the exact `60 Wood` / `20 Stone` spend, assignment of three selected Villagers, completion at both map and closer gameplay zoom, clean alpha/ground contact, and an empty browser console. Live Render verification remains required before this pass can be called released.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- In the deployed game, mine the opening Gold vein with several Villagers and verify return paths, selection text, and the `+25%` yield at normal and close zoom.
+- Author dedicated construction stages only after the completed work-site size and ground anchor are approved in live play.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add Stables, cavalry, a Lumber Mill, Grain Mill, Stone Quarry, mine shaft, mint, market, technology tree, second age, or more resource currencies in the next pass.
+- Do not create a separate processed-Gold inventory. Keep raw Gold as one readable resource until the single Ore Wash loop is proven stable.

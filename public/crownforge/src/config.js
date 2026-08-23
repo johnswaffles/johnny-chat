@@ -141,7 +141,10 @@ export const PRODUCTION_TYPES = {
     icon: 'icon-soldier',
     building: 'barracks',
     trainTime: 6,
-    cost: { food: 40, wood: 15, stone: 0 },
+    // Gold earns its first clear strategic use through the existing military
+    // loop. This remains a restrained equipment cost rather than a second
+    // currency tree or a new unit roster.
+    cost: { food: 40, wood: 15, stone: 0, gold: 10 },
   },
 };
 
@@ -172,6 +175,7 @@ export const BUILDING_TYPES = {
     },
     completed: true,
     storage: true,
+    acceptsResources: ['food', 'wood', 'stone', 'gold'],
     production: true,
     productionTypes: ['villager'],
   },
@@ -206,6 +210,26 @@ export const BUILDING_TYPES = {
     production: true,
     productionTypes: ['soldier'],
   },
+  oreWash: {
+    label: 'Ore Wash',
+    function: 'Gold drop-off and nearby ore-washing support',
+    asset: 'oreWash',
+    maxHp: 320,
+    // This is a practical first-age work yard, not a civic landmark. Its
+    // modest footprint and render width keep the Hall and Barracks dominant.
+    footprint: { width: 4, height: 3 },
+    renderSize: 380,
+    collisionClearance: 0.9,
+    entrance: 'south',
+    buildTime: 7,
+    cost: { food: 0, wood: 60, stone: 20, gold: 0 },
+    storage: true,
+    acceptsResources: ['gold'],
+    // Nearby washing and sorting raises each completed Gold load from 8 to
+    // 10. Multiple Ore Washes never stack; the simulation takes the strongest
+    // single local bonus.
+    gatherBonus: { resourceType: 'gold', radius: 16, multiplier: 1.25 },
+  },
   lumberMill: {
     label: 'Lumber Mill',
     function: 'Wood drop-off',
@@ -218,6 +242,7 @@ export const BUILDING_TYPES = {
     buildTime: 7,
     cost: { food: 0, wood: 45, stone: 10 },
     storage: true,
+    acceptsResources: ['wood'],
   },
   quarry: {
     label: 'Stone Quarry',
@@ -231,6 +256,7 @@ export const BUILDING_TYPES = {
     buildTime: 7,
     cost: { food: 0, wood: 35, stone: 25 },
     storage: true,
+    acceptsResources: ['stone'],
   },
   grainMill: {
     label: 'Grain Mill',
@@ -244,6 +270,7 @@ export const BUILDING_TYPES = {
     buildTime: 7,
     cost: { food: 0, wood: 50, stone: 10 },
     storage: true,
+    acceptsResources: ['food'],
   },
   field: {
     label: 'Grain Field',
@@ -287,6 +314,7 @@ export const BUILDING_TYPES = {
     entrance: 'south',
     completed: true,
     storage: true,
+    acceptsResources: ['food', 'wood', 'stone', 'gold'],
   },
   ashenCamp: {
     label: 'Ashen Camp',
@@ -306,7 +334,7 @@ export const BUILDING_TYPES = {
 // Only these structures belong to the current player-facing first-age build
 // catalog. Retired prototypes remain defined for old saves/audit history, but
 // cannot be placed until they receive an approved Crownforge asset and role.
-export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'field', 'wall']);
+export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'oreWash', 'field', 'wall']);
 
 export const ASSET_RECTS = {
   townCenter: { x: 0, y: 0, width: 418, height: 418 },
@@ -367,6 +395,7 @@ export const GOLD_DEPOSIT_ASSETS = {
 export const FIRST_AGE_ASSETS = {
   townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024 },
   barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
+  oreWash: { src: './assets/crownforge-ore-wash-v1.png?v=20260822-orewash1', width: 1536, height: 1024 },
   lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },

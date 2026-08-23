@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260822-goldpass2';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260822-orewash1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260821-hallwoodpass2';
-import { CrownforgeRenderer } from './renderer.js?v=20260822-goldpass2';
-import { CrownforgeSimulation } from './simulation.js?v=20260822-goldpass2';
+import { CrownforgeRenderer } from './renderer.js?v=20260822-orewash1';
+import { CrownforgeSimulation } from './simulation.js?v=20260822-orewash1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -416,14 +416,20 @@ function selectionStatus() {
 
 function buildingAbilityLabel(building, blueprint) {
   if (blueprint.enemyStructure) return 'enemy settlement core · destroy to win';
+  const acceptedResources = blueprint.acceptsResources ?? Object.keys(RESOURCE_TYPES);
+  const acceptedLabel = acceptedResources.length === Object.keys(RESOURCE_TYPES).length
+    ? 'food, wood, stone, and gold'
+    : acceptedResources.map((type) => RESOURCE_TYPES[type]?.label?.toLowerCase() ?? type).join(' and ');
   if (blueprint.production) {
     const products = (blueprint.productionTypes ?? []).map((type) => PRODUCTION_TYPES[type]?.label ?? type).join(' + ');
-    const dropoff = blueprint.storage ? 'drop-off for food, wood, stone, and gold · ' : '';
+    const dropoff = blueprint.storage ? `drop-off for ${acceptedLabel} · ` : '';
     return `${dropoff}trains ${products} · select a unit below`;
   }
   if (blueprint.storage) {
-    const resource = building.type === 'lumberMill' ? 'wood' : building.type === 'quarry' ? 'stone' : building.type === 'grainMill' ? 'food' : 'all resources';
-    return `drop-off for ${resource} · shortens return routes`;
+    const support = blueprint.gatherBonus
+      ? ` · +${Math.round((blueprint.gatherBonus.multiplier - 1) * 100)}% ${RESOURCE_TYPES[blueprint.gatherBonus.resourceType]?.label ?? blueprint.gatherBonus.resourceType} yield within ${blueprint.gatherBonus.radius} tiles`
+      : '';
+    return `drop-off for ${acceptedLabel} · shortens return routes${support}`;
   }
   if (blueprint.field) return building.farmerId ? 'one farmer tending · generates food' : 'one farmer · awaiting worker';
   if (blueprint.population) return `housing · adds ${blueprint.population} population space`;

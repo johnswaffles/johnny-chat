@@ -112,3 +112,17 @@ Before accepting an asset family, test:
 - Individual tree family: `assets/crownforge-tree-atlas-v1.png`, the isolated clean tree row used to prevent mixed-atlas sampling.
 
 Future units and buildings should follow this file and then add only the smallest new rule needed for their unique silhouette or gameplay interaction.
+
+## Small resource-support building pattern — 2026-08-22
+
+The Ore Wash establishes the repeatable pattern for a future Lumber Yard, Grain Work Site, or other first-age support structure, but it does not pre-approve those buildings.
+
+1. Reference the approved Crown Hall and Barracks for perspective, timber treatment, light, cloth, and terrain contact.
+2. Show the actual work process in the silhouette; avoid a generic house with a different sign.
+3. Keep the structure visually below half of the landmark width and give it a narrow documented collision footprint.
+4. Generate one complete uncropped raster with generous margin, no people, no text, and no scenic rectangle.
+5. Convert any generated neutral checker representation to true alpha with `tools/prepare-neutral-matte.mjs`, then inspect the result over meadow green.
+6. Register the asset through `FIRST_AGE_ASSETS`, admit the blueprint explicitly through `FIRST_AGE_BUILD_BLUEPRINTS`, and add resource compatibility and gameplay purpose in data rather than type-name conditionals.
+7. Test placement, construction, selection information, compatible and incompatible cargo routing, local bonus behavior, normal zoom, close zoom, and cold-load readiness before deployment.
+
+Current reference output: `assets/crownforge-ore-wash-v1.png`, `1536 × 1024` RGBA, runtime width `380`, footprint `4 × 3`.

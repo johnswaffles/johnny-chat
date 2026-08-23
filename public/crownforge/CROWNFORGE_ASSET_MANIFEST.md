@@ -309,3 +309,11 @@ The first approved Gold economy family contains six original prepared RGBA asset
 The built-in image generator authored the family against the approved Crownforge stone, Crown Hall, Villager carry, and HUD references. The accepted outputs were passed through edge-connected neutral-matte removal followed by enclosed neutral-cell cleanup. Runtime files use true transparency; raw generated checker representations are not registered.
 
 `GOLD_DEPOSIT_ASSETS` and `VILLAGER_ATLASES.carryGoldLoop` are the source-of-truth registrations. The runtime marker is `20260822-goldpass1`. Gold deposits use independent tier silhouettes rather than recoloring or enlarging the active stone atlas.
+
+## FIRST-AGE ORE WASH ASSET — 2026-08-22 (CURRENT ADDITION)
+
+- `assets/crownforge-ore-wash-v1.png` — 1536 × 1024 RGBA, compact Gold washing and sorting yard with split-log sluice, shallow troughs, ore baskets, thatched lean-to, rope lashings, packed-earth contact, and restrained blue cloth.
+- Runtime registration: `FIRST_AGE_ASSETS.oreWash` with marker `20260822-orewash1`.
+- Runtime width: `380`, intentionally 38% of the `1000`-wide Hall/Barracks landmarks; gameplay footprint: `4 × 3` with `0.9` clearance.
+
+The built-in image generator used the approved wooden Crown Hall and first-age Barracks as style references. The final prompt required a two-worker utilitarian yard, fixed elevated three-quarter perspective, warm upper-left light, no people, no masonry, no industrial machinery, no text, no rectangular ground plate, and a complete uncropped silhouette. The generated RGB checker representation was converted through `tools/prepare-neutral-matte.mjs` into true RGBA transparency; the raw generated source is not referenced by the game.

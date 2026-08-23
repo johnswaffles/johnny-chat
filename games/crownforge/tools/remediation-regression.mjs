@@ -9,6 +9,7 @@ import {
   FIRST_AGE_ASSETS,
   GOLD_DEPOSIT_ASSETS,
   INITIAL_RESOURCES,
+  PRODUCTION_TYPES,
   RESOURCE_TYPES,
   VILLAGER_ATLASES,
 } from '../src/config.js';
@@ -116,7 +117,7 @@ function checkResetPresentation() {
     ['townCenter'],
     'reset begins with the Crown Hall as the only player building',
   );
-  assert.deepEqual(FIRST_AGE_BUILD_BLUEPRINTS, ['barracks', 'field', 'wall'], 'first-age blueprint catalog stays intentionally small');
+  assert.deepEqual(FIRST_AGE_BUILD_BLUEPRINTS, ['barracks', 'oreWash', 'field', 'wall'], 'first-age blueprint catalog stays intentionally small');
   assert.deepEqual(
     [...INDEX_HTML.matchAll(/data-build-type="([^"]+)"/g)].map((match) => match[1]),
     FIRST_AGE_BUILD_BLUEPRINTS,
@@ -235,6 +236,70 @@ function checkGoldEconomyLoop() {
   assert.equal(group.issueContextCommand({ x: sharedVein.x, z: sharedVein.z }).success, true, 'several villagers can target one Gold vein');
   const slots = new Set(workers.map((unit) => unit.gatherSlot));
   assert.equal(slots.size, workers.length, 'Gold workers reserve distinct interaction slots');
+}
+
+function checkOreWashEconomySupport() {
+  const blueprint = BUILDING_TYPES.oreWash;
+  assert.deepEqual(blueprint.acceptsResources, ['gold'], 'Ore Wash accepts only Gold cargo');
+  assert.deepEqual(blueprint.gatherBonus, { resourceType: 'gold', radius: 16, multiplier: 1.25 }, 'Ore Wash exposes one non-stacking local Gold bonus');
+  assert.match(FIRST_AGE_ASSETS.oreWash.src, /crownforge-ore-wash-v1\.png/, 'Ore Wash uses its authored first-age asset');
+  assert.equal(PRODUCTION_TYPES.soldier.cost.gold, 10, 'Crown Guard equipment gives Gold an immediate first-age use');
+
+  const routing = movementSandbox();
+  const hall = routing.addBuilding('townCenter', 20, 20, 'player');
+  const wash = routing.addBuilding('oreWash', 34, 20, 'player');
+  const goldWorker = routing.addUnit('villager', 29, 20, 'player');
+  goldWorker.carryType = 'gold';
+  goldWorker.carryAmount = 5;
+  assert.equal(routing._beginReturn(goldWorker), true, 'Gold cargo finds a compatible work-site route');
+  assert.equal(goldWorker.returnStorageId, wash.id, 'nearby Gold cargo prefers the Ore Wash');
+
+  const woodWorker = routing.addUnit('villager', 29, 22, 'player');
+  woodWorker.carryType = 'wood';
+  woodWorker.carryAmount = 5;
+  assert.equal(routing._beginReturn(woodWorker), true, 'Wood cargo still finds a compatible route');
+  assert.equal(woodWorker.returnStorageId, hall.id, 'Ore Wash rejects Wood and leaves the Crown Hall as fallback');
+
+  const bonus = movementSandbox();
+  bonus.addBuilding('oreWash', 20, 20, 'player');
+  bonus.addResource('gold', 'gold', 28, 20, 100, 0, { sizeTier: 'small' });
+  const bonusNode = bonus.resourcesNodes[0];
+  const bonusWorker = bonus.addUnit('villager', 29.7, 20, 'player');
+  bonusWorker.gatherTarget = bonusNode.id;
+  bonusWorker.command = 'gather';
+  bonus.resources.gold = 0;
+  bonus._updateGathering(bonusWorker, RESOURCE_TYPES.gold.gatherTime);
+  assert.equal(bonusWorker.carryAmount, 10, 'nearby Ore Wash raises a completed Gold load from 8 to 10');
+  assert.equal(bonusNode.amount, 90, 'boosted Gold load is removed from the vein exactly once');
+
+  const production = movementSandbox();
+  const barracks = production.addBuilding('barracks', 20, 20, 'player');
+  production.selectedIds = [barracks.id];
+  production._syncSelectionFlags();
+  const goldBefore = production.resources.gold;
+  assert.equal(production.queueUnit('soldier').success, true, 'Crown Guard remains trainable through the existing Barracks loop');
+  assert.equal(production.resources.gold, goldBefore - PRODUCTION_TYPES.soldier.cost.gold, 'queuing a Crown Guard spends the Gold equipment cost');
+
+  const construction = freshSimulation();
+  const openingVein = construction.resourcesNodes.find((node) => node.resourceType === 'gold' && node.x === 111 && node.z === 72);
+  let site = null;
+  for (let radius = 7; radius <= 14 && !site; radius += 1) {
+    for (let step = 0; step < 16; step += 1) {
+      const angle = step / 16 * Math.PI * 2;
+      const point = { x: openingVein.x + Math.cos(angle) * radius, z: openingVein.z + Math.sin(angle) * radius };
+      if (construction.getPlacementCheck('oreWash', point).valid) {
+        site = point;
+        break;
+      }
+    }
+  }
+  assert.ok(site, 'Ore Wash has a valid work-site placement near the opening Gold vein');
+  assert.equal(construction.placeBuilding('oreWash', site), true, 'Ore Wash foundation places through the standard construction system');
+  const placedWash = construction.buildings.find((building) => building.type === 'oreWash');
+  construction.setUnitSpeedScale(10);
+  advance(construction, BUILDING_TYPES.oreWash.buildTime + 12);
+  assert.equal(placedWash.progress, 1, 'Ore Wash completes through Villager construction');
+  assert.ok(Math.hypot(placedWash.x - openingVein.x, placedWash.z - openingVein.z) <= blueprint.gatherBonus.radius, 'completed Ore Wash supports the intended opening vein');
 }
 
 function checkReadableResourceApproaches() {
@@ -592,6 +657,7 @@ checkAnimationAtlases();
 checkResetPresentation();
 checkGathering();
 checkGoldEconomyLoop();
+checkOreWashEconomySupport();
 checkReadableResourceApproaches();
 checkConstructionAndPlacement();
 checkWallResourcePrecedence();
@@ -616,7 +682,8 @@ console.log(JSON.stringify({
     '20 Hz versus 60 Hz gathering convergence',
     'cargo-preserving retask and storage return',
     'complete Gold gather, carry, Crown Hall deposit, return-to-work, depletion, and multi-worker slot loop',
-    'focused first-age building catalog and Crown Hall-only drop-off routing',
+    'Ore Wash construction, Gold-only drop-off routing, local yield bonus, and Crown Guard Gold spending',
+    'focused first-age building catalog with the Crown Hall as universal fallback',
     'placement rejection and Barracks completion',
     'wall precedence over trees and stone with safe resource cleanup',
     'magnetic wall endpoint snap and connected segment spacing',

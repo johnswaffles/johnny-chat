@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260822-goldpass2';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260822-orewash1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260822-goldpass2';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260822-orewash1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -965,7 +965,8 @@ export class CrownforgeSimulation {
     // readable strike cue without needing a second visual-event queue.
     this.animation.emit(unit, ANIMATION_EVENTS.toolContact, { resourceType: node.resourceType, x: node.x, z: node.z, nodeId: node.id });
     const availableSpace = resourceInfo.capacity - this.resources[node.resourceType];
-    const amount = Math.min(resourceInfo.gatherAmount, node.amount, availableSpace);
+    const gatherAmount = Math.round(resourceInfo.gatherAmount * this._resourceGatherMultiplier(node));
+    const amount = Math.min(gatherAmount, node.amount, availableSpace);
     if (amount <= 0) {
       unit.gatherTimer = 0;
       unit.gatherEventFired = false;
@@ -993,7 +994,7 @@ export class CrownforgeSimulation {
   }
 
   _updateReturning(unit) {
-    const storage = this._getReturnStorage(unit) ?? this._nearestStorage(unit);
+    const storage = this._getReturnStorage(unit) ?? this._nearestStorage(unit, unit.carryType);
     if (!storage) {
       unit.actionLabel = 'No drop-off available';
       unit.visualState = unit.carryType ? `carry:${unit.carryType}` : 'idle';
@@ -1078,7 +1079,30 @@ export class CrownforgeSimulation {
   }
 
   _getReturnStorage(unit) {
-    return this.buildings.find((building) => building.id === unit.returnStorageId && !building.destroyed && building.progress >= 1 && building.faction === 'player' && BUILDING_TYPES[building.type].storage) ?? null;
+    return this.buildings.find((building) => building.id === unit.returnStorageId
+      && !building.destroyed
+      && building.progress >= 1
+      && building.faction === 'player'
+      && this._storageAccepts(building, unit.carryType)) ?? null;
+  }
+
+  _storageAccepts(building, resourceType = null) {
+    const blueprint = BUILDING_TYPES[building?.type];
+    if (!blueprint?.storage) return false;
+    if (!resourceType) return true;
+    const accepted = blueprint.acceptsResources;
+    return !Array.isArray(accepted) || accepted.includes(resourceType);
+  }
+
+  _resourceGatherMultiplier(node) {
+    let multiplier = 1;
+    for (const building of this.buildings) {
+      if (building.destroyed || building.progress < 1 || building.faction !== 'player') continue;
+      const bonus = BUILDING_TYPES[building.type]?.gatherBonus;
+      if (!bonus || bonus.resourceType !== node.resourceType) continue;
+      if (distance(building, node) <= bonus.radius) multiplier = Math.max(multiplier, bonus.multiplier);
+    }
+    return multiplier;
   }
 
   _resourceInteractionPoint(node, slot, unitType = 'villager') {
@@ -1373,7 +1397,7 @@ export class CrownforgeSimulation {
       return node ? this._sendUnitToResource(unit, node) : false;
     }
     if (unit.command === 'return') {
-      const storage = this._getReturnStorage(unit) ?? this._nearestStorage(unit);
+      const storage = this._getReturnStorage(unit) ?? this._nearestStorage(unit, unit.carryType);
       return storage ? this._sendUnitToStorage(unit, storage) : false;
     }
     if (unit.command === 'attack') {
@@ -1515,18 +1539,30 @@ export class CrownforgeSimulation {
     return true;
   }
 
-  _findStorageRoute(unit) {
+  _findStorageRoute(unit, resourceType = unit.carryType) {
     const storages = this.buildings
-      .filter((building) => !building.destroyed && building.faction === 'player' && building.progress >= 1 && BUILDING_TYPES[building.type].storage)
+      .filter((building) => !building.destroyed
+        && building.faction === 'player'
+        && building.progress >= 1
+        && this._storageAccepts(building, resourceType))
       .sort((a, b) => distance(unit, a) - distance(unit, b));
     for (const storage of storages) {
       const route = this._bestPathToPoints(unit, this._storageApproachPoints(storage));
-      if (route) return { storage, path: route.path, slot: route.slot };
+      if (route) return { storage, path: route.path, slot: route.slot, point: route.point };
     }
     return null;
   }
 
   _sendUnitToStorage(unit, storage) {
+    if (!this._storageAccepts(storage, unit.carryType)) {
+      const fallback = this._findStorageRoute(unit);
+      if (!fallback) {
+        unit.pathBlocked = true;
+        unit.actionLabel = 'No compatible drop-off';
+        return false;
+      }
+      storage = fallback.storage;
+    }
     const points = this._storageApproachPoints(storage);
     const route = this._bestPathToPoints(unit, points);
     if (!route) {
@@ -2020,8 +2056,11 @@ export class CrownforgeSimulation {
     }
   }
 
-  _nearestStorage(point) {
-    const storage = this.buildings.filter((building) => !building.destroyed && building.faction === 'player' && building.progress >= 1 && BUILDING_TYPES[building.type].storage);
+  _nearestStorage(point, resourceType = point?.carryType ?? null) {
+    const storage = this.buildings.filter((building) => !building.destroyed
+      && building.faction === 'player'
+      && building.progress >= 1
+      && this._storageAccepts(building, resourceType));
     return storage.sort((a, b) => distance(point, a) - distance(point, b))[0] ?? null;
   }
 

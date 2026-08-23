@@ -412,3 +412,19 @@ The approved visual hierarchy is:
 Gold mining reuses the approved directional stone-pick motion because the physical action and tool are the same. The material must become distinct through the authored node family, muted-gold contact feedback, `carryGoldLoop`, carry badge, selected-resource icon, and Gold total—not by changing the Villager's body scale or adding exaggerated sparkling effects.
 
 Do not introduce a Gold-processing building, mint, market, coins, cavalry cost, technology, or age progression merely because Gold now exists. Those remain separate design approvals.
+
+## 28. First-age utilitarian work sites — Ore Wash approval
+
+The Ore Wash is the approved visual and scale precedent for small resource-support structures. It must remain subordinate to the Crown Hall and Barracks: low silhouette, no tower, no monumental porch, no stone blockwork, and no grand faction heraldry. Its readable identity comes from the work itself—timber sluice, shallow wash troughs, ore baskets, damp boards, simple hand tools, and a small thatched shelter.
+
+Approved work-site rules:
+
+- use the same fixed elevated three-quarter camera and upper-left/front key light as the Hall and Barracks;
+- use rough timber, rope, woven baskets, thatch, hide or cloth, and packed earth appropriate to the first age;
+- keep render width below half of a major production landmark unless a human-scale reference proves otherwise;
+- use only restrained Crownwarden blue-and-gold accents;
+- keep a complete transparent silhouette with an irregular terrain contact, never a square plate or halo;
+- make the entrance and working side readable from normal RTS zoom;
+- do not turn a support structure into a mine shaft, furnace complex, stone refinery, merchant market, or later-age factory.
+
+This approval lifts the preceding Gold-pass prohibition only for the compact Ore Wash. Stables, cavalry, other specialty mills, technologies, coins, markets, and age progression remain separate approvals.
