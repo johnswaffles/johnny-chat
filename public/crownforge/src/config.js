@@ -66,6 +66,7 @@ export const RESOURCE_TYPES = {
   food: { label: 'Food', color: '#d76649', capacity: 9999, gatherAmount: 10, gatherTime: 1.05, interactionDistance: 1.55 },
   wood: { label: 'Wood', color: '#b98147', capacity: 9999, gatherAmount: 12, gatherTime: 1.1, interactionDistance: 1.75 },
   stone: { label: 'Stone', color: '#9fa8ab', capacity: 9999, gatherAmount: 10, gatherTime: 1.2, interactionDistance: 1.7 },
+  gold: { label: 'Gold', color: '#c6a15b', capacity: 9999, gatherAmount: 8, gatherTime: 1.3, interactionDistance: 1.72 },
 };
 
 // Resource size is data, not a one-off art trick. Every future material (for
@@ -353,6 +354,16 @@ export const LARGE_STONE_ASSET = {
   height: 1024,
 };
 
+// Gold uses a small authored family rather than recoloring the stone atlas.
+// Each tier has its own silhouette, and exhausted veins retain a low worked
+// rubble state so depletion reads without a floating label.
+export const GOLD_DEPOSIT_ASSETS = {
+  small: { src: './assets/crownforge-gold-deposit-small-v1.png?v=20260822-goldpass1', width: 1536, height: 1024 },
+  medium: { src: './assets/crownforge-gold-deposit-medium-v1.png?v=20260822-goldpass1', width: 1536, height: 1024 },
+  large: { src: './assets/crownforge-gold-deposit-large-v1.png?v=20260822-goldpass1', width: 1536, height: 1024 },
+  depleted: { src: './assets/crownforge-gold-deposit-depleted-v1.png?v=20260822-goldpass1', width: 1536, height: 1024 },
+};
+
 export const FIRST_AGE_ASSETS = {
   townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024 },
   barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
@@ -506,6 +517,14 @@ export const VILLAGER_ATLASES = {
     rows: 4,
     layout: 'frame-columns',
   },
+  carryGoldLoop: {
+    src: './assets/crownforge-villager-carry-gold-loop-v1.png?v=20260822-goldpass1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
   carrySuppliesLoop: {
     src: './assets/villager-carry-supplies-loop-v1.png?v=1',
     width: 1254,
@@ -603,4 +622,4 @@ export const COMBAT_ATLASES = {
   },
 };
 
-export const INITIAL_RESOURCES = { food: 5000, wood: 5000, stone: 5000 };
+export const INITIAL_RESOURCES = { food: 5000, wood: 5000, stone: 5000, gold: 5000 };

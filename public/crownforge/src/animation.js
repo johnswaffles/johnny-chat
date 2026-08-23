@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260821-hallwoodpass2';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260822-goldpass1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -79,6 +79,7 @@ export const ANIMATION_DEFINITIONS = {
       carryWoodLoop: VILLAGER_ATLASES.carryWoodLoop,
       carryFoodLoop: VILLAGER_ATLASES.carryFoodLoop,
       carryStoneLoop: VILLAGER_ATLASES.carryStoneLoop,
+      carryGoldLoop: VILLAGER_ATLASES.carryGoldLoop,
       carrySuppliesLoop: VILLAGER_ATLASES.carrySuppliesLoop,
       hitLoop: VILLAGER_ATLASES.hitLoop,
       deathLoop: VILLAGER_ATLASES.deathLoop,
@@ -93,10 +94,15 @@ export const ANIMATION_DEFINITIONS = {
       gather_food: actionLoop('foodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       field_work: actionLoop('fieldLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_stone: actionLoop('stoneLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
+      // Gold-bearing quartz is worked with the same pick motion as stone; the
+      // distinct ore deposit, cargo atlas, feedback color, and HUD state make
+      // the material legible without inventing an implausible tool action.
+      gather_gold: actionLoop('stoneLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       construct: actionLoop('buildLoop', { construction_strike: ANIMATION_EVENT_TIMINGS.construction_strike }),
       carry_wood: actionLoop('carryWoodLoop'),
       carry_food: actionLoop('carryFoodLoop'),
       carry_stone: actionLoop('carryStoneLoop'),
+      carry_gold: actionLoop('carryGoldLoop'),
       carry_supplies: actionLoop('carrySuppliesLoop'),
       attack: singleFrame('combat', VILLAGER_ATLASES.combat.rows.attack, { events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit } }),
       attack_anticipation: singleFrame('combat', VILLAGER_ATLASES.combat.rows.idle),
@@ -175,6 +181,7 @@ export function resolveAnimationState(unit) {
   if (unit.visualState === 'field') return 'field_work';
   if (unit.visualState === 'food') return 'gather_food';
   if (unit.visualState === 'stone') return 'gather_stone';
+  if (unit.visualState === 'gold') return 'gather_gold';
   if (unit.visualState === 'build') return 'construct';
   if (unit.visualState?.startsWith('carry:')) return `carry_${unit.visualState.slice(6)}`;
   return 'idle';

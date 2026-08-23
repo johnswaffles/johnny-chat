@@ -20,6 +20,7 @@ button, [title] { -webkit-tap-highlight-color: transparent; }
 .icon-food { background-position: -31.5px 0; }
 .icon-wood { background-position: -63px 0; }
 .icon-stone { background-position: -94.5px 0; }
+.icon-gold { background-image: url('./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1'); background-position: center !important; background-size: contain !important; background-repeat: no-repeat; }
 .icon-villager { background-position: 0 -31.5px; }
 .icon-soldier { background-position: -31.5px -31.5px; }
 .icon-house { background-position: -63px -31.5px; }
@@ -59,10 +60,10 @@ h1 { font: 20px 'Marcellus', Georgia, serif; letter-spacing: .01em; color: #faf1
 .resource-strip { gap: 8px; }
 .resource-card { min-width: 88px; display: flex; gap: 8px; align-items: center; padding: 7px 9px; border: 1px solid rgba(255,255,255,.08); border-radius: 9px; background: rgba(255,255,255,.035); }
 .resource-glyph { width: 31px; height: 31px; border-radius: 8px; background-color: rgba(255, 255, 255, .07); }
-.food-card .resource-glyph { background-color: rgba(215,102,73,.18); }.wood-card .resource-glyph { background-color: rgba(185,129,71,.2); }.stone-card .resource-glyph { background-color: rgba(159,168,171,.18); }
+.food-card .resource-glyph { background-color: rgba(215,102,73,.18); }.wood-card .resource-glyph { background-color: rgba(185,129,71,.2); }.stone-card .resource-glyph { background-color: rgba(159,168,171,.18); }.gold-card .resource-glyph { background-color: rgba(198,161,91,.18); }
 .resource-label { display: block; font-size: 8px; letter-spacing: .14em; color: #aab7a7; }
 .resource-card strong { display: flex; align-items: baseline; gap: 3px; font-size: 16px; line-height: 17px; font-weight: 600; color: #fff2cf; }.resource-card strong small { color: #8e9b8e; font-size: 9px; font-weight: 500; }
-.resource-bar { display: block; width: 55px; height: 3px; margin-top: 4px; border-radius: 99px; overflow: hidden; background: rgba(255,255,255,.1); }.resource-bar i { display: block; height: 100%; width: 50%; background: var(--gold); border-radius: inherit; transition: width .25s; }.food-card .resource-bar i { background: #d76649; }.wood-card .resource-bar i { background: #b98147; }.stone-card .resource-bar i { background: #9fa8ab; }
+.resource-bar { display: block; width: 55px; height: 3px; margin-top: 4px; border-radius: 99px; overflow: hidden; background: rgba(255,255,255,.1); }.resource-bar i { display: block; height: 100%; width: 50%; background: var(--gold); border-radius: inherit; transition: width .25s; }.food-card .resource-bar i { background: #d76649; }.wood-card .resource-bar i { background: #b98147; }.stone-card .resource-bar i { background: #9fa8ab; }.gold-card .resource-bar i { background: #c6a15b; }
 
 .left-rail { position: absolute; z-index: 3; top: 105px; left: 18px; width: 248px; display: grid; gap: 10px; }
 .intel-panel, .doctrine-panel { border-radius: 13px; padding: 14px; }
@@ -92,7 +93,7 @@ h1 { font: 20px 'Marcellus', Georgia, serif; letter-spacing: .01em; color: #faf1
 .secondary-button .icon-controls { background-position: -60px -60px; }.secondary-button .icon-cancel { background-position: -40px -60px; }
 .placement-readout .icon-house { background-position: -50px -25px; }.placement-readout .icon-cancel { background-position: -50px -75px; }
 .victory-sigil .icon-victory { background-position: 0 -144px; }.victory-sigil .icon-defeat { background-position: -48px -144px; }
-.selection-icon.icon-food { background-position: -42px 0; }.selection-icon.icon-wood { background-position: -84px 0; }.selection-icon.icon-stone { background-position: -126px 0; }.selection-icon.icon-villager { background-position: 0 -42px; }.selection-icon.icon-soldier { background-position: -42px -42px; }.selection-icon.icon-house { background-position: -84px -42px; }.selection-icon.icon-population { background-position: -84px -84px; }
+.selection-icon.icon-food { background-position: -42px 0; }.selection-icon.icon-wood { background-position: -84px 0; }.selection-icon.icon-stone { background-position: -126px 0; }.selection-icon.icon-gold { background-position: center !important; background-size: contain !important; }.selection-icon.icon-villager { background-position: 0 -42px; }.selection-icon.icon-soldier { background-position: -42px -42px; }.selection-icon.icon-house { background-position: -84px -42px; }.selection-icon.icon-population { background-position: -84px -84px; }
 .selection-icon.icon-controls { background-position: -126px -126px; }
 .placement-readout.is-valid { border-color: rgba(129,185,141,.42); background: rgba(129,185,141,.1); }
 .placement-readout.is-valid b { color: #d8efdd; }

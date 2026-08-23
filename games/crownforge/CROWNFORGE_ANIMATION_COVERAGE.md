@@ -37,13 +37,13 @@ Four directions are the correct current tradeoff for this fixed camera and RTS-d
 
 | Field | Coverage |
 |---|---|
-| Existing and required states | Idle; walking; gather wood; gather food; mine stone; carry wood; carry food; carry stone; carry supplies; construct; attack; take damage; death. All are required or applicable in the current slice. |
-| Existing artwork | `assets/villager-motion-atlas.png`, `villager-task-atlas.png`, `villager-carry-atlas.png`, `villager-combat-atlas.png`, the four integrated task/build loop atlases, and the four integrated carry loop atlases; all are original, transparent Crownforge sheets. |
+| Existing and required states | Idle; walking; gather wood; gather food; mine stone; mine Gold; carry wood; carry food; carry stone; carry Gold; carry supplies; construct; attack; take damage; death. All are required or applicable in the current slice. |
+| Existing artwork | `assets/villager-motion-atlas.png`, `villager-task-atlas.png`, `villager-carry-atlas.png`, `villager-combat-atlas.png`, the four integrated task/build loop atlases, and five integrated carry loop atlases; all are original, transparent Crownforge sheets. Gold mining deliberately reuses the physically correct stone-pick loop and has its own cargo loop. |
 | Directions / missing directions | 4/4 authored camera quadrants for every sheet. No missing gameplay direction. Eight-direction cells are intentionally deferred, not mechanically mirrored. |
 | Frames | Idle 1 pose/direction; walking 3 poses/direction; Wood, Food, Stone, Construct, and each carry state 4 poses/direction; attack 1 pose/direction; hit 4 poses/direction; death 4 poses/direction. Remaining refinement: optional worker-combat command depth and live visual confirmation. |
 | Dimensions | Source `1254 x 1254` RGBA per atlas; 4 x 4 cells, nominally `313.5 x 313.5` source pixels per cell. Render size is `108` pixels before camera zoom. |
 | Ground anchor / pivot | World position is the feet contact point. Renderer destination begins at `screen.y - size * 0.98`; feet and painted shadow were visually checked against meadow terrain. |
-| Collision footprint | `0.36` simulation radius. Resource interaction distance is type-specific (`1.55` food, `1.70` stone, `1.75` wood); building/storage interaction is `0.78`. |
+| Collision footprint | `0.36` simulation radius. Resource interaction distance is type-specific (`1.55` food, `1.70` stone, `1.72` Gold, `1.75` wood) and expands with the authored node footprint; building/storage interaction is `0.78`. |
 | Shadow anchor | Painted contact shadow inside every generated frame; selection ellipse is a separate gameplay/readability marker at `point.y + 6 * zoom`. There is no separate dynamic shadow sprite. |
 | Inconsistencies / deficiencies | Task, construction, carry, hit, and death loops have authored frames and shared feet baselines. Optional worker-combat command depth and an explicit turn clip remain deferred; generated sheets must be rechecked if the camera angle changes. |
 | Implementation status | Complete state registry in `src/animation.js`; simulation stores `animationState`, `animationTime`, `animationPhase`, `animationFrame`, and recent named events; renderer consumes the registry and live facing. Developer harness covers every state/direction/frame. |
@@ -132,9 +132,11 @@ All entries below are authored atlas cells, not mirrored or procedurally rotated
 | Gathering wood | task row 0, col 0 | task row 0, col 1 | task row 0, col 2 | task row 0, col 3 | Axe/log silhouette; `tool_contact` fires at the resource collection moment. |
 | Gathering food | task row 1, col 0 | task row 1, col 1 | task row 1, col 2 | task row 1, col 3 | Basket/berry silhouette; same contact timing with food-specific color feedback. |
 | Mining stone | task row 2, col 0 | task row 2, col 1 | task row 2, col 2 | task row 2, col 3 | Pick/sack silhouette; stone-chip contact feedback and stone-specific carry state. |
+| Mining Gold | stone loop row 0 | stone loop row 1 | stone loop row 2 | stone loop row 3 | Same believable pick action; Gold node, contact color, cargo, badge, selection icon, and total make the material distinct. |
 | Carrying wood | carry row 0, col 0 | carry row 0, col 1 | carry row 0, col 2 | carry row 0, col 3 | Wood bundle attachment remains visible while returning; compact quantity badge remains separate. |
 | Carrying food | carry row 1, col 0 | carry row 1, col 1 | carry row 1, col 2 | carry row 1, col 3 | Food basket attachment remains visible until `deposit_complete`. |
 | Carrying stone | carry row 2, col 0 | carry row 2, col 1 | carry row 2, col 2 | carry row 2, col 3 | Stone sack attachment remains visible until deposit. |
+| Carrying Gold | Gold carry row 0 | Gold carry row 1 | Gold carry row 2 | Gold carry row 3 | Rawhide ore sack remains attached through return and clears on `deposit_complete`. |
 | Carrying supplies | carry row 3, col 0 | carry row 3, col 1 | carry row 3, col 2 | carry row 3, col 3 | Construction supply attachment is available for the building-work language. |
 | Constructing | task row 3, col 0 | task row 3, col 1 | task row 3, col 2 | task row 3, col 3 | Hammer/workbench silhouette; `construction_strike` advances building progress and emits restrained work feedback. |
 | Attacking, if ordered | combat attack row, col 0 | combat attack row, col 1 | combat attack row, col 2 | combat attack row, col 3 | Villager melee remains optional; target-facing direction is preserved. |
@@ -145,11 +147,11 @@ All entries below are authored atlas cells, not mirrored or procedurally rotated
 
 - Resource nodes now reserve six perimeter approach slots. Three villagers assigned to one node receive three distinct slots; a retask, depletion, death, or lost target releases the reservation.
 - Construction sites now reserve four perimeter work slots. Multiple selected villagers can be assigned to one foundation without occupying one coordinate; completion or interruption releases every slot.
-- Wood, food, and stone use the same state graph: `walk → task-specific work → carry:<resource> → return → deposit_complete → task or idle`.
+- Wood, food, stone, and Gold use the same state graph: `walk → task-specific work → carry:<resource> → return → deposit_complete → task or idle`.
 - A worker leaving a node with cargo immediately frees the node slot. A worker returning to the same node after deposit reserves a slot again rather than retaining a stale claim.
-- Resource depletion visibly changes the node renderer to its depleted family (stump, reduced berry, or stone rubble), and the worker safely transitions to cargo return or idle.
+- Resource depletion visibly changes the node renderer to its depleted family (stump, reduced berry, stone rubble, or worked Gold hollow), and the worker safely transitions to cargo return or idle.
 - Retasking while carrying preserves the bundle, routes it to the proper player drop-off, then continues to the new command. Stale gather/build/attack targets are cleared during that transition.
-- Resource and construction events now carry world positions. The renderer uses them for restrained wood chips, berry glints, stone chips, construction dust, and deposit rings; no generic placeholder icon or colored-box feedback was introduced.
+- Resource and construction events now carry world positions. The renderer uses them for restrained wood chips, berry glints, stone/Gold chips, construction dust, and deposit rings; no generic placeholder icon or colored-box feedback was introduced.
 - Storage routes now use the same continuous static-clearance test as live movement. A smoothed route may not cut through a Town Center, resource footprint, or construction footprint.
 
 ### Remaining deficiencies
@@ -231,9 +233,10 @@ The previous coverage table correctly described the old single-pose carry and at
 | Carry Wood | `villager-carry-wood-loop-v1.png` / `carryWoodLoop` | 4/4 | 4 | Cargo remains attached while returning; deposit clears state and resumes work. |
 | Carry Food | `villager-carry-food-loop-v1.png` / `carryFoodLoop` | 4/4 | 4 | Food load remains readable; no state-specific mirroring. |
 | Carry Stone | `villager-carry-stone-loop-v1.png` / `carryStoneLoop` | 4/4 | 4 | Stone load remains grounded and aligned during return. |
+| Carry Gold | `crownforge-villager-carry-gold-loop-v1.png` / `carryGoldLoop` | 4/4 | 4 | Rawhide ore sack and pale quartz load remain grounded and direction-correct. |
 | Carry Supplies | `villager-carry-supplies-loop-v1.png` / `carrySuppliesLoop` | 4/4 | 4 | Construction cargo has its own restrained loop. |
 
-All four families use direction rows `0–3`, frame columns `0–3`, the existing 108 px runtime size, and the shared feet/shadow anchor. Live Wood QA showed `2 carrying` and then a full storage deposit; the deterministic retask test preserved cargo before return.
+All five families use direction rows `0–3`, frame columns `0–3`, the existing 108 px runtime size, and the shared feet/shadow anchor. Live Wood QA showed `2 carrying` and then a full storage deposit; deterministic retask checks preserve cargo before return, and Gold coverage includes Crown Hall deposit, return-to-work, depletion, and multiple workers.
 
 ### Crown Guard / Ashen Raider attack coverage
 
@@ -325,3 +328,14 @@ The rows use the shared direction order `screen-down`, `screen-right`, `screen-u
 - Both sheets are 1254 × 1254 RGBA atlases with zero opaque edge pixels after `tools/prepare-hit-atlases.mjs` cleanup.
 - Source visual-integrity and deterministic regression checks pass.
 - Live browser confirmation remains pending because the in-app Browser blocks the isolated local URL; no unsupported live claim is made.
+
+## FIRST-AGE GOLD CARRY COVERAGE — 2026-08-22 (CURRENT)
+
+Gold adds one material-specific carry family without adding a new body motion or changing the Villager scale.
+
+| Villager state | Active atlas | Directions | Frames | Runtime contract |
+|---|---|---:|---:|---|
+| Mine Gold | `villager-gather-stone-loop-v1.png` / `stoneLoop` | 4/4 | 4 | Reuses the physically correct pick action; Gold contact feedback and target art remain distinct. |
+| Carry Gold | `crownforge-villager-carry-gold-loop-v1.png` / `carryGoldLoop` | 4/4 | 4 | Rawhide sack and pale quartz ore remain attached through Crown Hall return and clear on `deposit_complete`. |
+
+`carryGoldLoop` follows rows `screen-down`, `screen-right`, `screen-up`, `screen-left` and frame columns `0–3`, with the existing 108 px Villager renderer size, foot baseline, and painted contact shadow. Deterministic coverage resolves all four directions without fallback; the complete economy check covers Gold gathering, carrying, Crown Hall deposit, return-to-work, depletion, and distinct multi-worker interaction slots.

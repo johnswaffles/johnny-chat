@@ -55,7 +55,7 @@ The first-age construction contract is foundation, partial, near-complete, and c
 
 ## Resource contract
 
-Resources use data-driven `small`, `medium`, and `large` tiers. A tier controls capacity, visual scale, collision footprint, interaction ring, and depletion time. Bushes keep the compact small scale. Trees and groves can use larger authored silhouettes without changing bush scale. Stone and future metal deposits use the same tier interface; large deposits need a dedicated large silhouette rather than a visibly blurry enlargement.
+Resources use data-driven `small`, `medium`, and `large` tiers. A tier controls capacity, visual scale, collision footprint, interaction ring, and depletion time. Bushes keep the compact small scale. Trees and groves can use larger authored silhouettes without changing bush scale. Stone and Gold deposits use the same tier interface; medium and large Gold deposits need dedicated authored silhouettes rather than visibly blurry enlargement or a stone recolor.
 
 For every node, verify:
 
@@ -103,6 +103,9 @@ Before accepting an asset family, test:
 - Crown Barracks: `assets/crownforge-barracks-first-age-v3.png`.
 - Palisade directional family: `assets/crownforge-palisade-diagonal-right-v1.png`, `assets/crownforge-palisade-diagonal-left-v1.png`, `assets/crownforge-palisade-face-v1.png`, and `assets/crownforge-palisade-depth-v1.png`.
 - Large stone: `assets/crownforge-stone-deposit-large-v1.png`.
+- Gold deposit family: `assets/crownforge-gold-deposit-small-v1.png`, `assets/crownforge-gold-deposit-medium-v1.png`, `assets/crownforge-gold-deposit-large-v1.png`, and `assets/crownforge-gold-deposit-depleted-v1.png`.
+- Villager carry Gold: `assets/crownforge-villager-carry-gold-loop-v1.png`, using the shared 4 × 4 direction/frame and ground-anchor contract.
+- Gold HUD/selection icon: `assets/crownforge-icon-gold-v1.png`, a restrained quartz-and-washing-pan symbol rather than treasure or coins.
 - Grove depletion family: `assets/crownforge-tree-grove-depletion-v1.png`, scaled by the resource tier contract and staged by remaining capacity.
 - Field plot: `assets/crownforge-field-v2.png`, a no-worker transparent plot reserved for the live farmer.
 - Field worker loop: `assets/crownforge-villager-field-work-loop-v1.png`, 4x4 directional upright/reach/bend/recover sheet.

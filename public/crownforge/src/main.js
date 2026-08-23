@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260822-uprightwalls2';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260822-goldpass1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260821-hallwoodpass2';
-import { CrownforgeRenderer } from './renderer.js?v=20260822-uprightwalls2';
-import { CrownforgeSimulation } from './simulation.js?v=20260822-uprightwalls2';
+import { CrownforgeRenderer } from './renderer.js?v=20260822-goldpass1';
+import { CrownforgeSimulation } from './simulation.js?v=20260822-goldpass1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -415,7 +415,7 @@ function buildingAbilityLabel(building, blueprint) {
   if (blueprint.enemyStructure) return 'enemy settlement core · destroy to win';
   if (blueprint.production) {
     const products = (blueprint.productionTypes ?? []).map((type) => PRODUCTION_TYPES[type]?.label ?? type).join(' + ');
-    const dropoff = blueprint.storage ? 'drop-off for food, wood, and stone · ' : '';
+    const dropoff = blueprint.storage ? 'drop-off for food, wood, stone, and gold · ' : '';
     return `${dropoff}trains ${products} · select a unit below`;
   }
   if (blueprint.storage) {

@@ -2701,3 +2701,58 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add gates, towers, stone walls, segment-level damage, wall editing, or another placement system. Keep the corrected Palisade family stable first.
+
+## FIRST-AGE GOLD ECONOMY PASS — 2026-08-22
+
+### WHAT EXISTS
+
+- Gold is now the fourth first-age resource beside Food, Wood, and Stone. A dedicated HUD card reports the live total and `9999` sandbox cap with an original muted quartz-and-washing-pan icon.
+- The deterministic map contains `11` Gold deposits distributed across player-side, central, and enemy-side regions: `4` small, `5` medium, and `2` large deposits.
+- Villagers can be selected and right-clicked onto Gold, walk to a reserved interaction slot, mine at contact range, carry a visibly distinct ore sack, deposit at the Crown Hall, and return to the same vein while material remains.
+
+### WHAT WAS COMPLETED
+
+- Added Gold to the shared resource registry, initial sandbox reserves, counters, gather timing, carry capacity, interaction distance, simulation inventory, renderer, UI selection feedback, and Crown Hall drop-off description.
+- Added small, medium, large, and exhausted Gold deposit states with distinct capacities of `140`, `420`, and `1150` Gold for the active tiers.
+- Added deterministic regional Gold seeding without changing the existing Food/Wood/Stone distribution and without adding automatic fields.
+- Added Gold gathering and carrying to the Villager state resolver. Mining Gold deliberately reuses the approved stone-pick motion because the physical action is the same; carrying uses a dedicated authored Gold atlas rather than recoloring the unit at runtime.
+- Added Gold to resource occlusion handling and contact feedback while keeping deposits protected from Palisade resource-clearing precedence.
+- Bumped the runtime marker to `20260822-goldpass1` and expanded both deterministic regression and active-asset audits.
+
+### ASSETS CREATED
+
+- `assets/crownforge-gold-deposit-small-v1.png` — compact quartz-bearing first-age Gold vein.
+- `assets/crownforge-gold-deposit-medium-v1.png` — broader worked Gold outcrop.
+- `assets/crownforge-gold-deposit-large-v1.png` — long-lived regional Gold formation.
+- `assets/crownforge-gold-deposit-depleted-v1.png` — exhausted rubble and disturbed earth state.
+- `assets/crownforge-villager-carry-gold-loop-v1.png` — sixteen-frame, four-direction Villager carry atlas with a rawhide ore sack.
+- `assets/crownforge-icon-gold-v1.png` — restrained quartz-bearing ore and primitive washing-pan HUD icon.
+
+### SYSTEMS CREATED OR CHANGED
+
+- Extended the existing data-driven economy loop to a fourth resource without introducing a parallel gathering system.
+- Added tier-aware Gold capacities and asset resolution, final-load depletion, nearest completed Crown Hall storage routing, return-to-work, and unique interaction-slot coverage for multiple miners.
+- Added regression coverage for registration, opening reserves, all authored asset states, command acceptance, carried inventory, node consumption, deposit, final-load exhaustion, automatic work return, Crown Hall routing, regional distribution, and multi-worker spacing.
+
+### VALIDATION
+
+- `node --check` passed for every changed runtime and audit module.
+- `tools/remediation-regression.mjs` passed all `21` checks, including the complete Gold gather/deposit/return/depletion loop and all prior movement, economy, construction, wall, pathfinding, combat, AI, victory, defeat, and camera coverage.
+- `tools/visual-integrity-audit.mjs` passed with no missing file, placeholder reference, fallback, or animation-dimension mismatch across `140` active animation combinations.
+- A direct simulation probe completed repeated Gold trips and deposits at `10×` travel speed while leaving gathering timing unchanged.
+- Browser play at normal and close zoom showed a clean fourth HUD card, grounded Gold deposit artwork, successful right-click tasking, repeated Crown Hall deposits, automatic work return, and Gold rising from `5000` to `5128`. Restart and defeat behavior remained functional, and the browser warning/error console stayed empty.
+
+### KNOWN ISSUES
+
+- Gold is currently a gathered sandbox resource and is not yet consumed by an approved first-age blueprint. This is an intentional scope boundary until the first Gold-using building or unit is designed and approved.
+- No Gold processing work site exists yet. Villagers deposit raw ore directly at the Crown Hall so this pass can establish one complete, testable economy loop before another building is admitted.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Player-test several villagers mining the large deposit at normal travel speed and tune only interaction-slot spacing or ore silhouette scale if a reproducible crowding problem appears.
+- Decide which single approved first-age production choice should consume Gold before adding a processing work site. The next pass should remain one small, complete loop.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add Stables, cavalry, a Gold processor, Lumber Mill, Grain Mill, Stone Quarry, technology tree, second age, or additional resource currencies in this pass.
+- Do not replace the shared mining motion merely to make Gold look mechanically different; preserve truthful motion reuse and spend new artwork only where the silhouette or carried material actually changes.

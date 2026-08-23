@@ -7,7 +7,9 @@ import {
   CONFIG,
   FIRST_AGE_BUILD_BLUEPRINTS,
   FIRST_AGE_ASSETS,
+  GOLD_DEPOSIT_ASSETS,
   INITIAL_RESOURCES,
+  RESOURCE_TYPES,
   VILLAGER_ATLASES,
 } from '../src/config.js';
 import { animationFrame } from '../src/animation.js';
@@ -50,6 +52,7 @@ function checkAnimationAtlases() {
     ['carry_wood', 'carryWoodLoop'],
     ['carry_food', 'carryFoodLoop'],
     ['carry_stone', 'carryStoneLoop'],
+    ['carry_gold', 'carryGoldLoop'],
     ['carry_supplies', 'carrySuppliesLoop'],
   ]) {
     for (let direction = 0; direction < 4; direction += 1) {
@@ -168,7 +171,7 @@ function checkGathering() {
   const hall = simulation.buildings.find((building) => building.type === 'townCenter');
   assert.equal(villager.returnStorageId, hall.id, 'retasked cargo returns to the Crown Hall');
 
-  for (const resourceType of ['food', 'wood', 'stone']) {
+  for (const resourceType of ['food', 'wood', 'stone', 'gold']) {
     const dropoffSimulation = freshSimulation();
     const worker = dropoffSimulation.units.find((unit) => unit.type === 'villager');
     const crownHall = dropoffSimulation.buildings.find((building) => building.type === 'townCenter');
@@ -180,6 +183,58 @@ function checkGathering() {
     advance(dropoffSimulation, 20);
     assert.equal(dropoffSimulation.resources[resourceType], before + 5, `${resourceType} cargo deposits at the Crown Hall`);
   }
+}
+
+function checkGoldEconomyLoop() {
+  assert.equal(RESOURCE_TYPES.gold.label, 'Gold', 'Gold is registered as a first-class resource');
+  assert.equal(INITIAL_RESOURCES.gold, 5000, 'sandbox reset starts with a useful Gold reserve');
+  for (const [tier, asset] of Object.entries(GOLD_DEPOSIT_ASSETS)) {
+    assert.match(asset.src, /crownforge-gold-deposit-/, `${tier} Gold deposit uses authored Crownforge artwork`);
+  }
+
+  const simulation = freshSimulation();
+  simulation.setUnitSpeedScale(10);
+  const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  const vein = simulation.resourcesNodes.find((node) => node.resourceType === 'gold');
+  const hall = simulation.buildings.find((building) => building.type === 'townCenter');
+  const before = simulation.resources.gold;
+  simulation.selectedIds = [villager.id];
+  simulation._syncSelectionFlags();
+  const command = simulation.issueContextCommand({ x: vein.x, z: vein.z });
+  assert.equal(command.kind, 'gather', 'Gold vein accepts the standard gather command');
+  advance(simulation, 20);
+  assert.ok(simulation.resources.gold > before, 'Villager deposits gathered Gold');
+  assert.ok(vein.amount < vein.maxAmount, 'Gold vein capacity decreases at tool contact');
+  assert.equal(villager.gatherTarget, vein.id, 'Villager returns to the Gold vein after depositing');
+  assert.equal(villager.returnStorageId === null || villager.returnStorageId === hall.id, true, 'Gold routing uses the Crown Hall');
+
+  const depletion = movementSandbox();
+  const depletionHall = depletion.addBuilding('townCenter', 20, 20, 'player');
+  const worker = depletion.addUnit('villager', 27, 20, 'player');
+  depletion.addResource('gold', 'gold', 33, 20, RESOURCE_TYPES.gold.gatherAmount, 0, { sizeTier: 'small' });
+  const smallVein = depletion.resourcesNodes.find((node) => node.resourceType === 'gold');
+  depletion.resources.gold = 0;
+  depletion.selectedIds = [worker.id];
+  depletion._syncSelectionFlags();
+  depletion.setUnitSpeedScale(10);
+  assert.equal(depletion.issueContextCommand({ x: smallVein.x, z: smallVein.z }).success, true, 'small Gold vein is reachable');
+  advance(depletion, 14);
+  assert.equal(smallVein.depleted, true, 'exhausted Gold vein enters its depleted visual state');
+  assert.equal(smallVein.amount, 0, 'Gold depletion clamps capacity to zero');
+  assert.equal(depletion.resources.gold, RESOURCE_TYPES.gold.gatherAmount, 'last Gold load deposits instead of disappearing');
+  assert.equal(worker.returnStorageId, null, 'worker releases Crown Hall reservation after final Gold deposit');
+  assert.equal(depletionHall.type, 'townCenter', 'depletion scenario uses the Crown Hall drop-off');
+
+  const group = movementSandbox();
+  group.addBuilding('townCenter', 20, 20, 'player');
+  group.addResource('gold', 'gold', 38, 20, 420, 0, { sizeTier: 'medium' });
+  const sharedVein = group.resourcesNodes[0];
+  const workers = [[26, 18], [26, 20], [26, 22]].map(([x, z]) => group.addUnit('villager', x, z, 'player'));
+  group.selectedIds = workers.map((unit) => unit.id);
+  group._syncSelectionFlags();
+  assert.equal(group.issueContextCommand({ x: sharedVein.x, z: sharedVein.z }).success, true, 'several villagers can target one Gold vein');
+  const slots = new Set(workers.map((unit) => unit.gatherSlot));
+  assert.equal(slots.size, workers.length, 'Gold workers reserve distinct interaction slots');
 }
 
 function checkReadableResourceApproaches() {
@@ -411,6 +466,11 @@ function checkExpandedWorldAndEnemyDistance() {
   assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'wood').length >= 40, 'expanded map has a readable wood family');
   assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'food').length >= 30, 'expanded map has a readable berry family');
   assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'stone').length >= 20, 'expanded map has a readable stone family');
+  const goldNodes = simulation.resourcesNodes.filter((node) => node.resourceType === 'gold');
+  assert.ok(goldNodes.length >= 10 && goldNodes.length <= 14, 'expanded map keeps Gold regional and scarce');
+  assert.deepEqual(new Set(goldNodes.map((node) => node.sizeTier)), new Set(['small', 'medium', 'large']), 'Gold distribution includes all three readable capacity tiers');
+  assert.ok(goldNodes.some((node) => node.x < CONFIG.mapWidth / 2 && node.z < CONFIG.mapHeight / 2), 'Gold exists in the player-side half');
+  assert.ok(goldNodes.some((node) => node.x > CONFIG.mapWidth / 2 && node.z > CONFIG.mapHeight / 2), 'Gold exists in the enemy-side half');
   assert.equal(simulation.resourcesNodes.some((node) => node.type === 'grain'), false, 'reset does not seed cultivated Grain Fields');
   assert.equal(simulation.buildings.some((building) => building.type === 'field'), false, 'fields remain exclusively player-built');
   const columns = 5;
@@ -531,6 +591,7 @@ function checkCombatAndEndStates() {
 checkAnimationAtlases();
 checkResetPresentation();
 checkGathering();
+checkGoldEconomyLoop();
 checkReadableResourceApproaches();
 checkConstructionAndPlacement();
 checkWallResourcePrecedence();
@@ -554,6 +615,7 @@ console.log(JSON.stringify({
     'reset villager ground/building clearance',
     '20 Hz versus 60 Hz gathering convergence',
     'cargo-preserving retask and storage return',
+    'complete Gold gather, carry, Crown Hall deposit, return-to-work, depletion, and multi-worker slot loop',
     'focused first-age building catalog and Crown Hall-only drop-off routing',
     'placement rejection and Barracks completion',
     'wall precedence over trees and stone with safe resource cleanup',
@@ -564,7 +626,7 @@ console.log(JSON.stringify({
     'person-scaled Barracks landmark and collision clearance',
     'equal Crown Hall/Barracks proportion, inward placement, and four-sided buildable ring',
     'travel-only speed scaling, high-speed collision routing, and fast group spacing',
-    'regional wood, berry, and stone coverage without prebuilt fields',
+    'regional wood, berry, stone, and scarce three-tier Gold coverage without prebuilt fields',
     'expanded map and opposite-side enemy camp',
     'cursor-centered zoom anchor in both directions',
     'four authored upright Palisade views across all eight snap directions',

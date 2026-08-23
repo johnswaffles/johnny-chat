@@ -294,3 +294,18 @@ The optional worker-combat response now uses two original transparent RGBA atlas
 - `assets/villager-death-loop-v1.png` — 1254 × 1254, 4 columns × 4 directional rows; standing stagger, kneel, fall, and grounded final pose.
 
 They are registered in `src/config.js` as `VILLAGER_ATLASES.hitLoop` and `VILLAGER_ATLASES.deathLoop`, then consumed by `src/animation.js` as non-looping action phases. Both were prepared from generated studio-matte sheets through `tools/prepare-hit-atlases.mjs`; the raw matte source is not referenced by the runtime. The final files pass RGBA metadata and zero-opaque-edge checks.
+
+## FIRST-AGE GOLD ASSETS — 2026-08-22 (CURRENT ADDITION)
+
+The first approved Gold economy family contains six original prepared RGBA assets:
+
+- `assets/crownforge-gold-deposit-small-v1.png` — 1536 × 1024 compact quartz-bearing outcrop.
+- `assets/crownforge-gold-deposit-medium-v1.png` — 1536 × 1024 broad mid-capacity vein.
+- `assets/crownforge-gold-deposit-large-v1.png` — 1536 × 1024 regional high-capacity landmark vein.
+- `assets/crownforge-gold-deposit-depleted-v1.png` — 1536 × 1024 low worked rubble/hollow shown after exhaustion.
+- `assets/crownforge-villager-carry-gold-loop-v1.png` — 1254 × 1254, 4 frame columns × 4 directional rows; rawhide sack carrying pale quartz ore.
+- `assets/crownforge-icon-gold-v1.png` — 1254 × 1254 standalone HUD/selection icon; quartz-bearing rock and primitive wooden washing pan.
+
+The built-in image generator authored the family against the approved Crownforge stone, Crown Hall, Villager carry, and HUD references. The accepted outputs were passed through edge-connected neutral-matte removal followed by enclosed neutral-cell cleanup. Runtime files use true transparency; raw generated checker representations are not registered.
+
+`GOLD_DEPOSIT_ASSETS` and `VILLAGER_ATLASES.carryGoldLoop` are the source-of-truth registrations. The runtime marker is `20260822-goldpass1`. Gold deposits use independent tier silhouettes rather than recoloring or enlarging the active stone atlas.

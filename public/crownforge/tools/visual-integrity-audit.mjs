@@ -10,6 +10,7 @@ import {
   ENEMY_CAMP_ASSET,
   ENVIRONMENT_ATLAS,
   FIRST_AGE_ASSETS,
+  GOLD_DEPOSIT_ASSETS,
   VILLAGER_ATLASES,
 } from '../src/config.js';
 import { ANIMATION_DEFINITIONS, animationFrame } from '../src/animation.js';
@@ -141,6 +142,7 @@ const atlasEntries = [
   ['environment', ENVIRONMENT_ATLAS],
   ['buildingStages', BUILDING_STAGE_ATLAS],
   ['enemyCamp', ENEMY_CAMP_ASSET],
+  ...Object.entries(GOLD_DEPOSIT_ASSETS).map(([key, value]) => [`goldDeposit.${key}`, value]),
   ...Object.entries(FIRST_AGE_ASSETS).map(([key, value]) => [`firstAge.${key}`, value]),
   ...Object.entries(VILLAGER_ATLASES)
     .filter(([, value]) => value?.src && value.width && value.height && value.columns && value.rows)
@@ -177,6 +179,7 @@ const activeSources = [
   ENVIRONMENT_ATLAS.src,
   BUILDING_STAGE_ATLAS.src,
   ENEMY_CAMP_ASSET.src,
+  ...Object.values(GOLD_DEPOSIT_ASSETS).map((value) => value?.src).filter(Boolean),
   ...Object.values(FIRST_AGE_ASSETS).map((value) => value?.src).filter(Boolean),
   ...Object.values(VILLAGER_ATLASES).map((value) => value?.src).filter(Boolean),
   ...Object.values(COMBAT_ATLASES).map((value) => value?.src).filter(Boolean),

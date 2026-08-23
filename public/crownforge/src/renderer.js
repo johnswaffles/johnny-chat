@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260822-uprightwalls2';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260821-hallwoodpass2';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260822-goldpass1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260822-goldpass1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -112,6 +112,7 @@ export class CrownforgeRenderer {
     this.buildingStagesReady = false;
     this.treeGroveReady = false;
     this.largeStoneReady = false;
+    this.goldDepositAssetReady = {};
     this.firstAgeAssetReady = {};
     this.enemyCampReady = false;
     this.villagerAtlases = {};
@@ -133,6 +134,7 @@ export class CrownforgeRenderer {
     this.buildingStages = new Image();
     this.treeGroveAtlas = new Image();
     this.largeStone = new Image();
+    this.goldDepositAssets = {};
     this.enemyCamp = new Image();
     this.environmentAtlas.addEventListener('load', () => { this.environmentReady = true; });
     this.treeAtlas.addEventListener('load', () => { this.treeAtlasReady = true; });
@@ -150,6 +152,13 @@ export class CrownforgeRenderer {
     this.treeGroveAtlas.src = TREE_GROVE_ATLAS.src;
     this.largeStone.src = LARGE_STONE_ASSET.src;
     this.enemyCamp.src = ENEMY_CAMP_ASSET.src;
+    for (const [key, definition] of Object.entries(GOLD_DEPOSIT_ASSETS)) {
+      const image = new Image();
+      this.goldDepositAssets[key] = image;
+      this.goldDepositAssetReady[key] = false;
+      image.addEventListener('load', () => { this.goldDepositAssetReady[key] = true; });
+      image.src = definition.src;
+    }
     this.firstAgeAssets = {};
     for (const [key, definition] of Object.entries(FIRST_AGE_ASSETS)) {
       const image = new Image();
@@ -639,9 +648,9 @@ export class CrownforgeRenderer {
         return nearStructure && unit.x + unit.z < building.x + building.z - 0.04;
       });
       const hiddenByResource = simulation.resourcesNodes.find((node) => {
-        if (!['tree', 'grove', 'berry', 'grain', 'stone'].includes(node.type) || node.amount <= 0) return false;
+        if (!['tree', 'grove', 'berry', 'grain', 'stone', 'gold'].includes(node.type) || node.amount <= 0) return false;
         const tierScale = RESOURCE_SIZE_TIERS[node.sizeTier ?? 'small']?.footprintScale ?? 1;
-        const clearance = node.type === 'berry' || node.type === 'grain' ? 1.55 : node.type === 'stone' ? 1.7 * tierScale : node.type === 'grove' ? 2.6 * tierScale : 1.9 * tierScale;
+        const clearance = node.type === 'berry' || node.type === 'grain' ? 1.55 : node.type === 'stone' || node.type === 'gold' ? 1.7 * tierScale : node.type === 'grove' ? 2.6 * tierScale : 1.9 * tierScale;
         if (node.type === 'grain') return false;
         return Math.hypot(unit.x - node.x, unit.z - node.z) < clearance
           && unit.x + unit.z < node.x + node.z - 0.04;
@@ -1129,10 +1138,10 @@ export class CrownforgeRenderer {
   drawResource(ctx, resource, time) {
     const point = this.worldToScreen(resource);
     const tier = RESOURCE_SIZE_TIERS[resource.sizeTier ?? 'small'] ?? RESOURCE_SIZE_TIERS.small;
-    // Bushes keep their compact authored scale. Trees, groves, and stone use
-    // the tier contract so a player can read both footprint and remaining
-    // work at normal zoom without adding labels to the world.
-    const baseSize = resource.type === 'grove' ? 252 : resource.type === 'grain' ? 360 : resource.type === 'tree' ? 174 : resource.type === 'berry' ? 115 : 132;
+    // Bushes keep their compact authored scale. Trees, groves, stone, and
+    // Gold use the tier contract so a player can read both footprint and
+    // remaining work at normal zoom without adding labels to the world.
+    const baseSize = resource.type === 'grove' ? 252 : resource.type === 'grain' ? 360 : resource.type === 'tree' ? 174 : resource.type === 'berry' ? 115 : resource.type === 'gold' ? 138 : 132;
     const size = resource.type === 'berry' || resource.type === 'grain' ? baseSize : baseSize * tier.renderScale;
     const ratio = resource.maxAmount > 0 ? Math.max(0, Math.min(1, resource.amount / resource.maxAmount)) : 0;
     const depleted = resource.amount <= 0;
@@ -1147,6 +1156,21 @@ export class CrownforgeRenderer {
       this.drawEnvironmentAsset(ctx, 'stump', 1, point, size * 0.72 * this.camera.zoom, 0.94);
     } else if (resource.type === 'tree') {
       this.drawTreeAsset(ctx, resource.variant, point, size * scale * this.camera.zoom, alpha);
+    } else if (resource.type === 'gold') {
+      const assetKey = depleted ? 'depleted' : (resource.sizeTier ?? 'small');
+      const definition = GOLD_DEPOSIT_ASSETS[assetKey] ?? GOLD_DEPOSIT_ASSETS.small;
+      const image = this.goldDepositAssets[assetKey];
+      if (image && this.goldDepositAssetReady[assetKey]) {
+        const width = size * (depleted ? 0.92 : 0.95 + ratio * 0.05) * this.camera.zoom;
+        const height = width * (definition.height / definition.width);
+        ctx.save();
+        ctx.globalAlpha = depleted ? 0.82 : 0.9 + ratio * 0.1;
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(image, point.x - width / 2, point.y - height * 0.98, width, height);
+        ctx.restore();
+      } else {
+        this.drawEnvironmentAsset(ctx, depleted ? 'pebbles' : 'stone', depleted ? 3 : resource.variant, point, size * scale * this.camera.zoom, alpha);
+      }
     } else if (resource.type === 'stone' && resource.sizeTier === 'large' && !depleted && this.largeStoneReady) {
       const width = size * this.camera.zoom;
       const height = width * (LARGE_STONE_ASSET.height / LARGE_STONE_ASSET.width);
@@ -1270,7 +1294,9 @@ export class CrownforgeRenderer {
           ? '#d76649'
           : payload.resourceType === 'stone'
             ? '#b8c4c4'
-            : '#d7aa54';
+            : payload.resourceType === 'gold'
+              ? '#c6a15b'
+              : '#d7aa54';
       ctx.save();
       ctx.globalAlpha = alpha;
       if (event.name === 'tool_contact') {

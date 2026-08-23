@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260822-uprightwalls2';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260822-goldpass1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260821-hallwoodpass2';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260822-goldpass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -13,7 +13,7 @@ const STORAGE_INTERACTION_DISTANCE = 0.78;
 const BUILDING_INTERACTION_DISTANCE = 0.78;
 const PATH_REACH_TOLERANCE = 0.38;
 const BUILDING_CLEARANCE = 0.4;
-const RESOURCE_FOOTPRINTS = { tree: 1.05, grove: 2.45, berry: 0.82, grain: 1.1, stone: 0.92 };
+const RESOURCE_FOOTPRINTS = { tree: 1.05, grove: 2.45, berry: 0.82, grain: 1.1, stone: 0.92, gold: 1.02 };
 const WALL_CLEARABLE_RESOURCE_TYPES = new Set(['wood', 'stone']);
 const WALL_CONNECT_SNAP_DISTANCE = 3.4;
 const DECORATION_FOOTPRINTS = { log: 0.78, stump: 0.62, flowers: 0.42, pebbles: 0.44 };
@@ -178,9 +178,12 @@ export class CrownforgeSimulation {
     this.addResource('berry', 'food', 82, 41, 105, 0, { sizeTier: 'small' });
     this.addResource('stone', 'stone', 72, 64, 360, 1, { sizeTier: 'medium' });
     this.addResource('stone', 'stone', 84, 61, 900, 0, { sizeTier: 'large' });
+    // A modest opening vein teaches the fourth economy loop without crowding
+    // the Crown Hall build ring. Richer deposits remain regional discoveries.
+    this.addResource('gold', 'gold', 111, 72, 420, 0, { sizeTier: 'medium' });
     // Populate every macro-region with a deterministic mix of natural wood,
-    // berry, and stone nodes. Cultivated Grain Fields are deliberately not
-    // seeded; those remain a player-built settlement choice.
+    // berry, stone, and rarer gold nodes. Cultivated Grain Fields are
+    // deliberately not seeded; those remain a player-built settlement choice.
     this._seedNaturalResourceRegions();
     this.addDecoration('log', 18, 24, 0, 0.9);
     this.addDecoration('stump', 8.4, 52, 1, 0.85);
@@ -207,6 +210,7 @@ export class CrownforgeSimulation {
   _naturalResourceAmount(type, sizeTier) {
     if (type === 'berry') return 105;
     if (type === 'stone') return sizeTier === 'large' ? 900 : sizeTier === 'medium' ? 360 : 120;
+    if (type === 'gold') return sizeTier === 'large' ? 1150 : sizeTier === 'medium' ? 420 : 140;
     if (type === 'grove') return sizeTier === 'large' ? 1100 : sizeTier === 'medium' ? 700 : 480;
     return sizeTier === 'large' ? 700 : sizeTier === 'medium' ? 260 : 180;
   }
@@ -268,6 +272,13 @@ export class CrownforgeSimulation {
         this._seedNaturalResourceInSector({ type: index % 4 === 0 ? 'grove' : 'tree', resourceType: 'wood', sizeTier: index % 4 === 0 ? 'medium' : 'small', u: 0.8, v: 0.24 }, sector, index, 17);
         if (index % 2 === 0) {
           this._seedNaturalResourceInSector({ type: 'berry', resourceType: 'food', sizeTier: 'small', u: 0.26, v: 0.64 }, sector, index, 23);
+        }
+        // Gold is intentionally scarcer than the three foundational
+        // materials: one authored vein in alternating sectors, with only two
+        // large regional landmarks across the full expanded map.
+        if (index % 2 === 1) {
+          const goldTier = index % 10 === 9 ? 'large' : index % 4 === 1 ? 'medium' : 'small';
+          this._seedNaturalResourceInSector({ type: 'gold', resourceType: 'gold', sizeTier: goldTier, u: 0.57, v: 0.4 }, sector, index, 29);
         }
       }
     }

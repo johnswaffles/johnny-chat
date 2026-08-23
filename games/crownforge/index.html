@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css?v=20260819-musicpass1" />
+    <link rel="stylesheet" href="./styles.css?v=20260822-goldpass1" />
   </head>
   <body>
     <main class="game-shell">
@@ -30,6 +30,7 @@
           <div class="resource-card food-card" data-resource-card="food" title="Food stored"><span class="resource-glyph ui-icon icon-food" aria-hidden="true"></span><div><span class="resource-label">FOOD</span><strong><span data-resource="food">165</span><small data-resource-cap="food">/ 180</small></strong><span class="resource-bar"><i data-resource-bar="food"></i></span></div></div>
           <div class="resource-card wood-card" data-resource-card="wood" title="Wood stored"><span class="resource-glyph ui-icon icon-wood" aria-hidden="true"></span><div><span class="resource-label">WOOD</span><strong><span data-resource="wood">150</span><small data-resource-cap="wood">/ 180</small></strong><span class="resource-bar"><i data-resource-bar="wood"></i></span></div></div>
           <div class="resource-card stone-card" data-resource-card="stone" title="Stone stored"><span class="resource-glyph ui-icon icon-stone" aria-hidden="true"></span><div><span class="resource-label">STONE</span><strong><span data-resource="stone">90</span><small data-resource-cap="stone">/ 120</small></strong><span class="resource-bar"><i data-resource-bar="stone"></i></span></div></div>
+          <div class="resource-card gold-card" data-resource-card="gold" title="Gold stored"><span class="resource-glyph ui-icon icon-gold" aria-hidden="true"></span><div><span class="resource-label">GOLD</span><strong><span data-resource="gold">5000</span><small data-resource-cap="gold">/ 9999</small></strong><span class="resource-bar"><i data-resource-bar="gold"></i></span></div></div>
         </div>
       </header>
 
@@ -114,7 +115,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260822-uprightwalls2"></script>
+    <script type="module" src="./src/main.js?v=20260822-goldpass1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

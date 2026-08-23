@@ -395,3 +395,20 @@ Villager task, construction, and carry loops now establish the quality standard 
 The approved marauder attack family is now `crownforge-raider-attack-loop-v3.png`. It is a transparent 4 × 4 sheet composed from four generated directional strips, with each frame padded inside its source cell and aligned to the existing unit ground baseline. The back-left contact frame was generated as a standalone connected-axe pose because the earlier strip contained a detached fragment. The old v2 family is retained only as historical source material and must not be referenced by runtime.
 
 The live renderer and QA viewer now share the same one-pixel atlas-cell inset. Any future generated sheet must be inspected at full atlas size, at runtime size, and in all four directions before integration. Current hit/death depth remains the next visual standard gap; no new art catalog should be generated until it is addressed.
+
+## FIRST-AGE GOLD MATERIAL AMENDMENT — 2026-08-22 (CURRENT)
+
+Gold is the fourth approved first-age resource. It must read as scarce quartz-bearing host rock, not a pile of coins, ingots, treasure, or a later-age mine. The active family uses ochre-grey stone, pale quartz, very restrained natural gold traces, moss, grass, loose rubble, and the fixed warm upper-left light. Small, medium, and large veins use independently authored silhouettes; the exhausted state is a low worked rubble hollow with timber wedges and no floating label.
+
+The approved visual hierarchy is:
+
+- small vein: a compact prospecting outcrop and short work life;
+- medium vein: a broad, clearly discoverable settlement resource;
+- large vein: a regional landmark with a long work life, still subordinate to the Crown Hall and Barracks;
+- depleted vein: low rubble and worked earth that preserves ground contact without blocking the view;
+- carried Gold: pale quartz ore in a rawhide sack, held at the established Villager scale and foot anchor;
+- HUD Gold: quartz-bearing rock and a primitive wooden washing pan, with only tiny muted gold traces.
+
+Gold mining reuses the approved directional stone-pick motion because the physical action and tool are the same. The material must become distinct through the authored node family, muted-gold contact feedback, `carryGoldLoop`, carry badge, selected-resource icon, and Gold total—not by changing the Villager's body scale or adding exaggerated sparkling effects.
+
+Do not introduce a Gold-processing building, mint, market, coins, cavalry cost, technology, or age progression merely because Gold now exists. Those remain separate design approvals.
