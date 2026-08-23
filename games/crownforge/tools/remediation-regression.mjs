@@ -14,6 +14,7 @@ import {
   VILLAGER_ATLASES,
 } from '../src/config.js';
 import { animationFrame } from '../src/animation.js';
+import { CrownforgeInput } from '../src/input.js';
 import { CrownforgeRenderer, resolveFirstAgeConstructionStage, resolveWallVisual } from '../src/renderer.js';
 import { CrownforgeSimulation } from '../src/simulation.js';
 import { summarizeUnitTasks } from '../src/task-summary.js';
@@ -482,6 +483,38 @@ function checkConstructionRetaskingAndTaskSummary() {
   const barracks = simulation.buildings.find((building) => building.type === 'barracks' && building.progress < 1);
   const villagers = simulation.units.filter((unit) => unit.type === 'villager' && unit.faction === 'player');
   assert.equal(barracks.buildAssigned.length, 3, 'all opening villagers begin assigned to the foundation');
+
+  // Primary-clicking a visible unfinished foundation is an explicit resume
+  // order when a Villager is already selected. Keep this as an input-level
+  // regression so future selection changes cannot silently turn the action
+  // back into a building-only selection.
+  const clickWorker = villagers[0];
+  simulation.selectedIds = [clickWorker.id];
+  simulation._syncSelectionFlags();
+  let clickResult = null;
+  const clickInput = Object.create(CrownforgeInput.prototype);
+  clickInput.canvas = {
+    getBoundingClientRect: () => ({ left: 0, top: 0 }),
+    focus: () => {},
+    setPointerCapture: () => {},
+  };
+  clickInput.renderer = {
+    screenToWorld: () => ({ x: barracks.x, z: barracks.z }),
+    getEntityAtScreen: () => barracks,
+    addRipple: () => {},
+  };
+  clickInput.simulation = simulation;
+  clickInput.buildMode = null;
+  clickInput.drag = null;
+  clickInput.pan = null;
+  clickInput.pointer = { x: 0, y: 0 };
+  clickInput.wallDrag = null;
+  clickInput.onGesture = () => {};
+  clickInput.onCommand = (result) => { clickResult = result; };
+  clickInput._updateCursor = () => {};
+  clickInput._down({ button: 0, clientX: 0, clientY: 0, pointerId: 1, shiftKey: false });
+  assert.equal(clickResult?.kind, 'build', 'primary-clicking an unfinished foundation resumes construction');
+  assert.equal(clickWorker.buildTarget, barracks.id, 'primary-click resume assigns the selected Villager');
 
   const clearPoint = { x: townCenter.x + 40, z: townCenter.z + 32 };
   simulation.selectedIds = villagers.map((unit) => unit.id);

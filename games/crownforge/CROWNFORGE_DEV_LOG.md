@@ -3123,3 +3123,46 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add hills, hill traversal, terrain elevation, gates, towers, wall editing, segment-level damage, or freeform spline walls in this pass.
+
+## PRIMARY-CLICK CONSTRUCTION RESUME PASS — 2026-08-23
+
+### WHAT EXISTS
+
+- Unfinished friendly foundations already retain progress, builder slots, and the existing cargo-first construction continuation path.
+- Right-click remains the standard move, gather, attack, and construction command. Normal left-click still selects units and buildings.
+
+### WHAT WAS COMPLETED
+
+- Added a focused primary-click exception: when one or more player Villagers are selected, clicking a visible unfinished friendly foundation now issues the existing construction command instead of only selecting the building.
+- Reused the authoritative construction command router, so the click path preserves distinct approach slots, releases previous work, and sends a loaded Villager to the Crown Hall before returning to the foundation.
+- Kept the interaction intentionally narrow. Clicking completed buildings, resources, open ground, or foundations with no selected Villager retains the existing selection behavior.
+- Bumped the runtime marker to `20260823-constructionclick1` and kept the source/public runtime mirrors ready for deployment.
+
+### KNOWN ISSUES
+
+- The click-to-resume action only applies to friendly unfinished foundations visible under the existing forgiving building silhouette hit region. It does not add per-pixel hit masks or a new construction panel.
+- Four Villager construction approach slots remain the current first-age limit; additional builders wait for a future demonstrated crowding need.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. Existing Crownforge foundation and building assets remain in use.
+
+### SYSTEMS CREATED
+
+- Primary-click construction resume routing in the existing RTS input layer.
+- Regression coverage proving a selected Villager can resume a foundation through primary click, alongside existing right-click and cargo-first coverage.
+
+### VALIDATION
+
+- `node --check` passed for the updated input and regression modules.
+- `tools/remediation-regression.mjs` passed the full focused suite, including primary-click foundation resume, right-click reassignment, cargo-first continuation, construction completion, movement, economy, walls, combat, victory, and defeat.
+- `git diff --check` remains part of the release gate; the source/public mirror and live Render build must be verified after the deployment commit.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Play both click paths at normal speed with a partially built Barracks and Ore Wash: select one Villager, primary-click the site, then repeat with a loaded worker and confirm the return trip is readable.
+- Keep the current concise input model until a separate player-facing construction feedback problem is reproduced.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add a second construction system, new building classes, new ages, extra overlays, or per-pixel targeting as part of this small interaction repair.

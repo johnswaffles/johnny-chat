@@ -201,6 +201,32 @@ export class CrownforgeInput {
         }
         return;
       }
+      // A selected Villager can use a primary click on a friendly foundation
+      // as an explicit resume-construction order. Selection remains the
+      // normal left-click behavior everywhere else, while this small
+      // exception makes an unfinished site feel actionable instead of merely
+      // selectable. The same command router is used by right-click, so slot
+      // reservations, cargo-first deposits, and interruption cleanup stay
+      // identical between both input paths.
+      const selectedUnits = this.simulation.selectedEntities
+        .filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead);
+      const selectedVillagers = selectedUnits.filter((unit) => unit.type === 'villager');
+      if (selectedVillagers.length) {
+        const visualTarget = this.renderer.getEntityAtScreen?.(this.simulation, point, 'command');
+        if (visualTarget?.kind === 'building'
+          && visualTarget.faction === 'player'
+          && visualTarget.progress < 1
+          && !visualTarget.destroyed) {
+          const result = this.simulation.issueContextCommand(
+            this.renderer.screenToWorld(point),
+            visualTarget,
+          );
+          if (result.kind !== 'none') this.renderer.addRipple(point, '#d7aa54');
+          this.onCommand(result);
+          this._updateCursor(point);
+          return;
+        }
+      }
       this.drag = { start: point, additive: event.shiftKey };
       this.canvas.setPointerCapture(event.pointerId);
     }

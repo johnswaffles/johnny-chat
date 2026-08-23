@@ -2973,3 +2973,196 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add Stables, cavalry, Lumber Mill, Grain Mill, Stone Quarry, mine shaft, mint, market, technology tree, second age, processed-Gold inventory, or another resource currency in the next quality pass.
 - Do not add a second construction system, construction particles, decorative workers, per-pixel hit masks, or another status panel for information already covered by the current task summary.
+
+## STUCK VILLAGER RECOVERY PASS — 2026-08-23
+
+### WHAT EXISTS
+
+- Selected player Villagers now have a contextual `RECOVER STUCK` command when their route is blocked, has no route, or they have been stationary long enough to qualify as stuck.
+- The recovery command is available from the selection panel and the `R` keyboard shortcut. It is hidden during normal work so the existing command deck stays uncluttered.
+
+### WHAT WAS COMPLETED
+
+- Added a bounded recovery state that appears after a genuine movement stall or an explicit blocked-route result; ordinary idle and working Villagers do not qualify.
+- Recovery interrupts the Villager's old work, releases gather/build/return reservations, clears the route, stops residual motion, and preserves the current selection.
+- A recovered Villager is placed at a collision-safe Crown Hall approach point, with widening fallback rings and personal-space checks so several recovered Villagers do not stack or appear inside the Hall, walls, buildings, trees, rocks, or other units.
+- Carried resources are deposited into the Crown Hall during recovery when the Hall accepts that resource and has capacity. If the stockpile is full, the remaining cargo stays visible on the Villager rather than being silently deleted.
+- The recovered Villager returns to a clean idle state at the Crown Hall and is ready for a new right-click order.
+- Added a concise recovery button, tooltip, and controls entry without introducing a new gameplay building or rescue system.
+- Synchronized the source game and `public/crownforge` mirror with the `20260823-recovery1` runtime marker.
+
+### KNOWN ISSUES
+
+- Recovery currently applies to selected player Villagers only. Crown Guards and enemy units still use normal retasking and are intentionally outside this narrow pass.
+- The command appears after a blocked/no-route signal or a measured stall; it is not shown for every Villager that is simply standing still.
+- If every safe approach point around the Crown Hall is occupied by a deliberately dense wall, building, or unit arrangement, recovery reports that no clear approach space is available instead of placing a unit inside an obstacle.
+- The in-app browser smoke check was attempted but blocked by the local Browser Use URL policy in this environment. Deterministic runtime and visual-integrity checks passed; live visual confirmation should be repeated once the local page is reachable from the browser.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. Recovery reuses the approved Villager, Crown Hall, selection, and seal icon assets.
+
+### SYSTEMS CREATED
+
+- Stuck-route detection and recovery availability latch.
+- Crown Hall recovery-point search with collision, building, resource, wall, map-boundary, and spacing checks.
+- Cargo deposit and animation feedback during recovery.
+- Selection-panel recovery action and `R` keyboard command.
+- Regression coverage for two Villagers recovering to separate valid points, depositing carried Wood, clearing blocked state, and leaving normal idle Villagers unaffected.
+
+### VALIDATION
+
+- `node --check` passed for the changed source and public runtime modules.
+- `git diff --check` passed.
+- `tools/remediation-regression.mjs` passed, including the focused two-Villager recovery scenario and all existing animation, movement, pathfinding, collision, economy, construction, wall, camera, combat, victory, and defeat checks.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across the active animation combinations.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Reproduce one concrete fence or wall arrangement from a real play session once browser access is available, then tune the recovery-point search only if the specific arrangement still fails.
+- Consider extending the same recovery pattern to Crown Guards only after a separate stuck-unit case is demonstrated.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add new civilizations, ages, buildings, units, AI systems, rescue buildings, or a separate teleport mechanic.
+- Do not make recovery available as a routine movement shortcut; it should remain a narrow safety valve for genuine blocked Villagers.
+
+## PALISADE MAGNETIC CONNECT FOLLOW-UP — 2026-08-23
+
+### WHAT EXISTS
+
+- Palisade Walls still use the existing click-drag workflow, eight-way direction snap, multi-segment construction record, and resource-clearing precedence.
+- Wall ends now have a wider, local magnetic connection field. Starting or finishing a drag near a terminal post locks the preview to the exact next segment center, so the player can continue dragging from the connected point instead of pixel-hunting.
+
+### WHAT WAS COMPLETED
+
+- Enlarged endpoint magnetism from a one-segment-tight threshold to a more forgiving `5.4` world-unit connection field.
+- Applied the same magnetism to both the drag start and drag end, including off-axis approaches, straight extensions, corners, and T-junctions.
+- Added terminal outward-direction filtering so a connection candidate must sit outside the existing wall run. Reverse drags can no longer magnetize onto the existing segment centers and create a duplicate fence over itself.
+- Preserved the existing placement rules: trees and stone are cleared by a valid wall on release; food nodes, decorations, units, buildings, map limits, builder access, and affordability remain protected.
+- Updated the construction tooltip and build-menu guidance to explain that dragging from or toward a wall end will magnetically lock within a generous radius.
+- Synchronized the source game and `public/crownforge` mirror with the `20260823-wallconnect2` runtime marker.
+
+### KNOWN ISSUES
+
+- A wall can still be placed as one continuous construction record with shared health/progress rather than as individually selectable segments. This remains an intentional first-slice limitation.
+- If a player intentionally tries to route a new wall directly through the middle of an existing connected run, the preview remains invalid rather than guessing which segments to replace.
+- A full pointer drag through a live browser still merits a close/normal-zoom pass when a wall endpoint is visible in the current viewport; deterministic wall placement coverage is passing and the deployed menu/placement guidance was verified.
+
+### ASSETS CREATED
+
+- No new artwork was required. The existing authored upright Palisade direction family remains canonical.
+
+### SYSTEMS CREATED
+
+- Wider endpoint magnetic field for both wall-drag endpoints.
+- Terminal outward filtering and segment-center overlap protection for connected wall runs.
+- Regression coverage for off-axis start/end magnetism and reverse-drag duplicate prevention.
+
+### VALIDATION
+
+- `node --check` remains clean for the changed simulation and main modules.
+- `git diff --check` remains clean.
+- `tools/remediation-regression.mjs` passed the full suite, including the focused wall precedence, magnetic connection, off-axis magnetism, reverse-overlap guard, construction, movement, economy, combat, victory, and defeat checks.
+- `tools/visual-integrity-audit.mjs` remains clean with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across the active animation combinations.
+- The public Render page returned `200` and served the `20260823-wallconnect2` HTML/module marker. Live browser inspection confirmed the `WIDE MAGNET` Palisade entry, the generous-radius tooltip, the placement readout, the new magnetic-lock toast, and clean Escape cancellation.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Verify one straight extension, one corner, and one T-junction with real pointer input at normal and close zoom. Tune only a demonstrated oversnap or missed connection.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add gates, towers, wall editing, segment-level damage, freeform spline walls, or a second wall-placement mode until this forgiving endpoint contract remains stable.
+
+## PALISADE GROUND PRECEDENCE PASS — 2026-08-23
+
+### WHAT EXISTS
+
+- Palisade placement now treats map boundaries and actual structures as the only world blockers. A wall can claim open ground even when small natural assets or units occupy its line.
+- Trees, groves, stone, berry, Gold, small ground details, and units yield to a valid Palisade line. Existing buildings and unrelated Palisade structures still reject overlap.
+
+### WHAT WAS COMPLETED
+
+- Added a wall-specific placement path that bypasses the generic building checks for access-room count, resource collision, decoration collision, and unit collision.
+- Kept map-boundary, structure-overlap, selected-builder, builder-cargo, and resource-cost checks intact so the relaxed rule does not permit an out-of-bounds or unpaid foundation.
+- Expanded wall resource precedence to all configured resource types, not only Wood and Stone. Any overlapping resource is removed when the wall is released, with existing gatherer interruption and cargo-return handling preserved.
+- Ground details inside the wall envelope are removed on release so pebbles, flowers, stumps, and logs cannot remain visibly trapped beneath the Palisade.
+- Updated preview, placement toast, and placement announcement language from `tree/stone` to `resource`/`natural detail` so the interface matches the broader rule.
+- Kept the future hill boundary explicit: no hill terrain or hill artwork was added in this pass. When hills arrive, they will need a dedicated terrain/wall visual contract rather than being silently treated as flat meadow.
+- Bumped the runtime marker to `20260823-wallprecedence2` and synchronized the source/public Crownforge mirrors.
+
+### KNOWN ISSUES
+
+- The wall still cannot be placed outside the map or through an actual structure. This is intentional and prevents foundations from being unreachable or visually merged with buildings.
+- A wall may temporarily overlap a unit during placement because units now yield to the wall; the normal collision solver must separate the unit after the foundation exists.
+- Hills are not implemented yet. Their slope-aware Palisade artwork, placement height, and collision behavior remain future work.
+
+### ASSETS CREATED
+
+- No new artwork was required. The existing upright Palisade family remains the visual source for flat first-age ground.
+
+### SYSTEMS CREATED
+
+- Wall-specific ground-claiming precedence.
+- All-resource cleanup and ground-detail cleanup on Palisade release.
+- Regression coverage proving a wall can cross tree, stone, berry, detail, and unit positions while still rejecting a building.
+
+### VALIDATION
+
+- `node --check` passed for changed source and public runtime modules.
+- `git diff --check` passed.
+- `tools/remediation-regression.mjs` passed the full suite, including wall precedence, all-resource cleanup, unit yielding, magnetic endpoint joining, construction, movement, economy, combat, victory, and defeat checks.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across the active animation combinations.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Verify the relaxed rule with a real pointer drag across the exact open-land location that previously failed. If it still rejects, identify the specific structure or map-edge reason shown by the placement readout before changing the rule again.
+- Design hills as a separate terrain pass with authored slope-compatible wall variants only when hill gameplay is explicitly scheduled.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add hills, hill traversal, terrain elevation, gates, towers, wall editing, segment-level damage, or freeform spline walls in this pass.
+
+## PRIMARY-CLICK CONSTRUCTION RESUME PASS — 2026-08-23
+
+### WHAT EXISTS
+
+- Unfinished friendly foundations already retain progress, builder slots, and the existing cargo-first construction continuation path.
+- Right-click remains the standard move, gather, attack, and construction command. Normal left-click still selects units and buildings.
+
+### WHAT WAS COMPLETED
+
+- Added a focused primary-click exception: when one or more player Villagers are selected, clicking a visible unfinished friendly foundation now issues the existing construction command instead of only selecting the building.
+- Reused the authoritative construction command router, so the click path preserves distinct approach slots, releases previous work, and sends a loaded Villager to the Crown Hall before returning to the foundation.
+- Kept the interaction intentionally narrow. Clicking completed buildings, resources, open ground, or foundations with no selected Villager retains the existing selection behavior.
+- Bumped the runtime marker to `20260823-constructionclick1` and kept the source/public runtime mirrors ready for deployment.
+
+### KNOWN ISSUES
+
+- The click-to-resume action only applies to friendly unfinished foundations visible under the existing forgiving building silhouette hit region. It does not add per-pixel hit masks or a new construction panel.
+- Four Villager construction approach slots remain the current first-age limit; additional builders wait for a future demonstrated crowding need.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. Existing Crownforge foundation and building assets remain in use.
+
+### SYSTEMS CREATED
+
+- Primary-click construction resume routing in the existing RTS input layer.
+- Regression coverage proving a selected Villager can resume a foundation through primary click, alongside existing right-click and cargo-first coverage.
+
+### VALIDATION
+
+- `node --check` passed for the updated input and regression modules.
+- `tools/remediation-regression.mjs` passed the full focused suite, including primary-click foundation resume, right-click reassignment, cargo-first continuation, construction completion, movement, economy, walls, combat, victory, and defeat.
+- `git diff --check` remains part of the release gate; the source/public mirror and live Render build must be verified after the deployment commit.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Play both click paths at normal speed with a partially built Barracks and Ore Wash: select one Villager, primary-click the site, then repeat with a loaded worker and confirm the return trip is readable.
+- Keep the current concise input model until a separate player-facing construction feedback problem is reproduced.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add a second construction system, new building classes, new ages, extra overlays, or per-pixel targeting as part of this small interaction repair.
