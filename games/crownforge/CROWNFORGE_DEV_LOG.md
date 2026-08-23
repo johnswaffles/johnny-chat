@@ -2854,6 +2854,7 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - `tools/visual-integrity-audit.mjs` passed with no missing file, placeholder reference, stage dimension mismatch, or unsafe construction-stage edge. The new files retain transparent margins of at least `71 px` on every side.
 - Browser play through the real build menu captured the authored Ore Wash at `4%`, `44%`, `84%`, and completion. The stages remained grounded, changed in the correct order, preserved the same site anchor, and completed with three assigned Villagers.
 - Normal and closer browser zoom showed no square background, halo, cut-off artwork, stage jump, unit overlap inside the footprint, or warning/error console entry.
+- GitHub commit `82f7eaa` triggered the Render release. An uncached public load confirmed runtime marker `20260823-orewashstages1`, a successful `200` response for the new foundation raster, the authored partial stage at `34%` through the real build menu, and an empty warning/error console. `https://justaskjohnny.com/crownforge/` continues to redirect to the same Render game.
 
 ### WHAT SHOULD BE POLISHED NEXT
 
