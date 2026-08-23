@@ -2908,6 +2908,7 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Real browser input built an Ore Wash beside the opening Gold vein, showed the gather cursor over the overlapping target, issued the right-click gather command, depleted the full `420 Gold` node, and raised stored Gold from `5000` to `5420`.
 - A left-click on the same completed Ore Wash still selected it and displayed `320 / 320 HP`, Gold-only drop-off, short return routes, and the local `+25%` Gold yield.
 - The local browser console remained empty.
+- GitHub commit `64da836` triggered the Render release. An uncached public load confirmed runtime marker `20260823-targeting1`, the correct gather cursor, `3 units · Walking to Wood` after real right-click input, and an empty console. `https://justaskjohnny.com/crownforge/` redirected to the same verified Render game and marker.
 
 ### WHAT SHOULD BE POLISHED NEXT
 
