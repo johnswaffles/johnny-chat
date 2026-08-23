@@ -2962,6 +2962,7 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - `tools/visual-integrity-audit.mjs` passed with no missing active file, placeholder reference, fallback, construction-stage edge failure, or animation-dimension mismatch across `140` active animation combinations.
 - Real pointer input placed a Crown Barracks, retasked all three assigned Villagers to a meadow point, and then right-clicked the same `4%` foundation. The command changed back to `Walking to build site`, all three workers resumed, and the Barracks completed without a stuck unit or leaked reservation.
 - A second normal-speed gathering playtest visibly passed through `1 Gathering Wood · 2 Walking to Wood`, `1 Returning Wood to Crown Hall · 2 Walking to Wood`, and a three-way gather/return/walk split. The selection panel and command line remained readable, and the browser console reported no error or warning.
+- GitHub commit `cab5aa2` triggered the Render release. An uncached public load confirmed runtime marker `20260823-constructionretask1`; real right-click input then passed through `1 Gathering Wood · 2 Walking to Wood` and `1 Returning Wood to Crown Hall · 2 Walking to Wood` with an empty error console. `https://justaskjohnny.com/crownforge/` returned a direct `301` to the same verified Render build and preserved the cache-busting query.
 
 ### WHAT SHOULD BE POLISHED NEXT
 
