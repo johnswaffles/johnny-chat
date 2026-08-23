@@ -2919,3 +2919,56 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add Stables, cavalry, Lumber Mill, Grain Mill, Stone Quarry, mine shaft, mint, market, technology tree, second age, processed-Gold inventory, or another resource currency in the next quality pass.
 - Do not add per-pixel hit masks, decorative Ore Wash animation, or extra UI labels without a demonstrated player-facing problem.
+
+## CONSTRUCTION RETASKING AND MIXED-WORKER CLARITY PASS — 2026-08-23
+
+### WHAT EXISTS
+
+- The first-age building catalog remains exactly Crown Barracks, Ore Wash, Grain Field, and Palisade Wall.
+- Construction sites keep real builder assignments and four reserved interaction positions. A foundation pauses safely when every Villager is retasked and continues from the same progress when a worker returns.
+- Existing selection and command panels now describe mixed Villager phases without adding another UI panel or overlay.
+
+### WHAT WAS COMPLETED
+
+- Fixed the reproduced defect where right-clicking an unfinished friendly building issued a generic ground move instead of assigning the selected Villager to construction.
+- Added explicit unfinished-building command routing. Up to four selected Villagers reserve distinct approach slots, path to the foundation, and continue its existing construction progress.
+- Preserved carried resources during a construction retask. A loaded Villager returns the current bundle to compatible storage first, then automatically walks back to the requested foundation and builds.
+- Kept interruption cleanup authoritative: moving, gathering, fighting, or issuing another order releases the old construction assignment and slot so foundations never gain phantom progress from absent workers.
+- Replaced the mixed group's generic `units active` fallback with a bounded task breakdown such as `1 Returning Wood to Crown Hall · 1 Gathering Wood · 1 Walking to Wood`.
+- Kept homogeneous groups concise and capped unusually varied groups with a `more tasks` summary so the existing panel remains readable.
+- Added the runtime marker `20260823-constructionretask1` and a small reusable task-summary module rather than duplicating grouping logic between the selection panel and command line.
+
+### KNOWN ISSUES
+
+- The current vertical slice intentionally supports four simultaneous builder approach slots per structure. Additional selected Villagers are not assigned until the interaction ring is expanded as part of a demonstrated crowding need.
+- When more than three distinct tasks exist in one selection, the UI shows the first two task groups and a bounded `more tasks` count. Selecting an individual unit still exposes its exact task, cargo, and health.
+- Friendly structures still use the existing forgiving silhouette hit regions. No new selection-mask or per-pixel targeting system was introduced.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. This pass repaired construction commands, reservations, and information clarity using the approved first-age building and Villager art.
+
+### SYSTEMS CREATED
+
+- Unfinished-friendly-building context commands with multi-builder approach-slot assignment.
+- Cargo-first post-deposit construction continuation that survives the storage trip and cancels cleanly on a new order.
+- Reusable, bounded mixed-unit task aggregation shared by the existing selection and command feedback areas.
+- Regression coverage for builder interruption cleanup, paused foundations, right-click resume, loaded-worker resume, construction completion, and mixed-task text.
+
+### VALIDATION
+
+- `node --check` passed for the changed runtime, task-summary, and regression modules; `git diff --check` remained clean.
+- `tools/remediation-regression.mjs` passed all `24` focused areas, including construction pause/resume, slot release and reassignment, cargo-first construction, mixed-task feedback, and every prior animation, movement, pathfinding, collision, economy, wall, camera, combat, victory, and defeat check.
+- `tools/visual-integrity-audit.mjs` passed with no missing active file, placeholder reference, fallback, construction-stage edge failure, or animation-dimension mismatch across `140` active animation combinations.
+- Real pointer input placed a Crown Barracks, retasked all three assigned Villagers to a meadow point, and then right-clicked the same `4%` foundation. The command changed back to `Walking to build site`, all three workers resumed, and the Barracks completed without a stuck unit or leaked reservation.
+- A second normal-speed gathering playtest visibly passed through `1 Gathering Wood · 2 Walking to Wood`, `1 Returning Wood to Crown Hall · 2 Walking to Wood`, and a three-way gather/return/walk split. The selection panel and command line remained readable, and the browser console reported no error or warning.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Keep the four-choice catalog fixed and test one existing production or construction edge at normal speed, such as a blocked unit spawn or a multi-segment Palisade foundation whose builders are interrupted and reassigned.
+- Adjust builder count, summary length, or approach spacing only after a concrete player-facing crowding or readability problem is reproduced.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add Stables, cavalry, Lumber Mill, Grain Mill, Stone Quarry, mine shaft, mint, market, technology tree, second age, processed-Gold inventory, or another resource currency in the next quality pass.
+- Do not add a second construction system, construction particles, decorative workers, per-pixel hit masks, or another status panel for information already covered by the current task summary.

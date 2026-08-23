@@ -2,7 +2,8 @@ import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, 
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260823-targeting1';
 import { CrownforgeRenderer } from './renderer.js?v=20260823-targeting1';
-import { CrownforgeSimulation } from './simulation.js?v=20260823-targeting1';
+import { CrownforgeSimulation } from './simulation.js?v=20260823-constructionretask1';
+import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -338,13 +339,9 @@ function updateUi() {
 
 function commandLineText() {
   const activeUnits = simulation.selectedEntities
-    .filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead && entity.command !== 'idle' && entity.actionLabel)
-    .map((entity) => entity.actionLabel);
-  if (activeUnits.length === 1) return activeUnits[0];
-  if (activeUnits.length > 1) {
-    const unique = [...new Set(activeUnits)];
-    return unique.length === 1 ? `${activeUnits.length} units · ${unique[0]}` : `${activeUnits.length} units active.`;
-  }
+    .filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead && entity.command !== 'idle' && entity.actionLabel);
+  if (activeUnits.length === 1) return activeUnits[0].actionLabel;
+  if (activeUnits.length > 1) return summarizeUnitTasks(activeUnits, { includeReady: false, maxEntries: 3 });
   return simulation.lastCommand;
 }
 
@@ -398,15 +395,7 @@ function selectionStatus() {
     return `${unit.actionLabel}${health}${cargo}`;
   }
   if (units.length > 1) {
-    const active = units.filter((unit) => unit.command !== 'idle').length;
-    const carrying = units.filter((unit) => unit.carryAmount > 0).length;
-    const activeLabels = [...new Set(units
-      .filter((unit) => unit.command !== 'idle' && unit.actionLabel)
-      .map((unit) => unit.actionLabel))];
-    if (active && activeLabels.length === 1) return `${units.length} units · ${activeLabels[0]}`;
-    if (carrying) return `${units.length} units · ${carrying} carrying${active ? ` · ${active} active` : ''}`;
-    if (active) return `${units.length} units · ${active} active`;
-    return `${units.length} units ready.`;
+    return summarizeUnitTasks(units, { includeReady: true, maxEntries: 3 });
   }
   if (entities.length === 1 && entities[0].kind === 'resource') {
     const node = entities[0];

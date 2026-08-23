@@ -16,6 +16,7 @@ import {
 import { animationFrame } from '../src/animation.js';
 import { CrownforgeRenderer, resolveFirstAgeConstructionStage, resolveWallVisual } from '../src/renderer.js';
 import { CrownforgeSimulation } from '../src/simulation.js';
+import { summarizeUnitTasks } from '../src/task-summary.js';
 
 const STEP_60HZ = 1 / 60;
 const STEP_20HZ = 1 / 20;
@@ -467,6 +468,75 @@ function checkConstructionAndPlacement() {
   assert.equal(barracks.hp, barracks.maxHp, 'completed Barracks reaches full health');
 }
 
+function checkConstructionRetaskingAndTaskSummary() {
+  const simulation = freshSimulation();
+  const townCenter = simulation.buildings.find((building) => building.type === 'townCenter');
+  const placement = [
+    { x: townCenter.x - 18, z: townCenter.z },
+    { x: townCenter.x + 18, z: townCenter.z },
+    { x: townCenter.x, z: townCenter.z + 17 },
+    { x: townCenter.x, z: townCenter.z - 17 },
+  ].find((point) => simulation.getPlacementCheck('barracks', point).valid);
+  assert.ok(placement, 'construction-retask scenario has a valid Barracks site');
+  assert.equal(simulation.placeBuilding('barracks', placement), true, 'construction-retask scenario places a foundation');
+  const barracks = simulation.buildings.find((building) => building.type === 'barracks' && building.progress < 1);
+  const villagers = simulation.units.filter((unit) => unit.type === 'villager' && unit.faction === 'player');
+  assert.equal(barracks.buildAssigned.length, 3, 'all opening villagers begin assigned to the foundation');
+
+  const clearPoint = { x: townCenter.x + 40, z: townCenter.z + 32 };
+  simulation.selectedIds = villagers.map((unit) => unit.id);
+  simulation._syncSelectionFlags();
+  simulation.issueContextCommand(clearPoint, { kind: 'ground' });
+  assert.equal(barracks.buildAssigned.length, 0, 'retasking every builder releases the construction assignment');
+  assert.equal(barracks.buildSlotReservations.size, 0, 'retasking every builder releases every construction slot');
+  const pausedProgress = barracks.progress;
+  advance(simulation, 2);
+  assert.equal(barracks.progress, pausedProgress, 'an unstaffed foundation pauses without phantom construction');
+
+  const returningBuilder = villagers[0];
+  simulation.selectedIds = [returningBuilder.id];
+  simulation._syncSelectionFlags();
+  const resume = simulation.issueContextCommand({ x: barracks.x, z: barracks.z }, barracks);
+  assert.equal(resume.kind, 'build', 'right-clicking a foundation issues a construction command');
+  assert.equal(returningBuilder.buildTarget, barracks.id, 'resumed builder targets the unfinished building');
+  assert.ok(barracks.buildAssigned.includes(returningBuilder.id), 'resumed builder owns a construction assignment');
+  assert.ok([...barracks.buildSlotReservations.values()].includes(returningBuilder.id), 'resumed builder owns an approach slot');
+
+  const loadedBuilder = villagers[1];
+  loadedBuilder.carryType = 'wood';
+  loadedBuilder.carryAmount = 10;
+  simulation.selectedIds = [loadedBuilder.id];
+  simulation._syncSelectionFlags();
+  const loadedResume = simulation.issueContextCommand({ x: barracks.x, z: barracks.z }, barracks);
+  assert.equal(loadedResume.kind, 'build', 'a loaded villager can be queued to construct after depositing');
+  assert.equal(loadedBuilder.command, 'return', 'loaded construction retask preserves the deposit trip');
+  assert.equal(loadedBuilder.postDepositBuildTarget, barracks.id, 'loaded construction retask remembers the foundation');
+
+  simulation.setUnitSpeedScale(10);
+  advance(simulation, BUILDING_TYPES.barracks.buildTime + 35);
+  assert.equal(barracks.progress, 1, 'resumed builders complete the paused foundation');
+  assert.equal(loadedBuilder.postDepositBuildTarget, null, 'completed construction clears the queued post-deposit target');
+
+  const mixedSummary = summarizeUnitTasks([
+    { command: 'gather', actionLabel: 'Gathering Gold' },
+    { command: 'return', actionLabel: 'Returning Gold to Crown Hall' },
+    { command: 'idle', actionLabel: 'Idle' },
+  ]);
+  assert.equal(
+    mixedSummary,
+    '3 units · 1 Gathering Gold · 1 Returning Gold to Crown Hall · 1 ready',
+    'mixed worker selection names each visible task instead of collapsing to a generic active count',
+  );
+  assert.equal(
+    summarizeUnitTasks([
+      { command: 'gather', actionLabel: 'Gathering Wood' },
+      { command: 'gather', actionLabel: 'Gathering Wood' },
+    ], { includeReady: false }),
+    '2 active · Gathering Wood',
+    'homogeneous command feedback stays concise',
+  );
+}
+
 function checkWallResourcePrecedence() {
   const simulation = freshSimulation();
   const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
@@ -783,6 +853,7 @@ checkOreWashEconomySupport();
 checkIntentAwareVisualTargeting();
 checkReadableResourceApproaches();
 checkConstructionAndPlacement();
+checkConstructionRetaskingAndTaskSummary();
 checkWallResourcePrecedence();
 checkWallEndpointMagnetism();
 checkBlockedDestinationFallback();
@@ -809,6 +880,7 @@ console.log(JSON.stringify({
     'intent-aware visual targeting and resource-specific gather/drop-off feedback',
     'focused first-age building catalog with the Crown Hall as universal fallback',
     'placement rejection and Barracks completion',
+    'construction pause, foundation right-click reassignment, cargo-first resume, and mixed-task feedback',
     'wall precedence over trees and stone with safe resource cleanup',
     'magnetic wall endpoint snap and connected segment spacing',
     'blocked destination fallback outside building clearance',

@@ -346,6 +346,7 @@ export class CrownforgeSimulation {
       returnStorageId: null,
       returnSlot: 0,
       postDepositTarget: null,
+      postDepositBuildTarget: null,
       routeTarget: null,
       attackTarget: null,
       attackTargetKind: null,
@@ -623,6 +624,7 @@ export class CrownforgeSimulation {
     }
     unit.fieldTarget = null;
     unit.returnStorageId = null;
+    unit.postDepositBuildTarget = null;
     unit.attackTarget = null;
     unit.attackTargetKind = null;
     unit.attackTimer = 0;
@@ -1026,6 +1028,7 @@ export class CrownforgeSimulation {
     });
     unit.actionLabel = deposited > 0 ? `Stored ${deposited} ${resourceInfo.label}` : `${resourceInfo.label} storage full`;
     if (unit.carryAmount > 0) {
+      unit.postDepositBuildTarget = null;
       unit.command = 'idle';
       unit.visualState = `carry:${unit.carryType}`;
       return;
@@ -1045,6 +1048,19 @@ export class CrownforgeSimulation {
       return;
     }
     unit.gatherTarget = null;
+    if (unit.postDepositBuildTarget) {
+      const buildingId = unit.postDepositBuildTarget;
+      unit.postDepositBuildTarget = null;
+      const building = this.buildings.find((candidate) => candidate.id === buildingId
+        && candidate.faction === 'player'
+        && candidate.progress < 1
+        && !candidate.destroyed);
+      if (building) {
+        unit.buildTarget = building.id;
+        if (!this._sendUnitToBuilding(unit, building, unit.buildSlot)) unit.buildTarget = null;
+        return;
+      }
+    }
     if (unit.postDepositTarget) {
       const target = unit.postDepositTarget;
       unit.postDepositTarget = null;
@@ -2309,6 +2325,35 @@ export class CrownforgeSimulation {
         ? `Return cargo, then gather ${RESOURCE_TYPES[target.resourceType].label.toLowerCase()}.`
         : `Gather ${RESOURCE_TYPES[target.resourceType].label.toLowerCase()}.`;
       return { kind: 'gather', success: true, target };
+    }
+    if (target?.kind === 'building' && target.faction === 'player' && target.progress < 1 && !target.destroyed) {
+      const builders = units.filter((unit) => unit.type === 'villager').slice(0, CONSTRUCTION_SLOT_COUNT);
+      if (!builders.length) {
+        this.lastCommand = 'Select a villager to continue construction.';
+        this._announce(this.lastCommand);
+        return { kind: 'none', success: false, target };
+      }
+      let assigned = 0;
+      builders.forEach((unit, index) => {
+        this._interruptWork(unit);
+        unit.postDepositTarget = null;
+        if (unit.carryAmount > 0) {
+          unit.postDepositBuildTarget = target.id;
+          if (this._beginReturn(unit)) assigned += 1;
+          else unit.postDepositBuildTarget = null;
+          return;
+        }
+        unit.buildTarget = target.id;
+        if (this._sendUnitToBuilding(unit, target, index)) assigned += 1;
+        else unit.buildTarget = null;
+      });
+      if (!assigned) {
+        this.lastCommand = `No route to the ${BUILDING_TYPES[target.type].label.toLowerCase()} foundation.`;
+        this._announce(this.lastCommand);
+        return { kind: 'none', success: false, target };
+      }
+      this.lastCommand = `Continue ${BUILDING_TYPES[target.type].label} construction with ${assigned} villager${assigned === 1 ? '' : 's'}.`;
+      return { kind: 'build', success: true, target, assigned };
     }
     if (target?.kind === 'building' && target.faction === 'player' && target.type === 'townCenter' && target.progress >= 1 && !target.destroyed) {
       let routed = 0;
