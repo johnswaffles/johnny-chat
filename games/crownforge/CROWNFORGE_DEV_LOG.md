@@ -3047,7 +3047,7 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - A wall can still be placed as one continuous construction record with shared health/progress rather than as individually selectable segments. This remains an intentional first-slice limitation.
 - If a player intentionally tries to route a new wall directly through the middle of an existing connected run, the preview remains invalid rather than guessing which segments to replace.
-- Browser visual smoke testing should still be repeated at normal and close zoom after deployment when the in-app browser can reach the local/live page; deterministic wall placement coverage is passing.
+- A full pointer drag through a live browser still merits a close/normal-zoom pass when a wall endpoint is visible in the current viewport; deterministic wall placement coverage is passing and the deployed menu/placement guidance was verified.
 
 ### ASSETS CREATED
 
@@ -3065,6 +3065,7 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - `git diff --check` remains clean.
 - `tools/remediation-regression.mjs` passed the full suite, including the focused wall precedence, magnetic connection, off-axis magnetism, reverse-overlap guard, construction, movement, economy, combat, victory, and defeat checks.
 - `tools/visual-integrity-audit.mjs` remains clean with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across the active animation combinations.
+- The public Render page returned `200` and served the `20260823-wallconnect2` HTML/module marker. Live browser inspection confirmed the `WIDE MAGNET` Palisade entry, the generous-radius tooltip, the placement readout, the new magnetic-lock toast, and clean Escape cancellation.
 
 ### WHAT SHOULD BE POLISHED NEXT
 
