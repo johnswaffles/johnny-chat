@@ -358,6 +358,72 @@ function checkOreWashEconomySupport() {
   assert.ok(Math.hypot(placedWash.x - openingVein.x, placedWash.z - openingVein.z) <= blueprint.gatherBonus.radius, 'completed Ore Wash supports the intended opening vein');
 }
 
+function checkIntentAwareVisualTargeting() {
+  const renderer = Object.create(CrownforgeRenderer.prototype);
+  renderer.width = 1280;
+  renderer.height = 720;
+  renderer.camera = { x: 0, y: 0, zoom: 0.45 };
+  const oreWash = {
+    id: 1,
+    kind: 'building',
+    type: 'oreWash',
+    faction: 'player',
+    x: 100,
+    z: 100,
+    hp: BUILDING_TYPES.oreWash.maxHp,
+    destroyed: false,
+  };
+  const gold = {
+    id: 2,
+    kind: 'resource',
+    type: 'gold',
+    resourceType: 'gold',
+    sizeTier: 'medium',
+    x: 103,
+    z: 97,
+    amount: 420,
+  };
+  const simulation = {
+    units: [],
+    buildings: [oreWash],
+    resourcesNodes: [gold],
+    getEntityAt: () => null,
+  };
+  const goldScreenPoint = renderer.worldToScreen(gold);
+  assert.equal(
+    renderer.getEntityAtScreen(simulation, goldScreenPoint, 'select'),
+    oreWash,
+    'selection keeps the forgiving Ore Wash silhouette hit region',
+  );
+  assert.equal(
+    renderer.getEntityAtScreen(simulation, goldScreenPoint, 'command'),
+    gold,
+    'gather command prefers a visible Gold vein within the overlapping Ore Wash silhouette',
+  );
+
+  const routing = movementSandbox();
+  const wash = routing.addBuilding('oreWash', 34, 20, 'player');
+  routing.addResource('gold', 'gold', 38, 20, 120, 0, { sizeTier: 'medium' });
+  const vein = routing.resourcesNodes[0];
+  const worker = routing.addUnit('villager', 27, 20, 'player');
+  routing.resources.gold = 0;
+  routing.selectedIds = [worker.id];
+  routing._syncSelectionFlags();
+  const command = routing.issueContextCommand({ x: vein.x, z: vein.z }, vein);
+  assert.equal(command.kind, 'gather', 'intent-resolved Gold target starts the gather loop');
+  assert.equal(worker.actionLabel, 'Walking to Gold', 'worker task names the resource while approaching');
+  routing.setUnitSpeedScale(10);
+  advance(routing, 7);
+  assert.ok(
+    worker.actionLabel === 'Gathering Gold'
+      || worker.actionLabel === 'Returning Gold to Ore Wash'
+      || worker.actionLabel.startsWith('Stored ')
+      || worker.actionLabel === 'Walking to Gold',
+    `Gold loop retains a specific task label, received ${worker.actionLabel}`,
+  );
+  assert.equal(worker.returnStorageId === null || worker.returnStorageId === wash.id, true, 'Gold task remains tied to the Ore Wash drop-off');
+}
+
 function checkReadableResourceApproaches() {
   const simulation = freshSimulation();
   const villager = simulation.units.find((unit) => unit.type === 'villager');
@@ -714,6 +780,7 @@ checkResetPresentation();
 checkGathering();
 checkGoldEconomyLoop();
 checkOreWashEconomySupport();
+checkIntentAwareVisualTargeting();
 checkReadableResourceApproaches();
 checkConstructionAndPlacement();
 checkWallResourcePrecedence();
@@ -739,6 +806,7 @@ console.log(JSON.stringify({
     'cargo-preserving retask and storage return',
     'complete Gold gather, carry, Crown Hall deposit, return-to-work, depletion, and multi-worker slot loop',
     'Ore Wash construction, Gold-only drop-off routing, local yield bonus, and Crown Guard Gold spending',
+    'intent-aware visual targeting and resource-specific gather/drop-off feedback',
     'focused first-age building catalog with the Crown Hall as universal fallback',
     'placement rejection and Barracks completion',
     'wall precedence over trees and stone with safe resource cleanup',

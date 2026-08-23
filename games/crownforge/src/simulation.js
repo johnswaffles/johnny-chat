@@ -938,7 +938,7 @@ export class CrownforgeSimulation {
       return;
     }
     if (distance(unit, node) > interactionDistance + 0.08) {
-      unit.actionLabel = 'Walking to resource';
+      unit.actionLabel = `Walking to ${resourceInfo.label}`;
       unit.visualState = 'walk';
       setUnitFacing(unit, node.x - unit.x, node.z - unit.z);
       if (!unit.path.length) this._sendUnitToResource(unit, node);
@@ -980,7 +980,7 @@ export class CrownforgeSimulation {
     unit.carryAmount = amount;
     unit.gatherTimer = 0;
     unit.gatherEventFired = false;
-    unit.actionLabel = 'Carrying to storage';
+    unit.actionLabel = `Carrying ${resourceInfo.label}`;
     unit.visualState = `carry:${unit.carryType}`;
     if (node.amount <= 0 && !node.depleted) {
       node.depleted = true;
@@ -1003,7 +1003,7 @@ export class CrownforgeSimulation {
     }
     const storageDistance = this._distanceToBuildingEdge(unit, storage);
     if (storageDistance > STORAGE_INTERACTION_DISTANCE + 0.08) {
-      unit.actionLabel = 'Returning to storage';
+      unit.actionLabel = this._returnActionLabel(unit, storage);
       unit.visualState = `carry:${unit.carryType}`;
       if (!unit.path.length) this._sendUnitToStorage(unit, storage);
       return;
@@ -1039,7 +1039,7 @@ export class CrownforgeSimulation {
     const nextNode = this.resourcesNodes.find((node) => node.id === unit.gatherTarget && node.amount > 0);
     if (nextNode) {
       unit.command = 'gather';
-      unit.actionLabel = `Walking to ${RESOURCE_TYPES[nextNode.resourceType].label.toLowerCase()}`;
+      unit.actionLabel = `Walking to ${RESOURCE_TYPES[nextNode.resourceType].label}`;
       unit.visualState = 'walk';
       this._sendUnitToResource(unit, nextNode);
       return;
@@ -1073,7 +1073,7 @@ export class CrownforgeSimulation {
     unit.path = route.path;
     unit.pathBlocked = false;
     unit.command = 'return';
-    unit.actionLabel = 'Returning to storage';
+    unit.actionLabel = this._returnActionLabel(unit, route.storage);
     unit.visualState = `carry:${unit.carryType}`;
     return true;
   }
@@ -1084,6 +1084,13 @@ export class CrownforgeSimulation {
       && building.progress >= 1
       && building.faction === 'player'
       && this._storageAccepts(building, unit.carryType)) ?? null;
+  }
+
+  _returnActionLabel(unit, storage = null) {
+    const resourceLabel = RESOURCE_TYPES[unit.carryType]?.label ?? 'Cargo';
+    const target = storage ?? this._getReturnStorage(unit);
+    const storageLabel = target ? BUILDING_TYPES[target.type]?.label : null;
+    return storageLabel ? `Returning ${resourceLabel} to ${storageLabel}` : `Returning ${resourceLabel}`;
   }
 
   _storageAccepts(building, resourceType = null) {
@@ -1534,7 +1541,7 @@ export class CrownforgeSimulation {
     unit.stopDistance = resourceInteractionDistance(node, unit.type);
     unit.pathBlocked = false;
     unit.command = 'gather';
-    unit.actionLabel = `Walking to ${RESOURCE_TYPES[node.resourceType].label.toLowerCase()}`;
+    unit.actionLabel = `Walking to ${RESOURCE_TYPES[node.resourceType].label}`;
     this._resetMovementTracking(unit);
     return true;
   }
@@ -2108,7 +2115,18 @@ export class CrownforgeSimulation {
     unit.routeTarget = { x: target.x, z: target.z };
     unit.pathBlocked = false;
     unit.command = command;
-    unit.actionLabel = command === 'gather' ? 'Walking to resource' : command === 'return' ? 'Returning to storage' : command === 'attack' ? 'Closing on enemy' : command === 'build' ? 'Walking to build site' : 'Moving';
+    const gatherNode = command === 'gather'
+      ? this.resourcesNodes.find((node) => node.id === unit.gatherTarget && node.amount > 0)
+      : null;
+    unit.actionLabel = command === 'gather'
+      ? `Walking to ${RESOURCE_TYPES[gatherNode?.resourceType]?.label ?? 'resource'}`
+      : command === 'return'
+        ? this._returnActionLabel(unit)
+        : command === 'attack'
+          ? 'Closing on enemy'
+          : command === 'build'
+            ? 'Walking to build site'
+            : 'Moving';
     this._resetMovementTracking(unit);
     return true;
   }
@@ -2334,7 +2352,7 @@ export class CrownforgeSimulation {
             unit.stopDistance = STORAGE_INTERACTION_DISTANCE;
             unit.pathBlocked = false;
             unit.command = 'move';
-            unit.actionLabel = 'Moving to storage';
+            unit.actionLabel = `Moving to ${BUILDING_TYPES[target.type].label}`;
             this._resetMovementTracking(unit);
             routed += 1;
           }
@@ -2345,7 +2363,7 @@ export class CrownforgeSimulation {
         this._announce(this.lastCommand);
         return { kind: 'none', success: false, target };
       }
-      this.lastCommand = 'Move to storage.';
+      this.lastCommand = `Move to ${BUILDING_TYPES[target.type].label}.`;
       return { kind: 'move', success: true, target };
     }
     if (target?.kind === 'building' && target.faction === 'player' && target.progress >= 1) {

@@ -2865,3 +2865,56 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add Stables, cavalry, a Lumber Mill, Grain Mill, Stone Quarry, mine shaft, mint, market, technology tree, second age, processed-Gold inventory, or another resource currency during this quality pass.
 - Do not add construction smoke, sparks, animated water, or decorative workers merely to make the site busier.
+
+## INTENT-AWARE TARGETING AND ECONOMY-FEEDBACK QUALITY PASS — 2026-08-23
+
+### WHAT EXISTS
+
+- The first-age build catalog remains exactly Crown Barracks, Ore Wash, Grain Field, and Palisade Wall.
+- Large buildings retain forgiving visual-silhouette selection regions, while right-click commands now resolve through a separate intent-aware priority.
+- Villager economy tasks name the active resource and compatible destination, including `Walking to Gold` and `Returning Gold to Ore Wash`.
+
+### WHAT WAS COMPLETED
+
+- Fixed a real browser-play defect where the Ore Wash's generous painted-silhouette hit region could steal a right-click intended for a visible Gold vein beside it and turn gathering into a storage movement order.
+- Split visual hit resolution into selection and command intent without changing world collision, placement bounds, pathfinding, or artwork.
+- Preserved hostile-unit priority for combat commands, then prefer visible resources over friendly buildings for economic commands. Left-click selection keeps the familiar unit, building, then resource order.
+- Made the hover cursor use the same intent-aware target as the eventual right-click, so the gather cursor no longer promises one result while the command issues another.
+- Replaced generic `Walking to resource`, `Returning to storage`, and `Move to storage` feedback with the actual resource or building name where known.
+- Improved same-task group feedback so several selected workers display their shared action instead of only an active-unit count.
+- Added a deterministic overlap scenario proving that an Ore Wash remains easy to select while a command at the visible Gold node resolves to gathering.
+- Bumped the runtime module marker to `20260823-targeting1` and synchronized the source game with the website mirror.
+
+### KNOWN ISSUES
+
+- Mixed-phase groups intentionally collapse to a concise `units active` summary when some Villagers are walking, some gathering, and some returning. Selecting one Villager still exposes its exact task and carried resource.
+- Visual selection uses forgiving authored-silhouette rectangles rather than expensive per-pixel alpha masks. This is deliberate for RTS-distance usability; change it only if a specific remaining mis-pick is reproduced.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. This pass corrects command interpretation and information clarity around the approved Ore Wash, Gold, and Villager assets.
+
+### SYSTEMS CREATED
+
+- Intent-aware screen target resolution shared by hover feedback and right-click commands.
+- Resource- and destination-specific Villager task labels across approach, route recovery, carrying, return, and direct storage movement.
+- Regression coverage for overlapping building/resource silhouettes and precise Gold-loop feedback.
+
+### VALIDATION
+
+- `node --check` passed for every Crownforge runtime module.
+- `tools/remediation-regression.mjs` passed all `23` focused areas, including intent-aware overlap targeting, exact gather/drop-off feedback, and every prior animation, movement, pathfinding, collision, economy, construction, wall, camera, combat, victory, and defeat check.
+- `tools/visual-integrity-audit.mjs` passed with no missing file, placeholder reference, fallback, or animation-dimension mismatch across `140` active animation combinations. The authored Ore Wash construction stages still report safe transparent margins.
+- Real browser input built an Ore Wash beside the opening Gold vein, showed the gather cursor over the overlapping target, issued the right-click gather command, depleted the full `420 Gold` node, and raised stored Gold from `5000` to `5420`.
+- A left-click on the same completed Ore Wash still selected it and displayed `320 / 320 HP`, Gold-only drop-off, short return routes, and the local `+25%` Gold yield.
+- The local browser console remained empty.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Keep the four-choice first-age catalog fixed and test one more existing interaction at normal travel speed, especially mixed-worker selection feedback or construction retasking beside large landmarks.
+- Adjust targeting again only if a concrete tree, berry, stone, Gold, unit, or building mis-pick can be reproduced with real pointer input.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add Stables, cavalry, Lumber Mill, Grain Mill, Stone Quarry, mine shaft, mint, market, technology tree, second age, processed-Gold inventory, or another resource currency in the next quality pass.
+- Do not add per-pixel hit masks, decorative Ore Wash animation, or extra UI labels without a demonstrated player-facing problem.

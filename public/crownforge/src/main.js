@@ -1,8 +1,8 @@
 import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260823-orewashstages1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260821-hallwoodpass2';
-import { CrownforgeRenderer } from './renderer.js?v=20260823-orewashstages1';
-import { CrownforgeSimulation } from './simulation.js?v=20260823-orewashstages1';
+import { CrownforgeInput } from './input.js?v=20260823-targeting1';
+import { CrownforgeRenderer } from './renderer.js?v=20260823-targeting1';
+import { CrownforgeSimulation } from './simulation.js?v=20260823-targeting1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -400,6 +400,10 @@ function selectionStatus() {
   if (units.length > 1) {
     const active = units.filter((unit) => unit.command !== 'idle').length;
     const carrying = units.filter((unit) => unit.carryAmount > 0).length;
+    const activeLabels = [...new Set(units
+      .filter((unit) => unit.command !== 'idle' && unit.actionLabel)
+      .map((unit) => unit.actionLabel))];
+    if (active && activeLabels.length === 1) return `${units.length} units · ${activeLabels[0]}`;
     if (carrying) return `${units.length} units · ${carrying} carrying${active ? ` · ${active} active` : ''}`;
     if (active) return `${units.length} units · ${active} active`;
     return `${units.length} units ready.`;

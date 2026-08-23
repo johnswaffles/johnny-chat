@@ -154,11 +154,11 @@ export class CrownforgeInput {
     // Keep hover feedback aligned with the forgiving visual-body hit regions
     // used by renderer selection. The old world-radius test only covered the
     // unit's ground anchor, which made visible clicks feel offset below/right.
-    const entity = this.renderer.getEntityAtScreen?.(this.simulation, point)
-      ?? this.simulation.getEntityAt(this.renderer.screenToWorld(point));
     const selected = this.simulation.selectedEntities;
     const selectedUnits = selected.filter((candidate) => candidate.kind === 'unit' && candidate.faction === 'player' && !candidate.dead);
     const selectedVillagers = selectedUnits.filter((candidate) => candidate.type === 'villager');
+    const entity = this.renderer.getEntityAtScreen?.(this.simulation, point, selectedUnits.length ? 'command' : 'select')
+      ?? this.simulation.getEntityAt(this.renderer.screenToWorld(point));
     if (selectedUnits.length) {
       if (entity?.faction === 'enemy') this._setCursor('attack-target');
       else if (entity?.kind === 'resource' && selectedVillagers.length) this._setCursor('gather-target');
@@ -206,7 +206,7 @@ export class CrownforgeInput {
       // Use the same forgiving visible-silhouette hit test as selection so a
       // click on a tree canopy, berry bush, or large stone deposit commands
       // the node itself rather than falling through to a plain move order.
-      const visualTarget = this.renderer.getEntityAtScreen?.(this.simulation, point);
+      const visualTarget = this.renderer.getEntityAtScreen?.(this.simulation, point, 'command');
       const result = this.simulation.issueContextCommand(world, visualTarget);
       if (result.kind !== 'none') this.renderer.addRipple(world, result.kind === 'attack' ? '#d86b55' : '#86c4cf');
       this.onCommand(result);

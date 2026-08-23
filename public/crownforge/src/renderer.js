@@ -741,9 +741,9 @@ export class CrownforgeRenderer {
     ctx.restore();
   }
 
-  getEntityAtScreen(simulation, point) {
+  getEntityAtScreen(simulation, point, purpose = 'select') {
     const world = this.screenToWorld(point);
-    const unitHit = simulation.units
+    const unitHits = simulation.units
       .filter((unit) => !unit.dead)
       .map((unit) => {
         const anchor = this.unitScreenPoint(unit);
@@ -756,9 +756,9 @@ export class CrownforgeRenderer {
           : null;
       })
       .filter(Boolean)
-      .sort((a, b) => a.distance - b.distance)[0]?.unit;
-    if (unitHit) return unitHit;
-    const buildingHit = simulation.buildings
+      .sort((a, b) => a.distance - b.distance);
+    const unitHit = unitHits[0]?.unit;
+    const buildingHits = simulation.buildings
       .filter((building) => !building.destroyed && building.hp > 0)
       .map((building) => {
         const anchor = this.worldToScreen(building);
@@ -771,9 +771,9 @@ export class CrownforgeRenderer {
         return withinX && withinY ? { building, distance: Math.hypot(point.x - anchor.x, point.y - anchor.y) } : null;
       })
       .filter(Boolean)
-      .sort((a, b) => a.distance - b.distance)[0]?.building;
-    if (buildingHit) return buildingHit;
-    const resourceHit = simulation.resourcesNodes
+      .sort((a, b) => a.distance - b.distance);
+    const buildingHit = buildingHits[0]?.building;
+    const resourceHits = simulation.resourcesNodes
       .filter((resource) => resource.amount > 0)
       .map((resource) => {
         const anchor = this.worldToScreen(resource);
@@ -785,8 +785,25 @@ export class CrownforgeRenderer {
         return withinX && withinY ? { resource, distance: Math.hypot(point.x - anchor.x, point.y - (anchor.y - size * 0.46)) } : null;
       })
       .filter(Boolean)
-      .sort((a, b) => a.distance - b.distance)[0]?.resource;
-    return resourceHit ?? simulation.getEntityAt(world);
+      .sort((a, b) => a.distance - b.distance);
+    const resourceHit = resourceHits[0]?.resource;
+
+    if (purpose === 'command') {
+      // Command intent is different from selection intent. Large authored
+      // buildings use generous silhouette hit regions so their upper stories
+      // remain easy to select, but those rectangles can overlap a visible
+      // tree, bush, or ore node beside the building. A hostile body still has
+      // first priority; after that, a visible resource wins before a friendly
+      // structure so right-click gathering cannot turn into an accidental
+      // "move to storage" order.
+      const hostileUnitHit = unitHits.find(({ unit }) => unit.faction === 'enemy')?.unit;
+      return hostileUnitHit ?? resourceHit ?? buildingHit ?? unitHit ?? simulation.getEntityAt(world);
+    }
+
+    // Selection retains the familiar body -> building -> resource order. The
+    // intent split keeps monumental structures forgiving to select without
+    // allowing that convenience region to swallow economic commands.
+    return unitHit ?? buildingHit ?? resourceHit ?? simulation.getEntityAt(world);
   }
 
   drawAtlasCell(ctx, image, ready, atlas, column, row, screen, size, alpha = 1, yOffset = 0) {
