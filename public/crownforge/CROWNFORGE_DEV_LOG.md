@@ -3156,7 +3156,8 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - `node --check` passed for the updated input and regression modules.
 - `tools/remediation-regression.mjs` passed the full focused suite, including primary-click foundation resume, right-click reassignment, cargo-first continuation, construction completion, movement, economy, walls, combat, victory, and defeat.
-- `git diff --check` remains part of the release gate; the source/public mirror and live Render build must be verified after the deployment commit.
+- `git diff --check` passed, the source/public runtime mirrors are byte-identical, and GitHub commit `70eb804` is the final pushed deployment commit.
+- Render returned `200` for the final build and served runtime marker `20260823-constructionclick1`; a fresh live browser load exposed the new module marker and the existing construction menu without a load failure.
 
 ### WHAT SHOULD BE POLISHED NEXT
 
