@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260822-goldpass1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260822-goldpass1';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260822-goldpass2';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260822-goldpass2';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -204,6 +204,32 @@ export class CrownforgeRenderer {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas);
     this.resize();
+  }
+
+  startupReadiness() {
+    // Hold the simulation behind the loading veil until every asset needed by
+    // the opening match can draw at production quality. Build-only and later
+    // action atlases may continue warming in the browser cache afterward.
+    const required = [
+      this.meadow,
+      this.environmentAtlas,
+      this.treeAtlas,
+      this.treeGroveAtlas,
+      this.largeStone,
+      this.enemyCamp,
+      this.firstAgeAssets.townCenter,
+      this.goldDepositAssets.small,
+      this.goldDepositAssets.medium,
+      this.goldDepositAssets.large,
+      this.villagerAtlases.motionLoop,
+      this.combatAtlases.soldier,
+      this.combatAtlases.soldierWalk,
+      this.combatAtlases.raider,
+      this.combatAtlases.raiderWalk,
+    ].filter(Boolean);
+    const loaded = required.filter((image) => image.complete && image.naturalWidth > 0).length;
+    const total = required.length;
+    return { loaded, total, ratio: total ? loaded / total : 1, ready: loaded === total };
   }
 
   resize() {

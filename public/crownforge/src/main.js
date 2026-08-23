@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260822-goldpass1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260822-goldpass2';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260821-hallwoodpass2';
-import { CrownforgeRenderer } from './renderer.js?v=20260822-goldpass1';
-import { CrownforgeSimulation } from './simulation.js?v=20260822-goldpass1';
+import { CrownforgeRenderer } from './renderer.js?v=20260822-goldpass2';
+import { CrownforgeSimulation } from './simulation.js?v=20260822-goldpass2';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -36,6 +36,9 @@ const placementTitle = document.querySelector('#placement-title');
 const placementDetail = document.querySelector('#placement-detail');
 const selectionIcon = document.querySelector('#selection-icon');
 const selectionKind = document.querySelector('#selection-kind');
+const loadingVeil = document.querySelector('#loading-veil');
+const loadingDetail = document.querySelector('#loading-detail');
+const loadingProgress = document.querySelector('#loading-progress');
 
 let toastTimer = null;
 function announce(message) {
@@ -442,19 +445,45 @@ function formatCost(cost) {
 }
 
 let previous = performance.now();
+let sceneReady = false;
+let sceneReadyAnnounced = false;
 function frame(now) {
   const delta = Math.min(0.05, (now - previous) / 1000);
   previous = now;
+
+  if (!sceneReady) {
+    const readiness = renderer.startupReadiness();
+    const percent = Math.round(readiness.ratio * 100);
+    loadingProgress.style.width = `${percent}%`;
+    loadingDetail.textContent = readiness.ready
+      ? 'The meadow is ready.'
+      : `Loading first-age artwork… ${percent}%`;
+    if (!readiness.ready) {
+      requestAnimationFrame(frame);
+      return;
+    }
+
+    sceneReady = true;
+    renderer.render(simulation, input, now);
+    updateUi();
+    loadingVeil.classList.add('is-ready');
+    loadingVeil.setAttribute('aria-hidden', 'true');
+    window.setTimeout(() => { loadingVeil.hidden = true; }, 450);
+  }
+
   input.update(delta);
   simulation.update(delta);
   audio.sync(simulation);
   renderer.render(simulation, input, now);
   updateUi();
+  if (!sceneReadyAnnounced) {
+    sceneReadyAnnounced = true;
+    announce(`${FACTION.name} are ready. Select a villager, then right-click a resource.`);
+  }
   requestAnimationFrame(frame);
 }
 
 window.crownforge = { simulation, renderer, input, audio };
 bindTooltips();
 updateMusicControl();
-announce(`${FACTION.name} are ready. Select a villager, then right-click a resource.`);
 requestAnimationFrame(frame);

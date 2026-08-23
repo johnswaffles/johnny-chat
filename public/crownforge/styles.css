@@ -15,6 +15,16 @@ html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background:
 body { color: var(--ink); font-family: 'DM Sans', system-ui, sans-serif; }
 button, [title] { -webkit-tap-highlight-color: transparent; }
 
+.loading-veil { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 42%, rgba(44,58,44,.96), rgba(12,28,30,.985) 68%); opacity: 1; transition: opacity .38s ease; }
+.loading-veil.is-ready { opacity: 0; pointer-events: none; }
+.loading-veil[hidden] { display: none; }
+.loading-card { width: min(390px, calc(100vw - 48px)); padding: 28px 30px 26px; text-align: center; border-color: rgba(196,158,75,.34); box-shadow: 0 24px 70px rgba(0,0,0,.35); }
+.loading-sigil { width: 64px; height: 64px; margin: 0 auto 12px; display: block; background-size: 256px 256px; }
+.loading-card h2 { margin: 6px 0 5px; font: 27px 'Marcellus', Georgia, serif; color: #fff1ce; }
+.loading-card p { margin: 0; color: #aebbad; font-size: 13px; }
+.loading-track { display: block; height: 4px; margin-top: 20px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.09); }
+.loading-track i { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #8e6d32, #d7b35d); transition: width .18s ease; }
+
 .ui-icon { display: inline-block; flex: 0 0 auto; width: 31px; height: 31px; background-image: url('./assets/crownforge-ui-icons-v1.png'); background-size: 126px 126px; background-repeat: no-repeat; filter: drop-shadow(0 2px 2px rgba(3, 9, 10, .38)); }
 .icon-seal { background-position: 0 0; }
 .icon-food { background-position: -31.5px 0; }

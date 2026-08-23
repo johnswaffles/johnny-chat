@@ -8,11 +8,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css?v=20260822-goldpass1" />
+    <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
+    <link rel="stylesheet" href="./styles.css?v=20260822-goldpass2" />
   </head>
   <body>
     <main class="game-shell">
       <canvas id="game-canvas" tabindex="0" aria-label="Crownforge playable settlement map"></canvas>
+
+      <section id="loading-veil" class="loading-veil" role="status" aria-live="polite">
+        <div class="loading-card glass-panel">
+          <span class="loading-sigil ui-icon icon-seal" aria-hidden="true"></span>
+          <div class="panel-kicker">FORGING THE MEADOW</div>
+          <h2>Preparing Crownforge</h2>
+          <p id="loading-detail">Loading first-age artwork…</p>
+          <span class="loading-track" aria-hidden="true"><i id="loading-progress"></i></span>
+        </div>
+      </section>
 
       <header class="topbar glass-panel">
         <div class="brand-lockup">
@@ -115,7 +126,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260822-goldpass1"></script>
+    <script type="module" src="./src/main.js?v=20260822-goldpass2"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

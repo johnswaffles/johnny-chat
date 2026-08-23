@@ -2717,7 +2717,8 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Added deterministic regional Gold seeding without changing the existing Food/Wood/Stone distribution and without adding automatic fields.
 - Added Gold gathering and carrying to the Villager state resolver. Mining Gold deliberately reuses the approved stone-pick motion because the physical action is the same; carrying uses a dedicated authored Gold atlas rather than recoloring the unit at runtime.
 - Added Gold to resource occlusion handling and contact feedback while keeping deposits protected from Palisade resource-clearing precedence.
-- Bumped the runtime marker to `20260822-goldpass1` and expanded both deterministic regression and active-asset audits.
+- Added a Crownforge loading veil for cold hosted visits. The simulation and match clock now remain paused until the critical meadow, environment, opening buildings, units, enemy camp, and Gold deposit artwork are ready, so players never begin behind a flat fallback scene.
+- Bumped the runtime marker to `20260822-goldpass2` and expanded both deterministic regression and active-asset audits.
 
 ### ASSETS CREATED
 
@@ -2733,6 +2734,7 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Extended the existing data-driven economy loop to a fourth resource without introducing a parallel gathering system.
 - Added tier-aware Gold capacities and asset resolution, final-load depletion, nearest completed Crown Hall storage routing, return-to-work, and unique interaction-slot coverage for multiple miners.
 - Added regression coverage for registration, opening reserves, all authored asset states, command acceptance, carried inventory, node consumption, deposit, final-load exhaustion, automatic work return, Crown Hall routing, regional distribution, and multi-worker spacing.
+- Added renderer startup-readiness reporting and an asset-gated match start. Build-only and later action artwork may continue warming in cache, but every asset visible in the opening match must be present before control is handed to the player.
 
 ### VALIDATION
 
@@ -2741,6 +2743,7 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - `tools/visual-integrity-audit.mjs` passed with no missing file, placeholder reference, fallback, or animation-dimension mismatch across `140` active animation combinations.
 - A direct simulation probe completed repeated Gold trips and deposits at `10×` travel speed while leaving gathering timing unchanged.
 - Browser play at normal and close zoom showed a clean fourth HUD card, grounded Gold deposit artwork, successful right-click tasking, repeated Crown Hall deposits, automatic work return, and Gold rising from `5000` to `5128`. Restart and defeat behavior remained functional, and the browser warning/error console stayed empty.
+- The first uncached Render verification exposed the old fallback meadow while the multi-megabyte art pack downloaded. The new loading gate was then tested from DOM load through release: the clock remained at `0:00` under the authored loading veil, the complete scene rendered before the veil cleared, and no warning/error was emitted.
 
 ### KNOWN ISSUES
 
