@@ -217,11 +217,9 @@ export class CrownforgeInput {
           && visualTarget.faction === 'player'
           && visualTarget.progress < 1
           && !visualTarget.destroyed) {
-          const result = this.simulation.issueContextCommand(
-            this.renderer.screenToWorld(point),
-            visualTarget,
-          );
-          if (result.kind !== 'none') this.renderer.addRipple(point, '#d7aa54');
+          const world = this.renderer.screenToWorld(point);
+          const result = this.simulation.issueContextCommand(world, visualTarget);
+          if (result.kind !== 'none') this.renderer.addRipple(world, '#d7aa54');
           this.onCommand(result);
           this._updateCursor(point);
           return;
