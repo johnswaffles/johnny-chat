@@ -2799,7 +2799,8 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - `node --check` passed for the changed runtime and regression modules.
 - `tools/remediation-regression.mjs` passed `22` focused areas, including Ore Wash placement/construction, Gold-only routing, Wood rejection and Hall fallback, `8 → 10` local Gold yield, Crown Guard Gold spending, and every prior movement, economy, wall, construction, pathfinding, camera, combat, victory, and defeat check.
 - `tools/visual-integrity-audit.mjs` passed with no missing active file, placeholder reference, fallback, or animation-dimension mismatch across `140` active animation combinations.
-- Local source browser play confirmed the authored Ore Wash in the four-item build menu, valid meadow placement, the exact `60 Wood` / `20 Stone` spend, assignment of three selected Villagers, completion at both map and closer gameplay zoom, clean alpha/ground contact, and an empty browser console. Live Render verification remains required before this pass can be called released.
+- Local source browser play confirmed the authored Ore Wash in the four-item build menu, valid meadow placement, the exact `60 Wood` / `20 Stone` spend, assignment of three selected Villagers, completion at both map and closer gameplay zoom, clean alpha/ground contact, and an empty browser console.
+- GitHub commit `e28958b` triggered the Render release. An uncached public playtest at `https://crownforge-dawn-kingdoms.onrender.com/` confirmed the loading gate, `20260822-orewash1` runtime, Ore Wash menu choice, exact resource spend, three-Villager construction through completion, and an empty browser console. `https://justaskjohnny.com/crownforge/` continues to redirect to that single live game.
 
 ### WHAT SHOULD BE POLISHED NEXT
 
