@@ -11,6 +11,7 @@ export class CrownforgeInput {
     onCommand = () => {},
     onPlacement = () => {},
     onBuildShortcut = () => {},
+    onRecoverShortcut = () => {},
   }) {
     this.canvas = canvas;
     this.renderer = renderer;
@@ -23,6 +24,7 @@ export class CrownforgeInput {
     this.onCommand = onCommand;
     this.onPlacement = onPlacement;
     this.onBuildShortcut = onBuildShortcut;
+    this.onRecoverShortcut = onRecoverShortcut;
     this.pointer = { x: 0, y: 0 };
     this.drag = null;
     this.pan = null;
@@ -58,10 +60,11 @@ export class CrownforgeInput {
       }
       if (this._isUiFocused()) return;
       const key = event.key.toLowerCase();
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'b'].includes(key)) event.preventDefault();
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'b', 'r'].includes(key)) event.preventDefault();
       if (event.repeat) return;
       this.keys.add(key);
       if (key === 'b') this.onBuildShortcut();
+      if (key === 'r') this.onRecoverShortcut();
     });
     window.addEventListener('keyup', (event) => this.keys.delete(event.key.toLowerCase()));
     window.addEventListener('blur', () => {

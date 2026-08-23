@@ -2973,3 +2973,56 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add Stables, cavalry, Lumber Mill, Grain Mill, Stone Quarry, mine shaft, mint, market, technology tree, second age, processed-Gold inventory, or another resource currency in the next quality pass.
 - Do not add a second construction system, construction particles, decorative workers, per-pixel hit masks, or another status panel for information already covered by the current task summary.
+
+## STUCK VILLAGER RECOVERY PASS — 2026-08-23
+
+### WHAT EXISTS
+
+- Selected player Villagers now have a contextual `RECOVER STUCK` command when their route is blocked, has no route, or they have been stationary long enough to qualify as stuck.
+- The recovery command is available from the selection panel and the `R` keyboard shortcut. It is hidden during normal work so the existing command deck stays uncluttered.
+
+### WHAT WAS COMPLETED
+
+- Added a bounded recovery state that appears after a genuine movement stall or an explicit blocked-route result; ordinary idle and working Villagers do not qualify.
+- Recovery interrupts the Villager's old work, releases gather/build/return reservations, clears the route, stops residual motion, and preserves the current selection.
+- A recovered Villager is placed at a collision-safe Crown Hall approach point, with widening fallback rings and personal-space checks so several recovered Villagers do not stack or appear inside the Hall, walls, buildings, trees, rocks, or other units.
+- Carried resources are deposited into the Crown Hall during recovery when the Hall accepts that resource and has capacity. If the stockpile is full, the remaining cargo stays visible on the Villager rather than being silently deleted.
+- The recovered Villager returns to a clean idle state at the Crown Hall and is ready for a new right-click order.
+- Added a concise recovery button, tooltip, and controls entry without introducing a new gameplay building or rescue system.
+- Synchronized the source game and `public/crownforge` mirror with the `20260823-recovery1` runtime marker.
+
+### KNOWN ISSUES
+
+- Recovery currently applies to selected player Villagers only. Crown Guards and enemy units still use normal retasking and are intentionally outside this narrow pass.
+- The command appears after a blocked/no-route signal or a measured stall; it is not shown for every Villager that is simply standing still.
+- If every safe approach point around the Crown Hall is occupied by a deliberately dense wall, building, or unit arrangement, recovery reports that no clear approach space is available instead of placing a unit inside an obstacle.
+- The in-app browser smoke check was attempted but blocked by the local Browser Use URL policy in this environment. Deterministic runtime and visual-integrity checks passed; live visual confirmation should be repeated once the local page is reachable from the browser.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. Recovery reuses the approved Villager, Crown Hall, selection, and seal icon assets.
+
+### SYSTEMS CREATED
+
+- Stuck-route detection and recovery availability latch.
+- Crown Hall recovery-point search with collision, building, resource, wall, map-boundary, and spacing checks.
+- Cargo deposit and animation feedback during recovery.
+- Selection-panel recovery action and `R` keyboard command.
+- Regression coverage for two Villagers recovering to separate valid points, depositing carried Wood, clearing blocked state, and leaving normal idle Villagers unaffected.
+
+### VALIDATION
+
+- `node --check` passed for the changed source and public runtime modules.
+- `git diff --check` passed.
+- `tools/remediation-regression.mjs` passed, including the focused two-Villager recovery scenario and all existing animation, movement, pathfinding, collision, economy, construction, wall, camera, combat, victory, and defeat checks.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across the active animation combinations.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Reproduce one concrete fence or wall arrangement from a real play session once browser access is available, then tune the recovery-point search only if the specific arrangement still fails.
+- Consider extending the same recovery pattern to Crown Guards only after a separate stuck-unit case is demonstrated.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add new civilizations, ages, buildings, units, AI systems, rescue buildings, or a separate teleport mechanic.
+- Do not make recovery available as a routine movement shortcut; it should remain a narrow safety valve for genuine blocked Villagers.

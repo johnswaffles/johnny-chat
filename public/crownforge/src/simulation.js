@@ -24,6 +24,7 @@ const BUILDING_COLLISION_RELEASE_TIME = 0.75;
 const DESTROYED_BUILDING_LIFETIME = 2.4;
 const FACING_HYSTERESIS = 0.12;
 const UNIT_STUCK_TIMEOUT = 0.72;
+const UNIT_RECOVERY_STUCK_THRESHOLD = 0.42;
 const UNIT_REPATH_COOLDOWN = 0.42;
 const UNIT_STATIC_CLEARANCE = 0.06;
 const MAX_UNIT_TRAVEL_SUBSTEP = 0.16;
@@ -386,6 +387,7 @@ export class CrownforgeSimulation {
       healthRevealTimer: 0,
       dead: false,
       pathBlocked: false,
+      recoveryAvailable: false,
       stuckTimer: 0,
       repathCooldown: 0,
       lastProgressX: x,
@@ -719,6 +721,7 @@ export class CrownforgeSimulation {
     if (!route) {
       unit.path = [];
       unit.pathBlocked = true;
+      unit.recoveryAvailable = true;
       unit.command = 'idle';
       unit.visualState = 'idle';
       unit.actionLabel = 'Field route blocked';
@@ -895,9 +898,13 @@ export class CrownforgeSimulation {
     else unit.stuckTimer = Math.max(0, unit.stuckTimer - dt * 2);
     unit.lastProgressX = unit.x;
     unit.lastProgressZ = unit.z;
+    if (unit.path.length && unit.stuckTimer >= UNIT_RECOVERY_STUCK_THRESHOLD) {
+      unit.recoveryAvailable = true;
+    }
     if (unit.path.length && unit.stuckTimer >= UNIT_STUCK_TIMEOUT && unit.repathCooldown <= 0) {
       unit.stuckTimer = 0;
-      this._replanUnit(unit);
+      const replanned = this._replanUnit(unit);
+      if (!replanned) unit.pathBlocked = true;
     }
     if (unit.command === 'move' && !unit.path.length && Math.hypot(unit.velocityX, unit.velocityZ) < 0.08) {
       unit.command = 'idle';
@@ -1258,6 +1265,7 @@ export class CrownforgeSimulation {
       unit.stairProgress = 0;
       unit.path = [];
       unit.pathBlocked = true;
+      unit.recoveryAvailable = true;
       unit.command = 'idle';
       unit.visualState = 'idle';
       unit.actionLabel = 'Crown Hall steps blocked';
@@ -1352,6 +1360,127 @@ export class CrownforgeSimulation {
       && node.amount > 0 && this._resourceBlocksPoint(point, node, padding));
   }
 
+  _isRecoverableVillager(unit) {
+    if (!unit || unit.dead || unit.faction !== 'player' || unit.type !== 'villager') return false;
+    return Boolean(unit.recoveryAvailable
+      || unit.pathBlocked
+      || (unit.path.length && unit.stuckTimer >= UNIT_RECOVERY_STUCK_THRESHOLD)
+      || /blocked|no route/i.test(unit.actionLabel ?? ''));
+  }
+
+  canRecoverSelectedUnits() {
+    return this.units.some((unit) => this.selectedIds.includes(unit.id) && this._isRecoverableVillager(unit));
+  }
+
+  _crownHallRecoveryPoints(hall) {
+    const points = [];
+    const seen = new Set();
+    const addPoint = (point) => {
+      const safePoint = {
+        x: clamp(point.x, 0.75, CONFIG.mapWidth - 0.75),
+        z: clamp(point.z, 0.75, CONFIG.mapHeight - 0.75),
+      };
+      const key = `${safePoint.x.toFixed(2)}:${safePoint.z.toFixed(2)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        points.push(safePoint);
+      }
+    };
+
+    // Prefer the Hall's authored interaction ring so recovery lands where a
+    // normal worker would return cargo, then widen the search only when the
+    // civic approach is occupied by a wall, building, or another unit.
+    for (const margin of [STORAGE_INTERACTION_DISTANCE, 1.35, 2.05, 2.8]) {
+      this._buildingApproachPoints(hall, margin).forEach(addPoint);
+    }
+    const footprint = this._buildingFootprint(hall);
+    const clearance = BUILDING_TYPES[hall.type].collisionClearance ?? 0;
+    for (const margin of [1.25, 2.1, 3.1, 4.2]) {
+      const radiusX = footprint.width / 2 + clearance + margin;
+      const radiusZ = footprint.height / 2 + clearance + margin;
+      for (let index = 0; index < 12; index += 1) {
+        const angle = -Math.PI / 2 + index * TAU / 12;
+        addPoint({ x: hall.x + Math.cos(angle) * radiusX, z: hall.z + Math.sin(angle) * radiusZ });
+      }
+    }
+    return points;
+  }
+
+  _findCrownHallRecoveryPoint(unit, hall, occupiedPoints = []) {
+    const role = SPACING_ROLES[unit.type] ?? SPACING_ROLES.villager;
+    return this._crownHallRecoveryPoints(hall).find((point) => {
+      if (this._pointBlockedForUnit(unit, point)) return false;
+      if (occupiedPoints.some((occupied) => distance(point, occupied) < role.personalSpace)) return false;
+      return this.units.every((other) => other === unit || other.dead || !other.faction
+        || distance(point, other) >= Math.max(role.personalSpace, SPACING_ROLES[other.type]?.personalSpace ?? 1));
+    }) ?? null;
+  }
+
+  _depositRecoveredCargo(unit, hall) {
+    if (!unit.carryAmount || !unit.carryType || !this._storageAccepts(hall, unit.carryType)) return 0;
+    const resourceType = unit.carryType;
+    const availableSpace = Math.max(0, RESOURCE_TYPES[resourceType].capacity - this.resources[resourceType]);
+    const deposited = Math.min(unit.carryAmount, availableSpace);
+    this.resources[resourceType] += deposited;
+    unit.carryAmount -= deposited;
+    if (deposited > 0) this.animation.emit(unit, ANIMATION_EVENTS.depositComplete, {
+      resourceType,
+      amount: deposited,
+      storageId: hall.id,
+      x: hall.x,
+      z: hall.z,
+    });
+    if (unit.carryAmount <= 0) unit.carryType = null;
+    return deposited;
+  }
+
+  unstickSelectedUnits() {
+    const recoverable = this.units.filter((unit) => this.selectedIds.includes(unit.id) && this._isRecoverableVillager(unit));
+    if (!recoverable.length) return { kind: 'recover', success: false, count: 0 };
+    const hall = this.buildings.find((building) => building.type === 'townCenter'
+      && building.faction === 'player'
+      && !building.destroyed
+      && building.progress >= 1);
+    if (!hall) {
+      this._announce('The Crown Hall is unavailable for unit recovery.');
+      return { kind: 'recover', success: false, count: 0 };
+    }
+    const occupiedPoints = [];
+    let recovered = 0;
+    for (const unit of recoverable) {
+      const point = this._findCrownHallRecoveryPoint(unit, hall, occupiedPoints);
+      if (!point) continue;
+      this._interruptWork(unit);
+      this._depositRecoveredCargo(unit, hall);
+      unit.x = point.x;
+      unit.z = point.z;
+      unit.path = [];
+      unit.routeTarget = null;
+      unit.returnStorageId = null;
+      unit.velocityX = 0;
+      unit.velocityZ = 0;
+      unit.motionSpeed = 0;
+      unit.animationPlaybackRate = 1;
+      unit.command = 'idle';
+      unit.visualState = unit.carryType ? `carry:${unit.carryType}` : 'idle';
+      unit.actionLabel = unit.carryType ? 'Recovered at Crown Hall with cargo' : 'Recovered at Crown Hall';
+      unit.pathBlocked = false;
+      unit.recoveryAvailable = false;
+      unit.stuckTimer = 0;
+      unit.repathCooldown = 0;
+      unit.lastProgressX = point.x;
+      unit.lastProgressZ = point.z;
+      occupiedPoints.push(point);
+      recovered += 1;
+    }
+    if (!recovered) {
+      this._announce('No clear approach space is available around the Crown Hall.');
+      return { kind: 'recover', success: false, count: 0 };
+    }
+    this._announce(`Recovered ${recovered} villager${recovered === 1 ? '' : 's'} at the Crown Hall.`);
+    return { kind: 'recover', success: true, count: recovered, hallId: hall.id };
+  }
+
   _cellIntersectsResource(cellX, cellZ, node, padding = 0) {
     const closestX = clamp(node.x, cellX, cellX + 1);
     const closestZ = clamp(node.z, cellZ, cellZ + 1);
@@ -1408,6 +1537,7 @@ export class CrownforgeSimulation {
 
   _resetMovementTracking(unit) {
     unit.stuckTimer = 0;
+    unit.recoveryAvailable = false;
     unit.repathCooldown = UNIT_REPATH_COOLDOWN;
     unit.lastProgressX = unit.x;
     unit.lastProgressZ = unit.z;
@@ -1498,6 +1628,7 @@ export class CrownforgeSimulation {
     if (!route) {
       unit.path = [];
       unit.pathBlocked = true;
+      unit.recoveryAvailable = true;
       unit.command = 'idle';
       unit.visualState = 'idle';
       unit.actionLabel = 'Build route blocked';
@@ -1547,6 +1678,7 @@ export class CrownforgeSimulation {
       unit.command = 'idle';
       unit.path = [];
       unit.pathBlocked = true;
+      unit.recoveryAvailable = true;
       unit.visualState = 'idle';
       unit.actionLabel = 'No route to resource';
       return false;
@@ -1581,6 +1713,7 @@ export class CrownforgeSimulation {
       const fallback = this._findStorageRoute(unit);
       if (!fallback) {
         unit.pathBlocked = true;
+        unit.recoveryAvailable = true;
         unit.actionLabel = 'No compatible drop-off';
         return false;
       }
@@ -1592,6 +1725,7 @@ export class CrownforgeSimulation {
       const fallback = this._findStorageRoute(unit);
       if (!fallback) {
         unit.pathBlocked = true;
+        unit.recoveryAvailable = true;
         unit.actionLabel = 'Drop-off route blocked';
         return false;
       }
@@ -2122,6 +2256,7 @@ export class CrownforgeSimulation {
     if (!path) {
       unit.path = [];
       unit.pathBlocked = true;
+      unit.recoveryAvailable = true;
       unit.command = 'idle';
       unit.visualState = 'idle';
       unit.actionLabel = command === 'move' ? 'No route available' : 'Path blocked';

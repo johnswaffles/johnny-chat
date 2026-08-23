@@ -1,8 +1,8 @@
 import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260823-orewashstages1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260823-targeting1';
+import { CrownforgeInput } from './input.js?v=20260823-recovery1';
 import { CrownforgeRenderer } from './renderer.js?v=20260823-targeting1';
-import { CrownforgeSimulation } from './simulation.js?v=20260823-constructionretask1';
+import { CrownforgeSimulation } from './simulation.js?v=20260823-recovery1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
 const canvas = document.querySelector('#game-canvas');
@@ -37,6 +37,8 @@ const placementTitle = document.querySelector('#placement-title');
 const placementDetail = document.querySelector('#placement-detail');
 const selectionIcon = document.querySelector('#selection-icon');
 const selectionKind = document.querySelector('#selection-kind');
+const selectionRecovery = document.querySelector('#selection-recovery');
+const recoverUnitsButton = document.querySelector('#recover-units');
 const loadingVeil = document.querySelector('#loading-veil');
 const loadingDetail = document.querySelector('#loading-detail');
 const loadingProgress = document.querySelector('#loading-progress');
@@ -115,6 +117,13 @@ const input = new CrownforgeInput({
     audio.ui();
     buildMenu.hidden = !buildMenu.hidden;
     trainMenu.hidden = true;
+  },
+  onRecoverShortcut: () => {
+    if (!simulation.canRecoverSelectedUnits()) return;
+    audio.unlock();
+    audio.ui();
+    simulation.unstickSelectedUnits();
+    updateUi();
   },
   onEscape: () => {
     audio.ui();
@@ -229,6 +238,14 @@ unitSpeed?.addEventListener('input', (event) => {
   if (unitSpeedValue) unitSpeedValue.textContent = `${value}×`;
 });
 
+recoverUnitsButton?.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  const result = simulation.unstickSelectedUnits();
+  if (result.success) audio.command('move');
+  updateUi();
+});
+
 function updateUi() {
   for (const [key, info] of Object.entries(RESOURCE_TYPES)) {
     const amount = Math.floor(simulation.resources[key]);
@@ -243,6 +260,7 @@ function updateUi() {
   if (unitSpeedValue) unitSpeedValue.textContent = `${simulation.getUnitSpeedScale()}×`;
   document.querySelector('#selection-title').textContent = selectionTitle();
   document.querySelector('#selection-detail').textContent = selectionStatus();
+  if (selectionRecovery) selectionRecovery.hidden = !simulation.canRecoverSelectedUnits();
   const preview = renderer.buildPreview;
   document.querySelector('#command-line').textContent = input.buildMode
     ? `PLACEMENT MODE  •  ${preview?.valid ? 'site ready' : (preview?.reason ?? 'move the foundation')}`

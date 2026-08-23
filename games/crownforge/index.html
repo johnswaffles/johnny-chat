@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
-    <link rel="stylesheet" href="./styles.css?v=20260822-goldpass2" />
+    <link rel="stylesheet" href="./styles.css?v=20260823-recovery1" />
   </head>
   <body>
     <main class="game-shell">
@@ -52,6 +52,12 @@
           <div class="selection-identity"><span id="selection-icon" class="ui-icon icon-population selection-icon" aria-hidden="true"></span><div><span id="selection-kind" class="selection-kind">GROUP</span><h2 id="selection-title">3 Crownwardens</h2></div></div>
           <p id="selection-detail">Select a Crownwarden and issue an order.</p>
           <div class="command-line"><span class="command-dot"></span><span id="command-line">Select a villager, then right-click a resource.</span></div>
+          <div id="selection-recovery" class="selection-recovery" hidden>
+            <button id="recover-units" class="recovery-button" type="button" title="Recover blocked villagers at the Crown Hall (R)">
+              <span class="ui-icon icon-seal recovery-icon" aria-hidden="true"></span>
+              <span><b>RECOVER STUCK</b><small>RETURN TO CROWN HALL <kbd>R</kbd></small></span>
+            </button>
+          </div>
         </section>
         <section class="glass-panel doctrine-panel">
           <div class="panel-kicker">FIRST LIGHT ORDERS</div>
@@ -70,6 +76,7 @@
             <div><kbd>W A S D</kbd><span>Pan camera</span></div>
             <div><kbd>Middle-drag</kbd><span>Pan map</span></div>
             <div><kbd>Esc</kbd><span>Close menu / placement</span></div>
+            <div><kbd>R</kbd><span>Recover stuck Villager</span></div>
           </div>
           <div class="settings-block unit-speed-setting">
             <div class="controls-setting-title">UNIT PACE</div>
@@ -127,7 +134,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260823-constructionretask1"></script>
+    <script type="module" src="./src/main.js?v=20260823-recovery1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

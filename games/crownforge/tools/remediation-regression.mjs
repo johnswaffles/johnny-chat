@@ -712,6 +712,40 @@ function checkTravelSpeedIsolation() {
   }
 }
 
+function checkVillagerRecovery() {
+  const simulation = movementSandbox();
+  const hall = simulation.addBuilding('townCenter', 20, 20, 'player');
+  const blocked = simulation.addUnit('villager', 8, 8, 'player');
+  const secondBlocked = simulation.addUnit('villager', 10, 8, 'player');
+  blocked.pathBlocked = true;
+  blocked.recoveryAvailable = true;
+  blocked.carryType = 'wood';
+  blocked.carryAmount = 9;
+  secondBlocked.pathBlocked = true;
+  secondBlocked.recoveryAvailable = true;
+  simulation.selectedIds = [blocked.id, secondBlocked.id];
+  simulation._syncSelectionFlags();
+  const beforeWood = simulation.resources.wood;
+  assert.equal(simulation.canRecoverSelectedUnits(), true, 'blocked Villagers expose the recovery action');
+  const result = simulation.unstickSelectedUnits();
+  assert.equal(result.success, true, 'selected blocked Villagers recover successfully');
+  assert.equal(result.count, 2, 'recovery handles a selected group');
+  assert.equal(simulation.resources.wood, beforeWood + 9, 'recovery deposits carried cargo at the Crown Hall');
+  assert.equal(blocked.command, 'idle', 'recovered Villager is ready for a new command');
+  assert.equal(blocked.path.length, 0, 'recovery clears the old blocked path');
+  assert.equal(blocked.pathBlocked, false, 'recovery clears the blocked state');
+  assert.equal(simulation._pointBlockedForUnit(blocked, blocked), false, 'recovered Villager stands on a valid approach point');
+  assert.equal(simulation._pointBlockedForUnit(secondBlocked, secondBlocked), false, 'second recovered Villager stands on a valid approach point');
+  assert.ok(Math.hypot(blocked.x - secondBlocked.x, blocked.z - secondBlocked.z) >= blocked.spacingRole.personalSpace, 'recovered Villagers keep personal spacing');
+  assert.equal(insideBuilding(blocked, hall), false, 'recovered Villager is outside the Crown Hall footprint');
+  assert.equal(simulation.canRecoverSelectedUnits(), false, 'recovery action disappears after a successful recovery');
+
+  const idle = simulation.addUnit('villager', 32, 32, 'player');
+  simulation.selectedIds = [idle.id];
+  simulation._syncSelectionFlags();
+  assert.equal(simulation.canRecoverSelectedUnits(), false, 'ordinary idle Villagers do not expose recovery');
+}
+
 function checkExpandedWorldAndEnemyDistance() {
   const simulation = freshSimulation();
   assert.equal(CONFIG.mapWidth, 560, 'expanded map width is ten-area scale');
@@ -862,6 +896,7 @@ checkCrownHallStairs();
 checkBarracksLandmarkScale();
 checkCrownHallProportionsAndBuildableRing();
 checkTravelSpeedIsolation();
+checkVillagerRecovery();
 checkExpandedWorldAndEnemyDistance();
 checkCursorCenteredZoom();
 checkUprightWallVisuals();
@@ -889,6 +924,7 @@ console.log(JSON.stringify({
     'person-scaled Barracks landmark and collision clearance',
     'equal Crown Hall/Barracks proportion, inward placement, and four-sided buildable ring',
     'travel-only speed scaling, high-speed collision routing, and fast group spacing',
+    'selected blocked Villager recovery at a clear Crown Hall approach with cargo deposit and group spacing',
     'regional wood, berry, stone, and scarce three-tier Gold coverage without prebuilt fields',
     'expanded map and opposite-side enemy camp',
     'cursor-centered zoom anchor in both directions',
