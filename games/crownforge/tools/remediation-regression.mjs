@@ -580,6 +580,18 @@ function checkWallEndpointMagnetism() {
   assert.deepEqual(preview.wallStart, { x: 189, z: 180 }, 'wall start magnetically moves to the next segment center');
   assert.deepEqual(preview.segments.at(-1), { x: 195, z: 180 }, 'connected wall preserves exact segment spacing');
   assert.ok(preview.wallConnectionIds.includes(existing.id), 'preview records the connected wall id');
+
+  const forgivingStart = simulation.getWallLinePreview({ x: 186.4, z: 182.2 }, { x: 195.2, z: 182.2 });
+  assert.equal(forgivingStart.wallConnectCount, 1, 'the larger magnetic field catches a nearby off-axis start');
+  assert.deepEqual(forgivingStart.wallStart, { x: 189, z: 180 }, 'off-axis start still lands on the exact next segment center');
+
+  const forgivingEnd = simulation.getWallLinePreview({ x: 168, z: 180 }, { x: 187.2, z: 182.2 });
+  assert.equal(forgivingEnd.wallConnectCount, 1, 'the larger magnetic field catches a nearby off-axis end');
+  assert.deepEqual(forgivingEnd.segments.at(-1), { x: 189, z: 180 }, 'off-axis end lands on the exact connecting segment center');
+
+  const reverseOverlap = simulation.getWallLinePreview({ x: 186, z: 180 }, { x: 177, z: 180 });
+  assert.equal(reverseOverlap.valid, false, 'reverse drag cannot lay a duplicate run over existing wall segments');
+
   assert.equal(simulation.placeWallLine({ x: 186.4, z: 180.1 }, { x: 195.2, z: 180.1 }), true, 'connected wall line places successfully');
   assert.equal(simulation.buildings.filter((building) => building.type === 'wall').length, 2, 'connected wall remains a separate construction record');
 }

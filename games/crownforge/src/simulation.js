@@ -15,7 +15,11 @@ const PATH_REACH_TOLERANCE = 0.38;
 const BUILDING_CLEARANCE = 0.4;
 const RESOURCE_FOOTPRINTS = { tree: 1.05, grove: 2.45, berry: 0.82, grain: 1.1, stone: 0.92, gold: 1.02 };
 const WALL_CLEARABLE_RESOURCE_TYPES = new Set(['wood', 'stone']);
-const WALL_CONNECT_SNAP_DISTANCE = 3.4;
+// A wall segment is three world units wide. The connection field is larger
+// than one segment so players can release near a terminal post instead of
+// having to land on a single pixel-perfect center, while still remaining
+// local enough that a nearby unrelated wall end does not steal the drag.
+const WALL_CONNECT_SNAP_DISTANCE = 5.4;
 const DECORATION_FOOTPRINTS = { log: 0.78, stump: 0.62, flowers: 0.42, pebbles: 0.44 };
 const COMBAT_SLOT_COUNT = 8;
 const COMBAT_SLOT_MARGIN = 0.12;
@@ -2662,8 +2666,18 @@ export class CrownforgeSimulation {
           z: start.z + direction.z * (count - 1) * span,
         };
         return [
-          { buildingId: building.id, side: 'start', point: start },
-          { buildingId: building.id, side: 'end', point: end },
+          {
+            buildingId: building.id,
+            side: 'start',
+            point: start,
+            outwardDirection: { x: -direction.x, z: -direction.z },
+          },
+          {
+            buildingId: building.id,
+            side: 'end',
+            point: end,
+            outwardDirection: { x: direction.x, z: direction.z },
+          },
         ];
       });
   }
@@ -2677,9 +2691,16 @@ export class CrownforgeSimulation {
       // terminal center. Testing both signs also allows clean T-junctions and
       // corners instead of forcing every new wall to extend straight ahead.
       for (const sign of [1, -1]) {
+        const candidateOffset = { x: direction.x * sign, z: direction.z * sign };
+        const outwardAlignment = candidateOffset.x * endpoint.outwardDirection.x
+          + candidateOffset.z * endpoint.outwardDirection.z;
+        // Never magnetize onto the existing run itself. The outward test
+        // still allows a new wall to approach a terminal from either side,
+        // plus perpendicular T-junctions and diagonal corners.
+        if (outwardAlignment < 0.28) continue;
         const candidate = {
-          x: endpoint.point.x + direction.x * span * sign,
-          z: endpoint.point.z + direction.z * span * sign,
+          x: endpoint.point.x + candidateOffset.x * span,
+          z: endpoint.point.z + candidateOffset.z * span,
         };
         const distanceToCandidate = distance(point, candidate);
         if (distanceToCandidate > WALL_CONNECT_SNAP_DISTANCE) continue;
@@ -2694,6 +2715,29 @@ export class CrownforgeSimulation {
       }
     }
     return nearest;
+  }
+
+  _wallSegmentPoints(source) {
+    const blueprint = BUILDING_TYPES.wall;
+    const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
+    const count = Math.max(1, Math.round(source.wallSegments ?? 1));
+    const direction = wallDirectionFromOptions(source);
+    const start = source.wallStart ?? {
+      x: source.x - direction.x * (count - 1) * span / 2,
+      z: source.z - direction.z * (count - 1) * span / 2,
+    };
+    return Array.from({ length: count }, (_, index) => ({
+      x: start.x + direction.x * index * span,
+      z: start.z + direction.z * index * span,
+    }));
+  }
+
+  _wallSegmentsOverlap(first, second) {
+    const span = BUILDING_TYPES.wall.wallSegmentSpan ?? BUILDING_TYPES.wall.footprint.width;
+    const overlapDistance = span * 0.42;
+    const firstSegments = this._wallSegmentPoints(first);
+    const secondSegments = this._wallSegmentPoints(second);
+    return firstSegments.some((firstPoint) => secondSegments.some((secondPoint) => distance(firstPoint, secondPoint) < overlapDistance));
   }
 
   getWallLinePreview(start, end) {
@@ -2938,9 +2982,13 @@ export class CrownforgeSimulation {
     if (this.buildings.some((building) => {
       if (building.destroyed || !this._boundsOverlap(bounds, this._buildingEntityBounds(building, 0))) return false;
       // Connected wall runs intentionally overlap their conservative collision
-      // envelopes at the terminal post. Other structures and unrelated wall
-      // crossings remain invalid so the magnet never becomes a bypass.
-      return !(blueprint.wall && building.type === 'wall' && connectedWallIds.has(building.id));
+      // envelopes at the terminal post. Do not allow a reverse drag to lay a
+      // second run over the existing segment centers, though; only the narrow
+      // terminal-post envelope overlap is valid for a magnetic join.
+      if (blueprint.wall && building.type === 'wall' && connectedWallIds.has(building.id)) {
+        return this._wallSegmentsOverlap(placement, building);
+      }
+      return true;
     })) {
       return { valid: false, reason: 'Another structure is in the way.' };
     }

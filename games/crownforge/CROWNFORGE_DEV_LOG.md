@@ -3026,3 +3026,50 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add new civilizations, ages, buildings, units, AI systems, rescue buildings, or a separate teleport mechanic.
 - Do not make recovery available as a routine movement shortcut; it should remain a narrow safety valve for genuine blocked Villagers.
+
+## PALISADE MAGNETIC CONNECT FOLLOW-UP — 2026-08-23
+
+### WHAT EXISTS
+
+- Palisade Walls still use the existing click-drag workflow, eight-way direction snap, multi-segment construction record, and resource-clearing precedence.
+- Wall ends now have a wider, local magnetic connection field. Starting or finishing a drag near a terminal post locks the preview to the exact next segment center, so the player can continue dragging from the connected point instead of pixel-hunting.
+
+### WHAT WAS COMPLETED
+
+- Enlarged endpoint magnetism from a one-segment-tight threshold to a more forgiving `5.4` world-unit connection field.
+- Applied the same magnetism to both the drag start and drag end, including off-axis approaches, straight extensions, corners, and T-junctions.
+- Added terminal outward-direction filtering so a connection candidate must sit outside the existing wall run. Reverse drags can no longer magnetize onto the existing segment centers and create a duplicate fence over itself.
+- Preserved the existing placement rules: trees and stone are cleared by a valid wall on release; food nodes, decorations, units, buildings, map limits, builder access, and affordability remain protected.
+- Updated the construction tooltip and build-menu guidance to explain that dragging from or toward a wall end will magnetically lock within a generous radius.
+- Synchronized the source game and `public/crownforge` mirror with the `20260823-wallconnect2` runtime marker.
+
+### KNOWN ISSUES
+
+- A wall can still be placed as one continuous construction record with shared health/progress rather than as individually selectable segments. This remains an intentional first-slice limitation.
+- If a player intentionally tries to route a new wall directly through the middle of an existing connected run, the preview remains invalid rather than guessing which segments to replace.
+- Browser visual smoke testing should still be repeated at normal and close zoom after deployment when the in-app browser can reach the local/live page; deterministic wall placement coverage is passing.
+
+### ASSETS CREATED
+
+- No new artwork was required. The existing authored upright Palisade direction family remains canonical.
+
+### SYSTEMS CREATED
+
+- Wider endpoint magnetic field for both wall-drag endpoints.
+- Terminal outward filtering and segment-center overlap protection for connected wall runs.
+- Regression coverage for off-axis start/end magnetism and reverse-drag duplicate prevention.
+
+### VALIDATION
+
+- `node --check` remains clean for the changed simulation and main modules.
+- `git diff --check` remains clean.
+- `tools/remediation-regression.mjs` passed the full suite, including the focused wall precedence, magnetic connection, off-axis magnetism, reverse-overlap guard, construction, movement, economy, combat, victory, and defeat checks.
+- `tools/visual-integrity-audit.mjs` remains clean with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across the active animation combinations.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Verify one straight extension, one corner, and one T-junction with real pointer input at normal and close zoom. Tune only a demonstrated oversnap or missed connection.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add gates, towers, wall editing, segment-level damage, freeform spline walls, or a second wall-placement mode until this forgiving endpoint contract remains stable.

@@ -1,8 +1,8 @@
 import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260823-orewashstages1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260823-recovery1';
+import { CrownforgeInput } from './input.js?v=20260823-wallconnect2';
 import { CrownforgeRenderer } from './renderer.js?v=20260823-targeting1';
-import { CrownforgeSimulation } from './simulation.js?v=20260823-recovery1';
+import { CrownforgeSimulation } from './simulation.js?v=20260823-wallconnect2';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
 const canvas = document.querySelector('#game-canvas');
@@ -276,7 +276,7 @@ function updateUi() {
     const ready = Boolean(builder && affordable && builder.carryAmount <= 0);
     const detail = button.querySelector(`[data-build-detail="${type}"]`);
     const status = !builder ? 'SELECT VILLAGER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
-    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? 'DRAG TO AIM  •  8-WAY SNAP  •  AUTO-CONNECT  •  ' : ''}${status}`;
+    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? 'DRAG TO AIM  •  8-WAY SNAP  •  WIDE MAGNET  •  ' : ''}${status}`;
     button.classList.toggle('is-unavailable', !ready);
     setTooltip(button, !builder
       ? `Select a villager before placing a ${blueprint.label}`
@@ -285,7 +285,7 @@ function updateUi() {
         : !affordable
           ? `Gather the resources needed for a ${blueprint.label}`
           : blueprint.wall
-          ? `Click-drag in any direction; the ${blueprint.label} snaps to 8 orientations and magnetically connects to nearby wall ends`
+          ? `Click-drag from or toward a wall end; the ${blueprint.label} locks on within a generous radius, then snaps to 8 orientations`
             : `Place a ${blueprint.label}`);
   });
   const selected = simulation.selectedEntities;
