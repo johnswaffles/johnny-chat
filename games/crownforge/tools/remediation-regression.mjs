@@ -546,17 +546,24 @@ function checkWallResourcePrecedence() {
 
   simulation.addResource('tree', 'wood', 180, 80, 260, 0, { sizeTier: 'medium' });
   simulation.addResource('stone', 'stone', 184, 80, 360, 0, { sizeTier: 'medium' });
+  simulation.addResource('berry', 'food', 181, 80.6, 105, 0, { sizeTier: 'small' });
+  simulation.addDecoration('pebbles', 182, 80.4, 0, 0.7);
+  const unitInWallPath = simulation.addUnit('villager', 183, 80, 'player');
   const tree = simulation.resourcesNodes.find((node) => node.x === 180 && node.z === 80);
   const stone = simulation.resourcesNodes.find((node) => node.x === 184 && node.z === 80);
+  const berry = simulation.resourcesNodes.find((node) => node.x === 181 && node.z === 80.6);
   assert.ok(tree && stone, 'wall test has tree and stone obstructions');
+  assert.ok(berry && unitInWallPath, 'wall test has a food node and unit in its path');
 
   simulation.issueContextCommand({ x: tree.x, z: tree.z });
   const preview = simulation.getWallLinePreview({ x: 178, z: 80 }, { x: 184, z: 80 });
   assert.equal(preview.valid, true, 'wall preview accepts trees and stone in its snapped path');
-  assert.equal(preview.resourceClearCount, 2, 'wall preview reports clearable tree and stone nodes');
+  assert.equal(preview.resourceClearCount, 3, 'wall preview reports all natural resource nodes it will clear');
   assert.equal(simulation.getWallLinePreview({ x: 76, z: 82 }, { x: 84, z: 82 }).valid, false, 'wall still respects building collision');
   assert.equal(simulation.placeWallLine({ x: 178, z: 80 }, { x: 184, z: 80 }), true, 'wall line places through tree and stone');
-  assert.equal(simulation.resourcesNodes.some((node) => node.id === tree.id || node.id === stone.id), false, 'wall removes tree and stone nodes it replaces');
+  assert.equal(simulation.resourcesNodes.some((node) => node.id === tree.id || node.id === stone.id || node.id === berry.id), false, 'wall removes every resource node it replaces');
+  assert.equal(simulation.decorations.some((decoration) => decoration.x === 182 && decoration.z === 80.4), false, 'wall clears small ground details it replaces');
+  assert.ok(simulation.units.includes(unitInWallPath), 'units yield to wall placement instead of blocking the preview');
   assert.equal(villager.gatherTarget, null, 'cleared resource retasks a worker safely');
   assert.ok(simulation.buildings.some((building) => building.type === 'wall' && building.wallSegments === 3), 'wall keeps its snapped segment run');
 }

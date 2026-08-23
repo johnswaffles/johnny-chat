@@ -3074,3 +3074,52 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add gates, towers, wall editing, segment-level damage, freeform spline walls, or a second wall-placement mode until this forgiving endpoint contract remains stable.
+
+## PALISADE GROUND PRECEDENCE PASS — 2026-08-23
+
+### WHAT EXISTS
+
+- Palisade placement now treats map boundaries and actual structures as the only world blockers. A wall can claim open ground even when small natural assets or units occupy its line.
+- Trees, groves, stone, berry, Gold, small ground details, and units yield to a valid Palisade line. Existing buildings and unrelated Palisade structures still reject overlap.
+
+### WHAT WAS COMPLETED
+
+- Added a wall-specific placement path that bypasses the generic building checks for access-room count, resource collision, decoration collision, and unit collision.
+- Kept map-boundary, structure-overlap, selected-builder, builder-cargo, and resource-cost checks intact so the relaxed rule does not permit an out-of-bounds or unpaid foundation.
+- Expanded wall resource precedence to all configured resource types, not only Wood and Stone. Any overlapping resource is removed when the wall is released, with existing gatherer interruption and cargo-return handling preserved.
+- Ground details inside the wall envelope are removed on release so pebbles, flowers, stumps, and logs cannot remain visibly trapped beneath the Palisade.
+- Updated preview, placement toast, and placement announcement language from `tree/stone` to `resource`/`natural detail` so the interface matches the broader rule.
+- Kept the future hill boundary explicit: no hill terrain or hill artwork was added in this pass. When hills arrive, they will need a dedicated terrain/wall visual contract rather than being silently treated as flat meadow.
+- Bumped the runtime marker to `20260823-wallprecedence2` and synchronized the source/public Crownforge mirrors.
+
+### KNOWN ISSUES
+
+- The wall still cannot be placed outside the map or through an actual structure. This is intentional and prevents foundations from being unreachable or visually merged with buildings.
+- A wall may temporarily overlap a unit during placement because units now yield to the wall; the normal collision solver must separate the unit after the foundation exists.
+- Hills are not implemented yet. Their slope-aware Palisade artwork, placement height, and collision behavior remain future work.
+
+### ASSETS CREATED
+
+- No new artwork was required. The existing upright Palisade family remains the visual source for flat first-age ground.
+
+### SYSTEMS CREATED
+
+- Wall-specific ground-claiming precedence.
+- All-resource cleanup and ground-detail cleanup on Palisade release.
+- Regression coverage proving a wall can cross tree, stone, berry, detail, and unit positions while still rejecting a building.
+
+### VALIDATION
+
+- `node --check` passed for changed source and public runtime modules.
+- `git diff --check` passed.
+- `tools/remediation-regression.mjs` passed the full suite, including wall precedence, all-resource cleanup, unit yielding, magnetic endpoint joining, construction, movement, economy, combat, victory, and defeat checks.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across the active animation combinations.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Verify the relaxed rule with a real pointer drag across the exact open-land location that previously failed. If it still rejects, identify the specific structure or map-edge reason shown by the placement readout before changing the rule again.
+- Design hills as a separate terrain pass with authored slope-compatible wall variants only when hill gameplay is explicitly scheduled.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add hills, hill traversal, terrain elevation, gates, towers, wall editing, segment-level damage, or freeform spline walls in this pass.

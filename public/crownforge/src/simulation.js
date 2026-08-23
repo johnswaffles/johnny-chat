@@ -14,7 +14,10 @@ const BUILDING_INTERACTION_DISTANCE = 0.78;
 const PATH_REACH_TOLERANCE = 0.38;
 const BUILDING_CLEARANCE = 0.4;
 const RESOURCE_FOOTPRINTS = { tree: 1.05, grove: 2.45, berry: 0.82, grain: 1.1, stone: 0.92, gold: 1.02 };
-const WALL_CLEARABLE_RESOURCE_TYPES = new Set(['wood', 'stone']);
+// A Palisade is a deliberate ground-claiming structure. Current and future
+// resource types may be cleared from its footprint; only actual structures
+// remain placement blockers.
+const WALL_CLEARABLE_RESOURCE_TYPES = new Set(Object.keys(RESOURCE_TYPES));
 // A wall segment is three world units wide. The connection field is larger
 // than one segment so players can release near a terminal post instead of
 // having to land on a single pixel-perfect center, while still remaining
@@ -1349,6 +1352,28 @@ export class CrownforgeSimulation {
     this.resourcesNodes = this.resourcesNodes.filter((node) => !clearedIds.has(node.id));
     this.selectedIds = this.selectedIds.filter((id) => !clearedIds.has(id));
     this._syncSelectionFlags();
+    return cleared.length;
+  }
+
+  _clearDecorationsForWall(preview) {
+    if (!preview?.clearResources) return 0;
+    const placement = {
+      type: 'wall',
+      x: preview.world.x,
+      z: preview.world.z,
+      progress: 1,
+      ...preview,
+    };
+    const bounds = this._buildingBounds('wall', placement, BUILDING_CLEARANCE, placement);
+    const cleared = this.decorations.filter((decoration) => this._circleIntersectsBounds(
+      decoration,
+      DECORATION_FOOTPRINTS[decoration.type] ?? 0.45,
+      bounds,
+    ));
+    if (cleared.length) {
+      const clearedIds = new Set(cleared.map((decoration) => decoration.id));
+      this.decorations = this.decorations.filter((decoration) => !clearedIds.has(decoration.id));
+    }
     return cleared.length;
   }
 
@@ -2827,6 +2852,7 @@ export class CrownforgeSimulation {
       return false;
     }
     const cleared = this._clearResourcesForWall(preview);
+    const clearedDetails = this._clearDecorationsForWall(preview);
     this._spend(preview.totalCost);
     const building = this.addBuilding('wall', preview.world.x, preview.world.z, 'player', 0.04, {
       wallSegments: preview.wallSegments,
@@ -2844,7 +2870,10 @@ export class CrownforgeSimulation {
       if (this._sendUnitToBuilding(builder, building, index)) assigned += 1;
       else builder.buildTarget = null;
     });
-    const clearedMessage = cleared ? ` Cleared ${cleared} tree/stone node${cleared === 1 ? '' : 's'} in its path.` : '';
+    const clearedCount = cleared + clearedDetails;
+    const clearedMessage = clearedCount
+      ? ` Cleared ${clearedCount} natural detail${clearedCount === 1 ? '' : 's'} in its path.`
+      : '';
     this._announce(`${blueprint.label} line placed: ${preview.wallSegments} segment${preview.wallSegments === 1 ? '' : 's'}. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.${clearedMessage}`);
     return true;
   }
@@ -2991,6 +3020,19 @@ export class CrownforgeSimulation {
       return true;
     })) {
       return { valid: false, reason: 'Another structure is in the way.' };
+    }
+    if (blueprint.wall) {
+      const builder = this._selectedBuilders(point)[0];
+      if (!builder) return { valid: false, reason: 'Select a villager to build.' };
+      if (builder.carryAmount > 0) return { valid: false, reason: 'Let the selected villager deposit cargo first.' };
+      if (!this._canAfford(blueprint.cost)) {
+        const missing = Object.entries(blueprint.cost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
+        return { valid: false, reason: `Not enough ${missing} for a ${blueprint.label}.` };
+      }
+      // Palisades claim the ground they occupy. Do not apply the generic
+      // access/resource/unit checks below: trees, rocks, small details, and
+      // units yield to the wall, while structures remain the real blocker.
+      return { valid: true, reason: 'Palisade line ready.' };
     }
     if (this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)
       && this._circleIntersectsBounds(node, resourceFootprint(node), bounds))) {

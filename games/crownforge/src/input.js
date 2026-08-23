@@ -93,7 +93,7 @@ export class CrownforgeInput {
     this.onBuildMode(type);
     this._updateCursor(this.pointer);
     this.onToast(type === 'wall'
-      ? 'Drag across the meadow to aim the wall. Start or finish near a wall end and it magnetically locks on. Trees and stone clear on release. Press Esc to cancel.'
+      ? 'Drag across the meadow to aim the wall. Start or finish near a wall end and it magnetically locks on. Natural resources yield to the wall; structures remain protected. Press Esc to cancel.'
       : 'Construction menu: choose a clear meadow tile. Press Esc to cancel.');
   }
 
