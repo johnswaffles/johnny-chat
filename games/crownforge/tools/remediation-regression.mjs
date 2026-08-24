@@ -520,6 +520,9 @@ function checkConstructionRetaskingAndTaskSummary() {
   simulation.selectedIds = villagers.map((unit) => unit.id);
   simulation._syncSelectionFlags();
   simulation.issueContextCommand(clearPoint, { kind: 'ground' });
+  // Ordinary ground orders now queue behind active construction. Keep the
+  // explicit interruption path covered for tools or future cancel controls.
+  villagers.forEach((unit) => simulation._interruptWork(unit));
   assert.equal(barracks.buildAssigned.length, 0, 'retasking every builder releases the construction assignment');
   assert.equal(barracks.buildSlotReservations.size, 0, 'retasking every builder releases every construction slot');
   const pausedProgress = barracks.progress;
@@ -568,6 +571,42 @@ function checkConstructionRetaskingAndTaskSummary() {
     '2 active · Gathering Wood',
     'homogeneous command feedback stays concise',
   );
+}
+
+function checkConstructionOrderQueue() {
+  const simulation = freshSimulation();
+  const townCenter = simulation.buildings.find((building) => building.type === 'townCenter');
+  const placement = [
+    { x: townCenter.x - 18, z: townCenter.z },
+    { x: townCenter.x + 18, z: townCenter.z },
+    { x: townCenter.x, z: townCenter.z + 17 },
+    { x: townCenter.x, z: townCenter.z - 17 },
+  ].find((point) => simulation.getPlacementCheck('barracks', point).valid);
+  assert.ok(placement, 'construction queue scenario has a valid Barracks site');
+  assert.equal(simulation.placeBuilding('barracks', placement), true, 'construction queue scenario places a foundation');
+  const barracks = simulation.buildings.find((building) => building.type === 'barracks' && building.progress < 1);
+  const worker = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  assert.ok(barracks && worker, 'construction queue scenario has a foundation and worker');
+
+  simulation.selectedIds = [worker.id];
+  simulation._syncSelectionFlags();
+  const queuedPoint = { x: townCenter.x + 40, z: townCenter.z + 32 };
+  const command = simulation.issueContextCommand(queuedPoint, { kind: 'ground' });
+  assert.equal(command.kind, 'move', 'a new ground order remains a move command while construction is active');
+  assert.equal(command.success, true, 'a new ground order is accepted while construction is active');
+  assert.equal(command.queued, 1, 'the active builder reports one queued order');
+  assert.equal(worker.command, 'build', 'the builder keeps the current construction command');
+  assert.equal(worker.buildTarget, barracks.id, 'the builder keeps the current foundation target');
+  assert.equal(worker.orderQueue.length, 1, 'the new order is stored on the builder');
+  assert.match(worker.actionLabel, /queued/, 'the builder task label exposes the queued order');
+
+  simulation.setUnitSpeedScale(10);
+  advance(simulation, BUILDING_TYPES.barracks.buildTime + 35);
+  assert.equal(barracks.progress, 1, 'the foundation completes before the queued order executes');
+  assert.equal(worker.orderQueue.length, 0, 'the queued order is removed after execution begins');
+  assert.ok(['move', 'idle'].includes(worker.command), 'the builder transitions into the queued move or its settled state');
+  advance(simulation, 4);
+  assert.ok(Math.hypot(worker.x - queuedPoint.x, worker.z - queuedPoint.z) < 3.0, 'the builder reaches the queued destination');
 }
 
 function checkWallResourcePrecedence() {
@@ -982,6 +1021,7 @@ checkIntentAwareVisualTargeting();
 checkReadableResourceApproaches();
 checkConstructionAndPlacement();
 checkConstructionRetaskingAndTaskSummary();
+checkConstructionOrderQueue();
 checkWallResourcePrecedence();
 checkWallEndpointMagnetism();
 checkBlockedDestinationFallback();
@@ -1010,6 +1050,7 @@ console.log(JSON.stringify({
     'focused first-age building catalog with the Crown Hall as universal fallback',
     'placement rejection and Barracks completion',
     'construction pause, foundation right-click reassignment, cargo-first resume, and mixed-task feedback',
+    'active builders queue new move orders and continue them after construction completes',
     'wall precedence over trees and stone with safe resource cleanup',
     'magnetic wall endpoint snap and connected segment spacing',
     'blocked destination fallback outside building clearance',

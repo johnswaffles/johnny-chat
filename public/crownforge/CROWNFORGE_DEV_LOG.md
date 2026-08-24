@@ -3259,3 +3259,52 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add curved wall splines, gates, wall editing, elevation-specific wall art, or a second placement system as part of this focused repair.
+
+## CONSTRUCTION ORDER QUEUE PASS — 2026-08-24
+
+### WHAT EXISTS
+
+- Villagers can keep an active construction assignment while accepting a new move, gather, building, Crown Hall, attack, or construction command.
+- Queued orders are executed in order after the current foundation completes, with a small per-Villager queue cap to keep the behavior readable and bounded.
+
+### WHAT WAS COMPLETED
+
+- Added a construction-aware order queue to the existing Villager command state instead of creating a parallel command system.
+- Preserved the current build target, construction slot, and building progress when a builder receives a normal player order.
+- Added task feedback that shows when a builder is walking to the site, building, or carrying queued work.
+- Added continuation for queued movement, gathering, building, storage, Crown Hall stair, completed-building, and attack orders.
+- Queued work now resumes after construction completion and after a queued resource deposit, while invalid or depleted targets are skipped safely.
+- Kept explicit interruption behavior available for future cancel controls and teardown paths.
+
+### KNOWN ISSUES
+
+- The queue is intentionally small and FIFO; there is no visible multi-order command list or reorder/remove interaction yet.
+- A queued target that is destroyed or depleted before the builder finishes is skipped and the next valid order is attempted.
+- Queue state is currently per Villager and is not persisted between resets, matches, or saves.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. Existing construction, movement, gathering, carrying, and combat artwork continues to provide the visual states.
+
+### SYSTEMS CREATED
+
+- Construction-aware order storage and bounded queue handling.
+- Queue execution hooks at foundation completion, movement arrival, and resource deposit completion.
+- Regression coverage for preserving the active build, accepting a follow-up order, completing the foundation, and reaching the queued destination.
+
+### VALIDATION
+
+- `node --check` passed for the changed simulation, main, and regression modules.
+- `tools/remediation-regression.mjs` passed the complete focused simulation suite, including the new construction order queue scenario.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across 140 active animation combinations.
+- `git diff --check` passed.
+- Runtime marker bumped to `20260824-constructionqueue1`; source and public runtime mirrors are synchronized.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Visually playtest a builder receiving move, gather, and second-build orders during construction at normal speed and speed 10.
+- Add only the smallest visible queue indicator needed if the current task label is not enough during live play.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add a waypoint editor, queue reordering, saved build plans, patrol scripting, production automation, or a broader AI order planner in this pass.
