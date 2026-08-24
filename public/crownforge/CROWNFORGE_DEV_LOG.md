@@ -3206,7 +3206,8 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - `node --check` passed for the changed simulation, input, main, and regression modules.
 - `tools/remediation-regression.mjs` passed the full focused suite, including long-wall edge locks, existing wall magnets, structure blocking, resource precedence, construction, movement, economy, combat, victory, and defeat.
 - `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across 140 active animation combinations.
-- Source/public runtime synchronization and live Render verification remain part of the deployment gate for this pass.
+- Source/public runtime and log mirrors were synchronized before commit `61430ca` was pushed to GitHub.
+- Render returned `200` and served runtime marker `20260824-walledge1`; a fresh live game load exposed `EDGE LOCK` in the Palisade button and showed a normal-zoom `MAP EDGE LOCK` placement readout.
 
 ### WHAT SHOULD BE POLISHED NEXT
 
