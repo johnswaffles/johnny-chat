@@ -629,6 +629,17 @@ function checkWallEndpointMagnetism() {
   assert.equal(forgivingEnd.wallConnectCount, 1, 'the larger magnetic field catches a nearby off-axis end');
   assert.deepEqual(forgivingEnd.segments.at(-1), { x: 189, z: 180 }, 'off-axis end lands on the exact connecting segment center');
 
+  const cornerTurn = simulation.getWallLinePreview({ x: 186, z: 180 }, { x: 186, z: 189 });
+  assert.equal(cornerTurn.valid, true, 'a turned wall remains placeable at a terminal corner');
+  assert.equal(cornerTurn.wallConnectCount, 1, 'a perpendicular turn keeps its magnetic wall connection');
+  assert.deepEqual(cornerTurn.wallStart, { x: 186, z: 183 }, 'a perpendicular turn starts one segment beyond the terminal');
+  assert.deepEqual(cornerTurn.segments.at(-1), { x: 186, z: 189 }, 'a perpendicular turn preserves exact segment spacing');
+
+  const diagonalTurn = simulation.getWallLinePreview({ x: 186, z: 180 }, { x: 177, z: 171 });
+  assert.equal(diagonalTurn.valid, true, 'a diagonal wall turn remains placeable at a terminal corner');
+  assert.equal(diagonalTurn.wallConnectCount, 1, 'a diagonal turn keeps its magnetic wall connection');
+  assert.deepEqual(diagonalTurn.wallStart, { x: 183.87867965644037, z: 177.87867965644037 }, 'a diagonal turn starts ahead of the terminal in its chosen heading');
+
   const reverseOverlap = simulation.getWallLinePreview({ x: 186, z: 180 }, { x: 177, z: 180 });
   assert.equal(reverseOverlap.valid, false, 'reverse drag cannot lay a duplicate run over existing wall segments');
 

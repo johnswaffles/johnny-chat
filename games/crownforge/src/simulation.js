@@ -2715,7 +2715,7 @@ export class CrownforgeSimulation {
       });
   }
 
-  _nearestWallConnection(point, direction) {
+  _nearestWallConnection(point, direction, signs = [1, -1]) {
     const blueprint = BUILDING_TYPES.wall;
     const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
     let nearest = null;
@@ -2723,14 +2723,17 @@ export class CrownforgeSimulation {
       // The new segment center sits one segment span away from the existing
       // terminal center. Testing both signs also allows clean T-junctions and
       // corners instead of forcing every new wall to extend straight ahead.
-      for (const sign of [1, -1]) {
+      for (const sign of signs) {
         const candidateOffset = { x: direction.x * sign, z: direction.z * sign };
         const outwardAlignment = candidateOffset.x * endpoint.outwardDirection.x
           + candidateOffset.z * endpoint.outwardDirection.z;
-        // Never magnetize onto the existing run itself. The outward test
-        // still allows a new wall to approach a terminal from either side,
-        // plus perpendicular T-junctions and diagonal corners.
-        if (outwardAlignment < 0.28) continue;
+        // Never magnetize back onto the existing run itself. Perpendicular
+        // and diagonal headings are legitimate corner turns or T-junctions,
+        // so only reject a heading that points directly back through the old
+        // wall. This is
+        // what keeps a connected endpoint locked when the player changes the
+        // new run from a straight extension into a different compass heading.
+        if (outwardAlignment < -0.85) continue;
         const candidate = {
           x: endpoint.point.x + candidateOffset.x * span,
           z: endpoint.point.z + candidateOffset.z * span,
@@ -2850,7 +2853,13 @@ export class CrownforgeSimulation {
     const directionIndex = ((Math.round(-rawAngle / (Math.PI / 4)) % WALL_SNAP_DIRECTIONS.length) + WALL_SNAP_DIRECTIONS.length) % WALL_SNAP_DIRECTIONS.length;
     const snapped = WALL_SNAP_DIRECTIONS[directionIndex];
     const direction = normalizeWallDirection(snapped);
-    const startConnection = this._nearestWallConnection(start, direction);
+    // At the drag origin the first new segment must be one span ahead in the
+    // chosen heading. Testing the reverse sign here could place that first
+    // segment on the far side of the terminal, so a 90-degree turn would
+    // appear magnetized while its next segment folded back through the old
+    // wall. End-point matching keeps both signs because a drag may terminate
+    // either just before or just beyond a terminal.
+    const startConnection = this._nearestWallConnection(start, direction, [1]);
     const edgeStart = this._snapWallStartToMapEdge(start, direction);
     let anchor = startConnection?.point ?? edgeStart.point;
     let edgeLocked = !startConnection && edgeStart.locked;

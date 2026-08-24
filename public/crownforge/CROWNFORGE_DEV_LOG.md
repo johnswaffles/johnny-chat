@@ -3217,3 +3217,45 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add hills, elevation traversal, gates, towers, wall editing, spline walls, segment-level damage, or automatic structure demolition in this pass.
+
+## PALISADE TURN-CONNECTION PASS — 2026-08-24
+
+### WHAT EXISTS
+
+- Palisades remain straight, eight-way snapped drag runs with magnetic terminal joining and building-only hard blockers.
+
+### WHAT WAS COMPLETED
+
+- Fixed endpoint magnetism for direction changes. A new run can now turn perpendicular or diagonally from an existing Palisade terminal without losing its magnetic connection.
+- Narrowed the reverse-run protection rule so only headings that point materially back through the existing wall are rejected; valid corners and T-junctions remain available.
+- Kept the connected segment center spacing exact, so the new first post stays one Palisade span beyond the existing terminal instead of leaving a visible break or overlapping the old run.
+- Preserved the existing map-edge lock, resource-clearing precedence, and structure protection behavior.
+- Added the `20260824-wallturn1` runtime marker and synchronized the fix through the source/public runtime mirrors.
+
+### KNOWN ISSUES
+
+- Walls are still straight eight-way runs in this first-age sandbox; freeform curves, gates, and terrain elevation are intentionally out of scope.
+- A wall that genuinely crosses a building remains invalid by design.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. The existing upright Palisade family remains the canonical wall art.
+
+### SYSTEMS CREATED
+
+- Direction-change-safe terminal connection filtering in the existing wall preview solver.
+- Regression coverage for a perpendicular corner turn, exact terminal spacing, and continued reverse-overlap rejection.
+
+### VALIDATION
+
+- `node --check` passed for the changed simulation, main, and regression modules.
+- `tools/remediation-regression.mjs` passed the full focused suite, including wall precedence, endpoint magnetism, perpendicular turning, map-edge locks, structure blocking, construction, movement, economy, combat, victory, and defeat.
+- `git diff --check` passed.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Visually playtest an attached corner and a perpendicular T-junction at normal zoom, then pan to inspect the terminal posts from both sides.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add curved wall splines, gates, wall editing, elevation-specific wall art, or a second placement system as part of this focused repair.
