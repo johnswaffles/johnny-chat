@@ -1,8 +1,8 @@
 import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260823-orewashstages1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260823-constructionclick1';
+import { CrownforgeInput } from './input.js?v=20260824-walledge1';
 import { CrownforgeRenderer } from './renderer.js?v=20260823-targeting1';
-import { CrownforgeSimulation } from './simulation.js?v=20260823-constructionclick1';
+import { CrownforgeSimulation } from './simulation.js?v=20260824-walledge1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
 const canvas = document.querySelector('#game-canvas');
@@ -276,7 +276,7 @@ function updateUi() {
     const ready = Boolean(builder && affordable && builder.carryAmount <= 0);
     const detail = button.querySelector(`[data-build-detail="${type}"]`);
     const status = !builder ? 'SELECT VILLAGER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
-    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? 'DRAG TO AIM  •  8-WAY SNAP  •  WIDE MAGNET  •  ' : ''}${status}`;
+    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? 'DRAG TO AIM  •  8-WAY SNAP  •  WIDE MAGNET  •  EDGE LOCK  •  ' : ''}${status}`;
     button.classList.toggle('is-unavailable', !ready);
     setTooltip(button, !builder
       ? `Select a villager before placing a ${blueprint.label}`
@@ -337,7 +337,7 @@ function updateUi() {
     placementTitle.textContent = valid ? 'FOUNDATION READY' : 'CANNOT PLACE HERE';
     placementDetail.textContent = valid
       ? preview?.type === 'wall'
-        ? `${preview.wallSnapLabel ?? 'SNAPPED'} · ${preview.wallSegments ?? 1} segment${preview.wallSegments === 1 ? '' : 's'}${preview.wallConnectCount ? ` · connects ${preview.wallConnectCount} wall end${preview.wallConnectCount === 1 ? '' : 's'}` : ''}${preview.resourceClearCount ? ` · clears ${preview.resourceClearCount} resource node${preview.resourceClearCount === 1 ? '' : 's'}` : ''} · release to place`
+        ? `${preview.wallSnapLabel ?? 'SNAPPED'} · ${preview.wallSegments ?? 1} segment${preview.wallSegments === 1 ? '' : 's'}${preview.wallEdgeSnap ? ' · MAP EDGE LOCK' : ''}${preview.wallConnectCount ? ` · connects ${preview.wallConnectCount} wall end${preview.wallConnectCount === 1 ? '' : 's'}` : ''}${preview.resourceClearCount ? ` · clears ${preview.resourceClearCount} resource node${preview.resourceClearCount === 1 ? '' : 's'}` : ''} · release to place`
         : 'Click to place  ·  Hall vision active  ·  Esc to cancel'
       : (preview?.reason ?? 'Move the foundation to a clear site.');
   }

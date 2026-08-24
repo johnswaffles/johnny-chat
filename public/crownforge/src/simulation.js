@@ -23,6 +23,14 @@ const WALL_CLEARABLE_RESOURCE_TYPES = new Set(Object.keys(RESOURCE_TYPES));
 // having to land on a single pixel-perfect center, while still remaining
 // local enough that a nearby unrelated wall end does not steal the drag.
 const WALL_CONNECT_SNAP_DISTANCE = 5.4;
+// A wall endpoint that is released within this distance of the playable
+// boundary magnetizes to the boundary. The center-line margin is deliberately
+// just large enough for the wall's real collision envelope to meet the map
+// edge, so raiders cannot slip through a decorative-looking gap.
+const WALL_EDGE_SNAP_DISTANCE = 8.4;
+const WALL_EDGE_CENTER_MARGIN = 2.54;
+const WALL_EDGE_BOUNDARY_MARGIN = 0.05;
+const WALL_MAX_SEGMENTS = Math.ceil(Math.hypot(CONFIG.mapWidth, CONFIG.mapHeight) / (BUILDING_TYPES.wall.wallSegmentSpan ?? 3)) + 8;
 const DECORATION_FOOTPRINTS = { log: 0.78, stump: 0.62, flowers: 0.42, pebbles: 0.44 };
 const COMBAT_SLOT_COUNT = 8;
 const COMBAT_SLOT_MARGIN = 0.12;
@@ -2742,6 +2750,69 @@ export class CrownforgeSimulation {
     return nearest;
   }
 
+  _wallRunBounds(anchor, direction, count, padding = BUILDING_CLEARANCE) {
+    const span = BUILDING_TYPES.wall.wallSegmentSpan ?? BUILDING_TYPES.wall.footprint.width;
+    const safeCount = Math.max(1, Math.round(count));
+    const center = {
+      x: anchor.x + direction.x * (safeCount - 1) * span / 2,
+      z: anchor.z + direction.z * (safeCount - 1) * span / 2,
+    };
+    return this._buildingBounds('wall', center, padding, {
+      wallSegments: safeCount,
+      wallDirection: direction,
+    });
+  }
+
+  _wallRunFitsMap(anchor, direction, count, padding = BUILDING_CLEARANCE) {
+    const bounds = this._wallRunBounds(anchor, direction, count, padding);
+    const boundaryMargin = padding <= 0.001 ? WALL_EDGE_BOUNDARY_MARGIN : 0.55;
+    return bounds.minX >= boundaryMargin
+      && bounds.minZ >= boundaryMargin
+      && bounds.maxX <= CONFIG.mapWidth - boundaryMargin
+      && bounds.maxZ <= CONFIG.mapHeight - boundaryMargin;
+  }
+
+  _maxWallSegmentsFromAnchor(anchor, direction, padding = BUILDING_CLEARANCE) {
+    let maximum = 0;
+    for (let count = 1; count <= WALL_MAX_SEGMENTS; count += 1) {
+      if (!this._wallRunFitsMap(anchor, direction, count, padding)) break;
+      maximum = count;
+    }
+    return Math.max(1, maximum);
+  }
+
+  _snapWallStartToMapEdge(point, direction) {
+    const snapped = {
+      x: Math.round(point.x),
+      z: Math.round(point.z),
+    };
+    let locked = false;
+    if (direction.x > 0.01 && point.x <= WALL_EDGE_SNAP_DISTANCE) {
+      snapped.x = WALL_EDGE_CENTER_MARGIN;
+      locked = true;
+    } else if (direction.x < -0.01 && point.x >= CONFIG.mapWidth - WALL_EDGE_SNAP_DISTANCE) {
+      snapped.x = CONFIG.mapWidth - WALL_EDGE_CENTER_MARGIN;
+      locked = true;
+    }
+    if (direction.z > 0.01 && point.z <= WALL_EDGE_SNAP_DISTANCE) {
+      snapped.z = WALL_EDGE_CENTER_MARGIN;
+      locked = true;
+    } else if (direction.z < -0.01 && point.z >= CONFIG.mapHeight - WALL_EDGE_SNAP_DISTANCE) {
+      snapped.z = CONFIG.mapHeight - WALL_EDGE_CENTER_MARGIN;
+      locked = true;
+    }
+    return { point: snapped, locked };
+  }
+
+  _forwardWallEdgeDistance(point, direction) {
+    const distances = [];
+    if (direction.x > 0.01) distances.push(CONFIG.mapWidth - point.x);
+    if (direction.x < -0.01) distances.push(point.x);
+    if (direction.z > 0.01) distances.push(CONFIG.mapHeight - point.z);
+    if (direction.z < -0.01) distances.push(point.z);
+    return distances.length ? Math.min(...distances) : Infinity;
+  }
+
   _wallSegmentPoints(source) {
     const blueprint = BUILDING_TYPES.wall;
     const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
@@ -2780,13 +2851,15 @@ export class CrownforgeSimulation {
     const snapped = WALL_SNAP_DIRECTIONS[directionIndex];
     const direction = normalizeWallDirection(snapped);
     const startConnection = this._nearestWallConnection(start, direction);
-    let anchor = startConnection?.point ?? {
-      x: Math.round(start.x),
-      z: Math.round(start.z),
-    };
+    const edgeStart = this._snapWallStartToMapEdge(start, direction);
+    let anchor = startConnection?.point ?? edgeStart.point;
+    let edgeLocked = !startConnection && edgeStart.locked;
     const projectedDistance = (end.x - anchor.x) * direction.x + (end.z - anchor.z) * direction.z;
     const distanceAlongWall = Math.max(span, Math.abs(projectedDistance));
-    let segmentCount = Math.max(1, Math.min(24, Math.round(distanceAlongWall / span) + 1));
+    let mapPadding = edgeLocked ? 0 : BUILDING_CLEARANCE;
+    let maximumSegments = this._maxWallSegmentsFromAnchor(anchor, direction, mapPadding);
+    const requestedSegments = Math.max(1, Math.round(distanceAlongWall / span) + 1);
+    let segmentCount = Math.max(1, Math.min(maximumSegments, requestedSegments));
     let endConnection = null;
     let proposedEnd = {
       x: anchor.x + direction.x * (segmentCount - 1) * span,
@@ -2797,7 +2870,7 @@ export class CrownforgeSimulation {
     if (endCandidate) {
       const projectedEnd = (endCandidate.point.x - anchor.x) * direction.x + (endCandidate.point.z - anchor.z) * direction.z;
       if (projectedEnd >= span * 0.75) {
-        segmentCount = Math.max(1, Math.min(24, Math.round(projectedEnd / span) + 1));
+        segmentCount = Math.max(1, Math.min(maximumSegments, Math.round(projectedEnd / span) + 1));
         const snappedAnchor = {
           x: endCandidate.point.x - direction.x * (segmentCount - 1) * span,
           z: endCandidate.point.z - direction.z * (segmentCount - 1) * span,
@@ -2807,6 +2880,19 @@ export class CrownforgeSimulation {
           endConnection = endCandidate;
           proposedEnd = endCandidate.point;
         }
+      }
+    }
+    if (!endConnection) {
+      const endNearMapEdge = this._forwardWallEdgeDistance(end, direction) <= WALL_EDGE_SNAP_DISTANCE;
+      if (endNearMapEdge || requestedSegments > maximumSegments) {
+        edgeLocked = true;
+        mapPadding = 0;
+        maximumSegments = this._maxWallSegmentsFromAnchor(anchor, direction, mapPadding);
+        segmentCount = maximumSegments;
+        proposedEnd = {
+          x: anchor.x + direction.x * (segmentCount - 1) * span,
+          z: anchor.z + direction.z * (segmentCount - 1) * span,
+        };
       }
     }
     const orientation = Math.abs(direction.x) > 0.98 ? 'horizontal' : Math.abs(direction.z) > 0.98 ? 'vertical' : 'diagonal';
@@ -2824,6 +2910,7 @@ export class CrownforgeSimulation {
       wallOrientation: orientation,
       wallDirection,
       wallSnapLabel: snapped.label,
+      wallEdgeSnap: edgeLocked,
       wallStart: segments[0],
       clearResources: true,
       wallConnectionIds: [...new Set([startConnection?.buildingId, endConnection?.buildingId].filter(Boolean))],
@@ -3002,8 +3089,14 @@ export class CrownforgeSimulation {
   getPlacementCheck(type, point, options = {}) {
     const blueprint = BUILDING_TYPES[type];
     if (!blueprint || !point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) return { valid: false, reason: 'Move the foundation onto the meadow.' };
-    const bounds = this._buildingBounds(type, point, BUILDING_CLEARANCE, options);
-    if (bounds.minX < 0.55 || bounds.minZ < 0.55 || bounds.maxX > CONFIG.mapWidth - 0.55 || bounds.maxZ > CONFIG.mapHeight - 0.55) {
+    // An edge-locked Palisade uses the wall's real collision envelope as its
+    // boundary test. Generic construction keeps its extra placement buffer;
+    // the edge path intentionally lets the finished wall sit close enough to
+    // the meadow boundary to close the raider-sized gap.
+    const placementPadding = blueprint.wall && options.wallEdgeSnap ? 0 : BUILDING_CLEARANCE;
+    const boundaryMargin = blueprint.wall && options.wallEdgeSnap ? WALL_EDGE_BOUNDARY_MARGIN : 0.55;
+    const bounds = this._buildingBounds(type, point, placementPadding, options);
+    if (bounds.minX < boundaryMargin || bounds.minZ < boundaryMargin || bounds.maxX > CONFIG.mapWidth - boundaryMargin || bounds.maxZ > CONFIG.mapHeight - boundaryMargin) {
       return { valid: false, reason: 'Foundation is outside the meadow.' };
     }
     const placement = { type, x: point.x, z: point.z, progress: 1, ...options };

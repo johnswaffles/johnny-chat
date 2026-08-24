@@ -3167,3 +3167,52 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add a second construction system, new building classes, new ages, extra overlays, or per-pixel targeting as part of this small interaction repair.
+
+## FULL-MAP PALISADE AND MAP-EDGE LOCK PASS — 2026-08-24
+
+### WHAT EXISTS
+
+- Palisades remain first-age drag-built defensive structures with eight-way direction snapping, magnetic wall-end joining, resource precedence, and building-only collision blocking.
+- The playable meadow is 560 by 460 world units. The wall preview now treats that full boundary as usable construction space instead of imposing a small fixed segment cap.
+
+### WHAT WAS COMPLETED
+
+- Removed the fixed 24-segment Palisade limit. Requested wall length now grows to the maximum safe run for the snapped direction and map boundary.
+- Added map-edge endpoint magnetism. Releasing within the edge snap field, or dragging beyond the available run, locks the Palisade to the playable boundary and displays `MAP EDGE LOCK` in the placement readout.
+- Added start-edge snapping as well as end-edge snapping, so a drag can begin near a map edge without leaving a visible opening at the first segment.
+- Let edge-locked walls use their actual collision envelope for the boundary test. This allows the completed Palisade to sit close enough to the edge that raiders cannot route through the old narrow gap.
+- Kept structure collision authoritative. A long wall still rejects placement through the Crown Hall, Barracks, Ore Wash, fields, or another Palisade structure even though trees, rocks, natural resources, ground details, and units yield to the wall.
+- Updated the wall placement help and build-menu/readout language so the user can see the edge-lock behavior before releasing the drag.
+- Bumped the runtime marker to `20260824-walledge1`.
+
+### KNOWN ISSUES
+
+- A full-map wall still costs one normal Palisade segment cost per segment, so affordability can intentionally stop a very long run when the sandbox reserve is insufficient.
+- Edge locking follows the snapped straight direction; hills, elevation changes, gates, corners, and spline-shaped walls remain future systems.
+- A wall that genuinely crosses a building remains invalid rather than silently deleting or moving that structure.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. Existing upright Palisade artwork is reused for the longer run, with the same grounded shadows and segment spacing.
+
+### SYSTEMS CREATED
+
+- Dynamic full-map wall-length calculation based on direction, segment span, and map bounds.
+- Start/end map-edge magnetism with collision-aware edge closure.
+- Regression coverage for long horizontal and vertical edge-locked walls, boundary-reaching collision, segment lengths above 24, and continued building protection.
+
+### VALIDATION
+
+- `node --check` passed for the changed simulation, input, main, and regression modules.
+- `tools/remediation-regression.mjs` passed the full focused suite, including long-wall edge locks, existing wall magnets, structure blocking, resource precedence, construction, movement, economy, combat, victory, and defeat.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across 140 active animation combinations.
+- Source/public runtime synchronization and live Render verification remain part of the deployment gate for this pass.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Visually verify one horizontal, one vertical, and one diagonal edge-locked wall at normal zoom and after panning to both endpoints. Tune only if the preview/readout or segment grounding becomes unreadable.
+- Keep the current straight eight-way wall contract until gates or terrain elevation are explicitly scheduled.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add hills, elevation traversal, gates, towers, wall editing, spline walls, segment-level damage, or automatic structure demolition in this pass.

@@ -634,6 +634,37 @@ function checkWallEndpointMagnetism() {
 
   assert.equal(simulation.placeWallLine({ x: 186.4, z: 180.1 }, { x: 195.2, z: 180.1 }), true, 'connected wall line places successfully');
   assert.equal(simulation.buildings.filter((building) => building.type === 'wall').length, 2, 'connected wall remains a separate construction record');
+
+  const edgeSimulation = freshSimulation();
+  const edgeVillager = edgeSimulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  edgeSimulation.selectedIds = [edgeVillager.id];
+  edgeSimulation._syncSelectionFlags();
+  edgeSimulation.resources.wood = 99999;
+  edgeSimulation.resources.stone = 99999;
+  const acrossMap = edgeSimulation.getWallLinePreview(
+    { x: 3, z: 230 },
+    { x: CONFIG.mapWidth - 3, z: 230 },
+  );
+  assert.equal(acrossMap.valid, true, 'an edge-to-edge Palisade preview remains placeable');
+  assert.equal(acrossMap.wallEdgeSnap, true, 'a long Palisade locks to the map boundary');
+  assert.ok(acrossMap.wallSegments > 24, 'Palisade length is no longer capped at 24 segments');
+  assert.ok(acrossMap.segments.at(-1).x > CONFIG.mapWidth - 4, 'edge lock reaches the far map boundary');
+  const acrossMapBounds = edgeSimulation._buildingEntityBounds({
+    type: 'wall',
+    x: acrossMap.world.x,
+    z: acrossMap.world.z,
+    wallSegments: acrossMap.wallSegments,
+    wallDirection: acrossMap.wallDirection,
+  }, 0);
+  assert.ok(acrossMapBounds.minX < 1 && acrossMapBounds.maxX > CONFIG.mapWidth - 1, 'edge-to-edge wall collision closes the raider-sized gap');
+
+  const verticalEdge = edgeSimulation.getWallLinePreview(
+    { x: 300, z: 3 },
+    { x: 300, z: CONFIG.mapHeight - 3 },
+  );
+  assert.equal(verticalEdge.valid, true, 'vertical edge lock remains placeable');
+  assert.equal(verticalEdge.wallEdgeSnap, true, 'vertical Palisade locks to the map edge');
+  assert.ok(verticalEdge.wallSegments > 24, 'vertical Palisade can span the expanded map');
 }
 
 function checkBlockedDestinationFallback() {
