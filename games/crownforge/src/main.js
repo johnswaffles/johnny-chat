@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260825-palisadefort1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260825-builderflow1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260825-palisadefort1';
-import { CrownforgeRenderer } from './renderer.js?v=20260825-palisadefort1';
-import { CrownforgeSimulation } from './simulation.js?v=20260825-palisadefort1';
+import { CrownforgeInput } from './input.js?v=20260825-builderflow1';
+import { CrownforgeRenderer } from './renderer.js?v=20260825-builderflow1';
+import { CrownforgeSimulation } from './simulation.js?v=20260825-builderflow1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
@@ -40,6 +40,8 @@ const selectionIcon = document.querySelector('#selection-icon');
 const selectionKind = document.querySelector('#selection-kind');
 const selectionRecovery = document.querySelector('#selection-recovery');
 const recoverUnitsButton = document.querySelector('#recover-units');
+const selectionVillagerActions = document.querySelector('#selection-villager-actions');
+const selectAllVillagersButton = document.querySelector('#select-all-villagers');
 const loadingVeil = document.querySelector('#loading-veil');
 const loadingDetail = document.querySelector('#loading-detail');
 const loadingProgress = document.querySelector('#loading-progress');
@@ -149,6 +151,14 @@ const input = new CrownforgeInput({
     simulation.unstickSelectedUnits();
     updateUi();
   },
+  onSelectAllVillagersShortcut: () => {
+    if (!simulation.selectedEntities.some((entity) => entity.kind === 'unit' && entity.type === 'villager' && entity.faction === 'player' && !entity.dead)) return;
+    audio.unlock();
+    audio.ui();
+    const result = simulation.selectAllVillagers();
+    if (result.success) audio.select(result.count);
+    updateUi();
+  },
   onEscape: () => {
     audio.ui();
     buildMenu.hidden = true;
@@ -174,9 +184,9 @@ function beginBuildingPlacement(type) {
   }
   const blueprint = BUILDING_TYPES[type];
   if (!blueprint || !FIRST_AGE_BUILD_BLUEPRINTS.includes(type)) return;
-  const builder = simulation.units.find((unit) => unit.selected && unit.type === 'villager' && unit.faction === 'player' && !unit.dead);
+  const builder = simulation.units.find((unit) => unit.selected && simulation.isBuilderUnit(unit));
   if (!builder) {
-    announce(`Select a villager before placing a ${blueprint.label}.`);
+    announce(`Select a builder before placing a ${blueprint.label}.`);
     audio.play('invalid');
     return;
   }
@@ -270,6 +280,15 @@ recoverUnitsButton?.addEventListener('click', () => {
   updateUi();
 });
 
+selectAllVillagersButton?.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  const result = simulation.selectAllVillagers();
+  if (result.success) audio.select(result.count);
+  announce(simulation.lastCommand);
+  updateUi();
+});
+
 function updateUi() {
   for (const [key, info] of Object.entries(RESOURCE_TYPES)) {
     const amount = Math.floor(simulation.resources[key]);
@@ -286,12 +305,16 @@ function updateUi() {
   ui.selectionTitle.textContent = selectionTitle();
   ui.selectionDetail.textContent = selectionStatus();
   if (selectionRecovery) selectionRecovery.hidden = !simulation.canRecoverSelectedUnits();
+  if (selectionVillagerActions) selectionVillagerActions.hidden = !simulation.selectedEntities.some((entity) => entity.kind === 'unit'
+    && entity.type === 'villager'
+    && entity.faction === 'player'
+    && !entity.dead);
   const preview = renderer.buildPreview;
   ui.commandLine.textContent = input.buildMode
     ? `PLACEMENT MODE  •  ${preview?.valid ? 'site ready' : (preview?.reason ?? 'move the foundation')}`
     : commandLineText();
   ui.clock.textContent = formatClock(simulation.clock);
-  const builder = simulation.units.find((unit) => unit.selected && unit.type === 'villager' && unit.faction === 'player' && !unit.dead);
+  const builder = simulation.units.find((unit) => unit.selected && simulation.isBuilderUnit(unit));
   buildButtons.forEach((button) => {
     const type = button.dataset.buildType;
     const blueprint = BUILDING_TYPES[type];
@@ -300,7 +323,7 @@ function updateUi() {
     const affordable = Object.entries(cost).every(([key, value]) => simulation.resources[key] >= value);
     const ready = Boolean(builder && affordable && builder.carryAmount <= 0);
     const detail = ui.buildDetails[type];
-    const status = !builder ? 'SELECT VILLAGER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
+    const status = !builder ? 'SELECT BUILDER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
     const placementHint = blueprint.wall
       ? 'DRAG TO AIM  •  8-WAY SNAP  •  WIDE MAGNET  •  EDGE LOCK  •  '
       : blueprint.gate
@@ -311,7 +334,7 @@ function updateUi() {
     if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${placementHint}${status}`;
     button.classList.toggle('is-unavailable', !ready);
     setTooltip(button, !builder
-      ? `Select a villager before placing a ${blueprint.label}`
+      ? `Select a builder before placing a ${blueprint.label}`
       : builder.carryAmount > 0
         ? 'Let the selected villager deposit cargo first'
         : !affordable
@@ -440,10 +463,15 @@ function selectionStatus() {
             ? ' · mid construction'
             : ' · late construction';
     const progress = building.progress < 1 ? ` · build ${Math.round(building.progress * 100)}%${stage}` : '';
+    const damage = building.progress >= 1 && building.hp < building.maxHp
+      ? ` · ${Math.round((building.hp / building.maxHp) * 100)}% integrity`
+      : '';
     const currentFunction = building.progress < 1
       ? 'construction active'
+      : building.hp < building.maxHp
+        ? 'repair available · select a builder and click with the hammer cursor'
       : buildingAbilityLabel(building, blueprint);
-    return `${Math.ceil(building.hp)} / ${building.maxHp} HP${progress} · ${blueprint.function} · ${currentFunction}`;
+    return `${Math.ceil(building.hp)} / ${building.maxHp} HP${progress}${damage} · ${blueprint.function} · ${currentFunction}`;
   }
   const units = entities.filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead);
   if (units.length === 1) {

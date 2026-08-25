@@ -88,6 +88,13 @@ export const UNIT_TYPES = {
     label: 'Villager',
     asset: 'villager',
     renderSize: 88,
+    // Builder behavior is data-driven so future worker or engineer units can
+    // inherit construction, repair, and nearby auto-assist without adding
+    // another unit-type check to the input or simulation layers.
+    canBuild: true,
+    repairRate: 8,
+    autoBuildRadius: 12,
+    regroupAtTownCenter: true,
     speed: 2.9,
     acceleration: 10.5,
     braking: 13.5,

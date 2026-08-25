@@ -3777,3 +3777,61 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Do not add ranged Tower attacks, garrisoning, wall upgrades, siege, stone walls, or defensive technologies during this Palisade polish pass.
 - Do not add another wall family until the first-age timber Palisade, Gate, Tower, and junction behavior are consistently strong.
 - Do not replace the renderer or introduce a new physics system for these connections; continue strengthening the current data-driven wall foundation.
+
+## BUILDER CAPABILITY, REPAIR & VILLAGER SAFETY PASS — 2026-08-25
+
+### WHAT EXISTS
+
+- The Villager now owns an explicit, data-driven builder capability instead of construction behavior being inferred only from its unit name. Future builders can inherit the same interaction contract without duplicating Villager-specific input code.
+- Unfinished and damaged player structures are both recognized as actionable builder work. A selected builder receives a hammer cursor over valid work and can be sent there with the same direct click/right-click command language used for resources.
+- Villagers that finish a task return to a spaced safety huddle on the Crown Hall's south court unless the player has given them a deliberate movement or queued order.
+
+### WHAT WAS COMPLETED
+
+- Added builder metadata for construction ability, repair rate, local auto-assist radius, and task-completion regroup behavior.
+- Generalized construction assignment, queued building work, placement assignment, reservation cleanup, and construction-slot filtering to use builder capability checks.
+- Added completed-building repair. Builders walk to a valid interaction slot, perform the established construction animation, restore health at a controlled rate, release their slot at full health, and report completion cleanly.
+- Added restrained local auto-assist. An idle builder periodically checks only a small nearby radius, prioritizes unfinished foundations over damaged buildings, respects construction slots, and uses a capped route budget so the convenience system does not become a new source of frame spikes.
+- Added task-terminal safety regrouping after construction, repair, gathering/deposit exhaustion, and invalidated work. Explicit player movement remains authoritative and is never silently replaced by regrouping.
+- Added a conditional `SELECT ALL VILLAGERS` action to the selected-Villager panel and the `V` shortcut. It selects every living player Villager while excluding soldiers, enemies, and dead units.
+- Added distinct build and repair hammer cursors within the existing code-native cursor family, plus clearer damaged-building selection text and builder instructions.
+- Bumped the active runtime marker to `20260825-builderflow1` across the source module graph.
+
+### KNOWN ISSUES
+
+- Automatic assistance is intentionally local. A Villager across the map will not abandon a safe idle position to discover a distant unfinished structure; use the direct build command or queue the work.
+- Repair currently reuses the established construction animation and strike feedback. A dedicated repair pose should only be created if live inspection shows that the shared hammering language is unclear at RTS distance.
+- Safety regroup points are currently generated on the Crown Hall's accessible south court. They are deliberately outside the stair landing and footprint, but very dense custom construction directly across the court can force normal path replanning.
+- The in-app browser security policy blocked navigation from the already-open local `file://` tab to the local QA server. Deterministic simulation, syntax, and visual-integrity checks were completed locally; the player-visible check is performed against the deployed HTTPS build.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. The build and repair pointers extend the established code-native SVG cursor family, and the Villager action reuses the original Villager portrait asset.
+
+### SYSTEMS CREATED
+
+- Reusable builder-capability contract (`canBuild`, `repairRate`, `autoBuildRadius`, and `regroupAtTownCenter`).
+- Unified unfinished-construction and damaged-building work routing.
+- Local builder auto-assist service with priority, reservation, and route-budget controls.
+- Crown Hall safety-huddle assignment with deterministic spacing.
+- Settlement-wide Villager selection action and keyboard command.
+- Regression coverage for capability recognition, automatic construction claiming, repair completion, safety regrouping, selection filtering, UI controls, keyboard binding, and hammer-cursor wiring.
+
+### VALIDATION
+
+- `node --check` passed for every changed runtime and regression module.
+- `tools/remediation-regression.mjs` passed the complete suite, including automatic build assistance, manual repair, huddle completion, and settlement-wide Villager selection.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or dimension mismatches; all 252 registered animation combinations remain valid.
+- `git diff --check` passed.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. In a normal match, leave several nearby foundations unfinished and damage several structures, then watch multiple Villagers distribute themselves without excessive slot contention.
+2. Confirm the Crown Hall safety court remains readable after the player constructs buildings close to its southern approach.
+3. Consider a small on-unit queued-work indicator only if players cannot understand that a builder will continue to its next queued order.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add a separate builder class, repair resource tax, repair technology, automated global repair crew, or building-maintenance economy until this direct interaction is proven in repeated play.
+- Do not broaden automatic assistance beyond nearby idle builders; player orders must remain authoritative.
+- Do not add another large unit or building set during this workflow pass.

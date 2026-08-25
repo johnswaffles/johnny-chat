@@ -11,6 +11,7 @@ import {
   INITIAL_RESOURCES,
   PRODUCTION_TYPES,
   RESOURCE_TYPES,
+  UNIT_TYPES,
   VILLAGER_ATLASES,
 } from '../src/config.js';
 import { animationFrame } from '../src/animation.js';
@@ -22,6 +23,8 @@ import { summarizeUnitTasks } from '../src/task-summary.js';
 const STEP_60HZ = 1 / 60;
 const STEP_20HZ = 1 / 20;
 const INDEX_HTML = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const INPUT_SOURCE = fs.readFileSync(new URL('../src/input.js', import.meta.url), 'utf8');
+const STYLES_CSS = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 
 function advance(simulation, seconds, step = STEP_60HZ) {
   const count = Math.ceil(seconds / step);
@@ -418,6 +421,8 @@ function checkStableGranaryAndScout() {
   advance(simulation, BUILDING_TYPES.granary.buildTime + 14);
   assert.equal(granary.progress, 1, 'First-age Granary completes through Villager construction');
   const foodWorker = simulation.units.find((unit) => unit.type === 'villager');
+  foodWorker.x = granary.x - 4.8;
+  foodWorker.z = granary.z;
   foodWorker.carryType = 'food';
   foodWorker.carryAmount = 5;
   assert.equal(simulation._beginReturn(foodWorker), true, 'Food cargo finds the new Granary as a compatible drop-off');
@@ -654,6 +659,68 @@ function checkReadableResourceApproaches() {
     assert.ok(frontBias >= -0.05, `${node.type} ${node.sizeTier} chooses a readable front approach`);
     simulation._releaseResourceSlot(villager);
   }
+}
+
+function checkBuilderWorkflowAndVillagerControls() {
+  assert.equal(UNIT_TYPES.villager.canBuild, true, 'Villager exposes the reusable builder capability');
+  assert.ok(UNIT_TYPES.villager.autoBuildRadius >= 10, 'nearby builder assistance has a useful local radius');
+  assert.ok(UNIT_TYPES.villager.repairRate > 0, 'builder capability includes a positive repair rate');
+
+  const automatic = movementSandbox();
+  automatic.addBuilding('townCenter', 20, 20, 'player');
+  const autoBuilder = automatic.addUnit('villager', 29, 20, 'player');
+  autoBuilder.needsSafetyRegroup = false;
+  const unfinished = automatic.addBuilding('house', 34, 20, 'player', 0.25);
+  automatic.update(STEP_60HZ);
+  assert.equal(autoBuilder.buildTarget, unfinished.id, 'idle nearby builder automatically claims an unfinished structure');
+  assert.equal(autoBuilder.command, 'build', 'automatic builder assistance uses the normal construction command');
+
+  automatic.setUnitSpeedScale(10);
+  advance(automatic, BUILDING_TYPES.house.buildTime + 6);
+  assert.equal(unfinished.progress, 1, 'automatically assisted structure completes normally');
+  unfinished.hp -= 24;
+  automatic.selectedIds = [autoBuilder.id];
+  automatic._syncSelectionFlags();
+  const repair = automatic.issueContextCommand({ x: unfinished.x, z: unfinished.z }, unfinished);
+  assert.equal(repair.kind, 'repair', 'damaged friendly structure resolves to a repair command');
+  assert.equal(repair.success, true, 'builder accepts repair command');
+  advance(automatic, 6);
+  assert.equal(unfinished.hp, unfinished.maxHp, 'repair restores building health to its cap');
+  assert.equal(unfinished.buildAssigned.length, 0, 'repair releases its builder reservations when complete');
+
+  const regroup = movementSandbox();
+  const hall = regroup.addBuilding('townCenter', 20, 20, 'player');
+  const returningWorker = regroup.addUnit('villager', 62, 62, 'player');
+  returningWorker.needsSafetyRegroup = true;
+  regroup.update(STEP_60HZ);
+  assert.equal(returningWorker.safetyRegroupActive, true, 'finished Villager starts a safety regroup route');
+  assert.match(returningWorker.actionLabel, /Regrouping at Crown Hall/, 'safety regroup is visible in the selected-unit task');
+  regroup.setUnitSpeedScale(10);
+  advance(regroup, 8);
+  assert.equal(returningWorker.command, 'idle', 'regrouped Villager settles instead of repeatedly rerouting');
+  assert.equal(returningWorker.needsSafetyRegroup, false, 'completed huddle clears the regroup request');
+  assert.equal(returningWorker.actionLabel, 'Standing by at Crown Hall', 'regrouped Villager reports the safe standby state');
+  assert.ok(regroup._distanceToBuildingEdge(returningWorker, hall) < 9, 'Villager huddle remains close to the Crown Hall');
+
+  const selection = movementSandbox();
+  const first = selection.addUnit('villager', 10, 10, 'player');
+  const second = selection.addUnit('villager', 12, 10, 'player');
+  const fallen = selection.addUnit('villager', 14, 10, 'player');
+  selection.addUnit('soldier', 16, 10, 'player');
+  selection.addUnit('villager', 18, 10, 'enemy');
+  fallen.dead = true;
+  selection.selectedIds = [first.id];
+  selection._syncSelectionFlags();
+  const selected = selection.selectAllVillagers();
+  assert.equal(selected.count, 2, 'select-all includes every living player Villager only');
+  assert.deepEqual(selection.selectedIds, [first.id, second.id], 'select-all excludes soldiers, enemies, and fallen Villagers');
+
+  assert.match(INDEX_HTML, /id="select-all-villagers"/, 'selection panel exposes a Select All Villagers button');
+  assert.match(INDEX_HTML, /SETTLEMENT-WIDE <kbd>V<\/kbd>/, 'Select All Villagers button advertises its keyboard shortcut');
+  assert.match(INPUT_SOURCE, /buildingNeedsWork\(entity\)/, 'hover targeting asks the shared building-work capability');
+  assert.match(INPUT_SOURCE, /isBuilderUnit\(unit\)/, 'primary-click construction uses the shared builder capability');
+  assert.match(STYLES_CSS, /is-build-target[^\n]+cursor:/, 'unfinished structures have a dedicated hammer cursor');
+  assert.match(STYLES_CSS, /is-repair-target[^\n]+cursor:/, 'damaged structures have a dedicated repair cursor');
 }
 
 function checkConstructionAndPlacement() {
@@ -1330,6 +1397,7 @@ checkHomesteadAndMilitia();
 checkWatchHutAndShieldbearer();
 checkIntentAwareVisualTargeting();
 checkReadableResourceApproaches();
+checkBuilderWorkflowAndVillagerControls();
 checkConstructionAndPlacement();
 checkConstructionRetaskingAndTaskSummary();
 checkConstructionOrderQueue();
@@ -1363,6 +1431,7 @@ console.log(JSON.stringify({
     'First-age Homestead construction/housing, Crown Militia production, and four-direction Militia animation',
     'First-age Watch Hut construction, Crown Shieldbearer production, and four-direction Shieldbearer animation',
     'intent-aware visual targeting and resource-specific gather/drop-off feedback',
+    'data-driven builder capability, hammer cursor, manual repair, nearby auto-assist, Crown Hall safety regroup, and Select All Villagers control',
     'focused first-age building catalog with the Crown Hall as universal fallback',
     'placement rejection and Barracks completion',
     'construction pause, foundation right-click reassignment, cargo-first resume, and mixed-task feedback',

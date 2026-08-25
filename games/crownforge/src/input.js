@@ -12,6 +12,7 @@ export class CrownforgeInput {
     onPlacement = () => {},
     onBuildShortcut = () => {},
     onRecoverShortcut = () => {},
+    onSelectAllVillagersShortcut = () => {},
   }) {
     this.canvas = canvas;
     this.renderer = renderer;
@@ -25,6 +26,7 @@ export class CrownforgeInput {
     this.onPlacement = onPlacement;
     this.onBuildShortcut = onBuildShortcut;
     this.onRecoverShortcut = onRecoverShortcut;
+    this.onSelectAllVillagersShortcut = onSelectAllVillagersShortcut;
     this.pointer = { x: 0, y: 0 };
     this.drag = null;
     this.pan = null;
@@ -62,11 +64,12 @@ export class CrownforgeInput {
       }
       if (this._isUiFocused()) return;
       const key = event.key.toLowerCase();
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'b', 'r'].includes(key)) event.preventDefault();
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'b', 'r', 'v'].includes(key)) event.preventDefault();
       if (event.repeat) return;
       this.keys.add(key);
       if (key === 'b') this.onBuildShortcut();
       if (key === 'r') this.onRecoverShortcut();
+      if (key === 'v') this.onSelectAllVillagersShortcut();
     });
     window.addEventListener('keyup', (event) => this.keys.delete(event.key.toLowerCase()));
     window.addEventListener('blur', () => {
@@ -147,9 +150,9 @@ export class CrownforgeInput {
   }
 
   _setCursor(cursor) {
-    const cursorClasses = ['is-select-target', 'is-move-target', 'is-gather-target', 'is-attack-target', 'is-interact-target', 'is-build-valid', 'is-build-invalid'];
+    const cursorClasses = ['is-select-target', 'is-move-target', 'is-gather-target', 'is-attack-target', 'is-interact-target', 'is-build-target', 'is-repair-target', 'is-build-valid', 'is-build-invalid'];
     cursorClasses.forEach((name) => this.canvas.classList.toggle(name, name === `is-${cursor}`));
-    this.canvas.classList.toggle('is-command-target', ['move-target', 'gather-target', 'attack-target', 'interact-target'].includes(cursor));
+    this.canvas.classList.toggle('is-command-target', ['move-target', 'gather-target', 'attack-target', 'interact-target', 'build-target', 'repair-target'].includes(cursor));
     this.canvas.style.cursor = '';
   }
 
@@ -167,11 +170,15 @@ export class CrownforgeInput {
     // unit's ground anchor, which made visible clicks feel offset below/right.
     const selected = this.simulation.selectedEntities;
     const selectedUnits = selected.filter((candidate) => candidate.kind === 'unit' && candidate.faction === 'player' && !candidate.dead);
+    const selectedBuilders = selectedUnits.filter((candidate) => this.simulation.isBuilderUnit(candidate));
     const selectedVillagers = selectedUnits.filter((candidate) => candidate.type === 'villager');
     const entity = this.renderer.getEntityAtScreen?.(this.simulation, point, selectedUnits.length ? 'command' : 'select')
       ?? this.simulation.getEntityAt(this.renderer.screenToWorld(point));
     if (selectedUnits.length) {
       if (entity?.faction === 'enemy') this._setCursor('attack-target');
+      else if (entity?.kind === 'building' && selectedBuilders.length && this.simulation.buildingNeedsWork(entity)) {
+        this._setCursor(entity.progress < 1 ? 'build-target' : 'repair-target');
+      }
       else if (entity?.kind === 'resource' && selectedVillagers.length) this._setCursor('gather-target');
       else if (entity?.kind === 'building' && entity.faction === 'player' && selectedVillagers.length) this._setCursor('interact-target');
       else this._setCursor('move-target');
@@ -209,8 +216,8 @@ export class CrownforgeInput {
         }
         return;
       }
-      // A selected Villager can use a primary click on a friendly foundation
-      // as an explicit resume-construction order. Selection remains the
+      // A selected builder can use a primary click on unfinished or damaged
+      // friendly structures as an explicit build/repair order. Selection remains the
       // normal left-click behavior everywhere else, while this small
       // exception makes an unfinished site feel actionable instead of merely
       // selectable. The same command router is used by right-click, so slot
@@ -218,13 +225,11 @@ export class CrownforgeInput {
       // identical between both input paths.
       const selectedUnits = this.simulation.selectedEntities
         .filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead);
-      const selectedVillagers = selectedUnits.filter((unit) => unit.type === 'villager');
-      if (selectedVillagers.length) {
+      const selectedBuilders = selectedUnits.filter((unit) => this.simulation.isBuilderUnit(unit));
+      if (selectedBuilders.length) {
         const visualTarget = this.renderer.getEntityAtScreen?.(this.simulation, point, 'command');
         if (visualTarget?.kind === 'building'
-          && visualTarget.faction === 'player'
-          && visualTarget.progress < 1
-          && !visualTarget.destroyed) {
+          && this.simulation.buildingNeedsWork(visualTarget)) {
           const world = this.renderer.screenToWorld(point);
           const result = this.simulation.issueContextCommand(world, visualTarget);
           if (result.kind !== 'none') this.renderer.addRipple(world, '#d7aa54');

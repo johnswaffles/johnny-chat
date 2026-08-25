@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260825-palisadefort1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260825-builderflow1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260823-orewashstages1';
 
@@ -51,6 +51,10 @@ const STATIC_BLOCKER_GRID_SIZE = 8;
 const STATIC_BLOCKER_QUERY_RADIUS = 6;
 const SIMULATION_STEP = 1 / 60;
 const MAX_SIMULATION_STEPS = 8;
+const BUILDER_SERVICE_INTERVAL = 0.4;
+const BUILDING_REPAIR_EPSILON = 0.5;
+const REPAIR_STRIKE_INTERVAL = 0.82;
+const SAFETY_HUDDLE_SPACING = 1.65;
 const NATURAL_RESOURCE_SECTORS = { columns: 5, rows: 4 };
 const NATURAL_RESOURCE_GAP = 1.7;
 
@@ -156,6 +160,8 @@ export class CrownforgeSimulation {
     this.clock = 0;
     this.timeAccumulator = 0;
     this.nextId = 1;
+    this.nextSafetyHuddleSlot = 0;
+    this.builderServiceClock = 0;
     this.navigationVersion = 0;
     this.staticBlockerGrid = new Map();
     this.staticBlockerGridVersion = -1;
@@ -436,6 +442,9 @@ export class CrownforgeSimulation {
       pathfindingDeferred: false,
       lastProgressX: x,
       lastProgressZ: z,
+      needsSafetyRegroup: Boolean(blueprint.regroupAtTownCenter && faction === 'player'),
+      safetyRegroupActive: false,
+      safetyHuddleSlot: blueprint.regroupAtTownCenter && faction === 'player' ? this.nextSafetyHuddleSlot++ : -1,
       spacingRole: SPACING_ROLES[type] ?? SPACING_ROLES.villager,
     };
     this.units.push(unit);
@@ -520,6 +529,11 @@ export class CrownforgeSimulation {
       return;
     }
     this.clock += dt;
+    this.builderServiceClock -= dt;
+    if (this.builderServiceClock <= 0) {
+      this.builderServiceClock = BUILDER_SERVICE_INTERVAL;
+      this._updateBuilderServices();
+    }
     for (const building of this.buildings) {
       this._updateConstruction(building, dt);
       this._updateTraining(building, dt);
@@ -665,17 +679,33 @@ export class CrownforgeSimulation {
     });
   }
 
+  isBuilderUnit(unit) {
+    return Boolean(unit
+      && unit.kind === 'unit'
+      && unit.faction === 'player'
+      && !unit.dead
+      && UNIT_TYPES[unit.type]?.canBuild);
+  }
+
+  buildingNeedsWork(building) {
+    return Boolean(building
+      && building.kind === 'building'
+      && building.faction === 'player'
+      && !building.destroyed
+      && (building.progress < 1 || building.hp < building.maxHp - BUILDING_REPAIR_EPSILON));
+  }
+
   _activeConstruction(unit) {
     if (unit.command !== 'build' || !unit.buildTarget) return null;
     return this.buildings.find((building) => building.id === unit.buildTarget
-      && building.faction === 'player'
-      && building.progress < 1
-      && !building.destroyed) ?? null;
+      && this.buildingNeedsWork(building)) ?? null;
   }
 
   _constructionQueueLabel(unit, building) {
     const count = Array.isArray(unit.orderQueue) ? unit.orderQueue.length : 0;
-    const base = `Building ${BUILDING_TYPES[building.type].label}`;
+    const base = building.progress < 1
+      ? `Building ${BUILDING_TYPES[building.type].label}`
+      : `Repairing ${BUILDING_TYPES[building.type].label}`;
     return count ? `${base} · ${count} queued` : base;
   }
 
@@ -713,9 +743,7 @@ export class CrownforgeSimulation {
         }
       } else if (order.kind === 'build') {
         const building = this.buildings.find((candidate) => candidate.id === order.buildingId
-          && candidate.faction === 'player'
-          && candidate.progress < 1
-          && !candidate.destroyed);
+          && this.buildingNeedsWork(candidate));
         if (building) {
           unit.buildTarget = building.id;
           started = this._sendUnitToBuilding(unit, building, order.buildSlot);
@@ -806,22 +834,28 @@ export class CrownforgeSimulation {
     unit.attackHitApplied = false;
     unit.stairAccess = false;
     unit.stairProgress = 0;
+    unit.needsSafetyRegroup = false;
+    unit.safetyRegroupActive = false;
     this._cancelAttackCycle(unit);
   }
 
   _updateConstruction(building, dt) {
-    if (building.progress >= 1) return;
+    if (!this.buildingNeedsWork(building)) return;
+    const repairing = building.progress >= 1;
     if (!Array.isArray(building.buildAssigned)) building.buildAssigned = building.buildAssigned ? [building.buildAssigned] : [];
-    building.buildAssigned = building.buildAssigned.filter((unitId) => this.units.some((unit) => unit.id === unitId && !unit.dead && unit.buildTarget === building.id));
+    building.buildAssigned = building.buildAssigned.filter((unitId) => this.units.some((unit) => unit.id === unitId
+      && this.isBuilderUnit(unit)
+      && unit.buildTarget === building.id));
     if (!building.buildAssigned.length) return;
     const builders = building.buildAssigned
-      .map((unitId) => this.units.find((unit) => unit.id === unitId && !unit.dead))
+      .map((unitId) => this.units.find((unit) => unit.id === unitId && this.isBuilderUnit(unit)))
       .filter(Boolean);
     let activeBuilders = 0;
     for (const builder of builders) {
       if (this._distanceToBuildingEdge(builder, building) > BUILDING_INTERACTION_DISTANCE + 0.08) {
         builder.visualState = 'walk';
-        builder.actionLabel = `Walking to build site${builder.orderQueue?.length ? ` · ${builder.orderQueue.length} queued` : ''}`;
+        const destination = building.progress < 1 ? 'build site' : BUILDING_TYPES[building.type].label;
+        builder.actionLabel = `Walking to ${destination}${builder.orderQueue?.length ? ` · ${builder.orderQueue.length} queued` : ''}`;
         if (builder.command !== 'build' || !builder.path.length) this._sendUnitToBuilding(builder, building, builder.buildSlot);
         continue;
       }
@@ -836,29 +870,50 @@ export class CrownforgeSimulation {
     }
     if (!activeBuilders) return;
     const blueprint = BUILDING_TYPES[building.type];
-    const strikeInterval = Math.max(0.55, blueprint.buildTime / 10);
-    building.constructionTimer = (building.constructionTimer ?? 0) + dt;
-    while (building.constructionTimer >= strikeInterval && building.progress < 1) {
-      building.constructionTimer -= strikeInterval;
-      for (const builder of builders) {
-        if (this._distanceToBuildingEdge(builder, building) <= BUILDING_INTERACTION_DISTANCE + 0.08) {
-          this.animation.emit(builder, ANIMATION_EVENTS.constructionStrike, { buildingId: building.id, x: building.x, z: building.z });
+    if (building.progress < 1) {
+      const strikeInterval = Math.max(0.55, blueprint.buildTime / 10);
+      building.constructionTimer = (building.constructionTimer ?? 0) + dt;
+      while (building.constructionTimer >= strikeInterval && building.progress < 1) {
+        building.constructionTimer -= strikeInterval;
+        for (const builder of builders) {
+          if (this._distanceToBuildingEdge(builder, building) <= BUILDING_INTERACTION_DISTANCE + 0.08) {
+            this.animation.emit(builder, ANIMATION_EVENTS.constructionStrike, { buildingId: building.id, x: building.x, z: building.z });
+          }
+        }
+        building.progress = clamp(building.progress + strikeInterval / blueprint.buildTime, 0, 1);
+        building.hp = building.maxHp * Math.max(building.progress, 0.18);
+      }
+    } else {
+      building.constructionTimer = (building.constructionTimer ?? 0) + dt;
+      while (building.constructionTimer >= REPAIR_STRIKE_INTERVAL) {
+        building.constructionTimer -= REPAIR_STRIKE_INTERVAL;
+        for (const builder of builders) {
+          if (this._distanceToBuildingEdge(builder, building) <= BUILDING_INTERACTION_DISTANCE + 0.08) {
+            this.animation.emit(builder, ANIMATION_EVENTS.constructionStrike, { buildingId: building.id, x: building.x, z: building.z, repair: true });
+          }
         }
       }
-      building.progress = clamp(building.progress + strikeInterval / blueprint.buildTime, 0, 1);
-      building.hp = building.maxHp * Math.max(building.progress, 0.18);
+      const repairPerSecond = builders.reduce((total, builder) => {
+        if (this._distanceToBuildingEdge(builder, building) > BUILDING_INTERACTION_DISTANCE + 0.08) return total;
+        return total + (UNIT_TYPES[builder.type]?.repairRate ?? 0);
+      }, 0);
+      building.hp = Math.min(building.maxHp, building.hp + repairPerSecond * dt);
     }
-    if (building.progress >= 1) {
+    const constructionComplete = building.progress >= 1 && building.hp >= building.maxHp - BUILDING_REPAIR_EPSILON;
+    if (constructionComplete) {
+      building.progress = 1;
+      building.hp = building.maxHp;
+      building.constructionTimer = 0;
       for (const builder of builders) {
         this._releaseBuildingSlot(builder);
         builder.buildTarget = null;
         builder.command = 'idle';
         builder.visualState = 'idle';
         builder.actionLabel = 'Idle';
-        this._executeNextConstructionOrder(builder);
+        if (!this._executeNextConstructionOrder(builder)) builder.needsSafetyRegroup = true;
       }
       building.buildAssigned = [];
-      this._announce(`${BUILDING_TYPES[building.type].label} complete.`);
+      this._announce(`${BUILDING_TYPES[building.type].label} ${repairing ? 'repaired' : 'complete'}.`);
     }
   }
 
@@ -889,6 +944,121 @@ export class CrownforgeSimulation {
     queue.shift();
     building.productionProgress = queue.length ? 0 : 0;
     this._announce(`${blueprint.label} ready at the ${BUILDING_TYPES[building.type]?.label ?? 'building'}.`);
+  }
+
+  _availableForAutomaticBuilding(unit) {
+    return Boolean(this.isBuilderUnit(unit)
+      && unit.command === 'idle'
+      && !unit.path.length
+      && !unit.carryAmount
+      && !unit.gatherTarget
+      && !unit.buildTarget
+      && !unit.fieldTarget
+      && !unit.attackTarget
+      && !unit.pathBlocked
+      && !(unit.orderQueue?.length));
+  }
+
+  _nearestAutomaticBuildingWork(unit) {
+    const radius = UNIT_TYPES[unit.type]?.autoBuildRadius ?? 0;
+    if (radius <= 0) return null;
+    return this.buildings
+      .filter((building) => {
+        if (!this.buildingNeedsWork(building)) return false;
+        const reservations = building.buildSlotReservations ?? new Map();
+        if (reservations.size >= CONSTRUCTION_SLOT_COUNT && ![...reservations.values()].includes(unit.id)) return false;
+        return this._distanceToBuildingEdge(unit, building) <= radius;
+      })
+      .sort((a, b) => {
+        const priorityA = a.progress < 1 ? 0 : 1;
+        const priorityB = b.progress < 1 ? 0 : 1;
+        return priorityA - priorityB
+          || this._distanceToBuildingEdge(unit, a) - this._distanceToBuildingEdge(unit, b)
+          || a.id - b.id;
+      })[0] ?? null;
+  }
+
+  _crownHallHuddlePoints(hall) {
+    const footprint = this._buildingFootprint(hall);
+    const clearance = BUILDING_TYPES[hall.type].collisionClearance ?? 0;
+    const firstRowZ = hall.z + footprint.height / 2 + clearance + 4.3;
+    const points = [];
+    // A shallow court south of the Hall creates a readable worker huddle
+    // without occupying the stair landing. Wider back rows scale to a busy
+    // test settlement while preserving one personal-space slot per worker.
+    for (let row = 0; row < 12; row += 1) {
+      const count = 7 + row * 2;
+      const z = firstRowZ + row * SAFETY_HUDDLE_SPACING;
+      const center = (count - 1) / 2;
+      const columns = Array.from({ length: count }, (_, column) => column)
+        .sort((a, b) => Math.abs(a - center) - Math.abs(b - center) || a - b);
+      for (const column of columns) {
+        points.push({
+          x: clamp(hall.x + (column - center) * SAFETY_HUDDLE_SPACING, 0.75, CONFIG.mapWidth - 0.75),
+          z: clamp(z, 0.75, CONFIG.mapHeight - 0.75),
+        });
+      }
+    }
+    return points;
+  }
+
+  _safetyHuddlePoint(unit, hall) {
+    const points = this._crownHallHuddlePoints(hall);
+    if (!points.length) return null;
+    const start = Math.max(0, unit.safetyHuddleSlot ?? 0) % points.length;
+    for (let offset = 0; offset < Math.min(points.length, 28); offset += 1) {
+      const point = points[(start + offset) % points.length];
+      if (!this._pointBlockedForUnit(unit, point)) return point;
+    }
+    return null;
+  }
+
+  _updateBuilderServices() {
+    const builders = this.units
+      .filter((unit) => this._availableForAutomaticBuilding(unit))
+      .sort((a, b) => a.id - b.id);
+    let routeBudget = this.stressMode ? 3 : 6;
+    for (const builder of builders) {
+      if (routeBudget <= 0) break;
+      const building = this._nearestAutomaticBuildingWork(builder);
+      if (!building) continue;
+      this._interruptWork(builder);
+      builder.buildTarget = building.id;
+      if (this._sendUnitToBuilding(builder, building, builder.id % CONSTRUCTION_SLOT_COUNT)) {
+        builder.actionLabel = `${building.progress < 1 ? 'Auto-building' : 'Auto-repairing'} ${BUILDING_TYPES[building.type].label}`;
+        routeBudget -= 1;
+      } else {
+        builder.buildTarget = null;
+      }
+    }
+
+    if (routeBudget <= 0) return;
+    const hall = this.buildings.find((building) => building.type === 'townCenter'
+      && building.faction === 'player'
+      && building.progress >= 1
+      && !building.destroyed);
+    if (!hall) return;
+    const regrouping = this.units
+      .filter((unit) => this._availableForAutomaticBuilding(unit)
+        && UNIT_TYPES[unit.type]?.regroupAtTownCenter
+        && unit.needsSafetyRegroup)
+      .sort((a, b) => a.safetyHuddleSlot - b.safetyHuddleSlot || a.id - b.id);
+    for (const unit of regrouping) {
+      if (routeBudget <= 0) break;
+      const point = this._safetyHuddlePoint(unit, hall);
+      if (!point) continue;
+      if (distance(unit, point) <= 0.72) {
+        unit.needsSafetyRegroup = false;
+        unit.safetyRegroupActive = false;
+        unit.actionLabel = 'Standing by at Crown Hall';
+        continue;
+      }
+      if (this._sendUnitTo(unit, point, 'move')) {
+        unit.safetyRegroupActive = true;
+        unit.actionLabel = 'Regrouping at Crown Hall';
+        routeBudget -= 1;
+      }
+    }
   }
 
   _sendUnitToField(unit, field) {
@@ -1096,7 +1266,13 @@ export class CrownforgeSimulation {
         unit.command = 'idle';
         unit.visualState = 'idle';
         unit.routeTarget = null;
-        unit.actionLabel = 'Idle';
+        if (unit.safetyRegroupActive) {
+          unit.safetyRegroupActive = false;
+          unit.needsSafetyRegroup = false;
+          unit.actionLabel = 'Standing by at Crown Hall';
+        } else {
+          unit.actionLabel = 'Idle';
+        }
       }
     }
   }
@@ -1116,6 +1292,7 @@ export class CrownforgeSimulation {
         unit.actionLabel = 'Resource depleted';
         unit.command = 'idle';
         unit.visualState = 'idle';
+        unit.needsSafetyRegroup = true;
       }
       return;
     }
@@ -1126,11 +1303,14 @@ export class CrownforgeSimulation {
       return;
     }
     if (this.resources[node.resourceType] >= resourceInfo.capacity) {
+      this._releaseResourceSlot(unit);
+      unit.gatherTarget = null;
       unit.gatherTimer = 0;
       unit.gatherEventFired = false;
       unit.command = 'idle';
       unit.visualState = 'idle';
       unit.actionLabel = `${resourceInfo.label} storage full`;
+      unit.needsSafetyRegroup = true;
       return;
     }
     if (distance(unit, node) > interactionDistance + 0.08) {
@@ -1164,11 +1344,14 @@ export class CrownforgeSimulation {
     const gatherAmount = Math.round(resourceInfo.gatherAmount * this._resourceGatherMultiplier(node));
     const amount = Math.min(gatherAmount, node.amount, availableSpace);
     if (amount <= 0) {
+      this._releaseResourceSlot(unit);
+      unit.gatherTarget = null;
       unit.gatherTimer = 0;
       unit.gatherEventFired = false;
       unit.command = 'idle';
       unit.visualState = 'idle';
       unit.actionLabel = `${resourceInfo.label} storage full`;
+      unit.needsSafetyRegroup = true;
       return;
     }
     node.amount -= amount;
@@ -1251,9 +1434,7 @@ export class CrownforgeSimulation {
       const buildingId = unit.postDepositBuildTarget;
       unit.postDepositBuildTarget = null;
       const building = this.buildings.find((candidate) => candidate.id === buildingId
-        && candidate.faction === 'player'
-        && candidate.progress < 1
-        && !candidate.destroyed);
+        && this.buildingNeedsWork(candidate));
       if (building) {
         unit.buildTarget = building.id;
         if (!this._sendUnitToBuilding(unit, building, unit.buildSlot)) unit.buildTarget = null;
@@ -1269,6 +1450,7 @@ export class CrownforgeSimulation {
     unit.command = 'idle';
     unit.visualState = 'idle';
     unit.actionLabel = 'Idle';
+    unit.needsSafetyRegroup = true;
   }
 
   _beginReturn(unit) {
@@ -1825,7 +2007,7 @@ export class CrownforgeSimulation {
       return target ? this._sendUnitToAttack(unit, target, unit.attackSlot) : false;
     }
     if (unit.command === 'build') {
-      const building = this.buildings.find((candidate) => candidate.id === unit.buildTarget && !candidate.destroyed && candidate.progress < 1);
+      const building = this.buildings.find((candidate) => candidate.id === unit.buildTarget && this.buildingNeedsWork(candidate));
       return building ? this._sendUnitToBuilding(unit, building) : false;
     }
     if (unit.command === 'move' && unit.routeTarget) {
@@ -1914,7 +2096,7 @@ export class CrownforgeSimulation {
       unit.recoveryAvailable = true;
       unit.command = 'idle';
       unit.visualState = 'idle';
-      unit.actionLabel = 'Build route blocked';
+      unit.actionLabel = building.progress < 1 ? 'Build route blocked' : 'Repair route blocked';
       return false;
     }
     this._reserveBuildingSlot(unit, building, route.slot);
@@ -1923,7 +2105,9 @@ export class CrownforgeSimulation {
     unit.stopDistance = BUILDING_INTERACTION_DISTANCE;
     unit.pathBlocked = false;
     unit.command = 'build';
-    unit.actionLabel = 'Walking to build site';
+    unit.actionLabel = building.progress < 1
+      ? 'Walking to build site'
+      : `Walking to repair ${BUILDING_TYPES[building.type].label}`;
     this._resetMovementTracking(unit);
     return true;
   }
@@ -2266,17 +2450,19 @@ export class CrownforgeSimulation {
   }
 
   _updateBuildingIntent(unit) {
-    const building = this.buildings.find((candidate) => candidate.id === unit.buildTarget && candidate.progress < 1);
+    const building = this.buildings.find((candidate) => candidate.id === unit.buildTarget && this.buildingNeedsWork(candidate));
     if (!building) {
       this._releaseBuildingSlot(unit);
       unit.buildTarget = null;
       unit.command = 'idle';
       unit.visualState = 'idle';
       unit.actionLabel = 'Idle';
+      if (!this._executeNextConstructionOrder(unit)) unit.needsSafetyRegroup = true;
       return;
     }
     if (this._distanceToBuildingEdge(unit, building) > BUILDING_INTERACTION_DISTANCE + 0.08) {
-      unit.actionLabel = `Walking to build site${unit.orderQueue?.length ? ` · ${unit.orderQueue.length} queued` : ''}`;
+      const destination = building.progress < 1 ? 'build site' : `repair ${BUILDING_TYPES[building.type].label}`;
+      unit.actionLabel = `Walking to ${destination}${unit.orderQueue?.length ? ` · ${unit.orderQueue.length} queued` : ''}`;
       unit.visualState = 'walk';
       setUnitFacing(unit, building.x - unit.x, building.z - unit.z);
       if (!unit.path.length) this._sendUnitToBuilding(unit, building, unit.buildSlot);
@@ -2794,6 +2980,18 @@ export class CrownforgeSimulation {
     this.lastCommand = this.selectedIds.length ? `${this.selectedIds.length} Crownwarden${this.selectedIds.length === 1 ? '' : 's'} selected.` : 'No Crownwardens in that box.';
   }
 
+  selectAllVillagers() {
+    const villagers = this.units
+      .filter((unit) => unit.type === 'villager' && unit.faction === 'player' && !unit.dead)
+      .sort((a, b) => a.id - b.id);
+    this.selectedIds = villagers.map((unit) => unit.id);
+    this._syncSelectionFlags();
+    this.lastCommand = villagers.length
+      ? `All ${villagers.length} villager${villagers.length === 1 ? '' : 's'} selected.`
+      : 'No villagers are available.';
+    return { kind: 'selection', success: villagers.length > 0, count: villagers.length, entities: villagers };
+  }
+
   issueContextCommand(point, forcedTarget = null) {
     const units = this.units.filter((unit) => this.selectedIds.includes(unit.id) && unit.faction === 'player' && !unit.dead);
     if (!units.length) {
@@ -2841,10 +3039,11 @@ export class CrownforgeSimulation {
       if (queued) this.lastCommand += ` ${queued} builder${queued === 1 ? '' : 's'} queued it after construction.`;
       return { kind: 'gather', success: true, target, queued };
     }
-    if (target?.kind === 'building' && target.faction === 'player' && target.progress < 1 && !target.destroyed) {
-      const builders = units.filter((unit) => unit.type === 'villager').slice(0, CONSTRUCTION_SLOT_COUNT);
+    if (target?.kind === 'building' && this.buildingNeedsWork(target)) {
+      const repair = target.progress >= 1;
+      const builders = units.filter((unit) => this.isBuilderUnit(unit)).slice(0, CONSTRUCTION_SLOT_COUNT);
       if (!builders.length) {
-        this.lastCommand = 'Select a villager to continue construction.';
+        this.lastCommand = `Select a builder to ${repair ? 'repair this structure' : 'continue construction'}.`;
         this._announce(this.lastCommand);
         return { kind: 'none', success: false, target };
       }
@@ -2869,13 +3068,15 @@ export class CrownforgeSimulation {
         else unit.buildTarget = null;
       });
       if (!assigned) {
-        this.lastCommand = `No route to the ${BUILDING_TYPES[target.type].label.toLowerCase()} foundation.`;
+        this.lastCommand = `No route to the ${BUILDING_TYPES[target.type].label.toLowerCase()}${repair ? '' : ' foundation'}.`;
         this._announce(this.lastCommand);
         return { kind: 'none', success: false, target };
       }
-      this.lastCommand = `Continue ${BUILDING_TYPES[target.type].label} construction with ${assigned} villager${assigned === 1 ? '' : 's'}.`;
+      this.lastCommand = repair
+        ? `Repair ${BUILDING_TYPES[target.type].label} with ${assigned} builder${assigned === 1 ? '' : 's'}.`
+        : `Continue ${BUILDING_TYPES[target.type].label} construction with ${assigned} builder${assigned === 1 ? '' : 's'}.`;
       if (queued) this.lastCommand += ` ${queued} builder${queued === 1 ? '' : 's'} queued it after current construction.`;
-      return { kind: 'build', success: true, target, assigned, queued };
+      return { kind: repair ? 'repair' : 'build', success: true, target, assigned, queued };
     }
     if (target?.kind === 'building' && target.faction === 'player' && target.type === 'townCenter' && target.progress >= 1 && !target.destroyed) {
       let routed = 0;
@@ -3527,7 +3728,7 @@ export class CrownforgeSimulation {
     const blueprint = BUILDING_TYPES.wall;
     const builders = this._selectedBuilders(preview.world).slice(0, CONSTRUCTION_SLOT_COUNT);
     if (!builders.length) {
-      this._announce('Select a villager before placing a Palisade Wall.');
+      this._announce('Select a builder before placing a Palisade Wall.');
       return false;
     }
     const cleared = this._clearResourcesForWall(preview);
@@ -3567,7 +3768,7 @@ export class CrownforgeSimulation {
     const buildPoint = preview.world;
     const builders = this._selectedBuilders(buildPoint).slice(0, CONSTRUCTION_SLOT_COUNT);
     if (!builders.length) {
-      this._announce(`Select a villager before placing a ${blueprint.label}.`);
+      this._announce(`Select a builder before placing a ${blueprint.label}.`);
       return false;
     }
     if (!preview.valid) {
@@ -3639,7 +3840,7 @@ export class CrownforgeSimulation {
   }
 
   _selectedBuilders(point = null) {
-    const builders = this.units.filter((unit) => unit.selected && unit.type === 'villager' && unit.faction === 'player' && !unit.dead && unit.carryAmount <= 0);
+    const builders = this.units.filter((unit) => unit.selected && this.isBuilderUnit(unit) && unit.carryAmount <= 0);
     if (!point) return builders;
     return builders.slice().sort((a, b) => distance(a, point) - distance(b, point));
   }
@@ -3750,7 +3951,7 @@ export class CrownforgeSimulation {
     }
     if (blueprint.wall) {
       const builder = this._selectedBuilders(point)[0];
-      if (!builder) return { valid: false, reason: 'Select a villager to build.' };
+      if (!builder) return { valid: false, reason: 'Select a builder to build.' };
       if (builder.carryAmount > 0) return { valid: false, reason: 'Let the selected villager deposit cargo first.' };
       if (!this._canAfford(blueprint.cost)) {
         const missing = Object.entries(blueprint.cost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
@@ -3781,7 +3982,7 @@ export class CrownforgeSimulation {
     });
     if (openAccess.length < 2) return { valid: false, reason: 'Leave room around the foundation to build.' };
     const builder = this._selectedBuilders(point)[0];
-    if (!builder) return { valid: false, reason: 'Select a villager to build.' };
+    if (!builder) return { valid: false, reason: 'Select a builder to build.' };
     if (builder.carryAmount > 0) return { valid: false, reason: 'Let the selected villager deposit cargo first.' };
     const route = this._bestPathToPoints(builder, this._buildingApproachPoints(placement), placement);
     if (!route) return { valid: false, reason: 'The selected villager has no route to the site.' };
