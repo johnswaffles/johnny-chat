@@ -1,4 +1,4 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260825-firstage4';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260825-palisadefort1';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260825-firstage4';
 
 const TAU = Math.PI * 2;
@@ -234,6 +234,8 @@ export class CrownforgeRenderer {
     this.resolutionScale = 1;
     this.staticLayer = document.createElement('canvas');
     this.staticLayerKey = null;
+    this.palisadeJunctionCacheKey = '';
+    this.palisadeJunctionCache = [];
     this.viewportBounds = null;
     this.daylightEnabled = !query.has('lighting-off');
     this.frameStats = { count: 0, samples: [] };
@@ -270,6 +272,9 @@ export class CrownforgeRenderer {
       this.firstAgeConstructionAtlases.homestead,
       this.firstAgeAssets.watchHut,
       this.firstAgeConstructionAtlases.watchHut,
+      this.firstAgeAssets.palisadeTower,
+      this.firstAgeConstructionAtlases.palisadeTower,
+      this.firstAgeAssets.palisadeJunction,
       this.firstAgeAssets.timberYard,
       this.firstAgeConstructionAtlases.timberYard,
       this.firstAgeAssets.stonewrightYard,
@@ -760,9 +765,10 @@ export class CrownforgeRenderer {
   }
 
   drawWorldEntities(ctx, simulation, time) {
-    const kindOrder = { building: 0, resource: 1, roadside: 2, 'roadside-shrub': 2, decoration: 3, unit: 4 };
+    const kindOrder = { building: 0, 'wall-junction': 0.5, resource: 1, roadside: 2, 'roadside-shrub': 2, decoration: 3, unit: 4 };
     const entities = [
       ...simulation.buildings.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.field ? -10000 + entity.x + entity.z : entity.x + entity.z + 0.2 })),
+      ...this.palisadeJunctionEntities(simulation).filter((entity) => this.isWorldVisible(entity, 3)).map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.48 })),
       ...simulation.resourcesNodes.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.type === 'grain' ? -9999 + entity.x + entity.z : entity.x + entity.z + 0.3 })),
       ...this.roadsideDetails.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity, index) => ({
         ...entity,
@@ -776,11 +782,107 @@ export class CrownforgeRenderer {
       if (entity.dead && entity.deathAge > 2.4) continue;
       if (entity.destroyed && entity.destroyAge > 2.4) continue;
       if (entity.kind === 'building') this.drawBuilding(ctx, entity, time);
+      else if (entity.kind === 'wall-junction') this.drawPalisadeJunction(ctx, entity);
       else if (entity.kind === 'resource') this.drawResource(ctx, entity, time);
       else if (entity.kind === 'roadside' || entity.kind === 'roadside-shrub') this.drawRoadsideDetail(ctx, entity);
       else if (entity.kind === 'decoration') this.drawDecoration(ctx, entity);
       else this.drawUnit(ctx, entity, time);
     }
+  }
+
+  wallSegmentPoints(wall) {
+    const blueprint = BUILDING_TYPES.wall;
+    const count = Math.max(1, Math.round(wall.wallSegments ?? 1));
+    const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
+    const direction = wall.wallDirection
+      ?? (wall.wallOrientation === 'vertical' ? { x: 0, z: 1 } : { x: 1, z: 0 });
+    const magnitude = Math.hypot(direction.x, direction.z) || 1;
+    const dx = direction.x / magnitude;
+    const dz = direction.z / magnitude;
+    const start = wall.wallStart ?? {
+      x: wall.x - dx * (count - 1) * span / 2,
+      z: wall.z - dz * (count - 1) * span / 2,
+    };
+    return {
+      direction: { x: dx, z: dz },
+      points: Array.from({ length: count }, (_, index) => ({
+        x: start.x + dx * index * span,
+        z: start.z + dz * index * span,
+      })),
+    };
+  }
+
+  palisadeJunctionEntities(simulation) {
+    const activeWalls = simulation.buildings
+      .filter((building) => building.type === 'wall' && !building.destroyed && building.progress > 0.08);
+    const cacheKey = activeWalls.map((wall) => {
+      const direction = wall.wallDirection ?? { x: 1, z: 0 };
+      const start = wall.wallStart ?? wall;
+      return `${wall.id}:${wall.wallSegments}:${start.x.toFixed(3)}:${start.z.toFixed(3)}:${direction.x.toFixed(3)}:${direction.z.toFixed(3)}:${Math.round(wall.progress * 12)}`;
+    }).join('|');
+    if (cacheKey === this.palisadeJunctionCacheKey) return this.palisadeJunctionCache;
+
+    const walls = activeWalls.map((wall) => ({ wall, ...this.wallSegmentPoints(wall) }));
+    const span = BUILDING_TYPES.wall.wallSegmentSpan ?? BUILDING_TYPES.wall.footprint.width;
+    const junctions = [];
+    const seen = new Set();
+    const addJunction = (point, first, second) => {
+      const key = `${Math.round(point.x * 4)}:${Math.round(point.z * 4)}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      junctions.push({
+        id: `wall-junction-${key}`,
+        kind: 'wall-junction',
+        x: point.x,
+        z: point.z,
+        alpha: Math.min(1, Math.max(0.24, Math.min(first.wall.progress, second.wall.progress))),
+      });
+    };
+    for (let firstIndex = 0; firstIndex < walls.length; firstIndex += 1) {
+      const first = walls[firstIndex];
+      const firstEndpoints = [first.points[0], first.points[first.points.length - 1]];
+      for (let secondIndex = firstIndex + 1; secondIndex < walls.length; secondIndex += 1) {
+        const second = walls[secondIndex];
+        const secondEndpoints = [second.points[0], second.points[second.points.length - 1]];
+        const directionAlignment = Math.abs(first.direction.x * second.direction.x + first.direction.z * second.direction.z);
+
+        // Crossings and T-junctions share a segment center. Ignore exact
+        // collinear duplicates, which remain a single continuous visual run.
+        for (const firstPoint of first.points) {
+          for (const secondPoint of second.points) {
+            if (distance(firstPoint, secondPoint) > span * 0.4 || directionAlignment > 0.93) continue;
+            addJunction({ x: (firstPoint.x + secondPoint.x) / 2, z: (firstPoint.z + secondPoint.z) / 2 }, first, second);
+          }
+        }
+
+        // Magnetically connected runs keep one segment-span between their
+        // terminal centers. A shared upright connector at the midpoint masks
+        // both oversized panel ends and makes straight, diagonal, and corner
+        // joins read as one authored structure.
+        for (const firstPoint of firstEndpoints) {
+          for (const secondPoint of secondEndpoints) {
+            const separation = distance(firstPoint, secondPoint);
+            if (separation < span * 0.72 || separation > span * 1.28) continue;
+            const joinDirection = {
+              x: (secondPoint.x - firstPoint.x) / separation,
+              z: (secondPoint.z - firstPoint.z) / separation,
+            };
+            const firstAlignment = Math.abs(joinDirection.x * first.direction.x + joinDirection.z * first.direction.z);
+            const secondAlignment = Math.abs(joinDirection.x * second.direction.x + joinDirection.z * second.direction.z);
+            if (Math.max(firstAlignment, secondAlignment) < 0.82) continue;
+            addJunction({ x: (firstPoint.x + secondPoint.x) / 2, z: (firstPoint.z + secondPoint.z) / 2 }, first, second);
+          }
+        }
+      }
+    }
+    this.palisadeJunctionCacheKey = cacheKey;
+    this.palisadeJunctionCache = junctions;
+    return junctions;
+  }
+
+  drawPalisadeJunction(ctx, junction) {
+    const point = this.worldToScreen(junction);
+    this.drawFirstAgeAsset(ctx, 'palisadeJunction', point, 150 * this.camera.zoom, junction.alpha ?? 1);
   }
 
   drawOccludedUnitOverlays(ctx, simulation) {

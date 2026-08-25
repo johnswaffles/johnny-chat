@@ -3717,3 +3717,63 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add ranged combat, garrisoning, fog of war, technologies, additional ages, new factions, advanced enemy behavior, or a large military roster for this pass.
 - Do not add more units merely to fill menus; future additions must have a clear first-age role and complete original directional/action artwork before integration.
+
+## PALISADE JUNCTION, GATE & TOWER PASS — 2026-08-25
+
+### WHAT EXISTS
+
+- Palisade lines now use forgiving eight-way direction snapping, a broad endpoint magnet, interior branch sockets, map-edge locking, unrestricted line length, and natural-resource clearing. Buildings remain the only hard placement blocker.
+- Palisade corners, dividers, and exact crossings receive a compact shared timber junction post in the final render pass, replacing the visual impression of two complete fence panels stacked through one another.
+- The existing open Palisade Gate and new Palisade Tower both attach directly to a claimed wall panel, remove that panel, and preserve connected wall runs on both sides.
+
+### WHAT WAS COMPLETED
+
+- Audited the complete wall preview, snapping, placement, overlap, obstacle-clearing, split-run, edge-lock, gate, collision, and render paths.
+- Expanded magnetic wall connections from terminal endpoints to compatible sockets along every Palisade run, allowing dividers to begin or finish against an existing wall without pixel-perfect input.
+- Prevented a short turn from folding back onto a second socket of the same source run while preserving deliberate overlaps, parallel-row dividers, diagonal turns, and long edge-to-edge walls.
+- Added synthetic shared-junction rendering for exact crossings, T-junctions, and one-panel-span turns. Junctions participate in depth sorting and use a dedicated upright timber asset rather than a debug mark or geometric patch.
+- Cached junction topology by wall layout and coarse construction progress, so settled walls do not repeat pairwise connection discovery every render frame.
+- Generalized the existing gate replacement path into a wall-attachment contract shared by the Gate and Tower. The claimed wall run is retired and rebuilt as left/right connected runs around the attachment.
+- Added a selectable `Palisade Tower` blueprint with 480 HP, 3.6 × 3.6 footprint, seven-second construction time, and 85 Wood / 20 Stone cost.
+- Added foundation, partial, near-complete, and completed Tower stages. The Tower remains a passive reinforced hardpoint in this pass; no ranged, garrison, or fog-of-war subsystem was introduced.
+- Added concise build-menu, tooltip, placement-readout, construction, and building-selection information for the Tower.
+- Bumped the Palisade runtime marker to `20260825-palisadefort1` across the active module graph.
+
+### KNOWN ISSUES
+
+- The Palisade Tower is currently a passive wall hardpoint. Ranged fire, garrisoning, vision, and upgrades are intentionally deferred.
+- Wall runs remain separate simulation records after they connect. The renderer resolves their shared visual junction while collision treats every placed run as a continuous blocker.
+- Arbitrary decorative stacking of several walls in the exact same collinear location is allowed for forgiving placement; the Gate and Tower remove every claimed overlapping panel at their attachment point.
+
+### ASSETS CREATED
+
+- `assets/crownforge-palisade-junction-post-v1.png` — 1254 × 1254 RGBA compact upright shared-corner/intersection post.
+- `assets/crownforge-palisade-tower-first-age-v1.png` — 1254 × 1254 RGBA completed first-age timber Palisade Tower.
+- `assets/crownforge-palisade-tower-construction-atlas-v1.png` — 1254 × 1254 RGBA 2 × 2 foundation, partial, near-complete, and completed Tower atlas.
+- All three were authored as one original Crownforge timber-and-thatch family, then passed through the established neutral-matte preparation tool to produce true-alpha runtime PNGs.
+
+### SYSTEMS CREATED
+
+- General `wallAttachment` building contract for structures that replace one Palisade panel while preserving both neighboring wall runs.
+- Interior wall-socket discovery and compatible branch snapping.
+- Render-sorted Palisade junction detection for corners, crossings, and dividers.
+- Data-driven Palisade Tower completed/construction asset registration and startup-readiness coverage.
+- Regression coverage for endpoint and interior magnets, perpendicular and diagonal turns, overlapping lines, parallel-row dividers, edge-to-edge walls, Gate replacement, and Tower replacement.
+
+### VALIDATION
+
+- `node --check` passed for all changed runtime modules.
+- `tools/remediation-regression.mjs` passed the complete suite including the new Palisade and Tower assertions.
+- A live local browser scene at normal zoom verified upright walls, clean corner junctions, connected Gate/Tower silhouettes, true-alpha asset edges, and the Palisade Tower build command with no new browser warnings or runtime errors.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Test long mixed-orientation enclosures in a normal player match, including repeated Gate/Tower replacements and villagers resuming interrupted construction.
+2. Inspect very dense three- and four-way junctions at the minimum and maximum zoom limits and tune only the compact junction scale if a specific overlap remains visible.
+3. Add a narrow gate open/closed behavior only after wall placement and traversal are stable in repeated live play.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add ranged Tower attacks, garrisoning, wall upgrades, siege, stone walls, or defensive technologies during this Palisade polish pass.
+- Do not add another wall family until the first-age timber Palisade, Gate, Tower, and junction behavior are consistently strong.
+- Do not replace the renderer or introduce a new physics system for these connections; continue strengthening the current data-driven wall foundation.

@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260825-firstage4';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260825-palisadefort1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260824-smoothpass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260825-firstage4';
-import { CrownforgeSimulation } from './simulation.js?v=20260825-firstage4';
+import { CrownforgeInput } from './input.js?v=20260825-palisadefort1';
+import { CrownforgeRenderer } from './renderer.js?v=20260825-palisadefort1';
+import { CrownforgeSimulation } from './simulation.js?v=20260825-palisadefort1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
@@ -305,6 +305,8 @@ function updateUi() {
       ? 'DRAG TO AIM  •  8-WAY SNAP  •  WIDE MAGNET  •  EDGE LOCK  •  '
       : blueprint.gate
         ? 'SNAPS TO WALL  •  REPLACES 1 PANEL  •  PASSABLE  •  '
+        : blueprint.wallAttachment
+          ? 'SNAPS TO WALL  •  REPLACES 1 PANEL  •  HARDPOINT  •  '
         : '';
     if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${placementHint}${status}`;
     button.classList.toggle('is-unavailable', !ready);
@@ -318,6 +320,8 @@ function updateUi() {
           ? `Click-drag from or toward a wall end; the ${blueprint.label} locks on within a generous radius, then snaps to 8 orientations`
           : blueprint.gate
             ? `Move the ${blueprint.label} over a Palisade; it magnetically replaces one panel with a passable opening`
+            : blueprint.wallAttachment
+              ? `Move the ${blueprint.label} over a Palisade; it magnetically replaces one panel and reconnects the wall around the hardpoint`
             : `Place a ${blueprint.label}`);
   });
   const selected = simulation.selectedEntities;
@@ -372,6 +376,8 @@ function updateUi() {
         ? `${preview.wallSnapLabel ?? 'SNAPPED'} · ${preview.wallSegments ?? 1} segment${preview.wallSegments === 1 ? '' : 's'}${preview.wallEdgeSnap ? ' · MAP EDGE LOCK' : ''}${preview.wallConnectCount ? ` · connects ${preview.wallConnectCount} wall end${preview.wallConnectCount === 1 ? '' : 's'}` : ''}${preview.resourceClearCount ? ` · clears ${preview.resourceClearCount} resource node${preview.resourceClearCount === 1 ? '' : 's'}` : ''} · release to place`
         : preview?.type === 'gate'
           ? `Palisade opening · ${preview.gateWallId ? 'wall panel snapped' : 'move over a wall'} · click to place`
+          : preview?.type === 'palisadeTower'
+            ? `Palisade hardpoint · ${preview.attachmentWallId ? 'wall panel snapped' : 'move over a wall'} · click to replace panel`
         : 'Click to place  ·  Hall vision active  ·  Esc to cancel'
       : (preview?.reason ?? 'Move the foundation to a clear site.');
   }
@@ -480,6 +486,7 @@ function buildingAbilityLabel(building, blueprint) {
   if (blueprint.population) return `housing · adds ${blueprint.population} population space`;
   if (blueprint.wall) return 'defensive boundary · blocks movement';
   if (blueprint.gate) return 'passable defensive entryway · replaces one Palisade panel';
+  if (blueprint.wallAttachment) return 'reinforced Palisade hardpoint · replaces one wall panel';
   return 'structure ready · no active command';
 }
 

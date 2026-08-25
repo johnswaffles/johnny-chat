@@ -95,6 +95,8 @@ export class CrownforgeInput {
       ? 'Drag across the meadow to aim the wall. Start or finish near a wall end or map edge and it magnetically locks on. Natural resources yield to the wall; structures remain protected. Press Esc to cancel.'
       : type === 'gate'
         ? 'Move over a Palisade to magnetically snap the gate into place. It replaces one segment and opens a passable crossing. Press Esc to cancel.'
+        : type === 'palisadeTower'
+          ? 'Move over a Palisade to magnetically snap the tower into place. It replaces the claimed panel and reconnects both wall sides. Press Esc to cancel.'
         : 'Construction menu: choose a clear meadow tile. Press Esc to cancel.');
   }
 

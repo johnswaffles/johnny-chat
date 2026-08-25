@@ -370,3 +370,12 @@ The built-in image generator used the approved completed Ore Wash as the strict 
 - `assets/crownforge-shieldbearer-attack-loop-v1.png` — original four-direction four-frame Shieldbearer attack loop, 1236×1273.
 - Runtime cache marker: `20260825-firstage4`.
 - All five generated rasters were inspected as transparent game assets before integration; no text, UI, studio backplate, or unrelated character appears in the project-bound versions.
+
+## PALISADE JUNCTION & TOWER ASSETS — 2026-08-25 (CURRENT ADDITION)
+
+- `assets/crownforge-palisade-junction-post-v1.png` — 1254 × 1254 RGBA compact shared corner/intersection post with upright sharpened timber, blue leather straps, restrained gold crown fittings, and a bottom-center terrain anchor.
+- `assets/crownforge-palisade-tower-first-age-v1.png` — 1254 × 1254 RGBA completed first-age wall tower with an elevated timber platform, thatched roof, ladder, Palisade-compatible base, and restrained Crownwarden cloth.
+- `assets/crownforge-palisade-tower-construction-atlas-v1.png` — 1254 × 1254 RGBA 2 × 2 Tower construction atlas. Runtime cells are foundation, partial frame, near-complete, and completed stages.
+- Runtime registration: `FIRST_AGE_ASSETS.palisadeJunction` and `FIRST_AGE_ASSETS.palisadeTower`, with cache marker `20260825-palisadefort1`.
+- The built-in image generator authored all three against the active first-age Palisade and Gate family. Generated neutral/checker representations were converted through `tools/prepare-neutral-matte.mjs`; only true-alpha prepared PNGs are registered by the runtime.
+- The junction is a render-layer connector, not a simulation entity. The completed Tower and its construction atlas use the generic first-age staged-building contract, while `wallAttachment` placement replaces the claimed Palisade panel.

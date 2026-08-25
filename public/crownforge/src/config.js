@@ -503,7 +503,21 @@ export const BUILDING_TYPES = {
     buildTime: 5,
     cost: { food: 0, wood: 40, stone: 15 },
     gate: true,
+    wallAttachment: true,
     walkable: true,
+  },
+  palisadeTower: {
+    label: 'Palisade Tower',
+    function: 'Reinforced wall hardpoint',
+    asset: 'palisadeTower',
+    maxHp: 480,
+    footprint: { width: 3.6, height: 3.6 },
+    renderSize: 300,
+    collisionClearance: 0.55,
+    entrance: 'south',
+    buildTime: 7,
+    cost: { food: 0, wood: 85, stone: 20 },
+    wallAttachment: true,
   },
   storehouse: {
     label: 'Waystore',
@@ -536,7 +550,7 @@ export const BUILDING_TYPES = {
 // Only these structures belong to the current player-facing first-age build
 // catalog. Retired prototypes remain defined for old saves/audit history, but
 // cannot be placed until they receive an approved Crownforge asset and role.
-export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'wall', 'gate']);
+export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'wall', 'gate', 'palisadeTower']);
 
 export const ASSET_RECTS = {
   townCenter: { x: 0, y: 0, width: 418, height: 418 },
@@ -740,6 +754,29 @@ export const FIRST_AGE_ASSETS = {
       face: { column: 0, row: 1 },
       depth: { column: 1, row: 1 },
     },
+  },
+  palisadeTower: {
+    src: './assets/crownforge-palisade-tower-first-age-v1.png?v=20260825-palisadefort1',
+    width: 1254,
+    height: 1254,
+    constructionAtlas: {
+      src: './assets/crownforge-palisade-tower-construction-atlas-v1.png?v=20260825-palisadefort1',
+      width: 1254,
+      height: 1254,
+      columns: 2,
+      rows: 2,
+      destinationAspect: 1,
+      cellByStage: {
+        foundation: { column: 0, row: 0 },
+        partial: { column: 1, row: 0 },
+        nearComplete: { column: 0, row: 1 },
+      },
+    },
+  },
+  palisadeJunction: {
+    src: './assets/crownforge-palisade-junction-post-v1.png?v=20260825-palisadefort1',
+    width: 1254,
+    height: 1254,
   },
 };
 

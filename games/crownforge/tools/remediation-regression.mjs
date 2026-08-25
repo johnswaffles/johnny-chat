@@ -121,7 +121,7 @@ function checkResetPresentation() {
     ['townCenter'],
     'reset begins with the Crown Hall as the only player building',
   );
-  assert.deepEqual(FIRST_AGE_BUILD_BLUEPRINTS, ['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'wall', 'gate'], 'first-age blueprint catalog stays intentionally small');
+  assert.deepEqual(FIRST_AGE_BUILD_BLUEPRINTS, ['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'wall', 'gate', 'palisadeTower'], 'first-age blueprint catalog stays intentionally small');
   assert.deepEqual(
     [...INDEX_HTML.matchAll(/data-build-type="([^"]+)"/g)].map((match) => match[1]),
     FIRST_AGE_BUILD_BLUEPRINTS,
@@ -891,6 +891,11 @@ function checkWallEndpointMagnetism() {
   assert.equal(diagonalTurn.wallConnectCount, 1, 'a diagonal turn keeps its magnetic wall connection');
   assert.deepEqual(diagonalTurn.wallStart, { x: 183.87867965644037, z: 177.87867965644037 }, 'a diagonal turn starts ahead of the terminal in its chosen heading');
 
+  const interiorBranch = simulation.getWallLinePreview({ x: 183.2, z: 183.1 }, { x: 183.2, z: 192.2 });
+  assert.equal(interiorBranch.valid, true, 'a divider can magnetize to an interior Palisade panel');
+  assert.equal(interiorBranch.wallConnectCount, 1, 'interior Palisade sockets report a magnetic connection');
+  assert.deepEqual(interiorBranch.wallStart, { x: 183, z: 183 }, 'interior branch starts exactly one segment beyond the claimed panel');
+
   const reverseOverlap = simulation.getWallLinePreview({ x: 186, z: 180 }, { x: 177, z: 180 });
   assert.equal(reverseOverlap.valid, true, 'reverse drag may overlap an existing wall run without becoming an error');
 
@@ -997,6 +1002,26 @@ function checkWallOverlapAndGate() {
   assert.equal(overlappedGatePreview.gateWallIds.length, 2, 'gate claims every overlapping wall record at the opening');
   assert.equal(overlappedGateSimulation.placeBuilding('gate', { x: 177, z: 196 }), true, 'gate clears overlapping panels without treating them as a blocker');
   assert.equal(overlappedGateSimulation.buildings.filter((building) => building.type === 'wall' && !building.destroyed).length, 4, 'overlapping wall runs retain both sides of the shared opening');
+
+  const towerSimulation = freshSimulation();
+  const towerBuilder = towerSimulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  towerSimulation.selectedIds = [towerBuilder.id];
+  towerSimulation._syncSelectionFlags();
+  towerSimulation.resourcesNodes = towerSimulation.resourcesNodes.filter((node) => Math.hypot(node.x - 220, node.z - 220) > 8);
+  towerSimulation.decorations = towerSimulation.decorations.filter((detail) => Math.hypot(detail.x - 220, detail.z - 220) > 8);
+  const towerWall = towerSimulation.addBuilding('wall', 220, 220, 'player', 1, {
+    wallSegments: 5,
+    wallOrientation: 'horizontal',
+    wallDirection: { x: 1, z: 0 },
+    wallStart: { x: 214, z: 220 },
+  });
+  const towerPreview = towerSimulation.getBuildingPlacementPreview('palisadeTower', { x: 220.8, z: 220.6 });
+  assert.equal(towerPreview.valid, true, 'Palisade Tower preview magnetizes to an existing wall panel');
+  assert.equal(towerPreview.attachmentWallId, towerWall.id, 'Palisade Tower preview records the wall panel it will replace');
+  assert.equal(towerSimulation.placeBuilding('palisadeTower', { x: 220.8, z: 220.6 }), true, 'Palisade Tower replaces its claimed panel and places a construction site');
+  assert.ok(towerSimulation.buildings.some((building) => building.type === 'palisadeTower' && !building.destroyed), 'Palisade Tower remains as a selectable building');
+  assert.equal(towerSimulation.buildings.filter((building) => building.type === 'wall' && !building.destroyed).length, 2, 'tower replacement preserves connected wall runs on both sides');
+  assert.equal(towerWall.destroyed, true, 'original wall record retires when the tower claims its panel');
 }
 
 function checkBlockedDestinationFallback() {
@@ -1344,7 +1369,7 @@ console.log(JSON.stringify({
     'active builders queue new move orders and continue them after construction completes',
     'wall precedence over trees and stone with safe resource cleanup',
     'magnetic wall endpoint snap and connected segment spacing',
-    'parallel-row wall dividers, overlap-tolerant wall runs, and gate replacement openings',
+    'interior and endpoint wall magnets, overlap-tolerant runs, gate openings, and Palisade Tower replacement hardpoints',
     'blocked destination fallback outside building clearance',
     'dynamic building blocker route recovery',
     'Crown Hall stair routing, landing stop, and interior collision',

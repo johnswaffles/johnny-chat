@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260825-firstage4';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260825-palisadefort1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260823-orewashstages1';
 
@@ -14,8 +14,8 @@ const STORAGE_INTERACTION_DISTANCE = 0.78;
 const BUILDING_INTERACTION_DISTANCE = 0.78;
 const PATH_REACH_TOLERANCE = 0.38;
 const BUILDING_CLEARANCE = 0.4;
-const GATE_WALL_SNAP_DISTANCE = 5.8;
-const GATE_SEGMENT_MATCH_DISTANCE = 1.18;
+const WALL_ATTACHMENT_SNAP_DISTANCE = 7.2;
+const WALL_ATTACHMENT_SEGMENT_MATCH_DISTANCE = 1.18;
 const RESOURCE_FOOTPRINTS = { tree: 1.05, grove: 2.45, berry: 0.82, grain: 1.1, stone: 0.92, gold: 1.02 };
 // A Palisade is a deliberate ground-claiming structure. Current and future
 // resource types may be cleared from its footprint; only actual structures
@@ -25,7 +25,7 @@ const WALL_CLEARABLE_RESOURCE_TYPES = new Set(Object.keys(RESOURCE_TYPES));
 // than one segment so players can release near a terminal post instead of
 // having to land on a single pixel-perfect center, while still remaining
 // local enough that a nearby unrelated wall end does not steal the drag.
-const WALL_CONNECT_SNAP_DISTANCE = 5.4;
+const WALL_CONNECT_SNAP_DISTANCE = 7.2;
 // A wall endpoint that is released within this distance of the playable
 // boundary magnetizes to the boundary. The center-line margin is deliberately
 // just large enough for the wall's real collision envelope to meet the map
@@ -350,11 +350,13 @@ export class CrownforgeSimulation {
       field: Boolean(blueprint.field),
       wallSegments: blueprint.wall ? Math.max(1, Math.round(options.wallSegments ?? 1)) : 1,
       wallOrientation: blueprint.wall ? (options.wallOrientation ?? 'horizontal') : null,
-      wallDirection: blueprint.wall || blueprint.gate ? wallDirectionFromOptions(options) : null,
+      wallDirection: blueprint.wall || blueprint.wallAttachment ? wallDirectionFromOptions(options) : null,
       wallStart: blueprint.wall ? (options.wallStart ? { ...options.wallStart } : { x, z }) : null,
       gateDirection: blueprint.gate ? wallDirectionFromOptions(options) : null,
       gateOrientation: blueprint.gate ? (options.gateOrientation ?? 'diagonal-right') : null,
       gateWallId: blueprint.gate ? (options.gateWallId ?? null) : null,
+      attachmentDirection: blueprint.wallAttachment ? wallDirectionFromOptions(options) : null,
+      attachmentWallId: blueprint.wallAttachment ? (options.attachmentWallId ?? options.gateWallId ?? null) : null,
       farmerId: null,
       fieldTimer: 0,
     };
@@ -3117,33 +3119,64 @@ export class CrownforgeSimulation {
     const blueprint = BUILDING_TYPES.wall;
     const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
     let nearest = null;
-    for (const endpoint of this._wallEndpointRecords()) {
+    const walls = this.buildings.filter((building) => building.type === 'wall'
+      && building.faction === 'player'
+      && !building.destroyed);
+    const occupied = walls.flatMap((wall) => this._wallSegmentPoints(wall));
+    const records = walls.flatMap((wall) => {
+      const segments = this._wallSegmentPoints(wall);
+      const wallDirection = wallDirectionFromOptions(wall);
+      return segments.map((segment, index) => ({
+        buildingId: wall.id,
+        side: index === 0 ? 'start' : index === segments.length - 1 ? 'end' : 'middle',
+        point: segment,
+        wallDirection,
+        outwardDirection: index === 0
+          ? { x: -wallDirection.x, z: -wallDirection.z }
+          : index === segments.length - 1
+            ? { x: wallDirection.x, z: wallDirection.z }
+            : null,
+      }));
+    });
+    for (const endpoint of records) {
       // The new segment center sits one segment span away from the existing
       // terminal center. Testing both signs also allows clean T-junctions and
       // corners instead of forcing every new wall to extend straight ahead.
       for (const sign of signs) {
         const candidateOffset = { x: direction.x * sign, z: direction.z * sign };
-        const outwardAlignment = candidateOffset.x * endpoint.outwardDirection.x
-          + candidateOffset.z * endpoint.outwardDirection.z;
+        const outwardAlignment = endpoint.outwardDirection
+          ? candidateOffset.x * endpoint.outwardDirection.x + candidateOffset.z * endpoint.outwardDirection.z
+          : 0;
         // Never magnetize back onto the existing run itself. Perpendicular
         // and diagonal headings are legitimate corner turns or T-junctions,
         // so only reject a heading that points directly back through the old
         // wall. This is
         // what keeps a connected endpoint locked when the player changes the
         // new run from a straight extension into a different compass heading.
-        if (outwardAlignment < -0.85) continue;
+        if (endpoint.outwardDirection && outwardAlignment < -0.85) continue;
+        if (!endpoint.outwardDirection) {
+          const runAlignment = Math.abs(candidateOffset.x * endpoint.wallDirection.x
+            + candidateOffset.z * endpoint.wallDirection.z);
+          // Interior sockets exist for dividers and T-junctions. A collinear
+          // interior socket would merely duplicate the neighboring panel, so
+          // reserve those headings for actual run endpoints.
+          if (runAlignment > 0.85) continue;
+        }
         const candidate = {
           x: endpoint.point.x + candidateOffset.x * span,
           z: endpoint.point.z + candidateOffset.z * span,
         };
+        if (occupied.some((segment) => distance(segment, candidate) <= WALL_ATTACHMENT_SEGMENT_MATCH_DISTANCE)) continue;
         const distanceToCandidate = distance(point, candidate);
         if (distanceToCandidate > WALL_CONNECT_SNAP_DISTANCE) continue;
-        if (!nearest || distanceToCandidate < nearest.distance - 0.001) {
+        const priorityDistance = distanceToCandidate + (endpoint.side === 'middle' ? 0.42 : 0);
+        if (!nearest || priorityDistance < nearest.priorityDistance - 0.001) {
           nearest = {
             buildingId: endpoint.buildingId,
             side: endpoint.side,
             point: candidate,
             distance: distanceToCandidate,
+            priorityDistance,
           };
         }
       }
@@ -3229,7 +3262,7 @@ export class CrownforgeSimulation {
     }));
   }
 
-  _nearestGateWallSegment(point) {
+  _nearestWallAttachmentSegment(point) {
     if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) return null;
     let nearest = null;
     for (const wall of this.buildings.filter((building) => building.type === 'wall'
@@ -3239,7 +3272,7 @@ export class CrownforgeSimulation {
       const segments = this._wallSegmentPoints(wall);
       segments.forEach((segment, index) => {
         const distanceToSegment = distance(point, segment);
-        if (distanceToSegment > GATE_WALL_SNAP_DISTANCE) return;
+        if (distanceToSegment > WALL_ATTACHMENT_SNAP_DISTANCE) return;
         if (!nearest || distanceToSegment < nearest.distance) {
           nearest = {
             wall,
@@ -3257,10 +3290,14 @@ export class CrownforgeSimulation {
         .filter((wall) => wall.type === 'wall'
           && wall.faction === 'player'
           && !wall.destroyed)
-        .filter((wall) => this._wallSegmentPoints(wall).some((segment) => distance(segment, nearest.point) <= GATE_SEGMENT_MATCH_DISTANCE))
+        .filter((wall) => this._wallSegmentPoints(wall).some((segment) => distance(segment, nearest.point) <= WALL_ATTACHMENT_SEGMENT_MATCH_DISTANCE))
         .map((wall) => wall.id);
     }
     return nearest;
+  }
+
+  _nearestGateWallSegment(point) {
+    return this._nearestWallAttachmentSegment(point);
   }
 
   _gateOrientationFromDirection(direction = { x: 1, z: 0 }) {
@@ -3315,8 +3352,13 @@ export class CrownforgeSimulation {
       x: anchor.x + direction.x * (segmentCount - 1) * span,
       z: anchor.z + direction.z * (segmentCount - 1) * span,
     };
-    const endCandidate = this._nearestWallConnection(end, direction)
+    let endCandidate = this._nearestWallConnection(end, direction)
       ?? this._nearestWallConnection(proposedEnd, direction);
+    // A broad magnetic field must not fold a short turn back onto a second
+    // socket of the same run that already owns its start. Keep the initial
+    // connection locked while the player changes direction; a second,
+    // distinct wall run can still be claimed at the far end for dividers.
+    if (startConnection && endCandidate?.buildingId === startConnection.buildingId) endCandidate = null;
     if (endCandidate) {
       const projectedEnd = (endCandidate.point.x - anchor.x) * direction.x + (endCandidate.point.z - anchor.z) * direction.z;
       if (projectedEnd >= span * 0.75) {
@@ -3377,20 +3419,26 @@ export class CrownforgeSimulation {
   }
 
   getBuildingPlacementPreview(type, point) {
-    if (type !== 'gate') {
+    const blueprint = BUILDING_TYPES[type];
+    if (!blueprint?.wallAttachment) {
       const check = this.getPlacementCheck(type, point);
       return { type, world: point, valid: check.valid, reason: check.reason };
     }
-    const snap = this._nearestGateWallSegment(point);
+    const snap = this._nearestWallAttachmentSegment(point);
     if (!snap) {
       return {
         type,
         world: point,
         valid: false,
-        reason: 'Place the gate over a Palisade segment to create an opening.',
+        reason: blueprint.gate
+          ? 'Place the gate over a Palisade segment to create an opening.'
+          : 'Place the tower over a Palisade segment to reinforce it.',
       };
     }
     const options = {
+      attachmentWallId: snap.wallId,
+      attachmentSegmentIndex: snap.segmentIndex,
+      attachmentDirection: snap.direction,
       gateWallId: snap.wallId,
       gateSegmentIndex: snap.segmentIndex,
       gateDirection: snap.direction,
@@ -3410,13 +3458,17 @@ export class CrownforgeSimulation {
       gateOrientation: check.gateOrientation ?? options.gateOrientation,
       gateSnapDistance: snap.distance,
       gateWallIds: options.ignoreBuildingIds,
+      attachmentWallId: snap.wallId,
+      attachmentSegmentIndex: snap.segmentIndex,
+      attachmentDirection: snap.direction,
+      attachmentWallIds: options.ignoreBuildingIds,
       ...check,
     };
   }
 
-  _replaceWallSegmentsForGate(gatePlacement) {
+  _replaceWallSegmentsForAttachment(attachmentPlacement) {
     const span = BUILDING_TYPES.wall.wallSegmentSpan ?? 3;
-    const target = gatePlacement.world;
+    const target = attachmentPlacement.world;
     const replaced = [];
     for (const wall of this.buildings.filter((building) => building.type === 'wall'
       && building.faction === 'player'
@@ -3424,7 +3476,7 @@ export class CrownforgeSimulation {
       const segments = this._wallSegmentPoints(wall);
       const removedIndices = segments
         .map((segment, index) => ({ segment, index }))
-        .filter(({ segment }) => distance(segment, target) <= GATE_SEGMENT_MATCH_DISTANCE)
+        .filter(({ segment }) => distance(segment, target) <= WALL_ATTACHMENT_SEGMENT_MATCH_DISTANCE)
         .map(({ index }) => index);
       if (!removedIndices.length) continue;
       const removed = new Set(removedIndices);
@@ -3460,6 +3512,10 @@ export class CrownforgeSimulation {
       replaced.push(removedIndices.length);
     }
     return replaced.reduce((sum, count) => sum + count, 0);
+  }
+
+  _replaceWallSegmentsForGate(gatePlacement) {
+    return this._replaceWallSegmentsForAttachment(gatePlacement);
   }
 
   placeWallLine(start, end) {
@@ -3519,8 +3575,11 @@ export class CrownforgeSimulation {
       return false;
     }
     this._spend(blueprint.cost);
-    if (blueprint.gate) this._replaceWallSegmentsForGate(preview);
+    if (blueprint.wallAttachment) this._replaceWallSegmentsForAttachment(preview);
     const building = this.addBuilding(type, buildPoint.x, buildPoint.z, 'player', 0.04, {
+      attachmentWallId: preview.attachmentWallId ?? preview.gateWallId,
+      attachmentSegmentIndex: preview.attachmentSegmentIndex ?? preview.gateSegmentIndex,
+      attachmentDirection: preview.attachmentDirection ?? preview.gateDirection,
       gateWallId: preview.gateWallId,
       gateSegmentIndex: preview.gateSegmentIndex,
       gateDirection: preview.gateDirection,
@@ -3633,12 +3692,20 @@ export class CrownforgeSimulation {
   getPlacementCheck(type, point, options = {}) {
     const blueprint = BUILDING_TYPES[type];
     if (!blueprint || !point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) return { valid: false, reason: 'Move the foundation onto the meadow.' };
-    if (blueprint.gate && !options.gateWallId) {
-      const snap = this._nearestGateWallSegment(point);
-      if (!snap) return { valid: false, reason: 'Place the gate over a Palisade segment to create an opening.' };
+    if (blueprint.wallAttachment && !options.attachmentWallId && !options.gateWallId) {
+      const snap = this._nearestWallAttachmentSegment(point);
+      if (!snap) return {
+        valid: false,
+        reason: blueprint.gate
+          ? 'Place the gate over a Palisade segment to create an opening.'
+          : 'Place the tower over a Palisade segment to reinforce it.',
+      };
       point = snap.point;
       options = {
         ...options,
+        attachmentWallId: snap.wallId,
+        attachmentSegmentIndex: snap.segmentIndex,
+        attachmentDirection: snap.direction,
         gateWallId: snap.wallId,
         gateSegmentIndex: snap.segmentIndex,
         gateDirection: snap.direction,
@@ -3658,8 +3725,8 @@ export class CrownforgeSimulation {
     }
     const placement = { type, x: point.x, z: point.z, progress: 1, ...options };
     const connectedWallIds = new Set(blueprint.wall ? (options.wallConnectionIds ?? []) : []);
-    const gateWallIds = new Set(blueprint.gate
-      ? (options.ignoreBuildingIds ?? [options.gateWallId]).filter(Boolean)
+    const gateWallIds = new Set(blueprint.wallAttachment
+      ? (options.ignoreBuildingIds ?? [options.attachmentWallId ?? options.gateWallId]).filter(Boolean)
       : []);
     if (this.buildings.some((building) => {
       if (building.destroyed || !this._boundsOverlap(bounds, this._buildingEntityBounds(building, 0))) return false;
@@ -3669,7 +3736,7 @@ export class CrownforgeSimulation {
       if (blueprint.wall && building.type === 'wall') return false;
       // A gate is allowed to claim the one wall segment it is replacing. All
       // other structures, including another gate, remain hard blockers.
-      if (blueprint.gate && building.type === 'wall' && gateWallIds.has(building.id)) return false;
+      if (blueprint.wallAttachment && building.type === 'wall' && gateWallIds.has(building.id)) return false;
       // Connected wall runs intentionally overlap their conservative collision
       // envelopes at the terminal post. Do not allow a reverse drag to lay a
       // second run over the existing segment centers, though; only the narrow
@@ -3701,7 +3768,7 @@ export class CrownforgeSimulation {
     if (this.decorations.some((decoration) => this._circleIntersectsBounds(decoration, DECORATION_FOOTPRINTS[decoration.type] ?? 0.45, bounds))) {
       return { valid: false, reason: 'Clear the ground detail before building here.' };
     }
-    if (this.units.some((unit) => !unit.dead && this._circleIntersectsBounds(unit, UNIT_TYPES[unit.type].radius + 0.18, bounds))) {
+    if (!blueprint.wallAttachment && this.units.some((unit) => !unit.dead && this._circleIntersectsBounds(unit, UNIT_TYPES[unit.type].radius + 0.18, bounds))) {
       return { valid: false, reason: 'A unit is standing in the foundation.' };
     }
     const accessCells = this._placementAccessCells(type, point, options);
@@ -3724,7 +3791,7 @@ export class CrownforgeSimulation {
     }
     return {
       valid: true,
-      reason: blueprint.gate ? 'Gate opening ready.' : 'Foundation site ready.',
+      reason: blueprint.gate ? 'Gate opening ready.' : blueprint.wallAttachment ? 'Palisade hardpoint ready.' : 'Foundation site ready.',
       gateOrientation: blueprint.gate ? this._gateOrientationFromDirection(options.gateDirection ?? options.wallDirection) : null,
     };
   }
