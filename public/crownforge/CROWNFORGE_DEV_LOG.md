@@ -3308,3 +3308,412 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 ### WHAT SHOULD NOT BE BUILT YET
 
 - Do not add a waypoint editor, queue reordering, saved build plans, patrol scripting, production automation, or a broader AI order planner in this pass.
+
+## PALISADE CONNECTION & GATE PASS — 2026-08-24
+
+### WHAT EXISTS
+
+- Palisade lines can overlap deliberately and can be used as parallel defensive rows with short divider runs between them.
+- A first-age Palisade Gate can be placed over an existing player Palisade segment to create a passable opening.
+
+### WHAT WAS COMPLETED
+
+- Relaxed Palisade-versus-Palisade placement so returning, crossing, and overlapping wall runs are valid instead of producing a placement error.
+- Preserved building collision as the meaningful hard blocker; walls still cannot be placed through structures.
+- Reused the existing endpoint magnetism so a divider dragged between two nearby Palisade rows can connect to both terminals without pixel-perfect placement.
+- Added gate targeting that magnetically finds the nearest Palisade segment within a readable placement radius.
+- Gate placement retires the claimed wall record, removes the matching panel, preserves the remaining left and right wall runs, and places a passable gate foundation in the opening.
+- Added gate-specific preview text, build-menu guidance, placement feedback, and building information.
+- Added a four-view original Crownforge gate atlas with upright diagonal, face, and depth presentation, then prepared it as a true RGBA runtime asset with the neutral matte removed.
+
+### KNOWN ISSUES
+
+- The gate is currently one panel wide and has no open/close animation or player-controlled gate state.
+- Gate replacement is intentionally limited to completed or in-progress player Palisades; there is no separate wall-panel editing tool.
+- Wall runs remain straight eight-way segments. Curved walls, elevation-specific construction, and richer defensive structures are out of scope.
+
+### ASSETS CREATED
+
+- `assets/crownforge-palisade-gate-atlas-v1.png` — 1254 × 1254, 2 × 2 directional atlas; primitive timber gate with blue-and-gold Crownforge accents, open passage, and grounded dirt/grass contact.
+- `tools/prepare-gate-atlas.mjs` — repeatable neutral-matte cleanup and RGBA preparation for the gate atlas.
+
+### SYSTEMS CREATED
+
+- Overlap-tolerant Palisade placement and divider connection handling.
+- Nearest-segment gate snapping with automatic replacement/opening logic.
+- Gate-specific footprints, passability, collision exceptions for the replaced segment, rendering, preview, and UI copy.
+- Regression coverage for parallel-row dividers, overlap-tolerant wall runs, gate replacement, preserved wall halves, and the retired source wall record.
+
+### VALIDATION
+
+- `node --check` passed for the changed Crownforge modules and regression tool.
+- `tools/remediation-regression.mjs` passed the complete focused suite, including divider connections, overlap-tolerant runs, single-panel gate replacement, and gates over coincident wall runs.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across 140 active animation combinations.
+- Gate artwork was verified at 1254 × 1254 with true RGBA transparency.
+- Browser smoke test loaded the local build, exposed the Palisade Gate blueprint, and reported no console errors or warnings.
+- `git diff --check` passed.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Visually playtest a gate between two parallel rows at normal zoom and confirm both wall terminals read as connected on either side of the opening.
+- Add a restrained open/close state only after the basic gate footprint and pathing remain stable in a real match.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add gate automation, wall curves, wall elevation variants, multiple gate tiers, towers, siege defenses, or a larger military roster in this pass.
+
+## PERFORMANCE HARDENING PASS — 2026-08-24
+
+### WHAT EXISTS
+
+- The normal first-age match now uses a safer population ceiling of 24 plus completed housing. The previous 999-unit capacity is still available as an explicit stress mode with `?stress=1`.
+- An opt-in development telemetry panel is available with `?perf=1`. It reports rolling simulation time, render time, UI time, entity count, and long frames over the last five seconds.
+- An opt-in low-resolution renderer is available with `?lowres=1`; it forces a 1× canvas backing scale for Retina/high-DPI performance checks without changing world coordinates or gameplay physics.
+
+### WHAT WAS COMPLETED
+
+- Added the `CrownforgePerformanceMonitor` module and a compact development-only telemetry panel. Normal players do not see it unless the query flag is present.
+- Added viewport bounds and conservative per-entity culling for units, resources, buildings, wall segments, decorations, roadside details, path lines, interaction feedback, and ripples. Large authored structures use their visual extent so they do not pop at the viewport edge.
+- Added a camera-aware static terrain/map cache. The grass, terrain grade, map edge, and authored road layer are rendered once per camera/viewport state and reused until the camera or relevant asset state changes.
+- Added a spatial grid for unit-to-unit collision and spacing resolution. Units only compare against nearby grid buckets instead of testing every live unit pair.
+- Cached the main HUD DOM references and changed the steady-state HUD refresh to 12 updates per second. Event-driven interactions still refresh immediately when a command or selection changes.
+- Added route caching keyed by navigation version, unit movement class, start/target cells, stair access, and placement context. Cached paths use a bounded LRU so the stress mode cannot grow memory without limit.
+- Added a per-fixed-step repath budget. When a crowd exhausts that budget, blocked units briefly defer and retain their recovery state instead of launching an unbounded synchronous A* burst.
+- Added lightweight simulation performance counters for entity count, path requests/cache hits, repath requests, and collision pairs so later stress investigations can be evidence-based.
+
+### KNOWN ISSUES
+
+- The static layer is invalidated while the camera is moving, which is intentional: the cache primarily removes repeated terrain work during idle and ordinary play frames. A future renderer could add a larger world-tile cache if camera motion profiling shows it is worthwhile.
+- Culling is conservative and uses world-space bounds, so a few oversized transparent margins may remain inside the draw set. This protects the hand-authored silhouettes from edge popping.
+- The performance panel is intentionally query-driven and not a player-facing settings menu. Use `?perf=1`, `?stress=1`, and `?lowres=1` for development and QA.
+- No save/load or persistence was added; this pass changes runtime performance behavior only.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. The optimization pass reuses the existing Crownforge asset families and preserves their visual treatment.
+
+### SYSTEMS CREATED
+
+- Development performance telemetry and optional low-resolution canvas mode.
+- Viewport culling and camera-invalidated static terrain/map caching.
+- Spatial-grid unit collision broad phase.
+- Bounded route cache and per-step repath budget.
+- Cached DOM HUD references with 12 Hz steady-state updates.
+- Normal versus explicit stress population capacity modes.
+
+### VALIDATION
+
+- `node --check` passed for `config.js`, `main.js`, `performance.js`, `renderer.js`, and `simulation.js`.
+- `tools/remediation-regression.mjs` passed the complete focused gameplay suite after the route-cache, repath-budget, normal-capacity, and spatial-grid changes.
+- Browser smoke test loaded the local build in normal mode and in `?perf=1&stress=1&lowres=1` mode.
+- The development panel visibly reported `STRESS · LOW-RES`, rolling timing values, `122` active entities in the seeded world, and `0 / 5s` long frames during the sample window.
+- Normal browser mode reported `4 / 24` population capacity, `NORMAL · FULL-RES`, and no console errors or warnings.
+- `git diff --check` passed.
+- Source and public runtime mirrors were synchronized for the changed HTML, CSS, config, main, renderer, simulation, and performance module.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Run a longer controlled stress capture with many manually trained units and compare the telemetry panel before and after each future optimization.
+- Add a small culling/cache counter to the panel only if profiling shows that timing alone is not enough to explain a frame spike.
+- Revisit the repath budget after a real large-crowd playtest; the current budget is deliberately conservative so the slice remains responsive.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add a new game engine, rewrite the Canvas renderer, add worker-thread simulation, add save/load, or increase normal population until the current browser stress evidence shows the existing foundation is the bottleneck.
+- Do not turn the telemetry panel or stress mode into player-facing game systems.
+- Do not expand civilizations, ages, campaigns, or military roster as part of performance work.
+
+## SMOOTHNESS & HOT-PATH PASS — 2026-08-24
+
+### WHAT EXISTS
+
+- The existing Canvas renderer, fixed-step simulation, normal population cap, optional stress mode, performance panel, viewport culling, and low-resolution mode remain in place.
+- Normal gameplay behavior and the public runtime mirror are unchanged in scope; this pass reduces per-frame and per-tick work rather than adding player-facing systems.
+
+### WHAT WAS COMPLETED
+
+- Replaced renderer hit-testing allocations and distance sorts with single-pass nearest-hit selection for units, buildings, resources, and hostile targets.
+- Throttled non-command cursor hover hit-testing to 30 Hz. Pointer movement still updates immediately for placement previews, while clicks and commands refresh feedback immediately.
+- Added a static blocker spatial grid for buildings and live resource nodes. Movement constraints, path-cell checks, and blocked-point tests now query nearby blockers instead of scanning every building and resource on every unit update.
+- Invalidated the blocker grid when structures or resource nodes are added, depleted, cleared for a Palisade, or destroyed so the optimization does not leave stale collision state behind.
+- Removed duplicate collision-pair bookkeeping and replaced string pair keys with numeric spatial-grid keys. Nearby pairs are still processed once by stable unit id ordering.
+- Simplified enemy awareness selection to reuse the player target list and choose the nearest target in one pass rather than filtering and sorting the player roster for every Raider.
+- Removed a duplicate build-preview assignment in the pointer path while preserving the existing preview and cursor behavior.
+
+### KNOWN ISSUES
+
+- A large first command through a newly changed obstacle can still perform a synchronous A* search. The existing route cache and per-step repath budget contain repeated requests, but worker-thread pathfinding is intentionally deferred until profiling proves it is needed.
+- Camera movement still invalidates the screen-sized static terrain cache by design. The current seeded browser sample remains inexpensive; a chunked world cache would be the next renderer-level step if long panning captures expose a real hitch.
+- The 999-unit stress mode remains a diagnostic sandbox, not a target normal match size.
+
+### ASSETS CREATED
+
+- No new artwork or audio was required. This was a code-only responsiveness pass.
+
+### SYSTEMS CREATED
+
+- 30 Hz hover feedback budget for non-command cursor hit-testing.
+- Static blocker spatial index for unit movement, path checks, and collision constraints.
+- Allocation-light nearest-hit selection and numeric collision-pair broad-phase bookkeeping.
+- Single-pass enemy target acquisition for crowded stress scenarios.
+
+### VALIDATION
+
+- `node --check` passed for the changed input, main, renderer, and simulation modules.
+- `tools/remediation-regression.mjs` passed all focused gameplay checks, including movement, gathering, construction, walls/gates, combat, victory, and defeat.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or animation-dimension mismatches across 140 active animation combinations.
+- Controlled local simulation benchmark: 300-unit fixed-step cost measured about 0.60 ms per tick after the blocker-grid change; a 1,000-unit idle-player stress sample measured about 1.33 ms per tick.
+- Browser stress smoke test with `?perf=1&stress=1&lowres=1` loaded the new `20260824-smoothpass1` runtime, reported roughly 0.06–0.08 ms simulation and 0.43–0.48 ms render averages, and settled at `0 / 5s` long frames.
+- Normal browser smoke test reported `NORMAL · FULL-RES` and no console errors or warnings.
+- Source and public runtime mirrors were synchronized; `git diff --check` passed.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Capture a longer browser session while panning, selecting, and issuing group movement orders, then compare long-frame counts with the telemetry panel.
+- If panning becomes the dominant cost, replace the screen-sized static cache with reusable world chunks rather than increasing draw budgets.
+- If very large path searches remain visible, move only path computation behind a bounded worker interface; keep movement and command state on the existing simulation thread.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add a new engine, rewrite the renderer, add worker threads, increase the normal population, or add new gameplay systems solely because the optional stress mode exists.
+- Do not expose the hover budget, blocker grid, or path budgets as player settings.
+
+## FIRST-AGE CONTENT PASS — 2026-08-24
+
+### WHAT EXISTS
+
+- The first age now has a compact three-addition expansion: Crown Stable, First-age Granary, and Crown Scout.
+- The Crown Stable is a modest mounted-scout production building. The First-age Granary is a small food drop-off and grain-support building. The Crown Scout is a fast, lightly armed reconnaissance unit.
+- The additions use the same data-driven building, production, selection, pathfinding, collision, health, and combat foundations as the existing Crown Hall, Barracks, Villagers, Crown Guards, and Ashen Raiders.
+
+### WHAT WAS COMPLETED
+
+- Added Stable and Granary blueprints to the first-age build catalog with clear costs, footprints, entrances, health, construction time, storage/production behavior, and restrained first-age roles.
+- Added a Crown Scout production order to the Stable: 60 Food, 30 Wood, 15 Gold, 8 seconds. It uses the existing queue, population, spawn, selection, movement, attack, damage, death, and target systems.
+- Added Stable and Granary construction atlases with foundation, partial, and near-complete cells. Completed structures use separate authored assets instead of fading into existence.
+- Added Scout idle, four-direction walking, four-direction attack phases, and four-direction death artwork. The walk loop is separate from the attack loop so movement does not reuse a combat pose.
+- Added Scout labels, selection presentation, spacing role, production UI, build-menu entries, and readable building information without introducing a new UI subsystem.
+- Made the Scout fallback safe during asset loading by retaining an established Crown Guard image until the Scout atlas is ready; the authored Scout atlas is used for normal runtime drawing.
+- Extended the visual-integrity audit to inspect construction atlases as complete 2 × 2 sheets, not only older single-stage assets.
+- Updated the accepted matte-removal threshold in `tools/prepare-crown-hall-v3.mjs` so the Scout attack atlas has clean transparent corners without cutting its authored silhouette.
+
+### KNOWN ISSUES
+
+- Scout hit reaction currently relies on the existing hit-flash feedback rather than a dedicated Scout recoil atlas. This is intentionally deferred until the new unit has been visually reviewed in live combat.
+- The Scout uses the existing Crown Guard command icon because the current first-age icon family does not yet include a dedicated mounted-scout glyph. It is readable, but a dedicated original icon is the next small visual polish item.
+- The Stable and Granary are intentionally small supporting buildings. They do not add technology tiers, age progression, farming automation, or a broader economy simulation.
+- No new mounted combat rules, scouting vision system, fog of war, cavalry roster, or production automation was added.
+
+### ASSETS CREATED
+
+- `assets/crownforge-stable-first-age-v1.png` — 1536 × 1024 RGBA completed Crown Stable; primitive timber, thatch, hitching rail, and Crown cloth in the established first-age family.
+- `assets/crownforge-stable-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 atlas for foundation, partial, near-complete, and reserved complete stage.
+- `assets/crownforge-granary-first-age-v1.png` — 1536 × 1024 RGBA completed raised Granary with timber frame, thatch, grain bundles, and food-store contact.
+- `assets/crownforge-granary-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 construction atlas for foundation, partial, near-complete, and reserved complete stage.
+- `assets/crownforge-scout-combat-atlas-v1.png` — 1254 × 1254 RGBA 4 × 4 directional atlas for Scout idle, walk reference, attack reference, and death reference.
+- `assets/crownforge-scout-walk-loop-v1.png` — 1254 × 1254 RGBA 4 × 4 directional walk loop with distinct front, profile, rear, and opposite-profile views.
+- `assets/crownforge-scout-attack-loop-v1.png` — 1254 × 1254 RGBA 4 × 4 directional attack-phase loop.
+- All generated artwork was prepared into true alpha runtime files; neutral matte backgrounds and raw generation sources are not referenced by the game.
+
+### SYSTEMS CREATED
+
+- First-age Stable blueprint and generic production queue entry for Crown Scout.
+- First-age Granary storage/drop-off routing for Food plus a single non-stacking local gather bonus.
+- Scout unit configuration, spacing role, combat timings, four-direction animation definition, production UI, and selection identity.
+- Construction-atlas loading and aspect-correct rendering for the new buildings.
+- Asset-integrity coverage for the new Stable, Granary, and Scout families.
+
+### VALIDATION
+
+- `node --check` passed for the changed source and audit modules.
+- `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or dimension mismatches; the new Stable/Granary atlases are included in the audit.
+- `tools/remediation-regression.mjs` passed the focused gameplay suite, including Stable construction, Granary construction, food routing to the Granary, Scout production, Scout spawn clearance, and four-direction Scout animation resolution.
+- Public runtime assets and source mirrors were synchronized under `public/crownforge`.
+- `git diff --check` remains part of the release gate.
+- Browser visual QA was attempted against the already-open local file tab, but the browser sandbox rejected inspection of the `file://` page after the tab was claimed; the source-level asset audit and simulation regression remain the verified evidence for this pass.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Visually review the Scout in a live match at normal zoom, especially its profile walk, attack silhouette, and death contact.
+- If combat makes the missing Scout recoil noticeable, generate one dedicated four-direction Scout hit loop and add a dedicated Scout command icon.
+- Check Stable and Granary placement beside large Crown Hall/Barracks landmarks during an ordinary build session; keep their supporting scale and first-age material language restrained.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add another civilization, age, technology tree, campaign, cavalry roster, fog of war, scouting vision, advanced stable upgrades, or a large building catalog.
+- Do not add farms, mills, auto-farming, or a new resource type as part of this pass.
+- Do not replace the existing engine or renderer for these three additions; keep proving the current foundation with small complete content slices.
+
+## FIRST-AGE SUPPORT YARDS & SPEARWARDEN PASS — 2026-08-24
+
+### WHAT EXISTS
+
+- The first age now has a second compact three-part expansion beyond the Stable, Granary, and Scout: Timber Yard, Stonewright Yard, and Crown Spearwarden.
+- Timber Yard is a practical wood drop-off with one local wood-gather support bonus. Stonewright Yard is the matching stone drop-off with one local stone-gather support bonus. Both remain intentionally smaller than the Crown Hall and Barracks.
+- Crown Spearwarden is a foot melee unit produced from the existing Barracks queue. It is slower and tougher than a Crown Guard, uses a longer melee range, and remains within the existing single-target melee rules.
+
+### WHAT WAS COMPLETED
+
+- Added Timber Yard and Stonewright Yard to the source-of-truth first-age blueprint list, build menu, construction placement flow, building selection information, health, collision, entrances, and generic storage routing.
+- Added local wood and stone gather bonuses without stacking multiple yards or creating a new economy subsystem.
+- Added Spearwarden production to the Barracks using the existing generic queue, resource costs, population accounting, spawn clearance, selection, movement, target acquisition, melee timing, damage, health, death, and cleanup systems.
+- Added separate four-direction Spearwarden idle/reference, walking, attack, and death artwork mappings. Walking uses its own four-frame direction-row loop, and attack uses a separate direction-row thrust loop so the moving unit does not slide through a static combat pose.
+- Bumped the first-age runtime marker to `20260824-firstage2` across the source/public module graph and synchronized the public mirror.
+
+### KNOWN ISSUES
+
+- Spearwarden hit feedback intentionally uses the shared combat hit-flash rather than a dedicated recoil atlas. This keeps the pass small; a dedicated hit loop can be added only after live combat proves it is needed.
+- The two support yards use the existing resource-family command icons rather than introducing a second icon-art pass. Their building art and selection copy are dedicated.
+- The generated construction sheets have the same authored contact shadows and crop behavior as the existing first-age atlas family. Visual-integrity reports may list intentional cell contact margins; they are not missing or placeholder assets.
+- The current file-tab browser sandbox still rejects player-visible inspection of the `file://` runtime after the tab is claimed. Source-level audits, direct asset inspection, and simulation regressions are the verified evidence for this pass.
+
+### ASSETS CREATED
+
+- `assets/crownforge-timber-yard-first-age-v1.png` — 1536 × 1024 RGBA completed Timber Yard.
+- `assets/crownforge-timber-yard-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 staged Timber Yard atlas.
+- `assets/crownforge-stonewright-yard-first-age-v1.png` — 1536 × 1024 RGBA completed Stonewright Yard.
+- `assets/crownforge-stonewright-yard-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 staged Stonewright Yard atlas.
+- `assets/crownforge-spearwarden-combat-atlas-v1.png` — 1233 × 1275 RGBA 4 × 4 directional reference atlas.
+- `assets/crownforge-spearwarden-walk-loop-v1.png` — 1230 × 1278 RGBA four-direction walking loop.
+- `assets/crownforge-spearwarden-attack-loop-v1.png` — 1268 × 1241 RGBA four-direction spear attack loop.
+- The seven generated outputs were prepared as project-local RGBA runtime assets; generation mattes and discarded sources are not referenced.
+
+### SYSTEMS CREATED
+
+- Data-driven Timber Yard and Stonewright Yard building definitions, first-age blueprint admission, local gather bonuses, construction-atlas loading, and resource-specific deposit routing.
+- Data-driven Spearwarden unit and Barracks production order with dedicated spacing role, combat timing, animation definition, renderer preload readiness, UI training entry, and regression coverage.
+- Continued the shared Crownforge content recipe: asset family first, config contract second, generic simulation integration third, then source/public mirror and audit coverage.
+
+### VALIDATION
+
+- `node --check` passed for all changed source and public modules.
+- Source `tools/remediation-regression.mjs` passed all 29 focused checks, including Timber Yard/Stonewright Yard data and routing, Barracks Spearwarden production, and four-direction Spearwarden animation resolution.
+- Public `tools/remediation-regression.mjs` passed the same 29-check suite.
+- Source and public `tools/visual-integrity-audit.mjs` passed with no missing files, placeholder references, fallbacks, or dimension mismatches; the new construction and combat atlases are included in the audit.
+- `git diff --check` passed. Direct asset inspection confirmed the new buildings are grounded and the Spearwarden walk/attack sheets preserve readable direction changes and complete spear silhouettes.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- In a player-visible browser session, inspect the Spearwarden at normal and close zoom in all four directions, especially spear contact, profile leg timing, death grounding, and group spacing beside a Crown Guard.
+- Place both support yards beside resource clusters and near large landmarks to check scale, entrance approach, and whether the small buildings remain visually subordinate.
+- If those live checks remain stable, add a dedicated Spearwarden hit/recoil loop and icon only as a targeted polish pass.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add another age, civilization, technology tree, campaign, ranged unit, cavalry roster, fog-of-war system, advanced AI economy, or new resource type.
+- Do not add more military buildings or a large support-building catalog until these three additions are visually and mechanically stable in a complete match.
+- Do not replace the current renderer or engine for this content pass; keep the first-age foundation data-driven and small.
+
+## FIRST-AGE HOMESTEAD & MILITIA PASS — 2026-08-24
+
+### WHAT EXISTS
+
+- The first age now includes a modest First-age Homestead for population housing and a low-cost Crown Militia trained from the existing Barracks.
+- The Homestead is a supporting timber-and-thatch dwelling with a population increase of six. It does not become a storage building and does not introduce a new economy rule.
+- The Crown Militia is a light first-age melee infantry option with a round shield and short mace. It shares the existing single-target melee, collision, attack timing, health, death, and cleanup foundation with the Crown Guard and Spearwarden.
+
+### WHAT WAS COMPLETED
+
+- Added Homestead to the approved first-age blueprint catalog, build menu, placement validation, construction progress, health, collision, entrance approach, building selection information, and population capacity calculation.
+- Added a dedicated 2 × 2 Homestead construction atlas so the dwelling moves through foundation, partial, near-complete, and completed visual states instead of appearing all at once.
+- Added Crown Militia to the Barracks production list, resource costs, training queue, population accounting, spawn clearance, selection identity, movement, spacing, target acquisition, attack timing, damage, health, death, and retargeting.
+- Added separate four-direction Militia idle/reference, walk, attack, and death artwork mappings. Walking uses its own four-frame direction-row loop; attack uses a separate mace-and-shield loop with readable wind-up, contact, and recovery poses.
+- Kept hit response deliberately within the existing shared hit-flash contract rather than adding a new combat system or a fifth unit-state subsystem.
+- Bumped the first-age runtime marker to `20260824-firstage3` across the source module graph and prepared the same source/public mirror update.
+
+### KNOWN ISSUES
+
+- Crown Militia does not yet have a dedicated recoil atlas; it uses the established hit flash while the combat roster remains small.
+- The Homestead is intentionally a modest supporting building, not a second civic landmark. Its current visual has a small stone chimney and foundation accents within the existing primitive first-age material language; this should be reviewed beside the wooden Crown Hall in a player-visible pass.
+- This pass was validated through direct asset inspection and source regressions. The already-open local `file://` browser tab remains blocked by the browser sandbox after claim, so a fresh player-visible browser inspection is still the next verification step when the runtime can be reopened through an allowed route.
+
+### ASSETS CREATED
+
+- `assets/crownforge-homestead-first-age-v1.png` — 1536 × 1024 RGBA completed First-age Homestead.
+- `assets/crownforge-homestead-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 staged Homestead atlas.
+- `assets/crownforge-militia-combat-atlas-v1.png` — 1224 × 1285 RGBA 4 × 4 directional reference atlas.
+- `assets/crownforge-militia-walk-loop-v1.png` — 1240 × 1268 RGBA four-direction walk loop.
+- `assets/crownforge-militia-attack-loop-v1.png` — 1536 × 1024 RGBA four-direction mace-and-shield attack loop.
+- All five accepted assets were generated with the built-in image-generation workflow, inspected, prepared as project-local alpha PNGs, and mirrored under `public/crownforge/assets`.
+
+### SYSTEMS CREATED
+
+- Data-driven Homestead housing blueprint with the existing generic placement, staged construction, building info, health, collision, and population systems.
+- Data-driven Crown Militia Barracks production entry with the existing generic queue, movement, combat, spacing, and animation systems.
+- Four-direction Militia animation definition and renderer preload/readiness coverage for separate walk and attack sheets.
+- Regression coverage for Homestead construction/population capacity, Militia production/spawn state, every Militia combat direction/state, first-age blueprint UI parity, and the existing 29-check suite.
+
+### VALIDATION
+
+- Source `node --check` passed for config, animation, renderer, main, simulation, and regression modules.
+- Source `tools/remediation-regression.mjs` passed with the new Homestead/Militia check plus all existing movement, economy, construction, wall, camera, combat, and outcome checks.
+- `git diff --check` passed.
+- Direct inspection confirmed the Homestead construction sheet is a strict 2 × 2 family and the Militia sheets provide distinct front, profile, rear, and opposite-profile rows with complete shield/mace silhouettes.
+- Public mirror `node public/crownforge/tools/remediation-regression.mjs` passed the same focused suite; source/public mirror checks passed for all changed modules, docs, and five assets.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+- Reopen a player-visible runtime and inspect Homestead placement beside the Crown Hall, Barracks, and support yards at normal and close zoom.
+- Watch the Militia walk and attack beside Crown Guards and Spearwardens to tune relative scale, frame cadence, group spacing, and mace contact readability.
+- Add a dedicated Militia hit/recoil loop only if the shared flash is visibly insufficient in live combat.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add another age, civilization, technology tree, campaign, ranged unit, cavalry roster, advanced AI economy, fog of war, or a new resource type.
+- Do not add a second production building or a larger housing catalog until Homestead and Militia are visually stable in a complete player-visible match.
+- Do not replace the current renderer or engine for these additions; keep proving the first-age data-driven foundation with small, complete content passes.
+
+## FIRST-AGE WATCH HUT & SHIELDBEARER PASS — 2026-08-25
+
+### WHAT EXISTS
+
+- The first-age Crownwardens now have a small Watch Hut landmark and a defensive Crown Shieldbearer in addition to the existing first-age economy, scout, militia, spear, Crown Guard, and construction set.
+
+### WHAT WAS COMPLETED
+
+- Added `First-age Watch Hut` to the approved build catalog. It is a compact raised timber lookout with a 3.5 × 3.5 footprint, 300 HP, 65 Wood / 15 Stone cost, seven-second construction time, and a clear selection function. It does not introduce a ranged attack, garrison, or fog-of-war system.
+- Added `Crown Shieldbearer` to the Crown Barracks queue. It is a slower, durable first-age melee unit with 118 HP, 12 attack, 1.28 range, 1.08 second cooldown, and a 45 Food / 20 Wood / 5 Gold cost.
+- Reused the existing generic construction, placement validation, building collision, building selection, production queue, spawn clearance, target acquisition, melee spacing, attack timing, damage, health, death, and victory systems. No new age, technology, AI, or combat subsystem was added.
+- Added the Watch Hut blueprint and Shieldbearer training option to the UI menus with concise costs, purpose, and timing text.
+- Added explicit source-level regression coverage for Watch Hut construction/completion and Shieldbearer production, idle, walk, attack, and death animation resolution in all four directions.
+
+### KNOWN ISSUES
+
+- Watch Hut is currently a readable defensive landmark only; it has no attack, garrison, line-of-sight, or enemy-vision mechanic by design.
+- Shieldbearer has a four-direction idle/combat atlas plus separate four-direction four-frame walk and attack sheets, but it still uses the existing shared hit-flash treatment rather than a dedicated recoil atlas.
+- The generated construction atlas has intentional full-cell staging composition in its two near-complete cells; the renderer's one-pixel cell inset prevents neighboring-cell sampling, and direct inspection found no cross-cell bleed or cut-off silhouette.
+- The current browser evaluation surface still blocks the active `file://` tab, so this pass's browser visual check is limited to direct asset inspection and deterministic source/public regression coverage.
+
+### ASSETS CREATED
+
+- `assets/crownforge-watch-hut-first-age-v1.png` — original transparent completed Watch Hut.
+- `assets/crownforge-watch-hut-construction-atlas-v1.png` — original 2 × 2 foundation, partial, near-complete, and completed Watch Hut stages.
+- `assets/crownforge-shieldbearer-combat-atlas-v1.png` — original four-direction idle, walk reference, attack reference, and non-graphic death atlas.
+- `assets/crownforge-shieldbearer-walk-loop-v1.png` — original four-direction four-frame walking loop.
+- `assets/crownforge-shieldbearer-attack-loop-v1.png` — original four-direction four-frame attack loop.
+- All five rasters use the existing Crownforge warm historical RTS treatment, ground shadows, scale discipline, and transparent asset contract. No temporary boxes, text, UI, or unrelated art was added.
+
+### SYSTEMS CREATED
+
+- Data entries for `watchHut` and `shieldbearer` in the existing building, unit, spacing, production, first-age blueprint, asset, and combat-atlas registries.
+- A data-driven `shieldbearer` animation definition covering idle, walk, attack anticipation/contact/recovery, and death with four authored directions.
+- Startup readiness requirements for the Watch Hut completed/construction assets and Shieldbearer combat/walk/attack assets.
+- No new system boundary was introduced; future first-age additions should follow this same registry-first pattern.
+
+### VALIDATION
+
+- Source syntax checks passed for config, animation, renderer, main, simulation, and the regression tool.
+- Source remediation regression passed, including Watch Hut placement/construction/completion, Shieldbearer queue/spawn/idle state, all directional Shieldbearer animation states, and the existing complete first-age suite.
+- Source visual-integrity audit passed with no missing files, placeholder references, fallbacks, or dimension mismatches; the animation combination count increased to 252.
+- The five generated rasters were inspected directly; the completed Watch Hut and all Shieldbearer sheets have transparent corners and readable silhouettes with no clipped weapons or body parts.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Visually inspect the Watch Hut beside the Crown Hall, Barracks, Homestead, and existing first-age work yards at normal and close zoom once the browser evaluation path is available.
+2. Tune Shieldbearer walk cadence and attack contact timing beside the existing Crown Guard and Spearwarden so all first-age melee units share one readability standard.
+3. If the Watch Hut becomes a meaningful gameplay feature later, add one narrowly scoped lookout mechanic only after the current first-age visual and movement quality is rechecked.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add ranged combat, garrisoning, fog of war, technologies, additional ages, new factions, advanced enemy behavior, or a large military roster for this pass.
+- Do not add more units merely to fill menus; future additions must have a clear first-age role and complete original directional/action artwork before integration.

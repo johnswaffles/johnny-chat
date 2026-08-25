@@ -320,3 +320,53 @@ The built-in image generator authored the family against the approved Crownforge
 - Runtime width: `380`, intentionally 38% of the `1000`-wide Hall/Barracks landmarks; gameplay footprint: `4 × 3` with `0.9` clearance.
 
 The built-in image generator used the approved completed Ore Wash as the strict stage reference after the original completed asset had been approved against the wooden Crown Hall and first-age Barracks. Every stage preserves the same camera, footprint, orientation, light, palette, and bottom-center ground anchor. The generated RGB neutral/checker representations were converted through `tools/prepare-neutral-matte.mjs` into true RGBA transparency; raw generated sources are not referenced by the game. The active visual audit verifies exact dimensions plus transparent crop margins for all three construction stages.
+
+## PALISADE CONNECTION & GATE ASSET — 2026-08-24 (CURRENT ADDITION)
+
+- `assets/crownforge-palisade-gate-atlas-v1.png` — 1254 × 1254 RGBA, 2 × 2 atlas with four original first-age gate views: diagonal-right, diagonal-left, face, and depth.
+- The atlas shows a modest upright timber entryway with an open passage, blue-and-gold Crownforge cloth, packed-earth contact, and no text or decorative background.
+- The accepted generated image was processed through `tools/prepare-gate-atlas.mjs` to remove the neutral matte and verify true alpha before it was copied to the runtime asset path. The raw generated representation is not referenced by the game.
+- Runtime registration: `FIRST_AGE_ASSETS.gate` with marker `20260824-gatepass1`; `src/renderer.js` selects a single atlas cell from the gate's wall direction so the full sheet is never drawn as one sprite.
+
+## FIRST-AGE SUPPORT BUILDINGS & SCOUT ASSETS — 2026-08-24 (CURRENT ADDITION)
+
+- `assets/crownforge-stable-first-age-v1.png` — 1536 × 1024 RGBA completed Crown Stable; timber hitching yard, thatch, rope, grain sacks, and restrained Crown cloth.
+- `assets/crownforge-stable-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 construction atlas. Runtime cells are foundation, partial, and near-complete with aspect-correct destination sizing.
+- `assets/crownforge-granary-first-age-v1.png` — 1536 × 1024 RGBA completed First-age Granary; raised timber food store with thatch and grounded packed-earth contact.
+- `assets/crownforge-granary-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 construction atlas with the same staged contract as the Stable.
+- `assets/crownforge-scout-combat-atlas-v1.png` — 1254 × 1254 RGBA 4 × 4 directional reference atlas for the Crown Scout.
+- `assets/crownforge-scout-walk-loop-v1.png` — 1254 × 1254 RGBA 4 × 4 authored directional walk loop.
+- `assets/crownforge-scout-attack-loop-v1.png` — 1254 × 1254 RGBA 4 × 4 authored directional attack loop.
+- Runtime registration: `FIRST_AGE_ASSETS.stable`, `FIRST_AGE_ASSETS.granary`, and `COMBAT_ATLASES.scout*` with marker `20260824-firstage1`.
+- All seven accepted files are prepared RGBA runtime outputs with neutral matte removed; raw generation sheets are not loaded. Visual-integrity audit now validates the new construction atlases as sheets as well as completed assets.
+
+## FIRST-AGE SUPPORT YARDS & SPEARWARDEN ASSETS — 2026-08-24 (CURRENT ADDITION)
+
+- `assets/crownforge-timber-yard-first-age-v1.png` — 1536 × 1024 RGBA compact timber-and-thatch wood work yard with log racks, saw bench, splitting block, ropes, and Crown cloth.
+- `assets/crownforge-timber-yard-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 construction atlas for foundation, partial, near-complete, and reserved complete stages.
+- `assets/crownforge-stonewright-yard-first-age-v1.png` — 1536 × 1024 RGBA compact stone-sorting and shaping yard with timber shelter, rough workbench, lifting frame, and stone piles.
+- `assets/crownforge-stonewright-yard-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 construction atlas using the same staged contract.
+- `assets/crownforge-spearwarden-combat-atlas-v1.png` — 1233 × 1275 RGBA 4 × 4 directional reference atlas for idle, walk reference, attack reference, and death reference.
+- `assets/crownforge-spearwarden-walk-loop-v1.png` — 1230 × 1278 RGBA 4 × 4 direction-row walking loop with distinct front, profile, rear, and opposite-profile leg phases.
+- `assets/crownforge-spearwarden-attack-loop-v1.png` — 1268 × 1241 RGBA 4 × 4 direction-row spear thrust loop with wind-up, contact, and recovery.
+- Runtime registration: `FIRST_AGE_ASSETS.timberYard`, `FIRST_AGE_ASSETS.stonewrightYard`, and `COMBAT_ATLASES.spearwarden*` with marker `20260824-firstage2`.
+- All seven accepted files are prepared RGBA runtime outputs and are loaded as individual assets or cell-addressed atlases; raw generation sources are not referenced.
+
+## FIRST-AGE HOMESTEAD & MILITIA ASSETS — 2026-08-24 (CURRENT ADDITION)
+
+- `assets/crownforge-homestead-first-age-v1.png` — 1536 × 1024 RGBA compact timber-and-wattle family dwelling with thatch, porch, firewood, clay vessel, and restrained Crown cloth.
+- `assets/crownforge-homestead-construction-atlas-v1.png` — 1536 × 1024 RGBA 2 × 2 construction atlas for foundation, partial frame, near-complete, and reserved complete stages.
+- `assets/crownforge-militia-combat-atlas-v1.png` — 1224 × 1285 RGBA 4 × 4 directional reference atlas for idle, walk reference, attack reference, and non-graphic death.
+- `assets/crownforge-militia-walk-loop-v1.png` — 1240 × 1268 RGBA 4 × 4 direction-row walk loop with distinct in-between leg phases.
+- `assets/crownforge-militia-attack-loop-v1.png` — 1536 × 1024 RGBA 4 × 4 direction-row mace-and-shield attack loop with wind-up, contact, and recovery.
+- Runtime registration: `FIRST_AGE_ASSETS.homestead` and `COMBAT_ATLASES.militia*` with marker `20260824-firstage3`.
+- The accepted files were generated as isolated alpha assets, prepared into project-local runtime PNGs, and copied to the source/public mirror. No studio background or raw generation source is referenced by the game.
+## FIRST-AGE WATCH HUT & SHIELDBEARER ASSETS — 2026-08-25 (CURRENT ADDITION)
+
+- `assets/crownforge-watch-hut-first-age-v1.png` — original transparent first-age Watch Hut, 1300×1209.
+- `assets/crownforge-watch-hut-construction-atlas-v1.png` — original 2×2 foundation / partial / near-complete / completed Watch Hut atlas, 1536×1024.
+- `assets/crownforge-shieldbearer-combat-atlas-v1.png` — original four-direction Shieldbearer idle / walk reference / attack reference / death atlas, 1230×1278.
+- `assets/crownforge-shieldbearer-walk-loop-v1.png` — original four-direction four-frame Shieldbearer walking loop, 1239×1269.
+- `assets/crownforge-shieldbearer-attack-loop-v1.png` — original four-direction four-frame Shieldbearer attack loop, 1236×1273.
+- Runtime cache marker: `20260825-firstage4`.
+- All five generated rasters were inspected as transparent game assets before integration; no text, UI, studio backplate, or unrelated character appears in the project-bound versions.

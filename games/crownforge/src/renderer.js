@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260823-orewashstages1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260823-orewashstages1';
+import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260825-firstage4';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260825-firstage4';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -122,6 +122,8 @@ export class CrownforgeRenderer {
     this.goldDepositAssetReady = {};
     this.firstAgeAssetReady = {};
     this.firstAgeConstructionAssetReady = {};
+    this.firstAgeConstructionAtlases = {};
+    this.firstAgeConstructionAtlasReady = {};
     this.enemyCampReady = false;
     this.villagerAtlases = {};
     this.villagerAtlasReady = {};
@@ -131,10 +133,12 @@ export class CrownforgeRenderer {
     this.meadow.addEventListener('load', () => {
       this.meadowReady = true;
       this.meadowPattern = null;
+      this.invalidateStaticLayer();
     });
     this.road.addEventListener('load', () => {
       this.roadReady = true;
       this.roadPattern = null;
+      this.invalidateStaticLayer();
     });
     this.roadsideProps.addEventListener('load', () => { this.roadsidePropsReady = true; });
     this.environmentAtlas = new Image();
@@ -185,6 +189,14 @@ export class CrownforgeRenderer {
         stageImage.addEventListener('load', () => { this.firstAgeConstructionAssetReady[key][stage] = true; });
         stageImage.src = stageDefinition.src;
       }
+      const constructionAtlas = definition.constructionAtlas;
+      if (constructionAtlas) {
+        const stageAtlas = new Image();
+        this.firstAgeConstructionAtlases[key] = stageAtlas;
+        this.firstAgeConstructionAtlasReady[key] = false;
+        stageAtlas.addEventListener('load', () => { this.firstAgeConstructionAtlasReady[key] = true; });
+        stageAtlas.src = constructionAtlas.src;
+      }
     }
     for (const [key, definition] of Object.entries(VILLAGER_ATLASES)) {
       if (!definition.src) continue;
@@ -218,6 +230,11 @@ export class CrownforgeRenderer {
     this.lastRenderTime = 0;
     const query = new URLSearchParams(window.location.search);
     this.diagnostics = query.has('lighting-benchmark');
+    this.lowResolutionMode = query.has('lowres');
+    this.resolutionScale = 1;
+    this.staticLayer = document.createElement('canvas');
+    this.staticLayerKey = null;
+    this.viewportBounds = null;
     this.daylightEnabled = !query.has('lighting-off');
     this.frameStats = { count: 0, samples: [] };
     this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -245,6 +262,30 @@ export class CrownforgeRenderer {
       this.combatAtlases.soldierWalk,
       this.combatAtlases.raider,
       this.combatAtlases.raiderWalk,
+      this.firstAgeAssets.stable,
+      this.firstAgeConstructionAtlases.stable,
+      this.firstAgeAssets.granary,
+      this.firstAgeConstructionAtlases.granary,
+      this.firstAgeAssets.homestead,
+      this.firstAgeConstructionAtlases.homestead,
+      this.firstAgeAssets.watchHut,
+      this.firstAgeConstructionAtlases.watchHut,
+      this.firstAgeAssets.timberYard,
+      this.firstAgeConstructionAtlases.timberYard,
+      this.firstAgeAssets.stonewrightYard,
+      this.firstAgeConstructionAtlases.stonewrightYard,
+      this.combatAtlases.scout,
+      this.combatAtlases.scoutWalk,
+      this.combatAtlases.scoutAttack,
+      this.combatAtlases.spearwarden,
+      this.combatAtlases.spearwardenWalk,
+      this.combatAtlases.spearwardenAttack,
+      this.combatAtlases.militia,
+      this.combatAtlases.militiaWalk,
+      this.combatAtlases.militiaAttack,
+      this.combatAtlases.shieldbearer,
+      this.combatAtlases.shieldbearerWalk,
+      this.combatAtlases.shieldbearerAttack,
     ].filter(Boolean);
     const loaded = required.filter((image) => image.complete && image.naturalWidth > 0).length;
     const total = required.length;
@@ -252,12 +293,16 @@ export class CrownforgeRenderer {
   }
 
   resize() {
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const ratio = this.lowResolutionMode ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+    this.resolutionScale = ratio;
     const rect = this.canvas.getBoundingClientRect();
     this.width = Math.max(1, rect.width);
     this.height = Math.max(1, rect.height);
     this.canvas.width = Math.round(this.width * ratio);
     this.canvas.height = Math.round(this.height * ratio);
+    this.staticLayer.width = this.canvas.width;
+    this.staticLayer.height = this.canvas.height;
+    this.invalidateStaticLayer();
     this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     if (!this.cameraInitialized && this.width > 1 && this.height > 1) {
       const focus = CONFIG.initialCameraWorld ?? { x: CONFIG.mapWidth / 2, z: CONFIG.mapHeight / 2 };
@@ -298,6 +343,7 @@ export class CrownforgeRenderer {
     this.camera.x += dx;
     this.camera.y += dy;
     this.clampCamera();
+    this.invalidateStaticLayer();
   }
 
   clampCamera() {
@@ -329,6 +375,56 @@ export class CrownforgeRenderer {
     this.camera.x = screenPoint.x - this.width / 2 - worldX * nextZoom;
     this.camera.y = screenPoint.y - this.height / 2 - worldY * nextZoom;
     this.clampCamera();
+    this.invalidateStaticLayer();
+  }
+
+  invalidateStaticLayer() {
+    this.staticLayerKey = null;
+  }
+
+  viewportWorldBounds(padding = 0) {
+    const corners = [
+      this.screenToWorld({ x: 0, y: 0 }),
+      this.screenToWorld({ x: this.width, y: 0 }),
+      this.screenToWorld({ x: this.width, y: this.height }),
+      this.screenToWorld({ x: 0, y: this.height }),
+    ];
+    return {
+      minX: Math.min(...corners.map((point) => point.x)) - padding,
+      maxX: Math.max(...corners.map((point) => point.x)) + padding,
+      minZ: Math.min(...corners.map((point) => point.z)) - padding,
+      maxZ: Math.max(...corners.map((point) => point.z)) + padding,
+    };
+  }
+
+  isWorldVisible(point, radius = 0) {
+    const bounds = this.viewportBounds ?? this.viewportWorldBounds();
+    return point.x + radius >= bounds.minX && point.x - radius <= bounds.maxX
+      && point.z + radius >= bounds.minZ && point.z - radius <= bounds.maxZ;
+  }
+
+  entityCullRadius(entity) {
+    if (entity.kind === 'unit') return 3;
+    if (entity.kind === 'resource') {
+      const tierScale = RESOURCE_SIZE_TIERS[entity.sizeTier ?? 'small']?.renderScale ?? 1;
+      const base = entity.type === 'grove' ? 7 : entity.type === 'grain' ? 8 : entity.type === 'berry' ? 4 : 5;
+      return base * tierScale;
+    }
+    if (entity.kind === 'building') {
+      const footprint = this.buildingFootprint(entity);
+      return Math.max(4, footprint.width, footprint.height, this.buildingRenderSize(entity) / 24);
+    }
+    return Math.max(3, (entity.size ?? 50) / 24);
+  }
+
+  ensureStaticLayer() {
+    const key = [this.width, this.height, this.camera.x, this.camera.y, this.camera.zoom, this.meadowReady, this.roadReady, this.daylightEnabled].join('|');
+    if (this.staticLayerKey === key) return;
+    const staticCtx = this.staticLayer.getContext('2d');
+    staticCtx.setTransform(this.resolutionScale, 0, 0, this.resolutionScale, 0, 0);
+    staticCtx.clearRect(0, 0, this.width, this.height);
+    this.drawMap(staticCtx, 0);
+    this.staticLayerKey = key;
   }
 
   render(simulation, input, time) {
@@ -336,9 +432,11 @@ export class CrownforgeRenderer {
     const renderDelta = this.lastRenderTime ? Math.min(0.05, Math.max(0, (time - this.lastRenderTime) / 1000)) : 0;
     this.lastRenderTime = time;
     const ctx = this.ctx;
+    this.viewportBounds = this.viewportWorldBounds(3);
     ctx.clearRect(0, 0, this.width, this.height);
     this.drawBackdrop(ctx);
-    this.drawMap(ctx, time);
+    this.ensureStaticLayer();
+    ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
     this.drawPaths(ctx, simulation);
     this.drawWorldEntities(ctx, simulation, time);
     // Placement is a planning state, so the monumental Hall gets a quiet
@@ -634,7 +732,7 @@ export class CrownforgeRenderer {
   drawPaths(ctx, simulation) {
     ctx.save();
     for (const unit of simulation.units) {
-      if (!unit.selected || unit.dead || !unit.path.length) continue;
+      if (!unit.selected || unit.dead || !unit.path.length || !this.isWorldVisible(unit, 2)) continue;
       const start = this.unitScreenPoint(unit);
       ctx.beginPath();
       ctx.moveTo(start.x, start.y);
@@ -664,15 +762,15 @@ export class CrownforgeRenderer {
   drawWorldEntities(ctx, simulation, time) {
     const kindOrder = { building: 0, resource: 1, roadside: 2, 'roadside-shrub': 2, decoration: 3, unit: 4 };
     const entities = [
-      ...simulation.buildings.map((entity) => ({ ...entity, depth: entity.field ? -10000 + entity.x + entity.z : entity.x + entity.z + 0.2 })),
-      ...simulation.resourcesNodes.map((entity) => ({ ...entity, depth: entity.type === 'grain' ? -9999 + entity.x + entity.z : entity.x + entity.z + 0.3 })),
-      ...this.roadsideDetails.map((entity, index) => ({
+      ...simulation.buildings.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.field ? -10000 + entity.x + entity.z : entity.x + entity.z + 0.2 })),
+      ...simulation.resourcesNodes.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.type === 'grain' ? -9999 + entity.x + entity.z : entity.x + entity.z + 0.3 })),
+      ...this.roadsideDetails.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity, index) => ({
         ...entity,
         id: -1000 - index,
         depth: entity.x + entity.z + (entity.depthBias ?? 0.25),
       })),
-      ...simulation.decorations.map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.34 })),
-      ...simulation.units.map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.7 })),
+      ...simulation.decorations.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.34 })),
+      ...simulation.units.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.7 })),
     ].sort((a, b) => a.depth - b.depth || (kindOrder[a.kind] ?? 0) - (kindOrder[b.kind] ?? 0) || a.id - b.id);
     for (const entity of entities) {
       if (entity.dead && entity.deathAge > 2.4) continue;
@@ -687,6 +785,7 @@ export class CrownforgeRenderer {
 
   drawOccludedUnitOverlays(ctx, simulation) {
     for (const unit of simulation.units.filter((candidate) => !candidate.dead)) {
+      if (!this.isWorldVisible(unit, 3)) continue;
       const hiddenByBuilding = simulation.buildings.find((building) => {
         if (building.destroyed || building.progress <= 0 || building.field) return false;
         const nearStructure = simulation._distanceToBuildingEdge(unit, building) < 2.3;
@@ -743,50 +842,63 @@ export class CrownforgeRenderer {
 
   getEntityAtScreen(simulation, point, purpose = 'select') {
     const world = this.screenToWorld(point);
-    const unitHits = simulation.units
-      .filter((unit) => !unit.dead)
-      .map((unit) => {
-        const anchor = this.unitScreenPoint(unit);
-        const style = UNIT_TYPES[unit.type];
-        const size = (style.renderSize ?? 120) * this.camera.zoom;
-        const withinX = Math.abs(point.x - anchor.x) <= Math.max(22, size * 0.3);
-        const withinY = point.y >= anchor.y - size * 1.04 && point.y <= anchor.y + size * 0.16;
-        return withinX && withinY
-          ? { unit, distance: Math.hypot(point.x - anchor.x, point.y - (anchor.y - size * 0.48)) }
-          : null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.distance - b.distance);
-    const unitHit = unitHits[0]?.unit;
-    const buildingHits = simulation.buildings
-      .filter((building) => !building.destroyed && building.hp > 0)
-      .map((building) => {
-        const anchor = this.worldToScreen(building);
-        const size = this.buildingRenderSize(building) * this.camera.zoom;
-        const definition = FIRST_AGE_ASSETS[building.type];
-        const aspect = definition ? definition.width / definition.height : 1;
-        const height = size / aspect;
-        const withinX = Math.abs(point.x - anchor.x) <= size * 0.66;
-        const withinY = point.y >= anchor.y - height * 1.04 && point.y <= anchor.y + height * 0.18;
-        return withinX && withinY ? { building, distance: Math.hypot(point.x - anchor.x, point.y - anchor.y) } : null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.distance - b.distance);
-    const buildingHit = buildingHits[0]?.building;
-    const resourceHits = simulation.resourcesNodes
-      .filter((resource) => resource.amount > 0)
-      .map((resource) => {
-        const anchor = this.worldToScreen(resource);
-        const tier = RESOURCE_SIZE_TIERS[resource.sizeTier ?? 'small'] ?? RESOURCE_SIZE_TIERS.small;
-        const baseSize = resource.type === 'grove' ? 252 : resource.type === 'grain' ? 360 : resource.type === 'tree' ? 174 : resource.type === 'berry' ? 115 : 132;
-        const size = (resource.type === 'berry' || resource.type === 'grain' ? baseSize : baseSize * tier.renderScale) * this.camera.zoom;
-        const withinX = Math.abs(point.x - anchor.x) <= Math.max(24, size * (resource.type === 'grain' ? 0.58 : 0.5));
-        const withinY = point.y >= anchor.y - size * 1.08 && point.y <= anchor.y + size * 0.14;
-        return withinX && withinY ? { resource, distance: Math.hypot(point.x - anchor.x, point.y - (anchor.y - size * 0.46)) } : null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.distance - b.distance);
-    const resourceHit = resourceHits[0]?.resource;
+    let unitHit = null;
+    let unitDistance = Infinity;
+    let hostileUnitHit = null;
+    let hostileUnitDistance = Infinity;
+    for (const unit of simulation.units) {
+      if (unit.dead || (this.viewportBounds && !this.isWorldVisible(unit, 3))) continue;
+      const anchor = this.unitScreenPoint(unit);
+      const style = UNIT_TYPES[unit.type];
+      const size = (style.renderSize ?? 120) * this.camera.zoom;
+      const withinX = Math.abs(point.x - anchor.x) <= Math.max(22, size * 0.3);
+      const withinY = point.y >= anchor.y - size * 1.04 && point.y <= anchor.y + size * 0.16;
+      if (!withinX || !withinY) continue;
+      const candidateDistance = Math.hypot(point.x - anchor.x, point.y - (anchor.y - size * 0.48));
+      if (candidateDistance < unitDistance) {
+        unitDistance = candidateDistance;
+        unitHit = unit;
+      }
+      if (unit.faction === 'enemy' && candidateDistance < hostileUnitDistance) {
+        hostileUnitDistance = candidateDistance;
+        hostileUnitHit = unit;
+      }
+    }
+    let buildingHit = null;
+    let buildingDistance = Infinity;
+    for (const building of simulation.buildings) {
+      if (building.destroyed || building.hp <= 0 || (this.viewportBounds && !this.isWorldVisible(building, this.entityCullRadius(building)))) continue;
+      const anchor = this.worldToScreen(building);
+      const size = this.buildingRenderSize(building) * this.camera.zoom;
+      const definition = FIRST_AGE_ASSETS[building.type];
+      const aspect = definition ? definition.width / definition.height : 1;
+      const height = size / aspect;
+      const withinX = Math.abs(point.x - anchor.x) <= size * 0.66;
+      const withinY = point.y >= anchor.y - height * 1.04 && point.y <= anchor.y + height * 0.18;
+      if (!withinX || !withinY) continue;
+      const candidateDistance = Math.hypot(point.x - anchor.x, point.y - anchor.y);
+      if (candidateDistance < buildingDistance) {
+        buildingDistance = candidateDistance;
+        buildingHit = building;
+      }
+    }
+    let resourceHit = null;
+    let resourceDistance = Infinity;
+    for (const resource of simulation.resourcesNodes) {
+      if (resource.amount <= 0 || (this.viewportBounds && !this.isWorldVisible(resource, this.entityCullRadius(resource)))) continue;
+      const anchor = this.worldToScreen(resource);
+      const tier = RESOURCE_SIZE_TIERS[resource.sizeTier ?? 'small'] ?? RESOURCE_SIZE_TIERS.small;
+      const baseSize = resource.type === 'grove' ? 252 : resource.type === 'grain' ? 360 : resource.type === 'tree' ? 174 : resource.type === 'berry' ? 115 : 132;
+      const size = (resource.type === 'berry' || resource.type === 'grain' ? baseSize : baseSize * tier.renderScale) * this.camera.zoom;
+      const withinX = Math.abs(point.x - anchor.x) <= Math.max(24, size * (resource.type === 'grain' ? 0.58 : 0.5));
+      const withinY = point.y >= anchor.y - size * 1.08 && point.y <= anchor.y + size * 0.14;
+      if (!withinX || !withinY) continue;
+      const candidateDistance = Math.hypot(point.x - anchor.x, point.y - (anchor.y - size * 0.46));
+      if (candidateDistance < resourceDistance) {
+        resourceDistance = candidateDistance;
+        resourceHit = resource;
+      }
+    }
 
     if (purpose === 'command') {
       // Command intent is different from selection intent. Large authored
@@ -796,7 +908,6 @@ export class CrownforgeRenderer {
       // first priority; after that, a visible resource wins before a friendly
       // structure so right-click gathering cannot turn into an accidental
       // "move to storage" order.
-      const hostileUnitHit = unitHits.find(({ unit }) => unit.faction === 'enemy')?.unit;
       return hostileUnitHit ?? resourceHit ?? buildingHit ?? unitHit ?? simulation.getEntityAt(world);
     }
 
@@ -823,9 +934,11 @@ export class CrownforgeRenderer {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.imageSmoothingEnabled = true;
+    const destinationWidth = size;
+    const destinationHeight = size * (atlas.destinationAspect ?? 1);
     const destination = {
-      x: screen.x - size / 2,
-      y: screen.y - size * 0.98 + yOffset,
+      x: screen.x - destinationWidth / 2,
+      y: screen.y - destinationHeight * 0.98 + yOffset,
     };
     ctx.drawImage(
       image,
@@ -835,8 +948,8 @@ export class CrownforgeRenderer {
       cellHeight,
       destination.x,
       destination.y,
-      size,
-      size,
+      destinationWidth,
+      destinationHeight,
     );
     ctx.restore();
     return true;
@@ -886,10 +999,48 @@ export class CrownforgeRenderer {
     );
   }
 
+  drawGateAsset(ctx, buildingOrPreview, screen, size, alpha = 1) {
+    const definition = FIRST_AGE_ASSETS.gate;
+    const image = this.firstAgeAssets?.gate;
+    const orientation = resolveWallVisual(
+      buildingOrPreview?.gateDirection
+        ?? buildingOrPreview?.wallDirection
+        ?? { x: 1, z: 0 },
+    ).orientation;
+    const cell = definition?.cellByOrientation?.[orientation] ?? { column: 0, row: 0 };
+    return this.drawAtlasCell(
+      ctx,
+      image,
+      this.firstAgeAssetReady?.gate,
+      definition,
+      cell.column,
+      cell.row,
+      screen,
+      size,
+      alpha,
+    );
+  }
+
   drawFirstAgeConstructionAsset(ctx, type, stage, screen, size, alpha = 1) {
+    const definition = FIRST_AGE_ASSETS[type];
+    const constructionAtlas = definition?.constructionAtlas;
+    const cell = constructionAtlas?.cellByStage?.[stage];
+    if (constructionAtlas && cell) {
+      return this.drawAtlasCell(
+        ctx,
+        this.firstAgeConstructionAtlases?.[type],
+        this.firstAgeConstructionAtlasReady?.[type],
+        constructionAtlas,
+        cell.column,
+        cell.row,
+        screen,
+        size,
+        alpha,
+      );
+    }
     return this.drawFirstAgeDefinition(
       ctx,
-      FIRST_AGE_ASSETS[type]?.constructionStages?.[stage],
+      definition?.constructionStages?.[stage],
       this.firstAgeConstructionAssets?.[type]?.[stage],
       this.firstAgeConstructionAssetReady?.[type]?.[stage],
       screen,
@@ -910,6 +1061,12 @@ export class CrownforgeRenderer {
       const destination = { x: screen.x - width / 2, y: screen.y - height * 0.98 };
       ctx.drawImage(this.enemyCamp, destination.x, destination.y, width, height);
       ctx.restore();
+      return;
+    }
+    if (building.type === 'gate') {
+      const stage = resolveFirstAgeConstructionStage(building.progress);
+      const gateAlpha = stage === 'complete' ? alpha : alpha * (0.28 + building.progress * 0.72);
+      this.drawGateAsset(ctx, building, screen, size, gateAlpha);
       return;
     }
     if (building.type === 'wall') {
@@ -954,8 +1111,8 @@ export class CrownforgeRenderer {
   buildingFootprint(buildingOrType) {
     const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType.type;
     const blueprint = BUILDING_TYPES[type];
-    if (!blueprint?.wall) return blueprint?.footprint ?? { width: 1, height: 1 };
-    const segments = Math.max(1, Math.round(buildingOrType.wallSegments ?? 1));
+    if (!blueprint?.wall && !blueprint?.gate) return blueprint?.footprint ?? { width: 1, height: 1 };
+    const segments = blueprint.wall ? Math.max(1, Math.round(buildingOrType.wallSegments ?? 1)) : 1;
     const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
     const length = blueprint.footprint.width + (segments - 1) * span;
     const direction = buildingOrType.wallDirection
@@ -990,6 +1147,7 @@ export class CrownforgeRenderer {
         x: start.x + dx * index * span,
         z: start.z + dz * index * span,
       };
+      if (!this.isWorldVisible(world, 3)) continue;
       const point = this.worldToScreen(world);
       placements.push({ point, index });
     }
@@ -1087,10 +1245,10 @@ export class CrownforgeRenderer {
     const clearance = blueprint.collisionClearance ?? 0;
     const baseFootprint = this.buildingFootprint(building);
     let corners;
-    if (blueprint.wall) {
-      const count = Math.max(1, Math.round(building.wallSegments ?? 1));
+    if (blueprint.wall || blueprint.gate) {
+      const count = blueprint.wall ? Math.max(1, Math.round(building.wallSegments ?? 1)) : 1;
       const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
-      const length = blueprint.footprint.width + (count - 1) * span + clearance * 2;
+      const length = blueprint.gate ? blueprint.footprint.width + clearance * 2 : blueprint.footprint.width + (count - 1) * span + clearance * 2;
       const thickness = blueprint.footprint.height + clearance * 2;
       const direction = building.wallDirection
         ?? (building.wallOrientation === 'vertical' ? { x: 0, z: 1 } : { x: 1, z: 0 });
@@ -1319,7 +1477,7 @@ export class CrownforgeRenderer {
     const style = UNIT_TYPES[unit.type];
     const size = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
-    if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
+    if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 0.84 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
     if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else this.drawAsset(ctx, style.asset, point, size * this.camera.zoom, alpha);
@@ -1365,7 +1523,7 @@ export class CrownforgeRenderer {
   drawWorkFeedback(ctx, simulation, time) {
     for (const unit of simulation.units) {
       const event = unit.lastAnimationEvent;
-      if (!event || unit.dead) continue;
+      if (!event || unit.dead || !this.isWorldVisible(unit, 3)) continue;
       const age = (unit.animClock ?? 0) - event.clock;
       if (age < 0 || age > 0.58) continue;
       const progress = age / 0.58;
@@ -1427,7 +1585,7 @@ export class CrownforgeRenderer {
 
   drawCombatFeedback(ctx, simulation, time) {
     for (const unit of simulation.units) {
-      if (unit.dead || !unit.animationEvents?.length) continue;
+      if (unit.dead || !unit.animationEvents?.length || !this.isWorldVisible(unit, 3)) continue;
       for (const event of unit.animationEvents) {
         if (![ANIMATION_EVENTS.attackStart, ANIMATION_EVENTS.attackHit, ANIMATION_EVENTS.attackWhiff].includes(event.name)) continue;
         const age = (unit.animClock ?? 0) - event.clock;
@@ -1552,6 +1710,8 @@ export class CrownforgeRenderer {
     ctx.globalAlpha = this.buildPreview.valid ? 0.58 : 0.28;
     if (type === 'wall' && this.buildPreview.segments?.length) {
       this.drawWallSegments(ctx, this.buildPreview, size, 0.9);
+    } else if (type === 'gate') {
+      this.drawGateAsset(ctx, this.buildPreview, point, size, 0.9);
     } else if (FIRST_AGE_ASSETS[type]) {
       this.drawFirstAgeAsset(ctx, type, point, size, 0.9);
     } else {
@@ -1583,6 +1743,7 @@ export class CrownforgeRenderer {
     if (!this.buildPreview) return;
     const hall = simulation.buildings.find((building) => building.type === 'townCenter' && !building.destroyed && building.progress >= 1);
     if (!hall) return;
+    if (!this.isWorldVisible(hall, this.entityCullRadius(hall))) return;
     const point = this.worldToScreen(hall);
     const size = this.buildingRenderSize(hall) * this.camera.zoom;
     const height = this.buildingVisualHeight(hall, size);
@@ -1609,6 +1770,7 @@ export class CrownforgeRenderer {
 
   drawRipples(ctx, time, delta = 0) {
     for (const ripple of this.ripples) {
+      if (!this.isWorldVisible(ripple.world, 2)) continue;
       ripple.age += delta;
       const point = this.worldToScreen(ripple.world);
       const progress = Math.min(1, ripple.age / 0.8);

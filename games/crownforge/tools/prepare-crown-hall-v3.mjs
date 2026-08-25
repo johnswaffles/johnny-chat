@@ -16,7 +16,7 @@ const isStudioMatte = (x, y) => {
   const blue = data[index + 2];
   const brightness = (red + green + blue) / 3;
   const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
-  return brightness > 178 && chroma < 24;
+  return brightness >= 176 && chroma < 28;
 };
 
 const enqueue = (x, y) => {

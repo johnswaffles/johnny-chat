@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
-    <link rel="stylesheet" href="./styles.css?v=20260823-wallconnect2" />
+    <link rel="stylesheet" href="./styles.css?v=20260824-perfpass1" />
   </head>
   <body>
     <main class="game-shell">
@@ -48,7 +48,7 @@
       <aside class="left-rail">
         <section class="glass-panel intel-panel">
           <div class="panel-kicker">SETTLEMENT INTEL</div>
-          <div class="selection-header"><span id="selection-count">3 SELECTED</span><span class="population" title="Population used / housing capacity"><span class="ui-icon icon-population icon-micro" aria-hidden="true"></span><b id="population">4 / 8</b></span></div>
+          <div class="selection-header"><span id="selection-count">3 SELECTED</span><span class="population" title="Population used / housing capacity"><span class="ui-icon icon-population icon-micro" aria-hidden="true"></span><b id="population">4 / 24</b></span></div>
           <div class="selection-identity"><span id="selection-icon" class="ui-icon icon-population selection-icon" aria-hidden="true"></span><div><span id="selection-kind" class="selection-kind">GROUP</span><h2 id="selection-title">3 Crownwardens</h2></div></div>
           <p id="selection-detail">Select a Crownwarden and issue an order.</p>
           <div class="command-line"><span class="command-dot"></span><span id="command-line">Select a villager, then right-click a resource.</span></div>
@@ -91,6 +91,17 @@
 
       <div class="map-hint glass-panel">SCROLL TO ZOOM <span>•</span> WASD TO PAN <span>•</span> MIDDLE-DRAG TO PAN</div>
 
+      <section id="performance-panel" class="performance-panel glass-panel" aria-label="Development performance telemetry" hidden>
+        <div class="performance-heading"><span class="panel-kicker">DEV TELEMETRY</span><span data-perf="mode">NORMAL · FULL-RES</span></div>
+        <div class="performance-grid">
+          <span>SIMULATION</span><b data-perf="simulation">0.00 ms</b>
+          <span>RENDER</span><b data-perf="render">0.00 ms</b>
+          <span>UI</span><b data-perf="ui">0.00 ms</b>
+          <span>ENTITIES</span><b data-perf="entities">0</b>
+          <span>LONG FRAMES</span><b data-perf="long-frames">0 / 5s</b>
+        </div>
+      </section>
+
       <section class="command-deck glass-panel">
         <div class="deck-summary"><span class="panel-kicker">COMMAND DECK</span><span class="deck-subtitle">The settlement grows by deliberate orders.</span></div>
         <div class="deck-actions">
@@ -99,9 +110,16 @@
             <div id="build-menu" class="build-menu glass-panel" hidden>
               <div class="build-menu-kicker">FIRST-AGE BLUEPRINTS</div>
               <button class="build-option" data-build-type="barracks" title="Place a Crown Barracks"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN BARRACKS</b><small data-build-detail="barracks">90 WOOD · 40 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="stable" title="Place a Crown Stable for mounted scout production"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>CROWN STABLE</b><small data-build-detail="stable">120 WOOD · 30 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="granary" title="Place a First-age Granary for food drop-off and grain support"><span class="action-mark ui-icon icon-food" aria-hidden="true"></span><span><b>FIRST-AGE GRANARY</b><small data-build-detail="granary">70 WOOD · 10 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="homestead" title="Place a First-age Homestead for population housing"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>FIRST-AGE HOMESTEAD</b><small data-build-detail="homestead">80 WOOD · 10 STONE  •  +6 POP  •  READY</small></span></button>
+              <button class="build-option" data-build-type="watchHut" title="Place a First-age Watch Hut as a defensive landmark"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>FIRST-AGE WATCH HUT</b><small data-build-detail="watchHut">65 WOOD · 15 STONE  •  LOOKOUT  •  READY</small></span></button>
+              <button class="build-option" data-build-type="timberYard" title="Place a Timber Yard for wood drop-off and nearby felling support"><span class="action-mark ui-icon icon-wood" aria-hidden="true"></span><span><b>TIMBER YARD</b><small data-build-detail="timberYard">55 WOOD · 10 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="stonewrightYard" title="Place a Stonewright Yard for stone drop-off and nearby shaping support"><span class="action-mark ui-icon icon-stone" aria-hidden="true"></span><span><b>STONEWRIGHT YARD</b><small data-build-detail="stonewrightYard">45 WOOD · 25 STONE  •  READY</small></span></button>
               <button class="build-option" data-build-type="oreWash" title="Place an Ore Wash for Gold drop-off and nearby mining support"><span class="action-mark ui-icon icon-gold" aria-hidden="true"></span><span><b>ORE WASH</b><small data-build-detail="oreWash">60 WOOD · 20 STONE  •  READY</small></span></button>
               <button class="build-option" data-build-type="field" title="Place a Grain Field"><span class="action-mark ui-icon icon-food" aria-hidden="true"></span><span><b>GRAIN FIELD</b><small data-build-detail="field">25 WOOD  •  READY</small></span></button>
               <button class="build-option" data-build-type="wall" title="Click-drag a Palisade Wall from or toward an existing wall end; nearby ends magnetically connect"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>PALISADE WALL</b><small data-build-detail="wall">20 WOOD · 10 STONE  •  DRAG TO AIM  •  READY</small></span></button>
+              <button class="build-option" data-build-type="gate" title="Place a Palisade Gate over an existing wall to create a passable opening"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>PALISADE GATE</b><small data-build-detail="gate">40 WOOD · 15 STONE  •  SNAPS TO WALL  •  READY</small></span></button>
             </div>
           </div>
           <div id="train-menu-wrap" class="build-menu-wrap" hidden>
@@ -110,6 +128,10 @@
               <div class="build-menu-kicker">BUILDING QUEUE</div>
               <button class="build-option production-option" data-train-unit="villager" title="Train a Villager"><span class="action-mark ui-icon icon-villager" aria-hidden="true"></span><span><b>VILLAGER</b><small data-train-detail="villager">50 FOOD  •  4 SEC</small></span></button>
               <button class="build-option production-option" data-train-unit="soldier" title="Train a Crown Guard"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN GUARD</b><small data-train-detail="soldier">40 FOOD · 15 WOOD · 10 GOLD  •  6 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="scout" title="Train a Crown Scout"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN SCOUT</b><small data-train-detail="scout">60 FOOD · 30 WOOD · 15 GOLD  •  8 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="spearwarden" title="Train a Crown Spearwarden"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN SPEARWARDEN</b><small data-train-detail="spearwarden">55 FOOD · 20 WOOD · 15 GOLD  •  8 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="militia" title="Train a Crown Militia"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN MILITIA</b><small data-train-detail="militia">35 FOOD · 10 WOOD · 5 GOLD  •  5.5 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="shieldbearer" title="Train a Crown Shieldbearer"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN SHIELDBEARER</b><small data-train-detail="shieldbearer">45 FOOD · 20 WOOD · 5 GOLD  •  7 SEC</small></span></button>
               <small id="train-queue-status" class="train-queue-status">Select a unit to add it to the queue.</small>
             </div>
           </div>
@@ -134,7 +156,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260824-constructionqueue1"></script>
+    <script type="module" src="./src/main.js?v=20260824-firstage2"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

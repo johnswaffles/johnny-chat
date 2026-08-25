@@ -13,15 +13,19 @@ export const CONFIG = {
   // Keep the first-age Crown Hall below the top HUD with a readable southern
   // approach and open construction space around the civic core.
   initialCameraWorld: { x: 78, z: 82 },
-  // The beta sandbox keeps generous resources and production capacity, while
-  // the player-facing blueprint list remains intentionally small and coherent.
-  sandboxMode: true,
+  // The normal slice uses a readable population ceiling. The 999-capacity
+  // sandbox remains available through ?stress=1 for profiling and QA rather
+  // than making every first match pay the cost of a stress test.
+  sandboxMode: false,
+  normalPopulationCapacity: 24,
   // Roads remain authored content for a later-age build feature. The opening
   // first-age map starts as an unroaded meadow so the settlement grows from
   // player decisions rather than presenting a finished route network.
   startingRoads: false,
   productionQueueLimit: 100,
   sandboxPopulationCapacity: 999,
+  pathCacheLimit: 256,
+  repathBudgetPerStep: 8,
 };
 
 // The slice currently ships with one readable, forgiving enemy profile. It
@@ -120,12 +124,84 @@ export const UNIT_TYPES = {
     attackTiming: { anticipation: 0.22, contact: 0.46, recovery: 0.32 },
     combatAtlas: 'raider',
   },
+  scout: {
+    label: 'Crown Scout',
+    // The atlas is the production render. The established Crown Guard image
+    // remains a safe fallback while the scout sheets finish loading.
+    asset: 'soldier',
+    renderSize: 112,
+    speed: 4.15,
+    acceleration: 11.5,
+    braking: 14.5,
+    radius: 0.46,
+    maxHp: 62,
+    attack: 10,
+    range: 1.35,
+    cooldown: 1.05,
+    attackTiming: { anticipation: 0.2, contact: 0.42, recovery: 0.34 },
+    combatAtlas: 'scout',
+  },
+  spearwarden: {
+    label: 'Crown Spearwarden',
+    // The authored atlas is the production render. Keep a Crown Guard image
+    // as a safe loading fallback until the four-way Spearwarden sheets are
+    // ready in the browser cache.
+    asset: 'soldier',
+    renderSize: 116,
+    speed: 2.18,
+    acceleration: 10.5,
+    braking: 13.2,
+    radius: 0.45,
+    maxHp: 108,
+    attack: 17,
+    range: 1.62,
+    cooldown: 1.02,
+    attackTiming: { anticipation: 0.24, contact: 0.45, recovery: 0.33 },
+    combatAtlas: 'spearwarden',
+  },
+  militia: {
+    label: 'Crown Militia',
+    // The Militia has its own lighter first-age silhouette and mace/shield
+    // language. Keep the established unit fallback while the authored sheets
+    // are loading so the queue never produces a blank entity.
+    asset: 'soldier',
+    renderSize: 112,
+    speed: 2.55,
+    acceleration: 10.5,
+    braking: 13.5,
+    radius: 0.42,
+    maxHp: 78,
+    attack: 11,
+    range: 1.25,
+    cooldown: 0.95,
+    attackTiming: { anticipation: 0.22, contact: 0.44, recovery: 0.34 },
+    combatAtlas: 'militia',
+  },
+  shieldbearer: {
+    label: 'Crown Shieldbearer',
+    asset: 'soldier',
+    renderSize: 116,
+    speed: 2.2,
+    acceleration: 10.2,
+    braking: 13.2,
+    radius: 0.44,
+    maxHp: 118,
+    attack: 12,
+    range: 1.28,
+    cooldown: 1.08,
+    attackTiming: { anticipation: 0.24, contact: 0.46, recovery: 0.34 },
+    combatAtlas: 'shieldbearer',
+  },
 };
 
 export const SPACING_ROLES = {
   villager: { personalSpace: 1.08, groupGap: 1.45 },
   soldier: { personalSpace: 1.28, groupGap: 1.72 },
   raider: { personalSpace: 1.32, groupGap: 1.78 },
+  scout: { personalSpace: 1.38, groupGap: 1.86 },
+  spearwarden: { personalSpace: 1.34, groupGap: 1.8 },
+  militia: { personalSpace: 1.27, groupGap: 1.7 },
+  shieldbearer: { personalSpace: 1.3, groupGap: 1.76 },
 };
 
 export const PRODUCTION_TYPES = {
@@ -145,6 +221,34 @@ export const PRODUCTION_TYPES = {
     // loop. This remains a restrained equipment cost rather than a second
     // currency tree or a new unit roster.
     cost: { food: 40, wood: 15, stone: 0, gold: 10 },
+  },
+  scout: {
+    label: 'Crown Scout',
+    icon: 'icon-soldier',
+    building: 'stable',
+    trainTime: 8,
+    cost: { food: 60, wood: 30, stone: 0, gold: 15 },
+  },
+  spearwarden: {
+    label: 'Crown Spearwarden',
+    icon: 'icon-soldier',
+    building: 'barracks',
+    trainTime: 8,
+    cost: { food: 55, wood: 20, stone: 0, gold: 15 },
+  },
+  militia: {
+    label: 'Crown Militia',
+    icon: 'icon-soldier',
+    building: 'barracks',
+    trainTime: 5.5,
+    cost: { food: 35, wood: 10, stone: 0, gold: 5 },
+  },
+  shieldbearer: {
+    label: 'Crown Shieldbearer',
+    icon: 'icon-soldier',
+    building: 'barracks',
+    trainTime: 7,
+    cost: { food: 45, wood: 20, stone: 0, gold: 5 },
   },
 };
 
@@ -208,7 +312,91 @@ export const BUILDING_TYPES = {
     buildTime: 10,
     cost: { food: 0, wood: 90, stone: 40 },
     production: true,
-    productionTypes: ['soldier'],
+    productionTypes: ['soldier', 'militia', 'shieldbearer', 'spearwarden'],
+  },
+  stable: {
+    label: 'Crown Stable',
+    function: 'Fast mounted scout production',
+    asset: 'stable',
+    maxHp: 460,
+    footprint: { width: 5, height: 4 },
+    renderSize: 660,
+    collisionClearance: 1.25,
+    entrance: 'south',
+    buildTime: 12,
+    cost: { food: 0, wood: 120, stone: 30 },
+    production: true,
+    productionTypes: ['scout'],
+  },
+  granary: {
+    label: 'First-age Granary',
+    function: 'Food drop-off and grain support',
+    asset: 'granary',
+    maxHp: 350,
+    footprint: { width: 4, height: 3 },
+    renderSize: 420,
+    collisionClearance: 1.05,
+    entrance: 'south',
+    buildTime: 8,
+    cost: { food: 0, wood: 70, stone: 10 },
+    storage: true,
+    acceptsResources: ['food'],
+    gatherBonus: { resourceType: 'food', radius: 14, multiplier: 1.15 },
+  },
+  homestead: {
+    label: 'First-age Homestead',
+    function: 'Population housing',
+    asset: 'homestead',
+    maxHp: 300,
+    footprint: { width: 4, height: 3 },
+    renderSize: 430,
+    collisionClearance: 1.05,
+    entrance: 'south',
+    buildTime: 8,
+    cost: { food: 0, wood: 80, stone: 10 },
+    population: 6,
+  },
+  watchHut: {
+    label: 'First-age Watch Hut',
+    function: 'Settlement lookout and defensive landmark',
+    asset: 'watchHut',
+    maxHp: 300,
+    footprint: { width: 3.5, height: 3.5 },
+    renderSize: 410,
+    collisionClearance: 1.05,
+    entrance: 'south',
+    buildTime: 7,
+    cost: { food: 0, wood: 65, stone: 15 },
+  },
+  timberYard: {
+    label: 'Timber Yard',
+    function: 'Wood drop-off and nearby felling support',
+    asset: 'timberYard',
+    maxHp: 340,
+    footprint: { width: 4, height: 3 },
+    renderSize: 410,
+    collisionClearance: 1.02,
+    entrance: 'south',
+    buildTime: 7,
+    cost: { food: 0, wood: 55, stone: 10 },
+    storage: true,
+    acceptsResources: ['wood'],
+    gatherBonus: { resourceType: 'wood', radius: 14, multiplier: 1.15 },
+  },
+  stonewrightYard: {
+    label: 'Stonewright Yard',
+    function: 'Stone drop-off and nearby shaping support',
+    asset: 'stonewrightYard',
+    maxHp: 360,
+    footprint: { width: 4, height: 3 },
+    renderSize: 410,
+    collisionClearance: 1.02,
+    entrance: 'south',
+    buildTime: 7,
+    cost: { food: 0, wood: 45, stone: 25 },
+    storage: true,
+    acceptsResources: ['stone'],
+    gatherBonus: { resourceType: 'stone', radius: 15, multiplier: 1.15 },
   },
   oreWash: {
     label: 'Ore Wash',
@@ -303,6 +491,20 @@ export const BUILDING_TYPES = {
     wall: true,
     wallSegmentSpan: 3,
   },
+  gate: {
+    label: 'Palisade Gate',
+    function: 'Passable defensive entryway',
+    asset: 'gate',
+    maxHp: 300,
+    footprint: { width: 3.2, height: 1.35 },
+    renderSize: 250,
+    collisionClearance: 0.48,
+    entrance: 'south',
+    buildTime: 5,
+    cost: { food: 0, wood: 40, stone: 15 },
+    gate: true,
+    walkable: true,
+  },
   storehouse: {
     label: 'Waystore',
     function: 'Resource drop-off',
@@ -334,7 +536,7 @@ export const BUILDING_TYPES = {
 // Only these structures belong to the current player-facing first-age build
 // catalog. Retired prototypes remain defined for old saves/audit history, but
 // cannot be placed until they receive an approved Crownforge asset and role.
-export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'oreWash', 'field', 'wall']);
+export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'wall', 'gate']);
 
 export const ASSET_RECTS = {
   townCenter: { x: 0, y: 0, width: 418, height: 418 },
@@ -395,6 +597,114 @@ export const GOLD_DEPOSIT_ASSETS = {
 export const FIRST_AGE_ASSETS = {
   townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024 },
   barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
+  stable: {
+    src: './assets/crownforge-stable-first-age-v1.png?v=20260824-firstage1',
+    width: 1536,
+    height: 1024,
+    constructionAtlas: {
+      src: './assets/crownforge-stable-construction-atlas-v1.png?v=20260824-firstage1',
+      width: 1536,
+      height: 1024,
+      columns: 2,
+      rows: 2,
+      destinationAspect: 512 / 768,
+      cellByStage: {
+        foundation: { column: 0, row: 0 },
+        partial: { column: 1, row: 0 },
+        nearComplete: { column: 0, row: 1 },
+      },
+    },
+  },
+  watchHut: {
+    src: './assets/crownforge-watch-hut-first-age-v1.png?v=20260825-firstage4',
+    width: 1300,
+    height: 1209,
+    constructionAtlas: {
+      src: './assets/crownforge-watch-hut-construction-atlas-v1.png?v=20260825-firstage4',
+      width: 1536,
+      height: 1024,
+      columns: 2,
+      rows: 2,
+      destinationAspect: 512 / 768,
+      cellByStage: {
+        foundation: { column: 0, row: 0 },
+        partial: { column: 1, row: 0 },
+        nearComplete: { column: 0, row: 1 },
+      },
+    },
+  },
+  granary: {
+    src: './assets/crownforge-granary-first-age-v1.png?v=20260824-firstage1',
+    width: 1536,
+    height: 1024,
+    constructionAtlas: {
+      src: './assets/crownforge-granary-construction-atlas-v1.png?v=20260824-firstage1',
+      width: 1536,
+      height: 1024,
+      columns: 2,
+      rows: 2,
+      destinationAspect: 512 / 768,
+      cellByStage: {
+        foundation: { column: 0, row: 0 },
+        partial: { column: 1, row: 0 },
+        nearComplete: { column: 0, row: 1 },
+      },
+    },
+  },
+  homestead: {
+    src: './assets/crownforge-homestead-first-age-v1.png?v=20260824-firstage3',
+    width: 1536,
+    height: 1024,
+    constructionAtlas: {
+      src: './assets/crownforge-homestead-construction-atlas-v1.png?v=20260824-firstage3',
+      width: 1536,
+      height: 1024,
+      columns: 2,
+      rows: 2,
+      destinationAspect: 512 / 768,
+      cellByStage: {
+        foundation: { column: 0, row: 0 },
+        partial: { column: 1, row: 0 },
+        nearComplete: { column: 0, row: 1 },
+      },
+    },
+  },
+  timberYard: {
+    src: './assets/crownforge-timber-yard-first-age-v1.png?v=20260824-firstage2',
+    width: 1536,
+    height: 1024,
+    constructionAtlas: {
+      src: './assets/crownforge-timber-yard-construction-atlas-v1.png?v=20260824-firstage2',
+      width: 1536,
+      height: 1024,
+      columns: 2,
+      rows: 2,
+      destinationAspect: 512 / 768,
+      cellByStage: {
+        foundation: { column: 0, row: 0 },
+        partial: { column: 1, row: 0 },
+        nearComplete: { column: 0, row: 1 },
+      },
+    },
+  },
+  stonewrightYard: {
+    src: './assets/crownforge-stonewright-yard-first-age-v1.png?v=20260824-firstage2',
+    width: 1536,
+    height: 1024,
+    constructionAtlas: {
+      src: './assets/crownforge-stonewright-yard-construction-atlas-v1.png?v=20260824-firstage2',
+      width: 1536,
+      height: 1024,
+      columns: 2,
+      rows: 2,
+      destinationAspect: 512 / 768,
+      cellByStage: {
+        foundation: { column: 0, row: 0 },
+        partial: { column: 1, row: 0 },
+        nearComplete: { column: 0, row: 1 },
+      },
+    },
+  },
   oreWash: {
     src: './assets/crownforge-ore-wash-v1.png?v=20260823-orewashstages1',
     width: 1536,
@@ -416,6 +726,21 @@ export const FIRST_AGE_ASSETS = {
   wallDiagonalLeft: { src: './assets/crownforge-palisade-diagonal-left-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
   wallFace: { src: './assets/crownforge-palisade-face-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
   wallDepth: { src: './assets/crownforge-palisade-depth-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
+  // The gate is a 2x2 atlas so each upright screen-space wall direction gets
+  // its own matching opening instead of rotating a flat picture.
+  gate: {
+    src: './assets/crownforge-palisade-gate-atlas-v1.png?v=20260824-gatepass1',
+    width: 1254,
+    height: 1254,
+    columns: 2,
+    rows: 2,
+    cellByOrientation: {
+      'diagonal-right': { column: 0, row: 0 },
+      'diagonal-left': { column: 1, row: 0 },
+      face: { column: 0, row: 1 },
+      depth: { column: 1, row: 1 },
+    },
+  },
 };
 
 export const ROAD_DETAILS_ATLAS = {
@@ -654,6 +979,102 @@ export const COMBAT_ATLASES = {
     src: './assets/crownforge-raider-death-loop-v1.png?v=20260820-hitpass1',
     width: 1254,
     height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  scout: {
+    src: './assets/crownforge-scout-combat-atlas-v1.png?v=20260824-firstage1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
+  },
+  scoutWalk: {
+    src: './assets/crownforge-scout-walk-loop-v1.png?v=20260824-firstage1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  scoutAttack: {
+    src: './assets/crownforge-scout-attack-loop-v1.png?v=20260824-firstage1',
+    width: 1254,
+    height: 1254,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  spearwarden: {
+    src: './assets/crownforge-spearwarden-combat-atlas-v1.png?v=20260824-firstage2',
+    width: 1233,
+    height: 1275,
+    columns: 4,
+    rows: 4,
+    rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
+  },
+  spearwardenWalk: {
+    src: './assets/crownforge-spearwarden-walk-loop-v1.png?v=20260824-firstage2',
+    width: 1230,
+    height: 1278,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  spearwardenAttack: {
+    src: './assets/crownforge-spearwarden-attack-loop-v1.png?v=20260824-firstage2',
+    width: 1268,
+    height: 1241,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  militia: {
+    src: './assets/crownforge-militia-combat-atlas-v1.png?v=20260824-firstage3',
+    width: 1224,
+    height: 1285,
+    columns: 4,
+    rows: 4,
+    rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
+  },
+  militiaWalk: {
+    src: './assets/crownforge-militia-walk-loop-v1.png?v=20260824-firstage3',
+    width: 1240,
+    height: 1268,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  militiaAttack: {
+    src: './assets/crownforge-militia-attack-loop-v1.png?v=20260824-firstage3',
+    width: 1536,
+    height: 1024,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  shieldbearer: {
+    src: './assets/crownforge-shieldbearer-combat-atlas-v1.png?v=20260825-firstage4',
+    width: 1230,
+    height: 1278,
+    columns: 4,
+    rows: 4,
+    rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
+  },
+  shieldbearerWalk: {
+    src: './assets/crownforge-shieldbearer-walk-loop-v1.png?v=20260825-firstage4',
+    width: 1239,
+    height: 1269,
+    columns: 4,
+    rows: 4,
+    layout: 'frame-columns',
+  },
+  shieldbearerAttack: {
+    src: './assets/crownforge-shieldbearer-attack-loop-v1.png?v=20260825-firstage4',
+    width: 1236,
+    height: 1273,
     columns: 4,
     rows: 4,
     layout: 'frame-columns',

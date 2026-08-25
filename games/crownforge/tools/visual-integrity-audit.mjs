@@ -181,6 +181,9 @@ const firstAgeConstructionEntries = Object.entries(FIRST_AGE_ASSETS).flatMap(([t
     stageDefinition,
   ])
 ));
+const firstAgeConstructionAtlasEntries = Object.entries(FIRST_AGE_ASSETS)
+  .filter(([, definition]) => definition.constructionAtlas?.src)
+  .map(([type, definition]) => [`firstAge.${type}.constructionAtlas`, definition.constructionAtlas]);
 
 const atlasEntries = [
   ['environment', ENVIRONMENT_ATLAS],
@@ -189,6 +192,7 @@ const atlasEntries = [
   ...Object.entries(GOLD_DEPOSIT_ASSETS).map(([key, value]) => [`goldDeposit.${key}`, value]),
   ...Object.entries(FIRST_AGE_ASSETS).map(([key, value]) => [`firstAge.${key}`, value]),
   ...firstAgeConstructionEntries,
+  ...firstAgeConstructionAtlasEntries,
   ...Object.entries(VILLAGER_ATLASES)
     .filter(([, value]) => value?.src && value.width && value.height && value.columns && value.rows)
     .map(([key, value]) => [`villager.${key}`, value]),
@@ -233,6 +237,7 @@ const activeSources = [
   ...Object.values(GOLD_DEPOSIT_ASSETS).map((value) => value?.src).filter(Boolean),
   ...Object.values(FIRST_AGE_ASSETS).map((value) => value?.src).filter(Boolean),
   ...firstAgeConstructionEntries.map(([, value]) => value?.src).filter(Boolean),
+  ...firstAgeConstructionAtlasEntries.map(([, value]) => value?.src).filter(Boolean),
   ...Object.values(VILLAGER_ATLASES).map((value) => value?.src).filter(Boolean),
   ...Object.values(COMBAT_ATLASES).map((value) => value?.src).filter(Boolean),
 ].filter(Boolean).map((src) => src.split('?')[0]);

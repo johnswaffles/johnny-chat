@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260823-orewashstages1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260825-firstage4';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260823-orewashstages1';
 
@@ -14,6 +14,8 @@ const STORAGE_INTERACTION_DISTANCE = 0.78;
 const BUILDING_INTERACTION_DISTANCE = 0.78;
 const PATH_REACH_TOLERANCE = 0.38;
 const BUILDING_CLEARANCE = 0.4;
+const GATE_WALL_SNAP_DISTANCE = 5.8;
+const GATE_SEGMENT_MATCH_DISTANCE = 1.18;
 const RESOURCE_FOOTPRINTS = { tree: 1.05, grove: 2.45, berry: 0.82, grain: 1.1, stone: 0.92, gold: 1.02 };
 // A Palisade is a deliberate ground-claiming structure. Current and future
 // resource types may be cleared from its footprint; only actual structures
@@ -44,6 +46,9 @@ const UNIT_RECOVERY_STUCK_THRESHOLD = 0.42;
 const UNIT_REPATH_COOLDOWN = 0.42;
 const UNIT_STATIC_CLEARANCE = 0.06;
 const MAX_UNIT_TRAVEL_SUBSTEP = 0.16;
+const UNIT_COLLISION_GRID_SIZE = 4;
+const STATIC_BLOCKER_GRID_SIZE = 8;
+const STATIC_BLOCKER_QUERY_RADIUS = 6;
 const SIMULATION_STEP = 1 / 60;
 const MAX_SIMULATION_STEPS = 8;
 const NATURAL_RESOURCE_SECTORS = { columns: 5, rows: 4 };
@@ -141,6 +146,9 @@ export class CrownforgeSimulation {
     this.onEvent = onEvent;
     this.animation = new CrownforgeAnimationSystem();
     this.unitSpeedScale = 1;
+    const query = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    this.stressMode = query.has('stress');
+    this.pathCache = new Map();
     this.reset();
   }
 
@@ -148,6 +156,14 @@ export class CrownforgeSimulation {
     this.clock = 0;
     this.timeAccumulator = 0;
     this.nextId = 1;
+    this.navigationVersion = 0;
+    this.staticBlockerGrid = new Map();
+    this.staticBlockerGridVersion = -1;
+    this.repathBudgetRemaining = CONFIG.repathBudgetPerStep;
+    this.repathRequestsLastStep = 0;
+    this.pathRequestsLastStep = 0;
+    this.pathCacheHitsLastStep = 0;
+    this.collisionPairsLastStep = 0;
     this.phase = 'playing';
     this.resources = { ...INITIAL_RESOURCES };
     this.units = [];
@@ -155,6 +171,9 @@ export class CrownforgeSimulation {
     this.resourcesNodes = [];
     this.decorations = [];
     this.selectedIds = [];
+    this.pathCache.clear();
+    this.staticBlockerGrid.clear();
+    this.staticBlockerGridVersion = -1;
     this.lastCommand = 'Select a Crownwarden and issue an order.';
     this._seedWorld();
     this.selectedIds = this.units.filter((unit) => unit.type === 'villager').map((unit) => unit.id);
@@ -331,12 +350,17 @@ export class CrownforgeSimulation {
       field: Boolean(blueprint.field),
       wallSegments: blueprint.wall ? Math.max(1, Math.round(options.wallSegments ?? 1)) : 1,
       wallOrientation: blueprint.wall ? (options.wallOrientation ?? 'horizontal') : null,
-      wallDirection: blueprint.wall ? wallDirectionFromOptions(options) : null,
+      wallDirection: blueprint.wall || blueprint.gate ? wallDirectionFromOptions(options) : null,
       wallStart: blueprint.wall ? (options.wallStart ? { ...options.wallStart } : { x, z }) : null,
+      gateDirection: blueprint.gate ? wallDirectionFromOptions(options) : null,
+      gateOrientation: blueprint.gate ? (options.gateOrientation ?? 'diagonal-right') : null,
+      gateWallId: blueprint.gate ? (options.gateWallId ?? null) : null,
       farmerId: null,
       fieldTimer: 0,
     };
     this.buildings.push(building);
+    this.navigationVersion += 1;
+    this.staticBlockerGridVersion = -1;
     return building;
   }
 
@@ -407,6 +431,7 @@ export class CrownforgeSimulation {
       recoveryAvailable: false,
       stuckTimer: 0,
       repathCooldown: 0,
+      pathfindingDeferred: false,
       lastProgressX: x,
       lastProgressZ: z,
       spacingRole: SPACING_ROLES[type] ?? SPACING_ROLES.villager,
@@ -430,6 +455,8 @@ export class CrownforgeSimulation {
       depleted: false,
       reservedSlots: new Map(),
     });
+    this.navigationVersion += 1;
+    this.staticBlockerGridVersion = -1;
   }
 
   addDecoration(type, x, z, variant = 0, scale = 1) {
@@ -460,6 +487,11 @@ export class CrownforgeSimulation {
   }
 
   _updateFixed(dt) {
+    this.repathBudgetRemaining = this.stressMode ? CONFIG.repathBudgetPerStep * 2 : CONFIG.repathBudgetPerStep;
+    this.repathRequestsLastStep = 0;
+    this.pathRequestsLastStep = 0;
+    this.pathCacheHitsLastStep = 0;
+    this.collisionPairsLastStep = 0;
     for (const building of this.buildings) {
       building.hitFlash = Math.max(0, building.hitFlash - dt);
       if (building.destroyed) building.destroyAge += dt;
@@ -978,7 +1010,16 @@ export class CrownforgeSimulation {
     );
     let routePaused = false;
     if (routeBlocked) {
-      if (unit.repathCooldown <= 0) this._replanUnit(unit);
+      if (unit.repathCooldown <= 0) {
+        const replanned = this._requestRepath(unit);
+        if (replanned === null || replanned === false) {
+          unit.velocityX = 0;
+          unit.velocityZ = 0;
+          unit.motionSpeed = 0;
+          unit.stuckTimer += dt;
+          routePaused = true;
+        }
+      }
       else {
         unit.velocityX = 0;
         unit.velocityZ = 0;
@@ -1044,8 +1085,8 @@ export class CrownforgeSimulation {
     }
     if (unit.path.length && unit.stuckTimer >= UNIT_STUCK_TIMEOUT && unit.repathCooldown <= 0) {
       unit.stuckTimer = 0;
-      const replanned = this._replanUnit(unit);
-      if (!replanned) unit.pathBlocked = true;
+      const replanned = this._requestRepath(unit);
+      if (replanned === false) unit.pathBlocked = true;
     }
     if (unit.command === 'move' && !unit.path.length && Math.hypot(unit.velocityX, unit.velocityZ) < 0.08) {
       if (unit.orderQueue?.length) this._executeNextConstructionOrder(unit);
@@ -1137,6 +1178,7 @@ export class CrownforgeSimulation {
     unit.visualState = `carry:${unit.carryType}`;
     if (node.amount <= 0 && !node.depleted) {
       node.depleted = true;
+      this.navigationVersion += 1;
       this._announce(`${resourceInfo.label} source depleted.`);
     }
     // A worker owns a resource slot only while approaching or working the
@@ -1297,9 +1339,9 @@ export class CrownforgeSimulation {
     const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType?.type;
     const blueprint = BUILDING_TYPES[type];
     if (!blueprint) return { width: 1, height: 1 };
-    if (!blueprint.wall) return { ...blueprint.footprint };
+    if (!blueprint.wall && !blueprint.gate) return { ...blueprint.footprint };
     const source = typeof buildingOrType === 'object' ? buildingOrType : options;
-    const segments = Math.max(1, Math.round(source.wallSegments ?? options.wallSegments ?? 1));
+    const segments = blueprint.wall ? Math.max(1, Math.round(source.wallSegments ?? options.wallSegments ?? 1)) : 1;
     const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
     const length = blueprint.footprint.width + (segments - 1) * span;
     const direction = wallDirectionFromOptions(source);
@@ -1491,6 +1533,8 @@ export class CrownforgeSimulation {
       }
     }
     this.resourcesNodes = this.resourcesNodes.filter((node) => !clearedIds.has(node.id));
+    this.navigationVersion += 1;
+    this.staticBlockerGridVersion = -1;
     this.selectedIds = this.selectedIds.filter((id) => !clearedIds.has(id));
     this._syncSelectionFlags();
     return cleared.length;
@@ -1520,14 +1564,20 @@ export class CrownforgeSimulation {
 
   _pointBlockedForUnit(unit, point, placement = null) {
     const padding = (UNIT_TYPES[unit.type]?.radius ?? 0.4) + UNIT_STATIC_CLEARANCE;
-    if (this.buildings.some((building) => {
-      if (!this._buildingHasCollision(building)) return false;
-      if (unit.stairAccess && this._pointOnCrownHallStairs(point, building, padding)) return false;
-      return this._distanceToBuildingEdge(point, building) < padding;
-    })) return true;
+    const candidates = this._staticBlockerCandidates(point);
+    for (const building of candidates) {
+      if (building.kind !== 'building') continue;
+      if (placement?.ignoreBuildingIds?.includes(building.id)) continue;
+      if (!this._buildingHasCollision(building)) continue;
+      if (unit.stairAccess && this._pointOnCrownHallStairs(point, building, padding)) continue;
+      if (this._distanceToBuildingEdge(point, building) < padding) return true;
+    }
     if (placement && this._distanceToBuildingEdge(point, placement) < padding) return true;
-    return this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)
-      && node.amount > 0 && this._resourceBlocksPoint(point, node, padding));
+    for (const node of candidates) {
+      if (node.kind !== 'resource' || this._wallResourceWillBeCleared(node, placement) || node.amount <= 0) continue;
+      if (this._resourceBlocksPoint(point, node, padding)) return true;
+    }
+    return false;
   }
 
   _isRecoverableVillager(unit) {
@@ -1661,18 +1711,45 @@ export class CrownforgeSimulation {
     if (cellX < 0 || cellZ < 0 || cellX >= CONFIG.mapWidth || cellZ >= CONFIG.mapHeight) return true;
     if (allowedPoint && Math.floor(allowedPoint.x) === cellX && Math.floor(allowedPoint.z) === cellZ && !this._pointBlockedForUnit(unit, allowedPoint, placement)) return false;
     const padding = (UNIT_TYPES[unit.type]?.radius ?? 0.4) + UNIT_STATIC_CLEARANCE;
-    if (this.buildings.some((building) => {
-      if (!this._buildingHasCollision(building)) return false;
-      if (unit.stairAccess && this._pointOnCrownHallStairs({ x: cellX + 0.5, z: cellZ + 0.5 }, building, padding + 0.25)) return false;
-      if (this._buildingBlocksCell(cellX, cellZ, building)) return true;
-      return this._cellIntersectsBuilding(cellX, cellZ, building, padding);
-    })) return true;
+    const cellPoint = { x: cellX + 0.5, z: cellZ + 0.5 };
+    const candidates = this._staticBlockerCandidates(cellPoint);
+    for (const building of candidates) {
+      if (building.kind !== 'building') continue;
+      if (placement?.ignoreBuildingIds?.includes(building.id)) continue;
+      if (!this._buildingHasCollision(building)) continue;
+      if (unit.stairAccess && this._pointOnCrownHallStairs(cellPoint, building, padding + 0.25)) continue;
+      if (this._buildingBlocksCell(cellX, cellZ, building) || this._cellIntersectsBuilding(cellX, cellZ, building, padding)) return true;
+    }
     if (placement && (this._buildingBlocksCell(cellX, cellZ, placement) || this._cellIntersectsBuilding(cellX, cellZ, placement, padding))) return true;
     // Keep the resource's own footprint out of the grid. The precise unit
     // radius is enforced by _constrainUnitPosition so approach cells remain
     // usable for gathering slots around the perimeter.
-    return this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)
-      && node.amount > 0 && this._cellIntersectsResource(cellX, cellZ, node));
+    for (const node of candidates) {
+      if (node.kind !== 'resource' || this._wallResourceWillBeCleared(node, placement) || node.amount <= 0) continue;
+      if (this._cellIntersectsResource(cellX, cellZ, node)) return true;
+    }
+    return false;
+  }
+
+  _pathCacheKey(unit, target, placement = null) {
+    const placementKey = placement
+      ? `${placement.type ?? 'placement'}:${Math.round(placement.x * 2)}:${Math.round(placement.z * 2)}:${(placement.ignoreBuildingIds ?? []).join(',')}`
+      : 'world';
+    return [
+      this.navigationVersion,
+      unit.type,
+      unit.stairAccess ? 1 : 0,
+      Math.floor(unit.x), Math.floor(unit.z),
+      Math.round(target.x * 2), Math.round(target.z * 2),
+      placementKey,
+    ].join('|');
+  }
+
+  _cachePath(key, path) {
+    this.pathCache.set(key, path ? path.map((point) => ({ ...point })) : null);
+    while (this.pathCache.size > (CONFIG.pathCacheLimit ?? 256)) {
+      this.pathCache.delete(this.pathCache.keys().next().value);
+    }
   }
 
   _buildPath(unit, target, placement = null) {
@@ -1680,6 +1757,17 @@ export class CrownforgeSimulation {
       x: clamp(target.x, 0.55, CONFIG.mapWidth - 0.55),
       z: clamp(target.z, 0.55, CONFIG.mapHeight - 0.55),
     };
+    const cacheKey = this._pathCacheKey(unit, safeTarget, placement);
+    if (this.pathCache.has(cacheKey)) {
+      this.pathCacheHitsLastStep += 1;
+      const cached = this.pathCache.get(cacheKey);
+      // Refresh the entry in insertion order so frequently used routes stay
+      // in the small LRU cache during the 999-unit stress run.
+      this.pathCache.delete(cacheKey);
+      this.pathCache.set(cacheKey, cached);
+      return cached ? cached.map((point) => ({ ...point })) : null;
+    }
+    this.pathRequestsLastStep += 1;
     const targetCell = { x: Math.floor(safeTarget.x), z: Math.floor(safeTarget.z) };
     const isBlocked = (x, z) => this._isPathCellBlocked(unit, x, z, placement, targetCell.x === x && targetCell.z === z ? safeTarget : null);
     const path = findPath(unit, safeTarget, isBlocked, CONFIG.mapWidth, CONFIG.mapHeight, {
@@ -1687,14 +1775,20 @@ export class CrownforgeSimulation {
     });
     const targetCellOpen = !isBlocked(targetCell.x, targetCell.z);
     if (!path.length && distance(unit, safeTarget) > PATH_REACH_TOLERANCE) {
-      if (!targetCellOpen) return null;
+      if (!targetCellOpen) {
+        this._cachePath(cacheKey, null);
+        return null;
+      }
       // An empty A* result means the destination is not connected to the
       // current cell. The only safe direct fallback is when both points are
       // already inside the same open cell; otherwise let the caller choose a
       // different storage or interaction slot.
       if (Math.floor(unit.x) === targetCell.x && Math.floor(unit.z) === targetCell.z) {
-        return [{ x: safeTarget.x, z: safeTarget.z }];
+        const directPath = [{ x: safeTarget.x, z: safeTarget.z }];
+        this._cachePath(cacheKey, directPath);
+        return directPath;
       }
+      this._cachePath(cacheKey, null);
       return null;
     }
     // A* may end on a nearby walkable cell when a destination is blocked. Never
@@ -1702,6 +1796,7 @@ export class CrownforgeSimulation {
     if (path.length && targetCellOpen && distance(path[path.length - 1], safeTarget) <= 1.3) {
       path[path.length - 1] = { x: safeTarget.x, z: safeTarget.z };
     }
+    this._cachePath(cacheKey, path);
     return path;
   }
 
@@ -1735,6 +1830,22 @@ export class CrownforgeSimulation {
       return this._sendUnitTo(unit, unit.routeTarget, 'move', unit.stopDistance ?? 0);
     }
     return false;
+  }
+
+  _requestRepath(unit) {
+    if (this.repathBudgetRemaining <= 0) {
+      // Keep the current route alive for a short window rather than allowing
+      // a crowd to launch hundreds of synchronous A* calls in one tick. A
+      // deferred request is not a failed route; the next budget window will
+      // retry it without triggering the stuck recovery state.
+      unit.repathCooldown = Math.max(unit.repathCooldown, 0.12);
+      unit.pathfindingDeferred = true;
+      return null;
+    }
+    this.repathBudgetRemaining -= 1;
+    this.repathRequestsLastStep += 1;
+    unit.pathfindingDeferred = false;
+    return this._replanUnit(unit);
   }
 
   _pathSegmentBlocked(unit, start, end, placement = null) {
@@ -2274,6 +2385,7 @@ export class CrownforgeSimulation {
 
   _updateEnemyIntent() {
     const enemies = this.units.filter((unit) => unit.faction === 'enemy' && !unit.dead);
+    const playerTargets = this.units.filter((unit) => unit.faction === 'player' && !unit.dead);
     for (const enemy of enemies) {
       const currentTarget = enemy.command === 'attack' ? this._getAttackTarget(enemy) : null;
       if (currentTarget) continue;
@@ -2285,8 +2397,15 @@ export class CrownforgeSimulation {
         enemy.visualState = 'idle';
         enemy.actionLabel = 'Guarding the Ashen Camp';
       }
-      const targets = this.units.filter((unit) => unit.faction === 'player' && !unit.dead);
-      const target = targets.slice().sort((a, b) => this._targetDistance(enemy, a) - this._targetDistance(enemy, b))[0];
+      let target = null;
+      let nearestDistance = Infinity;
+      for (const candidate of playerTargets) {
+        const candidateDistance = this._targetDistance(enemy, candidate);
+        if (candidateDistance < nearestDistance) {
+          nearestDistance = candidateDistance;
+          target = candidate;
+        }
+      }
       if (target && distance(enemy, target) < ENEMY_AI.awarenessRange) {
         enemy.attackTarget = target.id;
         enemy.attackTargetKind = 'unit';
@@ -2326,8 +2445,9 @@ export class CrownforgeSimulation {
     this._announce(`${UNIT_TYPES[unit.type].label} defeated.`);
   }
 
-  _destroyBuilding(building, killer) {
+  _destroyBuilding(building, killer, options = {}) {
     if (building.destroyed) return;
+    this.navigationVersion += 1;
     this.selectedIds = this.selectedIds.filter((id) => id !== building.id);
     building.selected = false;
     const assignedIds = new Set([
@@ -2366,7 +2486,7 @@ export class CrownforgeSimulation {
       }
     }
     this._syncSelectionFlags();
-    this._announce(`${BUILDING_TYPES[building.type].label} destroyed.`);
+    if (!options.silent) this._announce(`${BUILDING_TYPES[building.type].label} destroyed.`);
   }
 
   _checkVictory() {
@@ -2413,11 +2533,68 @@ export class CrownforgeSimulation {
     return !building.destroyed || building.destroyAge < BUILDING_COLLISION_RELEASE_TIME;
   }
 
+  _staticBlockerGridKey(cellX, cellZ) {
+    return `${cellX}:${cellZ}`;
+  }
+
+  _ensureStaticBlockerGrid() {
+    if (this.staticBlockerGridVersion === this.navigationVersion) return;
+    this.staticBlockerGrid.clear();
+    const add = (entity, minX, maxX, minZ, maxZ) => {
+      const firstX = Math.floor(minX / STATIC_BLOCKER_GRID_SIZE);
+      const lastX = Math.floor(maxX / STATIC_BLOCKER_GRID_SIZE);
+      const firstZ = Math.floor(minZ / STATIC_BLOCKER_GRID_SIZE);
+      const lastZ = Math.floor(maxZ / STATIC_BLOCKER_GRID_SIZE);
+      for (let cellX = firstX; cellX <= lastX; cellX += 1) {
+        for (let cellZ = firstZ; cellZ <= lastZ; cellZ += 1) {
+          const key = this._staticBlockerGridKey(cellX, cellZ);
+          const bucket = this.staticBlockerGrid.get(key) ?? [];
+          bucket.push(entity);
+          this.staticBlockerGrid.set(key, bucket);
+        }
+      }
+    };
+    for (const building of this.buildings) {
+      if (!this._buildingHasCollision(building)) continue;
+      const bounds = this._buildingEntityBounds(building);
+      add(building, bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ);
+    }
+    for (const node of this.resourcesNodes) {
+      if (node.amount <= 0) continue;
+      const footprint = resourceFootprint(node);
+      add(node, node.x - footprint, node.x + footprint, node.z - footprint, node.z + footprint);
+    }
+    this.staticBlockerGridVersion = this.navigationVersion;
+  }
+
+  _staticBlockerCandidates(point, padding = STATIC_BLOCKER_QUERY_RADIUS) {
+    this._ensureStaticBlockerGrid();
+    const minX = Math.floor((point.x - padding) / STATIC_BLOCKER_GRID_SIZE);
+    const maxX = Math.floor((point.x + padding) / STATIC_BLOCKER_GRID_SIZE);
+    const minZ = Math.floor((point.z - padding) / STATIC_BLOCKER_GRID_SIZE);
+    const maxZ = Math.floor((point.z + padding) / STATIC_BLOCKER_GRID_SIZE);
+    const candidates = [];
+    const seen = new Set();
+    for (let cellX = minX; cellX <= maxX; cellX += 1) {
+      for (let cellZ = minZ; cellZ <= maxZ; cellZ += 1) {
+        const bucket = this.staticBlockerGrid.get(this._staticBlockerGridKey(cellX, cellZ));
+        if (!bucket) continue;
+        for (const entity of bucket) {
+          if (seen.has(entity.id)) continue;
+          seen.add(entity.id);
+          candidates.push(entity);
+        }
+      }
+    }
+    return candidates;
+  }
+
   isBlocked(cellX, cellZ) {
     if (cellX < 0 || cellZ < 0 || cellX >= CONFIG.mapWidth || cellZ >= CONFIG.mapHeight) return true;
-    const buildingBlocked = this.buildings.some((building) => this._buildingBlocksCell(cellX, cellZ, building));
-    if (buildingBlocked) return true;
-    return this.resourcesNodes.some((node) => node.amount > 0 && this._cellIntersectsResource(cellX, cellZ, node));
+    const point = { x: cellX + 0.5, z: cellZ + 0.5 };
+    return this._staticBlockerCandidates(point).some((entity) => entity.kind === 'building'
+      ? this._buildingBlocksCell(cellX, cellZ, entity)
+      : entity.amount > 0 && this._cellIntersectsResource(cellX, cellZ, entity));
   }
 
   _sendUnitTo(unit, target, command, stopDistance = 0) {
@@ -2457,7 +2634,9 @@ export class CrownforgeSimulation {
     const radius = UNIT_TYPES[unit.type].radius + UNIT_STATIC_CLEARANCE;
     unit.x = clamp(unit.x, 0.45, CONFIG.mapWidth - 0.45);
     unit.z = clamp(unit.z, 0.45, CONFIG.mapHeight - 0.45);
-    for (const building of this.buildings) {
+    const nearbyBlockers = this._staticBlockerCandidates(unit, STATIC_BLOCKER_QUERY_RADIUS);
+    for (const building of nearbyBlockers) {
+      if (building.kind !== 'building') continue;
       if (!this._buildingHasCollision(building)) continue;
       if (unit.stairAccess && this._pointOnCrownHallStairs(unit, building, radius)) continue;
       const bounds = this._buildingEntityBounds(building, radius);
@@ -2474,7 +2653,8 @@ export class CrownforgeSimulation {
       if (nearest === 'minZ') { unit.z = bounds.minZ; unit.velocityZ = Math.max(0, unit.velocityZ); }
       if (nearest === 'maxZ') { unit.z = bounds.maxZ; unit.velocityZ = Math.min(0, unit.velocityZ); }
     }
-    for (const node of this.resourcesNodes) {
+    for (const node of nearbyBlockers) {
+      if (node.kind !== 'resource') continue;
       if (node.amount <= 0) continue;
       const safeDistance = resourceFootprint(node) + radius;
       const dx = unit.x - node.x;
@@ -2501,9 +2681,23 @@ export class CrownforgeSimulation {
 
   _resolveUnitCollisions() {
     const live = this.units.filter((unit) => !unit.dead);
-    for (let i = 0; i < live.length; i += 1) {
-      for (let j = i + 1; j < live.length; j += 1) {
-        const a = live[i]; const b = live[j];
+    const grid = new Map();
+    const cellKey = (x, z) => (Math.floor(x / UNIT_COLLISION_GRID_SIZE) << 16) | Math.floor(z / UNIT_COLLISION_GRID_SIZE);
+    for (const unit of live) {
+      const key = cellKey(unit.x, unit.z);
+      const bucket = grid.get(key) ?? [];
+      bucket.push(unit);
+      grid.set(key, bucket);
+    }
+    for (const a of live) {
+      const cellX = Math.floor(a.x / UNIT_COLLISION_GRID_SIZE);
+      const cellZ = Math.floor(a.z / UNIT_COLLISION_GRID_SIZE);
+      for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+        for (let offsetZ = -1; offsetZ <= 1; offsetZ += 1) {
+          const bucket = grid.get(cellKey((cellX + offsetX) * UNIT_COLLISION_GRID_SIZE, (cellZ + offsetZ) * UNIT_COLLISION_GRID_SIZE)) ?? [];
+          for (const b of bucket) {
+            if (a.id >= b.id) continue;
+            this.collisionPairsLastStep += 1;
         const roleDistance = Math.max(
           SPACING_ROLES[a.type]?.personalSpace ?? UNIT_TYPES[a.type].radius,
           SPACING_ROLES[b.type]?.personalSpace ?? UNIT_TYPES[b.type].radius,
@@ -2535,6 +2729,8 @@ export class CrownforgeSimulation {
         a.z = clamp(a.z - nz * push, 0.45, CONFIG.mapHeight - 0.45);
         b.x = clamp(b.x + nx * push, 0.45, CONFIG.mapWidth - 0.45);
         b.z = clamp(b.z + nz * push, 0.45, CONFIG.mapHeight - 0.45);
+          }
+        }
       }
     }
     for (const unit of live) this._constrainUnitPosition(unit);
@@ -3033,6 +3229,49 @@ export class CrownforgeSimulation {
     }));
   }
 
+  _nearestGateWallSegment(point) {
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) return null;
+    let nearest = null;
+    for (const wall of this.buildings.filter((building) => building.type === 'wall'
+      && building.faction === 'player'
+      && !building.destroyed)) {
+      const direction = wallDirectionFromOptions(wall);
+      const segments = this._wallSegmentPoints(wall);
+      segments.forEach((segment, index) => {
+        const distanceToSegment = distance(point, segment);
+        if (distanceToSegment > GATE_WALL_SNAP_DISTANCE) return;
+        if (!nearest || distanceToSegment < nearest.distance) {
+          nearest = {
+            wall,
+            wallId: wall.id,
+            segmentIndex: index,
+            point: { ...segment },
+            direction,
+            distance: distanceToSegment,
+          };
+        }
+      });
+    }
+    if (nearest) {
+      nearest.wallIds = this.buildings
+        .filter((wall) => wall.type === 'wall'
+          && wall.faction === 'player'
+          && !wall.destroyed)
+        .filter((wall) => this._wallSegmentPoints(wall).some((segment) => distance(segment, nearest.point) <= GATE_SEGMENT_MATCH_DISTANCE))
+        .map((wall) => wall.id);
+    }
+    return nearest;
+  }
+
+  _gateOrientationFromDirection(direction = { x: 1, z: 0 }) {
+    const normalized = wallDirectionFromOptions({ wallDirection: direction });
+    const screenX = normalized.x - normalized.z;
+    const screenY = (normalized.x + normalized.z) * (CONFIG.tileHeight / CONFIG.tileWidth);
+    if (Math.abs(screenX) < 0.001) return 'depth';
+    if (Math.abs(screenY) < 0.001) return 'face';
+    return screenX * screenY < 0 ? 'diagonal-left' : 'diagonal-right';
+  }
+
   _wallSegmentsOverlap(first, second) {
     const span = BUILDING_TYPES.wall.wallSegmentSpan ?? BUILDING_TYPES.wall.footprint.width;
     const overlapDistance = span * 0.42;
@@ -3137,6 +3376,92 @@ export class CrownforgeSimulation {
     return { type: 'wall', world, segments, ...options, valid: check.valid, reason: check.reason, totalCost, resourceClearCount };
   }
 
+  getBuildingPlacementPreview(type, point) {
+    if (type !== 'gate') {
+      const check = this.getPlacementCheck(type, point);
+      return { type, world: point, valid: check.valid, reason: check.reason };
+    }
+    const snap = this._nearestGateWallSegment(point);
+    if (!snap) {
+      return {
+        type,
+        world: point,
+        valid: false,
+        reason: 'Place the gate over a Palisade segment to create an opening.',
+      };
+    }
+    const options = {
+      gateWallId: snap.wallId,
+      gateSegmentIndex: snap.segmentIndex,
+      gateDirection: snap.direction,
+      wallDirection: snap.direction,
+      gateOrientation: 'pending',
+      ignoreBuildingIds: snap.wallIds ?? [snap.wallId],
+    };
+    const check = this.getPlacementCheck(type, snap.point, options);
+    return {
+      type,
+      world: snap.point,
+      valid: check.valid,
+      reason: check.reason,
+      gateWallId: snap.wallId,
+      gateSegmentIndex: snap.segmentIndex,
+      gateDirection: snap.direction,
+      gateOrientation: check.gateOrientation ?? options.gateOrientation,
+      gateSnapDistance: snap.distance,
+      gateWallIds: options.ignoreBuildingIds,
+      ...check,
+    };
+  }
+
+  _replaceWallSegmentsForGate(gatePlacement) {
+    const span = BUILDING_TYPES.wall.wallSegmentSpan ?? 3;
+    const target = gatePlacement.world;
+    const replaced = [];
+    for (const wall of this.buildings.filter((building) => building.type === 'wall'
+      && building.faction === 'player'
+      && !building.destroyed)) {
+      const segments = this._wallSegmentPoints(wall);
+      const removedIndices = segments
+        .map((segment, index) => ({ segment, index }))
+        .filter(({ segment }) => distance(segment, target) <= GATE_SEGMENT_MATCH_DISTANCE)
+        .map(({ index }) => index);
+      if (!removedIndices.length) continue;
+      const removed = new Set(removedIndices);
+      const remainingGroups = [];
+      let group = [];
+      segments.forEach((segment, index) => {
+        if (removed.has(index)) {
+          if (group.length) remainingGroups.push(group);
+          group = [];
+        } else {
+          group.push({ segment, index });
+        }
+      });
+      if (group.length) remainingGroups.push(group);
+      const originalHp = wall.hp;
+      const originalCount = segments.length;
+      this._destroyBuilding(wall, null, { silent: true });
+      remainingGroups.forEach((remaining) => {
+        const start = remaining[0].segment;
+        const end = remaining[remaining.length - 1].segment;
+        const center = {
+          x: (start.x + end.x) / 2,
+          z: (start.z + end.z) / 2,
+        };
+        const replacement = this.addBuilding('wall', center.x, center.z, 'player', wall.progress, {
+          wallSegments: remaining.length,
+          wallOrientation: wall.wallOrientation,
+          wallDirection: wall.wallDirection,
+          wallStart: start,
+        });
+        replacement.hp = Math.max(1, originalHp * (remaining.length / originalCount));
+      });
+      replaced.push(removedIndices.length);
+    }
+    return replaced.reduce((sum, count) => sum + count, 0);
+  }
+
   placeWallLine(start, end) {
     const preview = this.getWallLinePreview(start, end);
     if (!preview.valid) {
@@ -3182,18 +3507,26 @@ export class CrownforgeSimulation {
       this._announce('That blueprint is not available in the first-age sandbox.');
       return false;
     }
-    const builders = this._selectedBuilders(point).slice(0, CONSTRUCTION_SLOT_COUNT);
+    const preview = this.getBuildingPlacementPreview(type, point);
+    const buildPoint = preview.world;
+    const builders = this._selectedBuilders(buildPoint).slice(0, CONSTRUCTION_SLOT_COUNT);
     if (!builders.length) {
       this._announce(`Select a villager before placing a ${blueprint.label}.`);
       return false;
     }
-    const check = this.getPlacementCheck(type, point);
-    if (!check.valid) {
-      this._announce(check.reason);
+    if (!preview.valid) {
+      this._announce(preview.reason);
       return false;
     }
     this._spend(blueprint.cost);
-    const building = this.addBuilding(type, point.x, point.z, 'player', 0.04);
+    if (blueprint.gate) this._replaceWallSegmentsForGate(preview);
+    const building = this.addBuilding(type, buildPoint.x, buildPoint.z, 'player', 0.04, {
+      gateWallId: preview.gateWallId,
+      gateSegmentIndex: preview.gateSegmentIndex,
+      gateDirection: preview.gateDirection,
+      wallDirection: preview.gateDirection,
+      gateOrientation: preview.gateOrientation,
+    });
     let assigned = 0;
     builders.forEach((builder, index) => {
       this._interruptWork(builder);
@@ -3225,7 +3558,7 @@ export class CrownforgeSimulation {
       return { success: false, kind: 'train', building };
     }
     const population = this.population;
-    if (!CONFIG.sandboxMode && population.used >= population.capacity) {
+    if (population.used >= population.capacity) {
       this._announce('The settlement has reached its current population limit.');
       return { success: false, kind: 'train', building };
     }
@@ -3300,6 +3633,19 @@ export class CrownforgeSimulation {
   getPlacementCheck(type, point, options = {}) {
     const blueprint = BUILDING_TYPES[type];
     if (!blueprint || !point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) return { valid: false, reason: 'Move the foundation onto the meadow.' };
+    if (blueprint.gate && !options.gateWallId) {
+      const snap = this._nearestGateWallSegment(point);
+      if (!snap) return { valid: false, reason: 'Place the gate over a Palisade segment to create an opening.' };
+      point = snap.point;
+      options = {
+        ...options,
+        gateWallId: snap.wallId,
+        gateSegmentIndex: snap.segmentIndex,
+        gateDirection: snap.direction,
+        wallDirection: snap.direction,
+        ignoreBuildingIds: snap.wallIds ?? [snap.wallId],
+      };
+    }
     // An edge-locked Palisade uses the wall's real collision envelope as its
     // boundary test. Generic construction keeps its extra placement buffer;
     // the edge path intentionally lets the finished wall sit close enough to
@@ -3312,8 +3658,18 @@ export class CrownforgeSimulation {
     }
     const placement = { type, x: point.x, z: point.z, progress: 1, ...options };
     const connectedWallIds = new Set(blueprint.wall ? (options.wallConnectionIds ?? []) : []);
+    const gateWallIds = new Set(blueprint.gate
+      ? (options.ignoreBuildingIds ?? [options.gateWallId]).filter(Boolean)
+      : []);
     if (this.buildings.some((building) => {
       if (building.destroyed || !this._boundsOverlap(bounds, this._buildingEntityBounds(building, 0))) return false;
+      // Palisade runs may cross or overlap deliberately. Existing wall art is
+      // already the authoritative barrier, and rejecting these intersections
+      // made parallel rows and divider walls unnecessarily pixel-perfect.
+      if (blueprint.wall && building.type === 'wall') return false;
+      // A gate is allowed to claim the one wall segment it is replacing. All
+      // other structures, including another gate, remain hard blockers.
+      if (blueprint.gate && building.type === 'wall' && gateWallIds.has(building.id)) return false;
       // Connected wall runs intentionally overlap their conservative collision
       // envelopes at the terminal post. Do not allow a reverse drag to lay a
       // second run over the existing segment centers, though; only the narrow
@@ -3350,7 +3706,8 @@ export class CrownforgeSimulation {
     }
     const accessCells = this._placementAccessCells(type, point, options);
     const openAccess = accessCells.filter((cell) => {
-      const buildingBlocked = this.buildings.some((building) => this._buildingBlocksCell(cell.x, cell.z, building));
+      const buildingBlocked = this.buildings.some((building) => !gateWallIds.has(building.id)
+        && this._buildingBlocksCell(cell.x, cell.z, building));
       const resourceBlocked = this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)
         && node.amount > 0 && this._cellIntersectsResource(cell.x, cell.z, node));
       return !buildingBlocked && !resourceBlocked && !this._buildingBlocksCell(cell.x, cell.z, placement);
@@ -3365,7 +3722,11 @@ export class CrownforgeSimulation {
       const missing = Object.entries(blueprint.cost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
       return { valid: false, reason: `Not enough ${missing} for a ${blueprint.label}.` };
     }
-    return { valid: true, reason: 'Foundation site ready.' };
+    return {
+      valid: true,
+      reason: blueprint.gate ? 'Gate opening ready.' : 'Foundation site ready.',
+      gateOrientation: blueprint.gate ? this._gateOrientationFromDirection(options.gateDirection ?? options.wallDirection) : null,
+    };
   }
 
   _canPlace(type, point) {
@@ -3389,10 +3750,29 @@ export class CrownforgeSimulation {
     return [...this.units, ...this.buildings, ...this.resourcesNodes].filter((entity) => this.selectedIds.includes(entity.id));
   }
 
+  getEntityCount() {
+    return this.units.length + this.buildings.length + this.resourcesNodes.length + this.decorations.length;
+  }
+
+  getPerformanceSnapshot() {
+    return {
+      entityCount: this.getEntityCount(),
+      unitCount: this.units.length,
+      buildingCount: this.buildings.length,
+      resourceCount: this.resourcesNodes.length,
+      pathRequests: this.pathRequestsLastStep,
+      pathCacheHits: this.pathCacheHitsLastStep,
+      repathRequests: this.repathRequestsLastStep,
+      collisionPairs: this.collisionPairsLastStep,
+      stressMode: this.stressMode,
+    };
+  }
+
   get population() {
     const housing = this.buildings.filter((building) => building.faction === 'player' && building.progress >= 1).reduce((sum, building) => sum + (BUILDING_TYPES[building.type].population ?? 0), 0);
     const queued = this.buildings.reduce((sum, building) => sum + (building.faction === 'player' ? (building.productionQueue?.length ?? 0) : 0), 0);
-    return { used: this.units.filter((unit) => unit.faction === 'player' && !unit.dead).length + queued, capacity: CONFIG.sandboxMode ? CONFIG.sandboxPopulationCapacity : 4 + housing };
+    const baseCapacity = this.stressMode ? CONFIG.sandboxPopulationCapacity : CONFIG.normalPopulationCapacity;
+    return { used: this.units.filter((unit) => unit.faction === 'player' && !unit.dead).length + queued, capacity: baseCapacity + housing };
   }
 
   _announce(message) {

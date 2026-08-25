@@ -1,8 +1,9 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES } from './config.js?v=20260823-orewashstages1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260825-firstage4';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260824-wallturn1';
-import { CrownforgeRenderer } from './renderer.js?v=20260823-targeting1';
-import { CrownforgeSimulation } from './simulation.js?v=20260824-constructionqueue1';
+import { CrownforgeInput } from './input.js?v=20260824-smoothpass1';
+import { CrownforgeRenderer } from './renderer.js?v=20260825-firstage4';
+import { CrownforgeSimulation } from './simulation.js?v=20260825-firstage4';
+import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
 const canvas = document.querySelector('#game-canvas');
@@ -42,6 +43,23 @@ const recoverUnitsButton = document.querySelector('#recover-units');
 const loadingVeil = document.querySelector('#loading-veil');
 const loadingDetail = document.querySelector('#loading-detail');
 const loadingProgress = document.querySelector('#loading-progress');
+const performancePanel = document.querySelector('#performance-panel');
+const ui = {
+  resources: Object.fromEntries(Object.keys(RESOURCE_TYPES).map((key) => [key, {
+    value: document.querySelector(`[data-resource="${key}"]`),
+    cap: document.querySelector(`[data-resource-cap="${key}"]`),
+    bar: document.querySelector(`[data-resource-bar="${key}"]`),
+    card: document.querySelector(`[data-resource-card="${key}"]`),
+  }])),
+  population: document.querySelector('#population'),
+  selectionCount: document.querySelector('#selection-count'),
+  selectionTitle: document.querySelector('#selection-title'),
+  selectionDetail: document.querySelector('#selection-detail'),
+  commandLine: document.querySelector('#command-line'),
+  clock: document.querySelector('#clock'),
+  buildDetails: Object.fromEntries(buildButtons.map((button) => [button.dataset.buildType, button.querySelector(`[data-build-detail="${button.dataset.buildType}"]`)])),
+  trainDetails: Object.fromEntries(trainButtons.map((button) => [button.dataset.trainUnit, button.querySelector(`[data-train-detail="${button.dataset.trainUnit}"]`)])),
+};
 
 let toastTimer = null;
 function announce(message) {
@@ -90,6 +108,12 @@ function bindTooltips() {
 
 const renderer = new CrownforgeRenderer(canvas);
 const simulation = new CrownforgeSimulation({ onEvent: announce });
+const query = new URLSearchParams(window.location.search);
+const performanceMonitor = new CrownforgePerformanceMonitor(performancePanel, {
+  enabled: query.has('perf'),
+  stressMode: simulation.stressMode,
+  lowResolutionMode: renderer.lowResolutionMode,
+});
 const audio = new CrownforgeAudio();
 const input = new CrownforgeInput({
   canvas,
@@ -249,23 +273,24 @@ recoverUnitsButton?.addEventListener('click', () => {
 function updateUi() {
   for (const [key, info] of Object.entries(RESOURCE_TYPES)) {
     const amount = Math.floor(simulation.resources[key]);
-    document.querySelector(`[data-resource="${key}"]`).textContent = amount;
-    document.querySelector(`[data-resource-cap="${key}"]`).textContent = `/ ${info.capacity}`;
-    document.querySelector(`[data-resource-bar="${key}"]`).style.width = `${Math.min(100, (amount / info.capacity) * 100)}%`;
-    setTooltip(document.querySelector(`[data-resource-card="${key}"]`), `${info.label}: ${amount} of ${info.capacity} stored`);
+    const resourceUi = ui.resources[key];
+    resourceUi.value.textContent = amount;
+    resourceUi.cap.textContent = `/ ${info.capacity}`;
+    resourceUi.bar.style.width = `${Math.min(100, (amount / info.capacity) * 100)}%`;
+    setTooltip(resourceUi.card, `${info.label}: ${amount} of ${info.capacity} stored`);
   }
   const population = simulation.population;
-  document.querySelector('#population').textContent = `${population.used} / ${population.capacity}`;
+  ui.population.textContent = `${population.used} / ${population.capacity}`;
   if (unitSpeed) unitSpeed.value = String(simulation.getUnitSpeedScale());
   if (unitSpeedValue) unitSpeedValue.textContent = `${simulation.getUnitSpeedScale()}×`;
-  document.querySelector('#selection-title').textContent = selectionTitle();
-  document.querySelector('#selection-detail').textContent = selectionStatus();
+  ui.selectionTitle.textContent = selectionTitle();
+  ui.selectionDetail.textContent = selectionStatus();
   if (selectionRecovery) selectionRecovery.hidden = !simulation.canRecoverSelectedUnits();
   const preview = renderer.buildPreview;
-  document.querySelector('#command-line').textContent = input.buildMode
+  ui.commandLine.textContent = input.buildMode
     ? `PLACEMENT MODE  •  ${preview?.valid ? 'site ready' : (preview?.reason ?? 'move the foundation')}`
     : commandLineText();
-  document.querySelector('#clock').textContent = formatClock(simulation.clock);
+  ui.clock.textContent = formatClock(simulation.clock);
   const builder = simulation.units.find((unit) => unit.selected && unit.type === 'villager' && unit.faction === 'player' && !unit.dead);
   buildButtons.forEach((button) => {
     const type = button.dataset.buildType;
@@ -274,9 +299,14 @@ function updateUi() {
     const cost = blueprint.cost ?? {};
     const affordable = Object.entries(cost).every(([key, value]) => simulation.resources[key] >= value);
     const ready = Boolean(builder && affordable && builder.carryAmount <= 0);
-    const detail = button.querySelector(`[data-build-detail="${type}"]`);
+    const detail = ui.buildDetails[type];
     const status = !builder ? 'SELECT VILLAGER' : builder.carryAmount > 0 ? 'DEPOSIT CARGO' : !affordable ? 'NEED RESOURCES' : 'READY';
-    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${blueprint.wall ? 'DRAG TO AIM  •  8-WAY SNAP  •  WIDE MAGNET  •  EDGE LOCK  •  ' : ''}${status}`;
+    const placementHint = blueprint.wall
+      ? 'DRAG TO AIM  •  8-WAY SNAP  •  WIDE MAGNET  •  EDGE LOCK  •  '
+      : blueprint.gate
+        ? 'SNAPS TO WALL  •  REPLACES 1 PANEL  •  PASSABLE  •  '
+        : '';
+    if (detail) detail.textContent = `${formatCost(cost) || 'NO COST'}  •  ${placementHint}${status}`;
     button.classList.toggle('is-unavailable', !ready);
     setTooltip(button, !builder
       ? `Select a villager before placing a ${blueprint.label}`
@@ -286,6 +316,8 @@ function updateUi() {
           ? `Gather the resources needed for a ${blueprint.label}`
           : blueprint.wall
           ? `Click-drag from or toward a wall end; the ${blueprint.label} locks on within a generous radius, then snaps to 8 orientations`
+          : blueprint.gate
+            ? `Move the ${blueprint.label} over a Palisade; it magnetically replaces one panel with a passable opening`
             : `Place a ${blueprint.label}`);
   });
   const selected = simulation.selectedEntities;
@@ -311,7 +343,7 @@ function updateUi() {
       const capacityReady = simulation.population.used < simulation.population.capacity;
       const allowed = BUILDING_TYPES[productionBuilding.type].productionTypes?.includes(type) ?? false;
       const available = allowed && affordable && capacityReady && queue.length < 100;
-      const detail = button.querySelector(`[data-train-detail="${type}"]`);
+      const detail = ui.trainDetails[type];
       if (detail) detail.textContent = `${formatCost(blueprint.cost)}  •  ${blueprint.trainTime} SEC${queued ? `  •  ${queued} QUEUED` : ''}`;
       button.hidden = !allowed;
       button.classList.toggle('is-unavailable', !available);
@@ -324,7 +356,7 @@ function updateUi() {
             : `Train a ${blueprint.label}`);
     });
   }
-  document.querySelector('#selection-count').textContent = selected.length ? `${selected.length} SELECTED` : 'NO SELECTION';
+  ui.selectionCount.textContent = selected.length ? `${selected.length} SELECTED` : 'NO SELECTION';
   const presentation = selectionPresentation();
   selectionKind.textContent = presentation.kind;
   selectionIcon.className = `ui-icon selection-icon ${presentation.icon}`;
@@ -338,6 +370,8 @@ function updateUi() {
     placementDetail.textContent = valid
       ? preview?.type === 'wall'
         ? `${preview.wallSnapLabel ?? 'SNAPPED'} · ${preview.wallSegments ?? 1} segment${preview.wallSegments === 1 ? '' : 's'}${preview.wallEdgeSnap ? ' · MAP EDGE LOCK' : ''}${preview.wallConnectCount ? ` · connects ${preview.wallConnectCount} wall end${preview.wallConnectCount === 1 ? '' : 's'}` : ''}${preview.resourceClearCount ? ` · clears ${preview.resourceClearCount} resource node${preview.resourceClearCount === 1 ? '' : 's'}` : ''} · release to place`
+        : preview?.type === 'gate'
+          ? `Palisade opening · ${preview.gateWallId ? 'wall panel snapped' : 'move over a wall'} · click to place`
         : 'Click to place  ·  Hall vision active  ·  Esc to cancel'
       : (preview?.reason ?? 'Move the foundation to a clear site.');
   }
@@ -368,7 +402,7 @@ function selectionTitle() {
   if (!entities.length) return 'No selection';
   if (entities.length > 1) return `${entities.length} Crownwardens`;
   const entity = entities[0];
-  if (entity.kind === 'unit') return entity.type === 'soldier' ? 'Crown Guard' : 'Villager';
+  if (entity.kind === 'unit') return UNIT_TYPES[entity.type]?.label ?? 'Unit';
   if (entity.kind === 'building') return BUILDING_TYPES[entity.type]?.label ?? 'Structure';
   return entity.resourceType[0].toUpperCase() + entity.resourceType.slice(1);
 }
@@ -378,9 +412,9 @@ function selectionPresentation() {
   if (!entities.length) return { kind: 'NO SELECTION', icon: 'icon-controls' };
   if (entities.length > 1) return { kind: 'GROUP', icon: 'icon-population' };
   const entity = entities[0];
-  if (entity.kind === 'unit') return entity.type === 'soldier'
-    ? { kind: 'COMBAT UNIT', icon: 'icon-soldier' }
-    : { kind: 'WORKER', icon: 'icon-villager' };
+  if (entity.kind === 'unit') return entity.type === 'villager'
+    ? { kind: 'WORKER', icon: 'icon-villager' }
+    : { kind: 'COMBAT UNIT', icon: 'icon-soldier' };
   if (entity.kind === 'building') return { kind: entity.progress < 1 ? 'UNDER CONSTRUCTION' : 'BUILDING', icon: 'icon-house' };
   return { kind: 'RESOURCE NODE', icon: `icon-${entity.resourceType}` };
 }
@@ -445,6 +479,7 @@ function buildingAbilityLabel(building, blueprint) {
   if (blueprint.field) return building.farmerId ? 'one farmer tending · generates food' : 'one farmer · awaiting worker';
   if (blueprint.population) return `housing · adds ${blueprint.population} population space`;
   if (blueprint.wall) return 'defensive boundary · blocks movement';
+  if (blueprint.gate) return 'passable defensive entryway · replaces one Palisade panel';
   return 'structure ready · no active command';
 }
 
@@ -464,7 +499,10 @@ function formatCost(cost) {
 let previous = performance.now();
 let sceneReady = false;
 let sceneReadyAnnounced = false;
+let uiAccumulator = 1;
+const UI_UPDATE_INTERVAL = 1 / 12;
 function frame(now) {
+  const frameStart = performance.now();
   const delta = Math.min(0.05, (now - previous) / 1000);
   previous = now;
 
@@ -489,10 +527,29 @@ function frame(now) {
   }
 
   input.update(delta);
+  const simulationStart = performance.now();
   simulation.update(delta);
+  const simulationMs = performance.now() - simulationStart;
   audio.sync(simulation);
+  const renderStart = performance.now();
   renderer.render(simulation, input, now);
-  updateUi();
+  const renderMs = performance.now() - renderStart;
+  uiAccumulator += delta;
+  let uiMs = 0;
+  if (uiAccumulator >= UI_UPDATE_INTERVAL) {
+    const uiStart = performance.now();
+    updateUi();
+    uiMs = performance.now() - uiStart;
+    uiAccumulator = 0;
+  }
+  performanceMonitor.recordFrame({
+    now,
+    frameMs: performance.now() - frameStart,
+    simulationMs,
+    renderMs,
+    uiMs,
+    entityCount: simulation.getEntityCount(),
+  });
   if (!sceneReadyAnnounced) {
     sceneReadyAnnounced = true;
     announce(`${FACTION.name} are ready. Select a villager, then right-click a resource.`);

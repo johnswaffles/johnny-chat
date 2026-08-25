@@ -32,6 +32,8 @@ export class CrownforgeInput {
     this.wallDrag = null;
     this.keys = new Set();
     this.reducedMotion = false;
+    this.cursorDirty = true;
+    this.cursorUpdateElapsed = 0;
     this._bind();
   }
 
@@ -85,16 +87,15 @@ export class CrownforgeInput {
     const world = this.renderer.screenToWorld(this.pointer);
     const preview = type === 'wall'
       ? this.simulation.getWallLinePreview(world, world)
-      : (() => {
-        const check = this.simulation.getPlacementCheck(type, world);
-        return { type, world, valid: check.valid, reason: check.reason };
-      })();
+      : this.simulation.getBuildingPlacementPreview(type, world);
     this.renderer.setBuildPreview(preview);
     this.onBuildMode(type);
     this._updateCursor(this.pointer);
     this.onToast(type === 'wall'
       ? 'Drag across the meadow to aim the wall. Start or finish near a wall end or map edge and it magnetically locks on. Natural resources yield to the wall; structures remain protected. Press Esc to cancel.'
-      : 'Construction menu: choose a clear meadow tile. Press Esc to cancel.');
+      : type === 'gate'
+        ? 'Move over a Palisade to magnetically snap the gate into place. It replaces one segment and opens a passable crossing. Press Esc to cancel.'
+        : 'Construction menu: choose a clear meadow tile. Press Esc to cancel.');
   }
 
   cancelBuildMode() {
@@ -118,7 +119,11 @@ export class CrownforgeInput {
     const point = this._point(event);
     this.pointer = point;
     this.renderer.setPointer(point);
-    this._updateCursor(point);
+    // Hover feedback is visual-only. Refreshing it for every pointer event
+    // makes a large-unit stress scene spend its frame budget sorting hit
+    // candidates instead of animating the world, so the steady-state cursor
+    // is refreshed at a bounded rate in update().
+    this.cursorDirty = true;
     if (this.pan) {
       this.renderer.panBy(point.x - this.pan.x, point.y - this.pan.y);
       this.pan = point;
@@ -131,10 +136,11 @@ export class CrownforgeInput {
       const preview = this.buildMode === 'wall' && this.wallDrag
         ? this.simulation.getWallLinePreview(this.wallDrag.start, world)
         : (() => {
-          const check = this.simulation.getPlacementCheck(this.buildMode, world);
-          return { type: this.buildMode, world, valid: check.valid, reason: check.reason };
+          return this.simulation.getBuildingPlacementPreview(this.buildMode, world);
         })();
       this.renderer.setBuildPreview(preview);
+      this._updateCursor(point);
+      this.cursorDirty = false;
     }
   }
 
@@ -150,7 +156,7 @@ export class CrownforgeInput {
       const world = this.renderer.screenToWorld(point);
       const preview = this.buildMode === 'wall' && this.wallDrag
         ? this.simulation.getWallLinePreview(this.wallDrag.start, world)
-        : this.simulation.getPlacementCheck(this.buildMode, world);
+        : this.simulation.getBuildingPlacementPreview(this.buildMode, world);
       this._setCursor(preview.valid ? 'build-valid' : 'build-invalid');
       return;
     }
@@ -290,5 +296,11 @@ export class CrownforgeInput {
       dy = (dy / length) * speed;
     }
     if (dx || dy) this.renderer.panBy(dx, dy);
+    this.cursorUpdateElapsed += Math.max(0, delta);
+    if (this.cursorDirty && this.cursorUpdateElapsed >= 1 / 30) {
+      this._updateCursor(this.pointer);
+      this.cursorDirty = false;
+      this.cursorUpdateElapsed = 0;
+    }
   }
 }
