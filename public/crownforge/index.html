@@ -3,13 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="crownforge-build" content="20260826-fortifications2" />
     <title>Crownforge: Dawn of Kingdoms</title>
     <meta name="description" content="Crownforge — a tiny polished historical RTS settlement slice." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
-    <link rel="stylesheet" href="./styles.css?v=20260824-perfpass1" />
+    <link rel="stylesheet" href="./styles.css?v=20260826-fortifications2" />
   </head>
   <body>
     <main class="game-shell">
@@ -57,11 +58,15 @@
               <span class="ui-icon icon-villager selection-action-icon" aria-hidden="true"></span>
               <span><b>SELECT ALL VILLAGERS</b><small>SETTLEMENT-WIDE <kbd>V</kbd></small></span>
             </button>
+            <button id="demolition-mode" class="selection-unit-button demolition-button" type="button" title="Use selected Villagers to click or drag across structures and dismantle them (X)">
+              <span class="ui-icon icon-cancel selection-action-icon" aria-hidden="true"></span>
+              <span><b>DISMANTLE STRUCTURES</b><small>CLICK OR DRAG <kbd>X</kbd></small></span>
+            </button>
           </div>
           <div id="selection-recovery" class="selection-recovery" hidden>
-            <button id="recover-units" class="recovery-button" type="button" title="Recover blocked villagers at the Crown Hall (R)">
+            <button id="recover-units" class="recovery-button" type="button" title="Return selected units to a clear Crown Hall approach (R)">
               <span class="ui-icon icon-seal recovery-icon" aria-hidden="true"></span>
-              <span><b>RECOVER STUCK</b><small>RETURN TO CROWN HALL <kbd>R</kbd></small></span>
+              <span><b>RECOVER SELECTED</b><small>RETURN TO CROWN HALL <kbd>R</kbd></small></span>
             </button>
           </div>
         </section>
@@ -82,8 +87,9 @@
             <div><kbd>W A S D</kbd><span>Pan camera</span></div>
             <div><kbd>Middle-drag</kbd><span>Pan map</span></div>
             <div><kbd>Esc</kbd><span>Close menu / placement</span></div>
-            <div><kbd>R</kbd><span>Recover stuck Villager</span></div>
+            <div><kbd>R</kbd><span>Return selected units to Crown Hall</span></div>
             <div><kbd>V</kbd><span>Select all Villagers</span></div>
+            <div><kbd>X</kbd><span>Villager demolition mode</span></div>
           </div>
           <div class="settings-block unit-speed-setting">
             <div class="controls-setting-title">UNIT PACE</div>
@@ -164,7 +170,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260825-builderflow1"></script>
+    <script type="module" src="./src/main.js?v=20260826-fortifications2"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

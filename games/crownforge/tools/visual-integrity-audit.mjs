@@ -4,6 +4,8 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 
 import {
+  ANCIENT_FOREST_ATLAS,
+  ASHEN_BUILDING_ASSETS,
   ASSET_RECTS,
   BUILDING_STAGE_ATLAS,
   COMBAT_ATLASES,
@@ -184,8 +186,22 @@ const firstAgeConstructionEntries = Object.entries(FIRST_AGE_ASSETS).flatMap(([t
 const firstAgeConstructionAtlasEntries = Object.entries(FIRST_AGE_ASSETS)
   .filter(([, definition]) => definition.constructionAtlas?.src)
   .map(([type, definition]) => [`firstAge.${type}.constructionAtlas`, definition.constructionAtlas]);
+const ashenAssetEntries = [];
+const ashenAssetSources = new Set();
+for (const [type, definition] of Object.entries(ASHEN_BUILDING_ASSETS)) {
+  for (const [suffix, asset] of [
+    ['', definition.src ? definition : null],
+    ['.atlas', definition.atlas],
+    ['.constructionAtlas', definition.constructionAtlas],
+  ]) {
+    if (!asset?.src || ashenAssetSources.has(asset.src)) continue;
+    ashenAssetSources.add(asset.src);
+    ashenAssetEntries.push([`ashen.${type}${suffix}`, asset]);
+  }
+}
 
 const atlasEntries = [
+  ['ancientForest', ANCIENT_FOREST_ATLAS],
   ['environment', ENVIRONMENT_ATLAS],
   ['buildingStages', BUILDING_STAGE_ATLAS],
   ['enemyCamp', ENEMY_CAMP_ASSET],
@@ -193,6 +209,7 @@ const atlasEntries = [
   ...Object.entries(FIRST_AGE_ASSETS).map(([key, value]) => [`firstAge.${key}`, value]),
   ...firstAgeConstructionEntries,
   ...firstAgeConstructionAtlasEntries,
+  ...ashenAssetEntries,
   ...Object.entries(VILLAGER_ATLASES)
     .filter(([, value]) => value?.src && value.width && value.height && value.columns && value.rows)
     .map(([key, value]) => [`villager.${key}`, value]),
@@ -238,15 +255,21 @@ const activeSources = [
   ...Object.values(FIRST_AGE_ASSETS).map((value) => value?.src).filter(Boolean),
   ...firstAgeConstructionEntries.map(([, value]) => value?.src).filter(Boolean),
   ...firstAgeConstructionAtlasEntries.map(([, value]) => value?.src).filter(Boolean),
+  ...ashenAssetEntries.map(([, value]) => value?.src).filter(Boolean),
   ...Object.values(VILLAGER_ATLASES).map((value) => value?.src).filter(Boolean),
   ...Object.values(COMBAT_ATLASES).map((value) => value?.src).filter(Boolean),
 ].filter(Boolean).map((src) => src.split('?')[0]);
 const placeholderReferences = activeSources.filter((src) => /placeholder|programmer|temp|debug|generic/i.test(src));
+const ashenProductionCellSafetyFailures = boundaryReports.filter((report) => (
+  report.key.startsWith('ashen.')
+  || /^combat\.(ashenForager|ashenOutrider|thornSpear|hearthLevy|hidewall)/.test(report.key)
+) && (report.unsafeCells.length || report.bottomContactCells.length));
 
 const result = {
   status: missingFiles.length
     || boundaryReports.some((report) => report.dimensionMismatch)
     || constructionStageReports.some((report) => report.dimensionMismatch || report.unsafeEdge)
+    || ashenProductionCellSafetyFailures.length
     || placeholderReferences.length
     ? 'failed'
     : 'passed',
@@ -257,6 +280,7 @@ const result = {
   animationCombinations: animationCoverage.length,
   boundaryReports,
   constructionStageReports,
+  ashenProductionCellSafetyFailures,
 };
 
 console.log(JSON.stringify(result, null, 2));

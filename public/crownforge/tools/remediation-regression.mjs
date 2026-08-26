@@ -2,15 +2,18 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 import {
+  ASHEN_BUILDING_ASSETS,
   BUILDING_TYPES,
   COMBAT_ATLASES,
   CONFIG,
+  ENEMY_AI,
   FIRST_AGE_BUILD_BLUEPRINTS,
   FIRST_AGE_ASSETS,
   GOLD_DEPOSIT_ASSETS,
   INITIAL_RESOURCES,
   PRODUCTION_TYPES,
   RESOURCE_TYPES,
+  SPACING_ROLES,
   UNIT_TYPES,
   VILLAGER_ATLASES,
 } from '../src/config.js';
@@ -32,9 +35,15 @@ function advance(simulation, seconds, step = STEP_60HZ) {
 }
 
 function insideBuilding(point, building, padding = 0) {
-  const width = BUILDING_TYPES[building.type].footprint.width / 2 + padding;
-  const height = BUILDING_TYPES[building.type].footprint.height / 2 + padding;
-  return Math.abs(point.x - building.x) < width && Math.abs(point.z - building.z) < height;
+  const blueprint = BUILDING_TYPES[building.type];
+  const footprint = blueprint.collisionFootprint ?? blueprint.footprint;
+  const offset = blueprint.collisionOffset ?? { x: 0, z: 0 };
+  const clearance = blueprint.collisionClearance ?? 0;
+  const width = footprint.width / 2 + clearance + padding;
+  const height = footprint.height / 2 + clearance + padding;
+  const centerX = building.x + (offset.x ?? 0);
+  const centerZ = building.z + (offset.z ?? 0);
+  return Math.abs(point.x - centerX) < width && Math.abs(point.z - centerZ) < height;
 }
 
 function freshSimulation() {
@@ -98,6 +107,12 @@ function checkAnimationAtlases() {
     }
   }
   for (let direction = 0; direction < 4; direction += 1) {
+    for (const state of ['attack_anticipation', 'attack_contact', 'attack_recovery']) {
+      const attackFrame = animationFrame('villager', state, 0.22, direction);
+      assert.equal(attackFrame.atlasKey, 'defenseAttackLoop', `villager ${state} uses authored defense atlas direction ${direction}`);
+      assert.equal(attackFrame.row, direction, `villager ${state} preserves direction ${direction}`);
+      assert.equal(attackFrame.fallback, null, `villager ${state} does not fall back to a static pose`);
+    }
     const hitFrame = animationFrame('villager', 'hit', 0.11, direction);
     assert.equal(hitFrame.atlasKey, 'hitLoop', `villager hit atlas direction ${direction}`);
     assert.equal(hitFrame.frameCount, 4, 'villager hit uses four authored recoil frames');
@@ -106,12 +121,62 @@ function checkAnimationAtlases() {
     assert.equal(deathFrame.atlasKey, 'deathLoop', `villager death atlas direction ${direction}`);
     assert.equal(deathFrame.frameCount, 4, 'villager death uses four authored frames');
     assert.equal(deathFrame.fallback, null, 'villager death does not fall back to idle');
+
+    const stunnedFrame = animationFrame('raider', 'stunned', 0.37, direction);
+    assert.equal(stunnedFrame.atlasKey, 'raiderStunned', `Raider stun uses authored atlas direction ${direction}`);
+    assert.equal(stunnedFrame.row, direction, `Raider stun preserves direction ${direction}`);
+    assert.equal(stunnedFrame.frameCount, 4, 'Raider stun has a restrained four-pose loop');
+    assert.equal(stunnedFrame.fallback, null, 'Raider stun does not fall back to idle');
   }
   for (const atlas of Object.values(VILLAGER_ATLASES)) {
     if (atlas?.src) assert.match(atlas.src, /\.png/);
   }
   for (const atlas of Object.values(COMBAT_ATLASES)) {
     assert.match(atlas.src, /\.png/);
+  }
+
+  const foragerStates = {
+    idle: 'ashenForagerMotion',
+    walk: 'ashenForagerMotion',
+    gather_wood: 'ashenForagerWork',
+    gather_food: 'ashenForagerWork',
+    gather_stone: 'ashenForagerWork',
+    gather_gold: 'ashenForagerWork',
+    construct: 'ashenForagerWork',
+    carry_wood: 'ashenForagerCarry',
+    carry_food: 'ashenForagerCarry',
+    carry_stone: 'ashenForagerCarry',
+    carry_gold: 'ashenForagerCarry',
+  };
+  for (const [state, atlasKey] of Object.entries(foragerStates)) {
+    for (let direction = 0; direction < 4; direction += 1) {
+      const frame = animationFrame('ashenForager', state, 0.37, direction);
+      assert.equal(frame.atlasKey, atlasKey, `Ashen Forager ${state} direction ${direction} atlas`);
+      assert.equal(frame.row, direction, `Ashen Forager ${state} preserves direction ${direction}`);
+      assert.equal(frame.fallback, null, `Ashen Forager ${state} has authored artwork`);
+    }
+  }
+
+  const ashenFighters = {
+    ashenOutrider: ['ashenOutriderMotion', 'ashenOutriderAttack'],
+    thornSpear: ['thornSpearMotion', 'thornSpearAttack'],
+    hearthLevy: ['hearthLevyMotion', 'hearthLevyAttack'],
+    hidewall: ['hidewallMotion', 'hidewallAttack'],
+  };
+  for (const [type, [motionAtlas, attackAtlas]] of Object.entries(ashenFighters)) {
+    for (let direction = 0; direction < 4; direction += 1) {
+      const walkFrame = animationFrame(type, 'walk', 0.37, direction);
+      assert.equal(walkFrame.atlasKey, motionAtlas, `${type} walk direction ${direction} atlas`);
+      assert.equal(walkFrame.row, direction, `${type} walk preserves direction ${direction}`);
+      assert.equal(walkFrame.frameCount, 4, `${type} walk has four authored poses`);
+      assert.equal(walkFrame.fallback, null, `${type} walk has no static fallback`);
+      for (const state of ['attack_anticipation', 'attack_contact', 'attack_recovery']) {
+        const attackFrame = animationFrame(type, state, 0.22, direction);
+        assert.equal(attackFrame.atlasKey, attackAtlas, `${type} ${state} direction ${direction} atlas`);
+        assert.equal(attackFrame.row, direction, `${type} ${state} preserves direction ${direction}`);
+        assert.equal(attackFrame.fallback, null, `${type} ${state} has authored artwork`);
+      }
+    }
   }
 }
 
@@ -266,13 +331,13 @@ function checkOreWashEconomySupport() {
   const routing = movementSandbox();
   const hall = routing.addBuilding('townCenter', 20, 20, 'player');
   const wash = routing.addBuilding('oreWash', 34, 20, 'player');
-  const goldWorker = routing.addUnit('villager', 29, 20, 'player');
+  const goldWorker = routing.addUnit('villager', 26, 20, 'player');
   goldWorker.carryType = 'gold';
   goldWorker.carryAmount = 5;
   assert.equal(routing._beginReturn(goldWorker), true, 'Gold cargo finds a compatible work-site route');
   assert.equal(goldWorker.returnStorageId, wash.id, 'nearby Gold cargo prefers the Ore Wash');
 
-  const woodWorker = routing.addUnit('villager', 29, 22, 'player');
+  const woodWorker = routing.addUnit('villager', 26, 24, 'player');
   woodWorker.carryType = 'wood';
   woodWorker.carryAmount = 5;
   assert.equal(routing._beginReturn(woodWorker), true, 'Wood cargo still finds a compatible route');
@@ -372,9 +437,12 @@ function checkStableGranaryAndScout() {
   assert.deepEqual(BUILDING_TYPES.granary.gatherBonus, { resourceType: 'food', radius: 14, multiplier: 1.15 }, 'Granary has one restrained local food-support bonus');
   assert.equal(FIRST_AGE_ASSETS.stable.constructionAtlas.cellByStage.nearComplete.column, 0, 'Stable has authored construction-stage atlas mapping');
   assert.equal(FIRST_AGE_ASSETS.granary.constructionAtlas.cellByStage.partial.column, 1, 'Granary has authored construction-stage atlas mapping');
-  assert.match(COMBAT_ATLASES.scout.src, /crownforge-scout-combat-atlas-v1\.png/, 'Scout combat atlas is a Crownforge asset');
-  assert.match(COMBAT_ATLASES.scoutWalk.src, /crownforge-scout-walk-loop-v1\.png/, 'Scout walk loop is a separate authored asset');
-  assert.match(COMBAT_ATLASES.scoutAttack.src, /crownforge-scout-attack-loop-v1\.png/, 'Scout attack loop is a separate authored asset');
+  assert.match(COMBAT_ATLASES.scout.src, /crownforge-scout-combat-atlas-v3\.png/, 'Scout combat atlas uses the transparent cell-safe mounted-unit correction');
+  assert.match(COMBAT_ATLASES.scoutWalk.src, /crownforge-scout-walk-loop-v3\.png/, 'Scout walk loop uses the transparent cell-safe mounted-unit correction');
+  assert.match(COMBAT_ATLASES.scoutAttack.src, /crownforge-scout-attack-loop-v3\.png/, 'Scout attack loop uses the transparent cell-safe mounted-unit correction');
+  assert.ok(UNIT_TYPES.scout.renderSize >= UNIT_TYPES.soldier.renderSize * 1.5, 'mounted Scout keeps rider scale comparable to a foot soldier');
+  assert.ok(UNIT_TYPES.scout.radius >= 0.7, 'mounted Scout collision follows the enlarged horse body');
+  assert.ok(SPACING_ROLES.scout.personalSpace > SPACING_ROLES.soldier.personalSpace, 'mounted Scout reserves more local space than a foot soldier');
   for (const state of ['idle', 'walk', 'attack_anticipation', 'attack_contact', 'attack_recovery', 'death']) {
     for (let direction = 0; direction < 4; direction += 1) {
       const frame = animationFrame('scout', state, 0.41, direction);
@@ -421,8 +489,8 @@ function checkStableGranaryAndScout() {
   advance(simulation, BUILDING_TYPES.granary.buildTime + 14);
   assert.equal(granary.progress, 1, 'First-age Granary completes through Villager construction');
   const foodWorker = simulation.units.find((unit) => unit.type === 'villager');
-  foodWorker.x = granary.x - 4.8;
-  foodWorker.z = granary.z;
+  foodWorker.x = granary.x + 3;
+  foodWorker.z = granary.z + 3;
   foodWorker.carryType = 'food';
   foodWorker.carryAmount = 5;
   assert.equal(simulation._beginReturn(foodWorker), true, 'Food cargo finds the new Granary as a compatible drop-off');
@@ -464,17 +532,17 @@ function checkTimberStonewrightAndSpearwarden() {
   const hall = routing.addBuilding('townCenter', 20, 20, 'player');
   const timberYard = routing.addBuilding('timberYard', 34, 20, 'player');
   const stonewrightYard = routing.addBuilding('stonewrightYard', 34, 28, 'player');
-  const woodWorker = routing.addUnit('villager', 29, 20, 'player');
+  const woodWorker = routing.addUnit('villager', 38, 20, 'player');
   woodWorker.carryType = 'wood';
   woodWorker.carryAmount = 5;
   assert.equal(routing._beginReturn(woodWorker), true, 'Wood cargo finds the Timber Yard');
   assert.equal(woodWorker.returnStorageId, timberYard.id, 'nearby Wood cargo prefers the Timber Yard');
-  const stoneWorker = routing.addUnit('villager', 29, 28, 'player');
+  const stoneWorker = routing.addUnit('villager', 38, 28, 'player');
   stoneWorker.carryType = 'stone';
   stoneWorker.carryAmount = 5;
   assert.equal(routing._beginReturn(stoneWorker), true, 'Stone cargo finds the Stonewright Yard');
   assert.equal(stoneWorker.returnStorageId, stonewrightYard.id, 'nearby Stone cargo prefers the Stonewright Yard');
-  const goldWorker = routing.addUnit('villager', 29, 24, 'player');
+  const goldWorker = routing.addUnit('villager', 26, 26, 'player');
   goldWorker.carryType = 'gold';
   goldWorker.carryAmount = 5;
   assert.equal(routing._beginReturn(goldWorker), true, 'Gold cargo still finds the Crown Hall fallback');
@@ -668,7 +736,7 @@ function checkBuilderWorkflowAndVillagerControls() {
 
   const automatic = movementSandbox();
   automatic.addBuilding('townCenter', 20, 20, 'player');
-  const autoBuilder = automatic.addUnit('villager', 29, 20, 'player');
+  const autoBuilder = automatic.addUnit('villager', 26, 23, 'player');
   autoBuilder.needsSafetyRegroup = false;
   const unfinished = automatic.addBuilding('house', 34, 20, 'player', 0.25);
   automatic.update(STEP_60HZ);
@@ -732,7 +800,7 @@ function checkConstructionAndPlacement() {
   assert.equal(simulation.getPlacementCheck('barracks', { x: tree.x, z: tree.z }).valid, false, 'resource overlap rejected');
 
   const placement = [
-    { x: townCenter.x - 18, z: townCenter.z },
+    { x: townCenter.x - 22, z: townCenter.z },
     { x: townCenter.x + 18, z: townCenter.z },
     { x: townCenter.x, z: townCenter.z + 17 },
     { x: townCenter.x, z: townCenter.z - 17 },
@@ -752,7 +820,7 @@ function checkConstructionRetaskingAndTaskSummary() {
   const simulation = freshSimulation();
   const townCenter = simulation.buildings.find((building) => building.type === 'townCenter');
   const placement = [
-    { x: townCenter.x - 18, z: townCenter.z },
+    { x: townCenter.x - 22, z: townCenter.z },
     { x: townCenter.x + 18, z: townCenter.z },
     { x: townCenter.x, z: townCenter.z + 17 },
     { x: townCenter.x, z: townCenter.z - 17 },
@@ -856,7 +924,7 @@ function checkConstructionOrderQueue() {
   const simulation = freshSimulation();
   const townCenter = simulation.buildings.find((building) => building.type === 'townCenter');
   const placement = [
-    { x: townCenter.x - 18, z: townCenter.z },
+    { x: townCenter.x - 22, z: townCenter.z },
     { x: townCenter.x + 18, z: townCenter.z },
     { x: townCenter.x, z: townCenter.z + 17 },
     { x: townCenter.x, z: townCenter.z - 17 },
@@ -990,7 +1058,7 @@ function checkWallEndpointMagnetism() {
     wallSegments: acrossMap.wallSegments,
     wallDirection: acrossMap.wallDirection,
   }, 0);
-  assert.ok(acrossMapBounds.minX < 1 && acrossMapBounds.maxX > CONFIG.mapWidth - 1, 'edge-to-edge wall collision closes the raider-sized gap');
+  assert.ok(acrossMapBounds.minX <= 0 && acrossMapBounds.maxX >= CONFIG.mapWidth, 'edge-to-edge wall collision overlaps both map boundaries and closes the raider-sized gap');
 
   const verticalEdge = edgeSimulation.getWallLinePreview(
     { x: 300, z: 3 },
@@ -999,6 +1067,14 @@ function checkWallEndpointMagnetism() {
   assert.equal(verticalEdge.valid, true, 'vertical edge lock remains placeable');
   assert.equal(verticalEdge.wallEdgeSnap, true, 'vertical Palisade locks to the map edge');
   assert.ok(verticalEdge.wallSegments > 24, 'vertical Palisade can span the expanded map');
+  const verticalEdgeBounds = edgeSimulation._buildingEntityBounds({
+    type: 'wall',
+    x: verticalEdge.world.x,
+    z: verticalEdge.world.z,
+    wallSegments: verticalEdge.wallSegments,
+    wallDirection: verticalEdge.wallDirection,
+  }, 0);
+  assert.ok(verticalEdgeBounds.minZ <= 0 && verticalEdgeBounds.maxZ >= CONFIG.mapHeight, 'vertical edge lock physically seals both map boundaries');
 }
 
 function checkWallOverlapAndGate() {
@@ -1041,9 +1117,18 @@ function checkWallOverlapAndGate() {
   const gatePreview = gateSimulation.getBuildingPlacementPreview('gate', { x: 177.2, z: 160.2 });
   assert.equal(gatePreview.valid, true, 'gate preview snaps onto an existing Palisade segment');
   assert.equal(gatePreview.gateWallId, wall.id, 'gate preview identifies the wall it will replace');
-  assert.equal(gateSimulation.placeBuilding('gate', { x: 177.2, z: 160.2 }), true, 'gate replaces a Palisade panel and places a foundation');
+  assert.equal(gatePreview.gateOrientation, gateSimulation._gateOrientationFromDirection(gatePreview.gateDirection), 'gate preview resolves the authored atlas cell for the claimed wall direction');
+  assert.equal(new Set([
+    { x: 1, z: 0 },
+    { x: 0, z: 1 },
+    { x: 1, z: 1 },
+    { x: 1, z: -1 },
+  ].map((direction) => gateSimulation._gateOrientationFromDirection(direction))).size, 4, 'the four physical Palisade axes resolve to four distinct gate views');
+  assert.equal(gateSimulation.placeBuilding('gate', { x: 177.2, z: 160.2 }, gatePreview), true, 'gate replaces a Palisade panel and places the exact visible foundation preview');
   const gate = gateSimulation.buildings.find((building) => building.type === 'gate' && !building.destroyed);
   assert.ok(gate, 'gate foundation remains as a distinct building');
+  assert.equal(gate.gateOrientation, gatePreview.gateOrientation, 'built gate preserves the preview orientation instead of changing direction on click');
+  assert.deepEqual(gate.gateDirection, gatePreview.gateDirection, 'built gate remains aligned to the claimed Palisade run');
   assert.equal(gate.walkable ?? BUILDING_TYPES.gate.walkable, true, 'gate blueprint is passable after completion');
   assert.equal(gateSimulation.buildings.filter((building) => building.type === 'wall' && !building.destroyed).length, 2, 'replaced wall keeps connected runs on both sides of the opening');
   assert.equal(wall.destroyed, true, 'the original wall record is retired when the gate claims its panel');
@@ -1089,6 +1174,51 @@ function checkWallOverlapAndGate() {
   assert.ok(towerSimulation.buildings.some((building) => building.type === 'palisadeTower' && !building.destroyed), 'Palisade Tower remains as a selectable building');
   assert.equal(towerSimulation.buildings.filter((building) => building.type === 'wall' && !building.destroyed).length, 2, 'tower replacement preserves connected wall runs on both sides');
   assert.equal(towerWall.destroyed, true, 'original wall record retires when the tower claims its panel');
+
+  const cornerSimulation = freshSimulation();
+  const cornerBuilder = cornerSimulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  cornerSimulation.selectedIds = [cornerBuilder.id];
+  cornerSimulation._syncSelectionFlags();
+  cornerSimulation.resourcesNodes = cornerSimulation.resourcesNodes.filter((node) => Math.hypot(node.x - 242, node.z - 242) > 10);
+  cornerSimulation.decorations = cornerSimulation.decorations.filter((detail) => Math.hypot(detail.x - 242, detail.z - 242) > 10);
+  const cornerHorizontal = cornerSimulation.addBuilding('wall', 236, 240, 'player', 1, {
+    wallSegments: 5,
+    wallOrientation: 'horizontal',
+    wallDirection: { x: 1, z: 0 },
+    wallStart: { x: 230, z: 240 },
+  });
+  const cornerVertical = cornerSimulation.addBuilding('wall', 242, 246, 'player', 1, {
+    wallSegments: 3,
+    wallOrientation: 'vertical',
+    wallDirection: { x: 0, z: 1 },
+    wallStart: { x: 242, z: 243 },
+  });
+  const cornerSocket = cornerSimulation.getPalisadeJunctions()
+    .find((junction) => Math.hypot(junction.x - 242, junction.z - 241.5) < 0.2);
+  assert.ok(cornerSocket, 'two turned Palisade runs resolve to one shared corner socket');
+  assert.equal(cornerSocket.branchCount, 2, 'ordinary corner socket records exactly two wall branches');
+  const junctionRenderer = Object.create(CrownforgeRenderer.prototype);
+  junctionRenderer.palisadeJunctionCacheKey = '';
+  junctionRenderer.palisadeJunctionCache = [];
+  assert.equal(junctionRenderer.palisadeJunctionEntities(cornerSimulation).length, 0, 'ordinary two-way corners do not receive an oversized connector-post overlay');
+  const cornerOccupant = cornerSimulation.addUnit('villager', 242, 241.5, 'player');
+  const cornerTowerPreview = cornerSimulation.getBuildingPlacementPreview('palisadeTower', { x: 242.3, z: 241.6 });
+  assert.equal(cornerTowerPreview.valid, true, 'corner tower preview snaps to the shared wall socket');
+  assert.equal(cornerTowerPreview.attachmentJunction, true, 'corner tower preview is identified as a junction hardpoint');
+  assert.equal(cornerTowerPreview.attachmentWallIds.length, 2, 'corner tower claims both participating wall runs');
+  assert.equal(cornerTowerPreview.attachmentClaims.length, 2, 'corner tower claims one terminal panel from each branch');
+  assert.equal(cornerTowerPreview.attachmentConnectorSegments.length, 2, 'corner tower preserves one visual connector panel for each claimed wall branch');
+  assert.equal(cornerSimulation.placeBuilding('palisadeTower', { x: 242.3, z: 241.6 }, cornerTowerPreview), true, 'corner tower replaces both wall terminals with one aligned hardpoint');
+  const cornerTower = cornerSimulation.buildings.find((building) => building.type === 'palisadeTower' && !building.destroyed);
+  assert.ok(cornerTower, 'corner tower remains as the shared hardpoint building');
+  assert.equal(cornerTower.attachmentConnectorSegments.length, 2, 'built corner tower retains both behind-tower wall connectors');
+  cornerTower.progress = 1;
+  const towerConnectorRenderer = Object.create(CrownforgeRenderer.prototype);
+  assert.equal(towerConnectorRenderer.palisadeTowerConnectorEntities(cornerSimulation).length, 2, 'renderer supplies both correctly oriented connector panels behind a corner tower');
+  assert.equal(cornerHorizontal.destroyed, true, 'corner tower retires the horizontal source run');
+  assert.equal(cornerVertical.destroyed, true, 'corner tower retires the vertical source run');
+  assert.deepEqual(BUILDING_TYPES.palisadeTower.collisionOffset, { x: 0, z: 0 }, 'tower collision body is centered beneath the visible tower art');
+  assert.equal(insideBuilding(cornerOccupant, cornerTower, 0.15), false, 'unit standing on a new corner tower socket is moved outside the tower footprint');
 }
 
 function checkBlockedDestinationFallback() {
@@ -1166,7 +1296,7 @@ function checkCrownHallProportionsAndBuildableRing() {
   const simulation = freshSimulation();
   const center = simulation.buildings.find((building) => building.type === 'townCenter');
   const sites = {
-    north: { x: center.x, z: center.z - 13 },
+    north: { x: center.x, z: center.z - 19 },
     east: { x: center.x + 14, z: center.z },
     south: { x: center.x, z: center.z + 11 },
     west: { x: center.x - 20, z: center.z },
@@ -1175,6 +1305,56 @@ function checkCrownHallProportionsAndBuildableRing() {
     const check = simulation.getPlacementCheck('wall', point);
     assert.equal(check.valid, true, `Hall has a buildable meadow opening on the ${side} side`);
   }
+}
+
+function checkBuildingPhysicalInteractionBoundaries() {
+  const physicalTypes = Object.entries(BUILDING_TYPES)
+    .filter(([, blueprint]) => !blueprint.wall && !blueprint.gate && !blueprint.walkable)
+    .map(([type]) => type);
+  for (const type of physicalTypes) {
+    const blueprint = BUILDING_TYPES[type];
+    assert.ok(blueprint.collisionFootprint, `${blueprint.label} defines an artwork-matched physical footprint`);
+    assert.ok(blueprint.collisionFootprint.width >= blueprint.footprint.width, `${blueprint.label} physical width covers its gameplay footprint`);
+    assert.ok(blueprint.collisionFootprint.height >= blueprint.footprint.height, `${blueprint.label} physical depth covers its gameplay footprint`);
+    assert.ok(blueprint.interactionSlots >= 4, `${blueprint.label} exposes several perimeter interaction stations`);
+
+    const simulation = movementSandbox();
+    const building = simulation.addBuilding(type, 200, 200, type === 'ashenCamp' ? 'enemy' : 'player');
+    const center = simulation._buildingCollisionCenter(building);
+    const unit = simulation.addUnit('villager', center.x, center.z, 'player');
+    simulation._constrainUnitPosition(unit, center.x, center.z);
+    assert.equal(insideBuilding(unit, building), false, `${blueprint.label} collision ejects a unit from its illustrated base`);
+    for (const point of simulation._buildingApproachPoints(building)) {
+      assert.equal(insideBuilding(point, building), false, `${blueprint.label} interaction station remains outside the illustrated base`);
+    }
+  }
+
+  const storageSimulation = movementSandbox();
+  const hall = storageSimulation.addBuilding('townCenter', 100, 100, 'player');
+  const workers = [[110, 112], [113, 109], [116, 112]]
+    .map(([x, z]) => storageSimulation.addUnit('villager', x, z, 'player'));
+  for (const worker of workers) {
+    worker.carryType = 'wood';
+    worker.carryAmount = 5;
+    assert.equal(storageSimulation._beginReturn(worker), true, `Villager ${worker.id} receives a safe Crown Hall drop-off route`);
+    assert.equal(insideBuilding(worker.routeTarget, hall), false, `Villager ${worker.id} drop-off target stays outside Crown Hall artwork`);
+  }
+  assert.equal(new Set(workers.map((worker) => worker.returnSlot)).size, workers.length, 'simultaneous drop-offs reserve distinct Crown Hall stations');
+  advance(storageSimulation, 20);
+  assert.equal(workers.every((worker) => worker.carryAmount === 0), true, 'simultaneous Crown Hall drop-offs complete');
+  assert.equal(hall.storageSlotReservations.size, 0, 'drop-off reservations release after cargo is stored');
+  assert.equal(workers.every((worker) => !insideBuilding(worker, hall, 0.12)), true, 'workers remain outside the Crown Hall after depositing');
+
+  const constructionSimulation = movementSandbox();
+  const barracks = constructionSimulation.addBuilding('barracks', 100, 100, 'player', 0.04);
+  const builders = [[119, 116], [122, 112], [116, 120], [124, 118]]
+    .map(([x, z]) => constructionSimulation.addUnit('villager', x, z, 'player'));
+  for (const [index, builder] of builders.entries()) {
+    builder.buildTarget = barracks.id;
+    assert.equal(constructionSimulation._sendUnitToBuilding(builder, barracks, index), true, `builder ${builder.id} receives a Barracks perimeter route`);
+    assert.equal(insideBuilding(builder.routeTarget, barracks), false, `builder ${builder.id} works outside the Barracks artwork`);
+  }
+  assert.equal(new Set(builders.map((builder) => builder.buildSlot)).size, builders.length, 'builders reserve distinct Barracks work stations');
 }
 
 function checkTravelSpeedIsolation() {
@@ -1245,12 +1425,98 @@ function checkVillagerRecovery() {
   assert.equal(simulation._pointBlockedForUnit(secondBlocked, secondBlocked), false, 'second recovered Villager stands on a valid approach point');
   assert.ok(Math.hypot(blocked.x - secondBlocked.x, blocked.z - secondBlocked.z) >= blocked.spacingRole.personalSpace, 'recovered Villagers keep personal spacing');
   assert.equal(insideBuilding(blocked, hall), false, 'recovered Villager is outside the Crown Hall footprint');
-  assert.equal(simulation.canRecoverSelectedUnits(), false, 'recovery action disappears after a successful recovery');
+  assert.equal(simulation.canRecoverSelectedUnits(), true, 'recovery remains available after a successful recovery for deliberate repositioning');
 
   const idle = simulation.addUnit('villager', 32, 32, 'player');
   simulation.selectedIds = [idle.id];
   simulation._syncSelectionFlags();
-  assert.equal(simulation.canRecoverSelectedUnits(), false, 'ordinary idle Villagers do not expose recovery');
+  assert.equal(simulation.canRecoverSelectedUnits(), true, 'ordinary idle Villagers can always be returned to the Crown Hall');
+  const soldier = simulation.addUnit('soldier', 36, 36, 'player');
+  simulation.selectedIds = [soldier.id];
+  simulation._syncSelectionFlags();
+  assert.equal(simulation.canRecoverSelectedUnits(), true, 'recovery is available for every selected living player unit, not only Villagers');
+  assert.equal(simulation.unstickSelectedUnits().success, true, 'a selected military unit can be recovered from a bad fortification pocket');
+}
+
+function checkAshenSettlementEconomyAndAI() {
+  const buildingRolePairs = [
+    ['townCenter', 'ashenCamp'],
+    ['barracks', 'reaverLodge'],
+    ['stable', 'beastCorral'],
+    ['granary', 'smokeGranary'],
+    ['homestead', 'hideHomestead'],
+    ['watchHut', 'signalRoost'],
+    ['timberYard', 'ashenTimberRack'],
+    ['stonewrightYard', 'stonebreakYard'],
+    ['oreWash', 'oreHearth'],
+    ['field', 'ashenField'],
+    ['wall', 'ashenWall'],
+    ['gate', 'ashenGate'],
+    ['palisadeTower', 'ashenTower'],
+  ];
+  for (const [playerType, enemyType] of buildingRolePairs) {
+    assert.ok(BUILDING_TYPES[playerType], `${playerType} player role remains registered`);
+    assert.ok(BUILDING_TYPES[enemyType], `${enemyType} Ashen role is registered`);
+    const enemyAsset = ASHEN_BUILDING_ASSETS[enemyType];
+    assert.ok(enemyAsset, `${enemyType} has a production Ashen asset`);
+    const enemySource = enemyAsset.src ?? enemyAsset.atlas?.src;
+    const playerAssetKey = BUILDING_TYPES[playerType].asset;
+    const playerAsset = FIRST_AGE_ASSETS[playerAssetKey];
+    assert.match(enemySource, /crownforge-(?:ashen|reaver|beast)/, `${enemyType} uses the distinct Ashen visual family`);
+    if (playerAsset?.src) assert.notEqual(enemySource, playerAsset.src, `${enemyType} does not recolor ${playerType}`);
+  }
+
+  const unitRolePairs = [
+    ['villager', 'ashenForager'],
+    ['soldier', 'raider'],
+    ['scout', 'ashenOutrider'],
+    ['spearwarden', 'thornSpear'],
+    ['militia', 'hearthLevy'],
+    ['shieldbearer', 'hidewall'],
+  ];
+  for (const [playerType, enemyType] of unitRolePairs) {
+    assert.ok(UNIT_TYPES[playerType], `${playerType} player unit role remains registered`);
+    assert.ok(UNIT_TYPES[enemyType], `${enemyType} Ashen counterpart is registered`);
+    assert.notEqual(UNIT_TYPES[enemyType].combatAtlas, UNIT_TYPES[playerType].combatAtlas, `${enemyType} has distinct character artwork from ${playerType}`);
+  }
+  assert.equal(UNIT_TYPES.ashenForager.worker, true, 'Ashen Forager participates in the shared worker economy');
+  assert.equal(UNIT_TYPES.ashenForager.canBuild, true, 'Ashen Forager uses the shared construction foundation');
+  for (const type of ['ashenForager', 'raider', 'ashenOutrider', 'thornSpear', 'hearthLevy', 'hidewall']) {
+    assert.ok(PRODUCTION_TYPES[type], `${type} has a restrained production contract`);
+  }
+
+  const simulation = freshSimulation();
+  const camp = simulation.buildings.find((building) => building.type === 'ashenCamp' && building.faction === 'enemy');
+  assert.ok(camp, 'reset includes one Ashen Hearth on the far side of the map');
+  assert.equal(simulation._enemyWorkers().length, 3, 'Ashen settlement opens with three original Foragers');
+  assert.equal(simulation._enemyMilitary().length, 1, 'Ashen settlement opens with one readable defender');
+  assert.deepEqual(simulation.enemyResources, ENEMY_AI.startingResources, 'Ashen economy starts from its own restrained resource bank');
+
+  advance(simulation, 180, STEP_20HZ);
+  assert.equal(simulation.enemyAIState.raidCount, 0, 'easy AI does not raid during the three-minute build window');
+  assert.ok(simulation._enemyTownBuildings().length >= 3, 'Ashen workers establish a small town before the first raid');
+  assert.ok(simulation._enemyWorkers().length <= ENEMY_AI.maxWorkers, 'Ashen worker population respects its cap');
+  assert.ok(simulation._enemyMilitary().length <= ENEMY_AI.maxArmy, 'Ashen army respects its cap during buildup');
+  assert.notDeepEqual(simulation.enemyResources, ENEMY_AI.startingResources, 'Ashen workers gather and spend from their own economy');
+
+  advance(simulation, 75, STEP_20HZ);
+  const enemyBuildings = simulation._enemyTownBuildings();
+  const enemyBuildingTypes = new Set(enemyBuildings.map((building) => building.type));
+  for (const type of ['hideHomestead', 'smokeGranary', 'reaverLodge']) {
+    assert.ok(enemyBuildingTypes.has(type), `slow Ashen build plan reaches ${type}`);
+  }
+  assert.ok(enemyBuildings.filter((building) => building.progress >= 1).length >= 4, 'Ashen town contains several completed structures after four minutes');
+  assert.ok(enemyBuildings.length <= ENEMY_AI.maxTownStructures, 'Ashen town respects its structure cap');
+  const queuedWorkers = enemyBuildings.reduce((sum, building) => sum
+    + (building.productionQueue ?? []).filter((order) => UNIT_TYPES[order.type]?.worker).length, 0);
+  const queuedArmy = enemyBuildings.reduce((sum, building) => sum
+    + (building.productionQueue ?? []).filter((order) => !UNIT_TYPES[order.type]?.worker).length, 0);
+  assert.ok(simulation._enemyWorkers().length + queuedWorkers <= ENEMY_AI.maxWorkers, 'trained and queued Foragers stay within the worker cap');
+  assert.ok(simulation._enemyMilitary().length + queuedArmy <= ENEMY_AI.maxArmy, 'trained and queued fighters stay within the army cap');
+  assert.equal(simulation.enemyAIState.raidCount, 1, 'the first Ashen raid begins only after the long opening');
+  assert.ok(simulation.enemyAIState.raidWaveIds.length >= ENEMY_AI.minRaidSize, 'first raid contains a readable small warband');
+  assert.ok(simulation.enemyAIState.raidWaveIds.length <= ENEMY_AI.maxRaidSize, 'first raid never exceeds the easy-profile wave cap');
+  assert.ok(Object.values(simulation.enemyResources).every((value) => Number.isFinite(value) && value >= 0), 'Ashen resource bank remains finite and non-negative');
 }
 
 function checkExpandedWorldAndEnemyDistance() {
@@ -1352,6 +1618,77 @@ function checkAspectCorrectBuildingFeedback() {
   );
 }
 
+function checkVillagerLastStandDefense() {
+  const villagerRules = UNIT_TYPES.villager;
+  const raiderRules = UNIT_TYPES.raider;
+  assert.ok(Math.abs(villagerRules.attack * 20 - raiderRules.maxHp) < 1e-9, 'twenty clean Villager hits equal one Raider health pool');
+  assert.equal(villagerRules.canAttackUnits, true, 'Villagers may defend against hostile units');
+  assert.equal(villagerRules.canAttackBuildings, false, 'Villagers do not replace military units against structures');
+  assert.equal(villagerRules.stunOnHit.duration, 5, 'defensive strike stun lasts five seconds');
+  assert.equal(villagerRules.stunOnHit.immunityDuration, 20, 'stun recovery grants twenty seconds of immunity');
+  assert.equal(villagerRules.lastLightWard.duration, 60, 'Last Light Ward lasts one minute');
+  assert.ok(raiderRules.attackVsVillager >= villagerRules.maxHp, 'an unwarded Raider strike is lethal to a Villager');
+
+  const damageSimulation = movementSandbox();
+  const damageVillager = damageSimulation.addUnit('villager', 10, 10, 'player');
+  const damageRaider = damageSimulation.addUnit('raider', 12, 10, 'enemy');
+  for (let hit = 0; hit < 19; hit += 1) damageSimulation._applyUnitDamage(damageRaider, villagerRules.attack, damageVillager);
+  assert.equal(damageRaider.dead, false, 'Raider survives nineteen Villager hits');
+  assert.ok(damageRaider.hp > 0 && damageRaider.hp <= villagerRules.attack + 1e-8, 'nineteen hits leave exactly one Villager strike of Raider health');
+  damageSimulation._applyUnitDamage(damageRaider, villagerRules.attack, damageVillager);
+  assert.equal(damageRaider.dead, true, 'twentieth Villager hit defeats a Raider');
+
+  const stunSimulation = movementSandbox();
+  const stunVillager = stunSimulation.addUnit('villager', 10, 10, 'player');
+  const stunRaider = stunSimulation.addUnit('raider', 12, 10, 'enemy');
+  assert.equal(stunSimulation._tryApplyVillagerStun(stunVillager, stunRaider), true, 'first Villager contact stuns a humanoid Raider');
+  assert.equal(stunRaider.stunTimer, 5, 'stun starts at five seconds');
+  stunRaider.stunTimer = 3;
+  assert.equal(stunSimulation._tryApplyVillagerStun(stunVillager, stunRaider), false, 'additional hits do not refresh an active stun');
+  assert.equal(stunRaider.stunTimer, 3, 'active stun duration is not extended by a swarm');
+  stunSimulation._updateUnitStatusEffects(stunRaider, 3.01);
+  assert.equal(stunRaider.stunTimer, 0, 'stun releases after its duration');
+  assert.equal(stunRaider.stunImmunityTimer, 20, 'released Raider gains the full immunity window');
+  assert.equal(stunRaider.attackTarget, stunVillager.id, 'released Raider becomes aggressive toward the Villager that stunned it');
+  assert.equal(stunSimulation._tryApplyVillagerStun(stunVillager, stunRaider), false, 'immunity prevents immediate stun locking');
+  const immuneHp = stunRaider.hp;
+  stunSimulation._applyUnitDamage(stunRaider, villagerRules.attack, stunVillager);
+  assert.ok(stunRaider.hp < immuneHp, 'stun immunity does not grant damage immunity');
+
+  const commandSimulation = movementSandbox();
+  const carryingVillager = commandSimulation.addUnit('villager', 10, 10, 'player');
+  const secondVillager = commandSimulation.addUnit('villager', 10, 12, 'player');
+  const commandRaider = commandSimulation.addUnit('raider', 13, 11, 'enemy');
+  carryingVillager.carryAmount = 8;
+  carryingVillager.carryType = 'wood';
+  commandSimulation.selectedIds = [carryingVillager.id, secondVillager.id];
+  commandSimulation._syncSelectionFlags();
+  const command = commandSimulation.issueContextCommand({ x: commandRaider.x, z: commandRaider.z });
+  assert.equal(command.kind, 'attack', 'selected Villagers accept a hostile-unit defense order');
+  assert.equal(carryingVillager.command, 'attack', 'a carrying Villager defends immediately instead of losing the target during deposit');
+  assert.equal(secondVillager.command, 'attack', 'multi-selected Villagers defend together');
+
+  const wardSimulation = movementSandbox();
+  const protectedVillager = wardSimulation.addUnit('villager', 20, 20, 'player');
+  const nearbyVillager = wardSimulation.addUnit('villager', 22, 20, 'player');
+  const distantVillager = wardSimulation.addUnit('villager', 50, 50, 'player');
+  const lethalRaider = wardSimulation.addUnit('raider', 21, 22, 'enemy');
+  const wardResult = wardSimulation._applyUnitDamage(protectedVillager, raiderRules.attackVsVillager, lethalRaider);
+  assert.equal(wardResult.warded, true, 'lethal Raider strike triggers Last Light Ward');
+  assert.equal(protectedVillager.dead, false, 'Last Light Ward prevents Villager death');
+  assert.equal(protectedVillager.hp, 1, 'Ward catches the lethal strike at one health');
+  assert.equal(protectedVillager.lastLightWardTimer, 60, 'Ward starts at one minute');
+  assert.equal(nearbyVillager.attackTarget, lethalRaider.id, 'nearby Villager swarms the lethal attacker');
+  assert.notEqual(distantVillager.attackTarget, lethalRaider.id, 'distant Villager is not pulled away by the local safety response');
+  const protectedHp = protectedVillager.hp;
+  const blockedResult = wardSimulation._applyUnitDamage(protectedVillager, 999, lethalRaider);
+  assert.equal(blockedResult.blocked, true, 'active Ward blocks further damage');
+  assert.equal(protectedVillager.hp, protectedHp, 'active Ward preserves current health');
+  for (let second = 0; second < 601; second += 1) wardSimulation._updateUnitStatusEffects(protectedVillager, 0.1);
+  assert.equal(protectedVillager.lastLightWardTimer, 0, 'Ward expires cleanly after one minute');
+  assert.equal(protectedVillager.hp, protectedVillager.maxHp, 'Villager reaches full health by Ward expiry');
+}
+
 function checkCombatAndEndStates() {
   const simulation = freshSimulation();
   const soldier = simulation.units.find((unit) => unit.type === 'soldier');
@@ -1409,18 +1746,21 @@ checkDynamicBlockerRecovery();
 checkCrownHallStairs();
 checkBarracksLandmarkScale();
 checkCrownHallProportionsAndBuildableRing();
+checkBuildingPhysicalInteractionBoundaries();
 checkTravelSpeedIsolation();
 checkVillagerRecovery();
+checkAshenSettlementEconomyAndAI();
 checkExpandedWorldAndEnemyDistance();
 checkCursorCenteredZoom();
 checkUprightWallVisuals();
 checkAspectCorrectBuildingFeedback();
+checkVillagerLastStandDefense();
 checkCombatAndEndStates();
 
 console.log(JSON.stringify({
   status: 'passed',
   checks: [
-    'directional villager carry/response and military walk/attack/recoil/death atlas resolution',
+    'directional Villager carry/response/defense and military walk/attack/stun/recoil/death atlas resolution',
     'reset villager ground/building clearance',
     '20 Hz versus 60 Hz gathering convergence',
     'cargo-preserving retask and storage return',
@@ -1437,20 +1777,23 @@ console.log(JSON.stringify({
     'construction pause, foundation right-click reassignment, cargo-first resume, and mixed-task feedback',
     'active builders queue new move orders and continue them after construction completes',
     'wall precedence over trees and stone with safe resource cleanup',
-    'magnetic wall endpoint snap and connected segment spacing',
-    'interior and endpoint wall magnets, overlap-tolerant runs, gate openings, and Palisade Tower replacement hardpoints',
+    'magnetic wall endpoint snap, unlimited edge-sealing runs, and connected segment spacing',
+    'interior and endpoint wall magnets, clean two-way corners, orientation-locked gate openings, and multi-branch Palisade Tower hardpoints',
     'blocked destination fallback outside building clearance',
     'dynamic building blocker route recovery',
     'Crown Hall stair routing, landing stop, and interior collision',
     'person-scaled Barracks landmark and collision clearance',
     'equal Crown Hall/Barracks proportion, inward placement, and four-sided buildable ring',
+    'artwork-matched building collision, offset physical bases, perimeter work stations, and non-stacking Crown Hall drop-offs',
     'travel-only speed scaling, high-speed collision routing, and fast group spacing',
-    'selected blocked Villager recovery at a clear Crown Hall approach with cargo deposit and group spacing',
+    'always-available selected-unit recovery at a clear Crown Hall approach with cargo deposit and group spacing',
+    'distinct Ashen role-equivalent artwork, directional units, independent economy, capped town growth, local defense, and delayed small raids',
     'regional wood, berry, stone, and scarce three-tier Gold coverage without prebuilt fields',
     'expanded map and opposite-side enemy camp',
     'cursor-centered zoom anchor in both directions',
     'four authored upright Palisade views across all eight snap directions',
     'aspect-correct landmark health and placement feedback',
+    'twenty-hit Villager defense, five-second humanoid stun, twenty-second immunity, attacker aggro, local swarm, and one-minute Last Light Ward',
     'melee damage, death timing, victory, defeat',
   ],
 }));

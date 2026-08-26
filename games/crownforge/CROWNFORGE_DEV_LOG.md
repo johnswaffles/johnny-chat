@@ -3835,3 +3835,384 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Do not add a separate builder class, repair resource tax, repair technology, automated global repair crew, or building-maintenance economy until this direct interaction is proven in repeated play.
 - Do not broaden automatic assistance beyond nearby idle builders; player orders must remain authoritative.
 - Do not add another large unit or building set during this workflow pass.
+
+## VILLAGER DEMOLITION & ANCIENT FOREST PASS — 2026-08-25
+
+### WHAT EXISTS
+
+- Selected Villagers can enter a dedicated demolition mode and dismantle player-built structures with visible labor instead of deleting them instantly.
+- The expanded map now contains five Ancient Forest masses. Each is one performance-conscious macro resource representing a large woodland that many Villagers can gradually cut back.
+
+### WHAT WAS COMPLETED
+
+- Added a `DISMANTLE STRUCTURES` Villager action and `X` shortcut. In demolition mode, a click targets one structure and a drag targets every eligible structure intersecting the selection rectangle.
+- Added red demolition cursor, invalid-target cursor, selection rectangle, footprint preview, work progress, hammer feedback, and concise command/status text.
+- Protected the Crown Hall and non-player structures from demolition. Demolition mode remains active for repeated orders and cancels with right-click, `X`, `Esc`, another mode, or loss of the Villager selection.
+- Integrated demolition with the existing Villager order queue. A Villager already constructing or dismantling finishes the current job before continuing; carried resources are deposited first; several Villagers use separate perimeter work positions.
+- Added controlled demolition workload, health reduction, approach routing, eight work slots, path recovery, slot cleanup, completed removal, and post-task order continuation. Demolition intentionally grants no resource refund in this pass.
+- Added an `Ancient` resource tier with a 7,200-Wood capacity, broad collision footprint, sixteen gathering positions, and five deterministic map placements.
+- Added four authored Ancient Forest depletion stages: full woodland, thinned edge, half-cleared stand, and sparse remnant. The renderer changes stage as Wood is removed, while the physical footprint contracts gradually so reclaimed ground becomes usable.
+- Kept each woodland as one resource entity instead of hundreds of individual trees, preserving the visual impression of a forest while avoiding unnecessary pathfinding, collision, and draw overhead.
+
+### KNOWN ISSUES
+
+- Drag demolition currently removes an entire selected Palisade run record, not a single decorative panel. Gates and Towers remain separate selectable structures.
+- Demolition reuses the established Villager construction pose and hammer strike. A separate dismantling animation should only be generated if normal-zoom play shows the shared labor language is unclear.
+- Ancient Forest stage changes are intentionally discrete at four readable thresholds; individual trunks do not fall one at a time.
+- Ancient Forests do not regrow and do not support reforestation in this age.
+
+### ASSETS CREATED
+
+- `assets/crownforge-ancient-forest-depletion-v1.png` — original 1,254 × 1,254 RGBA 2 × 2 atlas containing four matching woodland depletion stages.
+- The atlas follows the existing warm first-age Crownforge palette, elevated isometric perspective, upper-left light, grounded shadows, and transparent asset contract. It contains no labels, characters, buildings, or placeholder geometry.
+
+### SYSTEMS CREATED
+
+- Data-driven builder demolition capability (`canDemolish` and `demolitionRate`).
+- Click/drag demolition targeting with protected-structure filtering and visual preview.
+- Queued multi-Villager demolition labor, perimeter reservations, path recovery, workload/health progression, and clean completion.
+- Macro-resource `Ancient` tier with staged rendering, sixteen gathering slots, very high capacity, and depletion-aware collision contraction.
+- Deterministic regional Ancient Forest placement without per-tree entity proliferation.
+
+### VALIDATION
+
+- `node --check` passed for config, simulation, renderer, input, main, and animation.
+- Deterministic simulation checks confirmed five Ancient Forests at 7,200 Wood each, three unique Villager gathering positions, visible footprint contraction after harvesting, Crown Hall demolition protection, two-target demolition completion, and idle worker recovery.
+- The visual-integrity audit now registers the Ancient Forest atlas and passed with correct 1,254 × 1,254 dimensions, no missing files, no unsafe cell edges, and no bottom-contact bleed.
+- Local browser play-testing confirmed demolition mode activation, clear click targeting, queued demolition behind active repair/build work, visible dismantling progress, completed structure removal, readable Ancient Forest silhouettes at normal zoom, and no browser warnings or runtime errors.
+- `git diff --check` passed.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Repeatedly drag-select mixed houses, work yards, Palisades, Gates, and Towers to tune only any target-boundary cases found in normal play.
+2. Send large Villager groups to one Ancient Forest and verify sixteen work positions remain readable at minimum and maximum zoom.
+3. Observe each woodland threshold in a long economy test and tune stage timing only if one visual stage passes too quickly.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add demolition refunds, salvage resources, specialized demolition units, siege demolition, structure relocation, or destruction technologies yet.
+- Do not turn the Ancient Forest into hundreds of independent tree entities; preserve the staged macro-resource design for performance and readability.
+- Do not add regrowth, forestry technologies, seasonal tree states, additional ages, civilizations, or a broader economy during this pass.
+
+## CROWN SCOUT ALPHA, SCALE & ATLAS-INTEGRITY PASS — 2026-08-26
+
+### WHAT EXISTS
+
+- The Crown Scout is now a properly scaled mounted unit. The rider reads at approximately Crown Guard human scale while the horse provides the larger overall silhouette expected beside infantry.
+- Idle, walk, attack, and death artwork all use directional production atlases with true transparent gaps beneath the belly and between every visible leg.
+
+### WHAT WAS COMPLETED
+
+- Increased the Scout render size from 112 to 190 while leaving infantry scale unchanged.
+- Increased the Scout collision radius from 0.46 to 0.72 and gave mounted units wider personal-space and group-gap values, so the larger horse silhouette has matching gameplay clearance.
+- Enlarged the Scout selection ring to follow the horse's footprint instead of reading like a foot-unit marker.
+- Re-edited the existing Scout artwork in the built-in image-generation edit workflow. The correction preserved the established rider, horse, Crownforge colors, four directions, poses, lighting, and frame order while removing the opaque studio ground between the legs.
+- Added a deterministic mounted-atlas preparation tool. It removes generated neutral mattes, identifies each complete connected pose, preserves one scale across all sixteen frames, isolates overlapping frame bounds, bottom-aligns the hooves, and packs the artwork into the exact 4 × 4 grid used by the renderer.
+- Repacked the complete combat, walk, and attack sets so no spear, hoof, tail, cloak, shadow, or death pose crosses a renderer cell boundary.
+- Bumped the active runtime marker to `20260825-scoutscale2` so browsers do not retain the undersized or matte-backed Scout sheets.
+
+### KNOWN ISSUES
+
+- The Scout is still the only mounted unit standard. Its larger footprint and scale should be proven in more dense cavalry-versus-infantry encounters before another mounted roster is added.
+- The contact shadows are intentionally restrained. Revisit them only if repeated terrain tests show a specific direction losing ground contact at normal zoom.
+
+### ASSETS CREATED
+
+- `assets/crownforge-scout-combat-atlas-v3.png` — production 1,254 × 1,254 RGBA idle/locomotion/attack/death atlas, true alpha and cell-safe.
+- `assets/crownforge-scout-walk-loop-v3.png` — production 1,254 × 1,254 RGBA four-direction walk loop, true alpha and cell-safe.
+- `assets/crownforge-scout-attack-loop-v3.png` — production 1,254 × 1,254 RGBA four-direction spear-attack loop, true alpha and cell-safe.
+- The previous v2 correction sheets remain available as traceable source revisions but are no longer active runtime assets.
+
+### SYSTEMS CREATED
+
+- `tools/prepare-scout-atlas.mjs` — reusable generated-atlas matte removal, connected-pose isolation, uniform scaling, hoof-baseline alignment, and exact-cell packing pipeline for mounted units.
+- Mounted-unit physical-spacing contract covering render scale, collision radius, local avoidance, group separation, and selection-ring scale.
+- Regression assertions that prevent the Scout from returning to foot-unit scale or an older matte-backed atlas revision.
+
+### VALIDATION
+
+- `node --check` passed for the changed runtime modules and the new atlas-preparation tool.
+- `tools/remediation-regression.mjs` passed the complete suite, including Crown Stable production, Scout scale, collision, spacing, and all four animation directions.
+- `tools/visual-integrity-audit.mjs` passed with all three active Scout atlases at 1,254 × 1,254 RGBA and zero unsafe-edge or bottom-contact cells.
+- Local browser play-testing placed a trained Scout directly beside a Crown Guard. The rider now matches infantry human scale, the horse reads substantially larger, normal grass remains visible between its legs, selection follows the mounted footprint, and movement uses the directional walk loop without browser warnings or runtime errors.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Run repeated Scout attack and death sequences beside infantry at minimum, normal, and maximum zoom, changing direction between each order.
+2. Test several Scouts passing through infantry groups and narrow Palisade approaches, tuning only if the larger physical spacing causes a reproducible blockage.
+3. Use this exact alpha, cell-margin, baseline, scale, and footprint contract for the next mounted unit instead of repairing it after integration.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add cavalry formations, charge physics, trample, mounted technologies, or a large mounted roster during this correction pass.
+- Do not shrink the Scout back toward infantry size to solve congestion; adjust route clearance or encounter layout only when a reproducible case exists.
+- Do not bypass the exact-cell preparation step for future generated sprite sheets, even when a contact sheet looks visually aligned at first glance.
+
+
+## BUILDING PHYSICAL-BOUNDARY & INTERACTION-PERIMETER PASS — 2026-08-26
+
+### WHAT EXISTS
+
+- Every solid building now has its own authored physical footprint, visual-to-physical offset, interaction clearance, and perimeter slot count.
+- Villagers and other ground units route around the illustrated base of each structure instead of treating every building as a small generic rectangle centered on its anchor.
+- Construction, repair, demolition, resource drop-off, spawning, combat approach, selection, placement, and occlusion all share the same building-boundary contract.
+
+### WHAT WAS COMPLETED
+
+- Added building-specific collision footprints for the Crown Hall, Crown Barracks, Stable, Watch Hut, Homestead, Granary, Timber Yard, Stonewright Yard, Ore Wash, Lumber Mill, Quarry, Grain Mill, Storehouse, Palisade Tower, and Ashen Camp.
+- Added visual-anchor offsets so each physical footprint follows the ground-contact area of its artwork rather than the image center. The Crown Hall consequently has a much larger protected base than small work buildings.
+- Reworked building approach generation into up to eight front-first perimeter stations. Multiple Villagers can build, repair, dismantle, or deposit at one structure without sharing a point or entering the sprite.
+- Added resource-drop-off slot reservations. Simultaneous carriers choose distinct available Crown Hall perimeter stations, release those reservations after depositing or retasking, and reroute safely if their storage target disappears.
+- Updated unit collision, pathfinding destination checks, line-of-sight checks, melee approach, spawn placement, recovery placement, huddle placement, building selection outlines, placement previews, and renderer depth checks to use the physical building center and footprint.
+- Kept completed fields walkable and treated them as ground surfaces, while solid structures remain impassable.
+- Expanded placement-access validation to test a genuinely navigable cell outside the physical footprint, preventing large but valid structures such as Palisade Towers from being rejected merely because their artwork extends beyond the old logical rectangle.
+
+### KNOWN ISSUES
+
+- The current footprint values are deliberately data-driven and may need small per-building tuning if future replacement artwork changes a structure's visible ground-contact silhouette.
+- Crown Hall stair traversal remains an explicit player movement feature; ordinary construction, repair, and deposit orders intentionally use exterior perimeter stations.
+- Buildings do not yet expose a developer-only footprint overlay in normal play. Automated geometry checks and placement/selection outlines currently provide the verification surface.
+
+### ASSETS CREATED
+
+- No new artwork was required. This pass corrected how the existing production building art occupies and interacts with world space.
+
+### SYSTEMS CREATED
+
+- Data-driven building physical-boundary contract using `collisionFootprint`, `collisionOffset`, `interactionClearance`, and `interactionSlots`.
+- Shared physical-center and perimeter-approach helpers used by simulation, placement, collision, combat, and rendering.
+- Reserved multi-worker construction and storage interaction stations with cleanup on interruption, completion, target loss, and destruction.
+- Regression coverage for footprint completeness, collision ejection, safe exterior stations, distinct simultaneous Hall deposits, and distinct multi-builder Barracks positions.
+
+### VALIDATION
+
+- `node --check` passed for the changed runtime and regression modules.
+- `tools/remediation-regression.mjs` passed in both the source and playable public mirrors, including the new building-boundary, three-carrier Hall deposit, and four-builder Barracks checks.
+- `tools/visual-integrity-audit.mjs` passed with no missing runtime assets or placeholder references.
+- Local browser play-testing at normal zoom confirmed three Villagers repairing the Crown Hall from separate exterior positions, then three Villagers constructing a Watch Hut from separate perimeter stations without entering either structure's artwork.
+- The completed Watch Hut remained visually solid, Villagers returned to exterior Crown Hall positions, and the browser development log contained no warnings or runtime errors.
+- Source and playable public files match, and `git diff --check` passed.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Repeat construction and repair checks on every remaining building at maximum zoom, adjusting only structures with a reproducible visual-footprint mismatch.
+2. Test large groups depositing at the Crown Hall from several directions and through nearby player-built layouts.
+3. Consider a development-only physical-footprint overlay if later building-art revisions make boundary tuning difficult.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add building interiors, full multi-level navigation, door-entry animations, or free traversal through structure art during this pass.
+- Do not add more buildings merely to exercise the boundary system; first prove the existing set under crowded play.
+- Do not replace cohesive production building artwork when a data-only footprint or anchor correction is sufficient.
+
+
+## VILLAGER LAST-LIGHT DEFENSE PASS — 2026-08-26
+
+### WHAT EXISTS
+
+- Villagers can now defend themselves and nearby workers against hostile humanoid units without becoming regular soldiers.
+- A Villager deals 3.6 melee damage, so a 72 HP Ashen Raider requires exactly twenty successful Villager hits to defeat.
+- The first eligible Villager hit stuns a humanoid target for five seconds. When the stun ends, that target gains twenty seconds of stun immunity, displays a readable immunity crest, and becomes aggressive toward the Villager who interrupted it.
+- A Villager who would receive lethal damage instead invokes Last Light Ward: health cannot fall below one, a visible protective shell surrounds the Villager for sixty seconds, and health steadily refills to maximum over that minute.
+- A lethal attack on a Villager alerts nearby Villagers within fourteen world units. Available workers converge on the attacker, use distinct melee approach positions, and continue the defensive attack until the threat is gone or they are retasked.
+
+### WHAT WAS COMPLETED
+
+- Added explicit unit-combat capability rules. Villagers may attack hostile units but cannot attack buildings; Raiders opt into the humanoid stun contract through data rather than hard-coded art assumptions.
+- Added a complete defensive attack loop for the Villager with front, right, back, and left directions and wind-up, swing, contact, and recovery poses.
+- Added a complete directional stunned loop for the Ashen Raider so a disabled enemy visibly reels instead of freezing on an unrelated frame.
+- Added authored Last Light Ward, stun, and stun-immunity effects. Ward artwork alternates between two subtle shield poses, while compact icons identify enemy stun and temporary stun immunity without obscuring the unit.
+- Added status lifecycle processing for stun, stun immunity, Ward activation, Ward damage rejection, gradual Ward healing, recovery aggro, target loss, and death cleanup.
+- Prevented repeated Villager hits from refreshing an active stun. Damage still applies during the target's immunity period, but another stun cannot begin until the immunity expires.
+- Corrected carried-resource retasking: a Villager ordered to defend while carrying resources attacks the hostile target immediately, then resumes the pending deposit after combat rather than retaining a stale resource target.
+- Added health and status information to selected-unit UI. Villagers report Ward ready/active state and remaining protection; affected enemies report remaining stun or immunity time.
+- Updated health-bar visibility so active, selected, damaged, stunned, immune, and Warded units remain readable during the encounter.
+- Prevented stunned Raiders from receiving ordinary raid or defense movement orders until their status ends.
+
+### KNOWN ISSUES
+
+- Only units carrying the `humanoid` trait currently participate in the Villager stun contract. Future humanoid enemies must opt in deliberately and should receive their own authored stunned artwork when their silhouette differs materially from the Raider.
+- Last Light Ward deliberately becomes ready again after its sixty-second lifecycle. This makes Villagers functionally unkillable in the current first-age beta, exactly matching this defensive-test design; permanent death, charges, or a longer cooldown should be reconsidered only during a later balance pass.
+- The automatic defense call is intentionally local. Villagers farther than fourteen world units away keep their current work instead of abandoning the economy for a map-wide swarm.
+
+### ASSETS CREATED
+
+- `assets/crownforge-villager-defense-attack-loop-v1.png` — 1,254 × 1,254 RGBA 4 × 4 directional Villager hammer-attack atlas.
+- `assets/crownforge-raider-stunned-loop-v1.png` — 1,254 × 1,254 RGBA 4 × 4 directional Ashen Raider stunned atlas.
+- `assets/crownforge-last-light-status-effects-v1.png` — 1,254 × 1,254 RGBA 2 × 2 atlas containing two Ward phases, the stun spiral, and the immunity crest.
+- All three production assets use the Crownforge isometric camera, warm first-age palette, upper-left lighting, grounded contact shadows, exact cell packing, and true transparency.
+
+### SYSTEMS CREATED
+
+- Data-driven defensive combat capabilities, humanoid stun rules, stun-immunity windows, and per-target recovery aggro.
+- Last Light Ward lethal-damage interception, sixty-second invulnerability, continuous full-health restoration, and status-event lifecycle.
+- Local Villager defense rally with radius filtering, target validation, distinct melee slots, and current-order replacement only for nearby available workers.
+- Shared unit-damage pipeline used by ordinary attacks, stun application, Ward interception, combat feedback, target loss, and death.
+- Renderer support for authored world-space Ward shells plus compact stun and immunity status markers.
+- Regression fixtures covering exact hit count, stun refresh prevention, immunity, recovery aggro, swarm range, Ward activation, blocked damage, healing, expiry, and directional animation use.
+
+### VALIDATION
+
+- `node --check` passed for config, animation, simulation, renderer, main, and regression modules.
+- `tools/remediation-regression.mjs` passed in both source and playable public mirrors. The deterministic combat scenario confirmed that nineteen Villager hits leave a Raider alive, the twentieth defeats it, stun lasts five seconds, immunity lasts twenty seconds, recovery retargets the attacker, and Ward blocks lethal damage while restoring full health over sixty seconds.
+- `tools/visual-integrity-audit.mjs` passed for the playable public bundle with all three new RGBA atlases present, registered, correctly sized, and free of placeholder or fallback references.
+- Live browser testing loaded the mirrored public build, exercised selection and hostile-unit command input during a natural raid, verified the authored combat/status assets at game scale, and produced no current browser warnings or runtime errors.
+- Source and playable public runtime files match, and `git diff --check` passed.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Repeatedly test three-to-eight Villagers surrounding one Raider beside buildings, trees, Palisades, and narrow approaches; tune only reproducible melee-slot congestion.
+2. Watch the full Ward minute at minimum, normal, and maximum zoom, reducing only any effect that obscures the Villager silhouette or nearby selection markers.
+3. Test defensive interruption while carrying Food, Wood, Stone, and Gold, then confirm each worker resumes the correct deposit or accepts a clean new order.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not turn Villagers into a general military roster, add ranged Villager attacks, offensive formations, combat technologies, or map-wide automatic pursuit.
+- Do not add permanent stun-lock upgrades, additional defensive spells, healing buildings, resurrection, or a broader magic system during this pass.
+- Do not generalize the Raider's stunned artwork to visibly different future units; create matching directional states only when a new humanoid is actually introduced.
+
+
+## ASHEN ROLE-EQUIVALENT SETTLEMENT & LIMITED AI PASS — 2026-08-26
+
+### WHAT EXISTS
+
+- The Ashen enemy is now a small functioning faction rather than a camp that only emits Raiders. It owns an independent Food, Wood, Stone, and Gold economy; assigns Foragers; deposits cargo; constructs a restrained settlement; trains a capped army; defends nearby structures; and sends delayed small warbands.
+- Enemy counterparts are role-equivalent to Crownwarden content but are not recolors or flipped player art. Ashen silhouettes, materials, names, proportions, production roles, and animation families are independently authored.
+- The opening enemy force is three Ashen Foragers and one Raider. Growth is capped at four workers, seven military units, ten town structures, and two-to-four attackers per raid.
+- The Ashen visual language is weathered dark timber, woven reed, patched hide, rope, iron, bone/ochre details, and restrained ember red under the established warm upper-left Crownforge lighting.
+
+### WHAT WAS COMPLETED
+
+- Added Ashen Forager worker behavior for Wood, Food, Stone, and Gold gathering; carried-resource visuals; building construction; local storage selection; deposit; depletion recovery; and automatic return to work.
+- Added four distinct military counterparts: Ashen Outrider mounted scout, Thorn Spear anti-mounted infantry, Hearth Levy light infantry, and Hidewall heavy shield infantry. The existing Raider remains the basic aggressive melee unit.
+- Added front, right, back, and left motion artwork for every new Ashen unit. Workers also have directional gathering/construction and four carried-resource states; fighters have directional attacks with unit-specific weapons and silhouettes.
+- Added the Ashen Hearth settlement core, Reaver Lodge infantry hall, Beast Corral mounted hall, Smoke Granary, Hide Homestead, Signal Roost, Timber Rack, Stonebreak Yard, Ore Hearth, Ashen Crop Plot, Stake Wall, Stake Gate, and Stake Roost tower.
+- Added Ashen construction presentation with foundation, partial, and nearly complete stages instead of fading finished buildings into existence.
+- Added an independent enemy resource bank and data-driven production costs. Enemy construction and training no longer spend the player's resources or appear for free.
+- Added a deliberately slow build plan with a long opening window, substantial pauses between structures, delayed worker/army replacement, local-defense awareness, and raid cooldowns. The AI does not constantly spam units or attack across the map whenever one target is seen.
+- Added target-loss and defense-expiry handling so defenders return to settlement duty after a local threat disappears. Raids remain capped and readable instead of pulling every Ashen unit into one attack.
+- Added exact-cell RGBA atlas preparation for generated unit/building sheets. Every active Ashen cell now has transparent gutters on all four sides, preventing feet, weapons, horses, roofs, smoke, or wall pieces from being sampled from neighboring frames.
+- Added permanent regression coverage for the complete counterpart map, directional animation resolution, independent economy, opening roster, slow construction, population/structure caps, local defense, and first-raid delay.
+- Added a targeted visual-integrity failure condition: any unsafe edge contact in a new Ashen production atlas now fails the audit rather than merely appearing in its report.
+
+### KNOWN ISSUES
+
+- Ashen walls, gates, and towers are fully defined and have original directional artwork, but the limited AI does not automatically fortify its camp yet. This is intentional until enclosure pathing and gate use are proven under AI control.
+- The AI follows a fixed restrained first-age build plan rather than evaluating advanced economy ratios, counter-composition, expansion sites, or multiple bases.
+- Ashen fighters currently reuse the shared hit/death timing contract after their authored movement and attack states. Dedicated unit-specific hit and death atlases should be considered only after repeated live combat shows that the shared readable response is below the new visual standard.
+- The enemy settlement has no player-facing intelligence panel. Its growth is communicated through world activity and restrained scout reports so the normal interface is not cluttered.
+
+### ASSETS CREATED
+
+- `assets/crownforge-ashen-forager-motion-v1.png` — exact-cell 4 × 4 directional idle/walk atlas.
+- `assets/crownforge-ashen-forager-work-v1.png` — directional Wood, Food, Stone/Gold, and construction task atlas.
+- `assets/crownforge-ashen-forager-carry-v1.png` — directional Wood, Food, Stone, and Gold carrying atlas.
+- `assets/crownforge-ashen-outrider-motion-v1.png` and `assets/crownforge-ashen-outrider-attack-v1.png` — mounted motion and directional spear-attack atlases.
+- `assets/crownforge-thorn-spear-motion-v1.png` and `assets/crownforge-thorn-spear-attack-v1.png` — spear infantry motion and directional attack atlases.
+- `assets/crownforge-hearth-levy-motion-v1.png` and `assets/crownforge-hearth-levy-attack-v1.png` — light axe-and-shield infantry motion and attack atlases.
+- `assets/crownforge-hidewall-motion-v1.png` and `assets/crownforge-hidewall-attack-v1.png` — heavy shield infantry motion and attack atlases.
+- `assets/crownforge-ashen-hearth-v1.png` — original Ashen settlement core.
+- `assets/crownforge-reaver-lodge-v1.png` — original infantry gathering hall.
+- `assets/crownforge-beast-corral-v1.png` — original mounted-unit corral.
+- `assets/crownforge-ashen-support-buildings-v1.png` — exact-cell 3 × 3 support-building family.
+- `assets/crownforge-ashen-fortifications-v1.png` — exact-cell directional wall, gate, tower, and corner family.
+- `assets/crownforge-ashen-construction-stages-v1.png` — exact-cell foundation, partial, and near-complete construction family.
+
+### SYSTEMS CREATED
+
+- Faction-aware worker, storage, gathering, deposit, construction, production, and resource-spending rules shared by player and enemy without duplicating the simulation.
+- Independent capped Ashen economy and town-growth state machine.
+- Slow first-age enemy build planner with safe placement search and one active construction priority at a time.
+- Production-building selection and affordable-unit training for worker, infantry, specialist, and mounted roles.
+- Settlement-centered local defense, limited acquisition range, target-loss recovery, delayed raid assembly, raid-size cap, and follow-up cooldown.
+- Data-driven Ashen building artwork registry, construction-atlas routing, wall orientation routing, renderer height metadata, and animation registration.
+- Reusable exact-cell atlas preparation tool with neutral-matte and green-screen cleanup modes, uniform scale, common baselines, and audited gutters.
+
+### VALIDATION
+
+- `node --check` passed for configuration, animation, renderer, simulation, main, regression, visual audit, and the new atlas-preparation tool in the playable public mirror.
+- `tools/remediation-regression.mjs` passed the complete existing suite plus Ashen counterpart, economy, construction, production, defense, and raid-pacing scenarios.
+- The deterministic AI scenario confirmed three workers plus one defender at opening, no raid before 180 seconds, delayed first warband after the opening economy develops, ten-structure/seven-soldier/four-worker caps, and independent resource spending.
+- `tools/visual-integrity-audit.mjs` passed for the playable public bundle with no missing files, no placeholder references, no animation fallbacks, 440 directional/action combinations, and zero unsafe or bottom-contact cells across every new Ashen atlas.
+- Local browser play-testing inspected the player and enemy sides at normal and strategic zoom. The Ashen settlement expanded gradually into a spaced group of distinct support buildings and fields, then announced limited warbands rather than constant attacks. No browser warning or runtime error was recorded.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Play repeated full matches while actively defending and attacking, then tune only measured pressure spikes; the intended target is a readable first raid after the player has had time to gather and place several structures.
+2. Inspect all five Ashen combat silhouettes fighting beside one another at normal zoom, especially mounted/infantry scale, approach slots, hit response, death readability, and target loss.
+3. Test four Foragers sharing each resource type and depositing at different Ashen storage buildings, including depletion, blocked routes, retasking, and a destroyed drop-off.
+4. Add AI fortifications only after a separate pass proves that gates, enclosure pathfinding, siege access, and unit spawning cannot trap either faction.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add a second enemy faction, multiple Ashen bases, diplomacy, difficulty tiers, technology research, ages, naval behavior, siege logic, or campaign scripting.
+- Do not increase army or raid caps simply because the new roster exists; improve tactical readability and balance the current small warbands first.
+- Do not recolor Crownwarden assets for future Ashen roles. New role equivalents must keep the independent-material, independent-silhouette, full-direction contract established here.
+- Do not let the AI auto-build walls, gates, or towers until the dedicated enclosure-pathing pass is complete.
++
+
+## PALISADE GATE, CORNER, EDGE-SEAL & RECOVERY PASS — 2026-08-26
+
+### WHAT EXISTS
+
+- Palisade walls now behave as one connected fortification graph instead of unrelated painted runs.
+- Gates inherit and preserve the exact direction of the wall panel they replace, using a dedicated four-view upright gate atlas.
+- Ordinary corners share a magnetic socket and meet without the former oversized pile-of-posts overlay.
+- A Palisade Tower placed at a corner claims both participating wall legs, replaces both terminal panels, preserves correctly oriented connector panels behind the tower, and relocates any friendly unit caught in the new footprint.
+- Edge-locked walls intentionally overlap the physical map boundary so hostile and friendly units cannot slip around the final panel.
+- `Recover Selected` is available for any living selected Crownwarden unit at any time and returns the selection to clear, spaced positions at the Crown Hall approach.
+
+### WHAT WAS COMPLETED
+
+- Reworked wall endpoint, interior-divider, corner, T-junction, and legacy-save detection around shared graph sockets.
+- Preserved magnetic attachment when the player changes direction after snapping to an existing wall end.
+- Allowed long wall runs to continue to the map boundary with a deliberate final-panel overhang and collision seal.
+- Removed trees, stone, Gold, and bushes along accepted wall routes while retaining buildings as the only hard placement blocker.
+- Locked gate orientation in the placement preview and passed that exact preview into final construction so the completed artwork cannot rotate to a different branch.
+- Added four authored upright gate views for diagonal-right, diagonal-left, face, and depth directions.
+- Centered Palisade Tower collision under the visible tower artwork.
+- Added multi-branch tower replacement metadata, behind-tower wall connectors, and render ordering that keeps the tower/gate authoritative over attached wall art.
+- Removed the oversized connector cap from normal two-way corners while retaining compact structural hubs for true three- and four-way junctions.
+- Added post-placement unit eviction so a tower, gate, or wall cannot leave a Villager embedded in its physical body.
+- Expanded recovery from only detectably stuck Villagers to every selected living player unit, keeping the command usable before and after a recovery.
+
+### KNOWN ISSUES
+
+- Palisade Towers currently use one square-footprint isometric view. The join system supports corners and straight hardpoints, but a future dedicated art pass could add subtle orientation variants if repeated play shows the single view is insufficient.
+- A wall sealed to the extreme diamond edge deliberately lets the upper part of its upright sprite project visually beyond the grass silhouette; its ground contact and collision terminate at the boundary so no traversable gap remains.
+- Saved walls from the older one-span connector model are supported through midpoint sockets, but unusual hand-authored legacy overlaps may still look less exact than newly placed graph-connected walls.
+
+### ASSETS CREATED
+
+- `assets/crownforge-palisade-gate-atlas-v2.png` — 1,254 × 1,254 RGBA 2 × 2 production atlas with four original upright Crownforge Palisade Gate directions.
+- Generation brief: first-age wooden Crownforge Palisade gate family, elevated isometric RTS view, matching existing warm timber/blue-binding materials, scale, upper-left light, grounded shadows, and four directionally correct openings.
+- Production preparation removed the generated matte, preserved true transparent alpha, and kept every gate safely inside its atlas cell so neighboring views cannot bleed or clip.
+
+### SYSTEMS CREATED
+
+- Shared Palisade socket graph with deterministic endpoint, interior, corner, T-junction, cross-junction, and legacy midpoint resolution.
+- Exact gate attachment direction and preview-to-placement orientation persistence.
+- Unlimited fixed-spacing wall runs with magnetic endpoint/edge locking and collision-complete boundary sealing.
+- Multi-wall Palisade Tower replacement with terminal claims, visual bridge segments, centered collision, and occupant relocation.
+- Always-available selected-unit recovery with Crown Hall destination search, cargo-safe handling, and group spacing.
+- Regression fixtures for four gate directions, ordinary corners, corner-tower replacement, connector rendering, unit eviction, boundary overlap, and repeated recovery.
+
+### VALIDATION
+
+- `node --check` passed for the changed source and playable public JavaScript modules.
+- `tools/remediation-regression.mjs` passed the complete simulation suite, including four distinct gate orientations, clean two-way corners, two-branch tower claims, both behind-tower connector panels, occupant relocation, map-edge collision overlap, and repeated selected-unit recovery.
+- The playable public `tools/visual-integrity-audit.mjs` passed with no missing assets, placeholder references, animation fallbacks, or unsafe cells in the new gate atlas.
+- Local browser QA inspected the finished diagonal gate, normal wall corner, corner tower, and edge seal at game scale. The gate remained upright and aligned, ordinary corners met cleanly, both wall legs terminated beneath the tower without a detached post or gap, and the final edge panel overlapped the physical boundary.
+- Source and playable public runtime files were kept identical for deployment.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Play-test rapid wall-drag, reverse-drag, divider, gate, and tower placement across crowded terrain with several builders.
+2. Verify enemy pathfinding against multiple fully enclosed shapes, especially a gate at one corner and a tower at another.
+3. Inspect loaded legacy saves containing overlapping or one-span-gap walls and migrate only layouts that reproduce a visible join defect.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add stone walls, siege towers, crenellation upgrades, elevation-specific fortification art, or automated enemy enclosures during this pass.
+- Do not add elaborate gate opening machinery until unit passage, collision, and enclosure behavior are repeatedly stable.
+- Do not increase fortification complexity before the current wall, gate, tower, recovery, and pathfinding loop remains smooth in a complete match.

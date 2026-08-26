@@ -1,5 +1,5 @@
-import { ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260825-builderflow1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260825-firstage4';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260826-fortifications2';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260826-fortifications2';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -118,12 +118,18 @@ export class CrownforgeRenderer {
     this.treeAtlasReady = false;
     this.buildingStagesReady = false;
     this.treeGroveReady = false;
+    this.ancientForestReady = false;
     this.largeStoneReady = false;
     this.goldDepositAssetReady = {};
     this.firstAgeAssetReady = {};
     this.firstAgeConstructionAssetReady = {};
     this.firstAgeConstructionAtlases = {};
     this.firstAgeConstructionAtlasReady = {};
+    this.ashenBuildingAssets = {};
+    this.ashenBuildingAssetReady = {};
+    this.ashenSupportAtlasReady = false;
+    this.ashenFortificationAtlasReady = false;
+    this.ashenConstructionAtlasReady = false;
     this.enemyCampReady = false;
     this.villagerAtlases = {};
     this.villagerAtlasReady = {};
@@ -145,6 +151,7 @@ export class CrownforgeRenderer {
     this.treeAtlas = new Image();
     this.buildingStages = new Image();
     this.treeGroveAtlas = new Image();
+    this.ancientForestAtlas = new Image();
     this.largeStone = new Image();
     this.goldDepositAssets = {};
     this.enemyCamp = new Image();
@@ -152,6 +159,7 @@ export class CrownforgeRenderer {
     this.treeAtlas.addEventListener('load', () => { this.treeAtlasReady = true; });
     this.buildingStages.addEventListener('load', () => { this.buildingStagesReady = true; });
     this.treeGroveAtlas.addEventListener('load', () => { this.treeGroveReady = true; });
+    this.ancientForestAtlas.addEventListener('load', () => { this.ancientForestReady = true; });
     this.largeStone.addEventListener('load', () => { this.largeStoneReady = true; });
     this.enemyCamp.addEventListener('load', () => { this.enemyCampReady = true; });
     this.atlas.src = './assets/crownforge-asset-atlas.png';
@@ -162,6 +170,7 @@ export class CrownforgeRenderer {
     this.treeAtlas.src = TREE_ATLAS.src;
     this.buildingStages.src = BUILDING_STAGE_ATLAS.src;
     this.treeGroveAtlas.src = TREE_GROVE_ATLAS.src;
+    this.ancientForestAtlas.src = ANCIENT_FOREST_ATLAS.src;
     this.largeStone.src = LARGE_STONE_ASSET.src;
     this.enemyCamp.src = ENEMY_CAMP_ASSET.src;
     for (const [key, definition] of Object.entries(GOLD_DEPOSIT_ASSETS)) {
@@ -198,6 +207,23 @@ export class CrownforgeRenderer {
         stageAtlas.src = constructionAtlas.src;
       }
     }
+    for (const [key, definition] of Object.entries(ASHEN_BUILDING_ASSETS)) {
+      if (!definition.src || key === 'ashenCamp') continue;
+      const image = new Image();
+      this.ashenBuildingAssets[key] = image;
+      this.ashenBuildingAssetReady[key] = false;
+      image.addEventListener('load', () => { this.ashenBuildingAssetReady[key] = true; });
+      image.src = definition.src;
+    }
+    this.ashenSupportAtlas = new Image();
+    this.ashenSupportAtlas.addEventListener('load', () => { this.ashenSupportAtlasReady = true; });
+    this.ashenSupportAtlas.src = ASHEN_BUILDING_ASSETS.smokeGranary.atlas.src;
+    this.ashenFortificationAtlas = new Image();
+    this.ashenFortificationAtlas.addEventListener('load', () => { this.ashenFortificationAtlasReady = true; });
+    this.ashenFortificationAtlas.src = ASHEN_BUILDING_ASSETS.ashenWall.atlas.src;
+    this.ashenConstructionAtlas = new Image();
+    this.ashenConstructionAtlas.addEventListener('load', () => { this.ashenConstructionAtlasReady = true; });
+    this.ashenConstructionAtlas.src = ASHEN_BUILDING_ASSETS.reaverLodge.constructionAtlas.src;
     for (const [key, definition] of Object.entries(VILLAGER_ATLASES)) {
       if (!definition.src) continue;
       const image = new Image();
@@ -218,6 +244,7 @@ export class CrownforgeRenderer {
     this.pointer = { x: 0, y: 0 };
     this.selectionBox = null;
     this.buildPreview = null;
+    this.demolitionPreview = [];
     this.ripples = [];
     this.roadsideDetails = CONFIG.startingRoads ? [
       { kind: 'roadside', type: 'fence', x: 7.1, z: 38.2, size: 112, depthBias: 0.3 },
@@ -253,6 +280,7 @@ export class CrownforgeRenderer {
       this.environmentAtlas,
       this.treeAtlas,
       this.treeGroveAtlas,
+      this.ancientForestAtlas,
       this.largeStone,
       this.enemyCamp,
       this.firstAgeAssets.townCenter,
@@ -260,10 +288,14 @@ export class CrownforgeRenderer {
       this.goldDepositAssets.medium,
       this.goldDepositAssets.large,
       this.villagerAtlases.motionLoop,
+      this.villagerAtlases.defenseAttackLoop,
+      this.villagerAtlases.statusEffects,
       this.combatAtlases.soldier,
       this.combatAtlases.soldierWalk,
       this.combatAtlases.raider,
       this.combatAtlases.raiderWalk,
+      this.combatAtlases.raiderStunned,
+      this.combatAtlases.ashenForagerMotion,
       this.firstAgeAssets.stable,
       this.firstAgeConstructionAtlases.stable,
       this.firstAgeAssets.granary,
@@ -323,6 +355,7 @@ export class CrownforgeRenderer {
   setPointer(point) { this.pointer = point; }
   setSelectionBox(box) { this.selectionBox = box; }
   setBuildPreview(preview) { this.buildPreview = preview; }
+  setDemolitionPreview(buildings = []) { this.demolitionPreview = Array.isArray(buildings) ? buildings : []; }
 
   addRipple(world, color = FACTION.color) {
     this.ripples.push({ world, age: 0, color });
@@ -451,6 +484,7 @@ export class CrownforgeRenderer {
     this.drawOccludedUnitOverlays(ctx, simulation);
     this.drawWorkFeedback(ctx, simulation, time);
     this.drawCombatFeedback(ctx, simulation, time);
+    this.drawDemolitionPreview(ctx);
     this.drawBuildPreview(ctx);
     this.drawRipples(ctx, time, renderDelta);
     if (this.selectionBox) this.drawSelectionBox(ctx);
@@ -745,7 +779,8 @@ export class CrownforgeRenderer {
         const screen = this.worldToScreen(point);
         ctx.lineTo(screen.x, screen.y);
       }
-      ctx.strokeStyle = unit.command === 'attack' ? 'rgba(222, 105, 80, 0.58)' : 'rgba(195, 229, 207, 0.55)';
+      const destructive = unit.command === 'attack' || unit.command === 'demolish';
+      ctx.strokeStyle = destructive ? 'rgba(222, 105, 80, 0.58)' : 'rgba(195, 229, 207, 0.55)';
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 6]);
       ctx.stroke();
@@ -753,21 +788,32 @@ export class CrownforgeRenderer {
       const destination = this.worldToScreen(unit.path[unit.path.length - 1]);
       ctx.beginPath();
       ctx.arc(destination.x, destination.y, 5 * this.camera.zoom, 0, TAU);
-      ctx.strokeStyle = unit.command === 'attack' ? 'rgba(222, 105, 80, 0.8)' : 'rgba(195, 229, 207, 0.8)';
+      ctx.strokeStyle = destructive ? 'rgba(222, 105, 80, 0.8)' : 'rgba(195, 229, 207, 0.8)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.beginPath();
       ctx.arc(destination.x, destination.y, 1.8 * this.camera.zoom, 0, TAU);
-      ctx.fillStyle = unit.command === 'attack' ? '#de6950' : '#c3e5cf';
+      ctx.fillStyle = destructive ? '#de6950' : '#c3e5cf';
       ctx.fill();
     }
     ctx.restore();
   }
 
   drawWorldEntities(ctx, simulation, time) {
-    const kindOrder = { building: 0, 'wall-junction': 0.5, resource: 1, roadside: 2, 'roadside-shrub': 2, decoration: 3, unit: 4 };
+    const kindOrder = { building: 0, 'tower-connector': 0.25, 'wall-junction': 0.5, resource: 1, roadside: 2, 'roadside-shrub': 2, decoration: 3, unit: 4 };
     const entities = [
-      ...simulation.buildings.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.field ? -10000 + entity.x + entity.z : entity.x + entity.z + 0.2 })),
+      ...simulation.buildings.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => {
+        // Gate and tower artwork is the authoritative join surface. A long
+        // attached wall is stored as one simulation building, so its center
+        // can otherwise sort a near panel over the hardpoint and make posts
+        // appear to run through the tower. These restrained base-depth biases
+        // keep the opening/hardpoint in front only inside its own visual mass.
+        const fortificationBias = entity.type === 'palisadeTower' ? 8.5 : entity.type === 'gate' ? 3 : 0.2;
+        return { ...entity, depth: entity.field ? -10000 + entity.x + entity.z : entity.x + entity.z + fortificationBias };
+      }),
+      ...this.palisadeTowerConnectorEntities(simulation)
+        .filter((entity) => this.isWorldVisible(entity, 3))
+        .map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.25 })),
       ...this.palisadeJunctionEntities(simulation).filter((entity) => this.isWorldVisible(entity, 3)).map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.48 })),
       ...simulation.resourcesNodes.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.type === 'grain' ? -9999 + entity.x + entity.z : entity.x + entity.z + 0.3 })),
       ...this.roadsideDetails.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity, index) => ({
@@ -782,6 +828,7 @@ export class CrownforgeRenderer {
       if (entity.dead && entity.deathAge > 2.4) continue;
       if (entity.destroyed && entity.destroyAge > 2.4) continue;
       if (entity.kind === 'building') this.drawBuilding(ctx, entity, time);
+      else if (entity.kind === 'tower-connector') this.drawPalisadeTowerConnector(ctx, entity);
       else if (entity.kind === 'wall-junction') this.drawPalisadeJunction(ctx, entity);
       else if (entity.kind === 'resource') this.drawResource(ctx, entity, time);
       else if (entity.kind === 'roadside' || entity.kind === 'roadside-shrub') this.drawRoadsideDetail(ctx, entity);
@@ -812,6 +859,34 @@ export class CrownforgeRenderer {
     };
   }
 
+  palisadeTowerConnectorEntities(simulation) {
+    return simulation.buildings
+      .filter((building) => building.type === 'palisadeTower'
+        && !building.destroyed
+        && building.progress > 0.08
+        && building.attachmentConnectorSegments?.length)
+      .flatMap((tower) => tower.attachmentConnectorSegments.map((segment, index) => ({
+        id: `tower-connector-${tower.id}-${index}`,
+        kind: 'tower-connector',
+        x: segment.x,
+        z: segment.z,
+        direction: segment.direction,
+        alpha: Math.min(1, 0.55 + tower.progress * 0.45),
+      })));
+  }
+
+  drawPalisadeTowerConnector(ctx, connector) {
+    const point = this.worldToScreen(connector);
+    const visual = resolveWallVisual(connector.direction);
+    this.drawFirstAgeAsset(
+      ctx,
+      visual.asset,
+      point,
+      this.buildingRenderSize('wall') * this.camera.zoom,
+      connector.alpha ?? 1,
+    );
+  }
+
   palisadeJunctionEntities(simulation) {
     const activeWalls = simulation.buildings
       .filter((building) => building.type === 'wall' && !building.destroyed && building.progress > 0.08);
@@ -822,59 +897,27 @@ export class CrownforgeRenderer {
     }).join('|');
     if (cacheKey === this.palisadeJunctionCacheKey) return this.palisadeJunctionCache;
 
-    const walls = activeWalls.map((wall) => ({ wall, ...this.wallSegmentPoints(wall) }));
-    const span = BUILDING_TYPES.wall.wallSegmentSpan ?? BUILDING_TYPES.wall.footprint.width;
-    const junctions = [];
-    const seen = new Set();
-    const addJunction = (point, first, second) => {
-      const key = `${Math.round(point.x * 4)}:${Math.round(point.z * 4)}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      junctions.push({
-        id: `wall-junction-${key}`,
-        kind: 'wall-junction',
-        x: point.x,
-        z: point.z,
-        alpha: Math.min(1, Math.max(0.24, Math.min(first.wall.progress, second.wall.progress))),
+    const activeById = new Map(activeWalls.map((wall) => [wall.id, wall]));
+    // A normal two-way corner is already authored by the two upright wall
+    // panels meeting at their shared socket. The old oversized cap made that
+    // corner look like a pile of posts. Reserve the connector art for true
+    // T-junctions and crossings where three or four branches need a readable
+    // structural hub.
+    const junctions = simulation.getPalisadeJunctions()
+      .filter((junction) => junction.branchCount >= 3)
+      .map((junction) => {
+        const progress = junction.wallIds
+          .map((wallId) => activeById.get(wallId)?.progress ?? 1)
+          .reduce((minimum, value) => Math.min(minimum, value), 1);
+        const key = `${Math.round(junction.x * 4)}:${Math.round(junction.z * 4)}`;
+        return {
+          id: `wall-junction-${key}`,
+          kind: 'wall-junction',
+          x: junction.x,
+          z: junction.z,
+          alpha: Math.min(1, Math.max(0.24, progress)),
+        };
       });
-    };
-    for (let firstIndex = 0; firstIndex < walls.length; firstIndex += 1) {
-      const first = walls[firstIndex];
-      const firstEndpoints = [first.points[0], first.points[first.points.length - 1]];
-      for (let secondIndex = firstIndex + 1; secondIndex < walls.length; secondIndex += 1) {
-        const second = walls[secondIndex];
-        const secondEndpoints = [second.points[0], second.points[second.points.length - 1]];
-        const directionAlignment = Math.abs(first.direction.x * second.direction.x + first.direction.z * second.direction.z);
-
-        // Crossings and T-junctions share a segment center. Ignore exact
-        // collinear duplicates, which remain a single continuous visual run.
-        for (const firstPoint of first.points) {
-          for (const secondPoint of second.points) {
-            if (distance(firstPoint, secondPoint) > span * 0.4 || directionAlignment > 0.93) continue;
-            addJunction({ x: (firstPoint.x + secondPoint.x) / 2, z: (firstPoint.z + secondPoint.z) / 2 }, first, second);
-          }
-        }
-
-        // Magnetically connected runs keep one segment-span between their
-        // terminal centers. A shared upright connector at the midpoint masks
-        // both oversized panel ends and makes straight, diagonal, and corner
-        // joins read as one authored structure.
-        for (const firstPoint of firstEndpoints) {
-          for (const secondPoint of secondEndpoints) {
-            const separation = distance(firstPoint, secondPoint);
-            if (separation < span * 0.72 || separation > span * 1.28) continue;
-            const joinDirection = {
-              x: (secondPoint.x - firstPoint.x) / separation,
-              z: (secondPoint.z - firstPoint.z) / separation,
-            };
-            const firstAlignment = Math.abs(joinDirection.x * first.direction.x + joinDirection.z * first.direction.z);
-            const secondAlignment = Math.abs(joinDirection.x * second.direction.x + joinDirection.z * second.direction.z);
-            if (Math.max(firstAlignment, secondAlignment) < 0.82) continue;
-            addJunction({ x: (firstPoint.x + secondPoint.x) / 2, z: (firstPoint.z + secondPoint.z) / 2 }, first, second);
-          }
-        }
-      }
-    }
     this.palisadeJunctionCacheKey = cacheKey;
     this.palisadeJunctionCache = junctions;
     return junctions;
@@ -882,7 +925,7 @@ export class CrownforgeRenderer {
 
   drawPalisadeJunction(ctx, junction) {
     const point = this.worldToScreen(junction);
-    this.drawFirstAgeAsset(ctx, 'palisadeJunction', point, 150 * this.camera.zoom, junction.alpha ?? 1);
+    this.drawFirstAgeAsset(ctx, 'palisadeJunction', point, 112 * this.camera.zoom, junction.alpha ?? 1);
   }
 
   drawOccludedUnitOverlays(ctx, simulation) {
@@ -891,7 +934,8 @@ export class CrownforgeRenderer {
       const hiddenByBuilding = simulation.buildings.find((building) => {
         if (building.destroyed || building.progress <= 0 || building.field) return false;
         const nearStructure = simulation._distanceToBuildingEdge(unit, building) < 2.3;
-        return nearStructure && unit.x + unit.z < building.x + building.z - 0.04;
+        const collisionCenter = this.buildingCollisionCenter(building);
+        return nearStructure && unit.x + unit.z < collisionCenter.x + collisionCenter.z - 0.04;
       });
       const hiddenByResource = simulation.resourcesNodes.find((node) => {
         if (!['tree', 'grove', 'berry', 'grain', 'stone', 'gold'].includes(node.type) || node.amount <= 0) return false;
@@ -917,8 +961,9 @@ export class CrownforgeRenderer {
         if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
         else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
       }
-      this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
-      this.drawHealthBar(ctx, point.x, point.y - unitSize * 0.9 * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(style.combatAtlas));
+      this.drawUnitStatusEffects(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime);
+      this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : unit.type === 'scout' ? 1.25 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
+      this.drawHealthBar(ctx, point.x, point.y - unitSize * 0.9 * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
     }
   }
 
@@ -942,8 +987,69 @@ export class CrownforgeRenderer {
     ctx.restore();
   }
 
+  buildingScreenBounds(building) {
+    const anchor = this.worldToScreen(building);
+    const size = this.buildingRenderSize(building) * this.camera.zoom;
+    const visualHeight = this.buildingVisualHeight(building, this.buildingRenderSize(building)) * this.camera.zoom;
+    if (BUILDING_TYPES[building.type]?.wall) {
+      const points = this.wallSegmentPoints(building).points.map((point) => this.worldToScreen(point));
+      const padX = Math.max(10, size * 0.48);
+      const padTop = Math.max(16, visualHeight * 0.96);
+      const padBottom = Math.max(7, visualHeight * 0.16);
+      return {
+        minX: Math.min(...points.map((point) => point.x)) - padX,
+        maxX: Math.max(...points.map((point) => point.x)) + padX,
+        minY: Math.min(...points.map((point) => point.y)) - padTop,
+        maxY: Math.max(...points.map((point) => point.y)) + padBottom,
+      };
+    }
+    const footprint = this.buildingFootprint(building);
+    const collisionCenter = this.buildingCollisionCenter(building);
+    const corners = [
+      { x: collisionCenter.x - footprint.width / 2, z: collisionCenter.z - footprint.height / 2 },
+      { x: collisionCenter.x + footprint.width / 2, z: collisionCenter.z - footprint.height / 2 },
+      { x: collisionCenter.x + footprint.width / 2, z: collisionCenter.z + footprint.height / 2 },
+      { x: collisionCenter.x - footprint.width / 2, z: collisionCenter.z + footprint.height / 2 },
+    ].map((point) => this.worldToScreen(point));
+    return {
+      minX: Math.min(anchor.x - size * 0.66, ...corners.map((point) => point.x)),
+      maxX: Math.max(anchor.x + size * 0.66, ...corners.map((point) => point.x)),
+      minY: Math.min(anchor.y - visualHeight * 1.04, ...corners.map((point) => point.y)),
+      maxY: Math.max(anchor.y + visualHeight * 0.18, ...corners.map((point) => point.y)),
+    };
+  }
+
+  getBuildingsInScreenRect(simulation, start, end) {
+    const selection = {
+      minX: Math.min(start.x, end.x),
+      maxX: Math.max(start.x, end.x),
+      minY: Math.min(start.y, end.y),
+      maxY: Math.max(start.y, end.y),
+    };
+    return simulation.buildings.filter((building) => {
+      if (building.destroyed || building.hp <= 0 || !simulation.canDemolishBuilding(building)) return false;
+      const bounds = this.buildingScreenBounds(building);
+      return bounds.maxX >= selection.minX && bounds.minX <= selection.maxX
+        && bounds.maxY >= selection.minY && bounds.minY <= selection.maxY;
+    });
+  }
+
   getEntityAtScreen(simulation, point, purpose = 'select') {
     const world = this.screenToWorld(point);
+    if (purpose === 'demolish') {
+      return simulation.buildings
+        .filter((building) => !building.destroyed && building.hp > 0)
+        .filter((building) => {
+          const bounds = this.buildingScreenBounds(building);
+          return point.x >= bounds.minX && point.x <= bounds.maxX && point.y >= bounds.minY && point.y <= bounds.maxY;
+        })
+        .sort((a, b) => {
+          const anchorA = this.worldToScreen(a);
+          const anchorB = this.worldToScreen(b);
+          return Math.hypot(point.x - anchorA.x, point.y - anchorA.y)
+            - Math.hypot(point.x - anchorB.x, point.y - anchorB.y);
+        })[0] ?? null;
+    }
     let unitHit = null;
     let unitDistance = Infinity;
     let hostileUnitHit = null;
@@ -1075,6 +1181,13 @@ export class CrownforgeRenderer {
     this.drawAtlasCell(ctx, this.treeGroveAtlas, this.treeGroveReady, TREE_GROVE_ATLAS, column, row, screen, size, alpha);
   }
 
+  drawAncientForestAsset(ctx, stage, screen, size, alpha = 1) {
+    const safeStage = Math.max(0, Math.min(3, stage ?? 0));
+    const column = safeStage % ANCIENT_FOREST_ATLAS.columns;
+    const row = Math.floor(safeStage / ANCIENT_FOREST_ATLAS.columns);
+    this.drawAtlasCell(ctx, this.ancientForestAtlas, this.ancientForestReady, ANCIENT_FOREST_ATLAS, column, row, screen, size, alpha);
+  }
+
   drawFirstAgeDefinition(ctx, definition, image, ready, screen, size, alpha = 1) {
     if (!definition || !image || (!ready && !(image.complete && image.naturalWidth > 0))) return false;
     ctx.save();
@@ -1104,11 +1217,14 @@ export class CrownforgeRenderer {
   drawGateAsset(ctx, buildingOrPreview, screen, size, alpha = 1) {
     const definition = FIRST_AGE_ASSETS.gate;
     const image = this.firstAgeAssets?.gate;
-    const orientation = resolveWallVisual(
-      buildingOrPreview?.gateDirection
-        ?? buildingOrPreview?.wallDirection
-        ?? { x: 1, z: 0 },
-    ).orientation;
+    const storedOrientation = buildingOrPreview?.gateOrientation;
+    const orientation = storedOrientation && definition?.cellByOrientation?.[storedOrientation]
+      ? storedOrientation
+      : resolveWallVisual(
+        buildingOrPreview?.gateDirection
+          ?? buildingOrPreview?.wallDirection
+          ?? { x: 1, z: 0 },
+      ).orientation;
     const cell = definition?.cellByOrientation?.[orientation] ?? { column: 0, row: 0 };
     return this.drawAtlasCell(
       ctx,
@@ -1151,18 +1267,87 @@ export class CrownforgeRenderer {
     );
   }
 
+  drawAshenBuildingAsset(ctx, buildingOrType, screen, size, alpha = 1) {
+    const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType.type;
+    const definition = ASHEN_BUILDING_ASSETS[type];
+    if (!definition) return false;
+    if (definition.src) {
+      const image = type === 'ashenCamp' ? this.enemyCamp : this.ashenBuildingAssets[type];
+      const ready = type === 'ashenCamp' ? this.enemyCampReady : this.ashenBuildingAssetReady[type];
+      return this.drawFirstAgeDefinition(ctx, definition, image, ready, screen, size, alpha);
+    }
+    const direction = buildingOrType?.attachmentDirection
+      ?? buildingOrType?.gateDirection
+      ?? buildingOrType?.wallDirection
+      ?? { x: 1, z: 0 };
+    const orientation = resolveWallVisual(direction).orientation;
+    const cell = definition.cellByOrientation?.[orientation] ?? definition.cell;
+    if (!cell || !definition.atlas) return false;
+    const fortification = definition.atlas.src === ASHEN_BUILDING_ASSETS.ashenWall.atlas.src;
+    return this.drawAtlasCell(
+      ctx,
+      fortification ? this.ashenFortificationAtlas : this.ashenSupportAtlas,
+      fortification ? this.ashenFortificationAtlasReady : this.ashenSupportAtlasReady,
+      definition.atlas,
+      cell.column,
+      cell.row,
+      screen,
+      size,
+      alpha,
+    );
+  }
+
+  drawAshenConstructionAsset(ctx, type, stage, screen, size, alpha = 1) {
+    const atlas = ASHEN_BUILDING_ASSETS[type]?.constructionAtlas;
+    const cell = atlas?.cellByStage?.[stage];
+    if (!atlas || !cell) return false;
+    return this.drawAtlasCell(
+      ctx,
+      this.ashenConstructionAtlas,
+      this.ashenConstructionAtlasReady,
+      atlas,
+      cell.column,
+      cell.row,
+      screen,
+      size,
+      alpha,
+    );
+  }
+
+  drawAshenWallSegments(ctx, building, size, alpha = 1) {
+    const blueprint = BUILDING_TYPES[building.type];
+    const count = Math.max(1, Math.round(building.wallSegments ?? 1));
+    const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
+    const direction = building.wallDirection
+      ?? (building.wallOrientation === 'vertical' ? { x: 0, z: 1 } : { x: 1, z: 0 });
+    const magnitude = Math.hypot(direction.x, direction.z) || 1;
+    const dx = direction.x / magnitude;
+    const dz = direction.z / magnitude;
+    const start = building.wallStart ?? {
+      x: building.x - dx * (count - 1) * span / 2,
+      z: building.z - dz * (count - 1) * span / 2,
+    };
+    const placements = [];
+    for (let index = 0; index < count; index += 1) {
+      const world = { x: start.x + dx * index * span, z: start.z + dz * index * span };
+      if (!this.isWorldVisible(world, 3)) continue;
+      placements.push({ point: this.worldToScreen(world), index });
+    }
+    placements.sort((a, b) => a.point.y - b.point.y || a.index - b.index);
+    for (const placement of placements) this.drawAshenBuildingAsset(ctx, building, placement.point, size, alpha);
+  }
+
   drawBuildingStage(ctx, building, screen, size, alpha = 1) {
-    if (building.type === 'ashenCamp') {
-      if (!this.enemyCampReady) return;
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.imageSmoothingEnabled = true;
-      const aspect = ENEMY_CAMP_ASSET.width / ENEMY_CAMP_ASSET.height;
-      const width = size;
-      const height = size / aspect;
-      const destination = { x: screen.x - width / 2, y: screen.y - height * 0.98 };
-      ctx.drawImage(this.enemyCamp, destination.x, destination.y, width, height);
-      ctx.restore();
+    if (ASHEN_BUILDING_ASSETS[building.type]) {
+      const constructionStage = resolveFirstAgeConstructionStage(building.progress);
+      if (building.type === 'ashenWall' && constructionStage === 'complete') {
+        this.drawAshenWallSegments(ctx, building, size, alpha);
+        return;
+      }
+      if (constructionStage !== 'complete'
+        && this.drawAshenConstructionAsset(ctx, building.type, constructionStage, screen, size, alpha)) return;
+      const constructionAlpha = constructionStage === 'complete' ? alpha : alpha * (0.28 + building.progress * 0.72);
+      this.drawAshenBuildingAsset(ctx, building, screen, size, constructionAlpha);
       return;
     }
     if (building.type === 'gate') {
@@ -1206,14 +1391,15 @@ export class CrownforgeRenderer {
 
   buildingVisualHeight(buildingOrType, width) {
     const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType.type;
-    const definition = FIRST_AGE_ASSETS[type] ?? (type === 'ashenCamp' ? ENEMY_CAMP_ASSET : null);
-    return definition ? width * (definition.height / definition.width) : width;
+    const definition = FIRST_AGE_ASSETS[type] ?? ASHEN_BUILDING_ASSETS[type] ?? (type === 'ashenCamp' ? ENEMY_CAMP_ASSET : null);
+    if (definition?.src) return width * (definition.height / definition.width);
+    return width;
   }
 
   buildingFootprint(buildingOrType) {
     const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType.type;
     const blueprint = BUILDING_TYPES[type];
-    if (!blueprint?.wall && !blueprint?.gate) return blueprint?.footprint ?? { width: 1, height: 1 };
+    if (!blueprint?.wall && !blueprint?.gate) return blueprint?.collisionFootprint ?? blueprint?.footprint ?? { width: 1, height: 1 };
     const segments = blueprint.wall ? Math.max(1, Math.round(buildingOrType.wallSegments ?? 1)) : 1;
     const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
     const length = blueprint.footprint.width + (segments - 1) * span;
@@ -1225,6 +1411,17 @@ export class CrownforgeRenderer {
     return {
       width: Math.abs(dx) * length + Math.abs(dz) * blueprint.footprint.height,
       height: Math.abs(dz) * length + Math.abs(dx) * blueprint.footprint.height,
+    };
+  }
+
+  buildingCollisionCenter(buildingOrType, anchor = null) {
+    const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType.type;
+    const blueprint = BUILDING_TYPES[type];
+    const source = anchor ?? (typeof buildingOrType === 'object' ? buildingOrType : null);
+    const offset = blueprint?.collisionOffset ?? { x: 0, z: 0 };
+    return {
+      x: (source?.x ?? 0) + (offset.x ?? 0),
+      z: (source?.z ?? 0) + (offset.z ?? 0),
     };
   }
 
@@ -1311,7 +1508,13 @@ export class CrownforgeRenderer {
     const size = this.buildingRenderSize(building);
     const visualHeight = this.buildingVisualHeight(building, size);
     const alpha = building.destroyed ? Math.max(0, 0.7 - building.destroyAge * 0.26) : 1;
-    if (!building.destroyed) this.drawBuildingFootprint(ctx, building, building.selected, building.faction === 'enemy' ? '#d86b55' : FACTION.color);
+    const dismantling = Boolean(building.demolitionQueued && !building.destroyed);
+    if (!building.destroyed) this.drawBuildingFootprint(
+      ctx,
+      building,
+      building.selected || dismantling,
+      dismantling ? '#d86b55' : building.faction === 'enemy' ? '#d86b55' : FACTION.color,
+    );
     this.drawBuildingStage(ctx, building, point, size * this.camera.zoom, alpha);
     if (building.destroyed) {
       this.drawDestroyedBuildingTreatment(ctx, building, point, size, time);
@@ -1338,8 +1541,22 @@ export class CrownforgeRenderer {
       ctx.restore();
       this.drawConstructionTreatment(ctx, building, point, time);
     }
+    if (dismantling) {
+      ctx.save();
+      ctx.globalAlpha = 0.48 + Math.sin(time * 0.006 + building.id) * 0.12;
+      ctx.strokeStyle = '#ef9b76';
+      ctx.lineWidth = Math.max(1.2, 2 * this.camera.zoom);
+      ctx.setLineDash([7 * this.camera.zoom, 5 * this.camera.zoom]);
+      ctx.beginPath();
+      ctx.ellipse(point.x, point.y - visualHeight * 0.36 * this.camera.zoom, size * 0.39 * this.camera.zoom, visualHeight * 0.18 * this.camera.zoom, 0, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
     this.drawBuildingDamageTreatment(ctx, building, point, size, time);
-    this.drawHealthBar(ctx, point.x, point.y - visualHeight * 0.82 * this.camera.zoom, size * 0.58 * this.camera.zoom, building.hp / building.maxHp, building.progress < 1 ? `BUILD ${Math.round(building.progress * 100)}%` : '');
+    const healthLabel = dismantling
+      ? `DISMANTLE ${Math.round((1 - building.hp / Math.max(1, building.demolitionStartHp || building.maxHp)) * 100)}%`
+      : building.progress < 1 ? `BUILD ${Math.round(building.progress * 100)}%` : '';
+    this.drawHealthBar(ctx, point.x, point.y - visualHeight * 0.82 * this.camera.zoom, size * 0.58 * this.camera.zoom, building.hp / building.maxHp, healthLabel);
   }
 
   drawBuildingFootprint(ctx, building, selected = false, color = FACTION.color) {
@@ -1365,15 +1582,16 @@ export class CrownforgeRenderer {
         { x: building.x - dx * length / 2 + normal.x * thickness / 2, z: building.z - dz * length / 2 + normal.z * thickness / 2 },
       ].map((corner) => this.worldToScreen(corner));
     } else {
+      const collisionCenter = this.buildingCollisionCenter(building);
       const footprint = {
         width: baseFootprint.width + clearance * 2,
         height: baseFootprint.height + clearance * 2,
       };
       corners = [
-        { x: building.x - footprint.width / 2, z: building.z - footprint.height / 2 },
-        { x: building.x + footprint.width / 2, z: building.z - footprint.height / 2 },
-        { x: building.x + footprint.width / 2, z: building.z + footprint.height / 2 },
-        { x: building.x - footprint.width / 2, z: building.z + footprint.height / 2 },
+        { x: collisionCenter.x - footprint.width / 2, z: collisionCenter.z - footprint.height / 2 },
+        { x: collisionCenter.x + footprint.width / 2, z: collisionCenter.z - footprint.height / 2 },
+        { x: collisionCenter.x + footprint.width / 2, z: collisionCenter.z + footprint.height / 2 },
+        { x: collisionCenter.x - footprint.width / 2, z: collisionCenter.z + footprint.height / 2 },
       ].map((corner) => this.worldToScreen(corner));
     }
     ctx.save();
@@ -1496,7 +1714,8 @@ export class CrownforgeRenderer {
     const alpha = depleted ? 0.32 : 0.82 + ratio * 0.18;
     if (resource.type === 'grove') {
       const stage = ratio > 0.72 ? 0 : ratio > 0.42 ? 1 : ratio > 0.12 ? 2 : 3;
-      this.drawTreeGroveAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.92);
+      if (resource.sizeTier === 'ancient') this.drawAncientForestAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.96);
+      else this.drawTreeGroveAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.92);
     } else if (resource.type === 'grain') {
       this.drawFirstAgeAsset(ctx, 'field', point, size * this.camera.zoom, depleted ? 0.3 : 0.9);
     } else if (depleted && resource.type === 'tree') {
@@ -1579,17 +1798,66 @@ export class CrownforgeRenderer {
     const style = UNIT_TYPES[unit.type];
     const size = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
-    if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 0.84 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
+    if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 1.25 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
     if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else this.drawAsset(ctx, style.asset, point, size * this.camera.zoom, alpha);
     if (!unit.dead) {
+      this.drawUnitStatusEffects(ctx, unit, point, size * this.camera.zoom, time);
       this.drawCombatPhaseCue(ctx, unit, point, time);
-      this.drawHealthBar(ctx, point.x, point.y - size * 0.9 * this.camera.zoom, size * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(style.combatAtlas && (unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0)));
+      this.drawHealthBar(ctx, point.x, point.y - size * 0.9 * this.camera.zoom, size * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
       if (unit.carryAmount > 0) this.drawCarryBadge(ctx, point.x + 20 * this.camera.zoom, point.y - 18 * this.camera.zoom, unit.carryType, unit.carryAmount);
       if (unit.command === 'attack' && unit.attackPhase !== 'approach') this.drawAttackRing(ctx, point, time, unit.attackPhase);
       if (unit.hitFlash > 0) this.drawHitFlash(ctx, point, time);
     }
+  }
+
+  drawUnitStatusEffects(ctx, unit, point, screenSize, time = 0) {
+    const image = this.villagerAtlases.statusEffects;
+    const atlas = VILLAGER_ATLASES.statusEffects;
+    if (!image || !atlas || (!this.villagerAtlasReady.statusEffects && !(image.complete && image.naturalWidth > 0))) return;
+
+    const drawCell = (cell, centerX, centerY, width, alpha = 1) => {
+      const sourceLeft = Math.ceil(cell.column * atlas.width / atlas.columns) + 1;
+      const sourceTop = Math.ceil(cell.row * atlas.height / atlas.rows) + 1;
+      const sourceRight = Math.floor((cell.column + 1) * atlas.width / atlas.columns) - 1;
+      const sourceBottom = Math.floor((cell.row + 1) * atlas.height / atlas.rows) - 1;
+      const sourceWidth = sourceRight - sourceLeft;
+      const sourceHeight = sourceBottom - sourceTop;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(
+        image,
+        sourceLeft,
+        sourceTop,
+        sourceWidth,
+        sourceHeight,
+        centerX - width / 2,
+        centerY - width / 2,
+        width,
+        width,
+      );
+      ctx.restore();
+    };
+
+    if (unit.lastLightWardTimer > 0) {
+      const wardFrame = Math.floor(time / 280) % 2 ? atlas.cells.wardB : atlas.cells.wardA;
+      const blockedPulse = Math.max(0, Math.min(1, (unit.wardBlockedPulse ?? 0) / 0.42));
+      const breathe = 1 + Math.sin(time * 0.005 + unit.id) * 0.025 + blockedPulse * 0.08;
+      const wardSize = screenSize * 1.42 * breathe;
+      drawCell(wardFrame, point.x, point.y - wardSize * 0.5, wardSize, 0.72 + blockedPulse * 0.24);
+    }
+
+    const statusCell = unit.stunTimer > 0
+      ? atlas.cells.stunned
+      : unit.stunImmunityTimer > 0
+        ? atlas.cells.stunImmune
+        : null;
+    if (!statusCell) return;
+    const iconSize = Math.max(18, Math.min(40, screenSize * 0.5));
+    const pulse = unit.stunTimer > 0 ? 0.92 : 0.78 + Math.sin(time * 0.007 + unit.id) * 0.14;
+    drawCell(statusCell, point.x, point.y - screenSize * 0.98 - iconSize * 0.34, iconSize, pulse);
   }
 
   drawCombatPhaseCue(ctx, unit, point, time) {
@@ -1635,7 +1903,9 @@ export class CrownforgeRenderer {
         : unit;
       const point = this.worldToScreen(world);
       const alpha = (1 - progress) * 0.72;
-      const color = payload.resourceType === 'wood'
+      const color = payload.demolition
+        ? '#e47a5f'
+        : payload.resourceType === 'wood'
         ? '#c69559'
         : payload.resourceType === 'food'
           ? '#d76649'
@@ -1884,11 +2154,32 @@ export class CrownforgeRenderer {
     this.ripples = this.ripples.filter((ripple) => ripple.age < 0.8);
   }
 
+  drawDemolitionPreview(ctx) {
+    for (const building of this.demolitionPreview) {
+      if (!building || building.destroyed || !this.isWorldVisible(building, this.entityCullRadius(building))) continue;
+      this.drawBuildingFootprint(ctx, building, true, '#d86b55');
+      const point = this.worldToScreen(building);
+      const size = this.buildingRenderSize(building) * this.camera.zoom;
+      ctx.save();
+      ctx.globalAlpha = 0.78;
+      ctx.strokeStyle = '#ffd0ba';
+      ctx.lineWidth = Math.max(1.2, 1.8 * this.camera.zoom);
+      ctx.beginPath();
+      ctx.moveTo(point.x - size * 0.11, point.y - size * 0.36);
+      ctx.lineTo(point.x + size * 0.11, point.y - size * 0.14);
+      ctx.moveTo(point.x + size * 0.11, point.y - size * 0.36);
+      ctx.lineTo(point.x - size * 0.11, point.y - size * 0.14);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   drawSelectionBox(ctx) {
     const box = this.selectionBox;
+    const demolition = box.mode === 'demolition';
     ctx.save();
-    ctx.fillStyle = 'rgba(134, 196, 207, 0.12)';
-    ctx.strokeStyle = FACTION.color;
+    ctx.fillStyle = demolition ? 'rgba(216, 107, 85, 0.14)' : 'rgba(134, 196, 207, 0.12)';
+    ctx.strokeStyle = demolition ? '#e47a5f' : FACTION.color;
     ctx.lineWidth = 1.5;
     ctx.fillRect(box.x, box.y, box.width, box.height);
     ctx.strokeRect(box.x, box.y, box.width, box.height);

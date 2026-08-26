@@ -11,6 +11,8 @@ export class CrownforgeInput {
     onCommand = () => {},
     onPlacement = () => {},
     onBuildShortcut = () => {},
+    onDemolitionMode = () => {},
+    onDemolitionShortcut = () => {},
     onRecoverShortcut = () => {},
     onSelectAllVillagersShortcut = () => {},
   }) {
@@ -25,6 +27,8 @@ export class CrownforgeInput {
     this.onCommand = onCommand;
     this.onPlacement = onPlacement;
     this.onBuildShortcut = onBuildShortcut;
+    this.onDemolitionMode = onDemolitionMode;
+    this.onDemolitionShortcut = onDemolitionShortcut;
     this.onRecoverShortcut = onRecoverShortcut;
     this.onSelectAllVillagersShortcut = onSelectAllVillagersShortcut;
     this.pointer = { x: 0, y: 0 };
@@ -32,6 +36,8 @@ export class CrownforgeInput {
     this.pan = null;
     this.buildMode = null;
     this.wallDrag = null;
+    this.demolitionMode = false;
+    this.demolitionDrag = null;
     this.keys = new Set();
     this.reducedMotion = false;
     this.cursorDirty = true;
@@ -58,16 +64,18 @@ export class CrownforgeInput {
       if (event.key === 'Escape') {
         this.keys.clear();
         this.cancelBuildMode();
+        this.cancelDemolitionMode();
         this.onEscape();
         event.preventDefault();
         return;
       }
       if (this._isUiFocused()) return;
       const key = event.key.toLowerCase();
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'b', 'r', 'v'].includes(key)) event.preventDefault();
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'b', 'r', 'v', 'x'].includes(key)) event.preventDefault();
       if (event.repeat) return;
       this.keys.add(key);
       if (key === 'b') this.onBuildShortcut();
+      if (key === 'x') this.onDemolitionShortcut();
       if (key === 'r') this.onRecoverShortcut();
       if (key === 'v') this.onSelectAllVillagersShortcut();
     });
@@ -76,7 +84,9 @@ export class CrownforgeInput {
       this.keys.clear();
       this.drag = null;
       this.pan = null;
+      this.demolitionDrag = null;
       this.renderer.setSelectionBox(null);
+      this.renderer.setDemolitionPreview([]);
     });
   }
 
@@ -86,6 +96,7 @@ export class CrownforgeInput {
   }
 
   setBuildMode(type) {
+    if (this.demolitionMode) this.cancelDemolitionMode();
     this.buildMode = type;
     const world = this.renderer.screenToWorld(this.pointer);
     const preview = type === 'wall'
@@ -108,6 +119,28 @@ export class CrownforgeInput {
     this.wallDrag = null;
     this.renderer.setBuildPreview(null);
     this.onBuildMode(null);
+    this._updateCursor(this.pointer);
+  }
+
+  setDemolitionMode(value = true) {
+    const active = Boolean(value);
+    if (active && this.buildMode) this.cancelBuildMode();
+    this.demolitionMode = active;
+    this.demolitionDrag = null;
+    this.renderer.setSelectionBox(null);
+    this.renderer.setDemolitionPreview([]);
+    this.onDemolitionMode(active);
+    this._updateCursor(this.pointer);
+    if (active) this.onToast('Demolition: click one structure or drag across several. Selected Villagers dismantle them with labor; the Crown Hall is protected. Press X or Esc to cancel.');
+  }
+
+  cancelDemolitionMode() {
+    if (!this.demolitionMode && !this.demolitionDrag) return;
+    this.demolitionMode = false;
+    this.demolitionDrag = null;
+    this.renderer.setSelectionBox(null);
+    this.renderer.setDemolitionPreview([]);
+    this.onDemolitionMode(false);
     this._updateCursor(this.pointer);
   }
 
@@ -136,6 +169,24 @@ export class CrownforgeInput {
     if (this.drag) {
       this.renderer.setSelectionBox({ x: this.drag.start.x, y: this.drag.start.y, width: point.x - this.drag.start.x, height: point.y - this.drag.start.y });
     }
+    if (this.demolitionMode) {
+      if (this.demolitionDrag) {
+        this.renderer.setSelectionBox({
+          x: this.demolitionDrag.start.x,
+          y: this.demolitionDrag.start.y,
+          width: point.x - this.demolitionDrag.start.x,
+          height: point.y - this.demolitionDrag.start.y,
+          mode: 'demolition',
+        });
+        this.renderer.setDemolitionPreview(this.renderer.getBuildingsInScreenRect(this.simulation, this.demolitionDrag.start, point));
+      } else {
+        const target = this.renderer.getEntityAtScreen?.(this.simulation, point, 'demolish');
+        this.renderer.setDemolitionPreview(this.simulation.canDemolishBuilding(target) ? [target] : []);
+      }
+      this._updateCursor(point);
+      this.cursorDirty = false;
+      return;
+    }
     if (this.buildMode) {
       const world = this.renderer.screenToWorld(point);
       const preview = this.buildMode === 'wall' && this.wallDrag
@@ -150,13 +201,18 @@ export class CrownforgeInput {
   }
 
   _setCursor(cursor) {
-    const cursorClasses = ['is-select-target', 'is-move-target', 'is-gather-target', 'is-attack-target', 'is-interact-target', 'is-build-target', 'is-repair-target', 'is-build-valid', 'is-build-invalid'];
+    const cursorClasses = ['is-select-target', 'is-move-target', 'is-gather-target', 'is-attack-target', 'is-interact-target', 'is-build-target', 'is-repair-target', 'is-demolish-target', 'is-demolish-invalid', 'is-build-valid', 'is-build-invalid'];
     cursorClasses.forEach((name) => this.canvas.classList.toggle(name, name === `is-${cursor}`));
-    this.canvas.classList.toggle('is-command-target', ['move-target', 'gather-target', 'attack-target', 'interact-target', 'build-target', 'repair-target'].includes(cursor));
+    this.canvas.classList.toggle('is-command-target', ['move-target', 'gather-target', 'attack-target', 'interact-target', 'build-target', 'repair-target', 'demolish-target'].includes(cursor));
     this.canvas.style.cursor = '';
   }
 
   _updateCursor(point) {
+    if (this.demolitionMode) {
+      const target = this.renderer.getEntityAtScreen?.(this.simulation, point, 'demolish');
+      this._setCursor(this.simulation.canDemolishBuilding(target) ? 'demolish-target' : 'demolish-invalid');
+      return;
+    }
     if (this.buildMode) {
       const world = this.renderer.screenToWorld(point);
       const preview = this.buildMode === 'wall' && this.wallDrag
@@ -199,7 +255,17 @@ export class CrownforgeInput {
       this.canvas.setPointerCapture(event.pointerId);
       return;
     }
+    if (event.button === 2 && this.demolitionMode) {
+      this.cancelDemolitionMode();
+      return;
+    }
     if (event.button === 0) {
+      if (this.demolitionMode) {
+        this.demolitionDrag = { start: point };
+        this.renderer.setSelectionBox({ x: point.x, y: point.y, width: 0, height: 0, mode: 'demolition' });
+        this.canvas.setPointerCapture(event.pointerId);
+        return;
+      }
       if (this.buildMode) {
         const world = this.renderer.screenToWorld(point);
         if (this.buildMode === 'wall') {
@@ -208,7 +274,9 @@ export class CrownforgeInput {
           this.canvas.setPointerCapture(event.pointerId);
           return;
         }
-        const placed = this.simulation.placeBuilding(this.buildMode, world);
+        const preview = this.simulation.getBuildingPlacementPreview(this.buildMode, world);
+        this.renderer.setBuildPreview(preview);
+        const placed = this.simulation.placeBuilding(this.buildMode, world, preview);
         this.onPlacement({ kind: 'placement', valid: placed });
         if (placed) {
           this.renderer.addRipple(world, '#d7aa54');
@@ -256,6 +324,21 @@ export class CrownforgeInput {
 
   _up(event) {
     const point = this._point(event);
+    if (this.demolitionDrag && event.button === 0) {
+      const start = this.demolitionDrag.start;
+      const dragDistance = Math.hypot(point.x - start.x, point.y - start.y);
+      const targets = dragDistance > 8
+        ? this.renderer.getBuildingsInScreenRect(this.simulation, start, point)
+        : [this.renderer.getEntityAtScreen?.(this.simulation, point, 'demolish')].filter(Boolean);
+      const result = this.simulation.issueDemolitionOrder(targets);
+      for (const target of result.targets ?? []) this.renderer.addRipple(target, '#d86b55');
+      this.renderer.setSelectionBox(null);
+      this.renderer.setDemolitionPreview([]);
+      this.demolitionDrag = null;
+      this.onCommand(result);
+      this._updateCursor(point);
+      return;
+    }
     if (this.wallDrag && event.button === 0) {
       const end = this.renderer.screenToWorld(point);
       const placed = this.simulation.placeWallLine(this.wallDrag.start, end);

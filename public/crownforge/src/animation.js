@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260825-firstage4';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260826-fortifications2';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -18,6 +18,10 @@ export const ANIMATION_EVENTS = {
   constructionStrike: 'construction_strike',
   depositComplete: 'deposit_complete',
   deathComplete: 'death_complete',
+  stunApplied: 'stun_applied',
+  stunEnded: 'stun_ended',
+  wardTriggered: 'ward_triggered',
+  wardBlocked: 'ward_blocked',
 };
 
 export const ANIMATION_EVENT_TIMINGS = {
@@ -59,6 +63,33 @@ const directionalLoop = (atlas, { frames = [0, 1, 2, 3], fps = 3.2, loop = true,
 
 const actionLoop = (atlas, events = {}) => directionalLoop(atlas, { events });
 const actionPhase = (atlas, frames, fps = 4.8, events = {}) => directionalLoop(atlas, { frames, fps, loop: false, events });
+const directionalPose = (atlas, column) => directionalLoop(atlas, { frames: [column], fps: 1 });
+
+const ashenFighterDefinition = ({ label, motion, attack, renderSize, radius, interactionRadius = 0.8, walkFps = 6.8 }) => ({
+  label,
+  directionCount: 4,
+  atlasSize: COMBAT_ATLASES[motion],
+  atlases: {
+    combat: COMBAT_ATLASES[motion],
+    [motion]: COMBAT_ATLASES[motion],
+    [attack]: COMBAT_ATLASES[attack],
+  },
+  clips: {
+    idle: directionalPose(motion, 0),
+    walk: directionalLoop(motion, { frames: [0, 1, 2, 3], fps: walkFps, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
+    attack: actionLoop(attack, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+    attack_anticipation: actionPhase(attack, [0, 1], 5.0),
+    attack_contact: actionPhase(attack, [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+    attack_recovery: actionPhase(attack, [3, 0], 4.6),
+    hit: directionalPose(motion, 3),
+    death: directionalLoop(motion, { frames: [3, 2, 1], fps: 3, loop: false }),
+  },
+  collisionRadius: radius,
+  interactionRadius,
+  renderSize,
+  groundAnchor: { x: 0.5, y: 0.98 },
+  shadowAnchor: { x: 0.5, y: 0.98, source: 'painted-in-frame' },
+});
 
 export const ANIMATION_DEFINITIONS = {
   villager: {
@@ -71,6 +102,7 @@ export const ANIMATION_DEFINITIONS = {
       task: VILLAGER_ATLASES.task,
       carry: VILLAGER_ATLASES.carry,
       combat: VILLAGER_ATLASES.combat,
+      defenseAttackLoop: VILLAGER_ATLASES.defenseAttackLoop,
       woodLoop: VILLAGER_ATLASES.woodLoop,
       foodLoop: VILLAGER_ATLASES.foodLoop,
       fieldLoop: VILLAGER_ATLASES.fieldLoop,
@@ -104,10 +136,10 @@ export const ANIMATION_DEFINITIONS = {
       carry_stone: actionLoop('carryStoneLoop'),
       carry_gold: actionLoop('carryGoldLoop'),
       carry_supplies: actionLoop('carrySuppliesLoop'),
-      attack: singleFrame('combat', VILLAGER_ATLASES.combat.rows.attack, { events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit } }),
-      attack_anticipation: singleFrame('combat', VILLAGER_ATLASES.combat.rows.idle),
-      attack_contact: singleFrame('combat', VILLAGER_ATLASES.combat.rows.attack, { events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit } }),
-      attack_recovery: singleFrame('combat', VILLAGER_ATLASES.combat.rows.idle),
+      attack: actionLoop('defenseAttackLoop', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_anticipation: actionPhase('defenseAttackLoop', [0, 1], 5.2),
+      attack_contact: actionPhase('defenseAttackLoop', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_recovery: actionPhase('defenseAttackLoop', [3, 0], 4.8),
       hit: actionPhase('hitLoop', [0, 1, 2, 3], 14),
       death: actionPhase('deathLoop', [0, 1, 2, 3], 3.0),
     },
@@ -142,7 +174,7 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Ashen Raider',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.raider,
-    atlases: { combat: COMBAT_ATLASES.raider, raiderWalk: COMBAT_ATLASES.raiderWalk, raiderAttack: COMBAT_ATLASES.raiderAttack, raiderHit: COMBAT_ATLASES.raiderHit, raiderDeath: COMBAT_ATLASES.raiderDeath },
+    atlases: { combat: COMBAT_ATLASES.raider, raiderWalk: COMBAT_ATLASES.raiderWalk, raiderAttack: COMBAT_ATLASES.raiderAttack, raiderHit: COMBAT_ATLASES.raiderHit, raiderStunned: COMBAT_ATLASES.raiderStunned, raiderDeath: COMBAT_ATLASES.raiderDeath },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.idle),
       walk: directionalLoop('raiderWalk', { fps: 6.8, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
@@ -151,6 +183,7 @@ export const ANIMATION_DEFINITIONS = {
       attack_contact: actionPhase('raiderAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
       attack_recovery: actionPhase('raiderAttack', [3, 0], 4.8),
       hit: actionPhase('raiderHit', [0, 1, 2, 3], 14),
+      stunned: directionalLoop('raiderStunned', { frames: [0, 1, 2, 1], fps: 4.2 }),
       death: actionPhase('raiderDeath', [0, 1, 2, 3], 3.0),
     },
     collisionRadius: 0.44,
@@ -159,6 +192,70 @@ export const ANIMATION_DEFINITIONS = {
     groundAnchor: { x: 0.5, y: 0.98 },
     shadowAnchor: { x: 0.5, y: 0.98, source: 'painted-in-frame' },
   },
+  ashenForager: {
+    label: 'Ashen Forager',
+    directionCount: 4,
+    atlasSize: COMBAT_ATLASES.ashenForagerMotion,
+    atlases: {
+      combat: COMBAT_ATLASES.ashenForagerMotion,
+      ashenForagerMotion: COMBAT_ATLASES.ashenForagerMotion,
+      ashenForagerWork: COMBAT_ATLASES.ashenForagerWork,
+      ashenForagerCarry: COMBAT_ATLASES.ashenForagerCarry,
+    },
+    clips: {
+      idle: directionalPose('ashenForagerMotion', 0),
+      walk: directionalLoop('ashenForagerMotion', { fps: 7.1, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
+      gather_wood: directionalPose('ashenForagerWork', 0),
+      gather_food: directionalPose('ashenForagerWork', 1),
+      field_work: directionalPose('ashenForagerWork', 1),
+      gather_stone: directionalPose('ashenForagerWork', 2),
+      gather_gold: directionalPose('ashenForagerWork', 2),
+      construct: directionalPose('ashenForagerWork', 3),
+      carry_wood: directionalPose('ashenForagerCarry', 0),
+      carry_food: directionalPose('ashenForagerCarry', 1),
+      carry_stone: directionalPose('ashenForagerCarry', 2),
+      carry_gold: directionalPose('ashenForagerCarry', 3),
+      hit: directionalPose('ashenForagerMotion', 3),
+      death: directionalLoop('ashenForagerMotion', { frames: [3, 2, 1], fps: 3, loop: false }),
+    },
+    collisionRadius: 0.36,
+    interactionRadius: 0.78,
+    renderSize: 104,
+    groundAnchor: { x: 0.5, y: 0.98 },
+    shadowAnchor: { x: 0.5, y: 0.98, source: 'painted-in-frame' },
+  },
+  ashenOutrider: ashenFighterDefinition({
+    label: 'Ashen Outrider',
+    motion: 'ashenOutriderMotion',
+    attack: 'ashenOutriderAttack',
+    renderSize: 184,
+    radius: 0.7,
+    interactionRadius: 1.06,
+    walkFps: 7.3,
+  }),
+  thornSpear: ashenFighterDefinition({
+    label: 'Thorn Spear',
+    motion: 'thornSpearMotion',
+    attack: 'thornSpearAttack',
+    renderSize: 112,
+    radius: 0.44,
+  }),
+  hearthLevy: ashenFighterDefinition({
+    label: 'Hearth Levy',
+    motion: 'hearthLevyMotion',
+    attack: 'hearthLevyAttack',
+    renderSize: 108,
+    radius: 0.42,
+    walkFps: 7.1,
+  }),
+  hidewall: ashenFighterDefinition({
+    label: 'Ashen Hidewall',
+    motion: 'hidewallMotion',
+    attack: 'hidewallAttack',
+    renderSize: 112,
+    radius: 0.44,
+    walkFps: 6.5,
+  }),
   scout: {
     label: 'Crown Scout',
     directionCount: 4,
@@ -173,9 +270,9 @@ export const ANIMATION_DEFINITIONS = {
       attack_recovery: actionPhase('scoutAttack', [3, 0], 4.8),
       death: singleFrame('combat', COMBAT_ATLASES.scout.rowByState.death, { loop: false }),
     },
-    collisionRadius: 0.46,
-    interactionRadius: 0.86,
-    renderSize: 112,
+    collisionRadius: 0.72,
+    interactionRadius: 1.08,
+    renderSize: 190,
     groundAnchor: { x: 0.5, y: 0.98 },
     shadowAnchor: { x: 0.5, y: 0.98, source: 'painted-in-frame' },
   },
@@ -248,6 +345,7 @@ export function animationDefinition(type) {
 export function resolveAnimationState(unit) {
   const definition = animationDefinition(unit.type);
   if (unit.dead || unit.command === 'dead') return 'death';
+  if (unit.stunTimer > 0) return definition.clips.stunned ? 'stunned' : 'idle';
   if (unit.hitFlash > 0 && definition.clips.hit) return 'hit';
   if (unit.command === 'attack' || unit.visualState === 'attack') {
     if (unit.attackPhase === 'approach') return 'walk';

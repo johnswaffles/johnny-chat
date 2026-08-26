@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260825-builderflow1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260826-fortifications2';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260825-builderflow1';
-import { CrownforgeRenderer } from './renderer.js?v=20260825-builderflow1';
-import { CrownforgeSimulation } from './simulation.js?v=20260825-builderflow1';
+import { CrownforgeInput } from './input.js?v=20260826-fortifications2';
+import { CrownforgeRenderer } from './renderer.js?v=20260826-fortifications2';
+import { CrownforgeSimulation } from './simulation.js?v=20260826-fortifications2';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
@@ -42,6 +42,7 @@ const selectionRecovery = document.querySelector('#selection-recovery');
 const recoverUnitsButton = document.querySelector('#recover-units');
 const selectionVillagerActions = document.querySelector('#selection-villager-actions');
 const selectAllVillagersButton = document.querySelector('#select-all-villagers');
+const demolitionModeButton = document.querySelector('#demolition-mode');
 const loadingVeil = document.querySelector('#loading-veil');
 const loadingDetail = document.querySelector('#loading-detail');
 const loadingProgress = document.querySelector('#loading-progress');
@@ -127,6 +128,12 @@ const input = new CrownforgeInput({
     trainMenu.hidden = true;
     cancelBuildButton.hidden = !mode;
   },
+  onDemolitionMode: (active) => {
+    demolitionModeButton?.classList.toggle('is-active', active);
+    buildMenu.hidden = true;
+    trainMenu.hidden = true;
+    cancelBuildButton.hidden = !active && !input.buildMode;
+  },
   onToast: announce,
   onGesture: () => audio.unlock(),
   onSelection: (entities) => {
@@ -143,6 +150,18 @@ const input = new CrownforgeInput({
     audio.ui();
     buildMenu.hidden = !buildMenu.hidden;
     trainMenu.hidden = true;
+  },
+  onDemolitionShortcut: () => {
+    const hasVillager = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
+      && entity.faction === 'player'
+      && entity.type === 'villager'
+      && !entity.dead);
+    if (!hasVillager) {
+      announce('Select at least one Villager before using demolition.');
+      return;
+    }
+    input.setDemolitionMode(!input.demolitionMode);
+    updateUi();
   },
   onRecoverShortcut: () => {
     if (!simulation.canRecoverSelectedUnits()) return;
@@ -173,6 +192,7 @@ buildMenuToggle.addEventListener('click', () => {
     input.cancelBuildMode();
     return;
   }
+  if (input.demolitionMode) input.cancelDemolitionMode();
   buildMenu.hidden = !buildMenu.hidden;
   trainMenu.hidden = true;
 });
@@ -206,11 +226,15 @@ function beginBuildingPlacement(type) {
 buildButtons.forEach((button) => {
   button.addEventListener('click', () => beginBuildingPlacement(button.dataset.buildType));
 });
-cancelBuildButton.addEventListener('click', () => input.cancelBuildMode());
+cancelBuildButton.addEventListener('click', () => {
+  input.cancelBuildMode();
+  input.cancelDemolitionMode();
+});
 trainMenuToggle.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
   if (input.buildMode) input.cancelBuildMode();
+  if (input.demolitionMode) input.cancelDemolitionMode();
   buildMenu.hidden = true;
   trainMenu.hidden = !trainMenu.hidden;
 });
@@ -226,6 +250,7 @@ controlsToggle.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
   if (input.buildMode) input.cancelBuildMode();
+  if (input.demolitionMode) input.cancelDemolitionMode();
   buildMenu.hidden = true;
   trainMenu.hidden = true;
   controlsPanel.hidden = !controlsPanel.hidden;
@@ -240,6 +265,7 @@ restartButton.addEventListener('click', () => {
   simulation.reset();
   audio.reset(simulation);
   input.cancelBuildMode();
+  input.cancelDemolitionMode();
   buildMenu.hidden = true;
   trainMenu.hidden = true;
   victoryPanel.hidden = true;
@@ -289,6 +315,20 @@ selectAllVillagersButton?.addEventListener('click', () => {
   updateUi();
 });
 
+demolitionModeButton?.addEventListener('click', () => {
+  audio.unlock();
+  const hasVillager = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
+    && entity.faction === 'player'
+    && entity.type === 'villager'
+    && !entity.dead);
+  if (!hasVillager) {
+    announce('Select at least one Villager before using demolition.');
+    return;
+  }
+  input.setDemolitionMode(!input.demolitionMode);
+  updateUi();
+});
+
 function updateUi() {
   for (const [key, info] of Object.entries(RESOURCE_TYPES)) {
     const amount = Math.floor(simulation.resources[key]);
@@ -305,12 +345,16 @@ function updateUi() {
   ui.selectionTitle.textContent = selectionTitle();
   ui.selectionDetail.textContent = selectionStatus();
   if (selectionRecovery) selectionRecovery.hidden = !simulation.canRecoverSelectedUnits();
-  if (selectionVillagerActions) selectionVillagerActions.hidden = !simulation.selectedEntities.some((entity) => entity.kind === 'unit'
+  const hasSelectedVillager = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
     && entity.type === 'villager'
     && entity.faction === 'player'
     && !entity.dead);
+  if (selectionVillagerActions) selectionVillagerActions.hidden = !hasSelectedVillager;
+  if (!hasSelectedVillager && input.demolitionMode) input.cancelDemolitionMode();
   const preview = renderer.buildPreview;
-  ui.commandLine.textContent = input.buildMode
+  ui.commandLine.textContent = input.demolitionMode
+    ? 'DEMOLITION MODE  •  click or drag across structures  •  Crown Hall protected'
+    : input.buildMode
     ? `PLACEMENT MODE  •  ${preview?.valid ? 'site ready' : (preview?.reason ?? 'move the foundation')}`
     : commandLineText();
   ui.clock.textContent = formatClock(simulation.clock);
@@ -387,8 +431,17 @@ function updateUi() {
   const presentation = selectionPresentation();
   selectionKind.textContent = presentation.kind;
   selectionIcon.className = `ui-icon selection-icon ${presentation.icon}`;
-  placementReadout.hidden = !input.buildMode;
-  if (input.buildMode) {
+  placementReadout.hidden = !input.buildMode && !input.demolitionMode;
+  if (input.demolitionMode) {
+    const targetCount = renderer.demolitionPreview.length;
+    placementReadout.classList.toggle('is-valid', targetCount > 0);
+    placementReadout.classList.toggle('is-invalid', targetCount === 0);
+    placementIcon.className = 'ui-icon icon-cancel';
+    placementTitle.textContent = 'VILLAGER DEMOLITION';
+    placementDetail.textContent = targetCount
+      ? `${targetCount} structure${targetCount === 1 ? '' : 's'} marked · release to order dismantling`
+      : 'Click one structure or drag across several · X / Esc cancels';
+  } else if (input.buildMode) {
     const valid = Boolean(preview?.valid);
     placementReadout.classList.toggle('is-valid', valid);
     placementReadout.classList.toggle('is-invalid', !valid);
@@ -433,6 +486,9 @@ function selectionTitle() {
   const entity = entities[0];
   if (entity.kind === 'unit') return UNIT_TYPES[entity.type]?.label ?? 'Unit';
   if (entity.kind === 'building') return BUILDING_TYPES[entity.type]?.label ?? 'Structure';
+  if (entity.type === 'grove' && entity.sizeTier === 'ancient') return 'Ancient Forest';
+  if (entity.type === 'grove' && entity.sizeTier === 'large') return 'Great Woodland';
+  if (entity.type === 'grove') return 'Timber Grove';
   return entity.resourceType[0].toUpperCase() + entity.resourceType.slice(1);
 }
 
@@ -463,6 +519,10 @@ function selectionStatus() {
             ? ' · mid construction'
             : ' · late construction';
     const progress = building.progress < 1 ? ` · build ${Math.round(building.progress * 100)}%${stage}` : '';
+    if (building.demolitionQueued) {
+      const remaining = Math.round((building.demolitionWork / Math.max(1, building.demolitionMaxWork)) * 100);
+      return `${Math.ceil(building.hp)} / ${building.maxHp} HP · dismantling · ${remaining}% labor remaining · selected Villagers work from safe edge positions`;
+    }
     const damage = building.progress >= 1 && building.hp < building.maxHp
       ? ` · ${Math.round((building.hp / building.maxHp) * 100)}% integrity`
       : '';
@@ -477,8 +537,18 @@ function selectionStatus() {
   if (units.length === 1) {
     const unit = units[0];
     const cargo = unit.carryAmount > 0 ? ` · carrying ${unit.carryAmount} ${unit.carryType}` : '';
-    const health = unit.type !== 'villager' && unit.hp < unit.maxHp ? ` · ${Math.ceil(unit.hp)}/${unit.maxHp} HP` : '';
-    return `${unit.actionLabel}${health}${cargo}`;
+    const health = ` · ${Math.ceil(unit.hp)}/${unit.maxHp} HP`;
+    const status = unit.stunTimer > 0
+      ? ` · stunned ${Math.max(1, Math.ceil(unit.stunTimer))}s`
+      : unit.stunImmunityTimer > 0
+        ? ` · stun immune ${Math.ceil(unit.stunImmunityTimer)}s`
+        : '';
+    const defense = unit.type === 'villager'
+      ? unit.lastLightWardTimer > 0
+        ? ` · Last Light Ward ${Math.ceil(unit.lastLightWardTimer)}s · invulnerable`
+        : ' · defensive strike stuns humanoids · Last Light Ward ready'
+      : '';
+    return `${unit.actionLabel}${health}${cargo}${status}${defense}`;
   }
   if (units.length > 1) {
     return summarizeUnitTasks(units, { includeReady: true, maxEntries: 3 });
@@ -486,8 +556,11 @@ function selectionStatus() {
   if (entities.length === 1 && entities[0].kind === 'resource') {
     const node = entities[0];
     const info = RESOURCE_TYPES[node.resourceType];
+    const workPositions = node.type === 'grove'
+      ? node.sizeTier === 'ancient' ? 16 : node.sizeTier === 'large' ? 10 : 8
+      : 6;
     return node.amount > 0
-      ? `${Math.round(node.amount)} ${info.label.toLowerCase()} remaining · right-click to gather`
+      ? `${Math.round(node.amount)} ${info.label.toLowerCase()} remaining · ${workPositions} work position${workPositions === 1 ? '' : 's'} · right-click to gather`
       : `${info.label} depleted · choose another resource`;
   }
   return simulation.lastCommand;
