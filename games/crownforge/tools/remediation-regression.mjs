@@ -1204,7 +1204,9 @@ function checkWallOverlapAndGate() {
   const junctionRenderer = Object.create(CrownforgeRenderer.prototype);
   junctionRenderer.palisadeJunctionCacheKey = '';
   junctionRenderer.palisadeJunctionCache = [];
-  assert.equal(junctionRenderer.palisadeJunctionEntities(cornerSimulation).length, 0, 'ordinary two-way corners do not receive an oversized connector-post overlay');
+  const cornerJunctionEntities = junctionRenderer.palisadeJunctionEntities(cornerSimulation);
+  assert.equal(cornerJunctionEntities.length, 1, 'ordinary two-way corners receive one restrained connector-post overlay');
+  assert.equal(cornerJunctionEntities[0].branchCount, 2, 'ordinary corner overlay retains its two-branch size classification');
   const cornerOccupant = cornerSimulation.addUnit('villager', 242, 241.5, 'player');
   const cornerTowerPreview = cornerSimulation.getBuildingPlacementPreview('palisadeTower', { x: 242.3, z: 241.6 });
   assert.equal(cornerTowerPreview.valid, true, 'corner tower preview snaps to the shared wall socket');
@@ -1223,6 +1225,16 @@ function checkWallOverlapAndGate() {
   assert.equal(cornerVertical.destroyed, true, 'corner tower retires the vertical source run');
   assert.deepEqual(BUILDING_TYPES.palisadeTower.collisionOffset, { x: 0, z: 0 }, 'tower collision body is centered beneath the visible tower art');
   assert.equal(insideBuilding(cornerOccupant, cornerTower, 0.15), false, 'unit standing on a new corner tower socket is moved outside the tower footprint');
+
+  assert.deepEqual(FIRST_AGE_ASSETS.gate.cellByOrientation['diagonal-right'], { column: 1, row: 0 }, 'diagonal-right gate uses the falling-to-screen-right authored cell');
+  assert.deepEqual(FIRST_AGE_ASSETS.gate.cellByOrientation['diagonal-left'], { column: 0, row: 0 }, 'diagonal-left gate uses the rising-to-screen-right authored cell');
+  assert.ok(FIRST_AGE_ASSETS.wall.groundAnchorY < 0.9 && FIRST_AGE_ASSETS.wallDiagonalLeft.groundAnchorY < 0.9, 'diagonal Palisade views anchor on their ground-footprint centers');
+  assert.ok(FIRST_AGE_ASSETS.wallDepth.groundAnchorY < 0.6, 'depth Palisade view anchors at the midpoint of its receding footprint');
+  const towerAnchors = [
+    FIRST_AGE_ASSETS.palisadeTower.groundAnchorY,
+    ...Object.values(FIRST_AGE_ASSETS.palisadeTower.constructionAtlas.groundAnchorByCell),
+  ];
+  assert.ok(Math.max(...towerAnchors) - Math.min(...towerAnchors) <= 0.14, 'tower construction and completion stages stay centered on one visible ground socket');
 }
 
 function checkBlockedDestinationFallback() {
