@@ -1,5 +1,5 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260826-fortifications2';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260826-fortifications2';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260827-fortificationanchors1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260827-fortificationanchors1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -898,13 +898,7 @@ export class CrownforgeRenderer {
     if (cacheKey === this.palisadeJunctionCacheKey) return this.palisadeJunctionCache;
 
     const activeById = new Map(activeWalls.map((wall) => [wall.id, wall]));
-    // A normal two-way corner is already authored by the two upright wall
-    // panels meeting at their shared socket. The old oversized cap made that
-    // corner look like a pile of posts. Reserve the connector art for true
-    // T-junctions and crossings where three or four branches need a readable
-    // structural hub.
     const junctions = simulation.getPalisadeJunctions()
-      .filter((junction) => junction.branchCount >= 3)
       .map((junction) => {
         const progress = junction.wallIds
           .map((wallId) => activeById.get(wallId)?.progress ?? 1)
@@ -915,6 +909,7 @@ export class CrownforgeRenderer {
           kind: 'wall-junction',
           x: junction.x,
           z: junction.z,
+          branchCount: junction.branchCount,
           alpha: Math.min(1, Math.max(0.24, progress)),
         };
       });
@@ -925,7 +920,10 @@ export class CrownforgeRenderer {
 
   drawPalisadeJunction(ctx, junction) {
     const point = this.worldToScreen(junction);
-    this.drawFirstAgeAsset(ctx, 'palisadeJunction', point, 112 * this.camera.zoom, junction.alpha ?? 1);
+    // A two-way turn needs only a small grounded binding post to conceal the
+    // meeting seam. True T/cross junctions use the larger reinforced cluster.
+    const size = junction.branchCount >= 3 ? 104 : 70;
+    this.drawFirstAgeAsset(ctx, 'palisadeJunction', point, size * this.camera.zoom, junction.alpha ?? 1);
   }
 
   drawOccludedUnitOverlays(ctx, simulation) {
@@ -979,6 +977,10 @@ export class CrownforgeRenderer {
   drawAsset(ctx, assetKey, screen, size, alpha = 1) {
     if (!this.atlasReady && !(this.atlas.complete && this.atlas.naturalWidth > 0)) return;
     const rect = ASSET_RECTS[assetKey];
+    // Dedicated first-age images can still be loading during the first frame.
+    // They do not necessarily have a legacy atlas fallback, so skip that
+    // transient frame instead of dereferencing an undefined atlas rectangle.
+    if (!rect) return;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.imageSmoothingEnabled = true;

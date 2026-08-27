@@ -4317,3 +4317,54 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Do not add attacks through buildings, universal collision bypasses, or ranged line-of-sight exceptions to solve overlap errors.
 - Do not broaden the Crown Hall stair exception to enemy units.
 - Do not change resource routing, specialized drop-off priority, or building placement clearance as part of this collision-only fix.
+
+## FORTIFICATION VISUAL-ANCHOR & RELEASE-VERIFICATION PASS — 2026-08-27
+
+### WHAT EXISTS
+
+- Palisade panels, corner bindings, gate openings, tower foundations, and completed Palisade Towers now use one shared physical ground socket instead of aligning each image by its lowest opaque pixel.
+- The fortification QA gallery renders the exact legacy corner arrangement from the reported screenshots, the same corner with a tower foundation, the completed corner tower, and all four gate views.
+
+### WHAT WAS COMPLETED
+
+- Audited the previously deployed fortification change and confirmed that it reached the live Render build. The missed defect was inadequate visual coverage: the former tests proved orientation metadata and replacement counts but never rendered the corner, tower, or gate combinations.
+- Corrected the two diagonal gate-atlas mappings. The prior implementation assigned the rising and falling screen-space gate views to the opposite wall directions.
+- Added authored per-view Palisade ground anchors so diagonal-right, diagonal-left, face, and depth artwork meet at the same gameplay socket.
+- Unified Palisade Tower foundation, partial, near-complete, and completed-stage placement around the same footprint center to prevent the tower from jumping between levels while it is built.
+- Added a restrained two-branch corner binding, while retaining the larger reinforced joint for T and cross junctions.
+- Hardened the legacy-atlas fallback so a dedicated first-age construction image still loading on the first frame cannot generate a console error.
+- Expanded the visual QA gallery and regression suite to cover the exact failures reported by the player.
+
+### KNOWN ISSUES
+
+- Palisade artwork remains four authored perspective views selected from eight logical drag directions. New terrain elevation or hills will require deliberately authored elevated-wall transitions rather than rotating the current flat-ground images.
+- The compact corner binding conceals the join without introducing a new gameplay entity; it is visual reinforcement, not a selectable post.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. The existing Palisade, gate, tower, construction, and junction assets were sound; their atlas-cell mapping and ground-anchor metadata were incorrect.
+
+### SYSTEMS CREATED
+
+- Per-orientation fortification ground anchors.
+- Per-cell gate and tower-construction ground anchors.
+- Rendered release matrix for ordinary corners, tower hardpoints, construction stages, and every gate orientation.
+- Regression assertions for two-way junction creation, gate-cell direction mapping, and tower-stage anchor consistency.
+
+### VALIDATION
+
+- Source and playable-public runtime files are identical.
+- JavaScript syntax checks passed for configuration, renderer, simulation, QA gallery, and remediation regression modules.
+- The complete remediation regression suite passed, including magnetic endpoints, connected spacing, two-way corners, orientation-locked gates, multi-branch tower hardpoints, edge sealing, and construction reassignment.
+- Fresh in-app browser sessions rendered the corner/tower/gate gallery and the normal game page with no console errors or warnings.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Playtest a long free-form enclosure containing several successive turns, gates, and corner towers at minimum and maximum zoom.
+2. Add future wall styles only after they supply the same four upright perspective views and explicit socket anchors.
+3. Preserve the rendered release gallery as a required check before every fortification deployment.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add hill transitions, stone walls, siege interactions, wall upgrades, or additional gate families until this flat-ground Palisade system remains stable through normal play.
+- Do not replace authored directional wall views with rotated single images.

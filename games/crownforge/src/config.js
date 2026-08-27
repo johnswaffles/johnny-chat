@@ -1226,38 +1226,50 @@ export const FIRST_AGE_ASSETS = {
   // Palisades use authored screen-space views instead of rotating one flat
   // picture. Rotating an upright fence also rotates its posts and makes a
   // completed wall look as if it is lying on the meadow.
-  wall: { src: './assets/crownforge-palisade-diagonal-right-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
-  wallDiagonalLeft: { src: './assets/crownforge-palisade-diagonal-left-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
-  wallFace: { src: './assets/crownforge-palisade-face-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
-  wallDepth: { src: './assets/crownforge-palisade-depth-v1.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
+  // A fortification anchor is the center of its footprint on the meadow,
+  // never the lowest opaque pixel. Each authored view has a different amount
+  // of perspective depth, so one generic bottom anchor made turns climb or
+  // drop when two otherwise-correct panels met.
+  wall: { src: './assets/crownforge-palisade-diagonal-right-v1.png?v=20260827-fortificationanchors1', width: 1536, height: 1024, groundAnchorY: 0.815 },
+  wallDiagonalLeft: { src: './assets/crownforge-palisade-diagonal-left-v1.png?v=20260827-fortificationanchors1', width: 1536, height: 1024, groundAnchorY: 0.825 },
+  wallFace: { src: './assets/crownforge-palisade-face-v1.png?v=20260827-fortificationanchors1', width: 1536, height: 1024, groundAnchorY: 0.83 },
+  wallDepth: { src: './assets/crownforge-palisade-depth-v1.png?v=20260827-fortificationanchors1', width: 1536, height: 1024, groundAnchorY: 0.5 },
   // The gate is a 2x2 atlas so each upright screen-space wall direction gets
   // its own matching opening instead of rotating a flat picture.
   gate: {
-    src: './assets/crownforge-palisade-gate-atlas-v2.png?v=20260826-fortifications2',
+    src: './assets/crownforge-palisade-gate-atlas-v2.png?v=20260827-fortificationanchors1',
     width: 1254,
     height: 1254,
     columns: 2,
     rows: 2,
+    groundAnchorByCell: { '0,0': 0.94, '1,0': 0.95, '0,1': 0.972, '1,1': 0.86 },
     cellByOrientation: {
-      'diagonal-right': { column: 0, row: 0 },
-      'diagonal-left': { column: 1, row: 0 },
+      // The atlas's top-left opening rises to screen-right (diagonal-left),
+      // while the top-right opening falls to screen-right (diagonal-right).
+      // These two cells were previously reversed even though the stored
+      // orientation metadata itself was correct.
+      'diagonal-right': { column: 1, row: 0 },
+      'diagonal-left': { column: 0, row: 0 },
       face: { column: 0, row: 1 },
       depth: { column: 1, row: 1 },
     },
   },
   palisadeTower: {
-    src: './assets/crownforge-palisade-tower-first-age-v1.png?v=20260825-palisadefort1',
+    src: './assets/crownforge-palisade-tower-first-age-v1.png?v=20260827-fortificationanchors1',
     width: 1254,
     height: 1254,
-    groundAnchorY: 0.9601,
+    groundAnchorY: 0.85,
     constructionAtlas: {
-      src: './assets/crownforge-palisade-tower-construction-atlas-v1.png?v=20260825-palisadefort1',
+      src: './assets/crownforge-palisade-tower-construction-atlas-v1.png?v=20260827-fortificationanchors1',
       width: 1254,
       height: 1254,
       columns: 2,
       rows: 2,
       destinationAspect: 1,
-      groundAnchorByCell: { '0,0': 0.9984, '1,0': 0.9984, '0,1': 0.9296 },
+      // All three stages use the same footprint center. The earlier
+      // lowest-pixel anchors visibly moved the tower down and right as it was
+      // built even though its simulation socket never changed.
+      groundAnchorByCell: { '0,0': 0.72, '1,0': 0.82, '0,1': 0.82 },
       cellByStage: {
         foundation: { column: 0, row: 0 },
         partial: { column: 1, row: 0 },
@@ -1266,9 +1278,10 @@ export const FIRST_AGE_ASSETS = {
     },
   },
   palisadeJunction: {
-    src: './assets/crownforge-palisade-junction-post-v1.png?v=20260825-palisadefort1',
+    src: './assets/crownforge-palisade-junction-post-v1.png?v=20260827-fortificationanchors1',
     width: 1254,
     height: 1254,
+    groundAnchorY: 0.82,
   },
 };
 
