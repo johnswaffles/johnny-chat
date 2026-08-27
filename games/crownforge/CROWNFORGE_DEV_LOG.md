@@ -4149,7 +4149,6 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Do not increase army or raid caps simply because the new roster exists; improve tactical readability and balance the current small warbands first.
 - Do not recolor Crownwarden assets for future Ashen roles. New role equivalents must keep the independent-material, independent-silhouette, full-direction contract established here.
 - Do not let the AI auto-build walls, gates, or towers until the dedicated enclosure-pathing pass is complete.
-+
 
 ## PALISADE GATE, CORNER, EDGE-SEAL & RECOVERY PASS — 2026-08-26
 
@@ -4216,3 +4215,105 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Do not add stone walls, siege towers, crenellation upgrades, elevation-specific fortification art, or automated enemy enclosures during this pass.
 - Do not add elaborate gate opening machinery until unit passage, collision, and enclosure behavior are repeatedly stable.
 - Do not increase fortification complexity before the current wall, gate, tower, recovery, and pathfinding loop remains smooth in a complete match.
+
+
+## WORLD-ASSET GROUND-CONTACT PASS — 2026-08-26
+
+### WHAT EXISTS
+
+- Completed Crownwarden and Ashen buildings, fields, construction stages, trees, groves, bushes, Stone deposits, and Gold deposits now share an explicit visible-ground baseline instead of being positioned from the bottom of each image rectangle.
+- Selection, active-construction, and dismantling footprints remain available as command feedback, but completed unselected structures no longer carry a permanent translucent collision diamond beneath their artwork.
+
+### WHAT WAS COMPLETED
+
+- Alpha-audited the visible bottom edge of every active first-age building family and the principal environment/resource families.
+- Added data-driven `groundAnchorY` metadata for individual assets and `groundAnchorByCell` metadata where different atlas cells have materially different transparent lower margins.
+- Reworked the shared direct-image and atlas-cell render paths to align visible soil, roots, foundations, fence lines, and rubble with the gameplay ground point.
+- Routed large Stone and every Gold-deposit tier through the same grounded direct-image renderer instead of maintaining separate hard-coded bottom alignment.
+- Removed the permanent filled collision footprint from completed unselected buildings. This eliminates the square-shadow effect that was especially obvious beneath fields while preserving useful placement and selection feedback.
+- Kept fields in the ordinary ground layer so units continue to render on top of the crop plot rather than behind it.
+
+### KNOWN ISSUES
+
+- Many production buildings intentionally include a narrow authored dirt or gravel apron. This is part of each building asset and remains visible, but the former extra translucent square/diamond overlay is gone.
+- Palisade direction assets retain their established socket baselines because their endpoints and join geometry are authored as a connected system. They were not changed during this building/resource grounding pass.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. The supplied building, field, and resource art already contained usable ground contact; the visible floating came from permanent renderer feedback and inconsistent treatment of transparent padding.
+
+### SYSTEMS CREATED
+
+- Shared alpha-aware ground-anchor resolution with safe fallback and clamping.
+- Per-cell atlas baseline support for construction stages and changing grove/forest depletion silhouettes.
+- Ground-contact regression coverage for completed, selected, and under-construction structures plus representative building and resource families.
+
+### VALIDATION
+
+- `node --check` passed for the source and playable-public configuration and renderer modules.
+- `tools/remediation-regression.mjs` passed the complete suite, including authored ground anchors, per-cell anchors, safety clamping, hidden completed-building footprints, retained selection feedback, and retained construction feedback.
+- Browser QA inspected economy buildings, two completed fields, Crown Hall, Barracks, Stable, foundation/partial/near-complete construction stages, and representative natural-resource nodes at gameplay zoom. Structures now meet the meadow through their authored soil/foundation edge without the previous square collision shadow.
+- Source and playable-public runtime files were kept identical.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Recheck newly introduced building and resource art against the same visible-alpha baseline before registration so transparent padding never becomes a positioning bug again.
+2. Inspect dirt-apron color matching during future terrain-biome work; adjust the authored apron only if a new biome creates a real seam.
+3. Re-test selected and actively constructed structures at minimum and maximum zoom to ensure their temporary command footprints remain clear without reading as permanent terrain.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not regenerate otherwise sound buildings merely to remove their intentional dirt aprons.
+- Do not add dynamic terrain deformation, height maps, biome-specific foundations, or generalized projected shadows during this correction pass.
+- Do not alter Palisade socket art or collision baselines without a dedicated wall-join regression pass.
+
+## CROWN HALL HOSTILE-EXCLUSION & COMBAT-RECOVERY PASS — 2026-08-27
+
+### WHAT EXISTS
+
+- The Crown Hall now has a dedicated unit-only exclusion ring outside its authored physical footprint. Player and enemy units cannot settle inside the broad porch and lower-roof silhouette.
+- A hostile unit found inside any solid building boundary is moved to the nearest valid perimeter before a direct melee route is chosen.
+- Crown Hall stair access remains a deliberate player-only corridor; stale enemy stair state cannot exempt a Marauder from ordinary collision.
+
+### WHAT WAS COMPLETED
+
+- Added `unitExclusionPadding` as a separate building rule and set a one-world-unit safety ring for the Crown Hall.
+- Preserved the Hall's prior economy and placement clearance, so the larger no-entry zone does not change specialized drop-off priority, construction spacing, or building scale.
+- Applied the unit-only boundary to movement constraints, path cells, approach stations, construction, repair, demolition, drop-off, spawning, combat range, and emergency relocation.
+- Added a small collision epsilon so a unit projected exactly onto a legal boundary does not remain falsely marked as blocked because of floating-point rounding.
+- Added embedded-target recovery before melee routing. The target retains its gameplay identity and health but loses stale motion/path state and is placed at an attackable perimeter point.
+- Removed false positive attack feedback: a hostile click is reported as successful only when at least one selected attacker actually receives or queues a route.
+
+### KNOWN ISSUES
+
+- This fail-safe fixes accidental overlap with solid structures; it does not permit units to attack through legitimate buildings, walls, or other large obstacles.
+- The Crown Hall stair corridor remains player-only until building interiors and enemy stair traversal are intentionally designed.
+
+### ASSETS CREATED
+
+- No new artwork was required. This pass corrected collision, routing, and command-state behavior around the existing Crown Hall asset.
+
+### SYSTEMS CREATED
+
+- Per-building unit-exclusion padding independent from economy, placement, and visual-footprint calculations.
+- Embedded hostile detection and nearest-open-perimeter recovery before direct combat routing.
+- Regression coverage for hostile exclusion on all four Crown Hall sides, deep-center recovery, honest attack-command feedback, reachable melee approach, and landed damage.
+
+### VALIDATION
+
+- `node --check` passed for the changed source and playable-public configuration, simulation, and regression modules.
+- `tools/remediation-regression.mjs` passed the complete suite, including specialized Gold drop-off priority, Crown Hall stair traversal, building collision, four-sided hostile exclusion, deep-center Raider recovery, and melee damage.
+- A focused browser playtest placed Raiders just inside every Hall side and one at the collision center. The result reported `BOUNDARY CLEAR`, accepted the direct Crown Guard attack, and reduced the recovered Raider from 72 HP to 0 HP.
+- The changed source and playable-public runtime and regression files were kept identical.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Re-test a live raid with several Crown Guards and Marauders approaching the Hall from different sides, including the stair-facing south side.
+2. Inspect old save states containing units near oversized structures and confirm the first simulation tick relocates them without visible teleporting from already-valid positions.
+3. Apply unit-only padding to another monumental building only when its artwork demonstrably needs it; do not inflate every structure by default.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add attacks through buildings, universal collision bypasses, or ranged line-of-sight exceptions to solve overlap errors.
+- Do not broaden the Crown Hall stair exception to enemy units.
+- Do not change resource routing, specialized drop-off priority, or building placement clearance as part of this collision-only fix.

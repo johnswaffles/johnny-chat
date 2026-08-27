@@ -1144,9 +1144,14 @@ export class CrownforgeRenderer {
     ctx.imageSmoothingEnabled = true;
     const destinationWidth = size;
     const destinationHeight = size * (atlas.destinationAspect ?? 1);
+    const groundAnchorY = this.assetGroundAnchorY(atlas, column, row);
     const destination = {
       x: screen.x - destinationWidth / 2,
-      y: screen.y - destinationHeight * 0.98 + yOffset,
+      // Ground the visible artwork, not the transparent rectangle around it.
+      // Generated assets intentionally keep safe padding so roofs, foliage,
+      // and construction frames never clip. That padding varies per asset and
+      // used to lift shorter buildings and resource nodes above the meadow.
+      y: screen.y - destinationHeight * groundAnchorY + yOffset,
     };
     ctx.drawImage(
       image,
@@ -1196,10 +1201,23 @@ export class CrownforgeRenderer {
     const aspect = definition.width / definition.height;
     const width = size;
     const height = size / aspect;
-    ctx.translate(screen.x, screen.y - height * 0.48);
+    const groundAnchorY = this.assetGroundAnchorY(definition);
+    ctx.translate(screen.x, screen.y - height * (groundAnchorY - 0.5));
     ctx.drawImage(image, -width / 2, -height / 2, width, height);
     ctx.restore();
     return true;
+  }
+
+  assetGroundAnchorY(definition, column = null, row = null) {
+    const cellKey = column == null || row == null ? null : `${column},${row}`;
+    const authored = cellKey ? definition?.groundAnchorByCell?.[cellKey] : null;
+    const anchor = Number.isFinite(authored)
+      ? authored
+      : Number.isFinite(definition?.groundAnchorY) ? definition.groundAnchorY : 0.98;
+    // Keep malformed future metadata from throwing a sprite far off its
+    // gameplay anchor. A small amount above 1 is permitted for authored
+    // effects, while ordinary structures remain inside the image plate.
+    return Math.max(0.5, Math.min(1.05, anchor));
   }
 
   drawFirstAgeAsset(ctx, type, screen, size, alpha = 1) {
@@ -1509,7 +1527,13 @@ export class CrownforgeRenderer {
     const visualHeight = this.buildingVisualHeight(building, size);
     const alpha = building.destroyed ? Math.max(0, 0.7 - building.destroyAge * 0.26) : 1;
     const dismantling = Boolean(building.demolitionQueued && !building.destroyed);
-    if (!building.destroyed) this.drawBuildingFootprint(
+    // A collision footprint is command feedback, not a permanent world
+    // shadow. Drawing it beneath every completed structure created dark
+    // square islands—especially obvious under fields—and made otherwise
+    // grounded artwork appear to hover. Keep it only while it communicates a
+    // selection, active construction, or dismantling state.
+    const showFootprint = building.selected || dismantling || building.progress < 1;
+    if (!building.destroyed && showFootprint) this.drawBuildingFootprint(
       ctx,
       building,
       building.selected || dismantling,
@@ -1728,23 +1752,29 @@ export class CrownforgeRenderer {
       const image = this.goldDepositAssets[assetKey];
       if (image && this.goldDepositAssetReady[assetKey]) {
         const width = size * (depleted ? 0.92 : 0.95 + ratio * 0.05) * this.camera.zoom;
-        const height = width * (definition.height / definition.width);
-        ctx.save();
-        ctx.globalAlpha = depleted ? 0.82 : 0.9 + ratio * 0.1;
-        ctx.imageSmoothingEnabled = true;
-        ctx.drawImage(image, point.x - width / 2, point.y - height * 0.98, width, height);
-        ctx.restore();
+        this.drawFirstAgeDefinition(
+          ctx,
+          definition,
+          image,
+          this.goldDepositAssetReady[assetKey],
+          point,
+          width,
+          depleted ? 0.82 : 0.9 + ratio * 0.1,
+        );
       } else {
         this.drawEnvironmentAsset(ctx, depleted ? 'pebbles' : 'stone', depleted ? 3 : resource.variant, point, size * scale * this.camera.zoom, alpha);
       }
     } else if (resource.type === 'stone' && resource.sizeTier === 'large' && !depleted && this.largeStoneReady) {
       const width = size * this.camera.zoom;
-      const height = width * (LARGE_STONE_ASSET.height / LARGE_STONE_ASSET.width);
-      ctx.save();
-      ctx.globalAlpha = 0.86 + ratio * 0.14;
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(this.largeStone, point.x - width / 2, point.y - height * 0.98, width, height);
-      ctx.restore();
+      this.drawFirstAgeDefinition(
+        ctx,
+        LARGE_STONE_ASSET,
+        this.largeStone,
+        this.largeStoneReady,
+        point,
+        width,
+        0.86 + ratio * 0.14,
+      );
     } else if (depleted && resource.type === 'stone') {
       this.drawEnvironmentAsset(ctx, 'pebbles', 3, point, size * 0.7 * this.camera.zoom, 0.76);
     } else {

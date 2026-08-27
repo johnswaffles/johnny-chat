@@ -450,6 +450,10 @@ export const BUILDING_TYPES = {
     collisionFootprint: { width: 17, height: 14 },
     collisionOffset: { x: -6.6, z: -6.6 },
     collisionClearance: 1.8,
+    // This extra ring applies only to moving units. Keeping it separate from
+    // collisionClearance prevents the larger no-entry boundary from changing
+    // drop-off priority, placement spacing, or the authored building scale.
+    unitExclusionPadding: 1,
     interactionSlots: 8,
     entrance: 'south',
     // The first-age Hall has a readable south stair run. Units may enter only
@@ -1017,6 +1021,10 @@ export const ENVIRONMENT_ATLAS = {
   height: 1254,
   columns: 4,
   rows: 4,
+  // Alpha-audited baseline for the visible soil/foliage contact band. The
+  // former rectangle-bottom anchor left every tree, bush, stone, and stump a
+  // few pixels above the meadow.
+  groundAnchorY: 0.944,
   rowByType: { tree: 0, berry: 1, stone: 2, log: 3, stump: 3, flowers: 3, pebbles: 3 },
 };
 
@@ -1029,6 +1037,7 @@ export const TREE_ATLAS = {
   height: 313,
   columns: 4,
   rows: 1,
+  groundAnchorY: 0.9453,
 };
 
 export const TREE_GROVE_ATLAS = {
@@ -1037,6 +1046,12 @@ export const TREE_GROVE_ATLAS = {
   height: 1278,
   columns: 2,
   rows: 2,
+  groundAnchorByCell: {
+    '0,0': 0.989,
+    '1,0': 0.9984,
+    '0,1': 0.9011,
+    '1,1': 0.8917,
+  },
 };
 
 export const ANCIENT_FOREST_ATLAS = {
@@ -1045,31 +1060,39 @@ export const ANCIENT_FOREST_ATLAS = {
   height: 1254,
   columns: 2,
   rows: 2,
+  groundAnchorByCell: {
+    '0,0': 0.9824,
+    '1,0': 0.9824,
+    '0,1': 0.9488,
+    '1,1': 0.96,
+  },
 };
 
 export const LARGE_STONE_ASSET = {
   src: './assets/crownforge-stone-deposit-large-v1.png?v=20260819-unitpass3',
   width: 1536,
   height: 1024,
+  groundAnchorY: 0.9561,
 };
 
 // Gold uses a small authored family rather than recoloring the stone atlas.
 // Each tier has its own silhouette, and exhausted veins retain a low worked
 // rubble state so depletion reads without a floating label.
 export const GOLD_DEPOSIT_ASSETS = {
-  small: { src: './assets/crownforge-gold-deposit-small-v1.png?v=20260822-goldpass1', width: 1536, height: 1024 },
-  medium: { src: './assets/crownforge-gold-deposit-medium-v1.png?v=20260822-goldpass1', width: 1536, height: 1024 },
-  large: { src: './assets/crownforge-gold-deposit-large-v1.png?v=20260822-goldpass1', width: 1536, height: 1024 },
-  depleted: { src: './assets/crownforge-gold-deposit-depleted-v1.png?v=20260822-goldpass1', width: 1536, height: 1024 },
+  small: { src: './assets/crownforge-gold-deposit-small-v1.png?v=20260822-goldpass1', width: 1536, height: 1024, groundAnchorY: 0.8018 },
+  medium: { src: './assets/crownforge-gold-deposit-medium-v1.png?v=20260822-goldpass1', width: 1536, height: 1024, groundAnchorY: 0.959 },
+  large: { src: './assets/crownforge-gold-deposit-large-v1.png?v=20260822-goldpass1', width: 1536, height: 1024, groundAnchorY: 0.9365 },
+  depleted: { src: './assets/crownforge-gold-deposit-depleted-v1.png?v=20260822-goldpass1', width: 1536, height: 1024, groundAnchorY: 0.8936 },
 };
 
 export const FIRST_AGE_ASSETS = {
-  townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024 },
-  barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-uprightwalls2', width: 1536, height: 1024 },
+  townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024, groundAnchorY: 0.9404 },
+  barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-uprightwalls2', width: 1536, height: 1024, groundAnchorY: 0.9355 },
   stable: {
     src: './assets/crownforge-stable-first-age-v1.png?v=20260824-firstage1',
     width: 1536,
     height: 1024,
+    groundAnchorY: 0.9209,
     constructionAtlas: {
       src: './assets/crownforge-stable-construction-atlas-v1.png?v=20260824-firstage1',
       width: 1536,
@@ -1077,6 +1100,7 @@ export const FIRST_AGE_ASSETS = {
       columns: 2,
       rows: 2,
       destinationAspect: 512 / 768,
+      groundAnchorByCell: { '0,0': 0.9196, '1,0': 0.9294, '0,1': 0.9235 },
       cellByStage: {
         foundation: { column: 0, row: 0 },
         partial: { column: 1, row: 0 },
@@ -1088,6 +1112,7 @@ export const FIRST_AGE_ASSETS = {
     src: './assets/crownforge-watch-hut-first-age-v1.png?v=20260825-firstage4',
     width: 1300,
     height: 1209,
+    groundAnchorY: 0.9636,
     constructionAtlas: {
       src: './assets/crownforge-watch-hut-construction-atlas-v1.png?v=20260825-firstage4',
       width: 1536,
@@ -1095,6 +1120,7 @@ export const FIRST_AGE_ASSETS = {
       columns: 2,
       rows: 2,
       destinationAspect: 512 / 768,
+      groundAnchorByCell: { '0,0': 0.998, '1,0': 0.998, '0,1': 0.9647 },
       cellByStage: {
         foundation: { column: 0, row: 0 },
         partial: { column: 1, row: 0 },
@@ -1106,6 +1132,7 @@ export const FIRST_AGE_ASSETS = {
     src: './assets/crownforge-granary-first-age-v1.png?v=20260824-firstage1',
     width: 1536,
     height: 1024,
+    groundAnchorY: 0.8799,
     constructionAtlas: {
       src: './assets/crownforge-granary-construction-atlas-v1.png?v=20260824-firstage1',
       width: 1536,
@@ -1113,6 +1140,7 @@ export const FIRST_AGE_ASSETS = {
       columns: 2,
       rows: 2,
       destinationAspect: 512 / 768,
+      groundAnchorByCell: { '0,0': 0.9373, '1,0': 0.9588, '0,1': 0.9176 },
       cellByStage: {
         foundation: { column: 0, row: 0 },
         partial: { column: 1, row: 0 },
@@ -1124,6 +1152,7 @@ export const FIRST_AGE_ASSETS = {
     src: './assets/crownforge-homestead-first-age-v1.png?v=20260824-firstage3',
     width: 1536,
     height: 1024,
+    groundAnchorY: 0.9609,
     constructionAtlas: {
       src: './assets/crownforge-homestead-construction-atlas-v1.png?v=20260824-firstage3',
       width: 1536,
@@ -1131,6 +1160,7 @@ export const FIRST_AGE_ASSETS = {
       columns: 2,
       rows: 2,
       destinationAspect: 512 / 768,
+      groundAnchorByCell: { '0,0': 0.998, '1,0': 0.998, '0,1': 0.851 },
       cellByStage: {
         foundation: { column: 0, row: 0 },
         partial: { column: 1, row: 0 },
@@ -1142,6 +1172,7 @@ export const FIRST_AGE_ASSETS = {
     src: './assets/crownforge-timber-yard-first-age-v1.png?v=20260824-firstage2',
     width: 1536,
     height: 1024,
+    groundAnchorY: 0.9326,
     constructionAtlas: {
       src: './assets/crownforge-timber-yard-construction-atlas-v1.png?v=20260824-firstage2',
       width: 1536,
@@ -1149,6 +1180,7 @@ export const FIRST_AGE_ASSETS = {
       columns: 2,
       rows: 2,
       destinationAspect: 512 / 768,
+      groundAnchorByCell: { '0,0': 0.998, '1,0': 0.998, '0,1': 0.9314 },
       cellByStage: {
         foundation: { column: 0, row: 0 },
         partial: { column: 1, row: 0 },
@@ -1160,6 +1192,7 @@ export const FIRST_AGE_ASSETS = {
     src: './assets/crownforge-stonewright-yard-first-age-v1.png?v=20260824-firstage2',
     width: 1536,
     height: 1024,
+    groundAnchorY: 0.9473,
     constructionAtlas: {
       src: './assets/crownforge-stonewright-yard-construction-atlas-v1.png?v=20260824-firstage2',
       width: 1536,
@@ -1167,6 +1200,7 @@ export const FIRST_AGE_ASSETS = {
       columns: 2,
       rows: 2,
       destinationAspect: 512 / 768,
+      groundAnchorByCell: { '0,0': 0.9294, '1,0': 0.998, '0,1': 0.9569 },
       cellByStage: {
         foundation: { column: 0, row: 0 },
         partial: { column: 1, row: 0 },
@@ -1178,16 +1212,17 @@ export const FIRST_AGE_ASSETS = {
     src: './assets/crownforge-ore-wash-v1.png?v=20260823-orewashstages1',
     width: 1536,
     height: 1024,
+    groundAnchorY: 0.9248,
     constructionStages: {
-      foundation: { src: './assets/crownforge-ore-wash-foundation-v1.png?v=20260823-orewashstages1', width: 1536, height: 1024 },
-      partial: { src: './assets/crownforge-ore-wash-partial-v1.png?v=20260823-orewashstages1', width: 1536, height: 1024 },
-      nearComplete: { src: './assets/crownforge-ore-wash-near-complete-v1.png?v=20260823-orewashstages1', width: 1536, height: 1024 },
+      foundation: { src: './assets/crownforge-ore-wash-foundation-v1.png?v=20260823-orewashstages1', width: 1536, height: 1024, groundAnchorY: 0.916 },
+      partial: { src: './assets/crownforge-ore-wash-partial-v1.png?v=20260823-orewashstages1', width: 1536, height: 1024, groundAnchorY: 0.9248 },
+      nearComplete: { src: './assets/crownforge-ore-wash-near-complete-v1.png?v=20260823-orewashstages1', width: 1536, height: 1024, groundAnchorY: 0.9248 },
     },
   },
-  lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
-  quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
-  grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254 },
-  field: { src: './assets/crownforge-field-v2.png?v=20260819-fieldpass1', width: 1536, height: 1024 },
+  lumberMill: { src: './assets/crownforge-lumber-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254, groundAnchorY: 0.8285 },
+  quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254, groundAnchorY: 0.9242 },
+  grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254, groundAnchorY: 0.878 },
+  field: { src: './assets/crownforge-field-v2.png?v=20260819-fieldpass1', width: 1536, height: 1024, groundAnchorY: 0.9697 },
   // Palisades use authored screen-space views instead of rotating one flat
   // picture. Rotating an upright fence also rotates its posts and makes a
   // completed wall look as if it is lying on the meadow.
@@ -1214,6 +1249,7 @@ export const FIRST_AGE_ASSETS = {
     src: './assets/crownforge-palisade-tower-first-age-v1.png?v=20260825-palisadefort1',
     width: 1254,
     height: 1254,
+    groundAnchorY: 0.9601,
     constructionAtlas: {
       src: './assets/crownforge-palisade-tower-construction-atlas-v1.png?v=20260825-palisadefort1',
       width: 1254,
@@ -1221,6 +1257,7 @@ export const FIRST_AGE_ASSETS = {
       columns: 2,
       rows: 2,
       destinationAspect: 1,
+      groundAnchorByCell: { '0,0': 0.9984, '1,0': 0.9984, '0,1': 0.9296 },
       cellByStage: {
         foundation: { column: 0, row: 0 },
         partial: { column: 1, row: 0 },
@@ -1245,6 +1282,7 @@ const ASHEN_CONSTRUCTION_ATLAS = {
   height: 1254,
   columns: 2,
   rows: 2,
+  groundAnchorY: 0.9776,
   cellByStage: {
     foundation: { column: 0, row: 0 },
     partial: { column: 1, row: 0 },
@@ -1258,6 +1296,7 @@ const ASHEN_SUPPORT_ATLAS = {
   height: 1254,
   columns: 3,
   rows: 3,
+  groundAnchorY: 0.9663,
 };
 
 const ASHEN_FORTIFICATION_ATLAS = {
@@ -1273,17 +1312,20 @@ export const ASHEN_BUILDING_ASSETS = {
     src: './assets/crownforge-ashen-hearth-v1.png?v=20260826-ashensettlement1',
     width: 1536,
     height: 1024,
+    groundAnchorY: 0.9707,
   },
   reaverLodge: {
     src: './assets/crownforge-reaver-lodge-v1.png?v=20260826-ashensettlement1',
     width: 1536,
     height: 1024,
+    groundAnchorY: 0.9863,
     constructionAtlas: ASHEN_CONSTRUCTION_ATLAS,
   },
   beastCorral: {
     src: './assets/crownforge-beast-corral-v1.png?v=20260826-ashensettlement1',
     width: 1536,
     height: 1024,
+    groundAnchorY: 0.9873,
     constructionAtlas: ASHEN_CONSTRUCTION_ATLAS,
   },
   smokeGranary: { atlas: ASHEN_SUPPORT_ATLAS, cell: { column: 0, row: 0 }, constructionAtlas: ASHEN_CONSTRUCTION_ATLAS },

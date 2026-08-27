@@ -7,13 +7,17 @@ import {
   COMBAT_ATLASES,
   CONFIG,
   ENEMY_AI,
+  ENVIRONMENT_ATLAS,
   FIRST_AGE_BUILD_BLUEPRINTS,
   FIRST_AGE_ASSETS,
   GOLD_DEPOSIT_ASSETS,
   INITIAL_RESOURCES,
+  LARGE_STONE_ASSET,
   PRODUCTION_TYPES,
   RESOURCE_TYPES,
   SPACING_ROLES,
+  TREE_ATLAS,
+  TREE_GROVE_ATLAS,
   UNIT_TYPES,
   VILLAGER_ATLASES,
 } from '../src/config.js';
@@ -38,7 +42,7 @@ function insideBuilding(point, building, padding = 0) {
   const blueprint = BUILDING_TYPES[building.type];
   const footprint = blueprint.collisionFootprint ?? blueprint.footprint;
   const offset = blueprint.collisionOffset ?? { x: 0, z: 0 };
-  const clearance = blueprint.collisionClearance ?? 0;
+  const clearance = (blueprint.collisionClearance ?? 0) + (blueprint.unitExclusionPadding ?? 0);
   const width = footprint.width / 2 + clearance + padding;
   const height = footprint.height / 2 + clearance + padding;
   const centerX = building.x + (offset.x ?? 0);
@@ -1289,7 +1293,8 @@ function checkCrownHallProportionsAndBuildableRing() {
   const hall = BUILDING_TYPES.townCenter;
   assert.equal(hall.renderSize, BUILDING_TYPES.barracks.renderSize, 'Crown Hall matches the Barracks visual width');
   assert.deepEqual(hall.footprint, { width: 9, height: 8 }, 'Crown Hall gameplay footprint is reduced with its visual scale');
-  assert.equal(hall.collisionClearance, 1.8, 'Crown Hall collision clearance matches the reduced landmark');
+  assert.equal(hall.collisionClearance, 1.8, 'Crown Hall keeps its authored economy and placement clearance');
+  assert.equal(hall.unitExclusionPadding, 1, 'Crown Hall adds a dedicated no-entry ring for moving units');
   assert.equal(hall.stairAccess.topOffset, 5, 'Crown Hall stair landing scales with the landmark');
   assert.equal(hall.stairAccess.outerOffset, 9, 'Crown Hall stair approach scales with the landmark');
 
@@ -1618,6 +1623,93 @@ function checkAspectCorrectBuildingFeedback() {
   );
 }
 
+function checkGroundedWorldAssets() {
+  const renderer = Object.create(CrownforgeRenderer.prototype);
+  assert.equal(renderer.assetGroundAnchorY(FIRST_AGE_ASSETS.granary), 0.8799, 'Granary uses its visible foundation baseline instead of the transparent plate bottom');
+  assert.equal(renderer.assetGroundAnchorY(FIRST_AGE_ASSETS.field), 0.9697, 'Grain Field uses an authored ground baseline');
+  assert.equal(renderer.assetGroundAnchorY(ENVIRONMENT_ATLAS, 0, 1), 0.944, 'Berry and stone atlas cells share their audited meadow baseline');
+  assert.equal(renderer.assetGroundAnchorY(TREE_ATLAS, 2, 0), 0.9453, 'Tree variants meet the meadow at their visible root band');
+  assert.equal(renderer.assetGroundAnchorY(TREE_GROVE_ATLAS, 0, 1), 0.9011, 'depleted grove stages use cell-specific baselines');
+  assert.equal(renderer.assetGroundAnchorY(GOLD_DEPOSIT_ASSETS.small), 0.8018, 'small Gold node no longer inherits its large transparent lower margin');
+  assert.equal(renderer.assetGroundAnchorY(LARGE_STONE_ASSET), 0.9561, 'large Stone uses its audited contact edge');
+  assert.equal(renderer.assetGroundAnchorY({ groundAnchorY: -4 }), 0.5, 'invalid low ground metadata is clamped safely');
+  assert.equal(renderer.assetGroundAnchorY({ groundAnchorY: 4 }), 1.05, 'invalid high ground metadata is clamped safely');
+
+  const completed = {
+    id: 1,
+    type: 'granary',
+    faction: 'player',
+    x: 10,
+    z: 10,
+    progress: 1,
+    hp: 350,
+    maxHp: 350,
+    selected: false,
+    destroyed: false,
+    destroyAge: 0,
+    hitFlash: 0,
+    demolitionQueued: false,
+  };
+  renderer.camera = { zoom: 1 };
+  renderer.worldToScreen = () => ({ x: 200, y: 200 });
+  renderer.buildingRenderSize = () => 420;
+  renderer.buildingVisualHeight = () => 280;
+  renderer.drawBuildingStage = () => {};
+  renderer.drawBuildingDamageTreatment = () => {};
+  renderer.drawHealthBar = () => {};
+  const noopContext = {
+    save() {},
+    restore() {},
+    beginPath() {},
+    ellipse() {},
+    stroke() {},
+    setLineDash() {},
+  };
+  let footprintDraws = 0;
+  renderer.drawBuildingFootprint = () => { footprintDraws += 1; };
+  renderer.drawBuilding(noopContext, completed, 0);
+  assert.equal(footprintDraws, 0, 'completed unselected buildings do not paint permanent collision diamonds');
+  renderer.drawBuilding(noopContext, { ...completed, selected: true }, 0);
+  assert.equal(footprintDraws, 1, 'selected buildings retain clear footprint feedback');
+  renderer.drawConstructionTreatment = () => {};
+  renderer.drawBuilding(noopContext, { ...completed, id: 2, progress: 0.5, hp: 175 }, 0);
+  assert.equal(footprintDraws, 2, 'active construction retains placement and collision feedback');
+}
+
+function checkCrownHallHostileExclusionAndCombatRecovery() {
+  const exclusion = movementSandbox();
+  const hall = exclusion.addBuilding('townCenter', 100, 100, 'player');
+  const center = exclusion._buildingCollisionCenter(hall);
+  const radius = UNIT_TYPES.raider.radius + 0.11;
+  const bounds = exclusion._buildingEntityBounds(hall, radius + BUILDING_TYPES.townCenter.unitExclusionPadding);
+  const raiders = [
+    { x: bounds.minX + 0.16, z: center.z },
+    { x: bounds.maxX - 0.16, z: center.z },
+    { x: center.x, z: bounds.minZ + 0.16 },
+    { x: center.x, z: bounds.maxZ - 0.16 },
+  ].map((point) => exclusion.addUnit('raider', point.x, point.z, 'enemy'));
+  advance(exclusion, 0.2);
+  for (const raider of raiders) {
+    assert.equal(exclusion._pointBlockedForUnit(raider, raider), false, `Raider ${raider.id} is expelled from the Crown Hall boundary`);
+    assert.equal(insideBuilding(raider, hall), false, `Raider ${raider.id} remains outside the Crown Hall artwork`);
+  }
+
+  const combat = movementSandbox();
+  const combatHall = combat.addBuilding('townCenter', 100, 100, 'player');
+  const combatCenter = combat._buildingCollisionCenter(combatHall);
+  const embeddedRaider = combat.addUnit('raider', combatCenter.x, combatCenter.z, 'enemy');
+  const guard = combat.addUnit('soldier', combatCenter.x - 16, combatCenter.z, 'player');
+  combat.selectedIds = [guard.id];
+  const command = combat.issueContextCommand(embeddedRaider, embeddedRaider);
+  assert.equal(command.success, true, 'direct attack order accepts an enemy embedded in a building boundary');
+  assert.equal(insideBuilding(embeddedRaider, combatHall), false, 'embedded enemy is recovered to the Hall perimeter before routing');
+  assert.equal(guard.command, 'attack', 'Crown Guard receives an attack command after target recovery');
+  assert.ok(guard.path.length > 0, 'Crown Guard receives a reachable melee approach');
+  assert.notEqual(guard.actionLabel, 'No opening to attack', 'embedded target no longer triggers the former attack blocker');
+  advance(combat, 12);
+  assert.ok(embeddedRaider.dead || embeddedRaider.hp < embeddedRaider.maxHp, 'Crown Guard lands damage on the recovered Raider');
+}
+
 function checkVillagerLastStandDefense() {
   const villagerRules = UNIT_TYPES.villager;
   const raiderRules = UNIT_TYPES.raider;
@@ -1754,6 +1846,8 @@ checkExpandedWorldAndEnemyDistance();
 checkCursorCenteredZoom();
 checkUprightWallVisuals();
 checkAspectCorrectBuildingFeedback();
+checkGroundedWorldAssets();
+checkCrownHallHostileExclusionAndCombatRecovery();
 checkVillagerLastStandDefense();
 checkCombatAndEndStates();
 
@@ -1793,6 +1887,8 @@ console.log(JSON.stringify({
     'cursor-centered zoom anchor in both directions',
     'four authored upright Palisade views across all eight snap directions',
     'aspect-correct landmark health and placement feedback',
+    'alpha-audited building, construction, field, tree, grove, stone, and Gold grounding without permanent collision diamonds',
+    'expanded Crown Hall hostile exclusion and attackable recovery for enemies embedded in solid structures',
     'twenty-hit Villager defense, five-second humanoid stun, twenty-second immunity, attacker aggro, local swarm, and one-minute Last Light Ward',
     'melee damage, death timing, victory, defeat',
   ],
