@@ -1,5 +1,5 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260827-fortificationanchors1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260827-fortificationanchors1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260827-wildwood1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260827-wildwood1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -536,21 +536,25 @@ export class CrownforgeRenderer {
       ctx.globalAlpha = 1;
       ctx.fillStyle = '#758c50';
       ctx.fill();
-      ctx.globalAlpha = 0.86;
-      // The grass tile is intentionally small and seamless. Anchor its repeat
-      // at the projected world origin and apply the same camera scale and
-      // translation as entities, so the terrain cannot stick to the viewport.
+      ctx.globalAlpha = 0.72;
+      // At distant zoom the full-resolution meadow used to collapse into a
+      // grid of tiny repeated squares. Hold the texture at a readable terrain
+      // LOD while the world continues to zoom normally. This removes the
+      // checkerboard without adding another per-frame world layer: the result
+      // remains part of the cached static terrain canvas.
       const pattern = this.meadowPattern ?? (this.meadowPattern = ctx.createPattern(this.meadow, 'repeat'));
       const canTransformPattern = pattern && typeof pattern.setTransform === 'function' && typeof DOMMatrix === 'function';
       if (canTransformPattern) {
+        const terrainPatternScale = Math.max(this.camera.zoom, 0.12);
         pattern.setTransform(new DOMMatrix([
-          this.camera.zoom,
+          terrainPatternScale,
           0,
           0,
-          this.camera.zoom,
+          terrainPatternScale,
           this.width / 2 + this.camera.x,
           this.height / 2 + this.camera.y,
         ]));
+        this.canvas.dataset.terrainLodScale = terrainPatternScale.toFixed(3);
         ctx.fillStyle = pattern;
         ctx.fillRect(minX - 18, minY - 18, maxX - minX + 36, maxY - minY + 36);
       } else {
@@ -586,6 +590,19 @@ export class CrownforgeRenderer {
     wash.addColorStop(0.5, 'rgba(90, 131, 74, 0.03)');
     wash.addColorStop(1, 'rgba(20, 44, 36, 0.12)');
     ctx.fillStyle = wash;
+    ctx.fillRect(x, y, width, height);
+
+    // A second broad, cross-map grade breaks up repeated local grass values
+    // into authored-looking meadow regions. Two cached gradients are much
+    // cheaper than drawing noise, decals, or a second terrain image every
+    // frame and remain stable while panning.
+    const meadowRegions = ctx.createLinearGradient(x + width * 0.08, y + height * 0.82, x + width * 0.92, y + height * 0.18);
+    meadowRegions.addColorStop(0, 'rgba(99, 118, 57, 0.1)');
+    meadowRegions.addColorStop(0.24, 'rgba(164, 153, 78, 0.025)');
+    meadowRegions.addColorStop(0.52, 'rgba(52, 91, 58, 0.075)');
+    meadowRegions.addColorStop(0.76, 'rgba(154, 137, 70, 0.03)');
+    meadowRegions.addColorStop(1, 'rgba(38, 70, 51, 0.1)');
+    ctx.fillStyle = meadowRegions;
     ctx.fillRect(x, y, width, height);
   }
 
@@ -1740,7 +1757,7 @@ export class CrownforgeRenderer {
     const alpha = depleted ? 0.32 : 0.82 + ratio * 0.18;
     if (resource.type === 'grove') {
       const stage = ratio > 0.72 ? 0 : ratio > 0.42 ? 1 : ratio > 0.12 ? 2 : 3;
-      if (resource.sizeTier === 'ancient') this.drawAncientForestAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.96);
+      if (resource.sizeTier === 'ancient' || resource.sizeTier === 'wildwood') this.drawAncientForestAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.96);
       else this.drawTreeGroveAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.92);
     } else if (resource.type === 'grain') {
       this.drawFirstAgeAsset(ctx, 'field', point, size * this.camera.zoom, depleted ? 0.3 : 0.9);

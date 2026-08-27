@@ -54,6 +54,24 @@ function freshSimulation() {
   return new CrownforgeSimulation();
 }
 
+function clearNaturalResources(simulation) {
+  simulation.resourcesNodes = [];
+  simulation.navigationVersion += 1;
+  simulation.staticBlockerGridVersion = -1;
+}
+
+function gatheringSimulation() {
+  const simulation = freshSimulation();
+  const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  simulation.units = [villager];
+  clearNaturalResources(simulation);
+  simulation._checkVictory = () => {};
+  simulation._updateEnemyAI = () => {};
+  simulation._updateEnemyIntent = () => {};
+  simulation.addResource('tree', 'wood', villager.x + 8, villager.z + 2, 180, 0, { sizeTier: 'small' });
+  return simulation;
+}
+
 function movementSandbox() {
   const simulation = freshSimulation();
   simulation.units = [];
@@ -211,7 +229,7 @@ function checkResetPresentation() {
 }
 
 function runGathering(step) {
-  const simulation = freshSimulation();
+  const simulation = gatheringSimulation();
   const villager = simulation.units.find((unit) => unit.type === 'villager');
   const tree = simulation.resourcesNodes.find((node) => node.resourceType === 'wood');
   simulation.selectAt({ x: villager.x, z: villager.z });
@@ -234,7 +252,7 @@ function checkGathering() {
   assert.ok(at60.remaining < at60.maxAmount, '60 Hz gathering consumes the node');
   assert.deepEqual(at20, at60, '20 Hz and 60 Hz gathering converge');
 
-  const simulation = freshSimulation();
+  const simulation = gatheringSimulation();
   const villager = simulation.units.find((unit) => unit.type === 'villager');
   const tree = simulation.resourcesNodes.find((node) => node.resourceType === 'wood');
   simulation.selectAt({ x: villager.x, z: villager.z });
@@ -962,6 +980,7 @@ function checkConstructionOrderQueue() {
 
 function checkWallResourcePrecedence() {
   const simulation = freshSimulation();
+  clearNaturalResources(simulation);
   const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   assert.ok(villager, 'reset has a builder for wall resource precedence');
   simulation.selectedIds = [villager.id];
@@ -993,6 +1012,7 @@ function checkWallResourcePrecedence() {
 
 function checkWallEndpointMagnetism() {
   const simulation = freshSimulation();
+  clearNaturalResources(simulation);
   const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   assert.ok(villager, 'reset has a builder for wall endpoint magnetism');
   simulation.selectedIds = [villager.id];
@@ -1042,6 +1062,7 @@ function checkWallEndpointMagnetism() {
   assert.equal(simulation.buildings.filter((building) => building.type === 'wall').length, 2, 'connected wall remains a separate construction record');
 
   const edgeSimulation = freshSimulation();
+  clearNaturalResources(edgeSimulation);
   const edgeVillager = edgeSimulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   edgeSimulation.selectedIds = [edgeVillager.id];
   edgeSimulation._syncSelectionFlags();
@@ -1083,6 +1104,7 @@ function checkWallEndpointMagnetism() {
 
 function checkWallOverlapAndGate() {
   const simulation = freshSimulation();
+  clearNaturalResources(simulation);
   const villager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   assert.ok(villager, 'reset has a builder for Palisade overlap and gate coverage');
   simulation.selectedIds = [villager.id];
@@ -1109,6 +1131,7 @@ function checkWallOverlapAndGate() {
   assert.equal(overlap.valid, true, 'a returning Palisade line may overlap an existing run');
 
   const gateSimulation = freshSimulation();
+  clearNaturalResources(gateSimulation);
   const gateBuilder = gateSimulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   gateSimulation.selectedIds = [gateBuilder.id];
   gateSimulation._syncSelectionFlags();
@@ -1138,6 +1161,7 @@ function checkWallOverlapAndGate() {
   assert.equal(wall.destroyed, true, 'the original wall record is retired when the gate claims its panel');
 
   const overlappedGateSimulation = freshSimulation();
+  clearNaturalResources(overlappedGateSimulation);
   const overlappedGateBuilder = overlappedGateSimulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   overlappedGateSimulation.selectedIds = [overlappedGateBuilder.id];
   overlappedGateSimulation._syncSelectionFlags();
@@ -1160,6 +1184,7 @@ function checkWallOverlapAndGate() {
   assert.equal(overlappedGateSimulation.buildings.filter((building) => building.type === 'wall' && !building.destroyed).length, 4, 'overlapping wall runs retain both sides of the shared opening');
 
   const towerSimulation = freshSimulation();
+  clearNaturalResources(towerSimulation);
   const towerBuilder = towerSimulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   towerSimulation.selectedIds = [towerBuilder.id];
   towerSimulation._syncSelectionFlags();
@@ -1180,6 +1205,7 @@ function checkWallOverlapAndGate() {
   assert.equal(towerWall.destroyed, true, 'original wall record retires when the tower claims its panel');
 
   const cornerSimulation = freshSimulation();
+  clearNaturalResources(cornerSimulation);
   const cornerBuilder = cornerSimulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   cornerSimulation.selectedIds = [cornerBuilder.id];
   cornerSimulation._syncSelectionFlags();
@@ -1530,9 +1556,8 @@ function checkAshenSettlementEconomyAndAI() {
     + (building.productionQueue ?? []).filter((order) => !UNIT_TYPES[order.type]?.worker).length, 0);
   assert.ok(simulation._enemyWorkers().length + queuedWorkers <= ENEMY_AI.maxWorkers, 'trained and queued Foragers stay within the worker cap');
   assert.ok(simulation._enemyMilitary().length + queuedArmy <= ENEMY_AI.maxArmy, 'trained and queued fighters stay within the army cap');
-  assert.equal(simulation.enemyAIState.raidCount, 1, 'the first Ashen raid begins only after the long opening');
-  assert.ok(simulation.enemyAIState.raidWaveIds.length >= ENEMY_AI.minRaidSize, 'first raid contains a readable small warband');
-  assert.ok(simulation.enemyAIState.raidWaveIds.length <= ENEMY_AI.maxRaidSize, 'first raid never exceeds the easy-profile wave cap');
+  assert.equal(simulation.enemyAIState.raidCount, 0, 'Ashen raids remain forest-gated while no route crosses the old-growth divide');
+  assert.equal(simulation.enemyAIState.raidWaveIds.length, 0, 'the AI does not strand a raid wave against an unopened forest wall');
   assert.ok(Object.values(simulation.enemyResources).every((value) => Number.isFinite(value) && value >= 0), 'Ashen resource bank remains finite and non-negative');
 }
 
@@ -1544,33 +1569,30 @@ function checkExpandedWorldAndEnemyDistance() {
   const camp = simulation.buildings.find((building) => building.type === 'ashenCamp');
   assert.ok(Math.hypot(camp.x - hall.x, camp.z - hall.z) > 500, 'enemy camp starts across the expanded map');
   assert.ok(hall.x > CONFIG.mapWidth * 0.1 && hall.z > CONFIG.mapHeight * 0.1, 'Crown Hall starts inside the map rather than on the north-west tip');
-  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'wood').length >= 40, 'expanded map has a readable wood family');
-  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'food').length >= 30, 'expanded map has a readable berry family');
-  assert.ok(simulation.resourcesNodes.filter((node) => node.resourceType === 'stone').length >= 20, 'expanded map has a readable stone family');
+  const wildwood = simulation.resourcesNodes.filter((node) => node.type === 'grove' && node.sizeTier === 'wildwood');
+  assert.ok(wildwood.length >= 200, 'expanded map is dominated by contiguous old-growth forest');
+  let woodedSamples = 0;
+  let totalSamples = 0;
+  for (let z = 8; z < CONFIG.mapHeight; z += 8) {
+    for (let x = 8; x < CONFIG.mapWidth; x += 8) {
+      totalSamples += 1;
+      if (wildwood.some((node) => Math.hypot(node.x - x, node.z - z) <= 24)) woodedSamples += 1;
+    }
+  }
+  const woodedCoverage = woodedSamples / totalSamples;
+  assert.ok(woodedCoverage >= 0.72 && woodedCoverage <= 0.84, 'wildwood physically covers roughly eighty percent while preserving authored clearings');
+  assert.ok(simulation.resourcesNodes.some((node) => node.resourceType === 'food'), 'wildwood clearings include forage pockets');
+  assert.ok(simulation.resourcesNodes.some((node) => node.resourceType === 'stone'), 'wildwood clearings include stone pockets');
   const goldNodes = simulation.resourcesNodes.filter((node) => node.resourceType === 'gold');
-  assert.ok(goldNodes.length >= 10 && goldNodes.length <= 14, 'expanded map keeps Gold regional and scarce');
-  assert.deepEqual(new Set(goldNodes.map((node) => node.sizeTier)), new Set(['small', 'medium', 'large']), 'Gold distribution includes all three readable capacity tiers');
+  assert.ok(goldNodes.length >= 4 && goldNodes.length <= 6, 'wildwood map keeps Gold regional and scarce inside authored glades');
+  assert.deepEqual(new Set(goldNodes.map((node) => node.sizeTier)), new Set(['medium', 'large']), 'wildwood Gold glades use durable medium and large deposits');
   assert.ok(goldNodes.some((node) => node.x < CONFIG.mapWidth / 2 && node.z < CONFIG.mapHeight / 2), 'Gold exists in the player-side half');
   assert.ok(goldNodes.some((node) => node.x > CONFIG.mapWidth / 2 && node.z > CONFIG.mapHeight / 2), 'Gold exists in the enemy-side half');
   assert.equal(simulation.resourcesNodes.some((node) => node.type === 'grain'), false, 'reset does not seed cultivated Grain Fields');
   assert.equal(simulation.buildings.some((building) => building.type === 'field'), false, 'fields remain exclusively player-built');
-  const columns = 5;
-  const rows = 4;
-  const sectorWidth = CONFIG.mapWidth / columns;
-  const sectorHeight = CONFIG.mapHeight / rows;
-  for (let row = 0; row < rows; row += 1) {
-    for (let column = 0; column < columns; column += 1) {
-      const nodes = simulation.resourcesNodes.filter((node) => (
-        node.x >= column * sectorWidth
-        && node.x < (column + 1) * sectorWidth
-        && node.z >= row * sectorHeight
-        && node.z < (row + 1) * sectorHeight
-      ));
-      for (const type of ['wood', 'food', 'stone']) {
-        assert.ok(nodes.some((node) => node.resourceType === type), `sector ${column},${row} contains natural ${type}`);
-      }
-    }
-  }
+  const playerVillager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  const routeAcrossWildwood = simulation._buildPath(playerVillager, { x: camp.x, z: camp.z - 24 });
+  assert.equal(routeAcrossWildwood, null, 'opposing settlements cannot meet before cutting through the harvestable wildwood divide');
   assert.ok(CONFIG.minZoom < 0.05, 'minimum zoom can frame the expanded map');
 }
 
@@ -1893,9 +1915,9 @@ console.log(JSON.stringify({
     'artwork-matched building collision, offset physical bases, perimeter work stations, and non-stacking Crown Hall drop-offs',
     'travel-only speed scaling, high-speed collision routing, and fast group spacing',
     'always-available selected-unit recovery at a clear Crown Hall approach with cargo deposit and group spacing',
-    'distinct Ashen role-equivalent artwork, directional units, independent economy, capped town growth, local defense, and delayed small raids',
-    'regional wood, berry, stone, and scarce three-tier Gold coverage without prebuilt fields',
-    'expanded map and opposite-side enemy camp',
+    'distinct Ashen role-equivalent artwork, directional units, independent economy, capped town growth, local defense, and forest-gated raids',
+    'roughly eighty-percent contiguous wildwood with authored berry, stone, and scarce Gold glades and no prebuilt fields',
+    'expanded map, opposite-side settlements, and a harvestable forest divide that gates contact',
     'cursor-centered zoom anchor in both directions',
     'four authored upright Palisade views across all eight snap directions',
     'aspect-correct landmark health and placement feedback',

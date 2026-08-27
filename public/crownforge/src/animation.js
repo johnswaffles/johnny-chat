@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260827-fortificationanchors1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260827-wildwood1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },

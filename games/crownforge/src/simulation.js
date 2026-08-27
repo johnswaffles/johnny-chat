@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260827-fortificationanchors1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260827-wildwood1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260827-fortificationanchors1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260827-wildwood1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -64,8 +64,30 @@ const BUILDER_SERVICE_INTERVAL = 0.4;
 const BUILDING_REPAIR_EPSILON = 0.5;
 const REPAIR_STRIKE_INTERVAL = 0.82;
 const SAFETY_HUDDLE_SPACING = 1.65;
-const NATURAL_RESOURCE_SECTORS = { columns: 5, rows: 4 };
 const NATURAL_RESOURCE_GAP = 1.7;
+const WILDWOOD_LATTICE = { margin: 28, spacingX: 32, spacingZ: 28, overlapAllowance: -15.5 };
+const WILDWOOD_CLEARINGS = [
+  { id: 'crown-clearing', x: 78, z: 82, radiusX: 78, radiusZ: 84 },
+  { id: 'ashen-clearing', x: 516, z: 414, radiusX: 72, radiusZ: 68 },
+  { id: 'west-berry-glade', x: 164, z: 104, radiusX: 15, radiusZ: 13 },
+  { id: 'west-stone-glade', x: 190, z: 245, radiusX: 16, radiusZ: 13 },
+  { id: 'heart-gold-glade', x: 278, z: 206, radiusX: 15, radiusZ: 13 },
+  { id: 'north-berry-glade', x: 360, z: 120, radiusX: 15, radiusZ: 13 },
+  { id: 'east-stone-glade', x: 418, z: 250, radiusX: 16, radiusZ: 13 },
+  { id: 'south-berry-glade', x: 300, z: 350, radiusX: 15, radiusZ: 13 },
+  { id: 'south-gold-glade', x: 130, z: 350, radiusX: 15, radiusZ: 13 },
+  { id: 'ashen-stone-glade', x: 430, z: 355, radiusX: 16, radiusZ: 13 },
+];
+const REGIONAL_RESOURCE_POCKETS = [
+  { type: 'berry', resourceType: 'food', x: 164, z: 104, sizeTier: 'small' },
+  { type: 'stone', resourceType: 'stone', x: 190, z: 245, sizeTier: 'large' },
+  { type: 'gold', resourceType: 'gold', x: 278, z: 206, sizeTier: 'large' },
+  { type: 'berry', resourceType: 'food', x: 360, z: 120, sizeTier: 'small' },
+  { type: 'stone', resourceType: 'stone', x: 418, z: 250, sizeTier: 'large' },
+  { type: 'berry', resourceType: 'food', x: 300, z: 350, sizeTier: 'small' },
+  { type: 'gold', resourceType: 'gold', x: 130, z: 350, sizeTier: 'large' },
+  { type: 'stone', resourceType: 'stone', x: 430, z: 355, sizeTier: 'large' },
+];
 const ENEMY_BUILD_PLAN = [
   { type: 'hideHomestead', offset: { x: -20, z: 14 } },
   { type: 'smokeGranary', offset: { x: -28, z: -5 } },
@@ -94,6 +116,7 @@ export function resourceFootprint(nodeOrType) {
 
 function resourceSlotCount(node) {
   if (node?.type !== 'grove') return RESOURCE_SLOT_COUNT;
+  if (node.sizeTier === 'wildwood') return 24;
   if (node.sizeTier === 'ancient') return 16;
   if (node.sizeTier === 'large') return 10;
   return 8;
@@ -266,16 +289,9 @@ export class CrownforgeSimulation {
     // long open approach creates time to gather and build without making the
     // Raiders blind or removing their ability to defend their camp.
     this.addBuilding('ashenCamp', 516, 414, 'enemy');
-    // Keep a compact opening reserve around the Crown Hall while leaving its
-    // build ring readable. The regional pass below supplies the rest of the
-    // map instead of concentrating nearly every useful node here.
-    this.addResource('tree', 'wood', 68, 96, 180, 0, { sizeTier: 'small' });
-    this.addResource('tree', 'wood', 62, 102, 180, 1, { sizeTier: 'small' });
-    this.addResource('tree', 'wood', 95, 105, 420, 3, { sizeTier: 'medium' });
-    this.addResource('grove', 'wood', 67, 59, 7200, 1, { sizeTier: 'ancient' });
-    // Keep a clear buildable meadow on the Hall's east flank. This food node
-    // remains close enough to serve the settlement without occupying the
-    // first ring where players expect to place structures.
+    // Keep the two faction clearings readable and useful. Dense Wildwood begins
+    // just beyond these local reserves, giving both economies reachable first
+    // resources without creating an open route across the map.
     this.addResource('berry', 'food', 49, 40.5, 105, 1, { sizeTier: 'small' });
     this.addResource('berry', 'food', 82, 41, 105, 0, { sizeTier: 'small' });
     this.addResource('stone', 'stone', 72, 64, 360, 1, { sizeTier: 'medium' });
@@ -283,9 +299,12 @@ export class CrownforgeSimulation {
     // A modest opening vein teaches the fourth economy loop without crowding
     // the Crown Hall build ring. Richer deposits remain regional discoveries.
     this.addResource('gold', 'gold', 111, 72, 420, 0, { sizeTier: 'medium' });
-    // Populate every macro-region with a deterministic mix of natural wood,
-    // berry, stone, and rarer gold nodes. Cultivated Grain Fields are
-    // deliberately not seeded; those remain a player-built settlement choice.
+    this.addResource('berry', 'food', 488, 430, 105, 2, { sizeTier: 'small' });
+    this.addResource('stone', 'stone', 487, 400, 360, 2, { sizeTier: 'medium' });
+    this.addResource('gold', 'gold', 504, 382, 420, 1, { sizeTier: 'medium' });
+    // Build a deterministic, contiguous woodland around the faction clearings
+    // and isolated resource glades. Cultivated fields are never seeded; they
+    // remain a settlement choice made by the player or AI.
     this._seedNaturalResourceRegions();
     this.addDecoration('log', 18, 24, 0, 0.9);
     this.addDecoration('stump', 8.4, 52, 1, 0.85);
@@ -316,7 +335,7 @@ export class CrownforgeSimulation {
     if (type === 'berry') return 105;
     if (type === 'stone') return sizeTier === 'large' ? 900 : sizeTier === 'medium' ? 360 : 120;
     if (type === 'gold') return sizeTier === 'large' ? 1150 : sizeTier === 'medium' ? 420 : 140;
-    if (type === 'grove') return sizeTier === 'ancient' ? 7200 : sizeTier === 'large' ? 1100 : sizeTier === 'medium' ? 700 : 480;
+    if (type === 'grove') return sizeTier === 'wildwood' ? 18000 : sizeTier === 'ancient' ? 7200 : sizeTier === 'large' ? 1100 : sizeTier === 'medium' ? 700 : 480;
     return sizeTier === 'large' ? 700 : sizeTier === 'medium' ? 260 : 180;
   }
 
@@ -328,76 +347,65 @@ export class CrownforgeSimulation {
       const bounds = this._buildingEntityBounds(building, footprint + 4);
       return x > bounds.minX && x < bounds.maxX && z > bounds.minZ && z < bounds.maxZ;
     })) return false;
-    return this.resourcesNodes.every((node) => distance(probe, node) >= footprint + resourceFootprint(node) + NATURAL_RESOURCE_GAP);
+    return this.resourcesNodes.every((node) => {
+      const contiguousWildwood = sizeTier === 'wildwood' && node.type === 'grove' && node.sizeTier === 'wildwood';
+      const gap = contiguousWildwood ? WILDWOOD_LATTICE.overlapAllowance : NATURAL_RESOURCE_GAP;
+      return distance(probe, node) >= footprint + resourceFootprint(node) + gap;
+    });
   }
 
-  _seedNaturalResourceInSector(spec, sector, index, salt) {
-    const sizeTier = spec.sizeTier ?? 'small';
-    const footprint = resourceFootprint({ type: spec.type, sizeTier });
-    const jitterX = (stableResourceNoise(index, salt) - 0.5) * sector.width * 0.14;
-    const jitterZ = (stableResourceNoise(index, salt + 19) - 0.5) * sector.height * 0.14;
-    const baseX = sector.minX + sector.width * spec.u + jitterX;
-    const baseZ = sector.minZ + sector.height * spec.v + jitterZ;
-    const nudge = Math.max(8, footprint + NATURAL_RESOURCE_GAP + 4);
-    const offsets = [
-      [0, 0], [nudge, 0], [-nudge, 0], [0, nudge], [0, -nudge],
-      [nudge, nudge], [-nudge, nudge], [nudge, -nudge], [-nudge, -nudge],
-    ];
-    for (const [offsetX, offsetZ] of offsets) {
-      const x = clamp(baseX + offsetX, sector.minX + footprint + 4, sector.maxX - footprint - 4);
-      const z = clamp(baseZ + offsetZ, sector.minZ + footprint + 4, sector.maxZ - footprint - 4);
-      if (!this._naturalResourceSpotClear(spec.type, sizeTier, x, z)) continue;
-      const variant = Math.floor(stableResourceNoise(index, salt + 37) * 4) % 4;
-      this.addResource(spec.type, spec.resourceType, x, z, this._naturalResourceAmount(spec.type, sizeTier), variant, { sizeTier });
-      return true;
-    }
-    return false;
+  _insideWildwoodClearing(x, z, padding = 0) {
+    return WILDWOOD_CLEARINGS.some((clearing) => {
+      const dx = (x - clearing.x) / (clearing.radiusX + padding);
+      const dz = (z - clearing.z) / (clearing.radiusZ + padding);
+      return dx * dx + dz * dz < 1;
+    });
   }
 
   _seedNaturalResourceRegions() {
-    const { columns, rows } = NATURAL_RESOURCE_SECTORS;
-    const sectorWidth = CONFIG.mapWidth / columns;
-    const sectorHeight = CONFIG.mapHeight / rows;
-    // Four remote macro forests form real woodland territories without
-    // flooding the simulation with hundreds of tiny blockers. Each one is a
-    // single staged resource that supports a large crew and retreats as its
-    // stored wood is removed.
-    const ancientForestSectors = new Set([3, 6, 13, 16]);
-    for (let row = 0; row < rows; row += 1) {
-      for (let column = 0; column < columns; column += 1) {
-        const index = row * columns + column;
-        const sector = {
-          minX: column * sectorWidth,
-          maxX: (column + 1) * sectorWidth,
-          minZ: row * sectorHeight,
-          maxZ: (row + 1) * sectorHeight,
-          width: sectorWidth,
-          height: sectorHeight,
-        };
-        const woodTier = index % 5 === 0 ? 'large' : index % 2 === 0 ? 'medium' : 'small';
-        const stoneTier = index % 6 === 0 ? 'large' : index % 2 === 1 ? 'medium' : 'small';
-        this._seedNaturalResourceInSector({ type: 'tree', resourceType: 'wood', sizeTier: woodTier, u: 0.2, v: 0.27 }, sector, index, 3);
-        this._seedNaturalResourceInSector({ type: 'berry', resourceType: 'food', sizeTier: 'small', u: 0.68, v: 0.66 }, sector, index, 7);
-        this._seedNaturalResourceInSector({ type: 'stone', resourceType: 'stone', sizeTier: stoneTier, u: 0.43, v: 0.8 }, sector, index, 11);
-        const ancientForest = ancientForestSectors.has(index);
-        this._seedNaturalResourceInSector({
-          type: ancientForest || index % 4 === 0 ? 'grove' : 'tree',
-          resourceType: 'wood',
-          sizeTier: ancientForest ? 'ancient' : index % 4 === 0 ? 'medium' : 'small',
-          u: 0.8,
-          v: 0.24,
-        }, sector, index, 17);
-        if (index % 2 === 0) {
-          this._seedNaturalResourceInSector({ type: 'berry', resourceType: 'food', sizeTier: 'small', u: 0.26, v: 0.64 }, sector, index, 23);
-        }
-        // Gold is intentionally scarcer than the three foundational
-        // materials: one authored vein in alternating sectors, with only two
-        // large regional landmarks across the full expanded map.
-        if (index % 2 === 1) {
-          const goldTier = index % 10 === 9 ? 'large' : index % 4 === 1 ? 'medium' : 'small';
-          this._seedNaturalResourceInSector({ type: 'gold', resourceType: 'gold', sizeTier: goldTier, u: 0.57, v: 0.4 }, sector, index, 29);
-        }
+    for (const [index, pocket] of REGIONAL_RESOURCE_POCKETS.entries()) {
+      this.addResource(
+        pocket.type,
+        pocket.resourceType,
+        pocket.x,
+        pocket.z,
+        this._naturalResourceAmount(pocket.type, pocket.sizeTier),
+        Math.floor(stableResourceNoise(index, 43) * 4) % 4,
+        { sizeTier: pocket.sizeTier },
+      );
+    }
+
+    const tier = 'wildwood';
+    const footprint = resourceFootprint({ type: 'grove', sizeTier: tier });
+    let latticeIndex = 0;
+    for (let row = 0, z = WILDWOOD_LATTICE.margin; z <= CONFIG.mapHeight - WILDWOOD_LATTICE.margin; row += 1, z += WILDWOOD_LATTICE.spacingZ) {
+      const rowOffset = row % 2 ? WILDWOOD_LATTICE.spacingX * 0.5 : 0;
+      for (let column = 0, x = WILDWOOD_LATTICE.margin + rowOffset; x <= CONFIG.mapWidth - WILDWOOD_LATTICE.margin; column += 1, x += WILDWOOD_LATTICE.spacingX) {
+        const jitterX = (stableResourceNoise(latticeIndex, 61) - 0.5) * 0.7;
+        const jitterZ = (stableResourceNoise(latticeIndex, 67) - 0.5) * 0.7;
+        const candidateX = x + jitterX;
+        const candidateZ = z + jitterZ;
+        latticeIndex += 1;
+        if (this._insideWildwoodClearing(candidateX, candidateZ, footprint * 0.48)) continue;
+        if (!this._naturalResourceSpotClear('grove', tier, candidateX, candidateZ)) continue;
+        const variant = Math.floor(stableResourceNoise(latticeIndex, 71) * 4) % 4;
+        this.addResource('grove', 'wood', candidateX, candidateZ, this._naturalResourceAmount('grove', tier), variant, { sizeTier: tier });
       }
+    }
+
+    // A continuous old-growth divide guarantees that the opposite faction
+    // cannot be reached through a lucky lattice seam or by slipping around a
+    // map edge. Every stand remains a normal harvestable resource, so the
+    // barrier becomes a player-authored road as crews cut through it.
+    const divideStart = { x: 0, z: 430 };
+    const divideEnd = { x: 430, z: 0 };
+    const divideLength = distance(divideStart, divideEnd);
+    const divideSegments = Math.ceil(divideLength / 25);
+    for (let index = 0; index <= divideSegments; index += 1) {
+      const ratio = index / divideSegments;
+      const x = divideStart.x + (divideEnd.x - divideStart.x) * ratio;
+      const z = divideStart.z + (divideEnd.z - divideStart.z) * ratio;
+      this.addResource('grove', 'wood', x, z, this._naturalResourceAmount('grove', tier), index % 4, { sizeTier: tier });
     }
   }
 

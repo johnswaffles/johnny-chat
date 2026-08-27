@@ -4368,3 +4368,67 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add hill transitions, stone walls, siege interactions, wall upgrades, or additional gate families until this flat-ground Palisade system remains stable through normal play.
 - Do not replace authored directional wall views with rotated single images.
+
+
+## WILDWOOD MAP & TERRAIN LOD PASS — 2026-08-27
+
+### WHAT EXISTS
+
+- The first-age map is now a deterministic wildwood landscape: approximately 76% of the physical map area and roughly 80% of the visible landscape is covered by contiguous, harvestable old-growth forest.
+- The Crownwardens and Ashen settlement begin in large authored clearings on opposite sides of the map.
+- A continuous harvestable forest divide prevents immediate cross-map contact. Either faction must open a route by cutting through the woodland before raids or direct battles can cross the map.
+- Small authored glades preserve readable access to berries, stone, and scarce Gold without scattering isolated nodes across every screen.
+
+### WHAT WAS COMPLETED
+
+- Replaced the old sector-speckle resource seeding with a staggered wildwood lattice that creates connected forest masses instead of sporadic individual trees.
+- Added protected player, enemy, and resource clearings so starting buildings remain visible, usable, and surrounded by buildable land.
+- Added a guaranteed diagonal old-growth divide between the two starting regions.
+- Added a \`wildwood\` resource tier with large visual footprint, high capacity, and staged depletion through the existing Crownforge ancient-forest art family.
+- Preserved reachable wood access on both sides of the divide; player and enemy workers can begin cutting from their own clearings.
+- Removed automatic field seeding. Cultivated fields remain player-built.
+- Reduced the zoomed-out checkerboard effect by scaling grass detail with camera zoom and layering broad cached tonal variation across the terrain. The treatment adds no per-frame procedural noise and does not add simulation entities.
+- Updated map, gathering, wall, gate, tower, Gold, and enemy-AI regression fixtures so they test their own isolated behavior rather than depending on the former sparse map layout.
+
+### KNOWN ISSUES
+
+- The wildwood currently repeats one cohesive staged forest family at macro scale. Its overlap and deterministic staggering reduce obvious repetition, but a second compatible old-growth family could improve distant silhouette variety later.
+- Physical coverage samples at approximately 76%; overlapping canopies make visual coverage read closer to the requested 80% while the deliberate clearings preserve playable settlement space.
+- The layout is deterministic rather than seed-randomized. This is intentional for vertical-slice balance and repeatable QA.
+- Enemy raids remain forest-gated while no traversable route exists. The enemy economy continues operating locally, but autonomous strategic corridor cutting is not yet a dedicated AI goal.
+
+### ASSETS CREATED
+
+- No new raster artwork was required. The existing staged ancient-forest assets and grass texture were reused at authored scale and spacing.
+
+### SYSTEMS CREATED
+
+- Contiguous wildwood lattice seeding.
+- Protected settlement clearings and resource glades.
+- Guaranteed harvestable inter-faction forest divide.
+- Wildwood capacity, footprint, gathering-slot, collision, and depletion behavior.
+- Camera-aware terrain texture LOD with cached broad tonal grading.
+- Regression coverage for woodland density, opposite-side starts, no seeded fields, scarce glade resources, and forest-gated cross-map routing.
+
+### VALIDATION
+
+- Generated 215 wildwood nodes and 231 total natural resource nodes.
+- Grid sampling measured 75.7% physical woodland coverage; overlapping rendered canopies visually approach 80%.
+- A fresh pathfinding check confirmed there is no walkable player-to-enemy route before trees are cut.
+- Focused checks confirmed both player and enemy workers can route to reachable perimeter trees and accept wood-gathering orders.
+- The complete remediation regression suite passed after map-dependent fixtures were isolated.
+- \`tools/visual-integrity-audit.mjs\` passed.
+- In-app browser inspection at normal and distant zoom confirmed a readable Crown Hall clearing, contiguous woodland, smoother grass, and no console errors or warnings.
+- Source and playable-public files were kept identical.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Play a longer lumber operation and tune how quickly a first corridor visibly opens through successive forest depletion stages.
+2. Confirm the Ashen workers expand their own woodland edge at a calm pace before adding any explicit strategic corridor-cutting behavior.
+3. Add one compatible old-growth silhouette family only if repeated long-distance play shows visible tiling.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add hills, terrain elevation, water, roads, seeded farms, multiple biomes, procedural map seeds, or fog of war during this pass.
+- Do not add more forest node types simply to increase count.
+- Do not restore immediate open-map raids; first contact should remain a consequence of clearing the wildwood.

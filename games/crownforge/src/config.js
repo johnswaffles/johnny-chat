@@ -1,8 +1,8 @@
 export const CONFIG = {
   // The current green diamond is expanded to roughly ten times its former
-  // area. The extra space is intentionally open so players can read routes,
-  // resource clearings, and the enemy approach instead of entering a cluttered
-  // forest.
+  // area. Most of that land is first-age wildwood: the two factions begin in
+  // distant authored clearings and must deliberately cut new routes through
+  // the forest instead of crossing one empty lawn.
   mapWidth: 560,
   mapHeight: 460,
   tileWidth: 52,
@@ -98,6 +98,11 @@ export const RESOURCE_SIZE_TIERS = {
   // visibly retreats through four depletion stages instead of spawning
   // hundreds of independent tree entities.
   ancient: { label: 'Ancient', renderScale: 4.1, capacityScale: 12, footprintScale: 3.4 },
+  // Wildwood stands are map-scale wood resources. A single staged entity
+  // represents a dense tract of trees, keeping an 80%-wooded map practical to
+  // render, path around, and gradually clear without creating thousands of
+  // individual tree objects.
+  wildwood: { label: 'Wildwood', renderScale: 5.8, capacityScale: 36, footprintScale: 9.5 },
 };
 
 export const UNIT_TYPES = {
