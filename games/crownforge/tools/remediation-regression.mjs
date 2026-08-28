@@ -31,6 +31,7 @@ const STEP_60HZ = 1 / 60;
 const STEP_20HZ = 1 / 20;
 const INDEX_HTML = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const INPUT_SOURCE = fs.readFileSync(new URL('../src/input.js', import.meta.url), 'utf8');
+const RENDERER_SOURCE = fs.readFileSync(new URL('../src/renderer.js', import.meta.url), 'utf8');
 const STYLES_CSS = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 
 function advance(simulation, seconds, step = STEP_60HZ) {
@@ -760,10 +761,13 @@ function checkBuilderWorkflowAndVillagerControls() {
   automatic.addBuilding('townCenter', 20, 20, 'player');
   const autoBuilder = automatic.addUnit('villager', 26, 23, 'player');
   autoBuilder.needsSafetyRegroup = false;
+  autoBuilder.pathBlocked = true;
+  autoBuilder.recoveryAvailable = true;
   const unfinished = automatic.addBuilding('house', 34, 20, 'player', 0.25);
   automatic.update(STEP_60HZ);
   assert.equal(autoBuilder.buildTarget, unfinished.id, 'idle nearby builder automatically claims an unfinished structure');
   assert.equal(autoBuilder.command, 'build', 'automatic builder assistance uses the normal construction command');
+  assert.equal(autoBuilder.pathBlocked, false, 'automatic assistance clears a stale blocked-route marker');
 
   automatic.setUnitSpeedScale(10);
   advance(automatic, BUILDING_TYPES.house.buildTime + 6);
@@ -782,7 +786,9 @@ function checkBuilderWorkflowAndVillagerControls() {
   const hall = regroup.addBuilding('townCenter', 20, 20, 'player');
   const returningWorker = regroup.addUnit('villager', 62, 62, 'player');
   returningWorker.needsSafetyRegroup = true;
-  regroup.update(STEP_60HZ);
+  advance(regroup, 29.5);
+  assert.equal(returningWorker.safetyRegroupActive, false, 'idle worker waits before returning to settlement safety');
+  advance(regroup, 1.1);
   assert.equal(returningWorker.safetyRegroupActive, true, 'finished Villager starts a safety regroup route');
   assert.match(returningWorker.actionLabel, /Regrouping at Crown Hall/, 'safety regroup is visible in the selected-unit task');
   regroup.setUnitSpeedScale(10);
@@ -811,6 +817,106 @@ function checkBuilderWorkflowAndVillagerControls() {
   assert.match(INPUT_SOURCE, /isBuilderUnit\(unit\)/, 'primary-click construction uses the shared builder capability');
   assert.match(STYLES_CSS, /is-build-target[^\n]+cursor:/, 'unfinished structures have a dedicated hammer cursor');
   assert.match(STYLES_CSS, /is-repair-target[^\n]+cursor:/, 'damaged structures have a dedicated repair cursor');
+}
+
+function checkInstantAreaDemolition() {
+  const simulation = movementSandbox();
+  const hall = simulation.addBuilding('townCenter', 20, 20, 'player');
+  const house = simulation.addBuilding('house', 34, 20, 'player');
+  const wall = simulation.addBuilding('wall', 44, 20, 'player', 1, {
+    wallSegments: 4,
+    wallStart: { x: 40, z: 20 },
+    wallDirection: { x: 1, z: 0 },
+  });
+  const enemyBuilding = simulation.addBuilding('ashenCamp', 58, 20, 'enemy');
+  simulation.selectedIds = [];
+  simulation._syncSelectionFlags();
+
+  const result = simulation.demolishStructures([house, wall, hall, enemyBuilding]);
+  assert.equal(result.success, true, 'direct demolition works without selecting a Villager');
+  assert.equal(result.targetCount, 2, 'area demolition removes every eligible player structure in one action');
+  assert.equal(result.protectedCount, 2, 'Crown Hall and enemy structures remain protected');
+  assert.equal(house.destroyed, true, 'selected player building is demolished immediately');
+  assert.equal(wall.destroyed, true, 'selected Palisade run is demolished immediately');
+  assert.ok(house.destroyAge > 2.4 && wall.destroyAge > 2.4, 'instant demolition skips debris and collapse frames');
+  assert.equal(simulation._buildingHasCollision(house), false, 'demolished structure releases collision immediately');
+  assert.equal(simulation._buildingHasCollision(wall), false, 'demolished wall releases collision immediately');
+  assert.equal(hall.destroyed, false, 'Crown Hall cannot be demolished');
+  assert.equal(enemyBuilding.destroyed, false, 'enemy structure cannot be demolished by the player command');
+  assert.equal(simulation.units.length, 0, 'demolition has no worker or unit dependency');
+  assert.match(simulation.lastCommand, /debris cleared/, 'demolition feedback confirms cleanup');
+
+  assert.match(INDEX_HTML, /DEMOLISH STRUCTURES/, 'selection panel exposes direct demolition');
+  assert.match(INDEX_HTML, /INSTANT AREA CLEAR/, 'direct demolition button communicates area clearing');
+  assert.doesNotMatch(INDEX_HTML, /Villager demolition mode/, 'controls no longer describe demolition as a Villager ability');
+  assert.match(INPUT_SOURCE, /demolishStructures\(targets\)/, 'area release calls the direct demolition command');
+}
+
+function checkAutonomousWorkCombatAndDefenses() {
+  const wallWork = movementSandbox();
+  const wall = wallWork.addBuilding('wall', 100, 100, 'player', 0.04, {
+    wallSegments: 20,
+    wallStart: { x: 70, z: 100 },
+    wallDirection: { x: 1, z: 0 },
+  });
+  const geometry = wallWork._wallLineGeometry(wall);
+  const wallBuilder = wallWork.addUnit('villager', geometry.center.x, geometry.center.z + 4, 'player');
+  const wallStations = wallWork._buildingApproachPoints(wall);
+  assert.ok(wallStations.some((point) => Math.abs(point.x - geometry.center.x) < 1), 'long Palisade exposes a construction station near its middle');
+  wallWork.update(STEP_60HZ);
+  assert.equal(wallBuilder.buildTarget, wall.id, 'nearby Villager automatically claims a long Palisade from its middle');
+  assert.equal(wallBuilder.command, 'build', 'Palisade construction keeps a persistent builder command');
+  const initialWallProgress = wall.progress;
+  wallWork.setUnitSpeedScale(10);
+  advance(wallWork, 3);
+  assert.ok(wall.progress > initialWallProgress, 'Villager reaches and advances long Palisade construction');
+
+  const persistentAttack = movementSandbox();
+  const patientGuard = persistentAttack.addUnit('soldier', 10, 10, 'player');
+  const distantRaider = persistentAttack.addUnit('raider', 30, 30, 'enemy');
+  persistentAttack._bestCombatRoute = () => null;
+  const accepted = persistentAttack._sendUnitToAttack(patientGuard, distantRaider, 0);
+  assert.equal(accepted, true, 'attack order is accepted even while a route is temporarily unavailable');
+  assert.equal(patientGuard.command, 'attack', 'temporarily blocked attack remains a persistent combat order');
+  assert.equal(patientGuard.attackTarget, distantRaider.id, 'persistent attack retains its target for route retry');
+  assert.match(patientGuard.actionLabel, /Finding an approach/, 'temporary attack obstruction reports recovery instead of refusal');
+
+  const military = movementSandbox();
+  const guard = military.addUnit('soldier', 100, 100, 'player');
+  const raider = military.addUnit('raider', 108, 100, 'enemy');
+  military._updateBuilderServices();
+  assert.equal(guard.attackTarget, raider.id, 'idle Crown Guard automatically acquires a nearby hostile fighter');
+  assert.equal(guard.command, 'attack', 'automatic settlement defense uses the normal attack command');
+
+  const protectedWorker = movementSandbox();
+  const restrainedGuard = protectedWorker.addUnit('soldier', 100, 100, 'player');
+  protectedWorker.addUnit('ashenForager', 106, 100, 'enemy');
+  protectedWorker._updateBuilderServices();
+  assert.equal(restrainedGuard.attackTarget, null, 'automatic military defense ignores protected enemy workers');
+
+  for (const defenseType of ['watchHut', 'palisadeTower']) {
+    const defense = movementSandbox();
+    const building = defense.addBuilding(defenseType, 100, 100, 'player');
+    const target = defense.addUnit('raider', 108, 100, 'enemy');
+    defense._updateDefensiveBuilding(building);
+    assert.equal(defense.projectiles.length, 1, `${BUILDING_TYPES[defenseType].label} launches an arrow at a nearby fighter`);
+    assert.ok(Number.isInteger(defense.projectiles[0].portIndex), `${BUILDING_TYPES[defenseType].label} chooses a directional firing port`);
+    const initialHp = target.hp;
+    advance(defense, 1);
+    assert.ok(target.hp < initialHp, `${BUILDING_TYPES[defenseType].label} arrow reaches and damages its target`);
+  }
+
+  const workTransition = movementSandbox();
+  const timberYard = workTransition.addBuilding('timberYard', 100, 100, 'player');
+  const lumberjack = workTransition.addUnit('villager', 100, 106, 'player');
+  workTransition.addResource('grove', 'wood', 109, 100, 1200, 0, { sizeTier: 'large' });
+  const nearbyTrees = workTransition.resourcesNodes.at(-1);
+  const assigned = workTransition._assignCompletedBuildingWork(lumberjack, timberYard);
+  assert.equal(assigned, true, 'completed specialist yard assigns its builder to matching nearby resources');
+  assert.equal(lumberjack.gatherTarget, nearbyTrees.id, 'Timber Yard builder transitions directly into nearby wood gathering');
+
+  assert.match(RENDERER_SOURCE, /wallJunctionClip:\s*\{ x: connector\.socketX, z: connector\.socketZ \}/, 'Palisade Tower connectors clip at the authored tower socket');
+  assert.match(RENDERER_SOURCE, /drawDefenseProjectiles\(ctx, simulation\)/, 'renderer draws defensive arrows in the world pass');
 }
 
 function checkConstructionAndPlacement() {
@@ -970,12 +1076,18 @@ function checkConstructionOrderQueue() {
   assert.match(worker.actionLabel, /queued/, 'the builder task label exposes the queued order');
 
   simulation.setUnitSpeedScale(10);
-  advance(simulation, BUILDING_TYPES.barracks.buildTime + 35);
+  let nearestQueuedDistance = Infinity;
+  const queueScenarioSteps = Math.ceil((BUILDING_TYPES.barracks.buildTime + 35) / STEP_60HZ);
+  for (let step = 0; step < queueScenarioSteps; step += 1) {
+    simulation.update(STEP_60HZ);
+    if (barracks.progress >= 1) {
+      nearestQueuedDistance = Math.min(nearestQueuedDistance, Math.hypot(worker.x - queuedPoint.x, worker.z - queuedPoint.z));
+    }
+  }
   assert.equal(barracks.progress, 1, 'the foundation completes before the queued order executes');
   assert.equal(worker.orderQueue.length, 0, 'the queued order is removed after execution begins');
-  assert.ok(['move', 'idle'].includes(worker.command), 'the builder transitions into the queued move or its settled state');
-  advance(simulation, 4);
-  assert.ok(Math.hypot(worker.x - queuedPoint.x, worker.z - queuedPoint.z) < 3.0, 'the builder reaches the queued destination');
+  assert.ok(['move', 'idle'].includes(worker.command), 'the builder transitions into the queued move, settles there, or later begins its safety return');
+  assert.ok(nearestQueuedDistance < 3.0, 'the builder reaches the queued destination before the delayed safety return');
 }
 
 function checkWallResourcePrecedence() {
@@ -1339,7 +1451,7 @@ function checkCrownHallProportionsAndBuildableRing() {
   assert.equal(hall.renderSize, BUILDING_TYPES.barracks.renderSize, 'Crown Hall matches the Barracks visual width');
   assert.deepEqual(hall.footprint, { width: 9, height: 8 }, 'Crown Hall gameplay footprint is reduced with its visual scale');
   assert.equal(hall.collisionClearance, 1.8, 'Crown Hall keeps its authored economy and placement clearance');
-  assert.equal(hall.unitExclusionPadding, 1, 'Crown Hall adds a dedicated no-entry ring for moving units');
+  assert.equal(hall.unitExclusionPadding, 1.8, 'Crown Hall adds an expanded no-entry ring for moving units and attackers');
   assert.equal(hall.stairAccess.topOffset, 5, 'Crown Hall stair landing scales with the landmark');
   assert.equal(hall.stairAccess.outerOffset, 9, 'Crown Hall stair approach scales with the landmark');
 
@@ -1959,6 +2071,8 @@ checkWatchHutAndShieldbearer();
 checkIntentAwareVisualTargeting();
 checkReadableResourceApproaches();
 checkBuilderWorkflowAndVillagerControls();
+checkInstantAreaDemolition();
+checkAutonomousWorkCombatAndDefenses();
 checkConstructionAndPlacement();
 checkConstructionRetaskingAndTaskSummary();
 checkConstructionOrderQueue();
@@ -1999,6 +2113,8 @@ console.log(JSON.stringify({
     'First-age Watch Hut construction, Crown Shieldbearer production, and four-direction Shieldbearer animation',
     'intent-aware visual targeting and resource-specific gather/drop-off feedback',
     'data-driven builder capability, hammer cursor, manual repair, nearby auto-assist, Crown Hall safety regroup, and Select All Villagers control',
+    'instant click, selected-structure, and drag-area demolition without Villagers, labor queues, collision, or debris',
+    'long-wall construction stations, persistent attack recovery, protected workers, autonomous military defense, directional building arrows, specialist work transitions, and tower socket integration',
     'focused first-age building catalog with the Crown Hall as universal fallback',
     'placement rejection and Barracks completion',
     'construction pause, foundation right-click reassignment, cargo-first resume, and mixed-task feedback',

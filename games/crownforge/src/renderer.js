@@ -1,5 +1,5 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260827-wildwood1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260827-unitfacing1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260828-instantdemo1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260828-instantdemo1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -477,6 +477,7 @@ export class CrownforgeRenderer {
     ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
     this.drawPaths(ctx, simulation);
     this.drawWorldEntities(ctx, simulation, time);
+    this.drawDefenseProjectiles(ctx, simulation);
     // Placement is a planning state, so the monumental Hall gets a quiet
     // vision overlay after normal depth sorting. This keeps its far side
     // readable without changing normal gameplay occlusion.
@@ -828,7 +829,7 @@ export class CrownforgeRenderer {
         // can otherwise sort a near panel over the hardpoint and make posts
         // appear to run through the tower. These restrained base-depth biases
         // keep the opening/hardpoint in front only inside its own visual mass.
-        const fortificationBias = entity.type === 'palisadeTower' ? 8.5 : entity.type === 'gate' ? 3 : 0.2;
+        const fortificationBias = entity.type === 'palisadeTower' ? 1.15 : entity.type === 'gate' ? 3 : 0.2;
         return [{ ...entity, depth: entity.field ? -10000 + entity.x + entity.z : entity.x + entity.z + fortificationBias }];
       }),
       ...this.palisadeTowerConnectorEntities(simulation)
@@ -918,6 +919,8 @@ export class CrownforgeRenderer {
         x: segment.x,
         z: segment.z,
         direction: segment.direction,
+        socketX: segment.socketX ?? tower.x,
+        socketZ: segment.socketZ ?? tower.z,
         alpha: Math.min(1, 0.55 + tower.progress * 0.45),
       })));
   }
@@ -925,13 +928,49 @@ export class CrownforgeRenderer {
   drawPalisadeTowerConnector(ctx, connector) {
     const point = this.worldToScreen(connector);
     const visual = resolveWallVisual(connector.direction);
-    this.drawFirstAgeAsset(
-      ctx,
-      visual.asset,
-      point,
-      this.buildingRenderSize('wall') * this.camera.zoom,
-      connector.alpha ?? 1,
-    );
+    this.drawWallPanel(ctx, {
+      wallJunctionClip: { x: connector.socketX, z: connector.socketZ },
+    }, visual.asset, point, this.buildingRenderSize('wall') * this.camera.zoom, connector.alpha ?? 1);
+  }
+
+  drawDefenseProjectiles(ctx, simulation) {
+    const projectiles = simulation.projectiles ?? [];
+    if (!projectiles.length) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const projectile of projectiles) {
+      if (!this.isWorldVisible(projectile, 3)) continue;
+      const head = this.worldToScreen(projectile);
+      const previous = this.worldToScreen({ x: projectile.previousX, z: projectile.previousZ });
+      const dx = head.x - previous.x;
+      const dy = head.y - previous.y;
+      const magnitude = Math.hypot(dx, dy) || 1;
+      const ux = dx / magnitude;
+      const uy = dy / magnitude;
+      const travelled = Math.hypot(projectile.x - projectile.startX, projectile.z - projectile.startZ);
+      const progress = Math.min(1, travelled / Math.max(projectile.totalDistance, 0.01));
+      const lift = (24 - progress * 18) * Math.max(0.55, this.camera.zoom);
+      const trailLength = Math.max(7, 16 * this.camera.zoom);
+      const headX = head.x;
+      const headY = head.y - lift;
+      const tailX = headX - ux * trailLength;
+      const tailY = headY - uy * trailLength;
+      ctx.strokeStyle = 'rgba(255, 205, 105, 0.92)';
+      ctx.lineWidth = Math.max(1.15, 2.2 * this.camera.zoom);
+      ctx.beginPath();
+      ctx.moveTo(tailX, tailY);
+      ctx.lineTo(headX, headY);
+      ctx.stroke();
+      ctx.fillStyle = '#f5dfad';
+      ctx.beginPath();
+      ctx.moveTo(headX + ux * 2.8, headY + uy * 2.8);
+      ctx.lineTo(headX - ux * 3.4 - uy * 2.1, headY - uy * 3.4 + ux * 2.1);
+      ctx.lineTo(headX - ux * 3.4 + uy * 2.1, headY - uy * 3.4 - ux * 2.1);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   palisadeJunctionEntities(simulation) {

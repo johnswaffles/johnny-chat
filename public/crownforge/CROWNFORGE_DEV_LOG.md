@@ -4528,3 +4528,116 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not add more unit types until each new atlas passes the same four-direction visual board and semantic sampling tests.
 - Do not compensate for atlas-layout mistakes with sprite rotation or arbitrary mirroring.
+
+
+## AUTONOMOUS WORK, DEFENSE, AND PALISADE-TOWER INTEGRATION — 2026-08-27
+
+### WHAT EXISTS
+
+- Villagers use distributed construction stations along an entire Palisade run rather than attempting to reach only the ends of a long wall.
+- Builder and combat orders remain active while the simulation searches for a temporarily unavailable approach.
+- First-age military units guard a restrained local radius, while enemy worker equivalents remain protected from automatic targeting.
+- First-age Watch Huts and Palisade Towers fire visible directional arrows at nearby hostile fighters.
+- Completed specialist yards hand their player builder directly into matching nearby gathering work.
+
+### WHAT WAS COMPLETED
+
+- Fixed Villagers getting stuck beside long Palisades by generating reachable work stations on both sides and near the middle of the physical wall line.
+- Kept blocked construction and direct attack commands persistent, with paced route retries instead of cancelling the order after one failed path query.
+- Cleared stale blocked-route state when an idle builder automatically claims nearby unfinished or damaged work.
+- Added automatic nearby construction and repair for capable workers using the existing building reservation system.
+- Added local automatic target acquisition to Crown Guards, Scouts, Spearwardens, Militia, and Shieldbearers.
+- Excluded Ashen Foragers and future worker-tagged enemy units from automatic military and defensive-building targeting.
+- Preserved easy-AI forest gating by requiring an immediate route before an Ashen raid can be counted as launched.
+- Expanded the Crown Hall unit-exclusion ring from 1.0 to 1.8 world units so hostile fighters remain clear of the illustrated Hall base.
+- Added four-port Palisade Tower firing and directional Watch Hut firing with restrained arrow trails, impact damage, cooldowns, and health feedback.
+- Added post-construction work transitions: Timber Yard to Wood, Stonewright Yard to Stone, Ore Wash to Gold, and Granary to Food when matching nodes are nearby.
+- Added a thirty-second idle grace period before player or Ashen workers return to their faction Hall huddle; intentional Crown Hall stair positions are preserved.
+- Lowered the Palisade Tower render-depth bias and clipped each replacement connector panel at the tower's physical socket so the tower reads as part of the wall instead of a sticker painted over it.
+- Advanced the playable build marker to `20260827-autonomy1`.
+
+### KNOWN ISSUES
+
+- Defensive arrows use a clean code-rendered projectile treatment; dedicated age-specific arrow-flight and impact raster effects can be considered only after extended live balance testing.
+- Automatic soldiers deliberately do not chase protected enemy gatherers. Direct player orders still control explicit combat intent under the existing unit rules.
+- The source-only regression entry still cannot execute because the pre-existing source tree lacks `src/pathfinding.js`; the synchronized playable public package contains the module and passes the complete suite.
+
+### ASSETS CREATED
+
+- No new raster assets were required. Existing Watch Hut, Palisade Tower, Palisade panel, and tower-construction artwork were retained and integrated through corrected physical sockets and render ordering.
+
+### SYSTEMS CREATED
+
+- Distributed long-wall construction stations.
+- Persistent build/repair and direct-attack route recovery.
+- Local military auto-defense with protected-worker filtering.
+- Directional defensive-building arrow projectiles.
+- Specialist-yard post-construction work assignment.
+- Delayed faction-Hall worker regrouping.
+- Tower-socket connector clipping and grounded depth integration.
+
+### VALIDATION
+
+- JavaScript syntax checks passed for configuration, simulation, renderer, and regression modules.
+- The complete playable-package remediation suite passed all economy, construction, Palisade, pathfinding, combat, AI, movement, animation, and stability checks.
+- New regression coverage proves middle-of-run Palisade work access, stale-blocker recovery, persistent attack retries, protected enemy workers, autonomous military target acquisition, Watch Hut and four-port Tower arrows, Timber Yard work transition, Crown Hall exclusion, and tower connector clipping.
+- Source and playable-public files were synchronized after the passing test run.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Play several live wall builds with one and multiple Villagers and tune work-station spacing only if workers visually crowd a very short run.
+2. Observe Watch Hut and Palisade Tower arrow cadence during a real raid and tune range/damage without adding more defensive structure types.
+3. Inspect straight-run and corner Tower replacements at minimum and maximum zoom after deployment; retain the physical socket as the single source of truth.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add advanced tower ammunition, garrisons, patrol stances, formation AI, or target-priority menus.
+- Do not let autonomous soldiers hunt protected workers or chase enemies across the entire map.
+- Do not replace persistent route recovery with collision bypasses that allow units to walk through structures or fortifications.
+
+## INSTANT PLAYER DEMOLITION PASS — 2026-08-28
+
+### WHAT EXISTS
+
+- Demolition is now a direct player command, not a Villager ability or labor task.
+- The demolition control is always available in Settlement Intel and through `X`, regardless of the current unit selection.
+- A selected player structure can be removed with one press. With no eligible structure selected, the same control enters click-or-drag area-clear mode.
+
+### WHAT WAS COMPLETED
+
+- Removed demolition capability and demolition speed from the Villager definition.
+- Removed the selected-Villager prerequisite from both the demolition button and keyboard shortcut.
+- Replaced queued travel, perimeter-slot reservation, hammer labor, and pathfinding-dependent dismantling with immediate structure removal.
+- Added instant collision release so removed walls and buildings stop blocking units in the same action.
+- Skipped the combat-destruction fade and debris treatment for player demolition; cleared structures disappear cleanly at once.
+- Preserved protection for the Crown Hall and all non-player structures.
+- Kept the forgiving visible-art hit regions and click-or-drag multi-structure area selection.
+- Reworded the button, tooltip, command line, placement readout, and controls guide so demolition no longer reads as a Villager spell or job.
+- Advanced the playable build marker to `20260828-instantdemo1`.
+
+### KNOWN ISSUES
+
+- Direct demolition intentionally provides no resource refund. A future economy-balance pass may decide whether partial salvage belongs in Crownforge, but it should not be added implicitly.
+- Combat-destroyed structures still use their authored short collapse treatment. Only deliberate player demolition is debris-free and immediate.
+
+### ASSETS CREATED
+
+- No new artwork was required. The existing demolition icon, area highlight, cursor, and selection feedback remain visually consistent with the current interface.
+
+### SYSTEMS CREATED
+
+- Selection-aware one-button demolition.
+- Always-available click-or-drag area demolition.
+- Immediate collision and debris cleanup.
+- Regression coverage for demolition without workers, protected structures, area removal, and instant navigation release.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Verify long mixed selections containing houses, fields, walls, gates, and towers at normal and distant zoom.
+2. Confirm the red area preview remains legible over dense wildwood and large fortifications.
+3. Keep demolition direct unless a later design pass explicitly introduces a salvage economy.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not restore Villager demolition labor, demolition pathfinding, worker slots, or demolition animations.
+- Do not add refunds, rubble harvesting, salvage wagons, demolition technologies, or faction-specific demolition rules during this pass.

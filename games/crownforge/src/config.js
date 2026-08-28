@@ -115,9 +115,7 @@ export const UNIT_TYPES = {
     // inherit construction, repair, and nearby auto-assist without adding
     // another unit-type check to the input or simulation layers.
     canBuild: true,
-    canDemolish: true,
     repairRate: 8,
-    demolitionRate: 22,
     autoBuildRadius: 12,
     regroupAtTownCenter: true,
     speed: 2.9,
@@ -156,6 +154,7 @@ export const UNIT_TYPES = {
     cooldown: 0.85,
     attackTiming: { anticipation: 0.24, contact: 0.44, recovery: 0.32 },
     combatAtlas: 'soldier',
+    autoAggroRadius: 16,
   },
   raider: {
     label: 'Ashen Raider',
@@ -194,6 +193,7 @@ export const UNIT_TYPES = {
     canAttackBuildings: false,
     combatAtlas: 'ashenForagerMotion',
     worker: true,
+    regroupAtTownCenter: true,
     traits: ['humanoid'],
   },
   ashenOutrider: {
@@ -277,6 +277,7 @@ export const UNIT_TYPES = {
     cooldown: 1.05,
     attackTiming: { anticipation: 0.2, contact: 0.42, recovery: 0.34 },
     combatAtlas: 'scout',
+    autoAggroRadius: 18,
   },
   spearwarden: {
     label: 'Crown Spearwarden',
@@ -295,6 +296,7 @@ export const UNIT_TYPES = {
     cooldown: 1.02,
     attackTiming: { anticipation: 0.24, contact: 0.45, recovery: 0.33 },
     combatAtlas: 'spearwarden',
+    autoAggroRadius: 16,
   },
   militia: {
     label: 'Crown Militia',
@@ -313,6 +315,7 @@ export const UNIT_TYPES = {
     cooldown: 0.95,
     attackTiming: { anticipation: 0.22, contact: 0.44, recovery: 0.34 },
     combatAtlas: 'militia',
+    autoAggroRadius: 14,
   },
   shieldbearer: {
     label: 'Crown Shieldbearer',
@@ -328,6 +331,7 @@ export const UNIT_TYPES = {
     cooldown: 1.08,
     attackTiming: { anticipation: 0.24, contact: 0.46, recovery: 0.34 },
     combatAtlas: 'shieldbearer',
+    autoAggroRadius: 15,
   },
 };
 
@@ -458,7 +462,7 @@ export const BUILDING_TYPES = {
     // This extra ring applies only to moving units. Keeping it separate from
     // collisionClearance prevents the larger no-entry boundary from changing
     // drop-off priority, placement spacing, or the authored building scale.
-    unitExclusionPadding: 1,
+    unitExclusionPadding: 1.8,
     interactionSlots: 8,
     entrance: 'south',
     // The first-age Hall has a readable south stair run. Units may enter only
@@ -580,6 +584,13 @@ export const BUILDING_TYPES = {
     entrance: 'south',
     buildTime: 7,
     cost: { food: 0, wood: 65, stone: 15 },
+    defense: {
+      range: 18,
+      damage: 8,
+      cooldown: 1.45,
+      projectileSpeed: 30,
+      portRadius: 0.9,
+    },
   },
   timberYard: {
     label: 'Timber Yard',
@@ -758,6 +769,14 @@ export const BUILDING_TYPES = {
     buildTime: 7,
     cost: { food: 0, wood: 85, stone: 20 },
     wallAttachment: true,
+    defense: {
+      range: 21,
+      damage: 10,
+      cooldown: 1.15,
+      projectileSpeed: 34,
+      portRadius: 1.25,
+      ports: 4,
+    },
   },
   storehouse: {
     label: 'Waystore',

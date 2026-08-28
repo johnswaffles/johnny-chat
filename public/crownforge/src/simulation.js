@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260827-wildwood1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260828-instantdemo1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260827-unitfacing1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-instantdemo1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -64,6 +64,9 @@ const BUILDER_SERVICE_INTERVAL = 0.4;
 const BUILDING_REPAIR_EPSILON = 0.5;
 const REPAIR_STRIKE_INTERVAL = 0.82;
 const SAFETY_HUDDLE_SPACING = 1.65;
+const IDLE_REGROUP_DELAY = 30;
+const AUTO_COMBAT_ROUTE_BUDGET = 5;
+const DEFENSE_PROJECTILE_LIFETIME = 2.4;
 const NATURAL_RESOURCE_GAP = 1.7;
 const WILDWOOD_LATTICE = { margin: 28, spacingX: 32, spacingZ: 28, overlapAllowance: -15.5 };
 const WILDWOOD_CLEARINGS = [
@@ -247,6 +250,7 @@ export class CrownforgeSimulation {
     };
     this.units = [];
     this.buildings = [];
+    this.projectiles = [];
     this.resourcesNodes = [];
     this.decorations = [];
     this.selectedIds = [];
@@ -446,6 +450,8 @@ export class CrownforgeSimulation {
       raidCount: 0,
       defendTimer: 0,
       defenseTargetId: null,
+      defenseFireCooldown: 0,
+      defenseTargetUnitId: null,
       productionQueue: [],
       productionProgress: 0,
       field: Boolean(blueprint.field),
@@ -471,6 +477,8 @@ export class CrownforgeSimulation {
           x: segment.x,
           z: segment.z,
           direction: normalizeWallDirection(segment.direction),
+          socketX: Number.isFinite(segment.socketX) ? segment.socketX : x,
+          socketZ: Number.isFinite(segment.socketZ) ? segment.socketZ : z,
         }))
         : [],
       attachmentJunction: blueprint.wallAttachment ? Boolean(options.attachmentJunction) : false,
@@ -518,6 +526,7 @@ export class CrownforgeSimulation {
       attackEventFired: false,
       attackTargetSnapshot: null,
       attackRepathCooldown: 0,
+      idleDuration: 0,
       buildTarget: null,
       demolishTarget: null,
       demolishSlot: -1,
@@ -564,9 +573,9 @@ export class CrownforgeSimulation {
       pathfindingDeferred: false,
       lastProgressX: x,
       lastProgressZ: z,
-      needsSafetyRegroup: Boolean(blueprint.regroupAtTownCenter && faction === 'player'),
+      needsSafetyRegroup: false,
       safetyRegroupActive: false,
-      safetyHuddleSlot: blueprint.regroupAtTownCenter && faction === 'player' ? this.nextSafetyHuddleSlot++ : -1,
+      safetyHuddleSlot: blueprint.regroupAtTownCenter ? this.nextSafetyHuddleSlot++ : -1,
       spacingRole: SPACING_ROLES[type] ?? SPACING_ROLES.villager,
     };
     this.units.push(unit);
@@ -629,6 +638,7 @@ export class CrownforgeSimulation {
     for (const building of this.buildings) {
       building.hitFlash = Math.max(0, building.hitFlash - dt);
       building.defendTimer = Math.max(0, (building.defendTimer ?? 0) - dt);
+      building.defenseFireCooldown = Math.max(0, (building.defenseFireCooldown ?? 0) - dt);
       if (building.destroyed) building.destroyAge += dt;
     }
     if (this.phase !== 'playing') {
@@ -663,7 +673,9 @@ export class CrownforgeSimulation {
       this._updateConstruction(building, dt);
       this._updateTraining(building, dt);
       this._updateField(building, dt);
+      this._updateDefensiveBuilding(building);
     }
+    this._updateDefenseProjectiles(dt);
     for (const unit of this.units) this._updateUnit(unit, dt);
     this._resolveUnitCollisions();
     this._updateEnemyAI(dt);
@@ -1049,6 +1061,9 @@ export class CrownforgeSimulation {
     unit.stairProgress = 0;
     unit.needsSafetyRegroup = false;
     unit.safetyRegroupActive = false;
+    unit.idleDuration = 0;
+    unit.pathBlocked = false;
+    unit.recoveryAvailable = false;
     this._cancelAttackCycle(unit);
   }
 
@@ -1126,6 +1141,35 @@ export class CrownforgeSimulation {
     this._announce(`${label} dismantled.`);
   }
 
+  _assignCompletedBuildingWork(unit, building) {
+    // The player's newly completed work yard should feel immediately useful.
+    // Ashen workers remain under their paced economy planner so this local
+    // convenience does not silently accelerate forest clearing or raids.
+    if (unit.faction !== 'player') return false;
+    const bonus = BUILDING_TYPES[building.type]?.gatherBonus;
+    if (!UNIT_TYPES[unit.type]?.worker || !bonus?.resourceType || building.destroyed || building.progress < 1) return false;
+    const candidates = this.resourcesNodes
+      .filter((node) => node.amount > 0
+        && node.resourceType === bonus.resourceType
+        && distance(node, building) <= bonus.radius)
+      .sort((a, b) => distance(unit, a) - distance(unit, b) || a.id - b.id);
+    for (const node of candidates) {
+      unit.gatherTarget = node.id;
+      unit.gatherSlot = unit.id % resourceSlotCount(node);
+      unit.gatherTimer = 0;
+      unit.gatherEventFired = false;
+      if (!this._sendUnitToResource(unit, node)) {
+        unit.gatherTarget = null;
+        continue;
+      }
+      unit.actionLabel = `Starting nearby ${RESOURCE_TYPES[bonus.resourceType].label} work`;
+      unit.needsSafetyRegroup = false;
+      unit.idleDuration = 0;
+      return true;
+    }
+    return false;
+  }
+
   _updateConstruction(building, dt) {
     if (!this.buildingNeedsWork(building)) return;
     const repairing = building.progress >= 1;
@@ -1145,7 +1189,9 @@ export class CrownforgeSimulation {
         builder.visualState = 'walk';
         const destination = building.progress < 1 ? 'build site' : BUILDING_TYPES[building.type].label;
         builder.actionLabel = `Walking to ${destination}${builder.orderQueue?.length ? ` · ${builder.orderQueue.length} queued` : ''}`;
-        if (builder.command !== 'build' || !builder.path.length) this._sendUnitToBuilding(builder, building, builder.buildSlot);
+        if ((builder.command !== 'build' || !builder.path.length) && builder.repathCooldown <= 0) {
+          this._sendUnitToBuilding(builder, building, builder.buildSlot);
+        }
         continue;
       }
       activeBuilders += 1;
@@ -1199,7 +1245,10 @@ export class CrownforgeSimulation {
         builder.command = 'idle';
         builder.visualState = 'idle';
         builder.actionLabel = 'Idle';
-        if (!this._executeNextConstructionOrder(builder)) builder.needsSafetyRegroup = Boolean(UNIT_TYPES[builder.type]?.regroupAtTownCenter && builder.faction === 'player');
+        builder.idleDuration = 0;
+        if (this._executeNextConstructionOrder(builder)) continue;
+        if (!repairing && this._assignCompletedBuildingWork(builder, building)) continue;
+        builder.needsSafetyRegroup = Boolean(UNIT_TYPES[builder.type]?.regroupAtTownCenter);
       }
       building.buildAssigned = [];
       this._announce(`${BUILDING_TYPES[building.type].label} ${repairing ? 'repaired' : 'complete'}.`);
@@ -1237,6 +1286,8 @@ export class CrownforgeSimulation {
 
   _availableForAutomaticBuilding(unit) {
     return Boolean(this.isBuilderUnit(unit)
+      && !unit.dead
+      && unit.stunTimer <= 0
       && unit.command === 'idle'
       && !unit.path.length
       && !unit.carryAmount
@@ -1244,7 +1295,6 @@ export class CrownforgeSimulation {
       && !unit.buildTarget
       && !unit.fieldTarget
       && !unit.attackTarget
-      && !unit.pathBlocked
       && !(unit.orderQueue?.length));
   }
 
@@ -1303,7 +1353,58 @@ export class CrownforgeSimulation {
     return null;
   }
 
+  _factionTownHall(faction) {
+    const preferredType = faction === 'enemy' ? 'ashenCamp' : 'townCenter';
+    return this.buildings.find((building) => building.type === preferredType
+      && building.faction === faction
+      && building.progress >= 1
+      && !building.destroyed) ?? null;
+  }
+
+  _isProtectedWorkerTarget(target) {
+    return Boolean(target?.kind === 'unit' && UNIT_TYPES[target.type]?.worker);
+  }
+
+  _nearestAutomaticCombatTarget(unit, radius) {
+    return this.units
+      .filter((candidate) => !candidate.dead
+        && candidate.faction !== unit.faction
+        && candidate.faction !== 'neutral'
+        && !this._isProtectedWorkerTarget(candidate)
+        && distance(unit, candidate) <= radius)
+      .sort((a, b) => distance(unit, a) - distance(unit, b) || a.id - b.id)[0] ?? null;
+  }
+
+  _updateMilitaryServices() {
+    let routeBudget = this.stressMode ? 2 : AUTO_COMBAT_ROUTE_BUDGET;
+    const defenders = this.units
+      .filter((unit) => {
+        const rules = UNIT_TYPES[unit.type] ?? {};
+        return !unit.dead
+          && rules.autoAggroRadius > 0
+          && rules.canAttackUnits !== false
+          && unit.stunTimer <= 0
+          && (unit.command === 'idle' || unit.safetyRegroupActive)
+          && !unit.orderQueue?.length;
+      })
+      .sort((a, b) => a.id - b.id);
+    for (const defender of defenders) {
+      if (routeBudget <= 0) break;
+      const target = this._nearestAutomaticCombatTarget(defender, UNIT_TYPES[defender.type].autoAggroRadius);
+      if (!target) continue;
+      this._interruptWork(defender);
+      defender.attackTarget = target.id;
+      defender.attackTargetKind = 'unit';
+      defender.attackSlot = defender.id % COMBAT_SLOT_COUNT;
+      if (this._sendUnitToAttack(defender, target, defender.attackSlot)) {
+        defender.actionLabel = `Defending against ${UNIT_TYPES[target.type].label}`;
+        routeBudget -= 1;
+      }
+    }
+  }
+
   _updateBuilderServices() {
+    this._updateMilitaryServices();
     const builders = this.units
       .filter((unit) => this._availableForAutomaticBuilding(unit))
       .sort((a, b) => a.id - b.id);
@@ -1323,32 +1424,134 @@ export class CrownforgeSimulation {
     }
 
     if (routeBudget <= 0) return;
-    const hall = this.buildings.find((building) => building.type === 'townCenter'
-      && building.faction === 'player'
-      && building.progress >= 1
-      && !building.destroyed);
-    if (!hall) return;
     const regrouping = this.units
       .filter((unit) => this._availableForAutomaticBuilding(unit)
         && UNIT_TYPES[unit.type]?.regroupAtTownCenter
-        && unit.needsSafetyRegroup)
+        && !unit.stairAccess
+        && (unit.needsSafetyRegroup || unit.idleDuration >= IDLE_REGROUP_DELAY)
+        && unit.idleDuration >= IDLE_REGROUP_DELAY)
       .sort((a, b) => a.safetyHuddleSlot - b.safetyHuddleSlot || a.id - b.id);
     for (const unit of regrouping) {
       if (routeBudget <= 0) break;
+      const hall = this._factionTownHall(unit.faction);
+      if (!hall) continue;
       const point = this._safetyHuddlePoint(unit, hall);
       if (!point) continue;
       if (distance(unit, point) <= 0.72) {
         unit.needsSafetyRegroup = false;
         unit.safetyRegroupActive = false;
-        unit.actionLabel = 'Standing by at Crown Hall';
+        unit.idleDuration = 0;
+        unit.actionLabel = `Standing by at ${BUILDING_TYPES[hall.type].label}`;
         continue;
       }
       if (this._sendUnitTo(unit, point, 'move')) {
         unit.safetyRegroupActive = true;
-        unit.actionLabel = 'Regrouping at Crown Hall';
+        unit.actionLabel = `Regrouping at ${BUILDING_TYPES[hall.type].label}`;
         routeBudget -= 1;
       }
     }
+  }
+
+  _defensiveBuildingTarget(building, rules) {
+    const current = this.units.find((unit) => unit.id === building.defenseTargetUnitId
+      && !unit.dead
+      && unit.faction !== building.faction
+      && unit.faction !== 'neutral'
+      && !this._isProtectedWorkerTarget(unit)
+      && distance(building, unit) <= rules.range);
+    if (current) return current;
+    return this.units
+      .filter((unit) => !unit.dead
+        && unit.faction !== building.faction
+        && unit.faction !== 'neutral'
+        && !this._isProtectedWorkerTarget(unit)
+        && distance(building, unit) <= rules.range)
+      .sort((a, b) => distance(building, a) - distance(building, b) || a.id - b.id)[0] ?? null;
+  }
+
+  _updateDefensiveBuilding(building) {
+    const rules = BUILDING_TYPES[building.type]?.defense;
+    if (!rules || building.destroyed || building.progress < 1 || building.hp <= 0 || building.faction === 'neutral') return;
+    if (building.defenseFireCooldown > 0) return;
+    const target = this._defensiveBuildingTarget(building, rules);
+    if (!target) {
+      building.defenseTargetUnitId = null;
+      return;
+    }
+    building.defenseTargetUnitId = target.id;
+    const angle = Math.atan2(target.z - building.z, target.x - building.x);
+    const ports = Math.max(1, Math.round(rules.ports ?? 4));
+    const portIndex = ((Math.round(angle / (TAU / ports)) % ports) + ports) % ports;
+    const portAngle = (portIndex / ports) * TAU;
+    const portRadius = rules.portRadius ?? 0.8;
+    const start = {
+      x: building.x + Math.cos(portAngle) * portRadius,
+      z: building.z + Math.sin(portAngle) * portRadius,
+    };
+    this.projectiles.push({
+      id: this.nextId++,
+      kind: 'defense-arrow',
+      faction: building.faction,
+      sourceBuildingId: building.id,
+      sourceType: building.type,
+      targetId: target.id,
+      x: start.x,
+      z: start.z,
+      previousX: start.x,
+      previousZ: start.z,
+      startX: start.x,
+      startZ: start.z,
+      damage: rules.damage,
+      speed: rules.projectileSpeed ?? 30,
+      age: 0,
+      maxAge: DEFENSE_PROJECTILE_LIFETIME,
+      totalDistance: Math.max(0.01, distance(start, target)),
+      portIndex,
+    });
+    building.defenseFireCooldown = rules.cooldown;
+  }
+
+  _updateDefenseProjectiles(dt) {
+    for (const projectile of this.projectiles) {
+      projectile.age += dt;
+      const target = this.units.find((unit) => unit.id === projectile.targetId
+        && !unit.dead
+        && unit.faction !== projectile.faction
+        && unit.faction !== 'neutral');
+      if (!target || this._isProtectedWorkerTarget(target) || projectile.age >= projectile.maxAge) {
+        projectile.expired = true;
+        continue;
+      }
+      projectile.previousX = projectile.x;
+      projectile.previousZ = projectile.z;
+      const remaining = distance(projectile, target);
+      const travel = projectile.speed * dt;
+      if (remaining <= travel + (UNIT_TYPES[target.type]?.radius ?? 0.4)) {
+        projectile.x = target.x;
+        projectile.z = target.z;
+        projectile.expired = true;
+        const result = this._applyUnitDamage(target, projectile.damage, {
+          id: projectile.sourceBuildingId,
+          kind: 'building',
+          faction: projectile.faction,
+          type: projectile.sourceType,
+        });
+        target.hitFlash = Math.max(target.hitFlash, result.blocked ? 0.12 : 0.3);
+        target.healthRevealTimer = Math.max(target.healthRevealTimer, 1.6);
+        this.animation.emit(target, ANIMATION_EVENTS.damageTaken, {
+          sourceId: projectile.sourceBuildingId,
+          sourceKind: 'building',
+          damage: result.damage,
+          warded: result.warded,
+          blocked: result.blocked,
+        });
+        continue;
+      }
+      const ratio = travel / Math.max(remaining, 0.001);
+      projectile.x += (target.x - projectile.x) * ratio;
+      projectile.z += (target.z - projectile.z) * ratio;
+    }
+    this.projectiles = this.projectiles.filter((projectile) => !projectile.expired);
   }
 
   _sendUnitToField(unit, field) {
@@ -1464,6 +1667,15 @@ export class CrownforgeSimulation {
     unit.animationPlaybackRate = unit.command === 'move' || unit.visualState === 'walk'
       ? Math.max(0, Math.min(3.2, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed, 0.01)))
       : 1;
+    const trulyIdle = unit.command === 'idle'
+      && !unit.path.length
+      && !unit.gatherTarget
+      && !unit.buildTarget
+      && !unit.fieldTarget
+      && !unit.attackTarget
+      && !unit.carryAmount
+      && !(unit.orderQueue?.length);
+    unit.idleDuration = trulyIdle ? (unit.idleDuration ?? 0) + dt : 0;
     this.animation.update(unit, dt);
   }
 
@@ -1916,6 +2128,40 @@ export class CrownforgeSimulation {
     const unitClearance = visualClearance + (blueprint.unitExclusionPadding ?? 0);
     const halfWidth = footprint.width / 2 + unitClearance + margin;
     const halfHeight = footprint.height / 2 + unitClearance + margin;
+    if (blueprint.wall) {
+      const geometry = this._wallLineGeometry(building);
+      if (geometry) {
+        const perpendicular = { x: -geometry.direction.z, z: geometry.direction.x };
+        const sideDistance = geometry.halfThickness + (blueprint.unitExclusionPadding ?? 0) + margin;
+        const usableHalfLength = Math.max(0, geometry.halfLength - (blueprint.wallSegmentSpan ?? 3) * 0.35);
+        const longitudinalStops = usableHalfLength > 0.2 ? [-0.72, 0, 0.72] : [0];
+        const points = [];
+        for (const stop of longitudinalStops) {
+          for (const side of [1, -1]) {
+            points.push({
+              x: geometry.center.x + geometry.direction.x * usableHalfLength * stop + perpendicular.x * sideDistance * side,
+              z: geometry.center.z + geometry.direction.z * usableHalfLength * stop + perpendicular.z * sideDistance * side,
+              priority: points.length,
+            });
+          }
+        }
+        const endDistance = geometry.halfLength + margin + (blueprint.unitExclusionPadding ?? 0);
+        for (const end of [1, -1]) {
+          points.push({
+            x: geometry.center.x + geometry.direction.x * endDistance * end,
+            z: geometry.center.z + geometry.direction.z * endDistance * end,
+            priority: points.length,
+          });
+        }
+        return points
+          .slice(0, this._buildingInteractionSlotCount(building))
+          .map((point) => ({
+            x: clamp(point.x, 0.55, CONFIG.mapWidth - 0.55),
+            z: clamp(point.z, 0.55, CONFIG.mapHeight - 0.55),
+            priority: point.priority,
+          }));
+      }
+    }
     if (blueprint.field && blueprint.walkable && building.progress >= 1) {
       const innerWidth = Math.max(0.7, footprint.width * 0.32);
       const innerHeight = Math.max(0.7, footprint.height * 0.32);
@@ -2711,13 +2957,18 @@ export class CrownforgeSimulation {
       if (!route || score < route.score) route = { path, point, slot, score };
     }
     if (!route) {
+      const waitingSlot = candidateSlots[0] ?? 0;
+      const waitingPoint = points[waitingSlot] ?? this._buildingCollisionCenter(building);
+      this._reserveBuildingSlot(unit, building, waitingSlot);
       unit.path = [];
-      unit.pathBlocked = true;
-      unit.recoveryAvailable = true;
-      unit.command = 'idle';
-      unit.visualState = 'idle';
-      unit.actionLabel = building.progress < 1 ? 'Build route blocked' : 'Repair route blocked';
-      return false;
+      unit.routeTarget = waitingPoint;
+      unit.pathBlocked = false;
+      unit.recoveryAvailable = false;
+      unit.command = 'build';
+      unit.visualState = 'walk';
+      unit.repathCooldown = UNIT_REPATH_COOLDOWN;
+      unit.actionLabel = building.progress < 1 ? 'Finding a build approach' : 'Finding a repair approach';
+      return true;
     }
     this._reserveBuildingSlot(unit, building, route.slot);
     unit.path = route.path;
@@ -2891,14 +3142,16 @@ export class CrownforgeSimulation {
       : UNIT_TYPES[target.type].radius;
     const ringRadius = Math.max(UNIT_TYPES[unit.type].range - COMBAT_SLOT_MARGIN, UNIT_TYPES[unit.type].radius + targetRadius + 0.08);
     const points = [];
-    for (let offset = 0; offset < COMBAT_SLOT_COUNT; offset += 1) {
-      const slot = (unit.attackSlot + offset) % COMBAT_SLOT_COUNT;
-      const angle = (slot / COMBAT_SLOT_COUNT) * TAU;
-      const point = {
-        x: clamp(target.x + Math.cos(angle) * ringRadius, 0.55, CONFIG.mapWidth - 0.55),
-        z: clamp(target.z + Math.sin(angle) * ringRadius, 0.55, CONFIG.mapHeight - 0.55),
-      };
-      if (this._hasCombatLineOfSight(point, target)) points.push({ point, slot });
+    for (const expansion of [0, 1.4]) {
+      for (let offset = 0; offset < COMBAT_SLOT_COUNT; offset += 1) {
+        const slot = (unit.attackSlot + offset) % COMBAT_SLOT_COUNT;
+        const angle = (slot / COMBAT_SLOT_COUNT) * TAU;
+        const point = {
+          x: clamp(target.x + Math.cos(angle) * (ringRadius + expansion), 0.55, CONFIG.mapWidth - 0.55),
+          z: clamp(target.z + Math.sin(angle) * (ringRadius + expansion), 0.55, CONFIG.mapHeight - 0.55),
+        };
+        if (this._hasCombatLineOfSight(point, target)) points.push({ point, slot });
+      }
     }
     return points;
   }
@@ -2977,7 +3230,7 @@ export class CrownforgeSimulation {
     return distance(before, target) > 0.001;
   }
 
-  _sendUnitToAttack(unit, target, slot = 0) {
+  _sendUnitToAttack(unit, target, slot = 0, options = {}) {
     if (!target || target.hp <= 0 || target.dead || target.destroyed) return false;
     const attackerRules = UNIT_TYPES[unit.type] ?? {};
     if (target.kind === 'unit' && attackerRules.canAttackUnits === false) return false;
@@ -2990,13 +3243,20 @@ export class CrownforgeSimulation {
     unit.attackSlot = slot % COMBAT_SLOT_COUNT;
     const route = this._bestCombatRoute(unit, target);
     if (!route) {
+      if (options.requireImmediateRoute) return false;
       this._releaseCombatSlot(unit);
       unit.path = [];
-      unit.pathBlocked = true;
-      unit.command = 'idle';
-      unit.visualState = 'idle';
-      unit.actionLabel = 'No opening to attack';
-      return false;
+      unit.routeTarget = null;
+      unit.pathBlocked = false;
+      unit.recoveryAvailable = false;
+      unit.command = 'attack';
+      unit.attackTarget = target.id;
+      unit.attackTargetKind = target.kind;
+      unit.attackPhase = 'approach';
+      unit.visualState = 'walk';
+      unit.attackRepathCooldown = UNIT_REPATH_COOLDOWN;
+      unit.actionLabel = `Finding an approach to ${this._targetLabel(target)}`;
+      return true;
     }
     this._reserveCombatSlot(unit, target, route.slot);
     unit.path = route.path;
@@ -3165,7 +3425,9 @@ export class CrownforgeSimulation {
       // stable route target; only ask A* again after the route is consumed or
       // the target has moved far enough to invalidate it.
       const routeTarget = unit.routeTarget;
-      if (!unit.path.length || !routeTarget || this._targetDistance(routeTarget, target) > 1.4) {
+      const routeTolerance = Math.max(1.4, range + 1.55);
+      if (unit.attackRepathCooldown <= 0
+        && (!unit.path.length || !routeTarget || this._targetDistance(routeTarget, target) > routeTolerance)) {
         this._sendUnitToAttack(unit, target, unit.attackSlot);
       }
       return;
@@ -3180,7 +3442,7 @@ export class CrownforgeSimulation {
         });
       }
       this._cancelAttackCycle(unit);
-      this._sendUnitToAttack(unit, target, unit.attackSlot);
+      if (unit.attackRepathCooldown <= 0) this._sendUnitToAttack(unit, target, unit.attackSlot);
       return;
     }
     setUnitFacing(unit, targetPoint.x - unit.x, targetPoint.z - unit.z, true);
@@ -3269,7 +3531,7 @@ export class CrownforgeSimulation {
       unit.visualState = 'walk';
       const interactionCenter = this._buildingCollisionCenter(building);
       setUnitFacing(unit, interactionCenter.x - unit.x, interactionCenter.z - unit.z);
-      if (!unit.path.length) this._sendUnitToBuilding(unit, building, unit.buildSlot);
+      if (!unit.path.length && unit.repathCooldown <= 0) this._sendUnitToBuilding(unit, building, unit.buildSlot);
     } else {
       unit.path = [];
       unit.velocityX = 0;
@@ -3544,10 +3806,15 @@ export class CrownforgeSimulation {
     state.raidWaveIds = [];
     wave.forEach((unit, index) => {
       this._interruptWork(unit);
-      unit.attackTarget = playerCore.id;
-      unit.attackTargetKind = 'building';
-      unit.actionLabel = 'Raiding the Crown Hall';
-      if (this._sendUnitToAttack(unit, playerCore, index)) state.raidWaveIds.push(unit.id);
+      if (this._sendUnitToAttack(unit, playerCore, index, { requireImmediateRoute: true })) {
+        unit.actionLabel = 'Raiding the Crown Hall';
+        state.raidWaveIds.push(unit.id);
+      } else {
+        unit.command = 'idle';
+        unit.attackTarget = null;
+        unit.attackTargetKind = null;
+        unit.actionLabel = 'Holding behind the wildwood';
+      }
     });
     if (state.raidWaveIds.length < ENEMY_AI.minRaidSize) return false;
     state.raidClock = 0;
@@ -3673,7 +3940,11 @@ export class CrownforgeSimulation {
       ...this.units.filter((unit) => unit.returnStorageId === building.id).map((unit) => unit.id),
     ]);
     building.destroyed = true;
-    building.destroyAge = 0;
+    // Direct player demolition removes the complete structure and its visual
+    // remains in one action. Combat destruction keeps the authored short
+    // collapse treatment, while instantCleanup immediately releases collision
+    // and skips every debris/fade frame.
+    building.destroyAge = options.instantCleanup ? 3 : 0;
     building.hp = 0;
     building.progress = 1;
     for (const unit of this.units.filter((candidate) => assignedIds.has(candidate.id))) {
@@ -4044,15 +4315,7 @@ export class CrownforgeSimulation {
     return { kind: 'selection', success: villagers.length > 0, count: villagers.length, entities: villagers };
   }
 
-  issueDemolitionOrder(targets = []) {
-    const builders = this.units
-      .filter((unit) => this.selectedIds.includes(unit.id) && this._isDemolitionUnit(unit))
-      .sort((a, b) => a.id - b.id);
-    if (!builders.length) {
-      this.lastCommand = 'Select at least one Villager before using demolition.';
-      this._announce(this.lastCommand);
-      return { kind: 'demolish', success: false, targetCount: 0, assigned: 0 };
-    }
+  demolishStructures(targets = []) {
     const uniqueTargets = [...new Map((Array.isArray(targets) ? targets : [targets])
       .filter((target) => target?.kind === 'building')
       .map((target) => [target.id, target])).values()];
@@ -4060,66 +4323,25 @@ export class CrownforgeSimulation {
     const protectedCount = uniqueTargets.length - validTargets.length;
     if (!validTargets.length) {
       this.lastCommand = protectedCount
-        ? 'The Crown Hall and non-player structures cannot be dismantled.'
-        : 'Drag across, or click, a player-built structure to dismantle it.';
+        ? 'The Crown Hall and non-player structures cannot be demolished.'
+        : 'Drag across, or click, a player-built structure to demolish it.';
       this._announce(this.lastCommand);
-      return { kind: 'demolish', success: false, targetCount: 0, assigned: 0, protectedCount };
+      return { kind: 'demolish', success: false, targetCount: 0, protectedCount };
     }
-    validTargets.forEach((building) => this._markBuildingForDemolition(building));
-    let assigned = 0;
-    let queued = 0;
-    builders.forEach((unit, index) => {
-      const building = validTargets[index % validTargets.length];
-      const order = { kind: 'demolish', buildingId: building.id, demolishSlot: index % DEMOLITION_SLOT_COUNT };
-      if (unit.command === 'build' || unit.command === 'demolish') {
-        if (this._queueUnitOrder(unit, order, 'Demolition')) {
-          assigned += 1;
-          queued += 1;
-        }
-        return;
-      }
-      this._interruptWork(unit);
-      unit.postDepositTarget = null;
-      if (unit.carryAmount > 0) {
-        if (this._queueUnitOrder(unit, order, 'Demolition') && this._beginReturn(unit)) {
-          assigned += 1;
-          queued += 1;
-        }
-        return;
-      }
-      if (this._sendUnitToDemolish(unit, building, order.demolishSlot)) assigned += 1;
-    });
-    for (let index = builders.length; index < validTargets.length; index += 1) {
-      const unit = builders[index % builders.length];
-      const building = validTargets[index];
-      if (this._queueUnitOrder(unit, {
-        kind: 'demolish',
-        buildingId: building.id,
-        demolishSlot: index % DEMOLITION_SLOT_COUNT,
-      }, 'Demolition')) queued += 1;
-    }
-    // A route or full queue can reject one requested target. Do not leave a
-    // red dismantling state on a structure that no worker actually owns.
-    for (const building of validTargets) {
-      const claimed = this.units.some((unit) => unit.demolishTarget === building.id
-        || unit.orderQueue?.some((order) => order.kind === 'demolish' && order.buildingId === building.id));
-      if (claimed) continue;
-      building.demolitionQueued = false;
-      building.demolitionWork = 0;
-      building.demolitionMaxWork = 0;
-      building.demolitionStartHp = 0;
-      building.demolitionTimer = 0;
-    }
-    const claimedTargets = validTargets.filter((building) => building.demolitionQueued).length;
-    if (!assigned && !queued) {
-      this.lastCommand = 'No Villager could reach the selected structures.';
-      this._announce(this.lastCommand);
-      return { kind: 'demolish', success: false, targetCount: 0, assigned: 0, protectedCount };
-    }
-    this.lastCommand = `Dismantle ${claimedTargets} structure${claimedTargets === 1 ? '' : 's'} with ${assigned} Villager${assigned === 1 ? '' : 's'}${queued ? ` · ${queued} queued order${queued === 1 ? '' : 's'}` : ''}.`;
+    validTargets.forEach((building) => this._destroyBuilding(building, null, {
+      silent: true,
+      instantCleanup: true,
+    }));
+    this.lastCommand = `${validTargets.length} structure${validTargets.length === 1 ? '' : 's'} demolished · debris cleared.`;
     if (protectedCount) this.lastCommand += ' Protected structures were skipped.';
     this._announce(this.lastCommand);
-    return { kind: 'demolish', success: true, targetCount: claimedTargets, assigned, queued, protectedCount, targets: validTargets.filter((building) => building.demolitionQueued) };
+    return {
+      kind: 'demolish',
+      success: true,
+      targetCount: validTargets.length,
+      protectedCount,
+      targets: validTargets,
+    };
   }
 
   issueContextCommand(point, forcedTarget = null) {

@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260827-wildwood1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260828-instantdemo1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260827-wildwood1';
-import { CrownforgeRenderer } from './renderer.js?v=20260827-unitfacing1';
-import { CrownforgeSimulation } from './simulation.js?v=20260827-unitfacing1';
+import { CrownforgeInput } from './input.js?v=20260828-instantdemo1';
+import { CrownforgeRenderer } from './renderer.js?v=20260828-instantdemo1';
+import { CrownforgeSimulation } from './simulation.js?v=20260828-instantdemo1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
@@ -151,18 +151,7 @@ const input = new CrownforgeInput({
     buildMenu.hidden = !buildMenu.hidden;
     trainMenu.hidden = true;
   },
-  onDemolitionShortcut: () => {
-    const hasVillager = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
-      && entity.faction === 'player'
-      && entity.type === 'villager'
-      && !entity.dead);
-    if (!hasVillager) {
-      announce('Select at least one Villager before using demolition.');
-      return;
-    }
-    input.setDemolitionMode(!input.demolitionMode);
-    updateUi();
-  },
+  onDemolitionShortcut: () => activateDemolitionControl(),
   onRecoverShortcut: () => {
     if (!simulation.canRecoverSelectedUnits()) return;
     audio.unlock();
@@ -184,6 +173,21 @@ const input = new CrownforgeInput({
     trainMenu.hidden = true;
   },
 });
+
+function activateDemolitionControl() {
+  const selectedStructures = simulation.selectedEntities.filter((entity) => simulation.canDemolishBuilding(entity));
+  if (selectedStructures.length) {
+    const result = simulation.demolishStructures(selectedStructures);
+    for (const target of result.targets ?? []) renderer.addRipple(target, '#d86b55');
+    input.cancelDemolitionMode();
+    audio.command(result.success === false ? 'none' : result.kind);
+    updateUi();
+    return result;
+  }
+  input.setDemolitionMode(!input.demolitionMode);
+  updateUi();
+  return { kind: 'demolish-mode', success: true, active: input.demolitionMode };
+}
 
 buildMenuToggle.addEventListener('click', () => {
   audio.unlock();
@@ -317,16 +321,7 @@ selectAllVillagersButton?.addEventListener('click', () => {
 
 demolitionModeButton?.addEventListener('click', () => {
   audio.unlock();
-  const hasVillager = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
-    && entity.faction === 'player'
-    && entity.type === 'villager'
-    && !entity.dead);
-  if (!hasVillager) {
-    announce('Select at least one Villager before using demolition.');
-    return;
-  }
-  input.setDemolitionMode(!input.demolitionMode);
-  updateUi();
+  activateDemolitionControl();
 });
 
 function updateUi() {
@@ -350,10 +345,9 @@ function updateUi() {
     && entity.faction === 'player'
     && !entity.dead);
   if (selectionVillagerActions) selectionVillagerActions.hidden = !hasSelectedVillager;
-  if (!hasSelectedVillager && input.demolitionMode) input.cancelDemolitionMode();
   const preview = renderer.buildPreview;
   ui.commandLine.textContent = input.demolitionMode
-    ? 'DEMOLITION MODE  •  click or drag across structures  •  Crown Hall protected'
+    ? 'INSTANT DEMOLITION  •  click or drag across structures  •  debris clears immediately  •  Crown Hall protected'
     : input.buildMode
     ? `PLACEMENT MODE  •  ${preview?.valid ? 'site ready' : (preview?.reason ?? 'move the foundation')}`
     : commandLineText();
@@ -437,9 +431,9 @@ function updateUi() {
     placementReadout.classList.toggle('is-valid', targetCount > 0);
     placementReadout.classList.toggle('is-invalid', targetCount === 0);
     placementIcon.className = 'ui-icon icon-cancel';
-    placementTitle.textContent = 'VILLAGER DEMOLITION';
+    placementTitle.textContent = 'INSTANT DEMOLITION';
     placementDetail.textContent = targetCount
-      ? `${targetCount} structure${targetCount === 1 ? '' : 's'} marked · release to order dismantling`
+      ? `${targetCount} structure${targetCount === 1 ? '' : 's'} selected · release to demolish and clear debris`
       : 'Click one structure or drag across several · X / Esc cancels';
   } else if (input.buildMode) {
     const valid = Boolean(preview?.valid);

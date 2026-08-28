@@ -131,7 +131,7 @@ export class CrownforgeInput {
     this.renderer.setDemolitionPreview([]);
     this.onDemolitionMode(active);
     this._updateCursor(this.pointer);
-    if (active) this.onToast('Demolition: click one structure or drag across several. Selected Villagers dismantle them with labor; the Crown Hall is protected. Press X or Esc to cancel.');
+    if (active) this.onToast('Instant demolition: click one structure or drag across an area to clear several immediately. The Crown Hall is protected. Press X or Esc to cancel.');
   }
 
   cancelDemolitionMode() {
@@ -330,7 +330,7 @@ export class CrownforgeInput {
       const targets = dragDistance > 8
         ? this.renderer.getBuildingsInScreenRect(this.simulation, start, point)
         : [this.renderer.getEntityAtScreen?.(this.simulation, point, 'demolish')].filter(Boolean);
-      const result = this.simulation.issueDemolitionOrder(targets);
+      const result = this.simulation.demolishStructures(targets);
       for (const target of result.targets ?? []) this.renderer.addRipple(target, '#d86b55');
       this.renderer.setSelectionBox(null);
       this.renderer.setDemolitionPreview([]);

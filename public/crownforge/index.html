@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="crownforge-build" content="20260827-unitfacing1" />
+    <meta name="crownforge-build" content="20260828-instantdemo1" />
     <title>Crownforge: Dawn of Kingdoms</title>
     <meta name="description" content="Crownforge — a tiny polished historical RTS settlement slice." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -58,9 +58,11 @@
               <span class="ui-icon icon-villager selection-action-icon" aria-hidden="true"></span>
               <span><b>SELECT ALL VILLAGERS</b><small>SETTLEMENT-WIDE <kbd>V</kbd></small></span>
             </button>
-            <button id="demolition-mode" class="selection-unit-button demolition-button" type="button" title="Use selected Villagers to click or drag across structures and dismantle them (X)">
+          </div>
+          <div class="selection-unit-actions selection-direct-actions">
+            <button id="demolition-mode" class="selection-unit-button demolition-button" type="button" title="Demolish selected player structures instantly, or enter area-clear mode when none are selected (X)">
               <span class="ui-icon icon-cancel selection-action-icon" aria-hidden="true"></span>
-              <span><b>DISMANTLE STRUCTURES</b><small>CLICK OR DRAG <kbd>X</kbd></small></span>
+              <span><b>DEMOLISH STRUCTURES</b><small>INSTANT AREA CLEAR <kbd>X</kbd></small></span>
             </button>
           </div>
           <div id="selection-recovery" class="selection-recovery" hidden>
@@ -89,7 +91,7 @@
             <div><kbd>Esc</kbd><span>Close menu / placement</span></div>
             <div><kbd>R</kbd><span>Return selected units to Crown Hall</span></div>
             <div><kbd>V</kbd><span>Select all Villagers</span></div>
-            <div><kbd>X</kbd><span>Villager demolition mode</span></div>
+            <div><kbd>X</kbd><span>Instant structure demolition</span></div>
           </div>
           <div class="settings-block unit-speed-setting">
             <div class="controls-setting-title">UNIT PACE</div>
@@ -170,7 +172,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260827-unitfacing1"></script>
+    <script type="module" src="./src/main.js?v=20260828-instantdemo1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>
