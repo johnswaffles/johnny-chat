@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260828-latencypass1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260828-forestpass1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260828-latencypass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260828-latencypass1';
-import { CrownforgeSimulation } from './simulation.js?v=20260828-uipass1';
+import { CrownforgeRenderer } from './renderer.js?v=20260828-forestpass1';
+import { CrownforgeSimulation } from './simulation.js?v=20260828-forestpass1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 

@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260828-latencypass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260828-forestpass1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-latencypass1';
 
@@ -366,7 +366,10 @@ export class CrownforgeSimulation {
     if (type === 'berry') return 105;
     if (type === 'stone') return sizeTier === 'large' ? 900 : sizeTier === 'medium' ? 360 : 120;
     if (type === 'gold') return sizeTier === 'large' ? 1150 : sizeTier === 'medium' ? 420 : 140;
-    if (type === 'grove') return sizeTier === 'wildwood' ? 18000 : sizeTier === 'ancient' ? 7200 : sizeTier === 'large' ? 1100 : sizeTier === 'medium' ? 700 : 480;
+    // One Wildwood mass remains a substantial long-running job, but it must
+    // also be possible for a normal crew to expose all six visual stages and
+    // eventually open a route through the forest.
+    if (type === 'grove') return sizeTier === 'wildwood' ? 2400 : sizeTier === 'ancient' ? 7200 : sizeTier === 'large' ? 1100 : sizeTier === 'medium' ? 700 : 480;
     return sizeTier === 'large' ? 700 : sizeTier === 'medium' ? 260 : 180;
   }
 
@@ -1860,19 +1863,23 @@ export class CrownforgeSimulation {
     const node = this.resourcesNodes.find((candidate) => candidate.id === unit.gatherTarget);
     if (!node || node.amount <= 0) {
       this._releaseResourceSlot(unit);
-      unit.gatherTarget = null;
       unit.gatherSlot = 0;
       unit.gatherTimer = 0;
       unit.gatherEventFired = false;
       if (unit.carryAmount > 0) {
         unit.actionLabel = 'Returning cargo';
         this._beginReturn(unit);
-      } else {
-        unit.actionLabel = 'Resource depleted';
-        unit.command = 'idle';
-        unit.visualState = 'idle';
-        unit.needsSafetyRegroup = true;
+        return;
       }
+      // A group should not lose its order because another worker removed the
+      // final bundle first. Keep the depleted node as the intent anchor and
+      // immediately roll each free worker onto the nearest matching source.
+      if (this._continueResourceIntent(unit, node)) return;
+      unit.gatherTarget = null;
+      unit.actionLabel = 'Resource depleted';
+      unit.command = 'idle';
+      unit.visualState = 'idle';
+      unit.needsSafetyRegroup = true;
       return;
     }
     const resourceInfo = RESOURCE_TYPES[node.resourceType];
@@ -1939,8 +1946,7 @@ export class CrownforgeSimulation {
     }
     node.amount -= amount;
     if (node.type === 'grove' && node.maxAmount > 0) {
-      const ratio = clamp(node.amount / node.maxAmount, 0, 1);
-      const nextStage = ratio > 0.72 ? 0 : ratio > 0.42 ? 1 : ratio > 0.12 ? 2 : 3;
+      const nextStage = resourceDepletionStage(node);
       if (nextStage !== node.depletionStage) {
         node.depletionStage = nextStage;
         this.navigationVersion += 1;
@@ -2017,16 +2023,7 @@ export class CrownforgeSimulation {
       this._executeNextConstructionOrder(unit);
       return;
     }
-    const nextNode = this.resourcesNodes.find((node) => node.id === unit.gatherTarget && node.amount > 0);
-    if (nextNode) {
-      const assignedNode = this._assignResourceWork(unit, {
-        resourceType: nextNode.resourceType,
-        origin: nextNode,
-        preferredNode: nextNode,
-        radius: RESOURCE_MANUAL_FALLBACK_RADIUS,
-      });
-      if (assignedNode) return;
-    }
+    if (this._continueResourceIntent(unit)) return;
     unit.gatherTarget = null;
     if (unit.postDepositBuildTarget) {
       const buildingId = unit.postDepositBuildTarget;
@@ -2049,6 +2046,21 @@ export class CrownforgeSimulation {
     unit.visualState = 'idle';
     unit.actionLabel = 'Idle';
     unit.needsSafetyRegroup = true;
+  }
+
+  _continueResourceIntent(unit, intentNode = null) {
+    const previousNode = intentNode
+      ?? this.resourcesNodes.find((node) => node.id === unit.gatherTarget)
+      ?? null;
+    if (!previousNode?.resourceType) return false;
+    const assignedNode = this._assignResourceWork(unit, {
+      resourceType: previousNode.resourceType,
+      origin: previousNode,
+      preferredNode: previousNode.amount > 0 ? previousNode : null,
+      radius: RESOURCE_MANUAL_FALLBACK_RADIUS,
+      preferredSlot: unit.gatherSlot,
+    });
+    return Boolean(assignedNode);
   }
 
   _beginReturn(unit) {

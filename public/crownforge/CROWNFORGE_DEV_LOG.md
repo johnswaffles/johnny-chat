@@ -4781,3 +4781,28 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not expose these speed controls in normal player mode; they are intentionally development-only.
 - Do not increase harvest yield or simulation time to implement faster gathering; keep the control limited to worker cycle duration.
+
+## PERSISTENT WILDWOOD HARVESTING — 2026-08-28
+
+### WHAT WAS COMPLETED
+
+- Preserved a selected group's gathering intent when its current resource node is exhausted, then advanced available workers to the nearest reachable node of the same resource type.
+- Raised the temporary wood storage ceiling so long-running forest-clearing tests do not silently halt when the settlement reaches the former development cap.
+- Rebalanced authored Wildwood reserves so each grove visibly changes within a practical play session while still taking sustained work to clear.
+- Added six depletion states for the dense Wildwood artwork, from full canopy through final stumps, with transparent edges that blend into the live terrain.
+- Advanced the playable build marker to `20260828-forestpass1` and retained the command-latency routing fixes in the same coherent module set.
+
+### ASSETS CREATED
+
+- `assets/crownforge-wildwood-depletion-v2.png` — transparent 3x2 atlas containing six progressive Wildwood depletion states.
+- `tools/forest-depletion-qa.html` and `tools/forest-depletion-qa.mjs` — focused visual board for checking stage order, framing, labels, and terrain blending.
+
+### VALIDATION
+
+- The complete remediation regression suite, JavaScript syntax checks, staged-diff checks, and source/public parity checks passed.
+- Browser QA confirmed all six depletion stages render in order with clean terrain blending and the full game loads the new forest asset without warnings or errors.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Playtest several simultaneous lumber groups over a long session and tune Wildwood reserve size only if map progression is too abrupt or too slow.
+2. Add equivalent authored depletion stages for future macro stone and gold formations before those nodes become central to progression.

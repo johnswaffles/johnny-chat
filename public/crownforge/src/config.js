@@ -80,7 +80,10 @@ export const FACTION = {
 
 export const RESOURCE_TYPES = {
   food: { label: 'Food', color: '#d76649', capacity: 9999, gatherAmount: 10, gatherTime: 1.05, interactionDistance: 1.55 },
-  wood: { label: 'Wood', color: '#b98147', capacity: 9999, gatherAmount: 12, gatherTime: 1.1, interactionDistance: 1.75 },
+  // Wildwood is a map-shaping resource rather than a handful of decorative
+  // trees. Its bank must be able to hold a full woodland campaign; the former
+  // 9,999 ceiling stopped crews before even one old-growth stand was cleared.
+  wood: { label: 'Wood', color: '#b98147', capacity: 999999, gatherAmount: 12, gatherTime: 1.1, interactionDistance: 1.75 },
   stone: { label: 'Stone', color: '#9fa8ab', capacity: 9999, gatherAmount: 10, gatherTime: 1.2, interactionDistance: 1.7 },
   gold: { label: 'Gold', color: '#c6a15b', capacity: 9999, gatherAmount: 8, gatherTime: 1.3, interactionDistance: 1.72 },
 };
@@ -95,15 +98,22 @@ export const RESOURCE_SIZE_TIERS = {
   large: { label: 'Large', renderScale: 2.05, capacityScale: 5, footprintScale: 2.05 },
   // Ancient forests are deliberately macro resources: one authored mass
   // represents a broad stand of trees, exposes many safe work positions, and
-  // visibly retreats through four depletion stages instead of spawning
+  // visibly retreats through authored depletion stages instead of spawning
   // hundreds of independent tree entities.
   ancient: { label: 'Ancient', renderScale: 4.1, capacityScale: 12, footprintScale: 3.4 },
   // Wildwood stands are map-scale wood resources. A single staged entity
   // represents a dense tract of trees, keeping an 80%-wooded map practical to
   // render, path around, and gradually clear without creating thousands of
   // individual tree objects.
-  wildwood: { label: 'Wildwood', renderScale: 5.8, capacityScale: 36, footprintScale: 9.5 },
+  wildwood: { label: 'Wildwood', renderScale: 5.8, capacityScale: 14, footprintScale: 9.5 },
 };
+
+export function resourceDepletionStage(node) {
+  if (node?.type !== 'grove' || !(node.maxAmount > 0)) return 0;
+  const stageCount = node.sizeTier === 'wildwood' ? 6 : 4;
+  const ratio = Math.max(0, Math.min(1, node.amount / node.maxAmount));
+  return Math.min(stageCount - 1, Math.floor((1 - ratio) * stageCount));
+}
 
 export const UNIT_TYPES = {
   villager: {
@@ -1096,6 +1106,22 @@ export const ANCIENT_FOREST_ATLAS = {
     '1,0': 0.9824,
     '0,1': 0.9488,
     '1,1': 0.96,
+  },
+};
+
+export const WILDWOOD_FOREST_ATLAS = {
+  src: './assets/crownforge-wildwood-depletion-v2.png?v=20260828-forestpass1',
+  width: 1536,
+  height: 1024,
+  columns: 3,
+  rows: 2,
+  groundAnchorByCell: {
+    '0,0': 0.8652,
+    '1,0': 0.9102,
+    '2,0': 0.9102,
+    '0,1': 0.875,
+    '1,1': 0.877,
+    '2,1': 0.875,
   },
 };
 

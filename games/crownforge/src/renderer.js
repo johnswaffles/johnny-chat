@@ -1,5 +1,5 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260828-workintent1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260828-workintent1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260828-forestpass1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260828-latencypass1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -119,6 +119,7 @@ export class CrownforgeRenderer {
     this.buildingStagesReady = false;
     this.treeGroveReady = false;
     this.ancientForestReady = false;
+    this.wildwoodForestReady = false;
     this.largeStoneReady = false;
     this.goldDepositAssetReady = {};
     this.firstAgeAssetReady = {};
@@ -152,6 +153,7 @@ export class CrownforgeRenderer {
     this.buildingStages = new Image();
     this.treeGroveAtlas = new Image();
     this.ancientForestAtlas = new Image();
+    this.wildwoodForestAtlas = new Image();
     this.largeStone = new Image();
     this.goldDepositAssets = {};
     this.enemyCamp = new Image();
@@ -160,6 +162,7 @@ export class CrownforgeRenderer {
     this.buildingStages.addEventListener('load', () => { this.buildingStagesReady = true; });
     this.treeGroveAtlas.addEventListener('load', () => { this.treeGroveReady = true; });
     this.ancientForestAtlas.addEventListener('load', () => { this.ancientForestReady = true; });
+    this.wildwoodForestAtlas.addEventListener('load', () => { this.wildwoodForestReady = true; });
     this.largeStone.addEventListener('load', () => { this.largeStoneReady = true; });
     this.enemyCamp.addEventListener('load', () => { this.enemyCampReady = true; });
     this.atlas.src = './assets/crownforge-asset-atlas.png';
@@ -171,6 +174,7 @@ export class CrownforgeRenderer {
     this.buildingStages.src = BUILDING_STAGE_ATLAS.src;
     this.treeGroveAtlas.src = TREE_GROVE_ATLAS.src;
     this.ancientForestAtlas.src = ANCIENT_FOREST_ATLAS.src;
+    this.wildwoodForestAtlas.src = WILDWOOD_FOREST_ATLAS.src;
     this.largeStone.src = LARGE_STONE_ASSET.src;
     this.enemyCamp.src = ENEMY_CAMP_ASSET.src;
     for (const [key, definition] of Object.entries(GOLD_DEPOSIT_ASSETS)) {
@@ -1282,6 +1286,13 @@ export class CrownforgeRenderer {
     this.drawAtlasCell(ctx, this.ancientForestAtlas, this.ancientForestReady, ANCIENT_FOREST_ATLAS, column, row, screen, size, alpha);
   }
 
+  drawWildwoodForestAsset(ctx, stage, screen, size, alpha = 1) {
+    const safeStage = Math.max(0, Math.min(5, stage ?? 0));
+    const column = safeStage % WILDWOOD_FOREST_ATLAS.columns;
+    const row = Math.floor(safeStage / WILDWOOD_FOREST_ATLAS.columns);
+    this.drawAtlasCell(ctx, this.wildwoodForestAtlas, this.wildwoodForestReady, WILDWOOD_FOREST_ATLAS, column, row, screen, size, alpha);
+  }
+
   drawFirstAgeDefinition(ctx, definition, image, ready, screen, size, alpha = 1) {
     if (!definition || !image || (!ready && !(image.complete && image.naturalWidth > 0))) return false;
     ctx.save();
@@ -1862,8 +1873,9 @@ export class CrownforgeRenderer {
     const scale = depleted ? 0.72 : 0.88 + ratio * 0.12;
     const alpha = depleted ? 0.32 : 0.82 + ratio * 0.18;
     if (resource.type === 'grove') {
-      const stage = ratio > 0.72 ? 0 : ratio > 0.42 ? 1 : ratio > 0.12 ? 2 : 3;
-      if (resource.sizeTier === 'ancient' || resource.sizeTier === 'wildwood') this.drawAncientForestAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.96);
+      const stage = resourceDepletionStage(resource);
+      if (resource.sizeTier === 'wildwood') this.drawWildwoodForestAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.9 : 0.98);
+      else if (resource.sizeTier === 'ancient') this.drawAncientForestAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.96);
       else this.drawTreeGroveAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.92);
     } else if (resource.type === 'grain') {
       this.drawFirstAgeAsset(ctx, 'field', point, size * this.camera.zoom, depleted ? 0.3 : 0.9);

@@ -20,6 +20,8 @@ import {
   TREE_GROVE_ATLAS,
   UNIT_TYPES,
   VILLAGER_ATLASES,
+  WILDWOOD_FOREST_ATLAS,
+  resourceDepletionStage,
 } from '../src/config.js';
 import { animationFrame, resolveAnimationState } from '../src/animation.js';
 import { CrownforgeInput } from '../src/input.js';
@@ -279,6 +281,41 @@ function checkGathering() {
     advance(dropoffSimulation, 20);
     assert.equal(dropoffSimulation.resources[resourceType], before + 5, `${resourceType} cargo deposits at the Crown Hall`);
   }
+}
+
+function checkPersistentForestGathering() {
+  assert.equal(WILDWOOD_FOREST_ATLAS.columns, 3, 'Wildwood depletion atlas has three columns');
+  assert.equal(WILDWOOD_FOREST_ATLAS.rows, 2, 'Wildwood depletion atlas has two rows');
+  assert.match(WILDWOOD_FOREST_ATLAS.src, /crownforge-wildwood-depletion-v2\.png/, 'Wildwood uses its dedicated six-stage artwork');
+  assert.ok(fs.existsSync(new URL(`../${WILDWOOD_FOREST_ATLAS.src.split('?')[0].replace(/^\.\//, '')}`, import.meta.url)), 'Wildwood depletion artwork is packaged with the playable game');
+  const stageProbe = { type: 'grove', sizeTier: 'wildwood', maxAmount: 100, amount: 100 };
+  assert.deepEqual(
+    [100, 83, 66, 49, 32, 15, 0].map((amount) => resourceDepletionStage({ ...stageProbe, amount })),
+    [0, 1, 2, 3, 4, 5, 5],
+    'Wildwood visibly advances through six depletion states from dense canopy to clearing',
+  );
+  assert.ok(RESOURCE_TYPES.wood.capacity > 400 * 2400, 'wood storage supports clearing the full generated Wildwood instead of silently stopping a crew');
+
+  const chain = movementSandbox();
+  chain.addBuilding('townCenter', 20, 20, 'player');
+  const workers = [
+    chain.addUnit('villager', 30, 18, 'player'),
+    chain.addUnit('villager', 30, 20, 'player'),
+    chain.addUnit('villager', 30, 22, 'player'),
+  ];
+  chain.addResource('tree', 'wood', 34, 20, 36, 0, { sizeTier: 'small' });
+  chain.addResource('tree', 'wood', 38, 20, 1200, 1, { sizeTier: 'small' });
+  const [firstStand, nextStand] = chain.resourcesNodes;
+  chain.resources.wood = 0;
+  chain.setUnitSpeedScale(10);
+  chain.setHarvestSpeedScale(10);
+  chain.selectedIds = workers.map((unit) => unit.id);
+  chain._syncSelectionFlags();
+  assert.equal(chain.issueContextCommand(firstStand, firstStand).kind, 'gather', 'group forest order is accepted');
+  advance(chain, 10);
+  assert.equal(firstStand.amount, 0, 'the first stand is actually depleted');
+  assert.ok(nextStand.amount < nextStand.maxAmount, 'the same group begins cutting the next nearby stand');
+  assert.ok(workers.every((unit) => unit.gatherTarget === nextStand.id && unit.command === 'gather'), 'all workers retain their gather intent instead of becoming unresponsive');
 }
 
 function checkDevelopmentSpeedControls() {
@@ -2195,6 +2232,7 @@ function checkUnitMovementFacingAndPoseSafety() {
 checkAnimationAtlases();
 checkResetPresentation();
 checkGathering();
+checkPersistentForestGathering();
 checkDevelopmentSpeedControls();
 checkGoldEconomyLoop();
 checkOreWashEconomySupport();
