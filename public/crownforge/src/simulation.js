@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260828-forestpass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260828-gatherpass1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-latencypass1';
 
@@ -9,12 +9,13 @@ const TAU = Math.PI * 2;
 const RESOURCE_SLOT_COUNT = 6;
 const RESOURCE_READABLE_FRONT_BIAS = -0.05;
 const RESOURCE_INTENT_MAX_CANDIDATES = 12;
-const RESOURCE_MANUAL_FALLBACK_RADIUS = 36;
-// A Wildwood ring exposes as many as twenty-four valid work positions. Running
-// a full A* search for every position made one gather click monopolize the
-// browser for several seconds. Try the nearest readable approaches first and
-// let the existing same-resource fallback choose another node when those few
-// entrances are sealed.
+const RESOURCE_APPROACH_MARGIN = 0.85;
+const RESOURCE_APPROACH_TOLERANCE = 0.45;
+const RESOURCE_RETRY_DELAY = 0.35;
+// A Wildwood ring exposes as many as twenty-four valid work positions. Normal
+// actions try a small readable subset, while persistent gather orders inspect
+// every ring position and keep the order pending if a route is temporarily
+// unavailable.
 const RESOURCE_ROUTE_ATTEMPT_LIMIT = 4;
 const CONSTRUCTION_SLOT_COUNT = 8;
 const DEMOLITION_SLOT_COUNT = 8;
@@ -139,7 +140,7 @@ function resourceInteractionDistance(node, unitType = 'villager') {
   // The worker must be allowed to reach the ring without being pushed back
   // by the same footprint used by collision. This matters most for groves and
   // large deposits, whose authored silhouettes are intentionally broad.
-  return Math.max(base, resourceFootprint(node) + unitRadius + UNIT_STATIC_CLEARANCE + 0.12);
+  return Math.max(base, resourceFootprint(node) + unitRadius + UNIT_STATIC_CLEARANCE + RESOURCE_APPROACH_MARGIN);
 }
 
 const FACING_VECTORS = [
@@ -535,6 +536,9 @@ export class CrownforgeSimulation {
       carryType: null,
       carryAmount: 0,
       gatherTarget: null,
+      gatherIntent: null,
+      gatherPersistent: false,
+      gatherRetryCooldown: 0,
       gatherSlot: 0,
       resourceSlotNodeId: null,
       returnStorageId: null,
@@ -992,7 +996,9 @@ export class CrownforgeSimulation {
           resourceType,
           origin,
           preferredNode,
-          radius: RESOURCE_MANUAL_FALLBACK_RADIUS,
+          radius: Infinity,
+          maxCandidates: Infinity,
+          persistent: true,
           preferredSlot: order.gatherSlot,
         }));
       } else if (order.kind === 'build') {
@@ -1079,6 +1085,9 @@ export class CrownforgeSimulation {
     this._releaseDemolitionSlot(unit);
     this._releaseCombatSlot(unit);
     unit.gatherTarget = null;
+    unit.gatherIntent = null;
+    unit.gatherPersistent = false;
+    unit.gatherRetryCooldown = 0;
     unit.buildTarget = null;
     if (unit.fieldTarget) {
       const field = this.buildings.find((building) => building.id === unit.fieldTarget);
@@ -1860,6 +1869,7 @@ export class CrownforgeSimulation {
   }
 
   _updateGathering(unit, dt) {
+    unit.gatherRetryCooldown = Math.max(0, (unit.gatherRetryCooldown ?? 0) - dt);
     const node = this.resourcesNodes.find((candidate) => candidate.id === unit.gatherTarget);
     if (!node || node.amount <= 0) {
       this._releaseResourceSlot(unit);
@@ -1876,6 +1886,8 @@ export class CrownforgeSimulation {
       // immediately roll each free worker onto the nearest matching source.
       if (this._continueResourceIntent(unit, node)) return;
       unit.gatherTarget = null;
+      unit.gatherIntent = null;
+      unit.gatherPersistent = false;
       unit.actionLabel = 'Resource depleted';
       unit.command = 'idle';
       unit.visualState = 'idle';
@@ -1892,6 +1904,8 @@ export class CrownforgeSimulation {
     if (bank[node.resourceType] >= resourceInfo.capacity) {
       this._releaseResourceSlot(unit);
       unit.gatherTarget = null;
+      unit.gatherIntent = null;
+      unit.gatherPersistent = false;
       unit.gatherTimer = 0;
       unit.gatherEventFired = false;
       unit.command = 'idle';
@@ -1900,11 +1914,14 @@ export class CrownforgeSimulation {
       unit.needsSafetyRegroup = true;
       return;
     }
-    if (distance(unit, node) > interactionDistance + 0.08) {
-      unit.actionLabel = `Walking to ${resourceInfo.label}`;
-      unit.visualState = 'walk';
+    if (distance(unit, node) > interactionDistance + RESOURCE_APPROACH_TOLERANCE) {
+      const retryingRoute = unit.gatherRetryCooldown > 0 && !unit.path.length;
+      unit.actionLabel = retryingRoute
+        ? `Finding a route to ${resourceInfo.label}`
+        : `Walking to ${resourceInfo.label}`;
+      unit.visualState = retryingRoute ? 'idle' : 'walk';
       setUnitFacing(unit, node.x - unit.x, node.z - unit.z);
-      if (!unit.path.length) this._sendUnitToResource(unit, node);
+      if (!unit.path.length && unit.gatherRetryCooldown <= 0) this._sendUnitToResource(unit, node);
       return;
     }
     unit.path = [];
@@ -2052,12 +2069,16 @@ export class CrownforgeSimulation {
     const previousNode = intentNode
       ?? this.resourcesNodes.find((node) => node.id === unit.gatherTarget)
       ?? null;
-    if (!previousNode?.resourceType) return false;
+    const intent = unit.gatherIntent;
+    const resourceType = previousNode?.resourceType ?? intent?.resourceType;
+    if (!resourceType) return false;
     const assignedNode = this._assignResourceWork(unit, {
-      resourceType: previousNode.resourceType,
-      origin: previousNode,
-      preferredNode: previousNode.amount > 0 ? previousNode : null,
-      radius: RESOURCE_MANUAL_FALLBACK_RADIUS,
+      resourceType,
+      origin: previousNode ?? intent?.origin ?? unit,
+      preferredNode: previousNode?.amount > 0 ? previousNode : null,
+      radius: Infinity,
+      maxCandidates: Infinity,
+      persistent: true,
       preferredSlot: unit.gatherSlot,
     });
     return Boolean(assignedNode);
@@ -3058,7 +3079,7 @@ export class CrownforgeSimulation {
         const scoreB = distance(b, origin) * 1.25 + distance(b, unit) * 0.35;
         return scoreA - scoreB || a.id - b.id;
       });
-    return [...(preferred ? [preferred] : []), ...alternatives].slice(0, RESOURCE_INTENT_MAX_CANDIDATES);
+    return [...(preferred ? [preferred] : []), ...alternatives];
   }
 
   _assignResourceWork(unit, {
@@ -3067,11 +3088,19 @@ export class CrownforgeSimulation {
     preferredNode = null,
     radius = Infinity,
     footprintMultiplier = 1,
+    maxCandidates = RESOURCE_INTENT_MAX_CANDIDATES,
+    persistent = false,
     preferredSlot = null,
     label = null,
   } = {}) {
     if (!this.isWorkerUnit(unit) || !resourceType) return null;
-    const candidates = this._resourceWorkCandidates(unit, resourceType, origin, preferredNode, radius, footprintMultiplier);
+    const allCandidates = this._resourceWorkCandidates(unit, resourceType, origin, preferredNode, radius, footprintMultiplier);
+    const candidates = Number.isFinite(maxCandidates) ? allCandidates.slice(0, maxCandidates) : allCandidates;
+    unit.gatherPersistent = Boolean(persistent);
+    unit.gatherIntent = {
+      resourceType,
+      origin: { x: origin?.x ?? unit.x, z: origin?.z ?? unit.z },
+    };
     for (const node of candidates) {
       unit.gatherTarget = node.id;
       unit.gatherSlot = Number.isInteger(preferredSlot)
@@ -3080,18 +3109,49 @@ export class CrownforgeSimulation {
       unit.gatherTimer = 0;
       unit.gatherEventFired = false;
       unit.postDepositTarget = null;
-      if (!this._sendUnitToResource(unit, node)) continue;
+      if (!this._sendUnitToResource(unit, node, { allowPending: false })) continue;
       if (label) unit.actionLabel = label;
       unit.needsSafetyRegroup = false;
       unit.idleDuration = 0;
       return node;
     }
+    if (persistent && candidates.length) {
+      const pendingNode = candidates.find((node) => node.amount > 0) ?? null;
+      if (pendingNode) {
+        unit.gatherTarget = pendingNode.id;
+        unit.gatherSlot = Number.isInteger(preferredSlot)
+          ? preferredSlot % resourceSlotCount(pendingNode)
+          : unit.id % resourceSlotCount(pendingNode);
+        unit.gatherTimer = 0;
+        unit.gatherEventFired = false;
+        this._releaseResourceSlot(unit);
+        this._holdGatherIntent(unit, pendingNode);
+        return pendingNode;
+      }
+    }
     this._releaseResourceSlot(unit);
     unit.gatherTarget = null;
+    unit.gatherIntent = null;
+    unit.gatherPersistent = false;
     return null;
   }
 
-  _sendUnitToResource(unit, node) {
+  _holdGatherIntent(unit, node) {
+    const resourceInfo = RESOURCE_TYPES[node?.resourceType];
+    unit.path = [];
+    unit.routeTarget = null;
+    unit.velocityX = 0;
+    unit.velocityZ = 0;
+    unit.motionSpeed = 0;
+    unit.pathBlocked = false;
+    unit.recoveryAvailable = false;
+    unit.command = 'gather';
+    unit.visualState = 'idle';
+    unit.actionLabel = `Finding a route to ${resourceInfo?.label ?? 'resource'}`;
+    unit.gatherRetryCooldown = RESOURCE_RETRY_DELAY;
+  }
+
+  _sendUnitToResource(unit, node, { allowPending = unit.gatherPersistent } = {}) {
     if (!node || node.amount <= 0) return false;
     if (!node.reservedSlots) node.reservedSlots = new Map();
     const slotCount = resourceSlotCount(node);
@@ -3119,7 +3179,8 @@ export class CrownforgeSimulation {
       || Number(b.readable) - Number(a.readable)
       || a.order - b.order);
     let route = null;
-    for (const candidate of routeCandidates.slice(0, RESOURCE_ROUTE_ATTEMPT_LIMIT)) {
+    const routeAttemptLimit = unit.gatherPersistent ? routeCandidates.length : RESOURCE_ROUTE_ATTEMPT_LIMIT;
+    for (const candidate of routeCandidates.slice(0, routeAttemptLimit)) {
       const path = this._buildPath(unit, candidate.point);
       if (!path) continue;
       route = { ...candidate, path };
@@ -3127,6 +3188,10 @@ export class CrownforgeSimulation {
     }
     if (!route) {
       this._releaseResourceSlot(unit);
+      if (allowPending) {
+        this._holdGatherIntent(unit, node);
+        return false;
+      }
       unit.command = 'idle';
       unit.path = [];
       unit.pathBlocked = true;
@@ -4498,7 +4563,9 @@ export class CrownforgeSimulation {
           resourceType: target.resourceType,
           origin: target,
           preferredNode: target,
-          radius: RESOURCE_MANUAL_FALLBACK_RADIUS,
+          radius: Infinity,
+          maxCandidates: Infinity,
+          persistent: true,
           preferredSlot: (index + unit.id) % slotCount,
         }) ? 1 : 0;
       });

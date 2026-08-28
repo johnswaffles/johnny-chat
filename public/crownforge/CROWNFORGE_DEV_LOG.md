@@ -4820,3 +4820,33 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Regression coverage confirms both sliders are in the visible speed panel, the optional telemetry panel remains hidden in normal play, and the movement/gathering scales remain independent.
 - Browser QA confirmed the live page shows both controls without requiring `?perf=1` and that the game completes loading normally.
+
+## CONTINUOUS FOREST GATHERING — 2026-08-28
+
+### WHAT WAS COMPLETED
+
+- Fixed the large-grove perimeter deadlock that left workers repeatedly replanning at the edge of a Wildwood stand instead of entering the gather state.
+- Added a small approach margin and tolerance so depletion-driven footprint changes do not make a worker's valid work position look out of range on the next frame.
+- Made manual and queued gather orders persistent: once a worker receives a wood, food, stone, gold, or other resource order, it keeps the resource intent and advances to the next available matching node across the map instead of stopping at the old local fallback radius.
+- Added a quiet retry state for temporarily unavailable approaches. Workers hold position with zero velocity while the route is retried, preventing the visible circle-and-stop behavior and preserving the original order.
+- Advanced the playable build marker to `20260828-gatherpass1` so the live browser loads the updated simulation module graph instead of an older cached release.
+
+### ASSETS CREATED
+
+- No new artwork was required. The existing six-stage Wildwood depletion atlas remains the visual progression for cleared forest stands.
+
+### VALIDATION
+
+- Focused gather regression passed for a full Wildwood stand and a five-stand forest chain with nodes spaced beyond the former 36-unit fallback radius.
+- The long-session simulation cleared the selected Wildwood and continued onto another wood stand without a stuck flag.
+- JavaScript syntax checks, `git diff --check`, and source/public simulation parity checks passed.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Playtest one long live session with several lumber groups and confirm the new continuous order feels readable at normal speed.
+2. Add matching persistent work intent to future non-resource jobs only when those jobs have an authored completion target.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not make storage literally infinite; the temporary development capacity is already large enough for the authored forest, and a real storage system should remain a future economy decision.
+- Do not remove building or enemy collision to solve a resource route; a pending gather intent now waits for a safe route instead.

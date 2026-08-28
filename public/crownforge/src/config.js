@@ -1110,7 +1110,7 @@ export const ANCIENT_FOREST_ATLAS = {
 };
 
 export const WILDWOOD_FOREST_ATLAS = {
-  src: './assets/crownforge-wildwood-depletion-v2.png?v=20260828-forestpass1',
+  src: './assets/crownforge-wildwood-depletion-v2.png?v=20260828-gatherpass1',
   width: 1536,
   height: 1024,
   columns: 3,
