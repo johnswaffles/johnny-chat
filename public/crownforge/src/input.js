@@ -227,7 +227,7 @@ export class CrownforgeInput {
     const selected = this.simulation.selectedEntities;
     const selectedUnits = selected.filter((candidate) => candidate.kind === 'unit' && candidate.faction === 'player' && !candidate.dead);
     const selectedBuilders = selectedUnits.filter((candidate) => this.simulation.isBuilderUnit(candidate));
-    const selectedVillagers = selectedUnits.filter((candidate) => candidate.type === 'villager');
+    const selectedWorkers = selectedUnits.filter((candidate) => this.simulation.isWorkerUnit(candidate));
     const entity = this.renderer.getEntityAtScreen?.(this.simulation, point, selectedUnits.length ? 'command' : 'select')
       ?? this.simulation.getEntityAt(this.renderer.screenToWorld(point));
     if (selectedUnits.length) {
@@ -235,8 +235,8 @@ export class CrownforgeInput {
       else if (entity?.kind === 'building' && selectedBuilders.length && this.simulation.buildingNeedsWork(entity)) {
         this._setCursor(entity.progress < 1 ? 'build-target' : 'repair-target');
       }
-      else if (entity?.kind === 'resource' && selectedVillagers.length) this._setCursor('gather-target');
-      else if (entity?.kind === 'building' && entity.faction === 'player' && selectedVillagers.length) this._setCursor('interact-target');
+      else if (entity?.kind === 'resource' && selectedWorkers.length) this._setCursor('gather-target');
+      else if (entity?.kind === 'building' && entity.faction === 'player' && selectedWorkers.length) this._setCursor('interact-target');
       else this._setCursor('move-target');
       return;
     }
@@ -283,28 +283,6 @@ export class CrownforgeInput {
           this.cancelBuildMode();
         }
         return;
-      }
-      // A selected builder can use a primary click on unfinished or damaged
-      // friendly structures as an explicit build/repair order. Selection remains the
-      // normal left-click behavior everywhere else, while this small
-      // exception makes an unfinished site feel actionable instead of merely
-      // selectable. The same command router is used by right-click, so slot
-      // reservations, cargo-first deposits, and interruption cleanup stay
-      // identical between both input paths.
-      const selectedUnits = this.simulation.selectedEntities
-        .filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead);
-      const selectedBuilders = selectedUnits.filter((unit) => this.simulation.isBuilderUnit(unit));
-      if (selectedBuilders.length) {
-        const visualTarget = this.renderer.getEntityAtScreen?.(this.simulation, point, 'command');
-        if (visualTarget?.kind === 'building'
-          && this.simulation.buildingNeedsWork(visualTarget)) {
-          const world = this.renderer.screenToWorld(point);
-          const result = this.simulation.issueContextCommand(world, visualTarget);
-          if (result.kind !== 'none') this.renderer.addRipple(world, '#d7aa54');
-          this.onCommand(result);
-          this._updateCursor(point);
-          return;
-        }
       }
       this.drag = { start: point, additive: event.shiftKey };
       this.canvas.setPointerCapture(event.pointerId);
@@ -364,9 +342,32 @@ export class CrownforgeInput {
     if (distance > 8) {
       this.simulation.selectRect(start, point, (unit) => this.renderer.worldToScreen(unit), this.drag.additive);
     } else {
-      const visualEntity = this.renderer.getEntityAtScreen?.(this.simulation, point);
-      if (visualEntity) this.simulation.selectEntity(visualEntity, this.drag.additive);
-      else this.simulation.selectAt(this.renderer.screenToWorld(point), this.drag.additive);
+      const world = this.renderer.screenToWorld(point);
+      const selectedUnits = this.simulation.selectedEntities
+        .filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead);
+      const commandTarget = this.renderer.getEntityAtScreen?.(this.simulation, point, 'command')
+        ?? this.simulation.getEntityAt(world);
+      const selectionTarget = this.renderer.getEntityAtScreen?.(this.simulation, point, 'select')
+        ?? this.simulation.getEntityAt(world);
+      const selectingFriendlyUnit = selectionTarget?.kind === 'unit'
+        && selectionTarget.faction === 'player'
+        && !selectionTarget.dead;
+      // Once a mobile unit is selected, one normal click is one order: open
+      // ground moves, natural resources gather, structures interact/build,
+      // and hostiles engage. Clicking another friendly unit still changes
+      // selection, and Shift keeps additive selection available.
+      if (selectedUnits.length && !this.drag.additive && !selectingFriendlyUnit) {
+        const result = this.simulation.issueContextCommand(world, commandTarget);
+        if (result.kind !== 'none') {
+          this.renderer.addRipple(world, result.kind === 'attack' ? '#d86b55' : result.kind === 'build' || result.kind === 'repair' ? '#d7aa54' : '#86c4cf');
+        }
+        this.drag = null;
+        this.onCommand(result);
+        this._updateCursor(point);
+        return;
+      }
+      if (selectionTarget) this.simulation.selectEntity(selectionTarget, this.drag.additive);
+      else this.simulation.selectAt(world, this.drag.additive);
     }
     this.drag = null;
     this.onSelection(this.simulation.selectedEntities);

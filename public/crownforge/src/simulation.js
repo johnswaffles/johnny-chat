@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260828-instantdemo1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260828-workintent1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-instantdemo1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-workintent1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -8,6 +8,8 @@ const moveToward = (value, target, amount) => value < target ? Math.min(value + 
 const TAU = Math.PI * 2;
 const RESOURCE_SLOT_COUNT = 6;
 const RESOURCE_READABLE_FRONT_BIAS = -0.05;
+const RESOURCE_INTENT_MAX_CANDIDATES = 12;
+const RESOURCE_MANUAL_FALLBACK_RADIUS = 36;
 const CONSTRUCTION_SLOT_COUNT = 8;
 const DEMOLITION_SLOT_COUNT = 8;
 const MAX_CONSTRUCTION_ORDER_QUEUE = 12;
@@ -882,6 +884,13 @@ export class CrownforgeSimulation {
       && UNIT_TYPES[unit.type]?.canBuild);
   }
 
+  isWorkerUnit(unit) {
+    return Boolean(unit
+      && unit.kind === 'unit'
+      && !unit.dead
+      && UNIT_TYPES[unit.type]?.worker);
+  }
+
   canDemolishBuilding(building) {
     return Boolean(building
       && building.kind === 'building'
@@ -952,15 +961,16 @@ export class CrownforgeSimulation {
       if (order.kind === 'move' && order.target) {
         started = this._sendUnitTo(unit, order.target, 'move', order.stopDistance ?? 0);
       } else if (order.kind === 'gather') {
-        const node = this.resourcesNodes.find((candidate) => candidate.id === order.resourceId && candidate.amount > 0);
-        if (node) {
-          unit.gatherTarget = node.id;
-          unit.gatherSlot = Number.isInteger(order.gatherSlot) ? order.gatherSlot : unit.id % resourceSlotCount(node);
-          unit.gatherTimer = 0;
-          unit.gatherEventFired = false;
-          started = this._sendUnitToResource(unit, node);
-          if (!started) unit.gatherTarget = null;
-        }
+        const preferredNode = this.resourcesNodes.find((candidate) => candidate.id === order.resourceId && candidate.amount > 0) ?? null;
+        const resourceType = preferredNode?.resourceType ?? order.resourceType;
+        const origin = order.origin ?? preferredNode ?? unit;
+        started = Boolean(this._assignResourceWork(unit, {
+          resourceType,
+          origin,
+          preferredNode,
+          radius: RESOURCE_MANUAL_FALLBACK_RADIUS,
+          preferredSlot: order.gatherSlot,
+        }));
       } else if (order.kind === 'build') {
         const building = this.buildings.find((candidate) => candidate.id === order.buildingId
           && this.buildingNeedsWork(candidate));
@@ -1142,32 +1152,30 @@ export class CrownforgeSimulation {
   }
 
   _assignCompletedBuildingWork(unit, building) {
-    // The player's newly completed work yard should feel immediately useful.
-    // Ashen workers remain under their paced economy planner so this local
-    // convenience does not silently accelerate forest clearing or raids.
-    if (unit.faction !== 'player') return false;
-    const bonus = BUILDING_TYPES[building.type]?.gatherBonus;
-    if (!UNIT_TYPES[unit.type]?.worker || !bonus?.resourceType || building.destroyed || building.progress < 1) return false;
-    const candidates = this.resourcesNodes
-      .filter((node) => node.amount > 0
-        && node.resourceType === bonus.resourceType
-        && distance(node, building) <= bonus.radius)
-      .sort((a, b) => distance(unit, a) - distance(unit, b) || a.id - b.id);
-    for (const node of candidates) {
-      unit.gatherTarget = node.id;
-      unit.gatherSlot = unit.id % resourceSlotCount(node);
-      unit.gatherTimer = 0;
-      unit.gatherEventFired = false;
-      if (!this._sendUnitToResource(unit, node)) {
-        unit.gatherTarget = null;
-        continue;
-      }
-      unit.actionLabel = `Starting nearby ${RESOURCE_TYPES[bonus.resourceType].label} work`;
-      unit.needsSafetyRegroup = false;
-      unit.idleDuration = 0;
-      return true;
-    }
-    return false;
+    // A completed drop-off should hand its builders directly into the work it
+    // exists to support. autoWork keeps the transition independent from yield
+    // bonuses, while the single-resource storage fallback makes future first-
+    // age work yards behave correctly even before a bonus is authored.
+    const blueprint = BUILDING_TYPES[building.type];
+    const inferredResourceType = Array.isArray(blueprint?.acceptsResources)
+      && blueprint.acceptsResources.length === 1
+      ? blueprint.acceptsResources[0]
+      : null;
+    const resourceType = blueprint?.autoWork?.resourceType ?? inferredResourceType;
+    const radius = blueprint?.autoWork?.radius ?? 18;
+    if (!this.isWorkerUnit(unit)
+      || !resourceType
+      || building.destroyed
+      || building.progress < 1
+      || building.faction !== unit.faction) return false;
+    const assignedNode = this._assignResourceWork(unit, {
+      resourceType,
+      origin: building,
+      radius,
+      footprintMultiplier: 2.25,
+      label: `Starting nearby ${RESOURCE_TYPES[resourceType].label} work`,
+    });
+    return Boolean(assignedNode);
   }
 
   _updateConstruction(building, dt) {
@@ -1987,11 +1995,13 @@ export class CrownforgeSimulation {
     }
     const nextNode = this.resourcesNodes.find((node) => node.id === unit.gatherTarget && node.amount > 0);
     if (nextNode) {
-      unit.command = 'gather';
-      unit.actionLabel = `Walking to ${RESOURCE_TYPES[nextNode.resourceType].label}`;
-      unit.visualState = 'walk';
-      this._sendUnitToResource(unit, nextNode);
-      return;
+      const assignedNode = this._assignResourceWork(unit, {
+        resourceType: nextNode.resourceType,
+        origin: nextNode,
+        preferredNode: nextNode,
+        radius: RESOURCE_MANUAL_FALLBACK_RADIUS,
+      });
+      if (assignedNode) return;
     }
     unit.gatherTarget = null;
     if (unit.postDepositBuildTarget) {
@@ -2981,6 +2991,58 @@ export class CrownforgeSimulation {
       : `Walking to repair ${BUILDING_TYPES[building.type].label}`;
     this._resetMovementTracking(unit);
     return true;
+  }
+
+  _resourceWorkCandidates(unit, resourceType, origin = unit, preferredNode = null, radius = Infinity, footprintMultiplier = 1) {
+    if (!resourceType) return [];
+    const available = this.resourcesNodes
+      .filter((node) => node.amount > 0
+        && node.resourceType === resourceType
+        && distance(node, origin) <= radius + resourceFootprint(node) * footprintMultiplier);
+    const preferred = preferredNode
+      && preferredNode.amount > 0
+      && preferredNode.resourceType === resourceType
+      && available.some((node) => node.id === preferredNode.id)
+      ? preferredNode
+      : null;
+    const alternatives = available
+      .filter((node) => node.id !== preferred?.id)
+      .sort((a, b) => {
+        const scoreA = distance(a, origin) * 1.25 + distance(a, unit) * 0.35;
+        const scoreB = distance(b, origin) * 1.25 + distance(b, unit) * 0.35;
+        return scoreA - scoreB || a.id - b.id;
+      });
+    return [...(preferred ? [preferred] : []), ...alternatives].slice(0, RESOURCE_INTENT_MAX_CANDIDATES);
+  }
+
+  _assignResourceWork(unit, {
+    resourceType,
+    origin = unit,
+    preferredNode = null,
+    radius = Infinity,
+    footprintMultiplier = 1,
+    preferredSlot = null,
+    label = null,
+  } = {}) {
+    if (!this.isWorkerUnit(unit) || !resourceType) return null;
+    const candidates = this._resourceWorkCandidates(unit, resourceType, origin, preferredNode, radius, footprintMultiplier);
+    for (const node of candidates) {
+      unit.gatherTarget = node.id;
+      unit.gatherSlot = Number.isInteger(preferredSlot)
+        ? preferredSlot % resourceSlotCount(node)
+        : unit.id % resourceSlotCount(node);
+      unit.gatherTimer = 0;
+      unit.gatherEventFired = false;
+      unit.postDepositTarget = null;
+      if (!this._sendUnitToResource(unit, node)) continue;
+      if (label) unit.actionLabel = label;
+      unit.needsSafetyRegroup = false;
+      unit.idleDuration = 0;
+      return node;
+    }
+    this._releaseResourceSlot(unit);
+    unit.gatherTarget = null;
+    return null;
   }
 
   _sendUnitToResource(unit, node) {
@@ -4287,7 +4349,7 @@ export class CrownforgeSimulation {
     this.lastCommand = !entity
       ? 'Nothing selected.'
       : entity.faction === 'enemy'
-        ? `${label} is hostile · right-click to attack.`
+        ? `${label} is hostile · select a defender, then click to attack.`
         : `${label} selected.`;
   }
 
@@ -4353,10 +4415,10 @@ export class CrownforgeSimulation {
     }
     const target = forcedTarget ?? this.getEntityAt(point);
     if (target?.kind === 'resource') {
-      const workers = units.filter((unit) => unit.type === 'villager');
+      const workers = units.filter((unit) => this.isWorkerUnit(unit));
       if (!workers.length) {
-        this.lastCommand = 'Select a villager to gather resources.';
-        this._announce('Select a villager to gather resources.');
+        this.lastCommand = 'Select a worker to gather resources.';
+        this._announce('Select a worker to gather resources.');
         return { kind: 'none', success: false, target };
       }
       let routed = 0;
@@ -4366,6 +4428,8 @@ export class CrownforgeSimulation {
         if (this._queueConstructionOrder(unit, {
           kind: 'gather',
           resourceId: target.id,
+          resourceType: target.resourceType,
+          origin: { x: target.x, z: target.z },
           gatherSlot: (index + unit.id) % slotCount,
         })) {
           routed += 1;
@@ -4379,7 +4443,13 @@ export class CrownforgeSimulation {
         unit.gatherEventFired = false;
         unit.postDepositTarget = null;
         if (unit.carryAmount > 0) routed += this._beginReturn(unit) ? 1 : 0;
-        else routed += this._sendUnitToResource(unit, target) ? 1 : 0;
+        else routed += this._assignResourceWork(unit, {
+          resourceType: target.resourceType,
+          origin: target,
+          preferredNode: target,
+          radius: RESOURCE_MANUAL_FALLBACK_RADIUS,
+          preferredSlot: (index + unit.id) % slotCount,
+        }) ? 1 : 0;
       });
       if (!routed) {
         this.lastCommand = `No route to ${RESOURCE_TYPES[target.resourceType].label.toLowerCase()}.`;
@@ -4462,7 +4532,7 @@ export class CrownforgeSimulation {
     if (target?.kind === 'building' && target.faction === 'player' && target.progress >= 1 && BUILDING_TYPES[target.type].storage) {
       const workers = units.filter((unit) => unit.type === 'villager');
       if (!workers.length) {
-        this.lastCommand = 'Select a villager to use a drop-off building.';
+        this.lastCommand = 'Select a worker to use a drop-off building.';
         this._announce(this.lastCommand);
         return { kind: 'none', success: false, target };
       }

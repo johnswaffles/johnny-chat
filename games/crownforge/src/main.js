@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260828-instantdemo1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260828-workintent1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260828-instantdemo1';
-import { CrownforgeRenderer } from './renderer.js?v=20260828-instantdemo1';
-import { CrownforgeSimulation } from './simulation.js?v=20260828-instantdemo1';
+import { CrownforgeInput } from './input.js?v=20260828-workintent1';
+import { CrownforgeRenderer } from './renderer.js?v=20260828-workintent1';
+import { CrownforgeSimulation } from './simulation.js?v=20260828-workintent1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
@@ -554,7 +554,7 @@ function selectionStatus() {
       ? node.sizeTier === 'ancient' ? 16 : node.sizeTier === 'large' ? 10 : 8
       : 6;
     return node.amount > 0
-      ? `${Math.round(node.amount)} ${info.label.toLowerCase()} remaining · ${workPositions} work position${workPositions === 1 ? '' : 's'} · right-click to gather`
+      ? `${Math.round(node.amount)} ${info.label.toLowerCase()} remaining · ${workPositions} work position${workPositions === 1 ? '' : 's'} · click to gather`
       : `${info.label} depleted · choose another resource`;
   }
   return simulation.lastCommand;
@@ -654,7 +654,7 @@ function frame(now) {
   });
   if (!sceneReadyAnnounced) {
     sceneReadyAnnounced = true;
-    announce(`${FACTION.name} are ready. Select a villager, then right-click a resource.`);
+    announce(`${FACTION.name} are ready. Select a villager, then click a resource.`);
   }
   requestAnimationFrame(frame);
 }

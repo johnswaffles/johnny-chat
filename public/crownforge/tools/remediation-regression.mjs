@@ -814,7 +814,8 @@ function checkBuilderWorkflowAndVillagerControls() {
   assert.match(INDEX_HTML, /id="select-all-villagers"/, 'selection panel exposes a Select All Villagers button');
   assert.match(INDEX_HTML, /SETTLEMENT-WIDE <kbd>V<\/kbd>/, 'Select All Villagers button advertises its keyboard shortcut');
   assert.match(INPUT_SOURCE, /buildingNeedsWork\(entity\)/, 'hover targeting asks the shared building-work capability');
-  assert.match(INPUT_SOURCE, /isBuilderUnit\(unit\)/, 'primary-click construction uses the shared builder capability');
+  assert.match(INPUT_SOURCE, /one normal click is one order/, 'selected units expose the primary-click command contract');
+  assert.match(INPUT_SOURCE, /issueContextCommand\(world, commandTarget\)/, 'primary clicks use the same context router as right-click orders');
   assert.match(STYLES_CSS, /is-build-target[^\n]+cursor:/, 'unfinished structures have a dedicated hammer cursor');
   assert.match(STYLES_CSS, /is-repair-target[^\n]+cursor:/, 'damaged structures have a dedicated repair cursor');
 }
@@ -915,6 +916,53 @@ function checkAutonomousWorkCombatAndDefenses() {
   assert.equal(assigned, true, 'completed specialist yard assigns its builder to matching nearby resources');
   assert.equal(lumberjack.gatherTarget, nearbyTrees.id, 'Timber Yard builder transitions directly into nearby wood gathering');
 
+  for (const [type, resourceType] of [
+    ['granary', 'food'],
+    ['timberYard', 'wood'],
+    ['stonewrightYard', 'stone'],
+    ['oreWash', 'gold'],
+    ['lumberMill', 'wood'],
+    ['quarry', 'stone'],
+    ['grainMill', 'food'],
+  ]) {
+    assert.equal(BUILDING_TYPES[type].autoWork.resourceType, resourceType, `${BUILDING_TYPES[type].label} declares its automatic follow-up work`);
+    assert.ok(BUILDING_TYPES[type].autoWork.radius >= 40, `${BUILDING_TYPES[type].label} reaches matching nodes beyond monumental wildwood canopies`);
+  }
+
+  const legacyMillTransition = movementSandbox();
+  const lumberMill = legacyMillTransition.addBuilding('lumberMill', 100, 100, 'player');
+  const millBuilder = legacyMillTransition.addUnit('villager', 100, 106, 'player');
+  legacyMillTransition.addResource('tree', 'wood', 113, 100, 180, 0, { sizeTier: 'small' });
+  assert.equal(legacyMillTransition._assignCompletedBuildingWork(millBuilder, lumberMill), true, 'completed Lumber Mill also dispatches its builder to nearby trees');
+  assert.equal(millBuilder.command, 'gather', 'Lumber Mill handoff begins a real gather order instead of leaving the builder idle');
+
+  const canopyTransition = movementSandbox();
+  const canopyYard = canopyTransition.addBuilding('timberYard', 100, 100, 'player');
+  const canopyBuilder = canopyTransition.addUnit('villager', 100, 106, 'player');
+  canopyTransition.addResource('grove', 'wood', 180, 100, 120000, 0, { sizeTier: 'wildwood' });
+  assert.equal(canopyTransition._assignCompletedBuildingWork(canopyBuilder, canopyYard), true, 'a yard beside a monumental visible canopy reaches the Wildwood node beyond its hidden center');
+  assert.match(canopyBuilder.actionLabel, /Starting nearby Wood work/, 'Wildwood canopy handoff remains visible as immediate Wood work');
+
+  const forgivingIntent = movementSandbox();
+  const intentWorker = forgivingIntent.addUnit('villager', 100, 100, 'player');
+  forgivingIntent.selectedIds = [intentWorker.id];
+  forgivingIntent._syncSelectionFlags();
+  forgivingIntent.addResource('grove', 'wood', 108, 100, 1200, 0, { sizeTier: 'large' });
+  const blockedTree = forgivingIntent.resourcesNodes.at(-1);
+  forgivingIntent.addResource('tree', 'wood', 112, 103, 180, 0, { sizeTier: 'small' });
+  const reachableTree = forgivingIntent.resourcesNodes.at(-1);
+  const attempts = [];
+  forgivingIntent._sendUnitToResource = (unit, node) => {
+    attempts.push(node.id);
+    if (node.id === blockedTree.id) return false;
+    unit.command = 'gather';
+    return true;
+  };
+  const gatherResult = forgivingIntent.issueContextCommand(blockedTree, blockedTree);
+  assert.equal(gatherResult.kind, 'gather', 'a blocked clicked tree still produces a successful gather command');
+  assert.deepEqual(attempts.slice(0, 2), [blockedTree.id, reachableTree.id], 'manual gather preserves the clicked tree first, then redirects to a nearby matching node');
+  assert.equal(intentWorker.gatherTarget, reachableTree.id, 'the worker retains the reachable fallback as its active work target');
+
   assert.match(RENDERER_SOURCE, /wallJunctionClip:\s*\{ x: connector\.socketX, z: connector\.socketZ \}/, 'Palisade Tower connectors clip at the authored tower socket');
   assert.match(RENDERER_SOURCE, /drawDefenseProjectiles\(ctx, simulation\)/, 'renderer draws defensive arrows in the world pass');
 }
@@ -977,6 +1025,7 @@ function checkConstructionRetaskingAndTaskSummary() {
     screenToWorld: () => ({ x: barracks.x, z: barracks.z }),
     getEntityAtScreen: () => barracks,
     addRipple: () => {},
+    setSelectionBox: () => {},
   };
   clickInput.simulation = simulation;
   clickInput.buildMode = null;
@@ -986,8 +1035,10 @@ function checkConstructionRetaskingAndTaskSummary() {
   clickInput.wallDrag = null;
   clickInput.onGesture = () => {};
   clickInput.onCommand = (result) => { clickResult = result; };
+  clickInput.onSelection = () => {};
   clickInput._updateCursor = () => {};
   clickInput._down({ button: 0, clientX: 0, clientY: 0, pointerId: 1, shiftKey: false });
+  clickInput._up({ button: 0, clientX: 0, clientY: 0, pointerId: 1, shiftKey: false });
   assert.equal(clickResult?.kind, 'build', 'primary-clicking an unfinished foundation resumes construction');
   assert.equal(clickWorker.buildTarget, barracks.id, 'primary-click resume assigns the selected Villager');
 
@@ -2114,7 +2165,7 @@ console.log(JSON.stringify({
     'intent-aware visual targeting and resource-specific gather/drop-off feedback',
     'data-driven builder capability, hammer cursor, manual repair, nearby auto-assist, Crown Hall safety regroup, and Select All Villagers control',
     'instant click, selected-structure, and drag-area demolition without Villagers, labor queues, collision, or debris',
-    'long-wall construction stations, persistent attack recovery, protected workers, autonomous military defense, directional building arrows, specialist work transitions, and tower socket integration',
+    'long-wall construction stations, persistent attack recovery, protected workers, autonomous military defense, directional building arrows, all resource-yard work transitions, forgiving manual resource redirection, and tower socket integration',
     'focused first-age building catalog with the Crown Hall as universal fallback',
     'placement rejection and Barracks completion',
     'construction pause, foundation right-click reassignment, cargo-first resume, and mixed-task feedback',

@@ -552,6 +552,7 @@ export const BUILDING_TYPES = {
     cost: { food: 0, wood: 70, stone: 10 },
     storage: true,
     acceptsResources: ['food'],
+    autoWork: { resourceType: 'food', radius: 40 },
     gatherBonus: { resourceType: 'food', radius: 14, multiplier: 1.15 },
   },
   homestead: {
@@ -608,6 +609,7 @@ export const BUILDING_TYPES = {
     cost: { food: 0, wood: 55, stone: 10 },
     storage: true,
     acceptsResources: ['wood'],
+    autoWork: { resourceType: 'wood', radius: 40 },
     gatherBonus: { resourceType: 'wood', radius: 14, multiplier: 1.15 },
   },
   stonewrightYard: {
@@ -626,6 +628,7 @@ export const BUILDING_TYPES = {
     cost: { food: 0, wood: 45, stone: 25 },
     storage: true,
     acceptsResources: ['stone'],
+    autoWork: { resourceType: 'stone', radius: 40 },
     gatherBonus: { resourceType: 'stone', radius: 15, multiplier: 1.15 },
   },
   oreWash: {
@@ -646,6 +649,7 @@ export const BUILDING_TYPES = {
     cost: { food: 0, wood: 60, stone: 20, gold: 0 },
     storage: true,
     acceptsResources: ['gold'],
+    autoWork: { resourceType: 'gold', radius: 40 },
     // Nearby washing and sorting raises each completed Gold load from 8 to
     // 10. Multiple Ore Washes never stack; the simulation takes the strongest
     // single local bonus.
@@ -667,6 +671,7 @@ export const BUILDING_TYPES = {
     cost: { food: 0, wood: 45, stone: 10 },
     storage: true,
     acceptsResources: ['wood'],
+    autoWork: { resourceType: 'wood', radius: 40 },
   },
   quarry: {
     label: 'Stone Quarry',
@@ -684,6 +689,7 @@ export const BUILDING_TYPES = {
     cost: { food: 0, wood: 35, stone: 25 },
     storage: true,
     acceptsResources: ['stone'],
+    autoWork: { resourceType: 'stone', radius: 40 },
   },
   grainMill: {
     label: 'Grain Mill',
@@ -701,6 +707,7 @@ export const BUILDING_TYPES = {
     cost: { food: 0, wood: 50, stone: 10 },
     storage: true,
     acceptsResources: ['food'],
+    autoWork: { resourceType: 'food', radius: 40 },
   },
   field: {
     label: 'Grain Field',

@@ -4641,3 +4641,62 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not restore Villager demolition labor, demolition pathfinding, worker slots, or demolition animations.
 - Do not add refunds, rubble harvesting, salvage wagons, demolition technologies, or faction-specific demolition rules during this pass.
+
+## ONE-CLICK WORK INTENT AND RESOURCE-YARD HANDOFF — 2026-08-28
+
+### WHAT EXISTS
+
+- A selected player unit now treats one normal click as one context-sensitive order: open ground moves, resources gather, structures interact or receive build/repair labor, and hostiles engage.
+- Resource work is expressed as an intent for Wood, Food, Stone, or Gold rather than a brittle dependency on one exact node.
+- Every current player resource drop-off declares the matching work its builders should begin when construction finishes.
+
+### WHAT WAS COMPLETED
+
+- Moved primary-click command routing to click release so short clicks issue orders while intentional drag gestures still perform box selection.
+- Preserved direct friendly-unit selection and Shift-additive selection while allowing selected units to use primary click on terrain, resources, buildings, and enemies.
+- Added data-driven `autoWork` definitions for the Granary, Timber Yard, Stonewright Yard, Ore Wash, Lumber Mill, Stone Quarry, and Grain Mill.
+- Added a single-resource storage fallback so future focused drop-off buildings inherit the correct automatic work handoff even before an explicit work rule is authored.
+- Unified manual gather orders, queued gather orders, post-deposit return-to-work, and post-construction work assignment through one resource-intent router.
+- Kept the node the player clicked as the first choice, then redirected to a nearby reachable node of the same resource type when dense forest, another node, or a structure blocks every authored work slot.
+- Generalized gather-capable selection from the literal Villager type to the shared worker capability so future builder/gatherer units inherit the same interaction.
+- Expanded post-construction discovery to a forgiving forty-world-unit work radius that reaches past monumental wildwood canopies without changing the smaller local yield-bonus radius.
+- Scaled automatic discovery by each node's authored footprint so a yard beside the visible crown of a Wildwood grove finds its trunks without making small bushes, stones, or Gold deposits globally attractive.
+- Updated the opening prompt, field manual, first-light order, resource detail, and hostile selection copy to teach primary-click commands while retaining right-click as an alternate.
+- Advanced the playable build marker to `20260828-workintent1`.
+
+### KNOWN ISSUES
+
+- Primary click now favors an order while player units are selected. Click another friendly unit to change unit selection, use Shift for additive selection, or clear unit selection before selecting a completed building for its own panel.
+- The source-only regression entry still cannot execute because the pre-existing source tree lacks `src/pathfinding.js`; the synchronized playable public package contains the module and runs the complete suite.
+
+### ASSETS CREATED
+
+- No new artwork was required. Existing move, gather, build, repair, attack, ripple, and cursor treatments now share the same command route.
+
+### SYSTEMS CREATED
+
+- Primary-click context command routing.
+- Data-driven resource-building work handoff.
+- Reachable same-resource target redirection.
+- Shared manual, queued, post-deposit, and post-construction work intent.
+- Future-worker capability inheritance.
+
+### VALIDATION
+
+- JavaScript syntax checks passed for configuration, input, simulation, animation, renderer, main, and regression modules.
+- The complete playable-package remediation regression suite passed.
+- New regression coverage proves the Lumber Mill and every current resource drop-off declares matching follow-up work, a completed Lumber Mill starts a real gather command, an unreachable clicked tree redirects to a nearby matching tree, and primary click uses the shared context router.
+- Source and playable-public implementation and regression files remain byte-identical.
+- Browser QA confirmed one primary click begins Wood/Gold gathering, one primary click on open meadow begins movement, and a forest-edge Timber Yard changes all three finishing builders to `Walking to Wood` immediately after completion.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Test one-worker and multi-worker handoff beside dense wildwood, berry pockets, stone deposits, and Gold veins on the live build.
+2. Observe how often a manual click redirects from an interior forest node to a perimeter node; tune only the fallback radius if the visual intent ever feels too broad.
+3. Keep new resource processors small and declare one `autoWork.resourceType` instead of adding building-specific worker scripts.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add job-management menus, work-zone painting, resource priority sliders, or per-building worker rosters before the one-click loop has been live-tested.
+- Do not let an unreachable resource order silently become a different resource type.
+- Do not bypass building or resource collision to make work paths succeed.
