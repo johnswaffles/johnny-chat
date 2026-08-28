@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260828-workintent1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260828-latencypass1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260828-workintent1';
-import { CrownforgeRenderer } from './renderer.js?v=20260828-workintent1';
-import { CrownforgeSimulation } from './simulation.js?v=20260828-workintent1';
+import { CrownforgeInput } from './input.js?v=20260828-latencypass1';
+import { CrownforgeRenderer } from './renderer.js?v=20260828-latencypass1';
+import { CrownforgeSimulation } from './simulation.js?v=20260828-uipass1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
@@ -23,14 +23,13 @@ const outcomeKicker = document.querySelector('#outcome-kicker');
 const outcomeTitle = document.querySelector('#outcome-title');
 const outcomeCopy = document.querySelector('#outcome-copy');
 const outcomeIcon = document.querySelector('#outcome-icon');
-const controlsToggle = document.querySelector('#controls-toggle');
-const controlsPanel = document.querySelector('#controls-panel');
-const controlsMinimize = document.querySelector('#controls-minimize');
 const musicToggle = document.querySelector('#music-toggle');
 const musicToggleLabel = document.querySelector('#music-toggle-label');
 const reducedMotion = document.querySelector('#reduced-motion');
 const unitSpeed = document.querySelector('#unit-speed');
 const unitSpeedValue = document.querySelector('#unit-speed-value');
+const harvestSpeed = document.querySelector('#harvest-speed');
+const harvestSpeedValue = document.querySelector('#harvest-speed-value');
 const uiTooltip = document.querySelector('#ui-tooltip');
 const placementReadout = document.querySelector('#placement-readout');
 const placementIcon = document.querySelector('#placement-icon');
@@ -250,19 +249,6 @@ trainButtons.forEach((button) => {
     updateUi();
   });
 });
-controlsToggle.addEventListener('click', () => {
-  audio.unlock();
-  audio.ui();
-  if (input.buildMode) input.cancelBuildMode();
-  if (input.demolitionMode) input.cancelDemolitionMode();
-  buildMenu.hidden = true;
-  trainMenu.hidden = true;
-  controlsPanel.hidden = !controlsPanel.hidden;
-});
-controlsMinimize?.addEventListener('click', () => {
-  controlsPanel.classList.toggle('is-collapsed');
-  controlsMinimize.setAttribute('aria-expanded', String(!controlsPanel.classList.contains('is-collapsed')));
-});
 restartButton.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
@@ -301,6 +287,10 @@ unitSpeed?.addEventListener('input', (event) => {
   const value = simulation.setUnitSpeedScale(event.target.value);
   if (unitSpeedValue) unitSpeedValue.textContent = `${value}×`;
 });
+harvestSpeed?.addEventListener('input', (event) => {
+  const value = simulation.setHarvestSpeedScale(event.target.value);
+  if (harvestSpeedValue) harvestSpeedValue.textContent = `${value}×`;
+});
 
 recoverUnitsButton?.addEventListener('click', () => {
   audio.unlock();
@@ -337,6 +327,8 @@ function updateUi() {
   ui.population.textContent = `${population.used} / ${population.capacity}`;
   if (unitSpeed) unitSpeed.value = String(simulation.getUnitSpeedScale());
   if (unitSpeedValue) unitSpeedValue.textContent = `${simulation.getUnitSpeedScale()}×`;
+  if (harvestSpeed) harvestSpeed.value = String(simulation.getHarvestSpeedScale());
+  if (harvestSpeedValue) harvestSpeedValue.textContent = `${simulation.getHarvestSpeedScale()}×`;
   ui.selectionTitle.textContent = selectionTitle();
   ui.selectionDetail.textContent = selectionStatus();
   if (selectionRecovery) selectionRecovery.hidden = !simulation.canRecoverSelectedUnits();

@@ -4700,3 +4700,84 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Do not add job-management menus, work-zone painting, resource priority sliders, or per-building worker rosters before the one-click loop has been live-tested.
 - Do not let an unreachable resource order silently become a different resource type.
 - Do not bypass building or resource collision to make work paths succeed.
+
+## COMMAND LATENCY AND FRAME-PACING PASS — 2026-08-28
+
+### WHAT EXISTS
+
+- Normal movement, gathering, construction, combat, and autonomous work continue to use the same collision-safe route system.
+- Nearby selected units now share obstacle-routing work instead of independently proving the same corridor open or closed.
+- Resource nodes retain their authored perimeter work slots and visible front-side preference where that side is actually reachable.
+
+### WHAT WAS COMPLETED
+
+- Added a continuous clear-line route fast path before A*. Orders inside one clearing now begin without constructing a large search frontier.
+- Replaced exhaustive Wildwood routing across as many as twenty-four work slots with four nearest-first attempts that mildly prefer visible front-side positions without rejecting the accessible forest edge.
+- Preserved same-resource fallback when those bounded approaches are genuinely sealed.
+- Split open-ground group movement into immediate direct routes plus clustered obstacle routing. One representative A* result or failure is shared by nearby group members.
+- Prevented a full selected population from repeating the same impossible cross-forest search once per unit.
+- Removed direct routes from the expensive-path diagnostic counter so telemetry now distinguishes clear-line commands from actual A* work.
+- Advanced the playable build marker to `20260828-latencypass1`.
+
+### KNOWN ISSUES
+
+- One genuinely obstructed cluster still performs one synchronous bounded A* search. On the current full map an impossible twenty-four-unit order measured about 119 ms instead of 1.9 seconds. If later ages add much larger maps or hundreds of independent clusters, route search should move to an incremental worker rather than raising the synchronous budget again.
+- Followers sharing an obstacle corridor converge through the same safe route and rely on the existing spatial collision spacing while travelling. This favors immediate response and reliable passage over preserving a wide parade formation through narrow gaps.
+
+### ASSETS CREATED
+
+- No new artwork was required. This pass changes route scheduling and command responsiveness only.
+
+### SYSTEMS CREATED
+
+- Clear-line pathfinding fast path.
+- Bounded nearest-first resource approach search.
+- Cluster-shared group obstacle routing and failure reuse.
+- Regression coverage for Wildwood work-slot bounds and full-population shared route failure.
+
+### VALIDATION
+
+- The complete playable-package remediation regression suite passed after the routing changes.
+- The opening scheduled enemy-economy spike fell from about 763 ms to about 1.6 ms in the deterministic benchmark.
+- A three-Villager Wildwood command fell from roughly 2.6–4.5 seconds to roughly 2–4 ms in the direct simulation benchmark.
+- A full twenty-four-unit open-ground order measured about 6 ms; the same group clicking beyond the sealed Wildwood divide fell from about 1.9 seconds and twenty-four A* searches to about 119 ms and one search.
+- Real-browser QA reduced the forest command round trip from about 3.31 seconds on the deployed baseline to about 0.26 seconds locally, matching the ordinary browser-control baseline for an open-ground click.
+- The optimized browser session showed zero long frames during the startup observation window, zero console warnings/errors, and immediate `Moving` / `Walking to Wood` feedback.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Recheck the same timings after a long live settlement session containing several completed resource yards and the full normal population.
+2. Observe formation flow through newly chopped forest corridors and tune only cluster radius or spacing if units visibly crowd a narrow opening.
+3. Keep resource approach attempts bounded when adding future macro-resource nodes.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not raise A* search limits or restore all-slot route comparisons to solve a single inaccessible approach.
+- Do not bypass Wildwood, building, wall, gate, or tower collision for faster-looking movement.
+- Do not add a new game engine solely for command latency; the measured bottleneck was repeated synchronous route work and is now removed at its source.
+
+## HUD CLEANUP AND DEVELOPMENT SPEED LAB — 2026-08-28
+
+### WHAT WAS COMPLETED
+
+- Removed the First Light Orders panel from the player HUD.
+- Removed the Field Manual commands-and-camera panel and its command-deck toggle so the left rail stays focused on settlement state and direct unit actions.
+- Moved the existing Travel speed slider into the development telemetry card in the upper-right.
+- Added a separate Harvesting speed slider beside Travel speed. Both controls are visible only with `?perf=1` and are capped at 10×.
+- Kept the development controls independent: Travel speed changes locomotion only, while Harvesting speed shortens worker resource-cycle duration only. Resource yield, physics, collision, combat, construction, animation cadence, and game timing remain unchanged.
+- Advanced the playable build marker to `20260828-uipass1`.
+
+### ASSETS CREATED
+
+- No new artwork was required. This is a HUD and simulation-timing pass using the existing authored controls and worker animations.
+
+### VALIDATION
+
+- Regression coverage confirms the retired HUD panels and controls toggle are absent, the development-only sliders are present, the 10× harvest setting completes a nearby wood cycle promptly, and the two speed scales remain independent.
+- JavaScript syntax checks, the complete playable-package remediation suite, `git diff --check`, and source/public parity checks passed.
+- Browser QA confirmed the normal HUD no longer exposes either retired panel and `?perf=1` shows the telemetry card with Travel speed and Harvesting speed controls. The harvesting slider responded to a real 10× browser interaction with no console errors.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not expose these speed controls in normal player mode; they are intentionally development-only.
+- Do not increase harvest yield or simulation time to implement faster gathering; keep the control limited to worker cycle duration.

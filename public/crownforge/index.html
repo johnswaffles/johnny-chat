@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="crownforge-build" content="20260828-workintent1" />
+    <meta name="crownforge-build" content="20260828-uipass1" />
     <title>Crownforge: Dawn of Kingdoms</title>
     <meta name="description" content="Crownforge — a tiny polished historical RTS settlement slice." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -72,36 +72,6 @@
             </button>
           </div>
         </section>
-        <section class="glass-panel doctrine-panel">
-          <div class="panel-kicker">FIRST LIGHT ORDERS</div>
-          <div class="order"><span class="order-number">01</span><span>Select units with click or drag. Shift adds to a selection.</span></div>
-          <div class="order"><span class="order-number">02</span><span>With units selected, click meadow, resource, structure, or enemy to command.</span></div>
-          <div class="order"><span class="order-number">03</span><span>Raise a Crown Barracks, then break the Ashen Camp.</span></div>
-        </section>
-        <section id="controls-panel" class="controls-panel glass-panel" aria-label="Crownforge controls">
-          <div class="controls-heading"><span class="ui-icon icon-controls" aria-hidden="true"></span><div><span class="panel-kicker">FIELD MANUAL</span><b>COMMANDS & CAMERA</b></div><button id="controls-minimize" class="controls-minimize" type="button" aria-label="Minimize controls" aria-expanded="true">—</button></div>
-          <div class="controls-grid">
-            <div><kbd>Left click</kbd><span>Select friendly / command selected</span></div>
-            <div><kbd>Drag</kbd><span>Box-select units</span></div>
-            <div><kbd>Shift + click</kbd><span>Add to selection</span></div>
-            <div><kbd>Right click</kbd><span>Alternate move / gather / attack</span></div>
-            <div><kbd>Scroll</kbd><span>Zoom to cursor</span></div>
-            <div><kbd>W A S D</kbd><span>Pan camera</span></div>
-            <div><kbd>Middle-drag</kbd><span>Pan map</span></div>
-            <div><kbd>Esc</kbd><span>Close menu / placement</span></div>
-            <div><kbd>R</kbd><span>Return selected units to Crown Hall</span></div>
-            <div><kbd>V</kbd><span>Select all Villagers</span></div>
-            <div><kbd>X</kbd><span>Instant structure demolition</span></div>
-          </div>
-          <div class="settings-block unit-speed-setting">
-            <div class="controls-setting-title">UNIT PACE</div>
-            <label class="range-setting" for="unit-speed">
-              <span>Travel speed <output id="unit-speed-value">1×</output></span>
-              <input id="unit-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit travel speed" />
-            </label>
-            <small class="settings-note">Travel only. Gathering, building, combat, and game timing stay unchanged.</small>
-          </div>
-        </section>
       </aside>
 
       <div class="map-hint glass-panel">SCROLL TO ZOOM <span>•</span> WASD TO PAN <span>•</span> MIDDLE-DRAG TO PAN</div>
@@ -114,6 +84,18 @@
           <span>UI</span><b data-perf="ui">0.00 ms</b>
           <span>ENTITIES</span><b data-perf="entities">0</b>
           <span>LONG FRAMES</span><b data-perf="long-frames">0 / 5s</b>
+        </div>
+        <div class="dev-speed-controls">
+          <div class="performance-subheading">DEV SPEED CONTROLS</div>
+          <label class="range-setting" for="unit-speed">
+            <span>Travel speed <output id="unit-speed-value">1×</output></span>
+            <input id="unit-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit travel speed" />
+          </label>
+          <label class="range-setting" for="harvest-speed">
+            <span>Harvesting speed <output id="harvest-speed-value">1×</output></span>
+            <input id="harvest-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit harvesting speed" />
+          </label>
+          <small class="settings-note">Development-only. Travel and resource work duration change; physics, combat, and game timing stay unchanged.</small>
         </div>
       </section>
 
@@ -152,7 +134,6 @@
             </div>
           </div>
           <div id="placement-readout" class="placement-readout" hidden><span id="placement-icon" class="ui-icon icon-house" aria-hidden="true"></span><span><b id="placement-title">PLACEMENT MODE</b><small id="placement-detail">Move the foundation to a clear site.</small></span></div>
-          <button id="controls-toggle" class="secondary-button" title="Show keyboard and mouse controls"><span class="ui-icon icon-controls" aria-hidden="true"></span><span>CONTROLS</span></button>
           <button id="music-toggle" class="secondary-button music-toggle" type="button" title="Mute Crownforge music" aria-pressed="false"><span class="music-glyph" aria-hidden="true">♫</span><span id="music-toggle-label">MUSIC ON</span></button>
           <button id="cancel-build" class="secondary-button" hidden title="Cancel construction placement (Esc)"><span class="ui-icon icon-cancel" aria-hidden="true"></span><span>ESC CANCEL</span></button>
           <button id="restart-game" class="secondary-button" title="Reset the current Crownforge slice"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>RESET SLICE</span></button>
@@ -172,7 +153,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260828-workintent1"></script>
+    <script type="module" src="./src/main.js?v=20260828-uipass1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

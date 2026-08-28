@@ -281,6 +281,43 @@ function checkGathering() {
   }
 }
 
+function checkDevelopmentSpeedControls() {
+  assert.equal(INDEX_HTML.includes('FIRST LIGHT ORDERS'), false, 'retired First Light Orders panel is removed from the player HUD');
+  assert.equal(INDEX_HTML.includes('FIELD MANUAL'), false, 'retired Field Manual commands panel is removed from the player HUD');
+  assert.equal(INDEX_HTML.includes('COMMANDS & CAMERA'), false, 'retired commands and camera panel is removed from the player HUD');
+  assert.equal(INDEX_HTML.includes('id="controls-toggle"'), false, 'retired controls toggle is removed from the command deck');
+  assert.match(INDEX_HTML, /id="performance-panel"[^>]*hidden/, 'development telemetry remains hidden in normal play');
+  assert.match(INDEX_HTML, /DEV SPEED CONTROLS/, 'development speed controls live beside telemetry');
+  assert.match(INDEX_HTML, /id="unit-speed"/, 'development travel speed slider remains available');
+  assert.match(INDEX_HTML, /id="harvest-speed"/, 'development harvesting speed slider is available');
+
+  const normal = movementSandbox();
+  const normalWorker = normal.addUnit('villager', 20, 20, 'player');
+  normal.addResource('tree', 'wood', 21.2, 20, 100, 0, { sizeTier: 'small' });
+  const normalTree = normal.resourcesNodes[0];
+  normalWorker.gatherTarget = normalTree.id;
+  normalWorker.command = 'gather';
+  normal._updateGathering(normalWorker, 0.2);
+  assert.equal(normalWorker.carryAmount, 0, 'normal harvesting speed does not complete a wood cycle early');
+
+  const fast = movementSandbox();
+  const fastWorker = fast.addUnit('villager', 20, 20, 'player');
+  fast.addResource('tree', 'wood', 21.2, 20, 100, 0, { sizeTier: 'small' });
+  const fastTree = fast.resourcesNodes[0];
+  fastWorker.gatherTarget = fastTree.id;
+  fastWorker.command = 'gather';
+  assert.equal(fast.setHarvestSpeedScale(10), 10, 'harvesting speed slider caps at 10x');
+  fast._updateGathering(fastWorker, 0.2);
+  assert.ok(fastWorker.carryAmount > 0, '10x harvesting completes a nearby wood cycle promptly');
+  assert.equal(fast.getUnitSpeedScale(), 1, 'harvesting speed does not alter travel speed');
+
+  const isolated = freshSimulation();
+  isolated.setUnitSpeedScale(7);
+  isolated.setHarvestSpeedScale(10);
+  assert.equal(isolated.getUnitSpeedScale(), 7, 'travel speed remains independently adjustable');
+  assert.equal(isolated.getHarvestSpeedScale(), 10, 'harvesting speed remains independently adjustable');
+}
+
 function checkGoldEconomyLoop() {
   assert.equal(RESOURCE_TYPES.gold.label, 'Gold', 'Gold is registered as a first-class resource');
   assert.equal(INITIAL_RESOURCES.gold, 5000, 'sandbox reset starts with a useful Gold reserve');
@@ -962,6 +999,51 @@ function checkAutonomousWorkCombatAndDefenses() {
   assert.equal(gatherResult.kind, 'gather', 'a blocked clicked tree still produces a successful gather command');
   assert.deepEqual(attempts.slice(0, 2), [blockedTree.id, reachableTree.id], 'manual gather preserves the clicked tree first, then redirects to a nearby matching node');
   assert.equal(intentWorker.gatherTarget, reachableTree.id, 'the worker retains the reachable fallback as its active work target');
+
+  const responsiveWildwood = movementSandbox();
+  const wildwoodWorkers = [
+    responsiveWildwood.addUnit('villager', 90, 98, 'player'),
+    responsiveWildwood.addUnit('villager', 90, 100, 'player'),
+    responsiveWildwood.addUnit('villager', 90, 102, 'player'),
+  ];
+  responsiveWildwood.addResource('grove', 'wood', 120, 100, 120000, 0, { sizeTier: 'wildwood' });
+  const responsiveGrove = responsiveWildwood.resourcesNodes.at(-1);
+  responsiveWildwood.selectedIds = wildwoodWorkers.map((unit) => unit.id);
+  responsiveWildwood._syncSelectionFlags();
+  const responsiveGather = responsiveWildwood.issueContextCommand(responsiveGrove, responsiveGrove);
+  assert.equal(responsiveGather.kind, 'gather', 'a group Wildwood click accepts the gather order immediately');
+  assert.ok(wildwoodWorkers.every((unit) => unit.command === 'gather'), 'all selected workers begin the Wildwood order together');
+  assert.ok(responsiveWildwood.pathRequestsLastStep <= wildwoodWorkers.length, 'clear Wildwood approaches avoid an exhaustive A* search across every work slot');
+
+  const boundedResourceSearch = movementSandbox();
+  const boundedWorker = boundedResourceSearch.addUnit('villager', 90, 100, 'player');
+  boundedResourceSearch.addResource('grove', 'wood', 120, 100, 120000, 0, { sizeTier: 'wildwood' });
+  const boundedGrove = boundedResourceSearch.resourcesNodes.at(-1);
+  let boundedAttempts = 0;
+  boundedResourceSearch._buildPath = () => {
+    boundedAttempts += 1;
+    return null;
+  };
+  assert.equal(boundedResourceSearch._sendUnitToResource(boundedWorker, boundedGrove), false, 'a sealed Wildwood approach reports failure');
+  assert.ok(boundedAttempts <= 4, 'a sealed Wildwood node never launches pathfinding for all twenty-four work slots');
+
+  const sharedGroupRoute = freshSimulation();
+  const groupLeader = sharedGroupRoute.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
+  const routeGroup = [groupLeader];
+  for (let index = 1; index < CONFIG.normalPopulationCapacity; index += 1) {
+    routeGroup.push(sharedGroupRoute.addUnit(
+      'villager',
+      groupLeader.x + (index % 6) * 0.65,
+      groupLeader.z + Math.floor(index / 6) * 0.65,
+      'player',
+    ));
+  }
+  sharedGroupRoute.selectedIds = routeGroup.map((unit) => unit.id);
+  sharedGroupRoute._syncSelectionFlags();
+  const sealedGroupMove = sharedGroupRoute.issueContextCommand({ x: CONFIG.mapWidth - 60, z: CONFIG.mapHeight - 60 });
+  assert.equal(sealedGroupMove.success, false, 'an uncut Wildwood divide still rejects an impossible group move');
+  assert.ok(sharedGroupRoute.pathRequestsLastStep <= 1, 'a nearby selected group shares one obstacle search instead of repeating it for every unit');
+  assert.equal(routeGroup.filter((unit) => unit.pathBlocked).length, routeGroup.length, 'the shared failed route leaves every group member recoverable');
 
   assert.match(RENDERER_SOURCE, /wallJunctionClip:\s*\{ x: connector\.socketX, z: connector\.socketZ \}/, 'Palisade Tower connectors clip at the authored tower socket');
   assert.match(RENDERER_SOURCE, /drawDefenseProjectiles\(ctx, simulation\)/, 'renderer draws defensive arrows in the world pass');
@@ -2113,6 +2195,7 @@ function checkUnitMovementFacingAndPoseSafety() {
 checkAnimationAtlases();
 checkResetPresentation();
 checkGathering();
+checkDevelopmentSpeedControls();
 checkGoldEconomyLoop();
 checkOreWashEconomySupport();
 checkStableGranaryAndScout();

@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260828-workintent1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260828-latencypass1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-workintent1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-latencypass1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -10,6 +10,12 @@ const RESOURCE_SLOT_COUNT = 6;
 const RESOURCE_READABLE_FRONT_BIAS = -0.05;
 const RESOURCE_INTENT_MAX_CANDIDATES = 12;
 const RESOURCE_MANUAL_FALLBACK_RADIUS = 36;
+// A Wildwood ring exposes as many as twenty-four valid work positions. Running
+// a full A* search for every position made one gather click monopolize the
+// browser for several seconds. Try the nearest readable approaches first and
+// let the existing same-resource fallback choose another node when those few
+// entrances are sealed.
+const RESOURCE_ROUTE_ATTEMPT_LIMIT = 4;
 const CONSTRUCTION_SLOT_COUNT = 8;
 const DEMOLITION_SLOT_COUNT = 8;
 const MAX_CONSTRUCTION_ORDER_QUEUE = 12;
@@ -217,6 +223,10 @@ export class CrownforgeSimulation {
     this.onEvent = onEvent;
     this.animation = new CrownforgeAnimationSystem();
     this.unitSpeedScale = 1;
+    // Development-only time compression for worker resource cycles. Keep it
+    // separate from locomotion so a faster harvest never changes movement,
+    // collision, combat, construction, or the fixed simulation clock.
+    this.harvestSpeedScale = 1;
     const query = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
     this.stressMode = query.has('stress');
     this.pathCache = new Map();
@@ -274,6 +284,17 @@ export class CrownforgeSimulation {
 
   getUnitSpeedScale() {
     return this.unitSpeedScale;
+  }
+
+  setHarvestSpeedScale(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return this.harvestSpeedScale;
+    this.harvestSpeedScale = clamp(numeric, 1, 10);
+    return this.harvestSpeedScale;
+  }
+
+  getHarvestSpeedScale() {
+    return this.harvestSpeedScale;
   }
 
   _resourceBank(faction = 'player') {
@@ -1885,10 +1906,13 @@ export class CrownforgeSimulation {
     setUnitFacing(unit, node.x - unit.x, node.z - unit.z, true);
     unit.visualState = node.resourceType;
     unit.actionLabel = `Gathering ${resourceInfo.label}`;
+    // Only the worker's gather cycle is compressed. Amounts, carry limits,
+    // animation state, and the rest of the simulation remain unchanged.
+    const effectiveGatherTime = resourceInfo.gatherTime / this.harvestSpeedScale;
     unit.gatherTimer += dt;
-    const toolContactTime = resourceInfo.gatherTime * ANIMATION_EVENT_TIMINGS.resource_collected;
+    const toolContactTime = effectiveGatherTime * ANIMATION_EVENT_TIMINGS.resource_collected;
     if (unit.gatherEventFired || unit.gatherTimer < toolContactTime) {
-      if (unit.gatherTimer >= resourceInfo.gatherTime) {
+      if (unit.gatherTimer >= effectiveGatherTime) {
         unit.gatherTimer = 0;
         unit.gatherEventFired = false;
       }
@@ -2743,7 +2767,7 @@ export class CrownforgeSimulation {
     }
   }
 
-  _buildPath(unit, target, placement = null) {
+  _buildPath(unit, target, placement = null, { directOnly = false } = {}) {
     const safeTarget = {
       x: clamp(target.x, 0.55, CONFIG.mapWidth - 0.55),
       z: clamp(target.z, 0.55, CONFIG.mapHeight - 0.55),
@@ -2758,13 +2782,23 @@ export class CrownforgeSimulation {
       this.pathCache.set(cacheKey, cached);
       return cached ? cached.map((point) => ({ ...point })) : null;
     }
-    this.pathRequestsLastStep += 1;
     const targetCell = { x: Math.floor(safeTarget.x), z: Math.floor(safeTarget.z) };
     const isBlocked = (x, z) => this._isPathCellBlocked(unit, x, z, placement, targetCell.x === x && targetCell.z === z ? safeTarget : null);
+    const targetCellOpen = !isBlocked(targetCell.x, targetCell.z);
+    // Most player orders stay inside one clearing. A continuous collision
+    // probe is substantially cheaper than constructing a large A* frontier,
+    // and gives the unit a route during the same click event. Keep the result
+    // in the ordinary route cache so followers and retries share it.
+    if (targetCellOpen && !this._pathSegmentBlocked(unit, unit, safeTarget, placement)) {
+      const directPath = [{ x: safeTarget.x, z: safeTarget.z }];
+      this._cachePath(cacheKey, directPath);
+      return directPath;
+    }
+    if (directOnly) return null;
+    this.pathRequestsLastStep += 1;
     const path = findPath(unit, safeTarget, isBlocked, CONFIG.mapWidth, CONFIG.mapHeight, {
       segmentClear: (start, end) => !this._pathSegmentBlocked(unit, start, end, placement),
     });
-    const targetCellOpen = !isBlocked(targetCell.x, targetCell.z);
     if (!path.length && distance(unit, safeTarget) > PATH_REACH_TOLERANCE) {
       if (!targetCellOpen) {
         this._cachePath(cacheKey, null);
@@ -3053,27 +3087,32 @@ export class CrownforgeSimulation {
     const orderedSlots = Array.from({ length: slotCount }, (_, offset) => (preferredSlot + offset) % slotCount);
     const freeSlots = orderedSlots.filter((slot) => !node.reservedSlots.has(slot) || node.reservedSlots.get(slot) === unit.id);
     const candidateSlots = freeSlots.length ? freeSlots : orderedSlots;
-    const routes = [];
-    for (const slot of candidateSlots) {
+    const routeCandidates = candidateSlots.map((slot, order) => {
       const point = this._resourceInteractionPoint(node, slot, unit.type);
-      const path = this._buildPath(unit, point);
-      if (!path) continue;
       // Prefer the screen-front half of a resource ring. The rear slots are
       // mechanically valid, but a worker placed there can disappear behind a
       // tree or berry canopy at the fixed camera zoom. Keeping the preference
       // in route selection preserves depth sorting while making the worker's
       // tool pose readable during the work loop.
       const frontBias = (point.x + point.z) - (node.x + node.z);
-      const score = path.length * 1.1 + distance(unit, point) * 0.2 - frontBias * 1.35;
-      routes.push({ path, point, slot, score, frontBias });
+      return {
+        point,
+        slot,
+        order,
+        frontBias,
+        readable: frontBias >= RESOURCE_READABLE_FRONT_BIAS,
+        proximity: distance(unit, point),
+      };
+    }).sort((a, b) => (a.proximity + (a.readable ? 0 : 6)) - (b.proximity + (b.readable ? 0 : 6))
+      || Number(b.readable) - Number(a.readable)
+      || a.order - b.order);
+    let route = null;
+    for (const candidate of routeCandidates.slice(0, RESOURCE_ROUTE_ATTEMPT_LIMIT)) {
+      const path = this._buildPath(unit, candidate.point);
+      if (!path) continue;
+      route = { ...candidate, path };
+      break;
     }
-    // A shorter rear route is still mechanically valid, but it can place a
-    // worker beneath a tall authored canopy. Prefer any free screen-front
-    // approach before comparing path length; only fall back to the full set
-    // when the readable half of the ring is unreachable.
-    const readableRoutes = routes.filter((candidate) => candidate.frontBias >= RESOURCE_READABLE_FRONT_BIAS);
-    const routePool = readableRoutes.length ? readableRoutes : routes;
-    const route = routePool.sort((a, b) => a.score - b.score || a.slot - b.slot)[0] ?? null;
     if (!route) {
       this._releaseResourceSlot(unit);
       unit.command = 'idle';
@@ -4684,6 +4723,7 @@ export class CrownforgeSimulation {
     const spacing = units.length === 1 ? 0 : Math.min(2.4, Math.max(1.35, 0.72 + units.length * 0.22));
     let routed = 0;
     let queued = 0;
+    const pendingMoves = [];
     units.forEach((unit, index) => {
       const angle = (index / Math.max(1, units.length)) * Math.PI * 2;
       const moveTarget = { x: point.x + Math.cos(angle) * spacing, z: point.z + Math.sin(angle) * spacing };
@@ -4698,9 +4738,58 @@ export class CrownforgeSimulation {
         routed += this._beginReturn(unit) ? 1 : 0;
       } else {
         unit.postDepositTarget = null;
-        routed += this._sendUnitTo(unit, moveTarget, 'move') ? 1 : 0;
+        const directPath = this._buildPath(unit, moveTarget, null, { directOnly: true });
+        if (directPath) {
+          unit.path = directPath;
+          unit.routeTarget = { ...moveTarget };
+          unit.stopDistance = 0;
+          unit.pathBlocked = false;
+          unit.command = 'move';
+          unit.actionLabel = 'Moving';
+          this._resetMovementTracking(unit);
+          routed += 1;
+        } else {
+          pendingMoves.push({ unit, moveTarget });
+        }
       }
     });
+    // Units selected together are normally standing in the same local group.
+    // When an obstacle requires A*, solve one representative route for that
+    // cluster and let its neighbors use the same corridor. This prevents a
+    // sealed forest click from repeating an identical expensive failure for
+    // every unit before the browser can acknowledge the command.
+    while (pendingMoves.length) {
+      const leaderOrder = pendingMoves.shift();
+      const cluster = [leaderOrder];
+      for (let index = pendingMoves.length - 1; index >= 0; index -= 1) {
+        if (distance(pendingMoves[index].unit, leaderOrder.unit) > 12) continue;
+        cluster.push(pendingMoves[index]);
+        pendingMoves.splice(index, 1);
+      }
+      if (!this._sendUnitTo(leaderOrder.unit, leaderOrder.moveTarget, 'move')) {
+        for (const follower of cluster.slice(1)) {
+          follower.unit.path = [];
+          follower.unit.routeTarget = { ...follower.moveTarget };
+          follower.unit.pathBlocked = true;
+          follower.unit.recoveryAvailable = true;
+          follower.unit.command = 'idle';
+          follower.unit.visualState = 'idle';
+          follower.unit.actionLabel = 'No route available';
+        }
+        continue;
+      }
+      routed += 1;
+      for (const follower of cluster.slice(1)) {
+        follower.unit.path = leaderOrder.unit.path.map((waypoint) => ({ ...waypoint }));
+        follower.unit.routeTarget = { ...leaderOrder.unit.routeTarget };
+        follower.unit.stopDistance = 0;
+        follower.unit.pathBlocked = false;
+        follower.unit.command = 'move';
+        follower.unit.actionLabel = 'Moving';
+        this._resetMovementTracking(follower.unit);
+        routed += 1;
+      }
+    }
     if (!routed) {
       this.lastCommand = 'No route to that location.';
       this._announce(this.lastCommand);
