@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG } from '../src/config.js?v=20260827-fortificationanchors1';
-import { CrownforgeRenderer } from '../src/renderer.js?v=20260827-fortificationanchors1';
-import { CrownforgeSimulation } from '../src/simulation.js?v=20260827-fortificationanchors1';
+import { BUILDING_TYPES, CONFIG } from '../src/config.js?v=20260827-walljoin1';
+import { CrownforgeRenderer } from '../src/renderer.js?v=20260827-walljoin1';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260827-walljoin1';
 
 const canvas = document.querySelector('#game-canvas');
 const renderer = new CrownforgeRenderer(canvas);
@@ -43,9 +43,9 @@ function addWall(start, direction, count = 4, progress = 1) {
   });
 }
 
-function addLegacyCorner(screen, towerProgress = null) {
+function addGroundedCorner(screen, towerProgress = null) {
   const socket = worldAt(screen);
-  const leftTerminal = { x: socket.x, z: socket.z - span / 2 };
+  const leftTerminal = { x: socket.x - span / 2, z: socket.z };
   const rightTerminal = { x: socket.x, z: socket.z + span / 2 };
   addWall({ x: leftTerminal.x - span * 3, z: leftTerminal.z }, { x: 1, z: 0 });
   addWall(rightTerminal, { x: 0, z: 1 });
@@ -76,9 +76,9 @@ function addGate(screen, direction) {
 }
 
 // Exact combinations that previously escaped metadata-only regression tests.
-addLegacyCorner({ x: 300, y: 285 });
-addLegacyCorner({ x: 760, y: 285 }, 0.04);
-addLegacyCorner({ x: 1215, y: 285 }, 1);
+addGroundedCorner({ x: 300, y: 285 });
+addGroundedCorner({ x: 760, y: 285 }, 0.04);
+addGroundedCorner({ x: 1215, y: 285 }, 1);
 addGate({ x: 245, y: 665 }, { x: 1, z: 0 });
 addGate({ x: 600, y: 665 }, { x: 0, z: 1 });
 addGate({ x: 960, y: 665 }, { x: Math.SQRT1_2, z: -Math.SQRT1_2 });

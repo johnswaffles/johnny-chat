@@ -21,7 +21,7 @@ import {
   UNIT_TYPES,
   VILLAGER_ATLASES,
 } from '../src/config.js';
-import { animationFrame } from '../src/animation.js';
+import { animationFrame, resolveAnimationState } from '../src/animation.js';
 import { CrownforgeInput } from '../src/input.js';
 import { CrownforgeRenderer, resolveFirstAgeConstructionStage, resolveWallVisual } from '../src/renderer.js';
 import { CrownforgeSimulation } from '../src/simulation.js';
@@ -1042,18 +1042,18 @@ function checkWallEndpointMagnetism() {
   const cornerTurn = simulation.getWallLinePreview({ x: 186, z: 180 }, { x: 186, z: 189 });
   assert.equal(cornerTurn.valid, true, 'a turned wall remains placeable at a terminal corner');
   assert.equal(cornerTurn.wallConnectCount, 1, 'a perpendicular turn keeps its magnetic wall connection');
-  assert.deepEqual(cornerTurn.wallStart, { x: 186, z: 183 }, 'a perpendicular turn starts one segment beyond the terminal');
-  assert.deepEqual(cornerTurn.segments.at(-1), { x: 186, z: 189 }, 'a perpendicular turn preserves exact segment spacing');
+  assert.deepEqual(cornerTurn.wallStart, { x: 187.5, z: 181.5 }, 'a perpendicular turn aligns its first panel edge to the terminal socket');
+  assert.ok(cornerTurn.segments.every((segment, index, segments) => index === 0 || Math.abs(Math.hypot(segment.x - segments[index - 1].x, segment.z - segments[index - 1].z) - 3) < 0.001), 'a perpendicular turn preserves exact segment spacing');
 
   const diagonalTurn = simulation.getWallLinePreview({ x: 186, z: 180 }, { x: 177, z: 171 });
   assert.equal(diagonalTurn.valid, true, 'a diagonal wall turn remains placeable at a terminal corner');
   assert.equal(diagonalTurn.wallConnectCount, 1, 'a diagonal turn keeps its magnetic wall connection');
-  assert.deepEqual(diagonalTurn.wallStart, { x: 183.87867965644037, z: 177.87867965644037 }, 'a diagonal turn starts ahead of the terminal in its chosen heading');
+  assert.deepEqual(diagonalTurn.wallStart, { x: 186.43933982822017, z: 178.93933982822017 }, 'a diagonal turn aligns its first panel edge to the terminal socket');
 
   const interiorBranch = simulation.getWallLinePreview({ x: 183.2, z: 183.1 }, { x: 183.2, z: 192.2 });
   assert.equal(interiorBranch.valid, true, 'a divider can magnetize to an interior Palisade panel');
   assert.equal(interiorBranch.wallConnectCount, 1, 'interior Palisade sockets report a magnetic connection');
-  assert.deepEqual(interiorBranch.wallStart, { x: 183, z: 183 }, 'interior branch starts exactly one segment beyond the claimed panel');
+  assert.deepEqual(interiorBranch.wallStart, { x: 183, z: 181.5 }, 'interior branch aligns its first panel edge to the claimed through-wall center');
 
   const reverseOverlap = simulation.getWallLinePreview({ x: 186, z: 180 }, { x: 177, z: 180 });
   assert.equal(reverseOverlap.valid, true, 'reverse drag may overlap an existing wall run without becoming an error');
@@ -1217,30 +1217,37 @@ function checkWallOverlapAndGate() {
     wallDirection: { x: 1, z: 0 },
     wallStart: { x: 230, z: 240 },
   });
-  const cornerVertical = cornerSimulation.addBuilding('wall', 242, 246, 'player', 1, {
+  const cornerVertical = cornerSimulation.addBuilding('wall', 243.5, 244.5, 'player', 1, {
     wallSegments: 3,
     wallOrientation: 'vertical',
     wallDirection: { x: 0, z: 1 },
-    wallStart: { x: 242, z: 243 },
+    wallStart: { x: 243.5, z: 241.5 },
   });
   const cornerSocket = cornerSimulation.getPalisadeJunctions()
-    .find((junction) => Math.hypot(junction.x - 242, junction.z - 241.5) < 0.2);
+    .find((junction) => Math.hypot(junction.x - 243.5, junction.z - 240) < 0.2);
   assert.ok(cornerSocket, 'two turned Palisade runs resolve to one shared corner socket');
   assert.equal(cornerSocket.branchCount, 2, 'ordinary corner socket records exactly two wall branches');
   const junctionRenderer = Object.create(CrownforgeRenderer.prototype);
   junctionRenderer.palisadeJunctionCacheKey = '';
   junctionRenderer.palisadeJunctionCache = [];
+  junctionRenderer.isWorldVisible = () => true;
   const cornerJunctionEntities = junctionRenderer.palisadeJunctionEntities(cornerSimulation);
-  assert.equal(cornerJunctionEntities.length, 1, 'ordinary two-way corners receive one restrained connector-post overlay');
-  assert.equal(cornerJunctionEntities[0].branchCount, 2, 'ordinary corner overlay retains its two-branch size classification');
-  const cornerOccupant = cornerSimulation.addUnit('villager', 242, 241.5, 'player');
-  const cornerTowerPreview = cornerSimulation.getBuildingPlacementPreview('palisadeTower', { x: 242.3, z: 241.6 });
+  assert.equal(cornerJunctionEntities.length, 1, 'ordinary two-way corners receive one wall-height grounded binding');
+  assert.equal(cornerJunctionEntities[0].branchCount, 2, 'ordinary corner binding retains its two-branch classification');
+  const cornerJunctions = cornerSimulation.getPalisadeJunctions();
+  const cornerPanelEntities = [cornerHorizontal, cornerVertical]
+    .flatMap((wall) => junctionRenderer.wallSegmentEntities(wall, cornerJunctions));
+  assert.equal(cornerPanelEntities.length, 8, 'each wall panel is expanded into its own depth-sorted render entity at a corner');
+  assert.ok(cornerPanelEntities.every((panel) => panel.kind === 'wall-segment' && panel.wallSegments === 1), 'corner panel render entities preserve one grounded panel apiece');
+  assert.equal(cornerPanelEntities.filter((panel) => panel.wallJunctionClip).length, 2, 'both terminal paintings stop at the same physical corner socket');
+  const cornerOccupant = cornerSimulation.addUnit('villager', 243.5, 240, 'player');
+  const cornerTowerPreview = cornerSimulation.getBuildingPlacementPreview('palisadeTower', { x: 243.7, z: 240.1 });
   assert.equal(cornerTowerPreview.valid, true, 'corner tower preview snaps to the shared wall socket');
   assert.equal(cornerTowerPreview.attachmentJunction, true, 'corner tower preview is identified as a junction hardpoint');
   assert.equal(cornerTowerPreview.attachmentWallIds.length, 2, 'corner tower claims both participating wall runs');
   assert.equal(cornerTowerPreview.attachmentClaims.length, 2, 'corner tower claims one terminal panel from each branch');
   assert.equal(cornerTowerPreview.attachmentConnectorSegments.length, 2, 'corner tower preserves one visual connector panel for each claimed wall branch');
-  assert.equal(cornerSimulation.placeBuilding('palisadeTower', { x: 242.3, z: 241.6 }, cornerTowerPreview), true, 'corner tower replaces both wall terminals with one aligned hardpoint');
+  assert.equal(cornerSimulation.placeBuilding('palisadeTower', { x: 243.7, z: 240.1 }, cornerTowerPreview), true, 'corner tower replaces both wall terminals with one aligned hardpoint');
   const cornerTower = cornerSimulation.buildings.find((building) => building.type === 'palisadeTower' && !building.destroyed);
   assert.ok(cornerTower, 'corner tower remains as the shared hardpoint building');
   assert.equal(cornerTower.attachmentConnectorSegments.length, 2, 'built corner tower retains both behind-tower wall connectors');
@@ -1849,6 +1856,97 @@ function checkCombatAndEndStates() {
   assert.equal(defeatSimulation.phase, 'defeat', 'player core destruction loses');
 }
 
+function checkUnitMovementFacingAndPoseSafety() {
+  const directionCases = [
+    { label: 'screen-down', dx: 1, dz: 1, expected: 0 },
+    { label: 'screen-right', dx: 1, dz: -1, expected: 1 },
+    { label: 'screen-up', dx: -1, dz: -1, expected: 2 },
+    { label: 'screen-left', dx: -1, dz: 1, expected: 3 },
+  ];
+
+  for (const type of Object.keys(UNIT_TYPES)) {
+    for (const direction of directionCases) {
+      const simulation = movementSandbox();
+      const unit = simulation.addUnit(type, 100, 100, type.startsWith('ashen') || type === 'raider' || type === 'thornSpear' || type === 'hearthLevy' || type === 'hidewall' ? 'enemy' : 'player');
+      unit.command = 'move';
+      unit.visualState = 'walk';
+      unit.path = [{ x: unit.x + direction.dx * 20, z: unit.z + direction.dz * 20 }];
+      unit.routeTarget = { ...unit.path[0] };
+      unit.facing = Number.NaN;
+      const observed = new Set();
+      for (let frame = 0; frame < 24; frame += 1) {
+        if (frame === 4) unit.hitFlash = 0.3;
+        simulation._updateUnit(unit, STEP_60HZ);
+        observed.add(unit.facing);
+        assert.equal(resolveAnimationState(unit), 'walk', `${type} keeps its walk pose while travelling ${direction.label}`);
+      }
+      assert.deepEqual([...observed], [direction.expected], `${type} holds the correct ${direction.label} facing without row spinning`);
+    }
+  }
+
+  // Lock the two non-standard production atlases to their authored layouts.
+  // These checks catch visually catastrophic row/column mistakes that valid
+  // simulation-facing integers alone cannot detect.
+  const militiaDirectionColumns = [0, 1, 2, 3];
+  for (const direction of militiaDirectionColumns) {
+    for (const time of [0, 0.16, 0.31, 0.47]) {
+      const frame = animationFrame('militia', 'walk', time, direction);
+      assert.equal(frame.column, direction, `militia walk keeps direction ${direction} in its authored column`);
+      assert.ok(frame.row <= 1, `militia walk direction ${direction} never enters attack or death rows`);
+    }
+    assert.deepEqual(
+      { row: animationFrame('militia', 'idle', 0, direction).row, column: animationFrame('militia', 'idle', 0, direction).column },
+      { row: 0, column: direction },
+      `militia idle preserves authored direction ${direction}`,
+    );
+    assert.deepEqual(
+      { row: animationFrame('militia', 'death', 0, direction).row, column: animationFrame('militia', 'death', 0, direction).column },
+      { row: 3, column: direction },
+      `militia death preserves authored direction ${direction}`,
+    );
+  }
+
+  const shieldbearerRows = [2, 1, 0, 3];
+  for (let direction = 0; direction < 4; direction += 1) {
+    for (const state of ['idle', 'walk', 'attack', 'attack_anticipation', 'attack_contact', 'attack_recovery', 'death']) {
+      assert.equal(
+        animationFrame('shieldbearer', state, 0.22, direction).row,
+        shieldbearerRows[direction],
+        `shieldbearer ${state} maps direction ${direction} to its authored row`,
+      );
+    }
+  }
+
+  const approach = movementSandbox();
+  const raider = approach.addUnit('raider', 100, 100, 'enemy');
+  const guard = approach.addUnit('soldier', 112, 100, 'player');
+  raider.command = 'attack';
+  raider.visualState = 'walk';
+  raider.attackPhase = 'approach';
+  raider.attackTarget = guard.id;
+  raider.attackTargetKind = 'unit';
+  raider.path = [{ x: 100, z: 104 }];
+  raider.routeTarget = { x: 111, z: 100 };
+  const approachFacings = new Set();
+  for (let frame = 0; frame < 12; frame += 1) {
+    approach._updateUnit(raider, STEP_60HZ);
+    approachFacings.add(raider.facing);
+  }
+  assert.deepEqual([...approachFacings], [3], 'attack approach faces the detour path instead of looking at the distant target');
+  assert.equal(resolveAnimationState(raider), 'walk', 'attack approach cannot slide in a recoil or attack pose');
+
+  const death = movementSandbox();
+  const fallen = death.addUnit('soldier', 100, 100, 'player');
+  fallen.dead = true;
+  fallen.command = 'dead';
+  fallen.path = [{ x: 120, z: 120 }];
+  fallen.velocityX = 8;
+  fallen.velocityZ = -8;
+  fallen.facing = 2;
+  death._updateUnit(fallen, 0.5);
+  assert.deepEqual({ x: fallen.x, z: fallen.z, facing: fallen.facing }, { x: 100, z: 100, facing: 2 }, 'death animation never travels or rotates from stale movement state');
+}
+
 checkAnimationAtlases();
 checkResetPresentation();
 checkGathering();
@@ -1883,6 +1981,7 @@ checkAspectCorrectBuildingFeedback();
 checkGroundedWorldAssets();
 checkCrownHallHostileExclusionAndCombatRecovery();
 checkVillagerLastStandDefense();
+checkUnitMovementFacingAndPoseSafety();
 checkCombatAndEndStates();
 
 console.log(JSON.stringify({
@@ -1924,6 +2023,7 @@ console.log(JSON.stringify({
     'alpha-audited building, construction, field, tree, grove, stone, and Gold grounding without permanent collision diamonds',
     'expanded Crown Hall hostile exclusion and attackable recovery for enemies embedded in solid structures',
     'twenty-hit Villager defense, five-second humanoid stun, twenty-second immunity, attacker aggro, local swarm, and one-minute Last Light Ward',
+    'all movable unit types hold correct four-way travel facing, attack approaches follow their path heading, and recoil/death poses never slide or spin',
     'melee damage, death timing, victory, defeat',
   ],
 }));

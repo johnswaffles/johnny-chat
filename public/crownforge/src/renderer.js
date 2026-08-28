@@ -1,5 +1,5 @@
 import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, FIRST_AGE_ASSETS } from './config.js?v=20260827-wildwood1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260827-wildwood1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260827-unitfacing1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -817,16 +817,19 @@ export class CrownforgeRenderer {
   }
 
   drawWorldEntities(ctx, simulation, time) {
-    const kindOrder = { building: 0, 'tower-connector': 0.25, 'wall-junction': 0.5, resource: 1, roadside: 2, 'roadside-shrub': 2, decoration: 3, unit: 4 };
+    const kindOrder = { building: 0, 'wall-segment': 0.1, 'tower-connector': 0.25, 'wall-junction': 0.5, resource: 1, roadside: 2, 'roadside-shrub': 2, decoration: 3, unit: 4 };
+    const palisadeJunctions = simulation.getPalisadeJunctions();
     const entities = [
-      ...simulation.buildings.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => {
+      ...simulation.buildings.flatMap((entity) => {
+        if (entity.type === 'wall') return this.wallSegmentEntities(entity, palisadeJunctions);
+        if (!this.isWorldVisible(entity, this.entityCullRadius(entity))) return [];
         // Gate and tower artwork is the authoritative join surface. A long
         // attached wall is stored as one simulation building, so its center
         // can otherwise sort a near panel over the hardpoint and make posts
         // appear to run through the tower. These restrained base-depth biases
         // keep the opening/hardpoint in front only inside its own visual mass.
         const fortificationBias = entity.type === 'palisadeTower' ? 8.5 : entity.type === 'gate' ? 3 : 0.2;
-        return { ...entity, depth: entity.field ? -10000 + entity.x + entity.z : entity.x + entity.z + fortificationBias };
+        return [{ ...entity, depth: entity.field ? -10000 + entity.x + entity.z : entity.x + entity.z + fortificationBias }];
       }),
       ...this.palisadeTowerConnectorEntities(simulation)
         .filter((entity) => this.isWorldVisible(entity, 3))
@@ -844,7 +847,7 @@ export class CrownforgeRenderer {
     for (const entity of entities) {
       if (entity.dead && entity.deathAge > 2.4) continue;
       if (entity.destroyed && entity.destroyAge > 2.4) continue;
-      if (entity.kind === 'building') this.drawBuilding(ctx, entity, time);
+      if (entity.kind === 'building' || entity.kind === 'wall-segment') this.drawBuilding(ctx, entity, time);
       else if (entity.kind === 'tower-connector') this.drawPalisadeTowerConnector(ctx, entity);
       else if (entity.kind === 'wall-junction') this.drawPalisadeJunction(ctx, entity);
       else if (entity.kind === 'resource') this.drawResource(ctx, entity, time);
@@ -874,6 +877,33 @@ export class CrownforgeRenderer {
         z: start.z + dz * index * span,
       })),
     };
+  }
+
+  wallSegmentEntities(wall, junctions = []) {
+    if (!wall) return [];
+    const { direction, points } = this.wallSegmentPoints(wall);
+    return points
+      .map((point, index) => ({ point, index }))
+      .filter(({ point }) => this.isWorldVisible(point, 3))
+      .map(({ point, index }) => {
+        const socket = junctions.find((junction) => junction.members?.some((member) => member.wallId === wall.id
+          && member.segmentIndex === index
+          && member.side !== 'middle'));
+        return {
+          ...wall,
+          kind: 'wall-segment',
+          x: point.x,
+          z: point.z,
+          wallStart: { ...point },
+          wallDirection: { ...direction },
+          wallSegments: 1,
+          wallSegmentEntity: true,
+          wallSegmentIndex: index,
+          wallSegmentCount: points.length,
+          wallJunctionClip: socket ? { x: socket.x, z: socket.z } : null,
+          depth: point.x + point.z + 0.2,
+        };
+      });
   }
 
   palisadeTowerConnectorEntities(simulation) {
@@ -937,9 +967,10 @@ export class CrownforgeRenderer {
 
   drawPalisadeJunction(ctx, junction) {
     const point = this.worldToScreen(junction);
-    // A two-way turn needs only a small grounded binding post to conceal the
-    // meeting seam. True T/cross junctions use the larger reinforced cluster.
-    const size = junction.branchCount >= 3 ? 104 : 70;
+    // The binding is part of the Palisade, not a decorative token. Match the
+    // authored wall height so it closes the clipped terminal halves without
+    // reading as a tiny object perched on the seam.
+    const size = junction.branchCount >= 3 ? 126 : 112;
     this.drawFirstAgeAsset(ctx, 'palisadeJunction', point, size * this.camera.zoom, junction.alpha ?? 1);
   }
 
@@ -1490,9 +1521,38 @@ export class CrownforgeRenderer {
     // Draw the farthest screen-space segment first. This keeps depth-facing
     // panels interlocked without a distant panel painting over the near one.
     placements.sort((a, b) => a.point.y - b.point.y || a.index - b.index);
-    for (const placement of placements) {
-      this.drawFirstAgeAsset(ctx, visual.asset, placement.point, size, alpha);
+    for (const placement of placements) this.drawWallPanel(ctx, building, visual.asset, placement.point, size, alpha);
+  }
+
+  drawWallPanel(ctx, building, asset, point, size, alpha = 1) {
+    const socket = building.wallJunctionClip;
+    if (!socket) {
+      this.drawFirstAgeAsset(ctx, asset, point, size, alpha);
+      return;
     }
+    const socketScreen = this.worldToScreen(socket);
+    const keepX = point.x - socketScreen.x;
+    const keepY = point.y - socketScreen.y;
+    const magnitude = Math.hypot(keepX, keepY);
+    if (magnitude < 0.5) {
+      this.drawFirstAgeAsset(ctx, asset, point, size, alpha);
+      return;
+    }
+    const nx = keepX / magnitude;
+    const ny = keepY / magnitude;
+    const tx = -ny;
+    const ty = nx;
+    const extent = Math.max(this.canvas.width, this.canvas.height) * 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(socketScreen.x + tx * extent, socketScreen.y + ty * extent);
+    ctx.lineTo(socketScreen.x - tx * extent, socketScreen.y - ty * extent);
+    ctx.lineTo(socketScreen.x - tx * extent + nx * extent, socketScreen.y - ty * extent + ny * extent);
+    ctx.lineTo(socketScreen.x + tx * extent + nx * extent, socketScreen.y + ty * extent + ny * extent);
+    ctx.closePath();
+    ctx.clip();
+    this.drawFirstAgeAsset(ctx, asset, point, size, alpha);
+    ctx.restore();
   }
 
   drawVillagerAsset(ctx, unit, screen, size, alpha = 1) {
@@ -1563,6 +1623,13 @@ export class CrownforgeRenderer {
       this.drawDestroyedBuildingTreatment(ctx, building, point, size, time);
       return;
     }
+    // A Palisade run is expanded into independently depth-sorted panels so a
+    // near corner panel cannot be painted beneath an entire distant run. Keep
+    // selection footprints on every panel, but show shared status/health only
+    // once at the run's middle panel.
+    const representativeWallPanel = !building.wallSegmentEntity
+      || building.wallSegmentIndex === Math.floor(building.wallSegmentCount / 2);
+    if (!representativeWallPanel) return;
     if (building.hitFlash > 0 && !building.destroyed) {
       ctx.save();
       ctx.globalAlpha = 0.25 + building.hitFlash * 0.55;

@@ -1,6 +1,6 @@
 import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES } from './config.js?v=20260827-wildwood1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260827-wildwood1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260827-unitfacing1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -182,6 +182,10 @@ function wallDirectionFromOptions(source = {}) {
 }
 
 function setUnitFacing(unit, dx, dz, force = false) {
+  if (!Number.isInteger(unit.facing) || unit.facing < 0 || unit.facing > 3) {
+    unit.facing = 0;
+    unit.facingLocked = false;
+  }
   const magnitude = Math.hypot(dx, dz);
   if (magnitude < 0.12) return unit.facing;
   const candidate = directionFromVector(dx, dz, unit.facing);
@@ -3140,7 +3144,6 @@ export class CrownforgeSimulation {
     const inRange = this._targetDistance(unit, target) <= range;
     const hasLine = inRange && this._hasCombatLineOfSight(unit, target);
     const targetPoint = target.kind === 'building' ? this._buildingCollisionCenter(target) : target;
-    setUnitFacing(unit, targetPoint.x - unit.x, targetPoint.z - unit.z, true);
     const blueprint = UNIT_TYPES[unit.type];
     const cooldown = blueprint.cooldown;
     const timing = blueprint.attackTiming ?? { anticipation: 0.25, contact: 0.45, recovery: 0.3 };
@@ -3149,6 +3152,10 @@ export class CrownforgeSimulation {
     const recoveryDuration = cooldown * timing.recovery;
 
     if (unit.attackPhase === 'approach' && !hasLine) {
+      // `_followPath` owns facing while an attacker is travelling. Forcing the
+      // sprite to look directly at its target here made an obstacle-detouring
+      // unit run backward and rapidly flip rows as path and target headings
+      // disagreed. Face the target only after the unit reaches attack range.
       unit.actionLabel = inRange ? 'Seeking an opening' : `Closing on ${this._targetLabel(target)}`;
       unit.visualState = 'walk';
       // `path[path.length - 1]` is an A* cell center and can be several
@@ -3176,6 +3183,7 @@ export class CrownforgeSimulation {
       this._sendUnitToAttack(unit, target, unit.attackSlot);
       return;
     }
+    setUnitFacing(unit, targetPoint.x - unit.x, targetPoint.z - unit.z, true);
     if (unit.attackPhase === 'approach') {
       this._startAttackCycle(unit, target);
     }
@@ -4515,24 +4523,41 @@ export class CrownforgeSimulation {
       });
     };
 
-    // New wall graphs can share an exact segment socket. Group those records
-    // first so gates and towers claim every coincident panel deterministically.
+    // A panel is centered on its world point, while its physical connection
+    // sockets live half a segment beyond that center. Group those true socket
+    // points—not the image centers—so a turned run forms an L/V instead of
+    // crossing through the corner.
+    const physicalSockets = records.flatMap((record) => {
+      if (record.side === 'start') return [{ member: record, point: {
+        x: record.point.x - record.direction.x * span / 2,
+        z: record.point.z - record.direction.z * span / 2,
+      } }];
+      if (record.side === 'end') return [{ member: record, point: {
+        x: record.point.x + record.direction.x * span / 2,
+        z: record.point.z + record.direction.z * span / 2,
+      } }];
+      if (record.side === 'single') return [-1, 1].map((sign) => ({ member: record, point: {
+        x: record.point.x + record.direction.x * span * sign / 2,
+        z: record.point.z + record.direction.z * span * sign / 2,
+      } }));
+      return [{ member: record, point: { ...record.point } }];
+    });
     const visited = new Set();
-    for (let index = 0; index < records.length; index += 1) {
+    for (let index = 0; index < physicalSockets.length; index += 1) {
       if (visited.has(index)) continue;
-      const group = [records[index]];
-      for (let other = index + 1; other < records.length; other += 1) {
-        if (distance(records[index].point, records[other].point) <= WALL_JUNCTION_MATCH_DISTANCE) {
-          group.push(records[other]);
+      const group = [physicalSockets[index]];
+      for (let other = index + 1; other < physicalSockets.length; other += 1) {
+        if (distance(physicalSockets[index].point, physicalSockets[other].point) <= WALL_JUNCTION_MATCH_DISTANCE) {
+          group.push(physicalSockets[other]);
           visited.add(other);
         }
       }
-      if (new Set(group.map((member) => member.wallId)).size >= 2) {
+      if (new Set(group.map(({ member }) => member.wallId)).size >= 2) {
         const point = {
-          x: group.reduce((sum, member) => sum + member.point.x, 0) / group.length,
-          z: group.reduce((sum, member) => sum + member.point.z, 0) / group.length,
+          x: group.reduce((sum, socket) => sum + socket.point.x, 0) / group.length,
+          z: group.reduce((sum, socket) => sum + socket.point.z, 0) / group.length,
         };
-        addSocket(point, group, false);
+        addSocket(point, group.map(({ member }) => member), false);
       }
     }
 
@@ -4574,6 +4599,13 @@ export class CrownforgeSimulation {
       wallIds: [...socket.wallIds],
       branchCount: socket.branchCount,
       legacy: socket.legacy,
+      members: socket.members.map((member) => ({
+        wallId: member.wallId,
+        segmentIndex: member.segmentIndex,
+        side: member.side,
+        x: member.point.x,
+        z: member.point.z,
+      })),
     }));
   }
 
@@ -4609,6 +4641,8 @@ export class CrownforgeSimulation {
         const outwardAlignment = endpoint.outwardDirection
           ? candidateOffset.x * endpoint.outwardDirection.x + candidateOffset.z * endpoint.outwardDirection.z
           : 0;
+        const runAlignment = Math.abs(candidateOffset.x * endpoint.wallDirection.x
+          + candidateOffset.z * endpoint.wallDirection.z);
         // Never magnetize back onto the existing run itself. Perpendicular
         // and diagonal headings are legitimate corner turns or T-junctions,
         // so only reject a heading that points directly back through the old
@@ -4617,18 +4651,21 @@ export class CrownforgeSimulation {
         // new run from a straight extension into a different compass heading.
         if (endpoint.outwardDirection && outwardAlignment < -0.85) continue;
         if (!endpoint.outwardDirection) {
-          const runAlignment = Math.abs(candidateOffset.x * endpoint.wallDirection.x
-            + candidateOffset.z * endpoint.wallDirection.z);
           // Interior sockets exist for dividers and T-junctions. A collinear
           // interior socket would merely duplicate the neighboring panel, so
           // reserve those headings for actual run endpoints.
           if (runAlignment > 0.85) continue;
         }
+        const socket = endpoint.outwardDirection ? {
+          x: endpoint.point.x + endpoint.outwardDirection.x * span / 2,
+          z: endpoint.point.z + endpoint.outwardDirection.z * span / 2,
+        } : endpoint.point;
         const candidate = {
-          x: endpoint.point.x + candidateOffset.x * span,
-          z: endpoint.point.z + candidateOffset.z * span,
+          x: socket.x + candidateOffset.x * span / 2,
+          z: socket.z + candidateOffset.z * span / 2,
         };
-        if (occupied.some((segment) => distance(segment, candidate) <= WALL_ATTACHMENT_SEGMENT_MATCH_DISTANCE)) continue;
+        if (runAlignment > 0.85
+          && occupied.some((segment) => distance(segment, candidate) <= WALL_ATTACHMENT_SEGMENT_MATCH_DISTANCE)) continue;
         const distanceToCandidate = distance(point, candidate);
         if (distanceToCandidate > WALL_CONNECT_SNAP_DISTANCE) continue;
         const priorityDistance = distanceToCandidate + (endpoint.side === 'middle' ? 0.42 : 0);

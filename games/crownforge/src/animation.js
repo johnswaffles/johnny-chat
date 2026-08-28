@@ -299,16 +299,20 @@ export const ANIMATION_DEFINITIONS = {
   militia: {
     label: 'Crown Militia',
     directionCount: 4,
-    atlasSize: COMBAT_ATLASES.militia,
-    atlases: { combat: COMBAT_ATLASES.militia, militiaWalk: COMBAT_ATLASES.militiaWalk, militiaAttack: COMBAT_ATLASES.militiaAttack },
+    // The authored militia "walk" sheet is state rows x direction columns,
+    // unlike the other frame-column movement sheets. Treat it as the stable
+    // state atlas too; reading its rows as directions is what made militia
+    // cycle through walk, attack, and prone death poses while travelling.
+    atlasSize: COMBAT_ATLASES.militiaWalk,
+    atlases: { combat: COMBAT_ATLASES.militiaWalk, militiaWalk: COMBAT_ATLASES.militiaWalk, militiaAttack: COMBAT_ATLASES.militiaAttack },
     clips: {
-      idle: singleFrame('combat', COMBAT_ATLASES.militia.rowByState.idle),
-      walk: directionalLoop('militiaWalk', { fps: 7.2, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
+      idle: singleFrame('combat', 0),
+      walk: walkClip('militiaWalk', [0, 1, 0, 1]),
       attack: actionLoop('militiaAttack', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
       attack_anticipation: actionPhase('militiaAttack', [0, 1], 5.0),
       attack_contact: actionPhase('militiaAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
       attack_recovery: actionPhase('militiaAttack', [3, 0], 4.8),
-      death: singleFrame('combat', COMBAT_ATLASES.militia.rowByState.death, { loop: false }),
+      death: singleFrame('combat', 3, { loop: false }),
     },
     collisionRadius: 0.42,
     interactionRadius: 0.78,
@@ -322,13 +326,15 @@ export const ANIMATION_DEFINITIONS = {
     atlasSize: COMBAT_ATLASES.shieldbearer,
     atlases: { combat: COMBAT_ATLASES.shieldbearer, shieldbearerWalk: COMBAT_ATLASES.shieldbearerWalk, shieldbearerAttack: COMBAT_ATLASES.shieldbearerAttack },
     clips: {
-      idle: singleFrame('combat', COMBAT_ATLASES.shieldbearer.rowByState.idle),
-      walk: directionalLoop('shieldbearerWalk', { fps: 6.6, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
-      attack: actionLoop('shieldbearerAttack', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_anticipation: actionPhase('shieldbearerAttack', [0, 1], 5.0),
-      attack_contact: actionPhase('shieldbearerAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_recovery: actionPhase('shieldbearerAttack', [3, 0], 4.6),
-      death: singleFrame('combat', COMBAT_ATLASES.shieldbearer.rowByState.death, { loop: false }),
+      // Shieldbearer sheets were authored back, right, front, left. Map that
+      // order into Crownforge's front, right, back, left direction contract.
+      idle: directionalLoop('combat', { frames: [0], fps: 1, directionRows: [2, 1, 0, 3] }),
+      walk: directionalLoop('shieldbearerWalk', { fps: 6.6, directionRows: [2, 1, 0, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
+      attack: directionalLoop('shieldbearerAttack', { directionRows: [2, 1, 0, 3], events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit } }),
+      attack_anticipation: directionalLoop('shieldbearerAttack', { frames: [0, 1], fps: 5.0, loop: false, directionRows: [2, 1, 0, 3] }),
+      attack_contact: directionalLoop('shieldbearerAttack', { frames: [2], fps: 1, loop: false, directionRows: [2, 1, 0, 3], events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit } }),
+      attack_recovery: directionalLoop('shieldbearerAttack', { frames: [3, 0], fps: 4.6, loop: false, directionRows: [2, 1, 0, 3] }),
+      death: directionalLoop('combat', { frames: [3], fps: 1, loop: false, directionRows: [2, 1, 0, 3] }),
     },
     collisionRadius: 0.44,
     interactionRadius: 0.8,
@@ -346,7 +352,6 @@ export function resolveAnimationState(unit) {
   const definition = animationDefinition(unit.type);
   if (unit.dead || unit.command === 'dead') return 'death';
   if (unit.stunTimer > 0) return definition.clips.stunned ? 'stunned' : 'idle';
-  if (unit.hitFlash > 0 && definition.clips.hit) return 'hit';
   if (unit.command === 'attack' || unit.visualState === 'attack') {
     if (unit.attackPhase === 'approach') return 'walk';
     if (unit.attackPhase === 'anticipation') return 'attack_anticipation';
@@ -355,6 +360,10 @@ export function resolveAnimationState(unit) {
     return 'attack';
   }
   if (unit.command === 'move' || unit.visualState === 'walk') return 'walk';
+  // A recoil atlas may contain a deep lean or fall. Never slide that pose
+  // along a live route: locomotion stays visually authoritative until the
+  // unit stops, while the existing hit flash and health feedback still read.
+  if (unit.hitFlash > 0 && definition.clips.hit) return 'hit';
   if (unit.visualState === 'wood') return 'gather_wood';
   if (unit.visualState === 'field') return 'field_work';
   if (unit.visualState === 'food') return 'gather_food';
@@ -383,7 +392,8 @@ export function animationFrame(type, state, time = 0, direction = 0) {
   const frameIndex = clip.loop
     ? Math.floor((safeTime % duration) * clip.fps) % clip.frames.length
     : Math.min(clip.frames.length - 1, Math.floor(safeTime * clip.fps));
-  const directionIndex = Math.max(0, Math.min(definition.directionCount - 1, direction ?? 0));
+  const numericDirection = Number.isFinite(Number(direction)) ? Math.round(Number(direction)) : 0;
+  const directionIndex = Math.max(0, Math.min(definition.directionCount - 1, numericDirection));
   const frameColumns = clip.layout === 'frame-columns';
   const sourceRow = frameColumns
     ? (clip.directionRows?.[directionIndex] ?? directionIndex)

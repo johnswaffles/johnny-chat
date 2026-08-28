@@ -4432,3 +4432,99 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Do not add hills, terrain elevation, water, roads, seeded farms, multiple biomes, procedural map seeds, or fog of war during this pass.
 - Do not add more forest node types simply to increase count.
 - Do not restore immediate open-map raids; first contact should remain a consequence of clearing the wildwood.
+
+
+## PALISADE PHYSICAL-SOCKET CORNER REPAIR — 2026-08-27
+
+### WHAT EXISTS
+
+- Every Palisade panel now has two physical edge sockets positioned half a segment from its simulation center.
+- Turned runs meet edge-to-edge at one shared socket instead of aligning unrelated image centers or relying on a decorative patch.
+- Wall panels from separate construction runs are expanded into independently depth-sorted render entities.
+
+### WHAT WAS COMPLETED
+
+- Replaced the old turn formula, which offset a new corner solely along the new wall direction, with a two-sided socket formula that accounts for both the existing run and the new run.
+- Added true physical-socket grouping to the wall graph for corners, T-junctions, tower claims, and gate/tower attachment lookup.
+- Added terminal-panel clipping at the shared socket so authored wall paintings stop at the corner instead of continuing through it.
+- Increased the grounded corner binding to wall height so it closes the join without reading as a tiny ornament perched on top.
+- Replaced whole-run render ordering with per-panel depth ordering, preventing a distant long wall from painting over the near half of a corner.
+- Preserved the four authored upright wall perspectives, magnetic snapping, resource clearing, map-edge sealing, gate replacement, and tower replacement behavior.
+- Advanced the public build marker to `20260827-walljoin1` so browsers and the deployment cannot reuse the failed cached renderer.
+
+### ROOT CAUSE OF THE REPEATED FAILURE
+
+- Earlier tests proved that wall records shared metadata and that a connector entity existed, but they did not prove that the visible ends of two raster paintings occupied the same physical socket.
+- The previous center-to-center turn formula was geometrically invalid for two different directions, and the renderer sorted an entire long wall as one object. The small junction sprite concealed only part of those errors.
+
+### VALIDATION
+
+- The wall orientation gallery now renders a clean V/L turn, construction foundation, completed corner tower, and all four gate directions using the production renderer.
+- The complete remediation regression suite passes, including physical corner sockets, terminal clipping metadata, magnetic turns, T-junctions, gates, towers, edge sealing, and all non-wall gameplay checks.
+- The full game loads build `20260827-walljoin1` without console errors or warnings.
+- Source and playable-public Crownforge files are identical.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Build one long enclosure with successive 45-degree and 90-degree turns in normal play and compare every corner at minimum and maximum zoom.
+2. Keep physical socket positions as required metadata for every future wall material or age.
+3. Add dedicated T/cross artwork only if the current reinforced binding becomes visually repetitive in larger fortifications.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add stone walls, hill transitions, siege wall damage, or wall upgrades until this physical-socket model has survived extended live play.
+- Do not return to center-only snapping or whole-run render sorting.
+
+
+## ALL-UNIT MOVEMENT-FACING REPAIR — 2026-08-27
+
+### WHAT EXISTS
+
+- All twelve current movable unit types use one shared four-way travel contract: screen-down/front, screen-right/profile, screen-up/back, and screen-left/profile.
+- A production-rendered movement QA board can lock every unit to any one of those four directions for direct visual comparison.
+
+### WHAT WAS COMPLETED
+
+- Removed the attack-approach facing conflict that made an approaching fighter alternate between its path heading and a distant target heading. Path movement now owns facing until the unit reaches melee range; stationary attack phases then face the target.
+- Prevented recoil and deep hit poses from sliding along active routes. A unit that is still moving keeps its walk pose while damage feedback remains visible through the existing flash and health feedback.
+- Sanitized invalid facing values before movement and atlas sampling so stale or non-finite directions cannot select unpredictable artwork.
+- Corrected the Crown Militia atlas interpretation. Its walk file is authored as action rows by direction columns, so locomotion now samples only the idle/walk rows and can never cycle into attack or prone death artwork while travelling.
+- Corrected Crown Shieldbearer front/back mapping across idle, walk, attack phases, and death. Its authored row order is back, right, front, left and is now explicitly mapped to the shared Crownforge direction contract.
+- Added semantic atlas regression checks that assert actual sampled rows and columns for Militia and Shieldbearer, not only simulation-facing numbers.
+- Added `tools/unit-facing-qa.html` and `tools/unit-facing-qa.mjs` for production-rendered inspection of every current unit in every movement direction, including a live hit interval during travel.
+- Advanced the playable build marker to `20260827-unitfacing1`.
+
+### KNOWN ISSUES
+
+- The Militia walk family contains two unique locomotion poses, repeated into a restrained four-step cadence. It is directionally correct and stable, but a future polish pass may add two compatible in-between poses without changing the atlas contract.
+- The source-only regression entry cannot currently execute because the pre-existing source tree lacks `src/pathfinding.js`. The playable public package contains that module and passed the complete regression suite.
+
+### ASSETS CREATED
+
+- No new raster art was required. The production unit artwork was retained and its authored atlas layouts were mapped correctly.
+
+### SYSTEMS CREATED
+
+- Path-authoritative facing during attack approaches.
+- Moving-pose priority over recoil art.
+- Facing-value sanitation.
+- Semantic atlas row/column regression coverage.
+- Locked-direction all-unit visual QA board.
+
+### VALIDATION
+
+- JavaScript syntax checks passed for animation, simulation, and remediation regression modules.
+- The complete playable-package remediation regression suite passed, including every current unit type travelling in all four directions, detoured attack approaches, moving hit feedback, stale-path death safety, and exact Militia/Shieldbearer atlas sampling.
+- Browser inspection confirmed correct front, rear, left-profile, and right-profile travel across Villager, Crown Guard, Ashen Raider, Ashen Forager, Ashen Outrider, Thorn Spear, Hearth Levy, Ashen Hidewall, Crown Scout, Crown Spearwarden, Crown Militia, and Crown Shieldbearer.
+- The QA board produced no visible prone-travel, row spinning, backward movement, or direction-change scaling failures.
+
+### WHAT SHOULD BE POLISHED NEXT
+
+1. Add two matching Militia in-between walk poses only if extended normal-zoom play still makes its two-pose cadence feel too sharp.
+2. Keep the locked-direction QA board in the release checklist whenever a human or mounted unit atlas is added.
+3. Audit any future unit sheet's row/column contract before wiring animation states.
+
+### WHAT SHOULD NOT BE BUILT YET
+
+- Do not add more unit types until each new atlas passes the same four-direction visual board and semantic sampling tests.
+- Do not compensate for atlas-layout mistakes with sprite rotation or arbitrary mirroring.
