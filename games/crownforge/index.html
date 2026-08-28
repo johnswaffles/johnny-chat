@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
-    <link rel="stylesheet" href="./styles.css?v=20260827-wildwood1" />
+    <link rel="stylesheet" href="./styles.css?v=20260828-speeds1" />
   </head>
   <body>
     <main class="game-shell">
@@ -85,18 +85,19 @@
           <span>ENTITIES</span><b data-perf="entities">0</b>
           <span>LONG FRAMES</span><b data-perf="long-frames">0 / 5s</b>
         </div>
-        <div class="dev-speed-controls">
-          <div class="performance-subheading">DEV SPEED CONTROLS</div>
-          <label class="range-setting" for="unit-speed">
-            <span>Travel speed <output id="unit-speed-value">1×</output></span>
-            <input id="unit-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit travel speed" />
-          </label>
-          <label class="range-setting" for="harvest-speed">
-            <span>Harvesting speed <output id="harvest-speed-value">1×</output></span>
-            <input id="harvest-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit harvesting speed" />
-          </label>
-          <small class="settings-note">Development-only. Travel and resource work duration change; physics, combat, and game timing stay unchanged.</small>
-        </div>
+      </section>
+
+      <section id="dev-speed-panel" class="dev-speed-panel glass-panel" aria-label="Development speed controls">
+        <div class="performance-subheading">DEV SPEED CONTROLS</div>
+        <label class="range-setting" for="unit-speed">
+          <span>Travel speed <output id="unit-speed-value">1×</output></span>
+          <input id="unit-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit travel speed" />
+        </label>
+        <label class="range-setting" for="harvest-speed">
+          <span>Harvesting speed <output id="harvest-speed-value">1×</output></span>
+          <input id="harvest-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit harvesting speed" />
+        </label>
+        <small class="settings-note">Development-only. Travel and resource work duration change; physics, combat, and game timing stay unchanged.</small>
       </section>
 
       <section class="command-deck glass-panel">
@@ -153,7 +154,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260828-forestpass1"></script>
+    <script type="module" src="./src/main.js?v=20260828-speeds1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

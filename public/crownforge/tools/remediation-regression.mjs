@@ -324,7 +324,8 @@ function checkDevelopmentSpeedControls() {
   assert.equal(INDEX_HTML.includes('COMMANDS & CAMERA'), false, 'retired commands and camera panel is removed from the player HUD');
   assert.equal(INDEX_HTML.includes('id="controls-toggle"'), false, 'retired controls toggle is removed from the command deck');
   assert.match(INDEX_HTML, /id="performance-panel"[^>]*hidden/, 'development telemetry remains hidden in normal play');
-  assert.match(INDEX_HTML, /DEV SPEED CONTROLS/, 'development speed controls live beside telemetry');
+  assert.match(INDEX_HTML, /id="dev-speed-panel"[^>]*class="dev-speed-panel/, 'development speed controls have a visible live panel');
+  assert.match(INDEX_HTML, /id="dev-speed-panel"[\s\S]*DEV SPEED CONTROLS/, 'development speed controls live outside optional telemetry');
   assert.match(INDEX_HTML, /id="unit-speed"/, 'development travel speed slider remains available');
   assert.match(INDEX_HTML, /id="harvest-speed"/, 'development harvesting speed slider is available');
 

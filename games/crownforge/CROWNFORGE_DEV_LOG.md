@@ -4806,3 +4806,17 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 1. Playtest several simultaneous lumber groups over a long session and tune Wildwood reserve size only if map progression is too abrupt or too slow.
 2. Add equivalent authored depletion stages for future macro stone and gold formations before those nodes become central to progression.
+
+## DEV SPEED CONTROLS RETURN — 2026-08-28
+
+### WHAT WAS COMPLETED
+
+- Restored a visible, compact development-only speed card in the live Crownforge HUD with independent Travel speed and Harvesting speed sliders from 1x to 10x.
+- Kept the heavier performance telemetry panel opt-in through `?perf=1`; speed controls no longer disappear with that diagnostic panel.
+- Kept travel scaling limited to locomotion and harvesting scaling limited to worker-cycle duration, leaving physics, combat, construction, and game timing unchanged.
+- Advanced the playable build marker to `20260828-speeds1`.
+
+### VALIDATION
+
+- Regression coverage confirms both sliders are in the visible speed panel, the optional telemetry panel remains hidden in normal play, and the movement/gathering scales remain independent.
+- Browser QA confirmed the live page shows both controls without requiring `?perf=1` and that the game completes loading normally.
