@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260828-gatherpass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260828-groundpass1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-latencypass1';
 
@@ -2484,6 +2484,47 @@ export class CrownforgeSimulation {
         unit.command = 'idle';
         unit.visualState = 'idle';
         unit.actionLabel = 'Resource cleared for wall';
+      }
+    }
+    this.resourcesNodes = this.resourcesNodes.filter((node) => !clearedIds.has(node.id));
+    this.navigationVersion += 1;
+    this.staticBlockerGridVersion = -1;
+    this.selectedIds = this.selectedIds.filter((id) => !clearedIds.has(id));
+    this._syncSelectionFlags();
+    return cleared.length;
+  }
+
+  _clearDepletedWoodForBuilding(preview) {
+    if (!preview?.world || !preview.type) return 0;
+    const placement = {
+      type: preview.type,
+      x: preview.world.x,
+      z: preview.world.z,
+      progress: 1,
+      ...preview,
+    };
+    const bounds = this._buildingBounds(preview.type, placement, BUILDING_CLEARANCE, placement);
+    const cleared = this.resourcesNodes.filter((node) => node.resourceType === 'wood'
+      && node.amount <= 0
+      && this._circleIntersectsBounds(node, resourceFootprint(node), bounds));
+    if (!cleared.length) return 0;
+    const clearedIds = new Set(cleared.map((node) => node.id));
+    for (const unit of this.units) {
+      if (!clearedIds.has(unit.gatherTarget)) continue;
+      this._releaseResourceSlot(unit);
+      unit.gatherTarget = null;
+      unit.gatherSlot = 0;
+      unit.gatherTimer = 0;
+      unit.gatherEventFired = false;
+      if (unit.carryAmount > 0) {
+        unit.actionLabel = 'Returning cargo';
+        this._beginReturn(unit);
+      } else {
+        unit.path = [];
+        unit.routeTarget = null;
+        unit.command = 'idle';
+        unit.visualState = 'idle';
+        unit.actionLabel = 'Cleared woodland ground';
       }
     }
     this.resourcesNodes = this.resourcesNodes.filter((node) => !clearedIds.has(node.id));
@@ -5627,6 +5668,7 @@ export class CrownforgeSimulation {
       this._announce(preview.reason);
       return false;
     }
+    const clearedWoodland = this._clearDepletedWoodForBuilding(preview);
     this._spend(blueprint.cost);
     if (blueprint.wallAttachment) this._replaceWallSegmentsForAttachment(preview);
     const building = this.addBuilding(type, buildPoint.x, buildPoint.z, 'player', 0.04, {
@@ -5657,7 +5699,10 @@ export class CrownforgeSimulation {
     const relocatedMessage = relocated
       ? ` ${relocated} unit${relocated === 1 ? '' : 's'} moved safely outside its footprint.`
       : '';
-    this._announce(`${blueprint.label} foundation placed. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.${relocatedMessage}`);
+    const clearedMessage = clearedWoodland
+      ? ` Restored ${clearedWoodland} cleared woodland patch${clearedWoodland === 1 ? '' : 'es'} to meadow.`
+      : '';
+    this._announce(`${blueprint.label} foundation placed. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.${clearedMessage}${relocatedMessage}`);
     return true;
   }
 
@@ -5831,7 +5876,8 @@ export class CrownforgeSimulation {
       // units yield to the wall, while structures remain the real blocker.
       return { valid: true, reason: 'Palisade line ready.' };
     }
-    if (this.resourcesNodes.some((node) => !this._wallResourceWillBeCleared(node, placement)
+    if (this.resourcesNodes.some((node) => node.amount > 0
+      && !this._wallResourceWillBeCleared(node, placement)
       && this._circleIntersectsBounds(node, resourceFootprint(node), bounds))) {
       return { valid: false, reason: 'Clear the resource before building here.' };
     }

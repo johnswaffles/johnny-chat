@@ -4850,3 +4850,23 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Do not make storage literally infinite; the temporary development capacity is already large enough for the authored forest, and a real storage system should remain a future economy decision.
 - Do not remove building or enemy collision to solve a resource route; a pending gather intent now waits for a safe route instead.
+
+## FOREST GROUND VISIBILITY — 2026-08-28
+
+### WHAT WAS COMPLETED
+
+- Removed depleted wood nodes from the render list at zero resources, so the final Wildwood/tree image disappears on the same simulation update that takes the last bundle.
+- Kept the authored depletion atlas for active woodland only; the existing meadow now shows through automatically after a stand is depleted.
+- Made zero-resource nodes non-blocking for normal building placement and remove any overlapping depleted woodland bookkeeping when a foundation is placed.
+- Preserved active-resource protection: a building still cannot be placed through a grove or tree that has wood remaining, while Palisade wall clearing keeps its existing explicit behavior.
+- Advanced the playable build marker to `20260828-groundpass1` for the next release.
+
+### ASSETS CREATED
+
+- No new artwork was required. The existing Wildwood depletion atlas remains the active-resource progression, while cleared areas use the base meadow layer.
+
+### VALIDATION
+
+- Focused simulation regression confirmed a Watch Hut can be placed over a depleted Wildwood footprint and that the old node is removed when construction begins.
+- Focused renderer regression confirmed depleted wood returns before any forest/stump asset draw is attempted.
+- JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.

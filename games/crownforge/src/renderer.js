@@ -1,4 +1,4 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260828-gatherpass1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260828-groundpass1';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260828-latencypass1';
 
 const TAU = Math.PI * 2;
@@ -840,7 +840,13 @@ export class CrownforgeRenderer {
         .filter((entity) => this.isWorldVisible(entity, 3))
         .map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.25 })),
       ...this.palisadeJunctionEntities(simulation).filter((entity) => this.isWorldVisible(entity, 3)).map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.48 })),
-      ...simulation.resourcesNodes.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.type === 'grain' ? -9999 + entity.x + entity.z : entity.x + entity.z + 0.3 })),
+      // A depleted wood node is simulation bookkeeping only. Its authored
+      // forest/stump atlas is intentionally removed at zero so cleared land
+      // returns to the meadow and cannot cover buildings or villagers.
+      ...simulation.resourcesNodes
+        .filter((entity) => entity.amount > 0 || entity.resourceType !== 'wood')
+        .filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity)))
+        .map((entity) => ({ ...entity, depth: entity.type === 'grain' ? -9999 + entity.x + entity.z : entity.x + entity.z + 0.3 })),
       ...this.roadsideDetails.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity, index) => ({
         ...entity,
         id: -1000 - index,
@@ -1861,6 +1867,10 @@ export class CrownforgeRenderer {
   }
 
   drawResource(ctx, resource, time) {
+    // Wood nodes become invisible the instant their final bundle is taken.
+    // The underlying terrain is already the normal green meadow, so no
+    // replacement patch or large depleted-forest image is needed.
+    if (resource.resourceType === 'wood' && resource.amount <= 0) return;
     const point = this.worldToScreen(resource);
     const tier = RESOURCE_SIZE_TIERS[resource.sizeTier ?? 'small'] ?? RESOURCE_SIZE_TIERS.small;
     // Bushes keep their compact authored scale. Trees, groves, stone, and
