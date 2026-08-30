@@ -2151,6 +2151,22 @@ function checkCombatAndEndStates() {
   assert.equal(defeatSimulation.phase, 'defeat', 'player core destruction loses');
 }
 
+function checkRendererCanvasSafety() {
+  const renderer = Object.create(CrownforgeRenderer.prototype);
+  renderer.camera = { zoom: CONFIG.minZoom };
+  const radii = [];
+  const context = {
+    save() {},
+    restore() {},
+    beginPath() {},
+    arc(_x, _y, radius) { radii.push(radius); },
+    stroke() {},
+  };
+  renderer.drawAttackRing(context, { x: 0, y: 0 }, (Math.PI * 1.5) / 0.01);
+  assert.equal(radii.length, 1, 'attack feedback still draws its pulse at minimum zoom');
+  assert.ok(Number.isFinite(radii[0]) && radii[0] >= 0, 'attack feedback never passes a negative Canvas arc radius');
+}
+
 function checkUnitMovementFacingAndPoseSafety() {
   const directionCases = [
     { label: 'screen-down', dx: 1, dz: 1, expected: 0 },
@@ -2282,6 +2298,7 @@ checkCrownHallHostileExclusionAndCombatRecovery();
 checkVillagerLastStandDefense();
 checkUnitMovementFacingAndPoseSafety();
 checkCombatAndEndStates();
+checkRendererCanvasSafety();
 
 console.log(JSON.stringify({
   status: 'passed',
@@ -2326,5 +2343,6 @@ console.log(JSON.stringify({
     'twenty-hit Villager defense, five-second humanoid stun, twenty-second immunity, attacker aggro, local swarm, and one-minute Last Light Ward',
     'all movable unit types hold correct four-way travel facing, attack approaches follow their path heading, and recoil/death poses never slide or spin',
     'melee damage, death timing, victory, defeat',
+    'minimum-zoom attack feedback never throws a negative Canvas arc radius',
   ],
 }));

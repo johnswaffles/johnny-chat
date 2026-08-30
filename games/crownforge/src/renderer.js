@@ -1,4 +1,4 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260830-harvestquantity1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260830-renderguard1';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260828-latencypass1';
 
 const TAU = Math.PI * 2;
@@ -2233,7 +2233,12 @@ export class CrownforgeRenderer {
 
   drawAttackRing(ctx, point, time, phase = 'approach') {
     ctx.save();
-    ctx.beginPath(); ctx.arc(point.x, point.y + 4, 19 * this.camera.zoom + Math.sin(time * 0.01) * 2, 0, TAU);
+    // At the minimum zoom the old fixed-size pulse could subtract more than
+    // the ring radius and pass a negative radius to CanvasRenderingContext2D.
+    // That throws IndexSizeError and aborts the animation loop, which looks
+    // like a full game lock-up after combat starts near a zoomed-out view.
+    const pulseRadius = Math.max(0.5, 19 * this.camera.zoom + Math.sin(time * 0.01) * Math.min(2, 6 * this.camera.zoom));
+    ctx.beginPath(); ctx.arc(point.x, point.y + 4, pulseRadius, 0, TAU);
     ctx.strokeStyle = phase === 'contact' ? 'rgba(240, 189, 104, 0.78)' : phase === 'anticipation' ? 'rgba(222, 158, 80, 0.52)' : 'rgba(222, 105, 80, 0.46)';
     ctx.lineWidth = phase === 'contact' ? 2.2 : 1.5;
     ctx.stroke(); ctx.restore();

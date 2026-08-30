@@ -4886,3 +4886,16 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Confirmed the new control is labeled Harvesting quantity, has a 100x maximum, and no longer calls the old time-compression behavior.
 - Confirmed a 100x quantity setting increases the gathered bundle while the gather cycle duration remains unchanged.
 - JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.
+
+## RENDERER CANVAS SAFETY — 2026-08-30
+
+### WHAT WAS COMPLETED
+
+- Fixed the zoom-aware attack feedback pulse so it never passes a negative radius to Canvas.
+- The previous fixed two-pixel pulse could become negative at the minimum zoom and throw `IndexSizeError`, aborting the render loop and making the game appear frozen after combat activity.
+- Bumped the playable build marker to `20260830-renderguard1` so the browser cannot reuse the affected renderer bundle.
+
+### VALIDATION
+
+- Minimum-zoom renderer regression passed with a Canvas arc-radius guard.
+- Full remediation regression, JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.
