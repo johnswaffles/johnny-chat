@@ -4870,3 +4870,19 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Focused simulation regression confirmed a Watch Hut can be placed over a depleted Wildwood footprint and that the old node is removed when construction begins.
 - Focused renderer regression confirmed depleted wood returns before any forest/stump asset draw is attempted.
 - JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.
+
+## HARVESTING QUANTITY CONTROL — 2026-08-30
+
+### WHAT WAS COMPLETED
+
+- Replaced the development-only Harvesting speed control with Harvesting quantity, adjustable from 1x to 100x.
+- Kept worker movement, tool timing, animation cadence, collision, combat, construction, and the simulation clock at their normal rates.
+- Applied the quantity multiplier to the amount removed at each normal gather contact, so forests and other resources deplete faster without gatherers sprinting or animation-skipping.
+- Kept the previous simulation setter/getter names as compatibility aliases for older QA harnesses; they now change haul size only.
+- Advanced the playable build marker to `20260830-harvestquantity1`.
+
+### VALIDATION
+
+- Confirmed the new control is labeled Harvesting quantity, has a 100x maximum, and no longer calls the old time-compression behavior.
+- Confirmed a 100x quantity setting increases the gathered bundle while the gather cycle duration remains unchanged.
+- JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.

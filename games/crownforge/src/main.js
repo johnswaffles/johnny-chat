@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260828-groundpass1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260830-harvestquantity1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260828-latencypass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260828-groundpass1';
-import { CrownforgeSimulation } from './simulation.js?v=20260828-groundpass1';
+import { CrownforgeRenderer } from './renderer.js?v=20260830-harvestquantity1';
+import { CrownforgeSimulation } from './simulation.js?v=20260830-harvestquantity1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260823-constructionretask1';
 
@@ -28,8 +28,8 @@ const musicToggleLabel = document.querySelector('#music-toggle-label');
 const reducedMotion = document.querySelector('#reduced-motion');
 const unitSpeed = document.querySelector('#unit-speed');
 const unitSpeedValue = document.querySelector('#unit-speed-value');
-const harvestSpeed = document.querySelector('#harvest-speed');
-const harvestSpeedValue = document.querySelector('#harvest-speed-value');
+const harvestQuantity = document.querySelector('#harvest-quantity');
+const harvestQuantityValue = document.querySelector('#harvest-quantity-value');
 const uiTooltip = document.querySelector('#ui-tooltip');
 const placementReadout = document.querySelector('#placement-readout');
 const placementIcon = document.querySelector('#placement-icon');
@@ -287,9 +287,9 @@ unitSpeed?.addEventListener('input', (event) => {
   const value = simulation.setUnitSpeedScale(event.target.value);
   if (unitSpeedValue) unitSpeedValue.textContent = `${value}×`;
 });
-harvestSpeed?.addEventListener('input', (event) => {
-  const value = simulation.setHarvestSpeedScale(event.target.value);
-  if (harvestSpeedValue) harvestSpeedValue.textContent = `${value}×`;
+harvestQuantity?.addEventListener('input', (event) => {
+  const value = simulation.setHarvestQuantityScale(event.target.value);
+  if (harvestQuantityValue) harvestQuantityValue.textContent = `${value}×`;
 });
 
 recoverUnitsButton?.addEventListener('click', () => {
@@ -327,8 +327,8 @@ function updateUi() {
   ui.population.textContent = `${population.used} / ${population.capacity}`;
   if (unitSpeed) unitSpeed.value = String(simulation.getUnitSpeedScale());
   if (unitSpeedValue) unitSpeedValue.textContent = `${simulation.getUnitSpeedScale()}×`;
-  if (harvestSpeed) harvestSpeed.value = String(simulation.getHarvestSpeedScale());
-  if (harvestSpeedValue) harvestSpeedValue.textContent = `${simulation.getHarvestSpeedScale()}×`;
+  if (harvestQuantity) harvestQuantity.value = String(simulation.getHarvestQuantityScale());
+  if (harvestQuantityValue) harvestQuantityValue.textContent = `${simulation.getHarvestQuantityScale()}×`;
   ui.selectionTitle.textContent = selectionTitle();
   ui.selectionDetail.textContent = selectionStatus();
   if (selectionRecovery) selectionRecovery.hidden = !simulation.canRecoverSelectedUnits();

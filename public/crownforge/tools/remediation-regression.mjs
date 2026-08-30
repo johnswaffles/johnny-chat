@@ -308,14 +308,17 @@ function checkPersistentForestGathering() {
   const [firstStand, nextStand] = chain.resourcesNodes;
   chain.resources.wood = 0;
   chain.setUnitSpeedScale(10);
-  chain.setHarvestSpeedScale(10);
+  chain.setHarvestQuantityScale(1);
   chain.selectedIds = workers.map((unit) => unit.id);
   chain._syncSelectionFlags();
   assert.equal(chain.issueContextCommand(firstStand, firstStand).kind, 'gather', 'group forest order is accepted');
   advance(chain, 10);
   assert.equal(firstStand.amount, 0, 'the first stand is actually depleted');
   assert.ok(nextStand.amount < nextStand.maxAmount, 'the same group begins cutting the next nearby stand');
-  assert.ok(workers.every((unit) => unit.gatherTarget === nextStand.id && unit.command === 'gather'), 'all workers retain their gather intent instead of becoming unresponsive');
+  assert.ok(
+    workers.every((unit) => unit.gatherTarget === nextStand.id && ['gather', 'return'].includes(unit.command)),
+    'all workers retain their gather intent instead of becoming unresponsive',
+  );
 }
 
 function checkDevelopmentSpeedControls() {
@@ -327,7 +330,7 @@ function checkDevelopmentSpeedControls() {
   assert.match(INDEX_HTML, /id="dev-speed-panel"[^>]*class="dev-speed-panel/, 'development speed controls have a visible live panel');
   assert.match(INDEX_HTML, /id="dev-speed-panel"[\s\S]*DEV SPEED CONTROLS/, 'development speed controls live outside optional telemetry');
   assert.match(INDEX_HTML, /id="unit-speed"/, 'development travel speed slider remains available');
-  assert.match(INDEX_HTML, /id="harvest-speed"/, 'development harvesting speed slider is available');
+  assert.match(INDEX_HTML, /id="harvest-quantity"/, 'development harvesting quantity slider is available');
 
   const normal = movementSandbox();
   const normalWorker = normal.addUnit('villager', 20, 20, 'player');
@@ -336,24 +339,33 @@ function checkDevelopmentSpeedControls() {
   normalWorker.gatherTarget = normalTree.id;
   normalWorker.command = 'gather';
   normal._updateGathering(normalWorker, 0.2);
-  assert.equal(normalWorker.carryAmount, 0, 'normal harvesting speed does not complete a wood cycle early');
+  assert.equal(normalWorker.carryAmount, 0, 'normal harvesting quantity does not complete a wood cycle early');
 
-  const fast = movementSandbox();
-  const fastWorker = fast.addUnit('villager', 20, 20, 'player');
-  fast.addResource('tree', 'wood', 21.2, 20, 100, 0, { sizeTier: 'small' });
-  const fastTree = fast.resourcesNodes[0];
-  fastWorker.gatherTarget = fastTree.id;
-  fastWorker.command = 'gather';
-  assert.equal(fast.setHarvestSpeedScale(10), 10, 'harvesting speed slider caps at 10x');
-  fast._updateGathering(fastWorker, 0.2);
-  assert.ok(fastWorker.carryAmount > 0, '10x harvesting completes a nearby wood cycle promptly');
-  assert.equal(fast.getUnitSpeedScale(), 1, 'harvesting speed does not alter travel speed');
+  const base = movementSandbox();
+  const baseWorker = base.addUnit('villager', 20, 20, 'player');
+  base.addResource('tree', 'wood', 21.2, 20, 200, 0, { sizeTier: 'small' });
+  const baseTree = base.resourcesNodes[0];
+  baseWorker.gatherTarget = baseTree.id;
+  baseWorker.command = 'gather';
+  base._updateGathering(baseWorker, 1.1);
+  assert.equal(baseWorker.carryAmount, RESOURCE_TYPES.wood.gatherAmount, '1x removes the authored wood quantity');
+
+  const boosted = movementSandbox();
+  const boostedWorker = boosted.addUnit('villager', 20, 20, 'player');
+  boosted.addResource('tree', 'wood', 21.2, 20, 200, 0, { sizeTier: 'small' });
+  const boostedTree = boosted.resourcesNodes[0];
+  boostedWorker.gatherTarget = boostedTree.id;
+  boostedWorker.command = 'gather';
+  assert.equal(boosted.setHarvestQuantityScale(100), 100, 'harvesting quantity slider caps at 100x');
+  boosted._updateGathering(boostedWorker, 1.1);
+  assert.equal(boostedWorker.carryAmount, 200, '100x removes the larger available bundle at normal cycle timing');
+  assert.equal(boosted.getUnitSpeedScale(), 1, 'harvesting quantity does not alter travel speed');
 
   const isolated = freshSimulation();
   isolated.setUnitSpeedScale(7);
-  isolated.setHarvestSpeedScale(10);
+  isolated.setHarvestQuantityScale(100);
   assert.equal(isolated.getUnitSpeedScale(), 7, 'travel speed remains independently adjustable');
-  assert.equal(isolated.getHarvestSpeedScale(), 10, 'harvesting speed remains independently adjustable');
+  assert.equal(isolated.getHarvestQuantityScale(), 100, 'harvesting quantity remains independently adjustable');
 }
 
 function checkGoldEconomyLoop() {

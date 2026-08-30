@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260828-groundpass1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260830-harvestquantity1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-latencypass1';
 
@@ -224,10 +224,10 @@ export class CrownforgeSimulation {
     this.onEvent = onEvent;
     this.animation = new CrownforgeAnimationSystem();
     this.unitSpeedScale = 1;
-    // Development-only time compression for worker resource cycles. Keep it
-    // separate from locomotion so a faster harvest never changes movement,
-    // collision, combat, construction, or the fixed simulation clock.
-    this.harvestSpeedScale = 1;
+    // Development-only quantity compression for worker resource cycles. Keep
+    // it separate from locomotion so a larger haul never changes movement,
+    // animation timing, collision, combat, construction, or the fixed clock.
+    this.harvestQuantityScale = 1;
     const query = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
     this.stressMode = query.has('stress');
     this.pathCache = new Map();
@@ -287,15 +287,26 @@ export class CrownforgeSimulation {
     return this.unitSpeedScale;
   }
 
-  setHarvestSpeedScale(value) {
+  setHarvestQuantityScale(value) {
     const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return this.harvestSpeedScale;
-    this.harvestSpeedScale = clamp(numeric, 1, 10);
-    return this.harvestSpeedScale;
+    if (!Number.isFinite(numeric)) return this.harvestQuantityScale;
+    this.harvestQuantityScale = clamp(numeric, 1, 100);
+    return this.harvestQuantityScale;
+  }
+
+  getHarvestQuantityScale() {
+    return this.harvestQuantityScale;
+  }
+
+  // Keep the previous development-hook names as compatibility aliases for
+  // older QA harnesses. They now change haul size only; they never compress
+  // the gather cycle.
+  setHarvestSpeedScale(value) {
+    return this.setHarvestQuantityScale(value);
   }
 
   getHarvestSpeedScale() {
-    return this.harvestSpeedScale;
+    return this.getHarvestQuantityScale();
   }
 
   _resourceBank(faction = 'player') {
@@ -1930,9 +1941,10 @@ export class CrownforgeSimulation {
     setUnitFacing(unit, node.x - unit.x, node.z - unit.z, true);
     unit.visualState = node.resourceType;
     unit.actionLabel = `Gathering ${resourceInfo.label}`;
-    // Only the worker's gather cycle is compressed. Amounts, carry limits,
-    // animation state, and the rest of the simulation remain unchanged.
-    const effectiveGatherTime = resourceInfo.gatherTime / this.harvestSpeedScale;
+    // Quantity controls only how much the worker removes at the normal tool
+    // contact moment. Movement, gather-cycle timing, and animation stay at
+    // their authored pace so a 100x haul does not look like a speed hack.
+    const effectiveGatherTime = resourceInfo.gatherTime;
     unit.gatherTimer += dt;
     const toolContactTime = effectiveGatherTime * ANIMATION_EVENT_TIMINGS.resource_collected;
     if (unit.gatherEventFired || unit.gatherTimer < toolContactTime) {
@@ -1948,7 +1960,9 @@ export class CrownforgeSimulation {
     // readable strike cue without needing a second visual-event queue.
     this.animation.emit(unit, ANIMATION_EVENTS.toolContact, { resourceType: node.resourceType, x: node.x, z: node.z, nodeId: node.id });
     const availableSpace = resourceInfo.capacity - bank[node.resourceType];
-    const gatherAmount = Math.round(resourceInfo.gatherAmount * this._resourceGatherMultiplier(node, unit.faction));
+    const gatherAmount = Math.round(resourceInfo.gatherAmount
+      * this.harvestQuantityScale
+      * this._resourceGatherMultiplier(node, unit.faction));
     const amount = Math.min(gatherAmount, node.amount, availableSpace);
     if (amount <= 0) {
       this._releaseResourceSlot(unit);
