@@ -2225,6 +2225,13 @@ function checkRendererCanvasSafety() {
   assert.ok(Number.isFinite(radii[0]) && radii[0] >= 0, 'attack feedback never passes a negative Canvas arc radius');
 }
 
+function checkReleaseSurfaceAndOcclusionBudget() {
+  assert.match(INDEX_HTML, /<link rel="icon" type="image\/png" href="\.\/assets\/crownforge-icon-gold-v1\.png/, 'the playable page declares a packaged favicon instead of requesting the missing root favicon');
+  assert.match(RENDERER_SOURCE, /simulation\._staticBlockerCandidates\(unit, OCCLUSION_QUERY_RADIUS\)/, 'unit occlusion uses the spatial blocker grid');
+  assert.doesNotMatch(RENDERER_SOURCE, /const hiddenByBuilding = simulation\.buildings\.find/, 'unit occlusion does not scan every building for every unit');
+  assert.doesNotMatch(RENDERER_SOURCE, /const hiddenByResource = simulation\.resourcesNodes\.find/, 'unit occlusion does not scan every resource for every unit');
+}
+
 function checkUnitMovementFacingAndPoseSafety() {
   const directionCases = [
     { label: 'screen-down', dx: 1, dz: 1, expected: 0 },
@@ -2356,6 +2363,7 @@ checkCrownHallHostileExclusionAndCombatRecovery();
 checkVillagerLastStandDefense();
 checkUnitMovementFacingAndPoseSafety();
 checkCombatAndEndStates();
+checkReleaseSurfaceAndOcclusionBudget();
 checkRendererCanvasSafety();
 
 console.log(JSON.stringify({
@@ -2401,6 +2409,7 @@ console.log(JSON.stringify({
     'twenty-hit Villager defense, five-second humanoid stun, twenty-second immunity, attacker aggro, local swarm, and one-minute Last Light Ward',
     'all movable unit types hold correct four-way travel facing, attack approaches follow their path heading, and recoil/death poses never slide or spin',
     'melee damage, death timing, victory, defeat',
+    'packaged favicon and spatially bounded unit-occlusion rendering',
     'minimum-zoom attack feedback never throws a negative Canvas arc radius',
   ],
 }));

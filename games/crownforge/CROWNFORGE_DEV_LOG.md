@@ -4918,3 +4918,18 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Minimum-zoom renderer regression passed with a Canvas arc-radius guard.
 - Full remediation regression, JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.
+
+## CHECKLIST HEALTH PASS — 2026-08-31
+
+### WHAT WAS COMPLETED
+
+- Audited boot/assets, simulation timing, input and selection, gathering, construction, wall/gate/tower placement, combat/AI, pathfinding/recovery, rendering/performance, and release integrity.
+- Replaced the per-frame all-buildings/all-resources unit-occlusion scan with the existing spatial blocker grid, keeping readability overlays bounded in dense forests and stress mode.
+- Added the Crownforge icon as the page favicon so browsers no longer request a missing `/favicon.ico` resource.
+- Advanced the playable build marker to `20260831-checklist1`.
+
+### VALIDATION
+
+- Full remediation regression passed, including the new release-surface and occlusion-budget checks.
+- Live normal-mode telemetry was observed at roughly 0.54 ms simulation, 2.16 ms render, 0.25 ms UI, 3,269 entities, and 0 long frames in a five-second sample.
+- JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.

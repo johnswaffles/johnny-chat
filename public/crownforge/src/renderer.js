@@ -3,6 +3,10 @@ import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimation
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+// Occlusion only needs nearby static bodies. Querying the simulation's
+// spatial blocker grid keeps this visual readability pass bounded when a
+// dense Wildwood scene or the optional stress population is active.
+const OCCLUSION_QUERY_RADIUS = 12;
 
 export function resolveWallVisual(direction = { x: 1, z: 0 }) {
   const magnitude = Math.hypot(direction.x, direction.z) || 1;
@@ -1024,15 +1028,21 @@ export class CrownforgeRenderer {
   }
 
   drawOccludedUnitOverlays(ctx, simulation) {
-    for (const unit of simulation.units.filter((candidate) => !candidate.dead)) {
+    for (const unit of simulation.units) {
+      if (unit.dead) continue;
       if (!this.isWorldVisible(unit, 3)) continue;
-      const hiddenByBuilding = simulation.buildings.find((building) => {
+      const nearbyStatic = typeof simulation._staticBlockerCandidates === 'function'
+        ? simulation._staticBlockerCandidates(unit, OCCLUSION_QUERY_RADIUS)
+        : [...simulation.buildings, ...simulation.resourcesNodes];
+      const hiddenByBuilding = nearbyStatic.find((building) => {
+        if (building.kind !== 'building') return false;
         if (building.destroyed || building.progress <= 0 || building.field) return false;
         const nearStructure = simulation._distanceToBuildingEdge(unit, building) < 2.3;
         const collisionCenter = this.buildingCollisionCenter(building);
         return nearStructure && unit.x + unit.z < collisionCenter.x + collisionCenter.z - 0.04;
       });
-      const hiddenByResource = simulation.resourcesNodes.find((node) => {
+      const hiddenByResource = nearbyStatic.find((node) => {
+        if (node.kind !== 'resource') return false;
         if (!['tree', 'grove', 'berry', 'grain', 'stone', 'gold'].includes(node.type) || node.amount <= 0) return false;
         const tierScale = RESOURCE_SIZE_TIERS[node.sizeTier ?? 'small']?.footprintScale ?? 1;
         const clearance = node.type === 'berry' || node.type === 'grain' ? 1.55 : node.type === 'stone' || node.type === 'gold' ? 1.7 * tierScale : node.type === 'grove' ? 2.6 * tierScale : node.type === 'tree' ? 1.28 * tierScale : 1.9 * tierScale;
