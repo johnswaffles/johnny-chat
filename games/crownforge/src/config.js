@@ -96,15 +96,12 @@ export const RESOURCE_SIZE_TIERS = {
   small: { label: 'Small', renderScale: 1, capacityScale: 1, footprintScale: 1 },
   medium: { label: 'Medium', renderScale: 1.42, capacityScale: 2.2, footprintScale: 1.42 },
   large: { label: 'Large', renderScale: 2.05, capacityScale: 5, footprintScale: 2.05 },
-  // Ancient forests are deliberately macro resources: one authored mass
-  // represents a broad stand of trees, exposes many safe work positions, and
-  // visibly retreats through authored depletion stages instead of spawning
-  // hundreds of independent tree entities.
+  // Ancient forests remain available for legacy authored scenarios and QA.
+  // Generated first-age Wildwood now uses independent small tree nodes so
+  // each trunk can disappear cleanly when its own haul is exhausted.
   ancient: { label: 'Ancient', renderScale: 4.1, capacityScale: 12, footprintScale: 3.4 },
-  // Wildwood stands are map-scale wood resources. A single staged entity
-  // represents a dense tract of trees, keeping an 80%-wooded map practical to
-  // render, path around, and gradually clear without creating thousands of
-  // individual tree objects.
+  // Wildwood is retained as a legacy tier for the six-stage atlas and older
+  // QA fixtures. The live map no longer seeds this macro resource.
   wildwood: { label: 'Wildwood', renderScale: 5.8, capacityScale: 14, footprintScale: 9.5 },
 };
 

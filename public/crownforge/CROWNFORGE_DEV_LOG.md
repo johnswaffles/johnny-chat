@@ -4,6 +4,20 @@ Date: 2026-08-16
 Milestone: Tiny playable settlement prototype — technical hardening and release certification
 Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 
+## 2026-08-30 — Individual forest resource pass
+
+- Replaced generated macro Wildwood groves with deterministic clusters of independent small tree resources. Each tree now owns its position, footprint, 240 Wood reserve, gather target, blocker, and depletion state.
+- A tree disappears from the world render immediately when its own Wood reaches zero. The cleared meadow remains the normal green terrain, so a final-stage brown forest patch cannot cover workers or future buildings.
+- Preserved the dense first-age woodland and the forest-gated diagonal divide. The divide uses a compact overlapping tree lattice, so it remains impassable until actual tree entities are cleared instead of relying on one indestructible macro image.
+- Kept legacy grove tiers and six-stage atlas support for older QA fixtures and authored scenarios, but the live reset no longer seeds any Wildwood grove entities.
+- Reduced active-tree occlusion clearance and suppressed one toast per cleared tree to keep worker visibility and the UI responsive during long forest-clearing orders.
+
+## 2026-08-30 — Local defense hold pass
+
+- Fixed combat target cleanup so a Crown Guard or other armed Crownwarden stops at the fight area when the nearby attacker is defeated instead of inheriting the nearest enemy settlement as a new target.
+- Kept nearby-threat reacquisition inside the existing local auto-defense radius and preserved exact player-issued attack targets until those targets are gone.
+- Kept the independent-tree forest pass in the same release: each tree still clears its own canopy and returns the space to normal meadow immediately at zero Wood.
+
 ## WHAT EXISTS
 
 - A standalone browser-first Crownforge project under `crownforge/`.

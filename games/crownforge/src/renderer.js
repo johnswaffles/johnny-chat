@@ -1,4 +1,4 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260830-renderguard1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260830-forestguard1';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260828-latencypass1';
 
 const TAU = Math.PI * 2;
@@ -1035,7 +1035,7 @@ export class CrownforgeRenderer {
       const hiddenByResource = simulation.resourcesNodes.find((node) => {
         if (!['tree', 'grove', 'berry', 'grain', 'stone', 'gold'].includes(node.type) || node.amount <= 0) return false;
         const tierScale = RESOURCE_SIZE_TIERS[node.sizeTier ?? 'small']?.footprintScale ?? 1;
-        const clearance = node.type === 'berry' || node.type === 'grain' ? 1.55 : node.type === 'stone' || node.type === 'gold' ? 1.7 * tierScale : node.type === 'grove' ? 2.6 * tierScale : 1.9 * tierScale;
+        const clearance = node.type === 'berry' || node.type === 'grain' ? 1.55 : node.type === 'stone' || node.type === 'gold' ? 1.7 * tierScale : node.type === 'grove' ? 2.6 * tierScale : node.type === 'tree' ? 1.28 * tierScale : 1.9 * tierScale;
         if (node.type === 'grain') return false;
         return Math.hypot(unit.x - node.x, unit.z - node.z) < clearance
           && unit.x + unit.z < node.x + node.z - 0.04;
@@ -1889,8 +1889,6 @@ export class CrownforgeRenderer {
       else this.drawTreeGroveAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.92);
     } else if (resource.type === 'grain') {
       this.drawFirstAgeAsset(ctx, 'field', point, size * this.camera.zoom, depleted ? 0.3 : 0.9);
-    } else if (depleted && resource.type === 'tree') {
-      this.drawEnvironmentAsset(ctx, 'stump', 1, point, size * 0.72 * this.camera.zoom, 0.94);
     } else if (resource.type === 'tree') {
       this.drawTreeAsset(ctx, resource.variant, point, size * scale * this.camera.zoom, alpha);
     } else if (resource.type === 'gold') {

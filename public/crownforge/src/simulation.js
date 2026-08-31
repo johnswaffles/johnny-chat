@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260830-renderguard1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260830-forestguard1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-latencypass1';
 
@@ -77,7 +77,21 @@ const IDLE_REGROUP_DELAY = 30;
 const AUTO_COMBAT_ROUTE_BUDGET = 5;
 const DEFENSE_PROJECTILE_LIFETIME = 2.4;
 const NATURAL_RESOURCE_GAP = 1.7;
-const WILDWOOD_LATTICE = { margin: 28, spacingX: 32, spacingZ: 28, overlapAllowance: -15.5 };
+const WILDWOOD_LATTICE = { margin: 28, spacingX: 32, spacingZ: 28 };
+// Generated Wildwood is made from independent trees rather than one giant
+// staged grove. The former grove artwork made a nearly-cleared stand look
+// like a broad brown patch and kept hiding workers after the last visible
+// trunks were gone. A compact deterministic cluster keeps the map densely
+// wooded while giving every tree its own footprint, haul, blocker, and
+// immediate removal point.
+const WILDWOOD_TREE_OFFSETS = [
+  { x: -7.2, z: -6.1 }, { x: -2.4, z: -6.7 }, { x: 2.4, z: -6.7 }, { x: 7.2, z: -5.2 },
+  { x: -7.2, z: -1.1 }, { x: -2.4, z: -0.5 }, { x: 2.4, z: -0.5 }, { x: 7.2, z: 0.2 },
+  { x: -6.1, z: 4.3 }, { x: -1.2, z: 4.9 }, { x: 3.7, z: 4.7 }, { x: 7.4, z: 5.4 },
+];
+const WILDWOOD_DIVIDE_BAND_OFFSETS = [-24, -16, -8, 0, 8, 16, 24];
+const WILDWOOD_DIVIDE_TREE_OFFSETS = [{ x: 0, z: 0 }];
+const WILDWOOD_TREE_AMOUNT = 240;
 const WILDWOOD_CLEARINGS = [
   { id: 'crown-clearing', x: 78, z: 82, radiusX: 78, radiusZ: 84 },
   { id: 'ashen-clearing', x: 516, z: 414, radiusX: 72, radiusZ: 68 },
@@ -120,10 +134,12 @@ const ENEMY_SITE_OFFSETS = [
 export function resourceFootprint(nodeOrType) {
   const type = typeof nodeOrType === 'string' ? nodeOrType : nodeOrType?.type;
   const tier = typeof nodeOrType === 'object' ? nodeOrType?.sizeTier ?? 'small' : 'small';
+  const independentForestTree = type === 'tree' && typeof nodeOrType === 'object' && nodeOrType.forestClusterId;
   const depletionScale = type === 'grove' && typeof nodeOrType === 'object' && nodeOrType.maxAmount > 0
     ? 0.52 + Math.sqrt(clamp(nodeOrType.amount / nodeOrType.maxAmount, 0, 1)) * 0.48
     : 1;
-  return (RESOURCE_FOOTPRINTS[type] ?? 0.8) * (RESOURCE_SIZE_TIERS[tier]?.footprintScale ?? 1) * depletionScale;
+  const baseFootprint = independentForestTree ? 3.05 : (RESOURCE_FOOTPRINTS[type] ?? 0.8);
+  return baseFootprint * (RESOURCE_SIZE_TIERS[tier]?.footprintScale ?? 1) * depletionScale;
 }
 
 function resourceSlotCount(node) {
@@ -378,11 +394,34 @@ export class CrownforgeSimulation {
     if (type === 'berry') return 105;
     if (type === 'stone') return sizeTier === 'large' ? 900 : sizeTier === 'medium' ? 360 : 120;
     if (type === 'gold') return sizeTier === 'large' ? 1150 : sizeTier === 'medium' ? 420 : 140;
-    // One Wildwood mass remains a substantial long-running job, but it must
-    // also be possible for a normal crew to expose all six visual stages and
-    // eventually open a route through the forest.
+    // Legacy macro-grove amount retained for old QA fixtures and saves. The
+    // generated map now uses WILDWOOD_TREE_AMOUNT per independent tree.
     if (type === 'grove') return sizeTier === 'wildwood' ? 2400 : sizeTier === 'ancient' ? 7200 : sizeTier === 'large' ? 1100 : sizeTier === 'medium' ? 700 : 480;
     return sizeTier === 'large' ? 700 : sizeTier === 'medium' ? 260 : 180;
+  }
+
+  _seedWildwoodTreeCluster(centerX, centerZ, clusterIndex, offsets = WILDWOOD_TREE_OFFSETS) {
+    const clusterId = `wildwood-${clusterIndex}`;
+    let added = 0;
+    for (const [treeIndex, offset] of offsets.entries()) {
+      const jitterX = (stableResourceNoise(clusterIndex * 17 + treeIndex, 83) - 0.5) * 0.9;
+      const jitterZ = (stableResourceNoise(clusterIndex * 17 + treeIndex, 89) - 0.5) * 0.9;
+      const x = centerX + offset.x + jitterX;
+      const z = centerZ + offset.z + jitterZ;
+      const treeFootprint = resourceFootprint({ type: 'tree', sizeTier: 'small', forestClusterId: clusterId });
+      if (x - treeFootprint < 2 || z - treeFootprint < 2 || x + treeFootprint > CONFIG.mapWidth - 2 || z + treeFootprint > CONFIG.mapHeight - 2) continue;
+      if (this._insideWildwoodClearing(x, z, treeFootprint * 0.55)) continue;
+      // Keep regional forage, stone, and Gold readable. Trees in the same
+      // cluster are deliberately allowed to sit close together; that is the
+      // visual forest density the macro grove used to provide.
+      if (this.resourcesNodes.some((node) => node.resourceType !== 'wood'
+        && distance({ x, z }, node) < treeFootprint + resourceFootprint(node) + 0.6)) continue;
+      this.addResource('tree', 'wood', x, z, WILDWOOD_TREE_AMOUNT,
+        Math.floor(stableResourceNoise(clusterIndex * 31 + treeIndex, 97) * 4) % 4,
+        { sizeTier: 'small', forestClusterId: clusterId, forestTreeIndex: treeIndex });
+      added += 1;
+    }
+    return added;
   }
 
   _naturalResourceSpotClear(type, sizeTier, x, z) {
@@ -393,11 +432,7 @@ export class CrownforgeSimulation {
       const bounds = this._buildingEntityBounds(building, footprint + 4);
       return x > bounds.minX && x < bounds.maxX && z > bounds.minZ && z < bounds.maxZ;
     })) return false;
-    return this.resourcesNodes.every((node) => {
-      const contiguousWildwood = sizeTier === 'wildwood' && node.type === 'grove' && node.sizeTier === 'wildwood';
-      const gap = contiguousWildwood ? WILDWOOD_LATTICE.overlapAllowance : NATURAL_RESOURCE_GAP;
-      return distance(probe, node) >= footprint + resourceFootprint(node) + gap;
-    });
+    return this.resourcesNodes.every((node) => distance(probe, node) >= footprint + resourceFootprint(node) + NATURAL_RESOURCE_GAP);
   }
 
   _insideWildwoodClearing(x, z, padding = 0) {
@@ -421,8 +456,7 @@ export class CrownforgeSimulation {
       );
     }
 
-    const tier = 'wildwood';
-    const footprint = resourceFootprint({ type: 'grove', sizeTier: tier });
+    const footprint = resourceFootprint({ type: 'tree', sizeTier: 'small' });
     let latticeIndex = 0;
     for (let row = 0, z = WILDWOOD_LATTICE.margin; z <= CONFIG.mapHeight - WILDWOOD_LATTICE.margin; row += 1, z += WILDWOOD_LATTICE.spacingZ) {
       const rowOffset = row % 2 ? WILDWOOD_LATTICE.spacingX * 0.5 : 0;
@@ -433,25 +467,39 @@ export class CrownforgeSimulation {
         const candidateZ = z + jitterZ;
         latticeIndex += 1;
         if (this._insideWildwoodClearing(candidateX, candidateZ, footprint * 0.48)) continue;
-        if (!this._naturalResourceSpotClear('grove', tier, candidateX, candidateZ)) continue;
-        const variant = Math.floor(stableResourceNoise(latticeIndex, 71) * 4) % 4;
-        this.addResource('grove', 'wood', candidateX, candidateZ, this._naturalResourceAmount('grove', tier), variant, { sizeTier: tier });
+        if (!this._naturalResourceSpotClear('tree', 'small', candidateX, candidateZ)) continue;
+        this._seedWildwoodTreeCluster(candidateX, candidateZ, latticeIndex);
       }
     }
 
     // A continuous old-growth divide guarantees that the opposite faction
     // cannot be reached through a lucky lattice seam or by slipping around a
-    // map edge. Every stand remains a normal harvestable resource, so the
-    // barrier becomes a player-authored road as crews cut through it.
+    // map edge. Each divide cluster is still made from separate harvestable
+    // trees, so the barrier becomes a player-authored road one tree at a time.
     const divideStart = { x: 0, z: 430 };
     const divideEnd = { x: 430, z: 0 };
     const divideLength = distance(divideStart, divideEnd);
-    const divideSegments = Math.ceil(divideLength / 25);
+    // The divide is the one intentional forest choke point. Its clusters
+    // overlap along the diagonal so the pathfinder cannot slip through a
+    // lattice seam, while every blocker remains an individual tree that can
+    // be removed to open the route.
+    const divideSegments = Math.ceil(divideLength / 5);
     for (let index = 0; index <= divideSegments; index += 1) {
       const ratio = index / divideSegments;
       const x = divideStart.x + (divideEnd.x - divideStart.x) * ratio;
       const z = divideStart.z + (divideEnd.z - divideStart.z) * ratio;
-      this.addResource('grove', 'wood', x, z, this._naturalResourceAmount('grove', tier), index % 4, { sizeTier: tier });
+      // Seed a compact overlapping band rather than three full clusters.
+      // Trees are spaced closely along the diagonal and across its thickness
+      // so the pathfinder cannot slip through a seam, while every blocker
+      // remains an individual tree that can be removed to open the route.
+      WILDWOOD_DIVIDE_BAND_OFFSETS.forEach((bandOffset, bandIndex) => {
+        this._seedWildwoodTreeCluster(
+          x + bandOffset * 0.5,
+          z + bandOffset * 0.5,
+          1000 + index * WILDWOOD_DIVIDE_BAND_OFFSETS.length + bandIndex,
+          WILDWOOD_DIVIDE_TREE_OFFSETS,
+        );
+      });
     }
   }
 
@@ -624,7 +672,7 @@ export class CrownforgeSimulation {
   }
 
   addResource(type, resourceType, x, z, amount, variant = 0, options = {}) {
-    this.resourcesNodes.push({
+    const node = {
       id: this.nextId++,
       kind: 'resource',
       type,
@@ -638,9 +686,13 @@ export class CrownforgeSimulation {
       depleted: false,
       depletionStage: 0,
       reservedSlots: new Map(),
-    });
+      forestClusterId: options.forestClusterId ?? null,
+      forestTreeIndex: Number.isInteger(options.forestTreeIndex) ? options.forestTreeIndex : null,
+    };
+    this.resourcesNodes.push(node);
     this.navigationVersion += 1;
     this.staticBlockerGridVersion = -1;
+    return node;
   }
 
   addDecoration(type, x, z, variant = 0, scale = 1) {
@@ -1993,7 +2045,11 @@ export class CrownforgeSimulation {
     if (node.amount <= 0 && !node.depleted) {
       node.depleted = true;
       this.navigationVersion += 1;
-      this._announce(`${resourceInfo.label} source depleted.`);
+      // A forest has many independent sources. Announcing every cleared tree
+      // would flood the toast channel and add avoidable UI work during a
+      // long clearing order; macro/hand-authored resources keep the useful
+      // depletion announcement.
+      if (!node.forestClusterId) this._announce(`${resourceInfo.label} source depleted.`);
     }
     // A worker owns a resource slot only while approaching or working the
     // node. Once the gathered bundle is on the worker, the slot is free for
@@ -3331,13 +3387,13 @@ export class CrownforgeSimulation {
   }
 
   _getAttackTarget(unit) {
-    if (unit.attackTarget) {
-      const target = unit.attackTargetKind === 'building'
-        ? this.buildings.find((candidate) => candidate.id === unit.attackTarget && !candidate.destroyed && candidate.hp > 0 && candidate.progress >= 1)
-        : this.units.find((candidate) => candidate.id === unit.attackTarget && !candidate.dead);
-      if (target && target.faction !== unit.faction && target.faction !== 'neutral') return target;
-    }
-    return this._findNearestHostile(unit);
+    // Combat orders are committed to the target that caused them. The old
+    // nearest-hostile fallback turned a finished local defense into a march
+    // toward the enemy town center when the original attacker died. Nearby
+    // threats are reacquired by `_updateMilitaryServices`/`_updateEnemyIntent`
+    // within their normal awareness radius; combat itself must never invent a
+    // new cross-map target after an order is complete.
+    return this._getExplicitAttackTarget(unit);
   }
 
   _targetDistance(attacker, target) {

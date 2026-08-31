@@ -26,7 +26,7 @@ import {
 import { animationFrame, resolveAnimationState } from '../src/animation.js';
 import { CrownforgeInput } from '../src/input.js';
 import { CrownforgeRenderer, resolveFirstAgeConstructionStage, resolveWallVisual } from '../src/renderer.js';
-import { CrownforgeSimulation } from '../src/simulation.js';
+import { CrownforgeSimulation, resourceFootprint } from '../src/simulation.js';
 import { summarizeUnitTasks } from '../src/task-summary.js';
 
 const STEP_60HZ = 1 / 60;
@@ -294,7 +294,30 @@ function checkPersistentForestGathering() {
     [0, 1, 2, 3, 4, 5, 5],
     'Wildwood visibly advances through six depletion states from dense canopy to clearing',
   );
+  assert.match(RENDERER_SOURCE, /resource\.resourceType === 'wood' && resource\.amount <= 0/, 'depleted wood artwork is removed before it can cover the cleared ground');
+  assert.doesNotMatch(RENDERER_SOURCE, /depleted && resource\.type === 'tree'/, 'individual forest trees do not leave a replacement stump patch');
   assert.ok(RESOURCE_TYPES.wood.capacity > 400 * 2400, 'wood storage supports clearing the full generated Wildwood instead of silently stopping a crew');
+
+  const treeLifecycle = movementSandbox();
+  const treeWorker = treeLifecycle.addUnit('villager', 100, 100, 'player');
+  const tree = treeLifecycle.addResource('tree', 'wood', 106, 100, 12, 0, {
+    sizeTier: 'small',
+    forestClusterId: 'qa-forest',
+    forestTreeIndex: 0,
+  });
+  treeLifecycle.setUnitSpeedScale(10);
+  treeLifecycle.setHarvestQuantityScale(100);
+  assert.ok(treeLifecycle._assignResourceWork(treeWorker, {
+    resourceType: 'wood',
+    origin: tree,
+    preferredNode: tree,
+    radius: Infinity,
+    maxCandidates: Infinity,
+    persistent: true,
+  }), 'an independent forest tree accepts a persistent gathering order');
+  advance(treeLifecycle, 4);
+  assert.equal(tree.amount, 0, 'an independent forest tree can be fully depleted on its own');
+  assert.equal(tree.depleted, true, 'an independent forest tree records its own depletion state');
 
   const chain = movementSandbox();
   chain.addBuilding('townCenter', 20, 20, 'player');
@@ -975,6 +998,20 @@ function checkAutonomousWorkCombatAndDefenses() {
   military._updateBuilderServices();
   assert.equal(guard.attackTarget, raider.id, 'idle Crown Guard automatically acquires a nearby hostile fighter');
   assert.equal(guard.command, 'attack', 'automatic settlement defense uses the normal attack command');
+
+  const localDefense = movementSandbox();
+  const localGuard = localDefense.addUnit('soldier', 100, 100, 'player');
+  const localRaider = localDefense.addUnit('raider', 106, 100, 'enemy');
+  localDefense.addBuilding('ashenCamp', 420, 420, 'enemy');
+  localDefense._updateBuilderServices();
+  assert.equal(localGuard.attackTarget, localRaider.id, 'local defense locks onto the nearby attacker');
+  const guardPosition = { x: localGuard.x, z: localGuard.z };
+  localDefense._killUnit(localRaider, localGuard);
+  localDefense._updateUnit(localGuard, STEP_60HZ);
+  assert.equal(localGuard.command, 'idle', 'guard returns to a holding state after its local threat is defeated');
+  assert.equal(localGuard.attackTarget, null, 'finished local defense does not retain a stale attack target');
+  assert.deepEqual({ x: localGuard.x, z: localGuard.z }, guardPosition, 'finished local defense holds the position where the fight ended');
+  assert.equal(localDefense._getAttackTarget(localGuard), null, 'combat cleanup never promotes the distant enemy camp into a new target');
 
   const protectedWorker = movementSandbox();
   const restrainedGuard = protectedWorker.addUnit('soldier', 100, 100, 'player');
@@ -1872,13 +1909,18 @@ function checkExpandedWorldAndEnemyDistance() {
   assert.ok(Math.hypot(camp.x - hall.x, camp.z - hall.z) > 500, 'enemy camp starts across the expanded map');
   assert.ok(hall.x > CONFIG.mapWidth * 0.1 && hall.z > CONFIG.mapHeight * 0.1, 'Crown Hall starts inside the map rather than on the north-west tip');
   const wildwood = simulation.resourcesNodes.filter((node) => node.type === 'grove' && node.sizeTier === 'wildwood');
-  assert.ok(wildwood.length >= 200, 'expanded map is dominated by contiguous old-growth forest');
+  const forestTrees = simulation.resourcesNodes.filter((node) => node.type === 'tree' && node.forestClusterId);
+  assert.equal(wildwood.length, 0, 'expanded map no longer seeds macro Wildwood grove entities');
+  assert.ok(forestTrees.length >= 3000, 'expanded map is dominated by individually harvestable old-growth trees');
+  assert.ok(new Set(forestTrees.map((node) => node.forestClusterId)).size >= 900, 'forest trees retain deterministic cluster provenance without sharing a depletion image');
+  assert.ok(forestTrees.every((node) => node.sizeTier === 'small' && node.maxAmount > 0 && node.amount === node.maxAmount), 'generated forest entries start as independent full tree resources');
+  assert.ok(resourceFootprint(forestTrees[0]) > resourceFootprint({ type: 'tree', sizeTier: 'small' }), 'forest trees reserve their own readable physical space for movement and gathering');
   let woodedSamples = 0;
   let totalSamples = 0;
   for (let z = 8; z < CONFIG.mapHeight; z += 8) {
     for (let x = 8; x < CONFIG.mapWidth; x += 8) {
       totalSamples += 1;
-      if (wildwood.some((node) => Math.hypot(node.x - x, node.z - z) <= 24)) woodedSamples += 1;
+      if (forestTrees.some((node) => Math.hypot(node.x - x, node.z - z) <= 14)) woodedSamples += 1;
     }
   }
   const woodedCoverage = woodedSamples / totalSamples;
@@ -1895,6 +1937,14 @@ function checkExpandedWorldAndEnemyDistance() {
   const playerVillager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   const routeAcrossWildwood = simulation._buildPath(playerVillager, { x: camp.x, z: camp.z - 24 });
   assert.equal(routeAcrossWildwood, null, 'opposing settlements cannot meet before cutting through the harvestable wildwood divide');
+  forestTrees.forEach((node) => {
+    node.amount = 0;
+    node.depleted = true;
+  });
+  simulation.navigationVersion += 1;
+  simulation.staticBlockerGridVersion = -1;
+  simulation.pathCache.clear();
+  assert.ok(simulation._buildPath(playerVillager, { x: camp.x, z: camp.z - 24 }), 'clearing the individual forest blockers opens the cross-map route');
   assert.ok(CONFIG.minZoom < 0.05, 'minimum zoom can frame the expanded map');
 }
 
@@ -2333,7 +2383,7 @@ console.log(JSON.stringify({
     'travel-only speed scaling, high-speed collision routing, and fast group spacing',
     'always-available selected-unit recovery at a clear Crown Hall approach with cargo deposit and group spacing',
     'distinct Ashen role-equivalent artwork, directional units, independent economy, capped town growth, local defense, and forest-gated raids',
-    'roughly eighty-percent contiguous wildwood with authored berry, stone, and scarce Gold glades and no prebuilt fields',
+    'roughly eighty-percent individually harvestable Wildwood trees with authored berry, stone, and scarce Gold glades and no prebuilt fields',
     'expanded map, opposite-side settlements, and a harvestable forest divide that gates contact',
     'cursor-centered zoom anchor in both directions',
     'four authored upright Palisade views across all eight snap directions',
