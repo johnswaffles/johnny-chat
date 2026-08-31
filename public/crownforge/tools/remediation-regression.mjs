@@ -34,6 +34,7 @@ const STEP_20HZ = 1 / 20;
 const INDEX_HTML = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const INPUT_SOURCE = fs.readFileSync(new URL('../src/input.js', import.meta.url), 'utf8');
 const RENDERER_SOURCE = fs.readFileSync(new URL('../src/renderer.js', import.meta.url), 'utf8');
+const SIMULATION_SOURCE = fs.readFileSync(new URL('../src/simulation.js', import.meta.url), 'utf8');
 const STYLES_CSS = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 
 function advance(simulation, seconds, step = STEP_60HZ) {
@@ -297,6 +298,19 @@ function checkPersistentForestGathering() {
   assert.match(RENDERER_SOURCE, /resource\.resourceType === 'wood' && resource\.amount <= 0/, 'depleted wood artwork is removed before it can cover the cleared ground');
   assert.doesNotMatch(RENDERER_SOURCE, /depleted && resource\.type === 'tree'/, 'individual forest trees do not leave a replacement stump patch');
   assert.ok(RESOURCE_TYPES.wood.capacity > 400 * 2400, 'wood storage supports clearing the full generated Wildwood instead of silently stopping a crew');
+  assert.match(SIMULATION_SOURCE, /resolveWorldSeed\(requestedSeed\)/, 'forest generation has an explicit client-side seed');
+  assert.match(SIMULATION_SOURCE, /WILDWOOD_CLUSTER_JITTER/, 'forest generation keeps jitter separate from the sampling lattice');
+  const forestSignature = (simulation) => simulation.resourcesNodes
+    .filter((node) => node.type === 'tree' && node.forestClusterId)
+    .map((node) => `${node.x.toFixed(3)},${node.z.toFixed(3)}`)
+    .join('|');
+  const seededA = new CrownforgeSimulation({ seed: 0x12345678 });
+  const seededB = new CrownforgeSimulation({ seed: 0x12345678 });
+  const seededSignature = forestSignature(seededA);
+  assert.ok(seededA.resourcesNodes.filter((node) => node.type === 'tree').length > 1000, 'seeded Wildwood remains a substantial harvestable forest');
+  assert.equal(seededSignature, forestSignature(seededB), 'the same seed reproduces the same forest for QA and shareable maps');
+  seededA.reset();
+  assert.notEqual(seededSignature, forestSignature(seededA), 'reset rolls a fresh forest layout from the local generation seed');
 
   const treeLifecycle = movementSandbox();
   const treeWorker = treeLifecycle.addUnit('villager', 100, 100, 'player');

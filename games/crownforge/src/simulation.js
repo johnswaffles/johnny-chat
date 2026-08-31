@@ -78,6 +78,10 @@ const AUTO_COMBAT_ROUTE_BUDGET = 5;
 const DEFENSE_PROJECTILE_LIFETIME = 2.4;
 const NATURAL_RESOURCE_GAP = 1.7;
 const WILDWOOD_LATTICE = { margin: 28, spacingX: 32, spacingZ: 28 };
+const DEFAULT_WILDWOOD_SEED = 0xc0ffee31;
+const WORLD_GENERATION_STRIDE = 0x9e3779b9;
+const WILDWOOD_CLUSTER_JITTER = { x: 0.82, z: 0.82 };
+const WILDWOOD_TREE_JITTER = 1.4;
 // Generated Wildwood is made from independent trees rather than one giant
 // staged grove. The former grove artwork made a nearly-cleared stand look
 // like a broad brown patch and kept hiding workers after the last visible
@@ -166,11 +170,28 @@ const FACING_VECTORS = [
   { x: -1, z: 1 },
 ];
 
-function stableResourceNoise(index, salt = 0) {
-  let value = (Math.imul(index + 1, 374761393) + Math.imul(salt + 1, 668265263) + 0x9e3779b9) >>> 0;
+function stableResourceNoise(index, salt = 0, seed = 0) {
+  let value = (Math.imul(index + 1, 374761393) + Math.imul(salt + 1, 668265263) + (seed >>> 0) + 0x9e3779b9) >>> 0;
   value = Math.imul(value ^ (value >>> 13), 1274126177) >>> 0;
   value ^= value >>> 16;
   return (value >>> 0) / 4294967296;
+}
+
+function resolveWorldSeed(requestedSeed) {
+  if (Number.isInteger(requestedSeed)) return requestedSeed >>> 0;
+  if (typeof window !== 'undefined') {
+    const querySeed = Number(new URLSearchParams(window.location.search).get('seed'));
+    if (Number.isInteger(querySeed)) return querySeed >>> 0;
+    if (window.crypto?.getRandomValues) {
+      const seed = new Uint32Array(1);
+      window.crypto.getRandomValues(seed);
+      return seed[0] >>> 0;
+    }
+  }
+  // Node-based QA and deterministic fixtures get a stable layout. Browser
+  // sessions use a fresh seed above, but all of the generation remains local
+  // and synchronous, so a new map never adds server or hosting compute.
+  return DEFAULT_WILDWOOD_SEED;
 }
 
 function directionFromVector(dx, dz, fallback = 0) {
@@ -236,9 +257,11 @@ function setUnitFacing(unit, dx, dz, force = false) {
 }
 
 export class CrownforgeSimulation {
-  constructor({ onEvent = () => {} } = {}) {
+  constructor({ onEvent = () => {}, seed } = {}) {
     this.onEvent = onEvent;
     this.animation = new CrownforgeAnimationSystem();
+    this.worldSeed = resolveWorldSeed(seed);
+    this.worldGeneration = 0;
     this.unitSpeedScale = 1;
     // Development-only quantity compression for worker resource cycles. Keep
     // it separate from locomotion so a larger haul never changes movement,
@@ -251,6 +274,8 @@ export class CrownforgeSimulation {
   }
 
   reset() {
+    this.activeWorldSeed = (this.worldSeed + Math.imul(this.worldGeneration, WORLD_GENERATION_STRIDE)) >>> 0;
+    this.worldGeneration += 1;
     this.clock = 0;
     this.timeAccumulator = 0;
     this.nextId = 1;
@@ -287,7 +312,7 @@ export class CrownforgeSimulation {
     this.staticBlockerGrid.clear();
     this.staticBlockerGridVersion = -1;
     this.lastCommand = 'Select a Crownwarden and issue an order.';
-    this._seedWorld();
+    this._seedWorld(this.activeWorldSeed);
     this.selectedIds = this.units.filter((unit) => unit.type === 'villager').map((unit) => unit.id);
     this._syncSelectionFlags();
   }
@@ -339,7 +364,7 @@ export class CrownforgeSimulation {
     for (const [key, value] of Object.entries(cost)) bank[key] = Math.max(0, (bank[key] ?? 0) - value);
   }
 
-  _seedWorld() {
+  _seedWorld(worldSeed = this.activeWorldSeed ?? this.worldSeed) {
     this.addBuilding('townCenter', 78, 82, 'player');
     // The first-age settlement begins with one coherent civic landmark. The
     // retired Hearth House and Waystore are intentionally absent; until new
@@ -364,7 +389,7 @@ export class CrownforgeSimulation {
     // Build a deterministic, contiguous woodland around the faction clearings
     // and isolated resource glades. Cultivated fields are never seeded; they
     // remain a settlement choice made by the player or AI.
-    this._seedNaturalResourceRegions();
+    this._seedNaturalResourceRegions(worldSeed);
     this.addDecoration('log', 18, 24, 0, 0.9);
     this.addDecoration('stump', 8.4, 52, 1, 0.85);
     this.addDecoration('flowers', 43, 20, 2, 0.72);
@@ -400,14 +425,21 @@ export class CrownforgeSimulation {
     return sizeTier === 'large' ? 700 : sizeTier === 'medium' ? 260 : 180;
   }
 
-  _seedWildwoodTreeCluster(centerX, centerZ, clusterIndex, offsets = WILDWOOD_TREE_OFFSETS) {
+  _seedWildwoodTreeCluster(centerX, centerZ, clusterIndex, offsets = WILDWOOD_TREE_OFFSETS, worldSeed = this.activeWorldSeed ?? this.worldSeed) {
     const clusterId = `wildwood-${clusterIndex}`;
+    const clusterAngle = stableResourceNoise(clusterIndex, 11, worldSeed) * TAU;
+    const clusterCos = Math.cos(clusterAngle);
+    const clusterSin = Math.sin(clusterAngle);
     let added = 0;
     for (const [treeIndex, offset] of offsets.entries()) {
-      const jitterX = (stableResourceNoise(clusterIndex * 17 + treeIndex, 83) - 0.5) * 0.9;
-      const jitterZ = (stableResourceNoise(clusterIndex * 17 + treeIndex, 89) - 0.5) * 0.9;
-      const x = centerX + offset.x + jitterX;
-      const z = centerZ + offset.z + jitterZ;
+      // Rotate and perturb each small cluster so the sampling lattice is an
+      // implementation detail, not a visible row-and-column pattern.
+      const rotatedX = offset.x * clusterCos - offset.z * clusterSin;
+      const rotatedZ = offset.x * clusterSin + offset.z * clusterCos;
+      const jitterX = (stableResourceNoise(clusterIndex * 17 + treeIndex, 83, worldSeed) - 0.5) * WILDWOOD_TREE_JITTER;
+      const jitterZ = (stableResourceNoise(clusterIndex * 17 + treeIndex, 89, worldSeed) - 0.5) * WILDWOOD_TREE_JITTER;
+      const x = centerX + rotatedX + jitterX;
+      const z = centerZ + rotatedZ + jitterZ;
       const treeFootprint = resourceFootprint({ type: 'tree', sizeTier: 'small', forestClusterId: clusterId });
       if (x - treeFootprint < 2 || z - treeFootprint < 2 || x + treeFootprint > CONFIG.mapWidth - 2 || z + treeFootprint > CONFIG.mapHeight - 2) continue;
       if (this._insideWildwoodClearing(x, z, treeFootprint * 0.55)) continue;
@@ -417,7 +449,7 @@ export class CrownforgeSimulation {
       if (this.resourcesNodes.some((node) => node.resourceType !== 'wood'
         && distance({ x, z }, node) < treeFootprint + resourceFootprint(node) + 0.6)) continue;
       this.addResource('tree', 'wood', x, z, WILDWOOD_TREE_AMOUNT,
-        Math.floor(stableResourceNoise(clusterIndex * 31 + treeIndex, 97) * 4) % 4,
+        Math.floor(stableResourceNoise(clusterIndex * 31 + treeIndex, 97, worldSeed) * 4) % 4,
         { sizeTier: 'small', forestClusterId: clusterId, forestTreeIndex: treeIndex });
       added += 1;
     }
@@ -443,7 +475,7 @@ export class CrownforgeSimulation {
     });
   }
 
-  _seedNaturalResourceRegions() {
+  _seedNaturalResourceRegions(worldSeed = this.activeWorldSeed ?? this.worldSeed) {
     for (const [index, pocket] of REGIONAL_RESOURCE_POCKETS.entries()) {
       this.addResource(
         pocket.type,
@@ -451,7 +483,7 @@ export class CrownforgeSimulation {
         pocket.x,
         pocket.z,
         this._naturalResourceAmount(pocket.type, pocket.sizeTier),
-        Math.floor(stableResourceNoise(index, 43) * 4) % 4,
+        Math.floor(stableResourceNoise(index, 43, worldSeed) * 4) % 4,
         { sizeTier: pocket.sizeTier },
       );
     }
@@ -461,14 +493,17 @@ export class CrownforgeSimulation {
     for (let row = 0, z = WILDWOOD_LATTICE.margin; z <= CONFIG.mapHeight - WILDWOOD_LATTICE.margin; row += 1, z += WILDWOOD_LATTICE.spacingZ) {
       const rowOffset = row % 2 ? WILDWOOD_LATTICE.spacingX * 0.5 : 0;
       for (let column = 0, x = WILDWOOD_LATTICE.margin + rowOffset; x <= CONFIG.mapWidth - WILDWOOD_LATTICE.margin; column += 1, x += WILDWOOD_LATTICE.spacingX) {
-        const jitterX = (stableResourceNoise(latticeIndex, 61) - 0.5) * 0.7;
-        const jitterZ = (stableResourceNoise(latticeIndex, 67) - 0.5) * 0.7;
+        // This is only a cheap sampling lattice. Large seeded center jitter,
+        // per-cluster rotation, and individual tree offsets create an organic
+        // forest without runtime noise generation or a procedural server.
+        const jitterX = (stableResourceNoise(latticeIndex, 61, worldSeed) - 0.5) * WILDWOOD_LATTICE.spacingX * WILDWOOD_CLUSTER_JITTER.x;
+        const jitterZ = (stableResourceNoise(latticeIndex, 67, worldSeed) - 0.5) * WILDWOOD_LATTICE.spacingZ * WILDWOOD_CLUSTER_JITTER.z;
         const candidateX = x + jitterX;
         const candidateZ = z + jitterZ;
         latticeIndex += 1;
         if (this._insideWildwoodClearing(candidateX, candidateZ, footprint * 0.48)) continue;
         if (!this._naturalResourceSpotClear('tree', 'small', candidateX, candidateZ)) continue;
-        this._seedWildwoodTreeCluster(candidateX, candidateZ, latticeIndex);
+        this._seedWildwoodTreeCluster(candidateX, candidateZ, latticeIndex, WILDWOOD_TREE_OFFSETS, worldSeed);
       }
     }
 
@@ -486,8 +521,9 @@ export class CrownforgeSimulation {
     const divideSegments = Math.ceil(divideLength / 5);
     for (let index = 0; index <= divideSegments; index += 1) {
       const ratio = index / divideSegments;
-      const x = divideStart.x + (divideEnd.x - divideStart.x) * ratio;
-      const z = divideStart.z + (divideEnd.z - divideStart.z) * ratio;
+      const tangentJitter = (stableResourceNoise(index, 131, worldSeed) - 0.5) * 1.6;
+      const x = divideStart.x + (divideEnd.x - divideStart.x) * ratio + tangentJitter;
+      const z = divideStart.z + (divideEnd.z - divideStart.z) * ratio - tangentJitter;
       // Seed a compact overlapping band rather than three full clusters.
       // Trees are spaced closely along the diagonal and across its thickness
       // so the pathfinder cannot slip through a seam, while every blocker
@@ -498,6 +534,7 @@ export class CrownforgeSimulation {
           z + bandOffset * 0.5,
           1000 + index * WILDWOOD_DIVIDE_BAND_OFFSETS.length + bandIndex,
           WILDWOOD_DIVIDE_TREE_OFFSETS,
+          worldSeed,
         );
       });
     }

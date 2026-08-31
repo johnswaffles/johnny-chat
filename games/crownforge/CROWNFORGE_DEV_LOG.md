@@ -4933,3 +4933,18 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Full remediation regression passed, including the new release-surface and occlusion-budget checks.
 - Live normal-mode telemetry was observed at roughly 0.54 ms simulation, 2.16 ms render, 0.25 ms UI, 3,269 entities, and 0 long frames in a five-second sample.
 - JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.
+
+## SEEDED WILDWOOD SCATTER — 2026-08-31
+
+### WHAT WAS COMPLETED
+
+- Replaced the visibly regular forest placement with seeded, client-side scatter: cluster centers receive broad jitter, each small tree cluster rotates, and individual trees receive a small deterministic offset.
+- Kept the authored Crown Hall and Ashen clearings, regional berry/stone/Gold pockets, harvestable divide, independent tree depletion, and the existing forest resource budget intact.
+- Added a fresh local world seed for each browser session and each in-session reset. An optional `?seed=1234` query keeps a layout shareable and reproducible for QA.
+- Kept the map generation synchronous and local; no procedural-map service, server work, or hosting compute was added.
+- Advanced the playable build marker to `20260831-randomforest1`.
+
+### VALIDATION
+
+- Confirmed equal explicit seeds reproduce the same forest and reset produces a different layout while preserving a substantial forest.
+- Full remediation regression, JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.
