@@ -23,7 +23,7 @@
   // Generated artwork is optional: the manifest can turn a painted sprite on without
   // changing collision, AI, animation state, or room composition. Missing entries keep
   // the crisp procedural fallback, which makes the art pass safe to stage incrementally.
-  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=47";
+  const ASSET_MANIFEST_URL = "/mosswake/assets/manifest.json?v=48";
   const loadedAssets = new Map();
   const loadOptionalAsset = (key, spec) => {
     if (!spec || typeof spec.src !== "string" || typeof Image === "undefined") return;
@@ -1150,6 +1150,31 @@
       }
     });
   };
+  const drawGroundCover = (time) => {
+    // These are sparse, authored meadow islands rather than a wall of repeated
+    // grass cards. They give the base wash real material variation while
+    // preserving readable clearings, roads, ponds, and combat space.
+    if (!loadedAssets.has("meadow-ground-v2")) return;
+    const islands = [
+      [112, 238, 12, 142, 90, .2, -.12], [360, 290, 6, 118, 78, .18, .08],
+      [635, 250, 8, 132, 84, .2, -.04], [1010, 300, 4, 128, 80, .16, .1],
+      [1328, 262, 10, 148, 88, .18, -.08], [1450, 680, 14, 156, 94, .19, .06],
+      [1120, 770, 5, 128, 82, .16, -.1], [470, 770, 9, 144, 86, .17, .12],
+      [190, 742, 15, 132, 80, .15, -.05]
+    ];
+    islands.forEach(([x, y, frame, width, height, alpha, rotation], index) => {
+      if (isMainRoadZone(x, y, 112)) return;
+      drawOptionalSprite("meadow-ground-v2", x, y, {
+        frame,
+        width,
+        height,
+        anchorX: .5,
+        anchorY: .9,
+        alpha: alpha + Math.sin(time * .28 + index) * .012,
+        rotation: rotation + Math.sin(time * .22 + index) * .006
+      });
+    });
+  };
   const mainRoadY = (x) => {
     const points = [[0, 490], [430, 423], [760, 505], [1110, 580], [1600, 440]];
     const clampedX = clamp(x, points[0][0], points[points.length - 1][0]);
@@ -1259,29 +1284,29 @@
   };
   const drawPath = (time) => {
     ctx.save(); ctx.globalAlpha = .34; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 86; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-30, 500); ctx.quadraticCurveTo(430, 433, 760, 515); ctx.quadraticCurveTo(1110, 590, 1630, 450); ctx.stroke();
-    ctx.globalAlpha = 1; ctx.strokeStyle = "#b28f62"; ctx.lineWidth = 78; ctx.beginPath(); ctx.moveTo(-30, 490); ctx.quadraticCurveTo(430, 423, 760, 505); ctx.quadraticCurveTo(1110, 580, 1630, 440); ctx.stroke();
-    ctx.strokeStyle = "rgba(246,222,166,.32)"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-20, 470); ctx.quadraticCurveTo(430, 405, 760, 486); ctx.quadraticCurveTo(1110, 560, 1610, 425); ctx.stroke();
-    // Give the lower branch a readable junction with the main road. This is
-    // visual navigation only; the world collision and route logic remain
-    // unchanged while the two authored path ribbons now read as one network.
-    ctx.globalAlpha = .34; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 50; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(430, 604); ctx.quadraticCurveTo(390, 522, 430, 423); ctx.stroke();
-    ctx.globalAlpha = 1; ctx.strokeStyle = "#aa9069"; ctx.lineWidth = 42; ctx.beginPath(); ctx.moveTo(430, 604); ctx.quadraticCurveTo(390, 522, 430, 423); ctx.stroke();
-    ctx.strokeStyle = "rgba(247,223,170,.23)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(430, 596); ctx.quadraticCurveTo(402, 522, 435, 431); ctx.stroke();
-    ctx.globalAlpha = .42; ctx.strokeStyle = "rgba(109,84,60,.34)"; ctx.lineWidth = 2; [470, 520, 568].forEach((y, index) => { const x = 412 + index * 7; ctx.beginPath(); ctx.moveTo(x - 8, y); ctx.quadraticCurveTo(x + 3, y - 4, x + 14, y); ctx.stroke(); });
-    if (loadedAssets.has("road-family")) drawOptionalSprite("road-family", 430, 514, { frame: 0, width: 112, height: 184, anchorX: .5, anchorY: .5, alpha: .64 });
-    ctx.globalAlpha = .42; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 42; ctx.beginPath(); ctx.moveTo(85, 620); ctx.quadraticCurveTo(310, 580, 520, 610); ctx.stroke();
-    ctx.globalAlpha = 1; ctx.strokeStyle = "#aa9069"; ctx.lineWidth = 34; ctx.beginPath(); ctx.moveTo(85, 614); ctx.quadraticCurveTo(310, 574, 520, 604); ctx.stroke();
-    ctx.strokeStyle = "rgba(247,223,170,.25)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(92, 605); ctx.quadraticCurveTo(310, 568, 516, 596); ctx.stroke();
+    const hasRoadAtlas = loadedAssets.has("road-surface-v2") || loadedAssets.has("road-family");
+    ctx.globalAlpha = hasRoadAtlas ? .34 : .84; ctx.strokeStyle = hasRoadAtlas ? "#6b563e" : "#896b4b"; ctx.lineWidth = hasRoadAtlas ? 62 : 78; ctx.beginPath(); ctx.moveTo(-30, 490); ctx.quadraticCurveTo(430, 423, 760, 505); ctx.quadraticCurveTo(1110, 580, 1630, 440); ctx.stroke();
+    if (!hasRoadAtlas) { ctx.strokeStyle = "rgba(236,194,123,.16)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-20, 470); ctx.quadraticCurveTo(430, 405, 760, 486); ctx.quadraticCurveTo(1110, 560, 1610, 425); ctx.stroke(); }
+    // Preserve the authored connector between the lower footpath and the main
+    // route. It remains visual-only; movement collision still owns the route.
+    ctx.globalAlpha = hasRoadAtlas ? .2 : .34; ctx.strokeStyle = hasRoadAtlas ? "#6b563e" : ART.inkSoft; ctx.lineWidth = hasRoadAtlas ? 38 : 50; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(430, 604); ctx.quadraticCurveTo(390, 522, 430, 423); ctx.stroke();
+    if (!hasRoadAtlas) { ctx.globalAlpha = 1; ctx.strokeStyle = "#aa9069"; ctx.lineWidth = 42; ctx.beginPath(); ctx.moveTo(430, 604); ctx.quadraticCurveTo(390, 522, 430, 423); ctx.stroke(); ctx.strokeStyle = "rgba(247,223,170,.23)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(430, 596); ctx.quadraticCurveTo(402, 522, 435, 431); ctx.stroke(); }
+    ctx.globalAlpha = hasRoadAtlas ? .22 : .42; ctx.strokeStyle = ART.inkSoft; ctx.lineWidth = 42; ctx.beginPath(); ctx.moveTo(85, 620); ctx.quadraticCurveTo(310, 580, 520, 610); ctx.stroke();
+    ctx.globalAlpha = hasRoadAtlas ? .3 : .84; ctx.strokeStyle = hasRoadAtlas ? "#6b563e" : "#80694e"; ctx.lineWidth = hasRoadAtlas ? 30 : 34; ctx.beginPath(); ctx.moveTo(85, 614); ctx.quadraticCurveTo(310, 574, 520, 604); ctx.stroke();
+    if (!hasRoadAtlas) { ctx.strokeStyle = "rgba(236,194,123,.14)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(92, 605); ctx.quadraticCurveTo(310, 568, 516, 596); ctx.stroke(); }
     for (let i = 0; i < 12; i += 1) { const x = (i * 131 + 68) % 1550; const y = 480 + Math.sin(x * .011) * 30 + Math.sin(time * .28 + i) * 1.4; ctx.fillStyle = i % 3 ? "rgba(145,119,83,.28)" : "rgba(245,218,163,.34)"; ctx.beginPath(); ctx.ellipse(x, y, 3 + i % 3, 1.8, 0, 0, Math.PI * 2); ctx.fill(); }
     ctx.globalAlpha = .46; ctx.strokeStyle = "rgba(109,84,60,.38)"; ctx.lineWidth = 2; for (let i = 0; i < 7; i += 1) { const x = 70 + i * 236; const y = 488 + Math.sin(x * .011) * 30; ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.quadraticCurveTo(x + 11, y - 15, x + 19, y - 9); ctx.stroke(); }
     ctx.globalAlpha = .7; const pathStones = [[135, 485, -0.25], [338, 448, .18], [572, 477, -.08], [804, 519, .15], [1050, 550, -.18], [1288, 510, .12], [1478, 462, -.2]];
     pathStones.forEach(([x, y, angle], index) => { ctx.save(); ctx.translate(x, y + Math.sin(time * .35 + index) * .4); ctx.rotate(angle); ctx.fillStyle = index % 2 ? "rgba(218,191,142,.5)" : "rgba(119,96,70,.4)"; ctx.beginPath(); ctx.ellipse(0, 0, 10 + index % 3 * 2, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
     // Painted road tiles now carry the visible surface; the procedural ribbon
     // remains underneath as the collision-safe silhouette and offline fallback.
-    if (loadedAssets.has("road-family")) {
+    const roadKey = loadedAssets.has("road-surface-v2") ? "road-surface-v2" : "road-family";
+    if (loadedAssets.has(roadKey)) {
       const roadTiles = [
-        [155, 466, 1, -.12, 220, 108], [430, 455, 2, -.08, 192, 138], [735, 506, 3, .08, 170, 130],
-        [1015, 552, 7, .11, 210, 148], [1325, 506, 2, -.12, 198, 138]
+        [-10, 492, 0, -.13, 320, 132], [260, 445, 0, -.1, 320, 132],
+        [530, 475, 2, -.04, 290, 174], [790, 520, 0, .08, 320, 132],
+        [1060, 560, 0, .1, 320, 132], [1305, 535, 5, .03, 300, 180],
+        [1545, 470, 3, -.1, 300, 174]
       ];
       // The atlas includes its own grassy border. Clip the large painted pieces
       // to the authored road corridor so those borders blend into the existing
@@ -1290,11 +1315,14 @@
       ctx.moveTo(-40, 452); ctx.quadraticCurveTo(430, 385, 760, 467); ctx.quadraticCurveTo(1110, 542, 1640, 402);
       ctx.lineTo(1640, 480); ctx.quadraticCurveTo(1110, 620, 760, 545); ctx.quadraticCurveTo(430, 463, -40, 530); ctx.closePath(); ctx.clip();
       ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
-      roadTiles.forEach(([x, y, frame, rotation, width, height]) => drawOptionalSprite("road-family", x, y, { frame, width, height, anchorX: .5, anchorY: .5, rotation, alpha: .62 }));
+      roadTiles.forEach(([x, y, frame, rotation, width, height]) => drawOptionalSprite(roadKey, x, y, { frame, width, height, anchorX: .5, anchorY: .5, rotation, alpha: roadKey === "road-surface-v2" ? .92 : .62 }));
       ctx.restore();
-      // The lower branch is intentionally quieter: one small side-path cell is
-      // enough to make it feel authored without adding another focal cluster.
-      drawOptionalSprite("road-family", 320, 596, { frame: 13, width: 136, height: 86, anchorX: .5, anchorY: .5, rotation: -.14, alpha: .5 });
+      // The lower branch uses a small set of quieter cells so it reads as a
+      // real footpath, not a second highway or another tan placeholder ribbon.
+      ctx.save(); ctx.beginPath(); ctx.moveTo(62, 587); ctx.quadraticCurveTo(310, 548, 548, 578); ctx.lineTo(548, 637); ctx.quadraticCurveTo(310, 608, 62, 650); ctx.closePath(); ctx.clip();
+      drawOptionalSprite(roadKey, 300, 598, { frame: roadKey === "road-surface-v2" ? 0 : 13, width: roadKey === "road-surface-v2" ? 472 : 154, height: roadKey === "road-surface-v2" ? 118 : 96, anchorX: .5, anchorY: .5, rotation: -.1, alpha: roadKey === "road-surface-v2" ? .82 : .5 });
+      if (roadKey === "road-surface-v2") drawOptionalSprite(roadKey, 430, 514, { frame: 1, width: 108, height: 196, anchorX: .5, anchorY: .5, alpha: .76 });
+      ctx.restore();
     }
     // Keep the road material family exclusive to the path. The old outdoor-props
     // cards were decorative logs/roots placed on top of the road and read as
@@ -1304,11 +1332,9 @@
   const drawGrassTuft = (item, time, foreground = false) => {
     if (state.area === "overworld" && isMainRoadZone(item.x, item.y, 82)) return;
     const rustle = item.rustle || 0; const sway = Math.sin(time * 1.05 + item.phase) * .045 + rustle * Math.sin(time * 18 + item.phase) * .26;
-    const foliageFrame = Number.isFinite(item.foliageFrame) ? item.foliageFrame % 4 : Math.abs(Math.floor((item.x * .17 + item.y * .07) % 4));
-    // Keep the large ground-family cards reserved for intentional bushes and
-    // trail repairs. Grass uses the dedicated foliage atlas so it reads as a
-    // light, walkable edge detail rather than a repeated garden bed.
-    if (drawOptionalSprite("outdoor-foliage", item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * 48, height: (item.s || 1) * 48, anchorX: .5, anchorY: .92, alpha: foreground ? .56 : .74, rotation: sway * .2 })) return;
+    const foliageFrame = Number.isFinite(item.foliageFrame) ? Math.abs(item.foliageFrame) % 4 : Math.abs(Math.floor((item.x * .17 + item.y * .07) % 4));
+    const meadowKey = loadedAssets.has("meadow-ground-v2") ? "meadow-ground-v2" : "outdoor-foliage";
+    if (drawOptionalSprite(meadowKey, item.x, item.y + 5, { frame: foliageFrame, width: (item.s || 1) * (meadowKey === "meadow-ground-v2" ? 62 : 48), height: (item.s || 1) * (meadowKey === "meadow-ground-v2" ? 58 : 48), anchorX: .5, anchorY: .92, alpha: foreground ? .48 : .64, rotation: sway * .2 })) return;
     ctx.save(); ctx.translate(item.x, item.y); ctx.rotate(sway); ctx.scale(item.s || 1, item.s || 1); ctx.globalAlpha = foreground ? .56 : .78;
     [[-8, "#5f9e5a"], [-3, "#77b866"], [3, "#4d8950"], [8, "#83c56d"]].forEach(([offset, color], i) => { ctx.strokeStyle = color; ctx.lineWidth = i % 2 ? 3 : 2; ctx.beginPath(); ctx.moveTo(offset, 8); ctx.quadraticCurveTo(offset - 2, -4, offset + (i - 1.5) * 3, -18 - (i % 2) * 4); ctx.stroke(); });
     ctx.restore();
@@ -1320,14 +1346,16 @@
     if (state.area === "overworld" && isMainRoadZone(patch.x, patch.y, Math.max(104, patch.radius * 1.2))) return;
     const rustle = patch.rustle || 0; const density = Math.max(4, Math.round((patch.density + (patch.seed % 3)) * .7)); const scale = patch.scale || .7;
     const isLandmark = Boolean(patch.landmark);
-    if (loadedAssets.has("meadow-edge") && isLandmark) {
-      const frameBase = Number.isFinite(patch.foliageFrame) ? Math.abs(patch.foliageFrame) % 8 : Math.floor(hash01(patch.x, patch.y) * 8);
-      const frame = (frameBase + (rustle > .2 ? Math.floor(time * 2) % 2 : 0)) % 8;
+    const patchKey = loadedAssets.has("meadow-ground-v2") ? "meadow-ground-v2" : loadedAssets.has("meadow-edge") ? "meadow-edge" : null;
+    if (patchKey && isLandmark) {
+      const frameBase = Number.isFinite(patch.foliageFrame) ? Math.abs(patch.foliageFrame) : Math.floor(hash01(patch.x, patch.y) * 8);
+      const frame = (frameBase + (rustle > .2 ? Math.floor(time * 2) % 2 : 0)) % (patchKey === "meadow-ground-v2" ? 16 : 8);
       drawShadow(patch.x, patch.y + 9, 26 * scale, 6 * scale, foreground ? .12 : .16);
-      if (drawOptionalSprite("meadow-edge", patch.x, patch.y + 7, { frame, width: 96 * scale, height: 78 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .68 : .74, rotation: Math.sin(time * .42 + patch.phase) * .004 })) return;
+      if (drawOptionalSprite(patchKey, patch.x, patch.y + 7, { frame, width: (patchKey === "meadow-ground-v2" ? 124 : 96) * scale, height: (patchKey === "meadow-ground-v2" ? 106 : 78) * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .58 : .68, rotation: Math.sin(time * .42 + patch.phase) * .004 })) return;
     }
-    if (loadedAssets.has("outdoor-foliage")) {
-      const frameBase = Number.isFinite(patch.foliageFrame) ? patch.foliageFrame % 4 : 0;
+    if (patchKey || loadedAssets.has("outdoor-foliage")) {
+      const key = patchKey || "outdoor-foliage";
+      const frameBase = Number.isFinite(patch.foliageFrame) ? Math.abs(patch.foliageFrame) : 0;
       const clusterCount = foreground ? 1 : 2;
       drawShadow(patch.x, patch.y + 8, 20 * scale, 5 * scale, foreground ? .1 : .14);
       for (let i = 0; i < clusterCount; i += 1) {
@@ -1335,8 +1363,8 @@
         const radius = i === 0 ? 0 : 8 + hash01(patch.seed + i, 11) * Math.min(24, patch.radius * .3);
         const x = patch.x + Math.cos(angle) * radius;
         const y = patch.y + Math.sin(angle) * radius * .42;
-        const frame = (frameBase + i + (rustle > .2 ? Math.floor(time * 2) % 2 : 0)) % 8;
-        drawOptionalSprite("outdoor-foliage", x, y + 8, { frame, width: 44 * scale, height: 48 * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .42 : .56, rotation: Math.sin(time * .42 + patch.phase + i) * .006 });
+        const frame = (frameBase + i + (rustle > .2 ? Math.floor(time * 2) % 2 : 0)) % (key === "meadow-ground-v2" ? 16 : 8);
+        drawOptionalSprite(key, x, y + 8, { frame, width: (key === "meadow-ground-v2" ? 58 : 44) * scale, height: (key === "meadow-ground-v2" ? 56 : 48) * scale, anchorX: .5, anchorY: .92, alpha: foreground ? .34 : .48, rotation: Math.sin(time * .42 + patch.phase + i) * .006 });
       }
       return;
     }
@@ -1352,8 +1380,9 @@
   };
   const drawFlower = (flower, time) => {
     const rustle = flower.rustle || 0; const sway = Math.sin(time * 1.02 + flower.phase) * .035 + rustle * Math.sin(time * 16 + flower.phase) * .24;
-    const foliageFrame = 8 + (Number.isFinite(flower.foliageFrame) ? flower.foliageFrame % 4 : Math.abs(Math.floor((flower.x * .11 + flower.y * .05) % 4)));
-    if (drawOptionalSprite("outdoor-foliage", flower.x, flower.y + 6, { frame: foliageFrame, width: (flower.s || 1) * 52, height: (flower.s || 1) * 52, anchorX: .5, anchorY: .92, alpha: .94, rotation: sway * .4 })) return;
+    const foliageFrame = 4 + (Number.isFinite(flower.foliageFrame) ? Math.abs(flower.foliageFrame) % 8 : Math.abs(Math.floor((flower.x * .11 + flower.y * .05) % 8)));
+    const flowerKey = loadedAssets.has("meadow-ground-v2") ? "meadow-ground-v2" : "outdoor-foliage";
+    if (drawOptionalSprite(flowerKey, flower.x, flower.y + 6, { frame: flowerKey === "meadow-ground-v2" ? foliageFrame : foliageFrame % 16, width: (flower.s || 1) * (flowerKey === "meadow-ground-v2" ? 66 : 52), height: (flower.s || 1) * (flowerKey === "meadow-ground-v2" ? 64 : 52), anchorX: .5, anchorY: .92, alpha: .9, rotation: sway * .4 })) return;
     ctx.save(); ctx.translate(flower.x, flower.y); ctx.rotate(sway); ctx.scale(flower.s, flower.s); ctx.strokeStyle = "#6f9b58"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 10); ctx.quadraticCurveTo(-2, -2, 0, -11); ctx.stroke(); ctx.fillStyle = flower.color; for (let i = 0; i < 4; i += 1) { ctx.beginPath(); ctx.ellipse(Math.cos(i * 1.57) * 4, -13 + Math.sin(i * 1.57) * 4, 4, 2.5, i * 1.57, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = "#ffe8a4"; ctx.beginPath(); ctx.arc(0, -13, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   };
   const drawRock = (rock) => {
@@ -1470,7 +1499,7 @@
     ctx.save(); ctx.globalAlpha = .12; ctx.fillStyle = "#f6e8ae"; for (let i = 0; i < 10; i += 1) { const x = 160 + ((i * 193) % 1330) + Math.sin(time * .22 + i) * 8; const y = 115 + ((i * 97) % 310) + Math.cos(time * .3 + i) * 6; ctx.beginPath(); ctx.arc(x, y, 1 + (i % 2) * .55, 0, Math.PI * 2); ctx.fill(); } ctx.restore();
   };
   const drawOverworld = (time) => {
-    drawGrassBase(time); environment.clearings.forEach((clearing) => drawClearing(clearing, time)); environment.cliffs.forEach((cliff) => drawCliff(cliff, time)); drawPath(time);
+    drawGrassBase(time); drawGroundCover(time); environment.clearings.forEach((clearing) => drawClearing(clearing, time)); environment.cliffs.forEach((cliff) => drawCliff(cliff, time)); drawPath(time);
     environment.treesBack.forEach((tree) => drawTree(tree, time, "back"));
     drawDappleShadows(time);
     drawPond({ x: 610, y: 650, w: 360, h: 150 }, time); drawPond({ x: 1080, y: 510, w: 260, h: 90 }, time + 1, true);

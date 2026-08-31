@@ -2,6 +2,14 @@
 
 This is the persistent production record for Mosswake's replaceable visual library. The runtime keeps collision, AI, timing, camera, and room composition in `mosswake.js`; artwork is loaded through `assets/manifest.json` so a later generated replacement does not require gameplay rewrites.
 
+## 2026-08-31 — Generated road surface and meadow ground atlas
+
+- Generated and normalized `assets/terrain/mosswake-road-atlas-generated-v2.png` and `assets/plants/mosswake-meadow-atlas-generated-v2.png` as 1280×1280 RGBA 4×4 atlases with 320×320 cells. Both use transparent Mosswake hand-painted orthographic 3/4 modular cutouts with no text, UI, characters, or baked background.
+- The road atlas contains straight, vertical, curved, S, T, cross, Y, clearing, mud, puddle, stone-edge, root, bridge, and worn-fragment cells. `drawPath` composes overlapping cells across the main route, the lower footpath, and their connector; the procedural stroke is now a darker low-alpha offline/collision-safe underlay.
+- The meadow atlas contains low grass, wind-bent grass, ferns, reeds, wildflowers, moss rocks, leaf litter, mushrooms, clover, wet moss, seed heads, sparse groundcover, and fallen-log clusters. `drawGroundCover` places sparse authored islands in clearings, while grass patches, flowers, and individual tufts prefer the new family and retain the existing generated/procedural fallbacks.
+- Added manifest v48 keys `road-surface-v2` and `meadow-ground-v2`; bumped the route script to `mosswake.js?v=88`. Collision, pathing, NPC, combat, save, camera, and room logic are unchanged.
+- Fresh local browser QA showed continuous generated main and side paths, grounded meadow clusters, and zero warning/error entries from the browser dev log.
+
 ## 2026-08-21 — Lower-road junction readability pass
 
 - Replayed the fresh Lanternwood opening and found that the existing lower path read as a disconnected pale strip instead of a branch from the main road.

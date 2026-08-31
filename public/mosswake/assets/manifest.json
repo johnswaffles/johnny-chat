@@ -1,5 +1,5 @@
 {
-  "version": 47,
+  "version": 48,
   "sprites": {
     "ui-panels": {
       "src": "ui/ui-panels-generated-v1.png",
@@ -181,6 +181,18 @@
       "anchorX": 0.5,
       "anchorY": 0.92
     },
+    "meadow-ground-v2": {
+      "src": "plants/mosswake-meadow-atlas-generated-v2.png",
+      "frameWidth": 320,
+      "frameHeight": 320,
+      "columns": 4,
+      "frames": 16,
+      "fps": 2,
+      "displayWidth": 86,
+      "displayHeight": 82,
+      "anchorX": 0.5,
+      "anchorY": 0.92
+    },
     "waystone-clues": {
       "src": "rocks/mosswake-waystone-clue-family-generated-v1.png",
       "frameWidth": 312,
@@ -202,6 +214,18 @@
       "fps": 1,
       "displayWidth": 156,
       "displayHeight": 156,
+      "anchorX": 0.5,
+      "anchorY": 0.5
+    },
+    "road-surface-v2": {
+      "src": "terrain/mosswake-road-atlas-generated-v2.png",
+      "frameWidth": 320,
+      "frameHeight": 320,
+      "columns": 4,
+      "frames": 16,
+      "fps": 1,
+      "displayWidth": 220,
+      "displayHeight": 150,
       "anchorX": 0.5,
       "anchorY": 0.5
     },

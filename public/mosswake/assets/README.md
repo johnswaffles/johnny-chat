@@ -95,6 +95,9 @@ The renderer intentionally keeps the procedural body as a safe fallback. This me
 | `ui/` | `heart`, `key`, `map-marker`, `dialogue-frame` | 48×48 / 9-slice frame |
 | `portraits/` | `rowan`, `tansy`, `brindle`, `lumen` | 96×96 transparent busts, neutral/talk/event expressions |
 
+| `terrain/mosswake-road-atlas-generated-v2.png` | 4 columns × 4 rows, 320×320 source cells, 16 modular cells | Generated ochre path straights, bends, junctions, worn mud, puddle, stone edge, root crossing, bridge, and loose fragments; composed across the main route and lower footpath through `road-surface-v2` with the older road family as fallback |
+| `plants/mosswake-meadow-atlas-generated-v2.png` | 4 columns × 4 rows, 320×320 source cells, 16 modular cells | Generated low meadow, wind-bent grass, fern, reed, wildflower, moss-rock, leaf-litter, mushroom, clover, wet-moss, seed-head, sparse-edge, and fallen-log clusters; used for ground islands, grass patches, flowers, and individual tufts through `meadow-ground-v2` |
+
 ## Completion audit status
 
 The first-section renderer is visually coherent and performance-safe. The player, Rowan, Tansy's directional fire-side movement, Brindle's directional movement, Lumen's directional map-work movement, Mossling, distinct enemy family, enemy combat effects, HUD/pickup icons, Hollow Guardian, Guardian combat FX, Lantern-blade combat FX, water/shoreline family, outdoor cliff family, layered tree family, outdoor foliage family, pond dock, northeast moon arch, secondary moonwell, and Moon Switch Hall bridge threshold now use generated, alpha-prepared assets; the procedural fallback remains available for every other living entity and effect. The remaining high-impact replacements are ranked in **GRAPHICS TO GENERATE NEXT (remaining)** below. The persistent production log lives in `MOSSWAKE_ASSET_UPGRADE_TRACKER.md`.
