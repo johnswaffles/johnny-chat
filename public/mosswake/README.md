@@ -1,5 +1,9 @@
 # Mosswake
 
+## Current starter slice
+
+The public build intentionally starts small: one Lanternwood overworld, Rowan as the only quest-giving NPC, two Mosslings for the first combat encounter, and one hidden pond/grove discovery. Dungeon entry, shrine progression, and the larger NPC roster are disabled in starter mode so the opening loop can be polished before the world expands. The dungeon, boss, and deeper progression systems remain in the source behind `STARTER_MODE` for a later chapter.
+
 Mosswake is a self-contained browser game: **The Hollow Shrine**.
 
 This source boundary was copied from the clean production snapshot of

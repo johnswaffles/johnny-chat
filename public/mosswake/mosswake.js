@@ -10,6 +10,7 @@
   const STORAGE_KEY = "johnny-mosswake-save-v1";
   const WORLD = { width: 1600, height: 1000 };
   const ROOM = { width: 1200, height: 800 };
+  const STARTER_MODE = true;
   const COLORS = {
     grass: "#355e45", grassLight: "#417254", grassDark: "#294936", path: "#b49b6f", water: "#236d72",
     waterLight: "#5cb6a5", wood: "#76523b", stone: "#77867b", dungeon: "#283334", dungeonLight: "#344547",
@@ -109,7 +110,7 @@
     mode: "title", area: "overworld", roomX: 0, roomY: 0, roomVisited: { overworld: true }, key: false, switches: false,
     miniBossDefeated: false, bossDefeated: false, reward: false, secretFound: false, chestOpened: false, heartChestOpened: false, loot: 0,
     rowanClue: false, rowanRewarded: false, southPassageOpen: false, reedCacheFound: false, hiddenChestOpened: false,
-    optionalGuardDefeated: false, lanternLens: false, lanternSeed: false, discoveries: 0, discoveryTotal: 3,
+    optionalGuardDefeated: false, lanternLens: false, lanternSeed: false, discoveries: 0, discoveryTotal: 1,
     dialogueSpeed: 52, spawnGrace: 0, dungeonIntro: 0, dungeonEntranceSeen: false, roomTransition: 0, roomTransitionLabel: "", hazardCooldown: 0, ashCacheOpened: false, ashShortcutOpen: false,
     rootlightLantern: false, rootlightTested: false, rootlightGalleryOpen: false, rootlightGalleryCacheOpened: false, rootlightMoonBridge: false, rootlightWaterway: false, rootlightGateOpen: false, rootlightCacheOpened: false, itemReveal: 0,
     bossIntroSeen: false, bossEntrance: 0, bossPhase: 1, bossPhaseShift: 0, bossArenaPulse: 0, bossDefeatTimer: 0, bossDefeatX: 600, bossDefeatY: 390, bossRewardClaimed: false,
@@ -213,6 +214,7 @@
     // deliberate destination without crowding the fire, map table, or road.
     { id: "marlow", name: "Marlow", role: "Outpost trader", portrait: "trader", x: 752, y: 304, baseX: 752, baseY: 304, behavior: "cart", phase: 5.2, facing: 1, facingAxis: "y" }
   ];
+  const activeNpcs = () => STARTER_MODE ? npcs.filter((npc) => npc.id === "rowan") : npcs;
   let camera = { x: 0, y: 0, shake: 0, shakeX: 0, shakeY: 0, shakePhase: 0 };
   let previousHealthKey = `${player.hp}/${player.maxHp}`;
   let lastFrame = 0;
@@ -324,12 +326,13 @@
   const normaliseSave = (value) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
     const save = { ...value };
-    save.area = value.area === "dungeon" ? "dungeon" : "overworld";
+    save.area = STARTER_MODE ? "overworld" : (value.area === "dungeon" ? "dungeon" : "overworld");
     const roomX = Number(value.roomX); const roomY = Number(value.roomY); const hp = Number(value.hp);
-    save.roomX = Number.isFinite(roomX) ? clamp(Math.trunc(roomX), 0, 2) : 0;
-    save.roomY = Number.isFinite(roomY) ? clamp(Math.trunc(roomY), 0, 1) : 0;
+    save.roomX = STARTER_MODE ? 0 : (Number.isFinite(roomX) ? clamp(Math.trunc(roomX), 0, 2) : 0);
+    save.roomY = STARTER_MODE ? 0 : (Number.isFinite(roomY) ? clamp(Math.trunc(roomY), 0, 1) : 0);
     save.hp = Number.isFinite(hp) ? clamp(hp, 1, 12) : 6;
-    save.roomVisited = value.roomVisited && typeof value.roomVisited === "object" && !Array.isArray(value.roomVisited) ? value.roomVisited : { overworld: true };
+    save.roomVisited = STARTER_MODE ? { overworld: true } : (value.roomVisited && typeof value.roomVisited === "object" && !Array.isArray(value.roomVisited) ? value.roomVisited : { overworld: true });
+    if (STARTER_MODE) { ["key", "switches", "miniBossDefeated", "bossDefeated", "reward", "heartChestOpened", "lanternLens", "lanternSeed", "ashCacheOpened", "ashShortcutOpen", "rootlightLantern", "rootlightTested", "rootlightGalleryOpen", "rootlightGalleryCacheOpened", "rootlightMoonBridge", "rootlightWaterway", "rootlightGateOpen", "rootlightCacheOpened", "bossIntroSeen", "bossRewardClaimed"].forEach((key) => { save[key] = false; }); save.discoveryTotal = 1; }
     return save;
   };
   const applySaveSnapshot = (value) => {
@@ -427,7 +430,7 @@
     });
   };
   const updateNpcs = (dt) => {
-    npcs.forEach((npc) => {
+    activeNpcs().forEach((npc) => {
       npc.clock = (npc.clock || 0) + dt;
       const playerNear = state.area === "overworld" && distance(player, npc) < 92;
       npc.near = playerNear;
@@ -469,7 +472,7 @@
   };
   const nearestNpc = (radius = 68) => {
     if (state.area !== "overworld") return null;
-    return npcs.reduce((nearest, npc) => { const range = distance(player, npc); return range < radius && (!nearest || range < nearest.range) ? { npc, range } : nearest; }, null)?.npc || null;
+    return activeNpcs().reduce((nearest, npc) => { const range = distance(player, npc); return range < radius && (!nearest || range < nearest.range) ? { npc, range } : nearest; }, null)?.npc || null;
   };
   const spawnDrop = (enemy) => {
     if (!enemy.drop) return;
@@ -537,6 +540,7 @@
   };
 
   const startArea = (area, announce = true) => {
+    if (STARTER_MODE && area === "dungeon") area = "overworld";
     state.area = area;
     // Give the player a calm read of each outdoor arrival before enemies wake up.
     // This keeps the opening and post-dungeon return readable without changing combat rules.
@@ -557,11 +561,8 @@
     enemies = []; projectiles = []; drops = []; particles = [];
     if (area === "overworld") {
       player.x = 390; player.y = 500;
-      spawnEnemy("mossling", 650, 455, { group: "meadow-pack" }); spawnEnemy("mossling", 705, 470, { group: "meadow-pack" }); spawnEnemy("mossling", 740, 430, { group: "meadow-pack" });
-      spawnEnemy("thornback", 905, 520, { guardRadius: 120, encounter: "bridge-guard" });
-      spawnEnemy("wisp", 1145, 340, { guardRadius: 150, encounter: "lantern-grove" });
-      spawnEnemy("moth", 1280, 745, { guardRadius: 90, encounter: "chest-ambush" });
-      spawnHiddenEncounter();
+      spawnEnemy("mossling", 650, 455, { group: "meadow-pack" }); spawnEnemy("mossling", 760, 430, { group: "meadow-pack" });
+      if (!STARTER_MODE) { spawnEnemy("thornback", 905, 520, { guardRadius: 120, encounter: "bridge-guard" }); spawnEnemy("wisp", 1145, 340, { guardRadius: 150, encounter: "lantern-grove" }); spawnEnemy("moth", 1280, 745, { guardRadius: 90, encounter: "chest-ambush" }); spawnHiddenEncounter(); }
       if (announce) showToast("LANTERNWOOD · the moths are listening");
     } else {
       player.x = ROOM.width / 2; player.y = ROOM.height - 90;
@@ -591,7 +592,7 @@
     { x: 800, y: 90, w: 300, h: 165, type: "house" }, { x: 1140, y: 100, w: 190, h: 135, type: "outpost" },
     { x: 610, y: 650, w: 360, h: 150, type: "water" }, { x: 1080, y: 510, w: 260, h: 90, type: "water" },
     { x: 240, y: 220, w: 90, h: 130, type: "rock" }, { x: 1420, y: 300, w: 100, h: 190, type: "rock" },
-    ...(!state.rootlightGateOpen ? [{ x: 1360, y: 550, w: 180, h: 58, type: "rootlight-gate" }] : [])
+    ...(!STARTER_MODE && !state.rootlightGateOpen ? [{ x: 1360, y: 550, w: 180, h: 58, type: "rootlight-gate" }] : [])
   ];
   const dungeonObstacles = () => {
     const walls = [{ x: 0, y: 0, w: ROOM.width, h: 35 }, { x: 0, y: ROOM.height - 35, w: ROOM.width, h: 35 }, { x: 0, y: 0, w: 35, h: ROOM.height }, { x: ROOM.width - 35, y: 0, w: 35, h: ROOM.height }];
@@ -620,7 +621,7 @@
     return [];
   };
   const rootlightNodes = () => {
-    if (state.area === "overworld") return [{ id: "rootlight-gate", x: 1450, y: 580, radius: 88, label: "MOONROOT GATE" }];
+    if (state.area === "overworld") return STARTER_MODE ? [] : [{ id: "rootlight-gate", x: 1450, y: 580, radius: 88, label: "MOONROOT GATE" }];
     const key = `${state.roomX}-${state.roomY}`;
     if (key === "0-0") return [{ id: "gallery-cache", x: 990, y: 640, radius: 84, label: "DORMANT CACHE" }];
     if (key === "1-0") return [{ id: "moon-bridge", x: 600, y: 620, radius: 86, label: "ROOT BRIDGE" }];
@@ -833,7 +834,7 @@
     if (state.area === "overworld") {
       const npc = nearestNpc(); if (npc) { talkToNpc(npc); return; }
       const rootNode = nearestRootlightNode(72); if (rootNode && !state.rootlightLantern) { activateRootlightNode(rootNode); return; }
-      if (distance(player, { x: 1350, y: 235 }) < 120) { enterDungeon(); return; }
+      if (!STARTER_MODE && distance(player, { x: 1350, y: 235 }) < 120) { enterDungeon(); return; }
       if (distance(player, { x: 1240, y: 745 }) < 70 && !state.chestOpened) { state.chestOpened = true; state.key = true; state.chestOpening = .44; state.chestOpenX = 1240; state.chestOpenY = 745; state.pickupPulse = .7; playSfx("chest"); spawnLeaves(1240, 745, 18); showToast("You found an old brass key"); saveData(); updateHud(); return; }
       if (distance(player, { x: 1450, y: 665 }) < 78 && state.rootlightGateOpen && !state.rootlightCacheOpened) { state.rootlightCacheOpened = true; state.loot += 1; state.chestOpening = .44; state.chestOpenX = 1450; state.chestOpenY = 665; state.pickupPulse = .7; playSfx("cache"); spawnLeaves(1450, 665, 20); triggerImpact(1450, 665, COLORS.gold, 1.1); showToast("Moonroot cache found · the old road has more secrets", 2200); saveData(); updateHud(); return; }
       if (distance(player, { x: 1060, y: 830 }) < 70 && state.southPassageOpen && !state.hiddenChestOpened && !enemies.some((enemy) => enemy.encounter === "hidden-cache" && !enemy.dead)) {
@@ -852,7 +853,7 @@
     showToast("Nothing within reach · move closer to a glow or nameplate", 1200);
   };
 
-  const enterDungeon = () => { playSfx("door"); state.area = "dungeon"; state.roomX = 0; state.roomY = 0; player.x = ROOM.width / 2; player.y = ROOM.height - 100; startArea("dungeon"); saveData(); updateObjective(); };
+  const enterDungeon = () => { if (STARTER_MODE) return; playSfx("door"); state.area = "dungeon"; state.roomX = 0; state.roomY = 0; player.x = ROOM.width / 2; player.y = ROOM.height - 100; startArea("dungeon"); saveData(); updateObjective(); };
   const transitionDungeon = (dx, dy) => {
     const from = `${state.roomX}-${state.roomY}`; const targetX = state.roomX + dx; const targetY = state.roomY + dy;
     if (from === "0-0" && dy < 0 || from === "0-1" && dy > 0) { if (from === "0-1") { state.area = "overworld"; startArea("overworld"); return; } }
@@ -1533,7 +1534,7 @@
     drawHouse(800, 90, 300, 165, "#d5c99e", "#a56e4e"); drawHouse(1140, 100, 190, 135, "#9fb88b", "#6a8e70");
     drawLantern(790, 290, time); drawLantern(1115, 282, time + 1); drawLantern(1280, 172, time + 2);
     ctx.fillStyle = "#6c4d3a"; ctx.fillRect(1280, 180, 64, 64); ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4; ctx.strokeRect(1280, 180, 64, 64); ctx.fillStyle = "rgba(130,241,215,.42)"; ctx.fillRect(1290, 190, 44, 44); ctx.fillStyle = "#e5d59f"; ctx.fillRect(1303, 246, 20, 7);
-    environment.rocks.forEach(drawRock); environment.logs.forEach(drawLog); drawExplorationClues(time); drawHiddenGrovePreview(time); drawRootlightOverworld(time);
+    environment.rocks.forEach(drawRock); environment.logs.forEach(drawLog); drawExplorationClues(time); drawHiddenGrovePreview(time); if (!STARTER_MODE) drawRootlightOverworld(time);
     environment.grassPatches.filter((patch) => patch.y <= 560).forEach((patch) => drawGrassPatch(patch, time));
     environment.grasses.filter((grass, index) => index % 2 === 0 || grass.y > 600).forEach((grass) => drawGrassTuft(grass, time));
     environment.flowers.filter((flower) => !isMainRoadZone(flower.x, flower.y, 84)).forEach((flower) => drawFlower(flower, time));
@@ -1654,8 +1655,8 @@
     const candidates = [];
     const add = (x, y, radius, label, text) => { const range = distance(player, { x, y }); if (range < radius) candidates.push({ x, y, range, label, text }); };
     if (state.area === "overworld") {
-      if (!state.rootlightLantern) add(1450, 580, 72, "E", "CHECK GATE");
-      if (distance(player, { x: 1350, y: 235 }) < 120) add(1312, 210, 120, "E", "ENTER SHRINE");
+      if (!STARTER_MODE && !state.rootlightLantern) add(1450, 580, 72, "E", "CHECK GATE");
+      if (!STARTER_MODE && distance(player, { x: 1350, y: 235 }) < 120) add(1312, 210, 120, "E", "ENTER SHRINE");
       if (!state.chestOpened) add(1240, 745, 70, "E", "OPEN CHEST");
       if (state.rootlightGateOpen && !state.rootlightCacheOpened) add(1450, 665, 78, "E", "SEARCH CACHE");
       if (state.southPassageOpen && !state.hiddenChestOpened && !enemies.some((enemy) => enemy.encounter === "hidden-cache" && !enemy.dead)) add(1060, 830, 70, "E", "SEARCH GROVE");
@@ -2402,7 +2403,7 @@
         : entry.actor.y;
     const actorEntities = [
       ...enemies.map((enemy) => ({ kind: "enemy", actor: enemy })),
-      ...(state.area === "overworld" ? npcs.map((npc) => ({ kind: "npc", actor: npc })) : []),
+      ...(state.area === "overworld" ? activeNpcs().map((npc) => ({ kind: "npc", actor: npc })) : []),
       { kind: "player", actor: player }
     ].sort((a, b) => actorDepthY(a) - actorDepthY(b));
     actorEntities.forEach((entry) => { if (entry.kind === "player") drawPlayer(time); else if (entry.kind === "npc") drawNpc(entry.actor, time); else drawEnemy(entry.actor, time); });
@@ -2423,6 +2424,7 @@
   };
 
   const updateObjective = () => {
+    if (STARTER_MODE) { if (!state.rowanClue) { ui.objective.textContent = "Meet Rowan at the outpost"; ui.objectiveCopy.textContent = "Walk the lantern road and press E when the nameplate appears."; } else if (!state.southPassageOpen) { ui.objective.textContent = "Explore Lanternwood"; ui.objectiveCopy.textContent = "Follow the worn road, practice your sword, and look for the ivy-hidden pond path."; } else if (!state.hiddenChestOpened) { ui.objective.textContent = "Find the hidden grove"; ui.objectiveCopy.textContent = "The reeds parted near the low pond. Something old is waiting beyond them."; } else { ui.objective.textContent = "Lanternwood is yours to explore"; ui.objectiveCopy.textContent = "A small beginning. The shrine and deeper roads will come in a later chapter."; } return; }
     if (state.area === "overworld") {
       if (state.rootlightLantern && !state.rootlightGateOpen) { ui.objective.textContent = "Follow the Moonroot glow"; ui.objectiveCopy.textContent = "Press L near the sealed gate beyond the pond. The lantern reveals what daylight misses."; }
       else if (!state.rowanClue) { ui.objective.textContent = "Find Rowan at the outpost"; ui.objectiveCopy.textContent = "The blue moths gather where the old path breaks."; }
@@ -2441,14 +2443,14 @@
     else { ui.objective.textContent = "Explore the shrine"; ui.objectiveCopy.textContent = "Every room remembers a different season."; }
   };
   const updateHud = () => {
-    ui.area.textContent = state.area === "overworld" ? "Lanternwood" : "Hollow Shrine";
-    ui.room.textContent = state.area === "overworld" ? "Outpost field" : dungeonRoomName();
-    ui.seed.textContent = state.reward ? "1" : "0"; ui.keys.textContent = state.key ? "1" : "0"; ui.loot.textContent = state.loot || "0";
+    ui.area.textContent = "Lanternwood";
+    ui.room.textContent = "Starter field";
+    ui.seed.textContent = "0"; ui.keys.textContent = "0"; ui.loot.textContent = state.loot || "0";
     if (ui.discovery) ui.discovery.textContent = `${state.discoveries || 0}/${state.discoveryTotal || 3}`;
-    if (ui.ability) { ui.ability.textContent = state.rootlightLantern ? (player.rootlightCooldown > 0 ? `Moonwake Lantern · ${player.rootlightCooldown.toFixed(1)}s` : "Moonwake Lantern · L ready") : "Rootlight dormant"; ui.ability.classList.toggle("ready", Boolean(state.rootlightLantern && player.rootlightCooldown <= 0)); }
+    if (ui.ability) { ui.ability.textContent = STARTER_MODE ? "Starter slice · lantern coming later" : state.rootlightLantern ? (player.rootlightCooldown > 0 ? `Moonwake Lantern · ${player.rootlightCooldown.toFixed(1)}s` : "Moonwake Lantern · L ready") : "Rootlight dormant"; ui.ability.classList.toggle("ready", Boolean(!STARTER_MODE && state.rootlightLantern && player.rootlightCooldown <= 0)); }
     ui.save.textContent = state.saveError ? "Save unavailable" : state.mode === "playing" ? "Autosaved" : state.mode === "title" ? "Not started" : state.mode === "victory" ? "Complete" : state.mode === "dead" ? "Run ended" : "Paused";
     const healthKey = `${player.hp}/${player.maxHp}`; const healthChanged = healthKey !== previousHealthKey; ui.hearts.innerHTML = ""; for (let i = 0; i < player.maxHp; i += 1) { const heart = document.createElement("i"); heart.className = "heart" + (i < player.hp ? "" : " empty") + (loadedAssets.has("ui-icons") ? " painted" : ""); ui.hearts.appendChild(heart); } if (healthChanged) { ui.hearts.classList.remove("health-pop"); void ui.hearts.offsetWidth; ui.hearts.classList.add("health-pop"); window.setTimeout(() => ui.hearts.classList.remove("health-pop"), 300); previousHealthKey = healthKey; }
-    ui.map.innerHTML = ""; ["0-0","1-0","2-0","0-1","1-1","2-1"].forEach((key) => { const dot = document.createElement("i"); dot.className = (state.roomVisited[`dungeon-${key}`] ? "done " : "") + (state.area === "dungeon" && `${state.roomX}-${state.roomY}` === key ? "active" : ""); ui.map.appendChild(dot); }); updateObjective();
+    ui.map.innerHTML = ""; const dot = document.createElement("i"); dot.className = "done active"; ui.map.appendChild(dot); updateObjective();
   };
   const updateDialogueSpeedLabel = () => { if (!ui.dialogueSpeed) return; const speed = state.dialogueSpeed || 52; ui.dialogueSpeed.textContent = `Text: ${speed >= 100 ? "fast" : speed <= 36 ? "slow" : "normal"}`; };
   const showVictory = () => { state.mode = "victory"; hideScreens(); ui.victory.classList.remove("hidden"); updateHud(); };

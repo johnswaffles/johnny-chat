@@ -10,6 +10,11 @@ This is the persistent production record for Mosswake's replaceable visual libra
 - Added manifest v48 keys `road-surface-v2` and `meadow-ground-v2`; bumped the route script to `mosswake.js?v=88`. Collision, pathing, NPC, combat, save, camera, and room logic are unchanged.
 - Fresh local browser QA showed continuous generated main and side paths, grounded meadow clusters, and zero warning/error entries from the browser dev log.
 
+## 2026-08-31 — Starter slice scope lock
+
+- The public experience is intentionally constrained to one Lanternwood overworld, Rowan as the only active quest-giving NPC, two Mosslings for the first combat beat, and one hidden pond/grove discovery.
+- Dungeon, shrine, boss, and larger NPC systems remain preserved in source but are disabled behind `STARTER_MODE` until the small opening loop is fully polished. This is a scope decision, not an asset-family completion claim.
+
 ## 2026-08-21 — Lower-road junction readability pass
 
 - Replayed the fresh Lanternwood opening and found that the existing lower path read as a disconnected pale strip instead of a branch from the main road.
