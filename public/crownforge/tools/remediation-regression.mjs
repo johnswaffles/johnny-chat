@@ -2133,6 +2133,14 @@ function checkVillagerLastStandDefense() {
   stunSimulation._applyUnitDamage(stunRaider, villagerRules.attack, stunVillager);
   assert.ok(stunRaider.hp < immuneHp, 'stun immunity does not grant damage immunity');
 
+  const immediateAggro = movementSandbox();
+  const aggroVillager = immediateAggro.addUnit('villager', 20, 20, 'player');
+  const aggroRaider = immediateAggro.addUnit('raider', 22, 20, 'enemy');
+  aggroRaider.stunImmunityTimer = 20;
+  assert.equal(immediateAggro._aggroTargetOnVillager(aggroVillager, aggroRaider), true, 'a hostile struck by a Villager immediately accepts the Villager as its aggro target');
+  assert.equal(aggroRaider.attackTarget, aggroVillager.id, 'Villager retaliation points at the Villager who started the fight');
+  assert.equal(aggroRaider.command, 'attack', 'Villager retaliation starts without waiting for the enemy intent service');
+
   const commandSimulation = movementSandbox();
   const carryingVillager = commandSimulation.addUnit('villager', 10, 10, 'player');
   const secondVillager = commandSimulation.addUnit('villager', 10, 12, 'player');

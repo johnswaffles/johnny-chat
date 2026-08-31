@@ -18,6 +18,11 @@ Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 - Kept nearby-threat reacquisition inside the existing local auto-defense radius and preserved exact player-issued attack targets until those targets are gone.
 - Kept the independent-tree forest pass in the same release: each tree still clears its own canopy and returns the space to normal meadow immediately at zero Wood.
 
+## 2026-08-31 — Villager retaliation pass
+
+- Any surviving hostile unit struck by a Villager now immediately records that Villager as its aggro target and routes a retaliation attack without waiting for the next enemy-intent service tick.
+- Stunned humanoids preserve the same Villager as their release target, so the existing stun and immunity window remains readable without losing the source of the fight.
+
 ## WHAT EXISTS
 
 - A standalone browser-first Crownforge project under `crownforge/`.

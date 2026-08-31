@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260830-forestguard1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260831-villageraggro1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-latencypass1';
 
@@ -3599,6 +3599,36 @@ export class CrownforgeSimulation {
     return true;
   }
 
+  _aggroTargetOnVillager(villager, target) {
+    if (!villager
+      || villager.type !== 'villager'
+      || villager.dead
+      || !target
+      || target.kind !== 'unit'
+      || target.dead
+      || target.faction === villager.faction
+      || target.faction === 'neutral') return false;
+
+    // A stunned humanoid already has the Villager recorded as its release
+    // source. Preserve the attack target while the stun plays so it cannot
+    // forget who started the fight, then let the normal stun-release path
+    // route the retaliation.
+    if (target.stunTimer > 0) {
+      target.attackTarget = villager.id;
+      target.attackTargetKind = 'unit';
+      target.stunSourceId = villager.id;
+      return true;
+    }
+
+    const targetRules = UNIT_TYPES[target.type] ?? {};
+    if (targetRules.canAttackUnits === false) return false;
+    this._interruptWork(target);
+    target.attackSlot = target.id % COMBAT_SLOT_COUNT;
+    const routed = this._sendUnitToAttack(target, villager, target.attackSlot);
+    if (routed) target.actionLabel = `Retaliating against ${UNIT_TYPES[villager.type].label}`;
+    return routed;
+  }
+
   _rallyVillagersToDefend(protectedVillager, attacker, radius) {
     if (!attacker || attacker.dead || attacker.kind !== 'unit' || attacker.faction === protectedVillager.faction) return 0;
     const defenders = this.units
@@ -3785,7 +3815,10 @@ export class CrownforgeSimulation {
               blocked: result.blocked,
             });
             target.healthRevealTimer = Math.max(target.healthRevealTimer, 1.6);
-            if (!target.dead) this._tryApplyVillagerStun(unit, target);
+            if (!target.dead) {
+              this._tryApplyVillagerStun(unit, target);
+              if (unit.type === 'villager') this._aggroTargetOnVillager(unit, target);
+            }
           }
         } else {
           this.animation.emit(unit, ANIMATION_EVENTS.attackWhiff, payload);
