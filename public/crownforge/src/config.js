@@ -114,42 +114,51 @@ export function resourceDepletionStage(node) {
   return Math.min(stageCount - 1, Math.floor((1 - ratio) * stageCount));
 }
 
+// Crownwardens and Ashen settlements draw from the same Hearthkin people.
+// Faction colors and buildings stay distinct, but the shared worker contract
+// keeps construction, defense, and recovery abilities consistent on both
+// sides of the frontier.
+const HEARTHKIN_WORKER_ABILITIES = Object.freeze({
+  race: 'hearthkin',
+  worker: true,
+  canBuild: true,
+  repairRate: 8,
+  autoBuildRadius: 12,
+  regroupAtTownCenter: true,
+  canAttackUnits: true,
+  canAttackBuildings: false,
+  stunOnHit: Object.freeze({
+    targetTrait: 'humanoid',
+    duration: 5,
+    immunityDuration: 20,
+  }),
+  lastLightWard: Object.freeze({
+    duration: 60,
+    swarmRadius: 14,
+  }),
+});
+
 export const UNIT_TYPES = {
   villager: {
-    label: 'Villager',
+    ...HEARTHKIN_WORKER_ABILITIES,
+    label: 'Hearthkin',
     asset: 'villager',
     renderSize: 88,
-    worker: true,
     // Builder behavior is data-driven so future worker or engineer units can
     // inherit construction, repair, and nearby auto-assist without adding
     // another unit-type check to the input or simulation layers.
-    canBuild: true,
-    repairRate: 8,
-    autoBuildRadius: 12,
-    regroupAtTownCenter: true,
     speed: 2.9,
     acceleration: 10.5,
     braking: 13.5,
     radius: 0.36,
     maxHp: 42,
-    // Villagers can defend one another, but they remain workers rather than
+    // Hearthkin can defend one another, but they remain workers rather than
     // substitute soldiers. An Ashen Raider has 72 HP, so 3.6 damage is an
     // exact twenty clean hits before armor gives way.
     attack: 3.6,
     range: 0.95,
     cooldown: 1.25,
     attackTiming: { anticipation: 0.2, contact: 0.46, recovery: 0.34 },
-    canAttackUnits: true,
-    canAttackBuildings: false,
-    stunOnHit: {
-      targetTrait: 'humanoid',
-      duration: 5,
-      immunityDuration: 20,
-    },
-    lastLightWard: {
-      duration: 60,
-      swarmRadius: 14,
-    },
   },
   soldier: {
     label: 'Crown Guard',
@@ -184,12 +193,10 @@ export const UNIT_TYPES = {
     traits: ['humanoid'],
   },
   ashenForager: {
-    label: 'Ashen Forager',
+    ...HEARTHKIN_WORKER_ABILITIES,
+    label: 'Hearthkin',
     asset: 'raider',
     renderSize: 104,
-    canBuild: true,
-    repairRate: 7,
-    autoBuildRadius: 10,
     speed: 2.75,
     acceleration: 10.2,
     braking: 13.2,
@@ -198,11 +205,7 @@ export const UNIT_TYPES = {
     attack: 2.4,
     range: 0.9,
     cooldown: 1.35,
-    canAttackUnits: false,
-    canAttackBuildings: false,
     combatAtlas: 'ashenForagerMotion',
-    worker: true,
-    regroupAtTownCenter: true,
     traits: ['humanoid'],
   },
   ashenOutrider: {
@@ -361,7 +364,7 @@ export const SPACING_ROLES = {
 
 export const PRODUCTION_TYPES = {
   villager: {
-    label: 'Villager',
+    label: 'Hearthkin',
     icon: 'icon-villager',
     building: 'townCenter',
     trainTime: 4,
@@ -406,7 +409,7 @@ export const PRODUCTION_TYPES = {
     cost: { food: 45, wood: 20, stone: 0, gold: 5 },
   },
   ashenForager: {
-    label: 'Ashen Forager',
+    label: 'Hearthkin',
     icon: 'icon-villager',
     building: 'ashenCamp',
     trainTime: 7,
@@ -992,7 +995,7 @@ export const BUILDING_TYPES = {
   },
   ashenField: {
     label: 'Ashen Crop Plot',
-    function: 'One-forager food plot',
+    function: 'One-Hearthkin food plot',
     asset: 'ashenField',
     maxHp: 140,
     footprint: { width: 8, height: 6 },

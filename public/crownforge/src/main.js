@@ -1,8 +1,8 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260831-firstage2';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260901-hearthkin1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260828-latencypass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260901-ashenmotion1';
-import { CrownforgeSimulation } from './simulation.js?v=20260901-ashenmotion1';
+import { CrownforgeRenderer } from './renderer.js?v=20260901-hearthkin1';
+import { CrownforgeSimulation } from './simulation.js?v=20260901-hearthkin1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260831-firstage2';
 
@@ -204,7 +204,7 @@ const input = new CrownforgeInput({
     updateUi();
   },
   onSelectAllVillagersShortcut: () => {
-    if (!simulation.selectedEntities.some((entity) => entity.kind === 'unit' && entity.type === 'villager' && entity.faction === 'player' && !entity.dead)) return;
+    if (!simulation.selectedEntities.some((entity) => entity.kind === 'unit' && UNIT_TYPES[entity.type]?.worker && entity.faction === 'player' && !entity.dead)) return;
     audio.unlock();
     audio.ui();
     const result = simulation.selectAllVillagers();
@@ -294,7 +294,7 @@ function beginBuildingPlacement(type, options = {}) {
     return;
   }
   if (builder.carryAmount > 0) {
-    announce('Let the selected villager deposit cargo before building.');
+    announce('Let the selected Hearthkin deposit cargo before building.');
     audio.play('invalid');
     return;
   }
@@ -546,7 +546,7 @@ function updateUi() {
   ui.selectionDetail.textContent = selectionStatus();
   if (selectionRecovery) selectionRecovery.hidden = !simulation.canRecoverSelectedUnits();
   const hasSelectedVillager = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
-    && entity.type === 'villager'
+    && UNIT_TYPES[entity.type]?.worker
     && entity.faction === 'player'
     && !entity.dead);
   if (selectionVillagerActions) selectionVillagerActions.hidden = !hasSelectedVillager;
@@ -681,7 +681,7 @@ function updateUi() {
     setTooltip(button, !builder
       ? `Select a builder before placing a ${blueprint.label}`
       : builder.carryAmount > 0
-        ? 'Let the selected villager deposit cargo first'
+        ? 'Let the selected Hearthkin deposit cargo first'
         : !affordable
           ? `Gather the resources needed for a ${blueprint.label}`
           : blueprint.wall
@@ -798,7 +798,7 @@ function selectionPresentation() {
   if (!entities.length) return { kind: 'NO SELECTION', icon: 'icon-controls' };
   if (entities.length > 1) return { kind: 'GROUP', icon: 'icon-population' };
   const entity = entities[0];
-  if (entity.kind === 'unit') return entity.type === 'villager'
+  if (entity.kind === 'unit') return UNIT_TYPES[entity.type]?.worker
     ? { kind: 'WORKER', icon: 'icon-villager' }
     : { kind: 'COMBAT UNIT', icon: 'icon-soldier' };
   if (entity.kind === 'building') return { kind: entity.progress < 1 ? 'UNDER CONSTRUCTION' : 'BUILDING', icon: 'icon-house' };
@@ -822,7 +822,7 @@ function selectionStatus() {
     const progress = building.progress < 1 ? ` · build ${Math.round(building.progress * 100)}%${stage}` : '';
     if (building.demolitionQueued) {
       const remaining = Math.round((building.demolitionWork / Math.max(1, building.demolitionMaxWork)) * 100);
-      return `${Math.ceil(building.hp)} / ${building.maxHp} HP · dismantling · ${remaining}% labor remaining · selected Villagers work from safe edge positions`;
+      return `${Math.ceil(building.hp)} / ${building.maxHp} HP · dismantling · ${remaining}% labor remaining · selected Hearthkin work from safe edge positions`;
     }
     const damage = building.progress >= 1 && building.hp < building.maxHp
       ? ` · ${Math.round((building.hp / building.maxHp) * 100)}% integrity`
@@ -844,7 +844,7 @@ function selectionStatus() {
       : unit.stunImmunityTimer > 0
         ? ` · stun immune ${Math.ceil(unit.stunImmunityTimer)}s`
         : '';
-    const defense = unit.type === 'villager'
+    const defense = UNIT_TYPES[unit.type]?.worker
       ? unit.lastLightWardTimer > 0
         ? ` · Last Light Ward ${Math.ceil(unit.lastLightWardTimer)}s · invulnerable`
         : ' · defensive strike stuns humanoids · Last Light Ward ready'
@@ -884,7 +884,7 @@ function buildingAbilityLabel(building, blueprint) {
       : '';
     return `drop-off for ${acceptedLabel} · shortens return routes${support}`;
   }
-  if (blueprint.field) return building.farmerId ? 'one farmer tending · generates food' : 'one farmer · awaiting worker';
+  if (blueprint.field) return building.farmerId ? 'one Hearthkin tending · generates food' : 'one Hearthkin · awaiting worker';
   if (blueprint.population) return `housing · adds ${blueprint.population} population space`;
   if (blueprint.wall) return 'defensive boundary · blocks movement';
   if (blueprint.gate) return 'passable defensive entryway · replaces one Palisade panel';
@@ -961,7 +961,7 @@ function frame(now) {
   });
   if (!sceneReadyAnnounced) {
     sceneReadyAnnounced = true;
-    announce(`${FACTION.name} are ready. Select a villager, then click a resource.`);
+    announce(`${FACTION.name} are ready. Select a Hearthkin, then click a resource.`);
   }
   requestAnimationFrame(frame);
 }

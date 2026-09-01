@@ -1063,7 +1063,21 @@ function checkBuilderWorkflowAndVillagerControls() {
   assert.equal(selected.count, 2, 'select-all includes every living player Villager only');
   assert.deepEqual(selection.selectedIds, [first.id, second.id], 'select-all excludes soldiers, enemies, and fallen Villagers');
 
-  assert.match(INDEX_HTML, /id="select-all-villagers"/, 'selection panel exposes a Select All Villagers button');
+  const neutral = movementSandbox();
+  const crownHearthkin = neutral.addUnit('villager', 10, 10, 'player');
+  const ashenHearthkin = neutral.addUnit('ashenForager', 12, 10, 'enemy');
+  crownHearthkin.attackTarget = ashenHearthkin.id;
+  crownHearthkin.attackTargetKind = 'unit';
+  assert.equal(neutral._sendUnitToAttack(crownHearthkin, ashenHearthkin), false, 'opposing Hearthkin cannot attack one another');
+  neutral.selectedIds = [crownHearthkin.id];
+  neutral._syncSelectionFlags();
+  const neutralCommand = neutral.issueContextCommand(ashenHearthkin, ashenHearthkin);
+  assert.equal(neutralCommand.success, false, 'manual attack command respects Hearthkin neutrality');
+  assert.match(neutral.lastCommand, /one race and remain neutral/, 'neutrality gives the player a clear command explanation');
+
+  assert.match(INDEX_HTML, /id="select-all-villagers"/, 'selection panel exposes a Select All Hearthkin button');
+  assert.match(INDEX_HTML, /SELECT ALL HEARTHKIN/, 'selection panel uses the shared Hearthkin name');
+  assert.doesNotMatch(INDEX_HTML, /FIRST-AGE DOCTRINE|WORK CREW|FIRST-AGE MILESTONES/, 'legacy First Age panels are removed from the left rail');
   assert.match(INDEX_HTML, /SETTLEMENT-WIDE <kbd>V<\/kbd>/, 'Select All Villagers button advertises its keyboard shortcut');
   assert.match(INPUT_SOURCE, /buildingNeedsWork\(entity\)/, 'hover targeting asks the shared building-work capability');
   assert.match(INPUT_SOURCE, /one normal click is one order/, 'selected units expose the primary-click command contract');
@@ -2030,6 +2044,15 @@ function checkAshenSettlementEconomyAndAI() {
   }
   assert.equal(UNIT_TYPES.ashenForager.worker, true, 'Ashen Forager participates in the shared worker economy');
   assert.equal(UNIT_TYPES.ashenForager.canBuild, true, 'Ashen Forager uses the shared construction foundation');
+  assert.equal(UNIT_TYPES.villager.race, 'hearthkin', 'Crownwarden worker belongs to the Hearthkin race');
+  assert.equal(UNIT_TYPES.ashenForager.race, 'hearthkin', 'Ashen worker belongs to the Hearthkin race');
+  assert.equal(UNIT_TYPES.villager.label, 'Hearthkin', 'Crownwarden worker uses the shared Hearthkin name');
+  assert.equal(UNIT_TYPES.ashenForager.label, 'Hearthkin', 'Ashen worker uses the shared Hearthkin name');
+  for (const ability of ['worker', 'canBuild', 'canAttackUnits', 'canAttackBuildings', 'repairRate', 'autoBuildRadius', 'regroupAtTownCenter']) {
+    assert.deepEqual(UNIT_TYPES.ashenForager[ability], UNIT_TYPES.villager[ability], `Hearthkin workers share the ${ability} ability`);
+  }
+  assert.deepEqual(UNIT_TYPES.ashenForager.stunOnHit, UNIT_TYPES.villager.stunOnHit, 'Hearthkin workers share defensive stun behavior');
+  assert.deepEqual(UNIT_TYPES.ashenForager.lastLightWard, UNIT_TYPES.villager.lastLightWard, 'Hearthkin workers share Last Light Ward');
   for (const type of ['ashenForager', 'raider', 'ashenOutrider', 'thornSpear', 'hearthLevy', 'hidewall']) {
     assert.ok(PRODUCTION_TYPES[type], `${type} has a restrained production contract`);
   }

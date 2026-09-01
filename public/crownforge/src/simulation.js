@@ -1,8 +1,10 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260831-firstage2';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260901-hearthkin1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260901-ashenmotion1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260901-hearthkin1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
+const areHearthkinNeutral = (first, second) => isHearthkinUnit(first) && isHearthkinUnit(second);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const moveToward = (value, target, amount) => value < target ? Math.min(value + amount, target) : Math.max(value - amount, target);
 const TAU = Math.PI * 2;
@@ -328,7 +330,9 @@ export class CrownforgeSimulation {
     this.lastCommand = 'Select a Crownwarden and issue an order.';
     this._seedWorld(this.activeWorldSeed);
     this._updateExploration();
-    this.selectedIds = this.units.filter((unit) => unit.type === 'villager').map((unit) => unit.id);
+    this.selectedIds = this.units
+      .filter((unit) => isHearthkinUnit(unit) && unit.faction === 'player')
+      .map((unit) => unit.id);
     this._syncSelectionFlags();
   }
 
@@ -466,7 +470,7 @@ export class CrownforgeSimulation {
   setWorkerFocus(focus = 'balanced') {
     if (!FIRST_AGE_WORK_PRIORITIES[focus]) return this.workerFocus;
     this.workerFocus = focus;
-    this._announce(`Worker focus set to ${FIRST_AGE_WORK_PRIORITIES[focus].label}. Nearby idle villagers will follow it.`);
+    this._announce(`Worker focus set to ${FIRST_AGE_WORK_PRIORITIES[focus].label}. Nearby idle Hearthkin will follow it.`);
     return this.workerFocus;
   }
 
@@ -1263,7 +1267,12 @@ export class CrownforgeSimulation {
     const target = unit.attackTargetKind === 'building'
       ? this.buildings.find((candidate) => candidate.id === unit.attackTarget && !candidate.destroyed && candidate.hp > 0 && candidate.progress >= 1)
       : this.units.find((candidate) => candidate.id === unit.attackTarget && !candidate.dead);
-    return target && target.faction !== unit.faction && target.faction !== 'neutral' ? target : null;
+    return target
+      && target.faction !== unit.faction
+      && target.faction !== 'neutral'
+      && !areHearthkinNeutral(unit, target)
+      ? target
+      : null;
   }
 
   _releaseCombatSlot(unit) {
@@ -2518,7 +2527,7 @@ export class CrownforgeSimulation {
     }
     // A worker owns a resource slot only while approaching or working the
     // node. Once the gathered bundle is on the worker, the slot is free for
-    // another villager (or for a retasked worker to choose again later).
+    // another Hearthkin (or for a retasked worker to choose again later).
     this._releaseResourceSlot(unit);
     this._beginReturn(unit);
   }
@@ -3210,7 +3219,7 @@ export class CrownforgeSimulation {
 
   _isRecoverableUnit(unit) {
     // Recovery is an explicit beta-sandbox command, not a warning that only
-    // appears after the pathfinder has already declared a Villager stuck.
+    // appears after the pathfinder has already declared a Hearthkin stuck.
     // Any selected living player unit may be returned to a clear Crown Hall
     // approach, which also gives the player a dependable escape from a bad
     // wall/tower placement without waiting for a hidden timeout.
@@ -3854,7 +3863,10 @@ export class CrownforgeSimulation {
 
   _findNearestHostile(unit) {
     const attackerRules = UNIT_TYPES[unit.type] ?? {};
-    const unitTargets = attackerRules.canAttackUnits === false ? [] : this.units.filter((candidate) => !candidate.dead && candidate.faction !== unit.faction && candidate.faction !== 'neutral');
+    const unitTargets = attackerRules.canAttackUnits === false ? [] : this.units.filter((candidate) => !candidate.dead
+      && candidate.faction !== unit.faction
+      && candidate.faction !== 'neutral'
+      && !areHearthkinNeutral(unit, candidate));
     const buildingTargets = attackerRules.canAttackBuildings === false ? [] : this.buildings.filter((candidate) => {
       if (candidate.destroyed || candidate.hp <= 0 || candidate.progress < 1 || candidate.faction === unit.faction || candidate.faction === 'neutral') return false;
       return unit.faction === 'player' ? Boolean(BUILDING_TYPES[candidate.type].enemyStructure) : candidate.type === 'townCenter';
@@ -3998,6 +4010,7 @@ export class CrownforgeSimulation {
 
   _sendUnitToAttack(unit, target, slot = 0, options = {}) {
     if (!target || target.hp <= 0 || target.dead || target.destroyed) return false;
+    if (target.kind === 'unit' && areHearthkinNeutral(unit, target)) return false;
     const attackerRules = UNIT_TYPES[unit.type] ?? {};
     if (target.kind === 'unit' && attackerRules.canAttackUnits === false) return false;
     if (target.kind === 'building' && attackerRules.canAttackBuildings === false) return false;
@@ -4047,7 +4060,7 @@ export class CrownforgeSimulation {
     const stunRule = UNIT_TYPES[attacker.type]?.stunOnHit;
     const targetTraits = UNIT_TYPES[target.type]?.traits ?? [];
     if (!stunRule
-      || attacker.faction === target.faction
+      || (attacker.faction === target.faction && !areHearthkinNeutral(attacker, target))
       || !targetTraits.includes(stunRule.targetTrait)
       || target.dead
       || target.stunTimer > 0
@@ -4078,12 +4091,13 @@ export class CrownforgeSimulation {
 
   _aggroTargetOnVillager(villager, target) {
     if (!villager
-      || villager.type !== 'villager'
+      || !isHearthkinUnit(villager)
       || villager.dead
       || !target
       || target.kind !== 'unit'
       || target.dead
-      || target.faction === villager.faction
+      || (target.faction === villager.faction && !areHearthkinNeutral(villager, target))
+      || areHearthkinNeutral(villager, target)
       || target.faction === 'neutral') return false;
 
     // A stunned humanoid already has the Villager recorded as its release
@@ -4109,7 +4123,7 @@ export class CrownforgeSimulation {
   _rallyVillagersToDefend(protectedVillager, attacker, radius) {
     if (!attacker || attacker.dead || attacker.kind !== 'unit' || attacker.faction === protectedVillager.faction) return 0;
     const defenders = this.units
-      .filter((unit) => unit.type === 'villager'
+      .filter((unit) => isHearthkinUnit(unit)
         && unit.faction === protectedVillager.faction
         && !unit.dead
         && distance(unit, protectedVillager) <= radius)
@@ -4139,8 +4153,8 @@ export class CrownforgeSimulation {
       duration,
     });
     const defenders = this._rallyVillagersToDefend(villager, attacker, wardRule.swarmRadius ?? 14);
-    const rally = defenders > 0 ? ` ${defenders} nearby villager${defenders === 1 ? '' : 's'} rally.` : '';
-    this._announce(`Last Light Ward saves the Villager for ${duration} seconds.${rally}`);
+    const rally = defenders > 0 ? ` ${defenders} nearby Hearthkin rally.` : '';
+    this._announce(`Last Light Ward saves the Hearthkin for ${duration} seconds.${rally}`);
   }
 
   _applyUnitDamage(target, amount, attacker) {
@@ -4272,7 +4286,7 @@ export class CrownforgeSimulation {
         const payload = { targetId: target.id, targetKind: target.kind, x: target.x, z: target.z };
         if (validContact) {
           unit.attackHitApplied = true;
-          const strikeDamage = target.kind === 'unit' && target.type === 'villager'
+          const strikeDamage = target.kind === 'unit' && isHearthkinUnit(target)
             ? blueprint.attackVsVillager ?? blueprint.attack
             : blueprint.attack;
           payload.damage = strikeDamage;
@@ -4299,7 +4313,7 @@ export class CrownforgeSimulation {
             target.healthRevealTimer = Math.max(target.healthRevealTimer, 1.6);
             if (!target.dead) {
               this._tryApplyVillagerStun(unit, target);
-              if (unit.type === 'villager') this._aggroTargetOnVillager(unit, target);
+              if (isHearthkinUnit(unit)) this._aggroTargetOnVillager(unit, target);
             }
           }
         } else {
@@ -5112,16 +5126,23 @@ export class CrownforgeSimulation {
     this.lastCommand = this.selectedIds.length ? `${this.selectedIds.length} Crownwarden${this.selectedIds.length === 1 ? '' : 's'} selected.` : 'No Crownwardens in that box.';
   }
 
-  selectAllVillagers() {
-    const villagers = this.units
-      .filter((unit) => unit.type === 'villager' && unit.faction === 'player' && !unit.dead)
+  selectAllHearthkin() {
+    const hearthkin = this.units
+      .filter((unit) => isHearthkinUnit(unit) && unit.faction === 'player' && !unit.dead)
       .sort((a, b) => a.id - b.id);
-    this.selectedIds = villagers.map((unit) => unit.id);
+    this.selectedIds = hearthkin.map((unit) => unit.id);
     this._syncSelectionFlags();
-    this.lastCommand = villagers.length
-      ? `All ${villagers.length} villager${villagers.length === 1 ? '' : 's'} selected.`
-      : 'No villagers are available.';
-    return { kind: 'selection', success: villagers.length > 0, count: villagers.length, entities: villagers };
+    this.lastCommand = hearthkin.length
+      ? `All ${hearthkin.length} Hearthkin selected.`
+      : 'No Hearthkin are available.';
+    return { kind: 'selection', success: hearthkin.length > 0, count: hearthkin.length, entities: hearthkin };
+  }
+
+  // Keep the old method name as a save/test compatibility alias. Existing
+  // hotkeys and saved UI bindings can continue to call it while the worker
+  // roster now includes both Crownwarden and Ashen Hearthkin.
+  selectAllVillagers() {
+    return this.selectAllHearthkin();
   }
 
   demolishStructures(targets = []) {
@@ -5156,7 +5177,7 @@ export class CrownforgeSimulation {
   issueContextCommand(point, forcedTarget = null, { queue = false } = {}) {
     const units = this.units.filter((unit) => this.selectedIds.includes(unit.id) && unit.faction === 'player' && !unit.dead);
     if (!units.length) {
-      this.lastCommand = 'Select a villager or Crown Guard first.';
+      this.lastCommand = 'Select a Hearthkin or Crown Guard first.';
       this._announce(this.lastCommand);
       return { kind: 'none', success: false };
     }
@@ -5297,7 +5318,7 @@ export class CrownforgeSimulation {
       return { kind: 'move', success: true, target, queued };
     }
     if (target?.kind === 'building' && target.faction === 'player' && target.progress >= 1 && BUILDING_TYPES[target.type].storage) {
-      const workers = units.filter((unit) => unit.type === 'villager');
+      const workers = units.filter((unit) => this.isWorkerUnit(unit));
       if (!workers.length) {
         this.lastCommand = 'Select a worker to use a drop-off building.';
         this._announce(this.lastCommand);
@@ -5389,9 +5410,12 @@ export class CrownforgeSimulation {
       return { kind: 'move', success: true, target, queued };
     }
     if (target?.kind === 'unit' && target.faction === 'enemy') {
-      const attackers = units.filter((unit) => UNIT_TYPES[unit.type]?.canAttackUnits !== false);
+      const attackers = units.filter((unit) => UNIT_TYPES[unit.type]?.canAttackUnits !== false
+        && !areHearthkinNeutral(unit, target));
       if (!attackers.length) {
-        this.lastCommand = 'Select a unit able to defend the settlement.';
+        this.lastCommand = areHearthkinNeutral(units[0], target)
+          ? 'Hearthkin are one race and remain neutral to one another.'
+          : 'Select a unit able to defend the settlement.';
         this._announce(this.lastCommand);
         return { kind: 'none', success: false, target };
       }
@@ -5434,7 +5458,7 @@ export class CrownforgeSimulation {
     if (target?.kind === 'building' && target.faction === 'enemy' && target.progress >= 1 && !target.destroyed) {
       const attackers = units.filter((unit) => UNIT_TYPES[unit.type]?.canAttackBuildings !== false);
       if (!attackers.length) {
-        this.lastCommand = 'Villagers defend against units; select a military unit to attack structures.';
+        this.lastCommand = 'Hearthkin defend against units; select a military unit to attack structures.';
         this._announce(this.lastCommand);
         return { kind: 'none', success: false, target };
       }
@@ -6278,7 +6302,7 @@ export class CrownforgeSimulation {
     const relocatedMessage = relocated
       ? ` Moved ${relocated} unit${relocated === 1 ? '' : 's'} clear of the new barrier.`
       : '';
-    this._announce(`${blueprint.label} line placed: ${preview.wallSegments} segment${preview.wallSegments === 1 ? '' : 's'}. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.${clearedMessage}${relocatedMessage}`);
+    this._announce(`${blueprint.label} line placed: ${preview.wallSegments} segment${preview.wallSegments === 1 ? '' : 's'}. ${assigned} Hearthkin assigned.${clearedMessage}${relocatedMessage}`);
     return true;
   }
 
@@ -6338,7 +6362,7 @@ export class CrownforgeSimulation {
     const clearedMessage = clearedWoodland
       ? ` Restored ${clearedWoodland} cleared woodland patch${clearedWoodland === 1 ? '' : 'es'} to meadow.`
       : '';
-    this._announce(`${blueprint.label} foundation placed. ${assigned} villager${assigned === 1 ? '' : 's'} assigned.${clearedMessage}${relocatedMessage}`);
+    this._announce(`${blueprint.label} foundation placed. ${assigned} Hearthkin assigned.${clearedMessage}${relocatedMessage}`);
     return true;
   }
 
@@ -6502,7 +6526,7 @@ export class CrownforgeSimulation {
     if (blueprint.wall) {
       const builder = this._selectedBuilders(point)[0];
       if (!builder) return { valid: false, reason: 'Select a builder to build.' };
-      if (builder.carryAmount > 0) return { valid: false, reason: 'Let the selected villager deposit cargo first.' };
+      if (builder.carryAmount > 0) return { valid: false, reason: 'Let the selected Hearthkin deposit cargo first.' };
       if (!this._canAfford(blueprint.cost)) {
         const missing = Object.entries(blueprint.cost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
         return { valid: false, reason: `Not enough ${missing} for a ${blueprint.label}.` };
@@ -6534,9 +6558,9 @@ export class CrownforgeSimulation {
     if (openAccess.length < 2) return { valid: false, reason: 'Leave room around the foundation to build.' };
     const builder = this._selectedBuilders(point)[0];
     if (!builder) return { valid: false, reason: 'Select a builder to build.' };
-    if (builder.carryAmount > 0) return { valid: false, reason: 'Let the selected villager deposit cargo first.' };
+    if (builder.carryAmount > 0) return { valid: false, reason: 'Let the selected Hearthkin deposit cargo first.' };
     const route = this._bestPathToPoints(builder, this._buildingApproachPoints(placement), placement);
-    if (!route) return { valid: false, reason: 'The selected villager has no route to the site.' };
+    if (!route) return { valid: false, reason: 'The selected Hearthkin has no route to the site.' };
     if (!this._canAfford(blueprint.cost)) {
       const missing = Object.entries(blueprint.cost).find(([key, value]) => this.resources[key] < value)?.[0] ?? 'resources';
       return { valid: false, reason: `Not enough ${missing} for a ${blueprint.label}.` };
