@@ -10,6 +10,7 @@ import {
   ENVIRONMENT_ATLAS,
   FIRST_AGE_BUILD_BLUEPRINTS,
   FIRST_AGE_ASSETS,
+  FIRST_AGE_TECHNOLOGIES,
   GOLD_DEPOSIT_ASSETS,
   INITIAL_RESOURCES,
   LARGE_STONE_ASSET,
@@ -215,7 +216,7 @@ function checkResetPresentation() {
     ['townCenter'],
     'reset begins with the Crown Hall as the only player building',
   );
-  assert.deepEqual(FIRST_AGE_BUILD_BLUEPRINTS, ['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'wall', 'gate', 'palisadeTower'], 'first-age blueprint catalog stays intentionally small');
+  assert.deepEqual(FIRST_AGE_BUILD_BLUEPRINTS, ['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'road', 'wall', 'gate', 'palisadeTower'], 'first-age blueprint catalog stays intentionally small');
   assert.deepEqual(
     [...INDEX_HTML.matchAll(/data-build-type="([^"]+)"/g)].map((match) => match[1]),
     FIRST_AGE_BUILD_BLUEPRINTS,
@@ -403,6 +404,56 @@ function checkDevelopmentSpeedControls() {
   isolated.setHarvestQuantityScale(100);
   assert.equal(isolated.getUnitSpeedScale(), 7, 'travel speed remains independently adjustable');
   assert.equal(isolated.getHarvestQuantityScale(), 100, 'harvesting quantity remains independently adjustable');
+}
+
+function checkFirstAgeSystemsPass() {
+  assert.ok(FIRST_AGE_BUILD_BLUEPRINTS.includes('road'), 'packed roads are available in the First Age catalog');
+  assert.equal(BUILDING_TYPES.road.walkable, true, 'packed roads do not become navigation blockers');
+  assert.equal(BUILDING_TYPES.road.road, true, 'packed roads carry their movement-network identity');
+  assert.equal(Object.keys(FIRST_AGE_TECHNOLOGIES).length, 3, 'First Age has three focused doctrine upgrades');
+
+  const simulation = movementSandbox();
+  simulation.addBuilding('townCenter', 20, 20, 'player', 1);
+  const guard = simulation.addUnit('soldier', 20, 20, 'player');
+  simulation.selectedIds = [guard.id];
+  simulation._syncSelectionFlags();
+  const guardOrder = simulation.setGuardZone({ x: 20, z: 20 }, 18);
+  assert.equal(guardOrder.success, true, 'an armed unit accepts a guard-area order');
+  assert.equal(guard.command, 'guard', 'a guard-area order holds the unit in guard state');
+  assert.deepEqual(guard.guardPoint, { x: 20, z: 20 }, 'guard area stores its station point');
+  assert.equal(guard.guardRadius, 18, 'guard area stores its local defense radius');
+  assert.match(simulation.getRecentEvents(1)[0].message, /Guard area set/, 'guard order is written to the field log');
+
+  simulation.resources = { food: 1000, wood: 1000, stone: 1000, gold: 1000 };
+  assert.equal(simulation.researchTechnology('forestStewardship').success, true, 'Forest Stewardship can be researched');
+  assert.equal(simulation._technologyGatherMultiplier('wood'), 1.25, 'Forest Stewardship increases wood yield');
+  assert.equal(simulation.researchTechnology('stonecuttersGuild').success, true, 'Stonecutters Guild can be researched');
+  assert.equal(simulation._technologyGatherMultiplier('stone'), 1.15, 'Stonecutters Guild increases stone yield');
+  assert.equal(simulation.researchTechnology('watchkeeping').success, true, 'Watchkeeping can be researched');
+  assert.equal(simulation._defenseRangeMultiplier(), 1.2, 'Watchkeeping increases defensive building range');
+
+  const road = simulation.addBuilding('road', 26, 20, 'player', 1);
+  guard.x = 26;
+  guard.z = 20;
+  assert.equal(simulation._isOnPackedRoad(guard), true, 'armed units receive the packed-road movement context');
+  const snapshot = simulation.serialize();
+  const restored = movementSandbox();
+  assert.equal(restored.restore(snapshot), true, 'a serialized Crownforge slice restores successfully');
+  assert.equal(restored.getWorldSeed(), simulation.getWorldSeed(), 'save/load preserves the world seed');
+  assert.equal(restored.technologies.watchkeeping.researchedAt >= 0, true, 'save/load preserves researched doctrine');
+  assert.ok(restored.buildings.some((building) => building.id === road.id && building.road), 'save/load preserves packed-road buildings');
+  assert.ok(restored.units.some((unit) => unit.id === guard.id && unit.guardPoint), 'save/load preserves guard orders');
+  assert.match(restored.getRecentEvents(1)[0].message, /save restored/i, 'save recovery writes a restore event');
+
+  const queuedOrders = movementSandbox();
+  const queuedWorker = queuedOrders.addUnit('villager', 10, 10, 'player');
+  queuedOrders.selectedIds = [queuedWorker.id];
+  queuedOrders._syncSelectionFlags();
+  assert.equal(queuedOrders.issueContextCommand({ x: 20, z: 20 }).kind, 'move', 'a worker accepts the first direct move order');
+  const queuedMove = queuedOrders.issueContextCommand({ x: 30, z: 30 }, null, { queue: true });
+  assert.equal(queuedMove.success, true, 'Shift-right-click accepts a follow-up move order');
+  assert.equal(queuedWorker.orderQueue.length, 1, 'the follow-up move is retained instead of replacing the active order');
+  assert.equal(queuedWorker.orderQueue[0].kind, 'move', 'the retained order keeps its move intent');
 }
 
 function checkGoldEconomyLoop() {
@@ -2342,6 +2393,7 @@ checkResetPresentation();
 checkGathering();
 checkPersistentForestGathering();
 checkDevelopmentSpeedControls();
+checkFirstAgeSystemsPass();
 checkGoldEconomyLoop();
 checkOreWashEconomySupport();
 checkStableGranaryAndScout();
@@ -2411,6 +2463,7 @@ console.log(JSON.stringify({
     'equal Crown Hall/Barracks proportion, inward placement, and four-sided buildable ring',
     'artwork-matched building collision, offset physical bases, perimeter work stations, and non-stacking Crown Hall drop-offs',
     'travel-only speed scaling, high-speed collision routing, and fast group spacing',
+    'First-age packed roads, three researchable doctrines, visible guard areas, field history, and local save/load recovery',
     'always-available selected-unit recovery at a clear Crown Hall approach with cargo deposit and group spacing',
     'distinct Ashen role-equivalent artwork, directional units, independent economy, capped town growth, local defense, and forest-gated raids',
     'roughly eighty-percent individually harvestable Wildwood trees with authored berry, stone, and scarce Gold glades and no prebuilt fields',

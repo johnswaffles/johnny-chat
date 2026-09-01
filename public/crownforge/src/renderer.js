@@ -1,4 +1,4 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260831-villageraggro1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260831-systems1';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260828-latencypass1';
 
 const TAU = Math.PI * 2;
@@ -484,6 +484,7 @@ export class CrownforgeRenderer {
     this.ensureStaticLayer();
     ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
     this.drawPaths(ctx, simulation);
+    this.drawGuardZones(ctx, simulation);
     this.drawWorldEntities(ctx, simulation, time);
     this.drawDefenseProjectiles(ctx, simulation);
     // Placement is a planning state, so the monumental Hall gets a quiet
@@ -823,6 +824,41 @@ export class CrownforgeRenderer {
       ctx.fill();
     }
     ctx.restore();
+  }
+
+  drawGuardZones(ctx, simulation) {
+    const zones = new Map();
+    for (const unit of simulation.units) {
+      if (unit.dead || !unit.guardPoint || !this.isWorldVisible(unit.guardPoint, unit.guardRadius + 2)) continue;
+      const key = `${unit.guardPoint.x.toFixed(2)}:${unit.guardPoint.z.toFixed(2)}:${unit.guardRadius.toFixed(2)}`;
+      if (!zones.has(key)) zones.set(key, unit);
+    }
+    for (const unit of zones.values()) {
+      const center = this.worldToScreen(unit.guardPoint);
+      const east = this.worldToScreen({ x: unit.guardPoint.x + unit.guardRadius, z: unit.guardPoint.z });
+      const south = this.worldToScreen({ x: unit.guardPoint.x, z: unit.guardPoint.z + unit.guardRadius });
+      const west = this.worldToScreen({ x: unit.guardPoint.x - unit.guardRadius, z: unit.guardPoint.z });
+      const north = this.worldToScreen({ x: unit.guardPoint.x, z: unit.guardPoint.z - unit.guardRadius });
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(north.x, north.y);
+      ctx.lineTo(east.x, east.y);
+      ctx.lineTo(south.x, south.y);
+      ctx.lineTo(west.x, west.y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(134, 196, 207, 0.07)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(134, 196, 207, 0.55)';
+      ctx.lineWidth = Math.max(1, 1.4 * this.camera.zoom);
+      ctx.setLineDash([6 * this.camera.zoom, 7 * this.camera.zoom]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, Math.max(2, 4 * this.camera.zoom), 0, TAU);
+      ctx.fillStyle = '#86c4cf';
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   drawWorldEntities(ctx, simulation, time) {
@@ -1482,6 +1518,19 @@ export class CrownforgeRenderer {
         && this.drawAshenConstructionAsset(ctx, building.type, constructionStage, screen, size, alpha)) return;
       const constructionAlpha = constructionStage === 'complete' ? alpha : alpha * (0.28 + building.progress * 0.72);
       this.drawAshenBuildingAsset(ctx, building, screen, size, constructionAlpha);
+      return;
+    }
+    if (building.type === 'road') {
+      const constructionStage = resolveFirstAgeConstructionStage(building.progress);
+      const roadAlpha = constructionStage === 'complete' ? alpha : alpha * (0.35 + building.progress * 0.65);
+      if (this.drawFirstAgeAsset(ctx, 'road', screen, size, roadAlpha)) return;
+      ctx.save();
+      ctx.globalAlpha = roadAlpha;
+      ctx.fillStyle = '#9d7a4c';
+      ctx.beginPath();
+      ctx.ellipse(screen.x, screen.y + 2 * this.camera.zoom, size * 0.43, size * 0.18, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
       return;
     }
     if (building.type === 'gate') {

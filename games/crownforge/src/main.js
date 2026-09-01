@@ -1,10 +1,10 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260831-randomforest1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_TECHNOLOGIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260831-systems1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260828-latencypass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260831-randomforest1';
-import { CrownforgeSimulation } from './simulation.js?v=20260831-randomforest1';
+import { CrownforgeRenderer } from './renderer.js?v=20260831-systems1';
+import { CrownforgeSimulation } from './simulation.js?v=20260831-systems1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
-import { summarizeUnitTasks } from './task-summary.js?v=20260831-randomforest1';
+import { summarizeUnitTasks } from './task-summary.js?v=20260831-systems1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -41,7 +41,16 @@ const selectionRecovery = document.querySelector('#selection-recovery');
 const recoverUnitsButton = document.querySelector('#recover-units');
 const selectionVillagerActions = document.querySelector('#selection-villager-actions');
 const selectAllVillagersButton = document.querySelector('#select-all-villagers');
+const selectionCombatActions = document.querySelector('#selection-combat-actions');
+const guardAreaButton = document.querySelector('#guard-area');
+const clearGuardButton = document.querySelector('#clear-guard');
 const demolitionModeButton = document.querySelector('#demolition-mode');
+const saveGameButton = document.querySelector('#save-game');
+const loadGameButton = document.querySelector('#load-game');
+const copySeedButton = document.querySelector('#copy-seed');
+const worldSeedLabel = document.querySelector('#world-seed');
+const eventHistoryList = document.querySelector('#event-history-list');
+const technologyButtons = [...document.querySelectorAll('[data-tech]')];
 const loadingVeil = document.querySelector('#loading-veil');
 const loadingDetail = document.querySelector('#loading-detail');
 const loadingProgress = document.querySelector('#loading-progress');
@@ -61,6 +70,7 @@ const ui = {
   clock: document.querySelector('#clock'),
   buildDetails: Object.fromEntries(buildButtons.map((button) => [button.dataset.buildType, button.querySelector(`[data-build-detail="${button.dataset.buildType}"]`)])),
   trainDetails: Object.fromEntries(trainButtons.map((button) => [button.dataset.trainUnit, button.querySelector(`[data-train-detail="${button.dataset.trainUnit}"]`)])),
+  technologyDetails: Object.fromEntries(technologyButtons.map((button) => [button.dataset.tech, button.querySelector('[data-tech-detail]')])),
 };
 
 let toastTimer = null;
@@ -133,6 +143,13 @@ const input = new CrownforgeInput({
     trainMenu.hidden = true;
     cancelBuildButton.hidden = !active && !input.buildMode;
   },
+  onGuardMode: (active) => {
+    guardAreaButton?.classList.toggle('is-active', active);
+    guardAreaButton?.setAttribute('aria-pressed', String(active));
+    buildMenu.hidden = true;
+    trainMenu.hidden = true;
+    cancelBuildButton.hidden = !active && !input.buildMode && !input.demolitionMode;
+  },
   onToast: announce,
   onGesture: () => audio.unlock(),
   onSelection: (entities) => {
@@ -151,6 +168,7 @@ const input = new CrownforgeInput({
     trainMenu.hidden = true;
   },
   onDemolitionShortcut: () => activateDemolitionControl(),
+  onGuardShortcut: () => activateGuardControl(),
   onRecoverShortcut: () => {
     if (!simulation.canRecoverSelectedUnits()) return;
     audio.unlock();
@@ -196,6 +214,7 @@ buildMenuToggle.addEventListener('click', () => {
     return;
   }
   if (input.demolitionMode) input.cancelDemolitionMode();
+  if (input.guardMode) input.cancelGuardMode();
   buildMenu.hidden = !buildMenu.hidden;
   trainMenu.hidden = true;
 });
@@ -232,12 +251,14 @@ buildButtons.forEach((button) => {
 cancelBuildButton.addEventListener('click', () => {
   input.cancelBuildMode();
   input.cancelDemolitionMode();
+  input.cancelGuardMode();
 });
 trainMenuToggle.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
   if (input.buildMode) input.cancelBuildMode();
   if (input.demolitionMode) input.cancelDemolitionMode();
+  if (input.guardMode) input.cancelGuardMode();
   buildMenu.hidden = true;
   trainMenu.hidden = !trainMenu.hidden;
 });
@@ -261,6 +282,81 @@ restartButton.addEventListener('click', () => {
   victoryPanel.hidden = true;
   victoryPanel.classList.remove('is-defeat');
   announce('A fresh Crownforge meadow awaits.');
+});
+
+function activateGuardControl() {
+  audio.unlock();
+  audio.ui();
+  const armed = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
+    && entity.faction === 'player'
+    && !entity.dead
+    && !UNIT_TYPES[entity.type]?.worker
+    && UNIT_TYPES[entity.type]?.canAttackUnits !== false);
+  if (!armed) {
+    announce('Select a Crown Guard or other armed unit before setting a guard area.');
+    audio.play('invalid');
+    return { success: false, kind: 'guard' };
+  }
+  input.setGuardMode(!input.guardMode);
+  updateUi();
+  return { success: true, kind: 'guard-mode', active: input.guardMode };
+}
+
+guardAreaButton?.addEventListener('click', () => activateGuardControl());
+clearGuardButton?.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  const result = simulation.clearGuardZone();
+  if (result.success) audio.command('move'); else audio.play('invalid');
+  updateUi();
+});
+
+saveGameButton?.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  const saved = simulation.saveToStorage();
+  if (!saved) audio.play('invalid');
+  updateUi();
+});
+
+loadGameButton?.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  const loaded = simulation.loadFromStorage();
+  if (loaded) {
+    audio.reset(simulation);
+    input.cancelBuildMode();
+    input.cancelDemolitionMode();
+    input.cancelGuardMode();
+    victoryPanel.hidden = simulation.phase === 'playing';
+    audio.command('move');
+  } else {
+    audio.play('invalid');
+    announce('No Crownforge save is available in this browser.');
+  }
+  updateUi();
+});
+
+copySeedButton?.addEventListener('click', async () => {
+  audio.unlock();
+  audio.ui();
+  const seed = simulation.getWorldSeedLabel();
+  try {
+    await navigator.clipboard.writeText(seed);
+    announce(`World seed ${seed} copied.`);
+  } catch {
+    announce(`World seed: ${seed}`);
+  }
+});
+
+technologyButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    audio.unlock();
+    audio.ui();
+    const result = simulation.researchTechnology(button.dataset.tech);
+    if (!result.success) audio.play('invalid');
+    updateUi();
+  });
 });
 
 function updateMusicControl() {
@@ -337,13 +433,52 @@ function updateUi() {
     && entity.faction === 'player'
     && !entity.dead);
   if (selectionVillagerActions) selectionVillagerActions.hidden = !hasSelectedVillager;
+  const hasSelectedArmedUnit = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
+    && entity.faction === 'player'
+    && !entity.dead
+    && !UNIT_TYPES[entity.type]?.worker
+    && UNIT_TYPES[entity.type]?.canAttackUnits !== false);
+  if (selectionCombatActions) selectionCombatActions.hidden = !hasSelectedArmedUnit;
+  if (guardAreaButton) {
+    guardAreaButton.classList.toggle('is-active', input.guardMode);
+    guardAreaButton.setAttribute('aria-pressed', String(input.guardMode));
+  }
+  if (clearGuardButton) clearGuardButton.hidden = !simulation.selectedEntities.some((entity) => entity.kind === 'unit' && entity.guardPoint && !entity.dead);
   const preview = renderer.buildPreview;
   ui.commandLine.textContent = input.demolitionMode
     ? 'INSTANT DEMOLITION  •  click or drag across structures  •  debris clears immediately  •  Crown Hall protected'
+    : input.guardMode
+    ? 'GUARD AREA  •  click a point to station selected armed units  •  press G or Esc to cancel'
     : input.buildMode
     ? `PLACEMENT MODE  •  ${preview?.valid ? 'site ready' : (preview?.reason ?? 'move the foundation')}`
     : commandLineText();
   ui.clock.textContent = formatClock(simulation.clock);
+  if (worldSeedLabel) worldSeedLabel.textContent = `SEED ${simulation.getWorldSeedLabel()}`;
+  technologyButtons.forEach((button) => {
+    const id = button.dataset.tech;
+    const technology = FIRST_AGE_TECHNOLOGIES[id];
+    if (!technology) return;
+    const researched = simulation._hasTechnology(id);
+    const affordable = Object.entries(technology.cost).every(([key, value]) => simulation.resources[key] >= value);
+    const detail = ui.technologyDetails[id];
+    if (detail) detail.textContent = researched ? 'RESEARCHED' : `${formatCost(technology.cost)}  •  ${affordable ? 'READY' : 'GATHER MORE'}`;
+    button.classList.toggle('is-researched', researched);
+    button.classList.toggle('is-unavailable', !researched && !affordable);
+    button.disabled = researched;
+    setTooltip(button, researched ? `${technology.label} is active` : `${technology.description} Cost: ${formatCost(technology.cost)}`);
+  });
+  if (eventHistoryList) {
+    const history = simulation.getRecentEvents(5);
+    const signature = history.map((event) => event.id).join(',');
+    if (eventHistoryList.dataset.signature !== signature) {
+      eventHistoryList.dataset.signature = signature;
+      eventHistoryList.replaceChildren(...history.map((event) => {
+        const item = document.createElement('li');
+        item.textContent = event.message;
+        return item;
+      }));
+    }
+  }
   const builder = simulation.units.find((unit) => unit.selected && simulation.isBuilderUnit(unit));
   buildButtons.forEach((button) => {
     const type = button.dataset.buildType;

@@ -734,6 +734,21 @@ export const BUILDING_TYPES = {
     field: true,
     walkable: true,
   },
+  road: {
+    label: 'Packed Road',
+    function: 'Fast, reliable settlement route',
+    asset: 'road',
+    maxHp: 80,
+    footprint: { width: 2.6, height: 1.55 },
+    renderSize: 118,
+    collisionClearance: 0.05,
+    interactionSlots: 4,
+    entrance: 'south',
+    buildTime: 1.8,
+    cost: { food: 0, wood: 8, stone: 0 },
+    walkable: true,
+    road: true,
+  },
   wall: {
     label: 'Palisade Wall',
     function: 'Defensive boundary',
@@ -1039,7 +1054,31 @@ export const BUILDING_TYPES = {
 // Only these structures belong to the current player-facing first-age build
 // catalog. Retired prototypes remain defined for old saves/audit history, but
 // cannot be placed until they receive an approved Crownforge asset and role.
-export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'wall', 'gate', 'palisadeTower']);
+export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'road', 'wall', 'gate', 'palisadeTower']);
+
+// First-age doctrine gives the player a small amount of strategic direction
+// without introducing a large tech tree. Each upgrade is a one-time local
+// rule that is cheap to inspect, save, and balance in the vertical slice.
+export const FIRST_AGE_TECHNOLOGIES = Object.freeze({
+  forestStewardship: {
+    label: 'Forest Stewardship',
+    description: 'Crownwardens haul 25% more wood per work cycle.',
+    cost: { food: 0, wood: 90, stone: 20, gold: 0 },
+    gatherMultiplier: { wood: 1.25 },
+  },
+  stonecuttersGuild: {
+    label: 'Stonecutters Guild',
+    description: 'Stone and Gold work cycles yield 15% more.',
+    cost: { food: 0, wood: 70, stone: 45, gold: 10 },
+    gatherMultiplier: { stone: 1.15, gold: 1.15 },
+  },
+  watchkeeping: {
+    label: 'Watchkeeping',
+    description: 'Watch Huts and Palisade Towers see 20% farther.',
+    cost: { food: 0, wood: 60, stone: 35, gold: 20 },
+    defenseRangeMultiplier: 1.2,
+  },
+});
 
 export const ASSET_RECTS = {
   townCenter: { x: 0, y: 0, width: 418, height: 418 },
@@ -1277,6 +1316,7 @@ export const FIRST_AGE_ASSETS = {
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254, groundAnchorY: 0.9242 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254, groundAnchorY: 0.878 },
   field: { src: './assets/crownforge-field-v2.png?v=20260819-fieldpass1', width: 1536, height: 1024, groundAnchorY: 0.9697 },
+  road: { src: './assets/crownforge-dirt-road-tile-v1.png?v=20260831-systems1', width: 1024, height: 1024, groundAnchorY: 0.5 },
   // Palisades use authored screen-space views instead of rotating one flat
   // picture. Rotating an upright fence also rotates its posts and makes a
   // completed wall look as if it is lying on the meadow.
