@@ -18,6 +18,8 @@ button, [title] { -webkit-tap-highlight-color: transparent; }
 .loading-veil { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 42%, rgba(44,58,44,.96), rgba(12,28,30,.985) 68%); opacity: 1; transition: opacity .38s ease; }
 .loading-veil.is-ready { opacity: 0; pointer-events: none; }
 .loading-veil[hidden] { display: none; }
+.file-protocol-help { max-width: 360px; margin: 0; color: rgba(233, 238, 218, .78); font-size: .78rem; line-height: 1.55; text-align: center; }
+.file-protocol-help a { color: #d7aa54; font-weight: 700; }
 .loading-card { width: min(390px, calc(100vw - 48px)); padding: 28px 30px 26px; text-align: center; border-color: rgba(196,158,75,.34); box-shadow: 0 24px 70px rgba(0,0,0,.35); }
 .loading-sigil { width: 64px; height: 64px; margin: 0 auto 12px; display: block; background-size: 256px 256px; }
 .loading-card h2 { margin: 6px 0 5px; font: 27px 'Marcellus', Georgia, serif; color: #fff1ce; }
