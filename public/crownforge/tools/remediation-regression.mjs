@@ -185,6 +185,11 @@ function checkAnimationAtlases() {
       assert.equal(frame.fallback, null, `Ashen Forager ${state} has authored artwork`);
     }
   }
+  const authoredWalkTimes = [0.05, 0.22, 0.39, 0.56];
+  for (let direction = 0; direction < 4; direction += 1) {
+    const columns = authoredWalkTimes.map((time) => animationFrame('ashenForager', 'walk', time, direction).column);
+    assert.ok(new Set(columns).size >= 3, `Ashen Forager direction ${direction} advances through authored walk frames`);
+  }
 
   const ashenFighters = {
     ashenOutrider: ['ashenOutriderMotion', 'ashenOutriderAttack'],
@@ -1957,6 +1962,31 @@ function checkVillagerRecovery() {
   assert.equal(simulation.unstickSelectedUnits().success, true, 'a selected military unit can be recovered from a bad fortification pocket');
 }
 
+function checkAshenForagerMotionAndFieldWorker() {
+  const simulation = movementSandbox();
+  const field = simulation.addBuilding('ashenField', 80, 80, 'enemy');
+  const forager = simulation.addUnit('ashenForager', 72, 80, 'enemy');
+  forager.command = 'gather';
+  forager.visualState = 'wood';
+  forager.gatherTarget = { id: 'test-wood-node' };
+  simulation.navigationVersion += 1;
+  simulation.staticBlockerGridVersion = -1;
+  simulation.update(STEP_60HZ);
+  assert.equal(field.farmerId, forager.id, 'completed fields assign a real Ashen Forager instead of a placeholder');
+  assert.equal(forager.fieldTarget, field.id, 'assigned Ashen Forager receives the field work target');
+  assert.equal(forager.command, 'field', 'assigned Ashen Forager receives a field work order');
+  assert.equal(forager.visualState, 'walk', 'assigned Ashen Forager uses the walk state while approaching the field');
+
+  const mover = simulation.addUnit('ashenForager', 40, 40, 'enemy');
+  mover.command = 'move';
+  mover.visualState = 'walk';
+  mover.path = [{ x: 46, z: 46 }];
+  mover.routeTarget = { x: 46, z: 46 };
+  simulation._updateUnit(mover, STEP_60HZ);
+  assert.ok(mover.animationPlaybackRate >= 0.78, 'a moving Ashen Forager keeps its walk cycle alive at low route speed');
+  assert.equal(resolveAnimationState(mover), 'walk', 'a moving Ashen Forager never resolves to a static task pose');
+}
+
 function checkAshenSettlementEconomyAndAI() {
   const buildingRolePairs = [
     ['townCenter', 'ashenCamp'],
@@ -2491,6 +2521,7 @@ checkBarracksLandmarkScale();
 checkCrownHallProportionsAndBuildableRing();
 checkBuildingPhysicalInteractionBoundaries();
 checkTravelSpeedIsolation();
+checkAshenForagerMotionAndFieldWorker();
 checkVillagerRecovery();
 checkAshenSettlementEconomyAndAI();
 checkExpandedWorldAndEnemyDistance();

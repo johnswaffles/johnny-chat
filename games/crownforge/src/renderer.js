@@ -1,5 +1,5 @@
 import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260831-firstage2';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260828-latencypass1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260901-ashenmotion1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -304,6 +304,8 @@ export class CrownforgeRenderer {
       this.combatAtlases.raiderWalk,
       this.combatAtlases.raiderStunned,
       this.combatAtlases.ashenForagerMotion,
+      this.combatAtlases.ashenForagerWork,
+      this.combatAtlases.ashenForagerCarry,
       this.firstAgeAssets.stable,
       this.firstAgeConstructionAtlases.stable,
       this.firstAgeAssets.granary,
@@ -1788,6 +1790,20 @@ export class CrownforgeRenderer {
     const imageKey = frameData.atlasKey === 'combat' ? style.combatAtlas : frameData.atlasKey;
     const image = this.combatAtlases[imageKey];
     if (!atlas || !image || !this.combatAtlasReady[imageKey]) {
+      // Ashen Foragers have their own authored motion atlas. If a task atlas
+      // is still warming, keep the real Forager visible rather than falling
+      // back to the generic Raider silhouette (which reads as a placeholder
+      // worker in fields).
+      if (unit.type === 'ashenForager') {
+        const motionAtlas = COMBAT_ATLASES.ashenForagerMotion;
+        const motionImage = this.combatAtlases.ashenForagerMotion;
+        if (motionAtlas && motionImage && this.combatAtlasReady.ashenForagerMotion) {
+          const fallbackState = state === 'walk' ? 'walk' : 'idle';
+          const fallbackFrame = animationFrame('ashenForager', fallbackState, unit.animationTime ?? unit.animClock, unit.facing);
+          this.drawAtlasCell(ctx, motionImage, true, motionAtlas, fallbackFrame.column, fallbackFrame.row, screen, size, alpha, 0);
+          return;
+        }
+      }
       this.drawAsset(ctx, style.asset, screen, size, alpha);
       return;
     }

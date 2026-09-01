@@ -1,6 +1,6 @@
 import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260831-firstage2';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-latencypass1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260901-ashenmotion1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -2121,13 +2121,18 @@ export class CrownforgeSimulation {
       ? this.units.find((unit) => unit.id === building.farmerId && !unit.dead && unit.faction === building.faction)
       : null;
     if (!farmer) {
-      const candidate = this.units.find((unit) => UNIT_TYPES[unit.type]?.worker
-        && unit.faction === building.faction
-        && !unit.dead
-        && !unit.carryAmount
-        && unit.command === 'idle'
-        && !unit.buildTarget
-        && !unit.fieldTarget);
+      const candidate = this.units
+        .filter((unit) => UNIT_TYPES[unit.type]?.worker
+          && unit.faction === building.faction
+          && !unit.dead
+          && !unit.carryAmount
+          && !unit.buildTarget
+          && !unit.fieldTarget
+          && !unit.attackTarget
+          && !['attack', 'build', 'demolish', 'return', 'stunned', 'move'].includes(unit.command))
+        .sort((a, b) => Number(a.command !== 'idle') - Number(b.command !== 'idle')
+          || distance(a, building) - distance(b, building)
+          || a.id - b.id)[0] ?? null;
       if (!candidate) return;
       this._interruptWork(candidate);
       building.farmerId = candidate.id;
@@ -2202,8 +2207,10 @@ export class CrownforgeSimulation {
     else if (unit.command === 'field') this._updateFieldIntent(unit);
     this._updateStairProgress(unit);
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
-    unit.animationPlaybackRate = unit.command === 'move' || unit.visualState === 'walk'
-      ? Math.max(0, Math.min(3.2, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed, 0.01)))
+    const locomoting = unit.command === 'move' || unit.visualState === 'walk';
+    const hasMovementIntent = locomoting && (unit.path.length > 0 || unit.motionSpeed > 0.08);
+    unit.animationPlaybackRate = hasMovementIntent
+      ? Math.max(0.78, Math.min(3.2, unit.motionSpeed / Math.max(UNIT_TYPES[unit.type].speed, 0.01)))
       : 1;
     const trulyIdle = unit.command === 'idle'
       && !unit.path.length

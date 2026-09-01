@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260828-latencypass1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260901-ashenmotion1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -430,7 +430,11 @@ export class CrownforgeAnimationSystem {
     const clip = animationClip(unit.type, nextState);
     const previousTime = unit.animationTime ?? 0;
     const duration = Math.max(0.001, clip.frames.length / Math.max(0.001, clip.fps));
-    const playbackRate = nextState === 'walk' ? Math.max(0, Math.min(2.2, unit.animationPlaybackRate ?? 1)) : 1;
+    // A unit can be moving while its collision solver is easing around a
+    // blocker or starting a route. Keep the authored walk cycle alive during
+    // that low-speed portion instead of showing a single frame sliding over
+    // the ground. The simulation still caps fast travel independently.
+    const playbackRate = nextState === 'walk' ? Math.max(0.78, Math.min(2.2, unit.animationPlaybackRate ?? 1)) : 1;
     const nextTime = clip.loop ? (previousTime + delta * playbackRate) % duration : Math.min(duration, previousTime + delta * playbackRate);
     if (nextState === 'walk' && clip.events?.footstep) {
       const thresholds = Array.isArray(clip.events.footstep) ? clip.events.footstep : [clip.events.footstep];
