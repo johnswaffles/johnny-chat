@@ -1,4 +1,4 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260831-systems1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260831-firstage2';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260828-latencypass1';
 
 const TAU = Math.PI * 2;
@@ -483,8 +483,11 @@ export class CrownforgeRenderer {
     this.drawBackdrop(ctx);
     this.ensureStaticLayer();
     ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
+    this.drawExplorationOverlay(ctx, simulation);
     this.drawPaths(ctx, simulation);
     this.drawGuardZones(ctx, simulation);
+    this.drawPatrolRoutes(ctx, simulation);
+    this.drawRallyPoints(ctx, simulation);
     this.drawWorldEntities(ctx, simulation, time);
     this.drawDefenseProjectiles(ctx, simulation);
     // Placement is a planning state, so the monumental Hall gets a quiet
@@ -859,6 +862,85 @@ export class CrownforgeRenderer {
       ctx.fill();
       ctx.restore();
     }
+  }
+
+  drawPatrolRoutes(ctx, simulation) {
+    for (const unit of simulation.units) {
+      if (!unit.selected || unit.dead || !unit.patrolActive || unit.patrolPoints.length < 2) continue;
+      if (!unit.patrolPoints.some((point) => this.isWorldVisible(point, 2))) continue;
+      const points = unit.patrolPoints.map((point) => this.worldToScreen(point));
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (const point of points.slice(1)) ctx.lineTo(point.x, point.y);
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(215, 170, 84, 0.72)';
+      ctx.lineWidth = Math.max(1, 1.5 * this.camera.zoom);
+      ctx.setLineDash([5 * this.camera.zoom, 5 * this.camera.zoom]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      for (const point of points) {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, Math.max(2.5, 4.5 * this.camera.zoom), 0, TAU);
+        ctx.fillStyle = 'rgba(215, 170, 84, 0.88)';
+        ctx.fill();
+        ctx.strokeStyle = '#243531';
+        ctx.lineWidth = Math.max(1, this.camera.zoom);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  drawRallyPoints(ctx, simulation) {
+    for (const building of simulation.buildings) {
+      if (!building.selected || building.destroyed || !building.rallyPoint || !this.isWorldVisible(building.rallyPoint, 2)) continue;
+      const point = this.worldToScreen(building.rallyPoint);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(134, 196, 207, 0.88)';
+      ctx.fillStyle = 'rgba(134, 196, 207, 0.2)';
+      ctx.lineWidth = Math.max(1, 1.4 * this.camera.zoom);
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, Math.max(4, 7 * this.camera.zoom), 0, TAU);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(point.x - 4 * this.camera.zoom, point.y);
+      ctx.lineTo(point.x + 4 * this.camera.zoom, point.y);
+      ctx.moveTo(point.x, point.y - 4 * this.camera.zoom);
+      ctx.lineTo(point.x, point.y + 4 * this.camera.zoom);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  drawExplorationOverlay(ctx, simulation) {
+    const snapshot = simulation.getExplorationSnapshot?.();
+    if (!snapshot?.enabled) return;
+    const explored = new Set(snapshot.cells);
+    const cellSize = snapshot.cellSize;
+    const columns = Math.ceil(CONFIG.mapWidth / cellSize);
+    const rows = Math.ceil(CONFIG.mapHeight / cellSize);
+    ctx.save();
+    ctx.fillStyle = 'rgba(8, 18, 19, 0.48)';
+    for (let cellZ = 0; cellZ < rows; cellZ += 1) {
+      for (let cellX = 0; cellX < columns; cellX += 1) {
+        if (explored.has(`${cellX}:${cellZ}`)) continue;
+        const corners = [
+          this.worldToScreen({ x: cellX * cellSize, z: cellZ * cellSize }),
+          this.worldToScreen({ x: Math.min(CONFIG.mapWidth, (cellX + 1) * cellSize), z: cellZ * cellSize }),
+          this.worldToScreen({ x: Math.min(CONFIG.mapWidth, (cellX + 1) * cellSize), z: Math.min(CONFIG.mapHeight, (cellZ + 1) * cellSize) }),
+          this.worldToScreen({ x: cellX * cellSize, z: Math.min(CONFIG.mapHeight, (cellZ + 1) * cellSize) }),
+        ];
+        if (corners.every((point) => point.x < -2 || point.x > this.width + 2 || point.y < -2 || point.y > this.height + 2)) continue;
+        ctx.beginPath();
+        ctx.moveTo(corners[0].x, corners[0].y);
+        for (const point of corners.slice(1)) ctx.lineTo(point.x, point.y);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    ctx.restore();
   }
 
   drawWorldEntities(ctx, simulation, time) {

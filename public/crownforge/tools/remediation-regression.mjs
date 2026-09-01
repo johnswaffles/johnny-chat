@@ -10,7 +10,9 @@ import {
   ENVIRONMENT_ATLAS,
   FIRST_AGE_BUILD_BLUEPRINTS,
   FIRST_AGE_ASSETS,
+  FIRST_AGE_MILESTONES,
   FIRST_AGE_TECHNOLOGIES,
+  FIRST_AGE_WORK_PRIORITIES,
   GOLD_DEPOSIT_ASSETS,
   INITIAL_RESOURCES,
   LARGE_STONE_ASSET,
@@ -454,6 +456,76 @@ function checkFirstAgeSystemsPass() {
   assert.equal(queuedMove.success, true, 'Shift-right-click accepts a follow-up move order');
   assert.equal(queuedWorker.orderQueue.length, 1, 'the follow-up move is retained instead of replacing the active order');
   assert.equal(queuedWorker.orderQueue[0].kind, 'move', 'the retained order keeps its move intent');
+}
+
+function checkFirstAgeCommandDeckPass() {
+  assert.equal(Object.keys(FIRST_AGE_WORK_PRIORITIES).length, 5, 'First Age worker focus offers five intentional priority presets');
+  assert.equal(FIRST_AGE_MILESTONES.length, 5, 'First Age milestone track stays compact and readable');
+
+  const workerFocus = movementSandbox();
+  const worker = workerFocus.addUnit('villager', 10, 10, 'player');
+  workerFocus.addResource('tree', 'wood', 14, 12, 180, 0);
+  workerFocus.addResource('berry', 'food', 42, 42, 105, 0);
+  workerFocus.setWorkerFocus('wood');
+  workerFocus._updateWorkerAssignments();
+  assert.equal(workerFocus.getWorkerFocus(), 'wood', 'worker focus persists as a simulation setting');
+  assert.equal(worker.gatherTarget !== null, true, 'idle workers receive an automatic resource assignment');
+  assert.equal(worker.gatherIntent.resourceType, 'wood', 'worker focus chooses the requested nearby resource first');
+
+  const repairToggle = movementSandbox();
+  const repairWorker = repairToggle.addUnit('villager', 20, 20, 'player');
+  const damaged = repairToggle.addBuilding('house', 20, 20, 'player', 1);
+  damaged.hp = damaged.maxHp - 20;
+  repairToggle.setAutoRepairEnabled(false);
+  assert.equal(repairToggle._nearestAutomaticBuildingWork(repairWorker), null, 'paused automatic repair leaves damaged structures for explicit orders');
+  repairToggle.setAutoRepairEnabled(true);
+  assert.equal(repairToggle._nearestAutomaticBuildingWork(repairWorker).id, damaged.id, 'automatic repair can be resumed without changing building data');
+
+  const rally = movementSandbox();
+  const barracks = rally.addBuilding('barracks', 20, 20, 'player', 1);
+  rally.selectedIds = [barracks.id];
+  rally._syncSelectionFlags();
+  const rallyResult = rally.setRallyPoint({ x: 30, z: 30 });
+  assert.equal(rallyResult.success, true, 'production buildings accept a rally point');
+  assert.deepEqual(barracks.rallyPoint, { x: 30, z: 30 }, 'rally point stores its world destination');
+  rally.clearRallyPoint();
+  assert.equal(barracks.rallyPoint, null, 'production rally points can be cleared');
+
+  const patrol = movementSandbox();
+  const guard = patrol.addUnit('soldier', 20, 20, 'player');
+  patrol.selectedIds = [guard.id];
+  patrol._syncSelectionFlags();
+  const patrolResult = patrol.setPatrolRoute({ x: 20, z: 20 }, { x: 34, z: 20 });
+  assert.equal(patrolResult.success, true, 'armed units accept a two-point patrol route');
+  assert.equal(guard.patrolActive, true, 'patrol state stays active after the initial route is planned');
+  assert.equal(guard.patrolPoints.length, 2, 'patrol keeps both waypoints');
+  patrol.clearPatrolRoute();
+  assert.equal(guard.patrolActive, false, 'patrol route can be cleared');
+
+  const map = movementSandbox();
+  const scout = map.addUnit('scout', 20, 20, 'player');
+  map.setExplorationEnabled(true);
+  assert.ok(map.getExplorationSnapshot().cells.length > 0, 'optional exploration reveals a bounded local cell set');
+  map.setExplorationEnabled(false);
+  assert.equal(map.getExplorationSnapshot().enabled, false, 'exploration can be disabled for the normal full-map slice');
+
+  const settlement = movementSandbox();
+  settlement.addBuilding('townCenter', 20, 20, 'player', 1);
+  const timber = settlement.addBuilding('timberYard', 32, 20, 'player', 1);
+  const wall = settlement.addBuilding('wall', 45, 20, 'player', 1, { wallSegments: 3, wallDirection: { x: 1, z: 0 }, wallStart: { x: 42, z: 20 } });
+  const milestones = settlement.getFirstAgeMilestones();
+  assert.equal(milestones.find((item) => item.id === 'established').complete, true, 'Crown Hall milestone reflects a standing settlement core');
+  assert.equal(milestones.find((item) => item.id === 'frontier').value, 2, 'milestone progress counts completed First Age structures');
+  assert.equal(settlement.getLogisticsSummary().find((item) => item.resourceType === 'wood').station, 'Timber Yard', 'logistics summary selects the matching drop-off');
+  assert.ok(settlement.getWallExtensionStart(wall).x > wall.x, 'wall continuation exposes a magnetic last-end start point');
+
+  settlement.setWorkerFocus('gold');
+  settlement.setAutoRepairEnabled(false);
+  const save = settlement.serialize();
+  const restored = movementSandbox();
+  assert.equal(restored.restore(save), true, 'new First Age command settings survive save/load');
+  assert.equal(restored.getWorkerFocus(), 'gold', 'save/load preserves worker focus');
+  assert.equal(restored.isAutoRepairEnabled(), false, 'save/load preserves automatic repair state');
 }
 
 function checkGoldEconomyLoop() {
@@ -2394,6 +2466,7 @@ checkGathering();
 checkPersistentForestGathering();
 checkDevelopmentSpeedControls();
 checkFirstAgeSystemsPass();
+checkFirstAgeCommandDeckPass();
 checkGoldEconomyLoop();
 checkOreWashEconomySupport();
 checkStableGranaryAndScout();
@@ -2464,6 +2537,7 @@ console.log(JSON.stringify({
     'artwork-matched building collision, offset physical bases, perimeter work stations, and non-stacking Crown Hall drop-offs',
     'travel-only speed scaling, high-speed collision routing, and fast group spacing',
     'First-age packed roads, three researchable doctrines, visible guard areas, field history, and local save/load recovery',
+    'First-age worker focus, automatic repair toggle, production rally points, patrol routes, optional exploration, milestones, logistics summary, wall continuation, and command-setting save/load',
     'always-available selected-unit recovery at a clear Crown Hall approach with cargo deposit and group spacing',
     'distinct Ashen role-equivalent artwork, directional units, independent economy, capped town growth, local defense, and forest-gated raids',
     'roughly eighty-percent individually harvestable Wildwood trees with authored berry, stone, and scarce Gold glades and no prebuilt fields',

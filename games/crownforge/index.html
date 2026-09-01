@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="crownforge-build" content="20260831-systems1" />
+    <meta name="crownforge-build" content="20260831-firstage2" />
     <title>Crownforge: Dawn of Kingdoms</title>
     <meta name="description" content="Crownforge — a tiny polished historical RTS settlement slice." />
-    <link rel="icon" type="image/png" href="./assets/crownforge-icon-gold-v1.png?v=20260831-systems1" />
+    <link rel="icon" type="image/png" href="./assets/crownforge-icon-gold-v1.png?v=20260831-firstage2" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
-    <link rel="stylesheet" href="./styles.css?v=20260831-systems1" />
+    <link rel="stylesheet" href="./styles.css?v=20260831-firstage2" />
   </head>
   <body>
     <main class="game-shell">
@@ -69,6 +69,28 @@
               <span class="ui-icon icon-cancel selection-action-icon" aria-hidden="true"></span>
               <span><b>CLEAR GUARD</b><small>RETURN TO READY</small></span>
             </button>
+            <button id="patrol-route" class="selection-unit-button patrol-button" type="button" title="Set a two-point patrol route for selected armed units (P)">
+              <span class="ui-icon icon-house selection-action-icon" aria-hidden="true"></span>
+              <span><b>PATROL ROUTE</b><small>CLICK TWO WAYPOINTS <kbd>P</kbd></small></span>
+            </button>
+            <button id="clear-patrol" class="selection-unit-button patrol-clear-button" type="button" title="Clear patrol routes for selected armed units">
+              <span class="ui-icon icon-cancel selection-action-icon" aria-hidden="true"></span>
+              <span><b>CLEAR PATROL</b><small>RETURN TO READY</small></span>
+            </button>
+          </div>
+          <div id="selection-building-actions" class="selection-unit-actions selection-building-actions" hidden>
+            <button id="set-rally" class="selection-unit-button rally-button" type="button" title="Set a rally point for the selected production building (Y)">
+              <span class="ui-icon icon-house selection-action-icon" aria-hidden="true"></span>
+              <span><b>SET RALLY POINT</b><small>CLICK THE MAP <kbd>Y</kbd></small></span>
+            </button>
+            <button id="clear-rally" class="selection-unit-button rally-clear-button" type="button" title="Clear the selected production building's rally point">
+              <span class="ui-icon icon-cancel selection-action-icon" aria-hidden="true"></span>
+              <span><b>CLEAR RALLY</b><small>SPAWN AT BUILDING</small></span>
+            </button>
+            <button id="extend-wall" class="selection-unit-button wall-extend-button" type="button" title="Continue a selected Palisade from its last end">
+              <span class="ui-icon icon-house selection-action-icon" aria-hidden="true"></span>
+              <span><b>EXTEND PALISADE</b><small>DRAG FROM LAST END</small></span>
+            </button>
           </div>
           <div class="selection-unit-actions selection-direct-actions">
             <button id="demolition-mode" class="selection-unit-button demolition-button" type="button" title="Demolish selected player structures instantly, or enter area-clear mode when none are selected (X)">
@@ -97,6 +119,25 @@
               <span class="technology-mark">III</span><span><b>WATCHKEEPING</b><small data-tech-detail>60 WOOD · 35 STONE · 20 GOLD  •  READY</small></span>
             </button>
           </div>
+        </section>
+        <section class="glass-panel worker-panel">
+          <div class="panel-kicker">WORK CREW</div>
+          <p class="panel-note">Idle villagers choose nearby work by priority.</p>
+          <div class="worker-focus-list" role="group" aria-label="Worker focus">
+            <button class="worker-focus-option" type="button" data-worker-focus="balanced">BALANCED</button>
+            <button class="worker-focus-option" type="button" data-worker-focus="wood">WOOD</button>
+            <button class="worker-focus-option" type="button" data-worker-focus="food">FOOD</button>
+            <button class="worker-focus-option" type="button" data-worker-focus="stone">STONE</button>
+            <button class="worker-focus-option" type="button" data-worker-focus="gold">GOLD</button>
+          </div>
+          <button id="auto-repair-toggle" class="utility-toggle" type="button" aria-pressed="true">AUTO-REPAIR ON</button>
+          <button id="exploration-toggle" class="utility-toggle" type="button" aria-pressed="false">MAP REVEAL OFF</button>
+          <ul id="logistics-list" class="logistics-list" aria-label="Drop-off routing"></ul>
+        </section>
+        <section class="glass-panel milestone-panel">
+          <div class="panel-kicker">FIRST-AGE MILESTONES</div>
+          <ol id="milestone-list" class="milestone-list"></ol>
+          <ul id="settlement-warnings" class="settlement-warnings" aria-live="polite"></ul>
         </section>
         <section class="glass-panel history-panel">
           <div class="panel-kicker">FIELD LOG</div>
@@ -187,7 +228,7 @@
         <button id="victory-reset" class="action-button">PLAY AGAIN</button>
       </section>
     </main>
-    <script type="module" src="./src/main.js?v=20260831-systems1"></script>
+    <script type="module" src="./src/main.js?v=20260831-firstage2"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

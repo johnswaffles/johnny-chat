@@ -1,10 +1,10 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_TECHNOLOGIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260831-systems1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260831-firstage2';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260828-latencypass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260831-systems1';
-import { CrownforgeSimulation } from './simulation.js?v=20260831-systems1';
+import { CrownforgeRenderer } from './renderer.js?v=20260831-firstage2';
+import { CrownforgeSimulation } from './simulation.js?v=20260831-firstage2';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
-import { summarizeUnitTasks } from './task-summary.js?v=20260831-systems1';
+import { summarizeUnitTasks } from './task-summary.js?v=20260831-firstage2';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -44,6 +44,18 @@ const selectAllVillagersButton = document.querySelector('#select-all-villagers')
 const selectionCombatActions = document.querySelector('#selection-combat-actions');
 const guardAreaButton = document.querySelector('#guard-area');
 const clearGuardButton = document.querySelector('#clear-guard');
+const patrolRouteButton = document.querySelector('#patrol-route');
+const clearPatrolButton = document.querySelector('#clear-patrol');
+const selectionBuildingActions = document.querySelector('#selection-building-actions');
+const setRallyButton = document.querySelector('#set-rally');
+const clearRallyButton = document.querySelector('#clear-rally');
+const extendWallButton = document.querySelector('#extend-wall');
+const workerFocusButtons = [...document.querySelectorAll('[data-worker-focus]')];
+const autoRepairToggle = document.querySelector('#auto-repair-toggle');
+const explorationToggle = document.querySelector('#exploration-toggle');
+const milestoneList = document.querySelector('#milestone-list');
+const settlementWarnings = document.querySelector('#settlement-warnings');
+const logisticsList = document.querySelector('#logistics-list');
 const demolitionModeButton = document.querySelector('#demolition-mode');
 const saveGameButton = document.querySelector('#save-game');
 const loadGameButton = document.querySelector('#load-game');
@@ -71,6 +83,7 @@ const ui = {
   buildDetails: Object.fromEntries(buildButtons.map((button) => [button.dataset.buildType, button.querySelector(`[data-build-detail="${button.dataset.buildType}"]`)])),
   trainDetails: Object.fromEntries(trainButtons.map((button) => [button.dataset.trainUnit, button.querySelector(`[data-train-detail="${button.dataset.trainUnit}"]`)])),
   technologyDetails: Object.fromEntries(technologyButtons.map((button) => [button.dataset.tech, button.querySelector('[data-tech-detail]')])),
+  workerFocus: Object.fromEntries(workerFocusButtons.map((button) => [button.dataset.workerFocus, button])),
 };
 
 let toastTimer = null;
@@ -150,6 +163,20 @@ const input = new CrownforgeInput({
     trainMenu.hidden = true;
     cancelBuildButton.hidden = !active && !input.buildMode && !input.demolitionMode;
   },
+  onRallyMode: (active) => {
+    setRallyButton?.classList.toggle('is-active', active);
+    setRallyButton?.setAttribute('aria-pressed', String(active));
+    buildMenu.hidden = true;
+    trainMenu.hidden = true;
+    cancelBuildButton.hidden = !active && !input.buildMode && !input.demolitionMode && !input.guardMode && !input.patrolMode;
+  },
+  onPatrolMode: (active) => {
+    patrolRouteButton?.classList.toggle('is-active', active);
+    patrolRouteButton?.setAttribute('aria-pressed', String(active));
+    buildMenu.hidden = true;
+    trainMenu.hidden = true;
+    cancelBuildButton.hidden = !active && !input.buildMode && !input.demolitionMode && !input.guardMode && !input.rallyMode;
+  },
   onToast: announce,
   onGesture: () => audio.unlock(),
   onSelection: (entities) => {
@@ -206,6 +233,38 @@ function activateDemolitionControl() {
   return { kind: 'demolish-mode', success: true, active: input.demolitionMode };
 }
 
+function activateRallyControl() {
+  const productionBuilding = simulation.selectedEntities.find((entity) => entity.kind === 'building'
+    && entity.faction === 'player'
+    && entity.progress >= 1
+    && !entity.destroyed
+    && BUILDING_TYPES[entity.type]?.production);
+  if (!productionBuilding) {
+    announce('Select a completed production building before setting a rally point.');
+    audio.play('invalid');
+    return { success: false, kind: 'rally' };
+  }
+  input.setRallyMode(!input.rallyMode);
+  updateUi();
+  return { success: true, kind: 'rally-mode', active: input.rallyMode };
+}
+
+function activatePatrolControl() {
+  const armed = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
+    && entity.faction === 'player'
+    && !entity.dead
+    && !UNIT_TYPES[entity.type]?.worker
+    && UNIT_TYPES[entity.type]?.canAttackUnits !== false);
+  if (!armed) {
+    announce('Select an armed unit before setting a patrol route.');
+    audio.play('invalid');
+    return { success: false, kind: 'patrol' };
+  }
+  input.setPatrolMode(!input.patrolMode);
+  updateUi();
+  return { success: true, kind: 'patrol-mode', active: input.patrolMode };
+}
+
 buildMenuToggle.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
@@ -215,10 +274,12 @@ buildMenuToggle.addEventListener('click', () => {
   }
   if (input.demolitionMode) input.cancelDemolitionMode();
   if (input.guardMode) input.cancelGuardMode();
+  if (input.rallyMode) input.cancelRallyMode();
+  if (input.patrolMode) input.cancelPatrolMode();
   buildMenu.hidden = !buildMenu.hidden;
   trainMenu.hidden = true;
 });
-function beginBuildingPlacement(type) {
+function beginBuildingPlacement(type, options = {}) {
   audio.unlock();
   if (input.buildMode) {
     input.cancelBuildMode();
@@ -243,7 +304,7 @@ function beginBuildingPlacement(type) {
     audio.play('invalid');
     return;
   }
-  input.setBuildMode(type);
+  input.setBuildMode(type, options);
 }
 buildButtons.forEach((button) => {
   button.addEventListener('click', () => beginBuildingPlacement(button.dataset.buildType));
@@ -252,6 +313,11 @@ cancelBuildButton.addEventListener('click', () => {
   input.cancelBuildMode();
   input.cancelDemolitionMode();
   input.cancelGuardMode();
+  input.cancelRallyMode();
+  input.cancelPatrolMode();
+  input.cancelGuardMode();
+  input.cancelRallyMode();
+  input.cancelPatrolMode();
 });
 trainMenuToggle.addEventListener('click', () => {
   audio.unlock();
@@ -259,6 +325,8 @@ trainMenuToggle.addEventListener('click', () => {
   if (input.buildMode) input.cancelBuildMode();
   if (input.demolitionMode) input.cancelDemolitionMode();
   if (input.guardMode) input.cancelGuardMode();
+  if (input.rallyMode) input.cancelRallyMode();
+  if (input.patrolMode) input.cancelPatrolMode();
   buildMenu.hidden = true;
   trainMenu.hidden = !trainMenu.hidden;
 });
@@ -311,6 +379,53 @@ clearGuardButton?.addEventListener('click', () => {
   updateUi();
 });
 
+patrolRouteButton?.addEventListener('click', () => activatePatrolControl());
+clearPatrolButton?.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  const result = simulation.clearPatrolRoute();
+  if (result.success) audio.command('move'); else audio.play('invalid');
+  updateUi();
+});
+setRallyButton?.addEventListener('click', () => activateRallyControl());
+clearRallyButton?.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  const result = simulation.clearRallyPoint();
+  if (!result.success) audio.play('invalid');
+  updateUi();
+});
+extendWallButton?.addEventListener('click', () => {
+  const wall = simulation.selectedEntities.find((entity) => entity.kind === 'building' && entity.type === 'wall' && entity.faction === 'player' && !entity.destroyed);
+  const start = simulation.getWallExtensionStart(wall);
+  if (!start) {
+    announce('Select a Palisade wall before extending it.');
+    audio.play('invalid');
+    return;
+  }
+  beginBuildingPlacement('wall', { wallStart: start });
+});
+workerFocusButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    audio.unlock();
+    audio.ui();
+    simulation.setWorkerFocus(button.dataset.workerFocus);
+    updateUi();
+  });
+});
+autoRepairToggle?.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  simulation.setAutoRepairEnabled(!simulation.isAutoRepairEnabled());
+  updateUi();
+});
+explorationToggle?.addEventListener('click', () => {
+  audio.unlock();
+  audio.ui();
+  simulation.setExplorationEnabled(!simulation.getExplorationSnapshot().enabled);
+  updateUi();
+});
+
 saveGameButton?.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
@@ -328,6 +443,8 @@ loadGameButton?.addEventListener('click', () => {
     input.cancelBuildMode();
     input.cancelDemolitionMode();
     input.cancelGuardMode();
+    input.cancelRallyMode();
+    input.cancelPatrolMode();
     victoryPanel.hidden = simulation.phase === 'playing';
     audio.command('move');
   } else {
@@ -444,11 +561,74 @@ function updateUi() {
     guardAreaButton.setAttribute('aria-pressed', String(input.guardMode));
   }
   if (clearGuardButton) clearGuardButton.hidden = !simulation.selectedEntities.some((entity) => entity.kind === 'unit' && entity.guardPoint && !entity.dead);
+  if (clearPatrolButton) clearPatrolButton.hidden = !simulation.selectedEntities.some((entity) => entity.kind === 'unit' && entity.patrolActive && !entity.dead);
+  const selectedProductionBuilding = simulation.selectedEntities.find((entity) => entity.kind === 'building'
+    && entity.faction === 'player'
+    && entity.progress >= 1
+    && !entity.destroyed
+    && BUILDING_TYPES[entity.type]?.production);
+  const selectedWall = simulation.selectedEntities.find((entity) => entity.kind === 'building'
+    && entity.type === 'wall'
+    && entity.faction === 'player'
+    && !entity.destroyed);
+  if (selectionBuildingActions) selectionBuildingActions.hidden = !selectedProductionBuilding && !selectedWall;
+  if (setRallyButton) {
+    setRallyButton.hidden = !selectedProductionBuilding;
+    setRallyButton.classList.toggle('is-active', input.rallyMode);
+    setRallyButton.setAttribute('aria-pressed', String(input.rallyMode));
+  }
+  if (clearRallyButton) clearRallyButton.hidden = !selectedProductionBuilding?.rallyPoint;
+  if (extendWallButton) extendWallButton.hidden = !selectedWall;
+  workerFocusButtons.forEach((button) => {
+    const active = simulation.getWorkerFocus() === button.dataset.workerFocus;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+    setTooltip(button, `${FIRST_AGE_WORK_PRIORITIES[button.dataset.workerFocus]?.label ?? 'Worker'} priority for automatic nearby assignments`);
+  });
+  if (autoRepairToggle) {
+    const enabled = simulation.isAutoRepairEnabled();
+    autoRepairToggle.textContent = `AUTO-REPAIR ${enabled ? 'ON' : 'OFF'}`;
+    autoRepairToggle.classList.toggle('is-active', enabled);
+    autoRepairToggle.setAttribute('aria-pressed', String(enabled));
+  }
+  if (explorationToggle) {
+    const exploration = simulation.getExplorationSnapshot();
+    explorationToggle.textContent = `MAP REVEAL ${exploration.enabled ? 'ON' : 'OFF'}`;
+    explorationToggle.classList.toggle('is-active', exploration.enabled);
+    explorationToggle.setAttribute('aria-pressed', String(exploration.enabled));
+  }
+  if (logisticsList) {
+    logisticsList.replaceChildren(...simulation.getLogisticsSummary().map((item) => {
+      const row = document.createElement('li');
+      row.innerHTML = `<span>${item.label}</span><b>${item.station}</b>`;
+      return row;
+    }));
+  }
+  if (milestoneList) {
+    milestoneList.replaceChildren(...simulation.getFirstAgeMilestones().map((milestone) => {
+      const item = document.createElement('li');
+      item.classList.toggle('is-complete', milestone.complete);
+      item.innerHTML = `<span>${milestone.label}</span><b>${Math.round(milestone.value)}/${milestone.target}</b>`;
+      return item;
+    }));
+  }
+  if (settlementWarnings) {
+    settlementWarnings.replaceChildren(...simulation.getSettlementWarnings().map((warning) => {
+      const item = document.createElement('li');
+      item.className = `warning-${warning.tone}`;
+      item.textContent = warning.message;
+      return item;
+    }));
+  }
   const preview = renderer.buildPreview;
   ui.commandLine.textContent = input.demolitionMode
     ? 'INSTANT DEMOLITION  •  click or drag across structures  •  debris clears immediately  •  Crown Hall protected'
     : input.guardMode
     ? 'GUARD AREA  •  click a point to station selected armed units  •  press G or Esc to cancel'
+    : input.rallyMode
+    ? 'RALLY POINT  •  click the destination for newly trained units  •  press Y or Esc to cancel'
+    : input.patrolMode
+    ? `PATROL ROUTE  •  click ${input.patrolStart ? 'the second' : 'the first'} waypoint  •  press P or Esc to cancel`
     : input.buildMode
     ? `PLACEMENT MODE  •  ${preview?.valid ? 'site ready' : (preview?.reason ?? 'move the foundation')}`
     : commandLineText();
@@ -525,8 +705,8 @@ function updateUi() {
   if (productionBuilding) {
     const queue = productionBuilding.productionQueue ?? [];
     trainQueueStatus.textContent = queue.length
-      ? `${queue.length} queued · ${Math.round((productionBuilding.productionProgress ?? 0) * 100)}% on current unit`
-      : 'Select a unit to add it to the queue.';
+      ? `${queue.length} queued · ${Math.round((productionBuilding.productionProgress ?? 0) * 100)}% on current unit${productionBuilding.rallyPoint ? ' · rally set' : ''}`
+      : productionBuilding.rallyPoint ? 'Rally set · select a unit to add it to the queue.' : 'Select a unit to add it to the queue.';
     trainButtons.forEach((button) => {
       const type = button.dataset.trainUnit;
       const blueprint = PRODUCTION_TYPES[type];

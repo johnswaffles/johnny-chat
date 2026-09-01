@@ -96,8 +96,31 @@ h1 { font: 20px 'Marcellus', Georgia, serif; letter-spacing: .01em; color: #faf1
 @media (max-height: 760px) { .build-menu { bottom: calc(100% + 30px); max-height: calc(100vh - 180px); } }
 
 .selection-combat-actions { display: grid; gap: 6px; }
+.selection-combat-actions .selection-unit-button + .selection-unit-button { margin-top: 0; }
 .guard-button.is-active { border-color: rgba(129, 185, 141, .9); background: rgba(129, 185, 141, .2); box-shadow: 0 0 0 1px rgba(129,185,141,.16) inset; }
 .guard-clear-button[hidden] { display: none; }
+.patrol-button.is-active, .rally-button.is-active { border-color: rgba(129, 185, 141, .9); background: rgba(129, 185, 141, .2); box-shadow: 0 0 0 1px rgba(129,185,141,.16) inset; }
+.patrol-clear-button[hidden], .rally-clear-button[hidden], .extend-wall-button[hidden] { display: none; }
+.selection-building-actions { display: grid; gap: 6px; }
+.selection-building-actions .selection-unit-button + .selection-unit-button { margin-top: 0; }
+.worker-panel, .milestone-panel { padding: 10px; border-radius: 13px; }
+.worker-panel { margin-top: 0; }
+.worker-focus-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.worker-focus-option, .utility-toggle { border: 1px solid rgba(134,196,207,.28); border-radius: 6px; color: #b9cbbb; background: rgba(134,196,207,.07); cursor: pointer; font-size: 7px; font-weight: 700; letter-spacing: .06em; }
+.worker-focus-option { padding: 6px 3px; }
+.worker-focus-option:hover, .worker-focus-option.is-active, .utility-toggle:hover, .utility-toggle.is-active { border-color: rgba(134,196,207,.78); color: #e2f0d7; background: rgba(134,196,207,.19); }
+.utility-toggle { width: 100%; margin-top: 6px; padding: 6px; text-align: left; }
+.logistics-list, .settlement-warnings { display: grid; gap: 4px; margin: 8px 0 0; padding: 7px 0 0; border-top: 1px solid rgba(255,255,255,.08); list-style: none; }
+.logistics-list li, .milestone-list li { display: flex; justify-content: space-between; gap: 6px; color: #9eaf9f; font-size: 7px; line-height: 1.25; }
+.logistics-list b, .milestone-list b { color: #d7e0c5; font-weight: 600; text-align: right; }
+.milestone-panel { margin-top: 0; }
+.milestone-list { display: grid; gap: 5px; margin: 7px 0 0; padding: 0; list-style: none; }
+.milestone-list li.is-complete { color: #9bd19c; }
+.milestone-list li.is-complete b { color: #9bd19c; }
+.settlement-warnings { margin-top: 8px; padding-left: 12px; list-style: disc; }
+.settlement-warnings:empty { display: none; }
+.settlement-warnings li { color: #d9c47c; font-size: 7px; line-height: 1.25; }
+.settlement-warnings .warning-info { color: #9fc5bf; }
 .doctrine-panel, .history-panel { padding: 10px; }
 .doctrine-panel { margin-top: 10px; }
 .history-panel { margin-top: 10px; min-height: 96px; }

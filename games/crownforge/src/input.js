@@ -15,6 +15,10 @@ export class CrownforgeInput {
     onDemolitionShortcut = () => {},
     onGuardMode = () => {},
     onGuardShortcut = () => {},
+    onRallyMode = () => {},
+    onRallyShortcut = () => {},
+    onPatrolMode = () => {},
+    onPatrolShortcut = () => {},
     onRecoverShortcut = () => {},
     onSelectAllVillagersShortcut = () => {},
   }) {
@@ -33,6 +37,10 @@ export class CrownforgeInput {
     this.onDemolitionShortcut = onDemolitionShortcut;
     this.onGuardMode = onGuardMode;
     this.onGuardShortcut = onGuardShortcut;
+    this.onRallyMode = onRallyMode;
+    this.onRallyShortcut = onRallyShortcut;
+    this.onPatrolMode = onPatrolMode;
+    this.onPatrolShortcut = onPatrolShortcut;
     this.onRecoverShortcut = onRecoverShortcut;
     this.onSelectAllVillagersShortcut = onSelectAllVillagersShortcut;
     this.pointer = { x: 0, y: 0 };
@@ -40,9 +48,13 @@ export class CrownforgeInput {
     this.pan = null;
     this.buildMode = null;
     this.wallDrag = null;
+    this.wallStartHint = null;
     this.demolitionMode = false;
     this.demolitionDrag = null;
     this.guardMode = false;
+    this.rallyMode = false;
+    this.patrolMode = false;
+    this.patrolStart = null;
     this.keys = new Set();
     this.reducedMotion = false;
     this.cursorDirty = true;
@@ -71,18 +83,22 @@ export class CrownforgeInput {
         this.cancelBuildMode();
         this.cancelDemolitionMode();
         this.cancelGuardMode();
+        this.cancelRallyMode();
+        this.cancelPatrolMode();
         this.onEscape();
         event.preventDefault();
         return;
       }
       if (this._isUiFocused()) return;
       const key = event.key.toLowerCase();
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'b', 'g', 'r', 'v', 'x'].includes(key)) event.preventDefault();
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'b', 'g', 'p', 'y', 'r', 'v', 'x'].includes(key)) event.preventDefault();
       if (event.repeat) return;
       this.keys.add(key);
       if (key === 'b') this.onBuildShortcut();
       if (key === 'x') this.onDemolitionShortcut();
       if (key === 'g') this.onGuardShortcut();
+      if (key === 'p') this.onPatrolShortcut();
+      if (key === 'y') this.onRallyShortcut();
       if (key === 'r') this.onRecoverShortcut();
       if (key === 'v') this.onSelectAllVillagersShortcut();
     });
@@ -93,9 +109,14 @@ export class CrownforgeInput {
       this.pan = null;
       this.demolitionDrag = null;
       this.guardMode = false;
+      this.rallyMode = false;
+      this.patrolMode = false;
+      this.patrolStart = null;
       this.renderer.setSelectionBox(null);
       this.renderer.setDemolitionPreview([]);
       this.onGuardMode(false);
+      this.onRallyMode(false);
+      this.onPatrolMode(false);
     });
   }
 
@@ -104,13 +125,16 @@ export class CrownforgeInput {
     return Boolean(active?.closest?.('button, input, select, textarea, [contenteditable="true"]'));
   }
 
-  setBuildMode(type) {
+  setBuildMode(type, options = {}) {
     if (this.demolitionMode) this.cancelDemolitionMode();
     if (this.guardMode) this.cancelGuardMode();
+    if (this.rallyMode) this.cancelRallyMode();
+    if (this.patrolMode) this.cancelPatrolMode();
     this.buildMode = type;
+    this.wallStartHint = options.wallStart ? { ...options.wallStart } : null;
     const world = this.renderer.screenToWorld(this.pointer);
     const preview = type === 'wall'
-      ? this.simulation.getWallLinePreview(world, world)
+      ? this.simulation.getWallLinePreview(this.wallStartHint ?? world, world)
       : this.simulation.getBuildingPlacementPreview(type, world);
     this.renderer.setBuildPreview(preview);
     this.onBuildMode(type);
@@ -127,6 +151,7 @@ export class CrownforgeInput {
   cancelBuildMode() {
     this.buildMode = null;
     this.wallDrag = null;
+    this.wallStartHint = null;
     this.renderer.setBuildPreview(null);
     this.onBuildMode(null);
     this._updateCursor(this.pointer);
@@ -136,6 +161,8 @@ export class CrownforgeInput {
     const active = Boolean(value);
     if (active && this.buildMode) this.cancelBuildMode();
     if (active && this.guardMode) this.cancelGuardMode();
+    if (active && this.rallyMode) this.cancelRallyMode();
+    if (active && this.patrolMode) this.cancelPatrolMode();
     this.demolitionMode = active;
     this.demolitionDrag = null;
     this.renderer.setSelectionBox(null);
@@ -159,6 +186,8 @@ export class CrownforgeInput {
     const active = Boolean(value);
     if (active && this.buildMode) this.cancelBuildMode();
     if (active && this.demolitionMode) this.cancelDemolitionMode();
+    if (active && this.rallyMode) this.cancelRallyMode();
+    if (active && this.patrolMode) this.cancelPatrolMode();
     this.guardMode = active;
     this.renderer.setSelectionBox(null);
     this.renderer.setDemolitionPreview([]);
@@ -171,6 +200,46 @@ export class CrownforgeInput {
     if (!this.guardMode) return;
     this.guardMode = false;
     this.onGuardMode(false);
+    this._updateCursor(this.pointer);
+  }
+
+  setRallyMode(value = true) {
+    const active = Boolean(value);
+    if (active && this.buildMode) this.cancelBuildMode();
+    if (active && this.demolitionMode) this.cancelDemolitionMode();
+    if (active && this.guardMode) this.cancelGuardMode();
+    if (active && this.patrolMode) this.cancelPatrolMode();
+    this.rallyMode = active;
+    this.onRallyMode(active);
+    this._updateCursor(this.pointer);
+    if (active) this.onToast('Rally point: click the map to send newly trained units there. Press Y or Esc to cancel.');
+  }
+
+  cancelRallyMode() {
+    if (!this.rallyMode) return;
+    this.rallyMode = false;
+    this.onRallyMode(false);
+    this._updateCursor(this.pointer);
+  }
+
+  setPatrolMode(value = true) {
+    const active = Boolean(value);
+    if (active && this.buildMode) this.cancelBuildMode();
+    if (active && this.demolitionMode) this.cancelDemolitionMode();
+    if (active && this.guardMode) this.cancelGuardMode();
+    if (active && this.rallyMode) this.cancelRallyMode();
+    this.patrolMode = active;
+    this.patrolStart = null;
+    this.onPatrolMode(active);
+    this._updateCursor(this.pointer);
+    if (active) this.onToast('Patrol route: click a first waypoint, then a second. Press P or Esc to cancel.');
+  }
+
+  cancelPatrolMode() {
+    if (!this.patrolMode && !this.patrolStart) return;
+    this.patrolMode = false;
+    this.patrolStart = null;
+    this.onPatrolMode(false);
     this._updateCursor(this.pointer);
   }
 
@@ -221,6 +290,8 @@ export class CrownforgeInput {
       const world = this.renderer.screenToWorld(point);
       const preview = this.buildMode === 'wall' && this.wallDrag
         ? this.simulation.getWallLinePreview(this.wallDrag.start, world)
+        : this.buildMode === 'wall' && this.wallStartHint
+          ? this.simulation.getWallLinePreview(this.wallStartHint, world)
         : (() => {
           return this.simulation.getBuildingPlacementPreview(this.buildMode, world);
         })();
@@ -242,6 +313,10 @@ export class CrownforgeInput {
       this._setCursor('move-target');
       return;
     }
+    if (this.rallyMode || this.patrolMode) {
+      this._setCursor('move-target');
+      return;
+    }
     if (this.demolitionMode) {
       const target = this.renderer.getEntityAtScreen?.(this.simulation, point, 'demolish');
       this._setCursor(this.simulation.canDemolishBuilding(target) ? 'demolish-target' : 'demolish-invalid');
@@ -251,6 +326,8 @@ export class CrownforgeInput {
       const world = this.renderer.screenToWorld(point);
       const preview = this.buildMode === 'wall' && this.wallDrag
         ? this.simulation.getWallLinePreview(this.wallDrag.start, world)
+        : this.buildMode === 'wall' && this.wallStartHint
+          ? this.simulation.getWallLinePreview(this.wallStartHint, world)
         : this.simulation.getBuildingPlacementPreview(this.buildMode, world);
       this._setCursor(preview.valid ? 'build-valid' : 'build-invalid');
       return;
@@ -297,6 +374,11 @@ export class CrownforgeInput {
       this.cancelGuardMode();
       return;
     }
+    if (event.button === 2 && (this.rallyMode || this.patrolMode)) {
+      this.cancelRallyMode();
+      this.cancelPatrolMode();
+      return;
+    }
     if (event.button === 0) {
       if (this.demolitionMode) {
         this.demolitionDrag = { start: point };
@@ -307,8 +389,10 @@ export class CrownforgeInput {
       if (this.buildMode) {
         const world = this.renderer.screenToWorld(point);
         if (this.buildMode === 'wall') {
-          this.wallDrag = { start: world };
-          this.renderer.setBuildPreview(this.simulation.getWallLinePreview(world, world));
+          const start = this.wallStartHint ?? world;
+          this.wallStartHint = null;
+          this.wallDrag = { start };
+          this.renderer.setBuildPreview(this.simulation.getWallLinePreview(start, world));
           this.canvas.setPointerCapture(event.pointerId);
           return;
         }
@@ -328,6 +412,28 @@ export class CrownforgeInput {
         if (result.success) this.renderer.addRipple(result.point ?? world, '#86c4cf');
         this.onCommand(result);
         this.cancelGuardMode();
+        return;
+      }
+      if (this.rallyMode) {
+        const world = this.renderer.screenToWorld(point);
+        const result = this.simulation.setRallyPoint(world);
+        if (result.success) this.renderer.addRipple(result.point ?? world, '#d7aa54');
+        this.onCommand(result);
+        this.cancelRallyMode();
+        return;
+      }
+      if (this.patrolMode) {
+        const world = this.renderer.screenToWorld(point);
+        if (!this.patrolStart) {
+          this.patrolStart = world;
+          this.renderer.addRipple(world, '#86c4cf');
+          this.onToast('First waypoint set. Click a second point to complete the patrol route.');
+        } else {
+          const result = this.simulation.setPatrolRoute(this.patrolStart, world);
+          if (result.success) this.renderer.addRipple(world, '#86c4cf');
+          this.onCommand(result);
+          this.cancelPatrolMode();
+        }
         return;
       }
       this.drag = { start: point, additive: event.shiftKey };

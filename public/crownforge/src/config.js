@@ -26,6 +26,8 @@ export const CONFIG = {
   sandboxPopulationCapacity: 999,
   pathCacheLimit: 256,
   repathBudgetPerStep: 8,
+  explorationCellSize: 16,
+  explorationRadius: 24,
 };
 
 // The slice currently ships with one readable, forgiving enemy profile. It
@@ -1080,6 +1082,28 @@ export const FIRST_AGE_TECHNOLOGIES = Object.freeze({
   },
 });
 
+// The opening age stays focused when workers have a readable priority rather
+// than a full automation tree. These are deliberately small, inspectable
+// presets that only change how idle builders choose nearby natural work.
+export const FIRST_AGE_WORK_PRIORITIES = Object.freeze({
+  balanced: { label: 'Balanced', order: ['wood', 'food', 'stone', 'gold'] },
+  wood: { label: 'Wood focus', order: ['wood', 'stone', 'food', 'gold'] },
+  food: { label: 'Food focus', order: ['food', 'wood', 'stone', 'gold'] },
+  stone: { label: 'Stone focus', order: ['stone', 'gold', 'wood', 'food'] },
+  gold: { label: 'Gold focus', order: ['gold', 'stone', 'wood', 'food'] },
+});
+
+// Milestones give the First Age a gentle arc without unlocking a later-age
+// tech tree. Every requirement is derived from the live slice state or the
+// lightweight lifetime haul counter, so it survives save/load cleanly.
+export const FIRST_AGE_MILESTONES = Object.freeze([
+  { id: 'established', label: 'Establish the Crown Hall', description: 'Keep the settlement core standing.', target: 1 },
+  { id: 'provisioned', label: 'Provision the settlement', description: 'Gather 250 total resources.', target: 250 },
+  { id: 'frontier', label: 'Open the frontier', description: 'Complete three First Age structures.', target: 3 },
+  { id: 'watchful', label: 'Keep watch', description: 'Complete a Watch Hut or Palisade Tower.', target: 1 },
+  { id: 'woodland', label: 'Make a clearing', description: 'Clear 12 individual Wildwood trees.', target: 12 },
+]);
+
 export const ASSET_RECTS = {
   townCenter: { x: 0, y: 0, width: 418, height: 418 },
   house: { x: 418, y: 0, width: 418, height: 418 },
@@ -1316,7 +1340,7 @@ export const FIRST_AGE_ASSETS = {
   quarry: { src: './assets/crownforge-quarry-v1.png?v=20260818-sandbox1', width: 1254, height: 1254, groundAnchorY: 0.9242 },
   grainMill: { src: './assets/crownforge-grain-mill-v1.png?v=20260818-sandbox1', width: 1254, height: 1254, groundAnchorY: 0.878 },
   field: { src: './assets/crownforge-field-v2.png?v=20260819-fieldpass1', width: 1536, height: 1024, groundAnchorY: 0.9697 },
-  road: { src: './assets/crownforge-dirt-road-tile-v1.png?v=20260831-systems1', width: 1024, height: 1024, groundAnchorY: 0.5 },
+  road: { src: './assets/crownforge-dirt-road-tile-v1.png?v=20260831-firstage2', width: 1024, height: 1024, groundAnchorY: 0.5 },
   // Palisades use authored screen-space views instead of rotating one flat
   // picture. Rotating an upright fence also rotates its posts and makes a
   // completed wall look as if it is lying on the meadow.

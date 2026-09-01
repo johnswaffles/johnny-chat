@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_TECHNOLOGIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260831-systems1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260831-firstage2';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260828-latencypass1';
 
@@ -267,11 +267,17 @@ export class CrownforgeSimulation {
     // it separate from locomotion so a larger haul never changes movement,
     // animation timing, collision, combat, construction, or the fixed clock.
     this.harvestQuantityScale = 1;
+    this.workerFocus = 'balanced';
+    this.autoRepairEnabled = true;
     const query = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
     this.stressMode = query.has('stress');
+    this.explorationEnabled = query.has('explore');
     this.pathCache = new Map();
     this.eventHistory = [];
     this.eventSequence = 0;
+    this.explorationVersion = 0;
+    this.exploredCells = new Set();
+    this.lifetimeGathered = { food: 0, wood: 0, stone: 0, gold: 0 };
     this.reset();
   }
 
@@ -295,6 +301,9 @@ export class CrownforgeSimulation {
     this.technologies = {};
     this.eventHistory = [];
     this.eventSequence = 0;
+    this.explorationVersion = 0;
+    this.exploredCells = new Set();
+    this.lifetimeGathered = { food: 0, wood: 0, stone: 0, gold: 0 };
     this.resources = { ...INITIAL_RESOURCES };
     this.enemyResources = { ...ENEMY_AI.startingResources };
     this.enemyAIState = {
@@ -318,6 +327,7 @@ export class CrownforgeSimulation {
     this.staticBlockerGridVersion = -1;
     this.lastCommand = 'Select a Crownwarden and issue an order.';
     this._seedWorld(this.activeWorldSeed);
+    this._updateExploration();
     this.selectedIds = this.units.filter((unit) => unit.type === 'villager').map((unit) => unit.id);
     this._syncSelectionFlags();
   }
@@ -447,6 +457,213 @@ export class CrownforgeSimulation {
     });
     this._announce(guards.length ? 'Guard areas cleared.' : 'No selected unit has a guard area.');
     return { success: guards.length > 0, kind: 'guard-clear', count: guards.length };
+  }
+
+  getWorkerFocus() {
+    return this.workerFocus;
+  }
+
+  setWorkerFocus(focus = 'balanced') {
+    if (!FIRST_AGE_WORK_PRIORITIES[focus]) return this.workerFocus;
+    this.workerFocus = focus;
+    this._announce(`Worker focus set to ${FIRST_AGE_WORK_PRIORITIES[focus].label}. Nearby idle villagers will follow it.`);
+    return this.workerFocus;
+  }
+
+  isAutoRepairEnabled() {
+    return this.autoRepairEnabled;
+  }
+
+  setAutoRepairEnabled(enabled = true) {
+    this.autoRepairEnabled = Boolean(enabled);
+    this._announce(`Automatic repairs ${this.autoRepairEnabled ? 'enabled' : 'paused'}.`);
+    return this.autoRepairEnabled;
+  }
+
+  setRallyPoint(point) {
+    const building = this.selectedEntities.find((entity) => entity.kind === 'building'
+      && entity.faction === 'player'
+      && entity.progress >= 1
+      && !entity.destroyed
+      && BUILDING_TYPES[entity.type]?.production);
+    if (!building || !point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) {
+      this._announce('Select a completed production building before setting a rally point.');
+      return { success: false, kind: 'rally' };
+    }
+    building.rallyPoint = {
+      x: clamp(point.x, 1, CONFIG.mapWidth - 1),
+      z: clamp(point.z, 1, CONFIG.mapHeight - 1),
+    };
+    this._announce(`${BUILDING_TYPES[building.type].label} rally point set.`);
+    return { success: true, kind: 'rally', building, point: { ...building.rallyPoint } };
+  }
+
+  clearRallyPoint() {
+    const buildings = this.selectedEntities.filter((entity) => entity.kind === 'building'
+      && entity.faction === 'player'
+      && entity.rallyPoint);
+    buildings.forEach((building) => { building.rallyPoint = null; });
+    this._announce(buildings.length ? 'Rally points cleared.' : 'No selected production building has a rally point.');
+    return { success: buildings.length > 0, kind: 'rally-clear', count: buildings.length };
+  }
+
+  setPatrolRoute(start, end) {
+    const guards = this.units.filter((unit) => this.selectedIds.includes(unit.id)
+      && unit.faction === 'player'
+      && !unit.dead
+      && !UNIT_TYPES[unit.type]?.worker
+      && UNIT_TYPES[unit.type]?.canAttackUnits !== false);
+    if (!guards.length || !start || !end) {
+      this._announce('Select an armed unit before setting a patrol route.');
+      return { success: false, kind: 'patrol' };
+    }
+    const safeStart = { x: clamp(start.x, 1, CONFIG.mapWidth - 1), z: clamp(start.z, 1, CONFIG.mapHeight - 1) };
+    const safeEnd = { x: clamp(end.x, 1, CONFIG.mapWidth - 1), z: clamp(end.z, 1, CONFIG.mapHeight - 1) };
+    if (distance(safeStart, safeEnd) < 1.2) {
+      this._announce('Patrol waypoints are too close together.');
+      return { success: false, kind: 'patrol' };
+    }
+    let routed = 0;
+    guards.forEach((unit) => {
+      this._interruptWork(unit);
+      unit.patrolPoints = [{ ...safeStart }, { ...safeEnd }];
+      unit.patrolIndex = 0;
+      unit.patrolActive = true;
+      if (this._sendUnitTo(unit, safeStart, 'move')) {
+        unit.actionLabel = 'Moving to patrol waypoint';
+        routed += 1;
+      } else {
+        unit.patrolActive = false;
+        unit.patrolPoints = [];
+      }
+    });
+    this._announce(`Patrol route set for ${guards.length} unit${guards.length === 1 ? '' : 's'}.`);
+    return { success: routed > 0, kind: 'patrol', routed, count: guards.length, points: [safeStart, safeEnd] };
+  }
+
+  clearPatrolRoute() {
+    const guards = this.units.filter((unit) => this.selectedIds.includes(unit.id) && unit.patrolActive && !unit.dead);
+    guards.forEach((unit) => {
+      unit.patrolActive = false;
+      unit.patrolPoints = [];
+      unit.patrolIndex = 0;
+      if (unit.command === 'move') {
+        unit.path = [];
+        unit.routeTarget = null;
+        unit.command = 'idle';
+        unit.visualState = 'idle';
+        unit.actionLabel = 'Idle';
+      }
+    });
+    this._announce(guards.length ? 'Patrol routes cleared.' : 'No selected unit has a patrol route.');
+    return { success: guards.length > 0, kind: 'patrol-clear', count: guards.length };
+  }
+
+  setExplorationEnabled(enabled = true) {
+    this.explorationEnabled = Boolean(enabled);
+    if (this.explorationEnabled) this._updateExploration();
+    this.explorationVersion += 1;
+    this._announce(`Map exploration ${this.explorationEnabled ? 'enabled' : 'disabled'}.`);
+    return this.explorationEnabled;
+  }
+
+  getExplorationSnapshot() {
+    return {
+      enabled: this.explorationEnabled,
+      version: this.explorationVersion,
+      cellSize: CONFIG.explorationCellSize,
+      cells: [...this.exploredCells],
+    };
+  }
+
+  _updateExploration() {
+    if (!this.explorationEnabled) return;
+    const cellSize = CONFIG.explorationCellSize;
+    const radius = CONFIG.explorationRadius;
+    let changed = false;
+    const reveal = (entity, revealRadius = radius) => {
+      const minX = Math.max(0, Math.floor((entity.x - revealRadius) / cellSize));
+      const maxX = Math.min(Math.ceil(CONFIG.mapWidth / cellSize) - 1, Math.floor((entity.x + revealRadius) / cellSize));
+      const minZ = Math.max(0, Math.floor((entity.z - revealRadius) / cellSize));
+      const maxZ = Math.min(Math.ceil(CONFIG.mapHeight / cellSize) - 1, Math.floor((entity.z + revealRadius) / cellSize));
+      for (let cellZ = minZ; cellZ <= maxZ; cellZ += 1) {
+        for (let cellX = minX; cellX <= maxX; cellX += 1) {
+          const centerX = (cellX + 0.5) * cellSize;
+          const centerZ = (cellZ + 0.5) * cellSize;
+          if (Math.hypot(centerX - entity.x, centerZ - entity.z) > revealRadius) continue;
+          const key = `${cellX}:${cellZ}`;
+          if (this.exploredCells.has(key)) continue;
+          this.exploredCells.add(key);
+          changed = true;
+        }
+      }
+    };
+    this.units.filter((unit) => unit.faction === 'player' && !unit.dead).forEach((unit) => reveal(unit, radius));
+    this.buildings.filter((building) => building.faction === 'player' && !building.destroyed).forEach((building) => reveal(building, radius * 1.2));
+    if (changed) this.explorationVersion += 1;
+  }
+
+  getSettlementWarnings() {
+    const warnings = [];
+    const population = this.population;
+    const spareHousing = population.capacity - population.used;
+    if (spareHousing <= 2) warnings.push({ id: 'housing', tone: 'warn', message: 'Housing is nearly full.' });
+    const idleWorkers = this.units.filter((unit) => unit.faction === 'player' && !unit.dead && this.isWorkerUnit(unit) && unit.command === 'idle' && unit.idleDuration > 2).length;
+    if (idleWorkers) warnings.push({ id: 'idle-workers', tone: 'warn', message: `${idleWorkers} worker${idleWorkers === 1 ? '' : 's'} waiting for an order.` });
+    const damaged = this.buildings.filter((building) => building.faction === 'player' && !building.destroyed && building.progress >= 1 && building.hp < building.maxHp - BUILDING_REPAIR_EPSILON).length;
+    if (damaged && !this.autoRepairEnabled) warnings.push({ id: 'repairs', tone: 'warn', message: `${damaged} damaged structure${damaged === 1 ? '' : 's'} need repair.` });
+    const emptyTypes = Object.keys(RESOURCE_TYPES).filter((type) => !this.resourcesNodes.some((node) => node.resourceType === type && node.amount > 0));
+    if (emptyTypes.length) warnings.push({ id: 'depleted', tone: 'info', message: `${emptyTypes.map((type) => RESOURCE_TYPES[type].label).join(', ')} fully depleted.` });
+    return warnings.slice(0, 3);
+  }
+
+  getFirstAgeMilestones() {
+    const completedBuildings = this.buildings.filter((building) => building.faction === 'player' && !building.destroyed && building.progress >= 1 && building.type !== 'townCenter' && building.type !== 'road').length;
+    const watchful = this.buildings.filter((building) => building.faction === 'player' && !building.destroyed && building.progress >= 1 && ['watchHut', 'palisadeTower'].includes(building.type)).length;
+    const woodland = this.resourcesNodes.filter((node) => node.forestClusterId && node.resourceType === 'wood' && node.depleted).length;
+    const values = {
+      established: this.buildings.some((building) => building.type === 'townCenter' && building.faction === 'player' && !building.destroyed && building.hp > 0) ? 1 : 0,
+      provisioned: Object.values(this.lifetimeGathered).reduce((sum, value) => sum + value, 0),
+      frontier: completedBuildings,
+      watchful,
+      woodland,
+    };
+    return FIRST_AGE_MILESTONES.map((milestone) => ({
+      ...milestone,
+      value: Math.min(milestone.target, values[milestone.id] ?? 0),
+      complete: (values[milestone.id] ?? 0) >= milestone.target,
+    }));
+  }
+
+  getLogisticsSummary() {
+    return Object.keys(RESOURCE_TYPES).map((resourceType) => {
+      const stations = this.buildings.filter((building) => building.faction === 'player'
+        && !building.destroyed
+        && building.progress >= 1
+        && this._storageAccepts(building, resourceType));
+      const dedicated = stations.filter((building) => {
+        const accepted = BUILDING_TYPES[building.type]?.acceptsResources;
+        return Array.isArray(accepted) && accepted.length === 1 && accepted.includes(resourceType);
+      });
+      const candidates = dedicated.length ? dedicated : stations;
+      const station = candidates.sort((a, b) => (a.storageSlotReservations?.size ?? 0) - (b.storageSlotReservations?.size ?? 0) || a.id - b.id)[0] ?? null;
+      return {
+        resourceType,
+        label: RESOURCE_TYPES[resourceType].label,
+        station: station ? BUILDING_TYPES[station.type].label : 'Crown Hall',
+        load: station?.storageSlotReservations?.size ?? 0,
+      };
+    });
+  }
+
+  getWallExtensionStart(wall = null) {
+    const target = wall?.kind === 'building' ? wall : this.selectedEntities.find((entity) => entity.kind === 'building' && entity.type === 'wall' && entity.faction === 'player' && !entity.destroyed);
+    if (!target) return null;
+    const points = this._wallSegmentPoints(target);
+    const direction = wallDirectionFromOptions(target);
+    const endpoint = points[points.length - 1] ?? points[0];
+    const span = BUILDING_TYPES.wall.wallSegmentSpan ?? BUILDING_TYPES.wall.footprint.width;
+    return { x: endpoint.x + direction.x * span / 2, z: endpoint.z + direction.z * span / 2 };
   }
 
   // Keep the previous development-hook names as compatibility aliases for
@@ -718,6 +935,8 @@ export class CrownforgeSimulation {
       attachmentJunction: blueprint.wallAttachment ? Boolean(options.attachmentJunction) : false,
       farmerId: null,
       fieldTimer: 0,
+      rallyPoint: null,
+      constructionMaterial: Math.min(1, Math.max(0, progress)),
     };
     this.buildings.push(building);
     this.navigationVersion += 1;
@@ -817,6 +1036,9 @@ export class CrownforgeSimulation {
       guardPoint: null,
       guardRadius: 14,
       guardTraveling: false,
+      patrolPoints: [],
+      patrolIndex: 0,
+      patrolActive: false,
     };
     this.units.push(unit);
     return unit;
@@ -922,6 +1144,7 @@ export class CrownforgeSimulation {
     this._updateDefenseProjectiles(dt);
     for (const unit of this.units) this._updateUnit(unit, dt);
     this._resolveUnitCollisions();
+    this._updateExploration();
     this._updateEnemyAI(dt);
     this._updateEnemyIntent();
     this._checkVictory();
@@ -1324,6 +1547,9 @@ export class CrownforgeSimulation {
     unit.stairProgress = 0;
     unit.needsSafetyRegroup = false;
     unit.safetyRegroupActive = false;
+    unit.patrolPoints = [];
+    unit.patrolIndex = 0;
+    unit.patrolActive = false;
     if (!preserveGuard) {
       unit.guardPoint = null;
       unit.guardTraveling = false;
@@ -1436,6 +1662,7 @@ export class CrownforgeSimulation {
   }
 
   _updateConstruction(building, dt) {
+    building.constructionMaterial = clamp(building.progress, 0, 1);
     if (!this.buildingNeedsWork(building)) return;
     const repairing = building.progress >= 1;
     if (!Array.isArray(building.buildAssigned)) building.buildAssigned = building.buildAssigned ? [building.buildAssigned] : [];
@@ -1502,6 +1729,7 @@ export class CrownforgeSimulation {
     const constructionComplete = building.progress >= 1 && building.hp >= building.maxHp - BUILDING_REPAIR_EPSILON;
     if (constructionComplete) {
       building.progress = 1;
+      building.constructionMaterial = 1;
       building.hp = building.maxHp;
       building.constructionTimer = 0;
       for (const builder of builders) {
@@ -1544,6 +1772,10 @@ export class CrownforgeSimulation {
     }
     const unit = this.addUnit(order.type, spawn.x, spawn.z, building.faction);
     unit.actionLabel = 'Idle';
+    if (building.rallyPoint) {
+      if (this._sendUnitTo(unit, building.rallyPoint, 'move')) unit.actionLabel = 'Moving to rally point';
+      else unit.actionLabel = 'Ready at production building';
+    }
     queue.shift();
     building.productionProgress = queue.length ? 0 : 0;
     if (building.faction === 'player') this._announce(`${blueprint.label} ready at the ${BUILDING_TYPES[building.type]?.label ?? 'building'}.`);
@@ -1570,6 +1802,7 @@ export class CrownforgeSimulation {
       .filter((building) => {
         if (building.faction !== unit.faction) return false;
         if (!this.buildingNeedsWork(building)) return false;
+        if (building.progress >= 1 && !this.autoRepairEnabled) return false;
         const reservations = building.buildSlotReservations ?? new Map();
         if (reservations.size >= this._buildingInteractionSlotCount(building) && ![...reservations.values()].includes(unit.id)) return false;
         return this._distanceToBuildingUnitEdge(unit, building) <= radius;
@@ -1581,6 +1814,40 @@ export class CrownforgeSimulation {
           || this._distanceToBuildingUnitEdge(unit, a) - this._distanceToBuildingUnitEdge(unit, b)
           || a.id - b.id;
       })[0] ?? null;
+  }
+
+  _workerResourcePriority() {
+    return FIRST_AGE_WORK_PRIORITIES[this.workerFocus]?.order ?? FIRST_AGE_WORK_PRIORITIES.balanced.order;
+  }
+
+  _updateWorkerAssignments() {
+    const workers = this.units
+      .filter((unit) => this._availableForAutomaticBuilding(unit) && !unit.needsSafetyRegroup && !unit.stairAccess)
+      .sort((a, b) => a.id - b.id);
+    let routeBudget = this.stressMode ? 2 : 5;
+    for (const worker of workers) {
+      if (routeBudget <= 0) break;
+      let assigned = false;
+      for (const resourceType of this._workerResourcePriority()) {
+        const node = this._assignResourceWork(worker, {
+          resourceType,
+          origin: worker,
+          radius: 24,
+          maxCandidates: 8,
+          persistent: true,
+          label: `Starting ${RESOURCE_TYPES[resourceType].label} work`,
+        });
+        if (node) {
+          assigned = true;
+          worker.actionLabel = `Starting ${RESOURCE_TYPES[resourceType].label} work`;
+          routeBudget -= 1;
+          break;
+        }
+      }
+      // Leave the existing idle/regroup label intact when no resource can be
+      // reached. The safety-huddle pass owns that message and should not be
+      // overwritten on every service tick.
+    }
   }
 
   _crownHallHuddlePoints(hall) {
@@ -1688,6 +1955,8 @@ export class CrownforgeSimulation {
         builder.buildTarget = null;
       }
     }
+
+    this._updateWorkerAssignments();
 
     if (routeBudget <= 0) return;
     const regrouping = this.units
@@ -2084,6 +2353,20 @@ export class CrownforgeSimulation {
     }
     if (unit.command === 'move' && !unit.path.length && Math.hypot(unit.velocityX, unit.velocityZ) < 0.08) {
       if (unit.orderQueue?.length) this._executeNextConstructionOrder(unit);
+      else if (unit.patrolActive && unit.patrolPoints.length >= 2) {
+        unit.patrolIndex = (unit.patrolIndex + 1) % unit.patrolPoints.length;
+        const waypoint = unit.patrolPoints[unit.patrolIndex];
+        if (this._sendUnitTo(unit, waypoint, 'move')) {
+          unit.actionLabel = 'Patrolling area';
+        } else {
+          unit.patrolActive = false;
+          unit.patrolPoints = [];
+          unit.patrolIndex = 0;
+          unit.command = 'idle';
+          unit.routeTarget = null;
+          unit.actionLabel = 'Patrol route blocked';
+        }
+      }
       else if (unit.guardTraveling && unit.guardPoint) {
         unit.guardTraveling = false;
         unit.command = 'guard';
@@ -2259,6 +2542,9 @@ export class CrownforgeSimulation {
     const availableSpace = Math.max(0, resourceInfo.capacity - bank[unit.carryType]);
     const deposited = Math.min(unit.carryAmount, availableSpace);
     bank[unit.carryType] += deposited;
+    if (unit.faction === 'player' && deposited > 0) {
+      this.lifetimeGathered[unit.carryType] = (this.lifetimeGathered[unit.carryType] ?? 0) + deposited;
+    }
     unit.carryAmount -= deposited;
     if (deposited > 0) this.animation.emit(unit, ANIMATION_EVENTS.depositComplete, {
       resourceType: unit.carryType,
@@ -2281,6 +2567,7 @@ export class CrownforgeSimulation {
   }
 
   _continueAfterDeposit(unit) {
+    if (unit.patrolActive || (unit.guardPoint && (unit.command === 'guard' || unit.guardTraveling))) return;
     if (unit.orderQueue?.length) {
       this._executeNextConstructionOrder(unit);
       return;
@@ -4523,7 +4810,12 @@ export class CrownforgeSimulation {
       && building.faction === faction
       && building.progress >= 1
       && this._storageAccepts(building, resourceType));
-    return storage.sort((a, b) => this._distanceToBuildingEdge(point, a) - this._distanceToBuildingEdge(point, b))[0] ?? null;
+    const dedicated = storage.filter((building) => {
+      const accepted = BUILDING_TYPES[building.type]?.acceptsResources;
+      return Array.isArray(accepted) && accepted.length === 1 && accepted.includes(resourceType);
+    });
+    const candidates = dedicated.length ? dedicated : storage;
+    return candidates.sort((a, b) => this._distanceToBuildingEdge(point, a) - this._distanceToBuildingEdge(point, b))[0] ?? null;
   }
 
   _cellIntersectsBuilding(cellX, cellZ, building, padding = 0) {
@@ -6321,6 +6613,12 @@ export class CrownforgeSimulation {
       activeWorldSeed: this.activeWorldSeed,
       worldGeneration: this.worldGeneration,
       phase: this.phase,
+      workerFocus: this.workerFocus,
+      autoRepairEnabled: this.autoRepairEnabled,
+      explorationEnabled: this.explorationEnabled,
+      exploredCells: [...this.exploredCells],
+      explorationVersion: this.explorationVersion,
+      lifetimeGathered: this._jsonSafe(this.lifetimeGathered),
       resources: this._jsonSafe(this.resources),
       enemyResources: this._jsonSafe(this.enemyResources),
       enemyAIState: this._jsonSafe(this.enemyAIState),
@@ -6377,6 +6675,12 @@ export class CrownforgeSimulation {
     this.activeWorldSeed = Number.isInteger(restored.activeWorldSeed) ? restored.activeWorldSeed >>> 0 : this.activeWorldSeed;
     this.worldGeneration = Number.isInteger(restored.worldGeneration) ? restored.worldGeneration : this.worldGeneration;
     this.phase = restored.phase === 'victory' || restored.phase === 'defeat' ? restored.phase : 'playing';
+    this.workerFocus = FIRST_AGE_WORK_PRIORITIES[restored.workerFocus] ? restored.workerFocus : 'balanced';
+    this.autoRepairEnabled = restored.autoRepairEnabled !== false;
+    this.explorationEnabled = Boolean(restored.explorationEnabled);
+    this.exploredCells = new Set(Array.isArray(restored.exploredCells) ? restored.exploredCells : []);
+    this.explorationVersion = Number.isInteger(restored.explorationVersion) ? restored.explorationVersion : 0;
+    this.lifetimeGathered = { food: 0, wood: 0, stone: 0, gold: 0, ...(restored.lifetimeGathered ?? {}) };
     this.resources = { ...INITIAL_RESOURCES, ...(restored.resources ?? {}) };
     this.enemyResources = { ...ENEMY_AI.startingResources, ...(restored.enemyResources ?? {}) };
     this.enemyAIState = { ...this.enemyAIState, ...(restored.enemyAIState ?? {}) };
