@@ -101,7 +101,7 @@
   };
   const SOUNDTRACKS = {
     cozy: { src: "/home/cozy-builder-theme.mp3", label: "Johnny's Cozy Theme" },
-    "dreamy-clouds": { src: "/tetris/audio/dreamy-clouds.mp3", label: "Dreamy Clouds" },
+    "dreamy-clouds": { src: "/tetris/audio/dreamy-clouds.mp3", label: "Dreamy Clouds", loopTrimSeconds: 2 },
     "neon-dreams": { src: "/tetris/audio/neon-dreams.mp3", label: "Neon Dreams" },
     "whimsical-waltz": { src: "/tetris/audio/whimsical-waltz.mp3", label: "Whimsical Waltz" }
   };
@@ -1193,6 +1193,16 @@
     updateMusicButton();
   };
 
+  // Dreamy Clouds has a short silent tail. Restart just before it so the
+  // browser's native loop stays continuous without affecting other tracks.
+  const keepTrackLoopTight = () => {
+    const trimSeconds = SOUNDTRACKS[soundtrackId]?.loopTrimSeconds || 0;
+    if (!trimSeconds || music.paused || !Number.isFinite(music.duration)) return;
+    if (music.duration > trimSeconds && music.currentTime >= music.duration - trimSeconds) {
+      music.currentTime = 0;
+    }
+  };
+
   const updateSoundtrackControls = () => {
     if (soundtrackSelect) soundtrackSelect.value = soundtrackId;
     if (mobileSoundtrackSelect) mobileSoundtrackSelect.value = soundtrackId;
@@ -1380,6 +1390,7 @@
     musicError = false;
     updateMusicButton();
   });
+  music.addEventListener("timeupdate", keepTrackLoopTight);
   music.addEventListener("error", handleMusicError);
 
   if (!SOUNDTRACKS[soundtrackId]) soundtrackId = "cozy";
