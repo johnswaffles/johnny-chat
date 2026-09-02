@@ -12,7 +12,8 @@ const activeRoutes = [
   "/mosswake/",
   "/cozy-builder-game/",
   "/cozy-builder/",
-  "/crownforge/"
+  "/crownforge/",
+  "/cozy-search/"
 ];
 const errors = [];
 

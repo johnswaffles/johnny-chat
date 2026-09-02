@@ -25,7 +25,8 @@
     "/sim/",
     "/story-editor/",
     "/textsmith/",
-    "/tetris/"
+    "/tetris/",
+    "/cozy-search/"
   ]);
 
   RETIRED_HEARTHWILD_KEYS.forEach((key) => {
