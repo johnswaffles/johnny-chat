@@ -4974,3 +4974,18 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - Browser QA loaded all 144 walk/attack/death direction combinations through the real runtime renderer with zero failures and no console warnings or errors.
 - The playable game completed loading and moved the opening Hearthkin group using the new atlas without blank, clipped, or disappearing units.
 - The older omnibus remediation and gather scripts still contain pre-existing assertions for the retired road list, Harvesting speed label, and macro Wildwood stand; the scoped animation regression and live runtime checks are the release authority for this art-only pass.
+
+## CROWN HEARTHKIN WALK PASS — 2026-09-02
+
+### WHAT WAS COMPLETED
+
+- Rebuilt only the Crownwarden Hearthkin walk cycle around two opposite contact poses and a true passing/weight-transfer pose in every direction.
+- Kept the approved Hearthkin identity, clothing, axe, scale, ground anchoring, attack cycle, death cycle, and all other unit artwork unchanged.
+- Added `assets/crownforge-roster-v2-crown-hearthkin-walk.png` as a separate production atlas so the previous roster atlas remains recoverable.
+- Advanced the playable build marker to `20260902-hearthkinwalk2`.
+
+### VALIDATION
+
+- The focused roster regression verified all three ordered walk frames in all four directions and all 36 roster atlas mappings.
+- The visual integrity audit passed with no missing assets, dimension mismatches, fallbacks, or unsafe Crown Hearthkin frame edges.
+- The internal animation inspector loaded the v2 atlas and displayed the new raised-foot passing pose at the production render size.

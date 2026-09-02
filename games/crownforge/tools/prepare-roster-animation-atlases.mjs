@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
-const [sourceArgument, outputArgument, sharpModuleArgument] = process.argv.slice(2);
+const [sourceArgument, outputArgument, sharpModuleArgument, ...cliArguments] = process.argv.slice(2);
 
 if (!sourceArgument || !outputArgument) {
   console.error('Usage: node prepare-roster-animation-atlases.mjs <strip-directory> <output-directory> [sharp-module-path]');
@@ -13,6 +13,14 @@ if (!sourceArgument || !outputArgument) {
 const sharp = require(sharpModuleArgument || 'sharp');
 const sourceRoot = path.resolve(sourceArgument);
 const outputRoot = path.resolve(outputArgument);
+const optionValue = (name, fallback = null) => {
+  const index = cliArguments.indexOf(name);
+  return index >= 0 ? cliArguments[index + 1] : fallback;
+};
+const selectedUnit = optionValue('--unit');
+const selectedAnimation = optionValue('--animation');
+const sourceVersion = optionValue('--source-version', '1');
+const outputVersion = optionValue('--output-version', sourceVersion);
 
 const units = [
   'crown-hearthkin',
@@ -44,11 +52,12 @@ const outputCell = { width: 360, height: 362 };
 
 await mkdir(outputRoot, { recursive: true });
 
-for (const unit of units) {
+for (const unit of units.filter((entry) => !selectedUnit || entry === selectedUnit)) {
   for (const [animation, frameCount] of Object.entries(animations)) {
+    if (selectedAnimation && animation !== selectedAnimation) continue;
     const composites = [];
     for (const [row, direction] of directions.entries()) {
-      const source = path.join(sourceRoot, `${unit}-${animation}-${direction}-${frameCount}phase-v1.png`);
+      const source = path.join(sourceRoot, `${unit}-${animation}-${direction}-${frameCount}phase-v${sourceVersion}.png`);
       const metadata = await sharp(source).metadata();
       const expectedWidth = sourceCell.width * frameCount;
       if (metadata.width !== expectedWidth || metadata.height !== sourceCell.height) {
@@ -72,7 +81,7 @@ for (const unit of units) {
 
     const width = outputCell.width * frameCount;
     const height = outputCell.height * directions.length;
-    const filename = `crownforge-roster-v1-${unit}-${animation}.png`;
+    const filename = `crownforge-roster-v${outputVersion}-${unit}-${animation}.png`;
     await sharp({
       create: {
         width,

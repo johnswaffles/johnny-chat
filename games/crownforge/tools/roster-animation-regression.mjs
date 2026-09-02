@@ -7,9 +7,10 @@ import { animationFrame } from '../src/animation.js';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const releaseMarker = '20260902-rosteranimations1';
+const hearthkinWalkReleaseMarker = '20260902-hearthkinwalk2';
 
 const roster = [
-  { type: 'villager', slug: 'crown-hearthkin', walk: 'motionLoop', attack: 'defenseAttackLoop', death: 'deathLoop', villager: true },
+  { type: 'villager', slug: 'crown-hearthkin', walk: 'motionLoop', attack: 'defenseAttackLoop', death: 'deathLoop', villager: true, walkAssetVersion: 2, walkReleaseMarker: hearthkinWalkReleaseMarker },
   { type: 'soldier', slug: 'crown-guard', walk: 'soldierWalk', attack: 'soldierAttack', death: 'soldierDeath' },
   { type: 'scout', slug: 'crown-scout', walk: 'scoutWalk', attack: 'scoutAttack', death: 'scoutDeath' },
   { type: 'spearwarden', slug: 'crown-spearwarden', walk: 'spearwardenWalk', attack: 'spearwardenAttack', death: 'spearwardenDeath' },
@@ -41,7 +42,9 @@ for (const unit of roster) {
   ]) {
     const atlas = atlasFor(unit, key);
     assert.ok(atlas, `${unit.type} ${animation} atlas is registered`);
-    assert.match(atlas.src, new RegExp(`crownforge-roster-v1-${unit.slug}-${animation}\\.png\\?v=${releaseMarker}$`));
+    const assetVersion = animation === 'walk' ? (unit.walkAssetVersion ?? 1) : 1;
+    const animationReleaseMarker = animation === 'walk' ? (unit.walkReleaseMarker ?? releaseMarker) : releaseMarker;
+    assert.match(atlas.src, new RegExp(`crownforge-roster-v${assetVersion}-${unit.slug}-${animation}\\.png\\?v=${animationReleaseMarker}$`));
     assert.equal(atlas.columns, columns, `${unit.type} ${animation} column count`);
     assert.equal(atlas.rows, 4, `${unit.type} ${animation} direction count`);
     assert.deepEqual(atlas.directionRows, [0, 1, 2, 3], `${unit.type} ${animation} direction order`);

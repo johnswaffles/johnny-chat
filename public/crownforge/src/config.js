@@ -1539,8 +1539,9 @@ export const ENEMY_CAMP_ASSET = {
 };
 
 const ROSTER_ANIMATION_VERSION = '20260902-rosteranimations1';
-const rosterAnimationAtlas = (unit, animation, columns) => ({
-  src: `./assets/crownforge-roster-v1-${unit}-${animation}.png?v=${ROSTER_ANIMATION_VERSION}`,
+const HEARTHKIN_WALK_ANIMATION_VERSION = '20260902-hearthkinwalk2';
+const rosterAnimationAtlas = (unit, animation, columns, assetVersion = 1, releaseVersion = ROSTER_ANIMATION_VERSION) => ({
+  src: `./assets/crownforge-roster-v${assetVersion}-${unit}-${animation}.png?v=${releaseVersion}`,
   width: columns * 360,
   height: 4 * 362,
   columns,
@@ -1554,7 +1555,7 @@ export const VILLAGER_ATLASES = {
     src: './assets/villager-motion-atlas.png?v=2',
     rows: { idle: 0, walk: [1, 2, 3] },
   },
-  motionLoop: rosterAnimationAtlas('crown-hearthkin', 'walk', 3),
+  motionLoop: rosterAnimationAtlas('crown-hearthkin', 'walk', 3, 2, HEARTHKIN_WALK_ANIMATION_VERSION),
   task: {
     src: './assets/villager-task-atlas.png?v=2',
     rows: { wood: 0, food: 1, stone: 2, build: 3 },
