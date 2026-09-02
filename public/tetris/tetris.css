@@ -353,7 +353,7 @@ button:active { transform: translateY(1px); }
   .level-progress span { transition: none; }
 }
 
-/* 2026 Falling Blocks shell: the game logic stays in the engine; this layer only
+/* 2026 Cozy Falling Blocks shell: the game logic stays in the engine; this layer only
    gives the classic board a richer arcade cabinet and a purpose-built phone UI. */
 .site-nav {
   border-color: rgba(105, 231, 255, .2);
