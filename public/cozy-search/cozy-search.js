@@ -22,12 +22,17 @@
   const music = document.getElementById("game-music");
   const musicButton = document.getElementById("music-button");
   const soundtrackSelect = document.getElementById("soundtrack-select");
+  const wordListContent = document.getElementById("word-list-content");
+  const wordListToggle = document.getElementById("word-list-toggle");
+  const wordListToggleLabel = wordListToggle?.querySelector(".toggle-label");
+  const wordListToggleIcon = wordListToggle?.querySelector(".toggle-icon");
 
   const DIFFICULTIES = {
     easy: { label: "Easy glow", copy: "A soft landing with clear paths.", size: 8, wordCount: 5, reverse: false, directionNames: ["across", "down"] },
     casual: { label: "Casual drift", copy: "A little more to notice, never too much.", size: 9, wordCount: 6, reverse: false, directionNames: ["across", "down", "diagonal"] },
     tricky: { label: "Tricky tide", copy: "Diagonals and backwards trails join the mix.", size: 11, wordCount: 8, reverse: true, directionNames: ["all directions"] },
-    hard: { label: "Hard focus", copy: "A dense field for a serious search.", size: 13, wordCount: 10, reverse: true, directionNames: ["all directions"] }
+    hard: { label: "Hard focus", copy: "A dense field for a serious search.", size: 13, wordCount: 10, reverse: true, directionNames: ["all directions"] },
+    "very-hard": { label: "Very hard", copy: "Thirty words. A deep field. No shortcuts.", size: 18, wordCount: 30, reverse: true, directionNames: ["all directions"] }
   };
   const WORD_BANK = [
     "BREATHE", "BRIGHT", "CALM", "COZY", "DREAM", "EMBER", "FLOW", "FOCUS", "FRIEND", "GLOW",
@@ -253,6 +258,15 @@
     wordsLeftElement.dataset.complete = String(state.complete);
   };
 
+  const setWordListExpanded = (expanded) => {
+    if (!wordListContent || !wordListToggle) return;
+    wordListContent.hidden = !expanded;
+    wordListToggle.setAttribute("aria-expanded", String(expanded));
+    if (wordListToggleLabel) wordListToggleLabel.textContent = expanded ? "Hide list" : "Show list";
+    if (wordListToggleIcon) wordListToggleIcon.textContent = expanded ? "−" : "＋";
+    wordListToggle.closest(".words-card")?.classList.toggle("is-expanded", expanded);
+  };
+
   const playTone = (finalWord = false) => {
     try {
       audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
@@ -420,6 +434,7 @@
     };
     renderGrid();
     renderWords();
+    setWordListExpanded(false);
     updateUi();
     setStatus(`${DIFFICULTIES[difficultyKey].label} field ready. Find your first word.`);
   };
@@ -499,6 +514,9 @@
   newGameButton.addEventListener("click", () => {
     startMusic();
     newGame();
+  });
+  wordListToggle?.addEventListener("click", () => {
+    setWordListExpanded(wordListToggle.getAttribute("aria-expanded") !== "true");
   });
   musicButton.addEventListener("click", () => {
     musicEnabled = !musicEnabled;

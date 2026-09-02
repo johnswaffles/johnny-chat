@@ -238,6 +238,11 @@ button { font-family: inherit; }
 .difficulty-controls button[aria-pressed="true"] b { color: var(--cyan); }
 .panel-copy { margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.48; }
 .word-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 14px 0 0; padding: 0; list-style: none; }
+.word-list-content[hidden] { display: none; }
+.panel-toggle { position: absolute; top: 0; right: 0; display: inline-flex; align-items: center; gap: 5px; min-height: 27px; padding: 0 8px; border: 1px solid rgba(114,232,255,.24); border-radius: 999px; color: var(--cyan); background: rgba(7,18,36,.72); font: 700 9px var(--font); cursor: pointer; transition: 140ms ease; }
+.panel-toggle:hover, .panel-toggle:focus-visible { border-color: rgba(114,232,255,.65); background: rgba(35,77,104,.55); box-shadow: 0 0 16px rgba(114,232,255,.12); outline: none; }
+.toggle-icon { color: var(--mint); font-size: 14px; line-height: .8; }
+.words-card.is-expanded .panel-toggle { color: var(--muted); }
 .word-list li { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 8px 7px; border: 1px solid rgba(172,204,255,.1); border-radius: 8px; color: var(--muted); background: rgba(4,10,24,.42); font: 600 10px var(--mono); letter-spacing: .05em; transition: 180ms ease; }
 .word-list li::before { flex: 0 0 auto; width: 7px; height: 7px; border: 1px solid rgba(132,242,194,.45); border-radius: 50%; content: ""; }
 .word-list li.is-found { color: var(--mint); border-color: rgba(132,242,194,.25); background: rgba(48,117,99,.15); text-decoration: line-through; text-decoration-color: rgba(132,242,194,.74); }
@@ -306,7 +311,7 @@ button { font-family: inherit; }
   .side-panel { grid-template-columns: 1fr; gap: 8px; }
   .panel-card { padding: 12px; border-radius: 13px; }
   .panel-heading strong { font-size: 18px; }
-  .difficulty-controls { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4px; }
+  .difficulty-controls { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 4px; }
   .difficulty-controls button { min-height: 54px; padding: 7px 5px; text-align: center; }
   .difficulty-controls button b { font-size: 10px; }
   .difficulty-controls button small { font-size: 7px; }
