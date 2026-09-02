@@ -2,6 +2,8 @@
   "use strict";
 
   const gridElement = document.getElementById("word-grid");
+  const searchCard = document.querySelector(".search-card");
+  const constellationLayer = document.getElementById("constellation-layer");
   const wordListElement = document.getElementById("word-list");
   const newGameButton = document.getElementById("new-game");
   const difficultyButtons = [...document.querySelectorAll("[data-difficulty]")];
@@ -17,6 +19,9 @@
   const celebration = document.getElementById("celebration");
   const celebrationKicker = document.getElementById("celebration-kicker");
   const celebrationWord = document.getElementById("celebration-word");
+  const celebrationStatFound = document.getElementById("celebration-stat-found");
+  const celebrationStatTime = document.getElementById("celebration-stat-time");
+  const celebrationStatStreak = document.getElementById("celebration-stat-streak");
   const celebrationCopy = document.getElementById("celebration-copy");
   const celebrationSparks = document.getElementById("celebration-sparks");
   const music = document.getElementById("game-music");
@@ -26,6 +31,8 @@
   const wordListToggle = document.getElementById("word-list-toggle");
   const wordListToggleLabel = wordListToggle?.querySelector(".toggle-label");
   const wordListToggleIcon = wordListToggle?.querySelector(".toggle-icon");
+  const wordsProgressLabel = document.getElementById("words-progress-label");
+  const wordsProgressFill = document.getElementById("words-progress-fill");
 
   const DIFFICULTIES = {
     easy: { label: "Easy glow", copy: "A soft landing with clear paths.", size: 8, wordCount: 5, reverse: false, directionNames: ["across", "down"] },
@@ -206,6 +213,7 @@
     const color = FOUND_COLORS[state.foundPaths.length % FOUND_COLORS.length];
     paintFoundPath(path, color);
     state.foundPaths.push(path);
+    return color;
   };
 
   const showWrongPath = (path) => {
@@ -230,6 +238,47 @@
       gridElement.appendChild(cell);
     }));
     state.foundPaths.forEach((path, index) => paintFoundPath(path, FOUND_COLORS[index % FOUND_COLORS.length]));
+    renderConstellationTrails();
+  };
+
+  const renderConstellationTrails = () => {
+    if (!constellationLayer) return;
+    constellationLayer.innerHTML = "";
+    if (!state?.foundPaths.length) return;
+    const layerRect = constellationLayer.getBoundingClientRect();
+    if (!layerRect.width || !layerRect.height) return;
+    state.foundPaths.forEach((path, pathIndex) => {
+      const points = path.map((point) => {
+        const cell = cellElement(point);
+        if (!cell) return null;
+        const rect = cell.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2 - layerRect.left, y: rect.top + rect.height / 2 - layerRect.top };
+      }).filter(Boolean);
+      if (points.length < 2) return;
+      const start = points[0];
+      const end = points[points.length - 1];
+      const distance = Math.hypot(end.x - start.x, end.y - start.y);
+      const angle = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
+      const color = FOUND_COLORS[pathIndex % FOUND_COLORS.length];
+      const line = document.createElement("span");
+      line.className = "constellation-line";
+      line.style.left = `${start.x}px`;
+      line.style.top = `${start.y}px`;
+      line.style.width = `${distance}px`;
+      line.style.transform = `rotate(${angle}deg)`;
+      line.style.setProperty("--trail-color", color);
+      line.style.setProperty("--trail-delay", `${Math.min(pathIndex * 35, 420)}ms`);
+      constellationLayer.appendChild(line);
+      points.forEach((point, pointIndex) => {
+        const node = document.createElement("i");
+        node.className = "constellation-node";
+        node.style.left = `${point.x}px`;
+        node.style.top = `${point.y}px`;
+        node.style.setProperty("--trail-color", color);
+        node.style.setProperty("--trail-delay", `${Math.min(pathIndex * 35 + pointIndex * 22, 600)}ms`);
+        constellationLayer.appendChild(node);
+      });
+    });
   };
 
   const renderWords = () => {
@@ -238,7 +287,10 @@
       const item = document.createElement("li");
       item.dataset.word = word;
       item.textContent = word;
-      if (state.found.has(word)) item.classList.add("is-found");
+      if (state.found.has(word)) {
+        item.classList.add("is-found");
+        item.style.setProperty("--word-color", state.foundWordColors.get(word) || FOUND_COLORS[0]);
+      }
       wordListElement.appendChild(item);
     });
   };
@@ -246,6 +298,7 @@
   const updateUi = () => {
     const config = DIFFICULTIES[state.difficultyKey];
     const found = state.found.size;
+    const progress = state.puzzle.words.length ? found / state.puzzle.words.length : 0;
     foundCountElement.textContent = `${found}/${state.puzzle.words.length}`;
     wordsLeftElement.textContent = `${state.puzzle.words.length - found} left`;
     timerElement.textContent = formatTime(state.elapsed);
@@ -256,6 +309,10 @@
     boardHint.textContent = state.selectedStart ? "Now tap the last letter" : "Drag a line or tap two letters";
     difficultyButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.difficulty === state.difficultyKey)));
     wordsLeftElement.dataset.complete = String(state.complete);
+    searchCard?.setAttribute("data-difficulty", state.difficultyKey);
+    document.body.setAttribute("data-search-difficulty", state.difficultyKey);
+    if (wordsProgressLabel) wordsProgressLabel.textContent = `${Math.round(progress * 100)}%`;
+    if (wordsProgressFill) wordsProgressFill.style.width = `${progress * 100}%`;
   };
 
   const setWordListExpanded = (expanded) => {
@@ -291,6 +348,9 @@
   const showCelebration = (word, finalWord) => {
     celebrationKicker.textContent = finalWord ? "FIELD CLEARED" : "WORD FOUND";
     celebrationWord.textContent = finalWord ? "ALL DONE" : word;
+    celebrationStatFound.textContent = `${state.found.size}/${state.puzzle.words.length}`;
+    celebrationStatTime.textContent = formatTime(state.elapsed);
+    celebrationStatStreak.textContent = String(state.streak);
     celebrationCopy.textContent = finalWord ? "Every hidden word is glowing. Beautiful work." : "A bright little breakthrough.";
     celebrationSparks.innerHTML = "";
     const hues = ["#72e8ff", "#84f2c2", "#ffd86b", "#b995ff", "#ff83bd"];
@@ -307,6 +367,7 @@
     }
     celebration.classList.remove("is-visible");
     void celebration.offsetWidth;
+    celebration.dataset.final = String(finalWord);
     celebration.classList.add("is-visible");
     celebration.setAttribute("aria-hidden", "false");
     document.body.classList.add("is-celebrating");
@@ -314,8 +375,9 @@
     celebrationTimer = window.setTimeout(() => {
       celebration.classList.remove("is-visible");
       celebration.setAttribute("aria-hidden", "true");
+      delete celebration.dataset.final;
       document.body.classList.remove("is-celebrating");
-    }, finalWord ? 1900 : 1350);
+    }, finalWord ? 2600 : 1350);
   };
 
   const attemptSelection = (path) => {
@@ -337,10 +399,13 @@
     }
     state.found.add(word);
     state.streak += 1;
-    markFoundPath(path);
+    const foundColor = markFoundPath(path);
+    state.foundWordColors.set(word, foundColor);
     clearPreview();
     const wordItem = wordListElement.querySelector(`[data-word="${word}"]`);
     wordItem?.classList.add("is-found");
+    wordItem?.style.setProperty("--word-color", foundColor);
+    renderConstellationTrails();
     const finalWord = state.found.size === state.puzzle.words.length;
     state.complete = finalWord;
     setStatus(finalWord ? "Beautiful — you cleared the whole field." : `${word} found. Keep the glow going.`);
@@ -423,6 +488,7 @@
       difficultyKey,
       puzzle: generatePuzzle(difficultyKey),
       found: new Set(),
+      foundWordColors: new Map(),
       foundCells: new Set(),
       foundPaths: [],
       selectedStart: null,
@@ -540,6 +606,11 @@
   music.addEventListener("ended", advanceLoopAll);
   window.addEventListener("pagehide", () => music.pause());
   window.addEventListener("johnny:music-focus", updateMusicButton);
+  let resizeFrame = 0;
+  window.addEventListener("resize", () => {
+    window.cancelAnimationFrame(resizeFrame);
+    resizeFrame = window.requestAnimationFrame(renderConstellationTrails);
+  });
 
   let storedSoundtrack = "cozy";
   try { storedSoundtrack = localStorage.getItem(SOUNDTRACK_STORAGE_KEY) || "cozy"; } catch (_) {}
