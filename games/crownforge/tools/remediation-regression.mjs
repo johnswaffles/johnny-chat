@@ -87,6 +87,19 @@ function movementSandbox() {
 }
 
 function checkAnimationAtlases() {
+  for (let direction = 0; direction < 4; direction += 1) {
+    const walkFrame = animationFrame('villager', 'walk', 0.37, direction);
+    assert.equal(walkFrame.atlasKey, 'motionLoop', `Crownforge Hearthkin walk direction ${direction} atlas`);
+    assert.equal(walkFrame.row, direction, `Crownforge Hearthkin walk preserves direction ${direction}`);
+    assert.equal(walkFrame.frameCount, 4, `Crownforge Hearthkin walk direction ${direction} has four authored poses`);
+    assert.ok(walkFrame.column >= 0 && walkFrame.column < 4, `Crownforge Hearthkin walk direction ${direction} frame`);
+    assert.equal(walkFrame.fallback, null, `Crownforge Hearthkin walk direction ${direction} has no fallback`);
+  }
+  const crownforgeWalkTimes = [0.05, 0.22, 0.39, 0.56];
+  for (let direction = 0; direction < 4; direction += 1) {
+    const columns = crownforgeWalkTimes.map((time) => animationFrame('villager', 'walk', time, direction).column);
+    assert.ok(new Set(columns).size >= 3, `Crownforge Hearthkin direction ${direction} advances through the full walk cycle`);
+  }
   for (const [state, atlasKey] of [
     ['carry_wood', 'carryWoodLoop'],
     ['carry_food', 'carryFoodLoop'],

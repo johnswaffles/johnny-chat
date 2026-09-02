@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260902-buildingperimeter1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260902-hearthkinmotion1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -120,10 +120,11 @@ export const ANIMATION_DEFINITIONS = {
     },
     clips: {
       idle: singleFrame('motion', VILLAGER_ATLASES.motion.rows.idle),
-      // v3 is authored in the shared Crownforge direction contract: front,
-      // right profile, back, left profile. Keeping the mapping explicit here
-      // prevents a future sheet from silently making villagers walk backward.
-      walk: directionalLoop('motionLoop', { fps: 7.2, directionRows: [0, 1, 2, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
+      // v4 follows the Ashen motion standard: front, right profile, back,
+      // left profile, with a clear contact/passing/recovery cadence in every
+      // row. Keep the mapping explicit so a future sheet cannot silently make
+      // Crownforge Hearthkin walk backward or side-on in the wrong direction.
+      walk: directionalLoop('motionLoop', { frames: [0, 1, 2, 3], fps: 7.1, directionRows: [0, 1, 2, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
       gather_wood: actionLoop('woodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_food: actionLoop('foodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       field_work: actionLoop('fieldLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),

@@ -1544,12 +1544,13 @@ export const VILLAGER_ATLASES = {
     rows: { idle: 0, walk: [1, 2, 3] },
   },
   motionLoop: {
-    src: './assets/crownforge-villager-walk-loop-v3.png?v=20260819-unitpass3',
-    width: 1234,
-    height: 1275,
+    src: './assets/crownforge-villager-walk-loop-v4.png?v=20260902-hearthkinmotion1',
+    width: 1242,
+    height: 1266,
     columns: 4,
     rows: 4,
     layout: 'frame-columns',
+    directionRows: [0, 1, 2, 3],
   },
   task: {
     src: './assets/villager-task-atlas.png?v=2',
