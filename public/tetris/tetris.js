@@ -103,7 +103,8 @@
     cozy: { src: "/home/cozy-builder-theme.mp3", label: "Johnny's Cozy Theme" },
     "dreamy-clouds": { src: "/tetris/audio/dreamy-clouds.mp3", label: "Dreamy Clouds", loopTrimSeconds: 2 },
     "neon-dreams": { src: "/tetris/audio/neon-dreams.mp3", label: "Neon Dreams" },
-    "whimsical-waltz": { src: "/tetris/audio/whimsical-waltz.mp3", label: "Whimsical Waltz" }
+    "whimsical-waltz": { src: "/tetris/audio/whimsical-waltz.mp3", label: "Whimsical Waltz" },
+    "crownforge-rp": { src: "/crownforge/assets/lantern-under-stone.mp3", label: "Johnny's RP" }
   };
   const SOUNDTRACK_STORAGE_KEY = "johnny-tetris-soundtrack";
   const MAX_SECOND_CHANCES = 4;
