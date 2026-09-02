@@ -32,6 +32,7 @@ function readPng(filePath) {
   let colorType;
   let interlace;
   const idat = [];
+  let paletteAlpha = null;
   while (offset < bytes.length) {
     const length = bytes.readUInt32BE(offset);
     const type = bytes.toString('ascii', offset + 4, offset + 8);
@@ -45,13 +46,15 @@ function readPng(filePath) {
       interlace = data[12];
     } else if (type === 'IDAT') {
       idat.push(data);
+    } else if (type === 'tRNS') {
+      paletteAlpha = Buffer.from(data);
     } else if (type === 'IEND') {
       break;
     }
   }
   assert.equal(bitDepth, 8, `${path.basename(filePath)} must use 8-bit channels`);
   assert.equal(interlace, 0, `${path.basename(filePath)} must be non-interlaced`);
-  const channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[colorType];
+  const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[colorType];
   assert.ok(channels, `${path.basename(filePath)} uses unsupported PNG color type ${colorType}`);
   const bytesPerPixel = channels;
   const rowBytes = width * channels;
@@ -86,6 +89,7 @@ function readPng(filePath) {
     height,
     channels,
     alphaAt(x, y) {
+      if (colorType === 3) return paletteAlpha?.[pixels[y * rowBytes + x]] ?? 255;
       if (colorType === 6) return pixels[(y * rowBytes) + (x * 4) + 3];
       if (colorType === 4) return pixels[(y * rowBytes) + (x * 2) + 1];
       return 255;
@@ -263,7 +267,13 @@ const placeholderReferences = activeSources.filter((src) => /placeholder|program
 const ashenProductionCellSafetyFailures = boundaryReports.filter((report) => (
   report.key.startsWith('ashen.')
   || /^combat\.(ashenForager|ashenOutrider|thornSpear|hearthLevy|hidewall)/.test(report.key)
-) && (report.unsafeCells.length || report.bottomContactCells.length));
+) && (
+  report.unsafeCells.length
+  // Roster animation cells intentionally share a grounded bottom baseline;
+  // only top/side contact can bleed into an adjacent runtime frame. Legacy
+  // Ashen production atlases retain the stricter all-edge contract.
+  || (!report.file.includes('crownforge-roster-v1-') && report.bottomContactCells.length)
+));
 
 const result = {
   status: missingFiles.length

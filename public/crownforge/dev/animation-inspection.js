@@ -4,7 +4,7 @@ import {
   animationClip,
   animationDefinition,
   animationFrame,
-} from '../src/animation.js';
+} from '../src/animation.js?v=20260902-rosteranimations1';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');
@@ -116,10 +116,14 @@ function draw() {
   ctx.beginPath(); ctx.ellipse(groundX, groundY, 250, 80, 0, 0, Math.PI * 2); ctx.fill();
   if (guidesInput.checked) drawGuides(definition, groundX, groundY, size);
   if (image.complete && image.naturalWidth) {
-    const sourceLeft = Math.ceil(frame.column * definition.atlasSize.width / definition.atlasSize.columns) + 1;
-    const sourceTop = Math.ceil(frame.row * definition.atlasSize.height / definition.atlasSize.rows) + 1;
-    const sourceRight = Math.floor((frame.column + 1) * definition.atlasSize.width / definition.atlasSize.columns) - 1;
-    const sourceBottom = Math.floor((frame.row + 1) * definition.atlasSize.height / definition.atlasSize.rows) - 1;
+    const atlasWidth = atlas.width ?? definition.atlasSize.width;
+    const atlasHeight = atlas.height ?? definition.atlasSize.height;
+    const atlasColumns = atlas.columns ?? definition.atlasSize.columns;
+    const atlasRows = atlas.rows ?? definition.atlasSize.rows;
+    const sourceLeft = Math.ceil(frame.column * atlasWidth / atlasColumns) + 1;
+    const sourceTop = Math.ceil(frame.row * atlasHeight / atlasRows) + 1;
+    const sourceRight = Math.floor((frame.column + 1) * atlasWidth / atlasColumns) - 1;
+    const sourceBottom = Math.floor((frame.row + 1) * atlasHeight / atlasRows) - 1;
     const cellWidth = sourceRight - sourceLeft;
     const cellHeight = sourceBottom - sourceTop;
     ctx.imageSmoothingEnabled = true;
@@ -145,6 +149,31 @@ unitSelect.addEventListener('change', refreshStates);
 stateSelect.addEventListener('change', refreshFrameRange);
 for (const input of [directionSelect, frameInput, speedInput, animateInput, guidesInput]) input.addEventListener('input', draw);
 refreshStates();
+
+window.__crownforgeAnimationQA = {
+  unitTypes: Object.keys(ANIMATION_DEFINITIONS),
+  directions: ANIMATION_DIRECTIONS.map(({ index, key }) => ({ index, key })),
+  assetStatus: () => Object.fromEntries(Object.entries(images).map(([type, atlases]) => [
+    type,
+    Object.fromEntries(Object.entries(atlases).map(([key, image]) => [key, {
+      complete: image.complete,
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+    }])),
+  ])),
+  select: ({ type, state, direction = 0, animate = true }) => {
+    unitSelect.value = type;
+    refreshStates();
+    stateSelect.value = state;
+    refreshFrameRange();
+    directionSelect.value = String(direction);
+    animateInput.checked = animate;
+    currentTime = 0;
+    draw();
+    return { type: selectedType(), state: selectedState(), direction: selectedDirection() };
+  },
+  frame: () => animationFrame(selectedType(), selectedState(), currentTime, selectedDirection()),
+};
 
 function loop(now) {
   const delta = Math.min(.05, (now - lastTime) / 1000);

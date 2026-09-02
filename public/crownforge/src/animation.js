@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260902-hearthkinmotion1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260902-rosteranimations1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -44,15 +44,6 @@ const singleFrame = (atlas, row, options = {}) => ({
   fallback: options.fallback,
 });
 
-const walkClip = (atlas, rows) => ({
-  atlas,
-  rows,
-  frames: rows.map((_, index) => index),
-  fps: 7.2,
-  loop: true,
-  events: { footstep: ANIMATION_EVENT_TIMINGS.footstep },
-});
-
 const directionalLoop = (atlas, { frames = [0, 1, 2, 3], fps = 3.2, loop = true, events = {}, directionRows = [0, 1, 2, 3] } = {}) => ({
   atlas,
   layout: 'frame-columns',
@@ -66,25 +57,48 @@ const directionalLoop = (atlas, { frames = [0, 1, 2, 3], fps = 3.2, loop = true,
 const actionLoop = (atlas, events = {}) => directionalLoop(atlas, { events });
 const actionPhase = (atlas, frames, fps = 4.8, events = {}) => directionalLoop(atlas, { frames, fps, loop: false, events });
 const directionalPose = (atlas, column) => directionalLoop(atlas, { frames: [column], fps: 1 });
+const rosterWalk = (atlas, fps = 3.2) => directionalLoop(atlas, {
+  frames: [0, 1, 2],
+  fps,
+  events: { footstep: ANIMATION_EVENT_TIMINGS.footstep },
+});
+const rosterAttack = (atlas) => directionalLoop(atlas, {
+  frames: [0, 1, 2],
+  fps: 4.8,
+  events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit },
+});
+const rosterAttackPhase = (atlas, frame, events = {}) => directionalLoop(atlas, {
+  frames: [frame],
+  fps: 1,
+  loop: false,
+  events,
+});
+const rosterDeath = (atlas) => directionalLoop(atlas, {
+  frames: [0, 1, 2, 3],
+  fps: 4.2,
+  loop: false,
+});
 
-const ashenFighterDefinition = ({ label, motion, attack, renderSize, radius, interactionRadius = 0.8, walkFps = 6.8 }) => ({
+const ashenFighterDefinition = ({ label, motion, walk, attack, death, renderSize, radius, interactionRadius = 0.8 }) => ({
   label,
   directionCount: 4,
   atlasSize: COMBAT_ATLASES[motion],
   atlases: {
     combat: COMBAT_ATLASES[motion],
     [motion]: COMBAT_ATLASES[motion],
+    [walk]: COMBAT_ATLASES[walk],
     [attack]: COMBAT_ATLASES[attack],
+    [death]: COMBAT_ATLASES[death],
   },
   clips: {
     idle: directionalPose(motion, 0),
-    walk: directionalLoop(motion, { frames: [0, 1, 2, 3], fps: walkFps, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
-    attack: actionLoop(attack, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-    attack_anticipation: actionPhase(attack, [0, 1], 5.0),
-    attack_contact: actionPhase(attack, [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-    attack_recovery: actionPhase(attack, [3, 0], 4.6),
+    walk: rosterWalk(walk),
+    attack: rosterAttack(attack),
+    attack_anticipation: rosterAttackPhase(attack, 0),
+    attack_contact: rosterAttackPhase(attack, 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+    attack_recovery: rosterAttackPhase(attack, 2),
     hit: directionalPose(motion, 3),
-    death: directionalLoop(motion, { frames: [3, 2, 1], fps: 3, loop: false }),
+    death: rosterDeath(death),
   },
   collisionRadius: radius,
   interactionRadius,
@@ -95,7 +109,7 @@ const ashenFighterDefinition = ({ label, motion, attack, renderSize, radius, int
 
 export const ANIMATION_DEFINITIONS = {
   villager: {
-    label: 'Villager',
+    label: 'Hearthkin',
     directionCount: 4,
     atlasSize: { width: VILLAGER_ATLASES.width, height: VILLAGER_ATLASES.height, columns: VILLAGER_ATLASES.columns, rows: VILLAGER_ATLASES.rows },
     atlases: {
@@ -120,11 +134,9 @@ export const ANIMATION_DEFINITIONS = {
     },
     clips: {
       idle: singleFrame('motion', VILLAGER_ATLASES.motion.rows.idle),
-      // v4 follows the Ashen motion standard: front, right profile, back,
-      // left profile, with a clear contact/passing/recovery cadence in every
-      // row. Keep the mapping explicit so a future sheet cannot silently make
-      // Crownforge Hearthkin walk backward or side-on in the wrong direction.
-      walk: directionalLoop('motionLoop', { frames: [0, 1, 2, 3], fps: 7.1, directionRows: [0, 1, 2, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
+      // All roster movement sheets share the same front, right, back, left
+      // direction contract and a deliberate contact, passing, contact cycle.
+      walk: rosterWalk('motionLoop'),
       gather_wood: actionLoop('woodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       gather_food: actionLoop('foodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
       field_work: actionLoop('fieldLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
@@ -139,12 +151,12 @@ export const ANIMATION_DEFINITIONS = {
       carry_stone: actionLoop('carryStoneLoop'),
       carry_gold: actionLoop('carryGoldLoop'),
       carry_supplies: actionLoop('carrySuppliesLoop'),
-      attack: actionLoop('defenseAttackLoop', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_anticipation: actionPhase('defenseAttackLoop', [0, 1], 5.2),
-      attack_contact: actionPhase('defenseAttackLoop', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_recovery: actionPhase('defenseAttackLoop', [3, 0], 4.8),
+      attack: rosterAttack('defenseAttackLoop'),
+      attack_anticipation: rosterAttackPhase('defenseAttackLoop', 0),
+      attack_contact: rosterAttackPhase('defenseAttackLoop', 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_recovery: rosterAttackPhase('defenseAttackLoop', 2),
       hit: actionPhase('hitLoop', [0, 1, 2, 3], 14),
-      death: actionPhase('deathLoop', [0, 1, 2, 3], 3.0),
+      death: rosterDeath('deathLoop'),
     },
     collisionRadius: 0.36,
     interactionRadius: 0.78,
@@ -159,13 +171,13 @@ export const ANIMATION_DEFINITIONS = {
     atlases: { combat: COMBAT_ATLASES.soldier, soldierWalk: COMBAT_ATLASES.soldierWalk, soldierAttack: COMBAT_ATLASES.soldierAttack, soldierHit: COMBAT_ATLASES.soldierHit, soldierDeath: COMBAT_ATLASES.soldierDeath },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.soldier.rowByState.idle),
-      walk: directionalLoop('soldierWalk', { fps: 6.8, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
-      attack: actionLoop('soldierAttack', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_anticipation: actionPhase('soldierAttack', [0, 1]),
-      attack_contact: actionPhase('soldierAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_recovery: actionPhase('soldierAttack', [3, 0], 4.8),
+      walk: rosterWalk('soldierWalk'),
+      attack: rosterAttack('soldierAttack'),
+      attack_anticipation: rosterAttackPhase('soldierAttack', 0),
+      attack_contact: rosterAttackPhase('soldierAttack', 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_recovery: rosterAttackPhase('soldierAttack', 2),
       hit: actionPhase('soldierHit', [0, 1, 2, 3], 14),
-      death: actionPhase('soldierDeath', [0, 1, 2, 3], 3.0),
+      death: rosterDeath('soldierDeath'),
     },
     collisionRadius: 0.43,
     interactionRadius: 0.78,
@@ -180,14 +192,14 @@ export const ANIMATION_DEFINITIONS = {
     atlases: { combat: COMBAT_ATLASES.raider, raiderWalk: COMBAT_ATLASES.raiderWalk, raiderAttack: COMBAT_ATLASES.raiderAttack, raiderHit: COMBAT_ATLASES.raiderHit, raiderStunned: COMBAT_ATLASES.raiderStunned, raiderDeath: COMBAT_ATLASES.raiderDeath },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.raider.rowByState.idle),
-      walk: directionalLoop('raiderWalk', { fps: 6.8, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
-      attack: actionLoop('raiderAttack', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_anticipation: actionPhase('raiderAttack', [0, 1]),
-      attack_contact: actionPhase('raiderAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_recovery: actionPhase('raiderAttack', [3, 0], 4.8),
+      walk: rosterWalk('raiderWalk'),
+      attack: rosterAttack('raiderAttack'),
+      attack_anticipation: rosterAttackPhase('raiderAttack', 0),
+      attack_contact: rosterAttackPhase('raiderAttack', 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_recovery: rosterAttackPhase('raiderAttack', 2),
       hit: actionPhase('raiderHit', [0, 1, 2, 3], 14),
       stunned: directionalLoop('raiderStunned', { frames: [0, 1, 2, 1], fps: 4.2 }),
-      death: actionPhase('raiderDeath', [0, 1, 2, 3], 3.0),
+      death: rosterDeath('raiderDeath'),
     },
     collisionRadius: 0.44,
     interactionRadius: 0.78,
@@ -196,18 +208,21 @@ export const ANIMATION_DEFINITIONS = {
     shadowAnchor: { x: 0.5, y: 0.98, source: 'painted-in-frame' },
   },
   ashenForager: {
-    label: 'Ashen Forager',
+    label: 'Ashen Hearthkin',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.ashenForagerMotion,
     atlases: {
       combat: COMBAT_ATLASES.ashenForagerMotion,
       ashenForagerMotion: COMBAT_ATLASES.ashenForagerMotion,
+      ashenForagerWalk: COMBAT_ATLASES.ashenForagerWalk,
+      ashenForagerAttack: COMBAT_ATLASES.ashenForagerAttack,
+      ashenForagerDeath: COMBAT_ATLASES.ashenForagerDeath,
       ashenForagerWork: COMBAT_ATLASES.ashenForagerWork,
       ashenForagerCarry: COMBAT_ATLASES.ashenForagerCarry,
     },
     clips: {
       idle: directionalPose('ashenForagerMotion', 0),
-      walk: directionalLoop('ashenForagerMotion', { fps: 7.1, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
+      walk: rosterWalk('ashenForagerWalk'),
       gather_wood: directionalPose('ashenForagerWork', 0),
       gather_food: directionalPose('ashenForagerWork', 1),
       field_work: directionalPose('ashenForagerWork', 1),
@@ -218,8 +233,12 @@ export const ANIMATION_DEFINITIONS = {
       carry_food: directionalPose('ashenForagerCarry', 1),
       carry_stone: directionalPose('ashenForagerCarry', 2),
       carry_gold: directionalPose('ashenForagerCarry', 3),
+      attack: rosterAttack('ashenForagerAttack'),
+      attack_anticipation: rosterAttackPhase('ashenForagerAttack', 0),
+      attack_contact: rosterAttackPhase('ashenForagerAttack', 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_recovery: rosterAttackPhase('ashenForagerAttack', 2),
       hit: directionalPose('ashenForagerMotion', 3),
-      death: directionalLoop('ashenForagerMotion', { frames: [3, 2, 1], fps: 3, loop: false }),
+      death: rosterDeath('ashenForagerDeath'),
     },
     collisionRadius: 0.36,
     interactionRadius: 0.78,
@@ -230,48 +249,53 @@ export const ANIMATION_DEFINITIONS = {
   ashenOutrider: ashenFighterDefinition({
     label: 'Ashen Outrider',
     motion: 'ashenOutriderMotion',
+    walk: 'ashenOutriderWalk',
     attack: 'ashenOutriderAttack',
+    death: 'ashenOutriderDeath',
     renderSize: 184,
     radius: 0.7,
     interactionRadius: 1.06,
-    walkFps: 7.3,
   }),
   thornSpear: ashenFighterDefinition({
     label: 'Thorn Spear',
     motion: 'thornSpearMotion',
+    walk: 'thornSpearWalk',
     attack: 'thornSpearAttack',
+    death: 'thornSpearDeath',
     renderSize: 112,
     radius: 0.44,
   }),
   hearthLevy: ashenFighterDefinition({
     label: 'Hearth Levy',
     motion: 'hearthLevyMotion',
+    walk: 'hearthLevyWalk',
     attack: 'hearthLevyAttack',
+    death: 'hearthLevyDeath',
     renderSize: 108,
     radius: 0.42,
-    walkFps: 7.1,
   }),
   hidewall: ashenFighterDefinition({
     label: 'Ashen Hidewall',
     motion: 'hidewallMotion',
+    walk: 'hidewallWalk',
     attack: 'hidewallAttack',
+    death: 'hidewallDeath',
     renderSize: 112,
     radius: 0.44,
-    walkFps: 6.5,
   }),
   scout: {
     label: 'Crown Scout',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.scout,
-    atlases: { combat: COMBAT_ATLASES.scout, scoutWalk: COMBAT_ATLASES.scoutWalk, scoutAttack: COMBAT_ATLASES.scoutAttack },
+    atlases: { combat: COMBAT_ATLASES.scout, scoutWalk: COMBAT_ATLASES.scoutWalk, scoutAttack: COMBAT_ATLASES.scoutAttack, scoutDeath: COMBAT_ATLASES.scoutDeath },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.scout.rowByState.idle),
-      walk: directionalLoop('scoutWalk', { fps: 7.4, events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
-      attack: actionLoop('scoutAttack', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_anticipation: actionPhase('scoutAttack', [0, 1], 5.2),
-      attack_contact: actionPhase('scoutAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_recovery: actionPhase('scoutAttack', [3, 0], 4.8),
-      death: singleFrame('combat', COMBAT_ATLASES.scout.rowByState.death, { loop: false }),
+      walk: rosterWalk('scoutWalk'),
+      attack: rosterAttack('scoutAttack'),
+      attack_anticipation: rosterAttackPhase('scoutAttack', 0),
+      attack_contact: rosterAttackPhase('scoutAttack', 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_recovery: rosterAttackPhase('scoutAttack', 2),
+      death: rosterDeath('scoutDeath'),
     },
     collisionRadius: 0.72,
     interactionRadius: 1.08,
@@ -283,15 +307,15 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Crown Spearwarden',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.spearwarden,
-    atlases: { combat: COMBAT_ATLASES.spearwarden, spearwardenWalk: COMBAT_ATLASES.spearwardenWalk, spearwardenAttack: COMBAT_ATLASES.spearwardenAttack },
+    atlases: { combat: COMBAT_ATLASES.spearwarden, spearwardenWalk: COMBAT_ATLASES.spearwardenWalk, spearwardenAttack: COMBAT_ATLASES.spearwardenAttack, spearwardenDeath: COMBAT_ATLASES.spearwardenDeath },
     clips: {
       idle: singleFrame('combat', COMBAT_ATLASES.spearwarden.rowByState.idle),
-      walk: directionalLoop('spearwardenWalk', { fps: 6.9, directionRows: [0, 1, 2, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
-      attack: actionLoop('spearwardenAttack', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_anticipation: actionPhase('spearwardenAttack', [0, 1], 5.0),
-      attack_contact: actionPhase('spearwardenAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_recovery: actionPhase('spearwardenAttack', [3, 0], 4.8),
-      death: singleFrame('combat', COMBAT_ATLASES.spearwarden.rowByState.death, { loop: false }),
+      walk: rosterWalk('spearwardenWalk'),
+      attack: rosterAttack('spearwardenAttack'),
+      attack_anticipation: rosterAttackPhase('spearwardenAttack', 0),
+      attack_contact: rosterAttackPhase('spearwardenAttack', 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_recovery: rosterAttackPhase('spearwardenAttack', 2),
+      death: rosterDeath('spearwardenDeath'),
     },
     collisionRadius: 0.45,
     interactionRadius: 0.82,
@@ -302,20 +326,16 @@ export const ANIMATION_DEFINITIONS = {
   militia: {
     label: 'Crown Militia',
     directionCount: 4,
-    // The authored militia "walk" sheet is state rows x direction columns,
-    // unlike the other frame-column movement sheets. Treat it as the stable
-    // state atlas too; reading its rows as directions is what made militia
-    // cycle through walk, attack, and prone death poses while travelling.
-    atlasSize: COMBAT_ATLASES.militiaWalk,
-    atlases: { combat: COMBAT_ATLASES.militiaWalk, militiaWalk: COMBAT_ATLASES.militiaWalk, militiaAttack: COMBAT_ATLASES.militiaAttack },
+    atlasSize: COMBAT_ATLASES.militia,
+    atlases: { combat: COMBAT_ATLASES.militia, militiaWalk: COMBAT_ATLASES.militiaWalk, militiaAttack: COMBAT_ATLASES.militiaAttack, militiaDeath: COMBAT_ATLASES.militiaDeath },
     clips: {
       idle: singleFrame('combat', 0),
-      walk: walkClip('militiaWalk', [0, 1, 0, 1]),
-      attack: actionLoop('militiaAttack', { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_anticipation: actionPhase('militiaAttack', [0, 1], 5.0),
-      attack_contact: actionPhase('militiaAttack', [2], 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_recovery: actionPhase('militiaAttack', [3, 0], 4.8),
-      death: singleFrame('combat', 3, { loop: false }),
+      walk: rosterWalk('militiaWalk'),
+      attack: rosterAttack('militiaAttack'),
+      attack_anticipation: rosterAttackPhase('militiaAttack', 0),
+      attack_contact: rosterAttackPhase('militiaAttack', 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_recovery: rosterAttackPhase('militiaAttack', 2),
+      death: rosterDeath('militiaDeath'),
     },
     collisionRadius: 0.42,
     interactionRadius: 0.78,
@@ -327,17 +347,17 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Crown Shieldbearer',
     directionCount: 4,
     atlasSize: COMBAT_ATLASES.shieldbearer,
-    atlases: { combat: COMBAT_ATLASES.shieldbearer, shieldbearerWalk: COMBAT_ATLASES.shieldbearerWalk, shieldbearerAttack: COMBAT_ATLASES.shieldbearerAttack },
+    atlases: { combat: COMBAT_ATLASES.shieldbearer, shieldbearerWalk: COMBAT_ATLASES.shieldbearerWalk, shieldbearerAttack: COMBAT_ATLASES.shieldbearerAttack, shieldbearerDeath: COMBAT_ATLASES.shieldbearerDeath },
     clips: {
       // Shieldbearer sheets were authored back, right, front, left. Map that
       // order into Crownforge's front, right, back, left direction contract.
       idle: directionalLoop('combat', { frames: [0], fps: 1, directionRows: [2, 1, 0, 3] }),
-      walk: directionalLoop('shieldbearerWalk', { fps: 6.6, directionRows: [2, 1, 0, 3], events: { footstep: ANIMATION_EVENT_TIMINGS.footstep } }),
-      attack: directionalLoop('shieldbearerAttack', { directionRows: [2, 1, 0, 3], events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit } }),
-      attack_anticipation: directionalLoop('shieldbearerAttack', { frames: [0, 1], fps: 5.0, loop: false, directionRows: [2, 1, 0, 3] }),
-      attack_contact: directionalLoop('shieldbearerAttack', { frames: [2], fps: 1, loop: false, directionRows: [2, 1, 0, 3], events: { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit } }),
-      attack_recovery: directionalLoop('shieldbearerAttack', { frames: [3, 0], fps: 4.6, loop: false, directionRows: [2, 1, 0, 3] }),
-      death: directionalLoop('combat', { frames: [3], fps: 1, loop: false, directionRows: [2, 1, 0, 3] }),
+      walk: rosterWalk('shieldbearerWalk'),
+      attack: rosterAttack('shieldbearerAttack'),
+      attack_anticipation: rosterAttackPhase('shieldbearerAttack', 0),
+      attack_contact: rosterAttackPhase('shieldbearerAttack', 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
+      attack_recovery: rosterAttackPhase('shieldbearerAttack', 2),
+      death: rosterDeath('shieldbearerDeath'),
     },
     collisionRadius: 0.44,
     interactionRadius: 0.8,

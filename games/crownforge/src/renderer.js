@@ -1,5 +1,5 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260902-hearthkinmotion1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260902-hearthkinmotion1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260902-rosteranimations1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260902-rosteranimations1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -1817,55 +1817,6 @@ export class CrownforgeRenderer {
     this.drawAtlasCell(ctx, image, true, atlas, column, row, screen, size, alpha, bob);
   }
 
-  drawHearthkinHairSway(ctx, unit, screen, size, alpha = 1) {
-    // The Ashen motion atlas already contains the authored body and braid
-    // poses. This restrained accent only lets the loose braid tip lag behind
-    // the walk cycle; it is deliberately omitted from the front view, where
-    // the braid is tucked behind the shoulders and should not draw over the
-    // face or bodice.
-    if (unit.type !== 'ashenForager' || unit.animationState !== 'walk' || unit.dead) return;
-    const direction = Number(unit.facing);
-    if (![1, 2, 3].includes(direction)) return;
-    const time = Number(unit.animationTime ?? unit.animClock ?? 0);
-    const walkBeat = time * 7.1 * Math.PI * 2 / 4 + (Number(unit.id) || 0) * 0.19;
-    const sway = Math.sin(walkBeat);
-    const trail = direction === 1 ? -1 : direction === 3 ? 1 : 0;
-    const baseX = screen.x + trail * size * 0.055;
-    const baseY = screen.y - size * 0.78;
-    const tipX = direction === 2
-      ? screen.x + sway * size * 0.045
-      : screen.x + trail * size * (0.17 + sway * 0.022);
-    const tipY = screen.y - size * (direction === 2 ? 0.57 : 0.61) + Math.abs(sway) * size * 0.012;
-    ctx.save();
-    ctx.globalAlpha = alpha * 0.34;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#3a211a';
-    ctx.lineWidth = Math.max(1, size * 0.021);
-    ctx.beginPath();
-    ctx.moveTo(baseX, baseY);
-    ctx.quadraticCurveTo(
-      baseX + (tipX - baseX) * 0.58 + (direction === 2 ? sway * size * 0.03 : 0),
-      baseY + (tipY - baseY) * 0.45,
-      tipX,
-      tipY,
-    );
-    ctx.stroke();
-    ctx.globalAlpha = alpha * 0.24;
-    ctx.strokeStyle = '#b77b3e';
-    ctx.lineWidth = Math.max(0.6, size * 0.006);
-    ctx.beginPath();
-    ctx.moveTo(baseX, baseY - size * 0.004);
-    ctx.quadraticCurveTo(
-      baseX + (tipX - baseX) * 0.6 + (direction === 2 ? sway * size * 0.03 : 0),
-      baseY + (tipY - baseY) * 0.44,
-      tipX,
-      tipY,
-    );
-    ctx.stroke();
-    ctx.restore();
-  }
-
   drawBuilding(ctx, building, time) {
     const point = this.worldToScreen(building);
     const size = this.buildingRenderSize(building);
@@ -2184,7 +2135,6 @@ export class CrownforgeRenderer {
     const size = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
     if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 1.25 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
-    this.drawHearthkinHairSway(ctx, unit, point, size * this.camera.zoom, alpha);
     if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else this.drawAsset(ctx, style.asset, point, size * this.camera.zoom, alpha);

@@ -4948,3 +4948,29 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 
 - Confirmed equal explicit seeds reproduce the same forest and reset produces a different layout while preserving a substantial forest.
 - Full remediation regression, JavaScript syntax checks, `git diff --check`, and source/public parity checks passed.
+
+## FULL ROSTER ANIMATION RELEASE — 2026-09-02
+
+### WHAT WAS COMPLETED
+
+- Integrated the approved animation-lab artwork for all 12 Crownwarden and Ashen unit types into the production renderer without changing movement, combat damage, pathfinding, or unit statistics.
+- Added one optimized four-direction atlas per unit and action: three ordered walk poses, three ordered attack poses, and four ordered death poses, for 36 production atlases total.
+- Standardized every new atlas on Crownforge's front, right, back, left direction order so runtime facing never relies on mechanical mirroring.
+- Mapped attack anticipation, contact, and recovery directly to wind-up, impact, and follow-through artwork, and kept the final fallen frame visible until the existing 2.4-second corpse removal completes.
+- Removed the old procedural Ashen Hearthkin hair stroke because the new walk frames contain the approved braid motion themselves.
+- Updated the internal animation inspector to crop each selected atlas by its own dimensions and advanced the playable build marker to `20260902-rosteranimations1`.
+
+### ASSETS AND TOOLS
+
+- `assets/crownforge-roster-v1-<unit>-<walk|attack|death>.png` — 36 web-optimized directional atlases generated from the approved 144 animation-lab strips.
+- `tools/prepare-roster-animation-atlases.mjs` — repeatable strip-to-runtime atlas packer with fixed cell isolation and direction order.
+- `tools/roster-animation-regression.mjs` — focused production wiring, frame-order, dimensions, and death-hold regression.
+- `dev/animation-inspection.html` — runtime animation inspector covering every registered unit, state, direction, and frame.
+
+### VALIDATION
+
+- The focused roster regression verified 12 units, 36 production atlases, all four directions, ordered walk/attack/death phases, and final death-pose holding.
+- The visual integrity audit passed with no missing files, dimension mismatches, fallbacks, or unsafe top/side frame contact across the new roster atlases.
+- Browser QA loaded all 144 walk/attack/death direction combinations through the real runtime renderer with zero failures and no console warnings or errors.
+- The playable game completed loading and moved the opening Hearthkin group using the new atlas without blank, clipped, or disappearing units.
+- The older omnibus remediation and gather scripts still contain pre-existing assertions for the retired road list, Harvesting speed label, and macro Wildwood stand; the scoped animation regression and live runtime checks are the release authority for this art-only pass.

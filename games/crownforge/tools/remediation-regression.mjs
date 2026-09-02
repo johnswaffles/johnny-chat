@@ -87,19 +87,59 @@ function movementSandbox() {
 }
 
 function checkAnimationAtlases() {
-  for (let direction = 0; direction < 4; direction += 1) {
-    const walkFrame = animationFrame('villager', 'walk', 0.37, direction);
-    assert.equal(walkFrame.atlasKey, 'motionLoop', `Crownforge Hearthkin walk direction ${direction} atlas`);
-    assert.equal(walkFrame.row, direction, `Crownforge Hearthkin walk preserves direction ${direction}`);
-    assert.equal(walkFrame.frameCount, 4, `Crownforge Hearthkin walk direction ${direction} has four authored poses`);
-    assert.ok(walkFrame.column >= 0 && walkFrame.column < 4, `Crownforge Hearthkin walk direction ${direction} frame`);
-    assert.equal(walkFrame.fallback, null, `Crownforge Hearthkin walk direction ${direction} has no fallback`);
+  const rosterUnits = [
+    { type: 'villager', label: 'Crown Hearthkin', walk: 'motionLoop', attack: 'defenseAttackLoop', death: 'deathLoop' },
+    { type: 'soldier', label: 'Crown Guard', walk: 'soldierWalk', attack: 'soldierAttack', death: 'soldierDeath' },
+    { type: 'scout', label: 'Crown Scout', walk: 'scoutWalk', attack: 'scoutAttack', death: 'scoutDeath' },
+    { type: 'spearwarden', label: 'Crown Spearwarden', walk: 'spearwardenWalk', attack: 'spearwardenAttack', death: 'spearwardenDeath' },
+    { type: 'militia', label: 'Crown Militia', walk: 'militiaWalk', attack: 'militiaAttack', death: 'militiaDeath' },
+    { type: 'shieldbearer', label: 'Crown Shieldbearer', walk: 'shieldbearerWalk', attack: 'shieldbearerAttack', death: 'shieldbearerDeath' },
+    { type: 'ashenForager', label: 'Ashen Hearthkin', walk: 'ashenForagerWalk', attack: 'ashenForagerAttack', death: 'ashenForagerDeath' },
+    { type: 'raider', label: 'Ashen Raider', walk: 'raiderWalk', attack: 'raiderAttack', death: 'raiderDeath' },
+    { type: 'ashenOutrider', label: 'Ashen Outrider', walk: 'ashenOutriderWalk', attack: 'ashenOutriderAttack', death: 'ashenOutriderDeath' },
+    { type: 'thornSpear', label: 'Thorn Spear', walk: 'thornSpearWalk', attack: 'thornSpearAttack', death: 'thornSpearDeath' },
+    { type: 'hearthLevy', label: 'Hearth Levy', walk: 'hearthLevyWalk', attack: 'hearthLevyAttack', death: 'hearthLevyDeath' },
+    { type: 'hidewall', label: 'Ashen Hidewall', walk: 'hidewallWalk', attack: 'hidewallAttack', death: 'hidewallDeath' },
+  ];
+
+  for (const unit of rosterUnits) {
+    for (let direction = 0; direction < 4; direction += 1) {
+      const walkFrame = animationFrame(unit.type, 'walk', 0.37, direction);
+      assert.equal(walkFrame.atlasKey, unit.walk, `${unit.label} walk direction ${direction} atlas`);
+      assert.equal(walkFrame.row, direction, `${unit.label} walk preserves direction ${direction}`);
+      assert.equal(walkFrame.frameCount, 3, `${unit.label} walk uses contact, passing, contact poses`);
+      assert.ok(walkFrame.column >= 0 && walkFrame.column < 3, `${unit.label} walk direction ${direction} frame`);
+      assert.equal(walkFrame.fallback, null, `${unit.label} walk has no fallback`);
+
+      const walkColumns = [0.01, 0.34, 0.66].map((time) => animationFrame(unit.type, 'walk', time, direction).column);
+      assert.deepEqual(walkColumns, [0, 1, 2], `${unit.label} walk advances through the ordered three-pose stride`);
+
+      const attackFrame = animationFrame(unit.type, 'attack', 0.37, direction);
+      assert.equal(attackFrame.atlasKey, unit.attack, `${unit.label} attack direction ${direction} atlas`);
+      assert.equal(attackFrame.row, direction, `${unit.label} attack preserves direction ${direction}`);
+      assert.equal(attackFrame.frameCount, 3, `${unit.label} attack uses wind-up, impact, follow-through poses`);
+
+      for (const [state, expectedColumn] of [
+        ['attack_anticipation', 0],
+        ['attack_contact', 1],
+        ['attack_recovery', 2],
+      ]) {
+        const phaseFrame = animationFrame(unit.type, state, 0.22, direction);
+        assert.equal(phaseFrame.atlasKey, unit.attack, `${unit.label} ${state} atlas`);
+        assert.equal(phaseFrame.row, direction, `${unit.label} ${state} preserves direction ${direction}`);
+        assert.equal(phaseFrame.column, expectedColumn, `${unit.label} ${state} uses its authored attack phase`);
+        assert.equal(phaseFrame.fallback, null, `${unit.label} ${state} has no fallback`);
+      }
+
+      const deathFrame = animationFrame(unit.type, 'death', 0.71, direction);
+      assert.equal(deathFrame.atlasKey, unit.death, `${unit.label} death direction ${direction} atlas`);
+      assert.equal(deathFrame.row, direction, `${unit.label} death preserves direction ${direction}`);
+      assert.equal(deathFrame.frameCount, 4, `${unit.label} death uses reaction, stagger, collapse, fallen poses`);
+      assert.ok(deathFrame.column >= 0 && deathFrame.column < 4, `${unit.label} death direction ${direction} frame`);
+      assert.equal(deathFrame.fallback, null, `${unit.label} death has no fallback`);
+    }
   }
-  const crownforgeWalkTimes = [0.05, 0.22, 0.39, 0.56];
-  for (let direction = 0; direction < 4; direction += 1) {
-    const columns = crownforgeWalkTimes.map((time) => animationFrame('villager', 'walk', time, direction).column);
-    assert.ok(new Set(columns).size >= 3, `Crownforge Hearthkin direction ${direction} advances through the full walk cycle`);
-  }
+
   for (const [state, atlasKey] of [
     ['carry_wood', 'carryWoodLoop'],
     ['carry_food', 'carryFoodLoop'],
@@ -113,51 +153,20 @@ function checkAnimationAtlases() {
       assert.ok(frame.column >= 0 && frame.column < 4, `${state} direction ${direction} frame`);
     }
   }
-  for (const type of ['soldier', 'raider', 'scout', 'spearwarden', 'militia', 'shieldbearer']) {
-    for (let direction = 0; direction < 4; direction += 1) {
-      const walkFrame = animationFrame(type, 'walk', 0.37, direction);
-      assert.equal(walkFrame.atlasKey, `${type}Walk`, `${type} walk atlas`);
-      assert.equal(walkFrame.frameCount, 4, `${type} walk uses four authored frames`);
-      assert.ok(walkFrame.column >= 0 && walkFrame.column < 4, `${type} walk direction ${direction} frame`);
-      assert.equal(walkFrame.fallback, null, `${type} walk does not fall back to idle`);
-    }
-    for (const state of ['attack_anticipation', 'attack_contact', 'attack_recovery']) {
-      for (let direction = 0; direction < 4; direction += 1) {
-        const frame = animationFrame(type, state, 0.22, direction);
-        assert.equal(frame.atlasKey, `${type}Attack`, `${type} ${state} atlas`);
-        assert.ok(frame.row >= 0 && frame.row < 4, `${type} ${state} direction ${direction}`);
-      }
-    }
-    for (let direction = 0; direction < 4; direction += 1) {
-      if (!['scout', 'spearwarden', 'militia', 'shieldbearer'].includes(type)) {
-        const frame = animationFrame(type, 'hit', 0.11, direction);
-        assert.equal(frame.atlasKey, `${type}Hit`, `${type} hit atlas`);
-        assert.equal(frame.frameCount, 4, `${type} hit uses four authored recoil frames`);
-        assert.ok(frame.column >= 0 && frame.column < 4, `${type} hit direction ${direction} frame`);
-        assert.equal(frame.fallback, null, `${type} hit does not fall back to idle`);
-      }
-      const deathFrame = animationFrame(type, 'death', 0.71, direction);
-      assert.equal(deathFrame.atlasKey, ['scout', 'spearwarden', 'militia', 'shieldbearer'].includes(type) ? 'combat' : `${type}Death`, `${type} death atlas`);
-      assert.equal(deathFrame.frameCount, ['scout', 'spearwarden', 'militia', 'shieldbearer'].includes(type) ? 1 : 4, `${type} death uses authored frames`);
-      assert.ok(deathFrame.column >= 0 && deathFrame.column < 4, `${type} death direction ${direction} frame`);
-      assert.equal(deathFrame.fallback, null, `${type} death does not fall back to idle`);
-    }
-  }
+
   for (let direction = 0; direction < 4; direction += 1) {
-    for (const state of ['attack_anticipation', 'attack_contact', 'attack_recovery']) {
-      const attackFrame = animationFrame('villager', state, 0.22, direction);
-      assert.equal(attackFrame.atlasKey, 'defenseAttackLoop', `villager ${state} uses authored defense atlas direction ${direction}`);
-      assert.equal(attackFrame.row, direction, `villager ${state} preserves direction ${direction}`);
-      assert.equal(attackFrame.fallback, null, `villager ${state} does not fall back to a static pose`);
-    }
     const hitFrame = animationFrame('villager', 'hit', 0.11, direction);
     assert.equal(hitFrame.atlasKey, 'hitLoop', `villager hit atlas direction ${direction}`);
     assert.equal(hitFrame.frameCount, 4, 'villager hit uses four authored recoil frames');
     assert.equal(hitFrame.fallback, null, 'villager hit does not fall back to idle');
-    const deathFrame = animationFrame('villager', 'death', 0.71, direction);
-    assert.equal(deathFrame.atlasKey, 'deathLoop', `villager death atlas direction ${direction}`);
-    assert.equal(deathFrame.frameCount, 4, 'villager death uses four authored frames');
-    assert.equal(deathFrame.fallback, null, 'villager death does not fall back to idle');
+
+    for (const type of ['soldier', 'raider']) {
+      const frame = animationFrame(type, 'hit', 0.11, direction);
+      assert.equal(frame.atlasKey, `${type}Hit`, `${type} hit atlas`);
+      assert.equal(frame.frameCount, 4, `${type} hit uses four authored recoil frames`);
+      assert.ok(frame.column >= 0 && frame.column < 4, `${type} hit direction ${direction} frame`);
+      assert.equal(frame.fallback, null, `${type} hit does not fall back to idle`);
+    }
 
     const stunnedFrame = animationFrame('raider', 'stunned', 0.37, direction);
     assert.equal(stunnedFrame.atlasKey, 'raiderStunned', `Raider stun uses authored atlas direction ${direction}`);
@@ -165,6 +174,7 @@ function checkAnimationAtlases() {
     assert.equal(stunnedFrame.frameCount, 4, 'Raider stun has a restrained four-pose loop');
     assert.equal(stunnedFrame.fallback, null, 'Raider stun does not fall back to idle');
   }
+
   for (const atlas of Object.values(VILLAGER_ATLASES)) {
     if (atlas?.src) assert.match(atlas.src, /\.png/);
   }
@@ -174,7 +184,6 @@ function checkAnimationAtlases() {
 
   const foragerStates = {
     idle: 'ashenForagerMotion',
-    walk: 'ashenForagerMotion',
     gather_wood: 'ashenForagerWork',
     gather_food: 'ashenForagerWork',
     gather_stone: 'ashenForagerWork',
@@ -191,28 +200,6 @@ function checkAnimationAtlases() {
       assert.equal(frame.atlasKey, atlasKey, `Ashen Forager ${state} direction ${direction} atlas`);
       assert.equal(frame.row, direction, `Ashen Forager ${state} preserves direction ${direction}`);
       assert.equal(frame.fallback, null, `Ashen Forager ${state} has authored artwork`);
-    }
-  }
-
-  const ashenFighters = {
-    ashenOutrider: ['ashenOutriderMotion', 'ashenOutriderAttack'],
-    thornSpear: ['thornSpearMotion', 'thornSpearAttack'],
-    hearthLevy: ['hearthLevyMotion', 'hearthLevyAttack'],
-    hidewall: ['hidewallMotion', 'hidewallAttack'],
-  };
-  for (const [type, [motionAtlas, attackAtlas]] of Object.entries(ashenFighters)) {
-    for (let direction = 0; direction < 4; direction += 1) {
-      const walkFrame = animationFrame(type, 'walk', 0.37, direction);
-      assert.equal(walkFrame.atlasKey, motionAtlas, `${type} walk direction ${direction} atlas`);
-      assert.equal(walkFrame.row, direction, `${type} walk preserves direction ${direction}`);
-      assert.equal(walkFrame.frameCount, 4, `${type} walk has four authored poses`);
-      assert.equal(walkFrame.fallback, null, `${type} walk has no static fallback`);
-      for (const state of ['attack_anticipation', 'attack_contact', 'attack_recovery']) {
-        const attackFrame = animationFrame(type, state, 0.22, direction);
-        assert.equal(attackFrame.atlasKey, attackAtlas, `${type} ${state} direction ${direction} atlas`);
-        assert.equal(attackFrame.row, direction, `${type} ${state} preserves direction ${direction}`);
-        assert.equal(attackFrame.fallback, null, `${type} ${state} has authored artwork`);
-      }
     }
   }
 }
@@ -513,8 +500,9 @@ function checkStableGranaryAndScout() {
   assert.equal(FIRST_AGE_ASSETS.stable.constructionAtlas.cellByStage.nearComplete.column, 0, 'Stable has authored construction-stage atlas mapping');
   assert.equal(FIRST_AGE_ASSETS.granary.constructionAtlas.cellByStage.partial.column, 1, 'Granary has authored construction-stage atlas mapping');
   assert.match(COMBAT_ATLASES.scout.src, /crownforge-scout-combat-atlas-v3\.png/, 'Scout combat atlas uses the transparent cell-safe mounted-unit correction');
-  assert.match(COMBAT_ATLASES.scoutWalk.src, /crownforge-scout-walk-loop-v3\.png/, 'Scout walk loop uses the transparent cell-safe mounted-unit correction');
-  assert.match(COMBAT_ATLASES.scoutAttack.src, /crownforge-scout-attack-loop-v3\.png/, 'Scout attack loop uses the transparent cell-safe mounted-unit correction');
+  assert.match(COMBAT_ATLASES.scoutWalk.src, /crownforge-roster-v1-crown-scout-walk\.png/, 'Scout walk loop uses the approved roster animation');
+  assert.match(COMBAT_ATLASES.scoutAttack.src, /crownforge-roster-v1-crown-scout-attack\.png/, 'Scout attack loop uses the approved roster animation');
+  assert.match(COMBAT_ATLASES.scoutDeath.src, /crownforge-roster-v1-crown-scout-death\.png/, 'Scout death uses the approved roster animation');
   assert.ok(UNIT_TYPES.scout.renderSize >= UNIT_TYPES.soldier.renderSize * 1.5, 'mounted Scout keeps rider scale comparable to a foot soldier');
   assert.ok(UNIT_TYPES.scout.radius >= 0.7, 'mounted Scout collision follows the enlarged horse body');
   assert.ok(SPACING_ROLES.scout.personalSpace > SPACING_ROLES.soldier.personalSpace, 'mounted Scout reserves more local space than a foot soldier');
@@ -584,8 +572,9 @@ function checkTimberStonewrightAndSpearwarden() {
   assert.match(FIRST_AGE_ASSETS.timberYard.src, /crownforge-timber-yard-first-age-v1\.png/, 'Timber Yard uses a Crownforge first-age asset');
   assert.match(FIRST_AGE_ASSETS.stonewrightYard.src, /crownforge-stonewright-yard-first-age-v1\.png/, 'Stonewright Yard uses a Crownforge first-age asset');
   assert.match(COMBAT_ATLASES.spearwarden.src, /crownforge-spearwarden-combat-atlas-v1\.png/, 'Spearwarden combat atlas is a Crownforge asset');
-  assert.match(COMBAT_ATLASES.spearwardenWalk.src, /crownforge-spearwarden-walk-loop-v1\.png/, 'Spearwarden walk loop is a separate authored asset');
-  assert.match(COMBAT_ATLASES.spearwardenAttack.src, /crownforge-spearwarden-attack-loop-v1\.png/, 'Spearwarden attack loop is a separate authored asset');
+  assert.match(COMBAT_ATLASES.spearwardenWalk.src, /crownforge-roster-v1-crown-spearwarden-walk\.png/, 'Spearwarden walk loop uses the approved roster animation');
+  assert.match(COMBAT_ATLASES.spearwardenAttack.src, /crownforge-roster-v1-crown-spearwarden-attack\.png/, 'Spearwarden attack loop uses the approved roster animation');
+  assert.match(COMBAT_ATLASES.spearwardenDeath.src, /crownforge-roster-v1-crown-spearwarden-death\.png/, 'Spearwarden death uses the approved roster animation');
   for (const state of ['idle', 'walk', 'attack_anticipation', 'attack_contact', 'attack_recovery', 'death']) {
     for (let direction = 0; direction < 4; direction += 1) {
       const frame = animationFrame('spearwarden', state, 0.41, direction);
@@ -631,8 +620,9 @@ function checkHomesteadAndMilitia() {
   assert.match(FIRST_AGE_ASSETS.homestead.src, /crownforge-homestead-first-age-v1\.png/, 'First-age Homestead uses a Crownforge asset');
   assert.match(FIRST_AGE_ASSETS.homestead.constructionAtlas.src, /crownforge-homestead-construction-atlas-v1\.png/, 'First-age Homestead construction uses a Crownforge atlas');
   assert.match(COMBAT_ATLASES.militia.src, /crownforge-militia-combat-atlas-v1\.png/, 'Crown Militia combat atlas is a Crownforge asset');
-  assert.match(COMBAT_ATLASES.militiaWalk.src, /crownforge-militia-walk-loop-v1\.png/, 'Crown Militia walk loop is a separate authored asset');
-  assert.match(COMBAT_ATLASES.militiaAttack.src, /crownforge-militia-attack-loop-v1\.png/, 'Crown Militia attack loop is a separate authored asset');
+  assert.match(COMBAT_ATLASES.militiaWalk.src, /crownforge-roster-v1-crown-militia-walk\.png/, 'Crown Militia walk loop uses the approved roster animation');
+  assert.match(COMBAT_ATLASES.militiaAttack.src, /crownforge-roster-v1-crown-militia-attack\.png/, 'Crown Militia attack loop uses the approved roster animation');
+  assert.match(COMBAT_ATLASES.militiaDeath.src, /crownforge-roster-v1-crown-militia-death\.png/, 'Crown Militia death uses the approved roster animation');
   assert.ok(BUILDING_TYPES.barracks.productionTypes.includes('militia'), 'Barracks exposes the Crown Militia production loop');
   for (const state of ['idle', 'walk', 'attack_anticipation', 'attack_contact', 'attack_recovery', 'death']) {
     for (let direction = 0; direction < 4; direction += 1) {
@@ -679,8 +669,9 @@ function checkWatchHutAndShieldbearer() {
   assert.match(FIRST_AGE_ASSETS.watchHut.src, /crownforge-watch-hut-first-age-v1\.png/, 'Watch Hut uses a Crownforge first-age asset');
   assert.match(FIRST_AGE_ASSETS.watchHut.constructionAtlas.src, /crownforge-watch-hut-construction-atlas-v1\.png/, 'Watch Hut construction uses a Crownforge atlas');
   assert.match(COMBAT_ATLASES.shieldbearer.src, /crownforge-shieldbearer-combat-atlas-v1\.png/, 'Shieldbearer combat atlas is a Crownforge asset');
-  assert.match(COMBAT_ATLASES.shieldbearerWalk.src, /crownforge-shieldbearer-walk-loop-v1\.png/, 'Shieldbearer walk loop is a separate authored asset');
-  assert.match(COMBAT_ATLASES.shieldbearerAttack.src, /crownforge-shieldbearer-attack-loop-v1\.png/, 'Shieldbearer attack loop is a separate authored asset');
+  assert.match(COMBAT_ATLASES.shieldbearerWalk.src, /crownforge-roster-v1-crown-shieldbearer-walk\.png/, 'Shieldbearer walk loop uses the approved roster animation');
+  assert.match(COMBAT_ATLASES.shieldbearerAttack.src, /crownforge-roster-v1-crown-shieldbearer-attack\.png/, 'Shieldbearer attack loop uses the approved roster animation');
+  assert.match(COMBAT_ATLASES.shieldbearerDeath.src, /crownforge-roster-v1-crown-shieldbearer-death\.png/, 'Shieldbearer death uses the approved roster animation');
   assert.ok(BUILDING_TYPES.barracks.productionTypes.includes('shieldbearer'), 'Barracks exposes the Crown Shieldbearer production loop');
   for (const state of ['idle', 'walk', 'attack_anticipation', 'attack_contact', 'attack_recovery', 'death']) {
     for (let direction = 0; direction < 4; direction += 1) {
