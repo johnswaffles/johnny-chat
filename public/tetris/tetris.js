@@ -1305,7 +1305,12 @@
 
   const setSpeed = (mode) => {
     if (!SPEEDS[mode]) return;
-    if (mode === speedMode) return;
+    if (mode === speedMode) {
+      // Re-selecting Really fast is an explicit request to restore its hidden
+      // soundtrack, even if a visible song was chosen as a temporary override.
+      if (mode === "really-fast") setReallyFastTrack(true);
+      return;
+    }
     const wasReallyFast = speedMode === "really-fast";
     speedMode = mode;
     updateSpeedControls();
