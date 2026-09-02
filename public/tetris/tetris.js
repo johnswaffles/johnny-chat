@@ -105,7 +105,7 @@
     "neon-dreams": { src: "/tetris/audio/neon-dreams.mp3", label: "Neon Dreams" },
     "whimsical-waltz": { src: "/tetris/audio/whimsical-waltz.mp3", label: "Whimsical Waltz" },
     "crownforge-rp": { src: "/crownforge/assets/lantern-under-stone.mp3", label: "Johnny's RP" },
-    "nocturnal-calm": { src: "/tetris/audio/nocturnal-calm.mp3", label: "Nocturnal Calm" }
+    "nocturnal-calm": { src: "/tetris/audio/nocturnal-calm.mp3", label: "Nocturnal Calm", loopTrimSeconds: 1 }
   };
   const LOOP_ALL_ID = "loop-all";
   const SOUNDTRACK_ORDER = Object.keys(SOUNDTRACKS);
@@ -1202,9 +1202,9 @@
 
   const activeTrack = () => SOUNDTRACKS[activeTrackId] || SOUNDTRACKS.cozy;
 
-  // Dreamy Clouds has a short silent tail. Restart just before it when it is
-  // selected on its own; Loop All must be allowed to reach the real end so
-  // the ended event can advance to the next song.
+  // Dreamy Clouds and Nocturnal Calm have short silent tails. Restart just
+  // before them when selected on their own; Loop All must reach each real end
+  // so the ended event can advance to the next song.
   const keepTrackLoopTight = () => {
     if (soundtrackId === LOOP_ALL_ID) return;
     const trimSeconds = activeTrack().loopTrimSeconds || 0;
