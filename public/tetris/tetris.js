@@ -107,6 +107,11 @@
     "crownforge-rp": { src: "/crownforge/assets/lantern-under-stone.mp3", label: "Johnny's RP" },
     "nocturnal-calm": { src: "/tetris/audio/nocturnal-calm.mp3", label: "Nocturnal Calm", loopTrimSeconds: 1 }
   };
+  const REALLY_FAST_TRACK = {
+    id: "night-flight-pulse",
+    src: "/tetris/audio/night-flight-pulse.mp3",
+    label: "Night Flight Pulse"
+  };
   const LOOP_ALL_ID = "loop-all";
   const SOUNDTRACK_ORDER = Object.keys(SOUNDTRACKS);
   const SOUNDTRACK_STORAGE_KEY = "johnny-tetris-soundtrack";
@@ -145,6 +150,7 @@
   if (soundtrackId !== LOOP_ALL_ID && !SOUNDTRACKS[soundtrackId]) soundtrackId = "cozy";
   let activeTrackId = soundtrackId === LOOP_ALL_ID ? SOUNDTRACK_ORDER[0] : soundtrackId;
   let loopAllIndex = Math.max(0, SOUNDTRACK_ORDER.indexOf(activeTrackId));
+  let reallyFastTrackActive = false;
   let speedMode = "classic";
   let audioContext = null;
   let highScore = Number(localStorage.getItem("johnny-tetris-high-score") || 0);
@@ -1200,7 +1206,9 @@
     updateMusicButton();
   };
 
-  const activeTrack = () => SOUNDTRACKS[activeTrackId] || SOUNDTRACKS.cozy;
+  const activeTrack = () => activeTrackId === REALLY_FAST_TRACK.id
+    ? REALLY_FAST_TRACK
+    : SOUNDTRACKS[activeTrackId] || SOUNDTRACKS.cozy;
 
   // Dreamy Clouds and Nocturnal Calm have short silent tails. Restart just
   // before them when selected on their own; Loop All must reach each real end
@@ -1222,12 +1230,14 @@
   };
 
   const loadTrack = (trackId, { resume = false } = {}) => {
-    const nextTrack = SOUNDTRACKS[trackId];
+    const nextTrack = trackId === REALLY_FAST_TRACK.id
+      ? REALLY_FAST_TRACK
+      : SOUNDTRACKS[trackId];
     if (!nextTrack) return;
     activeTrackId = trackId;
     musicError = false;
     music.pause();
-    music.loop = soundtrackId !== LOOP_ALL_ID;
+    music.loop = trackId === REALLY_FAST_TRACK.id || soundtrackId !== LOOP_ALL_ID;
     if (music.getAttribute("src") !== nextTrack.src) {
       music.src = nextTrack.src;
       music.load();
@@ -1249,6 +1259,10 @@
     const resume = options.resume !== false && musicEnabled
       && (!music.paused || (musicError && running && !paused && !gameOver));
     soundtrackId = nextId;
+    // Choosing any visible song intentionally exits the hidden Really fast
+    // override. The hidden track can only be reactivated by choosing Really
+    // fast again.
+    reallyFastTrackActive = false;
     localStorage.setItem(SOUNDTRACK_STORAGE_KEY, soundtrackId);
     if (soundtrackId === LOOP_ALL_ID) {
       loopAllIndex = 0;
@@ -1259,8 +1273,24 @@
     loadTrack(soundtrackId, { resume });
   };
 
+  const setReallyFastTrack = (active) => {
+    reallyFastTrackActive = active;
+    const resume = musicEnabled && running && !paused && !gameOver;
+    if (active) {
+      loadTrack(REALLY_FAST_TRACK.id, { resume });
+      return;
+    }
+    if (soundtrackId === LOOP_ALL_ID) {
+      loopAllIndex = 0;
+      loadTrack(SOUNDTRACK_ORDER[loopAllIndex], { resume });
+      return;
+    }
+    loopAllIndex = Math.max(0, SOUNDTRACK_ORDER.indexOf(soundtrackId));
+    loadTrack(soundtrackId, { resume });
+  };
+
   const advanceLoopAll = () => {
-    if (soundtrackId !== LOOP_ALL_ID) return;
+    if (soundtrackId !== LOOP_ALL_ID || reallyFastTrackActive) return;
     loopAllIndex = (loopAllIndex + 1) % SOUNDTRACK_ORDER.length;
     loadTrack(SOUNDTRACK_ORDER[loopAllIndex], { resume: musicEnabled });
   };
@@ -1275,8 +1305,12 @@
 
   const setSpeed = (mode) => {
     if (!SPEEDS[mode]) return;
+    if (mode === speedMode) return;
+    const wasReallyFast = speedMode === "really-fast";
     speedMode = mode;
     updateSpeedControls();
+    if (mode === "really-fast") setReallyFastTrack(true);
+    else if (wasReallyFast) setReallyFastTrack(false);
   };
 
   const toggleMusic = () => {
