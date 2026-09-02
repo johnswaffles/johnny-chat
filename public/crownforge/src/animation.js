@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260901-hearthkin1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260902-hearthkincurse1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -22,6 +22,8 @@ export const ANIMATION_EVENTS = {
   stunEnded: 'stun_ended',
   wardTriggered: 'ward_triggered',
   wardBlocked: 'ward_blocked',
+  wardBlast: 'ward_blast',
+  curseApplied: 'curse_applied',
 };
 
 export const ANIMATION_EVENT_TIMINGS = {

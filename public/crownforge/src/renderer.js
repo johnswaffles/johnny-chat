@@ -1,5 +1,5 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260901-hearthkin1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260901-hearthkin1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260902-hearthkincurse1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260902-hearthkincurse1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -2145,6 +2145,64 @@ export class CrownforgeRenderer {
   }
 
   drawUnitStatusEffects(ctx, unit, point, screenSize, time = 0) {
+    if (unit.lastLightWardBlastTimer > 0) {
+      const duration = Math.max(0.2, unit.lastLightWardBlastDuration || 0.9);
+      const progress = Math.max(0, Math.min(1, 1 - unit.lastLightWardBlastTimer / duration));
+      const eased = 1 - Math.pow(1 - progress, 2);
+      const centerY = point.y - screenSize * 0.48;
+      const radius = screenSize * (0.72 + eased * 1.52);
+      const alpha = (1 - progress) * 0.92;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const glow = ctx.createRadialGradient(point.x, centerY, 0, point.x, centerY, radius);
+      glow.addColorStop(0, `rgba(255, 248, 198, ${alpha * 0.72})`);
+      glow.addColorStop(0.38, `rgba(235, 212, 132, ${alpha * 0.24})`);
+      glow.addColorStop(1, 'rgba(235, 212, 132, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(point.x, centerY, radius, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#fff3b0';
+      ctx.lineWidth = Math.max(1, 2.2 * this.camera.zoom * (1 - progress * 0.35));
+      ctx.beginPath();
+      ctx.arc(point.x, centerY, radius * 0.72, 0, TAU);
+      ctx.stroke();
+      for (let index = 0; index < 8; index += 1) {
+        const angle = index * (TAU / 8) + unit.id * 0.17;
+        const inner = radius * 0.34;
+        const outer = radius * (0.86 + (index % 2) * 0.12);
+        ctx.beginPath();
+        ctx.moveTo(point.x + Math.cos(angle) * inner, centerY + Math.sin(angle) * inner * 0.62);
+        ctx.lineTo(point.x + Math.cos(angle) * outer, centerY + Math.sin(angle) * outer * 0.62);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (unit.lastLightCurseActive || unit.lastLightCurseFlashTimer > 0) {
+      const flash = Math.max(0, Math.min(1, (unit.lastLightCurseFlashTimer ?? 0) / 1.15));
+      const pulse = 0.78 + Math.sin(time * 0.012 + unit.id) * 0.12;
+      const radius = screenSize * (0.48 + flash * 0.12);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (unit.lastLightCurseActive ? 0.58 : 0.3) + flash * 0.3;
+      ctx.strokeStyle = '#bc75d6';
+      ctx.lineWidth = Math.max(1, 1.5 * this.camera.zoom);
+      ctx.beginPath();
+      ctx.arc(point.x, point.y - screenSize * 0.36, radius * pulse, 0, TAU);
+      ctx.stroke();
+      ctx.fillStyle = '#d79ae7';
+      ctx.beginPath();
+      ctx.moveTo(point.x, point.y - screenSize * 1.1 - radius * 0.25);
+      ctx.lineTo(point.x + radius * 0.28, point.y - screenSize * 1.1);
+      ctx.lineTo(point.x, point.y - screenSize * 1.1 + radius * 0.25);
+      ctx.lineTo(point.x - radius * 0.28, point.y - screenSize * 1.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
     const image = this.villagerAtlases.statusEffects;
     const atlas = VILLAGER_ATLASES.statusEffects;
     if (!image || !atlas || (!this.villagerAtlasReady.statusEffects && !(image.complete && image.naturalWidth > 0))) return;

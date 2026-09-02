@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260901-hearthkin1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260902-hearthkincurse1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260901-hearthkin1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260902-hearthkincurse1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -1024,6 +1024,12 @@ export class CrownforgeSimulation {
       lastLightWardTimer: 0,
       lastLightWardDuration: 0,
       lastLightWardHealRate: 0,
+      lastLightWardCurseDelayTimer: 0,
+      lastLightWardCurseSourceId: null,
+      lastLightWardBlastTimer: 0,
+      lastLightWardBlastDuration: 0,
+      lastLightCurseActive: false,
+      lastLightCurseFlashTimer: 0,
       wardBlockedPulse: 0,
       dead: false,
       pathBlocked: false,
@@ -2235,6 +2241,12 @@ export class CrownforgeSimulation {
 
   _updateUnitStatusEffects(unit, dt) {
     unit.wardBlockedPulse = Math.max(0, (unit.wardBlockedPulse ?? 0) - dt);
+    unit.lastLightWardBlastTimer = Math.max(0, (unit.lastLightWardBlastTimer ?? 0) - dt);
+    unit.lastLightCurseFlashTimer = Math.max(0, (unit.lastLightCurseFlashTimer ?? 0) - dt);
+    if (unit.lastLightWardCurseDelayTimer > 0) {
+      unit.lastLightWardCurseDelayTimer = Math.max(0, unit.lastLightWardCurseDelayTimer - dt);
+      if (unit.lastLightWardCurseDelayTimer <= 0) this._resolveLastLightWardCurse(unit);
+    }
     if (unit.lastLightWardTimer > 0) {
       unit.lastLightWardTimer = Math.max(0, unit.lastLightWardTimer - dt);
       unit.hp = Math.min(unit.maxHp, unit.hp + (unit.lastLightWardHealRate ?? 0) * dt);
@@ -4120,55 +4132,68 @@ export class CrownforgeSimulation {
     return routed;
   }
 
-  _rallyVillagersToDefend(protectedVillager, attacker, radius) {
-    if (!attacker || attacker.dead || attacker.kind !== 'unit' || attacker.faction === protectedVillager.faction) return 0;
-    const defenders = this.units
-      .filter((unit) => isHearthkinUnit(unit)
-        && unit.faction === protectedVillager.faction
-        && !unit.dead
-        && distance(unit, protectedVillager) <= radius)
-      .sort((first, second) => distance(first, attacker) - distance(second, attacker));
-    let routed = 0;
-    defenders.forEach((villager, index) => {
-      this._interruptWork(villager);
-      villager.postDepositTarget = null;
-      villager.attackTarget = attacker.id;
-      villager.attackTargetKind = 'unit';
-      villager.attackSlot = index % COMBAT_SLOT_COUNT;
-      villager.actionLabel = `Defending ${UNIT_TYPES[protectedVillager.type].label}`;
-      if (this._sendUnitToAttack(villager, attacker, villager.attackSlot)) routed += 1;
+  _resolveLastLightWardCurse(hearthkin) {
+    const sourceId = hearthkin.lastLightWardCurseSourceId;
+    hearthkin.lastLightWardCurseSourceId = null;
+    hearthkin.lastLightWardCurseDelayTimer = 0;
+    hearthkin.lastLightWardBlastTimer = Math.max(0.2, hearthkin.lastLightWardBlastDuration || 0.9);
+    this.animation.emit(hearthkin, ANIMATION_EVENTS.wardBlast, {
+      targetId: sourceId,
+      duration: hearthkin.lastLightWardBlastTimer,
     });
-    return routed;
+
+    const attacker = this.units.find((candidate) => candidate.id === sourceId && !candidate.dead);
+    if (!attacker) return false;
+    attacker.hp = 1;
+    attacker.lastLightCurseActive = true;
+    attacker.lastLightCurseFlashTimer = 1.15;
+    attacker.hitFlash = Math.max(attacker.hitFlash, 0.34);
+    attacker.healthRevealTimer = Math.max(attacker.healthRevealTimer, 2.2);
+    this.animation.emit(attacker, ANIMATION_EVENTS.curseApplied, {
+      sourceId: hearthkin.id,
+      hp: 1,
+    });
+    this._announce(`Last Light Curse leaves ${UNIT_TYPES[attacker.type].label} at 1 HP.`);
+    return true;
   }
 
-  _triggerLastLightWard(villager, attacker, wardRule) {
+  _triggerLastLightWard(hearthkin, attacker, wardRule) {
     const duration = Math.max(1, wardRule.duration ?? 60);
-    villager.lastLightWardTimer = duration;
-    villager.lastLightWardDuration = duration;
+    const curseDelay = Math.max(0, wardRule.curseDelay ?? 1.5);
+    hearthkin.lastLightWardTimer = duration;
+    hearthkin.lastLightWardDuration = duration;
     // The ward catches the killing blow by returning the Hearthkin to full
     // health immediately. The shield, not a slow heal, is the readable
     // one-minute safety window the player can rely on under pressure.
-    villager.hp = villager.maxHp;
-    villager.lastLightWardHealRate = 0;
-    villager.wardBlockedPulse = 0.55;
-    villager.healthRevealTimer = Math.max(villager.healthRevealTimer, duration);
-    this.animation.emit(villager, ANIMATION_EVENTS.wardTriggered, {
+    hearthkin.hp = hearthkin.maxHp;
+    hearthkin.lastLightWardHealRate = 0;
+    hearthkin.lastLightWardCurseSourceId = attacker?.kind === 'unit' && !attacker.dead ? attacker.id : null;
+    hearthkin.lastLightWardCurseDelayTimer = hearthkin.lastLightWardCurseSourceId ? curseDelay : 0;
+    hearthkin.lastLightWardBlastDuration = Math.max(0.2, wardRule.blastDuration ?? 0.9);
+    hearthkin.wardBlockedPulse = 0.55;
+    hearthkin.healthRevealTimer = Math.max(hearthkin.healthRevealTimer, duration);
+    this.animation.emit(hearthkin, ANIMATION_EVENTS.wardTriggered, {
       sourceId: attacker?.id ?? null,
       duration,
     });
-    const defenders = this._rallyVillagersToDefend(villager, attacker, wardRule.swarmRadius ?? 14);
-    const rally = defenders > 0 ? ` ${defenders} nearby Hearthkin rally.` : '';
-    this._announce(`Last Light Ward saves the Hearthkin for ${duration} seconds.${rally}`);
+    const curseNotice = hearthkin.lastLightWardCurseSourceId ? ` Last Light Curse in ${Math.ceil(curseDelay)} seconds.` : '';
+    this._announce(`Last Light Ward saves the Hearthkin for ${duration} seconds.${curseNotice}`);
   }
 
   _applyUnitDamage(target, amount, attacker) {
-    if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false };
+    if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
     const damage = Math.max(0, Number(amount) || 0);
+    if (target.lastLightCurseActive && damage > 0) {
+      const before = target.hp;
+      target.hp = 0;
+      this._killUnit(target, attacker);
+      return { damage: before, killed: true, warded: false, blocked: false, cursed: true };
+    }
     if (target.lastLightWardTimer > 0) {
       target.wardBlockedPulse = 0.42;
       target.hitFlash = Math.max(target.hitFlash, 0.12);
       this.animation.emit(target, ANIMATION_EVENTS.wardBlocked, { sourceId: attacker?.id ?? null, damage });
-      return { damage: 0, killed: false, warded: true, blocked: true };
+      return { damage: 0, killed: false, warded: true, blocked: true, cursed: false };
     }
 
     const before = target.hp;
@@ -4176,12 +4201,12 @@ export class CrownforgeSimulation {
     const wardRule = UNIT_TYPES[target.type]?.lastLightWard;
     if (wardRule && isHearthkinUnit(target) && after <= 0) {
       this._triggerLastLightWard(target, attacker, wardRule);
-      return { damage: before, killed: false, warded: true, blocked: false };
+      return { damage: before, killed: false, warded: true, blocked: false, cursed: false };
     }
 
     target.hp = Math.max(0, after);
     if (target.hp <= 0) this._killUnit(target, attacker);
-    return { damage: Math.min(before, damage), killed: target.dead, warded: false, blocked: false };
+    return { damage: Math.min(before, damage), killed: target.dead, warded: false, blocked: false, cursed: false };
   }
 
   _updateAttack(unit, dt) {

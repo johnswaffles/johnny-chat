@@ -134,7 +134,8 @@ const HEARTHKIN_WORKER_ABILITIES = Object.freeze({
   }),
   lastLightWard: Object.freeze({
     duration: 60,
-    swarmRadius: 14,
+    curseDelay: 1.5,
+    blastDuration: 0.9,
   }),
 });
 

@@ -1,7 +1,7 @@
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260901-hearthkin1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260902-hearthkincurse1';
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260828-latencypass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260901-hearthkin1';
+import { CrownforgeRenderer } from './renderer.js?v=20260902-hearthkincurse1';
 import { CrownforgeSimulation } from './simulation.js?v=20260901-hearthkinward1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260831-firstage2';
@@ -849,7 +849,8 @@ function selectionStatus() {
         ? ` · Last Light Ward ${Math.ceil(unit.lastLightWardTimer)}s · invulnerable`
         : ' · defensive strike stuns humanoids · Last Light Ward ready'
       : '';
-    return `${unit.actionLabel}${health}${cargo}${status}${defense}`;
+    const curse = unit.lastLightCurseActive ? ' · Last Light Curse · 1 HP · any damage is fatal' : '';
+    return `${unit.actionLabel}${health}${cargo}${status}${curse}${defense}`;
   }
   if (units.length > 1) {
     return summarizeUnitTasks(units, { includeReady: true, maxEntries: 3 });

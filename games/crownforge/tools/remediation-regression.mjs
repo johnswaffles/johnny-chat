@@ -21,7 +21,7 @@ import {
   UNIT_TYPES,
   VILLAGER_ATLASES,
 } from '../src/config.js';
-import { animationFrame, resolveAnimationState } from '../src/animation.js';
+import { ANIMATION_EVENTS, animationFrame, resolveAnimationState } from '../src/animation.js';
 import { CrownforgeInput } from '../src/input.js';
 import { CrownforgeRenderer, resolveFirstAgeConstructionStage, resolveWallVisual } from '../src/renderer.js';
 import { CrownforgeSimulation } from '../src/simulation.js';
@@ -2006,6 +2006,8 @@ function checkVillagerLastStandDefense() {
   assert.equal(villagerRules.stunOnHit.duration, 5, 'defensive strike stun lasts five seconds');
   assert.equal(villagerRules.stunOnHit.immunityDuration, 20, 'stun recovery grants twenty seconds of immunity');
   assert.equal(villagerRules.lastLightWard.duration, 60, 'Last Light Ward lasts one minute');
+  assert.equal(villagerRules.lastLightWard.curseDelay, 1.5, 'Last Light Curse transfers after a readable delay');
+  assert.equal(villagerRules.lastLightWard.blastDuration, 0.9, 'Last Light Curse has an authored blast window');
   assert.ok(raiderRules.attackVsVillager >= villagerRules.maxHp, 'an unwarded Raider strike is lethal to a Villager');
 
   const damageSimulation = movementSandbox();
@@ -2057,8 +2059,21 @@ function checkVillagerLastStandDefense() {
   assert.equal(protectedVillager.dead, false, 'Last Light Ward prevents Villager death');
   assert.equal(protectedVillager.hp, protectedVillager.maxHp, 'Ward catches the lethal strike at full health');
   assert.equal(protectedVillager.lastLightWardTimer, 60, 'Ward starts at one minute');
-  assert.equal(nearbyVillager.attackTarget, lethalRaider.id, 'nearby Villager swarms the lethal attacker');
-  assert.notEqual(distantVillager.attackTarget, lethalRaider.id, 'distant Villager is not pulled away by the local safety response');
+  assert.equal(nearbyVillager.attackTarget, null, 'nearby Hearthkin do not aggro the lethal attacker');
+  assert.equal(distantVillager.attackTarget, null, 'distant Hearthkin remain uninvolved in the ward response');
+  assert.equal(lethalRaider.lastLightCurseActive, false, 'curse waits for the delayed light transfer');
+  wardSimulation._updateUnitStatusEffects(protectedVillager, 0.5);
+  assert.equal(lethalRaider.lastLightCurseActive, false, 'curse remains pending before the blast delay ends');
+  wardSimulation._updateUnitStatusEffects(protectedVillager, 1.01);
+  assert.equal(protectedVillager.lastLightWardCurseDelayTimer, 0, 'ward curse delay resolves once');
+  assert.ok(protectedVillager.lastLightWardBlastTimer > 0, 'Hearthkin emits a delayed light blast');
+  assert.equal(protectedVillager.lastAnimationEvent.name, ANIMATION_EVENTS.wardBlast, 'blast has a dedicated animation event');
+  assert.equal(lethalRaider.lastLightCurseActive, true, 'the killing attacker receives Last Light Curse');
+  assert.equal(lethalRaider.hp, 1, 'Last Light Curse reduces the attacker to one HP');
+  assert.equal(lethalRaider.lastAnimationEvent.name, ANIMATION_EVENTS.curseApplied, 'curse transfer has a dedicated animation event');
+  const cursedStrike = wardSimulation._applyUnitDamage(lethalRaider, 0.01, protectedVillager);
+  assert.equal(cursedStrike.cursed, true, 'any positive damage is lethal to a cursed attacker');
+  assert.equal(lethalRaider.dead, true, 'cursed attacker dies from the next damage instance');
   const protectedHp = protectedVillager.hp;
   const blockedResult = wardSimulation._applyUnitDamage(protectedVillager, 999, lethalRaider);
   assert.equal(blockedResult.blocked, true, 'active Ward blocks further damage');
@@ -2284,7 +2299,7 @@ console.log(JSON.stringify({
     'aspect-correct landmark health and placement feedback',
     'alpha-audited building, construction, field, tree, grove, stone, and Gold grounding without permanent collision diamonds',
     'expanded Crown Hall hostile exclusion and attackable recovery for enemies embedded in solid structures',
-    'twenty-hit Villager defense, five-second humanoid stun, twenty-second immunity, attacker aggro, local swarm, and one-minute Last Light Ward',
+    'twenty-hit Villager defense, five-second humanoid stun, twenty-second immunity, delayed Last Light Curse, and one-minute ward protection',
     'all movable unit types hold correct four-way travel facing, attack approaches follow their path heading, and recoil/death poses never slide or spin',
     'melee damage, death timing, victory, defeat',
   ],
