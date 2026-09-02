@@ -43,7 +43,8 @@ function insideBuilding(point, building, padding = 0) {
   const blueprint = BUILDING_TYPES[building.type];
   const footprint = blueprint.collisionFootprint ?? blueprint.footprint;
   const offset = blueprint.collisionOffset ?? { x: 0, z: 0 };
-  const clearance = (blueprint.collisionClearance ?? 0) + (blueprint.unitExclusionPadding ?? 0);
+  const defaultUnitExclusion = !blueprint.walkable && !blueprint.wall && !blueprint.gate && !blueprint.road ? 0.38 : 0;
+  const clearance = (blueprint.collisionClearance ?? 0) + (blueprint.unitExclusionPadding ?? defaultUnitExclusion);
   const width = footprint.width / 2 + clearance + padding;
   const height = footprint.height / 2 + clearance + padding;
   const centerX = building.x + (offset.x ?? 0);
@@ -1651,6 +1652,22 @@ function checkBuildingPhysicalInteractionBoundaries() {
     assert.equal(insideBuilding(builder.routeTarget, barracks), false, `builder ${builder.id} works outside the Barracks artwork`);
   }
   assert.equal(new Set(builders.map((builder) => builder.buildSlot)).size, builders.length, 'builders reserve distinct Barracks work stations');
+
+  const productionSimulation = movementSandbox();
+  const spawnCases = [
+    ['townCenter', 'villager', 40, 40],
+    ['barracks', 'soldier', 80, 40],
+    ['stable', 'scout', 120, 40],
+  ];
+  for (const [type, unitType, x, z] of spawnCases) {
+    const producer = productionSimulation.addBuilding(type, x, z, 'player');
+    const spawn = productionSimulation._findUnitSpawnPoint(producer, unitType);
+    assert.ok(spawn, `${BUILDING_TYPES[type].label} finds a clear production exit`);
+    assert.equal(productionSimulation._pointBlockedForUnit({ type: unitType }, spawn), false, `${BUILDING_TYPES[type].label} production exit is outside the unit perimeter`);
+    assert.ok(productionSimulation._distanceToBuildingUnitEdge(spawn, producer) >= 2.15, `${BUILDING_TYPES[type].label} places new units far enough beyond its illustrated base`);
+    const center = productionSimulation._buildingCollisionCenter(producer);
+    assert.ok(spawn.z > center.z, `${BUILDING_TYPES[type].label} prefers the south-facing readable production exit`);
+  }
 }
 
 function checkTravelSpeedIsolation() {
@@ -2288,7 +2305,7 @@ console.log(JSON.stringify({
     'Crown Hall stair routing, landing stop, and interior collision',
     'person-scaled Barracks landmark and collision clearance',
     'equal Crown Hall/Barracks proportion, inward placement, and four-sided buildable ring',
-    'artwork-matched building collision, offset physical bases, perimeter work stations, and non-stacking Crown Hall drop-offs',
+    'artwork-matched building collision, expanded unit perimeters, safe production exits, perimeter work stations, low-building occlusion protection, and non-stacking Crown Hall drop-offs',
     'travel-only speed scaling, high-speed collision routing, and fast group spacing',
     'always-available selected-unit recovery at a clear Crown Hall approach with cargo deposit and group spacing',
     'distinct Ashen role-equivalent artwork, directional units, independent economy, capped town growth, local defense, and forest-gated raids',

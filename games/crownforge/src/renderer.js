@@ -1,5 +1,5 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260902-hearthkincurse1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260902-hearthkincurse1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260902-buildingperimeter1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260902-buildingperimeter1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -1157,6 +1157,10 @@ export class CrownforgeRenderer {
       const hiddenByBuilding = nearbyStatic.find((building) => {
         if (building.kind !== 'building') return false;
         if (building.destroyed || building.progress <= 0 || building.field) return false;
+        // Low work buildings should never swallow a moving worker or a newly
+        // produced unit. Tall landmarks keep their natural far-side occlusion
+        // so a unit walking behind a tower still reads correctly.
+        if (BUILDING_TYPES[building.type]?.allowsUnitOcclusion) return false;
         const nearStructure = simulation._distanceToBuildingEdge(unit, building) < 2.3;
         const collisionCenter = this.buildingCollisionCenter(building);
         return nearStructure && unit.x + unit.z < collisionCenter.x + collisionCenter.z - 0.04;

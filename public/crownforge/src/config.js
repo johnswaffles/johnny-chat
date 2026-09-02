@@ -476,6 +476,7 @@ export const BUILDING_TYPES = {
     // collisionClearance prevents the larger no-entry boundary from changing
     // drop-off priority, placement spacing, or the authored building scale.
     unitExclusionPadding: 1.8,
+    allowsUnitOcclusion: true,
     interactionSlots: 8,
     entrance: 'south',
     // The first-age Hall has a readable south stair run. Units may enter only
@@ -525,6 +526,7 @@ export const BUILDING_TYPES = {
     collisionFootprint: { width: 15, height: 12.5 },
     collisionOffset: { x: -6.6, z: -6.6 },
     collisionClearance: 1.5,
+    allowsUnitOcclusion: true,
     interactionSlots: 8,
     entrance: 'south',
     buildTime: 10,
@@ -594,6 +596,7 @@ export const BUILDING_TYPES = {
     collisionFootprint: { width: 5.5, height: 5 },
     collisionOffset: { x: -2.6, z: -2.6 },
     collisionClearance: 0.8,
+    allowsUnitOcclusion: true,
     interactionSlots: 8,
     entrance: 'south',
     buildTime: 7,
@@ -799,6 +802,7 @@ export const BUILDING_TYPES = {
     // tower while an invisible blocker sits down-left of it.
     collisionOffset: { x: 0, z: 0 },
     collisionClearance: 0.55,
+    allowsUnitOcclusion: true,
     interactionSlots: 8,
     entrance: 'south',
     buildTime: 7,
@@ -839,6 +843,7 @@ export const BUILDING_TYPES = {
     collisionFootprint: { width: 11, height: 9 },
     collisionOffset: { x: -4.3, z: -4.3 },
     collisionClearance: 1.25,
+    allowsUnitOcclusion: true,
     interactionSlots: 8,
     entrance: 'south',
     spawnDistance: 2,
@@ -859,6 +864,7 @@ export const BUILDING_TYPES = {
     collisionFootprint: { width: 10, height: 8 },
     collisionOffset: { x: -4, z: -4 },
     collisionClearance: 1.05,
+    allowsUnitOcclusion: true,
     interactionSlots: 8,
     entrance: 'south',
     buildTime: 12,
@@ -931,6 +937,7 @@ export const BUILDING_TYPES = {
     collisionFootprint: { width: 5.2, height: 5 },
     collisionOffset: { x: -2.1, z: -2.1 },
     collisionClearance: 0.75,
+    allowsUnitOcclusion: true,
     interactionSlots: 8,
     entrance: 'south',
     buildTime: 8,
@@ -1050,6 +1057,7 @@ export const BUILDING_TYPES = {
     collisionFootprint: { width: 4.2, height: 4.2 },
     collisionOffset: { x: -1.4, z: -1.4 },
     collisionClearance: 0.55,
+    allowsUnitOcclusion: true,
     interactionSlots: 8,
     buildTime: 7,
     cost: { food: 0, wood: 75, stone: 18, gold: 0 },

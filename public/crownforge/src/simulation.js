@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260902-hearthkincurse1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260902-buildingperimeter1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260902-hearthkincurse1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260902-buildingperimeter1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -24,6 +24,11 @@ const DEMOLITION_SLOT_COUNT = 8;
 const MAX_CONSTRUCTION_ORDER_QUEUE = 12;
 const STORAGE_INTERACTION_DISTANCE = 0.78;
 const BUILDING_INTERACTION_DISTANCE = 0.78;
+// Units should interact with a structure from its illustrated edge, not from
+// the transparent pixels inside the raster. Existing landmarks may author a
+// larger ring; future solid buildings get this safe default automatically.
+const DEFAULT_BUILDING_UNIT_EXCLUSION_PADDING = 0.38;
+const PRODUCTION_SPAWN_MARGIN = 2.2;
 const DEMOLITION_INTERACTION_DISTANCE = 0.82;
 const DEMOLITION_STRIKE_INTERVAL = 0.72;
 const PATH_REACH_TOLERANCE = 0.38;
@@ -136,6 +141,15 @@ const ENEMY_SITE_OFFSETS = [
   { x: 0, z: 0 }, { x: -8, z: 0 }, { x: 0, z: -8 }, { x: 8, z: 0 }, { x: 0, z: 8 },
   { x: -8, z: -8 }, { x: 8, z: -8 }, { x: -12, z: 6 }, { x: 6, z: -12 },
 ];
+
+function buildingUnitExclusionPadding(buildingOrType) {
+  const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType?.type;
+  const blueprint = BUILDING_TYPES[type];
+  if (!blueprint || blueprint.walkable || blueprint.wall || blueprint.gate || blueprint.road) {
+    return blueprint?.unitExclusionPadding ?? 0;
+  }
+  return blueprint.unitExclusionPadding ?? DEFAULT_BUILDING_UNIT_EXCLUSION_PADDING;
+}
 
 export function resourceFootprint(nodeOrType) {
   const type = typeof nodeOrType === 'string' ? nodeOrType : nodeOrType?.type;
@@ -2179,7 +2193,8 @@ export class CrownforgeSimulation {
   _findUnitSpawnPoint(building, type, queueDepth = 0) {
     const role = SPACING_ROLES[type] ?? SPACING_ROLES.villager;
     const wobble = (queueDepth % 3) * 0.32;
-    const candidates = this._buildingApproachPoints(building, 1.1 + wobble);
+    const spawnMargin = Math.max(PRODUCTION_SPAWN_MARGIN, BUILDING_TYPES[building.type]?.spawnDistance ?? 0);
+    const candidates = this._buildingApproachPoints(building, spawnMargin + wobble);
     const unitProbe = { type };
     return candidates.find((point) => {
       if (this._pointBlockedForUnit(unitProbe, point)) return false;
@@ -2646,6 +2661,7 @@ export class CrownforgeSimulation {
 
   _beginReturn(unit) {
     if (!unit.carryAmount || !unit.carryType) return false;
+    this._releaseUnitFromBuildingPerimeter(unit);
     this._releaseResourceSlot(unit);
     this._releaseStorageSlot(unit);
     const route = this._findStorageRoute(unit);
@@ -2760,14 +2776,15 @@ export class CrownforgeSimulation {
     const footprint = this._buildingFootprint(building);
     const center = this._buildingCollisionCenter(building);
     const visualClearance = blueprint.collisionClearance ?? 0;
-    const unitClearance = visualClearance + (blueprint.unitExclusionPadding ?? 0);
+    const unitExclusion = buildingUnitExclusionPadding(building);
+    const unitClearance = visualClearance + unitExclusion;
     const halfWidth = footprint.width / 2 + unitClearance + margin;
     const halfHeight = footprint.height / 2 + unitClearance + margin;
     if (blueprint.wall) {
       const geometry = this._wallLineGeometry(building);
       if (geometry) {
         const perpendicular = { x: -geometry.direction.z, z: geometry.direction.x };
-        const sideDistance = geometry.halfThickness + (blueprint.unitExclusionPadding ?? 0) + margin;
+        const sideDistance = geometry.halfThickness + unitExclusion + margin;
         const usableHalfLength = Math.max(0, geometry.halfLength - (blueprint.wallSegmentSpan ?? 3) * 0.35);
         const longitudinalStops = usableHalfLength > 0.2 ? [-0.72, 0, 0.72] : [0];
         const points = [];
@@ -2780,7 +2797,7 @@ export class CrownforgeSimulation {
             });
           }
         }
-        const endDistance = geometry.halfLength + margin + (blueprint.unitExclusionPadding ?? 0);
+        const endDistance = geometry.halfLength + margin + unitExclusion;
         for (const end of [1, -1]) {
           points.push({
             x: geometry.center.x + geometry.direction.x * endDistance * end,
@@ -2809,14 +2826,14 @@ export class CrownforgeSimulation {
       ].map((point, priority) => ({ ...point, priority }));
     }
     const vectors = [
-      { x: 1, z: 1 },
       { x: 0, z: 1 },
-      { x: 1, z: 0 },
+      { x: 1, z: 1 },
       { x: -1, z: 1 },
-      { x: 1, z: -1 },
+      { x: 1, z: 0 },
       { x: -1, z: 0 },
-      { x: 0, z: -1 },
+      { x: 1, z: -1 },
       { x: -1, z: -1 },
+      { x: 0, z: -1 },
     ];
     const points = [];
     for (const vector of vectors) {
@@ -2900,7 +2917,7 @@ export class CrownforgeSimulation {
   }
 
   _distanceToBuildingUnitEdge(point, building) {
-    const extraClearance = BUILDING_TYPES[building.type]?.unitExclusionPadding ?? 0;
+    const extraClearance = buildingUnitExclusionPadding(building);
     if (extraClearance <= 0) return this._distanceToBuildingEdge(point, building);
     const wallGeometry = this._wallLineGeometry(building);
     if (wallGeometry) {
@@ -3154,7 +3171,7 @@ export class CrownforgeSimulation {
     const center = this._buildingCollisionCenter(building);
     const footprint = this._buildingFootprint(building);
     const unitClearance = (BUILDING_TYPES[building.type]?.collisionClearance ?? 0)
-      + (BUILDING_TYPES[building.type]?.unitExclusionPadding ?? 0);
+      + buildingUnitExclusionPadding(building);
     const radiusX = footprint.width / 2 + unitClearance + role.personalSpace;
     const radiusZ = footprint.height / 2 + unitClearance + role.personalSpace;
     for (let index = 0; index < 16; index += 1) {
@@ -3210,6 +3227,50 @@ export class CrownforgeSimulation {
     return relocated;
   }
 
+  _releaseUnitFromBuildingPerimeter(unit) {
+    const unitPoint = { x: unit.x, z: unit.z };
+    if (!this._pointBlockedForUnit(unit, unitPoint)) return false;
+    const unitPadding = (UNIT_TYPES[unit.type]?.radius ?? 0.4) + UNIT_STATIC_CLEARANCE;
+    const buildingBlockers = this._staticBlockerCandidates(unit, STATIC_BLOCKER_QUERY_RADIUS + 2)
+      .filter((building) => building.kind === 'building'
+        && this._buildingHasCollision(building)
+        && this._distanceToBuildingUnitEdge(unitPoint, building) < unitPadding)
+      .sort((a, b) => this._distanceToBuildingUnitEdge(unitPoint, a) - this._distanceToBuildingUnitEdge(unitPoint, b));
+    if (!buildingBlockers.length) return false;
+
+    // A unit can only arrive here from a pre-existing save, a building that
+    // finished around it, or a deliberately tight test layout. Do not make
+    // it walk through its own safety ring. Relocate it to a clear exterior
+    // station, then let the ordinary pathfinder calculate the next order.
+    for (const building of buildingBlockers) {
+      const candidates = [
+        ...this._placementEvictionCandidates(unit, building),
+        ...this._buildingApproachPoints(building, 1.35),
+        ...this._buildingApproachPoints(building, 2.4),
+        ...this._buildingApproachPoints(building, 3.6),
+      ];
+      const point = candidates
+        .filter((candidate) => !this._pointBlockedForUnit(unit, candidate))
+        .sort((a, b) => distance(unitPoint, a) - distance(unitPoint, b))[0];
+      if (!point) continue;
+      unit.x = point.x;
+      unit.z = point.z;
+      unit.path = [];
+      unit.routeTarget = null;
+      unit.velocityX = 0;
+      unit.velocityZ = 0;
+      unit.motionSpeed = 0;
+      unit.pathBlocked = false;
+      unit.recoveryAvailable = false;
+      unit.stuckTimer = 0;
+      unit.repathCooldown = 0;
+      unit.lastProgressX = point.x;
+      unit.lastProgressZ = point.z;
+      return true;
+    }
+    return false;
+  }
+
   _pointBlockedForUnit(unit, point, placement = null) {
     const padding = (UNIT_TYPES[unit.type]?.radius ?? 0.4) + UNIT_STATIC_CLEARANCE;
     const candidates = this._staticBlockerCandidates(point);
@@ -3217,7 +3278,7 @@ export class CrownforgeSimulation {
       if (building.kind !== 'building') continue;
       if (placement?.ignoreBuildingIds?.includes(building.id)) continue;
       if (!this._buildingHasCollision(building)) continue;
-      const unitExclusion = BUILDING_TYPES[building.type]?.unitExclusionPadding ?? 0;
+      const unitExclusion = buildingUnitExclusionPadding(building);
       if (unit.stairAccess && this._pointOnCrownHallStairs(point, building, padding + unitExclusion)) continue;
       if (this._distanceToBuildingUnitEdge(point, building) < padding - UNIT_COLLISION_EPSILON) return true;
     }
@@ -3372,7 +3433,7 @@ export class CrownforgeSimulation {
       if (building.kind !== 'building') continue;
       if (placement?.ignoreBuildingIds?.includes(building.id)) continue;
       if (!this._buildingHasCollision(building)) continue;
-      const unitExclusion = BUILDING_TYPES[building.type]?.unitExclusionPadding ?? 0;
+      const unitExclusion = buildingUnitExclusionPadding(building);
       if (unit.stairAccess && this._pointOnCrownHallStairs(cellPoint, building, padding + unitExclusion + 0.25)) continue;
       if (this._buildingBlocksCell(cellX, cellZ, building)
         || this._cellIntersectsBuilding(cellX, cellZ, building, padding + unitExclusion)) return true;
@@ -3827,7 +3888,17 @@ export class CrownforgeSimulation {
         && building.progress >= 1
         && this._storageAccepts(building, resourceType))
       .sort((a, b) => this._distanceToBuildingEdge(unit, a) - this._distanceToBuildingEdge(unit, b));
-    for (const storage of storages) {
+    // Keep dedicated first-age depots authoritative for their resource. A
+    // worker recovering from another building's perimeter should still use a
+    // nearby Granary/Timber Yard/Stonewright Yard/Ore Wash when one exists,
+    // instead of switching to the Crown Hall simply because the egress point
+    // is temporarily closer to the civic center.
+    const dedicated = storages.filter((building) => {
+      const accepted = BUILDING_TYPES[building.type]?.acceptsResources;
+      return Array.isArray(accepted) && accepted.length === 1 && accepted.includes(resourceType);
+    });
+    const candidates = dedicated.length ? dedicated : storages;
+    for (const storage of candidates) {
       const route = this._bestPathToPoints(unit, this._availableStorageApproachPoints(unit, storage));
       if (route) return { storage, path: route.path, slot: route.slot, point: route.point };
     }
@@ -4999,7 +5070,7 @@ export class CrownforgeSimulation {
     for (const building of nearbyBlockers) {
       if (building.kind !== 'building') continue;
       if (!this._buildingHasCollision(building)) continue;
-      const unitExclusion = BUILDING_TYPES[building.type]?.unitExclusionPadding ?? 0;
+      const unitExclusion = buildingUnitExclusionPadding(building);
       if (unit.stairAccess && this._pointOnCrownHallStairs(unit, building, radius + unitExclusion)) continue;
       const bounds = this._buildingEntityBounds(building, radius + unitExclusion);
       if (unit.x <= bounds.minX || unit.x >= bounds.maxX || unit.z <= bounds.minZ || unit.z >= bounds.maxZ) continue;

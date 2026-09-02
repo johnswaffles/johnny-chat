@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260902-hearthkincurse1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260902-buildingperimeter1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
