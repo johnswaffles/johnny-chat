@@ -104,8 +104,11 @@
     "dreamy-clouds": { src: "/tetris/audio/dreamy-clouds.mp3", label: "Dreamy Clouds", loopTrimSeconds: 2 },
     "neon-dreams": { src: "/tetris/audio/neon-dreams.mp3", label: "Neon Dreams" },
     "whimsical-waltz": { src: "/tetris/audio/whimsical-waltz.mp3", label: "Whimsical Waltz" },
-    "crownforge-rp": { src: "/crownforge/assets/lantern-under-stone.mp3", label: "Johnny's RP" }
+    "crownforge-rp": { src: "/crownforge/assets/lantern-under-stone.mp3", label: "Johnny's RP" },
+    "nocturnal-calm": { src: "/tetris/audio/nocturnal-calm.mp3", label: "Nocturnal Calm" }
   };
+  const LOOP_ALL_ID = "loop-all";
+  const SOUNDTRACK_ORDER = Object.keys(SOUNDTRACKS);
   const SOUNDTRACK_STORAGE_KEY = "johnny-tetris-soundtrack";
   const MAX_SECOND_CHANCES = 4;
   const MAX_REACTOR_CHARGE = 100;
@@ -139,6 +142,9 @@
   let musicEnabled = true;
   let musicError = false;
   let soundtrackId = localStorage.getItem(SOUNDTRACK_STORAGE_KEY) || "cozy";
+  if (soundtrackId !== LOOP_ALL_ID && !SOUNDTRACKS[soundtrackId]) soundtrackId = "cozy";
+  let activeTrackId = soundtrackId === LOOP_ALL_ID ? SOUNDTRACK_ORDER[0] : soundtrackId;
+  let loopAllIndex = Math.max(0, SOUNDTRACK_ORDER.indexOf(activeTrackId));
   let speedMode = "classic";
   let audioContext = null;
   let highScore = Number(localStorage.getItem("johnny-tetris-high-score") || 0);
@@ -1194,10 +1200,14 @@
     updateMusicButton();
   };
 
-  // Dreamy Clouds has a short silent tail. Restart just before it so the
-  // browser's native loop stays continuous without affecting other tracks.
+  const activeTrack = () => SOUNDTRACKS[activeTrackId] || SOUNDTRACKS.cozy;
+
+  // Dreamy Clouds has a short silent tail. Restart just before it when it is
+  // selected on its own; Loop All must be allowed to reach the real end so
+  // the ended event can advance to the next song.
   const keepTrackLoopTight = () => {
-    const trimSeconds = SOUNDTRACKS[soundtrackId]?.loopTrimSeconds || 0;
+    if (soundtrackId === LOOP_ALL_ID) return;
+    const trimSeconds = activeTrack().loopTrimSeconds || 0;
     if (!trimSeconds || music.paused || !Number.isFinite(music.duration)) return;
     if (music.duration > trimSeconds && music.currentTime >= music.duration - trimSeconds) {
       music.currentTime = 0;
@@ -1207,22 +1217,22 @@
   const updateSoundtrackControls = () => {
     if (soundtrackSelect) soundtrackSelect.value = soundtrackId;
     if (mobileSoundtrackSelect) mobileSoundtrackSelect.value = soundtrackId;
-    music.dataset.track = soundtrackId;
+    music.dataset.track = activeTrackId;
+    music.dataset.playlist = soundtrackId === LOOP_ALL_ID ? "all" : "single";
   };
 
-  const setSoundtrack = (nextId, options = {}) => {
-    if (!SOUNDTRACKS[nextId]) return;
-    const resume = options.resume !== false && musicEnabled
-      && (!music.paused || (musicError && running && !paused && !gameOver));
-    const nextTrack = SOUNDTRACKS[nextId];
+  const loadTrack = (trackId, { resume = false } = {}) => {
+    const nextTrack = SOUNDTRACKS[trackId];
+    if (!nextTrack) return;
+    activeTrackId = trackId;
     musicError = false;
-    soundtrackId = nextId;
-    localStorage.setItem(SOUNDTRACK_STORAGE_KEY, soundtrackId);
     music.pause();
+    music.loop = soundtrackId !== LOOP_ALL_ID;
     if (music.getAttribute("src") !== nextTrack.src) {
       music.src = nextTrack.src;
       music.load();
     }
+    try { music.currentTime = 0; } catch (_) {}
     music.setAttribute("aria-label", nextTrack.label + " soundtrack");
     updateSoundtrackControls();
     if (resume) {
@@ -1232,6 +1242,27 @@
     } else {
       updateMusicButton();
     }
+  };
+
+  const setSoundtrack = (nextId, options = {}) => {
+    if (nextId !== LOOP_ALL_ID && !SOUNDTRACKS[nextId]) return;
+    const resume = options.resume !== false && musicEnabled
+      && (!music.paused || (musicError && running && !paused && !gameOver));
+    soundtrackId = nextId;
+    localStorage.setItem(SOUNDTRACK_STORAGE_KEY, soundtrackId);
+    if (soundtrackId === LOOP_ALL_ID) {
+      loopAllIndex = 0;
+      loadTrack(SOUNDTRACK_ORDER[loopAllIndex], { resume });
+      return;
+    }
+    loopAllIndex = Math.max(0, SOUNDTRACK_ORDER.indexOf(soundtrackId));
+    loadTrack(soundtrackId, { resume });
+  };
+
+  const advanceLoopAll = () => {
+    if (soundtrackId !== LOOP_ALL_ID) return;
+    loopAllIndex = (loopAllIndex + 1) % SOUNDTRACK_ORDER.length;
+    loadTrack(SOUNDTRACK_ORDER[loopAllIndex], { resume: musicEnabled });
   };
 
   const updateSpeedControls = () => {
@@ -1392,9 +1423,10 @@
     updateMusicButton();
   });
   music.addEventListener("timeupdate", keepTrackLoopTight);
+  music.addEventListener("ended", advanceLoopAll);
   music.addEventListener("error", handleMusicError);
 
-  if (!SOUNDTRACKS[soundtrackId]) soundtrackId = "cozy";
+  if (soundtrackId !== LOOP_ALL_ID && !SOUNDTRACKS[soundtrackId]) soundtrackId = "cozy";
   setSoundtrack(soundtrackId, { resume: false });
   resetGame();
   updateMusicButton();
