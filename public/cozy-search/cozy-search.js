@@ -32,7 +32,7 @@
     casual: { label: "Casual drift", copy: "A little more to notice, never too much.", size: 9, wordCount: 6, reverse: false, directionNames: ["across", "down", "diagonal"] },
     tricky: { label: "Tricky tide", copy: "Diagonals and backwards trails join the mix.", size: 11, wordCount: 8, reverse: true, directionNames: ["all directions"] },
     hard: { label: "Hard focus", copy: "A dense field for a serious search.", size: 13, wordCount: 10, reverse: true, directionNames: ["all directions"] },
-    "very-hard": { label: "Very hard", copy: "Thirty words. A deep field. No shortcuts.", size: 18, wordCount: 30, reverse: true, directionNames: ["all directions"] }
+    "very-hard": { label: "Very hard", copy: "Thirty words. A tight field. No shortcuts.", size: 13, wordCount: 30, reverse: true, directionNames: ["all directions"] }
   };
   const WORD_BANK = [
     "BREATHE", "BRIGHT", "CALM", "COZY", "DREAM", "EMBER", "FLOW", "FOCUS", "FRIEND", "GLOW",
@@ -441,8 +441,11 @@
 
   const startMusic = () => {
     if (!musicEnabled) return;
-    window.JohnnyAudioFocus?.claim("cozy-search");
-    music.play().catch(() => {});
+    // A selection starts with a pointerdown on the grid. Re-claiming audio
+    // focus for every pointerdown briefly pauses the track on mobile, so only
+    // claim when this app actually needs to start (or resume) its audio.
+    if (music.paused) window.JohnnyAudioFocus?.claim("cozy-search");
+    if (music.paused) music.play().catch(() => {});
   };
 
   const updateMusicButton = () => {
