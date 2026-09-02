@@ -2,7 +2,7 @@ import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTON
 import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
 import { CrownforgeInput } from './input.js?v=20260828-latencypass1';
 import { CrownforgeRenderer } from './renderer.js?v=20260901-hearthkin1';
-import { CrownforgeSimulation } from './simulation.js?v=20260901-hearthkin1';
+import { CrownforgeSimulation } from './simulation.js?v=20260901-hearthkinward1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260831-firstage2';
 

@@ -4145,7 +4145,11 @@ export class CrownforgeSimulation {
     const duration = Math.max(1, wardRule.duration ?? 60);
     villager.lastLightWardTimer = duration;
     villager.lastLightWardDuration = duration;
-    villager.lastLightWardHealRate = Math.max(0, villager.maxHp - villager.hp) / duration;
+    // The ward catches the killing blow by returning the Hearthkin to full
+    // health immediately. The shield, not a slow heal, is the readable
+    // one-minute safety window the player can rely on under pressure.
+    villager.hp = villager.maxHp;
+    villager.lastLightWardHealRate = 0;
     villager.wardBlockedPulse = 0.55;
     villager.healthRevealTimer = Math.max(villager.healthRevealTimer, duration);
     this.animation.emit(villager, ANIMATION_EVENTS.wardTriggered, {
@@ -4170,10 +4174,9 @@ export class CrownforgeSimulation {
     const before = target.hp;
     const after = before - damage;
     const wardRule = UNIT_TYPES[target.type]?.lastLightWard;
-    if (wardRule && target.faction === 'player' && after <= 0) {
-      target.hp = 1;
+    if (wardRule && isHearthkinUnit(target) && after <= 0) {
       this._triggerLastLightWard(target, attacker, wardRule);
-      return { damage: Math.max(0, before - target.hp), killed: false, warded: true, blocked: false };
+      return { damage: before, killed: false, warded: true, blocked: false };
     }
 
     target.hp = Math.max(0, after);

@@ -2352,7 +2352,7 @@ function checkVillagerLastStandDefense() {
   const wardResult = wardSimulation._applyUnitDamage(protectedVillager, raiderRules.attackVsVillager, lethalRaider);
   assert.equal(wardResult.warded, true, 'lethal Raider strike triggers Last Light Ward');
   assert.equal(protectedVillager.dead, false, 'Last Light Ward prevents Villager death');
-  assert.equal(protectedVillager.hp, 1, 'Ward catches the lethal strike at one health');
+  assert.equal(protectedVillager.hp, protectedVillager.maxHp, 'Ward catches the lethal strike at full health');
   assert.equal(protectedVillager.lastLightWardTimer, 60, 'Ward starts at one minute');
   assert.equal(nearbyVillager.attackTarget, lethalRaider.id, 'nearby Villager swarms the lethal attacker');
   assert.notEqual(distantVillager.attackTarget, lethalRaider.id, 'distant Villager is not pulled away by the local safety response');
@@ -2363,6 +2363,17 @@ function checkVillagerLastStandDefense() {
   for (let second = 0; second < 601; second += 1) wardSimulation._updateUnitStatusEffects(protectedVillager, 0.1);
   assert.equal(protectedVillager.lastLightWardTimer, 0, 'Ward expires cleanly after one minute');
   assert.equal(protectedVillager.hp, protectedVillager.maxHp, 'Villager reaches full health by Ward expiry');
+
+  const ashenWardSimulation = movementSandbox();
+  const crownAttacker = ashenWardSimulation.addUnit('soldier', 20, 20, 'player');
+  const ashenHearthkin = ashenWardSimulation.addUnit('ashenForager', 22, 20, 'enemy');
+  const ashenWardResult = ashenWardSimulation._applyUnitDamage(ashenHearthkin, ashenHearthkin.maxHp * 2, crownAttacker);
+  assert.equal(ashenWardResult.warded, true, 'lethal damage also triggers Last Light Ward for Ashen Hearthkin');
+  assert.equal(ashenHearthkin.dead, false, 'Ashen Hearthkin survive a killing blow under the shared ward');
+  assert.equal(ashenHearthkin.hp, ashenHearthkin.maxHp, 'shared ward restores Ashen Hearthkin to full health immediately');
+  assert.equal(ashenHearthkin.lastLightWardTimer, 60, 'Ashen Hearthkin ward starts at one minute');
+  const ashenBlocked = ashenWardSimulation._applyUnitDamage(ashenHearthkin, 999, crownAttacker);
+  assert.equal(ashenBlocked.blocked, true, 'shared ward blocks follow-up damage for Ashen Hearthkin');
 }
 
 function checkCombatAndEndStates() {
