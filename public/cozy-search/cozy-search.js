@@ -312,16 +312,16 @@
     });
   };
 
-  const flashWordItem = (word) => {
-    const item = wordListElement.querySelector(`[data-word="${word}"]`);
-    if (!item) return;
+  const flashRevealedPath = (word, path) => {
+    const cells = path.map((point) => cellElement(point)).filter(Boolean);
+    if (!cells.length) return;
     const previousTimer = revealGlowTimers.get(word);
     if (previousTimer) window.clearTimeout(previousTimer);
-    item.classList.remove("is-revealed");
-    void item.offsetWidth;
-    item.classList.add("is-revealed");
+    cells.forEach((cell) => cell.classList.remove("is-revealed"));
+    void cells[0].offsetWidth;
+    cells.forEach((cell) => cell.classList.add("is-revealed"));
     const timer = window.setTimeout(() => {
-      item.classList.remove("is-revealed");
+      cells.forEach((cell) => cell.classList.remove("is-revealed"));
       revealGlowTimers.delete(word);
     }, 2600);
     revealGlowTimers.set(word, timer);
@@ -422,7 +422,7 @@
     state.selectedStart = null;
     clearPreview();
     updateWordItem(word);
-    if (revealed) flashWordItem(word);
+    if (revealed) flashRevealedPath(word, path);
     renderConstellationTrails();
     const finalWord = state.found.size === state.puzzle.words.length;
     state.complete = finalWord;
