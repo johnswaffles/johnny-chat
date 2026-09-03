@@ -4,7 +4,7 @@ import {
   animationClip,
   animationDefinition,
   animationFrame,
-} from '../src/animation.js?v=20260902-hearthkinwalk2';
+} from '../src/animation.js?v=20260902-coreunits1';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');
