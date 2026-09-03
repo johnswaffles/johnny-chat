@@ -21,7 +21,7 @@ const roster = [
   { type: 'ashenOutrider', slug: 'ashen-outrider', walk: 'ashenOutriderWalk', attack: 'ashenOutriderAttack', death: 'ashenOutriderDeath' },
   { type: 'thornSpear', slug: 'thorn-spear', walk: 'thornSpearWalk', attack: 'thornSpearAttack', death: 'thornSpearDeath', walkAssetVersion: 2, walkReleaseMarker: '20260903-thornspear1', attackAssetVersion: 2, attackReleaseMarker: '20260903-thornspear1', deathAssetVersion: 2, deathReleaseMarker: '20260903-thornspear1', idleFromWalk: true, cellWidth: 720, cellHeight: 724, renderScales: { walk: 1.5, attack: 2.6, death: 1.7 } },
   { type: 'hearthLevy', slug: 'hearth-levy', walk: 'hearthLevyWalk', attack: 'hearthLevyAttack', death: 'hearthLevyDeath', walkAssetVersion: 3, walkReleaseMarker: '20260903-hearthlevy2', attackAssetVersion: 2, attackReleaseMarker: '20260903-hearthlevy2', deathAssetVersion: 2, deathReleaseMarker: '20260903-hearthlevy2' },
-  { type: 'hidewall', slug: 'ashen-hidewall', walk: 'hidewallWalk', attack: 'hidewallAttack', death: 'hidewallDeath' },
+  { type: 'hidewall', slug: 'ashen-hidewall', walk: 'hidewallWalk', attack: 'hidewallAttack', death: 'hidewallDeath', walkAssetVersion: 2, walkReleaseMarker: '20260903-hidewall2', attackAssetVersion: 2, attackReleaseMarker: '20260903-hidewall2', deathAssetVersion: 2, deathReleaseMarker: '20260903-hidewall2' },
 ];
 
 function atlasFor(unit, key) {
@@ -56,10 +56,11 @@ for (const unit of roster) {
   }
 
   for (let direction = 0; direction < 4; direction += 1) {
-    const walkFrameCount = unit.walkColumns ?? 3;
+    const playbackFrames = unit.type === 'hidewall' ? [0, 1, 2, 1] : Array.from({ length: unit.walkColumns ?? 3 }, (_, index) => index);
+    const walkFrameCount = playbackFrames.length;
     const walkSampleTimes = walkFrameCount === 4 ? [0.01, 0.32, 0.63, 0.94] : [0.01, 0.34, 0.66];
     const walkColumns = walkSampleTimes.map((time) => animationFrame(unit.type, 'walk', time, direction).column);
-    assert.deepEqual(walkColumns, Array.from({ length: walkFrameCount }, (_, index) => index), `${unit.type} direction ${direction} ordered stride`);
+    assert.deepEqual(walkColumns, playbackFrames, `${unit.type} direction ${direction} ordered stride`);
     const walk = animationFrame(unit.type, 'walk', 0.37, direction);
     assert.equal(walk.atlasKey, unit.walk);
     assert.equal(walk.row, direction);
@@ -98,6 +99,8 @@ for (const unit of roster) {
 }
 
 const thornMotion = COMBAT_ATLASES.thornSpearMotion;
+assert.match(COMBAT_ATLASES.hidewallMotion.src, /crownforge-hidewall-motion-v2\.png\?v=20260903-hidewall2$/);
+assert.deepEqual(pngDimensions(path.resolve(root, COMBAT_ATLASES.hidewallMotion.src.split('?')[0])), { width: 1254, height: 1254 });
 assert.match(COMBAT_ATLASES.hearthLevyMotion.src, /crownforge-hearth-levy-motion-v2\.png\?v=20260903-hearthlevy2$/);
 assert.deepEqual(pngDimensions(path.resolve(root, COMBAT_ATLASES.hearthLevyMotion.src.split('?')[0])), { width: 1254, height: 1254 });
 assert.deepEqual(pngDimensions(path.resolve(root, thornMotion.src.split('?')[0])), { width: 2880, height: 2896 });

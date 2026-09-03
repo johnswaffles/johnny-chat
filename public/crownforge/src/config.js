@@ -1548,6 +1548,7 @@ const SPEARWARDEN_ANIMATION_VERSION = '20260903-spearwarden1';
 const MILITIA_ANIMATION_VERSION = '20260903-militia1';
 const THORN_SPEAR_ANIMATION_VERSION = '20260903-thornspear1';
 const HEARTH_LEVY_ANIMATION_VERSION = '20260903-hearthlevy2';
+const HIDEWALL_ANIMATION_VERSION = '20260903-hidewall2';
 const rosterAnimationAtlas = (unit, animation, columns, assetVersion = 1, releaseVersion = ROSTER_ANIMATION_VERSION) => ({
   src: `./assets/crownforge-roster-v${assetVersion}-${unit}-${animation}.png?v=${releaseVersion}`,
   width: columns * 360,
@@ -1842,7 +1843,7 @@ export const COMBAT_ATLASES = {
   hearthLevyAttack: rosterAnimationAtlas('hearth-levy', 'attack', 3, 2, HEARTH_LEVY_ANIMATION_VERSION),
   hearthLevyDeath: rosterAnimationAtlas('hearth-levy', 'death', 4, 2, HEARTH_LEVY_ANIMATION_VERSION),
   hidewallMotion: {
-    src: './assets/crownforge-hidewall-motion-v1.png?v=20260826-ashensettlement1',
+    src: `./assets/crownforge-hidewall-motion-v2.png?v=${HIDEWALL_ANIMATION_VERSION}`,
     width: 1254,
     height: 1254,
     columns: 4,
@@ -1850,9 +1851,9 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
     rowByState: { idle: 0 },
   },
-  hidewallWalk: rosterAnimationAtlas('ashen-hidewall', 'walk', 3),
-  hidewallAttack: rosterAnimationAtlas('ashen-hidewall', 'attack', 3),
-  hidewallDeath: rosterAnimationAtlas('ashen-hidewall', 'death', 4),
+  hidewallWalk: rosterAnimationAtlas('ashen-hidewall', 'walk', 3, 2, HIDEWALL_ANIMATION_VERSION),
+  hidewallAttack: rosterAnimationAtlas('ashen-hidewall', 'attack', 3, 2, HIDEWALL_ANIMATION_VERSION),
+  hidewallDeath: rosterAnimationAtlas('ashen-hidewall', 'death', 4, 2, HIDEWALL_ANIMATION_VERSION),
 };
 
 export const INITIAL_RESOURCES = { food: 5000, wood: 5000, stone: 5000, gold: 5000 };

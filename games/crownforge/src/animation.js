@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260903-hearthlevy2';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260903-hidewall2';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -79,7 +79,7 @@ const rosterDeath = (atlas) => directionalLoop(atlas, {
   loop: false,
 });
 
-const ashenFighterDefinition = ({ label, motion, walk, attack, death, renderSize, radius, interactionRadius = 0.8, idleFromWalk = false }) => ({
+const ashenFighterDefinition = ({ label, motion, walk, attack, death, renderSize, radius, interactionRadius = 0.8, idleFromWalk = false, walkFrames = [0, 1, 2] }) => ({
   label,
   directionCount: 4,
   atlasSize: COMBAT_ATLASES[motion],
@@ -92,7 +92,7 @@ const ashenFighterDefinition = ({ label, motion, walk, attack, death, renderSize
   },
   clips: {
     idle: idleFromWalk ? directionalPose(walk, 1) : directionalPose(motion, 0),
-    walk: rosterWalk(walk),
+    walk: { ...rosterWalk(walk), frames: walkFrames },
     attack: rosterAttack(attack),
     attack_anticipation: rosterAttackPhase(attack, 0),
     attack_contact: rosterAttackPhase(attack, 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
@@ -279,6 +279,8 @@ export const ANIMATION_DEFINITIONS = {
     label: 'Ashen Hidewall',
     motion: 'hidewallMotion',
     walk: 'hidewallWalk',
+    // Three drawings, with the passing pose on both halves of the stride.
+    walkFrames: [0, 1, 2, 1],
     attack: 'hidewallAttack',
     death: 'hidewallDeath',
     renderSize: 112,

@@ -4,7 +4,7 @@ import {
   animationClip,
   animationDefinition,
   animationFrame,
-} from '../src/animation.js?v=20260903-hearthlevy2';
+} from '../src/animation.js?v=20260903-hidewall2';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');
@@ -142,7 +142,9 @@ function draw() {
   summary.innerHTML = `<strong>${definition.label}</strong> · ${state.replaceAll('_', ' ')} · ${ANIMATION_DIRECTIONS[direction].label}`;
   const ready = Boolean(image?.complete && image.naturalWidth);
   const fallback = frame.fallback ? ` · FALLBACK → ${frame.fallback}` : '';
-  asset.innerHTML = `<code>${frame.atlasKey}</code> row ${frame.row} / column ${frame.column} · ${frame.frameCount} authored frame${frame.frameCount === 1 ? '' : 's'} · ${ready ? 'asset loaded' : 'asset pending'}${fallback}`;
+  const authoredCount = new Set(clip.frames).size;
+  const repeatedPassing = authoredCount === frame.frameCount ? '' : ` / ${frame.frameCount} playback steps`;
+  asset.innerHTML = `<code>${frame.atlasKey}</code> row ${frame.row} / column ${frame.column} · ${authoredCount} authored frame${authoredCount === 1 ? '' : 's'}${repeatedPassing} · ${ready ? 'asset loaded' : 'asset pending'}${fallback}`;
   geometry.textContent = `pivot ${definition.groundAnchor.x.toFixed(2)},${definition.groundAnchor.y.toFixed(2)} · collision ${definition.collisionRadius.toFixed(2)} · interaction ${definition.interactionRadius.toFixed(2)}`;
 }
 
