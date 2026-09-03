@@ -81,6 +81,7 @@
   let celebrationTimer = 0;
   let state = null;
   let pointerSession = null;
+  const revealGlowTimers = new Map();
 
   const shuffle = (items) => {
     const result = items.slice();
@@ -311,6 +312,21 @@
     });
   };
 
+  const flashWordItem = (word) => {
+    const item = wordListElement.querySelector(`[data-word="${word}"]`);
+    if (!item) return;
+    const previousTimer = revealGlowTimers.get(word);
+    if (previousTimer) window.clearTimeout(previousTimer);
+    item.classList.remove("is-revealed");
+    void item.offsetWidth;
+    item.classList.add("is-revealed");
+    const timer = window.setTimeout(() => {
+      item.classList.remove("is-revealed");
+      revealGlowTimers.delete(word);
+    }, 2600);
+    revealGlowTimers.set(word, timer);
+  };
+
   const updateUi = () => {
     const config = DIFFICULTIES[state.difficultyKey];
     const found = state.found.size;
@@ -406,6 +422,7 @@
     state.selectedStart = null;
     clearPreview();
     updateWordItem(word);
+    if (revealed) flashWordItem(word);
     renderConstellationTrails();
     const finalWord = state.found.size === state.puzzle.words.length;
     state.complete = finalWord;
@@ -514,6 +531,8 @@
   });
 
   const newGame = (difficultyKey = state?.difficultyKey || "easy") => {
+    revealGlowTimers.forEach((timer) => window.clearTimeout(timer));
+    revealGlowTimers.clear();
     state = {
       difficultyKey,
       puzzle: generatePuzzle(difficultyKey),

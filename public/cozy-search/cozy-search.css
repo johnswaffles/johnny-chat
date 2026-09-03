@@ -281,6 +281,9 @@ button { font-family: inherit; }
 .word-list li.is-found .word-reveal { color: var(--word-color, var(--mint)); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--word-color, var(--mint)) 74%, transparent); }
 .word-list li.is-found .word-reveal::before { border-color: var(--word-color, var(--mint)); background: var(--word-color, var(--mint)); box-shadow: 0 0 8px var(--word-color, var(--mint)); }
 .word-list li.is-found::after { animation: card-shimmer 850ms 120ms ease both; }
+.word-list li.is-revealed { border-color: color-mix(in srgb, var(--yellow) 78%, transparent); background: linear-gradient(145deg, rgba(255,216,107,.28), rgba(114,232,255,.16)); box-shadow: 0 0 0 1px rgba(255,216,107,.22), 0 0 28px rgba(255,216,107,.46), inset 0 1px rgba(255,255,255,.62); animation: reveal-glow 2600ms ease both; }
+.word-list li.is-revealed .word-reveal { color: #fff; text-shadow: 0 0 12px rgba(255,216,107,.9), 0 0 22px rgba(114,232,255,.48); }
+.word-list li.is-revealed .word-reveal::before { border-color: var(--yellow); background: var(--yellow); box-shadow: 0 0 12px var(--yellow), 0 0 22px rgba(255,216,107,.62); }
 .select-wrap { position: relative; display: block; margin-top: 13px; }
 .select-wrap::after { position: absolute; top: 50%; right: 13px; width: 6px; height: 6px; border-right: 1px solid var(--cyan); border-bottom: 1px solid var(--cyan); content: ""; pointer-events: none; transform: translateY(-65%) rotate(45deg); }
 .select-wrap select { width: 100%; min-height: 40px; padding: 0 32px 0 12px; border: 1px solid rgba(114,232,255,.25); border-radius: 9px; color: var(--text); background: linear-gradient(145deg, rgba(23,45,73,.9), rgba(8,19,38,.96)); font: 700 10px var(--font); appearance: none; cursor: pointer; }
@@ -334,6 +337,7 @@ button { font-family: inherit; }
 @keyframes constellation-draw { 0% { opacity: 0; clip-path: inset(0 100% 0 0); } 100% { opacity: .84; clip-path: inset(0 0 0 0); } }
 @keyframes constellation-node { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 65% { opacity: 1; transform: translate(-50%, -50%) scale(1.25); } 100% { opacity: .86; transform: translate(-50%, -50%) scale(1); } }
 @keyframes card-shimmer { 0% { transform: translateX(-125%); } 100% { transform: translateX(125%); } }
+@keyframes reveal-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,216,107,0), 0 0 0 rgba(255,216,107,0), inset 0 1px rgba(255,255,255,.12); } 14% { box-shadow: 0 0 0 2px rgba(255,216,107,.3), 0 0 34px 8px rgba(255,216,107,.56), inset 0 1px rgba(255,255,255,.75); } 38% { box-shadow: 0 0 0 1px rgba(255,216,107,.23), 0 0 22px 3px rgba(255,216,107,.38), inset 0 1px rgba(255,255,255,.62); } 58% { box-shadow: 0 0 0 2px rgba(255,216,107,.26), 0 0 31px 7px rgba(255,216,107,.5), inset 0 1px rgba(255,255,255,.68); } }
 @keyframes core-arrive { 0% { transform: scale(.7); opacity: 0; } 55% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes ring-burst { 0% { transform: translate(-50%, -50%) scale(.08); opacity: .8; } 70% { opacity: .42; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
 @keyframes spark-fly { 0% { transform: translate(-50%, -50%) scale(.2); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(.1); opacity: 0; } }
