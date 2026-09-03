@@ -281,17 +281,33 @@
     });
   };
 
+  const updateWordItem = (word) => {
+    const item = wordListElement.querySelector(`[data-word="${word}"]`);
+    const button = item?.querySelector(".word-reveal");
+    if (!item || !button) return;
+    const found = state.found.has(word);
+    item.classList.toggle("is-found", found);
+    button.textContent = word;
+    button.disabled = found;
+    button.title = found ? `${word} found` : `Reveal ${word} on the board`;
+    button.setAttribute("aria-label", found ? `${word}, found` : `Reveal ${word} on the board`);
+    if (found) item.style.setProperty("--word-color", state.foundWordColors.get(word) || FOUND_COLORS[0]);
+    else item.style.removeProperty("--word-color");
+  };
+
   const renderWords = () => {
     wordListElement.innerHTML = "";
     state.puzzle.words.forEach((word) => {
       const item = document.createElement("li");
       item.dataset.word = word;
-      item.textContent = word;
-      if (state.found.has(word)) {
-        item.classList.add("is-found");
-        item.style.setProperty("--word-color", state.foundWordColors.get(word) || FOUND_COLORS[0]);
-      }
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "word-reveal";
+      button.textContent = word;
+      button.addEventListener("click", () => revealWord(word));
+      item.appendChild(button);
       wordListElement.appendChild(item);
+      updateWordItem(word);
     });
   };
 
@@ -345,13 +361,13 @@
     } catch (_) {}
   };
 
-  const showCelebration = (word, finalWord) => {
-    celebrationKicker.textContent = finalWord ? "FIELD CLEARED" : "WORD FOUND";
+  const showCelebration = (word, finalWord, revealed = false) => {
+    celebrationKicker.textContent = finalWord ? "FIELD CLEARED" : (revealed ? "WORD REVEALED" : "WORD FOUND");
     celebrationWord.textContent = finalWord ? "ALL DONE" : word;
     celebrationStatFound.textContent = `${state.found.size}/${state.puzzle.words.length}`;
     celebrationStatTime.textContent = formatTime(state.elapsed);
     celebrationStatStreak.textContent = String(state.streak);
-    celebrationCopy.textContent = finalWord ? "Every hidden word is glowing. Beautiful work." : "A bright little breakthrough.";
+    celebrationCopy.textContent = finalWord ? "Every hidden word is glowing. Beautiful work." : (revealed ? "A little help from your trail map." : "A bright little breakthrough.");
     celebrationSparks.innerHTML = "";
     const hues = ["#72e8ff", "#84f2c2", "#ffd86b", "#b995ff", "#ff83bd"];
     for (let index = 0; index < (finalWord ? 46 : 30); index += 1) {
@@ -368,6 +384,7 @@
     celebration.classList.remove("is-visible");
     void celebration.offsetWidth;
     celebration.dataset.final = String(finalWord);
+    celebration.dataset.revealed = String(revealed);
     celebration.classList.add("is-visible");
     celebration.setAttribute("aria-hidden", "false");
     document.body.classList.add("is-celebrating");
@@ -376,8 +393,35 @@
       celebration.classList.remove("is-visible");
       celebration.setAttribute("aria-hidden", "true");
       delete celebration.dataset.final;
+      delete celebration.dataset.revealed;
       document.body.classList.remove("is-celebrating");
     }, finalWord ? 2600 : 1350);
+  };
+
+  const registerWord = (word, path, { revealed = false } = {}) => {
+    state.found.add(word);
+    state.streak = revealed ? 0 : state.streak + 1;
+    const foundColor = markFoundPath(path);
+    state.foundWordColors.set(word, foundColor);
+    state.selectedStart = null;
+    clearPreview();
+    updateWordItem(word);
+    renderConstellationTrails();
+    const finalWord = state.found.size === state.puzzle.words.length;
+    state.complete = finalWord;
+    setStatus(finalWord ? "Beautiful — you cleared the whole field." : (revealed ? `${word} revealed. Keep going.` : `${word} found. Keep the glow going.`));
+    playTone(finalWord);
+    // Keep assists lightweight so a player can reveal one word and move on.
+    // The cinematic finale still appears if a reveal completes the board.
+    if (!revealed || finalWord) showCelebration(word, finalWord, revealed);
+    updateUi();
+  };
+
+  const revealWord = (word) => {
+    if (!state || state.complete || state.found.has(word)) return;
+    const placement = state.puzzle.placements.find((candidate) => candidate.word === word);
+    if (!placement) return;
+    registerWord(word, placement.path, { revealed: true });
   };
 
   const attemptSelection = (path) => {
@@ -397,21 +441,7 @@
       updateUi();
       return;
     }
-    state.found.add(word);
-    state.streak += 1;
-    const foundColor = markFoundPath(path);
-    state.foundWordColors.set(word, foundColor);
-    clearPreview();
-    const wordItem = wordListElement.querySelector(`[data-word="${word}"]`);
-    wordItem?.classList.add("is-found");
-    wordItem?.style.setProperty("--word-color", foundColor);
-    renderConstellationTrails();
-    const finalWord = state.found.size === state.puzzle.words.length;
-    state.complete = finalWord;
-    setStatus(finalWord ? "Beautiful — you cleared the whole field." : `${word} found. Keep the glow going.`);
-    playTone(finalWord);
-    showCelebration(word, finalWord);
-    updateUi();
+    registerWord(word, path);
   };
 
   const cellFromPoint = (clientX, clientY) => {
