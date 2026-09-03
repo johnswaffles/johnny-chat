@@ -1539,7 +1539,10 @@ export const ENEMY_CAMP_ASSET = {
 };
 
 const ROSTER_ANIMATION_VERSION = '20260902-rosteranimations1';
-const HEARTHKIN_WALK_ANIMATION_VERSION = '20260902-hearthkinwalk2';
+const HEARTHKIN_WALK_ANIMATION_VERSION = '20260902-crownwalk3';
+const CROWN_GUARD_WALK_ANIMATION_VERSION = '20260902-crownguardwalk2';
+const CROWN_GUARD_STATE_ANIMATION_VERSION = '20260902-crownguardstates2';
+const ASHEN_RAIDER_STATE_ANIMATION_VERSION = '20260902-ashenraiderstates2';
 const rosterAnimationAtlas = (unit, animation, columns, assetVersion = 1, releaseVersion = ROSTER_ANIMATION_VERSION) => ({
   src: `./assets/crownforge-roster-v${assetVersion}-${unit}-${animation}.png?v=${releaseVersion}`,
   width: columns * 360,
@@ -1555,7 +1558,7 @@ export const VILLAGER_ATLASES = {
     src: './assets/villager-motion-atlas.png?v=2',
     rows: { idle: 0, walk: [1, 2, 3] },
   },
-  motionLoop: rosterAnimationAtlas('crown-hearthkin', 'walk', 3, 2, HEARTHKIN_WALK_ANIMATION_VERSION),
+  motionLoop: rosterAnimationAtlas('crown-hearthkin', 'walk', 3, 3, HEARTHKIN_WALK_ANIMATION_VERSION),
   task: {
     src: './assets/villager-task-atlas.png?v=2',
     rows: { wood: 0, food: 1, stone: 2, build: 3 },
@@ -1692,15 +1695,8 @@ export const COMBAT_ATLASES = {
     rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
   },
   soldierAttack: rosterAnimationAtlas('crown-guard', 'attack', 3),
-  soldierWalk: rosterAnimationAtlas('crown-guard', 'walk', 3),
-  soldierHit: {
-    src: './assets/crownforge-soldier-hit-loop-v1.png?v=20260820-hitpass1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
+  soldierWalk: rosterAnimationAtlas('crown-guard', 'walk', 3, 2, CROWN_GUARD_WALK_ANIMATION_VERSION),
+  soldierHit: rosterAnimationAtlas('crown-guard', 'hit', 4, 2, CROWN_GUARD_STATE_ANIMATION_VERSION),
   soldierDeath: rosterAnimationAtlas('crown-guard', 'death', 4),
   raider: {
     src: './assets/crownforge-raider-combat-atlas-v1.png?v=1',
@@ -1711,15 +1707,8 @@ export const COMBAT_ATLASES = {
     rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
   },
   raiderAttack: rosterAnimationAtlas('ashen-raider', 'attack', 3),
-  raiderWalk: rosterAnimationAtlas('ashen-raider', 'walk', 3),
-  raiderHit: {
-    src: './assets/crownforge-raider-hit-loop-v1.png?v=20260820-hitpass1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
+  raiderWalk: rosterAnimationAtlas('ashen-raider', 'walk', 3, 2, ASHEN_RAIDER_STATE_ANIMATION_VERSION),
+  raiderHit: rosterAnimationAtlas('ashen-raider', 'hit', 4, 2, ASHEN_RAIDER_STATE_ANIMATION_VERSION),
   raiderStunned: {
     src: './assets/crownforge-raider-stunned-loop-v1.png?v=20260826-lastlight1',
     width: 1254,

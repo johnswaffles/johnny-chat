@@ -7,17 +7,17 @@ import { animationFrame } from '../src/animation.js';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const releaseMarker = '20260902-rosteranimations1';
-const hearthkinWalkReleaseMarker = '20260902-hearthkinwalk2';
+const hearthkinWalkReleaseMarker = '20260902-crownwalk3';
 
 const roster = [
-  { type: 'villager', slug: 'crown-hearthkin', walk: 'motionLoop', attack: 'defenseAttackLoop', death: 'deathLoop', villager: true, walkAssetVersion: 2, walkReleaseMarker: hearthkinWalkReleaseMarker },
-  { type: 'soldier', slug: 'crown-guard', walk: 'soldierWalk', attack: 'soldierAttack', death: 'soldierDeath' },
+  { type: 'villager', slug: 'crown-hearthkin', walk: 'motionLoop', attack: 'defenseAttackLoop', death: 'deathLoop', villager: true, walkAssetVersion: 3, walkReleaseMarker: hearthkinWalkReleaseMarker },
+  { type: 'soldier', slug: 'crown-guard', walk: 'soldierWalk', attack: 'soldierAttack', hit: 'soldierHit', death: 'soldierDeath', walkAssetVersion: 2, walkReleaseMarker: '20260902-crownguardwalk2', hitAssetVersion: 2, hitReleaseMarker: '20260902-crownguardstates2' },
   { type: 'scout', slug: 'crown-scout', walk: 'scoutWalk', attack: 'scoutAttack', death: 'scoutDeath' },
   { type: 'spearwarden', slug: 'crown-spearwarden', walk: 'spearwardenWalk', attack: 'spearwardenAttack', death: 'spearwardenDeath' },
   { type: 'militia', slug: 'crown-militia', walk: 'militiaWalk', attack: 'militiaAttack', death: 'militiaDeath' },
   { type: 'shieldbearer', slug: 'crown-shieldbearer', walk: 'shieldbearerWalk', attack: 'shieldbearerAttack', death: 'shieldbearerDeath' },
   { type: 'ashenForager', slug: 'ashen-hearthkin', walk: 'ashenForagerWalk', attack: 'ashenForagerAttack', death: 'ashenForagerDeath' },
-  { type: 'raider', slug: 'ashen-raider', walk: 'raiderWalk', attack: 'raiderAttack', death: 'raiderDeath' },
+  { type: 'raider', slug: 'ashen-raider', walk: 'raiderWalk', attack: 'raiderAttack', hit: 'raiderHit', death: 'raiderDeath', walkAssetVersion: 2, walkReleaseMarker: '20260902-ashenraiderstates2', hitAssetVersion: 2, hitReleaseMarker: '20260902-ashenraiderstates2' },
   { type: 'ashenOutrider', slug: 'ashen-outrider', walk: 'ashenOutriderWalk', attack: 'ashenOutriderAttack', death: 'ashenOutriderDeath' },
   { type: 'thornSpear', slug: 'thorn-spear', walk: 'thornSpearWalk', attack: 'thornSpearAttack', death: 'thornSpearDeath' },
   { type: 'hearthLevy', slug: 'hearth-levy', walk: 'hearthLevyWalk', attack: 'hearthLevyAttack', death: 'hearthLevyDeath' },
@@ -36,14 +36,15 @@ function pngDimensions(file) {
 
 for (const unit of roster) {
   for (const [animation, key, columns] of [
-    ['walk', unit.walk, 3],
+    ['walk', unit.walk, unit.walkColumns ?? 3],
     ['attack', unit.attack, 3],
+    ...(unit.hit ? [['hit', unit.hit, 4]] : []),
     ['death', unit.death, 4],
   ]) {
     const atlas = atlasFor(unit, key);
     assert.ok(atlas, `${unit.type} ${animation} atlas is registered`);
-    const assetVersion = animation === 'walk' ? (unit.walkAssetVersion ?? 1) : 1;
-    const animationReleaseMarker = animation === 'walk' ? (unit.walkReleaseMarker ?? releaseMarker) : releaseMarker;
+    const assetVersion = unit[`${animation}AssetVersion`] ?? 1;
+    const animationReleaseMarker = unit[`${animation}ReleaseMarker`] ?? releaseMarker;
     assert.match(atlas.src, new RegExp(`crownforge-roster-v${assetVersion}-${unit.slug}-${animation}\\.png\\?v=${animationReleaseMarker}$`));
     assert.equal(atlas.columns, columns, `${unit.type} ${animation} column count`);
     assert.equal(atlas.rows, 4, `${unit.type} ${animation} direction count`);
@@ -54,12 +55,23 @@ for (const unit of roster) {
   }
 
   for (let direction = 0; direction < 4; direction += 1) {
-    const walkColumns = [0.01, 0.34, 0.66].map((time) => animationFrame(unit.type, 'walk', time, direction).column);
-    assert.deepEqual(walkColumns, [0, 1, 2], `${unit.type} direction ${direction} ordered stride`);
+    const walkFrameCount = unit.walkColumns ?? 3;
+    const walkSampleTimes = walkFrameCount === 4 ? [0.01, 0.32, 0.63, 0.94] : [0.01, 0.34, 0.66];
+    const walkColumns = walkSampleTimes.map((time) => animationFrame(unit.type, 'walk', time, direction).column);
+    assert.deepEqual(walkColumns, Array.from({ length: walkFrameCount }, (_, index) => index), `${unit.type} direction ${direction} ordered stride`);
     const walk = animationFrame(unit.type, 'walk', 0.37, direction);
     assert.equal(walk.atlasKey, unit.walk);
     assert.equal(walk.row, direction);
-    assert.equal(walk.frameCount, 3);
+    assert.equal(walk.frameCount, walkFrameCount);
+
+    if (unit.hit) {
+      const idle = animationFrame(unit.type, 'idle', 0.2, direction);
+      assert.equal(idle.atlasKey, unit.walk, `${unit.type} idle shares approved identity`);
+      assert.equal(idle.row, direction, `${unit.type} idle direction`);
+      assert.equal(idle.column, 1, `${unit.type} idle neutral pose`);
+      const hitColumns = [0.001, 0.08, 0.15, 0.22].map((time) => animationFrame(unit.type, 'hit', time, direction).column);
+      assert.deepEqual(hitColumns, [0, 1, 2, 3], `${unit.type} direction ${direction} ordered hit reaction`);
+    }
 
     for (const [state, column] of [
       ['attack_anticipation', 0],
@@ -82,4 +94,4 @@ for (const unit of roster) {
   }
 }
 
-console.log(`Verified ${roster.length} units, 36 production atlases, and all 4 directional animation mappings.`);
+console.log(`Verified ${roster.length} units, 38 production atlases, identity-matched idle/hit states, and all 4 directional animation mappings.`);

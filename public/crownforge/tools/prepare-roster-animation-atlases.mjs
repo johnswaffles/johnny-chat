@@ -21,6 +21,7 @@ const selectedUnit = optionValue('--unit');
 const selectedAnimation = optionValue('--animation');
 const sourceVersion = optionValue('--source-version', '1');
 const outputVersion = optionValue('--output-version', sourceVersion);
+const selectedFrameCount = Number(optionValue('--frame-count', '0')) || null;
 
 const units = [
   'crown-hearthkin',
@@ -40,6 +41,7 @@ const units = [
 const animations = {
   walk: 3,
   attack: 3,
+  hit: 4,
   death: 4,
 };
 
@@ -53,8 +55,9 @@ const outputCell = { width: 360, height: 362 };
 await mkdir(outputRoot, { recursive: true });
 
 for (const unit of units.filter((entry) => !selectedUnit || entry === selectedUnit)) {
-  for (const [animation, frameCount] of Object.entries(animations)) {
+  for (const [animation, defaultFrameCount] of Object.entries(animations)) {
     if (selectedAnimation && animation !== selectedAnimation) continue;
+    const frameCount = selectedFrameCount ?? defaultFrameCount;
     const composites = [];
     for (const [row, direction] of directions.entries()) {
       const source = path.join(sourceRoot, `${unit}-${animation}-${direction}-${frameCount}phase-v${sourceVersion}.png`);

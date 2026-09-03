@@ -272,7 +272,7 @@ const ashenProductionCellSafetyFailures = boundaryReports.filter((report) => (
   // Roster animation cells intentionally share a grounded bottom baseline;
   // only top/side contact can bleed into an adjacent runtime frame. Legacy
   // Ashen production atlases retain the stricter all-edge contract.
-  || (!report.file.includes('crownforge-roster-v1-') && report.bottomContactCells.length)
+  || (!/crownforge-roster-v\d+-/.test(report.file) && report.bottomContactCells.length)
 ));
 
 const result = {
