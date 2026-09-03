@@ -14,13 +14,13 @@ const roster = [
   { type: 'soldier', slug: 'crown-guard', walk: 'soldierWalk', attack: 'soldierAttack', hit: 'soldierHit', death: 'soldierDeath', walkAssetVersion: 2, walkReleaseMarker: '20260902-crownguardwalk2', hitAssetVersion: 2, hitReleaseMarker: '20260902-crownguardstates2' },
   { type: 'scout', slug: 'crown-scout', walk: 'scoutWalk', attack: 'scoutAttack', death: 'scoutDeath' },
   { type: 'spearwarden', slug: 'crown-spearwarden', walk: 'spearwardenWalk', attack: 'spearwardenAttack', death: 'spearwardenDeath', walkAssetVersion: 3, walkReleaseMarker: '20260903-spearwarden1', attackAssetVersion: 3, attackReleaseMarker: '20260903-spearwarden1' },
-  { type: 'militia', slug: 'crown-militia', walk: 'militiaWalk', attack: 'militiaAttack', death: 'militiaDeath' },
+  { type: 'militia', slug: 'crown-militia', walk: 'militiaWalk', attack: 'militiaAttack', death: 'militiaDeath', walkAssetVersion: 2, walkReleaseMarker: '20260903-militia1', attackAssetVersion: 2, attackReleaseMarker: '20260903-militia1', deathAssetVersion: 2, deathReleaseMarker: '20260903-militia1', idleFromWalk: true },
   { type: 'shieldbearer', slug: 'crown-shieldbearer', walk: 'shieldbearerWalk', attack: 'shieldbearerAttack', death: 'shieldbearerDeath' },
   { type: 'ashenForager', slug: 'ashen-hearthkin', walk: 'ashenForagerWalk', attack: 'ashenForagerAttack', death: 'ashenForagerDeath', walkAssetVersion: 3, walkReleaseMarker: '20260903-ashenhearthkin1' },
   { type: 'raider', slug: 'ashen-raider', walk: 'raiderWalk', attack: 'raiderAttack', hit: 'raiderHit', death: 'raiderDeath', walkAssetVersion: 2, walkReleaseMarker: '20260902-ashenraiderstates2', hitAssetVersion: 2, hitReleaseMarker: '20260902-ashenraiderstates2' },
   { type: 'ashenOutrider', slug: 'ashen-outrider', walk: 'ashenOutriderWalk', attack: 'ashenOutriderAttack', death: 'ashenOutriderDeath' },
-  { type: 'thornSpear', slug: 'thorn-spear', walk: 'thornSpearWalk', attack: 'thornSpearAttack', death: 'thornSpearDeath' },
-  { type: 'hearthLevy', slug: 'hearth-levy', walk: 'hearthLevyWalk', attack: 'hearthLevyAttack', death: 'hearthLevyDeath' },
+  { type: 'thornSpear', slug: 'thorn-spear', walk: 'thornSpearWalk', attack: 'thornSpearAttack', death: 'thornSpearDeath', walkAssetVersion: 2, walkReleaseMarker: '20260903-thornspear1', attackAssetVersion: 2, attackReleaseMarker: '20260903-thornspear1', deathAssetVersion: 2, deathReleaseMarker: '20260903-thornspear1', idleFromWalk: true, cellWidth: 720, cellHeight: 724, renderScales: { walk: 1.5, attack: 2.6, death: 1.7 } },
+  { type: 'hearthLevy', slug: 'hearth-levy', walk: 'hearthLevyWalk', attack: 'hearthLevyAttack', death: 'hearthLevyDeath', walkAssetVersion: 3, walkReleaseMarker: '20260903-hearthlevy2', attackAssetVersion: 2, attackReleaseMarker: '20260903-hearthlevy2', deathAssetVersion: 2, deathReleaseMarker: '20260903-hearthlevy2' },
   { type: 'hidewall', slug: 'ashen-hidewall', walk: 'hidewallWalk', attack: 'hidewallAttack', death: 'hidewallDeath' },
 ];
 
@@ -51,7 +51,8 @@ for (const unit of roster) {
     assert.deepEqual(atlas.directionRows, [0, 1, 2, 3], `${unit.type} ${animation} direction order`);
     const file = path.resolve(root, atlas.src.replace(/^\.\//, '').split('?')[0]);
     assert.ok(fs.existsSync(file), `${unit.type} ${animation} atlas exists`);
-    assert.deepEqual(pngDimensions(file), { width: columns * 360, height: 1448 }, `${unit.type} ${animation} dimensions`);
+    assert.deepEqual(pngDimensions(file), { width: columns * (unit.cellWidth ?? 360), height: 4 * (unit.cellHeight ?? 362) }, `${unit.type} ${animation} dimensions`);
+    assert.equal(atlas.renderScale ?? 1, unit.renderScales?.[animation] ?? 1, `${unit.type} ${animation} padding compensation`);
   }
 
   for (let direction = 0; direction < 4; direction += 1) {
@@ -64,11 +65,13 @@ for (const unit of roster) {
     assert.equal(walk.row, direction);
     assert.equal(walk.frameCount, walkFrameCount);
 
-    if (unit.hit) {
+    if (unit.hit || unit.idleFromWalk) {
       const idle = animationFrame(unit.type, 'idle', 0.2, direction);
       assert.equal(idle.atlasKey, unit.walk, `${unit.type} idle shares approved identity`);
       assert.equal(idle.row, direction, `${unit.type} idle direction`);
       assert.equal(idle.column, 1, `${unit.type} idle neutral pose`);
+    }
+    if (unit.hit) {
       const hitColumns = [0.001, 0.08, 0.15, 0.22].map((time) => animationFrame(unit.type, 'hit', time, direction).column);
       assert.deepEqual(hitColumns, [0, 1, 2, 3], `${unit.type} direction ${direction} ordered hit reaction`);
     }
@@ -94,4 +97,15 @@ for (const unit of roster) {
   }
 }
 
-console.log(`Verified ${roster.length} units, 38 production atlases, identity-matched idle/hit states, and all 4 directional animation mappings.`);
+const thornMotion = COMBAT_ATLASES.thornSpearMotion;
+assert.match(COMBAT_ATLASES.hearthLevyMotion.src, /crownforge-hearth-levy-motion-v2\.png\?v=20260903-hearthlevy2$/);
+assert.deepEqual(pngDimensions(path.resolve(root, COMBAT_ATLASES.hearthLevyMotion.src.split('?')[0])), { width: 1254, height: 1254 });
+assert.deepEqual(pngDimensions(path.resolve(root, thornMotion.src.split('?')[0])), { width: 2880, height: 2896 });
+assert.equal(thornMotion.renderScale, 1.5, 'Thorn Spear hit maintains the walk body scale');
+for (let direction = 0; direction < 4; direction++) {
+  const hit = animationFrame('thornSpear', 'hit', .1, direction);
+  assert.equal(hit.atlasKey, 'thornSpearMotion');
+  assert.equal(hit.column, 3);
+  assert.equal(hit.row, direction);
+}
+console.log(`Verified ${roster.length} units, 38 roster atlases plus normalized Thorn Spear hit art, identity-matched idle/hit states, and all 4 directional animation mappings.`);

@@ -1545,6 +1545,9 @@ const CROWN_GUARD_STATE_ANIMATION_VERSION = '20260902-crownguardstates2';
 const ASHEN_RAIDER_STATE_ANIMATION_VERSION = '20260902-ashenraiderstates2';
 const ASHEN_HEARTHKIN_WALK_ANIMATION_VERSION = '20260903-ashenhearthkin1';
 const SPEARWARDEN_ANIMATION_VERSION = '20260903-spearwarden1';
+const MILITIA_ANIMATION_VERSION = '20260903-militia1';
+const THORN_SPEAR_ANIMATION_VERSION = '20260903-thornspear1';
+const HEARTH_LEVY_ANIMATION_VERSION = '20260903-hearthlevy2';
 const rosterAnimationAtlas = (unit, animation, columns, assetVersion = 1, releaseVersion = ROSTER_ANIMATION_VERSION) => ({
   src: `./assets/crownforge-roster-v${assetVersion}-${unit}-${animation}.png?v=${releaseVersion}`,
   width: columns * 360,
@@ -1553,6 +1556,15 @@ const rosterAnimationAtlas = (unit, animation, columns, assetVersion = 1, releas
   rows: 4,
   layout: 'frame-columns',
   directionRows: [0, 1, 2, 3],
+});
+
+// Long spears require extra transparent room, not smaller characters.
+// The opt-in display multiplier compensates for that authored padding.
+const thornSpearAnimationAtlas = (animation, columns, renderScale) => ({
+  ...rosterAnimationAtlas('thorn-spear', animation, columns, 2, THORN_SPEAR_ANIMATION_VERSION),
+  width: columns * 720,
+  height: 4 * 724,
+  renderScale,
 });
 
 export const VILLAGER_ATLASES = {
@@ -1750,9 +1762,9 @@ export const COMBAT_ATLASES = {
     rows: 4,
     rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
   },
-  militiaWalk: rosterAnimationAtlas('crown-militia', 'walk', 3),
-  militiaAttack: rosterAnimationAtlas('crown-militia', 'attack', 3),
-  militiaDeath: rosterAnimationAtlas('crown-militia', 'death', 4),
+  militiaWalk: rosterAnimationAtlas('crown-militia', 'walk', 3, 2, MILITIA_ANIMATION_VERSION),
+  militiaAttack: rosterAnimationAtlas('crown-militia', 'attack', 3, 2, MILITIA_ANIMATION_VERSION),
+  militiaDeath: rosterAnimationAtlas('crown-militia', 'death', 4, 2, MILITIA_ANIMATION_VERSION),
   shieldbearer: {
     src: './assets/crownforge-shieldbearer-combat-atlas-v1.png?v=20260825-firstage4',
     width: 1230,
@@ -1805,19 +1817,20 @@ export const COMBAT_ATLASES = {
   ashenOutriderAttack: rosterAnimationAtlas('ashen-outrider', 'attack', 3),
   ashenOutriderDeath: rosterAnimationAtlas('ashen-outrider', 'death', 4),
   thornSpearMotion: {
-    src: './assets/crownforge-thorn-spear-motion-v1.png?v=20260826-ashensettlement1',
-    width: 1254,
-    height: 1254,
+    src: `./assets/crownforge-thorn-spear-motion-v2.png?v=${THORN_SPEAR_ANIMATION_VERSION}`,
+    width: 2880,
+    height: 2896,
+    renderScale: 1.5,
     columns: 4,
     rows: 4,
     layout: 'frame-columns',
     rowByState: { idle: 0 },
   },
-  thornSpearWalk: rosterAnimationAtlas('thorn-spear', 'walk', 3),
-  thornSpearAttack: rosterAnimationAtlas('thorn-spear', 'attack', 3),
-  thornSpearDeath: rosterAnimationAtlas('thorn-spear', 'death', 4),
+  thornSpearWalk: thornSpearAnimationAtlas('walk', 3, 1.5),
+  thornSpearAttack: thornSpearAnimationAtlas('attack', 3, 2.6),
+  thornSpearDeath: thornSpearAnimationAtlas('death', 4, 1.7),
   hearthLevyMotion: {
-    src: './assets/crownforge-hearth-levy-motion-v1.png?v=20260826-ashensettlement1',
+    src: `./assets/crownforge-hearth-levy-motion-v2.png?v=${HEARTH_LEVY_ANIMATION_VERSION}`,
     width: 1254,
     height: 1254,
     columns: 4,
@@ -1825,9 +1838,9 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
     rowByState: { idle: 0 },
   },
-  hearthLevyWalk: rosterAnimationAtlas('hearth-levy', 'walk', 3),
-  hearthLevyAttack: rosterAnimationAtlas('hearth-levy', 'attack', 3),
-  hearthLevyDeath: rosterAnimationAtlas('hearth-levy', 'death', 4),
+  hearthLevyWalk: rosterAnimationAtlas('hearth-levy', 'walk', 3, 3, HEARTH_LEVY_ANIMATION_VERSION),
+  hearthLevyAttack: rosterAnimationAtlas('hearth-levy', 'attack', 3, 2, HEARTH_LEVY_ANIMATION_VERSION),
+  hearthLevyDeath: rosterAnimationAtlas('hearth-levy', 'death', 4, 2, HEARTH_LEVY_ANIMATION_VERSION),
   hidewallMotion: {
     src: './assets/crownforge-hidewall-motion-v1.png?v=20260826-ashensettlement1',
     width: 1254,

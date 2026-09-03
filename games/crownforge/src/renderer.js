@@ -1,5 +1,5 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260903-hearthkin-spearwarden1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260903-hearthkin-spearwarden1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260903-hearthlevy2';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260903-hearthlevy2';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -1814,7 +1814,7 @@ export class CrownforgeRenderer {
     const row = frameData.row;
     const column = frameData.column;
     const bob = 0;
-    this.drawAtlasCell(ctx, image, true, atlas, column, row, screen, size, alpha, bob);
+    this.drawAtlasCell(ctx, image, true, atlas, column, row, screen, size * (atlas.renderScale ?? 1), alpha, bob);
   }
 
   drawBuilding(ctx, building, time) {

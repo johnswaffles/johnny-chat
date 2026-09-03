@@ -1,4 +1,4 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260903-hearthkin-spearwarden1';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260903-hearthlevy2';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -79,7 +79,7 @@ const rosterDeath = (atlas) => directionalLoop(atlas, {
   loop: false,
 });
 
-const ashenFighterDefinition = ({ label, motion, walk, attack, death, renderSize, radius, interactionRadius = 0.8 }) => ({
+const ashenFighterDefinition = ({ label, motion, walk, attack, death, renderSize, radius, interactionRadius = 0.8, idleFromWalk = false }) => ({
   label,
   directionCount: 4,
   atlasSize: COMBAT_ATLASES[motion],
@@ -91,7 +91,7 @@ const ashenFighterDefinition = ({ label, motion, walk, attack, death, renderSize
     [death]: COMBAT_ATLASES[death],
   },
   clips: {
-    idle: directionalPose(motion, 0),
+    idle: idleFromWalk ? directionalPose(walk, 1) : directionalPose(motion, 0),
     walk: rosterWalk(walk),
     attack: rosterAttack(attack),
     attack_anticipation: rosterAttackPhase(attack, 0),
@@ -257,6 +257,7 @@ export const ANIMATION_DEFINITIONS = {
     interactionRadius: 1.06,
   }),
   thornSpear: ashenFighterDefinition({
+    idleFromWalk: true,
     label: 'Thorn Spear',
     motion: 'thornSpearMotion',
     walk: 'thornSpearWalk',
@@ -329,7 +330,7 @@ export const ANIMATION_DEFINITIONS = {
     atlasSize: COMBAT_ATLASES.militia,
     atlases: { combat: COMBAT_ATLASES.militia, militiaWalk: COMBAT_ATLASES.militiaWalk, militiaAttack: COMBAT_ATLASES.militiaAttack, militiaDeath: COMBAT_ATLASES.militiaDeath },
     clips: {
-      idle: singleFrame('combat', 0),
+      idle: directionalPose('militiaWalk', 1),
       walk: rosterWalk('militiaWalk'),
       attack: rosterAttack('militiaAttack'),
       attack_anticipation: rosterAttackPhase('militiaAttack', 0),

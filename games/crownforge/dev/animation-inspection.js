@@ -4,7 +4,7 @@ import {
   animationClip,
   animationDefinition,
   animationFrame,
-} from '../src/animation.js?v=20260903-hearthkin-spearwarden1';
+} from '../src/animation.js?v=20260903-hearthlevy2';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');
@@ -127,7 +127,8 @@ function draw() {
     const cellWidth = sourceRight - sourceLeft;
     const cellHeight = sourceBottom - sourceTop;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(image, sourceLeft, sourceTop, cellWidth, cellHeight, groundX - size / 2, groundY - size * .98, size, size);
+    const spriteSize = size * (atlas.renderScale ?? 1);
+    ctx.drawImage(image, sourceLeft, sourceTop, cellWidth, cellHeight, groundX - spriteSize / 2, groundY - spriteSize * .98, spriteSize, spriteSize);
   }
   ctx.fillStyle = '#f4e7c2';
   ctx.font = '700 16px Georgia, serif';
@@ -148,7 +149,16 @@ function draw() {
 unitSelect.addEventListener('change', refreshStates);
 stateSelect.addEventListener('change', refreshFrameRange);
 for (const input of [directionSelect, frameInput, speedInput, animateInput, guidesInput]) input.addEventListener('input', draw);
+// Shareable review links select only known units, states and directions.
+const reviewParams = new URLSearchParams(location.search);
+const reviewUnit = reviewParams.get('unit');
+if (Object.hasOwn(ANIMATION_DEFINITIONS, reviewUnit)) unitSelect.value = reviewUnit;
 refreshStates();
+const reviewState = reviewParams.get('state');
+if (Object.hasOwn(animationDefinition(selectedType()).clips, reviewState)) stateSelect.value = reviewState;
+refreshFrameRange();
+const reviewDirection = reviewParams.get('direction');
+if (['0', '1', '2', '3'].includes(reviewDirection)) directionSelect.value = reviewDirection;
 
 window.__crownforgeAnimationQA = {
   unitTypes: Object.keys(ANIMATION_DEFINITIONS),
