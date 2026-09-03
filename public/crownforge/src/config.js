@@ -1543,6 +1543,8 @@ const HEARTHKIN_WALK_ANIMATION_VERSION = '20260902-crownwalk3';
 const CROWN_GUARD_WALK_ANIMATION_VERSION = '20260902-crownguardwalk2';
 const CROWN_GUARD_STATE_ANIMATION_VERSION = '20260902-crownguardstates2';
 const ASHEN_RAIDER_STATE_ANIMATION_VERSION = '20260902-ashenraiderstates2';
+const ASHEN_HEARTHKIN_WALK_ANIMATION_VERSION = '20260903-ashenhearthkin1';
+const SPEARWARDEN_ANIMATION_VERSION = '20260903-spearwarden1';
 const rosterAnimationAtlas = (unit, animation, columns, assetVersion = 1, releaseVersion = ROSTER_ANIMATION_VERSION) => ({
   src: `./assets/crownforge-roster-v${assetVersion}-${unit}-${animation}.png?v=${releaseVersion}`,
   width: columns * 360,
@@ -1737,8 +1739,8 @@ export const COMBAT_ATLASES = {
     rows: 4,
     rowByState: { idle: 0, walk: 1, attack: 2, death: 3 },
   },
-  spearwardenWalk: rosterAnimationAtlas('crown-spearwarden', 'walk', 3),
-  spearwardenAttack: rosterAnimationAtlas('crown-spearwarden', 'attack', 3),
+  spearwardenWalk: rosterAnimationAtlas('crown-spearwarden', 'walk', 3, 3, SPEARWARDEN_ANIMATION_VERSION),
+  spearwardenAttack: rosterAnimationAtlas('crown-spearwarden', 'attack', 3, 3, SPEARWARDEN_ANIMATION_VERSION),
   spearwardenDeath: rosterAnimationAtlas('crown-spearwarden', 'death', 4),
   militia: {
     src: './assets/crownforge-militia-combat-atlas-v1.png?v=20260824-firstage3',
@@ -1771,7 +1773,7 @@ export const COMBAT_ATLASES = {
     layout: 'frame-columns',
     rowByState: { idle: 0 },
   },
-  ashenForagerWalk: rosterAnimationAtlas('ashen-hearthkin', 'walk', 3),
+  ashenForagerWalk: rosterAnimationAtlas('ashen-hearthkin', 'walk', 3, 3, ASHEN_HEARTHKIN_WALK_ANIMATION_VERSION),
   ashenForagerAttack: rosterAnimationAtlas('ashen-hearthkin', 'attack', 3),
   ashenForagerDeath: rosterAnimationAtlas('ashen-hearthkin', 'death', 4),
   ashenForagerWork: {
