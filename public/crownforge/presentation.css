@@ -1,0 +1,177 @@
+/* Dawnlight: brass, ink, parchment, and room for the world. */
+:root { --ink: #efe6cf; --muted: #b8c1af; --gold: #d6b678; --line: #c4aa7042; }
+.game-shell { min-width: 0; min-height: 0; height: 100dvh; }
+.glass-panel { border-color: var(--line); border-radius: 4px; background: linear-gradient(130deg, #182c28f5, #122321ef); box-shadow: 0 8px 25px #071b2040, inset 0 0 0 3px #dcc48506; backdrop-filter: blur(10px); }
+.topbar { top: 14px; left: 20px; right: 20px; height: 66px; padding: 0 16px; grid-template-columns: 280px 1fr auto; border-top: 2px solid #cfb37c99; }
+.sigil { border-radius: 50%; width: 39px; height: 39px; background: #b3914930; box-shadow: 0 0 0 4px #b3914909; }
+.eyebrow { color: #d5b97d; font-size: 9px; letter-spacing: .28em; margin-bottom: 3px; }
+h1 { font-size: 22px; }
+.faction-pill { border: 0; background: none; padding: 0; font-size: 10px; color: #c7c4aa; }
+.topbar-center { flex-direction: column; gap: 4px; }
+.clock { color: #d8bd87; font-size: 9px; }
+.resource-strip { gap: 0; }
+.resource-card { background: none; border: 0; border-left: 1px solid #b9a77426; border-radius: 0; padding: 3px 13px; min-width: 104px; }
+.resource-card:last-child { padding-right: 0; }
+.resource-glyph { background-color: transparent !important; }
+.resource-card strong { font-size: 19px; line-height: 22px; font-variant-numeric: tabular-nums; }
+.resource-card strong small { font-size: 8px; }
+.resource-label { color: #c8bf9f; font-size: 8px; }
+.resource-bar { width: 65px; height: 2px; margin-top: 3px; }
+.left-rail { left: 20px; top: 100px; width: 230px; max-height: calc(100dvh - 205px); gap: 9px; padding-bottom: 0; }
+.intel-panel { padding: 15px; color: #303a2c; border: 1px solid #e5c99190; border-top: 3px solid #d5ba7e; background: linear-gradient(120deg, #ece1c5f7, #cebd94f5); box-shadow: 0 10px 30px #0a1d2250, inset 0 0 0 4px #f4ecd72e; }
+.intel-panel .panel-kicker { color: #706246; font-size: 8px; letter-spacing: .18em; }
+.intel-panel .selection-header { color: #645b42; font-size: 9px; margin-top: 13px; padding-bottom: 9px; border-bottom: 1px solid #7a693430; }
+.intel-panel .population b { color: #3e503c; }
+.selection-identity { margin-top: 12px; gap: 10px; }
+.selection-icon { border-radius: 50%; background-color: #52674b24; border-color: #86723a40; }
+.intel-panel h2 { color: #243e34; font-size: 22px; line-height: 1.1; }
+.intel-panel .selection-kind { color: #75653e; font-size: 8px; margin-bottom: 4px; }
+.intel-panel p { color: #565943; font-size: 11px; line-height: 1.55; min-height: 20px; }
+.intel-panel .command-line { border-color: #81734a33; color: #394b35; margin-top: 10px; font-size: 10px; padding-top: 10px; }
+.command-dot { background: #467459; box-shadow: none; }
+.intel-panel .selection-unit-button { border: 1px solid #8c8f6548; border-radius: 3px; background: #253d2f0d; color: #2d4435; padding: 8px 7px; }
+.intel-panel .selection-unit-button:hover { background: #f9edcd70; border-color: #68815d; }
+.intel-panel .selection-unit-button b { font-size: 8px; letter-spacing: .05em; }
+.intel-panel .selection-unit-button small { color: #6e6b50; font-size: 7px; }
+.intel-panel .selection-action-icon { border: 0; background-color: #4b5e4620; border-radius: 3px; }
+.intel-panel kbd { color: #4b543b; border-color: #78836050; background: #fff6dc40; }
+.selection-direct-actions { padding-top: 2px; }
+.intel-panel .selection-direct-actions .selection-unit-button { border-color: #9c805b40; background: transparent; }
+.intel-panel .selection-direct-actions .selection-unit-button b { font-size: 7px; }
+.history-panel { padding: 0; min-height: 0; }
+.field-log-toggle { width: 100%; display: flex; justify-content: space-between; padding: 11px 13px; border: 0; background: transparent; color: #ccb98b; font-size: 8px; font-weight: 600; letter-spacing: .16em; text-align: left; }
+.field-log-toggle::after { content: '+'; }
+.history-panel.is-open .field-log-toggle::after { content: '−'; }
+.event-history-list { display: none; font-size: 10px; line-height: 1.45; padding: 0 14px 10px 27px; max-height: 160px; overflow: auto; }
+.history-panel.is-open .event-history-list { display: grid; }
+.map-hint { left: 270px; right: auto; top: 94px; padding: 5px 0; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; font-size: 8px; color: #eeead0b3; text-shadow: 0 1px 3px #15221f; letter-spacing: .09em; }
+.map-hint #world-seed, .map-hint .seed-button, .map-hint > span:last-of-type { display: none; }
+.world-tools { position: absolute; z-index: 5; top: 97px; right: 20px; display: flex; gap: 6px; }
+.world-tools button, .map-controls button { border: 1px solid #d2b37555; color: #e5d5ad; background: #142c28ec; border-radius: 3px; padding: 9px 12px; font-size: 8px; letter-spacing: .12em; min-height: 32px; }
+.world-tools button:hover, .map-controls button:hover { background: #28473d; border-color: #e0c68a; }
+.realm-panel { position: absolute; z-index: 3; right: 20px; bottom: 110px; width: 196px; overflow: hidden; }
+.realm-art { height: 87px; position: relative; background: linear-gradient(0deg, #112922, transparent 95%), url('./assets/crownforge-dawn-valley-v1.png') center 59% / cover; padding: 44px 12px 10px; }
+.realm-art span { display: block; font-size: 7px; letter-spacing: .18em; color: #e4c581; margin-bottom: 4px; }
+.realm-art h2 { font: 20px 'Marcellus', Georgia, serif; color: #f7e9c7; }
+.kingdom-map-wrap { padding: 9px; }
+#kingdom-map { display: block; width: 100%; height: 120px; border: 1px solid #b59b6152; cursor: crosshair; }
+.map-caption { display: flex; justify-content: space-between; color: #b5bd9e; padding-top: 7px; font-size: 7px; letter-spacing: .12em; }
+.map-controls { display: flex; align-items: center; justify-content: space-between; padding: 0 9px 9px; gap: 3px; }
+.map-controls button { padding: 5px 7px; min-height: 26px; }
+.map-controls #view-home { flex: 1; font-size: 7px; }
+.map-controls #view-zoom { width: 31px; text-align: center; font-size: 8px; color: #cbbc95; }
+.view-settings-panel { position: absolute; z-index: 8; top: 139px; right: 20px; width: 246px; padding: 16px; }
+.view-settings-panel h2 { font: 22px 'Marcellus', Georgia, serif; margin: 4px 0 14px; }
+.view-settings-panel label { color: #cdd3bd; font-size: 10px; }
+.light-options { display: flex; gap: 5px; margin: 10px 0 16px; }
+.light-options button { flex: 1; padding: 9px 3px; border-radius: 3px; border: 1px solid #c8af7333; background: #fff5d909; color: #c9bea3; font-size: 10px; }
+.light-options button[aria-pressed='true'] { background: #d3b47526; border-color: #d3b475; color: #f4d99f; }
+.view-settings-panel .utility-toggle { font-size: 9px; margin-top: 16px; padding: 8px; border-radius: 3px; }
+.view-settings-panel small { display: block; color: #95a78f; font-size: 9px; line-height: 1.5; margin-top: 14px; }
+.dev-speed-panel { top: 435px; right: 20px; width: 246px; border-radius: 3px; }
+.performance-panel { top: 142px; right: 284px; }
+.performance-panel:not([hidden]) + .dev-speed-panel { top: 435px; }
+.command-deck { bottom: 18px; left: 20px; right: 20px; min-height: 72px; border-top: 2px solid #bca16b8c; border-radius: 4px; padding: 10px 14px; gap: 15px; }
+.deck-summary { min-width: 165px; gap: 3px; }
+.deck-summary .panel-kicker { color: #dac391; font-size: 8px; letter-spacing: .18em; }
+.deck-summary .deck-subtitle { font: 17px 'Marcellus', Georgia, serif; color: #eee3c5; }
+.deck-actions { gap: 7px; }
+.action-button { min-width: 160px; border-radius: 3px; border-color: #ccb07888; background: linear-gradient(135deg, #b89b5148, #967e3524); padding: 8px 11px; }
+.secondary-button { border-radius: 3px; padding: 9px 8px; font-size: 8px; border-color: #b9a26f33; }
+.secondary-button .ui-icon { display: none; }
+.music-toggle { min-width: 83px; }
+.action-button small { font-size: 8px; }
+.build-menu { border-radius: 4px; bottom: calc(100% + 20px); }
+#build-menu { position: fixed; left: 270px; right: 232px; bottom: 106px; width: auto; max-height: calc(100dvh - 250px); padding: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; background: #152a25f7; }
+.build-menu-kicker { grid-column: 1 / -1; font-size: 9px; color: #d6c08a; margin: 0 0 6px; }
+#build-menu .build-option { flex-direction: column; gap: 4px; padding: 8px; border-radius: 3px; min-height: 133px; background: radial-gradient(ellipse at 50% 25%, #c5a8691f, #76937308); }
+#build-menu .build-option + .build-option { margin-top: 0; }
+.blueprint-art { width: 100%; height: 80px; object-fit: contain; filter: drop-shadow(0 5px 4px #04171390); transition: transform .18s ease; }
+.build-option:hover .blueprint-art { transform: translateY(-3px) scale(1.04); }
+#build-menu .build-option b { font-size: 8px; letter-spacing: .07em; text-align: center; }
+#build-menu .build-option small { font-size: 7px; line-height: 1.45; color: #c0c6a8; text-align: center; }
+#build-menu .build-option > .action-mark { margin: 19px 0; }
+.production-menu { width: 274px; background: #152a25fa; }
+.production-menu .build-option { border-radius: 3px; }
+.toast { bottom: 98px; font-size: 11px; color: #f5e0af; border-radius: 3px; border-color: #cbb17c60; background: #192e26f0; max-width: min(500px, 80vw); }
+.ui-tooltip { border-radius: 3px; font-size: 10px; }
+.loading-veil { background: linear-gradient(90deg, #081c21d9, #0a252545 72%), url('./assets/crownforge-dawn-valley-v1.png') center / cover; justify-items: start; padding: 7vw; }
+.loading-card { background: transparent; box-shadow: none; backdrop-filter: none; border: 0; text-align: left; padding: 0; width: min(500px, 80vw); }
+.loading-sigil { margin: 0 0 24px; }
+.loading-card .panel-kicker { color: #e3c489; font-size: 10px; letter-spacing: .3em; }
+.loading-card h2 { font-size: clamp(38px, 5vw, 65px); margin: 12px 0; line-height: 1.05; }
+.loading-card p { color: #e1ddc5; font-size: 13px; }
+.loading-track { margin-top: 32px; max-width: 310px; height: 2px; }
+.is-cinematic .topbar, .is-cinematic .left-rail, .is-cinematic .command-deck, .is-cinematic .map-hint, .is-cinematic .realm-panel, .is-cinematic .dev-speed-panel, .is-cinematic .performance-panel { display: none; }
+.is-cinematic .world-tools { top: 24px; right: 26px; opacity: .7; }
+.is-cinematic .world-tools:hover { opacity: 1; }
+.is-cinematic #view-settings { display: none; }
+.is-cinematic .toast { bottom: 28px; }
+[hidden], #build-menu[hidden] { display: none !important; }
+@media (max-width: 1100px) {
+  .topbar { grid-template-columns: 250px 1fr auto; }
+  .resource-card { min-width: 92px; padding: 3px 8px; }
+  .faction-pill { display: none; }
+  .left-rail { width: 210px; }
+  .realm-panel { width: 176px; }
+  .map-hint { left: 248px; font-size: 7px; max-width: 450px; line-height: 1.6; }
+  #build-menu { left: 246px; right: 215px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .deck-summary { display: none; }
+  .deck-actions { width: 100%; justify-content: center; }
+}
+@media (max-width: 760px) {
+  .topbar { left: 10px; right: 10px; top: 10px; height: 105px; grid-template-columns: 1fr auto; padding: 10px; gap: 6px; }
+  .brand-lockup { gap: 7px; }
+  h1 { font-size: 19px; }
+  .eyebrow { font-size: 7px; }
+  .resource-strip { grid-column: 1 / -1; justify-content: space-between; }
+  .resource-card { min-width: 0; width: 25%; padding: 0 5px; gap: 4px; }
+  .resource-glyph { display: none; }
+  .resource-card strong { font-size: 15px; }
+  .resource-bar { width: 50px; }
+  .left-rail { top: 171px; left: 10px; width: 180px; max-height: calc(100dvh - 265px); }
+  .intel-panel { padding: 10px; }
+  .intel-panel h2 { font-size: 17px; }
+  .selection-icon { display: none; }
+  .intel-panel p, .intel-panel .command-line { font-size: 10px; }
+  .realm-panel { display: none; }
+  .map-hint { display: none; }
+  .world-tools { top: 126px; right: 10px; }
+  .command-deck { left: 10px; right: 10px; bottom: 10px; padding: 8px; min-height: 66px; }
+  .deck-actions { justify-content: flex-start; gap: 5px; flex-wrap: wrap; }
+  .action-button { min-width: 110px; padding: 7px; gap: 5px; }
+  .action-button .action-mark { display: none; }
+  .secondary-button { padding: 8px 6px; font-size: 7px; }
+  .music-toggle { min-width: 66px; }
+  #restart-game { display: none; }
+  #build-menu { left: 10px; right: 10px; bottom: 90px; max-height: calc(100dvh - 260px); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .build-menu { position: fixed; left: 10px; bottom: 90px; max-height: calc(100dvh - 260px); }
+  .view-settings-panel { top: 166px; right: 10px; }
+  .dev-speed-panel { top: 450px; max-height: calc(100dvh - 540px); overflow: auto; right: 10px; }
+  .toast { bottom: 86px; }
+}
+@media (max-height: 620px) and (min-width: 761px) {
+  .realm-art { display: none; }
+  .realm-panel { bottom: 100px; }
+  .left-rail { max-height: calc(100dvh - 195px); }
+}
+
+.intel-panel h2 { font-size: 19px; }
+.intel-panel .recovery-button { color: #654a35; border-color: #98715155; background: #9a775016; border-radius: 3px; }
+.intel-panel .recovery-button small { color: #7c6a4a; }
+.intel-panel .recovery-button:hover { background: #ad845127; }
+@media (max-width: 760px) { .intel-panel h2 { font-size: 17px; } }
+
+#build-menu .build-option b { font-size: 9px; }
+#build-menu .build-option small { font-size: 8px; }
+
+.intel-toggle { display: flex; justify-content: space-between; width: 100%; text-align: left; padding: 0; border: 0; background: none; }
+.intel-toggle::after { content: '−'; }
+.intel-panel.is-compact .intel-toggle::after { content: '+'; }
+.intel-panel.is-compact > :not(.intel-toggle):not(.selection-identity) { display: none !important; }
+.intel-panel.is-compact .selection-identity { margin-top: 10px; }
+@media (max-width: 760px) {
+ .resource-card strong { white-space: nowrap; flex-wrap: nowrap; font-size: 14px; gap: 2px; }
+ .resource-card strong small { font-size: 6px; }
+ #restart-game { display: inline-flex; }
+}

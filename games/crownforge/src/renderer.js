@@ -1,5 +1,6 @@
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260903-hidewall2';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260903-hidewall2';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260904-dawnlight1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260904-dawnlight1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260904-dawnlight1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -170,7 +171,7 @@ export class CrownforgeRenderer {
     this.largeStone.addEventListener('load', () => { this.largeStoneReady = true; });
     this.enemyCamp.addEventListener('load', () => { this.enemyCampReady = true; });
     this.atlas.src = './assets/crownforge-asset-atlas.png';
-    this.meadow.src = './assets/crownforge-grass-tile-v1.png?v=20260818-roads2';
+    this.meadow.src = './assets/crownforge-meadow-dawn-v1.png?v=20260904-dawnlight1';
     this.road.src = './assets/crownforge-dirt-road-tile-v1.png?v=20260818-roads2';
     this.roadsideProps.src = ROAD_DETAILS_ATLAS.src;
     this.environmentAtlas.src = ENVIRONMENT_ATLAS.src;
@@ -274,6 +275,7 @@ export class CrownforgeRenderer {
     this.viewportBounds = null;
     this.daylightEnabled = !query.has('lighting-off');
     this.frameStats = { count: 0, samples: [] };
+    this.atmosphere = new CrownforgeAtmosphere(this);
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas);
     this.resize();
@@ -485,6 +487,7 @@ export class CrownforgeRenderer {
     this.drawBackdrop(ctx);
     this.ensureStaticLayer();
     ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
+    this.atmosphere.drawClouds(ctx, time);
     this.drawExplorationOverlay(ctx, simulation);
     this.drawPaths(ctx, simulation);
     this.drawGuardZones(ctx, simulation);
@@ -499,6 +502,7 @@ export class CrownforgeRenderer {
     this.drawOccludedUnitOverlays(ctx, simulation);
     this.drawWorkFeedback(ctx, simulation, time);
     this.drawCombatFeedback(ctx, simulation, time);
+    this.atmosphere.drawAir(ctx, time);
     this.drawDemolitionPreview(ctx);
     this.drawBuildPreview(ctx);
     this.drawRipples(ctx, time, renderDelta);
@@ -549,7 +553,7 @@ export class CrownforgeRenderer {
     ctx.clip();
     if (this.meadowReady) {
       ctx.globalAlpha = 1;
-      ctx.fillStyle = '#758c50';
+      ctx.fillStyle = '#526d43';
       ctx.fill();
       ctx.globalAlpha = 0.72;
       // At distant zoom the full-resolution meadow used to collapse into a
@@ -584,6 +588,8 @@ export class CrownforgeRenderer {
     }
     this.drawTerrainWash(ctx, minX, minY, maxX - minX, maxY - minY);
     if (this.daylightEnabled) this.drawDaylightGrade(ctx, minX, minY, maxX - minX, maxY - minY);
+    this.atmosphere.drawMeadow(ctx, CONFIG);
+    this.atmosphere.drawFlora(ctx, CONFIG);
     this.drawPathsOnMap(ctx, time);
     ctx.restore();
 
@@ -591,8 +597,8 @@ export class CrownforgeRenderer {
     ctx.beginPath();
     corners.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
     ctx.closePath();
-    ctx.strokeStyle = 'rgba(237, 209, 143, 0.5)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(140, 166, 132, 0.12)';
+    ctx.lineWidth = 16 * this.camera.zoom;
     ctx.shadowColor = LIGHTING.mapEdgeShadow;
     ctx.shadowBlur = 14;
     ctx.stroke();
@@ -1836,6 +1842,7 @@ export class CrownforgeRenderer {
       dismantling ? '#d86b55' : building.faction === 'enemy' ? '#d86b55' : FACTION.color,
     );
     this.drawBuildingStage(ctx, building, point, size * this.camera.zoom, alpha);
+    this.atmosphere.drawHearth(ctx, building, point, size * this.camera.zoom, visualHeight * this.camera.zoom, time);
     if (building.destroyed) {
       this.drawDestroyedBuildingTreatment(ctx, building, point, size, time);
       return;
@@ -2396,23 +2403,24 @@ export class CrownforgeRenderer {
   }
 
   drawSelectionMarker(ctx, point, selected, scale, color = FACTION.color) {
+    const zoom = this.camera.zoom;
+    const rx = Math.max(selected ? 6 : 2, 25 * scale * zoom);
+    const ry = Math.max(selected ? 2.4 : 1, 9 * scale * zoom);
+    const y = point.y + 4 * zoom;
     ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(point.x, point.y + 6 * this.camera.zoom, 25 * scale * this.camera.zoom, 9 * scale * this.camera.zoom, 0, 0, TAU);
-    ctx.fillStyle = selected ? `${color}42` : 'rgba(9, 20, 19, 0.23)';
+    ctx.beginPath(); ctx.ellipse(point.x, y, rx, ry, 0, 0, TAU);
+    ctx.fillStyle = selected ? `${color}22` : 'rgba(9, 20, 19, 0.2)';
     ctx.fill();
-    ctx.strokeStyle = selected ? color : 'rgba(232, 210, 144, 0.16)';
-    ctx.lineWidth = selected ? 2 : 1;
-    ctx.stroke();
     if (selected) {
-      ctx.beginPath();
-      ctx.arc(point.x, point.y + 6 * this.camera.zoom, 29 * scale * this.camera.zoom, Math.PI * 0.12, Math.PI * 0.42);
-      ctx.strokeStyle = `${color}cc`;
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = `${color}c0`;
+      ctx.lineWidth = 1.2;
       ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(point.x, point.y + 6 * this.camera.zoom, 29 * scale * this.camera.zoom, Math.PI * 0.62, Math.PI * 0.92);
-      ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(point.x, y, rx + 3, ry + 1.5, 0, 0, TAU);
+      ctx.strokeStyle = `${color}48`; ctx.lineWidth = 0.8; ctx.stroke();
+      for (const side of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(point.x + side * (rx + 2), y); ctx.lineTo(point.x + side * (rx + 5), y);
+        ctx.strokeStyle = '#f0dfac'; ctx.stroke();
+      }
     }
     ctx.restore();
   }
@@ -2541,14 +2549,22 @@ export class CrownforgeRenderer {
 
   drawRipples(ctx, time, delta = 0) {
     for (const ripple of this.ripples) {
-      if (!this.isWorldVisible(ripple.world, 2)) continue;
       ripple.age += delta;
+      if (!this.isWorldVisible(ripple.world, 2)) continue;
       const point = this.worldToScreen(ripple.world);
       const progress = Math.min(1, ripple.age / 0.8);
+      const zoom = Math.max(this.camera.zoom, 0.3);
       ctx.save();
       ctx.globalAlpha = 1 - progress;
-      ctx.beginPath(); ctx.ellipse(point.x, point.y + 4, (12 + progress * 32) * this.camera.zoom, (5 + progress * 12) * this.camera.zoom, 0, 0, TAU);
-      ctx.strokeStyle = ripple.color; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+      ctx.strokeStyle = ripple.color;
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 2; i++) {
+        const radius = (12 + progress * 34 + i * 11) * zoom;
+        ctx.beginPath(); ctx.ellipse(point.x, point.y, radius, radius * 0.4, 0, 0, TAU); ctx.stroke();
+      }
+      ctx.fillStyle = '#f3dfa5';
+      ctx.beginPath(); ctx.moveTo(point.x, point.y - 4); ctx.lineTo(point.x + 3, point.y); ctx.lineTo(point.x, point.y + 3); ctx.lineTo(point.x - 3, point.y); ctx.closePath(); ctx.fill();
+      ctx.restore();
     }
     this.ripples = this.ripples.filter((ripple) => ripple.age < 0.8);
   }

@@ -4989,3 +4989,7 @@ For future Crownforge deployments, deploy the synchronized `public/crownforge` r
 - The focused roster regression verified all three ordered walk frames in all four directions and all 36 roster atlas mappings.
 - The visual integrity audit passed with no missing assets, dimension mismatches, fallbacks, or unsafe Crown Hearthkin frame edges.
 - The internal animation inspector loaded the v2 atlas and displayed the new raised-foot passing pose at the production render size.
+
+## 2026-09-04 — Dawnlight visual release
+
+Implemented three presentation upgrades: original layered meadow/flora and atmosphere; a closer settlement view with grounded hearth/selection effects; parchment-and-brass UI with illustrated construction, overview navigation and Full View. Kept simulation rules, unit atlas identities, existing saves and production asset anchors. Added system-aware reduced motion and compact small-screen layouts. Build, current roster regression, visual regression, baseline game-state parity and browser construction/save/load/navigation checks passed. See `CROWNFORGE_DAWNLIGHT_RELEASE.md` for controls, exact prompts, assets and the documented pre-existing legacy test failures.

@@ -7,12 +7,12 @@ export const CONFIG = {
   mapHeight: 460,
   tileWidth: 52,
   tileHeight: 26,
-  initialZoom: 0.16,
+  initialZoom: 0.28,
   minZoom: 0.035,
   maxZoom: 1.16,
   // Keep the first-age Crown Hall below the top HUD with a readable southern
   // approach and open construction space around the civic core.
-  initialCameraWorld: { x: 78, z: 82 },
+  initialCameraWorld: { x: 82, z: 90 },
   // The normal slice uses a readable population ceiling. The 999-capacity
   // sandbox remains available through ?stress=1 for profiling and QA rather
   // than making every first match pay the cost of a stress test.
