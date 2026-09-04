@@ -167,6 +167,15 @@
   const heldKeys = new Map();
   const crystalTileCache = new Map();
   let boardBackdrop = null;
+  let starTravelTime = 0;
+  // Fixed seeds keep the sky independent of the random piece bag.
+  const cozyStars = Array.from({ length: 54 }, (_, index) => ({
+    x: (index * 73 + index * index * 11) % (COLS * CELL),
+    y: (index * 137 + index * index * 7) % (ROWS * CELL),
+    depth: index % 3,
+    phase: index * 2.399,
+    warm: index % 9 === 0
+  }));
 
 
   const cloneMatrix = (matrix) => matrix.map((row) => row.slice());
@@ -950,18 +959,6 @@
     context.fillStyle = crown;
     context.fillRect(0, 0, width, height);
 
-    // Tiny fixed points of light add depth without a particle loop. Their
-    // positions are deterministic, so the backdrop can be rendered once.
-    for (let index = 0; index < 34; index += 1) {
-      const x = 10 + ((index * 73 + index * index * 11) % (width - 20));
-      const y = 12 + ((index * 137 + index * index * 7) % (height - 24));
-      const radius = .45 + (index % 4) * .18;
-      context.beginPath();
-      context.arc(x, y, radius, 0, Math.PI * 2);
-      context.fillStyle = index % 5 === 0 ? "rgba(194,162,255,.2)" : "rgba(168,239,255,.14)";
-      context.fill();
-    }
-
     context.fillStyle = "rgba(105,231,255,.018)";
     for (let y = 0; y < ROWS; y += 2) context.fillRect(0, y * CELL, width, CELL);
     context.strokeStyle = "rgba(157,180,255,.085)";
@@ -996,6 +993,36 @@
     context.fillStyle = vignette;
     context.fillRect(0, 0, width, height);
     return boardBackdrop;
+  };
+
+  const drawCozyStars = () => {
+    const ctx = boardContext;
+    const width = COLS * CELL;
+    const height = ROWS * CELL;
+    const seconds = reducedMotion.matches ? 0 : starTravelTime / 1000;
+    ctx.save();
+    for (const star of cozyStars) {
+      // Three gentle parallax layers: a slow diagonal journey, no speed streaks.
+      const speed = [1.8, 3.2, 5.4][star.depth];
+      const x = (star.x + seconds * speed * .16) % width;
+      const y = (star.y + seconds * speed) % height;
+      const edgeFade = Math.min(1, x / 18, (width - x) / 18, y / 24, (height - y) / 24);
+      const shimmer = .94 + .06 * Math.sin(seconds * .35 + star.phase);
+      const opacity = (.22 + star.depth * .10) * edgeFade * shimmer;
+      const radius = .45 + star.depth * .28;
+      ctx.fillStyle = star.warm ? "#ffe4bd" : "#c6e6ff";
+      if (star.depth === 2) {
+        ctx.globalAlpha = opacity * .10;
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 2.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = opacity;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   };
 
   const drawPrismBloom = () => {
@@ -1086,6 +1113,7 @@
     drawPrismBloom();
     boardContext.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
     boardContext.drawImage(getBoardBackdrop(), 0, 0);
+    drawCozyStars();
     if (dropTrail) {
       boardContext.save();
       boardContext.globalAlpha = dropTrail.life / 190 * .36;
@@ -1495,6 +1523,7 @@
     lastFrame = timestamp;
     if (!paused) advanceEffects(elapsed);
     if (running && !paused && !gameOver) {
+      if (!reducedMotion.matches) starTravelTime += elapsed;
       renderTimer += elapsed;
       if (pendingClear) {
         pendingClearTimer -= elapsed;
