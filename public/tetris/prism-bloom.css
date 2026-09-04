@@ -1,0 +1,97 @@
+/* Prism Bloom: a larger playfield and celebrations that spill past the glass. */
+body { --bloom-energy: .12; }
+.aurora {
+  width: 75vw;
+  height: 28vw;
+  border-radius: 45% 65% 35% 55%;
+  opacity: var(--bloom-energy);
+  transition: opacity 1s ease, background 1s ease;
+  animation: prism-aurora 18s ease-in-out infinite alternate;
+}
+.aurora-one { top: 12%; left: -15%; background: linear-gradient(115deg, #56f3cf, #7ea5ff, transparent); }
+.aurora-two { bottom: 12%; right: -15%; background: linear-gradient(45deg, #ff73be, #9765ef, transparent); animation-delay: -9s; }
+body[data-speed="really-fast"] .aurora-one { background: linear-gradient(115deg, #fb60c7, #9565ff, transparent); animation-duration: 9s; }
+body[data-speed="really-fast"] .board-column { border-color: #e788ed; }
+@keyframes prism-aurora {
+  from { transform: translate3d(-3%, -4%, 0) rotate(-18deg) scale(1); }
+  to { transform: translate3d(12%, 8%, 0) rotate(9deg) scale(1.12); }
+}
+body.game-active .board-wrap { overflow: visible; }
+#prism-bloom {
+  position: absolute;
+  top: -12.5%;
+  left: -25%;
+  width: 150%;
+  height: 125%;
+  max-width: none;
+  z-index: 4;
+  pointer-events: none;
+}
+.line-clear-badge {
+  top: -48px;
+  z-index: 5;
+  min-width: 0;
+  width: max-content;
+  max-width: 125%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  letter-spacing: .07em;
+  white-space: nowrap;
+  clip-path: none;
+  text-shadow: none;
+  filter: none;
+}
+.line-clear-badge::before, .line-clear-badge::after { content: none; }
+.line-clear-badge[data-visible="true"] { animation: none; }
+.line-clear-badge[data-tier="4"] { min-width: 0; font-size: 13px; }
+.arcade[data-clear-tier] .reactor-heading,
+.arcade[data-clear-tier] .reactor-meta { opacity: .08; }
+.arcade[data-clear-tier] .board-column {
+  box-shadow: inset 0 1px #ddffff, 0 0 40px #69e7ff65, 0 0 85px #bc7aff50, 0 25px 60px #0008;
+}
+.arcade[data-clear-tier="4"] .board-column {
+  box-shadow: inset 0 1px #fff, -18px 0 60px #ff73be80, 18px 0 60px #69e7ff80, 0 0 120px #c18cff65;
+}
+.board-column { transition: box-shadow .18s ease, border-color .3s ease; }
+@media (min-width: 681px) {
+  body.game-active .game-shell { grid-template-rows: 38px minmax(0, 1fr) 76px; }
+  body.game-active .arcade {
+    --cockpit-board-height: clamp(160px, min(calc(100dvh - 228px), calc((100vw - 362px) * 2)), 760px);
+    grid-template-columns: minmax(125px, 180px) calc(var(--cockpit-board-width) + 30px) minmax(125px, 180px);
+    align-content: center;
+    gap: clamp(10px, 2vw, 30px);
+  }
+  body.game-active .board-column { width: calc(var(--cockpit-board-width) + 30px); padding: 9px 14px; }
+  body.game-active .touch-controls {
+    grid-template-columns: 118px 156px minmax(100px, 170px);
+    justify-content: center;
+    width: min(570px, calc(100vw - 24px));
+    height: 76px;
+    padding: 6px 14px;
+    gap: 20px;
+    border-radius: 18px;
+  }
+  body.game-active .d-pad { grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(2, 28px); gap: 4px; }
+  body.game-active .touch-controls button { min-height: 28px; border-radius: 9px; font-size: 22px; }
+  body.game-active .action-pad { gap: 10px; }
+  body.game-active .action-pad button[data-action="rotate"] { width: 50px; height: 50px; min-height: 50px; }
+  body.game-active .action-pad button[data-action="second-chance"] { width: 92px; height: 50px; min-height: 50px; border-radius: 12px; }
+  body.game-active .action-pad button[data-action="rotate"] b { font-size: 20px; }
+  body.game-active .action-pad button[data-action="rotate"] span { font-size: 8px; }
+  body.game-active .action-pad button[data-action="second-chance"] b { font-size: 10px; }
+  body.game-active .action-pad button[data-action="second-chance"] span { font-size: 8px; }
+  body.game-active .drop-control { min-height: 52px !important; border-radius: 12px; }
+  body.game-active .drop-control b { font-size: 18px; }
+  body.game-active .drop-control span { font-size: 9px; }
+}
+@media (max-width: 680px) {
+  .line-clear-badge { top: -36px; font-size: 9px; padding: 10px; }
+  .line-clear-badge[data-tier="4"] { font-size: 9px; }
+  .aurora { filter: blur(40px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aurora { animation: none; }
+  .board-column { transition: none; }
+  .line-clear-badge[data-visible="true"] { opacity: 1; transform: translate(-50%, 0); }
+}

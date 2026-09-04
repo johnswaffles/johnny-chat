@@ -28,8 +28,9 @@
   const T_SPIN_POINTS = [400, 800, 1200, 1600];
   const LOCK_DELAY = 500;
   const MAX_LOCK_RESETS = 15;
-  const CLEAR_ANIMATION = 220;
-  const CLEAR_FEEDBACK_DURATION = 620;
+  const CLEAR_ANIMATION = 280;
+  const CLEAR_FEEDBACK_DURATION = 900;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const IMPACT_FEEDBACK_DURATION = 150;
   const DAS_DELAY = 140;
   const ARR_INTERVAL = 45;
@@ -77,6 +78,8 @@
   const secondChanceMeter = document.getElementById("second-chance-meter");
   const chanceCard = document.querySelector(".chance-card");
   const lineClearBadge = document.getElementById("line-clear-badge");
+  const bloomCanvas = document.getElementById("prism-bloom");
+  const bloomContext = bloomCanvas.getContext("2d");
   const gameOverFlash = document.getElementById("game-over-flash");
   const boardWrap = document.querySelector(".board-wrap");
   const arcadeElement = document.querySelector(".arcade");
@@ -144,6 +147,8 @@
   let impactFlashTimer = 0;
   let impactCells = [];
   let effectParticles = [];
+  let dropTrail = null;
+  let settleTimer = 0;
   let musicEnabled = true;
   let musicError = false;
   let soundtrackId = localStorage.getItem(SOUNDTRACK_STORAGE_KEY) || "cozy";
@@ -266,29 +271,41 @@
     }
   };
 
-  const lineClearLabel = (cleared) => ["", "SINGLE", "DOUBLE", "TRIPLE", "FOUR LINE CLEAR"][cleared] || "LINE CLEAR";
+  const lineClearLabel = (cleared) => ["", "LINE CLEAR!", "DOUBLE BLOOM!", "TRIPLE BLOOM!", "FOUR-LINE CLEAR!"][cleared] || "LINE CLEAR!";
 
   const beginLineClearFeedback = (cleared, rows) => {
-    lineClearFx = { timer: CLEAR_FEEDBACK_DURATION, total: CLEAR_FEEDBACK_DURATION };
+    lineClearFx = { timer: CLEAR_FEEDBACK_DURATION, total: CLEAR_FEEDBACK_DURATION, rows: rows.slice(), tier: cleared };
     boardWrap.dataset.state = "clear";
     boardWrap.dataset.clearTier = String(cleared);
     if (arcadeElement) arcadeElement.dataset.clearTier = String(cleared);
     lineClearBadge.textContent = lineClearLabel(cleared);
     lineClearBadge.dataset.tier = String(cleared);
     lineClearBadge.dataset.visible = "true";
+    if (!reducedMotion.matches) {
+      lineClearBadge.getAnimations().forEach((animation) => animation.cancel());
+      lineClearBadge.animate([
+        { opacity: 0, transform: "translate(-50%, 8px) scale(.85)" },
+        { opacity: 1, transform: "translate(-50%, 0) scale(1.04)", offset: .18 },
+        { opacity: 1, transform: "translate(-50%, 0) scale(1)", offset: .7 },
+        { opacity: 0, transform: "translate(-50%, -8px) scale(1)" }
+      ], { duration: CLEAR_FEEDBACK_DURATION });
+    }
     rows.forEach((row) => {
       for (let x = 0; x < COLS; x += 1) {
         const color = COLORS[board[row][x]] || "#ffffff";
-        for (let index = 0; index < 3; index += 1) {
+        for (let index = 0; index < (reducedMotion.matches ? 0 : 5); index += 1) {
           effectParticles.push({
             x: (x + .5) * CELL,
             y: (row + .5) * CELL,
-            vx: (Math.random() - .5) * .28,
-            vy: -.18 - Math.random() * .18,
+            vx: (x - 4.5) * .035 + (Math.random() - .5) * .18,
+            vy: -.1 - Math.random() * .22,
             size: 2 + Math.random() * 4,
             color,
-            life: 420 + Math.random() * 220,
-            maxLife: 640
+            life: 700 + Math.random() * 150,
+            maxLife: 850,
+            prism: true,
+            rotation: Math.random() * Math.PI,
+            spin: (Math.random() - .5) * .012
           });
         }
       }
@@ -343,11 +360,17 @@
       }
     }
     impactFlashTimer = Math.max(0, impactFlashTimer - elapsed);
+    settleTimer = Math.max(0, settleTimer - elapsed);
+    if (dropTrail) {
+      dropTrail.life -= elapsed;
+      if (dropTrail.life <= 0) dropTrail = null;
+    }
     effectParticles = effectParticles.filter((particle) => {
       particle.life -= elapsed;
       particle.x += particle.vx * elapsed;
       particle.y += particle.vy * elapsed;
       particle.vy += .00045 * elapsed;
+      if (particle.prism) particle.rotation += particle.spin * elapsed;
       return particle.life > 0;
     });
   };
@@ -416,12 +439,16 @@
 
   const hardDrop = () => {
     if (!running || paused || gameOver || pendingClear || !current) return;
+    const trailStart = current.y;
     let distance = 0;
     while (!collides(current, 0, 1)) {
       current.y += 1;
       distance += 1;
     }
     score += distance * 2;
+    if (!reducedMotion.matches && distance > 1) {
+      dropTrail = { x: current.x, from: trailStart, to: current.y, matrix: cloneMatrix(current.matrix), color: COLORS[current.type], life: 190 };
+    }
     playTone(95, .075, "sawtooth", .025);
     lockPiece();
   };
@@ -492,16 +519,19 @@
 
   const finishLineClear = () => {
     if (!pendingClear) return;
-    for (const row of pendingClear.rows.slice().sort((a, b) => b - a)) {
-      board.splice(row, 1);
-      board.unshift(Array(COLS).fill(null));
-    }
+    // Remove rows together so inserting blank rows cannot shift later indices.
+    const removed = new Set(pendingClear.rows);
+    board = board.filter((_, index) => !removed.has(index));
+    while (board.length < ROWS) board.unshift(Array(COLS).fill(null));
     const cleared = pendingClear.rows.length;
     const tSpin = pendingClear.tSpin;
     pendingClear = null;
     pendingClearTimer = 0;
     const perfectClear = board.every((row) => row.every((cell) => !cell));
+    const scoreBefore = score;
     applyScore(cleared, tSpin, perfectClear);
+    lineClearBadge.textContent = lineClearLabel(cleared) + "  +" + (score - scoreBefore).toLocaleString();
+    settleTimer = reducedMotion.matches ? 0 : 170;
     spawnNext();
     draw();
   };
@@ -579,6 +609,8 @@
     impactFlashTimer = 0;
     impactCells = [];
     effectParticles = [];
+    dropTrail = null;
+    settleTimer = 0;
     secondChances = MAX_SECOND_CHANCES;
     moveStartSnapshot = null;
     lastMoveSnapshot = null;
@@ -669,6 +701,7 @@
   };
 
   const updateAtmosphere = () => {
+    document.body.style.setProperty("--bloom-energy", String(Math.min(.38, .12 + Math.max(0, combo) * .045)));
     const topOccupiedRow = board.findIndex((row) => row.some(Boolean));
     const stackHeight = topOccupiedRow < 0 ? 0 : ROWS - topOccupiedRow;
     const danger = stackHeight >= 16 ? "critical" : stackHeight >= 11 ? "rising" : "calm";
@@ -735,9 +768,10 @@
     const gradient = context.createLinearGradient(tileLeft, tileTop, tileLeft + tileSize, tileTop + tileSize);
     gradient.addColorStop(0, shiftColor(color, 62));
     gradient.addColorStop(.2, shiftColor(color, 24));
-    gradient.addColorStop(.55, color);
-    gradient.addColorStop(.82, shiftColor(color, -25));
-    gradient.addColorStop(1, shiftColor(color, -62));
+    gradient.addColorStop(.45, shiftColor(color, -12));
+    gradient.addColorStop(.72, shiftColor(color, -55));
+    gradient.addColorStop(.88, color);
+    gradient.addColorStop(1, shiftColor(color, -75));
     context.fillStyle = gradient;
     roundedRectPath(context, tileLeft, tileTop, tileSize, tileSize, radius);
     context.fill();
@@ -798,6 +832,11 @@
     roundedRectPath(context, tileLeft + .5, tileTop + .5, tileSize - 1, tileSize - 1, radius);
     context.strokeStyle = rgba(shiftColor(color, 78), active ? .98 : .78);
     context.lineWidth = Math.max(1, size * .035);
+    context.stroke();
+    // A second inset bevel keeps individual tiles crisp inside a bright stack.
+    roundedRectPath(context, tileLeft + 3, tileTop + 3, tileSize - 6, tileSize - 6, Math.max(2, radius - 2));
+    context.strokeStyle = "rgba(255,255,255,.25)";
+    context.lineWidth = .65;
     context.stroke();
     context.restore();
     return { sprite, padding };
@@ -959,9 +998,106 @@
     return boardBackdrop;
   };
 
+  const drawPrismBloom = () => {
+    const ctx = bloomContext;
+    ctx.clearRect(0, 0, 450, 750);
+    if (!lineClearFx || reducedMotion.matches) return;
+    const elapsed = lineClearFx.total - lineClearFx.timer;
+    const tier = lineClearFx.tier;
+    ctx.save();
+    ctx.translate(75, 75);
+    ctx.globalCompositeOperation = "lighter";
+    lineClearFx.rows.forEach((row, rowIndex) => {
+      const age = elapsed - rowIndex * 30;
+      if (age < 0) return;
+      const y = (row + .5) * CELL;
+      if (age < 120) {
+        ctx.globalAlpha = Math.sin(age / 120 * Math.PI) * .65;
+        ctx.fillStyle = "#c7ffff";
+        ctx.fillRect(0, y - 2, 300, 4);
+      }
+      const p = Math.max(0, Math.min(1, (age - 90) / 480));
+      if (p > 0 && p < 1) {
+        const ribbon = ctx.createLinearGradient(-40, 0, 340, 0);
+        ribbon.addColorStop(0, "#ff73be");
+        ribbon.addColorStop(.27, "#c18cff");
+        ribbon.addColorStop(.5, "#edffff");
+        ribbon.addColorStop(.75, "#69e7ff");
+        ribbon.addColorStop(1, "#ffd65c");
+        ctx.globalAlpha = (1 - p) * .9;
+        ctx.strokeStyle = ribbon;
+        ctx.shadowColor = "#bca6ff";
+        ctx.shadowBlur = 14;
+        ctx.lineWidth = 1 + (1 - p) * 5;
+        for (const direction of [-1, 1]) {
+          ctx.beginPath();
+          ctx.moveTo(150, y);
+          ctx.bezierCurveTo(150 + direction * 65 * p, y - 40 * p, 150 + direction * 130 * p, y + 35 * p, 150 + direction * 220 * p, y - 12 * p);
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        if (tier === 4 && rowIndex === 1) {
+          ctx.lineWidth = 3 * (1 - p);
+          ctx.beginPath();
+          ctx.ellipse(150, y, 20 + p * 195, 12 + p * 95, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    });
+    if (elapsed > 95) {
+      effectParticles.forEach((particle) => {
+        if (!particle.prism) return;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife) * .85;
+        ctx.translate(particle.x, particle.y);
+        ctx.rotate(particle.rotation);
+        ctx.fillStyle = particle.color;
+        ctx.beginPath();
+        ctx.moveTo(0, -particle.size);
+        ctx.lineTo(particle.size * .65, 0);
+        ctx.lineTo(0, particle.size * .65);
+        ctx.lineTo(-particle.size * .45, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,.75)";
+        ctx.lineWidth = .6;
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+    // Reward motes arc along the edges, leaving the next piece unobscured.
+    for (let i = 0; i < 6; i += 1) {
+      const t = Math.max(0, Math.min(1, (elapsed - 230 - i * 24) / 500));
+      if (!t || t === 1) continue;
+      const startY = (lineClearFx.rows[0] + .5) * CELL;
+      const side = i % 2 ? 320 : -20;
+      const x = (1 - t) ** 2 * 150 + 2 * (1 - t) * t * side + t * t * (i % 2 ? 150 : -45);
+      const y = startY * (1 - t) - 45 * t;
+      ctx.globalAlpha = Math.sin(t * Math.PI);
+      ctx.fillStyle = i % 2 ? "#69e7ff" : "#ffd65c";
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + tier * .35, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  };
+
   const draw = () => {
+    drawPrismBloom();
     boardContext.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
     boardContext.drawImage(getBoardBackdrop(), 0, 0);
+    if (dropTrail) {
+      boardContext.save();
+      boardContext.globalAlpha = dropTrail.life / 190 * .36;
+      const trail = boardContext.createLinearGradient(0, dropTrail.from * CELL, 0, (dropTrail.to + 2) * CELL);
+      trail.addColorStop(0, "transparent");
+      trail.addColorStop(1, dropTrail.color);
+      boardContext.fillStyle = trail;
+      dropTrail.matrix[0].forEach((_, x) => {
+        if (dropTrail.matrix.some((row) => row[x])) boardContext.fillRect((dropTrail.x + x) * CELL + 5, Math.max(0, dropTrail.from * CELL), CELL - 10, (dropTrail.to - Math.max(0, dropTrail.from) + 1) * CELL);
+      });
+      boardContext.restore();
+    }
 
     const accent = current ? COLORS[current.type] : "#69e7ff";
     const topOccupiedRow = board.findIndex((row) => row.some(Boolean));
@@ -995,7 +1131,10 @@
 
     for (let y = 0; y < ROWS; y += 1) {
       for (let x = 0; x < COLS; x += 1) {
-        if (board[y][x]) drawCell(boardContext, x, y, COLORS[board[y][x]]);
+        if (board[y][x]) {
+          const settle = settleTimer ? Math.sin((1 - settleTimer / 170) * Math.PI) * 2.5 : 0;
+          drawCell(boardContext, x, y, COLORS[board[y][x]], 1, CELL, 0, settle);
+        }
       }
     }
     if (pendingClear && pendingClearTimer > 0) {
@@ -1038,6 +1177,7 @@
       boardContext.restore();
     }
     effectParticles.forEach((particle) => {
+      if (particle.prism) return;
       boardContext.save();
       boardContext.globalAlpha = Math.max(0, particle.life / particle.maxLife);
       boardContext.globalCompositeOperation = "lighter";
@@ -1133,6 +1273,8 @@
     impactFlashTimer = 0;
     impactCells = [];
     effectParticles = [];
+    dropTrail = null;
+    settleTimer = 0;
     fallTimer = 0;
     lockTimer = 0;
     lockResets = 0;
@@ -1305,6 +1447,7 @@
 
   const setSpeed = (mode) => {
     if (!SPEEDS[mode]) return;
+    document.body.dataset.speed = mode;
     if (mode === speedMode) {
       // Re-selecting Really fast is an explicit request to restore its hidden
       // soundtrack, even if a visible song was chosen as a temporary override.
