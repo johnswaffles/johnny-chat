@@ -1,6 +1,7 @@
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260904-dawnlight1';
+import { landscapeHash, woodlandDensity, woodlandRidgeZ } from './landscape-layout.js?v=20260904-livingwood1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260904-livingwood1';
 import { findPath } from './pathfinding.js?v=20260822-pathfix1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260904-dawnlight1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260904-livingwood1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -84,24 +85,8 @@ const IDLE_REGROUP_DELAY = 30;
 const AUTO_COMBAT_ROUTE_BUDGET = 5;
 const DEFENSE_PROJECTILE_LIFETIME = 2.4;
 const NATURAL_RESOURCE_GAP = 1.7;
-const WILDWOOD_LATTICE = { margin: 28, spacingX: 32, spacingZ: 28 };
 const DEFAULT_WILDWOOD_SEED = 0xc0ffee31;
 const WORLD_GENERATION_STRIDE = 0x9e3779b9;
-const WILDWOOD_CLUSTER_JITTER = { x: 0.82, z: 0.82 };
-const WILDWOOD_TREE_JITTER = 1.4;
-// Generated Wildwood is made from independent trees rather than one giant
-// staged grove. The former grove artwork made a nearly-cleared stand look
-// like a broad brown patch and kept hiding workers after the last visible
-// trunks were gone. A compact deterministic cluster keeps the map densely
-// wooded while giving every tree its own footprint, haul, blocker, and
-// immediate removal point.
-const WILDWOOD_TREE_OFFSETS = [
-  { x: -7.2, z: -6.1 }, { x: -2.4, z: -6.7 }, { x: 2.4, z: -6.7 }, { x: 7.2, z: -5.2 },
-  { x: -7.2, z: -1.1 }, { x: -2.4, z: -0.5 }, { x: 2.4, z: -0.5 }, { x: 7.2, z: 0.2 },
-  { x: -6.1, z: 4.3 }, { x: -1.2, z: 4.9 }, { x: 3.7, z: 4.7 }, { x: 7.4, z: 5.4 },
-];
-const WILDWOOD_DIVIDE_BAND_OFFSETS = [-24, -16, -8, 0, 8, 16, 24];
-const WILDWOOD_DIVIDE_TREE_OFFSETS = [{ x: 0, z: 0 }];
 const WILDWOOD_TREE_AMOUNT = 240;
 const WILDWOOD_CLEARINGS = [
   { id: 'crown-clearing', x: 78, z: 82, radiusX: 78, radiusZ: 84 },
@@ -770,37 +755,6 @@ export class CrownforgeSimulation {
     return sizeTier === 'large' ? 700 : sizeTier === 'medium' ? 260 : 180;
   }
 
-  _seedWildwoodTreeCluster(centerX, centerZ, clusterIndex, offsets = WILDWOOD_TREE_OFFSETS, worldSeed = this.activeWorldSeed ?? this.worldSeed) {
-    const clusterId = `wildwood-${clusterIndex}`;
-    const clusterAngle = stableResourceNoise(clusterIndex, 11, worldSeed) * TAU;
-    const clusterCos = Math.cos(clusterAngle);
-    const clusterSin = Math.sin(clusterAngle);
-    let added = 0;
-    for (const [treeIndex, offset] of offsets.entries()) {
-      // Rotate and perturb each small cluster so the sampling lattice is an
-      // implementation detail, not a visible row-and-column pattern.
-      const rotatedX = offset.x * clusterCos - offset.z * clusterSin;
-      const rotatedZ = offset.x * clusterSin + offset.z * clusterCos;
-      const jitterX = (stableResourceNoise(clusterIndex * 17 + treeIndex, 83, worldSeed) - 0.5) * WILDWOOD_TREE_JITTER;
-      const jitterZ = (stableResourceNoise(clusterIndex * 17 + treeIndex, 89, worldSeed) - 0.5) * WILDWOOD_TREE_JITTER;
-      const x = centerX + rotatedX + jitterX;
-      const z = centerZ + rotatedZ + jitterZ;
-      const treeFootprint = resourceFootprint({ type: 'tree', sizeTier: 'small', forestClusterId: clusterId });
-      if (x - treeFootprint < 2 || z - treeFootprint < 2 || x + treeFootprint > CONFIG.mapWidth - 2 || z + treeFootprint > CONFIG.mapHeight - 2) continue;
-      if (this._insideWildwoodClearing(x, z, treeFootprint * 0.55)) continue;
-      // Keep regional forage, stone, and Gold readable. Trees in the same
-      // cluster are deliberately allowed to sit close together; that is the
-      // visual forest density the macro grove used to provide.
-      if (this.resourcesNodes.some((node) => node.resourceType !== 'wood'
-        && distance({ x, z }, node) < treeFootprint + resourceFootprint(node) + 0.6)) continue;
-      this.addResource('tree', 'wood', x, z, WILDWOOD_TREE_AMOUNT,
-        Math.floor(stableResourceNoise(clusterIndex * 31 + treeIndex, 97, worldSeed) * 4) % 4,
-        { sizeTier: 'small', forestClusterId: clusterId, forestTreeIndex: treeIndex });
-      added += 1;
-    }
-    return added;
-  }
-
   _naturalResourceSpotClear(type, sizeTier, x, z) {
     const probe = { type, sizeTier, x, z };
     const footprint = resourceFootprint(probe);
@@ -833,55 +787,50 @@ export class CrownforgeSimulation {
       );
     }
 
-    const footprint = resourceFootprint({ type: 'tree', sizeTier: 'small' });
-    let latticeIndex = 0;
-    for (let row = 0, z = WILDWOOD_LATTICE.margin; z <= CONFIG.mapHeight - WILDWOOD_LATTICE.margin; row += 1, z += WILDWOOD_LATTICE.spacingZ) {
-      const rowOffset = row % 2 ? WILDWOOD_LATTICE.spacingX * 0.5 : 0;
-      for (let column = 0, x = WILDWOOD_LATTICE.margin + rowOffset; x <= CONFIG.mapWidth - WILDWOOD_LATTICE.margin; column += 1, x += WILDWOOD_LATTICE.spacingX) {
-        // This is only a cheap sampling lattice. Large seeded center jitter,
-        // per-cluster rotation, and individual tree offsets create an organic
-        // forest without runtime noise generation or a procedural server.
-        const jitterX = (stableResourceNoise(latticeIndex, 61, worldSeed) - 0.5) * WILDWOOD_LATTICE.spacingX * WILDWOOD_CLUSTER_JITTER.x;
-        const jitterZ = (stableResourceNoise(latticeIndex, 67, worldSeed) - 0.5) * WILDWOOD_LATTICE.spacingZ * WILDWOOD_CLUSTER_JITTER.z;
-        const candidateX = x + jitterX;
-        const candidateZ = z + jitterZ;
-        latticeIndex += 1;
-        if (this._insideWildwoodClearing(candidateX, candidateZ, footprint * 0.48)) continue;
-        if (!this._naturalResourceSpotClear('tree', 'small', candidateX, candidateZ)) continue;
-        this._seedWildwoodTreeCluster(candidateX, candidateZ, latticeIndex, WILDWOOD_TREE_OFFSETS, worldSeed);
+    // Random dart sampling with a spatial exclusion grid replaces the old
+    // repeated twelve-tree stamps. Density fields create stands and glades;
+    // a small minimum spacing keeps each trunk individually harvestable.
+    const grid = new Map();
+    const cellSize = 4.0;
+    const otherResources = this.resourcesNodes.filter(node => node.resourceType !== 'wood');
+    const placeTree = (x, z, index, ridge = false) => {
+      if (x < 0 || z < 0 || x > CONFIG.mapWidth || z > CONFIG.mapHeight) return false;
+      if (this._insideWildwoodClearing(x, z, 2)) return false;
+      if (otherResources.some(node => distance({ x, z }, node) < 3.05 + resourceFootprint(node) + 1)) return false;
+      const gx = Math.floor(x / cellSize), gz = Math.floor(z / cellSize);
+      if (!ridge) {
+        const gap = 3.8 + landscapeHash(index, 13, worldSeed) * 1.8;
+        for (let ix = gx - 2; ix <= gx + 2; ix++) {
+          for (let iz = gz - 2; iz <= gz + 2; iz++) {
+            if ((grid.get(`${ix},${iz}`) ?? []).some(node => distance({ x, z }, node) < gap)) return false;
+          }
+        }
       }
-    }
+      const node = this.addResource('tree', 'wood', x, z, WILDWOOD_TREE_AMOUNT,
+        Math.floor(landscapeHash(index, 97, worldSeed) * 8),
+        { sizeTier: 'small', forestClusterId: ridge ? 'livingwood-ridge' : `livingwood-${Math.floor(x / 48)}-${Math.floor(z / 48)}`, forestTreeIndex: index });
+      const key = `${gx},${gz}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(node);
+      return true;
+    };
 
-    // A continuous old-growth divide guarantees that the opposite faction
-    // cannot be reached through a lucky lattice seam or by slipping around a
-    // map edge. Each divide cluster is still made from separate harvestable
-    // trees, so the barrier becomes a player-authored road one tree at a time.
-    const divideStart = { x: 0, z: 430 };
-    const divideEnd = { x: 430, z: 0 };
-    const divideLength = distance(divideStart, divideEnd);
-    // The divide is the one intentional forest choke point. Its clusters
-    // overlap along the diagonal so the pathfinder cannot slip through a
-    // lattice seam, while every blocker remains an individual tree that can
-    // be removed to open the route.
-    const divideSegments = Math.ceil(divideLength / 5);
-    for (let index = 0; index <= divideSegments; index += 1) {
-      const ratio = index / divideSegments;
-      const tangentJitter = (stableResourceNoise(index, 131, worldSeed) - 0.5) * 1.6;
-      const x = divideStart.x + (divideEnd.x - divideStart.x) * ratio + tangentJitter;
-      const z = divideStart.z + (divideEnd.z - divideStart.z) * ratio - tangentJitter;
-      // Seed a compact overlapping band rather than three full clusters.
-      // Trees are spaced closely along the diagonal and across its thickness
-      // so the pathfinder cannot slip through a seam, while every blocker
-      // remains an individual tree that can be removed to open the route.
-      WILDWOOD_DIVIDE_BAND_OFFSETS.forEach((bandOffset, bandIndex) => {
-        this._seedWildwoodTreeCluster(
-          x + bandOffset * 0.5,
-          z + bandOffset * 0.5,
-          1000 + index * WILDWOOD_DIVIDE_BAND_OFFSETS.length + bandIndex,
-          WILDWOOD_DIVIDE_TREE_OFFSETS,
-          worldSeed,
-        );
-      });
+    // Follow the ridge with overlapping blocker circles, including its two
+    // boundary contacts. Satellites are sampled independently, never in bands.
+    let index = 0;
+    for (let x = 0; x <= 460; x += 1.7) {
+      const z = woodlandRidgeZ(x);
+      if (z < 0) break;
+      const slope = (woodlandRidgeZ(x + 0.1) - woodlandRidgeZ(x - 0.1)) / 0.2;
+      const norm = Math.hypot(slope, 1);
+      const offset = x > 2 && z > 3 ? (landscapeHash(index, 149, worldSeed) - 0.5) * 1.4 : 0;
+      placeTree(x - slope / norm * offset, z + offset / norm, index++, true);
+    }
+    for (let attempt = 0; attempt < 16500; attempt++) {
+      const x = 5 + landscapeHash(attempt, 311, worldSeed) * (CONFIG.mapWidth - 10);
+      const z = 5 + landscapeHash(attempt, 419, worldSeed) * (CONFIG.mapHeight - 10);
+      if (landscapeHash(attempt, 557, worldSeed) > woodlandDensity(x, z, worldSeed)) continue;
+      placeTree(x, z, index++);
     }
   }
 

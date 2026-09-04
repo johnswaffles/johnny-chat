@@ -174,11 +174,13 @@ At normal gameplay zoom, read assets in this order:
 
 The meadow is the broad color field. Paths provide navigation readability and settlement character, but they do not become a grid or decorative UI line. Environmental detail is used to break repetition and support scale:
 
-- four tree variations, four berry variations, four stone variations;
+- eight Livingwood tree species with position-derived size variation; two berry families with full/picked paintings; four stone variations;
 - logs, stumps, flowers, and pebbles as small supporting details;
 - neutral detail should be lower contrast than resource nodes;
 - variants may be rotated in composition by placement, but the authored art itself must keep the same camera and light;
 - never place enough detail to hide interaction circles, building footprints, or unit feet.
+
+The Livingwood pass blends meadow, dry grass, leaf litter and moss through cached world-space masks. Tree root zones merge into a woodland floor and recede when the trees are harvested. Terrain texture mip levels suppress distant aliasing. Tree sprite widths are species-specific (148–288 base pixels with 0.82–1.18 size variation); authored root contacts and silhouette bounds drive drawing and picking. Trees retain their size until felled. Forest placement uses seeded density fields and a winding continuous harvestable ridge, with protected faction/resource clearings. See `CROWNFORGE_LIVINGWOOD_RELEASE.md` for asset definitions and prompts.
 
 ## 10. Buildings and construction
 

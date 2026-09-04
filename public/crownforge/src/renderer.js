@@ -1,6 +1,7 @@
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260904-dawnlight1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260904-dawnlight1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260904-dawnlight1';
+import { CrownforgeLandscape } from './landscape.js?v=20260904-livingwood1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260904-livingwood1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260904-livingwood1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260904-livingwood1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -110,14 +111,11 @@ export class CrownforgeRenderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.atlas = new Image();
-    this.meadow = new Image();
     this.road = new Image();
     this.roadsideProps = new Image();
     this.atlasReady = false;
-    this.meadowReady = false;
     this.roadReady = false;
     this.roadsidePropsReady = false;
-    this.meadowPattern = null;
     this.roadPattern = null;
     this.environmentReady = false;
     this.treeAtlasReady = false;
@@ -142,11 +140,6 @@ export class CrownforgeRenderer {
     this.combatAtlases = {};
     this.combatAtlasReady = {};
     this.atlas.addEventListener('load', () => { this.atlasReady = true; });
-    this.meadow.addEventListener('load', () => {
-      this.meadowReady = true;
-      this.meadowPattern = null;
-      this.invalidateStaticLayer();
-    });
     this.road.addEventListener('load', () => {
       this.roadReady = true;
       this.roadPattern = null;
@@ -171,7 +164,6 @@ export class CrownforgeRenderer {
     this.largeStone.addEventListener('load', () => { this.largeStoneReady = true; });
     this.enemyCamp.addEventListener('load', () => { this.enemyCampReady = true; });
     this.atlas.src = './assets/crownforge-asset-atlas.png';
-    this.meadow.src = './assets/crownforge-meadow-dawn-v1.png?v=20260904-dawnlight1';
     this.road.src = './assets/crownforge-dirt-road-tile-v1.png?v=20260818-roads2';
     this.roadsideProps.src = ROAD_DETAILS_ATLAS.src;
     this.environmentAtlas.src = ENVIRONMENT_ATLAS.src;
@@ -276,6 +268,7 @@ export class CrownforgeRenderer {
     this.daylightEnabled = !query.has('lighting-off');
     this.frameStats = { count: 0, samples: [] };
     this.atmosphere = new CrownforgeAtmosphere(this);
+    this.landscape = new CrownforgeLandscape(this);
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas);
     this.resize();
@@ -286,7 +279,7 @@ export class CrownforgeRenderer {
     // the opening match can draw at production quality. Build-only and later
     // action atlases may continue warming in the browser cache afterward.
     const required = [
-      this.meadow,
+      ...Object.values(this.landscape.images),
       this.environmentAtlas,
       this.treeAtlas,
       this.treeGroveAtlas,
@@ -457,7 +450,7 @@ export class CrownforgeRenderer {
     if (entity.kind === 'unit') return 3;
     if (entity.kind === 'resource') {
       const tierScale = RESOURCE_SIZE_TIERS[entity.sizeTier ?? 'small']?.renderScale ?? 1;
-      const base = entity.type === 'grove' ? 7 : entity.type === 'grain' ? 8 : entity.type === 'berry' ? 4 : 5;
+      const base = entity.type === 'tree' ? 22 : entity.type === 'grove' ? 7 : entity.type === 'grain' ? 8 : entity.type === 'berry' ? 4 : 5;
       return base * tierScale;
     }
     if (entity.kind === 'building') {
@@ -468,7 +461,7 @@ export class CrownforgeRenderer {
   }
 
   ensureStaticLayer() {
-    const key = [this.width, this.height, this.camera.x, this.camera.y, this.camera.zoom, this.meadowReady, this.roadReady, this.daylightEnabled].join('|');
+    const key = [this.width, this.height, this.camera.x, this.camera.y, this.camera.zoom, this.roadReady, this.daylightEnabled, this.landscape.revision].join('|');
     if (this.staticLayerKey === key) return;
     const staticCtx = this.staticLayer.getContext('2d');
     staticCtx.setTransform(this.resolutionScale, 0, 0, this.resolutionScale, 0, 0);
@@ -485,6 +478,7 @@ export class CrownforgeRenderer {
     this.viewportBounds = this.viewportWorldBounds(3);
     ctx.clearRect(0, 0, this.width, this.height);
     this.drawBackdrop(ctx);
+    this.landscape.sync(simulation);
     this.ensureStaticLayer();
     ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
     this.atmosphere.drawClouds(ctx, time);
@@ -551,45 +545,11 @@ export class CrownforgeRenderer {
     corners.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
     ctx.closePath();
     ctx.clip();
-    if (this.meadowReady) {
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = '#526d43';
-      ctx.fill();
-      ctx.globalAlpha = 0.72;
-      // At distant zoom the full-resolution meadow used to collapse into a
-      // grid of tiny repeated squares. Hold the texture at a readable terrain
-      // LOD while the world continues to zoom normally. This removes the
-      // checkerboard without adding another per-frame world layer: the result
-      // remains part of the cached static terrain canvas.
-      const pattern = this.meadowPattern ?? (this.meadowPattern = ctx.createPattern(this.meadow, 'repeat'));
-      const canTransformPattern = pattern && typeof pattern.setTransform === 'function' && typeof DOMMatrix === 'function';
-      if (canTransformPattern) {
-        const terrainPatternScale = Math.max(this.camera.zoom, 0.12);
-        pattern.setTransform(new DOMMatrix([
-          terrainPatternScale,
-          0,
-          0,
-          terrainPatternScale,
-          this.width / 2 + this.camera.x,
-          this.height / 2 + this.camera.y,
-        ]));
-        this.canvas.dataset.terrainLodScale = terrainPatternScale.toFixed(3);
-        ctx.fillStyle = pattern;
-        ctx.fillRect(minX - 18, minY - 18, maxX - minX + 36, maxY - minY + 36);
-      } else {
-        // Older canvas implementations still get a camera-following draw;
-        // this is preferable to a viewport-fixed pattern.
-        ctx.drawImage(this.meadow, minX - 18, minY - 18, maxX - minX + 36, maxY - minY + 36);
-      }
-      ctx.globalAlpha = 1;
-    } else {
-      ctx.fillStyle = '#647b4a';
+    if (!this.landscape.drawGround(ctx)) {
+      ctx.fillStyle = '#57734b';
       ctx.fill();
     }
     this.drawTerrainWash(ctx, minX, minY, maxX - minX, maxY - minY);
-    if (this.daylightEnabled) this.drawDaylightGrade(ctx, minX, minY, maxX - minX, maxY - minY);
-    this.atmosphere.drawMeadow(ctx, CONFIG);
-    this.atmosphere.drawFlora(ctx, CONFIG);
     this.drawPathsOnMap(ctx, time);
     ctx.restore();
 
@@ -1335,12 +1295,17 @@ export class CrownforgeRenderer {
       if (resource.amount <= 0 || (this.viewportBounds && !this.isWorldVisible(resource, this.entityCullRadius(resource)))) continue;
       const anchor = this.worldToScreen(resource);
       const tier = RESOURCE_SIZE_TIERS[resource.sizeTier ?? 'small'] ?? RESOURCE_SIZE_TIERS.small;
-      const baseSize = resource.type === 'grove' ? 252 : resource.type === 'grain' ? 360 : resource.type === 'tree' ? 174 : resource.type === 'berry' ? 115 : 132;
-      const size = (resource.type === 'berry' || resource.type === 'grain' ? baseSize : baseSize * tier.renderScale) * this.camera.zoom;
-      const withinX = Math.abs(point.x - anchor.x) <= Math.max(24, size * (resource.type === 'grain' ? 0.58 : 0.5));
-      const withinY = point.y >= anchor.y - size * 1.08 && point.y <= anchor.y + size * 0.14;
+      const painted = ['tree', 'berry'].includes(resource.type) ? this.landscape.resourceVisual(resource) : null;
+      const baseSize = resource.type === 'grove' ? 252 : resource.type === 'grain' ? 360 : 132;
+      const size = (resource.type === 'grain' ? baseSize : baseSize * tier.renderScale) * this.camera.zoom;
+      const visualScale = this.camera.zoom * (resource.type === 'tree' ? tier.renderScale : 1);
+      const width = painted ? painted.width * visualScale : size;
+      const height = painted ? painted.height * visualScale : size;
+      const rootX = painted ? painted.sprite.root[0] : 0.5;
+      const withinX = point.x >= anchor.x - Math.max(18, width * rootX) && point.x <= anchor.x + Math.max(18, width * (1 - rootX));
+      const withinY = point.y >= anchor.y - height && point.y <= anchor.y + Math.max(5, height * 0.08);
       if (!withinX || !withinY) continue;
-      const candidateDistance = Math.hypot(point.x - anchor.x, point.y - (anchor.y - size * 0.46));
+      const candidateDistance = Math.hypot(point.x - anchor.x, point.y - (anchor.y - height * 0.46));
       if (candidateDistance < resourceDistance) {
         resourceDistance = candidateDistance;
         resourceHit = resource;
@@ -2057,8 +2022,11 @@ export class CrownforgeRenderer {
       else this.drawTreeGroveAsset(ctx, stage, point, size * this.camera.zoom, depleted ? 0.74 : 0.92);
     } else if (resource.type === 'grain') {
       this.drawFirstAgeAsset(ctx, 'field', point, size * this.camera.zoom, depleted ? 0.3 : 0.9);
-    } else if (resource.type === 'tree') {
-      this.drawTreeAsset(ctx, resource.variant, point, size * scale * this.camera.zoom, alpha);
+    } else if (resource.type === 'tree' || resource.type === 'berry') {
+      if (!this.landscape.drawResource(ctx, resource, point, resource.type === 'tree' ? tier.renderScale : 1)) {
+        if (resource.type === 'tree') this.drawTreeAsset(ctx, resource.variant, point, size * this.camera.zoom, 1);
+        else this.drawEnvironmentAsset(ctx, 'berry', resource.variant, point, size * this.camera.zoom, alpha);
+      }
     } else if (resource.type === 'gold') {
       const assetKey = depleted ? 'depleted' : (resource.sizeTier ?? 'small');
       const definition = GOLD_DEPOSIT_ASSETS[assetKey] ?? GOLD_DEPOSIT_ASSETS.small;

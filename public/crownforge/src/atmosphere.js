@@ -25,61 +25,11 @@ export class CrownforgeAtmosphere {
     this.mode = 'dawn';
     this.reducedMotion = false;
     this.enabled = true;
-    this.flora = new Image();
-    this.flora.addEventListener('load', () => renderer.invalidateStaticLayer());
-    this.flora.src = './assets/crownforge-meadow-flora-v1.png';
     this.cloud = softSprite('19,43,39');
     this.mist = softSprite('235,225,198');
     this.ember = softSprite('255,177,64');
     this.grade = document.createElement('canvas');
     this.gradeKey = '';
-  }
-
-  drawMeadow(ctx, config) {
-    const r = this.renderer;
-    const bounds = r.viewportWorldBounds(36);
-    // Cached with the terrain, and culled before creating the gradients.
-    const step = 24;
-    for (let x = Math.max(0, Math.floor(bounds.minX / step) * step); x < Math.min(config.mapWidth, bounds.maxX); x += step) {
-      for (let z = Math.max(0, Math.floor(bounds.minZ / step) * step); z < Math.min(config.mapHeight, bounds.maxZ); z += step) {
-        const n = noise(x, z);
-        const point = r.worldToScreen({ x: x + n * 12, z: z + noise(z, x) * 12 });
-        const radius = (210 + n * 310) * r.camera.zoom;
-        ctx.save();
-        ctx.translate(point.x, point.y);
-        ctx.scale(1, 0.58);
-        const patch = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
-        const tone = n > 0.52 ? '27,75,52' : '181,165,88';
-        patch.addColorStop(0, `rgba(${tone},${n > 0.52 ? 0.24 : 0.13})`);
-        patch.addColorStop(1, `rgba(${tone},0)`);
-        ctx.fillStyle = patch;
-        ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
-        ctx.restore();
-      }
-    }
-  }
-
-  drawFlora(ctx, config) {
-    const r = this.renderer;
-    if (!this.flora.complete || !this.flora.naturalWidth || r.camera.zoom < 0.12) return;
-    const bounds = r.viewportWorldBounds(8);
-    const cellW = this.flora.naturalWidth / 2;
-    const cellH = this.flora.naturalHeight / 2;
-    const step = 9;
-    ctx.save();
-    ctx.globalAlpha = 0.76;
-    for (let x = Math.max(0, Math.floor(bounds.minX / step) * step); x < Math.min(config.mapWidth, bounds.maxX); x += step) {
-      for (let z = Math.max(0, Math.floor(bounds.minZ / step) * step); z < Math.min(config.mapHeight, bounds.maxZ); z += step) {
-        const n = noise(x + 6, z + 19);
-        if (n < 0.67) continue;
-        const point = r.worldToScreen({ x: x + n * 7, z: z + noise(z, x) * 7 });
-        const size = (58 + n * 65) * r.camera.zoom;
-        const variant = Math.floor(noise(x + 2, z + 3) * 4);
-        ctx.drawImage(this.flora, variant % 2 * cellW, Math.floor(variant / 2) * cellH, cellW, cellH,
-          point.x - size / 2, point.y - size * 0.92, size, size);
-      }
-    }
-    ctx.restore();
   }
 
   drawClouds(ctx, time) {
