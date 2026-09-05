@@ -31,4 +31,6 @@ The first opaque checkerboard result was rejected. The shipped 1024 × 1536 PNG 
 
 ## Delivery
 
-Source and production mirror are ready. Live verification follows the release push.
+Released as `e238163` to `codex/crownforge-live-sync-20260821`. Render serves build `20260905-horsefit1`. Eight deployed files (assembly, mounted motion, renderer rig, registry, Ashen metadata, new PNG and both horse-review entry files) match the tested source byte for byte. Live browser review loaded both horses and inspected a walking cycle in all four directions. Local production field review loaded all twelve characters and confirmed actual mounted walking through the game renderer. The live comparison is left open with walking playing.
+
+Live review: https://crownforge-dawn-kingdoms.onrender.com/dev/horse-review.html?direction=1&action=walk&release=20260905-horsefit1
