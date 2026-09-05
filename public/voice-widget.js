@@ -1030,11 +1030,335 @@ class VoiceWidget {
     }
 }
 
+/** Homepage presentation. Other widget profiles keep their existing interface. */
+class HomeVoiceWidget extends VoiceWidget {
+    createUI() {
+        super.createUI();
+        const container = document.getElementById('voice-widget-container');
+        if (!container) return;
+        this.homeTextGeneration = 0;
+        this.homeTextPending = false;
+        this.homeResponseActive = false;
+        this.homeQueuedTexts = [];
+        this.container = container;
+        container.dataset.theme = 'galaxy-console-v1';
+        container.setAttribute('role', 'complementary');
+        container.setAttribute('aria-label', 'Johnny AI site guide');
+        const arrow = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 17 10-10M7 7h10v10"/></svg>';
+        const mic = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></svg>';
+        container.innerHTML = `
+            <div class="widget-header" id="widget-header">
+                <button class="widget-title-button" id="widget-title-button" type="button" aria-label="Open Johnny, your AI site guide">
+                    <span class="home-widget-avatar" aria-hidden="true"><img src="/home/galaxy.webp" alt="" width="44" height="44"><i></i></span>
+                    <span class="home-widget-identity"><span class="widget-title-text">Ask Johnny<span class="home-widget-title-dot">.</span></span><span class="home-widget-subtitle">Your AI site guide</span></span>
+                    <span class="home-widget-launch-arrow">${arrow}</span>
+                </button>
+                <span class="home-widget-drag-handle" aria-hidden="true">⠿</span>
+                <div class="widget-actions"><button id="minimize-btn" type="button" aria-label="Minimize Johnny"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>
+            </div>
+            <div class="voice-widget-card" id="voice-card" data-state="idle">
+                <div class="home-widget-orbit" aria-hidden="true"><div class="home-widget-galaxy"><img src="/home/galaxy.webp" alt="" width="150" height="150"></div><span class="home-widget-orbit-dot"></span></div>
+                <div class="status-indicator"><span class="status-label" id="status-label" role="status">A little help finding your next thing.</span><div class="audio-visualizer" id="visualizer" aria-hidden="true"><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div></div></div>
+                <button class="mic-button" id="start-btn" type="button">${mic}<span id="home-call-label">Start a conversation</span><span class="home-widget-stop-icon" aria-hidden="true"></span></button>
+            </div>
+            <div class="top-controls">
+                <button class="top-control" id="mute-btn" type="button" aria-label="Unmute microphone" aria-pressed="true" disabled>${mic}<span class="home-mic-label">Mic off</span></button>
+                <span class="home-widget-session-hint" id="home-session-hint">Voice & text</span>
+                <button class="top-control" id="new-btn" type="button" aria-label="Start a new conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 1 1 2 9M3 4v6h6"/></svg><span>New chat</span></button>
+            </div>
+            <div class="bottom-area">
+                <div class="chat-viewport" id="chat-viewport"><div class="home-widget-welcome" id="home-widget-welcome"><p>A question. An idea.<br>A good place to start.</p><span>Ask about the tools, find a game,<br>or let me point you in the right direction.</span></div><div class="chat-history" id="chat-history" role="log" aria-label="Conversation with Johnny" aria-live="polite" aria-relevant="additions text"></div></div>
+                <div class="input-area"><label class="home-widget-input-label" for="voice-text-input">Message Johnny</label><div class="input-wrapper"><input type="text" id="voice-text-input" placeholder="What's on your mind?" autocomplete="off" enterkeyhint="send"><button id="home-send-btn" class="home-widget-send" type="button" aria-label="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div><p class="home-widget-footer"><span class="home-widget-ai-dot"></span>AI, with a little Johnny personality.</p></div>
+            </div>`;
+        for (const [property, id] of Object.entries({ card: 'voice-card', btn: 'start-btn', titleBtn: 'widget-title-button', history: 'chat-history', historyViewport: 'chat-viewport', statusLabel: 'status-label', visualizer: 'visualizer', newBtn: 'new-btn', muteBtn: 'mute-btn', textInput: 'voice-text-input' })) {
+            this[property] = document.getElementById(id);
+        }
+        this.fileInput = null;
+        this.uploadLabel = null;
+        this.updateState('idle');
+    }
+
+    attachEvents() {
+        super.attachEvents();
+        this.btn.onclick = () => {
+            if (this.state === 'idle' || this.state === 'error') {
+                this.isTextInitiated = false;
+                this.startSession();
+            } else this.stopSession();
+        };
+        this.container.addEventListener('pointerdown', () => {
+            if (this.remoteAudioEl?.paused && this.remoteAudioEl.srcObject) this.remoteAudioEl.play().catch(() => {});
+        });
+        document.getElementById('home-send-btn').onclick = () => {
+            const text = this.textInput.value.trim();
+            if (!text) return;
+            this.textInput.value = '';
+            this.sendTextMessage(text);
+        };
+        // Enter during IME composition must finish composing rather than send.
+        this.textInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && event.isComposing) event.stopImmediatePropagation();
+        }, true);
+        this.container.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape' || this.container.classList.contains('minimized')) return;
+            this.container.classList.add('minimized');
+            this.titleBtn.focus({ preventScroll: true });
+        });
+        const syncExpanded = () => {
+            const expanded = !this.container.classList.contains('minimized');
+            this.titleBtn.setAttribute('aria-expanded', String(expanded));
+            this.titleBtn.setAttribute('aria-label', expanded ? 'Johnny AI site guide' : 'Open Johnny, your AI site guide');
+            const min = document.getElementById('minimize-btn');
+            min.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+            min.setAttribute('aria-label', 'Minimize Johnny');
+        };
+        new MutationObserver(syncExpanded).observe(this.container, { attributes: true, attributeFilter: ['class'] });
+        syncExpanded();
+    }
+
+    updateState(state) {
+        super.updateState(state);
+        if (!this.container) return;
+        this.container.dataset.state = state;
+        const active = ['listening', 'speaking'].includes(state);
+        const labels = { idle: 'A little help finding your next thing.', connecting: 'Connecting you to Johnny…', listening: this.isMuted ? 'Connected. Unmute when you’re ready.' : 'I’m listening. Take your time.', speaking: 'Johnny is speaking…', error: 'Couldn’t connect. Give it another try.' };
+        this.statusLabel.innerText = labels[state] || labels.idle;
+        const callLabel = document.getElementById('home-call-label');
+        if (callLabel) callLabel.textContent = state === 'connecting' ? 'Cancel connection' : active ? 'End conversation' : state === 'error' ? 'Try connecting again' : 'Start a conversation';
+        this.btn.setAttribute('aria-label', callLabel?.textContent || 'Start a conversation');
+        this.muteBtn.disabled = !active;
+        this.syncHomeMic();
+        const sessionHint = document.getElementById('home-session-hint');
+        if (sessionHint) sessionHint.textContent = active ? 'Connected' : state === 'connecting' ? 'Connecting' : 'Voice & text';
+    }
+
+    syncHomeMic() {
+        if (!this.muteBtn) return;
+        const muted = !this.stream || this.isMuted;
+        this.muteBtn.setAttribute('aria-pressed', String(muted));
+        this.muteBtn.setAttribute('aria-label', muted ? 'Unmute microphone' : 'Mute microphone');
+        this.muteBtn.querySelector('.home-mic-label').textContent = muted ? 'Mic off' : 'Mic on';
+    }
+
+    toggleMute() {
+        super.toggleMute();
+        this.syncHomeMic();
+        if (this.state === 'listening') this.updateState('listening');
+    }
+
+    // Keep the visual console steady while the transcript grows.
+    updateSphereScale() {}
+
+    createMessageBubble(role) {
+        document.getElementById('home-widget-welcome').hidden = true;
+        return super.createMessageBubble(role);
+    }
+
+    resetChat() {
+        this.homeTextGeneration += 1;
+        super.resetChat();
+        document.getElementById('home-widget-welcome').hidden = false;
+        this.textInput.focus({ preventScroll: true });
+    }
+
+    getGreetingPrompt() {
+        return "Say exactly: 'Hey, welcome to my little corner of the internet. I can help you find a tool, pick a game, or figure out where to start. Your microphone starts off muted. Tap Mic off when you are ready to talk, or just type below.' Do not add any other greeting text.";
+    }
+
+    async startSession() {
+        if (this.state === 'connecting') return this.homeConnecting;
+        if (this.state === 'error') super.stopPlayback();
+        const generation = (this.homeConnectionGeneration || 0) + 1;
+        this.homeConnectionGeneration = generation;
+        const controller = new AbortController();
+        this.homeAbort = controller;
+        const current = () => generation === this.homeConnectionGeneration;
+        this.pendingHangup = false;
+        this.updateState('connecting');
+        const deadline = setTimeout(() => controller.abort(), 30000);
+        this.homeConnecting = (async () => {
+            try {
+                const tokenUrl = new URL(`${this.getBackendUrl()}/api/realtime-token`);
+                tokenUrl.searchParams.set('profile', 'home');
+                tokenUrl.searchParams.set('t', Date.now().toString());
+                const tokenResponse = await fetch(tokenUrl, { method: 'POST', headers: this.getAuthHeaders(), signal: controller.signal });
+                if (!tokenResponse.ok) throw new Error(tokenResponse.status === 429 ? 'visit limit' : 'Connection unavailable');
+                const data = await tokenResponse.json();
+                if (!current()) return;
+                const key = data.client_secret?.value || data.value;
+                if (!key) throw new Error('Connection unavailable');
+                this.realtimeModel = String(data.model || data.session?.model || '');
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+                if (!current() || controller.signal.aborted) {
+                    stream.getTracks().forEach(track => track.stop());
+                    if (current()) throw new Error('Connection timed out');
+                    return;
+                }
+                this.stream = stream;
+                this.isMuted = true;
+                stream.getAudioTracks().forEach(track => { track.enabled = false; });
+                this.muteBtn.dataset.muted = 'true';
+                const pc = new RTCPeerConnection();
+                this.pc = pc;
+                const audio = document.createElement('audio');
+                audio.autoplay = true;
+                audio.playsInline = true;
+                audio.setAttribute('aria-hidden', 'true');
+                audio.style.display = 'none';
+                document.body.appendChild(audio);
+                this.remoteAudioEl = audio;
+                pc.ontrack = event => {
+                    if (!current()) return;
+                    audio.srcObject = event.streams[0];
+                    audio.play().catch(() => { this.statusLabel.innerText = 'Tap the conversation to enable Johnny’s audio.'; });
+                };
+                pc.addTrack(stream.getAudioTracks()[0], stream);
+                pc.onconnectionstatechange = () => {
+                    if (!current()) return;
+                    if (['failed', 'closed'].includes(pc.connectionState)) {
+                        this.stopPlayback();
+                        this.updateState('error');
+                    }
+                };
+                const channel = pc.createDataChannel('oai-events');
+                this.dc = channel;
+                channel.onopen = () => { if (current()) { this.updateState('listening'); this.onDataChannelOpen(); } };
+                channel.onmessage = event => {
+                    if (!current()) return;
+                    try { this.onDataChannelMessage(JSON.parse(event.data)); } catch { /* Ignore malformed events. */ }
+                };
+                channel.onclose = () => {
+                    if (!current()) return;
+                    this.stopPlayback();
+                    this.updateState('error');
+                };
+                const offer = await pc.createOffer();
+                if (!current()) return;
+                await pc.setLocalDescription(offer);
+                const response = await fetch(data.realtime_url || 'https://api.openai.com/v1/realtime/calls', {
+                    method: 'POST', body: offer.sdp, headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/sdp' }, signal: controller.signal
+                });
+                if (!response.ok) throw new Error('Connection unavailable');
+                const sdp = await response.text();
+                if (!current()) return;
+                await pc.setRemoteDescription({ type: 'answer', sdp });
+                if (channel.readyState !== 'open') {
+                    await new Promise((resolve, reject) => {
+                        const cleanup = () => { channel.removeEventListener('open', opened); channel.removeEventListener('close', closed); controller.signal.removeEventListener('abort', closed); };
+                        const opened = () => { cleanup(); resolve(); };
+                        const closed = () => { cleanup(); reject(new Error('Connection closed')); };
+                        channel.addEventListener('open', opened, { once: true });
+                        channel.addEventListener('close', closed, { once: true });
+                        controller.signal.addEventListener('abort', closed, { once: true });
+                        if (controller.signal.aborted) closed();
+                    });
+                }
+            } catch (error) {
+                if (!current()) return;
+                super.stopPlayback();
+                this.updateState('error');
+                if (error.name === 'NotAllowedError') this.statusLabel.innerText = 'Microphone access is needed. Allow it, then try again.';
+                else if (error.message.includes('visit limit')) this.statusLabel.innerText = 'Today’s visit limit is reached. You can still explore the site.';
+            } finally {
+                clearTimeout(deadline);
+                if (current()) this.homeConnecting = null;
+            }
+        })();
+        return this.homeConnecting;
+    }
+
+    onDataChannelOpen() {
+        const channel = this.dc;
+        for (const message of this.messages) {
+            channel.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'message', role: message.role, content: [{ type: message.role === 'user' ? 'input_text' : 'text', text: message.text }] } }));
+        }
+        if (!this.isTextInitiated) {
+            const prompt = this.messages.length ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session." : this.getGreetingPrompt();
+            this.homeGreetingTimer = setTimeout(() => {
+                if (channel === this.dc && channel.readyState === 'open') {
+                    this.homeResponseActive = true;
+                    channel.send(JSON.stringify({ type: 'response.create', response: { instructions: prompt } }));
+                }
+            }, 800);
+        }
+        this.isTextInitiated = false;
+    }
+
+    stopPlayback() {
+        this.homeConnectionGeneration = (this.homeConnectionGeneration || 0) + 1;
+        this.homeAbort?.abort();
+        clearTimeout(this.homeGreetingTimer);
+        this.homeResponseActive = false;
+        this.homeQueuedTexts = [];
+        super.stopPlayback();
+    }
+
+    dispatchText(text) {
+        clearTimeout(this.homeGreetingTimer);
+        if (this.homeResponseActive) {
+            this.homeQueuedTexts.push(text);
+            this.statusLabel.innerText = 'Your message is next. Johnny is finishing a thought.';
+            return;
+        }
+        this.homeResponseActive = true;
+        super.dispatchText(text);
+        this.statusLabel.innerText = 'Johnny is thinking…';
+    }
+
+    onDataChannelMessage(message) {
+        if (message.type === 'response.created') this.homeResponseActive = true;
+        super.onDataChannelMessage(message);
+        if (['response.done', 'response.failed', 'response.cancelled'].includes(message.type)) {
+            this.homeResponseActive = false;
+            if (this.homeQueuedTexts.length && this.dc?.readyState === 'open') this.dispatchText(this.homeQueuedTexts.shift());
+        }
+    }
+
+    async sendTextMessage(text) {
+        // Replace the legacy unbounded polling loop only for this homepage.
+        if (this.homeTextPending) { this.textInput.value = text; return; }
+        if (!this.allowHomeTurn()) return;
+        this.homeTextPending = true;
+        const generation = this.homeTextGeneration;
+        const sendButton = document.getElementById('home-send-btn');
+        sendButton.disabled = true;
+        try {
+            if (this.state === 'idle' || this.state === 'error') {
+                this.isTextInitiated = true;
+                await this.startSession();
+            }
+            if (generation !== this.homeTextGeneration) return;
+            const channel = this.dc;
+            if (!channel || this.state === 'error') throw new Error('Connection unavailable');
+            if (channel.readyState !== 'open') {
+                await new Promise((resolve, reject) => {
+                    const cleanup = () => { clearTimeout(timer); channel.removeEventListener('open', opened); channel.removeEventListener('close', closed); };
+                    const opened = () => { cleanup(); resolve(); };
+                    const closed = () => { cleanup(); reject(new Error('Connection closed')); };
+                    const timer = setTimeout(() => { cleanup(); reject(new Error('Connection timed out')); }, 15000);
+                    channel.addEventListener('open', opened, { once: true });
+                    channel.addEventListener('close', closed, { once: true });
+                });
+            }
+            if (generation !== this.homeTextGeneration || channel !== this.dc) return;
+            this.dispatchText(text);
+        } catch {
+            if (generation !== this.homeTextGeneration) return;
+            if (!this.textInput.value) this.textInput.value = text;
+            this.statusLabel.innerText = 'Your message is still here. Try connecting again.';
+        } finally {
+            this.homeTextPending = false;
+            sendButton.disabled = false;
+        }
+    }
+}
+
 // Global Init with Editor Protection
 function initJohnny() {
     if (window.johnnyInitialized) return;
     window.johnnyInitialized = true;
-    new VoiceWidget();
+    const Widget = detectJohnnyWidgetProfile() === "home" ? HomeVoiceWidget : VoiceWidget;
+    new Widget();
 }
 
 initJohnny();
