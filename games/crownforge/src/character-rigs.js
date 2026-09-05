@@ -1,4 +1,4 @@
-import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js?v=20260905-horsefit1';
+import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js?v=20260905-softelbow1';
 import ashenHearthkin from './roster-art/ashen-hearthkin.js';
 import crownSpearwarden from './roster-art/crown-spearwarden.js';
 import crownShieldbearer from './roster-art/crown-shieldbearer.js';
@@ -21,6 +21,7 @@ function workerActions(type) {
   }]));
 }
 function workerPose(type,state,time,direction,options={}) {
+  options={...options,relaxedWalkArms:type==='villager'};
   const actions=workerActions(type),action=actions[state]??actions.idle;
   if(state==='death') {
     const pose=militaryPose('raider','death',time/action.duration*militaryActions('raider').death.duration,direction,{...options,profileOverride:{...MILITARY_PROFILES.raider,shoulders:12,hips:4.4,scale:1}});

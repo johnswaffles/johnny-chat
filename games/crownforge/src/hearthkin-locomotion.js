@@ -45,7 +45,7 @@ function footCycle(phase,stride) {
   return {z:travel*stride,lift,planted,angle:heel+toe,phase:p};
 }
 
-export function hearthkinLocomotion(state,time,direction,{duration=1.05,id=0,moving=true}={}) {
+export function hearthkinLocomotion(state,time,direction,{duration=1.05,id=0,moving=true,relaxedWalkArms=false}={}) {
   const carrying=state.startsWith('carry_');
   const walking=moving&&(state==='walk'||carrying);
   const phase=((time/duration)%1+1)%1;
@@ -76,15 +76,21 @@ export function hearthkinLocomotion(state,time,direction,{duration=1.05,id=0,mov
       hand=v(sign*8.7,44.2+rise,13);
       elbow=solveAnatomicalLimb(shoulderJoint,hand,17,16,add(shoulderJoint,v(sign*4,-25,1)));
     } else {
-      // Opposite arm and leg lead at contact. The elbow swings in the
-      // sagittal plane; a loaded axe arm has a quieter arc than the free arm.
+      // Opposite arm and leg lead at contact. The main swing follows
+      // the forward/back plane; the loaded axe arm has a quieter arc.
       const armWave=walking?sign*contact:0;
-      const upperAngle=armWave*(index===1?.16:.24)-.015;
-      const elbowFlex=(walking?14+4*Math.sin(phase*TAU+index*Math.PI-.25):12)*rad;
-      const upperRadius=Math.sqrt(17*17-.65*.65), lowerRadius=Math.sqrt(16*16-.2*.2);
-      elbow=add(shoulderJoint,v(sign*.65,-upperRadius*Math.cos(upperAngle),upperRadius*Math.sin(upperAngle)));
+      const relaxed=relaxedWalkArms&&walking;
+      // Crownwarden trial: the elbow sits slightly outside and behind the
+      // shoulder/wrist line. The forearm returns toward the hip instead of
+      // extending the upper arm's almost straight frontal silhouette.
+      // Solve the same anatomy for every view; preserve both bone lengths.
+      const upperAngle=armWave*(index===1?.16:.24)-(relaxed?.085:.015);
+      const elbowFlex=(walking?(relaxed?18:14)+4*Math.sin(phase*TAU+index*Math.PI-.25):12)*rad;
+      const upperOut=relaxed?2.6:.65,lowerOut=relaxed?-2.05:.2;
+      const upperRadius=Math.sqrt(17*17-upperOut*upperOut),lowerRadius=Math.sqrt(16*16-lowerOut*lowerOut);
+      elbow=add(shoulderJoint,v(sign*upperOut,-upperRadius*Math.cos(upperAngle),upperRadius*Math.sin(upperAngle)));
       const forearmAngle=upperAngle+elbowFlex;
-      hand=add(elbow,v(sign*.2,-lowerRadius*Math.cos(forearmAngle),lowerRadius*Math.sin(forearmAngle)));
+      hand=add(elbow,v(sign*lowerOut,-lowerRadius*Math.cos(forearmAngle),lowerRadius*Math.sin(forearmAngle)));
     }
     joints[name+'Shoulder']=shoulderJoint;joints[name+'Elbow']=elbow;joints[name+'Hand']=hand;
     joints[name+'Hip']=hipJoint;joints[name+'Knee']=knee;joints[name+'Ankle']=ankle;

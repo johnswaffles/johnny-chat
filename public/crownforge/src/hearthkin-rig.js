@@ -1,6 +1,6 @@
 import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260904-rosterkin1';
 import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-horsefit1';
-import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260904-rosterkin1';
+import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260905-softelbow1';
 import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js';
 import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js';
 import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js';
@@ -241,7 +241,7 @@ export function hearthkinPose(state = 'idle', time = 0, direction = 0, options =
     braidSway: Math.sin((walking ? cycle * TAU : time * 2) - .7) * (walking ? .085 : .018) * (1 - fall),
   };
   if (state === 'walk' || state.startsWith('carry_') || state === 'idle' && !response && !(options.wardImpact > .01)) {
-    Object.assign(pose, hearthkinLocomotion(state,time,direction,{duration:action.duration,id:options.id,moving:options.moving}));
+    Object.assign(pose, hearthkinLocomotion(state,time,direction,{duration:action.duration,id:options.id,moving:options.moving,relaxedWalkArms:options.relaxedWalkArms}));
     const wristAngle = Math.atan2(pose.rightHand.y-pose.rightElbow.y,pose.rightHand.x-pose.rightElbow.x)-Math.PI/2;
     pose.toolAngle = Math.PI + wristAngle * .65;
     pose.headTilt = 0;

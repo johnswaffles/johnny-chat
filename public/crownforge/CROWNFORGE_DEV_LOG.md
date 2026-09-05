@@ -5027,3 +5027,12 @@ Player review identified remaining inside-out front/back arm surfaces and an axe
 ## September 5, 2026 — Horse anatomy and attachment correction
 
 Player review found the Ashen horse's profile rump looked cut off and both horses' heads did not line up with their necks. Replaced the Ashen profile barrels with two original, independently painted complete croups. Repositioned both tail docks and gave the tails a downward resting hang. Added source-measured head/neck/mane assembly in all four directions, a downward muzzle pitch, shoulder overlap, and independent skull volume so the rear head does not collapse under projection. Added a two-horse close review page. This corrects defects missed by the previous roster acceptance; it does not alter game rules, attack timing, collision or saves. See `CROWNFORGE_HORSE_FIT_RELEASE.md` for art provenance and validation.
+
+
+## September 5, 2026 — Crownwarden Hearthkin relaxed walking elbows
+
+Player feedback identified front/rear walking arms that read as perfectly straight. Scoped this trial to `villager` moving walk only: elbows sit slightly outward and backward relative to the shoulder-to-wrist line, and the forearms return toward the hips. The free arm retains its larger opposite-leg swing; the axe arm keeps a quieter arc. Both 17/16-unit bone lengths and the painted palm attachment remain fixed. The same anatomical pose is projected in all four directions. No new artwork or game-rule changes.
+
+A one-time before/after comparison of every character/action across four views and 33 cycle samples found only `villager/walk` changed; the other 135 character/action families were byte-identical. The projected elbow bow is 2.28–2.34 units, with 21.35–27.24-degree anatomical flex through the cycle. The studio was checked in arm-detail and normal-size views at half and full speed. The other characters will receive no equivalent adjustment until the user requests that rollout. Release marker: `20260905-softelbow1`.
+
+Validation: focused elbow regression 4/4; Hearthkin rig regression 23 actions/four views, including rendered grip and depth checks; full roster motion 12 rigs/544 directional states/44,064 poses/88,128 painted grips. All passed.
