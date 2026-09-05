@@ -1,6 +1,6 @@
-import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260905-wristfit3';
+import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260905-rosterfit1';
 import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-horsefit1';
-import { fitHearthkinProfile } from './hearthkin-surface-fit.js?v=20260905-wristfit3';
+import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260905-rosterfit1';
 import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260905-softelbow1';
 import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js';
 import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js';
@@ -263,7 +263,7 @@ export function hearthkinHandFrame(pose,left=false) {
 }
 
 export function hearthkinPalmSocket(pose,left=false) {
-  if(pose.projectedWork)return pose[left?'leftPalm':'rightPalm'];
+  if(pose.projectedWork||pose.surfacePalms)return pose[left?'leftPalm':'rightPalm'];
   const wrist=left?pose.leftHand:pose.rightHand, elbow=left?pose.leftElbow:pose.rightElbow;
   const angle=Math.atan2(wrist.y-elbow.y,wrist.x-elbow.x)-Math.PI/2;
   const frame=hearthkinHandFrame(pose,left);
@@ -272,7 +272,16 @@ export function hearthkinPalmSocket(pose,left=false) {
 
 export function hearthkinHandTransform(pose,left=false) {
   const frame=hearthkinHandFrame(pose,left),wrist=pose[left?'leftHand':'rightHand'],elbow=pose[left?'leftElbow':'rightElbow'];
-  if(!pose.projectedWork)return {frame,width:frame.width,height:frame.height,angle:Math.atan2(wrist.y-elbow.y,wrist.x-elbow.x)-Math.PI/2};
+  if(pose.surfacePalms) {
+    const palm=hearthkinPalmSocket(pose,left),dx=wrist.x-elbow.x,dy=wrist.y-elbow.y,length=Math.max(.000001,Math.hypot(dx,dy));
+    const across={x:dy/length,y:-dx/length},lateral=(frame.grip[0]-frame.root[0])*frame.width;
+    const longitudinal=(frame.grip[1]-frame.root[1])*frame.height;
+    // Foreshorten/shear the longitudinal axis instead of shrinking the
+    // wrist breadth when a curled hand points almost toward the camera.
+    // Both measured source anchors still map exactly to wrist and palm.
+    return {frame,width:frame.width,height:frame.height,angle:0,matrix:[across.x,across.y,(palm.x-wrist.x-across.x*lateral)/longitudinal,(palm.y-wrist.y-across.y*lateral)/longitudinal]};
+  }
+  if(!pose.projectedWork&&!pose.surfacePalms)return {frame,width:frame.width,height:frame.height,angle:Math.atan2(wrist.y-elbow.y,wrist.x-elbow.x)-Math.PI/2};
   const palm=hearthkinPalmSocket(pose,left),dx=palm.x-wrist.x,dy=palm.y-wrist.y,length=Math.hypot(dx,dy);
   const authoredX=(frame.grip[0]-frame.root[0])*frame.width;
   const width=frame.width*Math.min(1,length/Math.max(.0001,Math.abs(authoredX))* .98);
@@ -420,7 +429,7 @@ export class HearthkinRig {
       }
       this.transitions.set(unit, { state, direction, pose, from: amount < 1 ? from : null, started });
     }
-    if((this.definition?.id??unit.type??'villager')==='villager')pose=fitHearthkinProfile(pose);
+    pose=fitCharacterSurfaces(pose,this.definition?.id?this.definition:{id:unit.type??'villager'});
     if (!this.part(view, 0)) return false;
     ctx.save(); ctx.translate(anchor.x, anchor.y); ctx.scale(size / 100, size / 100); ctx.globalAlpha *= alpha;
     ctx.imageSmoothingEnabled = true;
@@ -527,7 +536,7 @@ export class HearthkinRig {
     const drawArm = left => {
       const a = left ? pose.leftShoulder : pose.rightShoulder, b = left ? pose.leftElbow : pose.rightElbow, c = left ? pose.leftHand : pose.rightHand;
       const parts=(this.armParts??HEARTHKIN_ARM_PARTS)[view]?.[left?'left':'right'];
-      const upper=()=>parts?attachedSegment(parts.upper,a,b,dimensions.upperArm??9.2):segment(left?4:5,a,b,9.2);
+      const upper=()=>parts?attachedSegment(parts.upper,a,b,parts.upper.width??dimensions.upperArm??9.2):segment(left?4:5,a,b,9.2);
       const lower=()=>{
         if(parts?.lower.clipAtWrist) {
           // A diagonal painted forearm needs extra source pixels below its
@@ -543,15 +552,26 @@ export class HearthkinRig {
         } else if(parts)attachedSegment(parts.lower,b,c,parts.lower.width??dimensions.forearm??5.4);
         else segment(left?6:7,b,c,5.4,1.8);
       };
-      if((this.definition?.id??unit.type??'villager')==='villager') {
+      if(parts?.sleeveOverForearm||(this.definition?.id??unit.type??'villager')==='villager') {
         // The rolled sleeve covers the forearm insertion at the elbow.
         lower();upper();
       } else {upper();lower();}
     };
     const drawHand = left => {
       const wrist = left ? pose.leftHand : pose.rightHand;
-      const {frame,width,height,angle}=hearthkinHandTransform(pose,left);
-      draw(frame.key, frame.index, wrist, width, height, angle, frame.root[0], frame.root[1]);
+      const {frame,width,height,angle,matrix}=hearthkinHandTransform(pose,left);
+      if(frame.clipAtWrist) {
+        const elbow=left?pose.leftElbow:pose.rightElbow,dx=wrist.x-elbow.x,dy=wrist.y-elbow.y;
+        const length=Math.max(.000001,Math.hypot(dx,dy)),ux=dx/length,uy=dy/length,nx=uy,ny=-ux;
+        const at={x:wrist.x-ux*.15,y:wrist.y-uy*.15};
+        ctx.save();ctx.beginPath();ctx.moveTo(at.x+nx*30,at.y+ny*30);ctx.lineTo(at.x-nx*30,at.y-ny*30);
+        ctx.lineTo(at.x-nx*30+ux*100,at.y-ny*30+uy*100);ctx.lineTo(at.x+nx*30+ux*100,at.y+ny*30+uy*100);ctx.closePath();ctx.clip();
+      }
+      if(matrix) {
+        ctx.save();ctx.transform(...matrix,wrist.x,wrist.y);
+        draw(frame.key,frame.index,point(0,0),width,height,0,frame.root[0],frame.root[1]);ctx.restore();
+      } else draw(frame.key, frame.index, wrist, width, height, angle, frame.root[0], frame.root[1]);
+      if(frame.clipAtWrist)ctx.restore();
     };
     const drawTool = () => {
       if (!pose.tool) return;

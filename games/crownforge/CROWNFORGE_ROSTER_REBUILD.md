@@ -163,3 +163,8 @@ A generated image, a registered clip, a green structural test, a local screensho
 - 2026-09-05, Crownwarden proportions follow-up: corrected undersized hands and excessive forearm ends using measured wrist creases and painted widths. Seated the near profile sleeves at the torso's actual armholes, with connected free arms and fixed-palm work reach solving. Added rendered wrist and profile-fit checks because prior endpoint tests had not established proportional surfaces or torso socket alignment. Canonical action motion and the other 11 characters remain unchanged. See `CROWNFORGE_DEV_LOG.md`, release `20260905-armfit2`.
 
 - 2026-09-05, Crownwarden wrist refinement: enlarged profile forearms/hands together and updated both profile work arms for the larger palm reach without moving tool contacts. Magnified review identified proximal skin overpaint, angled crop clipping, and a bare-skin color cut that earlier endpoint checks missed. Wrist-plane clipping and a narrow bare-wrist material transition address these while preserving crisp leather cuffs. Added stricter actual-edge and cached-mask checks. See `CROWNFORGE_DEV_LOG.md`, release `20260905-wristfit3`.
+
+
+## September 5, 2026 — Approved worker fitting rolled out to the roster
+
+After approving Crownwarden Hearthkin's `wristfit3` result, the player requested the necessary same-class corrections for every other current character. All eleven received individual source measurements and fitting; the approved Crown path remains. This follow-up refines the already-rebuilt roster. The per-character review, rendering decisions and current evidence are recorded in [CROWNFORGE_ROSTER_SURFACE_FIT.md](CROWNFORGE_ROSTER_SURFACE_FIT.md).

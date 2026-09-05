@@ -203,17 +203,26 @@ test('actual rendered forearm and hand silhouettes meet at comparable widths thr
   }
 });
 
-test('all eleven other characters retain their own upper-before-lower arm painter order',()=>{
+test('all eleven other characters honor their measured per-arm sleeve painter order',()=>{
+  let identities=0,layeredSleeves=0,exposedElbows=0;
   for(const[type,definition]of Object.entries(CHARACTER_RIGS)){
     if(type==='villager')continue;
+    identities++;
     for(let direction=0;direction<4;direction++){
       const{draws}=recordDraw(type,direction),view=views[direction];
       for(const side of ['left','right']){
         const parts=definition.arms[view][side],upper=draws.findIndex(d=>d.key===parts.upper.key&&d.index===parts.upper.index),lower=draws.findIndex(d=>d.key===parts.lower.key&&d.index===parts.lower.index);
-        assert.ok(upper>=0&&lower>upper,`${type}/${view}/${side} keeps its own previous arm stacking`);
+        assert.ok(upper>=0&&lower>=0&&upper!==lower,`${type}/${view}/${side} renders both arm components`);
+        if(parts.sleeveOverForearm){
+          assert.ok(lower<upper,`${type}/${view}/${side} sleeve covers the forearm insertion`);layeredSleeves++;
+        }else{
+          assert.ok(upper<lower,`${type}/${view}/${side} exposed elbow retains the authored upper-before-lower stacking`);exposedElbows++;
+        }
       }
     }
   }
+  assert.equal(identities,11);assert.equal(layeredSleeves+exposedElbows,88,'every arm in all four views is checked');
+  assert.ok(layeredSleeves>0&&exposedElbows>0,'both covered-cuff and exposed-elbow rendering paths are exercised');
 });
 
 function insidePolygon(point,polygon){

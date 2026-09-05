@@ -1,4 +1,4 @@
-import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js?v=20260905-wristfit3';
+import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js?v=20260905-rosterfit1';
 import ashenHearthkin from './roster-art/ashen-hearthkin.js';
 import crownSpearwarden from './roster-art/crown-spearwarden.js';
 import crownShieldbearer from './roster-art/crown-shieldbearer.js';
@@ -13,6 +13,7 @@ import ashenRaider from './roster-art/ashen-raider.js';
 import { militaryActions, militaryPose, MILITARY_PROFILES } from './military-motion.js';
 import { mountedActions, mountedPose } from './mounted-motion.js?v=20260905-horsefit1';
 import { UNIT_TYPES } from './config.js';
+import {calibrateCharacterSurfaces} from './character-surface-calibration.js?v=20260905-rosterfit1';
 
 function workerActions(type) {
   const unit=UNIT_TYPES[type],timing=unit.attackTiming??{anticipation:.25,contact:.45,recovery:.3};
@@ -21,7 +22,7 @@ function workerActions(type) {
   }]));
 }
 function workerPose(type,state,time,direction,options={}) {
-  options={...options,relaxedWalkArms:type==='villager'};
+  options={...options,relaxedWalkArms:true};
   const actions=workerActions(type),action=actions[state]??actions.idle;
   if(state==='death') {
     const pose=militaryPose('raider','death',time/action.duration*militaryActions('raider').death.duration,direction,{...options,profileOverride:{...MILITARY_PROFILES.raider,shoulders:12,hips:4.4,scale:1}});
@@ -44,7 +45,7 @@ function workerPose(type,state,time,direction,options={}) {
 
 // Entries are added only once the character owns four usable art views.
 // The scope ledger retains every unfinished current-game character.
-export const CHARACTER_RIGS={
+const BASE_CHARACTER_RIGS={
   villager:{id:'villager',label:'Crownwarden Hearthkin',faction:'Crownwardens',family:'worker',actions:workerActions('villager'),samplePose:(...args)=>workerPose('villager',...args)},
   ashenForager:{...ashenHearthkin,id:'ashenForager',label:'Ashen Hearthkin',faction:'Ashen',family:'worker',actions:workerActions('ashenForager'),samplePose:(...args)=>workerPose('ashenForager',...args)},
   soldier:{...crownGuard,id:'soldier',label:'Crown Guard',faction:'Crownwardens',family:'foot',actions:militaryActions('soldier'),samplePose:(...args)=>militaryPose('soldier',...args),dimensions:{torso:28,upperArm:10.5,forearm:6.5,headHeight:28,cloakWidth:29,cloakHeight:43}},
@@ -58,6 +59,8 @@ export const CHARACTER_RIGS={
   hidewall:{...ashenHidewall,id:'hidewall',label:'Ashen Hidewall',faction:'Ashen',family:'foot',actions:militaryActions('hidewall'),samplePose:(...args)=>militaryPose('hidewall',...args),dimensions:{torso:33,torsoSide:25,upperArm:12.5,forearm:8,headWidth:19,headHeight:26,cloakWidth:36,cloakHeight:40}},
   raider:{...ashenRaider,id:'raider',label:'Ashen Raider',faction:'Ashen',family:'foot',actions:militaryActions('raider'),samplePose:(...args)=>militaryPose('raider',...args),dimensions:{torso:31,torsoSide:23,upperArm:11.5,forearm:7.2,headWidth:19,headHeight:25,cloakWidth:32,cloakHeight:38}},
 };
+
+export const CHARACTER_RIGS=Object.fromEntries(Object.entries(BASE_CHARACTER_RIGS).map(([type,definition])=>[type,calibrateCharacterSurfaces(definition)]));
 
 class LazyCharacterRigs extends Map {
   // Membership describes supported characters; iteration and size describe

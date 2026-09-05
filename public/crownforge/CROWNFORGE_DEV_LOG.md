@@ -5068,3 +5068,10 @@ Validation: surface regression 8/8, including clip-aware PNG edge sampling, 5% w
 Delivery: `e5657d4` is live as `20260905-wristfit3`. Build and changed-script syntax checks passed; all 24 changed source/production files matched. Eight deployed artwork/fit/rig/registry/renderer/main/studio files matched the tested source byte for byte. Live four-view walking review showed the enlarged profile limbs and refined wrist joins. The corrected Crownwarden Arm detail preview remains open and playing.
 
 Preview-link follow-up: the user reopened the removed temporary `dev/wrist-fit-preview.html` through a local file link and received `ERR_FILE_NOT_FOUND`. Restored that path as a small HTML shortcut to the live Crownwarden studio, with a visible fallback link and matching production copy. The live studio returned HTTP 200 and was opened and visually verified playing; the browser tool's local-file URL policy prevented automatic verification of the file shortcut itself. Use the direct HTTPS studio URL when sharing this preview.
+
+
+## September 5, 2026 — Full-roster wrist, elbow and shoulder fitting
+
+The player approved Crownwarden Hearthkin and authorized applying the necessary fixes to every other character. Preserved the approved Crown path; individually calibrated the other eleven identities' wrists, hand/forearm breadth, profile cap/socket placement and costume overlap. Affine hand surfaces keep their width during foreshortening while retaining exact original painted grips. Opposite wrist-plane clips remove duplicate stumps without diagonal crop gaps. Ashen Hearthkin now uses the approved gentle walking elbow bend. Curved Guard cuff masks remove its remaining skin wedges; continuous Spearwarden lower sleeves cover hollow upper openings. A mounted-death reach exception keeps the shoulder seated while moving held attachments together. Original PNGs and horse motion remain untouched.
+
+Full scope, per-character review and verification are in [the surface-fit release record](CROWNFORGE_ROSTER_SURFACE_FIT.md). Release marker: `20260905-rosterfit1`.

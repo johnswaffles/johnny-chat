@@ -5,6 +5,7 @@ import {HearthkinRig} from '../src/hearthkin-rig.js';
 import {HEARTHKIN_RIG_ART,HEARTHKIN_ARM_PARTS,HEARTHKIN_HAND_PARTS} from '../src/hearthkin-rig-art.js';
 import {projectHearthkin} from '../src/hearthkin-locomotion.js';
 import {fitHearthkinProfile} from '../src/hearthkin-surface-fit.js';
+import {fitCharacterSurfaces} from '../src/character-surface-fit.js';
 
 const crown=CHARACTER_RIGS.villager,views=['front','right','back','left'];
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,(a.z??0)-(b.z??0));
@@ -145,19 +146,32 @@ test('production draw uses the fitted Crown source socket across actions and tra
   }
 });
 
-test('all eleven other identities keep their own canonical rendered shoulder anchors',()=>{
+test('all eleven other identities render their own calibrated shoulder sockets without moving far shoulders',()=>{
+  let identities=0,sockets=0;
   for(const[type,definition]of Object.entries(CHARACTER_RIGS)){
     if(type==='villager')continue;
+    identities++;assert.ok(definition.surfaceCalibration,`${type} owns a source calibration`);
     const rig=recordingRig(type);
-    for(let direction=0;direction<4;direction++){
-      const time=definition.actions.walk.duration*.25,pose=definition.samplePose('walk',time,direction,{id:5,moving:true});
+    for(let direction=0;direction<4;direction++)for(const phase of [0,.125,.25,.5,.75]){
+      const time=definition.actions.walk.duration*phase,pose=definition.samplePose('walk',time,direction,{id:5,moving:true});
+      const snapshot=structuredClone(pose),fit=fitCharacterSurfaces(pose,definition);
+      assert.deepEqual(pose,snapshot,`${type} fitting leaves canonical sampling unchanged`);
       const{ctx,draws}=recordingContext();assert.ok(rig.draw(ctx,{type,id:5,animationState:'walk',facing:direction},{x:0,y:0},100,1,time));
       for(const side of ['left','right']){
         const upper=definition.arms[views[direction]][side].upper,draw=draws.find(d=>d.key===upper.key&&d.index===upper.index);
         assert.ok(draw,`${type}/${direction}/${side} upper arm is rendered`);
-        const shoulder=pose[side+'Shoulder'],scale=definition.renderScale??1;
-        near(pointOnDraw(draw,...upper.root),{x:shoulder.x*scale,y:shoulder.y*scale},`${type}/${direction}/${side} keeps original shoulder`);
+        const shoulder=fit[side+'Shoulder'],scale=definition.renderScale??1;
+        near(pointOnDraw(draw,...upper.root),{x:shoulder.x*scale,y:shoulder.y*scale},`${type}/${direction}/${side} draws its fitted shoulder`);
+        const nearSide=direction===1?'right':'left',socket=definition.surfaceCalibration.profileSockets[views[direction]];
+        if(socket&&side===nearSide){
+          const replacement=definition.views[views[direction]].overrides?.[1];
+          const torso=draws.find(d=>d.key===(replacement?.key??views[direction])&&d.index===(replacement?.index??1));
+          assert.ok(torso,`${type}/${direction} torso is rendered`);
+          near(pointOnDraw(draw,...upper.root),pointOnDraw(torso,...socket),`${type}/${direction} shoulder aligns with its own painted socket`);
+          sockets++;
+        }else near(fit[side+'Shoulder'],pose[side+'Shoulder'],`${type}/${direction}/${side} uncalibrated shoulder remains at its canonical position`);
       }
     }
   }
+  assert.equal(identities,11);assert.equal(sockets,110,'both authored profile sockets checked at five walk phases for every other identity');
 });

@@ -68,15 +68,25 @@ test('relaxed elbows retain the opposed gait and continuous loop',()=>{
   }
 });
 
-test('the default Ashen walk and both workers idle/carry poses retain their existing anatomy',()=>{
+test('both workers use relaxed walking while idle, carrying and stopped poses retain their existing anatomy',()=>{
   const carries=['carry_wood','carry_food','carry_stone','carry_gold','carry_supplies'];
-  for(const[rig,states]of [[ash,['idle','walk',...carries]],[crown,['idle',...carries]]])for(const state of states)for(let direction=0;direction<4;direction++)for(const phase of [0,.125,.25,.5,.75,1]){
+  for(const rig of [ash,crown])for(const state of ['idle',...carries])for(let direction=0;direction<4;direction++)for(const phase of [0,.125,.25,.5,.75,1]){
     const options={id:5,moving:true},actual=rig.samplePose(state,rig.actions[state].duration*phase,direction,options);
     const expected=hearthkinPose(state,HEARTHKIN_ACTIONS[state].duration*phase,direction,options);
     assert.deepEqual(actual,expected,`${rig.id}/${state} must retain the default worker pose`);
   }
-  for(let direction=0;direction<4;direction++)for(const phase of [0,.25,.5,.75]){
+  for(let direction=0;direction<4;direction++)for(const phase of [0,.125,.25,.5,.75,1]){
+    const crownPose=sample(phase,direction),ashenPose=ash.samplePose('walk',ash.actions.walk.duration*phase,direction,{id:5,moving:true});
+    assert.deepEqual(ashenPose.anatomical,crownPose.anatomical,'the Ashen worker receives the approved anatomical walking bend in every view');
+    for(const side of ['left','right']){
+      const j=ashenPose.anatomical,a=j[side+'Shoulder'],b=j[side+'Elbow'],c=j[side+'Hand'],sign=side==='left'?-1:1;
+      near(distance(a,b),17,'Ashen upper arm length');near(distance(b,c),16,'Ashen forearm length');
+      assert.ok(sign*(b.x-a.x)>1.8&&sign*(b.x-a.x)<3.25,'Ashen upper arm bends moderately outward');
+      assert.ok(sign*(c.x-b.x)<0,'Ashen forearm returns toward the hip');
+    }
+  }
+  for(const rig of [ash,crown])for(let direction=0;direction<4;direction++)for(const phase of [0,.25,.5,.75]){
     const options={id:5,moving:false};
-    assert.deepEqual(sample(phase,direction,options),hearthkinPose('walk',duration*phase,direction,options),'stopped Crown worker does not keep the moving arm treatment');
+    assert.deepEqual(rig.samplePose('walk',rig.actions.walk.duration*phase,direction,options),hearthkinPose('walk',duration*phase,direction,options),`stopped ${rig.id} does not keep the moving arm treatment`);
   }
 });

@@ -1,7 +1,7 @@
 import { UNIT_TYPES } from '../src/config.js';
-import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260905-wristfit3';
-import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260905-wristfit3';
-import { fitHearthkinProfile } from '../src/hearthkin-surface-fit.js?v=20260905-wristfit3';
+import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260905-rosterfit1';
+import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260905-rosterfit1';
+import {fitCharacterSurfaces} from '../src/character-surface-fit.js?v=20260905-rosterfit1';
 
 const canvas = document.querySelector('#stage');
 const ctx = canvas.getContext('2d');
@@ -109,7 +109,7 @@ function frame(now) {
     if(ready===rig.readiness().length){shadow(x,y,size);drawHearthkinWard(ctx,unit,{x,y},size,now,true);rig.draw(ctx,unit,{x,y},size,1,t);drawHearthkinWard(ctx,unit,{x,y},size,now);}
     if(joints.checked){
       let pose=CHARACTER_RIGS[character.value].samplePose(action.value,t,direction);
-      if(character.value==='villager')pose=fitHearthkinProfile(pose);
+      pose=fitCharacterSurfaces(pose,CHARACTER_RIGS[character.value]);
       drawJointGuide(pose,x,y,size*(CHARACTER_RIGS[character.value].renderScale??1));
     }
     ctx.restore();
