@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#09111f">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071b25">
   <title>Cozy Search — Johnny's Game Shelf</title>
-  <link rel="stylesheet" href="/cozy-search/cozy-search.css?v=cozy-search-2026-09">
+  <meta name="description" content="A little discovery. A little magic. Find hidden words in a moonlit observatory and bring your constellation to life.">
+  <link rel="preload" as="image" href="/cozy-search/assets/enchanted-observatory-v1.jpg">
+  <link rel="stylesheet" href="/cozy-search/cozy-search.css?v=cozy-observatory-2026-09-04-clear-letters">
 </head>
 <body>
-  <div class="ambient ambient-one" aria-hidden="true"></div>
-  <div class="ambient ambient-two" aria-hidden="true"></div>
-  <div class="ambient-grid" aria-hidden="true"></div>
-  <div class="sky-noise" aria-hidden="true"></div>
+  <div class="observatory-world" aria-hidden="true"></div>
+  <div class="world-mist" aria-hidden="true"></div>
 
   <header class="site-nav">
     <a class="brand" href="/">justaskjohnny.com</a>
@@ -37,10 +37,10 @@
   <main class="game-shell">
     <section class="game-intro">
       <div>
-        <p class="eyebrow intro-eyebrow"><i aria-hidden="true"></i>A tiny focus ritual</p>
+        <p class="eyebrow intro-eyebrow"><i aria-hidden="true"></i>The moonlit observatory</p>
         <h1>Cozy Search <span>✦</span></h1>
-        <p class="lede">Find the hidden words. Follow the little sparks.</p>
-        <div class="intro-badges" aria-hidden="true"><span>Celestial search console</span><span><i></i> Field online</span></div>
+        <p class="lede">A little discovery. A little magic.</p>
+
       </div>
       <div class="game-status" aria-live="polite">
         <span class="status-dot"></span>
@@ -59,7 +59,7 @@
       <div class="game-layout">
         <div class="board-stage">
           <div class="stage-heading">
-            <div><span class="eyebrow">Search field</span><strong id="difficulty-label">Easy glow</strong></div>
+            <div><span class="eyebrow">Your star chart</span><strong id="difficulty-label">Easy glow</strong></div>
             <div class="stage-readout">
               <span id="board-hint">Drag a line or tap two letters</span>
               <div id="field-meter" class="field-meter" role="img" aria-label="0 percent of words charted">
@@ -67,22 +67,22 @@
               </div>
             </div>
           </div>
-          <div class="grid-wrap">
-            <canvas id="starfield-layer" class="starfield-layer" aria-hidden="true"></canvas>
-            <div class="orbital-reticle" aria-hidden="true"><i></i><i></i><i></i></div>
-            <div class="grid-halo" aria-hidden="true"></div>
-            <div id="word-grid" class="word-grid" role="grid" aria-label="Cozy Search puzzle grid"></div>
-            <div class="field-sweep" aria-hidden="true"></div>
-            <div id="constellation-layer" class="constellation-layer" aria-hidden="true"></div>
-            <div id="discovery-layer" class="discovery-layer" aria-hidden="true"></div>
+          <div class="sky-map" role="img" aria-label="0 of 5 constellation stars lit">
+            <span class="sky-map-label">Your constellation <b id="sky-count">0 / 5</b></span>
+            <canvas id="observatory-sky" aria-hidden="true"></canvas>
           </div>
-          <div class="stage-footer"><span id="puzzle-code">Puzzle 001</span><span><i></i>New sky map every game</span></div>
+          <div class="grid-wrap">
+            <div id="word-grid" class="word-grid" role="grid" aria-label="Cozy Search puzzle grid"></div>
+          </div>
+          <canvas id="bloom-canvas" aria-hidden="true"></canvas>
+          <div class="bloom-caption" aria-hidden="true"><span id="bloom-kicker">Beautifully found</span><strong id="bloom-word"></strong></div>
+          <div class="stage-footer"><span id="puzzle-code">Puzzle 001</span><span><i></i>Every word lights a star</span></div>
         </div>
 
         <aside class="side-panel">
           <section class="panel-card words-card" aria-labelledby="words-title">
             <div class="panel-heading">
-              <span class="eyebrow">Your trail</span>
+              <span class="eyebrow">A little guidance</span>
               <strong id="words-title">Hidden words</strong>
               <span id="words-left" class="panel-count">5 left</span>
               <button id="word-list-toggle" class="panel-toggle" type="button" aria-expanded="false" aria-controls="word-list-content">
@@ -91,7 +91,7 @@
             </div>
             <div id="word-list-content" class="word-list-content" hidden>
               <div class="list-progress" aria-label="Search progress">
-                <div class="list-progress-heading"><span class="eyebrow">Field signal</span><strong id="words-progress-label">0%</strong></div>
+                <div class="list-progress-heading"><span class="eyebrow">Words discovered</span><strong id="words-progress-label">0%</strong></div>
                 <div class="progress-track"><span id="words-progress-fill"></span></div>
               </div>
               <ul id="word-list" class="word-list" aria-live="polite"></ul>
@@ -134,30 +134,10 @@
     </section>
   </main>
 
-  <div id="celebration" class="celebration" aria-live="polite" aria-hidden="true">
-    <div class="celebration-rays" aria-hidden="true"></div>
-    <div class="celebration-horizon" aria-hidden="true"></div>
-    <div class="celebration-flare" aria-hidden="true"></div>
-    <div class="celebration-orbit celebration-orbit-one" aria-hidden="true"></div>
-    <div class="celebration-orbit celebration-orbit-two" aria-hidden="true"></div>
-    <div class="celebration-ring celebration-ring-one" aria-hidden="true"></div>
-    <div class="celebration-ring celebration-ring-two" aria-hidden="true"></div>
-    <div id="celebration-sparks" class="celebration-sparks" aria-hidden="true"></div>
-    <div id="celebration-glyphs" class="celebration-glyphs" aria-hidden="true"></div>
-    <div class="celebration-core">
-      <span id="celebration-kicker">WORD FOUND</span>
-      <strong id="celebration-word">GLOW</strong>
-      <div class="celebration-stats" aria-label="Search progress">
-        <span><b id="celebration-stat-found">1/5</b><small>words lit</small></span>
-        <span><b id="celebration-stat-time">00:00</b><small>time</small></span>
-        <span><b id="celebration-stat-streak">1</b><small>streak</small></span>
-      </div>
-      <small id="celebration-copy">A bright little breakthrough.</small>
-    </div>
-  </div>
-
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" preload="metadata"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/cozy-search/cozy-search.js?v=cozy-search-2026-09"></script>
+  <script src="/cozy-search/ambient-world.js?v=cozy-observatory-2026-09-04-ambient"></script>
+  <script src="/cozy-search/observatory.js?v=cozy-observatory-2026-09-04"></script>
+  <script src="/cozy-search/cozy-search.js?v=cozy-observatory-2026-09-04-clear-letters"></script>
 </body>
 </html>

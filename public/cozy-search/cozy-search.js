@@ -3,10 +3,6 @@
 
   const gridElement = document.getElementById("word-grid");
   const searchCard = document.querySelector(".search-card");
-  const constellationLayer = document.getElementById("constellation-layer");
-  const discoveryLayer = document.getElementById("discovery-layer");
-  const starfieldCanvas = document.getElementById("starfield-layer");
-  const gridWrap = gridElement?.closest(".grid-wrap");
   const wordListElement = document.getElementById("word-list");
   const newGameButton = document.getElementById("new-game");
   const difficultyButtons = [...document.querySelectorAll("[data-difficulty]")];
@@ -19,15 +15,6 @@
   const statusText = document.getElementById("status-text");
   const boardHint = document.getElementById("board-hint");
   const puzzleCode = document.getElementById("puzzle-code");
-  const celebration = document.getElementById("celebration");
-  const celebrationKicker = document.getElementById("celebration-kicker");
-  const celebrationWord = document.getElementById("celebration-word");
-  const celebrationStatFound = document.getElementById("celebration-stat-found");
-  const celebrationStatTime = document.getElementById("celebration-stat-time");
-  const celebrationStatStreak = document.getElementById("celebration-stat-streak");
-  const celebrationCopy = document.getElementById("celebration-copy");
-  const celebrationSparks = document.getElementById("celebration-sparks");
-  const celebrationGlyphs = document.getElementById("celebration-glyphs");
   const music = document.getElementById("game-music");
   const musicButton = document.getElementById("music-button");
   const musicButtonLabel = document.getElementById("music-button-label");
@@ -41,8 +28,6 @@
   const fieldMeter = document.getElementById("field-meter");
   const fieldMeterFill = document.getElementById("field-meter-fill");
   const fieldMeterLabel = document.getElementById("field-meter-label");
-  const reducedMotionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const finePointerMedia = window.matchMedia("(pointer: fine)");
 
   const DIFFICULTIES = {
     easy: { label: "Easy glow", copy: "A soft landing with clear paths.", size: 8, wordCount: 5, reverse: false, directionNames: ["across", "down"] },
@@ -68,14 +53,7 @@
     { dr: -1, dc: -1, name: "diagonal" },
     { dr: -1, dc: 1, name: "diagonal" }
   ];
-  const FOUND_COLORS = ["#9bf3d0", "#72e8ff", "#ffd86b", "#b995ff", "#ff83bd", "#9fb6ff"];
-  const WORLD_PALETTES = {
-    easy: ["#72e8ff", "#84f2c2", "#b995ff"],
-    casual: ["#84f2c2", "#72e8ff", "#ffd86b"],
-    tricky: ["#b995ff", "#72e8ff", "#ff83bd"],
-    hard: ["#ff83bd", "#b995ff", "#ffd86b"],
-    "very-hard": ["#ff6fae", "#b995ff", "#ffd86b"]
-  };
+  const FOUND_COLORS = ["#addfc5", "#acdcd9", "#e6cd91", "#c3b5dd", "#dbb6bc", "#bacbe0"];
   const SOUNDTRACKS = {
     cozy: { src: "/home/cozy-builder-theme.mp3", label: "Johnny's Cozy Theme" },
     "dreamy-clouds": { src: "/tetris/audio/dreamy-clouds.mp3", label: "Dreamy Clouds", loopTrimSeconds: 2 },
@@ -95,17 +73,9 @@
   let soundtrackId = "cozy";
   let activeTrackId = "cozy";
   let loopAllIndex = 0;
-  let celebrationTimer = 0;
-  let celebrationDelayTimer = 0;
-  let discoveryTimer = 0;
-  let starfieldFrame = 0;
-  let starfieldLastPaint = 0;
-  let starfieldStars = [];
-  let lightFrame = 0;
   let resizeFrame = 0;
   let pointerMoveFrame = 0;
   let latestPointerMove = null;
-  let boardVisible = true;
   let state = null;
   let pointerSession = null;
   let previewCellElements = [];
@@ -215,12 +185,14 @@
     previewCellElements.forEach((cell) => cell.classList.remove("is-preview", "is-anchor"));
     previewCellElements = [];
     state.previewPath = [];
+    window.CozyObservatory?.preview([]);
   };
 
   const setPreview = (path) => {
     previewCellElements.forEach((cell) => cell.classList.remove("is-preview", "is-anchor"));
     previewCellElements = [];
     state.previewPath = path;
+    window.CozyObservatory?.preview(path.map(cellElement).filter(Boolean));
     path.forEach((point, index) => {
       const cell = cellElement(point);
       if (!cell || state.foundCells.has(cellKey(point))) return;
@@ -275,274 +247,13 @@
       gridElement.appendChild(cell);
     }));
     state.foundPaths.forEach((path, index) => paintFoundPath(path, FOUND_COLORS[index % FOUND_COLORS.length]));
-    renderConstellationTrails();
-  };
-
-  const pointsForPath = (path, layerRect) => path.map((point) => {
-    const cell = cellElement(point);
-    if (!cell) return null;
-    const rect = cell.getBoundingClientRect();
-    return { x: rect.left + rect.width / 2 - layerRect.left, y: rect.top + rect.height / 2 - layerRect.top };
-  }).filter(Boolean);
-
-  const drawConstellationPath = (path, pathIndex, { animate = false } = {}) => {
-    if (!constellationLayer) return;
-    const layerRect = constellationLayer.getBoundingClientRect();
-    if (!layerRect.width || !layerRect.height) return;
-    const points = pointsForPath(path, layerRect);
-    if (points.length < 2) return;
-    const start = points[0];
-    const end = points[points.length - 1];
-    const distance = Math.hypot(end.x - start.x, end.y - start.y);
-    const angle = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
-    const color = FOUND_COLORS[pathIndex % FOUND_COLORS.length];
-    const line = document.createElement("span");
-    line.className = `constellation-line${animate ? " is-new" : ""}`;
-    line.style.left = `${start.x}px`;
-    line.style.top = `${start.y}px`;
-    line.style.width = `${distance}px`;
-    line.style.setProperty("--trail-angle", `${angle}deg`);
-    line.style.setProperty("--trail-color", color);
-    line.style.setProperty("--trail-delay", "90ms");
-    constellationLayer.appendChild(line);
-    points.forEach((point, pointIndex) => {
-      const node = document.createElement("i");
-      node.className = `constellation-node${animate ? " is-new" : ""}`;
-      node.style.left = `${point.x}px`;
-      node.style.top = `${point.y}px`;
-      node.style.setProperty("--trail-color", color);
-      node.style.setProperty("--trail-delay", `${140 + pointIndex * 34}ms`);
-      constellationLayer.appendChild(node);
-    });
-  };
-
-  const renderConstellationTrails = () => {
-    if (!constellationLayer) return;
-    constellationLayer.innerHTML = "";
-    if (!state?.foundPaths.length) return;
-    state.foundPaths.forEach((path, pathIndex) => drawConstellationPath(path, pathIndex));
-  };
-
-  const appendConstellationTrail = (path) => drawConstellationPath(path, state.foundPaths.length - 1, { animate: true });
-
-  const starfieldContext = starfieldCanvas?.getContext("2d", { alpha: true });
-
-  const paintStarfield = (now = performance.now()) => {
-    if (!starfieldCanvas || !starfieldContext) return;
-    const width = Number(starfieldCanvas.dataset.width) || 0;
-    const height = Number(starfieldCanvas.dataset.height) || 0;
-    if (!width || !height) return;
-    starfieldContext.clearRect(0, 0, width, height);
-    const palette = WORLD_PALETTES[state?.difficultyKey] || WORLD_PALETTES.easy;
-    const calmFrame = reducedMotionMedia.matches;
-
-    starfieldContext.lineWidth = .65;
-    for (let index = 0; index < Math.min(8, starfieldStars.length - 1); index += 1) {
-      const from = starfieldStars[index];
-      const to = starfieldStars[(index * 5 + 7) % starfieldStars.length];
-      starfieldContext.beginPath();
-      starfieldContext.moveTo(from.x, from.y);
-      starfieldContext.lineTo(to.x, to.y);
-      starfieldContext.strokeStyle = `${palette[index % palette.length]}18`;
-      starfieldContext.stroke();
-    }
-
-    starfieldStars.forEach((star, index) => {
-      const pulse = calmFrame ? .72 : .48 + Math.sin(now * star.speed + star.phase) * .24;
-      starfieldContext.globalAlpha = Math.max(.18, pulse);
-      starfieldContext.fillStyle = palette[star.colorIndex % palette.length];
-      starfieldContext.beginPath();
-      starfieldContext.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-      starfieldContext.fill();
-      if (index % 9 === 0) {
-        starfieldContext.globalAlpha = Math.max(.08, pulse * .22);
-        starfieldContext.beginPath();
-        starfieldContext.arc(star.x, star.y, star.radius * 4.5, 0, Math.PI * 2);
-        starfieldContext.fill();
-      }
-    });
-    starfieldContext.globalAlpha = 1;
-  };
-
-  const starfieldTick = (now) => {
-    starfieldFrame = 0;
-    if (document.hidden || !boardVisible || reducedMotionMedia.matches) return;
-    const frameInterval = window.innerWidth <= 820 ? 45 : 33;
-    if (now - starfieldLastPaint > frameInterval) {
-      paintStarfield(now);
-      starfieldLastPaint = now;
-    }
-    starfieldFrame = window.requestAnimationFrame(starfieldTick);
-  };
-
-  const startStarfield = () => {
-    if (starfieldFrame || document.hidden || !boardVisible || reducedMotionMedia.matches) return;
-    starfieldFrame = window.requestAnimationFrame(starfieldTick);
-  };
-
-  const stopStarfield = () => {
-    window.cancelAnimationFrame(starfieldFrame);
-    starfieldFrame = 0;
-  };
-
-  const seedStarfield = (width, height) => {
-    if (!width || !height) return;
-    const count = width <= 560 ? 24 : (width <= 820 ? 30 : 42);
-    starfieldStars = Array.from({ length: count }, (_, index) => ({
-      x: 10 + Math.random() * Math.max(1, width - 20),
-      y: 10 + Math.random() * Math.max(1, height - 20),
-      radius: index % 9 === 0 ? 1.7 + Math.random() * 1.1 : .55 + Math.random() * 1.1,
-      phase: Math.random() * Math.PI * 2,
-      speed: .0011 + Math.random() * .0018,
-      colorIndex: index % 3
-    }));
-  };
-
-  const reseedStarfield = () => {
-    if (!starfieldCanvas) return;
-    const width = Number(starfieldCanvas.dataset.width) || 0;
-    const height = Number(starfieldCanvas.dataset.height) || 0;
-    seedStarfield(width, height);
-    paintStarfield();
-  };
-
-  const resizeStarfield = () => {
-    if (!starfieldCanvas || !starfieldContext || !gridWrap) return;
-    const rect = gridWrap.getBoundingClientRect();
-    const width = Math.max(1, Math.round(rect.width));
-    const height = Math.max(1, Math.round(rect.height));
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    if (Number(starfieldCanvas.dataset.width) === width &&
-        Number(starfieldCanvas.dataset.height) === height &&
-        Number(starfieldCanvas.dataset.dpr) === dpr) return false;
-    starfieldCanvas.width = Math.round(width * dpr);
-    starfieldCanvas.height = Math.round(height * dpr);
-    starfieldCanvas.style.width = `${width}px`;
-    starfieldCanvas.style.height = `${height}px`;
-    starfieldCanvas.dataset.width = String(width);
-    starfieldCanvas.dataset.height = String(height);
-    starfieldCanvas.dataset.dpr = String(dpr);
-    starfieldContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-    seedStarfield(width, height);
-    paintStarfield();
-    startStarfield();
-    return true;
   };
 
   const scheduleBoardLayout = () => {
     window.cancelAnimationFrame(resizeFrame);
     resizeFrame = window.requestAnimationFrame(() => {
-      resizeFrame = 0;
-      if (!resizeStarfield()) return;
-      clearDiscoveryFx();
-      renderConstellationTrails();
+      window.CozyObservatory?.resize();
     });
-  };
-
-  const clearDiscoveryFx = () => {
-    window.clearTimeout(discoveryTimer);
-    discoveryLayer?.replaceChildren();
-    discoveryLayer?.classList.remove("is-final", "is-reveal");
-    gridElement.querySelectorAll(".is-discovering, .is-echo").forEach((cell) => {
-      cell.classList.remove("is-discovering", "is-echo");
-      cell.style.removeProperty("--path-delay");
-    });
-    searchCard?.classList.remove("is-discovery-active");
-  };
-
-  const runDiscoveryFx = ({ word, path, color, revealed, finalWord }) => {
-    if (!discoveryLayer || !path.length) return;
-    clearDiscoveryFx();
-    const layerRect = discoveryLayer.getBoundingClientRect();
-    const points = pointsForPath(path, layerRect);
-    if (!points.length) return;
-    const duration = reducedMotionMedia.matches ? 380 : 1120;
-    const pathKeys = new Set(path.map(cellKey));
-    const cells = path.map((point) => cellElement(point)).filter(Boolean);
-    cells.forEach((cell, index) => {
-      cell.style.setProperty("--path-delay", `${index * 52}ms`);
-      cell.classList.add("is-discovering");
-    });
-
-    const neighbors = [];
-    const neighborKeys = new Set();
-    path.forEach(({ row, col }, pathIndex) => {
-      [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([rowOffset, colOffset]) => {
-        const point = { row: row + rowOffset, col: col + colOffset };
-        const key = cellKey(point);
-        if (pathKeys.has(key) || neighborKeys.has(key)) return;
-        const cell = cellElement(point);
-        if (!cell) return;
-        neighborKeys.add(key);
-        neighbors.push({ cell, delay: pathIndex * 34 + Math.random() * 90 });
-      });
-    });
-    neighbors.slice(0, window.innerWidth <= 560 ? 10 : (window.innerWidth <= 820 ? 14 : 18)).forEach(({ cell, delay }) => {
-      cell.style.setProperty("--path-delay", `${delay}ms`);
-      cell.classList.add("is-echo");
-    });
-
-    searchCard?.classList.add("is-discovery-active");
-    discoveryLayer.style.setProperty("--discovery-color", color);
-    discoveryLayer.classList.toggle("is-final", finalWord);
-    discoveryLayer.classList.toggle("is-reveal", revealed);
-
-    if (!reducedMotionMedia.matches && points.length > 1) {
-      const start = points[0];
-      const end = points[points.length - 1];
-      const distance = Math.hypot(end.x - start.x, end.y - start.y);
-      const angle = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
-      const beam = document.createElement("span");
-      beam.className = "discovery-beam";
-      beam.style.left = `${start.x}px`;
-      beam.style.top = `${start.y}px`;
-      beam.style.width = `${distance}px`;
-      beam.style.setProperty("--beam-angle", `${angle}deg`);
-      discoveryLayer.appendChild(beam);
-
-      const comet = document.createElement("i");
-      comet.className = "discovery-comet";
-      comet.style.left = `${start.x}px`;
-      comet.style.top = `${start.y}px`;
-      comet.style.setProperty("--travel-x", `${end.x - start.x}px`);
-      comet.style.setProperty("--travel-y", `${end.y - start.y}px`);
-      discoveryLayer.appendChild(comet);
-
-      const endpointStart = document.createElement("i");
-      endpointStart.className = "discovery-endpoint start";
-      endpointStart.style.left = `${start.x}px`;
-      endpointStart.style.top = `${start.y}px`;
-      discoveryLayer.appendChild(endpointStart);
-      const endpointEnd = document.createElement("i");
-      endpointEnd.className = "discovery-endpoint end";
-      endpointEnd.style.left = `${end.x}px`;
-      endpointEnd.style.top = `${end.y}px`;
-      discoveryLayer.appendChild(endpointEnd);
-
-      const sparkCount = window.innerWidth <= 560 ? 10 : (window.innerWidth <= 820 ? 13 : 17);
-      for (let index = 0; index < sparkCount; index += 1) {
-        const origin = points[index % points.length];
-        const angleOut = Math.random() * Math.PI * 2;
-        const spark = document.createElement("i");
-        spark.className = "discovery-spark";
-        spark.style.left = `${origin.x}px`;
-        spark.style.top = `${origin.y}px`;
-        spark.style.setProperty("--spark-x", `${Math.cos(angleOut) * (18 + Math.random() * 35)}px`);
-        spark.style.setProperty("--spark-y", `${Math.sin(angleOut) * (18 + Math.random() * 35)}px`);
-        spark.style.setProperty("--spark-delay", `${index * 18 + Math.random() * 80}ms`);
-        discoveryLayer.appendChild(spark);
-      }
-
-      const midpoint = points[Math.floor(points.length / 2)];
-      const caption = document.createElement("span");
-      caption.className = "discovery-caption";
-      caption.textContent = `${revealed ? "TRAIL REVEALED" : "WORD CHARTED"} · ${word}`;
-      caption.style.left = `${midpoint.x}px`;
-      caption.style.top = `${midpoint.y}px`;
-      discoveryLayer.appendChild(caption);
-    }
-
-    discoveryTimer = window.setTimeout(clearDiscoveryFx, duration);
   };
 
   const updateWordItem = (word) => {
@@ -622,7 +333,6 @@
     if (fieldMeterFill) fieldMeterFill.style.transform = `scaleX(${progress})`;
     if (fieldMeterLabel) fieldMeterLabel.textContent = `${Math.round(progress * 100)}% charted`;
     fieldMeter?.setAttribute("aria-label", `${Math.round(progress * 100)} percent of words charted`);
-    if (reducedMotionMedia.matches) paintStarfield();
   };
 
   const setWordListExpanded = (expanded) => {
@@ -635,86 +345,25 @@
   };
 
   const playTone = (finalWord = false) => {
+    if (!musicEnabled) return;
     try {
       audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
       if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
       const now = audioContext.currentTime;
-      const notes = finalWord ? [392, 523, 659, 784] : [440, 554, 659];
+      const notes = finalWord ? [392, 523, 659, 784] : [523.25, 659.25, 783.99, 1046.5];
       notes.forEach((frequency, index) => {
         const oscillator = audioContext.createOscillator();
         const gain = audioContext.createGain();
-        oscillator.type = index % 2 ? "triangle" : "sine";
+        oscillator.type = "sine";
         oscillator.frequency.value = frequency;
-        gain.gain.setValueAtTime(.0001, now + index * .055);
-        gain.gain.exponentialRampToValueAtTime(finalWord ? .045 : .03, now + index * .055 + .025);
-        gain.gain.exponentialRampToValueAtTime(.0001, now + index * .055 + .34);
+        gain.gain.setValueAtTime(.0001, now + index * .085);
+        gain.gain.exponentialRampToValueAtTime(finalWord ? .045 : .03, now + index * .085 + .025);
+        gain.gain.exponentialRampToValueAtTime(.0001, now + index * .085 + .34);
         oscillator.connect(gain).connect(audioContext.destination);
-        oscillator.start(now + index * .055);
-        oscillator.stop(now + index * .055 + .36);
+        oscillator.start(now + index * .085);
+        oscillator.stop(now + index * .085 + .36);
       });
     } catch (_) {}
-  };
-
-  const hideCelebration = () => {
-    window.clearTimeout(celebrationTimer);
-    celebration.classList.remove("is-visible");
-    celebration.setAttribute("aria-hidden", "true");
-    delete celebration.dataset.final;
-    delete celebration.dataset.revealed;
-    document.body.classList.remove("is-celebrating");
-    celebrationSparks.replaceChildren();
-    celebrationGlyphs?.replaceChildren();
-  };
-
-  const showCelebration = (word, finalWord, revealed = false, foundColor = FOUND_COLORS[0]) => {
-    celebrationKicker.textContent = finalWord ? "FIELD CLEARED" : (revealed ? "WORD REVEALED" : "WORD FOUND");
-    celebrationWord.textContent = finalWord ? "ALL DONE" : word;
-    celebrationStatFound.textContent = `${state.found.size}/${state.puzzle.words.length}`;
-    celebrationStatTime.textContent = formatTime(state.elapsed);
-    celebrationStatStreak.textContent = String(state.streak);
-    celebrationCopy.textContent = finalWord ? "Every hidden word is glowing. Beautiful work." : (revealed ? "A little help from your trail map." : "A bright little breakthrough.");
-    celebrationSparks.innerHTML = "";
-    celebrationGlyphs?.replaceChildren();
-    celebration.style.setProperty("--celebration-color", foundColor);
-    const hues = [foundColor, "#72e8ff", "#84f2c2", "#ffd86b", "#b995ff", "#ff83bd"];
-    const isMobile = window.innerWidth <= 560;
-    const isCompact = window.innerWidth <= 820;
-    const sparkCount = reducedMotionMedia.matches ? 0 : (finalWord ? (isMobile ? 28 : (isCompact ? 34 : 42)) : (isMobile ? 16 : (isCompact ? 20 : 25)));
-    for (let index = 0; index < sparkCount; index += 1) {
-      const spark = document.createElement("i");
-      const angle = Math.random() * Math.PI * 2;
-      const distance = 120 + Math.random() * (finalWord ? 330 : 220);
-      spark.style.setProperty("--x", `${Math.cos(angle) * distance}px`);
-      spark.style.setProperty("--y", `${Math.sin(angle) * distance}px`);
-      spark.style.setProperty("--delay", `${Math.random() * 130}ms`);
-      spark.style.setProperty("--size", `${4 + Math.random() * 8}px`);
-      spark.style.setProperty("--spark-color", hues[index % hues.length]);
-      celebrationSparks.appendChild(spark);
-    }
-    if (celebrationGlyphs && !reducedMotionMedia.matches) {
-      const glyphs = ["✦", "·", "+", "◇", "✧"];
-      const glyphCount = finalWord ? (isMobile ? 13 : (isCompact ? 16 : 20)) : (isMobile ? 8 : (isCompact ? 10 : 12));
-      for (let index = 0; index < glyphCount; index += 1) {
-        const glyph = document.createElement("i");
-        glyph.textContent = glyphs[index % glyphs.length];
-        glyph.style.left = `${5 + Math.random() * 90}%`;
-        glyph.style.top = `${6 + Math.random() * 88}%`;
-        glyph.style.setProperty("--glyph-delay", `${120 + Math.random() * 320}ms`);
-        glyph.style.setProperty("--glyph-size", `${9 + Math.random() * 22}px`);
-        glyph.style.setProperty("--glyph-color", hues[index % hues.length]);
-        celebrationGlyphs.appendChild(glyph);
-      }
-    }
-    celebration.classList.remove("is-visible");
-    void celebration.offsetWidth;
-    celebration.dataset.final = String(finalWord);
-    celebration.dataset.revealed = String(revealed);
-    celebration.classList.add("is-visible");
-    celebration.setAttribute("aria-hidden", "false");
-    document.body.classList.add("is-celebrating");
-    window.clearTimeout(celebrationTimer);
-    const duration = reducedMotionMedia.matches ? (finalWord ? 900 : 620) : (finalWord ? 2600 : 1400);
-    celebrationTimer = window.setTimeout(hideCelebration, duration);
   };
 
   const registerWord = (word, path, { revealed = false } = {}) => {
@@ -728,20 +377,13 @@
     if (revealed) flashRevealedPath(word, path);
     const finalWord = state.found.size === state.puzzle.words.length;
     state.complete = finalWord;
-    appendConstellationTrail(path);
-    runDiscoveryFx({ word, path, color: foundColor, revealed, finalWord });
+    window.CozyObservatory?.found({
+      word, cells: path.map(cellElement).filter(Boolean), color: foundColor,
+      revealed, finalWord, count: state.found.size, total: state.puzzle.words.length
+    });
     setStatus(finalWord ? "Beautiful — you cleared the whole field." : (revealed ? `${word} revealed. Keep going.` : `${word} found. Keep the glow going.`));
     playTone(finalWord);
-    // Keep assists lightweight so a player can reveal one word and move on.
-    // The cinematic finale still appears if a reveal completes the board.
     updateUi();
-    if (!revealed || finalWord) {
-      const puzzleId = state.puzzle.id;
-      window.clearTimeout(celebrationDelayTimer);
-      celebrationDelayTimer = window.setTimeout(() => {
-        if (state?.puzzle.id === puzzleId && state.found.has(word)) showCelebration(word, finalWord, revealed, foundColor);
-      }, reducedMotionMedia.matches ? 180 : (finalWord ? 1040 : 980));
-    }
   };
 
   const revealWord = (word) => {
@@ -820,7 +462,7 @@
 
   gridElement.addEventListener("pointerdown", (event) => {
     const cell = event.target.closest?.(".grid-cell");
-    if (!cell || state.complete || document.body.classList.contains("is-celebrating")) return;
+    if (!cell || state.complete) return;
     event.preventDefault();
     window.cancelAnimationFrame(pointerMoveFrame);
     pointerMoveFrame = 0;
@@ -840,7 +482,7 @@
   gridElement.addEventListener("pointerup", endPointerSession);
   gridElement.addEventListener("pointercancel", endPointerSession);
   gridElement.addEventListener("keydown", (event) => {
-    if (!event.target.closest?.(".grid-cell") || !["Enter", " "].includes(event.key) || state.complete || document.body.classList.contains("is-celebrating")) return;
+    if (!event.target.closest?.(".grid-cell") || !["Enter", " "].includes(event.key) || state.complete) return;
     event.preventDefault();
     const point = readCell(event.target);
     if (!state.selectedStart) {
@@ -856,13 +498,11 @@
   });
 
   const newGame = (difficultyKey = state?.difficultyKey || "easy") => {
-    window.clearTimeout(celebrationDelayTimer);
     window.cancelAnimationFrame(pointerMoveFrame);
     pointerMoveFrame = 0;
     latestPointerMove = null;
     pointerSession = null;
-    hideCelebration();
-    clearDiscoveryFx();
+    window.CozyObservatory?.clear();
     revealGlowTimers.forEach((timer) => window.clearTimeout(timer));
     revealGlowTimers.clear();
     revealGlowCounts.clear();
@@ -885,7 +525,7 @@
     setWordListExpanded(false);
     updateUi();
     setStatus(`${DIFFICULTIES[difficultyKey].label} field ready. Find your first word.`);
-    reseedStarfield();
+    window.CozyObservatory?.reset(state.puzzle.words.length, state.puzzle.id);
     scheduleBoardLayout();
   };
 
@@ -991,53 +631,12 @@
   music.addEventListener("ended", advanceLoopAll);
   window.addEventListener("pagehide", () => {
     music.pause();
-    stopStarfield();
     window.cancelAnimationFrame(resizeFrame);
   });
   window.addEventListener("pageshow", () => {
     scheduleBoardLayout();
-    paintStarfield();
-    startStarfield();
   });
   window.addEventListener("johnny:music-focus", updateMusicButton);
-  searchCard?.addEventListener("pointermove", (event) => {
-    if (!finePointerMedia.matches || lightFrame) return;
-    const clientX = event.clientX;
-    const clientY = event.clientY;
-    lightFrame = window.requestAnimationFrame(() => {
-      lightFrame = 0;
-      const rect = searchCard.getBoundingClientRect();
-      searchCard.style.setProperty("--light-x", `${((clientX - rect.left) / rect.width) * 100}%`);
-      searchCard.style.setProperty("--light-y", `${((clientY - rect.top) / rect.height) * 100}%`);
-    });
-  });
-  searchCard?.addEventListener("pointerleave", () => {
-    searchCard.style.setProperty("--light-x", "50%");
-    searchCard.style.setProperty("--light-y", "8%");
-  });
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) stopStarfield();
-    else {
-      paintStarfield();
-      startStarfield();
-    }
-  });
-  reducedMotionMedia.addEventListener?.("change", () => {
-    if (reducedMotionMedia.matches) {
-      stopStarfield();
-      paintStarfield();
-    } else startStarfield();
-  });
-  if ("IntersectionObserver" in window && gridWrap) {
-    const boardObserver = new IntersectionObserver(([entry]) => {
-      boardVisible = Boolean(entry?.isIntersecting);
-      if (boardVisible) {
-        paintStarfield();
-        startStarfield();
-      } else stopStarfield();
-    }, { rootMargin: "120px 0px" });
-    boardObserver.observe(gridWrap);
-  }
   window.addEventListener("resize", scheduleBoardLayout);
 
   let storedSoundtrack = "cozy";
