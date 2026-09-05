@@ -10,7 +10,31 @@
 body.observatory::before {
   z-index: -2;
   background: linear-gradient(180deg, #03091218, #03091250),
-    url("/tetris/observatory-space.jpg") center center / cover no-repeat;
+    url("/tetris/observatory-space-v2.jpg") center center / cover no-repeat;
+}
+.observatory-sky { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+/* Match the artwork's 3:2 cover crop so lights stay on stars, not the planet. */
+.observatory-stars {
+  position: absolute;
+  width: max(100vw, 150vh);
+  height: max(100vh, 66.666667vw);
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+}
+.observatory-stars i {
+  position: absolute; left: var(--x); top: var(--y);
+  width: 2px; height: 2px; border-radius: 50%;
+  background: #e1efff; box-shadow: 0 0 5px 1px #c7e8ff60;
+  opacity: .16; animation: observatory-twinkle 9s ease-in-out var(--phase) infinite;
+}
+.observatory-stars i:nth-child(3n) { animation-duration: 12s; }
+.observatory-stars i:nth-child(3n + 1) { animation-duration: 7s; }
+.observatory-stars i:nth-child(n + 8) { background: #ffe6bd; box-shadow: 0 0 7px 1px #ffe0b54d; }
+@keyframes observatory-twinkle {
+  0%, 100% { opacity: .12; }
+  50% { opacity: .6; }
+}
+@media (max-width: 680px) {
+  .observatory-stars { left: 82%; transform: translate(-82%, -50%); }
 }
 .observatory .aurora { opacity: .07; }
 .observatory .game-shell { position: relative; }
@@ -221,6 +245,7 @@ body.observatory button:disabled { filter: saturate(.3); opacity: .48; }
   body.observatory .arcade { --cockpit-board-height: 350px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .observatory-stars i { animation: none; opacity: .22; }
   .observatory .record-disc { animation: none !important; }
   .observatory button { transition: none; }
 }
