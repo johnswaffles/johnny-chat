@@ -1,6 +1,6 @@
 # Full-roster arm and hand fitting — September 5, 2026
 
-Release: `20260905-rosterfit1`. Local validation complete; publication verification is recorded below when available.
+Release: `20260905-rosterfit1`. Published and verified as commit `6d82867` on the Crownforge release branch.
 
 The player approved Crownwarden Hearthkin's wristfit3 result and requested the necessary fixes on every other current character. This pass preserves that approved Crown art/fit path and calibrates the other eleven identities individually. No original PNG, horse artwork, gameplay rule, contact timing, or saved unit key is replaced.
 
@@ -37,3 +37,10 @@ The new independent roster surface suite passes 6/6 across 4,068 poses and 8,136
 Existing motion, work, loading, mounted and gameplay suites passed. The motion suite covers 12 rigs, 544 directional states, 44,064 poses and 88,128 grips. Gameplay/save behavior matched the prior simulation baseline. An independent mounted audit covered 11,592 fitted poses and 23,184 painted grips, with zero held-contact drift; all profile shoulders now meet their painted sockets to floating-point precision.
 
 Browser review separates enlarged four-view anatomy checks from action-grid and production-field checks. This is a refinement of the existing character art, not a replacement animation or model pipeline.
+
+
+## Published verification
+
+The live build marker is `20260905-rosterfit1`. All 24 changed public pages and runtime modules matched the tested source byte for byte, including every per-character calibration module. The live production field reported all 12 characters ready and all 12 in walking state. The live Ashen Hearthkin studio was opened with all four views loaded and the corrected walking close-up playing.
+
+Local production-field interactions verified both walking directions, combat damage, both workers in `field_work`, both `ward_block` reactions, and saving/restoring all 12 identities. The complete action grids were visually reviewed for the eleven updated characters; original Crown rendering remains covered by its dedicated tests and the production-field comparison. The build, 20 changed-script syntax checks, 31 source/production file pairs, and whitespace checks passed.
