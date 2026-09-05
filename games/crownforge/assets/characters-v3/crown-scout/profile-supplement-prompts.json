@@ -1,0 +1,33 @@
+{
+  "mode": "Built-in image_gen only",
+  "handPrompt": "Use case: stylized-concept.\nAsset type: four-piece neutral profile hand atlas for a game animation rig.\nInput1 is the Crown Scout's identity/costume reference. Input2 supplies ONLY correct four-hand profile anatomy, layout and thumb direction.\nCreate FOUR original independently authored hands for the Crown Scout young adult man, retaining his dark chestnut brown fingerless riding gloves, detailed worn leather panels, visible fingertips/thumb tips, stitching, a modest brass buckle at the short wrist. Warm natural light skin, agile male hands. No attached forearm, just a short neutral wrist above each hand. Preserve the original glove identity, not armored gauntlets and not bare hands.\nExactly2columns by2rows, one isolated hand per cell:\nTop-left: right-facing character's FAR anatomical LEFT hand: show the PALM side of the fingerless glove and curled finger pads. Thumb on forward SCREEN-RIGHT side.\nTop-right: right-facing character's NEAR anatomical RIGHT hand: show DORSAL glove knuckle panels/back of hand. Thumb on forward SCREEN-RIGHT side.\nBottom-left: left-facing character's NEAR anatomical LEFT hand: show DORSAL glove knuckle panels/back of hand. Thumb on forward SCREEN-LEFT side.\nBottom-right: left-facing character's FAR anatomical RIGHT hand: show PALM glove surface and curled finger pads. Thumb on forward SCREEN-LEFT side.\nEach wrist points straight up and curled fingers downward, no sideways wrist bend. Fingers close gently around a narrow INVISIBLE upright rein/weapon handle: include a small genuinely empty thumb-index grip opening, but NO object or painted stub inside it. There are four hands, no extras. Palms and dorsal knuckle surfaces MUST visibly differ.\nPremium realistic3D game sculpture, tactile leather and lifelike skin, elevated25degree orthographic camera, warm upper-left key and cool ambient bounce. Large genuinely transparent gutters.\nNo forearms, sleeve, weapon, tool, rein, scenery, labels, grid, text, checkerboard or backgroundcolor. Genuine transparent PNG RGBA alpha0 around the components.",
+  "torsoPrompt": "Use case: precise-object-edit.\nAsset type: two separate profile torso replacement cutouts for a game character rig.\nReference image1 contains the accepted Crown Scout RIGHT profile, image2 the accepted LEFT profile. Extract and carefully re-author ONLY the TORSO from each reference, matching its existing costume, view, proportions, colors, scale relative to itself and premium rendering.\nMake a two-column atlas: LEFT cell is the original SCREEN-RIGHT torso, RIGHT cell the original SCREEN-LEFT torso. Complete armless torsos from shoulders/short neck collar to waist, no head, hips, cape or limb. Keep their individual directional differences; do not mirror one to produce the other.\nRetain brown leather sleeveless riding jerkin with its seams, modest brass clasps, dark teal under-tunic/neck collar, cream shirt lining and thin cream lower hem, plain brown waist belt. On the left-facing torso retain the small golden crown on the chest and button panel as shown in that reference. Proper slim young male rider proportions, elevated25degree orthographic camera, same warm upper-left key and cool ambient bounce.\nPrimary repair: CLOSE the large hollow arm socket at each outer shoulder with continuous underlying cloth matching the original cream shirt inside the vest. This must be a SOLID softly lit cream cloth shoulder area with no dark hollow, deep cavity, exposed bare skin or visibly open armhole. It sits inside the torso silhouette and blends naturally into the costume as a shirt beneath the leather vest. There is NO fixed arm stub or sleeve protruding from the torso: the rig has separate sleeves. Avoid a dark ring or black socket edge. The moving upperarm will slide over this closed cloth area.\nMaintain the original profile torso silhouettes and slender side width. No extra shoulderpad, sleeve, backpack, head, collar on a separate head, or new ornament. Two torso pieces only, one per cell, large transparent gap.\nGenuinely transparent PNG RGBA alpha0 background, no scenery, text, labels, grid, checkerboard, cast shadow or backdrop.",
+  "references": {
+    "right": "/private/tmp/crownforge-dawn-visuals-20260904/games/crownforge/assets/characters-v3/crown-scout/rider-right.png",
+    "left": "/private/tmp/crownforge-dawn-visuals-20260904/games/crownforge/assets/characters-v3/crown-scout/rider-left.png",
+    "hands": "/private/tmp/crownforge-dawn-visuals-20260904/games/crownforge/assets/characters-v3/crown-militia/profile-hands-v1.png"
+  },
+  "drafts": {
+    "hands": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-1388d48f-437b-4fd4-acd1-699a05dcef87.png",
+    "torsos": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-68a79def-46f4-4280-bd8a-93c9bacf9fb1.png"
+  },
+  "extractionPrompt": "Use case: background-extraction\nAsset type: transparent PNG game sprite sheet\nPrimary request: Extract all separate character components from the supplied image onto a genuinely transparent background with an alpha channel.\nInput image: edit target.\nConstraints: keep every component and its placement, detail, color, facing direction and size unchanged. Remove only the painted checkerboard background. Preserve clean edges and all gaps. The output is a transparent cutout PNG, not an illustration of cutouts on paper.",
+  "selectedOriginals": {
+    "hands": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-0f9235f8-d3ca-411f-9f94-dc0d28efbdf4.png",
+    "torsos": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-08f8909e-6c2d-4a83-a294-2f750afa01d7.png"
+  },
+  "activeFiles": {
+    "hands": "profile-hands-v1.png",
+    "torsos": "profile-torsos-v1.png"
+  },
+  "handOrder": [
+    "right-far-left-palm",
+    "right-near-right-dorsal",
+    "left-near-left-dorsal",
+    "left-far-right-palm"
+  ],
+  "torsoOrder": [
+    "right",
+    "left"
+  ]
+}

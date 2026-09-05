@@ -492,7 +492,7 @@ export const HEARTHKIN_RIG_ART = {
     ]
   },
   "armSurfaces": {
-    "src": "./assets/hearthkin-v2/arm-surfaces.png?v=20260904-armdepth1",
+    "src": "./assets/hearthkin-v2/arm-surfaces.png?v=20260904-rosterkin1",
     "width": 1536,
     "height": 1024,
     "parts": [
@@ -547,7 +547,7 @@ export const HEARTHKIN_RIG_ART = {
     ]
   },
   "neutralHands": {
-    "src": "./assets/hearthkin-v2/neutral-hands.png?v=20260904-armdepth1",
+    "src": "./assets/hearthkin-v2/neutral-hands.png?v=20260904-rosterkin1",
     "width": 1774,
     "height": 887,
     "parts": [
@@ -578,6 +578,20 @@ export const HEARTHKIN_RIG_ART = {
     ]
   }
 };
+
+// Profile hands use independent palm and knuckle surfaces. The source's
+// visible thumb direction determines assignment, rather than its cell label.
+HEARTHKIN_RIG_ART.profileHands = {
+  src:'./assets/characters-v3/crown-hearthkin/profile-hands.png?v=20260904-rosterkin1',
+  width:2141,height:734,
+  parts:[[48,7,390,700],[593,7,425,698],[1122,7,426,698],[1700,7,393,700]],
+};
+HEARTHKIN_RIG_ART.profileTorsos = {
+  src:'./assets/characters-v3/crown-hearthkin/profile-torsos.png?v=20260904-rosterkin1',
+  width:1536,height:1024,parts:[[176,27,546,950],[863,28,533,953]],
+};
+HEARTHKIN_RIG_ART.right.overrides={1:{key:'profileTorsos',index:0}};
+HEARTHKIN_RIG_ART.left.overrides={1:{key:'profileTorsos',index:1}};
 
 // Joint attachments measured inside the authored component rectangles.
 export const HEARTHKIN_ARM_PARTS = {
@@ -691,8 +705,19 @@ export const HEARTHKIN_ARM_PARTS = {
   }
 };
 
+const profileHand=(index,root,grip)=>({key:'profileHands',index,width:4.2,
+  height:Math.sqrt(3.45**2-((grip[0]-root[0])*4.2)**2)/(grip[1]-root[1]),root,grip});
+
 // Neutral wrist rotation: thumb edges inward, left bracer remains on the left arm.
 export const HEARTHKIN_HAND_PARTS = {
+  right:{
+    left:profileHand(3,[.418575,.12],[.400148,.832234]),
+    right:profileHand(1,[.368235,.12],[.50,.80]),
+  },
+  left:{
+    left:profileHand(2,[.634977,.12],[.50,.80]),
+    right:profileHand(0,[.584615,.12],[.596891,.832425]),
+  },
   "front": {
     "left": {
       "key": "neutralHands",

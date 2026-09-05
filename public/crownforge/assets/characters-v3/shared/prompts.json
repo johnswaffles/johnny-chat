@@ -1,0 +1,11 @@
+{
+  "tool": "built-in image_gen",
+  "assets": [
+    {
+      "file": "equipment-materials.png",
+      "prompt": "Use case: stylized-concept\nAsset type: seamless material texture atlas for close-view medieval strategy-game equipment, opaque RGB.\nPrimary request: Create four original realistic painted material textures in a perfectly aligned 2 by 2 square atlas. Every quadrant is a flat, evenly lit surface photographed straight on, no perspective or objects. Top-left: warm aged ash wood with fine vertical grain, subtle dark pores, honey brown and muted tan, no knots larger than a thumbnail. Top-right: dark forged iron with fine hammer marks, muted blue gray patina, minute scratches and understated metallic variation. Bottom-left: warm worn bronze, restrained ochre-gold, very subtle greenish patina and engraved-looking micro scratches, no symbols. Bottom-right: dark brown worn leather, fine pores and creases, slightly warmer rubbed areas. No borders or gutters between equal quadrants. No text, labels, tools, handles, pictograms, dramatic lighting, gradients across the whole sheet, or cast shadows. Material detail must feel hand-crafted and natural at a small game scale, matching a realistic painted teal-and-cream medieval character. Output 2048 square if possible, each quarter independently seamless, completely fills its square.",
+      "output": "exec-a2479770-25b0-48f6-958c-d9b621f4f19f.png",
+      "usage": "Original material atlas projected onto finite 3D equipment surfaces; output copied unchanged."
+    }
+  ]
+}

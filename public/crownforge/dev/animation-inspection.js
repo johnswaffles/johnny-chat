@@ -1,12 +1,12 @@
-import { HearthkinRig } from '../src/hearthkin-rig.js?v=20260904-armdepth1';
-const hearthkinRig = new HearthkinRig();
+import { createCharacterRigs } from '../src/character-rigs.js';
+const characterRigs = createCharacterRigs();
 import {
   ANIMATION_DIRECTIONS,
   ANIMATION_DEFINITIONS,
   animationClip,
   animationDefinition,
   animationFrame,
-} from '../src/animation.js?v=20260904-armdepth1';
+} from '../src/animation.js?v=20260904-rosterkin1';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');
@@ -96,6 +96,7 @@ function drawGuides(definition, groundX, groundY, size) {
 
 function draw() {
   const type = selectedType();
+  const hearthkinRig=characterRigs.get(type);
   const state = selectedState();
   const direction = selectedDirection();
   const definition = animationDefinition(type);
@@ -121,7 +122,7 @@ function draw() {
   ctx.beginPath(); ctx.ellipse(groundX, groundY, 250, 80, 0, 0, Math.PI * 2); ctx.fill();
   if (guidesInput.checked) drawGuides(definition, groundX, groundY, size);
   if (skeletal) {
-    hearthkinRig.draw(ctx, { id: 1, facing: direction, animationState: state }, { x: groundX, y: groundY }, size, 1, rigTime);
+    hearthkinRig.draw(ctx, { id: 1, type, facing: direction, animationState: state }, { x: groundX, y: groundY }, size, 1, rigTime);
   } else if (image.complete && image.naturalWidth) {
     const atlasWidth = atlas.width ?? definition.atlasSize.width;
     const atlasHeight = atlas.height ?? definition.atlasSize.height;

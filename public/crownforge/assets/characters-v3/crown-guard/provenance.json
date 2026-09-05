@@ -1,0 +1,218 @@
+{
+  "front": {
+    "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-b6839595-6a53-4414-903a-d5b10df7a518.png",
+    "sha256": "e1118589bd96c29654385b0918ae3b9d9bfdb8896fd030d2baaeacf12ef955a3",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "opaqueComponentCount": 16,
+    "sourceIndexOrder": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      9,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "boundsThreshold": 24,
+    "boundsPadding": 2,
+    "gripMeasurement": "centroid of enclosed transparent hole between curled fingers and thumb"
+  },
+  "right": {
+    "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-db7a86ae-82b4-4686-9ac5-04569eebb231.png",
+    "sha256": "f23db6f11d82b6860a3e32095824aeeededcaea56d499af860e10d0e46a69b00",
+    "size": [
+      1312,
+      1199
+    ],
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "opaqueComponentCount": 16,
+    "sourceIndexOrder": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "boundsThreshold": 24,
+    "boundsPadding": 2,
+    "gripMeasurements": {
+      "8": "alpha centroid at70percent; closed hand has no enclosed transparent hole",
+      "9": "enclosed transparent grip-hole centroid"
+    },
+    "supersedes": {
+      "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-a1be2fda-9cf8-45e3-9244-0ff828ed18ac.png",
+      "sha256": "41ff5cf98e233c7198e662c780f244d3f579094ac3a1f59dc29e3f573331d9e9",
+      "size": [
+        1278,
+        1230
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "opaqueComponentCount": 16,
+      "sourceIndexOrder": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "boundsThreshold": 24,
+      "boundsPadding": 2,
+      "gripMeasurement": "centroid of enclosed transparent hole between curled fingers and thumb"
+    }
+  },
+  "back": {
+    "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-cf49f331-df3d-4a2c-9731-86c59196f5d0.png",
+    "sha256": "037349bd3c5fbef37bc48fd724fd72696129203abbadbd422e84b20d4f9ec262",
+    "size": [
+      1333,
+      1180
+    ],
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "opaqueComponentCount": 16,
+    "sourceIndexOrder": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "boundsThreshold": 24,
+    "boundsPadding": 2,
+    "gripMeasurement": "centroid of enclosed transparent hole between curled fingers and thumb"
+  },
+  "left": {
+    "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-f43f96b4-dfb1-4ef1-8a4c-8eef505b7191.png",
+    "sha256": "1ec49d49c78e80ec59c2695ba420e681dda3c0c16e4c55379971b35c5795104a",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "opaqueComponentCount": 16,
+    "sourceIndexOrder": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "boundsThreshold": 24,
+    "boundsPadding": 2,
+    "gripMeasurements": {
+      "8": "enclosed transparent grip-hole centroid",
+      "9": "alpha centroid at70percent; closed hand has no enclosed transparent hole"
+    },
+    "supersedes": {
+      "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-0c5131e3-7839-48e1-bfab-b57128753d99.png",
+      "sha256": "d1e52efe3de8129eeac72013b4000042ec69ee1bcba86f2542b884c60d5727d6",
+      "size": [
+        1243,
+        1266
+      ],
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "opaqueComponentCount": 16,
+      "sourceIndexOrder": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "boundsThreshold": 24,
+      "boundsPadding": 2,
+      "gripMeasurement": "centroid of enclosed transparent hole between curled fingers and thumb"
+    }
+  }
+}

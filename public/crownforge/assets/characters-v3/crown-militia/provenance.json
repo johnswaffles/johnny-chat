@@ -1,0 +1,42 @@
+{
+  "front": {
+    "file": "rig-front.png",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-eb22f0c2-d961-4842-a089-8a2dd699eef4.png",
+    "size": [
+      1278,
+      1230
+    ],
+    "mode": "RGBA",
+    "sha256": "63dd82dae39ed8adf6532986bab9cc874afa867f04f8c798a3cb3e29ce757f87"
+  },
+  "right": {
+    "file": "rig-right.png",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-ad092e0f-3893-4664-ae04-0bf5f80cb738.png",
+    "size": [
+      1364,
+      1153
+    ],
+    "mode": "RGBA",
+    "sha256": "f90478714fbfbebf0c810c1ef2b3b6e86df1276f80864f1f9bdc22f07bff2984"
+  },
+  "back": {
+    "file": "rig-back.png",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-e85eb4eb-3c1d-442a-a7e7-85f8f943c345.png",
+    "size": [
+      1312,
+      1199
+    ],
+    "mode": "RGBA",
+    "sha256": "6acba58fcc3c8339385f5c975908849e158e0b64ad0b06b60d8d577d958fa71a"
+  },
+  "left": {
+    "file": "rig-left.png",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-8629c72d-f7e9-4ffc-be71-f85ba5d14844.png",
+    "size": [
+      1274,
+      1234
+    ],
+    "mode": "RGBA",
+    "sha256": "e38a9cc7b001cd481fa45ae1bc3df088accad1bcfe7054e5d767d05aa53525bc"
+  }
+}

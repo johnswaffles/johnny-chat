@@ -1,0 +1,25 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "acceptedSource": "exec-1545ecca-78a0-4a13-83d4-df7f7f0e11d1.png",
+  "prompt": "Create a small corrected cutout atlas of exactly TWO detached female fantasy worker TORSOS, using supplied Crown Hearthkin art to match the teal embroidered waistcoat, off-white linen undershirt, brass trim and brown waist belt perfectly. One torso faces SCREEN RIGHT in exact side profile, the other faces SCREEN LEFT in exact side profile. Only neck/collar down to belt, no head, no hip skirt, no arms, no hands. This is underlay artwork for separately articulated sleeves: CONTINUOUS CLOSED CLOTH MUST FILL THE ENTIRE SHOULDER AND UNDERARM AREA. No armholes, no dark oval sockets, no disconnected white sleeve circle, no exposed skin patches, no mannequin holes. Carry the solid teal or off-white linen fabric continuously from shoulder ridge under the waistcoat down into the side seam. Keep the same feminine chest silhouette and same trim/belt; physically closed garment like a sleeved shirt with the sleeve removed from view but torso side intact. The first right profile's chest points right; the second's chest points left. Same painted-realistic game art, original character garment design, carefully finished textures. Two isolated components in a horizontal row with generous empty margins on actual TRANSPARENT RGBA background, no checkerboard, no lettering, no shadows.",
+  "method": "Generated PNG copied unchanged; alpha-only bounds measured. Independent right and left closed garment underlays replace old hollow shoulder art through source metadata overrides.",
+  "size": [
+    1536,
+    1024
+  ],
+  "parts": [
+    [
+      176,
+      27,
+      546,
+      950
+    ],
+    [
+      863,
+      28,
+      533,
+      953
+    ]
+  ],
+  "alphaZeroFraction": 0.53705597
+}

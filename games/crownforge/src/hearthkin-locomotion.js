@@ -96,6 +96,6 @@ export function hearthkinLocomotion(state,time,direction,{duration=1.05,id=0,mov
     result[name+'Foot']={point:projectHearthkin(joints[name+'Ankle'],direction),angle:walking?feet[index].angle*facing:0,planted:walking?feet[index].planted:true,lift:walking?feet[index].lift:0};
   }
   result.clothSway=walking?wave*.016:0;
-  result.braidSway=walking?Math.sin(phase*TAU-.8)*.035:Math.sin(time*2)*.009;
+  result.braidSway=walking?Math.sin(phase*TAU-.8)*.035:Math.sin(time*TAU/3.6)*.009;
   return result;
 }

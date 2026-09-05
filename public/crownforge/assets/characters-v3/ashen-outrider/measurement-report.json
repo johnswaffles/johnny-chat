@@ -1,0 +1,254 @@
+{
+  "rider-front.png": {
+    "size": [
+      1219,
+      1290
+    ],
+    "parts": 16,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "transparentFraction": 0.58172,
+    "sha256": "2fa54a66086e755af4799b602a85ffd55e7b64a604030ffcb2085ea584c67e4f"
+  },
+  "front-left-grip": {
+    "grip": [
+      0.2811,
+      0.6511
+    ],
+    "method": "enclosed-alpha-hole",
+    "pixels": 491
+  },
+  "front-right-grip": {
+    "grip": [
+      0.7122,
+      0.648
+    ],
+    "method": "enclosed-alpha-hole",
+    "pixels": 307
+  },
+  "horse-front.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 20,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.62677,
+    "sha256": "7fd1cc0d6acdc1cf8ea957114e15442a51d68d27dcd263a79d18634f83e2b2f7"
+  },
+  "rider-right.png": {
+    "size": [
+      1536,
+      1024
+    ],
+    "parts": 16,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.65283,
+    "sha256": "0ff0bc72c95e365e67551d39389be301d1f9121d2dee7e44271e52c99379a572"
+  },
+  "right-left-grip": {
+    "grip": [
+      0.7314,
+      0.769
+    ],
+    "method": "enclosed-alpha-hole",
+    "pixels": 32
+  },
+  "right-right-grip": {
+    "grip": [
+      0.3068,
+      0.6792
+    ],
+    "method": "open-aperture-alpha-centroid",
+    "pixels": 659,
+    "measurementWindow": [
+      0.16,
+      0.55,
+      0.48,
+      0.77
+    ]
+  },
+  "horse-right.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 20,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.67169,
+    "sha256": "f018dac1c04fa5a7492d44f08e5937d19fcb8c629c17698eb33d1d00cdc20e07"
+  },
+  "rider-back.png": {
+    "size": [
+      1433,
+      1098
+    ],
+    "parts": 16,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "transparentFraction": 0.65211,
+    "sha256": "d5d70f3dcef32ca80c9db3796f49c60ad11f77ec3460bbf141c81866e5a6a2b3"
+  },
+  "back-left-grip": {
+    "grip": [
+      0.7313,
+      0.6931
+    ],
+    "method": "open-aperture-alpha-centroid",
+    "pixels": 378,
+    "measurementWindow": [
+      0.52,
+      0.55,
+      0.84,
+      0.77
+    ]
+  },
+  "back-right-grip": {
+    "grip": [
+      0.2728,
+      0.6938
+    ],
+    "method": "open-aperture-alpha-centroid",
+    "pixels": 423,
+    "measurementWindow": [
+      0.16,
+      0.55,
+      0.48,
+      0.77
+    ]
+  },
+  "horse-back.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 20,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.6366,
+    "sha256": "927b80efec820e2335c3a8cae202361e502786b3b24f15a4c450b7b3c14f7d0a"
+  },
+  "rider-left.png": {
+    "size": [
+      1254,
+      1254
+    ],
+    "parts": 16,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "transparentFraction": 0.63943,
+    "sha256": "24da8cd7b75907e4272408812b783ce1e60a6974c101686bb1153a9fda11746a"
+  },
+  "left-left-grip": {
+    "grip": [
+      0.6595,
+      0.6789
+    ],
+    "method": "open-aperture-alpha-centroid",
+    "pixels": 716,
+    "measurementWindow": [
+      0.52,
+      0.55,
+      0.84,
+      0.77
+    ]
+  },
+  "left-right-grip": {
+    "grip": [
+      0.3016,
+      0.6857
+    ],
+    "method": "open-aperture-alpha-centroid",
+    "pixels": 729,
+    "measurementWindow": [
+      0.16,
+      0.55,
+      0.48,
+      0.77
+    ]
+  },
+  "horse-left.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 20,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.65324,
+    "sha256": "84fd5071e04345edfb0bf90a441a51f1dcd09ecd8750739d8402e7a267498f80"
+  },
+  "profile-hands-v1.png": {
+    "size": [
+      1254,
+      1254
+    ],
+    "parts": 4,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "transparentFraction": 0.59686,
+    "sha256": "fff5b8e640e77dc9867fb36f1042cdc45e9cb9c96ce64b26c189cd3c83b167e1"
+  },
+  "right-left-profile-grip": {
+    "grip": [
+      0.7209,
+      0.6675
+    ],
+    "method": "enclosed-thumb-index-alpha-hole",
+    "pixels": 3420
+  },
+  "right-right-profile-grip": {
+    "grip": [
+      0.7594,
+      0.6661
+    ],
+    "method": "enclosed-thumb-index-alpha-hole",
+    "pixels": 2131
+  },
+  "left-left-profile-grip": {
+    "grip": [
+      0.241,
+      0.6706
+    ],
+    "method": "enclosed-thumb-index-alpha-hole",
+    "pixels": 2401
+  },
+  "left-right-profile-grip": {
+    "grip": [
+      0.2786,
+      0.6667
+    ],
+    "method": "enclosed-thumb-index-alpha-hole",
+    "pixels": 3681
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "audit": "Four profile hand sources visually inspected before change.",
+  "findings": {
+    "right": "Near anatomical right dorsal hand has backward screen-left thumb.",
+    "left": "Near anatomical left dorsal hand has backward screen-right thumb."
+  },
+  "result": "Corrected using four independent forward-thumb faction male profile hand cutouts.",
+  "sourceCharacter": "crown-militia",
+  "sourceModule": "../../../src/roster-art/crown-militia.js",
+  "sourcePng": "../crown-militia/profile-hands-v1.png",
+  "sourcePromptRecord": "../crown-militia/profile-hands-prompts.json",
+  "preserved": "All unique body source sheets and their four-view bounds, all arm source axes, front/back hand metadata, all existing profile hand width/height, and appendage."
+}

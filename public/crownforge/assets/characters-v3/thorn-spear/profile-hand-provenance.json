@@ -1,0 +1,13 @@
+{
+  "audit": "Four profile hand sources visually inspected before change.",
+  "findings": {
+    "right": "Near anatomical right dorsal hand has backward screen-left thumb.",
+    "left": "Far anatomical right palm hand has backward screen-right thumb; near left dorsal hand is forward."
+  },
+  "result": "Corrected using four independent forward-thumb faction male profile hand cutouts.",
+  "sourceCharacter": "ashen-raider",
+  "sourceModule": "../../../src/roster-art/ashen-raider.js",
+  "sourcePng": "../ashen-raider/profile-hands-v1.png",
+  "sourcePromptRecord": "../ashen-raider/profile-hands-prompts.json",
+  "preserved": "All unique body source sheets and their four-view bounds, all arm source axes, front/back hand metadata, all existing profile hand width/height, and appendage."
+}

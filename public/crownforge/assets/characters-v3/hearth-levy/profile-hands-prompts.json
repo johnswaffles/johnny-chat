@@ -1,0 +1,18 @@
+{
+  "mode": "Built-in image_gen only",
+  "prompt": "Use case: stylized-concept. Asset type: precise four-hand game animation atlas. Input image is an identity and skin-material reference only. Draw FOUR isolated bare gripping hands with short vertical wrists as entirely new anatomically correct neutral profile hands. Keep the character's skin tone, age, and surface quality. Fingers close gently around a narrow INVISIBLE upright shaft, with an actually transparent tiny thumb-index grip opening. No wooden stub or tool inside. Exactly2columns×2rows, one hand per cell, large transparent gutters. Four hands total. Row1 is SCREEN-RIGHT-facing character: col1 FAR anatomical LEFT hand showing PALM creases and curled finger pads, its thumb on the forward SCREEN-RIGHT edge; col2 NEAR anatomical RIGHT hand showing DORSAL knuckles/tendons, thumb pointing to forward SCREEN-RIGHT edge. Row2 is SCREEN-LEFT-facing character: col1 NEAR anatomical LEFT hand showing DORSAL knuckles/tendons, thumb on forward SCREEN-LEFT edge; col2 FAR anatomical RIGHT hand showing PALM creases and curled finger pads, thumb on forward SCREEN-LEFT edge. Each hand's wrist points straight up, fingers down. Neutral natural wrist, no sideways bend or splayed fingers. Dorsal and palm surfaces must be distinctly different. Important: the forward thumb edge follows the character's facing direction, right for both top hands, left for both bottom hands. Premium tactile 3D game sculpture, warm upper-left key with cool bounce, subtle veins/nails, lifelike non-fantastical anatomy, clean silhouettes. No attached arms, no bracers, no weapons, no text, labels, backgroundcolor, checkerboard, cast shadow or grid. Genuine transparent PNG RGBA alpha0 around parts. This is the Hearth Levy adult male citizen soldier: practical medium-strength weathered hands, warm tan skin, short clean nails, subtle working calluses. Image1 determines skin identity; image2 is the correct hand surface and layout reference. No bracers, cuffs or rings.",
+  "references": [
+    "/private/tmp/crownforge-dawn-visuals-20260904/games/crownforge/assets/crownforge-roster-v3-hearth-levy-walk.png",
+    "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-97dd0309-b5df-4c4a-bee3-f97901663694.png"
+  ],
+  "extractionPrompt": "Use case: background-extraction\nAsset type: transparent PNG game sprite sheet\nPrimary request: Extract all separate character components from the supplied image onto a genuinely transparent background with an alpha channel.\nInput image: edit target.\nConstraints: keep every component and its placement, detail, color, facing direction and size unchanged. Remove only the painted checkerboard background. Preserve clean edges and all gaps. The output is a transparent cutout PNG, not an illustration of cutouts on paper.",
+  "draftOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-1284d833-3119-40a0-b102-2379c1170052.png",
+  "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-7487c63a-9ccd-4242-9783-cf62db70695f.png",
+  "file": "profile-hands-v1.png",
+  "order": [
+    "right-far-left-palm",
+    "right-near-right-dorsal",
+    "left-near-left-dorsal",
+    "left-far-right-palm"
+  ]
+}

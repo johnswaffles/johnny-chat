@@ -1,8 +1,9 @@
-import { HearthkinRig, drawHearthkinWard } from './hearthkin-rig.js?v=20260904-armdepth1';
-import { CrownforgeLandscape } from './landscape.js?v=20260904-armdepth1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260904-armdepth1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260904-armdepth1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260904-armdepth1';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js';
+import { drawHearthkinWard } from './hearthkin-rig.js?v=20260904-rosterkin1';
+import { CrownforgeLandscape } from './landscape.js?v=20260904-rosterkin1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260904-rosterkin1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260904-rosterkin1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260904-rosterkin1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -136,7 +137,8 @@ export class CrownforgeRenderer {
     this.ashenFortificationAtlasReady = false;
     this.ashenConstructionAtlasReady = false;
     this.enemyCampReady = false;
-    this.hearthkinRig = new HearthkinRig();
+    this.characterRigs = createCharacterRigs({ lazy: true });
+    this.hearthkinRig = this.characterRigs.get('villager');
     this.villagerAtlases = {};
     this.villagerAtlasReady = {};
     this.combatAtlases = {};
@@ -235,7 +237,13 @@ export class CrownforgeRenderer {
       image.addEventListener('load', () => { this.villagerAtlasReady[key] = true; });
       image.src = definition.src;
     }
+    // Registered characters use their own modular art in both draw passes.
+    // Request legacy sheets only for a type that still needs that renderer.
+    const legacySources = new Set(Object.keys(UNIT_TYPES)
+      .filter(type => !CHARACTER_RIGS[type])
+      .flatMap(type => Object.values(animationDefinition(type).atlases).map(atlas => atlas.src)));
     for (const [key, definition] of Object.entries(COMBAT_ATLASES)) {
+      if (!legacySources.has(definition.src)) continue;
       const image = new Image();
       this.combatAtlases[key] = image;
       this.combatAtlasReady[key] = false;
@@ -276,10 +284,24 @@ export class CrownforgeRenderer {
     this.resize();
   }
 
-  startupReadiness() {
+  warmQueuedCharacterRigs(simulation) {
+    // Training gives the correct character's art time to arrive before it
+    // enters the world. This reads queues without changing their timing.
+    for (const building of simulation?.buildings ?? []) {
+      if (building.destroyed) continue;
+      for (const order of building.productionQueue ?? []) this.characterRigs.get(order.type)?.readiness();
+    }
+  }
+
+  startupReadiness(simulation) {
     // Hold the simulation behind the loading veil until every asset needed by
     // the opening match can draw at production quality. Build-only and later
     // action atlases may continue warming in the browser cache afterward.
+    const currentTypes = simulation
+      ? new Set(simulation.units.map(unit => unit.type))
+      : new Set(this.characterRigs.keys());
+    const characterImages = [...currentTypes].flatMap(type => this.characterRigs.get(type)?.readiness() ?? []);
+    this.warmQueuedCharacterRigs(simulation);
     const required = [
       ...Object.values(this.landscape.images),
       this.environmentAtlas,
@@ -292,16 +314,9 @@ export class CrownforgeRenderer {
       this.goldDepositAssets.small,
       this.goldDepositAssets.medium,
       this.goldDepositAssets.large,
-      ...this.hearthkinRig.readiness(),
+      ...characterImages,
       this.villagerAtlases.statusEffects,
-      this.combatAtlases.soldier,
-      this.combatAtlases.soldierWalk,
-      this.combatAtlases.raider,
-      this.combatAtlases.raiderWalk,
-      this.combatAtlases.raiderStunned,
-      this.combatAtlases.ashenForagerMotion,
-      this.combatAtlases.ashenForagerWork,
-      this.combatAtlases.ashenForagerCarry,
+      ...Object.values(this.combatAtlases),
       this.firstAgeAssets.stable,
       this.firstAgeConstructionAtlases.stable,
       this.firstAgeAssets.granary,
@@ -317,18 +332,6 @@ export class CrownforgeRenderer {
       this.firstAgeConstructionAtlases.timberYard,
       this.firstAgeAssets.stonewrightYard,
       this.firstAgeConstructionAtlases.stonewrightYard,
-      this.combatAtlases.scout,
-      this.combatAtlases.scoutWalk,
-      this.combatAtlases.scoutAttack,
-      this.combatAtlases.spearwarden,
-      this.combatAtlases.spearwardenWalk,
-      this.combatAtlases.spearwardenAttack,
-      this.combatAtlases.militia,
-      this.combatAtlases.militiaWalk,
-      this.combatAtlases.militiaAttack,
-      this.combatAtlases.shieldbearer,
-      this.combatAtlases.shieldbearerWalk,
-      this.combatAtlases.shieldbearerAttack,
     ].filter(Boolean);
     const loaded = required.filter((image) => image.complete && image.naturalWidth > 0).length;
     const total = required.length;
@@ -472,6 +475,7 @@ export class CrownforgeRenderer {
   }
 
   render(simulation, input, time) {
+    this.warmQueuedCharacterRigs(simulation);
     const renderStart = this.diagnostics ? window.performance.now() : 0;
     const renderDelta = this.lastRenderTime ? Math.min(0.05, Math.max(0, (time - this.lastRenderTime) / 1000)) : 0;
     this.lastRenderTime = time;
@@ -1154,8 +1158,8 @@ export class CrownforgeRenderer {
       // retain the natural depth order and do not pop through architecture.
       const readableState = unit.selected || unit.command !== 'idle' || unit.faction === 'enemy' || unit.hp < unit.maxHp;
       if (readableState) {
-        if (unit.type === 'villager' && !unit.dead) drawHearthkinWard(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime, true, this.atmosphere.reducedMotion);
-        if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
+        if (CHARACTER_RIGS[unit.type]?.family === 'worker' && !unit.dead) drawHearthkinWard(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime, true, this.atmosphere.reducedMotion);
+        if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
         else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
       }
       this.drawUnitStatusEffects(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime);
@@ -1732,7 +1736,9 @@ export class CrownforgeRenderer {
   }
 
   drawVillagerAsset(ctx, unit, screen, size, alpha = 1) {
-    this.hearthkinRig.draw(ctx, unit, screen, size, alpha);
+    const rig = this.characterRigs.get(unit.type);
+    if (!rig || !rig.readiness().every(image => image.complete && image.naturalWidth > 0)) return false;
+    return rig.draw(ctx, unit, screen, size, alpha);
   }
 
   drawCombatAsset(ctx, unit, screen, size, alpha = 1) {
@@ -2089,8 +2095,8 @@ export class CrownforgeRenderer {
     const size = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
     if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 1.25 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
-    if (unit.type === 'villager' && !unit.dead) drawHearthkinWard(ctx, unit, point, size * this.camera.zoom, time, true, this.atmosphere.reducedMotion);
-    if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
+    if (CHARACTER_RIGS[unit.type]?.family === 'worker' && !unit.dead) drawHearthkinWard(ctx, unit, point, size * this.camera.zoom, time, true, this.atmosphere.reducedMotion);
+    if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else this.drawAsset(ctx, style.asset, point, size * this.camera.zoom, alpha);
     if (!unit.dead) {
@@ -2162,7 +2168,7 @@ export class CrownforgeRenderer {
       ctx.restore();
     }
 
-    if (unit.type === 'villager') {
+    if (CHARACTER_RIGS[unit.type]) {
       drawHearthkinWard(ctx, unit, point, screenSize, time, false, this.atmosphere.reducedMotion);
       if (unit.stunTimer > 0 || unit.stunImmunityTimer > 0) {
         const stunned = unit.stunTimer > 0;

@@ -1,0 +1,154 @@
+{
+  "front": {
+    "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-024204f0-5676-41d9-bbd6-eca41bc6e3f1.png",
+    "sha256": "62997dde0abfd9bf4898c67909ad6688890b2a87250f795339a7e8d6e0ae5fa5",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "opaqueComponentCount": 16,
+    "sourceIndexOrder": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      9,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "boundsThreshold": 24,
+    "boundsPadding": 2,
+    "gripMeasurements": {
+      "8": "enclosed transparent grip-hole centroid",
+      "9": "enclosed transparent grip-hole centroid"
+    }
+  },
+  "right": {
+    "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-ea545652-33e1-46bd-8501-8e8a45b8bba5.png",
+    "sha256": "f4606bbbb4dcb394ac675ad3f041d0b1807fab98772e8766b222f2b6f19cf034",
+    "size": [
+      1295,
+      1214
+    ],
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "opaqueComponentCount": 16,
+    "sourceIndexOrder": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "boundsThreshold": 24,
+    "boundsPadding": 2,
+    "gripMeasurements": {
+      "8": "alpha centroid at70percent; closed hand has no enclosed transparent hole",
+      "9": "alpha centroid at70percent; closed hand has no enclosed transparent hole"
+    }
+  },
+  "back": {
+    "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-017a79c9-1142-43c8-bee3-392ceb567c86.png",
+    "sha256": "d3f33965923f490034971ad6ab743eb3ff4016831736e3a005c4d7228af9a6b8",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "opaqueComponentCount": 16,
+    "sourceIndexOrder": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "boundsThreshold": 24,
+    "boundsPadding": 2,
+    "gripMeasurements": {
+      "8": "alpha centroid at70percent; closed hand has no enclosed transparent hole",
+      "9": "alpha centroid at70percent; closed hand has no enclosed transparent hole"
+    }
+  },
+  "left": {
+    "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f3f-c316-73e2-9c72-65eda6b21038/exec-09175b0d-c0a4-4f51-97aa-042138a2f503.png",
+    "sha256": "68adccf4e1107b7e953a1e6bd1717c020c89aebf7c6ef6a727e2b857150ef926",
+    "size": [
+      1236,
+      1273
+    ],
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      255
+    ],
+    "opaqueComponentCount": 16,
+    "sourceIndexOrder": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "boundsThreshold": 24,
+    "boundsPadding": 2,
+    "gripMeasurements": {
+      "8": "alpha centroid at70percent; closed hand has no enclosed transparent hole",
+      "9": "alpha centroid at70percent; closed hand has no enclosed transparent hole"
+    }
+  }
+}

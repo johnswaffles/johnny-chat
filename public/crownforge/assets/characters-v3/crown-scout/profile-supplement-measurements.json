@@ -1,0 +1,79 @@
+{
+  "hands": {
+    "src": "./assets/characters-v3/crown-scout/profile-hands-v1.png?v=20260905-profile1",
+    "width": 1312,
+    "height": 1199,
+    "parts": [
+      [
+        181,
+        8,
+        401,
+        563
+      ],
+      [
+        770,
+        7,
+        400,
+        567
+      ],
+      [
+        128,
+        586,
+        407,
+        569
+      ],
+      [
+        729,
+        589,
+        419,
+        569
+      ]
+    ],
+    "anchors": {
+      "0": {
+        "root": [
+          0.468,
+          0.12
+        ]
+      },
+      "1": {
+        "root": [
+          0.4619,
+          0.12
+        ]
+      },
+      "2": {
+        "root": [
+          0.5505,
+          0.12
+        ]
+      },
+      "3": {
+        "root": [
+          0.5465,
+          0.12
+        ]
+      }
+    }
+  },
+  "torsos": {
+    "src": "./assets/characters-v3/crown-scout/profile-torsos-v1.png?v=20260905-profile1",
+    "width": 1536,
+    "height": 1024,
+    "parts": [
+      [
+        152,
+        13,
+        486,
+        983
+      ],
+      [
+        884,
+        12,
+        483,
+        988
+      ]
+    ],
+    "anchors": {}
+  }
+}

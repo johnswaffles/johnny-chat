@@ -1,0 +1,151 @@
+{
+  "tool": "Built-in image_gen",
+  "unchangedCopies": true,
+  "generatedPixelEditsByScript": false,
+  "files": [
+    {
+      "file": "rider-front.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-bacd43a0-e2cc-47af-a34f-3ea974b1efa3.png",
+      "size": [
+        1219,
+        1290
+      ],
+      "parts": 16,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "transparentFraction": 0.58172,
+      "sha256": "2fa54a66086e755af4799b602a85ffd55e7b64a604030ffcb2085ea584c67e4f"
+    },
+    {
+      "file": "horse-front.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-92d2a6e7-b03f-49be-b0c2-6818ad281f31.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 20,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.62677,
+      "sha256": "7fd1cc0d6acdc1cf8ea957114e15442a51d68d27dcd263a79d18634f83e2b2f7"
+    },
+    {
+      "file": "rider-right.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-bb0780d3-ed02-449c-83c3-c63600f87cd9.png",
+      "size": [
+        1536,
+        1024
+      ],
+      "parts": 16,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.65283,
+      "sha256": "0ff0bc72c95e365e67551d39389be301d1f9121d2dee7e44271e52c99379a572"
+    },
+    {
+      "file": "rider-back.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-14308832-6b4b-41e0-964e-64d911e352f3.png",
+      "size": [
+        1433,
+        1098
+      ],
+      "parts": 16,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "transparentFraction": 0.65211,
+      "sha256": "d5d70f3dcef32ca80c9db3796f49c60ad11f77ec3460bbf141c81866e5a6a2b3"
+    },
+    {
+      "file": "horse-left.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-912c5c1d-783c-45f9-8e8e-c43d406ddbcb.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 20,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.65324,
+      "sha256": "84fd5071e04345edfb0bf90a441a51f1dcd09ecd8750739d8402e7a267498f80"
+    },
+    {
+      "file": "horse-right.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-3588bb73-9837-42a6-939f-01a9208dd50f.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 20,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.67169,
+      "sha256": "f018dac1c04fa5a7492d44f08e5937d19fcb8c629c17698eb33d1d00cdc20e07"
+    },
+    {
+      "file": "rider-left.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-d6e6166c-8481-42b7-8dd7-1fb0e44cb09b.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "parts": 16,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "transparentFraction": 0.63943,
+      "sha256": "24da8cd7b75907e4272408812b783ce1e60a6974c101686bb1153a9fda11746a"
+    },
+    {
+      "file": "horse-back.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-971e416a-f4e8-4ab4-9dc3-e5831fba0f9a.png",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 20,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.6366,
+      "sha256": "927b80efec820e2335c3a8cae202361e502786b3b24f15a4c450b7b3c14f7d0a"
+    },
+    {
+      "file": "profile-hands-v1.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-17fd6649-df74-4bd7-b020-cc8c50028b6d.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "parts": 4,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "transparentFraction": 0.59686,
+      "sha256": "fff5b8e640e77dc9867fb36f1042cdc45e9cb9c96ce64b26c189cd3c83b167e1"
+    }
+  ]
+}

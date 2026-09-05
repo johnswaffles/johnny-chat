@@ -1,0 +1,30 @@
+{
+  "hands": {
+    "file": "profile-hands-v1.png",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-0f9235f8-d3ca-411f-9f94-dc0d28efbdf4.png",
+    "dimensions": [
+      1312,
+      1199
+    ],
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      255
+    ],
+    "sha256": "f2920186d7e9dc329d0d8dd72aafd04f006991701a50d2fde26337e93cf14d33"
+  },
+  "torsos": {
+    "file": "profile-torsos-v1.png",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-08f8909e-6c2d-4a83-a294-2f750afa01d7.png",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "sha256": "47cbe7895a3754e2f38ce04333bc0f4205fbaf985fd887644221340856744d11"
+  }
+}

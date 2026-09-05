@@ -1,5 +1,5 @@
-import { CONFIG } from './config.js?v=20260904-armdepth1';
-import { clamp01, landscapeHash, landscapeNoise, treeAppearance } from './landscape-layout.js?v=20260904-armdepth1';
+import { CONFIG } from './config.js?v=20260904-rosterkin1';
+import { clamp01, landscapeHash, landscapeNoise, treeAppearance } from './landscape-layout.js?v=20260904-rosterkin1';
 
 const MASK_WIDTH = 560;
 const MASK_HEIGHT = 460;

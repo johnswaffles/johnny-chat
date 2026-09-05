@@ -1,0 +1,190 @@
+{
+  "rider-front.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 16,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.52995,
+    "sha256": "f796fbfb713987658c41780e6b09bcd623820e0480f15e84cf6613b99d585bb0"
+  },
+  "front-left-grip": {
+    "grip": [
+      0.3284,
+      0.6733
+    ],
+    "method": "open-aperture-alpha-centroid",
+    "pixels": 1805,
+    "measurementWindow": [
+      0.16,
+      0.55,
+      0.48,
+      0.77
+    ]
+  },
+  "front-right-grip": {
+    "grip": [
+      0.6591,
+      0.6743
+    ],
+    "method": "open-aperture-alpha-centroid",
+    "pixels": 1784,
+    "measurementWindow": [
+      0.52,
+      0.55,
+      0.84,
+      0.77
+    ]
+  },
+  "horse-front.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 20,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.60301,
+    "sha256": "b5260822df41e4ea49defa8d025cb1cc5d5bb0beed38c46b33491772a2c32657"
+  },
+  "rider-right.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 16,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.66944,
+    "sha256": "04a4688d43280ab78d51c79cc2dd17593b66812e9429b1cc24cb64361b8f75e6"
+  },
+  "right-left-grip": {
+    "grip": [
+      0.7486,
+      0.6855
+    ],
+    "method": "enclosed-alpha-hole",
+    "pixels": 271
+  },
+  "right-right-grip": {
+    "grip": [
+      0.2428,
+      0.6692
+    ],
+    "method": "enclosed-alpha-hole",
+    "pixels": 276
+  },
+  "horse-right.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 20,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.6833,
+    "sha256": "ff8dc087a567e0c752aefd17836240fb156f86b34d9d48262f800e56d756c1f4"
+  },
+  "rider-back.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 16,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.60607,
+    "sha256": "cbfa76b9ca5a0267190078d236ebbdf510697119a51e0d6cb3254a5333539d5e"
+  },
+  "back-left-grip": {
+    "grip": [
+      0.6545,
+      0.6975
+    ],
+    "method": "enclosed-alpha-hole",
+    "pixels": 695
+  },
+  "back-right-grip": {
+    "grip": [
+      0.3443,
+      0.6965
+    ],
+    "method": "enclosed-alpha-hole",
+    "pixels": 653
+  },
+  "horse-back.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 20,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.63602,
+    "sha256": "fcb07f584ff988b569b04e1627ff6be6f2f9d3eabb8e29fcdbf9117e9023b086"
+  },
+  "rider-left.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 16,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.47601,
+    "sha256": "d592e9ccf2e38992a65a167bb03f7f35a8f3a9c31dd39351c6c038757785a7ff"
+  },
+  "left-left-grip": {
+    "grip": [
+      0.66,
+      0.6905
+    ],
+    "method": "enclosed-alpha-hole",
+    "pixels": 908
+  },
+  "left-right-grip": {
+    "grip": [
+      0.3409,
+      0.6922
+    ],
+    "method": "enclosed-alpha-hole",
+    "pixels": 974
+  },
+  "horse-left.png": {
+    "size": [
+      1024,
+      1536
+    ],
+    "parts": 20,
+    "mode": "RGBA",
+    "alphaRange": [
+      0,
+      254
+    ],
+    "transparentFraction": 0.63326,
+    "sha256": "1811ff68bd5a47963c8b8e19a6ae6070503d3ad5dcf393e2fe2efbf72250e585"
+  }
+}

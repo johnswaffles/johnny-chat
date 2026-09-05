@@ -1,0 +1,135 @@
+{
+  "tool": "Built-in image_gen",
+  "unchangedCopies": true,
+  "generatedPixelEditsByScript": false,
+  "files": [
+    {
+      "file": "rider-front.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-2418b3f4-1eac-40d2-9a9b-f8b77ed4d420.png",
+      "sha256": "f796fbfb713987658c41780e6b09bcd623820e0480f15e84cf6613b99d585bb0",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 16,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.52995
+    },
+    {
+      "file": "rider-back.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-aa4f7540-078e-4851-b251-b53b233a30f1.png",
+      "sha256": "cbfa76b9ca5a0267190078d236ebbdf510697119a51e0d6cb3254a5333539d5e",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 16,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.60607
+    },
+    {
+      "file": "rider-left.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-dcacf543-ec69-4059-8cc1-374543fe99f9.png",
+      "sha256": "d592e9ccf2e38992a65a167bb03f7f35a8f3a9c31dd39351c6c038757785a7ff",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 16,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.47601
+    },
+    {
+      "file": "horse-front.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-0d322ef1-f742-4a55-b1f0-127f21eca22f.png",
+      "sha256": "b5260822df41e4ea49defa8d025cb1cc5d5bb0beed38c46b33491772a2c32657",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 20,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.60301
+    },
+    {
+      "file": "horse-right.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-24130439-2dca-401b-9c86-f3b07a9c6091.png",
+      "sha256": "ff8dc087a567e0c752aefd17836240fb156f86b34d9d48262f800e56d756c1f4",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 20,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.6833
+    },
+    {
+      "file": "horse-back.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-1a9e5324-d1c3-468b-9fb9-0a5ab04f76cb.png",
+      "sha256": "fcb07f584ff988b569b04e1627ff6be6f2f9d3eabb8e29fcdbf9117e9023b086",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 20,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.63602
+    },
+    {
+      "file": "rider-right.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-07477dd6-ee73-40bc-95db-8352506fe66c.png",
+      "sha256": "04a4688d43280ab78d51c79cc2dd17593b66812e9429b1cc24cb64361b8f75e6",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 16,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.66944
+    },
+    {
+      "file": "horse-left.png",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a06f3f-8a86-7a70-8496-9c743f8f3094/exec-59b6ab38-3410-4a24-b224-822fb5096a99.png",
+      "sha256": "1811ff68bd5a47963c8b8e19a6ae6070503d3ad5dcf393e2fe2efbf72250e585",
+      "size": [
+        1024,
+        1536
+      ],
+      "parts": 20,
+      "mode": "RGBA",
+      "alphaRange": [
+        0,
+        254
+      ],
+      "transparentFraction": 0.63326
+    }
+  ]
+}

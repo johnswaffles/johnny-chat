@@ -4,6 +4,31 @@
 **Scope:** Every raster or code-rendered visual currently visible or reachable in the playable slice.  
 **Runtime source of truth:** src/config.js, src/animation.js, src/renderer.js, styles.css.
 
+## September 2026 current-roster sources
+
+The character rebuild supersedes the historical atlas/frame inventory below. Integration and release status are recorded in `CROWNFORGE_ROSTER_REBUILD.md`; do not infer production completion from asset presence alone. `src/character-rigs.js` and `src/roster-art/*.js` are the authoritative new source/attachment mappings.
+
+| Type | Original body / mount assets | Additional anatomy sources |
+|---|---|---|
+| villager | `assets/hearthkin-v2/rig-{front,right,back,left}.png` | Existing front/back arm/neutral-hand sheets; `characters-v3/crown-hearthkin/` profile hands and closed torsos |
+| ashenForager | `characters-v3/ashen-hearthkin/` | Own profile-hand supplement and corrected profile torso sheets |
+| soldier | `characters-v3/crown-guard/` | Corrected profiles; explicit Crown Militia bare-hand supplement |
+| scout | `characters-v3/crown-scout/` | Four rider16-part and four horse20-part sheets; measured hoof soles; rider supplements tracked in descriptor |
+| spearwarden | `characters-v3/crown-spearwarden/` | Explicit Crown Militia bare-hand supplement |
+| militia | `characters-v3/crown-militia/` | Own four-surface profile-hand supplement |
+| shieldbearer | `characters-v3/crown-shieldbearer/` | Explicit Crown Militia bare-hand supplement |
+| raider | `characters-v3/ashen-raider/` | Own four-surface profile-hand supplement |
+| ashenOutrider | `characters-v3/ashen-outrider/` | Four rider16-part and four horse20-part sheets; measured hoof soles; rider supplements tracked in descriptor |
+| thornSpear | `characters-v3/thorn-spear/` | Explicit Ashen Raider bare-hand supplement |
+| hearthLevy | `characters-v3/hearth-levy/` | Own four-surface profile-hand supplement |
+| hidewall | `characters-v3/ashen-hidewall/` | Explicit Ashen Raider bare-hand supplement |
+
+Paths beginning `characters-v3/` are relative to `assets/`. Each body retains four independently authored camera views; hand sharing does not replace its face, costume, anatomy proportions or arm cutouts. Original PNG output bytes are retained. Per-folder JSON/README records document exact built-in image-generation prompts, corrections/extractions, accepted outputs, alpha/anchor measurements and explicit shared references.
+
+`assets/characters-v3/shared/equipment-materials.png` supplies original wood/iron/bronze/leather material surfaces; `shared/shields.png` supplies nine original shield faces. `src/character-equipment.js` and `src/character-shields.js` construct/project finite solids around the anatomical grip. They retain vectors for enlarged inspection and use bounded equipment-only caches at game scale.
+
+Historical completed-character sprites are retained for compatibility/loading history. They do not establish the current animation contract; all current production unit keys must resolve through the rebuilt registry before release acceptance.
+
 Status vocabulary:
 
 - **A — active / compliant:** player-facing and consistent with the current art bible.

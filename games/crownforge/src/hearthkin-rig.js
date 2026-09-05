@@ -1,5 +1,8 @@
-import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260904-armdepth1';
-import { hearthkinLocomotion } from './hearthkin-locomotion.js?v=20260904-armdepth1';
+import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260904-rosterkin1';
+import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260904-rosterkin1';
+import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js';
+import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js';
+import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js';
 
 const TAU = Math.PI * 2;
 const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
@@ -241,47 +244,99 @@ export function hearthkinPose(state = 'idle', time = 0, direction = 0, options =
     const wristAngle = Math.atan2(pose.rightHand.y-pose.rightElbow.y,pose.rightHand.x-pose.rightElbow.x)-Math.PI/2;
     pose.toolAngle = Math.PI + wristAngle * .65;
     pose.headTilt = 0;
+    const forearm=pose.anatomical.rightHand,elbow=pose.anatomical.rightElbow;
+    pose.toolFrame=anatomicalToolFrame(pose,Math.PI+Math.atan2(forearm.z-elbow.z,elbow.y-forearm.y)*.65);
+  } else {
+    const work=hearthkinWorkMotion(state,time,direction,{duration:action.duration,id:options.id,phase});
+    if(work)Object.assign(pose,work);
   }
   return pose;
 }
 
 export function hearthkinHandFrame(pose,left=false) {
   const view=['front','right','back','left'][pose.direction];
-  return HEARTHKIN_HAND_PARTS[view]?.[left?'left':'right'] ?? {
+  return (pose.handFrames??HEARTHKIN_HAND_PARTS)[view]?.[left?'left':'right'] ?? {
     key:view,index:left?8:9,width:4.8,height:7,root:[.5,.18],grip:[.5,.18+3.45/7],
   };
 }
 
 export function hearthkinPalmSocket(pose,left=false) {
+  if(pose.projectedWork)return pose[left?'leftPalm':'rightPalm'];
   const wrist=left?pose.leftHand:pose.rightHand, elbow=left?pose.leftElbow:pose.rightElbow;
   const angle=Math.atan2(wrist.y-elbow.y,wrist.x-elbow.x)-Math.PI/2;
   const frame=hearthkinHandFrame(pose,left);
   return attachment(wrist,(frame.grip[0]-frame.root[0])*frame.width,(frame.grip[1]-frame.root[1])*frame.height,angle);
 }
 
+export function hearthkinHandTransform(pose,left=false) {
+  const frame=hearthkinHandFrame(pose,left),wrist=pose[left?'leftHand':'rightHand'],elbow=pose[left?'leftElbow':'rightElbow'];
+  if(!pose.projectedWork)return {frame,width:frame.width,height:frame.height,angle:Math.atan2(wrist.y-elbow.y,wrist.x-elbow.x)-Math.PI/2};
+  const palm=hearthkinPalmSocket(pose,left),dx=palm.x-wrist.x,dy=palm.y-wrist.y,length=Math.hypot(dx,dy);
+  const authoredX=(frame.grip[0]-frame.root[0])*frame.width;
+  const width=frame.width*Math.min(1,length/Math.max(.0001,Math.abs(authoredX))* .98);
+  const sourceX=(frame.grip[0]-frame.root[0])*width;
+  const sourceY=Math.sqrt(Math.max(.000001,length*length-sourceX*sourceX));
+  return {frame,width,height:sourceY/(frame.grip[1]-frame.root[1]),angle:Math.atan2(dy,dx)-Math.atan2(sourceY,sourceX)};
+}
+
 // Raster artwork supplies surfaces; the rig supplies continuous motion.
 // No direction is obtained by flipping another view and no animation uses
 // a whole-character bob, squash, crossfade, or repeated sprite-sheet poses.
+// A hoof has two attachments: the fetlock above it and its painted sole on
+// the ground. Preserve both while the sole rolls around the supporting edge.
+export function mountedHoofTransform(pose,index,art) {
+  const legName=['frontLeft','frontRight','hindLeft','hindRight'][index-14];
+  const leg=pose.mount.legs[legName],rect=art.parts[index],anchors=art.anchors[index];
+  const root=anchors.root,sole=anchors.sole??anchors.tip;
+  const origin=pose.mount.projected[legName+'Fetlock'];
+  const ground=projectHearthkin(leg.contact,pose.direction);
+  const angle=leg.pitch*(pose.direction===3?-1:pose.direction===1?1:0);
+  const height=8*pose.mount.scale/Math.max(.001,sole[1]-root[1]);
+  const width=height*rect[2]/rect[3];
+  const candidates=[anchors.heel??sole,anchors.toe??sole];
+  const support=angle===0?sole:candidates.reduce((a,b)=>Math.sin(angle)*a[0]>Math.sin(angle)*b[0]?a:b);
+  const target={x:ground.x+(support[0]-sole[0])*width,y:ground.y};
+  const across={x:width*Math.cos(angle),y:width*Math.sin(angle)};
+  const du=support[0]-root[0],dv=Math.max(.001,support[1]-root[1]);
+  const down={x:(target.x-origin.x-du*across.x)/dv,y:(target.y-origin.y-du*across.y)/dv};
+  return {origin,ground,target,root,sole,support,width,height,across,down,angle};
+}
+
+export function mountedPaintOrder(pose) {
+  const h=pose.mount.projected;
+  const legs=[{root:'frontLeftShoulder',parts:[4,8,14]},{root:'frontRightShoulder',parts:[5,9,15]},{root:'hindLeftHip',parts:[6,10,12,16]},{root:'hindRightHip',parts:[7,11,13,17]}].sort((a,b)=>h[a.root].depth-h[b.root].depth);
+  const neck=[1,18,0],rear=pose.direction===2;
+  return {
+    behind:[...(rear?neck:[3]),...legs.slice(0,2).flatMap(leg=>leg.parts)],
+    ahead:[...legs.slice(2).flatMap(leg=>leg.parts),...(rear?[3]:pose.direction===0?[]:neck)],
+  };
+}
+
 export class HearthkinRig {
-  constructor() {
+  constructor(definition={}) {
+    this.definition=definition;
+    this.art=definition.views?{...definition.views,props:HEARTHKIN_RIG_ART.props}:HEARTHKIN_RIG_ART;
+    if(definition.mount)for(const [view,art] of Object.entries(definition.mount.views))this.art['mount-'+view]=art;
+    this.armParts=definition.arms??HEARTHKIN_ARM_PARTS;
+    this.handFrames=definition.hands??HEARTHKIN_HAND_PARTS;
     this.images = {};
     this.parts = new Map();
     this.transitions = new WeakMap();
-    for (const [key, definition] of Object.entries(HEARTHKIN_RIG_ART)) {
+    for (const [key, definition] of Object.entries(this.art)) {
       const image = new Image();
       image.src = new URL(definition.src.replace('./assets/', '../assets/'), import.meta.url).href;
       this.images[key] = image;
     }
   }
 
-  readiness() { return Object.values(this.images); }
+  readiness() { return [...Object.values(this.images),...equipmentReadiness(),...(this.definition?.family==='foot'||this.definition?.family==='mounted'?shieldReadiness():[])]; }
 
   part(key, index) {
     const cacheKey = `${key}:${index}`;
     if (this.parts.has(cacheKey)) return this.parts.get(cacheKey);
     const image = this.images[key];
     if (!image?.complete || !image.naturalWidth) return null;
-    const rect = HEARTHKIN_RIG_ART[key].parts[index];
+    const rect = (this.art??HEARTHKIN_RIG_ART)[key].parts[index];
     if (!rect) return null;
     // Make small mipmaps once so fine cloth detail remains clean at RTS size.
     const levels = [256, 128, 64, 32].map(height => {
@@ -297,32 +352,41 @@ export class HearthkinRig {
   }
 
   draw(ctx, unit, anchor, size, alpha = 1, timeOverride) {
+    size*=this.definition?.renderScale??1;
     const direction = clamp(Math.floor(unit.facing ?? 0), 0, 3);
     const view = ['front', 'right', 'back', 'left'][direction];
     const state = unit.animationState ?? 'idle';
-    const action = HEARTHKIN_ACTIONS[state] ?? HEARTHKIN_ACTIONS.idle;
+    const actions=this.definition?.actions??HEARTHKIN_ACTIONS;
+    const action = actions[state] ?? actions.idle;
     let time = timeOverride ?? unit.animationTime ?? 0;
     // Gathering uses the simulation's contact clock so a tool lands when the
     // harvest event fires, even after travel, interruptions, or loading a save.
     if (timeOverride === undefined && state.startsWith('gather_') && Number.isFinite(unit.gatherTimer)) time = unit.gatherTimer;
     if (timeOverride === undefined && state.startsWith('attack_') && Number.isFinite(unit.attackPhaseElapsed)) time = unit.attackPhaseElapsed;
     if (timeOverride === undefined && ['construct', 'repair', 'demolish', 'field_work'].includes(state) && Number.isFinite(unit.workCyclePhase)) time = unit.workCyclePhase * action.duration;
-    let pose = hearthkinPose(state, time, direction, {
+    let pose = (this.definition?.samplePose??hearthkinPose)(state, time, direction, {
       id: unit.id, hit: unit.hitFlash, wardImpact: unit.wardBlockedPulse,
       carryType: unit.carryAmount > 0 ? unit.carryType : null,
       moving: unit.kind === 'unit' ? unit.motionSpeed > .025 : state === 'walk' || state.startsWith('carry_'),
     });
+    if(this.handFrames)pose.handFrames=this.handFrames;
     if (timeOverride === undefined) {
       const previous = this.transitions.get(unit);
       const clock = unit.animClock ?? 0;
-      const from = previous?.state !== state ? previous?.pose : previous?.from;
+      const from = previous?.direction!==direction?null:previous?.state !== state ? previous?.pose : previous?.from;
       const started = previous?.state !== state ? clock : previous?.started ?? clock;
       const amount = smooth((clock - started) / .11);
-      // Blend joints when changing jobs; combat contact remains tied exactly
-      // to the simulation clock. This is not a crossfade between pictures.
-      if (from && amount < 1 && !state.startsWith('attack') && state !== 'death' && state !== 'hit' && state !== 'ward_block') {
+      // A projected work/body frame already solves physical hand, tool and
+      // torso constraints together. Blending only its screen joints would
+      // leave the tool and body at a different pose for the first 110 ms.
+      // Blend compatible free locomotion only; action entry/contact frames
+      // retain their complete anatomical solution and simulation timing.
+      const freeTransition=from&&!pose.projectedWork&&!from.projectedWork&&!pose.bodyFrame&&!from.bodyFrame
+        &&pose.tool===from.tool&&pose.cargo===from.cargo;
+      if (freeTransition && amount < 1 && !state.startsWith('attack') && state !== 'death' && state !== 'hit' && state !== 'ward_block') {
         pose = { ...pose };
         for (const key of ['hip','waist','neck','shoulder','head','leftShoulder','rightShoulder','leftElbow','rightElbow','leftHip','rightHip','leftKnee','rightKnee','leftHand','rightHand']) pose[key] = blend(from[key], pose[key], amount);
+        if(pose.projectedWork)for(const side of ['left','right'])pose[side+'Palm']=blend(hearthkinPalmSocket(from,side==='left'),pose[side+'Palm'],amount);
         for (const key of ['leftFoot','rightFoot']) pose[key] = { ...pose[key], point: blend(from[key].point, pose[key].point, amount), angle: mix(from[key].angle, pose[key].angle, amount) };
         pose.headTilt = mix(from.headTilt, pose.headTilt, amount);
         const angularDifference = Math.atan2(Math.sin(pose.toolAngle - from.toolAngle), Math.cos(pose.toolAngle - from.toolAngle));
@@ -333,12 +397,16 @@ export class HearthkinRig {
           pose.rightElbow = solveLimb(pose.rightShoulder, pose.rightHand, 17, 16, pose.sideView ? pose.forward.x : -lateral);
         }
       }
-      this.transitions.set(unit, { state, pose, from: amount < 1 ? from : null, started });
+      this.transitions.set(unit, { state, direction, pose, from: amount < 1 ? from : null, started });
     }
     if (!this.part(view, 0)) return false;
     ctx.save(); ctx.translate(anchor.x, anchor.y); ctx.scale(size / 100, size / 100); ctx.globalAlpha *= alpha;
     ctx.imageSmoothingEnabled = true;
+    const dimensions=this.definition?.dimensions??{};
+    const appendage=this.definition?.appendage??'braid';
     const draw = (key, index, position, width, height, angle = 0, pivotX = .5, pivotY = 0, half = null, reverseAcrossGrip = false) => {
+      const replacement=this.art?.[key]?.overrides?.[index];
+      if(replacement){key=replacement.key;index=replacement.index;}
       const levels = this.part(key, index);
       if (!levels) return;
       const screenHeight = Math.abs(height * size / 100) * (globalThis.devicePixelRatio ?? 1);
@@ -347,6 +415,18 @@ export class HearthkinRig {
       if(reverseAcrossGrip)ctx.scale(-1,1);
       if (half !== null) { ctx.beginPath();ctx.rect(-width * pivotX + half * width / 2, -height * pivotY, width / 2, height);ctx.clip(); }
       ctx.drawImage(image, -width * pivotX, -height * pivotY, width, height); ctx.restore();
+    };
+    // Body surfaces follow the actor's plane as it leans or falls. Keeping
+    // a full-height billboard here leaves rear cloaks standing upright.
+    const bodySurface=(index,joint,width,height,pivotX=.5,pivotY=0,upOffset=0,backOffset=0)=>{
+      const frame=pose.bodyFrame,origin=pose.anatomical[joint];
+      const horizontal=pose.sideView?frame.forward:frame.right;
+      const sign=direction===0||direction===3?-1:1;
+      const x=projectHearthkin({x:horizontal.x*sign,y:horizontal.y*sign,z:horizontal.z*sign},direction);
+      const down=projectHearthkin({x:-frame.up.x,y:-frame.up.y,z:-frame.up.z},direction);
+      const at=projectHearthkin({x:origin.x+frame.up.x*upOffset-frame.forward.x*backOffset,y:origin.y+frame.up.y*upOffset-frame.forward.y*backOffset,z:origin.z+frame.up.z*upOffset-frame.forward.z*backOffset},direction);
+      ctx.save();ctx.transform(x.x,x.y,down.x,down.y,at.x,at.y);
+      draw(view,index,point(0,0),width,height,0,pivotX,pivotY);ctx.restore();
     };
     const segment = (index, a, b, width, overlap = 2.2) => {
       const length = Math.hypot(b.x - a.x, b.y - a.y);
@@ -363,28 +443,80 @@ export class HearthkinRig {
     const drawLeg = left => {
       const a = left ? pose.leftHip : pose.rightHip, b = left ? pose.leftKnee : pose.rightKnee;
       const foot = left ? pose.leftFoot : pose.rightFoot;
-      segment(left ? 10 : 11, a, b, pose.sideView ? 10 : 9.4);
-      segment(left ? 12 : 13, b, foot.point, 7.4);
+      for(const [index,start,end,width] of [[left?10:11,a,b,pose.sideView?10:9.4],[left?12:13,b,foot.point,7.4]]) {
+        const anchors=this.art?.[view]?.anchors?.[index];
+        if(anchors)attachedSegment({key:view,index,...anchors},start,end,width);
+        else segment(index,start,end,width);
+      }
       draw(view, left ? 14 : 15, offset(foot.point, pose.forward.x * 2.1, -1), pose.sideView ? 12.5 : 9.4, 10, foot.angle, .5, .26);
+    };
+    const mountKey='mount-'+view;
+    const mountBone=index=>{
+      const binding=pose.mount.partBindings[index],parts=this.art[mountKey],rect=parts.parts[index];
+      const anchors=parts.anchors?.[index]??{root:[.5,.1],tip:[.5,.9]};
+      const a=pose.mount.projected[binding.root],b=pose.mount.projected[binding.tip];
+      if(index>=14&&index<=17) {
+        const t=mountedHoofTransform(pose,index,parts);
+        ctx.save();ctx.transform(t.across.x/t.width,t.across.y/t.width,t.down.x/t.height,t.down.y/t.height,t.origin.x,t.origin.y);
+        draw(mountKey,index,point(0,0),t.width,t.height,0,t.root[0],t.root[1]);ctx.restore();
+        return;
+      }
+      const dx=(anchors.tip[0]-anchors.root[0])*rect[2],dy=(anchors.tip[1]-anchors.root[1])*rect[3];
+      const scale=Math.hypot(b.x-a.x,b.y-a.y)/Math.max(.001,Math.hypot(dx,dy));
+      const angle=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(dy,dx);
+      draw(mountKey,index,a,rect[2]*scale,rect[3]*scale,angle,anchors.root[0],anchors.root[1]);
+    };
+    const mountSurface=(index,joint,width,height)=>{
+      const frame=pose.mount.bodyFrame,origin=pose.mount.projected[joint];
+      const horizontal=pose.sideView?frame.forward:frame.right;
+      const sign=direction===0||direction===3?-1:1;
+      const x=projectHearthkin({x:horizontal.x*sign,y:horizontal.y*sign,z:horizontal.z*sign},direction);
+      const down=projectHearthkin({x:-frame.up.x,y:-frame.up.y,z:-frame.up.z},direction);
+      const pivot=this.art[mountKey].anchors?.[index]?.root??[.5,.5];
+      ctx.save();ctx.transform(x.x,x.y,down.x,down.y,origin.x,origin.y);
+      draw(mountKey,index,point(0,0),width,height,0,pivot[0],pivot[1]);ctx.restore();
+    };
+    const mountFront=()=>{mountBone(1);mountBone(18);mountBone(0);};
+    const drawMount=()=>{
+      const order=mountedPaintOrder(pose);
+      for(const index of order.behind)mountBone(index);
+      if(pose.sideView)drawLeg(direction===1);
+      mountSurface(2,'barrel',(pose.sideView?60:24)*pose.mount.scale,(pose.sideView?32:36)*pose.mount.scale);
+      mountSurface(19,'saddle',(pose.sideView?28:25)*pose.mount.scale,13*pose.mount.scale);
+      for(const index of order.ahead)mountBone(index);
+    };
+    const drawReins=()=>{
+      if(!pose.reins)return;
+      ctx.save();ctx.strokeStyle='#39271b';ctx.lineWidth=.62;
+      for(const side of ['left','right']) {
+        const [a,b,c]=pose.reins[side].map(p=>projectHearthkin(p,direction));
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(b.x,b.y,c.x,c.y);ctx.stroke();
+      }
+      ctx.restore();
     };
     const drawArm = left => {
       const a = left ? pose.leftShoulder : pose.rightShoulder, b = left ? pose.leftElbow : pose.rightElbow, c = left ? pose.leftHand : pose.rightHand;
-      const parts=HEARTHKIN_ARM_PARTS[view]?.[left?'left':'right'];
+      const parts=(this.armParts??HEARTHKIN_ARM_PARTS)[view]?.[left?'left':'right'];
       if(parts) {
-        attachedSegment(parts.upper,a,b,9.2);
-        attachedSegment(parts.lower,b,c,5.4);
+        attachedSegment(parts.upper,a,b,dimensions.upperArm??9.2);
+        attachedSegment(parts.lower,b,c,dimensions.forearm??5.4);
       } else {
         segment(left ? 4 : 5, a, b, 9.2);
         segment(left ? 6 : 7, b, c, 5.4, 1.8);
       }
     };
     const drawHand = left => {
-      const wrist = left ? pose.leftHand : pose.rightHand, elbow = left ? pose.leftElbow : pose.rightElbow;
-      const frame=hearthkinHandFrame(pose,left);
-      draw(frame.key, frame.index, wrist, frame.width, frame.height, Math.atan2(wrist.y - elbow.y, wrist.x - elbow.x) - Math.PI / 2, frame.root[0], frame.root[1]);
+      const wrist = left ? pose.leftHand : pose.rightHand;
+      const {frame,width,height,angle}=hearthkinHandTransform(pose,left);
+      draw(frame.key, frame.index, wrist, width, height, angle, frame.root[0], frame.root[1]);
     };
     const drawTool = () => {
       if (!pose.tool) return;
+      if(pose.toolFrame) {
+        const socket=hearthkinPalmSocket(pose),grip=projectHearthkin(pose.toolFrame.grip,direction);
+        drawCharacterEquipment(ctx,pose.toolFrame,direction,{x:socket.x-grip.x,y:socket.y-grip.y});
+        return;
+      }
       const index = { axe: 0, pick: 1, hoe: 2, hammer: 3 }[pose.tool];
       const width = { axe: 13, pick: 24, hoe: 13, hammer: 13 }[pose.tool] * pose.toolScale;
       const gripX = { axe: .18, pick: .52, hoe: .13, hammer: .5 }[pose.tool];
@@ -402,32 +534,48 @@ export class HearthkinRig {
     // Directional painter order: the far limbs disappear behind the torso,
     // while the near fingers close over the carried object/tool grip.
     const farLeft = direction === 1 || direction === 2;
+    const shield=pose.shieldFrame?shieldGeometry(pose.shieldFrame,direction):null;
     const drawArmAssembly = left => {
       drawArm(left);
       if (!left) drawTool();
+      if(left&&shield?.frame.hand==='left'&&!shield.frontFacing)drawCharacterShield(ctx,pose.shieldFrame,direction,unit.type??this.definition?.id);
       drawHand(left);
+      if(left&&shield?.frame.hand==='left'&&shield.frontFacing)drawCharacterShield(ctx,pose.shieldFrame,direction,unit.type??this.definition?.id);
     };
-    drawLeg(farLeft);
+    const torsoAngle = Math.atan2(pose.waist.y - pose.neck.y, pose.waist.x - pose.neck.x) - Math.PI / 2;
+    const drawCloak=()=>pose.bodyFrame?bodySurface(3,'neck',pose.sideView?(dimensions.cloakSideWidth??18):(dimensions.cloakWidth??29),dimensions.cloakHeight??41,.5,.05,1,3):draw(view,3,attachment(pose.neck,pose.sideView?-pose.forward.x*3:0,-1,torsoAngle),pose.sideView?(dimensions.cloakSideWidth??18):(dimensions.cloakWidth??29),dimensions.cloakHeight??41,torsoAngle+pose.braidSway,.5,.05);
+    if(pose.mount)drawMount();
+    if(appendage==='cloak'&&direction!==2)drawCloak();
+    if(shield?.frame.attachment==='back'&&direction!==2)drawCharacterShield(ctx,pose.shieldFrame,direction,unit.type??this.definition?.id);
+    if(!pose.mount||!pose.sideView)drawLeg(farLeft);
     if (pose.sideView) drawArmAssembly(farLeft);
     drawLeg(!farLeft);
     if (direction === 2) { drawCargo();drawArmAssembly(true);drawArmAssembly(false); }
-    const torsoAngle = Math.atan2(pose.waist.y - pose.neck.y, pose.waist.x - pose.neck.x) - Math.PI / 2;
-    const hipsAngle = pose.fall * pose.sign * 1.2;
+    const hipsAngle = pose.bodyFrame?torsoAngle:pose.fall * pose.sign * 1.2;
     const coatRoot = attachment(pose.waist, 0, -2, hipsAngle);
-    if (pose.sideView || pose.fall > .01) draw(view, 2, coatRoot, pose.sideView ? 22 : 28, 27, hipsAngle + pose.clothSway);
+    if(pose.bodyFrame)bodySurface(2,'waist',pose.sideView?22:28,27,.5,0,2);
+    else if (pose.sideView || pose.fall > .01) draw(view, 2, coatRoot, pose.sideView ? 22 : 28, 27, hipsAngle + pose.clothSway);
     else {
       draw(view, 2, coatRoot, 28, 27, hipsAngle + pose.clothSway, .5, 0, 0);
       draw(view, 2, coatRoot, 28, 27, hipsAngle - pose.clothSway, .5, 0, 1);
     }
     const torsoHeight = Math.hypot(pose.waist.x - pose.neck.x, pose.waist.y - pose.neck.y) + 3;
-    draw(view, 1, offset(pose.neck, 0, -1), pose.sideView ? 20 : 25, torsoHeight, torsoAngle);
+    if(pose.bodyFrame)bodySurface(1,'neck',pose.sideView?(dimensions.torsoSide??20):(dimensions.torso??25),31,.5,0,1);
+    else draw(view, 1, offset(pose.neck, 0, -1), pose.sideView ? (dimensions.torsoSide??20) : (dimensions.torso??25), torsoHeight, torsoAngle);
+    if(appendage==='cloak'&&direction===2)drawCloak();
+    if(shield?.frame.attachment==='back'&&direction===2)drawCharacterShield(ctx,pose.shieldFrame,direction,unit.type??this.definition?.id);
     const headAngle = torsoAngle + pose.headTilt;
-    if (direction !== 0) draw(view, 3, attachment(pose.head, -pose.forward.x * 6, -8, headAngle), 4.6, 29, headAngle + pose.braidSway);
-    draw(view, 0, attachment(pose.head, 0, 5, headAngle), pose.sideView ? 16.4 : 17.4, 23, headAngle, .5, .91);
-    if (direction === 0) draw(view, 3, attachment(pose.head, 7, -7, headAngle), 3.8, 26, headAngle + pose.braidSway);
+    if(appendage==='braid'&&pose.bodyFrame)bodySurface(3,'head',4.6,29,.5,0,8,6);
+    if (appendage==='braid'&&!pose.bodyFrame&&direction !== 0) draw(view, 3, attachment(pose.head, -pose.forward.x * 6, -8, headAngle), 4.6, 29, headAngle + pose.braidSway);
+    if(pose.bodyFrame)bodySurface(0,'head',pose.sideView?(dimensions.headSideWidth??16.4):(dimensions.headWidth??17.4),dimensions.headHeight??23,.5,.91,-5);
+    else draw(view, 0, attachment(pose.head, 0, 5, headAngle), pose.sideView ? (dimensions.headSideWidth??16.4) : (dimensions.headWidth??17.4), dimensions.headHeight??23, headAngle, .5, .91);
+    if (appendage==='braid'&&!pose.bodyFrame&&direction === 0) draw(view, 3, attachment(pose.head, 7, -7, headAngle), 3.8, 26, headAngle + pose.braidSway);
     if (direction === 0) { drawCargo();drawArmAssembly(true);drawArmAssembly(false); }
     else if (pose.sideView) { drawCargo();drawArmAssembly(!farLeft); }
-    if (state === 'death') {
+    if(pose.mount&&direction===0)mountFront();
+    drawReins();
+    if(pose.droppedToolFrame)drawCharacterEquipment(ctx,pose.droppedToolFrame,direction);
+    else if (state === 'death'&&!pose.bodyFrame) {
       const p = clamp(time / action.duration);
       const drop = smooth(clamp(p * 1.8));
       draw('props', 0, point(mix(pose.sign * 15, -pose.sign * 10, drop), mix(-34, 7, drop) - Math.sin(drop * Math.PI) * 8), 13, 33, Math.PI - pose.sign * drop * Math.PI / 2, .24, .85, null, direction===2||direction===3);

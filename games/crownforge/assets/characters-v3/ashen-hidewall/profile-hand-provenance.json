@@ -1,0 +1,8 @@
+{
+  "reason": "Source audit found backward thumb on a near profile hand and/or duplicate dorsal far hand.",
+  "sourceCharacter": "ashen-raider",
+  "sourceModule": "../../../src/roster-art/ashen-raider.js",
+  "sourcePng": "../ashen-raider/profile-hands-v1.png",
+  "sourcePromptRecord": "../ashen-raider/profile-hands-prompts.json",
+  "changes": "Profile ART reference and hand source wrist/grip coordinates only. Retain unique four-view body pixels, all body rectangles, arm axes, appendage, and existing hand width/height."
+}

@@ -7,6 +7,20 @@
 
 This is the visual contract for Crownforge. Every new asset must fit this contract before it is added. The current slice is intentionally small: quality and consistency outrank asset count.
 
+## September 2026 character amendment
+
+The current-roster rebuild supersedes the historical frame-count and three-family animation notes below. Its exact scope and acceptance are in `CROWNFORGE_ROSTER_REBUILD.md` and current contracts in `CROWNFORGE_ANIMATION_COVERAGE.md`.
+
+All12 existing identities retain independently authored front/right/back/left body artwork. Continuous joint rotation and projected body planes are permitted for individual anatomical cutouts; rotating or mirroring a complete character to invent a missing view remains prohibited. Original face, costume, materials, faction palette and recognizable equipment remain character-specific.
+
+Author closed torso cloth/armor beneath moving sleeves, anatomically correct near knuckles/far palms, and forward profile thumbs. Record source wrist-to-grip and limb axes from actual cutouts. Shared bare-hand supplements are acceptable when skin/materials fit and each character retains its proportions; document every shared source explicitly.
+
+Weapons and shields require finite solid surfaces with grip, shaft, edge/face and thickness axes. Work must move the appropriate striking face toward the target. Two-handed tools stay on both palms and rear equipment occludes behind the body. Death moves all body/costume surfaces together.
+
+Horses use independent four-beat support, measured painted hoof floors, species-appropriate limb anatomy, and correctly scaled human riders with seat, stirrups and reins. A planted joint or valid bone length alone does not prove a visibly grounded hoof or natural standing posture.
+
+Review source anatomy, enlarged critical poses, moving all-state grids and actual gameplay. Retain exact prompts/provenance and verify genuine alpha. Technical tests and cache/performance measurements support that review; they do not replace it.
+
 ## 1. Identity
 
 Crownforge is a warm, grounded historical strategy game seen from an elevated three-quarter camera. Its identity comes from the meeting of:

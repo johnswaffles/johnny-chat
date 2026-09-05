@@ -1,0 +1,21 @@
+{
+  "mode": "Built-in image_gen only",
+  "prompt": "Use case: stylized-concept. Asset type: precise four-hand game animation atlas. Input image is an identity and skin-material reference only. Draw FOUR isolated bare gripping hands with short vertical wrists as entirely new anatomically correct neutral profile hands. Keep the character's skin tone, age, and surface quality. Fingers close gently around a narrow INVISIBLE upright shaft, with an actually transparent tiny thumb-index grip opening. No wooden stub or tool inside. Exactly2columns\u00d72rows, one hand per cell, large transparent gutters. Four hands total. Row1 is SCREEN-RIGHT-facing character: col1 FAR anatomical LEFT hand showing PALM creases and curled finger pads, its thumb on the forward SCREEN-RIGHT edge; col2 NEAR anatomical RIGHT hand showing DORSAL knuckles/tendons, thumb pointing to forward SCREEN-RIGHT edge. Row2 is SCREEN-LEFT-facing character: col1 NEAR anatomical LEFT hand showing DORSAL knuckles/tendons, thumb on forward SCREEN-LEFT edge; col2 FAR anatomical RIGHT hand showing PALM creases and curled finger pads, thumb on forward SCREEN-LEFT edge. Each hand's wrist points straight up, fingers down. Neutral natural wrist, no sideways bend or splayed fingers. Dorsal and palm surfaces must be distinctly different. Important: the forward thumb edge follows the character's facing direction, right for both top hands, left for both bottom hands. Premium tactile 3D game sculpture, warm upper-left key with cool bounce, subtle veins/nails, lifelike non-fantastical anatomy, clean silhouettes. No attached arms, no bracers, no weapons, no text, labels, backgroundcolor, checkerboard, cast shadow or grid. Genuine transparent PNG RGBA alpha0 around parts. This is the Crown Militia adult man: medium strong male hands, natural warm light skin, modest knuckles, working infantryman's hands without jewelry or scars. Short bare wrists, no clothing.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-eb22f0c2-d961-4842-a089-8a2dd699eef4.png",
+  "extractionPrompt": "Use case: background-extraction\nAsset type: transparent PNG game sprite sheet\nPrimary request: Extract all separate character components from the supplied image onto a genuinely transparent background with an alpha channel.\nInput image: edit target.\nConstraints: keep every component and its placement, detail, color, facing direction and size unchanged. Remove only the painted checkerboard background. Preserve clean edges and all gaps. The output is a transparent cutout PNG, not an illustration of cutouts on paper.",
+  "draftOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-b424cb94-eab2-483f-9e17-46da047f0498.png",
+  "selectedOriginal": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-5e65e310-fdbb-4d8c-a02f-d37ade229f0a.png",
+  "file": "profile-hands-v1.png",
+  "order": [
+    "right-far-left-palm",
+    "right-near-right-dorsal",
+    "left-near-left-dorsal",
+    "left-far-right-palm"
+  ],
+  "modeVerified": "RGBA",
+  "dimensions": [
+    1308,
+    1202
+  ],
+  "sha256": "beeed3545b1e30d30afecedac316c0a07c1e5fc567b5e7d8bf68aa8096bcd11c"
+}

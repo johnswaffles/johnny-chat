@@ -1,0 +1,52 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "role": "Original Crown Hearthkin profile hand correction. Generated output copied unchanged.",
+  "acceptedSource": "exec-8c6f33a4-da0a-4123-baf5-a865342aabc5.png",
+  "generation": "Create an ORIGINAL production cutout atlas correcting the supplied Crown Hearthkin character's PROFILE hands. Use references only for matching the realistic illustrated skin, off-white sleeve/teal clothing fantasy game aesthetic. Output exactly FOUR large isolated EMPTY gripping hands in one horizontal row on genuine transparent RGBA background, wrist UP, fingers down. No torso, no weapons, no labels, no grid. Each hand must be a loosely closed natural cylindrical grip around an absent small tool shaft, with the visible opening transparent. Anatomy is essential: cell 1 is the anatomical LEFT hand of a woman facing SCREEN RIGHT, viewed from the PALM side (far hand): thumb points SCREEN RIGHT/forward and curled finger pads and palm creases visible. Cell 2 is anatomical RIGHT hand of woman facing SCREEN RIGHT, viewed DORSALLY (near hand): back of hand/knuckles, thumb points SCREEN RIGHT/forward. Cell 3 anatomical LEFT hand facing SCREEN LEFT, DORSAL near-hand surface with knuckles, thumb SCREEN LEFT/forward. Cell 4 anatomical RIGHT hand facing SCREEN LEFT, PALM far-hand surface with curled finger pads/palm creases, thumb SCREEN LEFT/forward. Cell 1 and2 genuinely different palm vs dorsal surfaces, cell3and4 likewise. Neutral wrist straight with forearm, small wrist stump at top; no inverted hands. Anatomically correct five fingers on each hand, realistic feminine worker hands, relaxed firm grip, no jewelry or gloves. All four same size and lighting and clean separate silhouette with ample margin. Full detail matching source skin palette. True transparent alpha cutouts; no baked background, no checkerboard, no drop shadows.",
+  "extraction": "Extract these four separate hands into a transparent PNG with actual alpha. Remove the entire checkerboard background, leaving empty transparent space between the hands and within their open grips. Preserve the existing hands, positions, colors and camera views. This is background removal only.",
+  "failedOpaqueExtractions": [
+    "Extract the FOUR exact original hand cutouts from this image onto a GENUINE transparent RGBA background. Remove the checkerboard completely, including inside the open finger grips. Preserve every hand pixel, anatomy, order, position, shape and texture. Do not redraw, change, relight, mirror or move hands. Output a PNG with real transparent alpha outside each cutout; not a drawn checkerboard and not any opaque matte. Four separate hands in the same one-row layout.",
+    "Remove the background from the attached four-hand image. The output MUST use TRANSPARENT BACKGROUND mode, RGBA PNG with an actual alpha channel. The checkerboard in the reference is a mistake and must all disappear. Keep only the four isolated hand cutouts, including transparent holes between curled fingers. No background color or pattern. Preserve hand skin and artwork; no new hands. TRANSPARENT BACKGROUND."
+  ],
+  "measurement": {
+    "alphaZeroFraction": 0.5140834,
+    "parts": [
+      [
+        48,
+        7,
+        390,
+        700
+      ],
+      [
+        593,
+        7,
+        425,
+        698
+      ],
+      [
+        1122,
+        7,
+        426,
+        698
+      ],
+      [
+        1700,
+        7,
+        393,
+        700
+      ]
+    ],
+    "palmGripCentroids": [
+      [
+        0.5968907538461539,
+        0.83242469
+      ],
+      [
+        0.40014783460559794,
+        0.8322340642857143
+      ]
+    ],
+    "dorsalGrip": "Closed fingers obscure the aperture. Visual grip center normalized [0.5,0.8]; wrist measured from alpha at 12 percent height.",
+    "assignment": "Right view far-left uses source cell3 palm thumb forward; near-right cell1 dorsal thumb forward. Left view near-left cell2 dorsal; far-right cell0 palm. No source reflections."
+  }
+}

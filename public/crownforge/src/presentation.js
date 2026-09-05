@@ -1,4 +1,4 @@
-import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260904-armdepth1';
+import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260904-rosterkin1';
 
 export function setupPresentation({ renderer, simulation, input, announce }) {
   const shell = document.querySelector('.game-shell');

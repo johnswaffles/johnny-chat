@@ -4,6 +4,15 @@ Date: 2026-08-16
 Milestone: Tiny playable settlement prototype — technical hardening and release certification
 Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 
+## September 2026 — Current-roster motion rebuild (release verification pending)
+
+- Rebuilt the existing worker, foot-soldier and mounted presentation around continuous anatomical poses, independently authored four-direction cutouts, measured painted grips, solid tools and equipment, and each character's original identity. Exact12-character scope and524 required directional cases are tracked in `CROWNFORGE_ROSTER_REBUILD.md`.
+- Corrected Crown Hearthkin's front/back hammer and chopping plane, head-on walking axe form, two-hand hoe stroke/contact/recovery and rear equipment occlusion. Dedicated profile hands and closed garment underlays remove duplicated hand surfaces and exposed hollow shoulder art.
+- Added original roster art, source-specific limb/hand anchors, per-unit military timing/weight/loadouts, and four-beat horse/rider motion. Horse posture, painted hoof contact and rear neck/tail order are validated separately from skeletal support.
+- Both rendering passes and state/cadence routing now use the character registry. Worker work-clock expansion changes cosmetic fields only. Physical action frames are kept intact during transitions, avoiding a screen-only blend that separated hand/tool/body constraints.
+- Added whole-roster studio, all-state contact sheets, real simulation field review, population drawing measurement, and dense pose/grip/contact/gameplay regression checks. Source/production mirror and live deployment verification remain pending in the acceptance ledger until explicitly recorded.
+- Saved the user's requested confirmed rig/art lessons for future characters. Original PNG outputs, exact generation/extraction prompts, metadata measurements and shared-hand provenance remain recorded with the assets.
+
 ## 2026-08-30 — Individual forest resource pass
 
 - Replaced generated macro Wildwood groves with deterministic clusters of independent small tree resources. Each tree now owns its position, footprint, 240 Wood reserve, gather target, blocker, and depletion state.

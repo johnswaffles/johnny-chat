@@ -1,0 +1,8 @@
+{
+  "reason": "Source audit found backward thumb on a near profile hand and/or duplicate dorsal far hand.",
+  "sourceCharacter": "crown-militia",
+  "sourceModule": "../../../src/roster-art/crown-militia.js",
+  "sourcePng": "../crown-militia/profile-hands-v1.png",
+  "sourcePromptRecord": "../crown-militia/profile-hands-prompts.json",
+  "changes": "Profile ART reference and hand source wrist/grip coordinates only. Retain unique four-view body pixels, all body rectangles, arm axes, appendage, and existing hand width/height."
+}

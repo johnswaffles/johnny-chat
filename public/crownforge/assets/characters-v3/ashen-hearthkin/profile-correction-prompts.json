@@ -1,0 +1,9 @@
+{
+  "tool": "Built-in image_gen",
+  "preciseEdit": "Use case: precise-object-edit.\nAsset type: modular game character sprite atlas.\nEdit ONLY the isolated torso in row1column2 of the supplied image. The circular skin-colored bare shoulder patch in that torso is incorrect for a rigged body. Replace that entire circular skin patch with continuous charcoal linen clothing, matching the neighboring vest fabric texture, lighting, folds and edge. There must be NO exposed skin or bare arm circle anywhere on the detached torso. Preserve its exact outline and all garment details outside this small circular patch.\nKeep ALL other fifteen components absolutely unchanged in placement, size, color, detail and alpha. Do not recolor or move any other piece. Do not alter hands, legs, face, boots, braid or forearms. Preserve true transparent PNG alpha: all original background remains alpha zero. No new background, checkerboard, labels or text.",
+  "transparentExtraction": "Use case: background-extraction\nAsset type: transparent PNG game sprite sheet\nPrimary request: Extract all separate character components from the supplied image onto a genuinely transparent background with an alpha channel.\nInput image: edit target.\nConstraints: keep every component and its placement, detail, color, facing direction and size unchanged. Remove only the black background. Preserve clean edges and all gaps. The output is a transparent cutout PNG, not an illustration of cutouts on paper.",
+  "selectedOriginals": {
+    "right": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-721984c0-7ea8-4874-bb92-8edaf9010300.png",
+    "left": "/Users/johnshopinski/.codex/generated_images/01a06f41-b124-71c3-a503-056c36ae3d00/exec-d79f0a5d-42b7-4492-b1cb-cae79727e717.png"
+  }
+}

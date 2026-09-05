@@ -1,6 +1,7 @@
-import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260904-armdepth1';
-import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-armdepth1';
-import { COMBAT_ATLASES, UNIT_TYPES, VILLAGER_ATLASES } from './config.js?v=20260904-armdepth1';
+import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260904-rosterkin1';
+import { CHARACTER_RIGS } from './character-rigs.js';
+import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-rosterkin1';
+import { COMBAT_ATLASES, UNIT_TYPES, VILLAGER_ATLASES } from './config.js?v=20260904-rosterkin1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -335,6 +336,16 @@ export const ANIMATION_DEFINITIONS = {
   },
 };
 
+for(const [type,rig] of Object.entries(CHARACTER_RIGS)) {
+  const unit=UNIT_TYPES[type],atlases=rig.views??HEARTHKIN_RIG_ART;
+  ANIMATION_DEFINITIONS[type]={label:rig.label,directionCount:4,renderer:'skeletal',atlasSize:atlases.front,atlases,
+    clips:Object.fromEntries(Object.entries(rig.actions).map(([state,action])=>[state,{
+      atlas:'front',frames:[0],rows:[0],fps:1/action.duration,loop:action.loop!==false,skeletal:true,
+      events:state==='walk'||state.startsWith('carry_')?{footstep:action.footsteps??[0,.5]}:{},
+    }])),collisionRadius:unit.radius,interactionRadius:.78,renderSize:unit.renderSize,
+    groundAnchor:{x:.5,y:1},shadowAnchor:{x:.5,y:1,source:'world-contact'}};
+}
+
 export function animationDefinition(type) {
   return ANIMATION_DEFINITIONS[type] ?? ANIMATION_DEFINITIONS.villager;
 }
@@ -354,7 +365,7 @@ export function resolveAnimationState(unit) {
   // A recoil atlas may contain a deep lean or fall. Never slide that pose
   // along a live route: locomotion stays visually authoritative until the
   // unit stops, while the existing hit flash and health feedback still read.
-  if (unit.type === 'villager' && unit.wardBlockedPulse > 0 && unit.lastLightWardTimer > 0 && unit.visualState === 'idle') return 'ward_block';
+  if (definition.clips.ward_block && unit.wardBlockedPulse > 0 && unit.lastLightWardTimer > 0 && unit.visualState === 'idle') return 'ward_block';
   if (unit.hitFlash > 0 && definition.clips.hit) return 'hit';
   if (unit.visualState === 'wood') return 'gather_wood';
   if (unit.visualState === 'field') return 'field_work';
@@ -423,16 +434,17 @@ export class CrownforgeAnimationSystem {
     const clip = animationClip(unit.type, nextState);
     const previousTime = unit.animationTime ?? 0;
     const duration = Math.max(0.001, clip.frames.length / Math.max(0.001, clip.fps));
-    // Crown workers ease their cadence with actual movement and stop stepping
-    // when blocked. Other roster units retain their authored sheet cadence.
-    const locomotion = nextState === 'walk' || unit.type === 'villager' && nextState.startsWith('carry_');
+    // Continuous rigs ease their cadence with actual movement and stop
+    // stepping when blocked, using their own movement speed.
+    const continuous=animationDefinition(unit.type).renderer==='skeletal';
+    const locomotion = nextState === 'walk' || continuous && nextState.startsWith('carry_');
     const playbackRate = locomotion
-      ? unit.type === 'villager' && Number.isFinite(unit.motionSpeed)
-        ? Math.max(0, Math.min(2.2, unit.motionSpeed / UNIT_TYPES.villager.speed))
+      ? continuous && Number.isFinite(unit.motionSpeed)
+        ? Math.max(0, Math.min(2.2, unit.motionSpeed / UNIT_TYPES[unit.type].speed))
         : Math.max(.78, Math.min(2.2, unit.animationPlaybackRate ?? 1))
       : 1;
     const nextTime = clip.loop ? (previousTime + delta * playbackRate) % duration : Math.min(duration, previousTime + delta * playbackRate);
-    if ((nextState === 'walk' || unit.type === 'villager' && nextState.startsWith('carry_')) && clip.events?.footstep) {
+    if (locomotion && clip.events?.footstep) {
       const thresholds = Array.isArray(clip.events.footstep) ? clip.events.footstep : [clip.events.footstep];
       for (const threshold of thresholds) {
         const eventTime = duration * threshold;
