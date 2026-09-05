@@ -49,4 +49,9 @@ Local verification completed:
 - Wide-view cache review retained 1,833 chunks / 63,693 candidates for the full world, about 15.3 MiB in a Node heap estimate. A 2px pan at .11 zoom improved from about 12.1 ms to 2.82 ms in field-only measurements; near-invisible .096 views generate no chunks.
 - Production build completed. Source/production mirror parity, changed-module syntax and whitespace checks passed.
 
-Public release verification is recorded after deployment.
+Public verification completed:
+
+- Published implementation commit `6e3df18` to the existing Crownforge release branch; the public root reports `20260905-meadow1`.
+- SHA-256 checks matched the deployed renderer, landscape, meadow modules, review page and both new PNGs to the tested source files.
+- The public game accepted a right-click walk, moved the Hearthkin 7.75 world units, retained up to 86 grass contacts, and successfully saved/restored. No browser errors. Live browser sample: 3.93 ms average / 4.3 ms p95 renderer time with 1,686 tufts.
+- Opened the published Living Meadow in the in-app browser and visually verified the loaded grass, both Hearthkin, the Scout, framing and controls.
