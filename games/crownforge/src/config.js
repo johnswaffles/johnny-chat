@@ -144,7 +144,7 @@ export const UNIT_TYPES = {
     ...HEARTHKIN_WORKER_ABILITIES,
     label: 'Hearthkin',
     asset: 'villager',
-    renderSize: 88,
+    renderSize: 100,
     // Builder behavior is data-driven so future worker or engineer units can
     // inherit construction, repair, and nearby auto-assist without adding
     // another unit-type check to the input or simulation layers.
@@ -1568,25 +1568,9 @@ const thornSpearAnimationAtlas = (animation, columns, renderScale) => ({
   renderScale,
 });
 
+// Shared status artwork remains for the other Hearthkin faction. Crown
+// character surfaces and equipment live in hearthkin-rig-art.js.
 export const VILLAGER_ATLASES = {
-  motion: {
-    src: './assets/villager-motion-atlas.png?v=2',
-    rows: { idle: 0, walk: [1, 2, 3] },
-  },
-  motionLoop: rosterAnimationAtlas('crown-hearthkin', 'walk', 3, 3, HEARTHKIN_WALK_ANIMATION_VERSION),
-  task: {
-    src: './assets/villager-task-atlas.png?v=2',
-    rows: { wood: 0, food: 1, stone: 2, build: 3 },
-  },
-  carry: {
-    src: './assets/villager-carry-atlas.png?v=2',
-    rows: { wood: 0, food: 1, stone: 2, supplies: 3 },
-  },
-  combat: {
-    src: './assets/villager-combat-atlas.png?v=2',
-    rows: { attack: 0, hit: 1, death: 2, idle: 3 },
-  },
-  defenseAttackLoop: rosterAnimationAtlas('crown-hearthkin', 'attack', 3),
   statusEffects: {
     src: './assets/crownforge-last-light-status-effects-v1.png?v=20260826-lastlight1',
     width: 1254,
@@ -1601,103 +1585,6 @@ export const VILLAGER_ATLASES = {
       stunImmune: { column: 1, row: 1 },
     },
   },
-  hitLoop: {
-    src: './assets/villager-hit-loop-v1.png?v=20260821-hallwoodpass2',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  deathLoop: rosterAnimationAtlas('crown-hearthkin', 'death', 4),
-  // Action-loop atlases use frame columns and authored direction rows. The
-  // legacy task/carry/combat sheets remain available for states that are
-  // intentionally single-pose, while newer focused passes can replace a
-  // response family without changing the shared renderer contract.
-  woodLoop: {
-    src: './assets/villager-gather-wood-loop-v1.png?v=1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  foodLoop: {
-    src: './assets/villager-gather-food-loop-v1.png?v=1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  fieldLoop: {
-    src: './assets/crownforge-villager-field-work-loop-v1.png?v=20260819-fieldpass1',
-    width: 1235,
-    height: 1274,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  stoneLoop: {
-    src: './assets/villager-gather-stone-loop-v1.png?v=1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  buildLoop: {
-    src: './assets/villager-construct-loop-v1.png?v=1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  carryWoodLoop: {
-    src: './assets/villager-carry-wood-loop-v1.png?v=1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  carryFoodLoop: {
-    src: './assets/villager-carry-food-loop-v1.png?v=1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  carryStoneLoop: {
-    src: './assets/villager-carry-stone-loop-v1.png?v=1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  carryGoldLoop: {
-    src: './assets/crownforge-villager-carry-gold-loop-v1.png?v=20260822-goldpass1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  carrySuppliesLoop: {
-    src: './assets/villager-carry-supplies-loop-v1.png?v=1',
-    width: 1254,
-    height: 1254,
-    columns: 4,
-    rows: 4,
-    layout: 'frame-columns',
-  },
-  columns: 4,
-  rows: 4,
-  width: 1254,
-  height: 1254,
 };
 
 export const COMBAT_ATLASES = {

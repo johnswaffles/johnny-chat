@@ -443,3 +443,12 @@ The Ore Wash is the first completed reference for a four-state construction fami
 Every state must preserve one fixed elevated camera, footprint center, orientation, warm upper-left light, transparent canvas dimensions, and bottom-center terrain anchor. A stage may become taller as framing rises, but it must not drift sideways, acquire a square ground plate, change material age, or introduce people baked into the building. Runtime construction health and collision remain data, not painted into the raster.
 
 Current approved family: `crownforge-ore-wash-foundation-v1.png`, `crownforge-ore-wash-partial-v1.png`, `crownforge-ore-wash-near-complete-v1.png`, and `crownforge-ore-wash-v1.png`.
+
+
+## 30. Crownwarden Hearthkin living-motion contract — September 4, 2026
+
+The Crownwarden worker now uses the original `assets/hearthkin-v2/` modular character family and the continuous `src/hearthkin-rig.js` renderer. This supersedes the old Crown worker frame-sheet rules only for `villager`; the other characters retain their approved sheets. Four independently authored component views provide front, right, back and left. Never mirror an entire character to manufacture a missing direction. Joint pieces may rotate and overlap around articulated shoulders, elbows, hips and knees; whole-character bobbing or rotation must not substitute for a walk or work cycle.
+
+Preserve the teal-and-cream artisan silhouette, auburn braid, kerchief, layered cloth, warm upper-left light and visible feet at the simulation ground anchor. Work tools attach to the right grip. Cargo changes the hands and body posture. Construction, harvest and combat contact poses follow the existing simulation clocks. The ward is a separate two-layer effect that remains around the worker during her current action.
+
+Keep all four views and every action visible in `dev/hearthkin-studio.html`, including normal player-size previews. Check planted feet, joint connections, equipment grip, clear face, final death contact, and alpha against the actual terrain. The production originals remain unchanged RGBA PNGs; source rectangles and cached runtime mipmaps prepare their display. This is a 2D skeletal renderer with original raster surfaces, not a claim of authored 3D animation or a particular sprite-frame count.

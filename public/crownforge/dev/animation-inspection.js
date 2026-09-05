@@ -1,10 +1,12 @@
+import { HearthkinRig } from '../src/hearthkin-rig.js?v=20260904-hearthkin3';
+const hearthkinRig = new HearthkinRig();
 import {
   ANIMATION_DIRECTIONS,
   ANIMATION_DEFINITIONS,
   animationClip,
   animationDefinition,
   animationFrame,
-} from '../src/animation.js?v=20260903-hidewall2';
+} from '../src/animation.js?v=20260904-hearthkin3';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');
@@ -63,7 +65,8 @@ function refreshStates() {
 
 function refreshFrameRange() {
   const clip = animationClip(selectedType(), selectedState());
-  frameInput.max = String(Math.max(0, clip.frames.length - 1));
+  document.querySelector('#frame-label').textContent = animationDefinition(selectedType()).renderer === 'skeletal' ? 'Pose phase' : 'Frame';
+  frameInput.max = String(animationDefinition(selectedType()).renderer === 'skeletal' ? 99 : Math.max(0, clip.frames.length - 1));
   frameInput.value = String(Math.min(Number(frameInput.value), Number(frameInput.max)));
 }
 
@@ -98,6 +101,8 @@ function draw() {
   const definition = animationDefinition(type);
   const clip = animationClip(type, state);
   const manualFrame = Number(frameInput.value || 0);
+  const skeletal = definition.renderer === 'skeletal';
+  const rigTime = animateInput.checked ? currentTime : manualFrame / 99 / clip.fps;
   const frame = animateInput.checked
     ? animationFrame(type, state, currentTime, direction)
     : { ...animationFrame(type, state, manualFrame / Math.max(clip.fps, 0.001), direction), frameIndex: manualFrame };
@@ -115,7 +120,9 @@ function draw() {
   ctx.fillStyle = 'rgba(220, 187, 113, .08)';
   ctx.beginPath(); ctx.ellipse(groundX, groundY, 250, 80, 0, 0, Math.PI * 2); ctx.fill();
   if (guidesInput.checked) drawGuides(definition, groundX, groundY, size);
-  if (image.complete && image.naturalWidth) {
+  if (skeletal) {
+    hearthkinRig.draw(ctx, { id: 1, facing: direction, animationState: state }, { x: groundX, y: groundY }, size, 1, rigTime);
+  } else if (image.complete && image.naturalWidth) {
     const atlasWidth = atlas.width ?? definition.atlasSize.width;
     const atlasHeight = atlas.height ?? definition.atlasSize.height;
     const atlasColumns = atlas.columns ?? definition.atlasSize.columns;
@@ -136,7 +143,7 @@ function draw() {
   ctx.fillText(`${definition.label} · ${state.replaceAll('_', ' ')}`, groundX, 54);
   ctx.font = '12px Inter, sans-serif';
   ctx.fillStyle = '#b9c8c0';
-  ctx.fillText(`direction ${direction} · frame ${frame.frameIndex + 1}/${clip.frames.length} · ${animateInput.checked ? `${Number(speedInput.value).toFixed(2)}×` : 'manual'}`, groundX, 78);
+  ctx.fillText(`direction ${direction} · ${skeletal ? 'continuous pose' : `frame ${frame.frameIndex + 1}/${clip.frames.length}`} · ${animateInput.checked ? `${Number(speedInput.value).toFixed(2)}×` : 'manual'}`, groundX, 78);
   ctx.textAlign = 'start';
 
   summary.innerHTML = `<strong>${definition.label}</strong> · ${state.replaceAll('_', ' ')} · ${ANIMATION_DIRECTIONS[direction].label}`;
@@ -145,6 +152,7 @@ function draw() {
   const authoredCount = new Set(clip.frames).size;
   const repeatedPassing = authoredCount === frame.frameCount ? '' : ` / ${frame.frameCount} playback steps`;
   asset.innerHTML = `<code>${frame.atlasKey}</code> row ${frame.row} / column ${frame.column} · ${authoredCount} authored frame${authoredCount === 1 ? '' : 's'}${repeatedPassing} · ${ready ? 'asset loaded' : 'asset pending'}${fallback}`;
+  if (skeletal) asset.textContent = 'Continuous joint animation · four independently authored views · ' + (hearthkinRig.readiness().every(image => image.complete && image.naturalWidth) ? 'all surfaces loaded' : 'loading surfaces');
   geometry.textContent = `pivot ${definition.groundAnchor.x.toFixed(2)},${definition.groundAnchor.y.toFixed(2)} · collision ${definition.collisionRadius.toFixed(2)} · interaction ${definition.interactionRadius.toFixed(2)}`;
 }
 

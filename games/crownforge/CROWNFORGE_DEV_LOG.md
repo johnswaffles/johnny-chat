@@ -4997,3 +4997,10 @@ Implemented three presentation upgrades: original layered meadow/flora and atmos
 ## 2026-09-04 — Livingwood environment rebuild
 
 Replaced the uniform ground treatment with four blended original terrain materials, world-anchored grass detail, actual-tree forest floors and cached texture mip levels. Replaced repeated forest stamps/parallel divider bands with seeded organic stands and a winding harvestable ridge. Added eight tree species with varied silhouettes and mature sizes, plus natural redcurrant/blackberry thickets and picked states. Kept existing-save resource positions, protected opening/resource clearings, and individual harvesting. Five seed/navigation checks and food/wood harvesting-delivery/save regressions passed, together with current visual and roster checks. Exact selected prompts, assets and validation scope are in `CROWNFORGE_LIVINGWOOD_RELEASE.md`.
+
+
+## September 4, 2026 — Crownwarden Hearthkin: Living Motion
+
+Rebuilt the Crownwarden worker with original four-view modular art, matching portrait, dedicated tool and cargo props, and a continuous articulated animation system. Added 23 animation states covering locomotion, all harvest tasks, farming, construction, repair, legacy dismantling, five loads, defensive combat, ward blocks, hit reactions, stun and death. Timing follows the existing game events; economy, collision, navigation, work rates and damage remain unchanged. Added a four-direction motion studio with action controls, slow motion, pose scrubbing, ward preview and actual player-size views.
+
+Validated joint continuity, tool contact, source alpha/bounds and all state/view combinations. Current and pre-change simulation snapshots matched across all resources, construction, repairs, farming, combat, ward and saved-game scenarios. Other roster, landscape and visual regressions passed. Browser play verified selection, movement, field placement, completed construction and rising food through farming. Final release marker: `20260904-hearthkin3`. See `CROWNFORGE_HEARTHKIN_RELEASE.md` for artwork, exact prompts, implementation scope and checks.

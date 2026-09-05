@@ -175,3 +175,6 @@ h1 { font-size: 22px; }
  .resource-card strong small { font-size: 6px; }
  #restart-game { display: inline-flex; }
 }
+
+/* The worker portrait uses the same authored face as the world rig. */
+.ui-icon.icon-villager { background-image: url('./assets/hearthkin-v2/rig-front.png?v=20260904-hearthkin3'); background-size: 625.6% auto; background-position: 8.5% 4%; }

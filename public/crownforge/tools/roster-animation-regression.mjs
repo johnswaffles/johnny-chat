@@ -1,3 +1,4 @@
+// Crown Hearthkin uses continuous joint animation; its coverage lives in hearthkin-rig-regression.mjs.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,7 +11,6 @@ const releaseMarker = '20260902-rosteranimations1';
 const hearthkinWalkReleaseMarker = '20260902-crownwalk3';
 
 const roster = [
-  { type: 'villager', slug: 'crown-hearthkin', walk: 'motionLoop', attack: 'defenseAttackLoop', death: 'deathLoop', villager: true, walkAssetVersion: 3, walkReleaseMarker: hearthkinWalkReleaseMarker },
   { type: 'soldier', slug: 'crown-guard', walk: 'soldierWalk', attack: 'soldierAttack', hit: 'soldierHit', death: 'soldierDeath', walkAssetVersion: 2, walkReleaseMarker: '20260902-crownguardwalk2', hitAssetVersion: 2, hitReleaseMarker: '20260902-crownguardstates2' },
   { type: 'scout', slug: 'crown-scout', walk: 'scoutWalk', attack: 'scoutAttack', death: 'scoutDeath' },
   { type: 'spearwarden', slug: 'crown-spearwarden', walk: 'spearwardenWalk', attack: 'spearwardenAttack', death: 'spearwardenDeath', walkAssetVersion: 3, walkReleaseMarker: '20260903-spearwarden1', attackAssetVersion: 3, attackReleaseMarker: '20260903-spearwarden1' },
@@ -111,4 +111,4 @@ for (let direction = 0; direction < 4; direction++) {
   assert.equal(hit.column, 3);
   assert.equal(hit.row, direction);
 }
-console.log(`Verified ${roster.length} units, 38 roster atlases plus normalized Thorn Spear hit art, identity-matched idle/hit states, and all 4 directional animation mappings.`);
+console.log(`Verified ${roster.length} units, 35 roster atlases plus normalized Thorn Spear hit art, identity-matched idle/hit states, and all 4 directional animation mappings.`);

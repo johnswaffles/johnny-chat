@@ -1,7 +1,8 @@
-import { CrownforgeLandscape } from './landscape.js?v=20260904-livingwood1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260904-livingwood1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260904-livingwood1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260904-livingwood1';
+import { HearthkinRig, drawHearthkinWard } from './hearthkin-rig.js?v=20260904-hearthkin3';
+import { CrownforgeLandscape } from './landscape.js?v=20260904-hearthkin3';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260904-hearthkin3';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260904-hearthkin3';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260904-hearthkin3';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -135,6 +136,7 @@ export class CrownforgeRenderer {
     this.ashenFortificationAtlasReady = false;
     this.ashenConstructionAtlasReady = false;
     this.enemyCampReady = false;
+    this.hearthkinRig = new HearthkinRig();
     this.villagerAtlases = {};
     this.villagerAtlasReady = {};
     this.combatAtlases = {};
@@ -290,8 +292,7 @@ export class CrownforgeRenderer {
       this.goldDepositAssets.small,
       this.goldDepositAssets.medium,
       this.goldDepositAssets.large,
-      this.villagerAtlases.motionLoop,
-      this.villagerAtlases.defenseAttackLoop,
+      ...this.hearthkinRig.readiness(),
       this.villagerAtlases.statusEffects,
       this.combatAtlases.soldier,
       this.combatAtlases.soldierWalk,
@@ -1153,12 +1154,13 @@ export class CrownforgeRenderer {
       // retain the natural depth order and do not pop through architecture.
       const readableState = unit.selected || unit.command !== 'idle' || unit.faction === 'enemy' || unit.hp < unit.maxHp;
       if (readableState) {
+        if (unit.type === 'villager' && !unit.dead) drawHearthkinWard(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime, true, this.atmosphere.reducedMotion);
         if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
         else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
       }
       this.drawUnitStatusEffects(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime);
       this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : unit.type === 'scout' ? 1.25 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
-      this.drawHealthBar(ctx, point.x, point.y - unitSize * 0.9 * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
+      this.drawHealthBar(ctx, point.x, point.y - unitSize * (unit.type === 'villager' ? 1.08 : .9) * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
     }
   }
 
@@ -1730,30 +1732,7 @@ export class CrownforgeRenderer {
   }
 
   drawVillagerAsset(ctx, unit, screen, size, alpha = 1) {
-    const state = unit.animationState ?? resolveAnimationState(unit);
-    const frameData = animationFrame('villager', state, unit.animationTime ?? unit.animClock, unit.facing);
-    const atlasKey = frameData.atlasKey;
-    const row = frameData.row;
-    const frame = frameData.column;
-    const image = this.villagerAtlases[atlasKey];
-    if (!image || (!this.villagerAtlasReady[atlasKey] && !(image.complete && image.naturalWidth > 0))) {
-      this.drawAsset(ctx, 'villager', screen, size, alpha);
-      return;
-    }
-    const atlasDefinition = VILLAGER_ATLASES[atlasKey] ?? VILLAGER_ATLASES.motion;
-    const atlasWidth = atlasDefinition.width ?? VILLAGER_ATLASES.width;
-    const atlasHeight = atlasDefinition.height ?? VILLAGER_ATLASES.height;
-    const atlasColumns = Number.isFinite(atlasDefinition.columns) ? atlasDefinition.columns : VILLAGER_ATLASES.columns;
-    const atlasRows = Number.isFinite(atlasDefinition.rows) ? atlasDefinition.rows : VILLAGER_ATLASES.rows;
-    // The atlas already carries the silhouette and contact shadow. Keep the
-    // world anchor fixed so idle/task frames never float above the meadow.
-    const bob = 0;
-    this.drawAtlasCell(ctx, image, true, {
-      width: atlasWidth,
-      height: atlasHeight,
-      columns: atlasColumns,
-      rows: atlasRows,
-    }, frame, row, screen, size, alpha, bob);
+    this.hearthkinRig.draw(ctx, unit, screen, size, alpha);
   }
 
   drawCombatAsset(ctx, unit, screen, size, alpha = 1) {
@@ -2110,13 +2089,14 @@ export class CrownforgeRenderer {
     const size = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
     if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 1.25 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
+    if (unit.type === 'villager' && !unit.dead) drawHearthkinWard(ctx, unit, point, size * this.camera.zoom, time, true, this.atmosphere.reducedMotion);
     if (unit.type === 'villager') this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else this.drawAsset(ctx, style.asset, point, size * this.camera.zoom, alpha);
     if (!unit.dead) {
       this.drawUnitStatusEffects(ctx, unit, point, size * this.camera.zoom, time);
       this.drawCombatPhaseCue(ctx, unit, point, time);
-      this.drawHealthBar(ctx, point.x, point.y - size * 0.9 * this.camera.zoom, size * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
+      this.drawHealthBar(ctx, point.x, point.y - size * (unit.type === 'villager' ? 1.08 : .9) * this.camera.zoom, size * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
       if (unit.carryAmount > 0) this.drawCarryBadge(ctx, point.x + 20 * this.camera.zoom, point.y - 18 * this.camera.zoom, unit.carryType, unit.carryAmount);
       if (unit.command === 'attack' && unit.attackPhase !== 'approach') this.drawAttackRing(ctx, point, time, unit.attackPhase);
       if (unit.hitFlash > 0) this.drawHitFlash(ctx, point, time);
@@ -2180,6 +2160,29 @@ export class CrownforgeRenderer {
       ctx.closePath();
       ctx.fill();
       ctx.restore();
+    }
+
+    if (unit.type === 'villager') {
+      drawHearthkinWard(ctx, unit, point, screenSize, time, false, this.atmosphere.reducedMotion);
+      if (unit.stunTimer > 0 || unit.stunImmunityTimer > 0) {
+        const stunned = unit.stunTimer > 0;
+        ctx.save();
+        ctx.strokeStyle = stunned ? '#e5c58b' : '#a8cfbe';
+        ctx.lineWidth = Math.max(1, screenSize * .015);
+        const radius = Math.max(5, screenSize * .13);
+        const centerY = point.y - screenSize * 1.03;
+        ctx.globalAlpha = stunned ? .78 : .45;
+        ctx.beginPath();ctx.ellipse(point.x, centerY, radius, radius * .3, 0, 0, TAU);ctx.stroke();
+        if (stunned) {
+          ctx.fillStyle = '#ffe4aa';
+          for (let i = 0; i < 3; i++) {
+            const angle = (this.atmosphere.reducedMotion ? 0 : time * .002) + i * TAU / 3;
+            ctx.beginPath();ctx.arc(point.x + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius * .3, Math.max(1, screenSize * .017), 0, TAU);ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+      return;
     }
 
     const image = this.villagerAtlases.statusEffects;

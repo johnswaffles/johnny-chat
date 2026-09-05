@@ -1,4 +1,6 @@
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260904-livingwood1';
+import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260904-hearthkin3';
+import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-hearthkin3';
+import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260904-hearthkin3';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -111,58 +113,21 @@ export const ANIMATION_DEFINITIONS = {
   villager: {
     label: 'Hearthkin',
     directionCount: 4,
-    atlasSize: { width: VILLAGER_ATLASES.width, height: VILLAGER_ATLASES.height, columns: VILLAGER_ATLASES.columns, rows: VILLAGER_ATLASES.rows },
-    atlases: {
-      motion: VILLAGER_ATLASES.motion,
-      motionLoop: VILLAGER_ATLASES.motionLoop,
-      task: VILLAGER_ATLASES.task,
-      carry: VILLAGER_ATLASES.carry,
-      combat: VILLAGER_ATLASES.combat,
-      defenseAttackLoop: VILLAGER_ATLASES.defenseAttackLoop,
-      woodLoop: VILLAGER_ATLASES.woodLoop,
-      foodLoop: VILLAGER_ATLASES.foodLoop,
-      fieldLoop: VILLAGER_ATLASES.fieldLoop,
-      stoneLoop: VILLAGER_ATLASES.stoneLoop,
-      buildLoop: VILLAGER_ATLASES.buildLoop,
-      carryWoodLoop: VILLAGER_ATLASES.carryWoodLoop,
-      carryFoodLoop: VILLAGER_ATLASES.carryFoodLoop,
-      carryStoneLoop: VILLAGER_ATLASES.carryStoneLoop,
-      carryGoldLoop: VILLAGER_ATLASES.carryGoldLoop,
-      carrySuppliesLoop: VILLAGER_ATLASES.carrySuppliesLoop,
-      hitLoop: VILLAGER_ATLASES.hitLoop,
-      deathLoop: VILLAGER_ATLASES.deathLoop,
-    },
-    clips: {
-      idle: singleFrame('motion', VILLAGER_ATLASES.motion.rows.idle),
-      // All roster movement sheets share the same front, right, back, left
-      // direction contract and a deliberate contact, passing, contact cycle.
-      walk: rosterWalk('motionLoop'),
-      gather_wood: actionLoop('woodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
-      gather_food: actionLoop('foodLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
-      field_work: actionLoop('fieldLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
-      gather_stone: actionLoop('stoneLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
-      // Gold-bearing quartz is worked with the same pick motion as stone; the
-      // distinct ore deposit, cargo atlas, feedback color, and HUD state make
-      // the material legible without inventing an implausible tool action.
-      gather_gold: actionLoop('stoneLoop', { tool_contact: ANIMATION_EVENT_TIMINGS.tool_contact, resource_collected: ANIMATION_EVENT_TIMINGS.resource_collected }),
-      construct: actionLoop('buildLoop', { construction_strike: ANIMATION_EVENT_TIMINGS.construction_strike }),
-      carry_wood: actionLoop('carryWoodLoop'),
-      carry_food: actionLoop('carryFoodLoop'),
-      carry_stone: actionLoop('carryStoneLoop'),
-      carry_gold: actionLoop('carryGoldLoop'),
-      carry_supplies: actionLoop('carrySuppliesLoop'),
-      attack: rosterAttack('defenseAttackLoop'),
-      attack_anticipation: rosterAttackPhase('defenseAttackLoop', 0),
-      attack_contact: rosterAttackPhase('defenseAttackLoop', 1, { attack_hit: ANIMATION_EVENT_TIMINGS.attack_hit }),
-      attack_recovery: rosterAttackPhase('defenseAttackLoop', 2),
-      hit: actionPhase('hitLoop', [0, 1, 2, 3], 14),
-      death: rosterDeath('deathLoop'),
-    },
+    renderer: 'skeletal',
+    atlasSize: HEARTHKIN_RIG_ART.front,
+    atlases: HEARTHKIN_RIG_ART,
+    // One continuous pose function per action. `frames` is only the shared
+    // clock contract; it does not describe a one-frame sprite animation.
+    clips: Object.fromEntries(Object.entries(HEARTHKIN_ACTIONS).map(([state, action]) => [state, {
+      atlas: 'front', frames: [0], rows: [0], fps: 1 / action.duration,
+      loop: action.loop !== false, skeletal: true,
+      events: state === 'walk' || state.startsWith('carry_') ? { footstep: [0, .5] } : {},
+    }])),
     collisionRadius: 0.36,
     interactionRadius: 0.78,
-    renderSize: 108,
-    groundAnchor: { x: 0.5, y: 0.98 },
-    shadowAnchor: { x: 0.5, y: 0.98, source: 'painted-in-frame' },
+    renderSize: 100,
+    groundAnchor: { x: 0.5, y: 1 },
+    shadowAnchor: { x: 0.5, y: 1, source: 'world-contact' },
   },
   soldier: {
     label: 'Crown Guard',
@@ -389,13 +354,14 @@ export function resolveAnimationState(unit) {
   // A recoil atlas may contain a deep lean or fall. Never slide that pose
   // along a live route: locomotion stays visually authoritative until the
   // unit stops, while the existing hit flash and health feedback still read.
+  if (unit.type === 'villager' && unit.wardBlockedPulse > 0 && unit.lastLightWardTimer > 0 && unit.visualState === 'idle') return 'ward_block';
   if (unit.hitFlash > 0 && definition.clips.hit) return 'hit';
   if (unit.visualState === 'wood') return 'gather_wood';
   if (unit.visualState === 'field') return 'field_work';
   if (unit.visualState === 'food') return 'gather_food';
   if (unit.visualState === 'stone') return 'gather_stone';
   if (unit.visualState === 'gold') return 'gather_gold';
-  if (unit.visualState === 'build') return 'construct';
+  if (unit.visualState === 'build') return definition.clips[unit.workAnimation] ? unit.workAnimation : 'construct';
   if (unit.visualState?.startsWith('carry:')) return `carry_${unit.visualState.slice(6)}`;
   return 'idle';
 }
@@ -431,9 +397,10 @@ export function animationFrame(type, state, time = 0, direction = 0) {
     requestedState,
     resolvedState: requestedClip.fallback ?? requestedState,
     fallback: requestedClip.fallback ?? null,
-    atlasKey: clip.atlas,
-    row: sourceRow,
-    column: sourceColumn,
+    atlasKey: clip.skeletal ? ['front', 'right', 'back', 'left'][directionIndex] : clip.atlas,
+    row: clip.skeletal ? 0 : sourceRow,
+    column: clip.skeletal ? 0 : sourceColumn,
+    skeletal: Boolean(clip.skeletal),
     frameIndex,
     frameCount: clip.frames.length,
     fps: clip.fps,
@@ -460,9 +427,9 @@ export class CrownforgeAnimationSystem {
     // blocker or starting a route. Keep the authored walk cycle alive during
     // that low-speed portion instead of showing a single frame sliding over
     // the ground. The simulation still caps fast travel independently.
-    const playbackRate = nextState === 'walk' ? Math.max(0.78, Math.min(2.2, unit.animationPlaybackRate ?? 1)) : 1;
+    const playbackRate = nextState === 'walk' || (unit.type === 'villager' && nextState.startsWith('carry_')) ? Math.max(0.78, Math.min(2.2, unit.animationPlaybackRate ?? 1)) : 1;
     const nextTime = clip.loop ? (previousTime + delta * playbackRate) % duration : Math.min(duration, previousTime + delta * playbackRate);
-    if (nextState === 'walk' && clip.events?.footstep) {
+    if ((nextState === 'walk' || unit.type === 'villager' && nextState.startsWith('carry_')) && clip.events?.footstep) {
       const thresholds = Array.isArray(clip.events.footstep) ? clip.events.footstep : [clip.events.footstep];
       for (const threshold of thresholds) {
         const eventTime = duration * threshold;
