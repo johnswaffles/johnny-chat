@@ -1,20 +1,28 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { HEARTHKIN_ACTIONS, HearthkinRig, hearthkinPose, hearthkinPalmSocket, solveLimb } from '../src/hearthkin-rig.js';
-import { HEARTHKIN_RIG_ART } from '../src/hearthkin-rig-art.js';
+import { HEARTHKIN_ACTIONS, HearthkinRig, hearthkinPose, hearthkinHandFrame, hearthkinPalmSocket, solveLimb } from '../src/hearthkin-rig.js';
+import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from '../src/hearthkin-rig-art.js';
 import { ANIMATION_DEFINITIONS, CrownforgeAnimationSystem, resolveAnimationState, animationFrame } from '../src/animation.js';
 import { CrownforgeRenderer } from '../src/renderer.js';
 
 const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const anatomicalDistance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 const near = (actual,expected,tolerance,message) => assert.ok(Math.abs(actual-expected)<=tolerance,`${message}: ${actual} versus ${expected}`);
+const renderedPoint = (draw,point) => {
+  const [a,b,c,d,e,f]=draw.matrix;
+  const [px,py]=Array.isArray(point)?point:[point.x,point.y];
+  const x=draw.x+draw.width*px,y=draw.y+draw.height*py;
+  return {x:a*x+c*y+e,y:b*x+d*y+f};
+};
 assert.equal(ANIMATION_DEFINITIONS.villager.renderer, 'skeletal');
+const partCounts={front:16,right:16,back:16,left:16,props:12,armSurfaces:8,neutralHands:4};
+assert.deepEqual(Object.keys(HEARTHKIN_RIG_ART).sort(),Object.keys(partCounts).sort(),'all authored atlases are covered by source validation');
 for(const [view,art] of Object.entries(HEARTHKIN_RIG_ART)) {
   const bytes=fs.readFileSync(new URL('../'+art.src.split('?')[0],import.meta.url));
   assert.equal(bytes.readUInt32BE(16),art.width);
   assert.equal(bytes.readUInt32BE(20),art.height);
   assert.equal(bytes[25],6,`${view}: RGBA PNG, not painted transparency`);
-  assert.equal(art.parts.length,view==='props'?12:16);
+  assert.equal(art.parts.length,partCounts[view],`${view}: expected authored component count`);
   for(const [x,y,w,h] of art.parts)assert.ok(x>=0&&y>=0&&w>0&&h>0&&x+w<=art.width&&y+h<=art.height,`${view}: source part inside atlas`);
 }
 assert.equal(new Set(['front','right','back','left'].map(key=>HEARTHKIN_RIG_ART[key].src)).size,4,'four authored views, no mirrored substitutes');
@@ -112,6 +120,7 @@ function captureRigDraw(state,time,direction) {
     translate(x,y){matrix[4]+=matrix[0]*x+matrix[2]*y;matrix[5]+=matrix[1]*x+matrix[3]*y;},
     scale(x,y){matrix[0]*=x;matrix[1]*=x;matrix[2]*=y;matrix[3]*=y;},
     rotate(angle){const [a,b,c,d,e,f]=matrix,cos=Math.cos(angle),sin=Math.sin(angle);matrix=[a*cos+c*sin,b*cos+d*sin,-a*sin+c*cos,-b*sin+d*cos,e,f];},
+    transform(a,b,c,d,e,f){const [a0,b0,c0,d0,e0,f0]=matrix;matrix=[a0*a+c0*b,b0*a+d0*b,a0*c+c0*d,b0*c+d0*d,a0*e+c0*f+e0,b0*e+d0*f+f0];},
     beginPath(){},rect(){},clip(){},
     drawImage(image,x,y,width,height){draws.push({image,x,y,width,height,matrix:[...matrix]});},
   };
@@ -124,16 +133,89 @@ function captureRigDraw(state,time,direction) {
 for(let direction=0;direction<4;direction++)for(const phase of [0,.2,.5,.8]) {
   const time=walkDuration*phase,p=hearthkinPose('walk',time,direction),socket=hearthkinPalmSocket(p);
   const wrist=p.rightHand,elbow=p.rightElbow;
-  near(distance(socket,wrist),3.45,1e-6,'weapon socket lies inside the palm, beyond the wrist');
+  const frame=hearthkinHandFrame(p);
+  const gripDistance=Math.hypot((frame.grip[0]-frame.root[0])*frame.width,(frame.grip[1]-frame.root[1])*frame.height);
+  near(distance(socket,wrist),gripDistance,1e-6,'weapon socket lies at the authored palm grip, beyond the wrist');
+  assert.ok(gripDistance>3&&gripDistance<5,'grip remains inside the hand rather than floating at or beyond it');
   assert.ok((socket.x-wrist.x)*(wrist.x-elbow.x)+(socket.y-wrist.y)*(wrist.y-elbow.y)>0,'palm socket follows the forearm direction');
   const draws=captureRigDraw('walk',time,direction);
   const toolIndex=draws.findIndex(draw=>draw.image.key==='props'&&draw.image.index===0);
-  const handIndex=draws.findIndex(draw=>draw.image.key!== 'props'&&draw.image.index===9);
+  if(direction===3) {
+    const nearLeg=draws.map((draw,index)=>({draw,index})).filter(({draw})=>draw.image.key==='left'&&[10,12,14].includes(draw.image.index));
+    assert.equal(nearLeg.length,3,'left-facing near leg includes thigh, shin and boot');
+    assert.ok(nearLeg.every(({index})=>index>toolIndex),'left-facing near leg must overdraw the far right-hand axe');
+  } else if(direction===1) {
+    const legs=draws.map((draw,index)=>({draw,index})).filter(({draw})=>draw.image.key==='right'&&draw.image.index>=10&&draw.image.index<=15);
+    assert.equal(legs.length,6,'right-facing draw includes both complete legs');
+    assert.ok(legs.every(({index})=>index<toolIndex),'right-facing near right-hand axe remains in front of both legs');
+  }
+  const handIndex=draws.findIndex(draw=>draw.image.key===frame.key&&draw.image.index===frame.index);
   assert.ok(toolIndex>=0&&handIndex>toolIndex,'right hand closes over the axe shaft in every facing');
-  const draw=draws[toolIndex],[a,b,c,d,e,f]=draw.matrix;
-  const gripX=draw.x+draw.width*.18,gripY=draw.y+draw.height*p.toolGrip;
-  const renderedGrip={x:a*gripX+c*gripY+e,y:b*gripX+d*gripY+f};
-  near(distance(renderedGrip,socket),0,1e-6,'rendered axe grip stays attached to the palm socket');
+  const axe=draws[toolIndex],[axeA,axeB,axeC,axeD]=axe.matrix;
+  const reversed=direction===2||direction===3;
+  assert.equal(Math.sign(axeA*axeD-axeB*axeC),reversed?-1:1,'only back/left axe surfaces reverse across their grip');
+  // The axe is authored with its cutting edge to the right of the shaft.
+  // Compare points at the same source height to isolate the blade side
+  // from shaft lean and the position of the worker's hand.
+  const blade=renderedPoint(axe,[.92,.12]),shaftAtBlade=renderedPoint(axe,[.18,.12]);
+  assert.equal(Math.sign(blade.x-shaftAtBlade.x),reversed?1:-1,'hanging blade points outward in front/back and trails the walk in either profile');
+  const shaftLower=renderedPoint(axe,[.18,.9]),shaftUpper=renderedPoint(axe,[.18,.6]);
+  near(shaftLower.x-shaftUpper.x,-Math.sin(p.toolAngle)*axe.height*.3,1e-6,'axe reflection preserves the shaft lean rather than reflecting screen space');
+  near(shaftLower.y-shaftUpper.y,Math.cos(p.toolAngle)*axe.height*.3,1e-6,'axe reflection preserves the longitudinal shaft direction');
+  near(distance(renderedPoint(axe,[.18,p.toolGrip]),socket),0,1e-6,'rendered axe grip stays attached to the palm socket through reflection');
+  near(distance(renderedPoint(draws[handIndex],frame.root),wrist),0,1e-6,'actual hand artwork wrist lands on the skeletal wrist');
+  near(distance(renderedPoint(draws[handIndex],frame.grip),socket),0,1e-6,'actual hand artwork grip and axe handle share the same point');
+  if(direction===1||direction===3) {
+    assert.deepEqual(frame,{key:direction===1?'right':'left',index:9,width:4.8,height:7,root:[.5,.18],grip:[.5,.18+3.45/7]},'profile hand frame retains the established artwork and attachments');
+    near(distance(socket,wrist),3.45,1e-6,'profile hand attachment distance is unchanged');
+  }
+}
+for(let direction=0;direction<4;direction++) {
+  for(const phase of [0,.5,1]) {
+    const axe=captureRigDraw('death',HEARTHKIN_ACTIONS.death.duration*phase,direction).find(draw=>draw.image.key==='props'&&draw.image.index===0);
+    assert.ok(axe,'falling worker retains a separately drawn dropped axe');
+    const [a,b,c,d,e,f]=axe.matrix;
+    assert.equal(Math.sign(a*d-b*c),direction===2||direction===3?-1:1,'dropped axe retains its four-view surface orientation');
+    near(distance(renderedPoint(axe,[.24,.85]),{x:e,y:f}),0,1e-6,'dropped axe reflection preserves its authored pivot');
+  }
+  for(const [state,index] of [['gather_stone',1],['field_work',2],['construct',3]]) {
+    const draw=captureRigDraw(state,HEARTHKIN_ACTIONS[state].duration*.6,direction).find(draw=>draw.image.key==='props'&&draw.image.index===index);
+    assert.ok(draw,`${state} retains its own tool`);
+    const [a,b,c,d]=draw.matrix;
+    assert.ok(a*d-b*c>0,'axe-specific orientation correction does not mirror the pick, hoe or hammer');
+  }
+}
+// Test the source pixels' authored attachment points through the transforms
+// actually passed to drawImage. Correct joints alone did not catch the old
+// centerline assumption, which added each sleeve's painted tilt a second time.
+for(const [direction,view,handIndices] of [[0,'front',{left:1,right:0}],[2,'back',{left:2,right:3}]]) {
+  for(const phase of [0,.125,.25,.375,.5,.625,.75,.875]) {
+    const time=walkDuration*phase,p=hearthkinPose('walk',time,direction),draws=captureRigDraw('walk',time,direction);
+    for(const side of ['left','right']) {
+      for(const [segment,start,end] of [['upper','Shoulder','Elbow'],['lower','Elbow','Hand']]) {
+        const part=HEARTHKIN_ARM_PARTS[view][side][segment];
+        assert.equal(part.key,'armSurfaces',`${view} ${side} ${segment} uses the corrected authored surface`);
+        assert.ok(part.root.every(n=>n>=0&&n<=1)&&part.tip.every(n=>n>=0&&n<=1),'arm attachments lie inside their source rectangles');
+        const matches=draws.filter(draw=>draw.image.key===part.key&&draw.image.index===part.index);
+        assert.equal(matches.length,1,`${view} ${side} ${segment} is drawn once from the intended source part`);
+        const draw=matches[0],[a,b,c,d]=draw.matrix;
+        assert.ok(a*d-b*c>0,'arm surface preserves authored handedness without reflection');
+        near(distance(renderedPoint(draw,part.root),p[side+start]),0,1e-6,`${view} ${side} ${segment} source root lands on ${start}`);
+        near(distance(renderedPoint(draw,part.tip),p[side+end]),0,1e-6,`${view} ${side} ${segment} source tip lands on ${end}`);
+      }
+      const frame=hearthkinHandFrame(p,side==='left');
+      assert.deepEqual(frame,HEARTHKIN_HAND_PARTS[view][side],`${view} ${side} hand uses the authored neutral wrist frame`);
+      assert.equal(frame.key,'neutralHands');
+      assert.equal(frame.index,handIndices[side],`${view} ${side} selects the anatomically authored hand, not screen-side slot order`);
+      assert.ok(frame.root.every(n=>n>=0&&n<=1)&&frame.grip.every(n=>n>=0&&n<=1),'hand wrist and grip remain inside their source rectangle');
+      const matches=draws.filter(draw=>draw.image.key===frame.key&&draw.image.index===frame.index);
+      assert.equal(matches.length,1,`${view} ${side} hand is drawn once from its intended source part`);
+      const draw=matches[0],[a,b,c,d]=draw.matrix;
+      assert.ok(a*d-b*c>0,'hand surface preserves its authored chirality without reflection');
+      near(distance(renderedPoint(draw,frame.root),p[side+'Hand']),0,1e-6,`${view} ${side} source wrist remains attached throughout the walk`);
+      near(distance(renderedPoint(draw,frame.grip),hearthkinPalmSocket(p,side==='left')),0,1e-6,`${view} ${side} source grip agrees with its palm socket throughout the walk`);
+    }
+  }
 }
 for(const type of ['wood','food','stone','gold','supplies'])assert.equal(hearthkinPose('carry_'+type,.2,0).cargo,type);
 const base={type:'villager',facing:0,animClock:0,visualState:'idle',command:'idle'};
@@ -174,4 +256,4 @@ for(const ward of [0,10])renderer.drawOccludedUnitOverlays(ctx,{
   buildings:[],resourcesNodes:[{kind:'resource',type:'tree',x:0,z:1,amount:100}],
 });
 assert.equal(repaints,2,'selected workers remain visible under a canopy with and without a ward');
-console.log(`PASS: ${Object.keys(HEARTHKIN_ACTIONS).length} continuous actions, four authored views, anatomical limb lengths, grounded gait, opposed arm swing, attached palm grip, cycle seams, contact poses, cargo, status priority, still death and PNG source bounds.`);
+console.log(`PASS: ${Object.keys(HEARTHKIN_ACTIONS).length} continuous actions, four authored views, anatomical limb lengths, grounded gait, opposed arm swing, authored source joints and hands, attached rendered palm grip, correct axe-leg depth and blade orientation, unchanged profile attachments, cycle seams, contact poses, cargo, status priority, still death and PNG source bounds.`);

@@ -1,4 +1,4 @@
-import { HearthkinRig } from '../src/hearthkin-rig.js?v=20260904-naturalwalk1';
+import { HearthkinRig } from '../src/hearthkin-rig.js?v=20260904-armdepth1';
 const hearthkinRig = new HearthkinRig();
 import {
   ANIMATION_DIRECTIONS,
@@ -6,7 +6,7 @@ import {
   animationClip,
   animationDefinition,
   animationFrame,
-} from '../src/animation.js?v=20260904-naturalwalk1';
+} from '../src/animation.js?v=20260904-armdepth1';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');

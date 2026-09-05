@@ -1,6 +1,6 @@
-import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260904-naturalwalk1';
-import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-naturalwalk1';
-import { COMBAT_ATLASES, UNIT_TYPES, VILLAGER_ATLASES } from './config.js?v=20260904-naturalwalk1';
+import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260904-armdepth1';
+import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-armdepth1';
+import { COMBAT_ATLASES, UNIT_TYPES, VILLAGER_ATLASES } from './config.js?v=20260904-armdepth1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },

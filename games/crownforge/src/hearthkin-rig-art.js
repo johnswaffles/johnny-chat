@@ -490,5 +490,267 @@ export const HEARTHKIN_RIG_ART = {
         211
       ]
     ]
+  },
+  "armSurfaces": {
+    "src": "./assets/hearthkin-v2/arm-surfaces.png?v=20260904-armdepth1",
+    "width": 1536,
+    "height": 1024,
+    "parts": [
+      [
+        135,
+        17,
+        152,
+        295
+      ],
+      [
+        494,
+        18,
+        142,
+        293
+      ],
+      [
+        893,
+        19,
+        148,
+        294
+      ],
+      [
+        1257,
+        18,
+        146,
+        294
+      ],
+      [
+        155,
+        356,
+        105,
+        286
+      ],
+      [
+        515,
+        357,
+        92,
+        290
+      ],
+      [
+        908,
+        357,
+        109,
+        291
+      ],
+      [
+        1280,
+        357,
+        93,
+        294
+      ]
+    ]
+  },
+  "neutralHands": {
+    "src": "./assets/hearthkin-v2/neutral-hands.png?v=20260904-armdepth1",
+    "width": 1774,
+    "height": 887,
+    "parts": [
+      [
+        49,
+        99,
+        256,
+        684
+      ],
+      [
+        497,
+        99,
+        255,
+        684
+      ],
+      [
+        1019,
+        99,
+        260,
+        684
+      ],
+      [
+        1470,
+        99,
+        256,
+        684
+      ]
+    ]
+  }
+};
+
+// Joint attachments measured inside the authored component rectangles.
+export const HEARTHKIN_ARM_PARTS = {
+  "front": {
+    "left": {
+      "upper": {
+        "key": "armSurfaces",
+        "index": 0,
+        "root": [
+          0.552,
+          0.08
+        ],
+        "tip": [
+          0.4519,
+          0.92
+        ]
+      },
+      "lower": {
+        "key": "armSurfaces",
+        "index": 4,
+        "root": [
+          0.519,
+          0.08
+        ],
+        "tip": [
+          0.5029,
+          0.92
+        ]
+      }
+    },
+    "right": {
+      "upper": {
+        "key": "armSurfaces",
+        "index": 1,
+        "root": [
+          0.4499,
+          0.08
+        ],
+        "tip": [
+          0.5183,
+          0.92
+        ]
+      },
+      "lower": {
+        "key": "armSurfaces",
+        "index": 5,
+        "root": [
+          0.4815,
+          0.08
+        ],
+        "tip": [
+          0.5043,
+          0.92
+        ]
+      }
+    }
+  },
+  "back": {
+    "left": {
+      "upper": {
+        "key": "armSurfaces",
+        "index": 2,
+        "root": [
+          0.5318,
+          0.08
+        ],
+        "tip": [
+          0.4682,
+          0.92
+        ]
+      },
+      "lower": {
+        "key": "armSurfaces",
+        "index": 6,
+        "root": [
+          0.5174,
+          0.08
+        ],
+        "tip": [
+          0.4716,
+          0.92
+        ]
+      }
+    },
+    "right": {
+      "upper": {
+        "key": "armSurfaces",
+        "index": 3,
+        "root": [
+          0.4698,
+          0.08
+        ],
+        "tip": [
+          0.524,
+          0.92
+        ]
+      },
+      "lower": {
+        "key": "armSurfaces",
+        "index": 7,
+        "root": [
+          0.5032,
+          0.08
+        ],
+        "tip": [
+          0.4892,
+          0.92
+        ]
+      }
+    }
+  }
+};
+
+// Neutral wrist rotation: thumb edges inward, left bracer remains on the left arm.
+export const HEARTHKIN_HAND_PARTS = {
+  "front": {
+    "left": {
+      "key": "neutralHands",
+      "index": 1,
+      "width": 3.7,
+      "height": 6.8,
+      "root": [
+        0.5804,
+        0.15
+      ],
+      "grip": [
+        0.4,
+        0.72
+      ]
+    },
+    "right": {
+      "key": "neutralHands",
+      "index": 0,
+      "width": 3.7,
+      "height": 6.8,
+      "root": [
+        0.4121,
+        0.15
+      ],
+      "grip": [
+        0.6,
+        0.72
+      ]
+    }
+  },
+  "back": {
+    "left": {
+      "key": "neutralHands",
+      "index": 2,
+      "width": 3.7,
+      "height": 6.8,
+      "root": [
+        0.4104,
+        0.15
+      ],
+      "grip": [
+        0.6,
+        0.72
+      ]
+    },
+    "right": {
+      "key": "neutralHands",
+      "index": 3,
+      "width": 3.7,
+      "height": 6.8,
+      "root": [
+        0.5867,
+        0.15
+      ],
+      "grip": [
+        0.4,
+        0.72
+      ]
+    }
   }
 };

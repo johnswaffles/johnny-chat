@@ -457,3 +457,9 @@ Keep all four views and every action visible in `dev/hearthkin-studio.html`, inc
 ### Natural gait correction — `20260904-naturalwalk1`
 
 For Crown worker locomotion, idle and cargo, solve fixed-length limbs in anatomical space, then project into the camera. Never force a projected front/back limb to retain its full 2D length: this creates outward elbow bends. Keep ordinary walking low and coordinated, with opposite arm/leg contact and continuous foot position, velocity and roll at the loop seam. Attach the handle to the visible palm rather than the wrist, and render fingers over the shaft in every facing. Evaluate at normal speed as well as contact/passing poses; source references and measured checks are in `CROWNFORGE_NATURAL_WALK_RELEASE.md`.
+
+### Authored arm anchors and equipment depth — `20260904-armdepth1`
+
+Front/back sleeves and forearms use measured shoulder/elbow/wrist anchors in `HEARTHKIN_ARM_PARTS`; never assume the painted limb axis is the rectangle centerline. Neutral hand frames have independent wrist and palm anchors. Preserve the anatomical left bracer and independently authored front/back hand surfaces. Profile artwork and gait remain the natural-walk version.
+
+For profile views, draw the far leg, far arm/tool/hand, then the near leg before the body and near arm. An axe in the far right hand must be occluded by the near left leg. The axe blade's transverse axis reverses around its own grip in back/left views, after tool rotation; its longitudinal angle stays fixed. This prop orientation does not permit mirroring the whole character or the arm/hand art. Use Arm detail and normal-size playback together when reviewing future changes.

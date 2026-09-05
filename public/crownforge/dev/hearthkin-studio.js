@@ -1,4 +1,4 @@
-import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose, drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260904-naturalwalk1';
+import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose, drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260904-armdepth1';
 
 const canvas = document.querySelector('#stage');
 const ctx = canvas.getContext('2d');
@@ -8,6 +8,7 @@ const scrub = document.querySelector('#scrub');
 const speed = document.querySelector('#speed');
 const ward = document.querySelector('#ward');
 const joints = document.querySelector('#joints');
+const detail = document.querySelector('#detail');
 const status = document.querySelector('#status');
 const progress = document.querySelector('#progress');
 const rig = new HearthkinRig();
@@ -20,6 +21,12 @@ action.value = HEARTHKIN_ACTIONS[requested] && !requested.startsWith('attack_') 
 let clock = 0, playing = true, previous = performance.now(), impact = 0;
 const setPlaying = value => { playing = value;play.textContent = playing ? 'Pause' : 'Play';play.setAttribute('aria-pressed', String(playing)); };
 const review = new URLSearchParams(location.search);
+detail.checked = review.get('detail') === 'arms';
+detail.addEventListener('change', () => {
+  const url=new URL(location.href);
+  if(detail.checked)url.searchParams.set('detail','arms');else url.searchParams.delete('detail');
+  history.replaceState(null,'',url);
+});
 if (review.has('pose')) {
   const pose = Number(review.get('pose'));
   if (Number.isFinite(pose)) clock = Math.max(0, Math.min(1, pose)) * HEARTHKIN_ACTIONS[action.value].duration;
@@ -60,12 +67,17 @@ function frame(now) {
   if(status.textContent!==message)status.textContent=message;
   canvas.dataset.ready=String(ready===rig.readiness().length);
   canvas.dataset.action=action.value;
+  canvas.dataset.view=detail.checked?'arms':'full';
   for(let direction=0;direction<4;direction++) {
-    const x=180+direction*360,y=438,size=338;
+    const x=180+direction*360,y=detail.checked?725:438,size=detail.checked?700:338;
     const unit={id:1,facing:direction,animationState:action.value,animationTime:t,lastLightWardTimer:ward.checked?60:0,wardBlockedPulse:impact};
+    ctx.save();
+    if(detail.checked){ctx.beginPath();ctx.rect(x-165,36,330,564);ctx.clip();}
     shadow(x,y,size);drawHearthkinWard(ctx,unit,{x,y},size,now,true);rig.draw(ctx,unit,{x,y},size,1,t);drawHearthkinWard(ctx,unit,{x,y},size,now);
     if(joints.checked)drawJointGuide(hearthkinPose(action.value,t,direction),x,y,size);
-    ctx.textAlign='center';ctx.fillStyle='#d3c4a7';ctx.font='20px Georgia,serif';ctx.fillText(['Front','Right','Back','Left'][direction],x,483);
+    ctx.restore();
+    ctx.textAlign='center';ctx.fillStyle='#d3c4a7';ctx.font='20px Georgia,serif';ctx.fillText(['Front','Right','Back','Left'][direction],x,detail.checked?632:483);
+    if(detail.checked)continue;
     ctx.strokeStyle='#aac0aa22';ctx.beginPath();ctx.moveTo(x-112,512);ctx.lineTo(x+112,512);ctx.stroke();
     const displayScale=Math.min(canvas.clientWidth/canvas.width,canvas.clientHeight/canvas.height)||1;
     for(const [dx,scale] of [[-35,100*.28/displayScale],[35,100*.7/displayScale]]) {const p={x:x+dx,y:625};shadow(p.x,p.y,scale);rig.draw(ctx,unit,p,scale,1,t);drawHearthkinWard(ctx,unit,p,scale,now);}

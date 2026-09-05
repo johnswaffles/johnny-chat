@@ -9,7 +9,7 @@
   </style>
 </head>
 <body>
-  <header><div><div class="eyebrow">Crownforge · Character Studio</div><h1>The Crownwarden Hearthkin</h1><p>One artisan. Every task. Four authored views.</p></div><a href="../?release=20260904-naturalwalk1">Enter the Crownlands ↗</a></header>
+  <header><div><div class="eyebrow">Crownforge · Character Studio</div><h1>The Crownwarden Hearthkin</h1><p>One artisan. Every task. Four authored views.</p></div><a href="../?release=20260904-armdepth1">Enter the Crownlands ↗</a></header>
   <section class="controls" aria-label="Animation controls">
     <label>Action <select id="action"></select></label>
     <button id="play" aria-pressed="true">Pause</button>
@@ -17,12 +17,13 @@
     <label><input id="ward" type="checkbox" />Last Light Ward</label>
     <button id="impact">Block a blow</button>
     <label><input id="joints" type="checkbox" />Show joints</label>
+    <label><input id="detail" type="checkbox" />Arm detail</label>
   </section>
   <main>
     <div class="stage"><div id="status" class="status" role="status">Preparing the character…</div><canvas id="stage" width="1440" height="660" aria-label="Animated Hearthkin, viewed from front, right, back and left"></canvas></div>
     <div class="timeline"><small>Cycle</small><input id="scrub" aria-label="Animation progress" type="range" min="0" max="1000" value="0" /><output id="progress">0%</output></div>
     <footer><span>Continuous joint animation · Independently authored front, right, back and left.<br />Use the timeline to examine weight, foot contact, hands and equipment.</span><div class="legend"><span><b>Large view</b><br />Character detail</span><span><b>Small view</b><br />Normal game size</span></div></footer>
   </main>
-  <script type="module" src="./hearthkin-studio.js?v=20260904-naturalwalk1"></script>
+  <script type="module" src="./hearthkin-studio.js?v=20260904-armdepth1"></script>
 </body>
 </html>

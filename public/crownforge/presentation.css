@@ -177,4 +177,4 @@ h1 { font-size: 22px; }
 }
 
 /* The worker portrait uses the same authored face as the world rig. */
-.ui-icon.icon-villager { background-image: url('./assets/hearthkin-v2/rig-front.png?v=20260904-naturalwalk1'); background-size: 625.6% auto; background-position: 8.5% 4%; }
+.ui-icon.icon-villager { background-image: url('./assets/hearthkin-v2/rig-front.png?v=20260904-armdepth1'); background-size: 625.6% auto; background-position: 8.5% 4%; }

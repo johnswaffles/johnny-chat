@@ -1,5 +1,5 @@
-import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-naturalwalk1';
-import { hearthkinLocomotion } from './hearthkin-locomotion.js?v=20260904-naturalwalk1';
+import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260904-armdepth1';
+import { hearthkinLocomotion } from './hearthkin-locomotion.js?v=20260904-armdepth1';
 
 const TAU = Math.PI * 2;
 const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
@@ -229,7 +229,7 @@ export function hearthkinPose(state = 'idle', time = 0, direction = 0, options =
   const leftElbow = solveLimb(leftShoulder, leftHand, 17, 16, sideView ? forward.x : lateral);
   const rightElbow = solveLimb(rightShoulder, rightHand, 17, 16, sideView ? forward.x : -lateral);
   const pose = {
-    state, phase, sideView, forward, sign, walking, carrying, fall, hip, waist, neck, shoulder, head, headTilt,
+    state, phase, direction, sideView, forward, sign, walking, carrying, fall, hip, waist, neck, shoulder, head, headTilt,
     leftShoulder, rightShoulder, leftElbow, rightElbow, leftHand, rightHand,
     leftHip, rightHip, leftKnee, rightKnee, leftFoot, rightFoot,
     tool, toolAngle, toolScale, toolGrip, toolHand, cargo,
@@ -245,10 +245,18 @@ export function hearthkinPose(state = 'idle', time = 0, direction = 0, options =
   return pose;
 }
 
+export function hearthkinHandFrame(pose,left=false) {
+  const view=['front','right','back','left'][pose.direction];
+  return HEARTHKIN_HAND_PARTS[view]?.[left?'left':'right'] ?? {
+    key:view,index:left?8:9,width:4.8,height:7,root:[.5,.18],grip:[.5,.18+3.45/7],
+  };
+}
+
 export function hearthkinPalmSocket(pose,left=false) {
   const wrist=left?pose.leftHand:pose.rightHand, elbow=left?pose.leftElbow:pose.rightElbow;
   const angle=Math.atan2(wrist.y-elbow.y,wrist.x-elbow.x)-Math.PI/2;
-  return attachment(wrist,0,3.45,angle);
+  const frame=hearthkinHandFrame(pose,left);
+  return attachment(wrist,(frame.grip[0]-frame.root[0])*frame.width,(frame.grip[1]-frame.root[1])*frame.height,angle);
 }
 
 // Raster artwork supplies surfaces; the rig supplies continuous motion.
@@ -330,18 +338,27 @@ export class HearthkinRig {
     if (!this.part(view, 0)) return false;
     ctx.save(); ctx.translate(anchor.x, anchor.y); ctx.scale(size / 100, size / 100); ctx.globalAlpha *= alpha;
     ctx.imageSmoothingEnabled = true;
-    const draw = (key, index, position, width, height, angle = 0, pivotX = .5, pivotY = 0, half = null) => {
+    const draw = (key, index, position, width, height, angle = 0, pivotX = .5, pivotY = 0, half = null, reverseAcrossGrip = false) => {
       const levels = this.part(key, index);
       if (!levels) return;
       const screenHeight = Math.abs(height * size / 100) * (globalThis.devicePixelRatio ?? 1);
       const image = screenHeight > 128 ? levels[0] : screenHeight > 64 ? levels[1] : screenHeight > 32 ? levels[2] : levels[3];
       ctx.save(); ctx.translate(position.x, position.y); ctx.rotate(angle);
+      if(reverseAcrossGrip)ctx.scale(-1,1);
       if (half !== null) { ctx.beginPath();ctx.rect(-width * pivotX + half * width / 2, -height * pivotY, width / 2, height);ctx.clip(); }
       ctx.drawImage(image, -width * pivotX, -height * pivotY, width, height); ctx.restore();
     };
     const segment = (index, a, b, width, overlap = 2.2) => {
       const length = Math.hypot(b.x - a.x, b.y - a.y);
       draw(view, index, a, width, length + overlap * 2, Math.atan2(b.y - a.y, b.x - a.x) - Math.PI / 2, .5, overlap / (length + overlap * 2));
+    };
+    const attachedSegment = (part,a,b,width) => {
+      const length=Math.hypot(b.x-a.x,b.y-a.y);
+      const sourceX=(part.tip[0]-part.root[0])*width;
+      const sourceY=Math.sqrt(Math.max(.001,length*length-sourceX*sourceX));
+      const height=sourceY/(part.tip[1]-part.root[1]);
+      const angle=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(sourceY,sourceX);
+      draw(part.key,part.index,a,width,height,angle,part.root[0],part.root[1]);
     };
     const drawLeg = left => {
       const a = left ? pose.leftHip : pose.rightHip, b = left ? pose.leftKnee : pose.rightKnee;
@@ -352,19 +369,29 @@ export class HearthkinRig {
     };
     const drawArm = left => {
       const a = left ? pose.leftShoulder : pose.rightShoulder, b = left ? pose.leftElbow : pose.rightElbow, c = left ? pose.leftHand : pose.rightHand;
-      segment(left ? 4 : 5, a, b, 9.2);
-      segment(left ? 6 : 7, b, c, 5.4, 1.8);
+      const parts=HEARTHKIN_ARM_PARTS[view]?.[left?'left':'right'];
+      if(parts) {
+        attachedSegment(parts.upper,a,b,9.2);
+        attachedSegment(parts.lower,b,c,5.4);
+      } else {
+        segment(left ? 4 : 5, a, b, 9.2);
+        segment(left ? 6 : 7, b, c, 5.4, 1.8);
+      }
     };
     const drawHand = left => {
       const wrist = left ? pose.leftHand : pose.rightHand, elbow = left ? pose.leftElbow : pose.rightElbow;
-      draw(view, left ? 8 : 9, wrist, 4.8, 7, Math.atan2(wrist.y - elbow.y, wrist.x - elbow.x) - Math.PI / 2, .5, .18);
+      const frame=hearthkinHandFrame(pose,left);
+      draw(frame.key, frame.index, wrist, frame.width, frame.height, Math.atan2(wrist.y - elbow.y, wrist.x - elbow.x) - Math.PI / 2, frame.root[0], frame.root[1]);
     };
     const drawTool = () => {
       if (!pose.tool) return;
       const index = { axe: 0, pick: 1, hoe: 2, hammer: 3 }[pose.tool];
       const width = { axe: 13, pick: 24, hoe: 13, hammer: 13 }[pose.tool] * pose.toolScale;
       const gripX = { axe: .18, pick: .52, hoe: .13, hammer: .5 }[pose.tool];
-      draw('props', index, hearthkinPalmSocket(pose), width, 33 * pose.toolScale, pose.toolAngle, gripX, pose.toolGrip);
+      // The cutting edge follows the right hand around the body. Reverse
+      // across the grip, never across the screen or the whole character.
+      const reverseAxe=pose.tool==='axe'&&(direction===2||direction===3);
+      draw('props', index, hearthkinPalmSocket(pose), width, 33 * pose.toolScale, pose.toolAngle, gripX, pose.toolGrip, null, reverseAxe);
     };
     const drawCargo = () => {
       if (!pose.cargo) return;
@@ -380,9 +407,10 @@ export class HearthkinRig {
       if (!left) drawTool();
       drawHand(left);
     };
-    drawLeg(farLeft); drawLeg(!farLeft);
+    drawLeg(farLeft);
+    if (pose.sideView) drawArmAssembly(farLeft);
+    drawLeg(!farLeft);
     if (direction === 2) { drawCargo();drawArmAssembly(true);drawArmAssembly(false); }
-    else if (pose.sideView) drawArmAssembly(farLeft);
     const torsoAngle = Math.atan2(pose.waist.y - pose.neck.y, pose.waist.x - pose.neck.x) - Math.PI / 2;
     const hipsAngle = pose.fall * pose.sign * 1.2;
     const coatRoot = attachment(pose.waist, 0, -2, hipsAngle);
@@ -402,7 +430,7 @@ export class HearthkinRig {
     if (state === 'death') {
       const p = clamp(time / action.duration);
       const drop = smooth(clamp(p * 1.8));
-      draw('props', 0, point(mix(pose.sign * 15, -pose.sign * 10, drop), mix(-34, 7, drop) - Math.sin(drop * Math.PI) * 8), 13, 33, Math.PI - pose.sign * drop * Math.PI / 2, .24, .85);
+      draw('props', 0, point(mix(pose.sign * 15, -pose.sign * 10, drop), mix(-34, 7, drop) - Math.sin(drop * Math.PI) * 8), 13, 33, Math.PI - pose.sign * drop * Math.PI / 2, .24, .85, null, direction===2||direction===3);
     }
     ctx.restore();
     return true;
