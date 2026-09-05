@@ -1,4 +1,4 @@
-import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260904-rosterkin1';
+import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260905-cuffbraid3';
 import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-horsefit1';
 import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260905-softelbow1';
 import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js';
@@ -337,7 +337,8 @@ export class HearthkinRig {
     if (this.parts.has(cacheKey)) return this.parts.get(cacheKey);
     const image = this.images[key];
     if (!image?.complete || !image.naturalWidth) return null;
-    const rect = (this.art??HEARTHKIN_RIG_ART)[key].parts[index];
+    const source=(this.art??HEARTHKIN_RIG_ART)[key];
+    const rect=source.parts[index];
     if (!rect) return null;
     // Make small mipmaps once so fine cloth detail remains clean at RTS size.
     const levels = [256, 128, 64, 32].map(height => {
@@ -345,6 +346,15 @@ export class HearthkinRig {
       canvas.width = Math.max(1, Math.round(height * rect[2] / rect[3])); canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      // Some tightly packed authored cells have neighbouring components
+      // inside their rectangular bounds. Clip the source region before
+      // creating any mip level, so the stray cell cannot bleed into hair.
+      const polygon=source.sourceClips?.[index];
+      if(polygon) {
+        ctx.beginPath();
+        polygon.forEach(([x,y],i)=>ctx[i?'lineTo':'moveTo']((x-rect[0])*canvas.width/rect[2],(y-rect[1])*height/rect[3]));
+        ctx.closePath();ctx.clip();
+      }
       ctx.drawImage(image, ...rect, 0, 0, canvas.width, height);
       return canvas;
     });
@@ -506,13 +516,12 @@ export class HearthkinRig {
     const drawArm = left => {
       const a = left ? pose.leftShoulder : pose.rightShoulder, b = left ? pose.leftElbow : pose.rightElbow, c = left ? pose.leftHand : pose.rightHand;
       const parts=(this.armParts??HEARTHKIN_ARM_PARTS)[view]?.[left?'left':'right'];
-      if(parts) {
-        attachedSegment(parts.upper,a,b,dimensions.upperArm??9.2);
-        attachedSegment(parts.lower,b,c,dimensions.forearm??5.4);
-      } else {
-        segment(left ? 4 : 5, a, b, 9.2);
-        segment(left ? 6 : 7, b, c, 5.4, 1.8);
-      }
+      const upper=()=>parts?attachedSegment(parts.upper,a,b,dimensions.upperArm??9.2):segment(left?4:5,a,b,9.2);
+      const lower=()=>parts?attachedSegment(parts.lower,b,c,dimensions.forearm??5.4):segment(left?6:7,b,c,5.4,1.8);
+      if((this.definition?.id??unit.type??'villager')==='villager') {
+        // The rolled sleeve covers the forearm insertion at the elbow.
+        lower();upper();
+      } else {upper();lower();}
     };
     const drawHand = left => {
       const wrist = left ? pose.leftHand : pose.rightHand;

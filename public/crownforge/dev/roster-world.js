@@ -1,6 +1,6 @@
 import { CrownforgeSimulation } from '../src/simulation.js';
-import { CrownforgeRenderer } from '../src/renderer.js?v=20260905-softelbow1';
-import { CHARACTER_RIGS } from '../src/character-rigs.js?v=20260905-softelbow1';
+import { CrownforgeRenderer } from '../src/renderer.js?v=20260905-cuffbraid3';
+import { CHARACTER_RIGS } from '../src/character-rigs.js?v=20260905-cuffbraid3';
 import { UNIT_TYPES, CONFIG } from '../src/config.js';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas);

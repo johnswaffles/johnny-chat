@@ -1,4 +1,4 @@
-import { createCharacterRigs } from '../src/character-rigs.js?v=20260905-softelbow1';
+import { createCharacterRigs } from '../src/character-rigs.js?v=20260905-cuffbraid3';
 const characterRigs = createCharacterRigs();
 import {
   ANIMATION_DIRECTIONS,

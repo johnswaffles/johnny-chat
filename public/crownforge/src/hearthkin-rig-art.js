@@ -779,3 +779,35 @@ export const HEARTHKIN_HAND_PARTS = {
     }
   }
 };
+
+// Crownwarden sleeve openings: keep the complete linen hem, trim excess
+// rigid skin stubs, and place the elbow on the painted cuff opening.
+const normaliseArmPoint=(point,rect)=>[(point[0]-rect[0])/rect[2],(point[1]-rect[1])/rect[3]];
+for(const [view,side,index,endY,cuff] of [
+  ['front','left',0,301,[204,289]],['front','right',1,303,[568,285]],
+  ['back','left',2,299,[962,297]],['back','right',3,299,[1333,297]],
+]) {
+  const part=HEARTHKIN_ARM_PARTS[view][side].upper,rect=HEARTHKIN_RIG_ART.armSurfaces.parts[index];
+  const shoulder=[rect[0]+part.root[0]*rect[2],rect[1]+part.root[1]*rect[3]];
+  rect[3]=endY-rect[1];
+  part.root=normaliseArmPoint(shoulder,rect);part.tip=normaliseArmPoint(cuff,rect);
+}
+for(const [view,side,upperIndex,upperRect,shoulder,cuff,lowerIndex,elbow,wrist] of [
+  ['right','left',4,[217,324,107,210],[276,343],[267,517],6,[934,345],[969,532]],
+  ['right','right',5,[562,325,95,212],[611,344],[617,518],7,[1260,342],[1280,534]],
+  ['left','left',4,[174,330,119,217],[245,348],[230,526],6,[965,358],[909,536]],
+  ['left','right',5,[524,324,118,220],[588,342],[576,526],7,[1295,356],[1276,536]],
+]) {
+  HEARTHKIN_RIG_ART[view].parts[upperIndex]=upperRect;
+  const lowerRect=HEARTHKIN_RIG_ART[view].parts[lowerIndex];
+  (HEARTHKIN_ARM_PARTS[view]??={})[side]={
+    upper:{key:view,index:upperIndex,root:normaliseArmPoint(shoulder,upperRect),tip:normaliseArmPoint(cuff,upperRect)},
+    lower:{key:view,index:lowerIndex,root:normaliseArmPoint(elbow,lowerRect),tip:normaliseArmPoint(wrist,lowerRect)},
+  };
+}
+
+// The right braid's bottom-left corner overlaps a neighbouring forearm
+// cell. Preserve the original braid scale/pivot, excluding only that cell.
+HEARTHKIN_RIG_ART.right.sourceClips={
+  3:[[1216,12],[1318,12],[1318,364],[1272,364],[1272,334],[1216,334]],
+};
