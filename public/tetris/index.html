@@ -7,8 +7,10 @@
   <title>Cozy Falling Blocks — Johnny's Game Shelf</title>
   <link rel="stylesheet" href="/tetris/tetris.css?v=prism-bloom-20260904">
   <link rel="stylesheet" href="/tetris/prism-bloom.css?v=prism-bloom-20260904">
+  <link rel="stylesheet" href="/tetris/observatory.css?v=observatory-20260904">
+  <link rel="preload" as="image" href="/tetris/observatory-space.jpg">
 </head>
-<body class="game-active">
+<body class="game-active observatory">
   <div class="aurora aurora-one"></div>
   <div class="aurora aurora-two"></div>
   <header class="site-nav">
@@ -34,7 +36,7 @@
   <main class="game-shell">
     <section class="game-intro">
       <div>
-        <p class="eyebrow">A tiny arcade ritual</p>
+        <p class="eyebrow">Johnny's arcade <span>/</span> The observatory</p>
         <h1>Cozy Falling Blocks<span>∞</span></h1>
         <p class="lede">Stack clean. Think ahead. Keep the rhythm.</p>
       </div>
@@ -47,12 +49,13 @@
     <section class="arcade" aria-label="Cozy Falling Blocks game">
       <aside class="side-panel left-panel">
         <div class="stat-card score-card">
-          <span class="panel-label">Score</span>
+          <span class="panel-label">Your score</span>
           <strong id="score">0</strong>
           <div class="level-row"><span>Level <b id="level">1</b></span><span><b id="lines">0</b> lines</span></div>
           <div class="streak-row"><span id="combo">Combo —</span><b id="back-to-back"></b></div>
           <div class="level-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><span id="level-progress-bar"></span></div>
           <span id="level-progress-copy" class="level-progress-copy">0/10 to level 2</span>
+          <div class="personal-best"><span>PERSONAL BEST</span><b id="best-score">0</b></div>
         </div>
         <div class="mini-card next-card">
           <span class="panel-label">Next piece</span>
@@ -74,7 +77,7 @@
       </aside>
 
       <div class="board-column">
-        <div class="board-topline"><span>YOUR RUN</span></div>
+        <div class="board-topline"><span>THE OBSERVATORY</span><b>01</b></div>
         <div class="reactor-console" aria-label="Stack reactor">
           <div class="reactor-heading">
             <span class="panel-label">Stack reactor</span>
@@ -99,8 +102,9 @@
             <b></b><b></b><b></b><b></b><b></b><b></b>
           </div>
           <p class="overlay-kicker">COZY FALLING BLOCKS</p>
-          <h2 id="overlay-title">Ready?</h2>
-          <p id="overlay-copy">Press start, then use the arrow keys or the controls below.</p>
+          <div class="orbit-emblem" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <h2 id="overlay-title">Find your orbit.</h2>
+          <p id="overlay-copy">A little focus. A little wonder. Settle in and stack beneath the stars.</p>
           <button id="start-button" class="primary-button" type="button">Start game</button>
         </div>
         </div>
@@ -109,6 +113,7 @@
       <aside class="side-panel right-panel">
         <div class="mini-card music-card">
           <div class="music-heading"><span class="panel-label">Soundtrack</span><span class="equalizer" aria-hidden="true"><i></i><i></i><i></i></span></div>
+          <div class="orbital-record" aria-hidden="true"><div class="record-disc"><i></i></div><span>THE LISTENING ROOM</span></div>
           <select id="soundtrack-select" class="soundtrack-select" aria-label="Soundtrack">
             <option value="cozy">Johnny's Cozy Theme</option>
             <option value="dreamy-clouds">Dreamy Clouds</option>
@@ -180,6 +185,6 @@
 
   <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" preload="metadata"></audio>
   <script src="/audio-focus.js?v=1"></script>
-  <script src="/tetris/tetris.js?v=cozy-stars-20260904"></script>
+  <script src="/tetris/tetris.js?v=observatory-20260904"></script>
 </body>
 </html>

@@ -59,6 +59,7 @@
   const boardContext = boardCanvas.getContext("2d");
   const nextCanvases = [document.getElementById("next-canvas")];
   const scoreElement = document.getElementById("score");
+  const bestScoreElement = document.getElementById("best-score");
   const linesElement = document.getElementById("lines");
   const levelElement = document.getElementById("level");
   const comboElement = document.getElementById("combo");
@@ -744,6 +745,7 @@
 
   const updateStats = () => {
     scoreElement.textContent = score.toLocaleString();
+    if (bestScoreElement) bestScoreElement.textContent = Math.max(highScore, score).toLocaleString();
     linesElement.textContent = String(lines);
     levelElement.textContent = String(level);
     if (comboElement) comboElement.textContent = combo >= 0 ? "Combo x" + (combo + 1) : "Combo —";
@@ -759,7 +761,7 @@
   const createCrystalTile = (color, size, variant) => {
     const active = variant === "active";
     const preview = variant === "preview";
-    const shadowBlur = Math.max(4, size * (active ? .42 : .28));
+    const shadowBlur = Math.max(3, size * (active ? .30 : .16));
     const padding = Math.max(3, Math.ceil(shadowBlur * 1.5));
     const sprite = document.createElement("canvas");
     sprite.width = Math.ceil(size + padding * 2);
@@ -769,7 +771,7 @@
     const tileLeft = padding + inset;
     const tileTop = padding + inset;
     const tileSize = size - inset * 2;
-    const radius = Math.min(6, size * .16);
+    const radius = Math.min(4, size * .11);
 
     context.save();
     context.shadowColor = rgba(color, active ? .88 : preview ? .7 : .5);
@@ -797,7 +799,7 @@
       tileTop + tileSize * .52,
       tileSize * .68
     );
-    core.addColorStop(0, active ? "rgba(255,255,255,.78)" : "rgba(255,255,255,.55)");
+    core.addColorStop(0, active ? "rgba(255,255,255,.60)" : "rgba(255,255,255,.32)");
     core.addColorStop(.22, rgba(shiftColor(color, 42), active ? .48 : .3));
     core.addColorStop(.7, rgba(color, .08));
     core.addColorStop(1, "rgba(0,0,0,.24)");
@@ -945,15 +947,15 @@
     const height = boardBackdrop.height;
 
     const depth = context.createLinearGradient(0, 0, 0, height);
-    depth.addColorStop(0, "#111f43");
-    depth.addColorStop(.23, "#0a1733");
-    depth.addColorStop(.58, "#060d20");
-    depth.addColorStop(1, "#02050d");
+    depth.addColorStop(0, "#10232c");
+    depth.addColorStop(.23, "#08131f");
+    depth.addColorStop(.58, "#050b16");
+    depth.addColorStop(1, "#040811");
     context.fillStyle = depth;
     context.fillRect(0, 0, width, height);
 
     const crown = context.createRadialGradient(width * .5, height * .05, 4, width * .5, height * .1, height * .68);
-    crown.addColorStop(0, "rgba(122,241,255,.19)");
+    crown.addColorStop(0, "rgba(158,227,217,.09)");
     crown.addColorStop(.28, "rgba(105,231,255,.045)");
     crown.addColorStop(1, "rgba(105,231,255,0)");
     context.fillStyle = crown;
@@ -961,7 +963,7 @@
 
     context.fillStyle = "rgba(105,231,255,.018)";
     for (let y = 0; y < ROWS; y += 2) context.fillRect(0, y * CELL, width, CELL);
-    context.strokeStyle = "rgba(157,180,255,.085)";
+    context.strokeStyle = "rgba(157,190,205,.065)";
     context.lineWidth = 1;
     for (let x = 0; x <= COLS; x += 1) {
       context.beginPath();
