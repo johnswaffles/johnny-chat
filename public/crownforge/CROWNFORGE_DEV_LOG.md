@@ -5095,3 +5095,9 @@ Public release verified: `20260905-meadow1`, implementation `6e3df18`. Deployed 
 - Verified 50 building perimeter routes, 22 construction completions, 25 repairs, 12 recruitment exits, eight gate crossings, gathering, roster motion/loading/gameplay, and living meadow behavior. Browser-reviewed Hall construction, Ashen landmark, current character scale, wall corners and tower/gate joins.
 - Old saved coordinates remain unchanged. Exact original bytes are backed up before load/save, with download/restore controls. Automatic saved-layout relocation was rejected by approval review and remains excluded pending explicit user approval.
 - Release evidence and limitations: BUILDING_ART_RELEASE.md. Push and live verification pending.
+
+### Verified architecture deployment
+- Pushed feature commit 5d5c38a4e4ff4ccd2a9ce409586a2cc1d913527c to codex/crownforge-live-sync-20260821 without force pushing.
+- Render is serving release 20260905-buildings1. All 120 artwork assets, 48 source modules and five page/style/review files matched the tested local bytes (173 live SHA-256 checks; 2026-09-05 23:41 UTC).
+- Fresh browser load reached active gameplay with the enlarged Hall framed below the HUD and current characters outside its entrance. Local UI save/load and zoom controls also passed.
+- Existing saved coordinates are retained; automatic saved-layout relocation remains excluded pending separate approval. Backups and explicit download/restore controls are included.

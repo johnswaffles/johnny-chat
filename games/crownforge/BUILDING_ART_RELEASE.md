@@ -22,4 +22,4 @@ Existing saved building, resource and character coordinates load unchanged. No a
 
 Review all buildings at `dev/building-studio.html`; connected defenses at `tools/wall-orientation-qa.html`. Exact prompts: `BUILDING_ART_PROMPTS.md`; asset receipt: `assets/buildings-depth/manifest.json`.
 
-Deployment: pending final push and live verification. The preceding production commit provides a code/assets rollback; stored backups remain compatible with that game.
+Deployment: feature commit `5d5c38a4e4ff4ccd2a9ce409586a2cc1d913527c` pushed to `codex/crownforge-live-sync-20260821`. Render served release marker `20260905-buildings1`; 173 live files, including all 120 artwork assets and 48 game modules, matched the tested local SHA-256 hashes at 2026-09-05 23:41 UTC. A fresh live browser load reached gameplay and displayed the new Hall, current character rigs, meadow and HUD. The preceding production commit provides a code/assets rollback; stored backups remain compatible with that game.
