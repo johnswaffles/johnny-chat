@@ -1,0 +1,158 @@
+/* Three original illustrated destinations, using the arcade's card language. */
+.headline-tools.tool-card-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+.tool-gallery-card {
+  --card-accent: #daf6bd;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 590px;
+  border: 1px solid #dbe8e530;
+  border-radius: 17px;
+  background: #091315;
+  color: #f5f8f1;
+  box-shadow: 0 12px 35px #00000018;
+  transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+.tool-card-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+  transition: transform 1.1s cubic-bezier(.2, .6, .3, 1);
+}
+.tool-gallery-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, #040b0e70 0%, #040b0e00 23%, #040b0e08 36%, #040b0e88 57%, #040b0ee6 81%, #040b0ef5 100%);
+}
+.tool-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 24px 26px;
+  font-size: .875rem;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  color: #e4ede3;
+  text-shadow: 0 1px 12px #0008;
+}
+.tool-card-open {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  flex: none;
+  border: 1px solid #e3f4ec50;
+  border-radius: 50%;
+  background: #07101833;
+  backdrop-filter: blur(8px);
+  transition: background .3s, border-color .3s;
+}
+.tool-card-open svg { width: 16px; height: 16px; }
+.tool-card-copy { padding: 20px 26px 29px; margin-top: 214px; }
+.tool-card-kicker {
+  display: block;
+  color: var(--card-accent);
+  font-size: .75rem;
+  line-height: 1.7;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+.tool-card-copy h3 {
+  font: 500 clamp(2rem, 2.75vw, 2.7rem)/1.09 var(--display);
+  letter-spacing: -.045em;
+  margin: 0 0 15px;
+  color: #f4f8f1;
+  text-wrap: balance;
+}
+.tool-card-copy p {
+  margin: 0 0 24px;
+  color: #c1d0c7;
+  font-size: 1rem;
+  line-height: 1.7;
+  max-width: 350px;
+}
+.tool-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 17px;
+  padding: 11px 18px;
+  background: #e4eddc;
+  color: #243626;
+  border: 1px solid #eef7e688;
+  border-radius: 30px;
+  font-size: .875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  transition: background .2s, box-shadow .2s;
+}
+.tool-card-cta svg { width: 18px; height: 18px; transition: transform .25s; }
+.tool-gallery-story { --card-accent: #edce94; }
+.tool-gallery-story .tool-card-cta { background: #f0e5cf; color: #423520; }
+.tool-gallery-morrow { --card-accent: #c2dfed; }
+.tool-gallery-morrow .tool-card-cta { background: #dbeaf0; color: #243942; }
+.tool-gallery-card:hover, .tool-gallery-card:focus-visible {
+  transform: translateY(-5px);
+  border-color: #d7ecd188;
+  box-shadow: 0 20px 55px #0005;
+}
+.tool-gallery-card:hover .tool-card-art, .tool-gallery-card:focus-visible .tool-card-art { transform: scale(1.045); }
+.tool-gallery-card:hover .tool-card-open, .tool-gallery-card:focus-visible .tool-card-open { background: #e3f4ec16; border-color: #e3f4ec88; }
+.tool-gallery-card:hover .tool-card-cta, .tool-gallery-card:focus-visible .tool-card-cta { background: #f1ffe4; box-shadow: 0 0 22px #d8ff9d0b; }
+.tool-gallery-story:hover .tool-card-cta, .tool-gallery-story:focus-visible .tool-card-cta { background: #fff2d8; }
+.tool-gallery-morrow:hover .tool-card-cta, .tool-gallery-morrow:focus-visible .tool-card-cta { background: #eef9ff; }
+.tool-gallery-card:hover .tool-card-cta svg, .tool-gallery-card:focus-visible .tool-card-cta svg { transform: translateX(3px); }
+/* Morrow now occupies the feature row, leaving four existing utility cards. */
+.tool-card-gallery + .utility-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) {
+  .headline-tools.tool-card-gallery { gap: 17px; }
+  .tool-card-top { padding: 21px; font-size: .875rem; letter-spacing: .8px; }
+  .tool-card-copy { padding-inline: 21px; }
+  .tool-card-copy h3 { font-size: 2rem; }
+  .tool-card-kicker { letter-spacing: .6px; }
+  .tool-card-gallery + .utility-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .headline-tools.tool-card-gallery { grid-template-columns: 1fr; gap: 22px; }
+  .tool-gallery-card { min-height: 535px; }
+  .tool-card-top { padding: 25px 30px; }
+  .tool-card-art { object-position: center 27%; }
+  .tool-card-copy { padding: 20px 30px 31px; max-width: 470px; margin-top: 182px; }
+  .tool-card-copy h3 { font-size: 2.75rem; }
+  .tool-card-copy p { max-width: 395px; }
+  .tool-gallery-card::after { background: linear-gradient(180deg, #040b0e66, #040b0e00 28%, #040b0e55 51%, #040b0ee8 85%), linear-gradient(90deg, #040b0e66, transparent 85%); }
+}
+@media (max-width: 500px) {
+  .headline-tools.tool-card-gallery { gap: 19px; }
+  .tool-gallery-card { min-height: 580px; }
+  .tool-card-top { padding: 22px 24px; }
+  .tool-card-copy { padding: 20px 24px 28px; margin-top: 222px; }
+  .tool-card-copy h3 { font-size: clamp(2rem, 8.5vw, 2.5rem); }
+  .tool-card-art { object-position: center 35%; }
+  .tool-card-kicker { letter-spacing: .7px; }
+  .tool-gallery-card::after { background: linear-gradient(180deg, #040b0e66, #040b0e00 25%, #040b0e08 36%, #040b0e88 57%, #040b0ee6 81%, #040b0ef5); }
+}
+@media (max-width: 420px) {
+  .tool-card-gallery + .utility-grid { grid-template-columns: 1fr; }
+  .tool-card-top { padding-inline: 22px; }
+  .tool-card-copy { padding-inline: 22px; }
+  .tool-card-kicker { letter-spacing: .4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-gallery-card, .tool-gallery-card *, .tool-gallery-card::after { transition: none !important; }
+  .tool-gallery-card:hover, .tool-gallery-card:focus-visible, .tool-gallery-card:hover .tool-card-art, .tool-gallery-card:focus-visible .tool-card-art, .tool-gallery-card:hover .tool-card-cta svg, .tool-gallery-card:focus-visible .tool-card-cta svg { transform: none; }
+}
