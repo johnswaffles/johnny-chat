@@ -4762,8 +4762,11 @@ async function main() {
   ]);
 
   const aiClean = aiSource.replace(/<\/html>\s*[\s\S]*$/i, "</html>");
-  let aiPage = insertBeforeHeadEnd(aiClean, sharedNavStyles);
-  aiPage = insertAfterBodyOpen(aiPage, siteNav("ai", "ai-helper"));
+  let aiPage = aiClean;
+  if (!aiClean.includes('data-johnny-custom-nav="ai"')) {
+    aiPage = insertBeforeHeadEnd(aiPage, sharedNavStyles);
+    aiPage = insertAfterBodyOpen(aiPage, siteNav("ai", "ai-helper"));
+  }
   aiPage = insertBeforeBodyEnd(aiPage, widgetSnippet("ai"));
 
   await mkdir(path.join(publicDir, "chatbots"), { recursive: true });

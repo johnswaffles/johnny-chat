@@ -491,7 +491,7 @@ class VoiceWidget {
             }
         }
 
-        const supportsDirectImages = /^gpt-realtime(?:-2)?$/.test(this.realtimeModel);
+        const supportsDirectImages = /^gpt-realtime(?:-2(?:\.\d+)?)?(?:-\d{4}-\d{2}-\d{2})?$/.test(this.realtimeModel);
         const directImageInputs = supportsDirectImages && Array.isArray(content.imageInputs) ? content.imageInputs : [];
         const contentParts = [
             { type: "input_text", text: userMsg },
@@ -1030,7 +1030,7 @@ class VoiceWidget {
     }
 }
 
-/** Homepage presentation. Other widget profiles keep their existing interface. */
+/** Galaxy console shared by the homepage and the opt-in business demo. */
 class HomeVoiceWidget extends VoiceWidget {
     createUI() {
         super.createUI();
@@ -1179,7 +1179,7 @@ class HomeVoiceWidget extends VoiceWidget {
         this.homeConnecting = (async () => {
             try {
                 const tokenUrl = new URL(`${this.getBackendUrl()}/api/realtime-token`);
-                tokenUrl.searchParams.set('profile', 'home');
+                tokenUrl.searchParams.set('profile', this.profile);
                 tokenUrl.searchParams.set('t', Date.now().toString());
                 const tokenResponse = await fetch(tokenUrl, { method: 'POST', headers: this.getAuthHeaders(), signal: controller.signal });
                 if (!tokenResponse.ok) throw new Error(tokenResponse.status === 429 ? 'visit limit' : 'Connection unavailable');
@@ -1272,7 +1272,11 @@ class HomeVoiceWidget extends VoiceWidget {
         for (const message of this.messages) {
             channel.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'message', role: message.role, content: [{ type: message.role === 'user' ? 'input_text' : 'text', text: message.text }] } }));
         }
-        if (!this.isTextInitiated) {
+        if (this.pendingUpload) {
+            const upload = this.pendingUpload;
+            this.pendingUpload = null;
+            this.processUploadResponse(upload);
+        } else if (!this.isTextInitiated) {
             const prompt = this.messages.length ? "Briefly say 'I'm back' or ask 'Where were we?' to resume the session." : this.getGreetingPrompt();
             this.homeGreetingTimer = setTimeout(() => {
                 if (channel === this.dc && channel.readyState === 'open') {
@@ -1315,7 +1319,7 @@ class HomeVoiceWidget extends VoiceWidget {
     }
 
     async sendTextMessage(text) {
-        // Replace the legacy unbounded polling loop only for this homepage.
+        // Wait for a bounded connection before dispatching or recovering a draft.
         if (this.homeTextPending) { this.textInput.value = text; return; }
         if (!this.allowHomeTurn()) return;
         this.homeTextPending = true;
@@ -1353,11 +1357,219 @@ class HomeVoiceWidget extends VoiceWidget {
     }
 }
 
+/** The business demo keeps uploads and live search inside the same response lifecycle. */
+class BusinessVoiceWidget extends HomeVoiceWidget {
+    createUI() {
+        super.createUI();
+        this.businessQueue = [];
+        this.businessToolsPending = 0;
+        this.businessContinuation = null;
+        this.businessUploadGeneration = 0;
+        this.container.setAttribute('aria-label', 'Johnny, your business AI assistant');
+        this.container.querySelector('.home-widget-subtitle').textContent = 'Your business. A little more help.';
+        const welcome = document.getElementById('home-widget-welcome');
+        welcome.querySelector('p').innerHTML = 'Big idea?<br>Let’s talk business.';
+        welcome.querySelector('span').textContent = 'Tell me what you do. Try a customer conversation, share an image or PDF, or ask me to search the web.';
+        this.textInput.placeholder = 'Tell me about your business…';
+        this.container.querySelector('.home-widget-footer').innerHTML = '<span class="home-widget-ai-dot"></span>Voice · text · images · PDFs · live search';
+        this.textInput.insertAdjacentHTML('beforebegin', '<button class="business-attach" id="upload-label" type="button" aria-label="Attach images or PDFs" title="Attach images or PDFs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 11-9 9a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9.1 9.1a2 2 0 0 1-2.8-2.8L15 6"/></svg></button><input type="file" id="file-input" accept="image/*,application/pdf" hidden multiple>');
+        this.fileInput = document.getElementById('file-input');
+        this.uploadLabel = document.getElementById('upload-label');
+    }
+
+    attachEvents() {
+        super.attachEvents();
+        this.uploadLabel.onclick = () => this.fileInput.click();
+        const label = () => this.titleBtn.setAttribute('aria-label', this.container.classList.contains('minimized') ? 'Open Johnny, your business AI assistant' : 'Johnny, your business AI assistant');
+        new MutationObserver(label).observe(this.container, { attributes: true, attributeFilter: ['class'] });
+        label();
+    }
+
+    updateState(state) {
+        super.updateState(state);
+        if (state === 'idle' && this.statusLabel) this.statusLabel.innerText = 'Your next good idea starts here.';
+    }
+
+    getGreetingPrompt() {
+        return "Say exactly: 'Hi, I’m Johnny’s AI assistant. Tell me what kind of business you run, and we can try a customer conversation together. Your microphone starts muted. Tap Mic off to talk, or type below. You can share an image or PDF, too.' Do not add any other greeting text.";
+    }
+
+    dispatchText(text) {
+        clearTimeout(this.homeGreetingTimer);
+        if (this.homeResponseActive || this.businessToolsPending || this.businessContinuation) {
+            this.businessQueue.push({ type: 'text', text });
+            this.statusLabel.innerText = 'Your message is next. Johnny is finishing a thought.';
+            return;
+        }
+        this.homeResponseActive = true;
+        VoiceWidget.prototype.dispatchText.call(this, text);
+        this.statusLabel.innerText = 'Johnny is thinking…';
+    }
+
+    processUploadResponse(content) {
+        clearTimeout(this.homeGreetingTimer);
+        if (this.homeResponseActive || this.businessToolsPending || this.businessContinuation) {
+            this.businessQueue.push({ type: 'upload', content });
+            this.statusLabel.innerText = 'Your upload is ready. Johnny will look at it next.';
+            return;
+        }
+        this.homeResponseActive = true;
+        super.processUploadResponse(content);
+        this.statusLabel.innerText = 'Johnny is looking at your material…';
+    }
+
+    flushBusinessQueue() {
+        if (this.homeResponseActive || this.businessToolsPending || this.dc?.readyState !== 'open') return;
+        if (this.businessContinuation) {
+            const instructions = this.businessContinuation;
+            this.businessContinuation = null;
+            this.homeResponseActive = true;
+            this.dc.send(JSON.stringify({ type: 'response.create', response: { instructions } }));
+            return;
+        }
+        const next = this.businessQueue.shift();
+        if (next?.type === 'text') this.dispatchText(next.text);
+        else if (next?.type === 'upload') this.processUploadResponse(next.content);
+    }
+
+    onDataChannelMessage(message) {
+        super.onDataChannelMessage(message);
+        if (['response.done', 'response.failed', 'response.cancelled'].includes(message.type)) this.flushBusinessQueue();
+    }
+
+    async handleFileUpload(event) {
+        const files = Array.from(event.target.files || []);
+        if (!files.length || this.businessUploading) return;
+        if (files.some(file => !file.type.startsWith('image/') && file.type !== 'application/pdf')) {
+            this.createMessageBubble('assistant').textContent = 'Please choose images or PDF files.';
+            event.target.value = '';
+            return;
+        }
+        const generation = ++this.businessUploadGeneration;
+        const current = () => generation === this.businessUploadGeneration;
+        this.businessUploading = true;
+        this.uploadLabel.disabled = true;
+        this.uploadLabel.setAttribute('aria-busy', 'true');
+        const bubble = this.createMessageBubble('assistant');
+        bubble.textContent = 'Looking at your upload…';
+        this.scrollToBottom();
+        this.businessUploadAbort = new AbortController();
+        const deadline = setTimeout(() => this.businessUploadAbort?.abort(), 60000);
+        try {
+            const images = await this.buildRealtimeImageInputs(files);
+            if (!current()) return;
+            const form = new FormData();
+            form.append('profile', this.profile);
+            files.forEach(file => form.append('files', file));
+            const response = await fetch(`${this.getBackendUrl()}/upload`, { method: 'POST', headers: this.getAuthHeaders(), body: form, signal: this.businessUploadAbort.signal });
+            const data = await response.json();
+            if (!current()) return;
+            if (!response.ok) throw new Error(data.detail || data.error || 'Please try again.');
+            const content = { text: data.text || 'None', description: data.description || 'None', summary: data.summary || null, isPdf: files.some(file => file.type === 'application/pdf'), imageAnalysis: Array.isArray(data.imageAnalysis) ? data.imageAnalysis : [], imageInputs: images };
+            this.pendingUpload = content;
+            bubble.textContent = `Attached: ${files.map(file => file.name).join(', ')}`;
+            this.messages.push({ role: 'user', text: `Attached material: ${content.summary || content.text}. ${content.description}` });
+            if (this.state === 'idle' || this.state === 'error') await this.startSession();
+            else if (this.dc?.readyState === 'open') {
+                this.pendingUpload = null;
+                this.processUploadResponse(content);
+            }
+            if (current() && this.state === 'error') bubble.textContent = 'Your upload is ready. Use Try connecting again to talk about it.';
+        } catch (error) {
+            if (current()) {
+                bubble.textContent = error.name === 'AbortError' ? 'The upload took too long. Please try attaching it again.' : `Couldn’t upload: ${error.message}`;
+                this.scrollToBottom();
+            }
+        } finally {
+            clearTimeout(deadline);
+            if (current()) {
+                this.businessUploading = false;
+                this.uploadLabel.disabled = false;
+                this.uploadLabel.removeAttribute('aria-busy');
+                event.target.value = '';
+            }
+        }
+    }
+
+    async handleFunctionCall(message) {
+        const name = message.name || message.function?.name || '';
+        if (name !== 'search_web' && name !== 'web_search') return super.handleFunctionCall(message);
+        const callId = message.call_id || message.callId || message.id || '';
+        const callKey = callId || `${name}:${message.arguments || ''}`;
+        if (this.handledFunctionCalls.has(callKey)) return;
+        this.handledFunctionCalls.add(callKey);
+        const channel = this.dc;
+        const generation = this.homeConnectionGeneration;
+        const current = () => channel === this.dc && channel?.readyState === 'open' && generation === this.homeConnectionGeneration;
+        if (!current()) return;
+        this.businessToolsPending += 1;
+        const bubble = this.createMessageBubble('assistant');
+        bubble.textContent = 'Searching the live web…';
+        this.scrollToBottom();
+        let output;
+        try {
+            const args = this.parseFunctionArguments(message.arguments);
+            const query = String(args.query || args.search_query || args.q || '').trim();
+            if (!query) throw new Error('The search question was empty.');
+            const context = this.messages.slice(-6).map(item => `${item.role}: ${item.text}`).join('\n').slice(0, 3000);
+            const response = await fetch(`${this.getBackendUrl()}/api/realtime-search`, { method: 'POST', headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ query, context, profile: this.profile }), signal: this.homeAbort?.signal });
+            const data = await response.json();
+            if (!current()) return;
+            if (!response.ok) throw new Error('Search is unavailable right now.');
+            const sources = (Array.isArray(data.sources) ? data.sources : []).filter(source => {
+                try { return ['https:', 'http:'].includes(new URL(source.url).protocol); } catch { return false; }
+            }).slice(0, 4);
+            output = { answer: data.result || 'No clear result was found.', sources };
+            bubble.textContent = sources.length ? 'Live sources' : 'Live search complete.';
+            for (const source of sources) {
+                const link = document.createElement('a');
+                link.href = source.url;
+                link.textContent = source.title || source.url;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                bubble.appendChild(document.createElement('br'));
+                bubble.appendChild(link);
+            }
+        } catch (error) {
+            if (!current()) return;
+            output = { error: 'Search unavailable', message: error.message };
+            bubble.textContent = 'Live search is unavailable right now. You can keep talking with Johnny.';
+        } finally {
+            if (current()) {
+                this.businessToolsPending = Math.max(0, this.businessToolsPending - 1);
+                if (output) {
+                    channel.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: callId, output: JSON.stringify(output) } }));
+                    this.businessContinuation = 'Use the search tool results to answer naturally and concisely. Mention sources shown in the chat without reading URLs aloud. If search failed, explain briefly and offer to continue without it.';
+                }
+                this.flushBusinessQueue();
+                this.scrollToBottom();
+            }
+        }
+    }
+
+    stopPlayback() {
+        this.businessUploadGeneration = (this.businessUploadGeneration || 0) + 1;
+        this.businessUploadAbort?.abort();
+        this.businessQueue = [];
+        this.businessToolsPending = 0;
+        this.businessContinuation = null;
+        this.businessUploading = false;
+        this.pendingUpload = null;
+        if (this.uploadLabel) {
+            this.uploadLabel.disabled = false;
+            this.uploadLabel.removeAttribute('aria-busy');
+        }
+        if (this.fileInput) this.fileInput.value = '';
+        super.stopPlayback();
+    }
+}
+
 // Global Init with Editor Protection
 function initJohnny() {
     if (window.johnnyInitialized) return;
     window.johnnyInitialized = true;
-    const Widget = detectJohnnyWidgetProfile() === "home" ? HomeVoiceWidget : VoiceWidget;
+    const profile = detectJohnnyWidgetProfile();
+    const Widget = profile === "home" ? HomeVoiceWidget : profile === "ai" && window.JOHNNY_WIDGET_THEME === "galaxy" ? BusinessVoiceWidget : VoiceWidget;
     new Widget();
 }
 

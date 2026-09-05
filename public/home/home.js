@@ -194,6 +194,7 @@
   // Sound is a deliberate choice and never starts on an unrelated click.
   const music = document.getElementById('home-music');
   const musicButton = document.getElementById('music-control');
+  if (!music || !musicButton) return;
   music.volume = 0.22;
   musicButton.hidden = false;
   function syncSound() {
