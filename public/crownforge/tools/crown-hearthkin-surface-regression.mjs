@@ -3,8 +3,9 @@ import {test} from 'node:test';
 import fs from 'node:fs';
 import {inflateSync} from 'node:zlib';
 import {CHARACTER_RIGS} from '../src/character-rigs.js';
-import {HearthkinRig} from '../src/hearthkin-rig.js';
+import {HearthkinRig,hearthkinPalmSocket} from '../src/hearthkin-rig.js';
 import {HEARTHKIN_RIG_ART,HEARTHKIN_ARM_PARTS,HEARTHKIN_HAND_PARTS} from '../src/hearthkin-rig-art.js';
+import {fitHearthkinProfile} from '../src/hearthkin-surface-fit.js';
 
 const views=['front','right','back','left'];
 const near=(a,b,label)=>assert.ok(Math.hypot(a.x-b.x,a.y-b.y)<1e-7,label);
@@ -81,7 +82,7 @@ test('recorded Crown sleeve and forearm images join at the actual elbow in all f
   const definition=CHARACTER_RIGS.villager;
   for(let direction=0;direction<4;direction++)for(const phase of [0,.125,.25,.375,.5,.625,.75,.875]){
     const view=views[direction],{draws}=recordDraw('villager',direction,phase);
-    const pose=definition.samplePose('walk',definition.actions.walk.duration*phase,direction,{id:5,moving:true});
+    const pose=fitHearthkinProfile(definition.samplePose('walk',definition.actions.walk.duration*phase,direction,{id:5,moving:true}));
     for(const side of ['left','right']){
       const parts=HEARTHKIN_ARM_PARTS[view][side];
       const find=part=>draws.find(d=>d.key===part.key&&d.index===part.index);
@@ -98,6 +99,72 @@ test('recorded Crown sleeve and forearm images join at the actual elbow in all f
         const point={x:pose[side+'Elbow'].x+dx,y:pose[side+'Elbow'].y+dy};
         const alpha=Math.max(paintedAlpha(upper,HEARTHKIN_RIG_ART[upper.key],point),paintedAlpha(lower,HEARTHKIN_RIG_ART[lower.key],point));
         assert.ok(alpha>200,`${label} painted skin/cloth covers the elbow neighborhood`);
+      }
+    }
+  }
+});
+
+test('Crown hand pivots use the painted wrist transition and lower crops stop at that joint',()=>{
+  // These are source-image measurements, independent of the normalized
+  // metadata and canvas transforms. The previous pivots were in a long
+  // extra forearm stump, and the lower arm overran the new hand surface.
+  for(const[view,side,wrist,cropHeight]of [
+    ['front','left',[637.5,280],265],['front','right',[161,280],268],
+    ['back','left',[1134,280],269],['back','right',[1610,280],272],
+    ['right','left',[1865.5,200],206],['right','right',[754,200],211],
+    ['left','left',[1387.5,200],196],['left','right',[275,200],198],
+  ]){
+    const hand=HEARTHKIN_HAND_PARTS[view][side],handArt=HEARTHKIN_RIG_ART[hand.key],hr=handArt.parts[hand.index];
+    const actual=[hr[0]+hand.root[0]*hr[2],hr[1]+hand.root[1]*hr[3]],label=`${view}/${side}`;
+    assert.ok(Math.hypot(actual[0]-wrist[0],actual[1]-wrist[1])<.001,`${label} hand pivot lands on the measured wrist transition`);
+    assert.ok(sourceAlpha(handArt)(...actual)>230,`${label} wrist anchor has real skin paint`);
+    const reach=Math.hypot((hand.grip[0]-hand.root[0])*hand.width,(hand.grip[1]-hand.root[1])*hand.height);
+    assert.ok(Math.abs(reach-3.65)<1e-6,`${label} enlarged hand retains its physical palm grip`);
+    // A hand extends about one third of a 16-unit forearm beyond its wrist.
+    // This catches shrunken profiles and excessive enlargement separately
+    // from the grip constraint, which alone can pass with a tiny palm.
+    const distalHeight=(1-hand.root[1])*hand.height;
+    assert.ok(distalHeight>4.6&&distalHeight<6,`${label} visible wrist-to-finger length stays proportional to the forearm`);
+    const lower=HEARTHKIN_ARM_PARTS[view][side].lower,lr=HEARTHKIN_RIG_ART[lower.key].parts[lower.index];
+    assert.equal(lr[3],cropHeight,`${label} retains the measured distal crop`);
+    assert.ok((1-lower.tip[1])*lr[3]<=2,`${label} forearm cap extends at most two source pixels past its wrist`);
+  }
+});
+
+function paintedSpan(draw,art,origin,across){
+  let first=null,last=null;
+  for(let offset=-8;offset<=8;offset+=.025){
+    const point={x:origin.x+across.x*offset,y:origin.y+across.y*offset};
+    if(paintedAlpha(draw,art,point)>200){first??=offset;last=offset;}
+  }
+  assert.notEqual(first,null,'the cross section contains opaque skin or bracer paint');
+  return {first,last,width:last-first+.025};
+}
+
+test('actual rendered forearm and hand silhouettes meet at comparable widths through all four walk cycles',()=>{
+  const definition=CHARACTER_RIGS.villager;
+  for(let direction=0;direction<4;direction++)for(const phase of [0,.125,.25,.375,.5,.625,.75,.875]){
+    const view=views[direction],{draws}=recordDraw('villager',direction,phase);
+    const pose=fitHearthkinProfile(definition.samplePose('walk',definition.actions.walk.duration*phase,direction,{id:5,moving:true}));
+    for(const side of ['left','right']){
+      const part=HEARTHKIN_ARM_PARTS[view][side].lower,frame=HEARTHKIN_HAND_PARTS[view][side],label=`${view}/${side}/${phase}`;
+      const lower=draws.find(d=>d.key===part.key&&d.index===part.index),hand=draws.find(d=>d.key===frame.key&&d.index===frame.index);
+      assert.equal(lower.width,part.width??definition.dimensions?.forearm??5.4,`${label} renderer uses the calibrated forearm width`);
+      near(recordedPoint(hand,frame.root),pose[side+'Hand'],`${label} actual painted hand meets its wrist`);
+      near(recordedPoint(hand,frame.grip),hearthkinPalmSocket(pose,side==='left'),`${label} actual painted fingers retain the tool grip`);
+      const wrist=pose[side+'Hand'],elbow=pose[side+'Elbow'],length=Math.hypot(wrist.x-elbow.x,wrist.y-elbow.y);
+      const along={x:(wrist.x-elbow.x)/length,y:(wrist.y-elbow.y)/length},across={x:along.y,y:-along.x};
+      // Sample immediately above the seam, avoiding the transparent outer
+      // edge of a rotated crop while testing both painted components at
+      // the same actual screen location and scale.
+      const origin={x:wrist.x-along.x*.2,y:wrist.y-along.y*.2};
+      const forearmSpan=paintedSpan(lower,HEARTHKIN_RIG_ART[lower.key],origin,across);
+      const handSpan=paintedSpan(hand,HEARTHKIN_RIG_ART[hand.key],origin,across);
+      assert.ok(Math.abs(forearmSpan.width-handSpan.width)/Math.max(forearmSpan.width,handSpan.width)<.2,`${label} painted wrist widths match within 20%, not the former nearly 2:1 step`);
+      assert.ok(Math.max(Math.abs(forearmSpan.first-handSpan.first),Math.abs(forearmSpan.last-handSpan.last))<.45,`${label} wrist edges are centered on each other`);
+      for(const down of [-.4,0,.4])for(const offset of [-.7,0,.7]){
+        const point={x:wrist.x+along.x*down+across.x*offset,y:wrist.y+along.y*down+across.y*offset};
+        assert.ok(Math.max(paintedAlpha(lower,HEARTHKIN_RIG_ART[lower.key],point),paintedAlpha(hand,HEARTHKIN_RIG_ART[hand.key],point))>200,`${label} opaque skin covers the joined wrist without a gap`);
       }
     }
   }

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { HEARTHKIN_ACTIONS, HearthkinRig, hearthkinPose, hearthkinHandFrame, hearthkinPalmSocket, solveLimb } from '../src/hearthkin-rig.js';
 import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from '../src/hearthkin-rig-art.js';
+import { fitHearthkinProfile } from '../src/hearthkin-surface-fit.js';
 import { equipmentGeometry } from '../src/character-equipment.js';
 import { ANIMATION_DEFINITIONS, CrownforgeAnimationSystem, resolveAnimationState, animationFrame } from '../src/animation.js';
 import { CrownforgeRenderer } from '../src/renderer.js';
@@ -135,7 +136,7 @@ function captureRigDraw(state,time,direction) {
   return draws;
 }
 for(let direction=0;direction<4;direction++)for(const phase of [0,.2,.5,.8]) {
-  const time=walkDuration*phase,p=hearthkinPose('walk',time,direction),socket=hearthkinPalmSocket(p);
+  const time=walkDuration*phase,p=fitHearthkinProfile(hearthkinPose('walk',time,direction)),socket=hearthkinPalmSocket(p);
   const wrist=p.rightHand,elbow=p.rightElbow;
   const frame=hearthkinHandFrame(p);
   const gripDistance=Math.hypot((frame.grip[0]-frame.root[0])*frame.width,(frame.grip[1]-frame.root[1])*frame.height);
@@ -177,7 +178,7 @@ for(let direction=0;direction<4;direction++)for(const phase of [0,.2,.5,.8]) {
   if(direction===1||direction===3) {
     assert.equal(frame.key,'profileHands','profiles use gripping hands rather than the old open duplicated hands');
     assert.equal(frame.index,direction===1?1:0,'right hand uses near dorsal or far palm source according to camera');
-    near(distance(socket,wrist),3.45,1e-6,'profile hand attachment distance is unchanged');
+    near(distance(socket,wrist),3.65,1e-6,'profile palm grip has the calibrated wrist-to-grip reach');
   }
 }
 for(let direction=0;direction<4;direction++) {
@@ -189,7 +190,7 @@ for(let direction=0;direction<4;direction++) {
     near(distance(renderedPoint(axe,[.24,.85]),{x:e,y:f}),0,1e-6,'dropped axe reflection preserves its authored pivot');
   }
   for(const [state,tool] of [['gather_stone','pick'],['field_work','hoe'],['construct','hammer']]) {
-    const time=HEARTHKIN_ACTIONS[state].duration*.6,pose=hearthkinPose(state,time,direction);
+    const time=HEARTHKIN_ACTIONS[state].duration*.6,pose=fitHearthkinProfile(hearthkinPose(state,time,direction));
     const geometry=equipmentGeometry(pose.toolFrame,direction);
     const draws=captureRigDraw(state,time,direction),faces=draws.filter(draw=>draw.image.key==='solid-equipment');
     assert.equal(geometry.tool,tool,`${state} retains its own tool`);
@@ -276,4 +277,4 @@ for(const ward of [0,10])renderer.drawOccludedUnitOverlays(ctx,{
   buildings:[],resourcesNodes:[{kind:'resource',type:'tree',x:0,z:1,amount:100}],
 });
 assert.equal(repaints,2,'selected workers remain visible under a canopy with and without a ward');
-console.log(`PASS: ${Object.keys(HEARTHKIN_ACTIONS).length} continuous actions, four authored views, anatomical limb lengths, grounded gait, opposed arm swing, authored source joints and hands, attached rendered palm grip, correct axe-leg depth and blade orientation, unchanged profile attachments, cycle seams, contact poses, cargo, status priority, still death and PNG source bounds.`);
+console.log(`PASS: ${Object.keys(HEARTHKIN_ACTIONS).length} continuous actions, four authored views, anatomical limb lengths, grounded gait, opposed arm swing, authored source joints and hands, attached rendered palm grip, correct axe-leg depth and blade orientation, fitted profile attachments, cycle seams, contact poses, cargo, status priority, still death and PNG source bounds.`);

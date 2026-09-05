@@ -1,6 +1,7 @@
 import { UNIT_TYPES } from '../src/config.js';
-import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260905-cuffbraid3';
-import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260905-cuffbraid3';
+import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260905-armfit2';
+import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260905-armfit2';
+import { fitHearthkinProfile } from '../src/hearthkin-surface-fit.js?v=20260905-armfit2';
 
 const canvas = document.querySelector('#stage');
 const ctx = canvas.getContext('2d');
@@ -106,7 +107,11 @@ function frame(now) {
     ctx.save();
     if(detail.checked){ctx.beginPath();ctx.rect(x-165,36,330,564);ctx.clip();}
     if(ready===rig.readiness().length){shadow(x,y,size);drawHearthkinWard(ctx,unit,{x,y},size,now,true);rig.draw(ctx,unit,{x,y},size,1,t);drawHearthkinWard(ctx,unit,{x,y},size,now);}
-    if(joints.checked)drawJointGuide(CHARACTER_RIGS[character.value].samplePose(action.value,t,direction),x,y,size*(CHARACTER_RIGS[character.value].renderScale??1));
+    if(joints.checked){
+      let pose=CHARACTER_RIGS[character.value].samplePose(action.value,t,direction);
+      if(character.value==='villager')pose=fitHearthkinProfile(pose);
+      drawJointGuide(pose,x,y,size*(CHARACTER_RIGS[character.value].renderScale??1));
+    }
     ctx.restore();
     ctx.textAlign='center';ctx.fillStyle='#d3c4a7';ctx.font='20px Georgia,serif';ctx.fillText(['Front','Right','Back','Left'][direction],x,detail.checked?632:483);
     if(detail.checked)continue;

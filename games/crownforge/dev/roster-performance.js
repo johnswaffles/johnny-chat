@@ -1,5 +1,5 @@
 import {UNIT_TYPES} from '../src/config.js';
-import {CHARACTER_RIGS,createCharacterRigs} from '../src/character-rigs.js?v=20260905-cuffbraid3';
+import {CHARACTER_RIGS,createCharacterRigs} from '../src/character-rigs.js?v=20260905-armfit2';
 const canvas=document.querySelector('#population'),ctx=canvas.getContext('2d'),output=document.querySelector('#performance'),rigs=createCharacterRigs(),types=[...rigs.keys()],count=Math.min(256,Math.max(12,Number(new URLSearchParams(location.search).get('count'))||96));
 const units=Array.from({length:count},(_,id)=>({id:id+1,type:types[id%types.length],facing:id%4,animationState:id%5===0?'attack':id%7===0?'idle':'walk',animationTime:0}));
 const columns=16,rows=Math.ceil(count/columns),stepX=canvas.width/columns,stepY=canvas.height/rows,samples=[];

@@ -1,4 +1,4 @@
-import { CHARACTER_RIGS,createCharacterRigs } from '../src/character-rigs.js?v=20260905-cuffbraid3';
+import { CHARACTER_RIGS,createCharacterRigs } from '../src/character-rigs.js?v=20260905-armfit2';
 const params=new URLSearchParams(location.search),types=Object.keys(CHARACTER_RIGS),select=document.querySelector('#unit'),canvas=document.querySelector('#review'),ctx=canvas.getContext('2d'),rigs=createCharacterRigs();
 for(const type of types){const o=document.createElement('option');o.value=type;o.textContent=CHARACTER_RIGS[type].label;select.append(o);}
 select.value=CHARACTER_RIGS[params.get('unit')]?params.get('unit'):'villager';

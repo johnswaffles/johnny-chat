@@ -811,3 +811,25 @@ for(const [view,side,upperIndex,upperRect,shoulder,cuff,lowerIndex,elbow,wrist] 
 HEARTHKIN_RIG_ART.right.sourceClips={
   3:[[1216,12],[1318,12],[1318,364],[1272,364],[1272,334],[1216,334]],
 };
+
+// The hand pivot belongs at the wrist crease, not in the extra forearm
+// painted above it. Size each view by its actual wrist and palm surfaces.
+for(const [view,side,width,root] of [
+  ['front','left',5.2,[.550980,.264620]],['front','right',5.2,[.437500,.264620]],
+  ['back','left',4.5,[.442308,.264620]],['back','right',4.5,[.546875,.264620]],
+  ['right','left',5.2,[.421120,.275714]],['right','right',5.2,[.378824,.276504]],
+  ['left','left',5.2,[.623239,.276504]],['left','right',5.2,[.582051,.275714]],
+]) {
+  const hand=HEARTHKIN_HAND_PARTS[view][side];
+  Object.assign(hand,{width,root,height:Math.sqrt(3.65**2-((hand.grip[0]-root[0])*width)**2)/(hand.grip[1]-root[1])});
+}
+for(const [view,side,height] of [
+  ['front','left',265],['front','right',268],['back','left',269],['back','right',272],
+  ['right','left',206],['right','right',211],['left','left',196],['left','right',198],
+]) {
+  const part=HEARTHKIN_ARM_PARTS[view][side].lower,rect=HEARTHKIN_RIG_ART[part.key].parts[part.index];
+  const root=[rect[0]+part.root[0]*rect[2],rect[1]+part.root[1]*rect[3]];
+  const tip=[rect[0]+part.tip[0]*rect[2],rect[1]+part.tip[1]*rect[3]];
+  rect[3]=height;part.root=normaliseArmPoint(root,rect);part.tip=normaliseArmPoint(tip,rect);
+  if(view==='front'||view==='back')part.width=4.5;
+}
