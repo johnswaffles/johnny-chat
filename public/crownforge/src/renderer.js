@@ -1,6 +1,7 @@
 import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260905-rosterfit1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260905-rosterfit1';
-import { CrownforgeLandscape } from './landscape.js?v=20260904-rosterkin1';
+import { CrownforgeLandscape } from './landscape.js?v=20260905-meadow1';
+import { CrownforgeMeadow } from './meadow.js?v=20260905-meadow1';
 import { CrownforgeAtmosphere } from './atmosphere.js?v=20260904-rosterkin1';
 import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260904-rosterkin1';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260904-rosterkin1';
@@ -279,6 +280,7 @@ export class CrownforgeRenderer {
     this.frameStats = { count: 0, samples: [] };
     this.atmosphere = new CrownforgeAtmosphere(this);
     this.landscape = new CrownforgeLandscape(this);
+    this.meadow = new CrownforgeMeadow(this);
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas);
     this.resize();
@@ -484,6 +486,7 @@ export class CrownforgeRenderer {
     ctx.clearRect(0, 0, this.width, this.height);
     this.drawBackdrop(ctx);
     this.landscape.sync(simulation);
+    this.meadow.prepare(simulation, time / 1000, renderDelta);
     this.ensureStaticLayer();
     ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
     this.atmosphere.drawClouds(ctx, time);
@@ -950,7 +953,12 @@ export class CrownforgeRenderer {
       ...simulation.decorations.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.34 })),
       ...simulation.units.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity) => ({ ...entity, depth: entity.x + entity.z + 0.7 })),
     ].sort((a, b) => a.depth - b.depth || (kindOrder[a.kind] ?? 0) - (kindOrder[b.kind] ?? 0) || a.id - b.id);
+    // Merge root-sorted grass with the existing entity painter order. Near
+    // blades cover boots while buildings hide the grass behind them.
+    const grass = this.meadow?.tufts ?? [];
+    let blade = 0;
     for (const entity of entities) {
+      while (blade < grass.length && grass[blade].depth <= entity.depth) this.meadow.draw(ctx, grass[blade++]);
       if (entity.dead && entity.deathAge > 2.4) continue;
       if (entity.destroyed && entity.destroyAge > 2.4) continue;
       if (entity.kind === 'building' || entity.kind === 'wall-segment') this.drawBuilding(ctx, entity, time);
@@ -961,6 +969,7 @@ export class CrownforgeRenderer {
       else if (entity.kind === 'decoration') this.drawDecoration(ctx, entity);
       else this.drawUnit(ctx, entity, time);
     }
+    while (blade < grass.length) this.meadow.draw(ctx, grass[blade++]);
   }
 
   wallSegmentPoints(wall) {

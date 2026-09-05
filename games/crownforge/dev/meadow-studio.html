@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <base href="../">
+  <title>The Living Meadow · Crownforge</title>
+  <meta name="theme-color" content="#142925">
+  <style>
+    :root{color-scheme:dark;--ink:#112420;--paper:#f0e7d2;--muted:#b6c7b6;--gold:#cfb783;--line:#a3af8240}*{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{background:var(--ink);color:var(--paper);font:13px/1.5 system-ui,-apple-system,sans-serif}button,select,a{-webkit-tap-highlight-color:transparent}button,select{font:inherit}button,a{touch-action:manipulation}button{cursor:pointer}button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:4px}button:disabled{cursor:wait;opacity:.55}button,select{color:var(--paper);background:#20372ff0;border:1px solid var(--line);border-radius:7px;padding:9px 13px}button:hover,select:hover{border-color:#cfb78390;background:#2a4338}button[aria-pressed=true]{color:#18281f;background:var(--gold);border-color:var(--gold)}a{color:var(--gold);text-decoration:none}a:hover{text-decoration:underline}.world{position:absolute;inset:0}canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}.vignette{pointer-events:none;position:absolute;inset:0;background:linear-gradient(180deg,#0e231adb,transparent 185px,transparent 78%,#0e231ab0)}header{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:25px 30px 0;pointer-events:none}.title,.top-link{pointer-events:auto}.eyebrow{font-size:9px;font-weight:650;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:4px}h1{font:normal clamp(25px,3.2vw,39px)/1.12 Georgia,serif;letter-spacing:-.025em;margin:0;text-shadow:0 2px 16px #0b1c16}header p{color:var(--muted);font-size:12px;margin:7px 0 0}.top-link{font-size:11px;padding-top:7px;white-space:nowrap}.toolbar{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);width:max-content;max-width:calc(100% - 40px);display:flex;align-items:center;gap:13px;flex-wrap:wrap;justify-content:center;background:#142b25ed;border:1px solid #a3af824d;box-shadow:0 12px 45px #08180f66;border-radius:12px;padding:11px 13px;backdrop-filter:blur(16px)}.group{display:flex;gap:5px;align-items:center}.divider{width:1px;height:23px;background:var(--line);margin:0 1px}.view-group{padding:3px;border:1px solid var(--line);border-radius:8px;gap:0}.view-group button{border:0;background:none;font-size:12px;padding:6px 11px;min-width:58px}.view-group button[aria-pressed=true]{background:#52634a;color:#fff1d4}.primary{min-width:83px;font-weight:650}.person-label{display:none}#walker{font-size:12px;width:205px}.quiet{font-size:12px}footer{position:absolute;left:30px;right:30px;bottom:8px;display:flex;justify-content:space-between;gap:15px;color:#bfd0bc;font-size:10px;letter-spacing:.015em;pointer-events:none}#notice{position:absolute;left:30px;top:130px;max-width:320px;color:#e5e5ce;font-size:12px;padding:8px 12px;border-left:2px solid #baa672;background:#142b258f;transition:opacity .3s;pointer-events:none}#notice:empty{opacity:0}.loading{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#142b25c9;backdrop-filter:blur(4px)}.loading strong{font:normal 28px Georgia,serif}.loading p{margin:8px 0;color:var(--muted);font-size:12px}.loading-line{height:2px;background:#bac29825;width:170px;margin:18px auto 0;border-radius:10px;overflow:hidden}.loading-line span{display:block;height:100%;background:var(--gold);width:0;transition:width .35s}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-width:980px){.toolbar{gap:8px}#walker{width:205px}.toolbar button{padding:8px 10px}.toolbar .view-group button{padding:5px 8px;min-width:48px}.divider{display:none}}@media(max-width:740px){header{padding:19px 19px 0}header p{font-size:11px;max-width:240px}.top-link{font-size:10px}.toolbar{width:calc(100% - 26px);max-width:none;bottom:39px;gap:8px;padding:10px;border-radius:11px}#walker{width:205px}.toolbar .quiet{padding:7px 9px;font-size:11px}.view-group{order:4}.toolbar>.divider{display:none}footer{left:17px;right:17px;bottom:10px;font-size:9px}footer .hint{max-width:210px}#notice{top:116px;left:19px;max-width:280px}.view-group button{font-size:11px}#status{max-width:120px;text-align:right}}
+  </style>
+</head>
+<body>
+  <main class="world" aria-label="Crownforge living meadow">
+    <canvas id="world" tabindex="0" aria-label="A living meadow with two Hearthkin and a mounted scout. Choose a character below, then click open ground to walk there."></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+    <header><div class="title"><div class="eyebrow">Crownforge · The Crownlands</div><h1>The living meadow</h1><p>A quiet place to wander. Every footstep leaves an impression.</p></div><a class="top-link" href="./?release=20260905-meadow1">Enter the Crownlands ↗</a></header>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <section class="toolbar" aria-label="Meadow controls">
+      <button id="play" class="primary" aria-pressed="false" title="Pause or resume the walkers">Pause</button>
+      <div class="divider" aria-hidden="true"></div>
+      <label class="sr-only" for="walker">Selected character</label><select id="walker"><option value="villager">Crownwarden Hearthkin</option><option value="ashenForager">Ashen Hearthkin</option><option value="scout">Crown Scout</option></select>
+      <div class="group view-group" aria-label="View distance"><button data-view="close" aria-pressed="true">Close</button><button data-view="settlement" aria-pressed="false">Settlement</button><button data-view="wide" aria-pressed="false">Wide</button></div>
+      <button id="breeze" class="quiet" aria-pressed="true">Breeze</button>
+      <div class="divider" aria-hidden="true"></div>
+      <button id="home" class="quiet" aria-pressed="false">Build a home</button>
+      <button id="restore" class="quiet" title="Save this meadow and restore it immediately">Save &amp; restore</button>
+    </section>
+    <footer><span class="hint">Choose a character, then click the grass to lead the way.</span><span id="status">Opening the meadow…</span></footer>
+    <div id="loading" class="loading"><strong>Among the wild grasses</strong><p id="loading-copy">The meadow is waking.</p><div class="loading-line" aria-hidden="true"><span id="loading-progress"></span></div></div>
+  </main>
+  <script type="module" src="./dev/meadow-studio.js?v=20260905-meadow1"></script>
+</body>
+</html>

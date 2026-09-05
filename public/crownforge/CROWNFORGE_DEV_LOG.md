@@ -5077,3 +5077,10 @@ The player approved Crownwarden Hearthkin and authorized applying the necessary 
 Full scope, per-character review and verification are in [the surface-fit release record](CROWNFORGE_ROSTER_SURFACE_FIT.md). Release marker: `20260905-rosterfit1`.
 
 Delivery: `6d82867` is live as `20260905-rosterfit1`. All 24 deployed pages/runtime modules match the verified source. Combined Crown/roster surface checks pass 22/22; the new full-roster checks cover 4,068 poses, 8,136 arm samples and 352 actual rendered wrist joins. Local field checks confirmed movement, combat, farming, ward reactions and save restoration; live field reported all 12 walking. The updated live Ashen Hearthkin arm-detail preview is open and playing.
+
+
+### 2026-09-05 — The Living Meadow
+
+Upgraded the ground with four original painted terrain materials and twelve alpha-cut grass/clover/flower families, informed by official WoW environment references. Added seeded organic placement, rooted traveling wind and foot/hoof contact that bends and springs back, with real building/field/resource exclusions and entity depth ordering. Preserved approved character art, terrain dimensions, woodland positions and simulation rules. Added the interactive Living Meadow review scene.
+
+Caught and fixed a real-game lifecycle issue in which fresh per-frame unit arrays erased contact history; actual simulation movement now has a regression. Added bounded wide-view caching to prevent repeated whole-map regeneration. All 15 meadow tests, existing dawn visual and Livingwood navigation/harvesting/save checks, local browser walking/building/clearing/save checks and the production build pass. Main-game right-click movement produces a visible wake. Release marker: `20260905-meadow1`. Artwork, exact prompts, primary references and detailed validation are in `CROWNFORGE_LIVING_MEADOW_RELEASE.md` and `MEADOW_ART_PROMPTS.json`.

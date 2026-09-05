@@ -55,7 +55,8 @@ export class CrownforgeLandscape {
         this.revision++;
         renderer.invalidateStaticLayer();
       });
-      image.src = `./assets/crownforge-livingwood-${filename}-v1.png`;
+      image.src = key === 'ground' ? './assets/crownforge-meadow-materials-v1.png'
+        : `./assets/crownforge-livingwood-${filename}-v1.png`;
     }
   }
 
@@ -90,7 +91,7 @@ export class CrownforgeLandscape {
     if (worldChanged) this.prepareRegions();
     this.prepareWoodland(trees);
     this.revision++;
-    this.renderer.canvas.dataset.landscape = 'livingwood-1';
+    this.renderer.canvas.dataset.landscape = 'living-meadow-1';
     this.renderer.canvas.dataset.woodlandTrees = String(trees.length);
   }
 
@@ -192,7 +193,7 @@ export class CrownforgeLandscape {
     this.maskedMaterial(ctx, this.mossMask, this.tiles[3]);
     if (this.regionColor) {
       ctx.save(); this.worldTransform(ctx);
-      ctx.globalAlpha = 0.37;
+      ctx.globalAlpha = 0.23;
       ctx.drawImage(this.regionColor, 0, 0, CONFIG.mapWidth, CONFIG.mapHeight);
       ctx.restore();
     }
@@ -205,36 +206,7 @@ export class CrownforgeLandscape {
     ctx.fillStyle = `rgba(118,146,100,${this.renderer.camera.zoom < 0.12 ? 0.16 : 0.055})`;
     ctx.fillRect(0, 0, CONFIG.mapWidth, CONFIG.mapHeight);
     ctx.restore();
-    this.drawGroundDetails(ctx);
     return true;
-  }
-
-  drawGroundDetails(ctx) {
-    const r = this.renderer;
-    if (r.camera.zoom < 0.14) return;
-    const bounds = r.viewportWorldBounds(3);
-    ctx.save();
-    ctx.lineWidth = Math.max(0.55, r.camera.zoom * 1.1);
-    ctx.lineCap = 'round';
-    for (let i = 0; i < 8500; i++) {
-      const x = landscapeHash(i, 607, this.seed) * CONFIG.mapWidth;
-      const z = landscapeHash(i, 811, this.seed) * CONFIG.mapHeight;
-      if (x < bounds.minX || x > bounds.maxX || z < bounds.minZ || z > bounds.maxZ) continue;
-      if ((this.forestCoverage?.[Math.floor(z) * MASK_WIDTH + Math.floor(x)] ?? 0) > 0.5) continue;
-      const n = landscapeHash(i, 937, this.seed);
-      if (landscapeNoise(x / 18, z / 18, this.seed + 403) < 0.43) continue;
-      const point = r.worldToScreen({ x, z });
-      const height = (7 + n * 12) * r.camera.zoom;
-      ctx.strokeStyle = n > 0.82 ? 'rgba(194,183,117,0.43)' : n > 0.42 ? 'rgba(136,159,102,0.48)' : 'rgba(42,70,38,0.36)';
-      ctx.beginPath();
-      for (let blade = 0; blade < 4; blade++) {
-        const dx = (blade - 1.5) * height * 0.25;
-        ctx.moveTo(point.x + dx * 0.3, point.y);
-        ctx.quadraticCurveTo(point.x + dx, point.y - height * 0.65, point.x + dx + height * 0.21, point.y - height * (0.65 + blade % 2 * 0.35));
-      }
-      ctx.stroke();
-    }
-    ctx.restore();
   }
 
   resourceVisual(node) {
