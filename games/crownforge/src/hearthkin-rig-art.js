@@ -817,19 +817,35 @@ HEARTHKIN_RIG_ART.right.sourceClips={
 for(const [view,side,width,root] of [
   ['front','left',5.2,[.550980,.264620]],['front','right',5.2,[.437500,.264620]],
   ['back','left',4.5,[.442308,.264620]],['back','right',4.5,[.546875,.264620]],
-  ['right','left',5.2,[.421120,.275714]],['right','right',5.2,[.378824,.276504]],
-  ['left','left',5.2,[.623239,.276504]],['left','right',5.2,[.582051,.275714]],
+  ['right','left',6.2,[.421120,.275714]],['right','right',6.2,[.378824,.276504]],
+  ['left','left',6.2,[.623239,.276504]],['left','right',6.2,[.582051,.275714]],
 ]) {
   const hand=HEARTHKIN_HAND_PARTS[view][side];
-  Object.assign(hand,{width,root,height:Math.sqrt(3.65**2-((hand.grip[0]-root[0])*width)**2)/(hand.grip[1]-root[1])});
+  const palmLength=view==='right'||view==='left'?4.4:3.65;
+  Object.assign(hand,{width,root,palmLength,height:Math.sqrt(palmLength**2-((hand.grip[0]-root[0])*width)**2)/(hand.grip[1]-root[1])});
 }
 for(const [view,side,height] of [
-  ['front','left',265],['front','right',268],['back','left',269],['back','right',272],
-  ['right','left',206],['right','right',211],['left','left',196],['left','right',198],
+  ['front','left',273],['front','right',276],['back','left',277],['back','right',280],
+  ['right','left',214],['right','right',219],['left','left',204],['left','right',206],
 ]) {
   const part=HEARTHKIN_ARM_PARTS[view][side].lower,rect=HEARTHKIN_RIG_ART[part.key].parts[part.index];
   const root=[rect[0]+part.root[0]*rect[2],rect[1]+part.root[1]*rect[3]];
   const tip=[rect[0]+part.tip[0]*rect[2],rect[1]+part.tip[1]*rect[3]];
   rect[3]=height;part.root=normaliseArmPoint(root,rect);part.tip=normaliseArmPoint(tip,rect);
-  if(view==='front'||view==='back')part.width=4.5;
+  part.width=view==='front'||view==='back'?4.5:6.6;
+  part.clipAtWrist=true;
+}
+
+// Remove the long extra forearm above each hand. A bare wrist retains a
+// short, fully feathered skin transition; bracers keep a crisp leather edge
+// and only two pixels of overlap. The original image files are unchanged.
+for(const [view,sides] of Object.entries(HEARTHKIN_HAND_PARTS))for(const [side,hand] of Object.entries(sides)) {
+  const art=HEARTHKIN_RIG_ART[hand.key],rect=art.parts[hand.index];
+  const root=[rect[0]+hand.root[0]*rect[2],rect[1]+hand.root[1]*rect[3]];
+  const grip=[rect[0]+hand.grip[0]*rect[2],rect[1]+hand.grip[1]*rect[3]];
+  const bare=side==='right';
+  const start=Math.round(root[1])-(bare?50:2),cut=start-rect[1],oldHeight=rect[3];
+  rect[1]=start;rect[3]-=cut;hand.height*=rect[3]/oldHeight;
+  hand.root=normaliseArmPoint(root,rect);hand.grip=normaliseArmPoint(grip,rect);
+  if(bare)(art.wristFades??={})[hand.index]=hand.root[1];
 }

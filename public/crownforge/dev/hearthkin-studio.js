@@ -1,7 +1,7 @@
 import { UNIT_TYPES } from '../src/config.js';
-import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260905-armfit2';
-import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260905-armfit2';
-import { fitHearthkinProfile } from '../src/hearthkin-surface-fit.js?v=20260905-armfit2';
+import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260905-wristfit3';
+import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260905-wristfit3';
+import { fitHearthkinProfile } from '../src/hearthkin-surface-fit.js?v=20260905-wristfit3';
 
 const canvas = document.querySelector('#stage');
 const ctx = canvas.getContext('2d');

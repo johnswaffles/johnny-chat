@@ -1,6 +1,6 @@
-import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260905-armfit2';
+import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260905-wristfit3';
 import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-horsefit1';
-import { fitHearthkinProfile } from './hearthkin-surface-fit.js?v=20260905-armfit2';
+import { fitHearthkinProfile } from './hearthkin-surface-fit.js?v=20260905-wristfit3';
 import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260905-softelbow1';
 import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js';
 import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js';
@@ -357,6 +357,15 @@ export class HearthkinRig {
         ctx.closePath();ctx.clip();
       }
       ctx.drawImage(image, ...rect, 0, 0, canvas.width, height);
+      const wristFade=source.wristFades?.[index];
+      if(wristFade) {
+        // Match the bare wrist materials over a narrow joint band instead
+        // of exposing a hard color cut or an opaque rectangular skin stump.
+        const mask=ctx.createLinearGradient(0,0,0,height*wristFade);
+        mask.addColorStop(0,'rgba(0,0,0,0)');mask.addColorStop(1,'rgba(0,0,0,1)');
+        ctx.globalCompositeOperation='destination-in';ctx.fillStyle=mask;
+        ctx.fillRect(0,0,canvas.width,height);ctx.globalCompositeOperation='source-over';
+      }
       return canvas;
     });
     this.parts.set(cacheKey, levels);
@@ -519,7 +528,21 @@ export class HearthkinRig {
       const a = left ? pose.leftShoulder : pose.rightShoulder, b = left ? pose.leftElbow : pose.rightElbow, c = left ? pose.leftHand : pose.rightHand;
       const parts=(this.armParts??HEARTHKIN_ARM_PARTS)[view]?.[left?'left':'right'];
       const upper=()=>parts?attachedSegment(parts.upper,a,b,dimensions.upperArm??9.2):segment(left?4:5,a,b,9.2);
-      const lower=()=>parts?attachedSegment(parts.lower,b,c,parts.lower.width??dimensions.forearm??5.4):segment(left?6:7,b,c,5.4,1.8);
+      const lower=()=>{
+        if(parts?.lower.clipAtWrist) {
+          // A diagonal painted forearm needs extra source pixels below its
+          // wrist. Cut the final surface at the anatomical wrist plane,
+          // rather than using a horizontal atlas edge that clips one side.
+          const dx=c.x-b.x,dy=c.y-b.y,length=Math.max(.000001,Math.hypot(dx,dy)),ux=dx/length,uy=dy/length;
+          const nx=uy,ny=-ux,at={x:c.x+ux*.04,y:c.y+uy*.04};
+          ctx.save();ctx.beginPath();
+          ctx.moveTo(at.x+nx*30,at.y+ny*30);ctx.lineTo(at.x-nx*30,at.y-ny*30);
+          ctx.lineTo(at.x-nx*30-ux*100,at.y-ny*30-uy*100);ctx.lineTo(at.x+nx*30-ux*100,at.y+ny*30-uy*100);
+          ctx.closePath();ctx.clip();
+          attachedSegment(parts.lower,b,c,parts.lower.width??dimensions.forearm??5.4);ctx.restore();
+        } else if(parts)attachedSegment(parts.lower,b,c,parts.lower.width??dimensions.forearm??5.4);
+        else segment(left?6:7,b,c,5.4,1.8);
+      };
       if((this.definition?.id??unit.type??'villager')==='villager') {
         // The rolled sleeve covers the forearm insertion at the elbow.
         lower();upper();

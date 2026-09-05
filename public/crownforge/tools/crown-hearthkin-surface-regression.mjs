@@ -28,14 +28,16 @@ function sourceAlpha(art){
 }
 
 function recordDraw(type,direction,phase=.25){
-  let matrix=[1,0,0,1,0,0];const stack=[],draws=[];
+  let matrix=[1,0,0,1,0,0],path=[],clips=[];const stack=[],draws=[];
+  const point=(x,y)=>[matrix[0]*x+matrix[2]*y+matrix[4],matrix[1]*x+matrix[3]*y+matrix[5]];
   const ctx={globalAlpha:1,
-    save(){stack.push([...matrix]);},restore(){matrix=stack.pop();},
+    save(){stack.push({matrix:[...matrix],clips:[...clips]});},restore(){({matrix,clips}=stack.pop());},
     transform(a,b,c,d,e,f){const [aa,bb,cc,dd,ee,ff]=matrix;matrix=[aa*a+cc*b,bb*a+dd*b,aa*c+cc*d,bb*c+dd*d,aa*e+cc*f+ee,bb*e+dd*f+ff];},
     translate(x,y){this.transform(1,0,0,1,x,y);},scale(x,y){this.transform(x,0,0,y,0,0);},
     rotate(a){this.transform(Math.cos(a),Math.sin(a),-Math.sin(a),Math.cos(a),0,0);},
-    beginPath(){},rect(){},clip(){},closePath(){},moveTo(){},lineTo(){},fill(){},stroke(){},quadraticCurveTo(){},arc(){},ellipse(){},
-    drawImage(image,x,y,width,height){draws.push({key:image.key,index:image.index,x,y,width,height,matrix:[...matrix]});},
+    beginPath(){path=[];},rect(x,y,w,h){path.push(point(x,y),point(x+w,y),point(x+w,y+h),point(x,y+h));},
+    clip(){clips.push(path.map(p=>[...p]));},closePath(){},moveTo(x,y){path.push(point(x,y));},lineTo(x,y){path.push(point(x,y));},fill(){},stroke(){},quadraticCurveTo(){},arc(){},ellipse(){},
+    drawImage(image,x,y,width,height){draws.push({key:image.key,index:image.index,x,y,width,height,matrix:[...matrix],clips:[...clips]});},
   };
   const definition=CHARACTER_RIGS[type],art=definition.views?{...definition.views,props:HEARTHKIN_RIG_ART.props}:HEARTHKIN_RIG_ART;
   if(definition.mount)for(const [view,entry]of Object.entries(definition.mount.views))art['mount-'+view]=entry;
@@ -48,10 +50,12 @@ function recordedPoint(draw,normalised){
   return {x:a*x+c*y+e,y:b*x+d*y+f};
 }
 function paintedAlpha(draw,art,point){
+  if(draw.clips?.some(polygon=>!insidePolygon([point.x,point.y],polygon)))return 0;
   const [a,b,c,d,e,f]=draw.matrix,det=a*d-b*c,dx=point.x-e,dy=point.y-f;
   const x=(d*dx-c*dy)/det,y=(-b*dx+a*dy)/det,u=(x-draw.x)/draw.width,v=(y-draw.y)/draw.height;
   if(u<0||v<0||u>=1||v>=1)return 0;
-  const rect=art.parts[draw.index];return sourceAlpha(art)(rect[0]+u*rect[2],rect[1]+v*rect[3]);
+  const fade=art.wristFades?.[draw.index],opacity=fade?Math.min(1,v/fade):1;
+  const rect=art.parts[draw.index];return sourceAlpha(art)(rect[0]+u*rect[2],rect[1]+v*rect[3])*opacity;
 }
 
 test('Crown cuff anchors land on opaque paint and crops retain linen while removing skin stubs',()=>{
@@ -104,30 +108,45 @@ test('recorded Crown sleeve and forearm images join at the actual elbow in all f
   }
 });
 
-test('Crown hand pivots use the painted wrist transition and lower crops stop at that joint',()=>{
+test('Crown hand pivots and crops preserve measured wrists and palm grips without proximal skin stumps',()=>{
   // These are source-image measurements, independent of the normalized
   // metadata and canvas transforms. The previous pivots were in a long
   // extra forearm stump, and the lower arm overran the new hand surface.
-  for(const[view,side,wrist,cropHeight]of [
-    ['front','left',[637.5,280],265],['front','right',[161,280],268],
-    ['back','left',[1134,280],269],['back','right',[1610,280],272],
-    ['right','left',[1865.5,200],206],['right','right',[754,200],211],
-    ['left','left',[1387.5,200],196],['left','right',[275,200],198],
+  for(const[view,side,wrist,forearmWrist,grip]of [
+    ['front','left',[637.5,280],[207.8045,619.12],[599,591.48]],['front','right',[161,280],[561.3956,623.8],[202.6,591.48]],
+    ['back','left',[1134,280],[959.4044,624.72],[1175,591.48]],['back','right',[1610,280],[1325.4956,627.48],[1572.4,591.48]],
+    ['right','left',[1865.5,200],[969,532],[1857.258164,589.5638]],['right','right',[754,200],[1280,534],[805.5,565.4]],
+    ['left','left',[1387.5,200],[909,536],[1335,565.4]],['left','right',[275,200],[1276,536],[280.78749,589.6975]],
   ]){
     const hand=HEARTHKIN_HAND_PARTS[view][side],handArt=HEARTHKIN_RIG_ART[hand.key],hr=handArt.parts[hand.index];
     const actual=[hr[0]+hand.root[0]*hr[2],hr[1]+hand.root[1]*hr[3]],label=`${view}/${side}`;
     assert.ok(Math.hypot(actual[0]-wrist[0],actual[1]-wrist[1])<.001,`${label} hand pivot lands on the measured wrist transition`);
+    const actualGrip=[hr[0]+hand.grip[0]*hr[2],hr[1]+hand.grip[1]*hr[3]];
+    assert.ok(Math.hypot(actualGrip[0]-grip[0],actualGrip[1]-grip[1])<.001,`${label} crop preserves the original source palm grip`);
     assert.ok(sourceAlpha(handArt)(...actual)>230,`${label} wrist anchor has real skin paint`);
     const reach=Math.hypot((hand.grip[0]-hand.root[0])*hand.width,(hand.grip[1]-hand.root[1])*hand.height);
-    assert.ok(Math.abs(reach-3.65)<1e-6,`${label} enlarged hand retains its physical palm grip`);
+    const profile=view==='right'||view==='left';
+    assert.ok(Math.abs(reach-(profile?4.4:3.65))<1e-6,`${label} enlarged hand retains its physical palm grip`);
+    const proximalPixels=hand.root[1]*hr[3];
+    if(side==='right'){
+      assert.ok(Math.abs(proximalPixels-50)<.001,`${label} bare hand retains only the short source blend band`);
+      const blendLength=hand.root[1]*hand.height;
+      assert.ok(blendLength>.5&&blendLength<.65,`${label} bare wrist blend occupies only .5–.65 character units`);
+      assert.equal(handArt.wristFades?.[hand.index],hand.root[1],`${label} bare wrist fade reaches full opacity exactly at the anatomical joint`);
+    }else{
+      assert.ok(proximalPixels>0&&proximalPixels<=2.001,`${label} bracer hand retains at most two source pixels of proximal skin overlap`);
+      assert.equal(handArt.wristFades?.[hand.index],undefined,`${label} leather cuff keeps its crisp edge without a skin fade`);
+    }
     // A hand extends about one third of a 16-unit forearm beyond its wrist.
     // This catches shrunken profiles and excessive enlargement separately
     // from the grip constraint, which alone can pass with a tiny palm.
     const distalHeight=(1-hand.root[1])*hand.height;
-    assert.ok(distalHeight>4.6&&distalHeight<6,`${label} visible wrist-to-finger length stays proportional to the forearm`);
+    assert.ok(distalHeight>5.5&&distalHeight<6.1,`${label} visible wrist-to-finger length stays proportional to the forearm`);
     const lower=HEARTHKIN_ARM_PARTS[view][side].lower,lr=HEARTHKIN_RIG_ART[lower.key].parts[lower.index];
-    assert.equal(lr[3],cropHeight,`${label} retains the measured distal crop`);
-    assert.ok((1-lower.tip[1])*lr[3]<=2,`${label} forearm cap extends at most two source pixels past its wrist`);
+    const actualForearmWrist=[lr[0]+lower.tip[0]*lr[2],lr[1]+lower.tip[1]*lr[3]];
+    assert.ok(Math.hypot(actualForearmWrist[0]-forearmWrist[0],actualForearmWrist[1]-forearmWrist[1])<1e-6,`${label} extended crop preserves its absolute forearm wrist anchor`);
+    assert.ok((1-lower.tip[1])*lr[3]>=8,`${label} source retains enough distal paint for its diagonal wrist edge`);
+    assert.equal(lower.clipAtWrist,true,`${label} excess source paint is clipped at the anatomical wrist plane`);
   }
 });
 
@@ -154,14 +173,28 @@ test('actual rendered forearm and hand silhouettes meet at comparable widths thr
       near(recordedPoint(hand,frame.grip),hearthkinPalmSocket(pose,side==='left'),`${label} actual painted fingers retain the tool grip`);
       const wrist=pose[side+'Hand'],elbow=pose[side+'Elbow'],length=Math.hypot(wrist.x-elbow.x,wrist.y-elbow.y);
       const along={x:(wrist.x-elbow.x)/length,y:(wrist.y-elbow.y)/length},across={x:along.y,y:-along.x};
-      // Sample immediately above the seam, avoiding the transparent outer
-      // edge of a rotated crop while testing both painted components at
-      // the same actual screen location and scale.
-      const origin={x:wrist.x-along.x*.2,y:wrist.y-along.y*.2};
+      // Both skin surfaces now terminate at their anatomical joint, with
+      // minimal overlap. Measure the actual seam rather
+      // than requiring an unwanted strip of hand skin above the wrist.
+      const origin=wrist;
+      assert.equal(lower.clips.length,1,`${label} actual forearm draw has its own wrist clip`);
+      assert.equal(hand.clips.length,0,`${label} forearm clip does not leak into the hand draw`);
+      const clip=lower.clips[0];
+      assert.equal(clip.length,4,`${label} wrist clip is a complete polygon`);
+      const distances=clip.map(([x,y])=>(x-wrist.x)*along.x+(y-wrist.y)*along.y);
+      assert.ok(distances.slice(0,2).every(d=>Math.abs(d-.04)<1e-7),`${label} clip edge is perpendicular to the forearm at .04 units beyond the wrist`);
+      assert.ok(distances.slice(2).every(d=>d<-90),`${label} clip retains the full proximal forearm`);
+      for(const offset of [-1,0,1]){
+        const point={x:wrist.x+along.x*.15+across.x*offset,y:wrist.y+along.y*.15+across.y*offset};
+        assert.equal(paintedAlpha(lower,HEARTHKIN_RIG_ART[lower.key],point),0,`${label} actual clip removes all distal forearm overrun`);
+      }
+      const overrun={x:wrist.x+along.x*.15,y:wrist.y+along.y*.15};
+      assert.ok(paintedAlpha({...lower,clips:[]},HEARTHKIN_RIG_ART[lower.key],overrun)>200,`${label} distal test exercises real source paint rather than an already empty crop`);
       const forearmSpan=paintedSpan(lower,HEARTHKIN_RIG_ART[lower.key],origin,across);
       const handSpan=paintedSpan(hand,HEARTHKIN_RIG_ART[hand.key],origin,across);
-      assert.ok(Math.abs(forearmSpan.width-handSpan.width)/Math.max(forearmSpan.width,handSpan.width)<.2,`${label} painted wrist widths match within 20%, not the former nearly 2:1 step`);
-      assert.ok(Math.max(Math.abs(forearmSpan.first-handSpan.first),Math.abs(forearmSpan.last-handSpan.last))<.45,`${label} wrist edges are centered on each other`);
+      const profile=direction===1||direction===3,widthTolerance=profile ? .2 : .05,edgeTolerance=profile ? .45 : .1;
+      assert.ok(Math.abs(forearmSpan.width-handSpan.width)/Math.max(forearmSpan.width,handSpan.width)<widthTolerance,`${label} painted wrist widths match within ${widthTolerance*100}%, not the former nearly 2:1 step`);
+      assert.ok(Math.max(Math.abs(forearmSpan.first-handSpan.first),Math.abs(forearmSpan.last-handSpan.last))<edgeTolerance,`${label} wrist edges align within ${edgeTolerance} units`);
       for(const down of [-.4,0,.4])for(const offset of [-.7,0,.7]){
         const point={x:wrist.x+along.x*down+across.x*offset,y:wrist.y+along.y*down+across.y*offset};
         assert.ok(Math.max(paintedAlpha(lower,HEARTHKIN_RIG_ART[lower.key],point),paintedAlpha(hand,HEARTHKIN_RIG_ART[hand.key],point))>200,`${label} opaque skin covers the joined wrist without a gap`);
@@ -251,6 +284,53 @@ test('the real part cache applies the source clip before drawing every braid mip
     assert.equal(canvases.length,4,'cache hit must not create an unclipped replacement');
     const other=rig.part('right',2);
     assert.ok(other.every(canvas=>canvas.events.length===1&&canvas.events[0]==='draw'),'unrelated body components are not clipped');
+  }finally{
+    if(previousDocument===undefined)delete globalThis.document;else globalThis.document=previousDocument;
+  }
+});
+
+test('the real hand cache feathers only bare wrist skin from transparent crop edge to opaque anatomical wrist',()=>{
+  const previousDocument=globalThis.document,canvases=[];
+  globalThis.document={createElement(tag){
+    assert.equal(tag,'canvas');const events=[];let composite='source-over',fillStyle;
+    const ctx={
+      drawImage(...args){events.push({kind:'draw',args});},
+      createLinearGradient(...args){
+        const gradient={args,stops:[],addColorStop(at,color){this.stops.push([at,color]);events.push({kind:'stop',at,color});}};
+        events.push({kind:'gradient',gradient});return gradient;
+      },
+      set globalCompositeOperation(value){composite=value;events.push({kind:'composite',value});},get globalCompositeOperation(){return composite;},
+      set fillStyle(value){fillStyle=value;},
+      fillRect(...args){events.push({kind:'fill',args,composite,fillStyle});},
+    };
+    const canvas={width:0,height:0,events,ctx,getContext(kind){assert.equal(kind,'2d');return ctx;}};
+    canvases.push(canvas);return canvas;
+  }};
+  try{
+    const images=Object.fromEntries(['neutralHands','profileHands'].map(key=>[key,{complete:true,naturalWidth:HEARTHKIN_RIG_ART[key].width}]));
+    const rig=Object.assign(Object.create(HearthkinRig.prototype),{art:HEARTHKIN_RIG_ART,images,parts:new Map()});
+    for(const view of views)for(const side of ['left','right']){
+      const frame=HEARTHKIN_HAND_PARTS[view][side],art=HEARTHKIN_RIG_ART[frame.key],rect=art.parts[frame.index];
+      const levels=rig.part(frame.key,frame.index),label=`${view}/${side}`;
+      assert.deepEqual(levels.map(c=>c.height),[256,128,64,32],`${label} uses every actual display mip`);
+      for(const canvas of levels){
+        assert.deepEqual(canvas.events[0],{kind:'draw',args:[images[frame.key],...rect,0,0,canvas.width,canvas.height]},`${label} masks the intended original hand pixels`);
+        if(side==='left'){
+          assert.equal(canvas.events.length,1,`${label} bracer hand pixels are drawn without a mask`);continue;
+        }
+        assert.deepEqual(canvas.events.map(e=>e.kind),['draw','gradient','stop','stop','composite','fill','composite'],`${label} masks after image drawing and restores normal compositing`);
+        const gradient=canvas.events[1].gradient,fill=canvas.events[5];
+        assert.deepEqual(gradient.args,[0,0,0,canvas.height*frame.root[1]],`${label} every mip places the opaque stop at the real wrist`);
+        assert.deepEqual(gradient.stops,[[0,'rgba(0,0,0,0)'],[1,'rgba(0,0,0,1)']],`${label} first edge is fully transparent and the wrist is fully opaque`);
+        assert.deepEqual(canvas.events[4],{kind:'composite',value:'destination-in'},`${label} fade attenuates existing skin alpha rather than painting a colored rectangle`);
+        assert.equal(fill.fillStyle,gradient,`${label} uses the recorded opacity gradient`);
+        assert.equal(fill.composite,'destination-in',`${label} alpha mask is active during the actual fill`);
+        assert.deepEqual(fill.args,[0,0,canvas.width,canvas.height],`${label} entire cached image receives the mask`);
+        assert.equal(canvas.ctx.globalCompositeOperation,'source-over',`${label} normal compositing is restored after the mask`);
+      }
+      assert.equal(rig.part(frame.key,frame.index),levels,`${label} cache reuse preserves masked surfaces`);
+    }
+    assert.equal(canvases.length,32,'all eight hands have four cached mip surfaces with no regenerated cache hits');
   }finally{
     if(previousDocument===undefined)delete globalThis.document;else globalThis.document=previousDocument;
   }

@@ -34,7 +34,7 @@ function paintedSocket(pose){
 
 test('all 23 Crown actions retain physical limbs, fixed work palms and measured profile sockets',()=>{
   assert.equal(Object.keys(crown.actions).length,23);
-  let fitted=0,fixed=0,accommodated=0;
+  let fitted=0,fixed=0;
   for(const state of Object.keys(crown.actions))for(let direction=0;direction<4;direction++)for(let n=0;n<81;n++){
     const pose=sample(state,n/81,direction),snapshot=structuredClone(pose),fit=fitHearthkinProfile(pose);
     const label=`${state}/${views[direction]}/${n}`;
@@ -44,30 +44,38 @@ test('all 23 Crown actions retain physical limbs, fixed work palms and measured 
     const side=direction===1?'right':'left',far=side==='right'?'left':'right',j=fit.anatomical,old=pose.anatomical;
     const fixedPalm=pose.projectedWork&&!['hit','death'].includes(pose.state);
     for(const point of Object.values(j))assert.ok(['x','y','z'].every(axis=>Number.isFinite(point[axis])),`${label} finite anatomical point`);
-    for(const joint of ['Shoulder','Elbow','Hand','Palm'])if(j[side+joint]){
-      const p=projectHearthkin(j[side+joint],direction);
-      near(fit[side+joint],p,`${label} fitted ${joint} projection`);
-      assert.deepEqual(j[far+joint],old[far+joint],`${label} far ${joint} remains unchanged`);
+    assert.deepEqual(j[far+'Shoulder'],old[far+'Shoulder'],`${label} far shoulder remains unchanged`);
+    for(const arm of ['left','right']){
+      for(const joint of ['Shoulder','Elbow','Hand','Palm'])if(j[arm+joint]){
+        const p=projectHearthkin(j[arm+joint],direction);
+        near(fit[arm+joint],p,`${label}/${arm} fitted ${joint} projection`);
+      }
+      close(distance(j[arm+'Shoulder'],j[arm+'Elbow']),17,`${label}/${arm} upper arm length`);
+      close(distance(j[arm+'Elbow'],j[arm+'Hand']),16,`${label}/${arm} forearm length`);
     }
-    const upper=distance(j[side+'Shoulder'],j[side+'Elbow']),lower=distance(j[side+'Elbow'],j[side+'Hand']);
-    close(upper,distance(old[side+'Shoulder'],old[side+'Elbow']),`${label} upper arm length`);
-    close(lower,distance(old[side+'Elbow'],old[side+'Hand']),`${label} forearm length`);
     const socket=paintedSocket(pose),shoulder=fit[side+'Shoulder'],error=Math.hypot(socket.x-shoulder.x,socket.y-shoulder.y);
     assert.ok(error<=.2,`${label} shoulder remains within .2 units of painted socket (${error})`);
-    if(error>1e-7){accommodated++;assert.ok(pose.state.startsWith('attack'),`${label} only maximum attack extension needs a small socket accommodation`);}
+    if(error>1e-7)assert.ok(pose.state.startsWith('attack'),`${label} only maximum attack extension needs a small socket accommodation`);
     if(fixedPalm){
       fixed++;
-      near(j[side+'Palm'],old[side+'Palm'],`${label} physical work palm remains on target`);
-      close(distance(j[side+'Hand'],j[side+'Palm']),3.65,`${label} physical palm link`);
-      assert.ok(distance(j[side+'Shoulder'],j[side+'Palm'])<=36.641,`${label} fixed palm is reachable without stretching`);
+      for(const arm of ['left','right']){
+        near(j[arm+'Palm'],old[arm+'Palm'],`${label}/${arm} physical work palm remains on target`);
+        close(distance(j[arm+'Hand'],j[arm+'Palm']),4.4,`${label}/${arm} physical palm link`);
+        assert.ok(distance(j[arm+'Shoulder'],j[arm+'Palm'])<=37.391,`${label}/${arm} fixed palm is reachable without stretching`);
+      }
       assert.deepEqual(fit.toolFrame,pose.toolFrame,`${label} tool contact and orientation remain unchanged`);
     }else{
-      for(const [a,b]of [['Elbow','Shoulder'],['Hand','Elbow']])near(vector(j[side+a],j[side+b]),vector(old[side+a],old[side+b]),`${label} free ${a} vector`);
-      if(j[side+'Palm'])near(vector(j[side+'Palm'],j[side+'Hand']),vector(old[side+'Palm'],old[side+'Hand']),`${label} free palm vector`);
-      if(side==='right'&&pose.toolFrame)near(vector(fit.toolFrame.grip,j.rightHand),vector(pose.toolFrame.grip,old.rightHand),`${label} free tool follows the wrist`);
+      for(const arm of ['left','right']){
+        for(const [a,b]of [['Elbow','Shoulder'],['Hand','Elbow']])near(vector(j[arm+a],j[arm+b]),vector(old[arm+a],old[arm+b]),`${label}/${arm} free ${a} vector`);
+        if(j[arm+'Palm'])near(vector(j[arm+'Palm'],j[arm+'Hand']),mul(vector(j[arm+'Hand'],j[arm+'Elbow']),4.4/16),`${label}/${arm} free palm extends 4.4 beyond the wrist`);
+      }
+      if(pose.toolFrame){
+        near(vector(fit.toolFrame.grip,j.rightHand),mul(vector(j.rightHand,j.rightElbow),4.4/16),`${label} free tool follows the enlarged right palm`);
+        for(const key of Object.keys(pose.toolFrame))if(key!=='grip')assert.deepEqual(fit.toolFrame[key],pose.toolFrame[key],`${label} free tool ${key} retained`);
+      }
     }
   }
-  assert.equal(fitted,3726);assert.ok(fixed>2000);assert.ok(accommodated>0);
+  assert.equal(fitted,3726);assert.ok(fixed>2000);
 });
 
 test('fitting stays on the torso when a transition has blended screen joints and unblended anatomy',()=>{

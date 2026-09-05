@@ -1,4 +1,4 @@
-import { createCharacterRigs } from '../src/character-rigs.js?v=20260905-armfit2';
+import { createCharacterRigs } from '../src/character-rigs.js?v=20260905-wristfit3';
 const characterRigs = createCharacterRigs();
 import {
   ANIMATION_DIRECTIONS,

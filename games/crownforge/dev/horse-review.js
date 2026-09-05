@@ -1,4 +1,4 @@
-import { CHARACTER_RIGS,createCharacterRigs } from '../src/character-rigs.js?v=20260905-armfit2';
+import { CHARACTER_RIGS,createCharacterRigs } from '../src/character-rigs.js?v=20260905-wristfit3';
 const canvas=document.querySelector('#horses'),ctx=canvas.getContext('2d'),rigs=createCharacterRigs({lazy:true}),types=['scout','ashenOutrider'];
 const direction=document.querySelector('#direction'),action=document.querySelector('#action'),phase=document.querySelector('#phase'),play=document.querySelector('#play'),params=new URLSearchParams(location.search);
 for(const [key,a] of Object.entries(CHARACTER_RIGS.scout.actions)){const o=document.createElement('option');o.value=key;o.textContent=a.label;action.append(o);}

@@ -178,7 +178,7 @@ for(let direction=0;direction<4;direction++)for(const phase of [0,.2,.5,.8]) {
   if(direction===1||direction===3) {
     assert.equal(frame.key,'profileHands','profiles use gripping hands rather than the old open duplicated hands');
     assert.equal(frame.index,direction===1?1:0,'right hand uses near dorsal or far palm source according to camera');
-    near(distance(socket,wrist),3.65,1e-6,'profile palm grip has the calibrated wrist-to-grip reach');
+    near(distance(socket,wrist),4.4,1e-6,'profile palm grip has the calibrated wrist-to-grip reach');
   }
 }
 for(let direction=0;direction<4;direction++) {

@@ -27,7 +27,7 @@ export function fitHearthkinProfile(pose) {
   const fixedPalm=pose.projectedWork&&!['hit','death'].includes(pose.state);
   let depthShift=0;
   if(fixedPalm) {
-    const palm=pose[side+'Palm'],reach=36.64;
+    const palm=pose[side+'Palm'],reach=37.39;
     let dx=palm.x-socket.x,dy=palm.y-socket.y,distance=Math.hypot(dx,dy);
     // A profile source is a painted perspective. Choose the closest depth
     // on its socket ray that can reach the actual palm without stretching.
@@ -46,15 +46,26 @@ export function fitHearthkinProfile(pose) {
   const j={...pose.anatomical},shoulder=add(j[side+'Shoulder'],delta);
   j[side+'Shoulder']=shoulder;
   if(fixedPalm) {
-    const palm=j[side+'Palm'],pole=add(shoulder,{x:side==='left'?-3:3,y:-25,z:-4});
-    const elbow=solveAnatomicalLimb(shoulder,palm,17,19.65,pole);
-    j[side+'Elbow']=elbow;
-    j[side+'Hand']=add(elbow,mul(sub(palm,elbow),16/19.65));
+    for(const arm of ['left','right']) {
+      const root=j[arm+'Shoulder'],palm=j[arm+'Palm'],pole=add(root,{x:arm==='left'?-3:3,y:-25,z:-4});
+      const elbow=solveAnatomicalLimb(root,palm,17,20.4,pole);
+      j[arm+'Elbow']=elbow;
+      j[arm+'Hand']=add(elbow,mul(sub(palm,elbow),16/20.4));
+    }
   } else {
     for(const joint of ['Elbow','Hand','Palm'])if(j[side+joint])j[side+joint]=add(j[side+joint],delta);
   }
   const result={...pose,anatomical:j,surfaceFitted:true};
-  if(!fixedPalm&&side==='right'&&pose.toolFrame)result.toolFrame={...pose.toolFrame,grip:add(pose.toolFrame.grip,delta)};
-  for(const joint of ['Shoulder','Elbow','Hand','Palm'])if(j[side+joint])result[side+joint]=projectHearthkin(j[side+joint],pose.direction);
+  if(!fixedPalm) {
+    for(const arm of ['left','right'])if(j[arm+'Palm']) {
+      const forearm=sub(j[arm+'Hand'],j[arm+'Elbow']);
+      j[arm+'Palm']=add(j[arm+'Hand'],mul(forearm,4.4/Math.hypot(forearm.x,forearm.y,forearm.z)));
+    }
+    if(pose.toolFrame) {
+      const forearm=sub(j.rightHand,j.rightElbow);
+      result.toolFrame={...pose.toolFrame,grip:add(j.rightHand,mul(forearm,4.4/Math.hypot(forearm.x,forearm.y,forearm.z)))};
+    }
+  }
+  for(const arm of ['left','right'])for(const joint of ['Shoulder','Elbow','Hand','Palm'])if(j[arm+joint])result[arm+joint]=projectHearthkin(j[arm+joint],pose.direction);
   return result;
 }
