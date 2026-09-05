@@ -232,6 +232,10 @@ class VoiceWidget {
         const container = document.getElementById('voice-widget-container');
         const fitWidgetInViewport = () => {
             if (!container) return;
+            if (container.classList.contains('minimized')) {
+                this.restoreWidgetDock();
+                return;
+            }
 
             const margin = 12;
             const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
@@ -273,8 +277,8 @@ class VoiceWidget {
         if (minBtn) {
             minBtn.onclick = (e) => {
                 e.stopPropagation();
-                container.classList.toggle('minimized');
-                window.requestAnimationFrame(fitWidgetInViewport);
+                if (container.classList.contains('minimized')) openWidget();
+                else this.minimizeWidget();
                 syncChrome();
             };
         }
@@ -308,7 +312,7 @@ class VoiceWidget {
             let startX, startY, initialX, initialY;
 
             header.onmousedown = (e) => {
-                if (e.target.closest('button')) return;
+                if (container.classList.contains('minimized') || e.target.closest('button')) return;
                 isDragging = true;
                 startX = e.clientX;
                 startY = e.clientY;
@@ -339,6 +343,23 @@ class VoiceWidget {
                 }
             });
         }
+    }
+
+    restoreWidgetDock() {
+        const container = document.getElementById('voice-widget-container');
+        if (!container) return;
+        // Release drag coordinates so the responsive CSS corner and safe-area
+        // spacing apply again, including after viewport or orientation changes.
+        for (const property of ['left', 'top', 'right', 'bottom', 'transition']) {
+            container.style.removeProperty(property);
+        }
+    }
+
+    minimizeWidget() {
+        const container = document.getElementById('voice-widget-container');
+        if (!container) return;
+        container.classList.add('minimized');
+        this.restoreWidgetDock();
     }
 
     getBackendUrl() {
@@ -1101,7 +1122,7 @@ class HomeVoiceWidget extends VoiceWidget {
         }, true);
         this.container.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape' || this.container.classList.contains('minimized')) return;
-            this.container.classList.add('minimized');
+            this.minimizeWidget();
             this.titleBtn.focus({ preventScroll: true });
         });
         const syncExpanded = () => {
