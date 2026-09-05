@@ -5086,3 +5086,12 @@ Upgraded the ground with four original painted terrain materials and twelve alph
 Caught and fixed a real-game lifecycle issue in which fresh per-frame unit arrays erased contact history; actual simulation movement now has a regression. Added bounded wide-view caching to prevent repeated whole-map regeneration. All 15 meadow tests, existing dawn visual and Livingwood navigation/harvesting/save checks, local browser walking/building/clearing/save checks and the production build pass. Main-game right-click movement produces a visible wake. Release marker: `20260905-meadow1`. Artwork, exact prompts, primary references and detailed validation are in `CROWNFORGE_LIVING_MEADOW_RELEASE.md` and `MEADOW_ART_PROMPTS.json`.
 
 Public release verified: `20260905-meadow1`, implementation `6e3df18`. Deployed code/artwork hashes match source, the main game passes real movement and save/load with temporary grass contacts, and the published Living Meadow is open in the in-app browser.
+
+## 2026-09-05 — Full architecture integration
+- User approved all remaining building work, game integration, push and deployment after stopping the character task.
+- Built in isolated worktree codex/building-depth-20260905 from production 4e0e0f9; left the character checkout untouched.
+- Replaced all 32 Crown/Ashen building types, with three construction stages for 25 solid structures and authored fortification views. Kept all 51 protected approved-preview files unchanged. Native-resolution masters remain in the isolated lab; runtime art, exact prompts and hashes accompany the release.
+- Measured painted outlines drive placement, collision and exterior worker/recruit approaches. Added foot/mounted clearance, safe vector acceleration, exact final path corners, oriented wall collision and completed gate passages.
+- Verified 50 building perimeter routes, 22 construction completions, 25 repairs, 12 recruitment exits, eight gate crossings, gathering, roster motion/loading/gameplay, and living meadow behavior. Browser-reviewed Hall construction, Ashen landmark, current character scale, wall corners and tower/gate joins.
+- Old saved coordinates remain unchanged. Exact original bytes are backed up before load/save, with download/restore controls. Automatic saved-layout relocation was rejected by approval review and remains excluded pending explicit user approval.
+- Release evidence and limitations: BUILDING_ART_RELEASE.md. Push and live verification pending.

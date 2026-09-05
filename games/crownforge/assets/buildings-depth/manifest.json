@@ -1,0 +1,1743 @@
+{
+  "version": "20260905-buildings1",
+  "generator": "OpenAI built-in imagegen",
+  "masterPolicy": "Original PNG masters preserved byte-for-byte in the isolated art lab.",
+  "runtimePreparation": "Native-resolution WebP; sprite sheets unpacked without changing foreground RGBA pixels; runtime affine projection aligns wall sockets.",
+  "buildings": [
+    {
+      "id": "townCenter",
+      "label": "Crown Hall",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 1500,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "4fdd85a56f6324cd64508ec94da03ea3c52142ba0812c62c064cf87a1eccaba4",
+      "constructionMasterSHA256": "673e6e12fcdaabe64f319c33c000a5a0a5344ec21dc1b5da82eeba0bf65cbb8e"
+    },
+    {
+      "id": "house",
+      "label": "Hearth House",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 525,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "d13091ab69c951883bef18926296c899067897a223aa851e5b7d94d5bf36fe1b",
+      "constructionMasterSHA256": "879ce92632c11a9a40ba09122a2de07a7cb9eded1c903929e909375c74bc4696"
+    },
+    {
+      "id": "barracks",
+      "label": "Crown Barracks",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 1500,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "dd074a53e9bb5c21e75b0be27f1b7ec8f10f62890b8e9a653294c19b1839f17f",
+      "constructionMasterSHA256": "63c5ccad0cb0d13c58f344c8c6f6fcf8ecb9c2d5a7590809f2995799caf4beec"
+    },
+    {
+      "id": "stable",
+      "label": "Crown Stable",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 990,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "e237cee055e78b9d9e007ec31a62fcde13d2ef99f834cb7a654feca1d9a04efb",
+      "constructionMasterSHA256": "1b4653355b8455f81981de91ab69f2543fcb1ffad363be100f0b2a4d771868d5"
+    },
+    {
+      "id": "granary",
+      "label": "First-age Granary",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 630,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "869792b893b442c9aa9fbbc6c1a1ec6a7910aa6ee79565aacfac704fa411d8db",
+      "constructionMasterSHA256": "5217f1239a4c49e40192cf087d0ddaa3c6304c431e6d75ac4626522a3ca4ac40"
+    },
+    {
+      "id": "homestead",
+      "label": "First-age Homestead",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 645,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "1071f8132a43a0e652a2628f92d96520a33da724a9303b3bb851a9293c9c3c78",
+      "constructionMasterSHA256": "3540ca1a018bcd6a2475c7f9f8d6fed674457978e8c1c40f9b1e5786e6b77fe7"
+    },
+    {
+      "id": "watchHut",
+      "label": "First-age Watch Hut",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 615,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "a2ee62dd3906b981af1ec92efab05468d4bb3ab2658bba4f7fd772baafc839d0",
+      "constructionMasterSHA256": "c0bf4c1bf8fb2eadc147d79b22f7247a8bc79680f076b0e52609c03a835d4393"
+    },
+    {
+      "id": "timberYard",
+      "label": "Timber Yard",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 615,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "be137f802150ddb58f3df27587291f5d6ecdef7263b16540667c9be9d76a8bb6",
+      "constructionMasterSHA256": "2d04a5224381e585890e3555caaef686a321dfbc6d54742fac005bcbcba660c3"
+    },
+    {
+      "id": "stonewrightYard",
+      "label": "Stonewright Yard",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 615,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "c55ceda2383049cfe6085965b9af27d6f1b7bd6c658e364dc22f75ffe40549fd",
+      "constructionMasterSHA256": "e682e7efdb8bbabf5a78ecd01ea791ca1b1285c1877492296bba54b2fb5a2dbc"
+    },
+    {
+      "id": "oreWash",
+      "label": "Ore Wash",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 570,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "049c825f1e5e06d3f93818680d159cebfbce916d83c123168382fe014cd26537",
+      "constructionMasterSHA256": "b10204b17d9719510fc18cab820ba6bcb7559fe9d471908a57e2dd8bea9cb7d1"
+    },
+    {
+      "id": "lumberMill",
+      "label": "Lumber Mill",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 630,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "8fb14d3ab99fa60dc52d99dafe9db21858e0c02de24d829987cd1a2d4e147c4d",
+      "constructionMasterSHA256": "81656e6bdc02a56a670b699c427b70d8a9364e29f8e8ccca37609a25ceee1679"
+    },
+    {
+      "id": "quarry",
+      "label": "Stone Quarry",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 810,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "906666a5260a378afb6de1cbd6a42c25e3cb549669a5a04062b6a1b191ac63df",
+      "constructionMasterSHA256": "a1a0ba23985148913276b4356e5568fc65e170cca8b71fbf0dddfacf652ba1d6"
+    },
+    {
+      "id": "grainMill",
+      "label": "Grain Mill",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 615,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "e6a7a5f9dc8ca7a3bc4972fabd2659b9d3435b42f9c87c18cf9e7f5285cf059b",
+      "constructionMasterSHA256": "ad70b62245ebb46c167b32dd0a79fcf0060a0de79964de462b18b9d4ff0402f4"
+    },
+    {
+      "id": "field",
+      "label": "Grain Field",
+      "faction": "crown",
+      "kind": "field",
+      "renderSize": 500,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "2f20276ddc77e398b1258efaeaa9fea1c7d9dc9d7d89f40e2bc71215a6f3a290",
+      "constructionMasterSHA256": null
+    },
+    {
+      "id": "road",
+      "label": "Packed Road",
+      "faction": "crown",
+      "kind": "road",
+      "renderSize": 118,
+      "nativeSize": [
+        1254,
+        1254
+      ],
+      "masterSHA256": "ca3a0d084a13ac2dac905ba58e9faa326fb0b22ed6d0e7c9112fe49457f06e30",
+      "constructionMasterSHA256": null
+    },
+    {
+      "id": "wall",
+      "label": "Palisade Wall",
+      "faction": "crown",
+      "kind": "wall",
+      "renderSize": 190,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "e2451d4ba42feb247accc559455f8fe1ff901b830a30f3c8e538bcb6a5a5c554",
+      "constructionMasterSHA256": null
+    },
+    {
+      "id": "gate",
+      "label": "Palisade Gate",
+      "faction": "crown",
+      "kind": "gate",
+      "renderSize": 250,
+      "nativeSize": [
+        1254,
+        1254
+      ],
+      "masterSHA256": "7f54989e510252dda283c4ca7b13b266aeba30908f0650b5d4dee71ef998b3c6",
+      "constructionMasterSHA256": null
+    },
+    {
+      "id": "palisadeTower",
+      "label": "Palisade Tower",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 450,
+      "nativeSize": [
+        1024,
+        1536
+      ],
+      "masterSHA256": "e5eb156bbcb8d8bd2a8bcd9db5580c586d1ed931898599ade8b2ef052308cee8",
+      "constructionMasterSHA256": "51ddc5f703bc654a7b0de1b2d86a538a08a8fdbc20a02413d0beb6b5676ed27f"
+    },
+    {
+      "id": "storehouse",
+      "label": "Waystore",
+      "faction": "crown",
+      "kind": "solid",
+      "renderSize": 555,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "582e070db3b71e876cc6c1f707f192aac3b20d92071c8824d24b6d04e1ddf409",
+      "constructionMasterSHA256": "d98b5aa58ae64d630e7b058f9de8c52b3d2de88a0b6f7c1ad98a3617fffe2d11"
+    },
+    {
+      "id": "ashenCamp",
+      "label": "Ashen Hearth",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 930,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "3f0786e34379321c00a1ac2d5b21ed0eb2b869a276eced71553d31a9e024df9c",
+      "constructionMasterSHA256": "f28d2b0e4528a68e26fce34d801fe50309fb51bf0e8dd7aaf8d742058b3352ec"
+    },
+    {
+      "id": "reaverLodge",
+      "label": "Reaver Lodge",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 870,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "21a6e1d2a46ddd65dd09ba61aed68426220acad958527b3b44de815d51e30835",
+      "constructionMasterSHA256": "0210e7a0b7c29289428409054aa65d7e4101169fa275dbe87224e778d0f64acd"
+    },
+    {
+      "id": "beastCorral",
+      "label": "Beast Corral",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 810,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "2cee2a77bc68bbc883ce7b660413f2930df32509652a86de650ba03ac1a6b5bd",
+      "constructionMasterSHA256": "05a6853a160c71bedfca836d5d0cf6e1b254cd8f5052bb0df3147d43b03fcf09"
+    },
+    {
+      "id": "smokeGranary",
+      "label": "Smoke Granary",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 495,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "1dff8c3830ce87b20ee686439041bc9821d149cca2e462be80f4bfaea1a5aa5e",
+      "constructionMasterSHA256": "b60b35df8d2e530c22767ad6c841f889f351b3005e65f51912e96b4ffeb1598c"
+    },
+    {
+      "id": "hideHomestead",
+      "label": "Hide Homestead",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 510,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "f737684408f137789050d68a57b529416afc1e45225751330567a2b5bde89ca2",
+      "constructionMasterSHA256": "7babf082facd0b2c99b3ed03bea23531638e68c109c666c5525c50d0b7e142d3"
+    },
+    {
+      "id": "signalRoost",
+      "label": "Signal Roost",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 525,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "3aedb476d24fb26f701f77d99f557bae4568e3fd8eff0fe5aa8a61ea7fc8b92a",
+      "constructionMasterSHA256": "8546498aa858b0005ff14178fd88d2399018f4d61045f06b7f9ddce5c06bc8d4"
+    },
+    {
+      "id": "ashenTimberRack",
+      "label": "Timber Rack",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 480,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "9cd5436a58d9e56385d7ec588d71e2233a08d60ca3937c292f7c4822f0ea2806",
+      "constructionMasterSHA256": "6e7d64f53316f73ec24800c2a5c2cbcf1c530f22b3964eca5acbad60469f8498"
+    },
+    {
+      "id": "stonebreakYard",
+      "label": "Stonebreak Yard",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 480,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "8cb5b2ff50f14515e5c7a0467d08a219bd1ddbb9fbe4da9dd95de09de95c3453",
+      "constructionMasterSHA256": "a39c8e9d29cdb861b1e3aad28b820c054c374b58dc771bfb3841d7a24741fb74"
+    },
+    {
+      "id": "oreHearth",
+      "label": "Ore Hearth",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 480,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "cf574fa0605e88feece0f7b33938001e9cda083468d010f64a1c66d87360ef5d",
+      "constructionMasterSHA256": "c534375a8db1c69a59a95cc87dd2bfe42deecd4902708d9a23ab228f965872fe"
+    },
+    {
+      "id": "ashenField",
+      "label": "Ashen Crop Plot",
+      "faction": "ashen",
+      "kind": "field",
+      "renderSize": 420,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "ea32424d0e1da37700c5beda757593d1fee6fbd24665484c17e21548be61af14",
+      "constructionMasterSHA256": null
+    },
+    {
+      "id": "ashenWall",
+      "label": "Ashen Stake Wall",
+      "faction": "ashen",
+      "kind": "wall",
+      "renderSize": 190,
+      "nativeSize": [
+        1254,
+        1254
+      ],
+      "masterSHA256": "e581d74e14f182fdfb8481ae1969cf2a412581db70aa05775a5e693441f9a60d",
+      "constructionMasterSHA256": null
+    },
+    {
+      "id": "ashenGate",
+      "label": "Ashen Stake Gate",
+      "faction": "ashen",
+      "kind": "gate",
+      "renderSize": 250,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "796babe159eb3d3e30047b3daf1a7081c4994dff36deed10af7f560527d8e7b5",
+      "constructionMasterSHA256": null
+    },
+    {
+      "id": "ashenTower",
+      "label": "Ashen Stake Roost",
+      "faction": "ashen",
+      "kind": "solid",
+      "renderSize": 780,
+      "nativeSize": [
+        1536,
+        1024
+      ],
+      "masterSHA256": "3489dbabac223ddd6228c5992e5b5243d6d370bd2f7d92fb9add6bb8827413b2",
+      "constructionMasterSHA256": "09b0cbaeae75d11a1370464c4cf10668403329953b7cfa74e069da8f10e06854"
+    }
+  ],
+  "runtime": [
+    {
+      "file": "ashenCamp-foundation.webp",
+      "sha256": "a9674c31ed12d0bc676fcd03643203b9945d4a646b641fdcc86ba62885228499",
+      "bytes": 111410,
+      "width": 758,
+      "height": 449,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenCamp-nearComplete.webp",
+      "sha256": "c149e0cde822615d7955692f6a2f400e27d997d8fe56c4724ee59f405e3b19ed",
+      "bytes": 167828,
+      "width": 750,
+      "height": 538,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenCamp-partial.webp",
+      "sha256": "04b3a58b1dbfd5236c5cde86618fa180263e9c11859f26c62b8471d26810def1",
+      "bytes": 168084,
+      "width": 803,
+      "height": 501,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenCamp.webp",
+      "sha256": "56faa5fffd216977be14e2edb0c75a98db6cd4ace9fd5d7e1dc155d9859f538a",
+      "bytes": 481412,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenField.webp",
+      "sha256": "14f15ab8a47549b3e4625386ca4014fb8a7dd2fc8125fc1ef51645ccd4881a2d",
+      "bytes": 516280,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenGate-depth.webp",
+      "sha256": "e674cf8f3baf255c356074481e8bfd4690dd175829d491669527ba88957f5ed2",
+      "bytes": 75024,
+      "width": 611,
+      "height": 455,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenGate-diagonal-left.webp",
+      "sha256": "1b3531a74b6049f6534eb219fcaa12573d3d44839ebc7205857ecfb5e779953e",
+      "bytes": 103748,
+      "width": 760,
+      "height": 558,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenGate-diagonal-right.webp",
+      "sha256": "bc39d5e34aece18192de0654511d178bf23ff02ebe5be927ee5db0cb14fd3c80",
+      "bytes": 109214,
+      "width": 751,
+      "height": 677,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenGate-face.webp",
+      "sha256": "02b3d363c12e6b30c01128dbc0fcfe5a0c8e2f37c080a39e9b09d47f07913553",
+      "bytes": 97408,
+      "width": 818,
+      "height": 495,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenTimberRack-foundation.webp",
+      "sha256": "0a6a9a3f6fbe408e5631a05e5555136a458b26877dc647055d9f5e2f7aac983a",
+      "bytes": 115168,
+      "width": 706,
+      "height": 422,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenTimberRack-nearComplete.webp",
+      "sha256": "dcd57c87ede2cd6fc09656e2d2cc3b44dfb2519dec268f79aabca079032d30c6",
+      "bytes": 153036,
+      "width": 719,
+      "height": 515,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenTimberRack-partial.webp",
+      "sha256": "5d9374eacd31ab1f05c49ed60e1dd68e0bf6d2941801ea92986745cfc587781f",
+      "bytes": 156290,
+      "width": 775,
+      "height": 491,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenTimberRack.webp",
+      "sha256": "67fe1c6fd66fb55dbc4575d886571d05149087c7b6dbc14406c3af69214f5cb4",
+      "bytes": 481828,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenTower-foundation.webp",
+      "sha256": "8bef404ab14f65922b0714e14ace507eec7f26e363bb4606e39c961feadb6584",
+      "bytes": 79474,
+      "width": 545,
+      "height": 391,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenTower-nearComplete.webp",
+      "sha256": "3c1d9b69ec25795d240af26f1e1ec1541ff6c6b92356d5d3768fb5be545c2637",
+      "bytes": 124274,
+      "width": 721,
+      "height": 530,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenTower-partial.webp",
+      "sha256": "bc3b61a6fab5d98c2429f9c9593ef841654eb3f676aebaf931ad588be20e7a1d",
+      "bytes": 99992,
+      "width": 723,
+      "height": 482,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenTower.webp",
+      "sha256": "88ad7ab00a65ba1f51d5a9ef381a2f405243bf1cab0fbcd0f29b602534578099",
+      "bytes": 282198,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "ashenWall-depth.webp",
+      "sha256": "f8c8cc1c93823046c564a2e56a27fad02aa04317dcfe88530df4afb2fa1a8263",
+      "bytes": 51856,
+      "width": 345,
+      "height": 566,
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "ashenWall-diagonal-left.webp",
+      "sha256": "b06531ab0c0eedbbb2c01886b33c285805050565fa7d66c791731e4a195be185",
+      "bytes": 113854,
+      "width": 627,
+      "height": 632,
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "ashenWall-diagonal-right.webp",
+      "sha256": "6081e1c8786d092380e78947048569ec20c5670121e89b281c51779aeb647eb1",
+      "bytes": 110592,
+      "width": 602,
+      "height": 699,
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "ashenWall-face.webp",
+      "sha256": "97a38a191723ed35349ebdcc84cac6ebb73cc5b7255b8df8c039880a5c3f6e49",
+      "bytes": 185494,
+      "width": 801,
+      "height": 565,
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "barracks-foundation.webp",
+      "sha256": "ee46fa4b73075de904c17a993f3b3509076aa7e0a8c1ace97f285fc3953f063c",
+      "bytes": 130894,
+      "width": 742,
+      "height": 445,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "barracks-nearComplete.webp",
+      "sha256": "82f8115bede84588c2c501d6659318bffe86723e307acd5e21b014280920b962",
+      "bytes": 179570,
+      "width": 745,
+      "height": 554,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "barracks-partial.webp",
+      "sha256": "ab7375d6e1d17786627a5c81c3cb656e529d66aac82bc5005b746983dc38e0f2",
+      "bytes": 176256,
+      "width": 794,
+      "height": 481,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "barracks.webp",
+      "sha256": "914561404fb721ae772169360543a5a8be47e5e9322fc56f5248ec60d091f264",
+      "bytes": 494278,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "beastCorral-foundation.webp",
+      "sha256": "a8d9bec7e1839175b250aaf8e8c649206f9c70befbfc0f4b024a342f9fabe5db",
+      "bytes": 117246,
+      "width": 735,
+      "height": 461,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "beastCorral-nearComplete.webp",
+      "sha256": "b82da8689927fc7c25081511d8f5cc24917afce8a37c545a15d4bf6cb3c8c250",
+      "bytes": 160852,
+      "width": 736,
+      "height": 515,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "beastCorral-partial.webp",
+      "sha256": "08fd6053fdd86c4b3f61a9d20ed3cfdbf05b8cd49e13a67655279074648edb44",
+      "bytes": 161780,
+      "width": 745,
+      "height": 492,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "beastCorral.webp",
+      "sha256": "1add31cfc8c2e4eabfe8c752a9b20935d2e97b374fb86c53cd63480cad32b197",
+      "bytes": 470162,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "field.webp",
+      "sha256": "3510e1488c982db09620d0270cf9db7fc2ea337c3916db9d0dc7bdcaff7fd7cb",
+      "bytes": 518894,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "gate-depth.webp",
+      "sha256": "43ff9c81bbb4f1131e3ae80a5561adcdb25b36274a8155606bb7f73e229759e5",
+      "bytes": 135900,
+      "width": 569,
+      "height": 602,
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "gate-diagonal-left.webp",
+      "sha256": "2590543fe7fafd6ba67f25f65742a1ed2e1efc6b2512c329e8bde619c0e108c5",
+      "bytes": 134854,
+      "width": 624,
+      "height": 615,
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "gate-diagonal-right.webp",
+      "sha256": "a321c5c87bbe6094d22f108979177e9485c72794ae8b30ba3a25689f21c125e5",
+      "bytes": 133602,
+      "width": 582,
+      "height": 612,
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "gate-face.webp",
+      "sha256": "ec00f737db4442185bd3539dc91dd3265eb5af9030e4589a101c947a7de4245f",
+      "bytes": 134144,
+      "width": 671,
+      "height": 591,
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "grainMill-foundation.webp",
+      "sha256": "39117b1490d88c5635e1742a3b8fda6567ed6ed790662af0adfdb8509f35aa66",
+      "bytes": 91522,
+      "width": 681,
+      "height": 408,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "grainMill-nearComplete.webp",
+      "sha256": "0281bc2f3200e8d9a9ce4651ea96cc9817260be0baecc020f6096537f3c7afa6",
+      "bytes": 142254,
+      "width": 719,
+      "height": 517,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "grainMill-partial.webp",
+      "sha256": "93381164724a2a2f7f24896857d3e6b601af5b257c05100ac8c1867d62329322",
+      "bytes": 136988,
+      "width": 705,
+      "height": 480,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "grainMill.webp",
+      "sha256": "c00ddff43b5c52d446da499a05d75154ef0b2ab01478dd64285cada8f2fad6bd",
+      "bytes": 362770,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "granary-foundation.webp",
+      "sha256": "8101e0b3b4bebce4489b6d1cbf75ff4fc6b54cfa98c7d4d51691f396e674de58",
+      "bytes": 43794,
+      "width": 781,
+      "height": 393,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "granary-nearComplete.webp",
+      "sha256": "36837b3b93b03118f2c335b6e1902893b5870a139ce4fc03524dca60b0036ffc",
+      "bytes": 85874,
+      "width": 717,
+      "height": 487,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "granary-partial.webp",
+      "sha256": "b950d3451e6608f0274927ccf0b8abd7829862371ce218e7a76c08f543a6f6be",
+      "bytes": 88122,
+      "width": 703,
+      "height": 468,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "granary.webp",
+      "sha256": "95c6a569ceb050db54a119dfd681afc4c106528f24a2a8fbd8b14f65d65afa8d",
+      "bytes": 360794,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "hideHomestead-foundation.webp",
+      "sha256": "69c036ca8e634a5e2c77d84863c8875c20e681be155da30245b9d8c413ea0ce5",
+      "bytes": 86498,
+      "width": 712,
+      "height": 466,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "hideHomestead-nearComplete.webp",
+      "sha256": "33aba76e5ab2e9e94e55b8b2e50a2e803e6d9e2cfbd9f459695922e4f6fb0f7e",
+      "bytes": 168680,
+      "width": 768,
+      "height": 515,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "hideHomestead-partial.webp",
+      "sha256": "32a92f7524154c2295798cf6d1ca10d0a4e11d44ef99d6de9d6c088855549987",
+      "bytes": 166144,
+      "width": 848,
+      "height": 479,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "hideHomestead.webp",
+      "sha256": "f87ea8c7d3b7d6eb752cff42f639fb202efacce2a3ee06c5cdb39ba1c716bfd6",
+      "bytes": 477464,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "homestead-foundation.webp",
+      "sha256": "a5714af7e0e2654331ce210a7b0c5ca1b6412980c5c7bb7ea00c7bcafd81537f",
+      "bytes": 128744,
+      "width": 758,
+      "height": 455,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "homestead-nearComplete.webp",
+      "sha256": "42b73567efabe7e1877958cffafb0a04c005d3f99a54e87dd845f8b24d4385d8",
+      "bytes": 173278,
+      "width": 796,
+      "height": 522,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "homestead-partial.webp",
+      "sha256": "de5bb48b4ceb94dfe610bccc6be834b806a4259e457132fb9b1d3ae6c9baa40a",
+      "bytes": 170348,
+      "width": 747,
+      "height": 481,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "homestead.webp",
+      "sha256": "31246bd0824aedcd00f60dc15b688b270351918c807e7719505a52499f9c90ca",
+      "bytes": 406112,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "house-foundation.webp",
+      "sha256": "17d91e07422a185065dcee5e72deb0acc923968383f1c42afa9519c3e740252d",
+      "bytes": 99648,
+      "width": 695,
+      "height": 467,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "house-nearComplete.webp",
+      "sha256": "26b73424cc90a151568ec1f34fde21722af03bcd21b155f0feadf7293b04208c",
+      "bytes": 160810,
+      "width": 696,
+      "height": 529,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "house-partial.webp",
+      "sha256": "4217ef66105029f0601008bb25bb2ed55b6e21276d92c40d9e162d0dd67a3c4f",
+      "bytes": 152236,
+      "width": 696,
+      "height": 488,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "house.webp",
+      "sha256": "96ad06564acb1f73dc2b88a96d99e8adf347d3b65747fee89bcf2b49c1f666cf",
+      "bytes": 423222,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "lumberMill-foundation.webp",
+      "sha256": "9c9b425efd0ccb028060d9888af3c39c1eb269d2a7be55b8a968f7a434f735e9",
+      "bytes": 91190,
+      "width": 687,
+      "height": 371,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "lumberMill-nearComplete.webp",
+      "sha256": "a5e61c536e80e67b62e43b3e833c36502e88ea1768efaaac6f8a45561154fbe2",
+      "bytes": 139804,
+      "width": 719,
+      "height": 537,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "lumberMill-partial.webp",
+      "sha256": "4e22859dc6eb2aae6bc83e1f1e169b1c5121d4cefc6860659c8c54847e3cad02",
+      "bytes": 138482,
+      "width": 653,
+      "height": 488,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "lumberMill.webp",
+      "sha256": "425bc4fd283446097be11955d2347d2241faf5cdb304432f61fedd737a994866",
+      "bytes": 331434,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "file": "oreHearth-foundation.webp",
+      "sha256": "a45f82806ca0ee78ad893af3932d65b2f84e51ca335bb1ea87991e2241842363",
+      "bytes": 104056,
+      "width": 738,
+      "height": 466,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "oreHearth-nearComplete.webp",
+      "sha256": "c97cb8c10af1fc7de1a6a64760a1712f379e4853672fdda3a11ebd307d0110c0",
+      "bytes": 146780,
+      "width": 742,
+      "height": 519,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "oreHearth-partial.webp",
+      "sha256": "a82b9a975b5c3a5452d933046b654c8dce30045928d3bcdc7a4e784818cbd9f4",
+      "bytes": 161016,
+      "width": 843,
+      "height": 500,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "oreHearth.webp",
+      "sha256": "27120641f59d9711d82e157cb5b791d316649eaeec981bfac910b2f6d9108e4d",
+      "bytes": 525588,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "oreWash-foundation.webp",
+      "sha256": "a2e3ac963c2695bba0107e434ad761b7c4216b79faf28453cc94e1b46b142cd4",
+      "bytes": 110420,
+      "width": 739,
+      "height": 436,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "oreWash-nearComplete.webp",
+      "sha256": "fd041bdacc9566555fb263bdbfc3153a6bec7f6bf1f75b68f6d2b90388803a34",
+      "bytes": 163708,
+      "width": 736,
+      "height": 551,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "oreWash-partial.webp",
+      "sha256": "5f5f56bedb80455733b012f7ebb0b7c9dc64ee53a9c4184e6c1d6071c59596ff",
+      "bytes": 165970,
+      "width": 737,
+      "height": 521,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "oreWash.webp",
+      "sha256": "2f302342c596d6d14ebc8cc10f57b7c076973c68f817a1b71214ab0da79e875f",
+      "bytes": 410684,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "palisadeJunction.webp",
+      "sha256": "7895d3d7428065d38e2973e98a69bf8d0e707c53d132a1cba4f888ec842ee285",
+      "bytes": 198516,
+      "width": 1024,
+      "height": 1536,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "palisadeTower-foundation.webp",
+      "sha256": "36e91df19462593ff63b9eca90cd013d373c168f93ef93fedf5b9da81474374f",
+      "bytes": 48196,
+      "width": 487,
+      "height": 571,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "palisadeTower-nearComplete.webp",
+      "sha256": "95eaca30f8f31bbe44d343a3448fc568ceb70fb8d744c9274104cd11f6faa3cd",
+      "bytes": 107374,
+      "width": 506,
+      "height": 774,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "palisadeTower-partial.webp",
+      "sha256": "7be682db32ebb3e3736313d4a1156967bdc730af9136a9ce6660a72896c4730d",
+      "bytes": 114422,
+      "width": 680,
+      "height": 682,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "palisadeTower.webp",
+      "sha256": "41871385a404f6723604a54fa5451d89f1c64f43f59f58dffd61b57b18e4ac4c",
+      "bytes": 388182,
+      "width": 1024,
+      "height": 1536,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "quarry-foundation.webp",
+      "sha256": "bfe8a240d07caa71ba704c7b27897e5570d2cfbffd20bb5eee9c3a0dec20d0d2",
+      "bytes": 128208,
+      "width": 768,
+      "height": 476,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "quarry-nearComplete.webp",
+      "sha256": "006225929c581c547a995f2cba26a0294cd4539f8ddff2720cb0b9c01db469fc",
+      "bytes": 169452,
+      "width": 772,
+      "height": 511,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "quarry-partial.webp",
+      "sha256": "54041d64e0868b3b6210a5b307c204b0413a48453a6f11bb0aa8ea681d4b08d8",
+      "bytes": 164728,
+      "width": 761,
+      "height": 493,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "quarry.webp",
+      "sha256": "1a2f411a2e313ba3ca3465d3581eee95e7d120a3464027f8842966c1c414c4da",
+      "bytes": 560806,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "reaverLodge-foundation.webp",
+      "sha256": "140e83944539a71e0ff70e557c10bb5c3b2316cbf32a1888b9d1a456afa461b3",
+      "bytes": 145436,
+      "width": 767,
+      "height": 476,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "reaverLodge-nearComplete.webp",
+      "sha256": "8628e54063074ed46190c5d204a25fb0813fd0a20296f350696744fe12299c3c",
+      "bytes": 188466,
+      "width": 774,
+      "height": 533,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "reaverLodge-partial.webp",
+      "sha256": "27e4d188c64d8c869cf98a783989a51abcde7c69598b21b46d4e335c32dfcbdd",
+      "bytes": 187684,
+      "width": 769,
+      "height": 499,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "reaverLodge.webp",
+      "sha256": "9cf8f7e88c966a509698adbc2389d55fac20537cc26ab45ef18cfac299a89b69",
+      "bytes": 532850,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "road.webp",
+      "sha256": "b6dd0e7a0686b1c7fdefe353af6dd9b1c8f37cfc3ae18f9209053684c5a69eea",
+      "bytes": 703214,
+      "width": 1254,
+      "height": 1254,
+      "alphaRange": null
+    },
+    {
+      "file": "signalRoost-foundation.webp",
+      "sha256": "88501150a4d2c74b711d7b98e6b2a2ab1daff5c610297812fdf073d017d8800e",
+      "bytes": 73948,
+      "width": 742,
+      "height": 415,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "signalRoost-nearComplete.webp",
+      "sha256": "68e8a4c5fe34c1685388671ec796acdd73f58f6cf9ce0b23c09494165e39e38e",
+      "bytes": 110358,
+      "width": 691,
+      "height": 538,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "signalRoost-partial.webp",
+      "sha256": "82166dd2f9ef442e5f7356d0b3664ec227ee7aad929f4dca7eb0a9cf75ff43b9",
+      "bytes": 91800,
+      "width": 737,
+      "height": 544,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "signalRoost.webp",
+      "sha256": "f7ff8b07416bfb6699cf29fb0b48b9621a68cfd3c2a71cb2e280f9a50324aafa",
+      "bytes": 279824,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "smokeGranary-foundation.webp",
+      "sha256": "c2c9ba332d9c846b6c4107b945fdb7a3681f055c621ef87cf12471bbe84d395a",
+      "bytes": 82796,
+      "width": 765,
+      "height": 453,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "smokeGranary-nearComplete.webp",
+      "sha256": "af6578033c88fc3309f50122eb3aee33a08d3d81a07cc1fe6a5a6d1d28fedae5",
+      "bytes": 154850,
+      "width": 781,
+      "height": 545,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "smokeGranary-partial.webp",
+      "sha256": "47334066f06fd8c146baef8dfe8588fd47fd6c6572cc76e2c9b17ea3a25bbf7c",
+      "bytes": 143174,
+      "width": 773,
+      "height": 503,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "smokeGranary.webp",
+      "sha256": "d41f8a23e157d374b9f00b1bda1de124bcb03524270c940bfa48b80669d61918",
+      "bytes": 323076,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stable-foundation.webp",
+      "sha256": "0acc1c3f4352d5bf516f9bd7d7de99e8344735c335794c78b3dd1c806701f7ef",
+      "bytes": 98806,
+      "width": 739,
+      "height": 431,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stable-nearComplete.webp",
+      "sha256": "6af8875c1b1c4b89d1484b78c239f8949f693b2812d25f8fba9038cf9c900d69",
+      "bytes": 136424,
+      "width": 755,
+      "height": 463,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stable-partial.webp",
+      "sha256": "708d979750f40cc74e2268a93b7f40d93a8cd66c604db6b4b60aaf3c51191986",
+      "bytes": 145462,
+      "width": 870,
+      "height": 477,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stable.webp",
+      "sha256": "98a23fc32bed626104ea5f93cf5d176ce11fab59800f89486162503aca517e02",
+      "bytes": 510502,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stonebreakYard-foundation.webp",
+      "sha256": "ab439de501c76e6ec37a7fffaf8c3f60dee2a99d6c0d504d004e9672ea729db6",
+      "bytes": 116824,
+      "width": 754,
+      "height": 448,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stonebreakYard-nearComplete.webp",
+      "sha256": "aea498c5cf35df8a008261ef7eccf8090fa3f2452c3d02fd6e182fc905faf01d",
+      "bytes": 170742,
+      "width": 742,
+      "height": 533,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stonebreakYard-partial.webp",
+      "sha256": "bdb2793b21792264f1c04042ad9356266bc8d17b28c141198f90c30dbeee1f7f",
+      "bytes": 165970,
+      "width": 861,
+      "height": 509,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stonebreakYard.webp",
+      "sha256": "5d5be767d6bf87f695a17c72726b789c5650d4ca97ec9934403536933174a176",
+      "bytes": 515564,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stonewrightYard-foundation.webp",
+      "sha256": "ca44418b0f511cdd1d99a8efc39dd289a69b81ad34b871dcd3480cd0e415dead",
+      "bytes": 109676,
+      "width": 737,
+      "height": 393,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stonewrightYard-nearComplete.webp",
+      "sha256": "c1639276ce9a61eb7a12b8d6afb4823d35923841ca6d8a655a782aab293b63be",
+      "bytes": 168860,
+      "width": 764,
+      "height": 536,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stonewrightYard-partial.webp",
+      "sha256": "cf86651362a8b19ae1a7a9ffc94f4f4d16c6be54612b045245b074c9b97fae7f",
+      "bytes": 152272,
+      "width": 750,
+      "height": 487,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "stonewrightYard.webp",
+      "sha256": "159e838e9381afc14f03caae7f3fc0301c510aba1b45dad36c59fde8e7421d7e",
+      "bytes": 419310,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "storehouse-foundation.webp",
+      "sha256": "d9899a6827a42932fce8e495611e03f56e9bdc66fecdcaf818b97344804332e9",
+      "bytes": 75538,
+      "width": 737,
+      "height": 451,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "storehouse-nearComplete.webp",
+      "sha256": "cfde847e2383480e4cf7998156d58982474c3c709e1c06ea66dae90b1ad6e00b",
+      "bytes": 151338,
+      "width": 745,
+      "height": 449,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "storehouse-partial.webp",
+      "sha256": "fe1fdc18e6b552c9107cdb1a03661754fcf09b1d394001818355c9470503f846",
+      "bytes": 164918,
+      "width": 793,
+      "height": 457,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "storehouse.webp",
+      "sha256": "c588e772bd1f26ca46c8f60e120a16e30abc95cbb8200728b0253b5298e69a68",
+      "bytes": 404590,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "timberYard-foundation.webp",
+      "sha256": "ffcbfde35c40f1e245c5ade696456d43891e5d9a01bd664ad1511484e31956e0",
+      "bytes": 105300,
+      "width": 752,
+      "height": 314,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "timberYard-nearComplete.webp",
+      "sha256": "d35c6bca23c10ac2e1659eb2ed619e737b7c15e734237b704336bdf2a14110b7",
+      "bytes": 166642,
+      "width": 755,
+      "height": 546,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "timberYard-partial.webp",
+      "sha256": "b31a511ea41269cbf4993b832bf031f3f41232255f96f5d3f818eec8dcb05e68",
+      "bytes": 154760,
+      "width": 760,
+      "height": 479,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "timberYard.webp",
+      "sha256": "d0785c7f471bdbb698eaa5f7b11cdfb7592a7dfae16dd39bc97e226cfb65fe80",
+      "bytes": 476348,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "townCenter-foundation.webp",
+      "sha256": "f917eec5ce312f198a8cd3315433d5bef81a0387b635d89eedd154d60d1ad680",
+      "bytes": 112332,
+      "width": 760,
+      "height": 428,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "townCenter-nearComplete.webp",
+      "sha256": "23a7a11ac62956945f94396c7d35634d5f43d4447393279f3953a29a8578a449",
+      "bytes": 141392,
+      "width": 768,
+      "height": 533,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "townCenter-partial.webp",
+      "sha256": "ed194bcbebd8b337224de0a275d9636f61c65502308655238f841c4efbaf2521",
+      "bytes": 132314,
+      "width": 750,
+      "height": 473,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "townCenter.webp",
+      "sha256": "87d82041959fb3a18e9d8a2ab9c30fb3e1327c90cedcd34f093cc884390c3b95",
+      "bytes": 541522,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "wall-depth.webp",
+      "sha256": "c3d1b792ba909b70548d8c4e40ca58cfcfc34e78a3bb6c2c2c77aef95b895ccc",
+      "bytes": 29898,
+      "width": 322,
+      "height": 501,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "wall-diagonal-left.webp",
+      "sha256": "e243b2c384e22dbb917ecece67ad52691083abc9288d3adc9883a2d6180b424a",
+      "bytes": 134826,
+      "width": 731,
+      "height": 727,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "wall-diagonal-right.webp",
+      "sha256": "dbe43125085432b4c3c1ea06c43fb6d760a6f7bbb59b5ef64fecd6ee379d291a",
+      "bytes": 138776,
+      "width": 737,
+      "height": 695,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "wall-face.webp",
+      "sha256": "b923c05555cdb5dabc853a5e431ad3d974b2dbd960f8d084f9ee0ad4eab09dd6",
+      "bytes": 157732,
+      "width": 930,
+      "height": 410,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "watchHut-foundation.webp",
+      "sha256": "f670dc63eee2e5efec52d1e8df2616304bfd0beb19202c1dd853637864150e6e",
+      "bytes": 76942,
+      "width": 711,
+      "height": 485,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "watchHut-nearComplete.webp",
+      "sha256": "646f8418eed78b8ae7143f78fae6efea9d457db24c8d263c60afe5c34b3e216a",
+      "bytes": 125412,
+      "width": 759,
+      "height": 530,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "watchHut-partial.webp",
+      "sha256": "72bc464fd622215d2ce4f6f0584671df2b1d1c8a21d8e3bd860ad713b1b43d04",
+      "bytes": 110314,
+      "width": 634,
+      "height": 498,
+      "alphaRange": [
+        0,
+        254
+      ]
+    },
+    {
+      "file": "watchHut.webp",
+      "sha256": "aec99939be306e1760864211c950537d572b8be1cc2a9089682acd69e6e07aca",
+      "bytes": 255024,
+      "width": 1536,
+      "height": 1024,
+      "alphaRange": [
+        0,
+        254
+      ]
+    }
+  ]
+}

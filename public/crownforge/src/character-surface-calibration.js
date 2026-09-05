@@ -1,7 +1,7 @@
-import ashenHearthkin from './surface-calibration/ashen-hearthkin.js?v=20260905-rosterfit1';
-import crownMilitary from './surface-calibration/crown-military.js?v=20260905-rosterfit1';
-import ashenMilitary from './surface-calibration/ashen-military.js?v=20260905-rosterfit1';
-import mounted from './surface-calibration/mounted.js?v=20260905-rosterfit1';
+import ashenHearthkin from './surface-calibration/ashen-hearthkin.js?v=20260905-buildings1';
+import crownMilitary from './surface-calibration/crown-military.js?v=20260905-buildings1';
+import ashenMilitary from './surface-calibration/ashen-military.js?v=20260905-buildings1';
+import mounted from './surface-calibration/mounted.js?v=20260905-buildings1';
 
 export const CHARACTER_SURFACE_CALIBRATIONS={...ashenHearthkin,...crownMilitary,...ashenMilitary,...mounted};
 const normalize=(point,rect)=>[(point[0]-rect[0])/rect[2],(point[1]-rect[1])/rect[3]];

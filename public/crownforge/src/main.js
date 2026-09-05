@@ -1,11 +1,12 @@
-import { setupPresentation } from './presentation.js?v=20260904-rosterkin1';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260904-rosterkin1';
-import { CrownforgeAudio } from './audio.js?v=20260821-hallwoodpass2';
-import { CrownforgeInput } from './input.js?v=20260828-latencypass1';
-import { CrownforgeRenderer } from './renderer.js?v=20260905-meadow1';
-import { CrownforgeSimulation } from './simulation.js?v=20260904-rosterkin1';
-import { CrownforgePerformanceMonitor } from './performance.js?v=20260824-perfpass1';
-import { summarizeUnitTasks } from './task-summary.js?v=20260831-firstage2';
+import { setupPresentation } from './presentation.js?v=20260905-buildings1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260905-buildings1';
+import { CrownforgeAudio } from './audio.js?v=20260905-buildings1';
+import { CrownforgeInput } from './input.js?v=20260905-buildings1';
+import { CrownforgeRenderer } from './renderer.js?v=20260905-buildings1';
+import { CrownforgeSimulation } from './simulation.js?v=20260905-buildings1';
+import { CrownforgePerformanceMonitor } from './performance.js?v=20260905-buildings1';
+import { summarizeUnitTasks } from './task-summary.js?v=20260905-buildings1';
+import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260905-buildings1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -60,6 +61,31 @@ const logisticsList = document.querySelector('#logistics-list');
 const demolitionModeButton = document.querySelector('#demolition-mode');
 const saveGameButton = document.querySelector('#save-game');
 const loadGameButton = document.querySelector('#load-game');
+const buildingSaveBackup = document.querySelector('#building-save-backup');
+function updateBackupControls() {
+  try { buildingSaveBackup.hidden = !previousBuildingSave(localStorage); }
+  catch { buildingSaveBackup.hidden = true; }
+}
+function downloadOriginalSave() {
+  const original = previousBuildingSave(localStorage);
+  if (!original) return false;
+  const url = URL.createObjectURL(new Blob([original], {type:'application/json'}));
+  const link = document.createElement('a'); link.href=url; link.download='crownforge-original-settlement.json';
+  link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  return true;
+}
+document.querySelector('#download-building-backup')?.addEventListener('click', () => {
+  try { downloadOriginalSave(); } catch { announce('The original save could not be downloaded.'); }
+});
+document.querySelector('#restore-building-backup')?.addEventListener('click', () => {
+  try {
+    if (restorePreviousBuildingSave(localStorage)) {
+      downloadOriginalSave();
+      announce('Original save file restored. Choose Load to open it; the current session is still running.');
+    }
+  } catch { announce('The original save file could not be restored.'); }
+});
+updateBackupControls();
 const copySeedButton = document.querySelector('#copy-seed');
 const worldSeedLabel = document.querySelector('#world-seed');
 const eventHistoryList = document.querySelector('#event-history-list');
@@ -433,6 +459,7 @@ saveGameButton?.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
   const saved = simulation.saveToStorage();
+  updateBackupControls();
   if (!saved) audio.play('invalid');
   updateUi();
 });
@@ -441,6 +468,7 @@ loadGameButton?.addEventListener('click', () => {
   audio.unlock();
   audio.ui();
   const loaded = simulation.loadFromStorage();
+  updateBackupControls();
   if (loaded) {
     audio.reset(simulation);
     input.cancelBuildMode();
@@ -452,7 +480,7 @@ loadGameButton?.addEventListener('click', () => {
     audio.command('move');
   } else {
     audio.play('invalid');
-    announce('No Crownforge save is available in this browser.');
+    announce(simulation.lastCommand);
   }
   updateUi();
 });

@@ -1,3 +1,6 @@
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
+import { polygonBounds } from './building-geometry.js?v=20260905-buildings1';
+
 export const CONFIG = {
   // The current green diamond is expanded to roughly ten times its former
   // area. Most of that land is first-age wildwood: the two factions begin in
@@ -9,10 +12,10 @@ export const CONFIG = {
   tileHeight: 26,
   initialZoom: 0.28,
   minZoom: 0.035,
-  maxZoom: 1.16,
+  maxZoom: 2.4,
   // Keep the first-age Crown Hall below the top HUD with a readable southern
   // approach and open construction space around the civic core.
-  initialCameraWorld: { x: 82, z: 90 },
+  initialCameraWorld: { x: 70, z: 78 },
   // The normal slice uses a readable population ceiling. The 999-capacity
   // sandbox remains available through ?stress=1 for profiling and QA rather
   // than making every first match pay the cost of a stress test.
@@ -1744,3 +1747,21 @@ export const COMBAT_ATLASES = {
 };
 
 export const INITIAL_RESOURCES = { food: 5000, wood: 5000, stone: 5000, gold: 5000 };
+
+// Original high-detail plates and their measured outlines stay together.
+// Unit rigs, building costs, production roles and field passability are unchanged.
+for (const [type, art] of Object.entries(BUILDING_DEPTH)) {
+  const blueprint = BUILDING_TYPES[type];
+  if (!blueprint) continue;
+  blueprint.renderSize = art.renderSize;
+  const assets = ASHEN_BUILDING_ASSETS[type] ? ASHEN_BUILDING_ASSETS : FIRST_AGE_ASSETS;
+  assets[type] = { ...assets[type], src: art.src, width: art.width, height: art.height, groundAnchorY: art.groundAnchorY };
+  if (type === 'ashenCamp') Object.assign(ENEMY_CAMP_ASSET, assets[type]);
+  if (art.kind !== 'solid') continue;
+  const bounds = polygonBounds(art.polygons.material);
+  blueprint.collisionFootprint = { width: bounds.maxX - bounds.minX, height: bounds.maxZ - bounds.minZ };
+  blueprint.collisionOffset = { x: (bounds.minX + bounds.maxX) / 2, z: (bounds.minZ + bounds.maxZ) / 2 };
+  blueprint.collisionClearance = 0;
+  blueprint.unitExclusionPadding = 0;
+  delete blueprint.stairAccess;
+}

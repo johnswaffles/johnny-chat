@@ -1,6 +1,6 @@
-import { BUILDING_TYPES, CONFIG } from '../src/config.js?v=20260827-walljoin1';
-import { CrownforgeRenderer } from '../src/renderer.js?v=20260827-walljoin1';
-import { CrownforgeSimulation } from '../src/simulation.js?v=20260827-walljoin1';
+import { BUILDING_TYPES, CONFIG } from '../src/config.js?v=20260905-buildings1';
+import { CrownforgeRenderer } from '../src/renderer.js?v=20260905-buildings1';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260905-buildings1';
 
 const canvas = document.querySelector('#game-canvas');
 const renderer = new CrownforgeRenderer(canvas);
@@ -15,7 +15,7 @@ simulation.resources.wood = 99999;
 simulation.resources.stone = 99999;
 
 const focus = { x: CONFIG.mapWidth / 2, z: CONFIG.mapHeight / 2 };
-renderer.camera.zoom = 0.72;
+renderer.camera.zoom = Math.min(0.5, renderer.width / 2400, renderer.height / 1400);
 const baseX = (focus.x - focus.z - (CONFIG.mapWidth - CONFIG.mapHeight) / 2) * CONFIG.tileWidth / 2;
 const baseY = (focus.x + focus.z - (CONFIG.mapWidth + CONFIG.mapHeight) / 2) * CONFIG.tileHeight / 2;
 renderer.camera.x = -baseX * renderer.camera.zoom;
@@ -28,7 +28,7 @@ simulation.selectedIds = [builder.id];
 simulation._syncSelectionFlags();
 
 function worldAt(screen) {
-  return renderer.screenToWorld(screen);
+  return renderer.screenToWorld({ x: screen.x * renderer.width / 1536, y: screen.y * renderer.height / 800 });
 }
 
 function addWall(start, direction, count = 4, progress = 1) {
@@ -76,9 +76,9 @@ function addGate(screen, direction) {
 }
 
 // Exact combinations that previously escaped metadata-only regression tests.
-addGroundedCorner({ x: 300, y: 285 });
-addGroundedCorner({ x: 760, y: 285 }, 0.04);
-addGroundedCorner({ x: 1215, y: 285 }, 1);
+addGroundedCorner({ x: 300, y: 350 });
+addGroundedCorner({ x: 760, y: 350 }, 0.04);
+addGroundedCorner({ x: 1215, y: 350 }, 1);
 addGate({ x: 245, y: 665 }, { x: 1, z: 0 });
 addGate({ x: 600, y: 665 }, { x: 0, z: 1 });
 addGate({ x: 960, y: 665 }, { x: Math.SQRT1_2, z: -Math.SQRT1_2 });

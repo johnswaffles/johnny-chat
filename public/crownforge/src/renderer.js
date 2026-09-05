@@ -1,10 +1,13 @@
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260905-rosterfit1';
-import { drawHearthkinWard } from './hearthkin-rig.js?v=20260905-rosterfit1';
-import { CrownforgeLandscape } from './landscape.js?v=20260905-meadow1';
-import { CrownforgeMeadow } from './meadow.js?v=20260905-meadow1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260904-rosterkin1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260904-rosterkin1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260904-rosterkin1';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260905-buildings1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
+import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260905-buildings1';
+import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260905-buildings1';
+import { drawHearthkinWard } from './hearthkin-rig.js?v=20260905-buildings1';
+import { CrownforgeLandscape } from './landscape.js?v=20260905-buildings1';
+import { CrownforgeMeadow } from './meadow.js?v=20260905-buildings1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260905-buildings1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260905-buildings1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260905-buildings1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -173,7 +176,7 @@ export class CrownforgeRenderer {
     this.roadsideProps.src = ROAD_DETAILS_ATLAS.src;
     this.environmentAtlas.src = ENVIRONMENT_ATLAS.src;
     this.treeAtlas.src = TREE_ATLAS.src;
-    this.buildingStages.src = BUILDING_STAGE_ATLAS.src;
+    if (Object.keys(BUILDING_TYPES).some(type => !BUILDING_DEPTH[type] && !BUILDING_COMPONENTS[type])) this.buildingStages.src = BUILDING_STAGE_ATLAS.src;
     this.treeGroveAtlas.src = TREE_GROVE_ATLAS.src;
     this.ancientForestAtlas.src = ANCIENT_FOREST_ATLAS.src;
     this.wildwoodForestAtlas.src = WILDWOOD_FOREST_ATLAS.src;
@@ -189,12 +192,14 @@ export class CrownforgeRenderer {
     this.firstAgeAssets = {};
     this.firstAgeConstructionAssets = {};
     for (const [key, definition] of Object.entries(FIRST_AGE_ASSETS)) {
+      const componentKey = {wallDiagonalLeft:'wall',wallFace:'wall',wallDepth:'wall'}[key] ?? key;
+      if (BUILDING_COMPONENTS[componentKey] && !BUILDING_DEPTH[key]) continue;
       const image = new Image();
       this.firstAgeAssets[key] = image;
       this.firstAgeAssetReady[key] = false;
       image.addEventListener('load', () => { this.firstAgeAssetReady[key] = true; });
       image.src = definition.src;
-      const constructionStages = definition.constructionStages ?? {};
+      const constructionStages = BUILDING_DEPTH[key] ? {} : (definition.constructionStages ?? {});
       this.firstAgeConstructionAssets[key] = {};
       this.firstAgeConstructionAssetReady[key] = {};
       for (const [stage, stageDefinition] of Object.entries(constructionStages)) {
@@ -204,7 +209,7 @@ export class CrownforgeRenderer {
         stageImage.addEventListener('load', () => { this.firstAgeConstructionAssetReady[key][stage] = true; });
         stageImage.src = stageDefinition.src;
       }
-      const constructionAtlas = definition.constructionAtlas;
+      const constructionAtlas = BUILDING_DEPTH[key] ? null : definition.constructionAtlas;
       if (constructionAtlas) {
         const stageAtlas = new Image();
         this.firstAgeConstructionAtlases[key] = stageAtlas;
@@ -223,13 +228,13 @@ export class CrownforgeRenderer {
     }
     this.ashenSupportAtlas = new Image();
     this.ashenSupportAtlas.addEventListener('load', () => { this.ashenSupportAtlasReady = true; });
-    this.ashenSupportAtlas.src = ASHEN_BUILDING_ASSETS.smokeGranary.atlas.src;
+    if (!BUILDING_DEPTH.smokeGranary) this.ashenSupportAtlas.src = ASHEN_BUILDING_ASSETS.smokeGranary.atlas.src;
     this.ashenFortificationAtlas = new Image();
     this.ashenFortificationAtlas.addEventListener('load', () => { this.ashenFortificationAtlasReady = true; });
-    this.ashenFortificationAtlas.src = ASHEN_BUILDING_ASSETS.ashenWall.atlas.src;
+    if (!BUILDING_COMPONENTS.ashenWall) this.ashenFortificationAtlas.src = ASHEN_BUILDING_ASSETS.ashenWall.atlas.src;
     this.ashenConstructionAtlas = new Image();
     this.ashenConstructionAtlas.addEventListener('load', () => { this.ashenConstructionAtlasReady = true; });
-    this.ashenConstructionAtlas.src = ASHEN_BUILDING_ASSETS.reaverLodge.constructionAtlas.src;
+    if (!BUILDING_COMPONENTS.reaverLodge?.stages) this.ashenConstructionAtlas.src = ASHEN_BUILDING_ASSETS.reaverLodge.constructionAtlas.src;
     for (const [key, definition] of Object.entries(VILLAGER_ATLASES)) {
       if (!definition.src) continue;
       const image = new Image();
@@ -1292,7 +1297,7 @@ export class CrownforgeRenderer {
       if (building.destroyed || building.hp <= 0 || (this.viewportBounds && !this.isWorldVisible(building, this.entityCullRadius(building)))) continue;
       const anchor = this.worldToScreen(building);
       const size = this.buildingRenderSize(building) * this.camera.zoom;
-      const definition = FIRST_AGE_ASSETS[building.type];
+      const definition = FIRST_AGE_ASSETS[building.type] ?? ASHEN_BUILDING_ASSETS[building.type];
       const aspect = definition ? definition.width / definition.height : 1;
       const height = size / aspect;
       const withinX = Math.abs(point.x - anchor.x) <= size * 0.66;
@@ -1419,6 +1424,28 @@ export class CrownforgeRenderer {
     this.drawAtlasCell(ctx, this.wildwoodForestAtlas, this.wildwoodForestReady, WILDWOOD_FOREST_ATLAS, column, row, screen, size, alpha);
   }
 
+  depthComponentImage(definition) {
+    this.depthComponentImages ??= new Map();
+    let image=this.depthComponentImages.get(definition.src);
+    if (!image) {
+      image=new Image();this.depthComponentImages.set(definition.src,image);
+      image.addEventListener('load',()=>this.invalidateStaticLayer());image.src=definition.src;
+    }
+    return image;
+  }
+
+  drawDepthComponent(ctx, definition, screen, size, alpha=1) {
+    if (!definition) return false;
+    const image=this.depthComponentImage(definition);
+    if (!image.complete || !image.naturalWidth) return false;
+    const width=size*(definition.renderScale??1);
+    const height=width*definition.height/definition.width*(definition.verticalScale??1);
+    ctx.save();ctx.globalAlpha=alpha;ctx.imageSmoothingEnabled=true;
+    ctx.translate(screen.x,screen.y);ctx.transform(1,definition.shearY??0,0,1,0,0);
+    ctx.drawImage(image,-width*(definition.groundAnchorX??.5),-height*(definition.groundAnchorY??1),width,height);
+    ctx.restore();return true;
+  }
+
   drawFirstAgeDefinition(ctx, definition, image, ready, screen, size, alpha = 1) {
     if (!definition || !image || (!ready && !(image.complete && image.naturalWidth > 0))) return false;
     ctx.save();
@@ -1447,6 +1474,18 @@ export class CrownforgeRenderer {
   }
 
   drawFirstAgeAsset(ctx, type, screen, size, alpha = 1) {
+    const wallView = {wall:'diagonal-right',wallDiagonalLeft:'diagonal-left',wallFace:'face',wallDepth:'depth'}[type];
+    if (wallView && BUILDING_COMPONENTS.wall?.views) return this.drawDepthComponent(ctx, BUILDING_COMPONENTS.wall.views[wallView], screen, size, alpha);
+    if (type === 'palisadeJunction' && BUILDING_COMPONENTS.palisadeJunction) return this.drawDepthComponent(ctx, BUILDING_COMPONENTS.palisadeJunction.sprite, screen, size, alpha);
+    if (type === 'road' && BUILDING_COMPONENTS.road) {
+      const definition = BUILDING_COMPONENTS.road.texture;
+      const image = this.depthComponentImage(definition);
+      if (!image.complete || !image.naturalWidth) return false;
+      ctx.save();ctx.globalAlpha=alpha;ctx.imageSmoothingEnabled=true;
+      ctx.translate(screen.x,screen.y);
+      ctx.beginPath();ctx.moveTo(0,-size*.23);ctx.lineTo(size*.5,0);ctx.lineTo(0,size*.23);ctx.lineTo(-size*.5,0);ctx.closePath();ctx.clip();
+      ctx.drawImage(image,-size*.5,-size*.23,size,size*.46);ctx.restore();return true;
+    }
     return this.drawFirstAgeDefinition(
       ctx,
       FIRST_AGE_ASSETS[type],
@@ -1459,6 +1498,10 @@ export class CrownforgeRenderer {
   }
 
   drawGateAsset(ctx, buildingOrPreview, screen, size, alpha = 1) {
+    if (BUILDING_COMPONENTS.gate?.views) {
+      const orientation=buildingOrPreview?.gateOrientation??resolveWallVisual(buildingOrPreview?.gateDirection??buildingOrPreview?.wallDirection).orientation;
+      return this.drawDepthComponent(ctx,BUILDING_COMPONENTS.gate.views[orientation]??BUILDING_COMPONENTS.gate.views['diagonal-right'],screen,size,alpha);
+    }
     const definition = FIRST_AGE_ASSETS.gate;
     const image = this.firstAgeAssets?.gate;
     const storedOrientation = buildingOrPreview?.gateOrientation;
@@ -1513,6 +1556,10 @@ export class CrownforgeRenderer {
 
   drawAshenBuildingAsset(ctx, buildingOrType, screen, size, alpha = 1) {
     const type = typeof buildingOrType === 'string' ? buildingOrType : buildingOrType.type;
+    if (BUILDING_COMPONENTS[type]?.views) {
+      const orientation=buildingOrType?.gateOrientation??resolveWallVisual(buildingOrType?.attachmentDirection??buildingOrType?.gateDirection??buildingOrType?.wallDirection).orientation;
+      return this.drawDepthComponent(ctx,BUILDING_COMPONENTS[type].views[orientation],screen,size,alpha);
+    }
     const definition = ASHEN_BUILDING_ASSETS[type];
     if (!definition) return false;
     if (definition.src) {
@@ -1582,13 +1629,25 @@ export class CrownforgeRenderer {
   }
 
   drawBuildingStage(ctx, building, screen, size, alpha = 1) {
+    const depthStage=resolveFirstAgeConstructionStage(building.progress);
+    if (depthStage!=='complete' && BUILDING_DEPTH[building.type]?.kind==='solid') {
+      const stage=BUILDING_COMPONENTS[building.type]?.stages?.[depthStage];
+      if (stage) this.drawDepthComponent(ctx,stage,screen,size,alpha);
+      return;
+    }
+    if (BUILDING_DEPTH[building.type]?.kind==='field') {
+      const fieldAlpha=alpha*(.3+building.progress*.7);
+      if (ASHEN_BUILDING_ASSETS[building.type]) this.drawAshenBuildingAsset(ctx,building,screen,size,fieldAlpha);
+      else this.drawFirstAgeAsset(ctx,building.type,screen,size,fieldAlpha);
+      return;
+    }
     if (ASHEN_BUILDING_ASSETS[building.type]) {
       const constructionStage = resolveFirstAgeConstructionStage(building.progress);
       if (building.type === 'ashenWall' && constructionStage === 'complete') {
         this.drawAshenWallSegments(ctx, building, size, alpha);
         return;
       }
-      if (constructionStage !== 'complete'
+      if (!BUILDING_COMPONENTS[building.type]?.views && constructionStage !== 'complete'
         && this.drawAshenConstructionAsset(ctx, building.type, constructionStage, screen, size, alpha)) return;
       const constructionAlpha = constructionStage === 'complete' ? alpha : alpha * (0.28 + building.progress * 0.72);
       this.drawAshenBuildingAsset(ctx, building, screen, size, constructionAlpha);
@@ -1857,7 +1916,9 @@ export class CrownforgeRenderer {
     const clearance = blueprint.collisionClearance ?? 0;
     const baseFootprint = this.buildingFootprint(building);
     let corners;
-    if (blueprint.wall || blueprint.gate) {
+    if (hasBuildingOutline(building)) {
+      corners = buildingPolygon(building, 'foot').map(([x,z]) => this.worldToScreen({ x: building.x+x, z: building.z+z }));
+    } else if (blueprint.wall || blueprint.gate) {
       const count = blueprint.wall ? Math.max(1, Math.round(building.wallSegments ?? 1)) : 1;
       const span = blueprint.wallSegmentSpan ?? blueprint.footprint.width;
       const length = blueprint.gate ? blueprint.footprint.width + clearance * 2 : blueprint.footprint.width + (count - 1) * span + clearance * 2;
@@ -2477,6 +2538,8 @@ export class CrownforgeRenderer {
       this.drawWallSegments(ctx, this.buildPreview, size, 0.9);
     } else if (type === 'gate') {
       this.drawGateAsset(ctx, this.buildPreview, point, size, 0.9);
+    } else if (ASHEN_BUILDING_ASSETS[type]) {
+      this.drawAshenBuildingAsset(ctx, this.buildPreview, point, size, 0.9);
     } else if (FIRST_AGE_ASSETS[type]) {
       this.drawFirstAgeAsset(ctx, type, point, size, 0.9);
     } else {
@@ -2494,8 +2557,10 @@ export class CrownforgeRenderer {
       wallOrientation: this.buildPreview.wallOrientation,
       wallDirection: this.buildPreview.wallDirection,
     }, false, this.buildPreview.valid ? '#a6d4a8' : '#e27964');
-    ctx.beginPath(); ctx.ellipse(point.x, point.y + 8, size * 0.32, size * 0.12, 0, 0, TAU);
-    ctx.strokeStyle = this.buildPreview.valid ? '#a6d4a8' : '#e27964'; ctx.lineWidth = 1.4; ctx.stroke();
+    if (!hasBuildingOutline(type)) {
+      ctx.beginPath(); ctx.ellipse(point.x, point.y + 8, size * 0.32, size * 0.12, 0, 0, TAU);
+      ctx.strokeStyle = this.buildPreview.valid ? '#a6d4a8' : '#e27964'; ctx.lineWidth = 1.4; ctx.stroke();
+    }
     ctx.globalAlpha = 1;
     ctx.font = '700 9px Inter, sans-serif';
     ctx.textAlign = 'center';

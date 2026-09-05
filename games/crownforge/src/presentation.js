@@ -1,4 +1,4 @@
-import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260904-rosterkin1';
+import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260905-buildings1';
 
 export function setupPresentation({ renderer, simulation, input, announce }) {
   const shell = document.querySelector('.game-shell');
@@ -54,7 +54,7 @@ export function setupPresentation({ renderer, simulation, input, announce }) {
   });
   function focusHome() {
     const hall = simulation.buildings.find((b) => b.type === 'townCenter' && b.faction === 'player' && !b.destroyed);
-    const center = hall ? { x: hall.x + 4, z: hall.z + 8 } : CONFIG.initialCameraWorld;
+    const center = hall ? { x: hall.x - 8, z: hall.z - 4 } : CONFIG.initialCameraWorld;
     renderer.camera.zoom = CONFIG.initialZoom;
     const p = renderer.worldToScreen(center);
     renderer.panBy(renderer.width * 0.53 - p.x, renderer.height * 0.48 - p.y);

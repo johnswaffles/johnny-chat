@@ -1,10 +1,10 @@
-import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260905-rosterfit1';
-import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-horsefit1';
-import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260905-rosterfit1';
-import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260905-softelbow1';
-import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js';
-import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js';
-import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js';
+import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260905-buildings1';
+import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-buildings1';
+import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260905-buildings1';
+import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260905-buildings1';
+import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js?v=20260905-buildings1';
+import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js?v=20260905-buildings1';
+import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js?v=20260905-buildings1';
 
 const TAU = Math.PI * 2;
 const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));

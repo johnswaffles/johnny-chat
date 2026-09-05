@@ -1,5 +1,5 @@
-import {BUILDING_TYPES,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js';
-import {clamp01,landscapeHash,landscapeNoise} from './landscape-layout.js';
+import {BUILDING_TYPES,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260905-buildings1';
+import {clamp01,landscapeHash,landscapeNoise} from './landscape-layout.js?v=20260905-buildings1';
 
 // Presentation data only. No DOM, match RNG, pathfinding, or simulation writes.
 export const MEADOW_LIMITS=Object.freeze({chunkSize:12,candidatesPerChunk:72,maxChunks:2048,maxVisible:2500,maxUnits:1024,maxDisturbances:1024,interactionBin:3,exclusionBin:12,wakeLifetime:3.2,farZoom:.095});
