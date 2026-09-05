@@ -1,6 +1,6 @@
 # Complete roster motion release
 
-Release candidate: `20260904-rosterkin1`. Reviewed September 5, 2026. Publication and live verification pending.
+Published release: `20260904-rosterkin1`. Reviewed and verified live September 5, 2026. Runtime/art release commit: `1e0f40c`.
 
 ## Result
 
@@ -38,7 +38,11 @@ Production creates character artwork on demand. The opening match requests its f
 
 ## Publication
 
-Pending final artwork readiness, syntax/build/mirror checks, normal push to the existing Render release branch, and live browser verification. A successful push alone does not establish deployment.
+`npm run build`, changed JavaScript syntax checks and staged diff checks passed. All 174 changed source files matched their production mirrors by SHA-256. The authorized release was pushed normally to `codex/crownforge-live-sync-20260821`, advancing `3188be9` to `1e0f40c`.
+
+The public page served `20260904-rosterkin1`; the live `src/character-rigs.js` SHA-256 exactly matched the tested source (`65717b922d5aaaf1ad53124f4e880ded4d07e5e48ef5e9e09b27991da0f178ec`). The live studio listed all 12 characters, loaded their art, and displayed corrected Crown walking/building and Ashen mounted attack in all four views. The live field scene reported all 12 ready, all 12 walking left, actual military attack phases and 2,976 aggregate damage, exactly two ward blocks, both workers farming, and successful restoration of all 12 saved identities. No warnings/errors were reported. The ordinary live game reached its playable opening with the new worker and Guard artwork.
+
+A final studio-only polish reserves enough vertical space for mounted player-size comparisons and suppresses incomplete pieces while artwork loads; it was visually checked locally before publication. The character and gameplay implementation is unchanged by that polish.
 
 ## Reusable lessons
 

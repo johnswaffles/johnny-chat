@@ -2,7 +2,7 @@
 
 Opened 2026-09-04. This is the scope and evidence ledger for the requested Crownwarden Hearthkin work/tool corrections followed by the rebuild of every character currently in the game, on both sides.
 
-**Status: all 12 production rigs integrated; final release verification pending.** Current evidence is recorded in [the roster release](CROWNFORGE_ROSTER_RELEASE.md). Dated progress below retains intermediate findings; its earlier partial counts do not describe the current implementation.
+**Status: complete. All 12 characters are rebuilt, reviewed in four directions, and verified in the published game.** Current evidence is recorded in [the roster release](CROWNFORGE_ROSTER_RELEASE.md). Dated progress below retains intermediate findings; its earlier partial counts do not describe the current implementation.
 
 ## Authoritative scope
 
@@ -59,18 +59,18 @@ Each directional cell means **all of that unit's listed state contract**, with a
 
 | Type | States | Front | Right | Back | Left | Production/gameplay evidence |
 |---|---:|---|---|---|---|---|
-| `villager` | 23 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `soldier` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `scout` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `spearwarden` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `militia` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `shieldbearer` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `ashenForager` | 23 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `raider` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `ashenOutrider` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `thornSpear` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `hearthLevy` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
-| `hidewall` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Local evidence](CROWNFORGE_ROSTER_RELEASE.md); live pending |
+| `villager` | 23 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `soldier` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `scout` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `spearwarden` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `militia` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `shieldbearer` | 8 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `ashenForager` | 23 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `raider` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `ashenOutrider` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `thornSpear` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `hearthLevy` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
+| `hidewall` | 9 | Reviewed | Reviewed | Reviewed | Reviewed | [Verified live](CROWNFORGE_ROSTER_RELEASE.md) |
 
 ## Opening defects and omissions
 
@@ -151,3 +151,5 @@ A generated image, a registered clip, a green structural test, a local screensho
 - Later close-source review found duplicated/backward profile hand surfaces in earlier Crown/Ashen worker and Raider art. These have dedicated four-surface hand replacements, with far palms, near knuckles, and forward thumbs; actual wrist/grip transforms are being re-reviewed. Crown worker additionally replaces the old hollow right shoulder with two independently authored closed garment underlays. Small all-state grids alone had not exposed these defects, so earlier grid observations do not certify the original profile hands.
 - Crown Scout, Crown Militia, and Ashen Thorn Spear are connected (10/12). Scout uses an independently articulated horse and rider. Its initial standing assembly was visibly crouched despite fixed bone lengths; shoulder/hip placement and fore/hind lengths were corrected, and the mount-only scale retains human rider proportions. Rear horse layering and painted hoof-ground alignment are still being refined. Scout passed the 8-identity intermediate motion audit:400 supported directional cases,32,400 poses,64,800 painted grips and7,111 hoof samples.
 - Local real-game browser review at55% zoom confirmed fresh source-art loading, visible Crown worker/Guard rendering, worker group movement and stopping, and no reported console warnings/errors. Final full-roster world review remains outstanding. Expanded gameplay checks now also pass instant player demolition parity, and still stop at the pending Ashen Outrider stunned clip.
+
+- 2026-09-05, completion: all 12 identities and all applicable four-view states reviewed; final motion, painted grip, hoof, work, loading and exact baseline gameplay checks passed. Source/production mirror verified. Release `20260904-rosterkin1` / `1e0f40c` served live, with full-roster movement/attack/ward/save, both workers farming, studio controls and ordinary opening game verified. See [the complete release evidence](CROWNFORGE_ROSTER_RELEASE.md). Earlier partial-count progress entries are historical.

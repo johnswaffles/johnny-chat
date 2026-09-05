@@ -82,6 +82,9 @@ function drawJointGuide(pose, x, y, size) {
   ctx.restore();
 }
 function frame(now) {
+  const mountedSamples=CHARACTER_RIGS[character.value].family==='mounted'&&!detail.checked;
+  const stageHeight=mountedSamples?920:660;
+  if(canvas.height!==stageHeight)canvas.height=stageHeight;
   const delta = Math.min(.05, (now - previous) / 1000);previous=now;
   const definition = ACTIONS[action.value];
   if(playing)clock+=delta*Number(speed.value);
@@ -102,15 +105,15 @@ function frame(now) {
     const unit={id:1,type:character.value,facing:direction,animationState:action.value,animationTime:t,lastLightWardTimer:ward.checked?60:0,wardBlockedPulse:impact};
     ctx.save();
     if(detail.checked){ctx.beginPath();ctx.rect(x-165,36,330,564);ctx.clip();}
-    shadow(x,y,size);drawHearthkinWard(ctx,unit,{x,y},size,now,true);rig.draw(ctx,unit,{x,y},size,1,t);drawHearthkinWard(ctx,unit,{x,y},size,now);
+    if(ready===rig.readiness().length){shadow(x,y,size);drawHearthkinWard(ctx,unit,{x,y},size,now,true);rig.draw(ctx,unit,{x,y},size,1,t);drawHearthkinWard(ctx,unit,{x,y},size,now);}
     if(joints.checked)drawJointGuide(CHARACTER_RIGS[character.value].samplePose(action.value,t,direction),x,y,size*(CHARACTER_RIGS[character.value].renderScale??1));
     ctx.restore();
     ctx.textAlign='center';ctx.fillStyle='#d3c4a7';ctx.font='20px Georgia,serif';ctx.fillText(['Front','Right','Back','Left'][direction],x,detail.checked?632:483);
     if(detail.checked)continue;
     ctx.strokeStyle='#aac0aa22';ctx.beginPath();ctx.moveTo(x-112,512);ctx.lineTo(x+112,512);ctx.stroke();
     const displayScale=Math.min(canvas.clientWidth/canvas.width,canvas.clientHeight/canvas.height)||1;
-    for(const [dx,scale] of [[-35,UNIT_TYPES[character.value].renderSize*.28/displayScale],[35,UNIT_TYPES[character.value].renderSize*.7/displayScale]]) {const p={x:x+dx,y:625};shadow(p.x,p.y,scale);rig.draw(ctx,unit,p,scale,1,t);drawHearthkinWard(ctx,unit,p,scale,now);}
-    ctx.fillStyle='#91a99b';ctx.font='14px system-ui';ctx.fillText('28%  /  70% ZOOM',x,652);
+    if(ready===rig.readiness().length)for(const [dx,scale] of [[-35,UNIT_TYPES[character.value].renderSize*.28/displayScale],[35,UNIT_TYPES[character.value].renderSize*.7/displayScale]]) {const p={x:x+dx,y:mountedSamples?885:625};shadow(p.x,p.y,scale);rig.draw(ctx,unit,p,scale,1,t);drawHearthkinWard(ctx,unit,p,scale,now);}
+    ctx.fillStyle='#91a99b';ctx.font='14px system-ui';ctx.fillText('28%  /  70% ZOOM',x,mountedSamples?912:652);
   }
   scrub.value=String(Math.round(t/definition.duration*1000));progress.value=`${Math.round(t/definition.duration*100)}%`;
   requestAnimationFrame(frame);

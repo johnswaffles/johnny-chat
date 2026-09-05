@@ -4,13 +4,13 @@ Date: 2026-08-16
 Milestone: Tiny playable settlement prototype — technical hardening and release certification
 Working principle: SMALL -> COMPLETE -> POLISHED -> EXPAND
 
-## September 2026 — Current-roster motion rebuild (release verification pending)
+## September 2026 — Current-roster motion rebuild (published and verified)
 
 - Rebuilt the existing worker, foot-soldier and mounted presentation around continuous anatomical poses, independently authored four-direction cutouts, measured painted grips, solid tools and equipment, and each character's original identity. Exact12-character scope and524 required directional cases are tracked in `CROWNFORGE_ROSTER_REBUILD.md`.
 - Corrected Crown Hearthkin's front/back hammer and chopping plane, head-on walking axe form, two-hand hoe stroke/contact/recovery and rear equipment occlusion. Dedicated profile hands and closed garment underlays remove duplicated hand surfaces and exposed hollow shoulder art.
 - Added original roster art, source-specific limb/hand anchors, per-unit military timing/weight/loadouts, and four-beat horse/rider motion. Horse posture, painted hoof contact and rear neck/tail order are validated separately from skeletal support.
 - Both rendering passes and state/cadence routing now use the character registry. Worker work-clock expansion changes cosmetic fields only. Physical action frames are kept intact during transitions, avoiding a screen-only blend that separated hand/tool/body constraints.
-- Added whole-roster studio, all-state contact sheets, real simulation field review, population drawing measurement, and dense pose/grip/contact/gameplay regression checks. Source/production mirror and live deployment verification remain pending in the acceptance ledger until explicitly recorded.
+- Added whole-roster studio, all-state contact sheets, real simulation field review, population drawing measurement, and dense pose/grip/contact/gameplay regression checks. All 12 identities, 544 supported directional cases, 44,064 poses and 88,128 painted grips passed. Exact baseline gameplay/save parity, lazy opening loading, source/production mirroring, and live release `20260904-rosterkin1` were verified; see `CROWNFORGE_ROSTER_RELEASE.md`.
 - Saved the user's requested confirmed rig/art lessons for future characters. Original PNG outputs, exact generation/extraction prompts, metadata measurements and shared-hand provenance remain recorded with the assets.
 
 ## 2026-08-30 — Individual forest resource pass

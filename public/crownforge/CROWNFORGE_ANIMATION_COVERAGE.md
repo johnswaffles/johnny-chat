@@ -1,6 +1,6 @@
 # Crownforge current animation coverage
 
-Updated during the September 2026 current-roster rebuild. **Release verification is pending.** The acceptance record is [CROWNFORGE_ROSTER_REBUILD.md](CROWNFORGE_ROSTER_REBUILD.md). Older three-character and four-frame inventories have been superseded; their history remains in Git.
+Updated during the September 2026 current-roster rebuild. **All 12 characters are published and live-verified in `20260904-rosterkin1`.** The acceptance record is [CROWNFORGE_ROSTER_REBUILD.md](CROWNFORGE_ROSTER_REBUILD.md). Older three-character and four-frame inventories have been superseded; their history remains in Git.
 
 ## Scope
 
@@ -52,4 +52,4 @@ Military states: idle, walk, attack, attack_anticipation, attack_contact, attack
 - `tools/hearthkin-rig-regression.mjs`: original Crown walk contract plus actual draw-call grip/depth checks.
 - `tools/hearthkin-gameplay-regression.mjs` and `tools/roster-gameplay-regression.mjs`: both worker economies, construction/repair/fields, actual military attack phases/damage/death, applicable stun/ward, instant demolition and save compatibility. An optional baseline simulation path enables exact gameplay comparison with cosmetic fields omitted.
 
-Local structural checks do not certify art quality or deployment. The rebuild ledger records visible reviews and the eventual source/production/live verification separately. Exact original generation prompts, extraction attempts, source measurements and provenance live under `assets/characters-v3/`.
+Local structural checks do not certify art quality or deployment. The rebuild ledger records visible reviews and source/production/live verification separately. Exact original generation prompts, extraction attempts, source measurements and provenance live under `assets/characters-v3/`.
