@@ -1,4 +1,4 @@
-import { createCharacterRigs } from '../src/character-rigs.js';
+import { createCharacterRigs } from '../src/character-rigs.js?v=20260905-horsefit1';
 const characterRigs = createCharacterRigs();
 import {
   ANIMATION_DIRECTIONS,

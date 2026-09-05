@@ -1,17 +1,17 @@
-import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js';
+import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js?v=20260905-horsefit1';
 import ashenHearthkin from './roster-art/ashen-hearthkin.js';
 import crownSpearwarden from './roster-art/crown-spearwarden.js';
 import crownShieldbearer from './roster-art/crown-shieldbearer.js';
 import crownGuard from './roster-art/crown-guard.js';
 import crownScout from './roster-art/crown-scout.js';
-import ashenOutrider from './roster-art/ashen-outrider.js';
+import ashenOutrider from './roster-art/ashen-outrider.js?v=20260905-horsefit1';
 import crownMilitia from './roster-art/crown-militia.js';
 import thornSpear from './roster-art/thorn-spear.js';
 import hearthLevy from './roster-art/hearth-levy.js';
 import ashenHidewall from './roster-art/ashen-hidewall.js';
 import ashenRaider from './roster-art/ashen-raider.js';
 import { militaryActions, militaryPose, MILITARY_PROFILES } from './military-motion.js';
-import { mountedActions, mountedPose } from './mounted-motion.js';
+import { mountedActions, mountedPose } from './mounted-motion.js?v=20260905-horsefit1';
 import { UNIT_TYPES } from './config.js';
 
 function workerActions(type) {

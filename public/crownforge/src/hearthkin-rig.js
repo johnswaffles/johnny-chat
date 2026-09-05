@@ -1,4 +1,5 @@
 import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260904-rosterkin1';
+import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-horsefit1';
 import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260904-rosterkin1';
 import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js';
 import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js';
@@ -305,10 +306,10 @@ export function mountedHoofTransform(pose,index,art) {
 export function mountedPaintOrder(pose) {
   const h=pose.mount.projected;
   const legs=[{root:'frontLeftShoulder',parts:[4,8,14]},{root:'frontRightShoulder',parts:[5,9,15]},{root:'hindLeftHip',parts:[6,10,12,16]},{root:'hindRightHip',parts:[7,11,13,17]}].sort((a,b)=>h[a.root].depth-h[b.root].depth);
-  const neck=[1,18,0],rear=pose.direction===2;
+  const rear=pose.direction===2,profile=pose.direction===1||pose.direction===3;
   return {
-    behind:[...(rear?neck:[3]),...legs.slice(0,2).flatMap(leg=>leg.parts)],
-    ahead:[...legs.slice(2).flatMap(leg=>leg.parts),...(rear?[3]:pose.direction===0?[]:neck)],
+    behind:[...(rear?[1,18,0]:[3,...(profile?[18,1]:[])]),...legs.slice(0,2).flatMap(leg=>leg.parts)],
+    ahead:[...legs.slice(2).flatMap(leg=>leg.parts),...(rear?[3]:profile?[0]:[])],
   };
 }
 
@@ -451,7 +452,13 @@ export class HearthkinRig {
       draw(view, left ? 14 : 15, offset(foot.point, pose.forward.x * 2.1, -1), pose.sideView ? 12.5 : 9.4, 10, foot.angle, .5, .26);
     };
     const mountKey='mount-'+view;
+    const horseAssembly=pose.mount?horseAssemblyTransforms(pose,this.art[mountKey],unit.type):null;
     const mountBone=index=>{
+      if(horseAssembly?.[index]) {
+        const t=horseAssembly[index];
+        draw(mountKey,index,t.origin,t.width,t.height,t.angle,t.root[0],t.root[1]);
+        return;
+      }
       const binding=pose.mount.partBindings[index],parts=this.art[mountKey],rect=parts.parts[index];
       const anchors=parts.anchors?.[index]??{root:[.5,.1],tip:[.5,.9]};
       const a=pose.mount.projected[binding.root],b=pose.mount.projected[binding.tip];
@@ -467,6 +474,8 @@ export class HearthkinRig {
       draw(mountKey,index,a,rect[2]*scale,rect[3]*scale,angle,anchors.root[0],anchors.root[1]);
     };
     const mountSurface=(index,joint,width,height)=>{
+      const dimensions=this.art[mountKey].surfaces?.[index];
+      if(dimensions){width=dimensions.width*pose.mount.scale;height=dimensions.height*pose.mount.scale;}
       const frame=pose.mount.bodyFrame,origin=pose.mount.projected[joint];
       const horizontal=pose.sideView?frame.forward:frame.right;
       const sign=direction===0||direction===3?-1:1;
@@ -476,7 +485,7 @@ export class HearthkinRig {
       ctx.save();ctx.transform(x.x,x.y,down.x,down.y,origin.x,origin.y);
       draw(mountKey,index,point(0,0),width,height,0,pivot[0],pivot[1]);ctx.restore();
     };
-    const mountFront=()=>{mountBone(1);mountBone(18);mountBone(0);};
+    const mountFront=()=>{mountBone(18);mountBone(1);mountBone(0);};
     const drawMount=()=>{
       const order=mountedPaintOrder(pose);
       for(const index of order.behind)mountBone(index);

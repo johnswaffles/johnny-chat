@@ -1,6 +1,6 @@
 import { CrownforgeSimulation } from '../src/simulation.js';
-import { CrownforgeRenderer } from '../src/renderer.js';
-import { CHARACTER_RIGS } from '../src/character-rigs.js';
+import { CrownforgeRenderer } from '../src/renderer.js?v=20260905-horsefit1';
+import { CHARACTER_RIGS } from '../src/character-rigs.js?v=20260905-horsefit1';
 import { UNIT_TYPES, CONFIG } from '../src/config.js';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas);

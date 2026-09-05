@@ -5022,3 +5022,8 @@ Revisited the first Living Motion release after player feedback identified outwa
 ## September 4, 2026 — Front/back arm surfaces and left-facing axe depth
 
 Player review identified remaining inside-out front/back arm surfaces and an axe appearing over the near leg when facing left. Replaced front/back sleeves, forearms and neutral hands with original RGBA art, calibrated their source joint/palm anchors, moved the far profile arm/tool before the near leg, and reversed only the axe blade side around its grip for back/left views. Preserved natural gait math and existing right-profile character surfaces. Added enlarged Arm detail review in the studio. Rig regression and exact gameplay parity checks pass; source artwork, exact prompts and validation scope are recorded in `CROWNFORGE_ARM_DEPTH_RELEASE.md`. Release marker: `20260904-armdepth1`.
+
+
+## September 5, 2026 — Horse anatomy and attachment correction
+
+Player review found the Ashen horse's profile rump looked cut off and both horses' heads did not line up with their necks. Replaced the Ashen profile barrels with two original, independently painted complete croups. Repositioned both tail docks and gave the tails a downward resting hang. Added source-measured head/neck/mane assembly in all four directions, a downward muzzle pitch, shoulder overlap, and independent skull volume so the rear head does not collapse under projection. Added a two-horse close review page. This corrects defects missed by the previous roster acceptance; it does not alter game rules, attack timing, collision or saves. See `CROWNFORGE_HORSE_FIT_RELEASE.md` for art provenance and validation.

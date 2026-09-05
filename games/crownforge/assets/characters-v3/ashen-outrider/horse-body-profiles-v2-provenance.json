@@ -1,0 +1,33 @@
+{
+  "created": "2026-09-05",
+  "intent": "Correct reversed/truncated Ashen horse body profiles; preserve full rounded croup and tail dock.",
+  "generation": {
+    "prompt": "Use case: precise-object-edit. Input image is a STYLE AND COAT REFERENCE for the Ashen Outrider horse, not a layout to reproduce. Create one production sprite supplement with EXACTLY TWO isolated full horse TORSO cutouts, stacked vertically on a genuinely transparent RGBA background. Upper cutout: horse body facing screen RIGHT, so a FULL ROUNDED MUSCULAR CROUP AND BUTTOCK are at the LEFT end, chest/shoulder and a short rising neck-base at the RIGHT end. Lower cutout: independently painted horse body facing screen LEFT, so FULL ROUNDED MUSCULAR CROUP AND BUTTOCK are at the RIGHT end, chest/shoulder and short neck-base at the LEFT end. Each torso includes the entire back, belly, flank, shoulder, rump and fleshy tail dock, ending naturally at the silhouette; no flat amputation at either end. Only omit head, main neck, legs below shoulder/hip, tail hair, saddle and tack. The separate legs and tail will attach later. Keep both silhouettes roughly twice as long as high, matched proportions, realistic natural smoke-brown shaggy horse coat with charcoal lower flanks, soft upper-left daylight, hand-painted realistic fantasy RTS quality matching the reference. Do not mirror lighting. Keep the rump convex and complete, distinctly rounded at its rear; the chest is at the opposite forward end. Entire cutouts visible with generous transparent margins and a clear gap, no text, no labels, no border, no pedestal, no shadow or background matte. Avoid toy plastic, swirled ornate patterns, exposed cut cross-sections and hollow sockets. Output true transparent alpha.",
+    "source": "exec-5585a832-5e79-41fc-b89c-b87d22ceeb3f.png",
+    "result": "RGB checkerboard, not shipped"
+  },
+  "extraction": {
+    "prompt": "Extract the two horse torso cutouts from this image onto a genuinely transparent background. Remove all checkerboard pixels. Preserve the two horse body paintings and their spacing exactly. Output RGBA with alpha zero outside the horses.",
+    "source": "exec-926ddab8-7228-45ed-8dec-6363d5cb8924.png",
+    "result": "Accepted original RGBA 1024x1536; copied unchanged",
+    "alphaZeroFraction": 0.5205777486165365
+  },
+  "parts": [
+    [
+      21,
+      111,
+      980,
+      538
+    ],
+    [
+      26,
+      801,
+      992,
+      547
+    ]
+  ],
+  "order": [
+    "right-facing: rounded rump on left",
+    "left-facing: rounded rump on right"
+  ]
+}

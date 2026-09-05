@@ -1,6 +1,6 @@
 import { UNIT_TYPES } from '../src/config.js';
-import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js';
-import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260904-rosterkin1';
+import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260905-horsefit1';
+import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260905-horsefit1';
 
 const canvas = document.querySelector('#stage');
 const ctx = canvas.getContext('2d');

@@ -3103,4 +3103,16 @@ export const ASHEN_OUTRIDER_HORSE_ART = {
   }
 };
 
+// The original right-facing barrel had a flat cut at its rear. These two
+// independently painted profiles include the complete croup and tail dock.
+ASHEN_OUTRIDER_HORSE_ART.profileBodies = {
+  src:'./assets/characters-v3/ashen-outrider/horse-body-profiles-v2.png?v=20260905-horsefit1',
+  width:1024,height:1536,parts:[[21,111,980,538],[26,801,992,547]],
+};
+for(const [view,index] of [['right',0],['left',1]]) {
+  ASHEN_OUTRIDER_HORSE_ART[view].overrides={2:{key:'mount-profileBodies',index}};
+  ASHEN_OUTRIDER_HORSE_ART[view].anchors[2]={root:[.5,.6],barrel:[.5,.6]};
+  ASHEN_OUTRIDER_HORSE_ART[view].surfaces={2:{width:60,height:35}};
+}
+
 export default { id:'ashen-outrider', views:ASHEN_OUTRIDER_ART, arms:ASHEN_OUTRIDER_ARM_PARTS, hands:ASHEN_OUTRIDER_HAND_PARTS, appendage:'cloak', dimensions:{upperArm:8.2,forearm:5.8,headWidth:17.4,headSideWidth:16.4,headHeight:23,torso:23,torsoSide:18,cloakWidth:28,cloakSideWidth:17,cloakHeight:35}, mount:{views:ASHEN_OUTRIDER_HORSE_ART,bindings:MOUNT_PART_BINDINGS} };

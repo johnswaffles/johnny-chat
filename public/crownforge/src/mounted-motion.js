@@ -164,16 +164,16 @@ export function mountedPose(type,state='idle',time=0,direction=0,options={}) {
   h.withers=pointIn(barrel,horseFrame,v(0,8,20));h.croup=pointIn(barrel,horseFrame,v(0,7,-22));
   h.chest=pointIn(barrel,horseFrame,v(0,-2,25));h.rump=pointIn(barrel,horseFrame,v(0,-1,-25));
   h.saddle=pointIn(barrel,horseFrame,v(0,12,-4));
-  h.neckRoot=pointIn(barrel,horseFrame,v(0,7,24));
+  h.neckRoot=pointIn(barrel,horseFrame,v(0,5,18));
   const nod=walking?Math.sin(phase*TAU*2+.55)*.7:breath*.5;
   const neckDirection=normal(blend(vectorIn(horseFrame,v(0,21+nod,17)),v(-.55,-.22,.81),fall));
   h.poll=add(h.neckRoot,mul(neckDirection,26));
-  const headDirection=normal(blend(vectorIn(horseFrame,v(0,-9,16)),v(-.12,-.15,.98),fall));
+  const headDirection=normal(blend(vectorIn(horseFrame,v(0,-17,10)),v(-.12,-.15,.98),fall));
   h.muzzle=add(h.poll,mul(headDirection,18));h.head=blend(h.poll,h.muzzle,.42);
   h.bitLeft=add(h.muzzle,mul(horseFrame.right,-2.2));h.bitRight=add(h.muzzle,mul(horseFrame.right,2.2));
-  h.tailRoot=pointIn(barrel,horseFrame,v(0,4,-27));
+  h.tailRoot=pointIn(barrel,horseFrame,v(0,5,-28.5));
   const tailSway=attacking||state==='death'?0:walking?Math.sin(phase*TAU-.9)*2.4:Math.sin(phase*TAU)*.7;
-  const tail=pointIn(h.tailRoot,horseFrame,v(tailSway,-14,-20));
+  const tail=pointIn(h.tailRoot,horseFrame,v(tailSway,-33,-4.5));
   h.tailTip=blend(tail,v(-10,4,-48),fall);
   const legs={},groundContacts=[];
   for(const leg of LEG_ORDER) {
