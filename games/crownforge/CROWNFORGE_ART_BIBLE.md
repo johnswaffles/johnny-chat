@@ -452,3 +452,8 @@ The Crownwarden worker now uses the original `assets/hearthkin-v2/` modular char
 Preserve the teal-and-cream artisan silhouette, auburn braid, kerchief, layered cloth, warm upper-left light and visible feet at the simulation ground anchor. Work tools attach to the right grip. Cargo changes the hands and body posture. Construction, harvest and combat contact poses follow the existing simulation clocks. The ward is a separate two-layer effect that remains around the worker during her current action.
 
 Keep all four views and every action visible in `dev/hearthkin-studio.html`, including normal player-size previews. Check planted feet, joint connections, equipment grip, clear face, final death contact, and alpha against the actual terrain. The production originals remain unchanged RGBA PNGs; source rectangles and cached runtime mipmaps prepare their display. This is a 2D skeletal renderer with original raster surfaces, not a claim of authored 3D animation or a particular sprite-frame count.
+
+
+### Natural gait correction — `20260904-naturalwalk1`
+
+For Crown worker locomotion, idle and cargo, solve fixed-length limbs in anatomical space, then project into the camera. Never force a projected front/back limb to retain its full 2D length: this creates outward elbow bends. Keep ordinary walking low and coordinated, with opposite arm/leg contact and continuous foot position, velocity and roll at the loop seam. Attach the handle to the visible palm rather than the wrist, and render fingers over the shaft in every facing. Evaluate at normal speed as well as contact/passing poses; source references and measured checks are in `CROWNFORGE_NATURAL_WALK_RELEASE.md`.

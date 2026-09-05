@@ -1,4 +1,5 @@
-import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-hearthkin3';
+import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-naturalwalk1';
+import { hearthkinLocomotion } from './hearthkin-locomotion.js?v=20260904-naturalwalk1';
 
 const TAU = Math.PI * 2;
 const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
@@ -11,7 +12,7 @@ const attachment = (a, x, y, angle) => point(a.x + x * Math.cos(angle) - y * Mat
 
 export const HEARTHKIN_ACTIONS = Object.freeze({
   idle: { label: 'At ease', duration: 3.6 },
-  walk: { label: 'Walking', duration: .82 },
+  walk: { label: 'Walking', duration: 1.05 },
   gather_wood: { label: 'Chopping wood', duration: 1.1, contact: .6 },
   gather_food: { label: 'Picking berries', duration: 1.05, contact: .6 },
   field_work: { label: 'Tending the fields', duration: 1.6, contact: .6 },
@@ -20,11 +21,11 @@ export const HEARTHKIN_ACTIONS = Object.freeze({
   construct: { label: 'Building', duration: 1.2, contact: .6 },
   repair: { label: 'Repairing', duration: 1.2, contact: .6 },
   demolish: { label: 'Dismantling', duration: 1.2, contact: .6 },
-  carry_wood: { label: 'Carrying timber', duration: .96 },
-  carry_food: { label: 'Carrying food', duration: .96 },
-  carry_stone: { label: 'Carrying stone', duration: .96 },
-  carry_gold: { label: 'Carrying gold', duration: .96 },
-  carry_supplies: { label: 'Carrying supplies', duration: .96 },
+  carry_wood: { label: 'Carrying timber', duration: 1.12 },
+  carry_food: { label: 'Carrying food', duration: 1.12 },
+  carry_stone: { label: 'Carrying stone', duration: 1.12 },
+  carry_gold: { label: 'Carrying gold', duration: 1.12 },
+  carry_supplies: { label: 'Carrying supplies', duration: 1.12 },
   attack: { label: 'Defending the hearth', duration: 1.25, contact: .292 },
   attack_anticipation: { label: 'Attack · wind-up', duration: .25, loop: false },
   attack_contact: { label: 'Attack · strike', duration: .575, loop: false },
@@ -227,7 +228,7 @@ export function hearthkinPose(state = 'idle', time = 0, direction = 0, options =
   leftHand = constrainReach(leftShoulder, leftHand);rightHand = constrainReach(rightShoulder, rightHand);
   const leftElbow = solveLimb(leftShoulder, leftHand, 17, 16, sideView ? forward.x : lateral);
   const rightElbow = solveLimb(rightShoulder, rightHand, 17, 16, sideView ? forward.x : -lateral);
-  return {
+  const pose = {
     state, phase, sideView, forward, sign, walking, carrying, fall, hip, waist, neck, shoulder, head, headTilt,
     leftShoulder, rightShoulder, leftElbow, rightElbow, leftHand, rightHand,
     leftHip, rightHip, leftKnee, rightKnee, leftFoot, rightFoot,
@@ -235,6 +236,19 @@ export function hearthkinPose(state = 'idle', time = 0, direction = 0, options =
     clothSway: walking ? walkWave * .035 : 0,
     braidSway: Math.sin((walking ? cycle * TAU : time * 2) - .7) * (walking ? .085 : .018) * (1 - fall),
   };
+  if (state === 'walk' || state.startsWith('carry_') || state === 'idle' && !response && !(options.wardImpact > .01)) {
+    Object.assign(pose, hearthkinLocomotion(state,time,direction,{duration:action.duration,id:options.id,moving:options.moving}));
+    const wristAngle = Math.atan2(pose.rightHand.y-pose.rightElbow.y,pose.rightHand.x-pose.rightElbow.x)-Math.PI/2;
+    pose.toolAngle = Math.PI + wristAngle * .65;
+    pose.headTilt = 0;
+  }
+  return pose;
+}
+
+export function hearthkinPalmSocket(pose,left=false) {
+  const wrist=left?pose.leftHand:pose.rightHand, elbow=left?pose.leftElbow:pose.rightElbow;
+  const angle=Math.atan2(wrist.y-elbow.y,wrist.x-elbow.x)-Math.PI/2;
+  return attachment(wrist,0,3.45,angle);
 }
 
 // Raster artwork supplies surfaces; the rig supplies continuous motion.
@@ -288,7 +302,7 @@ export class HearthkinRig {
     let pose = hearthkinPose(state, time, direction, {
       id: unit.id, hit: unit.hitFlash, wardImpact: unit.wardBlockedPulse,
       carryType: unit.carryAmount > 0 ? unit.carryType : null,
-      moving: unit.kind === 'unit' ? unit.motionSpeed > .05 || Boolean(unit.path?.length) : state === 'walk' || state.startsWith('carry_'),
+      moving: unit.kind === 'unit' ? unit.motionSpeed > .025 : state === 'walk' || state.startsWith('carry_'),
     });
     if (timeOverride === undefined) {
       const previous = this.transitions.get(unit);
@@ -300,14 +314,16 @@ export class HearthkinRig {
       // to the simulation clock. This is not a crossfade between pictures.
       if (from && amount < 1 && !state.startsWith('attack') && state !== 'death' && state !== 'hit' && state !== 'ward_block') {
         pose = { ...pose };
-        for (const key of ['hip','waist','neck','shoulder','head','leftShoulder','rightShoulder','leftHip','rightHip','leftKnee','rightKnee','leftHand','rightHand']) pose[key] = blend(from[key], pose[key], amount);
+        for (const key of ['hip','waist','neck','shoulder','head','leftShoulder','rightShoulder','leftElbow','rightElbow','leftHip','rightHip','leftKnee','rightKnee','leftHand','rightHand']) pose[key] = blend(from[key], pose[key], amount);
         for (const key of ['leftFoot','rightFoot']) pose[key] = { ...pose[key], point: blend(from[key].point, pose[key].point, amount), angle: mix(from[key].angle, pose[key].angle, amount) };
         pose.headTilt = mix(from.headTilt, pose.headTilt, amount);
         const angularDifference = Math.atan2(Math.sin(pose.toolAngle - from.toolAngle), Math.cos(pose.toolAngle - from.toolAngle));
         pose.toolAngle = from.toolAngle + angularDifference * amount;
         const lateral = direction === 0 ? -1 : 1;
-        pose.leftElbow = solveLimb(pose.leftShoulder, pose.leftHand, 17, 16, pose.sideView ? pose.forward.x : lateral);
-        pose.rightElbow = solveLimb(pose.rightShoulder, pose.rightHand, 17, 16, pose.sideView ? pose.forward.x : -lateral);
+        if (!pose.projectedLocomotion) {
+          pose.leftElbow = solveLimb(pose.leftShoulder, pose.leftHand, 17, 16, pose.sideView ? pose.forward.x : lateral);
+          pose.rightElbow = solveLimb(pose.rightShoulder, pose.rightHand, 17, 16, pose.sideView ? pose.forward.x : -lateral);
+        }
       }
       this.transitions.set(unit, { state, pose, from: amount < 1 ? from : null, started });
     }
@@ -347,8 +363,8 @@ export class HearthkinRig {
       if (!pose.tool) return;
       const index = { axe: 0, pick: 1, hoe: 2, hammer: 3 }[pose.tool];
       const width = { axe: 13, pick: 24, hoe: 13, hammer: 13 }[pose.tool] * pose.toolScale;
-      const gripX = { axe: .24, pick: .5, hoe: .13, hammer: .5 }[pose.tool];
-      draw('props', index, pose.rightHand, width, 33 * pose.toolScale, pose.toolAngle, gripX, pose.toolGrip);
+      const gripX = { axe: .18, pick: .52, hoe: .13, hammer: .5 }[pose.tool];
+      draw('props', index, hearthkinPalmSocket(pose), width, 33 * pose.toolScale, pose.toolAngle, gripX, pose.toolGrip);
     };
     const drawCargo = () => {
       if (!pose.cargo) return;
@@ -359,9 +375,14 @@ export class HearthkinRig {
     // Directional painter order: the far limbs disappear behind the torso,
     // while the near fingers close over the carried object/tool grip.
     const farLeft = direction === 1 || direction === 2;
+    const drawArmAssembly = left => {
+      drawArm(left);
+      if (!left) drawTool();
+      drawHand(left);
+    };
     drawLeg(farLeft); drawLeg(!farLeft);
-    drawArm(farLeft); drawHand(farLeft);
-    if (direction === 2) { drawTool(); drawCargo(); }
+    if (direction === 2) { drawCargo();drawArmAssembly(true);drawArmAssembly(false); }
+    else if (pose.sideView) drawArmAssembly(farLeft);
     const torsoAngle = Math.atan2(pose.waist.y - pose.neck.y, pose.waist.x - pose.neck.x) - Math.PI / 2;
     const hipsAngle = pose.fall * pose.sign * 1.2;
     const coatRoot = attachment(pose.waist, 0, -2, hipsAngle);
@@ -376,10 +397,8 @@ export class HearthkinRig {
     if (direction !== 0) draw(view, 3, attachment(pose.head, -pose.forward.x * 6, -8, headAngle), 4.6, 29, headAngle + pose.braidSway);
     draw(view, 0, attachment(pose.head, 0, 5, headAngle), pose.sideView ? 16.4 : 17.4, 23, headAngle, .5, .91);
     if (direction === 0) draw(view, 3, attachment(pose.head, 7, -7, headAngle), 3.8, 26, headAngle + pose.braidSway);
-    drawArm(!farLeft);
-    if (direction !== 2) { drawTool(); drawCargo(); }
-    drawHand(!farLeft);
-    if (pose.cargo || ['field_work', 'gather_wood', 'gather_stone', 'gather_gold'].includes(state)) drawHand(farLeft);
+    if (direction === 0) { drawCargo();drawArmAssembly(true);drawArmAssembly(false); }
+    else if (pose.sideView) { drawCargo();drawArmAssembly(!farLeft); }
     if (state === 'death') {
       const p = clamp(time / action.duration);
       const drop = smooth(clamp(p * 1.8));

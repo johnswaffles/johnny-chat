@@ -1,6 +1,6 @@
-import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260904-hearthkin3';
-import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-hearthkin3';
-import { COMBAT_ATLASES, VILLAGER_ATLASES } from './config.js?v=20260904-hearthkin3';
+import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260904-naturalwalk1';
+import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260904-naturalwalk1';
+import { COMBAT_ATLASES, UNIT_TYPES, VILLAGER_ATLASES } from './config.js?v=20260904-naturalwalk1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -423,11 +423,14 @@ export class CrownforgeAnimationSystem {
     const clip = animationClip(unit.type, nextState);
     const previousTime = unit.animationTime ?? 0;
     const duration = Math.max(0.001, clip.frames.length / Math.max(0.001, clip.fps));
-    // A unit can be moving while its collision solver is easing around a
-    // blocker or starting a route. Keep the authored walk cycle alive during
-    // that low-speed portion instead of showing a single frame sliding over
-    // the ground. The simulation still caps fast travel independently.
-    const playbackRate = nextState === 'walk' || (unit.type === 'villager' && nextState.startsWith('carry_')) ? Math.max(0.78, Math.min(2.2, unit.animationPlaybackRate ?? 1)) : 1;
+    // Crown workers ease their cadence with actual movement and stop stepping
+    // when blocked. Other roster units retain their authored sheet cadence.
+    const locomotion = nextState === 'walk' || unit.type === 'villager' && nextState.startsWith('carry_');
+    const playbackRate = locomotion
+      ? unit.type === 'villager' && Number.isFinite(unit.motionSpeed)
+        ? Math.max(0, Math.min(2.2, unit.motionSpeed / UNIT_TYPES.villager.speed))
+        : Math.max(.78, Math.min(2.2, unit.animationPlaybackRate ?? 1))
+      : 1;
     const nextTime = clip.loop ? (previousTime + delta * playbackRate) % duration : Math.min(duration, previousTime + delta * playbackRate);
     if ((nextState === 'walk' || unit.type === 'villager' && nextState.startsWith('carry_')) && clip.events?.footstep) {
       const thresholds = Array.isArray(clip.events.footstep) ? clip.events.footstep : [clip.events.footstep];

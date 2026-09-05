@@ -1,4 +1,4 @@
-import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose, drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260904-hearthkin3';
+import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose, drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260904-naturalwalk1';
 
 const canvas = document.querySelector('#stage');
 const ctx = canvas.getContext('2d');
