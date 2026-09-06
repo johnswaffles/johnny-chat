@@ -5152,3 +5152,7 @@ Implemented three presentation upgrades: warm canopy lighting with painted-silho
 Replaced camera-dependent full terrain repaints with bounded, world-anchored progressive tiles. Added distant forest strips that retain individual painting around other entities and grass, plus initial image/drawing-surface preparation behind the loading veil. Wheel zoom now eases around the pointer and handles wheel units consistently. Both caches have explicit memory and per-frame work limits.
 
 The same full-world camera route reduced the maximum measured zoom render from 301.9 ms to 25.6 ms, with zero frame gaps over 50 ms in the final run. Pan render p95 is 4.9 ms including the new lighting. Real canvas placement took 8.6 ms; three workers completed the Timber Yard and delivered Wood. Relevant rendering, loading, forest/meadow, construction, navigation, gathering, gameplay and music tests pass. A retired-atlas remediation assertion fails identically on the old release and is documented in RADIANCE_RELEASE.md. Release marker: 20260905-radiance4.
+
+## September 5, 2026 — Lantern Under Stone opens the soundtrack
+
+Moved Lantern Under Stone to the first position in the default repeating album, followed by The Door Beneath the World, The Forgotten Stair, The Last Rune and Cavernous Wonder. Updated the initial status text and soundtrack catalog. Existing individual-song preferences and all original recordings remain unchanged. All six music regression checks, syntax and whitespace checks pass. Release marker: 20260905-lanternfirst1.

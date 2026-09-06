@@ -4,11 +4,11 @@ const asset = (name) => new URL(`../assets/${name}.mp3?v=20260905-playlist1`, im
 
 // Preserve the supplied recordings; this order is the default repeating album.
 export const CROWNFORGE_MUSIC = Object.freeze([
+  { id: 'lantern-under-stone', title: 'Lantern Under Stone' },
   { id: 'the-door-beneath-the-world', title: 'The Door Beneath the World' },
   { id: 'the-forgotten-stair', title: 'The Forgotten Stair' },
   { id: 'the-last-rune', title: 'The Last Rune' },
   { id: 'cavernous-wonder', title: 'Cavernous Wonder' },
-  { id: 'lantern-under-stone', title: 'Lantern Under Stone' },
 ].map(track => Object.freeze({ ...track, src: asset(track.id) })));
 
 function browserStorage() {

@@ -1,6 +1,6 @@
 import { setupPresentation } from './presentation.js?v=20260905-smooth1';
 import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260905-smooth1';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260905-playlist1';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260905-lanternfirst1';
 import { CrownforgeInput } from './input.js?v=20260905-radiance4';
 import { CrownforgeRenderer } from './renderer.js?v=20260905-radiance4';
 import { CrownforgeSimulation } from './simulation.js?v=20260905-greatwood3';

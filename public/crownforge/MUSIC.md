@@ -6,11 +6,11 @@ The original recordings are stored in `games/crownforge/assets/` and mirrored by
 
 The default All songs option plays the following order once, then repeats the whole playlist. Choosing a title loops only that recording. The browser remembers the selection; changing or resetting a settlement does not restart the soundtrack. Playback begins after the player interacts with the game. Music Off pauses and Music On resumes.
 
-1. [The Door Beneath the World](assets/the-door-beneath-the-world.mp3)
-2. [The Forgotten Stair](assets/the-forgotten-stair.mp3)
-3. [The Last Rune](assets/the-last-rune.mp3)
-4. [Cavernous Wonder](assets/cavernous-wonder.mp3)
-5. [Lantern Under Stone](assets/lantern-under-stone.mp3)
+1. [Lantern Under Stone](assets/lantern-under-stone.mp3)
+2. [The Door Beneath the World](assets/the-door-beneath-the-world.mp3)
+3. [The Forgotten Stair](assets/the-forgotten-stair.mp3)
+4. [The Last Rune](assets/the-last-rune.mp3)
+5. [Cavernous Wonder](assets/cavernous-wonder.mp3)
 
 ## Imported originals
 

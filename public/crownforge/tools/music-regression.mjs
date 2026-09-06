@@ -82,7 +82,7 @@ test('autoplay denial is handled and the next gesture retries without losing the
 });
 
 test('the shipped playlist contains all five original recordings',async()=>{
-  assert.deepEqual(CROWNFORGE_MUSIC.map(t=>t.title),['The Door Beneath the World','The Forgotten Stair','The Last Rune','Cavernous Wonder','Lantern Under Stone']);
+  assert.deepEqual(CROWNFORGE_MUSIC.map(t=>t.title),['Lantern Under Stone','The Door Beneath the World','The Forgotten Stair','The Last Rune','Cavernous Wonder']);
   for(const track of CROWNFORGE_MUSIC){
     const info=await stat(new URL(track.src));assert.ok(info.size>1000000,`${track.title} contains a full recording`);
   }
