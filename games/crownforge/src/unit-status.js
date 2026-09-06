@@ -2,13 +2,16 @@ import {UNIT_TYPES} from './config.js?v=20260906-firstcondemnation1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Divine curse',
-  summary:'No lesser curse can take hold.',
-  lore:'Before the first crown was forged, this bear broke the silence of a sacred grove. God marked it and condemned it to wander beneath the trees until their last root withers. No lesser curse may claim what Heaven has already condemned.',
-  effect:'Immune to other curses. Steel can still wound it. Two landed blows awaken a healthy Hearthkin’s Last Light Ward; the bear then loses all sight of the shielded worker.',
+  summary:'It wears lesser curses as a lure.',
+  lore:'Before the first crown was forged, this bear broke the silence of a sacred grove. God marked it and condemned it to wander beneath the trees until their last root withers. In those long centuries, it learned a cruel deceit. When Last Light names it, the beast welcomes the lesser rune and lets its life appear to dwindle to a single breath. Soldiers come close to deliver an easy mercy. The old strength waits beneath the mark. No lesser curse can weaken what Heaven has already condemned.',
+  effect:'Last Light leaves its rune and a false 1 HP reading, but cannot weaken the bear or make the next wound fatal. Steel still wears down its true strength. A lone soldier is in grave danger; bring two or three. Ward-protected workers remain invisible to its hunt.',
   art:'./assets/crownforge-first-condemnation-v1.png?v=20260906-firstcondemnation1',
 });
 export const isCurseImmune=unit=>Boolean(UNIT_TYPES[unit?.type]?.curseImmune);
 export const isWardProtected=unit=>Boolean(unit?.lastLightWardTimer>0);
+// Combat and saves always use real HP. The lesser curse disguises only what
+// players can see; a fallen bear must still read as dead.
+export const displayedUnitHealth=unit=>unit.dead||unit.hp<=0?0:unit.lastLightCurseActive&&isCurseImmune(unit)?1:unit.hp;
 export function strikeDamage(attacker,target){
   const rules=UNIT_TYPES[attacker.type];
   if(rules.workerStrikeFraction&&UNIT_TYPES[target?.type]?.worker)return Math.ceil(target.maxHp*rules.workerStrikeFraction);
@@ -18,7 +21,7 @@ export function unitStatuses(unit){
   const statuses=[];
   if(isCurseImmune(unit))statuses.push({...FIRST_CONDEMNATION,detail:'Permanent · curse immunity',rune:'divine'});
   if(unit.lastLightWardTimer>0)statuses.push({id:'ward',name:'Last Light Ward',kind:'Protection',detail:`${Math.ceil(unit.lastLightWardTimer)}s · invulnerable`,summary:'Protected from damage and attack targeting.',lore:'At the edge of death, the Hearthkin’s last light becomes a refuge. For one minute, no blow can touch them.',effect:'Health restored. Untargetable by attacks until the ward expires. Bears seek other prey.',rune:'ward'});
-  if(unit.lastLightCurseActive&&!isCurseImmune(unit))statuses.push({id:'lastLight',name:'Last Light Curse',kind:'Curse',detail:'1 HP · next damage is fatal',summary:'The next wound will be the last.',lore:'The light that saved another life has named its price. A thorned mark hangs above the aggressor, and the smallest wound will now claim them.',effect:'Health reduced to 1. Any positive damage is fatal.',rune:'curse'});
+  if(unit.lastLightCurseActive)statuses.push({id:'lastLight',name:'Last Light Curse',kind:'Curse',detail:'1 HP · next damage is fatal',summary:isCurseImmune(unit)?'One last breath—or so it would have you believe.':'The next wound will be the last.',lore:isCurseImmune(unit)?'The thorned rune is real. The weakness is a lie. The God-condemned beast wears Last Light willingly, hiding its strength behind the promise of a final, easy blow. Many have mistaken that single breath for mercy. Few have lived to warn the next.':'The light that saved another life has named its price. A thorned mark hangs above the aggressor, and the smallest wound will now claim them.',effect:isCurseImmune(unit)?'The First Condemnation turns this curse into a lure: the rune and 1 HP appear, but true health is unchanged and wounds deal normal damage. The next blow is fatal only when its hidden strength is actually spent.':'Health reduced to 1. Any positive damage is fatal.',rune:'curse'});
   if(unit.stunTimer>0)statuses.push({id:'stun',name:'Stunned',kind:'Impairment',detail:`${Math.ceil(unit.stunTimer)}s remaining`,summary:'Movement and attacks are interrupted.',rune:'stun'});
   if(unit.stunImmunityTimer>0)statuses.push({id:'stunImmunity',name:'Steadfast',kind:'Protection',detail:`${Math.ceil(unit.stunImmunityTimer)}s · stun immunity`,summary:'Cannot be stunned while this protection lasts.',rune:'ward'});
   return statuses;
@@ -34,7 +37,7 @@ export function sigilSvg(kind='curse'){
   const paths=SIGIL_STROKES.map(points=>`<polyline points="${points.map(p=>p.join(',')).join(' ')}"/>`).join('');
   return `<svg viewBox="-19 -20 38 42" aria-hidden="true" fill="none" stroke="${SIGIL_COLORS[kind]??SIGIL_COLORS.curse}" stroke-width="2.2" stroke-linejoin="miter">${paths}</svg>`;
 }
-export function curseRuneKind(unit){return isCurseImmune(unit)?'divine':unit.lastLightCurseActive?'curse':null;}
+export function curseRuneKind(unit){return unit.lastLightCurseActive?'curse':isCurseImmune(unit)?'divine':null;}
 export function drawCurseSigil(ctx,kind,x,y,size){
   ctx.save();ctx.translate(x,y);ctx.scale(size/38,size/38);ctx.lineCap='square';ctx.lineJoin='miter';
   for(const [color,width] of [['#231a1b',5],[SIGIL_COLORS[kind]??SIGIL_COLORS.curse,2.2]]){

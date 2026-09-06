@@ -1,4 +1,4 @@
-import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260906-firstcondemnation1';
+import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260906-falsemercy1';
 import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260906-firstcondemnation1';
 import { grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260906-bearmotion1';
 import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260906-firstcondemnation1';
@@ -1013,6 +1013,7 @@ export class CrownforgeSimulation {
       lastLightWardBlastTimer: 0,
       lastLightWardBlastDuration: 0,
       lastLightCurseActive: false,
+      lastLightCurseDecoy: false,
       lastLightCurseFlashTimer: 0,
       wardBlockedPulse: 0,
       dead: false,
@@ -4305,11 +4306,10 @@ export class CrownforgeSimulation {
 
     const attacker = this.units.find((candidate) => candidate.id === sourceId && !candidate.dead);
     if (!attacker) return false;
-    if (isCurseImmune(attacker)) {
-      this._announce('The First Condemnation rejects the lesser curse.');
-      return false;
-    }
-    attacker.hp = 1;
+    // The God-condemned bear accepts the mark, but only its visible health
+    // falls to one. Reapplying the curse must not erase real battle damage.
+    attacker.lastLightCurseDecoy = isCurseImmune(attacker);
+    if (!attacker.lastLightCurseDecoy) attacker.hp = 1;
     attacker.lastLightCurseActive = true;
     attacker.lastLightCurseFlashTimer = 1.15;
     attacker.hitFlash = Math.max(attacker.hitFlash, 0.34);
@@ -6936,8 +6936,10 @@ export class CrownforgeSimulation {
       const unit = this.addUnit(saved.type, saved.x, saved.z, saved.faction);
       Object.assign(unit, saved);
       if (isCurseImmune(unit) && unit.lastLightCurseActive) {
-        unit.lastLightCurseActive=false;unit.lastLightCurseFlashTimer=0;
-        if (!unit.dead) unit.hp=unit.maxHp;
+        // Pre-immunity saves stored the curse's one HP as real health. Migrate
+        // that once; new saves retain every wound, even genuine one-HP health.
+        if (!saved.lastLightCurseDecoy && !unit.dead && unit.hp === 1) unit.hp=unit.maxHp;
+        unit.lastLightCurseDecoy=true;
       }
       if (!Array.isArray(unit.orderQueue)) unit.orderQueue = [];
     }

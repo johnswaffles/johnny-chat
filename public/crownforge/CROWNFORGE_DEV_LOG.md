@@ -5189,3 +5189,12 @@ Replaced the Last Light Curse pulse and diamond with a steady thorned rune. The 
 Bear hits trigger either full-health gathering class shield on the second landed strike. Ward activation immediately clears every bear targeting that worker, rejects new attacks, and removes protected workers from hunt/spawn candidates. Other prey are sought, or the bear prowls while everyone is warded. Ordinary Last Light Curse behavior remains; living bears saved under the previous curse are migrated to the new immunity rule.
 
 Seven new focused checks plus bear motion, wildlife/economy, roster/Hearthkin gameplay, camera and building-service checks pass. Actual-game desktop and 390-pixel card review verified rune clicks, health/status display, curse immunity and shielded prey being ignored with no browser errors. Full evidence and exact original art prompt: FIRST_CONDEMNATION_RELEASE.md and FIRST_CONDEMNATION_ART_PROMPT.json. Release marker: 20260906-firstcondemnation1.
+
+
+## September 6, 2026 — False Mercy
+
+The bear now welcomes Last Light's lesser rune while The First Condemnation prevents its weakening and fatal-next-hit effects. All player-facing health views show 1 HP, while combat retains the bear's true wounds and existing strength. Both curses appear in inspection; clicking the overhead lesser rune opens the trickery entry. Expanded original lore explains how the bear feigns a final breath to lure attackers close.
+
+Repeated curses cannot heal it. New saves preserve the disguise and actual health, including genuine one-HP and dead states. Pre-immunity one-HP cursed bears migrate once without losing the mark; other battle damage survives. Existing worker wards, disengagement, ordinary curse lethality, and read-only hostile inspection remain intact.
+
+All 35 relevant checks pass. Seeded cursed-bear duels confirm one Crown Guard loses, two win with one casualty, and three win with one casualty. Browser inspection verifies the rune, false health in both cards and the world bar, lore interactions, and real wounds retained after loading. Full details: FALSE_MERCY_RELEASE.md. Release marker: 20260906-falsemercy1.

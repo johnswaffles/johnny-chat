@@ -56,7 +56,7 @@ test('the existing Last Light Ward repeatedly prevents either faction worker fro
    worker.hp=1;const result=s._applyUnitDamage(worker,1000,bear);
    assert(result.warded&&!result.killed);assert.equal(worker.hp,worker.maxHp);assert(worker.lastLightWardTimer>0);
    const blocked=s._applyUnitDamage(worker,1000,bear);assert(blocked.blocked);assert(!worker.dead);
-   s._updateUnitStatusEffects(worker,2);assert.equal(bear.hp,bear.maxHp,'the innate divine curse rejects the ward curse');assert.equal(bear.lastLightCurseActive,false);
+   s._updateUnitStatusEffects(worker,2);assert.equal(bear.hp,bear.maxHp,'the innate divine curse prevents weakness while accepting the lesser mark');assert.equal(bear.lastLightCurseActive,true);
    s._updateUnitStatusEffects(worker,61);assert.equal(worker.lastLightWardTimer,0);assert.equal(worker.hp,worker.maxHp);
   }
  }

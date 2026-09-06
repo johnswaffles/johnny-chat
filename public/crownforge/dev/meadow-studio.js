@@ -1,5 +1,5 @@
-import {CrownforgeSimulation} from '../src/simulation.js?v=20260906-firstcondemnation1';
-import {CrownforgeRenderer} from '../src/renderer.js?v=20260906-firstcondemnation1';
+import {CrownforgeSimulation} from '../src/simulation.js?v=20260906-falsemercy1';
+import {CrownforgeRenderer} from '../src/renderer.js?v=20260906-falsemercy1';
 import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260906-firstcondemnation1';
 import {CONFIG,UNIT_TYPES} from '../src/config.js?v=20260906-firstcondemnation1';
 

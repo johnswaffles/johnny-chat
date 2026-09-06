@@ -1,8 +1,8 @@
 import {UNIT_TYPES} from './config.js?v=20260906-firstcondemnation1';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION} from './unit-status.js?v=20260906-firstcondemnation1';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260906-falsemercy1';
 
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';
-const health=u=>`${Math.max(0,Math.ceil(u.hp))} / ${u.maxHp} HP`;
+const health=u=>`${Math.ceil(displayedUnitHealth(u))} / ${u.maxHp} HP`;
 export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
   const host=document.createElement('section');host.id='unit-inspector';host.hidden=true;
   host.innerHTML='<div class="unit-inspect-overview"><button class="unit-portrait-button" type="button" aria-label="Open character details"><canvas width="120" height="160" aria-hidden="true"></canvas></button><div class="unit-vitals"><span class="unit-allegiance"></span><strong class="unit-health-label"></strong><div class="unit-health-track" role="meter" aria-label="Health"><i></i></div><p class="unit-activity"></p></div></div><div class="unit-statuses" aria-label="Buffs and curses"></div><p class="unit-inspect-hint"></p>';
@@ -65,7 +65,7 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     document.querySelector('.selection-direct-actions').hidden=!!hostile;
     if(selected){
       $('.unit-allegiance').textContent=factionName(selected);$('.unit-health-label').textContent=health(selected);
-      const meter=$('.unit-health-track');meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax',selected.maxHp);meter.setAttribute('aria-valuenow',Math.max(0,Math.ceil(selected.hp)));meter.querySelector('i').style.width=`${Math.max(0,Math.min(100,selected.hp/selected.maxHp*100))}%`;
+      const visibleHp=displayedUnitHealth(selected),meter=$('.unit-health-track');meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax',selected.maxHp);meter.setAttribute('aria-valuenow',Math.ceil(visibleHp));meter.querySelector('i').style.width=`${Math.max(0,Math.min(100,visibleHp/selected.maxHp*100))}%`;
       $('.unit-activity').textContent=selected.dead?'Fallen':(selected.actionLabel||'Idle')+(selected.carryAmount>0?` · carrying ${selected.carryAmount} ${selected.carryType}`:'');
       $('.unit-inspect-hint').textContent=hostile?'Inspect only · select your soldiers, then right-click a foe to attack.':'Click a portrait or effect to read more.';
       buttonKey=renderButtons($('.unit-statuses'),selected,buttonKey,id=>open(selected,id));

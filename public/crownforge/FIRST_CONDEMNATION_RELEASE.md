@@ -2,6 +2,8 @@
 
 Release marker: `20260906-firstcondemnation1`
 
+Historical release: lesser-curse rejection and its save migration are superseded by [False Mercy](FALSE_MERCY_RELEASE.md).
+
 Last Light Curse now has a steady, thorned overhead rune. The previous pulsing circle and filled diamond are removed. The Greatwood Grizzly carries its own ember-colored rune from birth: **The First Condemnation**, a permanent divine curse which rejects lesser curses. Its short original story and original illustrated forest portrait appear in a character card. The bear can still take ordinary damage and be killed.
 
 Bear strikes against a gathering class inflict 60% of that worker's maximum health, rounded up. This triggers a full-health worker's ward on the second landed strike without changing damage against soldiers. Activating the ward immediately clears every bear's pursuit, path, combat reservation and target for that worker. All attack commands reject shielded units, damage protection takes precedence over curse damage, and the bear's hunt and spawning searches exclude shielded people. Hunters pursue other available prey; if all people are warded, they prowl until someone becomes targetable. Ward expiration restores attack eligibility.
