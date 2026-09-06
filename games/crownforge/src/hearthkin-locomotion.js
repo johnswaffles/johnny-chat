@@ -45,24 +45,30 @@ function footCycle(phase,stride) {
   return {z:travel*stride,lift,planted,angle:heel+toe,phase:p};
 }
 
-export function hearthkinLocomotion(state,time,direction,{duration=1.05,id=0,moving=true,relaxedWalkArms=false}={}) {
+export function hearthkinLocomotion(state,time,direction,{duration=1.05,id=0,moving=true,relaxedWalkArms=false,idleBreathing=false}={}) {
   const carrying=state.startsWith('carry_');
   const walking=moving&&(state==='walk'||carrying);
   const phase=((time/duration)%1+1)%1;
+  const atEase=idleBreathing&&state==='idle';
+  // A quiet, continuous breath with a slightly quicker inhale and softer
+  // exhale. Offsetting each actor keeps a group from breathing in unison.
+  // Every component shares the clip period, including its loop boundary.
+  const breathPhase=phase*TAU+id*2.39996322973;
+  const inhale=Math.sin(breathPhase)+.12*Math.sin(2*breathPhase);
   const wave=Math.sin(phase*TAU), contact=Math.cos(phase*TAU);
   const step=carrying?8.5:10.5;
   const feet=[footCycle(phase,step),footCycle(phase+.5,step)];
-  const sway=walking?wave*.48:0;
+  const sway=walking?wave*.48:atEase?.28*Math.sin(breathPhase+.65):0;
   // Low just after contact, high over the supporting leg at mid-stance.
-  const rise=walking?-.48*Math.cos(phase*TAU*2-.55):0;
-  const breath=walking?0:Math.sin(time*TAU/3.6+id*.63)*.15;
+  const rise=walking?-.48*Math.cos(phase*TAU*2-.55):atEase?.05*Math.sin(breathPhase+.4):0;
+  const breath=walking?0:atEase?inhale*1.05:Math.sin(time*TAU/3.6+id*.63)*.15;
   const hip=v(sway,43.35+rise);
   const waist=add(hip,v(0,3));
-  const neck=add(waist,v(-sway*.3,28+breath,walking?1.1:0));
+  const neck=add(waist,v(-sway*.3,28+breath,walking?1.1:atEase?inhale*.3:0));
   const shoulder=add(neck,mul(sub(waist,neck),.2));
   const head=add(neck,v(0,1));
   const joints={hip,waist,neck,shoulder,head};
-  const shoulderTurn=walking?wave*.035:0;
+  const shoulderTurn=walking?wave*.035:atEase?.007*Math.sin(breathPhase-.35):0;
   const hipTurn=walking?-wave*.035:0;
   for(const [index,name] of ['left','right'].entries()) {
     const sign=index===0?-1:1;
@@ -84,8 +90,8 @@ export function hearthkinLocomotion(state,time,direction,{duration=1.05,id=0,mov
       // shoulder/wrist line. The forearm returns toward the hip instead of
       // extending the upper arm's almost straight frontal silhouette.
       // Solve the same anatomy for every view; preserve both bone lengths.
-      const upperAngle=armWave*(index===1?.16:.24)-(relaxed?.085:.015);
-      const elbowFlex=(walking?(relaxed?18:14)+4*Math.sin(phase*TAU+index*Math.PI-.25):12)*rad;
+      const upperAngle=armWave*(index===1?.16:.24)-(relaxed?.085:.015)+(atEase?.008*Math.sin(breathPhase-.6):0);
+      const elbowFlex=(walking?(relaxed?18:14)+4*Math.sin(phase*TAU+index*Math.PI-.25):12+(atEase?.5*Math.sin(breathPhase-.85):0))*rad;
       const upperOut=relaxed?2.6:.65,lowerOut=relaxed?-2.05:.2;
       const upperRadius=Math.sqrt(17*17-upperOut*upperOut),lowerRadius=Math.sqrt(16*16-lowerOut*lowerOut);
       elbow=add(shoulderJoint,v(sign*upperOut,-upperRadius*Math.cos(upperAngle),upperRadius*Math.sin(upperAngle)));
@@ -101,7 +107,8 @@ export function hearthkinLocomotion(state,time,direction,{duration=1.05,id=0,mov
     const facing=direction===1?1:direction===3?-1:0;
     result[name+'Foot']={point:projectHearthkin(joints[name+'Ankle'],direction),angle:walking?feet[index].angle*facing:0,planted:walking?feet[index].planted:true,lift:walking?feet[index].lift:0};
   }
-  result.clothSway=walking?wave*.016:0;
-  result.braidSway=walking?Math.sin(phase*TAU-.8)*.035:Math.sin(time*TAU/3.6)*.009;
+  result.clothSway=walking?wave*.016:atEase?.003*Math.sin(breathPhase-.8):0;
+  result.braidSway=walking?Math.sin(phase*TAU-.8)*.035:atEase?.006*Math.sin(breathPhase-.9):Math.sin(time*TAU/3.6)*.009;
+  if(atEase){result.idleBreathing=true;result.headTilt=.006*Math.sin(breathPhase-.45);}
   return result;
 }

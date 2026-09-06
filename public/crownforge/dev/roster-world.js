@@ -1,6 +1,6 @@
-import { CrownforgeSimulation } from '../src/simulation.js';
-import { CrownforgeRenderer } from '../src/renderer.js?v=20260905-meadow1';
-import { CHARACTER_RIGS } from '../src/character-rigs.js?v=20260905-rosterfit1';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260905-idlebreath1';
+import { CrownforgeRenderer } from '../src/renderer.js?v=20260905-idlebreath1';
+import { CHARACTER_RIGS } from '../src/character-rigs.js?v=20260905-idlebreath1';
 import { UNIT_TYPES, CONFIG } from '../src/config.js';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas);

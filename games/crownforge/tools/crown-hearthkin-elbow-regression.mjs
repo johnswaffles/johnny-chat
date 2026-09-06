@@ -68,9 +68,9 @@ test('relaxed elbows retain the opposed gait and continuous loop',()=>{
   }
 });
 
-test('both workers use relaxed walking while idle, carrying and stopped poses retain their existing anatomy',()=>{
+test('both workers use relaxed walking while Ashen idle, carrying and stopped poses retain their existing anatomy',()=>{
   const carries=['carry_wood','carry_food','carry_stone','carry_gold','carry_supplies'];
-  for(const rig of [ash,crown])for(const state of ['idle',...carries])for(let direction=0;direction<4;direction++)for(const phase of [0,.125,.25,.5,.75,1]){
+  for(const rig of [ash,crown])for(const state of [...(rig===ash?['idle']:[]),...carries])for(let direction=0;direction<4;direction++)for(const phase of [0,.125,.25,.5,.75,1]){
     const options={id:5,moving:true},actual=rig.samplePose(state,rig.actions[state].duration*phase,direction,options);
     const expected=hearthkinPose(state,HEARTHKIN_ACTIONS[state].duration*phase,direction,options);
     assert.deepEqual(actual,expected,`${rig.id}/${state} must retain the default worker pose`);

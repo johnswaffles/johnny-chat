@@ -1,5 +1,5 @@
-import { equipmentReadiness } from './character-equipment.js?v=20260905-buildings1';
-import { projectHearthkin } from './hearthkin-locomotion.js?v=20260905-buildings1';
+import { equipmentReadiness } from './character-equipment.js?v=20260905-idlebreath1';
+import { projectHearthkin } from './hearthkin-locomotion.js?v=20260905-idlebreath1';
 
 const v=(x=0,y=0,z=0)=>({x,y,z});
 const add=(a,b)=>v(a.x+b.x,a.y+b.y,a.z+b.z),mul=(a,n)=>v(a.x*n,a.y*n,a.z*n);

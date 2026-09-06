@@ -1,4 +1,4 @@
-import { createCharacterRigs } from '../src/character-rigs.js?v=20260905-rosterfit1';
+import { createCharacterRigs } from '../src/character-rigs.js?v=20260905-idlebreath1';
 const characterRigs = createCharacterRigs();
 import {
   ANIMATION_DIRECTIONS,
@@ -6,7 +6,7 @@ import {
   animationClip,
   animationDefinition,
   animationFrame,
-} from '../src/animation.js?v=20260904-rosterkin1';
+} from '../src/animation.js?v=20260905-idlebreath1';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');

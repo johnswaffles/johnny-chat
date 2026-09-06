@@ -1,10 +1,10 @@
 import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260905-buildings1';
-import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-buildings1';
-import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260905-buildings1';
-import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260905-buildings1';
-import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js?v=20260905-buildings1';
-import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js?v=20260905-buildings1';
-import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js?v=20260905-buildings1';
+import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-idlebreath1';
+import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260905-idlebreath1';
+import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260905-idlebreath1';
+import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js?v=20260905-idlebreath1';
+import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js?v=20260905-idlebreath1';
+import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js?v=20260905-idlebreath1';
 
 const TAU = Math.PI * 2;
 const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
@@ -242,10 +242,10 @@ export function hearthkinPose(state = 'idle', time = 0, direction = 0, options =
     braidSway: Math.sin((walking ? cycle * TAU : time * 2) - .7) * (walking ? .085 : .018) * (1 - fall),
   };
   if (state === 'walk' || state.startsWith('carry_') || state === 'idle' && !response && !(options.wardImpact > .01)) {
-    Object.assign(pose, hearthkinLocomotion(state,time,direction,{duration:action.duration,id:options.id,moving:options.moving,relaxedWalkArms:options.relaxedWalkArms}));
+    Object.assign(pose, hearthkinLocomotion(state,time,direction,{duration:action.duration,id:options.id,moving:options.moving,relaxedWalkArms:options.relaxedWalkArms,idleBreathing:options.idleBreathing}));
     const wristAngle = Math.atan2(pose.rightHand.y-pose.rightElbow.y,pose.rightHand.x-pose.rightElbow.x)-Math.PI/2;
     pose.toolAngle = Math.PI + wristAngle * .65;
-    pose.headTilt = 0;
+    if (!pose.idleBreathing) pose.headTilt = 0;
     const forearm=pose.anatomical.rightHand,elbow=pose.anatomical.rightElbow;
     pose.toolFrame=anatomicalToolFrame(pose,Math.PI+Math.atan2(forearm.z-elbow.z,elbow.y-forearm.y)*.65);
   } else {
