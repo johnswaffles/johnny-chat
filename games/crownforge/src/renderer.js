@@ -1,5 +1,5 @@
-import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260906-paintedbear1';
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260906-paintedbear1';
+import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260906-bearpursuit1';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260906-bearpursuit1';
 import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260906-firstcondemnation1';
 import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260905-buildings1';

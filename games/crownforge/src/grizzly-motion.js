@@ -4,6 +4,7 @@ export const GRIZZLY_ATTACKS = Object.freeze({
   swipe:Object.freeze({duration:1.65,anticipation:.53,contact:.15,recovery:.32}),
   rear:Object.freeze({duration:2.4,anticipation:.56,contact:.15,recovery:.29}),
 });
+export const GRIZZLY_PURSUIT = Object.freeze({ reach:2.35, trackDistance:6, stopDistance:1.3 });
 const CONTACT={hindLeft:0,frontLeft:.25,hindRight:.5,frontRight:.75};
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const mix=(a,b,t)=>a+(b-a)*t;
@@ -26,7 +27,7 @@ export function grizzlyAttackClock(unit){
 
 // No wall-clock sprite loop: a blocked bear advances no stride distance.
 export function updateGrizzlyMotion(unit,dt,travelled){
-  const moving=travelled>1e-5&&unit.attackPhase==='approach';
+  const moving=travelled>1e-5&&(unit.attackPhase==='approach'||unit.grizzlyAttackVariant==='swipe');
   unit.grizzlyTravel=(unit.grizzlyTravel??0)+(moving?travelled:0);
   const goal=moving?1:0,rate=Math.min(1,dt/(moving?.16:.12));
   unit.grizzlyWalkBlend=mix(unit.grizzlyWalkBlend??0,goal,rate);

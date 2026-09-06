@@ -1,6 +1,6 @@
-import { GRIZZLY_PAINTED_ART } from './grizzly-painted-art.js?v=20260906-paintedbear1';
-import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260906-paintedbear1';
-import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260906-paintedbear1';
+import { GRIZZLY_PAINTED_ART } from './grizzly-painted-art.js?v=20260906-bearpursuit1';
+import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260906-bearpursuit1';
+import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260906-bearpursuit1';
 
 const VIEWS=['se','sw','ne','nw'];
 const BODY_SCALE=.85;
@@ -14,6 +14,11 @@ export function paintedGrizzlyFrame(unit,time=0,reducedMotion=false){
   }else if(!unit.dead && (unit.grizzlyWalkBlend??0)>.05){
     action='walk';phase=(unit.grizzlyTravel??0)/GRIZZLY_MOTION.strideLength;
   }else if(!unit.dead&&!reducedMotion){phase=(unit.animClock??time*.001)/ACTION_TIMING.idle.seconds;}
+  // Keep the approved stride during pursuit preparation and recovery; the
+  // complete swipe paintings carry the wind-up, hit and follow-through.
+  if(action==='swipe' && unit.grizzlyMovingAttack && (unit.grizzlyWalkBlend??0)>.05 && (phase<.46||phase>=.75)){
+    action='walk';phase=(unit.grizzlyTravel??0)/GRIZZLY_MOTION.strideLength;
+  }
   const sheet=GRIZZLY_PAINTED_ART[view][action];
   const index=action==='walk'?Math.floor((phase-Math.floor(phase))*sheet.frames.length):actionFrame(action,phase);
   return {view,action,index,sheet,frame:sheet.frames[index]};

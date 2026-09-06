@@ -1,6 +1,6 @@
-import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260906-paintedbear1';
+import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260906-bearpursuit1';
 import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260906-firstcondemnation1';
-import { grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260906-paintedbear1';
+import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260906-bearpursuit1';
 import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260906-firstcondemnation1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260905-greatwood3';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260905-buildings1';
@@ -1312,6 +1312,8 @@ export class CrownforgeSimulation {
     unit.attackHitApplied = false;
     unit.attackEventFired = false;
     unit.attackTargetSnapshot = null;
+    unit.grizzlyMovingAttack = false;
+    unit.grizzlyPursuitDirect = false;
   }
 
   _clearAttackState(unit, keepCommand = false) {
@@ -1332,7 +1334,9 @@ export class CrownforgeSimulation {
   _startAttackCycle(unit, target) {
     if (unit.type === 'grizzly') {
       unit.grizzlyAttackCount = (unit.grizzlyAttackCount ?? 0) + 1;
-      unit.grizzlyAttackVariant = unit.grizzlyAttackCount % 3 === 0 ? 'rear' : 'swipe';
+      const chasing = target.kind === 'unit' && (Math.hypot(target.velocityX??0,target.velocityZ??0)>.2 || this._targetDistance(unit,target)>UNIT_TYPES.grizzly.range);
+      unit.grizzlyAttackVariant = !chasing && unit.grizzlyAttackCount % 3 === 0 ? 'rear' : 'swipe';
+      unit.grizzlyMovingAttack = chasing;
       unit.grizzlyAttackSide = unit.grizzlyAttackCount % 2 ? 1 : -1;
     }
     unit.attackPhase = 'anticipation';
@@ -2220,6 +2224,7 @@ export class CrownforgeSimulation {
     else if (unit.command === 'field') unit.visualState = unit.path.length ? 'walk' : 'food';
     else if (!['gather', 'return', 'attack', 'build', 'demolish'].includes(unit.command)) unit.visualState = 'idle';
     if (unit.command === 'move' || unit.command === 'gather' || unit.command === 'return' || unit.command === 'attack' || unit.command === 'build' || unit.command === 'demolish' || unit.command === 'field') {
+      if (unit.type === 'grizzly' && unit.command === 'attack') this._prepareGrizzlyPursuit(unit);
       this._followPath(unit, dt);
     }
     if (unit.command === 'gather') this._updateGathering(unit, dt);
@@ -2335,7 +2340,7 @@ export class CrownforgeSimulation {
       const dx = next.x - unit.x;
       const dz = next.z - unit.z;
       const length = Math.hypot(dx, dz);
-      if (length < 0.12) {
+      if (length < (unit.grizzlyPursuitDirect ? .002 : .12)) {
         unit.x = next.x;
         unit.z = next.z;
         unit.path.shift();
@@ -4381,6 +4386,32 @@ export class CrownforgeSimulation {
     return { damage: Math.min(before, damage), killed: target.dead, warded: false, blocked: false, cursed: false };
   }
 
+  _prepareGrizzlyPursuit(unit) {
+    unit.grizzlyPursuitDirect=false;
+    const target=this._getExplicitAttackTarget(unit);
+    if(!target || target.kind!=='unit' || isWardProtected(target)) {
+      unit.path=[];unit.velocityX=unit.velocityZ=0;return;
+    }
+    // Upright attacks must keep their hind paws planted.
+    if(unit.attackPhase!=='approach' && unit.grizzlyAttackVariant==='rear') {
+      unit.path=[];unit.velocityX=unit.velocityZ=0;return;
+    }
+    const span=distance(unit,target);
+    if(span>GRIZZLY_PURSUIT.trackDistance)return;
+    const gap=GRIZZLY_PURSUIT.stopDistance;
+    if(span<=gap){unit.path=[];unit.velocityX=unit.velocityZ=0;return;}
+    const point={x:target.x+(unit.x-target.x)*gap/span,z:target.z+(unit.z-target.z)*gap/span};
+    // Follow a nearby moving target without running A* every frame. The
+    // ordinary movement integrator still handles acceleration and collision.
+    if(this._pointBlockedForUnit(unit,point)||this._pathSegmentBlocked(unit,unit,point)) {
+      if(unit.attackPhase!=='approach'){unit.path=[];unit.velocityX=unit.velocityZ=0;}
+      return;
+    }
+    unit.grizzlyPursuitDirect=true;
+    unit.path=[point];unit.routeTarget=point;unit.stopDistance=0;
+    if(unit.attackPhase!=='approach')unit.grizzlyMovingAttack=true;
+  }
+
   _updateAttack(unit, dt) {
     let target = unit.attackPhase !== 'approach' ? this._getExplicitAttackTarget(unit) : this._getAttackTarget(unit);
     if (!target && unit.attackPhase !== 'approach') {
@@ -4415,7 +4446,8 @@ export class CrownforgeSimulation {
     }
     unit.attackTarget = target.id;
     unit.attackTargetKind = target.kind;
-    const range = UNIT_TYPES[unit.type].range;
+    const pursuingBear = unit.type==='grizzly' && target.kind==='unit' && (unit.attackPhase==='approach' || unit.grizzlyMovingAttack);
+    const range = pursuingBear ? GRIZZLY_PURSUIT.reach : UNIT_TYPES[unit.type].range;
     const inRange = this._targetDistance(unit, target) <= range;
     const hasLine = inRange && this._hasCombatLineOfSight(unit, target);
     const targetPoint = target.kind === 'building' ? this._buildingCollisionCenter(target) : target;
@@ -4463,15 +4495,15 @@ export class CrownforgeSimulation {
       if (unit.attackRepathCooldown <= 0) this._sendUnitToAttack(unit, target, unit.attackSlot);
       return;
     }
-    if (unit.type !== 'grizzly' || unit.attackPhase === 'approach') setUnitFacing(unit, targetPoint.x - unit.x, targetPoint.z - unit.z, true);
+    if (unit.type !== 'grizzly' || unit.attackPhase === 'approach' || unit.grizzlyMovingAttack) setUnitFacing(unit, targetPoint.x - unit.x, targetPoint.z - unit.z, true);
     if (unit.attackPhase === 'approach') {
       this._startAttackCycle(unit, target);
     }
-    unit.path = [];
-    unit.velocityX = 0;
-    unit.velocityZ = 0;
+    if(unit.type!=='grizzly' || unit.grizzlyAttackVariant==='rear') {
+      unit.path = [];unit.velocityX = 0;unit.velocityZ = 0;
+    }
     unit.visualState = 'attack';
-    unit.actionLabel = `Attacking ${this._targetLabel(target)}`;
+    unit.actionLabel = `${unit.grizzlyMovingAttack?'Chasing and swiping at':'Attacking'} ${this._targetLabel(target)}`;
     unit.attackTimer += dt;
     unit.attackPhaseElapsed += dt;
     if (unit.attackPhase === 'anticipation') {
