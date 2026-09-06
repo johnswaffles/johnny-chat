@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="crownforge-build" content="20260906-bearstride1" />
+    <meta name="crownforge-build" content="20260906-bearpair1" />
     <title>Crownforge: Dawn of Kingdoms</title>
     <meta name="description" content="Crownforge — a tiny polished historical RTS settlement slice." />
     <link rel="icon" type="image/png" href="./assets/crownforge-icon-gold-v1.png?v=20260904-rosterkin1" />
@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
-    <link rel="stylesheet" href="./styles.css?v=20260904-rosterkin1" />
+    <link rel="stylesheet" href="./styles.css?v=20260906-bearpair1" />
     <link rel="stylesheet" href="./presentation.css?v=20260905-playlist1" />
       <link rel="stylesheet" href="./unit-inspector.css?v=20260906-firstcondemnation1" />
   </head>
@@ -176,6 +176,7 @@
             </div>
           </div>
           <div id="placement-readout" class="placement-readout" hidden><span id="placement-icon" class="ui-icon icon-house" aria-hidden="true"></span><span><b id="placement-title">PLACEMENT MODE</b><small id="placement-detail">Move the foundation to a clear site.</small></span></div>
+          <button id="release-bears" class="secondary-button bear-release-button" type="button" title="Release one grizzly near each faction at the same time"><span>RELEASE BEARS<small>BOTH SIDES</small></span></button>
           <button id="save-game" class="secondary-button" type="button" title="Save this Crownforge slice in this browser"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>SAVE</span></button>
           <button id="load-game" class="secondary-button" type="button" title="Restore the Crownforge slice saved in this browser"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>LOAD</span></button>
           <button id="music-toggle" class="secondary-button music-toggle" type="button" title="Mute Crownforge music" aria-pressed="false"><span class="music-glyph" aria-hidden="true">♫</span><span id="music-toggle-label">MUSIC ON</span></button>
@@ -238,7 +239,7 @@
         if (fileProtocolHelp) fileProtocolHelp.hidden = false;
       }
     </script>
-    <script type="module" src="./src/main.js?v=20260906-bearstride1"></script>
+    <script type="module" src="./src/main.js?v=20260906-bearpair1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

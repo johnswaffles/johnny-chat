@@ -8,11 +8,12 @@ export const initialWildlifeState = clock => ({ nextSpawnAt: (Math.floor(Math.ma
 
 // Spawn on a real woodland edge with a legal route to a person. Never move
 // existing trees, buildings or people to make an encounter fit.
-export function spawnGrizzly(sim) {
-  const state=sim.wildlifeState, humans=people(sim).filter(u=>!(u.lastLightWardTimer>0));
+function planGrizzly(sim,state,side=null,avoid=[]) {
+  const humans=people(sim).filter(u=>!(u.lastLightWardTimer>0));
   if (!humans.length) return null;
-  const preferred=state.spawnCount%2 ? 'enemy' : 'player';
+  const preferred=side??(state.spawnCount%2 ? 'enemy' : 'player');
   const audience=humans.filter(unit=>unit.faction===preferred);
+  if(side&&!audience.length)return null;
   const target=(audience.length?audience:humans)[state.spawnCount%(audience.length||humans.length)];
   const probe={id:-1,type:'grizzly',kind:'unit',faction:'wildlife',x:target.x,z:target.z,attackSlot:0,stairAccess:false};
   const radii=[20,28,38,52,72,95], count=radii.length*32;
@@ -23,23 +24,63 @@ export function spawnGrizzly(sim) {
     const radius=radii[Math.floor(index/32)];
     const point={x:target.x+Math.cos(angle)*radius,z:target.z+Math.sin(angle)*radius};
     if(point.x<2||point.z<2||point.x>CONFIG.mapWidth-2||point.z>CONFIG.mapHeight-2)continue;
+    if(avoid.some(p=>distance(p,point)<3)||sim.units.some(u=>u.type==='grizzly'&&!u.dead&&distance(u,point)<3))continue;
     if(humans.some(unit=>distance(unit,point)<14)||sim._pointBlockedForUnit(probe,point))continue;
     const woodland=sim._staticBlockerCandidates(point,7).some(node=>node.kind==='resource'&&node.type==='tree'&&node.amount>0&&distance(node,point)<7);
     if(!woodland)continue;
     Object.assign(probe,point);
     const route=sim._bestCombatRoute(probe,target);routes++;
-    if(route){
-      const bear=sim.addUnit('grizzly',point.x,point.z,'wildlife');
-      bear.wildlifeBornAt=sim.clock;bear.wildlifeHome={...point};bear.wildlifeScanClock=0;
-      sim._sendUnitToAttack(bear,target,0,{requireImmediateRoute:true});
-      bear.actionLabel='Hunting through the woodland';
-      state.spawnCount++;state.spawnCursor=0;
-      sim._announce('A huge grizzly has emerged from the woods. Soldiers, protect the settlement!');
-      return bear;
-    }
+    if(route)return {point,target,route};
     if(routes>=GRIZZLY_ENCOUNTER.spawnRouteBudget)break;
   }
   return null;
+}
+
+function releasePlannedGrizzly(sim,plan) {
+  const {point,target,route}=plan;
+  const bear=sim.addUnit('grizzly',point.x,point.z,'wildlife');
+  bear.wildlifeBornAt=sim.clock;bear.wildlifeHome={...point};bear.wildlifeScanClock=0;
+  sim._sendUnitToAttack(bear,target,0,{requireImmediateRoute:true,precomputedRoute:route});
+  bear.actionLabel='Hunting through the woodland';
+  sim.wildlifeState.spawnCount++;
+  return bear;
+}
+
+export function spawnGrizzly(sim) {
+  const state=sim.wildlifeState,plan=planGrizzly(sim,state);
+  if(!plan)return null;
+  const bear=releasePlannedGrizzly(sim,plan);state.spawnCursor=0;
+  sim._announce('A huge grizzly has emerged from the woods. Soldiers, protect the settlement!');
+  return bear;
+}
+
+export function requestGrizzlyPair(sim) {
+  const state=sim.wildlifeState??=initialWildlifeState(sim.clock);
+  if(sim.phase!=='playing'||state.pendingPair)return false;
+  if(!['player','enemy'].every(side=>people(sim).some(u=>u.faction===side))){
+    sim._announce('Both sides need living people before releasing a pair of bears.');return false;
+  }
+  state.pendingPair={startedAt:sim.clock,retryAt:sim.clock,player:{spawnCount:0,spawnCursor:0},enemy:{spawnCount:0,spawnCursor:0}};
+  sim._announce('Finding clear woodland trails for both bears…');
+  updateGrizzlyPair(sim);
+  return true;
+}
+
+function updateGrizzlyPair(sim) {
+  const state=sim.wildlifeState,pending=state.pendingPair;
+  if(!pending||sim.clock<pending.retryAt)return;
+  // Search with the existing per-side route budget, then commit both spawns
+  // in the same simulation tick. Never release half of a requested pair.
+  const player=planGrizzly(sim,pending.player,'player');
+  const enemy=planGrizzly(sim,pending.enemy,'enemy',player?[player.point]:[]);
+  if(player&&enemy){
+    releasePlannedGrizzly(sim,player);releasePlannedGrizzly(sim,enemy);
+    state.pendingPair=null;
+    sim._announce('Two grizzlies emerge! One hunts the Crownlands; one hunts the Ashen camp.');
+  }else if(sim.clock-pending.startedAt>=8){
+    state.pendingPair=null;
+    sim._announce('No clear woodland trails to both sides. Try releasing the bears again.');
+  }else pending.retryAt=sim.clock+.5;
 }
 
 function hunt(sim,bear) {
@@ -128,6 +169,7 @@ export function rallyBearDefenders(sim){
 
 export function updateWildlife(sim,dt) {
   const state=sim.wildlifeState??=initialWildlifeState(sim.clock);
+  updateGrizzlyPair(sim);
   if(sim.clock+1e-6>=state.nextSpawnAt&&sim.clock>=(state.spawnRetryAt??0)){
     if(spawnGrizzly(sim))state.nextSpawnAt+=GRIZZLY_ENCOUNTER.interval;
     state.spawnRetryAt=sim.clock+GRIZZLY_ENCOUNTER.retryInterval;

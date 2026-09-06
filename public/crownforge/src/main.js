@@ -1,11 +1,12 @@
-import {createUnitInspector} from './unit-inspector.js?v=20260906-bearstride1';
-import {displayedUnitHealth} from './unit-status.js?v=20260906-bearstride1';
+import {requestGrizzlyPair} from './wildlife.js?v=20260906-bearpair1';
+import {createUnitInspector} from './unit-inspector.js?v=20260906-bearpair1';
+import {displayedUnitHealth} from './unit-status.js?v=20260906-bearpair1';
 import { setupPresentation } from './presentation.js?v=20260906-firstcondemnation1';
 import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260906-firstcondemnation1';
 import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260905-lanternfirst1';
 import { CrownforgeInput } from './input.js?v=20260906-firstcondemnation1';
-import { CrownforgeRenderer } from './renderer.js?v=20260906-bearstride1';
-import { CrownforgeSimulation } from './simulation.js?v=20260906-bearstride1';
+import { CrownforgeRenderer } from './renderer.js?v=20260906-bearpair1';
+import { CrownforgeSimulation } from './simulation.js?v=20260906-bearpair1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260905-buildings1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260905-buildings1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260905-buildings1';
@@ -63,6 +64,8 @@ const milestoneList = document.querySelector('#milestone-list');
 const settlementWarnings = document.querySelector('#settlement-warnings');
 const logisticsList = document.querySelector('#logistics-list');
 const demolitionModeButton = document.querySelector('#demolition-mode');
+const releaseBearsButton = document.querySelector('#release-bears');
+releaseBearsButton.addEventListener('click',()=>{audio.unlock();audio.ui();requestGrizzlyPair(simulation);updateUi();});
 const saveGameButton = document.querySelector('#save-game');
 const loadGameButton = document.querySelector('#load-game');
 const buildingSaveBackup = document.querySelector('#building-save-backup');
@@ -584,6 +587,9 @@ demolitionModeButton?.addEventListener('click', () => {
 unitInspector=createUnitInspector({simulation,renderer,canvas,onOpen:()=>{input.keys.clear();input.drag=null;renderer.setSelectionBox(null);}});
 
 function updateUi() {
+  const pendingBears=Boolean(simulation.wildlifeState?.pendingPair);
+  releaseBearsButton.disabled=simulation.phase!=='playing'||pendingBears;
+  releaseBearsButton.querySelector('small').textContent=pendingBears?'FINDING TRAILS…':'BOTH SIDES';
   unitInspector.update();
   for (const [key, info] of Object.entries(RESOURCE_TYPES)) {
     const amount = Math.floor(simulation.resources[key]);

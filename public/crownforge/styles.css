@@ -217,3 +217,9 @@ button:active { transform: translateY(0); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Keep the paired encounter control readable inside the bottom command deck. */
+.bear-release-button { flex-shrink:0; border-color:rgba(207,148,88,.65); }
+.bear-release-button small { display:block; margin-top:4px; font-size:8px; color:#c5baa2; letter-spacing:.09em; }
+.bear-release-button:disabled { opacity:.55; cursor:wait; }
+.deck-actions { flex-wrap:wrap; justify-content:flex-end; }
