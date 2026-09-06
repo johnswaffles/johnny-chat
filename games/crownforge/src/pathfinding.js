@@ -146,6 +146,8 @@ export function findPath(start, target, isBlocked, width, height, options = {}) 
     z: Math.max(0, Math.min(height - 1, Math.round(target.z))),
   }, isCellBlocked, width, height);
 
+  if (options.connected && !options.connected(startCell, endCell)) return [];
+
   // A station may be open but surrounded by blocked cells. Prove small
   // enclosed pockets unreachable from the destination side before searching
   // tens of thousands of cells across the rest of the map. Larger regions

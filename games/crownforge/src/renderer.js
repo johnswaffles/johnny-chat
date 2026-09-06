@@ -3,8 +3,8 @@ import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260905-buildings1';
 import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260905-smooth1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import { CrownforgeLandscape } from './landscape.js?v=20260905-smooth1';
-import { CrownforgeMeadow } from './meadow.js?v=20260905-smooth1';
+import { CrownforgeLandscape } from './landscape.js?v=20260905-greatwood3';
+import { CrownforgeMeadow } from './meadow.js?v=20260905-greatwood3';
 import { CrownforgeAtmosphere } from './atmosphere.js?v=20260905-buildings1';
 import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260905-smooth1';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260905-smooth1';
@@ -461,7 +461,7 @@ export class CrownforgeRenderer {
     if (entity.kind === 'unit') return 3;
     if (entity.kind === 'resource') {
       const tierScale = RESOURCE_SIZE_TIERS[entity.sizeTier ?? 'small']?.renderScale ?? 1;
-      const base = entity.type === 'tree' ? 22 : entity.type === 'grove' ? 7 : entity.type === 'grain' ? 8 : entity.type === 'berry' ? 4 : 5;
+      const base = entity.type === 'tree' ? 29 : entity.type === 'grove' ? 7 : entity.type === 'grain' ? 8 : entity.type === 'berry' ? 4 : 5;
       return base * tierScale;
     }
     if (entity.kind === 'building') {
@@ -924,6 +924,16 @@ export class CrownforgeRenderer {
     ctx.restore();
   }
 
+  visibleResourceEntries(simulation) {
+    const key=[simulation.navigationVersion,this.camera.x,this.camera.y,this.camera.zoom,this.width,this.height].join('|');
+    if(this.resourceEntriesKey===key && this.resourceEntriesSource===simulation.resourcesNodes) return this.resourceEntries;
+    this.resourceEntriesKey=key;this.resourceEntriesSource=simulation.resourcesNodes;
+    this.resourceEntries=simulation.resourcesNodes
+      .filter(entity=>(entity.amount>0||entity.resourceType!=='wood')&&this.isWorldVisible(entity,this.entityCullRadius(entity)))
+      .map(resource=>({kind:'resource',id:resource.id,depth:resource.type==='grain'?-9999+resource.x+resource.z:resource.x+resource.z+.3,resource}));
+    return this.resourceEntries;
+  }
+
   drawWorldEntities(ctx, simulation, time) {
     const kindOrder = { building: 0, 'wall-segment': 0.1, 'tower-connector': 0.25, 'wall-junction': 0.5, resource: 1, roadside: 2, 'roadside-shrub': 2, decoration: 3, unit: 4 };
     const palisadeJunctions = simulation.getPalisadeJunctions();
@@ -946,10 +956,7 @@ export class CrownforgeRenderer {
       // A depleted wood node is simulation bookkeeping only. Its authored
       // forest/stump atlas is intentionally removed at zero so cleared land
       // returns to the meadow and cannot cover buildings or villagers.
-      ...simulation.resourcesNodes
-        .filter((entity) => entity.amount > 0 || entity.resourceType !== 'wood')
-        .filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity)))
-        .map((entity) => ({ ...entity, depth: entity.type === 'grain' ? -9999 + entity.x + entity.z : entity.x + entity.z + 0.3 })),
+      ...this.visibleResourceEntries(simulation),
       ...this.roadsideDetails.filter((entity) => this.isWorldVisible(entity, this.entityCullRadius(entity))).map((entity, index) => ({
         ...entity,
         id: -1000 - index,
@@ -969,7 +976,7 @@ export class CrownforgeRenderer {
       if (entity.kind === 'building' || entity.kind === 'wall-segment') this.drawBuilding(ctx, entity, time);
       else if (entity.kind === 'tower-connector') this.drawPalisadeTowerConnector(ctx, entity);
       else if (entity.kind === 'wall-junction') this.drawPalisadeJunction(ctx, entity);
-      else if (entity.kind === 'resource') this.drawResource(ctx, entity, time);
+      else if (entity.kind === 'resource') this.drawResource(ctx, entity.resource, time);
       else if (entity.kind === 'roadside' || entity.kind === 'roadside-shrub') this.drawRoadsideDetail(ctx, entity);
       else if (entity.kind === 'decoration') this.drawDecoration(ctx, entity);
       else this.drawUnit(ctx, entity, time);

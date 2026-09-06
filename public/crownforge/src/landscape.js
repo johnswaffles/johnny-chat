@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js?v=20260905-smooth1';
-import { clamp01, landscapeHash, landscapeNoise, treeAppearance } from './landscape-layout.js?v=20260905-buildings1';
+import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260905-greatwood3';
 
 const MASK_WIDTH = 560;
 const MASK_HEIGHT = 460;
@@ -16,6 +16,10 @@ export const TREE_SPRITES = [
   // separator follows their empty gutter and excludes the neighboring crown.
   { sheet: 1, rect: [14, 665, 671, 596], root: [0.69, 0.995], clip: [[0, 0], [1, 0], [1, 0.646], [0.984, 0.646], [0.984, 1], [0, 1]] },
   { sheet: 1, rect: [674, 847, 538, 340], root: [0.60, 0.98], clip: [[0.023, 0], [1, 0], [1, 1], [0, 1], [0, 0.597], [0.023, 0.597]] },
+  { sheet: 2, rect: [35, 13, 608, 599], root: [0.50, 0.99] },
+  { sheet: 2, rect: [763, 12, 434, 622], root: [0.45, 0.99] },
+  { sheet: 2, rect: [84, 628, 527, 632], root: [0.48, 0.99] },
+  { sheet: 2, rect: [782, 657, 373, 603], root: [0.48, 0.99] },
 ];
 
 function canvas(width, height) {
@@ -40,6 +44,8 @@ export class CrownforgeLandscape {
     this.renderer = renderer;
     this.revision = 0;
     this.images = {};
+    this.visualCache = new Map();
+    this.treeMips = [];
     this.tiles = [];
     this.berryRects = [[17, 19, 727, 474], [808, 36, 704, 471], [22, 528, 715, 479], [805, 550, 707, 461]];
     this.layer = canvas(1, 1);
@@ -47,17 +53,39 @@ export class CrownforgeLandscape {
     this.nodes = null;
     this.woodCount = -1;
     for (const [key, filename] of Object.entries({
-      treesA: 'trees-a', treesB: 'trees-b', berries: 'berries', ground: 'ground',
+      treesA: 'trees-a', treesB: 'trees-b', berries: 'berries', ground: 'ground', conifers: 'conifers',
     })) {
       const image = this.images[key] = new Image();
       image.addEventListener('load', () => {
         if (key === 'ground') this.prepareMaterials();
+        else if (key !== 'berries') this.prepareTreeSprites();
         this.revision++;
         renderer.invalidateStaticLayer();
       });
-      image.src = key === 'ground' ? './assets/crownforge-meadow-materials-v1.png'
-        : `./assets/crownforge-livingwood-${filename}-v1.png`;
+      image.src = key === 'ground' ? './assets/crownforge-greatwood-materials-v1.png'
+        : key === 'conifers' ? './assets/crownforge-greatwood-conifers-v1.png' : `./assets/crownforge-livingwood-${filename}-v1.png`;
     }
+  }
+
+  prepareTreeSprites() {
+    this.treeMips = TREE_SPRITES.map(sprite => {
+      const image = this.images[['treesA','treesB','conifers'][sprite.sheet]];
+      if (!image?.naturalWidth) return null;
+      const levels = [];
+      for (let width = Math.min(512, sprite.rect[2]); width >= 24; width = Math.floor(width / 2)) {
+        const tile = canvas(width, Math.round(width * sprite.rect[3] / sprite.rect[2]));
+        const g = tile.getContext('2d');
+        if (sprite.clip) {
+          g.beginPath();
+          sprite.clip.forEach(([x,y],i) => i ? g.lineTo(x*tile.width,y*tile.height) : g.moveTo(x*tile.width,y*tile.height));
+          g.closePath(); g.clip();
+        }
+        g.imageSmoothingQuality = 'high';
+        g.drawImage(image,...sprite.rect,0,0,tile.width,tile.height);
+        levels.push(tile);
+      }
+      return levels;
+    });
   }
 
   prepareMaterials() {
@@ -88,10 +116,15 @@ export class CrownforgeLandscape {
     this.nodes = simulation.resourcesNodes;
     this.seed = simulation.activeWorldSeed ?? simulation.worldSeed ?? 0;
     this.woodCount = trees.length;
-    if (worldChanged) this.prepareRegions();
+    if (worldChanged) {
+      this.visualCache.clear(); this.woodlandSources = new Map();
+      this.woodlandFloor = new Float32Array(MASK_WIDTH * MASK_HEIGHT);
+      this.coniferFloor = new Float32Array(MASK_WIDTH * MASK_HEIGHT);
+      this.prepareRegions();
+    }
     this.prepareWoodland(trees);
     this.revision++;
-    this.renderer.canvas.dataset.landscape = 'living-meadow-1';
+    this.renderer.canvas.dataset.landscape = 'greatwood-1';
     this.renderer.canvas.dataset.woodlandTrees = String(trees.length);
   }
 
@@ -108,9 +141,10 @@ export class CrownforgeLandscape {
         const fine = landscapeNoise(x / 14, z / 14, this.seed + 219);
         const erosion = landscapeNoise(x / 4.7, z / 4.7, 818);
         const mixed = broad * 0.74 + fine * 0.26;
-        dry[i] = clamp01((mixed - 0.44) * 2.5) * 0.81;
-        moss[i] = clamp01((0.5 - mixed) * 2.1) * 0.68;
-        shade[i] = (0.035 + broad * 0.085 + erosion * 0.035);
+        const meadow = meadowHabitat(x,z,this.seed);
+        dry[i] = clamp01((.62 - meadow.moisture) * 1.5) * .46;
+        moss[i] = meadow.lush * .19;
+        shade[i] = (0.018 + broad * 0.035 + erosion * 0.015);
         const warmth = clamp01((mixed - 0.35) * 1.5);
         const light = landscapeNoise(x / 29 + 17, z / 29 + 11, this.seed + 63);
         colors.data[i * 4] = 61 + warmth * 69 + light * 12;
@@ -126,24 +160,36 @@ export class CrownforgeLandscape {
   }
 
   prepareWoodland(trees) {
-    // Overlapping soft root zones merge into a forest floor. Rebuilt only
-    // when a tree disappears or a world loads, not during ordinary frames.
-    const floor = new Float32Array(MASK_WIDTH * MASK_HEIGHT);
-    for (const tree of trees) {
-      const radius = tree.type === 'grove' ? 13 : 7.5;
-      const cx = tree.x, cz = tree.z;
+    // Keep unclamped contributions, so felling one tree updates only its
+    // neighborhood instead of stamping the entire dense forest again.
+    const floor = this.woodlandFloor ??= new Float32Array(MASK_WIDTH * MASK_HEIGHT);
+    const pine = this.coniferFloor ??= new Float32Array(floor.length);
+    const previous = this.woodlandSources ??= new Map(), next = new Map();
+    const stamp = (source, sign) => {
+      const {x:cx,z:cz,radius,conifer} = source;
       for (let z = Math.max(0, Math.floor(cz - radius)); z < Math.min(MASK_HEIGHT, cz + radius); z++) {
         for (let x = Math.max(0, Math.floor(cx - radius)); x < Math.min(MASK_WIDTH, cx + radius); x++) {
-          const distance = Math.hypot(x - cx, z - cz) / radius;
-          if (distance >= 1) continue;
-          const weight = (1 - distance * distance) ** 2 * 0.38;
-          floor[z * MASK_WIDTH + x] += weight;
+          const squared = ((x-cx)**2+(z-cz)**2)/(radius*radius);
+          if (squared >= 1) continue;
+          const weight = (1-squared)**2 * .49 * sign, i=z*MASK_WIDTH+x;
+          floor[i] += weight; if(conifer) pine[i] += weight;
         }
       }
+    };
+    for (const tree of trees) {
+      let source=previous.get(tree.id);
+      if (!source || source.x!==tree.x || source.z!==tree.z) {
+        if(source) stamp(source,-1);
+        source={x:tree.x,z:tree.z,radius:tree.type==='grove'?13:9.2,conifer:treeAppearance(tree).habitat<2};
+        stamp(source,1);
+      }
+      next.set(tree.id,source);
     }
-    for (let i = 0; i < floor.length; i++) floor[i] = Math.min(0.82, floor[i]);
-    this.woodMask = alphaMask(floor);
-    this.forestCoverage = floor;
+    for(const [id,source] of previous) if(!next.has(id)) stamp(source,-1);
+    this.woodlandSources=next;
+    this.forestCoverage=Float32Array.from(floor,n=>Math.max(0,Math.min(.96,n)));
+    this.woodMask = alphaMask(this.forestCoverage);
+    this.pineMask = alphaMask(pine);
   }
 
   worldTransform(ctx) {
@@ -156,7 +202,7 @@ export class CrownforgeLandscape {
     if (!tile) return;
     ctx.save();
     this.worldTransform(ctx);
-    const worldSize = 24;
+    const worldSize = 21;
     const desired = worldSize * CONFIG.tileWidth / 2 * this.renderer.camera.zoom;
     const sample = (tile.mips ?? [tile]).find(image => image.width <= desired * 1.3) ?? tile.mips?.at(-1) ?? tile;
     const pattern = ctx.createPattern(sample, 'repeat');
@@ -193,11 +239,12 @@ export class CrownforgeLandscape {
     this.maskedMaterial(ctx, this.mossMask, this.tiles[3]);
     if (this.regionColor) {
       ctx.save(); this.worldTransform(ctx);
-      ctx.globalAlpha = 0.23;
+      ctx.globalAlpha = 0.12;
       ctx.drawImage(this.regionColor, 0, 0, CONFIG.mapWidth, CONFIG.mapHeight);
       ctx.restore();
     }
-    this.maskedMaterial(ctx, this.woodMask, this.tiles[2]);
+    this.maskedMaterial(ctx, this.woodMask, this.tiles[3]);
+    this.maskedMaterial(ctx, this.pineMask, this.tiles[2]);
     this.maskedMaterial(ctx, this.shadeMask, null, '#253f32');
     // A light, restrained atmospheric veil keeps tiny terrain detail from
     // becoming visual noise at the strategic overview distance.
@@ -211,8 +258,14 @@ export class CrownforgeLandscape {
 
   resourceVisual(node) {
     if (node.type === 'tree') {
+      const key = `${node.id}|${node.x}|${node.z}|${node.forestSeed??0}`;
+      const cached=this.visualCache.get(key);
+      if(cached) return cached;
       const look = treeAppearance(node), sprite = TREE_SPRITES[look.species];
-      return { ...look, sprite, height: look.width * sprite.rect[3] / sprite.rect[2], image: this.images[look.species < 4 ? 'treesA' : 'treesB'] };
+      const visual={ ...look, sprite, height: look.width * sprite.rect[3] / sprite.rect[2], image: this.images[['treesA','treesB','conifers'][sprite.sheet]] };
+      this.visualCache.set(key,visual);
+      if(this.visualCache.size>10000)this.visualCache.delete(this.visualCache.keys().next().value);
+      return visual;
     }
     const image = this.images.berries;
     const variant = (node.variant ?? 0) % 2;
@@ -229,11 +282,13 @@ export class CrownforgeLandscape {
     const zoom = this.renderer.camera.zoom;
     const width = visual.width * zoom * tierScale, height = visual.height * zoom * tierScale;
     const sprite = visual.sprite;
+    const levels=node.type==='tree'?this.treeMips[visual.species]:null;
+    const sample=levels?.find(tile=>tile.width<=width*1.6)??levels?.at(-1);
     ctx.save();
     ctx.fillStyle = 'rgba(16,32,22,0.23)';
     ctx.beginPath(); ctx.ellipse(point.x + width * 0.055, point.y + width * 0.012, width * 0.25, width * 0.065, -0.1, 0, Math.PI * 2); ctx.fill();
     ctx.translate(point.x, point.y);
-    if (sprite.clip) {
+    if (sprite.clip && !sample) {
       ctx.beginPath();
       sprite.clip.forEach(([x, y], i) => {
         const px = (x - sprite.root[0]) * width, py = (y - sprite.root[1]) * height;
@@ -242,7 +297,8 @@ export class CrownforgeLandscape {
       ctx.closePath(); ctx.clip();
     }
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(visual.image, ...sprite.rect, -width * sprite.root[0], -height * sprite.root[1], width, height);
+    if(sample) ctx.drawImage(sample,-width*sprite.root[0],-height*sprite.root[1],width,height);
+    else ctx.drawImage(visual.image, ...sprite.rect, -width * sprite.root[0], -height * sprite.root[1], width, height);
     ctx.restore();
     return true;
   }

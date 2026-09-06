@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js?v=20260905-smooth1';
-import { MeadowField } from './meadow-field.js?v=20260905-smooth1';
+import { MeadowField } from './meadow-field.js?v=20260905-greatwood3';
 
 // Measured isolated alpha bounds, not nominal atlas cells: the seed heads in
 // row two begin above the equal-cell boundary. Retain the source PNG intact.
@@ -33,7 +33,7 @@ export class CrownforgeMeadow {
         g.imageSmoothingQuality = 'high';
         g.drawImage(this.image,x,y,w,h,0,0,tile.width,tile.height);
         g.globalCompositeOperation = 'source-atop';
-        g.fillStyle = 'rgba(39,86,49,0.17)';
+        g.fillStyle = 'rgba(46,94,51,0.08)';
         g.fillRect(0,0,tile.width,tile.height);
         levels.push(tile);
       }
@@ -49,7 +49,7 @@ export class CrownforgeMeadow {
     this.tufts = this.sprites.length ? this.field.visible(r.viewportBounds, r.camera.zoom) : [];
     this.moving = this.windEnabled && r.atmosphere.enabled && !r.atmosphere.reducedMotion;
     Object.assign(r.canvas.dataset, {
-      meadow: 'living-meadow-1', meadowReady: String(this.sprites.length === 12),
+      meadow: 'greatwood-meadow-1', meadowReady: String(this.sprites.length === 12),
       meadowTufts: String(this.tufts.length), meadowWind: String(this.moving),
     });
   }

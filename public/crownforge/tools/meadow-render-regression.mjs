@@ -180,7 +180,7 @@ test('prepare reads frozen gameplay state and observes actual movement without w
 
 test('real entity painter merges grass before and after roots without hiding it behind a final unit pass',()=>{
   const events=[],renderer=Object.create(CrownforgeRenderer.prototype),ctx=context();
-  Object.assign(renderer,{roadsideDetails:[],isWorldVisible:e=>!e.offscreen,entityCullRadius:()=>1,
+  Object.assign(renderer,{camera:{x:0,y:0,zoom:1},roadsideDetails:[],isWorldVisible:e=>!e.offscreen,entityCullRadius:()=>1,
     palisadeTowerConnectorEntities:()=>[],palisadeJunctionEntities:()=>[],
     meadow:{tufts:[{id:101,depth:19.7},{id:102,depth:21.7},{id:103,depth:24.7},{id:104,depth:24.8},{id:105,depth:40}],draw(c,t){assert.equal(c,ctx);events.push(`grass:${t.id}`);}},
   });

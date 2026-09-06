@@ -10,16 +10,16 @@ const seeds = [1, 42, 12345, 0xc0ffee31, 0xffffffff];
 for (const seed of seeds) {
   const game = new CrownforgeSimulation({ seed });
   const trees = wood(game);
-  assert.ok(trees.length > 1400 && trees.length < 3600, 'forest stays within population/performance budget');
+  assert.ok(trees.length > 4000 && trees.length <= 8500, 'forest stays within population/performance budget');
   assert.equal(new Set(trees.map(node => `${node.x},${node.z}`)).size, trees.length, 'no duplicate trunks');
   for (const node of trees) {
     assert.ok(node.x >= 0 && node.z >= 0 && node.x <= CONFIG.mapWidth && node.z <= CONFIG.mapHeight);
     assert.equal(game._insideWildwoodClearing(node.x, node.z, 1.99), false, 'opening and regional clearings stay open');
     assert.equal(node.amount, 240, 'individual harvesting contract retained');
     const visual = treeAppearance(node);
-    assert.ok(TREE_SPRITES[visual.species] && visual.width > 100 && visual.width < 350);
+    assert.ok(TREE_SPRITES[visual.species] && visual.width > 100 && visual.width < 430);
   }
-  assert.equal(new Set(trees.map(node => treeAppearance(node).species)).size, 8, 'eight authored species appear in each tested world');
+  assert.equal(new Set(trees.map(node => treeAppearance(node).species)).size, 12, 'all twelve authored silhouettes appear in each tested world');
   const ridge = trees.filter(node => node.forestClusterId === 'livingwood-ridge');
   assert.ok(ridge[0].x <= resourceFootprint(ridge[0]), 'ridge closes west boundary');
   assert.ok(ridge.at(-1).z <= resourceFootprint(ridge.at(-1)), 'ridge closes north boundary');
@@ -28,7 +28,7 @@ for (const seed of seeds) {
   }
   const twin = new CrownforgeSimulation({ seed });
   assert.deepEqual(game.serialize(), twin.serialize(), 'seed reproduces the complete starting match');
-  console.log(`Seed ${seed}: ${trees.length} trees, eight species, continuous ridge, protected clearings.`);
+  console.log(`Seed ${seed}: ${trees.length} trees, twelve silhouettes, continuous ridge, protected clearings.`);
 }
 
 const game = new CrownforgeSimulation({ seed: 42 });

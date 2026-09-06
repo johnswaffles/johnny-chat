@@ -1,8 +1,8 @@
 import {BUILDING_TYPES,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260905-smooth1';
-import {clamp01,landscapeHash,landscapeNoise} from './landscape-layout.js?v=20260905-buildings1';
+import {clamp01,landscapeHash,landscapeNoise,meadowHabitat} from './landscape-layout.js?v=20260905-greatwood3';
 
 // Presentation data only. No DOM, match RNG, pathfinding, or simulation writes.
-export const MEADOW_LIMITS=Object.freeze({chunkSize:12,candidatesPerChunk:72,maxChunks:2048,maxVisible:2500,maxUnits:1024,maxDisturbances:1024,interactionBin:3,exclusionBin:12,wakeLifetime:3.2,farZoom:.095});
+export const MEADOW_LIMITS=Object.freeze({chunkSize:12,candidatesPerChunk:96,maxChunks:2048,maxVisible:2500,maxUnits:1024,maxDisturbances:1024,interactionBin:3,exclusionBin:12,wakeLifetime:3.2,farZoom:.095});
 const TAU=Math.PI*2,clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const smooth=(a,b,n)=>{const t=clamp01((n-a)/(b-a));return t*t*(3-2*t);};
 const finitePoint=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.z);
@@ -85,16 +85,17 @@ export class MeadowField {
     for(let i=0;i<MEADOW_LIMITS.candidatesPerChunk;i++){
       const x=(cx+landscapeHash(i,11,salt))*size,z=(cz+landscapeHash(i,37,salt))*size;
       if(x>=this.mapWidth||z>=this.mapHeight)continue;
-      const broad=landscapeNoise(x/28,z/28,this.seed+811),patch=landscapeNoise(x/7,z/7,this.seed+121);
-      const density=clamp(.22+broad*.56+(patch-.5)*.42,.12,.87);
+      const habitat=meadowHabitat(x,z,this.seed),{patch,lush,flowers}=habitat;
+      const density=clamp(.18+lush*.65+(patch-.5)*.24,.12,.92);
       if(landscapeHash(i,57,salt)>density)continue;
       const shape=landscapeHash(i,73,salt),rank=landscapeHash(i,97,salt),variety=landscapeHash(i,113,salt);
-      const variant=variety<.58?Math.floor(variety/.58*4):variety<.76?4+Math.floor((variety-.58)/.18*3):variety<.88?7:variety<.94?8:variety<.965?9:variety<.985?10:11;
+      const bloom=flowers*.16;
+      const variant=variety<bloom?(variety<bloom*.58?9:10):variety<.48?Math.floor(shape*4):variety<.70?4+Math.floor(shape*3):variety<.82?7:variety<.97?8:11;
       const seedGrass=variant>=4&&variant<=6,clover=variant===8,flower=variant===9||variant===10,fern=variant===11;
-      const height=seedGrass?26+shape*12:clover?9+shape*6:flower||fern?18+shape*9:12+shape*12;
-      const width=seedGrass?24+shape*14:clover?26+shape*16:flower?22+shape*13:fern?30+shape*14:30+shape*24;
+      const height=seedGrass?30+shape*8:clover?11+shape*8:flower||fern?22+shape*12:16+shape*9;
+      const width=seedGrass?30+shape*17:clover?32+shape*18:flower?27+shape*15:fern?35+shape*17:38+shape*25;
       const id=(cz*Math.ceil(this.mapWidth/size)+cx)*MEADOW_LIMITS.candidatesPerChunk+i;
-      tufts.push(Object.freeze({id,x,z,depth:x+z+.7,width,height,variant,phase:landscapeHash(i,139,salt)*TAU,opacity:.66+patch*.28,rank}));
+      tufts.push(Object.freeze({id,x,z,depth:x+z+.7,width,height,variant,phase:landscapeHash(i,139,salt)*TAU,opacity:.73+patch*.23,rank}));
     }
     this.chunks.set(key,tufts);while(this.chunks.size>MEADOW_LIMITS.maxChunks)this.chunks.delete(this.chunks.keys().next().value);
     return tufts;

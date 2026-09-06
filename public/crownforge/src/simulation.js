@@ -1,9 +1,10 @@
-import { landscapeHash, woodlandDensity, woodlandRidgeZ } from './landscape-layout.js?v=20260905-buildings1';
+import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260905-greatwood3';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260905-buildings1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260905-buildings1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260905-smooth1';
 import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260905-smooth1';
-import { findPath } from './pathfinding.js?v=20260905-smooth1';
+import { findPath } from './pathfinding.js?v=20260905-greatwood3';
+import { ResourceConnectivity } from './resource-connectivity.js?v=20260905-greatwood3';
 import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260905-smooth1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -774,8 +775,9 @@ export class CrownforgeSimulation {
 
   _insideWildwoodClearing(x, z, padding = 0) {
     return WILDWOOD_CLEARINGS.some((clearing) => {
-      const dx = (x - clearing.x) / (clearing.radiusX + padding);
-      const dz = (z - clearing.z) / (clearing.radiusZ + padding);
+      const edge = .9 + landscapeNoise(x / 24, z / 24, 317) * .16;
+      const dx = (x - clearing.x) / (clearing.radiusX * edge + padding);
+      const dz = (z - clearing.z) / (clearing.radiusZ * edge + padding);
       return dx * dx + dz * dz < 1;
     });
   }
@@ -805,7 +807,8 @@ export class CrownforgeSimulation {
       if (otherResources.some(node => distance({ x, z }, node) < 3.05 + resourceFootprint(node) + 1)) return false;
       const gx = Math.floor(x / cellSize), gz = Math.floor(z / cellSize);
       if (!ridge) {
-        const gap = 3.8 + landscapeHash(index, 13, worldSeed) * 1.8;
+        const density = woodlandDensity(x, z, worldSeed);
+        const gap = 3.9 + (1 - density) * 2.0 + landscapeHash(index, 13, worldSeed) * .55;
         for (let ix = gx - 2; ix <= gx + 2; ix++) {
           for (let iz = gz - 2; iz <= gz + 2; iz++) {
             if ((grid.get(`${ix},${iz}`) ?? []).some(node => distance({ x, z }, node) < gap)) return false;
@@ -814,7 +817,7 @@ export class CrownforgeSimulation {
       }
       const node = this.addResource('tree', 'wood', x, z, WILDWOOD_TREE_AMOUNT,
         Math.floor(landscapeHash(index, 97, worldSeed) * 8),
-        { sizeTier: 'small', forestClusterId: ridge ? 'livingwood-ridge' : `livingwood-${Math.floor(x / 48)}-${Math.floor(z / 48)}`, forestTreeIndex: index });
+        { sizeTier: 'small', forestClusterId: ridge ? 'livingwood-ridge' : `livingwood-${Math.floor(x / 48)}-${Math.floor(z / 48)}`, forestTreeIndex: index, forestSeed: worldSeed });
       const key = `${gx},${gz}`;
       if (!grid.has(key)) grid.set(key, []);
       grid.get(key).push(node);
@@ -823,20 +826,20 @@ export class CrownforgeSimulation {
 
     // Follow the ridge with overlapping blocker circles, including its two
     // boundary contacts. Satellites are sampled independently, never in bands.
-    let index = 0;
+    let index = 0, accepted = 0;
     for (let x = 0; x <= 460; x += 1.7) {
       const z = woodlandRidgeZ(x);
       if (z < 0) break;
       const slope = (woodlandRidgeZ(x + 0.1) - woodlandRidgeZ(x - 0.1)) / 0.2;
       const norm = Math.hypot(slope, 1);
       const offset = x > 2 && z > 3 ? (landscapeHash(index, 149, worldSeed) - 0.5) * 1.4 : 0;
-      placeTree(x - slope / norm * offset, z + offset / norm, index++, true);
+      if (placeTree(x - slope / norm * offset, z + offset / norm, index++, true)) accepted++;
     }
-    for (let attempt = 0; attempt < 16500; attempt++) {
+    for (let attempt = 0; attempt < FOREST_LIMITS.attempts && accepted < FOREST_LIMITS.maxTrees; attempt++) {
       const x = 5 + landscapeHash(attempt, 311, worldSeed) * (CONFIG.mapWidth - 10);
       const z = 5 + landscapeHash(attempt, 419, worldSeed) * (CONFIG.mapHeight - 10);
       if (landscapeHash(attempt, 557, worldSeed) > woodlandDensity(x, z, worldSeed)) continue;
-      placeTree(x, z, index++);
+      if (placeTree(x, z, index++)) accepted++;
     }
   }
 
@@ -1041,6 +1044,7 @@ export class CrownforgeSimulation {
       forestClusterId: options.forestClusterId ?? null,
       forestTreeIndex: Number.isInteger(options.forestTreeIndex) ? options.forestTreeIndex : null,
     };
+    if (Number.isInteger(options.forestSeed)) node.forestSeed = options.forestSeed >>> 0;
     this.resourcesNodes.push(node);
     this.navigationVersion += 1;
     this.staticBlockerGridVersion = -1;
@@ -3522,8 +3526,16 @@ export class CrownforgeSimulation {
       return directPath;
     }
     if (directOnly) return null;
+    // Reuse a compact resource-only topology across every worker and station.
+    // Planned walls may clear resources, so their hypothetical routes must
+    // use the full search. Buildings still use normal precise collision.
+    if (!placement && this.resourceConnectivityVersion !== this.navigationVersion) {
+      this.resourceConnectivity = new ResourceConnectivity(CONFIG.mapWidth, CONFIG.mapHeight, this.resourcesNodes, resourceFootprint);
+      this.resourceConnectivityVersion = this.navigationVersion;
+    }
     this.pathRequestsLastStep += 1;
     const path = findPath(unit, safeTarget, isBlocked, CONFIG.mapWidth, CONFIG.mapHeight, {
+      connected: placement ? null : (start, end) => this.resourceConnectivity.connected(start, end),
       segmentClear: (start, end) => !this._pathSegmentBlocked(unit, start, end, placement),
     });
     if (!path.length && distance(unit, safeTarget) > PATH_REACH_TOLERANCE) {

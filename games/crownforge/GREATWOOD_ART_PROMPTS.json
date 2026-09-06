@@ -1,0 +1,17 @@
+{
+  "generator": "Built-in image_gen",
+  "assets": [
+    {
+      "path": "assets/crownforge-greatwood-materials-v1.png",
+      "source": "exec-7b1d4d0c-bba0-4235-8d44-c1ffe1b4f7f8.png",
+      "prompt": "Use case: stylized-concept. Create a richly detailed production ground material atlas for a premium painterly realistic medieval isometric strategy game. EXACTLY four equal square quadrants in a square atlas, perfectly straight overhead orthographic material photography, seamless texture in each individual quadrant, uniform soft daylight from upper left without directional cast shadows. Top left: lush temperate wild meadow turf, richly layered short emerald and sage grasses, tiny overlapping clover leaves and delicate creeping wild thyme in organic cushions, fine dark moist soil between plants, broad soft irregular changes in green. Top right: taller sunlit meadow with fine bent grasses and beautiful small tawny seed heads mixed into green sward, subtle warmer organic patches and tiny scattered white and pale lavender wildflowers, predominantly living green, no hayfield. Bottom left: dense conifer forest floor, intricate soft brown pine needles and tiny cones, rough twig fragments, dark humus with irregular vivid deep green moss cushions and minute fern sprouts. Bottom right: lush shaded deciduous woodland floor, velvety green moss, dense tiny wood sorrel and clover, miniature ferns, a few brown oak and beech leaves and tiny stones partly sunk in soil. Make the small scale detail delightful and tactile when zoomed in, but maintain smooth natural tonal masses at wide view. NO perspective, horizon, trees, trunks, bushes, large rocks, ground islands, seams, borders, text, geometric repeated patterns, obvious circular swirls, or heavy black shadows. Each quadrant fills all its pixels with material. An original sophisticated game environment texture, quietly beautiful realistic vegetation with fine painterly detail."
+    },
+    {
+      "path": "assets/crownforge-greatwood-conifers-v1.png",
+      "source": "exec-a425f24c-c741-4c80-a216-d74fe7de19a7.png",
+      "reference": "assets/crownforge-livingwood-trees-a-v1.png",
+      "prompt": "Generate with transparent background enabled. Create a PNG with an alpha channel. Use this existing transparent sprite sheet as the reference. Four fully isolated detailed natural conifers in a 2 by 2 sheet: two different mature Scots pines across the top, two different dense Norway spruces across the bottom. Match the reference's elevated orthographic view, finely painted green needles, bark and warm upper-left lighting. Keep complete roots and treetops safely within each quadrant, generous empty transparent space around them. No ground, no shadows, no backdrop, no checkerboard pattern. All background pixels must be transparent. The actual output must be RGBA, not an RGB image depicting transparency."
+    }
+  ],
+  "rejectedVariants": "The first conifer generation and its extraction revision contained painted checkerboards in RGB. Neither is used by the game. The selected final generation has a real alpha channel; its original RGBA bytes are retained."
+}
