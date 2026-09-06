@@ -1,15 +1,16 @@
+import {curseRuneKind,drawCurseSigil} from './unit-status.js?v=20260906-firstcondemnation1';
 import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260906-bearmotion1';
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260906-wildwoodwatch2';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260906-firstcondemnation1';
 import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260905-buildings1';
 import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260905-smooth1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import { CrownforgeLandscape } from './landscape.js?v=20260906-wildwoodwatch2';
-import { ForestCache } from './forest-cache.js?v=20260906-wildwoodwatch2';
-import { CrownforgeMeadow } from './meadow.js?v=20260906-wildwoodwatch2';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260906-wildwoodwatch2';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260906-wildwoodwatch2';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260906-wildwoodwatch2';
+import { CrownforgeLandscape } from './landscape.js?v=20260906-firstcondemnation1';
+import { ForestCache } from './forest-cache.js?v=20260906-firstcondemnation1';
+import { CrownforgeMeadow } from './meadow.js?v=20260906-firstcondemnation1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260906-firstcondemnation1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260906-firstcondemnation1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260906-firstcondemnation1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -2265,6 +2266,20 @@ export class CrownforgeRenderer {
     }
   }
 
+  curseRuneGeometry(unit,point=this.unitScreenPoint(unit),size=(UNIT_TYPES[unit.type].renderSize??120)*this.camera.zoom){
+    return {x:point.x,y:point.y-size*(unit.type==='grizzly'?this.grizzly.heightFactor(unit)+.14:1.2),size:Math.max(13,Math.min(32,size*.17))};
+  }
+
+  getCurseRuneAtScreen(simulation,point){
+    let found=null,best=Infinity;
+    for(const unit of simulation.units){
+      if(unit.dead||!curseRuneKind(unit))continue;
+      const mark=this.curseRuneGeometry(unit),distance=Math.hypot(point.x-mark.x,point.y-mark.y);
+      if(distance<=mark.size*.65+3&&distance<best){found=unit;best=distance;}
+    }
+    return found;
+  }
+
   drawUnitStatusEffects(ctx, unit, point, screenSize, time = 0) {
     if (unit.lastLightWardBlastTimer > 0) {
       const duration = Math.max(0.2, unit.lastLightWardBlastDuration || 0.9);
@@ -2301,28 +2316,8 @@ export class CrownforgeRenderer {
       ctx.restore();
     }
 
-    if (unit.lastLightCurseActive || unit.lastLightCurseFlashTimer > 0) {
-      const flash = Math.max(0, Math.min(1, (unit.lastLightCurseFlashTimer ?? 0) / 1.15));
-      const pulse = 0.78 + Math.sin(time * 0.012 + unit.id) * 0.12;
-      const radius = screenSize * (0.48 + flash * 0.12);
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = (unit.lastLightCurseActive ? 0.58 : 0.3) + flash * 0.3;
-      ctx.strokeStyle = '#bc75d6';
-      ctx.lineWidth = Math.max(1, 1.5 * this.camera.zoom);
-      ctx.beginPath();
-      ctx.arc(point.x, point.y - screenSize * 0.36, radius * pulse, 0, TAU);
-      ctx.stroke();
-      ctx.fillStyle = '#d79ae7';
-      ctx.beginPath();
-      ctx.moveTo(point.x, point.y - screenSize * 1.1 - radius * 0.25);
-      ctx.lineTo(point.x + radius * 0.28, point.y - screenSize * 1.1);
-      ctx.lineTo(point.x, point.y - screenSize * 1.1 + radius * 0.25);
-      ctx.lineTo(point.x - radius * 0.28, point.y - screenSize * 1.1);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
+    const runeKind=curseRuneKind(unit);
+    if(runeKind){const mark=this.curseRuneGeometry(unit,point,screenSize);drawCurseSigil(ctx,runeKind,mark.x,mark.y,mark.size);}
 
     if (CHARACTER_RIGS[unit.type]) {
       drawHearthkinWard(ctx, unit, point, screenSize, time, false, this.atmosphere.reducedMotion);

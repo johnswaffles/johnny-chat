@@ -5180,3 +5180,12 @@ Replaced whole-body frame wobble with original four-view anatomical cutouts, dis
 All ten fighting classes on both teams intercept bears within 140 world units when free of another fight. Patrol, guard and rally routes resume afterward; manual orders cancel old resumption. Bounded searches, fair scanning and failed-route backoff limit navigation cost. Existing bear balance, worker wards and five-minute cadence remain intact.
 
 Nine new motion/response checks, eleven wildlife/routine checks, roster/Hearthkin gameplay, building defense, camera rendering and character loading pass. Four-view visual review and a 98-second actual Canvas fight verified both factions responding and both attacks completing, with zero browser errors. Local render p99 was 5.4 ms and simulation p99 0.3 ms. Full evidence and exact original artwork prompts are in GRIZZLY_MOTION_RELEASE.md and GRIZZLY_MOTION_ART_PROMPTS.json. Release marker: 20260906-bearmotion1.
+
+
+## September 6, 2026 — The First Condemnation and character inspection
+
+Replaced the Last Light Curse pulse and diamond with a steady thorned rune. The Greatwood Grizzly carries a permanent divine curse, The First Condemnation, which rejects lesser curses while allowing ordinary combat damage. Added an original illustrated lore card, live health/activity/buff inspection for all units, overhead-rune and status-button interactions, narrow-screen layout and keyboard dismissal. Hostiles are selected for observation only; left click inspects, right click issues attacks for player troops. All command ownership boundaries remain enforced.
+
+Bear hits trigger either full-health gathering class shield on the second landed strike. Ward activation immediately clears every bear targeting that worker, rejects new attacks, and removes protected workers from hunt/spawn candidates. Other prey are sought, or the bear prowls while everyone is warded. Ordinary Last Light Curse behavior remains; living bears saved under the previous curse are migrated to the new immunity rule.
+
+Seven new focused checks plus bear motion, wildlife/economy, roster/Hearthkin gameplay, camera and building-service checks pass. Actual-game desktop and 390-pixel card review verified rune clicks, health/status display, curse immunity and shielded prey being ignored with no browser errors. Full evidence and exact original art prompt: FIRST_CONDEMNATION_RELEASE.md and FIRST_CONDEMNATION_ART_PROMPT.json. Release marker: 20260906-firstcondemnation1.

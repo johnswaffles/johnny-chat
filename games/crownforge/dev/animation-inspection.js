@@ -1,4 +1,4 @@
-import { createCharacterRigs } from '../src/character-rigs.js?v=20260906-wildwoodwatch2';
+import { createCharacterRigs } from '../src/character-rigs.js?v=20260906-firstcondemnation1';
 const characterRigs = createCharacterRigs();
 import {
   ANIMATION_DIRECTIONS,
@@ -6,7 +6,7 @@ import {
   animationClip,
   animationDefinition,
   animationFrame,
-} from '../src/animation.js?v=20260906-wildwoodwatch2';
+} from '../src/animation.js?v=20260906-firstcondemnation1';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');

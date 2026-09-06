@@ -1,5 +1,5 @@
-import { BUILDING_TYPES, CONFIG, UNIT_TYPES } from '../src/config.js?v=20260906-wildwoodwatch2';
-import { CrownforgeSimulation } from '../src/simulation.js?v=20260906-bearmotion1';
+import { BUILDING_TYPES, CONFIG, UNIT_TYPES } from '../src/config.js?v=20260906-firstcondemnation1';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260906-firstcondemnation1';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');

@@ -1,4 +1,4 @@
-import {BUILDING_TYPES,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260906-wildwoodwatch2';
+import {BUILDING_TYPES,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260906-firstcondemnation1';
 import {clamp01,landscapeHash,landscapeNoise,meadowHabitat} from './landscape-layout.js?v=20260905-greatwood3';
 
 // Presentation data only. No DOM, match RNG, pathfinding, or simulation writes.

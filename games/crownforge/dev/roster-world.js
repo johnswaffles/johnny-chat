@@ -1,7 +1,7 @@
-import { CrownforgeSimulation } from '../src/simulation.js?v=20260906-bearmotion1';
-import { CrownforgeRenderer } from '../src/renderer.js?v=20260906-bearmotion1';
-import { CHARACTER_RIGS } from '../src/character-rigs.js?v=20260906-wildwoodwatch2';
-import { UNIT_TYPES, CONFIG } from '../src/config.js?v=20260906-wildwoodwatch2';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260906-firstcondemnation1';
+import { CrownforgeRenderer } from '../src/renderer.js?v=20260906-firstcondemnation1';
+import { CHARACTER_RIGS } from '../src/character-rigs.js?v=20260906-firstcondemnation1';
+import { UNIT_TYPES, CONFIG } from '../src/config.js?v=20260906-firstcondemnation1';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas);
 const status=document.querySelector('#status'),results=document.querySelector('#results');

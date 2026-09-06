@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260906-wildwoodwatch2';
+import { CONFIG } from './config.js?v=20260906-firstcondemnation1';
 
 // Presentation only: every effect is derived from position and render time.
 // Nothing consumes the simulation RNG or changes an entity's state.

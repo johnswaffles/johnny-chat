@@ -1,6 +1,6 @@
 import { GrizzlyRenderer } from '../src/grizzly-renderer.js?v=20260906-bearmotion1';
 import { GRIZZLY_MOTION, GRIZZLY_ATTACKS, grizzlyProjection } from '../src/grizzly-motion.js?v=20260906-bearmotion1';
-import { createCharacterRigs } from '../src/character-rigs.js?v=20260906-wildwoodwatch2';
+import { createCharacterRigs } from '../src/character-rigs.js?v=20260906-firstcondemnation1';
 const canvas=document.querySelector('#stage'),ctx=canvas.getContext('2d'),bear=new GrizzlyRenderer(),guard=createCharacterRigs({lazy:true}).get('soldier');
 const action=document.querySelector('#action'),pause=document.querySelector('#pause'),slider=document.querySelector('#pose'),status=document.querySelector('#status'),bones=document.querySelector('#bones');
 let clock=0,last=0,paused=false,frames=0;const errors=[];window.addEventListener('error',e=>errors.push(e.message));

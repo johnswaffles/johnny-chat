@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260906-wildwoodwatch2';
+import { CONFIG } from './config.js?v=20260906-firstcondemnation1';
 import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260905-greatwood3';
 
 const MASK_WIDTH = 560;

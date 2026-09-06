@@ -1,4 +1,4 @@
-import { CONFIG, UNIT_TYPES } from './config.js?v=20260906-wildwoodwatch2';
+import { CONFIG, UNIT_TYPES } from './config.js?v=20260906-firstcondemnation1';
 
 export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 300, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
@@ -9,7 +9,7 @@ export const initialWildlifeState = clock => ({ nextSpawnAt: (Math.floor(Math.ma
 // Spawn on a real woodland edge with a legal route to a person. Never move
 // existing trees, buildings or people to make an encounter fit.
 export function spawnGrizzly(sim) {
-  const state=sim.wildlifeState, humans=people(sim);
+  const state=sim.wildlifeState, humans=people(sim).filter(u=>!(u.lastLightWardTimer>0));
   if (!humans.length) return null;
   const preferred=state.spawnCount%2 ? 'enemy' : 'player';
   const audience=humans.filter(unit=>unit.faction===preferred);
@@ -43,7 +43,7 @@ export function spawnGrizzly(sim) {
 }
 
 function hunt(sim,bear) {
-  const humans=people(sim),current=sim._getAttackTarget(bear);
+  const humans=people(sim).filter(u=>!(u.lastLightWardTimer>0)),current=sim._getAttackTarget(bear);
   const mark=[current?.id??0,current?.hp??0].join('|');
   if(mark!==bear.wildlifeProgress||!bear.wildlifeProgressPoint||distance(bear,bear.wildlifeProgressPoint)>2){
     bear.wildlifeProgress=mark;bear.wildlifeProgressAt=sim.clock;bear.wildlifeProgressPoint={x:bear.x,z:bear.z};
@@ -55,7 +55,7 @@ function hunt(sim,bear) {
   bear.wildlifeAvoid??={};
   for(const [id,until] of Object.entries(bear.wildlifeAvoid))if(until<=sim.clock)delete bear.wildlifeAvoid[id];
   if(stalled&&current)bear.wildlifeAvoid[current.id]=sim.clock+12;
-  if(current){sim._interruptWork(bear);bear.command='idle';bear.path=[];}
+  if(current||bear.attackTarget){sim._interruptWork(bear);bear.command='idle';bear.path=[];}
   const candidates=humans.filter(unit=>!bear.wildlifeAvoid[unit.id])
     .sort((a,b)=>Number(a.lastLightWardTimer>0)-Number(b.lastLightWardTimer>0)||distance(bear,a)-distance(bear,b)||a.id-b.id);
   for(const target of candidates.slice(0,GRIZZLY_ENCOUNTER.huntRouteBudget)){

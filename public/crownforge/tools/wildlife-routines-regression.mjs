@@ -35,7 +35,7 @@ test('grizzlies target either faction, reacquire people and support actual playe
  const crown=s.addUnit('soldier',120,100,'player'),ashen=s.addUnit('raider',114,100,'enemy');
  updateWildlife(s,1);assert.equal(bear.attackTarget,ashen.id,'closest person is on the other team');
  s._killUnit(ashen,crown);s.clock+=1;updateWildlife(s,1);assert.equal(bear.attackTarget,crown.id);
- s.selectEntity(bear);assert.equal(s.selectedIds.length,0,'wildlife cannot become a controllable Crown unit');
+ s.selectEntity(bear);assert.deepEqual(s.selectedIds,[bear.id],'wildlife is inspectable');assert.equal(s.issueContextCommand({x:95,z:95}).kind,'none','inspection grants no command authority');
  s.selectEntity(crown);const result=s.issueContextCommand(bear,bear);assert.equal(result.kind,'attack');assert.equal(crown.attackTarget,bear.id);
 });
 
@@ -56,7 +56,7 @@ test('the existing Last Light Ward repeatedly prevents either faction worker fro
    worker.hp=1;const result=s._applyUnitDamage(worker,1000,bear);
    assert(result.warded&&!result.killed);assert.equal(worker.hp,worker.maxHp);assert(worker.lastLightWardTimer>0);
    const blocked=s._applyUnitDamage(worker,1000,bear);assert(blocked.blocked);assert(!worker.dead);
-   s._updateUnitStatusEffects(worker,2);assert.equal(bear.hp,1,'ward curse retains its existing effect');
+   s._updateUnitStatusEffects(worker,2);assert.equal(bear.hp,bear.maxHp,'the innate divine curse rejects the ward curse');assert.equal(bear.lastLightCurseActive,false);
    s._updateUnitStatusEffects(worker,61);assert.equal(worker.lastLightWardTimer,0);assert.equal(worker.hp,worker.maxHp);
   }
  }

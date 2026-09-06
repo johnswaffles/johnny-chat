@@ -145,6 +145,7 @@ const HEARTHKIN_WORKER_ABILITIES = Object.freeze({
 export const UNIT_TYPES = {
   grizzly: {
     label: 'Greatwood Grizzly', wildlife: true, renderSize: 218,
+    curseImmune: true, innateCurse: 'firstCondemnation', workerStrikeFraction: .6,
     speed: 2.85, acceleration: 8.5, braking: 12, radius: .82,
     maxHp: 180, attack: 29, range: 1.55, cooldown: 1.45,
     attackTiming: { anticipation: .28, contact: .30, recovery: .42 },

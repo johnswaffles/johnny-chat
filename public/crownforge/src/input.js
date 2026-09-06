@@ -8,6 +8,7 @@ export class CrownforgeInput {
     onEscape = () => {},
     onGesture = () => {},
     onSelection = () => {},
+    onInspectStatus = () => {},
     onCommand = () => {},
     onPlacement = () => {},
     onBuildShortcut = () => {},
@@ -30,6 +31,7 @@ export class CrownforgeInput {
     this.onEscape = onEscape;
     this.onGesture = onGesture;
     this.onSelection = onSelection;
+    this.onInspectStatus = onInspectStatus;
     this.onCommand = onCommand;
     this.onPlacement = onPlacement;
     this.onBuildShortcut = onBuildShortcut;
@@ -338,6 +340,7 @@ export class CrownforgeInput {
     // Keep hover feedback aligned with the forgiving visual-body hit regions
     // used by renderer selection. The old world-radius test only covered the
     // unit's ground anchor, which made visible clicks feel offset below/right.
+    if(this.renderer.getCurseRuneAtScreen?.(this.simulation,point)){this._setCursor('select-target');return;}
     const selected = this.simulation.selectedEntities;
     const selectedUnits = selected.filter((candidate) => candidate.kind === 'unit' && candidate.faction === 'player' && !candidate.dead);
     const selectedBuilders = selectedUnits.filter((candidate) => this.simulation.isBuilderUnit(candidate));
@@ -345,7 +348,7 @@ export class CrownforgeInput {
     const entity = this.renderer.getEntityAtScreen?.(this.simulation, point, selectedUnits.length ? 'command' : 'select')
       ?? this.simulation.getEntityAt(this.renderer.screenToWorld(point));
     if (selectedUnits.length) {
-      if (['enemy','wildlife'].includes(entity?.faction)) this._setCursor('attack-target');
+      if (['enemy','wildlife'].includes(entity?.faction)) this._setCursor(entity.kind==='unit'?'select-target':'attack-target');
       else if (entity?.kind === 'building' && selectedBuilders.length && this.simulation.buildingNeedsWork(entity)) {
         this._setCursor(entity.progress < 1 ? 'build-target' : 'repair-target');
       }
@@ -354,7 +357,7 @@ export class CrownforgeInput {
       else this._setCursor('move-target');
       return;
     }
-    if (['enemy','wildlife'].includes(entity?.faction)) this._setCursor('attack-target');
+    if (['enemy','wildlife'].includes(entity?.faction)) this._setCursor(entity.kind==='unit'?'select-target':'attack-target');
     else if (entity?.faction === 'player' || entity?.kind === 'resource') this._setCursor('select-target');
     else this._setCursor('default');
   }
@@ -498,6 +501,8 @@ export class CrownforgeInput {
       this.simulation.selectRect(start, point, (unit) => this.renderer.worldToScreen(unit), this.drag.additive);
     } else {
       const world = this.renderer.screenToWorld(point);
+      const runeUnit=this.renderer.getCurseRuneAtScreen?.(this.simulation,point);
+      if(runeUnit){this.simulation.selectEntity(runeUnit);this.drag=null;this.onSelection([runeUnit]);this.onInspectStatus(runeUnit);return;}
       const selectedUnits = this.simulation.selectedEntities
         .filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead);
       const commandTarget = this.renderer.getEntityAtScreen?.(this.simulation, point, 'command')
@@ -507,11 +512,11 @@ export class CrownforgeInput {
       const selectingFriendlyUnit = selectionTarget?.kind === 'unit'
         && selectionTarget.faction === 'player'
         && !selectionTarget.dead;
-      // Once a mobile unit is selected, one normal click is one order: open
-      // ground moves, natural resources gather, structures interact/build,
-      // and hostiles engage. Clicking another friendly unit still changes
-      // selection, and Shift keeps additive selection available.
-      if (selectedUnits.length && !this.drag.additive && !selectingFriendlyUnit) {
+      // Normal clicks still issue ground, resource and building orders.
+      // Unit clicks inspect/select; right-click
+      // retains attack orders. Hostile inspection never grants control.
+      const inspectingHostile=selectionTarget?.kind==='unit'&&['enemy','wildlife'].includes(selectionTarget.faction);
+      if (selectedUnits.length && !this.drag.additive && !selectingFriendlyUnit && !inspectingHostile) {
         const result = this.simulation.issueContextCommand(world, commandTarget);
         if (result.kind !== 'none') {
           this.renderer.addRipple(world, result.kind === 'attack' ? '#d86b55' : result.kind === 'build' || result.kind === 'repair' ? '#d7aa54' : '#86c4cf');

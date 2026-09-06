@@ -1,14 +1,15 @@
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260906-bearmotion1';
+import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260906-firstcondemnation1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260906-firstcondemnation1';
 import { grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260906-bearmotion1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260906-wildwoodwatch2';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260906-firstcondemnation1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260905-greatwood3';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260905-buildings1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260905-buildings1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260905-smooth1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260906-wildwoodwatch2';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260906-firstcondemnation1';
 import { findPath } from './pathfinding.js?v=20260905-greatwood3';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260905-greatwood3';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260906-wildwoodwatch2';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260906-firstcondemnation1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -467,7 +468,7 @@ export class CrownforgeSimulation {
   }
 
   clearGuardZone() {
-    const guards = this.units.filter((unit) => this.selectedIds.includes(unit.id) && unit.guardPoint && !unit.dead);
+    const guards = this.units.filter((unit) => this.selectedIds.includes(unit.id) && unit.faction === 'player' && unit.guardPoint && !unit.dead);
     guards.forEach((unit) => {
       unit.guardPoint = null;
       unit.guardTraveling = false;
@@ -563,7 +564,7 @@ export class CrownforgeSimulation {
   }
 
   clearPatrolRoute() {
-    const guards = this.units.filter((unit) => this.selectedIds.includes(unit.id) && unit.patrolActive && !unit.dead);
+    const guards = this.units.filter((unit) => this.selectedIds.includes(unit.id) && unit.faction === 'player' && unit.patrolActive && !unit.dead);
     guards.forEach((unit) => {
       unit.patrolActive = false;
       unit.patrolPoints = [];
@@ -1262,6 +1263,7 @@ export class CrownforgeSimulation {
       && target.faction !== unit.faction
       && target.faction !== 'neutral'
       && !areHearthkinNeutral(unit, target)
+      && !isWardProtected(target)
       ? target
       : null;
   }
@@ -4035,7 +4037,7 @@ export class CrownforgeSimulation {
     const unitTargets = attackerRules.canAttackUnits === false ? [] : this.units.filter((candidate) => !candidate.dead
       && candidate.faction !== unit.faction
       && candidate.faction !== 'neutral'
-      && !areHearthkinNeutral(unit, candidate));
+      && !areHearthkinNeutral(unit, candidate) && !isWardProtected(candidate));
     const buildingTargets = attackerRules.canAttackBuildings === false ? [] : this.buildings.filter((candidate) => {
       if (candidate.destroyed || candidate.hp <= 0 || candidate.progress < 1 || candidate.faction === unit.faction || candidate.faction === 'neutral') return false;
       return unit.faction === 'player' ? Boolean(BUILDING_TYPES[candidate.type].enemyStructure) : candidate.type === 'townCenter';
@@ -4180,7 +4182,7 @@ export class CrownforgeSimulation {
   }
 
   _sendUnitToAttack(unit, target, slot = 0, options = {}) {
-    if (!target || target.hp <= 0 || target.dead || target.destroyed) return false;
+    if (!target || target.hp <= 0 || target.dead || target.destroyed || isWardProtected(target)) return false;
     if (target.kind === 'unit' && areHearthkinNeutral(unit, target)) return false;
     const attackerRules = UNIT_TYPES[unit.type] ?? {};
     if (target.kind === 'unit' && attackerRules.canAttackUnits === false) return false;
@@ -4303,6 +4305,10 @@ export class CrownforgeSimulation {
 
     const attacker = this.units.find((candidate) => candidate.id === sourceId && !candidate.dead);
     if (!attacker) return false;
+    if (isCurseImmune(attacker)) {
+      this._announce('The First Condemnation rejects the lesser curse.');
+      return false;
+    }
     attacker.hp = 1;
     attacker.lastLightCurseActive = true;
     attacker.lastLightCurseFlashTimer = 1.15;
@@ -4335,6 +4341,13 @@ export class CrownforgeSimulation {
       sourceId: attacker?.id ?? null,
       duration,
     });
+    // Drop every bear's reservation and pursuit immediately, including bears
+    // approaching this worker from outside the current fight.
+    for (const bear of this.units) if (bear.type === 'grizzly' && !bear.dead && bear.attackTarget === hearthkin.id) {
+      this._interruptWork(bear);bear.command='idle';bear.path=[];bear.velocityX=0;bear.velocityZ=0;
+      bear.actionLabel='Seeking unwarded prey';
+    }
+    if (this.wildlifeState) this.wildlifeState.scanClock=0;
     const curseNotice = hearthkin.lastLightWardCurseSourceId ? ` Last Light Curse in ${Math.ceil(curseDelay)} seconds.` : '';
     this._announce(`Last Light Ward saves the Hearthkin for ${duration} seconds.${curseNotice}`);
   }
@@ -4342,17 +4355,17 @@ export class CrownforgeSimulation {
   _applyUnitDamage(target, amount, attacker) {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
     const damage = Math.max(0, Number(amount) || 0);
-    if (target.lastLightCurseActive && damage > 0) {
-      const before = target.hp;
-      target.hp = 0;
-      this._killUnit(target, attacker);
-      return { damage: before, killed: true, warded: false, blocked: false, cursed: true };
-    }
     if (target.lastLightWardTimer > 0) {
       target.wardBlockedPulse = 0.42;
       target.hitFlash = Math.max(target.hitFlash, 0.12);
       this.animation.emit(target, ANIMATION_EVENTS.wardBlocked, { sourceId: attacker?.id ?? null, damage });
       return { damage: 0, killed: false, warded: true, blocked: true, cursed: false };
+    }
+    if (target.lastLightCurseActive && !isCurseImmune(target) && damage > 0) {
+      const before = target.hp;
+      target.hp = 0;
+      this._killUnit(target, attacker);
+      return { damage: before, killed: true, warded: false, blocked: false, cursed: true };
     }
 
     const before = target.hp;
@@ -4476,19 +4489,17 @@ export class CrownforgeSimulation {
         const payload = { targetId: target.id, targetKind: target.kind, x: target.x, z: target.z };
         if (validContact) {
           unit.attackHitApplied = true;
-          const strikeDamage = target.kind === 'unit' && isHearthkinUnit(target)
-            ? blueprint.attackVsVillager ?? blueprint.attack
-            : blueprint.attack;
-          payload.damage = strikeDamage;
+          const damage = target.kind === 'unit' ? strikeDamage(unit,target) : blueprint.attack;
+          payload.damage = damage;
           if (target.kind === 'building') {
             this.animation.emit(unit, ANIMATION_EVENTS.attackHit, payload);
-            target.hp -= strikeDamage;
+            target.hp -= damage;
             target.hitFlash = 0.3;
             target.defenseTargetId = unit.id;
             target.defendTimer = ENEMY_AI.defenseDuration;
             if (target.hp <= 0) this._destroyBuilding(target, unit);
           } else {
-            const result = this._applyUnitDamage(target, strikeDamage, unit);
+            const result = this._applyUnitDamage(target, damage, unit);
             payload.damage = result.damage;
             payload.warded = result.warded;
             payload.blocked = result.blocked;
@@ -5309,7 +5320,9 @@ export class CrownforgeSimulation {
 
   selectEntity(entity, additive = false) {
     if (!additive) this.selectedIds = [];
-    if (entity && !['enemy','wildlife'].includes(entity.faction)) {
+    const hostile = entity?.kind === 'unit' && ['enemy','wildlife'].includes(entity.faction);
+    if (hostile || this.selectedEntities.some(e=>['enemy','wildlife'].includes(e.faction))) this.selectedIds=[];
+    if (entity && !entity.dead && (hostile || !['enemy','wildlife'].includes(entity.faction))) {
       if (additive && this.selectedIds.includes(entity.id)) this.selectedIds = this.selectedIds.filter((id) => id !== entity.id);
       else this.selectedIds.push(entity.id);
     }
@@ -5324,7 +5337,7 @@ export class CrownforgeSimulation {
     this.lastCommand = !entity
       ? 'Nothing selected.'
       : ['enemy','wildlife'].includes(entity.faction)
-        ? `${label} is hostile · select a defender, then click to attack.`
+        ? `${label} inspected · select a defender and right-click to attack.`
         : `${label} selected.`;
   }
 
@@ -5332,6 +5345,7 @@ export class CrownforgeSimulation {
     const x1 = Math.min(start.x, end.x); const x2 = Math.max(start.x, end.x);
     const y1 = Math.min(start.y, end.y); const y2 = Math.max(start.y, end.y);
     if (!additive) this.selectedIds = [];
+    this.selectedIds=this.selectedIds.filter(id=>this.units.some(u=>u.id===id&&u.faction==='player'&&!u.dead));
     for (const unit of this.units.filter((candidate) => candidate.faction === 'player' && !candidate.dead)) {
       const screen = screenProjector(unit);
       if (screen.x >= x1 && screen.x <= x2 && screen.y >= y1 && screen.y <= y2) this.selectedIds.push(unit.id);
@@ -6921,6 +6935,10 @@ export class CrownforgeSimulation {
     for (const saved of restored.units ?? []) {
       const unit = this.addUnit(saved.type, saved.x, saved.z, saved.faction);
       Object.assign(unit, saved);
+      if (isCurseImmune(unit) && unit.lastLightCurseActive) {
+        unit.lastLightCurseActive=false;unit.lastLightCurseFlashTimer=0;
+        if (!unit.dead) unit.hp=unit.maxHp;
+      }
       if (!Array.isArray(unit.orderQueue)) unit.orderQueue = [];
     }
     for (const saved of restored.buildings ?? []) {

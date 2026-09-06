@@ -1,9 +1,10 @@
-import { setupPresentation } from './presentation.js?v=20260906-wildwoodwatch2';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260906-wildwoodwatch2';
+import {createUnitInspector} from './unit-inspector.js?v=20260906-firstcondemnation1';
+import { setupPresentation } from './presentation.js?v=20260906-firstcondemnation1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260906-firstcondemnation1';
 import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260905-lanternfirst1';
-import { CrownforgeInput } from './input.js?v=20260906-wildwoodwatch2';
-import { CrownforgeRenderer } from './renderer.js?v=20260906-bearmotion1';
-import { CrownforgeSimulation } from './simulation.js?v=20260906-bearmotion1';
+import { CrownforgeInput } from './input.js?v=20260906-firstcondemnation1';
+import { CrownforgeRenderer } from './renderer.js?v=20260906-firstcondemnation1';
+import { CrownforgeSimulation } from './simulation.js?v=20260906-firstcondemnation1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260905-buildings1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260905-buildings1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260905-buildings1';
@@ -175,6 +176,7 @@ for (const track of CROWNFORGE_MUSIC) {
   musicSelection.append(option);
 }
 audio.onMusicChange = updateMusicControl;
+let unitInspector;
 const input = new CrownforgeInput({
   canvas,
   renderer,
@@ -214,6 +216,7 @@ const input = new CrownforgeInput({
   },
   onToast: announce,
   onGesture: () => audio.unlock(),
+  onInspectStatus: unit=>unitInspector.open(unit),
   onSelection: (entities) => {
     if (entities.length) audio.select(entities.length);
   },
@@ -577,7 +580,10 @@ demolitionModeButton?.addEventListener('click', () => {
   activateDemolitionControl();
 });
 
+unitInspector=createUnitInspector({simulation,renderer,canvas,onOpen:()=>{input.keys.clear();input.drag=null;renderer.setSelectionBox(null);}});
+
 function updateUi() {
+  unitInspector.update();
   for (const [key, info] of Object.entries(RESOURCE_TYPES)) {
     const amount = Math.floor(simulation.resources[key]);
     const resourceUi = ui.resources[key];
@@ -610,8 +616,8 @@ function updateUi() {
     guardAreaButton.classList.toggle('is-active', input.guardMode);
     guardAreaButton.setAttribute('aria-pressed', String(input.guardMode));
   }
-  if (clearGuardButton) clearGuardButton.hidden = !simulation.selectedEntities.some((entity) => entity.kind === 'unit' && entity.guardPoint && !entity.dead);
-  if (clearPatrolButton) clearPatrolButton.hidden = !simulation.selectedEntities.some((entity) => entity.kind === 'unit' && entity.patrolActive && !entity.dead);
+  if (clearGuardButton) clearGuardButton.hidden = !simulation.selectedEntities.some((entity) => entity.kind === 'unit' && entity.faction==='player' && entity.guardPoint && !entity.dead);
+  if (clearPatrolButton) clearPatrolButton.hidden = !simulation.selectedEntities.some((entity) => entity.kind === 'unit' && entity.faction==='player' && entity.patrolActive && !entity.dead);
   const selectedProductionBuilding = simulation.selectedEntities.find((entity) => entity.kind === 'building'
     && entity.faction === 'player'
     && entity.progress >= 1
@@ -848,6 +854,7 @@ function selectionPresentation() {
   if (!entities.length) return { kind: 'NO SELECTION', icon: 'icon-controls' };
   if (entities.length > 1) return { kind: 'GROUP', icon: 'icon-population' };
   const entity = entities[0];
+  if(entity.kind==='unit'&&entity.faction!=='player')return {kind:entity.type==='grizzly'?'CURSED WILDLIFE':'ASHEN · INSPECTING',icon:'icon-soldier'};
   if (entity.kind === 'unit') return UNIT_TYPES[entity.type]?.worker
     ? { kind: 'WORKER', icon: 'icon-villager' }
     : { kind: 'COMBAT UNIT', icon: 'icon-soldier' };
