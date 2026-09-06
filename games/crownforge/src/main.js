@@ -1,6 +1,6 @@
 import { setupPresentation } from './presentation.js?v=20260905-buildings1';
 import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260905-buildings1';
-import { CrownforgeAudio } from './audio.js?v=20260905-buildings1';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260905-playlist1';
 import { CrownforgeInput } from './input.js?v=20260905-buildings1';
 import { CrownforgeRenderer } from './renderer.js?v=20260905-idlebreath1';
 import { CrownforgeSimulation } from './simulation.js?v=20260905-idlebreath1';
@@ -27,6 +27,8 @@ const outcomeCopy = document.querySelector('#outcome-copy');
 const outcomeIcon = document.querySelector('#outcome-icon');
 const musicToggle = document.querySelector('#music-toggle');
 const musicToggleLabel = document.querySelector('#music-toggle-label');
+const musicSelection = document.querySelector('#music-selection');
+const musicNowPlaying = document.querySelector('#music-now-playing');
 const reducedMotion = document.querySelector('#reduced-motion');
 const unitSpeed = document.querySelector('#unit-speed');
 const unitSpeedValue = document.querySelector('#unit-speed-value');
@@ -167,6 +169,12 @@ const performanceMonitor = new CrownforgePerformanceMonitor(performancePanel, {
   lowResolutionMode: renderer.lowResolutionMode,
 });
 const audio = new CrownforgeAudio();
+for (const track of CROWNFORGE_MUSIC) {
+  const option = document.createElement('option');
+  option.value = track.id; option.textContent = track.title;
+  musicSelection.append(option);
+}
+audio.onMusicChange = updateMusicControl;
 const input = new CrownforgeInput({
   canvas,
   renderer,
@@ -513,14 +521,25 @@ function updateMusicControl() {
   musicToggle.classList.toggle('is-muted', muted);
   musicToggle.setAttribute('aria-pressed', String(muted));
   musicToggleLabel.textContent = muted ? 'MUSIC OFF' : 'MUSIC ON';
-  setTooltip(musicToggle, muted ? 'Unmute Lantern Under Stone' : 'Mute Crownforge music');
+  setTooltip(musicToggle, muted ? 'Resume Crownforge music' : 'Pause Crownforge music');
+  musicSelection.value = audio.selection;
+  const prefix = muted ? 'Paused' : audio.playbackStatus === 'playing' ? 'Playing' : audio.playbackStatus === 'loading' ? 'Loading' : 'Ready';
+  musicNowPlaying.textContent = audio.playbackStatus === 'error' && !muted
+    ? 'Music unavailable · choose a song to retry'
+    : `${prefix} · ${audio.currentTrack.title}`;
 }
+
+musicSelection.addEventListener('change', () => {
+  audio.selectMusic(musicSelection.value);
+  audio.unlock();
+  updateMusicControl();
+});
 
 musicToggle?.addEventListener('click', () => {
   audio.unlock();
   const muted = audio.toggleMusic();
   updateMusicControl();
-  announce(muted ? 'Crownforge music muted.' : 'Lantern Under Stone is playing.');
+  announce(muted ? 'Crownforge music paused.' : `Resuming ${audio.currentTrack.title}.`);
 });
 
 reducedMotion.addEventListener('change', (event) => {

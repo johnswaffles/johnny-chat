@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="crownforge-build" content="20260905-meadow1" />
+    <meta name="crownforge-build" content="20260905-playlist1" />
     <title>Crownforge: Dawn of Kingdoms</title>
     <meta name="description" content="Crownforge — a tiny polished historical RTS settlement slice." />
     <link rel="icon" type="image/png" href="./assets/crownforge-icon-gold-v1.png?v=20260904-rosterkin1" />
@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
     <link rel="stylesheet" href="./styles.css?v=20260904-rosterkin1" />
-    <link rel="stylesheet" href="./presentation.css?v=20260904-rosterkin1" />
+    <link rel="stylesheet" href="./presentation.css?v=20260905-playlist1" />
   </head>
   <body>
     <main class="game-shell">
@@ -178,6 +178,12 @@
           <button id="save-game" class="secondary-button" type="button" title="Save this Crownforge slice in this browser"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>SAVE</span></button>
           <button id="load-game" class="secondary-button" type="button" title="Restore the Crownforge slice saved in this browser"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>LOAD</span></button>
           <button id="music-toggle" class="secondary-button music-toggle" type="button" title="Mute Crownforge music" aria-pressed="false"><span class="music-glyph" aria-hidden="true">♫</span><span id="music-toggle-label">MUSIC ON</span></button>
+          <div class="soundtrack-control">
+            <label for="music-selection">SOUNDTRACK</label>
+            <select id="music-selection" aria-describedby="music-playback-help"><option value="all">All songs · play in order</option></select>
+            <span id="music-now-playing" role="status" aria-live="polite">Ready · The Door Beneath the World</span>
+            <span id="music-playback-help" class="soundtrack-help">All songs play once in order, then repeat. Choose one song to loop it.</span>
+          </div>
           <button id="cancel-build" class="secondary-button" hidden title="Cancel construction placement (Esc)"><span class="ui-icon icon-cancel" aria-hidden="true"></span><span>ESC CANCEL</span></button>
           <button id="restart-game" class="secondary-button" title="Reset the current Crownforge slice"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>RESET SLICE</span></button>
         </div>
@@ -231,7 +237,7 @@
         if (fileProtocolHelp) fileProtocolHelp.hidden = false;
       }
     </script>
-    <script type="module" src="./src/main.js?v=20260905-idlebreath1"></script>
+    <script type="module" src="./src/main.js?v=20260905-playlist1"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>

@@ -80,6 +80,12 @@ h1 { font-size: 22px; }
 .secondary-button { border-radius: 3px; padding: 9px 8px; font-size: 8px; border-color: #b9a26f33; }
 .secondary-button .ui-icon { display: none; }
 .music-toggle { min-width: 83px; }
+.soundtrack-control { display: grid; gap: 3px; width: 205px; min-width: 0; flex-shrink: 0; }
+.soundtrack-control label { font-size: 7px; letter-spacing: .14em; color: #cdbb91; }
+.soundtrack-control select { width: 100%; min-width: 0; padding: 6px 7px; border: 1px solid #b9a26f66; border-radius: 3px; color: #f1e4c4; background: #1b3029; font: 11px 'DM Sans', sans-serif; cursor: pointer; }
+.soundtrack-control select:focus-visible { outline: 2px solid #e1c487; outline-offset: 2px; }
+#music-now-playing { font-size: 8px; color: #b8c4ad; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.soundtrack-help { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .action-button small { font-size: 8px; }
 .build-menu { border-radius: 4px; bottom: calc(100% + 20px); }
 #build-menu { position: fixed; left: 270px; right: 232px; bottom: 106px; width: auto; max-height: calc(100dvh - 250px); padding: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; background: #152a25f7; }
@@ -143,6 +149,7 @@ h1 { font-size: 22px; }
   .action-button .action-mark { display: none; }
   .secondary-button { padding: 8px 6px; font-size: 7px; }
   .music-toggle { min-width: 66px; }
+  .soundtrack-control { width: min(205px, calc(100vw - 115px)); }
   #restart-game { display: none; }
   #build-menu { left: 10px; right: 10px; bottom: 90px; max-height: calc(100dvh - 260px); grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .build-menu { position: fixed; left: 10px; bottom: 90px; max-height: calc(100dvh - 260px); }
