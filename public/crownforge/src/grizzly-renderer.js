@@ -1,6 +1,6 @@
-import { GRIZZLY_PAINTED_ART } from './grizzly-painted-art.js?v=20260906-bearpursuit1';
-import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260906-bearpursuit1';
-import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260906-bearpursuit1';
+import { GRIZZLY_PAINTED_ART } from './grizzly-painted-art.js?v=20260906-bearstride1';
+import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260906-bearstride1';
+import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260906-bearstride1';
 
 const VIEWS=['se','sw','ne','nw'];
 const BODY_SCALE=.85;

@@ -1,6 +1,6 @@
-import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260906-bearpursuit1';
+import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260906-bearstride1';
 import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260906-firstcondemnation1';
-import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260906-bearpursuit1';
+import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260906-bearstride1';
 import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260906-firstcondemnation1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260905-greatwood3';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260905-buildings1';

@@ -1,5 +1,5 @@
 // Actor coordinates: x right, y up, z forward. Feet follow a four-beat walk.
-export const GRIZZLY_MOTION = Object.freeze({ modelSize:200, strideLength:1.8, stance:.72 });
+export const GRIZZLY_MOTION = Object.freeze({ modelSize:200, strideLength:2.25, stance:.72 });
 export const GRIZZLY_ATTACKS = Object.freeze({
   swipe:Object.freeze({duration:1.65,anticipation:.53,contact:.15,recovery:.32}),
   rear:Object.freeze({duration:2.4,anticipation:.56,contact:.15,recovery:.29}),
