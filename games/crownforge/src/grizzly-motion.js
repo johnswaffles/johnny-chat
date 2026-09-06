@@ -1,8 +1,8 @@
 // Actor coordinates: x right, y up, z forward. Feet follow a four-beat walk.
 export const GRIZZLY_MOTION = Object.freeze({ modelSize:200, strideLength:1.8, stance:.72 });
 export const GRIZZLY_ATTACKS = Object.freeze({
-  swipe:Object.freeze({duration:1.45,anticipation:.28,contact:.30,recovery:.42}),
-  rear:Object.freeze({duration:2.2,anticipation:.40,contact:.18,recovery:.42}),
+  swipe:Object.freeze({duration:1.65,anticipation:.53,contact:.15,recovery:.32}),
+  rear:Object.freeze({duration:2.4,anticipation:.56,contact:.15,recovery:.29}),
 });
 const CONTACT={hindLeft:0,frontLeft:.25,hindRight:.5,frontRight:.75};
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));

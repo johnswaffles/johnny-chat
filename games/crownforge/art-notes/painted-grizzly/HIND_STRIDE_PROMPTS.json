@@ -1,0 +1,54 @@
+{
+  "nw": {
+    "edit": {
+      "prompt": "Edit this 8-frame painted bear walk sprite sheet. Change only the TWO HIND LEGS and their paws: give BOTH back legs about twice their present forward/back stride excursion, with a clearly visible alternating step. Keep the upper torso, rump mass, fur coloring/detail, head, forelegs, lighting, camera and body size the same in every corresponding painting. Keep the complete animal painted as one intact sprite, never detached pieces. Exactly eight successive walk poses in the same 4-column by 2-row reading order. Frame 1: left hind paw reaches forward under the abdomen, right hind paw trails behind the rump. Frames 2–4: the left planted paw sweeps backward with weight, the right hind paw lifts slightly and swings forward. Frame 5: the right hind paw is forward under the abdomen, left hind paw trails behind. Frames 6–8: reverse that transfer to join frame 1 smoothly. This is forward/back travel ALONG THE BEAR'S BODY, NOT sideways spreading. Both thighs and hocks must articulate enough to carry the paws through that larger range; grounded heavy walking, not kicking or running. Low lifted paws, broad planted soles, no extra legs. Preserve original artwork everywhere else. Same 1536x1024 canvas and positions, generous room for extended paws. Output a true transparent PNG cutout sheet. All eight views remain rear three-quarter facing upper left.",
+      "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-nw-v1.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-0bddcfd5-5ca6-4057-afc9-c93998b7cb9b.png"
+    },
+    "extraction": {
+      "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+      "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-0bddcfd5-5ca6-4057-afc9-c93998b7cb9b.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-09cc81b6-9977-494d-b9f9-1adda21bc785.png"
+    },
+    "asset": "assets/painted-walk-nw-v2.png"
+  },
+  "ne": {
+    "edit": {
+      "prompt": "Edit this 8-frame painted bear walk sprite sheet. Change only the TWO HIND LEGS and their paws: give BOTH back legs about twice their present forward/back stride excursion, with a clearly visible alternating step. Keep the upper torso, rump mass, fur coloring/detail, head, forelegs, lighting, camera and body size the same in every corresponding painting. Keep the complete animal painted as one intact sprite, never detached pieces. Exactly eight successive walk poses in the same 4-column by 2-row reading order. Frame 1: left hind paw reaches forward under the abdomen, right hind paw trails behind the rump. Frames 2–4: the left planted paw sweeps backward with weight, the right hind paw lifts slightly and swings forward. Frame 5: the right hind paw is forward under the abdomen, left hind paw trails behind. Frames 6–8: reverse that transfer to join frame 1 smoothly. This is forward/back travel ALONG THE BEAR'S BODY, NOT sideways spreading. Both thighs and hocks must articulate enough to carry the paws through that larger range; grounded heavy walking, not kicking or running. Low lifted paws, broad planted soles, no extra legs. Preserve original artwork everywhere else. Same 1536x1024 canvas and positions, generous room for extended paws. Output a true transparent PNG cutout sheet. All eight views remain rear three-quarter facing upper right.",
+      "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-ne-v1.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e5a4c00b-02fb-4d00-bcd2-6a73dbd0cc5c.png"
+    },
+    "extraction": {
+      "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+      "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e5a4c00b-02fb-4d00-bcd2-6a73dbd0cc5c.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-3d657ec7-d415-490e-9d8c-7c537ea8315b.png"
+    },
+    "asset": "assets/painted-walk-ne-v2.png"
+  },
+  "se": {
+    "edit": {
+      "prompt": "Edit this 8-frame painted bear walk sprite sheet. Change only the TWO HIND LEGS and their paws: give BOTH back legs about twice their present forward/back stride excursion, with a clearly visible alternating step. Keep the upper torso, rump mass, fur coloring/detail, head, forelegs, lighting, camera and body size the same in every corresponding painting. Keep the complete animal painted as one intact sprite, never detached pieces. Exactly eight successive walk poses in the same 4-column by 2-row reading order. Frame 1: left hind paw reaches forward under the abdomen, right hind paw trails behind the rump. Frames 2–4: the left planted paw sweeps backward with weight, the right hind paw lifts slightly and swings forward. Frame 5: the right hind paw is forward under the abdomen, left hind paw trails behind. Frames 6–8: reverse that transfer to join frame 1 smoothly. This is forward/back travel ALONG THE BEAR'S BODY, NOT sideways spreading. Both thighs and hocks must articulate enough to carry the paws through that larger range; grounded heavy walking, not kicking or running. Low lifted paws, broad planted soles, no extra legs. Preserve original artwork everywhere else. Same 1536x1024 canvas and positions, generous room for extended paws. Output a true transparent PNG cutout sheet. All eight views remain front three-quarter facing lower right.",
+      "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-se-v1.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-26770d7f-1312-4350-884f-51e4c640f92f.png"
+    },
+    "extraction": {
+      "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+      "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-26770d7f-1312-4350-884f-51e4c640f92f.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-ffc71113-10b7-4020-9866-e6bfc6c82e19.png"
+    },
+    "asset": "assets/painted-walk-se-v2.png"
+  },
+  "sw": {
+    "edit": {
+      "prompt": "Edit this 8-frame painted bear walk sprite sheet. Change only the TWO HIND LEGS and their paws: give BOTH back legs about twice their present forward/back stride excursion, with a clearly visible alternating step. Keep the upper torso, rump mass, fur coloring/detail, head, forelegs, lighting, camera and body size the same in every corresponding painting. Keep the complete animal painted as one intact sprite, never detached pieces. Exactly eight successive walk poses in the same 4-column by 2-row reading order. Frame 1: left hind paw reaches forward under the abdomen, right hind paw trails behind the rump. Frames 2–4: the left planted paw sweeps backward with weight, the right hind paw lifts slightly and swings forward. Frame 5: the right hind paw is forward under the abdomen, left hind paw trails behind. Frames 6–8: reverse that transfer to join frame 1 smoothly. This is forward/back travel ALONG THE BEAR'S BODY, NOT sideways spreading. Both thighs and hocks must articulate enough to carry the paws through that larger range; grounded heavy walking, not kicking or running. Low lifted paws, broad planted soles, no extra legs. Preserve original artwork everywhere else. Same 1536x1024 canvas and positions, generous room for extended paws. Output a true transparent PNG cutout sheet. All eight views remain front three-quarter facing lower left.",
+      "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-sw-v1.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d4ad76d4-821e-483a-9a98-25a56860f3e9.png"
+    },
+    "extraction": {
+      "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+      "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d4ad76d4-821e-483a-9a98-25a56860f3e9.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-9889baa7-d469-4804-989e-493bcfd5c5eb.png"
+    },
+    "asset": "assets/painted-walk-sw-v2.png"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "localOnly": true,
+  "curation": "SW wind-up holds source painting 3 instead of source painting 4 to preserve the striking near paw.",
+  "directions": {
+    "sw": {
+      "steps": [
+        {
+          "prompt": "Create a new EIGHT-FRAME REARING ATTACK sprite sheet for this exact painted grizzly. Reference image establishes character and fur style; make NEW poses. Same shaggy rich brown animal, proportions and painted detail. Exactly 4 columns x 2 rows on 1536x1024 transparent PNG. Same body SCALE through all eight frames: neutral quadruped is visibly shorter than the tall upright bear. Full body in every cell, generous top margin and separate clear gutters; no overlap, shadows, scenery, labels or effects. All eight stay front three-quarter facing lower left. Keep camera completely fixed; do not turn a rear view into a front view.\nRead left to right, top then bottom. ONE powerful standing attack:\n1 calm on all four paws, match resting reference.\n2 crouches onto hindquarters, forepaws just lifting, preparing to rise.\n3 halfway rising, both forelegs clear of the ground, chest lifting.\n4 at FULL UPRIGHT HEIGHT on TWO HIND FEET, legs extending and abdomen vertical, near forepaw raised beside head ready to strike, far forepaw held near chest for balance.\n5 still upright, SAME NEAR FOREPAW sweeps powerfully forward and down across the opponent directly ahead. Far forepaw stays near chest. Mouth snarls.\n6 upright follow-through: near striking paw continues down across body, shoulders roll forward.\n7 descends by bending hips/knees and lowering chest, forepaws reaching toward ground.\n8 returns to all fours, same calm pose and size as frame1.\nHind feet stay planted throughout. Both front paws are clearly OFF THE GROUND through frames3–6. This must be a towering bear rearing to its full height, not the previous low paw swipe. Maintain the SAME striking paw; never swap near and far arms. Exactly eight whole-bear paintings, no separated pieces.",
+          "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-actions-sw-v1.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-bc4f5640-f4b0-4823-ba94-6b900667c5d0.png"
+        },
+        {
+          "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses. One correction in frame 4 (top right): raise the NEAR arm on the viewer-right side of the body beside its head, and lower the viewer-left far arm to its chest. The viewer-right near arm must be the same arm that then swipes across in frame 5. Preserve all other frames exactly.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-bc4f5640-f4b0-4823-ba94-6b900667c5d0.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-1606603b-2e4d-4dcf-98e8-9a07aed2a711.png"
+        },
+        {
+          "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-1606603b-2e4d-4dcf-98e8-9a07aed2a711.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-99edcf14-ecab-4fbf-8b49-8e8852000caf.png"
+        }
+      ],
+      "asset": "assets/painted-rear-sw-v1.png"
+    },
+    "se": {
+      "steps": [
+        {
+          "prompt": "Create a new EIGHT-FRAME REARING ATTACK sprite sheet for this exact painted grizzly. Reference image establishes character and fur style; make NEW poses. Same shaggy rich brown animal, proportions and painted detail. Exactly 4 columns x 2 rows on 1536x1024 transparent PNG. Same body SCALE through all eight frames: neutral quadruped is visibly shorter than the tall upright bear. Full body in every cell, generous top margin and separate clear gutters; no overlap, shadows, scenery, labels or effects. All eight stay front three-quarter facing lower right. Keep camera completely fixed; do not turn a rear view into a front view.\nRead left to right, top then bottom. ONE powerful standing attack:\n1 calm on all four paws, match resting reference.\n2 crouches onto hindquarters, forepaws just lifting, preparing to rise.\n3 halfway rising, both forelegs clear of the ground, chest lifting.\n4 at FULL UPRIGHT HEIGHT on TWO HIND FEET, legs extending and abdomen vertical, near forepaw raised beside head ready to strike, far forepaw held near chest for balance.\n5 still upright, SAME NEAR FOREPAW sweeps powerfully forward and down across the opponent directly ahead. Far forepaw stays near chest. Mouth snarls.\n6 upright follow-through: near striking paw continues down across body, shoulders roll forward.\n7 descends by bending hips/knees and lowering chest, forepaws reaching toward ground.\n8 returns to all fours, same calm pose and size as frame1.\nHind feet stay planted throughout. Both front paws are clearly OFF THE GROUND through frames3–6. This must be a towering bear rearing to its full height, not the previous low paw swipe. Maintain the SAME striking paw; never swap near and far arms. Exactly eight whole-bear paintings, no separated pieces.",
+          "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-actions-se-v1.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b3fb8f6a-bda9-4669-8916-90bd855b2cc3.png"
+        },
+        {
+          "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b3fb8f6a-bda9-4669-8916-90bd855b2cc3.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b3575273-96d3-413f-932c-c6d69c41687f.png"
+        }
+      ],
+      "asset": "assets/painted-rear-se-v1.png"
+    },
+    "nw": {
+      "steps": [
+        {
+          "prompt": "Create a new EIGHT-FRAME REARING ATTACK sprite sheet for this exact painted grizzly. Reference image establishes character and fur style; make NEW poses. Same shaggy rich brown animal, proportions and painted detail. Exactly 4 columns x 2 rows on 1536x1024 transparent PNG. Same body SCALE through all eight frames: neutral quadruped is visibly shorter than the tall upright bear. Full body in every cell, generous top margin and separate clear gutters; no overlap, shadows, scenery, labels or effects. All eight stay REAR three-quarter facing upper left, BACK always toward viewer. Keep camera completely fixed; do not turn a rear view into a front view.\nRead left to right, top then bottom. ONE powerful standing attack:\n1 calm on all four paws, match resting reference.\n2 crouches onto hindquarters, forepaws just lifting, preparing to rise.\n3 halfway rising, both forelegs clear of the ground, chest lifting.\n4 at FULL UPRIGHT HEIGHT on TWO HIND FEET, legs extending and abdomen vertical, near forepaw raised beside head ready to strike, far forepaw held near chest for balance.\n5 still upright, SAME NEAR FOREPAW sweeps powerfully forward and down across the opponent directly ahead. Far forepaw stays near chest. Mouth snarls.\n6 upright follow-through: near striking paw continues down across body, shoulders roll forward.\n7 descends by bending hips/knees and lowering chest, forepaws reaching toward ground.\n8 returns to all fours, same calm pose and size as frame1.\nHind feet stay planted throughout. Both front paws are clearly OFF THE GROUND through frames3–6. This must be a towering bear rearing to its full height, not the previous low paw swipe. Maintain the SAME striking paw; never swap near and far arms. Exactly eight whole-bear paintings, no separated pieces.",
+          "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-actions-nw-v1.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-879707be-1057-4963-a76c-57f4a8aeeb49.png"
+        },
+        {
+          "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-879707be-1057-4963-a76c-57f4a8aeeb49.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-4182b355-14db-489a-8772-bea004623dd4.png"
+        }
+      ],
+      "asset": "assets/painted-rear-nw-v1.png"
+    },
+    "ne": {
+      "steps": [
+        {
+          "prompt": "Create a new EIGHT-FRAME REARING ATTACK sprite sheet for this exact painted grizzly. Reference image establishes character and fur style; make NEW poses. Same shaggy rich brown animal, proportions and painted detail. Exactly 4 columns x 2 rows on 1536x1024 transparent PNG. Same body SCALE through all eight frames: neutral quadruped is visibly shorter than the tall upright bear. Full body in every cell, generous top margin and separate clear gutters; no overlap, shadows, scenery, labels or effects. All eight stay REAR three-quarter facing upper right, BACK always toward viewer. Keep camera completely fixed; do not turn a rear view into a front view.\nRead left to right, top then bottom. ONE powerful standing attack:\n1 calm on all four paws, match resting reference.\n2 crouches onto hindquarters, forepaws just lifting, preparing to rise.\n3 halfway rising, both forelegs clear of the ground, chest lifting.\n4 at FULL UPRIGHT HEIGHT on TWO HIND FEET, legs extending and abdomen vertical, near forepaw raised beside head ready to strike, far forepaw held near chest for balance.\n5 still upright, SAME NEAR FOREPAW sweeps powerfully forward and down across the opponent directly ahead. Far forepaw stays near chest. Mouth snarls.\n6 upright follow-through: near striking paw continues down across body, shoulders roll forward.\n7 descends by bending hips/knees and lowering chest, forepaws reaching toward ground.\n8 returns to all fours, same calm pose and size as frame1.\nHind feet stay planted throughout. Both front paws are clearly OFF THE GROUND through frames3–6. This must be a towering bear rearing to its full height, not the previous low paw swipe. Maintain the SAME striking paw; never swap near and far arms. Exactly eight whole-bear paintings, no separated pieces.",
+          "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-actions-ne-v1.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-9f6440c6-78a7-45a9-a2b2-e4bfccf580d0.png"
+        },
+        {
+          "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-9f6440c6-78a7-45a9-a2b2-e4bfccf580d0.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-381add1d-8f65-4410-b0e3-8d311e4ab3f4.png"
+        }
+      ],
+      "asset": "assets/painted-rear-ne-v1.png"
+    }
+  }
+}

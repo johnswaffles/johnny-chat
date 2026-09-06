@@ -1,0 +1,70 @@
+{
+  "tool": "Built-in ImageGen",
+  "directions": {
+    "nw": {
+      "asset": "assets/painted-actions-nw-v1.png",
+      "steps": [
+        {
+          "prompt": "Create an action sprite sheet for this exact painted grizzly. The input is a character/style reference, not the required walk poses. Match its shaggy warm brown fur, proportions, silhouette, face and lighting. Output 1536x1536 PNG, true transparent background. Exactly TWELVE complete painted bears, FOUR COLUMNS and THREE ROWS with wide clear gutters. Each bear same camera, scale and foot baseline inside its own 384x512 cell, ample margin so limbs never overlap another cell. All twelve face rear three-quarter facing upper left; never change direction. No text, labels, shadows, ground, grids, effects or motion streaks. Each is one intact painted bear, not separate parts.\nTOP ROW: four quiet STANDING/BREATHING frames. All four paws planted in exactly the same positions beneath body, all elbows and hocks relaxed, NO WALK STRIDE. 1 neutral exhaled chest; 2 barely rising chest; 3 gentle full inhalation in ribs/shoulders with only a few pixels change; 4 settling toward pose 1. Tiny ear/head responsiveness, no rocking, no lifting paws, no large body size change.\nMIDDLE AND BOTTOM ROWS: eight ordered frames of ONE powerful GROUNDED FRONT-PAW SWIPE using the near forepaw. Both hind paws stay planted and far forepaw supports weight. 5 neutral standing identical to pose 1; 6 lower shoulders and shift weight onto supporting far forepaw; 7 raise and draw NEAR forepaw back beside shoulder, elbow folded, claws open, mouth starting to snarl; 8 full wind-up with near paw high and body slightly coiled; 9 explosive forward-and-across swipe, near arm reaching toward an opponent directly ahead, head tracking strike, mouth open; 10 follow-through across front of chest and downward, visibly different from frame 9; 11 retract paw toward its standing contact with shoulder relaxing; 12 all four paws planted, mouth closed, returned to pose 1. The striking paw travels in one readable arc, never waves repeatedly. Show the planted rear paws throughout. Do not rear onto two legs. Do not add another bear, enemy or target. Preserve this exact artwork style; only author the required poses.",
+          "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-nw-v2.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-4db9ac8e-daa9-4d28-acba-52bf8b48e980.png"
+        },
+        {
+          "prompt": "Extract these twelve bears as clean transparent PNG cutouts, keeping the 4 columns by 3 rows arrangement. Empty background must be truly transparent. Keep the bear paintings and their poses. In only the four standing poses in the top row, and matching resting poses 5 and 12, lower the trailing hind paw onto the ground, sole facing down, so both back feet are flat and support the standing bear. Preserve all other artwork.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-4db9ac8e-daa9-4d28-acba-52bf8b48e980.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e9d0ad95-a09e-4d70-ba9e-5933939e5626.png"
+        },
+        {
+          "prompt": "Extract these twelve bears as clean transparent PNG cutouts, keeping the 4 columns by 3 rows arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e9d0ad95-a09e-4d70-ba9e-5933939e5626.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e10f1ff0-de2c-467f-915c-1316a053005b.png"
+        }
+      ]
+    },
+    "ne": {
+      "asset": "assets/painted-actions-ne-v1.png",
+      "steps": [
+        {
+          "prompt": "Create an action sprite sheet for this exact painted grizzly. The input is a character/style reference, not the required walk poses. Match its shaggy warm brown fur, proportions, silhouette, face and lighting. Output 1536x1536 PNG, true transparent background. Exactly TWELVE complete painted bears, FOUR COLUMNS and THREE ROWS with wide clear gutters. Each bear same camera, scale and foot baseline inside its own 384x512 cell, ample margin so limbs never overlap another cell. All twelve face rear three-quarter facing upper right; never change direction. No text, labels, shadows, ground, grids, effects or motion streaks. Each is one intact painted bear, not separate parts.\nTOP ROW: four quiet STANDING/BREATHING frames. All four paws planted in exactly the same positions beneath body, all elbows and hocks relaxed, NO WALK STRIDE. 1 neutral exhaled chest; 2 barely rising chest; 3 gentle full inhalation in ribs/shoulders with only a few pixels change; 4 settling toward pose 1. Tiny ear/head responsiveness, no rocking, no lifting paws, no large body size change.\nMIDDLE AND BOTTOM ROWS: eight ordered frames of ONE powerful GROUNDED FRONT-PAW SWIPE using the near forepaw. Both hind paws stay planted and far forepaw supports weight. 5 neutral standing identical to pose 1; 6 lower shoulders and shift weight onto supporting far forepaw; 7 raise and draw NEAR forepaw back beside shoulder, elbow folded, claws open, mouth starting to snarl; 8 full wind-up with near paw high and body slightly coiled; 9 explosive forward-and-across swipe, near arm reaching toward an opponent directly ahead, head tracking strike, mouth open; 10 follow-through across front of chest and downward, visibly different from frame 9; 11 retract paw toward its standing contact with shoulder relaxing; 12 all four paws planted, mouth closed, returned to pose 1. The striking paw travels in one readable arc, never waves repeatedly. Show the planted rear paws throughout. Do not rear onto two legs. Do not add another bear, enemy or target. Preserve this exact artwork style; only author the required poses.",
+          "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-ne-v3.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e0be12aa-0607-41ac-9868-eb7c89105507.png"
+        },
+        {
+          "prompt": "Extract these twelve bears as clean transparent PNG cutouts, keeping the 4 columns by 3 rows arrangement. Empty background must be truly transparent. Keep the bear paintings and their poses.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e0be12aa-0607-41ac-9868-eb7c89105507.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-ac73dea3-e3ac-4577-92ce-7cb5bf32ca35.png"
+        }
+      ]
+    },
+    "se": {
+      "asset": "assets/painted-actions-se-v1.png",
+      "steps": [
+        {
+          "prompt": "Create an action sprite sheet for this exact painted grizzly. The input is a character/style reference, not the required walk poses. Match its shaggy warm brown fur, proportions, silhouette, face and lighting. Output 1536x1536 PNG, true transparent background. Exactly TWELVE complete painted bears, FOUR COLUMNS and THREE ROWS with wide clear gutters. Each bear same camera, scale and foot baseline inside its own 384x512 cell, ample margin so limbs never overlap another cell. All twelve face front three-quarter facing lower right; never change direction. No text, labels, shadows, ground, grids, effects or motion streaks. Each is one intact painted bear, not separate parts.\nTOP ROW: four quiet STANDING/BREATHING frames. All four paws planted in exactly the same positions beneath body, all elbows and hocks relaxed, NO WALK STRIDE. 1 neutral exhaled chest; 2 barely rising chest; 3 gentle full inhalation in ribs/shoulders with only a few pixels change; 4 settling toward pose 1. Tiny ear/head responsiveness, no rocking, no lifting paws, no large body size change.\nMIDDLE AND BOTTOM ROWS: eight ordered frames of ONE powerful GROUNDED FRONT-PAW SWIPE using the near forepaw. Both hind paws stay planted and far forepaw supports weight. 5 neutral standing identical to pose 1; 6 lower shoulders and shift weight onto supporting far forepaw; 7 raise and draw NEAR forepaw back beside shoulder, elbow folded, claws open, mouth starting to snarl; 8 full wind-up with near paw high and body slightly coiled; 9 explosive forward-and-across swipe, near arm reaching toward an opponent directly ahead, head tracking strike, mouth open; 10 follow-through across front of chest and downward, visibly different from frame 9; 11 retract paw toward its standing contact with shoulder relaxing; 12 all four paws planted, mouth closed, returned to pose 1. The striking paw travels in one readable arc, never waves repeatedly. Show the planted rear paws throughout. Do not rear onto two legs. Do not add another bear, enemy or target. Preserve this exact artwork style; only author the required poses.",
+          "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-se-v3.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-f223feb5-d9ed-4698-8118-fbd80406ff60.png"
+        },
+        {
+          "prompt": "Extract these twelve bears as clean transparent PNG cutouts, keeping the 4 columns by 3 rows arrangement. Empty background must be truly transparent. Keep the bear paintings and their poses.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-f223feb5-d9ed-4698-8118-fbd80406ff60.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-505ea563-fce7-46ac-a863-320dd8a78fb1.png"
+        }
+      ]
+    },
+    "sw": {
+      "asset": "assets/painted-actions-sw-v1.png",
+      "steps": [
+        {
+          "prompt": "Create an action sprite sheet for this exact painted grizzly. The input is a character/style reference, not the required walk poses. Match its shaggy warm brown fur, proportions, silhouette, face and lighting. Output 1536x1536 PNG, true transparent background. Exactly TWELVE complete painted bears, FOUR COLUMNS and THREE ROWS with wide clear gutters. Each bear same camera, scale and foot baseline inside its own 384x512 cell, ample margin so limbs never overlap another cell. All twelve face front three-quarter facing lower left; never change direction. No text, labels, shadows, ground, grids, effects or motion streaks. Each is one intact painted bear, not separate parts.\nTOP ROW: four quiet STANDING/BREATHING frames. All four paws planted in exactly the same positions beneath body, all elbows and hocks relaxed, NO WALK STRIDE. 1 neutral exhaled chest; 2 barely rising chest; 3 gentle full inhalation in ribs/shoulders with only a few pixels change; 4 settling toward pose 1. Tiny ear/head responsiveness, no rocking, no lifting paws, no large body size change.\nMIDDLE AND BOTTOM ROWS: eight ordered frames of ONE powerful GROUNDED FRONT-PAW SWIPE using the near forepaw. Both hind paws stay planted and far forepaw supports weight. 5 neutral standing identical to pose 1; 6 lower shoulders and shift weight onto supporting far forepaw; 7 raise and draw NEAR forepaw back beside shoulder, elbow folded, claws open, mouth starting to snarl; 8 full wind-up with near paw high and body slightly coiled; 9 explosive forward-and-across swipe, near arm reaching toward an opponent directly ahead, head tracking strike, mouth open; 10 follow-through across front of chest and downward, visibly different from frame 9; 11 retract paw toward its standing contact with shoulder relaxing; 12 all four paws planted, mouth closed, returned to pose 1. The striking paw travels in one readable arc, never waves repeatedly. Show the planted rear paws throughout. Do not rear onto two legs. Do not add another bear, enemy or target. Preserve this exact artwork style; only author the required poses.",
+          "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-sw-v3.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-3d56c285-ca0f-4180-aa5b-224630ed8f0b.png"
+        },
+        {
+          "prompt": "Extract these twelve bears as clean transparent PNG cutouts, keeping the 4 columns by 3 rows arrangement. Empty background must be truly transparent. Keep the bear paintings and their poses.",
+          "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-3d56c285-ca0f-4180-aa5b-224630ed8f0b.png",
+          "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d3aa4f98-a8c0-46bd-8803-0281ef9b516c.png"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "nw": {
+    "edit": {
+      "prompt": "Use case: precise-object-edit. Edit target: this eight-painting bear walk atlas. Correct ONLY THE FRONT LEGS' WALK SEQUENCE. Preserve each corresponding frame's hind legs, hind paws, rump, torso, head, fur style, body size and camera. Do not reorder entire animals or change the approved hind stride. Eight successive whole-animal frames in 4 columns x 2 rows. Current forepaws repeat then jump; replace their poses with a continuous alternating walk, not a swipe. Near front paw: frame 1 reaches forward and touches down; frame 2 bears weight just ahead of shoulder; frame 3 planted below shoulder; frame 4 pushes back behind shoulder; frame 5 lifts low with wrist bent; frame 6 swings forward below chest; frame 7 extends toward touchdown; frame 8 almost touches ground ready to join frame 1. Far front paw follows the SAME motion offset by four frames: its touchdown is frame 5, while near paw lifts. Both FRONT legs must visibly take turns, one supporting the heavy body as the other advances. Keep present travel range, no bigger gestures. Paws point down, elbows bend naturally, no striking or waving. Clear coherent differences from pose to pose. Each sprite remains one intact painted bear; no separated body parts. Maintain same 1536x1024 arrangement and generous clear gaps. Transparent PNG background, no checkerboard. All eight animals remain rear three-quarter facing upper left.",
+      "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-nw-v2.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-91ab31bd-3645-4a0a-a742-6cfea50d303f.png"
+    },
+    "extraction": {
+      "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+      "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-91ab31bd-3645-4a0a-a742-6cfea50d303f.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-6de4f571-8ab1-4248-a22f-6b9d6f8323a8.png"
+    },
+    "asset": "assets/painted-walk-nw-v3.png",
+    "accepted": false,
+    "note": "Kept approved v2 rear-left view: candidate altered the hind-paw silhouette."
+  },
+  "ne": {
+    "edit": {
+      "prompt": "Use case: precise-object-edit. Edit target: this eight-painting bear walk atlas. Correct ONLY THE FRONT LEGS' WALK SEQUENCE. Preserve each corresponding frame's hind legs, hind paws, rump, torso, head, fur style, body size and camera. Do not reorder entire animals or change the approved hind stride. Eight successive whole-animal frames in 4 columns x 2 rows. Current forepaws repeat then jump; replace their poses with a continuous alternating walk, not a swipe. Near front paw: frame 1 reaches forward and touches down; frame 2 bears weight just ahead of shoulder; frame 3 planted below shoulder; frame 4 pushes back behind shoulder; frame 5 lifts low with wrist bent; frame 6 swings forward below chest; frame 7 extends toward touchdown; frame 8 almost touches ground ready to join frame 1. Far front paw follows the SAME motion offset by four frames: its touchdown is frame 5, while near paw lifts. Both FRONT legs must visibly take turns, one supporting the heavy body as the other advances. Keep present travel range, no bigger gestures. Paws point down, elbows bend naturally, no striking or waving. Clear coherent differences from pose to pose. Each sprite remains one intact painted bear; no separated body parts. Maintain same 1536x1024 arrangement and generous clear gaps. Transparent PNG background, no checkerboard. All eight animals remain rear three-quarter facing upper right.",
+      "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-ne-v2.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-c700114e-4428-4185-ab45-e274852d9777.png"
+    },
+    "extraction": {
+      "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+      "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-c700114e-4428-4185-ab45-e274852d9777.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-1305eab9-a041-4165-96d7-410f81b037d0.png"
+    },
+    "asset": "assets/painted-walk-ne-v3.png",
+    "accepted": true,
+    "note": "Front-paw study for local comparison."
+  },
+  "se": {
+    "edit": {
+      "prompt": "Use case: precise-object-edit. Edit target: this eight-painting bear walk atlas. Correct ONLY THE FRONT LEGS' WALK SEQUENCE. Preserve each corresponding frame's hind legs, hind paws, rump, torso, head, fur style, body size and camera. Do not reorder entire animals or change the approved hind stride. Eight successive whole-animal frames in 4 columns x 2 rows. Current forepaws repeat then jump; replace their poses with a continuous alternating walk, not a swipe. Near front paw: frame 1 reaches forward and touches down; frame 2 bears weight just ahead of shoulder; frame 3 planted below shoulder; frame 4 pushes back behind shoulder; frame 5 lifts low with wrist bent; frame 6 swings forward below chest; frame 7 extends toward touchdown; frame 8 almost touches ground ready to join frame 1. Far front paw follows the SAME motion offset by four frames: its touchdown is frame 5, while near paw lifts. Both FRONT legs must visibly take turns, one supporting the heavy body as the other advances. Keep present travel range, no bigger gestures. Paws point down, elbows bend naturally, no striking or waving. Clear coherent differences from pose to pose. Each sprite remains one intact painted bear; no separated body parts. Maintain same 1536x1024 arrangement and generous clear gaps. Transparent PNG background, no checkerboard. All eight animals remain front three-quarter facing lower right.",
+      "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-se-v2.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e9fef5ba-e7b2-4689-aaa2-48e0e21fc852.png"
+    },
+    "extraction": {
+      "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+      "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e9fef5ba-e7b2-4689-aaa2-48e0e21fc852.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-4b8f3fa9-12e6-4450-a364-38bd26557136.png"
+    },
+    "asset": "assets/painted-walk-se-v3.png",
+    "accepted": true,
+    "note": "Front-paw study for local comparison."
+  },
+  "sw": {
+    "edit": {
+      "prompt": "Use case: precise-object-edit. Edit target: this eight-painting bear walk atlas. Correct ONLY THE FRONT LEGS' WALK SEQUENCE. Preserve each corresponding frame's hind legs, hind paws, rump, torso, head, fur style, body size and camera. Do not reorder entire animals or change the approved hind stride. Eight successive whole-animal frames in 4 columns x 2 rows. Current forepaws repeat then jump; replace their poses with a continuous alternating walk, not a swipe. Near front paw: frame 1 reaches forward and touches down; frame 2 bears weight just ahead of shoulder; frame 3 planted below shoulder; frame 4 pushes back behind shoulder; frame 5 lifts low with wrist bent; frame 6 swings forward below chest; frame 7 extends toward touchdown; frame 8 almost touches ground ready to join frame 1. Far front paw follows the SAME motion offset by four frames: its touchdown is frame 5, while near paw lifts. Both FRONT legs must visibly take turns, one supporting the heavy body as the other advances. Keep present travel range, no bigger gestures. Paws point down, elbows bend naturally, no striking or waving. Clear coherent differences from pose to pose. Each sprite remains one intact painted bear; no separated body parts. Maintain same 1536x1024 arrangement and generous clear gaps. Transparent PNG background, no checkerboard. All eight animals remain front three-quarter facing lower left.",
+      "reference": "/Users/johnshopinski/Documents/New project/crownforge-bear-studio/assets/painted-walk-sw-v2.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-651da6f5-50c4-45df-8251-c167cbf84ed5.png"
+    },
+    "extraction": {
+      "prompt": "Extract these eight bears as clean transparent PNG cutouts, keeping the 4 by 2 arrangement. Empty background must be truly transparent. Keep the bear paintings and all their paw poses.",
+      "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-651da6f5-50c4-45df-8251-c167cbf84ed5.png",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-7a29dc1c-9047-4c25-b4ea-ea3333039718.png"
+    },
+    "asset": "assets/painted-walk-sw-v3.png",
+    "accepted": true,
+    "note": "Front-paw study for local comparison."
+  }
+}

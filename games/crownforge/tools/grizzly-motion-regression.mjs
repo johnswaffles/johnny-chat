@@ -64,7 +64,7 @@ test('a rear-up strike completes its follow-through when prey escapes and cannot
  s._sendUnitToAttack(bear,target);bear.grizzlyAttackCount=2;s._updateAttack(bear,1/60);
  assert.equal(bear.grizzlyAttackVariant,'rear');const facing=bear.facing,hp=target.hp;
  target.x=90;target.z=90;
- const phases=new Set();for(let i=0;i<2.3*60;i++){phases.add(bear.attackPhase);s._updateAttack(bear,1/60);assert.equal(bear.facing,facing);}
+ const phases=new Set();for(let i=0;i<2.5*60;i++){phases.add(bear.attackPhase);s._updateAttack(bear,1/60);assert.equal(bear.facing,facing);}
  assert(phases.has('contact')&&phases.has('recovery'));assert.equal(bear.attackPhase,'approach');assert.equal(target.hp,hp);
 });
 

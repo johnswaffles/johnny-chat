@@ -1,0 +1,5 @@
+cb66e35583e00c8100792e22da77fec1816b7b50b00068bc7c3b492c7f8fedd4  action-art.js
+e2b468bba0b8b9f765ac2596f37a10ec59145672c18b6742e157269a2aadb26f  assets/painted-actions-ne-v1.png
+3926e2047f783f9068fdfbb58428cb522fbe7eb319bb378740e735baed7007b2  assets/painted-actions-nw-v1.png
+98a1e00e86d00405f0ee294fd0eac6b11595977decdabe7df217564b75dfd03f  assets/painted-actions-se-v1.png
+83e68b4ddf0ef012a932b1420f2ac4d71109009e7505fb1eab190f1afc472617  assets/painted-actions-sw-v1.png
