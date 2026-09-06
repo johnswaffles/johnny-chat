@@ -1,4 +1,4 @@
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260906-wildwoodwatch2';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260906-bearmotion1';
 import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260906-wildwoodwatch2';
 import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260905-buildings1';
@@ -1261,7 +1261,7 @@ export class CrownforgeRenderer {
       }
       this.drawUnitStatusEffects(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime);
       this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : unit.type === 'scout' ? 1.25 : 0.66, ['enemy','wildlife'].includes(unit.faction) ? '#d86b55' : FACTION.color);
-      this.drawHealthBar(ctx, point.x, point.y - unitSize * (unit.type === 'villager' ? 1.08 : .9) * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
+      this.drawHealthBar(ctx, point.x, point.y - unitSize * (unit.type === 'grizzly' ? this.grizzly.heightFactor(unit) : unit.type === 'villager' ? 1.08 : .9) * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
     }
   }
 
@@ -1362,7 +1362,7 @@ export class CrownforgeRenderer {
       const style = UNIT_TYPES[unit.type];
       const size = (style.renderSize ?? 120) * this.camera.zoom;
       const withinX = Math.abs(point.x - anchor.x) <= Math.max(22, size * (style.wildlife ? .5 : .3));
-      const withinY = point.y >= anchor.y - size * 1.04 && point.y <= anchor.y + size * 0.16;
+      const withinY = point.y >= anchor.y - size * (unit.type === 'grizzly' ? Math.max(1.04,this.grizzly.heightFactor(unit)) : 1.04) && point.y <= anchor.y + size * 0.16;
       if (!withinX || !withinY) continue;
       const candidateDistance = Math.hypot(point.x - anchor.x, point.y - (anchor.y - size * 0.48));
       if (candidateDistance < unitDistance) {
@@ -2258,7 +2258,7 @@ export class CrownforgeRenderer {
     if (!unit.dead) {
       this.drawUnitStatusEffects(ctx, unit, point, size * this.camera.zoom, time);
       this.drawCombatPhaseCue(ctx, unit, point, time);
-      this.drawHealthBar(ctx, point.x, point.y - size * (unit.type === 'villager' ? 1.08 : .9) * this.camera.zoom, size * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
+      this.drawHealthBar(ctx, point.x, point.y - size * (unit.type === 'grizzly' ? this.grizzly.heightFactor(unit) : unit.type === 'villager' ? 1.08 : .9) * this.camera.zoom, size * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
       if (unit.carryAmount > 0) this.drawCarryBadge(ctx, point.x + 20 * this.camera.zoom, point.y - 18 * this.camera.zoom, unit.carryType, unit.carryAmount);
       if (unit.command === 'attack' && unit.attackPhase !== 'approach') this.drawAttackRing(ctx, point, time, unit.attackPhase);
       if (unit.hitFlash > 0) this.drawHitFlash(ctx, point, time);

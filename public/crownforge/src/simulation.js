@@ -1,4 +1,5 @@
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260906-wildwoodwatch2';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260906-bearmotion1';
+import { grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260906-bearmotion1';
 import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260906-wildwoodwatch2';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260905-greatwood3';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260905-buildings1';
@@ -1326,6 +1327,11 @@ export class CrownforgeSimulation {
   }
 
   _startAttackCycle(unit, target) {
+    if (unit.type === 'grizzly') {
+      unit.grizzlyAttackCount = (unit.grizzlyAttackCount ?? 0) + 1;
+      unit.grizzlyAttackVariant = unit.grizzlyAttackCount % 3 === 0 ? 'rear' : 'swipe';
+      unit.grizzlyAttackSide = unit.grizzlyAttackCount % 2 ? 1 : -1;
+    }
     unit.attackPhase = 'anticipation';
     unit.attackPhaseElapsed = 0;
     unit.attackTimer = 0;
@@ -1521,6 +1527,7 @@ export class CrownforgeSimulation {
   }
 
   _interruptWork(unit, { preserveQueue = false, preserveGuard = false } = {}) {
+    delete unit.bearResponse;
     this._releaseResourceSlot(unit);
     this._releaseBuildingSlot(unit);
     this._releaseStorageSlot(unit);
@@ -2184,6 +2191,7 @@ export class CrownforgeSimulation {
   }
 
   _updateUnit(unit, dt) {
+    const grizzlyStart = unit.type === 'grizzly' ? { x:unit.x, z:unit.z } : null;
     if (unit.dead) {
       unit.deathAge += dt;
       unit.animClock += dt;
@@ -2199,6 +2207,7 @@ export class CrownforgeSimulation {
     unit.repathCooldown = Math.max(0, unit.repathCooldown - dt);
     unit.attackRepathCooldown = Math.max(0, unit.attackRepathCooldown - dt);
     if (this._updateUnitStatusEffects(unit, dt)) {
+      if (grizzlyStart) updateGrizzlyMotion(unit,dt,0);
       unit.motionSpeed = 0;
       unit.animationPlaybackRate = 1;
       this.animation.update(unit, dt);
@@ -2218,6 +2227,7 @@ export class CrownforgeSimulation {
     else if (unit.command === 'field') this._updateFieldIntent(unit);
     this._updateStairProgress(unit);
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
+    if (grizzlyStart) updateGrizzlyMotion(unit,dt,Math.min(distance(unit,grizzlyStart),UNIT_TYPES.grizzly.speed*dt*1.6));
     const locomoting = unit.command === 'move' || unit.visualState === 'walk';
     const hasMovementIntent = locomoting && (unit.path.length > 0 || unit.motionSpeed > 0.08);
     unit.animationPlaybackRate = hasMovementIntent
@@ -4181,7 +4191,7 @@ export class CrownforgeSimulation {
     if (target.kind === 'unit') this._dislodgeEmbeddedCombatTarget(target);
     const enteringAttack = unit.command !== 'attack' || unit.attackTarget !== target.id || unit.attackTargetKind !== target.kind;
     unit.attackSlot = slot % COMBAT_SLOT_COUNT;
-    const route = this._bestCombatRoute(unit, target);
+    const route = options.precomputedRoute ?? this._bestCombatRoute(unit, target);
     if (!route) {
       if (options.requireImmediateRoute) return false;
       this._releaseCombatSlot(unit);
@@ -4397,8 +4407,9 @@ export class CrownforgeSimulation {
     const hasLine = inRange && this._hasCombatLineOfSight(unit, target);
     const targetPoint = target.kind === 'building' ? this._buildingCollisionCenter(target) : target;
     const blueprint = UNIT_TYPES[unit.type];
-    const cooldown = blueprint.cooldown;
-    const timing = blueprint.attackTiming ?? { anticipation: 0.25, contact: 0.45, recovery: 0.3 };
+    const grizzlyAttack = unit.type === 'grizzly' ? grizzlyAttackDefinition(unit) : null;
+    const cooldown = grizzlyAttack?.duration ?? blueprint.cooldown;
+    const timing = grizzlyAttack ?? blueprint.attackTiming ?? { anticipation: 0.25, contact: 0.45, recovery: 0.3 };
     const anticipationDuration = cooldown * timing.anticipation;
     const contactDuration = cooldown * timing.contact;
     const recoveryDuration = cooldown * timing.recovery;
@@ -4424,7 +4435,9 @@ export class CrownforgeSimulation {
       }
       return;
     }
-    if (unit.attackPhase !== 'approach' && !hasLine) {
+    // A committed bear strike follows through even if its prey steps away.
+    // Contact still checks range and line of sight, so an escaped swipe misses.
+    if (unit.type !== 'grizzly' && unit.attackPhase !== 'approach' && !hasLine) {
       if (!unit.attackEventFired) {
         this.animation.emit(unit, ANIMATION_EVENTS.attackWhiff, {
           targetId: target.id,
@@ -4437,7 +4450,7 @@ export class CrownforgeSimulation {
       if (unit.attackRepathCooldown <= 0) this._sendUnitToAttack(unit, target, unit.attackSlot);
       return;
     }
-    setUnitFacing(unit, targetPoint.x - unit.x, targetPoint.z - unit.z, true);
+    if (unit.type !== 'grizzly' || unit.attackPhase === 'approach') setUnitFacing(unit, targetPoint.x - unit.x, targetPoint.z - unit.z, true);
     if (unit.attackPhase === 'approach') {
       this._startAttackCycle(unit, target);
     }
@@ -4769,7 +4782,7 @@ export class CrownforgeSimulation {
   _sendEnemyRaid(playerCore) {
     const state = this.enemyAIState;
     const ready = this._enemyMilitary()
-      .filter((unit) => unit.stunTimer <= 0 && !unit.dead)
+      .filter((unit) => unit.stunTimer <= 0 && !unit.dead && this._getAttackTarget(unit)?.type !== 'grizzly')
       .sort((a, b) => distance(a, playerCore) - distance(b, playerCore) || a.id - b.id);
     if (ready.length < ENEMY_AI.minRaidSize) return false;
     const desired = Math.min(ENEMY_AI.maxRaidSize, ENEMY_AI.minRaidSize + Math.floor(state.raidCount / 2));
@@ -4821,6 +4834,7 @@ export class CrownforgeSimulation {
       defenders.forEach((unit, index) => {
         const current = unit.command === 'attack' ? this._getAttackTarget(unit) : null;
         if (current?.id === defenseTarget.id) return;
+        if (current?.type === 'grizzly') return;
         this._interruptWork(unit);
         unit.attackTarget = defenseTarget.id;
         unit.attackTargetKind = 'unit';

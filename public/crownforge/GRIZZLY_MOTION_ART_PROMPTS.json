@@ -1,0 +1,20 @@
+{
+  "tool": "built-in image_gen",
+  "asset": "assets/crownforge-grizzly-rig-v2.png",
+  "reference": "assets/crownforge-grizzly-v1.png",
+  "prompt": "Use case: stylized-concept. Production original modular animation artwork for Crownforge. Reference image: same grizzly identity, shaggy warm brown fur and detail, but this is a NEW ANATOMICAL PARTS ATLAS, not whole bear poses.\nCreate a transparent RGBA atlas, portrait 2:3 aspect, ideally 2048x3072. EXACTLY 4 equal columns by 8 equal rows, 32 isolated cutouts, generous transparent gutters. Each cutout entirely inside its own cell. No text, grid, shadow, background, checkerboard, blood or gore. These are clean fur-covered animation components, not anatomical dissection.\nCamera elevated orthographic isometric 30 degrees. Warm upper-left lighting, detailed painted fur, massive muscular grizzly, consistent individual and palette. Every piece must be a closed furry shape with rounded overlapping joint ends, no holes.\nROWS 1-2 face screen DOWN-RIGHT (southeast), see front and right flank.\nROWS 3-4 face screen DOWN-LEFT (southwest), see front and left flank.\nROWS 5-6 face screen UP-RIGHT (northeast), see back and right flank.\nROWS 7-8 face screen UP-LEFT (northwest), see back and left flank. Author every view separately; no mirror layouts.\nFor each pair of rows:\nFIRST ROW col1: quadruped horizontal torso ONLY, rear haunch mass, barrel belly, strong shoulder hump and short neck stump, absolutely NO legs, NO paws, NO head. Full fur under where legs will attach.\nFIRST ROW col2: same torso ONLY in the upright rearing posture, weight above rear hips, tall chest, rounded shoulder sockets, absolutely NO head, arms, legs or paws.\nFIRST ROW col3: complete bear HEAD with thick neck ruff, rounded ears, closed muzzle, facing that row's direction; no body or legs.\nFIRST ROW col4: same HEAD with neck ruff, snarling open jaw and teeth for attacks; no body or legs.\nSECOND ROW col1: isolated thick UPPER FORELEG fur segment from round shoulder to elbow, oriented mostly vertically down; no paw, no body.\nSECOND ROW col2: isolated LOWER FORELEG including broad front PAW and long pale claws, from round elbow joint at top to planted paw at bottom. Correct row perspective; leg projects vertically downward, paw points in row facing direction.\nSECOND ROW col3: isolated rounded UPPER HIND THIGH from hip to knee, bulky fur-covered mass, mostly vertical orientation; no paw, no body.\nSECOND ROW col4: isolated LOWER HIND LEG including broad planted rear PAW and claws, round knee joint at top, paw at bottom, correct row perspective.\nThe leg pieces should overlap like high-quality cutout animation, with generous furry joint caps that conceal articulation seams. Torso silhouette must have no dangling legs or head whatsoever. The head and legs are completely detached in their own cells. Show no assembled bear anywhere. Large crisp cutouts, consistent warm natural fur, calm neutral leg orientation suitable for rotating individual joints in a continuous animation rig.",
+  "extractionPrompt": "Use case: background-extraction. Edit this exact bear parts atlas only to remove the entire gray-and-white checkerboard background and make it genuinely transparent, alpha zero. Preserve every brown fur component, every pixel of the artwork, its size, position, shape, lighting and arrangement. Do not repaint, resize, rearrange or add anything. Output a clean true RGBA PNG with transparent empty space, no checkerboard or matte.",
+  "acceptedSource": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d22043f5-3cf7-4bd7-9094-5ecea84a1478.png",
+  "validation": {
+    "format": "RGBA PNG",
+    "width": 1024,
+    "height": 1536,
+    "alphaZeroPixels": 938300,
+    "alphaRange": [
+      0,
+      254
+    ],
+    "originalBytesPreserved": true
+  },
+  "preparation": "Measured alpha component bounds in grizzly-rig-art.js. Runtime source rectangles separate overlapping shin and paw surfaces and prepare three resolution levels. No original image pixels were edited."
+}

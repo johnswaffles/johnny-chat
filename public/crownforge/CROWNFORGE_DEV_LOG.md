@@ -5171,3 +5171,12 @@ Enemy Hearthkin now choose reachable gathering jobs, recover from stalled/oscill
 Added an original four-direction Greatwood Grizzly with planted, walking and paw-swipe art, prepared detail levels, breathing and death motion. One emerges from a collision-safe woodland edge every five minutes of active game time and hunts people from either faction. Save/load retains the encounter schedule and active wildlife; old saves begin at the next future boundary. It is powerful enough to kill a lone guard; two can win with a casualty or lose with an unfavorable approach. Existing worker shield/heal/curse behavior remains intact.
 
 The 920-second seeded regression produced three encounters, 99.9% active enemy-worker samples, no idle interval longer than two seconds and real deposits from all four workers. Simulation p99 1.62 ms, maximum 19.38 ms on this machine. Regression and browser evidence, balance, artwork and exact prompt provenance are recorded in WILDWOOD_WATCH_RELEASE.md and GRIZZLY_ART_PROMPT.json. Release marker: 20260906-wildwoodwatch2.
+
+
+## September 6, 2026 — Weighty grizzly motion and wide interception
+
+Replaced whole-body frame wobble with original four-view anatomical cutouts, distance-driven paw contacts, articulated legs and separate planted paws. Low swipes alternate sides; every third attack rears onto the hind legs for a slower downward swipe, then settles. A committed strike completes even when prey leaves range, with a contact-time miss and a steady facing. Bear health bars and click bounds follow the taller posture.
+
+All ten fighting classes on both teams intercept bears within 140 world units when free of another fight. Patrol, guard and rally routes resume afterward; manual orders cancel old resumption. Bounded searches, fair scanning and failed-route backoff limit navigation cost. Existing bear balance, worker wards and five-minute cadence remain intact.
+
+Nine new motion/response checks, eleven wildlife/routine checks, roster/Hearthkin gameplay, building defense, camera rendering and character loading pass. Four-view visual review and a 98-second actual Canvas fight verified both factions responding and both attacks completing, with zero browser errors. Local render p99 was 5.4 ms and simulation p99 0.3 ms. Full evidence and exact original artwork prompts are in GRIZZLY_MOTION_RELEASE.md and GRIZZLY_MOTION_ART_PROMPTS.json. Release marker: 20260906-bearmotion1.

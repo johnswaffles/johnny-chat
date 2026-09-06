@@ -1,6 +1,7 @@
 import { CONFIG, UNIT_TYPES } from './config.js?v=20260906-wildwoodwatch2';
 
 export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 300, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
+export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
 const distance = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
 const people = sim => sim.units.filter(unit => !unit.dead && (unit.faction === 'player' || unit.faction === 'enemy'));
 export const initialWildlifeState = clock => ({ nextSpawnAt: (Math.floor(Math.max(0,clock)/300)+1)*300, spawnCount: 0, scanClock: 0, spawnCursor: 0 });
@@ -75,12 +76,64 @@ function hunt(sim,bear) {
   bear.actionLabel='Searching the woodland';
 }
 
+function resumeAfterBear(sim,unit){
+  const response=unit.bearResponse;
+  if(!response)return;
+  const bear=sim.units.find(u=>u.id===response.targetId&&!u.dead);
+  if(bear&&unit.command==='attack'&&unit.attackTarget===bear.id)return;
+  // Explicit commands clear bearResponse in _interruptWork. Only an
+  // automatically completed encounter can resume this earlier route.
+  const order=response.order;
+  sim._interruptWork(unit);unit.command='idle';unit.path=[];
+  if(order?.patrolPoints?.length>=2){
+    unit.patrolPoints=order.patrolPoints;unit.patrolIndex=order.patrolIndex;unit.patrolActive=true;
+    sim._sendUnitTo(unit,unit.patrolPoints[unit.patrolIndex],'move');
+  }else if(order?.guardPoint){
+    unit.guardPoint=order.guardPoint;unit.guardRadius=order.guardRadius;unit.guardTraveling=true;
+    sim._sendUnitTo(unit,unit.guardPoint,'move');
+  }else if(order?.destination)sim._sendUnitTo(unit,order.destination,'move');
+}
+
+export function rallyBearDefenders(sim){
+  const state=sim.wildlifeState, bears=sim.units.filter(u=>u.type==='grizzly'&&!u.dead);
+  const fighters=sim.units.filter(u=>{
+    const rules=UNIT_TYPES[u.type];
+    return !u.dead&&['player','enemy'].includes(u.faction)&&!rules.worker&&rules.attack>0&&rules.canAttackUnits!==false;
+  });
+  for(const unit of fighters)resumeAfterBear(sim,unit);
+  if(!bears.length||!fighters.length)return;
+  let budget=BEAR_RESPONSE.routeBudget;
+  const start=(state.responseCursor??0)%fighters.length;
+  for(let offset=0;offset<fighters.length&&budget>0;offset++){
+    const index=(start+offset)%fighters.length,unit=fighters[index];
+    state.responseCursor=(index+1)%fighters.length;
+    if(unit.stunTimer>0||unit.command==='attack'&&sim._getAttackTarget(unit))continue;
+    unit.bearAvoid??={};
+    for(const [id,until] of Object.entries(unit.bearAvoid))if(until<=sim.clock)delete unit.bearAvoid[id];
+    const targets=bears.filter(b=>distance(unit,b)<=BEAR_RESPONSE.radius&&!unit.bearAvoid[b.id]).sort((a,b)=>distance(unit,a)-distance(unit,b));
+    for(const bear of targets){
+      if(budget<=0)break;
+      budget--;
+      const route=sim._bestCombatRoute(unit,bear);
+      if(!route){unit.bearAvoid[bear.id]=sim.clock+BEAR_RESPONSE.retry;continue;}
+      const order=unit.patrolActive?{patrolPoints:unit.patrolPoints.map(p=>({...p})),patrolIndex:unit.patrolIndex??0}
+        :unit.guardPoint?{guardPoint:{...unit.guardPoint},guardRadius:unit.guardRadius}
+        :unit.command==='move'&&unit.routeTarget?{destination:{...unit.routeTarget}}:null;
+      sim._interruptWork(unit,{preserveGuard:Boolean(unit.guardPoint)});
+      sim._sendUnitToAttack(unit,bear,route.slot,{requireImmediateRoute:true,precomputedRoute:route});
+      unit.bearResponse={targetId:bear.id,order};unit.actionLabel='Intercepting the Greatwood Grizzly';break;
+    }
+  }
+}
+
 export function updateWildlife(sim,dt) {
   const state=sim.wildlifeState??=initialWildlifeState(sim.clock);
   if(sim.clock+1e-6>=state.nextSpawnAt&&sim.clock>=(state.spawnRetryAt??0)){
     if(spawnGrizzly(sim))state.nextSpawnAt+=GRIZZLY_ENCOUNTER.interval;
     state.spawnRetryAt=sim.clock+GRIZZLY_ENCOUNTER.retryInterval;
   }
+  state.responseClock=(state.responseClock??0)-dt;
+  if(state.responseClock<=0){state.responseClock=BEAR_RESPONSE.scanInterval;rallyBearDefenders(sim);}
   state.scanClock-=dt;
   if(state.scanClock>0)return;
   state.scanClock=GRIZZLY_ENCOUNTER.scanInterval;
