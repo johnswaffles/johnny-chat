@@ -3,8 +3,7 @@ import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260905-buildings1';
 import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260905-smooth1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import { CrownforgeLandscape } from './landscape.js?v=20260905-radiance4';
-import { TerrainCache } from './terrain-cache.js?v=20260905-radiance4';
+import { CrownforgeLandscape } from './landscape.js?v=20260906-grassrestore1';
 import { ForestCache } from './forest-cache.js?v=20260905-radiance4';
 import { CrownforgeMeadow } from './meadow.js?v=20260905-greatwood3';
 import { CrownforgeAtmosphere } from './atmosphere.js?v=20260905-radiance4';
@@ -287,7 +286,6 @@ export class CrownforgeRenderer {
     this.frameStats = { count: 0, samples: [] };
     this.atmosphere = new CrownforgeAtmosphere(this);
     this.landscape = new CrownforgeLandscape(this);
-    this.terrainCache = new TerrainCache(this);
     this.forestCache = new ForestCache(this);
     this.meadow = new CrownforgeMeadow(this);
     this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -537,7 +535,8 @@ export class CrownforgeRenderer {
   }
 
   ensureStaticLayer() {
-    if (this.terrainCache) { this.terrainCache.prepare(); return; }
+    // Paint grass at the exact current camera scale; stretching a coarse
+    // overview while detail arrives makes zooming visibly blurry.
     const key = [this.width, this.height, this.camera.x, this.camera.y, this.camera.zoom, this.roadReady, this.daylightEnabled, this.landscape.revision].join('|');
     if (this.staticLayerKey === key) return;
     const staticCtx = this.staticLayer.getContext('2d');
@@ -559,8 +558,7 @@ export class CrownforgeRenderer {
     this.landscape.sync(simulation);
     this.meadow.prepare(simulation, time / 1000, renderDelta);
     this.ensureStaticLayer();
-    if (this.terrainCache) this.terrainCache.draw(ctx);
-    else ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
+    ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
     this.atmosphere.drawWoodlandLight(ctx,time);
     if(this.camera.zoom>=.145)for (const entry of this.visibleResourceEntries(simulation)) {
       if(entry.resource.type==='tree')this.landscape.drawTreeShadow(ctx,entry.resource,this.worldToScreen(entry.resource),RESOURCE_SIZE_TIERS[entry.resource.sizeTier??'small']?.renderScale??1);
@@ -629,7 +627,7 @@ export class CrownforgeRenderer {
     corners.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
     ctx.closePath();
     ctx.clip();
-    if (!this.landscape.drawGround(ctx, this)) {
+    if (!this.landscape.drawGround(ctx)) {
       ctx.fillStyle = '#57734b';
       ctx.fill();
     }

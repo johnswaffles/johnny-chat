@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
 import { CrownforgeRenderer } from '../src/renderer.js';
-import { TerrainCache, TERRAIN_CACHE_LIMITS, terrainTileRange, terrainZoomLevel } from '../src/terrain-cache.js';
 import { ForestCache, FOREST_CACHE_LIMITS } from '../src/forest-cache.js';
 import { CrownforgeAtmosphere } from '../src/atmosphere.js';
 
 const makeCanvas=()=>{
   const image={width:0,height:0};
-  const ctx={draws:[],save(){},restore(){},setTransform(){},transform(){},translate(){},rotate(){},fillRect(){},
+  const ctx={draws:[],save(){},restore(){},setTransform(){},transform(){},translate(){},rotate(){},fillRect(){},clearRect(){},
     createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}}),
     drawImage(...args){this.draws.push(args);},getImageData:()=>({data:new Uint8ClampedArray(4)}),
   };
@@ -16,32 +15,24 @@ globalThis.document={createElement:makeCanvas};
 
 const r=Object.create(CrownforgeRenderer.prototype);
 Object.assign(r,{width:800,height:600,resolutionScale:2,camera:{x:100,y:80,zoom:.4},roadReady:false,daylightEnabled:true,
-  landscape:{revision:0,seed:42,materialRevision:1},atmosphere:{enabled:true,reducedMotion:false},canvas:{dataset:{}}});
+  landscape:{revision:0,seed:42},atmosphere:{enabled:true,reducedMotion:false},canvas:{dataset:{}}});
 let mapBakes=0;
 r.drawMap=function(ctx){mapBakes++;ctx.marker=this.worldToScreen({x:211,z:173});};
-const cache=new TerrainCache(r),originalCamera={...r.camera};
-for(let i=0;i<100;i++){
-  const before=cache.bakes;cache.prepare();
-  assert(cache.bakes-before<=TERRAIN_CACHE_LIMITS.maxBakesPerFrame,'detail baking is bounded per frame');
+// Grass must be painted for this exact camera, with no scaled overview or
+// deferred tile replacement. An unchanged camera can still reuse its image.
+r.staticLayer=makeCanvas();
+const ctx=makeCanvas().getContext(),originalCamera={...r.camera};
+r.ensureStaticLayer();const firstBakes=mapBakes;
+r.ensureStaticLayer();assert.equal(mapBakes,firstBakes,'stationary terrain reuses its exact-scale image');
+for(const zoom of [.035,.07,.28,.283,.4,.78,1,2.4]){
+  r.camera.zoom=zoom;r.camera.x+=.25;
+  const before=mapBakes;r.ensureStaticLayer();
+  assert.equal(mapBakes,before+1,'new zoom paints full ground detail in the same frame');
+  assert.deepEqual(r.staticLayer.getContext().marker,r.worldToScreen({x:211,z:173}),'grass stays anchored at the actual camera scale');
 }
-assert.deepEqual(r.camera,originalCamera,'baking never moves the actual camera');
-const warmed=cache.bakes;cache.prepare();assert.equal(cache.bakes,warmed);
-for(let i=0;i<30;i++){r.camera.x+=.25;cache.prepare();}
-assert.equal(cache.bakes,warmed,'subpixel pan reuses the same terrain tiles');
-const ctx=makeCanvas().getContext();cache.draw(ctx);
-const expected=r.worldToScreen({x:211,z:173});
-for(const args of ctx.draws.filter(args=>args.length===9)){
-  const [image,sx,sy,sw,sh,dx,dy,dw,dh]=args,marker=image.getContext().marker;
-  const x=dx+(marker.x*r.resolutionScale-sx)/sw*dw,y=dy+(marker.y*r.resolutionScale-sy)/sh*dh;
-  assert(Math.hypot(x-expected.x,y-expected.y)<1e-7,'terrain stays precisely attached to world coordinates across tile gutters');
-}
-for(let i=0;i<300;i++){
-  r.camera.x=i*127;r.camera.y=i*43;r.camera.zoom=.05+(i%17)*.12;cache.prepare();
-  assert(cache.bytes<=TERRAIN_CACHE_LIMITS.maxBytes&&cache.tiles.size<=TERRAIN_CACHE_LIMITS.maxTiles);
-}
-r.landscape.revision++;cache.prepare();assert(cache.tiles.size<=2,'changed ground cannot reuse stale tiles');
-for(const zoom of [.035,.07,.28,1,2.4])assert(2**terrainZoomLevel(zoom)>=zoom);
-const range=terrainTileRange(r,.5);assert(range.minX<=range.maxX&&range.minY<=range.maxY);
+const beforeRevision=mapBakes;r.landscape.revision++;r.ensureStaticLayer();
+assert.equal(mapBakes,beforeRevision+1,'felling refreshes the ground');
+assert.equal(r.camera.y,originalCamera.y,'terrain painting never moves the camera');
 
 // Wheel easing converges without losing the cursor's world anchor.
 r.camera={x:0,y:0,zoom:.28};const pointer={x:410,y:312},anchor=r.screenToWorld(pointer);
@@ -88,4 +79,4 @@ const air=new CrownforgeAtmosphere(r);air.reducedMotion=true;
 const a=makeCanvas().getContext(),b=makeCanvas().getContext();air.drawWoodlandAir(a,1000);air.drawWoodlandAir(b,9000);
 assert(air.woodlandAnchors().length<=12);assert.deepEqual(a.draws,b.draws,'reduced motion stops fog drift');
 air.enabled=false;const disabled=makeCanvas().getContext();air.drawWoodlandAir(disabled,1000);air.drawWoodlandLight(disabled,1000);assert.equal(disabled.draws.length,0);
-console.log(JSON.stringify({test:'camera-render-regression',mapBakes,terrainBytes:cache.bytes,forestBytes:forest.bytes,rootChecks:trees.length,passed:true}));
+console.log(JSON.stringify({test:'camera-render-regression',mapBakes,forestBytes:forest.bytes,rootChecks:trees.length,passed:true}));

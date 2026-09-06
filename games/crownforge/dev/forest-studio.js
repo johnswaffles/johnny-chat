@@ -1,5 +1,5 @@
 import {CrownforgeSimulation} from '../src/simulation.js?v=20260905-greatwood3';
-import {CrownforgeRenderer} from '../src/renderer.js?v=20260905-radiance4';
+import {CrownforgeRenderer} from '../src/renderer.js?v=20260906-grassrestore1';
 import {CONFIG} from '../src/config.js?v=20260905-smooth1';
 import {treeAppearance,woodlandDensity} from '../src/landscape-layout.js?v=20260905-greatwood3';
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas),simulation=new CrownforgeSimulation({seed:42});

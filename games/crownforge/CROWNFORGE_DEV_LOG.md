@@ -5156,3 +5156,9 @@ The same full-world camera route reduced the maximum measured zoom render from 3
 ## September 5, 2026 — Lantern Under Stone opens the soundtrack
 
 Moved Lantern Under Stone to the first position in the default repeating album, followed by The Door Beneath the World, The Forgotten Stair, The Last Rune and Cavernous Wonder. Updated the initial status text and soundtrack catalog. Existing individual-song preferences and all original recordings remain unchanged. All six music regression checks, syntax and whitespace checks pass. Release marker: 20260905-lanternfirst1.
+
+## September 6, 2026 — Restore the previous grass rendering
+
+User requested a grass-only rollback after the Radiance terrain update introduced blurry detail changes while zooming. Restored the exact Greatwood grass/material methods from 7d70788 and the previous full-detail terrain layer, painted at the current camera scale. Removed the progressive terrain tile/overview system and its extra material blend. Stationary terrain still reuses its completed image. Kept the dense habitat forests, tree lighting/shadows/sway, woodland atmosphere, distant forest cache, sprite prewarming, smooth wheel controls, buildings, character motion and Lantern-first soundtrack. No artwork assets or simulation rules changed.
+
+Browser comparison against the original ground rendering produced zero changed pixel channels at zoom 0.08, 0.16, 0.28, 0.4, 0.78 and 1.2. A full seed-42 world with 4,643 trees completed 480 panning and 720 zooming frames: render p95 4.8 ms pan / 7.6 ms zoom; maxima 12.0 / 10.2 ms; maximum frame interval 17.7 ms and no intervals over 50 ms. No browser errors. Timings are measurements on this machine. Camera/depth-order, Greatwood, dawn visual, meadow rendering, character loading and all six music checks pass. Release marker: 20260906-grassrestore1.
