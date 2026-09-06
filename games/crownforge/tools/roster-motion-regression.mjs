@@ -11,8 +11,8 @@ import { projectHearthkin } from '../src/hearthkin-locomotion.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,(a.z??0)-(b.z??0));
 const close=(a,b,epsilon,label)=>assert.ok(Math.abs(a-b)<=epsilon,`${label}: ${a} vs ${b}`);
-const roster=Object.keys(UNIT_TYPES);
-if(!process.argv.includes('--partial'))assert.deepEqual(Object.keys(CHARACTER_RIGS).sort(),roster.sort(),'Every current unit must own a new production rig');
+const roster=Object.keys(UNIT_TYPES).filter(type=>!UNIT_TYPES[type].wildlife);
+if(!process.argv.includes('--partial'))assert.deepEqual(Object.keys(CHARACTER_RIGS).sort(),roster.sort(),'Every settlement character must own a new production rig');
 let cases=0,poses=0,grips=0,hoofContacts=0;
 for(const [type,rig] of Object.entries(CHARACTER_RIGS)) {
   const required=UNIT_TYPES[type].worker?['idle','walk','gather_wood','gather_food','field_work','gather_stone','gather_gold','construct','repair','demolish','carry_wood','carry_food','carry_stone','carry_gold','carry_supplies','attack','attack_anticipation','attack_contact','attack_recovery','hit','ward_block','stunned','death']:['idle','walk','attack','attack_anticipation','attack_contact','attack_recovery','hit','death',...(UNIT_TYPES[type].traits?.includes('humanoid')?['stunned']:[])];

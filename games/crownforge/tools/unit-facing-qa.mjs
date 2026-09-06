@@ -21,7 +21,7 @@ renderer.camera.x = -baseX * renderer.camera.zoom;
 renderer.camera.y = -baseY * renderer.camera.zoom;
 renderer.cameraInitialized = true;
 
-const types = Object.keys(UNIT_TYPES);
+const types = Object.keys(UNIT_TYPES).filter(type => !UNIT_TYPES[type].wildlife);
 const labels = document.querySelector('#labels');
 const enemyTypes = new Set(['raider', 'ashenForager', 'ashenOutrider', 'thornSpear', 'hearthLevy', 'hidewall']);
 const fixtures = types.map((type, index) => {

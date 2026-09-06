@@ -1,14 +1,15 @@
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260905-smooth1';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260906-wildwoodwatch2';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260906-wildwoodwatch2';
 import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260905-buildings1';
 import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260905-smooth1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import { CrownforgeLandscape } from './landscape.js?v=20260906-grassrestore1';
-import { ForestCache } from './forest-cache.js?v=20260905-radiance4';
-import { CrownforgeMeadow } from './meadow.js?v=20260905-greatwood3';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260905-radiance4';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260905-smooth1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260905-smooth1';
+import { CrownforgeLandscape } from './landscape.js?v=20260906-wildwoodwatch2';
+import { ForestCache } from './forest-cache.js?v=20260906-wildwoodwatch2';
+import { CrownforgeMeadow } from './meadow.js?v=20260906-wildwoodwatch2';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260906-wildwoodwatch2';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260906-wildwoodwatch2';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260906-wildwoodwatch2';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -286,6 +287,7 @@ export class CrownforgeRenderer {
     this.frameStats = { count: 0, samples: [] };
     this.atmosphere = new CrownforgeAtmosphere(this);
     this.landscape = new CrownforgeLandscape(this);
+    this.grizzly = new GrizzlyRenderer();
     this.forestCache = new ForestCache(this);
     this.meadow = new CrownforgeMeadow(this);
     this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -307,12 +309,13 @@ export class CrownforgeRenderer {
     // the opening match can draw at production quality. Build-only and later
     // action atlases may continue warming in the browser cache afterward.
     const currentTypes = simulation
-      ? new Set(simulation.units.map(unit => unit.type))
+      ? new Set(simulation.units.map(unit => unit.type).filter(type => this.characterRigs.has(type)))
       : new Set(this.characterRigs.keys());
     const characterImages = [...currentTypes].flatMap(type => this.characterRigs.get(type)?.readiness() ?? []);
     this.warmQueuedCharacterRigs(simulation);
     const required = [
       ...Object.values(this.landscape.images),
+      this.grizzly?.image,
       this.environmentAtlas,
       this.treeAtlas,
       this.treeGroveAtlas,
@@ -1240,7 +1243,7 @@ export class CrownforgeRenderer {
       });
       const hiddenBy = hiddenByBuilding || hiddenByResource;
       if (!hiddenBy) continue;
-      const needsTracking = unit.selected || unit.command === 'attack' || unit.hp < unit.maxHp || unit.faction === 'enemy';
+      const needsTracking = unit.selected || unit.command === 'attack' || unit.hp < unit.maxHp || ['enemy','wildlife'].includes(unit.faction);
       if (!needsTracking) continue;
       const point = this.unitScreenPoint(unit);
       const style = UNIT_TYPES[unit.type];
@@ -1249,14 +1252,15 @@ export class CrownforgeRenderer {
       // a selected, active, damaged, or hostile unit must remain readable.
       // Repaint the body only for those readable states; idle friendly units
       // retain the natural depth order and do not pop through architecture.
-      const readableState = unit.selected || unit.command !== 'idle' || unit.faction === 'enemy' || unit.hp < unit.maxHp;
+      const readableState = unit.selected || unit.command !== 'idle' || ['enemy','wildlife'].includes(unit.faction) || unit.hp < unit.maxHp;
       if (readableState) {
         if (CHARACTER_RIGS[unit.type]?.family === 'worker' && !unit.dead) drawHearthkinWard(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime, true, this.atmosphere.reducedMotion);
-        if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
+        if (unit.type === 'grizzly') this.grizzly.draw(ctx,unit,point,unitSize*this.camera.zoom,this.lastRenderTime,this.atmosphere.reducedMotion,this.resolutionScale);
+        else if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
         else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
       }
       this.drawUnitStatusEffects(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime);
-      this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : unit.type === 'scout' ? 1.25 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
+      this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : unit.type === 'scout' ? 1.25 : 0.66, ['enemy','wildlife'].includes(unit.faction) ? '#d86b55' : FACTION.color);
       this.drawHealthBar(ctx, point.x, point.y - unitSize * (unit.type === 'villager' ? 1.08 : .9) * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, unit.hp / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
     }
   }
@@ -1357,7 +1361,7 @@ export class CrownforgeRenderer {
       const anchor = this.unitScreenPoint(unit);
       const style = UNIT_TYPES[unit.type];
       const size = (style.renderSize ?? 120) * this.camera.zoom;
-      const withinX = Math.abs(point.x - anchor.x) <= Math.max(22, size * 0.3);
+      const withinX = Math.abs(point.x - anchor.x) <= Math.max(22, size * (style.wildlife ? .5 : .3));
       const withinY = point.y >= anchor.y - size * 1.04 && point.y <= anchor.y + size * 0.16;
       if (!withinX || !withinY) continue;
       const candidateDistance = Math.hypot(point.x - anchor.x, point.y - (anchor.y - size * 0.48));
@@ -1365,7 +1369,7 @@ export class CrownforgeRenderer {
         unitDistance = candidateDistance;
         unitHit = unit;
       }
-      if (unit.faction === 'enemy' && candidateDistance < hostileUnitDistance) {
+      if (['enemy','wildlife'].includes(unit.faction) && candidateDistance < hostileUnitDistance) {
         hostileUnitDistance = candidateDistance;
         hostileUnitHit = unit;
       }
@@ -2245,9 +2249,10 @@ export class CrownforgeRenderer {
     const style = UNIT_TYPES[unit.type];
     const size = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
-    if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 1.25 : 0.66, unit.faction === 'enemy' ? '#d86b55' : FACTION.color);
+    if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 1.25 : 0.66, ['enemy','wildlife'].includes(unit.faction) ? '#d86b55' : FACTION.color);
     if (CHARACTER_RIGS[unit.type]?.family === 'worker' && !unit.dead) drawHearthkinWard(ctx, unit, point, size * this.camera.zoom, time, true, this.atmosphere.reducedMotion);
-    if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
+    if (unit.type === 'grizzly') this.grizzly.draw(ctx,unit,point,size*this.camera.zoom,time,this.atmosphere.reducedMotion,this.resolutionScale);
+    else if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, size * this.camera.zoom, alpha);
     else this.drawAsset(ctx, style.asset, point, size * this.camera.zoom, alpha);
     if (!unit.dead) {

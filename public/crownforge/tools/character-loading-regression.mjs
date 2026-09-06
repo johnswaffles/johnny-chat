@@ -108,3 +108,14 @@ test('a restored current type is required even when absent from the opening rost
   outrider.readiness().forEach(loaded);
   assert.equal(renderer.startupReadiness(simulation).ready, true);
 });
+
+test('restored grizzlies use their own required art without requesting a humanoid rig', () => {
+  const renderer = new CrownforgeRenderer(canvas());
+  const simulation = { units: [{type:'grizzly'}], buildings: [] };
+  assert.equal(renderer.startupReadiness(simulation).ready,false);
+  PendingImage.instances.forEach(loaded);
+  assert.equal(renderer.startupReadiness(simulation).ready,true);
+  assert.equal(renderer.characterRigs.has('grizzly'),false);
+  renderer.grizzly.image.naturalWidth=0;
+  assert.equal(renderer.startupReadiness(simulation).ready,false);
+});

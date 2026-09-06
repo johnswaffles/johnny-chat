@@ -1,11 +1,13 @@
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260906-wildwoodwatch2';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260906-wildwoodwatch2';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260905-greatwood3';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260905-buildings1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260905-buildings1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260905-smooth1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260905-smooth1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260906-wildwoodwatch2';
 import { findPath } from './pathfinding.js?v=20260905-greatwood3';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260905-greatwood3';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260905-smooth1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260906-wildwoodwatch2';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -242,6 +244,13 @@ function setUnitFacing(unit, dx, dz, force = false) {
   }
   const magnitude = Math.hypot(dx, dz);
   if (magnitude < 0.12) return unit.facing;
+  if (unit.type === 'grizzly') {
+    const sx=dx-dz,sy=dx+dz;
+    const front=Math.abs(sy)<magnitude*.16?unit.facing<2:sy>=0;
+    const right=Math.abs(sx)<magnitude*.16?[0,2].includes(unit.facing):sx>=0;
+    unit.facing=front?(right?0:1):(right?2:3);
+    unit.facingLocked=true;return unit.facing;
+  }
   const candidate = directionFromVector(dx, dz, unit.facing);
   if (force || !unit.facingLocked || candidate === unit.facing) {
     unit.facing = candidate;
@@ -313,6 +322,7 @@ export class CrownforgeSimulation {
     this.lifetimeGathered = { food: 0, wood: 0, stone: 0, gold: 0 };
     this.resources = { ...INITIAL_RESOURCES };
     this.enemyResources = { ...ENEMY_AI.startingResources };
+    this.wildlifeState = initialWildlifeState(0);
     this.enemyAIState = {
       buildClock: 0,
       workerClock: 0,
@@ -1130,6 +1140,7 @@ export class CrownforgeSimulation {
     this._updateExploration();
     this._updateEnemyAI(dt);
     this._updateEnemyIntent();
+    updateWildlife(this,dt);
     this._checkVictory();
     for (const unit of this.units) {
       if (unit.dead && unit.deathAge >= DEAD_UNIT_LIFETIME && unit.lastAnimationEvent?.name !== ANIMATION_EVENTS.deathComplete) {
@@ -1492,7 +1503,7 @@ export class CrownforgeSimulation {
       } else if (order.kind === 'attack') {
         const target = order.targetKind === 'building'
           ? this.buildings.find((candidate) => candidate.id === order.targetId && candidate.faction === 'enemy' && !candidate.destroyed && candidate.hp > 0)
-          : this.units.find((candidate) => candidate.id === order.targetId && candidate.faction === 'enemy' && !candidate.dead);
+          : this.units.find((candidate) => candidate.id === order.targetId && ['enemy','wildlife'].includes(candidate.faction) && !candidate.dead);
         if (target) {
           unit.attackTarget = target.id;
           unit.attackTargetKind = target.kind;
@@ -1820,7 +1831,7 @@ export class CrownforgeSimulation {
 
   _updateWorkerAssignments() {
     const workers = this.units
-      .filter((unit) => this._availableForAutomaticBuilding(unit) && !unit.needsSafetyRegroup && !unit.stairAccess)
+      .filter((unit) => unit.faction === 'player' && this._availableForAutomaticBuilding(unit) && !unit.needsSafetyRegroup && !unit.stairAccess)
       .sort((a, b) => a.id - b.id);
     let routeBudget = this.stressMode ? 2 : 5;
     for (const worker of workers) {
@@ -1958,7 +1969,7 @@ export class CrownforgeSimulation {
 
     if (routeBudget <= 0) return;
     const regrouping = this.units
-      .filter((unit) => this._availableForAutomaticBuilding(unit)
+      .filter((unit) => unit.faction === 'player' && this._availableForAutomaticBuilding(unit)
         && UNIT_TYPES[unit.type]?.regroupAtTownCenter
         && !unit.stairAccess
         && (unit.needsSafetyRegroup || unit.idleDuration >= IDLE_REGROUP_DELAY)
@@ -2625,6 +2636,7 @@ export class CrownforgeSimulation {
   }
 
   _continueResourceIntent(unit, intentNode = null) {
+    if (unit.faction === 'enemy') return false; // Economy service chooses current reachable needs.
     const previousNode = intentNode
       ?? this.resourcesNodes.find((node) => node.id === unit.gatherTarget)
       ?? null;
@@ -3821,9 +3833,11 @@ export class CrownforgeSimulation {
     persistent = false,
     preferredSlot = null,
     label = null,
+    excludeNodeIds = [],
   } = {}) {
     if (!this.isWorkerUnit(unit) || !resourceType) return null;
-    const allCandidates = this._resourceWorkCandidates(unit, resourceType, origin, preferredNode, radius, footprintMultiplier);
+    const allCandidates = this._resourceWorkCandidates(unit, resourceType, origin, preferredNode, radius, footprintMultiplier)
+      .filter(node => !excludeNodeIds.includes(node.id));
     const candidates = Number.isFinite(maxCandidates) ? allCandidates.slice(0, maxCandidates) : allCandidates;
     unit.gatherPersistent = Boolean(persistent);
     unit.gatherIntent = {
@@ -3908,10 +3922,13 @@ export class CrownforgeSimulation {
       || Number(b.readable) - Number(a.readable)
       || a.order - b.order);
     let route = null;
-    const routeAttemptLimit = unit.gatherPersistent ? routeCandidates.length : RESOURCE_ROUTE_ATTEMPT_LIMIT;
+    const routeAttemptLimit = unit.gatherPersistent || unit.faction === 'enemy' ? routeCandidates.length : RESOURCE_ROUTE_ATTEMPT_LIMIT;
     for (const candidate of routeCandidates.slice(0, routeAttemptLimit)) {
       const path = this._buildPath(unit, candidate.point);
       if (!path) continue;
+      // A snapped A* endpoint can be outside harvesting reach when a newer
+      // building covers the original slot. The economy must try another slot.
+      if (unit.faction === 'enemy' && distance(path.at(-1) ?? unit, node) > resourceInteractionDistance(node,unit.type) + RESOURCE_APPROACH_TOLERANCE) continue;
       route = { ...candidate, path };
       break;
     }
@@ -4028,7 +4045,9 @@ export class CrownforgeSimulation {
   }
 
   _targetDistance(attacker, target) {
-    return target.kind === 'building' ? this._distanceToBuildingUnitEdge(attacker, target) : distance(attacker, target);
+    if (target.kind === 'building') return this._distanceToBuildingUnitEdge(attacker, target);
+    const creatureEdge = UNIT_TYPES[target.type]?.wildlife ? Math.max(0, UNIT_TYPES[target.type].radius - .43) : 0;
+    return Math.max(0,distance(attacker,target)-creatureEdge);
   }
 
   _targetLabel(target) {
@@ -4632,29 +4651,7 @@ export class CrownforgeSimulation {
     return [...new Set([...urgent, ...baseline.slice(rotation), ...baseline.slice(0, rotation)])];
   }
 
-  _assignEnemyEconomy() {
-    for (const worker of this._enemyWorkers()) {
-      if (worker.command !== 'idle'
-        || worker.path.length
-        || worker.carryAmount
-        || worker.buildTarget
-        || worker.fieldTarget
-        || worker.attackTarget) continue;
-      let node = null;
-      for (const resourceType of this._enemyResourcePriority(worker)) {
-        node = this.resourcesNodes
-          .filter((candidate) => candidate.amount > 0 && candidate.resourceType === resourceType)
-          .sort((a, b) => distance(worker, a) - distance(worker, b) || a.id - b.id)[0] ?? null;
-        if (node) break;
-      }
-      if (!node) continue;
-      worker.gatherTarget = node.id;
-      worker.gatherSlot = worker.id % resourceSlotCount(node);
-      worker.gatherTimer = 0;
-      worker.gatherEventFired = false;
-      if (!this._sendUnitToResource(worker, node)) worker.gatherTarget = null;
-    }
-  }
+  _assignEnemyEconomy() { assignEnemyEconomy(this); }
 
   _enemyBuildSite(type, desired, workers) {
     const blueprint = BUILDING_TYPES[type];
@@ -4760,12 +4757,12 @@ export class CrownforgeSimulation {
   _enemyDefenseTarget(camp) {
     const direct = this._enemyTownBuildings()
       .map((building) => building.defenseTargetId && building.defendTimer > 0
-        ? this.units.find((unit) => unit.id === building.defenseTargetId && unit.faction === 'player' && !unit.dead)
+        ? this.units.find((unit) => unit.id === building.defenseTargetId && ['player','wildlife'].includes(unit.faction) && !unit.dead)
         : null)
       .find(Boolean);
     if (direct) return direct;
     return this.units
-      .filter((unit) => unit.faction === 'player' && !unit.dead && distance(unit, camp) <= ENEMY_AI.defenseRange)
+      .filter((unit) => ['player','wildlife'].includes(unit.faction) && !unit.dead && distance(unit, camp) <= ENEMY_AI.defenseRange)
       .sort((a, b) => distance(a, camp) - distance(b, camp) || a.id - b.id)[0] ?? null;
   }
 
@@ -4808,6 +4805,7 @@ export class CrownforgeSimulation {
     if (state.economyClock >= 1) {
       state.economyClock = 0;
       this._assignEnemyEconomy();
+      assignEnemyPatrols(this,camp);
     }
     this._updateEnemyProduction(dt, camp);
 
@@ -4842,7 +4840,7 @@ export class CrownforgeSimulation {
 
   _updateEnemyIntent() {
     const enemies = this._enemyMilitary();
-    const playerTargets = this.units.filter((unit) => unit.faction === 'player' && !unit.dead);
+    const playerTargets = this.units.filter((unit) => ['player','wildlife'].includes(unit.faction) && !unit.dead);
     for (const enemy of enemies) {
       if (enemy.stunTimer > 0) continue;
       const currentTarget = enemy.command === 'attack' ? this._getAttackTarget(enemy) : null;
@@ -4867,7 +4865,7 @@ export class CrownforgeSimulation {
       if (target && distance(enemy, target) < ENEMY_AI.awarenessRange) {
         enemy.attackTarget = target.id;
         enemy.attackTargetKind = 'unit';
-        enemy.actionLabel = 'Engaging nearby Crownwardens';
+        enemy.actionLabel = `Engaging ${UNIT_TYPES[target.type].label}`;
         this._sendUnitToAttack(enemy, target, enemy.attackSlot);
       }
     }
@@ -5297,7 +5295,7 @@ export class CrownforgeSimulation {
 
   selectEntity(entity, additive = false) {
     if (!additive) this.selectedIds = [];
-    if (entity && entity.faction !== 'enemy') {
+    if (entity && !['enemy','wildlife'].includes(entity.faction)) {
       if (additive && this.selectedIds.includes(entity.id)) this.selectedIds = this.selectedIds.filter((id) => id !== entity.id);
       else this.selectedIds.push(entity.id);
     }
@@ -5311,7 +5309,7 @@ export class CrownforgeSimulation {
       : null;
     this.lastCommand = !entity
       ? 'Nothing selected.'
-      : entity.faction === 'enemy'
+      : ['enemy','wildlife'].includes(entity.faction)
         ? `${label} is hostile · select a defender, then click to attack.`
         : `${label} selected.`;
   }
@@ -5611,7 +5609,7 @@ export class CrownforgeSimulation {
       if (queued) this.lastCommand += ` ${queued} builder${queued === 1 ? '' : 's'} queued it after construction.`;
       return { kind: 'move', success: true, target, queued };
     }
-    if (target?.kind === 'unit' && target.faction === 'enemy') {
+    if (target?.kind === 'unit' && ['enemy','wildlife'].includes(target.faction)) {
       const attackers = units.filter((unit) => UNIT_TYPES[unit.type]?.canAttackUnits !== false
         && !areHearthkinNeutral(unit, target));
       if (!attackers.length) {
@@ -6878,6 +6876,7 @@ export class CrownforgeSimulation {
       resources: this._jsonSafe(this.resources),
       enemyResources: this._jsonSafe(this.enemyResources),
       enemyAIState: this._jsonSafe(this.enemyAIState),
+      wildlifeState: this._jsonSafe(this.wildlifeState),
       technologies: this._jsonSafe(this.technologies),
       selectedIds: [...this.selectedIds],
       lastCommand: this.lastCommand,
@@ -6940,6 +6939,8 @@ export class CrownforgeSimulation {
     this.resources = { ...INITIAL_RESOURCES, ...(restored.resources ?? {}) };
     this.enemyResources = { ...ENEMY_AI.startingResources, ...(restored.enemyResources ?? {}) };
     this.enemyAIState = { ...this.enemyAIState, ...(restored.enemyAIState ?? {}) };
+    this.wildlifeState = { ...initialWildlifeState(this.clock), ...(restored.wildlifeState ?? {}) };
+    if (!Number.isFinite(this.wildlifeState.nextSpawnAt)) this.wildlifeState.nextSpawnAt = initialWildlifeState(this.clock).nextSpawnAt;
     this.technologies = restored.technologies ?? {};
     this.selectedIds = Array.isArray(restored.selectedIds) ? restored.selectedIds : [];
     this.lastCommand = restored.lastCommand ?? 'Save restored.';

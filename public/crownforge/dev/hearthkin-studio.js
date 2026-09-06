@@ -1,5 +1,5 @@
-import { UNIT_TYPES } from '../src/config.js';
-import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260905-idlebreath1';
+import { UNIT_TYPES } from '../src/config.js?v=20260906-wildwoodwatch2';
+import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260906-wildwoodwatch2';
 import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260905-idlebreath1';
 import {fitCharacterSurfaces} from '../src/character-surface-fit.js?v=20260905-idlebreath1';
 

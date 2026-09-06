@@ -1,6 +1,6 @@
-import { CrownforgeSimulation } from '../src/simulation.js?v=20260905-greatwood3';
-import { CrownforgeRenderer } from '../src/renderer.js?v=20260906-grassrestore1';
-import { BUILDING_TYPES, CONFIG, FIRST_AGE_ASSETS, ASHEN_BUILDING_ASSETS } from '../src/config.js?v=20260905-buildings1';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260906-wildwoodwatch2';
+import { CrownforgeRenderer } from '../src/renderer.js?v=20260906-wildwoodwatch2';
+import { BUILDING_TYPES, CONFIG, FIRST_AGE_ASSETS, ASHEN_BUILDING_ASSETS } from '../src/config.js?v=20260906-wildwoodwatch2';
 import { BUILDING_DEPTH } from '../src/building-depth-data.js?v=20260905-buildings1';
 import { BUILDING_COMPONENTS } from '../src/building-components-data.js?v=20260905-buildings1';
 import { hasBuildingOutline, outlineApproaches, projectOutsideOutline } from '../src/building-geometry.js?v=20260905-buildings1';

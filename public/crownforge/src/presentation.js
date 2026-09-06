@@ -1,4 +1,4 @@
-import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260905-smooth1';
+import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260906-wildwoodwatch2';
 
 export function setupPresentation({ renderer, simulation, input, announce }) {
   const shell = document.querySelector('.game-shell');
@@ -174,10 +174,10 @@ export function setupPresentation({ renderer, simulation, input, announce }) {
     }
     for (const entity of [...simulation.buildings, ...simulation.units]) {
       if (entity.dead || entity.destroyed) continue;
-      if (entity.faction === 'enemy' && explored && !explored.has(`${Math.floor(entity.x / exploration.cellSize)}:${Math.floor(entity.z / exploration.cellSize)}`)) continue;
+      if (['enemy','wildlife'].includes(entity.faction) && explored && !explored.has(`${Math.floor(entity.x / exploration.cellSize)}:${Math.floor(entity.z / exploration.cellSize)}`)) continue;
       const p = project(entity);
       const size = entity.kind === 'building' ? 3.5 : 1.8;
-      mapCtx.fillStyle = entity.faction === 'enemy' ? '#d78c63' : '#eee1a7';
+      mapCtx.fillStyle = ['enemy','wildlife'].includes(entity.faction) ? (entity.faction === 'wildlife' ? '#e0b061' : '#d78c63') : '#eee1a7';
       mapCtx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
     }
     const corners = [{ x: 0, y: 0 }, { x: renderer.width, y: 0 }, { x: renderer.width, y: renderer.height }, { x: 0, y: renderer.height }].map((p) => project(renderer.screenToWorld(p)));

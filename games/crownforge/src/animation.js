@@ -1,7 +1,7 @@
 import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import { CHARACTER_RIGS } from './character-rigs.js?v=20260905-smooth1';
+import { CHARACTER_RIGS } from './character-rigs.js?v=20260906-wildwoodwatch2';
 import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260905-buildings1';
-import { COMBAT_ATLASES, UNIT_TYPES, VILLAGER_ATLASES } from './config.js?v=20260905-smooth1';
+import { COMBAT_ATLASES, UNIT_TYPES, VILLAGER_ATLASES } from './config.js?v=20260906-wildwoodwatch2';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -334,6 +334,16 @@ export const ANIMATION_DEFINITIONS = {
     groundAnchor: { x: 0.5, y: 0.98 },
     shadowAnchor: { x: 0.5, y: 0.98, source: 'painted-in-frame' },
   },
+};
+
+// The grizzly has its own directional painted sprites and never borrows a
+// Hearthkin pose, tool, or humanoid stun animation.
+ANIMATION_DEFINITIONS.grizzly = {
+  label: 'Greatwood Grizzly', directionCount: 4, renderer: 'wildlife', atlases: {},
+  clips: Object.fromEntries(['idle','walk','attack','attack_anticipation','attack_contact','attack_recovery','death'].map(state=>[state,{
+    atlas:'grizzly',frames:state==='walk'?[0,1,0,2]:[state==='attack_contact'?3:0],rows:[0],fps:state==='walk'?5.8:1,
+    loop:state==='walk'||state==='idle',
+  }])),collisionRadius:.82,renderSize:218,
 };
 
 for(const [type,rig] of Object.entries(CHARACTER_RIGS)) {

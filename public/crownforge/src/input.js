@@ -345,7 +345,7 @@ export class CrownforgeInput {
     const entity = this.renderer.getEntityAtScreen?.(this.simulation, point, selectedUnits.length ? 'command' : 'select')
       ?? this.simulation.getEntityAt(this.renderer.screenToWorld(point));
     if (selectedUnits.length) {
-      if (entity?.faction === 'enemy') this._setCursor('attack-target');
+      if (['enemy','wildlife'].includes(entity?.faction)) this._setCursor('attack-target');
       else if (entity?.kind === 'building' && selectedBuilders.length && this.simulation.buildingNeedsWork(entity)) {
         this._setCursor(entity.progress < 1 ? 'build-target' : 'repair-target');
       }
@@ -354,7 +354,7 @@ export class CrownforgeInput {
       else this._setCursor('move-target');
       return;
     }
-    if (entity?.faction === 'enemy') this._setCursor('attack-target');
+    if (['enemy','wildlife'].includes(entity?.faction)) this._setCursor('attack-target');
     else if (entity?.faction === 'player' || entity?.kind === 'resource') this._setCursor('select-target');
     else this._setCursor('default');
   }

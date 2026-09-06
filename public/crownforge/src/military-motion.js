@@ -1,4 +1,4 @@
-import { UNIT_TYPES } from './config.js?v=20260905-smooth1';
+import { UNIT_TYPES } from './config.js?v=20260906-wildwoodwatch2';
 import { hearthkinLocomotion, projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260905-idlebreath1';
 
 // Pure actor-space motion. A facing selects a camera projection; it cannot

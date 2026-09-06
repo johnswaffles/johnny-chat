@@ -1,7 +1,7 @@
-import {CrownforgeSimulation} from '../src/simulation.js?v=20260905-greatwood3';
-import {CrownforgeRenderer} from '../src/renderer.js?v=20260906-grassrestore1';
-import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260905-idlebreath1';
-import {CONFIG,UNIT_TYPES} from '../src/config.js';
+import {CrownforgeSimulation} from '../src/simulation.js?v=20260906-wildwoodwatch2';
+import {CrownforgeRenderer} from '../src/renderer.js?v=20260906-wildwoodwatch2';
+import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260906-wildwoodwatch2';
+import {CONFIG,UNIT_TYPES} from '../src/config.js?v=20260906-wildwoodwatch2';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas);
 const play=document.querySelector('#play'),walker=document.querySelector('#walker'),homeButton=document.querySelector('#home');

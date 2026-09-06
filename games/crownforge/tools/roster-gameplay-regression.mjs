@@ -51,6 +51,7 @@ for(const type of ['villager','ashenForager']) {
 console.log('PASS: instant player demolition and its baseline parity; worker dismantling remains a compatibility animation.');
 
 for(const [type,definition] of Object.entries(UNIT_TYPES)) {
+  if (definition.wildlife) continue; // Wild creatures have autonomous hunting, not player roster orders.
   const games=pair(game=>{
     const u=game.addUnit(type,25,25,'player');game.selectedIds=[u.id];
     assert.equal(game.issueContextCommand({x:38,z:25}).success,true);return game;
