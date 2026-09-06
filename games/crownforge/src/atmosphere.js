@@ -1,3 +1,5 @@
+import { CONFIG } from './config.js?v=20260905-smooth1';
+
 // Presentation only: every effect is derived from position and render time.
 // Nothing consumes the simulation RNG or changes an entity's state.
 const TAU = Math.PI * 2;
@@ -19,6 +21,19 @@ function softSprite(rgb) {
   return canvas;
 }
 
+function shaftSprite() {
+  const image=document.createElement('canvas');image.width=128;image.height=512;
+  const g=image.getContext('2d'),across=g.createLinearGradient(0,0,128,0);
+  across.addColorStop(0,'rgba(255,232,171,0)');across.addColorStop(.35,'rgba(255,232,171,.7)');
+  across.addColorStop(.56,'rgba(255,242,195,1)');across.addColorStop(1,'rgba(255,232,171,0)');
+  g.fillStyle=across;g.fillRect(0,0,128,512);
+  const fade=g.createLinearGradient(0,0,0,512);
+  fade.addColorStop(0,'rgba(0,0,0,0)');fade.addColorStop(.2,'rgba(0,0,0,.9)');
+  fade.addColorStop(.7,'rgba(0,0,0,.55)');fade.addColorStop(1,'rgba(0,0,0,0)');
+  g.globalCompositeOperation='destination-in';g.fillStyle=fade;g.fillRect(0,0,128,512);
+  return image;
+}
+
 export class CrownforgeAtmosphere {
   constructor(renderer) {
     this.renderer = renderer;
@@ -28,6 +43,9 @@ export class CrownforgeAtmosphere {
     this.cloud = softSprite('19,43,39');
     this.mist = softSprite('235,225,198');
     this.ember = softSprite('255,177,64');
+    this.sunPool = softSprite('240,226,158');
+    this.woodlandMist = softSprite('153,185,172');
+    this.shaft = shaftSprite();
     this.grade = document.createElement('canvas');
     this.gradeKey = '';
   }
@@ -47,6 +65,63 @@ export class CrownforgeAtmosphere {
         const point = r.worldToScreen({ x: x + Math.sin(t * 0.022 + phase) * 24, z: z + Math.cos(t * 0.015 + phase) * 18 });
         const width = 1900 * r.camera.zoom;
         ctx.drawImage(this.cloud, point.x - width / 2, point.y - width * 0.16, width, width * 0.32);
+      }
+    }
+    ctx.restore();
+  }
+
+  woodlandAnchors() {
+    const r=this.renderer,coverage=r.landscape?.forestCoverage;
+    if (!coverage || r.camera.zoom<.12) return [];
+    const bounds=r.viewportWorldBounds(24),step=34;
+    const x0=Math.max(0,Math.floor(bounds.minX/step)),z0=Math.max(0,Math.floor(bounds.minZ/step));
+    const x1=Math.min(Math.ceil(CONFIG.mapWidth/step),Math.floor(bounds.maxX/step));
+    const z1=Math.min(Math.ceil(CONFIG.mapHeight/step),Math.floor(bounds.maxZ/step));
+    const key=`${x0}|${z0}|${x1}|${z1}|${r.landscape.seed}`;
+    if (key===this.anchorKey && this.anchorCoverage===coverage) return this.anchors;
+    const anchors=[];
+    for (let iz=z0;iz<=z1;iz++) for (let ix=x0;ix<=x1;ix++) {
+      const rank=noise(ix+19,iz+71);
+      if (rank<.58) continue;
+      const x=(ix+.2+noise(ix+5,iz)*.6)*step,z=(iz+.2+noise(ix,iz+8)*.6)*step;
+      if (x>=CONFIG.mapWidth || z>=CONFIG.mapHeight) continue;
+      const shade=coverage[Math.floor(z)*CONFIG.mapWidth+Math.floor(x)]??0;
+      if (shade<.16) continue;
+      anchors.push({x,z,rank,shade,phase:noise(ix+41,iz+9)*TAU});
+    }
+    anchors.sort((a,b)=>b.rank-a.rank);anchors.length=Math.min(12,anchors.length);
+    this.anchorKey=key;this.anchorCoverage=coverage;this.anchors=anchors;
+    return anchors;
+  }
+
+  drawWoodlandLight(ctx,time) {
+    if (!this.enabled) return;
+    const r=this.renderer,t=this.reducedMotion?0:time*.001;
+    ctx.save();ctx.globalCompositeOperation='screen';
+    for (const a of this.woodlandAnchors()) {
+      const p=r.worldToScreen(a),w=(380+a.rank*220)*r.camera.zoom;
+      ctx.globalAlpha=(this.mode==='day'?.10:.16)*(1+Math.sin(t*.17+a.phase)*.12);
+      ctx.drawImage(this.sunPool,p.x-w*.5,p.y-w*.17,w,w*.34);
+    }
+    ctx.restore();
+  }
+
+  drawWoodlandAir(ctx,time) {
+    if (!this.enabled) return;
+    const r=this.renderer,t=this.reducedMotion?0:time*.001;
+    const fade=Math.min(1,Math.max(0,(r.camera.zoom-.12)/.18));
+    ctx.save();
+    for (const a of this.woodlandAnchors()) {
+      const drift=Math.sin(t*.10+a.phase)*1.8;
+      const p=r.worldToScreen({x:a.x+drift,z:a.z+drift*.4});
+      const width=(650+a.rank*230)*r.camera.zoom;
+      ctx.globalAlpha=fade*(this.mode==='day'?.045:.095)*(a.shade*.5+.5);
+      ctx.drawImage(this.woodlandMist,p.x-width*.5,p.y-width*.16,width,width*.23);
+      if (a.rank>.83 && r.daylightEnabled) {
+        ctx.save();ctx.translate(p.x,p.y);ctx.rotate(-.44);
+        ctx.globalCompositeOperation='screen';ctx.globalAlpha=fade*(this.mode==='day'?.075:.12);
+        const h=(500+a.rank*200)*r.camera.zoom,w=h*.22;
+        ctx.drawImage(this.shaft,-w*.5,-h,w,h);ctx.restore();
       }
     }
     ctx.restore();
@@ -98,6 +173,7 @@ export class CrownforgeAtmosphere {
 
   drawAir(ctx, time) {
     if (!this.enabled) return;
+    this.drawWoodlandAir(ctx,time);
     const r = this.renderer;
     const key = `${r.width}|${r.height}|${this.mode}`;
     if (this.gradeKey !== key) {

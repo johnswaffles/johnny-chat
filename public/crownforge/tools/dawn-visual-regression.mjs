@@ -6,7 +6,7 @@ import { CrownforgeAtmosphere } from '../src/atmosphere.js';
 const calls = [];
 const ctx = new Proxy({}, { get: (_, key) => (...args) => {
   calls.push({ key, args });
-  if (key === 'createRadialGradient') return { addColorStop() {} };
+  if (key === 'createRadialGradient' || key === 'createLinearGradient') return { addColorStop() {} };
   if (key === 'drawImage') {
     assert.ok(args.slice(1).every(Number.isFinite), 'all image coordinates are finite');
     assert.ok(args.at(-1) >= 0 && args.at(-2) >= 0, 'effect size cannot be negative');

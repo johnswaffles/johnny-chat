@@ -71,11 +71,14 @@ export class CrownforgeInput {
     window.addEventListener('pointercancel', (event) => this._up(event));
     this.canvas.addEventListener('wheel', (event) => {
       event.preventDefault();
+      if (!event.deltaY) return;
       const point = this._point(event);
-      const magnitude = Math.min(140, Math.max(1, Math.abs(event.deltaY)));
+      const pixelDelta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?this.canvas.clientHeight:1);
+      const magnitude = Math.min(140, Math.max(1, Math.abs(pixelDelta)));
       const direction = event.deltaY < 0 ? 1 : -1;
       const factor = Math.pow(1.0018, direction * magnitude);
-      this.renderer.zoomAt(factor, point);
+      this.renderer.queueZoom(factor, point);
+      this.cursorDirty = true;
     }, { passive: false });
     window.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
@@ -527,6 +530,7 @@ export class CrownforgeInput {
   }
 
   update(delta) {
+    if (this.renderer.advanceCamera(delta)) this.cursorDirty = true;
     let dx = 0; let dy = 0;
     if (this.keys.has('a') || this.keys.has('arrowleft')) dx += 1;
     if (this.keys.has('d') || this.keys.has('arrowright')) dx -= 1;

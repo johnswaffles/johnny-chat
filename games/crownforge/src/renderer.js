@@ -3,9 +3,11 @@ import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260905-buildings1';
 import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260905-smooth1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import { CrownforgeLandscape } from './landscape.js?v=20260905-greatwood3';
+import { CrownforgeLandscape } from './landscape.js?v=20260905-radiance4';
+import { TerrainCache } from './terrain-cache.js?v=20260905-radiance4';
+import { ForestCache } from './forest-cache.js?v=20260905-radiance4';
 import { CrownforgeMeadow } from './meadow.js?v=20260905-greatwood3';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260905-buildings1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260905-radiance4';
 import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260905-smooth1';
 import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260905-smooth1';
 
@@ -285,6 +287,8 @@ export class CrownforgeRenderer {
     this.frameStats = { count: 0, samples: [] };
     this.atmosphere = new CrownforgeAtmosphere(this);
     this.landscape = new CrownforgeLandscape(this);
+    this.terrainCache = new TerrainCache(this);
+    this.forestCache = new ForestCache(this);
     this.meadow = new CrownforgeMeadow(this);
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas);
@@ -340,9 +344,54 @@ export class CrownforgeRenderer {
       this.firstAgeAssets.stonewrightYard,
       this.firstAgeConstructionAtlases.stonewrightYard,
     ].filter(Boolean);
-    const loaded = required.filter((image) => image.complete && image.naturalWidth > 0).length;
+    this.imageDecoding ??= new WeakMap();
+    const decoded = image => {
+      if (typeof image.decode!=='function') return true;
+      if (!this.imageDecoding.has(image)) {
+        this.imageDecoding.set(image,false);
+        image.decode().then(()=>this.imageDecoding.set(image,true),()=>this.imageDecoding.delete(image));
+      }
+      return this.imageDecoding.get(image);
+    };
+    const loaded = required.filter((image) => image.complete && image.naturalWidth > 0 && decoded(image)).length;
     const total = required.length;
-    return { loaded, total, ratio: total ? loaded / total : 1, ready: loaded === total };
+    let surfacesReady=true;
+    if(loaded===total && typeof required[0]?.decode==='function') {
+      this.warmedViews??=new Map();
+      if(!this.warmCanvas){this.warmCanvas=document.createElement('canvas');this.warmCanvas.width=256;this.warmCanvas.height=256;}
+      this.assetMips??=new WeakMap();
+      const resourceImages=[this.largeStone,...Object.values(this.goldDepositAssets),this.enemyCamp,this.firstAgeAssets.townCenter].filter(image=>image.complete&&image.naturalWidth);
+      const cold=resourceImages.find(image=>!this.assetMips.has(image));
+      if(cold){
+        const levels=[512,256,128,64].map(width=>{
+          const tile=document.createElement('canvas');tile.width=width;tile.height=Math.round(width*cold.naturalHeight/cold.naturalWidth);
+          const g=tile.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(cold,0,0,tile.width,tile.height);return tile;
+        });
+        this.assetMips.set(cold,levels);
+        const g=this.warmCanvas.getContext('2d');for(const tile of levels)g.drawImage(tile,0,0,1,1);g.getImageData(0,0,1,1);
+        return {loaded,total,ratio:1,ready:false};
+      }
+      this.warmedTreeSpecies??=0;
+      if(this.warmedTreeSpecies<(this.landscape.treeMips?.length??0)){
+        const g=this.warmCanvas.getContext('2d'),index=this.warmedTreeSpecies++;
+        for(const tile of this.landscape.treeMips[index]??[])g.drawImage(tile,0,0,1,1);
+        const shadow=this.landscape.treeShadows?.[index];if(shadow)g.drawImage(shadow,0,0,1,1);
+        g.getImageData(0,0,1,1);return {loaded,total,ratio:1,ready:false};
+      }
+      for(const type of currentTypes){
+        const view=this.warmedViews.get(type)??0;
+        const actions=UNIT_TYPES[type]?.worker?['idle','walk','gather_wood','gather_food','gather_stone','gather_gold','carry_wood','carry_food','carry_stone','carry_gold','construct','field_work']:['idle','walk','attack_anticipation'];
+        if(view>=4*actions.length)continue;
+        const rig=this.characterRigs.get(type);
+        const g=this.warmCanvas.getContext('2d');
+        rig.draw(g,{type,kind:'preview',id:0,facing:view%4,animationState:actions[Math.floor(view/4)],animationTime:0},{x:128,y:220},100,1,0);
+        for(const levels of rig.parts.values())for(const tile of levels)g.drawImage(tile,0,0,1,1);
+        // Flush the offscreen work during loading, not during the first pan.
+        g.getImageData(0,0,1,1);
+        this.warmedViews.set(type,view+1);surfacesReady=false;break;
+      }
+    }
+    return { loaded, total, ratio: total ? loaded / total : 1, ready: loaded === total && surfacesReady };
   }
 
   resize() {
@@ -394,6 +443,7 @@ export class CrownforgeRenderer {
   }
 
   panBy(dx, dy) {
+    if (dx || dy) this.zoomMotion = null;
     this.camera.x += dx;
     this.camera.y += dy;
     this.clampCamera();
@@ -416,7 +466,7 @@ export class CrownforgeRenderer {
   zoomAt(factor, screenPoint) {
     const previousZoom = this.camera.zoom;
     const nextZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, previousZoom * factor));
-    if (Math.abs(nextZoom - previousZoom) < 0.0001) return;
+    if (Math.abs(nextZoom - previousZoom) < 1e-8) return;
 
     // Resolve the world point under the cursor before changing scale, then
     // solve the camera offset directly for that same point. This avoids the
@@ -430,6 +480,21 @@ export class CrownforgeRenderer {
     this.camera.y = screenPoint.y - this.height / 2 - worldY * nextZoom;
     this.clampCamera();
     this.invalidateStaticLayer();
+  }
+
+  queueZoom(factor, point) {
+    if (this.atmosphere?.reducedMotion) { this.zoomMotion = null; this.zoomAt(factor, point); return; }
+    this.zoomMotion = { target: Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, (this.zoomMotion?.target ?? this.camera.zoom)*factor)), point: {...point} };
+  }
+
+  advanceCamera(delta) {
+    if (!this.zoomMotion) return false;
+    const {target,point} = this.zoomMotion;
+    const zoom = this.camera.zoom+(target-this.camera.zoom)*(1-Math.exp(-Math.max(0,delta)/.065));
+    const settled = Math.abs(zoom-target)<.0002;
+    this.zoomAt((settled?target:zoom)/this.camera.zoom,point);
+    if (settled) this.zoomMotion=null;
+    return true;
   }
 
   invalidateStaticLayer() {
@@ -472,6 +537,7 @@ export class CrownforgeRenderer {
   }
 
   ensureStaticLayer() {
+    if (this.terrainCache) { this.terrainCache.prepare(); return; }
     const key = [this.width, this.height, this.camera.x, this.camera.y, this.camera.zoom, this.roadReady, this.daylightEnabled, this.landscape.revision].join('|');
     if (this.staticLayerKey === key) return;
     const staticCtx = this.staticLayer.getContext('2d');
@@ -493,7 +559,12 @@ export class CrownforgeRenderer {
     this.landscape.sync(simulation);
     this.meadow.prepare(simulation, time / 1000, renderDelta);
     this.ensureStaticLayer();
-    ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
+    if (this.terrainCache) this.terrainCache.draw(ctx);
+    else ctx.drawImage(this.staticLayer, 0, 0, this.width, this.height);
+    this.atmosphere.drawWoodlandLight(ctx,time);
+    if(this.camera.zoom>=.145)for (const entry of this.visibleResourceEntries(simulation)) {
+      if(entry.resource.type==='tree')this.landscape.drawTreeShadow(ctx,entry.resource,this.worldToScreen(entry.resource),RESOURCE_SIZE_TIERS[entry.resource.sizeTier??'small']?.renderScale??1);
+    }
     this.atmosphere.drawClouds(ctx, time);
     this.drawExplorationOverlay(ctx, simulation);
     this.drawPaths(ctx, simulation);
@@ -558,7 +629,7 @@ export class CrownforgeRenderer {
     corners.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
     ctx.closePath();
     ctx.clip();
-    if (!this.landscape.drawGround(ctx)) {
+    if (!this.landscape.drawGround(ctx, this)) {
       ctx.fillStyle = '#57734b';
       ctx.fill();
     }
@@ -968,6 +1039,7 @@ export class CrownforgeRenderer {
     // Merge root-sorted grass with the existing entity painter order. Near
     // blades cover boots while buildings hide the grass behind them.
     const grass = this.meadow?.tufts ?? [];
+    this.forestCache?.prepare(simulation,entities,grass);
     let blade = 0;
     for (const entity of entities) {
       while (blade < grass.length && grass[blade].depth <= entity.depth) this.meadow.draw(ctx, grass[blade++]);
@@ -976,7 +1048,9 @@ export class CrownforgeRenderer {
       if (entity.kind === 'building' || entity.kind === 'wall-segment') this.drawBuilding(ctx, entity, time);
       else if (entity.kind === 'tower-connector') this.drawPalisadeTowerConnector(ctx, entity);
       else if (entity.kind === 'wall-junction') this.drawPalisadeJunction(ctx, entity);
-      else if (entity.kind === 'resource') this.drawResource(ctx, entity.resource, time);
+      else if (entity.kind === 'resource') {
+        if(!this.forestCache?.draw(ctx,entity))this.drawResource(ctx, entity.resource, time);
+      }
       else if (entity.kind === 'roadside' || entity.kind === 'roadside-shrub') this.drawRoadsideDetail(ctx, entity);
       else if (entity.kind === 'decoration') this.drawDecoration(ctx, entity);
       else this.drawUnit(ctx, entity, time);
@@ -1463,7 +1537,9 @@ export class CrownforgeRenderer {
     const height = size / aspect;
     const groundAnchorY = this.assetGroundAnchorY(definition);
     ctx.translate(screen.x, screen.y - height * (groundAnchorY - 0.5));
-    ctx.drawImage(image, -width / 2, -height / 2, width, height);
+    const desired=width*(this.resolutionScale??1);
+    const sample=this.assetMips?.get(image)?.findLast(tile=>tile.width>=desired)??image;
+    ctx.drawImage(sample, -width / 2, -height / 2, width, height);
     ctx.restore();
     return true;
   }
@@ -2085,7 +2161,7 @@ export class CrownforgeRenderer {
     } else if (resource.type === 'grain') {
       this.drawFirstAgeAsset(ctx, 'field', point, size * this.camera.zoom, depleted ? 0.3 : 0.9);
     } else if (resource.type === 'tree' || resource.type === 'berry') {
-      if (!this.landscape.drawResource(ctx, resource, point, resource.type === 'tree' ? tier.renderScale : 1)) {
+      if (!this.landscape.drawResource(ctx, resource, point, resource.type === 'tree' ? tier.renderScale : 1, time)) {
         if (resource.type === 'tree') this.drawTreeAsset(ctx, resource.variant, point, size * this.camera.zoom, 1);
         else this.drawEnvironmentAsset(ctx, 'berry', resource.variant, point, size * this.camera.zoom, alpha);
       }

@@ -1,5 +1,5 @@
 import {CrownforgeSimulation} from '../src/simulation.js?v=20260905-greatwood3';
-import {CrownforgeRenderer} from '../src/renderer.js?v=20260905-greatwood3';
+import {CrownforgeRenderer} from '../src/renderer.js?v=20260905-radiance4';
 import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260905-idlebreath1';
 import {CONFIG,UNIT_TYPES} from '../src/config.js';
 

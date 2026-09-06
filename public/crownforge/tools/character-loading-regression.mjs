@@ -16,6 +16,7 @@ class PendingImage {
 globalThis.Image = PendingImage;
 const context = () => ({
   createRadialGradient: () => ({ addColorStop() {} }),
+  createLinearGradient: () => ({ addColorStop() {} }),
   fillRect() {}, setTransform() {},
 });
 const canvas = () => ({

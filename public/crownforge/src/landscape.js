@@ -82,13 +82,30 @@ export class CrownforgeLandscape {
         }
         g.imageSmoothingQuality = 'high';
         g.drawImage(image,...sprite.rect,0,0,tile.width,tile.height);
+        // Keep the painted details, with warm upper foliage and cooler
+        // recessed branches baked once into each detail level.
+        g.globalCompositeOperation = 'source-atop';
+        const light = g.createLinearGradient(0,0,tile.width,tile.height);
+        light.addColorStop(0,'rgba(255,231,165,.11)');
+        light.addColorStop(.45,'rgba(255,231,165,0)');
+        light.addColorStop(1,'rgba(17,49,43,.16)');
+        g.fillStyle=light; g.fillRect(0,0,tile.width,tile.height);
         levels.push(tile);
       }
       return levels;
     });
+    this.treeShadows = this.treeMips.map(levels => {
+      const source=levels?.find(tile=>tile.width<=128);
+      if (!source) return null;
+      const shadow=canvas(source.width,source.height),g=shadow.getContext('2d');
+      g.drawImage(source,0,0); g.globalCompositeOperation='source-in';
+      g.fillStyle='#102c29';g.fillRect(0,0,shadow.width,shadow.height);
+      return shadow;
+    });
   }
 
   prepareMaterials() {
+    this.materialRevision=(this.materialRevision??0)+1;
     const image = this.images.ground;
     const w = Math.floor(image.naturalWidth / 2), h = Math.floor(image.naturalHeight / 2);
     this.tiles = Array.from({ length: 4 }, (_, i) => {
@@ -192,18 +209,18 @@ export class CrownforgeLandscape {
     this.pineMask = alphaMask(pine);
   }
 
-  worldTransform(ctx) {
-    const r = this.renderer, origin = r.worldToScreen({ x: 0, z: 0 });
+  worldTransform(ctx, r = this.renderer) {
+    const origin = r.worldToScreen({ x: 0, z: 0 });
     const x = CONFIG.tileWidth / 2 * r.camera.zoom, y = CONFIG.tileHeight / 2 * r.camera.zoom;
     ctx.transform(x, y, -x, y, origin.x, origin.y);
   }
 
-  fillMaterial(ctx, tile, alpha = 1) {
+  fillMaterial(ctx, tile, alpha = 1, r = this.renderer) {
     if (!tile) return;
     ctx.save();
-    this.worldTransform(ctx);
+    this.worldTransform(ctx,r);
     const worldSize = 21;
-    const desired = worldSize * CONFIG.tileWidth / 2 * this.renderer.camera.zoom;
+    const desired = worldSize * CONFIG.tileWidth / 2 * r.camera.zoom * (r.resolutionScale??1);
     const sample = (tile.mips ?? [tile]).find(image => image.width <= desired * 1.3) ?? tile.mips?.at(-1) ?? tile;
     const pattern = ctx.createPattern(sample, 'repeat');
     // The detail has a fixed world size, so grass stays attached to the land
@@ -212,45 +229,56 @@ export class CrownforgeLandscape {
     ctx.fillStyle = pattern;
     ctx.globalAlpha = alpha;
     ctx.fillRect(0, 0, CONFIG.mapWidth, CONFIG.mapHeight);
+    // A second world-aligned orientation at an incommensurate scale breaks
+    // the old obvious diagonal texture repetition. This is baked into tiles,
+    // so camera motion pays only for drawing the finished material.
+    const secondary = ctx.createPattern(sample,'repeat');
+    const scale=31/sample.width, angle=.73;
+    secondary.setTransform(new DOMMatrix([Math.cos(angle)*scale,Math.sin(angle)*scale,-Math.sin(angle)*scale,Math.cos(angle)*scale,13,9]));
+    ctx.globalCompositeOperation='source-atop';ctx.globalAlpha=alpha*.24;
+    ctx.fillStyle=secondary;ctx.fillRect(0,0,CONFIG.mapWidth,CONFIG.mapHeight);
     ctx.restore();
   }
 
-  maskedMaterial(ctx, mask, tile, color) {
+  maskedMaterial(ctx, mask, tile, color, r = this.renderer) {
     if (!mask) return;
-    const r = this.renderer;
     const layer = this.layer;
-    if (layer.width !== r.width || layer.height !== r.height) { layer.width = r.width; layer.height = r.height; }
+    const ratio=r.resolutionScale??1,w=Math.ceil(r.width*ratio),h=Math.ceil(r.height*ratio);
+    if (layer.width !== w || layer.height !== h) { layer.width = w; layer.height = h; }
     const g = layer.getContext('2d');
-    g.clearRect(0, 0, layer.width, layer.height);
-    g.save(); this.worldTransform(g);
+    g.setTransform(ratio,0,0,ratio,0,0);
+    g.clearRect(0, 0, r.width, r.height);
+    g.save(); this.worldTransform(g,r);
     g.drawImage(mask, 0, 0, CONFIG.mapWidth, CONFIG.mapHeight);
     g.restore();
     g.globalCompositeOperation = 'source-in';
-    if (tile) this.fillMaterial(g, tile);
+    if (tile) this.fillMaterial(g, tile, 1, r);
     else { g.fillStyle = color; g.fillRect(0, 0, layer.width, layer.height); }
     g.globalCompositeOperation = 'source-over';
-    ctx.drawImage(layer, 0, 0);
+    ctx.drawImage(layer, 0, 0, r.width, r.height);
   }
 
-  drawGround(ctx) {
+  drawGround(ctx, r = this.renderer) {
     if (!this.tiles.length) return false;
-    this.fillMaterial(ctx, this.tiles[0]);
-    this.maskedMaterial(ctx, this.dryMask, this.tiles[1]);
-    this.maskedMaterial(ctx, this.mossMask, this.tiles[3]);
+    this.fillMaterial(ctx, this.tiles[0],1,r);
+    this.maskedMaterial(ctx, this.dryMask, this.tiles[1],null,r);
+    this.maskedMaterial(ctx, this.mossMask, this.tiles[3],null,r);
     if (this.regionColor) {
-      ctx.save(); this.worldTransform(ctx);
+      ctx.save(); this.worldTransform(ctx,r);
       ctx.globalAlpha = 0.12;
       ctx.drawImage(this.regionColor, 0, 0, CONFIG.mapWidth, CONFIG.mapHeight);
       ctx.restore();
     }
-    this.maskedMaterial(ctx, this.woodMask, this.tiles[3]);
-    this.maskedMaterial(ctx, this.pineMask, this.tiles[2]);
-    this.maskedMaterial(ctx, this.shadeMask, null, '#253f32');
+    if (!r.baseTerrain) {
+      this.maskedMaterial(ctx, this.woodMask, this.tiles[3],null,r);
+      this.maskedMaterial(ctx, this.pineMask, this.tiles[2],null,r);
+    }
+    this.maskedMaterial(ctx, this.shadeMask, null, '#253f32',r);
     // A light, restrained atmospheric veil keeps tiny terrain detail from
     // becoming visual noise at the strategic overview distance.
     ctx.save();
-    this.worldTransform(ctx);
-    ctx.fillStyle = `rgba(118,146,100,${this.renderer.camera.zoom < 0.12 ? 0.16 : 0.055})`;
+    this.worldTransform(ctx,r);
+    ctx.fillStyle = `rgba(118,146,100,${r.camera.zoom < 0.12 ? 0.16 : 0.035})`;
     ctx.fillRect(0, 0, CONFIG.mapWidth, CONFIG.mapHeight);
     ctx.restore();
     return true;
@@ -276,18 +304,35 @@ export class CrownforgeLandscape {
     return { width, height: width * rect[3] / rect[2], sprite: { rect, root: [0.5, 0.96] }, image };
   }
 
-  drawResource(ctx, node, point, tierScale = 1) {
+  drawTreeShadow(ctx,node,point,tierScale=1) {
+    const r=this.renderer;
+    if (node.type!=='tree'||r.camera.zoom<.085||!r.daylightEnabled) return;
+    const visual=this.resourceVisual(node),shadow=this.treeShadows?.[visual.species];
+    if (!shadow) return;
+    const w=visual.width*r.camera.zoom*tierScale,h=visual.height*r.camera.zoom*tierScale;
+    ctx.save();ctx.globalAlpha=(r.atmosphere.mode==='day'?.23:.18)*Math.min(1,Math.max(0,(r.camera.zoom-.145)/.1));
+    ctx.translate(point.x,point.y);ctx.transform(.82,.12,-.56,-.22,0,0);
+    ctx.drawImage(shadow,-w*visual.sprite.root[0],-h*visual.sprite.root[1],w,h);
+    ctx.restore();
+  }
+
+  drawResource(ctx, node, point, tierScale = 1, time = 0) {
     const visual = this.resourceVisual(node);
     if (!visual || !visual.image?.complete || !visual.image.naturalWidth) return false;
     const zoom = this.renderer.camera.zoom;
     const width = visual.width * zoom * tierScale, height = visual.height * zoom * tierScale;
     const sprite = visual.sprite;
     const levels=node.type==='tree'?this.treeMips[visual.species]:null;
-    const sample=levels?.find(tile=>tile.width<=width*1.6)??levels?.at(-1);
+    const sample=levels?.find(tile=>tile.width<=width*(this.renderer.resolutionScale??1)*1.6)??levels?.at(-1);
     ctx.save();
     ctx.fillStyle = 'rgba(16,32,22,0.23)';
     ctx.beginPath(); ctx.ellipse(point.x + width * 0.055, point.y + width * 0.012, width * 0.25, width * 0.065, -0.1, 0, Math.PI * 2); ctx.fill();
     ctx.translate(point.x, point.y);
+    if (node.type==='tree' && zoom>=.145 && this.renderer.atmosphere.enabled && !this.renderer.atmosphere.reducedMotion) {
+      const t=time*.001;
+      const bend=Math.sin(t*.68-node.x*.055-node.z*.034)*.0035+Math.sin(t*1.13+node.x*.17)*.001;
+      ctx.transform(1,0,bend,1,0,0);
+    }
     if (sprite.clip && !sample) {
       ctx.beginPath();
       sprite.clip.forEach(([x, y], i) => {
