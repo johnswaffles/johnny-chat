@@ -9,12 +9,40 @@ export function buildingPolygon(building, profile = 'material') {
   return data.polygons[profile] ?? data.polygons.material;
 }
 
+// Authored hulls are immutable. Share their bounds, edges and SAT projections
+// across all buildings instead of rebuilding them for every navigation probe.
+const geometryCache = new WeakMap();
+function polygonGeometry(polygon) {
+  let data = geometryCache.get(polygon);
+  if (data) return data;
+  const edges = [];
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (let i = 0; i < polygon.length; i++) {
+    const [x, z] = polygon[i], [bx, bz] = polygon[(i + 1) % polygon.length];
+    const dx = bx - x, dz = bz - z, lengthSquared = dx * dx + dz * dz;
+    const inverseLength = 1 / Math.sqrt(lengthSquared);
+    const nx = dz * inverseLength, nz = -dx * inverseLength;
+    let min = Infinity, max = -Infinity;
+    for (const p of polygon) {
+      const projection = p[0] * dz - p[1] * dx;
+      min = Math.min(min, projection); max = Math.max(max, projection);
+    }
+    edges.push({ x, z, dx, dz, inverseSquared: 1 / lengthSquared, nx, nz, min, max });
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+  }
+  data = { edges, minX, maxX, minZ, maxZ };
+  geometryCache.set(polygon, data);
+  return data;
+}
+
 export function polygonBounds(polygon, x = 0, z = 0, padding = 0) {
+  const bounds = polygonGeometry(polygon);
   return {
-    minX: x + Math.min(...polygon.map(p => p[0])) - padding,
-    maxX: x + Math.max(...polygon.map(p => p[0])) + padding,
-    minZ: z + Math.min(...polygon.map(p => p[1])) - padding,
-    maxZ: z + Math.max(...polygon.map(p => p[1])) + padding,
+    minX: x + bounds.minX - padding,
+    maxX: x + bounds.maxX + padding,
+    minZ: z + bounds.minZ - padding,
+    maxZ: z + bounds.maxZ + padding,
   };
 }
 
@@ -24,18 +52,28 @@ export function outlineBounds(building, padding = 0, profile = 'material') {
 }
 
 function nearestBoundary(polygon, x, z) {
-  let inside = true, best = null;
-  for (let i = 0; i < polygon.length; i++) {
-    const a = polygon[i], b = polygon[(i + 1) % polygon.length];
-    const dx = b[0] - a[0], dz = b[1] - a[1];
-    if (dx * (z - a[1]) - dz * (x - a[0]) < -1e-8) inside = false;
-    const length = Math.hypot(dx, dz);
-    const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (length * length)));
-    const px = a[0] + t * dx, pz = a[1] + t * dz;
-    const distance = Math.hypot(x - px, z - pz);
-    if (!best || distance < best.distance) best = { x: px, z: pz, nx: dz / length, nz: -dx / length, distance };
+  let inside = true, bestSquared = Infinity, bestX = 0, bestZ = 0, bestEdge;
+  for (const edge of polygonGeometry(polygon).edges) {
+    const rx = x - edge.x, rz = z - edge.z;
+    if (edge.dx * rz - edge.dz * rx < -1e-8) inside = false;
+    const t = Math.max(0, Math.min(1, (rx * edge.dx + rz * edge.dz) * edge.inverseSquared));
+    const px = edge.x + t * edge.dx, pz = edge.z + t * edge.dz;
+    const distanceSquared = (x - px) ** 2 + (z - pz) ** 2;
+    if (distanceSquared < bestSquared) {
+      bestSquared = distanceSquared; bestX = px; bestZ = pz; bestEdge = edge;
+    }
   }
-  return { ...best, inside };
+  return { x: bestX, z: bestZ, nx: bestEdge.nx, nz: bestEdge.nz, distance: Math.sqrt(bestSquared), inside };
+}
+
+export function withinOutlineDistance(point, building, radius, profile = 'material') {
+  const polygon = buildingPolygon(building, profile);
+  if (!polygon || radius <= 0) return false;
+  const { minX, maxX, minZ, maxZ } = polygonGeometry(polygon);
+  const x = point.x - building.x, z = point.z - building.z;
+  if (x < minX - radius || x > maxX + radius || z < minZ - radius || z > maxZ + radius) return false;
+  const hit = nearestBoundary(polygon, x, z);
+  return hit.inside || hit.distance < radius;
 }
 
 export function distanceToOutline(point, building, profile = 'material') {
@@ -49,6 +87,8 @@ export function projectOutsideOutline(point, building, radius = 0, profile = 'fo
   const polygon = buildingPolygon(building, profile);
   if (!polygon) return null;
   const x = point.x - building.x, z = point.z - building.z;
+  const bounds = polygonGeometry(polygon);
+  if (x < bounds.minX - radius || x > bounds.maxX + radius || z < bounds.minZ - radius || z > bounds.maxZ + radius) return null;
   const hit = nearestBoundary(polygon, x, z);
   if (!hit.inside && hit.distance >= radius) return null;
   let nx = hit.nx, nz = hit.nz;
@@ -99,8 +139,22 @@ export function polygonsOverlap(a, b, padding = 0) {
 
 export function cellIntersectsOutline(cellX, cellZ, building, padding = 0, profile = 'material') {
   const polygon = buildingPolygon(building, profile);
+  if (!polygon) return false;
+  const data = polygonGeometry(polygon);
   const x = cellX - building.x, z = cellZ - building.z;
-  return polygonsOverlap(polygon, [[x-padding,z-padding],[x+1+padding,z-padding],[x+1+padding,z+1+padding],[x-padding,z+1+padding]]);
+  const lowX = x - padding, highX = x + 1 + padding, lowZ = z - padding, highZ = z + 1 + padding;
+  // Rectangle axes first, then the cached hull axes. This is the same SAT as
+  // polygonsOverlap, without allocating a polygon or re-projecting the hull.
+  const boxEpsilon = 1e-8 / (1 + 2 * padding);
+  if (data.maxX <= lowX + boxEpsilon || highX <= data.minX + boxEpsilon
+    || data.maxZ <= lowZ + boxEpsilon || highZ <= data.minZ + boxEpsilon) return false;
+  for (const edge of data.edges) {
+    const nx = edge.dz, nz = -edge.dx;
+    const min = (nx >= 0 ? lowX : highX) * nx + (nz >= 0 ? lowZ : highZ) * nz;
+    const max = (nx >= 0 ? highX : lowX) * nx + (nz >= 0 ? highZ : lowZ) * nz;
+    if (edge.max <= min + 1e-8 || max <= edge.min + 1e-8) return false;
+  }
+  return true;
 }
 
 export function translatedOutline(building, profile = 'material') {

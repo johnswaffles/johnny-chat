@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260905-buildings1';
+import { CONFIG } from './config.js?v=20260905-smooth1';
 import { clamp01, landscapeHash, landscapeNoise, treeAppearance } from './landscape-layout.js?v=20260905-buildings1';
 
 const MASK_WIDTH = 560;

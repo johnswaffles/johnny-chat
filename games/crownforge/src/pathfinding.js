@@ -115,9 +115,11 @@ function smoothPath(path, isBlocked, segmentClear = segmentIsClear) {
     // a precise continuous collision test. A bounded greedy lookahead keeps
     // the route readable while guaranteeing predictable work.
     const lookaheadEnd = Math.min(path.length, anchor + MAX_SMOOTH_LOOKAHEAD);
-    for (let candidate = anchor + 2; candidate < lookaheadEnd; candidate += 1) {
-      if (segmentClear(path[anchor], path[candidate], isBlocked)) furthest = candidate;
-      else break;
+    for (let candidate = lookaheadEnd - 1; candidate > anchor + 1; candidate -= 1) {
+      if (segmentClear(path[anchor], path[candidate], isBlocked)) {
+        furthest = candidate;
+        break;
+      }
     }
     smoothed.push(path[anchor]);
     anchor = furthest;
@@ -143,6 +145,26 @@ export function findPath(start, target, isBlocked, width, height, options = {}) 
     x: Math.max(0, Math.min(width - 1, Math.round(target.x))),
     z: Math.max(0, Math.min(height - 1, Math.round(target.z))),
   }, isCellBlocked, width, height);
+
+  // A station may be open but surrounded by blocked cells. Prove small
+  // enclosed pockets unreachable from the destination side before searching
+  // tens of thousands of cells across the rest of the map. Larger regions
+  // fall through to the normal complete search; this never limits detours.
+  const pocket = [endCell], pocketSeen = new Set([keyFor(endCell.x, endCell.z)]);
+  let pocketHead = 0, startInPocket = false;
+  while (pocketHead < pocket.length && pocket.length < 64) {
+    const current = pocket[pocketHead++];
+    if (current.x === startCell.x && current.z === startCell.z) { startInPocket = true; break; }
+    for (const [dx, dz] of DIRECTIONS) {
+      const x = current.x + dx, z = current.z + dz, key = keyFor(x, z);
+      if (x < 0 || z < 0 || x >= width || z >= height || pocketSeen.has(key)) continue;
+      const isStart = x === startCell.x && z === startCell.z;
+      if (!isStart && isCellBlocked(x, z)) continue;
+      if (dx && dz && (isCellBlocked(current.x + dx, current.z) || isCellBlocked(current.x, current.z + dz))) continue;
+      pocketSeen.add(key); pocket.push({ x, z });
+    }
+  }
+  if (!startInPocket && pocketHead === pocket.length) return [];
 
   const compareNodes = (a, b) => a.f - b.f || a.h - b.h || b.g - a.g;
   const open = new MinHeap(compareNodes);

@@ -138,7 +138,7 @@ export class CrownforgeInput {
       : this.simulation.getBuildingPlacementPreview(type, world);
     this.renderer.setBuildPreview(preview);
     this.onBuildMode(type);
-    this._updateCursor(this.pointer);
+    this._updateCursor(this.pointer, preview);
     this.onToast(type === 'wall'
       ? 'Drag across the meadow to aim the wall. Start or finish near a wall end or map edge and it magnetically locks on. Natural resources yield to the wall; structures remain protected. Press Esc to cancel.'
       : type === 'gate'
@@ -296,7 +296,7 @@ export class CrownforgeInput {
           return this.simulation.getBuildingPlacementPreview(this.buildMode, world);
         })();
       this.renderer.setBuildPreview(preview);
-      this._updateCursor(point);
+      this._updateCursor(point, preview);
       this.cursorDirty = false;
     }
   }
@@ -308,7 +308,7 @@ export class CrownforgeInput {
     this.canvas.style.cursor = '';
   }
 
-  _updateCursor(point) {
+  _updateCursor(point, buildPreview = null) {
     if (this.guardMode) {
       this._setCursor('move-target');
       return;
@@ -324,11 +324,11 @@ export class CrownforgeInput {
     }
     if (this.buildMode) {
       const world = this.renderer.screenToWorld(point);
-      const preview = this.buildMode === 'wall' && this.wallDrag
+      const preview = buildPreview ?? (this.buildMode === 'wall' && this.wallDrag
         ? this.simulation.getWallLinePreview(this.wallDrag.start, world)
         : this.buildMode === 'wall' && this.wallStartHint
           ? this.simulation.getWallLinePreview(this.wallStartHint, world)
-        : this.simulation.getBuildingPlacementPreview(this.buildMode, world);
+        : this.simulation.getBuildingPlacementPreview(this.buildMode, world));
       this._setCursor(preview.valid ? 'build-valid' : 'build-invalid');
       return;
     }

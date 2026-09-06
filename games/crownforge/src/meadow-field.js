@@ -1,4 +1,4 @@
-import {BUILDING_TYPES,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260905-buildings1';
+import {BUILDING_TYPES,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260905-smooth1';
 import {clamp01,landscapeHash,landscapeNoise} from './landscape-layout.js?v=20260905-buildings1';
 
 // Presentation data only. No DOM, match RNG, pathfinding, or simulation writes.
