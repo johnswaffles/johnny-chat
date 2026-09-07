@@ -1,0 +1,7 @@
+{
+  "action": "carry_food",
+  "prompt": "Remove the checkerboard background. Return these sixteen characters and their held equipment on a truly transparent PNG background. Preserve their four-by-four layout and all the artwork.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-0e18ebcf-2a5f-4da1-ac77-487c33311eab.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-14e754a1-866d-4f9e-bd3b-3ac5378a7fb2.png",
+  "asset": "assets/work-v2/carry_food.png"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "construct",
+  "prompt": "Extract the sixteen characters and their tools onto a transparent background. Keep the four-by-four arrangement unchanged.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-cd24b5ef-8b8f-432d-b997-2a7de3b4593e.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e171ff89-13e0-48e5-8f5f-f8f570fa4da8.png",
+  "asset": "assets/work-v2/construct.png"
+}

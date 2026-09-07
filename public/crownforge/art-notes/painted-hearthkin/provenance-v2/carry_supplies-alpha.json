@@ -1,0 +1,7 @@
+{
+  "action": "carry_supplies",
+  "prompt": "Remove the checkerboard background. Return these sixteen characters and their held equipment on a truly transparent PNG background. Preserve their four-by-four layout and all the artwork.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-6382552e-d94f-4ba9-a5d6-15e2567420b8.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d493c94d-7dfb-415f-a179-d066e4ef4720.png",
+  "asset": "assets/work-v2/carry_supplies.png"
+}

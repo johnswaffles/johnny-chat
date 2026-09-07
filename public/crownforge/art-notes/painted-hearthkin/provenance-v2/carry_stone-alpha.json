@@ -1,0 +1,7 @@
+{
+  "action": "carry_stone",
+  "prompt": "Remove the checkerboard background. Return these sixteen characters and their held equipment on a truly transparent PNG background. Preserve their four-by-four layout and all the artwork.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-f8fa75ea-5e83-457a-b423-0eb32fc6b420.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-89f47eb1-383a-42f5-9462-9737af1c726c.png",
+  "asset": "assets/work-v2/carry_stone.png"
+}

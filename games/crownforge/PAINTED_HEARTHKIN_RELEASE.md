@@ -1,0 +1,11 @@
+# Painted Hearthkin — 20260907-paintedhearthkin1
+
+Integrates the approved whole-painting Hearthkin studio: four authored directions, walking, breathing, all work and carrying actions, defense, reactions, shield and Last Light. The first southwest chopping painting now holds the axe head above both hands. The timber front views use the approved food-carry gait with the cargo changed to logs, keeping toes and knees facing the direction of travel. Other carrying artwork and the rear timber views retain their approved source bytes.
+
+The game uses 384 frame entries from 33 transparent PNGs. Canvas crop/clip metadata preserves the original generated image pixels. Cropped full-resolution and smaller frames prepare during loading and consume about 103 MiB, with no growing gameplay cache or runtime limb assembly. Startup waits for the required source artwork. Motion clocks follow actual speed and stop when blocked. A separate painted camera quadrant preserves the existing simulation facing contract. Attack and harvest contacts use simulation clocks, not an independent studio loop. Last Light awakening/release are stationary visual responses; moving workers retain locomotion and their existing shield.
+
+Health, collision, gathering, building, combat, worker immunity and bear curses retain their gameplay rules. Compatibility poses do not create new abilities. Crownwarden Hearthkin alone use the new renderer; the Ashen workers and combat roster retain their existing art.
+
+Production art inspection: `/dev/painted-hearthkin/`. Exact prompts, references, generated paths and asset hashes: `art-notes/painted-hearthkin/`. Those files also retain historical local-study notes. This release supersedes their earlier local-only status.
+
+Validation includes the painted-Hearthkin regression for source mappings, all four movement quadrants, blocked movement, contact frames and ward responses; existing economy/combat/save, loading, camera, bear, inspection, wildlife, buildings, roster and smoothness checks; and local browser gameplay inspection of chopping, all four timber views, resource gathering and ward activation. The browser loaded all 92 clips with zero captured errors. Source and public files are mirrored before release.

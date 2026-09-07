@@ -1,0 +1,13 @@
+{
+  "view": "sw",
+  "group": 1,
+  "ids": [
+    "repair",
+    "demolish",
+    "attack",
+    "ward_block"
+  ],
+  "prompt": "Use this reference as the exact CHARACTER AND CAMERA. Paint a sixteen-frame, four-column four-row character action atlas. EVERY SINGLE FIGURE FACES LEFT in exactly this same FRONT LEFT three-quarter camera as the reference. Nose, chest orientation, and tool action stay toward the LEFT edge. No right-facing poses anywhere. Each row is a different action, but all rows keep ONE left-facing camera. Keep auburn braid, linen headscarf, teal embroidered coat, dark trousers, brown boots and leather gear identical. Whole painted figures, beautifully detailed.\nROW 1: Repairing, a small hammer in right hand and a short replacement board held by left hand. Four columns: lean forward to position board; draw hammer back close to shoulder; give precise short hammer tap; inspect board and reset hand.\nROW 2: Dismantling · study pose, a long iron pry bar held in both hands. Four columns: plant bar ahead at waist level; brace boots and lean body back pulling bar; rock forward to release; reposition bar ahead.\nROW 3: Defensive strike, a stout wooden tool handle gripped in both hands as a defensive staff. Four columns: guard stance then coil shoulders and pull staff behind shoulder; decisive forward diagonal strike at an opponent chest height; strong extended follow-through with weight on front foot; retract staff into a balanced guarded stance.\nROW 4: Shield · block impact, empty hands, tools stowed, NO physical shield. Four columns: brace in a staggered stance with forearms raised before face; recoil a little behind raised forearms; press open palms forward resolutely; settle into protective ready stance.\nKeep all sixteen bodies and tool tips fully separated, inside their cells, consistent body scale and boot baseline across each row. No captions, no text, no scenery, no ground or shadows. Truly transparent PNG cutouts.",
+  "reference": "/Users/johnshopinski/Documents/New project/crownforge-hearthkin-studio/assets/hearthkin-sw-v1.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d64745c4-f5c3-49b6-91e5-902bdca04483.png"
+}

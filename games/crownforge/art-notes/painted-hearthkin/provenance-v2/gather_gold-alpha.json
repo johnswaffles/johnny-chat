@@ -1,0 +1,7 @@
+{
+  "action": "gather_gold",
+  "prompt": "Remove the checkerboard background. Return these sixteen characters and their held equipment on a truly transparent PNG background. Preserve their four-by-four layout and all the artwork.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d928d9f7-fce3-4da0-b8e4-6eecdf5b4175.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-bb9d2b09-2ff3-43f4-b66d-4b641d049e5e.png",
+  "asset": "assets/work-v2/gather_gold.png"
+}

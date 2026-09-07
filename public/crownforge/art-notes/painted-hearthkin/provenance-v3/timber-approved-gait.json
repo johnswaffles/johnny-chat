@@ -1,0 +1,5 @@
+{
+  "prompt": "Edit target: this sixteen-frame transparent character sprite sheet. Replace ONLY the baskets of apples/food with THREE SHORT WOODEN LOGS cradled across both forearms in every character. Adjust fingers minimally to cradle logs securely. Keep the ENTIRE REST of every character EXACTLY unchanged, especially the legs, boot orientations, walking phases, head directions, ground anchors and costume. The existing forward walk is approved: DO NOT REDRAW LEGS OR REVERSE THEM. Four rows, four columns. Retain existing front-left, front-right, rear-right, rear-left row ordering. No basket or food remains. Real transparent background. This produces a new timber-carrying variant of the approved food-carrying gait.",
+  "input": "/Users/johnshopinski/Documents/New project/crownforge-hearthkin-studio/assets/work-v2/carry_food.png",
+  "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b3fbda38-47fe-43c0-911e-1dd199e714ff.png"
+}

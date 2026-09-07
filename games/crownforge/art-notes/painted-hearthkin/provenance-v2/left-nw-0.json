@@ -1,0 +1,13 @@
+{
+  "view": "nw",
+  "group": 0,
+  "ids": [
+    "gather_wood",
+    "gather_stone",
+    "gather_gold",
+    "construct"
+  ],
+  "prompt": "Use this reference as the exact CHARACTER AND CAMERA. Paint a sixteen-frame, four-column four-row character action atlas. EVERY SINGLE FIGURE FACES LEFT in exactly this same REAR LEFT three-quarter, BACK toward viewer camera as the reference. Nose, chest orientation, and tool action stay toward the LEFT edge. No right-facing poses anywhere. Each row is a different action, but all rows keep ONE left-facing camera. Keep auburn braid, linen headscarf, teal embroidered coat, dark trousers, brown boots and leather gear identical. Whole painted figures, beautifully detailed.\nROW 1: Chopping wood, a woodcutting axe gripped securely in both hands. Four columns: raise axe over outside shoulder; swing axe down toward a tree trunk outside the frame; low follow-through at waist height; draw axe back ready for the next swing.\nROW 2: Quarrying stone, a steel pickaxe held in both hands. Four columns: raise pickaxe diagonally above shoulder; drive pickaxe downward ahead of boots; crouched low impact follow-through; pull pickaxe free and begin lifting.\nROW 3: Mining gold, a narrow prospecting pick gripped in the right hand with a small ore pouch on the belt. Four columns: draw pick back above shoulder; lean forward and drive pick into a waist-high vein outside frame; hold low strike follow-through with left hand bracing; withdraw pick and reset.\nROW 4: Building, a carpenters mallet in right hand and a wooden peg held low in left hand. Four columns: position the peg in front at waist level; raise mallet with bent elbow; strike downward while left hand clears the strike; lift mallet to reset.\nKeep all sixteen bodies and tool tips fully separated, inside their cells, consistent body scale and boot baseline across each row. No captions, no text, no scenery, no ground or shadows. Truly transparent PNG cutouts.",
+  "reference": "/Users/johnshopinski/Documents/New project/crownforge-hearthkin-studio/assets/hearthkin-nw-v1.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-ee9a2299-19cb-463e-9bba-f6aabd44d071.png"
+}

@@ -1,0 +1,7 @@
+{
+  "action": "stunned",
+  "prompt": "Remove the checkerboard background. Return these sixteen characters and their held equipment on a truly transparent PNG background. Preserve their four-by-four layout and all the artwork.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d0c42223-6e4c-4338-9881-3616c1c7363e.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-7765c14d-91c0-4dde-821f-2b9a92b2a990.png",
+  "asset": "assets/work-v2/stunned.png"
+}

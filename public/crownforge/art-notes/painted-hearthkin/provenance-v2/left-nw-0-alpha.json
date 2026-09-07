@@ -1,0 +1,14 @@
+{
+  "view": "nw",
+  "group": 0,
+  "ids": [
+    "gather_wood",
+    "gather_stone",
+    "gather_gold",
+    "construct"
+  ],
+  "prompt": "Extract the sixteen characters and their tools onto a transparent background. Keep the four-by-four arrangement unchanged.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-ee9a2299-19cb-463e-9bba-f6aabd44d071.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-dddf0798-8d53-4aaa-9b19-9524b63f76ec.png",
+  "asset": "assets/work-v2/left-nw-0.png"
+}

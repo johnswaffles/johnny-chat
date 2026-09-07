@@ -1,0 +1,7 @@
+{
+  "action": "carry_wood",
+  "prompt": "Remove the checkerboard background. Return these sixteen characters and their held equipment on a truly transparent PNG background. Preserve their four-by-four layout and all the artwork.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-6be3a4c1-b857-4558-9404-685ededf9678.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-50ede1b4-3821-418b-ba36-25141f90c40e.png",
+  "asset": "assets/work-v2/carry_wood.png"
+}

@@ -1,3 +1,4 @@
+import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260907-paintedhearthkin1';
 import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260906-bearstride1';
 import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260906-bearstride1';
 import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260906-firstcondemnation1';
@@ -10,7 +11,7 @@ import { ForestCache } from './forest-cache.js?v=20260906-firstcondemnation1';
 import { CrownforgeMeadow } from './meadow.js?v=20260906-firstcondemnation1';
 import { CrownforgeAtmosphere } from './atmosphere.js?v=20260906-firstcondemnation1';
 import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260906-firstcondemnation1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260906-firstcondemnation1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260907-paintedhearthkin1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -145,7 +146,8 @@ export class CrownforgeRenderer {
     this.ashenConstructionAtlasReady = false;
     this.enemyCampReady = false;
     this.characterRigs = createCharacterRigs({ lazy: true });
-    this.hearthkinRig = this.characterRigs.get('villager');
+    this.hearthkinRig = new PaintedHearthkinRenderer();
+    this.characterRigs.set('villager',this.hearthkinRig);
     this.villagerAtlases = {};
     this.villagerAtlasReady = {};
     this.combatAtlases = {};
@@ -1892,6 +1894,7 @@ export class CrownforgeRenderer {
   drawVillagerAsset(ctx, unit, screen, size, alpha = 1) {
     const rig = this.characterRigs.get(unit.type);
     if (!rig || !rig.readiness().every(image => image.complete && image.naturalWidth > 0)) return false;
+    if(unit.type==='villager')rig.reducedMotion=this.atmosphere.reducedMotion;
     return rig.draw(ctx, unit, screen, size, alpha);
   }
 

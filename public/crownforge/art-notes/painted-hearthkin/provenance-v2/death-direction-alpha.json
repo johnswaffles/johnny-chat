@@ -1,0 +1,7 @@
+{
+  "id": "death",
+  "prompt": "Extract the sixteen characters and their tools onto a transparent background. Keep the four-by-four arrangement unchanged.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-53db23d6-f841-4172-9e62-642a5112adca.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-9c3dd939-8e82-4f9d-a87f-28ff4aa8a4f5.png",
+  "asset": "assets/work-v2/death.png"
+}

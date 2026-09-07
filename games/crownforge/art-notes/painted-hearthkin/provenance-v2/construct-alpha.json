@@ -1,0 +1,7 @@
+{
+  "action": "construct",
+  "prompt": "Extract all sixteen painted characters and their held tools as clean transparent PNG cutouts. Keep the four-column by four-row layout, the poses, colors, equipment and character unchanged. Remove the entire checkerboard background; actual transparent alpha pixels, not a painted pattern. Preserve every boot, hand and tool tip.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e90528b7-6217-4725-bb75-1def6e9204a0.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-8012da97-e899-4c23-b4f9-401c6e92a58c.png",
+  "asset": "assets/work-v2/construct.png"
+}

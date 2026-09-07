@@ -1,0 +1,6 @@
+{
+  "action": "death",
+  "prompt": "Correct the CAMERA DIRECTIONS in this Fall · study pose sprite sheet while preserving the same sixteen whole-body poses, tools, costume and four-by-four grid. Every character in ROW ONE must be seen FRONT three-quarter facing toward the LEFT edge. Every character in ROW TWO must be seen FRONT three-quarter facing toward the RIGHT edge. Every character in ROW THREE must be seen from BEHIND facing toward the LEFT edge. Every character in ROW FOUR must be seen from BEHIND facing toward the RIGHT edge. All four poses in each row have the SAME camera and facing. Do not copy right-facing poses into left-facing rows. Redraw the incorrect orientations. Keep the action sequence and full bodies intact. Return PNG with a truly transparent background, no checkerboard.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-741fd4a4-ed02-42ca-b150-74eab01c402f.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-53db23d6-f841-4172-9e62-642a5112adca.png"
+}

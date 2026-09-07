@@ -116,6 +116,6 @@ test('restored grizzlies use their own required art without requesting a humanoi
   PendingImage.instances.forEach(loaded);
   assert.equal(renderer.startupReadiness(simulation).ready,true);
   assert.equal(renderer.characterRigs.has('grizzly'),false);
-  renderer.grizzly.image.naturalWidth=0;
+  renderer.grizzly.readiness()[0].naturalWidth=0;
   assert.equal(renderer.startupReadiness(simulation).ready,false);
 });

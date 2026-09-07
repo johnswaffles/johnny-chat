@@ -1,0 +1,14 @@
+{
+  "view": "nw",
+  "group": 1,
+  "ids": [
+    "repair",
+    "demolish",
+    "attack",
+    "ward_block"
+  ],
+  "prompt": "Extract the sixteen characters and their tools onto a transparent background. Keep the four-by-four arrangement unchanged.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-ecfc50b5-5697-43c1-ba55-c7b5bf2e06b8.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-9be18efb-66e2-4930-9bd3-d99f5eb77f10.png",
+  "asset": "assets/work-v2/left-nw-1.png"
+}

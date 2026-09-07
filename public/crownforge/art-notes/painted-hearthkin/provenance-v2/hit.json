@@ -1,0 +1,12 @@
+{
+  "id": "hit",
+  "label": "Hit reaction",
+  "group": "Combat",
+  "seconds": 0.65,
+  "prop": "empty hands, all tools stowed on belt",
+  "poses": "balanced standing; sharp recoil shoulders back with bent knees; twist away shielding ribs with one forearm; recover upright with hands lowered",
+  "loop": false,
+  "prompt": "Use case: stylized-concept. Create a painted game animation sprite atlas of the SAME adult female Hearthkin as the reference image (identity/costume reference): auburn braid, cream linen headscarf, teal embroidered work coat, rolled cream sleeves, dark trousers, brown boots, leather belt and pouch. Realistic detailed whole-body painting matching this reference, not a segmented puppet.\nACTION: Hit reaction. Equipment: empty hands, all tools stowed on belt.\nEXACT GRID: SIXTEEN complete separate paintings, FOUR columns by FOUR rows, square canvas 1536x1536. Each cell contains one whole character at the same scale. Keep generous empty gutters. Entire head, feet, hands and tool must fit inside each cell. No scenery, no target objects, no captions, no border, no ground shadows. GENUINELY TRANSPARENT PNG background, actual alpha, no painted checkerboard.\nRows are FOUR distinct fixed camera directions: row 1 SOUTHWEST front three-quarter looking lower-left; row 2 SOUTHEAST front three-quarter looking lower-right; row 3 NORTHWEST REAR three-quarter facing upper-left, BACK visible; row 4 NORTHEAST REAR three-quarter facing upper-right, BACK visible. Show the exact SAME four action poses in each row seen from that row's camera. Never turn around within a row.\nColumns are successive action poses, from left to right: balanced standing; sharp recoil shoulders back with bent knees; twist away shielding ribs with one forearm; recover upright with hands lowered.\nKeep anatomical hands gripping the equipment, face and clothing identity consistent, pelvis centered and feet grounded. Render physically different poses with visible shoulder/elbow/knee changes. Neutral daylight. No new armor, swords, hats or physical shields. Real transparent empty pixels surrounding each figure.",
+  "reference": "/Users/johnshopinski/Documents/New project/crownforge-hearthkin-studio/assets/original-hearthkin-design.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-c6821102-c90a-44fc-b7a0-7ee8d1c0632b.png"
+}

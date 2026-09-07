@@ -1,0 +1,7 @@
+{
+  "action": "gather_stone",
+  "prompt": "Remove the checkerboard background. Return these sixteen characters and their held equipment on a truly transparent PNG background. Preserve their four-by-four layout and all the artwork.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-ef4f8443-04ef-49a5-97b5-65a0773cd293.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-dc7fb2ac-0355-488c-8855-8963c82e0b4f.png",
+  "asset": "assets/work-v2/gather_stone.png"
+}

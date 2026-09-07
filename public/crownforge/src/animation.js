@@ -356,6 +356,14 @@ for(const [type,rig] of Object.entries(CHARACTER_RIGS)) {
     groundAnchor:{x:.5,y:1},shadowAnchor:{x:.5,y:1,source:'world-contact'}};
 }
 
+// Painted locomotion uses the approved slower studio cadence. These clocks
+// still pause with physical movement; combat and gathering rules are unchanged.
+ANIMATION_DEFINITIONS.villager.renderer='painted';
+for(const [state,clip] of Object.entries(ANIMATION_DEFINITIONS.villager.clips)) {
+  if(state==='walk')clip.fps=1/1.25;
+  if(state.startsWith('carry_'))clip.fps=1/1.5;
+}
+
 export function animationDefinition(type) {
   return ANIMATION_DEFINITIONS[type] ?? ANIMATION_DEFINITIONS.villager;
 }
@@ -446,7 +454,7 @@ export class CrownforgeAnimationSystem {
     const duration = Math.max(0.001, clip.frames.length / Math.max(0.001, clip.fps));
     // Continuous rigs ease their cadence with actual movement and stop
     // stepping when blocked, using their own movement speed.
-    const continuous=animationDefinition(unit.type).renderer==='skeletal';
+    const continuous=['skeletal','painted'].includes(animationDefinition(unit.type).renderer);
     const locomotion = nextState === 'walk' || continuous && nextState.startsWith('carry_');
     const playbackRate = locomotion
       ? continuous && Number.isFinite(unit.motionSpeed)

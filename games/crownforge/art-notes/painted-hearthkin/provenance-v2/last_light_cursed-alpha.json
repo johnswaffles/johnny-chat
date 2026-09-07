@@ -1,0 +1,7 @@
+{
+  "action": "last_light_cursed",
+  "prompt": "Remove the checkerboard background. Return these sixteen characters on a truly transparent PNG background. Preserve their four-by-four layout and all the artwork.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b5fbd451-88c1-4e31-842a-32fc53e40fa0.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-a7fcb9cc-a058-4ef0-b607-95be9ec671f8.png",
+  "asset": "assets/work-v2/last_light_cursed.png"
+}

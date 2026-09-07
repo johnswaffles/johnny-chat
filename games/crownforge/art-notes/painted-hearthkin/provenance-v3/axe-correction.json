@@ -1,0 +1,5 @@
+{
+  "prompt": "Edit target: the supplied transparent 4 by 4 character sprite sheet. Change ONLY the axe and two-hand grip of the TOP LEFT character (row 1 column 1). She must be in an axe chopping WIND-UP: steel axe head ABOVE her hands near the upper left corner above shoulder height, wooden handle descending from that head into her two hands. Upper hand near head, lower hand near handle butt. Present image has axe head at bottom, this is the error to fix. Preserve her face, costume, boots, direction, character size and ground position. Keep all other 15 characters exactly unchanged. Complete top-left head and axe inside its cell with padding. Preserve transparent background, same four by four arrangement.",
+  "input": "/Users/johnshopinski/Documents/New project/crownforge-hearthkin-studio/assets/work-v2/left-sw-0.png",
+  "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-76c367e4-8e64-44ab-b72f-f149ebc22ef8.png"
+}

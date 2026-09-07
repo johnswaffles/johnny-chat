@@ -1,0 +1,7 @@
+{
+  "action": "hit",
+  "prompt": "Remove the checkerboard background. Return these sixteen characters on a truly transparent PNG background. Preserve their four-by-four layout and all the artwork.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-c6821102-c90a-44fc-b7a0-7ee8d1c0632b.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-36ef9eb7-0c9f-4485-ac3b-2e47400dbfdd.png",
+  "asset": "assets/work-v2/hit.png"
+}

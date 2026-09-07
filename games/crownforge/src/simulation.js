@@ -9,7 +9,7 @@ import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproac
 import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260906-firstcondemnation1';
 import { findPath } from './pathfinding.js?v=20260905-greatwood3';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260905-greatwood3';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260906-firstcondemnation1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260907-paintedhearthkin1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -246,6 +246,14 @@ function setUnitFacing(unit, dx, dz, force = false) {
   }
   const magnitude = Math.hypot(dx, dz);
   if (magnitude < 0.12) return unit.facing;
+  if (unit.type === 'villager') {
+    // Preserve the simulation's cardinal facing; painted artwork owns a
+    // separate camera-quadrant view for travel and facing a work target.
+    const sx=dx-dz,sy=dx+dz,previous=unit.paintedFacing??1;
+    const front=Math.abs(sy)<magnitude*.16?previous<2:sy>=0;
+    const right=Math.abs(sx)<magnitude*.16?[0,2].includes(previous):sx>=0;
+    unit.paintedFacing=front?(right?0:1):(right?2:3);
+  }
   if (unit.type === 'grizzly') {
     const sx=dx-dz,sy=dx+dz;
     const front=Math.abs(sy)<magnitude*.16?unit.facing<2:sy>=0;

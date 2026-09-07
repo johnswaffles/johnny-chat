@@ -1,0 +1,14 @@
+{
+  "view": "nw",
+  "group": 2,
+  "ids": [
+    "ward_raise",
+    "last_light",
+    "death",
+    "last_light_cursed"
+  ],
+  "prompt": "Extract the sixteen characters and their tools onto a transparent background. Keep the four-by-four arrangement unchanged.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e20c8e29-996f-4069-8b35-c34d6ad51b27.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-a21c03c0-11e7-4292-8cb7-c58c27025365.png",
+  "asset": "assets/work-v2/left-nw-2.png"
+}

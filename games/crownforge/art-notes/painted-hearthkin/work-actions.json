@@ -1,0 +1,191 @@
+[
+  {
+    "id": "gather_wood",
+    "label": "Chopping wood",
+    "group": "Gathering",
+    "seconds": 1.25,
+    "prop": "a woodcutting axe gripped securely in both hands",
+    "poses": "raise axe over outside shoulder; swing axe down toward a tree trunk outside the frame; low follow-through at waist height; draw axe back ready for the next swing",
+    "loop": true
+  },
+  {
+    "id": "gather_food",
+    "label": "Picking berries",
+    "group": "Gathering",
+    "seconds": 1.6,
+    "prop": "a small berry basket hanging from the left forearm",
+    "poses": "bend forward and reach right hand out; pinch berries with right fingertips; draw right hand back toward basket; drop berries into basket and begin reaching again",
+    "loop": true
+  },
+  {
+    "id": "field_work",
+    "label": "Tending fields",
+    "group": "Gathering",
+    "seconds": 1.65,
+    "prop": "a wooden hoe held firmly in both hands",
+    "poses": "extend hoe forward low; press blade into soil ahead; pull hoe blade back toward boots with bent elbows; lift blade and extend again",
+    "loop": true
+  },
+  {
+    "id": "gather_stone",
+    "label": "Quarrying stone",
+    "group": "Gathering",
+    "seconds": 1.4,
+    "prop": "a steel pickaxe held in both hands",
+    "poses": "raise pickaxe diagonally above shoulder; drive pickaxe downward ahead of boots; crouched low impact follow-through; pull pickaxe free and begin lifting",
+    "loop": true
+  },
+  {
+    "id": "gather_gold",
+    "label": "Mining gold",
+    "group": "Gathering",
+    "seconds": 1.5,
+    "prop": "a narrow prospecting pick gripped in the right hand with a small ore pouch on the belt",
+    "poses": "draw pick back above shoulder; lean forward and drive pick into a waist-high vein outside frame; hold low strike follow-through with left hand bracing; withdraw pick and reset",
+    "loop": true
+  },
+  {
+    "id": "construct",
+    "label": "Building",
+    "group": "Building",
+    "seconds": 1.25,
+    "prop": "a carpenters mallet in right hand and a wooden peg held low in left hand",
+    "poses": "position the peg in front at waist level; raise mallet with bent elbow; strike downward while left hand clears the strike; lift mallet to reset",
+    "loop": true
+  },
+  {
+    "id": "repair",
+    "label": "Repairing",
+    "group": "Building",
+    "seconds": 1.35,
+    "prop": "a small hammer in right hand and a short replacement board held by left hand",
+    "poses": "lean forward to position board; draw hammer back close to shoulder; give precise short hammer tap; inspect board and reset hand",
+    "loop": true
+  },
+  {
+    "id": "demolish",
+    "label": "Dismantling · study pose",
+    "group": "Building",
+    "seconds": 1.5,
+    "prop": "a long iron pry bar held in both hands",
+    "poses": "plant bar ahead at waist level; brace boots and lean body back pulling bar; rock forward to release; reposition bar ahead",
+    "loop": true
+  },
+  {
+    "id": "carry_wood",
+    "label": "Carrying timber",
+    "group": "Carrying",
+    "seconds": 1.5,
+    "prop": "three short rough-cut logs cradled horizontally across both forearms against the abdomen",
+    "poses": "left boot forward on ground right boot behind; right boot lifted passing the planted left boot with LOW knee; right boot forward on ground left boot behind; left boot lifted passing planted right boot with LOW knee",
+    "loop": true
+  },
+  {
+    "id": "carry_food",
+    "label": "Carrying food",
+    "group": "Carrying",
+    "seconds": 1.5,
+    "prop": "a wicker basket full of red apples and greens carried in both hands against the abdomen",
+    "poses": "left boot forward on ground right boot behind; right boot lifted passing planted left boot with LOW knee; right boot forward on ground left boot behind; left boot lifted passing planted right boot with LOW knee",
+    "loop": true
+  },
+  {
+    "id": "carry_stone",
+    "label": "Carrying stone",
+    "group": "Carrying",
+    "seconds": 1.6,
+    "prop": "a squat wooden hod containing three heavy gray stones supported by both hands against the abdomen",
+    "poses": "left boot forward with a heavy planted step; right boot passing left close to ground; right boot forward with heavy planted step; left boot passing right close to ground",
+    "loop": true
+  },
+  {
+    "id": "carry_gold",
+    "label": "Carrying gold",
+    "group": "Carrying",
+    "seconds": 1.5,
+    "prop": "a reinforced leather ore sack in both hands, open top showing gold-flecked gray ore",
+    "poses": "left boot forward right boot behind; right boot passing planted left with low knee; right boot forward left boot behind; left boot passing planted right with low knee",
+    "loop": true
+  },
+  {
+    "id": "carry_supplies",
+    "label": "Carrying supplies · study pose",
+    "group": "Carrying",
+    "seconds": 1.5,
+    "prop": "a small wooden supply crate with rope handles gripped securely in both hands",
+    "poses": "left boot forward right boot behind; right boot passing planted left with low knee; right boot forward left boot behind; left boot passing planted right with low knee",
+    "loop": true
+  },
+  {
+    "id": "attack",
+    "label": "Defensive strike",
+    "group": "Combat",
+    "seconds": 1.25,
+    "prop": "a stout wooden tool handle gripped in both hands as a defensive staff",
+    "poses": "guard stance then coil shoulders and pull staff behind shoulder; decisive forward diagonal strike at an opponent chest height; strong extended follow-through with weight on front foot; retract staff into a balanced guarded stance",
+    "loop": true
+  },
+  {
+    "id": "hit",
+    "label": "Hit reaction",
+    "group": "Combat",
+    "seconds": 0.65,
+    "prop": "empty hands, all tools stowed on belt",
+    "poses": "balanced standing; sharp recoil shoulders back with bent knees; twist away shielding ribs with one forearm; recover upright with hands lowered",
+    "loop": false
+  },
+  {
+    "id": "ward_block",
+    "label": "Shield · block impact",
+    "group": "Last Light",
+    "seconds": 0.85,
+    "prop": "empty hands, tools stowed, NO physical shield",
+    "poses": "brace in a staggered stance with forearms raised before face; recoil a little behind raised forearms; press open palms forward resolutely; settle into protective ready stance",
+    "loop": false
+  },
+  {
+    "id": "stunned",
+    "label": "Stunned · study pose",
+    "group": "Combat",
+    "seconds": 2.2,
+    "prop": "empty hands, tools stowed",
+    "poses": "head bowed slightly one hand at temple; weight sinks onto bent left knee; slow dazed tilt toward right with same feet planted; steady herself returning toward first pose",
+    "loop": true
+  },
+  {
+    "id": "death",
+    "label": "Fall · study pose",
+    "group": "Combat",
+    "seconds": 1.6,
+    "prop": "empty hands, tools remain strapped to belt",
+    "poses": "knees give way and shoulders sag; sink onto one knee using left hand on ground; roll gently onto hip and forearm; lie still on side with bent knees. Non-graphic, no blood. Keep same body scale throughout including lying pose, leaving ample horizontal room",
+    "loop": false
+  },
+  {
+    "id": "ward_raise",
+    "label": "Shield · awakening",
+    "group": "Last Light",
+    "seconds": 1.7,
+    "prop": "empty hands, no physical shield, NO painted glow or effects",
+    "poses": "near collapse on one knee with one hand over heart; lift head and open palm; rise to both feet with both palms opening outward; stand firmly protected with palms gently lowered",
+    "loop": false
+  },
+  {
+    "id": "last_light",
+    "label": "Last Light · release",
+    "group": "Last Light",
+    "seconds": 1.6,
+    "prop": "empty hands, no physical shield, NO painted magic effects",
+    "poses": "draw hands close to chest and look toward aggressor; spread elbows as shoulders lift with resolve; extend open palms toward aggressor releasing the curse; lower palms and settle calmly",
+    "loop": false
+  },
+  {
+    "id": "last_light_cursed",
+    "label": "Last Light · curse reaction",
+    "group": "Last Light",
+    "seconds": 1.8,
+    "prop": "empty hands, tools stowed, NO painted rune or magical effects",
+    "poses": "upright looking ahead; flinch and glance upward toward an unseen mark above head; clutch chest and draw breath with knees slightly bent; stand weakened but alert. This is an inspection pose, no death",
+    "loop": true
+  }
+]

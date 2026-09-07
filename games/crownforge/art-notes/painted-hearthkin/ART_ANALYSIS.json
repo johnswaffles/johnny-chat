@@ -1,0 +1,50 @@
+{
+  "ne": {
+    "file": "./assets/hearthkin-ne-v1.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGBA",
+    "transparentPixels": 977767,
+    "sha256": "b8c0fbef95d6fe083e47c40146af2b70e53de86ede5ea2fff4f9254c68facfe8",
+    "sourcePaintings": 12,
+    "scaleBase": 470.5
+  },
+  "nw": {
+    "file": "./assets/hearthkin-nw-v1.png",
+    "size": [
+      1448,
+      1086
+    ],
+    "mode": "RGBA",
+    "transparentPixels": 1172604,
+    "sha256": "ff2d61e3829677fc17aa8ead126a264bfce4bf81d05b3ee5e976acfa7b00a350",
+    "sourcePaintings": 12,
+    "scaleBase": 354.5
+  },
+  "se": {
+    "file": "./assets/hearthkin-se-v1.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGBA",
+    "transparentPixels": 949259,
+    "sha256": "9b184d356b3883f884c92f16cdce3a1abd352e51bcd700f7981e500e9bba1f96",
+    "sourcePaintings": 12,
+    "scaleBase": 477.0
+  },
+  "sw": {
+    "file": "./assets/hearthkin-sw-v1.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGBA",
+    "transparentPixels": 1007653,
+    "sha256": "d65a393efb17e0d10b24e31bc2bf58c6a47ba89874971275cfd4a8fcc079dded",
+    "sourcePaintings": 12,
+    "scaleBase": 458.5
+  }
+}

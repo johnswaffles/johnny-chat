@@ -1,0 +1,364 @@
+{
+  "gather_wood": {
+    "size": [
+      1295,
+      1214
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.7065484406505823,
+    "sha256": "6fd80d2e2adc92b50c1ea43159b28552bbbd1ea6ce706cda8536b5ada0b1ddd6",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "gather_food": {
+    "size": [
+      1230,
+      1278
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.5941403615914094,
+    "sha256": "ab1f30de1abfa15eb4c879413677d6df3c57b2ce2ae50cc040565bb337434f82",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "field_work": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.5818688013349308,
+    "sha256": "91c08776c352fce527887feef4d86b3e50f9ae5480fc6133eab16aaea8b1c485",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "gather_stone": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6960940302038262,
+    "sha256": "651b9a3e12e2face259a20937dadf5b834a151d5b6dd299ffbd87a8091c02020",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "gather_gold": {
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.7607784271240234,
+    "sha256": "dc31cf148ecf9ee0f19a9ad325193ffeec8c1fb0ee419af99b5edb3a2deb5041",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "construct": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6613980398291655,
+    "sha256": "94246cee90ad63dcc0e5e5f30dc1fde4633b21578143f3b0cc367c82d39370be",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "repair": {
+    "size": [
+      1246,
+      1263
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6125870402072062,
+    "sha256": "c438eb46970d9346c62b226fe19a2103148f99013cd1ba6c6766bab45f32a530",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "demolish": {
+    "size": [
+      1432,
+      1098
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.691354774043207,
+    "sha256": "a9dcf119b28a8a98ecac3e2270bbaf1d6da30c13d899f2025063c3a3ef829b42",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "carry_wood": {
+    "size": [
+      1291,
+      1218
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6804745242737711,
+    "sha256": "447bb5a377f6c1a5653f7df32b6d686528c9b12b57b3127abae23e1ccfffd2e5",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "carry_food": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.7083457338430896,
+    "sha256": "f1cbed501f46428b64dce20be2b9d0259522006354c9b07327b3688f70762780",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "carry_stone": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.7273954605231362,
+    "sha256": "a9a8f51b9bc8e934fbe4721721948e125f19667500e0dcffee86d04fa3fa919c",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "carry_gold": {
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6950079600016276,
+    "sha256": "33ea8a4ffea66cc130779582932c075481ecfadd7d2a2dcea4f0444a0ed6a14d",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "carry_supplies": {
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.7605450948079427,
+    "sha256": "e739aec401e671b6c0d6e1c5d959546f7abcd0eddc9ca0ad779ff28a0f0fef37",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "attack": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6472042255849861,
+    "sha256": "f82fdc107c4fe8616ead61c31fd0d0fead7e7bd429583c79980631a1f99dcb94",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "hit": {
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.7617982228597006,
+    "sha256": "4f3de2f55c4f84c96c84ce016df53afee158d759e2ceb22eb801ccf3195ee7d9",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "ward_block": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6508512473005044,
+    "sha256": "779bb7d5854772f49eaaf253ece2ed46abd874fbe63b642064f35727e8eca71e",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "stunned": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6709222672456114,
+    "sha256": "e98625f21cc5f0943da8edc56b786374f05d08eaa871e8043435807e75f47832",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "death": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6344488704725421,
+    "sha256": "f154112705f685e394824316630c8ddf629d58d5c6d2b809f568c93dd85b3335",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "ward_raise": {
+    "size": [
+      1227,
+      1282
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6303491259454779,
+    "sha256": "e9d067ebe61bc7cf6147ed269e99a2e0e3c7ff55aea0e9358a74cc7f57aec996",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "last_light": {
+    "size": [
+      1234,
+      1274
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.7048067699838944,
+    "sha256": "58effb7c3487a20fc898cc8b77dee40ff022f4424a8d935f70ce6b8108ff9fa9",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "last_light_cursed": {
+    "size": [
+      1261,
+      1247
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.7078119922389469,
+    "sha256": "12a1217ddd4c1a72e0f4cea0a6dd9d440573b402cc9da4b93085f89dfbab5d51",
+    "rowCuts": [],
+    "frames": 16
+  },
+  "left-nw-0": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.685047401743448,
+    "sha256": "70057c8981c40f955f7e2a0aecc76b6eaf2e5eb025acfd7cf7794d276d450ace",
+    "frames": 16,
+    "view": "nw",
+    "actions": [
+      "gather_wood",
+      "gather_stone",
+      "gather_gold",
+      "construct"
+    ]
+  },
+  "left-nw-1": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6340577774725344,
+    "sha256": "1e7232bc41936111fdbbcd08cc03965da1974296d7f30c748f30575bfd9ecad8",
+    "frames": 16,
+    "view": "nw",
+    "actions": [
+      "repair",
+      "demolish",
+      "attack",
+      "ward_block"
+    ]
+  },
+  "left-nw-2": {
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.7123730977376302,
+    "sha256": "ed9add6f7f0fec128d0b766631b7a9e8f7d1b47f0c3210663675ba30e4ba96b8",
+    "frames": 16,
+    "view": "nw",
+    "actions": [
+      "ward_raise",
+      "last_light",
+      "death",
+      "last_light_cursed"
+    ]
+  },
+  "left-sw-0": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6442974189133847,
+    "sha256": "cace36e7a2594b621e0868a8c9fa486c7c2fe456c14319b0f9ccbca1894fd6e3",
+    "frames": 16,
+    "view": "sw",
+    "actions": [
+      "gather_wood",
+      "gather_stone",
+      "gather_gold",
+      "construct"
+    ]
+  },
+  "left-sw-1": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.5948123898262403,
+    "sha256": "2a46535729684c285ff8179d09e2ffbeec2066e4b6e546f4251c846017f9b1de",
+    "frames": 16,
+    "view": "sw",
+    "actions": [
+      "repair",
+      "demolish",
+      "attack",
+      "ward_block"
+    ]
+  },
+  "left-sw-2": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6545154389526084,
+    "sha256": "6830c4fcfc776c6f19a1c70fde47fb82a4a2b8dbc9e31247a30312d6bd351517",
+    "frames": 16,
+    "view": "sw",
+    "actions": [
+      "ward_raise",
+      "last_light",
+      "death",
+      "last_light_cursed"
+    ]
+  },
+  "chop-sw-fixed": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.6040033932882082,
+    "sha256": "e4bf7c14464e798fb32cb172f2203b87b420790a1efb2746be12900ace430e41",
+    "frames": 16,
+    "action": "gather_wood",
+    "correctedViews": [
+      "sw"
+    ]
+  },
+  "timber-forward": {
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparentFraction": 0.668122931658565,
+    "sha256": "719a574c6e2f4f5fa2e9f4af61ed5d0862de10344fe2047eeafb20e571d3c106",
+    "frames": 16,
+    "action": "carry_wood",
+    "correctedViews": [
+      "sw",
+      "se"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "action": "attack",
+  "prompt": "Correct the CAMERA DIRECTIONS in this Defensive strike sprite sheet while preserving the same sixteen whole-body poses, tools, costume and four-by-four grid. Every character in ROW ONE must be seen FRONT three-quarter facing toward the LEFT edge. Every character in ROW TWO must be seen FRONT three-quarter facing toward the RIGHT edge. Every character in ROW THREE must be seen from BEHIND facing toward the LEFT edge. Every character in ROW FOUR must be seen from BEHIND facing toward the RIGHT edge. All four poses in each row have the SAME camera and facing. Do not copy right-facing poses into left-facing rows. Redraw the incorrect orientations. Keep the action sequence and full bodies intact. Return PNG with a truly transparent background, no checkerboard.",
+  "reference": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-436def57-562b-4d63-9f7c-a586cb0a0bcc.png",
+  "generated": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-470b980a-94a5-4f75-8ec2-43e8a1c87c4b.png"
+}
