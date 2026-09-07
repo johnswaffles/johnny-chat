@@ -1,0 +1,7 @@
+{
+  "prompt": "Edit only this atlas. Preserve all twelve poses EXACTLY, every cell looking in the same direction as the original cell. Change the woman's identity and costume: black braided hair, no headscarf, warm tan complexion, charcoal blouse, rolled grey sleeves, rust red sash, pale grey worn FRONT apron over a charcoal skirt, brown boots. Back of outfit plain charcoal. No teal, no headscarf. EXACT THREE ROWS FOUR COLUMNS. Row1 idle4, rows2+3 eight walking frames from same camera. Do not rotate characters or replace walk phases with different angles. Same detailed painterly style. Transparent background.",
+  "inputs": [
+    "/private/tmp/crownforge-building-release-20260905/games/crownforge/assets/hearthkin-painted/hearthkin-sw-v1.png"
+  ],
+  "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-0bdba677-3bfa-4cd2-a409-d53b84c143cf.png"
+}

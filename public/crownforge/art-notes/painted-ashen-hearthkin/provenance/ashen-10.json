@@ -1,0 +1,7 @@
+{
+  "prompt": "Edit this sprite sheet. Keep EXACTLY sixteen complete poses in their original four rows and four columns, preserving each cell's camera direction, action, tool/cargo and walking foot positions. Change ONLY the woman to Ashen Hearthkin: dark brown braid without headscarf, warm tan skin, charcoal blouse, rolled grey sleeves, rust-red sash, worn pale grey apron on FRONT over dark skirt, brown boots. Rear garment is plain charcoal without apron. Same detailed painterly style. No teal coat or white scarf. Action carry_supplies. Actual transparent background; keep generous separation between cells.",
+  "inputs": [
+    "/private/tmp/crownforge-building-release-20260905/games/crownforge/assets/hearthkin-painted/work-v2/carry_supplies.png"
+  ],
+  "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-78f67f96-358d-46d6-b49b-dc8fddf8c06f.png"
+}

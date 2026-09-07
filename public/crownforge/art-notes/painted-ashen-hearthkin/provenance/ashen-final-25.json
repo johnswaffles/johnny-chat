@@ -1,0 +1,7 @@
+{
+  "prompt": "Extract the sixteen characters onto a transparent background. Remove the checkerboard entirely. Keep the four-by-four arrangement, all poses and the paintings unchanged.",
+  "inputs": [
+    "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-7a682d1d-bbc3-4e32-bad8-cb9a2ac53161.png"
+  ],
+  "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-a0418fe2-d647-4674-9908-07668bb0ac26.png"
+}

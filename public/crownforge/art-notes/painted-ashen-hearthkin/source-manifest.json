@@ -1,0 +1,167 @@
+[
+  {
+    "id": "ashen-00-hearthkin-sw-v1",
+    "source": "./assets/hearthkin-painted/hearthkin-sw-v1.png",
+    "rows": 3
+  },
+  {
+    "id": "ashen-01-chop-sw-fixed",
+    "source": "./assets/hearthkin-painted/work-v3/chop-sw-fixed.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-02-gather_food",
+    "source": "./assets/hearthkin-painted/work-v2/gather_food.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-03-field_work",
+    "source": "./assets/hearthkin-painted/work-v2/field_work.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-04-left-sw-0",
+    "source": "./assets/hearthkin-painted/work-v2/left-sw-0.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-05-left-sw-1",
+    "source": "./assets/hearthkin-painted/work-v2/left-sw-1.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-06-timber-forward",
+    "source": "./assets/hearthkin-painted/work-v3/timber-forward.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-07-carry_food",
+    "source": "./assets/hearthkin-painted/work-v2/carry_food.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-08-carry_stone",
+    "source": "./assets/hearthkin-painted/work-v2/carry_stone.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-09-carry_gold",
+    "source": "./assets/hearthkin-painted/work-v2/carry_gold.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-10-carry_supplies",
+    "source": "./assets/hearthkin-painted/work-v2/carry_supplies.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-11-hit",
+    "source": "./assets/hearthkin-painted/work-v2/hit.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-12-stunned",
+    "source": "./assets/hearthkin-painted/work-v2/stunned.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-13-left-sw-2",
+    "source": "./assets/hearthkin-painted/work-v2/left-sw-2.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-14-hearthkin-se-v1",
+    "source": "./assets/hearthkin-painted/hearthkin-se-v1.png",
+    "rows": 3
+  },
+  {
+    "id": "ashen-15-gather_wood",
+    "source": "./assets/hearthkin-painted/work-v2/gather_wood.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-16-gather_stone",
+    "source": "./assets/hearthkin-painted/work-v2/gather_stone.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-17-gather_gold",
+    "source": "./assets/hearthkin-painted/work-v2/gather_gold.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-18-construct",
+    "source": "./assets/hearthkin-painted/work-v2/construct.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-19-repair",
+    "source": "./assets/hearthkin-painted/work-v2/repair.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-20-demolish",
+    "source": "./assets/hearthkin-painted/work-v2/demolish.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-21-attack",
+    "source": "./assets/hearthkin-painted/work-v2/attack.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-22-ward_block",
+    "source": "./assets/hearthkin-painted/work-v2/ward_block.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-23-death",
+    "source": "./assets/hearthkin-painted/work-v2/death.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-24-ward_raise",
+    "source": "./assets/hearthkin-painted/work-v2/ward_raise.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-25-last_light",
+    "source": "./assets/hearthkin-painted/work-v2/last_light.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-26-last_light_cursed",
+    "source": "./assets/hearthkin-painted/work-v2/last_light_cursed.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-27-hearthkin-nw-v1",
+    "source": "./assets/hearthkin-painted/hearthkin-nw-v1.png",
+    "rows": 3
+  },
+  {
+    "id": "ashen-28-left-nw-0",
+    "source": "./assets/hearthkin-painted/work-v2/left-nw-0.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-29-left-nw-1",
+    "source": "./assets/hearthkin-painted/work-v2/left-nw-1.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-30-carry_wood",
+    "source": "./assets/hearthkin-painted/work-v2/carry_wood.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-31-left-nw-2",
+    "source": "./assets/hearthkin-painted/work-v2/left-nw-2.png",
+    "rows": 4
+  },
+  {
+    "id": "ashen-32-hearthkin-ne-v1",
+    "source": "./assets/hearthkin-painted/hearthkin-ne-v1.png",
+    "rows": 3
+  }
+]

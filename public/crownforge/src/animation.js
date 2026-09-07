@@ -358,10 +358,12 @@ for(const [type,rig] of Object.entries(CHARACTER_RIGS)) {
 
 // Painted locomotion uses the approved slower studio cadence. These clocks
 // still pause with physical movement; combat and gathering rules are unchanged.
-ANIMATION_DEFINITIONS.villager.renderer='painted';
-for(const [state,clip] of Object.entries(ANIMATION_DEFINITIONS.villager.clips)) {
+for(const type of ['villager','ashenForager']) {
+ANIMATION_DEFINITIONS[type].renderer='painted';
+for(const [state,clip] of Object.entries(ANIMATION_DEFINITIONS[type].clips)) {
   if(state==='walk')clip.fps=1/1.25;
   if(state.startsWith('carry_'))clip.fps=1/1.5;
+}
 }
 
 export function animationDefinition(type) {

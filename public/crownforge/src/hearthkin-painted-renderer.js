@@ -5,14 +5,16 @@ import { RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260906-firstcondemna
 const clamp=n=>Math.max(0,Math.min(.999999,n));
 const cycle=n=>n-Math.floor(n);
 const VIEWS=['se','sw','ne','nw'];
-export function paintedHearthkinFrame(unit,timeOverride,reducedMotion=false){
+export function paintedHearthkinFrame(unit,timeOverride,reducedMotion=false,art=HEARTHKIN_PAINTED_ART){
   const view=VIEWS[unit.paintedFacing]??['sw','se','ne','nw'][unit.facing??0]??'sw';
   let action=unit.animationState??'idle',phase=unit.animationPhase??0,indexOverride;
   const moving=unit.kind==='unit'&&(unit.motionSpeed??0)>.025;
   if(unit.dead){action='death';phase=clamp((unit.deathAge??unit.animationTime??0)/1.6);}
   else if(action==='walk'&&unit.carryAmount>0)action='carry_'+unit.carryType;
   if(!unit.dead&&unit.command==='attack'&&['anticipation','contact','recovery'].includes(unit.attackPhase)) {
-    action='attack_'+unit.attackPhase;phase=clamp((unit.attackPhaseElapsed??0)/(UNIT_TYPES.villager.cooldown*UNIT_TYPES.villager.attackTiming[unit.attackPhase]));
+    const config=UNIT_TYPES[unit.type]??UNIT_TYPES.villager;
+    const timing=config.attackTiming??{anticipation:.25,contact:.45,recovery:.3};
+    action='attack_'+unit.attackPhase;phase=clamp((unit.attackPhaseElapsed??0)/(config.cooldown*timing[unit.attackPhase]));
   }
   if(timeOverride!==undefined)phase=cycle(timeOverride/(HEARTHKIN_ACTIONS[action]?.duration??1));
   else if(action==='idle')phase=reducedMotion?0:cycle((unit.animClock??unit.animationTime??0)/3.6);
@@ -32,7 +34,7 @@ export function paintedHearthkinFrame(unit,timeOverride,reducedMotion=false){
   if(action==='attack_anticipation'){indexOverride=Math.min(1,Math.floor(clamp(phase)*2));action='attack';}
   else if(action==='attack_contact'){indexOverride=2;action='attack';}
   else if(action==='attack_recovery'){indexOverride=3;action='attack';}
-  const sheet=HEARTHKIN_PAINTED_ART[view][action]??HEARTHKIN_PAINTED_ART[view].idle;
+  const sheet=art[view][action]??art[view].idle;
   // Contact frame starts at the simulation's 60% harvest/build event.
   const work=action.startsWith('gather_')||['construct','repair','demolish','field_work'].includes(action);
   const index=indexOverride??(work?(phase<.4?0:phase<.6?1:phase<.78?2:3):Math.floor(clamp(phase)*sheet.frames.length));
@@ -40,9 +42,10 @@ export function paintedHearthkinFrame(unit,timeOverride,reducedMotion=false){
 }
 
 export class PaintedHearthkinRenderer {
-  constructor(){
-    this.definition={id:'villager'};this.images=new Map();this.cache=new Map();this.parts=new Map();this.pixelBytes=0;
-    const sheets=Object.values(HEARTHKIN_PAINTED_ART).flatMap(v=>Object.values(v));
+  constructor({type='villager',art=HEARTHKIN_PAINTED_ART}={}){
+    this.art=art;
+    this.definition={id:type};this.images=new Map();this.cache=new Map();this.parts=new Map();this.pixelBytes=0;
+    const sheets=Object.values(this.art).flatMap(v=>Object.values(v));
     for(const src of new Set(sheets.map(s=>s.src))){
       const image=new Image();this.images.set(src,image);
       image.addEventListener('load',()=>{for(const sheet of sheets.filter(s=>s.src===src))this.prepare(sheet,image);});
@@ -50,7 +53,7 @@ export class PaintedHearthkinRenderer {
     }
   }
   readiness(){return [...this.images.values()];}
-  get ready(){return this.cache.size===Object.values(HEARTHKIN_PAINTED_ART).reduce((n,v)=>n+Object.keys(v).length,0);}
+  get ready(){return this.cache.size===Object.values(this.art).reduce((n,v)=>n+Object.keys(v).length,0);}
   prepare(sheet,image){
     if(this.cache.has(sheet))return;
     const frames=sheet.frames.map(f=>{
@@ -66,7 +69,7 @@ export class PaintedHearthkinRenderer {
     this.cache.set(sheet,frames);
   }
   draw(ctx,unit,point,size,alpha=1,timeOverride){
-    const {sheet,frame,index}=paintedHearthkinFrame(unit,timeOverride,this.reducedMotion),frames=this.cache.get(sheet);
+    const {sheet,frame,index}=paintedHearthkinFrame(unit,timeOverride,this.reducedMotion,this.art),frames=this.cache.get(sheet);
     if(!frames)return false;
     const scale=size*.94/sheet.scaleBase,[full,small]=frames[index];
     // Two precomputed levels keep zoomed-out units inexpensive and avoid

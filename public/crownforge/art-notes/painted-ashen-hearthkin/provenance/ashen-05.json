@@ -1,0 +1,7 @@
+{
+  "prompt": "Edit this sprite sheet. Keep the EXACT 4 by 4 arrangement and all sixteen poses and tool placements. All cells front-left: row1 hammer repair, row2 prybar demolition, row3 staff attack, row4 shield block. Change only the woman: dark brown braided hair WITHOUT a headscarf, warm tan skin, charcoal blouse, rolled grey sleeves, rust-red sash, worn pale grey apron on front, dark skirt, brown boots. Detailed painterly Ashen Hearthkin worker, same rendering style and scale as original. No teal clothing, no white scarf. Rear views have plain charcoal back garment. Preserve each hand grip, each direction, each foot position. Real transparent background, no painted checkerboard.",
+  "inputs": [
+    "/private/tmp/crownforge-building-release-20260905/games/crownforge/assets/hearthkin-painted/work-v2/left-sw-1.png"
+  ],
+  "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-70d333c7-6a87-4cce-aa0b-bd2e14df8e2a.png"
+}

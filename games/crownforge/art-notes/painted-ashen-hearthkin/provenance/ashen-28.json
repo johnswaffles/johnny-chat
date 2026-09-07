@@ -1,0 +1,7 @@
+{
+  "prompt": "Edit this animation sprite atlas left-nw-0. Preserve EXACT original sixteen poses in a four-row four-column arrangement, every view direction, tool grip and animation phase. Replace woman with Ashen Hearthkin: dark brown braid, no headscarf, warm tan skin, charcoal blouse, rolled grey sleeves, rust-red sash, weathered pale grey apron on FRONT over dark skirt, brown boots. BACK of skirt is PLAIN CHARCOAL, no apron on the back. Same detailed painterly style and scale. No teal clothing or white scarf. Keep entire bodies and tools within cells. Transparent background, no added effects.",
+  "inputs": [
+    "/private/tmp/crownforge-building-release-20260905/games/crownforge/assets/hearthkin-painted/work-v2/left-nw-0.png"
+  ],
+  "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-3e178578-380b-421c-872c-f254befb3e18.png"
+}

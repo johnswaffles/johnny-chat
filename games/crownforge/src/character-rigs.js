@@ -63,16 +63,17 @@ const BASE_CHARACTER_RIGS={
 export const CHARACTER_RIGS=Object.fromEntries(Object.entries(BASE_CHARACTER_RIGS).map(([type,definition])=>[type,calibrateCharacterSurfaces(definition)]));
 
 class LazyCharacterRigs extends Map {
+  constructor(factories={}){super();this.factories=factories;}
   // Membership describes supported characters; iteration and size describe
   // the rigs actually requested so far. Inspection studios remain eager.
   has(type) { return Object.hasOwn(CHARACTER_RIGS,type); }
   get(type) {
     if(!this.has(type))return undefined;
-    if(!super.has(type))super.set(type,new HearthkinRig(CHARACTER_RIGS[type]));
+    if(!super.has(type))super.set(type,this.factories[type]?.()??new HearthkinRig(CHARACTER_RIGS[type]));
     return super.get(type);
   }
 }
 
-export function createCharacterRigs({lazy=false}={}) {
-  return lazy?new LazyCharacterRigs():new Map(Object.entries(CHARACTER_RIGS).map(([type,definition])=>[type,new HearthkinRig(definition)]));
+export function createCharacterRigs({lazy=false,factories={}}={}) {
+  return lazy?new LazyCharacterRigs(factories):new Map(Object.entries(CHARACTER_RIGS).map(([type,definition])=>[type,new HearthkinRig(definition)]));
 }

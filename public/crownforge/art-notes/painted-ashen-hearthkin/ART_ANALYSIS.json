@@ -1,0 +1,1248 @@
+{
+  "loco-sw": {
+    "sha256": "ad9e90966c48982ad68e2e7009166e0c841adbaed319f0db764d063f09c669a5",
+    "size": [
+      1024,
+      1536
+    ],
+    "cells": 12,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "idle",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "walk",
+        "indices": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  "01": {
+    "sha256": "05913e489c4c24b325b35071e6e9479081ec0721ac253067be35cb5e3154cd51",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "gather_wood",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "gather_stone",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "gather_gold",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "construct",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "02": {
+    "sha256": "dffd77c210c2081cd09634cbb9c1b8cc5e3287ebfdf3a5a648ee39601eb3fcb2",
+    "size": [
+      1536,
+      1024
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "gather_food",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "gather_food",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "gather_food",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "gather_food",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  "03": {
+    "sha256": "ca7bdfffd492e4a790a0f2a293e16a41dd3f33fca1a8d62e3db44576079956fc",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "field_work",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "field_work",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "field_work",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "field_work",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "05": {
+    "sha256": "a842b6e4cefbb5a80f246312dc24398078c8d2de6c719f2ad838a1a01813c984",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "repair",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "demolish",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "attack",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "ward_block",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "06": {
+    "sha256": "39ece75e82dfff5501e2d441a0e4b79828557a05614b6f86844eb93489d95fcf",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "carry_wood",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "carry_wood",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "carry_wood",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "carry_wood",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  "07": {
+    "sha256": "711258534b5d331f192cddb00e33751c7bf59e1756c94848832ab3735996d23d",
+    "size": [
+      1240,
+      1269
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "carry_food",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "carry_food",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "carry_food",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "carry_food",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  "08": {
+    "sha256": "5bb5566188950812f8f975c2aaa2f42717096390b2ab6b83a818b0a325ae4700",
+    "size": [
+      1236,
+      1272
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "carry_stone",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "carry_stone",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "carry_stone",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "carry_stone",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "09": {
+    "sha256": "789dc784f8b35dee31d526999e1a9d3ee02b4c8523f34ac49b65953b1a0d422a",
+    "size": [
+      1536,
+      1024
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "carry_gold",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "carry_gold",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "carry_gold",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "carry_gold",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  "10": {
+    "sha256": "53d1ff223e8a7837ff6d2b6f14db790885b6b91ee9db0a34c79c80f2aa12ac4c",
+    "size": [
+      1536,
+      1024
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "carry_supplies",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "carry_supplies",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "carry_supplies",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "carry_supplies",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "11": {
+    "sha256": "32a24720424061b83ae5bd1234f2f12e54a2d09168558b7b1b5990d9e0405f1f",
+    "size": [
+      1536,
+      1024
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "hit",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "hit",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "hit",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "hit",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  "12": {
+    "sha256": "fa1ac5c92303f9d9ba96e90638a864b8221e7bd4a4fec1aa27b9974d6681896e",
+    "size": [
+      1224,
+      1285
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "stunned",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "stunned",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "stunned",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "stunned",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "13": {
+    "sha256": "1496abb56653b50fee5ee6b70302d46a57a7c52e32ebd3d91b6a4f74e8002056",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "sw",
+        "action": "death",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "ward_raise",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "last_light",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "sw",
+        "action": "last_light_cursed",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "loco-se": {
+    "sha256": "0604a3fbc1cda649aa2ed246818001bae8a60872c0dab57f89c5970bf6ec546f",
+    "size": [
+      1024,
+      1536
+    ],
+    "cells": 12,
+    "clips": [
+      {
+        "view": "se",
+        "action": "idle",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "se",
+        "action": "walk",
+        "indices": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  "15": {
+    "sha256": "ca7b845e299a9d857b718e19fa5e0a89dba68136298e774fb5403acea9af7d02",
+    "size": [
+      1312,
+      1199
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "gather_wood",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "gather_wood",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "16": {
+    "sha256": "8918c1b7bfe5e4beec79a10f88bb2b5402a28da09c4c3c466d5408d7bbec334a",
+    "size": [
+      1305,
+      1205
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "gather_stone",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "gather_stone",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "17": {
+    "sha256": "7dcfec35f285bd51a8c87b5d0d29f5b3f63124ab3f9227f38e9b578159b26e18",
+    "size": [
+      1536,
+      1024
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "gather_gold",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "gather_gold",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "18": {
+    "sha256": "6971277316f54d43ddff3ace6df5afbdfae41b1ceab207826c92827f08d5331f",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "construct",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "construct",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "19": {
+    "sha256": "3e2a168fce91c530cbce0f16dc694524877297b0a8d18061fb610db3495ba083",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "repair",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "repair",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "20": {
+    "sha256": "054d3bfff8e0820976c6ccc01c415e69400ae1f355037cd9fa6e5b44fb8861a8",
+    "size": [
+      1536,
+      1024
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "demolish",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "demolish",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "21": {
+    "sha256": "cb802210c46cf1a21a922cc2eb51d7546ade42c158a430f7b3a516cfbd2af6be",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "attack",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "attack",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "22": {
+    "sha256": "b69c8e6bb4ef57a22815c65c5a49acd9e3d04858a567f3db030df19b87db3de0",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "ward_block",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "ward_block",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  "23": {
+    "sha256": "ee10537aa2dc40da5174f217e453e83236144e13003e56009f6ddb54ee8a9ac4",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "death",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "death",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "24": {
+    "sha256": "979f65d1e0624946ba02a77702c20bc4f8d805dce9b582846bac2d3f323ce2d0",
+    "size": [
+      1301,
+      1209
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "ward_raise",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "ward_raise",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "25": {
+    "sha256": "cdfcaec5da16cdef3ca4a211b8eec13702c6e9f5637d1dabd269f3e18bb6f907",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "last_light",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "last_light",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "26": {
+    "sha256": "dafc32eaf4e571909b0f4475e26c594f6144e795e71edcf56809e717c16aeccf",
+    "size": [
+      1312,
+      1199
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "se",
+        "action": "last_light_cursed",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "last_light_cursed",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "loco-nw": {
+    "sha256": "c26144d074a96fafcb56245d1191ec00fdd1678e9e522467fbc448cc3a160186",
+    "size": [
+      1448,
+      1086
+    ],
+    "cells": 12,
+    "clips": [
+      {
+        "view": "nw",
+        "action": "idle",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "walk",
+        "indices": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  },
+  "28": {
+    "sha256": "614073f4aa1838a07b1c64ec916d90724341845c15ab25ce29e49b12f77b9af8",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "nw",
+        "action": "gather_wood",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "gather_stone",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "gather_gold",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "construct",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "29": {
+    "sha256": "23f60396d8df0ccdded3c05dba029d50def50a711792b382cd49e40e2b6e0e40",
+    "size": [
+      1254,
+      1254
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "nw",
+        "action": "repair",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "demolish",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "attack",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "ward_block",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "31": {
+    "sha256": "12851c01b0320650207c521aef98079448911ae89daa7d31e9d12ac61e5bbe92",
+    "size": [
+      1536,
+      1024
+    ],
+    "cells": 16,
+    "clips": [
+      {
+        "view": "nw",
+        "action": "death",
+        "indices": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "ward_raise",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "last_light",
+        "indices": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "view": "nw",
+        "action": "last_light_cursed",
+        "indices": [
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    ]
+  },
+  "loco-ne": {
+    "sha256": "37f72e73579ec7c0d98124b327bca02bb30fc50f286befb2091c1d8c8549c072",
+    "size": [
+      1024,
+      1536
+    ],
+    "cells": 12,
+    "clips": [
+      {
+        "view": "ne",
+        "action": "idle",
+        "indices": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "view": "ne",
+        "action": "walk",
+        "indices": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    ]
+  }
+}

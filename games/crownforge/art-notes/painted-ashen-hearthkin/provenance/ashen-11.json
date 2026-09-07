@@ -1,0 +1,7 @@
+{
+  "prompt": "Edit only this atlas. Keep EXACTLY the sixteen whole-character poses and original four-by-four grid. Preserve every camera direction and body position, hand grip, tool orientation, action and sequence. Replace woman with Ashen Hearthkin: black braided hair WITHOUT headscarf, warm tan skin, charcoal blouse with rolled grey sleeves, rust-red sash, pale weathered grey FRONT apron over charcoal skirt, rugged brown boots. BACK garment entirely charcoal, no apron at back. Same detailed painterly rendering. No teal, no scarf. Action sheet hit. Transparent background. No extra effects.",
+  "inputs": [
+    "/private/tmp/crownforge-building-release-20260905/games/crownforge/assets/hearthkin-painted/work-v2/hit.png"
+  ],
+  "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e45bca35-8802-4396-8411-5e189ba3e77f.png"
+}

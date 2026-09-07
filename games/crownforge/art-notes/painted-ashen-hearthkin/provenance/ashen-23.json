@@ -1,0 +1,7 @@
+{
+  "prompt": "Edit this animation sprite atlas, action death. Preserve EXACT original four-by-four layout, every pose, camera view, direction, tool grip and sequence. Replace the Crownwarden woman with Ashen Hearthkin: black braided hair, NO headscarf, tan complexion, charcoal blouse with rolled grey sleeves, rust-red sash, worn pale grey FRONT apron over charcoal skirt, brown boots. Back garment is charcoal without apron. Same detailed painterly game style, same proportions, complete figures and tools. No teal clothing. Transparent background, separated cells, no added effects.",
+  "inputs": [
+    "/private/tmp/crownforge-building-release-20260905/games/crownforge/assets/hearthkin-painted/work-v2/death.png"
+  ],
+  "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-3290bbb4-0846-40d0-9979-e2a17088d9b6.png"
+}
