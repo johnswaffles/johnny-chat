@@ -1,4 +1,4 @@
-import {projectHearthkin,solveAnatomicalLimb} from './hearthkin-locomotion.js?v=20260909-fullroster1';
+import {projectHearthkin,solveAnatomicalLimb} from './hearthkin-locomotion.js?v=20260909-cursedbears1';
 
 const add=(a,b)=>({x:a.x+b.x,y:a.y+b.y,z:a.z+b.z});
 const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y,z:a.z-b.z});

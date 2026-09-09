@@ -1,5 +1,5 @@
-import { CONFIG } from './config.js?v=20260909-fullroster1';
-import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260909-fullroster1';
+import { CONFIG } from './config.js?v=20260909-cursedbears1';
+import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260909-cursedbears1';
 
 const MASK_WIDTH = 560;
 const MASK_HEIGHT = 460;

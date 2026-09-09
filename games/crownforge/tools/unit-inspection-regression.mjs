@@ -35,11 +35,11 @@ test('The First Condemnation accepts the delayed lesser rune and false health wi
  assert(isCurseImmune(b));assert.equal(unitStatuses(b)[0].name,'The First Condemnation');assert.equal(curseRuneKind(b),'divine');assert.equal(displayedUnitHealth(b),b.maxHp);
  s._applyUnitDamage(b,17,guard);const before=b.hp;w.hp=1;s._applyUnitDamage(w,29,b);s._updateUnitStatusEffects(w,2);
  assert.equal(b.hp,before);assert(b.lastLightCurseActive);assert(b.lastLightCurseDecoy);assert.equal(curseRuneKind(b),'curse');assert.equal(displayedUnitHealth(b),1);
- assert.deepEqual(unitStatuses(b).map(status=>status.id),['firstCondemnation','elderhide','lastLight','greatwoodFury']);
- s._applyUnitDamage(b,1,guard);assert.equal(b.hp,before-1);assert(!b.dead);assert.equal(displayedUnitHealth(b),1);
+ assert.deepEqual(unitStatuses(b).map(status=>status.id),['firstCondemnation','elderhide','thickHide','bearLineage','lastLight','greatwoodFury']);
+ s._applyUnitDamage(b,1,guard);assert.equal(b.hp,before-.5);assert(!b.dead);assert.equal(displayedUnitHealth(b),1);
  // A second worker's ward cannot heal existing wounds or reveal true health.
  const other=s.addUnit('ashenForager',110,100,'enemy');other.hp=1;s._applyUnitDamage(other,100,b);s._updateUnitStatusEffects(other,2);
- assert.equal(b.hp,before-1);assert.equal(displayedUnitHealth(b),1);assert.equal(curseRuneKind(b),'curse');
+ assert.equal(b.hp,before-.5);assert.equal(displayedUnitHealth(b),1);assert.equal(curseRuneKind(b),'curse');
  assert.equal(b.attackTarget,guard.id,'the protected worker cannot steal focus from the fighter who landed a hit');
 });
 
@@ -64,10 +64,10 @@ test('old one-HP cursed bears migrate once while retaining the mark; other battl
  }
 });
 
-test('the false one-HP bear takes normal damage until real health runs out',()=>{
+test('the false one-HP bear retains Thick Hide until real health runs out',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),w=s.addUnit('villager',105,100,'player');
  w.lastLightWardCurseSourceId=b.id;assert(s._resolveLastLightWardCurse(w));
- for(let strike=1;strike<18;strike++){assert(!s._applyUnitDamage(b,10).killed);assert.equal(b.hp,180-strike*10);assert.equal(displayedUnitHealth(b),1);}
+ for(let strike=1;strike<36;strike++){assert(!s._applyUnitDamage(b,10).killed);assert.equal(b.hp,180-strike*5);assert.equal(displayedUnitHealth(b),1);}
  assert(s._applyUnitDamage(b,10).killed);assert(b.dead);assert.equal(displayedUnitHealth(b),0);
 });
 

@@ -1,16 +1,17 @@
-import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, corpseLifetime } from './bear-combat.js?v=20260909-fullroster1';
-import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260909-fullroster1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260909-fullroster1';
-import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-fullroster1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260909-fullroster1';
-import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-fullroster1';
-import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-fullroster1';
-import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-fullroster1';
-import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-fullroster1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260909-fullroster1';
-import { findPath } from './pathfinding.js?v=20260909-fullroster1';
-import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-fullroster1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260909-fullroster1';
+import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260909-cursedbears1';
+import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260909-cursedbears1';
+import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260909-cursedbears1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260909-cursedbears1';
+import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260909-cursedbears1';
+import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
+import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
+import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
+import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260909-cursedbears1';
+import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
+import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260909-cursedbears1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -950,6 +951,7 @@ export class CrownforgeSimulation {
       faction,
       x,
       z,
+      bearVariant: type==='grizzly'?BEAR_VARIANT_IDS[this.units.filter(u=>u.type==='grizzly').length%3]:undefined,
       hp: blueprint.maxHp,
       maxHp: blueprint.maxHp,
       path: [],
@@ -4374,7 +4376,7 @@ export class CrownforgeSimulation {
   _applyUnitDamage(target, amount, attacker, {damageType='weapon'}={}) {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
     const rawDamage = Math.max(0, Number(amount) || 0);
-    const damage = target.type==='grizzly' && damageType==='arrow' && rawDamage>0 ? bearArrowDamage(target) : rawDamage;
+    const damage = bearIncomingDamage(target,rawDamage,damageType);
     if (target.lastLightWardTimer > 0) {
       target.wardBlockedPulse = 0.42;
       target.hitFlash = Math.max(target.hitFlash, 0.12);

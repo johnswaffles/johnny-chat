@@ -16,8 +16,8 @@ test('all four directions resolve approved walk, breathing, swipe and standing a
   u.grizzlyWalkBlend=0;assert.equal(paintedGrizzlyFrame(u).action,'idle');
   for(const variant of ['swipe','rear']){
    const d=GRIZZLY_ATTACKS[variant];Object.assign(u,{grizzlyAttackVariant:variant,attackPhase:'contact',attackPhaseElapsed:d.duration*d.contact*.2+1e-6});
-   const f=paintedGrizzlyFrame(u);assert.equal(f.action,variant);assert.equal(f.index,4,'damage lands on the painted striking paw');
-   u.attackPhase='recovery';u.attackPhaseElapsed=d.duration*d.recovery-1e-6;assert.equal(paintedGrizzlyFrame(u).index,7);
+   const f=paintedGrizzlyFrame(u);assert.equal(f.action,variant);assert.equal(f.index,2,'damage lands on the painted striking paw');
+   u.attackPhase='recovery';u.attackPhaseElapsed=d.duration*d.recovery-1e-6;assert.equal(paintedGrizzlyFrame(u).index,3);
   }
   u.dead=true;assert.equal(paintedGrizzlyFrame(u).action,'death');assert.equal(paintedGrizzlyFrame(u).index,0);
  }
@@ -27,7 +27,7 @@ test('actual combat damage uses the strike painting for both attacks',()=>{
  const s=new CrownforgeSimulation({seed:42});s.units=[];s.resourcesNodes=[];s.buildings=[];s.navigationVersion++;
  const bear=s.addUnit('grizzly',100,100,'wildlife'),target=s.addUnit('soldier',101.4,100,'player');target.hp=target.maxHp=10000;s._sendUnitToAttack(bear,target);
  const hits=[];const apply=s._applyUnitDamage.bind(s);
- s._applyUnitDamage=(t,damage,u)=>{if(u===bear){const frame=paintedGrizzlyFrame(u);hits.push(frame.action);assert.equal(frame.index,4);}return apply(t,damage,u);};
+ s._applyUnitDamage=(t,damage,u)=>{if(u===bear){const frame=paintedGrizzlyFrame(u);hits.push(frame.action);assert.equal(frame.index,2);}return apply(t,damage,u);};
  for(let i=0;i<12*60;i++)s._updateAttack(bear,1/60);
  assert(hits.includes('swipe')&&hits.includes('rear'));
 });

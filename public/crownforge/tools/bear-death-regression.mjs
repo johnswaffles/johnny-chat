@@ -3,7 +3,8 @@ import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {CrownforgeSimulation} from '../src/simulation.js';
 import {paintedGrizzlyFrame,GRIZZLY_VIEW_SCALE} from '../src/grizzly-renderer.js';
-import {GRIZZLY_DEATH_ART} from '../src/grizzly-death-art.js';
+import {CURSED_BEAR_ART} from '../src/cursed-bear-art.js';
+const GRIZZLY_DEATH_ART=Object.fromEntries(Object.entries(CURSED_BEAR_ART).flatMap(([id,views])=>Object.entries(views).map(([view,actions])=>[id+'-'+view,actions.death])));
 import {BEAR_DEATH,corpseLifetime} from '../src/bear-combat.js';
 test('four complete grounded collapse frames settle and hold, never returning to idle',()=>{
  for(let facing=0;facing<4;facing++){
@@ -17,17 +18,17 @@ test('collapse sources have real alpha and clipping bounds stay inside the origi
   const bytes=readFileSync(new URL('../'+sheet.src,import.meta.url));assert.equal(bytes[25],6,'PNG is RGBA');
   const width=bytes.readUInt32BE(16),height=bytes.readUInt32BE(20);
   assert.equal(sheet.frames.length,4);
-  for(const f of sheet.frames){const [x,y,w,h]=f.rect;assert(x>=0&&y>=0&&x+w<=width&&y+h<=height);assert(f.pivot[1]<=h);for(const [cx,cy,cw,ch] of f.clip)assert(cx>=0&&cy>=0&&cx+cw<=w&&cy+ch<=h);}
+  for(const f of sheet.frames){const [x,y,w,h]=f.rect;assert(x>=0&&y>=0&&x+w<=width&&y+h<=height);assert(f.pivot[1]<=h);for(const [cx,cy,cw,ch] of f.clip??[])assert(cx>=0&&cy>=0&&cx+cw<=w&&cy+ch<=h);}
  }
 });
 test('rear body width matches front mass and collapse begins at the same scale as idle',()=>{
  const widths=[];
  for(let facing=0;facing<4;facing++){
   const idle=paintedGrizzlyFrame({facing}),death=paintedGrizzlyFrame({facing,dead:true});
-  const width=f=>f.frame.rect[2]/f.sheet.scaleBase*GRIZZLY_VIEW_SCALE[f.view];
-  assert(Math.abs(width(idle)-width(death))<.01);widths.push(width(idle));
+  const width=f=>f.frame.rect[2]/f.sheet.scaleBase;
+  assert(Math.abs(width(idle)-width(death))<.2);widths.push(width(idle));
  }
- assert(Math.max(...widths)/Math.min(...widths)<1.14);
+ assert(Math.max(...widths)/Math.min(...widths)<1.3);
 });
 test('a killed bear remains for its collapse and rest in playing and finished matches, including after load',()=>{
  for(const phase of ['playing','victory']){

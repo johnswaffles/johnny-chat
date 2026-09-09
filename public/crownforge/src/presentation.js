@@ -1,4 +1,4 @@
-import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260909-fullroster1';
+import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260909-cursedbears1';
 
 export function setupPresentation({ renderer, simulation, input, announce }) {
   const shell = document.querySelector('.game-shell');

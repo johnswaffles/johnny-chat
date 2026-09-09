@@ -1,17 +1,18 @@
-import { GrizzlyRenderer } from '../src/grizzly-renderer.js?v=20260909-fullroster1';
-import { BEAR_DEATH } from '../src/bear-combat.js?v=20260909-fullroster1';
-import { GRIZZLY_MOTION, GRIZZLY_ATTACKS, grizzlyProjection } from '../src/grizzly-motion.js?v=20260909-fullroster1';
-import { createCharacterRigs } from '../src/character-rigs.js?v=20260909-fullroster1';
+import { GrizzlyRenderer } from '../src/grizzly-renderer.js?v=20260909-cursedbears1';
+import { BEAR_DEATH } from '../src/bear-combat.js?v=20260909-cursedbears1';
+import { GRIZZLY_MOTION, GRIZZLY_ATTACKS, grizzlyProjection } from '../src/grizzly-motion.js?v=20260909-cursedbears1';
+import { createCharacterRigs } from '../src/character-rigs.js?v=20260909-cursedbears1';
 const canvas=document.querySelector('#stage'),ctx=canvas.getContext('2d'),bear=new GrizzlyRenderer(),guard=createCharacterRigs({lazy:true}).get('soldier');
+const variant=document.querySelector('#variant');
 const action=document.querySelector('#action'),pause=document.querySelector('#pause'),slider=document.querySelector('#pose'),status=document.querySelector('#status'),bones=document.querySelector('#bones');
 let clock=0,last=0,paused=false,frames=0;const errors=[];window.addEventListener('error',e=>errors.push(e.message));
 pause.onclick=()=>{paused=!paused;pause.textContent=paused?'Play':'Pause'};action.onchange=()=>{clock=0};slider.oninput=()=>{paused=true;pause.textContent='Play';clock=slider.value/1000*duration()};
 const duration=()=>GRIZZLY_ATTACKS[action.value]?.duration??(action.value==='death'?BEAR_DEATH.lifetime+.2:action.value==='walk'?GRIZZLY_MOTION.strideLength/2.85:4);
-const params=new URLSearchParams(location.search);if(params.has('action'))action.value=params.get('action');if(params.has('pose')){paused=true;clock=Number(params.get('pose'))*duration();slider.value=Math.round(Number(params.get('pose'))*1000);pause.textContent='Play';}
+const params=new URLSearchParams(location.search);if(params.has('variant'))variant.value=params.get('variant');if(params.has('action'))action.value=params.get('action');if(params.has('pose')){paused=true;clock=Number(params.get('pose'))*duration();slider.value=Math.round(Number(params.get('pose'))*1000);pause.textContent='Play';}
 const ground=new Image();ground.src='./assets/crownforge-grass-tile-v1.png';
 function unit(direction){
  const d=GRIZZLY_ATTACKS[action.value],t=clock%duration(),wind=d?d.duration*d.anticipation:0,contact=d?d.duration*d.contact:0;
- const u={id:600+direction,type:'grizzly',facing:direction,animClock:clock,grizzlyTravel:t*2.85,grizzlyWalkBlend:action.value==='walk'?1:0,grizzlyAttackVariant:action.value,grizzlyAttackSide:1,attackPhase:'approach',attackPhaseElapsed:0,dead:action.value==='death',deathAge:t};
+ const u={id:600+direction,type:'grizzly',bearVariant:variant.value,facing:direction,animClock:clock,grizzlyTravel:t*2.85,grizzlyWalkBlend:action.value==='walk'?1:0,grizzlyAttackVariant:action.value,grizzlyAttackSide:1,attackPhase:'approach',attackPhaseElapsed:0,dead:action.value==='death',deathAge:t};
  const vector=[[1,0],[0,1],[0,-1],[-1,0]][direction];u.velocityX=action.value==='walk'?vector[0]*2.85:0;u.velocityZ=action.value==='walk'?vector[1]*2.85:0;
  if(d){u.attackPhase=t<wind?'anticipation':t<wind+contact?'contact':'recovery';u.attackPhaseElapsed=t-(t<wind?0:t<wind+contact?wind:wind+contact);}
  return u;

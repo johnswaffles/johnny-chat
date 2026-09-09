@@ -1,6 +1,8 @@
-import {UNIT_TYPES} from './config.js?v=20260909-fullroster1';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260909-fullroster1';
+import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
+import {UNIT_TYPES} from './config.js?v=20260909-cursedbears1';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260909-cursedbears1';
 
+const unitName=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type].label;
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';
 const health=u=>`${Math.ceil(displayedUnitHealth(u))} / ${u.maxHp} HP`;
 export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
@@ -23,7 +25,7 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     else renderer.drawVillagerAsset(ctx,u,point,size,1);
   }
   function renderButtons(container,u,key,open){
-    const statuses=unitStatuses(u),next=statuses.map(s=>s.id).join('|');
+    const statuses=unitStatuses(u),next=(u.bearVariant??'')+'|'+statuses.map(s=>s.id).join('|');
     if(key!==next){
       container.replaceChildren();
       for(const status of statuses){const b=document.createElement('button');b.type='button';b.className='unit-status';b.dataset.status=status.id;b.innerHTML=`${sigilSvg(status.rune)}<span><b></b><small></small></span>`;b.querySelector('b').textContent=status.name;b.onclick=()=>open(status.id);container.append(b);}
@@ -37,8 +39,8 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     d$('.unit-lore-health').textContent=health(profile);
     d$('.unit-lore-activity').textContent=profile.dead?'Fallen':profile.actionLabel||'Idle';
     profileKey=renderButtons(d$('.unit-lore-statuses'),profile,profileKey,id=>{chosen=id;updateProfile();});
-    const statuses=unitStatuses(profile),status=statuses.find(s=>s.id===chosen)??statuses.find(s=>s.id==='greatwoodFury')??statuses.find(s=>s.id==='lastLight')??statuses[0];
-    if(profile.type==='grizzly'){const art=d$('.unit-lore-hero img'),src=status?.art??FIRST_CONDEMNATION.art;if(art.getAttribute('src')!==src)art.src=src;art.alt=status?.id==='greatwoodFury'?'A Greatwood grizzly rears and swipes, scattering soldiers beneath the ancient trees':'A Greatwood grizzly beneath the ancient trees';}
+    const statuses=unitStatuses(profile),status=statuses.find(s=>s.id===chosen)??statuses.find(s=>s.id==='greatwoodFury')??statuses.find(s=>s.id==='lastLight')??statuses.find(s=>s.id==='bearLineage')??statuses[0];
+    if(profile.type==='grizzly'){const art=d$('.unit-lore-hero img'),src=status?.art??FIRST_CONDEMNATION.art;if(art.getAttribute('src')!==src)art.src=src;art.alt=`${bearVariant(profile).name}, a cursed Greatwood bear`; }
     dialog.classList.toggle('has-fury-art',status?.id==='greatwoodFury');
     d$('.unit-lore-sigil').innerHTML=sigilSvg(status?.rune??'ward');
     d$('.unit-lore-kind').textContent=status?.kind??'Character';
@@ -49,14 +51,14 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
   }
   function open(unit=selected,statusId=null){
     if(!unit)return;profile=unit;chosen=statusId;profileKey='!';onOpen();
-    d$('#unit-lore-title').textContent=UNIT_TYPES[unit.type].label;
+    d$('#unit-lore-title').textContent=unitName(unit);
     d$('.unit-lore-faction').textContent=factionName(unit);
     d$('.unit-lore-boundary').textContent=unit.faction==='player'?'Close this card to issue orders.':'Observation only · this character remains outside your command.';
     const bear=unit.type==='grizzly',art=d$('.unit-lore-hero img');art.hidden=!bear;d$('.unit-lore-hero canvas').hidden=bear;
-    if(bear)art.src=FIRST_CONDEMNATION.art;
+    if(bear)art.src=bearVariant(unit).art;
     if(!dialog.open)dialog.showModal();updateProfile();
   }
-  $('.unit-portrait-button').onclick=()=>open();
+  $('.unit-portrait-button').onclick=()=>{const current=simulation.selectedEntities;open(current.length===1&&current[0].kind==='unit'?current[0]:null);};
   function update(){
     const units=simulation.selectedEntities;
     selected=units.length===1&&units[0].kind==='unit'?units[0]:null;host.hidden=!selected;

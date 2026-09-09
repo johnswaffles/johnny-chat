@@ -1,0 +1,83 @@
+{
+  "release": "20260909-cursedbears1",
+  "paintings": 240,
+  "directional_atlases": 12,
+  "lore_illustrations": 3,
+  "files": [
+    {
+      "path": "assets/cursed-bears/ashen-grudge-lore-v1.png",
+      "bytes": 3398162,
+      "sha256": "28087d7d74632b14628fe19e02c5aa511c98dcc40f27e917f67b756e538c8390"
+    },
+    {
+      "path": "assets/cursed-bears/ashen-grudge-ne-v1.png",
+      "bytes": 2819547,
+      "sha256": "ea11d64a73aee45e812f8184f2411b6113821a6118afe2f4aac9df72da26bcd3"
+    },
+    {
+      "path": "assets/cursed-bears/ashen-grudge-nw-v1.png",
+      "bytes": 3089066,
+      "sha256": "6b78c4cb6f547d9c9c00b0eda50a9c6ef83d9d7ac11a66ab3cbd3e82fe811e23"
+    },
+    {
+      "path": "assets/cursed-bears/ashen-grudge-se-v1.png",
+      "bytes": 3126294,
+      "sha256": "9413f8fa40059c2e002342e1fa4739e3cf249e001660641f86b53b94e95d8e13"
+    },
+    {
+      "path": "assets/cursed-bears/ashen-grudge-sw-v1.png",
+      "bytes": 3219618,
+      "sha256": "15e147348d690357110f635cd004fa41ebec957b2e56b127d0b92bb9d2c75088"
+    },
+    {
+      "path": "assets/cursed-bears/black-oath-lore-v1.png",
+      "bytes": 3323877,
+      "sha256": "46aae1a6ca8df8620f6bd2f844d9cee732cfb45d969063eee5238e49e4dae845"
+    },
+    {
+      "path": "assets/cursed-bears/black-oath-ne-v1.png",
+      "bytes": 2720754,
+      "sha256": "2fa1b56d0ae2374d983bfa83abb7ecdee04b36a70e0433a1ef9b812eda81963f"
+    },
+    {
+      "path": "assets/cursed-bears/black-oath-nw-v1.png",
+      "bytes": 1925330,
+      "sha256": "fbf271273713bc3c2819109442b5633ecc6e98d30a8df40f15f8ce1e2b99b5f0"
+    },
+    {
+      "path": "assets/cursed-bears/black-oath-se-v1.png",
+      "bytes": 2196411,
+      "sha256": "407689a67e653fcc220d1c57569fe2028cf7b8d172cf769b601956089a4e1988"
+    },
+    {
+      "path": "assets/cursed-bears/black-oath-sw-v1.png",
+      "bytes": 2345137,
+      "sha256": "0bef7e951b3df87c9a889365367c595da187ab67ba5d8ca88ad5ff74730b3dfd"
+    },
+    {
+      "path": "assets/cursed-bears/cindermaw-lore-v1.png",
+      "bytes": 3089161,
+      "sha256": "51fa40e559dbf9b03404e242807e60cb98420a0c8d44ec78980d1c7a8a9a47d5"
+    },
+    {
+      "path": "assets/cursed-bears/cindermaw-ne-v1.png",
+      "bytes": 2738601,
+      "sha256": "fa9d8611a24c30be4b098de25898ddfe46c159d9aa7588851c49b663a75906a8"
+    },
+    {
+      "path": "assets/cursed-bears/cindermaw-nw-v1.png",
+      "bytes": 2967290,
+      "sha256": "8e1d80963654626330ccf53252c270c20bd096ec8e6e0d3d3f76b04bd224e12a"
+    },
+    {
+      "path": "assets/cursed-bears/cindermaw-se-v1.png",
+      "bytes": 3033853,
+      "sha256": "fd5755d5f1f0d267ef74619b44f32633e7b82ff6b90d0f21af8fc4370c5dd3bc"
+    },
+    {
+      "path": "assets/cursed-bears/cindermaw-sw-v1.png",
+      "bytes": 2401052,
+      "sha256": "ccd86792d838173cabce6bcfb49ea64bb82305d8554d1d7914e9ab68f1eed0ef"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260909-fullroster1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260909-cursedbears1';
 
 export const hasBuildingOutline = building => BUILDING_DEPTH[typeof building === 'string' ? building : building?.type]?.kind === 'solid';
 export const buildingActorProfile = unit => ['scout', 'ashenOutrider'].includes(typeof unit === 'string' ? unit : unit?.type) ? 'mounted' : 'foot';

@@ -1,0 +1,54 @@
+{
+  "authorization": "User: you may edit locally if needed, plz continue",
+  "backups": "/Users/johnshopinski/Documents/New project/crownforge-cursed-bear-concepts/uncleaned-sprites",
+  "files": [
+    {
+      "file": "ashen-grudge-ne-v1.png",
+      "original_sha256": "4997efada0bcb7a0a49278a9b879c3e29f9e041aaf70758911f034d1121849e8",
+      "transparent_fraction": 0.54723,
+      "method": "bright-neutral flood fill from atlas boundary; 0.35px alpha feather; interior RGB preserved"
+    },
+    {
+      "file": "ashen-grudge-nw-v1.png",
+      "original_sha256": "ea680503c3cda5c0a028d4c7bd66a2a0b44f59bb45c2b00b6202f06ab4716f81",
+      "transparent_fraction": 0.53285,
+      "method": "bright-neutral flood fill from atlas boundary; 0.35px alpha feather; interior RGB preserved"
+    },
+    {
+      "file": "ashen-grudge-se-v1.png",
+      "original_sha256": "85089f6ec01c918148ee795f6b113ac98f1f4083994bcf507dfd8a28fd3a8055",
+      "transparent_fraction": 0.44182,
+      "method": "bright-neutral flood fill from atlas boundary; 0.35px alpha feather; interior RGB preserved"
+    },
+    {
+      "file": "ashen-grudge-sw-v1.png",
+      "original_sha256": "2d1cd7d922143dd397741d5462a26c894a44efe7eb88142168a5cbbb11ea7d00",
+      "transparent_fraction": 0.41998,
+      "method": "bright-neutral flood fill from atlas boundary; 0.35px alpha feather; interior RGB preserved"
+    },
+    {
+      "file": "black-oath-ne-v1.png",
+      "original_sha256": "86b778e093d491653522967fad27eddfcc3ba4147d0657037b8c9ad9df25c0fb",
+      "transparent_fraction": 0.54283,
+      "method": "bright-neutral flood fill from atlas boundary; 0.35px alpha feather; interior RGB preserved"
+    },
+    {
+      "file": "cindermaw-ne-v1.png",
+      "original_sha256": "8b63363b378b2ea7491885c20f4f71ffc423f8bd6ce77a224cee4f650c72d2c6",
+      "transparent_fraction": 0.57346,
+      "method": "bright-neutral flood fill from atlas boundary; 0.35px alpha feather; interior RGB preserved"
+    },
+    {
+      "file": "cindermaw-nw-v1.png",
+      "original_sha256": "3fe611f6d8fa8b7f56e73a119ce42a9ad6b7ba8c494cc5127606178c45d5d423",
+      "transparent_fraction": 0.54328,
+      "method": "bright-neutral flood fill from atlas boundary; 0.35px alpha feather; interior RGB preserved"
+    },
+    {
+      "file": "cindermaw-se-v1.png",
+      "original_sha256": "eb7891a1ce62aa36985c6a39952a78e5349e1adc6904c06a33b223ae0c0cda40",
+      "transparent_fraction": 0.47049,
+      "method": "bright-neutral flood fill from atlas boundary; 0.35px alpha feather; interior RGB preserved"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { hearthkinLocomotion, projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260909-fullroster1';
+import { hearthkinLocomotion, projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260909-cursedbears1';
 
 const v=(x,y,z=0)=>({x,y,z});
 const add=(a,b)=>v(a.x+b.x,a.y+b.y,a.z+b.z);

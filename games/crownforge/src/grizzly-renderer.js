@@ -1,14 +1,13 @@
-import { GRIZZLY_PAINTED_ART } from './grizzly-painted-art.js?v=20260909-fullroster1';
-import { GRIZZLY_DEATH_ART } from './grizzly-death-art.js?v=20260909-fullroster1';
-import { BEAR_DEATH } from './bear-combat.js?v=20260909-fullroster1';
-import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260909-fullroster1';
-import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260909-fullroster1';
+import { CURSED_BEAR_ART } from './cursed-bear-art.js?v=20260909-cursedbears1';
+import { bearVariantId } from './bear-variants.js?v=20260909-cursedbears1';
+import { BEAR_DEATH } from './bear-combat.js?v=20260909-cursedbears1';
+import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260909-cursedbears1';
+import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260909-cursedbears1';
 
 const VIEWS=['se','sw','ne','nw'];
 const BODY_SCALE=.85;
-const ART=Object.fromEntries(Object.entries(GRIZZLY_PAINTED_ART).map(([view,actions])=>[view,{...actions,death:GRIZZLY_DEATH_ART[view]}]));
-// Rear paintings were calibrated against taller silhouettes, shrinking body mass.
-export const GRIZZLY_VIEW_SCALE=Object.freeze({se:1,sw:1,ne:1.25,nw:1.15});
+// All four authored views now share a measured standing-body height.
+export const GRIZZLY_VIEW_SCALE=Object.freeze({se:1,sw:1,ne:1,nw:1});
 export function paintedGrizzlyFrame(unit,time=0,reducedMotion=false){
   const view=VIEWS[Math.max(0,Math.min(3,unit.facing??0))];
   const attackTime=grizzlyAttackClock(unit);
@@ -25,15 +24,15 @@ export function paintedGrizzlyFrame(unit,time=0,reducedMotion=false){
   if(action==='swipe' && unit.grizzlyMovingAttack && (unit.grizzlyWalkBlend??0)>.05 && (phase<.46||phase>=.75)){
     action='walk';phase=(unit.grizzlyTravel??0)/GRIZZLY_MOTION.strideLength;
   }
-  const sheet=ART[view][action];
-  const index=action==='death'?Math.min(sheet.frames.length-1,Math.floor(phase*sheet.frames.length)):action==='walk'?Math.floor((phase-Math.floor(phase))*sheet.frames.length):actionFrame(action,phase);
+  const sheet=CURSED_BEAR_ART[bearVariantId(unit)][view][action];
+  const index=action==='death'?Math.min(sheet.frames.length-1,Math.floor(phase*sheet.frames.length)):action==='walk'?Math.floor((phase-Math.floor(phase))*sheet.frames.length):Math.floor(actionFrame(action,phase)*sheet.frames.length/(ACTION_TIMING[action]?.starts.length??sheet.frames.length));
   return {view,action,index,sheet,frame:sheet.frames[index]};
 }
 
 export class GrizzlyRenderer {
   constructor(){
     this.images=new Map();this.cache=new Map();this.frames=[];
-    const sheets=Object.values(ART).flatMap(view=>Object.values(view));
+    const sheets=Object.values(CURSED_BEAR_ART).flatMap(variant=>Object.values(variant).flatMap(view=>Object.values(view)));
     this.sheetCount=sheets.length;
     for(const src of new Set(sheets.map(sheet=>sheet.src))){
       const image=new Image();this.images.set(src,image);
@@ -60,13 +59,13 @@ export class GrizzlyRenderer {
     this.cache.set(sheet,frames);this.frames.push(...frames);
   }
   heightFactor(unit){
-    const {sheet,view}=paintedGrizzlyFrame(unit);
-    return Math.max(...sheet.frames.map(f=>f.pivot[1]/sheet.scaleBase))*BODY_SCALE*GRIZZLY_VIEW_SCALE[view]+.08;
+    const {sheet,frame}=paintedGrizzlyFrame(unit);
+    return frame.pivot[1]/sheet.scaleBase*BODY_SCALE*(frame.sizeFactor??1)+.08;
   }
   draw(ctx,unit,point,size,time,reducedMotion=false,resolution=1){
     const {sheet,frame,index,view}=paintedGrizzlyFrame(unit,time,reducedMotion),frames=this.cache.get(sheet);
     if(!frames)return false;
-    const [full,small]=frames[index],scale=size*BODY_SCALE*GRIZZLY_VIEW_SCALE[view]/sheet.scaleBase;
+    const [full,small]=frames[index],scale=size*BODY_SCALE*(frame.sizeFactor??1)/sheet.scaleBase;
     const image=scale*resolution<=.5?small:full;
     ctx.save();ctx.globalAlpha*=unit.dead?Math.max(0,Math.min(1,(BEAR_DEATH.lifetime-(unit.deathAge??0))/(BEAR_DEATH.lifetime-BEAR_DEATH.holdUntil))):1;
     ctx.fillStyle='rgba(13,23,17,.22)';ctx.beginPath();ctx.ellipse(point.x,point.y+2,size*.27,size*.085,0,0,Math.PI*2);ctx.fill();

@@ -16,15 +16,15 @@ test('fury uses the exact true threshold or false curse health, without healing'
  b.hp=173;b.lastLightCurseActive=true;assert(bearFuryActive(b));assert.equal(displayedUnitHealth(b),1);assert.equal(b.hp,173);
  b.lastLightCurseActive=false;assert(!bearFuryActive(b));b.hp=0;b.dead=true;assert(!bearFuryActive(b));
 });
-test('each of thirty actual arrow projectile impacts removes one thirtieth, with and without the lesser curse',()=>{
+test('each of sixty actual arrow projectile impacts removes one sixtieth, with and without the lesser curse',()=>{
  for(const cursed of [false,true]){
   const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=cursed;
   assert.equal(s._applyUnitDamage(b,0,null,{damageType:'arrow'}).damage,0);
-  for(let hit=1;hit<=30;hit++){
+  for(let hit=1;hit<=60;hit++){
    s.projectiles.push({id:9000+hit,kind:'defense-arrow',faction:'player',sourceBuildingId:999,sourceType:'watchtower',targetId:b.id,x:99.9,z:100,damage:10000,speed:30,age:0,maxAge:5});
    s._updateDefenseProjectiles(1/60);
-   assert.equal(b.hp,180-hit*6);assert.equal(b.dead,hit===30);
-   assert.equal(displayedUnitHealth(b),hit===30?0:cursed?1:b.hp);
+   assert.equal(b.hp,180-hit*3);assert.equal(b.dead,hit===60);
+   assert.equal(displayedUnitHealth(b),hit===60?0:cursed?1:b.hp);
   }
  }
 });
@@ -83,9 +83,9 @@ test('running fighters cannot hit through walls or reach an escaped target',()=>
 });
 test('bear lore reveals trickery only after Last Light, with accurate active buff numbers',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');let statuses=unitStatuses(b);
- assert.deepEqual(statuses.map(x=>x.id),['firstCondemnation','elderhide']);
+ assert.deepEqual(statuses.map(x=>x.id),['firstCondemnation','elderhide','thickHide','bearLineage']);
  assert(!/Last Light|lesser rune|lure|1 HP/.test(statuses.map(x=>x.lore+' '+x.effect).join(' ')));
- b.lastLightCurseActive=true;statuses=unitStatuses(b);const fury=statuses.find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/500%/);assert.match(fury.effect,/two other/);assert.match(fury.effect,/10 world units/);assert.match(fury.art,/greatwood-fury/);
+ b.lastLightCurseActive=true;statuses=unitStatuses(b);const fury=statuses.find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/500%/);assert.match(fury.effect,/two other/);assert.match(fury.effect,/10 world units/);assert.match(fury.art,/cursed-bears/);
  assert.match(statuses.find(x=>x.id==='lastLight').lore,/bait/);assert.equal(b.hp,b.maxHp);
  b.lastLightCurseActive=false;b.hp=18;assert(unitStatuses(b).some(x=>x.id==='greatwoodFury'));
 });

@@ -11,7 +11,7 @@ test('bear closes and hits fleeing prey during moving swipes, once per cycle',()
  for(let i=0;i<7*60;i++){t.x+=1.9/60;t.velocityX=1.9;s._updateUnit(b,1/60);}
  assert(b.x>110,'pursuit continues through attack cycles');assert(hits.length>=3);
  assert.equal(new Set(hits.map(h=>h.cycle)).size,hits.length);
- for(const hit of hits){assert(hit.speed>1);assert(hit.distance<=GRIZZLY_PURSUIT.reach);assert.equal(hit.frame.action,'swipe');assert.equal(hit.frame.index,4);}
+ for(const hit of hits){assert(hit.speed>1);assert(hit.distance<=GRIZZLY_PURSUIT.reach);assert.equal(hit.frame.action,'swipe');assert.equal(hit.frame.index,2);}
  assert.equal(b.grizzlyAttackVariant,'swipe','chase never slides the upright bear');assert(b.grizzlyTravel>8);
  const saved=s.serialize(),restored=arena();assert(restored.loadSnapshot(saved));const copy=restored.units.find(u=>u.id===b.id);assert.equal(copy.grizzlyMovingAttack,b.grizzlyMovingAttack);
 });

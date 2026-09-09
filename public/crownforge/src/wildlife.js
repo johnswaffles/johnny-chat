@@ -1,4 +1,5 @@
-import { CONFIG, UNIT_TYPES } from './config.js?v=20260909-fullroster1';
+import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
+import { CONFIG, UNIT_TYPES } from './config.js?v=20260909-cursedbears1';
 
 export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 300, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
@@ -39,6 +40,7 @@ function planGrizzly(sim,state,side=null,avoid=[]) {
 function releasePlannedGrizzly(sim,plan) {
   const {point,target,route}=plan;
   const bear=sim.addUnit('grizzly',point.x,point.z,'wildlife');
+  bear.bearVariant=BEAR_VARIANT_IDS[sim.wildlifeState.spawnCount%BEAR_VARIANT_IDS.length];
   bear.wildlifeBornAt=sim.clock;bear.wildlifeHome={...point};bear.wildlifeScanClock=0;
   sim._sendUnitToAttack(bear,target,0,{requireImmediateRoute:true,precomputedRoute:route});
   bear.actionLabel='Hunting through the woodland';
@@ -50,7 +52,7 @@ export function spawnGrizzly(sim) {
   const state=sim.wildlifeState,plan=planGrizzly(sim,state);
   if(!plan)return null;
   const bear=releasePlannedGrizzly(sim,plan);state.spawnCursor=0;
-  sim._announce('A huge grizzly has emerged from the woods. Soldiers, protect the settlement!');
+  sim._announce(`${bearVariant(bear).name} has emerged from the woods. Soldiers, protect the settlement!`);
   return bear;
 }
 
