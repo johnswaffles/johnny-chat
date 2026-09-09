@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-09",
+  "mode": "built-in image_gen",
+  "source": "assets/painted-death-ne-v2.png",
+  "request": "Redraw the incorrect rear leg with coherent hip, knee, hock and paw anatomy; preserve local review scope.",
+  "attempts": [
+    {
+      "prompt": "Use case: precise-object-edit.\nEdit target: the supplied four-frame transparent bear death sprite sheet, 1024 x 1536, one vertical column.\nPrimary request: REDRAW the bear's hindquarters and back legs with convincing animal anatomy throughout this collapse sequence. The present rear limbs look like unrelated paws growing out of the rump; replacing that anatomy is the point of this edit. Do not merely erase one paw.\nThe animal faces right and is seen in an elevated REAR three-quarter view. Draw one coherent pelvis with a broad rounded rump. The visible near hind leg must join low on the hip: a thick thigh slopes FORWARD and DOWN toward a bent knee, the shorter lower leg folds back at the hock, and the foot rests naturally on its side beside/under the belly. Its toes point generally toward the bear's head, not toward the viewer. Use natural overlapping fur to explain the joints; no straight dangling arm-shaped hind limb and no huge black sole facing the camera.\nThe far hind leg is on the opposite side of the pelvis and becomes fully occluded beneath the bear as it falls. REMOVE the conspicuous rearward paw sticking out from the leftmost bottom edge of the rump in the third and fourth paintings. In the final two poses only ONE hind foot should be clearly visible, attached continuously to the near folded thigh; the far hind foot is concealed. Do not add replacement feet elsewhere.\nFrame 1: hind knees starting to buckle, paws naturally bearing weight, rear limb connections clearly correct.\nFrame 2: pelvis lowers and near hind knee folds as chest reaches the ground; far hind leg progressively disappears behind the body.\nFrame 3: weight settles onto the haunch and flank, near hind leg loosely folded forward against abdomen; opposite hind leg hidden.\nFrame 4: fully collapsed lifeless animal resting on its side, pelvis on ground, relaxed near thigh/knee/hock/foot connected in a readable bent silhouette, hidden far hind leg, head down and eyes closed. A heavy carcass, not a crouching live bear.\nPreserve the established bear identity, thick copper brown fur, painted game-art style, head and visible front legs, rear three-quarter camera angle, four-row layout, overall body size and frame locations. Redraw only the hindquarters needed for good anatomy and continuity. Four legs anatomically total, but do not try to show every limb when the body hides them. Keep separated real transparent RGBA cutouts. No background or ground surface, no artificial checkerboard, no added labels, no glow.",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d2f75041-391d-4700-b7da-9b54d47cce96.png",
+      "result": "Anatomy reference only; opaque checkerboard, not integrated."
+    },
+    {
+      "prompt": "Make the background transparent.",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-ec53c1ca-294f-4b2c-93a2-0eedb3f46a15.png",
+      "result": "Opaque checkerboard, not integrated."
+    },
+    {
+      "prompt": "Image 1 is the EDIT TARGET: an existing transparent RGBA four-frame bear sprite sheet. Image 2 is ONLY the reference for the corrected hind-leg anatomy. Edit image 1 by replacing its hindquarters and back legs with the exact natural folded anatomy from image 2, matching all four poses row by row. In image 2 the large near hind thigh folds forward into a bent leg and forward-pointing paw, and the far hind leg is hidden beneath the body in the last two frames: use that corrected anatomy. Remove the old exposed hind soles and old rearward-projecting far paw from image 1. Preserve the already transparent alpha background of image 1, including the new empty area where the old paw was removed. The pale checkerboard in image 2 is NOT artwork: do NOT copy it. The output must have the same real transparency as image 1, actual RGBA alpha=0 around four separate bear cutouts, NOT an opaque checkerboard image. Keep portrait 1024 x 1536, four paintings in one column, the head, front legs, colors and fur style of image 1. No checkerboard, scenery, text or painted background.",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-d903df35-97ca-4ef6-8cd6-55d3652994d7.png",
+      "result": "Opaque checkerboard, not integrated."
+    },
+    {
+      "prompt": "Redraw the back legs in this existing image. In all four bears, remove the far hind paw that sticks backward out of the rump. That leg should be hidden behind the body. Bend the visible hind leg naturally forward at the knee, tuck its lower leg beneath the thigh, and turn the paw so its toes point toward the head. In the bottom two poses, the rump rests on the ground with just one folded hind leg visible beside the belly. No large paw soles facing us. Keep the head, front legs, fur, coloring, scale and four-row arrangement exactly as they are. Keep the image's existing transparent background.",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-890dbb55-7f70-4876-828a-5cdf59d36d9b.png",
+      "result": "Selected anatomy, still RGB; source for final transparency edit."
+    },
+    {
+      "prompt": "Make the background transparent.",
+      "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-59f26a17-4c6b-4f1b-981a-6a5a01644fa5.png",
+      "result": "Selected final RGBA transparent cutouts. Copied exact generated PNG bytes into project."
+    }
+  ],
+  "selected": "assets/painted-death-ne-v3.png",
+  "change": "Redrew the rear hip, folded knee/lower leg and forward-facing paw across four collapse frames. Far hind leg is occluded. NE and mirrored NW share the correction; front views use existing art.",
+  "validation": {
+    "tests": "7/7 bear-death and painted-grizzly checks passed",
+    "browser": "Inspected frames 1\u20134 in NE and NW; zero page errors and clean transparent silhouettes",
+    "scope": "Local preview; no commit, push or deployment"
+  }
+}

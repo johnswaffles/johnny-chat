@@ -1,0 +1,42 @@
+{
+  "baseCommit": "64490db",
+  "changed": [
+    "dev/grizzly-studio.html",
+    "dev/grizzly-studio.js",
+    "index.html",
+    "src/animation.js",
+    "src/character-rigs.js",
+    "src/grizzly-renderer.js",
+    "src/hearthkin-painted-renderer.js",
+    "src/hearthkin-rig.js",
+    "src/main.js",
+    "src/military-motion.js",
+    "src/mounted-motion.js",
+    "src/renderer.js",
+    "src/simulation.js",
+    "src/unit-inspector.js",
+    "src/unit-status.js",
+    "src/wildlife.js",
+    "tools/painted-grizzly-regression.mjs",
+    "tools/unit-inspection-regression.mjs",
+    "tools/wildlife-routines-regression.mjs",
+    "unit-inspector.css"
+  ],
+  "new": [
+    "art-notes/bear-fury-prompts.json",
+    "art-notes/bear-hindleg-redraw.json",
+    "art-notes/bear-paw-correction.json",
+    "assets/greatwood-fury-card-v1.png",
+    "assets/painted-death-ne-v1.png",
+    "assets/painted-death-ne-v2.png",
+    "assets/painted-death-ne-v3.png",
+    "assets/painted-death-se-v1.png",
+    "dev/bear-fury-arena.html",
+    "dev/bear-fury-arena.js",
+    "src/bear-combat.js",
+    "src/grizzly-death-art.js",
+    "tools/bear-death-regression.mjs",
+    "tools/bear-fury-regression.mjs",
+    "tools/measure-bear-death.py"
+  ]
+}

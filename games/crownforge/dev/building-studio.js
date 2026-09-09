@@ -1,9 +1,9 @@
-import { CrownforgeSimulation } from '../src/simulation.js?v=20260906-falsemercy1';
-import { CrownforgeRenderer } from '../src/renderer.js?v=20260906-falsemercy1';
-import { BUILDING_TYPES, CONFIG, FIRST_AGE_ASSETS, ASHEN_BUILDING_ASSETS } from '../src/config.js?v=20260906-firstcondemnation1';
-import { BUILDING_DEPTH } from '../src/building-depth-data.js?v=20260905-buildings1';
-import { BUILDING_COMPONENTS } from '../src/building-components-data.js?v=20260905-buildings1';
-import { hasBuildingOutline, outlineApproaches, projectOutsideOutline } from '../src/building-geometry.js?v=20260905-buildings1';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260909-fullroster1';
+import { CrownforgeRenderer } from '../src/renderer.js?v=20260909-fullroster1';
+import { BUILDING_TYPES, CONFIG, FIRST_AGE_ASSETS, ASHEN_BUILDING_ASSETS } from '../src/config.js?v=20260909-fullroster1';
+import { BUILDING_DEPTH } from '../src/building-depth-data.js?v=20260909-fullroster1';
+import { BUILDING_COMPONENTS } from '../src/building-components-data.js?v=20260909-fullroster1';
+import { hasBuildingOutline, outlineApproaches, projectOutsideOutline } from '../src/building-geometry.js?v=20260909-fullroster1';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas),select=document.querySelector('#building');
 let simulation,building,last=performance.now(),walking=false,perimeter=false,lap=0;

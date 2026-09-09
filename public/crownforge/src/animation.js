@@ -1,7 +1,8 @@
-import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import { CHARACTER_RIGS } from './character-rigs.js?v=20260906-firstcondemnation1';
-import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260905-buildings1';
-import { COMBAT_ATLASES, UNIT_TYPES, VILLAGER_ATLASES } from './config.js?v=20260906-firstcondemnation1';
+import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260909-fullroster1';
+import { CHARACTER_RIGS } from './character-rigs.js?v=20260909-fullroster1';
+import {PAINTED_FIGHTER_TYPES} from './painted-roster-rig.js?v=20260909-fullroster1';
+import { HEARTHKIN_RIG_ART } from './hearthkin-rig-art.js?v=20260909-fullroster1';
+import { COMBAT_ATLASES, UNIT_TYPES, VILLAGER_ATLASES } from './config.js?v=20260909-fullroster1';
 
 export const ANIMATION_DIRECTIONS = [
   { index: 0, key: 'screen-down', label: 'screen-down / front' },
@@ -355,6 +356,8 @@ for(const [type,rig] of Object.entries(CHARACTER_RIGS)) {
     }])),collisionRadius:unit.radius,interactionRadius:.78,renderSize:unit.renderSize,
     groundAnchor:{x:.5,y:1},shadowAnchor:{x:.5,y:1,source:'world-contact'}};
 }
+
+for(const type of PAINTED_FIGHTER_TYPES)ANIMATION_DEFINITIONS[type].renderer='painted';
 
 // Painted locomotion uses the approved slower studio cadence. These clocks
 // still pause with physical movement; combat and gathering rules are unchanged.

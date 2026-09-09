@@ -1,0 +1,67 @@
+{
+  "pass": 25,
+  "status": "complete for local user review",
+  "scope": "Local art rebuild only. No integration, commit, push or deployment. Both approved Hearthkin and the grizzly preserved.",
+  "readyForLocalUserReview": [
+    "soldier",
+    "spearwarden",
+    "militia",
+    "shieldbearer",
+    "scout",
+    "raider",
+    "thornSpear",
+    "hearthLevy",
+    "hidewall",
+    "ashenOutrider"
+  ],
+  "retainedReviews": {
+    "soldier": "review/pass-24.json",
+    "spearwarden": "review/pass-24.json",
+    "militia": "review/pass-24.json",
+    "shieldbearer": "review/pass-23.json",
+    "raider": "review/pass-24.json"
+  },
+  "completedReviews": {
+    "hearthLevy": "Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right axe and left shield retained. Six rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. Earlier pass16 travel evidence retained; gait unchanged. Minor cap, boot and painted finish differences accepted for local review.",
+    "hidewall": "Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right mace and left tall shield retained. Eight rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. The two close-to-source-edge NE mace tips were visually inspected and remain complete. Earlier pass18/pass20 travel evidence retained. Minor body and material differences accepted for local review.",
+    "scout": "Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear, left reins/shield and stirrups retained; four distinct hoof support phases preserved. Final hold/replay verified. No art or metadata changes; pass21 travel evidence retained. Minor cloth, finish and SE camera differences accepted for local review.",
+    "ashenOutrider": "Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear and left reins/shield retained, all limbs present and four hoof phases preserved. Four SW/SE fall pivots corrected to body contact, all16 falls rechecked and final hold/replay verified. Pass21 travel evidence retained. Minor horse finish and SE camera differences accepted for local review.",
+    "thornSpear": "Five walking paintings replaced: SW1/4, NW2 and NE1/4. All16 final walking frames stepped at locked size300 in four-view comparison, idle sampled and an attack pose compared. Earlier pass23 full80-painting review covers unchanged combat, reactions and calibrated falls. Fresh four-view travel observed with forward displacement and alternating planted/passing legs. Both spear grips and back shield remain connected. Broader bodies and corrected spear/camera alignment improve continuity; minor painted proportion/finish variance accepted for local review."
+  },
+  "sourceRecords": "review/pass-25-sources.json",
+  "prompts": "review/pass-25-prompts.md",
+  "generatedSources": 6,
+  "selectedNewRasterSources": 3,
+  "replacedWalkingPaintings": 5,
+  "bodyContactCorrections": 18,
+  "calibration": "review/pass-25-calibration.json",
+  "build": {
+    "sources": 179,
+    "actionViews": 240,
+    "frameSlots": 800,
+    "warnings": 0
+  },
+  "validation": {
+    "runtimeTests": 15,
+    "atlasOwnershipTests": 2,
+    "studioSyntax": "pass",
+    "browser": {
+      "size": 300,
+      "lockScale": true,
+      "compareAllFourViews": true,
+      "thornSpearTravel": "observed after final build",
+      "warningErrorLogs": []
+    }
+  },
+  "remaining": [],
+  "futureWork": "User review and any later requested production integration remain separate from this completed local artwork rebuild.",
+  "limitations": [
+    "Minor painted material, proportion and camera variation remains between some actions.",
+    "Local draw benchmark and automated runtime checks do not verify production world simulation or deployment."
+  ],
+  "findings": [
+    "All ten remaining characters are ready for local user review; ready does not mean user-approved or integrated.",
+    "Eighteen metadata-only fall corrections anchor knees and resting bodies instead of distant equipment or boot pixels.",
+    "Three real-alpha Thorn Spear sources replace five poses; three opaque drafts remain unselected. Original outputs and exact prompts are preserved."
+  ]
+}

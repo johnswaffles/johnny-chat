@@ -1,0 +1,431 @@
+{
+  "objective": "Rebuild every remaining character on both sides as full painted frame animation, preserving identity and checking correct grips, weapons, facing, gait, combat, hit, stun and death. Integrate only complete reviewed characters; preserve both painted Hearthkin and grizzly.",
+  "releaseBase": "64490db",
+  "releaseBranch": "codex/crownforge-live-sync-20260821",
+  "views": [
+    "sw",
+    "se",
+    "nw",
+    "ne"
+  ],
+  "characters": [
+    {
+      "type": "soldier",
+      "label": "Crown Guard",
+      "slug": "crown-guard",
+      "family": "foot",
+      "weapon": "spear",
+      "shield": "left-hand sun shield",
+      "identity": "Four independently authored views preserve the Crown Guard's bronze crested helmet, cobalt plume, bronze armor, dark blue under-tunic and royal-blue cloak. The spear and sun shield are deliberately separate runtime equipment. The torso contains neither baked arms nor a cloak. Profile version two replaces the original hollow shoulder openings with continuous bronze scales, so moving an arm does not expose an empty socket.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "Four genuine gait key poses replace the original eight repeating drafts. Contact/passing anchors calibrated; all four poses stepped and forward travel checked. New four-pose right-hand spear attack matched to the gait and browser stepped with complete weapon and shield.",
+          "reactions": "Matching four idle, two hit, two dazed and four death paintings selected. All new reaction/fall poses stepped. Body-ground pivots corrected for final collapse/resting frames; dropped spear retained. Tiny seam-edge sliver by collapsed boot remains close-detail polish.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "se": {
+          "locomotionAttack": "Pass22: walk frame3 now uses a broader proportion/costume correction. All four walk frames stepped, correct spear/shield retained, travel observed. Existing attacks retained.",
+          "reactions": "4 idle, 2 hit, 2 dazed, 4 death draft frames in studio; death sequence visually inspected",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "nw": {
+          "locomotionAttack": "Pass19: four alternating walking paintings selected and browser stepped. Right spear and left shield grips retained. NW size and NE body anchor calibrated. Existing attacks unchanged.",
+          "reactions": "4 idle, 2 hit, 2 dazed, 4 death draft frames in studio; death sequence visually inspected",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "ne": {
+          "locomotionAttack": "Pass22: walk frame4 now uses a broader proportion/costume correction. All four walk frames stepped, correct spear/shield retained, travel observed. Existing attacks retained.",
+          "reactions": "4 idle, 2 hit, 2 dazed, 4 death draft frames in studio; death sequence visually inspected",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Four independently authored views preserve the Crown Guard's bronze crested helmet, cobalt plume, bronze armor, dark blue under-tunic and royal-blue cloak. The spear and sun shield are deliberately separate runtime equipment. The torso contains neither baked arms nor a cloak. Profile version two replaces the original hollow shoulder openings with continuous bronze scales, so moving an arm does not expose an empty socket.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-24.json",
+        "integration": "not integrated"
+      }
+    },
+    {
+      "type": "spearwarden",
+      "label": "Crown Spearwarden",
+      "slug": "crown-spearwarden",
+      "family": "foot",
+      "weapon": "spear",
+      "shield": "left-hand round shield",
+      "identity": "Four independently authored views preserve the Spearwarden's iron cap, brown hair and beard, pale quilted tunic, brown leather vest, blue shoulder sash, fitted brown trousers and dark leather boots. The spear and shield remain separate runtime equipment. Both profile heads, chests and boots face their named direction. The chest panels contain continuous leather and cloth beneath the moving upper arms, with no bare shoulder patch or hollow socket.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "All four walk phases retain prior review; index2 now uses material-matched-v4 with subdued leather/cloth/blue. Contacts1/3 browser compared at locked size300. Spear length/ferrule, camera and face finish differences remain.",
+          "reactions": "4 idle, 2 hit, 2 dazed, 4 death frames in studio; selected missing-weapon poses corrected separately.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "se": {
+          "locomotionAttack": "Four walking key poses and four attack paintings. All walking phases enlarged and rechecked across four directions; placement jumps and rear-view undersizing corrected. Final finish/stride-width judgment remains.",
+          "reactions": "4 idle, 2 hit, 2 dazed, 4 death frames in studio; selected missing-weapon poses corrected separately.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "nw": {
+          "locomotionAttack": "Four walking key poses and four attack paintings. All walking phases enlarged and rechecked across four directions; placement jumps and rear-view undersizing corrected. Final finish/stride-width judgment remains.",
+          "reactions": "4 idle, 2 hit, 2 dazed, 4 death frames in studio; selected missing-weapon poses corrected separately.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "ne": {
+          "locomotionAttack": "Index2 matched-v4 restores the quilted waist-length vest and longer blue-edged gambeson, with correct right spear and left shield. Contacts1/3 compared after height calibration. Brighter finish remains; matte v5/v6 drafts are RGB and unselected.",
+          "reactions": "4 idle, 2 hit, 2 dazed, 4 death frames in studio; selected missing-weapon poses corrected separately.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Four independently authored views preserve the Spearwarden's iron cap, brown hair and beard, pale quilted tunic, brown leather vest, blue shoulder sash, fitted brown trousers and dark leather boots. The spear and shield remain separate runtime equipment. Both profile heads, chests and boots face their named direction. The chest panels contain continuous leather and cloth beneath the moving upper arms, with no bare shoulder patch or hollow socket.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-24.json",
+        "integration": "not integrated"
+      }
+    },
+    {
+      "type": "militia",
+      "label": "Crown Militia",
+      "slug": "crown-militia",
+      "family": "foot",
+      "weapon": "mace",
+      "shield": "left-hand round shield",
+      "identity": "Four independently authored views of the light Crown infantryman: iron bowl helmet, open bearded face, cream linen, brown leather jerkin, blue sash and heraldic skirt. The right-hand mace and left-hand shield remain separate runtime props.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "Four v5 opposite contacts remain selected. All sixteen walking phases reviewed; SE v5 is a valid opposite contact. Final-step scales/pivots calibrated and rechecked across four views.",
+          "reactions": "Four idle, two hit, two dazed and four death slots in the local studio. Selected equipment-loss errors corrected; full transition review pending.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "se": {
+          "locomotionAttack": "Four v5 opposite contacts remain selected. All sixteen walking phases reviewed; SE v5 is a valid opposite contact. Final-step scales/pivots calibrated and rechecked across four views.",
+          "reactions": "Four idle, two hit, two dazed and four death slots in the local studio. Selected equipment-loss errors corrected; full transition review pending.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "nw": {
+          "locomotionAttack": "Four v5 opposite contacts remain selected. All sixteen walking phases reviewed; SE v5 is a valid opposite contact. Final-step scales/pivots calibrated and rechecked across four views.",
+          "reactions": "Four idle, two hit, two dazed and four death slots in the local studio. Selected equipment-loss errors corrected; full transition review pending.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "ne": {
+          "locomotionAttack": "Four v5 opposite contacts remain selected. All sixteen walking phases reviewed; SE v5 is a valid opposite contact. Final-step scales/pivots calibrated and rechecked across four views.",
+          "reactions": "Four idle, two hit, two dazed and four death slots in the local studio. Selected equipment-loss errors corrected; full transition review pending.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Four independently authored views of the light Crown infantryman: iron bowl helmet, open bearded face, cream linen, brown leather jerkin, blue sash and heraldic skirt. The right-hand mace and left-hand shield remain separate runtime props.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-24.json",
+        "integration": "not integrated"
+      }
+    },
+    {
+      "type": "shieldbearer",
+      "label": "Crown Shieldbearer",
+      "slug": "crown-shieldbearer",
+      "family": "foot",
+      "weapon": "axe",
+      "shield": "left-hand large oval shield",
+      "identity": "Four independently authored views preserve the unhelmeted, broad, chestnut-haired and bearded Shieldbearer in dark petrol-teal quilted cloth, cream sleeves, leather bracers and boots. The right-hand axe and large left-hand round shield are separate runtime props.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "Corrected SW four-step gait remains selected and browser reviewed.",
+          "reactions": "Pass23: all four death pivots follow knees/body contact instead of the dropped axe. All four views of hit/dazed/death reviewed with equipment retained; final hold and replay checked.",
+          "visualReview": "Pass23: all six actions reviewed across four views; equipment, alternating support, body contacts and final hold checked. Ready for local user review. Minor finish and NW stride-range variation accepted."
+        },
+        "se": {
+          "locomotionAttack": "Four SE walk paintings now use row-alpha-v9 with alternating leading legs and close-foot passing poses. All four source/frame poses reviewed at locked size300; compared against idle height. Right axe and left shield retained. Brighter finish and older-action body/clothing continuity remain.",
+          "reactions": "Four corrected SE fall paintings now use knee-row-alpha-v12: bare right axe hand, visibly planted left boot bracing initial right-knee fall, one shield only in final rest. All four frames reviewed after body/knee pivot calibration; complete axe and shield, final hold verified.",
+          "visualReview": "Pass23: all six actions reviewed across four views; equipment, alternating support, body contacts and final hold checked. Ready for local user review. Minor finish and NW stride-range variation accepted."
+        },
+        "nw": {
+          "locomotionAttack": "Pass23: valid shorter opposite walking contact retained; wider repeated-lead draft rejected. Attack frame3 now uses an explicit right-arm high forward axe swing, left shield retained, scale990, all four attack frames stepped and playback checked.",
+          "reactions": "All-view hit, dazed and death phases reviewed. SE final corpse has a duplicate shield; corrected draft awaiting actual alpha.",
+          "visualReview": "Pass23: all six actions reviewed across four views; equipment, alternating support, body contacts and final hold checked. Ready for local user review. Minor finish and NW stride-range variation accepted."
+        },
+        "ne": {
+          "locomotionAttack": "Spaced v7 real-RGBA four-pose gait selected for local review. Right axe/left shield retained. Passing anchors calibrated; all four rechecked and forward travel observed.",
+          "reactions": "All-view hit, dazed and death phases reviewed. SE final corpse has a duplicate shield; corrected draft awaiting actual alpha.",
+          "visualReview": "Pass23: all six actions reviewed across four views; equipment, alternating support, body contacts and final hold checked. Ready for local user review. Minor finish and NW stride-range variation accepted."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Four independently authored views preserve the unhelmeted, broad, chestnut-haired and bearded Shieldbearer in dark petrol-teal quilted cloth, cream sleeves, leather bracers and boots. The right-hand axe and large left-hand round shield are separate runtime props.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-23.json",
+        "integration": "not integrated"
+      }
+    },
+    {
+      "type": "scout",
+      "label": "Crown Scout",
+      "slug": "crown-scout",
+      "family": "mounted",
+      "weapon": "spear",
+      "shield": "left-arm small round shield and reins",
+      "identity": "Eight original built-in image-generation sheets preserve the Crown Scout's chestnut horse, teal wool and old-gold trim, brown leather tack, and practical light cavalry identity. The rider has an open iron helmet, brown hair, ivory sleeves, leather vest and bracers, fingerless gloves, olive riding breeches and separate riding boots. His spear and small round shield remain runtime equipment; neither is baked into a character component.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "Pass21: complete four-hoof walking cycle with LF/RH/RF/LH swings, three supports, right spear and left reins/shield. All frames stepped and calibrated; attacks retained.",
+          "reactions": "Four idle breathing, two hit, two dazed and four full rider-and-horse fall paintings. All-view idle and fall phases browser reviewed; final motion acceptance pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear, left reins/shield and stirrups retained; four distinct hoof support phases preserved. Final hold/replay verified. No art or metadata changes; pass21 travel evidence retained. Minor cloth, finish and SE camera differences accepted for local review."
+        },
+        "se": {
+          "locomotionAttack": "Pass21: complete four-hoof walking cycle with LF/RH/RF/LH swings, three supports, right spear and left reins/shield. All frames stepped and calibrated; attacks retained.",
+          "reactions": "Four idle breathing, two hit, two dazed and four full rider-and-horse fall paintings. All-view idle and fall phases browser reviewed; final motion acceptance pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear, left reins/shield and stirrups retained; four distinct hoof support phases preserved. Final hold/replay verified. No art or metadata changes; pass21 travel evidence retained. Minor cloth, finish and SE camera differences accepted for local review."
+        },
+        "nw": {
+          "locomotionAttack": "Pass20: four distinct mounted hoof swings LF/RH/RF/LH, three support hooves per pose. Right spear, left reins and forearm shield retained. All four frames individually checked; frames2-4 calibrated and rechecked. Existing attacks retained.",
+          "reactions": "Four idle breathing, two hit, two dazed and four full rider-and-horse fall paintings. All-view idle and fall phases browser reviewed; final motion acceptance pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear, left reins/shield and stirrups retained; four distinct hoof support phases preserved. Final hold/replay verified. No art or metadata changes; pass21 travel evidence retained. Minor cloth, finish and SE camera differences accepted for local review."
+        },
+        "ne": {
+          "locomotionAttack": "Pass21: complete four-hoof walking cycle with LF/RH/RF/LH swings, three supports, right spear and left reins/shield. All frames stepped and calibrated; attacks retained.",
+          "reactions": "Four idle breathing, two hit, two dazed and four full rider-and-horse fall paintings. All-view idle and fall phases browser reviewed; final motion acceptance pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear, left reins/shield and stirrups retained; four distinct hoof support phases preserved. Final hold/replay verified. No art or metadata changes; pass21 travel evidence retained. Minor cloth, finish and SE camera differences accepted for local review."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Eight original built-in image-generation sheets preserve the Crown Scout's chestnut horse, teal wool and old-gold trim, brown leather tack, and practical light cavalry identity. The rider has an open iron helmet, brown hair, ivory sleeves, leather vest and bracers, fingerless gloves, olive riding breeches and separate riding boots. His spear and small round shield remain runtime equipment; neither is baked into a character component.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-25.json",
+        "integration": "not integrated"
+      }
+    },
+    {
+      "type": "raider",
+      "label": "Ashen Raider",
+      "slug": "ashen-raider",
+      "family": "foot",
+      "weapon": "axe",
+      "shield": "no shield",
+      "identity": "Four independently authored views preserve the current Raider's broad masculine build, dark beard and tied hair, charcoal fur mantle, crossed leather harness, rust-red sash and fur-trimmed boots. Body sheets contain no axe, shield or cargo; the right-hand weapon is attached by the shared renderer.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "Corrected gait-v12 retained. Matching whole-painted four-pose attack-v9 selected; all poses stepped, right-hand axe grip and complete overhead blade verified. Recovery base585 matches ready base700. Attack finish remains brighter than idle.",
+          "reactions": "Matching four idle, two hit, two dazed and four death poses selected and stepped at locked size300. Idle pivots calibrated against walk. Body-ground death pivots account for dropped axe; final frame hold verified.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "se": {
+          "locomotionAttack": "Corrected contact-v8 gait retained. Matched four-pose right-hand axe attack row-v2 selected and stepped. Ready, overhead, downward forward strike and recovery checked; final base508 matches walking scale.",
+          "reactions": "Matching four idle, two hit, two dazed and four death paintings selected and stepped. Idle endpoint shrink corrected with individual bases. Death body-contact anchors calibrated; right axe drops in frame2 and final rest holds. Old death-start alias removed.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "nw": {
+          "locomotionAttack": "Corrected contact-v8 gait retained. Matched four-pose attack right-row-cutout-v5 selected and stepped. Third-pose hand swap corrected to a high far/right-arm forward strike. All grips and complete axe verified. Final base545 matches walking scale.",
+          "reactions": "Matching four idle, two hit, two dazed and four death paintings selected and stepped. Old idle aliases and bowed/kneeling source overrides superseded. Death sole clipping repaired, knee/body pivots calibrated, final hold works.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        },
+        "ne": {
+          "locomotionAttack": "Corrected four-pose row-v13 walk retained. Matching square-v5 four-pose right-hand attack selected; all poses stepped at locked size300 with full raised axe, forward reach, free left hand and NE facing. Base500 keeps ready/recovery at consistent height.",
+          "reactions": "Matching four idle, two hit, two dazed and four death paintings selected and stepped. Idle base655 compared against walk. Hit/dazed base620 retains grips and stance; old two dazed aliases removed. Death base655 with body-contact pivots avoids trailing-boot floating and holds final frame.",
+          "visualReview": "Pass24: final action and continuity review completed; correct equipment and body contact checked, minor finish variation accepted. Ready for local user review. See review/pass-24.json for exact coverage and contact corrections."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Four independently authored views preserve the current Raider's broad masculine build, dark beard and tied hair, charcoal fur mantle, crossed leather harness, rust-red sash and fur-trimmed boots. Body sheets contain no axe, shield or cargo; the right-hand weapon is attached by the shared renderer.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-24.json",
+        "integration": "not integrated"
+      }
+    },
+    {
+      "type": "thornSpear",
+      "label": "Ashen Thorn Spear",
+      "slug": "thorn-spear",
+      "family": "foot",
+      "weapon": "spear",
+      "shield": "round shield strapped to back",
+      "identity": "Four independently authored views preserve the Thorn Spear's black topknot and tied hair, brown leather and hide armor, bone shoulder guards, tooth necklace, red ties, fitted trousers, fur-edged wraps and dark boots. The spear and round back shield are separate runtime equipment. The tooth necklace belongs only to the torso; the head ends at a short bare neck. Closed leather torso panels prevent an empty shoulder cavity or painted stationary arm from appearing during motion.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "Pass17: Four-phase alternating walking draft selected using alpha-v4 base cells and independent corrected contact/passing paintings. All four phases browser stepped. Slimmer replacement bodies, unequal knee/stride range and spear carry continuity still need polish. Older attack artwork unchanged.",
+          "reactions": "All hit/dazed/death phases reviewed. NE collapse spear restored; SE/NE exaggerated death scale reduced and browser checked. Final anatomy/transition continuity pending.",
+          "visualReview": "Pass25: Five walking paintings replaced: SW1/4, NW2 and NE1/4. All16 final walking frames stepped at locked size300 in four-view comparison, idle sampled and an attack pose compared. Earlier pass23 full80-painting review covers unchanged combat, reactions and calibrated falls. Fresh four-view travel observed with forward displacement and alternating planted/passing legs. Both spear grips and back shield remain connected. Broader bodies and corrected spear/camera alignment improve continuity; minor painted proportion/finish variance accepted for local review."
+        },
+        "se": {
+          "locomotionAttack": "Pass23: new SE3 broader body/short boots and longer waist-height spear, scale1060; all four steps and four-view travel checked. Correct opposite contact and connected two-hand grips. Existing attack set reviewed and retained.",
+          "reactions": "All hit/dazed/death phases reviewed. NE collapse spear restored; SE/NE exaggerated death scale reduced and browser checked. Final anatomy/transition continuity pending.",
+          "visualReview": "Pass25: Five walking paintings replaced: SW1/4, NW2 and NE1/4. All16 final walking frames stepped at locked size300 in four-view comparison, idle sampled and an attack pose compared. Earlier pass23 full80-painting review covers unchanged combat, reactions and calibrated falls. Fresh four-view travel observed with forward displacement and alternating planted/passing legs. Both spear grips and back shield remain connected. Broader bodies and corrected spear/camera alignment improve continuity; minor painted proportion/finish variance accepted for local review."
+        },
+        "nw": {
+          "locomotionAttack": "Pass17: Four-phase alternating walking draft selected using alpha-v4 base cells and independent corrected contact/passing paintings. All four phases browser stepped. Slimmer replacement bodies, unequal knee/stride range and spear carry continuity still need polish. Older attack artwork unchanged.",
+          "reactions": "All hit/dazed/death phases reviewed. NE collapse spear restored; SE/NE exaggerated death scale reduced and browser checked. Final anatomy/transition continuity pending.",
+          "visualReview": "Pass25: Five walking paintings replaced: SW1/4, NW2 and NE1/4. All16 final walking frames stepped at locked size300 in four-view comparison, idle sampled and an attack pose compared. Earlier pass23 full80-painting review covers unchanged combat, reactions and calibrated falls. Fresh four-view travel observed with forward displacement and alternating planted/passing legs. Both spear grips and back shield remain connected. Broader bodies and corrected spear/camera alignment improve continuity; minor painted proportion/finish variance accepted for local review."
+        },
+        "ne": {
+          "locomotionAttack": "Pass17: Four-phase alternating walking draft selected using alpha-v4 base cells and independent corrected contact/passing paintings. All four phases browser stepped. Slimmer replacement bodies, unequal knee/stride range and spear carry continuity still need polish. Older attack artwork unchanged.",
+          "reactions": "All hit/dazed/death phases reviewed. NE collapse spear restored; SE/NE exaggerated death scale reduced and browser checked. Final anatomy/transition continuity pending.",
+          "visualReview": "Pass25: Five walking paintings replaced: SW1/4, NW2 and NE1/4. All16 final walking frames stepped at locked size300 in four-view comparison, idle sampled and an attack pose compared. Earlier pass23 full80-painting review covers unchanged combat, reactions and calibrated falls. Fresh four-view travel observed with forward displacement and alternating planted/passing legs. Both spear grips and back shield remain connected. Broader bodies and corrected spear/camera alignment improve continuity; minor painted proportion/finish variance accepted for local review."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Four independently authored views preserve the Thorn Spear's black topknot and tied hair, brown leather and hide armor, bone shoulder guards, tooth necklace, red ties, fitted trousers, fur-edged wraps and dark boots. The spear and round back shield are separate runtime equipment. The tooth necklace belongs only to the torso; the head ends at a short bare neck. Closed leather torso panels prevent an empty shoulder cavity or painted stationary arm from appearing during motion.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-25.json",
+        "integration": "not integrated"
+      }
+    },
+    {
+      "type": "hearthLevy",
+      "label": "Ashen Hearth Levy",
+      "slug": "hearth-levy",
+      "family": "foot",
+      "weapon": "axe",
+      "shield": "left-hand wooden shield",
+      "identity": "Four independently authored views preserve the citizen defender's stitched brown leather cap, bearded open face, tawny fur collar, rough brown vest, cream sleeves, and red sash. The right-hand axe and left-hand wooden shield are separate runtime props. The head has a short bare neck; its fur collar appears only on the torso.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "Pass16: Matched alpha-v7 walking sheet selected with source order [0,3,2,1]. All contacts/support alternate correctly. Passing knee amplitude and costume continuity with older actions remain. Older attacks unchanged.",
+          "reactions": "Four idle, two hit, two dazed and four death slots in the local studio. Selected equipment-loss errors corrected; full transition review pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right axe and left shield retained. Six rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. Earlier pass16 travel evidence retained; gait unchanged. Minor cap, boot and painted finish differences accepted for local review."
+        },
+        "se": {
+          "locomotionAttack": "Pass16: Walking sheet cells0/1 plus independent right contact and bracer-corrected left-support/right-passing replacements selected. Shorter opposite stride, unequal passing knee height and mixed-source continuity remain. Older attacks unchanged.",
+          "reactions": "Four idle, two hit, two dazed and four death slots in the local studio. Selected equipment-loss errors corrected; full transition review pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right axe and left shield retained. Six rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. Earlier pass16 travel evidence retained; gait unchanged. Minor cap, boot and painted finish differences accepted for local review."
+        },
+        "nw": {
+          "locomotionAttack": "Pass16: Alternating four-phase walk retained. Frame2 now uses stocky-alpha-v10 with broader torso, shorter boots and smaller shield while preserving left support/right passing. Rearward camera and waist/boot continuity remain. Older attacks unchanged.",
+          "reactions": "Four idle, two hit, two dazed and four death slots in the local studio. Selected equipment-loss errors corrected; full transition review pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right axe and left shield retained. Six rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. Earlier pass16 travel evidence retained; gait unchanged. Minor cap, boot and painted finish differences accepted for local review."
+        },
+        "ne": {
+          "locomotionAttack": "Pass16: Alternating walk selected using compose-v4 cells0-2 and stocky-alpha-v13 right-support/left-passing frame4. Camera, waist, boots and axe carry continuity remain. Older attacks unchanged.",
+          "reactions": "Four idle, two hit, two dazed and four death slots in the local studio. Selected equipment-loss errors corrected; full transition review pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right axe and left shield retained. Six rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. Earlier pass16 travel evidence retained; gait unchanged. Minor cap, boot and painted finish differences accepted for local review."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Four independently authored views preserve the citizen defender's stitched brown leather cap, bearded open face, tawny fur collar, rough brown vest, cream sleeves, and red sash. The right-hand axe and left-hand wooden shield are separate runtime props. The head has a short bare neck; its fur collar appears only on the torso.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-25.json",
+        "integration": "not integrated"
+      }
+    },
+    {
+      "type": "hidewall",
+      "label": "Ashen Hidewall",
+      "slug": "ashen-hidewall",
+      "family": "foot",
+      "weapon": "mace",
+      "shield": "left-hand tall oval hide shield",
+      "identity": "Four independently authored views preserve the massive Hidewall's square weathered face, dark beard and high topknot, bone necklace, two-tone fur yoke, leather cuirass, rust-red sash, hide panels and fur-cuffed boots. The tan fur remains on the anatomical right shoulder and dark fur on the left; their visible placement changes correctly with facing.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "Pass18: Alternating four-phase walking draft selected and individually browser stepped. Right mace, left shield and fur sides retained. Mixed-source boot/body/costume/mace carry continuity needs polish, especially SW/NE. Existing attacks unchanged.",
+          "reactions": "Idle/hit/dazed/death drafts selected; kneeling gear inspected in browser.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right mace and left tall shield retained. Eight rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. The two close-to-source-edge NE mace tips were visually inspected and remain complete. Earlier pass18/pass20 travel evidence retained. Minor body and material differences accepted for local review."
+        },
+        "se": {
+          "locomotionAttack": "Pass20: separated four-phase SE walk selected, with isolated right-knee passing override. Complete right mace and left shield; all four frames stepped and frame2 size corrected. Existing attack retained.",
+          "reactions": "Idle/hit/dazed/death drafts selected; kneeling gear inspected in browser.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right mace and left tall shield retained. Eight rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. The two close-to-source-edge NE mace tips were visually inspected and remain complete. Earlier pass18/pass20 travel evidence retained. Minor body and material differences accepted for local review."
+        },
+        "nw": {
+          "locomotionAttack": "Pass18: Alternating four-phase walking draft selected and individually browser stepped. Right mace, left shield and fur sides retained. Mixed-source boot/body/costume/mace carry continuity needs polish, especially SW/NE. Existing attacks unchanged.",
+          "reactions": "Idle/hit/dazed/death drafts selected; kneeling gear inspected in browser.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right mace and left tall shield retained. Eight rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. The two close-to-source-edge NE mace tips were visually inspected and remain complete. Earlier pass18/pass20 travel evidence retained. Minor body and material differences accepted for local review."
+        },
+        "ne": {
+          "locomotionAttack": "Pass18: Alternating four-phase walking draft selected and individually browser stepped. Right mace, left shield and fur sides retained. Mixed-source boot/body/costume/mace carry continuity needs polish, especially SW/NE. Existing attacks unchanged.",
+          "reactions": "Idle/hit/dazed/death drafts selected; kneeling gear inspected in browser.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 falls stepped at locked size300. Right mace and left tall shield retained. Eight rear fall pivots corrected, all16 falls rechecked and final hold/replay verified. The two close-to-source-edge NE mace tips were visually inspected and remain complete. Earlier pass18/pass20 travel evidence retained. Minor body and material differences accepted for local review."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Four independently authored views preserve the massive Hidewall's square weathered face, dark beard and high topknot, bone necklace, two-tone fur yoke, leather cuirass, rust-red sash, hide panels and fur-cuffed boots. The tan fur remains on the anatomical right shoulder and dark fur on the left; their visible placement changes correctly with facing.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-25.json",
+        "integration": "not integrated"
+      }
+    },
+    {
+      "type": "ashenOutrider",
+      "label": "Ashen Outrider",
+      "slug": "ashen-outrider",
+      "family": "mounted",
+      "weapon": "spear",
+      "shield": "left-arm small wooden shield and reins",
+      "identity": "Nine original built-in image-generation sheets establish the Ashen Outrider: an olive-tan, dark-haired rider in a rust-red headband, worn brown leather, charcoal wool and a separate taupe fur cloak; and a full-size smoke-brown shaggy horse with black mane/tail, rough leather tack and a russet saddlecloth. The rider's spear, small wooden shield and reins remain runtime equipment. Saddle and blanket are a separate part from the breathing barrel.",
+      "views": {
+        "sw": {
+          "locomotionAttack": "Pass21: complete four-hoof walking cycle with LF/RH/RF/LH swings, three supports, right spear and left reins/shield. All frames stepped and calibrated; attacks retained.",
+          "reactions": "Four idle breathing, two hit, two dazed and four full rider-and-horse fall paintings. All-view idle and fall phases browser reviewed; final motion acceptance pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear and left reins/shield retained, all limbs present and four hoof phases preserved. Four SW/SE fall pivots corrected to body contact, all16 falls rechecked and final hold/replay verified. Pass21 travel evidence retained. Minor horse finish and SE camera differences accepted for local review."
+        },
+        "se": {
+          "locomotionAttack": "Pass21: complete four-hoof walking cycle with LF/RH/RF/LH swings, three supports, right spear and left reins/shield. All frames stepped and calibrated; attacks retained.",
+          "reactions": "Four idle breathing, two hit, two dazed and four full rider-and-horse fall paintings. All-view idle and fall phases browser reviewed; final motion acceptance pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear and left reins/shield retained, all limbs present and four hoof phases preserved. Four SW/SE fall pivots corrected to body contact, all16 falls rechecked and final hold/replay verified. Pass21 travel evidence retained. Minor horse finish and SE camera differences accepted for local review."
+        },
+        "nw": {
+          "locomotionAttack": "Pass20: four distinct mounted hoof swings LF/RH/RF/LH, three support hooves per pose. Right spear, left reins and forearm shield retained. All four frames individually checked; frames2-4 calibrated and rechecked. Existing attacks retained.",
+          "reactions": "Four idle breathing, two hit, two dazed and four full rider-and-horse fall paintings. All-view idle and fall phases browser reviewed; final motion acceptance pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear and left reins/shield retained, all limbs present and four hoof phases preserved. Four SW/SE fall pivots corrected to body contact, all16 falls rechecked and final hold/replay verified. Pass21 travel evidence retained. Minor horse finish and SE camera differences accepted for local review."
+        },
+        "ne": {
+          "locomotionAttack": "Pass21: complete four-hoof walking cycle with LF/RH/RF/LH swings, three supports, right spear and left reins/shield. All frames stepped and calibrated; attacks retained.",
+          "reactions": "Four idle breathing, two hit, two dazed and four full rider-and-horse fall paintings. All-view idle and fall phases browser reviewed; final motion acceptance pending.",
+          "visualReview": "Pass25: Idle sampled in all four views; all16 walks,16 attacks,8 hits,8 dazed and16 horse-and-rider falls stepped at locked size300. Right spear and left reins/shield retained, all limbs present and four hoof phases preserved. Four SW/SE fall pivots corrected to body contact, all16 falls rechecked and final hold/replay verified. Pass21 travel evidence retained. Minor horse finish and SE camera differences accepted for local review."
+        }
+      },
+      "runtime": "Shared bounded source and prepared-frame caches drive the local studio. 15 runtime tests pass; mixed 240-unit pan/zoom benchmark has no missing paintings. Game integration remains separate.",
+      "gameplay": "pending",
+      "deployment": "pending",
+      "referenceIdentity": "Nine original built-in image-generation sheets establish the Ashen Outrider: an olive-tan, dark-haired rider in a rust-red headband, worn brown leather, charcoal wool and a separate taupe fur cloak; and a full-size smoke-brown shaggy horse with black mane/tail, rough leather tack and a russet saddlecloth. The rider's spear, small wooden shield and reins remain runtime equipment. Saddle and blanket are a separate part from the breathing barrel.",
+      "artContract": "Whole-character painted frames include correctly held equipment; no runtime mirroring. Original rig descriptions are identity references, not the new rendering technique.",
+      "localArtReview": {
+        "status": "ready for user review",
+        "evidence": "review/pass-25.json",
+        "integration": "not integrated"
+      }
+    }
+  ],
+  "currentReview": "review/pass-25.json",
+  "currentInventory": {
+    "sources": 179,
+    "actionViews": 240,
+    "frameSlots": 800,
+    "missingActionViews": 0,
+    "measurementWarnings": 0
+  }
+}

@@ -1,7 +1,7 @@
-import { CrownforgeSimulation } from '../src/simulation.js?v=20260906-falsemercy1';
-import { CrownforgeRenderer } from '../src/renderer.js?v=20260906-falsemercy1';
-import { CHARACTER_RIGS } from '../src/character-rigs.js?v=20260906-firstcondemnation1';
-import { UNIT_TYPES, CONFIG } from '../src/config.js?v=20260906-firstcondemnation1';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260909-fullroster1';
+import { CrownforgeRenderer } from '../src/renderer.js?v=20260909-fullroster1';
+import { CHARACTER_RIGS } from '../src/character-rigs.js?v=20260909-fullroster1';
+import { UNIT_TYPES, CONFIG } from '../src/config.js?v=20260909-fullroster1';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas);
 const status=document.querySelector('#status'),results=document.querySelector('#results');
@@ -60,7 +60,7 @@ document.querySelector('#save-load').onclick=()=>{
 reset();focus();window.addEventListener('resize',focus);
 function frame(now) {
   const dt=Math.min(.05,(now-last)/1000);last=now;
-  const art=[...renderer.characterRigs.values()].flatMap(r=>r.readiness());
+  const art=roster.flatMap(type=>renderer.characterRigs.get(type).readiness());
   ready=roster.every(t=>CHARACTER_RIGS[t])&&art.every(i=>i.complete&&i.naturalWidth);
   if(ready)simulation.update(dt);
   renderer.render(simulation,null,now);
@@ -71,7 +71,7 @@ function frame(now) {
   const damage=damageBaseline-simulation.buildings.filter(b=>b.faction==='enemy').reduce((n,b)=>n+b.hp,0);
   const wards=simulation.units.filter(u=>u.lastLightWardTimer>0).length;
   const missing=roster.filter(type=>!CHARACTER_RIGS[type]);
-  status.textContent=ready?`${mode} · ${roster.length} characters ready`:missing.length?`Awaiting character: ${missing.join(', ')}`:`Preparing artwork · ${art.filter(i=>i.complete&&i.naturalWidth).length}/${art.length}`;
+  status.textContent=ready?`${mode} · ${roster.length} characters ready · 10 painted fighters`:missing.length?`Awaiting character: ${missing.join(', ')}`:`Preparing artwork · ${art.filter(i=>i.complete&&i.naturalWidth).length}/${art.length}`;
   results.textContent=Object.entries(states).map(([state,n])=>`${state}: ${n}`).join(' · ')+(damageBaseline?` · damage: ${Math.round(damage)}`:'')+(wards?` · wards: ${wards}`:'')+(saveVerified?' · save restored':'');
   Object.assign(canvas.dataset,{ready:String(ready),identities:String(simulation.units.length),states:JSON.stringify(states),damage:String(damage),wards:String(wards),saveVerified:String(saveVerified)});
   requestAnimationFrame(frame);

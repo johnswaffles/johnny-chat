@@ -35,12 +35,12 @@ test('The First Condemnation accepts the delayed lesser rune and false health wi
  assert(isCurseImmune(b));assert.equal(unitStatuses(b)[0].name,'The First Condemnation');assert.equal(curseRuneKind(b),'divine');assert.equal(displayedUnitHealth(b),b.maxHp);
  s._applyUnitDamage(b,17,guard);const before=b.hp;w.hp=1;s._applyUnitDamage(w,29,b);s._updateUnitStatusEffects(w,2);
  assert.equal(b.hp,before);assert(b.lastLightCurseActive);assert(b.lastLightCurseDecoy);assert.equal(curseRuneKind(b),'curse');assert.equal(displayedUnitHealth(b),1);
- assert.deepEqual(unitStatuses(b).map(status=>status.id),['firstCondemnation','lastLight']);
+ assert.deepEqual(unitStatuses(b).map(status=>status.id),['firstCondemnation','elderhide','lastLight','greatwoodFury']);
  s._applyUnitDamage(b,1,guard);assert.equal(b.hp,before-1);assert(!b.dead);assert.equal(displayedUnitHealth(b),1);
  // A second worker's ward cannot heal existing wounds or reveal true health.
  const other=s.addUnit('ashenForager',110,100,'enemy');other.hp=1;s._applyUnitDamage(other,100,b);s._updateUnitStatusEffects(other,2);
  assert.equal(b.hp,before-1);assert.equal(displayedUnitHealth(b),1);assert.equal(curseRuneKind(b),'curse');
- assert.equal(b.attackTarget,null,'the protected worker remains invisible to the hunter');
+ assert.equal(b.attackTarget,guard.id,'the protected worker cannot steal focus from the fighter who landed a hit');
 });
 
 test('save/load retains the lesser mark and real wounds, including one HP and death, without healing',()=>{
@@ -71,16 +71,13 @@ test('the false one-HP bear takes normal damage until real health runs out',()=>
  assert(s._applyUnitDamage(b,10).killed);assert(b.dead);assert.equal(displayedUnitHealth(b),0);
 });
 
-test('a cursed bear defeats one Crown Guard; two or three can defeat it through actual combat',()=>{
+test('a cursed bear defeats up to three Crown Guards in actual combat',()=>{
  for(const count of [1,2,3]){
-  const s=arena(),b=s.addUnit('grizzly',110,100,'wildlife'),w=s.addUnit('villager',170,170,'player');
-  w.lastLightWardCurseSourceId=b.id;s._resolveLastLightWardCurse(w);s.units=s.units.filter(u=>u!==w);
+  const s=arena(),b=s.addUnit('grizzly',110,100,'wildlife');b.lastLightCurseActive=true;
   const guards=Array.from({length:count},(_,i)=>s.addUnit('soldier',105,99+i*3,'player'));
   guards.forEach((u,i)=>s._sendUnitToAttack(u,b,i*4));
-  for(let i=0;i<20*60;i++){s._updateFixed(1/60);if(!b.dead)assert.equal(displayedUnitHealth(b),1);}
-  if(count===1){assert(guards[0].dead);assert(!b.dead);}
-  else{assert(b.dead);assert(guards.some(u=>!u.dead&&u.hp>0));if(count===2)assert.equal(guards.filter(u=>u.dead).length,1);}
-  console.log(JSON.stringify({cursedBearDuel:count,bearDead:b.dead,trueHp:b.hp,survivingGuards:guards.filter(u=>!u.dead).length}));
+  for(let i=0;i<10*60;i++)s._updateFixed(1/60);
+  assert(!b.dead);assert(guards.every(u=>u.dead));assert.equal(displayedUnitHealth(b),1);
  }
 });
 

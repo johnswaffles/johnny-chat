@@ -1,18 +1,20 @@
-import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260907-paintedashen1';
-import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260907-paintedashen1';
-import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260906-bearstride1';
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260906-bearstride1';
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260907-paintedashen1';
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260905-buildings1';
-import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260905-buildings1';
-import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260905-smooth1';
-import { drawHearthkinWard } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import { CrownforgeLandscape } from './landscape.js?v=20260906-firstcondemnation1';
-import { ForestCache } from './forest-cache.js?v=20260906-firstcondemnation1';
-import { CrownforgeMeadow } from './meadow.js?v=20260906-firstcondemnation1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260906-firstcondemnation1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260906-firstcondemnation1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260907-paintedashen1';
+import {corpseLifetime} from './bear-combat.js?v=20260909-fullroster1';
+import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-fullroster1';
+import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260909-fullroster1';
+import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260909-fullroster1';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260909-fullroster1';
+import {paintedRosterFactories} from './painted-roster-rig.js?v=20260909-fullroster1';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260909-fullroster1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260909-fullroster1';
+import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260909-fullroster1';
+import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260909-fullroster1';
+import { drawHearthkinWard } from './hearthkin-rig.js?v=20260909-fullroster1';
+import { CrownforgeLandscape } from './landscape.js?v=20260909-fullroster1';
+import { ForestCache } from './forest-cache.js?v=20260909-fullroster1';
+import { CrownforgeMeadow } from './meadow.js?v=20260909-fullroster1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260909-fullroster1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260909-fullroster1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260909-fullroster1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -146,7 +148,7 @@ export class CrownforgeRenderer {
     this.ashenFortificationAtlasReady = false;
     this.ashenConstructionAtlasReady = false;
     this.enemyCampReady = false;
-    this.characterRigs = createCharacterRigs({ lazy: true, factories: {ashenForager:()=>new PaintedHearthkinRenderer({type:'ashenForager',art:ASHEN_HEARTHKIN_PAINTED_ART})} });
+    this.characterRigs = createCharacterRigs({ lazy: true, factories: {...paintedRosterFactories(CHARACTER_RIGS),ashenForager:()=>new PaintedHearthkinRenderer({type:'ashenForager',art:ASHEN_HEARTHKIN_PAINTED_ART})} });
     this.hearthkinRig = new PaintedHearthkinRenderer();
     this.characterRigs.set('villager',this.hearthkinRig);
     this.villagerAtlases = {};
@@ -390,7 +392,7 @@ export class CrownforgeRenderer {
         const rig=this.characterRigs.get(type);
         const g=this.warmCanvas.getContext('2d');
         rig.draw(g,{type,kind:'preview',id:0,facing:view%4,animationState:actions[Math.floor(view/4)],animationTime:0},{x:128,y:220},100,1,0);
-        for(const levels of rig.parts.values())for(const tile of levels)g.drawImage(tile,0,0,1,1);
+        for(const levels of rig.parts?.values()??[])for(const tile of levels)g.drawImage(tile,0,0,1,1);
         // Flush the offscreen work during loading, not during the first pan.
         g.getImageData(0,0,1,1);
         this.warmedViews.set(type,view+1);surfacesReady=false;break;
@@ -1048,7 +1050,7 @@ export class CrownforgeRenderer {
     let blade = 0;
     for (const entity of entities) {
       while (blade < grass.length && grass[blade].depth <= entity.depth) this.meadow.draw(ctx, grass[blade++]);
-      if (entity.dead && entity.deathAge > 2.4) continue;
+      if (entity.dead && entity.deathAge >= corpseLifetime(entity)) continue;
       if (entity.destroyed && entity.destroyAge > 2.4) continue;
       if (entity.kind === 'building' || entity.kind === 'wall-segment') this.drawBuilding(ctx, entity, time);
       else if (entity.kind === 'tower-connector') this.drawPalisadeTowerConnector(ctx, entity);
@@ -1895,7 +1897,7 @@ export class CrownforgeRenderer {
   drawVillagerAsset(ctx, unit, screen, size, alpha = 1) {
     const rig = this.characterRigs.get(unit.type);
     if (!rig || !rig.readiness().every(image => image.complete && image.naturalWidth > 0)) return false;
-    if(['villager','ashenForager'].includes(unit.type))rig.reducedMotion=this.atmosphere.reducedMotion;
+    rig.reducedMotion=this.atmosphere.reducedMotion;
     return rig.draw(ctx, unit, screen, size, alpha);
   }
 

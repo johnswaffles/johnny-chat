@@ -1,0 +1,147 @@
+{
+  "method": "Built-in image_gen. Originals preserved at their generated paths. Selected PNG bytes copied without raster modification.",
+  "selected": {
+    "card": "greatwood-fury-card-v1",
+    "frontDeath": "painted-death-se-alpha-v3",
+    "rearDeath": "painted-death-ne-alpha-v3"
+  },
+  "notes": "Death uses front and rear complete-painting sequences with bilateral facing in the renderer. Approved walk, idle and attacks retain their original four-direction artwork. Other generated candidates were not integrated.",
+  "jobs": [
+    {
+      "key": "greatwood-fury-card-v1",
+      "refs": [
+        "/Users/johnshopinski/Documents/New project/crownforge-bear-fury-preview/assets/crownforge-first-condemnation-v1.png"
+      ],
+      "prompt": "Use case: illustration-story. Create a new wide fantasy lore-card painting in the detailed painterly style and grizzly identity of the reference. In a dense ancient forest, a huge russet grizzly stands on its hind legs delivering a devastating sweeping paw strike. Two armored adult soldiers are visibly thrown through the air by the swipe, their bodies recoiling with believable weight; three defeated adult soldiers lie motionless nearby with dropped shields and spears. No gore or dismemberment. The bear is the dominant central figure, with massive shoulders, long claws and a small ember-red ancient branching rune on its brow. Dynamic clear silhouettes, green forest depths and warm shafts of light, crisp rich fur detail. Frame the full upright bear, airborne soldiers and fallen soldiers within the composition. No writing, captions, UI, border or watermark. Landscape image.",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b6cc0399-d5be-481e-8df5-4f8e258abcc3.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-se-v1",
+      "refs": [
+        "/Users/johnshopinski/Documents/New project/crownforge-bear-fury-preview/assets/painted-walk-se-v3.png"
+      ],
+      "prompt": "Use case: stylized-concept. Create a NEW four-frame death animation sprite sheet for the exact bulky russet grizzly identity and crisp painterly fur style of the reference. Four complete whole-bear paintings in a spacious 2 by 2 grid, equal cells, read left to right then top to bottom. All four paintings keep the SAME front-right three-quarter view, muzzle points down-right with no camera turning and consistent body size. Frame1: wounded bear on four legs, head sagging and front knees starting to buckle. Frame2: forequarters drop, both front elbows fold with chest nearly grounded and hindquarters still high. Frame3: the heavy body rolls onto its flank, hind legs folding, muzzle near ground. Frame4: fully dead and motionless on its side, torso and head resting on ground, all four paws anatomically correct, closed eyes, no breathing pose. This is a weighty collapse, no gore or wounds. Preserve complete ears, muzzle, all paws and fur in every cell; generous margins and separation, no touching figures. Transparent PNG with actual alpha channel, no checkerboard, no ground plane, no background, no shadows, no text, no numbers. Do not reuse standing poses for the final death frames.",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b0c5c7e6-54c3-484e-8b0e-93bf03520174.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-sw-v1",
+      "refs": [
+        "/Users/johnshopinski/Documents/New project/crownforge-bear-fury-preview/assets/painted-walk-se-v3.png"
+      ],
+      "prompt": "Use case: stylized-concept. Create a NEW four-frame death animation sprite sheet for the exact bulky russet grizzly identity and crisp painterly fur style of the reference. Four complete whole-bear paintings in a spacious 2 by 2 grid, equal cells, read left to right then top to bottom. All four paintings keep the SAME front-left three-quarter view, muzzle points down-left with no camera turning and consistent body size. Frame1: wounded bear on four legs, head sagging and front knees starting to buckle. Frame2: forequarters drop, both front elbows fold with chest nearly grounded and hindquarters still high. Frame3: the heavy body rolls onto its flank, hind legs folding, muzzle near ground. Frame4: fully dead and motionless on its side, torso and head resting on ground, all four paws anatomically correct, closed eyes, no breathing pose. This is a weighty collapse, no gore or wounds. Preserve complete ears, muzzle, all paws and fur in every cell; generous margins and separation, no touching figures. Transparent PNG with actual alpha channel, no checkerboard, no ground plane, no background, no shadows, no text, no numbers. Do not reuse standing poses for the final death frames.",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b6af2fd9-2b32-4c65-ae3b-545441f12db9.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-ne-v1",
+      "refs": [
+        "/Users/johnshopinski/Documents/New project/crownforge-bear-fury-preview/assets/painted-walk-nw-v2.png"
+      ],
+      "prompt": "Use case: stylized-concept. Create a NEW four-frame death animation sprite sheet for the exact bulky russet grizzly identity and crisp painterly fur style of the reference. Four complete whole-bear paintings in a spacious 2 by 2 grid, equal cells, read left to right then top to bottom. All four paintings keep the SAME rear-right three-quarter view, rump nearest camera and muzzle points up-right with no camera turning and consistent body size. Frame1: wounded bear on four legs, head sagging and front knees starting to buckle. Frame2: forequarters drop, both front elbows fold with chest nearly grounded and hindquarters still high. Frame3: the heavy body rolls onto its flank, hind legs folding, muzzle near ground. Frame4: fully dead and motionless on its side, torso and head resting on ground, all four paws anatomically correct, closed eyes, no breathing pose. This is a weighty collapse, no gore or wounds. Preserve complete ears, muzzle, all paws and fur in every cell; generous margins and separation, no touching figures. Transparent PNG with actual alpha channel, no checkerboard, no ground plane, no background, no shadows, no text, no numbers. Do not reuse standing poses for the final death frames.",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-e824aca5-953d-4ca5-95c1-abb57d9f8a9a.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-nw-v1",
+      "refs": [
+        "/Users/johnshopinski/Documents/New project/crownforge-bear-fury-preview/assets/painted-walk-nw-v2.png"
+      ],
+      "prompt": "Use case: stylized-concept. Create a NEW four-frame death animation sprite sheet for the exact bulky russet grizzly identity and crisp painterly fur style of the reference. Four complete whole-bear paintings in a spacious 2 by 2 grid, equal cells, read left to right then top to bottom. All four paintings keep the SAME rear-left three-quarter view, rump nearest camera and muzzle points up-left with no camera turning and consistent body size. Frame1: wounded bear on four legs, head sagging and front knees starting to buckle. Frame2: forequarters drop, both front elbows fold with chest nearly grounded and hindquarters still high. Frame3: the heavy body rolls onto its flank, hind legs folding, muzzle near ground. Frame4: fully dead and motionless on its side, torso and head resting on ground, all four paws anatomically correct, closed eyes, no breathing pose. This is a weighty collapse, no gore or wounds. Preserve complete ears, muzzle, all paws and fur in every cell; generous margins and separation, no touching figures. Transparent PNG with actual alpha channel, no checkerboard, no ground plane, no background, no shadows, no text, no numbers. Do not reuse standing poses for the final death frames.",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-8cb315e3-5a38-43e4-a082-9fdb8067e40e.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-se-alpha-v2",
+      "prompt": "Extract all four bears onto a transparent background. Reflow them into a portrait sheet, one bear per row in a single vertical column. Real transparent PNG, clean alpha cutout silhouettes, no background pattern. Keep the exact four collapse poses in order. No shadow or ground. Full paws and fur, generous empty margin around each bear.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-58ad78a1-3cca-4395-9a50-aac24aba6ad8.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-f7d997b1-bf2e-4a83-97e7-02b462ca9e47.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-se-alpha-v3",
+      "prompt": "Make the background transparent.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-f7d997b1-bf2e-4a83-97e7-02b462ca9e47.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-71918706-1b2f-413e-866a-1c5ee006d0bd.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-sw-alpha-v2",
+      "prompt": "Extract all four bears onto a transparent background. Reflow them into a portrait sheet, one bear per row in a single vertical column. Real transparent PNG, clean alpha cutout silhouettes, no background pattern. Keep the exact four collapse poses in order. No shadow or ground. Full paws and fur, generous empty margin around each bear.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-a4d9b9e1-e337-478b-81ce-ac298eb68236.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-a21921e2-23f8-4b8f-a4b7-efa4915f17ae.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-sw-alpha-v3",
+      "prompt": "Make the background transparent.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-a21921e2-23f8-4b8f-a4b7-efa4915f17ae.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-dd5511d8-d8a7-4ff7-af5d-ba9369568471.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-sw-alpha-v4",
+      "prompt": "Make the background transparent.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-dd5511d8-d8a7-4ff7-af5d-ba9369568471.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b14d9809-3772-4400-ac06-2a9641e38dae.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-sw-alpha-v5",
+      "prompt": "Remove the gray and white checkerboard entirely. Isolate these four bears with transparent backgrounds. Transparent PNG cutouts.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-b14d9809-3772-4400-ac06-2a9641e38dae.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-18c9a3bb-a05a-416b-a3e5-64e93a2ce792.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-sw-alpha-v6",
+      "prompt": "Make these four complete bear collapse sprite frames face front left, southwest instead. Preserve their real transparent background and exactly the four collapse stages in one column. No ground, no background, no grid, no shadows. Painterly brown grizzly.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-71918706-1b2f-413e-866a-1c5ee006d0bd.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-296fc8fc-2e4f-4ad7-b114-add300d52a1a.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-sw-alpha-v7",
+      "prompt": "Make the background transparent.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-296fc8fc-2e4f-4ad7-b114-add300d52a1a.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-7e7166b2-7c0b-4f4e-bea1-80bfae960172.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-ne-alpha-v2",
+      "prompt": "Extract all four bears onto a transparent background. Reflow them into a portrait sheet, one bear per row in a single vertical column. Real transparent PNG, clean alpha cutout silhouettes, no background pattern. Keep the exact four collapse poses in order. No shadow or ground. Full paws and fur, generous empty margin around each bear.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-003a0e8a-8851-4a4a-8759-b8b50c405c93.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-cfaccf9e-052b-4d2c-ad51-24f0aa3556de.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-ne-alpha-v3",
+      "prompt": "Make the background transparent.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-cfaccf9e-052b-4d2c-ad51-24f0aa3556de.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-5f1f8de1-3215-46ca-b835-842c6cc2e632.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-nw-alpha-v2",
+      "prompt": "Extract all four bears onto a transparent background. Reflow them into a portrait sheet, one bear per row in a single vertical column. Real transparent PNG, clean alpha cutout silhouettes, no background pattern. Keep the exact four collapse poses in order. No shadow or ground. Full paws and fur, generous empty margin around each bear.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-2c145d61-edcf-4ea5-8a4a-c19ed038b80f.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-850a013f-cd7e-45e2-abed-028076739a68.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-nw-alpha-v3",
+      "prompt": "Make the background transparent.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-850a013f-cd7e-45e2-abed-028076739a68.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-55b23739-e0d4-433e-b4ce-cb5bbc7f5c0a.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-nw-alpha-v4",
+      "prompt": "Make the background transparent.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-55b23739-e0d4-433e-b4ce-cb5bbc7f5c0a.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-2af82968-0e0e-4956-8893-721ae317cd38.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-nw-alpha-v5",
+      "prompt": "Remove the gray and white checkerboard entirely. Isolate these four bears with transparent backgrounds. Transparent PNG cutouts.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-2af82968-0e0e-4956-8893-721ae317cd38.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-6cb1f035-4960-464b-ae41-59575ac18990.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-nw-alpha-v6",
+      "prompt": "Make these four complete bear collapse sprite frames face away to the left, northwest instead. Preserve their real transparent background and exactly the four collapse stages in one column. No ground, no background, no grid, no shadows. Painterly brown grizzly.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-5f1f8de1-3215-46ca-b835-842c6cc2e632.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-634cd44f-da30-4ee6-ad5c-16c70b64067e.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    {
+      "key": "painted-death-nw-alpha-v7",
+      "prompt": "Make the background transparent.",
+      "ref": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-634cd44f-da30-4ee6-ad5c-16c70b64067e.png",
+      "output": "Generated images are saved to /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd as /Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-dcdc9997-ad1f-4a0f-9e9a-6d981e60be79.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    }
+  ]
+}

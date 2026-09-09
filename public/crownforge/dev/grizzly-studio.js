@@ -1,11 +1,12 @@
-import { GrizzlyRenderer } from '../src/grizzly-renderer.js?v=20260906-bearstride1';
-import { GRIZZLY_MOTION, GRIZZLY_ATTACKS, grizzlyProjection } from '../src/grizzly-motion.js?v=20260906-bearstride1';
-import { createCharacterRigs } from '../src/character-rigs.js?v=20260906-firstcondemnation1';
+import { GrizzlyRenderer } from '../src/grizzly-renderer.js?v=20260909-fullroster1';
+import { BEAR_DEATH } from '../src/bear-combat.js?v=20260909-fullroster1';
+import { GRIZZLY_MOTION, GRIZZLY_ATTACKS, grizzlyProjection } from '../src/grizzly-motion.js?v=20260909-fullroster1';
+import { createCharacterRigs } from '../src/character-rigs.js?v=20260909-fullroster1';
 const canvas=document.querySelector('#stage'),ctx=canvas.getContext('2d'),bear=new GrizzlyRenderer(),guard=createCharacterRigs({lazy:true}).get('soldier');
 const action=document.querySelector('#action'),pause=document.querySelector('#pause'),slider=document.querySelector('#pose'),status=document.querySelector('#status'),bones=document.querySelector('#bones');
 let clock=0,last=0,paused=false,frames=0;const errors=[];window.addEventListener('error',e=>errors.push(e.message));
 pause.onclick=()=>{paused=!paused;pause.textContent=paused?'Play':'Pause'};action.onchange=()=>{clock=0};slider.oninput=()=>{paused=true;pause.textContent='Play';clock=slider.value/1000*duration()};
-const duration=()=>GRIZZLY_ATTACKS[action.value]?.duration??(action.value==='death'?1.8:action.value==='walk'?GRIZZLY_MOTION.strideLength/2.85:4);
+const duration=()=>GRIZZLY_ATTACKS[action.value]?.duration??(action.value==='death'?BEAR_DEATH.lifetime+.2:action.value==='walk'?GRIZZLY_MOTION.strideLength/2.85:4);
 const params=new URLSearchParams(location.search);if(params.has('action'))action.value=params.get('action');if(params.has('pose')){paused=true;clock=Number(params.get('pose'))*duration();slider.value=Math.round(Number(params.get('pose'))*1000);pause.textContent='Play';}
 const ground=new Image();ground.src='./assets/crownforge-grass-tile-v1.png';
 function unit(direction){
@@ -21,7 +22,7 @@ function tick(t){
  if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr)}
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#41543a';ctx.fillRect(0,0,w,h);
  if(ground.complete&&ground.naturalWidth){ctx.globalAlpha=.34;for(let y=0;y<h;y+=300)for(let x=0;x<w;x+=300)ctx.drawImage(ground,x,y,300,300);ctx.globalAlpha=1;}
- const size=Math.min(235,w*.24,h*.24),labels=['Southeast','Southwest','Northeast','Northwest'];
+ const size=Math.min(260,w*.27,h*.34),labels=['Southeast','Southwest','Northeast','Northwest'];
  for(let d=0;d<4;d++){
   const x=w*(d%2?.73:.27),y=h*(d<2?.47:.91),u=unit(d);
   bear.draw(ctx,u,{x,y},size,t,false,dpr);

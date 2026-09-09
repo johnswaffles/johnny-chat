@@ -1,5 +1,5 @@
-import { CONFIG } from './config.js?v=20260906-firstcondemnation1';
-import { MeadowField } from './meadow-field.js?v=20260906-firstcondemnation1';
+import { CONFIG } from './config.js?v=20260909-fullroster1';
+import { MeadowField } from './meadow-field.js?v=20260909-fullroster1';
 
 // Measured isolated alpha bounds, not nominal atlas cells: the seed heads in
 // row two begin above the equal-cell boundary. Retain the source PNG intact.

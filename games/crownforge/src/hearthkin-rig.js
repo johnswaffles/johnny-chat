@@ -1,10 +1,10 @@
-import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260905-buildings1';
-import { horseAssemblyTransforms } from './horse-assembly.js?v=20260905-idlebreath1';
-import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260905-idlebreath1';
-import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260905-idlebreath1';
-import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js?v=20260905-idlebreath1';
-import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js?v=20260905-idlebreath1';
-import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js?v=20260905-idlebreath1';
+import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260909-fullroster1';
+import { horseAssemblyTransforms } from './horse-assembly.js?v=20260909-fullroster1';
+import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260909-fullroster1';
+import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260909-fullroster1';
+import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js?v=20260909-fullroster1';
+import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js?v=20260909-fullroster1';
+import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js?v=20260909-fullroster1';
 
 const TAU = Math.PI * 2;
 const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
@@ -397,6 +397,8 @@ export class HearthkinRig {
     let pose = (this.definition?.samplePose??hearthkinPose)(state, time, direction, {
       id: unit.id, hit: unit.hitFlash, wardImpact: unit.wardBlockedPulse,
       carryType: unit.carryAmount > 0 ? unit.carryType : null,
+      combatMoving: Boolean(unit.fighterMovingAttack && unit.motionSpeed>.025),
+      locomotionTime: unit.combatLocomotionTime??0, motionSpeed:unit.motionSpeed,
       moving: unit.kind === 'unit' ? unit.motionSpeed > .025 : state === 'walk' || state.startsWith('carry_'),
     });
     if(this.handFrames)pose.handFrames=this.handFrames;

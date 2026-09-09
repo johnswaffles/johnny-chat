@@ -1,5 +1,5 @@
-import { UNIT_TYPES } from './config.js?v=20260906-firstcondemnation1';
-import { hearthkinLocomotion, projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260905-idlebreath1';
+import { UNIT_TYPES } from './config.js?v=20260909-fullroster1';
+import { hearthkinLocomotion, projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260909-fullroster1';
 
 // Pure actor-space motion. A facing selects a camera projection; it cannot
 // change the physical arm, shield hand, weapon direction or contact point.
@@ -123,11 +123,13 @@ export function militaryPose(type,state='idle',time=0,direction=0,options={}) {
   const safeTime=Math.max(0,Number.isFinite(time)?time:0);
   const sampleTime=action.loop?safeTime:Math.min(action.duration,safeTime);
   const phase=action.loop?fraction(sampleTime/action.duration):clamp(sampleTime/action.duration);
-  const walking=state==='walk'&&options.moving!==false&&(!Number.isFinite(options.motionSpeed)||options.motionSpeed>.025);
+  const walking=(state==='walk'||options.combatMoving&&(state==='attack'||state.startsWith('attack_')))&&options.moving!==false&&(!Number.isFinite(options.motionSpeed)||options.motionSpeed>.025);
   const attacking=state==='attack'||state.startsWith('attack_');
-  const base=hearthkinLocomotion(walking?'walk':'idle',walking?sampleTime:0,direction,{duration:profile.walk,id:options.id??0,moving:walking});
+  const gaitTime=options.combatMoving?(options.locomotionTime??0):sampleTime;
+  const gaitPhase=fraction(gaitTime/profile.walk);
+  const base=hearthkinLocomotion(walking?'walk':'idle',walking?gaitTime:0,direction,{duration:profile.walk,id:options.id??0,moving:walking});
   const j=Object.fromEntries(Object.entries(base.anatomical).map(([name,p])=>[name,{...p}]));
-  const wave=walking?Math.sin(phase*TAU):0,contactWave=walking?Math.cos(phase*TAU):0;
+  const wave=walking?Math.sin(gaitPhase*TAU):0,contactWave=walking?Math.cos(gaitPhase*TAU):0;
   const breath=state==='death'||attacking||walking?0:Math.sin(phase*TAU+(options.id??0)*.63)*.18;
   let drop=0,lean=walking?.055:0,guard=attacking?1:0,bodyYaw=walking?wave*.028:0;
   let fall=0,headPitch=0;

@@ -1,19 +1,19 @@
-import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import ashenHearthkin from './roster-art/ashen-hearthkin.js?v=20260905-buildings1';
-import crownSpearwarden from './roster-art/crown-spearwarden.js?v=20260905-buildings1';
-import crownShieldbearer from './roster-art/crown-shieldbearer.js?v=20260905-buildings1';
-import crownGuard from './roster-art/crown-guard.js?v=20260905-buildings1';
-import crownScout from './roster-art/crown-scout.js?v=20260905-idlebreath1';
-import ashenOutrider from './roster-art/ashen-outrider.js?v=20260905-idlebreath1';
-import crownMilitia from './roster-art/crown-militia.js?v=20260905-buildings1';
-import thornSpear from './roster-art/thorn-spear.js?v=20260905-buildings1';
-import hearthLevy from './roster-art/hearth-levy.js?v=20260905-buildings1';
-import ashenHidewall from './roster-art/ashen-hidewall.js?v=20260905-buildings1';
-import ashenRaider from './roster-art/ashen-raider.js?v=20260905-buildings1';
-import { militaryActions, militaryPose, MILITARY_PROFILES } from './military-motion.js?v=20260906-firstcondemnation1';
-import { mountedActions, mountedPose } from './mounted-motion.js?v=20260906-firstcondemnation1';
-import { UNIT_TYPES } from './config.js?v=20260906-firstcondemnation1';
-import {calibrateCharacterSurfaces} from './character-surface-calibration.js?v=20260905-buildings1';
+import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js?v=20260909-fullroster1';
+import ashenHearthkin from './roster-art/ashen-hearthkin.js?v=20260909-fullroster1';
+import crownSpearwarden from './roster-art/crown-spearwarden.js?v=20260909-fullroster1';
+import crownShieldbearer from './roster-art/crown-shieldbearer.js?v=20260909-fullroster1';
+import crownGuard from './roster-art/crown-guard.js?v=20260909-fullroster1';
+import crownScout from './roster-art/crown-scout.js?v=20260909-fullroster1';
+import ashenOutrider from './roster-art/ashen-outrider.js?v=20260909-fullroster1';
+import crownMilitia from './roster-art/crown-militia.js?v=20260909-fullroster1';
+import thornSpear from './roster-art/thorn-spear.js?v=20260909-fullroster1';
+import hearthLevy from './roster-art/hearth-levy.js?v=20260909-fullroster1';
+import ashenHidewall from './roster-art/ashen-hidewall.js?v=20260909-fullroster1';
+import ashenRaider from './roster-art/ashen-raider.js?v=20260909-fullroster1';
+import { militaryActions, militaryPose, MILITARY_PROFILES } from './military-motion.js?v=20260909-fullroster1';
+import { mountedActions, mountedPose } from './mounted-motion.js?v=20260909-fullroster1';
+import { UNIT_TYPES } from './config.js?v=20260909-fullroster1';
+import {calibrateCharacterSurfaces} from './character-surface-calibration.js?v=20260909-fullroster1';
 
 function workerActions(type) {
   const unit=UNIT_TYPES[type],timing=unit.attackTiming??{anticipation:.25,contact:.45,recovery:.3};

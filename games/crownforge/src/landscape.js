@@ -1,5 +1,5 @@
-import { CONFIG } from './config.js?v=20260906-firstcondemnation1';
-import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260905-greatwood3';
+import { CONFIG } from './config.js?v=20260909-fullroster1';
+import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260909-fullroster1';
 
 const MASK_WIDTH = 560;
 const MASK_HEIGHT = 460;

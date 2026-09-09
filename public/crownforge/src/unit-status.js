@@ -1,27 +1,34 @@
-import {UNIT_TYPES} from './config.js?v=20260906-firstcondemnation1';
+import {UNIT_TYPES} from './config.js?v=20260909-fullroster1';
+import {BEAR_FURY,bearFuryActive,isFighter} from './bear-combat.js?v=20260909-fullroster1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
-  id:'firstCondemnation',name:'The First Condemnation',kind:'Divine curse',
-  summary:'It wears lesser curses as a lure.',
-  lore:'Before the first crown was forged, this bear broke the silence of a sacred grove. God marked it and condemned it to wander beneath the trees until their last root withers. In those long centuries, it learned a cruel deceit. When Last Light names it, the beast welcomes the lesser rune and lets its life appear to dwindle to a single breath. Soldiers come close to deliver an easy mercy. The old strength waits beneath the mark. No lesser curse can weaken what Heaven has already condemned.',
-  effect:'Last Light leaves its rune and a false 1 HP reading, but cannot weaken the bear or make the next wound fatal. Steel still wears down its true strength. A lone soldier is in grave danger; bring two or three. Ward-protected workers remain invisible to its hunt.',
+  id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
+  summary:'The first law written beneath their skin.',
+  lore:'When the first kings felled the grove that held the sleeping stars, the old gods called the grizzlies of the Greatwood to judgment. The bears had devoured the grove’s keepers. For that hunger, every generation of their blood was bound to guard the forest they had betrayed. The First Condemnation is no passing spell: it is a law laid beneath flesh and bone. Sorcery born after that ancient sentence cannot unmake it. Only the hands that shaped the first dawn may rewrite its terms.',
+  effect:'Permanent elder magic. Lesser magic cannot weaken or stun these bears. Their true wounds still matter, and steel can kill them. Elderhide limits each landed arrow to one-thirtieth of full health. Ward-protected workers cannot be targeted or harmed.',
   art:'./assets/crownforge-first-condemnation-v1.png?v=20260906-firstcondemnation1',
 });
+export const GREATWOOD_FURY_ART='./assets/greatwood-fury-card-v1.png?v=20260909-bearfury1';
 export const isCurseImmune=unit=>Boolean(UNIT_TYPES[unit?.type]?.curseImmune);
 export const isWardProtected=unit=>Boolean(unit?.lastLightWardTimer>0);
-// Combat and saves always use real HP. The lesser curse disguises only what
-// players can see; a fallen bear must still read as dead.
+// Health used by combat is never replaced by the curse's false reading.
 export const displayedUnitHealth=unit=>unit.dead||unit.hp<=0?0:unit.lastLightCurseActive&&isCurseImmune(unit)?1:unit.hp;
 export function strikeDamage(attacker,target){
-  const rules=UNIT_TYPES[attacker.type];
-  if(rules.workerStrikeFraction&&UNIT_TYPES[target?.type]?.worker)return Math.ceil(target.maxHp*rules.workerStrikeFraction);
-  return UNIT_TYPES[target?.type]?.worker?(rules.attackVsVillager??rules.attack):rules.attack;
+  const rules=UNIT_TYPES[attacker.type],worker=UNIT_TYPES[target?.type]?.worker;
+  const base=rules.workerStrikeFraction&&worker?Math.ceil(target.maxHp*rules.workerStrikeFraction):worker?(rules.attackVsVillager??rules.attack):rules.attack;
+  if(!bearFuryActive(attacker))return base;
+  const empowered=base*BEAR_FURY.multiplier;
+  return isFighter(target)?Math.max(empowered,target.hp):empowered;
 }
 export function unitStatuses(unit){
-  const statuses=[];
-  if(isCurseImmune(unit))statuses.push({...FIRST_CONDEMNATION,detail:'Permanent · curse immunity',rune:'divine'});
+  const statuses=[],elder=isCurseImmune(unit),fury=bearFuryActive(unit);
+  if(elder){
+    statuses.push({...FIRST_CONDEMNATION,detail:'Permanent · elder magic',rune:'divine'});
+    statuses.push({id:'elderhide',name:'Elderhide',kind:'Permanent protection',detail:'30 arrows from full health',summary:'Ancient hide turns aside the bite of arrows.',lore:'The sentence of the old gods sank into hide as well as blood. Arrowheads splinter against the Greatwood bears like rain upon a weathered standing stone.',effect:`Every landed arrow deals exactly 1/30 of full health (${Number((unit.maxHp/BEAR_FURY.arrowHits).toFixed(2))} damage). A bear at full true health survives 29 arrows and falls to the 30th. Existing wounds are never restored. Steel deals normal damage.`,rune:'ward',art:FIRST_CONDEMNATION.art});
+  }
   if(unit.lastLightWardTimer>0)statuses.push({id:'ward',name:'Last Light Ward',kind:'Protection',detail:`${Math.ceil(unit.lastLightWardTimer)}s · invulnerable`,summary:'Protected from damage and attack targeting.',lore:'At the edge of death, the Hearthkin’s last light becomes a refuge. For one minute, no blow can touch them.',effect:'Health restored. Untargetable by attacks until the ward expires. Bears seek other prey.',rune:'ward'});
-  if(unit.lastLightCurseActive)statuses.push({id:'lastLight',name:'Last Light Curse',kind:'Curse',detail:'1 HP · next damage is fatal',summary:isCurseImmune(unit)?'One last breath—or so it would have you believe.':'The next wound will be the last.',lore:isCurseImmune(unit)?'The thorned rune is real. The weakness is a lie. The God-condemned beast wears Last Light willingly, hiding its strength behind the promise of a final, easy blow. Many have mistaken that single breath for mercy. Few have lived to warn the next.':'The light that saved another life has named its price. A thorned mark hangs above the aggressor, and the smallest wound will now claim them.',effect:isCurseImmune(unit)?'The First Condemnation turns this curse into a lure: the rune and 1 HP appear, but true health is unchanged and wounds deal normal damage. The next blow is fatal only when its hidden strength is actually spent.':'Health reduced to 1. Any positive damage is fatal.',rune:'curse'});
+  if(unit.lastLightCurseActive)statuses.push({id:'lastLight',name:elder?'The Borrowed Last Breath':'Last Light Curse',kind:'Curse',detail:elder?'1 HP shown · hidden strength':'1 HP · next damage is fatal',summary:elder?'The rune is real. The weakness is a lure.':'The next wound will be the last.',lore:elder?'The grizzlies of the Greatwood have learned to wear another’s death-mark. Last Light crowns them with its lesser rune and offers the eye a single remaining breath. Beneath that borrowed omen, the First Condemnation keeps its older law. Warriors hurry close to claim an easy kill; the waiting claws collect them instead. What should have warned the hunters becomes the bait.':'The light that saved another life has named its price. A thorned mark hangs above the aggressor, and the smallest wound will now claim them.',effect:elder?'The lesser rune and 1 HP reading appear, but true health and existing wounds remain unchanged. The apparent nearness of death awakens Wrath of the First Oath immediately. Arrows still need 30 hits from full true health.':'Health reduced to 1. Any positive damage is fatal.',rune:'curse',art:elder?FIRST_CONDEMNATION.art:undefined});
+  if(fury)statuses.push({id:'greatwoodFury',name:'Wrath of the First Oath',kind:'Fury · active',detail:'+500% damage · three-target swipe',summary:'The ancient sentence answers the scent of death.',lore:unit.lastLightCurseActive?'A borrowed death-mark is enough to stir the old sentence. These bears need not be dying: the promise of a last breath calls the same terrible strength. Those drawn to the lesser rune meet the fury of the first oath.':'As a Greatwood bear’s strength falls to its last tenth, the first oath tightens. The condemned blood remembers the ruin of the star-grove. A final measure of the old gods’ wrath passes into every claw.',effect:'Active at 10% true health or less, or while Last Light shows a false 1 HP. Damage rises by 500% (6×); a landed blow is always lethal to a fighter. Each successful swipe also strikes up to two other nearby fighters within 10 world units of the bear, with clear line of sight. Protected workers remain unharmed. A fighter’s landed weapon hit draws the bear’s attention.',rune:'fury',art:GREATWOOD_FURY_ART});
   if(unit.stunTimer>0)statuses.push({id:'stun',name:'Stunned',kind:'Impairment',detail:`${Math.ceil(unit.stunTimer)}s remaining`,summary:'Movement and attacks are interrupted.',rune:'stun'});
   if(unit.stunImmunityTimer>0)statuses.push({id:'stunImmunity',name:'Steadfast',kind:'Protection',detail:`${Math.ceil(unit.stunImmunityTimer)}s · stun immunity`,summary:'Cannot be stunned while this protection lasts.',rune:'ward'});
   return statuses;
@@ -32,6 +39,7 @@ export function unitStatuses(unit){
 export const SIGIL_STROKES=[[[0,-14],[0,13],[-3,17]], [[-10,-13],[-7,-6],[0,-10],[7,-6],[10,-13]], [[-12,-3],[-7,3],[0,-1],[7,3],[12,-3]], [[-8,8],[0,5],[8,8]], [[-5,13],[0,10],[5,13]]];
 export const SIGIL_COLORS={divine:'#cd8656',curse:'#bd8ec9',ward:'#d6c995',stun:'#c99b67'};
 export function sigilSvg(kind='curse'){
+  if(kind==='fury')return '<svg viewBox="-19 -20 38 42" aria-hidden="true" fill="none" stroke="#e98b56" stroke-width="2.6"><path d="M-10-15Q-15 0-9 15L-3 8 M0-17Q-5 0 1 17L7 9 M10-14Q5 0 11 14L16 7"/></svg>';
   if(kind==='ward')return '<svg viewBox="-19 -20 38 42" aria-hidden="true" fill="none" stroke="#d6c995" stroke-width="2"><path d="M-12-12Q0-18 12-12L10 3Q7 11 0 16Q-7 11-10 3Z M0-10V9 M-6-3L0-7 6-3 M-5 3L0-1 5 3"/></svg>';
   if(kind==='stun')return '<svg viewBox="-19 -20 38 42" aria-hidden="true" fill="none" stroke="#c99b67" stroke-width="2"><path d="M2-15L-7 1H0L-2 16 9-3H2Z M-14-8L-10-6 M10 10L14 12"/></svg>';
   const paths=SIGIL_STROKES.map(points=>`<polyline points="${points.map(p=>p.join(',')).join(' ')}"/>`).join('');

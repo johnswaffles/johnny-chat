@@ -1,6 +1,6 @@
-import { HEARTHKIN_PAINTED_ART } from './hearthkin-painted-art.js?v=20260907-paintedhearthkin1';
-import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260905-idlebreath1';
-import { RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260906-firstcondemnation1';
+import { HEARTHKIN_PAINTED_ART } from './hearthkin-painted-art.js?v=20260909-fullroster1';
+import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260909-fullroster1';
+import { RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260909-fullroster1';
 
 const clamp=n=>Math.max(0,Math.min(.999999,n));
 const cycle=n=>n-Math.floor(n);

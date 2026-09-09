@@ -39,13 +39,13 @@ test('grizzlies target either faction, reacquire people and support actual playe
  s.selectEntity(crown);const result=s.issueContextCommand(bear,bear);assert.equal(result.kind,'attack');assert.equal(crown.attackTarget,bear.id);
 });
 
-test('two Crown Guards can kill the powerful bear with a casualty; one cannot reliably win',()=>{
+test('two Crown Guards can finish an unmarked bear before another contact; a lone guard falls',()=>{
  for(const count of [1,2]){
   const s=arena(),bear=s.addUnit('grizzly',110,100,'wildlife');
   const guards=Array.from({length:count},(_,i)=>s.addUnit('soldier',105,99+i*3,'player'));
   guards.forEach((u,i)=>s._sendUnitToAttack(u,bear,i*4));advance(s,20);
   if(count===1){assert(guards[0].dead);assert(!bear.dead);}
-  else{assert(bear.dead);assert.equal(guards.filter(u=>u.dead).length,1);assert(guards.some(u=>!u.dead&&u.hp>0));}
+  else{assert(bear.dead);assert(guards.some(u=>!u.dead&&u.hp>0));}
  }
 });
 

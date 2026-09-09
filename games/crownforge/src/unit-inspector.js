@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260906-firstcondemnation1';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260906-falsemercy1';
+import {UNIT_TYPES} from './config.js?v=20260909-fullroster1';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260909-fullroster1';
 
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';
 const health=u=>`${Math.ceil(displayedUnitHealth(u))} / ${u.maxHp} HP`;
@@ -37,7 +37,9 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     d$('.unit-lore-health').textContent=health(profile);
     d$('.unit-lore-activity').textContent=profile.dead?'Fallen':profile.actionLabel||'Idle';
     profileKey=renderButtons(d$('.unit-lore-statuses'),profile,profileKey,id=>{chosen=id;updateProfile();});
-    const statuses=unitStatuses(profile),status=statuses.find(s=>s.id===chosen)??statuses[0];
+    const statuses=unitStatuses(profile),status=statuses.find(s=>s.id===chosen)??statuses.find(s=>s.id==='greatwoodFury')??statuses.find(s=>s.id==='lastLight')??statuses[0];
+    if(profile.type==='grizzly'){const art=d$('.unit-lore-hero img'),src=status?.art??FIRST_CONDEMNATION.art;if(art.getAttribute('src')!==src)art.src=src;art.alt=status?.id==='greatwoodFury'?'A Greatwood grizzly rears and swipes, scattering soldiers beneath the ancient trees':'A Greatwood grizzly beneath the ancient trees';}
+    dialog.classList.toggle('has-fury-art',status?.id==='greatwoodFury');
     d$('.unit-lore-sigil').innerHTML=sigilSvg(status?.rune??'ward');
     d$('.unit-lore-kind').textContent=status?.kind??'Character';
     d$('.unit-lore-name').textContent=status?.name??UNIT_TYPES[profile.type].label;

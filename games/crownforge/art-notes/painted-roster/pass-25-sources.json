@@ -1,0 +1,143 @@
+[
+  {
+    "key": "thornSpear-sw-pair-extract-v8",
+    "inputs": [
+      "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-2a2544ca-b50e-40bd-9e12-00eb448b023e.png"
+    ],
+    "prompt": "Remove the checkerboard background. Return the same two complete character sprites as transparent PNG cutouts with a real alpha channel.",
+    "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-ea804d7b-6a69-4606-89e0-4336d9797892.png",
+    "mode": "built-in ImageGen",
+    "generatedInPass": 25,
+    "selected": false,
+    "imageInspection": {
+      "mode": "RGB",
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    "review": "Unselected RGB background; retained as generation reference."
+  },
+  {
+    "key": "thornSpear-sw-pair-vertical-alpha-v8",
+    "inputs": [
+      "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-2a2544ca-b50e-40bd-9e12-00eb448b023e.png"
+    ],
+    "prompt": "Rearrange these exact two complete character cutouts in a vertical column, one above the other, on a transparent background. Preserve their two different leg poses and both connected hand grips. Preserve all painted details and the complete spear in each pose. Leave generous clear separation and margins. Output a real transparent PNG, with no checkerboard pattern or background artwork.",
+    "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-f51f15d3-9f64-4471-87c5-647fe201b6b0.png",
+    "mode": "built-in ImageGen",
+    "generatedInPass": 25,
+    "selected": true,
+    "imageInspection": {
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1536
+      ],
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "alphaZeroFraction": 0.7765
+    },
+    "candidateAsset": "assets/thornSpear-sw-pair-vertical-alpha-v8.png",
+    "review": "Selected after numeric alpha verification and calibrated four-view browser review. Correct leg support, continuous spear and both hand grips preserved; byte-identical copy of built-in ImageGen output.",
+    "asset": "assets/thornSpear-sw-pair-vertical-alpha-v8.png",
+    "sha256": "2d9e6a654a61a87c9b60698e54d68cbf11da5e7ccf6072e77d80f95e6e37fda6"
+  },
+  {
+    "key": "thornSpear-nw-passing-cohesion-v6",
+    "inputs": [
+      "/Users/johnshopinski/Documents/New project/crownforge-roster-painted-studio/assets/thornSpear-nw-pose2-alpha-v4.png",
+      "/Users/johnshopinski/Documents/New project/crownforge-roster-painted-studio/assets/thornSpear-nw-gait-alpha-v4.png"
+    ],
+    "prompt": "Edit the single character in image 1. Make his torso broader and legs more compact to match image 2, while keeping exactly image 1's planted LEFT leg and raised bent RIGHT leg with visible boot sole. Keep the same rear-left view, head facing upper-left, back shield, and continuous diagonal spear shaft passing through both gripping hands. Shorten the tall boot shafts to image 2's calf height. Do not change which foot is planted. One complete figure only. Preserve the transparent background and output a transparent PNG cutout with clear margins around all equipment.",
+    "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-517b6e62-d577-49b7-8e3b-5c354a296b92.png",
+    "mode": "built-in ImageGen",
+    "generatedInPass": 25,
+    "selected": false,
+    "imageInspection": {
+      "mode": "RGB",
+      "size": [
+        1254,
+        1254
+      ]
+    },
+    "review": "Unselected RGB background; retained as generation reference."
+  },
+  {
+    "key": "thornSpear-ne-pair-cohesion-v8",
+    "inputs": [
+      "/Users/johnshopinski/Documents/New project/crownforge-roster-painted-studio/assets/thornSpear-ne-pose1-portrait-alpha-v6.png",
+      "/Users/johnshopinski/Documents/New project/crownforge-roster-painted-studio/assets/thornSpear-ne-pose4-alpha-v4.png",
+      "/Users/johnshopinski/Documents/New project/crownforge-roster-painted-studio/assets/thornSpear-ne-gait-alpha-v4.png"
+    ],
+    "prompt": "Produce two complete character cutouts in a spacious vertical column. Top uses exactly image 1's crossed-thigh walking contact: anatomical right leg crosses backward to the trailing boot on image-left, left leg leads forward on image-right. Bottom uses exactly image 2's passing pose: right boot planted, left boot raised behind with sole visible. Match image 3's broader compact body and rear-right three-quarter camera showing mostly back, a small right cheek, and both shoulders. Keep one round back shield and one continuous spear in both hands, tip upper-right and butt lower-left. Keep correct support legs, complete hands and full equipment. Real transparent PNG with alpha channel, no checkerboard, shadows, ground or decorative background.",
+    "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-0aed6fae-5981-4e43-a953-833d65474e38.png",
+    "mode": "built-in ImageGen",
+    "generatedInPass": 25,
+    "selected": false,
+    "imageInspection": {
+      "mode": "RGB",
+      "size": [
+        1024,
+        1536
+      ]
+    },
+    "review": "Unselected RGB background; retained as generation reference."
+  },
+  {
+    "key": "thornSpear-nw-passing-alpha-v7",
+    "inputs": [
+      "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-517b6e62-d577-49b7-8e3b-5c354a296b92.png"
+    ],
+    "prompt": "Remove the background. Return the same complete character artwork as a transparent PNG cutout with a real alpha channel.",
+    "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-a85d518b-cc9e-449a-afa4-0afffef95997.png",
+    "mode": "built-in ImageGen",
+    "generatedInPass": 25,
+    "selected": true,
+    "imageInspection": {
+      "mode": "RGBA",
+      "size": [
+        1254,
+        1254
+      ],
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "alphaZeroFraction": 0.7203
+    },
+    "candidateAsset": "assets/thornSpear-nw-passing-alpha-v7.png",
+    "review": "Selected after numeric alpha verification and calibrated four-view browser review. Correct leg support, continuous spear and both hand grips preserved; byte-identical copy of built-in ImageGen output.",
+    "asset": "assets/thornSpear-nw-passing-alpha-v7.png",
+    "sha256": "7e1f94a92552b4c83a8f4bd574d0e43459ce365e5cbdc7c58010c3696346a3b1"
+  },
+  {
+    "key": "thornSpear-ne-pair-alpha-v9",
+    "inputs": [
+      "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-0aed6fae-5981-4e43-a953-833d65474e38.png"
+    ],
+    "prompt": "Remove the background. Return the same two complete character artworks as transparent PNG cutouts with a real alpha channel.",
+    "output": "/Users/johnshopinski/.codex/generated_images/01a0723b-1842-78e3-b242-a5646d62eebd/exec-fcec4d16-e066-47f8-a954-c31e54d60e31.png",
+    "mode": "built-in ImageGen",
+    "generatedInPass": 25,
+    "selected": true,
+    "imageInspection": {
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1536
+      ],
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "alphaZeroFraction": 0.7787
+    },
+    "candidateAsset": "assets/thornSpear-ne-pair-alpha-v9.png",
+    "review": "Selected after numeric alpha verification and calibrated four-view browser review. Correct leg support, continuous spear and both hand grips preserved; byte-identical copy of built-in ImageGen output.",
+    "asset": "assets/thornSpear-ne-pair-alpha-v9.png",
+    "sha256": "8d315c7d641274e955641b11c5575e9e03df834775e3ef114a304c66a86a6b59"
+  }
+]

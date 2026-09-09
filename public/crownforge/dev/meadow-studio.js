@@ -1,7 +1,7 @@
-import {CrownforgeSimulation} from '../src/simulation.js?v=20260906-falsemercy1';
-import {CrownforgeRenderer} from '../src/renderer.js?v=20260906-falsemercy1';
-import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260906-firstcondemnation1';
-import {CONFIG,UNIT_TYPES} from '../src/config.js?v=20260906-firstcondemnation1';
+import {CrownforgeSimulation} from '../src/simulation.js?v=20260909-fullroster1';
+import {CrownforgeRenderer} from '../src/renderer.js?v=20260909-fullroster1';
+import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260909-fullroster1';
+import {CONFIG,UNIT_TYPES} from '../src/config.js?v=20260909-fullroster1';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas);
 const play=document.querySelector('#play'),walker=document.querySelector('#walker'),homeButton=document.querySelector('#home');

@@ -1,15 +1,16 @@
-import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260906-bearstride1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260906-bearpair1';
-import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260906-bearstride1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260906-firstcondemnation1';
-import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260905-greatwood3';
-import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260905-buildings1';
-import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260905-buildings1';
-import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260905-smooth1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260906-firstcondemnation1';
-import { findPath } from './pathfinding.js?v=20260905-greatwood3';
-import { ResourceConnectivity } from './resource-connectivity.js?v=20260905-greatwood3';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260907-paintedashen1';
+import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, corpseLifetime } from './bear-combat.js?v=20260909-fullroster1';
+import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260909-fullroster1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260909-fullroster1';
+import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-fullroster1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260909-fullroster1';
+import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-fullroster1';
+import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-fullroster1';
+import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-fullroster1';
+import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-fullroster1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260909-fullroster1';
+import { findPath } from './pathfinding.js?v=20260909-fullroster1';
+import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-fullroster1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260909-fullroster1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -70,7 +71,7 @@ const WALL_MAX_SEGMENTS = Math.ceil(Math.hypot(CONFIG.mapWidth, CONFIG.mapHeight
 const DECORATION_FOOTPRINTS = { log: 0.78, stump: 0.62, flowers: 0.42, pebbles: 0.44 };
 const COMBAT_SLOT_COUNT = 8;
 const COMBAT_SLOT_MARGIN = 0.12;
-const DEAD_UNIT_LIFETIME = 2.4;
+// Corpse lifetime is shared with rendering; bears complete a painted collapse before fading.
 const BUILDING_COLLISION_RELEASE_TIME = 0.75;
 const DESTROYED_BUILDING_LIFETIME = 2.4;
 const FACING_HYSTERESIS = 0.12;
@@ -1125,11 +1126,11 @@ export class CrownforgeSimulation {
           unit.actionLabel = 'Idle';
         }
         this.animation.update(unit, dt);
-        if (unit.dead && unit.deathAge >= DEAD_UNIT_LIFETIME && unit.lastAnimationEvent?.name !== ANIMATION_EVENTS.deathComplete) {
+        if (unit.dead && unit.deathAge >= corpseLifetime(unit) && unit.lastAnimationEvent?.name !== ANIMATION_EVENTS.deathComplete) {
           this.animation.emit(unit, ANIMATION_EVENTS.deathComplete);
         }
       }
-      this.units = this.units.filter((unit) => !unit.dead || unit.deathAge < DEAD_UNIT_LIFETIME);
+      this.units = this.units.filter((unit) => !unit.dead || unit.deathAge < corpseLifetime(unit));
       return;
     }
     this.clock += dt;
@@ -1154,11 +1155,11 @@ export class CrownforgeSimulation {
     updateWildlife(this,dt);
     this._checkVictory();
     for (const unit of this.units) {
-      if (unit.dead && unit.deathAge >= DEAD_UNIT_LIFETIME && unit.lastAnimationEvent?.name !== ANIMATION_EVENTS.deathComplete) {
+      if (unit.dead && unit.deathAge >= corpseLifetime(unit) && unit.lastAnimationEvent?.name !== ANIMATION_EVENTS.deathComplete) {
         this.animation.emit(unit, ANIMATION_EVENTS.deathComplete);
       }
     }
-    this.units = this.units.filter((unit) => !unit.dead || unit.deathAge < DEAD_UNIT_LIFETIME);
+    this.units = this.units.filter((unit) => !unit.dead || unit.deathAge < corpseLifetime(unit));
     this.buildings = this.buildings.filter((building) => !building.destroyed || building.destroyAge < DESTROYED_BUILDING_LIFETIME);
   }
 
@@ -1321,6 +1322,7 @@ export class CrownforgeSimulation {
     unit.attackEventFired = false;
     unit.attackTargetSnapshot = null;
     unit.grizzlyMovingAttack = false;
+    unit.fighterMovingAttack = false;
     unit.grizzlyPursuitDirect = false;
   }
 
@@ -2104,7 +2106,7 @@ export class CrownforgeSimulation {
           kind: 'building',
           faction: projectile.faction,
           type: projectile.sourceType,
-        });
+        }, {damageType:'arrow'});
         target.hitFlash = Math.max(target.hitFlash, result.blocked ? 0.12 : 0.3);
         target.healthRevealTimer = Math.max(target.healthRevealTimer, 1.6);
         this.animation.emit(target, ANIMATION_EVENTS.damageTaken, {
@@ -2207,6 +2209,7 @@ export class CrownforgeSimulation {
 
   _updateUnit(unit, dt) {
     const grizzlyStart = unit.type === 'grizzly' ? { x:unit.x, z:unit.z } : null;
+    const fighterStart = isFighter(unit) ? {x:unit.x,z:unit.z} : null;
     if (unit.dead) {
       unit.deathAge += dt;
       unit.animClock += dt;
@@ -2233,6 +2236,7 @@ export class CrownforgeSimulation {
     else if (!['gather', 'return', 'attack', 'build', 'demolish'].includes(unit.command)) unit.visualState = 'idle';
     if (unit.command === 'move' || unit.command === 'gather' || unit.command === 'return' || unit.command === 'attack' || unit.command === 'build' || unit.command === 'demolish' || unit.command === 'field') {
       if (unit.type === 'grizzly' && unit.command === 'attack') this._prepareGrizzlyPursuit(unit);
+      else if (fighterStart && unit.command === 'attack') this._prepareFighterPursuit(unit);
       this._followPath(unit, dt);
     }
     if (unit.command === 'gather') this._updateGathering(unit, dt);
@@ -2244,6 +2248,7 @@ export class CrownforgeSimulation {
     this._updateStairProgress(unit);
     unit.motionSpeed = Math.hypot(unit.velocityX, unit.velocityZ);
     if (grizzlyStart) updateGrizzlyMotion(unit,dt,Math.min(distance(unit,grizzlyStart),UNIT_TYPES.grizzly.speed*dt*1.6));
+    if(fighterStart)unit.combatLocomotionTime=(unit.combatLocomotionTime??0)+distance(unit,fighterStart)/Math.max(UNIT_TYPES[unit.type].speed,.01);
     const locomoting = unit.command === 'move' || unit.visualState === 'walk';
     const hasMovementIntent = locomoting && (unit.path.length > 0 || unit.motionSpeed > 0.08);
     unit.animationPlaybackRate = hasMovementIntent
@@ -2262,6 +2267,7 @@ export class CrownforgeSimulation {
   }
 
   _updateUnitStatusEffects(unit, dt) {
+    if(isCurseImmune(unit)){unit.stunTimer=0;unit.stunImmunityTimer=0;}
     unit.wardBlockedPulse = Math.max(0, (unit.wardBlockedPulse ?? 0) - dt);
     unit.lastLightWardBlastTimer = Math.max(0, (unit.lastLightWardBlastTimer ?? 0) - dt);
     unit.lastLightCurseFlashTimer = Math.max(0, (unit.lastLightCurseFlashTimer ?? 0) - dt);
@@ -4246,7 +4252,7 @@ export class CrownforgeSimulation {
   _tryApplyVillagerStun(attacker, target) {
     const stunRule = UNIT_TYPES[attacker.type]?.stunOnHit;
     const targetTraits = UNIT_TYPES[target.type]?.traits ?? [];
-    if (!stunRule
+    if (isCurseImmune(target) || !stunRule
       || (attacker.faction === target.faction && !areHearthkinNeutral(attacker, target))
       || !targetTraits.includes(stunRule.targetTrait)
       || target.dead
@@ -4365,9 +4371,10 @@ export class CrownforgeSimulation {
     this._announce(`Last Light Ward saves the Hearthkin for ${duration} seconds.${curseNotice}`);
   }
 
-  _applyUnitDamage(target, amount, attacker) {
+  _applyUnitDamage(target, amount, attacker, {damageType='weapon'}={}) {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
-    const damage = Math.max(0, Number(amount) || 0);
+    const rawDamage = Math.max(0, Number(amount) || 0);
+    const damage = target.type==='grizzly' && damageType==='arrow' && rawDamage>0 ? bearArrowDamage(target) : rawDamage;
     if (target.lastLightWardTimer > 0) {
       target.wardBlockedPulse = 0.42;
       target.hitFlash = Math.max(target.hitFlash, 0.12);
@@ -4389,9 +4396,55 @@ export class CrownforgeSimulation {
       return { damage: before, killed: false, warded: true, blocked: false, cursed: false };
     }
 
-    target.hp = Math.max(0, after);
+    target.hp = after < 1e-8 ? 0 : after;
     if (target.hp <= 0) this._killUnit(target, attacker);
+    else if(target.type==='grizzly' && damage>0 && isFighter(attacker) && !isWardProtected(attacker)) this._retaliateGrizzly(target,attacker);
     return { damage: Math.min(before, damage), killed: target.dead, warded: false, blocked: false, cursed: false };
+  }
+
+  _retaliateGrizzly(bear,attacker) {
+    // Last landed fighter hit owns threat. Redirect an existing swing without
+    // restarting its wind-up, so alternating hits cannot stun-lock the bear.
+    bear.wildlifeRetaliationId=attacker.id;
+    bear.wildlifeProgressAt=this.clock;
+    if(bear.attackTarget===attacker.id && bear.command==='attack')return;
+    this._releaseCombatSlot(bear);
+    if(bear.command!=='attack')this._cancelAttackCycle(bear);
+    bear.command='attack';bear.attackTarget=attacker.id;bear.attackTargetKind='unit';
+    bear.path=[];bear.routeTarget=null;bear.attackRepathCooldown=0;
+    this._reserveCombatSlot(bear,attacker,bear.id%COMBAT_SLOT_COUNT);
+    bear.actionLabel='Turning on '+UNIT_TYPES[attacker.type].label;
+    setUnitFacing(bear,attacker.x-bear.x,attacker.z-bear.z,true);
+  }
+
+  _prepareFighterPursuit(unit) {
+    unit.fighterMovingAttack=false;
+    const target=this._getExplicitAttackTarget(unit);
+    if(!target || target.kind!=='unit' || isWardProtected(target))return;
+    const span=distance(unit,target),rules=UNIT_TYPES[unit.type];
+    if(span>FIGHTER_PURSUIT.trackDistance)return;
+    const gap=Math.max(rules.radius+(UNIT_TYPES[target.type].radius??.4)+.06,rules.range*.8);
+    if(span<=gap){unit.path=[];unit.velocityX=unit.velocityZ=0;return;}
+    const point={x:target.x+(unit.x-target.x)*gap/span,z:target.z+(unit.z-target.z)*gap/span};
+    if(this._pointBlockedForUnit(unit,point)||this._pathSegmentBlocked(unit,unit,point)) {
+      if(unit.attackPhase!=='approach'){unit.path=[];unit.velocityX=unit.velocityZ=0;}
+      return;
+    }
+    unit.path=[point];unit.routeTarget=point;unit.stopDistance=0;
+    unit.fighterMovingAttack=true;
+  }
+
+  _applyGrizzlyCleave(bear,primary) {
+    if(!bearFuryActive(bear))return;
+    const extra=this.units.filter(u=>u!==primary && isFighter(u) && !isWardProtected(u)
+      && distance(bear,u)<=BEAR_FURY.radius && this._hasCombatLineOfSight(bear,u))
+      .sort((a,b)=>distance(primary,a)-distance(primary,b)||a.id-b.id).slice(0,BEAR_FURY.extraTargets);
+    for(const target of extra){
+      const result=this._applyUnitDamage(target,strikeDamage(bear,target),bear);
+      target.hitFlash=.3;target.healthRevealTimer=1.6;
+      this.animation.emit(target,ANIMATION_EVENTS.damageTaken,{sourceId:bear.id,damage:result.damage});
+      this.animation.emit(bear,ANIMATION_EVENTS.attackHit,{targetId:target.id,targetKind:'unit',x:target.x,z:target.z,damage:result.damage,cleave:true});
+    }
   }
 
   _prepareGrizzlyPursuit(unit) {
@@ -4422,6 +4475,15 @@ export class CrownforgeSimulation {
 
   _updateAttack(unit, dt) {
     let target = unit.attackPhase !== 'approach' ? this._getExplicitAttackTarget(unit) : this._getAttackTarget(unit);
+    if(!target && unit.attackPhase!=='approach' && unit.attackEventFired){
+      const rule=UNIT_TYPES[unit.type],timing=unit.type==='grizzly'?grizzlyAttackDefinition(unit):(rule.attackTiming??{anticipation:.25,contact:.45,recovery:.3});
+      const duration=timing.duration??rule.cooldown;
+      unit.path=[];unit.velocityX=unit.velocityZ=0;
+      unit.attackPhaseElapsed+=dt;
+      if(unit.attackPhase==='contact' && unit.attackPhaseElapsed>=duration*timing.contact){unit.attackPhase='recovery';unit.attackPhaseElapsed=0;}
+      else if(unit.attackPhase==='recovery' && unit.attackPhaseElapsed>=duration*timing.recovery)this._cancelAttackCycle(unit);
+      return;
+    }
     if (!target && unit.attackPhase !== 'approach') {
       this._releaseCombatSlot(unit);
       this._cancelAttackCycle(unit);
@@ -4455,7 +4517,7 @@ export class CrownforgeSimulation {
     unit.attackTarget = target.id;
     unit.attackTargetKind = target.kind;
     const pursuingBear = unit.type==='grizzly' && target.kind==='unit' && (unit.attackPhase==='approach' || unit.grizzlyMovingAttack);
-    const range = pursuingBear ? GRIZZLY_PURSUIT.reach : UNIT_TYPES[unit.type].range;
+    const range = pursuingBear ? GRIZZLY_PURSUIT.reach : UNIT_TYPES[unit.type].range + (isFighter(unit)&&target.kind==='unit'?FIGHTER_PURSUIT.reachBonus:0);
     const inRange = this._targetDistance(unit, target) <= range;
     const hasLine = inRange && this._hasCombatLineOfSight(unit, target);
     const targetPoint = target.kind === 'building' ? this._buildingCollisionCenter(target) : target;
@@ -4507,11 +4569,11 @@ export class CrownforgeSimulation {
     if (unit.attackPhase === 'approach') {
       this._startAttackCycle(unit, target);
     }
-    if(unit.type!=='grizzly' || unit.grizzlyAttackVariant==='rear') {
+    if((unit.type!=='grizzly' && !unit.fighterMovingAttack) || (unit.type==='grizzly' && unit.grizzlyAttackVariant==='rear')) {
       unit.path = [];unit.velocityX = 0;unit.velocityZ = 0;
     }
     unit.visualState = 'attack';
-    unit.actionLabel = `${unit.grizzlyMovingAttack?'Chasing and swiping at':'Attacking'} ${this._targetLabel(target)}`;
+    unit.actionLabel = `${unit.grizzlyMovingAttack?'Chasing and swiping at':unit.fighterMovingAttack?'Running strike against':'Attacking'} ${this._targetLabel(target)}`;
     unit.attackTimer += dt;
     unit.attackPhaseElapsed += dt;
     if (unit.attackPhase === 'anticipation') {
@@ -4539,6 +4601,7 @@ export class CrownforgeSimulation {
             target.defendTimer = ENEMY_AI.defenseDuration;
             if (target.hp <= 0) this._destroyBuilding(target, unit);
           } else {
+            if(unit.type==='grizzly')this._applyGrizzlyCleave(unit,target);
             const result = this._applyUnitDamage(target, damage, unit);
             payload.damage = result.damage;
             payload.warded = result.warded;
@@ -4953,6 +5016,7 @@ export class CrownforgeSimulation {
     this.selectedIds = this.selectedIds.filter((id) => id !== unit.id);
     for (const attacker of this.units) {
       if (attacker === unit || attacker.attackTarget !== unit.id || attacker.attackTargetKind !== 'unit') continue;
+      if(attacker===killer && attacker.attackPhase!=='approach' && attacker.attackEventFired)continue;
       this._releaseCombatSlot(attacker);
       this._cancelAttackCycle(attacker);
       attacker.attackTarget = null;

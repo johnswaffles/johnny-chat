@@ -19,7 +19,7 @@ test('all four directions resolve approved walk, breathing, swipe and standing a
    const f=paintedGrizzlyFrame(u);assert.equal(f.action,variant);assert.equal(f.index,4,'damage lands on the painted striking paw');
    u.attackPhase='recovery';u.attackPhaseElapsed=d.duration*d.recovery-1e-6;assert.equal(paintedGrizzlyFrame(u).index,7);
   }
-  u.dead=true;assert.equal(paintedGrizzlyFrame(u).action,'idle');assert.equal(paintedGrizzlyFrame(u).index,0);
+  u.dead=true;assert.equal(paintedGrizzlyFrame(u).action,'death');assert.equal(paintedGrizzlyFrame(u).index,0);
  }
 });
 

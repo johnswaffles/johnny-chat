@@ -1,15 +1,15 @@
-import {requestGrizzlyPair} from './wildlife.js?v=20260906-bearpair1';
-import {createUnitInspector} from './unit-inspector.js?v=20260906-bearpair1';
-import {displayedUnitHealth} from './unit-status.js?v=20260906-bearpair1';
-import { setupPresentation } from './presentation.js?v=20260906-firstcondemnation1';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260906-firstcondemnation1';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260905-lanternfirst1';
-import { CrownforgeInput } from './input.js?v=20260906-firstcondemnation1';
-import { CrownforgeRenderer } from './renderer.js?v=20260907-paintedashen1';
-import { CrownforgeSimulation } from './simulation.js?v=20260907-paintedashen1';
-import { CrownforgePerformanceMonitor } from './performance.js?v=20260905-buildings1';
-import { summarizeUnitTasks } from './task-summary.js?v=20260905-buildings1';
-import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260905-buildings1';
+import {requestGrizzlyPair} from './wildlife.js?v=20260909-fullroster1';
+import {createUnitInspector} from './unit-inspector.js?v=20260909-fullroster1';
+import {displayedUnitHealth} from './unit-status.js?v=20260909-fullroster1';
+import { setupPresentation } from './presentation.js?v=20260909-fullroster1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260909-fullroster1';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260909-fullroster1';
+import { CrownforgeInput } from './input.js?v=20260909-fullroster1';
+import { CrownforgeRenderer } from './renderer.js?v=20260909-fullroster1';
+import { CrownforgeSimulation } from './simulation.js?v=20260909-fullroster1';
+import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-fullroster1';
+import { summarizeUnitTasks } from './task-summary.js?v=20260909-fullroster1';
+import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-fullroster1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');

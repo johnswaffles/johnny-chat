@@ -1,5 +1,5 @@
-import { UNIT_TYPES } from './config.js?v=20260906-firstcondemnation1';
-import { projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260905-idlebreath1';
+import { UNIT_TYPES } from './config.js?v=20260909-fullroster1';
+import { projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260909-fullroster1';
 
 const TAU=Math.PI*2;
 const v=(x=0,y=0,z=0)=>({x,y,z});
@@ -139,12 +139,13 @@ export function mountedPose(type,state='idle',time=0,direction=0,options={}) {
   direction=clamp(Math.round(Number.isFinite(direction)?direction:0),0,3);
   const sampleTime=action.loop?Math.max(0,Number.isFinite(time)?time:0):clamp(Number.isFinite(time)?time:0,0,action.duration);
   const phase=action.loop?fraction(sampleTime/action.duration):clamp(sampleTime/action.duration);
-  const walking=state==='walk'&&options.moving!==false&&(!Number.isFinite(options.motionSpeed)||options.motionSpeed>.025);
+  const walking=(state==='walk'||options.combatMoving&&(state==='attack'||state.startsWith('attack_')))&&options.moving!==false&&(!Number.isFinite(options.motionSpeed)||options.motionSpeed>.025);
   const attacking=state==='attack'||state.startsWith('attack_');
   const clock=attacking?attackClock(state,sampleTime,actions):null;
-  const wave=walking?Math.sin(phase*TAU):0;
+  const gaitPhase=options.combatMoving?fraction((options.locomotionTime??0)/profile.walk):phase;
+  const wave=walking?Math.sin(gaitPhase*TAU):0;
   const breath=attacking||state==='death'||walking?0:Math.sin(phase*TAU+(options.id??0)*.53)*.22;
-  let barrelDrop=0,fall=0,roll=walking?wave*.009:0,pitch=walking?Math.sin(phase*TAU*2)*.012:0;
+  let barrelDrop=0,fall=0,roll=walking?wave*.009:0,pitch=walking?Math.sin(gaitPhase*TAU*2)*.012:0;
   let riderLean=0,riderHeadTilt=0,brace=0;
   if(attacking) {
     brace=strike(clock,0,.25,1,.6);barrelDrop=brace*.35;
@@ -159,26 +160,26 @@ export function mountedPose(type,state='idle',time=0,direction=0,options={}) {
     roll=fall*Math.PI/2;pitch=0;riderLean=0;
   }
   const horseFrame=bodyAxes(roll,pitch);
-  const barrel=v(state==='death'?-6*fall:0,profile.barrelHeight-barrelDrop+(walking?Math.cos(phase*TAU*4)*.2/profile.weight:breath),0);
+  const barrel=v(state==='death'?-6*fall:0,profile.barrelHeight-barrelDrop+(walking?Math.cos(gaitPhase*TAU*4)*.2/profile.weight:breath),0);
   const h={barrel};
   h.withers=pointIn(barrel,horseFrame,v(0,8,20));h.croup=pointIn(barrel,horseFrame,v(0,7,-22));
   h.chest=pointIn(barrel,horseFrame,v(0,-2,25));h.rump=pointIn(barrel,horseFrame,v(0,-1,-25));
   h.saddle=pointIn(barrel,horseFrame,v(0,12,-4));
   h.neckRoot=pointIn(barrel,horseFrame,v(0,5,18));
-  const nod=walking?Math.sin(phase*TAU*2+.55)*.7:breath*.5;
+  const nod=walking?Math.sin(gaitPhase*TAU*2+.55)*.7:breath*.5;
   const neckDirection=normal(blend(vectorIn(horseFrame,v(0,21+nod,17)),v(-.55,-.22,.81),fall));
   h.poll=add(h.neckRoot,mul(neckDirection,26));
   const headDirection=normal(blend(vectorIn(horseFrame,v(0,-17,10)),v(-.12,-.15,.98),fall));
   h.muzzle=add(h.poll,mul(headDirection,18));h.head=blend(h.poll,h.muzzle,.42);
   h.bitLeft=add(h.muzzle,mul(horseFrame.right,-2.2));h.bitRight=add(h.muzzle,mul(horseFrame.right,2.2));
   h.tailRoot=pointIn(barrel,horseFrame,v(0,5,-28.5));
-  const tailSway=attacking||state==='death'?0:walking?Math.sin(phase*TAU-.9)*2.4:Math.sin(phase*TAU)*.7;
+  const tailSway=attacking||state==='death'?0:walking?Math.sin(gaitPhase*TAU-.9)*2.4:Math.sin(phase*TAU)*.7;
   const tail=pointIn(h.tailRoot,horseFrame,v(tailSway,-33,-4.5));
   h.tailTip=blend(tail,v(-10,4,-48),fall);
   const legs={},groundContacts=[];
   for(const leg of LEG_ORDER) {
     const front=leg.startsWith('front'),left=leg.endsWith('Left'),sign=left?-1:1;
-    const cycle=hoofCycle(phase,leg,profile,walking),z=front?23:-23;
+    const cycle=hoofCycle(gaitPhase,leg,profile,walking),z=front?23:-23;
     // Scapula/hip sit inside the barrel, with a small fore-aft excursion.
     // A low shoulder plus oversized bones produces a permanently crouched
     // horse even when every hoof is correctly planted.
@@ -281,7 +282,7 @@ export function mountedPose(type,state='idle',time=0,direction=0,options={}) {
     walking,carrying:false,cargo:null,fall,headTilt:riderHeadTilt,bodyFrame:riderFrame,
     tool:toolFrame?'spear':null,toolFrame,droppedToolFrame,toolHand:'right',toolScale:profile.toolScale,toolGrip:profile.toolGrip,
     toolAngle:Math.atan2(projectedShaft.y,projectedShaft.x)+Math.PI/2,shieldFrame,reins,
-    clothSway:state==='death'||attacking?0:walking?Math.sin(phase*TAU-.6)*.018:Math.sin(phase*TAU)*.004,
+    clothSway:state==='death'||attacking?0:walking?Math.sin(gaitPhase*TAU-.6)*.018:Math.sin(phase*TAU)*.004,
     braidSway:state==='death'||attacking?0:Math.sin(phase*TAU-.8)*(walking?.025:.005),
     attackClock:clock,contactPhase:actions.attack.contact,releasePhase:state==='death'?releasePhase:null,
     mount:{scale:mountScale,anatomical:h,projected:mountProjected,bodyFrame:horseFrame,legs,stirrups,saddle:h.saddle,seat:j.hip,fall,partBindings:MOUNT_PART_BINDINGS,legOrder:LEG_ORDER},

@@ -1,4 +1,4 @@
-import { CONFIG, UNIT_TYPES } from './config.js?v=20260906-firstcondemnation1';
+import { CONFIG, UNIT_TYPES } from './config.js?v=20260909-fullroster1';
 
 export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 300, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
@@ -84,6 +84,8 @@ function updateGrizzlyPair(sim) {
 }
 
 function hunt(sim,bear) {
+  // A lethal swipe still has weight and recovery; scanning must not reset it.
+  if(bear.attackEventFired&&bear.attackPhase!=='approach'&&!sim._getExplicitAttackTarget(bear))return;
   const humans=people(sim).filter(u=>!(u.lastLightWardTimer>0)),current=sim._getAttackTarget(bear);
   const mark=[current?.id??0,current?.hp??0].join('|');
   if(mark!==bear.wildlifeProgress||!bear.wildlifeProgressPoint||distance(bear,bear.wildlifeProgressPoint)>2){
@@ -91,7 +93,8 @@ function hunt(sim,bear) {
   }
   const stalled=sim.clock-(bear.wildlifeProgressAt??sim.clock)>6;
   const nearest=humans.filter(unit=>!(unit.lastLightWardTimer>0)).sort((a,b)=>distance(bear,a)-distance(bear,b)||a.id-b.id)[0];
-  const passing=nearest&&current&&nearest.id!==current.id&&distance(bear,nearest)<6&&distance(bear,current)>9;
+  const retaliation=current?.id===bear.wildlifeRetaliationId;
+  const passing=!retaliation&&nearest&&current&&nearest.id!==current.id&&distance(bear,nearest)<6&&distance(bear,current)>9;
   if(current&&!stalled&&!passing&&!(current.lastLightWardTimer>0))return;
   bear.wildlifeAvoid??={};
   for(const [id,until] of Object.entries(bear.wildlifeAvoid))if(until<=sim.clock)delete bear.wildlifeAvoid[id];

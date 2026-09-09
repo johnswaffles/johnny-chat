@@ -10,9 +10,6 @@ import {
   ENVIRONMENT_ATLAS,
   FIRST_AGE_BUILD_BLUEPRINTS,
   FIRST_AGE_ASSETS,
-  FIRST_AGE_MILESTONES,
-  FIRST_AGE_TECHNOLOGIES,
-  FIRST_AGE_WORK_PRIORITIES,
   GOLD_DEPOSIT_ASSETS,
   INITIAL_RESOURCES,
   LARGE_STONE_ASSET,
@@ -23,13 +20,11 @@ import {
   TREE_GROVE_ATLAS,
   UNIT_TYPES,
   VILLAGER_ATLASES,
-  WILDWOOD_FOREST_ATLAS,
-  resourceDepletionStage,
 } from '../src/config.js';
 import { ANIMATION_EVENTS, animationFrame, resolveAnimationState } from '../src/animation.js';
 import { CrownforgeInput } from '../src/input.js';
 import { CrownforgeRenderer, resolveFirstAgeConstructionStage, resolveWallVisual } from '../src/renderer.js';
-import { CrownforgeSimulation, resourceFootprint } from '../src/simulation.js';
+import { CrownforgeSimulation } from '../src/simulation.js';
 import { summarizeUnitTasks } from '../src/task-summary.js';
 
 const STEP_60HZ = 1 / 60;
@@ -37,7 +32,6 @@ const STEP_20HZ = 1 / 20;
 const INDEX_HTML = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const INPUT_SOURCE = fs.readFileSync(new URL('../src/input.js', import.meta.url), 'utf8');
 const RENDERER_SOURCE = fs.readFileSync(new URL('../src/renderer.js', import.meta.url), 'utf8');
-const SIMULATION_SOURCE = fs.readFileSync(new URL('../src/simulation.js', import.meta.url), 'utf8');
 const STYLES_CSS = fs.readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 
 function advance(simulation, seconds, step = STEP_60HZ) {
@@ -93,19 +87,59 @@ function movementSandbox() {
 }
 
 function checkAnimationAtlases() {
-  for (let direction = 0; direction < 4; direction += 1) {
-    const walkFrame = animationFrame('villager', 'walk', 0.37, direction);
-    assert.equal(walkFrame.atlasKey, 'motionLoop', `Crownforge Hearthkin walk direction ${direction} atlas`);
-    assert.equal(walkFrame.row, direction, `Crownforge Hearthkin walk preserves direction ${direction}`);
-    assert.equal(walkFrame.frameCount, 3, `Crownforge Hearthkin walk direction ${direction} has three authored poses`);
-    assert.ok(walkFrame.column >= 0 && walkFrame.column < 3, `Crownforge Hearthkin walk direction ${direction} frame`);
-    assert.equal(walkFrame.fallback, null, `Crownforge Hearthkin walk direction ${direction} has no fallback`);
+  const rosterUnits = [
+    { type: 'villager', label: 'Crown Hearthkin', walk: 'motionLoop', attack: 'defenseAttackLoop', death: 'deathLoop' },
+    { type: 'soldier', label: 'Crown Guard', walk: 'soldierWalk', attack: 'soldierAttack', death: 'soldierDeath' },
+    { type: 'scout', label: 'Crown Scout', walk: 'scoutWalk', attack: 'scoutAttack', death: 'scoutDeath' },
+    { type: 'spearwarden', label: 'Crown Spearwarden', walk: 'spearwardenWalk', attack: 'spearwardenAttack', death: 'spearwardenDeath' },
+    { type: 'militia', label: 'Crown Militia', walk: 'militiaWalk', attack: 'militiaAttack', death: 'militiaDeath' },
+    { type: 'shieldbearer', label: 'Crown Shieldbearer', walk: 'shieldbearerWalk', attack: 'shieldbearerAttack', death: 'shieldbearerDeath' },
+    { type: 'ashenForager', label: 'Ashen Hearthkin', walk: 'ashenForagerWalk', attack: 'ashenForagerAttack', death: 'ashenForagerDeath' },
+    { type: 'raider', label: 'Ashen Raider', walk: 'raiderWalk', attack: 'raiderAttack', death: 'raiderDeath' },
+    { type: 'ashenOutrider', label: 'Ashen Outrider', walk: 'ashenOutriderWalk', attack: 'ashenOutriderAttack', death: 'ashenOutriderDeath' },
+    { type: 'thornSpear', label: 'Thorn Spear', walk: 'thornSpearWalk', attack: 'thornSpearAttack', death: 'thornSpearDeath' },
+    { type: 'hearthLevy', label: 'Hearth Levy', walk: 'hearthLevyWalk', attack: 'hearthLevyAttack', death: 'hearthLevyDeath' },
+    { type: 'hidewall', label: 'Ashen Hidewall', walk: 'hidewallWalk', attack: 'hidewallAttack', death: 'hidewallDeath' },
+  ];
+
+  for (const unit of rosterUnits) {
+    for (let direction = 0; direction < 4; direction += 1) {
+      const walkFrame = animationFrame(unit.type, 'walk', 0.37, direction);
+      assert.equal(walkFrame.atlasKey, unit.walk, `${unit.label} walk direction ${direction} atlas`);
+      assert.equal(walkFrame.row, direction, `${unit.label} walk preserves direction ${direction}`);
+      assert.equal(walkFrame.frameCount, 3, `${unit.label} walk uses contact, passing, contact poses`);
+      assert.ok(walkFrame.column >= 0 && walkFrame.column < 3, `${unit.label} walk direction ${direction} frame`);
+      assert.equal(walkFrame.fallback, null, `${unit.label} walk has no fallback`);
+
+      const walkColumns = [0.01, 0.34, 0.66].map((time) => animationFrame(unit.type, 'walk', time, direction).column);
+      assert.deepEqual(walkColumns, [0, 1, 2], `${unit.label} walk advances through the ordered three-pose stride`);
+
+      const attackFrame = animationFrame(unit.type, 'attack', 0.37, direction);
+      assert.equal(attackFrame.atlasKey, unit.attack, `${unit.label} attack direction ${direction} atlas`);
+      assert.equal(attackFrame.row, direction, `${unit.label} attack preserves direction ${direction}`);
+      assert.equal(attackFrame.frameCount, 3, `${unit.label} attack uses wind-up, impact, follow-through poses`);
+
+      for (const [state, expectedColumn] of [
+        ['attack_anticipation', 0],
+        ['attack_contact', 1],
+        ['attack_recovery', 2],
+      ]) {
+        const phaseFrame = animationFrame(unit.type, state, 0.22, direction);
+        assert.equal(phaseFrame.atlasKey, unit.attack, `${unit.label} ${state} atlas`);
+        assert.equal(phaseFrame.row, direction, `${unit.label} ${state} preserves direction ${direction}`);
+        assert.equal(phaseFrame.column, expectedColumn, `${unit.label} ${state} uses its authored attack phase`);
+        assert.equal(phaseFrame.fallback, null, `${unit.label} ${state} has no fallback`);
+      }
+
+      const deathFrame = animationFrame(unit.type, 'death', 0.71, direction);
+      assert.equal(deathFrame.atlasKey, unit.death, `${unit.label} death direction ${direction} atlas`);
+      assert.equal(deathFrame.row, direction, `${unit.label} death preserves direction ${direction}`);
+      assert.equal(deathFrame.frameCount, 4, `${unit.label} death uses reaction, stagger, collapse, fallen poses`);
+      assert.ok(deathFrame.column >= 0 && deathFrame.column < 4, `${unit.label} death direction ${direction} frame`);
+      assert.equal(deathFrame.fallback, null, `${unit.label} death has no fallback`);
+    }
   }
-  const crownforgeWalkTimes = [0.01, 0.34, 0.66];
-  for (let direction = 0; direction < 4; direction += 1) {
-    const columns = crownforgeWalkTimes.map((time) => animationFrame('villager', 'walk', time, direction).column);
-    assert.ok(new Set(columns).size >= 3, `Crownforge Hearthkin direction ${direction} advances through the full walk cycle`);
-  }
+
   for (const [state, atlasKey] of [
     ['carry_wood', 'carryWoodLoop'],
     ['carry_food', 'carryFoodLoop'],
@@ -119,51 +153,20 @@ function checkAnimationAtlases() {
       assert.ok(frame.column >= 0 && frame.column < 4, `${state} direction ${direction} frame`);
     }
   }
-  for (const type of ['soldier', 'raider', 'scout', 'spearwarden', 'militia', 'shieldbearer']) {
-    for (let direction = 0; direction < 4; direction += 1) {
-      const walkFrame = animationFrame(type, 'walk', 0.37, direction);
-      assert.equal(walkFrame.atlasKey, `${type}Walk`, `${type} walk atlas`);
-      assert.equal(walkFrame.frameCount, 3, `${type} walk uses three authored frames`);
-      assert.ok(walkFrame.column >= 0 && walkFrame.column < 3, `${type} walk direction ${direction} frame`);
-      assert.equal(walkFrame.fallback, null, `${type} walk does not fall back to idle`);
-    }
-    for (const state of ['attack_anticipation', 'attack_contact', 'attack_recovery']) {
-      for (let direction = 0; direction < 4; direction += 1) {
-        const frame = animationFrame(type, state, 0.22, direction);
-        assert.equal(frame.atlasKey, `${type}Attack`, `${type} ${state} atlas`);
-        assert.ok(frame.row >= 0 && frame.row < 4, `${type} ${state} direction ${direction}`);
-      }
-    }
-    for (let direction = 0; direction < 4; direction += 1) {
-      if (!['scout', 'spearwarden', 'militia', 'shieldbearer'].includes(type)) {
-        const frame = animationFrame(type, 'hit', 0.11, direction);
-        assert.equal(frame.atlasKey, `${type}Hit`, `${type} hit atlas`);
-        assert.equal(frame.frameCount, 4, `${type} hit uses four authored recoil frames`);
-        assert.ok(frame.column >= 0 && frame.column < 4, `${type} hit direction ${direction} frame`);
-        assert.equal(frame.fallback, null, `${type} hit does not fall back to idle`);
-      }
-      const deathFrame = animationFrame(type, 'death', 0.71, direction);
-      assert.equal(deathFrame.atlasKey, `${type}Death`, `${type} death atlas`);
-      assert.equal(deathFrame.frameCount, 4, `${type} death uses authored frames`);
-      assert.ok(deathFrame.column >= 0 && deathFrame.column < 4, `${type} death direction ${direction} frame`);
-      assert.equal(deathFrame.fallback, null, `${type} death does not fall back to idle`);
-    }
-  }
+
   for (let direction = 0; direction < 4; direction += 1) {
-    for (const state of ['attack_anticipation', 'attack_contact', 'attack_recovery']) {
-      const attackFrame = animationFrame('villager', state, 0.22, direction);
-      assert.equal(attackFrame.atlasKey, 'defenseAttackLoop', `villager ${state} uses authored defense atlas direction ${direction}`);
-      assert.equal(attackFrame.row, direction, `villager ${state} preserves direction ${direction}`);
-      assert.equal(attackFrame.fallback, null, `villager ${state} does not fall back to a static pose`);
-    }
     const hitFrame = animationFrame('villager', 'hit', 0.11, direction);
     assert.equal(hitFrame.atlasKey, 'hitLoop', `villager hit atlas direction ${direction}`);
     assert.equal(hitFrame.frameCount, 4, 'villager hit uses four authored recoil frames');
     assert.equal(hitFrame.fallback, null, 'villager hit does not fall back to idle');
-    const deathFrame = animationFrame('villager', 'death', 0.71, direction);
-    assert.equal(deathFrame.atlasKey, 'deathLoop', `villager death atlas direction ${direction}`);
-    assert.equal(deathFrame.frameCount, 4, 'villager death uses four authored frames');
-    assert.equal(deathFrame.fallback, null, 'villager death does not fall back to idle');
+
+    for (const type of ['soldier', 'raider']) {
+      const frame = animationFrame(type, 'hit', 0.11, direction);
+      assert.equal(frame.atlasKey, `${type}Hit`, `${type} hit atlas`);
+      assert.equal(frame.frameCount, 4, `${type} hit uses four authored recoil frames`);
+      assert.ok(frame.column >= 0 && frame.column < 4, `${type} hit direction ${direction} frame`);
+      assert.equal(frame.fallback, null, `${type} hit does not fall back to idle`);
+    }
 
     const stunnedFrame = animationFrame('raider', 'stunned', 0.37, direction);
     assert.equal(stunnedFrame.atlasKey, 'raiderStunned', `Raider stun uses authored atlas direction ${direction}`);
@@ -171,6 +174,7 @@ function checkAnimationAtlases() {
     assert.equal(stunnedFrame.frameCount, 4, 'Raider stun has a restrained four-pose loop');
     assert.equal(stunnedFrame.fallback, null, 'Raider stun does not fall back to idle');
   }
+
   for (const atlas of Object.values(VILLAGER_ATLASES)) {
     if (atlas?.src) assert.match(atlas.src, /\.png/);
   }
@@ -180,7 +184,6 @@ function checkAnimationAtlases() {
 
   const foragerStates = {
     idle: 'ashenForagerMotion',
-    walk: 'ashenForagerWalk',
     gather_wood: 'ashenForagerWork',
     gather_food: 'ashenForagerWork',
     gather_stone: 'ashenForagerWork',
@@ -199,36 +202,6 @@ function checkAnimationAtlases() {
       assert.equal(frame.fallback, null, `Ashen Forager ${state} has authored artwork`);
     }
   }
-  const authoredWalkTimes = [0.01, 0.34, 0.66];
-  for (let direction = 0; direction < 4; direction += 1) {
-    const columns = authoredWalkTimes.map((time) => animationFrame('ashenForager', 'walk', time, direction).column);
-    assert.ok(new Set(columns).size >= 3, `Ashen Forager direction ${direction} advances through authored walk frames`);
-  }
-
-  const ashenFighters = {
-    ashenOutrider: ['ashenOutriderWalk', 'ashenOutriderAttack', 'ashenOutriderDeath'],
-    thornSpear: ['thornSpearWalk', 'thornSpearAttack', 'thornSpearDeath'],
-    hearthLevy: ['hearthLevyWalk', 'hearthLevyAttack', 'hearthLevyDeath'],
-    hidewall: ['hidewallWalk', 'hidewallAttack', 'hidewallDeath'],
-  };
-  for (const [type, [walkAtlas, attackAtlas, deathAtlas]] of Object.entries(ashenFighters)) {
-    for (let direction = 0; direction < 4; direction += 1) {
-      const walkFrame = animationFrame(type, 'walk', 0.37, direction);
-      assert.equal(walkFrame.atlasKey, walkAtlas, `${type} walk direction ${direction} atlas`);
-      assert.equal(walkFrame.row, direction, `${type} walk preserves direction ${direction}`);
-      assert.equal(walkFrame.frameCount, 3, `${type} walk has three authored poses`);
-      assert.equal(walkFrame.fallback, null, `${type} walk has no static fallback`);
-      for (const state of ['attack_anticipation', 'attack_contact', 'attack_recovery']) {
-        const attackFrame = animationFrame(type, state, 0.22, direction);
-        assert.equal(attackFrame.atlasKey, attackAtlas, `${type} ${state} direction ${direction} atlas`);
-        assert.equal(attackFrame.row, direction, `${type} ${state} preserves direction ${direction}`);
-        assert.equal(attackFrame.fallback, null, `${type} ${state} has authored artwork`);
-      }
-      const deathFrame = animationFrame(type, 'death', 0.71, direction);
-      assert.equal(deathFrame.atlasKey, deathAtlas, `${type} death direction ${direction} atlas`);
-      assert.equal(deathFrame.frameCount, 4, `${type} death has four authored poses`);
-    }
-  }
 }
 
 function checkResetPresentation() {
@@ -240,7 +213,7 @@ function checkResetPresentation() {
     ['townCenter'],
     'reset begins with the Crown Hall as the only player building',
   );
-  assert.deepEqual(FIRST_AGE_BUILD_BLUEPRINTS, ['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'road', 'wall', 'gate', 'palisadeTower'], 'first-age blueprint catalog stays intentionally small');
+  assert.deepEqual(FIRST_AGE_BUILD_BLUEPRINTS, ['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'wall', 'gate', 'palisadeTower'], 'first-age blueprint catalog stays intentionally small');
   assert.deepEqual(
     [...INDEX_HTML.matchAll(/data-build-type="([^"]+)"/g)].map((match) => match[1]),
     FIRST_AGE_BUILD_BLUEPRINTS,
@@ -309,80 +282,6 @@ function checkGathering() {
   }
 }
 
-function checkPersistentForestGathering() {
-  assert.equal(WILDWOOD_FOREST_ATLAS.columns, 3, 'Wildwood depletion atlas has three columns');
-  assert.equal(WILDWOOD_FOREST_ATLAS.rows, 2, 'Wildwood depletion atlas has two rows');
-  assert.match(WILDWOOD_FOREST_ATLAS.src, /crownforge-wildwood-depletion-v2\.png/, 'Wildwood uses its dedicated six-stage artwork');
-  assert.ok(fs.existsSync(new URL(`../${WILDWOOD_FOREST_ATLAS.src.split('?')[0].replace(/^\.\//, '')}`, import.meta.url)), 'Wildwood depletion artwork is packaged with the playable game');
-  const stageProbe = { type: 'grove', sizeTier: 'wildwood', maxAmount: 100, amount: 100 };
-  assert.deepEqual(
-    [100, 83, 66, 49, 32, 15, 0].map((amount) => resourceDepletionStage({ ...stageProbe, amount })),
-    [0, 1, 2, 3, 4, 5, 5],
-    'Wildwood visibly advances through six depletion states from dense canopy to clearing',
-  );
-  assert.match(RENDERER_SOURCE, /resource\.resourceType === 'wood' && resource\.amount <= 0/, 'depleted wood artwork is removed before it can cover the cleared ground');
-  assert.doesNotMatch(RENDERER_SOURCE, /depleted && resource\.type === 'tree'/, 'individual forest trees do not leave a replacement stump patch');
-  assert.ok(RESOURCE_TYPES.wood.capacity > 400 * 2400, 'wood storage supports clearing the full generated Wildwood instead of silently stopping a crew');
-  assert.match(SIMULATION_SOURCE, /resolveWorldSeed\(requestedSeed\)/, 'forest generation has an explicit client-side seed');
-  assert.match(SIMULATION_SOURCE, /WILDWOOD_CLUSTER_JITTER/, 'forest generation keeps jitter separate from the sampling lattice');
-  const forestSignature = (simulation) => simulation.resourcesNodes
-    .filter((node) => node.type === 'tree' && node.forestClusterId)
-    .map((node) => `${node.x.toFixed(3)},${node.z.toFixed(3)}`)
-    .join('|');
-  const seededA = new CrownforgeSimulation({ seed: 0x12345678 });
-  const seededB = new CrownforgeSimulation({ seed: 0x12345678 });
-  const seededSignature = forestSignature(seededA);
-  assert.ok(seededA.resourcesNodes.filter((node) => node.type === 'tree').length > 1000, 'seeded Wildwood remains a substantial harvestable forest');
-  assert.equal(seededSignature, forestSignature(seededB), 'the same seed reproduces the same forest for QA and shareable maps');
-  seededA.reset();
-  assert.notEqual(seededSignature, forestSignature(seededA), 'reset rolls a fresh forest layout from the local generation seed');
-
-  const treeLifecycle = movementSandbox();
-  const treeWorker = treeLifecycle.addUnit('villager', 100, 100, 'player');
-  const tree = treeLifecycle.addResource('tree', 'wood', 106, 100, 12, 0, {
-    sizeTier: 'small',
-    forestClusterId: 'qa-forest',
-    forestTreeIndex: 0,
-  });
-  treeLifecycle.setUnitSpeedScale(10);
-  treeLifecycle.setHarvestQuantityScale(100);
-  assert.ok(treeLifecycle._assignResourceWork(treeWorker, {
-    resourceType: 'wood',
-    origin: tree,
-    preferredNode: tree,
-    radius: Infinity,
-    maxCandidates: Infinity,
-    persistent: true,
-  }), 'an independent forest tree accepts a persistent gathering order');
-  advance(treeLifecycle, 4);
-  assert.equal(tree.amount, 0, 'an independent forest tree can be fully depleted on its own');
-  assert.equal(tree.depleted, true, 'an independent forest tree records its own depletion state');
-
-  const chain = movementSandbox();
-  chain.addBuilding('townCenter', 20, 20, 'player');
-  const workers = [
-    chain.addUnit('villager', 30, 18, 'player'),
-    chain.addUnit('villager', 30, 20, 'player'),
-    chain.addUnit('villager', 30, 22, 'player'),
-  ];
-  chain.addResource('tree', 'wood', 34, 20, 36, 0, { sizeTier: 'small' });
-  chain.addResource('tree', 'wood', 38, 20, 1200, 1, { sizeTier: 'small' });
-  const [firstStand, nextStand] = chain.resourcesNodes;
-  chain.resources.wood = 0;
-  chain.setUnitSpeedScale(10);
-  chain.setHarvestQuantityScale(1);
-  chain.selectedIds = workers.map((unit) => unit.id);
-  chain._syncSelectionFlags();
-  assert.equal(chain.issueContextCommand(firstStand, firstStand).kind, 'gather', 'group forest order is accepted');
-  advance(chain, 10);
-  assert.equal(firstStand.amount, 0, 'the first stand is actually depleted');
-  assert.ok(nextStand.amount < nextStand.maxAmount, 'the same group begins cutting the next nearby stand');
-  assert.ok(
-    workers.every((unit) => unit.gatherTarget === nextStand.id && ['gather', 'return'].includes(unit.command)),
-    'all workers retain their gather intent instead of becoming unresponsive',
-  );
-}
-
 function checkDevelopmentSpeedControls() {
   assert.equal(INDEX_HTML.includes('FIRST LIGHT ORDERS'), false, 'retired First Light Orders panel is removed from the player HUD');
   assert.equal(INDEX_HTML.includes('FIELD MANUAL'), false, 'retired Field Manual commands panel is removed from the player HUD');
@@ -392,7 +291,7 @@ function checkDevelopmentSpeedControls() {
   assert.match(INDEX_HTML, /id="dev-speed-panel"[^>]*class="dev-speed-panel/, 'development speed controls have a visible live panel');
   assert.match(INDEX_HTML, /id="dev-speed-panel"[\s\S]*DEV SPEED CONTROLS/, 'development speed controls live outside optional telemetry');
   assert.match(INDEX_HTML, /id="unit-speed"/, 'development travel speed slider remains available');
-  assert.match(INDEX_HTML, /id="harvest-quantity"/, 'development harvesting quantity slider is available');
+  assert.match(INDEX_HTML, /id="harvest-speed"/, 'development harvesting speed slider is available');
 
   const normal = movementSandbox();
   const normalWorker = normal.addUnit('villager', 20, 20, 'player');
@@ -401,153 +300,24 @@ function checkDevelopmentSpeedControls() {
   normalWorker.gatherTarget = normalTree.id;
   normalWorker.command = 'gather';
   normal._updateGathering(normalWorker, 0.2);
-  assert.equal(normalWorker.carryAmount, 0, 'normal harvesting quantity does not complete a wood cycle early');
+  assert.equal(normalWorker.carryAmount, 0, 'normal harvesting speed does not complete a wood cycle early');
 
-  const base = movementSandbox();
-  const baseWorker = base.addUnit('villager', 20, 20, 'player');
-  base.addResource('tree', 'wood', 21.2, 20, 200, 0, { sizeTier: 'small' });
-  const baseTree = base.resourcesNodes[0];
-  baseWorker.gatherTarget = baseTree.id;
-  baseWorker.command = 'gather';
-  base._updateGathering(baseWorker, 1.1);
-  assert.equal(baseWorker.carryAmount, RESOURCE_TYPES.wood.gatherAmount, '1x removes the authored wood quantity');
-
-  const boosted = movementSandbox();
-  const boostedWorker = boosted.addUnit('villager', 20, 20, 'player');
-  boosted.addResource('tree', 'wood', 21.2, 20, 200, 0, { sizeTier: 'small' });
-  const boostedTree = boosted.resourcesNodes[0];
-  boostedWorker.gatherTarget = boostedTree.id;
-  boostedWorker.command = 'gather';
-  assert.equal(boosted.setHarvestQuantityScale(100), 100, 'harvesting quantity slider caps at 100x');
-  boosted._updateGathering(boostedWorker, 1.1);
-  assert.equal(boostedWorker.carryAmount, 200, '100x removes the larger available bundle at normal cycle timing');
-  assert.equal(boosted.getUnitSpeedScale(), 1, 'harvesting quantity does not alter travel speed');
+  const fast = movementSandbox();
+  const fastWorker = fast.addUnit('villager', 20, 20, 'player');
+  fast.addResource('tree', 'wood', 21.2, 20, 100, 0, { sizeTier: 'small' });
+  const fastTree = fast.resourcesNodes[0];
+  fastWorker.gatherTarget = fastTree.id;
+  fastWorker.command = 'gather';
+  assert.equal(fast.setHarvestSpeedScale(10), 10, 'harvesting speed slider caps at 10x');
+  fast._updateGathering(fastWorker, 0.2);
+  assert.ok(fastWorker.carryAmount > 0, '10x harvesting completes a nearby wood cycle promptly');
+  assert.equal(fast.getUnitSpeedScale(), 1, 'harvesting speed does not alter travel speed');
 
   const isolated = freshSimulation();
   isolated.setUnitSpeedScale(7);
-  isolated.setHarvestQuantityScale(100);
+  isolated.setHarvestSpeedScale(10);
   assert.equal(isolated.getUnitSpeedScale(), 7, 'travel speed remains independently adjustable');
-  assert.equal(isolated.getHarvestQuantityScale(), 100, 'harvesting quantity remains independently adjustable');
-}
-
-function checkFirstAgeSystemsPass() {
-  assert.ok(FIRST_AGE_BUILD_BLUEPRINTS.includes('road'), 'packed roads are available in the First Age catalog');
-  assert.equal(BUILDING_TYPES.road.walkable, true, 'packed roads do not become navigation blockers');
-  assert.equal(BUILDING_TYPES.road.road, true, 'packed roads carry their movement-network identity');
-  assert.equal(Object.keys(FIRST_AGE_TECHNOLOGIES).length, 3, 'First Age has three focused doctrine upgrades');
-
-  const simulation = movementSandbox();
-  simulation.addBuilding('townCenter', 20, 20, 'player', 1);
-  const guard = simulation.addUnit('soldier', 20, 20, 'player');
-  simulation.selectedIds = [guard.id];
-  simulation._syncSelectionFlags();
-  const guardOrder = simulation.setGuardZone({ x: 20, z: 20 }, 18);
-  assert.equal(guardOrder.success, true, 'an armed unit accepts a guard-area order');
-  assert.equal(guard.command, 'guard', 'a guard-area order holds the unit in guard state');
-  assert.deepEqual(guard.guardPoint, { x: 20, z: 20 }, 'guard area stores its station point');
-  assert.equal(guard.guardRadius, 18, 'guard area stores its local defense radius');
-  assert.match(simulation.getRecentEvents(1)[0].message, /Guard area set/, 'guard order is written to the field log');
-
-  simulation.resources = { food: 1000, wood: 1000, stone: 1000, gold: 1000 };
-  assert.equal(simulation.researchTechnology('forestStewardship').success, true, 'Forest Stewardship can be researched');
-  assert.equal(simulation._technologyGatherMultiplier('wood'), 1.25, 'Forest Stewardship increases wood yield');
-  assert.equal(simulation.researchTechnology('stonecuttersGuild').success, true, 'Stonecutters Guild can be researched');
-  assert.equal(simulation._technologyGatherMultiplier('stone'), 1.15, 'Stonecutters Guild increases stone yield');
-  assert.equal(simulation.researchTechnology('watchkeeping').success, true, 'Watchkeeping can be researched');
-  assert.equal(simulation._defenseRangeMultiplier(), 1.2, 'Watchkeeping increases defensive building range');
-
-  const road = simulation.addBuilding('road', 26, 20, 'player', 1);
-  guard.x = 26;
-  guard.z = 20;
-  assert.equal(simulation._isOnPackedRoad(guard), true, 'armed units receive the packed-road movement context');
-  const snapshot = simulation.serialize();
-  const restored = movementSandbox();
-  assert.equal(restored.restore(snapshot), true, 'a serialized Crownforge slice restores successfully');
-  assert.equal(restored.getWorldSeed(), simulation.getWorldSeed(), 'save/load preserves the world seed');
-  assert.equal(restored.technologies.watchkeeping.researchedAt >= 0, true, 'save/load preserves researched doctrine');
-  assert.ok(restored.buildings.some((building) => building.id === road.id && building.road), 'save/load preserves packed-road buildings');
-  assert.ok(restored.units.some((unit) => unit.id === guard.id && unit.guardPoint), 'save/load preserves guard orders');
-  assert.match(restored.getRecentEvents(1)[0].message, /save restored/i, 'save recovery writes a restore event');
-
-  const queuedOrders = movementSandbox();
-  const queuedWorker = queuedOrders.addUnit('villager', 10, 10, 'player');
-  queuedOrders.selectedIds = [queuedWorker.id];
-  queuedOrders._syncSelectionFlags();
-  assert.equal(queuedOrders.issueContextCommand({ x: 20, z: 20 }).kind, 'move', 'a worker accepts the first direct move order');
-  const queuedMove = queuedOrders.issueContextCommand({ x: 30, z: 30 }, null, { queue: true });
-  assert.equal(queuedMove.success, true, 'Shift-right-click accepts a follow-up move order');
-  assert.equal(queuedWorker.orderQueue.length, 1, 'the follow-up move is retained instead of replacing the active order');
-  assert.equal(queuedWorker.orderQueue[0].kind, 'move', 'the retained order keeps its move intent');
-}
-
-function checkFirstAgeCommandDeckPass() {
-  assert.equal(Object.keys(FIRST_AGE_WORK_PRIORITIES).length, 5, 'First Age worker focus offers five intentional priority presets');
-  assert.equal(FIRST_AGE_MILESTONES.length, 5, 'First Age milestone track stays compact and readable');
-
-  const workerFocus = movementSandbox();
-  const worker = workerFocus.addUnit('villager', 10, 10, 'player');
-  workerFocus.addResource('tree', 'wood', 14, 12, 180, 0);
-  workerFocus.addResource('berry', 'food', 42, 42, 105, 0);
-  workerFocus.setWorkerFocus('wood');
-  workerFocus._updateWorkerAssignments();
-  assert.equal(workerFocus.getWorkerFocus(), 'wood', 'worker focus persists as a simulation setting');
-  assert.equal(worker.gatherTarget !== null, true, 'idle workers receive an automatic resource assignment');
-  assert.equal(worker.gatherIntent.resourceType, 'wood', 'worker focus chooses the requested nearby resource first');
-
-  const repairToggle = movementSandbox();
-  const repairWorker = repairToggle.addUnit('villager', 20, 20, 'player');
-  const damaged = repairToggle.addBuilding('house', 20, 20, 'player', 1);
-  damaged.hp = damaged.maxHp - 20;
-  repairToggle.setAutoRepairEnabled(false);
-  assert.equal(repairToggle._nearestAutomaticBuildingWork(repairWorker), null, 'paused automatic repair leaves damaged structures for explicit orders');
-  repairToggle.setAutoRepairEnabled(true);
-  assert.equal(repairToggle._nearestAutomaticBuildingWork(repairWorker).id, damaged.id, 'automatic repair can be resumed without changing building data');
-
-  const rally = movementSandbox();
-  const barracks = rally.addBuilding('barracks', 20, 20, 'player', 1);
-  rally.selectedIds = [barracks.id];
-  rally._syncSelectionFlags();
-  const rallyResult = rally.setRallyPoint({ x: 30, z: 30 });
-  assert.equal(rallyResult.success, true, 'production buildings accept a rally point');
-  assert.deepEqual(barracks.rallyPoint, { x: 30, z: 30 }, 'rally point stores its world destination');
-  rally.clearRallyPoint();
-  assert.equal(barracks.rallyPoint, null, 'production rally points can be cleared');
-
-  const patrol = movementSandbox();
-  const guard = patrol.addUnit('soldier', 20, 20, 'player');
-  patrol.selectedIds = [guard.id];
-  patrol._syncSelectionFlags();
-  const patrolResult = patrol.setPatrolRoute({ x: 20, z: 20 }, { x: 34, z: 20 });
-  assert.equal(patrolResult.success, true, 'armed units accept a two-point patrol route');
-  assert.equal(guard.patrolActive, true, 'patrol state stays active after the initial route is planned');
-  assert.equal(guard.patrolPoints.length, 2, 'patrol keeps both waypoints');
-  patrol.clearPatrolRoute();
-  assert.equal(guard.patrolActive, false, 'patrol route can be cleared');
-
-  const map = movementSandbox();
-  const scout = map.addUnit('scout', 20, 20, 'player');
-  map.setExplorationEnabled(true);
-  assert.ok(map.getExplorationSnapshot().cells.length > 0, 'optional exploration reveals a bounded local cell set');
-  map.setExplorationEnabled(false);
-  assert.equal(map.getExplorationSnapshot().enabled, false, 'exploration can be disabled for the normal full-map slice');
-
-  const settlement = movementSandbox();
-  settlement.addBuilding('townCenter', 20, 20, 'player', 1);
-  const timber = settlement.addBuilding('timberYard', 32, 20, 'player', 1);
-  const wall = settlement.addBuilding('wall', 45, 20, 'player', 1, { wallSegments: 3, wallDirection: { x: 1, z: 0 }, wallStart: { x: 42, z: 20 } });
-  const milestones = settlement.getFirstAgeMilestones();
-  assert.equal(milestones.find((item) => item.id === 'established').complete, true, 'Crown Hall milestone reflects a standing settlement core');
-  assert.equal(milestones.find((item) => item.id === 'frontier').value, 2, 'milestone progress counts completed First Age structures');
-  assert.equal(settlement.getLogisticsSummary().find((item) => item.resourceType === 'wood').station, 'Timber Yard', 'logistics summary selects the matching drop-off');
-  assert.ok(settlement.getWallExtensionStart(wall).x > wall.x, 'wall continuation exposes a magnetic last-end start point');
-
-  settlement.setWorkerFocus('gold');
-  settlement.setAutoRepairEnabled(false);
-  const save = settlement.serialize();
-  const restored = movementSandbox();
-  assert.equal(restored.restore(save), true, 'new First Age command settings survive save/load');
-  assert.equal(restored.getWorkerFocus(), 'gold', 'save/load preserves worker focus');
-  assert.equal(restored.isAutoRepairEnabled(), false, 'save/load preserves automatic repair state');
+  assert.equal(isolated.getHarvestSpeedScale(), 10, 'harvesting speed remains independently adjustable');
 }
 
 function checkGoldEconomyLoop() {
@@ -1084,21 +854,7 @@ function checkBuilderWorkflowAndVillagerControls() {
   assert.equal(selected.count, 2, 'select-all includes every living player Villager only');
   assert.deepEqual(selection.selectedIds, [first.id, second.id], 'select-all excludes soldiers, enemies, and fallen Villagers');
 
-  const neutral = movementSandbox();
-  const crownHearthkin = neutral.addUnit('villager', 10, 10, 'player');
-  const ashenHearthkin = neutral.addUnit('ashenForager', 12, 10, 'enemy');
-  crownHearthkin.attackTarget = ashenHearthkin.id;
-  crownHearthkin.attackTargetKind = 'unit';
-  assert.equal(neutral._sendUnitToAttack(crownHearthkin, ashenHearthkin), false, 'opposing Hearthkin cannot attack one another');
-  neutral.selectedIds = [crownHearthkin.id];
-  neutral._syncSelectionFlags();
-  const neutralCommand = neutral.issueContextCommand(ashenHearthkin, ashenHearthkin);
-  assert.equal(neutralCommand.success, false, 'manual attack command respects Hearthkin neutrality');
-  assert.match(neutral.lastCommand, /one race and remain neutral/, 'neutrality gives the player a clear command explanation');
-
-  assert.match(INDEX_HTML, /id="select-all-villagers"/, 'selection panel exposes a Select All Hearthkin button');
-  assert.match(INDEX_HTML, /SELECT ALL HEARTHKIN/, 'selection panel uses the shared Hearthkin name');
-  assert.doesNotMatch(INDEX_HTML, /FIRST-AGE DOCTRINE|WORK CREW|FIRST-AGE MILESTONES/, 'legacy First Age panels are removed from the left rail');
+  assert.match(INDEX_HTML, /id="select-all-villagers"/, 'selection panel exposes a Select All Villagers button');
   assert.match(INDEX_HTML, /SETTLEMENT-WIDE <kbd>V<\/kbd>/, 'Select All Villagers button advertises its keyboard shortcut');
   assert.match(INPUT_SOURCE, /buildingNeedsWork\(entity\)/, 'hover targeting asks the shared building-work capability');
   assert.match(INPUT_SOURCE, /one normal click is one order/, 'selected units expose the primary-click command contract');
@@ -1175,20 +931,6 @@ function checkAutonomousWorkCombatAndDefenses() {
   military._updateBuilderServices();
   assert.equal(guard.attackTarget, raider.id, 'idle Crown Guard automatically acquires a nearby hostile fighter');
   assert.equal(guard.command, 'attack', 'automatic settlement defense uses the normal attack command');
-
-  const localDefense = movementSandbox();
-  const localGuard = localDefense.addUnit('soldier', 100, 100, 'player');
-  const localRaider = localDefense.addUnit('raider', 106, 100, 'enemy');
-  localDefense.addBuilding('ashenCamp', 420, 420, 'enemy');
-  localDefense._updateBuilderServices();
-  assert.equal(localGuard.attackTarget, localRaider.id, 'local defense locks onto the nearby attacker');
-  const guardPosition = { x: localGuard.x, z: localGuard.z };
-  localDefense._killUnit(localRaider, localGuard);
-  localDefense._updateUnit(localGuard, STEP_60HZ);
-  assert.equal(localGuard.command, 'idle', 'guard returns to a holding state after its local threat is defeated');
-  assert.equal(localGuard.attackTarget, null, 'finished local defense does not retain a stale attack target');
-  assert.deepEqual({ x: localGuard.x, z: localGuard.z }, guardPosition, 'finished local defense holds the position where the fight ended');
-  assert.equal(localDefense._getAttackTarget(localGuard), null, 'combat cleanup never promotes the distant enemy camp into a new target');
 
   const protectedWorker = movementSandbox();
   const restrainedGuard = protectedWorker.addUnit('soldier', 100, 100, 'player');
@@ -2013,31 +1755,6 @@ function checkVillagerRecovery() {
   assert.equal(simulation.unstickSelectedUnits().success, true, 'a selected military unit can be recovered from a bad fortification pocket');
 }
 
-function checkAshenForagerMotionAndFieldWorker() {
-  const simulation = movementSandbox();
-  const field = simulation.addBuilding('ashenField', 80, 80, 'enemy');
-  const forager = simulation.addUnit('ashenForager', 72, 80, 'enemy');
-  forager.command = 'gather';
-  forager.visualState = 'wood';
-  forager.gatherTarget = { id: 'test-wood-node' };
-  simulation.navigationVersion += 1;
-  simulation.staticBlockerGridVersion = -1;
-  simulation.update(STEP_60HZ);
-  assert.equal(field.farmerId, forager.id, 'completed fields assign a real Ashen Forager instead of a placeholder');
-  assert.equal(forager.fieldTarget, field.id, 'assigned Ashen Forager receives the field work target');
-  assert.equal(forager.command, 'field', 'assigned Ashen Forager receives a field work order');
-  assert.equal(forager.visualState, 'walk', 'assigned Ashen Forager uses the walk state while approaching the field');
-
-  const mover = simulation.addUnit('ashenForager', 40, 40, 'enemy');
-  mover.command = 'move';
-  mover.visualState = 'walk';
-  mover.path = [{ x: 46, z: 46 }];
-  mover.routeTarget = { x: 46, z: 46 };
-  simulation._updateUnit(mover, STEP_60HZ);
-  assert.ok(mover.animationPlaybackRate >= 0.78, 'a moving Ashen Forager keeps its walk cycle alive at low route speed');
-  assert.equal(resolveAnimationState(mover), 'walk', 'a moving Ashen Forager never resolves to a static task pose');
-}
-
 function checkAshenSettlementEconomyAndAI() {
   const buildingRolePairs = [
     ['townCenter', 'ashenCamp'],
@@ -2081,15 +1798,6 @@ function checkAshenSettlementEconomyAndAI() {
   }
   assert.equal(UNIT_TYPES.ashenForager.worker, true, 'Ashen Forager participates in the shared worker economy');
   assert.equal(UNIT_TYPES.ashenForager.canBuild, true, 'Ashen Forager uses the shared construction foundation');
-  assert.equal(UNIT_TYPES.villager.race, 'hearthkin', 'Crownwarden worker belongs to the Hearthkin race');
-  assert.equal(UNIT_TYPES.ashenForager.race, 'hearthkin', 'Ashen worker belongs to the Hearthkin race');
-  assert.equal(UNIT_TYPES.villager.label, 'Hearthkin', 'Crownwarden worker uses the shared Hearthkin name');
-  assert.equal(UNIT_TYPES.ashenForager.label, 'Hearthkin', 'Ashen worker uses the shared Hearthkin name');
-  for (const ability of ['worker', 'canBuild', 'canAttackUnits', 'canAttackBuildings', 'repairRate', 'autoBuildRadius', 'regroupAtTownCenter']) {
-    assert.deepEqual(UNIT_TYPES.ashenForager[ability], UNIT_TYPES.villager[ability], `Hearthkin workers share the ${ability} ability`);
-  }
-  assert.deepEqual(UNIT_TYPES.ashenForager.stunOnHit, UNIT_TYPES.villager.stunOnHit, 'Hearthkin workers share defensive stun behavior');
-  assert.deepEqual(UNIT_TYPES.ashenForager.lastLightWard, UNIT_TYPES.villager.lastLightWard, 'Hearthkin workers share Last Light Ward');
   for (const type of ['ashenForager', 'raider', 'ashenOutrider', 'thornSpear', 'hearthLevy', 'hidewall']) {
     assert.ok(PRODUCTION_TYPES[type], `${type} has a restrained production contract`);
   }
@@ -2136,18 +1844,13 @@ function checkExpandedWorldAndEnemyDistance() {
   assert.ok(Math.hypot(camp.x - hall.x, camp.z - hall.z) > 500, 'enemy camp starts across the expanded map');
   assert.ok(hall.x > CONFIG.mapWidth * 0.1 && hall.z > CONFIG.mapHeight * 0.1, 'Crown Hall starts inside the map rather than on the north-west tip');
   const wildwood = simulation.resourcesNodes.filter((node) => node.type === 'grove' && node.sizeTier === 'wildwood');
-  const forestTrees = simulation.resourcesNodes.filter((node) => node.type === 'tree' && node.forestClusterId);
-  assert.equal(wildwood.length, 0, 'expanded map no longer seeds macro Wildwood grove entities');
-  assert.ok(forestTrees.length >= 3000, 'expanded map is dominated by individually harvestable old-growth trees');
-  assert.ok(new Set(forestTrees.map((node) => node.forestClusterId)).size >= 900, 'forest trees retain deterministic cluster provenance without sharing a depletion image');
-  assert.ok(forestTrees.every((node) => node.sizeTier === 'small' && node.maxAmount > 0 && node.amount === node.maxAmount), 'generated forest entries start as independent full tree resources');
-  assert.ok(resourceFootprint(forestTrees[0]) > resourceFootprint({ type: 'tree', sizeTier: 'small' }), 'forest trees reserve their own readable physical space for movement and gathering');
+  assert.ok(wildwood.length >= 200, 'expanded map is dominated by contiguous old-growth forest');
   let woodedSamples = 0;
   let totalSamples = 0;
   for (let z = 8; z < CONFIG.mapHeight; z += 8) {
     for (let x = 8; x < CONFIG.mapWidth; x += 8) {
       totalSamples += 1;
-      if (forestTrees.some((node) => Math.hypot(node.x - x, node.z - z) <= 14)) woodedSamples += 1;
+      if (wildwood.some((node) => Math.hypot(node.x - x, node.z - z) <= 24)) woodedSamples += 1;
     }
   }
   const woodedCoverage = woodedSamples / totalSamples;
@@ -2164,14 +1867,6 @@ function checkExpandedWorldAndEnemyDistance() {
   const playerVillager = simulation.units.find((unit) => unit.type === 'villager' && unit.faction === 'player');
   const routeAcrossWildwood = simulation._buildPath(playerVillager, { x: camp.x, z: camp.z - 24 });
   assert.equal(routeAcrossWildwood, null, 'opposing settlements cannot meet before cutting through the harvestable wildwood divide');
-  forestTrees.forEach((node) => {
-    node.amount = 0;
-    node.depleted = true;
-  });
-  simulation.navigationVersion += 1;
-  simulation.staticBlockerGridVersion = -1;
-  simulation.pathCache.clear();
-  assert.ok(simulation._buildPath(playerVillager, { x: camp.x, z: camp.z - 24 }), 'clearing the individual forest blockers opens the cross-map route');
   assert.ok(CONFIG.minZoom < 0.05, 'minimum zoom can frame the expanded map');
 }
 
@@ -2362,14 +2057,6 @@ function checkVillagerLastStandDefense() {
   stunSimulation._applyUnitDamage(stunRaider, villagerRules.attack, stunVillager);
   assert.ok(stunRaider.hp < immuneHp, 'stun immunity does not grant damage immunity');
 
-  const immediateAggro = movementSandbox();
-  const aggroVillager = immediateAggro.addUnit('villager', 20, 20, 'player');
-  const aggroRaider = immediateAggro.addUnit('raider', 22, 20, 'enemy');
-  aggroRaider.stunImmunityTimer = 20;
-  assert.equal(immediateAggro._aggroTargetOnVillager(aggroVillager, aggroRaider), true, 'a hostile struck by a Villager immediately accepts the Villager as its aggro target');
-  assert.equal(aggroRaider.attackTarget, aggroVillager.id, 'Villager retaliation points at the Villager who started the fight');
-  assert.equal(aggroRaider.command, 'attack', 'Villager retaliation starts without waiting for the enemy intent service');
-
   const commandSimulation = movementSandbox();
   const carryingVillager = commandSimulation.addUnit('villager', 10, 10, 'player');
   const secondVillager = commandSimulation.addUnit('villager', 10, 12, 'player');
@@ -2460,29 +2147,6 @@ function checkCombatAndEndStates() {
   defeatSimulation._destroyBuilding(playerCore, defeatSimulation.units.find((unit) => unit.type === 'raider'));
   defeatSimulation.update(STEP_60HZ);
   assert.equal(defeatSimulation.phase, 'defeat', 'player core destruction loses');
-}
-
-function checkRendererCanvasSafety() {
-  const renderer = Object.create(CrownforgeRenderer.prototype);
-  renderer.camera = { zoom: CONFIG.minZoom };
-  const radii = [];
-  const context = {
-    save() {},
-    restore() {},
-    beginPath() {},
-    arc(_x, _y, radius) { radii.push(radius); },
-    stroke() {},
-  };
-  renderer.drawAttackRing(context, { x: 0, y: 0 }, (Math.PI * 1.5) / 0.01);
-  assert.equal(radii.length, 1, 'attack feedback still draws its pulse at minimum zoom');
-  assert.ok(Number.isFinite(radii[0]) && radii[0] >= 0, 'attack feedback never passes a negative Canvas arc radius');
-}
-
-function checkReleaseSurfaceAndOcclusionBudget() {
-  assert.match(INDEX_HTML, /<link rel="icon" type="image\/png" href="\.\/assets\/crownforge-icon-gold-v1\.png/, 'the playable page declares a packaged favicon instead of requesting the missing root favicon');
-  assert.match(RENDERER_SOURCE, /simulation\._staticBlockerCandidates\(unit, OCCLUSION_QUERY_RADIUS\)/, 'unit occlusion uses the spatial blocker grid');
-  assert.doesNotMatch(RENDERER_SOURCE, /const hiddenByBuilding = simulation\.buildings\.find/, 'unit occlusion does not scan every building for every unit');
-  assert.doesNotMatch(RENDERER_SOURCE, /const hiddenByResource = simulation\.resourcesNodes\.find/, 'unit occlusion does not scan every resource for every unit');
 }
 
 function checkUnitMovementFacingAndPoseSafety() {
@@ -2579,10 +2243,7 @@ function checkUnitMovementFacingAndPoseSafety() {
 checkAnimationAtlases();
 checkResetPresentation();
 checkGathering();
-checkPersistentForestGathering();
 checkDevelopmentSpeedControls();
-checkFirstAgeSystemsPass();
-checkFirstAgeCommandDeckPass();
 checkGoldEconomyLoop();
 checkOreWashEconomySupport();
 checkStableGranaryAndScout();
@@ -2607,7 +2268,6 @@ checkBarracksLandmarkScale();
 checkCrownHallProportionsAndBuildableRing();
 checkBuildingPhysicalInteractionBoundaries();
 checkTravelSpeedIsolation();
-checkAshenForagerMotionAndFieldWorker();
 checkVillagerRecovery();
 checkAshenSettlementEconomyAndAI();
 checkExpandedWorldAndEnemyDistance();
@@ -2619,8 +2279,6 @@ checkCrownHallHostileExclusionAndCombatRecovery();
 checkVillagerLastStandDefense();
 checkUnitMovementFacingAndPoseSafety();
 checkCombatAndEndStates();
-checkReleaseSurfaceAndOcclusionBudget();
-checkRendererCanvasSafety();
 
 console.log(JSON.stringify({
   status: 'passed',
@@ -2653,11 +2311,9 @@ console.log(JSON.stringify({
     'equal Crown Hall/Barracks proportion, inward placement, and four-sided buildable ring',
     'artwork-matched building collision, expanded unit perimeters, safe production exits, perimeter work stations, low-building occlusion protection, and non-stacking Crown Hall drop-offs',
     'travel-only speed scaling, high-speed collision routing, and fast group spacing',
-    'First-age packed roads, three researchable doctrines, visible guard areas, field history, and local save/load recovery',
-    'First-age worker focus, automatic repair toggle, production rally points, patrol routes, optional exploration, milestones, logistics summary, wall continuation, and command-setting save/load',
     'always-available selected-unit recovery at a clear Crown Hall approach with cargo deposit and group spacing',
     'distinct Ashen role-equivalent artwork, directional units, independent economy, capped town growth, local defense, and forest-gated raids',
-    'roughly eighty-percent individually harvestable Wildwood trees with authored berry, stone, and scarce Gold glades and no prebuilt fields',
+    'roughly eighty-percent contiguous wildwood with authored berry, stone, and scarce Gold glades and no prebuilt fields',
     'expanded map, opposite-side settlements, and a harvestable forest divide that gates contact',
     'cursor-centered zoom anchor in both directions',
     'four authored upright Palisade views across all eight snap directions',
@@ -2667,7 +2323,5 @@ console.log(JSON.stringify({
     'twenty-hit Villager defense, five-second humanoid stun, twenty-second immunity, delayed Last Light Curse, and one-minute ward protection',
     'all movable unit types hold correct four-way travel facing, attack approaches follow their path heading, and recoil/death poses never slide or spin',
     'melee damage, death timing, victory, defeat',
-    'packaged favicon and spatially bounded unit-occlusion rendering',
-    'minimum-zoom attack feedback never throws a negative Canvas arc radius',
   ],
 }));

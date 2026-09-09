@@ -1,14 +1,20 @@
-import { GRIZZLY_PAINTED_ART } from './grizzly-painted-art.js?v=20260906-bearstride1';
-import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260906-bearstride1';
-import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260906-bearstride1';
+import { GRIZZLY_PAINTED_ART } from './grizzly-painted-art.js?v=20260909-fullroster1';
+import { GRIZZLY_DEATH_ART } from './grizzly-death-art.js?v=20260909-fullroster1';
+import { BEAR_DEATH } from './bear-combat.js?v=20260909-fullroster1';
+import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260909-fullroster1';
+import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260909-fullroster1';
 
 const VIEWS=['se','sw','ne','nw'];
 const BODY_SCALE=.85;
+const ART=Object.fromEntries(Object.entries(GRIZZLY_PAINTED_ART).map(([view,actions])=>[view,{...actions,death:GRIZZLY_DEATH_ART[view]}]));
+// Rear paintings were calibrated against taller silhouettes, shrinking body mass.
+export const GRIZZLY_VIEW_SCALE=Object.freeze({se:1,sw:1,ne:1.25,nw:1.15});
 export function paintedGrizzlyFrame(unit,time=0,reducedMotion=false){
   const view=VIEWS[Math.max(0,Math.min(3,unit.facing??0))];
   const attackTime=grizzlyAttackClock(unit);
   let action='idle',phase=0;
-  if(!unit.dead && attackTime!==null){
+  if(unit.dead){action='death';phase=Math.max(0,unit.deathAge??0)/BEAR_DEATH.collapse;}
+  else if(attackTime!==null){
     action=unit.grizzlyAttackVariant==='rear'?'rear':'swipe';
     phase=Math.min(.999999,attackTime/grizzlyAttackDefinition(unit).duration);
   }else if(!unit.dead && (unit.grizzlyWalkBlend??0)>.05){
@@ -19,15 +25,16 @@ export function paintedGrizzlyFrame(unit,time=0,reducedMotion=false){
   if(action==='swipe' && unit.grizzlyMovingAttack && (unit.grizzlyWalkBlend??0)>.05 && (phase<.46||phase>=.75)){
     action='walk';phase=(unit.grizzlyTravel??0)/GRIZZLY_MOTION.strideLength;
   }
-  const sheet=GRIZZLY_PAINTED_ART[view][action];
-  const index=action==='walk'?Math.floor((phase-Math.floor(phase))*sheet.frames.length):actionFrame(action,phase);
+  const sheet=ART[view][action];
+  const index=action==='death'?Math.min(sheet.frames.length-1,Math.floor(phase*sheet.frames.length)):action==='walk'?Math.floor((phase-Math.floor(phase))*sheet.frames.length):actionFrame(action,phase);
   return {view,action,index,sheet,frame:sheet.frames[index]};
 }
 
 export class GrizzlyRenderer {
   constructor(){
     this.images=new Map();this.cache=new Map();this.frames=[];
-    const sheets=Object.values(GRIZZLY_PAINTED_ART).flatMap(view=>Object.values(view));
+    const sheets=Object.values(ART).flatMap(view=>Object.values(view));
+    this.sheetCount=sheets.length;
     for(const src of new Set(sheets.map(sheet=>sheet.src))){
       const image=new Image();this.images.set(src,image);
       image.addEventListener('load',()=>{
@@ -37,7 +44,7 @@ export class GrizzlyRenderer {
     }
   }
   readiness(){return [...this.images.values()];}
-  get ready(){return this.cache.size===16;}
+  get ready(){return this.cache.size===this.sheetCount;}
   prepare(sheet,image){
     // Clip neighboring atlas paintings once during loading, not every frame.
     const frames=sheet.frames.map(f=>{
@@ -53,18 +60,20 @@ export class GrizzlyRenderer {
     this.cache.set(sheet,frames);this.frames.push(...frames);
   }
   heightFactor(unit){
-    const {sheet}=paintedGrizzlyFrame(unit);
-    return Math.max(...sheet.frames.map(f=>f.pivot[1]/sheet.scaleBase))*BODY_SCALE+.08;
+    const {sheet,view}=paintedGrizzlyFrame(unit);
+    return Math.max(...sheet.frames.map(f=>f.pivot[1]/sheet.scaleBase))*BODY_SCALE*GRIZZLY_VIEW_SCALE[view]+.08;
   }
   draw(ctx,unit,point,size,time,reducedMotion=false,resolution=1){
-    const {sheet,frame,index}=paintedGrizzlyFrame(unit,time,reducedMotion),frames=this.cache.get(sheet);
+    const {sheet,frame,index,view}=paintedGrizzlyFrame(unit,time,reducedMotion),frames=this.cache.get(sheet);
     if(!frames)return false;
-    const [full,small]=frames[index],scale=size*BODY_SCALE/sheet.scaleBase;
+    const [full,small]=frames[index],scale=size*BODY_SCALE*GRIZZLY_VIEW_SCALE[view]/sheet.scaleBase;
     const image=scale*resolution<=.5?small:full;
-    ctx.save();ctx.globalAlpha*=unit.dead?Math.max(0,1-(unit.deathAge??0)/5):1;
+    ctx.save();ctx.globalAlpha*=unit.dead?Math.max(0,Math.min(1,(BEAR_DEATH.lifetime-(unit.deathAge??0))/(BEAR_DEATH.lifetime-BEAR_DEATH.holdUntil))):1;
     ctx.fillStyle='rgba(13,23,17,.22)';ctx.beginPath();ctx.ellipse(point.x,point.y+2,size*.27,size*.085,0,0,Math.PI*2);ctx.fill();
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    ctx.drawImage(image,point.x-frame.pivot[0]*scale,point.y-frame.pivot[1]*scale,frame.rect[2]*scale,frame.rect[3]*scale);
+    ctx.translate(point.x,point.y);
+    if(sheet.flip)ctx.scale(-1,1);
+    ctx.drawImage(image,-frame.pivot[0]*scale,-frame.pivot[1]*scale,frame.rect[2]*scale,frame.rect[3]*scale);
     ctx.restore();return true;
   }
 }
