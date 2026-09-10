@@ -324,6 +324,7 @@
 
   function renderAutopilot() {
     const job = state.autopilotJob;
+    renderRevisionReport(job);
     if (!job) {
       el.autopilotProgress.hidden = true;
       el.autopilotStart.disabled = false;
@@ -343,6 +344,7 @@
     el.autopilotProgress.hidden = false;
     el.autopilotStart.disabled = running;
     el.autopilotStart.textContent = running ? "Full edit is working…" : job.status === "completed" ? "Run another full edit" : "Try full edit again";
+    document.getElementById("autopilot-status-label").textContent = running ? "Editing in progress" : job.status === "completed" ? "Revision saved" : "Run paused";
     el.autopilotPhase.textContent = phaseLabels[job.phase] || "Working through the manuscript";
     el.autopilotPercent.textContent = `${percent}%`;
     el.autopilotFill.style.width = `${percent}%`;
@@ -355,6 +357,39 @@
       : job.status === "failed"
         ? (job.error || "The original manuscript was kept intact.")
         : "The page can stay open while the model works; progress is saved between chunks.";
+  }
+
+  function renderRevisionReport(job) {
+    const panel = document.getElementById("revision-report");
+    panel.hidden = job?.status !== "completed";
+    if (panel.hidden) return;
+    const report = job.report || {};
+    const retained = report.passagesForReview || [];
+    document.getElementById("revision-summary").textContent = `${formatNumber(report.paragraphsRevised)} passages revised. ${retained.length ? `${retained.length} ${retained.length === 1 ? "passage kept" : "passages kept"} unchanged for your review.` : "Read through the revision before treating it as your final manuscript."}`;
+    const attention = document.getElementById("revision-attention");
+    attention.replaceChildren();
+    retained.forEach((passage) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "review-passage";
+      button.textContent = `${passage.label || "Passage"} — ${passage.reason || "Kept unchanged"}`;
+      button.addEventListener("click", () => {
+        document.getElementById("advanced-workbench").open = true;
+        state.sectionFilter = "all";
+        el.sectionFilter.value = "";
+        state.selectedId = passage.id;
+        renderSections();
+        renderEditor();
+        el.editingStage.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      attention.append(button);
+    });
+    const notes = [...(report.warnings || []), ...(report.finalReview?.issues || []).map((issue) => `${issue.location}: ${issue.issue} ${issue.recommendation}`)];
+    const node = document.getElementById("revision-notes");
+    node.replaceChildren();
+    [report.finalReview?.overall || "Revision saved.", ...notes].forEach((note) => {
+      const p = document.createElement("p"); p.textContent = note; node.append(p);
+    });
   }
 
   function filteredParagraphs() {
@@ -637,6 +672,7 @@
     const data = await readJsonResponse(response);
     if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not load your manuscripts.");
     state.projects = data.projects || [];
+    document.getElementById("editor-engine").textContent = data.engine ? `${data.engine.model === "gpt-6-astra" ? "GPT-6 Astra" : data.engine.model} · ${data.engine.reasoningEffort} reasoning.` : "Editor configuration unavailable.";
     renderProjects();
     if (!state.projects.length) {
       state.project = null;
@@ -674,7 +710,7 @@
       showProjectState();
       setLibraryOpen(false);
       const review = document.getElementById("advanced-workbench");
-      if (review) review.toggleAttribute("open", state.autopilotJob?.status === "completed");
+      if (review) review.open = false;
       if (state.autopilotJob?.status === "queued" || state.autopilotJob?.status === "running") pollAutopilot();
     } finally {
       el.editingStage.classList.remove("is-busy");
@@ -743,7 +779,7 @@
         document.getElementById("advanced-workbench")?.setAttribute("open", "");
         state.autopilotJob = data.job;
         renderOverview();
-        showToast("Autopilot finished the manuscript and its continuity review.");
+        showToast("Revision saved. Your draft and editorial notes are ready.");
       } else if (data.job.status === "failed") {
         showToast(data.job.error || "Autopilot stopped before it could finish.", true);
       }
@@ -873,12 +909,13 @@
     }
   }
 
-  async function exportDocx() {
+  async function exportDocx(source = "edited") {
+    source = source === "original" ? "original" : "edited";
     if (!state.project) return;
     el.exportDocx.disabled = true;
     try {
       const token = readCookie(sessionCookieName);
-      const response = await fetch(`${apiBase}/api/story-editor/projects/${encodeURIComponent(state.project.id)}/export.docx`, {
+      const response = await fetch(`${apiBase}/api/story-editor/projects/${encodeURIComponent(state.project.id)}/export.docx?source=${source}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error("The DOCX export could not be created.");
@@ -886,12 +923,12 @@
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
-      link.download = `${state.project.title.replace(/[^a-z0-9_-]+/gi, "-") || "manuscript"}-edited.docx`;
+      link.download = `${state.project.title.replace(/[^a-z0-9_-]+/gi, "-") || "manuscript"}-${source}.docx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
-      showToast("Your edited manuscript is downloading.");
+      showToast(`Your ${source} manuscript is downloading.`);
     } catch (error) {
       showToast(error.message || "The DOCX export could not be created.", true);
     } finally {
@@ -943,6 +980,18 @@
     showToast(error?.message || "Something went wrong in Story Editor.", true);
   }
 
+  document.getElementById("download-original").addEventListener("click", () => exportDocx("original"));
+  document.getElementById("download-revision").addEventListener("click", () => el.exportDocx.click());
+  const briefs = {
+    novel: "Polish this into a professional novel for adult readers. Preserve my voice, plot, mature themes, and ending. Strengthen clarity, pacing, dialogue, and emotional depth without inventing major events.",
+    memoir: "Edit this memoir for adult readers. Preserve my lived experience, voice, facts, and emotional honesty. Improve clarity, narrative flow, and pacing without inventing events or dialogue.",
+    education: "Edit this for an adult educational audience. Improve structure, clarity, and accessibility. Preserve factual meaning and uncertainty. Do not invent facts, citations, or evidence; flag claims that need verification.",
+    copyedit: "Lightly copyedit this manuscript for adult readers. Correct grammar, spelling, punctuation, and inconsistencies. Preserve my style, mature themes, meaning, plot, and paragraph structure."
+  };
+  document.querySelectorAll("[data-brief]").forEach((button) => button.addEventListener("click", () => {
+    el.intentInput.value = briefs[button.dataset.brief];
+    el.intentInput.focus();
+  }));
   el.openUpload.addEventListener("click", () => openDialog(el.uploadDialog));
   el.welcomeUpload.addEventListener("click", () => openDialog(el.uploadDialog));
   el.retryStartup.addEventListener("click", retryStartup);

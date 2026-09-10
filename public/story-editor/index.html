@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&amp;display=optional" rel="stylesheet">
-  <link rel="stylesheet" href="./story-editor.css?v=20260820-simplify1">
-  <script defer src="./story-editor.js?v=20260820-simplify1"></script>
+  <link rel="stylesheet" href="./story-editor.css?v=20260910-astra1">
+  <script defer src="./story-editor.js?v=20260910-astra1"></script>
 </head>
 <body>
   <div class="studio-shell">
@@ -116,13 +116,13 @@
       <section class="welcome-view" id="welcome-view" hidden>
         <div class="welcome-copy">
           <span class="overline">A better way to revise</span>
-          <h1>Keep your voice.<br><em>Strengthen the story.</em></h1>
-          <p>Bring in a manuscript, describe what you want, and let the editor carry a coherent revision across the whole draft.</p>
+          <h1>Your manuscript.<br><em>Its next chapter.</em></h1>
+          <p>Drop in your draft. Choose a direction. Get a complete revision you can read, refine, and download. Written for your audience, with your voice at its heart.</p>
           <button class="primary-button" id="welcome-upload" type="button">
-            Import your first manuscript
+            Start with your manuscript
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
           </button>
-          <small>No special formatting needed. We’ll organize the draft for you.</small>
+          <small>Fiction, memoir, or educational writing · TXT, DOCX, PDF</small>
         </div>
         <div class="welcome-visual" aria-hidden="true">
           <div class="paper paper-back"><span></span><span></span><span></span></div>
@@ -154,16 +154,16 @@
 
         <section class="autopilot-card" id="autopilot-card" aria-labelledby="autopilot-title">
           <div class="autopilot-copy">
-            <span class="overline">One instruction. Full-manuscript edit.</span>
-            <h2 id="autopilot-title">Tell it what you want. It handles the rest.</h2>
-            <p>Story Editor plans the work, breaks up long drafts, carries continuity between chunks, protects the ending, and produces one finished revised manuscript.</p>
+            <span class="overline">Your editorial brief</span>
+            <h2 id="autopilot-title">What should this draft become?</h2>
+            <p>Give the editor your direction. It follows your voice, characters, and story through the manuscript, then brings the revision back for your review.</p>
           </div>
           <label class="autopilot-intent-field">
             <span>Your one instruction</span>
-            <textarea id="autopilot-intent" rows="4" placeholder="Example: Turn this into a cinematic Star Trek episode while preserving the emotional spine, or make it a polished bestselling novel."></textarea>
+            <textarea id="autopilot-intent" rows="4" placeholder="Example: Shape this into a polished novel for adult readers. Preserve my voice, mature themes, plot, and ending. Strengthen pacing, dialogue, and emotional depth."></textarea>
           </label>
           <div class="autopilot-actions">
-            <span>Powered by GPT-5.6 Sol with maximum reasoning. Original text stays preserved; protected passages remain untouched while the surrounding story continues.</span>
+            <span><b id="editor-engine">Checking editor configuration…</b> Your original stays saved. Any passage the editor cannot revise stays unchanged and appears in your review list.</span>
             <button class="primary-button" id="autopilot-start" type="button">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.4 4.6L18 9l-4.6 1.4L12 15l-1.4-4.6L6 9l4.6-1.4L12 3ZM19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15Z"/></svg>
               Run full edit
@@ -171,7 +171,7 @@
           </div>
           <div class="autopilot-progress" id="autopilot-progress" hidden aria-live="polite">
             <div class="autopilot-progress-head">
-              <div><span class="overline">Autopilot is working</span><strong id="autopilot-phase">Preparing the manuscript…</strong></div>
+              <div><span class="overline" id="autopilot-status-label">Editing in progress</span><strong id="autopilot-phase">Preparing the manuscript…</strong></div>
               <b id="autopilot-percent">0%</b>
             </div>
             <div class="autopilot-track" role="progressbar" aria-label="Full-manuscript edit progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="autopilot-track"><i id="autopilot-fill"></i></div>
@@ -180,6 +180,13 @@
           </div>
         </section>
 
+        <section class="revision-report" id="revision-report" hidden aria-labelledby="revision-report-title">
+          <div class="report-heading"><div><span class="overline">Back at your desk</span><h2 id="revision-report-title">Your revised draft</h2></div><button class="primary-button" id="download-revision" type="button">Download Word document</button></div>
+          <p id="revision-summary"></p>
+          <button type="button" class="ghost-button" id="download-original">Download original text as Word</button>
+          <div id="revision-attention"></div>
+          <details><summary>Editorial notes</summary><div id="revision-notes"></div></details>
+        </section>
         <details class="advanced-workbench" id="advanced-workbench">
           <summary><span>Review sections and optional passage tools</span><small>Open this after the run to inspect preserved passages or make a one-off revision.</small></summary>
           <div class="editor-workspace">
@@ -324,9 +331,15 @@
         </button>
       </div>
 
+      <div class="brief-presets" role="group" aria-label="Starting direction">
+        <button type="button" data-brief="novel">Polished novel</button>
+        <button type="button" data-brief="memoir">Memoir</button>
+        <button type="button" data-brief="education">Educational</button>
+        <button type="button" data-brief="copyedit">Light copyedit</button>
+      </div>
       <label class="intent-field">
-        <span>Your one instruction <small>Required</small></span>
-        <textarea id="intent-input" name="intent" rows="4" required placeholder="Example: Turn this into a cinematic Star Trek episode while preserving the emotional spine."></textarea>
+        <span>What would you like to create? <small>Make this brief your own</small></span>
+        <textarea id="intent-input" name="intent" rows="4" required placeholder="Describe the book you want, your audience, and what matters most to preserve.">Polish this into a professional novel for adult readers. Preserve my voice, plot, mature themes, and ending. Strengthen clarity, pacing, dialogue, and emotional depth without inventing major events.</textarea>
         <small class="field-hint">Describe the outcome you want. You do not need to explain chunking, continuity, pacing, or how the edit should be performed.</small>
       </label>
 
@@ -338,6 +351,7 @@
         <small>Up to 80 MB · TXT, DOCX, or PDF</small>
       </label>
 
+      <p class="manuscript-promise">Mature themes are considered in context. If a passage cannot be edited, its words stay intact and it is flagged for your review. Your manuscript is sent to OpenAI to perform the edit.</p>
       <div class="dialog-status" id="upload-status" role="status"></div>
       <div class="dialog-actions">
         <button class="ghost-button" type="button" data-close-dialog>Cancel</button>

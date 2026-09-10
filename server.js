@@ -1,3 +1,4 @@
+import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, STORY_EDITOR_CONTEXT } from "./lib/story-editor.mjs";
 import express from "express";
 import cors from "cors";
 import multer from "multer";
@@ -26,9 +27,9 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_GPT54_REASONING_EFFORT = "",
-  OPENAI_STORY_EDITOR_MODEL = "gpt-5.6-sol",
-  OPENAI_STORY_EDITOR_REASONING_EFFORT = "max",
-  OPENAI_STORY_EDITOR_REASONING_MODE = "pro",
+  OPENAI_STORY_EDITOR_MODEL = "gpt-6-astra",
+  OPENAI_STORY_EDITOR_REASONING_EFFORT = "high",
+  OPENAI_STORY_EDITOR_REASONING_MODE = "",
   OPENAI_TEXTSMITH_MODEL = "gpt-5.6-luna",
   OPENAI_TEXTSMITH_FALLBACK_MODEL = "gpt-5.5",
   OPENAI_REALTIME_SEARCH_MODEL = "",
@@ -74,8 +75,8 @@ const MORROW_TRANSCRIBE_MODEL = OPENAI_MORROW_TRANSCRIBE_MODEL || "gpt-transcrib
 const MORROW_REALTIME_MODEL = "gpt-realtime-2.1-mini";
 const MORROW_PERSONALITY_VERSION = "morrow-personality-v4";
 const STORY_EDITOR_MODEL = OPENAI_STORY_EDITOR_MODEL || OPENAI_GPT54_MODEL || OPENAI_CHAT_MODEL;
-const STORY_EDITOR_REASONING_EFFORT = OPENAI_STORY_EDITOR_REASONING_EFFORT || "max";
-const STORY_EDITOR_REASONING_MODE = OPENAI_STORY_EDITOR_REASONING_MODE || "pro";
+const STORY_EDITOR_REASONING_EFFORT = OPENAI_STORY_EDITOR_REASONING_EFFORT || "high";
+const STORY_EDITOR_REASONING_MODE = OPENAI_STORY_EDITOR_REASONING_MODE || "";
 const STORY_EDITOR_UPLOAD_MB = Math.max(1, Number(STORY_EDITOR_MAX_UPLOAD_MB) || 80);
 const STORY_EDITOR_MAX_TEXT_CHARS = Math.max(1000000, (Number(STORY_EDITOR_MAX_TEXT_MB) || 80) * 1024 * 1024);
 
@@ -1782,7 +1783,8 @@ app.get("/health", (_req, res) => res.json({
   storyEditorMaxUploadMb: STORY_EDITOR_UPLOAD_MB,
   storyEditorReasoningEffort: STORY_EDITOR_REASONING_EFFORT,
   storyEditorReasoningMode: STORY_EDITOR_REASONING_MODE,
-  storyEditorProtectedPassthrough: true
+  storyEditorProtectedPassthrough: true,
+  storyEditorContentHandling: "context-aware-review-v2"
 }));
 
 function compactText(value) {
@@ -3504,31 +3506,8 @@ function splitManuscript(text) {
   return sections;
 }
 
-const STORY_PROTECTED_PATTERNS = [
-  { label: "magic mushroom or psilocybin reference", pattern: /\b(?:magic\s+mushrooms?|psychedelic\s+mushrooms?|hallucinogenic\s+mushrooms?|shrooms?|psilocybin|psilocin|psilocybe(?:\s+\w+)?)\b/gi },
-  { label: "cannabis or marijuana reference", pattern: /\b(?:cannabis|marijuana|marihuana|hashish|thc|cbd|blunt|spliff|joint)\b/gi }
-];
-
-function classifyStoryProtection(text) {
-  const source = String(text || "");
-  const labels = STORY_PROTECTED_PATTERNS
-    .filter(({ pattern }) => pattern.test(source))
-    .map(({ label }) => label);
-  STORY_PROTECTED_PATTERNS.forEach(({ pattern }) => { pattern.lastIndex = 0; });
-  return {
-    preserveVerbatim: labels.length > 0,
-    preserveReason: labels.length ? `Potentially sensitive material detected: ${[...new Set(labels)].join(", ")}. This passage is preserved verbatim and excluded from model rewriting.` : ""
-  };
-}
-
-function redactStorySensitiveText(value) {
-  let redacted = String(value || "");
-  STORY_PROTECTED_PATTERNS.forEach(({ pattern }) => {
-    redacted = redacted.replace(pattern, "[PROTECTED MATERIAL]");
-    pattern.lastIndex = 0;
-  });
-  return redacted;
-}
+// Preserve the author's actual language; keywords are not content decisions.
+function redactStorySensitiveText(value) { return String(value || ""); }
 
 function redactStoryModelValue(value) {
   if (typeof value === "string") return redactStorySensitiveText(value);
@@ -3537,14 +3516,6 @@ function redactStoryModelValue(value) {
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, redactStoryModelValue(item)]));
   }
   return value;
-}
-
-function storySectionProtection(section = {}) {
-  const detected = classifyStoryProtection(section.original_text ?? section.originalText ?? "");
-  return {
-    preserveVerbatim: Boolean(Number(section.preserve_verbatim ?? section.preserveVerbatim) || detected.preserveVerbatim),
-    preserveReason: String(section.preserve_reason || section.preserveReason || detected.preserveReason || "")
-  };
 }
 
 async function extractPdfText(buffer) {
@@ -3693,9 +3664,10 @@ const STORY_AUTOPILOT_CHUNK_SCHEMA = storyAutopilotFormat("story_autopilot_chunk
         properties: {
           id: { type: "string" },
           text: { type: "string" },
-          note: { type: "string" }
+          note: { type: "string" },
+          disposition: { type: "string", enum: ["revised", "preserved"] }
         },
-        required: ["id", "text", "note"]
+        required: ["id", "text", "note", "disposition"]
       }
     },
     handoff: {
@@ -3786,14 +3758,7 @@ const STORY_AUTOPILOT_REVIEW_SCHEMA = storyAutopilotFormat("story_autopilot_revi
 });
 
 function parseStoryModelJson(response) {
-  const refusal = (response?.output || [])
-    .flatMap((item) => Array.isArray(item?.content) ? item.content : [])
-    .find((content) => content?.type === "refusal" || content?.refusal);
-  if (refusal) {
-    const error = new Error("The story model declined one passage; protected material was preserved and the surrounding edit can continue.");
-    error.storySafetyRefusal = true;
-    throw error;
-  }
+  assertStoryModelResponse(response);
   const raw = extractResponseText(response).replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
   if (!raw) throw new Error("The story model returned an empty response.");
   try {
@@ -3806,12 +3771,6 @@ function parseStoryModelJson(response) {
   }
 }
 
-function isStorySafetyRefusal(error) {
-  if (error?.storySafetyRefusal) return true;
-  const message = String(error?.message || error || "");
-  return /\b(?:refus(?:e|ed|al)|safety|policy|moderation|disallowed|blocked|unsafe|harmful|biolog(?:y|ical))\b/i.test(message);
-}
-
 async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) {
   const request = {
     model: STORY_EDITOR_MODEL,
@@ -3819,7 +3778,7 @@ async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) 
     max_output_tokens: maxOutputTokens,
     text: { format },
     input: [
-      { role: "system", content: system },
+      { role: "system", content: `${STORY_EDITOR_CONTEXT} ${system}` },
       { role: "user", content: typeof user === "string" ? user : JSON.stringify(user, null, 2) }
     ]
   };
@@ -3854,7 +3813,7 @@ function buildStoryAutopilotChunks(paragraphs, { maxCharacters = 18000, maxParag
   };
   for (const paragraph of paragraphs) {
     const text = paragraph.edited_text || paragraph.original_text || "";
-    const sceneChanged = current.length && paragraph.scene_index !== current[current.length - 1].scene_index;
+    const sceneChanged = current.length && (paragraph.scene_index !== current[current.length - 1].sceneIndex || paragraph.chapter_index !== current[current.length - 1].chapterIndex);
     if (current.length && (characters + text.length > maxCharacters || current.length >= maxParagraphs || (sceneChanged && current.length >= 4))) flush();
     current.push({
       id: paragraph.id,
@@ -3947,23 +3906,6 @@ function prematureStoryClosure(text) {
   return /\b(the end|in the end|at last|finally|their story was over|everything was settled|life went on|they lived happily|it was all over|she knew it was over|he knew it was over)\b[.!]?\s*$/i.test(String(text || "").trim());
 }
 
-function normalizeAutopilotParagraphs(result, chunk) {
-  const byId = new Map((Array.isArray(result?.revisedParagraphs) ? result.revisedParagraphs : []).map((item) => [String(item?.id || ""), item]));
-  const warnings = [];
-  const paragraphs = chunk.paragraphs.map((paragraph) => {
-    const candidate = byId.get(paragraph.id);
-    if (!candidate || !String(candidate.text || "").trim()) {
-      warnings.push(`${paragraph.label} was kept unchanged because the model did not return a usable replacement.`);
-    }
-    return {
-      ...paragraph,
-      revisedText: normalizeStoryText(candidate?.text || paragraph.text, 240000),
-      note: String(candidate?.note || "").slice(0, 1000)
-    };
-  });
-  return { paragraphs, warnings };
-}
-
 async function repairStoryAutopilotEnding(chunk, paragraphs, intent, plan, handoff) {
   const tail = paragraphs.slice(-2);
   const result = await storyModelJson({
@@ -4036,8 +3978,8 @@ async function runStoryAutopilotJob(jobId) {
       paragraphCount: chunk.paragraphs.length,
       editableParagraphCount: chunk.paragraphs.filter((paragraph) => !paragraph.preserveVerbatim).length,
       protectedPassages: protectedPassageDescriptors(chunk.paragraphs),
-      opening: redactStorySensitiveText(chunk.paragraphs[0].text.slice(0, 320)),
-      closing: redactStorySensitiveText(chunk.paragraphs[chunk.paragraphs.length - 1].text.slice(-420))
+      opening: chunk.paragraphs[0].preserveVerbatim ? "[Passage held unchanged]" : chunk.paragraphs[0].text.slice(0, 320),
+      closing: chunk.paragraphs.at(-1).preserveVerbatim ? "[Passage held unchanged]" : chunk.paragraphs.at(-1).text.slice(-420)
     }));
     let plan;
     if (!editableParagraphCount) {
@@ -4061,8 +4003,8 @@ async function runStoryAutopilotJob(jobId) {
             intent: redactStorySensitiveText(job.intent),
             storyBible: redactStoryModelValue(bible),
             manuscriptOutline: outline,
-            openingSample: redactStorySensitiveText(rows.slice(0, 3).map((row) => row.original_text).join("\n\n").slice(0, 4000)),
-            endingSample: redactStorySensitiveText(rows.slice(-3).map((row) => row.original_text).join("\n\n").slice(-4000))
+            openingSample: redactStorySensitiveText(rows.filter((row) => !storySectionProtection(row).preserveVerbatim).slice(0, 3).map((row) => row.edited_text || row.original_text).join("\n\n").slice(0, 4000)),
+            endingSample: redactStorySensitiveText(rows.filter((row) => !storySectionProtection(row).preserveVerbatim).slice(-3).map((row) => row.edited_text || row.original_text).join("\n\n").slice(-4000))
           }
         }));
       } catch (error) {
@@ -4084,6 +4026,7 @@ async function runStoryAutopilotJob(jobId) {
     let revisedParagraphCount = 0;
     let preservedParagraphCount = protectedParagraphCount;
     const closureChecks = [];
+    const passagesForReview = chunks.flatMap((chunk) => protectedPassageDescriptors(chunk.paragraphs));
     for (const chunk of chunks) {
       await updateStoryAutopilotJob(jobId, {
         phase: "editing",
@@ -4111,7 +4054,7 @@ async function runStoryAutopilotJob(jobId) {
             system: [
               "You are Story Editor, a high-agency editor revising one connected chunk of a much larger manuscript.",
               "Follow the user's brief and the editorial plan. Preserve continuity with the supplied handoff ledger and Story Bible.",
-              "Return exactly one revised paragraph for every supplied editable paragraph ID. Do not add, remove, reorder, or merge paragraphs.",
+              "Return one entry per supplied paragraph ID, in order. Set disposition to revised for edited prose. If you cannot edit a passage, set disposition to preserved, text to an empty string, and note to a brief reason; the application keeps its exact source. Continue with the other permitted passages. Do not add, remove, reorder, or merge paragraphs.",
               "Protected passages are intentionally omitted from the editable text. Do not reconstruct, quote, summarize, or transform them; their IDs and narrative position are preserved by the application.",
               "This chunk is part of an ongoing story. Unless this is explicitly the final chunk, do not wind down, summarize, resolve the central conflict, say goodbye, add a moral, or use ending language. Preserve unfinished business, active tension, and forward momentum into the next chunk.",
               "The final chunk may resolve the story only when the source and user brief call for resolution.",
@@ -4133,37 +4076,12 @@ async function runStoryAutopilotJob(jobId) {
           }));
         } catch (error) {
           if (!isStorySafetyRefusal(error)) throw error;
-          warnings.push(`Chunk ${chunk.index} encountered a model safety refusal; protected material was preserved and a narrower surrounding edit was attempted.`);
-          try {
-            result = redactStoryModelValue(await storyModelJson({
-              format: STORY_AUTOPILOT_CHUNK_SCHEMA,
-              maxOutputTokens: 9000,
-              system: [
-                "Edit only the supplied editable fiction paragraphs for clarity and continuity.",
-                "Protected passages are omitted and must remain untouched by the application.",
-                "Return one revised paragraph for every supplied ID. If a paragraph cannot be safely revised, return its original text unchanged.",
-                "Do not summarize, add plot events, or create an ending in this interior chunk. Return structured JSON only."
-              ].join(" "),
-              user: {
-                chunkIndex: chunk.index,
-                isFinal,
-                protectedPassages,
-                paragraphs: editableChunk.paragraphs.map((paragraph) => ({ id: paragraph.id, text: redactStorySensitiveText(paragraph.text) }))
-              }
-            }));
-          } catch (retryError) {
-            if (!isStorySafetyRefusal(retryError)) throw retryError;
-            warnings.push(`Chunk ${chunk.index} was left unchanged after the narrower safety-preserving retry.`);
-            result = {
-              revisedParagraphs: [],
-              handoff,
-              quality: {
-                closureRisk: "medium",
-                continuityFlags: ["This chunk was preserved unchanged after a model safety refusal."],
-                preservedIntent: true
-              }
-            };
-          }
+          warnings.push(`Section ${chunk.index} was preserved after a model refusal. Later sections continue.`);
+          result = {
+            revisedParagraphs: editableChunk.paragraphs.map((paragraph) => ({ id: paragraph.id, text: "", disposition: "preserved", note: "The model declined this section. Source retained for your review." })),
+            handoff,
+            quality: { closureRisk: "medium", continuityFlags: ["Section retained unchanged after a model refusal."], preservedIntent: true }
+          };
         }
       }
       let editableNormalized = normalizeAutopilotParagraphs(result, editableChunk);
@@ -4171,11 +4089,17 @@ async function runStoryAutopilotJob(jobId) {
       let closureRisk = result?.quality?.closureRisk || "medium";
       let closureNote = Array.isArray(result?.quality?.continuityFlags) ? result.quality.continuityFlags.join(" ") : "";
       const editableLastText = editableNormalized.paragraphs[editableNormalized.paragraphs.length - 1]?.revisedText || "";
-      if (editableNormalized.paragraphs.length && !isFinal && (closureRisk === "high" || prematureStoryClosure(editableLastText))) {
+      if (editableNormalized.paragraphs.length && !editableNormalized.paragraphs.some((p) => p.needsReview) && !isFinal && (closureRisk === "high" || prematureStoryClosure(editableLastText))) {
+        try {
         const repaired = await repairStoryAutopilotEnding(editableChunk, editableNormalized.paragraphs, redactStorySensitiveText(job.intent), redactStoryModelValue(plan), redactStoryModelValue(handoff));
         editableNormalized = { paragraphs: repaired.paragraphs, warnings: editableNormalized.warnings };
         closureRisk = repaired.closureRisk;
         closureNote = repaired.note;
+        } catch (error) {
+          if (!isStorySafetyRefusal(error)) throw error;
+          warnings.push(`Section ${chunk.index}: optional ending repair was declined; existing revision retained.`);
+          closureNote = "Ending repair needs manual review.";
+        }
       }
       const editableById = new Map(editableNormalized.paragraphs.map((paragraph) => [paragraph.id, paragraph]));
       const normalized = {
@@ -4186,11 +4110,14 @@ async function runStoryAutopilotJob(jobId) {
       };
       const changedEditableCount = normalized.paragraphs.filter((paragraph) => !paragraph.preserveVerbatim && paragraph.revisedText !== paragraph.text).length;
       revisedParagraphCount += changedEditableCount;
+      const retained = normalized.paragraphs.filter((paragraph) => paragraph.needsReview);
+      preservedParagraphCount += retained.length;
+      passagesForReview.push(...retained.map((paragraph) => ({ id: paragraph.id, label: paragraph.label, reason: paragraph.note })));
       if (!editableChunk.paragraphs.length) closureNote = "Protected passages were preserved verbatim; this chunk was not sent to the model.";
       const writeNow = storyNow();
       const writes = ["BEGIN;"];
       for (const paragraph of normalized.paragraphs) {
-        if (paragraph.preserveVerbatim) continue;
+        if (paragraph.preserveVerbatim || paragraph.needsReview) continue;
         const editId = storyId("edit");
         writes.push(`UPDATE story_sections SET edited_text = ${sqliteLiteral(paragraph.revisedText)}, updated_at = ${sqliteLiteral(writeNow)} WHERE id = ${sqliteLiteral(paragraph.id)} AND project_id = ${sqliteLiteral(job.project_id)};`);
         writes.push(`INSERT INTO story_edits (id, project_id, section_id, mode, prompt, suggestion, status, created_at, decided_at) VALUES (${sqliteLiteral(editId)}, ${sqliteLiteral(job.project_id)}, ${sqliteLiteral(paragraph.id)}, 'autopilot', ${sqliteLiteral(job.intent)}, ${sqliteLiteral(paragraph.revisedText)}, 'accepted', ${sqliteLiteral(writeNow)}, ${sqliteLiteral(writeNow)});`);
@@ -4236,17 +4163,19 @@ async function runStoryAutopilotJob(jobId) {
         review.readyForExport = false;
       }
     }
+    if (passagesForReview.length) review.readyForExport = false;
     const report = {
       intent: job.intent,
       model: STORY_EDITOR_MODEL,
       chunks: chunks.length,
       paragraphsRevised: revisedParagraphCount,
       paragraphsPreserved: preservedParagraphCount,
+      passagesForReview,
       warnings,
       closureChecks,
       finalReview: review
     };
-    await updateStoryAutopilotJob(jobId, { status: "completed", phase: "complete", report_json: JSON.stringify(report), message: `Finished ${chunks.length} chunks and completed the final continuity review.`, finished_at: storyNow() });
+    await updateStoryAutopilotJob(jobId, { status: "completed", phase: "complete", report_json: JSON.stringify(report), message: passagesForReview.length ? `Revision finished with ${passagesForReview.length} ${passagesForReview.length === 1 ? "passage" : "passages"} for your review.` : "Revision finished. Your draft and editorial report are ready.", finished_at: storyNow() });
   } catch (err) {
     console.error("Story Autopilot failed:", err);
     await updateStoryAutopilotJob(jobId, { status: "failed", phase: "error", error: String(err.message || err), message: "The original text remains preserved; this run stopped before the revised draft could finish.", finished_at: storyNow() }).catch(() => {});
@@ -4285,7 +4214,7 @@ app.get("/api/story-editor/projects", async (req, res) => {
   try {
     if (!requireStoryEditorSession(req, res)) return;
     const projects = await storyQuery("SELECT id, title, filename, user_intent AS userIntent, created_at AS createdAt, updated_at AS updatedAt FROM story_projects ORDER BY updated_at DESC;");
-    res.json({ ok: true, projects });
+    res.json({ ok: true, projects, engine: { model: STORY_EDITOR_MODEL, reasoningEffort: STORY_EDITOR_REASONING_EFFORT } });
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err.message || err) });
   }
@@ -4334,7 +4263,7 @@ app.get("/api/story-editor/projects/:id", async (req, res) => {
       ORDER BY created_at DESC LIMIT 80;
     `);
     const bible = await getStoryBible(projectId);
-    const activeAutopilot = await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} AND status IN ('queued', 'running') ORDER BY created_at DESC LIMIT 1;`);
+    const activeAutopilot = await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} ORDER BY created_at DESC LIMIT 1;`);
     res.json({ ok: true, project: projects[0], sections, bible, edits, autopilot: storyAutopilotJobView(activeAutopilot[0]) });
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err.message || err) });
@@ -4492,6 +4421,7 @@ app.post("/api/story-editor/projects/:id/edit", async (req, res) => {
         {
           role: "system",
           content: [
+            STORY_EDITOR_CONTEXT,
             "You are Story Editor, a deep fiction editor working paragraph-by-paragraph.",
             "Never rewrite the whole manuscript. Only edit the selected paragraph or scene.",
             "Preserve the author's voice, POV, tense, rhythm, and intent.",
@@ -4514,7 +4444,9 @@ app.post("/api/story-editor/projects/:id/edit", async (req, res) => {
         }
       ]
     });
+    assertStoryModelResponse(response);
     const suggestion = normalizeStoryText(extractResponseText(response), 100000);
+    if (!suggestion) throw new Error("The model returned no revision. Your passage is unchanged.");
     const editId = storyId("edit");
     const now = storyNow();
     await storyExec(`INSERT INTO story_edits (id, project_id, section_id, mode, prompt, suggestion, status, created_at) VALUES (${sqliteLiteral(editId)}, ${sqliteLiteral(projectId)}, ${sqliteLiteral(sectionId)}, ${sqliteLiteral(mode)}, ${sqliteLiteral(req.body?.note || "")}, ${sqliteLiteral(suggestion)}, 'pending', ${sqliteLiteral(now)});`);
@@ -4561,10 +4493,11 @@ app.get("/api/story-editor/projects/:id/export.docx", async (req, res) => {
       WHERE project_id = ${sqliteLiteral(projectId)} AND kind IN ('chapter', 'scene', 'paragraph')
       ORDER BY chapter_index, scene_index, paragraph_index, line_index;
     `);
-    const paragraphs = sections.map((section) => section.editedText || section.originalText);
+    const original = req.query.source === "original";
+    const paragraphs = sections.map((section) => original ? section.originalText : section.editedText || section.originalText);
     const docx = await buildDocxBuffer(title, paragraphs);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    res.setHeader("Content-Disposition", `attachment; filename="${title.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80) || "manuscript"}-edited.docx"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${title.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80) || "manuscript"}-${original ? "original" : "edited"}.docx"`);
     res.send(docx);
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err.message || err) });
