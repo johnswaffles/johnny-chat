@@ -135,3 +135,11 @@ textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 4px rgba(23,127,12
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+
+.tone-field { display:grid; gap:8px; margin:18px 0; color:var(--copy); font-size:13px; }
+.tone-field select { width:100%; padding:12px; border:1px solid var(--line-strong); border-radius:10px; background:#fff; color:var(--ink); font:inherit; }
+textarea.message-copy { min-height:130px; width:100%; margin:12px 0; padding:14px; font:500 18px/1.6 var(--sans); background:#fff; resize:vertical; }
+.message-stats.over-limit { color:#a33131; font-weight:700; }
+button:disabled { cursor:default; opacity:.55; }
+.message-copy[aria-invalid="true"] { border-color:#a33131; }
+.hero h1 { font-size:clamp(38px,5vw,64px); }

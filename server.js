@@ -1,3 +1,4 @@
+import { getTextsmithSchema, getTextsmithSmsStats, parseTextsmithMessages, textsmithMessagesFit, textsmithPrompt } from "./lib/textsmith.mjs";
 import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, STORY_EDITOR_CONTEXT } from "./lib/story-editor.mjs";
 import express from "express";
 import cors from "cors";
@@ -30,8 +31,8 @@ const {
   OPENAI_STORY_EDITOR_MODEL = "gpt-6-astra",
   OPENAI_STORY_EDITOR_REASONING_EFFORT = "high",
   OPENAI_STORY_EDITOR_REASONING_MODE = "",
-  OPENAI_TEXTSMITH_MODEL = "gpt-5.6-luna",
-  OPENAI_TEXTSMITH_FALLBACK_MODEL = "gpt-5.5",
+  OPENAI_TEXTSMITH_MODEL = "gpt-6-astra",
+  OPENAI_TEXTSMITH_FALLBACK_MODEL = "gpt-5.6-luna",
   OPENAI_REALTIME_SEARCH_MODEL = "",
   OPENAI_IMAGE_MODEL = "dall-e-3",
   OPENAI_VISION_MODEL = "gpt-4.1-mini",
@@ -80,8 +81,6 @@ const STORY_EDITOR_REASONING_MODE = OPENAI_STORY_EDITOR_REASONING_MODE || "";
 const STORY_EDITOR_UPLOAD_MB = Math.max(1, Number(STORY_EDITOR_MAX_UPLOAD_MB) || 80);
 const STORY_EDITOR_MAX_TEXT_CHARS = Math.max(1000000, (Number(STORY_EDITOR_MAX_TEXT_MB) || 80) * 1024 * 1024);
 
-const GSM7_BASIC_CHARS = new Set(Array.from(`@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ\u001bÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà`));
-const GSM7_EXTENDED_CHARS = new Set(["^", "{", "}", "\\", "[", "]", "~", "|", "€"]);
 const textSmithRateLedger = new Map();
 const TEXTSMITH_RATE_WINDOW_MS = 60 * 1000;
 const TEXTSMITH_RATE_LIMIT = 16;
@@ -1181,89 +1180,6 @@ function extractResponseText(response) {
   return parts.join("\n").trim();
 }
 
-function getTextsmithSchema(mode) {
-  const split = mode === "split";
-  return {
-    type: "json_schema",
-    name: split ? "textsmith_split_messages" : "textsmith_single_message",
-    description: split ? "Exactly two polished plain-text customer SMS messages." : "Exactly one polished plain-text customer SMS message.",
-    strict: true,
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        messages: {
-          type: "array",
-          minItems: split ? 2 : 1,
-          maxItems: split ? 2 : 1,
-          items: { type: "string" }
-        }
-      },
-      required: ["messages"]
-    }
-  };
-}
-
-function normalizeTextsmithSmsCharacters(value) {
-  return String(value || "")
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
-    .replace(/[\u2013\u2014]/g, "-")
-    .replace(/\u2026/g, "...")
-    .replace(/\u00A0/g, " ");
-}
-
-function stripTextsmithEmoji(value) {
-  return normalizeTextsmithSmsCharacters(value)
-    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Emoji_Modifier}]/gu, "")
-    .replace(/[\uFE0E\uFE0F\u200D]/g, "")
-    .replace(/[\r\n]+/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/\s+([,.;!?])/g, "$1")
-    .trim();
-}
-
-function getTextsmithSmsStats(message, mode = "single") {
-  const text = stripTextsmithEmoji(message);
-  const characters = Array.from(text);
-  const gsm7 = characters.every((character) => GSM7_BASIC_CHARS.has(character) || GSM7_EXTENDED_CHARS.has(character));
-  const units = gsm7
-    ? characters.reduce((total, character) => total + (GSM7_EXTENDED_CHARS.has(character) ? 2 : 1), 0)
-    : characters.length;
-  const limit = mode === "split" ? (gsm7 ? 153 : 67) : (gsm7 ? 159 : 69);
-  return {
-    characters: characters.length,
-    units,
-    encoding: gsm7 ? "GSM-7" : "Unicode",
-    limit,
-    fits: units <= limit
-  };
-}
-
-function normalizeTextsmithMessages(value) {
-  const messages = Array.isArray(value) ? value : [];
-  return messages.map((message) => stripTextsmithEmoji(message)).filter(Boolean);
-}
-
-function textsmithMessagesFit(messages, mode) {
-  if (mode === "split" && messages.length !== 2) return false;
-  if (mode === "single" && messages.length !== 1) return false;
-  return messages.every((message) => getTextsmithSmsStats(message, mode).fits);
-}
-
-function parseTextsmithMessages(raw) {
-  const clean = String(raw || "")
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/```$/i, "")
-    .trim();
-  try {
-    const parsed = JSON.parse(clean);
-    return normalizeTextsmithMessages(parsed?.messages);
-  } catch {
-    return normalizeTextsmithMessages(clean.split(/\n+/).filter(Boolean));
-  }
-}
-
 function textsmithRateAllowed(req) {
   const key = getRequestClientKey(req);
   const now = Date.now();
@@ -1277,39 +1193,22 @@ function textsmithRateAllowed(req) {
   return true;
 }
 
-function textsmithPrompt(mode, draft = "") {
-  const split = mode === "split";
-  return [
-    "You are TextSmith, a professional customer-message editor.",
-    "Rewrite the user's rough text into a polished SMS that sounds natural, specific, warm, and professional.",
-    "Preserve every important fact, commitment, date, price, name, request, and call to action.",
-    "Use the available character budget intelligently. Quality, completeness, and natural phrasing matter more than brevity. Do not make the message unnecessarily short, and do not pad it with filler.",
-    "When the source contains several useful details, preserve that richness in a comfortably full sentence instead of reducing it to a bare summary.",
-    "Shorten only what is required to meet the SMS limit. Never use awkward abbreviations, telegraphic fragments, or vague wording just to save characters.",
-    "For a long source, prioritize the recipient's name, the main action, date or time, price, location, commitment, and next step. Remove repeated context, apologies, and nonessential adjectives before removing those useful details.",
-    "Use SMS-safe ASCII punctuation whenever possible: straight apostrophes and quotes, hyphens, and three periods instead of curly punctuation, em dashes, or a single ellipsis.",
-    "Never invent information or change the user's meaning.",
-    "Never use emoji, emoticons, decorative symbols, hashtags, or markdown. Use ordinary plain text only.",
-    split
-      ? "Return exactly two complete, coherent SMS messages. Divide the meaning at a natural point, and make each message fit the carrier-safe concatenated SMS budget. Do not add labels, numbering, or explanations."
-      : "SINGLE-MESSAGE MODE IS A HARD CONTRACT: return exactly one complete SMS message that fits under 160 characters. For GSM-7 text, stay at or below 159 SMS units; for Unicode text, stay at or below 69 characters. Aim for a comfortably full message near the limit when the source supports it, but never exceed the limit. Never suggest, mention, offer, or recommend splitting into two messages. Never output a second message, a note, or an explanation. If the source is too long, compress it thoughtfully until one rich, natural message fits; do not refuse just because the source is detailed.",
-    "Return only JSON in this shape: {\"messages\":[\"message text\"]}.",
-    draft ? `Your previous draft did not satisfy the constraints, likely because it was over the character budget. Produce one final SMS under 150 ASCII characters now while keeping the highest-value details. Do not discuss the constraints. Previous draft: ${draft}` : ""
-  ].filter(Boolean).join(" ");
-}
-
-async function createTextsmithResponse({ input, mode, model, draft = "" }) {
+async function createTextsmithResponse({ input, mode, model, tone = "warm", draft = "" }) {
   const response = await openai.responses.create({
     model,
-    reasoning: { effort: "none" },
-    max_output_tokens: mode === "split" ? 520 : 380,
+    reasoning: { effort: "low" },
+    max_output_tokens: 2400,
+    store: false,
     text: { format: getTextsmithSchema(mode) },
     input: [
-      { role: "system", content: textsmithPrompt(mode, draft) },
+      { role: "system", content: textsmithPrompt(mode, draft, tone) },
       { role: "user", content: `ROUGH CUSTOMER TEXT\n${input}` }
     ]
   });
-  return normalizeTextsmithMessages(parseTextsmithMessages(extractResponseText(response)));
+  const refused = (response.output || []).some(item => (item.content || []).some(part => part.type === "refusal"));
+  if (refused) { const error = new Error("This request could not be rewritten."); error.contentRefusal = true; throw error; }
+  if (response.status === "incomplete" || response.status === "failed") throw new Error("TextSmith response was incomplete.");
+  return parseTextsmithMessages(extractResponseText(response));
 }
 
 function extractResponseSources(response) {
@@ -1784,7 +1683,9 @@ app.get("/health", (_req, res) => res.json({
   storyEditorReasoningEffort: STORY_EDITOR_REASONING_EFFORT,
   storyEditorReasoningMode: STORY_EDITOR_REASONING_MODE,
   storyEditorProtectedPassthrough: true,
-  storyEditorContentHandling: "context-aware-review-v2"
+  storyEditorContentHandling: "context-aware-review-v2",
+  textsmithVersion: "intentional-messages-v2",
+  textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
 
 function compactText(value) {
@@ -5058,18 +4959,19 @@ app.post("/api/textsmith", async (req, res) => {
 
     const input = compactText(req.body?.input).replace(/[\r\n]+/g, " ").trim();
     const mode = req.body?.mode === "split" ? "split" : "single";
+    const tone = ["warm", "direct", "reassuring"].includes(req.body?.tone) ? req.body.tone : "warm";
     if (!input) return res.status(400).json({ detail: "Paste the rough customer text first." });
     if (input.length > 6000) return res.status(413).json({ detail: "Please keep the source text under 6,000 characters." });
 
     let model = OPENAI_TEXTSMITH_MODEL;
     let messages;
     try {
-      messages = await createTextsmithResponse({ input, mode, model });
+      messages = await createTextsmithResponse({ input, mode, model, tone });
     } catch (firstError) {
-      if (!OPENAI_TEXTSMITH_FALLBACK_MODEL || OPENAI_TEXTSMITH_FALLBACK_MODEL === model) throw firstError;
+      if (firstError.contentRefusal || !OPENAI_TEXTSMITH_FALLBACK_MODEL || OPENAI_TEXTSMITH_FALLBACK_MODEL === model) throw firstError;
       console.warn(`TextSmith model ${model} failed; trying fallback ${OPENAI_TEXTSMITH_FALLBACK_MODEL}:`, firstError?.message || firstError);
       model = OPENAI_TEXTSMITH_FALLBACK_MODEL;
-      messages = await createTextsmithResponse({ input, mode, model });
+      messages = await createTextsmithResponse({ input, mode, model, tone });
     }
 
     for (let attempt = 0; attempt < 3 && !textsmithMessagesFit(messages, mode); attempt += 1) {
@@ -5077,7 +4979,8 @@ app.post("/api/textsmith", async (req, res) => {
         input,
         mode,
         model,
-        draft: (mode === "single" ? messages.join(" ") : messages.join(" / ")) || "No usable draft was returned."
+        tone,
+        draft: JSON.stringify(messages.map(text => ({ text, characters: Array.from(text).length })))
       });
     }
 
