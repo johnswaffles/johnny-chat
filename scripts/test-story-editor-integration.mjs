@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { DatabaseSync } from 'node:sqlite';
 import assert from 'node:assert/strict';
 import { writeFile, mkdtemp } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -38,7 +39,8 @@ const mock=http.createServer(async(req,res)=>{
  res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(value)}]}]}));
 });
 await new Promise(r=>mock.listen(0,'127.0.0.1',r));
-const child=spawn(process.execPath,['server.js'],{cwd:fileURLToPath(new URL('..',import.meta.url)),env:{...process.env,PORT:String(port),OPENAI_API_KEY:'local-test-only',OPENAI_BASE_URL:`http://127.0.0.1:${mock.address().port}/v1`,OPENAI_STORY_EDITOR_MODEL:'gpt-6-astra',OPENAI_STORY_EDITOR_REASONING_EFFORT:'high',OPENAI_STORY_EDITOR_REASONING_MODE:'',JOHNNY_CHAT_PASSWORD:'local-story-preview',STORY_EDITOR_DB_PATH:testDir+'/story.sqlite',JOHNNY_CHAT_USAGE_PATH:testDir+'/usage.json',JOHNNY_CHAT_LIBRARY_PATH:testDir+'/library.json',PUBLIC_BOARD_STORE_PATH:testDir+'/board.json',PUBLIC_BOARD_RATE_LIMIT_PATH:testDir+'/rate.json',CLOCKWISE_DB_PATH:testDir+'/clock.sqlite'},stdio:['ignore','ignore','pipe']});
+const launch=()=>spawn(process.execPath,['server.js'],{cwd:fileURLToPath(new URL('..',import.meta.url)),env:{...process.env,PORT:String(port),OPENAI_API_KEY:'local-test-only',OPENAI_BASE_URL:`http://127.0.0.1:${mock.address().port}/v1`,OPENAI_STORY_EDITOR_MODEL:'gpt-6-astra',OPENAI_STORY_EDITOR_REASONING_EFFORT:'high',OPENAI_STORY_EDITOR_REASONING_MODE:'',JOHNNY_CHAT_PASSWORD:'local-story-preview',STORY_EDITOR_DB_PATH:testDir+'/story.sqlite',JOHNNY_CHAT_USAGE_PATH:testDir+'/usage.json',JOHNNY_CHAT_LIBRARY_PATH:testDir+'/library.json',PUBLIC_BOARD_STORE_PATH:testDir+'/board.json',PUBLIC_BOARD_RATE_LIMIT_PATH:testDir+'/rate.json',CLOCKWISE_DB_PATH:testDir+'/clock.sqlite'},stdio:['ignore','ignore','pipe']});
+let child=launch();
 let backendErrors='';child.stderr.on('data',d=>backendErrors+=d);process.on('exit',()=>child.kill());
 
 let token;
@@ -70,6 +72,20 @@ const auto=await run('BUDGET_ONCE The storm passed over the house.','LOCAL TEST 
 const stopped=await run(Array.from({length:12},(_,i)=>i===11?'RESUME_BUDGET The last passage.':`Checkpoint passage ${i}.`).join('\n\n'),'LOCAL TEST - Resume');
 assert.equal(stopped.job.status,'failed');assert.ok(stopped.job.completedChunks>0);
 const initialEdits=stopped.project.edits.length;
+// Reproduce a process disappearing while the saved job still says running.
+const db=new DatabaseSync(testDir+'/story.sqlite');
+db.prepare("UPDATE story_autopilot_jobs SET status='running', finished_at='' WHERE id=?").run(stopped.job.id);
+db.close();
+await new Promise(resolve=>{child.once('exit',resolve);child.kill();});
+child=launch();child.stderr.on('data',d=>backendErrors+=d);
+for(let i=0;i<50;i++) {try {const r=await fetch(origin+'/api/chatbot-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:'local-story-preview'})});const t=(await r.json()).token;if(t){auth.Authorization=`Bearer ${t}`;break;}}catch{}await new Promise(r=>setTimeout(r,100));}
+const interrupted=await json(stopped.base);
+assert.equal(interrupted.autopilot.status,'failed');
+assert.equal(interrupted.autopilot.phase,'interrupted');
+assert.equal(interrupted.autopilot.completedChunks,stopped.job.completedChunks);
+const checkDb=new DatabaseSync(testDir+'/story.sqlite');
+assert.equal(checkDb.prepare('SELECT status FROM story_autopilot_jobs WHERE id=?').get(stopped.job.id).status,'running','read-only recovery must not mutate saved jobs');
+checkDb.close();
 const requestCount=requests.length;
 const resumed=await json(stopped.base+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume:true,intent:stopped.job.intent})});assert.equal(resumed.job.id,stopped.job.id);
 let resumedJob;
@@ -77,5 +93,5 @@ for(let i=0;i<100;i++){resumedJob=(await json(stopped.base+'/autopilot/'+stopped
 assert.equal(resumedJob.status,'completed');
 const after=await json(stopped.base);assert.equal(after.edits.length,12);assert.ok(initialEdits<12);
 assert.ok(!requests.slice(requestCount).some(r=>JSON.parse(r.input[1].content).chunk?.paragraphs.some(p=>p.text.includes('Checkpoint passage 0.'))));
-console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; same-job resume skips saved paragraphs and avoids duplicate revisions.');
+console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');
 child.kill();mock.close();

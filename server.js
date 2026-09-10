@@ -1684,7 +1684,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorReasoningMode: STORY_EDITOR_REASONING_MODE,
   storyEditorProtectedPassthrough: true,
   storyEditorContentHandling: "context-aware-review-v2",
-  storyEditorOutputRecovery: "budget-retry-resume-v1",
+  storyEditorOutputRecovery: "budget-retry-resume-v2",
   textsmithVersion: "intentional-messages-v2",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
@@ -3730,7 +3730,22 @@ function buildStoryAutopilotChunks(paragraphs, { maxCharacters = 18000, maxParag
   return chunks;
 }
 
+// This SQLite-backed service has one worker process per persistent database.
+const storyWorkerProcessStartedAt = new Date().toISOString();
+function storyAutopilotInterrupted(row) {
+  return row && ['queued', 'running'].includes(row.status)
+    && row.updated_at < storyWorkerProcessStartedAt
+    && !storyAutopilotWorkers.has(row.id);
+}
+function recoverableStoryJob(row) {
+  if (!storyAutopilotInterrupted(row)) return row;
+  // Read-only presentation: only an explicit resume mutates this selected job.
+  return { ...row, status: 'failed', phase: 'interrupted', finished_at: row.updated_at,
+    message: 'The server restarted. Completed sections are saved.',
+    error: 'This edit was interrupted by a server restart. Resume the unfinished edit to continue from saved progress.' };
+}
 function storyAutopilotJobView(row) {
+  row = recoverableStoryJob(row);
   if (!row) return null;
   return {
     id: row.id,
@@ -4239,13 +4254,13 @@ app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
     const project = projects[0];
     if (!project) return res.status(404).json({ ok: false, error: "Project not found." });
     const active = await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} AND status IN ('queued', 'running') ORDER BY created_at DESC LIMIT 1;`);
-    if (active[0]) {
+    if (active[0] && !(req.body?.resume === true && storyAutopilotInterrupted(active[0]))) {
       return res.status(200).json({ ok: true, alreadyRunning: true, job: storyAutopilotJobView(active[0]) });
     }
     const intent = normalizeStoryText(req.body?.intent || project.user_intent || "Edit this manuscript for clarity, coherence, and stronger prose while preserving the author's voice.", 4000);
     if (!intent) return res.status(400).json({ ok: false, error: "Tell Story Editor what you want done before starting Autopilot." });
     if (req.body?.resume === true) {
-      const previous = (await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} ORDER BY created_at DESC LIMIT 1;`))[0];
+      const previous = recoverableStoryJob((await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} ORDER BY created_at DESC LIMIT 1;`))[0]);
       if (!previous || previous.status !== "failed" || previous.intent !== intent) return res.status(409).json({ ok: false, error: "The saved run does not match this brief. Start a new full edit." });
       const changed = await storyQuery(`SELECT id FROM story_sections WHERE project_id = ${sqliteLiteral(projectId)} AND updated_at > ${sqliteLiteral(previous.finished_at || previous.updated_at)} LIMIT 1;`);
       if (changed.length) return res.status(409).json({ ok: false, error: "The manuscript changed after this run stopped. Start a new full edit to include those changes." });
