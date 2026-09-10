@@ -1,7 +1,7 @@
 import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260909-cursedbears1';
 import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260909-cursedbears1';
 import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260909-cursedbears1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260909-cursedbears1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260909-bearcap1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
 import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260909-cursedbears1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';

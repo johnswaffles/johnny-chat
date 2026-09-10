@@ -1,15 +1,23 @@
 import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
 import { CONFIG, UNIT_TYPES } from './config.js?v=20260909-cursedbears1';
 
-export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 300, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
+export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 300, maxAlivePerSide: 2, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
 const distance = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
+// The isometric map's upper/lower halves are split along its x + z midpoint.
+// Count current positions, so crossing the map transfers a living bear's slot.
+export const grizzlySide = point => point.x + point.z < (CONFIG.mapWidth + CONFIG.mapHeight) / 2 ? 'player' : 'enemy';
+export function livingGrizzliesBySide(sim) {
+  const counts={player:0,enemy:0};
+  for(const unit of sim.units)if(unit.type==='grizzly'&&!unit.dead)counts[grizzlySide(unit)]++;
+  return counts;
+}
 const people = sim => sim.units.filter(unit => !unit.dead && (unit.faction === 'player' || unit.faction === 'enemy'));
 export const initialWildlifeState = clock => ({ nextSpawnAt: (Math.floor(Math.max(0,clock)/300)+1)*300, spawnCount: 0, scanClock: 0, spawnCursor: 0 });
 
 // Spawn on a real woodland edge with a legal route to a person. Never move
 // existing trees, buildings or people to make an encounter fit.
-function planGrizzly(sim,state,side=null,avoid=[]) {
+function planGrizzly(sim,state,side=null,avoid=[],automatic=false) {
   const humans=people(sim).filter(u=>!(u.lastLightWardTimer>0));
   if (!humans.length) return null;
   const preferred=side??(state.spawnCount%2 ? 'enemy' : 'player');
@@ -25,6 +33,7 @@ function planGrizzly(sim,state,side=null,avoid=[]) {
     const radius=radii[Math.floor(index/32)];
     const point={x:target.x+Math.cos(angle)*radius,z:target.z+Math.sin(angle)*radius};
     if(point.x<2||point.z<2||point.x>CONFIG.mapWidth-2||point.z>CONFIG.mapHeight-2)continue;
+    if(automatic&&grizzlySide(point)!==side)continue;
     if(avoid.some(p=>distance(p,point)<3)||sim.units.some(u=>u.type==='grizzly'&&!u.dead&&distance(u,point)<3))continue;
     if(humans.some(unit=>distance(unit,point)<14)||sim._pointBlockedForUnit(probe,point))continue;
     const woodland=sim._staticBlockerCandidates(point,7).some(node=>node.kind==='resource'&&node.type==='tree'&&node.amount>0&&distance(node,point)<7);
@@ -49,7 +58,14 @@ function releasePlannedGrizzly(sim,plan) {
 }
 
 export function spawnGrizzly(sim) {
-  const state=sim.wildlifeState,plan=planGrizzly(sim,state);
+  const state=sim.wildlifeState,counts=livingGrizzliesBySide(sim);
+  const preferred=state.spawnCount%2?'enemy':'player';
+  let plan=null;
+  for(const side of [preferred,preferred==='player'?'enemy':'player']){
+    if(counts[side]>=GRIZZLY_ENCOUNTER.maxAlivePerSide||!people(sim).some(u=>u.faction===side&&!(u.lastLightWardTimer>0)))continue;
+    plan=planGrizzly(sim,state,side,[],true);
+    break; // Preserve the chosen side while its bounded route search retries.
+  }
   if(!plan)return null;
   const bear=releasePlannedGrizzly(sim,plan);state.spawnCursor=0;
   sim._announce(`${bearVariant(bear).name} has emerged from the woods. Soldiers, protect the settlement!`);
@@ -176,7 +192,11 @@ export function updateWildlife(sim,dt) {
   const state=sim.wildlifeState??=initialWildlifeState(sim.clock);
   updateGrizzlyPair(sim);
   if(sim.clock+1e-6>=state.nextSpawnAt&&sim.clock>=(state.spawnRetryAt??0)){
-    if(spawnGrizzly(sim))state.nextSpawnAt+=GRIZZLY_ENCOUNTER.interval;
+    const counts=livingGrizzliesBySide(sim);
+    const full=Object.values(counts).every(count=>count>=GRIZZLY_ENCOUNTER.maxAlivePerSide);
+    // A capped event expires; do not accumulate overdue encounters for later.
+    if(full)state.nextSpawnAt=sim.clock+GRIZZLY_ENCOUNTER.interval;
+    else if(spawnGrizzly(sim))state.nextSpawnAt+=GRIZZLY_ENCOUNTER.interval;
     state.spawnRetryAt=sim.clock+GRIZZLY_ENCOUNTER.retryInterval;
   }
   state.responseClock=(state.responseClock??0)-dt;
