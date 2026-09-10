@@ -16,11 +16,18 @@ function sample(schema) {
  return 'Local test editorial note.';
 }
 const requests=[];
+let resumeBudgetFailures=0;
+const truncatedStages=new Set();
 const mock=http.createServer(async(req,res)=>{
  let raw=''; for await(const part of req) raw+=part;
  const body=JSON.parse(raw); requests.push(body);
  assert.equal(body.model,'gpt-6-astra'); assert.equal(body.reasoning.effort,'high'); assert.equal(body.reasoning.mode,undefined);
  const user=JSON.parse(body.input[1].content);
+ const stage=body.text?.format?.name;
+ const retryStage=body.input[1].content.includes('BUDGET_ONCE')&&!truncatedStages.has(stage);
+ const resumeFailure=user.chunk?.paragraphs.some(p=>p.text.includes('RESUME_BUDGET'))&&resumeBudgetFailures++<3;
+ if(retryStage||resumeFailure){truncatedStages.add(stage);res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'incomplete',incomplete_details:{reason:'max_output_tokens'},output:[{type:'message',content:[{type:'output_text',text:'{"revisedParagraphs":[]}'}]}]}));return;}
+
  if(user.chunk?.paragraphs.some(p=>p.text.includes('WHOLE_REFUSAL'))) {res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'completed',output:[{type:'message',content:[{type:'refusal',refusal:'Simulated refusal'}]}]}));return;}
  if(user.chunk?.paragraphs.some(p=>p.text.includes('TECHNICAL_FAILURE'))) {res.writeHead(400,{'Content-Type':'application/json'});res.end(JSON.stringify({error:{message:'Network policy blocked connection',code:'invalid_request_error'}}));return;}
  const value=sample(body.text.format.schema);
@@ -59,6 +66,16 @@ const download=await fetch(origin+main.base+'/export.docx',{headers:auth});asser
 const original=await fetch(origin+main.base+'/export.docx?source=original',{headers:auth});assert.equal(original.status,200);await writeFile(testDir+'/original.docx',Buffer.from(await original.arrayBuffer()));
 const whole=await run(Array.from({length:12},(_,i)=>i===0?'WHOLE_REFUSAL simulated hold.':`Paragraph ${i} of the local test manuscript.`).join('\n\n'),'LOCAL TEST - Refusal');assert.equal(whole.job.status,'completed');assert.ok(whole.job.report.paragraphsPreserved > 0);assert.ok(whole.job.report.paragraphsRevised > 0);assert.equal(whole.job.report.paragraphsPreserved + whole.job.report.paragraphsRevised,12);
 const fail=await run('TECHNICAL_FAILURE simulated service problem.','LOCAL TEST - Connection');assert.equal(fail.job.status,'failed');assert.equal(fail.project.sections.filter(s=>s.editedText).length,0);
-console.log('PASS: authenticated upload, Astra/high request contract, per-passage preservation, whole-section refusal continues later sections, technical failure stops, saved report reload, DOCX export.');
-
+const auto=await run('BUDGET_ONCE The storm passed over the house.','LOCAL TEST - Output budget');assert.equal(auto.job.status,'completed');assert.ok(truncatedStages.size>=2);
+const stopped=await run(Array.from({length:12},(_,i)=>i===11?'RESUME_BUDGET The last passage.':`Checkpoint passage ${i}.`).join('\n\n'),'LOCAL TEST - Resume');
+assert.equal(stopped.job.status,'failed');assert.ok(stopped.job.completedChunks>0);
+const initialEdits=stopped.project.edits.length;
+const requestCount=requests.length;
+const resumed=await json(stopped.base+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume:true,intent:stopped.job.intent})});assert.equal(resumed.job.id,stopped.job.id);
+let resumedJob;
+for(let i=0;i<100;i++){resumedJob=(await json(stopped.base+'/autopilot/'+stopped.job.id)).job;if(['completed','failed'].includes(resumedJob.status))break;await new Promise(r=>setTimeout(r,100));}
+assert.equal(resumedJob.status,'completed');
+const after=await json(stopped.base);assert.equal(after.edits.length,12);assert.ok(initialEdits<12);
+assert.ok(!requests.slice(requestCount).some(r=>JSON.parse(r.input[1].content).chunk?.paragraphs.some(p=>p.text.includes('Checkpoint passage 0.'))));
+console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; same-job resume skips saved paragraphs and avoids duplicate revisions.');
 child.kill();mock.close();

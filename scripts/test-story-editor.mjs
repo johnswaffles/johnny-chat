@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse } from '../lib/story-editor.mjs';
+import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, withStoryOutputBudget } from '../lib/story-editor.mjs';
 
 test('adult themes and ambiguous words are not automatic exclusions', () => {
   for (const text of ['She smelled cannabis.', 'His joint ached.', 'A blunt reply.', 'A lecture on psilocybin research.']) assert.equal(classifyStoryProtection(text).preserveVerbatim, false);
@@ -30,4 +30,20 @@ test('missing, blank, and duplicate replacements preserve the source', () => {
 test('incomplete output cannot become an accepted revision', () => {
   assert.throws(() => assertStoryModelResponse({status:'incomplete',incomplete_details:{reason:'max_output_tokens'}}), /did not finish/);
   assert.throws(() => assertStoryModelResponse({output:[{content:[{type:'refusal',refusal:'Declined'}]}]}), /declined/);
+});
+
+test('output exhaustion retries with larger allowances and never accepts partial text', async () => {
+  const budgets=[];
+  const result=await withStoryOutputBudget(async budget=>{
+    budgets.push(budget);
+    if(budgets.length===1) assertStoryModelResponse({status:'incomplete',incomplete_details:{reason:'max_output_tokens'},output:[{content:[{type:'output_text',text:'partial text'}]}]});
+    return 'complete';
+  },2600);
+  assert.equal(result,'complete');assert.deepEqual(budgets,[25000,50000]);
+});
+test('output retries are bounded and do not retry network or safety errors', async () => {
+  const budgets=[];
+  await assert.rejects(withStoryOutputBudget(async b=>{budgets.push(b);throw Object.assign(new Error('budget'),{code:'max_output_tokens'});}),/Completed sections are saved/);
+  assert.deepEqual(budgets,[25000,50000,64000]);
+  let calls=0;await assert.rejects(withStoryOutputBudget(async()=>{calls++;throw new Error('network');}),/network/);assert.equal(calls,1);
 });

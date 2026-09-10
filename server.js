@@ -1,5 +1,5 @@
 import { getTextsmithSchema, getTextsmithSmsStats, parseTextsmithMessages, textsmithMessagesFit, textsmithPrompt } from "./lib/textsmith.mjs";
-import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, STORY_EDITOR_CONTEXT } from "./lib/story-editor.mjs";
+import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, withStoryOutputBudget, STORY_EDITOR_CONTEXT } from "./lib/story-editor.mjs";
 import express from "express";
 import cors from "cors";
 import multer from "multer";
@@ -1684,6 +1684,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorReasoningMode: STORY_EDITOR_REASONING_MODE,
   storyEditorProtectedPassthrough: true,
   storyEditorContentHandling: "context-aware-review-v2",
+  storyEditorOutputRecovery: "budget-retry-resume-v1",
   textsmithVersion: "intentional-messages-v2",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
@@ -3683,19 +3684,16 @@ async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) 
       { role: "user", content: typeof user === "string" ? user : JSON.stringify(user, null, 2) }
     ]
   };
-  let response;
-  try {
-    response = await openai.responses.create(request);
-  } catch (error) {
-    const message = String(error?.message || error || "");
-    const hasReasoningMode = Boolean(request.reasoning?.mode);
-    if (!hasReasoningMode || !/reasoning|mode|pro|unsupported|invalid/i.test(message)) throw error;
-    response = await openai.responses.create({
-      ...request,
-      reasoning: { effort: STORY_EDITOR_REASONING_EFFORT }
-    });
-  }
-  return parseStoryModelJson(response);
+  return withStoryOutputBudget(async (budget) => {
+    let response;
+    try {
+      response = await openai.responses.create({ ...request, max_output_tokens: budget });
+    } catch (error) {
+      if (!request.reasoning?.mode || !/reasoning|mode|pro|unsupported|invalid/i.test(String(error?.message || ""))) throw error;
+      response = await openai.responses.create({ ...request, max_output_tokens: budget, reasoning: { effort: STORY_EDITOR_REASONING_EFFORT } });
+    }
+    return parseStoryModelJson(response);
+  }, maxOutputTokens);
 }
 
 function buildStoryAutopilotChunks(paragraphs, { maxCharacters = 18000, maxParagraphs = 10 } = {}) {
@@ -3834,7 +3832,10 @@ async function repairStoryAutopilotEnding(chunk, paragraphs, intent, plan, hando
   };
 }
 
+const storyAutopilotWorkers = new Set();
 async function runStoryAutopilotJob(jobId) {
+  if (storyAutopilotWorkers.has(jobId)) return;
+  storyAutopilotWorkers.add(jobId);
   try {
     const job = await getStoryAutopilotJob(jobId);
     if (!job) return;
@@ -3848,7 +3849,14 @@ async function runStoryAutopilotJob(jobId) {
       WHERE project_id = ${sqliteLiteral(job.project_id)} AND kind = 'paragraph'
       ORDER BY chapter_index, scene_index, paragraph_index;
     `);
-    const chunks = buildStoryAutopilotChunks(rows);
+    const storedChunks = await storyQuery(`SELECT * FROM story_autopilot_chunks WHERE job_id = ${sqliteLiteral(jobId)} ORDER BY chunk_index;`);
+    const chunks = storedChunks.length ? storedChunks.map((stored) => {
+      const first = rows.findIndex((row) => row.id === stored.first_section_id);
+      const last = rows.findIndex((row) => row.id === stored.last_section_id);
+      if (first < 0 || last < first) throw new Error("The saved section boundaries no longer match this manuscript. Start a new revision.");
+      const paragraphs = buildStoryAutopilotChunks(rows.slice(first, last + 1), { maxCharacters: Infinity, maxParagraphs: Infinity }).flatMap((chunk) => chunk.paragraphs);
+      return { id: stored.id, index: Number(stored.chunk_index), label: stored.label, paragraphs, saved: stored };
+    }) : buildStoryAutopilotChunks(rows);
     if (!chunks.length) throw new Error("The manuscript does not contain any editable passages.");
     const now = storyNow();
     await updateStoryAutopilotJob(jobId, {
@@ -3856,12 +3864,13 @@ async function runStoryAutopilotJob(jobId) {
       phase: "planning",
       total_chunks: chunks.length,
       current_chunk: 0,
-      completed_chunks: 0,
-      started_at: now,
+      completed_chunks: storedChunks.filter((chunk) => chunk.status === "complete").length,
+      started_at: job.started_at || now,
       message: "Reading the manuscript and building a continuity plan."
     });
     const chunkStatements = ["BEGIN;"];
     for (const chunk of chunks) {
+      if (chunk.saved) continue;
       const chunkId = storyId("chunk");
       chunk.id = chunkId;
       chunkStatements.push(`INSERT INTO story_autopilot_chunks (id, job_id, project_id, chunk_index, first_section_id, last_section_id, label, created_at, updated_at) VALUES (${sqliteLiteral(chunkId)}, ${sqliteLiteral(jobId)}, ${sqliteLiteral(job.project_id)}, ${chunk.index}, ${sqliteLiteral(chunk.paragraphs[0].id)}, ${sqliteLiteral(chunk.paragraphs[chunk.paragraphs.length - 1].id)}, ${sqliteLiteral(chunk.label)}, ${sqliteLiteral(now)}, ${sqliteLiteral(now)});`);
@@ -3883,7 +3892,10 @@ async function runStoryAutopilotJob(jobId) {
       closing: chunk.paragraphs.at(-1).preserveVerbatim ? "[Passage held unchanged]" : chunk.paragraphs.at(-1).text.slice(-420)
     }));
     let plan;
-    if (!editableParagraphCount) {
+    const savedPlan = parseStoryObject(job.plan_json);
+    if (savedPlan.editorialNorthStar) {
+      plan = savedPlan;
+    } else if (!editableParagraphCount) {
       plan = defaultStoryAutopilotPlan(job.intent, chunks);
       warnings.push("All detected sensitive passages were preserved verbatim; no model rewrite was needed.");
     } else {
@@ -3929,6 +3941,16 @@ async function runStoryAutopilotJob(jobId) {
     const closureChecks = [];
     const passagesForReview = chunks.flatMap((chunk) => protectedPassageDescriptors(chunk.paragraphs));
     for (const chunk of chunks) {
+      if (chunk.saved?.status === "complete") {
+        handoff = parseStoryObject(chunk.saved.continuity_json, handoff);
+        const savedReview = parseStoryObject(chunk.saved.review_json);
+        revisedParagraphCount += savedReview.paragraphsRevised ?? chunk.paragraphs.filter((paragraph) => paragraph.text !== paragraph.originalText).length;
+        const held = savedReview.passagesForReview || [];
+        preservedParagraphCount += held.length;
+        passagesForReview.push(...held);
+        closureChecks.push({ chunkIndex: chunk.index, status: chunk.index === chunks.length ? "final" : "resolved", note: "Previously completed section retained." });
+        continue;
+      }
       await updateStoryAutopilotJob(jobId, {
         phase: "editing",
         current_chunk: chunk.index,
@@ -4023,11 +4045,13 @@ async function runStoryAutopilotJob(jobId) {
         writes.push(`UPDATE story_sections SET edited_text = ${sqliteLiteral(paragraph.revisedText)}, updated_at = ${sqliteLiteral(writeNow)} WHERE id = ${sqliteLiteral(paragraph.id)} AND project_id = ${sqliteLiteral(job.project_id)};`);
         writes.push(`INSERT INTO story_edits (id, project_id, section_id, mode, prompt, suggestion, status, created_at, decided_at) VALUES (${sqliteLiteral(editId)}, ${sqliteLiteral(job.project_id)}, ${sqliteLiteral(paragraph.id)}, 'autopilot', ${sqliteLiteral(job.intent)}, ${sqliteLiteral(paragraph.revisedText)}, 'accepted', ${sqliteLiteral(writeNow)}, ${sqliteLiteral(writeNow)});`);
       }
+      const chunkReview = { closureRisk, continuityFlags: result?.quality?.continuityFlags || [], preservedIntent: result?.quality?.preservedIntent !== false, protectedPassages, protectedOnly: !editableChunk.paragraphs.length, paragraphsRevised: changedEditableCount, passagesForReview: retained.map((paragraph) => ({ id: paragraph.id, label: paragraph.label, reason: paragraph.note })) };
+      writes.push(`UPDATE story_autopilot_chunks SET status = 'complete', continuity_json = ${sqliteLiteral(JSON.stringify(result?.handoff || handoff))}, review_json = ${sqliteLiteral(JSON.stringify(chunkReview))}, updated_at = ${sqliteLiteral(writeNow)} WHERE id = ${sqliteLiteral(chunk.id)};`);
       writes.push("COMMIT;");
       await storyExec(writes);
       handoff = redactStoryModelValue(result?.handoff || handoff);
       closureChecks.push({ chunkIndex: chunk.index, status: isFinal ? "final" : closureRisk === "high" ? "open" : "resolved", note: closureNote || (isFinal ? "Final chunk reviewed for story resolution." : "Interior chunk preserved forward momentum.") });
-      await storyExec(`UPDATE story_autopilot_chunks SET status = 'complete', continuity_json = ${sqliteLiteral(JSON.stringify(handoff))}, review_json = ${sqliteLiteral(JSON.stringify({ closureRisk, continuityFlags: result?.quality?.continuityFlags || [], preservedIntent: result?.quality?.preservedIntent !== false, protectedPassages, protectedOnly: !editableChunk.paragraphs.length }))}, updated_at = ${sqliteLiteral(storyNow())} WHERE id = ${sqliteLiteral(chunk.id)};`);
+
       await updateStoryAutopilotJob(jobId, { completed_chunks: chunk.index, message: `Chunk ${chunk.index} complete. Continuity handoff saved for the next section.` });
     }
 
@@ -4080,6 +4104,8 @@ async function runStoryAutopilotJob(jobId) {
   } catch (err) {
     console.error("Story Autopilot failed:", err);
     await updateStoryAutopilotJob(jobId, { status: "failed", phase: "error", error: String(err.message || err), message: "The original text remains preserved; this run stopped before the revised draft could finish.", finished_at: storyNow() }).catch(() => {});
+  } finally {
+    storyAutopilotWorkers.delete(jobId);
   }
 }
 
@@ -4218,6 +4244,15 @@ app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
     }
     const intent = normalizeStoryText(req.body?.intent || project.user_intent || "Edit this manuscript for clarity, coherence, and stronger prose while preserving the author's voice.", 4000);
     if (!intent) return res.status(400).json({ ok: false, error: "Tell Story Editor what you want done before starting Autopilot." });
+    if (req.body?.resume === true) {
+      const previous = (await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} ORDER BY created_at DESC LIMIT 1;`))[0];
+      if (!previous || previous.status !== "failed" || previous.intent !== intent) return res.status(409).json({ ok: false, error: "The saved run does not match this brief. Start a new full edit." });
+      const changed = await storyQuery(`SELECT id FROM story_sections WHERE project_id = ${sqliteLiteral(projectId)} AND updated_at > ${sqliteLiteral(previous.finished_at || previous.updated_at)} LIMIT 1;`);
+      if (changed.length) return res.status(409).json({ ok: false, error: "The manuscript changed after this run stopped. Start a new full edit to include those changes." });
+      await updateStoryAutopilotJob(previous.id, { status: "queued", error: "", finished_at: "", message: "Resuming the unfinished revision; completed sections stay saved." });
+      void runStoryAutopilotJob(previous.id);
+      return res.status(202).json({ ok: true, resumed: true, job: storyAutopilotJobView(await getStoryAutopilotJob(previous.id, projectId)) });
+    }
     const jobId = storyId("autopilot");
     const now = storyNow();
     await storyExec([

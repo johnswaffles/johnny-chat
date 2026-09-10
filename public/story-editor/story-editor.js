@@ -325,6 +325,7 @@
   function renderAutopilot() {
     const job = state.autopilotJob;
     renderRevisionReport(job);
+    document.getElementById("autopilot-new-run").hidden = job?.status !== "failed";
     if (!job) {
       el.autopilotProgress.hidden = true;
       el.autopilotStart.disabled = false;
@@ -343,7 +344,7 @@
     };
     el.autopilotProgress.hidden = false;
     el.autopilotStart.disabled = running;
-    el.autopilotStart.textContent = running ? "Full edit is working…" : job.status === "completed" ? "Run another full edit" : "Try full edit again";
+    el.autopilotStart.textContent = running ? "Full edit is working…" : job.status === "completed" ? "Run another full edit" : "Resume unfinished edit";
     document.getElementById("autopilot-status-label").textContent = running ? "Editing in progress" : job.status === "completed" ? "Revision saved" : "Run paused";
     el.autopilotPhase.textContent = phaseLabels[job.phase] || "Working through the manuscript";
     el.autopilotPercent.textContent = `${percent}%`;
@@ -788,7 +789,7 @@
     }
   }
 
-  async function startAutopilot() {
+  async function startAutopilot({ fresh = false } = {}) {
     if (!state.project || el.autopilotStart.disabled) return;
     const intent = String(el.autopilotIntent.value || "").trim();
     if (!intent) {
@@ -801,7 +802,7 @@
       const response = await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/autopilot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intent })
+        body: JSON.stringify({ intent, resume: !fresh && state.autopilotJob?.status === "failed" && state.autopilotJob?.intent === intent })
       });
       const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Autopilot could not start.");
@@ -997,6 +998,7 @@
   el.retryStartup.addEventListener("click", retryStartup);
   el.openBible.addEventListener("click", () => openDialog(el.bibleDialog));
   el.autopilotStart.addEventListener("click", startAutopilot);
+  document.getElementById("autopilot-new-run").addEventListener("click", () => startAutopilot({ fresh: true }));
   el.railOpen.addEventListener("click", () => setLibraryOpen(true));
   el.railClose.addEventListener("click", () => setLibraryOpen(false));
   el.railScrim.addEventListener("click", () => setLibraryOpen(false));
