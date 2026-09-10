@@ -4994,7 +4994,7 @@ app.post("/api/textsmith", async (req, res) => {
 
     const input = compactText(req.body?.input).replace(/[\r\n]+/g, " ").trim();
     const mode = req.body?.mode === "split" ? "split" : "single";
-    const tone = ["warm", "direct", "reassuring"].includes(req.body?.tone) ? req.body.tone : "warm";
+    const tone = ["warm", "direct", "reassuring", "expert"].includes(req.body?.tone) ? req.body.tone : "warm";
     if (!input) return res.status(400).json({ detail: "Paste the rough customer text first." });
     if (input.length > 6000) return res.status(413).json({ detail: "Please keep the source text under 6,000 characters." });
 

@@ -19,6 +19,7 @@ let attempts=0;
 const mock=http.createServer(async(req,res)=>{
  let raw=''; for await(const p of req)raw+=p;const body=JSON.parse(raw);attempts++;
  assert.equal(body.model,'gpt-6-astra');assert.equal(body.reasoning.effort,'low');
+ if(body.input[1].content.includes('EXPERT')) assert.match(body.input[0].content,/EXPERT CUSTOMER CARE/);
  const count=body.text.format.schema.properties.messages.minItems;
  const first=body.input[1].content.includes('RETRY')&&!body.input[0].content.includes('Previous candidate');
  if(!first&&body.input[1].content.includes('RETRY')) assert.match(body.input[0].content,/TWO-message, 160-characters-EACH/);
@@ -37,7 +38,9 @@ for(const mode of ['single','split']) {
  const r=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input: mode==='split'?'RETRY appointment update':'Estimate for Mike is $285 Friday afternoon if it works.',mode})});
  assert.equal(r.status,200);const data=await r.json();assert.equal(data.messages.length,mode==='split'?2:1);assert.ok(data.stats.every(s=>s.characters<=s.limit));
 }
-assert.equal(attempts,3,'overlong pair repaired once without dropping second message');
+const expert=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'EXPERT: Tell Mike his estimate is $285 and ask whether Friday afternoon works.',mode:'single',tone:'expert'})});
+assert.equal(expert.status,200);
+assert.equal(attempts,4,'overlong pair repaired once without dropping second message');
 const empty=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(empty.status,400);
 console.log('PASS: real endpoint single/pair output, character stats, overlong pair repair, empty-input validation, Astra request parameters.');
 child.kill();mock.close();
