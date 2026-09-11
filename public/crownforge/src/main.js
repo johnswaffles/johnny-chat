@@ -7,7 +7,7 @@ import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTON
 import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260909-cursedbears1';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
 import { CrownforgeRenderer } from './renderer.js?v=20260911-worker-v010';
-import { CrownforgeSimulation } from './simulation.js?v=20260911-builderqueue1';
+import { CrownforgeSimulation } from './simulation.js?v=20260911-idlespacing1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260909-cursedbears1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-cursedbears1';

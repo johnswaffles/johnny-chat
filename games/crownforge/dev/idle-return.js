@@ -1,0 +1,7 @@
+// Isolated review scene; the regular game does not load this module.
+const {simulation:s,renderer:r}=window.crownforge;
+s.units=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.projectiles=[];s.navigationVersion++;s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};s._updateMilitaryServices=()=>{};s._updateWorkerAssignments=()=>{};s._nearestAutomaticBuildingWork=()=>null;s.wildlifeState.nextSpawnAt=Infinity;
+const hall=s.addBuilding('townCenter',180,180,'player',1);const workers=Array.from({length:12},(_,i)=>s.addUnit('villager',130+i*4,140,'player'));for(const u of workers){u.idleDuration=30;u.needsSafetyRegroup=true;}
+r.camera.zoom=.45;r.zoomMotion=null;r.cameraInitialized=true;const point=r.worldToScreen(hall);r.camera.x+=r.width*.5-point.x;r.camera.y+=r.height*.45-point.y;
+const bar=document.createElement('div');bar.style='position:fixed;bottom:12px;left:12px;z-index:100;background:#15251eee;color:white;padding:12px;border-radius:8px';bar.innerHTML='<button>Advance return</button> <output>12 workers returning to individual spots</output>';document.body.append(bar);
+bar.querySelector('button').onclick=()=>{for(let i=0;i<4000;i++)s.update(.05);r.camera.zoom=.14;r.zoomMotion=null;const center=r.worldToScreen(hall);r.camera.x+=r.width*.5-center.x;r.camera.y+=r.height*.48-center.y;bar.querySelector('output').textContent=`${workers.filter(u=>u.command==='idle'&&!u.safetyRegroupActive).length} workers settled around the hall`;};

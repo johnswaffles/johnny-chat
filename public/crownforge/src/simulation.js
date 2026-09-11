@@ -90,7 +90,7 @@ const MAX_SIMULATION_STEPS = 8;
 const BUILDER_SERVICE_INTERVAL = 0.4;
 const BUILDING_REPAIR_EPSILON = 0.5;
 const REPAIR_STRIKE_INTERVAL = 0.82;
-const SAFETY_HUDDLE_SPACING = 1.65;
+const SAFETY_HUDDLE_SPACING = 6;
 const IDLE_REGROUP_DELAY = 30;
 const AUTO_COMBAT_ROUTE_BUDGET = 5;
 const DEFENSE_PROJECTILE_LIFETIME = 2.4;
@@ -1572,6 +1572,8 @@ export class CrownforgeSimulation {
     unit.stairProgress = 0;
     unit.needsSafetyRegroup = false;
     unit.safetyRegroupActive = false;
+    unit.safetyStandbyPoint = null;
+    unit.safetyStandbyHallId = null;
     unit.patrolPoints = [];
     unit.patrolIndex = 0;
     unit.patrolActive = false;
@@ -1888,34 +1890,48 @@ export class CrownforgeSimulation {
   _crownHallHuddlePoints(hall) {
     const bounds = this._buildingEntityBounds(hall);
     const stairs = this._crownHallStairInfo(hall);
-    const firstRowZ = Math.max(bounds.maxZ + 4.3, (stairs?.outerZ ?? hall.z) + 1.8);
     const points = [];
-    // A shallow court south of the Hall creates a readable worker huddle
-    // without occupying the stair landing. Wider back rows scale to a busy
-    // test settlement while preserving one personal-space slot per worker.
-    for (let row = 0; row < 12; row += 1) {
-      const count = 7 + row * 2;
-      const z = firstRowZ + row * SAFETY_HUDDLE_SPACING;
-      const center = (count - 1) / 2;
-      const columns = Array.from({ length: count }, (_, column) => column)
-        .sort((a, b) => Math.abs(a - center) - Math.abs(b - center) || a - b);
-      for (const column of columns) {
-        points.push({
-          x: clamp(hall.x + (column - center) * SAFETY_HUDDLE_SPACING, 0.75, CONFIG.mapWidth - 0.75),
-          z: clamp(z, 0.75, CONFIG.mapHeight - 0.75),
-        });
+    // Expand around all four sides; never clamp off-map positions onto one
+    // shared edge point. Keep the entrance and stair landing clear.
+    for (let ring = 0; ring < 12; ring += 1) {
+      const margin = 5 + ring * SAFETY_HUDDLE_SPACING;
+      const left = bounds.minX - margin, right = bounds.maxX + margin;
+      const top = bounds.minZ - margin;
+      const bottom = Math.max(bounds.maxZ, stairs?.outerZ ?? bounds.maxZ) + margin;
+      const add = (x, z) => {
+        if (x < 1 || z < 1 || x > CONFIG.mapWidth - 1 || z > CONFIG.mapHeight - 1) return;
+        if (points.some((p) => Math.hypot(p.x - x, p.z - z) < SAFETY_HUDDLE_SPACING - .01)) return;
+        points.push({ x, z });
+      };
+      for (let x = left; x <= right; x += SAFETY_HUDDLE_SPACING) {
+        add(x, top); add(x, bottom);
+      }
+      for (let z = top; z <= bottom; z += SAFETY_HUDDLE_SPACING) {
+        add(left, z); add(right, z);
       }
     }
     return points;
   }
 
   _safetyHuddlePoint(unit, hall) {
+    const peers = this.units.filter((other) => other !== unit && !other.dead);
+    const reserved = (point) => peers.some((other) => other.safetyStandbyHallId === hall.id
+      && other.safetyStandbyPoint && (other.command === 'idle' || other.safetyRegroupActive)
+      && distance(point, other.safetyStandbyPoint) < SAFETY_HUDDLE_SPACING - .01);
+    const current = unit.safetyStandbyPoint;
+    if (unit.safetyStandbyHallId === hall.id && current
+      && !this._pointBlockedForUnit(unit, current) && !reserved(current)) return current;
+    unit.safetyStandbyPoint = null;
+    unit.safetyStandbyHallId = null;
     const points = this._crownHallHuddlePoints(hall);
-    if (!points.length) return null;
-    const start = Math.max(0, unit.safetyHuddleSlot ?? 0) % points.length;
-    for (let offset = 0; offset < Math.min(points.length, 28); offset += 1) {
+    const start = Math.max(0, unit.safetyHuddleSlot ?? 0) % Math.max(1, points.length);
+    for (let offset = 0; offset < points.length; offset += 1) {
       const point = points[(start + offset) % points.length];
-      if (!this._pointBlockedForUnit(unit, point)) return point;
+      if (this._pointBlockedForUnit(unit, point) || reserved(point)) continue;
+      if (peers.some((other) => distance(point, other) < SAFETY_HUDDLE_SPACING)) continue;
+      unit.safetyStandbyPoint = { ...point };
+      unit.safetyStandbyHallId = hall.id;
+      return unit.safetyStandbyPoint;
     }
     return null;
   }
@@ -2017,6 +2033,11 @@ export class CrownforgeSimulation {
       if (this._sendUnitTo(unit, point, 'move')) {
         unit.safetyRegroupActive = true;
         unit.actionLabel = `Regrouping at ${BUILDING_TYPES[hall.type].label}`;
+        routeBudget -= 1;
+      } else {
+        unit.safetyStandbyPoint = null;
+        unit.safetyStandbyHallId = null;
+        unit.safetyHuddleSlot = (unit.safetyHuddleSlot ?? 0) + 1;
         routeBudget -= 1;
       }
     }
