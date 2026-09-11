@@ -1,0 +1,9 @@
+{
+  "release": "20260911-livinghall1",
+  "previous_asset_preserved": "assets/buildings-depth/townCenter.webp",
+  "previous_sha256": "87d82041959fb3a18e9d8a2ab9c30fb3e1327c90cedcd34f093cc884390c3b95",
+  "sprite": "hall-chroma.png",
+  "compositing": "Magenta key applied once at load into cached alpha canvas",
+  "effects": "Blender 32-frame flame atlas, volume smoke, animated billows and embers",
+  "geometry": "Existing collision, construction stages and return reservations preserved"
+}

@@ -1,3 +1,4 @@
+import { LivingCrownHall } from './crown-hall-living.js?v=20260911-livinghall1';
 import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260911-worker-v010';
 import {corpseLifetime} from './bear-combat.js?v=20260909-cursedbears1';
 import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
@@ -122,6 +123,7 @@ const ROAD_MARKS = [
 
 export class CrownforgeRenderer {
   constructor(canvas) {
+    this.livingHall = new LivingCrownHall(() => this.invalidateStaticLayer());
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.atlas = new Image();
@@ -1569,6 +1571,7 @@ export class CrownforgeRenderer {
   }
 
   drawFirstAgeAsset(ctx, type, screen, size, alpha = 1) {
+    if (type === 'townCenter' && this.livingHall.draw(ctx, screen, size, alpha)) return true;
     const wallView = {wall:'diagonal-right',wallDiagonalLeft:'diagonal-left',wallFace:'face',wallDepth:'depth'}[type];
     if (wallView && BUILDING_COMPONENTS.wall?.views) return this.drawDepthComponent(ctx, BUILDING_COMPONENTS.wall.views[wallView], screen, size, alpha);
     if (type === 'palisadeJunction' && BUILDING_COMPONENTS.palisadeJunction) return this.drawDepthComponent(ctx, BUILDING_COMPONENTS.palisadeJunction.sprite, screen, size, alpha);
@@ -1956,7 +1959,8 @@ export class CrownforgeRenderer {
       dismantling ? '#d86b55' : building.faction === 'enemy' ? '#d86b55' : FACTION.color,
     );
     this.drawBuildingStage(ctx, building, point, size * this.camera.zoom, alpha);
-    this.atmosphere.drawHearth(ctx, building, point, size * this.camera.zoom, visualHeight * this.camera.zoom, time);
+    if (building.type === 'townCenter' && this.livingHall.ready) this.livingHall.effects(ctx, building, point, size * this.camera.zoom, time, this.atmosphere);
+    else this.atmosphere.drawHearth(ctx, building, point, size * this.camera.zoom, visualHeight * this.camera.zoom, time);
     if (building.destroyed) {
       this.drawDestroyedBuildingTreatment(ctx, building, point, size, time);
       return;
