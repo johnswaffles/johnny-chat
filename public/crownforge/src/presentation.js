@@ -1,4 +1,4 @@
-import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260909-cursedbears1';
+import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260911-teams2';
 
 export function setupPresentation({ renderer, simulation, input, announce }) {
   const appearance=document.querySelector('#hearthkin-appearance');

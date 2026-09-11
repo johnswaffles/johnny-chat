@@ -223,3 +223,17 @@ button:active { transform: translateY(0); }
 .bear-release-button small { display:block; margin-top:4px; font-size:8px; color:#c5baa2; letter-spacing:.09em; }
 .bear-release-button:disabled { opacity:.55; cursor:wait; }
 .deck-actions { flex-wrap:wrap; justify-content:flex-end; }
+
+/* Team controls share the left selection panel and remain keyboard accessible. */
+.warrior-class-actions[hidden],.combat-team-panel[hidden]{display:none!important}
+.warrior-class-actions{display:grid;gap:6px;margin:10px 0}
+.warrior-class-actions button{width:100%;min-height:34px;font-size:11px!important;text-align:left}
+.combat-team-panel{margin:12px 0;padding:10px;border:1px solid #877d5855;border-radius:5px;background:#e2d4b329}
+.combat-team-panel h3{font:600 10px system-ui;letter-spacing:.12em;margin:0 0 6px;color:inherit}
+.combat-team-panel p{font-size:10px!important;line-height:1.5!important;margin:6px 0;min-height:0!important}
+.combat-team-panel label{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:11px}
+.combat-team-panel select{min-width:0;flex:1;padding:6px;background:#e9dfc8;color:#243e34;border:1px solid #877d5866}
+.combat-team-panel button{padding:7px 6px;min-height:32px;font-size:10px;background:#d4d0ac;color:#243e34;border:1px solid #877d5877;border-radius:4px;cursor:pointer}
+.combat-team-panel button:disabled{opacity:.45;cursor:default}
+.combat-team-panel button:focus-visible,.combat-team-panel select:focus-visible{outline:2px solid #397970;outline-offset:2px}
+.team-buttons{display:grid;grid-template-columns:1fr 1fr;gap:5px}

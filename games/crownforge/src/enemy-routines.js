@@ -1,4 +1,4 @@
-import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260909-cursedbears1';
+import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260911-teams2';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 
 export function assignEnemyEconomy(sim) {

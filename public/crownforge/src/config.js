@@ -349,8 +349,9 @@ export const UNIT_TYPES = {
     acceleration: 10.2,
     braking: 13.2,
     radius: 0.44,
-    maxHp: 118,
-    attack: 12,
+    maxHp: 3480, // 20 enraged bear hits at 29 × 6 damage.
+    attack: 1.4, // Ten hits equal one Crown Guard hit (14).
+    combatRole: 'tank',
     range: 1.28,
     cooldown: 1.08,
     attackTiming: { anticipation: 0.24, contact: 0.46, recovery: 0.34 },

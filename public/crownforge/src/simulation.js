@@ -1,17 +1,18 @@
+import {combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams} from './combat-teams.js?v=20260911-teams2';
 import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260909-cursedbears1';
-import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260909-cursedbears1';
-import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260909-cursedbears1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260909-bearcap1';
+import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260911-teams2';
+import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260911-teams2';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260911-teams2';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260909-cursedbears1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260911-teams2';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260909-cursedbears1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260911-teams2';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260909-cursedbears1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260911-teams2';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -1150,6 +1151,7 @@ export class CrownforgeSimulation {
     }
     this._updateDefenseProjectiles(dt);
     for (const unit of this.units) this._updateUnit(unit, dt);
+    updateTeams(this,dt);
     this._resolveUnitCollisions();
     this._updateExploration();
     this._updateEnemyAI(dt);
@@ -1267,6 +1269,8 @@ export class CrownforgeSimulation {
   }
 
   _getExplicitAttackTarget(unit) {
+    const tank=tankTarget(this,unit);
+    if(tank)return tank;
     if (!unit.attackTarget || !unit.attackTargetKind) return null;
     const target = unit.attackTargetKind === 'building'
       ? this.buildings.find((candidate) => candidate.id === unit.attackTarget && !candidate.destroyed && candidate.hp > 0 && candidate.progress >= 1)
@@ -1546,6 +1550,7 @@ export class CrownforgeSimulation {
   }
 
   _interruptWork(unit, { preserveQueue = false, preserveGuard = false } = {}) {
+    unit.teamFollowing=false;unit.healTargetId=null;
     delete unit.bearResponse;
     this._releaseResourceSlot(unit);
     this._releaseBuildingSlot(unit);
@@ -1820,6 +1825,7 @@ export class CrownforgeSimulation {
 
   _availableForAutomaticBuilding(unit) {
     return Boolean(this.isBuilderUnit(unit)
+      && !isTeamHealer(unit)
       && !unit.dead
       && unit.stunTimer <= 0
       && unit.command === 'idle'
@@ -4232,6 +4238,8 @@ export class CrownforgeSimulation {
   }
 
   _sendUnitToAttack(unit, target, slot = 0, options = {}) {
+    if (isTeamHealer(unit)) { this._interruptWork(unit);unit.command='idle';unit.path=[];unit.actionLabel=`Supporting Team ${unit.teamId}`;return true; }
+    target=tankTarget(this,unit)??target;
     if (!target || target.hp <= 0 || target.dead || target.destroyed || isWardProtected(target)) return false;
     if (target.kind === 'unit' && areHearthkinNeutral(unit, target)) return false;
     const attackerRules = UNIT_TYPES[unit.type] ?? {};
@@ -4428,12 +4436,16 @@ export class CrownforgeSimulation {
 
     target.hp = after < 1e-8 ? 0 : after;
     if (target.hp <= 0) this._killUnit(target, attacker);
-    else if(target.type==='grizzly' && damage>0 && isFighter(attacker) && !isWardProtected(attacker)) this._retaliateGrizzly(target,attacker);
+    else if(damage>0) {
+      if(claimThreat(this,target,attacker)) this._retaliateGrizzly(target,attacker);
+      else if(target.type==='grizzly' && isFighter(attacker) && !isWardProtected(attacker)) this._retaliateGrizzly(target,attacker);
+    }
     return { damage: Math.min(before, damage), killed: target.dead, warded: false, blocked: false, cursed: false };
   }
 
   _retaliateGrizzly(bear,attacker) {
-    // Last landed fighter hit owns threat. Redirect an existing swing without
+    attacker=tankTarget(this,bear)??attacker;
+    // Redirect an existing swing without
     // restarting its wind-up, so alternating hits cannot stun-lock the bear.
     bear.wildlifeRetaliationId=attacker.id;
     bear.wildlifeProgressAt=this.clock;
@@ -4465,7 +4477,7 @@ export class CrownforgeSimulation {
   }
 
   _applyGrizzlyCleave(bear,primary) {
-    if(!bearFuryActive(bear))return;
+    if(!bearFuryActive(bear)||tankTarget(this,bear))return;
     const extra=this.units.filter(u=>u!==primary && isFighter(u) && !isWardProtected(u)
       && distance(bear,u)<=BEAR_FURY.radius && this._hasCombatLineOfSight(bear,u))
       .sort((a,b)=>distance(primary,a)-distance(primary,b)||a.id-b.id).slice(0,BEAR_FURY.extraTargets);
@@ -4926,7 +4938,7 @@ export class CrownforgeSimulation {
   _sendEnemyRaid(playerCore) {
     const state = this.enemyAIState;
     const ready = this._enemyMilitary()
-      .filter((unit) => unit.stunTimer <= 0 && !unit.dead && this._getAttackTarget(unit)?.type !== 'grizzly')
+      .filter((unit) => unit.stunTimer <= 0 && !unit.dead && !tankTarget(this,unit) && this._getAttackTarget(unit)?.type !== 'grizzly')
       .sort((a, b) => distance(a, playerCore) - distance(b, playerCore) || a.id - b.id);
     if (ready.length < ENEMY_AI.minRaidSize) return false;
     const desired = Math.min(ENEMY_AI.maxRaidSize, ENEMY_AI.minRaidSize + Math.floor(state.raidCount / 2));
@@ -4977,7 +4989,7 @@ export class CrownforgeSimulation {
       const defenders = this._enemyMilitary().filter((unit) => unit.stunTimer <= 0);
       defenders.forEach((unit, index) => {
         const current = unit.command === 'attack' ? this._getAttackTarget(unit) : null;
-        if (current?.id === defenseTarget.id) return;
+        if (tankTarget(this,unit)||current?.id === defenseTarget.id) return;
         if (current?.type === 'grizzly') return;
         this._interruptWork(unit);
         unit.attackTarget = defenseTarget.id;
@@ -5503,6 +5515,20 @@ export class CrownforgeSimulation {
   // Keep the old method name as a save/test compatibility alias. Existing
   // hotkeys and saved UI bindings can continue to call it while the worker
   // roster now includes both Crownwarden and Ashen Hearthkin.
+  selectAllWarriorClass(type) {
+    const selected=this.selectedEntities.some(u=>u.type===type&&u.faction==='player'&&!u.dead&&isFighter(u));
+    if(!selected)return {success:false,count:0};
+    const units=this.units.filter(u=>u.type===type&&u.faction==='player'&&isFighter(u));
+    this.selectedIds=units.map(u=>u.id);this._syncSelectionFlags();
+    this._announce(`All ${units.length} ${UNIT_TYPES[type].label} units selected.`);
+    return {success:true,count:units.length};
+  }
+  getCombatTeams(){return teams(this);}
+  assignSelectedTeam(id=null){return assignTeam(this,id);}
+  leaveSelectedTeam(){return leaveTeam(this);}
+  disbandTeam(id){return leaveTeam(this,id);}
+  selectCombatTeam(id){return selectTeam(this,id);}
+
   selectAllVillagers() {
     return this.selectAllHearthkin();
   }
@@ -7090,6 +7116,11 @@ export class CrownforgeSimulation {
     for (const saved of restored.units ?? []) {
       const unit = this.addUnit(saved.type, saved.x, saved.z, saved.faction);
       Object.assign(unit, saved);
+      if (UNIT_TYPES[unit.type]?.combatRole==='tank') {
+        const fraction=Math.max(0,Math.min(1,unit.hp/Math.max(1,unit.maxHp)));
+        unit.maxHp=UNIT_TYPES[unit.type].maxHp;unit.hp=unit.dead?0:unit.maxHp*fraction;
+      }
+      if(!Number.isInteger(unit.teamId)||unit.teamId<1)unit.teamId=null;
       if (isCurseImmune(unit) && unit.lastLightCurseActive) {
         // Pre-immunity saves stored the curse's one HP as real health. Migrate
         // that once; new saves retain every wound, even genuine one-HP health.

@@ -1,6 +1,6 @@
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {UNIT_TYPES} from './config.js?v=20260909-cursedbears1';
-import {BEAR_FURY,bearFuryActive,isFighter} from './bear-combat.js?v=20260909-cursedbears1';
+import {UNIT_TYPES} from './config.js?v=20260911-teams2';
+import {BEAR_FURY,bearFuryActive,isFighter} from './bear-combat.js?v=20260911-teams2';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
@@ -19,7 +19,7 @@ export function strikeDamage(attacker,target){
   const base=rules.workerStrikeFraction&&worker?Math.ceil(target.maxHp*rules.workerStrikeFraction):worker?(rules.attackVsVillager??rules.attack):rules.attack;
   if(!bearFuryActive(attacker))return base;
   const empowered=base*BEAR_FURY.multiplier;
-  return isFighter(target)?Math.max(empowered,target.hp):empowered;
+  return isFighter(target)&&UNIT_TYPES[target.type]?.combatRole!=='tank'?Math.max(empowered,target.hp):empowered;
 }
 export function unitStatuses(unit){
   const statuses=[],elder=isCurseImmune(unit),fury=bearFuryActive(unit);
@@ -32,7 +32,7 @@ export function unitStatuses(unit){
   }
   if(unit.lastLightWardTimer>0)statuses.push({id:'ward',name:'Last Light Ward',kind:'Protection',detail:`${Math.ceil(unit.lastLightWardTimer)}s · invulnerable`,summary:'Protected from damage and attack targeting.',lore:'At the edge of death, the Hearthkin’s last light becomes a refuge. For one minute, no blow can touch them.',effect:'Health restored. Untargetable by attacks until the ward expires. Bears seek other prey.',rune:'ward'});
   if(unit.lastLightCurseActive)statuses.push({id:'lastLight',name:elder?'The Borrowed Last Breath':'Last Light Curse',kind:'Curse',detail:elder?'1 HP shown · hidden strength':'1 HP · next damage is fatal',summary:elder?'The rune is real. The weakness is a lure.':'The next wound will be the last.',lore:elder?bearVariant(unit).trickery:'The light that saved another life has named its price. A thorned mark hangs above the aggressor, and the smallest wound will now claim them.',effect:elder?'The lesser rune and 1 HP reading appear, but true health and existing wounds remain unchanged. The apparent nearness of death awakens Wrath of the First Oath immediately. With Thick Hide, arrows need 60 hits from full true health.':'Health reduced to 1. Any positive damage is fatal.',rune:'curse',art:elder?bearVariant(unit).art:undefined});
-  if(fury)statuses.push({id:'greatwoodFury',name:'Wrath of the First Oath',kind:'Fury · active',detail:'+500% damage · three-target swipe',summary:'The ancient sentence answers the scent of death.',lore:unit.lastLightCurseActive?'A borrowed death-mark is enough to stir the old sentence. These bears need not be dying: the promise of a last breath calls the same terrible strength. Those drawn to the lesser rune meet the fury of the first oath.':'As a Greatwood bear’s strength falls to its last tenth, the first oath tightens. The condemned blood remembers the ruin of the star-grove. A final measure of the old gods’ wrath passes into every claw.',effect:'Active at 10% true health or less, or while Last Light shows a false 1 HP. Damage rises by 500% (6×); a landed blow is always lethal to a fighter. Each successful swipe also strikes up to two other nearby fighters within 10 world units of the bear, with clear line of sight. Protected workers remain unharmed. A fighter’s landed weapon hit draws the bear’s attention.',rune:'fury',art:bearVariant(unit).art});
+  if(fury)statuses.push({id:'greatwoodFury',name:'Wrath of the First Oath',kind:'Fury · active',detail:'+500% damage · three-target swipe',summary:'The ancient sentence answers the scent of death.',lore:unit.lastLightCurseActive?'A borrowed death-mark is enough to stir the old sentence. These bears need not be dying: the promise of a last breath calls the same terrible strength. Those drawn to the lesser rune meet the fury of the first oath.':'As a Greatwood bear’s strength falls to its last tenth, the first oath tightens. The condemned blood remembers the ruin of the star-grove. A final measure of the old gods’ wrath passes into every claw.',effect:'Active at 10% true health or less, or while Last Light shows a false 1 HP. Damage rises by 500% (6×); a landed blow is lethal to non-tank fighters. Shieldbearers withstand 20 unhealed hits from full health. Each successful swipe also strikes up to two other nearby fighters within 10 world units of the bear, with clear line of sight. Protected workers remain unharmed. Shieldbearer hits hold its attention for 8 seconds, refreshed by each hit. While focused on a tank, the swipe does not cleave other fighters.',rune:'fury',art:bearVariant(unit).art});
   if(unit.stunTimer>0)statuses.push({id:'stun',name:'Stunned',kind:'Impairment',detail:`${Math.ceil(unit.stunTimer)}s remaining`,summary:'Movement and attacks are interrupted.',rune:'stun'});
   if(unit.stunImmunityTimer>0)statuses.push({id:'stunImmunity',name:'Steadfast',kind:'Protection',detail:`${Math.ceil(unit.stunImmunityTimer)}s · stun immunity`,summary:'Cannot be stunned while this protection lasts.',rune:'ward'});
   return statuses;

@@ -1,13 +1,15 @@
+import {createTeamControls} from './team-controls.js?v=20260911-teams2';
+import {combatRole} from './combat-teams.js?v=20260911-teams2';
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {requestGrizzlyPair} from './wildlife.js?v=20260909-bearcap1';
-import {createUnitInspector} from './unit-inspector.js?v=20260909-cursedbears1';
-import {displayedUnitHealth} from './unit-status.js?v=20260909-cursedbears1';
-import { setupPresentation } from './presentation.js?v=20260911-worker-v010';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260909-cursedbears1';
+import {requestGrizzlyPair} from './wildlife.js?v=20260911-teams2';
+import {createUnitInspector} from './unit-inspector.js?v=20260911-teams2';
+import {displayedUnitHealth} from './unit-status.js?v=20260911-teams2';
+import { setupPresentation } from './presentation.js?v=20260911-teams2';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260911-teams2';
 import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260909-cursedbears1';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
-import { CrownforgeRenderer } from './renderer.js?v=20260911-livinghall1';
-import { CrownforgeSimulation } from './simulation.js?v=20260911-idlespacing1';
+import { CrownforgeRenderer } from './renderer.js?v=20260911-teams2';
+import { CrownforgeSimulation } from './simulation.js?v=20260911-teams2';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260909-cursedbears1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-cursedbears1';
@@ -587,7 +589,10 @@ demolitionModeButton?.addEventListener('click', () => {
 
 unitInspector=createUnitInspector({simulation,renderer,canvas,onOpen:()=>{input.keys.clear();input.drag=null;renderer.setSelectionBox(null);}});
 
+const teamControls=createTeamControls(simulation,()=>{announce(simulation.lastCommand);updateUi();});
+
 function updateUi() {
+  teamControls.update();
   const pendingBears=Boolean(simulation.wildlifeState?.pendingPair);
   releaseBearsButton.disabled=simulation.phase!=='playing'||pendingBears;
   releaseBearsButton.querySelector('small').textContent=pendingBears?'FINDING TRAILS…':'BOTH SIDES';
@@ -915,7 +920,9 @@ function selectionStatus() {
         : ' · defensive strike stuns humanoids · Last Light Ward ready'
       : '';
     const curse = unit.lastLightCurseActive ? ' · Last Light Curse · 1 HP · any damage is fatal' : '';
-    return `${unit.actionLabel}${health}${cargo}${status}${curse}${defense}`;
+    const team=unit.teamId?` · Team ${unit.teamId} · ${combatRole(unit)}`:'';
+    const tank=combatRole(unit)==='tank'?' · Tank: 20 enraged hits · 1.4 damage':'';
+    return `${unit.actionLabel}${health}${team}${tank}${cargo}${status}${curse}${defense}`;
   }
   if (units.length > 1) {
     return summarizeUnitTasks(units, { includeReady: true, maxEntries: 3 });
