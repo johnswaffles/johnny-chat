@@ -1,6 +1,8 @@
 import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260909-cursedbears1';
 
 export function setupPresentation({ renderer, simulation, input, announce }) {
+  const appearance=document.querySelector('#hearthkin-appearance');
+  if(appearance){appearance.value=renderer.hearthkinAppearance;appearance.addEventListener('change',async()=>{appearance.disabled=true;try{await renderer.setHearthkinAppearance(appearance.value);announce?.('Hearthkin appearance updated.');}catch{appearance.value=renderer.hearthkinAppearance;announce?.('Character artwork could not load. Keeping the current appearance.');}finally{appearance.disabled=false;}});}
   const shell = document.querySelector('.game-shell');
   const viewButton = document.querySelector('#view-mode');
   const settingsButton = document.querySelector('#view-settings');

@@ -1,3 +1,4 @@
+import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260911-worker3d1';
 import {corpseLifetime} from './bear-combat.js?v=20260909-cursedbears1';
 import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
 import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260909-cursedbears1';
@@ -149,7 +150,10 @@ export class CrownforgeRenderer {
     this.ashenConstructionAtlasReady = false;
     this.enemyCampReady = false;
     this.characterRigs = createCharacterRigs({ lazy: true, factories: {...paintedRosterFactories(CHARACTER_RIGS),ashenForager:()=>new PaintedHearthkinRenderer({type:'ashenForager',art:ASHEN_HEARTHKIN_PAINTED_ART})} });
-    this.hearthkinRig = new PaintedHearthkinRenderer();
+    let characterPreference;try{characterPreference=new URLSearchParams(location.search).get('hearthkin')||localStorage.getItem('crownforge-hearthkin-art');}catch{}
+    this.hearthkinAppearance=characterPreference==='legacy'?'legacy':'blender-v007';
+    this.hearthkinRig = this.hearthkinAppearance==='legacy'?new PaintedHearthkinRenderer():new BlenderHearthkinRenderer();
+    this.hearthkinVariants=new Map([[this.hearthkinAppearance,this.hearthkinRig]]);
     this.characterRigs.set('villager',this.hearthkinRig);
     this.villagerAtlases = {};
     this.villagerAtlasReady = {};
@@ -2249,6 +2253,15 @@ export class CrownforgeRenderer {
       destinationHeight,
     );
     ctx.restore();
+  }
+
+  async setHearthkinAppearance(value) {
+    const mode=value==='legacy'?'legacy':'blender-v007';
+    let rig=this.hearthkinVariants.get(mode);
+    if(!rig){rig=mode==='legacy'?new PaintedHearthkinRenderer():new BlenderHearthkinRenderer();this.hearthkinVariants.set(mode,rig);}
+    await Promise.all(rig.readiness().map(image=>image.complete&&image.naturalWidth?Promise.resolve():new Promise((resolve,reject)=>{image.addEventListener('load',resolve,{once:true});image.addEventListener('error',()=>reject(new Error('Character artwork did not load')),{once:true});})));
+    this.hearthkinRig=rig;this.characterRigs.set('villager',rig);this.hearthkinAppearance=mode;
+    try{localStorage.setItem('crownforge-hearthkin-art',mode);}catch{}
   }
 
   drawUnit(ctx, unit, time) {

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head><base href="../">
+  <meta name="crownforge-art-release" content="20260911-worker3d1">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="crownforge-build" content="20260907-paintedashen1" />
+    <title>Crownforge: Dawn of Kingdoms</title>
+    <meta name="description" content="Crownforge — a tiny polished historical RTS settlement slice." />
+    <link rel="icon" type="image/png" href="./assets/crownforge-icon-gold-v1.png?v=20260904-rosterkin1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
+    <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
+    <link rel="stylesheet" href="./styles.css?v=20260907-paintedashen1" />
+    <link rel="stylesheet" href="./presentation.css?v=20260905-playlist1" />
+      <link rel="stylesheet" href="./unit-inspector.css?v=20260909-bearfury1" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <canvas id="game-canvas" tabindex="0" aria-label="Crownforge playable settlement map"></canvas>
+
+      <section id="loading-veil" class="loading-veil" role="status" aria-live="polite">
+        <div class="loading-card glass-panel">
+          <span class="loading-sigil ui-icon icon-seal" aria-hidden="true"></span>
+          <div class="panel-kicker">THE FIRST AGE · A NEW DAWN</div>
+          <h2>A kingdom begins<br />with a single hearth.</h2>
+          <p id="loading-detail">Loading first-age artwork…</p>
+          <p id="file-protocol-help" class="file-protocol-help" hidden>This local preview was opened directly from a file. Open Crownforge through the live site or an HTTP server so the game modules can load.<br /><a href="https://crownforge-dawn-kingdoms.onrender.com/?release=20260905-meadow1">Open the live Crownforge build</a></p>
+          <span class="loading-track" aria-hidden="true"><i id="loading-progress"></i></span>
+        </div>
+      </section>
+
+      <header class="topbar glass-panel">
+        <div class="brand-lockup">
+          <div class="sigil"><span class="ui-icon icon-seal" aria-hidden="true"></span></div>
+          <div>
+            <div class="eyebrow">CROWNFORGE</div>
+            <h1>Dawn of Kingdoms</h1>
+          </div>
+        </div>
+        <div class="topbar-center">
+          <span class="faction-pill" title="Player faction"><span class="ui-icon icon-seal icon-micro" aria-hidden="true"></span> The Crownwardens</span>
+          <span id="clock" class="clock">DAYBREAK  0:00</span>
+        </div>
+        <div class="resource-strip" aria-label="Resources">
+          <div class="resource-card food-card" data-resource-card="food" title="Food stored"><span class="resource-glyph ui-icon icon-food" aria-hidden="true"></span><div><span class="resource-label">FOOD</span><strong><span data-resource="food">165</span><small data-resource-cap="food">/ 180</small></strong><span class="resource-bar"><i data-resource-bar="food"></i></span></div></div>
+          <div class="resource-card wood-card" data-resource-card="wood" title="Wood stored"><span class="resource-glyph ui-icon icon-wood" aria-hidden="true"></span><div><span class="resource-label">WOOD</span><strong><span data-resource="wood">150</span><small data-resource-cap="wood">/ 180</small></strong><span class="resource-bar"><i data-resource-bar="wood"></i></span></div></div>
+          <div class="resource-card stone-card" data-resource-card="stone" title="Stone stored"><span class="resource-glyph ui-icon icon-stone" aria-hidden="true"></span><div><span class="resource-label">STONE</span><strong><span data-resource="stone">90</span><small data-resource-cap="stone">/ 120</small></strong><span class="resource-bar"><i data-resource-bar="stone"></i></span></div></div>
+          <div class="resource-card gold-card" data-resource-card="gold" title="Gold stored"><span class="resource-glyph ui-icon icon-gold" aria-hidden="true"></span><div><span class="resource-label">GOLD</span><strong><span data-resource="gold">5000</span><small data-resource-cap="gold">/ 9999</small></strong><span class="resource-bar"><i data-resource-bar="gold"></i></span></div></div>
+        </div>
+      </header>
+
+      <aside class="left-rail">
+        <section class="glass-panel intel-panel">
+          <button id="intel-toggle" class="intel-toggle panel-kicker" aria-expanded="true">SETTLEMENT INTEL</button>
+          <div class="selection-header"><span id="selection-count">3 SELECTED</span><span class="population" title="Population used / housing capacity"><span class="ui-icon icon-population icon-micro" aria-hidden="true"></span><b id="population">4 / 24</b></span></div>
+          <div class="selection-identity"><span id="selection-icon" class="ui-icon icon-population selection-icon" aria-hidden="true"></span><div><span id="selection-kind" class="selection-kind">GROUP</span><h2 id="selection-title">3 Crownwardens</h2></div></div>
+          <p id="selection-detail">Select a Crownwarden and issue an order.</p>
+          <div class="command-line"><span class="command-dot"></span><span id="command-line">Select a Hearthkin, then click a resource.</span></div>
+          <div id="selection-villager-actions" class="selection-unit-actions" hidden>
+            <button id="select-all-villagers" class="selection-unit-button" type="button" title="Select every living Hearthkin in the settlement (V)">
+              <span class="ui-icon icon-villager selection-action-icon" aria-hidden="true"></span>
+              <span><b>SELECT ALL HEARTHKIN</b><small>SETTLEMENT-WIDE <kbd>V</kbd></small></span>
+            </button>
+          </div>
+          <div id="selection-combat-actions" class="selection-unit-actions selection-combat-actions" hidden>
+            <button id="guard-area" class="selection-unit-button guard-button" type="button" title="Set a guard area for selected armed units (G)" aria-pressed="false">
+              <span class="ui-icon icon-shield selection-action-icon" aria-hidden="true"></span>
+              <span><b>GUARD AREA</b><small>CLICK TO STATION <kbd>G</kbd></small></span>
+            </button>
+            <button id="clear-guard" class="selection-unit-button guard-clear-button" type="button" title="Clear guard orders for selected armed units">
+              <span class="ui-icon icon-cancel selection-action-icon" aria-hidden="true"></span>
+              <span><b>CLEAR GUARD</b><small>RETURN TO READY</small></span>
+            </button>
+            <button id="patrol-route" class="selection-unit-button patrol-button" type="button" title="Set a two-point patrol route for selected armed units (P)">
+              <span class="ui-icon icon-house selection-action-icon" aria-hidden="true"></span>
+              <span><b>PATROL ROUTE</b><small>CLICK TWO WAYPOINTS <kbd>P</kbd></small></span>
+            </button>
+            <button id="clear-patrol" class="selection-unit-button patrol-clear-button" type="button" title="Clear patrol routes for selected armed units">
+              <span class="ui-icon icon-cancel selection-action-icon" aria-hidden="true"></span>
+              <span><b>CLEAR PATROL</b><small>RETURN TO READY</small></span>
+            </button>
+          </div>
+          <div id="selection-building-actions" class="selection-unit-actions selection-building-actions" hidden>
+            <button id="set-rally" class="selection-unit-button rally-button" type="button" title="Set a rally point for the selected production building (Y)">
+              <span class="ui-icon icon-house selection-action-icon" aria-hidden="true"></span>
+              <span><b>SET RALLY POINT</b><small>CLICK THE MAP <kbd>Y</kbd></small></span>
+            </button>
+            <button id="clear-rally" class="selection-unit-button rally-clear-button" type="button" title="Clear the selected production building's rally point">
+              <span class="ui-icon icon-cancel selection-action-icon" aria-hidden="true"></span>
+              <span><b>CLEAR RALLY</b><small>SPAWN AT BUILDING</small></span>
+            </button>
+            <button id="extend-wall" class="selection-unit-button wall-extend-button" type="button" title="Continue a selected Palisade from its last end">
+              <span class="ui-icon icon-house selection-action-icon" aria-hidden="true"></span>
+              <span><b>EXTEND PALISADE</b><small>DRAG FROM LAST END</small></span>
+            </button>
+          </div>
+          <div class="selection-unit-actions selection-direct-actions">
+            <button id="demolition-mode" class="selection-unit-button demolition-button" type="button" title="Demolish selected player structures instantly, or enter area-clear mode when none are selected (X)">
+              <span class="ui-icon icon-cancel selection-action-icon" aria-hidden="true"></span>
+              <span><b>DEMOLISH STRUCTURES</b><small>INSTANT AREA CLEAR <kbd>X</kbd></small></span>
+            </button>
+          </div>
+          <div id="selection-recovery" class="selection-recovery" hidden>
+            <button id="recover-units" class="recovery-button" type="button" title="Return selected units to a clear Crown Hall approach (R)">
+              <span class="ui-icon icon-seal recovery-icon" aria-hidden="true"></span>
+              <span><b>RECOVER SELECTED</b><small>RETURN TO CROWN HALL <kbd>R</kbd></small></span>
+            </button>
+          </div>
+        </section>
+        <section class="glass-panel history-panel">
+          <button id="field-log-toggle" class="field-log-toggle" aria-expanded="false" aria-controls="event-history-list">FIELD JOURNAL</button>
+          <ol id="event-history-list" class="event-history-list" aria-live="polite"></ol>
+        </section>
+      </aside>
+
+      <div class="map-hint glass-panel">SCROLL TO ZOOM <span>•</span> WASD TO PAN <span>•</span> MIDDLE-DRAG TO PAN <span>•</span> SHIFT-RIGHT CLICK TO QUEUE <span>•</span> <span id="world-seed">SEED —</span> <button id="copy-seed" class="seed-button" type="button" title="Copy the current world seed">COPY</button></div>
+
+      <section id="performance-panel" class="performance-panel glass-panel" aria-label="Development performance telemetry" hidden>
+        <div class="performance-heading"><span class="panel-kicker">DEV TELEMETRY</span><span data-perf="mode">NORMAL · FULL-RES</span></div>
+        <div class="performance-grid">
+          <span>SIMULATION</span><b data-perf="simulation">0.00 ms</b>
+          <span>RENDER</span><b data-perf="render">0.00 ms</b>
+          <span>UI</span><b data-perf="ui">0.00 ms</b>
+          <span>ENTITIES</span><b data-perf="entities">0</b>
+          <span>LONG FRAMES</span><b data-perf="long-frames">0 / 5s</b>
+        </div>
+      </section>
+
+      <section id="dev-speed-panel" class="dev-speed-panel glass-panel" aria-label="Development speed controls" hidden>
+        <div class="performance-subheading">DEV SPEED CONTROLS</div>
+        <label class="range-setting" for="unit-speed">
+          <span>Travel speed <output id="unit-speed-value">1×</output></span>
+          <input id="unit-speed" type="range" min="1" max="10" step="1" value="1" aria-label="Unit travel speed" />
+        </label>
+        <label class="range-setting" for="harvest-quantity">
+          <span>Harvesting quantity <output id="harvest-quantity-value">1×</output></span>
+          <input id="harvest-quantity" type="range" min="1" max="100" step="1" value="1" aria-label="Harvesting quantity" />
+        </label>
+        <small class="settings-note">Development-only. Travel changes movement speed; quantity changes the haul per normal work cycle.</small>
+      </section>
+
+      <section class="command-deck glass-panel">
+        <div class="deck-summary"><span class="panel-kicker">COMMAND DECK</span><span class="deck-subtitle">From hearth to kingdom.</span></div>
+        <div class="deck-actions">
+          <div class="build-menu-wrap">
+            <button id="build-menu-toggle" class="action-button" title="Open buildings menu (B)"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>BUILDINGS</b><small>PLACE STRUCTURES <kbd>B</kbd></small></span></button>
+            <div id="build-menu" class="build-menu glass-panel" hidden>
+              <div class="build-menu-kicker">FIRST-AGE BLUEPRINTS</div>
+              <button class="build-option" data-build-type="barracks" title="Place a Crown Barracks"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN BARRACKS</b><small data-build-detail="barracks">90 WOOD · 40 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="stable" title="Place a Crown Stable for mounted scout production"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>CROWN STABLE</b><small data-build-detail="stable">120 WOOD · 30 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="granary" title="Place a First-age Granary for food drop-off and grain support"><span class="action-mark ui-icon icon-food" aria-hidden="true"></span><span><b>FIRST-AGE GRANARY</b><small data-build-detail="granary">70 WOOD · 10 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="homestead" title="Place a First-age Homestead for population housing"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>FIRST-AGE HOMESTEAD</b><small data-build-detail="homestead">80 WOOD · 10 STONE  •  +6 POP  •  READY</small></span></button>
+              <button class="build-option" data-build-type="watchHut" title="Place a First-age Watch Hut as a defensive landmark"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>FIRST-AGE WATCH HUT</b><small data-build-detail="watchHut">65 WOOD · 15 STONE  •  LOOKOUT  •  READY</small></span></button>
+              <button class="build-option" data-build-type="timberYard" title="Place a Timber Yard for wood drop-off and nearby felling support"><span class="action-mark ui-icon icon-wood" aria-hidden="true"></span><span><b>TIMBER YARD</b><small data-build-detail="timberYard">55 WOOD · 10 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="stonewrightYard" title="Place a Stonewright Yard for stone drop-off and nearby shaping support"><span class="action-mark ui-icon icon-stone" aria-hidden="true"></span><span><b>STONEWRIGHT YARD</b><small data-build-detail="stonewrightYard">45 WOOD · 25 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="oreWash" title="Place an Ore Wash for Gold drop-off and nearby mining support"><span class="action-mark ui-icon icon-gold" aria-hidden="true"></span><span><b>ORE WASH</b><small data-build-detail="oreWash">60 WOOD · 20 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="field" title="Place a Grain Field"><span class="action-mark ui-icon icon-food" aria-hidden="true"></span><span><b>GRAIN FIELD</b><small data-build-detail="field">25 WOOD  •  READY</small></span></button>
+              <button class="build-option" data-build-type="road" title="Place a Packed Road to improve local travel speed"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>PACKED ROAD</b><small data-build-detail="road">8 WOOD  •  TRAVEL BONUS  •  READY</small></span></button>
+              <button class="build-option" data-build-type="wall" title="Click-drag a Palisade Wall from or toward an existing wall end; nearby ends magnetically connect"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>PALISADE WALL</b><small data-build-detail="wall">20 WOOD · 10 STONE  •  DRAG TO AIM  •  READY</small></span></button>
+              <button class="build-option" data-build-type="gate" title="Place a Palisade Gate over an existing wall to create a passable opening"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>PALISADE GATE</b><small data-build-detail="gate">40 WOOD · 15 STONE  •  SNAPS TO WALL  •  READY</small></span></button>
+              <button class="build-option" data-build-type="palisadeTower" title="Place a Palisade Tower over an existing wall panel to create a reinforced hardpoint"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>PALISADE TOWER</b><small data-build-detail="palisadeTower">85 WOOD · 20 STONE  •  SNAPS TO WALL  •  READY</small></span></button>
+            </div>
+          </div>
+          <div id="train-menu-wrap" class="build-menu-wrap" hidden>
+            <button id="train-menu-toggle" class="action-button" title="Open Crown Hall training menu"><span class="action-mark ui-icon icon-population" aria-hidden="true"></span><span><b>TRAIN UNITS</b><small>OPEN UNIT MENU</small></span></button>
+            <div id="train-menu" class="build-menu production-menu glass-panel" hidden>
+              <div class="build-menu-kicker">BUILDING QUEUE</div>
+              <button class="build-option production-option" data-train-unit="villager" title="Train a Hearthkin"><span class="action-mark ui-icon icon-villager" aria-hidden="true"></span><span><b>HEARTHKIN</b><small data-train-detail="villager">50 FOOD  •  4 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="soldier" title="Train a Crown Guard"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN GUARD</b><small data-train-detail="soldier">40 FOOD · 15 WOOD · 10 GOLD  •  6 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="scout" title="Train a Crown Scout"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN SCOUT</b><small data-train-detail="scout">60 FOOD · 30 WOOD · 15 GOLD  •  8 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="spearwarden" title="Train a Crown Spearwarden"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN SPEARWARDEN</b><small data-train-detail="spearwarden">55 FOOD · 20 WOOD · 15 GOLD  •  8 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="militia" title="Train a Crown Militia"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN MILITIA</b><small data-train-detail="militia">35 FOOD · 10 WOOD · 5 GOLD  •  5.5 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="shieldbearer" title="Train a Crown Shieldbearer"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN SHIELDBEARER</b><small data-train-detail="shieldbearer">45 FOOD · 20 WOOD · 5 GOLD  •  7 SEC</small></span></button>
+              <small id="train-queue-status" class="train-queue-status">Select a unit to add it to the queue.</small>
+            </div>
+          </div>
+          <div id="placement-readout" class="placement-readout" hidden><span id="placement-icon" class="ui-icon icon-house" aria-hidden="true"></span><span><b id="placement-title">PLACEMENT MODE</b><small id="placement-detail">Move the foundation to a clear site.</small></span></div>
+          <button id="release-bears" class="secondary-button bear-release-button" type="button" title="Release one grizzly near each faction at the same time"><span>RELEASE BEARS<small>BOTH SIDES</small></span></button>
+          <button id="save-game" class="secondary-button" type="button" title="Save this Crownforge slice in this browser"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>SAVE</span></button>
+          <button id="load-game" class="secondary-button" type="button" title="Restore the Crownforge slice saved in this browser"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>LOAD</span></button>
+          <button id="music-toggle" class="secondary-button music-toggle" type="button" title="Mute Crownforge music" aria-pressed="false"><span class="music-glyph" aria-hidden="true">♫</span><span id="music-toggle-label">MUSIC ON</span></button>
+          <div class="soundtrack-control">
+            <label for="music-selection">SOUNDTRACK</label>
+            <select id="music-selection" aria-describedby="music-playback-help"><option value="all">All songs · play in order</option></select>
+            <span id="music-now-playing" role="status" aria-live="polite">Ready · Lantern Under Stone</span>
+            <span id="music-playback-help" class="soundtrack-help">All songs play once in order, then repeat. Choose one song to loop it.</span>
+          </div>
+          <button id="cancel-build" class="secondary-button" hidden title="Cancel construction placement (Esc)"><span class="ui-icon icon-cancel" aria-hidden="true"></span><span>ESC CANCEL</span></button>
+          <button id="restart-game" class="secondary-button" title="Reset the current Crownforge slice"><span class="ui-icon icon-seal" aria-hidden="true"></span><span>RESET SLICE</span></button>
+        </div>
+      </section>
+
+      <div class="world-tools" aria-label="View controls">
+        <button id="view-settings" type="button" aria-expanded="false" aria-controls="view-settings-panel">ATMOSPHERE</button>
+        <button id="view-mode" type="button" aria-pressed="false" title="Enjoy the full world view (F). Escape returns to command.">FULL VIEW</button>
+      </div>
+      <section id="view-settings-panel" class="view-settings-panel glass-panel" aria-label="Atmosphere settings" hidden>
+        <span class="panel-kicker">MAKE THE MOMENT YOURS</span><h2>Light over the meadow</h2>
+        <div class="light-options" aria-label="Lighting mood">
+          <button data-light="dawn" aria-pressed="true">Dawn</button>
+          <button data-light="day" aria-pressed="false">Daylight</button>
+          <button data-light="dusk" aria-pressed="false">Emberlight</button>
+        </div>
+        <label class="check-setting"><input id="ambient-effects" type="checkbox" checked /> Living atmosphere</label>
+        <label>Hearthkin appearance <select id="hearthkin-appearance" aria-label="Hearthkin appearance"><option value="blender-v007">New character</option><option value="legacy">Original character</option></select></label>
+        <label class="check-setting"><input id="reduced-motion" type="checkbox" /> Reduce ambient motion</label>
+        <button id="speed-controls-toggle" class="utility-toggle" aria-expanded="false" aria-controls="dev-speed-panel">Travel &amp; gathering controls</button>
+        <small>Lighting changes the view. Your settlement keeps its own time.</small>
+        <div id="building-save-backup" hidden>
+          <span class="panel-kicker">ORIGINAL SAVED SETTLEMENT</span>
+          <small>Your save from before the building update is kept here.</small>
+          <button id="download-building-backup" class="utility-toggle" type="button">Download original save</button>
+          <button id="restore-building-backup" class="utility-toggle" type="button">Restore original save file</button>
+        </div>
+      </section>
+      <aside class="realm-panel glass-panel" aria-label="Kingdom overview">
+        <div class="realm-art"><span>THE FIRST AGE</span><h2>The Crownlands</h2></div>
+        <div class="kingdom-map-wrap">
+          <canvas id="kingdom-map" width="348" height="240" tabindex="0" aria-label="Kingdom overview map. Click to travel. Press Enter to return to Crown Hall."></canvas>
+          <div class="map-caption"><span id="light-name">Dawn</span><span>CLICK TO TRAVEL</span></div>
+        </div>
+        <div class="map-controls"><button id="view-home" title="Center the view on your Crown Hall (Home)">CROWN HALL</button><button id="view-zoom-out" aria-label="Zoom out">−</button><span id="view-zoom">28%</span><button id="view-zoom-in" aria-label="Zoom in">+</button></div>
+      </aside>
+
+      <div id="toast" class="toast" role="status"></div>
+      <div id="ui-tooltip" class="ui-tooltip" role="tooltip" hidden></div>
+
+      <section id="victory-panel" class="victory-panel glass-panel" hidden>
+        <div class="victory-sigil"><span id="outcome-icon" class="ui-icon icon-victory" aria-hidden="true"></span></div>
+        <div><div id="outcome-kicker" class="panel-kicker">MEADOW SECURED</div><h2 id="outcome-title">The Crownwardens endure.</h2><p id="outcome-copy">The Ashen Camp is destroyed. This tiny slice is complete enough to polish, not expand.</p></div>
+        <button id="victory-reset" class="action-button">PLAY AGAIN</button>
+      </section>
+    </main>
+    <script>
+      if (window.location.protocol === 'file:') {
+        const loadingDetail = document.querySelector('#loading-detail');
+        const fileProtocolHelp = document.querySelector('#file-protocol-help');
+        if (loadingDetail) loadingDetail.textContent = 'Local preview needs an HTTP server';
+        if (fileProtocolHelp) fileProtocolHelp.hidden = false;
+      }
+    </script>
+    <script type="module" src="./src/main.js?v=20260911-worker3d1"></script>
+    <script type="module">
+      document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
+    </script>
+  <script type="module" src="./dev/blender-worker-game.js?v=20260911-worker3d1"></script></body>
+</html>
