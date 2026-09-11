@@ -1,0 +1,12 @@
+{
+  "revision": "v010",
+  "blend_sha256": "8843f11d689756ca35aa1f179143e2b2655f2e4b07b018e6322b4372a8a82a67",
+  "changes": [
+    "fitted waist and hips",
+    "auburn hair detail",
+    "attached braid root",
+    "attached rear headband knot"
+  ],
+  "previous_sheets": "../hearthkin-blender-v007",
+  "previous_metadata": "../hearthkin-blender-v007/art-manifest.js"
+}

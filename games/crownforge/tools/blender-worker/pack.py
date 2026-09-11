@@ -1,8 +1,9 @@
 """Pack independently rendered views, retaining measured ground pivots."""
 from PIL import Image
 from pathlib import Path
-import json,hashlib
-D=Path('/private/tmp/hearthkin-game-frames');R=Path(__file__).resolve().parents[2];out=R/'assets/hearthkin-blender-v007';out.mkdir(exist_ok=True)
+import json,hashlib,argparse
+p=argparse.ArgumentParser();p.add_argument("--frames",default="/private/tmp/hearthkin-game-frames");p.add_argument("--version",default="v007");args=p.parse_args()
+D=Path(args.frames);R=Path(__file__).resolve().parents[2];out=R/f'assets/hearthkin-blender-{args.version}';out.mkdir(exist_ok=True)
 records=json.loads((D/'manifest.json').read_text());art={};edge_hits=[]
 calibration={}
 for c in records:
@@ -19,7 +20,7 @@ for c in records:
   if i%4==0 and i:row_y+=row_height;row_x=0;row_height=0
   l,t,r,b=box;x,y=row_x+2,row_y+2;sheet.paste(im.crop(box),(x,y));frames.append({'rect':[x,y,r-l,b-t],'pivot':[c['pivot'][0]-l,c['pivot'][1]-t]});row_x+=r-l+4;row_height=max(row_height,b-t+4)
  path=out/f'{name}-{view}.webp';sheet.save(path,'WEBP',quality=90,method=4)
- art.setdefault(view,{})[name]={'src':f'./assets/hearthkin-blender-v007/{path.name}','scaleBase':calibration[view],'frames':frames,'loop':c['loop'],'contact':c['contact_phase'],'seconds':c['seconds']}
+ art.setdefault(view,{})[name]={'src':f'./assets/hearthkin-blender-{args.version}/{path.name}','scaleBase':calibration[view],'frames':frames,'loop':c['loop'],'contact':c['contact_phase'],'seconds':c['seconds']}
 (R/'src/hearthkin-blender-art.js').write_text('export const HEARTHKIN_BLENDER_ART='+json.dumps(art,separators=(',',':'))+';\n')
-(out/'provenance.json').write_text(json.dumps({'source':'Hearthkin Worker v007 with September 11 field, crate and shield corrections','view_count':4,'clip_count':len(art.get('se',{})),'clips':records,'edge_hits':edge_hits,'assets':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in out.glob('*.webp')}},indent=2))
+(out/'provenance.json').write_text(json.dumps({'source':f'Hearthkin Worker {args.version}; preserved v007 animation library','view_count':4,'clip_count':len(art.get('se',{})),'clips':records,'edge_hits':edge_hits,'assets':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in out.glob('*.webp')}},indent=2))
 print('PACKED',len(records),'SHEETS; EDGE_HITS',edge_hits)

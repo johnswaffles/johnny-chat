@@ -1,4 +1,4 @@
-import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260911-worker3d1';
+import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260911-worker-v010';
 import {corpseLifetime} from './bear-combat.js?v=20260909-cursedbears1';
 import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
 import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260909-cursedbears1';

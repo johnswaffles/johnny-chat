@@ -7,3 +7,6 @@ The new asset folder holds four independently rendered camera views for all 31 a
 Every sprite has its projected world-ground pivot retained through cropping. Source motion is sampled at 16 poses for active motion, 8 for idle/held breathing. Atlases are tightly packed WebP with transparent padding and loaded once per character renderer, not once per unit.
 
 `render.py --source <v007-directory>` uses the approved Blender source and its animation helpers. The stationary supplies action is baked from the corrected shared cargo grip, matching the approved walking grip. The fall uses a wider camera frame to retain its whole silhouette. `pack.py` packs the resulting `/private/tmp/hearthkin-game-frames` images and records source frames, pivots and asset hashes in `assets/hearthkin-blender-v007/provenance.json`.
+
+
+September 11 v010 appearance release: source Hearthkin_Worker_v010.blend, with fitted waist and hips, revised hair, attached braid root and rear headband knot. Export using render.py --blend PATH --output /private/tmp/hearthkin-v010-game-frames, then pack.py --frames /private/tmp/hearthkin-v010-game-frames --version v010. The v007 sheets and art-manifest.js are retained for restoration. Gameplay and the existing animation timing are unchanged.

@@ -1,4 +1,4 @@
-import {HEARTHKIN_BLENDER_ART} from './hearthkin-blender-art.js?v=20260911-worker3d1';
+import {HEARTHKIN_BLENDER_ART} from './hearthkin-blender-art.js?v=20260911-worker-v010';
 import {RESOURCE_TYPES,UNIT_TYPES} from './config.js?v=20260909-cursedbears1';
 const clamp=n=>Math.max(0,Math.min(.999999,n));
 const cycle=n=>((n%1)+1)%1;

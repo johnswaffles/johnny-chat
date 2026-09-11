@@ -4,8 +4,8 @@ from pathlib import Path
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 import argparse
-parser=argparse.ArgumentParser();parser.add_argument('--source',required=True,help='Hearthkin Worker v007 directory containing source and scripts');parser.add_argument('--output',default='/private/tmp/hearthkin-game-frames');parser.add_argument('--clips',nargs='*');parser.add_argument('--force',action='store_true');args=parser.parse_args(sys.argv[sys.argv.index('--')+1:]);O=Path(args.source);sys.path.insert(0,str(O/'scripts'));D=Path(args.output);D.mkdir(parents=True,exist_ok=True)
-bpy.ops.wm.open_mainfile(filepath=str(O/'source/Hearthkin_Worker_v007.blend'))
+parser=argparse.ArgumentParser();parser.add_argument('--blend',help='Override the source blend file');parser.add_argument('--source',required=True,help='Hearthkin Worker v007 directory containing source and scripts');parser.add_argument('--output',default='/private/tmp/hearthkin-game-frames');parser.add_argument('--clips',nargs='*');parser.add_argument('--force',action='store_true');args=parser.parse_args(sys.argv[sys.argv.index('--')+1:]);O=Path(args.source);sys.path.insert(0,str(O/'scripts'));D=Path(args.output);D.mkdir(parents=True,exist_ok=True)
+bpy.ops.wm.open_mainfile(filepath=args.blend or str(O/'source/Hearthkin_Worker_v007.blend'))
 from review_scene import *
 from motion_core import cargo_pose,key_pose
 character=set(json.loads(scene['CharacterMeshNames']));views={'se':(-4,-6,3.2),'sw':(4,-6,3.2),'ne':(-4,6,3.2),'nw':(4,6,3.2)}
