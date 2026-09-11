@@ -3264,7 +3264,9 @@ export class CrownforgeSimulation {
         ));
       });
       if (!point) continue;
-      this._interruptWork(unit);
+      const construction = this._activeConstruction(unit);
+      const buildSlot = unit.buildSlot;
+      this._interruptWork(unit, { preserveQueue: Boolean(construction) });
       unit.x = point.x;
       unit.z = point.z;
       unit.path = [];
@@ -3281,6 +3283,11 @@ export class CrownforgeSimulation {
       unit.repathCooldown = 0;
       unit.lastProgressX = point.x;
       unit.lastProgressZ = point.z;
+      if (construction) {
+        unit.buildTarget = construction.id;
+        this._sendUnitToBuilding(unit, construction, buildSlot);
+        unit.command = 'build';
+      }
       occupied.push({ ...point, type: unit.type });
       relocated += 1;
     }
@@ -6597,6 +6604,15 @@ export class CrownforgeSimulation {
     return this._replaceWallSegmentsForAttachment(gatePlacement);
   }
 
+  _canQueuePlacedConstruction(builders) {
+    if (builders.some((unit) => this._activeConstruction(unit)
+      && (unit.orderQueue?.length ?? 0) >= MAX_CONSTRUCTION_ORDER_QUEUE)) {
+      this._announce('Builder queue full (12 waiting orders). Finish some work before placing another foundation.');
+      return false;
+    }
+    return true;
+  }
+
   placeWallLine(start, end) {
     const preview = this.getWallLinePreview(start, end);
     if (!preview.valid) {
@@ -6609,6 +6625,7 @@ export class CrownforgeSimulation {
       this._announce('Select a builder before placing a Palisade Wall.');
       return false;
     }
+    if (!this._canQueuePlacedConstruction(builders)) return false;
     const cleared = this._clearResourcesForWall(preview);
     const clearedDetails = this._clearDecorationsForWall(preview);
     this._spend(preview.totalCost);
@@ -6620,7 +6637,12 @@ export class CrownforgeSimulation {
     });
     const relocated = this._relocateUnitsFromBuilding(building);
     let assigned = 0;
+    let queued = 0;
     builders.forEach((builder, index) => {
+      if (this._queueConstructionOrder(builder, { kind: 'build', buildingId: building.id, buildSlot: index })) {
+        queued += 1;
+        return;
+      }
       this._interruptWork(builder);
       builder.postDepositTarget = null;
       builder.attackTarget = null;
@@ -6636,7 +6658,7 @@ export class CrownforgeSimulation {
     const relocatedMessage = relocated
       ? ` Moved ${relocated} unit${relocated === 1 ? '' : 's'} clear of the new barrier.`
       : '';
-    this._announce(`${blueprint.label} line placed: ${preview.wallSegments} segment${preview.wallSegments === 1 ? '' : 's'}. ${assigned} Hearthkin assigned.${clearedMessage}${relocatedMessage}`);
+    this._announce(`${blueprint.label} line placed: ${preview.wallSegments} segment${preview.wallSegments === 1 ? '' : 's'}. ${assigned} Hearthkin assigned.${queued ? ` ${queued} builder${queued === 1 ? '' : 's'} queued it after current construction.` : ''}${clearedMessage}${relocatedMessage}`);
     return true;
   }
 
@@ -6662,6 +6684,7 @@ export class CrownforgeSimulation {
       this._announce(preview.reason);
       return false;
     }
+    if (!this._canQueuePlacedConstruction(builders)) return false;
     const clearedWoodland = this._clearDepletedWoodForBuilding(preview);
     this._spend(blueprint.cost);
     if (blueprint.wallAttachment) this._replaceWallSegmentsForAttachment(preview);
@@ -6681,7 +6704,12 @@ export class CrownforgeSimulation {
     });
     const relocated = this._relocateUnitsFromBuilding(building);
     let assigned = 0;
+    let queued = 0;
     builders.forEach((builder, index) => {
+      if (this._queueConstructionOrder(builder, { kind: 'build', buildingId: building.id, buildSlot: index })) {
+        queued += 1;
+        return;
+      }
       this._interruptWork(builder);
       builder.postDepositTarget = null;
       builder.attackTarget = null;
@@ -6696,7 +6724,7 @@ export class CrownforgeSimulation {
     const clearedMessage = clearedWoodland
       ? ` Restored ${clearedWoodland} cleared woodland patch${clearedWoodland === 1 ? '' : 'es'} to meadow.`
       : '';
-    this._announce(`${blueprint.label} foundation placed. ${assigned} Hearthkin assigned.${clearedMessage}${relocatedMessage}`);
+    this._announce(`${blueprint.label} foundation placed. ${assigned} Hearthkin assigned.${queued ? ` ${queued} builder${queued === 1 ? '' : 's'} queued it after current construction.` : ''}${clearedMessage}${relocatedMessage}`);
     return true;
   }
 
