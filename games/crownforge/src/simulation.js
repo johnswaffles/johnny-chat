@@ -1,18 +1,18 @@
-import {combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams} from './combat-teams.js?v=20260911-pause1';
+import {combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260911-singleteam1';
 import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260909-cursedbears1';
-import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260911-pause1';
-import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260911-pause1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260911-pause1';
+import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260911-singleteam1';
+import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260911-singleteam1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260911-singleteam1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260911-pause1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260911-singleteam1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260911-pause1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260911-singleteam1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260911-pause1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260911-singleteam1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -1155,6 +1155,7 @@ export class CrownforgeSimulation {
       this._updateDefensiveBuilding(building);
     }
     this._updateDefenseProjectiles(dt);
+    updateTeamApproaches(this);
     for (const unit of this.units) this._updateUnit(unit, dt);
     updateTeams(this,dt);
     this._resolveUnitCollisions();
@@ -1555,7 +1556,7 @@ export class CrownforgeSimulation {
   }
 
   _interruptWork(unit, { preserveQueue = false, preserveGuard = false } = {}) {
-    unit.teamFollowing=false;unit.healTargetId=null;
+    unit.teamFollowing=false;unit.healTargetId=null;unit.teamAdvanceTargetId=null;
     delete unit.bearResponse;
     this._releaseResourceSlot(unit);
     this._releaseBuildingSlot(unit);
@@ -2255,6 +2256,7 @@ export class CrownforgeSimulation {
     }
     unit.animClock += dt;
     unit.hitFlash = Math.max(0, unit.hitFlash - dt);
+    unit.dodgePulse=Math.max(0,(unit.dodgePulse??0)-dt);
     unit.healthRevealTimer = Math.max(0, unit.healthRevealTimer - dt);
     unit.repathCooldown = Math.max(0, unit.repathCooldown - dt);
     unit.attackRepathCooldown = Math.max(0, unit.attackRepathCooldown - dt);
@@ -4243,6 +4245,7 @@ export class CrownforgeSimulation {
   }
 
   _sendUnitToAttack(unit, target, slot = 0, options = {}) {
+    if (prepareTeamAttack(this,unit,target,slot)) return true;
     if (isTeamHealer(unit)) { this._interruptWork(unit);unit.command='idle';unit.path=[];unit.actionLabel=`Supporting Team ${unit.teamId}`;return true; }
     target=tankTarget(this,unit)??target;
     if (!target || target.hp <= 0 || target.dead || target.destroyed || isWardProtected(target)) return false;
@@ -4417,7 +4420,13 @@ export class CrownforgeSimulation {
   _applyUnitDamage(target, amount, attacker, {damageType='weapon'}={}) {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
     const rawDamage = Math.max(0, Number(amount) || 0);
-    const damage = bearIncomingDamage(target,rawDamage,damageType);
+    const defense=UNIT_TYPES[target.type];
+    if(rawDamage>0&&defense?.dodgeChance&&damageType==='weapon'&&attacker?.kind==='unit'){
+      target.incomingSwingCount=(target.incomingSwingCount??0)+1;
+      // Four evasions per five incoming melee swings; repeatable across saves.
+      if(target.incomingSwingCount%5!==0){target.dodgePulse=.45;return {damage:0,killed:false,warded:false,blocked:true,dodged:true,cursed:false};}
+    }
+    const damage = bearIncomingDamage(target,rawDamage,damageType)*(1-(defense?.armorReduction??0));
     if (target.lastLightWardTimer > 0) {
       target.wardBlockedPulse = 0.42;
       target.hitFlash = Math.max(target.hitFlash, 0.12);
@@ -5896,7 +5905,7 @@ export class CrownforgeSimulation {
     const pendingMoves = [];
     units.forEach((unit, index) => {
       const angle = (index / Math.max(1, units.length)) * Math.PI * 2;
-      const moveTarget = { x: point.x + Math.cos(angle) * spacing, z: point.z + Math.sin(angle) * spacing };
+      const moveTarget = teamMovePoint(units,unit,point) ?? { x: point.x + Math.cos(angle) * spacing, z: point.z + Math.sin(angle) * spacing };
       const moveOrder = { kind: 'move', target: moveTarget, stopDistance: 0 };
       if (this._shouldQueueExplicitOrder(unit, queue) && this._queueUnitOrder(unit, moveOrder, 'Move queued')) {
         routed += 1;
@@ -7130,7 +7139,7 @@ export class CrownforgeSimulation {
         const fraction=Math.max(0,Math.min(1,unit.hp/Math.max(1,unit.maxHp)));
         unit.maxHp=UNIT_TYPES[unit.type].maxHp;unit.hp=unit.dead?0:unit.maxHp*fraction;
       }
-      if(!Number.isInteger(unit.teamId)||unit.teamId<1)unit.teamId=null;
+      unit.teamId=Number.isInteger(unit.teamId)&&unit.teamId>0?1:null;
       if (isCurseImmune(unit) && unit.lastLightCurseActive) {
         // Pre-immunity saves stored the curse's one HP as real health. Migrate
         // that once; new saves retain every wound, even genuine one-HP health.

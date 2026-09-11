@@ -237,3 +237,5 @@ button:active { transform: translateY(0); }
 .combat-team-panel button:disabled{opacity:.45;cursor:default}
 .combat-team-panel button:focus-visible,.combat-team-panel select:focus-visible{outline:2px solid #397970;outline-offset:2px}
 .team-buttons{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+
+.combat-team-panel [hidden]{display:none!important}

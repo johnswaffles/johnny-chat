@@ -38,7 +38,7 @@ test('one fury contact kills the primary and only two nearby fighters; no harm t
  s._sendUnitToAttack(b,primary);let hits=0;
  const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(t,d,a,...rest)=>{if(a===b)hits++;return apply(t,d,a,...rest);};
  for(let i=0;i<60&&!primary.dead;i++)s._updateAttack(b,1/60);
- assert(primary.dead&&second.dead&&!third.dead);assert.equal(third.hp,third.maxHp-174);assert.equal(hits,3);
+ assert(primary.dead&&second.dead&&!third.dead);assert.equal(third.hp,third.maxHp);assert.equal(hits,3);
  for(const u of [fourth,outside,blocked,ward,worker,bear2])assert.equal(u.hp,u.maxHp);
  // Scanning during the follow-through cannot grant another instant strike.
  const phase=b.attackPhase,elapsed=b.attackPhaseElapsed;updateWildlife(s,1);assert.equal(b.attackPhase,phase);assert.equal(b.attackPhaseElapsed,elapsed);

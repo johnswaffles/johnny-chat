@@ -1,6 +1,6 @@
-import {UNIT_TYPES} from './config.js?v=20260911-pause1';
-import {isWardProtected} from './unit-status.js?v=20260911-pause1';
-export const TEAM_RULES=Object.freeze({healAmount:40,healInterval:2,healRange:8,followDistance:5,tauntDuration:8,tauntRange:24});
+import {UNIT_TYPES} from './config.js?v=20260911-singleteam1';
+import {isWardProtected} from './unit-status.js?v=20260911-singleteam1';
+export const TEAM_RULES=Object.freeze({healAmount:40,tankHealAmount:80,healInterval:2,healRange:16,followDistance:5,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
  const rule=UNIT_TYPES[unit?.type];
@@ -12,12 +12,12 @@ export function combatRole(unit){
 export const isTeamHealer=unit=>Boolean(unit?.teamId&&combatRole(unit)==='healer');
 export const eligibleMember=u=>Boolean(u?.kind==='unit'&&!u.dead&&u.faction==='player'&&combatRole(u));
 export function teams(sim,dt=0){
- const groups=new Map();
+ const groups=new Map([[1,{id:1,members:[],tank:0,healer:0,damage:0,support:0}]]);
  for(const u of sim.units){
   if(dt){u.healPulse=Math.max(0,(u.healPulse??0)-dt);u.healCastPulse=Math.max(0,(u.healCastPulse??0)-dt);}
   if(eligibleMember(u)&&Number.isInteger(u.teamId)&&u.teamId>0){
-  if(!groups.has(u.teamId))groups.set(u.teamId,{id:u.teamId,members:[],tank:0,healer:0,damage:0,support:0});
-  const group=groups.get(u.teamId);group.members.push(u);group[combatRole(u)]++;
+  u.teamId=1;
+  const group=groups.get(1);group.members.push(u);group[combatRole(u)]++;
  }
  }
  return [...groups.values()].sort((a,b)=>a.id-b.id);
@@ -25,14 +25,13 @@ export function teams(sim,dt=0){
 export function assignTeam(sim,id=null){
  const selected=sim.selectedEntities.filter(eligibleMember);
  if(!selected.length)return false;
- if(id!==null&&!teams(sim).some(t=>t.id===id))return false;
- const teamId=id??Math.max(0,...sim.units.map(u=>Number.isInteger(u.teamId)?u.teamId:0))+1;
+ const teamId=1;
  for(const u of selected){
   if(u.teamId===teamId)continue;
   u.teamId=teamId;u.healCooldown=TEAM_RULES.healInterval;
-  if(isTeamHealer(u)){sim._interruptWork(u);u.orderQueue=[];u.command='idle';u.path=[];u.actionLabel=`Healer · Team ${teamId}`;}
+  if(isTeamHealer(u)){sim._interruptWork(u);u.orderQueue=[];u.command='idle';u.path=[];u.actionLabel=`Healer · Your team`;}
  }
- sim._announce(`${selected.length} assigned to Team ${teamId}. Hearthkin will heal nearby teammates.`);return teamId;
+ sim._announce(`${selected.length} added to your team. Hearthkin heal all nearby allies.`);return teamId;
 }
 export function leaveTeam(sim,allId=null){
  const selected=allId===null?sim.selectedEntities:sim.units.filter(u=>u.teamId===allId);
@@ -40,12 +39,12 @@ export function leaveTeam(sim,allId=null){
   if(u.teamFollowing){sim._interruptWork(u);u.command='idle';u.path=[];}
   u.teamId=null;u.healTargetId=null;u.teamFollowing=false;u.actionLabel='Ready';
  }
- sim._announce(allId===null?'Selected units left their teams.':'Team disbanded.');
+ sim._announce(allId===null?'Selected units left your team.':'Team roster cleared. Add replacements whenever you like.');
 }
 export function selectTeam(sim,id){
- const members=sim.units.filter(u=>eligibleMember(u)&&u.teamId===id);
+ const members=sim.units.filter(u=>eligibleMember(u)&&u.teamId);
  sim.selectedIds=members.map(u=>u.id);sim._syncSelectionFlags();
- sim._announce(`Team ${id} selected · ${members.length} members.`);return members.length;
+ sim._announce(`Your team selected · ${members.length} members.`);return members.length;
 }
 export function tankTarget(sim,enemy){
  if(!enemy?.threatTankId)return null;
@@ -72,17 +71,21 @@ export function updateTeams(sim,dt){
   healer.teamThinkCooldown=Math.max(0,(healer.teamThinkCooldown??0)-dt);
   if(healer.teamThinkCooldown>1e-8)continue;
   healer.teamThinkCooldown=.2;
-  if(healer.stunTimer>0||!['idle','move','attack'].includes(healer.command))continue;
+  if(healer.stunTimer>0)continue;
+  if(!['idle','move'].includes(healer.command)){sim._interruptWork(healer);healer.command='idle';healer.path=[];healer.orderQueue=[];}
   const allies=group.members.filter(u=>u!==healer);
-  const patient=allies.filter(u=>u.hp<u.maxHp&&distance(healer,u)<=TEAM_RULES.healRange&&sim._hasCombatLineOfSight(healer,u))
-   .sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.id-b.id)[0];
+  const patients=sim.units.filter(u=>eligibleMember(u)&&u!==healer&&u.hp<u.maxHp&&distance(healer,u)<=TEAM_RULES.healRange&&sim._hasCombatLineOfSight(healer,u))
+   .sort((a,b)=>Number(combatRole(b)==='tank')-Number(combatRole(a)==='tank')||a.hp/a.maxHp-b.hp/b.maxHp||a.id-b.id);
+  const patient=patients[0];
   if(patient&&healer.healCooldown<=0){
-   const amount=Math.min(TEAM_RULES.healAmount,patient.maxHp-patient.hp);
-   patient.hp+=amount;patient.healPulse=.85;patient.lastHealAmount=amount;patient.healthRevealTimer=2;
+   for(const ally of patients){
+    const amount=Math.min(combatRole(ally)==='tank'?TEAM_RULES.tankHealAmount:TEAM_RULES.healAmount,ally.maxHp-ally.hp);
+    ally.hp+=amount;ally.healPulse=.85;ally.lastHealAmount=amount;ally.healthRevealTimer=2;
+   }
    healer.healTargetId=patient.id;healer.healCastPulse=.85;healer.healCooldown=TEAM_RULES.healInterval;
   }
-  if(patient)healer.actionLabel=`Healing ${UNIT_TYPES[patient.type].label} · Team ${group.id}`;
-  else if(healer.command==='idle')healer.actionLabel=`Healer ready · Team ${group.id}`;
+  if(patient)healer.actionLabel=`Healing ${UNIT_TYPES[patient.type].label} · Your team`;
+  else if(healer.command==='idle')healer.actionLabel=`Healer ready · Your team`;
   // Manual movement/work stays authoritative. Only automatic follow may repath.
   if(healer.command!=='idle'&&!healer.teamFollowing)continue;
   const anchor=allies.filter(u=>combatRole(u)!=='healer').sort((a,b)=>Number(combatRole(b)==='tank')-Number(combatRole(a)==='tank')||distance(healer,a)-distance(healer,b)||a.id-b.id)[0];
@@ -93,7 +96,48 @@ export function updateTeams(sim,dt){
   const point={x:anchor.x+dx/len*TEAM_RULES.followDistance-dz/len*side,z:anchor.z+dz/len*TEAM_RULES.followDistance+dx/len*side};
   if(distance(healer,anchor)>TEAM_RULES.healRange-1 && (healer.teamFollowAt??0)<=sim.clock&&sim.repathBudgetRemaining>0){
    healer.teamFollowAt=sim.clock+1;sim.repathBudgetRemaining--;
-   if(sim._sendUnitTo(healer,point,'move')){healer.teamFollowing=true;healer.actionLabel=`Following Team ${group.id}`;}
+   if(sim._sendUnitTo(healer,point,'move')){healer.teamFollowing=true;healer.actionLabel=`Following your team`;}
   }
  }
+}
+
+// Stage damage fighters behind the front line until a tank lands its first hit.
+export function prepareTeamAttack(sim,unit,target,slot){
+ if(!unit.teamId||combatRole(unit)!=='damage'||target?.kind!=='unit')return false;
+ const tanks=sim.units.filter(u=>eligibleMember(u)&&u.teamId&&combatRole(u)==='tank');
+ if(!tanks.length||tanks.some(u=>tankTarget(sim,target)?.id===u.id))return false;
+ for(const tank of tanks)if(tank.attackTarget!==target.id||tank.command!=='attack'){
+  sim._interruptWork(tank);sim._sendUnitToAttack(tank,target,tank.id%8);
+ }
+ sim._cancelAttackCycle(unit);unit.teamAdvanceTargetId=target.id;unit.teamAdvanceSlot=slot;
+ unit.attackTarget=null;unit.attackTargetKind=null;unit.command='move';unit.path=[];unit.routeTarget=null;
+ unit.actionLabel='Holding behind tanks until they establish aggro';return true;
+}
+export function updateTeamApproaches(sim){
+ for(const unit of sim.units){
+  if(unit.dead||!unit.teamAdvanceTargetId)continue;
+  const target=sim.units.find(u=>u.id===unit.teamAdvanceTargetId&&!u.dead);
+  if(!target||!unit.teamId){unit.teamAdvanceTargetId=null;unit.command='idle';unit.path=[];continue;}
+  const tanks=sim.units.filter(u=>eligibleMember(u)&&u.teamId&&combatRole(u)==='tank');
+  if(!tanks.length||tanks.some(t=>tankTarget(sim,target)?.id===t.id)){
+   unit.teamAdvanceTargetId=null;sim._sendUnitToAttack(unit,target,unit.teamAdvanceSlot??0);continue;
+  }
+  if((unit.teamAdvanceAt??0)>sim.clock||sim.repathBudgetRemaining<=0)continue;
+  unit.teamAdvanceAt=sim.clock+.5;
+  const tank=tanks.sort((a,b)=>distance(a,target)-distance(b,target)||a.id-b.id)[0];
+  const dx=tank.x-target.x,dz=tank.z-target.z,length=Math.hypot(dx,dz)||1,side=((unit.teamAdvanceSlot??unit.id)%3-1)*2.5;
+  const point={x:tank.x+dx/length*4-dz/length*side,z:tank.z+dz/length*4+dx/length*side};
+  if(distance(unit,point)>1){sim.repathBudgetRemaining--;sim._sendUnitTo(unit,point,'move');}
+  unit.actionLabel='Following behind the tank line';
+ }
+}
+
+export function teamMovePoint(units,unit,destination){
+ if(!unit.teamId||!units.some(u=>u.teamId&&combatRole(u)==='tank'))return null;
+ const members=units.filter(u=>u.teamId),center=members.reduce((p,u)=>({x:p.x+u.x/members.length,z:p.z+u.z/members.length}),{x:0,z:0});
+ const dx=destination.x-center.x,dz=destination.z-center.z,len=Math.hypot(dx,dz)||1;
+ const role=combatRole(unit),row=role==='tank'?0:role==='healer'?8:4;
+ const peers=members.filter(u=>combatRole(u)===role).sort((a,b)=>a.id-b.id),index=peers.indexOf(unit);
+ const side=(index%5-(Math.min(5,peers.length)-1)/2)*2.5,back=row+Math.floor(index/5)*2.5;
+ return {x:destination.x-dx/len*back-dz/len*side,z:destination.z-dz/len*back+dx/len*side};
 }

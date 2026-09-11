@@ -145,9 +145,9 @@ const HEARTHKIN_WORKER_ABILITIES = Object.freeze({
 export const UNIT_TYPES = {
   grizzly: {
     label: 'Greatwood Grizzly', wildlife: true, renderSize: 218,
-    curseImmune: true, innateCurse: 'firstCondemnation', workerStrikeFraction: .6,
+    curseImmune: true, innateCurse: 'firstCondemnation', workerStrikeFraction: 1.2,
     speed: 2.85, acceleration: 8.5, braking: 12, radius: .82,
-    maxHp: 180, attack: 29, range: 1.55, cooldown: 1.45,
+    maxHp: 180, attack: 58, range: 1.55, cooldown: 1.45,
     attackTiming: { anticipation: .28, contact: .30, recovery: .42 },
     canAttackUnits: true, canAttackBuildings: false, traits: ['beast'],
   },
@@ -349,7 +349,9 @@ export const UNIT_TYPES = {
     acceleration: 10.2,
     braking: 13.2,
     radius: 0.44,
-    maxHp: 3480, // 20 enraged bear hits at 29 × 6 damage.
+    maxHp: 3480, // 50 landed enraged hits: 58 × 6 × 20% after armor.
+    armorReduction: .8,
+    dodgeChance: .8,
     attack: 1.4, // Ten hits equal one Crown Guard hit (14).
     combatRole: 'tank',
     range: 1.28,
