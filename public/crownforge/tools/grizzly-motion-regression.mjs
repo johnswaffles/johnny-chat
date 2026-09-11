@@ -5,7 +5,7 @@ import {UNIT_TYPES} from '../src/config.js';
 import {rallyBearDefenders,BEAR_RESPONSE} from '../src/wildlife.js';
 import {grizzlyPose,grizzlyProjection,grizzlyAttackClock,updateGrizzlyMotion,GRIZZLY_MOTION,GRIZZLY_ATTACKS} from '../src/grizzly-motion.js';
 
-function arena(){const s=new CrownforgeSimulation({seed:42});s.units=[];s.resourcesNodes=[];s.buildings=[];s.navigationVersion++;s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};return s;}
+function arena(){const s=new CrownforgeSimulation({enemyTeamPaused:false,seed:42});s.units=[];s.resourcesNodes=[];s.buildings=[];s.navigationVersion++;s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};return s;}
 const near=(a,b,epsilon=1e-5)=>assert(Math.abs(a-b)<epsilon,`${a} != ${b}`);
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 

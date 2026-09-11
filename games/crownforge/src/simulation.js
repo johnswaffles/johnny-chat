@@ -1,18 +1,18 @@
-import {combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams} from './combat-teams.js?v=20260911-teams2';
+import {combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams} from './combat-teams.js?v=20260911-pause1';
 import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260909-cursedbears1';
-import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260911-teams2';
-import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260911-teams2';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260911-teams2';
+import { BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260911-pause1';
+import {isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260911-pause1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260911-pause1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260911-teams2';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260911-pause1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260911-teams2';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260911-pause1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260911-teams2';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260911-pause1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -284,7 +284,8 @@ function setUnitFacing(unit, dx, dz, force = false) {
 }
 
 export class CrownforgeSimulation {
-  constructor({ onEvent = () => {}, seed } = {}) {
+  constructor({ onEvent = () => {}, seed, enemyTeamPaused = true } = {}) {
+    this.enemyTeamPaused = enemyTeamPaused;
     this.onEvent = onEvent;
     this.animation = new CrownforgeAnimationSystem();
     this.worldSeed = resolveWorldSeed(seed);
@@ -309,6 +310,7 @@ export class CrownforgeSimulation {
   }
 
   reset() {
+    this.pausedEnemyUnits = [];
     this.activeWorldSeed = (this.worldSeed + Math.imul(this.worldGeneration, WORLD_GENERATION_STRIDE)) >>> 0;
     this.worldGeneration += 1;
     this.clock = 0;
@@ -769,10 +771,12 @@ export class CrownforgeSimulation {
     // Give the opening Raider a clear patrol pocket west/south of the camp.
     // The camp sprite is intentionally larger than its gameplay footprint, so
     // the old point could disappear behind the tall silhouette at reset.
+    if (!this.enemyTeamPaused) {
     this.addUnit('ashenForager', 500, 425, 'enemy');
     this.addUnit('ashenForager', 507, 428, 'enemy');
     this.addUnit('ashenForager', 495, 417, 'enemy');
     this.addUnit('raider', 505, 405, 'enemy');
+    }
   }
 
   _naturalResourceAmount(type, sizeTier) {
@@ -1143,6 +1147,7 @@ export class CrownforgeSimulation {
       this._updateBuilderServices();
     }
     for (const building of this.buildings) {
+      if(this.enemyTeamPaused && building.faction==='enemy')continue;
       this._updateDemolition(building, dt);
       this._updateConstruction(building, dt);
       this._updateTraining(building, dt);
@@ -4966,6 +4971,7 @@ export class CrownforgeSimulation {
   }
 
   _updateEnemyAI(dt) {
+    if(this.enemyTeamPaused)return;
     const camp = this._enemyCamp();
     if (!camp) return;
     const state = this.enemyAIState;
@@ -5009,6 +5015,7 @@ export class CrownforgeSimulation {
   }
 
   _updateEnemyIntent() {
+    if(this.enemyTeamPaused)return;
     const enemies = this._enemyMilitary();
     const playerTargets = this.units.filter((unit) => ['player','wildlife'].includes(unit.faction) && !unit.dead);
     for (const enemy of enemies) {
@@ -5146,6 +5153,7 @@ export class CrownforgeSimulation {
       this._announce('Defeat: the Crown Hall has fallen.');
       return;
     }
+    if(this.enemyTeamPaused)return;
     const enemyCore = this.buildings.some((building) => building.type === 'ashenCamp' && building.faction === 'enemy' && !building.destroyed && building.hp > 0);
     if (!enemyCore) {
       this.phase = 'victory';
@@ -7090,6 +7098,7 @@ export class CrownforgeSimulation {
       selectedIds: [...this.selectedIds],
       lastCommand: this.lastCommand,
       units: this._jsonSafe(this.units),
+      pausedEnemyUnits: this._jsonSafe(this.pausedEnemyUnits),
       buildings: this._jsonSafe(this.buildings),
       resourcesNodes: this._jsonSafe(this.resourcesNodes),
       decorations: this._jsonSafe(this.decorations),
@@ -7113,7 +7122,8 @@ export class CrownforgeSimulation {
     this.decorations = [];
     this.projectiles = [];
     this.nextId = 1;
-    for (const saved of restored.units ?? []) {
+    for (const saved of [...(restored.units ?? []),...(restored.pausedEnemyUnits ?? [])]) {
+      if(this.enemyTeamPaused && (saved.faction==='enemy'||saved.type==='grizzly'&&saved.x+saved.z >= (CONFIG.mapWidth+CONFIG.mapHeight)/2)){this.pausedEnemyUnits.push(saved);continue;}
       const unit = this.addUnit(saved.type, saved.x, saved.z, saved.faction);
       Object.assign(unit, saved);
       if (UNIT_TYPES[unit.type]?.combatRole==='tank') {
@@ -7141,8 +7151,16 @@ export class CrownforgeSimulation {
       Object.assign(node, saved);
       if (!(node.reservedSlots instanceof Map)) node.reservedSlots = new Map();
     }
+    if(this.enemyTeamPaused){
+      const archived=new Set(this.pausedEnemyUnits.map(u=>u.id));
+      for(const entity of [...this.units,...this.buildings,...this.resourcesNodes]){
+        for(const key of ['reservedSlots','combatSlotReservations','buildSlotReservations','storageSlotReservations','demolitionSlotReservations']){
+          const reservations=entity[key];if(reservations instanceof Map)for(const [slot,id] of reservations)if(archived.has(id))reservations.delete(slot);
+        }
+      }
+    }
     this.decorations = restored.decorations ?? [];
-    this.projectiles = restored.projectiles ?? [];
+    this.projectiles = (restored.projectiles ?? []).filter(p=>!this.enemyTeamPaused||p.faction!=='enemy');
     this.clock = Number.isFinite(restored.clock) ? restored.clock : 0;
     this.timeAccumulator = Number.isFinite(restored.timeAccumulator) ? restored.timeAccumulator : 0;
     this.nextId = Number.isInteger(restored.nextId) ? restored.nextId : this.nextId;

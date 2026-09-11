@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260911-teams2';
+import { CONFIG } from './config.js?v=20260911-pause1';
 import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260909-cursedbears1';
 
 const MASK_WIDTH = 560;

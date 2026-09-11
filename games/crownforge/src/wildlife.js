@@ -1,5 +1,5 @@
 import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import { CONFIG, UNIT_TYPES } from './config.js?v=20260911-teams2';
+import { CONFIG, UNIT_TYPES } from './config.js?v=20260911-pause1';
 
 export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 300, maxAlivePerSide: 2, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
@@ -33,7 +33,7 @@ function planGrizzly(sim,state,side=null,avoid=[],automatic=false) {
     const radius=radii[Math.floor(index/32)];
     const point={x:target.x+Math.cos(angle)*radius,z:target.z+Math.sin(angle)*radius};
     if(point.x<2||point.z<2||point.x>CONFIG.mapWidth-2||point.z>CONFIG.mapHeight-2)continue;
-    if(automatic&&grizzlySide(point)!==side)continue;
+    if((automatic||sim.enemyTeamPaused)&&grizzlySide(point)!==side)continue;
     if(avoid.some(p=>distance(p,point)<3)||sim.units.some(u=>u.type==='grizzly'&&!u.dead&&distance(u,point)<3))continue;
     if(humans.some(unit=>distance(unit,point)<14)||sim._pointBlockedForUnit(probe,point))continue;
     const woodland=sim._staticBlockerCandidates(point,7).some(node=>node.kind==='resource'&&node.type==='tree'&&node.amount>0&&distance(node,point)<7);
@@ -61,7 +61,7 @@ export function spawnGrizzly(sim) {
   const state=sim.wildlifeState,counts=livingGrizzliesBySide(sim);
   const preferred=state.spawnCount%2?'enemy':'player';
   let plan=null;
-  for(const side of [preferred,preferred==='player'?'enemy':'player']){
+  for(const side of (sim.enemyTeamPaused?['player']:[preferred,preferred==='player'?'enemy':'player'])){
     if(counts[side]>=GRIZZLY_ENCOUNTER.maxAlivePerSide||!people(sim).some(u=>u.faction===side&&!(u.lastLightWardTimer>0)))continue;
     plan=planGrizzly(sim,state,side,[],true);
     break; // Preserve the chosen side while its bounded route search retries.
@@ -75,11 +75,11 @@ export function spawnGrizzly(sim) {
 export function requestGrizzlyPair(sim) {
   const state=sim.wildlifeState??=initialWildlifeState(sim.clock);
   if(sim.phase!=='playing'||state.pendingPair)return false;
-  if(!['player','enemy'].every(side=>people(sim).some(u=>u.faction===side))){
-    sim._announce('Both sides need living people before releasing a pair of bears.');return false;
+  if(!(sim.enemyTeamPaused?['player']:['player','enemy']).every(side=>people(sim).some(u=>u.faction===side))){
+    sim._announce(sim.enemyTeamPaused?'Your settlement needs living people before releasing a bear.':'Both sides need living people before releasing a pair of bears.');return false;
   }
   state.pendingPair={startedAt:sim.clock,retryAt:sim.clock,player:{spawnCount:0,spawnCursor:0},enemy:{spawnCount:0,spawnCursor:0}};
-  sim._announce('Finding clear woodland trails for both bears…');
+  sim._announce(sim.enemyTeamPaused?'Finding a woodland trail near your settlement…':'Finding clear woodland trails for both bears…');
   updateGrizzlyPair(sim);
   return true;
 }
@@ -90,14 +90,14 @@ function updateGrizzlyPair(sim) {
   // Search with the existing per-side route budget, then commit both spawns
   // in the same simulation tick. Never release half of a requested pair.
   const player=planGrizzly(sim,pending.player,'player');
-  const enemy=planGrizzly(sim,pending.enemy,'enemy',player?[player.point]:[]);
-  if(player&&enemy){
-    releasePlannedGrizzly(sim,player);releasePlannedGrizzly(sim,enemy);
+  const enemy=sim.enemyTeamPaused?null:planGrizzly(sim,pending.enemy,'enemy',player?[player.point]:[]);
+  if(player&&(sim.enemyTeamPaused||enemy)){
+    releasePlannedGrizzly(sim,player);if(enemy)releasePlannedGrizzly(sim,enemy);
     state.pendingPair=null;
-    sim._announce('Two grizzlies emerge! One hunts the Crownlands; one hunts the Ashen camp.');
+    sim._announce(sim.enemyTeamPaused?'A grizzly emerges near your settlement!':'Two grizzlies emerge! One hunts the Crownlands; one hunts the Ashen camp.');
   }else if(sim.clock-pending.startedAt>=8){
     state.pendingPair=null;
-    sim._announce('No clear woodland trails to both sides. Try releasing the bears again.');
+    sim._announce('No clear woodland trail found. Try releasing the bear again.');
   }else pending.retryAt=sim.clock+.5;
 }
 
@@ -194,7 +194,7 @@ export function updateWildlife(sim,dt) {
   updateGrizzlyPair(sim);
   if(sim.clock+1e-6>=state.nextSpawnAt&&sim.clock>=(state.spawnRetryAt??0)){
     const counts=livingGrizzliesBySide(sim);
-    const full=Object.values(counts).every(count=>count>=GRIZZLY_ENCOUNTER.maxAlivePerSide);
+    const full=(sim.enemyTeamPaused?[counts.player]:Object.values(counts)).every(count=>count>=GRIZZLY_ENCOUNTER.maxAlivePerSide);
     // A capped event expires; do not accumulate overdue encounters for later.
     if(full)state.nextSpawnAt=sim.clock+GRIZZLY_ENCOUNTER.interval;
     else if(spawnGrizzly(sim))state.nextSpawnAt+=GRIZZLY_ENCOUNTER.interval;

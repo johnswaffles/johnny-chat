@@ -3,7 +3,7 @@ import {test} from 'node:test';
 import {CrownforgeSimulation} from '../src/simulation.js';
 import {GRIZZLY_PURSUIT} from '../src/grizzly-motion.js';
 import {paintedGrizzlyFrame} from '../src/grizzly-renderer.js';
-function arena(){const s=new CrownforgeSimulation({seed:42});s.units=[];s.buildings=[];s.resourcesNodes=[];s.navigationVersion++;s.unitSpeedScale=1;return s;}
+function arena(){const s=new CrownforgeSimulation({enemyTeamPaused:false,seed:42});s.units=[];s.buildings=[];s.resourcesNodes=[];s.navigationVersion++;s.unitSpeedScale=1;return s;}
 function pair(type='soldier'){const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit(type,102,100,'player');t.hp=t.maxHp=1000;s._sendUnitToAttack(b,t);return {s,b,t};}
 test('bear closes and hits fleeing prey during moving swipes, once per cycle',()=>{
  const {s,b,t}=pair();b.grizzlyAttackCount=2;const hits=[];const apply=s._applyUnitDamage.bind(s);

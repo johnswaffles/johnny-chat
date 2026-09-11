@@ -1,15 +1,15 @@
-import {createTeamControls} from './team-controls.js?v=20260911-teams2';
-import {combatRole} from './combat-teams.js?v=20260911-teams2';
+import {createTeamControls} from './team-controls.js?v=20260911-pause1';
+import {combatRole} from './combat-teams.js?v=20260911-pause1';
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {requestGrizzlyPair} from './wildlife.js?v=20260911-teams2';
-import {createUnitInspector} from './unit-inspector.js?v=20260911-teams2';
-import {displayedUnitHealth} from './unit-status.js?v=20260911-teams2';
-import { setupPresentation } from './presentation.js?v=20260911-teams2';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260911-teams2';
+import {requestGrizzlyPair} from './wildlife.js?v=20260911-pause1';
+import {createUnitInspector} from './unit-inspector.js?v=20260911-pause1';
+import {displayedUnitHealth} from './unit-status.js?v=20260911-pause1';
+import { setupPresentation } from './presentation.js?v=20260911-pause1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260911-pause1';
 import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260909-cursedbears1';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
-import { CrownforgeRenderer } from './renderer.js?v=20260911-teams2';
-import { CrownforgeSimulation } from './simulation.js?v=20260911-teams2';
+import { CrownforgeRenderer } from './renderer.js?v=20260911-pause1';
+import { CrownforgeSimulation } from './simulation.js?v=20260911-pause1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260909-cursedbears1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-cursedbears1';
@@ -595,7 +595,7 @@ function updateUi() {
   teamControls.update();
   const pendingBears=Boolean(simulation.wildlifeState?.pendingPair);
   releaseBearsButton.disabled=simulation.phase!=='playing'||pendingBears;
-  releaseBearsButton.querySelector('small').textContent=pendingBears?'FINDING TRAILS…':'BOTH SIDES';
+  releaseBearsButton.querySelector('small').textContent=pendingBears?'FINDING TRAILS…':simulation.enemyTeamPaused?'YOUR SETTLEMENT':'BOTH SIDES';
   unitInspector.update();
   for (const [key, info] of Object.entries(RESOURCE_TYPES)) {
     const amount = Math.floor(simulation.resources[key]);

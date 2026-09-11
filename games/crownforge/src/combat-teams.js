@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260911-teams2';
-import {isWardProtected} from './unit-status.js?v=20260911-teams2';
+import {UNIT_TYPES} from './config.js?v=20260911-pause1';
+import {isWardProtected} from './unit-status.js?v=20260911-pause1';
 export const TEAM_RULES=Object.freeze({healAmount:40,healInterval:2,healRange:8,followDistance:5,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -11,11 +11,14 @@ export function combatRole(unit){
 }
 export const isTeamHealer=unit=>Boolean(unit?.teamId&&combatRole(unit)==='healer');
 export const eligibleMember=u=>Boolean(u?.kind==='unit'&&!u.dead&&u.faction==='player'&&combatRole(u));
-export function teams(sim){
+export function teams(sim,dt=0){
  const groups=new Map();
- for(const u of sim.units)if(eligibleMember(u)&&Number.isInteger(u.teamId)&&u.teamId>0){
+ for(const u of sim.units){
+  if(dt){u.healPulse=Math.max(0,(u.healPulse??0)-dt);u.healCastPulse=Math.max(0,(u.healCastPulse??0)-dt);}
+  if(eligibleMember(u)&&Number.isInteger(u.teamId)&&u.teamId>0){
   if(!groups.has(u.teamId))groups.set(u.teamId,{id:u.teamId,members:[],tank:0,healer:0,damage:0,support:0});
   const group=groups.get(u.teamId);group.members.push(u);group[combatRole(u)]++;
+ }
  }
  return [...groups.values()].sort((a,b)=>a.id-b.id);
 }
@@ -63,10 +66,12 @@ export function claimThreat(sim,enemy,attacker){
  return true;
 }
 export function updateTeams(sim,dt){
- const groups=teams(sim);
- for(const unit of sim.units){unit.healPulse=Math.max(0,(unit.healPulse??0)-dt);unit.healCastPulse=Math.max(0,(unit.healCastPulse??0)-dt);}
+ const groups=teams(sim,dt);
  for(const group of groups)for(const healer of group.members.filter(isTeamHealer)){
   healer.healCooldown=Math.max(0,(healer.healCooldown??0)-dt);
+  healer.teamThinkCooldown=Math.max(0,(healer.teamThinkCooldown??0)-dt);
+  if(healer.teamThinkCooldown>1e-8)continue;
+  healer.teamThinkCooldown=.2;
   if(healer.stunTimer>0||!['idle','move','attack'].includes(healer.command))continue;
   const allies=group.members.filter(u=>u!==healer);
   const patient=allies.filter(u=>u.hp<u.maxHp&&distance(healer,u)<=TEAM_RULES.healRange&&sim._hasCombatLineOfSight(healer,u))
