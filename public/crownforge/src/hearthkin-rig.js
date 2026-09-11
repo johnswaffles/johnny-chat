@@ -1,3 +1,4 @@
+import { drawBlueWard, blueWardReadiness } from './hearthkin-blue-ward.js?v=20260911-blueward1';
 import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260909-cursedbears1';
 import { horseAssemblyTransforms } from './horse-assembly.js?v=20260909-cursedbears1';
 import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260909-cursedbears1';
@@ -340,7 +341,7 @@ export class HearthkinRig {
     }
   }
 
-  readiness() { return [...Object.values(this.images),...equipmentReadiness(),...(this.definition?.family==='foot'||this.definition?.family==='mounted'?shieldReadiness():[])]; }
+  readiness() { return [...blueWardReadiness(),...Object.values(this.images),...equipmentReadiness(),...(this.definition?.family==='foot'||this.definition?.family==='mounted'?shieldReadiness():[])]; }
 
   part(key, index) {
     const cacheKey = `${key}:${index}`;
@@ -650,36 +651,4 @@ export class HearthkinRig {
   }
 }
 
-export function drawHearthkinWard(ctx, unit, anchor, size, time, behind = false, reducedMotion = false) {
-  if (!(unit.lastLightWardTimer > 0)) return;
-  const impact = clamp((unit.wardBlockedPulse ?? 0) / .42);
-  const breathe = reducedMotion ? 0 : Math.sin(time * .0028 + (unit.id ?? 0)) * .015;
-  const x = anchor.x, y = anchor.y - size * .48, rx = size * (.39 + breathe + impact * .035), ry = size * .59;
-  ctx.save();
-  if (behind) {
-    const glow = ctx.createRadialGradient(x, y, size * .12, x, y, size * .63);
-    glow.addColorStop(0, 'rgba(255,232,159,0)');
-    glow.addColorStop(.66, `rgba(239,195,97,${.025 + impact * .045})`);
-    glow.addColorStop(.88, `rgba(255,221,143,${.11 + impact * .17})`);
-    glow.addColorStop(1, 'rgba(255,232,159,0)');
-    ctx.fillStyle = glow; ctx.beginPath(); ctx.ellipse(x, y, rx * 1.2, ry * 1.1, 0, 0, TAU); ctx.fill();
-  } else {
-    ctx.strokeStyle = `rgba(255,231,163,${.46 + impact * .43})`;
-    ctx.lineWidth = Math.max(.8, size * .009);
-    ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, -.2, Math.PI * .97); ctx.stroke();
-    ctx.strokeStyle = `rgba(255,246,207,${.23 + impact * .5})`;
-    ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, Math.PI * 1.07, TAU - .36); ctx.stroke();
-    ctx.strokeStyle = `rgba(239,211,131,${.24 + impact * .35})`;
-    ctx.beginPath(); ctx.ellipse(x, anchor.y + size * .01, rx * .79, size * .095, 0, 0, TAU); ctx.stroke();
-    if (!reducedMotion && size > 26) {
-      ctx.fillStyle = '#fff1c1';
-      for (let i = 0; i < 5; i++) {
-        const a = time * .0003 + i * TAU / 5;
-        const px = x + Math.cos(a) * rx, py = y + Math.sin(a) * ry;
-        ctx.globalAlpha = .3 + .2 * Math.sin(a * 2);
-        ctx.beginPath(); ctx.arc(px, py, Math.max(.6, size * .012), 0, TAU); ctx.fill();
-      }
-    }
-  }
-  ctx.restore();
-}
+export const drawHearthkinWard = drawBlueWard;

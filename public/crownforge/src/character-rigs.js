@@ -1,4 +1,4 @@
-import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js?v=20260909-cursedbears1';
+import { HearthkinRig, HEARTHKIN_ACTIONS, hearthkinPose } from './hearthkin-rig.js?v=20260911-blueward1';
 import ashenHearthkin from './roster-art/ashen-hearthkin.js?v=20260909-cursedbears1';
 import crownSpearwarden from './roster-art/crown-spearwarden.js?v=20260909-cursedbears1';
 import crownShieldbearer from './roster-art/crown-shieldbearer.js?v=20260909-cursedbears1';

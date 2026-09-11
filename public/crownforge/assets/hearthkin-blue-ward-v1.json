@@ -1,0 +1,10 @@
+{
+  "source": "Approved Hearthkin Worker v007 blue shield, 20260911-blue-ward",
+  "render": "Isolated Blender shield, transparent RGBA, no character geometry",
+  "dimensions": [
+    480,
+    600
+  ],
+  "sha256": "0ca2cead80bc48714311992a8907a0aece2d6a8ac42c6b2b8bd657d9b5b13655",
+  "scope": "Shield appearance only; protection and curse gameplay unchanged"
+}
