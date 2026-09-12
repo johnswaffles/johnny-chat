@@ -1,6 +1,6 @@
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {UNIT_TYPES} from './config.js?v=20260911-unbrokenwild1';
-import {BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-unbrokenwild1';
+import {UNIT_TYPES} from './config.js?v=20260911-loopfix1';
+import {BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-loopfix1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',

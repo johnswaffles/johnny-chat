@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8"><title>Combat loop verification</title>
+<style>body{background:#13251e;color:#efdfbd;font:16px system-ui;padding:30px}button{padding:14px;margin:8px}pre{white-space:pre-wrap}</style>
+<h1>Ancient Dungeon Siege — loop check</h1><p>Plays the last three seconds, then repeats into the opening. Uses the game's exact prepared buffer.</p>
+<button id="play">Play across loop boundary</button><button id="stop">Stop</button><pre id="status">Preparing…</pre>
+<script type="module">
+import {COMBAT_TRACK,seamlessCombatBuffer} from '../src/combat-music.js?v=20260911-loopfix1';
+const ctx=new AudioContext(),status=document.querySelector('#status');let source,started=0;
+const raw=await ctx.decodeAudioData(await (await fetch(COMBAT_TRACK.src)).arrayBuffer());
+const buffer=seamlessCombatBuffer(ctx,raw,{endSeconds:COMBAT_TRACK.loopEndSeconds});
+const offline=new OfflineAudioContext(buffer.numberOfChannels,Math.ceil(buffer.sampleRate*(buffer.duration*2+5)),buffer.sampleRate);
+const test=offline.createBufferSource();test.buffer=buffer;test.loop=true;test.loopStart=0;test.loopEnd=buffer.duration;test.connect(offline.destination);test.start();
+const rendered=await offline.startRendering(),data=rendered.getChannelData(0),n=buffer.length;
+let error=0;for(let i=0;i<n;i++)error=Math.max(error,Math.abs(data[i]-data[i+n]));
+const rms=(at,seconds)=>{let sum=0;const start=Math.round(at*buffer.sampleRate),length=Math.round(seconds*buffer.sampleRate);for(let i=start;i<start+length;i++)sum+=data[i]*data[i];return Math.sqrt(sum/length);};
+const report={originalSeconds:raw.duration,loopSeconds:buffer.duration,twoFullLoopsRendered:true,repeatMaxError:error,afterFirstRepeatRMS:rms(buffer.duration+.5,2),afterSecondRepeatRMS:rms(buffer.duration*2+.5,2)};
+status.textContent=JSON.stringify(report,null,2);
+document.querySelector('#play').onclick=async()=>{await ctx.resume();source?.stop();source=ctx.createBufferSource();source.buffer=buffer;source.loop=true;source.loopStart=0;source.loopEnd=buffer.duration;source.connect(ctx.destination);source.start(0,buffer.duration-3);started=ctx.currentTime;};
+document.querySelector('#stop').onclick=()=>{source?.stop();source=null;};
+setInterval(()=>{status.textContent=JSON.stringify({...report,playback:source?{seconds:ctx.currentTime-started,crossedBoundary:ctx.currentTime-started>=3}:"stopped"},null,2);},250);
+</script>

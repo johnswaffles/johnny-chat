@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260911-unbrokenwild1';
-export const COMBAT_TRACK={id:'ancient-dungeon-siege',title:'Ancient Dungeon Siege',src:new URL('../assets/ancient-dungeon-siege.mp3',import.meta.url).href};
+import {UNIT_TYPES} from './config.js?v=20260911-loopfix1';
+export const COMBAT_TRACK={id:'ancient-dungeon-siege',title:'Ancient Dungeon Siege',loopEndSeconds:130,src:new URL('../assets/ancient-dungeon-siege.mp3',import.meta.url).href};
 export const isEncounterEnemy=u=>Boolean(u&&!u.dead&&(UNIT_TYPES[u.type]?.wildlife||UNIT_TYPES[u.type]?.boss||u.wildlife||u.boss));
 export function engagedEnemies(sim){
  const live=new Map((sim?.units??[]).filter(u=>!u.dead&&u.hp>0).map(u=>[u.id,u])),ids=new Set();
@@ -13,11 +13,11 @@ export function engagedEnemies(sim){
 }
 // Decode once; trim only boundary silence and overlap the tail with the head.
 // AudioBufferSourceNode.loop repeats on the audio clock without an ended-event gap.
-export function seamlessCombatBuffer(context,input){
+export function seamlessCombatBuffer(context,input,{endSeconds=input.duration??input.length/input.sampleRate}={}){
  const channels=Array.from({length:input.numberOfChannels},(_,c)=>input.getChannelData(c));
  const window=Math.max(1,Math.floor(input.sampleRate*.01));
  const loud=(a,b)=>{let energy=0;for(const data of channels)for(let i=a;i<b;i++)energy+=data[i]*data[i];return Math.sqrt(energy/((b-a)*channels.length))>.002;};
- let start=0,end=input.length;
+ let start=0,end=Math.min(input.length,Math.floor(endSeconds*input.sampleRate));
  while(start+window<end&&!loud(start,start+window))start+=window;
  while(end-window>start&&!loud(end-window,end))end-=window;
  if(end-start<input.sampleRate)return input;
@@ -40,7 +40,7 @@ export class CombatMusic {
   if(!this.context){this.context=new AudioContext();this.gain=this.context.createGain();this.gain.gain.value=0;this.gain.connect(this.context.destination);}
   this.context.resume().catch(()=>{});
   if(!this.loading)this.loading=fetch(COMBAT_TRACK.src).then(r=>{if(!r.ok)throw Error('Combat audio unavailable');return r.arrayBuffer();}).then(b=>this.context.decodeAudioData(b)).then(b=>{
-   this.buffer=seamlessCombatBuffer(this.context,b);this.status='ready';
+   this.buffer=seamlessCombatBuffer(this.context,b,{endSeconds:COMBAT_TRACK.loopEndSeconds});this.status='ready';
   }).catch(()=>{this.status='error';this.loading=null;this.owner.notify();});
  }
  sync(sim){
@@ -51,14 +51,19 @@ export class CombatMusic {
   const active=this.enemies.size>0;
   if(active!==this.active){this.active=active;this.owner.notify();}
   if(active&&this.buffer&&!this.source&&this.owner.unlocked&&!this.owner.musicMuted){
-   this.source=this.context.createBufferSource();this.source.buffer=this.buffer;this.source.loop=true;this.source.connect(this.gain);this.source.start();this.owner.notify();
+   this.source=this.context.createBufferSource();this.source.buffer=this.buffer;this.source.loop=true;this.source.loopStart=0;this.source.loopEnd=this.buffer.duration;this.source.connect(this.gain);this.source.start();this.owner.notify();
   }
   const now=globalThis.performance?.now?.()??Date.now(),dt=this.lastTime===null?0:Math.min(.1,(now-this.lastTime)/1000);this.lastTime=now;
   const target=active&&this.source?1:0;
   this.mix+=Math.sign(target-this.mix)*Math.min(Math.abs(target-this.mix),dt/1.8);
   const volume=this.owner.musicMuted?0:this.owner.musicVolume;
   if(this.owner.music)this.owner.music.volume=volume*Math.cos(this.mix*Math.PI/2);
-  if(this.gain)this.gain.gain.setTargetAtTime(volume*Math.sin(this.mix*Math.PI/2),this.context.currentTime,.04);
+  const gainTarget=volume*Math.sin(this.mix*Math.PI/2);
+  if(this.gain&&Math.abs(gainTarget-(this.lastGainTarget??-1))>1e-5){
+   // Never append automation forever while a long track is at steady volume.
+   const now=this.context.currentTime;this.gain.gain.cancelScheduledValues?.(now);
+   this.gain.gain.setTargetAtTime(gainTarget,now,.04);this.lastGainTarget=gainTarget;
+  }
   if(!active&&this.mix===0&&this.source){this.source.stop();this.source.disconnect();this.source=null;this.owner.notify();}
  }
  get playing(){return Boolean(this.source&&(this.active||this.mix>0));}

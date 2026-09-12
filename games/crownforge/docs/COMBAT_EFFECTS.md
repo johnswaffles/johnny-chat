@@ -1,6 +1,6 @@
 # Combat effects and lore-card reference
 
-Revision: 20260911-unbrokenwild1. Approved release; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
+Revision: 20260911-loopfix1. Approved release; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
 
 | Effect | Owner and trigger | Actual rule |
 | --- | --- | --- |
@@ -44,3 +44,6 @@ Web Audio decodes once, removes boundary silence using a 10ms RMS threshold, and
 Bloodclaw visuals: a full ground shockwave plus two opposing rotating fans of three tapered crimson claws, bright edges, and trailing red sparks. Duration 1.25 seconds; visual circle matches the 10-unit special attack area.
 
 Timed last-stand rules supersede earlier health-only behavior. The damage reduction remains active until the timer runs out or HP is strictly greater than 60%; exactly 60% does not clear it. Reaching above 60% rearms a future below-20% activation. Buff timers advance in simulation time, including while stunned, but not while the game is paused.
+
+
+Combat loop repair: the MP3's low-toned ending is excluded using an explicit 130-second source endpoint. Boundary trimming/crossfade yields a 129.71-second playable loop from the supplied recording. Buffer sources set explicit loopStart=0 and loopEnd=buffer.duration. Steady volume no longer schedules redundant AudioParam automation every frame; transitions cancel future automation before updating. Browser OfflineAudioContext rendered two full loops of the actual MP3 with zero sample error between repeats and nonzero identical post-boundary RMS. Original MP3 is preserved unchanged. `dev/audio-loop.html` provides a real-time boundary test and the full-loop render report.

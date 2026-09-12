@@ -21,11 +21,12 @@ test('decoded loop removes silent ends and joins through a continuous crossfade'
  const out=seamlessCombatBuffer({createBuffer:buffer},input);assert.equal(out.length,2800);for(const data of out.data){assert(data[0]>.2&&data.at(-1)>.2);assert(Math.abs(data[0]-data.at(-1))<.001);assert(data.every(v=>v>.2));}
 });
 test('combat crossfade finishes both ways and retires its loop after victory',()=>{
- const owner={music:{volume:.58},musicVolume:.58,unlocked:true,musicMuted:false,notify(){}},music=new CombatMusic(owner);let stopped=0;
- music.context={currentTime:0,createBufferSource:()=>({connect(){},start(){},stop(){stopped++;},disconnect(){}})};music.gain={gain:{setTargetAtTime(v){this.value=v;}}};music.buffer={};
+ const owner={music:{volume:.58},musicVolume:.58,unlocked:true,musicMuted:false,notify(){}},music=new CombatMusic(owner);let stopped=0,automationCalls=0;
+ music.context={currentTime:0,createBufferSource:()=>({connect(){},start(){},stop(){stopped++;},disconnect(){}})};music.gain={gain:{setTargetAtTime(v){automationCalls++;this.value=v;}}};music.buffer={};
  const sim={units:[{id:1,hp:100,faction:'player',attackTarget:2},{id:2,hp:100,type:'grizzly'}]};
  for(let i=0;i<30;i++){music.lastTime=performance.now()-100;music.sync(sim);}
  assert.equal(music.mix,1);assert(music.source.loop);assert(owner.music.volume<1e-6);assert.equal(music.gain.gain.value,.58);
+ const stableCalls=automationCalls;for(let i=0;i<1000;i++)music.sync(sim);assert.equal(automationCalls,stableCalls);
  owner.musicMuted=true;music.sync(sim);assert.equal(music.gain.gain.value,0);owner.musicMuted=false;
  sim.units[1].dead=true;for(let i=0;i<30;i++){music.lastTime=performance.now()-100;music.sync(sim);}
  assert.equal(music.mix,0);assert.equal(owner.music.volume,.58);assert.equal(stopped,1);assert.equal(music.source,null);
@@ -35,4 +36,9 @@ test('half-health bear damage outpaces the halved healer output visibly',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit('shieldbearer',107,100,'player'),h=s.addUnit('villager',88,100,'player');b.hp=90;t.teamId=h.teamId=1;
  for(let i=0;i<10;i++){s._applyUnitDamage(t,strikeDamage(b,t),b);updateTeams(s,2);}
  assert(t.hp<t.maxHp*.75);assert(t.hp>0);assert(Math.abs(t.hp-(3480-10*(139.2-40)))<1e-6);
+});
+
+test('explicit loop endpoint excludes the recording tail',()=>{
+ const input=buffer(1,10000,1000);input.data[0].fill(.25,0,8000);input.data[0].fill(.8,8000);
+ const out=seamlessCombatBuffer({createBuffer:buffer},input,{endSeconds:8});assert.equal(out.length,7800);assert(Math.max(...out.data[0])<.4);
 });

@@ -8,7 +8,7 @@ Every team Hearthkin prioritizes healing over gathering, building, or attacking 
 
 When attacking a unit, team damage fighters stage behind the tank line until a tank lands a hit and claims aggro. Multiple tanks lead together; fighters proceed if no tanks survive. Against a tank-held bear they circle outside the frontal swipe and take distinct rear positions. Automatic healers follow behind the current rear DPS line, at least 12 units from the bear and 3 units behind the fighters, updating their path as the encounter moves. Rear positioning avoids ordinary frontal damage. Bloodclaw Reckoning now reduces rear DPS to 10% maximum health every 8 seconds, giving healers a recovery window. Cancelling a unit's order clears the staged approach. Ground movement destinations place tanks in the front row, damage fighters behind them, and healers at the rear.
 
-Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260911-unbrokenwild1.
+Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260911-loopfix1.
 
 Crushing Claws increases bear damage against tanks sixfold; half-health Colossus hits now deal 139.2 damage after armor. Healing output is halved. Bloodclaw has a full circular rotating claw effect.
 
