@@ -1,6 +1,6 @@
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {UNIT_TYPES} from './config.js?v=20260911-heart10';
-import {BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-heart10';
+import {UNIT_TYPES} from './config.js?v=20260911-defiance1';
+import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-defiance1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
@@ -47,13 +47,14 @@ export function lastBastionDamage(unit,damage){
 export function strikeDamage(attacker,target){
   const rules=UNIT_TYPES[attacker.type],worker=UNIT_TYPES[target?.type]?.worker;
   const tankPressure=attacker.type==='grizzly'&&UNIT_TYPES[target?.type]?.combatRole==='tank'?6:1;
-  const base=tankPressure*(bearEnrageActive(attacker)?2:1)*(rules.workerStrikeFraction&&worker?Math.ceil(target.maxHp*rules.workerStrikeFraction):worker?(rules.attackVsVillager??rules.attack):rules.attack);
+  const base=bearCrowdMultiplier(attacker)*tankPressure*(bearEnrageActive(attacker)?2:1)*(rules.workerStrikeFraction&&worker?Math.ceil(target.maxHp*rules.workerStrikeFraction):worker?(rules.attackVsVillager??rules.attack):rules.attack);
   if(!bearFuryActive(attacker))return base;
   const empowered=base*BEAR_FURY.multiplier;
   return isFighter(target)&&UNIT_TYPES[target.type]?.combatRole!=='tank'?Math.max(empowered,target.hp):empowered;
 }
 export function unitStatuses(unit){
   const statuses=[],elder=isCurseImmune(unit),fury=bearFuryActive(unit);
+  if(unit.type==='grizzly')statuses.push({id:'greatwoodDefiance',name:'Defiance of the Greatwood',kind:'Nearby strength',detail:`${unit.greatwoodDefianceStacks??0} nearby · +${Math.round((bearCrowdMultiplier(unit)-1)*100)}% damage and armor`,summary:'The gathering crowd awakens the forest’s defiance.',effect:'Each living worker or fighter of either faction within 30 yards grants 5% more damage and armor. Stacks add together and disappear as people leave or die. Armor divides incoming damage by 1 + the total bonus, stacking with Thick Hide and Heart. Other wildlife do not count.',rune:'fury',art:bearVariant(unit).art});
   if(unit.type==='shieldbearer')statuses.push({id:'oathboundStride',name:'Oathbound Stride',kind:'Permanent blessing',detail:'1.5× fastest base movement',summary:'The sworn shield reaches danger first.',effect:'Base movement speed is 1.5 times the fastest other unit. Terrain and roads still apply.',rune:'ward'});
   if(bearEnrageActive(unit))statuses.push({id:'greatwoodColossus',name:'Greatwood Colossus',kind:'Enrage',detail:'50% true health · double size and damage',summary:'Wounded ancient blood awakens a towering guardian.',effect:'At half true health, doubles body size, collision radius, and damage for the rest of its life. Stacks with Wrath of the First Oath. Bloodclaw Reckoning sweeps within 14 units every 8 seconds: rear damage fighters are left at 10% maximum health.',rune:'fury',art:bearVariant(unit).art});
   if(bearEnrageActive(unit)||fury)statuses.push({id:'bloodclawReckoning',name:'Bloodclaw Reckoning',kind:'Special swipe',detail:'8-second cooldown · rear DPS to 10% HP',summary:'Three crimson claws tear across the battle line.',effect:'Within 14 units and clear line of sight, the frontal fan takes normal empowered strike damage. Rear damage fighters drop to 10% maximum health, never healed upward. Tanks and healers are excluded from the rear damage pulse. Ward protection is respected.',rune:'fury',art:bearVariant(unit).art});
@@ -62,8 +63,8 @@ export function unitStatuses(unit){
   if(elder){
     const bloodline=bearVariant(unit);
     statuses.push({...FIRST_CONDEMNATION,art:bloodline.art,detail:'Permanent · elder magic',rune:'divine'});
-    statuses.push({id:'elderhide',name:'Elderhide',kind:'Permanent protection',detail:'60 arrows with Thick Hide',summary:'Ancient hide turns aside the bite of arrows.',lore:'The sentence of the old gods sank into hide as well as blood. Arrowheads splinter against the Greatwood bears like rain upon a weathered standing stone.',effect:`Elderhide limits each arrow to 1/30 of full health before Thick Hide halves that damage again (${Number((unit.maxHp/BEAR_FURY.arrowHits/2).toFixed(2))} damage). Without the temporary Heart protection, 60 arrows are required. Existing wounds are never restored.`,rune:'ward',art:bloodline.art});
-    statuses.push({id:'thickHide',name:'Thick Hide',kind:'Permanent armor',detail:'+100% armor · twice the durability',summary:'A second life of punishment beneath the fur.',lore:'The old sentence hardened into hide. Dense guard hairs cover layers of scarred flesh that turn blades and swallow the force of arrows.',effect:'Reduces all incoming damage by 50% after Elderhide. Twice the effective durability against the same attacks; 60 arrows from full true health without temporary Heart protection. Does not heal wounds or change the fury threshold.',rune:'ward',art:bloodline.art});
+    statuses.push({id:'elderhide',name:'Elderhide',kind:'Permanent protection',detail:'60 arrows with Thick Hide',summary:'Ancient hide turns aside the bite of arrows.',lore:'The sentence of the old gods sank into hide as well as blood. Arrowheads splinter against the Greatwood bears like rain upon a weathered standing stone.',effect:`Elderhide limits each arrow to 1/30 of full health before Thick Hide halves that damage again (${Number((unit.maxHp/BEAR_FURY.arrowHits/2).toFixed(2))} damage). Before Defiance and Heart protection, 60 arrows are required. Existing wounds are never restored.`,rune:'ward',art:bloodline.art});
+    statuses.push({id:'thickHide',name:'Thick Hide',kind:'Permanent armor',detail:'+100% armor · twice the durability',summary:'A second life of punishment beneath the fur.',lore:'The old sentence hardened into hide. Dense guard hairs cover layers of scarred flesh that turn blades and swallow the force of arrows.',effect:'Reduces all incoming damage by 50% after Elderhide. Twice the effective durability against the same attacks; 60 arrows from full true health before Defiance and Heart protection. Does not heal wounds or change the fury threshold.',rune:'ward',art:bloodline.art});
     statuses.push({id:'bearLineage',name:bloodline.name,kind:bloodline.kind,detail:'Greatwood bloodline · read their story',summary:bloodline.summary,lore:bloodline.lore,effect:'Bound by the permanent First Condemnation. Thick Hide grants +100% armor and twice the durability. The old gods alone can rewrite the sentence.',rune:'divine',art:bloodline.art});
   }
   if(unit.lastLightWardTimer>0)statuses.push({id:'ward',name:'Last Light Ward',kind:'Protection',detail:`${Math.ceil(unit.lastLightWardTimer)}s · invulnerable`,summary:'Protected from damage and attack targeting.',lore:'At the edge of death, the Hearthkin’s last light becomes a refuge. For one minute, no blow can touch them.',effect:'Health restored. Untargetable by attacks until the ward expires. Bears seek other prey.',rune:'ward'});

@@ -1,4 +1,4 @@
-import {BUILDING_TYPES,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260911-heart10';
+import {BUILDING_TYPES,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260911-defiance1';
 import {clamp01,landscapeHash,landscapeNoise,meadowHabitat} from './landscape-layout.js?v=20260909-cursedbears1';
 
 // Presentation data only. No DOM, match RNG, pathfinding, or simulation writes.

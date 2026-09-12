@@ -1,4 +1,4 @@
-import { UNIT_TYPES } from './config.js?v=20260911-heart10';
+import { UNIT_TYPES } from './config.js?v=20260911-defiance1';
 import { projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260909-cursedbears1';
 
 const TAU=Math.PI*2;

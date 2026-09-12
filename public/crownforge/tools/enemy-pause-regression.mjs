@@ -16,7 +16,7 @@ test('manual button releases one player-side bear, including repeated uncapped r
 });
 test('automatic player-side cap expires events instead of repeatedly seeking enemy routes',()=>{
  const s=new CrownforgeSimulation({seed:42});s.addUnit('grizzly',50,50,'wildlife');s.addUnit('grizzly',55,55,'wildlife');assert.equal(spawnGrizzly(s),null);
- s.clock=300;updateWildlife(s,.01);assert.equal(s.wildlifeState.nextSpawnAt,600);
+ s.clock=300;updateWildlife(s,.01);assert.equal(s.wildlifeState.nextSpawnAt,540);
 });
 test('old saves archive enemy units and lower-side bears, and retain them through another save',()=>{
  const old=new CrownforgeSimulation({seed:42,enemyTeamPaused:false});old.addUnit('grizzly',500,400,'wildlife');const before=old.units.length;

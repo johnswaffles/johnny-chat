@@ -1,8 +1,8 @@
-import { UNIT_TYPES } from './config.js?v=20260911-heart10';
+import { UNIT_TYPES } from './config.js?v=20260911-defiance1';
 
 export const BEAR_FURY = Object.freeze({threshold:.1, multiplier:6, extraTargets:2, radius:14, arrowHits:30});
 export const THICK_HIDE=Object.freeze({armorBonus:100,damageMultiplier:.5});
-export const bearIncomingDamage=(unit,amount,type='weapon')=>unit?.type==='grizzly'?(type==='arrow'&&amount>0?bearArrowDamage(unit):amount)*THICK_HIDE.damageMultiplier:amount;
+export const bearIncomingDamage=(unit,amount,type='weapon')=>unit?.type==='grizzly'?(type==='arrow'&&amount>0?bearArrowDamage(unit):amount)*THICK_HIDE.damageMultiplier/bearCrowdMultiplier(unit):amount;
 export const BEAR_DEATH = Object.freeze({collapse:1.8, holdUntil:5, lifetime:6});
 export const FIGHTER_PURSUIT = Object.freeze({trackDistance:6, reachBonus:.45});
 export function isFighter(unit){
@@ -25,4 +25,15 @@ export function inBearSwipe(bear,target,front=bear.bearSwipeDirection){
  const dx=target.x-bear.x,dz=target.z-bear.z,len=Math.hypot(dx,dz);
  // A 160-degree frontal fan. The whole rear hemisphere is safe.
  return len<=BEAR_FURY.radius&&len>0&&((dx*front.x+dz*front.z)/len)>=Math.cos(80*Math.PI/180);
+}
+
+export const GREATWOOD_DEFIANCE=Object.freeze({radius:30,perPerson:.05,scanInterval:.25});
+export const bearCrowdMultiplier=u=>u?.type==='grizzly'?1+Math.max(0,u.greatwoodDefianceStacks??0)*GREATWOOD_DEFIANCE.perPerson:1;
+export function updateGreatwoodDefiance(bear,units,dt=0){
+ if(bear.type!=='grizzly')return;
+ if(bear.dead||bear.hp<=0){bear.greatwoodDefianceStacks=0;return;}
+ bear.defianceScanRemaining=(bear.defianceScanRemaining??0)-dt;
+ if(bear.defianceScanRemaining>0)return;
+ bear.defianceScanRemaining=GREATWOOD_DEFIANCE.scanInterval;
+ bear.greatwoodDefianceStacks=units.filter(u=>u!==bear&&!u.dead&&u.hp>0&&['player','enemy'].includes(u.faction)&&UNIT_TYPES[u.type]&&!UNIT_TYPES[u.type].wildlife&&Math.hypot(u.x-bear.x,u.z-bear.z)<=GREATWOOD_DEFIANCE.radius).length;
 }

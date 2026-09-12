@@ -27,7 +27,7 @@ test('a pending pair survives saving and waits for protected targets to become e
  assert(requestGrizzlyPair(s));assert(s.wildlifeState.pendingPair);assert.equal(bears(s).length,0);
  const saved=s.serialize(),copy=new CrownforgeSimulation({enemyTeamPaused:false,seed:71});assert(copy.loadSnapshot(saved));
  for(const u of copy.units)u.lastLightWardTimer=0;
- finish(copy);assert.equal(bears(copy).length,2);assert.equal(copy.wildlifeState.nextSpawnAt,300);
+ finish(copy);assert.equal(bears(copy).length,2);assert.equal(copy.wildlifeState.nextSpawnAt,240);
 });
 test('finished matches or a missing faction reject the release without adding bears',()=>{
  const s=new CrownforgeSimulation({enemyTeamPaused:false,seed:42});s.phase='victory';assert(!requestGrizzlyPair(s));

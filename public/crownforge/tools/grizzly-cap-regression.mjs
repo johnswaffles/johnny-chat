@@ -36,8 +36,8 @@ test('dead bears free capacity; living cursed bears still count; saves retain co
 test('crossing the midpoint transfers the count and a capped timer skips without backlog',()=>{
  const s=new CrownforgeSimulation({enemyTeamPaused:false,seed:42});const b=add(s,'player');add(s,'player');add(s,'enemy');add(s,'enemy');
  b.x=515;b.z=410;assert.deepEqual(livingGrizzliesBySide(s),{player:1,enemy:3});
- b.x=80;b.z=80;s.clock=300;updateWildlife(s,.1);assert.equal(s.wildlifeState.nextSpawnAt,600);
+ b.x=80;b.z=80;s.clock=300;updateWildlife(s,.1);assert.equal(s.wildlifeState.nextSpawnAt,540);
  s._killUnit(b);s.clock=301;updateWildlife(s,.1);assert.equal(s.units.filter(u=>u.type==='grizzly').length,4);
- for(let t=600;t<610&&s.wildlifeState.nextSpawnAt===600;t++){s.clock=t;updateWildlife(s,.1);}assert.deepEqual(livingGrizzliesBySide(s),{player:2,enemy:2});
- assert(s.wildlifeState.nextSpawnAt>=900&&s.wildlifeState.nextSpawnAt<910);
+ for(let t=540;t<550&&s.wildlifeState.nextSpawnAt===540;t++){s.clock=t;updateWildlife(s,.1);}assert.deepEqual(livingGrizzliesBySide(s),{player:2,enemy:2});
+ assert(s.wildlifeState.nextSpawnAt>=780&&s.wildlifeState.nextSpawnAt<790);
 });

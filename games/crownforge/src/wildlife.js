@@ -1,7 +1,7 @@
 import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import { CONFIG, UNIT_TYPES } from './config.js?v=20260911-heart10';
+import { CONFIG, UNIT_TYPES } from './config.js?v=20260911-defiance1';
 
-export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 300, maxAlivePerSide: 2, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
+export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 240, maxAlivePerSide: 2, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
 const distance = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
 // The isometric map's upper/lower halves are split along its x + z midpoint.
@@ -13,7 +13,7 @@ export function livingGrizzliesBySide(sim) {
   return counts;
 }
 const people = sim => sim.units.filter(unit => !unit.dead && (unit.faction === 'player' || unit.faction === 'enemy'));
-export const initialWildlifeState = clock => ({ nextSpawnAt: (Math.floor(Math.max(0,clock)/300)+1)*300, spawnCount: 0, scanClock: 0, spawnCursor: 0 });
+export const initialWildlifeState = clock => ({ cadence: GRIZZLY_ENCOUNTER.interval, nextSpawnAt: (Math.floor(Math.max(0,clock)/GRIZZLY_ENCOUNTER.interval)+1)*GRIZZLY_ENCOUNTER.interval, spawnCount: 0, scanClock: 0, spawnCursor: 0 });
 
 // Spawn on a real woodland edge with a legal route to a person. Never move
 // existing trees, buildings or people to make an encounter fit.

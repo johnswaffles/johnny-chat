@@ -3,7 +3,7 @@
 <h1>Ancient Dungeon Siege — loop check</h1><p>Plays the last three seconds, then repeats into the opening. Uses the game's exact prepared buffer.</p>
 <button id="play">Play across loop boundary</button><button id="stop">Stop</button><pre id="status">Preparing…</pre>
 <script type="module">
-import {COMBAT_TRACK,seamlessCombatBuffer} from '../src/combat-music.js?v=20260911-heart10';
+import {COMBAT_TRACK,seamlessCombatBuffer} from '../src/combat-music.js?v=20260911-defiance1';
 const ctx=new AudioContext(),status=document.querySelector('#status');let source,started=0;
 const raw=await ctx.decodeAudioData(await (await fetch(COMBAT_TRACK.src)).arrayBuffer());
 const buffer=seamlessCombatBuffer(ctx,raw,{endSeconds:COMBAT_TRACK.loopEndSeconds});

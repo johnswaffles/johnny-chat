@@ -83,7 +83,7 @@ test('running fighters cannot hit through walls or reach an escaped target',()=>
 });
 test('bear lore reveals trickery only after Last Light, with accurate active buff numbers',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');let statuses=unitStatuses(b);
- assert.deepEqual(statuses.map(x=>x.id),['crushingClaws','firstCondemnation','elderhide','thickHide','bearLineage']);
+ assert.deepEqual(statuses.map(x=>x.id),['greatwoodDefiance','crushingClaws','firstCondemnation','elderhide','thickHide','bearLineage']);
  assert(!/Last Light|lesser rune|lure|1 HP/.test(statuses.map(x=>x.lore+' '+x.effect).join(' ')));
  b.lastLightCurseActive=true;statuses=unitStatuses(b);const fury=statuses.find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/six/);assert.match(fury.effect,/front 160-degree/);assert.match(fury.effect,/14 units/);assert.match(fury.art,/cursed-bears/);
  assert.match(statuses.find(x=>x.id==='lastLight').lore,/bait/);assert.equal(b.hp,b.maxHp);

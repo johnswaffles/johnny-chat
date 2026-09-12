@@ -11,23 +11,23 @@ function arena(){
 }
 function advance(s,seconds){for(let i=0;i<Math.ceil(seconds*60);i++)s._updateFixed(1/60);}
 
-test('five-minute grizzly encounters use real woodland, legal routes, both settlements and saved cadence',()=>{
- const s=new CrownforgeSimulation({seed:42});
- s.clock=299.99;updateWildlife(s,.1);assert.equal(s.units.filter(u=>u.type==='grizzly').length,0);
- let first;for(let t=300;t<=305&&!first;t++){s.clock=t;updateWildlife(s,1);first=s.units.find(u=>u.type==='grizzly');}
- assert(first,'a bear emerges at the five-minute event');assert.equal(first.faction,'wildlife');assert(first.path.length);
+test('four-minute grizzly encounters use real woodland, legal routes, both settlements and saved cadence',()=>{
+ const s=new CrownforgeSimulation({seed:42,enemyTeamPaused:false});
+ s.clock=239.99;updateWildlife(s,.1);assert.equal(s.units.filter(u=>u.type==='grizzly').length,0);
+ let first;for(let t=240;t<=245&&!first;t++){s.clock=t;updateWildlife(s,1);first=s.units.find(u=>u.type==='grizzly');}
+ assert(first,'a bear emerges at the four-minute event');assert.equal(first.faction,'wildlife');assert(first.path.length);
  assert(!s._pointBlockedForUnit(first,first),'bear spawns outside actual collision');
  assert(s.resourcesNodes.some(n=>n.type==='tree'&&n.amount>0&&Math.hypot(n.x-first.x,n.z-first.z)<7));
  assert.equal(s.units.find(u=>u.id===first.attackTarget).faction,'player');
- assert.equal(s.wildlifeState.nextSpawnAt,600);
- const snapshot=s.serialize(),restored=new CrownforgeSimulation({seed:71});assert(restored.loadSnapshot(snapshot));
- assert.equal(restored.wildlifeState.nextSpawnAt,600);assert.equal(restored.units.filter(u=>u.type==='grizzly').length,1);
- for(let t=600;t<=610&&restored.wildlifeState.spawnCount<2;t++){restored.clock=t;updateWildlife(restored,1);}
- assert.equal(restored.wildlifeState.spawnCount,2);assert.equal(restored.wildlifeState.nextSpawnAt,900);
+ assert.equal(s.wildlifeState.nextSpawnAt,480);
+ const snapshot=s.serialize(),restored=new CrownforgeSimulation({seed:71,enemyTeamPaused:false});assert(restored.loadSnapshot(snapshot));
+ assert.equal(restored.wildlifeState.nextSpawnAt,480);assert.equal(restored.units.filter(u=>u.type==='grizzly').length,1);
+ for(let t=480;t<=490&&restored.wildlifeState.spawnCount<2;t++){restored.clock=t;updateWildlife(restored,1);}
+ assert.equal(restored.wildlifeState.spawnCount,2);assert.equal(restored.wildlifeState.nextSpawnAt,720);
  const second=restored.units.filter(u=>u.type==='grizzly').at(-1);assert.equal(restored.units.find(u=>u.id===second.attackTarget).faction,'enemy');
  const old={...snapshot,clock:747};delete old.wildlifeState;
- assert(restored.loadSnapshot(old));assert.equal(restored.wildlifeState.nextSpawnAt,900,'old saves get the next future event, no catch-up flood');
- assert.deepEqual(initialWildlifeState(0).nextSpawnAt,300);
+ assert(restored.loadSnapshot(old));assert.equal(restored.wildlifeState.nextSpawnAt,960,'old saves get the next future event, no catch-up flood');
+ assert.deepEqual(initialWildlifeState(0).nextSpawnAt,240);
 });
 
 test('grizzlies target either faction, reacquire people and support actual player attack orders',()=>{

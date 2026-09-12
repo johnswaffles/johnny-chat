@@ -1,4 +1,4 @@
-import {CombatMusic,COMBAT_TRACK} from './combat-music.js?v=20260911-heart10';
+import {CombatMusic,COMBAT_TRACK} from './combat-music.js?v=20260911-defiance1';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const SELECTION_KEY = 'crownforge-music-selection-v1';
 const asset = (name) => new URL(`../assets/${name}.mp3?v=20260905-playlist1`, import.meta.url).href;
