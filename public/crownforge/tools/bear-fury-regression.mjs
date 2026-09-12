@@ -70,7 +70,7 @@ test('every fighter can land a strike while moving within reach; workers keep ex
   const s=arena(),u=s.addUnit(type,100,100,'player'),b=s.addUnit('grizzly',102,100,'wildlife');b.hp=b.maxHp=10000;s._sendUnitToAttack(u,b);
   let movingHits=0;const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(t,d,a,...rest)=>{if(a===u&&u.fighterMovingAttack&&u.motionSpeed>.1)movingHits++;return apply(t,d,a,...rest);};
   for(let i=0;i<6*60;i++){b.x+=1.3/60;b.velocityX=1.3;s._updateUnit(u,1/60);}
-  assert(movingHits>=1,`${type} must strike during pursuit`);assert(u.x>104);assert(u.combatLocomotionTime>0);
+  assert(movingHits>=1,`${type} must strike during pursuit`);assert(u.x>(type==='shieldbearer'?99:104));assert(u.combatLocomotionTime>0);
  }
  assert(!isFighter({type:'villager',faction:'player'}));assert(!isFighter({type:'ashenForager',faction:'enemy'}));
 });

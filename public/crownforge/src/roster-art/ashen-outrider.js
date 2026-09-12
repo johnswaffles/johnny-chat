@@ -1,6 +1,6 @@
 // Original Ashen Outrider rider and horse cutouts. Generated PNGs preserved unchanged.
 // Alpha-measured bounds/limb centers; source-specific horse poll, muzzle and tack anchors.
-import { MOUNT_PART_BINDINGS } from '../mounted-motion.js?v=20260911-fallback1';
+import { MOUNT_PART_BINDINGS } from '../mounted-motion.js?v=20260911-tankspace1';
 
 export const ASHEN_OUTRIDER_ART = {
   "front": {

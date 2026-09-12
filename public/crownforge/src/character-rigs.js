@@ -3,16 +3,16 @@ import ashenHearthkin from './roster-art/ashen-hearthkin.js?v=20260909-cursedbea
 import crownSpearwarden from './roster-art/crown-spearwarden.js?v=20260909-cursedbears1';
 import crownShieldbearer from './roster-art/crown-shieldbearer.js?v=20260909-cursedbears1';
 import crownGuard from './roster-art/crown-guard.js?v=20260909-cursedbears1';
-import crownScout from './roster-art/crown-scout.js?v=20260911-fallback1';
-import ashenOutrider from './roster-art/ashen-outrider.js?v=20260911-fallback1';
+import crownScout from './roster-art/crown-scout.js?v=20260911-tankspace1';
+import ashenOutrider from './roster-art/ashen-outrider.js?v=20260911-tankspace1';
 import crownMilitia from './roster-art/crown-militia.js?v=20260909-cursedbears1';
 import thornSpear from './roster-art/thorn-spear.js?v=20260909-cursedbears1';
 import hearthLevy from './roster-art/hearth-levy.js?v=20260909-cursedbears1';
 import ashenHidewall from './roster-art/ashen-hidewall.js?v=20260909-cursedbears1';
 import ashenRaider from './roster-art/ashen-raider.js?v=20260909-cursedbears1';
-import { militaryActions, militaryPose, MILITARY_PROFILES } from './military-motion.js?v=20260911-fallback1';
-import { mountedActions, mountedPose } from './mounted-motion.js?v=20260911-fallback1';
-import { UNIT_TYPES } from './config.js?v=20260911-fallback1';
+import { militaryActions, militaryPose, MILITARY_PROFILES } from './military-motion.js?v=20260911-tankspace1';
+import { mountedActions, mountedPose } from './mounted-motion.js?v=20260911-tankspace1';
+import { UNIT_TYPES } from './config.js?v=20260911-tankspace1';
 import {calibrateCharacterSurfaces} from './character-surface-calibration.js?v=20260909-cursedbears1';
 
 function workerActions(type) {

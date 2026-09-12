@@ -1,18 +1,18 @@
-import {markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260911-fallback1';
+import {markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260911-tankspace1';
 import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260909-cursedbears1';
-import { bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260911-fallback1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260911-fallback1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260911-fallback1';
+import { bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260911-tankspace1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260911-tankspace1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260911-tankspace1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260911-fallback1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260911-tankspace1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260911-fallback1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260911-tankspace1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260911-fallback1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260911-tankspace1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -20,6 +20,8 @@ const areHearthkinNeutral = (first, second) => isHearthkinUnit(first) && isHeart
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const moveToward = (value, target, amount) => value < target ? Math.min(value + amount, target) : Math.max(value - amount, target);
 const TAU = Math.PI * 2;
+// Extra presentation space is reciprocal: enemies can still hit the tank.
+const tankCombatSpace = (a,b) => a.type==='shieldbearer'||(b.kind==='unit'&&b.type==='shieldbearer') ? 5 : 0;
 const RESOURCE_SLOT_COUNT = 6;
 const RESOURCE_READABLE_FRONT_BIAS = -0.05;
 const RESOURCE_INTENT_MAX_CANDIDATES = 12;
@@ -4124,9 +4126,9 @@ export class CrownforgeSimulation {
   }
 
   _targetDistance(attacker, target) {
-    if (target.kind === 'building') return this._distanceToBuildingUnitEdge(attacker, target);
+    if (target.kind === 'building') return Math.max(0,this._distanceToBuildingUnitEdge(attacker, target)-tankCombatSpace(attacker,target));
     const creatureEdge = UNIT_TYPES[target.type]?.wildlife ? Math.max(0, combatRadius(target) - .43) : 0;
-    return Math.max(0,distance(attacker,target)-creatureEdge-(attacker.type==='grizzly'?Math.max(0,combatRadius(attacker)-.82):0));
+    return Math.max(0,distance(attacker,target)-tankCombatSpace(attacker,target)-creatureEdge-(attacker.type==='grizzly'?Math.max(0,combatRadius(attacker)-.82):0));
   }
 
   _targetLabel(target) {
@@ -4151,7 +4153,7 @@ export class CrownforgeSimulation {
     const rear=bearRearPosition(this,unit,target);
     if(rear){const point=bearOrbitStep(unit,target,rear);return this._hasCombatLineOfSight(point,target)?[{point,slot:unit.id}]:[];}
     if (target.kind === 'building') {
-      const margin = Math.max(UNIT_TYPES[unit.type].range - COMBAT_SLOT_MARGIN, UNIT_TYPES[unit.type].radius + 0.08);
+      const margin = Math.max(UNIT_TYPES[unit.type].range - COMBAT_SLOT_MARGIN, UNIT_TYPES[unit.type].radius + 0.08)+tankCombatSpace(unit,target);
       return this._buildingApproachPoints(target, margin, unit)
         .map((point, slot) => ({ point, slot }))
         .filter(({ point }) => this._hasCombatLineOfSight(point, target));
@@ -4160,7 +4162,7 @@ export class CrownforgeSimulation {
       ? Math.max(this._buildingFootprint(target).width, this._buildingFootprint(target).height) / 2
         + (BUILDING_TYPES[target.type].collisionClearance ?? 0)
       : combatRadius(target);
-    const ringRadius = Math.max(UNIT_TYPES[unit.type].range - COMBAT_SLOT_MARGIN, combatRadius(unit) + targetRadius + 0.2);
+    const ringRadius = Math.max(UNIT_TYPES[unit.type].range - COMBAT_SLOT_MARGIN, combatRadius(unit) + targetRadius + 0.2)+tankCombatSpace(unit,target);
     const points = [];
     for (const expansion of [0, 1.4]) {
       for (let offset = 0; offset < COMBAT_SLOT_COUNT; offset += 1) {
@@ -4485,7 +4487,15 @@ export class CrownforgeSimulation {
   _prepareFighterPursuit(unit) {
     unit.fighterMovingAttack=false;
     const target=this._getExplicitAttackTarget(unit);
-    if(!target || target.kind!=='unit' || isWardProtected(target))return;
+    if(!target || isWardProtected(target))return;
+    if(target.kind==='building'){
+      if(unit.type==='shieldbearer' && this._distanceToBuildingUnitEdge(unit,target)<5.7){
+        if(unit.path.length){unit.fighterMovingAttack=true;return;}
+        const route=this._bestCombatRoute(unit,target);
+        if(route){unit.path=route.path;unit.routeTarget=route.point;unit.stopDistance=0;unit.fighterMovingAttack=true;}
+      }
+      return;
+    }
     const rear=bearRearPosition(this,unit,target);
     if(rear){
       if(distance(unit,rear)<.5){unit.path=[];unit.velocityX=unit.velocityZ=0;return;}
@@ -4496,10 +4506,10 @@ export class CrownforgeSimulation {
       return;
     }
     const span=distance(unit,target),rules=UNIT_TYPES[unit.type];
-    if(span>FIGHTER_PURSUIT.trackDistance)return;
-    const gap=Math.max(combatRadius(unit)+combatRadius(target)+.2,rules.range*.8);
-    if(span<=gap){unit.path=[];unit.velocityX=unit.velocityZ=0;return;}
-    const point={x:target.x+(unit.x-target.x)*gap/span,z:target.z+(unit.z-target.z)*gap/span};
+    const gap=Math.max(combatRadius(unit)+combatRadius(target)+.2,rules.range*.8)+tankCombatSpace(unit,target);
+    if(span>Math.max(FIGHTER_PURSUIT.trackDistance,gap+2))return;
+    if(span<=gap && (unit.type!=='shieldbearer'||span>=gap-.2)){unit.path=[];unit.velocityX=unit.velocityZ=0;return;}
+    const point={x:target.x+(unit.x-target.x)*gap/(span||1),z:target.z+(unit.z-target.z)*gap/(span||1)};
     if(this._pointBlockedForUnit(unit,point)||this._pathSegmentBlocked(unit,unit,point)) {
       if(unit.attackPhase!=='approach'){unit.path=[];unit.velocityX=unit.velocityZ=0;}
       return;
@@ -4548,8 +4558,8 @@ export class CrownforgeSimulation {
       unit.path=[];unit.velocityX=unit.velocityZ=0;return;
     }
     const span=distance(unit,target);
-    if(span>GRIZZLY_PURSUIT.trackDistance)return;
-    const gap=Math.max(GRIZZLY_PURSUIT.stopDistance,combatRadius(unit)+combatRadius(target)+.2);
+    const gap=Math.max(GRIZZLY_PURSUIT.stopDistance,combatRadius(unit)+combatRadius(target)+.2)+tankCombatSpace(unit,target);
+    if(span>Math.max(GRIZZLY_PURSUIT.trackDistance,gap+2))return;
     if(span<=gap){unit.path=[];unit.velocityX=unit.velocityZ=0;return;}
     const point={x:target.x+(unit.x-target.x)*gap/span,z:target.z+(unit.z-target.z)*gap/span};
     // Follow a nearby moving target without running A* every frame. The

@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260911-fallback1';
-import {UNIT_TYPES} from './config.js?v=20260911-fallback1';
-import {isWardProtected} from './unit-status.js?v=20260911-fallback1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260911-tankspace1';
+import {UNIT_TYPES} from './config.js?v=20260911-tankspace1';
+import {isWardProtected} from './unit-status.js?v=20260911-tankspace1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -75,7 +75,7 @@ export function updateTeams(sim,dt){
   if(healer.stunTimer>0)continue;
   if(!['idle','move'].includes(healer.command)){sim._interruptWork(healer);healer.command='idle';healer.path=[];healer.orderQueue=[];}
   const allies=group.members.filter(u=>u!==healer);
-  const patients=sim.units.filter(u=>eligibleMember(u)&&u!==healer&&u.hp<u.maxHp&&distance(healer,u)<=TEAM_RULES.healRange&&sim._hasCombatLineOfSight(healer,u))
+  const patients=sim.units.filter(u=>eligibleMember(u)&&u!==healer&&u.hp<u.maxHp&&distance(healer,u)<=TEAM_RULES.healRange+(combatRole(u)==='tank'?5:0)&&sim._hasCombatLineOfSight(healer,u))
    .sort((a,b)=>Number(combatRole(b)==='tank')-Number(combatRole(a)==='tank')||a.hp/a.maxHp-b.hp/b.maxHp||a.id-b.id);
   const patient=patients[0];
   if(patient&&healer.healCooldown<=0){
