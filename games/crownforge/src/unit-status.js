@@ -1,6 +1,6 @@
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {UNIT_TYPES} from './config.js?v=20260911-tankspace1';
-import {BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-tankspace1';
+import {UNIT_TYPES} from './config.js?v=20260911-heart10';
+import {BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-heart10';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
@@ -25,7 +25,7 @@ export function updateLastBastion(unit,dt=0){
  if(unit.type==='grizzly'&&activeTime>0){
   unit.lastStandHealElapsed=(unit.lastStandHealElapsed??0)+activeTime;
   const pulses=Math.floor((unit.lastStandHealElapsed+1e-8)/5);
-  if(pulses){unit.lastStandHealElapsed-=pulses*5;const amount=Math.min(unit.maxHp-unit.hp,unit.maxHp*.02*Math.min(pulses,Math.floor((unit.maxHp*.6-unit.hp)/(unit.maxHp*.02))+1));unit.hp+=amount;unit.healPulse=.85;unit.lastHealAmount=amount;unit.healthRevealTimer=2;}
+  if(pulses){unit.lastStandHealElapsed-=pulses*5;const amount=Math.min(unit.maxHp-unit.hp,unit.maxHp*.10*Math.min(pulses,Math.floor((unit.maxHp*.6-unit.hp)/(unit.maxHp*.10))+1));unit.hp+=amount;unit.healPulse=.85;unit.lastHealAmount=amount;unit.healthRevealTimer=2;}
  }
  unit.lastStandTimer=Math.max(0,(unit.lastStandTimer??0)-dt);
  if(unit.hp/unit.maxHp>LAST_BASTION.rearmHealth){unit.lastStandTimer=0;unit.lastStandSpent=false;return;}
@@ -57,7 +57,7 @@ export function unitStatuses(unit){
   if(unit.type==='shieldbearer')statuses.push({id:'oathboundStride',name:'Oathbound Stride',kind:'Permanent blessing',detail:'1.5× fastest base movement',summary:'The sworn shield reaches danger first.',effect:'Base movement speed is 1.5 times the fastest other unit. Terrain and roads still apply.',rune:'ward'});
   if(bearEnrageActive(unit))statuses.push({id:'greatwoodColossus',name:'Greatwood Colossus',kind:'Enrage',detail:'50% true health · double size and damage',summary:'Wounded ancient blood awakens a towering guardian.',effect:'At half true health, doubles body size, collision radius, and damage for the rest of its life. Stacks with Wrath of the First Oath. Bloodclaw Reckoning sweeps within 14 units every 8 seconds: rear damage fighters are left at 10% maximum health.',rune:'fury',art:bearVariant(unit).art});
   if(bearEnrageActive(unit)||fury)statuses.push({id:'bloodclawReckoning',name:'Bloodclaw Reckoning',kind:'Special swipe',detail:'8-second cooldown · rear DPS to 10% HP',summary:'Three crimson claws tear across the battle line.',effect:'Within 14 units and clear line of sight, the frontal fan takes normal empowered strike damage. Rear damage fighters drop to 10% maximum health, never healed upward. Tanks and healers are excluded from the rear damage pulse. Ward protection is respected.',rune:'fury',art:bearVariant(unit).art});
-  if(lastBastionActive(unit))statuses.push({id:unit.type==='grizzly'?'unbrokenWild':'crownsLastBastion',name:unit.type==='grizzly'?'Heart of the Unbroken Wild':'The Crown’s Last Bastion',kind:'Last stand · active',detail:`${Math.ceil(unit.lastStandTimer)}s · 90% less incoming damage`,summary:unit.type==='grizzly'?'The ancient wild refuses to yield its heart.':'When the crown has nowhere left to retreat, its shield becomes a fortress.',effect:`Triggers below 20% true health and reduces damage after armor by 90%. Lasts up to ${unit.type==='grizzly'?60:20} seconds, ending early only above 60% health. Crossing damage below 20% is protected. Must heal above 60% to rearm after use.${unit.type==='grizzly'?' Also restores 2% maximum health every 5 seconds while active.':''}`,rune:'ward',art:unit.type==='grizzly'?bearVariant(unit).art:undefined});
+  if(lastBastionActive(unit))statuses.push({id:unit.type==='grizzly'?'unbrokenWild':'crownsLastBastion',name:unit.type==='grizzly'?'Heart of the Unbroken Wild':'The Crown’s Last Bastion',kind:'Last stand · active',detail:`${Math.ceil(unit.lastStandTimer)}s · 90% less incoming damage`,summary:unit.type==='grizzly'?'The ancient wild refuses to yield its heart.':'When the crown has nowhere left to retreat, its shield becomes a fortress.',effect:`Triggers below 20% true health and reduces damage after armor by 90%. Lasts up to ${unit.type==='grizzly'?60:20} seconds, ending early only above 60% health. Crossing damage below 20% is protected. Must heal above 60% to rearm after use.${unit.type==='grizzly'?' Also restores 10% maximum health every 5 seconds while active.':''}`,rune:'ward',art:unit.type==='grizzly'?bearVariant(unit).art:undefined});
   if(elder)statuses.push({id:'crushingClaws',name:'Crushing Claws',kind:'Tank pressure',detail:'6× strike damage against tanks',summary:'Greatwood claws crush a shield line.',effect:'Bear strikes against tanks deal six times their previous damage before armor. Colossus and Wrath still stack.',rune:'fury',art:bearVariant(unit).art});
   if(elder){
     const bloodline=bearVariant(unit);

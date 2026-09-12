@@ -14,14 +14,15 @@ test('healer unable to reach rear follows behind tank rather than retrying forev
  s._pointBlockedForUnit=(_u,p)=>p.x<100;s._pathSegmentBlocked=()=>false;s._buildPath=(_u,p)=>[p];s.repathBudgetRemaining=8;
  updateTeams(s,.2);assert(h.teamFollowing);assert(h.routeTarget.x>t.x);assert.equal(h.actionLabel,'Supporting behind the tank');
 });
-test('Heart heals two percent on five-second pulses, saves pulse progress, and stops at expiry',()=>{
- const b={type:'grizzly',hp:100,maxHp:1000};updateLastBastion(b);updateLastBastion(b,4.9);assert.equal(b.hp,100);const restored=structuredClone(b);updateLastBastion(restored,.1);assert.equal(restored.hp,120);
- updateLastBastion(restored,55);assert.equal(restored.hp,340);assert(!lastBastionActive(restored));updateLastBastion(restored,20);assert.equal(restored.hp,340);
+test('Heart heals ten percent on five-second pulses, saves pulse progress, and stops at expiry',()=>{
+ const b={type:'grizzly',hp:100,maxHp:1000};updateLastBastion(b);updateLastBastion(b,4.9);assert.equal(b.hp,100);const restored=structuredClone(b);updateLastBastion(restored,.1);assert.equal(restored.hp,200);
+ updateLastBastion(restored,55);assert.equal(restored.hp,700);assert(!lastBastionActive(restored));updateLastBastion(restored,20);assert.equal(restored.hp,700);
+ const expiring={type:'grizzly',hp:100,maxHp:1000,lastStandTimer:1,lastStandSpent:true,lastStandHealElapsed:4};updateLastBastion(expiring,1);assert.equal(expiring.hp,200);assert(!lastBastionActive(expiring));updateLastBastion(expiring,10);assert.equal(expiring.hp,200);
  const tank={type:'shieldbearer',hp:100,maxHp:1000};updateLastBastion(tank);updateLastBastion(tank,5);assert.equal(tank.hp,100);
 });
 test('Heart stops healing after health exceeds sixty percent',()=>{
  const b={type:'grizzly',hp:100,maxHp:1000};updateLastBastion(b);b.hp=601;updateLastBastion(b,10);assert.equal(b.hp,601);assert(!lastBastionActive(b));
- const crossing={type:'grizzly',hp:100,maxHp:1000};updateLastBastion(crossing);crossing.hp=590;updateLastBastion(crossing,55);assert.equal(crossing.hp,610);assert(!lastBastionActive(crossing));
+ const crossing={type:'grizzly',hp:100,maxHp:1000};updateLastBastion(crossing);crossing.hp=590;updateLastBastion(crossing,55);assert.equal(crossing.hp,690);assert(!lastBastionActive(crossing));
 });
 test('larger special catches rear DPS at thirteen units, not beyond fourteen',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit('shieldbearer',107,100,'player'),near=s.addUnit('soldier',87,100,'player'),far=s.addUnit('soldier',85,100,'player');b.hp=90;s._startAttackCycle(b,t);s._applyGrizzlyCleave(b,t);assert.equal(near.hp,near.maxHp*.1);assert.equal(far.hp,far.maxHp);

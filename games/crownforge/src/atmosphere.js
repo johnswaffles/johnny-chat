@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260911-tankspace1';
+import { CONFIG } from './config.js?v=20260911-heart10';
 
 // Presentation only: every effect is derived from position and render time.
 // Nothing consumes the simulation RNG or changes an entity's state.

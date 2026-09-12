@@ -1,6 +1,6 @@
 import { CURSED_BEAR_ART } from './cursed-bear-art.js?v=20260909-cursedbears1';
 import { bearVariantId } from './bear-variants.js?v=20260909-cursedbears1';
-import { BEAR_DEATH, bearBodyScale } from './bear-combat.js?v=20260911-tankspace1';
+import { BEAR_DEATH, bearBodyScale } from './bear-combat.js?v=20260911-heart10';
 import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260909-cursedbears1';
 import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260909-cursedbears1';
 

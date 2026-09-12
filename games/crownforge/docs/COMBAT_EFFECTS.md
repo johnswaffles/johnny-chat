@@ -1,6 +1,6 @@
 # Combat effects and lore-card reference
 
-Revision: 20260911-tankspace1. Approved release; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
+Revision: 20260911-heart10. Approved release; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
 
 | Effect | Owner and trigger | Actual rule |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ Timed last-stand rules supersede earlier health-only behavior. The damage reduct
 
 Combat loop repair: the MP3's low-toned ending is excluded using an explicit 130-second source endpoint. Boundary trimming/crossfade yields a 129.71-second playable loop from the supplied recording. Buffer sources set explicit loopStart=0 and loopEnd=buffer.duration. Steady volume no longer schedules redundant AudioParam automation every frame; transitions cancel future automation before updating. Browser OfflineAudioContext rendered two full loops of the actual MP3 with zero sample error between repeats and nonzero identical post-boundary RMS. Original MP3 is preserved unchanged. `dev/audio-loop.html` provides a real-time boundary test and the full-loop render report.
 
-Blocked rear approaches now fall back to reachable melee attack positions; healers and ranged fighters support from behind the tank. Failed routes or two seconds without movement trigger fallback, with bounded retries after eight seconds or after the target moves three units. Heart of the Unbroken Wild heals 2% maximum health every five active seconds (including a final pulse at 60 seconds). Partial pulse time persists in saves; no pulses occur after expiry or above-60% removal. Bloodclaw radius is now 14; healing reach is 24 to support the wider formation.
+Blocked rear approaches now fall back to reachable melee attack positions; healers and ranged fighters support from behind the tank. Failed routes or two seconds without movement trigger fallback, with bounded retries after eight seconds or after the target moves three units. Heart of the Unbroken Wild heals 10% maximum health every five active seconds (including a final pulse at 60 seconds). Partial pulse time persists in saves; no pulses occur after expiry or above-60% removal. Bloodclaw radius is now 14; healing reach is 24 to support the wider formation.
 
 ### Tank combat spacing (2026-09-11)
 Shield Wardens hold five additional world units of combat clearance against units and buildings. Reciprocal enemy reach preserves incoming damage and aggro; walls still block attacks. A tank already too close backs away when a clear route exists. Hearthkin can heal tanks within 29 units to support the wider formation; other allies retain the 24-unit range. This is positioning, not a new buff or damage reduction.

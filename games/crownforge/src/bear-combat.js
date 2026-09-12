@@ -1,4 +1,4 @@
-import { UNIT_TYPES } from './config.js?v=20260911-tankspace1';
+import { UNIT_TYPES } from './config.js?v=20260911-heart10';
 
 export const BEAR_FURY = Object.freeze({threshold:.1, multiplier:6, extraTargets:2, radius:14, arrowHits:30});
 export const THICK_HIDE=Object.freeze({armorBonus:100,damageMultiplier:.5});
