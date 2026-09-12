@@ -32,7 +32,7 @@ test('automatic healer retreats beyond swipe radius and can still heal tank',()=
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit('shieldbearer',103,100,'player'),h=s.addUnit('villager',104,100,'player');t.teamId=h.teamId=1;t.attackTarget=b.id;t.attackTargetKind='unit';t.command='attack';s.repathBudgetRemaining=8;
  updateTeams(s,.3);assert(h.teamFollowing);assert(dist(h.routeTarget,b)>10);assert(dist(h.routeTarget,t)<TEAM_RULES.healRange);
 });
-test('Oathbound Stride is three times fastest other base speed',()=>{assert.equal(UNIT_TYPES.shieldbearer.speed,3*Math.max(...Object.entries(UNIT_TYPES).filter(([k])=>k!=='shieldbearer').map(([,r])=>r.speed)));});
+test('Oathbound Stride is 1.5 times fastest other base speed',()=>{assert.equal(UNIT_TYPES.shieldbearer.speed,1.5*Math.max(...Object.entries(UNIT_TYPES).filter(([k])=>k!=='shieldbearer').map(([,r])=>r.speed)));});
 test('live movement brings two DPS behind tank-held bear and healer out of swipe range',()=>{
  const s=arena(),b=s.addUnit('grizzly',180,180,'wildlife'),t=s.addUnit('shieldbearer',174,180,'player'),h=s.addUnit('villager',173,179,'player'),d=s.addUnit('spearwarden',166,182,'player'),d2=s.addUnit('spearwarden',165,184,'player');
  b.maxHp=18000;b.hp=9000;

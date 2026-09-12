@@ -1,6 +1,6 @@
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {UNIT_TYPES} from './config.js?v=20260911-bloodstorm1';
-import {BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-bloodstorm1';
+import {UNIT_TYPES} from './config.js?v=20260911-lastbastion1';
+import {BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-lastbastion1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
@@ -14,6 +14,14 @@ export const isCurseImmune=unit=>Boolean(UNIT_TYPES[unit?.type]?.curseImmune);
 export const isWardProtected=unit=>Boolean(unit?.lastLightWardTimer>0);
 // Health used by combat is never replaced by the curse's false reading.
 export const displayedUnitHealth=unit=>unit.dead||unit.hp<=0?0:unit.lastLightCurseActive&&isCurseImmune(unit)?1:unit.hp;
+export const LAST_BASTION=Object.freeze({threshold:.2,damageMultiplier:.1});
+export const lastBastionActive=u=>Boolean(u?.type==='shieldbearer'&&!u.dead&&u.hp>0&&u.hp/u.maxHp<LAST_BASTION.threshold);
+// A blow crossing the threshold only gets protection on its below-threshold portion.
+export function lastBastionDamage(unit,damage){
+ if(unit?.type!=='shieldbearer'||unit.dead||unit.hp<=0)return damage;
+ const unprotected=Math.max(0,unit.hp-unit.maxHp*LAST_BASTION.threshold);
+ return Math.min(damage,unprotected)+Math.max(0,damage-unprotected)*LAST_BASTION.damageMultiplier;
+}
 export function strikeDamage(attacker,target){
   const rules=UNIT_TYPES[attacker.type],worker=UNIT_TYPES[target?.type]?.worker;
   const tankPressure=attacker.type==='grizzly'&&UNIT_TYPES[target?.type]?.combatRole==='tank'?6:1;
@@ -24,9 +32,10 @@ export function strikeDamage(attacker,target){
 }
 export function unitStatuses(unit){
   const statuses=[],elder=isCurseImmune(unit),fury=bearFuryActive(unit);
-  if(unit.type==='shieldbearer')statuses.push({id:'oathboundStride',name:'Oathbound Stride',kind:'Permanent blessing',detail:'3× fastest base movement',summary:'The sworn shield reaches danger first.',effect:'Base movement speed is three times the fastest other unit. Terrain and roads still apply.',rune:'ward'});
+  if(unit.type==='shieldbearer')statuses.push({id:'oathboundStride',name:'Oathbound Stride',kind:'Permanent blessing',detail:'1.5× fastest base movement',summary:'The sworn shield reaches danger first.',effect:'Base movement speed is 1.5 times the fastest other unit. Terrain and roads still apply.',rune:'ward'});
   if(bearEnrageActive(unit))statuses.push({id:'greatwoodColossus',name:'Greatwood Colossus',kind:'Enrage',detail:'50% true health · double size and damage',summary:'Wounded ancient blood awakens a towering guardian.',effect:'At half true health, doubles body size, collision radius, and damage for the rest of its life. Stacks with Wrath of the First Oath. Bloodclaw Reckoning sweeps within 10 units every 8 seconds: rear damage fighters are left at 10% maximum health.',rune:'fury',art:bearVariant(unit).art});
   if(bearEnrageActive(unit)||fury)statuses.push({id:'bloodclawReckoning',name:'Bloodclaw Reckoning',kind:'Special swipe',detail:'8-second cooldown · rear DPS to 10% HP',summary:'Three crimson claws tear across the battle line.',effect:'Within 10 units and clear line of sight, the frontal fan takes normal empowered strike damage. Rear damage fighters drop to 10% maximum health, never healed upward. Tanks and healers are excluded from the rear damage pulse. Ward protection is respected.',rune:'fury',art:bearVariant(unit).art});
+  if(lastBastionActive(unit))statuses.push({id:'crownsLastBastion',name:'The Crown’s Last Bastion',kind:'Last stand · active',detail:'Below 20% HP · 90% less incoming damage',summary:'When the crown has nowhere left to retreat, its shield becomes a fortress.',effect:'Below 20% maximum health, incoming damage after armor is reduced by a further 90%. The portion of a hit crossing below the threshold is protected. Healing to 20% or above ends the protection; it returns if health falls below again.',rune:'ward'});
   if(elder)statuses.push({id:'crushingClaws',name:'Crushing Claws',kind:'Tank pressure',detail:'6× strike damage against tanks',summary:'Greatwood claws crush a shield line.',effect:'Bear strikes against tanks deal six times their previous damage before armor. Colossus and Wrath still stack.',rune:'fury',art:bearVariant(unit).art});
   if(elder){
     const bloodline=bearVariant(unit);

@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260911-bloodstorm1';
-import {UNIT_TYPES} from './config.js?v=20260911-bloodstorm1';
-import {isWardProtected} from './unit-status.js?v=20260911-bloodstorm1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260911-lastbastion1';
+import {UNIT_TYPES} from './config.js?v=20260911-lastbastion1';
+import {isWardProtected} from './unit-status.js?v=20260911-lastbastion1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:20,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){

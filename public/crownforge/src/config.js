@@ -362,8 +362,8 @@ export const UNIT_TYPES = {
   },
 };
 
-// Oathbound Stride stays three times faster than the fastest other base unit.
-UNIT_TYPES.shieldbearer.speed=3*Math.max(...Object.entries(UNIT_TYPES).filter(([id])=>id!=='shieldbearer').map(([,rule])=>rule.speed??0));
+// Oathbound Stride stays 1.5 times as fast than the fastest other base unit.
+UNIT_TYPES.shieldbearer.speed=1.5*Math.max(...Object.entries(UNIT_TYPES).filter(([id])=>id!=='shieldbearer').map(([,rule])=>rule.speed??0));
 UNIT_TYPES.shieldbearer.acceleration=36;
 UNIT_TYPES.shieldbearer.braking=48;
 

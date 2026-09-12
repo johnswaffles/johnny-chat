@@ -1,6 +1,6 @@
 # Combat effects and lore-card reference
 
-Revision: 20260911-bloodstorm1. Approved release; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
+Revision: 20260911-lastbastion1. Approved release; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
 
 | Effect | Owner and trigger | Actual rule |
 | --- | --- | --- |
@@ -11,7 +11,8 @@ Revision: 20260911-bloodstorm1. Approved release; verify the live marker for dep
 | **Thick Hide** | Permanent bear armor | Halves incoming damage; combined with Elderhide, 60 landed arrows from full true health. |
 | **Crushing Claws** | Permanent bear tank pressure | Six times prior strike damage against tanks, before armor. Stacks with both bear rage layers. |
 | **Bloodclaw Reckoning** | Enraged bear, 8-second cooldown | 360-degree crimson claw sweep; frontal empowered hit plus rear DPS reduced to 10% maximum HP within 10 units. No upward healing, no rear tank/healer pulse, wards respected. |
-| **Oathbound Stride** | Permanent Crown Shieldbearer blessing | Base movement speed is three times the fastest other unit: currently 12.45 versus Scout 4.15. Roads and terrain still modify movement. Faster acceleration and braking keep it responsive. Lore seed: “The sworn shield reaches danger first.” |
+| **Oathbound Stride** | Permanent Crown Shieldbearer blessing | Base movement speed is 1.5 times the fastest other unit: currently 6.225 versus Scout 4.15. Roads and terrain still modify movement. Faster acceleration and braking keep it responsive. Lore seed: “The sworn shield reaches danger first.” |
+| **The Crown’s Last Bastion** | Shieldbearer below 20% maximum HP | Reduces post-armor incoming damage by another 90% (98% total reduction with armor). Protects only the below-threshold portion of a crossing hit. Healing to 20% or above ends it; no cooldown, no immunity, no healing from the buff. |
 | Shieldbearer armor and evasion | Permanent tank defenses | 3,480 HP, 80% damage reduction, one deterministic dodge per twenty incoming melee swings (5%). No new armor increase in this revision. |
 | Shieldbearer threat lock | Tank lands a hit | Enemy attacks the tank for 8 seconds, refreshed on each hit, within 24 units. Existing valid tank retains ownership over another tank. Other fighters cannot steal aggro. |
 | Team healing | Assigned Hearthkin, every 2 seconds | Heal every nearby injured eligible friendly unit within 20 units and line of sight: tanks 40 HP first, others 20 HP. Excludes self, dead units and enemies; no overheal. Healer remains dedicated until removed from team. |
@@ -28,7 +29,7 @@ Team damage fighters wait for tank aggro outside the swipe radius, circle via an
 
 ## Damage reference
 
-Crushing Claws multiplies bear damage against tanks by six before armor. Against a tank: base 348; Colossus 696; Wrath 2,088; both 4,176. After 80% armor, these become 69.6, 139.2, 417.6 and 835.2. Both rages kill an unhealed full-health tank in five landed hits. Dodge remains 5%. One healer now restores 40 tank HP or 20 other-ally HP every two seconds (50% less output). This intentionally lets the bear overwhelm a single healer, especially in its final rage. Ordinary non-tank damage and rear Bloodclaw's 10% health floor are unchanged.
+Crushing Claws multiplies bear damage against tanks by six before armor. Against a tank: base 348; Colossus 696; Wrath 2,088; both 4,176. After 80% armor, these become 69.6, 139.2, 417.6 and 835.2. The Crown’s Last Bastion now protects the portion below 20% health, so both rages require twelve landed hits to kill an unhealed full-health tank. Dodge remains 5%. One healer now restores 40 tank HP or 20 other-ally HP every two seconds (50% less output). This intentionally lets the bear overwhelm a single healer, especially in its final rage. Ordinary non-tank damage and rear Bloodclaw's 10% health floor are unchanged.
 
 No new lore-card art was generated in this revision. Oathbound Stride and Greatwood Colossus now appear in unit inspection; the other existing named effects keep their original art and stories.
 

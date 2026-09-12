@@ -10,11 +10,11 @@ test('every player warrior class can select its whole living class only',()=>{
  const a=s.addUnit(type,100,100,'player'),b=s.addUnit(type,110,110,'player');s.addUnit(type,120,120,'enemy');const dead=s.addUnit(type,130,130,'player');dead.dead=true;
  select(s,[a]);assert.equal(s.selectAllWarriorClass(type).count,2);assert.deepEqual(s.selectedIds,[a.id,b.id]);}
 });
-test('tank armor and evasion give exactly five landed stacked-rage hits',()=>{
+test('tank armor and evasion give exactly twelve landed stacked-rage hits with Last Bastion',()=>{
  const s=arena(),tank=s.addUnit('shieldbearer',100,100,'player'),bear=s.addUnit('grizzly',101,100,'wildlife');bear.hp=18;
  let landed=0,dodged=0;
- for(let swing=1;swing<=5;swing++){const result=s._applyUnitDamage(tank,strikeDamage(bear,tank),bear);if(result.dodged)dodged++;else landed++;assert.equal(tank.dead,swing===5);}
- assert.equal(landed,5);assert.equal(dodged,0);assert.equal(tank.hp,0);assert.equal(UNIT_TYPES.grizzly.attack,58);
+ for(let swing=1;swing<=12;swing++){const result=s._applyUnitDamage(tank,strikeDamage(bear,tank),bear);if(result.dodged)dodged++;else landed++;assert.equal(tank.dead,swing===12);}
+ assert.equal(landed,12);assert.equal(dodged,0);assert.equal(tank.hp,0);assert.equal(UNIT_TYPES.grizzly.attack,58);
  assert.equal(UNIT_TYPES.shieldbearer.attack*10,UNIT_TYPES.soldier.attack);
 });
 test('tank holds aggro through damage hits and wildlife scans without resetting a swing',()=>{
@@ -80,11 +80,11 @@ test('movement destinations put tanks ahead of damage and healers with separate 
  const s=arena(),units=['shieldbearer','shieldbearer','soldier','villager'].map(type=>s.addUnit(type,100,100,'player'));select(s,units);s.assignSelectedTeam();
  const points=units.map(u=>teamMovePoint(units,u,{x:120,z:100}));assert(points[0].x>points[2].x&&points[2].x>points[3].x);assert.notEqual(points[0].z,points[1].z);
 });
-test('stacked bear fury overwhelms a lone healer instead of leaving the tank unhurt',()=>{
+test('Last Bastion lets a badly wounded tank survive a thirty-second fury fight with healing',()=>{
  const s=arena(),tank=s.addUnit('shieldbearer',101.3,100,'player'),dps=s.addUnit('soldier',97,100,'player'),healer=s.addUnit('villager',112,100,'player'),bear=s.addUnit('grizzly',100,100,'wildlife');
  bear.maxHp=18000;bear.hp=1800;select(s,[tank,dps,healer]);s.assignSelectedTeam();
  s._applyUnitDamage(bear,1,tank);s._sendUnitToAttack(tank,bear);
  let hits=0,heals=0;const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(target,damage,attacker,...rest)=>{if(target===tank&&attacker===bear)hits++;return apply(target,damage,attacker,...rest);};
  for(let i=0;i<1800;i++){s.clock+=1/60;s._updateAttack(tank,1/60);s._updateAttack(bear,1/60);s._applyUnitDamage(bear,.01,dps);const hp=tank.hp;updateTeams(s,1/60);if(tank.hp>hp)heals++;}
- assert(hits>=3);assert(heals>=2);assert(tank.dead);
+ assert(hits>=3);assert(heals>=2);assert(!tank.dead);assert(tank.hp<tank.maxHp*.5);
 });

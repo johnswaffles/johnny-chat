@@ -1,4 +1,4 @@
-import { RESOURCE_SIZE_TIERS } from './config.js?v=20260911-bloodstorm1';
+import { RESOURCE_SIZE_TIERS } from './config.js?v=20260911-lastbastion1';
 
 // At strategic zoom, cache tree strips by world depth. Any strip containing
 // another kind of entity remains individually painted, preserving the exact
