@@ -8,8 +8,8 @@ Every team Hearthkin prioritizes healing over gathering, building, or attacking 
 
 When attacking a unit, team damage fighters stage behind the tank line until a tank lands a hit and claims aggro. Multiple tanks lead together; fighters proceed if no tanks survive. Against a tank-held bear they circle outside the frontal swipe and take distinct rear positions. Automatic healers follow behind the current rear DPS line, at least 12 units from the bear and 3 units behind the fighters, updating their path as the encounter moves. Rear positioning avoids ordinary frontal damage. Bloodclaw Reckoning now reduces rear DPS to 10% maximum health every 8 seconds, giving healers a recovery window. Cancelling a unit's order clears the staged approach. Ground movement destinations place tanks in the front row, damage fighters behind them, and healers at the rear.
 
-Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260911-lastbastion1.
+Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260911-unbrokenwild1.
 
 Crushing Claws increases bear damage against tanks sixfold; half-health Colossus hits now deal 139.2 damage after armor. Healing output is halved. Bloodclaw has a full circular rotating claw effect.
 
-The Crown’s Last Bastion reduces incoming damage after armor by 90% while below 20% health. Only the below-threshold part of a crossing hit is protected. Healing back to 20% ends it; falling below reactivates it.
+The Crown’s Last Bastion reduces incoming damage after armor by 90% after activating below 20% health. Only the below-threshold part of a crossing hit is protected. It lasts 20 seconds or until health exceeds 60%. It must heal above 60% before rearming. All bears gain Heart of the Unbroken Wild with the same trigger and removal rules, lasting 60 seconds.

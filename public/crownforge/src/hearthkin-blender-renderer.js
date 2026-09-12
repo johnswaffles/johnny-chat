@@ -1,5 +1,5 @@
 import {HEARTHKIN_BLENDER_ART} from './hearthkin-blender-art.js?v=20260911-worker-v010';
-import {RESOURCE_TYPES,UNIT_TYPES} from './config.js?v=20260911-lastbastion1';
+import {RESOURCE_TYPES,UNIT_TYPES} from './config.js?v=20260911-unbrokenwild1';
 const clamp=n=>Math.max(0,Math.min(.999999,n));
 const cycle=n=>((n%1)+1)%1;
 const cargo={wood:'Wood',food:'Berries',stone:'Stone',gold:'Gold',supplies:'Supplies'};

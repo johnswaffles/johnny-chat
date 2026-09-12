@@ -16,15 +16,15 @@ test('fury uses the exact true threshold or false curse health, without healing'
  b.hp=173;b.lastLightCurseActive=true;assert(bearFuryActive(b));assert.equal(displayedUnitHealth(b),1);assert.equal(b.hp,173);
  b.lastLightCurseActive=false;assert(!bearFuryActive(b));b.hp=0;b.dead=true;assert(!bearFuryActive(b));
 });
-test('each of sixty actual arrow projectile impacts removes one sixtieth, with and without the lesser curse',()=>{
+test('rapid arrows respect the temporary Heart reduction and true health, with or without the curse',()=>{
  for(const cursed of [false,true]){
   const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=cursed;
   assert.equal(s._applyUnitDamage(b,0,null,{damageType:'arrow'}).damage,0);
-  for(let hit=1;hit<=60;hit++){
+  for(let hit=1;hit<=168;hit++){
    s.projectiles.push({id:9000+hit,kind:'defense-arrow',faction:'player',sourceBuildingId:999,sourceType:'watchtower',targetId:b.id,x:99.9,z:100,damage:10000,speed:30,age:0,maxAge:5});
    s._updateDefenseProjectiles(1/60);
-   assert.equal(b.hp,180-hit*3);assert.equal(b.dead,hit===60);
-   assert.equal(displayedUnitHealth(b),hit===60?0:cursed?1:b.hp);
+   const expected=hit<=48?180-hit*3:Math.max(0,36-(hit-48)*.3);assert(Math.abs(b.hp-expected)<1e-7);assert.equal(b.dead,hit===168);
+   assert.equal(displayedUnitHealth(b),hit===168?0:cursed?1:b.hp);
   }
  }
 });

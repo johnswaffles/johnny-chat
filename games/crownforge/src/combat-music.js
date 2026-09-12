@@ -1,4 +1,4 @@
-import {UNIT_TYPES} from './config.js?v=20260911-lastbastion1';
+import {UNIT_TYPES} from './config.js?v=20260911-unbrokenwild1';
 export const COMBAT_TRACK={id:'ancient-dungeon-siege',title:'Ancient Dungeon Siege',src:new URL('../assets/ancient-dungeon-siege.mp3',import.meta.url).href};
 export const isEncounterEnemy=u=>Boolean(u&&!u.dead&&(UNIT_TYPES[u.type]?.wildlife||UNIT_TYPES[u.type]?.boss||u.wildlife||u.boss));
 export function engagedEnemies(sim){
