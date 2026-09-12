@@ -1,6 +1,6 @@
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {UNIT_TYPES} from './config.js?v=20260911-loopfix1';
-import {BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-loopfix1';
+import {UNIT_TYPES} from './config.js?v=20260911-fallback1';
+import {BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260911-fallback1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
@@ -21,9 +21,16 @@ export function updateLastBastion(unit,dt=0){
  if(!lastStandUnit(unit))return;
  if(unit.dead||unit.hp<=0){unit.lastStandTimer=0;return;}
  if(unit.hp/unit.maxHp>LAST_BASTION.rearmHealth){unit.lastStandTimer=0;unit.lastStandSpent=false;return;}
+ const activeTime=Math.min(Math.max(0,dt),unit.lastStandTimer??0);
+ if(unit.type==='grizzly'&&activeTime>0){
+  unit.lastStandHealElapsed=(unit.lastStandHealElapsed??0)+activeTime;
+  const pulses=Math.floor((unit.lastStandHealElapsed+1e-8)/5);
+  if(pulses){unit.lastStandHealElapsed-=pulses*5;const amount=Math.min(unit.maxHp-unit.hp,unit.maxHp*.02*Math.min(pulses,Math.floor((unit.maxHp*.6-unit.hp)/(unit.maxHp*.02))+1));unit.hp+=amount;unit.healPulse=.85;unit.lastHealAmount=amount;unit.healthRevealTimer=2;}
+ }
  unit.lastStandTimer=Math.max(0,(unit.lastStandTimer??0)-dt);
+ if(unit.hp/unit.maxHp>LAST_BASTION.rearmHealth){unit.lastStandTimer=0;unit.lastStandSpent=false;return;}
  if(!unit.lastStandSpent&&unit.hp/unit.maxHp<LAST_BASTION.threshold){
-  unit.lastStandSpent=true;unit.lastStandTimer=unit.type==='grizzly'?LAST_BASTION.bearDuration:LAST_BASTION.tankDuration;
+  unit.lastStandHealElapsed=0;unit.lastStandSpent=true;unit.lastStandTimer=unit.type==='grizzly'?LAST_BASTION.bearDuration:LAST_BASTION.tankDuration;
  }
 }
 // Protect only the below-threshold portion of the first crossing hit.
@@ -34,7 +41,7 @@ export function lastBastionDamage(unit,damage){
  if(unit.lastStandSpent)return damage;
  const unprotected=Math.max(0,unit.hp-unit.maxHp*LAST_BASTION.threshold);
  if(damage<=unprotected)return damage;
- unit.lastStandSpent=true;unit.lastStandTimer=unit.type==='grizzly'?LAST_BASTION.bearDuration:LAST_BASTION.tankDuration;
+ unit.lastStandHealElapsed=0;unit.lastStandSpent=true;unit.lastStandTimer=unit.type==='grizzly'?LAST_BASTION.bearDuration:LAST_BASTION.tankDuration;
  return unprotected+(damage-unprotected)*LAST_BASTION.damageMultiplier;
 }
 export function strikeDamage(attacker,target){
@@ -48,9 +55,9 @@ export function strikeDamage(attacker,target){
 export function unitStatuses(unit){
   const statuses=[],elder=isCurseImmune(unit),fury=bearFuryActive(unit);
   if(unit.type==='shieldbearer')statuses.push({id:'oathboundStride',name:'Oathbound Stride',kind:'Permanent blessing',detail:'1.5× fastest base movement',summary:'The sworn shield reaches danger first.',effect:'Base movement speed is 1.5 times the fastest other unit. Terrain and roads still apply.',rune:'ward'});
-  if(bearEnrageActive(unit))statuses.push({id:'greatwoodColossus',name:'Greatwood Colossus',kind:'Enrage',detail:'50% true health · double size and damage',summary:'Wounded ancient blood awakens a towering guardian.',effect:'At half true health, doubles body size, collision radius, and damage for the rest of its life. Stacks with Wrath of the First Oath. Bloodclaw Reckoning sweeps within 10 units every 8 seconds: rear damage fighters are left at 10% maximum health.',rune:'fury',art:bearVariant(unit).art});
-  if(bearEnrageActive(unit)||fury)statuses.push({id:'bloodclawReckoning',name:'Bloodclaw Reckoning',kind:'Special swipe',detail:'8-second cooldown · rear DPS to 10% HP',summary:'Three crimson claws tear across the battle line.',effect:'Within 10 units and clear line of sight, the frontal fan takes normal empowered strike damage. Rear damage fighters drop to 10% maximum health, never healed upward. Tanks and healers are excluded from the rear damage pulse. Ward protection is respected.',rune:'fury',art:bearVariant(unit).art});
-  if(lastBastionActive(unit))statuses.push({id:unit.type==='grizzly'?'unbrokenWild':'crownsLastBastion',name:unit.type==='grizzly'?'Heart of the Unbroken Wild':'The Crown’s Last Bastion',kind:'Last stand · active',detail:`${Math.ceil(unit.lastStandTimer)}s · 90% less incoming damage`,summary:unit.type==='grizzly'?'The ancient wild refuses to yield its heart.':'When the crown has nowhere left to retreat, its shield becomes a fortress.',effect:`Triggers below 20% true health and reduces damage after armor by 90%. Lasts up to ${unit.type==='grizzly'?60:20} seconds, ending early only above 60% health. Crossing damage below 20% is protected. Must heal above 60% to rearm after use.`,rune:'ward',art:unit.type==='grizzly'?bearVariant(unit).art:undefined});
+  if(bearEnrageActive(unit))statuses.push({id:'greatwoodColossus',name:'Greatwood Colossus',kind:'Enrage',detail:'50% true health · double size and damage',summary:'Wounded ancient blood awakens a towering guardian.',effect:'At half true health, doubles body size, collision radius, and damage for the rest of its life. Stacks with Wrath of the First Oath. Bloodclaw Reckoning sweeps within 14 units every 8 seconds: rear damage fighters are left at 10% maximum health.',rune:'fury',art:bearVariant(unit).art});
+  if(bearEnrageActive(unit)||fury)statuses.push({id:'bloodclawReckoning',name:'Bloodclaw Reckoning',kind:'Special swipe',detail:'8-second cooldown · rear DPS to 10% HP',summary:'Three crimson claws tear across the battle line.',effect:'Within 14 units and clear line of sight, the frontal fan takes normal empowered strike damage. Rear damage fighters drop to 10% maximum health, never healed upward. Tanks and healers are excluded from the rear damage pulse. Ward protection is respected.',rune:'fury',art:bearVariant(unit).art});
+  if(lastBastionActive(unit))statuses.push({id:unit.type==='grizzly'?'unbrokenWild':'crownsLastBastion',name:unit.type==='grizzly'?'Heart of the Unbroken Wild':'The Crown’s Last Bastion',kind:'Last stand · active',detail:`${Math.ceil(unit.lastStandTimer)}s · 90% less incoming damage`,summary:unit.type==='grizzly'?'The ancient wild refuses to yield its heart.':'When the crown has nowhere left to retreat, its shield becomes a fortress.',effect:`Triggers below 20% true health and reduces damage after armor by 90%. Lasts up to ${unit.type==='grizzly'?60:20} seconds, ending early only above 60% health. Crossing damage below 20% is protected. Must heal above 60% to rearm after use.${unit.type==='grizzly'?' Also restores 2% maximum health every 5 seconds while active.':''}`,rune:'ward',art:unit.type==='grizzly'?bearVariant(unit).art:undefined});
   if(elder)statuses.push({id:'crushingClaws',name:'Crushing Claws',kind:'Tank pressure',detail:'6× strike damage against tanks',summary:'Greatwood claws crush a shield line.',effect:'Bear strikes against tanks deal six times their previous damage before armor. Colossus and Wrath still stack.',rune:'fury',art:bearVariant(unit).art});
   if(elder){
     const bloodline=bearVariant(unit);
@@ -61,7 +68,7 @@ export function unitStatuses(unit){
   }
   if(unit.lastLightWardTimer>0)statuses.push({id:'ward',name:'Last Light Ward',kind:'Protection',detail:`${Math.ceil(unit.lastLightWardTimer)}s · invulnerable`,summary:'Protected from damage and attack targeting.',lore:'At the edge of death, the Hearthkin’s last light becomes a refuge. For one minute, no blow can touch them.',effect:'Health restored. Untargetable by attacks until the ward expires. Bears seek other prey.',rune:'ward'});
   if(unit.lastLightCurseActive)statuses.push({id:'lastLight',name:elder?'The Borrowed Last Breath':'Last Light Curse',kind:'Curse',detail:elder?'1 HP shown · hidden strength':'1 HP · next damage is fatal',summary:elder?'The rune is real. The weakness is a lure.':'The next wound will be the last.',lore:elder?bearVariant(unit).trickery:'The light that saved another life has named its price. A thorned mark hangs above the aggressor, and the smallest wound will now claim them.',effect:elder?'The lesser rune and 1 HP reading appear, but true health and existing wounds remain unchanged. The apparent nearness of death awakens Wrath of the First Oath immediately. With Thick Hide, arrows need 60 hits from full true health before temporary Heart protection.':'Health reduced to 1. Any positive damage is fatal.',rune:'curse',art:elder?bearVariant(unit).art:undefined});
-  if(fury)statuses.push({id:'greatwoodFury',name:'Wrath of the First Oath',kind:'Fury · active',detail:'6× damage · frontal swipe',summary:'The ancient sentence answers the scent of death.',lore:unit.lastLightCurseActive?'A borrowed death-mark is enough to stir the old sentence. These bears need not be dying: the promise of a last breath calls the same terrible strength. Those drawn to the lesser rune meet the fury of the first oath.':'As a Greatwood bear’s strength falls to its last tenth, the first oath tightens. The condemned blood remembers the ruin of the star-grove. A final measure of the old gods’ wrath passes into every claw.',effect:'Active at 10% true health or while Last Light shows a false 1 HP. Multiplies damage by six and stacks with Greatwood Colossus for twelve times base damage. Landed hits remain lethal to non-tank fighters. Swipes hit all unprotected hostile units in the front 160-degree fan within 10 units and clear line of sight. Bloodclaw Reckoning also reduces rear damage fighters to 10% maximum health, without raising anyone already below that amount. Shieldbearer hits refresh an 8-second threat lock.',rune:'fury',art:bearVariant(unit).art});
+  if(fury)statuses.push({id:'greatwoodFury',name:'Wrath of the First Oath',kind:'Fury · active',detail:'6× damage · frontal swipe',summary:'The ancient sentence answers the scent of death.',lore:unit.lastLightCurseActive?'A borrowed death-mark is enough to stir the old sentence. These bears need not be dying: the promise of a last breath calls the same terrible strength. Those drawn to the lesser rune meet the fury of the first oath.':'As a Greatwood bear’s strength falls to its last tenth, the first oath tightens. The condemned blood remembers the ruin of the star-grove. A final measure of the old gods’ wrath passes into every claw.',effect:'Active at 10% true health or while Last Light shows a false 1 HP. Multiplies damage by six and stacks with Greatwood Colossus for twelve times base damage. Landed hits remain lethal to non-tank fighters. Swipes hit all unprotected hostile units in the front 160-degree fan within 14 units and clear line of sight. Bloodclaw Reckoning also reduces rear damage fighters to 10% maximum health, without raising anyone already below that amount. Shieldbearer hits refresh an 8-second threat lock.',rune:'fury',art:bearVariant(unit).art});
   if(unit.stunTimer>0)statuses.push({id:'stun',name:'Stunned',kind:'Impairment',detail:`${Math.ceil(unit.stunTimer)}s remaining`,summary:'Movement and attacks are interrupted.',rune:'stun'});
   if(unit.stunImmunityTimer>0)statuses.push({id:'stunImmunity',name:'Steadfast',kind:'Protection',detail:`${Math.ceil(unit.stunImmunityTimer)}s · stun immunity`,summary:'Cannot be stunned while this protection lasts.',rune:'ward'});
   return statuses;

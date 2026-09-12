@@ -37,7 +37,7 @@ test('special swipe leaves rear damage fighters at ten percent',()=>{
  s._applyUnitDamage(bear,1,tank);s._applyGrizzlyCleave(bear,tank);assert(dps.hp>0&&dps.hp<=dps.maxHp);
 });
 test('team healers pulse every nearby injured ally, with stronger tank healing and rear-line range',()=>{
- const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',102,100,'player'),dps=s.addUnit('soldier',115,100,'player'),far=s.addUnit('soldier',121,100,'player'),enemy=s.addUnit('raider',103,100,'enemy');
+ const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',102,100,'player'),dps=s.addUnit('soldier',115,100,'player'),far=s.addUnit('soldier',125,100,'player'),enemy=s.addUnit('raider',103,100,'enemy');
  select(s,[h,t]);s.assignSelectedTeam();t.hp-=100;dps.hp=1;far.hp=1;enemy.hp=1;
  updateTeams(s,2);assert.equal(t.hp,t.maxHp-60);assert.equal(dps.hp,21);assert.equal(far.hp,1);assert.equal(enemy.hp,1);
  updateTeams(s,.1);assert.equal(t.hp,t.maxHp-60);
@@ -58,7 +58,7 @@ test('team membership and wounded tank percentage survive save and load; old tan
  restored.disbandTeam(id);assert.equal(restored.getCombatTeams()[0].members.length,0);
 });
 test('automatic healers follow a moving tank, but do not override manual destinations',()=>{
- const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',120,100,'player');select(s,[h,t]);s.assignSelectedTeam();
+ const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',125,100,'player');select(s,[h,t]);s.assignSelectedTeam();
  s.repathBudgetRemaining=8;updateTeams(s,.1);assert.equal(h.teamFollowing,true);assert.equal(h.command,'move');assert(h.path.length);
  s._interruptWork(h);s._sendUnitTo(h,{x:95,z:95},'move');const path=structuredClone(h.path);s.clock=3;updateTeams(s,.1);assert.deepEqual(h.path,path);assert.equal(h.teamFollowing,false);
 });

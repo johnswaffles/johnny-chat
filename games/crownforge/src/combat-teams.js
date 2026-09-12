@@ -1,7 +1,7 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260911-loopfix1';
-import {UNIT_TYPES} from './config.js?v=20260911-loopfix1';
-import {isWardProtected} from './unit-status.js?v=20260911-loopfix1';
-export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:20,followDistance:10,tauntDuration:8,tauntRange:24});
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260911-fallback1';
+import {UNIT_TYPES} from './config.js?v=20260911-fallback1';
+import {isWardProtected} from './unit-status.js?v=20260911-fallback1';
+export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
  const rule=UNIT_TYPES[unit?.type];
@@ -94,15 +94,17 @@ export function updateTeams(sim,dt){
   const enemy=sim._getExplicitAttackTarget(anchor);
   const dx=enemy?anchor.x-enemy.x:healer.x-anchor.x,dz=enemy?anchor.z-enemy.z:healer.z-anchor.z,len=Math.hypot(dx,dz)||1;
   const side=((healer.id%3)-1)*2;
-  const desired=enemy?.type==='grizzly'?healerRearPosition(sim,healer,enemy,anchor):{
+  let desired=enemy?.type==='grizzly'?healerRearPosition(sim,healer,enemy,anchor):{
    x:anchor.x+dx/len*TEAM_RULES.followDistance-dz/len*side,
    z:anchor.z+dz/len*TEAM_RULES.followDistance+dx/len*side};
+  const frontFallback=enemy?.type==='grizzly'&&rearRouteBlocked(sim,healer,enemy,desired);
+  if(frontFallback){const back=Math.max(BEAR_FURY.radius+2,distance(anchor,enemy)+4);desired={x:enemy.x+dx/len*back-dz/len*side,z:enemy.z+dz/len*back+dx/len*side};}
   if((enemy?.type==='grizzly'?distance(healer,desired)>1.2:distance(healer,anchor)>TEAM_RULES.healRange-1)
    &&(healer.teamFollowAt??0)<=sim.clock&&sim.repathBudgetRemaining>0){
    healer.teamFollowAt=sim.clock+.5;sim.repathBudgetRemaining--;
    // Follow the outer perimeter while crossing to the DPS side, not the bear's body.
-   const point=enemy?.type==='grizzly'?bearOrbitStep(healer,enemy,desired):desired;
-   if(sim._sendUnitTo(healer,point,'move')){healer.teamFollowing=true;healer.actionLabel='Following behind damage fighters';}
+   const point=enemy?.type==='grizzly'&&!frontFallback?bearOrbitStep(healer,enemy,desired):desired;
+   if(sim._sendUnitTo(healer,point,'move')){healer.teamFollowing=true;healer.actionLabel=frontFallback?'Supporting behind the tank':'Following behind damage fighters';}else if(enemy?.type==='grizzly')markFrontFallback(sim,healer,enemy);
   }
  }
 }
@@ -157,7 +159,10 @@ export function bearRearPosition(sim,unit,bear){
  const columns=Math.max(3,Math.floor(radius*2/1.6)),index=Math.max(0,peers.indexOf(unit)),count=Math.min(columns,peers.length);
  const angle=Math.atan2(bear.z-tank.z,bear.x-tank.x)+(index%columns-(count-1)/2)*(2/columns);
  const ring=radius+Math.floor(index/columns)*1.6;
- return {x:bear.x+Math.cos(angle)*ring,z:bear.z+Math.sin(angle)*ring};
+ const goal={x:bear.x+Math.cos(angle)*ring,z:bear.z+Math.sin(angle)*ring};
+ if(!rearRouteBlocked(sim,unit,bear,goal))return goal;
+ if(UNIT_TYPES[unit.type].range>=4){const span=distance(tank,bear)||1,r=combatRadius(bear)+UNIT_TYPES[unit.type].range*.8;return {x:bear.x+(tank.x-bear.x)/span*r,z:bear.z+(tank.z-bear.z)/span*r};}
+ return null;
 }
 // Advance around the circumference in short chords rather than through the bear.
 export function bearOrbitStep(unit,bear,goal){
@@ -187,4 +192,20 @@ export function healerRearPosition(sim,healer,enemy,anchor){
  const healers=sim.units.filter(u=>!u.dead&&u.teamId===healer.teamId&&isTeamHealer(u)).sort((a,b)=>a.id-b.id);
  const side=(healers.indexOf(healer)-(healers.length-1)/2)*2;
  return {x:enemy.x+dx*back-dz*side,z:enemy.z+dz*back+dx*side};
+}
+
+export function markFrontFallback(sim,unit,target){
+ unit.frontFallback={targetId:target.id,x:target.x,z:target.z,until:sim.clock+8};unit.rearProgress=null;
+}
+export function rearRouteBlocked(sim,unit,target,goal){
+ const fallback=unit.frontFallback;
+ if(fallback?.targetId===target.id&&sim.clock<fallback.until&&distance(fallback,target)<3)return true;
+ const step=bearOrbitStep(unit,target,goal);
+ if(sim._pointBlockedForUnit(unit,goal)||sim._pointBlockedForUnit(unit,step)||sim._pathSegmentBlocked(unit,unit,step)){
+  markFrontFallback(sim,unit,target);return true;
+ }
+ const track=unit.rearProgress;
+ if(!track||track.targetId!==target.id||distance(track,unit)>.3||distance(unit,goal)<1){unit.rearProgress={targetId:target.id,x:unit.x,z:unit.z,at:sim.clock};}
+ else if(sim.clock-track.at>2){markFrontFallback(sim,unit,target);return true;}
+ return false;
 }

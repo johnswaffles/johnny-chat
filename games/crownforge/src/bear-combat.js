@@ -1,6 +1,6 @@
-import { UNIT_TYPES } from './config.js?v=20260911-loopfix1';
+import { UNIT_TYPES } from './config.js?v=20260911-fallback1';
 
-export const BEAR_FURY = Object.freeze({threshold:.1, multiplier:6, extraTargets:2, radius:10, arrowHits:30});
+export const BEAR_FURY = Object.freeze({threshold:.1, multiplier:6, extraTargets:2, radius:14, arrowHits:30});
 export const THICK_HIDE=Object.freeze({armorBonus:100,damageMultiplier:.5});
 export const bearIncomingDamage=(unit,amount,type='weapon')=>unit?.type==='grizzly'?(type==='arrow'&&amount>0?bearArrowDamage(unit):amount)*THICK_HIDE.damageMultiplier:amount;
 export const BEAR_DEATH = Object.freeze({collapse:1.8, holdUntil:5, lifetime:6});

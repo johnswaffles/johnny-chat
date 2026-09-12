@@ -32,7 +32,7 @@ test('one fury contact kills the primary and all nearby frontal fighters; no har
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=true;
  const primary=s.addUnit('soldier',101.4,100,'player');primary.hp=primary.maxHp=500;
  const second=s.addUnit('raider',102,101,'enemy'),third=s.addUnit('shieldbearer',103,100,'player');
- const fourth=s.addUnit('soldier',105,100,'player'),outside=s.addUnit('soldier',111,100,'player'),blocked=s.addUnit('soldier',101,100,'player'),ward=s.addUnit('raider',100,101,'enemy');ward.lastLightWardTimer=20;
+ const fourth=s.addUnit('soldier',105,100,'player'),outside=s.addUnit('soldier',115,100,'player'),blocked=s.addUnit('soldier',101,100,'player'),ward=s.addUnit('raider',100,101,'enemy');ward.lastLightWardTimer=20;
  const worker=s.addUnit('villager',100,102,'player'),bear2=s.addUnit('grizzly',100,103,'wildlife');
  s._hasCombatLineOfSight=(u,t)=>t!==blocked;
  s._sendUnitToAttack(b,primary);let hits=0;
@@ -85,7 +85,7 @@ test('bear lore reveals trickery only after Last Light, with accurate active buf
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');let statuses=unitStatuses(b);
  assert.deepEqual(statuses.map(x=>x.id),['crushingClaws','firstCondemnation','elderhide','thickHide','bearLineage']);
  assert(!/Last Light|lesser rune|lure|1 HP/.test(statuses.map(x=>x.lore+' '+x.effect).join(' ')));
- b.lastLightCurseActive=true;statuses=unitStatuses(b);const fury=statuses.find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/six/);assert.match(fury.effect,/front 160-degree/);assert.match(fury.effect,/10 units/);assert.match(fury.art,/cursed-bears/);
+ b.lastLightCurseActive=true;statuses=unitStatuses(b);const fury=statuses.find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/six/);assert.match(fury.effect,/front 160-degree/);assert.match(fury.effect,/14 units/);assert.match(fury.art,/cursed-bears/);
  assert.match(statuses.find(x=>x.id==='lastLight').lore,/bait/);assert.equal(b.hp,b.maxHp);
  b.lastLightCurseActive=false;b.hp=18;assert(unitStatuses(b).some(x=>x.id==='greatwoodFury'));
 });

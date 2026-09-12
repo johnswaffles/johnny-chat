@@ -1,22 +1,22 @@
 import { LivingCrownHall } from './crown-hall-living.js?v=20260911-livinghall1';
-import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260911-loopfix1';
-import {corpseLifetime} from './bear-combat.js?v=20260911-loopfix1';
+import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260911-fallback1';
+import {corpseLifetime} from './bear-combat.js?v=20260911-fallback1';
 import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
-import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260911-loopfix1';
-import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260911-loopfix1';
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260911-loopfix1';
+import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260911-fallback1';
+import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260911-fallback1';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260911-fallback1';
 import {paintedRosterFactories} from './painted-roster-rig.js?v=20260909-cursedbears1';
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260911-loopfix1';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260911-fallback1';
 import { BUILDING_DEPTH } from './building-depth-data.js?v=20260909-cursedbears1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260909-cursedbears1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260911-blueward1';
-import { CrownforgeLandscape } from './landscape.js?v=20260911-loopfix1';
-import { ForestCache } from './forest-cache.js?v=20260911-loopfix1';
-import { CrownforgeMeadow } from './meadow.js?v=20260911-loopfix1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260911-loopfix1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260911-loopfix1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260911-loopfix1';
+import { CrownforgeLandscape } from './landscape.js?v=20260911-fallback1';
+import { ForestCache } from './forest-cache.js?v=20260911-fallback1';
+import { CrownforgeMeadow } from './meadow.js?v=20260911-fallback1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260911-fallback1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260911-fallback1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260911-fallback1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -2534,11 +2534,11 @@ export class CrownforgeRenderer {
           const ringPoint=(angle,radius,lift=0)=>{const p=this.worldToScreen({x:unit.x+Math.cos(angle)*radius,z:unit.z+Math.sin(angle)*radius});return {x:p.x,y:p.y-lift*zoom};};
           // Ground shockwave establishes the entire 360-degree danger area.
           ctx.shadowColor='#fb163b';ctx.shadowBlur=22*zoom;
-          ctx.beginPath();for(let i=0;i<=96;i++){const p=ringPoint(i/96*TAU,10*(.82+progress*.18));if(i)ctx.lineTo(p.x,p.y);else ctx.moveTo(p.x,p.y);}
+          ctx.beginPath();for(let i=0;i<=96;i++){const p=ringPoint(i/96*TAU,14*(.82+progress*.18));if(i)ctx.lineTo(p.x,p.y);else ctx.moveTo(p.x,p.y);}
           ctx.closePath();ctx.strokeStyle='#b91635';ctx.lineWidth=3*zoom;ctx.stroke();
           // Two opposed fans of three tapered claws sweep a complete revolution.
           for(let fan=0;fan<2;fan++)for(let claw=0;claw<3;claw++){
-            const head=turn+fan*Math.PI,radius=7.6+claw*.95,arc=1.7;
+            const head=turn+fan*Math.PI,radius=11.6+claw*.95,arc=1.7;
             ctx.beginPath();
             for(let i=0;i<=32;i++){const t=i/32,p=ringPoint(head-arc+t*arc,radius+.24*Math.sin(t*Math.PI),18+claw*7);if(i)ctx.lineTo(p.x,p.y);else ctx.moveTo(p.x,p.y);}
             for(let i=32;i>=0;i--){const t=i/32,p=ringPoint(head-arc+t*arc,radius-(.55+claw*.12)*Math.sin(t*Math.PI),18+claw*7);ctx.lineTo(p.x,p.y);}
@@ -2547,7 +2547,7 @@ export class CrownforgeRenderer {
             ctx.strokeStyle='#ffb4a4';ctx.lineWidth=1.5*zoom;ctx.stroke();
           }
           // Blood-red sparks trail outward from the moving claw tips.
-          for(let i=0;i<28;i++){const angle=turn+i*2.39996,p=ringPoint(angle,8+(i%5)*.5+progress*1.4,10+(i%4)*9);ctx.beginPath();ctx.arc(p.x,p.y,(1.4+i%3)*zoom,0,TAU);ctx.fillStyle=i%3?'#c90b31':'#ff8275';ctx.fill();}
+          for(let i=0;i<28;i++){const angle=turn+i*2.39996,p=ringPoint(angle,12+(i%5)*.5+progress*1.4,10+(i%4)*9);ctx.beginPath();ctx.arc(p.x,p.y,(1.4+i%3)*zoom,0,TAU);ctx.fillStyle=i%3?'#c90b31':'#ff8275';ctx.fill();}
           ctx.shadowBlur=0;
           for(const victim of payload.victims??[]){const p=this.worldToScreen(victim);
             for(let claw=0;claw<3;claw++){ctx.beginPath();ctx.moveTo(p.x-13*zoom+claw*8*zoom,p.y-42*zoom);ctx.lineTo(p.x-25*zoom+claw*8*zoom,p.y-8*zoom);ctx.strokeStyle='#ee2945';ctx.lineWidth=3*zoom;ctx.stroke();}
