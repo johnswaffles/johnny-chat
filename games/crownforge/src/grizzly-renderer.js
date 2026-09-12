@@ -1,6 +1,6 @@
 import { CURSED_BEAR_ART } from './cursed-bear-art.js?v=20260909-cursedbears1';
 import { bearVariantId } from './bear-variants.js?v=20260909-cursedbears1';
-import { BEAR_DEATH } from './bear-combat.js?v=20260911-singleteam1';
+import { BEAR_DEATH, bearBodyScale } from './bear-combat.js?v=20260911-bloodstorm1';
 import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260909-cursedbears1';
 import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260909-cursedbears1';
 
@@ -60,11 +60,12 @@ export class GrizzlyRenderer {
   }
   heightFactor(unit){
     const {sheet,frame}=paintedGrizzlyFrame(unit);
-    return frame.pivot[1]/sheet.scaleBase*BODY_SCALE*(frame.sizeFactor??1)+.08;
+    return frame.pivot[1]/sheet.scaleBase*BODY_SCALE*(frame.sizeFactor??1)*bearBodyScale(unit)+.08;
   }
   draw(ctx,unit,point,size,time,reducedMotion=false,resolution=1){
     const {sheet,frame,index,view}=paintedGrizzlyFrame(unit,time,reducedMotion),frames=this.cache.get(sheet);
     if(!frames)return false;
+    size*=bearBodyScale(unit);
     const [full,small]=frames[index],scale=size*BODY_SCALE*(frame.sizeFactor??1)/sheet.scaleBase;
     const image=scale*resolution<=.5?small:full;
     ctx.save();ctx.globalAlpha*=unit.dead?Math.max(0,Math.min(1,(BEAR_DEATH.lifetime-(unit.deathAge??0))/(BEAR_DEATH.lifetime-BEAR_DEATH.holdUntil))):1;

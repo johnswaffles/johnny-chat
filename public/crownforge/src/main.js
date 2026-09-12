@@ -1,15 +1,15 @@
-import {createTeamControls} from './team-controls.js?v=20260911-singleteam1';
-import {combatRole} from './combat-teams.js?v=20260911-singleteam1';
+import {createTeamControls} from './team-controls.js?v=20260911-bloodstorm1';
+import {combatRole} from './combat-teams.js?v=20260911-bloodstorm1';
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {requestGrizzlyPair} from './wildlife.js?v=20260911-singleteam1';
-import {createUnitInspector} from './unit-inspector.js?v=20260911-singleteam1';
-import {displayedUnitHealth} from './unit-status.js?v=20260911-singleteam1';
-import { setupPresentation } from './presentation.js?v=20260911-singleteam1';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260911-singleteam1';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260909-cursedbears1';
+import {requestGrizzlyPair} from './wildlife.js?v=20260911-bloodstorm1';
+import {createUnitInspector} from './unit-inspector.js?v=20260911-bloodstorm1';
+import {displayedUnitHealth} from './unit-status.js?v=20260911-bloodstorm1';
+import { setupPresentation } from './presentation.js?v=20260911-bloodstorm1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260911-bloodstorm1';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260911-bloodstorm1';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
-import { CrownforgeRenderer } from './renderer.js?v=20260911-singleteam1';
-import { CrownforgeSimulation } from './simulation.js?v=20260911-singleteam1';
+import { CrownforgeRenderer } from './renderer.js?v=20260911-bloodstorm1';
+import { CrownforgeSimulation } from './simulation.js?v=20260911-bloodstorm1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
 import { summarizeUnitTasks } from './task-summary.js?v=20260909-cursedbears1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-cursedbears1';
@@ -921,7 +921,7 @@ function selectionStatus() {
       : '';
     const curse = unit.lastLightCurseActive ? ' · Last Light Curse · 1 HP · any damage is fatal' : '';
     const team=unit.teamId?` · Your team · ${combatRole(unit)}`:'';
-    const tank=combatRole(unit)==='tank'?' · Tank: 50 landed enraged hits · 80% armor / dodge · 1.4 damage':'';
+    const tank=combatRole(unit)==='tank'?' · Tank: 80% armor · 5% dodge · Oathbound Stride · 1.4 damage':'';
     return `${unit.actionLabel}${health}${team}${tank}${cargo}${status}${curse}${defense}`;
   }
   if (units.length > 1) {

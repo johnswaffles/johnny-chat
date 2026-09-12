@@ -28,7 +28,7 @@ test('each of sixty actual arrow projectile impacts removes one sixtieth, with a
   }
  }
 });
-test('one fury contact kills the primary and only two nearby fighters; no harm through a wall or ward',()=>{
+test('one fury contact kills the primary and all nearby frontal fighters; no harm through a wall or ward',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=true;
  const primary=s.addUnit('soldier',101.4,100,'player');primary.hp=primary.maxHp=500;
  const second=s.addUnit('raider',102,101,'enemy'),third=s.addUnit('shieldbearer',103,100,'player');
@@ -38,11 +38,11 @@ test('one fury contact kills the primary and only two nearby fighters; no harm t
  s._sendUnitToAttack(b,primary);let hits=0;
  const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(t,d,a,...rest)=>{if(a===b)hits++;return apply(t,d,a,...rest);};
  for(let i=0;i<60&&!primary.dead;i++)s._updateAttack(b,1/60);
- assert(primary.dead&&second.dead&&!third.dead);assert.equal(third.hp,third.maxHp);assert.equal(hits,3);
- for(const u of [fourth,outside,blocked,ward,worker,bear2])assert.equal(u.hp,u.maxHp);
+ assert(primary.dead&&second.dead&&!third.dead);assert(third.hp<third.maxHp);assert.equal(hits,4);assert(fourth.dead);
+ for(const u of [outside,blocked,ward,worker,bear2])assert.equal(u.hp,u.maxHp);
  // Scanning during the follow-through cannot grant another instant strike.
  const phase=b.attackPhase,elapsed=b.attackPhaseElapsed;updateWildlife(s,1);assert.equal(b.attackPhase,phase);assert.equal(b.attackPhaseElapsed,elapsed);
- step(s,b,.3);assert.equal(hits,3);
+ step(s,b,.3);assert.equal(hits,4);assert(fourth.dead);
 });
 test('an escaped primary means the whole committed fury swipe misses',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),p=s.addUnit('soldier',101.3,100,'player'),near=s.addUnit('soldier',102,101,'player');b.hp=18;
@@ -68,7 +68,7 @@ test('every fighter can land a strike while moving within reach; workers keep ex
  const types=Object.keys(UNIT_TYPES).filter(type=>isFighter({type,faction:'player'}));assert(types.length>=8);
  for(const type of types){
   const s=arena(),u=s.addUnit(type,100,100,'player'),b=s.addUnit('grizzly',102,100,'wildlife');b.hp=b.maxHp=10000;s._sendUnitToAttack(u,b);
-  let movingHits=0;const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(t,d,a,...rest)=>{if(a===u&&u.fighterMovingAttack&&Math.hypot(u.velocityX,u.velocityZ)>.1)movingHits++;return apply(t,d,a,...rest);};
+  let movingHits=0;const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(t,d,a,...rest)=>{if(a===u&&u.fighterMovingAttack&&u.motionSpeed>.1)movingHits++;return apply(t,d,a,...rest);};
   for(let i=0;i<6*60;i++){b.x+=1.3/60;b.velocityX=1.3;s._updateUnit(u,1/60);}
   assert(movingHits>=1,`${type} must strike during pursuit`);assert(u.x>104);assert(u.combatLocomotionTime>0);
  }
@@ -83,9 +83,9 @@ test('running fighters cannot hit through walls or reach an escaped target',()=>
 });
 test('bear lore reveals trickery only after Last Light, with accurate active buff numbers',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');let statuses=unitStatuses(b);
- assert.deepEqual(statuses.map(x=>x.id),['firstCondemnation','elderhide','thickHide','bearLineage']);
+ assert.deepEqual(statuses.map(x=>x.id),['crushingClaws','firstCondemnation','elderhide','thickHide','bearLineage']);
  assert(!/Last Light|lesser rune|lure|1 HP/.test(statuses.map(x=>x.lore+' '+x.effect).join(' ')));
- b.lastLightCurseActive=true;statuses=unitStatuses(b);const fury=statuses.find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/500%/);assert.match(fury.effect,/two other/);assert.match(fury.effect,/10 world units/);assert.match(fury.art,/cursed-bears/);
+ b.lastLightCurseActive=true;statuses=unitStatuses(b);const fury=statuses.find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/six/);assert.match(fury.effect,/front 160-degree/);assert.match(fury.effect,/10 units/);assert.match(fury.art,/cursed-bears/);
  assert.match(statuses.find(x=>x.id==='lastLight').lore,/bait/);assert.equal(b.hp,b.maxHp);
  b.lastLightCurseActive=false;b.hp=18;assert(unitStatuses(b).some(x=>x.id==='greatwoodFury'));
 });

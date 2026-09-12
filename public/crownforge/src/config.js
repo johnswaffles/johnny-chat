@@ -349,9 +349,9 @@ export const UNIT_TYPES = {
     acceleration: 10.2,
     braking: 13.2,
     radius: 0.44,
-    maxHp: 3480, // 50 landed enraged hits: 58 × 6 × 20% after armor.
+    maxHp: 3480, // Colossus and last-breath fury stack; see COMBAT_EFFECTS.md.
     armorReduction: .8,
-    dodgeChance: .8,
+    dodgeChance: .05,
     attack: 1.4, // Ten hits equal one Crown Guard hit (14).
     combatRole: 'tank',
     range: 1.28,
@@ -361,6 +361,11 @@ export const UNIT_TYPES = {
     autoAggroRadius: 15,
   },
 };
+
+// Oathbound Stride stays three times faster than the fastest other base unit.
+UNIT_TYPES.shieldbearer.speed=3*Math.max(...Object.entries(UNIT_TYPES).filter(([id])=>id!=='shieldbearer').map(([,rule])=>rule.speed??0));
+UNIT_TYPES.shieldbearer.acceleration=36;
+UNIT_TYPES.shieldbearer.braking=48;
 
 export const SPACING_ROLES = {
   villager: { personalSpace: 1.08, groupGap: 1.45 },

@@ -1,3 +1,4 @@
+import {CombatMusic,COMBAT_TRACK} from './combat-music.js?v=20260911-bloodstorm1';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const SELECTION_KEY = 'crownforge-music-selection-v1';
 const asset = (name) => new URL(`../assets/${name}.mp3?v=20260905-playlist1`, import.meta.url).href;
@@ -15,12 +16,13 @@ function browserStorage() {
   try { return globalThis.localStorage; } catch { return null; }
 }
 
-// A single media element owns playback, so switching songs cannot overlap them.
+// A media element owns the regular album; a decoded combat loop crossfades over it.
 // Gameplay cues stay quiet until they have a coherent recorded sound family.
 export class CrownforgeAudio {
   constructor({ storage = browserStorage() } = {}) {
     this.music = typeof Audio === 'function' ? new Audio() : null;
     this.storage = storage;
+    this.combat=new CombatMusic(this);
     this.musicVolume = 0.58;
     this.musicMuted = false;
     this.unlocked = false;
@@ -49,7 +51,7 @@ export class CrownforgeAudio {
     }
   }
 
-  get currentTrack() { return CROWNFORGE_MUSIC[this.trackIndex]; }
+  get currentTrack() { return this.combat.playing?COMBAT_TRACK:CROWNFORGE_MUSIC[this.trackIndex]; }
   notify() { this.onMusicChange?.(); }
 
   loadTrack(index) {
@@ -58,7 +60,7 @@ export class CrownforgeAudio {
     this.playbackStatus = 'ready';
     if (this.music) {
       this.music.pause();
-      this.music.src = this.currentTrack.src;
+      this.music.src = CROWNFORGE_MUSIC[this.trackIndex].src;
       this.music.loop = this.selection !== 'all';
     }
     this.notify();
@@ -76,6 +78,7 @@ export class CrownforgeAudio {
 
   unlock() {
     this.unlocked = true;
+    this.combat.unlock();
     return this.startMusic();
   }
 
@@ -132,5 +135,5 @@ export class CrownforgeAudio {
   command() {}
   placement() {}
   play() {}
-  sync(simulation) { this.phase = simulation?.phase ?? this.phase; }
+  sync(simulation) { this.phase = simulation?.phase ?? this.phase;this.combat.sync(simulation); }
 }
