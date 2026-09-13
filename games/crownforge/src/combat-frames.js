@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260912-woodpull1';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260912-woodpull1';
+import {UNIT_TYPES} from './config.js?v=20260912-classportraits1';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260912-classportraits1';
 import {bearVariant} from './bear-variants.js?v=20260909-cursedbears1';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
@@ -7,22 +7,33 @@ const tank=u=>UNIT_TYPES[u.type]?.combatRole==='tank';
 const name=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type]?.label??u.type;
 // Track combat relationships, not selection or mere proximity. Grace prevents frame flicker during repositioning.
 export function encounterUnits(sim){
- const live=new Map(sim.units.filter(alive).map(u=>[u.id,u])),enemies=new Set(),allies=new Set();
+ const live=new Map(sim.units.filter(alive).map(u=>[u.id,u])),enemies=new Set(),allies=new Set(),threatened=new Set();
  for(const u of live.values()){
   const target=live.get(u.command==='attack'?u.attackTarget:u.teamAdvanceTargetId);
   if(!target||u.faction===target.faction)continue;
   if(u.faction==='player'&&target.faction!=='player'){allies.add(u.id);enemies.add(target.id);}
-  if(u.faction!=='player'&&target.faction==='player'){enemies.add(u.id);allies.add(target.id);}
+  if(u.faction!=='player'&&target.faction==='player'){enemies.add(u.id);allies.add(target.id);threatened.add(target.id);}
  }
  const teams=new Set([...allies].map(id=>live.get(id).teamId).filter(Boolean));
- return [...live.values()].filter(u=>enemies.has(u.id)||(u.faction==='player'&&tank(u)&&(allies.has(u.id)||teams.has(u.teamId)))).sort((a,b)=>Number(b.faction==='player')-Number(a.faction==='player')); 
+ return [...live.values()].filter(u=>enemies.has(u.id)||(u.faction==='player'&&(threatened.has(u.id)||(tank(u)&&(allies.has(u.id)||teams.has(u.teamId)))))).sort((a,b)=>Number(b.faction==='player')-Number(a.faction==='player'));
 }
 export function focusedCombatUnits(sim,units){
  const enemies=units.filter(u=>u.faction!=='player').slice(0,3);
- const tanks=units.filter(u=>u.faction==='player'&&tank(u));
- const damaged=tanks.filter(u=>sim.clock-(u.lastCombatDamageAt??-Infinity)<8).sort((a,b)=>b.lastCombatDamageAt-a.lastCombatDamageAt||a.hp/a.maxHp-b.hp/b.maxHp||a.id-b.id);
- const focused=damaged[0]??tanks.find(u=>units.some(e=>e.faction!=='player'&&e.attackTarget===u.id&&e.command==='attack'));
+ const friends=units.filter(u=>u.faction==='player'&&alive(u));
+ const recentFirst=(a,b)=>(b.lastCombatDamageAt??-Infinity)-(a.lastCombatDamageAt??-Infinity)||Number(tank(b))-Number(tank(a))||a.id-b.id;
+ const targets=friends.filter(u=>units.some(e=>e.faction!=='player'&&e.attackTarget===u.id&&e.command==='attack'));
+ const damaged=friends.filter(u=>sim.clock-(u.lastCombatDamageAt??-Infinity)<8);
+ const focused=damaged.sort(recentFirst)[0]??targets.sort(recentFirst)[0];
  return focused?[focused,...enemies]:enemies;
+}
+const crownRows=['villager','soldier','scout','spearwarden','militia'];
+const ashenRows=['raider','ashenForager','ashenOutrider','thornSpear','hearthLevy','hidewall'];
+export function portraitAsset(u){
+ if(u.type==='shieldbearer')return {file:'combat-portraits-v1.png',row:0,rows:4};
+ if(u.type==='grizzly')return {file:'combat-portraits-v1.png',row:({'black-oath':1,cindermaw:2,'ashen-grudge':3}[bearVariant(u).id]),rows:4};
+ if(crownRows.includes(u.type))return {file:'crown-class-portraits-v1.png',row:crownRows.indexOf(u.type),rows:5};
+ if(ashenRows.includes(u.type))return {file:'ashen-class-portraits-v1.png',row:ashenRows.indexOf(u.type),rows:6,top:[0,260,518,777,1058,1335][ashenRows.indexOf(u.type)],height:[260,258,259,281,277,320][ashenRows.indexOf(u.type)],sheetHeight:1774};
+ return null;
 }
 const glyphs={
  crownsAegis:'M12 3 4 6v7q0 6 8 9 8-3 8-9V6Z M8 12h8 M12 8v9',
@@ -52,7 +63,7 @@ export function effectIcon(status){
  return `<svg viewBox="0 0 24 24" aria-hidden="true" style="--sigil-hue:${hue}"><path d="${glyphs[status.id]??'m12 2 9 10-9 10-9-10Z M12 7v10 M7 12h10'}"/></svg>`;
 }
 export function createCombatFrames(sim,renderer){
- const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260912-woodpull1';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260912-classportraits1';document.head.append(css);
  const host=document.createElement('aside');host.className='combat-frames';host.hidden=true;host.setAttribute('aria-label','Encounter portraits');
  host.innerHTML='<header><span>IN COMBAT</span><b>Encounter</b><button type="button" aria-label="Minimize encounter portraits" aria-expanded="true">−</button></header><div class="combat-frame-list"></div>';
  document.querySelector('.game-shell').append(host);
@@ -69,8 +80,8 @@ export function createCombatFrames(sim,renderer){
   const el=document.createElement('article');el.className='combat-unit-frame';el.dataset.unitId=u.id;el.dataset.side=u.faction==='player'?'ally':'enemy';
   el.innerHTML='<div class="combat-frame-top"><button class="combat-portrait" type="button"><span></span><canvas width="120" height="120"></canvas></button><div class="combat-frame-vitals"><div class="combat-frame-name"></div><div class="combat-frame-role"></div><div class="combat-frame-health" role="meter" aria-label="Health"><i></i><span></span></div><div class="combat-frame-action"></div></div></div><div class="combat-auras" aria-label="Buffs"><small>BUFFS</small><div></div></div><div class="combat-auras debuffs" aria-label="Debuffs"><small>DEBUFFS</small><div></div></div>';
   const portrait=el.querySelector('.combat-portrait');bindTip(portrait);
-  const row=u.type==='shieldbearer'?0:u.type==='grizzly'?({'black-oath':1,cindermaw:2,'ashen-grudge':3}[bearVariant(u).id]):null;
-  if(row!==null){portrait.classList.add('has-art');portrait.style.setProperty('--portrait-row',`${row*100/3}%`);portrait.style.setProperty('--breath-delay',`${-(u.id%7)*.4}s`);}
+  const art=portraitAsset(u),row=art?.row??null;
+  if(art){portrait.classList.add('has-art');portrait.style.setProperty('--portrait-row',`${art.row*100/(art.rows-1)}%`);portrait.style.setProperty('--portrait-sheet',`url('./assets/${art.file}')`);portrait.style.setProperty('--portrait-sheet-size',`300% ${art.rows*100}%`);if(art.sheetHeight){portrait.style.setProperty('--portrait-row',`${art.top/(art.sheetHeight-art.height)*100}%`);portrait.style.setProperty('--portrait-sheet-size',`300% ${art.sheetHeight/art.height*100}%`);}portrait.style.setProperty('--breath-delay',`${-(u.id%7)*.4}s`);}
   const ordinal=[...records.values()].filter(r=>r.u.type===u.type).length+1;
   el.querySelector('.combat-frame-name').textContent=`${u.type==='shieldbearer'?'Shieldbearer':name(u)} · ${ordinal}`;
   list.append(el);return {el,u,lastSeen:sim.clock,icons:new Map(),portrait,row};
@@ -81,7 +92,7 @@ export function createCombatFrames(sim,renderer){
   const live=new Set(sim.units);
   for(const [id,r] of records){const {u,el}=r;if(!live.has(u)||!alive(u)||now-r.lastSeen>8||now<r.lastSeen){el.remove();records.delete(id);continue;}
    const hp=displayedUnitHealth(u),pct=Math.max(0,Math.min(100,hp/u.maxHp*100)),target=sim.units.find(v=>v.id===u.attackTarget&&alive(v));
-   el.classList.toggle('is-critical',pct<25);el.querySelector('.combat-frame-role').textContent=u.faction==='player'?'YOUR TANK':target?.faction==='player'?`TARGET · ${name(target)}`:'ENEMY';
+   el.classList.toggle('is-critical',pct<25);el.querySelector('.combat-frame-role').textContent=u.faction==='player'?(tank(u)?'YOUR TANK':'UNDER ATTACK'):target?.faction==='player'?`TARGET · ${name(target)}`:'ENEMY';
    const meter=el.querySelector('[role=meter]');meter.setAttribute('aria-valuemin',0);meter.setAttribute('aria-valuemax',u.maxHp);meter.setAttribute('aria-valuenow',Math.ceil(hp));meter.querySelector('i').style.width=`${pct}%`;meter.querySelector('span').textContent=`${Math.ceil(hp).toLocaleString()} / ${u.maxHp.toLocaleString()} · ${pct>0&&pct<1?'<1':Math.round(pct)}%`;
    el.querySelector('.combat-frame-action').textContent=u.actionLabel||'Engaged';r.portrait.setAttribute('aria-label',`${name(u)} portrait`);r.portrait._tip=[name(u),`${Math.ceil(hp)} / ${u.maxHp} health`,u.actionLabel||'Engaged'];
    if(r.row===null){const c=r.portrait.querySelector('canvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,120,120);renderer.drawVillagerAsset(ctx,{...u,command:'idle',animClock:sim.clock},{x:60,y:115},120,1);}
@@ -92,7 +103,7 @@ export function createCombatFrames(sim,renderer){
   }
   const visible=focusedCombatUnits(sim,[...records.values()].map(r=>r.u)),ids=new Set(visible.map(u=>u.id));
   for(const [id,r] of records)r.el.hidden=!ids.has(id);
-  host.hidden=!visible.length;document.querySelector('.game-shell').classList.toggle('has-encounter',visible.length>0);host.querySelector('header b').textContent=`${visible.some(u=>u.faction==='player')?'1 tank · ':''}${visible.filter(u=>u.faction!=='player').length} enemies`;
+  host.hidden=!visible.length;document.querySelector('.game-shell').classList.toggle('has-encounter',visible.length>0);host.querySelector('header b').textContent=`${visible.some(u=>u.faction==='player')?'1 ally · ':''}${visible.filter(u=>u.faction!=='player').length} enemies`;
   if(hovered)updateTooltip();
  }
  return {update};

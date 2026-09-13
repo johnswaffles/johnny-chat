@@ -1,6 +1,6 @@
 # Combat effects and lore-card reference
 
-Revision: 20260912-woodpull1. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
+Revision: 20260912-classportraits1. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
 
 | Effect | Owner and trigger | Actual rule |
 | --- | --- | --- |

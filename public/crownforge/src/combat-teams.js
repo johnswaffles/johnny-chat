@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-woodpull1';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260912-woodpull1';
-import {isWardProtected} from './unit-status.js?v=20260912-woodpull1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-classportraits1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260912-classportraits1';
+import {isWardProtected} from './unit-status.js?v=20260912-classportraits1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
