@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-encounter1';
-import {CONFIG,UNIT_TYPES} from './config.js?v=20260912-encounter1';
-import {isWardProtected} from './unit-status.js?v=20260912-encounter1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-elderhide1';
+import {CONFIG,UNIT_TYPES} from './config.js?v=20260912-elderhide1';
+import {isWardProtected} from './unit-status.js?v=20260912-elderhide1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -48,6 +48,7 @@ export function selectTeam(sim,id){
  sim._announce(`Your team selected · ${members.length} members.`);return members.length;
 }
 export function tankTarget(sim,enemy){
+ const side=sidePullTarget(sim,enemy);if(side)return side;
  if(enemy?.type==='grizzly'){
   if(enemy.dead||enemy.hp<=0)return null;
   const candidates=sim.units.filter(u=>!u.dead&&u.hp>0&&combatRole(u)==='tank'&&u.faction!==enemy.faction&&['player','enemy'].includes(u.faction)&&!isWardProtected(u)&&distance(u,enemy)<=TEAM_RULES.tauntRange&&sim._hasCombatLineOfSight(enemy,u));
@@ -76,6 +77,13 @@ export function claimThreat(sim,enemy,attacker){
 }
 export function updateTeams(sim,dt){
  const groups=teams(sim,dt);
+ const split=sim.sideEncounter;
+ if(split){
+  const participants=[split.tankId,split.healerId,split.mainTankId].map(id=>sim.units.find(u=>u.id===id));
+  const enemies=[split.targetId,split.mainId].map(id=>sim.units.find(u=>u.id===id));
+  const healer=participants[1],offTank=participants[0];
+  if(participants.some(u=>!eligibleMember(u)||u.hp<=0||!u.teamId)||enemies.some(u=>!u||u.dead||u.hp<=0)||offTank.attackTarget!==split.targetId||offTank.command!=='attack'||(healer.command!=='idle'&&!healer.teamFollowing)||sim.clock>split.until&&split.phase!=='hold')cancelSidePull(sim);
+ }
  for(const group of groups)for(const healer of group.members.filter(isTeamHealer)){
   healer.healCooldown=Math.max(0,(healer.healCooldown??0)-dt);
   healer.teamThinkCooldown=Math.max(0,(healer.teamThinkCooldown??0)-dt);
@@ -98,12 +106,13 @@ export function updateTeams(sim,dt){
   else if(healer.command==='idle')healer.actionLabel=`Healer ready · Your team`;
   // Manual movement/work stays authoritative. Only automatic follow may repath.
   if(healer.command!=='idle'&&!healer.teamFollowing)continue;
-  const anchor=allies.filter(u=>combatRole(u)!=='healer').sort((a,b)=>Number(combatRole(b)==='tank')-Number(combatRole(a)==='tank')||distance(healer,a)-distance(healer,b)||a.id-b.id)[0];
+  const assigned=sim.sideEncounter?.healerId===healer.id?allies.find(u=>u.id===sim.sideEncounter.tankId):null;
+  const anchor=assigned??allies.filter(u=>combatRole(u)!=='healer'&&u.id!==sim.sideEncounter?.tankId).sort((a,b)=>Number(combatRole(b)==='tank')-Number(combatRole(a)==='tank')||distance(healer,a)-distance(healer,b)||a.id-b.id)[0];
   if(!anchor)continue;
   const enemy=sim._getExplicitAttackTarget(anchor);
   const dx=enemy?anchor.x-enemy.x:healer.x-anchor.x,dz=enemy?anchor.z-enemy.z:healer.z-anchor.z,len=Math.hypot(dx,dz)||1;
   const side=((healer.id%3)-1)*2;
-  const pulling=anchor.tankPull?.targetId===enemy?.id&&Boolean(enemy);
+  const pulling=(anchor.tankPull?.targetId===enemy?.id&&Boolean(enemy))||Boolean(assigned);
   let desired=enemy?.type==='grizzly'&&!pulling?healerRearPosition(sim,healer,enemy,anchor):{
    x:anchor.x+dx/len*TEAM_RULES.followDistance-dz/len*side,
    z:anchor.z+dz/len*TEAM_RULES.followDistance+dx/len*side};
@@ -275,6 +284,7 @@ export function findPullClearing(sim,tank,target){
  return null;
 }
 export function prepareTankPull(sim,tank,target){
+ if(sim.sideEncounter?.tankId===tank.id)return prepareSidePull(sim,tank,target);
  if(combatRole(tank)!=='tank'||!tank.teamId||target?.kind!=='unit'||target.dead||tank.command!=='attack')return false;
  let pull=tank.tankPull;
  if(pull&&(pull.targetId!==target.id||sim.clock>=pull.until||target.dead||tankTarget(sim,target)?.id!==tank.id)){
@@ -316,4 +326,68 @@ export function holdForTankPull(sim,unit,target){
   const path=sim._buildPath(unit,goal);if(path){unit.path=path;unit.routeTarget=goal;unit.stopDistance=0;}
  }
  sim._cancelAttackCycle(unit);unit.actionLabel='Giving the tank room to pull';return true;
+}
+
+// Explicit two-front orders temporarily supersede automatic weakest-tank targeting.
+export function sidePullPlan(sim){
+ const members=sim.units.filter(u=>eligibleMember(u)&&u.hp>0&&u.teamId&&!isWardProtected(u));
+ const tanks=members.filter(u=>combatRole(u)==='tank'),healers=members.filter(isTeamHealer);
+ if(tanks.length<2||healers.length<2)return {reason:'Requires two tanks and two healers in Your team.'};
+ const engaged=sim.units.filter(u=>!u.dead&&u.hp>0&&u.faction!=='player'&&u.kind==='unit'&&!isWardProtected(u)&&members.some(a=>a.attackTarget===u.id||a.teamAdvanceTargetId===u.id||(u.command==='attack'&&u.attackTarget===a.id)));
+ if(engaged.length<2)return {reason:'Engage two enemies before splitting the fight.'};
+ const main=engaged.sort((a,b)=>members.filter(u=>combatRole(u)==='damage'&&u.attackTarget===b.id).length-members.filter(u=>combatRole(u)==='damage'&&u.attackTarget===a.id).length||a.id-b.id)[0];
+ const mainTank=tanks.find(u=>u.id===main.attackTarget)??tanks.find(u=>u.attackTarget===main.id)??tanks[0];
+ const offTank=tanks.filter(u=>u!==mainTank).sort((a,b)=>b.hp/b.maxHp-a.hp/a.maxHp||a.id-b.id)[0];
+ const target=engaged.filter(u=>u!==main&&distance(u,main)<65).sort((a,b)=>distance(offTank,a)-distance(offTank,b))[0];
+ if(!target)return {reason:'No second enemy close enough to pull aside.'};
+ const mainHealer=[...healers].sort((a,b)=>distance(a,mainTank)-distance(b,mainTank))[0];
+ const offHealer=healers.filter(u=>u!==mainHealer).sort((a,b)=>distance(a,offTank)-distance(b,offTank))[0];
+ return {main,mainTank,offTank,offHealer,target};
+}
+export function cancelSidePull(sim,message='Side pull cancelled. The pair returns to normal team orders.'){
+ const p=sim.sideEncounter;if(!p)return;sim.sideEncounter=null;
+ const tank=sim.units.find(u=>u.id===p.tankId),healer=sim.units.find(u=>u.id===p.healerId);
+ if(tank){tank.path=[];tank.tankPull=null;tank.pullScanAt=sim.clock+8;}
+ if(healer&&healer.teamFollowing){healer.path=[];healer.command='idle';healer.teamFollowing=false;}
+ if(message)sim._announce(message);
+}
+export function startSidePull(sim){
+ if(sim.sideEncounter){cancelSidePull(sim);return false;}
+ const p=sidePullPlan(sim);if(p.reason){sim._announce(p.reason);return false;}
+ const {main,mainTank,offTank,offHealer,target}=p;
+ let route=null;
+ const base=Math.atan2(target.z-main.z,target.x-main.x);
+ for(const span of [38,46,54])for(const offset of [0,Math.PI/4,-Math.PI/4,Math.PI/2,-Math.PI/2]){
+  if(route)break;
+  const a=base+offset,dir={x:Math.cos(a),z:Math.sin(a)},center={x:main.x+dir.x*span,z:main.z+dir.z*span};
+  const gap=combatRadius(target)+combatRadius(offTank)+8,point={x:center.x+dir.x*gap,z:center.z+dir.z*gap};
+  if(point.x<1||point.z<1||point.x>CONFIG.mapWidth-1||point.z>CONFIG.mapHeight-1||encounterOpenness(sim,target,center)<.97||sim._pointBlockedForUnit(offTank,point)||sim._pathSegmentBlocked(target,target,center)||!sim._hasCombatLineOfSight(target,point)||!sim._buildPath(offTank,point,null,{directOnly:true}))continue;
+  route={point,center};
+ }
+ if(!route){sim._announce('No clear side-pull route. Move the fight away from obstacles and try again.');return false;}
+ if(!sim._sendUnitToAttack(offTank,target)){sim._announce('The spare tank cannot reach that enemy.');return false;}
+ sim._interruptWork(offHealer);offHealer.command='idle';offHealer.path=[];offHealer.orderQueue=[];offHealer.teamFollowing=true;
+ sim.sideEncounter={tankId:offTank.id,healerId:offHealer.id,targetId:target.id,mainId:main.id,mainTankId:mainTank.id,...route,until:sim.clock+45,phase:'approach',progress:{x:target.x,z:target.z,at:sim.clock}};
+ // Damage fighters remain on the main encounter instead of following the pull.
+ for(const u of sim.units.filter(u=>eligibleMember(u)&&u.teamId&&combatRole(u)==='damage'&&(u.attackTarget===target.id||u.teamAdvanceTargetId===target.id)))sim._sendUnitToAttack(u,main);
+ sim._announce('Divide the Hunt: off-tank and healer are drawing the second enemy aside.');return true;
+}
+function sidePullTarget(sim,enemy){
+ const p=sim.sideEncounter;if(!p)return null;
+ const id=enemy?.id===p.targetId?p.tankId:enemy?.id===p.mainId?p.mainTankId:null;
+ const u=sim.units.find(u=>u.id===id&&eligibleMember(u)&&u.hp>0&&u.teamId&&!isWardProtected(u));
+ return u&&distance(u,enemy)<=TEAM_RULES.tauntRange&&sim._hasCombatLineOfSight(enemy,u)?u:null;
+}
+function prepareSidePull(sim,tank,target){
+ const p=sim.sideEncounter;if(!p||p.tankId!==tank.id||p.targetId!==target.id)return false;
+ if(p.phase==='hold'){tank.actionLabel='Holding the side encounter';return false;}
+ if(sim.clock>p.until){cancelSidePull(sim,'Side pull stopped: the enemy could not be separated in time.');return false;}
+ if(distance(tank,target)>22||!sim._hasCombatLineOfSight(tank,target))return false;
+ if(p.phase==='approach'){p.phase='pull';p.progress={x:target.x,z:target.z,at:sim.clock};sim._retaliateGrizzly(target,tank);}
+ const main=sim.units.find(u=>u.id===p.mainId);
+ if(main&&distance(target,main)>32&&encounterOpenness(sim,target)>=.97){p.phase='hold';tank.path=[];tank.pullScanAt=Infinity;return false;}
+ if(distance(target,p.progress)>.4)p.progress={x:target.x,z:target.z,at:sim.clock};
+ if(sim.clock-p.progress.at>8||sim._pathSegmentBlocked(tank,tank,p.point)){cancelSidePull(sim,'Side pull stopped: the chase route is blocked.');return false;}
+ const gap=combatRadius(target)+combatRadius(tank)+9;
+ sim._cancelAttackCycle(tank);tank.path=distance(tank,target)>gap?[]:[p.point];tank.routeTarget=p.point;tank.stopDistance=0;tank.fighterMovingAttack=true;tank.actionLabel='Divide the Hunt · drawing enemy aside';return true;
 }

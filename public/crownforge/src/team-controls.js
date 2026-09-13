@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260912-encounter1';
-import {combatRole,eligibleMember,TEAM_RULES} from './combat-teams.js?v=20260912-encounter1';
+import {UNIT_TYPES} from './config.js?v=20260912-elderhide1';
+import {startSidePull,sidePullPlan,combatRole,eligibleMember,TEAM_RULES} from './combat-teams.js?v=20260912-elderhide1';
 export function createTeamControls(sim,onChange){
  const panel=document.querySelector('#team-controls'),classes=document.querySelector('#select-warrior-classes');
  if(!panel||!classes)return {update(){}};
@@ -7,6 +7,7 @@ export function createTeamControls(sim,onChange){
  const button=name=>panel.querySelector(`[data-action="${name}"]`);
  let classKey='',teamKey='';
  const finish=()=>onChange();
+ const split=document.createElement('button');split.type='button';split.dataset.action='side-pull';split.textContent='Divide the Hunt · Side pull';panel.querySelector('.team-buttons').after(split);split.onclick=()=>{startSidePull(sim);finish();};
  classes.addEventListener('click',e=>{const b=e.target.closest('[data-class]');if(b){sim.selectAllWarriorClass(b.dataset.class);finish();}});
  button('create').hidden=true;picker.parentElement.hidden=true;button('disband').textContent='Clear roster';
  button('create').onclick=()=>{const id=sim.assignSelectedTeam();update();if(id)picker.value=String(id);finish();};
@@ -17,6 +18,7 @@ export function createTeamControls(sim,onChange){
  picker.onchange=()=>update();
  function update(){
   const selected=sim.selectedEntities.filter(eligibleMember),groups=sim.getCombatTeams();
+  const splitPlan=sidePullPlan(sim);split.disabled=!sim.sideEncounter&&Boolean(splitPlan.reason);split.textContent=sim.sideEncounter?'Cancel side pull':'Divide the Hunt · Side pull';split.title=sim.sideEncounter?'Release the off-tank and healer back to normal orders.':splitPlan.reason??'Send a spare tank and healer to separate the second enemy. Keeps one tank and healer in the main fight.';split.dataset.tooltip=split.title;
   const types=[...new Set(selected.filter(u=>!UNIT_TYPES[u.type].worker).map(u=>u.type))];
   const nextClass=types.map(t=>`${t}:${sim.units.filter(u=>u.type===t&&eligibleMember(u)).length}`).join('|');
   if(nextClass!==classKey){classKey=nextClass;classes.replaceChildren();

@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260912-encounter1';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260912-encounter1';
+import {UNIT_TYPES} from './config.js?v=20260912-elderhide1';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260912-elderhide1';
 import {bearVariant} from './bear-variants.js?v=20260909-cursedbears1';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
@@ -16,6 +16,13 @@ export function encounterUnits(sim){
  }
  const teams=new Set([...allies].map(id=>live.get(id).teamId).filter(Boolean));
  return [...live.values()].filter(u=>enemies.has(u.id)||(u.faction==='player'&&tank(u)&&(allies.has(u.id)||teams.has(u.teamId)))).sort((a,b)=>Number(b.faction==='player')-Number(a.faction==='player')); 
+}
+export function focusedCombatUnits(sim,units){
+ const enemies=units.filter(u=>u.faction!=='player').slice(0,3);
+ const tanks=units.filter(u=>u.faction==='player'&&tank(u));
+ const damaged=tanks.filter(u=>sim.clock-(u.lastCombatDamageAt??-Infinity)<8).sort((a,b)=>b.lastCombatDamageAt-a.lastCombatDamageAt||a.hp/a.maxHp-b.hp/b.maxHp||a.id-b.id);
+ const focused=damaged[0]??tanks.find(u=>units.some(e=>e.faction!=='player'&&e.attackTarget===u.id&&e.command==='attack'));
+ return focused?[focused,...enemies]:enemies;
 }
 const glyphs={
  crownsAegis:'M12 3 4 6v7q0 6 8 9 8-3 8-9V6Z M8 12h8 M12 8v9',
@@ -45,7 +52,7 @@ export function effectIcon(status){
  return `<svg viewBox="0 0 24 24" aria-hidden="true" style="--sigil-hue:${hue}"><path d="${glyphs[status.id]??'m12 2 9 10-9 10-9-10Z M12 7v10 M7 12h10'}"/></svg>`;
 }
 export function createCombatFrames(sim,renderer){
- const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260912-encounter1';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260912-elderhide1';document.head.append(css);
  const host=document.createElement('aside');host.className='combat-frames';host.hidden=true;host.setAttribute('aria-label','Encounter portraits');
  host.innerHTML='<header><span>IN COMBAT</span><b>Encounter</b><button type="button" aria-label="Minimize encounter portraits" aria-expanded="true">−</button></header><div class="combat-frame-list"></div>';
  document.querySelector('.game-shell').append(host);
@@ -54,7 +61,7 @@ export function createCombatFrames(sim,renderer){
  let hovered=null;
  function hide(){hovered?.removeAttribute('aria-describedby');hovered=null;tooltip.hidden=true;}
  function show(button){hovered=button;button.setAttribute('aria-describedby',tooltip.id);updateTooltip();}
- function updateTooltip(){if(!hovered?.isConnected){hide();return;}tooltip.replaceChildren();const title=document.createElement('b'),body=document.createElement('p'),detail=document.createElement('small');title.textContent=hovered._tip[0];body.textContent=hovered._tip[1];detail.textContent=hovered._tip[2]??'';tooltip.append(title,body,detail);tooltip.hidden=false;const rect=hovered.getBoundingClientRect();tooltip.style.left=`${Math.max(8,Math.min(innerWidth-280,rect.left-270))}px`;tooltip.style.top=`${Math.max(8,Math.min(innerHeight-tooltip.offsetHeight-8,rect.top))}px`;}
+ function updateTooltip(){if(!hovered?.isConnected||hovered.closest('[hidden]')){hide();return;}tooltip.replaceChildren();const title=document.createElement('b'),body=document.createElement('p'),detail=document.createElement('small');title.textContent=hovered._tip[0];body.textContent=hovered._tip[1];detail.textContent=hovered._tip[2]??'';tooltip.append(title,body,detail);tooltip.hidden=false;const rect=hovered.getBoundingClientRect();tooltip.style.left=`${Math.max(8,Math.min(innerWidth-280,rect.left-270))}px`;tooltip.style.top=`${Math.max(8,Math.min(innerHeight-tooltip.offsetHeight-8,rect.top))}px`;}
  function bindTip(button){button.onpointerenter=()=>show(button);button.onpointerleave=hide;button.onfocus=()=>show(button);button.onblur=hide;button.onclick=()=>show(button);}
  host.querySelector('header button').onclick=e=>{const mini=host.classList.toggle('is-mini');e.currentTarget.textContent=mini?'+':'−';e.currentTarget.setAttribute('aria-expanded',String(!mini));e.currentTarget.setAttribute('aria-label',`${mini?'Expand':'Minimize'} encounter portraits`);hide();};
  window.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});list.addEventListener('scroll',hide);
@@ -83,7 +90,9 @@ export function createCombatFrames(sim,renderer){
    for(const status of statuses){let b=r.icons.get(status.id);if(!b){b=document.createElement('button');b.type='button';b.className='combat-aura';b.innerHTML=effectIcon(status);bindTip(b);el.querySelector(isDebuff(status)?'.debuffs>div':'.combat-auras>div').append(b);r.icons.set(status.id,b);}b._tip=[status.name,status.detail,status.summary];b.setAttribute('aria-label',`${status.name}: ${status.detail}`);}
    for(const section of el.querySelectorAll('.combat-auras'))section.classList.toggle('is-empty',!section.querySelector('button'));
   }
-  host.hidden=!records.size;document.querySelector('.game-shell').classList.toggle('has-encounter',records.size>0);host.querySelector('header b').textContent=`${[...records.values()].filter(r=>r.u.faction==='player').length} tanks · ${[...records.values()].filter(r=>r.u.faction!=='player').length} enemies`;
+  const visible=focusedCombatUnits(sim,[...records.values()].map(r=>r.u)),ids=new Set(visible.map(u=>u.id));
+  for(const [id,r] of records)r.el.hidden=!ids.has(id);
+  host.hidden=!visible.length;document.querySelector('.game-shell').classList.toggle('has-encounter',visible.length>0);host.querySelector('header b').textContent=`${visible.some(u=>u.faction==='player')?'1 tank · ':''}${visible.filter(u=>u.faction!=='player').length} enemies`;
   if(hovered)updateTooltip();
  }
  return {update};

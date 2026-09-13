@@ -1,14 +1,14 @@
 # Combat effects and lore-card reference
 
-Revision: 20260912-encounter1. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
+Revision: 20260912-elderhide1. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
 
 | Effect | Owner and trigger | Actual rule |
 | --- | --- | --- |
 | **Greatwood Colossus** | Bear first reaches 50% **true** health | Double rendered size, body radius (3 → 6 world units), and outgoing damage. Latched for the rest of its life and saved. False Last Light health does not trigger it. |
 | **Wrath of the First Oath** | Bear at 10% true health or affected by the false Last Light reading | Existing 6× damage layer. Stacks with Colossus for 12× base damage. Landed blows remain lethal to non-tank fighters. |
 | **The First Condemnation** | Permanent Greatwood elder magic | Immunity to lesser curses and stuns; true physical wounds still kill. Preserve the established ancient sentence/bloodline lore. |
-| **Elderhide** | Permanent bear protection | Arrow damage normalizes to 1/30 of full health before Thick Hide. |
-| **Thick Hide** | Permanent bear armor | Halves incoming damage; combined with Elderhide, 60 landed arrows from full true health before temporary Heart protection. |
+| **Elderhide** | Permanent bear protection | Reduces incoming arrow damage by 95% before Thick Hide. |
+| **Thick Hide** | Permanent bear armor | Halves incoming damage; combined with Elderhide, reduces arrow damage by 97.5% before other protection. |
 | **Crushing Claws** | Permanent bear tank pressure | Six times prior strike damage against tanks, before armor. Stacks with both bear rage layers. |
 | **Bloodclaw Reckoning** | Enraged bear, 8-second cooldown | 360-degree AoE: 50% maximum-health damage before defenses to every hostile unit within 14 units and line of sight. Includes tanks and healers; wards respected. |
 | **Oathbound Stride** | Permanent Crown Shieldbearer blessing | Base movement speed is 1.5 times the fastest other unit: currently 6.225 versus Scout 4.15. Roads and terrain still modify movement. Faster acceleration and braking keep it responsive. Lore seed: “The sworn shield reaches danger first.” |

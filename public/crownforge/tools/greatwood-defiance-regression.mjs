@@ -11,7 +11,7 @@ test('Defiance counts living people within thirty yards and updates as they leav
  inside.x=31;enemy.hp=0;updateGreatwoodDefiance(b,units,.25);assert.equal(b.greatwoodDefianceStacks,0);
 });
 test('damage and proportional armor stack without immunity and appear in lore',()=>{
- const b=bear(),target={type:'soldier',hp:100,maxHp:100};const base=strikeDamage(b,target);updateGreatwoodDefiance(b,Array.from({length:20},()=>person()));assert.equal(strikeDamage(b,target),base*2);assert.equal(bearIncomingDamage(b,100),25);assert.equal(bearIncomingDamage(b,100,'arrow'),1.5);assert(unitStatuses(b).some(s=>s.id==='greatwoodDefiance'&&s.detail.includes('+100%')));
+ const b=bear(),target={type:'soldier',hp:100,maxHp:100};const base=strikeDamage(b,target);updateGreatwoodDefiance(b,Array.from({length:20},()=>person()));assert.equal(strikeDamage(b,target),base*2);assert.equal(bearIncomingDamage(b,100),25);assert.equal(bearIncomingDamage(b,100,'arrow'),1.25);assert(unitStatuses(b).some(s=>s.id==='greatwoodDefiance'&&s.detail.includes('+100%')));
  b.greatwoodDefianceStacks=1000;assert(bearIncomingDamage(b,100)>0);
 });
 test('four minute cadence migrates old saves without spawning a catch-up wave',()=>{

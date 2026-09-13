@@ -1,0 +1,16 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {CrownforgeSimulation} from '../src/simulation.js';
+import {startSidePull,sidePullPlan,cancelSidePull,tankTarget,updateTeams,updateTeamApproaches} from '../src/combat-teams.js';
+import {focusedCombatUnits} from '../src/combat-frames.js';
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+function fixture(){const s=new CrownforgeSimulation({seed:42});s.units=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.navigationVersion++;
+ const main=s.addUnit('grizzly',180,180,'wildlife'),other=s.addUnit('grizzly',185,194,'wildlife'),tank=s.addUnit('shieldbearer',192,180,'player'),off=s.addUnit('shieldbearer',193,192,'player'),heal=s.addUnit('villager',205,178,'player'),oh=s.addUnit('villager',205,192,'player'),d=s.addUnit('spearwarden',195,178,'player');
+ for(const u of s.units){u.maxHp=u.hp=1000000;if(u.faction==='player')u.teamId=1;}
+ for(const [a,b] of [[tank,main],[off,main],[d,main],[main,tank],[other,tank]])s._sendUnitToAttack(a,b);
+ return {s,main,other,tank,off,heal,oh,d};}
+test('reserves a main pair, commits a spare pair, and keeps enemies on separate tanks',()=>{const {s,main,other,tank,off,oh,d}=fixture();assert(startSidePull(s));assert.equal(s.sideEncounter.tankId,off.id);assert.equal(s.sideEncounter.healerId,oh.id);off.hp=400000;assert.equal(tankTarget(s,main).id,tank.id);assert.equal(tankTarget(s,other).id,off.id);assert.equal(d.attackTarget??d.teamAdvanceTargetId,main.id);cancelSidePull(s);assert.equal(s.sideEncounter,null);assert.equal(tankTarget(s,main).id,off.id);});
+test('actual movement separates second enemy and keeps healer with off-tank',()=>{const {s,main,other,off,oh}=fixture();assert(startSidePull(s));for(let i=0;i<2700;i++){s.clock+=1/60;s.repathBudgetRemaining=8;updateTeamApproaches(s);updateTeams(s,1/60);for(const u of s.units)if(!u.dead)s._updateUnit(u,1/60);s._resolveUnitCollisions();}assert(s.sideEncounter,`Cancelled: ${s.lastCommand}; separation ${dist(main,other)}`);assert.equal(s.sideEncounter.phase,'hold');assert(dist(main,other)>30);assert(dist(oh,off)<29);assert.equal(tankTarget(s,other).id,off.id);});
+test('missing spare healer and blocked routes leave original orders intact',()=>{const {s,oh,off}=fixture();oh.teamId=null;assert(sidePullPlan(s).reason);assert(!startSidePull(s));oh.teamId=1;const target=off.attackTarget;s._pathSegmentBlocked=()=>true;assert(!startSidePull(s));assert.equal(off.attackTarget,target);assert(!s.sideEncounter);});
+test('manual tank orders and loss of assigned healer cancel side pull',()=>{const {s,off,oh}=fixture();assert(startSidePull(s));s._interruptWork(off);assert(!s.sideEncounter);assert(startSidePull(s));oh.dead=true;updateTeams(s,.2);assert(!s.sideEncounter);});
+test('portraits follow most recently damaged tank and cap enemy count at three',()=>{const {s,tank,off}=fixture();const enemies=Array.from({length:5},(_,i)=>({id:900+i,faction:'enemy',command:'attack',attackTarget:tank.id}));s.clock=10;tank.lastCombatDamageAt=8;off.lastCombatDamageAt=9;let visible=focusedCombatUnits(s,[tank,off,...enemies]);assert.equal(visible.length,4);assert.equal(visible[0],off);tank.lastCombatDamageAt=10;assert.equal(focusedCombatUnits(s,[tank,off,...enemies])[0],tank);});

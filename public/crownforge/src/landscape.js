@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260912-encounter1';
+import { CONFIG } from './config.js?v=20260912-elderhide1';
 import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260909-cursedbears1';
 
 const MASK_WIDTH = 560;

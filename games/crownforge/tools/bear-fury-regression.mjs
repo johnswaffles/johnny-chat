@@ -21,7 +21,7 @@ test('rapid arrows respect both Heart damage-reduction tiers and true health, wi
   const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=cursed;
   assert.equal(s._applyUnitDamage(b,0,null,{damageType:'arrow'}).damage,0);
   for(let hit=1;hit<=438;hit++){
-   s.projectiles.push({id:9000+hit,kind:'defense-arrow',faction:'player',sourceBuildingId:999,sourceType:'watchtower',targetId:b.id,x:99.9,z:100,damage:10000,speed:30,age:0,maxAge:5});
+   s.projectiles.push({id:9000+hit,kind:'defense-arrow',faction:'player',sourceBuildingId:999,sourceType:'watchtower',targetId:b.id,x:99.9,z:100,damage:120,speed:30,age:0,maxAge:5});
    s._updateDefenseProjectiles(1/60);
    const expected=hit<=48?180-hit*3:hit<=138?36-(hit-48)*.3:Math.max(0,9-(hit-138)*.03);assert(Math.abs(b.hp-expected)<1e-7);assert.equal(b.dead,hit===438);
    assert.equal(displayedUnitHealth(b),hit===438?0:cursed?1:b.hp);
