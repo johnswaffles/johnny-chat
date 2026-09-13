@@ -8,7 +8,7 @@ Team Hearthkin prioritize healing, but explicit construction and repair orders t
 
 When attacking a unit, team damage fighters stage behind the tank line until a tank lands a hit and claims aggro. Multiple tanks lead together; fighters proceed if no tanks survive. Against a tank-held bear they circle outside the frontal swipe and take distinct rear positions. Automatic healers follow behind the current rear DPS line, at least 16 units from the bear and 3 units behind the fighters, updating their path as the encounter moves. Rear positioning avoids ordinary frontal damage. Bloodclaw Reckoning deals 50% maximum-health AoE damage before defenses within 14 units every 8 seconds; Aegis of the Unbroken Crown reduces tank AoE damage by 90%. Cancelling a unit's order clears the staged approach. Ground movement destinations place tanks in the front row, damage fighters behind them, and healers at the rear.
 
-Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260913-mercy1.
+Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260913-clearing1.
 
 Crushing Claws increases bear damage against tanks sixfold; half-health Colossus hits now deal 139.2 damage after armor. Healing output is halved. Bloodclaw has a full circular rotating claw effect.
 
@@ -49,3 +49,9 @@ Add all recruits every living eligible friendly unit, including Hearthkin, into 
 Explicit tank movement overrides automatic attack recruitment until arrival, then normal nearby-enemy aggression resumes. A new direct command supersedes the move. Queued moves use the same priority when they begin.
 
 Mercy of the Last Crown: a living tank strictly below 10% maximum HP receives 5× Hearthkin healing. Each healer checks the threshold before its pulse: 200 HP normally, 400 HP with Chorus. At 10% or above, normal tank healing remains 40 HP (80 with Chorus). Non-tanks receive 4 HP per pulse (8 with Chorus), an 80% reduction from their former base healing.
+
+Woodland encounters: new bears require a clear encounter footprint near a woodland edge rather than merely a noncolliding trunk position. Tank pulls use legal routed paths for both bodies and preserve corner waypoints. Damage fighters wait while a wooded target lacks a safe pull; healer follow stays behind the tank. A brief trunk occlusion retains an already validated tank chase. Wildlife rally cannot override explicit tank movement.
+
+## Starveil Arcanist
+
+The wizard is ranged damage support. He holds spell range rather than joining the melee surround ring, and honors tank pull staging. His one-per-side cap is independent of combat team IDs; splitting units into multiple teams never creates another wizard slot. Queued training at any observatory reserves the side's slot. The enemy side has its own independent slot without reactivating the paused enemy faction.

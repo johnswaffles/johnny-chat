@@ -18,9 +18,9 @@ test('the game loading veil completes with a whole-painting renderer that has no
  assert.equal(result.ready,true);assert.equal(result.loaded,result.total);
 });
 
-test('all ten production fighters use 240 independently authored action views',()=>{
- assert.equal(PAINTED_FIGHTER_TYPES.length,10);let views=0,frames=0;
- for(const type of PAINTED_FIGHTER_TYPES){
+test('ten original fighters preserve their 240 authored action views alongside the wizard',()=>{
+ assert.equal(PAINTED_FIGHTER_TYPES.length,11);let views=0,frames=0;
+ for(const type of PAINTED_FIGHTER_TYPES.filter(type=>type!=='wizard')){
   assert.equal(animationDefinition(type).renderer,'painted');
   for(const view of ['sw','se','ne','nw'])for(const action of ['idle','walk','attack','hit','stunned','death']){
    const sheet=arts[type][view][action];assert(sheet,type+':'+view+':'+action);views++;frames+=sheet.frames.length;

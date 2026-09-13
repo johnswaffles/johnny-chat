@@ -1,0 +1,14 @@
+{
+  "generator": "Built-in image generation",
+  "release": "20260913-skybreaker1",
+  "assets": [
+    {
+      "file": "flight-v1.png",
+      "sha256": "918a22552de96f1680c717a625c2c9f52b7ae586e6df9d4d6189a76d1cd29bb3"
+    },
+    {
+      "file": "lore-v1.png",
+      "sha256": "00cf0dc92e50cf6a3e19667e42a0c4e0b93b40d7e0ef3d415124a984df808a55"
+    }
+  ]
+}

@@ -1,17 +1,18 @@
-import {createCombatFrames} from './combat-frames.js?v=20260913-mercy1';
+import {createSkybreakerControls} from './skybreaker-controls.js?v=20260913-skybreaker2';
+import {createCombatFrames} from './combat-frames.js?v=20260913-skybreaker2';
 import {createUnitActivity} from './unit-activity.js?v=20260912-activity1';
-import {createTeamControls} from './team-controls.js?v=20260913-mercy1';
-import {combatRole} from './combat-teams.js?v=20260913-mercy1';
-import { bearVariant } from './bear-variants.js?v=20260913-mercy1';
-import {requestGrizzlyPair} from './wildlife.js?v=20260913-mercy1';
-import {createUnitInspector} from './unit-inspector.js?v=20260913-mercy1';
-import {displayedUnitHealth} from './unit-status.js?v=20260913-mercy1';
-import { setupPresentation } from './presentation.js?v=20260913-mercy1';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260913-mercy1';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260913-mercy1';
+import {createTeamControls} from './team-controls.js?v=20260913-skybreaker2';
+import {combatRole} from './combat-teams.js?v=20260913-skybreaker2';
+import { bearVariant } from './bear-variants.js?v=20260913-skybreaker2';
+import {requestGrizzlyPair} from './wildlife.js?v=20260913-skybreaker2';
+import {createUnitInspector} from './unit-inspector.js?v=20260913-skybreaker2';
+import {displayedUnitHealth} from './unit-status.js?v=20260913-skybreaker2';
+import { setupPresentation } from './presentation.js?v=20260913-skybreaker2';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260913-skybreaker2';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260913-skybreaker2';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
-import { CrownforgeRenderer } from './renderer.js?v=20260913-mercy1';
-import { CrownforgeSimulation } from './simulation.js?v=20260913-mercy1';
+import { CrownforgeRenderer } from './renderer.js?v=20260913-skybreaker2';
+import { CrownforgeSimulation } from './simulation.js?v=20260913-skybreaker2';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-cursedbears1';
 
@@ -592,6 +593,7 @@ demolitionModeButton?.addEventListener('click', () => {
 unitInspector=createUnitInspector({simulation,renderer,canvas,onOpen:()=>{input.keys.clear();input.drag=null;renderer.setSelectionBox(null);}});
 
 const combatFrames=createCombatFrames(simulation,renderer);
+const skybreakerControls=createSkybreakerControls(simulation);
 const teamControls=createTeamControls(simulation,()=>{announce(simulation.lastCommand);updateUi();});
 
 function updateUi() {
@@ -600,6 +602,7 @@ function updateUi() {
   releaseBearsButton.disabled=simulation.phase!=='playing'||pendingBears;
   releaseBearsButton.querySelector('small').textContent=pendingBears?'FINDING TRAILS…':simulation.enemyTeamPaused?'YOUR SETTLEMENT':'BOTH SIDES';
   unitInspector.update();
+  skybreakerControls.update();
   for (const [key, info] of Object.entries(RESOURCE_TYPES)) {
     const amount = Math.floor(simulation.resources[key]);
     const resourceUi = ui.resources[key];
@@ -788,12 +791,13 @@ function updateUi() {
       const affordable = Object.entries(blueprint.cost).every(([key, value]) => simulation.resources[key] >= value);
       const capacityReady = simulation.population.used < simulation.population.capacity;
       const allowed = BUILDING_TYPES[productionBuilding.type].productionTypes?.includes(type) ?? false;
-      const available = allowed && affordable && capacityReady && queue.length < 100;
+      const sideReady=type!=='wizard'||simulation.wizardSideCount('player',true)<1;
+      const available = allowed && affordable && capacityReady && sideReady && queue.length < 100;
       const detail = ui.trainDetails[type];
       if (detail) detail.textContent = `${formatCost(blueprint.cost)}  •  ${blueprint.trainTime} SEC${queued ? `  •  ${queued} QUEUED` : ''}`;
       button.hidden = !allowed;
       button.classList.toggle('is-unavailable', !available);
-      setTooltip(button, !capacityReady
+      setTooltip(button, !sideReady?'Only one living or training Starveil Arcanist per side': !capacityReady
         ? 'The settlement has reached its current population limit'
         : !affordable
           ? `Gather the resources needed for a ${blueprint.label}`

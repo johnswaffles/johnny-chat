@@ -1,4 +1,4 @@
-import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260913-mercy1';
+import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260913-skybreaker2';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 
 export function assignEnemyEconomy(sim) {

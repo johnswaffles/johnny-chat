@@ -144,6 +144,7 @@ const HEARTHKIN_WORKER_ABILITIES = Object.freeze({
 });
 
 export const UNIT_TYPES = {
+  wizard:{label:'Starveil Arcanist',asset:'soldier',renderSize:124,speed:2.1,acceleration:9,braking:12,radius:.44,maxHp:210,attack:36,range:18,cooldown:2.2,attackTiming:{anticipation:.35,contact:.25,recovery:.4},autoAggroRadius:23,combatRole:'damage',ranged:true,canAttackUnits:true,canAttackBuildings:false,sideLimit:1},
   grizzly: {
     label: 'Greatwood Grizzly', wildlife: true, renderSize: 218,
     curseImmune: true, innateCurse: 'firstCondemnation', workerStrikeFraction: 1.2,
@@ -385,6 +386,7 @@ export const SPACING_ROLES = {
 };
 
 export const PRODUCTION_TYPES = {
+  wizard:{label:'Starveil Arcanist',icon:'icon-seal',building:'observatory',trainTime:20,cost:{food:80,wood:40,stone:0,gold:150}},
   villager: {
     label: 'Hearthkin',
     icon: 'icon-villager',
@@ -475,6 +477,7 @@ export const PRODUCTION_TYPES = {
 };
 
 export const BUILDING_TYPES = {
+  observatory:{label:'Observatory of the Last Star',function:'Train one Starveil Arcanist per side',asset:'barracks',maxHp:700,footprint:{width:7,height:7},collisionFootprint:{width:13,height:13},renderSize:400,interactionSlots:6,entrance:'south',buildTime:24,cost:{food:0,wood:160,stone:120,gold:100},production:true,productionTypes:['wizard']},
   townCenter: {
     label: 'Crown Hall',
     function: 'Resource drop-off and settlement core',
@@ -1089,7 +1092,7 @@ export const BUILDING_TYPES = {
 // Only these structures belong to the current player-facing first-age build
 // catalog. Retired prototypes remain defined for old saves/audit history, but
 // cannot be placed until they receive an approved Crownforge asset and role.
-export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'stable', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'road', 'wall', 'gate', 'palisadeTower']);
+export const FIRST_AGE_BUILD_BLUEPRINTS = Object.freeze(['barracks', 'stable', 'observatory', 'granary', 'homestead', 'watchHut', 'timberYard', 'stonewrightYard', 'oreWash', 'field', 'road', 'wall', 'gate', 'palisadeTower']);
 
 // First-age doctrine gives the player a small amount of strategic direction
 // without introducing a large tech tree. Each upgrade is a one-time local
@@ -1236,6 +1239,7 @@ export const GOLD_DEPOSIT_ASSETS = {
 };
 
 export const FIRST_AGE_ASSETS = {
+  observatory:{src:'./assets/starveil/observatory-v1.png',width:1254,height:1254,groundAnchorY:.88},
   townCenter: { src: './assets/crownforge-crown-hall-wood-v1.png?v=20260821-hallwoodpass2', width: 1536, height: 1024, groundAnchorY: 0.9404 },
   barracks: { src: './assets/crownforge-barracks-first-age-v3.png?v=20260822-uprightwalls2', width: 1536, height: 1024, groundAnchorY: 0.9355 },
   stable: {

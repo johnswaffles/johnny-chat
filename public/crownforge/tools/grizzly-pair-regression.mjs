@@ -1,3 +1,4 @@
+import {encounterOpenness} from '../src/combat-teams.js';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {CrownforgeSimulation} from '../src/simulation.js';
@@ -10,7 +11,7 @@ test('one request releases both factions bears on the same tick, with safe woodl
   assert(requestGrizzlyPair(s));finish(s);assert.equal(bears(s).length,2,'seed '+seed);
   const [a,b]=bears(s);assert.equal(a.wildlifeBornAt,b.wildlifeBornAt);
   assert.deepEqual(bears(s).map(u=>s.units.find(t=>t.id===u.attackTarget).faction),['player','enemy']);
-  for(const u of bears(s)){assert(u.path.length);assert(!s._pointBlockedForUnit(u,u));assert(s.resourcesNodes.some(n=>n.type==='tree'&&n.amount>0&&Math.hypot(n.x-u.x,n.z-u.z)<7));}
+  for(const u of bears(s)){assert(u.path.length);assert(!s._pointBlockedForUnit(u,u));assert(encounterOpenness(s,u)>=.97);assert(s.resourcesNodes.some(n=>n.type==='tree'&&n.amount>0&&Math.hypot(n.x-u.x,n.z-u.z)<40));}
   assert.equal(s.wildlifeState.nextSpawnAt,due);assert.equal(s.wildlifeState.spawnCount,2);
   assert(requestGrizzlyPair(s));finish(s);assert.equal(bears(s).length,4);
  }

@@ -1,5 +1,6 @@
-import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260913-mercy1';
-import { CONFIG, UNIT_TYPES } from './config.js?v=20260913-mercy1';
+import {encounterOpenness} from './combat-teams.js?v=20260913-skybreaker2';
+import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260913-skybreaker2';
+import { CONFIG, UNIT_TYPES } from './config.js?v=20260913-skybreaker2';
 
 export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 240, maxAlivePerSide: 2, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
@@ -36,8 +37,8 @@ function planGrizzly(sim,state,side=null,avoid=[],automatic=false) {
     if((automatic||sim.enemyTeamPaused)&&grizzlySide(point)!==side)continue;
     if(avoid.some(p=>distance(p,point)<3)||sim.units.some(u=>u.type==='grizzly'&&!u.dead&&distance(u,point)<3))continue;
     if(humans.some(unit=>distance(unit,point)<14)||sim._pointBlockedForUnit(probe,point))continue;
-    const woodland=sim._staticBlockerCandidates(point,7).some(node=>node.kind==='resource'&&node.type==='tree'&&node.amount>0&&distance(node,point)<7);
-    if(!woodland)continue;
+    const woodland=sim._staticBlockerCandidates(point,40).some(node=>node.kind==='resource'&&node.type==='tree'&&node.amount>0&&distance(node,point)<40);
+    if(!woodland||encounterOpenness(sim,probe,point)<.97)continue;
     Object.assign(probe,point);
     const route=sim._bestCombatRoute(probe,target);routes++;
     if(route)return {point,target,route};
@@ -173,7 +174,7 @@ export function rallyBearDefenders(sim){
   for(let offset=0;offset<fighters.length&&budget>0;offset++){
     const index=(start+offset)%fighters.length,unit=fighters[index];
     state.responseCursor=(index+1)%fighters.length;
-    if(unit.stunTimer>0||unit.command==='attack'&&sim._getAttackTarget(unit))continue;
+    if(unit.manualCombatMove||unit.stunTimer>0||unit.command==='attack'&&sim._getAttackTarget(unit))continue;
     unit.bearAvoid??={};
     for(const [id,until] of Object.entries(unit.bearAvoid))if(until<=sim.clock)delete unit.bearAvoid[id];
     const targets=bears.filter(b=>distance(unit,b)<=BEAR_RESPONSE.radius&&!unit.bearAvoid[b.id]).sort((a,b)=>distance(unit,a)-distance(unit,b));

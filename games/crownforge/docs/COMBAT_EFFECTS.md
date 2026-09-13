@@ -1,6 +1,6 @@
 # Combat effects and lore-card reference
 
-Revision: 20260913-mercy1. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
+Revision: 20260913-clearing1. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
 
 | Effect | Owner and trigger | Actual rule |
 | --- | --- | --- |
@@ -71,3 +71,17 @@ Bloodclaw Reckoning now deals 50% maximum-health AoE damage before defenses with
 **Beyond the First Oath** — permanent Hearthkin protection. Hostile magical damage (including divine magic) and magical stuns cannot affect them. Spell damage must use `magical: true` or a magic damage type; physical Bloodclaw and ordinary attacks stay physical. Friendly heals and blessings remain effective. Lore: their nameless flame predates the first command of the old gods.
 
 Mercy of the Last Crown: a living tank strictly below 10% maximum HP receives 5× Hearthkin healing. Each healer checks the threshold before its pulse: 200 HP normally, 400 HP with Chorus. At 10% or above, normal tank healing remains 40 HP (80 with Chorus). Non-tanks receive 4 HP per pulse (8 with Chorus), an 80% reduction from their former base healing.
+
+## Starveil Arcanist — Keeper of the Last Star
+
+One living or training wizard per side, shared across all team groups and observatories. One player wizard and one enemy wizard can coexist. See [STARVEIL_ARCANIST.md](STARVEIL_ARCANIST.md) for original lore, art, recruitment, and animation details.
+
+- **Starshard:** traveling arcane bolt, 36 damage, 18 range, 2.2-second attack cycle.
+- **Falling Constellation:** a ready bolt adds 64 arcane AoE damage within 7 units; 12-second cooldown. Allies are excluded; Hearthkin immunity and tank AoE defenses apply.
+- **Astral Mantle:** a hit that would cross below 35% health triggers 70% damage reduction for 6 seconds, protecting the triggering hit. 30-second cooldown. No healing.
+
+## Vaelthryx — Heavenrend
+
+**Heavenrend:** manual Starveil Arcanist summon; 300-second cooldown; target/current or nearest enemy within 45 units. Ten-second flight, six-second lightning sweep across a 48-unit line. 150 lightning AoE damage every 0.5 seconds within 12 units of the moving breath center. Friendly units are excluded; Hearthkin magic immunity and tank AoE defenses apply. Flies over terrain; no building damage.
+
+**Stormward Covenant:** 30% incoming damage reduction for 12 seconds on allies within 28 units at summon time. **Skybreaker's Favor:** +50% Starshard damage for 12 seconds on the wizard. **Unbound Sovereign:** untargetable dragon continues its flight if the wizard dies. Full original lore and art: [VAELTHRYX_SKYBREAKER.md](VAELTHRYX_SKYBREAKER.md).

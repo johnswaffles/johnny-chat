@@ -61,7 +61,8 @@ for(const [type,definition] of Object.entries(UNIT_TYPES)) {
     const old=game.serialize(),loaded=sandbox(game.constructor);assert.equal(loaded.loadSnapshot(old),true);
     assert.equal(loaded.units[0].type,type,`${type} save retains identity`);
   }
-  if(definition.worker)continue;
+  // Ranged specialists that cannot siege have unit-target combat coverage separately.
+  if(definition.worker||definition.canAttackBuildings===false)continue;
   for(const game of games) {
     const u=game.units[0];u.hp=u.maxHp=100000;
     const enemy=game.addBuilding('homestead',u.x+4,u.z,'enemy');enemy.hp=enemy.maxHp=100000;

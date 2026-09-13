@@ -1,0 +1,19 @@
+{
+  "artist": "OpenAI image generation",
+  "release": "20260913-starveil1",
+  "description": "Original Starveil wizard, 64 painted frames, portrait and observatory. Existing art preserved.",
+  "assets": [
+    {
+      "file": "arcanist-atlas-v1.png",
+      "sha256": "286f8fb7a9eea7508e3181477e9affa39916d8a036334b9dee1d769cad1bc112"
+    },
+    {
+      "file": "observatory-v1.png",
+      "sha256": "40ce7c66e7a9a8dbb9ea215ee02dc339da2ec8051700a358c06098478ce200c9"
+    },
+    {
+      "file": "portrait-v1.png",
+      "sha256": "9e69537cb4c5547cd137d4c868028943857dd8712146c86910b2792530e9bc23"
+    }
+  ]
+}

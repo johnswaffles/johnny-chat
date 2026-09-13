@@ -38,7 +38,7 @@ for(const obstacle of ['tree','wall','homestead'])test(`tank finds and physicall
 test('pull plans also work for humanoids, respect blocked routes, and manual movement cancels pulling',()=>{
  const s=arena(),b=s.addUnit('soldier',180,180,'enemy'),t=s.addUnit('shieldbearer',187,180,'player'),d=s.addUnit('soldier',190,180,'player');t.teamId=d.teamId=1;s.addResource('tree','wood',177,180,2400,0,{sizeTier:'large'});s._sendUnitToAttack(t,b);s._applyUnitDamage(b,1,t);s.repathBudgetRemaining=8;
  assert(prepareTankPull(s,t,b));assert(t.tankPull);s._interruptWork(t);assert.equal(t.tankPull,null);
- s._pathSegmentBlocked=()=>true;assert.equal(findPullClearing(s,t,b),null);
+ s._buildPath=()=>null;assert.equal(findPullClearing(s,t,b),null);
 });
 test('stable surround reservations survive casualties, arrivals and extend to humanoid enemies',()=>{
  for(const type of ['grizzly','soldier']){

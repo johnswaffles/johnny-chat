@@ -1,6 +1,6 @@
 import {PaintedRosterRenderer,paintedRosterFrame,paintedRosterCacheStats} from './painted-roster/painted-roster-renderer.js?v=20260909-cursedbears1';
 
-export const PAINTED_FIGHTER_TYPES=Object.freeze(['soldier','spearwarden','militia','shieldbearer','scout','raider','thornSpear','hearthLevy','hidewall','ashenOutrider']);
+export const PAINTED_FIGHTER_TYPES=Object.freeze(['wizard','soldier','spearwarden','militia','shieldbearer','scout','raider','thornSpear','hearthLevy','hidewall','ashenOutrider']);
 export {paintedRosterCacheStats};
 const metadata=new Map();
 function loadArt(type){

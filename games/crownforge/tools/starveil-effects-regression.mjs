@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {drawWizardMagic} from '../src/starveil-effects.js';
+function context(){let calls=0,depth=0;const c={get calls(){return calls;},get depth(){return depth;},save(){depth++;},restore(){depth--;},createRadialGradient(){return {addColorStop(){}};}};for(const name of ['drawImage','fillRect','beginPath','closePath','moveTo','lineTo','bezierCurveTo','ellipse','fill','stroke'])c[name]=(...args)=>{calls++;for(const v of args)if(typeof v==='number')assert(Number.isFinite(v),name+' finite geometry');};return c;}
+let allocations=0;globalThis.document={createElement(){allocations++;return {getContext:context};}};
+const sim={units:[{type:'wizard',id:1,x:0,z:0,command:'attack',attackPhase:'anticipation',attackPhaseElapsed:.5,astralMantleTimer:4}],wizardProjectiles:[{x:5,z:6,from:{x:0,z:0},sourceId:1,age:.2}],wizardImpacts:[{x:8,z:7,nova:true,age:.52},{x:2,z:3,nova:false,age:.3}]};
+const renderer={camera:{zoom:.6},atmosphere:{reducedMotion:false},worldToScreen:p=>({x:p.x*20,y:p.z*10}),unitScreenPoint:p=>({x:p.x*20,y:p.z*10})};
+test('all spell layers render finite geometry, preserve simulation state, and reuse bounded textures',()=>{const before=JSON.stringify(sim),c=context();for(let i=0;i<60;i++)drawWizardMagic(c,renderer,sim,i*16);assert.equal(c.depth,0);assert.equal(JSON.stringify(sim),before);assert(allocations<=5);for(const zoom of [.1,1,2]){renderer.camera.zoom=zoom;drawWizardMagic(c,renderer,sim,500);}renderer.camera.zoom=.6;});
+test('reduced motion removes meteor showers and drifting fragments',()=>{const normal=context(),reduced=context();drawWizardMagic(normal,renderer,sim,1000);renderer.atmosphere.reducedMotion=true;drawWizardMagic(reduced,renderer,sim,1000);assert(reduced.calls<normal.calls*.6);assert.equal(reduced.depth,0);});

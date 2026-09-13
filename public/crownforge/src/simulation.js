@@ -1,18 +1,20 @@
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260913-mercy1';
-import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260913-mercy1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260913-mercy1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260913-mercy1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260913-mercy1';
+import {stormwardDamage} from './storm-dragon.js?v=20260913-skybreaker2';
+import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260913-skybreaker2';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260913-skybreaker2';
+import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260913-skybreaker2';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260913-skybreaker2';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260913-skybreaker2';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260913-skybreaker2';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260913-mercy1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260913-skybreaker2';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260913-mercy1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260913-skybreaker2';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260913-mercy1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260913-skybreaker2';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -313,6 +315,9 @@ export class CrownforgeSimulation {
   }
 
   reset() {
+    this.stormDragons=[];
+    this.wizardProjectiles=[];
+    this.wizardImpacts=[];
     this.pausedEnemyUnits = [];
     this.activeWorldSeed = (this.worldSeed + Math.imul(this.worldGeneration, WORLD_GENERATION_STRIDE)) >>> 0;
     this.worldGeneration += 1;
@@ -950,7 +955,12 @@ export class CrownforgeSimulation {
     return building;
   }
 
+  wizardSideCount(faction,includeQueued=false){
+    const live=[...this.units,...(this.pausedEnemyUnits??[])].filter(u=>u.type==='wizard'&&u.faction===faction&&!u.dead&&u.hp>0).length;
+    return live+(includeQueued?this.buildings.filter(b=>!b.destroyed&&b.faction===faction).reduce((n,b)=>n+(b.productionQueue??[]).filter(o=>o.type==='wizard').length,0):0);
+  }
   addUnit(type, x, z, faction) {
+    if(type==='wizard'&&this.wizardSideCount(faction)>=1)return null;
     const blueprint = UNIT_TYPES[type];
     const unit = {
       id: this.nextId++,
@@ -1159,6 +1169,7 @@ export class CrownforgeSimulation {
       this._updateDefensiveBuilding(building);
     }
     this._updateDefenseProjectiles(dt);
+    updateWizardMagic(this,dt);
     updateTeamApproaches(this);
     for (const unit of this.units) this._updateUnit(unit, dt);
     updateTeams(this,dt);
@@ -1809,6 +1820,7 @@ export class CrownforgeSimulation {
     const queue = building.productionQueue;
     if (!Array.isArray(queue) || !queue.length || building.destroyed || building.progress < 1) return;
     const order = queue[0];
+    if(order.type==='wizard'&&this.wizardSideCount(building.faction)>=1){building.productionProgress=0;return;}
     const blueprint = PRODUCTION_TYPES[order.type];
     if (!blueprint) {
       queue.shift();
@@ -1828,6 +1840,7 @@ export class CrownforgeSimulation {
       return;
     }
     const unit = this.addUnit(order.type, spawn.x, spawn.z, building.faction);
+    if(!unit)return;
     unit.actionLabel = 'Idle';
     if (building.rallyPoint) {
       if (this._sendUnitTo(unit, building.rallyPoint, 'move')) unit.actionLabel = 'Moving to rally point';
@@ -4425,7 +4438,7 @@ export class CrownforgeSimulation {
       // One evasion per twenty incoming melee swings; repeatable across saves.
       if(target.incomingSwingCount%20===0){target.dodgePulse=.45;return {damage:0,killed:false,warded:false,blocked:true,dodged:true,cursed:false};}
     }
-    const damage = lastBastionDamage(target,bearIncomingDamage(target,rawDamage,damageType)*(1-(defense?.armorReduction??0))*(areaOfEffect?1-(defense?.aoeReduction??0):1));
+    const damage = stormwardDamage(target,wizardIncomingDamage(target,lastBastionDamage(target,bearIncomingDamage(target,rawDamage,damageType)*(1-(defense?.armorReduction??0))*(areaOfEffect?1-(defense?.aoeReduction??0):1))));
     if (target.lastLightWardTimer > 0) {
       target.wardBlockedPulse = 0.42;
       target.hitFlash = Math.max(target.hitFlash, 0.12);
@@ -4472,6 +4485,7 @@ export class CrownforgeSimulation {
     const target=this._getExplicitAttackTarget(unit);
     if(!target || isWardProtected(target))return;
     if(prepareTankPull(this,unit,target)||holdForTankPull(this,unit,target))return;
+    if(unit.type==='wizard'){if(this._targetDistance(unit,target)<=UNIT_TYPES.wizard.range&&this._hasCombatLineOfSight(unit,target)){unit.path=[];unit.velocityX=unit.velocityZ=0;}return;}
     if(target.kind==='building'){
       if(unit.type==='shieldbearer' && this._distanceToBuildingUnitEdge(unit,target)<5.7){
         if(unit.path.length){unit.fighterMovingAttack=true;return;}
@@ -4668,6 +4682,7 @@ export class CrownforgeSimulation {
           unit.attackHitApplied = true;
           const damage = target.kind === 'unit' ? strikeDamage(unit,target) : blueprint.attack;
           payload.damage = damage;
+          if(unit.type==='wizard'&&target.kind==='unit'){castWizardSpell(this,unit,target);this.animation.emit(unit,ANIMATION_EVENTS.attackHit,payload);return;}
           if (target.kind === 'building') {
             this.animation.emit(unit, ANIMATION_EVENTS.attackHit, payload);
             target.hp -= damage;
@@ -4917,6 +4932,7 @@ export class CrownforgeSimulation {
   }
 
   _queueEnemyUnit(type) {
+    if(type==='wizard'&&this.wizardSideCount('enemy',true)>=1)return false;
     const blueprint = PRODUCTION_TYPES[type];
     if (!blueprint || !this._canAffordForFaction('enemy', blueprint.cost)) return false;
     const building = this.buildings.find((candidate) => candidate.faction === 'enemy'
@@ -6820,6 +6836,7 @@ export class CrownforgeSimulation {
   }
 
   queueUnit(type) {
+    if(type==='wizard'&&this.wizardSideCount('player',true)>=1){this._announce('Only one living or training Starveil Arcanist is allowed on your side.');return {success:false,kind:'train',reason:'side-limit'};}
     const blueprint = PRODUCTION_TYPES[type];
     const building = this.selectedEntities.find((entity) => entity.kind === 'building'
       && entity.faction === 'player'
@@ -7130,6 +7147,7 @@ export class CrownforgeSimulation {
       enemyResources: this._jsonSafe(this.enemyResources),
       enemyAIState: this._jsonSafe(this.enemyAIState),
       wildlifeState: this._jsonSafe(this.wildlifeState),
+      stormDragons: this._jsonSafe(this.stormDragons??[]),
       technologies: this._jsonSafe(this.technologies),
       selectedIds: [...this.selectedIds],
       lastCommand: this.lastCommand,
@@ -7152,6 +7170,7 @@ export class CrownforgeSimulation {
     if (!snapshot || snapshot.version !== 1 || !Array.isArray(snapshot.units) || !Array.isArray(snapshot.buildings)) return false;
     const restored = this._restoreJsonValue(snapshot);
     this.reset();
+    this.stormDragons=this._restoreJsonValue(snapshot.stormDragons??[]);
     this.units = [];
     this.buildings = [];
     this.resourcesNodes = [];
@@ -7161,6 +7180,7 @@ export class CrownforgeSimulation {
     for (const saved of [...(restored.units ?? []),...(restored.pausedEnemyUnits ?? [])]) {
       if(this.enemyTeamPaused && (saved.faction==='enemy'||saved.type==='grizzly'&&saved.x+saved.z >= (CONFIG.mapWidth+CONFIG.mapHeight)/2)){this.pausedEnemyUnits.push(saved);continue;}
       const unit = this.addUnit(saved.type, saved.x, saved.z, saved.faction);
+      if(!unit)continue;
       Object.assign(unit, saved);
       if (UNIT_TYPES[unit.type]?.combatRole==='tank') {
         const fraction=Math.max(0,Math.min(1,unit.hp/Math.max(1,unit.maxHp)));

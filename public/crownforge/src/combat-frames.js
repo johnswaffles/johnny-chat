@@ -1,6 +1,6 @@
-import {UNIT_TYPES} from './config.js?v=20260913-mercy1';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260913-mercy1';
-import {bearVariant} from './bear-variants.js?v=20260913-mercy1';
+import {UNIT_TYPES} from './config.js?v=20260913-skybreaker2';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260913-skybreaker2';
+import {bearVariant} from './bear-variants.js?v=20260913-skybreaker2';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
 const tank=u=>UNIT_TYPES[u.type]?.combatRole==='tank';
@@ -29,6 +29,7 @@ export function focusedCombatUnits(sim,units){
 const crownRows=['villager','soldier','scout','spearwarden','militia'];
 const ashenRows=['raider','ashenForager','ashenOutrider','thornSpear','hearthLevy','hidewall'];
 export function portraitAsset(u){
+ if(u.type==='wizard')return {file:'starveil/portrait-v1.png',row:0,rows:1,single:true};
  if(u.type==='shieldbearer')return {file:'combat-portraits-v1.png',row:0,rows:4};
  if(u.type==='grizzly')return {file:'combat-portraits-v1.png',row:({'black-oath':1,cindermaw:2,'ashen-grudge':3}[bearVariant(u).id]),rows:4};
  if(crownRows.includes(u.type))return {file:'crown-class-portraits-v1.png',row:crownRows.indexOf(u.type),rows:5};
@@ -36,6 +37,9 @@ export function portraitAsset(u){
  return null;
 }
 const glyphs={
+ heavenrend:'M2 5l7 3 3-6 3 6 7-3-4 9-5-3-2 5-3-2Z M14 13l-4 6h4l-3 4',stormwardCovenant:'M12 2 3 6v7q1 6 9 9 8-3 9-9V6Z M14 6l-6 7h5l-2 5 6-8h-5Z',skybreakerFavor:'m14 2-9 12h7l-2 8 10-13h-8Z',unboundSovereign:'M2 4l8 5 2-6 2 6 8-5-5 13-5-4-5 4Z',
+
+ starveilOath:'m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z',starshard:'m3 21 9-19 2 8 8 2Z M3 15l6-6',fallingConstellation:'m4 3 3 5-3 5 M12 2l3 5-3 5 M20 5l-3 5 3 5 M4 21l8-4 8 4',astralMantle:'M12 2 3 6v6q0 7 9 10 9-3 9-10V6Z M8 12l4-5 4 5-4 5Z',
  lastCrownMercy:'M12 2 3 6v6q0 7 9 10 9-3 9-10V6Z M12 7v10 M7 12h10 M7 4l2 3 3-4 3 4 2-3',
  beyondFirstOath:'M12 2 3 6v6q0 7 9 10 9-3 9-10V6Z M13 5 8 12h5l-2 7 6-9h-5Z',
  lastLightChorus:'M12 21S1 14 3 7q4-5 9 1 5-6 9-1 2 7-9 14Z M12 9v8 M8 13h8 M2 3h3 M19 3h3',
@@ -66,7 +70,7 @@ export function effectIcon(status){
  return `<svg viewBox="0 0 24 24" aria-hidden="true" style="--sigil-hue:${hue}"><path d="${glyphs[status.id]??'m12 2 9 10-9 10-9-10Z M12 7v10 M7 12h10'}"/></svg>`;
 }
 export function createCombatFrames(sim,renderer){
- const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260913-mercy1';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260913-skybreaker2';document.head.append(css);
  const host=document.createElement('aside');host.className='combat-frames';host.hidden=true;host.setAttribute('aria-label','Encounter portraits');
  host.innerHTML='<header><span>IN COMBAT</span><b>Encounter</b><button type="button" aria-label="Minimize encounter portraits" aria-expanded="true">−</button></header><div class="combat-frame-list"></div>';
  document.querySelector('.game-shell').append(host);
@@ -84,7 +88,8 @@ export function createCombatFrames(sim,renderer){
   el.innerHTML='<div class="combat-frame-top"><button class="combat-portrait" type="button"><span></span><canvas width="120" height="120"></canvas></button><div class="combat-frame-vitals"><div class="combat-frame-name"></div><div class="combat-frame-role"></div><div class="combat-frame-health" role="meter" aria-label="Health"><i></i><span></span></div><div class="combat-frame-action"></div></div></div><div class="combat-auras" aria-label="Buffs"><small>BUFFS</small><div></div></div><div class="combat-auras debuffs" aria-label="Debuffs"><small>DEBUFFS</small><div></div></div>';
   const portrait=el.querySelector('.combat-portrait');bindTip(portrait);
   const art=portraitAsset(u),row=art?.row??null;
-  if(art){portrait.classList.add('has-art');portrait.style.setProperty('--portrait-row',`${art.row*100/(art.rows-1)}%`);portrait.style.setProperty('--portrait-sheet',`url('./assets/${art.file}')`);portrait.style.setProperty('--portrait-sheet-size',`300% ${art.rows*100}%`);if(art.sheetHeight){portrait.style.setProperty('--portrait-row',`${art.top/(art.sheetHeight-art.height)*100}%`);portrait.style.setProperty('--portrait-sheet-size',`300% ${art.sheetHeight/art.height*100}%`);}portrait.style.setProperty('--breath-delay',`${-(u.id%7)*.4}s`);}
+  if(art){portrait.classList.add('has-art');portrait.style.setProperty('--portrait-row',`${art.row*100/Math.max(1,art.rows-1)}%`);portrait.style.setProperty('--portrait-sheet',`url('./assets/${art.file}')`);portrait.style.setProperty('--portrait-sheet-size',`300% ${art.rows*100}%`);if(art.sheetHeight){portrait.style.setProperty('--portrait-row',`${art.top/(art.sheetHeight-art.height)*100}%`);portrait.style.setProperty('--portrait-sheet-size',`300% ${art.sheetHeight/art.height*100}%`);}portrait.style.setProperty('--breath-delay',`${-(u.id%7)*.4}s`);}
+  if(art?.single){portrait.style.setProperty('--portrait-row','0%');portrait.style.setProperty('--portrait-sheet-size','100% 100%');portrait.querySelector('span').style.animation='none';}
   const ordinal=[...records.values()].filter(r=>r.u.type===u.type).length+1;
   el.querySelector('.combat-frame-name').textContent=`${u.type==='shieldbearer'?'Shieldbearer':name(u)} · ${ordinal}`;
   list.append(el);return {el,u,lastSeen:sim.clock,icons:new Map(),portrait,row};

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
 <base href="../">
-  <meta name="crownforge-art-release" content="20260913-mercy1">
+  <meta name="crownforge-art-release" content="20260913-skybreaker2">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="crownforge-build" content="20260907-paintedashen1" />
@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="./assets/crownforge-icon-gold-v1.png?v=20260822-goldpass1" />
-    <link rel="stylesheet" href="./styles.css?v=20260913-mercy1" />
+    <link rel="stylesheet" href="./styles.css?v=20260913-skybreaker2" />
     <link rel="stylesheet" href="./presentation.css?v=20260911-worker-v010" />
       <link rel="stylesheet" href="./unit-inspector.css?v=20260909-bearfury1" />
   </head>
@@ -159,6 +159,7 @@
             <div id="build-menu" class="build-menu glass-panel" hidden>
               <div class="build-menu-kicker">FIRST-AGE BLUEPRINTS</div>
               <button class="build-option" data-build-type="barracks" title="Place a Crown Barracks"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN BARRACKS</b><small data-build-detail="barracks">90 WOOD · 40 STONE  •  READY</small></span></button>
+              <button class="build-option" data-build-type="observatory" title="Build the Observatory of the Last Star"><img class="action-mark" src="./assets/starveil/observatory-v1.png" alt=""><span><b>OBSERVATORY OF THE LAST STAR</b><small data-build-detail="observatory">160 WOOD · 120 STONE · 100 GOLD</small></span></button>
               <button class="build-option" data-build-type="stable" title="Place a Crown Stable for mounted scout production"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>CROWN STABLE</b><small data-build-detail="stable">120 WOOD · 30 STONE  •  READY</small></span></button>
               <button class="build-option" data-build-type="granary" title="Place a First-age Granary for food drop-off and grain support"><span class="action-mark ui-icon icon-food" aria-hidden="true"></span><span><b>FIRST-AGE GRANARY</b><small data-build-detail="granary">70 WOOD · 10 STONE  •  READY</small></span></button>
               <button class="build-option" data-build-type="homestead" title="Place a First-age Homestead for population housing"><span class="action-mark ui-icon icon-house" aria-hidden="true"></span><span><b>FIRST-AGE HOMESTEAD</b><small data-build-detail="homestead">80 WOOD · 10 STONE  •  +6 POP  •  READY</small></span></button>
@@ -182,6 +183,7 @@
               <button class="build-option production-option" data-train-unit="scout" title="Train a Crown Scout"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN SCOUT</b><small data-train-detail="scout">60 FOOD · 30 WOOD · 15 GOLD  •  8 SEC</small></span></button>
               <button class="build-option production-option" data-train-unit="spearwarden" title="Train a Crown Spearwarden"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN SPEARWARDEN</b><small data-train-detail="spearwarden">55 FOOD · 20 WOOD · 15 GOLD  •  8 SEC</small></span></button>
               <button class="build-option production-option" data-train-unit="militia" title="Train a Crown Militia"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN MILITIA</b><small data-train-detail="militia">35 FOOD · 10 WOOD · 5 GOLD  •  5.5 SEC</small></span></button>
+              <button class="build-option production-option" data-train-unit="wizard" title="Train a Starveil Arcanist"><img class="action-mark" src="./assets/starveil/portrait-v1.png" alt=""><span><b>STARVEIL ARCANIST</b><small data-train-detail="wizard">ONE PER SIDE · 20 SEC</small></span></button>
               <button class="build-option production-option" data-train-unit="shieldbearer" title="Train a Crown Shieldbearer"><span class="action-mark ui-icon icon-soldier" aria-hidden="true"></span><span><b>CROWN SHIELDBEARER</b><small data-train-detail="shieldbearer">45 FOOD · 20 WOOD · 5 GOLD  •  7 SEC</small></span></button>
               <small id="train-queue-status" class="train-queue-status">Select a unit to add it to the queue.</small>
             </div>
@@ -251,9 +253,9 @@
         if (fileProtocolHelp) fileProtocolHelp.hidden = false;
       }
     </script>
-    <script type="module" src="./src/main.js?v=20260913-mercy1"></script>
+    <script type="module" src="./src/main.js?v=20260913-skybreaker2"></script>
     <script type="module">
       document.querySelector('#victory-reset').addEventListener('click', () => document.querySelector('#restart-game').click());
     </script>
-  <script type="module" src="./dev/encounter-positioning.js?v=20260913-mercy1"></script></body>
+  <script type="module" src="./dev/encounter-positioning.js?v=20260913-skybreaker2"></script></body>
 </html>

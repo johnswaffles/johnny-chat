@@ -3,16 +3,16 @@ import ashenHearthkin from './roster-art/ashen-hearthkin.js?v=20260909-cursedbea
 import crownSpearwarden from './roster-art/crown-spearwarden.js?v=20260909-cursedbears1';
 import crownShieldbearer from './roster-art/crown-shieldbearer.js?v=20260909-cursedbears1';
 import crownGuard from './roster-art/crown-guard.js?v=20260909-cursedbears1';
-import crownScout from './roster-art/crown-scout.js?v=20260913-mercy1';
-import ashenOutrider from './roster-art/ashen-outrider.js?v=20260913-mercy1';
+import crownScout from './roster-art/crown-scout.js?v=20260913-skybreaker2';
+import ashenOutrider from './roster-art/ashen-outrider.js?v=20260913-skybreaker2';
 import crownMilitia from './roster-art/crown-militia.js?v=20260909-cursedbears1';
 import thornSpear from './roster-art/thorn-spear.js?v=20260909-cursedbears1';
 import hearthLevy from './roster-art/hearth-levy.js?v=20260909-cursedbears1';
 import ashenHidewall from './roster-art/ashen-hidewall.js?v=20260909-cursedbears1';
 import ashenRaider from './roster-art/ashen-raider.js?v=20260909-cursedbears1';
-import { militaryActions, militaryPose, MILITARY_PROFILES } from './military-motion.js?v=20260913-mercy1';
-import { mountedActions, mountedPose } from './mounted-motion.js?v=20260913-mercy1';
-import { UNIT_TYPES } from './config.js?v=20260913-mercy1';
+import { militaryActions, militaryPose, MILITARY_PROFILES } from './military-motion.js?v=20260913-skybreaker2';
+import { mountedActions, mountedPose } from './mounted-motion.js?v=20260913-skybreaker2';
+import { UNIT_TYPES } from './config.js?v=20260913-skybreaker2';
 import {calibrateCharacterSurfaces} from './character-surface-calibration.js?v=20260909-cursedbears1';
 
 function workerActions(type) {
@@ -46,6 +46,7 @@ function workerPose(type,state,time,direction,options={}) {
 // Entries are added only once the character owns four usable art views.
 // The scope ledger retains every unfinished current-game character.
 const BASE_CHARACTER_RIGS={
+ wizard:{...crownGuard,id:'wizard',label:'Starveil Arcanist',family:'foot',faction:'Starveil',actions:{...militaryActions('soldier'),idle:{duration:3.8,loop:true},walk:{duration:1,loop:true},death:{duration:1.8,loop:false},attack_anticipation:{duration:.77,loop:false},attack_contact:{duration:.55,loop:false},attack_recovery:{duration:.88,loop:false}},samplePose:(...args)=>militaryPose('soldier',...args)},
   villager:{id:'villager',label:'Crownwarden Hearthkin',faction:'Crownwardens',family:'worker',actions:workerActions('villager'),samplePose:(...args)=>workerPose('villager',...args)},
   ashenForager:{...ashenHearthkin,id:'ashenForager',label:'Ashen Hearthkin',faction:'Ashen',family:'worker',actions:workerActions('ashenForager'),samplePose:(...args)=>workerPose('ashenForager',...args)},
   soldier:{...crownGuard,id:'soldier',label:'Crown Guard',faction:'Crownwardens',family:'foot',actions:militaryActions('soldier'),samplePose:(...args)=>militaryPose('soldier',...args),dimensions:{torso:28,upperArm:10.5,forearm:6.5,headHeight:28,cloakWidth:29,cloakHeight:43}},
