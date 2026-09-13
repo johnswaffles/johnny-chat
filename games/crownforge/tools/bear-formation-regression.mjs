@@ -8,7 +8,7 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 function arena(){const s=new CrownforgeSimulation({seed:42});s.units=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.navigationVersion++;s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};return s;}
 test('half true health alone triggers Colossus, doubles size/damage and persists in saves',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit('shieldbearer',104,100,'player');
- b.lastLightCurseActive=true;assert.equal(displayedUnitHealth(b),1);assert(!bearEnrageActive(b));assert.equal(bearBodyScale(b),1);
+ b.lastLightCurseActive=true;assert.equal(displayedUnitHealth(b),b.hp);assert(!bearEnrageActive(b));assert.equal(bearBodyScale(b),1);
  b.lastLightCurseActive=false;b.hp=90.01;assert(!bearEnrageActive(b));b.hp=90;assert(bearEnrageActive(b));assert.equal(strikeDamage(b,t),696);assert.equal(combatRadius(b),6);
  s._applyUnitDamage(b,1,t);b.hp=180;assert(bearEnrageActive(b));const saved=s.serialize();const restored=arena();restored.loadSnapshot(saved);assert(bearEnrageActive(restored.units.find(u=>u.id===b.id)));
  b.hp=18;assert.equal(strikeDamage(b,t),4176);assert(unitStatuses(b).some(u=>u.id==='greatwoodColossus'));

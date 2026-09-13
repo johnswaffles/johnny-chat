@@ -1,18 +1,18 @@
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260912-classportraits1';
-import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260909-cursedbears1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260912-classportraits1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260912-classportraits1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260912-classportraits1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260913-chorusfx3';
+import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260913-chorusfx3';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260913-chorusfx3';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260913-chorusfx3';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260913-chorusfx3';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260912-classportraits1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260913-chorusfx3';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260912-classportraits1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260913-chorusfx3';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260912-classportraits1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260913-chorusfx3';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -1025,6 +1025,7 @@ export class CrownforgeSimulation {
       stunImmunityDuration: 0,
       stunSourceId: null,
       lastLightWardTimer: 0,
+      lastLightChorusTimer: 0,
       lastLightWardDuration: 0,
       lastLightWardHealRate: 0,
       lastLightWardCurseDelayTimer: 0,
@@ -2314,11 +2315,11 @@ export class CrownforgeSimulation {
     if(isCurseImmune(unit)){unit.stunTimer=0;unit.stunImmunityTimer=0;}
     unit.wardBlockedPulse = Math.max(0, (unit.wardBlockedPulse ?? 0) - dt);
     unit.lastLightWardBlastTimer = Math.max(0, (unit.lastLightWardBlastTimer ?? 0) - dt);
-    unit.lastLightCurseFlashTimer = Math.max(0, (unit.lastLightCurseFlashTimer ?? 0) - dt);
-    if (unit.lastLightWardCurseDelayTimer > 0) {
-      unit.lastLightWardCurseDelayTimer = Math.max(0, unit.lastLightWardCurseDelayTimer - dt);
-      if (unit.lastLightWardCurseDelayTimer <= 0) this._resolveLastLightWardCurse(unit);
-    }
+    unit.lastLightChorusTimer=Math.max(0,(unit.lastLightChorusTimer??0)-dt);
+    unit.lastLightChorusCastTimer=Math.max(0,(unit.lastLightChorusCastTimer??0)-dt);
+    // Retired curse fields may exist in older saves; they no longer affect combat.
+    unit.lastLightCurseActive=false;unit.lastLightCurseDecoy=false;unit.lastLightCurseFlashTimer=0;
+    unit.lastLightWardCurseDelayTimer=0;unit.lastLightWardCurseSourceId=null;
     if (unit.lastLightWardTimer > 0) {
       unit.lastLightWardTimer = Math.max(0, unit.lastLightWardTimer - dt);
       unit.hp = Math.min(unit.maxHp, unit.hp + (unit.lastLightWardHealRate ?? 0) * dt);
@@ -4371,37 +4372,9 @@ export class CrownforgeSimulation {
     return routed;
   }
 
-  _resolveLastLightWardCurse(hearthkin) {
-    const sourceId = hearthkin.lastLightWardCurseSourceId;
-    hearthkin.lastLightWardCurseSourceId = null;
-    hearthkin.lastLightWardCurseDelayTimer = 0;
-    hearthkin.lastLightWardBlastTimer = Math.max(0.2, hearthkin.lastLightWardBlastDuration || 0.9);
-    this.animation.emit(hearthkin, ANIMATION_EVENTS.wardBlast, {
-      targetId: sourceId,
-      duration: hearthkin.lastLightWardBlastTimer,
-    });
-
-    const attacker = this.units.find((candidate) => candidate.id === sourceId && !candidate.dead);
-    if (!attacker) return false;
-    // The God-condemned bear accepts the mark, but only its visible health
-    // falls to one. Reapplying the curse must not erase real battle damage.
-    attacker.lastLightCurseDecoy = isCurseImmune(attacker);
-    if (!attacker.lastLightCurseDecoy) attacker.hp = 1;
-    attacker.lastLightCurseActive = true;
-    attacker.lastLightCurseFlashTimer = 1.15;
-    attacker.hitFlash = Math.max(attacker.hitFlash, 0.34);
-    attacker.healthRevealTimer = Math.max(attacker.healthRevealTimer, 2.2);
-    this.animation.emit(attacker, ANIMATION_EVENTS.curseApplied, {
-      sourceId: hearthkin.id,
-      hp: 1,
-    });
-    this._announce(`Last Light Curse leaves ${UNIT_TYPES[attacker.type].label} at 1 HP.`);
-    return true;
-  }
-
   _triggerLastLightWard(hearthkin, attacker, wardRule) {
     const duration = Math.max(1, wardRule.duration ?? 60);
-    const curseDelay = Math.max(0, wardRule.curseDelay ?? 1.5);
+
     hearthkin.lastLightWardTimer = duration;
     hearthkin.lastLightWardDuration = duration;
     // The ward catches the killing blow by returning the Hearthkin to full
@@ -4409,8 +4382,11 @@ export class CrownforgeSimulation {
     // one-minute safety window the player can rely on under pressure.
     hearthkin.hp = hearthkin.maxHp;
     hearthkin.lastLightWardHealRate = 0;
-    hearthkin.lastLightWardCurseSourceId = attacker?.kind === 'unit' && !attacker.dead ? attacker.id : null;
-    hearthkin.lastLightWardCurseDelayTimer = hearthkin.lastLightWardCurseSourceId ? curseDelay : 0;
+    hearthkin.lastLightWardCurseSourceId = null;
+    hearthkin.lastLightWardCurseDelayTimer = 0;
+    for(const ally of this.units)if(!ally.dead&&ally.hp>0&&ally.faction===hearthkin.faction){ally.lastLightChorusTimer=wardRule.teamHealingDuration??60;ally.healPulse=.85;}
+    hearthkin.lastLightChorusCastTimer=2.8;
+    hearthkin.lastLightWardBlastTimer=.9;
     hearthkin.lastLightWardBlastDuration = Math.max(0.2, wardRule.blastDuration ?? 0.9);
     hearthkin.wardBlockedPulse = 0.55;
     hearthkin.healthRevealTimer = Math.max(hearthkin.healthRevealTimer, duration);
@@ -4425,8 +4401,7 @@ export class CrownforgeSimulation {
       bear.actionLabel='Seeking unwarded prey';
     }
     if (this.wildlifeState) this.wildlifeState.scanClock=0;
-    const curseNotice = hearthkin.lastLightWardCurseSourceId ? ` Last Light Curse in ${Math.ceil(curseDelay)} seconds.` : '';
-    this._announce(`Last Light Ward saves the Hearthkin for ${duration} seconds.${curseNotice}`);
+    this._announce(`Last Light Ward saves the Hearthkin. Chorus of the Last Light grants the team double healing for 60 seconds.`);
   }
 
   _applyUnitDamage(target, amount, attacker, {damageType='weapon',healthFloor=0,areaOfEffect=false}={}) {
@@ -4445,13 +4420,6 @@ export class CrownforgeSimulation {
       this.animation.emit(target, ANIMATION_EVENTS.wardBlocked, { sourceId: attacker?.id ?? null, damage });
       return { damage: 0, killed: false, warded: true, blocked: true, cursed: false };
     }
-    if (target.lastLightCurseActive && !isCurseImmune(target) && damage > 0 && healthFloor<=0) {
-      const before = target.hp;
-      target.hp = 0;
-      this._killUnit(target, attacker);
-      return { damage: before, killed: true, warded: false, blocked: false, cursed: true };
-    }
-
     const before = target.hp;
     const after = Math.max(Math.min(before,healthFloor),before - damage);
     const wardRule = UNIT_TYPES[target.type]?.lastLightWard;
@@ -7187,8 +7155,11 @@ export class CrownforgeSimulation {
         // Pre-immunity saves stored the curse's one HP as real health. Migrate
         // that once; new saves retain every wound, even genuine one-HP health.
         if (!saved.lastLightCurseDecoy && !unit.dead && unit.hp === 1) unit.hp=unit.maxHp;
-        unit.lastLightCurseDecoy=true;
+        unit.lastLightCurseDecoy=false;
       }
+      unit.lastLightCurseActive=false;unit.lastLightCurseDecoy=false;unit.lastLightCurseFlashTimer=0;
+      unit.lastLightWardCurseSourceId=null;unit.lastLightWardCurseDelayTimer=0;
+      unit.lastLightChorusTimer=Math.max(0,Math.min(60,Number(saved.lastLightChorusTimer)||0));
       if (!Array.isArray(unit.orderQueue)) unit.orderQueue = [];
     }
     for (const saved of restored.buildings ?? []) {

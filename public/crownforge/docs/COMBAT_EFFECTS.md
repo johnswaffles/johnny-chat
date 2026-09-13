@@ -1,11 +1,11 @@
 # Combat effects and lore-card reference
 
-Revision: 20260912-classportraits1. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
+Revision: 20260913-chorusfx3. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
 
 | Effect | Owner and trigger | Actual rule |
 | --- | --- | --- |
-| **Greatwood Colossus** | Bear first reaches 50% **true** health | Double rendered size, body radius (3 → 6 world units), and outgoing damage. Latched for the rest of its life and saved. False Last Light health does not trigger it. |
-| **Wrath of the First Oath** | Bear at 10% true health or affected by the false Last Light reading | Existing 6× damage layer. Stacks with Colossus for 12× base damage. Landed blows remain lethal to non-tank fighters. |
+| **Greatwood Colossus** | Bear first reaches 50% **true** health | Double rendered size, body radius (3 → 6 world units), and outgoing damage. Latched for the rest of its life and saved. |
+| **Wrath of the First Oath** | Bear at 10% true health | Existing 6× damage layer. Stacks with Colossus for 12× base damage. Landed blows remain lethal to non-tank fighters. |
 | **The First Condemnation** | Permanent Greatwood elder magic | Immunity to lesser curses and stuns; true physical wounds still kill. Preserve the established ancient sentence/bloodline lore. |
 | **Elderhide** | Permanent bear protection | Reduces incoming arrow damage by 95% before Thick Hide. |
 | **Thick Hide** | Permanent bear armor | Halves incoming damage; combined with Elderhide, reduces arrow damage by 97.5% before other protection. |
@@ -13,14 +13,13 @@ Revision: 20260912-classportraits1. Local revision; verify the live marker for d
 | **Bloodclaw Reckoning** | Enraged bear, 8-second cooldown | 360-degree AoE: 50% maximum-health damage before defenses to every hostile unit within 14 units and line of sight. Includes tanks and healers; wards respected. |
 | **Oathbound Stride** | Permanent Crown Shieldbearer blessing | Base movement speed is 1.5 times the fastest other unit: currently 6.225 versus Scout 4.15. Roads and terrain still modify movement. Faster acceleration and braking keep it responsive. Lore seed: “The sworn shield reaches danger first.” |
 | **The Crown’s Last Bastion** | Shieldbearer crosses below 20% true HP | 90% reduction after armor for 20 seconds, or until health exceeds 60%. Protection persists while healing between 20% and 60%. Crossing damage beneath 20% is protected. Must heal above 60% to rearm; no continuous reactivation after timeout. |
-| **Heart of the Unbroken Wild** | Every grizzly bloodline crosses below 20% true HP | Same rules and 90% reduction after existing hide defenses, lasting 60 seconds. False Last Light health cannot trigger it. Remaining duration and spent state persist in saves. |
-| **Heart of the Deathless Greatwood** | Any bear crosses below 5% true HP | 99% damage reduction after hide/armor for 60 seconds, replacing ordinary Heart reduction. Protects the below-5% portion of the crossing hit. Persists through healing; no added regeneration. Rearms after expiry and healing above 60%. Timer/spent state persist in saves; false Last Light cannot trigger it. |
+| **Heart of the Unbroken Wild** | Every grizzly bloodline crosses below 20% true HP | Same rules and 90% reduction after existing hide defenses, lasting 60 seconds. Remaining duration and spent state persist in saves. |
+| **Heart of the Deathless Greatwood** | Any bear crosses below 5% true HP | 99% damage reduction after hide/armor for 60 seconds, replacing ordinary Heart reduction. Protects the below-5% portion of the crossing hit. Persists through healing; no added regeneration. Rearms after expiry and healing above 60%. Timer/spent state persist in saves. |
 | Shieldbearer armor and evasion | Permanent tank defenses | 3,480 HP, 80% damage reduction, one deterministic dodge per twenty incoming melee swings (5%). No new armor increase in this revision. |
 | Shieldbearer threat lock | Tank lands a hit | Enemy attacks the tank for 8 seconds, refreshed on each hit, within 24 units. Existing valid tank retains ownership over another tank. Other fighters cannot steal aggro. |
 | Team healing | Assigned Hearthkin, every 2 seconds | Heal every nearby injured eligible friendly unit within 24 units and line of sight: tanks 40 HP first, others 20 HP. Excludes self, dead units and enemies; no overheal. Healer remains dedicated until removed from team. |
-| **Last Light Ward** | Hearthkin would die | Existing 60-second protection/restoration and untargetability. Outward curse follows after 1.5 seconds; blast animation lasts 0.9 seconds. |
-| **Last Light Curse** | Last Light marks a susceptible enemy | Health becomes 1; next positive damage kills. Existing targeting/spread logic is preserved. |
-| **The Borrowed Last Breath** | Last Light meets an immune bear | Displays 1 HP without changing true wounds. Activates Wrath, but not Colossus unless true health reaches half. Preserve existing bloodline trickery stories. |
+| **Last Light Ward** | Hearthkin would die | Existing 60-second protection/restoration and untargetability. Immediately grants Chorus of the Last Light to living allies; outward blessing animation lasts 0.9 seconds. |
+| **Chorus of the Last Light** | Hearthkin shield activates | Living allies receive 200% of normal healing (2×) for 60 seconds: tanks 80 HP and others 40 HP per team heal. Another activation refreshes the duration without stacking. No curse or false health is applied to enemies. |
 | **Stunned** / **Steadfast** | Hearthkin strike against susceptible humanoid | Existing 5-second stun and 20-second stun immunity. Greatwood bears remain immune. |
 
 ## Swipe and formation rules

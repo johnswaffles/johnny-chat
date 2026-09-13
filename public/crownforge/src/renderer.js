@@ -1,22 +1,23 @@
+import {drawLastLightChorus} from './last-light-chorus-vfx.js?v=20260913-chorusfx3';
 import { LivingCrownHall } from './crown-hall-living.js?v=20260911-livinghall1';
-import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260912-classportraits1';
-import {corpseLifetime} from './bear-combat.js?v=20260912-classportraits1';
+import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260913-chorusfx3';
+import {corpseLifetime} from './bear-combat.js?v=20260913-chorusfx3';
 import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
-import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260912-classportraits1';
-import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260912-classportraits1';
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260912-classportraits1';
+import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260913-chorusfx3';
+import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260913-chorusfx3';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260913-chorusfx3';
 import {paintedRosterFactories} from './painted-roster-rig.js?v=20260909-cursedbears1';
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260912-classportraits1';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260913-chorusfx3';
 import { BUILDING_DEPTH } from './building-depth-data.js?v=20260909-cursedbears1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260909-cursedbears1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260911-blueward1';
-import { CrownforgeLandscape } from './landscape.js?v=20260912-classportraits1';
-import { ForestCache } from './forest-cache.js?v=20260912-classportraits1';
-import { CrownforgeMeadow } from './meadow.js?v=20260912-classportraits1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260912-classportraits1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260912-classportraits1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260912-classportraits1';
+import { CrownforgeLandscape } from './landscape.js?v=20260913-chorusfx3';
+import { ForestCache } from './forest-cache.js?v=20260913-chorusfx3';
+import { CrownforgeMeadow } from './meadow.js?v=20260913-chorusfx3';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260913-chorusfx3';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260913-chorusfx3';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260913-chorusfx3';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -1266,7 +1267,8 @@ export class CrownforgeRenderer {
       // retain the natural depth order and do not pop through architecture.
       const readableState = unit.selected || unit.command !== 'idle' || ['enemy','wildlife'].includes(unit.faction) || unit.hp < unit.maxHp;
       if (readableState) {
-        if (CHARACTER_RIGS[unit.type]?.family === 'worker' && !unit.dead) drawHearthkinWard(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime, true, this.atmosphere.reducedMotion);
+        drawLastLightChorus(ctx,unit,point,unitSize*this.camera.zoom,this.lastRenderTime,this.atmosphere.reducedMotion,true);
+    if (CHARACTER_RIGS[unit.type]?.family === 'worker' && !unit.dead) drawHearthkinWard(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime, true, this.atmosphere.reducedMotion);
         if (unit.type === 'grizzly') this.grizzly.draw(ctx,unit,point,unitSize*this.camera.zoom,this.lastRenderTime,this.atmosphere.reducedMotion,this.resolutionScale);
         else if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
         else if (style.combatAtlas) this.drawCombatAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
@@ -2274,6 +2276,7 @@ export class CrownforgeRenderer {
     const size = style.renderSize ?? (unit.type === 'villager' ? 88 : 120);
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
     if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 1.25 : 0.66, ['enemy','wildlife'].includes(unit.faction) ? '#d86b55' : FACTION.color);
+    drawLastLightChorus(ctx,unit,point,size*this.camera.zoom,time,this.atmosphere.reducedMotion,true);
     if (CHARACTER_RIGS[unit.type]?.family === 'worker' && !unit.dead) drawHearthkinWard(ctx, unit, point, size * this.camera.zoom, time, true, this.atmosphere.reducedMotion);
     if (unit.type === 'grizzly') this.grizzly.draw(ctx,unit,point,size*this.camera.zoom,time,this.atmosphere.reducedMotion,this.resolutionScale);
     else if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
@@ -2304,12 +2307,13 @@ export class CrownforgeRenderer {
   }
 
   drawUnitStatusEffects(ctx, unit, point, screenSize, time = 0) {
+    drawLastLightChorus(ctx,unit,point,screenSize,time,this.atmosphere.reducedMotion,false);
     if(unit.dodgePulse>0){ctx.save();ctx.globalAlpha=unit.dodgePulse/.45;ctx.fillStyle='#bfeaff';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText('DODGE',point.x,point.y-screenSize*.9);ctx.restore();}
     if(unit.healPulse>0||unit.healCastPulse>0){
       const pulse=Math.max(unit.healPulse??0,unit.healCastPulse??0),r=Math.max(7,screenSize*.2);
       ctx.save();ctx.globalAlpha=Math.min(1,pulse*1.6);ctx.strokeStyle='#91f1bf';ctx.lineWidth=2;
       ctx.beginPath();ctx.ellipse(point.x,point.y,r*(1.3-pulse*.3),r*.4,0,0,TAU);ctx.stroke();
-      if(unit.healPulse>0){ctx.fillStyle='#bdffdb';ctx.font=`bold ${Math.max(10,screenSize*.13)}px system-ui`;ctx.textAlign='center';ctx.fillText(`+${Math.round(unit.lastHealAmount??0)}`,point.x,point.y-screenSize*.8-(1-pulse)*18);}
+      if(unit.healPulse>0&&unit.lastHealAmount>0){ctx.fillStyle='#bdffdb';ctx.font=`bold ${Math.max(10,screenSize*.13)}px system-ui`;ctx.textAlign='center';ctx.fillText(`+${Math.round(unit.lastHealAmount??0)}`,point.x,point.y-screenSize*.8-(1-pulse)*18);}
       ctx.restore();
     }
     if (unit.lastLightWardBlastTimer > 0) {

@@ -1,4 +1,4 @@
-import { UNIT_TYPES } from './config.js?v=20260912-classportraits1';
+import { UNIT_TYPES } from './config.js?v=20260913-chorusfx3';
 
 export const BEAR_FURY = Object.freeze({threshold:.1, multiplier:6, extraTargets:2, radius:14, arrowHits:30});
 export const THICK_HIDE=Object.freeze({armorBonus:100,damageMultiplier:.5});
@@ -10,7 +10,7 @@ export function isFighter(unit){
   return Boolean(unit && !unit.dead && ['player','enemy'].includes(unit.faction) && rule && !rule.worker && !rule.wildlife && rule.attack>0 && rule.canAttackUnits!==false);
 }
 export function bearFuryActive(unit){
-  return Boolean(unit?.type==='grizzly' && !unit.dead && unit.hp>0 && (unit.hp/unit.maxHp<=BEAR_FURY.threshold || unit.lastLightCurseActive));
+  return Boolean(unit?.type==='grizzly' && !unit.dead && unit.hp>0 && unit.hp/unit.maxHp<=BEAR_FURY.threshold);
 }
 export const bearArrowDamage=amount=>Math.max(0,Number(amount)||0)*.05;
 export const corpseLifetime=unit=>unit.type==='grizzly'?BEAR_DEATH.lifetime:2.4;

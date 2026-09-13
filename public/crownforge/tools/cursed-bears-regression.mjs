@@ -8,13 +8,13 @@ function arena(){const s=new CrownforgeSimulation({seed:42});s.units=[];s.buildi
 test('all three bloodlines enter the simulation and retain identity and true wounds through saves',()=>{
  const s=arena();const bears=BEAR_VARIANT_IDS.map((id,i)=>{const b=s.addUnit('grizzly',100+i*10,100,'wildlife');assert.equal(b.bearVariant,id);b.hp=41+i;b.lastLightCurseActive=true;b.lastLightCurseDecoy=true;return b;});
  const snapshot=s.serialize();const restored=arena();assert(restored.loadSnapshot(snapshot));
- for(const b of bears){const copy=restored.units.find(u=>u.id===b.id);assert.equal(copy.bearVariant,b.bearVariant);assert.equal(copy.hp,b.hp);assert.equal(displayedUnitHealth(copy),1);assert.equal(bearVariant(copy).name,bearVariant(b).name);}
+ for(const b of bears){const copy=restored.units.find(u=>u.id===b.id);assert.equal(copy.bearVariant,b.bearVariant);assert.equal(copy.hp,b.hp);assert.equal(displayedUnitHealth(copy),copy.hp);assert.equal(bearVariant(copy).name,bearVariant(b).name);}
  assert(BEAR_VARIANT_IDS.includes(bearVariantId({id:99,bearVariant:'unknown'})));
 });
-test('every lineage has distinct lore and artwork, permanent Thick Hide, and conditional trickery',()=>{
+test('every lineage has distinct lore and artwork, permanent Thick Hide, and healing-chorus lore',()=>{
  const s=arena(),lore=new Set(),art=new Set();
  for(const id of BEAR_VARIANT_IDS){const b=s.addUnit('grizzly',100,100,'wildlife');b.bearVariant=id;const statuses=unitStatuses(b),story=statuses.find(s=>s.id==='bearLineage');lore.add(story.lore);art.add(story.art);
- assert(!/Last Light|1 HP|bait|lesser rune/.test(story.lore));assert.match(statuses.find(s=>s.id==='thickHide').effect,/50%/);b.lastLightCurseActive=true;const curse=unitStatuses(b).find(s=>s.id==='lastLight');assert.match(curse.lore,/bait/);assert.match(curse.effect,/95%/);assert(bearFuryActive(b));assert.equal(b.hp,b.maxHp);}
+ assert(!/Last Light|1 HP|bait|lesser rune/.test(story.lore));assert.match(statuses.find(s=>s.id==='thickHide').effect,/50%/);b.lastLightCurseActive=true;assert(!unitStatuses(b).some(s=>s.id==='lastLight'));assert(!bearFuryActive(b));assert.match(story.lore,/Hearthkin/);assert.equal(b.hp,b.maxHp);}
  assert.equal(lore.size,3);assert.equal(art.size,3);
 });
 test('Thick Hide doubles actual melee survival while leaving other units and zero hits unchanged',()=>{

@@ -1,6 +1,6 @@
-import {UNIT_TYPES} from './config.js?v=20260912-classportraits1';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260912-classportraits1';
-import {bearVariant} from './bear-variants.js?v=20260909-cursedbears1';
+import {UNIT_TYPES} from './config.js?v=20260913-chorusfx3';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260913-chorusfx3';
+import {bearVariant} from './bear-variants.js?v=20260913-chorusfx3';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
 const tank=u=>UNIT_TYPES[u.type]?.combatRole==='tank';
@@ -36,6 +36,7 @@ export function portraitAsset(u){
  return null;
 }
 const glyphs={
+ lastLightChorus:'M12 21S1 14 3 7q4-5 9 1 5-6 9-1 2 7-9 14Z M12 9v8 M8 13h8 M2 3h3 M19 3h3',
  crownsAegis:'M12 3 4 6v7q0 6 8 9 8-3 8-9V6Z M8 12h8 M12 8v9',
  oathboundStride:'m5 18 6-7-2-5 5-3 3 7-5 7 7 2 M3 21h8',
  kingsbaneHunger:'m3 7 4 3 5-6 5 6 4-3-3 11H6Z M8 14l8 5 M16 14l-8 5',
@@ -63,7 +64,7 @@ export function effectIcon(status){
  return `<svg viewBox="0 0 24 24" aria-hidden="true" style="--sigil-hue:${hue}"><path d="${glyphs[status.id]??'m12 2 9 10-9 10-9-10Z M12 7v10 M7 12h10'}"/></svg>`;
 }
 export function createCombatFrames(sim,renderer){
- const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260912-classportraits1';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260913-chorusfx3';document.head.append(css);
  const host=document.createElement('aside');host.className='combat-frames';host.hidden=true;host.setAttribute('aria-label','Encounter portraits');
  host.innerHTML='<header><span>IN COMBAT</span><b>Encounter</b><button type="button" aria-label="Minimize encounter portraits" aria-expanded="true">−</button></header><div class="combat-frame-list"></div>';
  document.querySelector('.game-shell').append(host);

@@ -1,16 +1,16 @@
-import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {UNIT_TYPES} from './config.js?v=20260912-classportraits1';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260912-classportraits1';
+import { bearVariant } from './bear-variants.js?v=20260913-chorusfx3';
+import {UNIT_TYPES} from './config.js?v=20260913-chorusfx3';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260913-chorusfx3';
 
 const unitName=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type].label;
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';
 const health=u=>`${Math.ceil(displayedUnitHealth(u))} / ${u.maxHp} HP`;
 export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
   const host=document.createElement('section');host.id='unit-inspector';host.hidden=true;
-  host.innerHTML='<div class="unit-inspect-overview"><button class="unit-portrait-button" type="button" aria-label="Open character details"><canvas width="120" height="160" aria-hidden="true"></canvas></button><div class="unit-vitals"><span class="unit-allegiance"></span><strong class="unit-health-label"></strong><div class="unit-health-track" role="meter" aria-label="Health"><i></i></div><p class="unit-activity"></p></div></div><div class="unit-statuses" aria-label="Buffs and curses"></div><p class="unit-inspect-hint"></p>';
+  host.innerHTML='<div class="unit-inspect-overview"><button class="unit-portrait-button" type="button" aria-label="Open character details"><canvas width="120" height="160" aria-hidden="true"></canvas></button><div class="unit-vitals"><span class="unit-allegiance"></span><strong class="unit-health-label"></strong><div class="unit-health-track" role="meter" aria-label="Health"><i></i></div><p class="unit-activity"></p></div></div><div class="unit-statuses" aria-label="Buffs and debuffs"></div><p class="unit-inspect-hint"></p>';
   document.querySelector('#selection-detail').after(host);
   const dialog=document.createElement('dialog');dialog.id='unit-lore';dialog.setAttribute('aria-labelledby','unit-lore-title');
-  dialog.innerHTML='<article class="unit-lore-card"><button class="unit-lore-close" type="button" aria-label="Close character details">×</button><div class="unit-lore-hero"><img alt="The cursed Greatwood Grizzly in its ancient forest" hidden><canvas width="360" height="360" hidden aria-label="Character portrait"></canvas><div class="unit-lore-heading"><span class="unit-lore-faction"></span><h2 id="unit-lore-title"></h2><p class="unit-lore-health"></p></div></div><div class="unit-lore-body"><p class="unit-lore-activity"></p><div class="unit-lore-statuses" aria-label="Character buffs and curses"></div><section class="unit-lore-story"><div class="unit-lore-sigil"></div><div><span class="unit-lore-kind"></span><h3 class="unit-lore-name"></h3></div><p class="unit-lore-prose"></p><p class="unit-lore-effect"></p></section><p class="unit-lore-boundary"></p></div></article>';
+  dialog.innerHTML='<article class="unit-lore-card"><button class="unit-lore-close" type="button" aria-label="Close character details">×</button><div class="unit-lore-hero"><img alt="The cursed Greatwood Grizzly in its ancient forest" hidden><canvas width="360" height="360" hidden aria-label="Character portrait"></canvas><div class="unit-lore-heading"><span class="unit-lore-faction"></span><h2 id="unit-lore-title"></h2><p class="unit-lore-health"></p></div></div><div class="unit-lore-body"><p class="unit-lore-activity"></p><div class="unit-lore-statuses" aria-label="Character buffs and debuffs"></div><section class="unit-lore-story"><div class="unit-lore-sigil"></div><div><span class="unit-lore-kind"></span><h3 class="unit-lore-name"></h3></div><p class="unit-lore-prose"></p><p class="unit-lore-effect"></p></section><p class="unit-lore-boundary"></p></div></article>';
   document.body.append(dialog);
   const $=s=>host.querySelector(s),d$=s=>dialog.querySelector(s);
   let selected=null,profile=null,chosen=null,buttonKey='!',profileKey='!',lastSelectionId=null;

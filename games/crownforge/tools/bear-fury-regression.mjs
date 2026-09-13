@@ -10,10 +10,10 @@ import {mountedPose,MOUNTED_TYPES} from '../src/mounted-motion.js';
 function arena(){const s=new CrownforgeSimulation({seed:42});s.units=[];s.buildings=[];s.resourcesNodes=[];s.navigationVersion++;s.unitSpeedScale=1;s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};return s;}
 const step=(s,u,seconds)=>{for(let i=0;i<seconds*60;i++)s._updateUnit(u,1/60);};
 
-test('fury uses the exact true threshold or false curse health, without healing',()=>{
+test('fury uses the exact true threshold and ignores retired curse flags',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');
  b.hp=18.001;assert(!bearFuryActive(b));b.hp=18;assert(bearFuryActive(b));
- b.hp=173;b.lastLightCurseActive=true;assert(bearFuryActive(b));assert.equal(displayedUnitHealth(b),1);assert.equal(b.hp,173);
+ b.hp=173;b.lastLightCurseActive=true;assert(!bearFuryActive(b));assert.equal(displayedUnitHealth(b),173);assert.equal(b.hp,173);
  b.lastLightCurseActive=false;assert(!bearFuryActive(b));b.hp=0;b.dead=true;assert(!bearFuryActive(b));
 });
 test('rapid arrows respect both Heart damage-reduction tiers and true health, with or without the curse',()=>{
@@ -24,12 +24,12 @@ test('rapid arrows respect both Heart damage-reduction tiers and true health, wi
    s.projectiles.push({id:9000+hit,kind:'defense-arrow',faction:'player',sourceBuildingId:999,sourceType:'watchtower',targetId:b.id,x:99.9,z:100,damage:120,speed:30,age:0,maxAge:5});
    s._updateDefenseProjectiles(1/60);
    const expected=hit<=48?180-hit*3:hit<=138?36-(hit-48)*.3:Math.max(0,9-(hit-138)*.03);assert(Math.abs(b.hp-expected)<1e-7);assert.equal(b.dead,hit===438);
-   assert.equal(displayedUnitHealth(b),hit===438?0:cursed?1:b.hp);
+   assert.equal(displayedUnitHealth(b),hit===438?0:b.hp);
   }
  }
 });
 test('fury kills the primary while Bloodclaw deals percentage AoE; walls and wards protect',()=>{
- const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=true;
+ const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.hp=18;
  const primary=s.addUnit('soldier',101.4,100,'player');primary.hp=primary.maxHp=500;
  const second=s.addUnit('raider',102,101,'enemy'),third=s.addUnit('militia',103,100,'player');
  const fourth=s.addUnit('soldier',105,100,'player'),outside=s.addUnit('soldier',115,100,'player'),blocked=s.addUnit('soldier',101,100,'player'),ward=s.addUnit('raider',100,101,'enemy');ward.lastLightWardTimer=20;
@@ -81,13 +81,11 @@ test('running fighters cannot hit through walls or reach an escaped target',()=>
   const hp=b.hp;step(s,u,1.5);assert.equal(b.hp,hp);
  }
 });
-test('bear lore reveals trickery only after Last Light, with accurate active buff numbers',()=>{
- const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');let statuses=unitStatuses(b);
- assert.deepEqual(statuses.map(x=>x.id),['kingsbaneHunger','falteringCrown','greatwoodDefiance','crushingClaws','firstCondemnation','elderhide','thickHide','bearLineage']);
- assert(!/Last Light|lesser rune|lure|1 HP/.test(statuses.map(x=>x.lore+' '+x.effect).join(' ')));
- b.lastLightCurseActive=true;statuses=unitStatuses(b);const fury=statuses.find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/six/);assert.match(fury.effect,/front 160-degree/);assert.match(fury.effect,/14 units/);assert.match(fury.art,/cursed-bears/);
- assert.match(statuses.find(x=>x.id==='lastLight').lore,/bait/);assert.equal(b.hp,b.maxHp);
- b.lastLightCurseActive=false;b.hp=18;assert(unitStatuses(b).some(x=>x.id==='greatwoodFury'));
+test('bear lore describes the healing chorus and wrath requires real wounds',()=>{
+ const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=true;
+ let statuses=unitStatuses(b);assert(!statuses.some(x=>x.id==='lastLight'||x.id==='greatwoodFury'));
+ assert.match(statuses.find(x=>x.id==='bearLineage').lore,/Hearthkin/);
+ b.hp=18;const fury=unitStatuses(b).find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/six/);
 });
 test('running strikes keep a distance-driven gait and attached weapons for foot and mounted fighters',()=>{
  for(const type of [...FOOT_MILITARY_TYPES,...MOUNTED_TYPES])for(let view=0;view<4;view++){

@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260912-classportraits1';
+import { CONFIG } from './config.js?v=20260913-chorusfx3';
 
 // Presentation only: every effect is derived from position and render time.
 // Nothing consumes the simulation RNG or changes an entity's state.

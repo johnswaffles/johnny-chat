@@ -1,4 +1,4 @@
-import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260912-classportraits1';
+import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260913-chorusfx3';
 
 export function setupPresentation({ renderer, simulation, input, announce }) {
   const appearance=document.querySelector('#hearthkin-appearance');

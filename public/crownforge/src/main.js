@@ -1,17 +1,17 @@
-import {createCombatFrames} from './combat-frames.js?v=20260912-classportraits1';
+import {createCombatFrames} from './combat-frames.js?v=20260913-chorusfx3';
 import {createUnitActivity} from './unit-activity.js?v=20260912-activity1';
-import {createTeamControls} from './team-controls.js?v=20260912-classportraits1';
-import {combatRole} from './combat-teams.js?v=20260912-classportraits1';
-import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {requestGrizzlyPair} from './wildlife.js?v=20260912-classportraits1';
-import {createUnitInspector} from './unit-inspector.js?v=20260912-classportraits1';
-import {displayedUnitHealth} from './unit-status.js?v=20260912-classportraits1';
-import { setupPresentation } from './presentation.js?v=20260912-classportraits1';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260912-classportraits1';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260912-classportraits1';
+import {createTeamControls} from './team-controls.js?v=20260913-chorusfx3';
+import {combatRole} from './combat-teams.js?v=20260913-chorusfx3';
+import { bearVariant } from './bear-variants.js?v=20260913-chorusfx3';
+import {requestGrizzlyPair} from './wildlife.js?v=20260913-chorusfx3';
+import {createUnitInspector} from './unit-inspector.js?v=20260913-chorusfx3';
+import {displayedUnitHealth} from './unit-status.js?v=20260913-chorusfx3';
+import { setupPresentation } from './presentation.js?v=20260913-chorusfx3';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260913-chorusfx3';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260913-chorusfx3';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
-import { CrownforgeRenderer } from './renderer.js?v=20260912-classportraits1';
-import { CrownforgeSimulation } from './simulation.js?v=20260912-classportraits1';
+import { CrownforgeRenderer } from './renderer.js?v=20260913-chorusfx3';
+import { CrownforgeSimulation } from './simulation.js?v=20260913-chorusfx3';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-cursedbears1';
 
@@ -921,10 +921,10 @@ function selectionStatus() {
         ? ` · Last Light Ward ${Math.ceil(unit.lastLightWardTimer)}s · invulnerable`
         : ' · defensive strike stuns humanoids · Last Light Ward ready'
       : '';
-    const curse = unit.lastLightCurseActive ? ' · Last Light Curse · 1 HP · any damage is fatal' : '';
+    const chorus = unit.lastLightChorusTimer>0 ? ` · Chorus of the Last Light ${Math.ceil(unit.lastLightChorusTimer)}s · 200% healing` : '';
     const team=unit.teamId?` · Your team · ${combatRole(unit)}`:'';
     const tank=combatRole(unit)==='tank'?' · Tank: 80% armor · 5% dodge · Oathbound Stride · 1.4 damage':'';
-    return `${unit.actionLabel}${health}${team}${tank}${cargo}${status}${curse}${defense}`;
+    return `${unit.actionLabel}${health}${team}${tank}${cargo}${status}${chorus}${defense}`;
   }
   if (units.length > 1) {
     return `${units.length} units selected · Orders shown in Unit activity.`;

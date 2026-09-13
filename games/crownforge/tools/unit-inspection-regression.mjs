@@ -30,60 +30,38 @@ test('ward activation clears every bear, excludes all new attack routes and move
  w.lastLightCurseActive=false;s._updateUnitStatusEffects(w,61);assert(s._sendUnitToAttack(bears[0],w),'ward expiration restores attack targetability');
 });
 
-test('The First Condemnation accepts the delayed lesser rune and false health without changing combat strength',()=>{
+test('the ancestral bear rune remains while Last Light blesses allies',()=>{
  const s=arena(),w=s.addUnit('villager',100,100,'player'),b=s.addUnit('grizzly',102,100,'wildlife'),guard=s.addUnit('soldier',106,100,'player');
- assert(isCurseImmune(b));assert.equal(unitStatuses(b)[0].name,'The First Condemnation');assert.equal(curseRuneKind(b),'divine');assert.equal(displayedUnitHealth(b),b.maxHp);
+ assert(isCurseImmune(b));assert.equal(curseRuneKind(b),'divine');
  s._applyUnitDamage(b,17,guard);const before=b.hp;w.hp=1;s._applyUnitDamage(w,29,b);s._updateUnitStatusEffects(w,2);
- assert.equal(b.hp,before);assert(b.lastLightCurseActive);assert(b.lastLightCurseDecoy);assert.equal(curseRuneKind(b),'curse');assert.equal(displayedUnitHealth(b),1);
- assert.deepEqual(unitStatuses(b).map(status=>status.id),['firstCondemnation','elderhide','thickHide','bearLineage','lastLight','greatwoodFury']);
- s._applyUnitDamage(b,1,guard);assert.equal(b.hp,before-.5);assert(!b.dead);assert.equal(displayedUnitHealth(b),1);
- // A second worker's ward cannot heal existing wounds or reveal true health.
- const other=s.addUnit('ashenForager',110,100,'enemy');other.hp=1;s._applyUnitDamage(other,100,b);s._updateUnitStatusEffects(other,2);
- assert.equal(b.hp,before-.5);assert.equal(displayedUnitHealth(b),1);assert.equal(curseRuneKind(b),'curse');
- assert.equal(b.attackTarget,guard.id,'the protected worker cannot steal focus from the fighter who landed a hit');
+ assert.equal(b.hp,before);assert(!b.lastLightCurseActive);assert.equal(displayedUnitHealth(b),before);assert.equal(curseRuneKind(b),'divine');
+ assert(!unitStatuses(b).some(x=>x.id==='lastLight'||x.id==='greatwoodFury'));assert(unitStatuses(guard).some(x=>x.id==='lastLightChorus'));
 });
 
-test('save/load retains the lesser mark and real wounds, including one HP and death, without healing',()=>{
+test('save/load removes retired marks and retains real wounds, including one HP and death',()=>{
  for(const trueHp of [180,93,1,0]){
   const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=true;b.lastLightCurseDecoy=true;b.hp=trueHp;b.dead=trueHp===0;
   let saved=JSON.parse(JSON.stringify(s.serialize()));
   for(let cycle=0;cycle<2;cycle++){
    const restored=arena();assert(restored.loadSnapshot(saved));const loaded=restored.units.find(u=>u.id===b.id);
-   assert.equal(loaded.hp,trueHp);assert.equal(loaded.dead,trueHp===0);assert(loaded.lastLightCurseActive);assert.equal(displayedUnitHealth(loaded),trueHp>0?1:0);saved=restored.serialize();
+   assert.equal(loaded.hp,trueHp);assert.equal(loaded.dead,trueHp===0);assert(!loaded.lastLightCurseActive);assert.equal(displayedUnitHealth(loaded),trueHp);saved=restored.serialize();
   }
  }
 });
 
-test('old one-HP cursed bears migrate once while retaining the mark; other battle damage and death survive',()=>{
+test('old one-HP cursed bears migrate once and retire the mark; other wounds and death survive',()=>{
  for(const oldHp of [180,93,1,0]){
   const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=true;b.hp=oldHp;b.dead=oldHp===0;
   const saved=s.serialize(),old=saved.units.find(u=>u.id===b.id);delete old.lastLightCurseDecoy;
   const restored=arena();assert(restored.loadSnapshot(saved));const loaded=restored.units.find(u=>u.id===b.id);
-  assert(loaded.lastLightCurseActive);assert(loaded.lastLightCurseDecoy);assert.equal(loaded.hp,oldHp===1?b.maxHp:oldHp);assert.equal(loaded.dead,oldHp===0);
+  assert(!loaded.lastLightCurseActive);assert(!loaded.lastLightCurseDecoy);assert.equal(loaded.hp,oldHp===1?b.maxHp:oldHp);assert.equal(loaded.dead,oldHp===0);
   if(!loaded.dead){restored._applyUnitDamage(loaded,10);const wounded=loaded.hp;assert(restored.loadSnapshot(restored.serialize()));assert.equal(restored.units.find(u=>u.id===b.id).hp,wounded);}
  }
 });
 
-test('the false one-HP bear retains Thick Hide until real health runs out',()=>{
- const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),w=s.addUnit('villager',105,100,'player');
- w.lastLightWardCurseSourceId=b.id;assert(s._resolveLastLightWardCurse(w));
- for(let strike=1;strike<36;strike++){assert(!s._applyUnitDamage(b,10).killed);assert.equal(b.hp,180-strike*5);assert.equal(displayedUnitHealth(b),1);}
- assert(s._applyUnitDamage(b,10).killed);assert(b.dead);assert.equal(displayedUnitHealth(b),0);
-});
-
-test('a cursed bear defeats up to three Crown Guards in actual combat',()=>{
- for(const count of [1,2,3]){
-  const s=arena(),b=s.addUnit('grizzly',110,100,'wildlife');b.lastLightCurseActive=true;
-  const guards=Array.from({length:count},(_,i)=>s.addUnit('soldier',105,99+i*3,'player'));
-  guards.forEach((u,i)=>s._sendUnitToAttack(u,b,i*4));
-  for(let i=0;i<10*60;i++)s._updateFixed(1/60);
-  assert(!b.dead);assert(guards.every(u=>u.dead));assert.equal(displayedUnitHealth(b),1);
- }
-});
-
-test('ordinary attackers retain Last Light Curse and its fatal next wound',()=>{
+test('a ward leaves ordinary attackers healthy and their next wound is ordinary damage',()=>{
  const s=arena(),w=s.addUnit('villager',100,100,'player'),r=s.addUnit('raider',102,100,'enemy');w.hp=1;s._applyUnitDamage(w,100,r);s._updateUnitStatusEffects(w,2);
- assert.equal(r.hp,1);assert(r.lastLightCurseActive);assert.equal(unitStatuses(r)[0].id,'lastLight');assert(s._applyUnitDamage(r,.1,w).killed);
+ assert.equal(r.hp,r.maxHp);assert(!r.lastLightCurseActive);assert(!unitStatuses(r).some(x=>x.id==='lastLight'));assert(!s._applyUnitDamage(r,.1,w).killed);assert.equal(r.hp,r.maxHp-.1);
 });
 
 test('all hostile classes are inspectable but movement, attack, guard, patrol and recovery cannot control them',()=>{
