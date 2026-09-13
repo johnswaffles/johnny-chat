@@ -1,6 +1,7 @@
+import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260912-deathless1';
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {UNIT_TYPES} from './config.js?v=20260912-crownaegis1';
-import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260912-crownaegis1';
+import {UNIT_TYPES} from './config.js?v=20260912-deathless1';
+import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260912-deathless1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
@@ -18,6 +19,7 @@ export const LAST_BASTION=Object.freeze({threshold:.2,rearmHealth:.6,damageMulti
 const lastStandUnit=u=>u?.type==='shieldbearer'||u?.type==='grizzly';
 export const lastBastionActive=u=>Boolean(lastStandUnit(u)&&!u.dead&&u.hp>0&&u.hp/u.maxHp<=LAST_BASTION.rearmHealth&&(u.lastStandTimer??0)>0);
 export function updateLastBastion(unit,dt=0){
+ updateDeathlessHeart(unit,dt);
  if(!lastStandUnit(unit))return;
  if(unit.dead||unit.hp<=0){unit.lastStandTimer=0;return;}
  if(unit.hp/unit.maxHp>LAST_BASTION.rearmHealth){unit.lastStandTimer=0;unit.lastStandSpent=false;return;}
@@ -34,7 +36,7 @@ export function updateLastBastion(unit,dt=0){
  }
 }
 // Protect only the below-threshold portion of the first crossing hit.
-export function lastBastionDamage(unit,damage){
+function ordinaryBastionDamage(unit,damage){
  if(!lastStandUnit(unit)||unit.dead||unit.hp<=0)return damage;
  updateLastBastion(unit);
  if(lastBastionActive(unit))return damage*LAST_BASTION.damageMultiplier;
@@ -43,6 +45,13 @@ export function lastBastionDamage(unit,damage){
  if(damage<=unprotected)return damage;
  unit.lastStandHealElapsed=0;unit.lastStandSpent=true;unit.lastStandTimer=unit.type==='grizzly'?LAST_BASTION.bearDuration:LAST_BASTION.tankDuration;
  return unprotected+(damage-unprotected)*LAST_BASTION.damageMultiplier;
+}
+export function lastBastionDamage(unit,damage){
+ if(!lastStandUnit(unit)||unit.dead||unit.hp<=0)return damage;
+ updateLastBastion(unit);
+ if(deathlessActive(unit))return damage*.01;
+ const ordinary=ordinaryBastionDamage(unit,damage);
+ return deathlessCrossingDamage(unit,damage,ordinary,lastBastionActive(unit)?.1:1);
 }
 export function strikeDamage(attacker,target){
   const rules=UNIT_TYPES[attacker.type],worker=UNIT_TYPES[target?.type]?.worker;
@@ -54,6 +63,7 @@ export function strikeDamage(attacker,target){
 }
 export function unitStatuses(unit){
   const statuses=[],elder=isCurseImmune(unit),fury=bearFuryActive(unit);
+  if(deathlessActive(unit))statuses.push({id:'deathlessHeart',name:'Heart of the Deathless Greatwood',kind:'Last stand · empowered',detail:`${Math.ceil(unit.deathlessTimer)}s · 99% less incoming damage`,summary:'Even death must wait beneath the ancient boughs.',effect:'Below 5% true health, reduces incoming damage after hide and armor by 99% for 60 seconds. Replaces Heart’s 90% reduction while active; does not add healing. Persists through healing. After expiry, heal above 60% to rearm. False Last Light health cannot trigger it.',rune:'ward',art:bearVariant(unit).art});
   if(unit.type==='grizzly')statuses.push({id:'greatwoodDefiance',name:'Defiance of the Greatwood',kind:'Nearby strength',detail:`${unit.greatwoodDefianceStacks??0} nearby · +${Math.round((bearCrowdMultiplier(unit)-1)*100)}% damage and armor`,summary:'The gathering crowd awakens the forest’s defiance.',effect:'Each living worker or fighter of either faction within 30 yards grants 5% more damage and armor. Stacks add together and disappear as people leave or die. Armor divides incoming damage by 1 + the total bonus, stacking with Thick Hide and Heart. Other wildlife do not count.',rune:'fury',art:bearVariant(unit).art});
   if(unit.type==='shieldbearer')statuses.push({id:'crownsAegis',name:'Aegis of the Unbroken Crown',kind:'Permanent AoE protection',detail:'90% less AoE damage',summary:'The sworn shield stands firm when the battlefield erupts.',effect:'Reduces incoming area-of-effect damage by 90%, including Bloodclaw Reckoning. Stacks with armor and The Crown’s Last Bastion.',rune:'ward'});
   if(unit.type==='shieldbearer')statuses.push({id:'oathboundStride',name:'Oathbound Stride',kind:'Permanent blessing',detail:'1.5× fastest base movement',summary:'The sworn shield reaches danger first.',effect:'Base movement speed is 1.5 times the fastest other unit. Terrain and roads still apply.',rune:'ward'});

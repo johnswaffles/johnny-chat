@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-crownaegis1';
-import {UNIT_TYPES} from './config.js?v=20260912-crownaegis1';
-import {isWardProtected} from './unit-status.js?v=20260912-crownaegis1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-deathless1';
+import {CONFIG,UNIT_TYPES} from './config.js?v=20260912-deathless1';
+import {isWardProtected} from './unit-status.js?v=20260912-deathless1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -94,16 +94,17 @@ export function updateTeams(sim,dt){
   const enemy=sim._getExplicitAttackTarget(anchor);
   const dx=enemy?anchor.x-enemy.x:healer.x-anchor.x,dz=enemy?anchor.z-enemy.z:healer.z-anchor.z,len=Math.hypot(dx,dz)||1;
   const side=((healer.id%3)-1)*2;
-  let desired=enemy?.type==='grizzly'?healerRearPosition(sim,healer,enemy,anchor):{
+  const pulling=anchor.tankPull?.targetId===enemy?.id&&Boolean(enemy);
+  let desired=enemy?.type==='grizzly'&&!pulling?healerRearPosition(sim,healer,enemy,anchor):{
    x:anchor.x+dx/len*TEAM_RULES.followDistance-dz/len*side,
    z:anchor.z+dz/len*TEAM_RULES.followDistance+dx/len*side};
-  const frontFallback=enemy?.type==='grizzly'&&rearRouteBlocked(sim,healer,enemy,desired);
+  const frontFallback=enemy?.type==='grizzly'&&!pulling&&rearRouteBlocked(sim,healer,enemy,desired);
   if(frontFallback){const back=Math.max(BEAR_FURY.radius+2,distance(anchor,enemy)+4);desired={x:enemy.x+dx/len*back-dz/len*side,z:enemy.z+dz/len*back+dx/len*side};}
   if((enemy?.type==='grizzly'?distance(healer,desired)>1.2:distance(healer,anchor)>TEAM_RULES.healRange-1)
    &&(healer.teamFollowAt??0)<=sim.clock&&sim.repathBudgetRemaining>0){
    healer.teamFollowAt=sim.clock+.5;sim.repathBudgetRemaining--;
    // Follow the outer perimeter while crossing to the DPS side, not the bear's body.
-   const point=enemy?.type==='grizzly'&&!frontFallback?bearOrbitStep(healer,enemy,desired):desired;
+   const point=enemy?.type==='grizzly'?bearOrbitStep(healer,enemy,desired):desired;
    if(sim._sendUnitTo(healer,point,'move')){healer.teamFollowing=true;healer.actionLabel=frontFallback?'Supporting behind the tank':'Following behind damage fighters';}else if(enemy?.type==='grizzly')markFrontFallback(sim,healer,enemy);
   }
  }
@@ -150,18 +151,38 @@ export function teamMovePoint(units,unit,destination){
  return {x:destination.x-dx/len*back-dz/len*side,z:destination.z-dz/len*back+dx/len*side};
 }
 
-// Stable rear slots use the tank's position, never the attacker's starting side.
+// Persistent reservations keep a casualty or newcomer from rotating the whole party.
 export function bearRearPosition(sim,unit,bear){
- if(bear?.type!=='grizzly'||!unit.teamId||combatRole(unit)!=='damage')return null;
+ if(bear?.kind!=='unit'||!unit.teamId||combatRole(unit)!=='damage')return null;
  const tank=tankTarget(sim,bear);if(!tank)return null;
- const peers=sim.units.filter(u=>!u.dead&&u.teamId&&combatRole(u)==='damage'&&(u.attackTarget===bear.id||u.teamAdvanceTargetId===bear.id||u.id===unit.id)).sort((a,b)=>a.id-b.id);
- const radius=combatRadius(bear)+Math.max(combatRadius(unit)+.25,Math.min(UNIT_TYPES[unit.type].range-.3,1.1));
- const columns=Math.max(3,Math.floor(radius*2/1.6)),index=Math.max(0,peers.indexOf(unit)),count=Math.min(columns,peers.length);
- const angle=Math.atan2(bear.z-tank.z,bear.x-tank.x)+(index%columns-(count-1)/2)*(2/columns);
- const ring=radius+Math.floor(index/columns)*1.6;
+ if(tank.tankPull?.targetId===bear.id)return null;
+ const peers=sim.units.filter(u=>!u.dead&&u.hp>0&&u.teamId===unit.teamId&&combatRole(u)==='damage'&&(u.attackTarget===bear.id||u.teamAdvanceTargetId===bear.id||u.id===unit.id)).sort((a,b)=>a.id-b.id);
+ const reservations=bear.surroundAssignments??={};
+ for(const id of Object.keys(reservations))if(!peers.some(u=>String(u.id)===id))delete reservations[id];
+ const occupied=new Set(Object.values(reservations));
+ for(const peer of peers)if(reservations[peer.id]===undefined){let slot=0;while(occupied.has(slot))slot++;reservations[peer.id]=slot;occupied.add(slot);}
+ const radius=combatRadius(bear)+.95;
+ const columns=Math.max(4,Math.floor(radius*4.1/1.55));
+ const axis=Math.atan2(bear.z-tank.z,bear.x-tank.x);
+ if(bear.surroundAxis===undefined||Math.abs(Math.atan2(Math.sin(axis-bear.surroundAxis),Math.cos(axis-bear.surroundAxis)))>.65)bear.surroundAxis=axis;
+ const slot=reservations[unit.id],column=slot%columns;
+ // Fill separated flanks first instead of filling adjacent positions into a clump.
+ const low=-Math.floor((columns-1)/2),high=Math.floor(columns/2);
+ const order=[0,Math.floor(columns/3),-Math.floor(columns/3),Math.floor(columns/6),-Math.floor(columns/6),high,low];
+ const offsets=[...new Set(order.filter(n=>n>=low&&n<=high))];
+ while(offsets.length<columns){
+  let next=low,best=-1;
+  for(let n=low;n<=high;n++)if(!offsets.includes(n)){const gap=Math.min(...offsets.map(x=>Math.abs(n-x)));if(gap>best){best=gap;next=n;}}
+  offsets.push(next);
+ }
+ const offset=offsets[column];
+ const angle=bear.surroundAxis+offset*4.1/columns;
+ const ranged=UNIT_TYPES[unit.type].range>=4;
+ const ring=(ranged?combatRadius(bear)+UNIT_TYPES[unit.type].range*.75:radius)+Math.floor(slot/columns)*1.65;
  const goal={x:bear.x+Math.cos(angle)*ring,z:bear.z+Math.sin(angle)*ring};
  if(!rearRouteBlocked(sim,unit,bear,goal))return goal;
- if(UNIT_TYPES[unit.type].range>=4){const span=distance(tank,bear)||1,r=combatRadius(bear)+UNIT_TYPES[unit.type].range*.8;return {x:bear.x+(tank.x-bear.x)/span*r,z:bear.z+(tank.z-bear.z)/span*r};}
+ // Keep ranged fallback positions distinct as well.
+ if(ranged){const span=distance(tank,bear)||1,side=offset*1.65;return {x:bear.x+(tank.x-bear.x)/span*ring-(tank.z-bear.z)/span*side,z:bear.z+(tank.z-bear.z)/span*ring+(tank.x-bear.x)/span*side};}
  return null;
 }
 // Advance around the circumference in short chords rather than through the bear.
@@ -205,7 +226,85 @@ export function rearRouteBlocked(sim,unit,target,goal){
   markFrontFallback(sim,unit,target);return true;
  }
  const track=unit.rearProgress;
- if(!track||track.targetId!==target.id||distance(track,unit)>.3||distance(unit,goal)<1){unit.rearProgress={targetId:target.id,x:unit.x,z:unit.z,at:sim.clock};}
+ if(!track||track.targetId!==target.id||distance(track,unit)>.3||distance(unit,goal)<(isTeamHealer(unit)?1.3:1)){unit.rearProgress={targetId:target.id,x:unit.x,z:unit.z,at:sim.clock};}
  else if(sim.clock-track.at>2){markFrontFallback(sim,unit,target);return true;}
  return false;
+}
+
+
+// The tank physically leads its target to a clearing; no teleporting or wall bypass.
+export const PULL_RULES=Object.freeze({scanInterval:4,maxDuration:20,retry:8,maxDistance:24});
+export function encounterOpenness(sim,target,center=target){
+ const radius=Math.max(4,combatRadius(target)+2.5),probe={type:'shieldbearer'};
+ let clear=0,total=0;
+ for(const r of [0,radius*.5,radius])for(let i=0;i<(r?16:1);i++){
+  const a=i*Math.PI/8,p={x:center.x+Math.cos(a)*r,z:center.z+Math.sin(a)*r};total++;
+  if(p.x>1&&p.z>1&&p.x<CONFIG.mapWidth-1&&p.z<CONFIG.mapHeight-1&&!sim._pointBlockedForUnit(probe,p))clear++;
+ }
+ return clear/total;
+}
+export function findPullClearing(sim,tank,target){
+ const current=encounterOpenness(sim,target);if(current>=.97)return null;
+ const toward=Math.atan2(tank.z-target.z,tank.x-target.x),candidates=[];
+ for(const span of [8,16,24])for(let i=0;i<16;i++){
+  const a=toward+i*Math.PI/8,dir={x:Math.cos(a),z:Math.sin(a)};
+  const center={x:target.x+dir.x*span,z:target.z+dir.z*span};
+  const gap=combatRadius(target)+combatRadius(tank)+8;
+  const point={x:center.x+dir.x*gap,z:center.z+dir.z*gap};
+  if(sim._pointBlockedForUnit(target,center)||sim._pointBlockedForUnit(tank,point)||point.x<1||point.z<1||point.x>CONFIG.mapWidth-1||point.z>CONFIG.mapHeight-1)continue;
+  const score=encounterOpenness(sim,target,center);
+  if(score<.97||score<=current+.015)continue;
+  candidates.push({center,point,score:score*100-span*.4-distance(tank,point)*.15});
+ }
+ candidates.sort((a,b)=>b.score-a.score);
+ for(const candidate of candidates.slice(0,8)){
+  // A straight, visible chase corridor is necessary for a predictable pull.
+  if(sim._pathSegmentBlocked(target,target,candidate.center)||!sim._hasCombatLineOfSight(target,candidate.point))continue;
+  const path=sim._buildPath(tank,candidate.point,null,{directOnly:true});
+  if(path)return {...candidate,path};
+ }
+ return null;
+}
+export function prepareTankPull(sim,tank,target){
+ if(combatRole(tank)!=='tank'||!tank.teamId||target?.kind!=='unit'||target.dead||tank.command!=='attack')return false;
+ let pull=tank.tankPull;
+ if(pull&&(pull.targetId!==target.id||sim.clock>=pull.until||target.dead||tankTarget(sim,target)?.id!==tank.id)){
+  tank.tankPull=null;tank.pullScanAt=sim.clock+PULL_RULES.retry;tank.path=[];pull=null;
+ }
+ if(!pull){
+  if((tank.pullScanAt??0)>sim.clock||tankTarget(sim,target)?.id!==tank.id)return false;
+  tank.pullScanAt=sim.clock+PULL_RULES.scanInterval;
+  if(!sim.units.some(u=>!u.dead&&u.teamId===tank.teamId&&combatRole(u)==='damage'))return false;
+  if(sim.repathBudgetRemaining<=0)return false;
+  sim.repathBudgetRemaining--;
+  const clearing=findPullClearing(sim,tank,target);if(!clearing)return false;
+  pull=tank.tankPull={targetId:target.id,center:clearing.center,point:clearing.point,until:sim.clock+PULL_RULES.maxDuration,start:{x:target.x,z:target.z},progress:{x:target.x,z:target.z,at:sim.clock}};
+  tank.path=clearing.path;sim._cancelAttackCycle(tank);
+ }
+ if(distance(target,pull.center)<2||(distance(target,pull.start)>5&&encounterOpenness(sim,target)>=.97)){
+  tank.tankPull=null;tank.pullScanAt=sim.clock+PULL_RULES.retry;tank.path=[];target.surroundAxis=undefined;target.surroundAssignments={};return false;
+ }
+ if(distance(target,pull.progress)>.4)pull.progress={x:target.x,z:target.z,at:sim.clock};
+ if(sim.clock-pull.progress.at>4||sim._pathSegmentBlocked(tank,tank,pull.point)){
+  tank.tankPull=null;tank.pullScanAt=sim.clock+PULL_RULES.retry;tank.path=[];return false;
+ }
+ // Keep a bounded chase lock only while the enemy can actually follow.
+ if(distance(tank,target)<TEAM_RULES.tauntRange&&sim._hasCombatLineOfSight(tank,target))target.threatUntil=sim.clock+TEAM_RULES.tauntDuration;
+ const chaseGap=combatRadius(target)+combatRadius(tank)+9;
+ tank.path=distance(tank,target)>chaseGap?[]:[pull.point];tank.routeTarget=pull.point;tank.stopDistance=0;tank.fighterMovingAttack=true;
+ tank.actionLabel=tank.path.length?'Drawing enemy into open ground':'Holding aggro for the party';
+ return true;
+}
+export function holdForTankPull(sim,unit,target){
+ if(!unit.teamId||combatRole(unit)!=='damage'||target?.kind!=='unit')return false;
+ const tank=tankTarget(sim,target);if(tank?.tankPull?.targetId!==target.id)return false;
+ const peers=sim.units.filter(u=>!u.dead&&u.teamId===unit.teamId&&combatRole(u)==='damage').sort((a,b)=>a.id-b.id),index=peers.indexOf(unit);
+ const dx=tank.x-target.x,dz=tank.z-target.z,len=Math.hypot(dx,dz)||1;
+ const back=Math.max(18,len+5)+Math.floor(index/5)*2,side=(index%5-2)*2;
+ const goal={x:target.x+dx/len*back-dz/len*side,z:target.z+dz/len*back+dx/len*side};
+ if((unit.pullFollowAt??0)<=sim.clock&&sim.repathBudgetRemaining>0){
+  unit.pullFollowAt=sim.clock+.5;sim.repathBudgetRemaining--;
+  const path=sim._buildPath(unit,goal);if(path){unit.path=path;unit.routeTarget=goal;unit.stopDistance=0;}
+ }
+ sim._cancelAttackCycle(unit);unit.actionLabel='Giving the tank room to pull';return true;
 }

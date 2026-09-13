@@ -1,6 +1,6 @@
 # Combat effects and lore-card reference
 
-Revision: 20260912-crownaegis1. Approved release; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
+Revision: 20260912-deathless1. Approved release; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
 
 | Effect | Owner and trigger | Actual rule |
 | --- | --- | --- |
@@ -14,6 +14,7 @@ Revision: 20260912-crownaegis1. Approved release; verify the live marker for dep
 | **Oathbound Stride** | Permanent Crown Shieldbearer blessing | Base movement speed is 1.5 times the fastest other unit: currently 6.225 versus Scout 4.15. Roads and terrain still modify movement. Faster acceleration and braking keep it responsive. Lore seed: “The sworn shield reaches danger first.” |
 | **The Crown’s Last Bastion** | Shieldbearer crosses below 20% true HP | 90% reduction after armor for 20 seconds, or until health exceeds 60%. Protection persists while healing between 20% and 60%. Crossing damage beneath 20% is protected. Must heal above 60% to rearm; no continuous reactivation after timeout. |
 | **Heart of the Unbroken Wild** | Every grizzly bloodline crosses below 20% true HP | Same rules and 90% reduction after existing hide defenses, lasting 60 seconds. False Last Light health cannot trigger it. Remaining duration and spent state persist in saves. |
+| **Heart of the Deathless Greatwood** | Any bear crosses below 5% true HP | 99% damage reduction after hide/armor for 60 seconds, replacing ordinary Heart reduction. Protects the below-5% portion of the crossing hit. Persists through healing; no added regeneration. Rearms after expiry and healing above 60%. Timer/spent state persist in saves; false Last Light cannot trigger it. |
 | Shieldbearer armor and evasion | Permanent tank defenses | 3,480 HP, 80% damage reduction, one deterministic dodge per twenty incoming melee swings (5%). No new armor increase in this revision. |
 | Shieldbearer threat lock | Tank lands a hit | Enemy attacks the tank for 8 seconds, refreshed on each hit, within 24 units. Existing valid tank retains ownership over another tank. Other fighters cannot steal aggro. |
 | Team healing | Assigned Hearthkin, every 2 seconds | Heal every nearby injured eligible friendly unit within 24 units and line of sight: tanks 40 HP first, others 20 HP. Excludes self, dead units and enemies; no overheal. Healer remains dedicated until removed from team. |
@@ -59,3 +60,8 @@ All bear bloodlines gain Defiance of the Greatwood: each living worker or fighte
 
 ### Bloodclaw and Crown Aegis (2026-09-12, supersedes earlier values)
 Heart of the Unbroken Wild restores 2% maximum health every five active seconds; its trigger, duration, expiry and rearm rules are unchanged. Bloodclaw Reckoning is a full-circle AoE every eight seconds within 14 units and line of sight. Each hostile unit, including tanks and healers, takes 25% of its maximum health before defenses; there is no ten-percent health floor. It is separate from the primary melee strike and does not scale with bear rage or crowd bonuses. Wards still protect. Aegis of the Unbroken Crown permanently reduces Shieldbearer AoE damage by 90%, multiplicatively with armor and Last Bastion. AoE cannot be melee-dodged.
+
+### Open-ground pulling and stable surrounds (2026-09-12)
+A team tank with established aggro checks nearby terrain for room around the target. If walls, trees or buildings obstruct the party, it chooses a clear reachable arena, walks away to draw the enemy there, and waits when its lead grows too large. A visible, nearby chase preserves the tank’s threat lock for this bounded pull. Pulls stop on arrival, loss of aggro, blocked movement, four seconds without enemy progress, or twenty seconds total. Manual orders cancel them. Inaccessible clearings are skipped and normal combat remains available.
+
+Damage fighters give the pulling tank room, then take persistent individually reserved flank/rear slots around bears or other tank-held units. New arrivals fill unused slots without shuffling existing fighters. Large parties use additional spaced rings. Healers follow the pull, then return behind the damage line; even fallback movement orbits around the enemy instead of crossing its body. Buildings themselves are stationary attack targets and are never pulled.

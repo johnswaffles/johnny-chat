@@ -19,7 +19,7 @@ test('every lineage has distinct lore and artwork, permanent Thick Hide, and con
 });
 test('Thick Hide doubles actual melee survival while leaving other units and zero hits unchanged',()=>{
  for(const id of BEAR_VARIANT_IDS){const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.bearVariant=id;b.lastStandSpent=true; // Isolate permanent hide from the separately tested Heart buff.
- for(let hit=1;hit<=36;hit++){b.lastStandSpent=true;s._applyUnitDamage(b,10,null);assert.equal(b.hp,180-5*hit);assert.equal(b.dead,hit===36);}}
+ for(let hit=1;hit<=36;hit++){b.lastStandSpent=true;b.deathlessSpent=true;s._applyUnitDamage(b,10,null);assert.equal(b.hp,180-5*hit);assert.equal(b.dead,hit===36);}}
  assert.equal(bearIncomingDamage({type:'soldier'},10),10);assert.equal(bearIncomingDamage({type:'grizzly',maxHp:180},0,'arrow'),0);
 });
 

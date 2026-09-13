@@ -46,7 +46,7 @@ test('live movement brings two DPS behind tank-held bear and healer out of swipe
  const goal=healerRearPosition(s,h,b,t);assert(dist(h,goal)<2,'healer must finish behind the DPS line');
  const previous={x:h.x,z:h.z};
  for(let i=0;i<1200;i++){if(i<600){b.x+=.01;b.z+=.01;t.x+=.01;t.z+=.01;}s.clock+=1/60;s.repathBudgetRemaining=8;updateTeamApproaches(s);updateTeams(s,1/60);for(const u of s.units)if(!u.dead)s._updateUnit(u,1/60);s._resolveUnitCollisions();}
- assert(dist(previous,h)>4,'healer follows a moved encounter');assert(dist(h,healerRearPosition(s,h,b,t))<2,'healer returns behind the shifted DPS line');
+ assert(dist(previous,h)>4,'healer follows a moved encounter');assert(dist(h,healerRearPosition(s,h,b,t))<2,JSON.stringify({healer:{x:h.x,z:h.z,command:h.command,path:h.path,front:h.frontFallback},goal:healerRearPosition(s,h,b,t),dps:[d,d2].map(u=>({x:u.x,z:u.z,goal:bearRearPosition(s,u,b)}))}));
  assert(!t.dead&&!d.dead&&!d2.dead);
 });
 
