@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260913-chorusfx3';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260913-chorusfx3';
-import {isWardProtected} from './unit-status.js?v=20260913-chorusfx3';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260913-addall1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260913-addall1';
+import {isWardProtected} from './unit-status.js?v=20260913-addall1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -23,8 +23,8 @@ export function teams(sim,dt=0){
  }
  return [...groups.values()].sort((a,b)=>a.id-b.id);
 }
-export function assignTeam(sim,id=null){
- const selected=sim.selectedEntities.filter(eligibleMember);
+export function assignTeam(sim,id=null,all=false){
+ const selected=(all?sim.units:sim.selectedEntities).filter(eligibleMember);
  if(!selected.length)return false;
  const teamId=1;
  for(const u of selected){

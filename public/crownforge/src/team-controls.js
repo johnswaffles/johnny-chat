@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260913-chorusfx3';
-import {startSidePull,sidePullPlan,combatRole,eligibleMember,TEAM_RULES} from './combat-teams.js?v=20260913-chorusfx3';
+import {UNIT_TYPES} from './config.js?v=20260913-addall1';
+import {startSidePull,sidePullPlan,combatRole,eligibleMember,TEAM_RULES} from './combat-teams.js?v=20260913-addall1';
 export function createTeamControls(sim,onChange){
  const panel=document.querySelector('#team-controls'),classes=document.querySelector('#select-warrior-classes');
  if(!panel||!classes)return {update(){}};
@@ -12,7 +12,7 @@ export function createTeamControls(sim,onChange){
  button('create').hidden=true;picker.parentElement.hidden=true;button('disband').textContent='Clear roster';
  button('create').onclick=()=>{const id=sim.assignSelectedTeam();update();if(id)picker.value=String(id);finish();};
  button('add').onclick=()=>{sim.assignSelectedTeam(Number(picker.value));finish();};
- button('select').onclick=()=>{sim.selectCombatTeam(Number(picker.value));finish();};
+ button('add-all').onclick=()=>{sim.assignAllUnitsTeam();finish();};
  button('leave').onclick=()=>{sim.leaveSelectedTeam();finish();};
  button('disband').onclick=()=>{sim.disbandTeam(Number(picker.value));finish();};
  picker.onchange=()=>update();
@@ -34,7 +34,7 @@ export function createTeamControls(sim,onChange){
   const team=groups.find(g=>g.id===Number(picker.value));
   summary.textContent=team?`${team.tank} tank${team.tank===1?'':'s'} · ${team.healer} healer${team.healer===1?'':'s'} · ${team.damage} damage${team.support?` · ${team.support} support`:''}`:'Your team is empty. Select units and add them.';
   button('create').disabled=!selected.length;button('add').disabled=!selected.length||!team;
-  button('leave').disabled=!selected.some(u=>u.teamId);button('select').disabled=!team;button('disband').disabled=!team;picker.disabled=!groups.length;
+  button('leave').disabled=!selected.some(u=>u.teamId);button('add-all').disabled=!sim.units.some(u=>eligibleMember(u)&&!u.teamId);button('disband').disabled=!team;picker.disabled=!groups.length;
   panel.querySelector('[data-help]').textContent=`Every ${TEAM_RULES.healInterval}s, heal all injured allies within ${TEAM_RULES.healRange} yards (tanks: ${TEAM_RULES.healRange+5}): tanks +${TEAM_RULES.tankHealAmount} HP, others +${TEAM_RULES.healAmount}. Tanks lead; healers follow behind the damage line. Add as many units as you like.`;
  }
  update();return {update};

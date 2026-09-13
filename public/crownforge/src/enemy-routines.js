@@ -1,4 +1,4 @@
-import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260913-chorusfx3';
+import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260913-addall1';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 
 export function assignEnemyEconomy(sim) {

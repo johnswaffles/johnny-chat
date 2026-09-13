@@ -1,6 +1,6 @@
-import { bearVariant } from './bear-variants.js?v=20260913-chorusfx3';
-import {UNIT_TYPES} from './config.js?v=20260913-chorusfx3';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260913-chorusfx3';
+import { bearVariant } from './bear-variants.js?v=20260913-addall1';
+import {UNIT_TYPES} from './config.js?v=20260913-addall1';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260913-addall1';
 
 const unitName=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type].label;
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';
