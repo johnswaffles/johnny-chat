@@ -1,5 +1,5 @@
-import {encounterOpenness} from '../src/combat-teams.js?v=20260913-firstoath1';
-import {updateDeathlessHeart} from '../src/deathless-heart.js?v=20260913-firstoath1';
+import {encounterOpenness} from '../src/combat-teams.js?v=20260913-mercy1';
+import {updateDeathlessHeart} from '../src/deathless-heart.js?v=20260913-mercy1';
 const {simulation:s,renderer:r}=window.crownforge;
 s.units=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.projectiles=[];s.navigationVersion++;
 s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};s._updateMilitaryServices=()=>{};s.wildlifeState.nextSpawnAt=Infinity;
@@ -32,7 +32,7 @@ panel.querySelector('[data-swipe]').onclick=()=>{
 };
 
 panel.querySelector('[data-join]').onclick=()=>{const second=s.addUnit('grizzly',bear.x+8,bear.z+8,'wildlife');second.bearVariant='cindermaw';second.hp=second.maxHp=180000;second.command='attack';second.attackTarget=tank.id;second.actionLabel='Joining the attack';if(s.units.filter(u=>u.type==='shieldbearer').length<2){const off=s.addUnit('shieldbearer',196,192,'player'),support=s.addUnit('villager',202,194,'player');off.hp=off.maxHp=348000;off.teamId=support.teamId=1;s._sendUnitToAttack(off,bear);}pick(tank);};
-panel.querySelector('[data-effects]').onclick=()=>{tank.hp=tank.maxHp*.18;tank.lastStandTimer=20;tank.lastStandSpent=true;healer.lastLightWardTimer=0;healer.hp=1;s._applyUnitDamage(healer,1000,bear);bear.command='attack';bear.attackTarget=tank.id;};
+panel.querySelector('[data-effects]').onclick=()=>{tank.hp=tank.maxHp*.09;tank.lastStandTimer=20;tank.lastStandSpent=true;healer.lastLightWardTimer=0;healer.hp=1;s._applyUnitDamage(healer,1000,bear);bear.command='attack';bear.attackTarget=tank.id;};
 
 panel.querySelector('[data-woods]').onclick=()=>{running=false;bear.x=210;bear.z=180;bear.hp=bear.maxHp;bear.dead=false;bear.command='idle';bear.path=[];tank.x=198;tank.z=180;tank.hp=tank.maxHp;tank.teamId=null;for(const u of [...party,healer]){u.x=240;u.z=230;u.command='idle';u.path=[];}s.addResource('tree','wood',210,166,2400,0,{sizeTier:'large'});s._sendUnitToAttack(tank,bear);pick(tank);running=true;};
 

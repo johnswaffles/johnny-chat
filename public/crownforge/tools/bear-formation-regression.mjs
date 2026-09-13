@@ -36,7 +36,8 @@ test('Oathbound Stride is 1.5 times fastest other base speed',()=>{assert.equal(
 test('live movement brings two DPS behind tank-held bear and healer out of swipe range',()=>{
  const s=arena(),b=s.addUnit('grizzly',180,180,'wildlife'),t=s.addUnit('shieldbearer',174,180,'player'),h=s.addUnit('villager',173,179,'player'),d=s.addUnit('spearwarden',166,182,'player'),d2=s.addUnit('spearwarden',165,184,'player');
  b.maxHp=18000;b.hp=9000;
- // Extra tank health isolates long formation navigation from the lethal balance test.
+ // Isolate navigation from survival balance; physical AoE remains separately tested.
+ const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(u,amount,attacker,options)=>apply(u,(u===d||u===d2)?amount*.05:amount,attacker,options);
  t.hp=t.maxHp=34800;for(const u of [t,h,d,d2])u.teamId=1;
  for(const u of [t,d,d2])s._sendUnitToAttack(u,b);
  for(let i=0;i<2400;i++){s.clock+=1/60;s.repathBudgetRemaining=8;updateTeamApproaches(s);updateTeams(s,1/60);for(const u of s.units)if(!u.dead)s._updateUnit(u,1/60);s._resolveUnitCollisions();}

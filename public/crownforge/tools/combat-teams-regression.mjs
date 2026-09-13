@@ -39,9 +39,9 @@ test('special swipe damages rear fighters',()=>{
 test('team healers pulse every nearby injured ally, with stronger tank healing and rear-line range',()=>{
  const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',102,100,'player'),dps=s.addUnit('soldier',115,100,'player'),far=s.addUnit('soldier',125,100,'player'),enemy=s.addUnit('raider',103,100,'enemy');
  select(s,[h,t]);s.assignSelectedTeam();t.hp-=100;dps.hp=1;far.hp=1;enemy.hp=1;
- updateTeams(s,2);assert.equal(t.hp,t.maxHp-60);assert.equal(dps.hp,21);assert.equal(far.hp,1);assert.equal(enemy.hp,1);
+ updateTeams(s,2);assert.equal(t.hp,t.maxHp-60);assert.equal(dps.hp,5);assert.equal(far.hp,1);assert.equal(enemy.hp,1);
  updateTeams(s,.1);assert.equal(t.hp,t.maxHp-60);
- updateTeams(s,2);assert.equal(t.hp,t.maxHp-20);assert.equal(dps.hp,41);
+ updateTeams(s,2);assert.equal(t.hp,t.maxHp-20);assert.equal(dps.hp,9);
  h.stunTimer=2;t.hp-=100;updateTeams(s,2);assert.equal(t.hp,t.maxHp-120);
 });
 test('healers honor line of sight and stay dedicated to healing until removed',()=>{
@@ -80,13 +80,13 @@ test('movement destinations put tanks ahead of damage and healers with separate 
  const s=arena(),units=['shieldbearer','shieldbearer','soldier','villager'].map(type=>s.addUnit(type,100,100,'player'));select(s,units);s.assignSelectedTeam();
  const points=units.map(u=>teamMovePoint(units,u,{x:120,z:100}));assert(points[0].x>points[2].x&&points[2].x>points[3].x);assert.notEqual(points[0].z,points[1].z);
 });
-test('Kingsbane Hunger overwhelms one healer in a thirty-second stacked-rage fight',()=>{
+test('Mercy sustains a critically wounded tank through a thirty-second stacked-rage fight',()=>{
  const s=arena(),tank=s.addUnit('shieldbearer',101.3,100,'player'),dps=s.addUnit('soldier',97,100,'player'),healer=s.addUnit('villager',112,100,'player'),bear=s.addUnit('grizzly',100,100,'wildlife');
  bear.maxHp=18000;bear.hp=1800;select(s,[tank,dps,healer]);s.assignSelectedTeam();
  s._applyUnitDamage(bear,1,tank);s._sendUnitToAttack(tank,bear);
  let hits=0,heals=0;const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(target,damage,attacker,...rest)=>{if(target===tank&&attacker===bear)hits++;return apply(target,damage,attacker,...rest);};
  for(let i=0;i<1800;i++){s.clock+=1/60;s._updateAttack(tank,1/60);s._updateAttack(bear,1/60);s._applyUnitDamage(bear,.01,dps);const hp=tank.hp;updateTeams(s,1/60);if(tank.hp>hp)heals++;}
- assert(hits>=3);assert(heals>=2);assert(tank.dead);assert.equal(tank.hp,0);
+ assert(hits>=3);assert(heals>=2);assert(!tank.dead);assert(tank.hp>0);
 });
 
 test('Add all enrolls the entire living friendly roster without changing selection or resetting existing healers',()=>{
@@ -107,4 +107,11 @@ test('explicit tank movement resists team attack recruitment and resumes nearby 
  const s=arena(),t=s.addUnit('shieldbearer',100,100,'player'),d=s.addUnit('soldier',102,100,'player'),b=s.addUnit('grizzly',110,100,'wildlife');t.teamId=d.teamId=1;s._sendUnitToAttack(t,b);select(s,[t]);const goal={x:100,z:110};assert(s.issueContextCommand(goal).success);assert(t.manualCombatMove);
  for(let i=0;i<1200&&t.manualCombatMove;i++){s.clock+=1/60;s.repathBudgetRemaining=8;s._sendUnitToAttack(d,b);s._updateMilitaryServices();assert.equal(t.command,'move');s._updateUnit(t,1/60);}
  assert(!t.manualCombatMove);assert(Math.hypot(t.x-goal.x,t.z-goal.z)<1);s._updateMilitaryServices();assert.equal(t.command,'attack');assert.equal(t.attackTarget,b.id);
+});
+
+test('Mercy multiplies only tank heals below ten percent and stacks with Chorus',()=>{
+ for(const chorus of [false,true])for(const fraction of [.099,.1,.11]){
+  const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',102,100,'player'),d=s.addUnit('soldier',103,100,'player');h.teamId=t.teamId=d.teamId=1;t.hp=t.maxHp*fraction;d.hp=1;t.lastLightChorusTimer=d.lastLightChorusTimer=chorus?60:0;const before=t.hp;h.healCooldown=0;s._hasCombatLineOfSight=()=>true;updateTeams(s,.2);
+  assert(Math.abs(t.hp-before-40*(chorus?2:1)*(fraction<.1?5:1))<1e-7);assert.equal(d.hp,1+4*(chorus?2:1));
+ }
 });

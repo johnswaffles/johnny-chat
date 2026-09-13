@@ -1,7 +1,7 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260913-firstoath1';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260913-firstoath1';
-import {isWardProtected} from './unit-status.js?v=20260913-firstoath1';
-export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260913-mercy1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260913-mercy1';
+import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260913-mercy1';
+export const TEAM_RULES=Object.freeze({healAmount:4,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
  const rule=UNIT_TYPES[unit?.type];
@@ -98,7 +98,7 @@ export function updateTeams(sim,dt){
   const patient=patients[0];
   if(patient&&healer.healCooldown<=0){
    for(const ally of patients){
-    const amount=Math.min((combatRole(ally)==='tank'?TEAM_RULES.tankHealAmount:TEAM_RULES.healAmount)*(ally.lastLightChorusTimer>0?2:1),ally.maxHp-ally.hp);
+    const amount=Math.min((combatRole(ally)==='tank'?TEAM_RULES.tankHealAmount:TEAM_RULES.healAmount)*(ally.lastLightChorusTimer>0?2:1)*(lastCrownMercyActive(ally)?5:1),ally.maxHp-ally.hp);
     ally.hp+=amount;ally.healPulse=.85;ally.lastHealAmount=amount;ally.healthRevealTimer=2;
    }
    healer.healTargetId=patient.id;healer.healCastPulse=.85;healer.healCooldown=TEAM_RULES.healInterval;
