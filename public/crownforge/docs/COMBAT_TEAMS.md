@@ -8,7 +8,7 @@ Every team Hearthkin prioritizes healing over gathering, building, or attacking 
 
 When attacking a unit, team damage fighters stage behind the tank line until a tank lands a hit and claims aggro. Multiple tanks lead together; fighters proceed if no tanks survive. Against a tank-held bear they circle outside the frontal swipe and take distinct rear positions. Automatic healers follow behind the current rear DPS line, at least 16 units from the bear and 3 units behind the fighters, updating their path as the encounter moves. Rear positioning avoids ordinary frontal damage. Bloodclaw Reckoning deals 50% maximum-health AoE damage before defenses within 14 units every 8 seconds; Aegis of the Unbroken Crown reduces tank AoE damage by 90%. Cancelling a unit's order clears the staged approach. Ground movement destinations place tanks in the front row, damage fighters behind them, and healers at the rear.
 
-Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260912-elderhide1.
+Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260912-woodpull1.
 
 Crushing Claws increases bear damage against tanks sixfold; half-health Colossus hits now deal 139.2 damage after armor. Healing output is halved. Bloodclaw has a full circular rotating claw effect.
 
@@ -35,3 +35,6 @@ Bloodclaw Reckoning now deals 50% maximum-health AoE damage before defenses with
 Your team can send a spare tank and healer to a second engaged enemy, preserving one tank and healer for the primary fight. The primary enemy is the one with the most damage fighters assigned. The healthiest spare tank draws the second enemy over 32 units away through an open, checked corridor; its healer follows that tank. Damage fighters assigned to the second enemy return to the primary fight. During this explicit order, each enemy prioritizes its assigned tank within normal range and line of sight, superseding automatic weakest-tank priority. Cancel restores normal targeting. Missing members, death, manual tank/healer orders, a blocked or stalled chase, or a 45-second unsuccessful pull cancel the assignment. A successful pair holds the separated enemy until cancelled or the encounter ends.
 
 Combat portraits display only the tank most recently damaged within eight seconds (otherwise an enemy's current tank target), plus up to three engaged enemies.
+
+### Woodland extraction
+Automatic tank pulls include tree-canopy clearance and a wider fighting ring, search clearings up to 48 units away, and allow up to 35 seconds for a visible chase. The bear must move at least five units and have a clear fighting ring before the pull finishes. Tanks need no team membership or accompanying damage fighter to pull. Tree trunks, buildings, map boundaries, line of sight, and stalled-chase cancellation remain enforced.

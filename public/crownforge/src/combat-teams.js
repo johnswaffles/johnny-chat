@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-elderhide1';
-import {CONFIG,UNIT_TYPES} from './config.js?v=20260912-elderhide1';
-import {isWardProtected} from './unit-status.js?v=20260912-elderhide1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-woodpull1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260912-woodpull1';
+import {isWardProtected} from './unit-status.js?v=20260912-woodpull1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -251,20 +251,23 @@ export function rearRouteBlocked(sim,unit,target,goal){
 
 
 // The tank physically leads its target to a clearing; no teleporting or wall bypass.
-export const PULL_RULES=Object.freeze({scanInterval:4,maxDuration:20,retry:8,maxDistance:24});
+export const PULL_RULES=Object.freeze({scanInterval:4,maxDuration:35,retry:8,maxDistance:48});
 export function encounterOpenness(sim,target,center=target){
- const radius=Math.max(4,combatRadius(target)+2.5),probe={type:'shieldbearer'};
+ const radius=Math.max(8,combatRadius(target)+5),probe={type:'shieldbearer'};
+ // Trunk collision alone misses the canopy and the room fighters need around it.
+ const trees=(sim.resourcesNodes??[]).filter(n=>n.amount>0&&['tree','grove'].includes(n.type)&&distance(n,center)<radius+40);
+ const underCanopy=p=>trees.some(n=>distance(n,p)<(n.type==='grove'?4:3.5)*(RESOURCE_SIZE_TIERS[n.sizeTier]?.footprintScale??1));
  let clear=0,total=0;
  for(const r of [0,radius*.5,radius])for(let i=0;i<(r?16:1);i++){
   const a=i*Math.PI/8,p={x:center.x+Math.cos(a)*r,z:center.z+Math.sin(a)*r};total++;
-  if(p.x>1&&p.z>1&&p.x<CONFIG.mapWidth-1&&p.z<CONFIG.mapHeight-1&&!sim._pointBlockedForUnit(probe,p))clear++;
+  if(p.x>1&&p.z>1&&p.x<CONFIG.mapWidth-1&&p.z<CONFIG.mapHeight-1&&!sim._pointBlockedForUnit(probe,p)&&!underCanopy(p))clear++;
  }
  return clear/total;
 }
 export function findPullClearing(sim,tank,target){
  const current=encounterOpenness(sim,target);if(current>=.97)return null;
  const toward=Math.atan2(tank.z-target.z,tank.x-target.x),candidates=[];
- for(const span of [8,16,24])for(let i=0;i<16;i++){
+ for(const span of [8,16,24,36,48])for(let i=0;i<16;i++){
   const a=toward+i*Math.PI/8,dir={x:Math.cos(a),z:Math.sin(a)};
   const center={x:target.x+dir.x*span,z:target.z+dir.z*span};
   const gap=combatRadius(target)+combatRadius(tank)+8;
@@ -275,7 +278,7 @@ export function findPullClearing(sim,tank,target){
   candidates.push({center,point,score:score*100-span*.4-distance(tank,point)*.15});
  }
  candidates.sort((a,b)=>b.score-a.score);
- for(const candidate of candidates.slice(0,8)){
+ for(const candidate of candidates.slice(0,24)){
   // A straight, visible chase corridor is necessary for a predictable pull.
   if(sim._pathSegmentBlocked(target,target,candidate.center)||!sim._hasCombatLineOfSight(target,candidate.point))continue;
   const path=sim._buildPath(tank,candidate.point,null,{directOnly:true});
@@ -285,7 +288,7 @@ export function findPullClearing(sim,tank,target){
 }
 export function prepareTankPull(sim,tank,target){
  if(sim.sideEncounter?.tankId===tank.id)return prepareSidePull(sim,tank,target);
- if(combatRole(tank)!=='tank'||!tank.teamId||target?.kind!=='unit'||target.dead||tank.command!=='attack')return false;
+ if(combatRole(tank)!=='tank'||target?.kind!=='unit'||target.dead||tank.command!=='attack')return false;
  let pull=tank.tankPull;
  if(pull&&(pull.targetId!==target.id||sim.clock>=pull.until||target.dead||tankTarget(sim,target)?.id!==tank.id)){
   tank.tankPull=null;tank.pullScanAt=sim.clock+PULL_RULES.retry;tank.path=[];pull=null;
@@ -293,14 +296,13 @@ export function prepareTankPull(sim,tank,target){
  if(!pull){
   if((tank.pullScanAt??0)>sim.clock||tankTarget(sim,target)?.id!==tank.id)return false;
   tank.pullScanAt=sim.clock+PULL_RULES.scanInterval;
-  if(!sim.units.some(u=>!u.dead&&u.teamId===tank.teamId&&combatRole(u)==='damage'))return false;
   if(sim.repathBudgetRemaining<=0)return false;
   sim.repathBudgetRemaining--;
   const clearing=findPullClearing(sim,tank,target);if(!clearing)return false;
   pull=tank.tankPull={targetId:target.id,center:clearing.center,point:clearing.point,until:sim.clock+PULL_RULES.maxDuration,start:{x:target.x,z:target.z},progress:{x:target.x,z:target.z,at:sim.clock}};
   tank.path=clearing.path;sim._cancelAttackCycle(tank);
  }
- if(distance(target,pull.center)<2||(distance(target,pull.start)>5&&encounterOpenness(sim,target)>=.97)){
+ if(distance(target,pull.start)>5&&encounterOpenness(sim,target)>=.97){
   tank.tankPull=null;tank.pullScanAt=sim.clock+PULL_RULES.retry;tank.path=[];target.surroundAxis=undefined;target.surroundAssignments={};return false;
  }
  if(distance(target,pull.progress)>.4)pull.progress={x:target.x,z:target.z,at:sim.clock};
@@ -311,7 +313,7 @@ export function prepareTankPull(sim,tank,target){
  if(distance(tank,target)<TEAM_RULES.tauntRange&&sim._hasCombatLineOfSight(tank,target))target.threatUntil=sim.clock+TEAM_RULES.tauntDuration;
  const chaseGap=combatRadius(target)+combatRadius(tank)+9;
  tank.path=distance(tank,target)>chaseGap?[]:[pull.point];tank.routeTarget=pull.point;tank.stopDistance=0;tank.fighterMovingAttack=true;
- tank.actionLabel=tank.path.length?'Drawing enemy into open ground':'Holding aggro for the party';
+ tank.actionLabel=tank.path.length?'Drawing enemy away from trees and obstacles':'Holding aggro for the party';
  return true;
 }
 export function holdForTankPull(sim,unit,target){
