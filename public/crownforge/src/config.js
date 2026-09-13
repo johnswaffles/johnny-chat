@@ -122,6 +122,7 @@ export function resourceDepletionStage(node) {
 // keeps construction, defense, and recovery abilities consistent on both
 // sides of the frontier.
 const HEARTHKIN_WORKER_ABILITIES = Object.freeze({
+  magicImmune: true,
   race: 'hearthkin',
   worker: true,
   canBuild: true,

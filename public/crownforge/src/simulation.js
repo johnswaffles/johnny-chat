@@ -1,18 +1,18 @@
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260913-addall1';
-import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260913-addall1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260913-addall1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260913-addall1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260913-addall1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260913-firstoath1';
+import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260913-firstoath1';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260913-firstoath1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260913-firstoath1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260913-firstoath1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260913-addall1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260913-firstoath1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260913-addall1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260913-firstoath1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260913-addall1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260913-firstoath1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -1471,6 +1471,7 @@ export class CrownforgeSimulation {
       let started = false;
       if (order.kind === 'move' && order.target) {
         started = this._sendUnitTo(unit, order.target, 'move', order.stopDistance ?? 0);
+        if(started&&order.manualCombatMove)unit.manualCombatMove={...order.target};
       } else if (order.kind === 'gather') {
         const preferredNode = this.resourcesNodes.find((candidate) => candidate.id === order.resourceId && candidate.amount > 0) ?? null;
         const resourceType = preferredNode?.resourceType ?? order.resourceType;
@@ -1563,6 +1564,7 @@ export class CrownforgeSimulation {
 
   _interruptWork(unit, { preserveQueue = false, preserveGuard = false } = {}) {
     if(this.sideEncounter?.tankId===unit.id)cancelSidePull(this);
+    unit.manualCombatMove=null;
     unit.teamFollowing=false;unit.healTargetId=null;unit.teamAdvanceTargetId=null;unit.tankPull=null;unit.pullScanAt=this.clock+2;
     delete unit.bearResponse;
     this._releaseResourceSlot(unit);
@@ -1984,6 +1986,7 @@ export class CrownforgeSimulation {
       .filter((unit) => {
         const rules = UNIT_TYPES[unit.type] ?? {};
         return !unit.dead
+          && !unit.manualCombatMove
           && rules.autoAggroRadius > 0
           && rules.canAttackUnits !== false
           && unit.stunTimer <= 0
@@ -2354,6 +2357,11 @@ export class CrownforgeSimulation {
       sourceId: source?.id ?? null,
       immunityDuration: unit.stunImmunityTimer,
     });
+    if(unit.manualCombatMove){
+      const destination={...unit.manualCombatMove};
+      if(!this._sendUnitTo(unit,destination,'move'))unit.manualCombatMove=null;
+      return false;
+    }
     if (source && source.faction !== unit.faction && source.faction !== 'neutral') {
       unit.attackTarget = source.id;
       unit.attackTargetKind = 'unit';
@@ -2467,6 +2475,7 @@ export class CrownforgeSimulation {
       if (replanned === false) unit.pathBlocked = true;
     }
     if (unit.command === 'move' && !unit.path.length && Math.hypot(unit.velocityX, unit.velocityZ) < 0.08) {
+      unit.manualCombatMove=null;
       if (unit.orderQueue?.length) this._executeNextConstructionOrder(unit);
       else if (unit.patrolActive && unit.patrolPoints.length >= 2) {
         unit.patrolIndex = (unit.patrolIndex + 1) % unit.patrolPoints.length;
@@ -4258,6 +4267,7 @@ export class CrownforgeSimulation {
   }
 
   _sendUnitToAttack(unit, target, slot = 0, options = {}) {
+    if(unit.manualCombatMove)return false;
     if (prepareTeamAttack(this,unit,target,slot)) return true;
     if (isTeamHealer(unit)) { this._interruptWork(unit);unit.command='idle';unit.path=[];unit.actionLabel=`Supporting Team ${unit.teamId}`;return true; }
     target=tankTarget(this,unit)??target;
@@ -4311,7 +4321,7 @@ export class CrownforgeSimulation {
   _tryApplyVillagerStun(attacker, target) {
     const stunRule = UNIT_TYPES[attacker.type]?.stunOnHit;
     const targetTraits = UNIT_TYPES[target.type]?.traits ?? [];
-    if (isCurseImmune(target) || !stunRule
+    if (isCurseImmune(target) || (UNIT_TYPES[target.type]?.magicImmune&&stunRule?.magical) || !stunRule
       || (attacker.faction === target.faction && !areHearthkinNeutral(attacker, target))
       || !targetTraits.includes(stunRule.targetTrait)
       || target.dead
@@ -4364,6 +4374,7 @@ export class CrownforgeSimulation {
     }
 
     const targetRules = UNIT_TYPES[target.type] ?? {};
+    if(target.manualCombatMove)return false;
     if (targetRules.canAttackUnits === false) return false;
     this._interruptWork(target);
     target.attackSlot = target.id % COMBAT_SLOT_COUNT;
@@ -4404,10 +4415,11 @@ export class CrownforgeSimulation {
     this._announce(`Last Light Ward saves the Hearthkin. Chorus of the Last Light grants the team double healing for 60 seconds.`);
   }
 
-  _applyUnitDamage(target, amount, attacker, {damageType='weapon',healthFloor=0,areaOfEffect=false}={}) {
+  _applyUnitDamage(target, amount, attacker, {damageType='weapon',healthFloor=0,areaOfEffect=false,magical=false}={}) {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
     const rawDamage = Math.max(0, Number(amount) || 0)*kingsbaneMultiplier(attacker,target);
     const defense=UNIT_TYPES[target.type];
+    if(defense?.magicImmune&&(magical||['magic','spell','arcane','divine','fire','frost','lightning','shadow','holy'].includes(damageType)))return {damage:0,killed:false,warded:false,blocked:true,magicImmune:true,cursed:false};
     if(rawDamage>0&&defense?.dodgeChance&&damageType==='weapon'&&!areaOfEffect&&attacker?.kind==='unit'){
       target.incomingSwingCount=(target.incomingSwingCount??0)+1;
       // One evasion per twenty incoming melee swings; repeatable across saves.
@@ -5915,10 +5927,11 @@ export class CrownforgeSimulation {
     let routed = 0;
     let queued = 0;
     const pendingMoves = [];
+    const explicitMovers=[];
     units.forEach((unit, index) => {
       const angle = (index / Math.max(1, units.length)) * Math.PI * 2;
       const moveTarget = teamMovePoint(units,unit,point) ?? { x: point.x + Math.cos(angle) * spacing, z: point.z + Math.sin(angle) * spacing };
-      const moveOrder = { kind: 'move', target: moveTarget, stopDistance: 0 };
+      const moveOrder = { kind: 'move', target: moveTarget, stopDistance: 0, manualCombatMove: combatRole(unit)==='tank' };
       if (this._shouldQueueExplicitOrder(unit, queue) && this._queueUnitOrder(unit, moveOrder, 'Move queued')) {
         routed += 1;
         queued += 1;
@@ -5930,6 +5943,7 @@ export class CrownforgeSimulation {
         return;
       }
       this._interruptWork(unit);
+      explicitMovers.push(unit);
       if (unit.carryAmount > 0) {
         unit.postDepositTarget = moveTarget;
         routed += this._beginReturn(unit) ? 1 : 0;
@@ -5987,6 +6001,7 @@ export class CrownforgeSimulation {
         routed += 1;
       }
     }
+    for(const unit of explicitMovers)if(combatRole(unit)==='tank'&&unit.command==='move'&&!unit.teamAdvanceTargetId&&unit.routeTarget)unit.manualCombatMove={...unit.routeTarget};
     if (!routed) {
       this.lastCommand = 'No route to that location.';
       this._announce(this.lastCommand);

@@ -1,7 +1,7 @@
-import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260913-addall1';
-import { bearVariant } from './bear-variants.js?v=20260913-addall1';
-import {UNIT_TYPES} from './config.js?v=20260913-addall1';
-import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260913-addall1';
+import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260913-firstoath1';
+import { bearVariant } from './bear-variants.js?v=20260913-firstoath1';
+import {UNIT_TYPES} from './config.js?v=20260913-firstoath1';
+import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260913-firstoath1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
@@ -63,6 +63,7 @@ export function strikeDamage(attacker,target){
 }
 export function unitStatuses(unit){
   const statuses=[],elder=isCurseImmune(unit),fury=bearFuryActive(unit);
+  if(UNIT_TYPES[unit.type]?.magicImmune)statuses.push({id:'beyondFirstOath',name:'Beyond the First Oath',kind:'Innate protection',detail:'Permanent · immune to hostile magic',summary:'No spell may bind them. No god may claim them.',lore:'Before the old gods spoke their first command, a small flame already burned beyond their reach. The Hearthkin carry that nameless fire. Sorcery unravels against it; curses find no purchase. Even the makers of this world cannot write an oath upon their souls.',effect:'Immune to hostile magical damage and magical stuns, including divine magic from the old gods. Friendly healing and blessings still work. Physical weapons, arrows, and physical bear swipes remain dangerous.',rune:'ward'});
   if(deathlessActive(unit))statuses.push({id:'deathlessHeart',name:'Heart of the Deathless Greatwood',kind:'Last stand · empowered',detail:`${Math.ceil(unit.deathlessTimer)}s · 99% less incoming damage`,summary:'Even death must wait beneath the ancient boughs.',effect:'Below 5% true health, reduces incoming damage after hide and armor by 99% for 60 seconds. Replaces Heart’s 90% reduction while active; does not add healing. Persists through healing. After expiry, heal above 60% to rearm. Only true wounds can trigger it.',rune:'ward',art:bearVariant(unit).art});
   if(unit.type==='grizzly'){
    statuses.push({id:'kingsbaneHunger',name:'Kingsbane Hunger',kind:'Predator’s blessing',detail:'Double damage to tanks below 50% HP',summary:'A faltering shield awakens an ancient hunger.',effect:'Deals 100% more damage to any tank below 50% true maximum health at the moment damage lands, including Bloodclaw Reckoning. Stacks with bear rage; armor, Aegis and Last Bastion still reduce the damage. Exactly 50% does not trigger it.',rune:'fury',art:bearVariant(unit).art});

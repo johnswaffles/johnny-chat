@@ -1,6 +1,6 @@
 # Combat effects and lore-card reference
 
-Revision: 20260913-addall1. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
+Revision: 20260913-firstoath1. Local revision; verify the live marker for deployment status. This is the gameplay reference for the next lore-card pass. Existing art and bloodline stories remain in `src/bear-variants.js` and `src/unit-status.js`.
 
 | Effect | Owner and trigger | Actual rule |
 | --- | --- | --- |
@@ -67,3 +67,5 @@ Damage fighters give the pulling tank room, then take persistent individually re
 
 ### Kingsbane Hunger and Scent of the Faltering Crown
 Bloodclaw Reckoning now deals 50% maximum-health AoE damage before defenses within 14 units every eight seconds while enraged. It can kill; it never merely halves current health. Tanks retain armor, Aegis and Last Bastion. Kingsbane Hunger doubles all bear damage to tanks already below 50% true health when each hit resolves, including AoE. Scent of the Faltering Crown makes bears prioritize the lowest-health-percentage living hostile tank within 24 units and line of sight, excluding warded tanks. Health ties preserve the current target; otherwise the lowest ID wins. Bear priority supersedes the previous first-tank threat lock; other enemies retain their existing taunt rules.
+
+**Beyond the First Oath** — permanent Hearthkin protection. Hostile magical damage (including divine magic) and magical stuns cannot affect them. Spell damage must use `magical: true` or a magic damage type; physical Bloodclaw and ordinary attacks stay physical. Friendly heals and blessings remain effective. Lore: their nameless flame predates the first command of the old gods.

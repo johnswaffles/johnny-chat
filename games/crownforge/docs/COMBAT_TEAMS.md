@@ -4,11 +4,11 @@ There is one persistent team, with no extra membership limit beyond the game's a
 
 Bears now awaken Greatwood Colossus at 50% true health: double size and damage. This stacks with Wrath of the First Oath at 10% true health. Shieldbearers retain 3,480 HP, 80% armor, and 5% dodge (one per twenty melee swings). Against both rages, they survive eight landed hits with Last Bastion without healing. Oathbound Stride grants 1.5 times the fastest other base movement speed. Tank damage remains 1.4. See COMBAT_EFFECTS.md for the complete balance and lore reference.
 
-Every team Hearthkin prioritizes healing over gathering, building, or attacking until removed from the team. Every two seconds it heals all injured friendly units within 24 world units and clear line of sight, excluding itself: tanks receive 40 HP and other allies receive 20 HP. Tanks are processed first and lead the healer's following behavior. No overhealing, resurrection, or healing enemies.
+Team Hearthkin prioritize healing, but explicit construction and repair orders take priority until finished. They retain team membership and resume healing afterward. Every two seconds it heals all injured friendly units within 24 world units and clear line of sight, excluding itself: tanks receive 40 HP and other allies receive 20 HP. Tanks are processed first and lead the healer's following behavior. No overhealing, resurrection, or healing enemies.
 
 When attacking a unit, team damage fighters stage behind the tank line until a tank lands a hit and claims aggro. Multiple tanks lead together; fighters proceed if no tanks survive. Against a tank-held bear they circle outside the frontal swipe and take distinct rear positions. Automatic healers follow behind the current rear DPS line, at least 16 units from the bear and 3 units behind the fighters, updating their path as the encounter moves. Rear positioning avoids ordinary frontal damage. Bloodclaw Reckoning deals 50% maximum-health AoE damage before defenses within 14 units every 8 seconds; Aegis of the Unbroken Crown reduces tank AoE damage by 90%. Cancelling a unit's order clears the staged approach. Ground movement destinations place tanks in the front row, damage fighters behind them, and healers at the rear.
 
-Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260913-addall1.
+Enemy settlement pause and player-side-only bear release remain enabled. Artwork quality is unchanged. Release revision: 20260913-firstoath1.
 
 Crushing Claws increases bear damage against tanks sixfold; half-health Colossus hits now deal 139.2 damage after armor. Healing output is halved. Bloodclaw has a full circular rotating claw effect.
 
@@ -45,3 +45,5 @@ The friendly combat frame now includes any player unit being attacked, including
 Chorus of the Last Light: a Hearthkin shield activation grants living allies 200% of normal healing for 60 seconds. Team heals become 80 HP for tanks and 40 HP for other allies, still capped at maximum health. Additional activations refresh the duration without stacking. The buff persists if its caster dies.
 
 Add all recruits every living eligible friendly unit, including Hearthkin, into Your team without changing the current selection. New Hearthkin members leave work orders and begin team healing. The button is disabled when everyone is already enrolled.
+
+Explicit tank movement overrides automatic attack recruitment until arrival, then normal nearby-enemy aggression resumes. A new direct command supersedes the move. Queued moves use the same priority when they begin.

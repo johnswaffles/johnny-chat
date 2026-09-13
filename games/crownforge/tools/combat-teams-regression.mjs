@@ -47,9 +47,9 @@ test('team healers pulse every nearby injured ally, with stronger tank healing a
 test('healers honor line of sight and stay dedicated to healing until removed',()=>{
  const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',102,100,'player'),bear=s.addUnit('grizzly',103,100,'wildlife');select(s,[h,t]);s.assignSelectedTeam();t.hp-=200;
  s._hasCombatLineOfSight=()=>false;updateTeams(s,2);assert.equal(t.hp,t.maxHp-200);
- s._hasCombatLineOfSight=()=>true;h.command='build';updateTeams(s,2);assert.equal(t.hp,t.maxHp-160);assert.notEqual(h.command,'build');
- s._sendUnitToAttack(h,bear);assert.equal(h.attackTarget,null);updateTeams(s,2);assert.equal(t.hp,t.maxHp-120);
- select(s,[h]);s.leaveSelectedTeam();updateTeams(s,2);assert.equal(t.hp,t.maxHp-120);
+ s._hasCombatLineOfSight=()=>true;h.command='build';updateTeams(s,2);assert.equal(t.hp,t.maxHp-200);assert.equal(h.command,'build');
+ s._sendUnitToAttack(h,bear);assert.equal(h.attackTarget,null);updateTeams(s,2);assert.equal(t.hp,t.maxHp-160);
+ select(s,[h]);s.leaveSelectedTeam();updateTeams(s,2);assert.equal(t.hp,t.maxHp-160);
 });
 test('team membership and wounded tank percentage survive save and load; old tanks migrate',()=>{
  const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',102,100,'player');select(s,[h,t]);const id=s.assignSelectedTeam();t.hp=t.maxHp/2;
@@ -95,4 +95,16 @@ test('Add all enrolls the entire living friendly roster without changing selecti
  for(const u of [tank,healer,dps])assert.equal(u.teamId,1);for(const u of [enemy,bear,dead])assert(!u.teamId);
  assert.deepEqual(s.selectedIds,[tank.id]);assert.equal(healer.command,'idle');assert.deepEqual(healer.orderQueue,[]);
  healer.healCooldown=.5;s.assignAllUnitsTeam();assert.equal(healer.healCooldown,.5);
+});
+
+test('team Hearthkin complete a building order and then resume healing',()=>{
+ const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',103,100,'player');h.teamId=t.teamId=1;t.hp-=200;
+ const b=s.addBuilding('house',108,100,'player',.9);select(s,[h]);assert(s.issueContextCommand(b,b).success);
+ for(let i=0;i<3600&&b.progress<1;i++){s.clock+=1/60;s.repathBudgetRemaining=8;updateTeams(s,1/60);s._updateUnit(h,1/60);s._updateConstruction(b,1/60);}
+ assert.equal(b.progress,1);assert.equal(h.teamId,1);h.command='idle';h.buildTarget=null;h.teamThinkCooldown=0;h.healCooldown=0;Object.assign(t,{x:100,z:90});Object.assign(h,{x:102,z:90});const hp=t.hp;s._hasCombatLineOfSight=()=>true;updateTeams(s,.2);assert(t.hp>hp,JSON.stringify({hp,after:t.hp,max:t.maxHp,command:h.command,team:h.teamId,stun:h.stunTimer,cooldown:h.healCooldown,los:s._hasCombatLineOfSight(h,t)}));
+});
+test('explicit tank movement resists team attack recruitment and resumes nearby combat on arrival',()=>{
+ const s=arena(),t=s.addUnit('shieldbearer',100,100,'player'),d=s.addUnit('soldier',102,100,'player'),b=s.addUnit('grizzly',110,100,'wildlife');t.teamId=d.teamId=1;s._sendUnitToAttack(t,b);select(s,[t]);const goal={x:100,z:110};assert(s.issueContextCommand(goal).success);assert(t.manualCombatMove);
+ for(let i=0;i<1200&&t.manualCombatMove;i++){s.clock+=1/60;s.repathBudgetRemaining=8;s._sendUnitToAttack(d,b);s._updateMilitaryServices();assert.equal(t.command,'move');s._updateUnit(t,1/60);}
+ assert(!t.manualCombatMove);assert(Math.hypot(t.x-goal.x,t.z-goal.z)<1);s._updateMilitaryServices();assert.equal(t.command,'attack');assert.equal(t.attackTarget,b.id);
 });

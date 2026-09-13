@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260913-addall1';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260913-addall1';
-import {isWardProtected} from './unit-status.js?v=20260913-addall1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260913-firstoath1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260913-firstoath1';
+import {isWardProtected} from './unit-status.js?v=20260913-firstoath1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -90,6 +90,7 @@ export function updateTeams(sim,dt){
   if(healer.teamThinkCooldown>1e-8)continue;
   healer.teamThinkCooldown=.2;
   if(healer.stunTimer>0)continue;
+  if(healer.command==='build'||healer.buildTarget)continue;
   if(!['idle','move'].includes(healer.command)){sim._interruptWork(healer);healer.command='idle';healer.path=[];healer.orderQueue=[];}
   const allies=group.members.filter(u=>u!==healer);
   const patients=sim.units.filter(u=>eligibleMember(u)&&u!==healer&&u.hp<u.maxHp&&distance(healer,u)<=TEAM_RULES.healRange+(combatRole(u)==='tank'?5:0)&&sim._hasCombatLineOfSight(healer,u))
@@ -133,7 +134,7 @@ export function prepareTeamAttack(sim,unit,target,slot){
  if(!unit.teamId||combatRole(unit)!=='damage'||target?.kind!=='unit')return false;
  const tanks=sim.units.filter(u=>eligibleMember(u)&&u.teamId&&combatRole(u)==='tank');
  if(!tanks.length||tanks.some(u=>target.command==='attack'&&tankTarget(sim,target)?.id===u.id))return false;
- for(const tank of tanks)if(tank.attackTarget!==target.id||tank.command!=='attack'){
+ for(const tank of tanks)if(!tank.manualCombatMove&&(tank.attackTarget!==target.id||tank.command!=='attack')){
   sim._interruptWork(tank);sim._sendUnitToAttack(tank,target,tank.id%8);
  }
  sim._cancelAttackCycle(unit);unit.teamAdvanceTargetId=target.id;unit.teamAdvanceSlot=slot;
