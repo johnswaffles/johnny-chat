@@ -1,18 +1,18 @@
-import {markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260911-defiance1';
+import {markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260912-crownaegis1';
 import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260909-cursedbears1';
-import { updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260911-defiance1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260911-defiance1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260911-defiance1';
+import { updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260912-crownaegis1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260912-crownaegis1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260912-crownaegis1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260911-defiance1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260912-crownaegis1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260911-defiance1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260912-crownaegis1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260911-defiance1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260912-crownaegis1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -4428,16 +4428,16 @@ export class CrownforgeSimulation {
     this._announce(`Last Light Ward saves the Hearthkin for ${duration} seconds.${curseNotice}`);
   }
 
-  _applyUnitDamage(target, amount, attacker, {damageType='weapon',healthFloor=0}={}) {
+  _applyUnitDamage(target, amount, attacker, {damageType='weapon',healthFloor=0,areaOfEffect=false}={}) {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
     const rawDamage = Math.max(0, Number(amount) || 0);
     const defense=UNIT_TYPES[target.type];
-    if(rawDamage>0&&defense?.dodgeChance&&damageType==='weapon'&&attacker?.kind==='unit'){
+    if(rawDamage>0&&defense?.dodgeChance&&damageType==='weapon'&&!areaOfEffect&&attacker?.kind==='unit'){
       target.incomingSwingCount=(target.incomingSwingCount??0)+1;
       // One evasion per twenty incoming melee swings; repeatable across saves.
       if(target.incomingSwingCount%20===0){target.dodgePulse=.45;return {damage:0,killed:false,warded:false,blocked:true,dodged:true,cursed:false};}
     }
-    const damage = lastBastionDamage(target,bearIncomingDamage(target,rawDamage,damageType)*(1-(defense?.armorReduction??0)));
+    const damage = lastBastionDamage(target,bearIncomingDamage(target,rawDamage,damageType)*(1-(defense?.armorReduction??0))*(areaOfEffect?1-(defense?.aoeReduction??0):1));
     if (target.lastLightWardTimer > 0) {
       target.wardBlockedPulse = 0.42;
       target.hitFlash = Math.max(target.hitFlash, 0.12);
@@ -4524,23 +4524,11 @@ export class CrownforgeSimulation {
     if((bear.specialSwipeReadyAt??0)>this.clock)return;
     bear.specialSwipeReadyAt=this.clock+8;
     const victims=[];
-    const front=bear.bearSwipeDirection??{x:(primary.x-bear.x)/(distance(primary,bear)||1),z:(primary.z-bear.z)/(distance(primary,bear)||1)};
-    const extra=this.units.filter(u=>u!==primary && !u.dead && u.hp>0 && u.faction!==bear.faction && !isWardProtected(u)
-      && inBearSwipe(bear,u,front) && this._hasCombatLineOfSight(bear,u))
-      .sort((a,b)=>distance(primary,a)-distance(primary,b)||a.id-b.id);
-    for(const target of extra){
-      const result=this._applyUnitDamage(target,strikeDamage(bear,target),bear);
-      target.hitFlash=.3;target.healthRevealTimer=1.6;
-      this.animation.emit(target,ANIMATION_EVENTS.damageTaken,{sourceId:bear.id,damage:result.damage});
-      this.animation.emit(bear,ANIMATION_EVENTS.attackHit,{targetId:target.id,targetKind:'unit',x:target.x,z:target.z,damage:result.damage,cleave:true});
-    }
     for(const target of this.units){
-      const dx=target.x-bear.x,dz=target.z-bear.z;
-      if(target===primary||!isFighter(target)||combatRole(target)==='tank'||target.faction===bear.faction
-        ||isWardProtected(target)||distance(bear,target)>BEAR_FURY.radius||dx*front.x+dz*front.z>0
+      if(target===bear||target.dead||target.hp<=0||target.faction===bear.faction
+        ||isWardProtected(target)||distance(bear,target)>BEAR_FURY.radius
         ||!this._hasCombatLineOfSight(bear,target))continue;
-      const floor=target.maxHp*.1,amount=Math.max(0,target.hp-floor)/(1-(UNIT_TYPES[target.type].armorReduction??0));
-      const result=this._applyUnitDamage(target,amount,bear,{damageType:'special',healthFloor:floor});
+      const result=this._applyUnitDamage(target,target.maxHp*.25,bear,{damageType:'special',areaOfEffect:true});
       target.hitFlash=.6;target.healthRevealTimer=3;victims.push({x:target.x,z:target.z});
       this.animation.emit(target,ANIMATION_EVENTS.damageTaken,{sourceId:bear.id,damage:result.damage});
     }

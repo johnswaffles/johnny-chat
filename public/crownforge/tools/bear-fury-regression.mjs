@@ -28,7 +28,7 @@ test('rapid arrows respect the temporary Heart reduction and true health, with o
   }
  }
 });
-test('one fury contact kills the primary and all nearby frontal fighters; no harm through a wall or ward',()=>{
+test('fury kills the primary while Bloodclaw deals percentage AoE; walls and wards protect',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=true;
  const primary=s.addUnit('soldier',101.4,100,'player');primary.hp=primary.maxHp=500;
  const second=s.addUnit('raider',102,101,'enemy'),third=s.addUnit('shieldbearer',103,100,'player');
@@ -38,11 +38,11 @@ test('one fury contact kills the primary and all nearby frontal fighters; no har
  s._sendUnitToAttack(b,primary);let hits=0;
  const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(t,d,a,...rest)=>{if(a===b)hits++;return apply(t,d,a,...rest);};
  for(let i=0;i<60&&!primary.dead;i++)s._updateAttack(b,1/60);
- assert(primary.dead&&second.dead&&!third.dead);assert(third.hp<third.maxHp);assert.equal(hits,4);assert(fourth.dead);
- for(const u of [outside,blocked,ward,worker,bear2])assert.equal(u.hp,u.maxHp);
+ assert(primary.dead&&!second.dead&&!third.dead);assert.equal(second.hp,second.maxHp*.75);assert(third.hp<third.maxHp);assert.equal(hits,6);assert.equal(fourth.hp,fourth.maxHp*.75);assert.equal(worker.hp,worker.maxHp*.75);
+ for(const u of [outside,blocked,ward,bear2])assert.equal(u.hp,u.maxHp);
  // Scanning during the follow-through cannot grant another instant strike.
  const phase=b.attackPhase,elapsed=b.attackPhaseElapsed;updateWildlife(s,1);assert.equal(b.attackPhase,phase);assert.equal(b.attackPhaseElapsed,elapsed);
- step(s,b,.3);assert.equal(hits,4);assert(fourth.dead);
+ step(s,b,.3);assert.equal(hits,6);assert.equal(fourth.hp,fourth.maxHp*.75);
 });
 test('an escaped primary means the whole committed fury swipe misses',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),p=s.addUnit('soldier',101.3,100,'player'),near=s.addUnit('soldier',102,101,'player');b.hp=18;

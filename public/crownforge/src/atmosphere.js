@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260911-defiance1';
+import { CONFIG } from './config.js?v=20260912-crownaegis1';
 
 // Presentation only: every effect is derived from position and render time.
 // Nothing consumes the simulation RNG or changes an entity's state.

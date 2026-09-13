@@ -13,12 +13,12 @@ test('half true health alone triggers Colossus, doubles size/damage and persists
  s._applyUnitDamage(b,1,t);b.hp=180;assert(bearEnrageActive(b));const saved=s.serialize();const restored=arena();restored.loadSnapshot(saved);assert(bearEnrageActive(restored.units.find(u=>u.id===b.id)));
  b.hp=18;assert.equal(strikeDamage(b,t),4176);assert(unitStatuses(b).some(u=>u.id==='greatwoodColossus'));
 });
-test('swipe remains dangerous in front with tank aggro but reduces rear DPS to ten percent and excludes walls and distant healers',()=>{
+test('AoE damages front and rear equally with tank aggro and excludes walls and distant healers',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit('shieldbearer',103,100,'player');b.hp=90;
- const front=s.addUnit('soldier',104,101,'player'),rear=s.addUnit('soldier',97,100,'player'),far=s.addUnit('villager',112,100,'player'),wall=s.addUnit('soldier',105,100,'player');
+ const front=s.addUnit('soldier',104,101,'player'),rear=s.addUnit('soldier',97,100,'player'),far=s.addUnit('villager',116,100,'player'),wall=s.addUnit('soldier',105,100,'player');
  s._hasCombatLineOfSight=(a,u)=>u!==wall;s._applyUnitDamage(b,1,t);s._startAttackCycle(b,t);
  assert(inBearSwipe(b,front));assert(!inBearSwipe(b,rear));s._applyGrizzlyCleave(b,t);
- assert(front.dead);assert.equal(rear.hp,rear.maxHp*.1);for(const u of [far,wall])assert.equal(u.hp,u.maxHp);
+ assert.equal(front.hp,front.maxHp*.75);assert.equal(rear.hp,rear.maxHp*.75);for(const u of [far,wall])assert.equal(u.hp,u.maxHp);
  // Moving the primary behind a committed claw swing causes a miss.
  t.x=97;assert(!inBearSwipe(b,t));
 });

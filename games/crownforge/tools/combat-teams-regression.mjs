@@ -32,7 +32,7 @@ test('tank taunt applies to other enemies and expires or releases out of range',
  s.clock=TEAM_RULES.tauntDuration+.01;assert.equal(tankTarget(s,enemy),null);
  s._applyUnitDamage(enemy,1,tank);tank.x+=100;assert.equal(tankTarget(s,enemy),null);
 });
-test('special swipe leaves rear damage fighters at ten percent',()=>{
+test('special swipe damages rear fighters',()=>{
  const s=arena(),tank=s.addUnit('shieldbearer',101,100,'player'),dps=s.addUnit('soldier',97,100,'player'),bear=s.addUnit('grizzly',100,100,'wildlife');bear.hp=18;
  s._applyUnitDamage(bear,1,tank);s._applyGrizzlyCleave(bear,tank);assert(dps.hp>0&&dps.hp<=dps.maxHp);
 });

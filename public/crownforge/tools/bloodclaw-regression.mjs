@@ -5,11 +5,11 @@ import {CrownforgeSimulation} from '../src/simulation.js';
 import {engagedEnemies,seamlessCombatBuffer,CombatMusic} from '../src/combat-music.js';
 const arena=()=>{const s=new CrownforgeSimulation({seed:42});s.units=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.navigationVersion++;return s;};
 test('shield dodges exactly five of one hundred incoming strikes',()=>{const s=arena(),t=s.addUnit('shieldbearer',100,100,'player'),b=s.addUnit('grizzly',108,100,'wildlife');let dodges=0;for(let i=0;i<100;i++)if(s._applyUnitDamage(t,1,b).dodged)dodges++;assert.equal(dodges,5);});
-test('Bloodclaw leaves rear DPS at ten percent, never heals, and respects cooldown and wards',()=>{
+test('Bloodclaw deals twenty-five percent maximum health, can kill, and respects cooldown and wards',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit('shieldbearer',107,100,'player'),d=s.addUnit('soldier',93,100,'player'),h=s.addUnit('villager',88,100,'player');b.hp=90;
- s._startAttackCycle(b,t);s._applyGrizzlyCleave(b,t);assert.equal(d.hp,d.maxHp*.1);assert.equal(h.hp,h.maxHp);assert(b.animationEvents.some(e=>e.name==='bear_special_swipe'));
- d.hp=d.maxHp;s.clock=7.99;s._applyGrizzlyCleave(b,t);assert.equal(d.hp,d.maxHp);s.clock=8;d.hp=3;s._applyGrizzlyCleave(b,t);assert.equal(d.hp,3);
- s.clock=16;d.hp=d.maxHp;d.lastLightWardTimer=20;s._applyGrizzlyCleave(b,t);assert.equal(d.hp,d.maxHp);
+ s._startAttackCycle(b,t);s._applyGrizzlyCleave(b,t);assert.equal(d.hp,d.maxHp*.75);assert.equal(h.hp,h.maxHp*.75);assert(b.animationEvents.some(e=>e.name==='bear_special_swipe'));
+ d.hp=d.maxHp;s.clock=7.99;s._applyGrizzlyCleave(b,t);assert.equal(d.hp,d.maxHp);s.clock=8;d.hp=3;s._applyGrizzlyCleave(b,t);assert.equal(d.hp,0);assert(d.dead);
+ s.clock=16;d.dead=false;d.hp=d.maxHp;d.lastLightWardTimer=20;s._applyGrizzlyCleave(b,t);assert.equal(d.hp,d.maxHp);
 });
 test('encounter music tracks multiple enemies until all die, including future bosses',()=>{
  const t={id:1,hp:100,faction:'player',attackTarget:2},b={id:2,hp:100,type:'grizzly'},boss={id:3,hp:100,boss:true,attackTarget:1},sim={units:[t,b,boss]};
@@ -41,4 +41,23 @@ test('half-health bear damage outpaces the halved healer output visibly',()=>{
 test('explicit loop endpoint excludes the recording tail',()=>{
  const input=buffer(1,10000,1000);input.data[0].fill(.25,0,8000);input.data[0].fill(.8,8000);
  const out=seamlessCombatBuffer({createBuffer:buffer},input,{endSeconds:8});assert.equal(out.length,7800);assert(Math.max(...out.data[0])<.4);
+});
+
+test('Aegis reduces all marked AoE by ninety percent, stacks with armor and Bastion, and cannot dodge',()=>{
+ const s=arena(),t=s.addUnit('shieldbearer',100,100,'player'),b=s.addUnit('grizzly',108,100,'wildlife');
+ const normal=s._applyUnitDamage(t,100,b).damage;
+ t.incomingSwingCount=19;
+ const aoe=s._applyUnitDamage(t,100,b,{areaOfEffect:true});
+ assert(Math.abs(aoe.damage-normal*.1)<1e-8);assert(!aoe.dodged);assert.equal(t.incomingSwingCount,19);
+ t.hp=t.maxHp*.1;const lastStand=s._applyUnitDamage(t,100,b,{areaOfEffect:true});assert(Math.abs(lastStand.damage-.2)<1e-8);
+});
+test('Bloodclaw hits primary tank and every direction once, ignores rage scaling, allies, wards and occlusion',()=>{
+ const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit('shieldbearer',107,100,'player');
+ const front=s.addUnit('soldier',108,100,'player'),rear=s.addUnit('soldier',92,100,'player'),side=s.addUnit('soldier',100,108,'player');
+ const ally=s.addUnit('grizzly',99,100,'wildlife'),blocked=s.addUnit('soldier',100,92,'player'),ward=s.addUnit('villager',101,101,'player');
+ ward.lastLightWardTimer=20;b.hp=b.maxHp*.05;b.greatwoodDefianceStacks=100;s._hasCombatLineOfSight=(_b,u)=>u!==blocked;
+ s._startAttackCycle(b,t);s._applyGrizzlyCleave(b,t);
+ assert(Math.abs(t.hp-t.maxHp*.995)<1e-8);
+ for(const u of [front,rear,side])assert.equal(u.hp,u.maxHp*.75);
+ for(const u of [ally,blocked,ward])assert.equal(u.hp,u.maxHp);
 });

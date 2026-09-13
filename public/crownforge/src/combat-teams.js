@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260911-defiance1';
-import {UNIT_TYPES} from './config.js?v=20260911-defiance1';
-import {isWardProtected} from './unit-status.js?v=20260911-defiance1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-crownaegis1';
+import {UNIT_TYPES} from './config.js?v=20260912-crownaegis1';
+import {isWardProtected} from './unit-status.js?v=20260912-crownaegis1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){

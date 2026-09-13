@@ -351,6 +351,7 @@ export const UNIT_TYPES = {
     radius: 0.44,
     maxHp: 3480, // Colossus and last-breath fury stack; see COMBAT_EFFECTS.md.
     armorReduction: .8,
+    aoeReduction: .9,
     dodgeChance: .05,
     attack: 1.4, // Ten hits equal one Crown Guard hit (14).
     combatRole: 'tank',
