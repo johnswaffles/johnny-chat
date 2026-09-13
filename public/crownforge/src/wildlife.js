@@ -1,5 +1,5 @@
 import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import { CONFIG, UNIT_TYPES } from './config.js?v=20260912-deathless1';
+import { CONFIG, UNIT_TYPES } from './config.js?v=20260912-encounter1';
 
 export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 240, maxAlivePerSide: 2, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
@@ -109,7 +109,10 @@ function hunt(sim,bear) {
   if(mark!==bear.wildlifeProgress||!bear.wildlifeProgressPoint||distance(bear,bear.wildlifeProgressPoint)>2){
     bear.wildlifeProgress=mark;bear.wildlifeProgressAt=sim.clock;bear.wildlifeProgressPoint={x:bear.x,z:bear.z};
   }
-  if(bear.threatTankId&&current?.id===bear.threatTankId)return;
+  if(bear.threatTankId&&current?.id===bear.threatTankId){
+    if(bear.command!=='attack'||bear.attackTarget!==current.id)sim._retaliateGrizzly(bear,current);
+    return;
+  }
   const stalled=sim.clock-(bear.wildlifeProgressAt??sim.clock)>6;
   const nearest=humans.filter(unit=>!(unit.lastLightWardTimer>0)).sort((a,b)=>distance(bear,a)-distance(bear,b)||a.id-b.id)[0];
   const retaliation=current?.id===bear.wildlifeRetaliationId;

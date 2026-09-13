@@ -1,17 +1,18 @@
-import {createTeamControls} from './team-controls.js?v=20260912-deathless1';
-import {combatRole} from './combat-teams.js?v=20260912-deathless1';
+import {createCombatFrames} from './combat-frames.js?v=20260912-encounter1';
+import {createUnitActivity} from './unit-activity.js?v=20260912-activity1';
+import {createTeamControls} from './team-controls.js?v=20260912-encounter1';
+import {combatRole} from './combat-teams.js?v=20260912-encounter1';
 import { bearVariant } from './bear-variants.js?v=20260909-cursedbears1';
-import {requestGrizzlyPair} from './wildlife.js?v=20260912-deathless1';
-import {createUnitInspector} from './unit-inspector.js?v=20260912-deathless1';
-import {displayedUnitHealth} from './unit-status.js?v=20260912-deathless1';
-import { setupPresentation } from './presentation.js?v=20260912-deathless1';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260912-deathless1';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260912-deathless1';
+import {requestGrizzlyPair} from './wildlife.js?v=20260912-encounter1';
+import {createUnitInspector} from './unit-inspector.js?v=20260912-encounter1';
+import {displayedUnitHealth} from './unit-status.js?v=20260912-encounter1';
+import { setupPresentation } from './presentation.js?v=20260912-encounter1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260912-encounter1';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260912-encounter1';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
-import { CrownforgeRenderer } from './renderer.js?v=20260912-deathless1';
-import { CrownforgeSimulation } from './simulation.js?v=20260912-deathless1';
+import { CrownforgeRenderer } from './renderer.js?v=20260912-encounter1';
+import { CrownforgeSimulation } from './simulation.js?v=20260912-encounter1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
-import { summarizeUnitTasks } from './task-summary.js?v=20260909-cursedbears1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-cursedbears1';
 
 const canvas = document.querySelector('#game-canvas');
@@ -170,6 +171,7 @@ function bindTooltips() {
 
 const renderer = new CrownforgeRenderer(canvas);
 const simulation = new CrownforgeSimulation({ onEvent: announce });
+const unitActivity = createUnitActivity(simulation);
 const query = new URLSearchParams(window.location.search);
 const performanceMonitor = new CrownforgePerformanceMonitor(performancePanel, {
   enabled: query.has('perf'),
@@ -589,6 +591,7 @@ demolitionModeButton?.addEventListener('click', () => {
 
 unitInspector=createUnitInspector({simulation,renderer,canvas,onOpen:()=>{input.keys.clear();input.drag=null;renderer.setSelectionBox(null);}});
 
+const combatFrames=createCombatFrames(simulation,renderer);
 const teamControls=createTeamControls(simulation,()=>{announce(simulation.lastCommand);updateUi();});
 
 function updateUi() {
@@ -613,6 +616,8 @@ function updateUi() {
   if (harvestQuantityValue) harvestQuantityValue.textContent = `${simulation.getHarvestQuantityScale()}×`;
   ui.selectionTitle.textContent = selectionTitle();
   ui.selectionDetail.textContent = selectionStatus();
+  unitActivity.render();
+  combatFrames.update();
   if (selectionRecovery) selectionRecovery.hidden = !simulation.canRecoverSelectedUnits();
   const hasSelectedVillager = simulation.selectedEntities.some((entity) => entity.kind === 'unit'
     && UNIT_TYPES[entity.type]?.worker
@@ -842,10 +847,7 @@ function updateUi() {
 }
 
 function commandLineText() {
-  const activeUnits = simulation.selectedEntities
-    .filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead && entity.command !== 'idle' && entity.actionLabel);
-  if (activeUnits.length === 1) return activeUnits[0].actionLabel;
-  if (activeUnits.length > 1) return summarizeUnitTasks(activeUnits, { includeReady: false, maxEntries: 3 });
+  if(simulation.selectedEntities.some(entity=>entity.kind==='unit'&&entity.faction==='player'&&!entity.dead))return 'Right-click to issue an order.';
   return simulation.lastCommand;
 }
 
@@ -925,7 +927,7 @@ function selectionStatus() {
     return `${unit.actionLabel}${health}${team}${tank}${cargo}${status}${curse}${defense}`;
   }
   if (units.length > 1) {
-    return summarizeUnitTasks(units, { includeReady: true, maxEntries: 3 });
+    return `${units.length} units selected · Orders shown in Unit activity.`;
   }
   if (entities.length === 1 && entities[0].kind === 'resource') {
     const node = entities[0];

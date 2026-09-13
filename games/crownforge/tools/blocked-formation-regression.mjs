@@ -25,5 +25,5 @@ test('Heart stops healing after health exceeds sixty percent',()=>{
  const crossing={type:'grizzly',hp:100,maxHp:1000};updateLastBastion(crossing);crossing.hp=590;updateLastBastion(crossing,55);assert.equal(crossing.hp,610);assert(!lastBastionActive(crossing));
 });
 test('larger special catches rear DPS at thirteen units, not beyond fourteen',()=>{
- const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit('shieldbearer',107,100,'player'),near=s.addUnit('soldier',87,100,'player'),far=s.addUnit('soldier',85,100,'player');b.hp=90;s._startAttackCycle(b,t);s._applyGrizzlyCleave(b,t);assert.equal(near.hp,near.maxHp*.75);assert.equal(far.hp,far.maxHp);
+ const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),t=s.addUnit('shieldbearer',107,100,'player'),near=s.addUnit('soldier',87,100,'player'),far=s.addUnit('soldier',85,100,'player');b.hp=90;s._startAttackCycle(b,t);s._applyGrizzlyCleave(b,t);assert.equal(near.hp,near.maxHp*.5);assert.equal(far.hp,far.maxHp);
 });

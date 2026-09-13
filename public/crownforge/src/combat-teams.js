@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-deathless1';
-import {CONFIG,UNIT_TYPES} from './config.js?v=20260912-deathless1';
-import {isWardProtected} from './unit-status.js?v=20260912-deathless1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260912-encounter1';
+import {CONFIG,UNIT_TYPES} from './config.js?v=20260912-encounter1';
+import {isWardProtected} from './unit-status.js?v=20260912-encounter1';
 export const TEAM_RULES=Object.freeze({healAmount:20,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -48,6 +48,15 @@ export function selectTeam(sim,id){
  sim._announce(`Your team selected · ${members.length} members.`);return members.length;
 }
 export function tankTarget(sim,enemy){
+ if(enemy?.type==='grizzly'){
+  if(enemy.dead||enemy.hp<=0)return null;
+  const candidates=sim.units.filter(u=>!u.dead&&u.hp>0&&combatRole(u)==='tank'&&u.faction!==enemy.faction&&['player','enemy'].includes(u.faction)&&!isWardProtected(u)&&distance(u,enemy)<=TEAM_RULES.tauntRange&&sim._hasCombatLineOfSight(enemy,u));
+  candidates.sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||Number(b.id===enemy.threatTankId)-Number(a.id===enemy.threatTankId)||a.id-b.id);
+  const chosen=candidates[0];
+  enemy.huntedTankHealth=chosen?chosen.hp/chosen.maxHp:null;
+  enemy.threatTankId=chosen?.id??null;enemy.threatUntil=chosen?sim.clock+TEAM_RULES.tauntDuration:0;
+  return chosen??null;
+ }
  if(!enemy?.threatTankId)return null;
  const tank=sim.units.find(u=>u.id===enemy.threatTankId&&!u.dead&&u.hp>0);
  if(!tank||combatRole(tank)!=='tank'||tank.faction===enemy.faction||isWardProtected(tank)
@@ -114,7 +123,7 @@ export function updateTeams(sim,dt){
 export function prepareTeamAttack(sim,unit,target,slot){
  if(!unit.teamId||combatRole(unit)!=='damage'||target?.kind!=='unit')return false;
  const tanks=sim.units.filter(u=>eligibleMember(u)&&u.teamId&&combatRole(u)==='tank');
- if(!tanks.length||tanks.some(u=>tankTarget(sim,target)?.id===u.id))return false;
+ if(!tanks.length||tanks.some(u=>target.command==='attack'&&tankTarget(sim,target)?.id===u.id))return false;
  for(const tank of tanks)if(tank.attackTarget!==target.id||tank.command!=='attack'){
   sim._interruptWork(tank);sim._sendUnitToAttack(tank,target,tank.id%8);
  }
@@ -128,7 +137,7 @@ export function updateTeamApproaches(sim){
   const target=sim.units.find(u=>u.id===unit.teamAdvanceTargetId&&!u.dead);
   if(!target||!unit.teamId){unit.teamAdvanceTargetId=null;unit.command='idle';unit.path=[];continue;}
   const tanks=sim.units.filter(u=>eligibleMember(u)&&u.teamId&&combatRole(u)==='tank');
-  if(!tanks.length||tanks.some(t=>tankTarget(sim,target)?.id===t.id)){
+  if(!tanks.length||tanks.some(t=>target.command==='attack'&&tankTarget(sim,target)?.id===t.id)){
    unit.teamAdvanceTargetId=null;sim._sendUnitToAttack(unit,target,unit.teamAdvanceSlot??0);continue;
   }
   if((unit.teamAdvanceAt??0)>sim.clock||sim.repathBudgetRemaining<=0)continue;

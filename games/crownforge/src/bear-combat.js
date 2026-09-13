@@ -1,4 +1,4 @@
-import { UNIT_TYPES } from './config.js?v=20260912-deathless1';
+import { UNIT_TYPES } from './config.js?v=20260912-encounter1';
 
 export const BEAR_FURY = Object.freeze({threshold:.1, multiplier:6, extraTargets:2, radius:14, arrowHits:30});
 export const THICK_HIDE=Object.freeze({armorBonus:100,damageMultiplier:.5});
@@ -37,3 +37,5 @@ export function updateGreatwoodDefiance(bear,units,dt=0){
  bear.defianceScanRemaining=GREATWOOD_DEFIANCE.scanInterval;
  bear.greatwoodDefianceStacks=units.filter(u=>u!==bear&&!u.dead&&u.hp>0&&['player','enemy'].includes(u.faction)&&UNIT_TYPES[u.type]&&!UNIT_TYPES[u.type].wildlife&&Math.hypot(u.x-bear.x,u.z-bear.z)<=GREATWOOD_DEFIANCE.radius).length;
 }
+
+export const kingsbaneMultiplier=(attacker,target)=>attacker?.type==='grizzly'&&UNIT_TYPES[target?.type]?.combatRole==='tank'&&!target.dead&&target.hp>0&&target.hp/target.maxHp<.5?2:1;

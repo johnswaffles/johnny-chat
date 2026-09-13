@@ -31,18 +31,18 @@ test('rapid arrows respect both Heart damage-reduction tiers and true health, wi
 test('fury kills the primary while Bloodclaw deals percentage AoE; walls and wards protect',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');b.lastLightCurseActive=true;
  const primary=s.addUnit('soldier',101.4,100,'player');primary.hp=primary.maxHp=500;
- const second=s.addUnit('raider',102,101,'enemy'),third=s.addUnit('shieldbearer',103,100,'player');
+ const second=s.addUnit('raider',102,101,'enemy'),third=s.addUnit('militia',103,100,'player');
  const fourth=s.addUnit('soldier',105,100,'player'),outside=s.addUnit('soldier',115,100,'player'),blocked=s.addUnit('soldier',101,100,'player'),ward=s.addUnit('raider',100,101,'enemy');ward.lastLightWardTimer=20;
  const worker=s.addUnit('villager',100,102,'player'),bear2=s.addUnit('grizzly',100,103,'wildlife');
  s._hasCombatLineOfSight=(u,t)=>t!==blocked;
  s._sendUnitToAttack(b,primary);let hits=0;
  const apply=s._applyUnitDamage.bind(s);s._applyUnitDamage=(t,d,a,...rest)=>{if(a===b)hits++;return apply(t,d,a,...rest);};
  for(let i=0;i<60&&!primary.dead;i++)s._updateAttack(b,1/60);
- assert(primary.dead&&!second.dead&&!third.dead);assert.equal(second.hp,second.maxHp*.75);assert(third.hp<third.maxHp);assert.equal(hits,6);assert.equal(fourth.hp,fourth.maxHp*.75);assert.equal(worker.hp,worker.maxHp*.75);
+ assert(primary.dead&&!second.dead&&!third.dead);assert.equal(second.hp,second.maxHp*.5);assert(third.hp<third.maxHp);assert.equal(hits,6);assert.equal(fourth.hp,fourth.maxHp*.5);assert.equal(worker.hp,worker.maxHp*.5);
  for(const u of [outside,blocked,ward,bear2])assert.equal(u.hp,u.maxHp);
  // Scanning during the follow-through cannot grant another instant strike.
  const phase=b.attackPhase,elapsed=b.attackPhaseElapsed;updateWildlife(s,1);assert.equal(b.attackPhase,phase);assert.equal(b.attackPhaseElapsed,elapsed);
- step(s,b,.3);assert.equal(hits,6);assert.equal(fourth.hp,fourth.maxHp*.75);
+ step(s,b,.3);assert.equal(hits,6);assert.equal(fourth.hp,fourth.maxHp*.5);
 });
 test('an escaped primary means the whole committed fury swipe misses',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife'),p=s.addUnit('soldier',101.3,100,'player'),near=s.addUnit('soldier',102,101,'player');b.hp=18;
@@ -83,7 +83,7 @@ test('running fighters cannot hit through walls or reach an escaped target',()=>
 });
 test('bear lore reveals trickery only after Last Light, with accurate active buff numbers',()=>{
  const s=arena(),b=s.addUnit('grizzly',100,100,'wildlife');let statuses=unitStatuses(b);
- assert.deepEqual(statuses.map(x=>x.id),['greatwoodDefiance','crushingClaws','firstCondemnation','elderhide','thickHide','bearLineage']);
+ assert.deepEqual(statuses.map(x=>x.id),['kingsbaneHunger','falteringCrown','greatwoodDefiance','crushingClaws','firstCondemnation','elderhide','thickHide','bearLineage']);
  assert(!/Last Light|lesser rune|lure|1 HP/.test(statuses.map(x=>x.lore+' '+x.effect).join(' ')));
  b.lastLightCurseActive=true;statuses=unitStatuses(b);const fury=statuses.find(x=>x.id==='greatwoodFury');assert(fury);assert.match(fury.effect,/six/);assert.match(fury.effect,/front 160-degree/);assert.match(fury.effect,/14 units/);assert.match(fury.art,/cursed-bears/);
  assert.match(statuses.find(x=>x.id==='lastLight').lore,/bait/);assert.equal(b.hp,b.maxHp);

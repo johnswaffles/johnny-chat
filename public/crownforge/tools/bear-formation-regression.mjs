@@ -18,7 +18,7 @@ test('AoE damages front and rear equally with tank aggro and excludes walls and 
  const front=s.addUnit('soldier',104,101,'player'),rear=s.addUnit('soldier',97,100,'player'),far=s.addUnit('villager',116,100,'player'),wall=s.addUnit('soldier',105,100,'player');
  s._hasCombatLineOfSight=(a,u)=>u!==wall;s._applyUnitDamage(b,1,t);s._startAttackCycle(b,t);
  assert(inBearSwipe(b,front));assert(!inBearSwipe(b,rear));s._applyGrizzlyCleave(b,t);
- assert.equal(front.hp,front.maxHp*.75);assert.equal(rear.hp,rear.maxHp*.75);for(const u of [far,wall])assert.equal(u.hp,u.maxHp);
+ assert.equal(front.hp,front.maxHp*.5);assert.equal(rear.hp,rear.maxHp*.5);for(const u of [far,wall])assert.equal(u.hp,u.maxHp);
  // Moving the primary behind a committed claw swing causes a miss.
  t.x=97;assert(!inBearSwipe(b,t));
 });
