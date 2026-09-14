@@ -1,7 +1,7 @@
-import {effectIcon} from './status-icons.js?v=20260914-wizardportrait5';
-import { bearVariant } from './bear-variants.js?v=20260914-wizardportrait5';
-import {UNIT_TYPES} from './config.js?v=20260914-wizardportrait5';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260914-wizardportrait5';
+import {effectIcon} from './status-icons.js?v=20260914-bearnorune1';
+import { bearVariant } from './bear-variants.js?v=20260914-bearnorune1';
+import {UNIT_TYPES} from './config.js?v=20260914-bearnorune1';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260914-bearnorune1';
 
 const unitName=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type].label;
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';
@@ -35,7 +35,7 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     const statuses=unitStatuses(u),next=(u.bearVariant??'')+'|'+statuses.map(s=>s.id).join('|');
     if(key!==next){
       container.replaceChildren();
-      for(const status of statuses){const b=document.createElement('button');b.type='button';b.className='unit-status';b.dataset.status=status.id;b.innerHTML=`${u.type==='wizard'||['stormwardCovenant','skybreakerFavor'].includes(status.id)?effectIcon(status):sigilSvg(status.rune)}<span><b></b><small></small></span>`;bindLoreTip(b);b.querySelector('b').textContent=status.name;b.onclick=()=>open(status.id);container.append(b);}
+      for(const status of statuses){const b=document.createElement('button');b.type='button';b.className='unit-status';b.dataset.status=status.id;b.innerHTML=`${effectIcon(status)}<span><b></b><small></small></span>`;bindLoreTip(b);b.querySelector('b').textContent=status.name;b.onclick=()=>open(status.id);container.append(b);}
       if(!statuses.length){const p=document.createElement('p');p.className='unit-no-status';p.textContent='No active buffs or curses';container.append(p);}
     }
     for(const status of statuses){const b=container.querySelector(`[data-status="${status.id}"]`);b.querySelector('small').textContent=status.detail;b.setAttribute('aria-label',`${status.name}: ${status.detail}. Open details`);b.dataset.tooltip=`${status.name}\n${status.summary??''}\n${status.detail}\n${status.effect??''}`;}
@@ -50,7 +50,7 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     if(profile.type==='wizard'){const art=d$('.unit-lore-hero img');art.src=status?.art??'./assets/starveil/portrait-v5.png';art.style.objectPosition='50% 18%';art.alt=status?.id==='heavenrend'?'Vaelthryx the Skybreaker':'Starveil Arcanist';}
     if(profile.type==='grizzly'){const art=d$('.unit-lore-hero img'),src=status?.art??FIRST_CONDEMNATION.art;if(art.getAttribute('src')!==src)art.src=src;art.alt=`${bearVariant(profile).name}, a cursed Greatwood bear`; }
     dialog.classList.toggle('has-fury-art',status?.id==='greatwoodFury');
-    d$('.unit-lore-sigil').innerHTML=status&&(profile.type==='wizard'||['stormwardCovenant','skybreakerFavor'].includes(status.id))?effectIcon(status):sigilSvg(status?.rune??'ward');
+    d$('.unit-lore-sigil').innerHTML=status?effectIcon(status):sigilSvg('ward');
     d$('.unit-lore-kind').textContent=status?.kind??'Character';
     d$('.unit-lore-name').textContent=status?.name??UNIT_TYPES[profile.type].label;
     d$('.unit-lore-prose').textContent=status?.lore??status?.summary??`${UNIT_TYPES[profile.type].label} of ${factionName(profile)}.`;

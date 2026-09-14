@@ -1,25 +1,25 @@
-import {drawStormDragons} from './storm-dragon-renderer.js?v=20260914-wizardportrait5';
-import {drawWizardMagic} from './wizard-magic.js?v=20260914-wizardportrait5';
-import {drawLastLightChorus} from './last-light-chorus-vfx.js?v=20260914-wizardportrait5';
+import {drawStormDragons} from './storm-dragon-renderer.js?v=20260914-bearnorune1';
+import {drawWizardMagic} from './wizard-magic.js?v=20260914-bearnorune1';
+import {drawLastLightChorus} from './last-light-chorus-vfx.js?v=20260914-bearnorune1';
 import { LivingCrownHall } from './crown-hall-living.js?v=20260911-livinghall1';
-import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260914-wizardportrait5';
-import {corpseLifetime} from './bear-combat.js?v=20260914-wizardportrait5';
+import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260914-bearnorune1';
+import {corpseLifetime} from './bear-combat.js?v=20260914-bearnorune1';
 import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
-import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260914-wizardportrait5';
-import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260914-wizardportrait5';
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260914-wizardportrait5';
-import {paintedRosterFactories} from './painted-roster-rig.js?v=20260914-wizardportrait5';
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260914-wizardportrait5';
+import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260914-bearnorune1';
+import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260914-bearnorune1';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260914-bearnorune1';
+import {paintedRosterFactories} from './painted-roster-rig.js?v=20260914-bearnorune1';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260914-bearnorune1';
 import { BUILDING_DEPTH } from './building-depth-data.js?v=20260909-cursedbears1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260909-cursedbears1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260911-blueward1';
-import { CrownforgeLandscape } from './landscape.js?v=20260914-wizardportrait5';
-import { ForestCache } from './forest-cache.js?v=20260914-wizardportrait5';
-import { CrownforgeMeadow } from './meadow.js?v=20260914-wizardportrait5';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260914-wizardportrait5';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260914-wizardportrait5';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260914-wizardportrait5';
+import { CrownforgeLandscape } from './landscape.js?v=20260914-bearnorune1';
+import { ForestCache } from './forest-cache.js?v=20260914-bearnorune1';
+import { CrownforgeMeadow } from './meadow.js?v=20260914-bearnorune1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260914-bearnorune1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260914-bearnorune1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260914-bearnorune1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -2304,7 +2304,7 @@ export class CrownforgeRenderer {
   getCurseRuneAtScreen(simulation,point){
     let found=null,best=Infinity;
     for(const unit of simulation.units){
-      if(unit.dead||!curseRuneKind(unit))continue;
+      if(unit.dead||unit.type==='grizzly'||!curseRuneKind(unit))continue;
       const mark=this.curseRuneGeometry(unit),distance=Math.hypot(point.x-mark.x,point.y-mark.y);
       if(distance<=mark.size*.65+3&&distance<best){found=unit;best=distance;}
     }
@@ -2356,7 +2356,7 @@ export class CrownforgeRenderer {
       ctx.restore();
     }
 
-    const runeKind=curseRuneKind(unit);
+    const runeKind=unit.type==='grizzly'?null:curseRuneKind(unit);
     if(runeKind){const mark=this.curseRuneGeometry(unit,point,screenSize);drawCurseSigil(ctx,runeKind,mark.x,mark.y,mark.size);}
 
     if (CHARACTER_RIGS[unit.type]) {

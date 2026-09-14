@@ -31,7 +31,7 @@ const glyphs={
 };
 export const isDebuff=s=>s.id==='lastLight'||s.id==='stun'||s.rune==='curse'||s.kind?.toLowerCase().includes('impairment');
 export function effectIcon(status){
- const colors={starveilOath:46,starshard:190,fallingConstellation:275,eventidePassage:285,distantStar:205,astralMantle:225,heavenrend:195,stormwardCovenant:180,skybreakerFavor:42,unboundSovereign:260};
+ const colors={kingsbaneHunger:18,falteringCrown:330,greatwoodDefiance:140,greatwoodColossus:35,bloodclawReckoning:0,unbrokenWild:155,deathlessHeart:280,crushingClaws:28,firstCondemnation:270,elderhide:45,thickHide:195,bearLineage:40,elderbloodSpellward:220,greatwoodFury:8,starveilOath:46,starshard:190,fallingConstellation:275,eventidePassage:285,distantStar:205,astralMantle:225,heavenrend:195,stormwardCovenant:180,skybreakerFavor:42,unboundSovereign:260};
  const hue=colors[status.id]??(isDebuff(status)?'315':status.rune==='fury'?'22':status.rune==='divine'?'46':'165');
  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="hsl(${hue} 85% 72%)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" style="--sigil-hue:${hue}"><path d="${glyphs[status.id]??'m12 2 9 10-9 10-9-10Z M12 7v10 M7 12h10'}"/></svg>`;
 }
