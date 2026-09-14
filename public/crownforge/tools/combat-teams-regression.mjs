@@ -89,12 +89,12 @@ test('Mercy sustains a critically wounded tank through a thirty-second stacked-r
  assert(hits>=3);assert(heals>=2);assert(!tank.dead);assert(tank.hp>0);
 });
 
-test('Add all enrolls the entire living friendly roster without changing selection or resetting existing healers',()=>{
+test('Add all enrolls the entire living friendly roster and selects it without resetting existing healers',()=>{
  const s=arena(),tank=s.addUnit('shieldbearer',100,100,'player'),healer=s.addUnit('villager',103,100,'player'),dps=s.addUnit('soldier',105,100,'player'),enemy=s.addUnit('soldier',107,100,'enemy'),bear=s.addUnit('grizzly',110,100,'wildlife'),dead=s.addUnit('soldier',112,100,'player');dead.dead=true;dead.hp=0;
  healer.command='gather';healer.orderQueue=[{kind:'move',x:130,z:130}];select(s,[tank]);assert.equal(s.assignAllUnitsTeam(),1);
  for(const u of [tank,healer,dps])assert.equal(u.teamId,1);for(const u of [enemy,bear,dead])assert(!u.teamId);
- assert.deepEqual(s.selectedIds,[tank.id]);assert.equal(healer.command,'idle');assert.deepEqual(healer.orderQueue,[]);
- healer.healCooldown=.5;s.assignAllUnitsTeam();assert.equal(healer.healCooldown,.5);
+ assert.deepEqual(s.selectedIds,[tank.id,healer.id,dps.id]);assert([tank,healer,dps].every(u=>u.selected));assert.equal(healer.command,'idle');assert.deepEqual(healer.orderQueue,[]);
+ healer.healCooldown=.5;select(s,[dps]);s.assignAllUnitsTeam();assert.deepEqual(s.selectedIds,[tank.id,healer.id,dps.id]);assert.equal(healer.healCooldown,.5);
 });
 
 test('team Hearthkin complete a building order and then resume healing',()=>{

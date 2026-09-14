@@ -1,20 +1,20 @@
-import {stormwardDamage} from './storm-dragon.js?v=20260913-skybreaker2';
-import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260913-skybreaker2';
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260913-skybreaker2';
-import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260913-skybreaker2';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260913-skybreaker2';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260913-skybreaker2';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260913-skybreaker2';
+import {stormwardDamage} from './storm-dragon.js?v=20260914-addselect1';
+import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260914-addselect1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260914-addselect1';
+import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260914-addselect1';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260914-addselect1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260914-addselect1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260914-addselect1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260913-skybreaker2';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260914-addselect1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260913-skybreaker2';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260914-addselect1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260913-skybreaker2';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260914-addselect1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -4430,9 +4430,12 @@ export class CrownforgeSimulation {
 
   _applyUnitDamage(target, amount, attacker, {damageType='weapon',healthFloor=0,areaOfEffect=false,magical=false}={}) {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
-    const rawDamage = Math.max(0, Number(amount) || 0)*kingsbaneMultiplier(attacker,target);
     const defense=UNIT_TYPES[target.type];
-    if(defense?.magicImmune&&(magical||['magic','spell','arcane','divine','fire','frost','lightning','shadow','holy'].includes(damageType)))return {damage:0,killed:false,warded:false,blocked:true,magicImmune:true,cursed:false};
+    const magicalHit=magical||['magic','spell','arcane','divine','fire','frost','lightning','shadow','holy'].includes(damageType);
+    // Elderblood Spellward applies before hide, crowd armor and last stands.
+    // Damage tags also cover dragon breath after its summoner has died.
+    const rawDamage = Math.max(0, Number(amount) || 0)*kingsbaneMultiplier(attacker,target)*(magicalHit?(defense?.magicDamageMultiplier??1):1);
+    if(defense?.magicImmune&&magicalHit)return {damage:0,killed:false,warded:false,blocked:true,magicImmune:true,cursed:false};
     if(rawDamage>0&&defense?.dodgeChance&&damageType==='weapon'&&!areaOfEffect&&attacker?.kind==='unit'){
       target.incomingSwingCount=(target.incomingSwingCount??0)+1;
       // One evasion per twenty incoming melee swings; repeatable across saves.
@@ -5581,7 +5584,7 @@ export class CrownforgeSimulation {
   }
   getCombatTeams(){return teams(this);}
   assignSelectedTeam(id=null){return assignTeam(this,id);}
-  assignAllUnitsTeam(){return assignTeam(this,null,true);}
+  assignAllUnitsTeam(){const id=assignTeam(this,null,true);if(id)selectTeam(this,id);return id;}
   leaveSelectedTeam(){return leaveTeam(this);}
   disbandTeam(id){return leaveTeam(this,id);}
   selectCombatTeam(id){return selectTeam(this,id);}

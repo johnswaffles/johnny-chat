@@ -1,6 +1,6 @@
-import {UNIT_TYPES} from './config.js?v=20260913-skybreaker2';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260913-skybreaker2';
-import {bearVariant} from './bear-variants.js?v=20260913-skybreaker2';
+import {UNIT_TYPES} from './config.js?v=20260914-addselect1';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260914-addselect1';
+import {bearVariant} from './bear-variants.js?v=20260914-addselect1';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
 const tank=u=>UNIT_TYPES[u.type]?.combatRole==='tank';
@@ -37,6 +37,7 @@ export function portraitAsset(u){
  return null;
 }
 const glyphs={
+ elderbloodSpellward:'M12 2 3 6v7q1 6 9 9 8-3 9-9V6Z M14 5l-6 8h5l-2 6 7-10h-5Z M5 4l14 16',
  heavenrend:'M2 5l7 3 3-6 3 6 7-3-4 9-5-3-2 5-3-2Z M14 13l-4 6h4l-3 4',stormwardCovenant:'M12 2 3 6v7q1 6 9 9 8-3 9-9V6Z M14 6l-6 7h5l-2 5 6-8h-5Z',skybreakerFavor:'m14 2-9 12h7l-2 8 10-13h-8Z',unboundSovereign:'M2 4l8 5 2-6 2 6 8-5-5 13-5-4-5 4Z',
 
  starveilOath:'m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z',starshard:'m3 21 9-19 2 8 8 2Z M3 15l6-6',fallingConstellation:'m4 3 3 5-3 5 M12 2l3 5-3 5 M20 5l-3 5 3 5 M4 21l8-4 8 4',astralMantle:'M12 2 3 6v6q0 7 9 10 9-3 9-10V6Z M8 12l4-5 4 5-4 5Z',
@@ -70,7 +71,7 @@ export function effectIcon(status){
  return `<svg viewBox="0 0 24 24" aria-hidden="true" style="--sigil-hue:${hue}"><path d="${glyphs[status.id]??'m12 2 9 10-9 10-9-10Z M12 7v10 M7 12h10'}"/></svg>`;
 }
 export function createCombatFrames(sim,renderer){
- const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260913-skybreaker2';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260914-addselect1';document.head.append(css);
  const host=document.createElement('aside');host.className='combat-frames';host.hidden=true;host.setAttribute('aria-label','Encounter portraits');
  host.innerHTML='<header><span>IN COMBAT</span><b>Encounter</b><button type="button" aria-label="Minimize encounter portraits" aria-expanded="true">−</button></header><div class="combat-frame-list"></div>';
  document.querySelector('.game-shell').append(host);

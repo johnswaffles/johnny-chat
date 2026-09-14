@@ -85,3 +85,7 @@ One living or training wizard per side, shared across all team groups and observ
 **Heavenrend:** manual Starveil Arcanist summon; 300-second cooldown; target/current or nearest enemy within 45 units. Ten-second flight, six-second lightning sweep across a 48-unit line. 150 lightning AoE damage every 0.5 seconds within 12 units of the moving breath center. Friendly units are excluded; Hearthkin magic immunity and tank AoE defenses apply. Flies over terrain; no building damage.
 
 **Stormward Covenant:** 30% incoming damage reduction for 12 seconds on allies within 28 units at summon time. **Skybreaker's Favor:** +50% Starshard damage for 12 seconds on the wizard. **Unbound Sovereign:** untargetable dragon continues its flight if the wizard dies. Full original lore and art: [VAELTHRYX_SKYBREAKER.md](VAELTHRYX_SKYBREAKER.md).
+
+## Elderblood Spellward
+
+All Greatwood bear bloodlines resist 95% of incoming magic. Only 5% passes to existing Thick Hide, Defiance, and Heart defenses. This includes Starshard, Falling Constellation, and Heavenrend, even after the wizard dies. With Thick Hide alone, a 100-damage spell deals 2.5 HP. Physical weapons and Elderhide arrow protection are unchanged. Wizard and dragon presentation remains spectacular while their damage against bears is intentionally limited.

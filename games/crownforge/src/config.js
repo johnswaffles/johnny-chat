@@ -146,6 +146,7 @@ const HEARTHKIN_WORKER_ABILITIES = Object.freeze({
 export const UNIT_TYPES = {
   wizard:{label:'Starveil Arcanist',asset:'soldier',renderSize:124,speed:2.1,acceleration:9,braking:12,radius:.44,maxHp:210,attack:36,range:18,cooldown:2.2,attackTiming:{anticipation:.35,contact:.25,recovery:.4},autoAggroRadius:23,combatRole:'damage',ranged:true,canAttackUnits:true,canAttackBuildings:false,sideLimit:1},
   grizzly: {
+    magicDamageMultiplier: 0.05,
     label: 'Greatwood Grizzly', wildlife: true, renderSize: 218,
     curseImmune: true, innateCurse: 'firstCondemnation', workerStrikeFraction: 1.2,
     speed: 2.85, acceleration: 8.5, braking: 12, radius: .82,

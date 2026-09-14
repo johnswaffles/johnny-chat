@@ -41,3 +41,5 @@ Lore: Original epic fantasy painted card illustration of Vaelthryx descending fr
 Targeted tests cover the exact five-minute cooldown, invalid casts, swept damage, friendly safety, magic immunity, tank defenses, blessing expiration, save/load pulse continuity, summoner death, reset, and the existing wizard mechanics. The local preview uses durable stationary training targets and offers a mid-flight hold control. Reload that development page to start a fresh preview; the in-game ability retains its full cooldown.
 
 The enlarged flight uses a higher mouth position, a proportionally larger shadow, and a dense plasma breath with five twisting streams, a heavy lightning core, fast luminous particles and branching ground arcs. Damage, radius, buffs and the five-minute cooldown are unchanged. The development preview widens its camera for the enormous wingspan.
+
+Greatwood bears now have Elderblood Spellward: 95% resistance to the dragon’s lightning before their existing hide and Heart defenses.

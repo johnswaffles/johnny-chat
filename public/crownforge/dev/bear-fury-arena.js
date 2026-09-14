@@ -1,4 +1,4 @@
-import { BEAR_VARIANT_IDS, BEAR_VARIANTS } from '../src/bear-variants.js?v=20260913-skybreaker2';
+import { BEAR_VARIANT_IDS, BEAR_VARIANTS } from '../src/bear-variants.js?v=20260914-addselect1';
 import {UNIT_TYPES,CONFIG} from '../src/config.js';
 import {bearFuryActive} from '../src/bear-combat.js';
 // Local review controls. This module is never loaded by the game entry point.

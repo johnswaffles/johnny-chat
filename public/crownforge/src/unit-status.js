@@ -1,15 +1,15 @@
-import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260913-skybreaker2';
+import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260914-addselect1';
 export const lastCrownMercyActive=unit=>Boolean(unit&&!unit.dead&&unit.hp>0&&UNIT_TYPES[unit.type]?.combatRole==='tank'&&unit.hp/unit.maxHp<.1);
-import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260913-skybreaker2';
-import { bearVariant } from './bear-variants.js?v=20260913-skybreaker2';
-import {UNIT_TYPES} from './config.js?v=20260913-skybreaker2';
-import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260913-skybreaker2';
+import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260914-addselect1';
+import { bearVariant } from './bear-variants.js?v=20260914-addselect1';
+import {UNIT_TYPES} from './config.js?v=20260914-addselect1';
+import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260914-addselect1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
   summary:'The first law written beneath their skin.',
   lore:'When the first kings felled the grove that held the sleeping stars, the old gods called the grizzlies of the Greatwood to judgment. The bears had devoured the grove’s keepers. For that hunger, every generation of their blood was bound to guard the forest they had betrayed. The First Condemnation is no passing spell: it is a law laid beneath flesh and bone. Sorcery born after that ancient sentence cannot unmake it. Only the hands that shaped the first dawn may rewrite its terms.',
-  effect:'Permanent elder magic. Lesser magic cannot weaken or stun these bears. Their true wounds still matter, and steel can kill them. Elderhide reduces arrow damage by 95%, then Thick Hide halves the remainder. Ward-protected workers cannot be targeted or harmed.',
+  effect:'Permanent elder magic. Lesser magic cannot weaken or stun these bears. Their true wounds still matter, and steel can kill them. Elderblood Spellward rejects 95% of hostile magic. Elderhide reduces arrow damage by 95%, then Thick Hide halves the remainder. Ward-protected workers cannot be targeted or harmed.',
   art:'./assets/crownforge-first-condemnation-v1.png?v=20260906-firstcondemnation1',
 });
 export const GREATWOOD_FURY_ART='./assets/greatwood-fury-card-v1.png?v=20260909-bearfury1';
@@ -94,6 +94,7 @@ export function unitStatuses(unit){
   if(elder){
     const bloodline=bearVariant(unit);
     statuses.push({...FIRST_CONDEMNATION,art:bloodline.art,detail:'Permanent · elder magic',rune:'divine'});
+    statuses.push({id:'elderbloodSpellward',name:'Elderblood Spellward',kind:'Innate magic resistance',detail:'95% reduced magical damage',summary:'The old gods wrote their storm into this blood. Lesser sorcery finds no purchase.',lore:'The First Condemnation did more than bind the Greatwood bears to their forest. It steeped their blood in the magic that shaped the first dawn. Starfire breaks upon that ancient inheritance, and even a dragon’s thunder reaches the heart as little more than a distant echo.',effect:'Only 5% of incoming magical damage passes this ward, including Starshard, Falling Constellation, and Vaelthryx’s Heavenrend. Thick Hide, Defiance, and Heart protections then reduce it further. With Thick Hide alone, a 100-damage spell deals 2.5 damage. Physical weapons and arrows retain their existing defenses.',rune:'ward',art:bloodline.art});
     statuses.push({id:'elderhide',name:'Elderhide',kind:'Permanent protection',detail:'95% reduced arrow damage',summary:'Ancient hide turns aside all but a whisper of each arrow.',lore:'The sentence of the old gods sank into hide as well as blood. Arrowheads splinter against the Greatwood bears like rain upon a weathered standing stone.',effect:'Reduces incoming arrow damage by 95%. Thick Hide then halves the remaining damage, for 97.5% combined reduction before Defiance and Heart protection. Arrow strength still matters; existing wounds are never restored.',rune:'ward',art:bloodline.art});
     statuses.push({id:'thickHide',name:'Thick Hide',kind:'Permanent armor',detail:'+100% armor · twice the durability',summary:'A second life of punishment beneath the fur.',lore:'The old sentence hardened into hide. Dense guard hairs cover layers of scarred flesh that turn blades and swallow the force of arrows.',effect:'Reduces all incoming damage by 50% after Elderhide. Stacks with Elderhide for 97.5% less arrow damage before Defiance and Heart protection. Does not heal wounds or change the fury threshold.',rune:'ward',art:bloodline.art});
     statuses.push({id:'bearLineage',name:bloodline.name,kind:bloodline.kind,detail:'Greatwood bloodline · read their story',summary:bloodline.summary,lore:`${bloodline.lore}\n\n${bloodline.resilience}`,effect:'Bound by the permanent First Condemnation. Thick Hide grants +100% armor and twice the durability. The old gods alone can rewrite the sentence.',rune:'divine',art:bloodline.art});

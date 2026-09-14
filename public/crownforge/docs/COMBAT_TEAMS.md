@@ -55,3 +55,7 @@ Woodland encounters: new bears require a clear encounter footprint near a woodla
 ## Starveil Arcanist
 
 The wizard is ranged damage support. He holds spell range rather than joining the melee surround ring, and honors tank pull staging. His one-per-side cap is independent of combat team IDs; splitting units into multiple teams never creates another wizard slot. Queued training at any observatory reserves the side's slot. The enemy side has its own independent slot without reactivating the paused enemy faction.
+
+## Elderblood Spellward
+
+All Greatwood bear bloodlines resist 95% of incoming magic. Only 5% passes to existing Thick Hide, Defiance, and Heart defenses. This includes Starshard, Falling Constellation, and Heavenrend, even after the wizard dies. With Thick Hide alone, a 100-damage spell deals 2.5 HP. Physical weapons and Elderhide arrow protection are unchanged. Wizard and dragon presentation remains spectacular while their damage against bears is intentionally limited.
