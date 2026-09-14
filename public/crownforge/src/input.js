@@ -83,6 +83,7 @@ export class CrownforgeInput {
       this.cursorDirty = true;
     }, { passive: false });
     window.addEventListener('keydown', (event) => {
+      if (document.querySelector('dialog[data-pauses-game][open]')) { this.keys.clear(); return; }
       if (event.key === 'Escape') {
         this.keys.clear();
         this.cancelBuildMode();

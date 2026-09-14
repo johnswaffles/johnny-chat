@@ -1,0 +1,6 @@
+{
+  "tool": "Built-in image_gen",
+  "prompt": "Use case: stylized-concept. Create a premium fantasy game lore card illustration of Vaelthryx the Skybreaker, an immense ancient midnight-blue storm dragon with silver crown-like horns and luminous pale gold throat scales, soaring above storm clouds and tiny distant medieval mountains. New original composition, anatomical clarity is paramount: one head on one neck, one continuous torso, exactly two batlike wings attached at shoulders with coherent membrane fingers, exactly four legs with distinct elbows and single feet, one long tapering tail. Three-quarter side view in flight, entire silhouette fits comfortably inside landscape 3:2 frame. Wings spread in a readable majestic arc, limbs separated clearly from tail and wings. Head facing right breathing a focused blue-white lightning torrent downward to right, electricity stays away from anatomy so every limb is legible. Dark sapphire scales, elegant silver horns, painterly cinematic high detail, restrained background violet thunderclouds, strong clear silhouette, no chaotic overlapping spikes, no duplicate claws, no fused limbs, no extra heads, no text or UI or borders. Awe-inspiring and dignified, a freed primordial sovereign, not a generic monster.",
+  "source": "exec-0b2842db-7aaa-4f62-b820-97e6cf677739.png",
+  "asset": "lore-v2.png"
+}

@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260914-eventide1';
+import { CONFIG } from './config.js?v=20260914-wizardlore3';
 
 // Presentation only: every effect is derived from position and render time.
 // Nothing consumes the simulation RNG or changes an entity's state.

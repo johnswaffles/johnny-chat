@@ -1,18 +1,18 @@
-import {createSkybreakerControls} from './skybreaker-controls.js?v=20260914-eventide1';
-import {createCombatFrames} from './combat-frames.js?v=20260914-eventide1';
+import {createSkybreakerControls} from './skybreaker-controls.js?v=20260914-wizardlore3';
+import {createCombatFrames} from './combat-frames.js?v=20260914-wizardlore3';
 import {createUnitActivity} from './unit-activity.js?v=20260912-activity1';
-import {createTeamControls} from './team-controls.js?v=20260914-eventide1';
-import {combatRole} from './combat-teams.js?v=20260914-eventide1';
-import { bearVariant } from './bear-variants.js?v=20260914-eventide1';
-import {requestGrizzlyPair} from './wildlife.js?v=20260914-eventide1';
-import {createUnitInspector} from './unit-inspector.js?v=20260914-eventide1';
-import {displayedUnitHealth} from './unit-status.js?v=20260914-eventide1';
-import { setupPresentation } from './presentation.js?v=20260914-eventide1';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260914-eventide1';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260914-eventide1';
+import {createTeamControls} from './team-controls.js?v=20260914-wizardlore3';
+import {combatRole} from './combat-teams.js?v=20260914-wizardlore3';
+import { bearVariant } from './bear-variants.js?v=20260914-wizardlore3';
+import {requestGrizzlyPair} from './wildlife.js?v=20260914-wizardlore3';
+import {createUnitInspector} from './unit-inspector.js?v=20260914-wizardlore3';
+import {displayedUnitHealth} from './unit-status.js?v=20260914-wizardlore3';
+import { setupPresentation } from './presentation.js?v=20260914-wizardlore3';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260914-wizardlore3';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260914-wizardlore3';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
-import { CrownforgeRenderer } from './renderer.js?v=20260914-eventide1';
-import { CrownforgeSimulation } from './simulation.js?v=20260914-eventide1';
+import { CrownforgeRenderer } from './renderer.js?v=20260914-wizardlore3';
+import { CrownforgeSimulation } from './simulation.js?v=20260914-wizardlore3';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-cursedbears1';
 
@@ -1012,6 +1012,13 @@ function frame(now) {
     loadingVeil.classList.add('is-ready');
     loadingVeil.setAttribute('aria-hidden', 'true');
     window.setTimeout(() => { loadingVeil.hidden = true; }, 450);
+  }
+
+  // Keep advancing the wall-clock baseline above, so reading never queues catch-up ticks.
+  if (document.querySelector('dialog[data-pauses-game][open]')) {
+    input.keys.clear();
+    requestAnimationFrame(frame);
+    return;
   }
 
   input.update(delta);

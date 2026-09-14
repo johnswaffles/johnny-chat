@@ -58,3 +58,11 @@ The effect pairs an imploding star iris with a distant nebula doorway: engraved 
 ### Starfire gathering
 
 Every Starshard now gathers energy through two counter-rotating ground seals and broken outer rune arcs. Four light streams and rising motes feed a growing blue-white sphere at the staff. Orbiting bands and a bright final crest build into the launch. The charge stays visible during anticipation and the short pre-release contact phase; the projectile emerges from the same visual point before joining its flight path. No spell damage, timing or cooldown changes. Reduced motion retains the rings and sphere while omitting streams, motes and branching arcs. `dev/starveil.html` provides Inspect starfire buildup and Watch starfire buildup.
+
+## Native-detail sprite revision
+
+The original 64-pose atlas remains preserved. Runtime now uses four independently generated directional sheets (`arcanist-{se,sw,ne,nw}-detail-v2.png`) with 16 paintings each. Standing poses contain 302–312 pixels of native source detail, up from about 143 pixels. The preparation script removes the supplied neutral matte and packs each isolated painting into a 400px cell without enlarging its pixels. Existing world size and combat clocks remain unchanged. The wizard alone prepares full-resolution action frames to avoid a low-resolution pose during zoom.
+
+Review `dev/wizard-detail.html` for synchronized original/new animation comparisons. Source generation prompts and preparation details are in `assets/starveil/detail-v2-generation.json`; hashes and pose dimensions are recorded alongside the assets. Created with the built-in image generation tool.
+
+Wizard facing uses the camera-projected target or movement vector (`screenX = dx - dz`, `screenY = dx + dz`) to choose SE/SW/NE/NW paintings. Forced casting aim updates immediately; travel keeps the existing small boundary hysteresis. `dev/wizard-facing.html` exercises all four directions with real attack clocks.

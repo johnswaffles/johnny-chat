@@ -14,6 +14,24 @@
     {
       "file": "portrait-v1.png",
       "sha256": "9e69537cb4c5547cd137d4c868028943857dd8712146c86910b2792530e9bc23"
+    },
+    {
+      "file": "arcanist-se-detail-v2.png",
+      "sha256": "021cd346919ca012addea350aae67ef4782d7694d6ecb0fe80d606dfc13f28f7"
+    },
+    {
+      "file": "arcanist-sw-detail-v2.png",
+      "sha256": "cb2f57d0de62bfa9feff78bc718a54af84aedadc425ce5df0643ad4984137dbf"
+    },
+    {
+      "file": "arcanist-ne-detail-v2.png",
+      "sha256": "6970afe2d942a4bc7909cf75ad89560e2caa2b24af11b7cb7d639b69e58610ff"
+    },
+    {
+      "file": "arcanist-nw-detail-v2.png",
+      "sha256": "4b11c70d85fc62d9370a7a36113e1100e16c7805410ceb16a3eac5fc1cb6e08f"
     }
-  ]
+  ],
+  "detailRevision": "20260914-wizarddetail2",
+  "detailDescription": "64 native-detail paintings, four independent views. Original v1 atlas, portrait and observatory preserved."
 }

@@ -1,9 +1,9 @@
-import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260914-eventide1';
+import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260914-wizardlore3';
 export const lastCrownMercyActive=unit=>Boolean(unit&&!unit.dead&&unit.hp>0&&UNIT_TYPES[unit.type]?.combatRole==='tank'&&unit.hp/unit.maxHp<.1);
-import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260914-eventide1';
-import { bearVariant } from './bear-variants.js?v=20260914-eventide1';
-import {UNIT_TYPES} from './config.js?v=20260914-eventide1';
-import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260914-eventide1';
+import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260914-wizardlore3';
+import { bearVariant } from './bear-variants.js?v=20260914-wizardlore3';
+import {UNIT_TYPES} from './config.js?v=20260914-wizardlore3';
+import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260914-wizardlore3';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',

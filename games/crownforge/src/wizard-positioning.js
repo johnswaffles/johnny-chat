@@ -1,4 +1,4 @@
-import {CONFIG,UNIT_TYPES,RESOURCE_SIZE_TIERS} from './config.js?v=20260914-eventide1';
+import {CONFIG,UNIT_TYPES,RESOURCE_SIZE_TIERS} from './config.js?v=20260914-wizardlore3';
 export const EVENTIDE=Object.freeze({distance:30,danger:20,escapeClearance:38,veil:6,cooldown:8});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const hostile=(w,u)=>u!==w&&!u.dead&&u.hp>0&&u.faction!==w.faction&&u.faction!=='neutral'&&UNIT_TYPES[u.type]?.attack>0;

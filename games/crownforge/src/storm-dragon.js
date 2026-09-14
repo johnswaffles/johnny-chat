@@ -1,5 +1,5 @@
 export const SKYBREAKER=Object.freeze({cooldown:300,duration:10,breathStart:2,breathEnd:8,pulse:.5,damage:150,radius:12,range:45,buffDuration:12,wardReduction:.3,spellMultiplier:1.5});
-export const SKYBREAKER_ART='./assets/skybreaker/lore-v1.png';
+export const SKYBREAKER_ART='./assets/skybreaker/lore-v2.png';
 export const SKYBREAKER_LORE='Before the old gods named the winds, Vaelthryx carried the first thunder beneath his wings. They chained him above the world and used his heart to light their heavens. When the last star fell, its keeper broke one link. Vaelthryx shattered the rest. He answers no throne and suffers no bridle. When the Arcanist raises that stolen star, the Skybreaker comes to repay a freedom that even the gods could not reclaim.';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function dragonBreathPoint(pass,age=pass.age){const t=Math.max(0,Math.min(1,(age-SKYBREAKER.breathStart)/(SKYBREAKER.breathEnd-SKYBREAKER.breathStart)));return {x:pass.target.x+pass.direction.x*(t-.5)*48,z:pass.target.z+pass.direction.z*(t-.5)*48};}

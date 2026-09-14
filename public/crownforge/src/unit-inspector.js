@@ -1,6 +1,6 @@
-import { bearVariant } from './bear-variants.js?v=20260914-eventide1';
-import {UNIT_TYPES} from './config.js?v=20260914-eventide1';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260914-eventide1';
+import { bearVariant } from './bear-variants.js?v=20260914-wizardlore3';
+import {UNIT_TYPES} from './config.js?v=20260914-wizardlore3';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260914-wizardlore3';
 
 const unitName=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type].label;
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';
@@ -9,7 +9,7 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
   const host=document.createElement('section');host.id='unit-inspector';host.hidden=true;
   host.innerHTML='<div class="unit-inspect-overview"><button class="unit-portrait-button" type="button" aria-label="Open character details"><canvas width="120" height="160" aria-hidden="true"></canvas></button><div class="unit-vitals"><span class="unit-allegiance"></span><strong class="unit-health-label"></strong><div class="unit-health-track" role="meter" aria-label="Health"><i></i></div><p class="unit-activity"></p></div></div><div class="unit-statuses" aria-label="Buffs and debuffs"></div><p class="unit-inspect-hint"></p>';
   document.querySelector('#selection-detail').after(host);
-  const dialog=document.createElement('dialog');dialog.id='unit-lore';dialog.setAttribute('aria-labelledby','unit-lore-title');
+  const dialog=document.createElement('dialog');dialog.id='unit-lore';dialog.dataset.pausesGame='';dialog.setAttribute('aria-labelledby','unit-lore-title');
   dialog.innerHTML='<article class="unit-lore-card"><button class="unit-lore-close" type="button" aria-label="Close character details">×</button><div class="unit-lore-hero"><img alt="The cursed Greatwood Grizzly in its ancient forest" hidden><canvas width="360" height="360" hidden aria-label="Character portrait"></canvas><div class="unit-lore-heading"><span class="unit-lore-faction"></span><h2 id="unit-lore-title"></h2><p class="unit-lore-health"></p></div></div><div class="unit-lore-body"><p class="unit-lore-activity"></p><div class="unit-lore-statuses" aria-label="Character buffs and debuffs"></div><section class="unit-lore-story"><div class="unit-lore-sigil"></div><div><span class="unit-lore-kind"></span><h3 class="unit-lore-name"></h3></div><p class="unit-lore-prose"></p><p class="unit-lore-effect"></p></section><p class="unit-lore-boundary"></p></div></article>';
   document.body.append(dialog);
   const $=s=>host.querySelector(s),d$=s=>dialog.querySelector(s);
@@ -54,7 +54,7 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     if(!unit)return;profile=unit;chosen=statusId;profileKey='!';onOpen();
     d$('#unit-lore-title').textContent=unitName(unit);
     d$('.unit-lore-faction').textContent=factionName(unit);
-    d$('.unit-lore-boundary').textContent=unit.faction==='player'?'Close this card to issue orders.':'Observation only · this character remains outside your command.';
+    d$('.unit-lore-boundary').textContent='Game paused · close this card to resume.';
     const bear=unit.type==='grizzly',painted=bear||unit.type==='wizard',art=d$('.unit-lore-hero img');art.hidden=!painted;d$('.unit-lore-hero canvas').hidden=painted;
     if(bear)art.src=bearVariant(unit).art;
     if(!dialog.open)dialog.showModal();updateProfile();

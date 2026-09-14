@@ -1,0 +1,12 @@
+import oldArt from './wizard-original-art.js';
+import art from '../src/painted-roster/wizard.js?v=20260914-wizarddetail2';
+import {PaintedRosterRenderer} from '../src/painted-roster/painted-roster-renderer.js';
+import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260914-wizardlore3';
+const renderers=[new PaintedRosterRenderer(CHARACTER_RIGS.wizard,oldArt),new PaintedRosterRenderer(CHARACTER_RIGS.wizard,art)];
+const canvases=[document.querySelector('#before'),document.querySelector('#after')],contexts=canvases.map(c=>{const dpr=devicePixelRatio||1;c.width=c.height=Math.round(440*dpr);const ctx=c.getContext('2d');ctx.scale(dpr,dpr);return ctx;});
+const prepared=await Promise.all(renderers.flatMap(r=>['se','sw','ne','nw'].flatMap(v=>['idle','walk','attack','death'].map(a=>r.prepareAction(v,a)))));
+if(!prepared.every(Boolean))throw new Error('A comparison atlas did not load');
+const animation=document.querySelector('[aria-label="Animation"]'),direction=document.querySelector('[aria-label="Direction"]'),zoom=document.querySelector('[aria-label="Zoom"]'),status=document.querySelector('output');
+let elapsed=0,last=performance.now(),paused=false;
+document.querySelector('#pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Resume animation':'Pause animation';};animation.onchange=()=>elapsed=0;
+function frame(now){if(!paused)elapsed+=(now-last)/1000;last=now;const action=animation.value,time=action==='death'?elapsed%2.6:elapsed,size=Number(zoom.value);for(let i=0;i<2;i++){const ctx=contexts[i];ctx.clearRect(0,0,440,440);ctx.fillStyle='#07151777';ctx.beginPath();ctx.ellipse(220,405,size*.3,size*.07,0,0,Math.PI*2);ctx.fill();renderers[i].draw(ctx,{type:'wizard',paintedFacing:Number(direction.value),animationState:action,command:'idle',dead:action==='death',deathAge:time},{x:220,y:405},size,1,time);}status.textContent=`${direction.selectedOptions[0].text} · ${animation.selectedOptions[0].text} · ${size}px display height · ${paused?'Paused':'Animated'} · 64 distinct poses`;requestAnimationFrame(frame);}requestAnimationFrame(frame);
