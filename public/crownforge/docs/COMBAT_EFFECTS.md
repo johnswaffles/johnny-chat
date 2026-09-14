@@ -76,7 +76,7 @@ Mercy of the Last Crown: a living tank strictly below 10% maximum HP receives 5Ã
 
 One living or training wizard per side, shared across all team groups and observatories. One player wizard and one enemy wizard can coexist. See [STARVEIL_ARCANIST.md](STARVEIL_ARCANIST.md) for original lore, art, recruitment, and animation details.
 
-- **Starshard:** traveling arcane bolt, 36 damage, 18 range, 2.2-second attack cycle.
+- **Starshard:** traveling arcane bolt, 36 damage, 36 range, 2.2-second attack cycle.
 - **Falling Constellation:** a ready bolt adds 64 arcane AoE damage within 7 units; 12-second cooldown. Allies are excluded; Hearthkin immunity and tank AoE defenses apply.
 - **Astral Mantle:** a hit that would cross below 35% health triggers 70% damage reduction for 6 seconds, protecting the triggering hit. 30-second cooldown. No healing.
 
@@ -89,3 +89,13 @@ One living or training wizard per side, shared across all team groups and observ
 ## Elderblood Spellward
 
 All Greatwood bear bloodlines resist 95% of incoming magic. Only 5% passes to existing Thick Hide, Defiance, and Heart defenses. This includes Starshard, Falling Constellation, and Heavenrend, even after the wizard dies. With Thick Hide alone, a 100-damage spell deals 2.5 HP. Physical weapons and Elderhide arrow protection are unchanged. Wizard and dragon presentation remains spectacular while their damage against bears is intentionally limited.
+
+## Eventide Passage and Distant Star
+
+Distant Star seeks a clear position about 30 units from enemies, at least 6 units beyond nearby healers, with 36-unit casting reach. Wizard formation orders use a row behind healers. Healers do not chase the wizard to define their own rear line. Paths are checked against nearby enemies so repositioning cannot cut through the fight.
+
+Eventide Passage automatically reacts to a bear pursuing the wizard or a hostile within 20 units. A successful blink moves at least 24 units, to an open landing at least 38 units from all hostile units. Landing candidates are checked at their center and eight surrounding points, against map boundaries, obstacles and occupied cells. If no safe destination exists, no teleport or cooldown is spent.
+
+The wizard breaks hostile pursuit and clears his in-flight bolts, cannot attack or be targeted/damaged for 6 seconds, and has an 8-second escape cooldown. He resumes his interrupted target after a teammate holds that enemy. Veil, cooldown and pending target persist through saves. This is spacing plus a temporary immunity, not permanent AoE immunity.
+
+The effect pairs an imploding star iris with a distant nebula doorway: engraved ground seals, counter-rotating light ribbons, crystal motes, a star bridge and a reforming column of light. Reduced motion simplifies particles. Local test route: `dev/eventide.html` (Replay bear chase, Inspect the rift, Test the formation).

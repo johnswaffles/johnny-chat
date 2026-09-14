@@ -1,20 +1,21 @@
-import {stormwardDamage} from './storm-dragon.js?v=20260914-addselect1';
-import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260914-addselect1';
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260914-addselect1';
-import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260914-addselect1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260914-addselect1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260914-addselect1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260914-addselect1';
+import {prepareWizardPosition} from './wizard-positioning.js?v=20260914-eventide1';
+import {stormwardDamage} from './storm-dragon.js?v=20260914-eventide1';
+import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260914-eventide1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260914-eventide1';
+import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260914-eventide1';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260914-eventide1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260914-eventide1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260914-eventide1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260914-addselect1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260914-eventide1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260914-addselect1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260914-eventide1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260914-addselect1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260914-eventide1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -318,6 +319,7 @@ export class CrownforgeSimulation {
     this.stormDragons=[];
     this.wizardProjectiles=[];
     this.wizardImpacts=[];
+    this.wizardRifts=[];
     this.pausedEnemyUnits = [];
     this.activeWorldSeed = (this.worldSeed + Math.imul(this.worldGeneration, WORLD_GENERATION_STRIDE)) >>> 0;
     this.worldGeneration += 1;
@@ -2292,6 +2294,7 @@ export class CrownforgeSimulation {
       this.animation.update(unit, dt);
       return;
     }
+    if(unit.type==='wizard'&&unit.eventideVeil>0){this._interruptWork(unit);unit.command='idle';unit.path=[];unit.velocityX=unit.velocityZ=0;unit.visualState='idle';unit.actionLabel='Eventide Passage · beyond the hunt';this.animation.update(unit,dt);return;}
     if (unit.command === 'move') unit.visualState = 'walk';
     else if (unit.command === 'field') unit.visualState = unit.path.length ? 'walk' : 'food';
     else if (!['gather', 'return', 'attack', 'build', 'demolish'].includes(unit.command)) unit.visualState = 'idle';
@@ -4280,7 +4283,7 @@ export class CrownforgeSimulation {
   }
 
   _sendUnitToAttack(unit, target, slot = 0, options = {}) {
-    if(unit.manualCombatMove)return false;
+    if(unit.manualCombatMove||unit.type==='wizard'&&unit.eventideVeil>0)return false;
     if (prepareTeamAttack(this,unit,target,slot)) return true;
     if (isTeamHealer(unit)) { this._interruptWork(unit);unit.command='idle';unit.path=[];unit.actionLabel=`Supporting Team ${unit.teamId}`;return true; }
     target=tankTarget(this,unit)??target;
@@ -4430,6 +4433,7 @@ export class CrownforgeSimulation {
 
   _applyUnitDamage(target, amount, attacker, {damageType='weapon',healthFloor=0,areaOfEffect=false,magical=false}={}) {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
+    if(target.type==='wizard'&&target.eventideVeil>0)return {damage:0,killed:false,warded:true,blocked:true,cursed:false};
     const defense=UNIT_TYPES[target.type];
     const magicalHit=magical||['magic','spell','arcane','divine','fire','frost','lightning','shadow','holy'].includes(damageType);
     // Elderblood Spellward applies before hide, crowd armor and last stands.
@@ -4487,8 +4491,8 @@ export class CrownforgeSimulation {
     unit.fighterMovingAttack=false;
     const target=this._getExplicitAttackTarget(unit);
     if(!target || isWardProtected(target))return;
+    if(unit.type==='wizard'){prepareWizardPosition(this,unit,target);return;}
     if(prepareTankPull(this,unit,target)||holdForTankPull(this,unit,target))return;
-    if(unit.type==='wizard'){if(this._targetDistance(unit,target)<=UNIT_TYPES.wizard.range&&this._hasCombatLineOfSight(unit,target)){unit.path=[];unit.velocityX=unit.velocityZ=0;}return;}
     if(target.kind==='building'){
       if(unit.type==='shieldbearer' && this._distanceToBuildingUnitEdge(unit,target)<5.7){
         if(unit.path.length){unit.fighterMovingAttack=true;return;}
@@ -4563,6 +4567,7 @@ export class CrownforgeSimulation {
   }
 
   _updateAttack(unit, dt) {
+    if(unit.type==='wizard'&&(unit.eventideVeil>0||unit.wizardRetreating)){this._cancelAttackCycle(unit);return;}
     const pullingTarget=this._getExplicitAttackTarget(unit);
     if(pullingTarget&&(unit.tankPull?.targetId===pullingTarget.id||holdForTankPull(this,unit,pullingTarget)))return;
     let target = unit.attackPhase !== 'approach' ? this._getExplicitAttackTarget(unit) : this._getAttackTarget(unit);

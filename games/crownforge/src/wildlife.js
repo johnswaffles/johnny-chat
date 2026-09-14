@@ -1,6 +1,7 @@
-import {encounterOpenness} from './combat-teams.js?v=20260914-addselect1';
-import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260914-addselect1';
-import { CONFIG, UNIT_TYPES } from './config.js?v=20260914-addselect1';
+import {isWardProtected} from './unit-status.js?v=20260914-eventide1';
+import {encounterOpenness} from './combat-teams.js?v=20260914-eventide1';
+import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260914-eventide1';
+import { CONFIG, UNIT_TYPES } from './config.js?v=20260914-eventide1';
 
 export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 240, maxAlivePerSide: 2, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });
@@ -19,7 +20,7 @@ export const initialWildlifeState = clock => ({ cadence: GRIZZLY_ENCOUNTER.inter
 // Spawn on a real woodland edge with a legal route to a person. Never move
 // existing trees, buildings or people to make an encounter fit.
 function planGrizzly(sim,state,side=null,avoid=[],automatic=false) {
-  const humans=people(sim).filter(u=>!(u.lastLightWardTimer>0));
+  const humans=people(sim).filter(u=>!isWardProtected(u));
   if (!humans.length) return null;
   const preferred=side??(state.spawnCount%2 ? 'enemy' : 'player');
   const audience=humans.filter(unit=>unit.faction===preferred);
@@ -63,7 +64,7 @@ export function spawnGrizzly(sim) {
   const preferred=state.spawnCount%2?'enemy':'player';
   let plan=null;
   for(const side of (sim.enemyTeamPaused?['player']:[preferred,preferred==='player'?'enemy':'player'])){
-    if(counts[side]>=GRIZZLY_ENCOUNTER.maxAlivePerSide||!people(sim).some(u=>u.faction===side&&!(u.lastLightWardTimer>0)))continue;
+    if(counts[side]>=GRIZZLY_ENCOUNTER.maxAlivePerSide||!people(sim).some(u=>u.faction===side&&!isWardProtected(u)))continue;
     plan=planGrizzly(sim,state,side,[],true);
     break; // Preserve the chosen side while its bounded route search retries.
   }
@@ -105,7 +106,7 @@ function updateGrizzlyPair(sim) {
 function hunt(sim,bear) {
   // A lethal swipe still has weight and recovery; scanning must not reset it.
   if(bear.attackEventFired&&bear.attackPhase!=='approach'&&!sim._getExplicitAttackTarget(bear))return;
-  const humans=people(sim).filter(u=>!(u.lastLightWardTimer>0)),current=sim._getAttackTarget(bear);
+  const humans=people(sim).filter(u=>!isWardProtected(u)),current=sim._getAttackTarget(bear);
   const mark=[current?.id??0,current?.hp??0].join('|');
   if(mark!==bear.wildlifeProgress||!bear.wildlifeProgressPoint||distance(bear,bear.wildlifeProgressPoint)>2){
     bear.wildlifeProgress=mark;bear.wildlifeProgressAt=sim.clock;bear.wildlifeProgressPoint={x:bear.x,z:bear.z};
@@ -115,16 +116,16 @@ function hunt(sim,bear) {
     return;
   }
   const stalled=sim.clock-(bear.wildlifeProgressAt??sim.clock)>6;
-  const nearest=humans.filter(unit=>!(unit.lastLightWardTimer>0)).sort((a,b)=>distance(bear,a)-distance(bear,b)||a.id-b.id)[0];
+  const nearest=humans.filter(unit=>!isWardProtected(unit)).sort((a,b)=>distance(bear,a)-distance(bear,b)||a.id-b.id)[0];
   const retaliation=current?.id===bear.wildlifeRetaliationId;
   const passing=!retaliation&&nearest&&current&&nearest.id!==current.id&&distance(bear,nearest)<6&&distance(bear,current)>9;
-  if(current&&!stalled&&!passing&&!(current.lastLightWardTimer>0))return;
+  if(current&&!stalled&&!passing&&!isWardProtected(current))return;
   bear.wildlifeAvoid??={};
   for(const [id,until] of Object.entries(bear.wildlifeAvoid))if(until<=sim.clock)delete bear.wildlifeAvoid[id];
   if(stalled&&current)bear.wildlifeAvoid[current.id]=sim.clock+12;
   if(current||bear.attackTarget){sim._interruptWork(bear);bear.command='idle';bear.path=[];}
   const candidates=humans.filter(unit=>!bear.wildlifeAvoid[unit.id])
-    .sort((a,b)=>Number(a.lastLightWardTimer>0)-Number(b.lastLightWardTimer>0)||distance(bear,a)-distance(bear,b)||a.id-b.id);
+    .sort((a,b)=>Number(isWardProtected(a))-Number(isWardProtected(b))||distance(bear,a)-distance(bear,b)||a.id-b.id);
   for(const target of candidates.slice(0,GRIZZLY_ENCOUNTER.huntRouteBudget)){
     if(sim._sendUnitToAttack(bear,target,bear.id%8,{requireImmediateRoute:true})){
       bear.wildlifeProgressAt=sim.clock;bear.actionLabel='Hunting '+UNIT_TYPES[target.type].label;return;

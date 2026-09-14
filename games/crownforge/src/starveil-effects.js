@@ -189,23 +189,113 @@ function mantle(c,p,z,remaining,t,reduced){
  }
  if(!reduced)for(let i=0;i<20;i++){const phase=(clock*.22+noise(i+110))%1,a=noise(i+200)*TAU,x=p.x+Math.cos(a+phase)*r*.8,y=p.y-phase*r*2.1;star(c,x,y,1.6*z,i%3?colors.ice:colors.gold,Math.sin(phase*Math.PI)*fade*.75);}
 }
+// The ground seal feeds the staff before each Starshard leaves the caster.
+function starfireGathering(c,p,z,charge,reduced){
+ const q=clamp(charge),power=q*q,fade=clamp(q*6),clock=q*2.8;
+ const sx=p.x-24*z,sy=p.y-86*z,r=(76-10*q)*z;
+ glow(c,p.x,p.y,r*1.8,colors.violet,fade*.42,.36);
+ glow(c,p.x,p.y,r*1.2,colors.ice,fade*(.2+power*.6),.3);
+ seal(c,p.x,p.y,r,clock*2,fade*.85,!reduced);
+ seal(c,p.x,p.y,r*.62,-clock*3,fade*.52,false);
+ // Broken outer arcs wind inward, visibly accelerating as the charge fills.
+ for(let i=0;i<6;i++){
+  const a=i*TAU/6-clock*1.8;
+  ellipse(c,p.x,p.y,r*1.16,r*.50,0,i%2?colors.ice:colors.gold,(1+power*2)*z,fade*.8,a,a+.6);
+  const x=p.x+Math.cos(a)*r*1.16,y=p.y+Math.sin(a)*r*.50;
+  star(c,x,y,(3+power*3)*z,colors.gold,fade*.8,a);
+ }
+ if(!reduced){
+  // Braided streams lift off the ring and funnel into the staff's star.
+  for(let k=0;k<4;k++){
+   const points=[];
+   for(let j=0;j<28;j++){
+    const f=j/27,a=k*TAU/4+clock*2+f*5,rr=r*(1-f)*.8;
+    points.push([p.x+(sx-p.x)*f+Math.cos(a)*rr,p.y+(sy-p.y)*f+Math.sin(a)*rr*.36]);
+   }
+   line(c,points,k%2?colors.ice:colors.violet,(4+power*4)*z,fade*.10);
+   line(c,points,k%2?colors.gold:colors.ice,(.8+power)*z,fade*.65);
+  }
+  for(let i=0;i<36;i++){
+   const f=(noise(i+10)+q*1.5)%1,a=i*2.399+clock*1.5,rr=r*(1-f),x=p.x+(sx-p.x)*f+Math.cos(a)*rr,y=p.y+(sy-p.y)*f+Math.sin(a)*rr*.4;
+   star(c,x,y,(1+noise(i+91)*2.5)*z,i%4?colors.ice:colors.gold,fade*Math.sin(f*Math.PI),a);
+  }
+ }
+ // A compact spherical seed builds into the already-approved projectile.
+ const core=(4+power*17)*z;
+ glow(c,sx,sy,core*4,colors.violet,fade*.75);
+ glow(c,sx,sy,core*2.5,colors.ice,fade*.85);
+ c.save();c.globalCompositeOperation='source-over';c.globalAlpha=fade;
+ const seed=c.createRadialGradient(sx-core*.25,sy-core*.3,0,sx,sy,core);
+ seed.addColorStop(0,'#ffffff');seed.addColorStop(.3,'#cffcff');seed.addColorStop(.65,'#389de4');seed.addColorStop(1,'#6953ba60');
+ c.fillStyle=seed;c.beginPath();c.ellipse(sx,sy,core,core,0,0,TAU);c.fill();c.restore();
+ for(let i=0;i<3;i++)ellipse(c,sx,sy,core*1.4,core*.5,clock+i*TAU/3,i%2?colors.gold:colors.ice,z,fade*.8);
+ const crest=clamp((q-.65)/.35);
+ star(c,sx,sy,(12+crest*22)*z,colors.white,crest*.8,.12);
+ if(!reduced&&crest>0)for(let i=0;i<7;i++){
+  const a=i*TAU/7-clock,rr=core*(2.8-crest),points=[];
+  for(let j=0;j<8;j++){const f=j/7,turn=a+Math.sin(j*3+i)*.13;points.push([sx+Math.cos(turn)*rr*(1-f),sy+Math.sin(turn)*rr*(1-f)]);}
+  line(c,points,colors.ice,z,crest*.75);
+ }
+}
+// Eventide Passage: an imploding iris and a distant doorway stitched by stars.
+function eventideRift(c,renderer,e,z,reduced){
+ z*=1.35;
+ const origin=renderer.worldToScreen(e.from),arrival=renderer.worldToScreen(e.to),age=e.age;
+ for(const [p,delay,closing] of [[origin,0,true],[arrival,.45,false]]){
+  const t=age-delay;if(t<0)continue;
+  const fade=clamp(t*5)*clamp((2.9-t)*1.4),pulse=closing?Math.max(.05,1-t/1.1):Math.sin(Math.min(1,t/2.3)*Math.PI);
+  const width=(14+44*pulse)*z,height=(65+65*pulse)*z,cy=p.y-height*.8;
+  glow(c,p.x,cy,170*z,colors.violet,fade*.65);
+  glow(c,p.x,p.y,145*z,colors.ice,fade*.75,.28);
+  seal(c,p.x,p.y,(65+Math.sin(t*2)*12)*z,closing?-t*3:t*3,fade,!reduced);
+  // A dark, opaque cut in the world keeps the portal legible on sunlit grass.
+  c.save();c.globalCompositeOperation='source-over';c.globalAlpha=fade*.93;const abyss=c.createRadialGradient(p.x-width*.3,cy-height*.25,0,p.x,cy,height);abyss.addColorStop(0,'#4c3a88');abyss.addColorStop(.25,'#172c65');abyss.addColorStop(.7,'#080d29');abyss.addColorStop(1,'#655ac0');c.fillStyle=abyss;c.beginPath();c.ellipse(p.x,cy,width,height,0,0,TAU);c.fill();c.restore();
+  for(let i=0;i<(reduced?9:34);i++){const a=noise(i+230)*TAU,r=Math.sqrt(noise(i+131))*.88;star(c,p.x+Math.cos(a)*width*r,cy+Math.sin(a)*height*r,(.7+noise(i+76)*1.6)*z,i%5?colors.ice:colors.gold,fade*(.5+.4*Math.sin(t+i)**2),i);}
+  glow(c,p.x-width*.2,cy-height*.3,width*1.3,colors.violet,fade*.5);
+  glow(c,p.x+width*.15,cy+height*.15,width,colors.ice,fade*.35);
+  for(let k=0;k<5;k++){
+   ellipse(c,p.x,cy,width+k*2*z,height+k*2*z,Math.sin(t*2)*.05,k%2?colors.violet:colors.ice,(k===0?4:1.2)*z,fade*(1-k*.14));
+  }
+  if(!reduced)for(let ribbon=0;ribbon<5;ribbon++){
+   const pts=[];for(let j=0;j<40;j++){const f=j/39,a=f*TAU*1.6+t*(closing?-3:3)+ribbon*TAU/5,rad=(1-f)*1.45;pts.push([p.x+Math.cos(a)*width*rad,cy+Math.sin(a)*height*rad]);}
+   line(c,pts,ribbon%2?colors.violet:colors.ice,2*z,fade*.45);
+  }
+  const count=reduced?8:48;
+  for(let i=0;i<count;i++){
+   const a=i*TAU/count+t*(closing?-1:1),orbit=closing?Math.max(.1,1.8-t):.5+t*.6;
+   const x=p.x+Math.cos(a)*width*orbit,y=cy+Math.sin(a)*height*orbit;
+   star(c,x,y,(2+noise(i)*5)*z,i%4?colors.ice:colors.gold,fade*.9,a);
+   if(!reduced)line(c,[[x,y],[p.x+Math.cos(a-.13)*width*orbit,cy+Math.sin(a-.13)*height*orbit]],colors.violet,2*z,fade*.45);
+  }
+  const flash=Math.exp(-Math.pow((t-(closing?.4:.8))*5,2));
+  glow(c,p.x,cy,120*z,colors.ice,flash*.85);
+  line(c,[[p.x,p.y+15*z],[p.x,cy-height-80*z]],colors.violet,18*z,flash*.3);
+  line(c,[[p.x,p.y+15*z],[p.x,cy-height-80*z]],colors.white,2*z,flash*.85);
+  star(c,p.x,cy,60*z,colors.white,flash*.8,0);
+ }
+ if(!reduced&&age>.25&&age<1.5){
+  const fade=Math.sin((age-.25)/1.25*Math.PI),points=[];
+  for(let i=0;i<40;i++){const f=i/39;points.push([origin.x+(arrival.x-origin.x)*f,origin.y+(arrival.y-origin.y)*f-Math.sin(f*Math.PI)*130*z-50*z]);}
+  line(c,points,colors.violet,5*z,fade*.18);line(c,points,colors.ice,z,fade*.5);
+  for(let i=0;i<22;i++){const f=(i/22+age*.7)%1;star(c,origin.x+(arrival.x-origin.x)*f,origin.y+(arrival.y-origin.y)*f-Math.sin(f*Math.PI)*130*z-50*z,(2+noise(i)*3)*z,i%3?colors.ice:colors.gold,fade,age);}
+ }
+}
 export function drawWizardMagic(c,renderer,sim,time){
  const z=renderer.camera.zoom,t=time/1000,reduced=Boolean(renderer.atmosphere?.reducedMotion);
  c.save();c.globalCompositeOperation='lighter';c.lineCap='round';
  try{
+  for(const e of sim.wizardRifts??[])eventideRift(c,renderer,e,z,reduced);
   for(const u of sim.units){
    if(u.type!=='wizard'||u.dead)continue;
    const p=renderer.unitScreenPoint(u);
    if(u.astralMantleTimer>0)mantle(c,p,z,u.astralMantleTimer,t,reduced);
-   if(u.command==='attack'&&u.attackPhase==='anticipation'){
-    const charge=clamp((u.attackPhaseElapsed??0)/.77);
-    seal(c,p.x,p.y,42*z,t,charge*.65,!reduced);
-    glow(c,p.x-15*z,p.y-85*z,(12+charge*22)*z,colors.ice,charge*.7);
-    if(!reduced)for(let i=0;i<9;i++){const a=i*TAU/9+t*2,rr=(1-charge)*42*z;star(c,p.x-15*z+Math.cos(a)*rr,p.y-85*z+Math.sin(a)*rr*.5,2*z,colors.gold,charge,a);}
+   if(u.command==='attack'&&!u.attackEventFired&&(u.attackPhase==='anticipation'||u.attackPhase==='contact')){
+    const charge=u.attackPhase==='contact'?1:clamp((u.attackPhaseElapsed??0)/.77);
+    starfireGathering(c,p,z,charge,reduced);
    }
   }
   for(const p of sim.wizardProjectiles??[]){
-   const to=renderer.worldToScreen(p),from=renderer.worldToScreen(p.from),lift=48*z;to.y-=lift;from.y-=lift;
+   const to=renderer.worldToScreen(p),from=renderer.worldToScreen(p.from),lift=48*z,launch=clamp(1-p.age/.2);to.y-=lift+38*z*launch;to.x-=24*z*launch;from.y-=86*z;from.x-=24*z;
    starfireOrb(c,from,to,z,t,p.sourceId,reduced);
   }
   for(const e of sim.wizardImpacts??[]){

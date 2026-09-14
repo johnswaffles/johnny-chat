@@ -15,7 +15,7 @@ A silver-haired battle scholar in midnight-blue robes, brass starwork, and a lon
 
 | Spell | Gameplay |
 | --- | --- |
-| Starshard | A traveling arcane bolt: 36 damage, 18-unit range, 2.2-second attack cycle. |
+| Starshard | A traveling arcane bolt: 36 damage, 36-unit range, 2.2-second attack cycle. |
 | Falling Constellation | The first ready bolt calls down seven painted starlight streaks, adding 64 arcane area damage within 7 units. 12-second cooldown. |
 | Astral Mantle | A hit that would reduce health below 35% triggers 70% damage reduction for 6 seconds, including that hit. 30-second cooldown. No healing or resurrection. |
 
@@ -44,3 +44,17 @@ Starshard now travels as a large, volumetric blue-white starfire sphere with a v
 The starfire orb now breaks into an expanding blue-white shell on contact, with broad curling plasma fragments, three ground shock rings, and falling sparks. The ordinary impact lasts 1.85 seconds and is also present beneath empowered constellation strikes. Damage remains 36 for the ordinary projectile. Inspect orb impact in the local review freezes a real, damaging hit at 0.30 seconds.
 
 Impact revision: 90ms compression, irregular white-hot rupture, volumetric blue plasma billows, torn flame tongues, a heavy rippling ground pressure wave, and tumbling crystal shards. This supersedes the earlier symmetrical plasma-petal design. Gameplay timing and damage are unchanged.
+
+## Eventide Passage and Distant Star
+
+Distant Star seeks a clear position about 30 units from enemies, at least 6 units beyond nearby healers, with 36-unit casting reach. Wizard formation orders use a row behind healers. Healers do not chase the wizard to define their own rear line. Paths are checked against nearby enemies so repositioning cannot cut through the fight.
+
+Eventide Passage automatically reacts to a bear pursuing the wizard or a hostile within 20 units. A successful blink moves at least 24 units, to an open landing at least 38 units from all hostile units. Landing candidates are checked at their center and eight surrounding points, against map boundaries, obstacles and occupied cells. If no safe destination exists, no teleport or cooldown is spent.
+
+The wizard breaks hostile pursuit and clears his in-flight bolts, cannot attack or be targeted/damaged for 6 seconds, and has an 8-second escape cooldown. He resumes his interrupted target after a teammate holds that enemy. Veil, cooldown and pending target persist through saves. This is spacing plus a temporary immunity, not permanent AoE immunity.
+
+The effect pairs an imploding star iris with a distant nebula doorway: engraved ground seals, counter-rotating light ribbons, crystal motes, a star bridge and a reforming column of light. Reduced motion simplifies particles. Local test route: `dev/eventide.html` (Replay bear chase, Inspect the rift, Test the formation).
+
+### Starfire gathering
+
+Every Starshard now gathers energy through two counter-rotating ground seals and broken outer rune arcs. Four light streams and rising motes feed a growing blue-white sphere at the staff. Orbiting bands and a bright final crest build into the launch. The charge stays visible during anticipation and the short pre-release contact phase; the projectile emerges from the same visual point before joining its flight path. No spell damage, timing or cooldown changes. Reduced motion retains the rings and sphere while omitting streams, motes and branching arcs. `dev/starveil.html` provides Inspect starfire buildup and Watch starfire buildup.

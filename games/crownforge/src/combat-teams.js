@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260914-addselect1';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260914-addselect1';
-import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260914-addselect1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260914-eventide1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260914-eventide1';
+import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260914-eventide1';
 export const TEAM_RULES=Object.freeze({healAmount:4,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -155,7 +155,7 @@ export function updateTeamApproaches(sim){
   unit.teamAdvanceAt=sim.clock+.5;
   const tank=tanks.sort((a,b)=>distance(a,target)-distance(b,target)||a.id-b.id)[0];
   const dx=tank.x-target.x,dz=tank.z-target.z,length=Math.hypot(dx,dz)||1,side=((unit.teamAdvanceSlot??unit.id)%3-1)*2.5;
-  const point={x:target.x+dx/length*Math.max(12,distance(tank,target)+4)-dz/length*side,z:target.z+dz/length*Math.max(12,distance(tank,target)+4)+dx/length*side};
+  const point={x:target.x+dx/length*Math.max(unit.type==='wizard'?34:12,distance(tank,target)+4)-dz/length*side,z:target.z+dz/length*Math.max(unit.type==='wizard'?34:12,distance(tank,target)+4)+dx/length*side};
   if(distance(unit,point)>1){sim.repathBudgetRemaining--;sim._sendUnitTo(unit,point,'move');}
   unit.actionLabel='Following behind the tank line';
  }
@@ -165,7 +165,7 @@ export function teamMovePoint(units,unit,destination){
  if(!unit.teamId||!units.some(u=>u.teamId&&combatRole(u)==='tank'))return null;
  const members=units.filter(u=>u.teamId),center=members.reduce((p,u)=>({x:p.x+u.x/members.length,z:p.z+u.z/members.length}),{x:0,z:0});
  const dx=destination.x-center.x,dz=destination.z-center.z,len=Math.hypot(dx,dz)||1;
- const role=combatRole(unit),row=role==='tank'?0:role==='healer'?8:4;
+ const role=combatRole(unit),row=unit.type==='wizard'?16:role==='tank'?0:role==='healer'?8:4;
  const peers=members.filter(u=>combatRole(u)===role).sort((a,b)=>a.id-b.id),index=peers.indexOf(unit);
  const side=(index%5-(Math.min(5,peers.length)-1)/2)*2.5,back=row+Math.floor(index/5)*2.5;
  return {x:destination.x-dx/len*back-dz/len*side,z:destination.z-dz/len*back+dx/len*side};
@@ -222,7 +222,7 @@ export function bearOrbitStep(unit,bear,goal){
 export function healerRearPosition(sim,healer,enemy,anchor){
  const away={x:enemy.x-anchor.x,z:enemy.z-anchor.z},length=Math.hypot(away.x,away.z)||1;
  let dx=away.x/length,dz=away.z/length;
- const damage=sim.units.filter(u=>!u.dead&&u.teamId===healer.teamId&&combatRole(u)==='damage'
+ const damage=sim.units.filter(u=>!u.dead&&u.teamId===healer.teamId&&combatRole(u)==='damage'&&u.type!=='wizard'
   &&(u.attackTarget===enemy.id||u.teamAdvanceTargetId===enemy.id)
   &&(u.x-enemy.x)*dx+(u.z-enemy.z)*dz>0);
  if(damage.length){

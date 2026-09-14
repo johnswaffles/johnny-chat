@@ -1,9 +1,9 @@
-import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260914-addselect1';
+import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260914-eventide1';
 export const lastCrownMercyActive=unit=>Boolean(unit&&!unit.dead&&unit.hp>0&&UNIT_TYPES[unit.type]?.combatRole==='tank'&&unit.hp/unit.maxHp<.1);
-import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260914-addselect1';
-import { bearVariant } from './bear-variants.js?v=20260914-addselect1';
-import {UNIT_TYPES} from './config.js?v=20260914-addselect1';
-import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260914-addselect1';
+import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260914-eventide1';
+import { bearVariant } from './bear-variants.js?v=20260914-eventide1';
+import {UNIT_TYPES} from './config.js?v=20260914-eventide1';
+import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260914-eventide1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
@@ -14,7 +14,7 @@ export const FIRST_CONDEMNATION = Object.freeze({
 });
 export const GREATWOOD_FURY_ART='./assets/greatwood-fury-card-v1.png?v=20260909-bearfury1';
 export const isCurseImmune=unit=>Boolean(UNIT_TYPES[unit?.type]?.curseImmune);
-export const isWardProtected=unit=>Boolean(unit?.lastLightWardTimer>0);
+export const isWardProtected=unit=>Boolean(unit?.lastLightWardTimer>0||unit?.type==='wizard'&&unit.eventideVeil>0);
 // Portraits and combat always use the unit's real health.
 export const displayedUnitHealth=unit=>unit.dead?0:unit.hp;
 export const LAST_BASTION=Object.freeze({threshold:.2,rearmHealth:.6,damageMultiplier:.1,tankDuration:20,bearDuration:60});
@@ -71,9 +71,11 @@ export function unitStatuses(unit){
    statuses.push({id:'heavenrend',name:'Heavenrend · Call the Skybreaker',kind:'Dragon summon',detail:unit.skybreakerCooldown>0?`${Math.ceil(unit.skybreakerCooldown)}s until ready`:'Ready · five-minute cooldown',summary:'The horizon bows beneath his wings.',lore:SKYBREAKER_LORE,effect:'Select this wizard and press Call the Skybreaker. Summons Vaelthryx for a 10-second flyover, sweeping lightning for 6 seconds: 150 magic AoE damage every half-second within 12 units of the moving breath. 45-unit targeting range; 300-second cooldown. Grants Stormward Covenant to nearby allies and Skybreaker’s Favor to the wizard.',rune:'divine',art:SKYBREAKER_ART});
    if(unit.skybreakerActive>0)statuses.push({id:'unboundSovereign',name:'Unbound Sovereign',kind:'Aerial ally',detail:`${Math.ceil(unit.skybreakerActive)}s · Vaelthryx is airborne`,summary:'No throne commands him. No chain can hold him.',effect:'The dragon is untargetable and flies over terrain. His lightning spares allies, respects magic immunity and tank area defenses, and completes even if his summoner falls.',rune:'ward',art:SKYBREAKER_ART});
    const art='./assets/starveil/portrait-v1.png';
-   statuses.push({id:'starveilOath',name:'Keeper of the Last Star',kind:'Starveil Arcanist',detail:'One living arcanist per side',summary:'The heavens went silent. One star answered.',lore:'When the old gods sealed the night above the Crownlands, a single star broke their order and fell. The first Arcanist carried its last ember into a ruined watchtower. The Observatory grew around that light. Only one sworn keeper on each side may bear its staff: a scholar, a sentinel, and a reminder that even a god can be defied.',effect:'A ranged spellcaster with 210 health and 18-unit casting reach. Train at the Observatory of the Last Star. Living units and training queues share a one-per-side limit; an opposing side may field its own arcanist.',rune:'divine',art});
+   statuses.push({id:'starveilOath',name:'Keeper of the Last Star',kind:'Starveil Arcanist',detail:'One living arcanist per side',summary:'The heavens went silent. One star answered.',lore:'When the old gods sealed the night above the Crownlands, a single star broke their order and fell. The first Arcanist carried its last ember into a ruined watchtower. The Observatory grew around that light. Only one sworn keeper on each side may bear its staff: a scholar, a sentinel, and a reminder that even a god can be defied.',effect:'A ranged spellcaster with 210 health and 36-unit casting reach. Train at the Observatory of the Last Star. Living units and training queues share a one-per-side limit; an opposing side may field its own arcanist.',rune:'divine',art});
    statuses.push({id:'starshard',name:'Starshard',kind:'Arcane attack',detail:'36 magic damage · 2.2-second cast cycle',summary:'A splinter of stolen starlight.',effect:'Launches a traveling star shard at the target. Requires clear line of sight. Hostile magic cannot harm Hearthkin.',rune:'divine',art});
    statuses.push({id:'fallingConstellation',name:'Falling Constellation',kind:'Area spell',detail:unit.starfallCooldown>0?`${Math.ceil(unit.starfallCooldown)}s until ready`:'Ready · 64 magic damage in 7 units',summary:'Seven lights fall where his staff points.',effect:'Every 12 seconds, the next Starshard also bursts into a constellation, dealing 64 magical AoE damage to enemies within 7 units and clear line of sight. Tank AoE defenses and magic immunity apply.',rune:'fury',art});
+   statuses.push({id:'eventidePassage',name:'Eventide Passage',kind:'Automatic escape',detail:unit.eventideVeil>0?`${Math.ceil(unit.eventideVeil)}s · beyond the hunt`:unit.eventideCooldown>0?`${Math.ceil(unit.eventideCooldown)}s until ready`:'Ready · escape the hunt',summary:'The hunter closes its jaws upon an empty constellation.',lore:'The last star taught its keeper a secret older than roads: every patch of open sky is a door. When the Greatwood turns its hunger upon him, his shape breaks into starlight and steps through the night between two stars.',effect:'Automatically teleports when a bear targets the wizard or a hostile closes within 20 units. Lands in a checked open clearing at least 38 units from nearby enemies; breaks pursuit and suspends casting. Untargetable and immune to damage for 6 seconds; 8-second cooldown. Requires a safe landing.',rune:'divine',art});
+   statuses.push({id:'distantStar',name:'Distant Star',kind:'Combat positioning',detail:'30-unit standoff · 36-unit casting reach',summary:'Beyond the healers, beyond the reach of claw and thunder.',effect:'Automatically seeks a clear casting position about 30 units from the fight and at least 6 units beyond nearby healers. Retreats before casting if enemies close in. Ground movement orders remain available.',rune:'ward',art});
    statuses.push({id:'astralMantle',name:'Astral Mantle',kind:'Protection',detail:unit.astralMantleTimer>0?`${Math.ceil(unit.astralMantleTimer)}s · 70% less damage`:unit.astralMantleCooldown>0?`${Math.ceil(unit.astralMantleCooldown)}s until ready`:'Ready · guards a lethal approach',summary:'The last star folds its light around its keeper.',effect:'A hit that would take the wizard below 35% health triggers 70% damage reduction for 6 seconds, including that hit. 30-second cooldown. Does not heal or resurrect.',rune:'ward',art});
   }
 
