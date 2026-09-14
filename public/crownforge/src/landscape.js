@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260914-wizardlore3';
+import { CONFIG } from './config.js?v=20260914-wizardportrait5';
 import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260909-cursedbears1';
 
 const MASK_WIDTH = 560;

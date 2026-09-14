@@ -1,0 +1,5 @@
+{
+  "tool": "Built-in image_gen",
+  "prompt": "Edit image 1, the wizard lore portrait. Image 2 is reference only for his in-game character identity. Keep image 1 composition, observatory background, lighting, rich painterly detail, gold star staff, blue and gold robes and mature age. Change the wizard to be completely clean shaven: no beard, no moustache, no stubble. Give him long flowing silver-white hair swept back behind his ears and falling past his shoulders, matching image 2's game wizard. Keep strong angular cheekbones and stern wise expression. Hair should clearly be long, distinguishable from robe. Preserve everything else. One polished square lore portrait, no text.",
+  "asset": "portrait-v2.png"
+}

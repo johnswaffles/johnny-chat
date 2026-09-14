@@ -1,0 +1,5 @@
+{
+  "tool": "Built-in image_gen",
+  "prompt": "Edit image 1 wizard portrait ONLY the staff to exactly match the staff in reference image 2 game sprites. Replace the bulky spherical armillary cage and oversized crystal with the game's slender straight dark staff shaft, small elegant elongated oval gold ring head, a simple inner crossing ring and four short compass-point gold tips, centered on a small brilliant cyan blue-white four-point star. The staff head should be slim and restrained like the sprite, NOT a large globe, NOT many elaborate rings, NOT a giant crystal. Preserve the clean-shaven wizard's face, long silver hair, robes, hand grip, background, composition, lighting, all other details unchanged. Square polished fantasy portrait. Reference image 2 is identity/design only, do not output a sprite sheet.",
+  "asset": "portrait-v3.png"
+}

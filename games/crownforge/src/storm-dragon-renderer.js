@@ -1,4 +1,4 @@
-import {dragonBreathPoint,SKYBREAKER} from './storm-dragon.js?v=20260914-wizardlore3';
+import {dragonBreathPoint,SKYBREAKER} from './storm-dragon.js?v=20260914-wizardportrait5';
 export const DRAGON_RENDER_WIDTH=2520;
 const TAU=Math.PI*2,clamp=v=>Math.max(0,Math.min(1,v));
 let atlas;
