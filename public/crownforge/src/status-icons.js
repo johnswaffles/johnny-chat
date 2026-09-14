@@ -1,4 +1,6 @@
 const glyphs={
+ spearwardenOath:'M12 2l4 7-4 3-4-3Z M12 12v10 M5 16l3 3 M19 16l-3 3',
+ shieldbearerOath:'M3 21V5h5V2h8v3h5v16 M8 21V10h8v11 M9 5l3 2 3-2',
  eventidePassage:'M9 3C1 4 1 20 9 21 M15 3c8 1 8 17 0 18 M8 12h8m-3-3 3 3-3 3 M5 5l2 2 M17 17l2 2',
  distantStar:'M2 19h20 M4 16l4-5 4 5 M16 2l2 5 4 2-4 2-2 5-2-5-4-2 4-2Z',
  elderbloodSpellward:'M12 2 3 6v7q1 6 9 9 8-3 9-9V6Z M14 5l-6 8h5l-2 6 7-10h-5Z M5 4l14 16',

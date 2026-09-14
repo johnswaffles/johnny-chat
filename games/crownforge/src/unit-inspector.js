@@ -1,7 +1,7 @@
-import {effectIcon} from './status-icons.js?v=20260914-bearnorune1';
-import { bearVariant } from './bear-variants.js?v=20260914-bearnorune1';
-import {UNIT_TYPES} from './config.js?v=20260914-bearnorune1';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260914-bearnorune1';
+import {effectIcon} from './status-icons.js?v=20260914-spearlore1';
+import { bearVariant } from './bear-variants.js?v=20260914-spearlore1';
+import {UNIT_TYPES} from './config.js?v=20260914-spearlore1';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260914-spearlore1';
 
 const unitName=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type].label;
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';
@@ -46,8 +46,11 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     d$('.unit-lore-health').textContent=health(profile);
     d$('.unit-lore-activity').textContent=profile.dead?'Fallen':profile.actionLabel||'Idle';
     profileKey=renderButtons(d$('.unit-lore-statuses'),profile,profileKey,id=>{chosen=id;updateProfile();});
-    const statuses=unitStatuses(profile),status=statuses.find(s=>s.id===chosen)??(profile.type==='wizard'?statuses.find(s=>s.id==='starveilOath'):null)??statuses.find(s=>s.id==='greatwoodFury')??statuses.find(s=>s.id==='lastLight')??statuses.find(s=>s.id==='bearLineage')??statuses[0];
+    const statuses=unitStatuses(profile),status=statuses.find(s=>s.id===chosen)??(profile.type==='spearwarden'?statuses.find(s=>s.id==='spearwardenOath'):null)??(profile.type==='shieldbearer'?statuses.find(s=>s.id==='shieldbearerOath'):null)??(profile.type==='wizard'?statuses.find(s=>s.id==='starveilOath'):null)??statuses.find(s=>s.id==='greatwoodFury')??statuses.find(s=>s.id==='lastLight')??statuses.find(s=>s.id==='bearLineage')??statuses[0];
     if(profile.type==='wizard'){const art=d$('.unit-lore-hero img');art.src=status?.art??'./assets/starveil/portrait-v5.png';art.style.objectPosition='50% 18%';art.alt=status?.id==='heavenrend'?'Vaelthryx the Skybreaker':'Starveil Arcanist';}
+    if(profile.type==='spearwarden'){const art=d$('.unit-lore-hero img');art.src='./assets/spearwarden/promise-lore-v1.png';art.style.objectPosition='50% 8%';art.alt='Crown Spearwarden at the dawn crossing';}
+    if(profile.type==='shieldbearer'){const art=d$('.unit-lore-hero img');art.src='./assets/shieldbearer/broken-gate-lore-v1.png';art.style.objectPosition='50% 10%';art.alt='Crown Shieldbearer holding the broken gate';}
+    if(profile.type==='villager'){const art=d$('.unit-lore-hero img');art.src='./assets/hearthkin/first-flame-lore-v2.png';art.style.objectPosition='50% 12%';art.alt='The Hearthkin revealed as the celestial First Flame';}
     if(profile.type==='grizzly'){const art=d$('.unit-lore-hero img'),src=status?.art??FIRST_CONDEMNATION.art;if(art.getAttribute('src')!==src)art.src=src;art.alt=`${bearVariant(profile).name}, a cursed Greatwood bear`; }
     dialog.classList.toggle('has-fury-art',status?.id==='greatwoodFury');
     d$('.unit-lore-sigil').innerHTML=status?effectIcon(status):sigilSvg('ward');
@@ -62,7 +65,7 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     d$('#unit-lore-title').textContent=unitName(unit);
     d$('.unit-lore-faction').textContent=factionName(unit);
     d$('.unit-lore-boundary').textContent='Game paused · close this card to resume.';
-    const bear=unit.type==='grizzly',painted=bear||unit.type==='wizard',art=d$('.unit-lore-hero img');art.hidden=!painted;d$('.unit-lore-hero canvas').hidden=painted;
+    const bear=unit.type==='grizzly',painted=bear||unit.type==='wizard'||unit.type==='villager'||unit.type==='shieldbearer'||unit.type==='spearwarden',art=d$('.unit-lore-hero img');art.hidden=!painted;d$('.unit-lore-hero canvas').hidden=painted;
     if(bear)art.src=bearVariant(unit).art;
     if(!dialog.open)dialog.showModal();updateProfile();
   }

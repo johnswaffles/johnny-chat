@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260914-bearnorune1';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260914-bearnorune1';
-import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260914-bearnorune1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260914-spearlore1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260914-spearlore1';
+import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260914-spearlore1';
 export const TEAM_RULES=Object.freeze({healAmount:4,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
