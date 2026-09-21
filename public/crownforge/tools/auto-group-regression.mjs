@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {CrownforgeSimulation} from '../src/simulation.js';
+const s=new CrownforgeSimulation({seed:42});
+const old=s.addUnit('militia',120,120,'player');assert(!old.teamId);
+s.autoGroupNewUnits=true;
+for(const type of ['villager','militia','shieldbearer','spearwarden','soldier','scout','wizard'])assert.equal(s.addUnit(type,125,125,'player').teamId,1,type);
+assert(!s.addUnit('raider',400,400,'enemy').teamId);assert(!s.addUnit('grizzly',300,300,'wildlife').teamId);assert(!old.teamId);
+const selected=[...s.selectedIds];s.addUnit('militia',130,130,'player');assert.deepEqual(s.selectedIds,selected);
+const restored=new CrownforgeSimulation();assert(restored.loadSnapshot(s.serialize()));assert(restored.autoGroupNewUnits);assert(!restored.units.find(u=>u.id===old.id).teamId);assert.equal(restored.addUnit('militia',130,130,'player').teamId,1);
+s.autoGroupNewUnits=false;assert(!s.addUnit('militia',140,140,'player').teamId);
+const legacy=s.serialize();delete legacy.autoGroupNewUnits;restored.loadSnapshot(legacy);assert.equal(restored.autoGroupNewUnits,false);
+console.log('Auto-group: all seven classes, exclusions, selection, off state, save/load and legacy saves passed');

@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260921-architecture1';
-import {startSidePull,sidePullPlan,combatRole,eligibleMember,TEAM_RULES} from './combat-teams.js?v=20260921-architecture1';
+import {UNIT_TYPES} from './config.js?v=20260921-autogroup1';
+import {startSidePull,sidePullPlan,combatRole,eligibleMember,TEAM_RULES} from './combat-teams.js?v=20260921-autogroup1';
 export function createTeamControls(sim,onChange){
  const panel=document.querySelector('#team-controls'),classes=document.querySelector('#select-warrior-classes');
  if(!panel||!classes)return {update(){}};
@@ -7,6 +7,11 @@ export function createTeamControls(sim,onChange){
  const button=name=>panel.querySelector(`[data-action="${name}"]`);
  let classKey='',teamKey='';
  const finish=()=>onChange();
+ const auto=document.createElement('label');auto.style.cssText='display:flex;align-items:center;gap:8px;margin:10px 0;font-size:12px;cursor:pointer';
+ const toggle=document.createElement('input');toggle.type='checkbox';toggle.id='auto-group-new-units';toggle.style.cssText='accent-color:#31594d;width:16px;height:16px';
+ auto.append(toggle,document.createTextNode('Auto-add new units'));auto.title='New friendly recruits automatically join Your Team. Existing units and your current selection stay unchanged.';
+ panel.querySelector('.team-buttons').after(auto);
+ toggle.onchange=()=>{sim.autoGroupNewUnits=toggle.checked;finish();};
  const split=document.createElement('button');split.type='button';split.dataset.action='side-pull';split.textContent='Divide the Hunt · Side pull';panel.querySelector('.team-buttons').after(split);split.onclick=()=>{startSidePull(sim);finish();};
  classes.addEventListener('click',e=>{const b=e.target.closest('[data-class]');if(b){sim.selectAllWarriorClass(b.dataset.class);finish();}});
  button('create').hidden=true;picker.parentElement.hidden=true;button('disband').textContent='Clear roster';
@@ -19,6 +24,7 @@ export function createTeamControls(sim,onChange){
  button('disband').onclick=()=>{sim.disbandTeam(Number(picker.value));finish();};
  picker.onchange=()=>update();
  function update(){
+  toggle.checked=sim.autoGroupNewUnits===true;
   const selected=sim.selectedEntities.filter(eligibleMember),groups=sim.getCombatTeams();
   const splitPlan=sidePullPlan(sim);split.disabled=!sim.sideEncounter&&Boolean(splitPlan.reason);split.textContent=sim.sideEncounter?'Cancel side pull':'Divide the Hunt · Side pull';split.title=sim.sideEncounter?'Release the off-tank and healer back to normal orders.':splitPlan.reason??'Send a spare tank and healer to separate the second enemy. Keeps one tank and healer in the main fight.';split.dataset.tooltip=split.title;
   const types=[...new Set(selected.filter(u=>!UNIT_TYPES[u.type].worker).map(u=>u.type))];

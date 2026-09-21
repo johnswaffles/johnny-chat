@@ -1,21 +1,21 @@
-import {prepareWizardPosition} from './wizard-positioning.js?v=20260921-architecture1';
+import {prepareWizardPosition} from './wizard-positioning.js?v=20260921-autogroup1';
 import {stormwardDamage} from './storm-dragon.js?v=20260921-toolbarheal1';
-import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260921-architecture1';
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260921-architecture1';
+import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260921-autogroup1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,eligibleMember,TEAM_RULES,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260921-autogroup1';
 import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260921-toolbarheal1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260921-architecture1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260921-architecture1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260921-architecture1';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260921-autogroup1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260921-autogroup1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260921-autogroup1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260921-architecture1';
-import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
-import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260921-architecture1';
-import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260921-architecture1';
-import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260921-architecture1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260921-architecture1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260921-autogroup1';
+import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260921-autogroup1';
+import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260921-autogroup1';
+import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260921-autogroup1';
+import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260921-autogroup1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260921-autogroup1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260921-architecture1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260921-autogroup1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -105,7 +105,7 @@ const DEFAULT_WILDWOOD_SEED = 0xc0ffee31;
 const WORLD_GENERATION_STRIDE = 0x9e3779b9;
 const WILDWOOD_TREE_AMOUNT = 240;
 const WILDWOOD_CLEARINGS = [
-  { id: 'crown-clearing', x: 78, z: 82, radiusX: 118, radiusZ: 124 },
+  { id: 'crown-clearing', x: 96, z: 100, radiusX: 150, radiusZ: 158 },
   { id: 'ashen-clearing', x: 516, z: 414, radiusX: 72, radiusZ: 68 },
   { id: 'west-berry-glade', x: 164, z: 104, radiusX: 15, radiusZ: 13 },
   { id: 'west-stone-glade', x: 190, z: 245, radiusX: 16, radiusZ: 13 },
@@ -304,6 +304,7 @@ export class CrownforgeSimulation {
     this.harvestQuantityScale = 1;
     this.workerFocus = 'balanced';
     this.autoRepairEnabled = true;
+    this.autoGroupNewUnits = false;
     const query = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
     this.stressMode = query.has('stress');
     this.explorationEnabled = query.has('explore');
@@ -820,8 +821,8 @@ export class CrownforgeSimulation {
     });
   }
 
-  _seedNaturalResourceRegions(worldSeed = this.activeWorldSeed ?? this.worldSeed) {
-    for (const [index, pocket] of REGIONAL_RESOURCE_POCKETS.entries()) {
+  _seedNaturalResourceRegions(worldSeed = this.activeWorldSeed ?? this.worldSeed, previousBounds = null) {
+    for (const [index, pocket] of (previousBounds ? [] : REGIONAL_RESOURCE_POCKETS).entries()) {
       this.addResource(
         pocket.type,
         pocket.resourceType,
@@ -838,8 +839,13 @@ export class CrownforgeSimulation {
     // a small minimum spacing keeps each trunk individually harvestable.
     const grid = new Map();
     const cellSize = 4.0;
+    if (previousBounds) for (const node of this.resourcesNodes.filter(n => n.type === 'tree')) {
+      const key = `${Math.floor(node.x/cellSize)},${Math.floor(node.z/cellSize)}`;
+      if (!grid.has(key)) grid.set(key, []);grid.get(key).push(node);
+    }
     const otherResources = this.resourcesNodes.filter(node => node.resourceType !== 'wood');
     const placeTree = (x, z, index, ridge = false) => {
+      if (previousBounds && x <= previousBounds.width && z <= previousBounds.height) return false;
       if (x < 0 || z < 0 || x > CONFIG.mapWidth || z > CONFIG.mapHeight) return false;
       if (this._insideWildwoodClearing(x, z, 2)) return false;
       if (otherResources.some(node => distance({ x, z }, node) < 3.05 + resourceFootprint(node) + 1)) return false;
@@ -864,7 +870,7 @@ export class CrownforgeSimulation {
 
     // Follow the ridge with overlapping blocker circles, including its two
     // boundary contacts. Satellites are sampled independently, never in bands.
-    let index = 0, accepted = 0;
+    let index = 0, accepted = previousBounds ? this.resourcesNodes.filter(n => n.type === 'tree').length : 0;
     for (let x = 0; x <= 460; x += 1.7) {
       const z = woodlandRidgeZ(x);
       if (z < 0) break;
@@ -1068,6 +1074,9 @@ export class CrownforgeSimulation {
       patrolIndex: 0,
       patrolActive: false,
     };
+    if (this.autoGroupNewUnits && eligibleMember(unit)) {
+      unit.teamId = 1;unit.healCooldown = TEAM_RULES.healInterval;
+    }
     this.units.push(unit);
     return unit;
   }
@@ -7146,6 +7155,7 @@ export class CrownforgeSimulation {
     return {
       version: 1,
       buildingArtVersion: BUILDING_ART_VERSION,
+      mapBounds: { width: CONFIG.mapWidth, height: CONFIG.mapHeight },
       clock: this.clock,
       timeAccumulator: this.timeAccumulator,
       nextId: this.nextId,
@@ -7155,6 +7165,7 @@ export class CrownforgeSimulation {
       phase: this.phase,
       workerFocus: this.workerFocus,
       autoRepairEnabled: this.autoRepairEnabled,
+      autoGroupNewUnits: this.autoGroupNewUnits,
       explorationEnabled: this.explorationEnabled,
       exploredCells: [...this.exploredCells],
       explorationVersion: this.explorationVersion,
@@ -7245,6 +7256,7 @@ export class CrownforgeSimulation {
     this.phase = restored.phase === 'victory' || restored.phase === 'defeat' ? restored.phase : 'playing';
     this.workerFocus = FIRST_AGE_WORK_PRIORITIES[restored.workerFocus] ? restored.workerFocus : 'balanced';
     this.autoRepairEnabled = restored.autoRepairEnabled !== false;
+    this.autoGroupNewUnits = restored.autoGroupNewUnits === true;
     this.explorationEnabled = Boolean(restored.explorationEnabled);
     this.exploredCells = new Set(Array.isArray(restored.exploredCells) ? restored.exploredCells : []);
     this.explorationVersion = Number.isInteger(restored.explorationVersion) ? restored.explorationVersion : 0;
@@ -7277,6 +7289,11 @@ export class CrownforgeSimulation {
     }
     this.resourcesNodes = this.resourcesNodes.filter(node => !clearedTrees.has(node.id));
     this.selectedIds = this.selectedIds.filter(id => !clearedTrees.has(id));
+    const previousBounds = restored.mapBounds ?? { width: 560, height: 460 };
+    if (previousBounds.width < CONFIG.mapWidth || previousBounds.height < CONFIG.mapHeight) {
+      this._seedNaturalResourceRegions(this.activeWorldSeed ?? this.worldSeed, previousBounds);
+      this.navigationVersion += 1;
+    }
     this._syncSelectionFlags();
     this._announce('Crownforge save restored.');
     return true;

@@ -1,13 +1,13 @@
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260921-architecture1';
-import { polygonBounds } from './building-geometry.js?v=20260921-architecture1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260921-autogroup1';
+import { polygonBounds } from './building-geometry.js?v=20260921-autogroup1';
 
 export const CONFIG = {
   // The current green diamond is expanded to roughly ten times its former
   // area. Most of that land is first-age wildwood: the two factions begin in
   // distant authored clearings and must deliberately cut new routes through
   // the forest instead of crossing one empty lawn.
-  mapWidth: 560,
-  mapHeight: 460,
+  mapWidth: 626,
+  mapHeight: 514,
   tileWidth: 52,
   tileHeight: 26,
   initialZoom: 0.28,

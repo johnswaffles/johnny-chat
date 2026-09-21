@@ -1,7 +1,7 @@
-import { GrizzlyRenderer } from '../src/grizzly-renderer.js?v=20260921-architecture1';
-import { BEAR_DEATH } from '../src/bear-combat.js?v=20260921-architecture1';
+import { GrizzlyRenderer } from '../src/grizzly-renderer.js?v=20260921-autogroup1';
+import { BEAR_DEATH } from '../src/bear-combat.js?v=20260921-autogroup1';
 import { GRIZZLY_MOTION, GRIZZLY_ATTACKS, grizzlyProjection } from '../src/grizzly-motion.js?v=20260909-cursedbears1';
-import { createCharacterRigs } from '../src/character-rigs.js?v=20260921-architecture1';
+import { createCharacterRigs } from '../src/character-rigs.js?v=20260921-autogroup1';
 const canvas=document.querySelector('#stage'),ctx=canvas.getContext('2d'),bear=new GrizzlyRenderer(),guard=createCharacterRigs({lazy:true}).get('soldier');
 const variant=document.querySelector('#variant');
 const action=document.querySelector('#action'),pause=document.querySelector('#pause'),slider=document.querySelector('#pose'),status=document.querySelector('#status'),bones=document.querySelector('#bones');

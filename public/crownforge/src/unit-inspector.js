@@ -1,7 +1,7 @@
 import {effectIcon} from './status-icons.js?v=20260921-toolbarheal1';
 import { bearVariant } from './bear-variants.js?v=20260921-toolbarheal1';
-import {UNIT_TYPES} from './config.js?v=20260921-architecture1';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260921-architecture1';
+import {UNIT_TYPES} from './config.js?v=20260921-autogroup1';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260921-autogroup1';
 
 const unitName=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type].label;
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';

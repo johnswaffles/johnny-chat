@@ -23,3 +23,20 @@ test('old saves clear only generated starting trees and release their workers',(
  const deposits=s.resourcesNodes.filter(n=>n.resourceType!=='wood').map(n=>n.id);
  assert.deepEqual(r.resourcesNodes.filter(n=>n.resourceType!=='wood').map(n=>n.id),deposits);
 });
+
+test('new outer land is wooded and old-save expansion does not regrow harvested land',()=>{
+ const s=new CrownforgeSimulation({seed:42});
+ for(const point of [{x:205,z:95},{x:190,z:160},{x:110,z:210}]){
+  assert(s.getBuildingPlacementPreview('observatory',point).valid);
+  s.addBuilding('observatory',point.x,point.z,'player',1);
+ }
+ assert(s.resourcesNodes.filter(n=>n.type==='tree').length>5000);
+ const save=s.serialize();delete save.mapBounds;
+ save.resourcesNodes=save.resourcesNodes.filter(n=>n.x<=560&&n.z<=460);
+ const oldIds=new Set(save.resourcesNodes.map(n=>n.id));
+ const r=new CrownforgeSimulation({seed:7});assert(r.loadSnapshot(save));
+ const added=r.resourcesNodes.filter(n=>!oldIds.has(n.id));
+ assert(added.length>500);assert(added.every(n=>n.type==='tree'&&(n.x>560||n.z>460)));
+ const again=new CrownforgeSimulation({seed:7});assert(again.loadSnapshot(r.serialize()));
+ assert.equal(again.resourcesNodes.length,r.resourcesNodes.length);
+});

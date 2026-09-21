@@ -1,4 +1,4 @@
-import { RESOURCE_SIZE_TIERS } from './config.js?v=20260921-architecture1';
+import { RESOURCE_SIZE_TIERS } from './config.js?v=20260921-autogroup1';
 
 // At strategic zoom, cache tree strips by world depth. Any strip containing
 // another kind of entity remains individually painted, preserving the exact

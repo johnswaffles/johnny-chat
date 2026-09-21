@@ -20,7 +20,7 @@ export function woodlandRidgeZ(x) {
   return 430 - x + 18 * Math.sin(x * 0.024) + 8 * Math.sin(x * 0.071)
     + 56 * Math.exp(-(((x - 190) / 43) ** 2));
 }
-export const FOREST_LIMITS = Object.freeze({ attempts: 100000, maxTrees: 8500 });
+export const FOREST_LIMITS = Object.freeze({ attempts: 125000, maxTrees: 10625 });
 const smooth = (a,b,n) => { const t=clamp01((n-a)/(b-a)); return t*t*(3-2*t); };
 
 export function woodlandDensity(x, z, seed = 0) {
