@@ -1,6 +1,6 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260921-startingroom1';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260921-startingroom1';
-import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260921-startingroom1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260921-formationmilitia1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260921-formationmilitia1';
+import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260921-formationmilitia1';
 export const TEAM_RULES=Object.freeze({healAmount:4,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -165,10 +165,21 @@ export function teamMovePoint(units,unit,destination){
  if(!unit.teamId||!units.some(u=>u.teamId&&combatRole(u)==='tank'))return null;
  const members=units.filter(u=>u.teamId),center=members.reduce((p,u)=>({x:p.x+u.x/members.length,z:p.z+u.z/members.length}),{x:0,z:0});
  const dx=destination.x-center.x,dz=destination.z-center.z,len=Math.hypot(dx,dz)||1;
- const role=combatRole(unit),row=unit.type==='wizard'?16:role==='tank'?0:role==='healer'?8:4;
- const peers=members.filter(u=>combatRole(u)===role).sort((a,b)=>a.id-b.id),index=peers.indexOf(unit);
- const side=(index%5-(Math.min(5,peers.length)-1)/2)*2.5,back=row+Math.floor(index/5)*2.5;
- return {x:destination.x-dx/len*back-dz/len*side,z:destination.z-dz/len*back+dx/len*side};
+ const band=u=>u.type==='wizard'?'wizard':combatRole(u);
+ const order=['tank','damage','healer','wizard'];
+ const columns=Math.max(3,Math.min(8,Math.ceil(Math.sqrt(members.length))));
+ let row=0;
+ for(const role of order){
+  const peers=members.filter(u=>band(u)===role).sort((a,b)=>a.id-b.id);
+  if(band(unit)===role){
+   const index=peers.indexOf(unit),count=Math.min(columns,peers.length-Math.floor(index/columns)*columns);
+   const side=(index%columns-(count-1)/2)*2.5,back=row+Math.floor(index/columns)*2.5;
+   const forwardX=len===1&&dx===0&&dz===0?1:dx/len,forwardZ=dz/len;
+   return {x:destination.x-forwardX*back-forwardZ*side,z:destination.z-forwardZ*back+forwardX*side};
+  }
+  if(peers.length)row+=Math.ceil(peers.length/columns)*2.5+(role==='healer'?6:1.5);
+ }
+ return null;
 }
 
 // Persistent reservations keep a casualty or newcomer from rotating the whole party.

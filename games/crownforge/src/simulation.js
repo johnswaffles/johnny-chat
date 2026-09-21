@@ -1,21 +1,21 @@
-import {prepareWizardPosition} from './wizard-positioning.js?v=20260921-startingroom1';
-import {stormwardDamage} from './storm-dragon.js?v=20260921-startingroom1';
-import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260921-startingroom1';
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260921-startingroom1';
-import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260921-startingroom1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260921-startingroom1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260921-startingroom1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260921-startingroom1';
+import {prepareWizardPosition} from './wizard-positioning.js?v=20260921-formationmilitia1';
+import {stormwardDamage} from './storm-dragon.js?v=20260921-formationmilitia1';
+import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260921-formationmilitia1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260921-formationmilitia1';
+import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260921-formationmilitia1';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260921-formationmilitia1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260921-formationmilitia1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260921-formationmilitia1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260921-startingroom1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260921-formationmilitia1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260921-startingroom1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260921-formationmilitia1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260921-startingroom1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260921-formationmilitia1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -3607,8 +3607,8 @@ export class CrownforgeSimulation {
       this.navigationVersion,
       unit.type,
       unit.stairAccess ? 1 : 0,
-      Math.floor(unit.x), Math.floor(unit.z),
-      Math.round(target.x * 2), Math.round(target.z * 2),
+      Math.round(unit.x * 1000), Math.round(unit.z * 1000),
+      Math.round(target.x * 1000), Math.round(target.z * 1000),
       placementKey,
     ].join('|');
   }
@@ -3620,7 +3620,7 @@ export class CrownforgeSimulation {
     }
   }
 
-  _buildPath(unit, target, placement = null, { directOnly = false } = {}) {
+  _buildPath(unit, target, placement = null, { directOnly = false, allowStartConnector = true } = {}) {
     const safeTarget = {
       x: clamp(target.x, 0.55, CONFIG.mapWidth - 0.55),
       z: clamp(target.z, 0.55, CONFIG.mapHeight - 0.55),
@@ -3660,6 +3660,16 @@ export class CrownforgeSimulation {
       connected: placement ? null : (start, end) => this.resourceConnectivity.connected(start, end),
       segmentClear: (start, end) => !this._pathSegmentBlocked(unit, start, end, placement),
     });
+    if (!path.length && allowStartConnector && targetCellOpen && !this._pointBlockedForUnit(unit,unit,placement)) {
+      // Crowding can leave valid feet beside a wall but inside a blocked A*
+      // start cell. Walk to an open cell through a checked short connector.
+      for(const radius of [1.5,3])for(let i=0;i<8;i++){
+        const angle=i*Math.PI/4,point={x:unit.x+Math.cos(angle)*radius,z:unit.z+Math.sin(angle)*radius};
+        if(this._pointBlockedForUnit(unit,point,placement)||this._pathSegmentBlocked(unit,unit,point,placement))continue;
+        const remainder=this._buildPath({...unit,...point},safeTarget,placement,{allowStartConnector:false});
+        if(remainder){const joined=[point,...remainder];this._cachePath(cacheKey,joined);return joined;}
+      }
+    }
     if (!path.length && distance(unit, safeTarget) > PATH_REACH_TOLERANCE) {
       if (!targetCellOpen) {
         this._cachePath(cacheKey, null);
@@ -5952,17 +5962,31 @@ export class CrownforgeSimulation {
       if (queued) this.lastCommand += ` ${queued} builder${queued === 1 ? '' : 's'} queued it after construction.`;
       return { kind: 'attack', success: true, target, queued };
     }
-    // A single selected unit should land on the cursor location. The ring is
-    // only for groups, where it prevents everyone from collapsing onto one
-    // point while preserving a readable formation.
-    const spacing = units.length === 1 ? 0 : Math.min(2.4, Math.max(1.35, 0.72 + units.length * 0.22));
+    // Every member gets a distinct slot; the formation grows with the roster.
+    const columns = Math.ceil(Math.sqrt(units.length));
+    const reservedMoves = [];
+    const openMovePoint = (unit, desired) => {
+      for (let ring = 0; ring <= 8; ring++) {
+        const count = ring ? ring * 8 : 1;
+        for (let i = 0; i < count; i++) {
+          const angle = i / count * Math.PI * 2;
+          const candidate = {x:desired.x + Math.cos(angle)*ring*2.5,z:desired.z + Math.sin(angle)*ring*2.5};
+          if(candidate.x<1||candidate.z<1||candidate.x>CONFIG.mapWidth-1||candidate.z>CONFIG.mapHeight-1)continue;
+          if (reservedMoves.some(p=>distance(p,candidate)<2.2) || this._pointBlockedForUnit(unit,candidate)) continue;
+          reservedMoves.push(candidate);return candidate;
+        }
+      }
+      return null;
+    };
     let routed = 0;
     let queued = 0;
     const pendingMoves = [];
     const explicitMovers=[];
     units.forEach((unit, index) => {
-      const angle = (index / Math.max(1, units.length)) * Math.PI * 2;
-      const moveTarget = teamMovePoint(units,unit,point) ?? { x: point.x + Math.cos(angle) * spacing, z: point.z + Math.sin(angle) * spacing };
+      const row=Math.floor(index/columns),width=Math.min(columns,units.length-row*columns);
+      const desired=teamMovePoint(units,unit,point) ?? {x:point.x+(index%columns-(width-1)/2)*2.5,z:point.z+(row-(Math.ceil(units.length/columns)-1)/2)*2.5};
+      const moveTarget=openMovePoint(unit,desired);
+      if(!moveTarget)return;
       const moveOrder = { kind: 'move', target: moveTarget, stopDistance: 0, manualCombatMove: combatRole(unit)==='tank' };
       if (this._shouldQueueExplicitOrder(unit, queue) && this._queueUnitOrder(unit, moveOrder, 'Move queued')) {
         routed += 1;
@@ -5996,41 +6020,16 @@ export class CrownforgeSimulation {
         }
       }
     });
-    // Units selected together are normally standing in the same local group.
-    // When an obstacle requires A*, solve one representative route for that
-    // cluster and let its neighbors use the same corridor. This prevents a
-    // sealed forest click from repeating an identical expensive failure for
-    // every unit before the browser can acknowledge the command.
-    while (pendingMoves.length) {
-      const leaderOrder = pendingMoves.shift();
-      const cluster = [leaderOrder];
-      for (let index = pendingMoves.length - 1; index >= 0; index -= 1) {
-        if (distance(pendingMoves[index].unit, leaderOrder.unit) > 12) continue;
-        cluster.push(pendingMoves[index]);
-        pendingMoves.splice(index, 1);
-      }
-      if (!this._sendUnitTo(leaderOrder.unit, leaderOrder.moveTarget, 'move')) {
-        for (const follower of cluster.slice(1)) {
-          follower.unit.path = [];
-          follower.unit.routeTarget = { ...follower.moveTarget };
-          follower.unit.pathBlocked = true;
-          follower.unit.recoveryAvailable = true;
-          follower.unit.command = 'idle';
-          follower.unit.visualState = 'idle';
-          follower.unit.actionLabel = 'No route available';
-        }
-        continue;
-      }
-      routed += 1;
-      for (const follower of cluster.slice(1)) {
-        follower.unit.path = leaderOrder.unit.path.map((waypoint) => ({ ...waypoint }));
-        follower.unit.routeTarget = { ...leaderOrder.unit.routeTarget };
-        follower.unit.stopDistance = 0;
-        follower.unit.pathBlocked = false;
-        follower.unit.command = 'move';
-        follower.unit.actionLabel = 'Moving';
-        this._resetMovementTracking(follower.unit);
-        routed += 1;
+    // A leader's corridor may intersect a building from a follower's position.
+    // Solve each remaining approach independently, retaining its reserved slot.
+    for (const {unit,moveTarget} of pendingMoves) {
+      if(this._sendUnitTo(unit,moveTarget,'move')){routed++;continue;}
+      // A clear slot can still sit on the wrong side of an obstacle. Try a
+      // bounded set of alternatives without moving or teleporting the unit.
+      for(let attempt=0;attempt<4;attempt++){
+        const angle=attempt*Math.PI/2;
+        const fallback=openMovePoint(unit,{x:moveTarget.x+Math.cos(angle)*7.5,z:moveTarget.z+Math.sin(angle)*7.5});
+        if(fallback&&this._sendUnitTo(unit,fallback,'move')){routed++;break;}
       }
     }
     for(const unit of explicitMovers)if(combatRole(unit)==='tank'&&unit.command==='move'&&!unit.teamAdvanceTargetId&&unit.routeTarget)unit.manualCombatMove={...unit.routeTarget};
@@ -6039,7 +6038,8 @@ export class CrownforgeSimulation {
       this._announce(this.lastCommand);
       return { kind: 'none', success: false, target: point };
     }
-    this.lastCommand = `Move ${units.length} unit${units.length === 1 ? '' : 's'}.`;
+    this.lastCommand = `Move ${routed} unit${routed === 1 ? '' : 's'}.`;
+    if(routed<units.length)this.lastCommand += ` ${units.length-routed} could not find an open route.`;
     if (queued) this.lastCommand += ` ${queued} builder${queued === 1 ? '' : 's'} queued it after construction.`;
     return { kind: 'move', success: true, target: point, queued };
   }
