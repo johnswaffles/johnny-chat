@@ -17,7 +17,7 @@ Revision: 20260913-clearing1. Local revision; verify the live marker for deploym
 | **Heart of the Deathless Greatwood** | Any bear crosses below 5% true HP | 99% damage reduction after hide/armor for 60 seconds, replacing ordinary Heart reduction. Protects the below-5% portion of the crossing hit. Persists through healing; no added regeneration. Rearms after expiry and healing above 60%. Timer/spent state persist in saves. |
 | Shieldbearer armor and evasion | Permanent tank defenses | 3,480 HP, 80% damage reduction, one deterministic dodge per twenty incoming melee swings (5%). No new armor increase in this revision. |
 | Shieldbearer threat lock | Tank lands a hit | Enemy attacks the tank for 8 seconds, refreshed on each hit, within 24 units. Existing valid tank retains ownership over another tank. Other fighters cannot steal aggro. |
-| Team healing | Assigned Hearthkin, every 2 seconds | Heal every nearby injured eligible friendly unit within 24 units and line of sight: tanks 40 HP first, others 4 HP. Excludes self, dead units and enemies; no overheal. Healer remains dedicated until removed from team. |
+| Team healing | Assigned Hearthkin, every 2 seconds | Heal every nearby injured eligible friendly unit within 24 units and line of sight: tanks 40 HP first, others 0.4 HP. Excludes self, dead units and enemies; no overheal. Healer remains dedicated until removed from team. |
 | **Last Light Ward** | Any attempted damaging hit on Hearthkin | No health is lost. Activates 60-second untargetability and reveals their protection. Immediately grants Chorus of the Last Light to living allies; outward blessing animation lasts 0.9 seconds. |
 | **Chorus of the Last Light** | Hearthkin shield activates | Living allies receive 200% of normal healing (2×) for 60 seconds: tanks 80 HP and others 8 HP per team heal. Another activation refreshes the duration without stacking. No curse or false health is applied to enemies. |
 | **Stunned** / **Steadfast** | Hearthkin strike against susceptible humanoid | Existing 5-second stun and 20-second stun immunity. Greatwood bears remain immune. |
@@ -70,7 +70,7 @@ Bloodclaw Reckoning now deals 50% maximum-health AoE damage before defenses with
 
 **Beyond the First Oath** — permanent Hearthkin protection. All damage, hostile magic, curses, and stuns are blocked. Attempted damage awakens Last Light Ward and the team healing blessing without taking health; an active ward is not continually refreshed. Friendly heals and blessings remain effective.
 
-Mercy of the Last Crown: a living tank strictly below 10% maximum HP receives 5× Hearthkin healing. Each healer checks the threshold before its pulse: 200 HP normally, 400 HP with Chorus. At 10% or above, normal tank healing remains 40 HP (80 with Chorus). Non-tanks receive 4 HP per pulse (8 with Chorus), an 80% reduction from their former base healing.
+Mercy of the Last Crown: a living tank strictly below 10% maximum HP receives 5× Hearthkin healing. Each healer checks the threshold before its pulse: 200 HP normally, 400 HP with Chorus. At 10% or above, normal tank healing remains 40 HP (80 with Chorus). Non-tanks receive 0.4 HP per pulse (0.8 with Chorus), a 98% reduction from their former base healing.
 
 ## Starveil Arcanist — Keeper of the Last Star
 

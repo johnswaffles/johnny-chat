@@ -1,18 +1,19 @@
-import {createSkybreakerControls} from './skybreaker-controls.js?v=20260921-militiasteady2';
-import {createCombatFrames} from './combat-frames.js?v=20260921-militiasteady2';
+import {createCommandToolbar} from './command-toolbar.js?v=20260921-toolbarheal1';
+import {createSkybreakerControls} from './skybreaker-controls.js?v=20260921-toolbarheal1';
+import {createCombatFrames} from './combat-frames.js?v=20260921-toolbarheal1';
 import {createUnitActivity} from './unit-activity.js?v=20260912-activity1';
-import {createTeamControls} from './team-controls.js?v=20260921-militiasteady2';
-import {combatRole} from './combat-teams.js?v=20260921-militiasteady2';
-import { bearVariant } from './bear-variants.js?v=20260921-militiasteady2';
-import {requestGrizzlyPair} from './wildlife.js?v=20260921-militiasteady2';
-import {createUnitInspector} from './unit-inspector.js?v=20260921-militiasteady2';
-import {displayedUnitHealth} from './unit-status.js?v=20260921-militiasteady2';
-import { setupPresentation } from './presentation.js?v=20260921-militiasteady2';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260921-militiasteady2';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260921-militiasteady2';
+import {createTeamControls} from './team-controls.js?v=20260921-toolbarheal1';
+import {combatRole} from './combat-teams.js?v=20260921-toolbarheal1';
+import { bearVariant } from './bear-variants.js?v=20260921-toolbarheal1';
+import {requestGrizzlyPair} from './wildlife.js?v=20260921-toolbarheal1';
+import {createUnitInspector} from './unit-inspector.js?v=20260921-toolbarheal1';
+import {displayedUnitHealth} from './unit-status.js?v=20260921-toolbarheal1';
+import { setupPresentation } from './presentation.js?v=20260921-toolbarheal1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260921-toolbarheal1';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260921-toolbarheal1';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
-import { CrownforgeRenderer } from './renderer.js?v=20260921-militiasteady2';
-import { CrownforgeSimulation } from './simulation.js?v=20260921-militiasteady2';
+import { CrownforgeRenderer } from './renderer.js?v=20260921-toolbarheal1';
+import { CrownforgeSimulation } from './simulation.js?v=20260921-toolbarheal1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
 import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260909-cursedbears1';
 
@@ -596,7 +597,10 @@ const combatFrames=createCombatFrames(simulation,renderer);
 const skybreakerControls=createSkybreakerControls(simulation);
 const teamControls=createTeamControls(simulation,()=>{announce(simulation.lastCommand);updateUi();});
 
+const commandToolbar=createCommandToolbar(simulation,()=>{audio.unlock();audio.ui();announce(simulation.lastCommand);updateUi();});
+
 function updateUi() {
+  commandToolbar.update();
   teamControls.update();
   const pendingBears=Boolean(simulation.wildlifeState?.pendingPair);
   releaseBearsButton.disabled=simulation.phase!=='playing'||pendingBears;
