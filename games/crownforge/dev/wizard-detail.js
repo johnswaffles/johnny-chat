@@ -1,7 +1,7 @@
 import oldArt from './wizard-original-art.js';
 import art from '../src/painted-roster/wizard.js?v=20260914-wizarddetail2';
 import {PaintedRosterRenderer} from '../src/painted-roster/painted-roster-renderer.js';
-import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260921-militiaplay1';
+import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260921-militiasteady2';
 const renderers=[new PaintedRosterRenderer(CHARACTER_RIGS.wizard,oldArt),new PaintedRosterRenderer(CHARACTER_RIGS.wizard,art)];
 const canvases=[document.querySelector('#before'),document.querySelector('#after')],contexts=canvases.map(c=>{const dpr=devicePixelRatio||1;c.width=c.height=Math.round(440*dpr);const ctx=c.getContext('2d');ctx.scale(dpr,dpr);return ctx;});
 const prepared=await Promise.all(renderers.flatMap(r=>['se','sw','ne','nw'].flatMap(v=>['idle','walk','attack','death'].map(a=>r.prepareAction(v,a)))));

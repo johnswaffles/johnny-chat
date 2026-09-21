@@ -1,5 +1,5 @@
-import { CONFIG } from './config.js?v=20260921-militiaplay1';
-import { MeadowField } from './meadow-field.js?v=20260921-militiaplay1';
+import { CONFIG } from './config.js?v=20260921-militiasteady2';
+import { MeadowField } from './meadow-field.js?v=20260921-militiasteady2';
 
 // Measured isolated alpha bounds, not nominal atlas cells: the seed heads in
 // row two begin above the equal-cell boundary. Retain the source PNG intact.

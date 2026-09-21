@@ -1,7 +1,7 @@
-import {effectIcon} from './status-icons.js?v=20260921-militiaplay1';
-import { bearVariant } from './bear-variants.js?v=20260921-militiaplay1';
-import {UNIT_TYPES} from './config.js?v=20260921-militiaplay1';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260921-militiaplay1';
+import {effectIcon} from './status-icons.js?v=20260921-militiasteady2';
+import { bearVariant } from './bear-variants.js?v=20260921-militiasteady2';
+import {UNIT_TYPES} from './config.js?v=20260921-militiasteady2';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260921-militiasteady2';
 
 const unitName=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type].label;
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';

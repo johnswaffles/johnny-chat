@@ -1,25 +1,25 @@
-import {drawStormDragons} from './storm-dragon-renderer.js?v=20260921-militiaplay1';
-import {drawWizardMagic} from './wizard-magic.js?v=20260921-militiaplay1';
-import {drawLastLightChorus} from './last-light-chorus-vfx.js?v=20260921-militiaplay1';
+import {drawStormDragons} from './storm-dragon-renderer.js?v=20260921-militiasteady2';
+import {drawWizardMagic} from './wizard-magic.js?v=20260921-militiasteady2';
+import {drawLastLightChorus} from './last-light-chorus-vfx.js?v=20260921-militiasteady2';
 import { LivingCrownHall } from './crown-hall-living.js?v=20260911-livinghall1';
-import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260921-militiaplay1';
-import {corpseLifetime} from './bear-combat.js?v=20260921-militiaplay1';
+import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260921-militiasteady2';
+import {corpseLifetime} from './bear-combat.js?v=20260921-militiasteady2';
 import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
-import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260921-militiaplay1';
-import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260921-militiaplay1';
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260921-militiaplay1';
-import {paintedRosterFactories} from './painted-roster-rig.js?v=20260921-militiaplay1';
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260921-militiaplay1';
+import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260921-militiasteady2';
+import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260921-militiasteady2';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260921-militiasteady2';
+import {paintedRosterFactories} from './painted-roster-rig.js?v=20260921-militiasteady2';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260921-militiasteady2';
 import { BUILDING_DEPTH } from './building-depth-data.js?v=20260909-cursedbears1';
 import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260909-cursedbears1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260911-blueward1';
-import { CrownforgeLandscape } from './landscape.js?v=20260921-militiaplay1';
-import { ForestCache } from './forest-cache.js?v=20260921-militiaplay1';
-import { CrownforgeMeadow } from './meadow.js?v=20260921-militiaplay1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260921-militiaplay1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260921-militiaplay1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260921-militiaplay1';
+import { CrownforgeLandscape } from './landscape.js?v=20260921-militiasteady2';
+import { ForestCache } from './forest-cache.js?v=20260921-militiasteady2';
+import { CrownforgeMeadow } from './meadow.js?v=20260921-militiasteady2';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260921-militiasteady2';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260921-militiasteady2';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260921-militiasteady2';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -1279,7 +1279,7 @@ export class CrownforgeRenderer {
       }
       this.drawUnitStatusEffects(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime);
       this.drawSelectionMarker(ctx, point, true, unit.type === 'soldier' ? 0.82 : unit.type === 'scout' ? 1.25 : 0.66, ['enemy','wildlife'].includes(unit.faction) ? '#d86b55' : FACTION.color);
-      this.drawHealthBar(ctx, point.x, point.y - unitSize * (unit.type === 'grizzly' ? this.grizzly.heightFactor(unit) : unit.type === 'villager' ? 1.08 : .9) * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, displayedUnitHealth(unit) / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
+      this.drawHealthBar(ctx, point.x, point.y - unitSize * (unit.type === 'grizzly' ? this.grizzly.heightFactor(unit) : unit.type === 'villager' ? 1.08 : unit.type === 'militia' ? 1.2 : .9) * this.camera.zoom, unitSize * 0.62 * this.camera.zoom, displayedUnitHealth(unit) / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
     }
   }
 
@@ -2290,7 +2290,7 @@ export class CrownforgeRenderer {
     if (!unit.dead) {
       this.drawUnitStatusEffects(ctx, unit, point, size * this.camera.zoom, time);
       this.drawCombatPhaseCue(ctx, unit, point, time);
-      this.drawHealthBar(ctx, point.x, point.y - size * (unit.type === 'grizzly' ? this.grizzly.heightFactor(unit) : unit.type === 'villager' ? 1.08 : .9) * this.camera.zoom, size * 0.62 * this.camera.zoom, displayedUnitHealth(unit) / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
+      this.drawHealthBar(ctx, point.x, point.y - size * (unit.type === 'grizzly' ? this.grizzly.heightFactor(unit) : unit.type === 'villager' ? 1.08 : unit.type === 'militia' ? 1.2 : .9) * this.camera.zoom, size * 0.62 * this.camera.zoom, displayedUnitHealth(unit) / unit.maxHp, '', Boolean(unit.selected || unit.command === 'attack' || unit.hitFlash > 0 || unit.healthRevealTimer > 0 || unit.stunTimer > 0 || unit.stunImmunityTimer > 0 || unit.lastLightWardTimer > 0));
       if (unit.carryAmount > 0) this.drawCarryBadge(ctx, point.x + 20 * this.camera.zoom, point.y - 18 * this.camera.zoom, unit.carryType, unit.carryAmount);
       if (unit.command === 'attack' && unit.attackPhase !== 'approach') this.drawAttackRing(ctx, point, time, unit.attackPhase);
       if (unit.hitFlash > 0) this.drawHitFlash(ctx, point, time);

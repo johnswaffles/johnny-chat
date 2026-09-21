@@ -1,4 +1,4 @@
-import {BUILDING_TYPES} from '../src/config.js?v=20260921-militiaplay1';
+import {BUILDING_TYPES} from '../src/config.js?v=20260921-militiasteady2';
 const {simulation:s,renderer:r}=window.crownforge;
 s.units=[];s.pausedEnemyUnits=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.projectiles=[];s.navigationVersion++;
 s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};s._updateMilitaryServices=()=>{};s.wildlifeState.nextSpawnAt=Infinity;

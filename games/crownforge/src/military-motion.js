@@ -1,4 +1,4 @@
-import { UNIT_TYPES } from './config.js?v=20260921-militiaplay1';
+import { UNIT_TYPES } from './config.js?v=20260921-militiasteady2';
 import { hearthkinLocomotion, projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260909-cursedbears1';
 
 // Pure actor-space motion. A facing selects a camera projection; it cannot
@@ -23,7 +23,7 @@ const shield=(width,height,shape='round',attachment='left-hand')=>Object.freeze(
 export const MILITARY_PROFILES=Object.freeze({
   soldier:Object.freeze({tool:'spear',scale:2.1,grip:.62,shoulders:13,hips:4.8,stride:.88,lift:.88,walk:1.14,shield:shield(23,25),weight:1.05}),
   spearwarden:Object.freeze({tool:'spear',scale:2.35,grip:.63,shoulders:12.2,hips:4.7,stride:.81,lift:.84,walk:1.2,shield:shield(23,26),weight:1.1}),
-  militia:Object.freeze({tool:'mace',scale:1.05,grip:.76,shoulders:11.7,hips:4.5,stride:.96,lift:.94,walk:1.08,shield:shield(21,23),weight:.85}),
+  militia:Object.freeze({tool:'mace',scale:1.05,grip:.76,shoulders:11.7,hips:4.5,stride:.96,lift:.94,walk:1.55,shield:shield(21,23),weight:.85}),
   shieldbearer:Object.freeze({tool:'axe',scale:1.03,grip:.76,shoulders:13.6,hips:5,stride:.78,lift:.8,walk:1.23,shield:shield(29,33,'oval'),weight:1.2}),
   raider:Object.freeze({tool:'axe',scale:1.2,grip:.75,shoulders:14.5,hips:5.2,stride:.9,lift:.94,walk:1.15,shield:null,weight:1.12}),
   thornSpear:Object.freeze({tool:'spear',scale:2.25,grip:.63,shoulders:13.4,hips:4.9,stride:.83,lift:.86,walk:1.22,shield:shield(24,25,'round','back'),weight:1.08}),

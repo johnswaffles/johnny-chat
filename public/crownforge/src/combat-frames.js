@@ -1,8 +1,8 @@
-import {effectIcon,isDebuff} from './status-icons.js?v=20260921-militiaplay1';
-export {effectIcon,isDebuff} from './status-icons.js?v=20260921-militiaplay1';
-import {UNIT_TYPES} from './config.js?v=20260921-militiaplay1';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260921-militiaplay1';
-import {bearVariant} from './bear-variants.js?v=20260921-militiaplay1';
+import {effectIcon,isDebuff} from './status-icons.js?v=20260921-militiasteady2';
+export {effectIcon,isDebuff} from './status-icons.js?v=20260921-militiasteady2';
+import {UNIT_TYPES} from './config.js?v=20260921-militiasteady2';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260921-militiasteady2';
+import {bearVariant} from './bear-variants.js?v=20260921-militiasteady2';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
 const tank=u=>UNIT_TYPES[u.type]?.combatRole==='tank';
@@ -39,7 +39,7 @@ export function portraitAsset(u){
  return null;
 }
 export function createCombatFrames(sim,renderer){
- const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260921-militiaplay1';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260921-militiasteady2';document.head.append(css);
  const host=document.createElement('aside');host.className='combat-frames';host.hidden=true;host.setAttribute('aria-label','Encounter portraits');
  host.innerHTML='<header><span>IN COMBAT</span><b>Encounter</b><button type="button" aria-label="Minimize encounter portraits" aria-expanded="true">−</button></header><div class="combat-frame-list"></div>';
  document.querySelector('.game-shell').append(host);

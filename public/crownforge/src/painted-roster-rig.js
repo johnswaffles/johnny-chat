@@ -1,10 +1,10 @@
-import {PaintedRosterRenderer,paintedRosterFrame,paintedRosterCacheStats} from './painted-roster/painted-roster-renderer.js?v=20260921-militiaplay1';
+import {PaintedRosterRenderer,paintedRosterFrame,paintedRosterCacheStats} from './painted-roster/painted-roster-renderer.js?v=20260921-militiasteady2';
 
 export const PAINTED_FIGHTER_TYPES=Object.freeze(['wizard','soldier','spearwarden','militia','shieldbearer','scout','raider','thornSpear','hearthLevy','hidewall','ashenOutrider']);
 export {paintedRosterCacheStats};
 const metadata=new Map();
 function loadArt(type){
-  if(!metadata.has(type))metadata.set(type,import(`./painted-roster/${type}.js?v=${type==='militia'?'20260921-militiaplay1':type==='wizard'?'20260914-wizarddetail2':'20260909-cursedbears1'}`).then(module=>module.default));
+  if(!metadata.has(type))metadata.set(type,import(`./painted-roster/${type}.js?v=${type==='militia'?'20260921-militiasteady2':type==='wizard'?'20260914-wizarddetail2':'20260909-cursedbears1'}`).then(module=>module.default));
   return metadata.get(type);
 }
 
