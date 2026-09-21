@@ -123,6 +123,7 @@ export function resourceDepletionStage(node) {
 // sides of the frontier.
 const HEARTHKIN_WORKER_ABILITIES = Object.freeze({
   magicImmune: true,
+  harmImmune: true,
   race: 'hearthkin',
   worker: true,
   canBuild: true,

@@ -1,21 +1,21 @@
-import {prepareWizardPosition} from './wizard-positioning.js?v=20260914-spearlore1';
-import {stormwardDamage} from './storm-dragon.js?v=20260914-spearlore1';
-import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260914-spearlore1';
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260914-spearlore1';
-import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260914-spearlore1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260914-spearlore1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260914-spearlore1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260914-spearlore1';
+import {prepareWizardPosition} from './wizard-positioning.js?v=20260920-guardmilitia1';
+import {stormwardDamage} from './storm-dragon.js?v=20260920-guardmilitia1';
+import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260920-guardmilitia1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260920-guardmilitia1';
+import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260920-guardmilitia1';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260920-guardmilitia1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260920-guardmilitia1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260920-guardmilitia1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260914-spearlore1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260920-guardmilitia1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260914-spearlore1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260920-guardmilitia1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260914-spearlore1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260920-guardmilitia1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -4338,7 +4338,7 @@ export class CrownforgeSimulation {
   _tryApplyVillagerStun(attacker, target) {
     const stunRule = UNIT_TYPES[attacker.type]?.stunOnHit;
     const targetTraits = UNIT_TYPES[target.type]?.traits ?? [];
-    if (isCurseImmune(target) || (UNIT_TYPES[target.type]?.magicImmune&&stunRule?.magical) || !stunRule
+    if (UNIT_TYPES[target.type]?.harmImmune || isCurseImmune(target) || (UNIT_TYPES[target.type]?.magicImmune&&stunRule?.magical) || !stunRule
       || (attacker.faction === target.faction && !areHearthkinNeutral(attacker, target))
       || !targetTraits.includes(stunRule.targetTrait)
       || target.dead
@@ -4405,9 +4405,9 @@ export class CrownforgeSimulation {
 
     hearthkin.lastLightWardTimer = duration;
     hearthkin.lastLightWardDuration = duration;
-    // The ward catches the killing blow by returning the Hearthkin to full
-    // health immediately. The shield, not a slow heal, is the readable
-    // one-minute safety window the player can rely on under pressure.
+    // An attempted damaging hit reveals the permanent protection and restores
+    // any previously missing health. The visible ward grants a one-minute
+    // untargetable window and shares Chorus with living allies.
     hearthkin.hp = hearthkin.maxHp;
     hearthkin.lastLightWardHealRate = 0;
     hearthkin.lastLightWardCurseSourceId = null;
@@ -4436,6 +4436,13 @@ export class CrownforgeSimulation {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
     if(target.type==='wizard'&&target.eventideVeil>0)return {damage:0,killed:false,warded:true,blocked:true,cursed:false};
     const defense=UNIT_TYPES[target.type];
+    if(defense?.harmImmune){
+      if(Number(amount)>0){
+        if(!(target.lastLightWardTimer>0))this._triggerLastLightWard(target,attacker,defense.lastLightWard);
+        else target.wardBlockedPulse=.42;
+      }
+      return {damage:0,killed:false,warded:true,blocked:true,magicImmune:true,cursed:false};
+    }
     const magicalHit=magical||['magic','spell','arcane','divine','fire','frost','lightning','shadow','holy'].includes(damageType);
     // Elderhide magic resistance applies before hide, crowd armor and last stands.
     // Damage tags also cover dragon breath after its summoner has died.

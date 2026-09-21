@@ -1,4 +1,4 @@
-import {CONFIG,UNIT_TYPES,RESOURCE_SIZE_TIERS} from './config.js?v=20260914-spearlore1';
+import {CONFIG,UNIT_TYPES,RESOURCE_SIZE_TIERS} from './config.js?v=20260920-guardmilitia1';
 export const EVENTIDE=Object.freeze({distance:30,danger:20,escapeClearance:38,veil:6,cooldown:8});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const hostile=(w,u)=>u!==w&&!u.dead&&u.hp>0&&u.faction!==w.faction&&u.faction!=='neutral'&&UNIT_TYPES[u.type]?.attack>0;
@@ -45,7 +45,7 @@ export function updateWizardPositioning(sim,dt){
   if(w.eventideVeil>0||w.eventideScan>0)continue;
   w.eventideScan=.15;
   const enemies=sim.units.filter(u=>hostile(w,u));
-  const threat=enemies.filter(u=>u.type==='grizzly'&&sim._getExplicitAttackTarget(u)?.id===w.id||distance(w,u)<EVENTIDE.danger).sort((a,b)=>distance(w,a)-distance(w,b))[0];
+  const threat=enemies.filter(u=>sim._getExplicitAttackTarget(u)?.id===w.id||distance(w,u)<EVENTIDE.danger).sort((a,b)=>distance(w,a)-distance(w,b))[0];
   if(threat){escapeEventide(sim,w,threat);continue;}
   if(w.eventideResumeId&&w.command==='idle'){
    const target=sim.units.find(u=>u.id===w.eventideResumeId&&!u.dead);

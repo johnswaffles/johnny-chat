@@ -18,7 +18,7 @@ Revision: 20260913-clearing1. Local revision; verify the live marker for deploym
 | Shieldbearer armor and evasion | Permanent tank defenses | 3,480 HP, 80% damage reduction, one deterministic dodge per twenty incoming melee swings (5%). No new armor increase in this revision. |
 | Shieldbearer threat lock | Tank lands a hit | Enemy attacks the tank for 8 seconds, refreshed on each hit, within 24 units. Existing valid tank retains ownership over another tank. Other fighters cannot steal aggro. |
 | Team healing | Assigned Hearthkin, every 2 seconds | Heal every nearby injured eligible friendly unit within 24 units and line of sight: tanks 40 HP first, others 4 HP. Excludes self, dead units and enemies; no overheal. Healer remains dedicated until removed from team. |
-| **Last Light Ward** | Hearthkin would die | Existing 60-second protection/restoration and untargetability. Immediately grants Chorus of the Last Light to living allies; outward blessing animation lasts 0.9 seconds. |
+| **Last Light Ward** | Any attempted damaging hit on Hearthkin | No health is lost. Activates 60-second untargetability and reveals their protection. Immediately grants Chorus of the Last Light to living allies; outward blessing animation lasts 0.9 seconds. |
 | **Chorus of the Last Light** | Hearthkin shield activates | Living allies receive 200% of normal healing (2×) for 60 seconds: tanks 80 HP and others 8 HP per team heal. Another activation refreshes the duration without stacking. No curse or false health is applied to enemies. |
 | **Stunned** / **Steadfast** | Hearthkin strike against susceptible humanoid | Existing 5-second stun and 20-second stun immunity. Greatwood bears remain immune. |
 
@@ -68,7 +68,7 @@ Damage fighters give the pulling tank room, then take persistent individually re
 ### Kingsbane Hunger and Scent of the Faltering Crown
 Bloodclaw Reckoning now deals 50% maximum-health AoE damage before defenses within 14 units every eight seconds while enraged. It can kill; it never merely halves current health. Tanks retain armor, Aegis and Last Bastion. Kingsbane Hunger doubles all bear damage to tanks already below 50% true health when each hit resolves, including AoE. Scent of the Faltering Crown makes bears prioritize the lowest-health-percentage living hostile tank within 24 units and line of sight, excluding warded tanks. Health ties preserve the current target; otherwise the lowest ID wins. Bear priority supersedes the previous first-tank threat lock; other enemies retain their existing taunt rules.
 
-**Beyond the First Oath** — permanent Hearthkin protection. Hostile magical damage (including divine magic) and magical stuns cannot affect them. Spell damage must use `magical: true` or a magic damage type; physical Bloodclaw and ordinary attacks stay physical. Friendly heals and blessings remain effective. Lore: their nameless flame predates the first command of the old gods.
+**Beyond the First Oath** — permanent Hearthkin protection. All damage, hostile magic, curses, and stuns are blocked. Attempted damage awakens Last Light Ward and the team healing blessing without taking health; an active ward is not continually refreshed. Friendly heals and blessings remain effective.
 
 Mercy of the Last Crown: a living tank strictly below 10% maximum HP receives 5× Hearthkin healing. Each healer checks the threshold before its pulse: 200 HP normally, 400 HP with Chorus. At 10% or above, normal tank healing remains 40 HP (80 with Chorus). Non-tanks receive 4 HP per pulse (8 with Chorus), an 80% reduction from their former base healing.
 
@@ -94,7 +94,7 @@ All Greatwood bear bloodlines resist 95% of incoming magic. Only 5% passes to ex
 
 Distant Star seeks a clear position about 30 units from enemies, at least 6 units beyond nearby healers, with 36-unit casting reach. Wizard formation orders use a row behind healers. Healers do not chase the wizard to define their own rear line. Paths are checked against nearby enemies so repositioning cannot cut through the fight.
 
-Eventide Passage automatically reacts to a bear pursuing the wizard or a hostile within 20 units. A successful blink moves at least 24 units, to an open landing at least 38 units from all hostile units. Landing candidates are checked at their center and eight surrounding points, against map boundaries, obstacles and occupied cells. If no safe destination exists, no teleport or cooldown is spent.
+Eventide Passage automatically reacts to any hostile pursuing the wizard or a hostile within 20 units. A successful blink moves at least 24 units, to an open landing at least 38 units from all hostile units. Landing candidates are checked at their center and eight surrounding points, against map boundaries, obstacles and occupied cells. If no safe destination exists, no teleport or cooldown is spent.
 
 The wizard breaks hostile pursuit and clears his in-flight bolts, cannot attack or be targeted/damaged for 6 seconds, and has an 8-second escape cooldown. He resumes his interrupted target after a teammate holds that enemy. Veil, cooldown and pending target persist through saves. This is spacing plus a temporary immunity, not permanent AoE immunity.
 

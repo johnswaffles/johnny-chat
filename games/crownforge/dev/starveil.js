@@ -1,7 +1,7 @@
-import {summonStormDragon} from '../src/storm-dragon.js?v=20260914-spearlore1';
-import {openSkybreakerCard} from '../src/skybreaker-controls.js?v=20260914-spearlore1';
-import {PaintedRosterRig} from '../src/painted-roster-rig.js?v=20260914-spearlore1';
-import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260914-spearlore1';
+import {summonStormDragon} from '../src/storm-dragon.js?v=20260920-guardmilitia1';
+import {openSkybreakerCard} from '../src/skybreaker-controls.js?v=20260920-guardmilitia1';
+import {PaintedRosterRig} from '../src/painted-roster-rig.js?v=20260920-guardmilitia1';
+import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260920-guardmilitia1';
 const {simulation:s,renderer:r}=window.crownforge;
 s.units=[];s.pausedEnemyUnits=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.projectiles=[];s.navigationVersion++;
 s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};s._updateMilitaryServices=()=>{};s.wildlifeState.nextSpawnAt=Infinity;

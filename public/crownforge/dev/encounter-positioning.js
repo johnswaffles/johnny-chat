@@ -1,5 +1,5 @@
-import {encounterOpenness} from '../src/combat-teams.js?v=20260914-spearlore1';
-import {updateDeathlessHeart} from '../src/deathless-heart.js?v=20260914-spearlore1';
+import {encounterOpenness} from '../src/combat-teams.js?v=20260920-guardmilitia1';
+import {updateDeathlessHeart} from '../src/deathless-heart.js?v=20260920-guardmilitia1';
 const {simulation:s,renderer:r}=window.crownforge;
 s.units=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.projectiles=[];s.navigationVersion++;
 s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};s._updateMilitaryServices=()=>{};s.wildlifeState.nextSpawnAt=Infinity;
@@ -14,8 +14,14 @@ let running=false;const update=s._updateUnit.bind(s);s._updateUnit=(u,dt)=>{if(r
 const pick=u=>{s.selectedIds=[u.id];s._syncSelectionFlags();};pick(tank);
 r.camera.zoom=.38;r.zoomMotion=null;r.cameraInitialized=true;const center=r.worldToScreen({x:183,z:181});r.camera.x+=r.width*.55-center.x;r.camera.y+=r.height*.5-center.y;
 const panel=document.createElement('section');panel.className='encounter-training';panel.style='position:fixed;right:334px;bottom:110px;width:280px;z-index:30;background:#16271ef2;color:#f4e8c8;padding:12px;border:1px solid #a88c54;border-radius:8px;font:12px system-ui';
-panel.innerHTML='<b>Open-ground encounter training</b><p>Extended health for positioning review. Real movement, damage, and collision rules.</p><div style="display:flex;gap:6px;flex-wrap:wrap"><button data-start>Start pull and surround</button><button data-pause>Pause encounter</button><button data-tank>Inspect tank</button><button data-tank-lore>Shieldbearer lore</button><button data-spear-lore>Spearwarden lore</button><button data-bear>Inspect bear</button><button data-bear-lore>Bear lore</button><button data-hearthkin-lore>Hearthkin lore</button><button data-woods>Preview woodland pull</button><button data-retarget>Tank falls · next portrait</button><button data-deathless>Trigger Deathless Heart</button><button data-swipe>Measure Bloodclaw damage</button><button data-join>Second bear joins</button><button data-effects>Trigger Last Light Chorus</button></div><p data-state></p><p data-damage></p>';
+panel.innerHTML='<b>Open-ground encounter training</b><p>Extended health for positioning review. Real movement, damage, and collision rules.</p><div style="display:flex;gap:6px;flex-wrap:wrap"><button data-start>Start pull and surround</button><button data-pause>Pause encounter</button><button data-tank>Inspect tank</button><button data-tank-lore>Shieldbearer lore</button><button data-spear-lore>Spearwarden lore</button><button data-guard-lore>Guard lore</button><button data-militia-lore>Militia lore</button><button data-bear>Inspect bear</button><button data-bear-lore>Bear lore</button><button data-hearthkin-lore>Hearthkin lore</button><button data-woods>Preview woodland pull</button><button data-retarget>Tank falls · next portrait</button><button data-deathless>Trigger Deathless Heart</button><button data-swipe>Measure Bloodclaw damage</button><button data-join>Second bear joins</button><button data-effects>Trigger Last Light Chorus</button></div><p data-state></p><p data-damage></p>';
 document.body.append(panel);
+for(const [key,type] of [['guard','soldier'],['militia','militia']])
+ panel.querySelector(`[data-${key}-lore]`).onclick=()=>{
+  let unit=s.units.find(u=>u.type===type&&u.faction==='player'&&!u.dead);
+  if(!unit)unit=s.addUnit(type,204,196,'player');
+  window.crownforge.unitInspector.open(unit);
+ };
 panel.querySelector('[data-spear-lore]').onclick=()=>window.crownforge.unitInspector.open(party[0]);
 panel.querySelector('[data-tank-lore]').onclick=()=>window.crownforge.unitInspector.open(tank);
 panel.querySelector('[data-bear-lore]').onclick=()=>window.crownforge.unitInspector.open(bear);

@@ -1,4 +1,6 @@
 const glyphs={
+ crownGuardOath:'M9 5V3h6v2 M6 7l6-3 6 3v12l-6 3-6-3Z M6 8h12 M8 18h8 M12 10q-5 5 0 7 5-2 0-7Z',
+ militiaOath:'M5 17h14l-2-4V9a5 5 0 0 0-10 0v4Z M10 20q2 3 4 0 M12 2v2 M2 7l2-2 M20 5l2 2',
  spearwardenOath:'M12 2l4 7-4 3-4-3Z M12 12v10 M5 16l3 3 M19 16l-3 3',
  shieldbearerOath:'M3 21V5h5V2h8v3h5v16 M8 21V10h8v11 M9 5l3 2 3-2',
  eventidePassage:'M9 3C1 4 1 20 9 21 M15 3c8 1 8 17 0 18 M8 12h8m-3-3 3 3-3 3 M5 5l2 2 M17 17l2 2',
@@ -33,7 +35,7 @@ const glyphs={
 };
 export const isDebuff=s=>s.id==='lastLight'||s.id==='stun'||s.rune==='curse'||s.kind?.toLowerCase().includes('impairment');
 export function effectIcon(status){
- const colors={kingsbaneHunger:18,falteringCrown:330,greatwoodDefiance:140,greatwoodColossus:35,bloodclawReckoning:0,unbrokenWild:155,deathlessHeart:280,crushingClaws:28,firstCondemnation:270,elderhide:45,thickHide:195,bearLineage:40,elderbloodSpellward:220,greatwoodFury:8,starveilOath:46,starshard:190,fallingConstellation:275,eventidePassage:285,distantStar:205,astralMantle:225,heavenrend:195,stormwardCovenant:180,skybreakerFavor:42,unboundSovereign:260};
+ const colors={crownGuardOath:42,militiaOath:24,kingsbaneHunger:18,falteringCrown:330,greatwoodDefiance:140,greatwoodColossus:35,bloodclawReckoning:0,unbrokenWild:155,deathlessHeart:280,crushingClaws:28,firstCondemnation:270,elderhide:45,thickHide:195,bearLineage:40,elderbloodSpellward:220,greatwoodFury:8,starveilOath:46,starshard:190,fallingConstellation:275,eventidePassage:285,distantStar:205,astralMantle:225,heavenrend:195,stormwardCovenant:180,skybreakerFavor:42,unboundSovereign:260};
  const hue=colors[status.id]??(isDebuff(status)?'315':status.rune==='fury'?'22':status.rune==='divine'?'46':'165');
  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="hsl(${hue} 85% 72%)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" style="--sigil-hue:${hue}"><path d="${glyphs[status.id]??'m12 2 9 10-9 10-9-10Z M12 7v10 M7 12h10'}"/></svg>`;
 }
