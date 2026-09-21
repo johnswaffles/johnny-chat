@@ -18,7 +18,7 @@ pause.onclick=()=>{playing=!playing;pause.textContent=playing?'Pause':'Play';};d
 const durations=[.16,.12,.13,.065,.055,.15,.16,.26];
 function attackFrame(t){let phase=t%1.1;for(let i=0;i<durations.length;i++){phase-=durations[i];if(phase<0)return i;}return 7;}
 function floor(ctx){ctx.fillStyle='#030b0d55';ctx.beginPath();ctx.ellipse(550,855,105,20,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#a58c4e35';ctx.beginPath();ctx.ellipse(550,855,145,35,0,0,Math.PI*2);ctx.stroke();}
-function frame(now){const dt=Math.min(.06,(now-last)/1000);last=now;if(playing&&!document.hidden)time+=dt*Number(document.querySelector('#speed').value);const size=Number(document.querySelector('#scale').value)*2;const a=action==='idle'?'attack':action,index=action==='idle'?0:action==='attack'?attackFrame(time):Math.floor(time/1.3*8)%8;const f=art[a].frames[index],scale=size/f.scaleBase;
+function frame(now){const dt=Math.max(0,Math.min(.06,(now-last)/1000));last=now;if(playing&&!document.hidden)time+=dt*Number(document.querySelector('#speed').value);const size=Number(document.querySelector('#scale').value)*2;const a=action==='idle'?'attack':action,index=action==='idle'?0:action==='attack'?attackFrame(time):Math.floor(time/1.3*8)%8;const f=art[a].frames[index],scale=size/f.scaleBase;
 for(const canvas of [before,after]){const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);floor(ctx);}
 if(oldReady)old.draw(before.getContext('2d'),{type:'militia',paintedFacing:0,animationState:action,command:'idle'}, {x:550,y:855},size,1,time);
 if(!oldReady){const g=before.getContext('2d');g.fillStyle='#bdc9c8';g.font='24px system-ui';g.textAlign='center';g.fillText('Loading original comparison…',550,450);}
