@@ -1,21 +1,21 @@
-import {prepareWizardPosition} from './wizard-positioning.js?v=20260920-guardmilitia1';
-import {stormwardDamage} from './storm-dragon.js?v=20260920-guardmilitia1';
-import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260920-guardmilitia1';
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260920-guardmilitia1';
-import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260920-guardmilitia1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260920-guardmilitia1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260920-guardmilitia1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260920-guardmilitia1';
+import {prepareWizardPosition} from './wizard-positioning.js?v=20260921-startingroom1';
+import {stormwardDamage} from './storm-dragon.js?v=20260921-startingroom1';
+import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260921-startingroom1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260921-startingroom1';
+import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260921-startingroom1';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260921-startingroom1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260921-startingroom1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260921-startingroom1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260920-guardmilitia1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260921-startingroom1';
 import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260909-cursedbears1';
 import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260909-cursedbears1';
 import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260909-cursedbears1';
 import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260909-cursedbears1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260920-guardmilitia1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260921-startingroom1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260920-guardmilitia1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260921-startingroom1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -105,7 +105,7 @@ const DEFAULT_WILDWOOD_SEED = 0xc0ffee31;
 const WORLD_GENERATION_STRIDE = 0x9e3779b9;
 const WILDWOOD_TREE_AMOUNT = 240;
 const WILDWOOD_CLEARINGS = [
-  { id: 'crown-clearing', x: 78, z: 82, radiusX: 78, radiusZ: 84 },
+  { id: 'crown-clearing', x: 78, z: 82, radiusX: 118, radiusZ: 124 },
   { id: 'ashen-clearing', x: 516, z: 414, radiusX: 72, radiusZ: 68 },
   { id: 'west-berry-glade', x: 164, z: 104, radiusX: 15, radiusZ: 13 },
   { id: 'west-stone-glade', x: 190, z: 245, radiusX: 16, radiusZ: 13 },
@@ -811,8 +811,8 @@ export class CrownforgeSimulation {
     return this.resourcesNodes.every((node) => distance(probe, node) >= footprint + resourceFootprint(node) + NATURAL_RESOURCE_GAP);
   }
 
-  _insideWildwoodClearing(x, z, padding = 0) {
-    return WILDWOOD_CLEARINGS.some((clearing) => {
+  _insideWildwoodClearing(x, z, padding = 0, clearings = WILDWOOD_CLEARINGS) {
+    return clearings.some((clearing) => {
       const edge = .9 + landscapeNoise(x / 24, z / 24, 317) * .16;
       const dx = (x - clearing.x) / (clearing.radiusX * edge + padding);
       const dz = (z - clearing.z) / (clearing.radiusZ * edge + padding);
@@ -7264,6 +7264,19 @@ export class CrownforgeSimulation {
     this.navigationVersion += 1;
     this.staticBlockerGrid = new Map();
     this.staticBlockerGridVersion = -1;
+    // Apply the larger Crown building reserve to older saves as well. Keep
+    // deposits, buildings, hand-authored resources, and the distant forest.
+    const clearedTrees = new Set(this.resourcesNodes.filter(node => node.type === 'tree' && node.forestClusterId
+      && this._insideWildwoodClearing(node.x, node.z, 2, [WILDWOOD_CLEARINGS[0]])).map(node => node.id));
+    for (const unit of this.units) if (clearedTrees.has(unit.gatherTarget)) {
+      this._releaseResourceSlot(unit);
+      unit.gatherTarget = null;unit.gatherSlot = 0;unit.gatherTimer = 0;unit.gatherEventFired = false;
+      unit.path = [];unit.routeTarget = null;unit.command = 'idle';unit.visualState = 'idle';
+      unit.actionLabel = 'Ready';
+      if (unit.carryAmount > 0) this._beginReturn(unit);
+    }
+    this.resourcesNodes = this.resourcesNodes.filter(node => !clearedTrees.has(node.id));
+    this.selectedIds = this.selectedIds.filter(id => !clearedTrees.has(id));
     this._syncSelectionFlags();
     this._announce('Crownforge save restored.');
     return true;

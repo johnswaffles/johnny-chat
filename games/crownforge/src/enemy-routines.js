@@ -1,4 +1,4 @@
-import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260920-guardmilitia1';
+import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260921-startingroom1';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 
 export function assignEnemyEconomy(sim) {

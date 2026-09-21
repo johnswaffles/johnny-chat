@@ -1,4 +1,4 @@
-import { UNIT_TYPES } from './config.js?v=20260920-guardmilitia1';
+import { UNIT_TYPES } from './config.js?v=20260921-startingroom1';
 
 export const BEAR_FURY = Object.freeze({threshold:.1, multiplier:6, extraTargets:2, radius:14, arrowHits:30});
 export const THICK_HIDE=Object.freeze({armorBonus:100,damageMultiplier:.5});

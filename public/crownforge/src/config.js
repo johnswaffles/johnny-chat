@@ -479,7 +479,7 @@ export const PRODUCTION_TYPES = {
 };
 
 export const BUILDING_TYPES = {
-  observatory:{label:'Observatory of the Last Star',function:'Train one Starveil Arcanist per side',asset:'barracks',maxHp:700,footprint:{width:7,height:7},collisionFootprint:{width:13,height:13},renderSize:400,interactionSlots:6,entrance:'south',buildTime:24,cost:{food:0,wood:160,stone:120,gold:100},production:true,productionTypes:['wizard']},
+  observatory:{label:'Observatory of the Last Star',function:'Train one Starveil Arcanist per side',asset:'barracks',maxHp:700,footprint:{width:18,height:16},collisionFootprint:{width:36,height:32},collisionOffset:{x:-8,z:-8},allowsUnitOcclusion:true,renderSize:2000,interactionSlots:6,entrance:'south',buildTime:24,cost:{food:0,wood:160,stone:120,gold:100},production:true,productionTypes:['wizard']},
   townCenter: {
     label: 'Crown Hall',
     function: 'Resource drop-off and settlement core',
