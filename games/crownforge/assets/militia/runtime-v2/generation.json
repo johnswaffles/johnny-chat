@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "sources": {
+    "sw": "exec-108d2245-1187-462d-a158-e67f1b5f680d.png",
+    "ne": "exec-4e4ccfa5-7b35-4123-8533-44b62e1a4c30.png",
+    "nw": "exec-8c7c17ea-ae84-4f70-b7c1-2db12c9c3bd6.png",
+    "states": "exec-ec48864f-6a69-45a3-9740-092fea186669.png"
+  },
+  "sha256": {
+    "sw": "b09ab9f6703fcef3488bc3d4f867e34e6381cd17e6eb0eab1474e9bb93ba28da",
+    "ne": "9a72f43ddd931e67f9be3496059e5ecbe0fb51b6c9c7d3ead6296d6cb30d13fd",
+    "nw": "710aaf4c026fefb576b278739c452d860142680ce9847c231f5a0edcaa789184",
+    "states": "6213e634fac68db51fef3020f1840e0e2ffde07ad48bd91606c3620c9df79154"
+  },
+  "notes": "Original PNGs preserved. Component alpha regions measured into render crops and clipping metadata. Southeast uses the approved study artwork. Four views; all live actions covered.",
+  "art_direction": "Crown Militia: curly black hair, stubble, teal quilted gambeson, brown leather pauldrons, belt and boots; iron flanged mace and wooden round shield. Crisp painterly isometric full-body transparent artwork. Four-column sheets; eight consecutive walking poses followed by eight attack poses. Separate southwest, northeast and northwest views. States sheet has one direction per row, two idle breathing poses, falling pose and fallen pose. Match the approved southeast study identity. No background, text, grid or ground."
+}

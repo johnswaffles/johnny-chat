@@ -16,9 +16,12 @@ export function paintedRosterFrame(unit,art,definition,{time,reducedMotion=false
   if(time!==undefined)phase=actions[action]?.loop===false?clamp(time/actions[action].duration):cycle(time/(actions[action]?.duration??1));
   else if(action==='idle')phase=reducedMotion?0:cycle((unit.animClock??unit.animationTime??0)/(actions.idle?.duration??3.8));
   if(time===undefined&&action==='walk'&&unit.kind==='unit'&&(unit.motionSpeed??0)<.025){action='idle';phase=0;}
-  if(action==='attack_anticipation'){index=Math.min(1,Math.floor(clamp(phase)*2));action='attack';}
-  else if(action==='attack_contact'){index=2;action='attack';}
-  else if(action==='attack_recovery'){index=3;action='attack';}
+  if(action.startsWith('attack_')){
+    const phaseName=action.slice(7),authored=art[view]?.attack?.phases?.[phaseName];
+    if(authored?.length)index=authored[Math.min(authored.length-1,Math.floor(clamp(phase)*authored.length))];
+    else index=phaseName==='anticipation'?Math.min(1,Math.floor(clamp(phase)*2)):phaseName==='contact'?2:3;
+    action='attack';
+  }
   let sheet=art[view]?.[action];
   if(!sheet){sheet=art[view]?.idle;action='idle';index=0;phase=0;}
   if(!sheet)return null;
