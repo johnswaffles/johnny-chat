@@ -1,25 +1,25 @@
-import {drawStormDragons} from './storm-dragon-renderer.js?v=20260921-toolbarheal1';
-import {drawWizardMagic} from './wizard-magic.js?v=20260921-toolbarheal1';
+import {drawStormDragons} from './storm-dragon-renderer.js?v=20260921-architecture1';
+import {drawWizardMagic} from './wizard-magic.js?v=20260921-architecture1';
 import {drawLastLightChorus} from './last-light-chorus-vfx.js?v=20260921-toolbarheal1';
 import { LivingCrownHall } from './crown-hall-living.js?v=20260911-livinghall1';
-import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260921-toolbarheal1';
-import {corpseLifetime} from './bear-combat.js?v=20260921-toolbarheal1';
+import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260921-architecture1';
+import {corpseLifetime} from './bear-combat.js?v=20260921-architecture1';
 import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
-import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260921-toolbarheal1';
-import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260921-toolbarheal1';
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260921-toolbarheal1';
-import {paintedRosterFactories} from './painted-roster-rig.js?v=20260921-toolbarheal1';
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260921-toolbarheal1';
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260909-cursedbears1';
-import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260909-cursedbears1';
-import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260909-cursedbears1';
+import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260921-architecture1';
+import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260921-architecture1';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260921-architecture1';
+import {paintedRosterFactories} from './painted-roster-rig.js?v=20260921-architecture1';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260921-architecture1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260921-architecture1';
+import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260921-architecture1';
+import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260921-architecture1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260911-blueward1';
-import { CrownforgeLandscape } from './landscape.js?v=20260921-toolbarheal1';
-import { ForestCache } from './forest-cache.js?v=20260921-toolbarheal1';
-import { CrownforgeMeadow } from './meadow.js?v=20260921-toolbarheal1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260921-toolbarheal1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260921-toolbarheal1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260921-toolbarheal1';
+import { CrownforgeLandscape } from './landscape.js?v=20260921-architecture1';
+import { ForestCache } from './forest-cache.js?v=20260921-architecture1';
+import { CrownforgeMeadow } from './meadow.js?v=20260921-architecture1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260921-architecture1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260921-architecture1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260921-architecture1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -1301,7 +1301,7 @@ export class CrownforgeRenderer {
     if (!rect) return;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     const destination = { x: screen.x - size / 2, y: screen.y - size * 0.98 };
     ctx.drawImage(this.atlas, rect.x, rect.y, rect.width, rect.height, destination.x, destination.y, size, size);
     ctx.restore();
@@ -1466,7 +1466,7 @@ export class CrownforgeRenderer {
     const cellHeight = sourceBottom - sourceTop;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     const destinationWidth = size;
     const destinationHeight = size * (atlas.destinationAspect ?? 1);
     const groundAnchorY = this.assetGroundAnchorY(atlas, column, row);
@@ -1543,7 +1543,8 @@ export class CrownforgeRenderer {
     const height=width*definition.height/definition.width*(definition.verticalScale??1);
     ctx.save();ctx.globalAlpha=alpha;ctx.imageSmoothingEnabled=true;
     ctx.translate(screen.x,screen.y);ctx.transform(1,definition.shearY??0,0,1,0,0);
-    ctx.drawImage(image,-width*(definition.groundAnchorX??.5),-height*(definition.groundAnchorY??1),width,height);
+    if(definition.cropWidth) ctx.drawImage(image,image.naturalWidth*definition.cropX,0,image.naturalWidth*definition.cropWidth,image.naturalHeight,-width*(definition.groundAnchorX??.5),-height*(definition.groundAnchorY??1),width,height);
+    else ctx.drawImage(image,-width*(definition.groundAnchorX??.5),-height*(definition.groundAnchorY??1),width,height);
     ctx.restore();return true;
   }
 
@@ -1551,7 +1552,7 @@ export class CrownforgeRenderer {
     if (!definition || !image || (!ready && !(image.complete && image.naturalWidth > 0))) return false;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     const aspect = definition.width / definition.height;
     const width = size;
     const height = size / aspect;
@@ -1577,10 +1578,15 @@ export class CrownforgeRenderer {
   }
 
   drawFirstAgeAsset(ctx, type, screen, size, alpha = 1) {
-    if (type === 'townCenter' && this.livingHall.draw(ctx, screen, size, alpha)) return true;
+    if (type === 'townCenter' && !FIRST_AGE_ASSETS.townCenter.architectureV2 && this.livingHall.draw(ctx, screen, size, alpha)) return true;
     const wallView = {wall:'diagonal-right',wallDiagonalLeft:'diagonal-left',wallFace:'face',wallDepth:'depth'}[type];
     if (wallView && BUILDING_COMPONENTS.wall?.views) return this.drawDepthComponent(ctx, BUILDING_COMPONENTS.wall.views[wallView], screen, size, alpha);
-    if (type === 'palisadeJunction' && BUILDING_COMPONENTS.palisadeJunction) return this.drawDepthComponent(ctx, BUILDING_COMPONENTS.palisadeJunction.sprite, screen, size, alpha);
+    if (type === 'palisadeJunction') {
+      const w=size*.12,h=size*.58;ctx.save();ctx.globalAlpha=alpha;ctx.translate(screen.x,screen.y);
+      ctx.fillStyle='#b3a58b';ctx.fillRect(-w/2,-h,w,h);ctx.fillStyle='#ddd0b5';ctx.fillRect(-w/2,-h,w*.48,h);
+      ctx.strokeStyle='#867861';ctx.lineWidth=Math.max(.5,size*.004);for(let y=-h;y<0;y+=h/8){ctx.beginPath();ctx.moveTo(-w/2,y);ctx.lineTo(w/2,y);ctx.stroke();}
+      ctx.fillStyle='#253d59';ctx.fillRect(-w*.65,-h-5,w*1.3,6);ctx.fillStyle='#c6a65d';ctx.fillRect(-w*.65,-h,w*1.3,3);ctx.restore();return true;
+    }
     if (type === 'road' && BUILDING_COMPONENTS.road) {
       const definition = BUILDING_COMPONENTS.road.texture;
       const image = this.depthComponentImage(definition);
@@ -1734,6 +1740,10 @@ export class CrownforgeRenderer {
 
   drawBuildingStage(ctx, building, screen, size, alpha = 1) {
     const depthStage=resolveFirstAgeConstructionStage(building.progress);
+    if (depthStage!=='complete' && BUILDING_DEPTH[building.type]?.architectureV2) {
+      this.drawFirstAgeAsset(ctx,building.type,screen,size,alpha*(.22+.78*building.progress));
+      return;
+    }
     if (depthStage!=='complete' && BUILDING_DEPTH[building.type]?.kind==='solid') {
       const stage=BUILDING_COMPONENTS[building.type]?.stages?.[depthStage];
       if (stage) this.drawDepthComponent(ctx,stage,screen,size,alpha);
@@ -1965,7 +1975,7 @@ export class CrownforgeRenderer {
       dismantling ? '#d86b55' : building.faction === 'enemy' ? '#d86b55' : FACTION.color,
     );
     this.drawBuildingStage(ctx, building, point, size * this.camera.zoom, alpha);
-    if (building.type === 'townCenter' && this.livingHall.ready) this.livingHall.effects(ctx, building, point, size * this.camera.zoom, time, this.atmosphere);
+    if (building.type === 'townCenter' && !FIRST_AGE_ASSETS.townCenter.architectureV2 && this.livingHall.ready) this.livingHall.effects(ctx, building, point, size * this.camera.zoom, time, this.atmosphere);
     else this.atmosphere.drawHearth(ctx, building, point, size * this.camera.zoom, visualHeight * this.camera.zoom, time);
     if (building.destroyed) {
       this.drawDestroyedBuildingTreatment(ctx, building, point, size, time);
@@ -2250,7 +2260,7 @@ export class CrownforgeRenderer {
     const destinationHeight = destinationWidth * (sourceHeight / sourceWidth);
     ctx.save();
     ctx.globalAlpha = 0.96;
-    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(
       this.roadsideProps,
       sourceLeft,
@@ -2395,7 +2405,7 @@ export class CrownforgeRenderer {
       const sourceHeight = sourceBottom - sourceTop;
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(
         image,
         sourceLeft,

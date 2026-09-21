@@ -1,5 +1,5 @@
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260909-cursedbears1';
-import { polygonBounds } from './building-geometry.js?v=20260909-cursedbears1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260921-architecture1';
+import { polygonBounds } from './building-geometry.js?v=20260921-architecture1';
 
 export const CONFIG = {
   // The current green diamond is expanded to roughly ten times its former
@@ -770,7 +770,7 @@ export const BUILDING_TYPES = {
     walkable: true,
   },
   road: {
-    label: 'Packed Road',
+    label: 'Crownstone Road',
     function: 'Fast, reliable settlement route',
     asset: 'road',
     maxHp: 80,
@@ -785,7 +785,7 @@ export const BUILDING_TYPES = {
     road: true,
   },
   wall: {
-    label: 'Palisade Wall',
+    label: 'Crownwall',
     function: 'Defensive boundary',
     asset: 'wall',
     maxHp: 260,
@@ -800,11 +800,11 @@ export const BUILDING_TYPES = {
     wallSegmentSpan: 3,
   },
   gate: {
-    label: 'Palisade Gate',
+    label: 'Crown Gatehouse',
     function: 'Passable defensive entryway',
     asset: 'gate',
     maxHp: 300,
-    footprint: { width: 3.2, height: 1.35 },
+    footprint: { width: 8, height: 1.35 },
     renderSize: 250,
     collisionClearance: 0.48,
     interactionSlots: 8,
@@ -816,7 +816,7 @@ export const BUILDING_TYPES = {
     walkable: true,
   },
   palisadeTower: {
-    label: 'Palisade Tower',
+    label: 'Crown Bastion',
     function: 'Reinforced wall hardpoint',
     asset: 'palisadeTower',
     maxHp: 480,
@@ -1063,7 +1063,7 @@ export const BUILDING_TYPES = {
     function: 'Passable Ashen entryway',
     asset: 'ashenGate',
     maxHp: 280,
-    footprint: { width: 3.2, height: 1.35 },
+    footprint: { width: 8, height: 1.35 },
     renderSize: 250,
     collisionClearance: 0.48,
     interactionSlots: 8,
@@ -1779,9 +1779,9 @@ for (const [type, art] of Object.entries(BUILDING_DEPTH)) {
   if (!blueprint) continue;
   blueprint.renderSize = art.renderSize;
   const assets = ASHEN_BUILDING_ASSETS[type] ? ASHEN_BUILDING_ASSETS : FIRST_AGE_ASSETS;
-  assets[type] = { ...assets[type], src: art.src, width: art.width, height: art.height, groundAnchorY: art.groundAnchorY };
+  assets[type] = { ...assets[type], src: art.src, width: art.width, height: art.height, groundAnchorY: art.groundAnchorY, architectureV2: !!art.architectureV2 };
   if (type === 'ashenCamp') Object.assign(ENEMY_CAMP_ASSET, assets[type]);
-  if (art.kind !== 'solid') continue;
+  if (art.kind !== 'solid' && !(art.architectureV2 && art.kind === 'field')) continue;
   const bounds = polygonBounds(art.polygons.material);
   blueprint.collisionFootprint = { width: bounds.maxX - bounds.minX, height: bounds.maxZ - bounds.minZ };
   blueprint.collisionOffset = { x: (bounds.minX + bounds.maxX) / 2, z: (bounds.minZ + bounds.maxZ) / 2 };

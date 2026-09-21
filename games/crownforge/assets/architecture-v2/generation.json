@@ -1,0 +1,11 @@
+{
+  "tool": "built-in image_gen",
+  "original": "exec-080ac9be-7c3c-4d6d-ac61-ed93d7830b0a.png",
+  "sha256": "7980cab7ff258e22d6b979266dba0243265deceac1e87fb2b3424b2a5dd98c82",
+  "dimensions": [
+    1536,
+    1024
+  ],
+  "status": "local design review, not integrated into main game",
+  "notes": "Original generated RGBA preserved unchanged. Dedicated preview uses native image directly; original Hall remains available for comparison."
+}

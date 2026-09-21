@@ -1,0 +1,167 @@
+[
+  {
+    "id": "homestead",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. FIRST-AGE HOMESTEAD: handsome spacious family manor with two asymmetric blue-roofed gables, a carved stone chimney, small timber balcony, sheltered front porch, flowering window boxes, covered firewood stack and modest fenced kitchen garden to side. Warm lived-in home, not cathedral, no towers. Broad clear front path.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-6c77ab38-999b-479b-9afe-5b04c95263e3.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "073e4c3cc7eb1b4a3a88cd65dfb2b6a89d169ec9ebc8a7b548acb7518a8d2153",
+    "asset": "assets/architecture-v2/homestead-v1.png"
+  },
+  {
+    "id": "house",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. HEARTH HOUSE: compact charming two-storey stone cottage, one steep slate gable, oak-framed upper storey, carved chimney, inviting arched front door with two lanterns, tiny porch and bench, ivy lightly climbing one corner, a few flower pots. Clearly smaller domestic building, not manor or palace.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-c8ffa5ec-e120-49f0-9c89-6025382c697c.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "f1a73a3e4c5dc16044afba3e6c29fadf84935763e1b563e0236ab77ffa4e394e",
+    "asset": "assets/architecture-v2/house-v1.png"
+  },
+  {
+    "id": "watchHut",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. CROWN WATCH LOOKOUT: tall elegant standalone square stone watchtower with open lookout gallery under a blue slate pyramidal roof and golden crown finial, narrow arrow-slit windows, timber access balcony, strongly buttressed base and visible front stair entrance. Teal banner down one facade. No surrounding castle or huge ground courtyard.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-92aff531-aa95-488a-89fc-afc76bd62d58.png",
+    "size": [
+      1374,
+      1145
+    ],
+    "sha256": "5c2478b8de767e46a606247a0fcdd1d362761958b83c678d09668699c7956e31",
+    "asset": "assets/architecture-v2/watchHut-v1.png"
+  },
+  {
+    "id": "timberYard",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. TIMBER YARD: royal carpenters' workshop with open timber-framed saw shed attached to a limestone office, blue-slate roofs, orderly stacks of logs and sawn planks along sides, sturdy manual sawbench, axes and measuring tools secured to racks, simple hoist, a handcart to side. Broad clear working aisle. Practical industrial character, not palace.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-d0b8e367-75b5-4c9e-b5e2-f28007b7ef6e.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "01470e65e5a6325a88909e5644b0f66c152f32fb36779975ad5088165fe6950e",
+    "asset": "assets/architecture-v2/timberYard-v1.png"
+  },
+  {
+    "id": "stonewrightYard",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. STONEWRIGHT YARD: royal masons' stone workshop, handsome limestone guild hall with blue-slate roof, open carved-stone arcade sheltering workbenches, a half-carved crown capital, neatly stacked dressed blocks, chisels and mallets on benches, small robust wooden lifting crane with suspended single stone block close to ground. Unobstructed front access, no people. Workshop not fortress.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-193e3f0e-15bf-4444-a8d3-2a9fbfb3c873.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "dc0645c82b2c9398fcf93646165a8d0a50bcce986348e0daf704711d84896283",
+    "asset": "assets/architecture-v2/stonewrightYard-v1.png"
+  },
+  {
+    "id": "oreWash",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. ORE WASH: refined royal mineral-washing works, squat limestone assay house with blue-slate roof and one chimney, clearly interconnected wooden sluice channels descending into shallow stone water basins, ore bins, sorting tables, small golden ore pieces and weighing balance under open canopy. Credible modest functional water system; no river scenery. Gold-accented crown banners, open working yard.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-86f8f6a6-857f-4360-8a0a-38322121ccbc.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "9ab09975ba2fdfa41e2bb353087a6878189ae3e88b46440693f6113482393848",
+    "asset": "assets/architecture-v2/oreWash-v1.png"
+  },
+  {
+    "id": "lumberMill",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. LUMBER MILL: a distinctive royal sawmill with large exposed oak waterwheel attached to squat limestone workshop, sloping blue-slate roof, visible saw bench beneath side awning, neatly aligned logs and board stacks, small contained stone water channel under wheel, no river beyond base. Wooden gearing and bracing believable and finely crafted. Clear front doors.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-debe1818-3511-4dab-bd30-6abc061af883.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "640eccb9e5988b4606b6e996cb7a430e02342d31bbc76c1ae78bf2dcfc8f31ab",
+    "asset": "assets/architecture-v2/lumberMill-v1.png"
+  },
+  {
+    "id": "quarry",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. STONE QUARRY: royal stonecutters' extraction station with modest blue-roof limestone lodge and adjacent shallow terraced cut-stone excavation within compact footprint. Strong wooden derrick crane with coherent pulley and rope, one cut block on a low sled, arranged stone blocks and carts, finely modeled pale rock strata. No mountain or vast landscape. Clear access ramp into excavation.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-74af0f2b-cf65-438b-868d-647f3738ecd8.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "bea3ec669d5c7408e435ddf8f1894c914de864ec9f0c26a39c6bee53cb871691",
+    "asset": "assets/architecture-v2/quarry-v1.png"
+  },
+  {
+    "id": "grainMill",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. GRAIN MILL: elegant limestone windmill with four symmetrical timber lattice sails connected to one axle on the front, blue conical slate roof on stout tapered tower, attached lower milling house with blue gabled roof, sacks and grindstone beneath awning, open loading doorway. Four blades only, geometrically coherent, no extra blades. Restrained crown and wheat heraldry.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-a6bf428e-7249-4b81-8214-a28540b6d659.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "b6dcaf18160b9ac61382b3a1529c8278c2e2e145237f1d60a63340a9776eece4",
+    "asset": "assets/architecture-v2/grainMill-v1.png"
+  },
+  {
+    "id": "storehouse",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. WAYSTORE: handsome robust trading storehouse, wide blue-slated hipped roof with small dormers, stone ground storey and oak-framed loft, broad iron-bound cargo doors, covered porch with neatly stacked crates, barrels and canvas-covered bundles. Small hanging brass balance scale under canopy, gold crown above main door, very clear front loading access. No text signs.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-dd9e13f8-9412-4402-a2c7-af22f63a6525.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "1da50203387262cb55c7b37fb4be2abfcc4d8e524bc33b5485ffb9bd5556bce3",
+    "asset": "assets/architecture-v2/storehouse-v1.png"
+  },
+  {
+    "id": "palisadeTower",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. CROWN WALL TOWER: fortified squat square limestone bastion, open crenellated fighting platform with gilded corner caps, central small blue-slate shelter, arrow slits, broad sturdy base. Teal crown banners on front and side, front oak door at ground level, no outside stair, no ground yard or projecting side buildings. Designed to join stone curtain walls on either side. Exact 3/4 isometric view. Tall enough to overlook wall, chunky military silhouette.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-5b031aec-1940-4063-afa9-03e77c95c89e.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "55aaca4b9268b27fc1dce1847645730e22579384d2d4bcb2db3c827ba51ab1ce",
+    "asset": "assets/architecture-v2/palisadeTower-v1.png"
+  },
+  {
+    "id": "wall",
+    "prompt": "Production high-detail 2D game architectural sprite: one straight rectangular section of pale limestone curtain wall with deeply detailed masonry blocks, blue-grey stone coping, five clean crenellations with tasteful gold edge trim and one narrow arrow slit. FRONTAL ORTHOGRAPHIC ELEVATION, exactly horizontal perfectly straight flat base, no perspective, no side towers, no posts, no scene, no people. Wall fills width with flat vertical joinable edges so repeated sections connect seamlessly. Actual transparent RGBA outside the silhouette. Matching reference limestone, aged gold and midnight-blue accents. No ground slab, no decorations extending sideways, no text, no blurred background. Sharp native architectural texture. Single wall panel, wider than tall. For isometric projection by game engine.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-8b7f6241-38ba-4d59-8ba1-900fc4ceee86.png",
+    "size": [
+      1774,
+      887
+    ],
+    "sha256": "59583b66511954399103f9d9de8b0e825e49481a2172fcaa2c98d5de3961db7d",
+    "asset": "assets/architecture-v2/wall-v1.png"
+  },
+  {
+    "id": "gate",
+    "prompt": "Production high-detail 2D game sprite: magnificent crown stone gatehouse in FRONTAL ORTHOGRAPHIC ELEVATION with no perspective. Wide OPEN passable arched gate, see pure transparency through entire arch to ground, raised iron portcullis visibly stored above arch, thick limestone piers on each side, golden crown crest above arch, crenellated midnight-blue coping, teal banners secured to piers. Matching reference stone/gold/blue palette. No doors blocking arch. Exactly straight horizontal ground line, no staircase or ground slab. Complete isolated object with transparent RGBA exterior AND opening. No backdrop, no people, no text. Broad enough for a horse cart, richly detailed masonry joints, metalwork and carvings. Native sharp detail for game zoom.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-5dc0fd3b-da61-43c9-b456-10447c8b3269.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "0cde3f5222e99272f46e7592bc1400b1ce5275cfca61b78c9c541381333a50b7",
+    "asset": "assets/architecture-v2/gate-v1.png"
+  },
+  {
+    "id": "field",
+    "prompt": "Production isometric RTS building sprite in the EXACT material and rendering family of the reference: pale carved limestone, individually crisp midnight-blue slate shingles, tasteful aged gold trim, teal crown banners, warm amber windows, detailed oak and ironwork. High native resolution, sharp intricate realistic painterly detail for close zoom. Orthographic elevated three-quarter front-right view, sunlight upper left. Entire complete building and small functional paved base inside frame with 5% padding. Actual transparent RGBA background outside footprint. NO backdrop, ground island, fog, blur, lettering, watermark, people. Distinct functional architecture, plausible stairs/doors/windows and clear entrance. Reference is style only, do not copy its floorplan. GRAIN FIELD: one low diamond-shaped isometric agricultural plot with mature golden wheat in straight orderly crop rows separated by narrow soil paths. Low pale-stone border with small corner posts bearing tiny gold wheat details; clear front access gap. Small blue cloth tool awning in back corner, sacks and a sickle beside it. Mostly field, no large building, no workers. Entire plot as isolated transparent diamond cutout, clean straight edges. Golden wheat heads rendered individually, rich natural soil.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-47425fb0-a6cb-4a9f-a5c6-5bb6f9d7a4b8.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "sha256": "cae49879793108404e3e3f1f6e00bdb788e6b18fc1ff7bbba366dcecff323fd8",
+    "asset": "assets/architecture-v2/field-v1.png"
+  },
+  {
+    "id": "road",
+    "prompt": "Production game terrain texture for royal limestone paving matching reference pale warm limestone. Seamless square top-down orthographic texture, full image filled edge-to-edge with finely detailed small irregular rectangular limestone cobbles, subtle warm beige and grey variations, very fine dark mortar, a few tiny worn chips. No borders, no perspective, no objects, no text, no gold stripes, no shadows, no vignette. Sharp native stone detail, natural aged foot traffic. This is a tileable paving MATERIAL, not a building; opaque texture is correct.",
+    "original": "/Users/johnshopinski/.codex/generated_images/01a09808-241a-7ae1-b05f-8eea41e490dd/exec-1a278170-ebeb-495c-b611-101917354341.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "sha256": "46d7d085484b139bc9a4cdb3db552252f0f27b36cb558ef63ebd4304b578ddd9",
+    "asset": "assets/architecture-v2/road-v1.png"
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "tool": "built-in image_gen",
+  "original": "exec-5f4caa9f-4359-4c40-85c3-63141b26a911.png",
+  "sha256": "e3c040276b613ce76dbcf44a043e82b8758f1663b414a9b12ff12d64d4fd9bc7",
+  "dimensions": [
+    1536,
+    1024
+  ],
+  "status": "local review only; original RGBA preserved"
+}
