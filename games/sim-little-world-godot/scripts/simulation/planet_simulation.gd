@@ -129,6 +129,8 @@ func step(delta: float) -> void:
 	action_effects = action_effects.filter(func(effect: Dictionary) -> bool: return effect.age < 1.25)
 	catalyst = min(catalyst_max, catalyst + delta * 0.72)
 	for organism in organisms:
+		organism.feeding_flash = maxf(0.0, float(organism.get("feeding_flash", 0.0)) - delta)
+		organism.birth_flash = maxf(0.0, float(organism.get("birth_flash", 0.0)) - delta)
 		organism.prev_pos = organism.pos
 		organism.prev_vel = organism.vel
 	day = int(tick / 180) + 1
@@ -219,12 +221,14 @@ func _update_cells(delta: float) -> void:
 
 
 func _update_amoeboid(amoeba: Dictionary, delta: float) -> void:
+	amoeba.behavior = "Seeking food"
 	amoeba.age += delta
 	amoeba.cooldown -= delta
 	amoeba.energy -= delta * (0.38 * amoeba.metabolism + 0.08 * amoeba.speed)
 	var predator = nearest(amoeba, "predator", 86.0 * amoeba.sensory)
 	var target: Vector2 = amoeba.pos + amoeba.vel * 34.0
 	if predator:
+		amoeba.behavior = "Fleeing a hunter"
 		target = amoeba.pos - (predator.pos - amoeba.pos) * (1.7 + amoeba.speed * 0.25)
 	else:
 		var food := best_microbe(amoeba.pos, 78.0 * amoeba.sensory)
@@ -235,14 +239,18 @@ func _update_amoeboid(amoeba: Dictionary, delta: float) -> void:
 	if c.microbes > 0.025:
 		var bite: float = min(c.microbes, 0.012 + amoeba.size * 0.003)
 		c.microbes -= bite
+		amoeba.feeding_flash = 0.3
 		amoeba.energy = clamp(amoeba.energy + bite * 230.0, 0.0, 140.0)
 	if c.fungus > 0.06 and rng.randf() < 0.4:
 		var snack: float = min(c.fungus, 0.008)
 		c.fungus -= snack
+		amoeba.feeding_flash = 0.3
 		amoeba.energy = clamp(amoeba.energy + snack * 80.0, 0.0, 140.0)
 	if amoeba.energy > 96.0 and amoeba.cooldown <= 0.0 and organisms.size() < MAX_ORGANISMS and local_count(amoeba.pos, "amoeboid", 42.0) < 7:
 		var child = spawn("amoeboid", amoeba.pos + _random_vec(18.0), amoeba)
 		if child:
+			amoeba.birth_flash = 0.8
+			child.birth_flash = 0.8
 			child.energy = 45.0
 			amoeba.energy -= 28.0
 			amoeba.cooldown = 5.5 / amoeba.fertility
@@ -251,12 +259,14 @@ func _update_amoeboid(amoeba: Dictionary, delta: float) -> void:
 
 
 func _update_grazer(grazer: Dictionary, delta: float) -> void:
+	grazer.behavior = "Grazing route"
 	grazer.age += delta
 	grazer.cooldown -= delta
 	grazer.energy -= delta * (0.72 * grazer.metabolism + 0.11 * grazer.speed + grazer.armor * 0.05)
 	var predator = nearest(grazer, "predator", 112.0 * grazer.sensory)
 	var target: Vector2 = grazer.pos + grazer.vel * 24.0
 	if predator and predator.aggression > grazer.camouflage:
+		grazer.behavior = "Fleeing a hunter"
 		target = grazer.pos - (predator.pos - grazer.pos) * 1.35
 	else:
 		var food := best_microbe(grazer.pos, 110.0 * grazer.sensory)
@@ -270,14 +280,18 @@ func _update_grazer(grazer: Dictionary, delta: float) -> void:
 	if c.microbes > 0.035:
 		var bite: float = min(c.microbes, 0.018 + grazer.size * 0.004)
 		c.microbes -= bite
+		grazer.feeding_flash = 0.3
 		grazer.energy = clamp(grazer.energy + bite * 170.0, 0.0, 155.0)
 	if c.decay > 0.04:
 		var scavenge: float = min(c.decay, 0.014)
 		c.decay -= scavenge
+		grazer.feeding_flash = 0.3
 		grazer.energy = clamp(grazer.energy + scavenge * 85.0, 0.0, 155.0)
 	if grazer.energy > 122.0 and grazer.cooldown <= 0.0 and organisms.size() < MAX_ORGANISMS and local_count(grazer.pos, "grazer", 70.0) < 5:
 		var child = spawn("grazer", grazer.pos + _random_vec(22.0), grazer)
 		if child:
+			grazer.birth_flash = 0.8
+			child.birth_flash = 0.8
 			child.energy = 58.0
 			grazer.energy -= 52.0
 			grazer.cooldown = 12.0 / grazer.fertility
@@ -290,6 +304,7 @@ func _update_predator(predator: Dictionary, delta: float) -> void:
 	predator.cooldown -= delta
 	predator.energy -= delta * (0.92 * predator.metabolism + 0.18 * predator.speed + predator.size * 0.05)
 	var prey = nearest_prey(predator, 125.0 * predator.sensory)
+	predator.behavior = "Pursuing prey" if prey else "Searching for prey"
 	var target: Vector2 = prey.pos if prey else predator.pos + predator.vel * 50.0
 	move_organism(predator, target, 36.0 * predator.speed, delta)
 	if prey and predator.pos.distance_squared_to(prey.pos) < pow(12.0 + predator.size * 2.0, 2.0):
@@ -297,12 +312,15 @@ func _update_predator(predator: Dictionary, delta: float) -> void:
 		var attack: float = predator.aggression + predator.speed * 0.24 + predator.size * 0.1
 		if rng.randf() < clamp(0.72 + attack - defense, 0.14, 0.96):
 			prey.dead = true
+			predator.feeding_flash = 0.5
 			predator.energy = clamp(predator.energy + 38.0 + prey.size * 14.0, 0.0, 170.0)
 		else:
 			predator.energy -= 5.0
 	if predator.energy > 142.0 and predator.cooldown <= 0.0 and organisms.size() < MAX_ORGANISMS and local_count(predator.pos, "predator", 94.0) < 3:
 		var child = spawn("predator", predator.pos + _random_vec(28.0), predator)
 		if child:
+			predator.birth_flash = 0.8
+			child.birth_flash = 0.8
 			child.energy = 68.0
 			predator.energy -= 72.0
 			predator.cooldown = 22.0
@@ -426,7 +444,7 @@ func paint_cell(cx: int, cy: int, tool: String, radius: int, update_events: bool
 	elif tool == "Eraser":
 		organisms = organisms.filter(func(organism: Dictionary) -> bool: return (organism.pos / CELL).distance_to(Vector2(cx, cy)) > radius + 2)
 	if update_events:
-		events.append({"day": day, "type": "Tool: " + tool})
+		events.append({"day": day, "tick": tick, "type": "Tool: " + tool})
 		if events.size() > 80:
 			events.pop_front()
 
@@ -439,7 +457,7 @@ func disaster(label: String) -> Dictionary:
 	if catalyst < cost:
 		return {"ok": false, "message": "Need %d Catalyst for %s" % [int(cost), label]}
 	catalyst -= cost
-	events.append({"day": day, "type": label})
+	events.append({"day": day, "tick": tick, "type": label})
 	match label:
 		"Heat Pulse":
 			weather = "heat pulse"
@@ -497,6 +515,7 @@ func rebalance() -> void:
 func stats() -> Dictionary:
 	var microbe_cells := 0
 	var fungal_cells := 0
+	var microbial_mass := 0.0
 	var nutrients := 0.0
 	var water := 0.0
 	var amoeboids := 0
@@ -508,6 +527,7 @@ func stats() -> Dictionary:
 	var aggression_total := 0.0
 	var max_generation := 1
 	for c in cells:
+		microbial_mass += c.microbes
 		if c.microbes > 0.05:
 			microbe_cells += 1
 		if c.fungus > 0.05:
@@ -555,6 +575,7 @@ func stats() -> Dictionary:
 		"nutrients": nutrients / cells.size(),
 		"water": water / cells.size(),
 		"oxygen": oxygen,
+		"oxygen_balance": microbial_mass / float(cells.size()) * 0.00034 - float(organisms.size()) * 0.000003,
 		"co2": co2,
 		"climate_heat": climate_heat,
 		"biodiversity": biodiversity,
@@ -574,6 +595,7 @@ func stats() -> Dictionary:
 func _sample_history() -> void:
 	var s := stats()
 	history.append({
+		"tick": tick,
 		"microbes": s.microbes,
 		"amoeboids": s.amoeboids,
 		"grazers": s.grazers,

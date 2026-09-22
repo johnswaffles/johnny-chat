@@ -1,0 +1,8 @@
+{
+  "release": "20260922-presentation1",
+  "engine": "Godot 4.6.1",
+  "sha256": {
+    "index.pck": "447f1f1efd9b7639d3ef33ff7b2bc063c895e048f98d7bba9b17453ef73611b1",
+    "index.wasm.gz": "26309737e81a496c5f309151b837aa4ebf2cab642a93f32248412161d7e074eb"
+  }
+}

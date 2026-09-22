@@ -4,7 +4,7 @@ const PlanetSimulation = preload("res://scripts/simulation/planet_simulation.gd"
 
 
 func draw_background(canvas: CanvasItem, sim: PlanetSimulation) -> void:
-	canvas.draw_rect(Rect2(Vector2.ZERO, Vector2(1440, 810)), Color("#020812"))
+	canvas.draw_rect(Rect2(Vector2.ZERO, canvas.get_viewport_rect().size), Color("#020812"))
 	canvas.draw_circle(Vector2(190, 90), 250, Color(0.08, 0.55, 0.72, 0.08))
 	canvas.draw_circle(Vector2(1230, 130), 330, Color(0.38, 0.28, 0.72, 0.07))
 	canvas.draw_circle(Vector2(770, 670), 470, Color(0.0, 0.34, 0.42, 0.065))
@@ -12,44 +12,53 @@ func draw_background(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 		for i in range(6):
 			var y := 108.0 + i * 110.0 + sin((sim.tick + i * 31) * 0.006) * 5.0
 			canvas.draw_line(Vector2(230, y), Vector2(1180, y + 18.0), Color(0.25, 0.84, 0.95, 0.025), 2.0)
-	canvas.draw_rect(Rect2(PlanetSimulation.WORLD_OFFSET - Vector2(4, 4), PlanetSimulation.WORLD_SIZE + Vector2(8, 8)), Color(0.42, 0.92, 0.95, 0.13), false, 2.0)
 
 
-func draw_world(canvas: CanvasItem, sim: PlanetSimulation) -> void:
-	canvas.draw_rect(Rect2(PlanetSimulation.WORLD_OFFSET, PlanetSimulation.WORLD_SIZE), Color("#061b2b"))
+var terrain_texture: ImageTexture
+var terrain_seed := ""
+var terrain_tick := -100
+
+
+func draw_world(canvas: CanvasItem, sim: PlanetSimulation, world_scale := Vector2.ONE, world_origin := Vector2.ZERO, art_scale := 1.0) -> void:
+	# One filtered color field replaces thousands of visible tile rectangles.
+	# Refresh at most twice per second; living organisms remain independent.
+	if terrain_texture == null or terrain_seed != sim.seed_text or sim.tick < terrain_tick or sim.tick - terrain_tick >= 10:
+		var field := Image.create(PlanetSimulation.GRID_W, PlanetSimulation.GRID_H, false, Image.FORMAT_RGBA8)
+		for y in range(PlanetSimulation.GRID_H):
+			for x in range(PlanetSimulation.GRID_W):
+				var blended := Color(0, 0, 0, 0)
+				for dy in range(-1, 2):
+					for dx in range(-1, 2):
+						var weight := float((2 if dx == 0 else 1) * (2 if dy == 0 else 1)) / 16.0
+						blended += terrain_color(sim.cell(clampi(x + dx, 0, PlanetSimulation.GRID_W - 1), clampi(y + dy, 0, PlanetSimulation.GRID_H - 1)), sim) * weight
+				field.set_pixel(x, y, blended)
+		if terrain_texture == null:
+			terrain_texture = ImageTexture.create_from_image(field)
+		else:
+			terrain_texture.update(field)
+		terrain_seed = sim.seed_text
+		terrain_tick = sim.tick
+	canvas.draw_texture_rect(terrain_texture, Rect2(PlanetSimulation.WORLD_OFFSET, PlanetSimulation.WORLD_SIZE), false)
+	canvas.draw_set_transform(Vector2.ZERO)
 	var busy_world := sim.organisms.size() >= 82
-	var saturated_world := sim.organisms.size() >= 118
 	for y in range(PlanetSimulation.GRID_H):
 		for x in range(PlanetSimulation.GRID_W):
 			var c := sim.cell(x, y)
-			var pos := PlanetSimulation.WORLD_OFFSET + Vector2(x, y) * PlanetSimulation.CELL
-			var tile := Rect2(pos, Vector2(PlanetSimulation.CELL + 0.35, PlanetSimulation.CELL + 0.35))
-			var color := terrain_color(c, sim)
-			var variation: float = (float(c.sediment) - 0.5) * 0.045
-			canvas.draw_rect(tile, color.lightened(max(0.0, variation)).darkened(max(0.0, -variation)))
-
-			# Mature worlds are already visually dense. Drop decorative primitives
-			# before they can monopolize the browser's render thread.
-			if not saturated_world:
-				if c.type == "tidal" or c.type == "shallow":
-					canvas.draw_rect(Rect2(pos + Vector2(2, 2), Vector2(PlanetSimulation.CELL - 4, 2)), Color(0.55, 0.94, 0.72, 0.055 + c.nutrients * 0.025))
-				elif c.type == "volcanic":
-					canvas.draw_line(pos + Vector2(3, 10), pos + Vector2(11, 4), Color(0.96, 0.48, 0.29, 0.18), 1.0)
-				elif c.type == "deep_ocean" and (x * 7 + y * 11) % 19 == 0:
-					canvas.draw_line(pos + Vector2(3, 6), pos + Vector2(9, 6), Color(0.5, 0.85, 0.96, 0.08), 1.0)
-
-				if x < PlanetSimulation.GRID_W - 1 and sim.cell(x + 1, y).type != c.type:
-					canvas.draw_line(pos + Vector2(PlanetSimulation.CELL, 1), pos + Vector2(PlanetSimulation.CELL, PlanetSimulation.CELL - 1), Color(0.54, 0.88, 0.84, 0.065), 1.0)
-				if y < PlanetSimulation.GRID_H - 1 and sim.cell(x, y + 1).type != c.type:
-					canvas.draw_line(pos + Vector2(1, PlanetSimulation.CELL), pos + Vector2(PlanetSimulation.CELL - 1, PlanetSimulation.CELL), Color(0.54, 0.88, 0.84, 0.055), 1.0)
-
-			var draw_mat: bool = c.microbes > 0.11
-			if saturated_world:
-				draw_mat = draw_mat and (x * 3 + y * 5) % 4 == 0
-			elif busy_world:
-				draw_mat = draw_mat and (x + y) % 2 == 0
-			if draw_mat:
-				draw_microbe_mat(canvas, pos, c, sim.tick, busy_world or sim.reduced_motion)
+			var pos := world_origin + (PlanetSimulation.WORLD_OFFSET + Vector2(x, y) * PlanetSimulation.CELL) * world_scale
+			canvas.draw_set_transform(pos, 0, Vector2.ONE * art_scale)
+			pos = Vector2.ZERO
+			var seed_value := float(x * 13 + y * 31)
+			if c.type == "basalt" or c.type == "volcanic":
+				if (x * 7 + y * 3) % 5 == 0:
+					var center := pos + Vector2(7, 8)
+					var rock := PackedVector2Array([center + Vector2(-7, 2), center + Vector2(-4, -4), center + Vector2(3, -5), center + Vector2(7, 0), center + Vector2(2, 5)])
+					canvas.draw_colored_polygon(rock, Color(0.12, 0.22, 0.26, 0.52))
+					canvas.draw_line(center + Vector2(-4, -4), center + Vector2(3, -5), Color(0.64, 0.75, 0.67, 0.23), 1.0, true)
+			elif c.type == "tidal" and (x + y * 3) % 7 == 0:
+				canvas.draw_circle(pos + Vector2(7, 7), 1.2, Color(0.85, 0.91, 0.64, 0.26))
+			if c.microbes > 0.11 and (not busy_world or (x + y) % 2 == 0):
+				var organic_offset := Vector2(sin(seed_value * 1.7), cos(seed_value * 2.3)) * 4.0
+				draw_microbe_mat(canvas, pos + organic_offset, c, sim.tick, busy_world or sim.reduced_motion)
 			if c.fungus > 0.08 and (not busy_world or (x + y) % 3 == 0):
 				draw_fungal_bloom(canvas, pos, c)
 			if c.vent:
@@ -60,7 +69,7 @@ func draw_microbe_mat(canvas: CanvasItem, pos: Vector2, c: Dictionary, tick: int
 	var pulse := 0.88 if simplified else 0.82 + sin(tick * 0.025 + c.sediment * 6.0) * 0.12
 	var alpha: float = 0.16 + c.microbes * 0.5
 	var center := pos + Vector2(7.0, 7.0)
-	var radius: float = 2.2 + c.microbes * 3.2
+	var radius: float = 2.6 + c.microbes * 4.3
 	if simplified:
 		canvas.draw_circle(center, radius + 0.8, Color(0.32, 0.9, 0.55, alpha * pulse))
 		return
@@ -84,13 +93,23 @@ func draw_vent(canvas: CanvasItem, pos: Vector2, tick: int, still := false) -> v
 	canvas.draw_line(center, center + Vector2(plume, -9), Color(0.95, 0.8, 0.56, 0.2), 1.5)
 
 
-func draw_organisms(canvas: CanvasItem, sim: PlanetSimulation) -> void:
+func draw_organisms(canvas: CanvasItem, sim: PlanetSimulation, world_scale := Vector2.ONE, world_origin := Vector2.ZERO, art_scale := 1.0) -> void:
 	var t := sim.render_alpha * sim.render_alpha * (3.0 - 2.0 * sim.render_alpha)
 	for organism in sim.organisms:
 		var p: Vector2 = PlanetSimulation.WORLD_OFFSET + organism.prev_pos.lerp(organism.pos, t)
+		p = world_origin + p * world_scale
+		canvas.draw_set_transform(p, 0, Vector2.ONE * art_scale)
+		p = Vector2.ZERO
 		var velocity: Vector2 = organism.prev_vel.lerp(organism.vel, t)
 		if velocity.length_squared() < 0.0001:
 			velocity = Vector2.RIGHT
+		if float(organism.get("feeding_flash", 0.0)) > 0.0:
+			canvas.draw_arc(Vector2.ZERO, 12.0 + float(organism.size) * 4.0, 0.3, 2.8, 20, Color(0.85, 1.0, 0.6, 0.48), 1.5, true)
+		if float(organism.get("birth_flash", 0.0)) > 0.0:
+			var radius := 19.0 if sim.reduced_motion else 18.0 + (0.8 - float(organism.birth_flash)) * 16.0
+			canvas.draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Color(0.8, 1, 0.86, float(organism.birth_flash) * 0.65), 1.0, true)
+		if float(organism.energy) < 25.0:
+			canvas.draw_circle(Vector2(0, -18), 2.0, Color("#ffd389"))
 		match organism.kind:
 			"amoeboid":
 				draw_amoeboid(canvas, p, organism, sim.tick, sim.reduced_motion)
@@ -101,23 +120,27 @@ func draw_organisms(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 
 
 func draw_amoeboid(canvas: CanvasItem, p: Vector2, organism: Dictionary, tick: int, still := false) -> void:
-	var r: float = 4.8 + organism.size * 1.7
+	var r: float = 6.0 + organism.size * 2.0
 	var wobble := 0.0 if still else sin(tick * 0.06 + organism.generation) * 0.55
 	var points := PackedVector2Array()
-	for i in range(8):
-		var angle := float(i) / 8.0 * TAU
+	for i in range(16):
+		var angle := float(i) / 16.0 * TAU
 		var rr := r + sin(angle * 3.0 + wobble) * 0.7
 		points.append(p + Vector2(cos(angle), sin(angle)) * rr)
 	canvas.draw_circle(p, r * 1.42, Color(0.25, 0.9, 1.0, 0.09))
-	canvas.draw_colored_polygon(points, Color(0.28, 0.86, 0.98, 0.92))
+	canvas.draw_circle(p + Vector2(1, 3), r, Color(0.0, 0.05, 0.12, 0.4))
+	canvas.draw_colored_polygon(points, Color(0.24, 0.78, 0.92, 0.86))
+	points.append(points[0])
+	canvas.draw_polyline(points, Color(0.65, 1.0, 0.98, 0.85), 1.1, true)
+	canvas.draw_circle(p - Vector2(1.5, 0), r * 0.38, Color(0.06, 0.36, 0.56, 0.8))
 	canvas.draw_circle(p + Vector2(1.8, -1.2), 1.35, Color(0.91, 1.0, 1.0, 0.95))
 
 
 func draw_grazer(canvas: CanvasItem, p: Vector2, organism: Dictionary, velocity: Vector2) -> void:
 	var forward := velocity.normalized()
 	var side := Vector2(-forward.y, forward.x)
-	var length: float = 9.5 + organism.size * 3.2
-	var width: float = 4.0 + organism.armor * 1.25
+	var length: float = 12.0 + organism.size * 3.6
+	var width: float = 5.0 + organism.armor * 1.5
 	var body := PackedVector2Array([
 		p + forward * length,
 		p + side * width + forward * length * 0.15,
@@ -127,7 +150,11 @@ func draw_grazer(canvas: CanvasItem, p: Vector2, organism: Dictionary, velocity:
 		p - side * width + forward * length * 0.15,
 	])
 	canvas.draw_circle(p, length * 0.8, Color(0.25, 0.88, 0.66, 0.07))
-	canvas.draw_colored_polygon(body, Color(0.35, 0.78, 0.52, 0.94))
+	canvas.draw_colored_polygon(body, Color(0.59, 0.84, 0.37, 0.98))
+	for segment in range(4):
+		var segment_pos := p - forward * float(segment - 1) * 4.0
+		canvas.draw_line(segment_pos - side * width * 0.7, segment_pos + side * width * 0.7, Color(0.13, 0.39, 0.28, 0.75), 1.2, true)
+	canvas.draw_line(p + forward * length * 0.6, p + forward * (length + 4) + side * 4, Color(0.88, 1.0, 0.65, 0.8), 1.0, true)
 	canvas.draw_line(p - side * width * 0.72, p + side * width * 0.72, Color(0.84, 1.0, 0.72, 0.45), 1.2)
 	canvas.draw_circle(p + forward * length * 0.66, 1.35, Color(1.0, 0.97, 0.62, 0.96))
 
@@ -135,7 +162,7 @@ func draw_grazer(canvas: CanvasItem, p: Vector2, organism: Dictionary, velocity:
 func draw_predator(canvas: CanvasItem, p: Vector2, organism: Dictionary, velocity: Vector2) -> void:
 	var forward := velocity.normalized()
 	var side := Vector2(-forward.y, forward.x)
-	var length: float = 12.0 + organism.size * 3.8
+	var length: float = 15.0 + organism.size * 4.0
 	var width: float = 4.8 + organism.aggression * 1.2
 	var body := PackedVector2Array([
 		p + forward * length,
@@ -200,7 +227,12 @@ func _draw_action_effects(canvas: CanvasItem, sim: PlanetSimulation) -> void:
 		var color: Color = _tool_effect_color(int(effect.tool))
 		color.a = (1.0 - progress) * 0.65
 		var radius: float = 10.0 + progress * 42.0
-		canvas.draw_rect(Rect2(center - Vector2(radius, radius), Vector2(radius * 2.0, radius * 2.0)), color, false, 2.0)
+		canvas.draw_arc(center, radius, 0, TAU, 40, color, 2.0, true)
+		var glow := color
+		glow.a *= 0.12
+		canvas.draw_circle(center, radius * 0.8, glow)
+		if not sim.reduced_motion:
+			canvas.draw_arc(center, radius * 0.62, 0, TAU, 32, color * Color(1, 1, 1, 0.4), 1.0, true)
 		if sim.reduced_motion:
 			continue
 		for i in range(5):
@@ -259,17 +291,17 @@ func terrain_color(c: Dictionary, sim: PlanetSimulation) -> Color:
 	var base := Color("#09273a")
 	match c.type:
 		"deep_ocean":
-			base = Color("#06243a")
+			base = Color("#073044")
 		"shelf":
-			base = Color("#0c3d4c")
+			base = Color("#105d6b")
 		"shallow":
-			base = Color("#16565a")
+			base = Color("#248a88")
 		"tidal":
-			base = Color("#2e604e")
+			base = Color("#609c86")
 		"basalt":
-			base = Color("#27313a")
+			base = Color("#263d4c")
 		"volcanic":
-			base = Color("#432f32")
+			base = Color("#604a50")
 	var heat: float = sim.climate_heat * 0.045 + c.temperature * 0.025
 	var nutrient: float = c.nutrients * 0.035
 	return base.lightened(nutrient).lerp(Color("#713b31"), heat)

@@ -1,6 +1,14 @@
 extends Node2D
 
 const PlanetSimulation = preload("res://scripts/simulation/planet_simulation.gd")
+const SpeciesGuide = preload("res://scripts/ui/species_guide.gd")
+const LifeLab = preload("res://scripts/ui/life_lab.gd")
+const OceanSettings = preload("res://scripts/ui/ocean_settings.gd")
+const OceanJournal = preload("res://scripts/ui/ocean_journal.gd")
+const BrowserSaveSync = preload("res://scripts/persistence/browser_save_sync.gd")
+const WorldSave = preload("res://scripts/persistence/world_save.gd")
+const OceanTouch = preload("res://scripts/rendering/ocean_touch.gd")
+const OceanCamera = preload("res://scripts/rendering/ocean_camera.gd")
 const PlanetRenderer = preload("res://scripts/rendering/planet_renderer.gd")
 const PopulationGraph = preload("res://scripts/graphs/population_graph.gd")
 const GlassTheme = preload("res://scripts/ui/glass_theme.gd")
@@ -13,7 +21,7 @@ const MAX_SIM_STEPS_PER_FRAME := 5
 const MAX_FRAME_DELTA := 0.1
 const SPEEDS: Array[float] = [0.5, 1.0, 2.0, 4.0]
 const TOOL_UNLOCK_STAGE: Array[int] = [0, 1, 1, 2, 0, 2, 0, 0]
-const TOOL_SHORT_NAMES := ["Cyano Mats", "Amoeboids", "Grazers", "Predators", "Tidal Nutrients", "Volcanic Rock", "Hydrothermal Vent", "Eraser"]
+const TOOL_SHORT_NAMES := ["Cyano Mats", "Amoeboids", "Grazers", "Predators", "Tidal Nutrients", "Volcanic Rock", "Thermal Vent", "Eraser"]
 const MISSION_TITLES := ["Awaken the Shallows", "Feed the Drifters", "Complete the Web", "Change the Sky", "Living Planet"]
 const FIELD_STUDIES := [
 	{"title": "Bloom Survey", "tool": 0, "goal": 4},
@@ -64,6 +72,64 @@ var pulse_trend: Dictionary = {}
 var pulse_last_tick := -1
 var pointer_position := Vector2.ZERO
 
+const EVENT_BRIEFINGS := {
+	"Heat Pulse": ["Raises ocean heat by 18 percentage points. Heat weather lasts 36 simulation seconds.", "Watch heat and food supplies. Monsoon can cool the ocean; avoid adding volcanic rock."],
+	"Monsoon": ["Cools the ocean by 8 percentage points and replenishes water and nutrients. Rain lasts 26 simulation seconds.", "Let mats respond before adding consumers. Watch population history for a delayed bloom."],
+	"Viral Bloom": ["Each drifter has a 22% chance of dying; each other animal has a 13% chance. Results vary.", "Give survivors time to recover. Rebuild microbial food before replacing animals."],
+	"Impact Event": ["A random region becomes volcanic rock and basalt. Microbial cover in that region is erased.", "Inspect the affected terrain. Seed suitable shallows elsewhere and monitor ocean heat."],
+	"Predator Surge": ["Attempts to introduce five hunters, subject to population limits. Existing prey may decline.", "Watch drifter and grazer counts. Avoid adding more hunters while the food web settles."],
+	"Seed Recovery": ["Replenishes depleted parts of the food web and nutrients. Additions depend on current populations.", "Let the new populations settle. Recovery is an intervention, not a guarantee of lasting balance."],
+}
+var event_dialog: ConfirmationDialog
+var pending_event := ""
+var event_was_running := false
+var observed_era := ""
+var event_glow := 0.0
+
+var journal_seen: Dictionary = {}
+var journal: Control
+var settings: AcceptDialog
+var life_lab: Control
+
+var save_pending := false
+var save_wait := 0.0
+var pending_save: Dictionary = {}
+var pending_announce := false
+
+var save_path := WorldSave.SAVE_PATH
+var autosave_elapsed := 0.0
+var save_status: Label
+var resume_button: Button
+var resume_detail: Label
+var new_world_dialog: ConfirmationDialog
+var saved_checkpoint: Dictionary = {}
+var save_recovered := false
+var new_world_was_running := false
+
+var camera := OceanCamera.new()
+var touch := OceanTouch.new()
+var world_view: Control
+var world_canvas: Node2D
+var camera_bar: HFlowContainer
+var zoom_label: Label
+var pan_button: Button
+var focus_button: Button
+var follow_button: Button
+var follow_status: Button
+var follow_target: Dictionary = {}
+var inspect_target: Dictionary = {}
+var pan_mode := false
+var panning := false
+var focus_mode := false
+
+var world_scale := Vector2.ONE
+var world_origin := Vector2.ZERO
+var layout_controls: Array[Dictionary] = []
+var haze: ColorRect
+var inspect_mode := false
+var inspect_button: Button
+var guide_label: Label
+
 var ui: CanvasLayer
 var intro_overlay: Control
 var stats_label: RichTextLabel
@@ -91,6 +157,8 @@ var inspector_overlay: Control
 var inspector_title: Label
 var inspector_label: RichTextLabel
 var inspector_button: Button
+var specimen: Control
+var inspected_organism: Dictionary = {}
 var help_button: Button
 var help_panel: Panel
 var help_title: Label
@@ -108,15 +176,35 @@ var pulse_action_button: Button
 
 func _ready() -> void:
 	sim.seed_text = "genesis-%d" % randi_range(1000, 999999)
+	_build_world_view()
 	_build_haze_overlay()
 	_create_music_player()
 	_build_ui()
 	_reset_world(false)
 	_update_ui()
+	for child in ui.get_children():
+		if child is Control:
+			layout_controls.append({"node": child, "position": child.position, "size": child.size})
+	get_viewport().size_changed.connect(_layout_view)
+	_layout_view()
+	_check_saved_world()
 	set_process(true)
 
 
 func _process(delta: float) -> void:
+	_poll_browser_save(delta)
+	if haze:
+		haze.material.set_shader_parameter("ocean_time", float(sim.tick) * SIM_STEP)
+		haze.material.set_shader_parameter("motion_amount", 0.0 if reduced_motion else 1.0)
+		event_glow = maxf(0.0, event_glow - delta * 0.16)
+		haze.material.set_shader_parameter("event_strength", 0.35 if not pending_event.is_empty() else event_glow)
+		haze.material.set_shader_parameter("climate_warmth", clampf((sim.climate_heat - 0.35) * 2.0, 0.0, 1.0))
+	_update_camera(delta)
+	if started and running:
+		autosave_elapsed += delta
+		if autosave_elapsed >= 30.0:
+			autosave_elapsed = 0.0
+			_save_world(false)
 	paint_cooldown = max(0.0, paint_cooldown - delta)
 	combo_timer = max(0.0, combo_timer - delta)
 	if combo_timer <= 0.0 and combo > 0:
@@ -139,6 +227,7 @@ func _process(delta: float) -> void:
 			guard += 1
 			sim.render_alpha = clamp(sim_accumulator / SIM_STEP, 0.0, 1.0)
 			if sim.tick % 10 == 0:
+				_check_era_milestone()
 				_check_mission()
 				_update_fun_systems()
 				_update_ui()
@@ -156,11 +245,37 @@ func _process(delta: float) -> void:
 	if render_accumulator >= render_interval:
 		render_accumulator = fmod(render_accumulator, render_interval)
 		queue_redraw()
+		world_canvas.queue_redraw()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and not event.pressed:
+		# GUI may consume a release; deferred cleanup runs after world handling.
+		touch.call_deferred("release", event.index)
+	if event is InputEventMouseMotion:
+		pointer_position = event.position
+		if placement_panel:
+			placement_panel.visible = false
+		sim.hover_cell = Vector2i(-1, -1)
+	# Releases must be seen even when a UI panel consumes the event.
+	if event is InputEventMouseButton and not event.pressed:
+		paint_down = false
+		panning = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	_maybe_start_music_from_user_gesture(event)
+	if (event is InputEventMouseButton or event is InputEventMouseMotion) and event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
 	if not started:
+		return
+	if life_lab and life_lab.visible:
+		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE and started:
+			life_lab.close()
+		return
+	if journal and journal.visible:
+		if event is InputEventKey and event.pressed and event.keycode in [KEY_ESCAPE, KEY_J]:
+			journal.close()
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
@@ -171,12 +286,20 @@ func _unhandled_input(event: InputEvent) -> void:
 					_toggle_help()
 				elif pulse_open:
 					_toggle_pulse()
+			KEY_EQUAL, KEY_PLUS, KEY_KP_ADD:
+				_zoom_camera(1.25)
+			KEY_MINUS, KEY_KP_SUBTRACT:
+				_zoom_camera(0.8)
+			KEY_HOME:
+				_fit_camera()
+			KEY_J:
+				journal.open()
 			KEY_H:
 				_toggle_help()
 			KEY_SPACE:
 				_toggle_running()
 			KEY_N:
-				_reset_world(true)
+				_request_new_world()
 			KEY_M:
 				_toggle_motion()
 			KEY_BRACKETLEFT:
@@ -185,34 +308,257 @@ func _unhandled_input(event: InputEvent) -> void:
 				_change_speed(1)
 			KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8:
 				_select_tool(event.keycode - KEY_1)
+	if event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and event.pressed:
+		if camera.frame.has_point(event.position):
+			_zoom_camera(1.25 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 0.8, event.position)
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE:
+		panning = event.pressed and camera.frame.has_point(event.position)
+		paint_down = false
+		return
 	if event is InputEventMouseMotion:
+		if panning:
+			_pan_camera(event.relative)
+			return
 		pointer_position = event.position
-		sim.set_hover_screen(event.position)
+		sim.set_hover_screen(_world_pointer(event.position))
 		_update_placement_preview(event.position)
 		if paint_down and paint_cooldown <= 0.0:
 			_use_selected_tool(event.position)
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if pan_mode:
+			panning = event.pressed and camera.frame.has_point(event.position)
+			paint_down = false
+			return
 		paint_down = event.pressed
 		if event.pressed:
 			pointer_position = event.position
-			sim.set_hover_screen(event.position)
+			sim.set_hover_screen(_world_pointer(event.position))
 			_update_placement_preview(event.position)
 			_use_selected_tool(event.position)
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 		_open_inspector(event.position)
-	if event is InputEventScreenTouch:
-		pointer_position = event.position
-		sim.set_hover_screen(event.position)
-		_update_placement_preview(event.position)
-		if event.pressed:
-			_use_selected_tool(event.position)
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		touch.handle(self, event)
+
+
+func _world_pointer(position: Vector2) -> Vector2:
+	return camera.to_world(position)
+
+
+func _world_bottom() -> float:
+	return camera.frame.end.y
+
+
+func _layout_view() -> void:
+	var extent := get_viewport_rect().size
+	var extra := maxf(0.0, extent.y - VIEW_SIZE.y)
+	world_scale = Vector2(maxf(1.0, (extent.x - 516.0) / 924.0), (560.0 + extra) / 560.0)
+	world_origin = PlanetSimulation.WORLD_OFFSET * (Vector2.ONE - world_scale)
+	camera.frame = Rect2(PlanetSimulation.WORLD_OFFSET, PlanetSimulation.WORLD_SIZE * world_scale)
+	if focus_mode:
+		camera.frame.position.x = 16
+		camera.frame.size.x = extent.x - 32
+	camera.constrain()
+	world_view.position = camera.frame.position
+	world_view.size = camera.frame.size
+	for item in layout_controls:
+		var control: Control = item.node
+		var base: Vector2 = item.position
+		control.position = base
+		if base.y >= 126 and (base.x < 230 or base.x >= 1186):
+			control.visible = not focus_mode
+		if base.x >= 1186:
+			control.position.x += extent.x - VIEW_SIZE.x
+		if base.y >= 710:
+			control.position.y += extra
+		if control is Panel and item.size.y == 668:
+			control.size.y = 668 + extra
+		if control == intro_overlay or control == inspector_overlay:
+			control.position = (extent - VIEW_SIZE) * 0.5
+			var shade := control.get_child(0) as ColorRect
+			shade.position = -control.position
+			shade.size = extent
+	if graph:
+		graph.position.x = camera.frame.position.x
+		graph.size.x = camera.frame.size.x
+	if guide_label:
+		guide_label.position = Vector2(camera.frame.position.x + 20, _world_bottom() - 40)
+	if toast_label:
+		toast_label.position.y = _world_bottom() - 76
+	if haze:
+		haze.position = camera.frame.position
+		haze.size = camera.frame.size
+	if camera_bar:
+		camera_bar.position = camera.frame.position + Vector2(12, 10)
+		camera_bar.size.x = camera.frame.size.x - 24
+		var screen_scale := maxf(0.25, get_viewport().get_screen_transform().get_scale().x)
+		var compact := screen_scale < 0.65
+		for control in camera_bar.get_children():
+			if control is Button:
+				control.custom_minimum_size = Vector2(42, 36) if not compact else Vector2(42, 42) / screen_scale
+				control.add_theme_font_size_override("font_size", 15 if not compact else roundi(13.0 / screen_scale))
+		camera_bar.queue_sort()
+		follow_status.position = camera.frame.position + Vector2(12, 56)
+	if journal:
+		journal.layout(extent)
+	if life_lab:
+		life_lab.layout()
+		var physical_width: float = extent.x * get_viewport().get_screen_transform().get_scale().x
+		if physical_width < 600 and not started:
+			life_lab.call_deferred("open")
+	world_canvas.queue_redraw()
+	queue_redraw()
+
+
+func _build_world_view() -> void:
+	world_view = Control.new()
+	world_view.clip_contents = true
+	world_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(world_view)
+	world_canvas = Node2D.new()
+	world_canvas.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	world_canvas.draw.connect(_draw_world_canvas)
+	world_view.add_child(world_canvas)
 
 
 func _draw() -> void:
 	renderer.draw_background(self, sim)
-	renderer.draw_world(self, sim)
-	renderer.draw_organisms(self, sim)
-	renderer.draw_overlay(self, sim)
+	draw_rect(camera.frame.grow(3), Color(0.42, 0.92, 0.95, 0.18), false, 2.0)
+
+
+func _draw_world_canvas() -> void:
+	var view_scale := camera.scale()
+	var view_origin := camera.origin() - camera.frame.position
+	world_canvas.draw_set_transform(view_origin, 0, view_scale)
+	renderer.draw_world(world_canvas, sim, view_scale, view_origin, camera.zoom)
+	world_canvas.draw_set_transform(Vector2.ZERO)
+	renderer.draw_organisms(world_canvas, sim, view_scale, view_origin, camera.zoom)
+	world_canvas.draw_set_transform(view_origin, 0, view_scale)
+	renderer.draw_overlay(world_canvas, sim)
+	world_canvas.draw_set_transform(Vector2.ZERO)
+	if not follow_target.is_empty():
+		var point := camera.to_screen(PlanetSimulation.WORLD_OFFSET + Vector2(follow_target.pos)) - camera.frame.position
+		world_canvas.draw_arc(point, 23.0 * camera.zoom, 0, TAU, 48, Color(0.8, 1, 0.65, 0.65), 1.5, true)
+
+
+func _zoom_camera(factor: float, anchor := Vector2.INF) -> void:
+	if anchor == Vector2.INF:
+		anchor = camera.frame.get_center()
+	paint_down = false
+	camera.set_zoom(camera.zoom * factor, anchor)
+	_refresh_camera()
+
+
+func _pan_camera(delta: Vector2) -> void:
+	follow_target = {}
+	camera.pan(delta)
+	_refresh_camera()
+
+
+func _fit_camera() -> void:
+	follow_target = {}
+	camera.fit()
+	_refresh_camera()
+
+
+func _refresh_camera() -> void:
+	if zoom_label:
+		zoom_label.text = "%d%%" % roundi(camera.zoom * 100)
+	if placement_panel:
+		placement_panel.visible = false
+	sim.hover_cell = Vector2i(-1, -1)
+	world_canvas.queue_redraw()
+
+
+func _update_camera(delta: float) -> void:
+	if not follow_target.is_empty():
+		if bool(follow_target.get("dead", true)) or not sim.organisms.has(follow_target):
+			follow_target = {}
+			_show_toast("This creature's life has ended. Inspect another to follow it.", Color("#b2d3d9"), 4.0)
+		else:
+			var target := PlanetSimulation.WORLD_OFFSET + Vector2(follow_target.pos)
+			camera.center = target if reduced_motion else camera.center.lerp(target, 1.0 - exp(-delta * 7.0))
+			camera.constrain()
+	if follow_status:
+		follow_status.visible = not follow_target.is_empty()
+		if follow_status.visible:
+			follow_status.text = "Following %s · Stop following" % _organism_common_name(str(follow_target.kind))
+
+
+func _follow_inspected() -> void:
+	if inspect_target.is_empty() or bool(inspect_target.get("dead", true)):
+		return
+	follow_target = inspect_target
+	_close_inspector()
+	camera.zoom = maxf(camera.zoom, 2.0)
+	camera.center = PlanetSimulation.WORLD_OFFSET + Vector2(follow_target.pos)
+	camera.constrain()
+	pan_mode = false
+	pan_button.button_pressed = false
+	_refresh_camera()
+
+
+func _toggle_focus() -> void:
+	focus_mode = focus_button.button_pressed
+	focus_button.text = "Show panels" if focus_mode else "Focus ocean"
+	_layout_view()
+
+
+func _build_camera_bar() -> void:
+	camera_bar = HFlowContainer.new()
+	camera_bar.mouse_filter = Control.MOUSE_FILTER_STOP
+	camera_bar.add_theme_constant_override("separation", 6)
+	ui.add_child(camera_bar)
+	var minus := _camera_button("−", func(): _zoom_camera(0.8))
+	minus.tooltip_text = "Zoom out (−)"
+	zoom_label = Label.new()
+	zoom_label.custom_minimum_size = Vector2(58, 36)
+	zoom_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	camera_bar.add_child(zoom_label)
+	_camera_button("+", func(): _zoom_camera(1.25)).tooltip_text = "Zoom in (+ or mouse wheel)"
+	_camera_button("Journal", func(): journal.open()).tooltip_text = "Species guide and world history (J)"
+	_camera_button("Save", func(): _save_world(true)).tooltip_text = "Save this world in this browser"
+	_camera_button("Fit", _fit_camera).tooltip_text = "Show the whole ocean (Home)"
+	pan_button = _camera_button("Pan", func():
+		pan_mode = pan_button.button_pressed
+		if pan_mode:
+			inspect_mode = false
+			inspect_button.button_pressed = false
+		paint_down = false
+	)
+	pan_button.toggle_mode = true
+	pan_button.tooltip_text = "Touch: drag to pan, pinch to zoom, tap to place. Mouse: enable Pan or middle-drag."
+	focus_button = _camera_button("Focus ocean", _toggle_focus)
+	focus_button.toggle_mode = true
+	_camera_button("Settings", func(): settings.open())
+	_camera_button("Life lab", func(): life_lab.open())
+	follow_status = _button("", Vector2.ZERO, Vector2(300, 32))
+	follow_status.add_theme_font_size_override("font_size", 13)
+	follow_status.pressed.connect(func(): follow_target = {})
+	follow_status.visible = false
+	_refresh_camera()
+
+
+func _camera_button(text: String, action: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(42, 36)
+	button.focus_mode = Control.FOCUS_NONE
+	glass.style_button(button)
+	button.pressed.connect(action)
+	camera_bar.add_child(button)
+	return button
+
+
+func _toggle_inspect_mode() -> void:
+	inspect_mode = inspect_button.button_pressed
+	pan_mode = false
+	panning = false
+	pan_button.button_pressed = false
+	paint_down = false
+	placement_panel.visible = false
+	_show_toast("Click a creature or habitat to inspect it" if inspect_mode else "Painting resumed", Color("#aef8e3"))
 
 
 func _build_ui() -> void:
@@ -237,7 +583,7 @@ func _build_ui() -> void:
 	music_button = _button("Music", Vector2(1206, 39), Vector2(88, 46))
 	music_button.pressed.connect(_toggle_music)
 	var fresh := _button("New", Vector2(1302, 39), Vector2(96, 46))
-	fresh.pressed.connect(_reset_world.bind(true))
+	fresh.pressed.connect(_request_new_world)
 
 	_panel(Vector2(16, 126), Vector2(214, 668), Color(0.012, 0.03, 0.042, 0.9))
 	_header("LIFE LAB", Vector2(34, 146))
@@ -245,6 +591,7 @@ func _build_ui() -> void:
 		var cost: int = PlanetSimulation.TOOL_COSTS[i]
 		var b := _button("[%d] %s   %dC" % [i + 1, TOOL_SHORT_NAMES[i], cost], Vector2(32, 177 + i * 40), Vector2(182, 34))
 		b.add_theme_font_size_override("font_size", 13)
+		b.clip_text = true
 		b.tooltip_text = _tool_tip(PlanetSimulation.TOOLS[i])
 		b.toggle_mode = true
 		b.pressed.connect(_select_tool.bind(i))
@@ -267,8 +614,11 @@ func _build_ui() -> void:
 	motion_button = _button("Reduced Motion: Off", Vector2(32, 636), Vector2(182, 34))
 	motion_button.add_theme_font_size_override("font_size", 12)
 	motion_button.pressed.connect(_toggle_motion)
-	var keys := _label("Space pause  •  [ ] speed\n1–8 tools  •  H live help\nRight-click inspect", Vector2(34, 688), 12, Color("#7897a2"))
-	keys.size = Vector2(176, 60)
+	inspect_button = _button("Inspect life", Vector2(32, 680), Vector2(182, 34))
+	inspect_button.toggle_mode = true
+	inspect_button.pressed.connect(_toggle_inspect_mode)
+	var keys := _label("Space pause • [ ] speed\n1–8 tools  •  H live help", Vector2(34, 726), 12, Color("#7897a2"))
+	keys.size = Vector2(176, 38)
 
 	_panel(Vector2(1186, 126), Vector2(238, 668), Color(0.012, 0.03, 0.042, 0.9))
 	_header("CURRENT MISSION", Vector2(1206, 146))
@@ -302,16 +652,23 @@ func _build_ui() -> void:
 		var event_name: String = PlanetSimulation.DISASTERS[i]
 		var event_button := _button(event_name, Vector2(1204 + (i % 2) * 102, 614 + int(i / 2) * 39), Vector2(96, 32))
 		event_button.add_theme_font_size_override("font_size", 10)
+		event_button.clip_text = true
 		event_button.tooltip_text = "%d Catalyst" % PlanetSimulation.DISASTER_COSTS[i]
 		event_button.pressed.connect(_trigger_event.bind(event_name))
 
 	graph = Control.new()
 	graph.position = Vector2(246, 710)
 	graph.size = Vector2(924, 84)
-	graph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	graph.mouse_filter = Control.MOUSE_FILTER_STOP
+	graph.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	graph.tooltip_text = "Open population history"
+	graph.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			journal.open(true)
+	)
 	graph.draw.connect(_draw_graph)
 	ui.add_child(graph)
-	var legend := _label("POPULATION HISTORY   ■ Mats   ■ Amoeboids   ■ Grazers   ■ Predators", Vector2(262, 714), 11, Color("#9dbac1"))
+	var legend := _label("RELATIVE TRENDS · Click to explore history", Vector2(262, 714), 11, Color("#9dbac1"))
 	legend.add_theme_color_override("font_color", Color("#a9c9cf"))
 	field_label = _label("", Vector2(650, 714), 11, Color("#ffe38a"))
 	field_label.size = Vector2(506, 22)
@@ -326,12 +683,27 @@ func _build_ui() -> void:
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast_label.modulate.a = 0.0
 
+	guide_label = _label("", Vector2(266, 660), 17, Color("#e2fff2"))
+	guide_label.add_theme_color_override("font_shadow_color", Color("#031c29"))
+	guide_label.add_theme_constant_override("shadow_outline_size", 6)
 	_select_tool(0)
 	_build_placement_preview()
 	_build_help_coach()
 	_build_planet_pulse()
+	_build_camera_bar()
 	_build_intro()
 	_build_inspector()
+	_build_save_ui()
+	_build_event_ui()
+	journal = OceanJournal.new()
+	ui.add_child(journal)
+	journal.setup(self)
+	settings = OceanSettings.new()
+	ui.add_child(settings)
+	settings.setup(self)
+	life_lab = LifeLab.new()
+	ui.add_child(life_lab)
+	life_lab.setup(self)
 
 
 func _build_intro() -> void:
@@ -342,22 +714,22 @@ func _build_intro() -> void:
 	ui.add_child(intro_overlay)
 	var shade := ColorRect.new()
 	shade.size = VIEW_SIZE
-	shade.color = Color(0.005, 0.012, 0.025, 0.91)
+	shade.color = Color(0.005, 0.012, 0.025, 0.64)
 	intro_overlay.add_child(shade)
 	var card := Panel.new()
 	card.position = Vector2(336, 92)
 	card.size = Vector2(768, 626)
 	glass.style_panel(card, Color(0.018, 0.052, 0.069, 0.98), Color(0.35, 1.0, 0.78, 0.38))
 	intro_overlay.add_child(card)
-	var eyebrow := _child_label(card, "PLANETARY STEWARDSHIP MISSION", Vector2(48, 42), 14, Color("#63f7ce"))
+	var eyebrow := _child_label(card, "A LIVING OCEAN • YOUR FIRST EXPEDITION", Vector2(48, 42), 14, Color("#63f7ce"))
 	var title := _child_label(card, "Bring a little world to life.", Vector2(48, 78), 38, Color("#f3fffa"))
-	var body := _child_label(card, "This ocean is young, fragile, and almost empty.\nBuild its food web one layer at a time without letting one species consume the rest.", Vector2(50, 140), 17, Color("#b2d3d9"))
+	var body := _child_label(card, "Every living world begins with something small.\nPlant your first colony in the turquoise shallows, then watch life take hold.", Vector2(50, 140), 17, Color("#b2d3d9"))
 	body.size = Vector2(660, 76)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_intro_step(card, "01", "Seed the shallows", "Paint cyanobacteria and nutrient-rich tidepools.", 232)
+	_intro_step(card, "01", "Seed the shallows", "Choose Cyano Mats, then click three places in the turquoise water.", 232)
 	_intro_step(card, "02", "Build a balanced web", "Add drifters, grazers, then predators as missions unlock.", 326)
 	_intro_step(card, "03", "Protect the planet", "Watch Stability, oxygen, and population history—not just raw growth.", 420)
-	var note := _child_label(card, "Open HELP anytime for one exact next step. You can also alternate tools for combos,\nwork inside gold hotspots, and right-click creatures to inspect their traits.", Vector2(50, 506), 13, Color("#8fd8c6"))
+	var note := _child_label(card, "Your next step stays visible along the ocean floor. Open HELP when you want more\ndetail, or choose Inspect life to meet the creatures in your world.", Vector2(50, 506), 13, Color("#8fd8c6"))
 	note.size = Vector2(660, 40)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var launch := Button.new()
@@ -365,8 +737,22 @@ func _build_intro() -> void:
 	launch.position = Vector2(250, 558)
 	launch.size = Vector2(268, 48)
 	glass.style_button(launch, Color(0.06, 0.58, 0.44, 0.9))
-	launch.pressed.connect(_start_game)
+	launch.pressed.connect(_start_new_from_intro)
 	card.add_child(launch)
+	resume_button = Button.new()
+	resume_button.text = "RESUME SAVED WORLD"
+	resume_button.position = Vector2(50, 558)
+	resume_button.size = Vector2(290, 48)
+	glass.style_button(resume_button, Color(0.05, 0.42, 0.38, 0.95))
+	resume_button.pressed.connect(_resume_saved_world)
+	resume_button.visible = false
+	card.add_child(resume_button)
+	launch.set_meta("new_world_launch", true)
+	resume_detail = _child_label(card, "", Vector2(50, 518), 13, Color("#b3efd5"))
+	resume_detail.size = Vector2(668, 35)
+	resume_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	resume_detail.visible = false
+	card.set_meta("intro_note", note)
 
 
 func _build_help_coach() -> void:
@@ -495,6 +881,11 @@ func _build_inspector() -> void:
 	inspector_label.add_theme_font_size_override("normal_font_size", 15)
 	inspector_label.add_theme_font_size_override("bold_font_size", 18)
 	card.add_child(inspector_label)
+	specimen = Control.new()
+	specimen.position = Vector2(430, 208)
+	specimen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	specimen.draw.connect(_draw_specimen)
+	card.add_child(specimen)
 	inspector_button = Button.new()
 	inspector_button.text = "RETURN TO THE OCEAN"
 	inspector_button.position = Vector2(164, 430)
@@ -502,6 +893,15 @@ func _build_inspector() -> void:
 	glass.style_button(inspector_button, Color(0.06, 0.58, 0.44, 0.9))
 	inspector_button.pressed.connect(_close_inspector)
 	card.add_child(inspector_button)
+	follow_button = Button.new()
+	follow_button.text = "FOLLOW CREATURE"
+	follow_button.position = Vector2(322, 300)
+	follow_button.size = Vector2(216, 36)
+	follow_button.focus_mode = Control.FOCUS_NONE
+	glass.style_button(follow_button)
+	follow_button.add_theme_font_size_override("font_size", 13)
+	follow_button.pressed.connect(_follow_inspected)
+	card.add_child(follow_button)
 
 
 func _intro_step(parent: Control, number: String, heading: String, copy: String, y: float) -> void:
@@ -512,6 +912,8 @@ func _intro_step(parent: Control, number: String, heading: String, copy: String,
 
 
 func _start_game() -> void:
+	if life_lab:
+		life_lab.hide()
 	started = true
 	running = true
 	intro_overlay.visible = false
@@ -523,13 +925,20 @@ func _start_game() -> void:
 
 
 func _reset_world(announce := true) -> void:
+	if life_lab:
+		life_lab.hide()
 	sim.seed_text = "genesis-%d" % randi_range(1000, 999999)
 	sim.new_world(sim.seed_text)
+	observed_era = str(sim.era_data().era)
+	event_glow = 0.0
+	autosave_elapsed = 0.0
+	_fit_camera()
 	sim.reduced_motion = reduced_motion
 	mission_stage = 0
 	_reset_fun_systems()
 	sim_accumulator = 0.0
 	paint_down = false
+	touch.reset()
 	_select_tool(0)
 	if announce:
 		started = true
@@ -549,6 +958,7 @@ func _reset_fun_systems() -> void:
 	field_study_progress = 0
 	field_studies_completed = 0
 	discoveries.clear()
+	journal_seen.clear()
 	achievements.clear()
 	current_crisis = ""
 	last_crisis_notice_tick = -1000
@@ -562,7 +972,7 @@ func _reset_fun_systems() -> void:
 	pulse_snapshot = sim.stats().duplicate()
 	pulse_trend = {"stability": 0.0, "oxygen": 0.0, "population": 0, "biodiversity": 0.0, "microbes": 0}
 	pulse_last_tick = sim.tick
-	sim.events.append({"day": sim.day, "type": "Expedition began"})
+	sim.events.append({"day": sim.day, "tick": sim.tick, "type": "Expedition began"})
 	sim.set_hotspot(Vector2i(-1, -1), false)
 	if inspector_overlay:
 		inspector_overlay.visible = false
@@ -602,6 +1012,13 @@ func _select_tool(index: int) -> void:
 	if TOOL_UNLOCK_STAGE[index] > mission_stage:
 		_show_toast("Complete the current mission to unlock %s" % TOOL_SHORT_NAMES[index], Color("#ffca8c"))
 		return
+	inspect_mode = false
+	pan_mode = false
+	panning = false
+	if pan_button:
+		pan_button.button_pressed = false
+	if inspect_button:
+		inspect_button.button_pressed = false
 	sim.select_tool(index)
 	for i in range(tool_buttons.size()):
 		tool_buttons[i].button_pressed = i == index
@@ -610,9 +1027,16 @@ func _select_tool(index: int) -> void:
 
 
 func _use_selected_tool(position: Vector2) -> void:
-	if not running or not sim.is_screen_in_world(position):
+	if not camera.frame.has_point(position):
 		return
-	var result: Dictionary = sim.tool_at_screen(position)
+	if inspect_mode:
+		_open_inspector(position)
+		paint_down = false
+		return
+	var world_position := _world_pointer(position)
+	if not running or not sim.is_screen_in_world(world_position):
+		return
+	var result: Dictionary = sim.tool_at_screen(world_position)
 	paint_cooldown = 0.085 if not reduced_motion else 0.14
 	if result.ok:
 		var fun_message := _handle_fun_action(result)
@@ -626,9 +1050,9 @@ func _use_selected_tool(position: Vector2) -> void:
 func _update_placement_preview(position: Vector2) -> void:
 	if not placement_panel:
 		return
-	var blocked_by_overlay := help_open or pulse_open or (inspector_overlay and inspector_overlay.visible)
-	var preview: Dictionary = sim.preview_at_screen(position)
-	if not started or blocked_by_overlay or preview.is_empty():
+	var blocked_by_overlay := help_open or pulse_open or not follow_target.is_empty() or (journal and journal.visible) or (inspector_overlay and inspector_overlay.visible)
+	var preview: Dictionary = sim.preview_at_screen(_world_pointer(position))
+	if not started or pan_mode or inspect_mode or not camera.frame.has_point(position) or blocked_by_overlay or preview.is_empty():
 		placement_panel.visible = false
 		return
 	var quality := str(preview.get("quality", "USEFUL"))
@@ -644,12 +1068,12 @@ func _update_placement_preview(position: Vector2) -> void:
 		relevance = "PAUSED  •  Resume the ocean before placing this intervention."
 	placement_body.text = "%s\n%s" % [str(preview.effect), relevance]
 	var card_position := position + Vector2(18, 18)
-	if card_position.x + placement_panel.size.x > PlanetSimulation.WORLD_OFFSET.x + PlanetSimulation.WORLD_SIZE.x:
+	if card_position.x + placement_panel.size.x > camera.frame.end.x:
 		card_position.x = position.x - placement_panel.size.x - 18.0
-	if card_position.y + placement_panel.size.y > PlanetSimulation.WORLD_OFFSET.y + PlanetSimulation.WORLD_SIZE.y:
+	if card_position.y + placement_panel.size.y > _world_bottom():
 		card_position.y = position.y - placement_panel.size.y - 18.0
-	card_position.x = clamp(card_position.x, PlanetSimulation.WORLD_OFFSET.x + 8.0, PlanetSimulation.WORLD_OFFSET.x + PlanetSimulation.WORLD_SIZE.x - placement_panel.size.x - 8.0)
-	card_position.y = clamp(card_position.y, PlanetSimulation.WORLD_OFFSET.y + 8.0, PlanetSimulation.WORLD_OFFSET.y + PlanetSimulation.WORLD_SIZE.y - placement_panel.size.y - 8.0)
+	card_position.x = clamp(card_position.x, camera.frame.position.x + 8.0, camera.frame.end.x - placement_panel.size.x - 8.0)
+	card_position.y = clamp(card_position.y, PlanetSimulation.WORLD_OFFSET.y + 8.0, _world_bottom() - placement_panel.size.y - 8.0)
 	placement_panel.position = card_position
 	placement_panel.visible = true
 
@@ -678,16 +1102,93 @@ func _placement_relevance(cell_pos: Vector2i) -> String:
 	return "ECOSYSTEM MOVE  •  Open Planet Pulse afterward to see the result."
 
 
+func _build_event_ui() -> void:
+	event_dialog = ConfirmationDialog.new()
+	event_dialog.title = "Prepare a world event"
+	var event_theme := Theme.new()
+	var surface := StyleBoxFlat.new()
+	surface.bg_color = Color("#0c2029")
+	surface.border_color = Color("#529b9d")
+	surface.set_border_width_all(1)
+	surface.set_content_margin_all(16)
+	event_theme.set_stylebox("panel", "AcceptDialog", surface)
+	var border: StyleBoxFlat = surface.duplicate()
+	border.expand_margin_top = 32
+	event_theme.set_stylebox("embedded_border", "Window", border)
+	event_dialog.theme = event_theme
+	glass.style_button(event_dialog.get_ok_button())
+	glass.style_button(event_dialog.get_cancel_button())
+	event_dialog.ok_button_text = "Apply event"
+	event_dialog.cancel_button_text = "Keep observing"
+	event_dialog.get_label().autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	event_dialog.get_label().custom_minimum_size = Vector2(500, 230)
+	event_dialog.get_label().add_theme_font_size_override("font_size", 20)
+	event_dialog.get_ok_button().custom_minimum_size.y = 44
+	event_dialog.get_cancel_button().custom_minimum_size.y = 44
+	event_dialog.confirmed.connect(_confirm_event)
+	event_dialog.canceled.connect(_cancel_event)
+	ui.add_child(event_dialog)
+
+
 func _trigger_event(event_name: String) -> void:
-	if not started:
+	if not started or not EVENT_BRIEFINGS.has(event_name) or not pending_event.is_empty():
 		return
+	var index: int = PlanetSimulation.DISASTERS.find(event_name)
+	var cost: int = PlanetSimulation.DISASTER_COSTS[index]
+	if sim.catalyst < cost:
+		_show_toast("Need %d Catalyst for %s" % [cost, event_name], Color("#ff9f91"), 2.0)
+		return
+	pending_event = event_name
+	var tint := Color("#83d3ed") if event_name in ["Monsoon", "Seed Recovery"] else Color("#efb671")
+	haze.material.set_shader_parameter("event_tint", tint)
+	event_was_running = running
+	running = false
+	paint_down = false
+	panning = false
+	play_button.text = "Play"
+	event_dialog.title = "%s · %d Catalyst" % [event_name, cost]
+	event_dialog.dialog_text = "%s\n\nRECOVERY PLAN\n%s\n\nThe ocean is paused while you decide." % EVENT_BRIEFINGS[event_name]
+	if life_lab.compact():
+		life_lab.open_event()
+	else:
+		event_dialog.popup_centered(Vector2i(560, 350))
+
+
+func _cancel_event() -> void:
+	if pending_event.is_empty():
+		return
+	pending_event = ""
+	running = event_was_running
+	play_button.text = "Pause" if running else "Play"
+
+
+func _confirm_event() -> void:
+	if pending_event.is_empty():
+		return
+	var event_name := pending_event
+	_cancel_event()
 	var result: Dictionary = sim.disaster(event_name)
 	if result.ok:
 		pulse_unread = true
-		_show_toast(result.message, Color("#ffca8c"), 2.2)
+		settings.cue()
+		event_glow = 0.6
+		# Keep aftercare in the saved chronicle, not just a disappearing toast.
+		sim.events.append({"day": sim.day, "tick": sim.tick, "type": "Recovery: " + str(EVENT_BRIEFINGS[event_name][1])})
+		_show_toast(event_name + " · " + str(EVENT_BRIEFINGS[event_name][1]), Color("#ffca8c"), 7.0)
 	else:
-		_show_toast(result.message, Color("#ff9f91"), 1.6)
+		_show_toast(result.message, Color("#ff9f91"), 2.0)
 	_update_ui()
+
+
+func _check_era_milestone() -> void:
+	var era: Dictionary = sim.era_data()
+	if observed_era == str(era.era):
+		return
+	observed_era = str(era.era)
+	settings.cue()
+	sim.events.append({"day": sim.day, "tick": sim.tick, "type": "Era reached: %s — %s" % [era.era, era.epoch]})
+	_show_toast("NEW ERA · %s · %s" % [era.era, era.epoch], Color("#ffe7a3"), 8.0)
+	pulse_unread = true
 
 
 func _handle_fun_action(result: Dictionary) -> String:
@@ -742,7 +1243,7 @@ func _complete_field_study(title: String) -> void:
 	field_studies_completed += 1
 	score += 300 + mission_stage * 60
 	sim.catalyst = min(sim.catalyst_max, sim.catalyst + 24.0)
-	sim.events.append({"day": sim.day, "type": "Field study complete: " + title})
+	sim.events.append({"day": sim.day, "tick": sim.tick, "type": "Field study complete: " + title})
 	if field_studies_completed >= 3:
 		_unlock_badge("Field Researcher")
 	_start_field_study()
@@ -786,7 +1287,7 @@ func _unlock_discovery(role: String) -> void:
 	discoveries.append(discovery)
 	score += 225
 	sim.catalyst = min(sim.catalyst_max, sim.catalyst + 8.0)
-	sim.events.append({"day": sim.day, "type": "Discovered " + discovery})
+	sim.events.append({"day": sim.day, "tick": sim.tick, "type": "Discovered " + discovery})
 	_show_toast("NEW DISCOVERY — %s" % discovery, Color("#8defff"), 3.0)
 
 
@@ -805,7 +1306,7 @@ func _update_crisis(s: Dictionary) -> void:
 	current_crisis = next_crisis
 	if current_crisis != "" and sim.tick - last_crisis_notice_tick >= 300:
 		last_crisis_notice_tick = sim.tick
-		sim.events.append({"day": sim.day, "type": "Crisis: " + current_crisis})
+		sim.events.append({"day": sim.day, "tick": sim.tick, "type": "Crisis: " + current_crisis})
 		_show_toast("ECOSYSTEM ALERT — %s" % current_crisis, Color("#ffad7a"), 3.0)
 
 
@@ -813,7 +1314,7 @@ func _detect_crisis(s: Dictionary) -> String:
 	if float(s.climate_heat) >= 0.72:
 		return "Ocean overheating — use Monsoon or expand tidal water"
 	if int(s.population) >= 112:
-		return "Overcrowding — add predators or trigger a Viral Bloom"
+		return "Overcrowding — add hunters sparingly or use Viral Bloom" if mission_stage >= TOOL_UNLOCK_STAGE[3] else "Overcrowding — hunters unlock after mission 2; preserve the food supply"
 	var food_demand: float = float(s.amoeboids) + float(s.grazers) * 2.2
 	if int(s.population) > 30 and float(s.microbes) < food_demand * 1.8:
 		return "Food web starving — seed cyano mats and nutrients"
@@ -889,7 +1390,7 @@ func _pulse_headline(s: Dictionary) -> String:
 		return "The food web is finding balance"
 	if int(s.microbes) < 180:
 		return "Life needs a stronger foundation"
-	if int(s.predators) == 0 and int(s.amoeboids) + int(s.grazers) >= 30:
+	if mission_stage >= TOOL_UNLOCK_STAGE[3] and int(s.predators) == 0 and int(s.amoeboids) + int(s.grazers) >= 30:
 		return "The food web is missing hunters"
 	return "The young biosphere is taking shape"
 
@@ -921,7 +1422,7 @@ func _pulse_pressure(s: Dictionary) -> String:
 		return "Food shortage costs −%.1f stability" % float(s.starvation_penalty)
 	if float(s.foundation_score) < 12.0:
 		return "Too little microbial habitat"
-	if int(s.predators) == 0 and int(s.amoeboids) + int(s.grazers) >= 30:
+	if mission_stage >= TOOL_UNLOCK_STAGE[3] and int(s.predators) == 0 and int(s.amoeboids) + int(s.grazers) >= 30:
 		return "Consumers lack a hunter layer"
 	return "No major pressure detected"
 
@@ -941,14 +1442,14 @@ func _unlock_badge(badge: String) -> void:
 		return
 	achievements[badge] = true
 	score += 150
-	sim.events.append({"day": sim.day, "type": "Badge unlocked: " + badge})
+	sim.events.append({"day": sim.day, "tick": sim.tick, "type": "Badge unlocked: " + badge})
 	_show_toast("BADGE UNLOCKED — %s" % badge, Color("#ffe38a"), 2.8)
 
 
 func _open_inspector(position: Vector2) -> void:
-	if not started or not sim.is_screen_in_world(position):
+	if not started or not camera.frame.has_point(position) or not sim.is_screen_in_world(_world_pointer(position)):
 		return
-	var info: Dictionary = sim.inspect_at_screen(position)
+	var info: Dictionary = sim.inspect_at_screen(_world_pointer(position))
 	if info.is_empty():
 		return
 	inspector_resume_running = running
@@ -959,6 +1460,10 @@ func _open_inspector(position: Vector2) -> void:
 	inspector_button.text = "RETURN TO THE OCEAN"
 	var inspected_cell: Dictionary = info.cell
 	var organism: Dictionary = info.organism
+	inspect_target = organism
+	follow_button.visible = not organism.is_empty()
+	inspected_organism = organism.duplicate()
+	specimen.queue_redraw()
 	if organism.is_empty():
 		inspector_label.text = "[b][color=#63f7ce]%s biome[/color][/b]\nCell %d, %d\n\n[b]Microbial cover[/b]  %.0f%%\n[b]Nutrients[/b]  %.0f%%\n[b]Temperature[/b]  %.0f%%\n[b]Water[/b]  %.0f%%\n\n[color=#8fafb7]No large organism is close enough to inspect. Right-click directly beside a moving creature.[/color]" % [
 			str(inspected_cell.type).capitalize(), int(info.cell_pos.x), int(info.cell_pos.y),
@@ -967,14 +1472,30 @@ func _open_inspector(position: Vector2) -> void:
 		]
 	else:
 		var common_name := _organism_common_name(str(organism.kind))
-		inspector_label.text = "[b][color=#63f7ce]%s[/color][/b]\n[color=#9de7ff]%s[/color]  •  Generation %d\n\n[b]Energy[/b]  %.0f\n[b]Age[/b]  %.1f days\n[b]Speed[/b]  %.2f\n[b]Armor[/b]  %.2f\n[b]Awareness[/b]  %.2f\n[b]Fertility[/b]  %.2f\n[b]Camouflage[/b]  %.2f\n\n[color=#8fafb7]Its traits are inherited with small mutations, so successful lineages gradually adapt to this world.[/color]" % [
-			common_name, str(organism.lineage), int(organism.generation), float(organism.energy),
+		inspector_label.text = "[b][color=#63f7ce]%s[/color][/b]\n[color=#9de7ff]%s[/color]  •  Generation %d\n[color=#ffe7a3]%s[/color]\n[b]Energy[/b]  %.0f\n[b]Age[/b]  %.1f days\n[b]Speed[/b]  %.2f\n[b]Armor[/b]  %.2f\n[b]Awareness[/b]  %.2f\n[b]Fertility[/b]  %.2f\n[b]Camouflage[/b]  %.2f\n\n[color=#8fafb7]Open the Ocean Journal (J) for its diet, predators and care notes. Traits pass to descendants with small mutations.[/color]" % [
+			common_name, str(organism.lineage), int(organism.generation), SpeciesGuide.behavior(organism), float(organism.energy),
 			float(organism.age), float(organism.speed), float(organism.armor), float(organism.sensory),
 			float(organism.fertility), float(organism.camouflage),
 		]
 	if placement_panel:
 		placement_panel.visible = false
 	inspector_overlay.visible = true
+
+
+func _draw_specimen() -> void:
+	if inspected_organism.is_empty():
+		return
+	specimen.draw_circle(Vector2.ZERO, 70, Color(0.07, 0.22, 0.28, 0.8))
+	specimen.draw_arc(Vector2.ZERO, 70, 0, TAU, 64, Color(0.3, 0.8, 0.76, 0.35), 1.0, true)
+	specimen.draw_set_transform(Vector2.ZERO, 0, Vector2(3.0, 3.0))
+	match str(inspected_organism.kind):
+		"amoeboid":
+			renderer.draw_amoeboid(specimen, Vector2.ZERO, inspected_organism, 0, true)
+		"grazer":
+			renderer.draw_grazer(specimen, Vector2.ZERO, inspected_organism, Vector2(1, -0.25))
+		"predator":
+			renderer.draw_predator(specimen, Vector2.ZERO, inspected_organism, Vector2(1, -0.25))
+	specimen.draw_set_transform(Vector2.ZERO)
 
 
 func _organism_common_name(kind: String) -> String:
@@ -1007,6 +1528,9 @@ func _finish_world(s: Dictionary) -> void:
 	_unlock_badge("Planet Maker")
 	var final_score := score + int(float(s.stability) * 25.0) + discoveries.size() * 250 + achievements.size() * 200
 	var grade := _world_grade(final_score)
+	inspected_organism = {}
+	specimen.queue_redraw()
+	follow_button.visible = false
 	inspector_victory = true
 	inspector_resume_running = false
 	running = false
@@ -1051,7 +1575,7 @@ func _check_mission() -> void:
 	mission_stage += 1
 	score += 700 + mission_stage * 150
 	sim.catalyst = min(sim.catalyst_max, sim.catalyst + 32.0)
-	sim.events.append({"day": sim.day, "type": "Mission complete: " + finished_title})
+	sim.events.append({"day": sim.day, "tick": sim.tick, "type": "Mission complete: " + finished_title})
 	if mission_stage == 1:
 		_unlock_badge("First Light")
 	if mission_stage < MISSION_TITLES.size():
@@ -1092,6 +1616,11 @@ func _update_ui() -> void:
 	if not stats_label:
 		return
 	var s := sim.stats()
+	if started:
+		SpeciesGuide.observe(sim, journal_seen, s)
+	if guide_label and started:
+		var tip := _coach_tip(s)
+		guide_label.text = "NEXT  •  " + str(tip.get("title", "Watch your ocean thrive")) + "   ·   H for guidance"
 	var era := sim.era_data()
 	clock_label.text = "%.2f BILLION YEARS AGO  •  %s" % [sim.planet_age_mya() / 1000.0, era.era]
 	weather_label.text = "Day %d  •  %s  •  %s" % [sim.day, sim.season_name(), sim.weather_text()]
@@ -1107,7 +1636,7 @@ func _update_ui() -> void:
 	catalyst_bar.value = sim.catalyst
 	catalyst_label.text = "%d / %d" % [int(sim.catalyst), int(sim.catalyst_max)]
 	seed_label.text = "WORLD SEED\n%s" % sim.seed_text
-	crisis_label.text = "⚠ %s" % current_crisis if current_crisis != "" else ""
+	crisis_label.text = "ALERT · %s" % current_crisis if current_crisis != "" else ""
 	if field_study_index >= 0:
 		var study: Dictionary = FIELD_STUDIES[field_study_index]
 		field_label.text = "FIELD STUDY: %s  •  %s %d/%d  •  gold hotspot = double" % [
@@ -1213,6 +1742,18 @@ func _coach_tip(s: Dictionary) -> Dictionary:
 			"why": "The Help Coach will start tracking the world as soon as the simulation begins.",
 			"status": "The young ocean is waiting.", "action_kind": "", "button": "",
 		}
+	if mission_stage == 3 and float(s.oxygen) < 0.035 and float(s.get("oxygen_balance", 0.0)) < 0.0 and int(s.microbes) >= 260:
+		return {
+			"key": "m3-oxygen-demand", "title": "Give oxygen room to recover",
+			"action": "Stop adding animals. Review Viral Bloom to reduce oxygen demand, then protect and expand the surviving microbial layer.",
+			"why": "Animal oxygen use currently exceeds microbial production. Faster simulation alone cannot reverse that deficit.",
+			"status": "O₂ %.1f/3.5%% · Animals %d · Oxygen balance falling" % [float(s.oxygen) * 100.0, int(s.population)],
+			"action_kind": "event", "action_value": "Viral Bloom", "button": "REVIEW VIRAL BLOOM",
+		}
+	if current_crisis.begins_with("Overcrowding") and mission_stage < TOOL_UNLOCK_STAGE[3] and int(s.microbes) >= 220:
+		var tip := _mission_coach_tip(s)
+		tip.why += " Hunters unlock after mission 2. Complete these early steps while keeping the food supply healthy."
+		return tip
 	if current_crisis != "":
 		return _crisis_coach_tip(s)
 	return _mission_coach_tip(s)
@@ -1380,6 +1921,8 @@ func _crisis_coach_tip(s: Dictionary) -> Dictionary:
 			"status": "Mats %d  •  Consumers %d" % [int(s.microbes), int(s.amoeboids) + int(s.grazers)],
 			"action_kind": "tool", "action_value": "0", "button": "SELECT CYANO MATS",
 		}
+	if mission_stage < TOOL_UNLOCK_STAGE[3]:
+		return _mission_coach_tip(s)
 	return {
 		"key": "crisis-consumers", "title": "Restore the missing hunter layer",
 		"action": "Place one small Predator group near the densest drifters and grazers, then let it establish.",
@@ -1456,7 +1999,7 @@ func _show_toast(message: String, color := Color.WHITE, duration := 1.8) -> void
 
 
 func _build_haze_overlay() -> void:
-	var haze := ColorRect.new()
+	haze = ColorRect.new()
 	haze.position = Vector2.ZERO
 	haze.size = VIEW_SIZE
 	haze.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1494,7 +2037,7 @@ func _toggle_music() -> void:
 
 
 func _draw_graph() -> void:
-	graph_renderer.draw_graph(graph, sim.history)
+	graph_renderer.draw_graph(graph, sim.history, [], sim.tick)
 
 
 func _button(text: String, pos: Vector2, size: Vector2) -> Button:
@@ -1580,3 +2123,141 @@ func _tool_tip(tool: String) -> String:
 		"Eraser":
 			return "Clear a small area and remove nearby organisms."
 	return ""
+
+
+func _build_save_ui() -> void:
+	save_status = _label("Autosaves every 30s · this browser", Vector2(34, 766), 11, Color("#88b8b6"))
+	save_status.size = Vector2(180, 25)
+	save_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	new_world_dialog = ConfirmationDialog.new()
+	new_world_dialog.title = "Begin a new ocean?"
+	new_world_dialog.dialog_text = "Your saved world will be replaced by this new expedition.\nChoose Cancel to keep exploring your current world."
+	new_world_dialog.ok_button_text = "Start new world"
+	new_world_dialog.confirmed.connect(func():
+		_reset_world(true)
+		_start_game()
+		_save_world(false)
+	)
+	new_world_dialog.canceled.connect(func(): running = new_world_was_running)
+	add_child(new_world_dialog)
+
+
+func _check_saved_world() -> void:
+	var found := WorldSave.read(save_path)
+	if found.is_empty():
+		if FileAccess.file_exists(save_path):
+			save_status.text = "Saved world could not be read"
+		return
+	saved_checkpoint = found.data
+	save_recovered = found.recovered
+	resume_button.visible = true
+	resume_detail.visible = true
+	var state: Dictionary = saved_checkpoint.simulation
+	resume_detail.text = "%sDay %d · %s · saved %s" % ["Recovered checkpoint · " if save_recovered else "", state.day, state.seed_text, saved_checkpoint.saved_at.replace("T", " ")]
+	var card := resume_button.get_parent()
+	card.get_meta("intro_note").visible = false
+	for child in card.get_children():
+		if child.has_meta("new_world_launch"):
+			child.position.x = 362
+			child.text = "START NEW WORLD"
+
+
+func _start_new_from_intro() -> void:
+	if saved_checkpoint.is_empty():
+		_start_game()
+	else:
+		_request_new_world()
+
+
+func _request_new_world() -> void:
+	if save_pending:
+		_show_toast("Wait for the current save to finish before starting a new world.", Color("#ffe7a3"), 4.0)
+		return
+	if not started and saved_checkpoint.is_empty():
+		_start_game()
+		return
+	new_world_was_running = running
+	running = false
+	paint_down = false
+	panning = false
+	new_world_dialog.popup_centered(Vector2i(520, 170))
+
+
+func _save_world(announce := true) -> bool:
+	if save_pending:
+		if announce:
+			_show_toast("Saving… keep this tab open until confirmation.", Color("#ffe7a3"), 4.0)
+		return false
+	if not started:
+		return false
+	if OS.has_feature("web") and not OS.is_userfs_persistent():
+		save_status.text = "Saving unavailable in this browser"
+		if announce:
+			_show_toast("Browser storage is unavailable. This world cannot be saved here.", Color("#ffbd91"), 5.0)
+		return false
+	var snapshot := WorldSave.capture(self)
+	if not WorldSave.write(snapshot, save_path):
+		save_status.text = "Save failed · retry Save"
+		if announce:
+			_show_toast("World could not be saved. Your previous checkpoint is preserved.", Color("#ffbd91"), 5.0)
+		return false
+	if OS.has_feature("web"):
+		pending_save = snapshot
+		pending_announce = announce
+		save_pending = true
+		save_wait = 0.0
+		save_status.text = "Saving… keep this tab open"
+		if announce:
+			_show_toast("Saving… waiting for browser storage", Color("#ffe7a3"), 4.0)
+		BrowserSaveSync.begin()
+	else:
+		_finish_save(snapshot, announce)
+	return true
+
+
+func _finish_save(snapshot: Dictionary, announce: bool) -> void:
+	saved_checkpoint = snapshot
+	save_status.text = "Saved · " + str(snapshot.saved_at).split("T")[-1]
+	if announce:
+		_show_toast("World saved in this browser. Resume it when you return.", Color("#aef8e3"), 4.0)
+
+
+func _poll_browser_save(delta: float) -> void:
+	if not save_pending:
+		return
+	save_wait += delta
+	var status := BrowserSaveSync.status()
+	if status == 0 and save_wait < 20.0:
+		return
+	save_pending = false
+	if status == 1:
+		_finish_save(pending_save, pending_announce)
+	else:
+		save_status.text = "Save unconfirmed · retry"
+		_show_toast("Browser save could not be confirmed. Keep this tab open and retry Save.", Color("#ffbd91"), 6.0)
+	pending_save = {}
+
+
+func _resume_saved_world() -> void:
+	if not WorldSave.restore(self, saved_checkpoint):
+		resume_detail.text = "This save could not be restored. Your current world has not changed."
+		return
+	observed_era = str(sim.era_data().era)
+	started = true
+	running = false
+	intro_overlay.visible = false
+	paint_down = false
+	panning = false
+	follow_target = {}
+	sim_accumulator = 0.0
+	autosave_elapsed = 0.0
+	renderer.terrain_texture = null
+	play_button.text = "Play"
+	speed_button.text = _speed_text()
+	motion_button.text = "Reduced Motion: On" if reduced_motion else "Reduced Motion: Off"
+	_select_tool(sim.selected_tool)
+	_refresh_camera()
+	current_crisis = _detect_crisis(sim.stats())
+	_update_ui()
+	save_status.text = "Checkpoint recovered" if save_recovered else "Saved world restored"
+	_show_toast("World restored and paused · press Play when you are ready", Color("#aef8e3"), 5.0)
