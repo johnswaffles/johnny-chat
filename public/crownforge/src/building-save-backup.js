@@ -1,4 +1,4 @@
-import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260921-steadyhealers1';
+import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260921-ascendancy1';
 
 export const SAVE_KEY = 'crownforge-save-v1';
 export const BUILDING_BACKUP_KEY = 'crownforge-save-before-building-depth-v1';

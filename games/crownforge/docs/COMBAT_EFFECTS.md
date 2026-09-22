@@ -96,6 +96,12 @@ Distant Star seeks a clear position about 30 units from enemies, at least 6 unit
 
 Eventide Passage automatically reacts to any hostile pursuing the wizard or a hostile within 20 units. A successful blink moves at least 24 units, to an open landing at least 38 units from all hostile units. Landing candidates are checked at their center and eight surrounding points, against map boundaries, obstacles and occupied cells. If no safe destination exists, no teleport or cooldown is spent.
 
-The wizard breaks hostile pursuit and clears his in-flight bolts, cannot attack or be targeted/damaged for 6 seconds, and has an 8-second escape cooldown. He resumes his interrupted target after a teammate holds that enemy. Veil, cooldown and pending target persist through saves. This is spacing plus a temporary immunity, not permanent AoE immunity.
+The wizard clears older in-flight bolts, fires instant Starshards from departure and arrival, and immediately resumes casting. He retains 6 seconds of targeting/damage immunity and an 8-second escape cooldown. Each successful passage doubles attack reach, capped at five lifetime stacks (1,152 units). Safe landing candidates prefer progressively more distant ground, within available map space; line of sight remains required. Stacks, veil and cooldown persist through saves.
 
 The effect pairs an imploding star iris with a distant nebula doorway: engraved ground seals, counter-rotating light ribbons, crystal motes, a star bridge and a reforming column of light. Reduced motion simplifies particles. Local test route: `dev/eventide.html` (Replay bear chase, Inspect the rift, Test the formation).
+
+## Eventide Ascendancy and Lone Star Reckoning (20260921-ascendancy1)
+
+Departure and arrival each resolve one immediate 36-base-damage Starshard and emit a fast visual orb; the visual does not apply damage again. A fading casting echo marks departure. Normal attack cadence continues during the veil, and ordinary bolts accelerate over long ranges so they arrive instead of expiring.
+
+After the first successful teleport, successive magical hits from the wizard against the same target multiply by 2, 4, 8 and onward before existing defenses. A hit by another attacker resets that target's chain; switching targets clears the previous chain. Range has five stacks; damage has no gameplay stack cap (arithmetic saturates for numerical safety). Bear resistance, armor and last stands remain active. The wizard's own other spells, including dragon damage attributed to him, count as his hits. Both abilities have unique portrait/lore icons and live stack details.

@@ -1,7 +1,7 @@
-import {effectIcon,isDebuff} from './status-icons.js?v=20260921-toolbarheal1';
-export {effectIcon,isDebuff} from './status-icons.js?v=20260921-toolbarheal1';
-import {UNIT_TYPES} from './config.js?v=20260921-steadyhealers1';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260921-steadyhealers1';
+import {effectIcon,isDebuff} from './status-icons.js?v=20260921-ascendancy1';
+export {effectIcon,isDebuff} from './status-icons.js?v=20260921-ascendancy1';
+import {UNIT_TYPES} from './config.js?v=20260921-ascendancy1';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260921-ascendancy1';
 import {bearVariant} from './bear-variants.js?v=20260921-toolbarheal1';
 
 const alive=u=>u&&!u.dead&&u.hp>0;

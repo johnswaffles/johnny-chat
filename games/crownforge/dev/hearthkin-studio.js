@@ -1,5 +1,5 @@
-import { UNIT_TYPES } from '../src/config.js?v=20260921-steadyhealers1';
-import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260921-steadyhealers1';
+import { UNIT_TYPES } from '../src/config.js?v=20260921-ascendancy1';
+import { CHARACTER_RIGS, createCharacterRigs } from '../src/character-rigs.js?v=20260921-ascendancy1';
 import { drawHearthkinWard } from '../src/hearthkin-rig.js?v=20260909-fullroster1';
 import {fitCharacterSurfaces} from '../src/character-surface-fit.js?v=20260909-fullroster1';
 

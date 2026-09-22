@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260921-steadyhealers1';
-import {portraitAsset} from './combat-frames.js?v=20260921-steadyhealers1';
+import {UNIT_TYPES} from './config.js?v=20260921-ascendancy1';
+import {portraitAsset} from './combat-frames.js?v=20260921-ascendancy1';
 export function createCommandToolbar(sim,onChange){
  const deck=document.querySelector('.command-deck');
  const css=document.createElement('link');css.rel='stylesheet';css.href='./command-toolbar.css?v=20260921-toolbarheal1';document.head.append(css);

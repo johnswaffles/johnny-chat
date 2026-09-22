@@ -1,4 +1,6 @@
 const glyphs={
+ eventideAscendancy:'M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z M2 21l5-5 M17 16l5 5 M3 3l2 2 M19 3l2-2',
+ loneStarReckoning:'M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3Z M5 3 2 6 M19 3l3 3 M3 18l3 3 M18 21l3-3',
  crownGuardOath:'M9 5V3h6v2 M6 7l6-3 6 3v12l-6 3-6-3Z M6 8h12 M8 18h8 M12 10q-5 5 0 7 5-2 0-7Z',
  militiaOath:'M5 17h14l-2-4V9a5 5 0 0 0-10 0v4Z M10 20q2 3 4 0 M12 2v2 M2 7l2-2 M20 5l2 2',
  spearwardenOath:'M12 2l4 7-4 3-4-3Z M12 12v10 M5 16l3 3 M19 16l-3 3',
@@ -35,7 +37,7 @@ const glyphs={
 };
 export const isDebuff=s=>s.id==='lastLight'||s.id==='stun'||s.rune==='curse'||s.kind?.toLowerCase().includes('impairment');
 export function effectIcon(status){
- const colors={crownGuardOath:42,militiaOath:24,kingsbaneHunger:18,falteringCrown:330,greatwoodDefiance:140,greatwoodColossus:35,bloodclawReckoning:0,unbrokenWild:155,deathlessHeart:280,crushingClaws:28,firstCondemnation:270,elderhide:45,thickHide:195,bearLineage:40,elderbloodSpellward:220,greatwoodFury:8,starveilOath:46,starshard:190,fallingConstellation:275,eventidePassage:285,distantStar:205,astralMantle:225,heavenrend:195,stormwardCovenant:180,skybreakerFavor:42,unboundSovereign:260};
+ const colors={eventideAscendancy:280,loneStarReckoning:35,crownGuardOath:42,militiaOath:24,kingsbaneHunger:18,falteringCrown:330,greatwoodDefiance:140,greatwoodColossus:35,bloodclawReckoning:0,unbrokenWild:155,deathlessHeart:280,crushingClaws:28,firstCondemnation:270,elderhide:45,thickHide:195,bearLineage:40,elderbloodSpellward:220,greatwoodFury:8,starveilOath:46,starshard:190,fallingConstellation:275,eventidePassage:285,distantStar:205,astralMantle:225,heavenrend:195,stormwardCovenant:180,skybreakerFavor:42,unboundSovereign:260};
  const hue=colors[status.id]??(isDebuff(status)?'315':status.rune==='fury'?'22':status.rune==='divine'?'46':'165');
  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="hsl(${hue} 85% 72%)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" style="--sigil-hue:${hue}"><path d="${glyphs[status.id]??'m12 2 9 10-9 10-9-10Z M12 7v10 M7 12h10'}"/></svg>`;
 }

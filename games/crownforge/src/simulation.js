@@ -1,21 +1,22 @@
-import {prepareWizardPosition} from './wizard-positioning.js?v=20260921-steadyhealers1';
+import {wizardAttackRange,reckoningDamage} from './eventide-ascendancy.js?v=20260921-ascendancy1';
+import {prepareWizardPosition} from './wizard-positioning.js?v=20260921-ascendancy1';
 import {stormwardDamage} from './storm-dragon.js?v=20260921-toolbarheal1';
-import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260921-steadyhealers1';
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,eligibleMember,TEAM_RULES,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260921-steadyhealers1';
+import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260921-ascendancy1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,eligibleMember,TEAM_RULES,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260921-ascendancy1';
 import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260921-toolbarheal1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260921-steadyhealers1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260921-steadyhealers1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260921-steadyhealers1';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260921-ascendancy1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260921-ascendancy1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260921-ascendancy1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260921-steadyhealers1';
-import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260921-steadyhealers1';
-import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260921-steadyhealers1';
-import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260921-steadyhealers1';
-import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260921-steadyhealers1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260921-steadyhealers1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260921-ascendancy1';
+import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260921-ascendancy1';
+import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260921-ascendancy1';
+import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260921-ascendancy1';
+import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260921-ascendancy1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260921-ascendancy1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260921-steadyhealers1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260921-ascendancy1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -2304,7 +2305,7 @@ export class CrownforgeSimulation {
       this.animation.update(unit, dt);
       return;
     }
-    if(unit.type==='wizard'&&unit.eventideVeil>0){this._interruptWork(unit);unit.command='idle';unit.path=[];unit.velocityX=unit.velocityZ=0;unit.visualState='idle';unit.actionLabel='Eventide Passage · beyond the hunt';this.animation.update(unit,dt);return;}
+
     if (unit.command === 'move') unit.visualState = 'walk';
     else if (unit.command === 'field') unit.visualState = unit.path.length ? 'walk' : 'food';
     else if (!['gather', 'return', 'attack', 'build', 'demolish'].includes(unit.command)) unit.visualState = 'idle';
@@ -4303,7 +4304,7 @@ export class CrownforgeSimulation {
   }
 
   _sendUnitToAttack(unit, target, slot = 0, options = {}) {
-    if(unit.manualCombatMove||unit.type==='wizard'&&unit.eventideVeil>0)return false;
+    if(unit.manualCombatMove)return false;
     if (prepareTeamAttack(this,unit,target,slot)) return true;
     if (isTeamHealer(unit)) { this._interruptWork(unit);unit.command='idle';unit.path=[];unit.actionLabel=`Supporting Team ${unit.teamId}`;return true; }
     target=tankTarget(this,unit)??target;
@@ -4463,6 +4464,7 @@ export class CrownforgeSimulation {
       return {damage:0,killed:false,warded:true,blocked:true,magicImmune:true,cursed:false};
     }
     const magicalHit=magical||['magic','spell','arcane','divine','fire','frost','lightning','shadow','holy'].includes(damageType);
+    amount=reckoningDamage(this,target,amount,attacker,magicalHit);
     // Elderhide magic resistance applies before hide, crowd armor and last stands.
     // Damage tags also cover dragon breath after its summoner has died.
     const rawDamage = Math.max(0, Number(amount) || 0)*kingsbaneMultiplier(attacker,target)*(magicalHit?(defense?.magicDamageMultiplier??1):1);
@@ -4594,7 +4596,7 @@ export class CrownforgeSimulation {
   }
 
   _updateAttack(unit, dt) {
-    if(unit.type==='wizard'&&(unit.eventideVeil>0||unit.wizardRetreating)){this._cancelAttackCycle(unit);return;}
+    if(unit.type==='wizard'&&unit.wizardRetreating){this._cancelAttackCycle(unit);return;}
     const pullingTarget=this._getExplicitAttackTarget(unit);
     if(pullingTarget&&(unit.tankPull?.targetId===pullingTarget.id||holdForTankPull(this,unit,pullingTarget)))return;
     let target = unit.attackPhase !== 'approach' ? this._getExplicitAttackTarget(unit) : this._getAttackTarget(unit);
@@ -4640,7 +4642,7 @@ export class CrownforgeSimulation {
     unit.attackTarget = target.id;
     unit.attackTargetKind = target.kind;
     const pursuingBear = unit.type==='grizzly' && target.kind==='unit' && (unit.attackPhase==='approach' || unit.grizzlyMovingAttack);
-    const range = pursuingBear ? GRIZZLY_PURSUIT.reach : UNIT_TYPES[unit.type].range + (isFighter(unit)&&target.kind==='unit'?FIGHTER_PURSUIT.reachBonus:0);
+    const range = pursuingBear ? GRIZZLY_PURSUIT.reach : (unit.type==='wizard'?wizardAttackRange(unit):UNIT_TYPES[unit.type].range) + (isFighter(unit)&&target.kind==='unit'?FIGHTER_PURSUIT.reachBonus:0);
     const inRange = this._targetDistance(unit, target) <= range;
     const rear=bearRearPosition(this,unit,target);
     const hasLine = inRange && (!rear||distance(unit,rear)<.85) && this._hasCombatLineOfSight(unit, target);

@@ -1,7 +1,7 @@
-import {CrownforgeSimulation} from '../src/simulation.js?v=20260921-steadyhealers1';
-import {CrownforgeRenderer} from '../src/renderer.js?v=20260921-steadyhealers1';
-import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260921-steadyhealers1';
-import {CONFIG,UNIT_TYPES} from '../src/config.js?v=20260921-steadyhealers1';
+import {CrownforgeSimulation} from '../src/simulation.js?v=20260921-ascendancy1';
+import {CrownforgeRenderer} from '../src/renderer.js?v=20260921-ascendancy1';
+import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260921-ascendancy1';
+import {CONFIG,UNIT_TYPES} from '../src/config.js?v=20260921-ascendancy1';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas);
 const play=document.querySelector('#play'),walker=document.querySelector('#walker'),homeButton=document.querySelector('#home');

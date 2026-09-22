@@ -284,7 +284,10 @@ export function drawWizardMagic(c,renderer,sim,time){
  const z=renderer.camera.zoom,t=time/1000,reduced=Boolean(renderer.atmosphere?.reducedMotion);
  c.save();c.globalCompositeOperation='lighter';c.lineCap='round';
  try{
-  for(const e of sim.wizardRifts??[])eventideRift(c,renderer,e,z,reduced);
+  for(const e of sim.wizardRifts??[]){
+   if(e.departure&&e.age<.32&&renderer.drawVillagerAsset){c.save();c.globalCompositeOperation='source-over';c.globalAlpha=(1-e.age/.32)*.8;renderer.drawVillagerAsset(c,e.departure,renderer.unitScreenPoint(e.departure),124*z,(1-e.age/.32)*.8);c.restore();}
+   eventideRift(c,renderer,e,z,reduced);
+  }
   for(const u of sim.units){
    if(u.type!=='wizard'||u.dead)continue;
    const p=renderer.unitScreenPoint(u);

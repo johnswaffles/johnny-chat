@@ -1,7 +1,7 @@
 import oldArt from './militia-study-original.js';
 import art from './militia-study-art.js';
 import {PaintedRosterRenderer} from '../src/painted-roster/painted-roster-renderer.js';
-import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260921-steadyhealers1';
+import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260921-ascendancy1';
 const old=new PaintedRosterRenderer(CHARACTER_RIGS.militia,oldArt);
 const images={};for(const action of ['walk','attack']){const im=new Image();im.src=art[action].src;await im.decode();images[action]=im;}
 let oldReady=false;

@@ -1,5 +1,5 @@
-import {encounterOpenness} from '../src/combat-teams.js?v=20260921-steadyhealers1';
-import {updateDeathlessHeart} from '../src/deathless-heart.js?v=20260921-steadyhealers1';
+import {encounterOpenness} from '../src/combat-teams.js?v=20260921-ascendancy1';
+import {updateDeathlessHeart} from '../src/deathless-heart.js?v=20260921-ascendancy1';
 const {simulation:s,renderer:r}=window.crownforge;
 s.units=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.projectiles=[];s.navigationVersion++;
 s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};s._updateMilitaryServices=()=>{};s.wildlifeState.nextSpawnAt=Infinity;
