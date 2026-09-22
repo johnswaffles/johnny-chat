@@ -1,5 +1,5 @@
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260921-autogroup1';
-import { polygonBounds } from './building-geometry.js?v=20260921-autogroup1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260921-healboost1';
+import { polygonBounds } from './building-geometry.js?v=20260921-healboost1';
 
 export const CONFIG = {
   // The current green diamond is expanded to roughly ten times its former
