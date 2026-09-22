@@ -1,5 +1,5 @@
-import { BUILDING_TYPES, CONFIG, UNIT_TYPES } from '../src/config.js?v=20260921-healboost1';
-import { CrownforgeSimulation } from '../src/simulation.js?v=20260921-healboost1';
+import { BUILDING_TYPES, CONFIG, UNIT_TYPES } from '../src/config.js?v=20260921-steadyhealers1';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260921-steadyhealers1';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');

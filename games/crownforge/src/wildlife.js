@@ -1,7 +1,7 @@
-import {isWardProtected} from './unit-status.js?v=20260921-healboost1';
-import {encounterOpenness} from './combat-teams.js?v=20260921-healboost1';
+import {isWardProtected} from './unit-status.js?v=20260921-steadyhealers1';
+import {encounterOpenness} from './combat-teams.js?v=20260921-steadyhealers1';
 import { BEAR_VARIANT_IDS, bearVariant } from './bear-variants.js?v=20260921-toolbarheal1';
-import { CONFIG, UNIT_TYPES } from './config.js?v=20260921-healboost1';
+import { CONFIG, UNIT_TYPES } from './config.js?v=20260921-steadyhealers1';
 
 export const GRIZZLY_ENCOUNTER = Object.freeze({ interval: 240, maxAlivePerSide: 2, scanInterval: .8, retryInterval: 1, spawnRouteBudget: 4, huntRouteBudget: 3 });
 export const BEAR_RESPONSE = Object.freeze({ radius:140, scanInterval:.5, routeBudget:3, retry:8 });

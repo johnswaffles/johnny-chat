@@ -39,9 +39,9 @@ test('special swipe damages rear fighters',()=>{
 test('team healers pulse every nearby injured ally, with stronger tank healing and rear-line range',()=>{
  const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',102,100,'player'),dps=s.addUnit('soldier',115,100,'player'),far=s.addUnit('soldier',125,100,'player'),enemy=s.addUnit('raider',103,100,'enemy');
  select(s,[h,t]);s.assignSelectedTeam();t.hp-=100;dps.hp=1;far.hp=1;enemy.hp=1;
- updateTeams(s,2);assert.equal(t.hp,t.maxHp-60);assert.equal(dps.hp,1.6);assert.equal(far.hp,1);assert.equal(enemy.hp,1);
+ updateTeams(s,2);assert.equal(t.hp,t.maxHp-60);assert.equal(dps.hp,1.9);assert.equal(far.hp,1);assert.equal(enemy.hp,1);
  updateTeams(s,.1);assert.equal(t.hp,t.maxHp-60);
- updateTeams(s,2);assert.equal(t.hp,t.maxHp-20);assert(Math.abs(dps.hp-2.2)<1e-9);
+ updateTeams(s,2);assert.equal(t.hp,t.maxHp-20);assert(Math.abs(dps.hp-2.8)<1e-9);
  h.stunTimer=2;t.hp-=100;updateTeams(s,2);assert.equal(t.hp,t.maxHp-120);
 });
 test('healers honor line of sight and stay dedicated to healing until removed',()=>{
@@ -112,6 +112,17 @@ test('explicit tank movement resists team attack recruitment and resumes nearby 
 test('Mercy multiplies only tank heals below ten percent and stacks with Chorus',()=>{
  for(const chorus of [false,true])for(const fraction of [.099,.1,.11]){
   const s=arena(),h=s.addUnit('villager',100,100,'player'),t=s.addUnit('shieldbearer',102,100,'player'),d=s.addUnit('soldier',103,100,'player');h.teamId=t.teamId=d.teamId=1;t.hp=t.maxHp*fraction;d.hp=1;t.lastLightChorusTimer=d.lastLightChorusTimer=chorus?60:0;const before=t.hp;h.healCooldown=0;s._hasCombatLineOfSight=()=>true;updateTeams(s,.2);
-  assert(Math.abs(t.hp-before-40*(chorus?2:1)*(fraction<.1?5:1))<1e-7);assert.equal(d.hp,1+.6*(chorus?2:1));
+  assert(Math.abs(t.hp-before-40*(chorus?2:1)*(fraction<.1?5:1))<1e-7);assert.equal(d.hp,1+.9*(chorus?2:1));
  }
+});
+
+test('settled healers hold their casting spot through tank jitter, but reposition for danger and respect manual orders',()=>{
+ const s=arena(),h=s.addUnit('villager',116,100,'player'),t=s.addUnit('shieldbearer',96,100,'player'),b=s.addUnit('grizzly',100,100,'wildlife');
+ h.teamId=t.teamId=1;t.attackTarget=b.id;t.attackTargetKind='unit';t.command='attack';
+ let moves=0;s._sendUnitTo=()=>{moves++;return true;};
+ h.teamFollowing=true;h.command='move';h.path=[{x:118,z:100}];h.velocityX=1;
+ for(let i=0;i<20;i++){s.clock=i;h.teamThinkCooldown=0;t.z=100+Math.sin(i)*.8;s.repathBudgetRemaining=10;updateTeams(s,.2);}
+ assert.equal(moves,0);assert.equal(h.command,'idle');assert.equal(h.velocityX,0);assert.equal(h.healingStanceTargetId,b.id);
+ h.command='move';h.teamFollowing=false;h.path=[{x:130,z:120}];h.teamThinkCooldown=0;updateTeams(s,.2);assert.equal(h.path.length,1);assert.equal(h.command,'move');
+ h.command='idle';b.x=110;s.clock=30;h.teamThinkCooldown=0;s.repathBudgetRemaining=10;updateTeams(s,.2);assert(moves>0);assert.equal(h.healingStanceTargetId,null);
 });

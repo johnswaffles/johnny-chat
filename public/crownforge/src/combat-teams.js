@@ -1,7 +1,7 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260921-healboost1';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260921-healboost1';
-import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260921-healboost1';
-export const TEAM_RULES=Object.freeze({healAmount:.6,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260921-steadyhealers1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260921-steadyhealers1';
+import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260921-steadyhealers1';
+export const TEAM_RULES=Object.freeze({healAmount:.9,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
  const rule=UNIT_TYPES[unit?.type];
@@ -120,7 +120,18 @@ export function updateTeams(sim,dt){
    z:anchor.z+dz/len*TEAM_RULES.followDistance+dx/len*side};
   const frontFallback=enemy?.type==='grizzly'&&!pulling&&rearRouteBlocked(sim,healer,enemy,desired);
   if(frontFallback){const back=Math.max(BEAR_FURY.radius+2,distance(anchor,enemy)+4);desired={x:enemy.x+dx/len*back-dz/len*side,z:enemy.z+dz/len*back+dx/len*side};}
-  if((enemy?.type==='grizzly'?distance(healer,desired)>1.2:distance(healer,anchor)>TEAM_RULES.healRange-1)
+  // Keep a useful casting position instead of chasing every change in the tank's facing.
+  // A wider arrival band and a retained stance prevent repeated short follow orders.
+  const canHold=enemy&&!pulling&&distance(healer,anchor)<=TEAM_RULES.healRange+(combatRole(anchor)==='tank'?5:0)-3
+   &&sim._hasCombatLineOfSight(healer,anchor)
+   &&distance(healer,enemy)>=BEAR_FURY.radius+1;
+  if(canHold&&(healer.healingStanceTargetId===enemy.id||distance(healer,desired)<=4)){
+   healer.healingStanceTargetId=enemy.id;
+   if(healer.teamFollowing){healer.path=[];healer.routeTarget=null;healer.command='idle';healer.teamFollowing=false;healer.velocityX=0;healer.velocityZ=0;}
+   continue;
+  }
+  healer.healingStanceTargetId=null;
+  if((enemy?.type==='grizzly'?distance(healer,desired)>2.5:distance(healer,anchor)>TEAM_RULES.healRange-1)
    &&(healer.teamFollowAt??0)<=sim.clock&&sim.repathBudgetRemaining>0){
    healer.teamFollowAt=sim.clock+.5;sim.repathBudgetRemaining--;
    // Follow the outer perimeter while crossing to the DPS side, not the bear's body.

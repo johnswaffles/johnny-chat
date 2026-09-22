@@ -1,5 +1,5 @@
-import { CONFIG } from './config.js?v=20260921-healboost1';
-import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260921-healboost1';
+import { CONFIG } from './config.js?v=20260921-steadyhealers1';
+import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260921-steadyhealers1';
 
 const MASK_WIDTH = 560;
 const MASK_HEIGHT = 460;
