@@ -1,4 +1,4 @@
-import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260921-ascendancy1';
+import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260922-bearrelease1';
 
 export function setupPresentation({ renderer, simulation, input, announce }) {
   const appearance=document.querySelector('#hearthkin-appearance');

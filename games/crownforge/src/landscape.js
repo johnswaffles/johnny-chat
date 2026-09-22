@@ -1,5 +1,5 @@
-import { CONFIG } from './config.js?v=20260921-ascendancy1';
-import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260921-ascendancy1';
+import { CONFIG } from './config.js?v=20260922-bearrelease1';
+import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260922-bearrelease1';
 
 const MASK_WIDTH = 560;
 const MASK_HEIGHT = 460;

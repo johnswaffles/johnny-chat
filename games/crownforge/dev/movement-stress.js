@@ -1,5 +1,5 @@
-import { BUILDING_TYPES, CONFIG, UNIT_TYPES } from '../src/config.js?v=20260921-ascendancy1';
-import { CrownforgeSimulation } from '../src/simulation.js?v=20260921-ascendancy1';
+import { BUILDING_TYPES, CONFIG, UNIT_TYPES } from '../src/config.js?v=20260922-bearrelease1';
+import { CrownforgeSimulation } from '../src/simulation.js?v=20260922-bearrelease1';
 
 const canvas = document.querySelector('#preview');
 const ctx = canvas.getContext('2d');

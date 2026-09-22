@@ -34,3 +34,14 @@ test('finished matches or a missing faction reject the release without adding be
  const s=new CrownforgeSimulation({enemyTeamPaused:false,seed:42});s.phase='victory';assert(!requestGrizzlyPair(s));
  s.phase='playing';s.units=s.units.filter(u=>u.faction==='player');assert(!requestGrizzlyPair(s));assert.equal(bears(s).length,0);
 });
+test('expanded player clearing releases a reachable bear without changing the forest',()=>{
+ for(const seed of [42,71,123,7,99]){
+  const s=new CrownforgeSimulation({enemyTeamPaused:true,seed});
+  const trees=s.resourcesNodes.filter(n=>n.type==='tree').map(n=>[n.id,n.x,n.z,n.amount]);
+  assert(requestGrizzlyPair(s));finish(s);
+  assert.equal(bears(s).length,1,'seed '+seed);
+  const b=bears(s)[0];assert(b.path.length);assert(encounterOpenness(s,b)>=.97);
+  assert(!s._pointBlockedForUnit(b,b));
+  assert.deepEqual(s.resourcesNodes.filter(n=>n.type==='tree').map(n=>[n.id,n.x,n.z,n.amount]),trees);
+ }
+});
