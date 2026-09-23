@@ -1,4 +1,4 @@
-import {UNIT_TYPES} from './config.js?v=20260923-livingearth1';
+import {UNIT_TYPES} from './config.js?v=20260923-firstage1';
 export const BENEDICTION_DURATION=15;
 export function grantFinalBenediction(sim,tank,attacker){
  if(tank.dead||tank.finalBenedictionSpent||UNIT_TYPES[tank.type]?.combatRole!=='tank')return false;

@@ -1,8 +1,8 @@
-import {effectIcon,isDebuff} from './status-icons.js?v=20260923-livingearth1';
-export {effectIcon,isDebuff} from './status-icons.js?v=20260923-livingearth1';
-import {UNIT_TYPES} from './config.js?v=20260923-livingearth1';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260923-livingearth1';
-import {bearVariant} from './bear-variants.js?v=20260921-toolbarheal1';
+import {effectIcon,isDebuff} from './status-icons.js?v=20260923-firstage1';
+export {effectIcon,isDebuff} from './status-icons.js?v=20260923-firstage1';
+import {UNIT_TYPES} from './config.js?v=20260923-firstage1';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260923-firstage1';
+import {bearVariant} from './bear-variants.js?v=20260923-firstage1';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
 const tank=u=>UNIT_TYPES[u.type]?.combatRole==='tank';

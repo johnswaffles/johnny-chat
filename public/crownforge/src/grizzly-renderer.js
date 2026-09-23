@@ -1,8 +1,8 @@
-import { CURSED_BEAR_ART } from './cursed-bear-art.js?v=20260909-cursedbears1';
-import { bearVariantId } from './bear-variants.js?v=20260921-toolbarheal1';
-import { BEAR_DEATH, bearBodyScale } from './bear-combat.js?v=20260922-bearrelease1';
-import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260909-cursedbears1';
-import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260909-cursedbears1';
+import { CURSED_BEAR_ART } from './cursed-bear-art.js?v=20260923-firstage1';
+import { bearVariantId } from './bear-variants.js?v=20260923-firstage1';
+import { BEAR_DEATH, bearBodyScale } from './bear-combat.js?v=20260923-firstage1';
+import { ACTION_TIMING, actionFrame } from './grizzly-painted-timing.js?v=20260923-firstage1';
+import { GRIZZLY_MOTION, grizzlyAttackClock, grizzlyAttackDefinition } from './grizzly-motion.js?v=20260923-firstage1';
 
 const VIEWS=['se','sw','ne','nw'];
 const BODY_SCALE=.85;

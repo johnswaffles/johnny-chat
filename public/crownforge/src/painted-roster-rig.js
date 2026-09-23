@@ -1,4 +1,4 @@
-import {PaintedRosterRenderer,paintedRosterFrame,paintedRosterCacheStats} from './painted-roster/painted-roster-renderer.js?v=20260922-bearrelease1';
+import {PaintedRosterRenderer,paintedRosterFrame,paintedRosterCacheStats} from './painted-roster/painted-roster-renderer.js?v=20260923-firstage1';
 
 export const PAINTED_FIGHTER_TYPES=Object.freeze(['wizard','soldier','spearwarden','militia','shieldbearer','scout','raider','thornSpear','hearthLevy','hidewall','ashenOutrider']);
 export {paintedRosterCacheStats};

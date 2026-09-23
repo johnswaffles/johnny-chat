@@ -1,4 +1,4 @@
-import {BUILDING_TYPES} from '../src/config.js?v=20260922-bearrelease1';
+import {BUILDING_TYPES} from '../src/config.js?v=20260923-firstage1';
 const {simulation:s,renderer:r}=window.crownforge;
 s.units=[];s.pausedEnemyUnits=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.projectiles=[];s.navigationVersion++;
 s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};s._updateMilitaryServices=()=>{};s.wildlifeState.nextSpawnAt=Infinity;

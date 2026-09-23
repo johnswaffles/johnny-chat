@@ -1,5 +1,5 @@
 import {HEARTHKIN_ART} from './painted-art.js';
-import {WORK_ART} from './work-art.js?v=study2';
+import {WORK_ART} from './work-art.js?v=20260923-firstage1';
 import {ACTIONS} from './action-catalog.js';
 import {BEAR_REFERENCE} from './bear-reference.js';
 import {VIEWS,frameIndex,directionFor,advanceActor} from './motion.js';

@@ -1,7 +1,7 @@
-import {CrownforgeSimulation} from '../src/simulation.js?v=20260922-bearrelease1';
-import {CrownforgeRenderer} from '../src/renderer.js?v=20260922-bearrelease1';
-import {CONFIG} from '../src/config.js?v=20260922-bearrelease1';
-import {treeAppearance,woodlandDensity} from '../src/landscape-layout.js?v=20260909-fullroster1';
+import {CrownforgeSimulation} from '../src/simulation.js?v=20260923-firstage1';
+import {CrownforgeRenderer} from '../src/renderer.js?v=20260923-firstage1';
+import {CONFIG} from '../src/config.js?v=20260923-firstage1';
+import {treeAppearance,woodlandDensity} from '../src/landscape-layout.js?v=20260923-firstage1';
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas),simulation=new CrownforgeSimulation({seed:42});
 const trees=simulation.resourcesNodes.filter(n=>n.type==='tree'),forestCount=trees.length;
 const targets={};

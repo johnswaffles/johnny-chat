@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260923-livingearth1';
-import {startSidePull,sidePullPlan,combatRole,eligibleMember,TEAM_RULES} from './combat-teams.js?v=20260923-livingearth1';
+import {UNIT_TYPES} from './config.js?v=20260923-firstage1';
+import {startSidePull,sidePullPlan,combatRole,eligibleMember,TEAM_RULES} from './combat-teams.js?v=20260923-firstage1';
 export function createTeamControls(sim,onChange){
  const panel=document.querySelector('#team-controls'),classes=document.querySelector('#select-warrior-classes');
  if(!panel||!classes)return {update(){}};

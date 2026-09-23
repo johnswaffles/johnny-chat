@@ -1,0 +1,62 @@
+[
+  {
+    "id": "barracks",
+    "subject": "A small militia barracks: low single-storey timber bunkhouse, modest shingled gable roof, open front awning sheltering a weapon rack with three spears and two round shields, simple practice dummy off to one side. Keep the doorway large and human-scale, no enclosed courtyard, no fortress."
+  },
+  {
+    "id": "stable",
+    "subject": "A compact working stable with three open timber stalls, one horse's head peeking from a stall, low warm wood shingle roof, hayloft with a little hay, trough and saddle rack. No towers, no enclosed courtyard."
+  },
+  {
+    "id": "granary",
+    "subject": "A small raised timber granary on short stone piers, wooden shingled gable roof, three broad steps to a sturdy central door, grain sacks and a wicker grain basket beneath a little side awning. Excellent readable grain-storage identity."
+  },
+  {
+    "id": "homestead",
+    "subject": "A modest first settler's homestead: single-storey cottage of warm oak framing and cream plaster, small short chimney, wood shingle roof, a narrow vegetable patch beside the cottage and tiny fenced chicken corner. Cozy, practical and compact, no decorative grounds."
+  },
+  {
+    "id": "house",
+    "subject": "A very small worker's cottage: one-room oak-and-plaster home, low shingle roof, stone footing, wooden front door, two warm windows, stacked kindling and one clay pot. Simple compact footprint."
+  },
+  {
+    "id": "watchHut",
+    "subject": "A rustic scout watch hut: small timber cabin raised one floor on four thick cross-braced posts, a sheltered observation balcony, simple ladder and a low wood-shingled roof. Teal pennant, bow rack. No stone tower, no battlements."
+  },
+  {
+    "id": "timberYard",
+    "subject": "A compact woodcutters' timber yard: open-sided low oak shed with shingled roof, neat split logs underneath, chopping stump with axe, a pair of sawhorses and fresh lumber. Small practical early-settlement workshop."
+  },
+  {
+    "id": "stonewrightYard",
+    "subject": "A compact stoneworker's workshop: simple low timber shed with wood shingle roof, rough fieldstone workbench, chisel and mallet, a few dressed blocks and irregular raw stone piles. No grand masonry building."
+  },
+  {
+    "id": "oreWash",
+    "subject": "A compact primitive ore washing station: timber shelter with shingle roof, sloping wooden sluice trough filled with a little water, wicker ore baskets and reddish ore stones, simple hand bucket hoist. No industrial machinery or big stone building."
+  },
+  {
+    "id": "lumberMill",
+    "subject": "A small early sawmill: timber shingle-roofed workshop with open work bay, a large hand-operated frame saw, timber carriage and stacked planks. A practical one-storey mill, no industrial smokestacks."
+  },
+  {
+    "id": "quarry",
+    "subject": "A compact quarry worksite: low exposed rough grey rock outcrop, timber A-frame rope derrick with stone block, little open shingled tool shelter at the side, chisels and cut blocks. No monumental building or stone towers."
+  },
+  {
+    "id": "grainMill",
+    "subject": "A modest early grain mill: sturdy oak-and-plaster single-storey hut with wooden shingles, sheltered millstone and hand-crank mechanism visibly at the front, sacks and a small grain hopper. No enormous windmill or advanced machinery."
+  },
+  {
+    "id": "storehouse",
+    "subject": "A small secure timber storehouse: low shingled gable roof, wide plank double doors, short stone foundation, sheltered stack of crates and barrels along one side, tiny teal cloth above door. Practical storage shed, not grand."
+  },
+  {
+    "id": "palisadeTower",
+    "subject": "A modest wooden defensive watchtower: four thick cross-braced oak legs, a square elevated fighting platform with waist-high log parapet, low shingle canopy, ladder rising through the structure, one muted teal pennant. No masonry keep, no gold, no spires. Stout and functional."
+  },
+  {
+    "id": "field",
+    "subject": "A small humble vegetable and grain plot: isometric rectangular patch of rich tilled earth, alternating tidy rows of young green crops and ripening wheat, low wattle fence along two edges, one watering can, no building. Natural irregular edges, no stone paving."
+  }
+]

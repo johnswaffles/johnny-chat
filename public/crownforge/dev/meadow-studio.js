@@ -1,7 +1,7 @@
-import {CrownforgeSimulation} from '../src/simulation.js?v=20260922-bearrelease1';
-import {CrownforgeRenderer} from '../src/renderer.js?v=20260922-bearrelease1';
-import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260922-bearrelease1';
-import {CONFIG,UNIT_TYPES} from '../src/config.js?v=20260922-bearrelease1';
+import {CrownforgeSimulation} from '../src/simulation.js?v=20260923-firstage1';
+import {CrownforgeRenderer} from '../src/renderer.js?v=20260923-firstage1';
+import {CHARACTER_RIGS} from '../src/character-rigs.js?v=20260923-firstage1';
+import {CONFIG,UNIT_TYPES} from '../src/config.js?v=20260923-firstage1';
 
 const canvas=document.querySelector('#world'),renderer=new CrownforgeRenderer(canvas);
 const play=document.querySelector('#play'),walker=document.querySelector('#walker'),homeButton=document.querySelector('#home');

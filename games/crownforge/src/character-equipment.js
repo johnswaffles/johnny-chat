@@ -1,4 +1,4 @@
-import { projectHearthkin } from './hearthkin-locomotion.js?v=20260909-cursedbears1';
+import { projectHearthkin } from './hearthkin-locomotion.js?v=20260923-firstage1';
 
 // Equipment is solid in the same anatomical space as its owner. A blade
 // viewed down its plane exposes its bevel and thickness, not a flipped icon.

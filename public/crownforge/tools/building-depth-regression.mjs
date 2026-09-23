@@ -14,12 +14,15 @@ for(const type of solids) {
     const unit=s.addUnit(unitType,points[0].x,points[0].z,'player');
     assert(!s._pointBlockedForUnit(unit,unit),`${type}: ${unitType} front station is usable`);
     assert(s._sendUnitTo(unit,points[7],'move'),`${type}: ${unitType} can route from entrance to rear`);
+    // Navigation snaps to a safe grid cell near the requested station.
+    const destination=unit.path.at(-1)??points[7];
+    assert(Math.hypot(destination.x-points[7].x,destination.z-points[7].z)<2,`${type}: route ends near the requested station`);
     s.setUnitSpeedScale(10);
     let arrived=false;
     for(let i=0;i<1600;i++) {
       s.update(.05);
       assert(distanceToOutline(unit,b,profile)>=UNIT_TYPES[unitType].radius-.02,`${type}: ${unitType} entered artwork while routing`);
-      if(Math.hypot(unit.x-points[7].x,unit.z-points[7].z)<1){arrived=true;break;}
+      if(Math.hypot(unit.x-destination.x,unit.z-destination.z)<.5){arrived=true;break;}
     }
     assert(arrived,`${type}: ${unitType} reaches the far side`);routes++;
     const interior={x:b.x+BUILDING_TYPES[type].collisionOffset.x,z:b.z+BUILDING_TYPES[type].collisionOffset.z};

@@ -1,11 +1,11 @@
-import {finalBenedictionStatus,lastBreathStatus} from './final-benediction.js?v=20260923-livingearth1';
-import {wizardAttackRange,ascendancyStacks} from './eventide-ascendancy.js?v=20260923-livingearth1';
-import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260921-toolbarheal1';
+import {finalBenedictionStatus,lastBreathStatus} from './final-benediction.js?v=20260923-firstage1';
+import {wizardAttackRange,ascendancyStacks} from './eventide-ascendancy.js?v=20260923-firstage1';
+import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260923-firstage1';
 export const lastCrownMercyActive=unit=>Boolean(unit&&!unit.dead&&!(unit.finalBenedictionRemaining>0)&&unit.hp>0&&UNIT_TYPES[unit.type]?.combatRole==='tank'&&unit.hp/unit.maxHp<.1);
-import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260921-toolbarheal1';
-import { bearVariant } from './bear-variants.js?v=20260921-toolbarheal1';
-import {UNIT_TYPES} from './config.js?v=20260923-livingearth1';
-import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260923-livingearth1';
+import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260923-firstage1';
+import { bearVariant } from './bear-variants.js?v=20260923-firstage1';
+import {UNIT_TYPES} from './config.js?v=20260923-firstage1';
+import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260923-firstage1';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',

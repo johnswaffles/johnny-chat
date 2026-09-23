@@ -15,8 +15,19 @@ for(const [type,art] of Object.entries(CROWN_ARCHITECTURE)){
  for(let i=0;i<hull.length;i++){const a=hull[i],b=hull[(i+1)%hull.length];area+=a[0]*b[1]-a[1]*b[0];}
  assert(area>0,type+' correctly oriented navigation hull');
 }
-for(const t of ['wall','gate'])for(const v of ['face','depth','diagonal-left','diagonal-right'])assert(BUILDING_COMPONENTS[t].views[v].src.includes('architecture-v2'),t+' '+v);
-const manifest=JSON.parse(await readFile(new URL('assets/architecture-v2/remaining-generation.json',root)));
-for(const a of manifest){const bytes=await readFile(new URL(a.asset,root));assert.equal(createHash('sha256').update(bytes).digest('hex'),a.sha256,a.id+' original artwork preserved');}
-assert.equal(BUILDING_TYPES.townCenter.renderSize,3000);assert.equal(BUILDING_TYPES.barracks.renderSize,3000);assert.equal(BUILDING_TYPES.stable.renderSize,1980);assert.equal(BUILDING_TYPES.granary.renderSize,1260);
-console.log('crown-architecture-regression: 16 building paintings, all fortification views, approved scales, and 15 original asset hashes passed');
+for(const t of ['wall','gate'])for(const v of ['face','depth','diagonal-left','diagonal-right'])assert(BUILDING_COMPONENTS[t].views[v].src.includes('architecture-first-age'),t+' '+v);
+const manifest=JSON.parse(await readFile(new URL('assets/architecture-first-age/manifest.json',root)));
+for(const asset of manifest.assets){
+ const bytes=await readFile(new URL(asset.asset,root));
+ assert.equal(createHash('sha256').update(bytes).digest('hex'),asset.sha256,asset.asset+' original artwork');
+}
+const preserved=manifest.preservedObservatory;
+assert.deepEqual(BUILDING_TYPES.observatory,preserved.blueprint,'Observatory gameplay and scale unchanged');
+assert.deepEqual(FIRST_AGE_ASSETS.observatory,preserved.asset,'Observatory artwork metadata unchanged');
+assert.equal(createHash('sha256').update(await readFile(new URL(preserved.asset.src,root))).digest('hex'),preserved.sha256,'Observatory artwork unchanged');
+assert.equal(BUILDING_TYPES.townCenter.renderSize,1050);
+assert.equal(BUILDING_TYPES.barracks.renderSize,1000);
+assert.equal(BUILDING_TYPES.stable.renderSize,1000);
+assert.equal(BUILDING_TYPES.granary.renderSize,800);
+assert.equal(BUILDING_TYPES.field.walkable,true,'fields remain walkable');
+console.log('crown-architecture-regression: 16 scaled buildings, 19 original assets, all fortification views, and unchanged Observatory passed');

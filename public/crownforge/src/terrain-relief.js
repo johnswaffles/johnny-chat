@@ -1,4 +1,4 @@
-import {landscapeNoise as noise,clamp01} from './landscape-layout.js?v=20260923-livingearth1';
+import {landscapeNoise as noise,clamp01} from './landscape-layout.js?v=20260923-firstage1';
 const smooth=(a,b,x)=>{const t=clamp01((x-a)/(b-a));return t*t*(3-2*t);};
 export function washDistance(x,z,seed=42){return Math.abs(z-(112+x*.13+18*Math.sin(x/43)+(noise(x/35,0,seed+81)-.5)*12));}
 // World-space macro landforms. Independent of camera, time and the match RNG.

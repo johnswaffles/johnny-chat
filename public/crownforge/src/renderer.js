@@ -1,26 +1,26 @@
-import {drawFinalBenediction} from './final-benediction-vfx.js?v=20260923-livingearth1';
-import {drawStormDragons} from './storm-dragon-renderer.js?v=20260923-livingearth1';
-import {drawWizardMagic} from './wizard-magic.js?v=20260923-livingearth1';
-import {drawLastLightChorus} from './last-light-chorus-vfx.js?v=20260921-toolbarheal1';
-import { LivingCrownHall } from './crown-hall-living.js?v=20260911-livinghall1';
-import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260923-livingearth1';
-import {corpseLifetime} from './bear-combat.js?v=20260923-livingearth1';
-import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
-import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260923-livingearth1';
-import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260923-livingearth1';
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260923-livingearth1';
-import {paintedRosterFactories} from './painted-roster-rig.js?v=20260923-livingearth1';
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260923-livingearth1';
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260923-livingearth1';
-import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260923-livingearth1';
-import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260923-livingearth1';
-import { drawHearthkinWard } from './hearthkin-rig.js?v=20260911-blueward1';
-import { CrownforgeLandscape } from './landscape.js?v=20260923-livingearth1';
-import { ForestCache } from './forest-cache.js?v=20260923-livingearth1';
-import { CrownforgeMeadow } from './meadow.js?v=20260923-livingearth1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260923-livingearth1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260923-livingearth1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260923-livingearth1';
+import {drawFinalBenediction} from './final-benediction-vfx.js?v=20260923-firstage1';
+import {drawStormDragons} from './storm-dragon-renderer.js?v=20260923-firstage1';
+import {drawWizardMagic} from './wizard-magic.js?v=20260923-firstage1';
+import {drawLastLightChorus} from './last-light-chorus-vfx.js?v=20260923-firstage1';
+import { LivingCrownHall } from './crown-hall-living.js?v=20260923-firstage1';
+import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260923-firstage1';
+import {corpseLifetime} from './bear-combat.js?v=20260923-firstage1';
+import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260923-firstage1';
+import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260923-firstage1';
+import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260923-firstage1';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260923-firstage1';
+import {paintedRosterFactories} from './painted-roster-rig.js?v=20260923-firstage1';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260923-firstage1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260923-firstage1';
+import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260923-firstage1';
+import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260923-firstage1';
+import { drawHearthkinWard } from './hearthkin-rig.js?v=20260923-firstage1';
+import { CrownforgeLandscape } from './landscape.js?v=20260923-firstage1';
+import { ForestCache } from './forest-cache.js?v=20260923-firstage1';
+import { CrownforgeMeadow } from './meadow.js?v=20260923-firstage1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260923-firstage1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260923-firstage1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260923-firstage1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -1586,9 +1586,10 @@ export class CrownforgeRenderer {
     if (wallView && BUILDING_COMPONENTS.wall?.views) return this.drawDepthComponent(ctx, BUILDING_COMPONENTS.wall.views[wallView], screen, size, alpha);
     if (type === 'palisadeJunction') {
       const w=size*.12,h=size*.58;ctx.save();ctx.globalAlpha=alpha;ctx.translate(screen.x,screen.y);
-      ctx.fillStyle='#b3a58b';ctx.fillRect(-w/2,-h,w,h);ctx.fillStyle='#ddd0b5';ctx.fillRect(-w/2,-h,w*.48,h);
-      ctx.strokeStyle='#867861';ctx.lineWidth=Math.max(.5,size*.004);for(let y=-h;y<0;y+=h/8){ctx.beginPath();ctx.moveTo(-w/2,y);ctx.lineTo(w/2,y);ctx.stroke();}
-      ctx.fillStyle='#253d59';ctx.fillRect(-w*.65,-h-5,w*1.3,6);ctx.fillStyle='#c6a65d';ctx.fillRect(-w*.65,-h,w*1.3,3);ctx.restore();return true;
+      ctx.fillStyle='#664426';ctx.fillRect(-w/2,-h,w,h);ctx.fillStyle='#a37b49';ctx.fillRect(-w/2,-h,w*.48,h);
+      ctx.strokeStyle='#48311f';ctx.lineWidth=Math.max(.5,size*.004);for(let x=-w*.32;x<w*.5;x+=w*.24){ctx.beginPath();ctx.moveTo(x,-h);ctx.lineTo(x+w*.04,0);ctx.stroke();}
+      ctx.fillStyle='#b48b53';ctx.beginPath();ctx.moveTo(-w/2,-h);ctx.lineTo(0,-h-w*.7);ctx.lineTo(w/2,-h);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#403c32';ctx.fillRect(-w*.53,-h*.35,w*1.06,h*.06);ctx.restore();return true;
     }
     if (type === 'road' && BUILDING_COMPONENTS.road) {
       const definition = BUILDING_COMPONENTS.road.texture;

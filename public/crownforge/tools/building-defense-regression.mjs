@@ -38,7 +38,7 @@ for (const d of [{x:1,z:0},{x:0,z:1},{x:Math.SQRT1_2,z:-Math.SQRT1_2},{x:Math.SQ
 // A large isometric building can overlap another's axis-aligned bounding box
 // while both painted outlines have ample space between them.
 const s=quiet(), a=s.addBuilding('townCenter',220,220,'player');
-const b={type:'townCenter',x:221,z:169.5};
+const b={type:'townCenter',x:220,z:209.5};
 assert(s._boundsOverlap(s._buildingEntityBounds(a),s._buildingEntityBounds(b)));
 assert(!polygonsOverlap(s._placementPolygon(a),s._placementPolygon(b),.4));
 assert(polygonsOverlap(s._placementPolygon(a),s._placementPolygon({...b,x:a.x,z:a.z}),.4));

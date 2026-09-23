@@ -1,6 +1,6 @@
-import { HEARTHKIN_PAINTED_ART } from './hearthkin-painted-art.js?v=20260909-cursedbears1';
-import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260909-cursedbears1';
-import { RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260922-bearrelease1';
+import { HEARTHKIN_PAINTED_ART } from './hearthkin-painted-art.js?v=20260923-firstage1';
+import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260923-firstage1';
+import { RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260923-firstage1';
 
 const clamp=n=>Math.max(0,Math.min(.999999,n));
 const cycle=n=>n-Math.floor(n);

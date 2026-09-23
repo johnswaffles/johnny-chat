@@ -1,5 +1,5 @@
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260922-bearrelease1';
-import { polygonBounds } from './building-geometry.js?v=20260922-bearrelease1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260923-firstage1';
+import { polygonBounds } from './building-geometry.js?v=20260923-firstage1';
 
 export const CONFIG = {
   // The current green diamond is expanded to roughly ten times its former
@@ -485,10 +485,8 @@ export const BUILDING_TYPES = {
     function: 'Resource drop-off and settlement core',
     asset: 'townCenter',
     maxHp: 900,
-    // The first-age Hall uses the Crown Barracks render scale as its shared
-    // settlement reference. Human units keep their established scale;
-    // gameplay bounds remain generous enough for the south stair approach and
-    // future building.
+    // Final art scale and ground bounds are supplied by CROWN_ARCHITECTURE.
+    // Human units keep their established scale.
     footprint: { width: 9, height: 8 },
     renderSize: 1000,
     // Building rasters use a near/front ground anchor. The physical base is

@@ -1,5 +1,5 @@
-import {updateWizardPositioning} from './wizard-positioning.js?v=20260922-bearrelease1';
-import {updateStormDragons} from './storm-dragon.js?v=20260921-toolbarheal1';
+import {updateWizardPositioning} from './wizard-positioning.js?v=20260923-firstage1';
+import {updateStormDragons} from './storm-dragon.js?v=20260923-firstage1';
 export const WIZARD_SPELLS=Object.freeze({starshard:36,starfall:64,radius:7,starfallCooldown:12,mantleDuration:6,mantleCooldown:30,mantleReduction:.7});
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function castWizardSpell(sim,wizard,target){
@@ -32,4 +32,4 @@ export function updateWizardMagic(sim,dt){
   sim.wizardImpacts.push({x:target.x,z:target.z,age:0,nova:p.nova});return false;
  });
 }
-export {drawWizardMagic} from './starveil-effects.js?v=20260922-bearrelease1';
+export {drawWizardMagic} from './starveil-effects.js?v=20260923-firstage1';

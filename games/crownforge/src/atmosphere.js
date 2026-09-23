@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260922-bearrelease1';
+import { CONFIG } from './config.js?v=20260923-firstage1';
 
 // Presentation only: every effect is derived from position and render time.
 // Nothing consumes the simulation RNG or changes an entity's state.
@@ -131,8 +131,8 @@ export class CrownforgeAtmosphere {
     if (!this.enabled || building.destroyed || building.progress < 1 || width < 38) return;
     // Authored flame/chimney coordinates, relative to the grounded image.
     const hearths = {
-      townCenter: { anchor: 0.9404, flames: [[0.416, 0.508], [0.505, 0.553]] },
-      homestead: { anchor: 0.9609, smoke: [0.645, 0.094], flames: [[0.38, 0.596]] },
+      townCenter: { anchor: .885, smoke: [.696,.204], flames: [[.288,.573], [.413,.619]] },
+      homestead: { anchor: .88, smoke: [.661,.20], flames: [[.386,.568]] },
       ashenCamp: { anchor: 0.98, flames: [[0.51, 0.66]] },
     };
     const hearth = hearths[building.type];

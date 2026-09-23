@@ -1,5 +1,5 @@
-import {projectHearthkin,solveAnatomicalLimb} from './hearthkin-locomotion.js?v=20260909-cursedbears1';
-import {fitHearthkinProfile} from './hearthkin-surface-fit.js?v=20260909-cursedbears1';
+import {projectHearthkin,solveAnatomicalLimb} from './hearthkin-locomotion.js?v=20260923-firstage1';
+import {fitHearthkinProfile} from './hearthkin-surface-fit.js?v=20260923-firstage1';
 
 const add=(a,b)=>({x:a.x+b.x,y:a.y+b.y,z:a.z+b.z});
 const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y,z:a.z-b.z});
