@@ -1,7 +1,7 @@
-import {effectIcon} from './status-icons.js?v=20260923-firstage1';
-import { bearVariant } from './bear-variants.js?v=20260923-firstage1';
-import {UNIT_TYPES} from './config.js?v=20260923-firstage1';
-import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260923-firstage1';
+import {effectIcon} from './status-icons.js?v=20260923-toolbar3';
+import { bearVariant } from './bear-variants.js?v=20260923-toolbar3';
+import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
+import {unitStatuses,sigilSvg,FIRST_CONDEMNATION,displayedUnitHealth} from './unit-status.js?v=20260923-toolbar3';
 
 const unitName=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type].label;
 const factionName=u=>u.faction==='player'?'The Crownwardens':u.faction==='enemy'?'The Ashen Clans':'Greatwood wildlife';
@@ -32,7 +32,7 @@ export function createUnitInspector({simulation,renderer,canvas,onOpen=()=>{}}){
     else renderer.drawVillagerAsset(ctx,u,point,size,1);
   }
   function renderButtons(container,u,key,open){
-    const statuses=unitStatuses(u),next=(u.bearVariant??'')+'|'+statuses.map(s=>s.id).join('|');
+    const statuses=unitStatuses(u).filter(status=>!host.contains(container)||!['heavenrend','unboundSovereign','skybreakerFavor','stormwardCovenant'].includes(status.id)),next=(u.bearVariant??'')+'|'+statuses.map(s=>s.id).join('|');
     if(key!==next){
       container.replaceChildren();
       for(const status of statuses){const b=document.createElement('button');b.type='button';b.className='unit-status';b.dataset.status=status.id;b.innerHTML=`${effectIcon(status)}<span><b></b><small></small></span>`;bindLoreTip(b);b.querySelector('b').textContent=status.name;b.onclick=()=>open(status.id);container.append(b);}

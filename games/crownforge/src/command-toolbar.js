@@ -1,8 +1,8 @@
-import {UNIT_TYPES} from './config.js?v=20260923-firstage1';
-import {portraitAsset} from './combat-frames.js?v=20260923-firstage1';
-export function createCommandToolbar(sim,onChange){
+import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
+import {portraitAsset} from './combat-frames.js?v=20260923-toolbar3';
+export function createCommandToolbar(sim,onChange,input){
  const deck=document.querySelector('.command-deck');
- const css=document.createElement('link');css.rel='stylesheet';css.href='./command-toolbar.css?v=20260921-toolbarheal1';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./command-toolbar.css?v=20260923-toolbar3';document.head.append(css);
  deck.classList.add('has-command-toolbar');
  new ResizeObserver(()=>document.documentElement.style.setProperty('--command-deck-clearance',`${deck.getBoundingClientRect().height+30}px`)).observe(deck);
  const bar=document.createElement('div');bar.className='command-toolbar';bar.setAttribute('aria-label','Unit selection and orders');deck.prepend(bar);
@@ -20,9 +20,11 @@ export function createCommandToolbar(sim,onChange){
  const orders=document.createElement('div');orders.className='toolbar-orders';orders.setAttribute('role','group');orders.setAttribute('aria-label','Unit orders');bar.append(orders);
  for(const id of ['selection-combat-actions','selection-building-actions','selection-recovery']){const el=document.getElementById(id);if(el)orders.append(el);}
  const demolition=document.querySelector('#demolition-mode');if(demolition)orders.append(demolition.closest('.selection-unit-actions'));
+ const clear=document.createElement('button');clear.id='unselect-units';clear.type='button';clear.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5M8 8l8 8m0-8-8 8"/></svg><span>Unselect</span>';clear.title='Clear selection without stopping unit orders';orders.prepend(clear);
+ clear.onclick=()=>{for(const method of ['cancelBuildMode','cancelDemolitionMode','cancelGuardMode','cancelRallyMode','cancelPatrolMode'])input?.[method]();if(input){input.drag=null;input.renderer.setSelectionBox(null);}sim.selectedIds=[];sim._syncSelectionFlags();sim.lastCommand='Selection cleared.';onChange();};
  const symbols={ 'guard-area':['Guard','M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6Z'], 'patrol-route':['Patrol','M5 6h12l-3-3m3 3-3 3M19 18H7l3 3m-3-3 3-3'], 'demolition-mode':['Demolish','m4 20 9-9m-3-5 4-3 7 7-3 4Z'], 'recover-units':['Recover','m3 11 9-8 9 8M6 10v11h12V10M10 21v-7h4v7']};
  for(const [id,[label,path]] of Object.entries(symbols)){const b=document.getElementById(id);b.setAttribute('aria-label',label);b.innerHTML=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg><span>${label}</span>`;}
  function living(){return sim.units.filter(u=>u.faction==='player'&&!u.dead&&u.hp>0);}
- function update(){const units=living(),selected=new Set(sim.selectedIds);for(const b of buttons){const group=units.filter(u=>b.dataset.selectClass==='all'||u.type===b.dataset.selectClass);b.disabled=!group.length;b.querySelector('small').textContent=group.length;b.title=`Select all ${b.dataset.selectClass==='all'?'friendly units':UNIT_TYPES[b.dataset.selectClass].label} (${group.length})`;b.setAttribute('aria-label',b.title);b.setAttribute('aria-pressed',String(group.length>0&&group.every(u=>selected.has(u.id))));}}
+ function update(){clear.disabled=!sim.selectedIds.length;const units=living(),selected=new Set(sim.selectedIds);for(const b of buttons){const group=units.filter(u=>b.dataset.selectClass==='all'||u.type===b.dataset.selectClass);b.disabled=!group.length;b.querySelector('small').textContent=group.length;b.title=`Select all ${b.dataset.selectClass==='all'?'friendly units':UNIT_TYPES[b.dataset.selectClass].label} (${group.length})`;b.setAttribute('aria-label',b.title);b.setAttribute('aria-pressed',String(group.length>0&&group.every(u=>selected.has(u.id))));}}
  update();return {update};
 }

@@ -1,12 +1,14 @@
-import {effectIcon,isDebuff} from './status-icons.js?v=20260923-firstage1';
-export {effectIcon,isDebuff} from './status-icons.js?v=20260923-firstage1';
-import {UNIT_TYPES} from './config.js?v=20260923-firstage1';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260923-firstage1';
-import {bearVariant} from './bear-variants.js?v=20260923-firstage1';
+import {selectedSkybreaker,skybreakerStatuses} from './skybreaker-selection.js?v=20260923-toolbar3';
+import {openSkybreakerCard} from './skybreaker-controls.js?v=20260923-toolbar3';
+import {effectIcon,isDebuff} from './status-icons.js?v=20260923-toolbar3';
+export {effectIcon,isDebuff} from './status-icons.js?v=20260923-toolbar3';
+import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260923-toolbar3';
+import {bearVariant} from './bear-variants.js?v=20260923-toolbar3';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
 const tank=u=>UNIT_TYPES[u.type]?.combatRole==='tank';
-const name=u=>u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type]?.label??u.type;
+const name=u=>u.type==='skybreaker'?'Vaelthryx':u.type==='grizzly'?bearVariant(u).name:UNIT_TYPES[u.type]?.label??u.type;
 // Track combat relationships, not selection or mere proximity. Grace prevents frame flicker during repositioning.
 export function encounterUnits(sim){
  const live=new Map(sim.units.filter(alive).map(u=>[u.id,u])),enemies=new Set(),allies=new Set(),threatened=new Set();
@@ -30,6 +32,7 @@ export function focusedCombatUnits(sim,units){
 }
 // One selected portrait keeps group selection compact and follows selection order.
 export function selectedPortraitUnit(sim){
+ const dragon=selectedSkybreaker(sim);if(dragon)return dragon;
  const live=new Map(sim.units.filter(alive).map(u=>[u.id,u]));
  return (sim.selectedIds??[]).map(id=>live.get(id)).find(Boolean)??null;
 }
@@ -39,6 +42,7 @@ export function portraitOrder(selected,combat){
 const crownRows=['villager','soldier','scout','spearwarden','militia'];
 const ashenRows=['raider','ashenForager','ashenOutrider','thornSpear','hearthLevy','hidewall'];
 export function portraitAsset(u){
+ if(u.type==='skybreaker')return {file:'skybreaker/lore-v2.png',row:0,rows:1,single:true};
  if(u.type==='wizard')return {file:'starveil/portrait-v5.png',row:0,rows:1,single:true};
  if(u.type==='shieldbearer')return {file:'combat-portraits-v1.png',row:0,rows:4};
  if(u.type==='grizzly')return {file:'combat-portraits-v1.png',row:({'black-oath':1,cindermaw:2,'ashen-grudge':3}[bearVariant(u).id]),rows:4};
@@ -64,7 +68,7 @@ export function createCombatFrames(sim,renderer){
  function create(u){
   const el=document.createElement('article');el.className='combat-unit-frame';el.dataset.unitId=u.id;el.dataset.side=u.faction==='player'?'ally':'enemy';
   el.innerHTML='<div class="combat-frame-top"><button class="combat-portrait" type="button"><span></span><canvas width="120" height="120"></canvas></button><div class="combat-frame-vitals"><div class="combat-frame-name"></div><div class="combat-frame-role"></div><div class="combat-frame-health" role="meter" aria-label="Health"><i></i><span></span></div><div class="combat-frame-action"></div></div></div><div class="combat-auras" aria-label="Buffs"><small>BUFFS</small><div></div></div><div class="combat-auras debuffs" aria-label="Debuffs"><small>DEBUFFS</small><div></div></div>';
-  const portrait=el.querySelector('.combat-portrait');bindTip(portrait);
+  const portrait=el.querySelector('.combat-portrait');bindTip(portrait);if(u.type==='skybreaker')portrait.onclick=()=>{hide();openSkybreakerCard();};
   const art=portraitAsset(u),row=art?.row??null;
   if(art){portrait.classList.add('has-art');portrait.style.setProperty('--portrait-row',`${art.row*100/Math.max(1,art.rows-1)}%`);portrait.style.setProperty('--portrait-sheet',`url('./assets/${art.file}')`);portrait.style.setProperty('--portrait-sheet-size',`300% ${art.rows*100}%`);if(art.sheetHeight){portrait.style.setProperty('--portrait-row',`${art.top/(art.sheetHeight-art.height)*100}%`);portrait.style.setProperty('--portrait-sheet-size',`300% ${art.sheetHeight/art.height*100}%`);}portrait.style.setProperty('--breath-delay',`${-(u.id%7)*.4}s`);}
   if(art?.single){portrait.style.setProperty('--portrait-row','0%');portrait.style.setProperty('--portrait-sheet-size','100% 100%');portrait.querySelector('span').style.animation='none';}
@@ -76,14 +80,15 @@ export function createCombatFrames(sim,renderer){
   const now=sim.clock,selected=selectedPortraitUnit(sim),encounter=encounterUnits(sim),engaged=new Set(encounter.map(u=>u.id));
   for(const u of portraitOrder(selected,encounter)){let r=records.get(u.id);if(r&&r.u!==u){r.el.remove();records.delete(u.id);r=null;}if(!r){r=create(u);records.set(u.id,r);}if(engaged.has(u.id))r.lastSeen=now;}
   const live=new Set(sim.units);
-  for(const [id,r] of records){const {u,el}=r;if(!live.has(u)||!alive(u)||(u!==selected&&(now-r.lastSeen>8||now<r.lastSeen))){el.remove();records.delete(id);continue;}
+  for(const [id,r] of records){const {u,el}=r;if((!live.has(u)&&u!==selected)||!alive(u)||(u!==selected&&(now-r.lastSeen>8||now<r.lastSeen))){el.remove();records.delete(id);continue;}
    const hp=displayedUnitHealth(u),pct=Math.max(0,Math.min(100,hp/u.maxHp*100)),target=sim.units.find(v=>v.id===u.attackTarget&&alive(v));
    el.classList.toggle('is-selected-portrait',u===selected);
    el.classList.toggle('is-critical',pct<25);el.querySelector('.combat-frame-role').textContent=u===selected?'SELECTED':u.faction==='player'?(tank(u)?'YOUR TANK':'UNDER ATTACK'):target?.faction==='player'?`TARGET · ${name(target)}`:'ENEMY';
    const meter=el.querySelector('[role=meter]');meter.setAttribute('aria-valuemin',0);meter.setAttribute('aria-valuemax',u.maxHp);meter.setAttribute('aria-valuenow',Math.ceil(hp));meter.querySelector('i').style.width=`${pct}%`;meter.querySelector('span').textContent=`${Math.ceil(hp).toLocaleString()} / ${u.maxHp.toLocaleString()} · ${pct>0&&pct<1?'<1':Math.round(pct)}%`;
    el.querySelector('.combat-frame-action').textContent=u.actionLabel||(engaged.has(u.id)?'Engaged':'Idle');r.portrait.setAttribute('aria-label',`${name(u)} portrait`);r.portrait._tip=[name(u),`${Math.ceil(hp)} / ${u.maxHp} health`,u.actionLabel||(engaged.has(u.id)?'Engaged':'Idle')];
    if(r.row===null){const c=r.portrait.querySelector('canvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,120,120);renderer.drawVillagerAsset(ctx,{...u,command:'idle',animClock:sim.clock},{x:60,y:115},120,1);}
-   const statuses=unitStatuses(u),ids=new Set(statuses.map(s=>s.id));
+   if(u.type==='skybreaker'){meter.hidden=true;r.portrait._tip=['Vaelthryx','Open lore card','The Unbound Thunder'];}
+   const statuses=u.type==='skybreaker'?skybreakerStatuses(u):unitStatuses(u),ids=new Set(statuses.map(s=>s.id));
    for(const [id,b] of r.icons)if(!ids.has(id)){b.remove();r.icons.delete(id);}
    for(const status of statuses){let b=r.icons.get(status.id);if(!b){b=document.createElement('button');b.type='button';b.className='combat-aura';b.dataset.status=status.id;b.innerHTML=effectIcon(status);bindTip(b);el.querySelector(isDebuff(status)?'.debuffs>div':'.combat-auras>div').append(b);r.icons.set(status.id,b);}b._tip=[status.name,status.summary,`${status.detail} · ${status.effect??''}`];b.setAttribute('aria-label',`${status.name}: ${status.detail}`);}
    for(const section of el.querySelectorAll('.combat-auras'))section.classList.toggle('is-empty',!section.querySelector('button'));

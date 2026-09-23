@@ -1,5 +1,5 @@
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260923-firstage1';
-import { polygonBounds } from './building-geometry.js?v=20260923-firstage1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260923-toolbar3';
+import { polygonBounds } from './building-geometry.js?v=20260923-toolbar3';
 
 export const CONFIG = {
   // The current green diamond is expanded to roughly ten times its former

@@ -1,3 +1,4 @@
+import {selectSkybreakerAt} from './skybreaker-selection.js?v=20260923-toolbar3';
 // Touch commands use the same simulation orders as the original controls.
 export function createTouchControls({input,simulation:sim,renderer:r,announce}) {
  const canvas=input.canvas,body=document.body;
@@ -58,6 +59,7 @@ export function createTouchControls({input,simulation:sim,renderer:r,announce}) 
  function tap(point,event){
   if(input.buildMode){placement(point);return;}
   if(input.guardMode||input.rallyMode||input.patrolMode||input.demolitionMode){input._down(event);input._up(event);return;}
+  if(mode==='auto'&&selectSkybreakerAt(sim,r,point)){input.onSelection([]);return;}
   if(mode==='attack'){const target=hit(point,'command');if(!target||!['enemy','wildlife'].includes(target.faction)){announce('Tap an enemy to attack.');return;}order(point,target);setOrder('auto',false);return;}
   if(mode==='move'){order(point,{kind:'ground'});setOrder('auto',false);return;}
   const target=hit(point);

@@ -1,4 +1,4 @@
-import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260923-firstage1';
+import { CONFIG, RESOURCE_TYPES } from './config.js?v=20260923-toolbar3';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 
 export function assignEnemyEconomy(sim) {

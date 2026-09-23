@@ -1,5 +1,5 @@
-import { UNIT_TYPES } from './config.js?v=20260923-firstage1';
-import { hearthkinLocomotion, projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260923-firstage1';
+import { UNIT_TYPES } from './config.js?v=20260923-toolbar3';
+import { hearthkinLocomotion, projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260923-toolbar3';
 
 // Pure actor-space motion. A facing selects a camera projection; it cannot
 // change the physical arm, shield hand, weapon direction or contact point.

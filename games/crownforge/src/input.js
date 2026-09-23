@@ -1,3 +1,4 @@
+import {selectSkybreakerAt} from './skybreaker-selection.js?v=20260923-toolbar3';
 export class CrownforgeInput {
   constructor({
     canvas,
@@ -503,6 +504,7 @@ export class CrownforgeInput {
     } else {
       const world = this.renderer.screenToWorld(point);
       const runeUnit=this.renderer.getCurseRuneAtScreen?.(this.simulation,point);
+      if(selectSkybreakerAt(this.simulation,this.renderer,point)){this.drag=null;this.onSelection([]);return;}
       if(runeUnit){this.simulation.selectEntity(runeUnit);this.drag=null;this.onSelection([runeUnit]);this.onInspectStatus(runeUnit);return;}
       const selectedUnits = this.simulation.selectedEntities
         .filter((entity) => entity.kind === 'unit' && entity.faction === 'player' && !entity.dead);

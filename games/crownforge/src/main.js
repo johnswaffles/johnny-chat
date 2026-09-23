@@ -1,22 +1,22 @@
-import {createTouchControls} from './touch-controls.js?v=20260923-firstage1';
-import {createCommandToolbar} from './command-toolbar.js?v=20260923-firstage1';
-import {createSkybreakerControls} from './skybreaker-controls.js?v=20260923-firstage1';
-import {createCombatFrames} from './combat-frames.js?v=20260923-firstage1';
-import {createUnitActivity} from './unit-activity.js?v=20260923-firstage1';
-import {createTeamControls} from './team-controls.js?v=20260923-firstage1';
-import {combatRole} from './combat-teams.js?v=20260923-firstage1';
-import { bearVariant } from './bear-variants.js?v=20260923-firstage1';
-import {requestGrizzlyPair} from './wildlife.js?v=20260923-firstage1';
-import {createUnitInspector} from './unit-inspector.js?v=20260923-firstage1';
-import {displayedUnitHealth} from './unit-status.js?v=20260923-firstage1';
-import { setupPresentation } from './presentation.js?v=20260923-firstage1';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260923-firstage1';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260923-firstage1';
-import { CrownforgeInput } from './input.js?v=20260923-firstage1';
-import { CrownforgeRenderer } from './renderer.js?v=20260923-firstage1';
-import { CrownforgeSimulation } from './simulation.js?v=20260923-firstage1';
-import { CrownforgePerformanceMonitor } from './performance.js?v=20260923-firstage1';
-import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260923-firstage1';
+import {createTouchControls} from './touch-controls.js?v=20260923-toolbar3';
+import {createCommandToolbar} from './command-toolbar.js?v=20260923-toolbar3';
+import {createSkybreakerControls} from './skybreaker-controls.js?v=20260923-toolbar3';
+import {createCombatFrames} from './combat-frames.js?v=20260923-toolbar3';
+import {createUnitActivity} from './unit-activity.js?v=20260923-toolbar3';
+import {createTeamControls} from './team-controls.js?v=20260923-toolbar3';
+import {combatRole} from './combat-teams.js?v=20260923-toolbar3';
+import { bearVariant } from './bear-variants.js?v=20260923-toolbar3';
+import {requestGrizzlyPair} from './wildlife.js?v=20260923-toolbar3';
+import {createUnitInspector} from './unit-inspector.js?v=20260923-toolbar3';
+import {displayedUnitHealth} from './unit-status.js?v=20260923-toolbar3';
+import { setupPresentation } from './presentation.js?v=20260923-toolbar3';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260923-toolbar3';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260923-toolbar3';
+import { CrownforgeInput } from './input.js?v=20260923-toolbar3';
+import { CrownforgeRenderer } from './renderer.js?v=20260923-toolbar3';
+import { CrownforgeSimulation } from './simulation.js?v=20260923-toolbar3';
+import { CrownforgePerformanceMonitor } from './performance.js?v=20260923-toolbar3';
+import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260923-toolbar3';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -595,10 +595,11 @@ demolitionModeButton?.addEventListener('click', () => {
 unitInspector=createUnitInspector({simulation,renderer,canvas,onOpen:()=>{input.keys.clear();input.drag=null;renderer.setSelectionBox(null);}});
 
 const combatFrames=createCombatFrames(simulation,renderer);
-const skybreakerControls=createSkybreakerControls(simulation);
+
 const teamControls=createTeamControls(simulation,()=>{announce(simulation.lastCommand);updateUi();});
 
-const commandToolbar=createCommandToolbar(simulation,()=>{audio.unlock();audio.ui();announce(simulation.lastCommand);updateUi();});
+const commandToolbar=createCommandToolbar(simulation,()=>{audio.unlock();audio.ui();announce(simulation.lastCommand);updateUi();},input);
+const skybreakerControls=createSkybreakerControls(simulation,()=>{announce(simulation.lastCommand);});
 
 const touchControls=createTouchControls({input,simulation,renderer,announce});
 

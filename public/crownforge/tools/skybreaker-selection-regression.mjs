@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {selectedPortraitUnit} from '../src/combat-frames.js';
+import {skybreakerId,skybreakerStatuses,selectSkybreakerAt} from '../src/skybreaker-selection.js';
+import {summonStormDragon,updateStormDragons} from '../src/storm-dragon.js';
+const setup=()=>{const wizard={id:1,type:'wizard',faction:'player',hp:210,x:0,z:0},enemy={id:2,type:'grizzly',faction:'wildlife',hp:1000,x:30,z:0};return {units:[wizard,enemy],selectedIds:[],_syncSelectionFlags(){},_applyUnitDamage(){return {damage:1};}};};
+test('summoning, selecting and deselecting keeps dragon outside normal unit orders',()=>{const sim=setup(),result=summonStormDragon(sim,sim.units[0]);assert.equal(result.success,true);sim.selectedIds=[skybreakerId(result.pass)];const portrait=selectedPortraitUnit(sim);assert.equal(portrait.type,'skybreaker');assert.equal(selectedPortraitUnit(sim),portrait);assert.equal(sim.units.length,2);assert.equal(summonStormDragon(sim,sim.units[0]).success,false);sim.selectedIds=[];assert.equal(selectedPortraitUnit(sim),null);});
+test('active statuses follow actual breath and disappear when flight ends',()=>{const sim=setup(),{pass}=summonStormDragon(sim,sim.units[0]);sim.selectedIds=[skybreakerId(pass)];assert.equal(skybreakerStatuses(selectedPortraitUnit(sim)).length,1);updateStormDragons(sim,3);assert.equal(skybreakerStatuses(selectedPortraitUnit(sim)).length,2);updateStormDragons(sim,7);assert.equal(selectedPortraitUnit(sim),null);});
+test('map selection uses the airborne body, not ground below it',()=>{const sim=setup(),{pass}=summonStormDragon(sim,sim.units[0]);pass.age=3;const renderer={camera:{zoom:1},worldToScreen:()=>({x:1000,y:1000})};assert.equal(selectSkybreakerAt(sim,renderer,{x:350,y:240}),true);assert.deepEqual(sim.selectedIds,[skybreakerId(pass)]);assert.equal(selectSkybreakerAt(sim,renderer,{x:1000,y:1000}),false);});

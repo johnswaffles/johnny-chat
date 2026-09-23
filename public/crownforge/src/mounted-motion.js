@@ -1,5 +1,5 @@
-import { UNIT_TYPES } from './config.js?v=20260923-firstage1';
-import { projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260923-firstage1';
+import { UNIT_TYPES } from './config.js?v=20260923-toolbar3';
+import { projectHearthkin, solveAnatomicalLimb } from './hearthkin-locomotion.js?v=20260923-toolbar3';
 
 const TAU=Math.PI*2;
 const v=(x=0,y=0,z=0)=>({x,y,z});

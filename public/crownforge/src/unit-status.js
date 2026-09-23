@@ -1,11 +1,11 @@
-import {finalBenedictionStatus,lastBreathStatus} from './final-benediction.js?v=20260923-firstage1';
-import {wizardAttackRange,ascendancyStacks} from './eventide-ascendancy.js?v=20260923-firstage1';
-import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260923-firstage1';
+import {finalBenedictionStatus,lastBreathStatus} from './final-benediction.js?v=20260923-toolbar3';
+import {wizardAttackRange,ascendancyStacks} from './eventide-ascendancy.js?v=20260923-toolbar3';
+import {SKYBREAKER_ART,SKYBREAKER_LORE} from './storm-dragon.js?v=20260923-toolbar3';
 export const lastCrownMercyActive=unit=>Boolean(unit&&!unit.dead&&!(unit.finalBenedictionRemaining>0)&&unit.hp>0&&UNIT_TYPES[unit.type]?.combatRole==='tank'&&unit.hp/unit.maxHp<.1);
-import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260923-firstage1';
-import { bearVariant } from './bear-variants.js?v=20260923-firstage1';
-import {UNIT_TYPES} from './config.js?v=20260923-firstage1';
-import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260923-firstage1';
+import {deathlessActive,updateDeathlessHeart,deathlessCrossingDamage} from './deathless-heart.js?v=20260923-toolbar3';
+import { bearVariant } from './bear-variants.js?v=20260923-toolbar3';
+import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
+import {bearCrowdMultiplier,BEAR_FURY,bearFuryActive,bearEnrageActive,isFighter} from './bear-combat.js?v=20260923-toolbar3';
 
 export const FIRST_CONDEMNATION = Object.freeze({
   id:'firstCondemnation',name:'The First Condemnation',kind:'Permanent elder magic',
@@ -74,7 +74,7 @@ export function unitStatuses(unit){
   if(unit.stormwardTimer>0)statuses.push({id:'stormwardCovenant',name:'Stormward Covenant',kind:'Dragon blessing',detail:`${Math.ceil(unit.stormwardTimer)}s · 30% less damage`,summary:'Thunder shelters those beneath its wings.',effect:'Reduces all incoming damage by 30% for 12 seconds. Granted to allies within 28 units when Heavenrend is summoned.',rune:'ward',art:SKYBREAKER_ART});
   if(unit.skybreakerFavor>0)statuses.push({id:'skybreakerFavor',name:'Skybreaker’s Favor',kind:'Dragon blessing',detail:`${Math.ceil(unit.skybreakerFavor)}s · +50% Starshard damage`,summary:'A stolen star remembers the first thunder.',effect:'Empowers the wizard’s basic star projectile for 12 seconds, raising its damage from 36 to 54.',rune:'fury',art:SKYBREAKER_ART});
   if(unit.type==='wizard'){
-   statuses.push({id:'heavenrend',name:'Heavenrend · Call the Skybreaker',kind:'Dragon summon',detail:unit.skybreakerCooldown>0?`${Math.ceil(unit.skybreakerCooldown)}s until ready`:'Ready · five-minute cooldown',summary:'The horizon bows beneath his wings.',lore:SKYBREAKER_LORE,effect:'Select this wizard and press Call the Skybreaker. Summons Vaelthryx for a 10-second flyover, sweeping lightning for 6 seconds: 150 magic AoE damage every half-second within 12 units of the moving breath. 45-unit targeting range; 300-second cooldown.',rune:'divine',art:SKYBREAKER_ART});
+   statuses.push({id:'heavenrend',name:'Heavenrend · Call the Skybreaker',kind:'Dragon summon',detail:unit.skybreakerCooldown>0?`${Math.ceil(unit.skybreakerCooldown)}s until ready`:'Ready · five-minute cooldown',summary:'The horizon bows beneath his wings.',lore:SKYBREAKER_LORE,effect:'Press Vaelthryx beside Wizard on the bottom bar. Summons Vaelthryx for a 10-second flyover, sweeping lightning for 6 seconds: 150 magic AoE damage every half-second within 12 units of the moving breath. 45-unit targeting range; 300-second cooldown.',rune:'divine',art:SKYBREAKER_ART});
    if(unit.skybreakerActive>0)statuses.push({id:'unboundSovereign',name:'Unbound Sovereign',kind:'Aerial ally',detail:`${Math.ceil(unit.skybreakerActive)}s · Vaelthryx is airborne`,summary:'No throne commands him. No chain can hold him.',effect:'An untargetable aerial ally. Flies over terrain and completes his flight even if his summoner falls.',rune:'ward',art:SKYBREAKER_ART});
    const art='./assets/starveil/portrait-v5.png';
    statuses.push({id:'starveilOath',name:'Keeper of the Last Star',kind:'Starveil Arcanist',detail:'One living arcanist per side',summary:'The heavens went silent. One star answered.',lore:'Before he wore the starwoven mantle, the Arcanist was a keeper of forgotten names. In the ruins above the Crownlands, he charted the places where stars had vanished and refused to call that darkness empty. When one last ember fell through the sealed heavens, he carried it home in his bare hands. The Observatory of the Last Star rose around its light. Now he walks beyond the battle line, gathering its scattered fire into his staff. He does not seek a throne or the worship owed to gods. He keeps a smaller promise: while one light remains, the night will never belong to them. Only one sworn keeper on each side may bear that burden.',effect:'A ranged spellcaster with 210 health and 36-unit casting reach. Train at the Observatory of the Last Star. Living units and training queues share a one-per-side limit; an opposing side may field its own arcanist.',rune:'divine',art});

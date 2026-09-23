@@ -1,7 +1,7 @@
-import {lastBreathTarget} from './final-benediction.js?v=20260923-firstage1';
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260923-firstage1';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260923-firstage1';
-import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260923-firstage1';
+import {lastBreathTarget} from './final-benediction.js?v=20260923-toolbar3';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260923-toolbar3';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260923-toolbar3';
+import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260923-toolbar3';
 export const TEAM_RULES=Object.freeze({healAmount:.9,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){

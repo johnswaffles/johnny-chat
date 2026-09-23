@@ -21,3 +21,8 @@
 .realm-panel,.toast,#build-menu{bottom:var(--command-deck-clearance,190px)}
 .left-rail{max-height:calc(100dvh - var(--command-deck-clearance,190px) - 112px)}
 #build-menu{max-height:calc(100dvh - var(--command-deck-clearance,190px) - 120px)}
+
+.touch-mode #unselect-units{display:none}.toolbar-orders #unselect-units:disabled{opacity:.35;cursor:default}
+#call-vaelthryx{border-color:#8bbfe966;color:#ccedff}.history-panel{min-height:0}
+
+body:not(.touch-mode) .left-rail{display:flex;flex-direction:column;overflow:hidden}body:not(.touch-mode) .left-rail .intel-panel{min-height:0;overflow:auto}body:not(.touch-mode) .left-rail .history-panel{display:block;flex-shrink:0;margin-top:0}.touch-mode.touch-details .history-panel{display:block}

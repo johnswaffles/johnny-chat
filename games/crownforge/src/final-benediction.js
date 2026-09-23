@@ -1,5 +1,5 @@
-import {UNIT_TYPES} from './config.js?v=20260923-firstage1';
-export const BENEDICTION_DURATION=15;
+import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
+export const BENEDICTION_DURATION=3;
 export function grantFinalBenediction(sim,tank,attacker){
  if(tank.dead||tank.finalBenedictionSpent||UNIT_TYPES[tank.type]?.combatRole!=='tank')return false;
  const hearth=sim.units.filter(u=>!u.dead&&u.hp>0&&u.faction===tank.faction&&u.type==='villager'&&Math.hypot(u.x-tank.x,u.z-tank.z)<=29&&sim._hasCombatLineOfSight(u,tank))
@@ -9,7 +9,7 @@ export function grantFinalBenediction(sim,tank,attacker){
  hearth.finalBenedictionCastRemaining=BENEDICTION_DURATION;
  tank.healthRevealTimer=BENEDICTION_DURATION;
  pulseLastBreath(sim,tank);
- sim._announce('Benediction of the Final Dawn — fifteen final seconds. “Child… your time has come. Return to the Creator.”');
+ sim._announce('Benediction of the Final Dawn — three final seconds. “Child… your time has come. Return to the Creator.”');
  return true;
 }
 export function updateFinalBenediction(sim,unit,dt){
@@ -23,13 +23,12 @@ export function updateFinalBenediction(sim,unit,dt){
  return false;
 }
 export function finalBenedictionStatus(unit){
- const active=unit.finalBenedictionRemaining>0,casting=unit.finalBenedictionCastRemaining>0;
- if(!active&&unit.type!=='villager')return null;
- return {id:'finalBenediction',name:'Benediction of the Final Dawn',kind:active?'Irrevocable blessing':'Hearthkin blessing',rune:'divine',
- detail:active?`${Math.ceil(unit.finalBenedictionRemaining)}s remaining`:casting?'The farewell is spoken':'Fatal tank wound · 15 final seconds',
+ if(unit.dead||!(unit.finalBenedictionRemaining>0)||UNIT_TYPES[unit.type]?.combatRole!=='tank')return null;
+ return {id:'finalBenediction',name:'Benediction of the Final Dawn',kind:'Irrevocable blessing',rune:'divine',
+ detail:`${Math.ceil(unit.finalBenedictionRemaining)}s remaining`,
  summary:'“Child… your time has come. Return to the Creator.”',
- lore:'The Hearthkin kneels before no throne. Yet for a fallen shield, they bow their head. “Hero. Beloved child of the Creator. You have carried enough.” Death approaches, but must wait for the Hearthkin’s blessing. Fifteen heartbeats of eternity are granted: time to raise a shield once more, to face the dawn without fear. Then the road opens home. No healing may recall the soul. No god may intercede. This is not a bargain with death. It is the farewell of one who knew you before the first star burned.',
- effect:active?'When the blessing ends, you die. Neither healing nor gods can intervene.':'Automatically blesses a friendly tank receiving a fatal hit within 29 units and clear line of sight. Grants fifteen final seconds at 1 health, then certain death. Once per tank’s life; cannot be refreshed or dispelled. Healing cannot save the blessed tank.'};
+ lore:'The Hearthkin kneels before no throne. Yet for a fallen shield, they bow their head. “Hero. Beloved child of the Creator. You have carried enough.” Death approaches, but must wait for the Hearthkin’s blessing. Three heartbeats of eternity are granted: time to raise a shield once more, to face the dawn without fear. Then the road opens home. No healing may recall the soul. No god may intercede. This is not a bargain with death. It is the farewell of one who knew you before the first star burned.',
+ effect:'Three final seconds. When the blessing ends, you die. Neither healing nor gods can intervene.'};
 }
 
 export const LAST_BREATH_RADIUS=48;

@@ -1,6 +1,6 @@
-import {bakeTerrainRelief,terrainCanvas} from './terrain-relief.js?v=20260923-firstage1';
-import { CONFIG } from './config.js?v=20260923-firstage1';
-import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260923-firstage1';
+import {bakeTerrainRelief,terrainCanvas} from './terrain-relief.js?v=20260923-toolbar3';
+import { CONFIG } from './config.js?v=20260923-toolbar3';
+import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260923-toolbar3';
 
 const MASK_WIDTH = 560;
 const MASK_HEIGHT = 460;

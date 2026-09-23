@@ -1,12 +1,13 @@
-// Rose-white soul ribbons and a closing ten-segment gate, distinct from healing green.
+import {BENEDICTION_DURATION} from './final-benediction.js?v=20260923-toolbar3';
+// Rose-white soul ribbons and one closing segment per final second.
 export function drawFinalBenediction(c,u,p,size,time,reduced=false,ground=false){
  const tank=u.finalBenedictionRemaining>0,remaining=tank?u.finalBenedictionRemaining:u.finalBenedictionCastRemaining;
  if(u.dead||!(remaining>0))return;
- const t=reduced?0:(u.animClock??time*.001),r=Math.max(15,size*(tank?.42:.33)),progress=remaining/15;
+ const t=reduced?0:(u.animClock??time*.001),r=Math.max(15,size*(tank?.42:.33));
  c.save();c.translate(p.x,p.y);c.globalCompositeOperation='lighter';
  if(ground){
   const glow=c.createRadialGradient(0,0,0,0,0,r*2);glow.addColorStop(0,'#ffedf13d');glow.addColorStop(.45,'#ff399c40');glow.addColorStop(1,'#d623bd00');c.fillStyle=glow;c.save();c.scale(1,.46);c.beginPath();c.arc(0,0,r*2,0,Math.PI*2);c.fill();
-  c.lineWidth=Math.max(1.4,size*.016);for(let i=0;i<15;i++){c.strokeStyle=i<Math.ceil(remaining)?'#ffe8f5':'#6d294b';c.beginPath();c.arc(0,0,r,i*Math.PI*2/15+.04,(i+1)*Math.PI*2/15-.06);c.stroke();}
+  c.lineWidth=Math.max(1.4,size*.016);for(let i=0;i<BENEDICTION_DURATION;i++){c.strokeStyle=i<Math.ceil(remaining)?'#ffe8f5':'#6d294b';c.beginPath();c.arc(0,0,r,i*Math.PI*2/BENEDICTION_DURATION+.04,(i+1)*Math.PI*2/BENEDICTION_DURATION-.06);c.stroke();}
   c.strokeStyle='#f394db';c.lineWidth=1;c.beginPath();c.arc(0,0,r*1.23,0,Math.PI*2);c.stroke();c.restore();
  }else{
   const veil=c.createLinearGradient(0,0,0,-size*1.4);veil.addColorStop(0,'#ff46b72b');veil.addColorStop(.6,'#ffb9e414');veil.addColorStop(1,'#fff0f000');c.fillStyle=veil;
