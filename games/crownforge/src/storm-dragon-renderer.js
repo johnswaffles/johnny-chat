@@ -1,4 +1,4 @@
-import {dragonBreathPoint,SKYBREAKER} from './storm-dragon.js?v=20260923-toolbar3';
+import {dragonBreathPoint,SKYBREAKER} from './storm-dragon.js?v=20260923-teamdock1';
 export const DRAGON_RENDER_WIDTH=2520;
 const TAU=Math.PI*2,clamp=v=>Math.max(0,Math.min(1,v));
 let atlas;

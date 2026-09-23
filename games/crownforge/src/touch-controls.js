@@ -1,4 +1,4 @@
-import {selectSkybreakerAt} from './skybreaker-selection.js?v=20260923-toolbar3';
+import {selectSkybreakerAt} from './skybreaker-selection.js?v=20260923-teamdock1';
 // Touch commands use the same simulation orders as the original controls.
 export function createTouchControls({input,simulation:sim,renderer:r,announce}) {
  const canvas=input.canvas,body=document.body;

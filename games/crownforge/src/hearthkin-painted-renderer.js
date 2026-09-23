@@ -1,6 +1,6 @@
-import { HEARTHKIN_PAINTED_ART } from './hearthkin-painted-art.js?v=20260923-toolbar3';
-import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260923-toolbar3';
-import { RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260923-toolbar3';
+import { HEARTHKIN_PAINTED_ART } from './hearthkin-painted-art.js?v=20260923-teamdock1';
+import { HEARTHKIN_ACTIONS } from './hearthkin-rig.js?v=20260923-teamdock1';
+import { RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260923-teamdock1';
 
 const clamp=n=>Math.max(0,Math.min(.999999,n));
 const cycle=n=>n-Math.floor(n);

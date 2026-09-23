@@ -1,4 +1,4 @@
-import {updateStormDragons} from '../src/storm-dragon.js?v=20260923-toolbar3';
+import {updateStormDragons} from '../src/storm-dragon.js?v=20260923-teamdock1';
 const {simulation:s,renderer:r}=window.crownforge;
 s.units=[];s.pausedEnemyUnits=[];s.buildings=[];s.resourcesNodes=[];s.decorations=[];s.navigationVersion++;
 s._checkVictory=()=>{};s._updateEnemyAI=()=>{};s._updateEnemyIntent=()=>{};s._updateMilitaryServices=()=>{};s.wildlifeState.nextSpawnAt=Infinity;

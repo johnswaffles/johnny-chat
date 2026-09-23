@@ -1,8 +1,8 @@
-import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
-import {portraitAsset} from './combat-frames.js?v=20260923-toolbar3';
+import {UNIT_TYPES} from './config.js?v=20260923-teamdock1';
+import {portraitAsset} from './combat-frames.js?v=20260923-teamdock1';
 export function createCommandToolbar(sim,onChange,input){
  const deck=document.querySelector('.command-deck');
- const css=document.createElement('link');css.rel='stylesheet';css.href='./command-toolbar.css?v=20260923-toolbar3';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./command-toolbar.css?v=20260923-teamdock1';document.head.append(css);
  deck.classList.add('has-command-toolbar');
  new ResizeObserver(()=>document.documentElement.style.setProperty('--command-deck-clearance',`${deck.getBoundingClientRect().height+30}px`)).observe(deck);
  const bar=document.createElement('div');bar.className='command-toolbar';bar.setAttribute('aria-label','Unit selection and orders');deck.prepend(bar);

@@ -1,4 +1,4 @@
-import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260923-toolbar3';
+import { CONFIG, FIRST_AGE_ASSETS } from './config.js?v=20260923-teamdock1';
 
 export function setupPresentation({ renderer, simulation, input, announce }) {
   const appearance=document.querySelector('#hearthkin-appearance');

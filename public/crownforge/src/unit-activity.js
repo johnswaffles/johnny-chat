@@ -1,4 +1,4 @@
-import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
+import {UNIT_TYPES} from './config.js?v=20260923-teamdock1';
 
 export function createUnitActivity(simulation){
  const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href=new URL('../unit-activity.css?v=20260912-activity1',import.meta.url);document.head.append(stylesheet);

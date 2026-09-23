@@ -26,3 +26,16 @@
 #call-vaelthryx{border-color:#8bbfe966;color:#ccedff}.history-panel{min-height:0}
 
 body:not(.touch-mode) .left-rail{display:flex;flex-direction:column;overflow:hidden}body:not(.touch-mode) .left-rail .intel-panel{min-height:0;overflow:auto}body:not(.touch-mode) .left-rail .history-panel{display:block;flex-shrink:0;margin-top:0}.touch-mode.touch-details .history-panel{display:block}
+
+/* Compact roster management lives beside the lower command controls. */
+.team-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0;padding:0;max-width:100%;color:#eadbb7}
+.team-toolbar .team-buttons{display:flex;flex-wrap:wrap;gap:5px}
+.team-toolbar button{min-height:38px;padding:8px 11px;border:1px solid #a591604f;border-radius:7px;background:#ffffff06;color:#eadbb7;font:11px system-ui;cursor:pointer}
+.team-toolbar button:hover:not(:disabled){background:#3c5042;border-color:#d6b56d}
+.team-toolbar button:disabled{opacity:.35;cursor:default}
+.team-toolbar [hidden]{display:none!important}
+.team-auto-add{display:flex;align-items:center;gap:7px;min-height:38px;padding:0 8px;font:11px system-ui;cursor:pointer;white-space:nowrap}
+.team-auto-add input{accent-color:#84c9ac;width:18px;height:18px;margin:0}
+.touch-mode .team-toolbar{width:100%;justify-content:center;gap:5px}
+.touch-mode .team-toolbar button,.touch-mode .team-auto-add{min-height:44px}
+@media(max-width:600px){.team-toolbar{justify-content:center;width:100%}.team-toolbar button{padding:6px 8px}}

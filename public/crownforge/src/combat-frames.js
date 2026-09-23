@@ -1,10 +1,10 @@
-import {selectedSkybreaker,skybreakerStatuses} from './skybreaker-selection.js?v=20260923-toolbar3';
-import {openSkybreakerCard} from './skybreaker-controls.js?v=20260923-toolbar3';
-import {effectIcon,isDebuff} from './status-icons.js?v=20260923-toolbar3';
-export {effectIcon,isDebuff} from './status-icons.js?v=20260923-toolbar3';
-import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260923-toolbar3';
-import {bearVariant} from './bear-variants.js?v=20260923-toolbar3';
+import {selectedSkybreaker,skybreakerStatuses} from './skybreaker-selection.js?v=20260923-teamdock1';
+import {openSkybreakerCard} from './skybreaker-controls.js?v=20260923-teamdock1';
+import {effectIcon,isDebuff} from './status-icons.js?v=20260923-teamdock1';
+export {effectIcon,isDebuff} from './status-icons.js?v=20260923-teamdock1';
+import {UNIT_TYPES} from './config.js?v=20260923-teamdock1';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260923-teamdock1';
+import {bearVariant} from './bear-variants.js?v=20260923-teamdock1';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
 const tank=u=>UNIT_TYPES[u.type]?.combatRole==='tank';

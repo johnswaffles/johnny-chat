@@ -1,4 +1,4 @@
-import { projectHearthkin } from './hearthkin-locomotion.js?v=20260923-toolbar3';
+import { projectHearthkin } from './hearthkin-locomotion.js?v=20260923-teamdock1';
 
 const VIEWS=['front','right','back','left'];
 const distance=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);

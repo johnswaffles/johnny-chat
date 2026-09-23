@@ -1,4 +1,4 @@
-import {SKYBREAKER,dragonBreathPoint} from './storm-dragon.js?v=20260923-toolbar3';
+import {SKYBREAKER,dragonBreathPoint} from './storm-dragon.js?v=20260923-teamdock1';
 export const skybreakerId=pass=>`skybreaker:${pass.sourceId}`;
 const portraits=new WeakMap();
 export function selectedSkybreaker(sim){

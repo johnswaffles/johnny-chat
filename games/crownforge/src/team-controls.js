@@ -1,15 +1,19 @@
-import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
-import {eligibleMember} from './combat-teams.js?v=20260923-toolbar3';
+import {UNIT_TYPES} from './config.js?v=20260923-teamdock1';
+import {eligibleMember} from './combat-teams.js?v=20260923-teamdock1';
 export function createTeamControls(sim,onChange){
  const panel=document.querySelector('#team-controls'),classes=document.querySelector('#select-warrior-classes');
  if(!panel||!classes)return {update(){}};
  panel.querySelector('[data-help]').remove();
+ panel.querySelector('h3').remove();
+ panel.className='team-toolbar';panel.setAttribute('aria-label','Team roster controls');
+ document.querySelector('.command-deck').prepend(panel);
  const picker=panel.querySelector('select'),summary=panel.querySelector('[data-summary]');
+ summary.hidden=true;
  const button=name=>panel.querySelector(`[data-action="${name}"]`);
  let classKey='',teamKey='';
  const finish=()=>onChange();
- const auto=document.createElement('label');auto.style.cssText='display:flex;align-items:center;gap:8px;margin:10px 0;font-size:12px;cursor:pointer';
- const toggle=document.createElement('input');toggle.type='checkbox';toggle.id='auto-group-new-units';toggle.style.cssText='accent-color:#31594d;width:16px;height:16px';
+ const auto=document.createElement('label');auto.className='team-auto-add';
+ const toggle=document.createElement('input');toggle.type='checkbox';toggle.id='auto-group-new-units';
  auto.append(toggle,document.createTextNode('Auto-add new units'));auto.title='New friendly recruits automatically join Your Team. Existing units and your current selection stay unchanged.';
  panel.querySelector('.team-buttons').after(auto);
  toggle.onchange=()=>{sim.autoGroupNewUnits=toggle.checked;finish();};

@@ -1,4 +1,4 @@
-import {UNIT_TYPES} from './config.js?v=20260923-toolbar3';
+import {UNIT_TYPES} from './config.js?v=20260923-teamdock1';
 export const BENEDICTION_DURATION=3;
 export function grantFinalBenediction(sim,tank,attacker){
  if(tank.dead||tank.finalBenedictionSpent||UNIT_TYPES[tank.type]?.combatRole!=='tank')return false;

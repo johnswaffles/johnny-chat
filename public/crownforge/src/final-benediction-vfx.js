@@ -1,4 +1,4 @@
-import {BENEDICTION_DURATION} from './final-benediction.js?v=20260923-toolbar3';
+import {BENEDICTION_DURATION} from './final-benediction.js?v=20260923-teamdock1';
 // Rose-white soul ribbons and one closing segment per final second.
 export function drawFinalBenediction(c,u,p,size,time,reduced=false,ground=false){
  const tank=u.finalBenedictionRemaining>0,remaining=tank?u.finalBenedictionRemaining:u.finalBenedictionCastRemaining;

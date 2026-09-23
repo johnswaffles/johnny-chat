@@ -1,4 +1,4 @@
-import {selectSkybreakerAt} from './skybreaker-selection.js?v=20260923-toolbar3';
+import {selectSkybreakerAt} from './skybreaker-selection.js?v=20260923-teamdock1';
 export class CrownforgeInput {
   constructor({
     canvas,

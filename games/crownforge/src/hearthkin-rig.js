@@ -1,11 +1,11 @@
-import { drawBlueWard, blueWardReadiness } from './hearthkin-blue-ward.js?v=20260923-toolbar3';
-import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260923-toolbar3';
-import { horseAssemblyTransforms } from './horse-assembly.js?v=20260923-toolbar3';
-import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260923-toolbar3';
-import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260923-toolbar3';
-import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js?v=20260923-toolbar3';
-import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js?v=20260923-toolbar3';
-import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js?v=20260923-toolbar3';
+import { drawBlueWard, blueWardReadiness } from './hearthkin-blue-ward.js?v=20260923-teamdock1';
+import { HEARTHKIN_RIG_ART, HEARTHKIN_ARM_PARTS, HEARTHKIN_HAND_PARTS } from './hearthkin-rig-art.js?v=20260923-teamdock1';
+import { horseAssemblyTransforms } from './horse-assembly.js?v=20260923-teamdock1';
+import {fitCharacterSurfaces} from './character-surface-fit.js?v=20260923-teamdock1';
+import { hearthkinLocomotion, projectHearthkin } from './hearthkin-locomotion.js?v=20260923-teamdock1';
+import { anatomicalToolFrame, hearthkinWorkMotion } from './hearthkin-work-motion.js?v=20260923-teamdock1';
+import { drawCharacterEquipment, equipmentReadiness } from './character-equipment.js?v=20260923-teamdock1';
+import { drawCharacterShield, shieldGeometry, shieldReadiness } from './character-shields.js?v=20260923-teamdock1';
 
 const TAU = Math.PI * 2;
 const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
