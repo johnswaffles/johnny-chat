@@ -1,0 +1,5 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {bakeTerrainRelief,terrainHeight,terrainMaterials} from '../src/terrain-relief.js';
+test('terrain generation is deterministic and does not consume match randomness',()=>{const old=Math.random;Math.random=()=>{throw Error('Random consumption');};try{assert.deepEqual(bakeTerrainRelief(80,70,42),bakeTerrainRelief(80,70,42));assert.notDeepEqual(bakeTerrainRelief(80,70,42).color,bakeTerrainRelief(80,70,71).color);}finally{Math.random=old;}});
+test('height field is smooth and material weights remain bounded throughout expanded map',()=>{let min=Infinity,max=-Infinity,earth=0;for(let z=0;z<514;z+=5)for(let x=0;x<626;x+=5){const h=terrainHeight(x,z,42);min=Math.min(min,h);max=Math.max(max,h);assert(Math.abs(h-terrainHeight(x+.01,z,42))<.1);const m=terrainMaterials(x,z,h,.3,42);for(const v of Object.values(m))assert(v>=0&&v<=1);earth+=m.earth;}assert(max-min>15);assert(earth>50);});
+test('cached layer storage is bounded by map dimensions',()=>{const b=bakeTerrainRelief(626,514,42);for(const k of ['color','shade','earth'])assert.equal(b[k].byteLength,626*514*4);});

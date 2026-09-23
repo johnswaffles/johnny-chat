@@ -1,5 +1,6 @@
-import { CONFIG } from './config.js?v=20260922-bearrelease1';
-import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260922-bearrelease1';
+import {bakeTerrainRelief,terrainCanvas} from './terrain-relief.js?v=20260923-livingearth1';
+import { CONFIG } from './config.js?v=20260923-livingearth1';
+import { clamp01, landscapeHash, landscapeNoise, treeAppearance, meadowHabitat } from './landscape-layout.js?v=20260923-livingearth1';
 
 const MASK_WIDTH = 560;
 const MASK_HEIGHT = 460;
@@ -145,6 +146,7 @@ export class CrownforgeLandscape {
   }
 
   prepareRegions() {
+    this.relief=null;
     const dry = new Float32Array(MASK_WIDTH * MASK_HEIGHT);
     const moss = new Float32Array(dry.length);
     const shade = new Float32Array(dry.length);
@@ -262,6 +264,11 @@ export class CrownforgeLandscape {
     this.maskedMaterial(ctx, this.woodMask, this.tiles[3]);
     this.maskedMaterial(ctx, this.pineMask, this.tiles[2]);
     this.maskedMaterial(ctx, this.shadeMask, null, '#253f32');
+    if(this.renderer.terrainReliefEnabled){
+      if(!this.relief){const data=bakeTerrainRelief(CONFIG.mapWidth,CONFIG.mapHeight,this.seed);this.relief={};for(const key of ['color','shade','earth'])this.relief[key]=terrainCanvas(data.width,data.height,data[key]);}
+      this.maskedMaterial(ctx,this.relief.earth,this.tiles[2]);
+      ctx.save();this.worldTransform(ctx);ctx.drawImage(this.relief.color,0,0,CONFIG.mapWidth,CONFIG.mapHeight);ctx.drawImage(this.relief.shade,0,0,CONFIG.mapWidth,CONFIG.mapHeight);ctx.restore();
+    }
     // A light, restrained atmospheric veil keeps tiny terrain detail from
     // becoming visual noise at the strategic overview distance.
     ctx.save();

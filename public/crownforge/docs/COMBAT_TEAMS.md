@@ -59,3 +59,9 @@ The wizard is ranged damage support. He holds spell range rather than joining th
 ## Elderblood Spellward
 
 All Greatwood bear bloodlines resist 95% of incoming magic. Only 5% passes to existing Thick Hide, Defiance, and Heart defenses. This includes Starshard, Falling Constellation, and Heavenrend, even after the wizard dies. With Thick Hide alone, a 100-damage spell deals 2.5 HP. Physical weapons and Elderhide arrow protection are unchanged. Wizard and dragon presentation remains spectacular while their damage against bears is intentionally limited.
+
+
+## Benediction of the Final Dawn (local review, 20260923)
+A fatal hit on a tank is delayed once per life by a living friendly Hearthkin within 29 units and clear line of sight. No team assignment required. The tank remains at 1 HP and may act for exactly 15 simulation seconds. Additional damage cannot kill it early; normal healing skips it. Even externally restored HP or wards cannot prevent expiration. The direct death path at zero bypasses protection; multiple Hearthkin cannot refresh it. Remaining time and spent state persist in saves; tactical/lore pauses suspend simulation time. Both units receive rose-white spell ribbons and a fifteen-segment ground seal; the tank displays a countdown. A glowing rose hourglass in portrait buffs shares the farewell and complete mechanics with lore inspection. Preview: dev/final-benediction.html.
+
+Defiance of the Last Breath taunts hostile units within 48 units immediately and every 0.5 seconds. Incoming enemies and enemies targeting allies are redirected through ordinary attack/pathfinding. Active final-stand targeting takes priority over ordinary tank and side-pull threat, but does not bypass obstacles. Multiple final stands retain their existing enemies until the owning tank dies or leaves range. One nearest eligible Hearthkin claims each tank’s blessing atomically; no duplicate casts or refreshes.

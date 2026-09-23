@@ -5,3 +5,10 @@
 .combat-frame-list{display:flex;flex-direction:column;gap:8px}.combat-unit-frame{margin-bottom:0;flex-shrink:0}.combat-unit-frame[data-side=ally]{order:-1}
 
 @media(max-width:740px){.encounter-training{left:200px!important;right:auto!important;width:min(260px,calc(100vw - 452px))!important}}
+
+.combat-unit-frame.is-selected-portrait{position:sticky;top:0;z-index:1;border-color:#dac185;background:linear-gradient(120deg,#394b3d,#192d27);box-shadow:0 4px 12px #0005}.is-selected-portrait .combat-frame-role{color:#f0d99d;letter-spacing:.12em}
+
+.combat-aura[data-status="finalBenediction"]{background:#3c1038;border:2px solid #ff9ad7;min-width:44px;min-height:44px;box-shadow:0 0 12px #ff46b788;animation:benediction-glow 2.4s ease-in-out infinite}
+.final-benediction-icon{filter:drop-shadow(0 0 4px #ff79c6);animation:benediction-glow 2.4s ease-in-out infinite}
+@keyframes benediction-glow{50%{filter:drop-shadow(0 0 7px #ff88d1);box-shadow:0 0 18px #ff46b7aa}}
+@media(prefers-reduced-motion:reduce){.final-benediction-icon,.combat-aura[data-status="finalBenediction"]{animation:none}}

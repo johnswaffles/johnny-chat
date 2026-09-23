@@ -1,0 +1,61 @@
+.touch-controls,.touch-order-bar,.touch-squads{display:none}
+#control-mode{min-height:44px!important;touch-action:manipulation}
+body.touch-mode{overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+.touch-mode #game-canvas{touch-action:none;cursor:default!important}
+.touch-mode button,.touch-mode select,.touch-mode input{touch-action:manipulation}
+.touch-mode .touch-controls{display:contents}
+.touch-mode .touch-order-bar,.touch-mode .touch-view,.touch-mode .touch-squads{display:flex;gap:6px;align-items:center}
+.touch-mode .touch-order-bar{width:100%;justify-content:center}
+.touch-mode .touch-order-bar button,.touch-mode .touch-view button,.touch-mode .touch-placement button,.touch-mode .touch-squads button{min-width:48px;min-height:46px;border:1px solid #a98b535e;border-radius:9px;background:#16342ff5;color:#f2e5c7;padding:7px 13px;font:15px 'DM Sans',sans-serif;box-shadow:0 2px 8px #0002}
+.touch-mode [data-touch][aria-pressed=true]{background:#476152;border-color:#e1c37d;box-shadow:inset 0 0 0 1px #e1c37d55}
+.touch-mode [data-touch]:disabled{opacity:.4}
+.touch-mode [data-touch] span{font-size:12px;margin-left:4px}
+.touch-mode .touch-view{position:absolute;z-index:8;left:12px;top:86px}
+.touch-mode .touch-hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--command-deck-clearance,230px) + 4px);padding:7px 14px;border:1px solid #cdb47944;border-radius:20px;background:#102822e8;color:#e5d8b6;font-size:11px;pointer-events:none;white-space:nowrap}
+.touch-mode .touch-placement{position:absolute;z-index:9;left:50%;transform:translateX(-50%);bottom:calc(var(--command-deck-clearance,230px) + 38px);display:flex;gap:8px;align-items:center;padding:10px;border:1px solid #d9bd75;border-radius:12px;background:#142c27f5;color:#f3e2b6;font-size:12px;max-width:calc(100vw - 24px)}
+.touch-mode .touch-placement[hidden]{display:none}
+.touch-mode .touch-placement button{white-space:nowrap}
+.touch-mode .command-deck.has-command-toolbar{left:10px;right:10px;bottom:max(8px,env(safe-area-inset-bottom));gap:6px;padding:8px 10px;min-height:0;max-height:45dvh;overflow:visible}
+.touch-mode .command-toolbar{gap:8px;padding-bottom:4px;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start}
+.touch-mode .roster-shortcuts,.touch-mode .toolbar-orders{flex-wrap:nowrap;flex-shrink:0}
+.touch-mode .roster-shortcuts button{min-width:54px;min-height:58px;padding:5px}
+.touch-mode .toolbar-orders button{min-height:46px;min-width:46px}
+.touch-mode .deck-actions{margin:0!important;width:100%;justify-content:center;gap:6px}
+.touch-mode .deck-actions>.secondary-button,.touch-mode .deck-actions>.soundtrack-control{display:none}
+.touch-mode .deck-actions>#release-bears{display:flex;min-height:46px}
+.touch-mode .deck-actions .action-button{min-height:46px;min-width:145px;padding:6px 10px}
+.touch-mode .deck-actions #placement-readout,.touch-mode .deck-actions #cancel-build{display:none!important}
+.touch-mode .touch-squads{display:none;justify-content:center;width:100%;font-size:10px;color:#d1bb86}
+.touch-mode.touch-more .touch-squads{display:flex}
+.touch-mode.touch-more .deck-actions>.secondary-button,.touch-mode.touch-more .deck-actions>.soundtrack-control{display:flex;min-height:44px}
+.touch-mode.touch-more .command-deck{max-height:55dvh;overflow-y:auto}
+.touch-mode .left-rail{display:none;top:140px;left:12px;width:290px;max-height:calc(100dvh - var(--command-deck-clearance,230px) - 156px);z-index:9;overflow:auto}
+.touch-mode.touch-details .left-rail{display:block}
+.touch-mode .left-rail button{min-height:44px}
+.touch-mode .realm-panel,.touch-mode .map-hint,.touch-mode .unit-activity-panel{display:none!important}
+.touch-mode .world-tools{top:86px;right:12px;z-index:8}
+.touch-mode .world-tools #view-mode{display:none}
+.touch-mode .world-tools button{min-height:46px;font-size:10px}
+.touch-mode .topbar{top:8px;left:10px;right:10px;height:64px;grid-template-columns:1fr auto;padding:0 12px}
+.touch-mode .topbar .brand-lockup{display:none}
+.touch-mode .topbar-center{align-items:flex-start}
+.touch-mode .view-settings-panel{top:140px;max-height:calc(100dvh - 170px);overflow:auto;z-index:12}
+.touch-mode #build-menu,.touch-mode #train-menu{position:fixed;bottom:var(--command-deck-clearance,230px);left:50%;right:auto;transform:translateX(-50%);width:min(620px,calc(100vw - 24px));max-height:calc(100dvh - var(--command-deck-clearance,230px) - 145px);overflow:auto;z-index:15}
+.touch-mode .build-option{min-height:60px}
+.touch-mode .combat-frames{top:145px;right:12px;max-height:calc(100dvh - var(--command-deck-clearance,230px) - 165px);width:245px;overflow:auto}
+.touch-mode .combat-aura{min-width:40px;min-height:40px}
+.touch-mode .combat-effect-tooltip{z-index:30;max-width:calc(100vw - 20px)}
+.touch-mode kbd{display:none}
+.touch-mode .toast{z-index:20;max-width:calc(100vw - 30px);bottom:calc(var(--command-deck-clearance,230px) + 44px)}
+@media(max-width:850px){
+ .touch-mode .touch-view{top:80px;gap:4px}.touch-mode .touch-view button{padding:6px 9px}.touch-mode .touch-view button span{display:none}
+ .touch-mode .world-tools{top:80px}.touch-mode #view-settings{display:none}
+ .touch-mode .touch-order-bar button{padding:6px;flex:1;font-size:17px}.touch-mode .touch-order-bar button span{display:block;margin:0;font-size:10px}
+ .touch-mode .command-toolbar{width:100%}.touch-mode .touch-hint{font-size:9px;padding:6px 8px}
+ .touch-mode .combat-frames{width:210px;top:135px}.touch-mode .topbar-center{display:none}.touch-mode .topbar{display:flex;justify-content:center}
+ .touch-mode .deck-actions .action-button{min-width:110px}.touch-mode .touch-placement>span{display:none}
+}
+
+.touch-mode.touch-details .left-rail .unit-activity-panel{display:block!important;position:relative;left:auto;right:auto;top:auto;bottom:auto;width:100%;max-height:none;margin-top:10px}
+
+@media(max-width:850px){.touch-mode.touch-more .world-tools #view-settings{display:block}}

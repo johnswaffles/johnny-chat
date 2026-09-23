@@ -1,4 +1,5 @@
 const glyphs={
+ lastBreathDefiance:'M12 2 3 6v7l9 9 9-9V6Z M12 6v11 M8 11l4-5 4 5 M1 10v6 M23 10v6',
  eventideAscendancy:'M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z M2 21l5-5 M17 16l5 5 M3 3l2 2 M19 3l2-2',
  loneStarReckoning:'M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3Z M5 3 2 6 M19 3l3 3 M3 18l3 3 M18 21l3-3',
  crownGuardOath:'M9 5V3h6v2 M6 7l6-3 6 3v12l-6 3-6-3Z M6 8h12 M8 18h8 M12 10q-5 5 0 7 5-2 0-7Z',
@@ -37,7 +38,9 @@ const glyphs={
 };
 export const isDebuff=s=>s.id==='lastLight'||s.id==='stun'||s.rune==='curse'||s.kind?.toLowerCase().includes('impairment');
 export function effectIcon(status){
- const colors={eventideAscendancy:280,loneStarReckoning:35,crownGuardOath:42,militiaOath:24,kingsbaneHunger:18,falteringCrown:330,greatwoodDefiance:140,greatwoodColossus:35,bloodclawReckoning:0,unbrokenWild:155,deathlessHeart:280,crushingClaws:28,firstCondemnation:270,elderhide:45,thickHide:195,bearLineage:40,elderbloodSpellward:220,greatwoodFury:8,starveilOath:46,starshard:190,fallingConstellation:275,eventidePassage:285,distantStar:205,astralMantle:225,heavenrend:195,stormwardCovenant:180,skybreakerFavor:42,unboundSovereign:260};
+ if(status.id==='finalBenediction')return `<svg class="final-benediction-icon" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="9" fill="#350d39" stroke="#ff8ac9"/><path d="M9 6h14M9 26h14M11 7c0 6 3 6 5 9-2 3-5 3-5 9M21 7c0 6-3 6-5 9 2 3 5 3 5 9" fill="none" stroke="#fff0e5" stroke-width="1.8"/><path d="m16 10-3 2 3 3 3-3Z M12 23l4-5 4 5Z" fill="#ff70c7"/><path d="M4 14v4m-2-2h4M28 14v4m-2-2h4" stroke="#ffe9ac"/></svg>`;
+
+ const colors={lastBreathDefiance:350,eventideAscendancy:280,loneStarReckoning:35,crownGuardOath:42,militiaOath:24,kingsbaneHunger:18,falteringCrown:330,greatwoodDefiance:140,greatwoodColossus:35,bloodclawReckoning:0,unbrokenWild:155,deathlessHeart:280,crushingClaws:28,firstCondemnation:270,elderhide:45,thickHide:195,bearLineage:40,elderbloodSpellward:220,greatwoodFury:8,starveilOath:46,starshard:190,fallingConstellation:275,eventidePassage:285,distantStar:205,astralMantle:225,heavenrend:195,stormwardCovenant:180,skybreakerFavor:42,unboundSovereign:260};
  const hue=colors[status.id]??(isDebuff(status)?'315':status.rune==='fury'?'22':status.rune==='divine'?'46':'165');
  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="hsl(${hue} 85% 72%)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" style="--sigil-hue:${hue}"><path d="${glyphs[status.id]??'m12 2 9 10-9 10-9-10Z M12 7v10 M7 12h10'}"/></svg>`;
 }

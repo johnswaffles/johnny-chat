@@ -1,7 +1,7 @@
-import {effectIcon,isDebuff} from './status-icons.js?v=20260922-bearrelease1';
-export {effectIcon,isDebuff} from './status-icons.js?v=20260922-bearrelease1';
-import {UNIT_TYPES} from './config.js?v=20260922-bearrelease1';
-import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260922-bearrelease1';
+import {effectIcon,isDebuff} from './status-icons.js?v=20260923-livingearth1';
+export {effectIcon,isDebuff} from './status-icons.js?v=20260923-livingearth1';
+import {UNIT_TYPES} from './config.js?v=20260923-livingearth1';
+import {unitStatuses,displayedUnitHealth} from './unit-status.js?v=20260923-livingearth1';
 import {bearVariant} from './bear-variants.js?v=20260921-toolbarheal1';
 
 const alive=u=>u&&!u.dead&&u.hp>0;
@@ -28,6 +28,14 @@ export function focusedCombatUnits(sim,units){
  const focused=damaged.sort(recentFirst)[0]??targets.sort(recentFirst)[0];
  return focused?[focused,...enemies]:enemies;
 }
+// One selected portrait keeps group selection compact and follows selection order.
+export function selectedPortraitUnit(sim){
+ const live=new Map(sim.units.filter(alive).map(u=>[u.id,u]));
+ return (sim.selectedIds??[]).map(id=>live.get(id)).find(Boolean)??null;
+}
+export function portraitOrder(selected,combat){
+ return selected?[selected,...combat.filter(u=>u.id!==selected.id)]:combat;
+}
 const crownRows=['villager','soldier','scout','spearwarden','militia'];
 const ashenRows=['raider','ashenForager','ashenOutrider','thornSpear','hearthLevy','hidewall'];
 export function portraitAsset(u){
@@ -39,7 +47,7 @@ export function portraitAsset(u){
  return null;
 }
 export function createCombatFrames(sim,renderer){
- const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260921-toolbarheal1';document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href='./combat-frames.css?v=20260923-livingearth1';document.head.append(css);
  const host=document.createElement('aside');host.className='combat-frames';host.hidden=true;host.setAttribute('aria-label','Encounter portraits');
  host.innerHTML='<header><span>IN COMBAT</span><b>Encounter</b><button type="button" aria-label="Minimize encounter portraits" aria-expanded="true">−</button></header><div class="combat-frame-list"></div>';
  document.querySelector('.game-shell').append(host);
@@ -51,6 +59,7 @@ export function createCombatFrames(sim,renderer){
  function updateTooltip(){if(!hovered?.isConnected||hovered.closest('[hidden]')){hide();return;}tooltip.replaceChildren();const title=document.createElement('b'),body=document.createElement('p'),detail=document.createElement('small');title.textContent=hovered._tip[0];body.textContent=hovered._tip[1];detail.textContent=hovered._tip[2]??'';tooltip.append(title,body,detail);tooltip.hidden=false;const rect=hovered.getBoundingClientRect();tooltip.style.left=`${Math.max(8,Math.min(innerWidth-280,rect.left-270))}px`;tooltip.style.top=`${Math.max(8,Math.min(innerHeight-tooltip.offsetHeight-8,rect.top))}px`;}
  function bindTip(button){button.onpointerenter=()=>show(button);button.onpointerleave=hide;button.onfocus=()=>show(button);button.onblur=hide;button.onclick=()=>show(button);}
  host.querySelector('header button').onclick=e=>{const mini=host.classList.toggle('is-mini');e.currentTarget.textContent=mini?'+':'−';e.currentTarget.setAttribute('aria-expanded',String(!mini));e.currentTarget.setAttribute('aria-label',`${mini?'Expand':'Minimize'} encounter portraits`);hide();};
+ document.addEventListener('pointerdown',e=>{if(document.body.classList.contains('touch-mode')&&!e.target.closest('.combat-aura,.combat-portrait'))hide();});
  window.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});list.addEventListener('scroll',hide);
  function create(u){
   const el=document.createElement('article');el.className='combat-unit-frame';el.dataset.unitId=u.id;el.dataset.side=u.faction==='player'?'ally':'enemy';
@@ -61,26 +70,30 @@ export function createCombatFrames(sim,renderer){
   if(art?.single){portrait.style.setProperty('--portrait-row','0%');portrait.style.setProperty('--portrait-sheet-size','100% 100%');portrait.querySelector('span').style.animation='none';}
   const ordinal=[...records.values()].filter(r=>r.u.type===u.type).length+1;
   el.querySelector('.combat-frame-name').textContent=`${u.type==='shieldbearer'?'Shieldbearer':name(u)} · ${ordinal}`;
-  list.append(el);return {el,u,lastSeen:sim.clock,icons:new Map(),portrait,row};
+  list.append(el);return {el,u,lastSeen:-Infinity,icons:new Map(),portrait,row};
  }
  function update(){
-  const now=sim.clock;
-  for(const u of encounterUnits(sim)){let r=records.get(u.id);if(r&&r.u!==u){r.el.remove();records.delete(u.id);r=null;}if(!r){r=create(u);records.set(u.id,r);}r.lastSeen=now;}
+  const now=sim.clock,selected=selectedPortraitUnit(sim),encounter=encounterUnits(sim),engaged=new Set(encounter.map(u=>u.id));
+  for(const u of portraitOrder(selected,encounter)){let r=records.get(u.id);if(r&&r.u!==u){r.el.remove();records.delete(u.id);r=null;}if(!r){r=create(u);records.set(u.id,r);}if(engaged.has(u.id))r.lastSeen=now;}
   const live=new Set(sim.units);
-  for(const [id,r] of records){const {u,el}=r;if(!live.has(u)||!alive(u)||now-r.lastSeen>8||now<r.lastSeen){el.remove();records.delete(id);continue;}
+  for(const [id,r] of records){const {u,el}=r;if(!live.has(u)||!alive(u)||(u!==selected&&(now-r.lastSeen>8||now<r.lastSeen))){el.remove();records.delete(id);continue;}
    const hp=displayedUnitHealth(u),pct=Math.max(0,Math.min(100,hp/u.maxHp*100)),target=sim.units.find(v=>v.id===u.attackTarget&&alive(v));
-   el.classList.toggle('is-critical',pct<25);el.querySelector('.combat-frame-role').textContent=u.faction==='player'?(tank(u)?'YOUR TANK':'UNDER ATTACK'):target?.faction==='player'?`TARGET · ${name(target)}`:'ENEMY';
+   el.classList.toggle('is-selected-portrait',u===selected);
+   el.classList.toggle('is-critical',pct<25);el.querySelector('.combat-frame-role').textContent=u===selected?'SELECTED':u.faction==='player'?(tank(u)?'YOUR TANK':'UNDER ATTACK'):target?.faction==='player'?`TARGET · ${name(target)}`:'ENEMY';
    const meter=el.querySelector('[role=meter]');meter.setAttribute('aria-valuemin',0);meter.setAttribute('aria-valuemax',u.maxHp);meter.setAttribute('aria-valuenow',Math.ceil(hp));meter.querySelector('i').style.width=`${pct}%`;meter.querySelector('span').textContent=`${Math.ceil(hp).toLocaleString()} / ${u.maxHp.toLocaleString()} · ${pct>0&&pct<1?'<1':Math.round(pct)}%`;
-   el.querySelector('.combat-frame-action').textContent=u.actionLabel||'Engaged';r.portrait.setAttribute('aria-label',`${name(u)} portrait`);r.portrait._tip=[name(u),`${Math.ceil(hp)} / ${u.maxHp} health`,u.actionLabel||'Engaged'];
+   el.querySelector('.combat-frame-action').textContent=u.actionLabel||(engaged.has(u.id)?'Engaged':'Idle');r.portrait.setAttribute('aria-label',`${name(u)} portrait`);r.portrait._tip=[name(u),`${Math.ceil(hp)} / ${u.maxHp} health`,u.actionLabel||(engaged.has(u.id)?'Engaged':'Idle')];
    if(r.row===null){const c=r.portrait.querySelector('canvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,120,120);renderer.drawVillagerAsset(ctx,{...u,command:'idle',animClock:sim.clock},{x:60,y:115},120,1);}
    const statuses=unitStatuses(u),ids=new Set(statuses.map(s=>s.id));
    for(const [id,b] of r.icons)if(!ids.has(id)){b.remove();r.icons.delete(id);}
-   for(const status of statuses){let b=r.icons.get(status.id);if(!b){b=document.createElement('button');b.type='button';b.className='combat-aura';b.innerHTML=effectIcon(status);bindTip(b);el.querySelector(isDebuff(status)?'.debuffs>div':'.combat-auras>div').append(b);r.icons.set(status.id,b);}b._tip=[status.name,status.summary,`${status.detail} · ${status.effect??''}`];b.setAttribute('aria-label',`${status.name}: ${status.detail}`);}
+   for(const status of statuses){let b=r.icons.get(status.id);if(!b){b=document.createElement('button');b.type='button';b.className='combat-aura';b.dataset.status=status.id;b.innerHTML=effectIcon(status);bindTip(b);el.querySelector(isDebuff(status)?'.debuffs>div':'.combat-auras>div').append(b);r.icons.set(status.id,b);}b._tip=[status.name,status.summary,`${status.detail} · ${status.effect??''}`];b.setAttribute('aria-label',`${status.name}: ${status.detail}`);}
    for(const section of el.querySelectorAll('.combat-auras'))section.classList.toggle('is-empty',!section.querySelector('button'));
   }
-  const visible=focusedCombatUnits(sim,[...records.values()].map(r=>r.u)),ids=new Set(visible.map(u=>u.id));
+  const combat=focusedCombatUnits(sim,[...records.values()].filter(r=>now-r.lastSeen<=8&&now>=r.lastSeen).map(r=>r.u));
+  const visible=portraitOrder(selected,combat),ids=new Set(visible.map(u=>u.id));
+  // Reorder only when needed so focused buff buttons keep their focus.
+  visible.forEach((u,i)=>{const el=records.get(u.id).el;if(list.children[i]!==el)list.insertBefore(el,list.children[i]??null);});
   for(const [id,r] of records)r.el.hidden=!ids.has(id);
-  host.hidden=!visible.length;document.querySelector('.game-shell').classList.toggle('has-encounter',visible.length>0);host.querySelector('header b').textContent=`${visible.some(u=>u.faction==='player')?'1 ally · ':''}${visible.filter(u=>u.faction!=='player').length} enemies`;
+  host.hidden=!visible.length;document.querySelector('.game-shell').classList.toggle('has-encounter',combat.length>0);host.querySelector('header>span').textContent=selected?'SELECTED UNIT':'IN COMBAT';host.querySelector('header b').textContent=combat.length?`${combat.some(u=>u.faction==='player')?'1 ally · ':''}${combat.filter(u=>u.faction!=='player').length} enemies`:'Unit details';
   if(hovered)updateTooltip();
  }
  return {update};

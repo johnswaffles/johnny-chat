@@ -1,0 +1,11 @@
+const {simulation:s,renderer:r}=window.crownforge;
+r.terrainReliefEnabled=true;s.selectedIds=[];s._syncSelectionFlags();
+const style=document.createElement('style');style.textContent='.terrain-review-controls button[aria-pressed="true"]{outline:2px solid #f0d694}.terrain-review .command-deck,.terrain-review .topbar,.terrain-review .touch-view,.terrain-review .touch-hint,.terrain-review .world-tools,.terrain-review .combat-frames,.terrain-review .left-rail,.terrain-review .realm-panel,.terrain-review .unit-activity-panel,.terrain-review .toast,.terrain-review .map-hint{display:none!important}';document.head.append(style);document.body.classList.add('terrain-review');
+
+const tray=document.createElement('section');tray.className='terrain-review-controls';tray.style.cssText='position:absolute;z-index:15;left:50%;transform:translateX(-50%);top:12px;display:flex;gap:6px;align-items:center;background:#132d27ed;border:1px solid #d0b87599;border-radius:10px;padding:8px;width:max-content;max-width:95vw;flex-wrap:wrap;color:#ecd6a1;font:12px system-ui';
+tray.innerHTML='<b style="padding:0 10px">THE LIVING EARTH</b><button data-terrain="new" aria-pressed="true">New terrain</button><button data-terrain="old" aria-pressed="false">Original</button><button data-terrain="wide">Settlement</button><button data-terrain="landscape">Highlands</button><button data-terrain="detail">Grass detail</button><a href="./?controls=touch" style="color:#e9d29d;padding:10px">Back to game</a>';
+for(const b of tray.querySelectorAll('button'))b.style.cssText='min-height:44px;background:#29483e;color:#ffe7bc;border:1px solid #c4aa7166;border-radius:7px;padding:8px 12px';
+document.querySelector('.game-shell').append(tray);
+function view(x,z,zoom){r.camera.zoom=zoom;r.cameraInitialized=true;r.zoomMotion=null;const p=r.worldToScreen({x,z});r.panBy(r.width*.48-p.x,r.height*.5-p.y);}
+tray.onclick=e=>{const key=e.target.dataset.terrain;if(key==='new'||key==='old'){r.terrainReliefEnabled=key==='new';r.invalidateStaticLayer();for(const b of tray.querySelectorAll('[aria-pressed]'))b.setAttribute('aria-pressed',String(b.dataset.terrain===key));}if(key==='wide')view(125,110,.085);if(key==='landscape')view(170,130,.15);if(key==='detail')view(105,110,.8);};
+view(125,110,.085);

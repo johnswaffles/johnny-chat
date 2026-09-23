@@ -1,25 +1,26 @@
-import {drawStormDragons} from './storm-dragon-renderer.js?v=20260922-bearrelease1';
-import {drawWizardMagic} from './wizard-magic.js?v=20260922-bearrelease1';
+import {drawFinalBenediction} from './final-benediction-vfx.js?v=20260923-livingearth1';
+import {drawStormDragons} from './storm-dragon-renderer.js?v=20260923-livingearth1';
+import {drawWizardMagic} from './wizard-magic.js?v=20260923-livingearth1';
 import {drawLastLightChorus} from './last-light-chorus-vfx.js?v=20260921-toolbarheal1';
 import { LivingCrownHall } from './crown-hall-living.js?v=20260911-livinghall1';
-import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260922-bearrelease1';
-import {corpseLifetime} from './bear-combat.js?v=20260922-bearrelease1';
+import {BlenderHearthkinRenderer} from './hearthkin-blender-renderer.js?v=20260923-livingearth1';
+import {corpseLifetime} from './bear-combat.js?v=20260923-livingearth1';
 import { ASHEN_HEARTHKIN_PAINTED_ART } from './ashen-hearthkin-painted-art.js?v=20260909-cursedbears1';
-import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260922-bearrelease1';
-import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260922-bearrelease1';
-import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260922-bearrelease1';
-import {paintedRosterFactories} from './painted-roster-rig.js?v=20260922-bearrelease1';
-import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260922-bearrelease1';
-import { BUILDING_DEPTH } from './building-depth-data.js?v=20260922-bearrelease1';
-import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260922-bearrelease1';
-import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260922-bearrelease1';
+import { PaintedHearthkinRenderer } from './hearthkin-painted-renderer.js?v=20260923-livingearth1';
+import {curseRuneKind,drawCurseSigil,displayedUnitHealth} from './unit-status.js?v=20260923-livingearth1';
+import { GrizzlyRenderer } from './grizzly-renderer.js?v=20260923-livingearth1';
+import {paintedRosterFactories} from './painted-roster-rig.js?v=20260923-livingearth1';
+import { CHARACTER_RIGS, createCharacterRigs } from './character-rigs.js?v=20260923-livingearth1';
+import { BUILDING_DEPTH } from './building-depth-data.js?v=20260923-livingearth1';
+import { BUILDING_COMPONENTS } from './building-components-data.js?v=20260923-livingearth1';
+import { hasBuildingOutline, buildingPolygon } from './building-geometry.js?v=20260923-livingearth1';
 import { drawHearthkinWard } from './hearthkin-rig.js?v=20260911-blueward1';
-import { CrownforgeLandscape } from './landscape.js?v=20260922-bearrelease1';
-import { ForestCache } from './forest-cache.js?v=20260922-bearrelease1';
-import { CrownforgeMeadow } from './meadow.js?v=20260922-bearrelease1';
-import { CrownforgeAtmosphere } from './atmosphere.js?v=20260922-bearrelease1';
-import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260922-bearrelease1';
-import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260922-bearrelease1';
+import { CrownforgeLandscape } from './landscape.js?v=20260923-livingearth1';
+import { ForestCache } from './forest-cache.js?v=20260923-livingearth1';
+import { CrownforgeMeadow } from './meadow.js?v=20260923-livingearth1';
+import { CrownforgeAtmosphere } from './atmosphere.js?v=20260923-livingearth1';
+import { ANCIENT_FOREST_ATLAS, ASHEN_BUILDING_ASSETS, ASSET_RECTS, COMBAT_ATLASES, CONFIG, ENEMY_CAMP_ASSET, FACTION, GOLD_DEPOSIT_ASSETS, LARGE_STONE_ASSET, LIGHTING, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, UNIT_TYPES, BUILDING_TYPES, VILLAGER_ATLASES, ENVIRONMENT_ATLAS, TREE_ATLAS, ROAD_DETAILS_ATLAS, BUILDING_STAGE_ATLAS, TREE_GROVE_ATLAS, WILDWOOD_FOREST_ATLAS, FIRST_AGE_ASSETS, resourceDepletionStage } from './config.js?v=20260923-livingearth1';
+import { ANIMATION_EVENTS, animationDefinition, animationFrame, resolveAnimationState } from './animation.js?v=20260923-livingearth1';
 
 const TAU = Math.PI * 2;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -301,6 +302,7 @@ export class CrownforgeRenderer {
     this.daylightEnabled = !query.has('lighting-off');
     this.frameStats = { count: 0, samples: [] };
     this.atmosphere = new CrownforgeAtmosphere(this);
+    this.terrainReliefEnabled = true;
     this.landscape = new CrownforgeLandscape(this);
     this.grizzly = new GrizzlyRenderer();
     this.forestCache = new ForestCache(this);
@@ -555,7 +557,7 @@ export class CrownforgeRenderer {
   ensureStaticLayer() {
     // Paint grass at the exact current camera scale; stretching a coarse
     // overview while detail arrives makes zooming visibly blurry.
-    const key = [this.width, this.height, this.camera.x, this.camera.y, this.camera.zoom, this.roadReady, this.daylightEnabled, this.landscape.revision].join('|');
+    const key = [this.width, this.height, this.camera.x, this.camera.y, this.camera.zoom, this.roadReady, this.daylightEnabled, this.landscape.revision,this.terrainReliefEnabled].join('|');
     if (this.staticLayerKey === key) return;
     const staticCtx = this.staticLayer.getContext('2d');
     staticCtx.setTransform(this.resolutionScale, 0, 0, this.resolutionScale, 0, 0);
@@ -1272,6 +1274,7 @@ export class CrownforgeRenderer {
       const readableState = unit.selected || unit.command !== 'idle' || ['enemy','wildlife'].includes(unit.faction) || unit.hp < unit.maxHp;
       if (readableState) {
         drawLastLightChorus(ctx,unit,point,unitSize*this.camera.zoom,this.lastRenderTime,this.atmosphere.reducedMotion,true);
+    drawFinalBenediction(ctx,unit,point,unitSize*this.camera.zoom,this.lastRenderTime,this.atmosphere.reducedMotion,true);
     if (CHARACTER_RIGS[unit.type]?.family === 'worker' && !unit.dead) drawHearthkinWard(ctx, unit, point, unitSize * this.camera.zoom, this.lastRenderTime, true, this.atmosphere.reducedMotion);
         if (unit.type === 'grizzly') this.grizzly.draw(ctx,unit,point,unitSize*this.camera.zoom,this.lastRenderTime,this.atmosphere.reducedMotion,this.resolutionScale);
         else if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, unitSize * this.camera.zoom, 1);
@@ -2291,6 +2294,7 @@ export class CrownforgeRenderer {
     const alpha = unit.dead ? Math.max(0, 0.92 - unit.deathAge * 0.18) : 1;
     if (!unit.dead) this.drawSelectionMarker(ctx, point, unit.selected, unit.type === 'soldier' ? 0.82 : unit.type === 'raider' ? 0.78 : unit.type === 'scout' ? 1.25 : 0.66, ['enemy','wildlife'].includes(unit.faction) ? '#d86b55' : FACTION.color);
     drawLastLightChorus(ctx,unit,point,size*this.camera.zoom,time,this.atmosphere.reducedMotion,true);
+    drawFinalBenediction(ctx,unit,point,size*this.camera.zoom,time,this.atmosphere.reducedMotion,true);
     if (CHARACTER_RIGS[unit.type]?.family === 'worker' && !unit.dead) drawHearthkinWard(ctx, unit, point, size * this.camera.zoom, time, true, this.atmosphere.reducedMotion);
     if (unit.type === 'grizzly') this.grizzly.draw(ctx,unit,point,size*this.camera.zoom,time,this.atmosphere.reducedMotion,this.resolutionScale);
     else if (CHARACTER_RIGS[unit.type]) this.drawVillagerAsset(ctx, unit, point, size * this.camera.zoom, alpha);
@@ -2322,6 +2326,7 @@ export class CrownforgeRenderer {
 
   drawUnitStatusEffects(ctx, unit, point, screenSize, time = 0) {
     drawLastLightChorus(ctx,unit,point,screenSize,time,this.atmosphere.reducedMotion,false);
+    drawFinalBenediction(ctx,unit,point,screenSize,time,this.atmosphere.reducedMotion,false);
     if(unit.dodgePulse>0){ctx.save();ctx.globalAlpha=unit.dodgePulse/.45;ctx.fillStyle='#bfeaff';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText('DODGE',point.x,point.y-screenSize*.9);ctx.restore();}
     if(unit.healPulse>0||unit.healCastPulse>0){
       const pulse=Math.max(unit.healPulse??0,unit.healCastPulse??0),r=Math.max(7,screenSize*.2);

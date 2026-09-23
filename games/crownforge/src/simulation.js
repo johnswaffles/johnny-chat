@@ -1,22 +1,23 @@
-import {wizardAttackRange,reckoningDamage} from './eventide-ascendancy.js?v=20260922-bearrelease1';
-import {prepareWizardPosition} from './wizard-positioning.js?v=20260922-bearrelease1';
+import {grantFinalBenediction,updateFinalBenediction} from './final-benediction.js?v=20260923-livingearth1';
+import {wizardAttackRange,reckoningDamage} from './eventide-ascendancy.js?v=20260923-livingearth1';
+import {prepareWizardPosition} from './wizard-positioning.js?v=20260923-livingearth1';
 import {stormwardDamage} from './storm-dragon.js?v=20260921-toolbarheal1';
-import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260922-bearrelease1';
-import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,eligibleMember,TEAM_RULES,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260922-bearrelease1';
+import {castWizardSpell,updateWizardMagic,wizardIncomingDamage} from './wizard-magic.js?v=20260923-livingearth1';
+import {cancelSidePull,prepareTankPull,holdForTankPull,markFrontFallback,bearRearPosition,bearOrbitStep,combatRole,isTeamHealer,eligibleMember,TEAM_RULES,teams,assignTeam,leaveTeam,selectTeam,tankTarget,claimThreat,updateTeams,prepareTeamAttack,updateTeamApproaches,teamMovePoint} from './combat-teams.js?v=20260923-livingearth1';
 import { BEAR_VARIANT_IDS } from './bear-variants.js?v=20260921-toolbarheal1';
-import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260922-bearrelease1';
-import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260922-bearrelease1';
-import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260922-bearrelease1';
+import { kingsbaneMultiplier, updateGreatwoodDefiance, bearEnrageActive, combatRadius, inBearSwipe, BEAR_FURY, FIGHTER_PURSUIT, isFighter, bearFuryActive, bearArrowDamage, bearIncomingDamage, corpseLifetime } from './bear-combat.js?v=20260923-livingearth1';
+import {updateLastBastion,lastBastionDamage,isCurseImmune,isWardProtected,strikeDamage} from './unit-status.js?v=20260923-livingearth1';
+import { initialWildlifeState, updateWildlife } from './wildlife.js?v=20260923-livingearth1';
 import { GRIZZLY_PURSUIT, grizzlyAttackDefinition, updateGrizzlyMotion } from './grizzly-motion.js?v=20260909-cursedbears1';
-import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260922-bearrelease1';
-import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260922-bearrelease1';
-import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260922-bearrelease1';
-import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260922-bearrelease1';
-import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260922-bearrelease1';
-import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260922-bearrelease1';
+import { assignEnemyEconomy, assignEnemyPatrols } from './enemy-routines.js?v=20260923-livingearth1';
+import { landscapeHash, landscapeNoise, woodlandDensity, woodlandRidgeZ, FOREST_LIMITS } from './landscape-layout.js?v=20260923-livingearth1';
+import { BUILDING_ART_VERSION } from './building-depth-data.js?v=20260923-livingearth1';
+import { readSavedGameForBuildingUpgrade } from './building-save-backup.js?v=20260923-livingearth1';
+import { hasBuildingOutline, buildingActorProfile, outlineBounds, outlineApproaches, distanceToOutline, withinOutlineDistance, projectOutsideOutline, cellIntersectsOutline, translatedOutline, polygonsOverlap } from './building-geometry.js?v=20260923-livingearth1';
+import { BUILDING_TYPES, CONFIG, ENEMY_AI, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, INITIAL_RESOURCES, PRODUCTION_TYPES, RESOURCE_SIZE_TIERS, RESOURCE_TYPES, SPACING_ROLES, UNIT_TYPES, resourceDepletionStage } from './config.js?v=20260923-livingearth1';
 import { findPath } from './pathfinding.js?v=20260909-cursedbears1';
 import { ResourceConnectivity } from './resource-connectivity.js?v=20260909-cursedbears1';
-import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260922-bearrelease1';
+import { ANIMATION_EVENT_TIMINGS, ANIMATION_EVENTS, CrownforgeAnimationSystem } from './animation.js?v=20260923-livingearth1';
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const isHearthkinUnit = (unit) => UNIT_TYPES[unit?.type]?.race === 'hearthkin';
@@ -2342,6 +2343,7 @@ export class CrownforgeSimulation {
   }
 
   _updateUnitStatusEffects(unit, dt) {
+    if(updateFinalBenediction(this,unit,dt))return true;
     if(isCurseImmune(unit)){unit.stunTimer=0;unit.stunImmunityTimer=0;}
     unit.wardBlockedPulse = Math.max(0, (unit.wardBlockedPulse ?? 0) - dt);
     unit.lastLightWardBlastTimer = Math.max(0, (unit.lastLightWardBlastTimer ?? 0) - dt);
@@ -2358,6 +2360,7 @@ export class CrownforgeSimulation {
         unit.lastLightWardHealRate = 0;
       }
     }
+    if(unit.finalBenedictionRemaining>0)unit.hp=1;
     unit.stunImmunityTimer = Math.max(0, (unit.stunImmunityTimer ?? 0) - dt);
     if (unit.stunTimer <= 0) return false;
 
@@ -4454,6 +4457,7 @@ export class CrownforgeSimulation {
 
   _applyUnitDamage(target, amount, attacker, {damageType='weapon',healthFloor=0,areaOfEffect=false,magical=false}={}) {
     if (!target || target.dead || target.kind !== 'unit') return { damage: 0, killed: false, warded: false, blocked: false, cursed: false };
+    if(target.finalBenedictionRemaining>0){target.hp=1;return {damage:0,killed:false,warded:true,blocked:true,cursed:false};}
     if(target.type==='wizard'&&target.eventideVeil>0)return {damage:0,killed:false,warded:true,blocked:true,cursed:false};
     const defense=UNIT_TYPES[target.type];
     if(defense?.harmImmune){
@@ -4489,6 +4493,7 @@ export class CrownforgeSimulation {
       return { damage: before, killed: false, warded: true, blocked: false, cursed: false };
     }
 
+    if(after<=0&&grantFinalBenediction(this,target,attacker)){target.lastCombatDamageAt=this.clock;return {damage:Math.max(0,before-1),killed:false,warded:true,blocked:false,cursed:false};}
     if(target.type==='grizzly'&&after<=target.maxHp*.5)target.greatwoodEnraged=true;
     target.hp = after < 1e-8 ? 0 : after;
     if(damage>0){target.lastCombatDamageAt=this.clock;target.lastCombatAttackerId=attacker?.id;}
@@ -5130,6 +5135,7 @@ export class CrownforgeSimulation {
   }
 
   _killUnit(unit, killer) {
+    if(unit.finalBenedictionRemaining>0){unit.hp=1;return;}
     this._interruptWork(unit);
     unit.dead = true;
     unit.deathAge = 0;

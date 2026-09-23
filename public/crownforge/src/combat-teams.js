@@ -1,6 +1,7 @@
-import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260922-bearrelease1';
-import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260922-bearrelease1';
-import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260922-bearrelease1';
+import {lastBreathTarget} from './final-benediction.js?v=20260923-livingearth1';
+import {combatRadius,BEAR_FURY} from './bear-combat.js?v=20260923-livingearth1';
+import {CONFIG,RESOURCE_SIZE_TIERS,UNIT_TYPES} from './config.js?v=20260923-livingearth1';
+import {isWardProtected,lastCrownMercyActive} from './unit-status.js?v=20260923-livingearth1';
 export const TEAM_RULES=Object.freeze({healAmount:.9,tankHealAmount:40,healInterval:2,healRange:24,followDistance:10,tauntDuration:8,tauntRange:24});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function combatRole(unit){
@@ -48,6 +49,7 @@ export function selectTeam(sim,id){
  sim._announce(`Your team selected · ${members.length} members.`);return members.length;
 }
 export function tankTarget(sim,enemy){
+ const finalStand=lastBreathTarget(sim,enemy);if(finalStand)return finalStand;
  const side=sidePullTarget(sim,enemy);if(side)return side;
  if(enemy?.type==='grizzly'){
   if(enemy.dead||enemy.hp<=0)return null;
@@ -94,7 +96,7 @@ export function updateTeams(sim,dt){
   if(healer.command==='build'||healer.buildTarget)continue;
   if(!['idle','move'].includes(healer.command)){sim._interruptWork(healer);healer.command='idle';healer.path=[];healer.orderQueue=[];}
   const allies=group.members.filter(u=>u!==healer);
-  const patients=sim.units.filter(u=>eligibleMember(u)&&u!==healer&&u.hp<u.maxHp&&distance(healer,u)<=TEAM_RULES.healRange+(combatRole(u)==='tank'?5:0)&&sim._hasCombatLineOfSight(healer,u))
+  const patients=sim.units.filter(u=>eligibleMember(u)&&!(u.finalBenedictionRemaining>0)&&u!==healer&&u.hp<u.maxHp&&distance(healer,u)<=TEAM_RULES.healRange+(combatRole(u)==='tank'?5:0)&&sim._hasCombatLineOfSight(healer,u))
    .sort((a,b)=>Number(combatRole(b)==='tank')-Number(combatRole(a)==='tank')||a.hp/a.maxHp-b.hp/b.maxHp||a.id-b.id);
   const patient=patients[0];
   if(patient&&healer.healCooldown<=0){

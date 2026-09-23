@@ -1,21 +1,22 @@
-import {createCommandToolbar} from './command-toolbar.js?v=20260922-bearrelease1';
+import {createTouchControls} from './touch-controls.js?v=20260923-livingearth1';
+import {createCommandToolbar} from './command-toolbar.js?v=20260923-livingearth1';
 import {createSkybreakerControls} from './skybreaker-controls.js?v=20260921-toolbarheal1';
-import {createCombatFrames} from './combat-frames.js?v=20260922-bearrelease1';
-import {createUnitActivity} from './unit-activity.js?v=20260922-bearrelease1';
-import {createTeamControls} from './team-controls.js?v=20260922-bearrelease1';
-import {combatRole} from './combat-teams.js?v=20260922-bearrelease1';
+import {createCombatFrames} from './combat-frames.js?v=20260923-livingearth1';
+import {createUnitActivity} from './unit-activity.js?v=20260923-livingearth1';
+import {createTeamControls} from './team-controls.js?v=20260923-livingearth1';
+import {combatRole} from './combat-teams.js?v=20260923-livingearth1';
 import { bearVariant } from './bear-variants.js?v=20260921-toolbarheal1';
-import {requestGrizzlyPair} from './wildlife.js?v=20260922-bearrelease1';
-import {createUnitInspector} from './unit-inspector.js?v=20260922-bearrelease1';
-import {displayedUnitHealth} from './unit-status.js?v=20260922-bearrelease1';
-import { setupPresentation } from './presentation.js?v=20260922-bearrelease1';
-import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260922-bearrelease1';
-import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260922-bearrelease1';
+import {requestGrizzlyPair} from './wildlife.js?v=20260923-livingearth1';
+import {createUnitInspector} from './unit-inspector.js?v=20260923-livingearth1';
+import {displayedUnitHealth} from './unit-status.js?v=20260923-livingearth1';
+import { setupPresentation } from './presentation.js?v=20260923-livingearth1';
+import { BUILDING_TYPES, FACTION, FIRST_AGE_BUILD_BLUEPRINTS, FIRST_AGE_MILESTONES, FIRST_AGE_TECHNOLOGIES, FIRST_AGE_WORK_PRIORITIES, PRODUCTION_TYPES, RESOURCE_TYPES, UNIT_TYPES } from './config.js?v=20260923-livingearth1';
+import { CrownforgeAudio, CROWNFORGE_MUSIC } from './audio.js?v=20260923-livingearth1';
 import { CrownforgeInput } from './input.js?v=20260909-cursedbears1';
-import { CrownforgeRenderer } from './renderer.js?v=20260922-bearrelease1';
-import { CrownforgeSimulation } from './simulation.js?v=20260922-bearrelease1';
+import { CrownforgeRenderer } from './renderer.js?v=20260923-livingearth1';
+import { CrownforgeSimulation } from './simulation.js?v=20260923-livingearth1';
 import { CrownforgePerformanceMonitor } from './performance.js?v=20260909-cursedbears1';
-import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260922-bearrelease1';
+import { previousBuildingSave, restorePreviousBuildingSave } from './building-save-backup.js?v=20260923-livingearth1';
 
 const canvas = document.querySelector('#game-canvas');
 const toast = document.querySelector('#toast');
@@ -599,7 +600,10 @@ const teamControls=createTeamControls(simulation,()=>{announce(simulation.lastCo
 
 const commandToolbar=createCommandToolbar(simulation,()=>{audio.unlock();audio.ui();announce(simulation.lastCommand);updateUi();});
 
+const touchControls=createTouchControls({input,simulation,renderer,announce});
+
 function updateUi() {
+  touchControls.update();
   commandToolbar.update();
   teamControls.update();
   const pendingBears=Boolean(simulation.wildlifeState?.pendingPair);
@@ -1028,7 +1032,7 @@ function frame(now) {
   input.update(delta);
   presentation.update(now);
   const simulationStart = performance.now();
-  simulation.update(delta);
+  if (!touchControls.paused) simulation.update(delta);
   const simulationMs = performance.now() - simulationStart;
   audio.sync(simulation);
   const renderStart = performance.now();
@@ -1057,7 +1061,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-window.crownforge = { simulation, renderer, input, audio, unitInspector };
+window.crownforge = { simulation, renderer, input, audio, unitInspector, touchControls };
 bindTooltips();
 updateMusicControl();
 requestAnimationFrame(frame);
