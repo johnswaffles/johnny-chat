@@ -1,0 +1,5 @@
+# Arcade spell icons
+
+Built-in image generation. Saved atlas: assets/arcade-spell-icons-v1.png.
+
+Create one game UI icon atlas: exactly four equal square icons in a seamless 2 by 2 grid, 1024x1024 overall, each cell exactly512x512, no gutters, no text, no letters, no borders. Premium painterly fantasy action RPG ability icons for silver-haired Starveil wizard. All four consistent cinematic detailed material style, dark midnight-blue background, intense luminous magic, crisp central silhouettes readable at 64px. Upper left: spherical blue-white arcane fireball with turbulent curling azure flame, no ninja blades. Upper right: violet and teal magical portal ellipse in perspective with a comet light crossing through it. Lower left: seven luminous silver-blue falling stars striking a brass celestial constellation seal. Lower right: dramatic recognizable blue dragon head in three-quarter view roaring with golden-white lightning and starry blue scales. Rich deep contrast, luminous detail contained inside each square, visually awesome and magical, clean usable game-ready atlas.

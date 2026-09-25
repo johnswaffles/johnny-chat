@@ -1,0 +1,5 @@
+<!doctype html><meta charset="utf-8"><title>Level theme check</title><button id="play">Play level theme</button><button id="mute">Mute</button><button id="resume">Unmute</button><button id="loop">Check end-of-track loop</button><pre id="status"></pre><script type="module">
+import {Soundscape} from '../src/audio.js?door-theme=1';const a=new Soundscape();let wraps=0,previous=0;
+document.querySelector('#play').onclick=()=>a.start();document.querySelector('#mute').onclick=()=>a.setEnabled(false);document.querySelector('#resume').onclick=()=>a.setEnabled(true);document.querySelector('#loop').onclick=()=>{if(a.music&&Number.isFinite(a.music.duration)){a.music.playbackRate=16;a.start();previous=a.music.currentTime;}};
+setInterval(()=>{const m=a.music;if(!m)return;if(previous>m.currentTime+1){wraps++;m.playbackRate=1;}previous=m.currentTime;document.querySelector('#status').textContent=JSON.stringify({paused:m.paused,time:m.currentTime,duration:m.duration,loop:m.loop,wraps,error:m.error?.message||null,elements:document.querySelectorAll('audio').length});},100);
+</script>

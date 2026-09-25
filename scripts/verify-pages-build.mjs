@@ -13,6 +13,7 @@ const activeRoutes = [
   "/cozy-builder-game/",
   "/cozy-builder/",
   "/crownforge/",
+  "/last-star/",
   "/cozy-search/"
 ];
 const errors = [];

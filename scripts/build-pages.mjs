@@ -4748,6 +4748,20 @@ ${siteNav("ai", "contact")}
 </html>`;
 }
 
+async function syncLastStarBuild() {
+  const source = path.join(root, "games", "last-star");
+  const target = path.join(publicDir, "last-star");
+  await mkdir(target, { recursive: true });
+  for (const item of ["index.html", "style.css", "src", "assets"]) {
+    await cp(path.join(source, item), path.join(target, item), { recursive: true });
+  }
+  // Opt-in browser QA uses the same input adapter and route driver as local tests.
+  await mkdir(path.join(target, "tests"), { recursive: true });
+  for (const item of ["route-driver.mjs", "virtual-gamepad.js"]) {
+    await cp(path.join(source, "tests", item), path.join(target, "tests", item));
+  }
+}
+
 async function main() {
   const aiSourcePath = path.join(publicDir, "ai-services.html");
   const mowingSourcePath = path.join(root, "squarespace_landing_section.html");
@@ -4776,6 +4790,7 @@ async function main() {
   await mkdir(path.join(publicDir, "contact"), { recursive: true });
   await syncGodotBuilds();
   await syncCrownforgeBuild();
+  await syncLastStarBuild();
   await syncMosswakeBuild();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();

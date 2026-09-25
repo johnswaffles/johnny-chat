@@ -1,0 +1,7 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "file": "assets/last-star-valley-detail-v2.png",
+  "reference": "assets/last-star-valley-v1.png",
+  "prompt": "Edit this exact original Crownforge panoramic game background. Deliver at 3840x1280 pixels, 3:1 aspect ratio, high native detail. Preserve the entire composition, identical positions and shapes of waterfalls, bridges, mountains, tree, and observatory; this image must align with existing scenery geometry. Substantially refine sharp, intricate detail: individually defined silver leaves, fissured bark, precise ivory stone blocks and carved Gothic tracery, brass observatory rings, craggy mountains, little pines and clear water strands. Maintain moonlit indigo and teal atmosphere with gold windows. Reduce the broad soft haze through the middle distance to reveal structures and rock formations; retain atmospheric perspective only far away and low in the valley. Crisp premium painterly realism, detailed rather than smooth or blurry. No changes to landmark layout, no new major objects, no text, no characters. Preserve panoramic framing exactly.",
+  "note": "Requested a larger image; the tool returned 2172x724. This is a more detailed repaint at the same native dimensions, not a resolution increase. Original v1 is preserved."
+}

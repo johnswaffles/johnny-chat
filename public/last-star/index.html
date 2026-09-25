@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta name="last-star-release" content="20260925-arcade-live1">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#071922">
+  <title>Crownforge: Last Star</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23b7e9ef' d='M32 0l7 25 25 7-25 7-7 25-7-25L0 32l25-7z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css?arcade=1">
+</head>
+<body>
+<main id="game" aria-label="Crownforge Last Star side-scrolling adventure">
+  <canvas tabindex="-1" id="world" aria-label="Game world. Move with A and D, jump with Space, cast with J, blink with Shift, constellation with Q, dragon with R, interact with E."></canvas>
+  <div id="vignette"></div>
+  <section id="hud" hidden>
+    <div class="vitals"><div class="crest">✧</div><div class="vital-info"><div class="eyebrow">KEEPER OF THE LAST STAR</div><div class="health-row"><span>Starveil Arcanist</span><span id="health-text">210 / 210</span></div><div class="bar health"><i id="health-fill"></i></div><div class="mana-row"><div class="bar mana"><i id="mana-fill"></i></div><span id="mana-text">100</span></div><div id="buffs"></div></div></div>
+    <aside id="arcade-hud" aria-label="Arcade score"><span>RUN SCORE</span><strong id="run-score">000000</strong><small id="combo-label">CHAIN KILLS · BUILD YOUR MULTIPLIER</small><div class="combo-track"><i id="combo-fill"></i></div></aside>
+    <aside id="power-hud" aria-label="Crystal power"><div><b id="power-rank">STAR POWER · 0</b><span id="crystal-count">0 crystals</span></div><div class="charge-track"><i id="charge-fill"></i></div><p id="power-description">Collect 6 crystals for +10% damage</p><small id="overdrive-label">OVERDRIVE · 0 / 9</small></aside>
+    <div class="quest"><div class="eyebrow" id="chapter">I · THE SILVERWOOD</div><div id="objective">Awaken the first starseal</div><div id="seals" aria-label="Starseals restored">◇ ◇ ◇</div><div id="memory-count">Memories 0 / 6</div></div>
+    <button id="pause-button" class="corner-button" aria-label="Pause game">Ⅱ</button>
+    <div id="boss-ui" hidden><div class="eyebrow">THE HOLLOW ASTRONOMER</div><div class="bar boss"><i id="boss-fill"></i></div></div>
+    <div id="area-title"><small>THE PATH TO THE LAST OBSERVATORY</small><strong>The Silverwood</strong></div>
+    <div id="interaction" hidden></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="dialogue" hidden><span class="dialogue-star">✦</span><div><small>THE ARCANIST</small><p></p></div></div>
+    <nav id="abilities" aria-label="Abilities">
+      <button data-spell="bolt" title="Starshard · J or left click · Hold to cast"><kbd>J</kbd><span class="spell-symbol" aria-hidden="true"></span><span class="spell-name">Starshard</span><i class="cooldown"></i></button>
+      <button data-spell="blink" title="Eventide Passage · Shift · Blink in your movement direction"><kbd>⇧</kbd><span class="spell-symbol" aria-hidden="true"></span><span class="spell-name">Eventide</span><i class="cooldown"></i></button>
+      <button data-spell="constellation" title="Falling Constellation · Q or right click · 30 starlight"><kbd>Q</kbd><span class="spell-symbol" aria-hidden="true"></span><span class="spell-name">Constellation</span><i class="cooldown"></i></button>
+      <button data-spell="dragon" title="Heavenrend · R · 60 starlight · Awaken the second seal"><kbd>R</kbd><span class="spell-symbol" aria-hidden="true"></span><span class="spell-name">Heavenrend</span><i class="cooldown"></i></button>
+    </nav>
+    <div class="bottom-hint"><span>A D <b>move</b> · SPACE <b>jump / double jump</b></span><span>E <b>interact</b> · ESC <b>pause</b></span></div>
+  </section>
+  <section id="title-screen" class="screen">
+    <div class="topline"><span>CROWNFORGE</span><span>A STARVEIL CHRONICLE</span></div>
+    <div class="title-content"><div class="eyebrow">ONE EMBER. AN ENDLESS NIGHT.</div><h1>Last <em>Star</em></h1><div class="title-rule"><span>✦</span></div><p>When the old gods sealed the night,<br>one star escaped.</p><p class="title-sub">Carry its light home.</p><div class="title-actions"><button id="begin" class="primary" disabled>Gathering starlight…</button><button id="continue" class="secondary" hidden>Continue your journey</button></div><div class="title-footer">CHAPTER I <span>—</span> THE PATH TO THE LAST OBSERVATORY</div></div>
+    <div class="title-bottom"><span>AN ORIGINAL CROWNFORGE ADVENTURE</span><button id="title-settings" class="text-button">Controls & settings</button></div>
+  </section>
+  <section id="pause-screen" class="screen modal-screen" hidden><div class="modal"><div class="eyebrow">A MOMENT BETWEEN STARS</div><h2 id="pause-title">The night can wait.</h2><p>Gain 1% damage for each 1% of health missing. Heal for 2% of damage dealt.</p><p class="small">Defeat shades for Star Crystals. Move close to collect them: +4 starlight each. Power ranks at 6 / 15 / 27 crystals add 10% damage each. Every 9 crystals grants 8 seconds of Overdrive (+35% damage). Chain kills within 8 seconds for up to ×5 score; getting hit breaks the chain.</p><div class="controls"><div><kbd>A D / ← →</kbd><span>Move</span></div><div><kbd>SPACE / W / ↑</kbd><span>Jump · press again in air</span></div><div><kbd>J / LEFT CLICK</kbd><span>Starshard · hold to cast</span></div><div><kbd>SHIFT / K</kbd><span>Eventide Passage</span></div><div><kbd>Q / RIGHT CLICK</kbd><span>Falling Constellation</span></div><div><kbd>R</kbd><span>Heavenrend · second seal</span></div><div><kbd>E</kbd><span>Restore seal / read memory</span></div></div><p class="small">Level theme: The Door Beneath the World · looping</p><label class="setting">Music & sound <input id="sound" type="checkbox" checked></label><label class="setting">Gentle effects <input id="gentle" type="checkbox"></label><label class="setting">Atmosphere quality <select id="quality"><option value="high">Rich</option><option value="low">Light</option></select></label><button id="customize-controls" class="secondary">Customize keyboard & controller</button><p class="small">Your last restored seal is saved on this device. Defeat returns you to it.</p><button id="resume" class="primary">Return to the stars</button><button id="back-title" class="text-button">Title screen</button></div></section>
+
+  <section id="bindings-screen" class="screen modal-screen" hidden><div class="modal bindings-modal">
+    <div class="eyebrow">MAKE THE MAGIC YOURS</div><h2>Your controls.</h2>
+    <p class="controller-status"><i id="controller-light"></i><span id="controller-status">Connect a controller, then press a button.</span></p>
+    <p class="small">Left stick moves · right stick aims · Menu pauses.<br>Menus: D-pad / left stick navigate · A selects · B goes back.</p>
+    <div class="binding-row binding-head"><span>Action</span><span>Keyboard</span><span>Controller</span></div>
+    <div id="binding-rows"></div>
+    <p id="binding-message" role="status">Select a binding to change it. Assigning a used button swaps the two actions.</p>
+    <button id="cancel-binding" class="secondary" hidden>Cancel binding</button>
+    <label class="setting" for="deadzone">Stick dead zone <output id="deadzone-value">18%</output></label><input id="deadzone" type="range" min="0.08" max="0.4" step="0.02" value="0.18" aria-label="Stick dead zone">
+    <div class="binding-footer"><button id="reset-bindings" class="text-button">Restore defaults</button><button id="bindings-back" class="primary">Done</button></div>
+    <p class="small">Escape and the controller Menu button always remain available. Xbox labels apply to standard-mapped controllers.</p>
+  </div></section>
+  <section id="death-screen" class="screen modal-screen" hidden><div class="modal compact"><div class="eyebrow">THE EMBER ENDURES</div><h2>A light never lost.</h2><p>The last star calls you back.<br>Your restored seals are safe. Run score and crystal power restart.</p><button id="retry" class="primary">Return to the last seal</button></div></section>
+  <section id="ending-screen" class="screen modal-screen" hidden><div class="modal ending"><div class="eyebrow">CHAPTER COMPLETE</div><div class="ending-star">✦</div><h2>The night remembers light.</h2><p>The Observatory wakes. Far below, the lamps of Brackenwatch answer, one by one.</p><p>You carried the ember home.</p><div id="ending-stats"></div><button id="replay" class="primary">Walk the path again</button><button id="ending-title" class="text-button">Return to title</button></div></section>
+  <section id="memory-screen" class="screen memory-screen" role="dialog" aria-modal="true" aria-labelledby="memory-title" hidden>
+    <article class="memory-book">
+      <div class="memory-art-wrap"><img id="memory-art" alt=""><div class="memory-art-caption">THE KEEPER OF THE LAST STAR</div></div>
+      <div class="memory-copy"><div class="eyebrow" id="memory-chapter"></div><h2 id="memory-title"></h2><p id="memory-place"></p><div id="memory-prose" aria-live="polite"></div>
+      <div class="memory-footer"><span id="memory-page"></span><div><button id="memory-prev" class="secondary">Previous page</button><button id="memory-next" class="primary">Next page →</button></div></div>
+      <button id="memory-close" class="text-button">Return to the journey</button><p class="memory-status">Game paused · Escape / controller B to return</p></div>
+    </article>
+  </section>
+  <div id="load-error" hidden role="alert"></div>
+</main>
+<script type="module" src="src/main.js?arcade=1"></script>
+</body></html>

@@ -60,3 +60,15 @@
 
 /textsmith/*
   Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+/last-star/
+  Cache-Control: no-cache
+
+/last-star/index.html
+  Cache-Control: no-cache
+
+/last-star/src/*
+  Cache-Control: no-cache
+
+/last-star/style.css
+  Cache-Control: no-cache

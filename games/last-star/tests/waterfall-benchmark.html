@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8"><title>Waterfall comparison</title><style>body{background:#102334;color:white;font:18px sans-serif}canvas{width:100%;max-width:1280px}button{padding:12px}pre{white-space:pre-wrap}</style><button id="run">Compare rendering cost</button><pre id="result">Loading</pre><canvas width="1280" height="720"></canvas><script type="module">
+import {createWaterfallSprites,drawWaterfalls,waterfallTransform} from '../src/waterfalls.js?arch-fix=1';
+import {drawWaterfalls as before} from './fixtures/waterfalls-before.mjs';
+const image=new Image();image.src='../assets/last-star-valley-detail-v2.png';await image.decode();
+const canvas=document.querySelector('canvas'),c=canvas.getContext('2d'),t=waterfallTransform(image,1280,0,7900),start=performance.now(),sprites=await createWaterfallSprites(image),bake=performance.now()-start;
+const memory=sprites.reduce((n,s)=>n+s.width*s.height*16*4,0);
+let running=false;
+function draw(time){c.drawImage(image,t.x,t.y,t.width,t.height);drawWaterfalls(c,t,time,sprites,1280);}
+function tick(now){if(!running)draw(now/1000);requestAnimationFrame(tick)}requestAnimationFrame(tick);
+document.querySelector('#result').textContent=`Ready. Sprite preparation ${bake.toFixed(1)} ms; ${(memory/1048576).toFixed(1)} MiB. Animated preview below.`;
+document.querySelector('#run').onclick=()=>{
+ running=true;const measure=fn=>{const a=performance.now();for(let i=0;i<30;i++){c.clearRect(0,0,1280,720);fn(i/60);c.getImageData(0,0,1280,720);}return (performance.now()-a)/30;};
+ const old=measure(time=>before(c,t,time)),fresh=measure(time=>drawWaterfalls(c,t,time,sprites,1280));
+ document.querySelector('#result').textContent=`30 frames each, 1280×720, including full-canvas readback. Old: ${old.toFixed(2)} ms/frame. Sprites: ${fresh.toFixed(2)} ms/frame. ${(old/fresh).toFixed(1)}× faster in this isolated check. Preparation: ${bake.toFixed(1)} ms; ${(memory/1048576).toFixed(1)} MiB. Gameplay FPS is separate.`;running=false;
+};
+</script>
