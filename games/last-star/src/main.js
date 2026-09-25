@@ -18,7 +18,7 @@ try{saved=parseSave(localStorage.getItem(storageKey));const prefs=JSON.parse(loc
 const zoneNames=['The Silverwood','The Broken Aqueduct','The Last Observatory'];
 function showToast(text){$('toast').textContent=text;toastUntil=performance.now()+3000;$('toast').classList.add('visible');}
 function save(){saved=game.save();try{localStorage.setItem(storageKey,JSON.stringify(saved));}catch{showToast('This browser cannot save. Keep this window open to continue.');}}
-function showDialogue(text){$('dialogue').querySelector('p').textContent=text;dialogueUntil=performance.now()+Math.max(6200,text.length*48);$('dialogue').hidden=false;}
+function showDialogue(text){$('dialogue').querySelector('p').textContent=text;dialogueUntil=performance.now()+Math.min(4500,Math.max(3000,text.length*45));$('dialogue').hidden=false;}
 let memoryIndex=0,memoryPage=0;
 function renderMemory(){
  const m=MEMORIES[memoryIndex];
