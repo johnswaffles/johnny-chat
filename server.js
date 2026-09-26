@@ -74,6 +74,7 @@ const REALTIME_SEARCH_MODEL = OPENAI_REALTIME_SEARCH_MODEL || OPENAI_GPT54_MODEL
 const MORROW_VISION_MODEL = OPENAI_MORROW_VISION_MODEL || OPENAI_GPT54_MODEL || "gpt-5.6-sol";
 const MORROW_TRANSCRIBE_MODEL = OPENAI_MORROW_TRANSCRIBE_MODEL || "gpt-transcribe";
 const MORROW_REALTIME_MODEL = "gpt-realtime-2.1-mini";
+const MORROW_DEEP_THINK_MODEL = "gpt-6-astra";
 const MORROW_PERSONALITY_VERSION = "morrow-personality-v4";
 const STORY_EDITOR_MODEL = OPENAI_STORY_EDITOR_MODEL || OPENAI_GPT54_MODEL || OPENAI_CHAT_MODEL;
 const STORY_EDITOR_REASONING_EFFORT = OPENAI_STORY_EDITOR_REASONING_EFFORT || "high";
@@ -658,7 +659,7 @@ function sendSse(res, event, data = {}) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function getGpt54ResponseConfig(profile, history, input, extra = {}) {
+function getGpt54ResponseConfig(profile, history, input, extra = {}, task = "") {
   const reasoningConfig = OPENAI_GPT54_REASONING_EFFORT
     ? { reasoning: { effort: OPENAI_GPT54_REASONING_EFFORT } }
     : {};
@@ -667,6 +668,7 @@ function getGpt54ResponseConfig(profile, history, input, extra = {}) {
     : {};
   const morrowConfig = profile === "morrow"
     ? {
+        ...(task === "deep_think" ? { model: MORROW_DEEP_THINK_MODEL } : {}),
         reasoning: { effort: "xhigh" },
         text: { verbosity: "medium" }
       }
@@ -969,7 +971,7 @@ function getRealtimeTools(profile = "ai") {
     tools.push({
       type: "function",
       name: "think_deep",
-      description: "Ask Morrow's private high-reasoning helper to work through a complex question, decision, contradiction, or explicit request to think deeply. This is a read-only handoff executed by the Morrow frontend: it does not change lists, Clockwise, memory, email, or any outside system. Pass the user's actual question or request and only the minimum relevant context. Never include passwords, credentials, exact addresses, or unrelated private memories.",
+      description: "Use GPT-6 Astra with extra-high reasoning for difficult questions: multi-step analysis, technical troubleshooting, competing explanations, consequential decisions, or synthesis across several facts. Call this proactively when careful reasoning matters, even if the user never says think deeply. Also use it when explicitly asked to think hard. Do not use it for casual chat, routine facts, or simple actions. This is a read-only handoff executed by the Morrow frontend: it does not change lists, Clockwise, memory, email, or any outside system. Pass the user's actual question or request and only the minimum relevant context. Never include passwords, credentials, exact addresses, or unrelated private memories.",
       parameters: {
         type: "object",
         properties: {
@@ -1109,7 +1111,7 @@ function getJohnnyRealtimeInstructions(profile = "ai", personalContext = "") {
 - Do not use search_web for ordinary personal sharing, emotional support, reflection, or merely to appear knowledgeable.
 - Create the narrowest query from the latest request. Never include Life Map memories, private names, exact locations, or unrelated personal context unless the user explicitly asks to search that specific information.
 - Before search_web, say one short natural preamble such as "Let me check that." After it returns, answer from the result, name useful sources conversationally, and do not read raw URLs aloud because links appear in the chat.
-- Call think_deep only for an explicit request to think deeply or a consequential, multi-factor decision, contradiction, or synthesis that would materially benefit. Never call think_deep for casual conversation, ordinary sharing, small talk, a playful question, routine facts, or a simple action. Pass the complete request plus only minimum relevant context. It is read-only and never replaces confirmation rules.
+- Call think_deep proactively for complex questions, multi-step analysis, technical troubleshooting, competing explanations, consequential decisions, or synthesis across several facts. It uses GPT-6 Astra with extra-high reasoning. Do not wait for the user to say think deeply; also call it whenever they explicitly ask for careful or deep reasoning. Examples include comparing business plans under constraints, diagnosing a recurring failure, or reconciling conflicting evidence. A short question can still be difficult. Never call think_deep for casual conversation, ordinary sharing, small talk, a playful question, routine facts, or a simple action. Pass the complete request and relevant constraints plus only minimum relevant context. It is read-only and never replaces confirmation rules. Say one brief natural acknowledgment before the handoff. After the result, preserve its conclusion, key reasons, uncertainty, and important qualifications without redoing the analysis or calling the helper again for the same request.
 - You start with an instant compact Companion brief and recent conversation continuity. When the user asks about an older discussion, exact prior wording, or an ambiguous “that thing the other day” that the compact context does not resolve, call recall_conversation with a focused private-memory query. Do not use public web search for private recall and do not guess.
 - If the latest audio is silence, background media, or speech not addressed to Morrow, remain silent and keep listening.`
     : `TOOLS:
@@ -1657,6 +1659,8 @@ app.get("/health", (_req, res) => res.json({
   release: "morrow-quiet-mobile-voice-v12",
   realtimeModel: OPENAI_REALTIME_MODEL,
   morrowRealtimeModel: MORROW_REALTIME_MODEL,
+  morrowDeepThinkModel: MORROW_DEEP_THINK_MODEL,
+  morrowDeepThinkReasoningEffort: "xhigh",
   morrowPersonalityVersion: MORROW_PERSONALITY_VERSION,
   morrowRealtimeVoices: Array.from(REALTIME_VOICES),
   morrowListTools: true,
@@ -4661,11 +4665,17 @@ app.post("/api/chat", async (req, res) => {
 
     if (profile === "gpt54" || profile === "community" || profile === "morrow") {
       if (profile === "gpt54") void recordJohnnyChatUsage("chats", { mode: "json" });
+      const deepThinking = profile === "morrow" && req.body?.task === "deep_think";
       const response = await openai.responses.create(getGpt54ResponseConfig(profile, history, s,
-        safetyIdentifier.match(/^[a-f0-9]{64}$/) ? { safety_identifier: safetyIdentifier } : {}));
+        safetyIdentifier.match(/^[a-f0-9]{64}$/) ? { safety_identifier: safetyIdentifier } : {},
+        deepThinking ? "deep_think" : ""));
+      if (deepThinking && (response.status !== "completed" || !extractResponseText(response).trim())) {
+        return res.status(502).json({ detail: "Morrow's deeper reasoning did not finish. Please try again." });
+      }
       return res.json({
         reply: extractResponseText(response) || "(no reply)",
-        sources: extractResponseSources(response)
+        sources: extractResponseSources(response),
+        ...(deepThinking ? { model: response.model, reasoningEffort: "xhigh" } : {})
       });
     }
 
