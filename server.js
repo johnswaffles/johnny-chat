@@ -76,6 +76,7 @@ const MORROW_REALTIME_MODEL = "gpt-realtime-2.1-mini";
 const MORROW_DEEP_THINK_MODEL = "gpt-6-astra";
 const VOICE_DEEP_THINK_MODEL = "gpt-6-astra";
 const UPLOAD_VISION_MODEL = "gpt-6-astra";
+const DEEP_RESEARCH_MODEL = "gpt-6-astra";
 const MORROW_PERSONALITY_VERSION = "morrow-personality-v4";
 const STORY_EDITOR_MODEL = OPENAI_STORY_EDITOR_MODEL || OPENAI_GPT54_MODEL || OPENAI_CHAT_MODEL;
 const STORY_EDITOR_REASONING_EFFORT = OPENAI_STORY_EDITOR_REASONING_EFFORT || "high";
@@ -1668,6 +1669,8 @@ app.get("/health", (_req, res) => res.json({
   morrowDeepThinkReasoningEffort: "xhigh",
   voiceDeepThinkModel: VOICE_DEEP_THINK_MODEL,
   voiceDeepThinkReasoningEffort: "xhigh",
+  deepResearchModel: DEEP_RESEARCH_MODEL,
+  deepResearchReasoningEffort: "xhigh",
   uploadVisionModel: UPLOAD_VISION_MODEL,
   uploadVisionReasoningEffort: "high",
   morrowPersonalityVersion: MORROW_PERSONALITY_VERSION,
@@ -4802,7 +4805,8 @@ app.post("/api/deep-research", async (req, res) => {
     const matchedLibrary = libraryContext(selectLibraryItems(lib.items, query, String(req.body?.projectId || ""), 8));
     const suppliedLibrary = String(library || "").slice(0, 16000);
     const response = await openai.responses.create({
-      model: OPENAI_GPT54_MODEL,
+      model: DEEP_RESEARCH_MODEL,
+      reasoning: { effort: "xhigh" },
       tools: [{ type: "web_search" }],
       input: [
         {
@@ -4826,10 +4830,16 @@ app.post("/api/deep-research", async (req, res) => {
       ]
     });
 
+    const reply = extractResponseText(response);
+    if (response.status !== "completed" || !reply) {
+      return res.status(502).json({ detail: "Deep research did not finish. Please try again." });
+    }
     void recordJohnnyChatUsage("deepResearch", { question: query });
     res.json({
-      reply: extractResponseText(response) || "(no report)",
-      sources: extractResponseSources(response)
+      reply,
+      sources: extractResponseSources(response),
+      model: response.model,
+      reasoningEffort: "xhigh"
     });
   } catch (err) {
     void recordJohnnyChatUsage("errors", { route: "/api/deep-research", message: err.message || err });
