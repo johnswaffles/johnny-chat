@@ -44,6 +44,10 @@ class VoiceWidget {
         this.activeUserBubble = null;
         this.itemBubbles = new Map(); // Link item IDs to message bubbles
         this.handledFunctionCalls = new Set();
+        this.deepResponseActive = false;
+        this.deepToolsPending = 0;
+        this.deepContinuation = null;
+        this.deepQueue = [];
         this.messages = [];
         this.isMuted = false;
         this.pendingUpload = null;
@@ -577,6 +581,10 @@ class VoiceWidget {
     }
 
     dispatchText(text) {
+        if (this.deepToolsPending || this.deepContinuation) {
+            this.deepQueue.push(text);
+            return;
+        }
         this.messages.push({ role: 'user', text: text });
         // Create the user message item
         this.dc.send(JSON.stringify({
@@ -614,6 +622,12 @@ class VoiceWidget {
     }
 
     stopPlayback() {
+        this.deepAbort?.abort();
+        this.deepAbort = null;
+        this.deepResponseActive = false;
+        this.deepToolsPending = 0;
+        this.deepContinuation = null;
+        this.deepQueue = [];
         if (this.remoteAudioEl) {
             try {
                 this.remoteAudioEl.pause();
@@ -814,6 +828,8 @@ class VoiceWidget {
     }
 
     onDataChannelMessage(msg) {
+        if (msg.type === 'response.created') this.deepResponseActive = true;
+        if (['response.done', 'response.failed', 'response.cancelled'].includes(msg.type)) this.deepResponseActive = false;
         switch (msg.type) {
             case 'conversation.item.added':
             case 'conversation.item.created':
@@ -891,10 +907,79 @@ class VoiceWidget {
                 this.handleFunctionCall(msg);
                 break;
         }
+        this.flushDeepThinking();
+    }
+
+    flushDeepThinking() {
+        if (this.deepResponseActive || this.deepToolsPending || this.dc?.readyState !== 'open') return;
+        if (this.deepContinuation) {
+            const instructions = this.deepContinuation;
+            this.deepContinuation = null;
+            this.deepResponseActive = true;
+            this.dc.send(JSON.stringify({ type: 'response.create', response: { instructions, tool_choice: 'none' } }));
+        } else if (this.deepQueue.length) {
+            this.deepResponseActive = true;
+            this.dispatchText(this.deepQueue.shift());
+        }
+    }
+
+    async handleDeepThinking(msg) {
+        const callId = msg.call_id || msg.callId || msg.id || '';
+        if (!callId || this.handledFunctionCalls.has(callId)) return;
+        this.handledFunctionCalls.add(callId);
+        const channel = this.dc;
+        const current = () => channel === this.dc && channel?.readyState === 'open';
+        if (!current()) return;
+        this.deepToolsPending += 1;
+        this.deepAbort ||= new AbortController();
+        const bubble = this.createMessageBubble('assistant');
+        bubble.textContent = 'Thinking this through with Astra…';
+        this.scrollToBottom();
+        let output;
+        try {
+            const args = this.parseFunctionArguments(msg.arguments);
+            const request = String(args.request || '').trim();
+            if (!request) throw new Error('The question was empty.');
+            const response = await fetch(`${this.getBackendUrl()}/api/voice-think`, {
+                method: 'POST', headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ request, context: String(args.context || '').slice(0, 6000), profile: this.profile }),
+                signal: this.deepAbort.signal
+            });
+            const data = await response.json();
+            if (!current()) return;
+            if (!response.ok || !data.result) throw new Error('Deep thinking is unavailable right now.');
+            output = { answer: data.result, sources: data.sources || [], model: data.model, reasoningEffort: data.reasoningEffort };
+            bubble.textContent = 'Astra finished thinking.';
+            for (const source of (Array.isArray(data.sources) ? data.sources : []).slice(0, 4)) {
+                try { if (!['https:', 'http:'].includes(new URL(source.url).protocol)) continue; } catch { continue; }
+                const link = document.createElement('a');
+                link.href = source.url;
+                link.textContent = source.title || source.url;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                bubble.appendChild(document.createElement('br'));
+                bubble.appendChild(link);
+            }
+        } catch (error) {
+            if (!current()) return;
+            output = { error: 'Deep thinking unavailable', message: error.message };
+            bubble.textContent = 'Deep thinking is unavailable right now. You can try again or keep talking.';
+        } finally {
+            if (current()) {
+                this.deepToolsPending = Math.max(0, this.deepToolsPending - 1);
+                if (output) {
+                    channel.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: callId, output: JSON.stringify(output) } }));
+                    this.deepContinuation = 'Answer using the think_deep result. Preserve its conclusion, key reasons, uncertainty, and qualifications. Speak naturally and do not read URLs. If the tool failed, explain that deep thinking was unavailable and offer to retry; do not pretend it succeeded.';
+                }
+                this.flushDeepThinking();
+                this.scrollToBottom();
+            }
+        }
     }
 
     async handleFunctionCall(msg) {
         const name = msg.name || msg.function?.name || "";
+        if (name === "think_deep") return this.handleDeepThinking(msg);
         const callId = msg.call_id || msg.callId || msg.id || "";
         const callKey = callId || `${name}:${msg.arguments || ""}`;
         if (this.handledFunctionCalls.has(callKey)) return;
@@ -1445,7 +1530,8 @@ class BusinessVoiceWidget extends HomeVoiceWidget {
             const instructions = this.businessContinuation;
             this.businessContinuation = null;
             this.homeResponseActive = true;
-            this.dc.send(JSON.stringify({ type: 'response.create', response: { instructions } }));
+            this.dc.send(JSON.stringify({ type: 'response.create', response: { instructions, ...(this.businessContinuationNoTools ? { tool_choice: 'none' } : {}) } }));
+            this.businessContinuationNoTools = false;
             return;
         }
         const next = this.businessQueue.shift();
@@ -1475,7 +1561,7 @@ class BusinessVoiceWidget extends HomeVoiceWidget {
         bubble.textContent = 'Looking at your upload…';
         this.scrollToBottom();
         this.businessUploadAbort = new AbortController();
-        const deadline = setTimeout(() => this.businessUploadAbort?.abort(), 60000);
+        const deadline = setTimeout(() => this.businessUploadAbort?.abort(), 180000);
         try {
             const images = await this.buildRealtimeImageInputs(files);
             if (!current()) return;
@@ -1514,7 +1600,8 @@ class BusinessVoiceWidget extends HomeVoiceWidget {
 
     async handleFunctionCall(message) {
         const name = message.name || message.function?.name || '';
-        if (name !== 'search_web' && name !== 'web_search') return super.handleFunctionCall(message);
+        if (!['search_web', 'web_search', 'think_deep'].includes(name)) return super.handleFunctionCall(message);
+        const deep = name === 'think_deep';
         const callId = message.call_id || message.callId || message.id || '';
         const callKey = callId || `${name}:${message.arguments || ''}`;
         if (this.handledFunctionCalls.has(callKey)) return;
@@ -1525,23 +1612,23 @@ class BusinessVoiceWidget extends HomeVoiceWidget {
         if (!current()) return;
         this.businessToolsPending += 1;
         const bubble = this.createMessageBubble('assistant');
-        bubble.textContent = 'Searching the live web…';
+        bubble.textContent = deep ? 'Thinking this through with Astra…' : 'Searching the live web…';
         this.scrollToBottom();
         let output;
         try {
             const args = this.parseFunctionArguments(message.arguments);
-            const query = String(args.query || args.search_query || args.q || '').trim();
+            const query = String(deep ? args.request || '' : args.query || args.search_query || args.q || '').trim();
             if (!query) throw new Error('The search question was empty.');
             const context = this.messages.slice(-6).map(item => `${item.role}: ${item.text}`).join('\n').slice(0, 3000);
-            const response = await fetch(`${this.getBackendUrl()}/api/realtime-search`, { method: 'POST', headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ query, context, profile: this.profile }), signal: this.homeAbort?.signal });
+            const response = await fetch(`${this.getBackendUrl()}${deep ? '/api/voice-think' : '/api/realtime-search'}`, { method: 'POST', headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(deep ? { request: query, context: String(args.context || '').slice(0, 6000), profile: this.profile } : { query, context, profile: this.profile }), signal: this.homeAbort?.signal });
             const data = await response.json();
             if (!current()) return;
-            if (!response.ok) throw new Error('Search is unavailable right now.');
+            if (!response.ok || !data.result) throw new Error(deep ? 'Deep thinking is unavailable right now.' : 'Search is unavailable right now.');
             const sources = (Array.isArray(data.sources) ? data.sources : []).filter(source => {
                 try { return ['https:', 'http:'].includes(new URL(source.url).protocol); } catch { return false; }
             }).slice(0, 4);
             output = { answer: data.result || 'No clear result was found.', sources };
-            bubble.textContent = sources.length ? 'Live sources' : 'Live search complete.';
+            bubble.textContent = sources.length ? 'Sources' : deep ? 'Astra finished thinking.' : 'Live search complete.';
             for (const source of sources) {
                 const link = document.createElement('a');
                 link.href = source.url;
@@ -1553,14 +1640,15 @@ class BusinessVoiceWidget extends HomeVoiceWidget {
             }
         } catch (error) {
             if (!current()) return;
-            output = { error: 'Search unavailable', message: error.message };
-            bubble.textContent = 'Live search is unavailable right now. You can keep talking with Johnny.';
+            output = { error: deep ? 'Deep thinking unavailable' : 'Search unavailable', message: error.message };
+            bubble.textContent = deep ? 'Deep thinking is unavailable right now. You can try again or keep talking.' : 'Live search is unavailable right now. You can keep talking with Johnny.';
         } finally {
             if (current()) {
                 this.businessToolsPending = Math.max(0, this.businessToolsPending - 1);
                 if (output) {
                     channel.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: callId, output: JSON.stringify(output) } }));
-                    this.businessContinuation = 'Use the search tool results to answer naturally and concisely. Mention sources shown in the chat without reading URLs aloud. If search failed, explain briefly and offer to continue without it.';
+                    this.businessContinuationNoTools = deep;
+                    this.businessContinuation = deep ? 'Answer using the think_deep result. Preserve its conclusion, key reasons, uncertainty, and qualifications. Speak naturally and mention sources shown in chat without reading URLs. If the tool failed, explain that deep thinking was unavailable and offer to retry; do not pretend it succeeded.' : 'Use the search tool results to answer naturally and concisely. Mention sources shown in the chat without reading URLs aloud. If search failed, explain briefly and offer to continue without it.';
                 }
                 this.flushBusinessQueue();
                 this.scrollToBottom();

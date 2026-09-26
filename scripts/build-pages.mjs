@@ -52,7 +52,7 @@ const widgetSnippet = (profile) => `
     window.JOHNNY_WIDGET_START_MINIMIZED = true;
   </script>
   <link rel="stylesheet" href="https://johnny-chat.onrender.com/voice-widget.css">
-  <script src="https://johnny-chat.onrender.com/voice-widget.js?v=realtime2-tools"></script>`;
+  <script src="https://johnny-chat.onrender.com/voice-widget.js?v=astra-voice-20260926"></script>`;
 
 const sharedNavStyles = `
   <style>
