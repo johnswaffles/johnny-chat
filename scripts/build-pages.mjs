@@ -10,16 +10,6 @@ const isPagesBuild = process.env.CF_PAGES === "1" || process.env.CF_PAGES === "t
 // Cloudflare keeps the committed public artifacts when that sibling checkout is
 // unavailable in the Pages build environment.
 const cozyExportSourceDir = path.resolve(root, "..", "johnny-games", "dist", "cozy-builder");
-const gladeExportSourceDir = path.resolve(root, "..", "public", "glade-playtest");
-// First Ember source and exports now live in the isolated johnny-games repo.
-// Cloudflare keeps the committed public artifact when that sibling checkout is
-// unavailable in the Pages build environment.
-const firstEmberExportSourceDir = path.resolve(root, "..", "johnny-games", "dist", "first-ember");
-// Mosswake's browser-game source now lives in the isolated johnny-games repo.
-// Cloudflare keeps the committed public route when that sibling checkout is
-// unavailable in the Pages build environment.
-const mosswakeSourceDir = path.resolve(root, "..", "johnny-games", "mosswake");
-const mosswakeTargetDir = path.join(publicDir, "mosswake");
 const crownforgeSourceDir = path.join(root, "games", "crownforge");
 const crownforgeTargetDir = path.join(publicDir, "crownforge");
 const cozyExportTargetDirs = [
@@ -29,21 +19,15 @@ const cozyExportTargetDirs = [
 ];
 const godotExportGroups = [
   { sourceDir: cozyExportSourceDir, targetDirs: cozyExportTargetDirs },
-  { sourceDir: gladeExportSourceDir, targetDirs: [path.join(publicDir, "glade")] },
-  { sourceDir: firstEmberExportSourceDir, targetDirs: [path.join(publicDir, "first-ember")] },
 ];
 const godotExportTargetDirs = [
   ...godotExportGroups.flatMap((group) => group.targetDirs),
-  path.join(publicDir, "sim"),
 ];
 const godotRemotePackRoutes = [
   { dir: "cozy-builder" },
   { dir: "cozy-builder-game" },
   { dir: "godot-playtest" },
-  { dir: "glade" },
-  // First Ember always uses the split Pages/Render architecture, even while
-  // its early package remains below Cloudflare's individual-file limit.
-  { dir: "first-ember", forceRemotePack: true, useBuildIdentifier: true },
+
 ];
 
 const widgetSnippet = (profile) => `
@@ -162,11 +146,8 @@ function siteNav(profile, active, brandOverride = "") {
   const novaHref = "/nova-chat/";
   const morrowHref = "/morrow/";
   const cozyHref = "/cozy-builder-game/";
-  const gladeHref = "/glade/";
   const crownforgeHref = "/crownforge/";
-  const firstEmberHref = "/first-ember/";
   const clockwiseHref = "/clockwise/";
-  const simHref = "/sim/";
   const contactHref = "/contact/";
   const newTab = 'target="_blank" rel="noopener noreferrer"';
   const homeOnly = `
@@ -194,11 +175,8 @@ function siteNav(profile, active, brandOverride = "") {
         `<a class="johnny-site-link ${active === "nova" ? "active" : ""}" href="${novaHref}" ${newTab}>Nova Chat</a>`,
         `<a class="johnny-site-link ${active === "morrow" ? "active" : ""}" href="${morrowHref}" ${newTab}>Morrow</a>`,
         `<a class="johnny-site-link ${active === "cozy" ? "active" : ""}" href="${cozyHref}" ${newTab}>Cozy Builder</a>`,
-        `<a class="johnny-site-link ${active === "glade" ? "active" : ""}" href="${gladeHref}" ${newTab}>Glade</a>`,
         `<a class="johnny-site-link ${active === "crownforge" ? "active" : ""}" href="${crownforgeHref}" ${newTab}>Crownforge</a>`,
-        `<a class="johnny-site-link ${active === "first-ember" ? "active" : ""}" href="${firstEmberHref}" ${newTab}>First Ember</a>`,
         `<a class="johnny-site-link ${active === "clockwise" ? "active" : ""}" href="${clockwiseHref}" ${newTab}>Clockwise</a>`,
-        `<a class="johnny-site-link ${active === "sim" ? "active" : ""}" href="${simHref}" ${newTab}>Sim</a>`,
         `<a class="johnny-site-link ${active === "contact" ? "active" : ""}" href="${contactHref}" ${newTab}>Contact</a>`
       ];
   return `
@@ -3915,17 +3893,6 @@ async function syncCrownforgeBuild() {
   await cp(crownforgeSourceDir, crownforgeTargetDir, { recursive: true });
 }
 
-async function syncMosswakeBuild() {
-  try {
-    await access(mosswakeSourceDir);
-  } catch {
-    // Keep the checked-in public route intact when the isolated source repo is absent.
-    return;
-  }
-  await rm(mosswakeTargetDir, { recursive: true, force: true });
-  await cp(mosswakeSourceDir, mosswakeTargetDir, { recursive: true });
-}
-
 async function patchGodotWasmLoader() {
   const stockStreamingBlock = `var response=fetch(binaryFile,{credentials:"same-origin"});var instantiationResult=await WebAssembly.instantiateStreaming(response,imports);return instantiationResult`;
   const gzipSafeStreamingBlock = `var response=await fetch(binaryFile,{credentials:"same-origin"});var buffer=await response.arrayBuffer();var bytes=new Uint8Array(buffer);if(bytes.length>=2&&bytes[0]===31&&bytes[1]===139&&typeof DecompressionStream!=="undefined"){var stream=new Response(buffer).body.pipeThrough(new DecompressionStream("gzip"));buffer=await new Response(stream).arrayBuffer()}var instantiationResult=await WebAssembly.instantiate(buffer,imports);return instantiationResult`;
@@ -3948,8 +3915,6 @@ async function patchGodotWasmLoader() {
 				}).then(function (buffer) {
 					WebAssembly.instantiate(buffer, imports).then(done);
 				});`;
-  const stockWasmRequest = 'preloader.loadPromise(`${loadPath}.wasm`, size, true);';
-  const directGzipWasmRequest = 'preloader.loadPromise(`${loadPath}.wasm.gz`, size, true);';
 
   for (const targetDir of godotExportTargetDirs) {
     const loaderPath = path.join(targetDir, "index.js");
@@ -3968,15 +3933,8 @@ async function patchGodotWasmLoader() {
         patched = patched.replace(stockInstantiateBlock, gzipSafeInstantiateBlock);
       }
     }
-    // Glade requests the committed gzip asset directly. This makes the game
-    // independent of whether a Pages Function has finished routing the clean
-    // `.wasm` URL during a new deployment.
-    if (path.basename(targetDir) === "glade" && patched.includes(stockWasmRequest)) {
-      patched = patched.replace(stockWasmRequest, directGzipWasmRequest);
-    }
     const hasPatchedGzipLoader = patched.includes(gzipSafeInstantiateBlock) && patched.includes(gzipSafeStreamingBlock);
-    const hasDirectGladeRequest = path.basename(targetDir) !== "glade" || patched.includes(directGzipWasmRequest);
-    if (!hasPatchedGzipLoader || !hasDirectGladeRequest) {
+    if (!hasPatchedGzipLoader) {
       throw new Error(`Could not patch Godot WASM loader in ${loaderPath}`);
     }
     if (patched !== source) {
@@ -4005,10 +3963,7 @@ async function patchGodotAudioFocus() {
   const gameNames = new Map([
     ["cozy-builder", "cozy-builder"],
     ["cozy-builder-game", "cozy-builder"],
-    ["godot-playtest", "cozy-builder"],
-    ["glade", "glade"],
-    ["first-ember", "first-ember"],
-    ["sim", "sim"]
+    ["godot-playtest", "cozy-builder"]
   ]);
   for (const targetDir of godotExportTargetDirs) {
     const gameName = gameNames.get(path.basename(targetDir));
@@ -4031,78 +3986,6 @@ async function patchGodotAudioFocus() {
     const patched = `${beforeMarker}\n${snippet}\n${afterMarker}`.replace(/\n+$/, "\n");
     await writeFile(htmlPath, patched, "utf8");
   }
-}
-
-async function patchGladeLocalFileRedirect() {
-  const targetDir = path.join(publicDir, "glade");
-  const htmlPath = path.join(targetDir, "index.html");
-  let source;
-  try {
-    source = await readFile(htmlPath, "utf8");
-  } catch {
-    return;
-  }
-  if (source.includes("data-glade-local-file-redirect")) return;
-
-  const loaderMatch = source.match(/<script src="(index\.js(?:\?v=[^"]*)?)"><\/script>/);
-  if (!loaderMatch || !source.includes("<script>\nconst GODOT_CONFIG")) {
-    throw new Error(`Could not add Glade local-file redirect in ${htmlPath}`);
-  }
-
-  const loaderSource = loaderMatch[1];
-  let patched = source.replace(
-    loaderMatch[0],
-    `<script data-glade-local-file-redirect>\nif (window.location.protocol === "file:") {\n\twindow.location.replace("https://justaskjohnny.com/glade/");\n} else {\n\tdocument.write('<script src="${loaderSource}"><\\/script>');\n}\n</script>`
-  );
-  patched = patched.replace(
-    "<script>\nconst GODOT_CONFIG",
-    '<script>\nif (window.location.protocol !== "file:") {\nconst GODOT_CONFIG'
-  );
-  patched = patched.replace(
-    "\n\t\t</script>\n\t</body>",
-    "\n}\n\t\t</script>\n\t</body>"
-  );
-  await writeFile(htmlPath, patched, "utf8");
-}
-
-async function patchSimLoadingScreen() {
-  const htmlPath = path.join(publicDir, "sim", "index.html");
-  let source;
-  try {
-    source = await readFile(htmlPath, "utf8");
-  } catch {
-    return;
-  }
-  if (source.includes("little-world-loading-screen")) return;
-  const brandedStyles = `
-/* little-world-loading-screen */
-#status {
-  background: radial-gradient(circle at 50% 35%, #103b43 0%, #061723 42%, #020812 100%);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-#status-splash { display: none !important; }
-#status::before {
-  content: "LITTLE WORLD: GENESIS\\A Preparing a young ocean…";
-  white-space: pre;
-  color: #effff9;
-  text-align: center;
-  font-size: clamp(18px, 2.4vw, 30px);
-  font-weight: 700;
-  line-height: 1.8;
-  letter-spacing: 0.08em;
-}
-#status-progress {
-  position: relative;
-  inset: auto;
-  width: min(360px, 56vw);
-  height: 5px;
-  margin: 24px auto 0;
-  accent-color: #63f7ce;
-}
-`;
-  const patched = source.replace("\t\t</style>", `${brandedStyles}\n\t\t</style>`);
-  if (patched === source) throw new Error(`Could not brand Sim loading screen in ${htmlPath}`);
-  await writeFile(htmlPath, patched, "utf8");
 }
 
 async function routeOversizedGodotAssetsForPages() {
@@ -4170,26 +4053,14 @@ async function collectWasmFiles(dir, out = []) {
 
 async function compressPublicWasmAssets() {
   const wasmFiles = await collectWasmFiles(publicDir);
-  const uncompressedWasmFiles = new Set([
-    path.join(publicDir, "sim", "index.wasm"),
-    path.join(publicDir, "sim", "sim-engine-20260525c.wasm"),
-  ]);
 
   for (const filePath of wasmFiles) {
-    if (uncompressedWasmFiles.has(filePath)) {
-      continue;
-    }
     const raw = await readFile(filePath);
     const gzPath = `${filePath}.gz`;
     await writeFile(gzPath, gzipSync(raw, { level: 9 }));
     await rm(filePath);
   }
 
-  if (isPagesBuild) {
-    for (const filePath of uncompressedWasmFiles) {
-      await rm(filePath, { force: true });
-    }
-  }
 }
 
 function createRootLandingPage(chatPageHtml) {
@@ -4631,9 +4502,7 @@ ${siteNav("ai", "contact")}
       const storyHref = "/story-editor/";
       const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
-      const gladeHref = "/glade/";
       const clockwiseHref = "/clockwise/";
-      const simHref = "/sim/";
       const contactHref = "/contact/";
 
       profileField.value = profile;
@@ -4661,13 +4530,7 @@ ${siteNav("ai", "contact")}
           }
           if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
-          if (label === "glade") link.href = gladeHref;
           if (label === "clockwise") link.href = clockwiseHref;
-          if (label === "sim") {
-            link.href = simHref;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-          }
           if (label === "contact") link.href = contactHref;
         });
       }
@@ -4791,12 +4654,9 @@ async function main() {
   await syncGodotBuilds();
   await syncCrownforgeBuild();
   await syncLastStarBuild();
-  await syncMosswakeBuild();
   await patchGodotWasmLoader();
   await patchGodotHtmlCacheBust();
-  await patchGladeLocalFileRedirect();
   await patchGodotAudioFocus();
-  await patchSimLoadingScreen();
   await routeOversizedGodotAssetsForPages();
 
   await writeFile(path.join(publicDir, "ai-helper", "index.html"), aiPage, "utf8");

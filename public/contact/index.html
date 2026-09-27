@@ -487,9 +487,7 @@
       const storyHref = "/story-editor/";
       const novaHref = "/nova-chat/";
       const cozyHref = "/cozy-builder-game/";
-      const gladeHref = "/glade/";
       const clockwiseHref = "/clockwise/";
-      const simHref = "/sim/";
       const contactHref = "/contact/";
 
       profileField.value = profile;
@@ -517,13 +515,7 @@
           }
           if (label === "nova chat") link.href = novaHref;
           if (label === "cozy builder") link.href = cozyHref;
-          if (label === "glade") link.href = gladeHref;
           if (label === "clockwise") link.href = clockwiseHref;
-          if (label === "sim") {
-            link.href = simHref;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-          }
           if (label === "contact") link.href = contactHref;
         });
       }

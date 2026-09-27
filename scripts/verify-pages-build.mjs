@@ -7,15 +7,14 @@ const root = process.cwd();
 const publicRoot = path.join(root, "public");
 const maxFileSize = 25 * 1024 * 1024;
 const activeRoutes = [
-  "/glade/",
-  "/first-ember/",
-  "/mosswake/",
   "/cozy-builder-game/",
   "/cozy-builder/",
   "/crownforge/",
   "/last-star/",
-  "/cozy-search/"
+  "/cozy-search/",
+  "/tetris/"
 ];
+const retiredGames = ["glade", "first-ember", "mosswake", "sim", "sim-live", "sim-assets"];
 const errors = [];
 
 function report(label, detail) {
@@ -74,17 +73,24 @@ if (!errors.some((entry) => entry.startsWith("Route:"))) {
   report("Routes", `${activeRoutes.length} active game routes have index.html`);
 }
 
+for (const name of retiredGames) {
+  if (await exists(path.join(publicRoot, name))) fail("Retired assets", `${name} must not be published`);
+}
 const allFiles = await filesUnder(publicRoot);
 const htmlFiles = allFiles.filter((file) => file.endsWith(".html"));
 let retiredReference = false;
 for (const file of htmlFiles) {
   const text = await readFile(file, "utf8");
+  if (retiredGames.some(name => new RegExp(`href=["']/${name}(?:/|["'])`, 'i').test(text))) {
+    fail("Retired navigation", `retired game link in ${path.relative(root, file)}`);
+    retiredReference = true;
+  }
   if (/href=["']\/settlement\//i.test(text) || /school life|bellweather academy/i.test(text)) {
     fail("Retired navigation", `reference found in ${path.relative(root, file)}`);
     retiredReference = true;
   }
 }
-if (!retiredReference) report("Retired navigation", "School Life and /settlement/ are absent from HTML navigation");
+if (!retiredReference) report("Retired navigation", "Retired games are absent from HTML navigation");
 
 const retiredRoute = path.join(publicRoot, "settlement", "index.html");
 if (await exists(retiredRoute)) {

@@ -1582,62 +1582,15 @@ const GODOT_WASM_ROUTES = [
   "/cozy-builder/index.wasm",
   "/cozy-builder-game/index.wasm",
   "/godot-playtest/index.wasm",
-  "/glade/index.wasm",
-  "/first-ember/index.wasm",
 ];
 
-app.get("/first-ember/index.pck", (req, res, next) => {
-  res.setHeader("Content-Type", "application/octet-stream");
-  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-  res.sendFile(path.join(process.cwd(), "public", "first-ember", "index.pck"), (err) => {
-    if (err) next(err);
-  });
-});
-
-function setSimAssetHeaders(res, assetName = "") {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Expires", "0");
-  if (assetName.endsWith(".wasm")) {
-    res.setHeader("Content-Type", "application/wasm");
-  } else if (assetName.endsWith(".pck")) {
-    res.setHeader("Content-Type", "application/octet-stream");
+// Retired experiments: also block their old asset URLs and aliases.
+app.use((req, res, next) => {
+  if (["glade", "first-ember", "mosswake", "sim", "sim-live", "sim-assets"].includes(req.path.split("/")[1])) {
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(410).type("html").send('<!doctype html><title>Game retired</title><h1>This game has been retired.</h1><p><a href="/">Explore the current games</a></p>');
   }
-}
-
-function sendSimAsset(req, res, next, assetName) {
-  if (!/^[a-zA-Z0-9._-]+$/.test(assetName)) {
-    next();
-    return;
-  }
-  setSimAssetHeaders(res, assetName);
-  res.sendFile(path.join(process.cwd(), "public", "sim", assetName), (err) => {
-    if (err) next(err);
-  });
-}
-
-function sendSimIndex(_req, res, next) {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Expires", "0");
-  setSimAssetHeaders(res, "index.html");
-  res.sendFile(path.join(process.cwd(), "public", "sim", "index.html"), (err) => {
-    if (err) next?.(err);
-  });
-}
-
-app.get("/sim/:asset", (req, res, next) => {
-  const assetName = String(req.params.asset || "");
-  sendSimAsset(req, res, next, assetName);
-});
-
-app.get(["/sim", "/sim/", "/sim/index.html"], sendSimIndex);
-
-app.get(["/sim-live", "/sim-live/", "/sim-live/index.html"], sendSimIndex);
-
-app.get(["/sim-live/:asset", "/sim-assets/:asset"], (req, res, next) => {
-  const assetName = String(req.params.asset || "");
-  sendSimAsset(req, res, next, assetName);
+  next();
 });
 
 app.get(GODOT_WASM_ROUTES, (req, res, next) => {

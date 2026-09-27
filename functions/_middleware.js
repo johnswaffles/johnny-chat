@@ -2,8 +2,6 @@ const WASM_ASSET_MAP = new Map([
   ["/cozy-builder/index.wasm", "/cozy-builder/index.wasm.gz"],
   ["/cozy-builder-game/index.wasm", "/cozy-builder-game/index.wasm.gz"],
   ["/godot-playtest/index.wasm", "/godot-playtest/index.wasm.gz"],
-  ["/glade/index.wasm", "/glade/index.wasm.gz"],
-  ["/first-ember/index.wasm", "/first-ember/index.wasm.gz"],
 ]);
 
 async function serveCompressedWasm(context, requestPath, compressedPath) {
@@ -31,6 +29,10 @@ async function serveCompressedWasm(context, requestPath, compressedPath) {
 export async function onRequest(context) {
   const { request, next } = context;
   const url = new URL(request.url);
+
+  if (["glade", "first-ember", "mosswake", "sim", "sim-live", "sim-assets"].includes(url.pathname.split("/")[1])) {
+    return new Response('<!doctype html><title>Game retired</title><h1>This game has been retired.</h1><p><a href="/">Explore the current games</a></p>', { status: 410, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+  }
 
   if (request.method === "GET" && WASM_ASSET_MAP.has(url.pathname)) {
     return serveCompressedWasm(context, url.pathname, WASM_ASSET_MAP.get(url.pathname));
