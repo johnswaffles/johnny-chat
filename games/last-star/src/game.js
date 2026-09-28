@@ -1,8 +1,8 @@
-import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260928-no-memories';
-import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260928-no-memories';
-import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260928-no-memories';
-import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260928-no-memories';
-import {starshardMuzzle} from './cast-pose.js?release=20260928-no-memories';
+import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260928-living-depth';
+import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260928-living-depth';
+import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260928-living-depth';
+import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260928-living-depth';
+import {starshardMuzzle} from './cast-pose.js?release=20260928-living-depth';
 export const SAVE_KEY = 'crownforge-last-star-level1-preview-v1';
 export const WIDTH = 7900;
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -20,7 +20,7 @@ export const SEALS = [
   {x:3690,y:565,name:'The Broken Aqueduct',chapter:'II · THE BROKEN AQUEDUCT'},
   {x:6550,y:570,name:'The Last Observatory',chapter:'III · THE LAST OBSERVATORY'},
 ];
-import {MEMORIES} from './memories.js?release=20260928-no-memories';
+import {MEMORIES} from './memories.js?release=20260928-living-depth';
 export {MEMORIES};
 const ENEMIES = [
  [1510,560,'wraith'],[580,580,'wraith'],[1660,560,'wraith'],

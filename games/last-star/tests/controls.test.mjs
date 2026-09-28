@@ -26,7 +26,7 @@ test('waterfall coordinates stay registered to the panorama at both camera extre
 test('water sprites animate at 12 fps, wrap seamlessly and freeze when paused',()=>{
  assert.equal(waterFrame(0),0);assert.equal(waterFrame(.04),0);assert.equal(waterFrame(.5),6);assert.equal(waterFrame(16/12),0);
  const sprites=[{frames:Array.from({length:16},(_,i)=>i),width:30,height:200,left:0,x:100,y:200},{frames:Array.from({length:16},(_,i)=>i),width:30,height:200,left:0,x:1500,y:200}];
- const sample=t=>{const calls=[];drawWaterfalls({drawImage:(...args)=>calls.push(args)},{x:0,y:0},t,sprites,1280);return calls;};
+ const sample=t=>{const calls=[];drawWaterfalls({save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},clip(){},stroke(){},drawImage:(...args)=>calls.push(args)},{x:0,y:0},t,sprites,1280);return calls;};
  assert.equal(sample(0).length,1);assert.notDeepEqual(sample(0),sample(.5));assert.deepEqual(sample(.5),sample(.5));
  assert.deepEqual(sample(0),sample(16/12));
 });

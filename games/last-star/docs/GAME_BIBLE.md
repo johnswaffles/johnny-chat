@@ -98,3 +98,9 @@ September 28: user authorized pushing the isolated Level1 upgrade for live testi
 ## Memories shelved — September 28 live override
 
 At the user's request, memories are removed from active play until explicitly revisited: no six glowing memory waypoints, nearby prompts, interaction/reader, HUD counter, completion tally, controls mention or QA visit buttons. Keep src/memories.js, story documents, art and old discovery IDs archived for possible rework; they are not approved for reinstatement. Existing saves retain discovered IDs without activating memories. The three progression starseals and their checkpoints remain. This overrides previous six-memory requirements. Release: 20260928-no-memories.
+
+## Sharp foreground and living scenery — September 28
+
+Light atmosphere must never lower character, enemy, platform or spell resolution. The foreground canvas uses device pixel ratio up to2, with an8.3-million-pixel ceiling. The scenery renders into a separate canvas (Light1x /Rich up to1.5x); both use the same continuous scene clock/camera. Keep fog mostly below the traversable edge. Never flatten character and scenery quality into one low-resolution switch again.
+
+Trees sway around grounded roots; three depths of windborne leaves and distant bird arcs add independent life. Water interpolates baked frames and adds tightly bounded descending highlights, including five additional registered painted streams. Preserve the excluded Silverwood tree-arch waterfall: water cannot start from solid branches. All motion freezes with the scene clock, and Gentle reduces tree motion. No approved raster artwork was changed. Memories remain shelved.

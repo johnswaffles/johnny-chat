@@ -1,12 +1,12 @@
-import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260928-no-memories';
-import {LEVEL1} from './level1-config.js?release=20260928-no-memories';
+import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260928-living-depth';
+import {LEVEL1} from './level1-config.js?release=20260928-living-depth';
 const selection=new SelectionRing();
 let pendingActions={},hitStop=0,hitStopGap=0,needsFrame=true;
-import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20260928-no-memories';
-import {Renderer,loadArt} from './render.js?release=20260928-no-memories';
-import {Soundscape} from './audio.js?release=20260928-no-memories';
-import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260928-no-memories';
-import {ControlsUI} from './controls-ui.js?release=20260928-no-memories';
+import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20260928-living-depth';
+import {Renderer,loadArt} from './render.js?release=20260928-living-depth';
+import {Soundscape} from './audio.js?release=20260928-living-depth';
+import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260928-living-depth';
+import {ControlsUI} from './controls-ui.js?release=20260928-living-depth';
 const $=id=>document.getElementById(id);
 const qa=new URLSearchParams(location.search).has('qa');
 const storageKey=qa?SAVE_KEY+'-qa':SAVE_KEY;
@@ -175,11 +175,12 @@ try{
   requestAnimationFrame(loop);
   // Local QA surface is opt-in and absent from the normal player route.
   if(qa){
-    qaDriver=(await import('../tests/route-driver.mjs?release=20260928-no-memories')).routeInput;
+    qaDriver=(await import('../tests/route-driver.mjs?release=20260928-living-depth')).routeInput;
     const panel=document.createElement('details');panel.id='qa-panel';panel.open=true;
     panel.innerHTML='<summary>Local QA</summary><button id="qa-replay">Run input-only playthrough</button><button id="qa-stop">Take control</button><button id="qa-resume">Resume saved checkpoint</button><output id="qa-state"></output>';
     $('game').append(panel);(await import('../tests/recording.js')).addRecording(panel,$('world'));
-    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260928-no-memories')).virtualGamepad(panel);
+    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260928-living-depth')).virtualGamepad(panel);
+    const scenery=document.createElement('button');scenery.textContent='Inspect eastern waterfalls';scenery.onclick=()=>{start(false);game.player.x=6650;game.player.y=570;game.checkpoint=3;game.player.invuln=60;renderer.camera=game.player.x-renderer.w*.37;};panel.append(scenery);
     const practice=document.createElement('button');practice.textContent='Practice spells in Silverwood';practice.onclick=()=>{start(false);game.player.x=1340;game.player.y=560;renderer.camera=900;for(const kind of SLOTS)grantItem(game,kind,3);for(const e of game.enemies)e.cd=15;game.player.hp=140;events();};panel.append(practice);
     const reprisalButton=document.createElement('button');reprisalButton.textContent='Reprisal: three enemy hits';reprisalButton.onclick=()=>{start(false);game.player.x=1250;game.player.y=560;renderer.camera=850;for(const e of game.enemies)e.cd=30;for(const amount of [10,20,30]){game.player.invuln=0;game.hurt(amount);}events();};panel.append(reprisalButton);
     const releaseButton=document.createElement('button');releaseButton.textContent='Release charged Starshard';releaseButton.onclick=()=>{game.spell('bolt');events();};panel.append(releaseButton);

@@ -1,12 +1,13 @@
-import {drawLevel1,elementEvent} from './level1-fx.js?release=20260928-no-memories';
-import {drawEnemyPose} from './enemy-frames.js?release=20260928-no-memories';
-import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20260928-no-memories';
-import {forwardCastPose} from './cast-pose.js?release=20260928-no-memories';
-import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20260928-no-memories';
-import {LANTERNS} from './level-decor.js?release=20260928-no-memories';
-import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20260928-no-memories';
-import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20260928-no-memories';
-import {PLATFORMS,SEALS,WIDTH,clamp} from './game.js?release=20260928-no-memories';
+import {sceneMotion,renderResolution,drawSceneLife} from './scene-life.js?release=20260928-living-depth';
+import {drawLevel1,elementEvent} from './level1-fx.js?release=20260928-living-depth';
+import {drawEnemyPose} from './enemy-frames.js?release=20260928-living-depth';
+import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20260928-living-depth';
+import {forwardCastPose} from './cast-pose.js?release=20260928-living-depth';
+import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20260928-living-depth';
+import {LANTERNS} from './level-decor.js?release=20260928-living-depth';
+import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20260928-living-depth';
+import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20260928-living-depth';
+import {PLATFORMS,SEALS,WIDTH,clamp} from './game.js?release=20260928-living-depth';
 const TAU=Math.PI*2;
 const rand=(n)=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 const WIZARD=[
@@ -21,7 +22,7 @@ export async function loadArt(){
 }
 export class Renderer {
   constructor(canvas,art){
-    this.canvas=canvas;this.ctx=canvas.getContext('2d',{alpha:false});this.art=art;this.camera=0;this.time=0;this.particles=[];this.rings=[];this.arcs=[];this.echoes=[];this.shake=0;this.flash=0;this.gentle=false;this.quality='high';this.title=true;
+    this.backgroundCanvas=document.createElement('canvas');this.backgroundContext=this.backgroundCanvas.getContext('2d',{alpha:false});this.backgroundCanvas.setAttribute('aria-hidden','true');this.backgroundCanvas.style.cssText='position:absolute;pointer-events:none';canvas.before(this.backgroundCanvas);canvas.style.position='relative';this.canvas=canvas;this.ctx=canvas.getContext('2d',{alpha:true});this.art=art;this.camera=0;this.time=0;this.particles=[];this.rings=[];this.arcs=[];this.echoes=[];this.shake=0;this.flash=0;this.gentle=false;this.quality='high';this.title=true;
     this.glows={};for(const [name,color] of Object.entries({blue:'117,209,255',teal:'113,238,212',gold:'255,208,119',violet:'192,112,255',white:'224,250,255'})){
       const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');const g=x.createRadialGradient(128,128,0,128,128,128);g.addColorStop(0,`rgba(${color},.7)`);g.addColorStop(.12,`rgba(${color},.42)`);g.addColorStop(.42,`rgba(${color},.13)`);g.addColorStop(1,`rgba(${color},0)`);x.fillStyle=g;x.fillRect(0,0,256,256);this.glows[name]=c;
     }
@@ -31,7 +32,9 @@ export class Renderer {
     this.resize();
   }
   reset(){for(const key of ['particles','rings','arcs','echoes','arcadeWaves','shardImpacts','elementFX'])this[key]=[];this.shake=this.flash=this.time=0;this.wizardAnimation=newWizardAnimation();}
-  resize(){const dpr=Math.min(window.devicePixelRatio||1,this.quality==='low'?1:1.5,Math.sqrt(2400000/(window.innerWidth*window.innerHeight)));this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';}
+  resize(){const dpr=renderResolution(window.innerWidth,window.innerHeight,window.devicePixelRatio);this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';const bgRatio=this.quality==='low'?1:Math.min(dpr,1.5);this.backgroundCanvas.width=Math.round(window.innerWidth*bgRatio);this.backgroundCanvas.height=Math.round(window.innerHeight*bgRatio);Object.assign(this.backgroundCanvas.style,{left:this.canvas.offsetLeft+'px',top:this.canvas.offsetTop+'px',width:this.canvas.clientWidth+'px',height:this.canvas.clientHeight+'px'});this.backgroundContext.imageSmoothingEnabled=true;this.backgroundContext.imageSmoothingQuality='high';}
+  backdrop(game){const front=this.ctx,bg=this.backgroundContext;this.ctx=bg;const scale=this.backgroundCanvas.height/720;bg.setTransform(scale,0,0,scale,0,0);this.background(game);this.ctx=front;}
+  tree(x,y,w,h,alpha,flip,seed){const sway=sceneMotion(this.time,seed,this.gentle);this.ctx.save();this.ctx.translate(x,y);this.ctx.transform(1,0,sway/h,1,0,0);this.prop('tree',0,0,w,h,alpha,flip);this.ctx.restore();}
   glow(x,y,size,color='blue',alpha=1){const c=this.ctx;c.save();c.globalCompositeOperation='screen';c.globalAlpha=alpha;c.drawImage(this.glows[color]||this.glows.blue,x-size/2,y-size/2,size,size);c.restore();}
   prop(name,x,y,w,h,alpha=1,flip=false){const c=this.ctx;const s=PROPS[name];c.save();c.globalAlpha=alpha;c.translate(x,y);if(flip)c.scale(-1,1);c.drawImage(this.art.props,...s,-w/2,-h,w,h);c.restore();}
   burst(x,y,color='blue',count=20,power=100){
@@ -70,20 +73,20 @@ export class Renderer {
     const veil=c.createLinearGradient(0,0,0,720);veil.addColorStop(0,'#10243715');veil.addColorStop(.6,'#0825350a');veil.addColorStop(1,'#061a2d95');c.fillStyle=veil;c.fillRect(0,0,w,720);
     // Quiet shafts stay behind the readable combat plane.
     c.save();c.globalCompositeOperation='screen';
-    for(let i=0;i<5;i++){const x=((i*461-this.camera*.13)% (w+650)+w+650)%(w+650)-200;const g=c.createLinearGradient(x,0,x+150,640);g.addColorStop(0,'#addfed00');g.addColorStop(.2,'#aedfec0d');g.addColorStop(.7,'#91cbdb08');g.addColorStop(1,'#91cbdb00');c.fillStyle=g;c.beginPath();c.moveTo(x,0);c.lineTo(x+35,0);c.lineTo(x+310,660);c.lineTo(x+100,660);c.closePath();c.fill();}c.restore();
+    for(let i=0;i<5;i++){c.globalAlpha=.8+Math.sin(t*.22+i)*.2;const x=((i*461-this.camera*.13)% (w+650)+w+650)%(w+650)-200;const g=c.createLinearGradient(x,0,x+150,640);g.addColorStop(0,'#addfed00');g.addColorStop(.2,'#aedfec0d');g.addColorStop(.7,'#91cbdb08');g.addColorStop(1,'#91cbdb00');c.fillStyle=g;c.beginPath();c.moveTo(x,0);c.lineTo(x+35,0);c.lineTo(x+310,660);c.lineTo(x+100,660);c.closePath();c.fill();}c.restore();
     // Independent middle-distance layers give the painting real parallax.
     for(let i=0;i<12;i++){
       const x=i*740+120-this.camera*.64;if(x<-450||x>w+450)continue;
       const h=330+rand(i)*180;
-      this.prop('tree',x,590,h*1.06,h,.5,i%2===0);
+      this.tree(x,590,h*1.06,h,.5,i%2===0,i);
     }
     for(let i=0;i<10;i++){
       const x=1900+i*520-this.camera*.8;if(x<-250||x>w+250)continue;
       this.prop('arch',x,620,220,310,.48);
     }
-    this.fog(505,.085,.17);
+    this.fog(290,.025,.08);this.fog(405,.035,.12);this.fog(505,.07,.17);
     for(const tree of [[-150,615,730],[1280,585,370],[2450,598,440],[4100,606,380],[5690,590,470],[6500,610,430],[8010,635,680]]){
-      const x=tree[0]-this.camera*.93;if(x<-650||x>w+650)continue;this.prop('tree',x,tree[1],tree[2]*1.02,tree[2],.75,tree[0]%3===0);
+      const x=tree[0]-this.camera*.93;if(x<-650||x>w+650)continue;this.tree(x,tree[1],tree[2]*1.02,tree[2],.75,tree[0]%3===0,tree[0]);
     }
     const astrolabe=7350-this.camera;
     if(astrolabe>-350&&astrolabe<w+350){
@@ -93,6 +96,7 @@ export class Renderer {
       for(let k=0;k<24;k++){const a=k*TAU/24+t*.04;c.beginPath();c.moveTo(Math.cos(a)*154,Math.sin(a)*154);c.lineTo(Math.cos(a)*165,Math.sin(a)*165);c.stroke();}c.restore();
       for(const dx of [-270,270]){const x=astrolabe+dx;c.strokeStyle='#a19874';c.lineWidth=4;c.beginPath();c.moveTo(x,570);c.lineTo(x,220);c.lineTo(x+70,220);c.stroke();c.fillStyle='#193a50';c.beginPath();c.moveTo(x+8,222);c.lineTo(x+65,222);c.lineTo(x+65+Math.sin(t)*4,410);c.lineTo(x+37,390);c.lineTo(x+8,410);c.closePath();c.fill();c.strokeStyle='#b6a371';c.lineWidth=1;c.stroke();this.star(x+36,280,14,'#b9aa78');}
     }
+    drawSceneLife(this);
     // Hanging motes drift at different apparent depths.
     const count=this.quality==='low'?24:65;
     c.save();c.globalCompositeOperation='screen';
@@ -273,7 +277,7 @@ export class Renderer {
   }
   foreground(){
     const c=this.ctx,t=this.time;
-    this.fog(645,.24,.55);this.fog(702,.16,.35);
+    this.fog(678,.10,.55);this.fog(720,.08,.35);
     // Nearby silhouettes slide faster than the player plane.
     for(let i=0;i<24;i++){
       const x=i*410-70-this.camera*1.13;if(x<-220||x>this.w+220)continue;
@@ -286,9 +290,9 @@ export class Renderer {
     this.time+=this.gentle?dt*.65:dt;const c=this.ctx,p=game.player;
     const desired=clamp(p.x-this.w*.37,0,WIDTH-this.w);
     if(this.title)this.camera=0;else this.camera+=(desired-this.camera)*(1-Math.exp(-dt*6));
-    c.setTransform(this.scale,0,0,this.scale,0,0);c.save();
+    c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,this.canvas.width,this.canvas.height);c.setTransform(this.scale,0,0,this.scale,0,0);c.save();
     this.shake=Math.max(0,this.shake-dt);if(!this.gentle&&this.shake>0)c.translate(Math.sin(this.time*87)*this.shake*8*(this.shakeScale??1),Math.sin(this.time*69)*this.shake*5*(this.shakeScale??1));
-    this.background(game);this.platforms(game);this.seals(game);this.enemies(game);
+    this.backdrop(game);this.platforms(game);this.seals(game);this.enemies(game);
     const flicker=p.invuln>0&&p.mantle<=0&&Math.floor(this.time*18)%2===0?.6:1;
     advanceWizardAnimation(this.wizardAnimation,p,dt);
     this.wizard(p,flicker);
