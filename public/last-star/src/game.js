@@ -1,8 +1,8 @@
-import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260928-level1-arcade';
-import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260928-level1-arcade';
-import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260928-level1-arcade';
-import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260928-level1-arcade';
-import {starshardMuzzle} from './cast-pose.js?release=20260928-level1-arcade';
+import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260928-no-memories';
+import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260928-no-memories';
+import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260928-no-memories';
+import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260928-no-memories';
+import {starshardMuzzle} from './cast-pose.js?release=20260928-no-memories';
 export const SAVE_KEY = 'crownforge-last-star-level1-preview-v1';
 export const WIDTH = 7900;
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -20,7 +20,7 @@ export const SEALS = [
   {x:3690,y:565,name:'The Broken Aqueduct',chapter:'II · THE BROKEN AQUEDUCT'},
   {x:6550,y:570,name:'The Last Observatory',chapter:'III · THE LAST OBSERVATORY'},
 ];
-import {MEMORIES} from './memories.js?release=20260928-level1-arcade';
+import {MEMORIES} from './memories.js?release=20260928-no-memories';
 export {MEMORIES};
 const ENEMIES = [
  [1510,560,'wraith'],[580,580,'wraith'],[1660,560,'wraith'],
@@ -55,7 +55,6 @@ export class Game {
   nearby(){
     const p=this.player;
     for(let i=0;i<SEALS.length;i++){const s=SEALS[i];if(Math.abs(p.x-s.x)<80&&Math.abs(p.y-s.y)<55)return {type:'seal',index:i,label:i<this.checkpoint?'Rest at the starseal':i===this.checkpoint?'Restore the starseal':'Restore the earlier starseal first'};}
-    for(let i=0;i<MEMORIES.length;i++){const m=MEMORIES[i];if(Math.abs(p.x-m.x)<60&&Math.abs(p.y-m.y)<45)return {type:'memory',index:i,label:'Read a memory'};}
     if(p.x>7610&&this.bossDefeated)return {type:'finish',label:'Return the ember'};
     return null;
   }
@@ -71,8 +70,6 @@ export class Game {
         this.event('dialogue',{text:lines[near.index]});
       }else this.notice('Health and starlight restored.');
       this.event('save');
-    }else if(near.type==='memory'){
-      this.memories.add(near.index);this.event('memory',{index:near.index});this.event('save');
     }else {this.state='won';this.event('won');this.event('save');}
   }
   aim(input={}){

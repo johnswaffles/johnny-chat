@@ -1,12 +1,12 @@
-import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260928-level1-arcade';
-import {LEVEL1} from './level1-config.js?release=20260928-level1-arcade';
+import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260928-no-memories';
+import {LEVEL1} from './level1-config.js?release=20260928-no-memories';
 const selection=new SelectionRing();
 let pendingActions={},hitStop=0,hitStopGap=0,needsFrame=true;
-import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus,MEMORIES} from './game.js?release=20260928-level1-arcade';
-import {Renderer,loadArt} from './render.js?release=20260928-level1-arcade';
-import {Soundscape} from './audio.js?release=20260928-level1-arcade';
-import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260928-level1-arcade';
-import {ControlsUI} from './controls-ui.js?release=20260928-level1-arcade';
+import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20260928-no-memories';
+import {Renderer,loadArt} from './render.js?release=20260928-no-memories';
+import {Soundscape} from './audio.js?release=20260928-no-memories';
+import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260928-no-memories';
+import {ControlsUI} from './controls-ui.js?release=20260928-no-memories';
 const $=id=>document.getElementById(id);
 const qa=new URLSearchParams(location.search).has('qa');
 const storageKey=qa?SAVE_KEY+'-qa':SAVE_KEY;
@@ -23,21 +23,7 @@ const zoneNames=['The Silverwood','The Broken Aqueduct','The Last Observatory'];
 function showToast(text){$('toast').textContent=text;toastUntil=performance.now()+3000;$('toast').classList.add('visible');}
 function save(){saved=game.save();try{localStorage.setItem(storageKey,JSON.stringify(saved));}catch{showToast('This browser cannot save. Keep this window open to continue.');}}
 function showDialogue(text){$('dialogue').querySelector('p').textContent=text;dialogueUntil=performance.now()+Math.min(4500,Math.max(3000,text.length*45));$('dialogue').hidden=false;}
-let memoryIndex=0,memoryPage=0;
-function renderMemory(){
- const m=MEMORIES[memoryIndex];
- $('memory-title').textContent=m.title;$('memory-chapter').textContent=`MEMORY ${m.chapter} OF ${MEMORIES.length} · ${game.memories.size} FOUND`;
- $('memory-place').textContent=m.place;$('memory-art').src=`assets/${m.art}`;$('memory-art').alt=m.alt;
- $('memory-prose').textContent=m.paragraphs[memoryPage];$('memory-page').textContent=`${memoryPage+1} / ${m.paragraphs.length}`;
- $('memory-prev').disabled=memoryPage===0;$('memory-next').textContent=memoryPage===m.paragraphs.length-1?'Return to the journey':'Next page →';
-}
-function openMemory(index){memoryIndex=index;memoryPage=0;renderMemory();$('dialogue').hidden=true;setMode('memory');}
-function closeMemory(){if(mode==='memory'){accumulator=0;setMode('playing');$('world').focus();}}
-$('memory-prev').onclick=()=>{if(memoryPage>0){memoryPage--;renderMemory();}};
-$('memory-next').onclick=()=>{if(memoryPage<MEMORIES[memoryIndex].paragraphs.length-1){memoryPage++;renderMemory();}else closeMemory();};
-$('memory-close').onclick=closeMemory;
-$('memory-screen').addEventListener('keydown',e=>{if(e.key!=='Tab')return;const buttons=[...$('memory-screen').querySelectorAll('button')].filter(b=>!b.disabled);const i=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(i+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();});
-function setMode(next){needsFrame=true;selection.cancel();pendingActions={};mode=next;$('hud').inert=next==='memory';keys.clear();pressed.clear();controller.clearEdges();mouseDown=false;mouseAim=null;for(const [id,name] of [['memory-screen','memory'],['title-screen','title'],['pause-screen','pause'],['bindings-screen','bindings'],['death-screen','dead'],['ending-screen','won']])$(id).hidden=next!==name;$('hud').hidden=next==='title'||(next==='bindings'&&menuReturn==='title');if(renderer)renderer.title=next==='title';if(next!=='playing')requestAnimationFrame(()=>{if(mode!==next)return;const target=next==='memory'?'memory-next':next==='pause'?'resume':next==='bindings'?'bindings-back':next==='dead'?'retry':next==='won'?'replay':saved&&!saved.completed?'continue':'begin';$(target)?.focus();});}
+function setMode(next){needsFrame=true;selection.cancel();pendingActions={};mode=next;keys.clear();pressed.clear();controller.clearEdges();mouseDown=false;mouseAim=null;for(const [id,name] of [['title-screen','title'],['pause-screen','pause'],['bindings-screen','bindings'],['death-screen','dead'],['ending-screen','won']])$(id).hidden=next!==name;$('hud').hidden=next==='title'||(next==='bindings'&&menuReturn==='title');if(renderer)renderer.title=next==='title';if(next!=='playing')requestAnimationFrame(()=>{if(mode!==next)return;const target=next==='pause'?'resume':next==='bindings'?'bindings-back':next==='dead'?'retry':next==='won'?'replay':saved&&!saved.completed?'continue':'begin';$(target)?.focus();});}
 function start(resume=false){
   hitStop=hitStopGap=0;audio.reset();qaReplay=false;toastUntil=dialogueUntil=areaUntil=0;$('dialogue').hidden=true;$('toast').classList.remove('visible');$('area-title').classList.remove('visible');
   game=new Game(resume?saved:null);renderer.camera=Math.max(0,game.player.x-renderer.w*.37);renderer.reset();
@@ -45,7 +31,7 @@ function start(resume=false){
   if(!resume){showDialogue('One ember survived the sealed night. Follow the starseals. Bring its light home.');}
   updateUI();
 }
-function pause(){if(mode==='memory'){closeMemory();return;}if(mode==='playing'||mode==='title'){menuReturn=mode;setMode('pause');if(menuReturn==='title')$('hud').hidden=true;}else if(mode==='pause')setMode(menuReturn);else if(mode==='bindings'){controlsUI.cancel();setMode('pause');}}
+function pause(){if(mode==='playing'||mode==='title'){menuReturn=mode;setMode('pause');if(menuReturn==='title')$('hud').hidden=true;}else if(mode==='pause')setMode(menuReturn);else if(mode==='bindings'){controlsUI.cancel();setMode('pause');}}
 function applySettings(){
   settings={sound:$('sound').checked,gentle:$('gentle').checked,quality:$('quality').value,music:+$('music-volume').value,sfx:+$('sfx-volume').value,shake:+$('shake-volume').value,reducedFlash:$('reduced-flash').checked};
   audio.setVolumes(settings.music,settings.sfx);audio.setEnabled(settings.sound);if(renderer){renderer.gentle=settings.gentle;renderer.quality=settings.quality;renderer.resize();needsFrame=true;renderer.shakeScale=settings.shake;renderer.reducedFlash=settings.reducedFlash;}
@@ -107,7 +93,7 @@ function pollController(now){
   if(controlsUI.poll(now)){controller.clearEdges();return;}
   if(controller.edges.has(9)){pause();controller.clearEdges();return;}
   if(mode==='playing'||!controller.connected)return;
-  const screen=$(mode==='memory'?'memory-screen':mode==='bindings'?'bindings-screen':mode==='pause'?'pause-screen':mode==='dead'?'death-screen':mode==='won'?'ending-screen':'title-screen');
+  const screen=$(mode==='bindings'?'bindings-screen':mode==='pause'?'pause-screen':mode==='dead'?'death-screen':mode==='won'?'ending-screen':'title-screen');
   const elements=[...screen.querySelectorAll('button,input,select')].filter(e=>!e.disabled&&e.getClientRects().length);
   if(!elements.length)return;
   let index=elements.indexOf(document.activeElement);
@@ -118,7 +104,7 @@ function pollController(now){
   let focused=elements[index]||elements[0];
   if(horizontal&&focused.tagName==='SELECT'){focused.selectedIndex=Math.max(0,Math.min(focused.options.length-1,focused.selectedIndex+horizontal));focused.dispatchEvent(new Event('change'));}
   if(horizontal&&focused.type==='range'){focused.value=String(Number(focused.value)+horizontal*Number(focused.step));focused.dispatchEvent(new Event('input'));}
-  if(controller.edges.has(1)){if(mode==='memory')closeMemory();else if(mode==='bindings')$('bindings-back').click();else if(mode==='pause')setMode(menuReturn);}
+  if(controller.edges.has(1)){if(mode==='bindings')$('bindings-back').click();else if(mode==='pause')setMode(menuReturn);}
   else if(controller.edges.has(0)){focused.focus();if(focused.tagName==='SELECT'){focused.selectedIndex=(focused.selectedIndex+1)%focused.options.length;focused.dispatchEvent(new Event('change'));}else focused.click();}
   controller.clearEdges();
 }
@@ -129,13 +115,12 @@ function events(){
     if(e.type==='treasure')showToast(e.text);
     if(e.type==='toast')showToast(e.text);
     if(e.type==='dialogue')showDialogue(e.text);
-    if(e.type==='memory')openMemory(e.index);
     if(e.type==='zone'){$('area-title').querySelector('strong').textContent=zoneNames[e.index];areaUntil=performance.now()+4200;$('area-title').classList.add('visible');}
     if(e.type==='save')save();
     if(e.type==='mantle')showToast('Astral Mantle · the last star shields you');
     if(e.type==='boss'){showDialogue('The Hollow Astronomer. Still guarding a sky that no longer exists.');showToast('Watch the fan, marked ground, then the low sweep. Strike between casts.');}
     if(e.type==='dead'){save();setMode('dead');}
-    if(e.type==='won'){$('ending-stats').textContent=`3 / 3 starseals restored · ${game.memories.size} / ${MEMORIES.length} memories found · ${game.arcade.score.toLocaleString()} points · best chain ×${game.arcade.bestCombo} · ${Math.floor(game.elapsed/60)}m ${Math.floor(game.elapsed%60)}s`;setMode('won');}
+    if(e.type==='won'){$('ending-stats').textContent=`3 / 3 starseals restored · ${game.arcade.score.toLocaleString()} points · best chain ×${game.arcade.bestCombo} · ${Math.floor(game.elapsed/60)}m ${Math.floor(game.elapsed%60)}s`;setMode('won');}
   }game.events=[];
 }
 function updateUI(){
@@ -146,7 +131,6 @@ function updateUI(){
   $('power-description').textContent=a.rank<3?`${[6,15,27][a.rank]-a.crystals} crystals to the next power rank`:'Maximum star power · three-shot staff';
   $('overdrive-label').textContent=a.overdrive>0?`OVERDRIVE · ${a.overdrive.toFixed(1)}s · +35% DAMAGE`:`OVERDRIVE · ${a.charge} / 9`;
   $('health-text').textContent=`${Math.ceil(p.hp)} / 210`;$('health-fill').style.width=`${p.hp/210*100}%`;$('mana-fill').style.width=p.mana+'%';$('mana-text').textContent=Math.floor(p.mana);
-  $('memory-count').textContent=`Memories ${game.memories.size} / ${MEMORIES.length}`;
   $('chapter').textContent=SEALS[p.x<2600?0:p.x<5100?1:2].chapter;
   $('seals').textContent=[0,1,2].map(i=>i<game.checkpoint?'◆':'◇').join(' ');
   $('objective').textContent=game.bossDefeated?'Return the ember to the Observatory':game.bossStarted?'Free the Hollow Astronomer':game.checkpoint===0?'Awaken the Silverwood starseal':game.checkpoint===1?'Find the aqueduct starseal':game.checkpoint===2?'Reach the Observatory starseal':'Enter the Observatory';
@@ -191,12 +175,11 @@ try{
   requestAnimationFrame(loop);
   // Local QA surface is opt-in and absent from the normal player route.
   if(qa){
-    qaDriver=(await import('../tests/route-driver.mjs?release=20260928-level1-arcade')).routeInput;
+    qaDriver=(await import('../tests/route-driver.mjs?release=20260928-no-memories')).routeInput;
     const panel=document.createElement('details');panel.id='qa-panel';panel.open=true;
     panel.innerHTML='<summary>Local QA</summary><button id="qa-replay">Run input-only playthrough</button><button id="qa-stop">Take control</button><button id="qa-resume">Resume saved checkpoint</button><output id="qa-state"></output>';
     $('game').append(panel);(await import('../tests/recording.js')).addRecording(panel,$('world'));
-    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260928-level1-arcade')).virtualGamepad(panel);
-    for(const m of [...MEMORIES].sort((a,b)=>a.chapter-b.chapter)){const b=document.createElement('button');b.textContent=`Visit memory ${m.chapter}`;b.onclick=()=>{start(false);game.player.x=m.x;game.player.y=m.y;renderer.camera=Math.max(0,m.x-renderer.w*.37);};panel.append(b);}
+    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260928-no-memories')).virtualGamepad(panel);
     const practice=document.createElement('button');practice.textContent='Practice spells in Silverwood';practice.onclick=()=>{start(false);game.player.x=1340;game.player.y=560;renderer.camera=900;for(const kind of SLOTS)grantItem(game,kind,3);for(const e of game.enemies)e.cd=15;game.player.hp=140;events();};panel.append(practice);
     const reprisalButton=document.createElement('button');reprisalButton.textContent='Reprisal: three enemy hits';reprisalButton.onclick=()=>{start(false);game.player.x=1250;game.player.y=560;renderer.camera=850;for(const e of game.enemies)e.cd=30;for(const amount of [10,20,30]){game.player.invuln=0;game.hurt(amount);}events();};panel.append(reprisalButton);
     const releaseButton=document.createElement('button');releaseButton.textContent='Release charged Starshard';releaseButton.onclick=()=>{game.spell('bolt');events();};panel.append(releaseButton);

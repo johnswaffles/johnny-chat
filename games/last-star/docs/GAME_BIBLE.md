@@ -94,3 +94,7 @@ The focused active loadout is unlimited Starshard, Eventide, and **Ember Orb / F
 ## Live test release authorization
 
 September 28: user authorized pushing the isolated Level1 upgrade for live testing. It now replaces the Last Star route as an arcade preview, retaining the separate preview save namespace and all Level1-only limits. No subsequent level is authorized. Release marker: 20260928-level1-arcade. Local-only statements above describe the pre-approval development stage.
+
+## Memories shelved — September 28 live override
+
+At the user's request, memories are removed from active play until explicitly revisited: no six glowing memory waypoints, nearby prompts, interaction/reader, HUD counter, completion tally, controls mention or QA visit buttons. Keep src/memories.js, story documents, art and old discovery IDs archived for possible rework; they are not approved for reinstatement. Existing saves retain discovered IDs without activating memories. The three progression starseals and their checkpoints remain. This overrides previous six-memory requirements. Release: 20260928-no-memories.

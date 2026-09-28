@@ -1,12 +1,12 @@
-import {drawLevel1,elementEvent} from './level1-fx.js?release=20260928-level1-arcade';
-import {drawEnemyPose} from './enemy-frames.js?release=20260928-level1-arcade';
-import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20260928-level1-arcade';
-import {forwardCastPose} from './cast-pose.js?release=20260928-level1-arcade';
-import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20260928-level1-arcade';
-import {LANTERNS} from './level-decor.js?release=20260928-level1-arcade';
-import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20260928-level1-arcade';
-import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20260928-level1-arcade';
-import {PLATFORMS,SEALS,MEMORIES,WIDTH,clamp} from './game.js?release=20260928-level1-arcade';
+import {drawLevel1,elementEvent} from './level1-fx.js?release=20260928-no-memories';
+import {drawEnemyPose} from './enemy-frames.js?release=20260928-no-memories';
+import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20260928-no-memories';
+import {forwardCastPose} from './cast-pose.js?release=20260928-no-memories';
+import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20260928-no-memories';
+import {LANTERNS} from './level-decor.js?release=20260928-no-memories';
+import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20260928-no-memories';
+import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20260928-no-memories';
+import {PLATFORMS,SEALS,WIDTH,clamp} from './game.js?release=20260928-no-memories';
 const TAU=Math.PI*2;
 const rand=(n)=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 const WIZARD=[
@@ -149,17 +149,6 @@ export class Renderer {
       for(let k=0;k<2;k++){c.beginPath();c.ellipse(0,0,23+k*8,33, k*Math.PI/2,0,TAU);c.stroke();}c.restore();
       this.star(x,s.y-72,12,active?'#eee0aa':'#bfe5f4');
       if(active){for(let k=0;k<5;k++){const a=t*.5+k*TAU/5;this.glow(x+Math.cos(a)*40,s.y-80+Math.sin(a)*20,20,'gold',.7);}}
-    }
-    for(let i=0;i<MEMORIES.length;i++){
-      const m=MEMORIES[i],x=m.x-this.camera,y=m.y-24+Math.sin(t*2+i)*5;
-      if(x<-100||x>this.w+100)continue;
-      const read=game.memories.has(i),color=read?'blue':'gold';
-      this.glow(x,y,125,color,read?.75:1.15);this.glow(x,y,42,color,1.4);
-      c.save();c.strokeStyle=read?'#afe6ff':'#ffe6a0';c.lineWidth=1.5;
-      c.beginPath();c.ellipse(x,y,19,26,0,0,TAU);c.stroke();c.restore();
-      this.star(x,y,14,read?'#e5faff':'#fff5ce');
-      for(let k=0;k<4;k++){const a=(this.gentle?0:t*.65)+k*TAU/4;this.star(x+Math.cos(a)*28,y+Math.sin(a)*20,2.5,'#fff0b5');}
-      if(Math.abs(game.player.x-m.x)<220){c.save();c.font='12px Georgia';c.textAlign='center';c.fillStyle='#07151f';c.fillRect(x-62,y-58,124,23);c.fillStyle='#fff0bb';c.fillText('Read a memory',x,y-42);c.restore();}
     }
     const gateX=6900-this.camera;
     if(gateX>-150&&gateX<this.w+200){
