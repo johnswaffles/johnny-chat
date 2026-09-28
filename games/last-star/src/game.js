@@ -1,8 +1,9 @@
-import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260928-living-depth';
-import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260928-living-depth';
-import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260928-living-depth';
-import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260928-living-depth';
-import {starshardMuzzle} from './cast-pose.js?release=20260928-living-depth';
+import {newSilverwoodEncounter,updateSilverwoodEncounter,silverwoodEnemyReady} from './silverwood-encounter.js?release=20260928-polish-preview';
+import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260928-polish-preview';
+import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260928-polish-preview';
+import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260928-polish-preview';
+import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260928-polish-preview';
+import {starshardMuzzle} from './cast-pose.js?release=20260928-polish-preview';
 export const SAVE_KEY = 'crownforge-last-star-level1-preview-v1';
 export const WIDTH = 7900;
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -20,7 +21,7 @@ export const SEALS = [
   {x:3690,y:565,name:'The Broken Aqueduct',chapter:'II · THE BROKEN AQUEDUCT'},
   {x:6550,y:570,name:'The Last Observatory',chapter:'III · THE LAST OBSERVATORY'},
 ];
-import {MEMORIES} from './memories.js?release=20260928-living-depth';
+import {MEMORIES} from './memories.js?release=20260928-polish-preview';
 export {MEMORIES};
 const ENEMIES = [
  [1510,560,'wraith'],[580,580,'wraith'],[1660,560,'wraith'],
@@ -41,10 +42,10 @@ export function parseSave(raw) {
 }
 export class Game {
   constructor(saved=null){
-    this.inventory=newInventory();this.solids=SOLIDS;this.arcade=newArcade();this.platforms=PLATFORMS;this.time=0;this.elapsed=saved?.elapsed||0;this.checkpoint=saved?.checkpoint||0;this.memories=new Set(saved?.memories||[]);
+    this.silverwood=newSilverwoodEncounter(saved?.checkpoint||0);this.inventory=newInventory();this.solids=SOLIDS;this.arcade=newArcade();this.platforms=PLATFORMS;this.time=0;this.elapsed=saved?.elapsed||0;this.checkpoint=saved?.checkpoint||0;this.memories=new Set(saved?.memories||[]);
     this.chests=CHESTS.map(d=>({...placeLoot(this,d),open:false,hp:1}));this.loot=INTRO_LOOT.map(d=>placeLoot(this,d));this.state='playing';this.events=[];this.projectiles=[];this.effects=[];this.numbers=[];this.kills=0;this.bossStarted=false;this.bossDefeated=false;this.zone=-1;this.jumpBuffer=0;this.coyote=0;this.targetId=null;this.chain=0;this.dragon=null;this.lastNotice=-10;
     const spawn=this.checkpoint?SEALS[this.checkpoint-1]:{x:230,y:580};
-    this.player={x:spawn.x,y:spawn.y,vx:0,vy:0,face:1,hp:210,maxHp:210,mana:100,onGround:true,jumps:0,invuln:0,mantle:0,mantleCd:0,cast:0,retaliation:0,blinked:false,rangeStacks:0,cooldowns:{bolt:0,blink:0,constellation:0,dragon:0}};
+    this.player={x:spawn.x,y:spawn.y,vx:0,vy:0,face:1,hp:210,maxHp:210,mana:100,onGround:true,jumps:0,invuln:0,mantle:0,mantleCd:0,cast:0,retaliation:0,hurtPose:0,blinked:false,rangeStacks:0,cooldowns:{bolt:0,blink:0,constellation:0,dragon:0}};
     this.enemies=ENEMIES.map(([x,y,type],id)=>({id,x,y,origin:x,type,hp:type==='boss'?1850:145,maxHp:type==='boss'?1850:145,cd:1+id*.14,windup:0,flash:0,stagger:0,staggerCd:0,phase:0,dead:false,attack:0,face:-1,role:type==='boss'?'guardian':id===1?'approach':id%4===0?'brute':'ranged'}));
     for(const e of this.enemies)if(e.role==='brute')e.hp=e.maxHp=220;
     for(const e of this.enemies)if(e.x<spawn.x-100)e.dead=true;
@@ -166,14 +167,14 @@ export class Game {
     if(p.mantle>0)amount*=.3;
     const lost=Math.min(p.hp,amount);
     if(source==='enemy'){p.retaliation+=lost;this.event('retaliation-charge',{x:p.x,y:p.y-65,bonus:p.retaliation*3});}
-    this.arcade.combo=0;this.arcade.comboTime=0;p.hp=Math.max(0,p.hp-amount);p.invuln=.8;this.event('hurt');
+    this.arcade.combo=0;this.arcade.comboTime=0;p.hp=Math.max(0,p.hp-amount);p.invuln=.8;p.hurtPose=.28;this.event('hurt');
     if(p.hp<=0){this.state='dead';this.event('dead');}
   }
   update(dt,input={}){
     if(this.state!=='playing')return;
     dt=clamp(dt,0,.04);this.time+=dt;this.elapsed+=dt;const p=this.player;
     for(const key in p.cooldowns)p.cooldowns[key]=Math.max(0,p.cooldowns[key]-dt);
-    for(const key of ['invuln','mantle','mantleCd','cast'])p[key]=Math.max(0,p[key]-dt);
+    for(const key of ['invuln','mantle','mantleCd','cast','hurtPose'])p[key]=Math.max(0,p[key]-dt);
     this.inventory.cooldown=Math.max(0,this.inventory.cooldown-dt);p.mana=Math.min(100,p.mana+dt*8);updateArcade(this,dt);updateLoot(this,dt);
     this.coyote=p.onGround?.12:Math.max(0,this.coyote-dt);
     if(input.jump)this.jumpBuffer=.13;else this.jumpBuffer=Math.max(0,this.jumpBuffer-dt);
@@ -197,8 +198,10 @@ export class Game {
     const zone=p.x<2600?0:p.x<5100?1:2;
     if(zone!==this.zone){this.zone=zone;this.event('zone',{index:zone});}
     if(p.x>6910&&this.checkpoint===3&&!this.bossStarted&&!this.bossDefeated){this.bossStarted=true;this.event('boss');}
+    updateSilverwoodEncounter(this,dt);
     for(const e of this.enemies){
       if(e.dead)continue;if(e.burn>0){e.burn=Math.max(0,e.burn-dt);e.burnTick-=dt;if(e.burnTick<=0){e.burnTick+=LEVEL1.spells.ember.burnInterval;this.damage(e,LEVEL1.spells.ember.burnDamage);}}if(e.dead)continue;for(const k of ['freeze','freezeImmune','slow'])e[k]=Math.max(0,(e[k]||0)-dt);e.stagger=Math.max(0,e.stagger-dt);e.staggerCd=Math.max(0,e.staggerCd-dt);e.flash=Math.max(0,e.flash-dt);e.attack=Math.max(0,e.attack-dt);
+      if(!silverwoodEnemyReady(this,e))continue;
       const dx=p.x-e.x,dy=p.y-e.y;e.face=Math.sign(dx)||-1;
       if(e.type==='boss'&&!this.bossStarted)continue;
       if(Math.abs(dx)>850||e.stagger>0||e.freeze>0)continue;const enemyDt=dt*(e.slow>0?LEVEL1.spells.frost.slow:1);
@@ -216,7 +219,7 @@ export class Game {
         }
       }else{
         e.cd-=enemyDt;
-        if(Math.abs(dx)<(e.type==='boss'?850:e.role==='ranged'?620:e.role==='brute'?110:75)&&e.cd<=0&&e.attack<=0){e.windup=e.type==='boss'?1.05:e.role==='brute'?1:.65;this.event('windup',{x:e.x,y:e.y-60});}
+        if(Math.abs(dx)<(e.type==='boss'?850:e.role==='ranged'?620:e.role==='brute'?110:75)&&e.cd<=0&&e.attack<=0){e.windup=e.type==='boss'?1.05:e.role==='brute'?1:.65;this.event('windup',{x:e.x,y:e.y-60,role:e.role,distance:Math.abs(dx)});}
         if(e.type==='wraith'&&e.attack<=0&&Math.abs(dx)>(e.role==='ranged'?210:48)){const nx=e.x+Math.sign(dx)*enemyDt*(e.role==='ranged'?39:e.role==='brute'?65:105);if(PLATFORMS.some(f=>!f.upper&&nx>f.x+25&&nx<f.x+f.w-25&&f.y===e.y))e.x=nx;}
       }
       if(e.role!=='ranged'&&e.attack>0&&e.attack<.25&&Math.abs(dx)<(e.type==='boss'?60:e.role==='brute'?115:78)&&Math.abs(dy)<80)this.hurt(e.type==='boss'?35:e.role==='brute'?27:18);

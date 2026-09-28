@@ -24,7 +24,7 @@ export class Soundscape {
   }
   setEnabled(on){this.enabled=on;if(on)this.start();else if(this.music)this.music.pause();if(this.master)this.master.gain.setTargetAtTime(on?this.sfxVolume:0,this.ctx.currentTime,.25);}
   setVolumes(music,sfx){this.musicVolume=music;this.sfxVolume=sfx;if(this.music)this.music.volume=music;if(this.master)this.master.gain.setTargetAtTime(this.enabled?sfx:0,this.ctx.currentTime,.05);}
-  reset(){for(const source of this.voices){try{source.stop();}catch{}}this.voices.clear();}
+  reset(){this.lastSceneTime=undefined;this.wasGrounded=undefined;this.stepDistance=0;for(const source of this.voices){try{source.stop();}catch{}}this.voices.clear();}
   track(source,nodes){this.voices.add(source);source.onended=()=>{this.voices.delete(source);for(const node of [source,...nodes])node.disconnect();};}
   tone(freq,duration=.3,gain=.15,type='sine',end=null,offset=0){
     if(!this.ctx||!this.enabled||this.voices.size>=32)return;const t=this.ctx.currentTime+offset,o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);if(end)o.frequency.exponentialRampToValueAtTime(end,t+duration);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+.012);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(this.master);g.connect(this.delay);this.track(o,[g]);o.start(t);o.stop(t+duration+.02);
@@ -33,6 +33,12 @@ export class Soundscape {
     if(!this.ctx||!this.enabled||!this.noiseBuffer||this.voices.size>=32)return;const t=this.ctx.currentTime,n=this.ctx.createBufferSource(),f=this.ctx.createBiquadFilter(),g=this.ctx.createGain();n.buffer=this.noiseBuffer;f.type='lowpass';f.frequency.setValueAtTime(frequency,t);f.frequency.exponentialRampToValueAtTime(100,t+duration);g.gain.setValueAtTime(volume,t);g.gain.exponentialRampToValueAtTime(.001,t+duration);n.connect(f);f.connect(g);g.connect(this.master);this.track(n,[f,g]);n.start();n.stop(t+duration);
   }
   event(e){
+    if(e.type==='windup'&&e.distance<650){this.tone(e.role==='ranged'?480:130,.24,.045,'triangle',e.role==='ranged'?780:85);}
+    if(e.type==='encounter-start'){this.tone(110,.65,.08,'triangle',82);this.tone(165,.5,.05,'sine',null,.18);}
+    if(e.type==='encounter-clear'){[523.25,659.25,783.99,1046.5].forEach((f,i)=>this.tone(f,.7,.085,'sine',null,i*.11));this.crack(.3,.045,2200);}
+    if(e.type==='footstep')this.crack(.045,.018,650);
+    if(e.type==='land'){this.crack(.13,.045,900);this.tone(75,.12,.025,'sine',45);}
+
     if(e.type==='unavailable'&&this.ctx&&this.ctx.currentTime-(this.lastUnavailable||-1)>.25){this.lastUnavailable=this.ctx.currentTime;this.tone(150,.08,.05,'triangle',110);}
     if(e.type==='special-cast'){this.tone(e.kind==='ember'?220:e.kind==='frost'?1300:750,.2,.1,'sine',e.kind==='ember'?70:1900);}
     if(e.type==='selection')this.tone(720,.07,.05,'sine',900);
@@ -61,5 +67,12 @@ export class Soundscape {
     if(e.type==='lightning')this.tone(95,.25,.15,'triangle',40);
     if(e.type==='enemy-death')this.tone(330,.6,.09,'sine',660);
   }
-  update(){}
+  update(time,player){
+    if(!player)return;
+    const elapsed=this.lastSceneTime===undefined?0:Math.max(0,Math.min(.05,time-this.lastSceneTime));this.lastSceneTime=time;
+    if(player.onGround&&!this.wasGrounded&&this.wasGrounded!==undefined)this.event({type:'land'});
+    this.wasGrounded=player.onGround;
+    this.stepDistance=(this.stepDistance||0)+(player.onGround?Math.abs(player.vx)*elapsed:0);
+    if(this.stepDistance>85){this.stepDistance%=85;this.event({type:'footstep'});}
+  }
 }

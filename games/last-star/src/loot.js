@@ -1,5 +1,5 @@
-import {grantItem} from './inventory.js?release=20260928-living-depth';
-import {collectCrystal} from './arcade.js?release=20260928-living-depth';
+import {grantItem} from './inventory.js?release=20260928-polish-preview';
+import {collectCrystal} from './arcade.js?release=20260928-polish-preview';
 export const INTRO_LOOT=[
  {x:420,kind:'gold',count:1},{x:960,kind:'ember',count:3},{x:1280,kind:'flask',count:1},
  {x:1790,kind:'power',count:6},{x:2120,kind:'frost',count:3},{x:2800,kind:'chain',count:3},

@@ -1,12 +1,12 @@
-import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260928-living-depth';
-import {LEVEL1} from './level1-config.js?release=20260928-living-depth';
+import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260928-polish-preview';
+import {LEVEL1} from './level1-config.js?release=20260928-polish-preview';
 const selection=new SelectionRing();
 let pendingActions={},hitStop=0,hitStopGap=0,needsFrame=true;
-import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20260928-living-depth';
-import {Renderer,loadArt} from './render.js?release=20260928-living-depth';
-import {Soundscape} from './audio.js?release=20260928-living-depth';
-import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260928-living-depth';
-import {ControlsUI} from './controls-ui.js?release=20260928-living-depth';
+import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20260928-polish-preview';
+import {Renderer,loadArt} from './render.js?release=20260928-polish-preview';
+import {Soundscape} from './audio.js?release=20260928-polish-preview';
+import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260928-polish-preview';
+import {ControlsUI} from './controls-ui.js?release=20260928-polish-preview';
 const $=id=>document.getElementById(id);
 const qa=new URLSearchParams(location.search).has('qa');
 const storageKey=qa?SAVE_KEY+'-qa':SAVE_KEY;
@@ -148,7 +148,7 @@ function updateUI(){
   const item=game.inventory.equipped;$('equipped-name').textContent=LEVEL1.spells[item].name;$('equipped-count').textContent=game.inventory.charges[item];$('equipped-key').textContent=prompt('use');$('equipped-item').dataset.itemIcon=item;$('ring-hint').textContent=`Hold ${prompt('ring')} · ${prompt('interact')} next / ${prompt('previous')} previous`;
   const hints=document.querySelectorAll('.bottom-hint span');hints[0].textContent=padMode?`Left stick move · Right stick aim · ${prompt('jump')} double jump`:`${prompt('left')} / ${prompt('right')} move · ${prompt('jump')} jump / double jump`;hints[1].textContent=`${prompt('interact')} interact · ${padMode?'Menu':'ESC'} pause`;
   controlsUI.status(controllerError);
-  if(qa&&$('qa-state'))$('qa-state').textContent=JSON.stringify({mode,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.hp),reprisal:Math.round(p.retaliation*3),ring:selection.open,inventory:game.inventory,score:game.arcade.score,crystals:game.arcade.crystals,power:game.arcade.rank,overdrive:game.arcade.overdrive,drops:game.arcade.drops.length,seals:game.checkpoint,kills:game.kills,elapsed:Math.round(game.elapsed),boss:game.bossStarted,bossHP:Math.round(boss.hp),dragon:!!game.dragon,memories:[...game.memories]});
+  if(qa&&$('qa-state'))$('qa-state').textContent=JSON.stringify({mode,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.hp),reprisal:Math.round(p.retaliation*3),ring:selection.open,inventory:game.inventory,score:game.arcade.score,crystals:game.arcade.crystals,power:game.arcade.rank,overdrive:game.arcade.overdrive,drops:game.arcade.drops.length,seals:game.checkpoint,kills:game.kills,elapsed:Math.round(game.elapsed),boss:game.bossStarted,bossHP:Math.round(boss.hp),silverwood:game.silverwood,dragon:!!game.dragon,memories:[...game.memories]});
 }
 function loop(now){
   const dt=Math.min((now-previous)/1000||0,.05);previous=now;
@@ -160,7 +160,7 @@ function loop(now){
     for(const a of ['jump','blink','use','interact'])pendingActions[a]||=controls[a];if(selection.open)pendingActions={};
     accumulator+=(hitStop>0?0:dt)*worldSpeed;let first=true;
     while(accumulator>=1/60){const step={...controls,...pendingActions};pendingActions={};if(!first){step.jump=step.blink=step.use=step.interact=false;}game.update(1/60,step);events();accumulator-=1/60;first=false;if(mode!=='playing'){accumulator=0;break;}}
-    audio.update(game.time);
+    audio.update(game.time,game.player);
   }
   if(mode==='title'){game.player.x=renderer.w*.72;game.player.y=580;}
   if(mode==='playing'||mode==='title'||needsFrame){renderer.draw(game,(mode==='playing'||mode==='title')?dt*worldSpeed:0);needsFrame=false;}
@@ -175,12 +175,13 @@ try{
   requestAnimationFrame(loop);
   // Local QA surface is opt-in and absent from the normal player route.
   if(qa){
-    qaDriver=(await import('../tests/route-driver.mjs?release=20260928-living-depth')).routeInput;
+    qaDriver=(await import('../tests/route-driver.mjs?release=20260928-polish-preview')).routeInput;
     const panel=document.createElement('details');panel.id='qa-panel';panel.open=true;
     panel.innerHTML='<summary>Local QA</summary><button id="qa-replay">Run input-only playthrough</button><button id="qa-stop">Take control</button><button id="qa-resume">Resume saved checkpoint</button><output id="qa-state"></output>';
     $('game').append(panel);(await import('../tests/recording.js')).addRecording(panel,$('world'));
-    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260928-living-depth')).virtualGamepad(panel);
-    const scenery=document.createElement('button');scenery.textContent='Inspect eastern waterfalls';scenery.onclick=()=>{start(false);game.player.x=6650;game.player.y=570;game.checkpoint=3;game.player.invuln=60;renderer.camera=game.player.x-renderer.w*.37;};panel.append(scenery);
+    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260928-polish-preview')).virtualGamepad(panel);
+    const polish=document.createElement('button');polish.textContent='Review Silverwood encounter';polish.onclick=()=>{start(false);game.player.x=1235;game.player.y=560;game.checkpoint=1;game.zone=0;dialogueUntil=0;$('dialogue').hidden=true;renderer.camera=game.player.x-renderer.w*.37;grantItem(game,'ember',3);};panel.append(polish);
+  const scenery=document.createElement('button');scenery.textContent='Inspect eastern waterfalls';scenery.onclick=()=>{start(false);game.player.x=6650;game.player.y=570;game.checkpoint=3;game.player.invuln=60;renderer.camera=game.player.x-renderer.w*.37;};panel.append(scenery);
     const practice=document.createElement('button');practice.textContent='Practice spells in Silverwood';practice.onclick=()=>{start(false);game.player.x=1340;game.player.y=560;renderer.camera=900;for(const kind of SLOTS)grantItem(game,kind,3);for(const e of game.enemies)e.cd=15;game.player.hp=140;events();};panel.append(practice);
     const reprisalButton=document.createElement('button');reprisalButton.textContent='Reprisal: three enemy hits';reprisalButton.onclick=()=>{start(false);game.player.x=1250;game.player.y=560;renderer.camera=850;for(const e of game.enemies)e.cd=30;for(const amount of [10,20,30]){game.player.invuln=0;game.hurt(amount);}events();};panel.append(reprisalButton);
     const releaseButton=document.createElement('button');releaseButton.textContent='Release charged Starshard';releaseButton.onclick=()=>{game.spell('bolt');events();};panel.append(releaseButton);

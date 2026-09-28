@@ -1,4 +1,4 @@
-import {PLATFORMS} from './game.js?release=20260928-living-depth';
+import {PLATFORMS} from './game.js?release=20260928-polish-preview';
 // Ground-mounted props belong to a surface, never arbitrary world coordinates.
 export function groundedPlacement(platforms,{platformId,offset,footprint=12}){
  const p=platforms.find(p=>p.id===platformId);
