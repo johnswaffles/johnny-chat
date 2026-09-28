@@ -1,5 +1,5 @@
-import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus,MEMORIES} from './game.js?arcade=1';
-import {Renderer,loadArt} from './render.js?arcade=1';
+import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus,MEMORIES} from './game.js?reprisal=1';
+import {Renderer,loadArt} from './render.js?reprisal=1';
 import {Soundscape} from './audio.js?arcade=1';
 import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js';
 import {ControlsUI} from './controls-ui.js';
@@ -142,7 +142,7 @@ function updateUI(){
   $('chapter').textContent=SEALS[p.x<2600?0:p.x<5100?1:2].chapter;
   $('seals').textContent=[0,1,2].map(i=>i<game.checkpoint?'◆':'◇').join(' ');
   $('objective').textContent=game.bossDefeated?'Return the ember to the Observatory':game.bossStarted?'Free the Hollow Astronomer':game.checkpoint===0?'Awaken the Silverwood starseal':game.checkpoint===1?'Find the aqueduct starseal':game.checkpoint===2?'Reach the Observatory starseal':'Enter the Observatory';
-  const buffs=[`Missing health: +${Math.round(missingHealthBonus(p)*100)}% damage · 2% lifesteal`];if(p.mantle>0)buffs.push(`Astral Mantle ${Math.ceil(p.mantle)}s`);if(p.blinked)buffs.push(`Eventide ${p.rangeStacks} · Reckoning ×${(1+game.chain*.25).toFixed(2)}`);$('buffs').textContent=buffs.join('  /  ');
+  const buffs=[`Missing health: +${Math.round(missingHealthBonus(p)*100)}% damage · 2% lifesteal`];if(p.retaliation>0)buffs.push(`Star Reprisal +${Math.round(p.retaliation*3)} next spell`);if(p.mantle>0)buffs.push(`Astral Mantle ${Math.ceil(p.mantle)}s`);if(p.blinked)buffs.push(`Eventide ${p.rangeStacks} · Reckoning ×${(1+game.chain*.25).toFixed(2)}`);$('buffs').textContent=buffs.join('  /  ');
   const padMode=lastDevice==='controller'&&controller.connected;
   const prompt=a=>padMode?buttonName(bindings.pad[a],controller.standard):keyName(bindings.keys[a]);
   $('game').classList.toggle('controller-active',padMode);
@@ -154,7 +154,7 @@ function updateUI(){
   const hints=document.querySelectorAll('.bottom-hint span');hints[0].textContent=padMode?`Left stick move · Right stick aim · ${prompt('jump')} double jump`:`${prompt('left')} / ${prompt('right')} move · ${prompt('jump')} jump / double jump`;hints[1].textContent=`${prompt('interact')} interact · ${padMode?'Menu':'ESC'} pause`;
   const help=document.querySelectorAll('.controls kbd');[`${prompt('left')} / ${prompt('right')}`,prompt('jump'),prompt('bolt'),prompt('blink'),prompt('constellation'),prompt('dragon'),prompt('interact')].forEach((v,i)=>{if(help[i])help[i].textContent=padMode&&i===0?'Left stick / D-pad':v;});
   controlsUI.status(controllerError);
-  if(qa&&$('qa-state'))$('qa-state').textContent=JSON.stringify({mode,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.hp),score:game.arcade.score,crystals:game.arcade.crystals,power:game.arcade.rank,overdrive:game.arcade.overdrive,drops:game.arcade.drops.length,seals:game.checkpoint,kills:game.kills,elapsed:Math.round(game.elapsed),boss:game.bossStarted,bossHP:Math.round(boss.hp),dragon:!!game.dragon,memories:[...game.memories]});
+  if(qa&&$('qa-state'))$('qa-state').textContent=JSON.stringify({mode,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.hp),reprisal:Math.round(p.retaliation*3),score:game.arcade.score,crystals:game.arcade.crystals,power:game.arcade.rank,overdrive:game.arcade.overdrive,drops:game.arcade.drops.length,seals:game.checkpoint,kills:game.kills,elapsed:Math.round(game.elapsed),boss:game.bossStarted,bossHP:Math.round(boss.hp),dragon:!!game.dragon,memories:[...game.memories]});
 }
 function loop(now){
   const dt=Math.min((now-previous)/1000||0,.05);previous=now;
@@ -183,6 +183,8 @@ try{
     $('game').append(panel);
     qaPadSource=(await import('../tests/virtual-gamepad.js')).virtualGamepad(panel);
     for(const m of [...MEMORIES].sort((a,b)=>a.chapter-b.chapter)){const b=document.createElement('button');b.textContent=`Visit memory ${m.chapter}`;b.onclick=()=>{start(false);game.player.x=m.x;game.player.y=m.y;renderer.camera=Math.max(0,m.x-renderer.w*.37);};panel.append(b);}
+    const reprisalButton=document.createElement('button');reprisalButton.textContent='Reprisal: three enemy hits';reprisalButton.onclick=()=>{start(false);game.player.x=1250;game.player.y=560;renderer.camera=850;for(const e of game.enemies)e.cd=30;for(const amount of [10,20,30]){game.player.invuln=0;game.hurt(amount);}events();};panel.append(reprisalButton);
+    const releaseButton=document.createElement('button');releaseButton.textContent='Release charged Starshard';releaseButton.onclick=()=>{game.spell('bolt');events();};panel.append(releaseButton);
     const arcadeButton=document.createElement('button');arcadeButton.textContent='Arcade reward demo';arcadeButton.onclick=()=>{start(false);game.player.x=1400;game.player.y=560;renderer.camera=1050;for(const [i,e] of game.enemies.slice(0,3).entries()){e.x=1460+i*22;e.y=560;game.damage(e,1000);}events();};panel.append(arcadeButton);
     $('qa-replay').onclick=()=>{start(false);qaReplay=true;};$('qa-stop').onclick=()=>{qaReplay=false;keys.clear();};$('qa-resume').onclick=()=>start(true);
     window.__lastStar={get game(){return game;},get renderer(){return renderer;},get mode(){return mode;},start,save,parseSave};

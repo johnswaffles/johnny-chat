@@ -41,7 +41,7 @@ export class Game {
     this.arcade=newArcade();this.platforms=PLATFORMS;this.time=0;this.elapsed=saved?.elapsed||0;this.checkpoint=saved?.checkpoint||0;this.memories=new Set(saved?.memories||[]);
     this.state='playing';this.events=[];this.projectiles=[];this.effects=[];this.numbers=[];this.kills=0;this.bossStarted=false;this.bossDefeated=false;this.zone=-1;this.jumpBuffer=0;this.coyote=0;this.targetId=null;this.chain=0;this.dragon=null;this.lastNotice=-10;
     const spawn=this.checkpoint?SEALS[this.checkpoint-1]:{x:230,y:580};
-    this.player={x:spawn.x,y:spawn.y,vx:0,vy:0,face:1,hp:210,maxHp:210,mana:100,onGround:true,jumps:0,invuln:0,mantle:0,mantleCd:0,cast:0,blinked:false,rangeStacks:0,cooldowns:{bolt:0,blink:0,constellation:0,dragon:0}};
+    this.player={x:spawn.x,y:spawn.y,vx:0,vy:0,face:1,hp:210,maxHp:210,mana:100,onGround:true,jumps:0,invuln:0,mantle:0,mantleCd:0,cast:0,retaliation:0,blinked:false,rangeStacks:0,cooldowns:{bolt:0,blink:0,constellation:0,dragon:0}};
     this.enemies=ENEMIES.map(([x,y,type],id)=>({id,x,y,origin:x,type,hp:type==='boss'?1850:145,maxHp:type==='boss'?1850:145,cd:1+id*.14,windup:0,flash:0,phase:0,dead:false,attack:0,face:-1}));
     for(const e of this.enemies)if(e.x<spawn.x-100)e.dead=true;
   }
@@ -82,7 +82,12 @@ export class Game {
     if(enemy){const origin=starshardMuzzle(p),dx=enemy.x-origin.x,dy=enemy.y-(enemy.type==='boss'?85:50)-origin.y,len=Math.hypot(dx,dy)||1;return {dx:dx/len,dy:dy/len};}
     return {dx:p.face,dy:0};
   }
-  bolt(x,y,aim,damage=36){this.projectiles.push({x,y,px:x,py:y,vx:aim.dx*900,vy:aim.dy*900,life:1.2+this.player.rangeStacks*.14,damage,owner:'player',r:9});}
+  beginAttack(){
+    const bonus=this.player.retaliation*3;this.player.retaliation=0;
+    if(bonus>0)this.event('retaliation-release',{x:this.player.x,y:this.player.y-65,bonus});
+    return {bonus,used:false};
+  }
+  bolt(x,y,aim,damage=36,attack=null){this.projectiles.push({attack,x,y,px:x,py:y,vx:aim.dx*900,vy:aim.dy*900,life:1.2+this.player.rangeStacks*.14,damage,owner:'player',r:9});}
   spell(kind,input={}){
     if(this.state!=='playing')return false;
     const p=this.player;
@@ -103,33 +108,36 @@ export class Game {
       if(!landing){this.notice('No safe ground within the passage.');return false;}
       p.x=landing.x;p.y=landing.y;p.vy=Math.min(p.vy,0);p.invuln=.85;p.blinked=true;p.rangeStacks=Math.min(5,p.rangeStacks+1);p.face=direction;
       this.event('blink',{from,to:landing});
+      let attack=null;
       for(const pos of [from,landing]){
         const target=this.enemies.filter(e=>!e.dead&&Math.hypot(e.x-pos.x,e.y-pos.y)<480).sort((a,b)=>Math.abs(a.x-pos.x)-Math.abs(b.x-pos.x))[0];
-        if(target){this.damage(target,36);this.event('arc',{from:{x:pos.x,y:pos.y-65},to:{x:target.x,y:target.y-60}});}
+        if(target){attack??=this.beginAttack();this.damage(target,36,attack);this.event('arc',{from:{x:pos.x,y:pos.y-65},to:{x:target.x,y:target.y-60}});}
       }
     }else if(kind==='bolt'){
-      const aim=this.aim(input);p.cast=.3;p.castKind='bolt';const muzzle=starshardMuzzle(p);this.bolt(muzzle.x,muzzle.y,aim);this.event('cast',muzzle);
+      const aim=this.aim(input);p.cast=.3;p.castKind='bolt';const muzzle=starshardMuzzle(p);this.bolt(muzzle.x,muzzle.y,aim,36,this.beginAttack());this.event('cast',muzzle);
     }else if(kind==='constellation'){
       p.castKind='constellation';
       const targets=this.enemies.filter(e=>!e.dead&&Math.abs(e.x-p.x)<660&&(e.x-p.x)*p.face>-60).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x));
       const x=clamp(Number.isFinite(input.aimX)?input.aimX:targets[0]?.x??p.x+p.face*230,p.x-650,p.x+650);
       const platform=PLATFORMS.filter(f=>x>=f.x&&x<=f.x+f.w).sort((a,b)=>b.y-a.y)[0];
       const y=platform?.y||580;
-      this.effects.push({type:'constellation',x,y,life:1.7,age:0,fired:false});p.cast=.6;
+      this.effects.push({type:'constellation',attack:this.beginAttack(),x,y,life:1.7,age:0,fired:false});p.cast=.6;
       this.event('constellation',{x,y});
     }else if(kind==='dragon'){
       p.castKind='dragon';
-      this.dragon={x:p.x-600,y:170,age:0,life:7,tick:0};p.cast=.7;p.invuln=1;this.event('dragon');
+      this.dragon={attack:this.beginAttack(),x:p.x-600,y:170,age:0,life:7,tick:0};p.cast=.7;p.invuln=1;this.event('dragon');
     }else return false;
     p.mana-=cost;p.cooldowns[kind]=COOLDOWNS[kind];return true;
   }
-  damage(e,base){
+  damage(e,base,attack=null){
     if(e.dead||e.hp<=0||this.player.hp<=0||!Number.isFinite(base)||base<=0)return;
     if(e.type==='boss'&&!this.bossStarted)return;
     if(this.targetId!==e.id){this.targetId=e.id;this.chain=0;}
     if(this.player.blinked)this.chain=Math.min(this.chain+1,4);
     const multiplier=this.player.blinked?1+this.chain*.25:1;
-    const amount=Math.round(base*multiplier*(1+missingHealthBonus(this.player))*arcadeDamage(this.arcade));
+    const bonus=attack&&!attack.used?attack.bonus:0;
+    if(attack)attack.used=true;
+    const amount=Math.round(base*multiplier*(1+missingHealthBonus(this.player))*arcadeDamage(this.arcade)+bonus);
     const dealt=Math.min(e.hp,amount);e.hp=Math.max(0,e.hp-amount);e.flash=.16;
     this.player.hp=Math.min(this.player.maxHp,this.player.hp+dealt*LIFE_STEAL);
     this.numbers.push({x:e.x,y:e.y-(e.type==='boss'?140:85),text:String(amount),life:.8,color:this.chain>=4?'#e9d29c':'#bceff8'});
@@ -138,10 +146,12 @@ export class Game {
       if(e.type==='boss'){this.bossDefeated=true;this.projectiles=this.projectiles.filter(b=>b.owner==='player');this.player.hp=210;this.event('dialogue',{text:'Even a broken star can find its way home. The ember is yours again.'});}
     }
   }
-  hurt(amount){
-    const p=this.player;if(p.invuln>0||this.state!=='playing')return;
+  hurt(amount,source='enemy'){
+    const p=this.player;if(p.invuln>0||this.state!=='playing'||!Number.isFinite(amount)||amount<=0)return;
     if(p.hp-amount<210*.35&&p.mantleCd<=0&&p.mantle<=0){p.mantle=6;p.mantleCd=30;this.event('mantle');}
     if(p.mantle>0)amount*=.3;
+    const lost=Math.min(p.hp,amount);
+    if(source==='enemy'){p.retaliation+=lost;this.event('retaliation-charge',{x:p.x,y:p.y-65,bonus:p.retaliation*3});}
     this.arcade.combo=0;this.arcade.comboTime=0;p.hp=Math.max(0,p.hp-amount);p.invuln=.8;this.event('hurt');
     if(p.hp<=0){this.state='dead';this.event('dead');}
   }
@@ -163,7 +173,7 @@ export class Game {
     if(p.vy>=0)for(const f of PLATFORMS){if(p.x+14>f.x&&p.x-14<f.x+f.w&&previousY<=f.y+5&&p.y>=f.y){p.y=f.y;p.vy=0;p.onGround=true;p.jumps=0;break;}}
     if(this.checkpoint<3&&p.x>6870){p.x=6870;this.notice('Three starseals hold the Observatory gate.');}
     if(this.bossStarted&&!this.bossDefeated)p.x=clamp(p.x,6840,7660);
-    if(p.y>880){p.invuln=0;this.hurt(35);if(this.state==='playing'){const spawn=this.checkpoint?SEALS[this.checkpoint-1]:{x:230,y:580};p.x=spawn.x;p.y=spawn.y;p.vx=p.vy=0;p.jumps=0;this.bossStarted=false;const boss=this.enemies.find(e=>e.type==='boss');if(!boss.dead){boss.hp=boss.maxHp;boss.x=boss.origin;boss.windup=0;boss.cd=2;}this.projectiles=[];this.notice('The ember catches you. Return to the path.');}}
+    if(p.y>880){p.invuln=0;this.hurt(35,'environment');if(this.state==='playing'){const spawn=this.checkpoint?SEALS[this.checkpoint-1]:{x:230,y:580};p.x=spawn.x;p.y=spawn.y;p.vx=p.vy=0;p.jumps=0;this.bossStarted=false;const boss=this.enemies.find(e=>e.type==='boss');if(!boss.dead){boss.hp=boss.maxHp;boss.x=boss.origin;boss.windup=0;boss.cd=2;}this.projectiles=[];this.notice('The ember catches you. Return to the path.');}}
     if(input.bolt)this.spell('bolt',input);
     if(input.blink)this.spell('blink',input);
     if(input.constellation)this.spell('constellation',input);
@@ -198,7 +208,7 @@ export class Game {
       b.life-=dt;b.px=b.x;b.py=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;
       if(b.owner==='player'){
         for(const e of this.enemies){if(e.dead)continue;const r=e.type==='boss'?55:31;
-          if(Math.abs(b.x-e.x)<r+10&&b.y>e.y-(e.type==='boss'?170:100)&&b.y<e.y+5){this.damage(e,b.damage);b.life=0;break;}}
+          if(Math.abs(b.x-e.x)<r+10&&b.y>e.y-(e.type==='boss'?170:100)&&b.y<e.y+5){this.damage(e,b.damage,b.attack);b.life=0;break;}}
       }else if(Math.abs(b.x-p.x)<24&&b.y>p.y-100&&b.y<p.y){this.hurt(b.damage);b.life=0;}
     }
     this.projectiles=this.projectiles.filter(b=>b.life>0);
@@ -206,13 +216,13 @@ export class Game {
       f.age+=dt;f.life-=dt;
       if(!f.fired&&f.age> (f.type==='danger'?.95:.6)){
         f.fired=true;
-        if(f.type==='constellation'){for(const e of this.enemies)if(!e.dead&&Math.abs(e.x-f.x)<170&&Math.abs(e.y-f.y)<210)this.damage(e,85);this.event('meteor-hit',{x:f.x,y:f.y});}
+        if(f.type==='constellation'){for(const e of this.enemies)if(!e.dead&&Math.abs(e.x-f.x)<170&&Math.abs(e.y-f.y)<210)this.damage(e,85,f.attack);this.event('meteor-hit',{x:f.x,y:f.y});}
         if(f.type==='danger'){if(Math.abs(p.x-f.x)<90&&p.y>480)this.hurt(40);this.event('danger-hit',{x:f.x,y:f.y});}
       }
     }
     this.effects=this.effects.filter(f=>f.life>0);
     if(this.dragon){const d=this.dragon;d.age+=dt;d.life-=dt;d.x+=dt*330;d.tick-=dt;
-      if(d.age>1&&d.tick<=0){d.tick=.45;const center=d.x+180;for(const e of this.enemies)if(!e.dead&&Math.abs(e.x-center)<270)this.damage(e,65);this.event('lightning',{x:center,y:565});}
+      if(d.age>1&&d.tick<=0){d.tick=.45;const center=d.x+180;for(const e of this.enemies)if(!e.dead&&Math.abs(e.x-center)<270)this.damage(e,65,d.attack);this.event('lightning',{x:center,y:565});}
       if(d.life<=0)this.dragon=null;
     }
     for(const n of this.numbers){n.life-=dt;n.y-=dt*32;}this.numbers=this.numbers.filter(n=>n.life>0);

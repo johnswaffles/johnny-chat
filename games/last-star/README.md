@@ -55,3 +55,6 @@ This folder is independent of Crownforge RTS, Oathbound and Johnny Chat. Neither
 - `docs/DETAIL_V2_PROMPT.json`: exact v2 repaint prompt, source and output path.
 
 The game uses native Canvas 2D and Web Audio. There are no runtime CDN, font or analytics requests. Transparent atlas sprites are drawn using source rectangles at runtime; the source images were not repainted or destructively processed.
+
+## Project contract
+Read [the game bible](docs/GAME_BIBLE.md) before creating new levels or changing mechanics and artwork.

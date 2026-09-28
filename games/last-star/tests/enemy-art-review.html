@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><title>Last Star enemy pose review</title>
+<style>body{background:#152432;color:#eef;font:15px sans-serif;margin:20px}canvas{max-width:100%;border:1px solid #688}button{padding:10px}</style>
+<h1>Enemy silhouette review — all poses, both directions</h1><p>Full weapons, trails and hems must remain visible. Dashed lines show shared foot anchors. This uses the production frame renderer at 1.6× gameplay size.</p>
+<button id="theme">Toggle light background</button><canvas width="1400" height="1400"></canvas>
+<script type="module">
+import {drawEnemyPose} from '../src/enemy-frames.js';
+const im=new Image();im.src='../assets/enemies-atlas-v2.png';await im.decode();const c=document.querySelector('canvas').getContext('2d');let light=false;
+function draw(){c.fillStyle=light?'#bacad1':'#14212e';c.fillRect(0,0,1400,1400);for(let row=0;row<4;row++){const type=row<2?'wraith':'boss',face=row%2?1:-1;for(let f=0;f<3;f++){const x=230+f*465,y=row<2?235+row*230:900+(row-2)*400;c.fillStyle=light?'#102030':'#dce8ed';c.font='16px sans-serif';c.fillText(`${type} · ${['idle','windup','attack'][f]} · ${face<0?'left':'right'}`,x-110,y-(type==='boss'?230:190));c.save();c.strokeStyle='#6c8794';c.setLineDash([4,5]);c.beginPath();c.moveTo(x-215,y);c.lineTo(x+215,y);c.stroke();c.restore();c.save();c.translate(x,y);c.scale(1.6,1.6);drawEnemyPose(c,im,type,f,0,0,face);c.restore();}}}
+document.querySelector('button').onclick=()=>{light=!light;draw()};draw();
+</script>

@@ -1,10 +1,11 @@
+import {drawEnemyPose} from './enemy-frames.js';
 import {arcadeEvent,drawArcade} from './arcade-fx.js';
 import {forwardCastPose} from './cast-pose.js';
 import {makeCelestialSeal,drawConstellation} from './spell-fx.js';
 import {LANTERNS} from './level-decor.js';
 import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?idle-flow=3';
 import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?arch-fix=1';
-import {PLATFORMS,SEALS,MEMORIES,WIDTH,clamp} from './game.js?arcade=1';
+import {PLATFORMS,SEALS,MEMORIES,WIDTH,clamp} from './game.js?reprisal=1';
 const TAU=Math.PI*2;
 const rand=(n)=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 const WIZARD=[
@@ -13,7 +14,7 @@ const WIZARD=[
 ];
 const PROPS={tree:[40,45,587,575],rock:[633,322,600,270],arch:[22,631,586,575],dragon:[628,629,610,581]};
 export async function loadArt(){
-  const paths={valley:'last-star-valley-detail-v2.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v1.png'};
+  const paths={valley:'last-star-valley-architecture-v3.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
   const images={};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));images.waterSprites=await createWaterfallSprites(images.valley);return images;
 }
 export class Renderer {
@@ -50,6 +51,8 @@ export class Renderer {
     if(e.type==='enemy-death'){this.burst(e.x,e.y,e.boss?'gold':'violet',e.boss?100:35,e.boss?250:110);if(e.boss){this.flash=.3;this.shake=.4;}}
     if(e.type==='seal'){this.burst(e.x,e.y-70,'gold',75,150);this.rings.push({x:e.x,y:e.y-60,r:20,life:1.4,color:'gold'});}
     if(e.type==='hurt')this.shake=.15;
+    if(e.type==='retaliation-charge'){this.burst(e.x,e.y,'violet',this.gentle?6:14,75);this.rings.push({x:e.x,y:e.y,r:22,life:.35,color:'violet'});}
+    if(e.type==='retaliation-release'){this.burst(e.x,e.y,'white',this.gentle?8:22,140);this.rings.push({x:e.x,y:e.y,r:15,life:.4,color:'violet'});}
     if(e.type==='lightning'){this.arcs.push({from:{x:e.x-60,y:225},to:{x:e.x,y:e.y},life:.25,lightning:true});this.burst(e.x,e.y-10,'blue',35,180);this.shake=.12;}
   }
   background(game){
@@ -213,10 +216,8 @@ export class Renderer {
       if(e.dead||e.x<this.camera-200||e.x>this.camera+this.w+200)continue;
       const boss=e.type==='boss',x=e.x-this.camera,bob=boss?Math.sin(t*1.2)*1.5:Math.sin(t*2+e.id)*7;
       let frame=e.windup>0?1:e.attack>0?2:0;
-      // Wide attack poses are framed separately to retain the whole weapon.
-      const sources=boss?[[10,521,486,475],[516,410,500,581],[1024,544,499,449]]:[[18,27,483,476],[567,12,457,492],[1025,81,500,418]];
-      const s=sources[frame],h=boss?196:106,w=h*s[2]/s[3];
-      c.save();c.translate(x,e.y+bob);if(e.face>0)c.scale(-1,1);if(e.flash>0)c.filter='brightness(1.9)';c.drawImage(this.art.enemies,...s,-w/2,-h,w,h);c.restore();
+      const h=boss?196:106;
+      c.save();if(e.flash>0)c.filter='brightness(1.9)';drawEnemyPose(c,this.art.enemies,e.type,frame,x,e.y+bob,e.face);c.restore();
       this.glow(x,e.y-(boss?100:70)+bob,boss?155:80,'violet',e.windup>0?.9:.4);
       if(e.windup>0){c.save();c.strokeStyle='#e1a5ecbb';c.lineWidth=1.5;c.beginPath();c.ellipse(x,e.y-3,boss?70:38,8,0,0,TAU);c.stroke();c.restore();this.star(x,e.y-h-17,6,'#f3b2e8');}
       if(!boss&&e.hp<e.maxHp){c.fillStyle='#1a1431';c.fillRect(x-24,e.y-h-15,48,3);c.fillStyle='#c994d4';c.fillRect(x-24,e.y-h-15,48*e.hp/e.maxHp,3);}
@@ -295,7 +296,15 @@ export class Renderer {
     this.background(game);this.platforms(game);this.seals(game);this.enemies(game);
     const flicker=p.invuln>0&&p.mantle<=0&&Math.floor(this.time*18)%2===0?.6:1;
     advanceWizardAnimation(this.wizardAnimation,p,dt);
-    this.wizard(p,flicker);this.spells(game);drawArcade(this,game,dt);this.particlesDraw(dt);
+    this.wizard(p,flicker);
+    if(p.retaliation>0){
+      const x=p.x-this.camera,y=p.y-62;c.save();
+      this.glow(x,y,110,'violet',.25+Math.min(p.retaliation/200,.35));
+      c.strokeStyle='#d5b3ff';c.lineWidth=1.2;c.globalAlpha=.7;
+      for(let i=0;i<3;i++){const a=i*TAU/3+(this.gentle?0:this.time*.9);const sx=x+Math.cos(a)*34,sy=y+Math.sin(a)*45;this.star(sx,sy,4,'#e7d5ff');}
+      c.restore();
+    }
+    this.spells(game);drawArcade(this,game,dt);this.particlesDraw(dt);
     for(const n of game.numbers){c.globalAlpha=Math.min(1,n.life*3);c.fillStyle=n.color;c.textAlign='center';c.font='bold 17px Georgia';c.shadowColor='#061522';c.shadowBlur=5;c.fillText(n.text,n.x-this.camera,n.y);c.shadowBlur=0;}c.globalAlpha=1;
     this.foreground();this.flash=Math.max(0,this.flash-dt);if(!this.gentle&&this.flash>0){c.fillStyle=`rgba(168,225,250,${this.flash*.35})`;c.fillRect(0,0,this.w,720);}
     c.restore();
