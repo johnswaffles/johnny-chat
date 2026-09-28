@@ -15,7 +15,7 @@ export function routeInput(g){
   // Walk off an upper ledge when a seal is below us before approaching it.
   if(next&&floor?.upper&&Math.abs(next.x-p.x)<150&&p.y<next.y-45&&!descentDirections.has(g))descentDirections.set(g,next.x<floor.x+floor.w/2?-1:1);
   if(descentDirections.has(g)){if(!next||p.y>=next.y-45)descentDirections.delete(g);else{move=descentDirections.get(g);jump=false;}}
-  const controls={move,jump,bolt:!!enemy,constellation:!!enemy&&Math.abs(enemy.x-p.x)<580,dragon:g.bossStarted&&!g.bossDefeated,interact:near?.type==='finish'||near?.type==='seal'&&near.index===g.checkpoint};
+  const controls={move,jump,bolt:!!enemy,use:!!enemy&&g.inventory.charges[g.inventory.equipped]>0,interact:near?.type==='finish'||near?.type==='seal'&&near.index===g.checkpoint};
   if(enemy){controls.aimX=enemy.x;controls.aimY=enemy.y-(enemy.type==='boss'?95:55);}
   return controls;
 }

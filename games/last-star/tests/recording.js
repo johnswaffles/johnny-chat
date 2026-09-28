@@ -1,0 +1,5 @@
+// Local QA only: capture the real game canvas; no state injection or audio access.
+export function addRecording(panel,canvas){
+ const b=document.createElement('button');b.textContent='Record 10 seconds of gameplay';panel.append(b);
+ b.onclick=()=>{if(!canvas.captureStream||!window.MediaRecorder){b.textContent='Canvas recording unavailable in this browser';return;}b.disabled=true;const stream=canvas.captureStream(30),recorder=new MediaRecorder(stream),chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());const a=document.createElement('a');const blob=new Blob(chunks,{type:recorder.mimeType});const result=location.hostname==='127.0.0.1'?await fetch('/qa-recording',{method:'POST',body:blob}):{ok:false};a.href=result.ok?'/output/level1-gameplay.webm':URL.createObjectURL(blob);a.download='level1-gameplay.webm';a.textContent='Download gameplay recording';panel.append(a);b.disabled=false;};recorder.start();setTimeout(()=>recorder.stop(),10000);};
+}

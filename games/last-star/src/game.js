@@ -1,6 +1,9 @@
-import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js';
-import {starshardMuzzle} from './cast-pose.js';
-export const SAVE_KEY = 'crownforge-last-star-v1';
+import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260928-level1-arcade';
+import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260928-level1-arcade';
+import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260928-level1-arcade';
+import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260928-level1-arcade';
+import {starshardMuzzle} from './cast-pose.js?release=20260928-level1-arcade';
+export const SAVE_KEY = 'crownforge-last-star-level1-preview-v1';
 export const WIDTH = 7900;
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 export const PLATFORMS = [
@@ -17,10 +20,10 @@ export const SEALS = [
   {x:3690,y:565,name:'The Broken Aqueduct',chapter:'II · THE BROKEN AQUEDUCT'},
   {x:6550,y:570,name:'The Last Observatory',chapter:'III · THE LAST OBSERVATORY'},
 ];
-import {MEMORIES} from './memories.js?staff-grounded=2';
+import {MEMORIES} from './memories.js?release=20260928-level1-arcade';
 export {MEMORIES};
 const ENEMIES = [
- [1510,560,'wraith'],[2260,580,'wraith'],[2430,580,'wraith'],
+ [1510,560,'wraith'],[580,580,'wraith'],[1660,560,'wraith'],
  [3000,565,'wraith'],[3210,565,'wraith'],[3890,565,'wraith'],
  [4490,580,'wraith'],[4800,580,'wraith'],[5370,570,'wraith'],
  [5610,570,'wraith'],[6010,555,'wraith'],[6220,555,'wraith'],
@@ -38,11 +41,12 @@ export function parseSave(raw) {
 }
 export class Game {
   constructor(saved=null){
-    this.arcade=newArcade();this.platforms=PLATFORMS;this.time=0;this.elapsed=saved?.elapsed||0;this.checkpoint=saved?.checkpoint||0;this.memories=new Set(saved?.memories||[]);
-    this.state='playing';this.events=[];this.projectiles=[];this.effects=[];this.numbers=[];this.kills=0;this.bossStarted=false;this.bossDefeated=false;this.zone=-1;this.jumpBuffer=0;this.coyote=0;this.targetId=null;this.chain=0;this.dragon=null;this.lastNotice=-10;
+    this.inventory=newInventory();this.solids=SOLIDS;this.arcade=newArcade();this.platforms=PLATFORMS;this.time=0;this.elapsed=saved?.elapsed||0;this.checkpoint=saved?.checkpoint||0;this.memories=new Set(saved?.memories||[]);
+    this.chests=CHESTS.map(d=>({...placeLoot(this,d),open:false,hp:1}));this.loot=INTRO_LOOT.map(d=>placeLoot(this,d));this.state='playing';this.events=[];this.projectiles=[];this.effects=[];this.numbers=[];this.kills=0;this.bossStarted=false;this.bossDefeated=false;this.zone=-1;this.jumpBuffer=0;this.coyote=0;this.targetId=null;this.chain=0;this.dragon=null;this.lastNotice=-10;
     const spawn=this.checkpoint?SEALS[this.checkpoint-1]:{x:230,y:580};
     this.player={x:spawn.x,y:spawn.y,vx:0,vy:0,face:1,hp:210,maxHp:210,mana:100,onGround:true,jumps:0,invuln:0,mantle:0,mantleCd:0,cast:0,retaliation:0,blinked:false,rangeStacks:0,cooldowns:{bolt:0,blink:0,constellation:0,dragon:0}};
-    this.enemies=ENEMIES.map(([x,y,type],id)=>({id,x,y,origin:x,type,hp:type==='boss'?1850:145,maxHp:type==='boss'?1850:145,cd:1+id*.14,windup:0,flash:0,phase:0,dead:false,attack:0,face:-1}));
+    this.enemies=ENEMIES.map(([x,y,type],id)=>({id,x,y,origin:x,type,hp:type==='boss'?1850:145,maxHp:type==='boss'?1850:145,cd:1+id*.14,windup:0,flash:0,stagger:0,staggerCd:0,phase:0,dead:false,attack:0,face:-1,role:type==='boss'?'guardian':id===1?'approach':id%4===0?'brute':'ranged'}));
+    for(const e of this.enemies)if(e.role==='brute')e.hp=e.maxHp=220;
     for(const e of this.enemies)if(e.x<spawn.x-100)e.dead=true;
   }
   event(type,data={}){this.events.push({type,...data});}
@@ -80,7 +84,18 @@ export class Game {
     }
     const enemy=this.enemies.filter(e=>!e.dead&&(e.x-p.x)*p.face>0&&Math.abs(e.x-p.x)<780).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0];
     if(enemy){const origin=starshardMuzzle(p),dx=enemy.x-origin.x,dy=enemy.y-(enemy.type==='boss'?85:50)-origin.y,len=Math.hypot(dx,dy)||1;return {dx:dx/len,dy:dy/len};}
+    const chest=this.chests.filter(c=>!c.open&&(c.x-p.x)*p.face>0&&Math.abs(c.x-p.x)<460).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0];if(chest){const o=starshardMuzzle(p),dx=chest.x-o.x,dy=chest.y-10-o.y,len=Math.hypot(dx,dy)||1;return {dx:dx/len,dy:dy/len};}
     return {dx:p.face,dy:0};
+  }
+  useItem(input={}){return useEquipped(this,input);}
+  applyStatus(e,kind,attack=null){
+    if(e.dead)return;
+    if(kind==='ember'){e.burn=LEVEL1.spells.ember.burnDuration;e.burnTick=LEVEL1.spells.ember.burnInterval;}
+    if(kind==='frost'){
+      if(e.type==='boss'||e.role==='brute'){e.slow=LEVEL1.spells.frost.slowDuration;}
+      else if(!(e.freezeImmune>0)){e.freeze=LEVEL1.spells.frost.freeze;e.freezeImmune=3.5;e.freezeAttack=attack;this.event('freeze',{x:e.x,y:e.y-50});}
+    }
+    if(kind==='chain'&&!(e.staggerCd>0)){e.stagger=e.type==='boss'?.08:e.role==='brute'?.15:LEVEL1.spells.chain.stagger;e.staggerCd=1.2;}
   }
   beginAttack(){
     const bonus=this.player.retaliation*3;this.player.retaliation=0;
@@ -91,7 +106,7 @@ export class Game {
   spell(kind,input={}){
     if(this.state!=='playing')return false;
     const p=this.player;
-    if(p.cooldowns[kind]>0)return false;
+    if(p.cooldowns[kind]>0||this.projectiles.length>LEVEL1.maxProjectiles-5)return false;
     if(kind==='dragon'&&this.checkpoint<2){this.notice('Awaken the aqueduct seal to call Vaelthryx.');return false;}
     const cost=kind==='constellation'?30:kind==='dragon'?60:0;
     if(p.mana<cost){this.notice('Starlight is gathering. Give it a moment.');return false;}
@@ -103,7 +118,7 @@ export class Game {
         if(this.bossStarted&&!this.bossDefeated&&(x<6840||x>7660))continue;
         if(!this.bossStarted&&this.checkpoint<3&&x>6880)continue;
         const ground=PLATFORMS.filter(f=>x>f.x+18&&x<f.x+f.w-18&&f.y>=p.y-35&&f.y<p.y+245).sort((a,b)=>a.y-b.y)[0];
-        if(ground){landing={x,y:Math.min(p.y,ground.y-2)};break;}
+        if(ground&&!segmentBlocked(from,{x,y:Math.min(p.y,ground.y-2)},this.solids)){landing={x,y:Math.min(p.y,ground.y-2)};break;}
       }
       if(!landing){this.notice('No safe ground within the passage.');return false;}
       p.x=landing.x;p.y=landing.y;p.vy=Math.min(p.vy,0);p.invuln=.85;p.blinked=true;p.rangeStacks=Math.min(5,p.rangeStacks+1);p.face=direction;
@@ -114,7 +129,7 @@ export class Game {
         if(target){attack??=this.beginAttack();this.damage(target,36,attack);this.event('arc',{from:{x:pos.x,y:pos.y-65},to:{x:target.x,y:target.y-60}});}
       }
     }else if(kind==='bolt'){
-      const aim=this.aim(input);p.cast=.3;p.castKind='bolt';const muzzle=starshardMuzzle(p);this.bolt(muzzle.x,muzzle.y,aim,36,this.beginAttack());this.event('cast',muzzle);
+      const aim=this.aim(input);p.cast=.3;p.castKind='bolt';const muzzle=starshardMuzzle(p);const level=Math.min(2,LEVEL1.staff.thresholds.filter(n=>this.arcade.crystals>=n).length-1),attack=this.beginAttack();for(let i=0;i<LEVEL1.staff.bolts[level];i++){const angle=Math.atan2(aim.dy,aim.dx)+(i-(LEVEL1.staff.bolts[level]-1)/2)*.08;this.bolt(muzzle.x,muzzle.y,{dx:Math.cos(angle),dy:Math.sin(angle)},LEVEL1.staff.damage[level],attack);this.projectiles.at(-1).power=level+1;}this.event('cast',muzzle);
     }else if(kind==='constellation'){
       p.castKind='constellation';
       const targets=this.enemies.filter(e=>!e.dead&&Math.abs(e.x-p.x)<660&&(e.x-p.x)*p.face>-60).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x));
@@ -135,9 +150,11 @@ export class Game {
     if(this.targetId!==e.id){this.targetId=e.id;this.chain=0;}
     if(this.player.blinked)this.chain=Math.min(this.chain+1,4);
     const multiplier=this.player.blinked?1+this.chain*.25:1;
+    let shatter=0;if(e.freeze>0&&attack!==e.freezeAttack){shatter=LEVEL1.spells.frost.shatter;e.freeze=0;this.event('shatter',{x:e.x,y:e.y-55});}
     const bonus=attack&&!attack.used?attack.bonus:0;
     if(attack)attack.used=true;
-    const amount=Math.round(base*multiplier*(1+missingHealthBonus(this.player))*arcadeDamage(this.arcade)+bonus);
+    const amount=Math.round(base*multiplier*(1+missingHealthBonus(this.player))*arcadeDamage(this.arcade)+bonus+shatter);
+    if(e.type!=='boss'&&e.staggerCd<=0){e.stagger=e.role==='brute'?.06:.12;e.staggerCd=e.role==='brute'?1.2:.7;const floor=this.platforms.find(f=>e.x>=f.x&&e.x<=f.x+f.w&&e.y===f.y);if(floor)e.x=clamp(e.x+Math.sign(e.x-this.player.x)*(e.role==='brute'?3:10),floor.x+25,floor.x+floor.w-25);}
     const dealt=Math.min(e.hp,amount);e.hp=Math.max(0,e.hp-amount);e.flash=.16;
     this.player.hp=Math.min(this.player.maxHp,this.player.hp+dealt*LIFE_STEAL);
     this.numbers.push({x:e.x,y:e.y-(e.type==='boss'?140:85),text:String(amount),life:.8,color:this.chain>=4?'#e9d29c':'#bceff8'});
@@ -160,7 +177,7 @@ export class Game {
     dt=clamp(dt,0,.04);this.time+=dt;this.elapsed+=dt;const p=this.player;
     for(const key in p.cooldowns)p.cooldowns[key]=Math.max(0,p.cooldowns[key]-dt);
     for(const key of ['invuln','mantle','mantleCd','cast'])p[key]=Math.max(0,p[key]-dt);
-    p.mana=Math.min(100,p.mana+dt*8);updateArcade(this,dt);
+    this.inventory.cooldown=Math.max(0,this.inventory.cooldown-dt);p.mana=Math.min(100,p.mana+dt*8);updateArcade(this,dt);updateLoot(this,dt);
     this.coyote=p.onGround?.12:Math.max(0,this.coyote-dt);
     if(input.jump)this.jumpBuffer=.13;else this.jumpBuffer=Math.max(0,this.jumpBuffer-dt);
     if(this.jumpBuffer>0&&(this.coyote>0||p.jumps<2)){
@@ -174,6 +191,7 @@ export class Game {
     if(this.checkpoint<3&&p.x>6870){p.x=6870;this.notice('Three starseals hold the Observatory gate.');}
     if(this.bossStarted&&!this.bossDefeated)p.x=clamp(p.x,6840,7660);
     if(p.y>880){p.invuln=0;this.hurt(35,'environment');if(this.state==='playing'){const spawn=this.checkpoint?SEALS[this.checkpoint-1]:{x:230,y:580};p.x=spawn.x;p.y=spawn.y;p.vx=p.vy=0;p.jumps=0;this.bossStarted=false;const boss=this.enemies.find(e=>e.type==='boss');if(!boss.dead){boss.hp=boss.maxHp;boss.x=boss.origin;boss.windup=0;boss.cd=2;}this.projectiles=[];this.notice('The ember catches you. Return to the path.');}}
+    if(input.use)this.useItem(input);
     if(input.bolt)this.spell('bolt',input);
     if(input.blink)this.spell('blink',input);
     if(input.constellation)this.spell('constellation',input);
@@ -183,35 +201,38 @@ export class Game {
     if(zone!==this.zone){this.zone=zone;this.event('zone',{index:zone});}
     if(p.x>6910&&this.checkpoint===3&&!this.bossStarted&&!this.bossDefeated){this.bossStarted=true;this.event('boss');}
     for(const e of this.enemies){
-      if(e.dead)continue;e.flash=Math.max(0,e.flash-dt);e.attack=Math.max(0,e.attack-dt);
+      if(e.dead)continue;if(e.burn>0){e.burn=Math.max(0,e.burn-dt);e.burnTick-=dt;if(e.burnTick<=0){e.burnTick+=LEVEL1.spells.ember.burnInterval;this.damage(e,LEVEL1.spells.ember.burnDamage);}}if(e.dead)continue;for(const k of ['freeze','freezeImmune','slow'])e[k]=Math.max(0,(e[k]||0)-dt);e.stagger=Math.max(0,e.stagger-dt);e.staggerCd=Math.max(0,e.staggerCd-dt);e.flash=Math.max(0,e.flash-dt);e.attack=Math.max(0,e.attack-dt);
       const dx=p.x-e.x,dy=p.y-e.y;e.face=Math.sign(dx)||-1;
       if(e.type==='boss'&&!this.bossStarted)continue;
-      if(Math.abs(dx)>850)continue;
+      if(Math.abs(dx)>850||e.stagger>0||e.freeze>0)continue;const enemyDt=dt*(e.slow>0?LEVEL1.spells.frost.slow:1);
       if(e.windup>0){
-        e.windup-=dt;
+        e.windup-=enemyDt;
         if(e.windup<=0){e.attack=.4;
           if(e.type==='boss'){
-            const phase=e.hp<e.maxHp*.5;
-            for(let i=-1;i<=1;i++){const len=Math.hypot(dx,dy-25)||1;const angle=Math.atan2(dy-25,dx)+i*(phase?.2:.15);this.projectiles.push({x:e.x,y:e.y-85,vx:Math.cos(angle)*280,vy:Math.sin(angle)*280,life:4,damage:29,owner:'enemy',r:13});}
-            if(phase)this.effects.push({type:'danger',x:p.x,y:570,age:0,life:1.4,fired:false});
-            this.event('enemy-cast',{x:e.x,y:e.y-85});e.cd=phase?1.8:2.6;
-          }else {const len=Math.hypot(dx,dy)||1;this.projectiles.push({x:e.x,y:e.y-55,vx:dx/len*230,vy:dy/len*230,life:3.5,damage:23,owner:'enemy',r:10});e.cd=2.2;}
+            const fast=e.hp<e.maxHp*.5,pattern=e.phase++%3;
+            if(pattern===0){for(let i=-1;i<=1;i++){const angle=Math.atan2(dy-25,dx)+i*.18;this.projectiles.push({x:e.x,y:e.y-85,vx:Math.cos(angle)*250,vy:Math.sin(angle)*250,life:4,damage:25,owner:'enemy',r:13});}}
+            else if(pattern===1){for(const offset of [-115,115])this.effects.push({type:'danger',x:clamp(p.x+offset,6860,7640),y:570,age:0,life:1.4,fired:false});}
+            else {this.projectiles.push({x:e.x,y:e.y-25,vx:e.face*300,vy:0,life:3,damage:30,owner:'enemy',r:13});}
+            this.event('enemy-cast',{x:e.x,y:e.y-85});e.cd=fast?2.1:2.7;
+          }else {if(e.role==='ranged'){const len=Math.hypot(dx,dy)||1;this.projectiles.push({x:e.x,y:e.y-55,vx:dx/len*230,vy:dy/len*230,life:3.5,damage:23,owner:'enemy',r:10});}e.cd=e.role==='brute'?2.3:1.8;}
+
         }
       }else{
-        e.cd-=dt;
-        if(Math.abs(dx)<(e.type==='boss'?850:620)&&e.cd<=0){e.windup=e.type==='boss'?.95:.8;this.event('windup',{x:e.x,y:e.y-60});}
-        if(e.type==='wraith'&&Math.abs(dx)>210){const nx=e.x+Math.sign(dx)*dt*39;if(PLATFORMS.some(f=>!f.upper&&nx>f.x+25&&nx<f.x+f.w-25&&f.y===e.y))e.x=nx;}
+        e.cd-=enemyDt;
+        if(Math.abs(dx)<(e.type==='boss'?850:e.role==='ranged'?620:e.role==='brute'?110:75)&&e.cd<=0&&e.attack<=0){e.windup=e.type==='boss'?1.05:e.role==='brute'?1:.65;this.event('windup',{x:e.x,y:e.y-60});}
+        if(e.type==='wraith'&&e.attack<=0&&Math.abs(dx)>(e.role==='ranged'?210:48)){const nx=e.x+Math.sign(dx)*enemyDt*(e.role==='ranged'?39:e.role==='brute'?65:105);if(PLATFORMS.some(f=>!f.upper&&nx>f.x+25&&nx<f.x+f.w-25&&f.y===e.y))e.x=nx;}
       }
-      if(Math.abs(dx)<(e.type==='boss'?60:34)&&Math.abs(dy)<80)this.hurt(e.type==='boss'?35:18);
+      if(e.role!=='ranged'&&e.attack>0&&e.attack<.25&&Math.abs(dx)<(e.type==='boss'?60:e.role==='brute'?115:78)&&Math.abs(dy)<80)this.hurt(e.type==='boss'?35:e.role==='brute'?27:18);
     }
     for(const b of this.projectiles){
       b.life-=dt;b.px=b.x;b.py=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;
       if(b.owner==='player'){
         for(const e of this.enemies){if(e.dead)continue;const r=e.type==='boss'?55:31;
-          if(Math.abs(b.x-e.x)<r+10&&b.y>e.y-(e.type==='boss'?170:100)&&b.y<e.y+5){this.damage(e,b.damage,b.attack);b.life=0;break;}}
+          if(Math.abs(b.x-e.x)<r+10&&b.y>e.y-(e.type==='boss'?170:100)&&b.y<e.y+5){if(b.kind==='ember'){for(const victim of this.enemies)if(!victim.dead&&Math.hypot(victim.x-b.x,victim.y-50-b.y)<LEVEL1.spells.ember.radius){this.damage(victim,b.damage,b.attack);this.applyStatus(victim,'ember');}this.event('ember-impact',{x:b.x,y:b.y});}else {this.damage(e,b.damage,b.attack);if(b.kind==='frost')this.applyStatus(e,'frost',b.attack);}b.life=0;break;}}
+      if(b.life>0)for(const chest of this.chests){if(!chest.open&&Math.abs(b.x-chest.x)<32&&b.y>chest.y-60&&b.y<chest.y+20){breakChest(this,chest);b.life=0;break;}}
       }else if(Math.abs(b.x-p.x)<24&&b.y>p.y-100&&b.y<p.y){this.hurt(b.damage);b.life=0;}
     }
-    this.projectiles=this.projectiles.filter(b=>b.life>0);
+    this.projectiles=this.projectiles.filter(b=>b.life>0).slice(-LEVEL1.maxProjectiles);
     for(const f of this.effects){
       f.age+=dt;f.life-=dt;
       if(!f.fired&&f.age> (f.type==='danger'?.95:.6)){
@@ -220,11 +241,11 @@ export class Game {
         if(f.type==='danger'){if(Math.abs(p.x-f.x)<90&&p.y>480)this.hurt(40);this.event('danger-hit',{x:f.x,y:f.y});}
       }
     }
-    this.effects=this.effects.filter(f=>f.life>0);
+    this.effects=this.effects.filter(f=>f.life>0).slice(-LEVEL1.maxEffects);
     if(this.dragon){const d=this.dragon;d.age+=dt;d.life-=dt;d.x+=dt*330;d.tick-=dt;
       if(d.age>1&&d.tick<=0){d.tick=.45;const center=d.x+180;for(const e of this.enemies)if(!e.dead&&Math.abs(e.x-center)<270)this.damage(e,65,d.attack);this.event('lightning',{x:center,y:565});}
       if(d.life<=0)this.dragon=null;
     }
-    for(const n of this.numbers){n.life-=dt;n.y-=dt*32;}this.numbers=this.numbers.filter(n=>n.life>0);
+    for(const n of this.numbers){n.life-=dt;n.y-=dt*32;}this.numbers=this.numbers.filter(n=>n.life>0).slice(-40);
   }
 }

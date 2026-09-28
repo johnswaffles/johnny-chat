@@ -5,6 +5,7 @@ export function virtualGamepad(panel){
  panel.append(section);
  section.querySelector('#qa-pad-connect').onclick=()=>{enabled=true;used=true;};
  section.querySelector('#qa-pad-disconnect').onclick=()=>{enabled=false;until.clear();};
+ const hold=document.createElement('button');hold.textContent='Hold virtual LB';hold.onclick=()=>until.set(4,Infinity);section.append(hold);const release=document.createElement('button');release.textContent='Release virtual LB';release.onclick=()=>until.delete(4);section.append(release);
  for(const [name,index] of [['A',0],['B',1],['X',2],['Y',3],['LB',4],['RB',5],['RT',7],['Menu',9],['Up',12],['Down',13]]){
   const b=document.createElement('button');b.textContent='Virtual '+name;b.style.display='inline-block';b.style.marginRight='4px';b.onpointerdown=e=>e.preventDefault();b.onclick=()=>until.set(index,performance.now()+250);section.append(b);
  }

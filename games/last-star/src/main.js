@@ -1,8 +1,12 @@
-import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus,MEMORIES} from './game.js?reprisal=1';
-import {Renderer,loadArt} from './render.js?reprisal=1';
-import {Soundscape} from './audio.js?arcade=1';
-import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js';
-import {ControlsUI} from './controls-ui.js';
+import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260928-level1-arcade';
+import {LEVEL1} from './level1-config.js?release=20260928-level1-arcade';
+const selection=new SelectionRing();
+let pendingActions={},hitStop=0,hitStopGap=0,needsFrame=true;
+import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus,MEMORIES} from './game.js?release=20260928-level1-arcade';
+import {Renderer,loadArt} from './render.js?release=20260928-level1-arcade';
+import {Soundscape} from './audio.js?release=20260928-level1-arcade';
+import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260928-level1-arcade';
+import {ControlsUI} from './controls-ui.js?release=20260928-level1-arcade';
 const $=id=>document.getElementById(id);
 const qa=new URLSearchParams(location.search).has('qa');
 const storageKey=qa?SAVE_KEY+'-qa':SAVE_KEY;
@@ -13,8 +17,8 @@ const controller=new Controller();
 let bindings;try{bindings=readBindings(localStorage.getItem(storageKey+'-bindings'));}catch{bindings=readBindings(null);}
 let lastDevice='keyboard',menuDirection=0,menuRepeatAt=0,controllerError='',qaPadSource=null;
 const controlsUI=new ControlsUI(bindings,controller,()=>{try{localStorage.setItem(storageKey+'-bindings',JSON.stringify(bindings));}catch{controlsUI.message('Controls changed for this session; browser storage is unavailable.');}});
-let saved=null,settings={sound:true,gentle:matchMedia('(prefers-reduced-motion: reduce)').matches,quality:'high'};
-try{saved=parseSave(localStorage.getItem(storageKey));const prefs=JSON.parse(localStorage.getItem(SAVE_KEY+'-settings'));if(prefs){settings.sound=prefs.sound!==false;settings.gentle=prefs.gentle===true;settings.quality=prefs.quality==='low'?'low':'high';}}catch{}
+let saved=null,settings={sound:true,gentle:matchMedia('(prefers-reduced-motion: reduce)').matches,quality:'low',music:.38,sfx:.28,shake:.65,reducedFlash:false};
+try{saved=parseSave(localStorage.getItem(storageKey));const prefs=JSON.parse(localStorage.getItem(SAVE_KEY+'-settings'));if(prefs){for(const key of ['music','sfx','shake'])if(Number.isFinite(prefs[key]))settings[key]=Math.max(0,Math.min(1,prefs[key]));settings.reducedFlash=prefs.reducedFlash===true;settings.sound=prefs.sound!==false;settings.gentle=prefs.gentle===true;settings.quality=prefs.quality==='low'?'low':'high';}}catch{}
 const zoneNames=['The Silverwood','The Broken Aqueduct','The Last Observatory'];
 function showToast(text){$('toast').textContent=text;toastUntil=performance.now()+3000;$('toast').classList.add('visible');}
 function save(){saved=game.save();try{localStorage.setItem(storageKey,JSON.stringify(saved));}catch{showToast('This browser cannot save. Keep this window open to continue.');}}
@@ -33,22 +37,25 @@ $('memory-prev').onclick=()=>{if(memoryPage>0){memoryPage--;renderMemory();}};
 $('memory-next').onclick=()=>{if(memoryPage<MEMORIES[memoryIndex].paragraphs.length-1){memoryPage++;renderMemory();}else closeMemory();};
 $('memory-close').onclick=closeMemory;
 $('memory-screen').addEventListener('keydown',e=>{if(e.key!=='Tab')return;const buttons=[...$('memory-screen').querySelectorAll('button')].filter(b=>!b.disabled);const i=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(i+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus();});
-function setMode(next){mode=next;$('hud').inert=next==='memory';keys.clear();pressed.clear();controller.clearEdges();mouseDown=false;mouseAim=null;for(const [id,name] of [['memory-screen','memory'],['title-screen','title'],['pause-screen','pause'],['bindings-screen','bindings'],['death-screen','dead'],['ending-screen','won']])$(id).hidden=next!==name;$('hud').hidden=next==='title'||(next==='bindings'&&menuReturn==='title');if(renderer)renderer.title=next==='title';if(next!=='playing')requestAnimationFrame(()=>{if(mode!==next)return;const target=next==='memory'?'memory-next':next==='pause'?'resume':next==='bindings'?'bindings-back':next==='dead'?'retry':next==='won'?'replay':saved&&!saved.completed?'continue':'begin';$(target)?.focus();});}
+function setMode(next){needsFrame=true;selection.cancel();pendingActions={};mode=next;$('hud').inert=next==='memory';keys.clear();pressed.clear();controller.clearEdges();mouseDown=false;mouseAim=null;for(const [id,name] of [['memory-screen','memory'],['title-screen','title'],['pause-screen','pause'],['bindings-screen','bindings'],['death-screen','dead'],['ending-screen','won']])$(id).hidden=next!==name;$('hud').hidden=next==='title'||(next==='bindings'&&menuReturn==='title');if(renderer)renderer.title=next==='title';if(next!=='playing')requestAnimationFrame(()=>{if(mode!==next)return;const target=next==='memory'?'memory-next':next==='pause'?'resume':next==='bindings'?'bindings-back':next==='dead'?'retry':next==='won'?'replay':saved&&!saved.completed?'continue':'begin';$(target)?.focus();});}
 function start(resume=false){
-  qaReplay=false;toastUntil=dialogueUntil=areaUntil=0;$('dialogue').hidden=true;$('toast').classList.remove('visible');$('area-title').classList.remove('visible');
-  game=new Game(resume?saved:null);renderer.camera=Math.max(0,game.player.x-renderer.w*.37);renderer.particles=[];renderer.rings=[];renderer.arcs=[];renderer.echoes=[];renderer.arcadeWaves=[];
+  hitStop=hitStopGap=0;audio.reset();qaReplay=false;toastUntil=dialogueUntil=areaUntil=0;$('dialogue').hidden=true;$('toast').classList.remove('visible');$('area-title').classList.remove('visible');
+  game=new Game(resume?saved:null);renderer.camera=Math.max(0,game.player.x-renderer.w*.37);renderer.reset();
   setMode('playing');audio.start();accumulator=0;
   if(!resume){showDialogue('One ember survived the sealed night. Follow the starseals. Bring its light home.');}
   updateUI();
 }
 function pause(){if(mode==='memory'){closeMemory();return;}if(mode==='playing'||mode==='title'){menuReturn=mode;setMode('pause');if(menuReturn==='title')$('hud').hidden=true;}else if(mode==='pause')setMode(menuReturn);else if(mode==='bindings'){controlsUI.cancel();setMode('pause');}}
 function applySettings(){
-  settings={sound:$('sound').checked,gentle:$('gentle').checked,quality:$('quality').value};
-  audio.setEnabled(settings.sound);if(renderer){renderer.gentle=settings.gentle;renderer.quality=settings.quality;}
+  settings={sound:$('sound').checked,gentle:$('gentle').checked,quality:$('quality').value,music:+$('music-volume').value,sfx:+$('sfx-volume').value,shake:+$('shake-volume').value,reducedFlash:$('reduced-flash').checked};
+  audio.setVolumes(settings.music,settings.sfx);audio.setEnabled(settings.sound);if(renderer){renderer.gentle=settings.gentle;renderer.quality=settings.quality;renderer.resize();needsFrame=true;renderer.shakeScale=settings.shake;renderer.reducedFlash=settings.reducedFlash;}
   try{localStorage.setItem(SAVE_KEY+'-settings',JSON.stringify(settings));}catch{}
 }
 for(const [id,key] of [['sound','sound'],['gentle','gentle']]){$(id).checked=settings[key];$(id).addEventListener('change',applySettings);}
+for(const [id,key] of [['music-volume','music'],['sfx-volume','sfx'],['shake-volume','shake']]){$(id).value=settings[key];$(id).addEventListener('input',applySettings);} $('reduced-flash').checked=settings.reducedFlash;$('reduced-flash').addEventListener('change',applySettings);
 $('quality').value=settings.quality;$('quality').addEventListener('change',applySettings);
+$('equipped-item').onclick=()=>{if(mode==='playing'&&!selection.open)game.useItem();};
+for(const [i,b] of [...document.querySelectorAll('[data-item]')].entries())b.onclick=()=>{selection.index=i;audio.event({type:'selection'});};
 $('begin').addEventListener('click',()=>start(false));$('continue').addEventListener('click',()=>start(true));
 $('pause-button').addEventListener('click',pause);$('resume').addEventListener('click',()=>setMode(menuReturn));
 $('title-settings').addEventListener('click',()=>{menuReturn='title';setMode('pause');$('hud').hidden=true;});
@@ -60,7 +67,7 @@ $('ending-title').addEventListener('click',title);$('retry').addEventListener('c
 for(const button of document.querySelectorAll('[data-spell]'))button.addEventListener('click',()=>{if(mode==='playing')game.spell(button.dataset.spell,{move:(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0)});});
 function actionKeys(action){
   const primary=bindings.keys[action];if(primary!==DEFAULT_KEYS[action])return [primary];
-  const aliases={left:['ArrowLeft'],right:['ArrowRight'],jump:['KeyW','ArrowUp'],blink:['KeyK']};
+  const aliases={left:['ArrowLeft'],right:['ArrowRight'],jump:['KeyW','ArrowUp'],blink:[]};
   // A customized primary binding takes precedence over an old convenience alias.
   return [primary,...(aliases[action]||[]).filter(k=>!Object.values(bindings.keys).includes(k))];
 }
@@ -77,16 +84,16 @@ window.addEventListener('keyup',e=>keys.delete(normalizeKey(e.code)));
 window.addEventListener('blur',()=>{keys.clear();pressed.clear();controller.clearEdges();controlsUI.cancel();mouseDown=false;if(mode==='playing')pause();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause();});
 function pointerWorld(e){const rect=$('world').getBoundingClientRect();return {aimX:(e.clientX-rect.left)/rect.width*renderer.w+renderer.camera,aimY:(e.clientY-rect.top)/rect.height*720};}
-$('world').addEventListener('pointerdown',e=>{lastDevice='keyboard';if(mode!=='playing')return;e.preventDefault();mouseAim=pointerWorld(e);if(e.button===0)mouseDown=true;if(e.button===2)game.spell('constellation',mouseAim);});
+$('world').addEventListener('pointerdown',e=>{lastDevice='keyboard';if(mode!=='playing')return;e.preventDefault();mouseAim=pointerWorld(e);if(e.button===0)mouseDown=true;if(e.button===2)game.useItem(mouseAim);});
 $('world').addEventListener('pointermove',e=>{if(mouseDown)mouseAim=pointerWorld(e);});
 window.addEventListener('pointerup',()=>{mouseDown=false;mouseAim=null;});
 $('world').addEventListener('contextmenu',e=>e.preventDefault());
-window.addEventListener('resize',()=>renderer?.resize());
+window.addEventListener('resize',()=>{renderer?.resize();needsFrame=true;});
 function input(){
   if(qaReplay&&qaDriver)return qaDriver(game);
   const has=a=>actionKeys(a).some(k=>keys.has(k)),edge=a=>actionKeys(a).some(k=>pressed.has(k));
   const pad=controller.consume(bindings);
-  const r={move:(has('right')?1:0)-(has('left')?1:0)||pad.move,jump:edge('jump')||pad.jump,bolt:has('bolt')||mouseDown||pad.bolt,blink:edge('blink')||pad.blink,constellation:edge('constellation')||pad.constellation,dragon:edge('dragon')||pad.dragon,interact:edge('interact')||pad.interact};
+  const r={move:(has('right')?1:0)-(has('left')?1:0)||pad.move,jump:edge('jump')||pad.jump,bolt:has('bolt')||mouseDown||pad.bolt,blink:edge('blink')||pad.blink,use:edge('use')||pad.use,ring:has('ring')||pad.ring,previous:edge('previous')||pad.previous,interact:edge('interact')||pad.interact};
   if(lastDevice==='controller'&&Math.hypot(controller.aim.x,controller.aim.y)>.1){r.aimX=game.player.x+controller.aim.x*600;r.aimY=game.player.y-68+controller.aim.y*600;}
   if(mouseDown&&mouseAim)Object.assign(r,mouseAim);pressed.clear();return r;
 }
@@ -116,16 +123,17 @@ function pollController(now){
   controller.clearEdges();
 }
 function events(){
-  for(const e of game.events){renderer.event(e);audio.event(e);
+  for(const e of game.events){renderer.event(e);audio.event(e);if(e.type==='enemy-death'&&hitStopGap<=0&&!settings.gentle){hitStop=LEVEL1.hitStop;hitStopGap=LEVEL1.hitStopGap;}
     if(e.type==='power-rank')showToast(`STAR POWER ${e.rank} · +${e.rank*10}% spell damage`);
     if(e.type==='overdrive')showToast('OVERDRIVE · +35% damage for 8 seconds');
+    if(e.type==='treasure')showToast(e.text);
     if(e.type==='toast')showToast(e.text);
     if(e.type==='dialogue')showDialogue(e.text);
     if(e.type==='memory')openMemory(e.index);
     if(e.type==='zone'){$('area-title').querySelector('strong').textContent=zoneNames[e.index];areaUntil=performance.now()+4200;$('area-title').classList.add('visible');}
     if(e.type==='save')save();
     if(e.type==='mantle')showToast('Astral Mantle · the last star shields you');
-    if(e.type==='boss'){showDialogue('The Hollow Astronomer. Still guarding a sky that no longer exists.');showToast('Break the guardian’s hold. Call Vaelthryx with R.');}
+    if(e.type==='boss'){showDialogue('The Hollow Astronomer. Still guarding a sky that no longer exists.');showToast('Watch the fan, marked ground, then the low sweep. Strike between casts.');}
     if(e.type==='dead'){save();setMode('dead');}
     if(e.type==='won'){$('ending-stats').textContent=`3 / 3 starseals restored · ${game.memories.size} / ${MEMORIES.length} memories found · ${game.arcade.score.toLocaleString()} points · best chain ×${game.arcade.bestCombo} · ${Math.floor(game.elapsed/60)}m ${Math.floor(game.elapsed%60)}s`;setMode('won');}
   }game.events=[];
@@ -133,9 +141,9 @@ function events(){
 function updateUI(){
   const p=game.player,a=game.arcade;
   $('run-score').textContent=String(a.score).padStart(6,'0');$('combo-label').textContent=a.combo?`×${a.combo} CHAIN · ${a.comboTime.toFixed(1)}s`:'CHAIN KILLS · BUILD YOUR MULTIPLIER';$('combo-fill').style.width=a.comboTime/8*100+'%';
-  $('power-rank').textContent=`STAR POWER ${['○','I','II','III'][a.rank]} · +${a.rank*10}%`;$('crystal-count').textContent=`${a.crystals} ${a.crystals===1?'crystal':'crystals'}`;
+  $('power-rank').textContent=`STAFF ${Math.min(3,1+(a.crystals>=6)+(a.crystals>=15))} / 3`; $('crystal-count').textContent=`${a.crystals} ${a.crystals===1?'crystal':'crystals'}`;
   $('charge-fill').style.width=(a.overdrive>0?a.overdrive/8:a.charge/9)*100+'%';$('power-hud').classList.toggle('overdrive',a.overdrive>0);
-  $('power-description').textContent=a.rank<3?`${[6,15,27][a.rank]-a.crystals} crystals to the next power rank`:'Maximum star power · keep charging Overdrive';
+  $('power-description').textContent=a.rank<3?`${[6,15,27][a.rank]-a.crystals} crystals to the next power rank`:'Maximum star power · three-shot staff';
   $('overdrive-label').textContent=a.overdrive>0?`OVERDRIVE · ${a.overdrive.toFixed(1)}s · +35% DAMAGE`:`OVERDRIVE · ${a.charge} / 9`;
   $('health-text').textContent=`${Math.ceil(p.hp)} / 210`;$('health-fill').style.width=`${p.hp/210*100}%`;$('mana-fill').style.width=p.mana+'%';$('mana-text').textContent=Math.floor(p.mana);
   $('memory-count').textContent=`Memories ${game.memories.size} / ${MEMORIES.length}`;
@@ -146,43 +154,50 @@ function updateUI(){
   const padMode=lastDevice==='controller'&&controller.connected;
   const prompt=a=>padMode?buttonName(bindings.pad[a],controller.standard):keyName(bindings.keys[a]);
   $('game').classList.toggle('controller-active',padMode);
-  $('world').setAttribute('aria-label',`Game world. ${padMode?'Left stick':prompt('left')+' and '+prompt('right')} to move, ${prompt('jump')} to jump, ${prompt('bolt')} to cast, ${prompt('blink')} to teleport, ${prompt('interact')} to interact.`);
+  $('world').setAttribute('aria-label',`Game world. ${padMode?'Left stick':prompt('left')+' and '+prompt('right')} to move, ${prompt('jump')} to jump, ${prompt('bolt')} to cast, ${prompt('blink')} to teleport, ${prompt('interact')} to interact, ${prompt('use')} to use equipped item, hold ${prompt('ring')} to select.`);
   const near=game.nearby();$('interaction').hidden=!near||mode!=='playing';if(near)$('interaction').innerHTML=`<kbd>${prompt('interact')}</kbd>${near.label}`;
   if((near&&performance.now()>dialogueUntil-3500)||(game.bossStarted&&!game.bossDefeated))$('dialogue').hidden=true;
   const boss=game.enemies.find(e=>e.type==='boss');$('boss-ui').hidden=!game.bossStarted||game.bossDefeated;$('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';
   for(const button of document.querySelectorAll('[data-spell]')){const spell=button.dataset.spell,cd=p.cooldowns[spell],locked=spell==='dragon'&&game.checkpoint<2;button.style.setProperty('--ready',`${(1-cd/COOLDOWNS[spell])*100}%`);button.querySelector('kbd').textContent=prompt(spell);button.title=`${ACTIONS[spell]} · ${prompt(spell)}${spell==='bolt'?' · Hold to cast':''}`;button.querySelector('.cooldown').textContent=locked?'◇':cd>.1?(cd<1?cd.toFixed(1):Math.ceil(cd)):'';button.classList.toggle('unavailable',locked||(spell==='dragon'&&p.mana<60)||(spell==='constellation'&&p.mana<30));}
+  $('selection-ring').classList.toggle('on-left',game.player.x-renderer.camera>renderer.w*.6);$('selection-ring').hidden=!selection.open||mode!=='playing';
+  for(const [i,b] of [...document.querySelectorAll('[data-item]')].entries()){const kind=b.dataset.item;b.classList.toggle('chosen',selection.index===i);b.querySelector('strong').textContent=game.inventory.charges[kind];b.setAttribute('aria-selected',String(selection.index===i));}
+  const item=game.inventory.equipped;$('equipped-name').textContent=LEVEL1.spells[item].name;$('equipped-count').textContent=game.inventory.charges[item];$('equipped-key').textContent=prompt('use');$('equipped-item').dataset.itemIcon=item;$('ring-hint').textContent=`Hold ${prompt('ring')} · ${prompt('interact')} next / ${prompt('previous')} previous`;
   const hints=document.querySelectorAll('.bottom-hint span');hints[0].textContent=padMode?`Left stick move · Right stick aim · ${prompt('jump')} double jump`:`${prompt('left')} / ${prompt('right')} move · ${prompt('jump')} jump / double jump`;hints[1].textContent=`${prompt('interact')} interact · ${padMode?'Menu':'ESC'} pause`;
-  const help=document.querySelectorAll('.controls kbd');[`${prompt('left')} / ${prompt('right')}`,prompt('jump'),prompt('bolt'),prompt('blink'),prompt('constellation'),prompt('dragon'),prompt('interact')].forEach((v,i)=>{if(help[i])help[i].textContent=padMode&&i===0?'Left stick / D-pad':v;});
   controlsUI.status(controllerError);
-  if(qa&&$('qa-state'))$('qa-state').textContent=JSON.stringify({mode,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.hp),reprisal:Math.round(p.retaliation*3),score:game.arcade.score,crystals:game.arcade.crystals,power:game.arcade.rank,overdrive:game.arcade.overdrive,drops:game.arcade.drops.length,seals:game.checkpoint,kills:game.kills,elapsed:Math.round(game.elapsed),boss:game.bossStarted,bossHP:Math.round(boss.hp),dragon:!!game.dragon,memories:[...game.memories]});
+  if(qa&&$('qa-state'))$('qa-state').textContent=JSON.stringify({mode,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.hp),reprisal:Math.round(p.retaliation*3),ring:selection.open,inventory:game.inventory,score:game.arcade.score,crystals:game.arcade.crystals,power:game.arcade.rank,overdrive:game.arcade.overdrive,drops:game.arcade.drops.length,seals:game.checkpoint,kills:game.kills,elapsed:Math.round(game.elapsed),boss:game.bossStarted,bossHP:Math.round(boss.hp),dragon:!!game.dragon,memories:[...game.memories]});
 }
 function loop(now){
   const dt=Math.min((now-previous)/1000||0,.05);previous=now;
   pollController(now);
+  hitStopGap=Math.max(0,hitStopGap-dt);hitStop=Math.max(0,hitStop-dt);let worldSpeed=1;
   if(mode==='playing'){
-    accumulator+=dt;let first=true;
-    while(accumulator>=1/60){const controls=input();if(!first){controls.jump=controls.blink=controls.constellation=controls.dragon=controls.interact=false;}game.update(1/60,controls);events();accumulator-=1/60;first=false;if(mode!=='playing'){accumulator=0;break;}}
+    const controls=input(),state=selection.step(controls,game.inventory);worldSpeed=state.speed;controls.use=state.use;if(selection.open){controls.interact=controls.bolt=controls.blink=controls.jump=false;}
+    if(state.changed||controls.previous||controls.interact&&selection.open)audio.event({type:'selection'});
+    for(const a of ['jump','blink','use','interact'])pendingActions[a]||=controls[a];if(selection.open)pendingActions={};
+    accumulator+=(hitStop>0?0:dt)*worldSpeed;let first=true;
+    while(accumulator>=1/60){const step={...controls,...pendingActions};pendingActions={};if(!first){step.jump=step.blink=step.use=step.interact=false;}game.update(1/60,step);events();accumulator-=1/60;first=false;if(mode!=='playing'){accumulator=0;break;}}
     audio.update(game.time);
   }
   if(mode==='title'){game.player.x=renderer.w*.72;game.player.y=580;}
-  renderer.draw(game,(mode==='playing'||mode==='title')?dt:0);
+  if(mode==='playing'||mode==='title'||needsFrame){renderer.draw(game,(mode==='playing'||mode==='title')?dt*worldSpeed:0);needsFrame=false;}
   uiTimer+=dt;if(uiTimer>.08){updateUI();uiTimer=0;}
   if(now>toastUntil)$('toast').classList.remove('visible');if(now>dialogueUntil)$('dialogue').hidden=true;if(now>areaUntil)$('area-title').classList.remove('visible');
   requestAnimationFrame(loop);
 }
 try{
-  const art=await loadArt();renderer=new Renderer($('world'),art);renderer.gentle=settings.gentle;renderer.quality=settings.quality;audio.enabled=settings.sound;
+  const art=await loadArt();renderer=new Renderer($('world'),art);renderer.gentle=settings.gentle;renderer.quality=settings.quality;renderer.resize();audio.setVolumes(settings.music,settings.sfx);audio.enabled=settings.sound;renderer.shakeScale=settings.shake;renderer.reducedFlash=settings.reducedFlash;
   $('begin').disabled=false;$('begin').textContent='Begin the journey  →';$('continue').hidden=!saved||saved.completed;
   game.player.x=renderer.w*.72;renderer.camera=0;
   requestAnimationFrame(loop);
   // Local QA surface is opt-in and absent from the normal player route.
   if(qa){
-    qaDriver=(await import('../tests/route-driver.mjs')).routeInput;
+    qaDriver=(await import('../tests/route-driver.mjs?release=20260928-level1-arcade')).routeInput;
     const panel=document.createElement('details');panel.id='qa-panel';panel.open=true;
     panel.innerHTML='<summary>Local QA</summary><button id="qa-replay">Run input-only playthrough</button><button id="qa-stop">Take control</button><button id="qa-resume">Resume saved checkpoint</button><output id="qa-state"></output>';
-    $('game').append(panel);
-    qaPadSource=(await import('../tests/virtual-gamepad.js')).virtualGamepad(panel);
+    $('game').append(panel);(await import('../tests/recording.js')).addRecording(panel,$('world'));
+    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260928-level1-arcade')).virtualGamepad(panel);
     for(const m of [...MEMORIES].sort((a,b)=>a.chapter-b.chapter)){const b=document.createElement('button');b.textContent=`Visit memory ${m.chapter}`;b.onclick=()=>{start(false);game.player.x=m.x;game.player.y=m.y;renderer.camera=Math.max(0,m.x-renderer.w*.37);};panel.append(b);}
+    const practice=document.createElement('button');practice.textContent='Practice spells in Silverwood';practice.onclick=()=>{start(false);game.player.x=1340;game.player.y=560;renderer.camera=900;for(const kind of SLOTS)grantItem(game,kind,3);for(const e of game.enemies)e.cd=15;game.player.hp=140;events();};panel.append(practice);
     const reprisalButton=document.createElement('button');reprisalButton.textContent='Reprisal: three enemy hits';reprisalButton.onclick=()=>{start(false);game.player.x=1250;game.player.y=560;renderer.camera=850;for(const e of game.enemies)e.cd=30;for(const amount of [10,20,30]){game.player.invuln=0;game.hurt(amount);}events();};panel.append(reprisalButton);
     const releaseButton=document.createElement('button');releaseButton.textContent='Release charged Starshard';releaseButton.onclick=()=>{game.spell('bolt');events();};panel.append(releaseButton);
     const arcadeButton=document.createElement('button');arcadeButton.textContent='Arcade reward demo';arcadeButton.onclick=()=>{start(false);game.player.x=1400;game.player.y=560;renderer.camera=1050;for(const [i,e] of game.enemies.slice(0,3).entries()){e.x=1460+i*22;e.y=560;game.damage(e,1000);}events();};panel.append(arcadeButton);

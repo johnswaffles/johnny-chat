@@ -1,11 +1,12 @@
-import {drawEnemyPose} from './enemy-frames.js';
-import {arcadeEvent,drawArcade} from './arcade-fx.js';
-import {forwardCastPose} from './cast-pose.js';
-import {makeCelestialSeal,drawConstellation} from './spell-fx.js';
-import {LANTERNS} from './level-decor.js';
-import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?idle-flow=3';
-import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?arch-fix=1';
-import {PLATFORMS,SEALS,MEMORIES,WIDTH,clamp} from './game.js?reprisal=1';
+import {drawLevel1,elementEvent} from './level1-fx.js?release=20260928-level1-arcade';
+import {drawEnemyPose} from './enemy-frames.js?release=20260928-level1-arcade';
+import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20260928-level1-arcade';
+import {forwardCastPose} from './cast-pose.js?release=20260928-level1-arcade';
+import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20260928-level1-arcade';
+import {LANTERNS} from './level-decor.js?release=20260928-level1-arcade';
+import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20260928-level1-arcade';
+import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20260928-level1-arcade';
+import {PLATFORMS,SEALS,MEMORIES,WIDTH,clamp} from './game.js?release=20260928-level1-arcade';
 const TAU=Math.PI*2;
 const rand=(n)=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 const WIZARD=[
@@ -15,6 +16,7 @@ const WIZARD=[
 const PROPS={tree:[40,45,587,575],rock:[633,322,600,270],arch:[22,631,586,575],dragon:[628,629,610,581]};
 export async function loadArt(){
   const paths={valley:'last-star-valley-architecture-v3.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
+  for(const kind of ['ember','frost','chain','flask','chest','power','gem','gold'])paths['item_'+kind]='level1-items/'+kind+'.png';
   const images={};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));images.waterSprites=await createWaterfallSprites(images.valley);return images;
 }
 export class Renderer {
@@ -28,7 +30,8 @@ export class Renderer {
     this.waterSprites=art.waterSprites;
     this.resize();
   }
-  resize(){const dpr=Math.min(window.devicePixelRatio||1,1.5,Math.sqrt(2400000/(window.innerWidth*window.innerHeight)));this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';}
+  reset(){for(const key of ['particles','rings','arcs','echoes','arcadeWaves','shardImpacts','elementFX'])this[key]=[];this.shake=this.flash=this.time=0;this.wizardAnimation=newWizardAnimation();}
+  resize(){const dpr=Math.min(window.devicePixelRatio||1,this.quality==='low'?1:1.5,Math.sqrt(2400000/(window.innerWidth*window.innerHeight)));this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';}
   glow(x,y,size,color='blue',alpha=1){const c=this.ctx;c.save();c.globalCompositeOperation='screen';c.globalAlpha=alpha;c.drawImage(this.glows[color]||this.glows.blue,x-size/2,y-size/2,size,size);c.restore();}
   prop(name,x,y,w,h,alpha=1,flip=false){const c=this.ctx;const s=PROPS[name];c.save();c.globalAlpha=alpha;c.translate(x,y);if(flip)c.scale(-1,1);c.drawImage(this.art.props,...s,-w/2,-h,w,h);c.restore();}
   burst(x,y,color='blue',count=20,power=100){
@@ -37,7 +40,9 @@ export class Renderer {
     if(this.particles.length>420)this.particles.splice(0,this.particles.length-420);
   }
   event(e){
-    arcadeEvent(this,e);
+    for(const [key,limit] of [['rings',48],['arcs',48],['echoes',12],['arcadeWaves',16]])if(this[key]?.length>=limit)this[key].splice(0,this[key].length-limit+1);
+    arcadeEvent(this,e);elementEvent(this,e);
+    if(e.type==='special-cast'){const color=e.kind==='ember'?'gold':e.kind==='chain'?'violet':'blue';this.burst(e.x,e.y,color,12,85);this.rings.push({x:e.x,y:e.y,r:6,life:.2,color});}
     if(e.type==='cast'){this.burst(e.x,e.y,'blue',12,95);this.rings.push({x:e.x,y:e.y,r:5,life:.22,color:'blue'});}
     if(e.type==='hit'){this.shardImpacts.push({x:e.x,y:e.y,life:.32});if(this.shardImpacts.length>20)this.shardImpacts.shift();this.burst(e.x,e.y,'blue',20,140);this.rings.push({x:e.x,y:e.y,r:6,life:.32,color:'blue'});}
     if(e.type==='jump'){this.burst(e.x,e.y,'teal',e.second?22:9,60);if(e.second)this.rings.push({x:e.x,y:e.y,r:10,life:.5,color:'teal'});}
@@ -50,6 +55,7 @@ export class Renderer {
     if(e.type==='danger-hit'){this.burst(e.x,e.y-15,'violet',40,190);this.rings.push({x:e.x,y:e.y,r:20,life:.5,color:'violet',ground:true});}
     if(e.type==='enemy-death'){this.burst(e.x,e.y,e.boss?'gold':'violet',e.boss?100:35,e.boss?250:110);if(e.boss){this.flash=.3;this.shake=.4;}}
     if(e.type==='seal'){this.burst(e.x,e.y-70,'gold',75,150);this.rings.push({x:e.x,y:e.y-60,r:20,life:1.4,color:'gold'});}
+    if(e.type==='ember-impact'){this.burst(e.x,e.y,'gold',35,165);this.rings.push({x:e.x,y:e.y,r:20,life:.45,color:'gold'});}
     if(e.type==='hurt')this.shake=.15;
     if(e.type==='retaliation-charge'){this.burst(e.x,e.y,'violet',this.gentle?6:14,75);this.rings.push({x:e.x,y:e.y,r:22,life:.35,color:'violet'});}
     if(e.type==='retaliation-release'){this.burst(e.x,e.y,'white',this.gentle?8:22,140);this.rings.push({x:e.x,y:e.y,r:15,life:.4,color:'violet'});}
@@ -100,7 +106,7 @@ export class Renderer {
   fog(y,alpha,speed){
     const c=this.ctx,t=this.time,w=this.w;
     if(this.quality==='low')alpha*=.7;
-    for(let i=0;i<4;i++){
+    for(let i=0;i<(this.quality==='low'?2:4);i++){
       const x=((i*530+t*speed*50-this.camera*speed*.3)%(w+900)+w+900)%(w+900)-400;
       c.save();c.translate(x,y+Math.sin(t*.15+i)*20);c.scale(5, .55);c.globalAlpha=alpha;
       c.drawImage(this.glows.teal,-140,-140,280,280);c.restore();
@@ -217,7 +223,7 @@ export class Renderer {
       const boss=e.type==='boss',x=e.x-this.camera,bob=boss?Math.sin(t*1.2)*1.5:Math.sin(t*2+e.id)*7;
       let frame=e.windup>0?1:e.attack>0?2:0;
       const h=boss?196:106;
-      c.save();if(e.flash>0)c.filter='brightness(1.9)';drawEnemyPose(c,this.art.enemies,e.type,frame,x,e.y+bob,e.face);c.restore();
+      c.save();if(e.flash>0)c.filter=this.reducedFlash?'brightness(1.15)':'brightness(1.9)';drawEnemyPose(c,this.art.enemies,e.type,frame,x,e.y+bob,e.face);c.restore();
       this.glow(x,e.y-(boss?100:70)+bob,boss?155:80,'violet',e.windup>0?.9:.4);
       if(e.windup>0){c.save();c.strokeStyle='#e1a5ecbb';c.lineWidth=1.5;c.beginPath();c.ellipse(x,e.y-3,boss?70:38,8,0,0,TAU);c.stroke();c.restore();this.star(x,e.y-h-17,6,'#f3b2e8');}
       if(!boss&&e.hp<e.maxHp){c.fillStyle='#1a1431';c.fillRect(x-24,e.y-h-15,48,3);c.fillStyle='#c994d4';c.fillRect(x-24,e.y-h-15,48*e.hp/e.maxHp,3);}
@@ -235,7 +241,7 @@ export class Renderer {
     const c=this.ctx,t=this.time;
     for(const b of game.projectiles){
       const x=b.x-this.camera,y=b.y,player=b.owner==='player';
-      if(player){this.starshard(x,y,b.vx,b.vy);continue;}
+      if(player){if(b.kind==='ember'){this.glow(x,y,68,'gold',.9);c.fillStyle='#fff4c4';c.beginPath();c.arc(x,y,8,0,TAU);c.fill();c.strokeStyle='#ff9a47';c.lineWidth=7;c.beginPath();c.moveTo(x,y);c.lineTo(x-b.vx*.035,y-b.vy*.035);c.stroke();}else if(b.kind==='frost'){c.save();c.translate(x,y);c.rotate(Math.atan2(b.vy,b.vx));c.fillStyle='#d7faff';c.beginPath();c.moveTo(13,0);c.lineTo(-8,-4);c.lineTo(-4,0);c.lineTo(-8,4);c.closePath();c.fill();c.restore();this.glow(x,y,30,'blue',.5);}else {if(b.power>=2)this.glow(x,y,b.power===3?50:65,'blue',.65);this.starshard(x,y,b.vx,b.vy);}continue;}
       this.glow(x,y,73,'violet',.85);
       const tail=27,len=Math.hypot(b.vx,b.vy)||1,dx=b.vx/len,dy=b.vy/len;
       const g=c.createLinearGradient(x-dx*tail,y-dy*tail,x,y);g.addColorStop(0,'#d0a1ee00');g.addColorStop(1,'#dba8ee');c.strokeStyle=g;c.lineWidth=4;c.beginPath();c.moveTo(x-dx*tail,y-dy*tail);c.lineTo(x,y);c.stroke();
@@ -292,7 +298,7 @@ export class Renderer {
     const desired=clamp(p.x-this.w*.37,0,WIDTH-this.w);
     if(this.title)this.camera=0;else this.camera+=(desired-this.camera)*(1-Math.exp(-dt*6));
     c.setTransform(this.scale,0,0,this.scale,0,0);c.save();
-    this.shake=Math.max(0,this.shake-dt);if(!this.gentle&&this.shake>0)c.translate(Math.sin(this.time*87)*this.shake*8,Math.sin(this.time*69)*this.shake*5);
+    this.shake=Math.max(0,this.shake-dt);if(!this.gentle&&this.shake>0)c.translate(Math.sin(this.time*87)*this.shake*8*(this.shakeScale??1),Math.sin(this.time*69)*this.shake*5*(this.shakeScale??1));
     this.background(game);this.platforms(game);this.seals(game);this.enemies(game);
     const flicker=p.invuln>0&&p.mantle<=0&&Math.floor(this.time*18)%2===0?.6:1;
     advanceWizardAnimation(this.wizardAnimation,p,dt);
@@ -304,9 +310,9 @@ export class Renderer {
       for(let i=0;i<3;i++){const a=i*TAU/3+(this.gentle?0:this.time*.9);const sx=x+Math.cos(a)*34,sy=y+Math.sin(a)*45;this.star(sx,sy,4,'#e7d5ff');}
       c.restore();
     }
-    this.spells(game);drawArcade(this,game,dt);this.particlesDraw(dt);
+    this.spells(game);drawArcade(this,game,dt);drawLevel1(this,game,dt);this.particlesDraw(dt);
     for(const n of game.numbers){c.globalAlpha=Math.min(1,n.life*3);c.fillStyle=n.color;c.textAlign='center';c.font='bold 17px Georgia';c.shadowColor='#061522';c.shadowBlur=5;c.fillText(n.text,n.x-this.camera,n.y);c.shadowBlur=0;}c.globalAlpha=1;
-    this.foreground();this.flash=Math.max(0,this.flash-dt);if(!this.gentle&&this.flash>0){c.fillStyle=`rgba(168,225,250,${this.flash*.35})`;c.fillRect(0,0,this.w,720);}
+    this.foreground();this.flash=Math.max(0,this.flash-dt);if(!this.gentle&&!this.reducedFlash&&this.flash>0){c.fillStyle=`rgba(168,225,250,${this.flash*.35})`;c.fillRect(0,0,this.w,720);}
     c.restore();
   }
 }

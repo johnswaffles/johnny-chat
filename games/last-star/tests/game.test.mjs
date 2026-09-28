@@ -34,7 +34,7 @@ test('Reckoning resets on target change and remains bounded for this solo adapta
 });
 test('seals require order and nearby enemies to be cleared; rest restores resources',()=>{
   const g=new Game();g.player.x=SEALS[1].x;g.player.y=SEALS[1].y;g.interact();assert.equal(g.checkpoint,0);
-  g.player.x=SEALS[0].x;g.player.y=SEALS[0].y;g.interact();assert.equal(g.checkpoint,1);
+  g.enemies.filter(e=>Math.abs(e.x-SEALS[0].x)<280).forEach(e=>e.dead=true);g.player.x=SEALS[0].x;g.player.y=SEALS[0].y;g.interact();assert.equal(g.checkpoint,1);
   g.player.x=SEALS[1].x;g.player.y=SEALS[1].y;g.interact();assert.equal(g.checkpoint,1);
   for(const e of g.enemies)if(Math.abs(e.x-g.player.x)<280)e.dead=true;g.player.hp=20;g.interact();assert.equal(g.checkpoint,2);assert.equal(g.player.hp,210);
 });
@@ -43,7 +43,7 @@ test('checkpoint reload restores location, memories and clears only earlier enco
   assert.equal(copy.player.x,3690);assert.equal(copy.player.y,565);assert.deepEqual([...copy.memories],[1]);assert.ok(copy.enemies[0].dead);assert.ok(!copy.enemies.at(-1).dead);
 });
 test('constellation applies one AoE impact and costs starlight once',()=>{
-  const g=new Game();g.player.x=1320;g.player.y=560;const e=g.enemies[0];assert.equal(g.spell('constellation'),true);assert.equal(g.player.mana,70);assert.equal(g.spell('constellation'),false);step(g,90);assert.equal(e.hp,60);
+  const g=new Game();g.player.x=1320;g.player.y=560;const e=g.enemies[0],hp=e.hp;assert.equal(g.spell('constellation'),true);assert.equal(g.player.mana,70);assert.equal(g.spell('constellation'),false);step(g,90);assert.equal(e.hp,hp-85);
 });
 test('Heavenrend unlocks at the second seal and sweeps actual enemies',()=>{
   const g=new Game();g.player.x=4200;g.player.y=580;assert.equal(g.spell('dragon'),false);g.checkpoint=2;assert.equal(g.spell('dragon'),true);assert.equal(g.player.mana,40);step(g,350);assert.ok(g.enemies[6].dead||g.enemies[6].hp<145);assert.ok(g.events.some(e=>e.type==='lightning'));

@@ -1,11 +1,11 @@
-export const ACTIONS={left:'Move left',right:'Move right',jump:'Jump / double jump',bolt:'Starshard',blink:'Eventide Passage',constellation:'Falling Constellation',dragon:'Heavenrend',interact:'Interact / read'};
-export const DEFAULT_KEYS={left:'KeyA',right:'KeyD',jump:'Space',bolt:'KeyJ',blink:'ShiftLeft',constellation:'KeyQ',dragon:'KeyR',interact:'KeyE'};
-export const DEFAULT_PAD={left:14,right:15,jump:0,bolt:7,blink:1,constellation:2,dragon:3,interact:5};
+export const ACTIONS={left:'Move left',right:'Move right',jump:'Jump / double jump',bolt:'Starshard',blink:'Eventide Passage',use:'Use equipped item',ring:'Hold selection ring',previous:'Previous ring entry',interact:'Interact / next ring entry'};
+export const DEFAULT_KEYS={left:'KeyA',right:'KeyD',jump:'Space',bolt:'KeyJ',blink:'ShiftLeft',use:'KeyK',ring:'Tab',previous:'KeyQ',interact:'KeyE'};
+export const DEFAULT_PAD={left:14,right:15,jump:0,bolt:2,blink:1,use:3,ring:4,previous:6,interact:5};
 export const BUTTON_NAMES=['A','B','X','Y','LB','RB','LT','RT','View','Menu','L stick','R stick','D-pad ↑','D-pad ↓','D-pad ←','D-pad →','Guide'];
 export const buttonName=(n,standard=true)=>standard?(BUTTON_NAMES[n]??`Button ${n+1}`):`Button ${n+1}`;
 export const keyName=k=>({Space:'Space',ShiftLeft:'Shift',ControlLeft:'Ctrl',AltLeft:'Alt',ArrowLeft:'←',ArrowRight:'→',ArrowUp:'↑',ArrowDown:'↓',Backquote:'`',Minus:'−',Equal:'=',BracketLeft:'[',BracketRight:']',Semicolon:';',Quote:"'",Comma:',',Period:'.',Slash:'/'}[k]||k.replace(/^Key|^Digit/,''));
 export const normalizeKey=k=>k.replace(/(Shift|Control|Alt)Right/,'$1Left');
-export const validKey=k=>typeof k==='string'&&/^(Key[A-Z]|Digit[0-9]|Space|ShiftLeft|ControlLeft|AltLeft|Arrow(Left|Right|Up|Down)|Backquote|Minus|Equal|BracketLeft|BracketRight|Semicolon|Quote|Comma|Period|Slash)$/.test(k);
+export const validKey=k=>typeof k==='string'&&/^(Key[A-Z]|Digit[0-9]|Tab|Space|ShiftLeft|ControlLeft|AltLeft|Arrow(Left|Right|Up|Down)|Backquote|Minus|Equal|BracketLeft|BracketRight|Semicolon|Quote|Comma|Period|Slash)$/.test(k);
 export const validButton=n=>Number.isInteger(n)&&n>=0&&n<=31&&n!==9&&n!==16;
 export function readBindings(raw){
   let v;try{v=typeof raw==='string'?JSON.parse(raw):raw;}catch{}
@@ -40,7 +40,7 @@ export class Controller {
   consume(config){
     const b=config.pad,held=a=>this.down.has(b[a]),edge=a=>this.pending.has(b[a]);
     const digital=(held('right')?1:0)-(held('left')?1:0);
-    const result={move:digital||this.move,jump:edge('jump'),bolt:held('bolt'),blink:edge('blink'),constellation:edge('constellation'),dragon:edge('dragon'),interact:edge('interact')};
+    const result={move:digital||this.move,jump:edge('jump'),bolt:held('bolt'),blink:edge('blink'),use:edge('use'),ring:held('ring'),previous:edge('previous'),interact:edge('interact')};
     this.pending.clear();return result;
   }
 }
