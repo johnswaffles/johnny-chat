@@ -32,3 +32,11 @@ These samples average approximately 60 FPS, not a universal locked-60 guarantee.
 ## Asset provenance
 
 Built-in image generation, prompts and selected versions in `docs/art/GORGE_STUDY.md`. Existing approved assets preserved. New assets load only for the opt-in gorge preview; they do not add loading cost to the baseline route.
+
+## Living ground follow-up
+
+Horizon v2 and six-species flora atlas integrated. Explicit padded crops visually checked at runtime; empty atlas areas confirmed alpha zero. Plants render from cached small canvases. Flower patches and grass footprints stay within actual platforms; a new test checks all platform bounds and a second checks that only grounded contact on the same height causes bending. **75/75 Node tests pass.** Walking demo reviewed visually; cached art composites without haze or rectangular backgrounds.
+
+Rich twelve-enemy sample after foliage integration, same 1364 × 899 / DPR1 setup: 299 measured intervals, mean frame16.67ms, p95 frame18.2ms, mean JS work0.95ms, p95 work2.1ms. Approximately60FPS in this sample; no claim about other devices or Retina performance.
+
+Final browser checks also passed for identical paused foreground plants, independent scenery motion, WebGL error0, context-loss fallback and restored rendering.

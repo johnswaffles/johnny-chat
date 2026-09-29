@@ -130,3 +130,15 @@ Approved scope: rebuild a roughly two-screen Silverwood waterfall gorge before e
 - Quality gate: inspect forest, waterfall and aqueduct views at gameplay scale; grounded and distinct wood/stone; complete canopy; clear landing edges; visible animation at rest; paused identical redraw; bounded rendering workload; measured 60 FPS target on the user's machine rather than an unverified claim.
 
 See docs/art/GORGE_STUDY.md for provenance and docs/GORGE_STUDY_QA.md for test evidence. Memories remain shelved; mechanics, controls, checkpoint saves and the level layout are unchanged.
+
+## Living ground and mountain detail — September 29 follow-up
+
+The user approved the gorge direction and requested richer grass, flowers and mountains. Keep this as the same local study; no live deployment requested.
+
+- Horizon v2 adds detailed rock strata, snow-lined crevices, pine ridges and supported observatory terraces, preserving the approved silhouette/composition. Retain v1 for comparison. Atmospheric color treatment stays opaque.
+- Six painted plant species (moss/grass, dewy grass, white wildflowers, violet bellflowers, fern, buttercups) form varied small patches on existing platforms. Each plant footprint must fit its supporting platform with an edge margin; no floating plants in gaps or across cliff edges. Maximum plant height under 40 logical pixels keeps landing edges and character silhouettes legible.
+- Plants sway about their roots; nearby grounded movement on the same surface bends them in the walking direction and they settle smoothly afterward. Airborne characters or characters on another elevation must not bend plants through geometry. Gentle mode reduces wind/contact amplitude. All plant animation freezes with the renderer clock.
+- Atlas crops are explicitly registered with padding and cached at small render-ready sizes once. No per-frame image pixel work. Grass and flowers inherit crisp foreground resolution, independently of atmosphere quality.
+- QA preview includes a walking demonstration on the supported 1200–1870 platform. Preserve the actual game collision surfaces and normal controls.
+
+Prompts: docs/art/GORGE_FLORA.md. Focused tests protect footprint support and contact-height isolation.

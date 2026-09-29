@@ -1,3 +1,4 @@
+import {prepareFlora,drawGorgeFlora} from './gorge-flora.js?release=20260929-flora';
 import {GorgeScene} from './gorge-scene.js?release=20260929-gorge-study';
 import {paintedAction,drawPaintedPose} from './action-poses.js?release=20260928-polish-preview';
 import {drawReactiveLight,lightEvent,prepareWizardLighting,wizardLight,spellLights} from './reactive-light.js?release=20260928-polish-preview';
@@ -21,9 +22,9 @@ const WIZARD=[
 const PROPS={tree:[40,45,587,575],rock:[633,322,600,270],arch:[22,631,586,575],dragon:[628,629,610,581]};
 export async function loadArt(){
   const paths={wizardActions:'arcanist-actions-v2.png',silverwoodLayers:'silverwood-layers-v1.png',valley:'last-star-valley-architecture-v3.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
-  if(new URLSearchParams(location.search).has('gorge'))Object.assign(paths,{gorgeClouds:'silverwood-clouds-v1.png',gorgeHorizon:'silverwood-horizon-v1.png',gorgeRidge:'silverwood-gorge-v2.png'});
+  if(new URLSearchParams(location.search).has('gorge'))Object.assign(paths,{gorgeClouds:'silverwood-clouds-v1.png',gorgeFlora:'silverwood-flora-v1.png',gorgeHorizon:'silverwood-horizon-v2.png',gorgeRidge:'silverwood-gorge-v2.png'});
   for(const kind of ['ember','frost','chain','flask','chest','power','gem','gold'])paths['item_'+kind]='level1-items/'+kind+'.png';
-  const images={};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));images.wizardLightCache=prepareWizardLighting(images);images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);images.waterSprites=await createWaterfallSprites(images.valley);return images;
+  const images={};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));if(images.gorgeFlora)images.floraSprites=prepareFlora(images.gorgeFlora);images.wizardLightCache=prepareWizardLighting(images);images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);images.waterSprites=await createWaterfallSprites(images.valley);return images;
 }
 export class Renderer {
   constructor(canvas,art){
@@ -143,7 +144,7 @@ export class Renderer {
       }else this.prop('rock',x+p.w/2,p.y+85,p.w+10,95,1,p.id%2===0);
       // A slender moss rim makes the actual landing surface unambiguous.
       c.strokeStyle='#9cb88b70';c.lineWidth=2;c.beginPath();c.moveTo(x+6,p.y+1);c.lineTo(x+p.w-6,p.y+1);c.stroke();
-      for(let j=0;j<p.w/25;j++){
+      if(this.gorgeEnabled&&this.camera<1800&&this.art.floraSprites){drawGorgeFlora(this,game,p);}else for(let j=0;j<p.w/25;j++){
         const gx=x+j*25+rand(j+p.id*30)*15;const seed=j+p.id*91;const h=5+rand(seed)*12;c.strokeStyle=j%3?'#426b56':'#8aa884';c.lineWidth=1;c.beginPath();c.moveTo(gx,p.y+2);c.quadraticCurveTo(gx-3,p.y-h*.5,gx+Math.sin(this.time*1.1+seed)*3,p.y-h);c.stroke();
         if(rand(seed+15)>.88){this.glow(gx,p.y-8,27,'teal',.6);c.fillStyle='#9fddd1';c.fillRect(gx,p.y-8,2,3);}
       }
