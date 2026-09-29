@@ -1,13 +1,18 @@
-import {sceneMotion,renderResolution,drawSceneLife} from './scene-life.js?release=20260928-living-depth';
-import {drawLevel1,elementEvent} from './level1-fx.js?release=20260928-living-depth';
-import {drawEnemyPose} from './enemy-frames.js?release=20260928-living-depth';
-import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20260928-living-depth';
-import {forwardCastPose} from './cast-pose.js?release=20260928-living-depth';
-import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20260928-living-depth';
-import {LANTERNS} from './level-decor.js?release=20260928-living-depth';
-import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20260928-living-depth';
-import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20260928-living-depth';
-import {PLATFORMS,SEALS,WIDTH,clamp} from './game.js?release=20260928-living-depth';
+import {prepareFlora,drawGorgeFlora} from './gorge-flora.js?release=20260929-living-meadow';
+import {GorgeScene} from './gorge-scene.js?release=20260929-living-meadow';
+import {paintedAction,drawPaintedPose} from './action-poses.js?release=20260929-living-meadow';
+import {drawReactiveLight,lightEvent,prepareWizardLighting,wizardLight,spellLights} from './reactive-light.js?release=20260929-living-meadow';
+import {drawSilverwoodLayers,prepareSilverwoodLayers} from './silverwood-layers.js?release=20260929-living-meadow';
+import {sceneMotion,renderResolution,drawSceneLife} from './scene-life.js?release=20260929-living-meadow';
+import {drawLevel1,elementEvent} from './level1-fx.js?release=20260929-living-meadow';
+import {drawEnemyPose} from './enemy-frames.js?release=20260929-living-meadow';
+import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20260929-living-meadow';
+import {forwardCastPose} from './cast-pose.js?release=20260929-living-meadow';
+import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20260929-living-meadow';
+import {LANTERNS} from './level-decor.js?release=20260929-living-meadow';
+import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20260929-living-meadow';
+import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20260929-living-meadow';
+import {PLATFORMS,SEALS,WIDTH,clamp} from './game.js?release=20260929-living-meadow';
 const TAU=Math.PI*2;
 const rand=(n)=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 const WIZARD=[
@@ -16,9 +21,10 @@ const WIZARD=[
 ];
 const PROPS={tree:[40,45,587,575],rock:[633,322,600,270],arch:[22,631,586,575],dragon:[628,629,610,581]};
 export async function loadArt(){
-  const paths={valley:'last-star-valley-architecture-v3.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
+  const paths={wizardActions:'arcanist-actions-v2.png',silverwoodLayers:'silverwood-layers-v1.png',valley:'last-star-valley-architecture-v3.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
+  if(new URLSearchParams(location.search).has('gorge'))Object.assign(paths,{gorgeClouds:'silverwood-clouds-v1.png',gorgeFlora:'silverwood-flora-v1.png',gorgeHorizon:'silverwood-horizon-v2.png',gorgeRidge:'silverwood-gorge-v2.png'});
   for(const kind of ['ember','frost','chain','flask','chest','power','gem','gold'])paths['item_'+kind]='level1-items/'+kind+'.png';
-  const images={};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));images.waterSprites=await createWaterfallSprites(images.valley);return images;
+  const images={};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));if(images.gorgeFlora)images.floraSprites=prepareFlora(images.gorgeFlora);images.wizardLightCache=prepareWizardLighting(images);images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);images.waterSprites=await createWaterfallSprites(images.valley);return images;
 }
 export class Renderer {
   constructor(canvas,art){
@@ -29,11 +35,18 @@ export class Renderer {
     this.celestialSeal=makeCelestialSeal();this.shardImpacts=[];
     this.wizardAnimation=newWizardAnimation();
     this.waterSprites=art.waterSprites;
+    this.gorgeEnabled=new URLSearchParams(location.search).has('gorge');
+    if(this.gorgeEnabled){try{this.gorge=new GorgeScene(canvas,art);}catch(error){console.warn('GPU scenery unavailable; using existing scenery',error);}}
     this.resize();
   }
-  reset(){for(const key of ['particles','rings','arcs','echoes','arcadeWaves','shardImpacts','elementFX'])this[key]=[];this.shake=this.flash=this.time=0;this.wizardAnimation=newWizardAnimation();}
-  resize(){const dpr=renderResolution(window.innerWidth,window.innerHeight,window.devicePixelRatio);this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';const bgRatio=this.quality==='low'?1:Math.min(dpr,1.5);this.backgroundCanvas.width=Math.round(window.innerWidth*bgRatio);this.backgroundCanvas.height=Math.round(window.innerHeight*bgRatio);Object.assign(this.backgroundCanvas.style,{left:this.canvas.offsetLeft+'px',top:this.canvas.offsetTop+'px',width:this.canvas.clientWidth+'px',height:this.canvas.clientHeight+'px'});this.backgroundContext.imageSmoothingEnabled=true;this.backgroundContext.imageSmoothingQuality='high';}
-  backdrop(game){const front=this.ctx,bg=this.backgroundContext;this.ctx=bg;const scale=this.backgroundCanvas.height/720;bg.setTransform(scale,0,0,scale,0,0);this.background(game);this.ctx=front;}
+  reset(){for(const key of ['particles','rings','arcs','echoes','arcadeWaves','shardImpacts','elementFX','lightPulses'])this[key]=[];this.shake=this.flash=this.time=0;this.wizardAnimation=newWizardAnimation();}
+  resize(){const dpr=renderResolution(window.innerWidth,window.innerHeight,window.devicePixelRatio);this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';const bgRatio=this.quality==='low'?1:Math.min(dpr,1.5);this.backgroundCanvas.width=Math.round(window.innerWidth*bgRatio);this.backgroundCanvas.height=Math.round(window.innerHeight*bgRatio);Object.assign(this.backgroundCanvas.style,{left:this.canvas.offsetLeft+'px',top:this.canvas.offsetTop+'px',width:this.canvas.clientWidth+'px',height:this.canvas.clientHeight+'px'});this.backgroundContext.imageSmoothingEnabled=true;this.backgroundContext.imageSmoothingQuality='high';this.gorge?.resize(this.canvas,bgRatio);}
+  backdrop(game){
+    const active=this.gorgeEnabled&&this.camera<1800&&this.previewLayers!==false&&this.gorge?.ready;
+    if(this.gorge)this.gorge.canvas.hidden=!active;
+    this.backgroundCanvas.hidden=!!active;
+    if(active&&this.gorge.draw(this))return;
+    const front=this.ctx,bg=this.backgroundContext;this.ctx=bg;const scale=this.backgroundCanvas.height/720;bg.setTransform(scale,0,0,scale,0,0);this.background(game);this.ctx=front;}
   tree(x,y,w,h,alpha,flip,seed){const sway=sceneMotion(this.time,seed,this.gentle);this.ctx.save();this.ctx.translate(x,y);this.ctx.transform(1,0,sway/h,1,0,0);this.prop('tree',0,0,w,h,alpha,flip);this.ctx.restore();}
   glow(x,y,size,color='blue',alpha=1){const c=this.ctx;c.save();c.globalCompositeOperation='screen';c.globalAlpha=alpha;c.drawImage(this.glows[color]||this.glows.blue,x-size/2,y-size/2,size,size);c.restore();}
   prop(name,x,y,w,h,alpha=1,flip=false){const c=this.ctx;const s=PROPS[name];c.save();c.globalAlpha=alpha;c.translate(x,y);if(flip)c.scale(-1,1);c.drawImage(this.art.props,...s,-w/2,-h,w,h);c.restore();}
@@ -44,7 +57,7 @@ export class Renderer {
   }
   event(e){
     for(const [key,limit] of [['rings',48],['arcs',48],['echoes',12],['arcadeWaves',16]])if(this[key]?.length>=limit)this[key].splice(0,this[key].length-limit+1);
-    arcadeEvent(this,e);elementEvent(this,e);
+    arcadeEvent(this,e);elementEvent(this,e);lightEvent(this,e);
     if(e.type==='special-cast'){const color=e.kind==='ember'?'gold':e.kind==='chain'?'violet':'blue';this.burst(e.x,e.y,color,12,85);this.rings.push({x:e.x,y:e.y,r:6,life:.2,color});}
     if(e.type==='cast'){this.burst(e.x,e.y,'blue',12,95);this.rings.push({x:e.x,y:e.y,r:5,life:.22,color:'blue'});}
     if(e.type==='hit'){this.shardImpacts.push({x:e.x,y:e.y,life:.32});if(this.shardImpacts.length>20)this.shardImpacts.shift();this.burst(e.x,e.y,'blue',20,140);this.rings.push({x:e.x,y:e.y,r:6,life:.32,color:'blue'});}
@@ -65,7 +78,7 @@ export class Renderer {
     if(e.type==='lightning'){this.arcs.push({from:{x:e.x-60,y:225},to:{x:e.x,y:e.y},life:.25,lightning:true});this.burst(e.x,e.y-10,'blue',35,180);this.shake=.12;}
   }
   background(game){
-    const c=this.ctx,w=this.w,t=this.time;
+    const c=this.ctx,w=this.w,t=this.time;const authored=this.art.sceneryPieces&&this.previewLayers!==false?clamp((2300-this.camera)/450,0,1):0;
     c.fillStyle='#071923';c.fillRect(0,0,w,720);
     const water=waterfallTransform(this.art.valley,w,this.camera,WIDTH);
     c.drawImage(this.art.valley,water.x,water.y,water.width,water.height);
@@ -77,16 +90,16 @@ export class Renderer {
     // Independent middle-distance layers give the painting real parallax.
     for(let i=0;i<12;i++){
       const x=i*740+120-this.camera*.64;if(x<-450||x>w+450)continue;
-      const h=330+rand(i)*180;
-      this.tree(x,590,h*1.06,h,.5,i%2===0,i);
+      const h=330+rand(i)*180,alpha=.5*(i<3?1-authored:1);if(alpha<=0)continue;
+      this.tree(x,590,h*1.06,h,alpha,i%2===0,i);
     }
     for(let i=0;i<10;i++){
       const x=1900+i*520-this.camera*.8;if(x<-250||x>w+250)continue;
-      this.prop('arch',x,620,220,310,.48);
+      const alpha=.48*(i===0?1-authored:1);if(alpha>0)this.prop('arch',x,620,220,310,alpha);
     }
     this.fog(290,.025,.08);this.fog(405,.035,.12);this.fog(505,.07,.17);
     for(const tree of [[-150,615,730],[1280,585,370],[2450,598,440],[4100,606,380],[5690,590,470],[6500,610,430],[8010,635,680]]){
-      const x=tree[0]-this.camera*.93;if(x<-650||x>w+650)continue;this.tree(x,tree[1],tree[2]*1.02,tree[2],.75,tree[0]%3===0,tree[0]);
+      const x=tree[0]-this.camera*.93,alpha=.75*(tree[0]===1280?1-authored:1);if(x<-650||x>w+650||alpha<=0)continue;this.tree(x,tree[1],tree[2]*1.02,tree[2],alpha,tree[0]%3===0,tree[0]);
     }
     const astrolabe=7350-this.camera;
     if(astrolabe>-350&&astrolabe<w+350){
@@ -96,7 +109,7 @@ export class Renderer {
       for(let k=0;k<24;k++){const a=k*TAU/24+t*.04;c.beginPath();c.moveTo(Math.cos(a)*154,Math.sin(a)*154);c.lineTo(Math.cos(a)*165,Math.sin(a)*165);c.stroke();}c.restore();
       for(const dx of [-270,270]){const x=astrolabe+dx;c.strokeStyle='#a19874';c.lineWidth=4;c.beginPath();c.moveTo(x,570);c.lineTo(x,220);c.lineTo(x+70,220);c.stroke();c.fillStyle='#193a50';c.beginPath();c.moveTo(x+8,222);c.lineTo(x+65,222);c.lineTo(x+65+Math.sin(t)*4,410);c.lineTo(x+37,390);c.lineTo(x+8,410);c.closePath();c.fill();c.strokeStyle='#b6a371';c.lineWidth=1;c.stroke();this.star(x+36,280,14,'#b9aa78');}
     }
-    drawSceneLife(this);
+    drawSilverwoodLayers(this,game);drawSceneLife(this);
     // Hanging motes drift at different apparent depths.
     const count=this.quality==='low'?24:65;
     c.save();c.globalCompositeOperation='screen';
@@ -131,7 +144,7 @@ export class Renderer {
       }else this.prop('rock',x+p.w/2,p.y+85,p.w+10,95,1,p.id%2===0);
       // A slender moss rim makes the actual landing surface unambiguous.
       c.strokeStyle='#9cb88b70';c.lineWidth=2;c.beginPath();c.moveTo(x+6,p.y+1);c.lineTo(x+p.w-6,p.y+1);c.stroke();
-      for(let j=0;j<p.w/25;j++){
+      if(this.gorgeEnabled&&this.camera<1800&&this.art.floraSprites){drawGorgeFlora(this,game,p);}else for(let j=0;j<p.w/25;j++){
         const gx=x+j*25+rand(j+p.id*30)*15;const seed=j+p.id*91;const h=5+rand(seed)*12;c.strokeStyle=j%3?'#426b56':'#8aa884';c.lineWidth=1;c.beginPath();c.moveTo(gx,p.y+2);c.quadraticCurveTo(gx-3,p.y-h*.5,gx+Math.sin(this.time*1.1+seed)*3,p.y-h);c.stroke();
         if(rand(seed+15)>.88){this.glow(gx,p.y-8,27,'teal',.6);c.fillStyle='#9fddd1';c.fillRect(gx,p.y-8,2,3);}
       }
@@ -164,7 +177,7 @@ export class Renderer {
   star(x,y,r,color){const c=this.ctx;c.fillStyle=color;c.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4-Math.PI/2,rr=i%2?r*.24:r;c.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);}c.closePath();c.fill();}
   wizard(p,alpha=1,override=null){
     const c=this.ctx,x=p.x-this.camera,t=this.time;
-    const animation=this.wizardAnimation;
+    const animation=this.wizardAnimation;const painted=override===null?paintedAction(p,animation):null;
     const walking=override===null&&animation.walking;
     const idle=override===null&&animation.idle;
     const firing=override===null&&p.cast>0&&p.castKind==='bolt';
@@ -181,9 +194,11 @@ export class Renderer {
         left=pose.left;top=pose.top;tip=pose.tip;art=this.art[pose.key];
       }
       let castPose=null;
-      if(firing){castPose=forwardCastPose(p);s=castPose.source;h=s[3]*castPose.scale;w=s[2]*castPose.scale;left=castPose.left;top=castPose.top;tip=castPose.tip;art=this.art.wizardCast;}
+      if(firing){castPose=forwardCastPose(p);s=castPose.source;h=s[3]*castPose.scale;w=s[2]*castPose.scale;left=castPose.left;top=castPose.top;tip=castPose.tip;art=p.onGround?this.art.wizardActions:this.art.wizardCast;}
+      if(painted){s=painted.source;h=s[3]*painted.scale;w=s[2]*painted.scale;left=painted.left;top=painted.top;tip=painted.tip;art=this.art.wizardActions;}
       c.globalAlpha=alpha;
-      if(firing){
+      if(painted)drawPaintedPose(c,art,painted);
+      else if(firing){
         c.save();
         if(castPose.ground){const k=castPose.scale;c.beginPath();c.moveTo(left,top);c.lineTo(left+w,top);c.lineTo(left+w,top+200*k);c.lineTo(left+768*k,top+200*k);c.lineTo(left+768*k,top+h);c.lineTo(left,top+h);c.closePath();c.clip();}
         if(!castPose.ground){const k=castPose.scale;c.beginPath();c.moveTo(left+60*k,top);c.lineTo(left+w,top);c.lineTo(left+w,top+h);c.lineTo(left,top+h);c.lineTo(left,top+200*k);c.lineTo(left+60*k,top+200*k);c.closePath();c.clip();}
@@ -191,6 +206,8 @@ export class Renderer {
       }
       else if(override===null&&animation.airborne)drawAirCloth(c,art,s,left,top,h/s[3],animation.airTime);
       else c.drawImage(art,...s,left,top,w,h);
+      const illumination=override===null?wizardLight(this,p):null;
+      if(illumination&&this.previewLighting!==false){const tint=this.art.wizardLightCache?.get(art)?.[illumination.color];if(tint){c.save();c.globalCompositeOperation='screen';c.globalAlpha=illumination.strength;if(painted)drawPaintedPose(c,tint,painted,.5);else {c.beginPath();c.rect(left+w*.36,top,w*.64,h);c.clip();c.drawImage(tint,s[0]/2,s[1]/2,s[2]/2,s[3]/2,left,top,w,h);}c.restore();}}
       const tx=left+tip[0]*h/s[3],ty=top+tip[1]*h/s[3];
       // Cached light textures, with a crisp blue crystal core; no live blur filter.
       const power=(.85+Math.sin(t*3)*.12)*(p.cast>0?1.35:1);
@@ -287,7 +304,7 @@ export class Renderer {
     const g=c.createLinearGradient(0,600,0,720);g.addColorStop(0,'#020e1700');g.addColorStop(1,'#020e1788');c.fillStyle=g;c.fillRect(0,600,this.w,120);
   }
   draw(game,dt=1/60){
-    this.time+=this.gentle?dt*.65:dt;const c=this.ctx,p=game.player;
+    this.worldLights=spellLights(game);this.time+=this.gentle?dt*.65:dt;const c=this.ctx,p=game.player;
     const desired=clamp(p.x-this.w*.37,0,WIDTH-this.w);
     if(this.title)this.camera=0;else this.camera+=(desired-this.camera)*(1-Math.exp(-dt*6));
     c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,this.canvas.width,this.canvas.height);c.setTransform(this.scale,0,0,this.scale,0,0);c.save();
@@ -295,7 +312,7 @@ export class Renderer {
     this.backdrop(game);this.platforms(game);this.seals(game);this.enemies(game);
     const flicker=p.invuln>0&&p.mantle<=0&&Math.floor(this.time*18)%2===0?.6:1;
     advanceWizardAnimation(this.wizardAnimation,p,dt);
-    this.wizard(p,flicker);
+    this.wizard(p,flicker);drawReactiveLight(this,game);
     if(p.retaliation>0){
       const x=p.x-this.camera,y=p.y-62;c.save();
       this.glow(x,y,110,'violet',.25+Math.min(p.retaliation/200,.35));

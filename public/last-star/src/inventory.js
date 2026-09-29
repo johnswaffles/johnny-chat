@@ -1,5 +1,5 @@
-import {LEVEL1} from './level1-config.js?release=20260928-living-depth';
-import {starshardMuzzle} from './cast-pose.js?release=20260928-living-depth';
+import {LEVEL1} from './level1-config.js?release=20260929-living-meadow';
+import {starshardMuzzle} from './cast-pose.js?release=20260929-living-meadow';
 export const SLOTS=['ember','frost','chain','flask'];
 export const newInventory=()=>({equipped:'ember',charges:{ember:0,frost:0,chain:0,flask:0},cooldown:0});
 export function grantItem(game,kind,count=1){

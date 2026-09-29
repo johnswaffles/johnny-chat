@@ -1,9 +1,9 @@
-import {newSilverwoodEncounter,updateSilverwoodEncounter,silverwoodEnemyReady} from './silverwood-encounter.js?release=20260928-polish-preview';
-import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260928-polish-preview';
-import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260928-polish-preview';
-import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260928-polish-preview';
-import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260928-polish-preview';
-import {starshardMuzzle} from './cast-pose.js?release=20260928-polish-preview';
+import {newSilverwoodEncounter,updateSilverwoodEncounter,silverwoodEnemyReady} from './silverwood-encounter.js?release=20260929-living-meadow';
+import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260929-living-meadow';
+import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260929-living-meadow';
+import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260929-living-meadow';
+import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260929-living-meadow';
+import {starshardMuzzle} from './cast-pose.js?release=20260929-living-meadow';
 export const SAVE_KEY = 'crownforge-last-star-level1-preview-v1';
 export const WIDTH = 7900;
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -21,7 +21,7 @@ export const SEALS = [
   {x:3690,y:565,name:'The Broken Aqueduct',chapter:'II · THE BROKEN AQUEDUCT'},
   {x:6550,y:570,name:'The Last Observatory',chapter:'III · THE LAST OBSERVATORY'},
 ];
-import {MEMORIES} from './memories.js?release=20260928-polish-preview';
+import {MEMORIES} from './memories.js?release=20260929-living-meadow';
 export {MEMORIES};
 const ENEMIES = [
  [1510,560,'wraith'],[580,580,'wraith'],[1660,560,'wraith'],

@@ -142,3 +142,8 @@ The user approved the gorge direction and requested richer grass, flowers and mo
 - QA preview includes a walking demonstration on the supported 1200–1870 platform. Preserve the actual game collision surfaces and normal controls.
 
 Prompts: docs/art/GORGE_FLORA.md. Focused tests protect footprint support and contact-height isolation.
+
+
+## September 29 living-meadow live test
+
+User authorized publishing the approved gorge and flora preview for live testing. Release marker: 20260929-living-meadow. Playable opt-in route: /last-star/?gorge=1. Scenery review: /last-star/tests/gorge-review.html?gorge=1. The first camera section uses the new scenery; the remaining route retains existing art with the documented temporary handoff. This is explicitly a live test of the first section, not a completed full-level scenery migration. Previous local-only statements describe the pre-authorization stage. Gameplay changes from the approved Silverwood polish preview accompany this build.

@@ -1,12 +1,12 @@
-import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260928-polish-preview';
-import {LEVEL1} from './level1-config.js?release=20260928-polish-preview';
+import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260929-living-meadow';
+import {LEVEL1} from './level1-config.js?release=20260929-living-meadow';
 const selection=new SelectionRing();
 let pendingActions={},hitStop=0,hitStopGap=0,needsFrame=true;
-import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20260928-polish-preview';
-import {Renderer,loadArt} from './render.js?release=20260928-polish-preview';
-import {Soundscape} from './audio.js?release=20260928-polish-preview';
-import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260928-polish-preview';
-import {ControlsUI} from './controls-ui.js?release=20260928-polish-preview';
+import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20260929-living-meadow';
+import {Renderer,loadArt} from './render.js?release=20260929-living-meadow';
+import {Soundscape} from './audio.js?release=20260929-living-meadow';
+import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260929-living-meadow';
+import {ControlsUI} from './controls-ui.js?release=20260929-living-meadow';
 const $=id=>document.getElementById(id);
 const qa=new URLSearchParams(location.search).has('qa');
 const storageKey=qa?SAVE_KEY+'-qa':SAVE_KEY;
@@ -175,11 +175,11 @@ try{
   requestAnimationFrame(loop);
   // Local QA surface is opt-in and absent from the normal player route.
   if(qa){
-    qaDriver=(await import('../tests/route-driver.mjs?release=20260928-polish-preview')).routeInput;
+    qaDriver=(await import('../tests/route-driver.mjs?release=20260929-living-meadow')).routeInput;
     const panel=document.createElement('details');panel.id='qa-panel';panel.open=true;
     panel.innerHTML='<summary>Local QA</summary><button id="qa-replay">Run input-only playthrough</button><button id="qa-stop">Take control</button><button id="qa-resume">Resume saved checkpoint</button><output id="qa-state"></output>';
     $('game').append(panel);(await import('../tests/recording.js')).addRecording(panel,$('world'));
-    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260928-polish-preview')).virtualGamepad(panel);
+    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260929-living-meadow')).virtualGamepad(panel);
     const quiet=document.createElement('button');quiet.textContent='Quiet gorge review';quiet.onclick=()=>{start(false);game.player.x=1235;game.player.y=560;game.player.invuln=10000;game.checkpoint=1;game.zone=0;for(const enemy of game.enemies)enemy.dead=true;renderer.camera=game.player.x-renderer.w*.37;dialogueUntil=areaUntil=0;$('dialogue').hidden=true;$('area-title').classList.remove('visible');};panel.append(quiet);
     const polish=document.createElement('button');polish.textContent='Review Silverwood encounter';polish.onclick=()=>{start(false);game.player.x=1235;game.player.y=560;game.checkpoint=1;game.zone=0;dialogueUntil=0;$('dialogue').hidden=true;renderer.camera=game.player.x-renderer.w*.37;grantItem(game,'ember',3);};panel.append(polish);
   const scenery=document.createElement('button');scenery.textContent='Inspect eastern waterfalls';scenery.onclick=()=>{start(false);game.player.x=6650;game.player.y=570;game.checkpoint=3;game.player.invuln=60;renderer.camera=game.player.x-renderer.w*.37;};panel.append(scenery);

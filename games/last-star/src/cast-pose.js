@@ -1,4 +1,4 @@
-import {actionPose} from './action-poses.js?release=20260928-polish-preview';
+import {actionPose} from './action-poses.js?release=20260929-living-meadow';
 // Shared painted crystal coordinates keep rendering and projectile origins together.
 export function forwardCastPose(p){
  const scale=.17;
