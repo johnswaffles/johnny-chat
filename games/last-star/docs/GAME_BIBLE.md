@@ -1,6 +1,6 @@
 # Crownforge: Last Star — game bible
 
-Last updated: September 28, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
+Last updated: September 29, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
 
 ## Identity and scope
 
@@ -114,3 +114,19 @@ Approved next step: a focused Level 1 section improving animation, layered art, 
 - At most eight player projectile lights and twelve transient light pulses. Illumination follows actual platform tops and proximity to the wizard. No full-screen filters or per-frame pixel manipulation. Respect Gentle and reduced-flash settings.
 - Existing sentries at1510/1660 form a two-stage encounter: entering950 starts the approaching brute sentry; the ranged sentry begins after3.5 scene seconds or the front sentry's death. Defeating both releases one grounded gem and two Ember charges exactly once per attempt at1690/1740. No arena walls, extra enemies, mandatory stop, permanent economy or changed damage multipliers. Retry at seal1 resets this encounter; later checkpoints treat it as already completed.
 - Distinct quiet melee/ranged preparation tones, footfalls driven by travel, landing sound and a victory chime provide physical feedback. All share SFX volume and the32-voice limit. Existing looping theme remains.
+
+
+## Living gorge direction — September 29 local study
+
+The user rejected repeating translucent trees/gateways and a flat panorama embellished with birds. This overrides the September 28 decorative-background direction for the new Silverwood study. Solid wood and stone must stay opaque. Show atmospheric distance through color/contrast and placement, never ghostlike object opacity. No copied tree/arch marching across the scene. Depth and life must remain visible when the player stands still.
+
+Approved scope: rebuild a roughly two-screen Silverwood waterfall gorge before extending the approach. Local opt-in `?gorge=1`; the source game without that parameter and the published mirror stay unchanged. New renderer is active for camera positions 0–1800; the rest of the route retains the previous scenery, with a temporary hard handoff at the study boundary. This is an environment approval preview, not a finished whole-level migration. Do not publish that boundary as a finished level transition.
+
+- Three independently authored, versioned assets: cloud bank, distant mountain/observatory silhouette, nearer river-cliff/tree/aqueduct ridge. The original panorama is not drawn inside the study. No new birds.
+- Direct WebGL background rendering, keeping the existing crisp Canvas2D gameplay layer. This is a focused renderer prototype, not a PixiJS dependency or full game-engine migration. Local dependency-free shaders and texture uploads; no per-frame CPU pixel distortion or readback in gameplay.
+- Separate clock-driven clouds, water streaks and basin vapor. Camera motion is not animation. Keep all motion on the renderer clock so pause freezes it; Gentle reduces foliage motion. Rooted foliage deformation is confined to the canopy region, never stone or tree roots.
+- Water coordinates register to the v2 river lip, not an arbitrary area. Mist remains behind the gameplay layer. The old recommendation to use baked waterfall frames still applies to the legacy panorama; GPU material animation is approved for this separated-asset study.
+- Rich and Light atmosphere quality do not reduce character/platform resolution. GPU context failure falls back to the previous background; restoration rebuilds shader programs and textures.
+- Quality gate: inspect forest, waterfall and aqueduct views at gameplay scale; grounded and distinct wood/stone; complete canopy; clear landing edges; visible animation at rest; paused identical redraw; bounded rendering workload; measured 60 FPS target on the user's machine rather than an unverified claim.
+
+See docs/art/GORGE_STUDY.md for provenance and docs/GORGE_STUDY_QA.md for test evidence. Memories remain shelved; mechanics, controls, checkpoint saves and the level layout are unchanged.

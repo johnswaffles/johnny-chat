@@ -1,3 +1,4 @@
+import {GorgeScene} from './gorge-scene.js?release=20260929-gorge-study';
 import {paintedAction,drawPaintedPose} from './action-poses.js?release=20260928-polish-preview';
 import {drawReactiveLight,lightEvent,prepareWizardLighting,wizardLight,spellLights} from './reactive-light.js?release=20260928-polish-preview';
 import {drawSilverwoodLayers,prepareSilverwoodLayers} from './silverwood-layers.js?release=20260928-polish-preview';
@@ -20,6 +21,7 @@ const WIZARD=[
 const PROPS={tree:[40,45,587,575],rock:[633,322,600,270],arch:[22,631,586,575],dragon:[628,629,610,581]};
 export async function loadArt(){
   const paths={wizardActions:'arcanist-actions-v2.png',silverwoodLayers:'silverwood-layers-v1.png',valley:'last-star-valley-architecture-v3.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
+  if(new URLSearchParams(location.search).has('gorge'))Object.assign(paths,{gorgeClouds:'silverwood-clouds-v1.png',gorgeHorizon:'silverwood-horizon-v1.png',gorgeRidge:'silverwood-gorge-v2.png'});
   for(const kind of ['ember','frost','chain','flask','chest','power','gem','gold'])paths['item_'+kind]='level1-items/'+kind+'.png';
   const images={};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));images.wizardLightCache=prepareWizardLighting(images);images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);images.waterSprites=await createWaterfallSprites(images.valley);return images;
 }
@@ -32,11 +34,18 @@ export class Renderer {
     this.celestialSeal=makeCelestialSeal();this.shardImpacts=[];
     this.wizardAnimation=newWizardAnimation();
     this.waterSprites=art.waterSprites;
+    this.gorgeEnabled=new URLSearchParams(location.search).has('gorge');
+    if(this.gorgeEnabled){try{this.gorge=new GorgeScene(canvas,art);}catch(error){console.warn('GPU scenery unavailable; using existing scenery',error);}}
     this.resize();
   }
   reset(){for(const key of ['particles','rings','arcs','echoes','arcadeWaves','shardImpacts','elementFX','lightPulses'])this[key]=[];this.shake=this.flash=this.time=0;this.wizardAnimation=newWizardAnimation();}
-  resize(){const dpr=renderResolution(window.innerWidth,window.innerHeight,window.devicePixelRatio);this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';const bgRatio=this.quality==='low'?1:Math.min(dpr,1.5);this.backgroundCanvas.width=Math.round(window.innerWidth*bgRatio);this.backgroundCanvas.height=Math.round(window.innerHeight*bgRatio);Object.assign(this.backgroundCanvas.style,{left:this.canvas.offsetLeft+'px',top:this.canvas.offsetTop+'px',width:this.canvas.clientWidth+'px',height:this.canvas.clientHeight+'px'});this.backgroundContext.imageSmoothingEnabled=true;this.backgroundContext.imageSmoothingQuality='high';}
-  backdrop(game){const front=this.ctx,bg=this.backgroundContext;this.ctx=bg;const scale=this.backgroundCanvas.height/720;bg.setTransform(scale,0,0,scale,0,0);this.background(game);this.ctx=front;}
+  resize(){const dpr=renderResolution(window.innerWidth,window.innerHeight,window.devicePixelRatio);this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';const bgRatio=this.quality==='low'?1:Math.min(dpr,1.5);this.backgroundCanvas.width=Math.round(window.innerWidth*bgRatio);this.backgroundCanvas.height=Math.round(window.innerHeight*bgRatio);Object.assign(this.backgroundCanvas.style,{left:this.canvas.offsetLeft+'px',top:this.canvas.offsetTop+'px',width:this.canvas.clientWidth+'px',height:this.canvas.clientHeight+'px'});this.backgroundContext.imageSmoothingEnabled=true;this.backgroundContext.imageSmoothingQuality='high';this.gorge?.resize(this.canvas,bgRatio);}
+  backdrop(game){
+    const active=this.gorgeEnabled&&this.camera<1800&&this.previewLayers!==false&&this.gorge?.ready;
+    if(this.gorge)this.gorge.canvas.hidden=!active;
+    this.backgroundCanvas.hidden=!!active;
+    if(active&&this.gorge.draw(this))return;
+    const front=this.ctx,bg=this.backgroundContext;this.ctx=bg;const scale=this.backgroundCanvas.height/720;bg.setTransform(scale,0,0,scale,0,0);this.background(game);this.ctx=front;}
   tree(x,y,w,h,alpha,flip,seed){const sway=sceneMotion(this.time,seed,this.gentle);this.ctx.save();this.ctx.translate(x,y);this.ctx.transform(1,0,sway/h,1,0,0);this.prop('tree',0,0,w,h,alpha,flip);this.ctx.restore();}
   glow(x,y,size,color='blue',alpha=1){const c=this.ctx;c.save();c.globalCompositeOperation='screen';c.globalAlpha=alpha;c.drawImage(this.glows[color]||this.glows.blue,x-size/2,y-size/2,size,size);c.restore();}
   prop(name,x,y,w,h,alpha=1,flip=false){const c=this.ctx;const s=PROPS[name];c.save();c.globalAlpha=alpha;c.translate(x,y);if(flip)c.scale(-1,1);c.drawImage(this.art.props,...s,-w/2,-h,w,h);c.restore();}
