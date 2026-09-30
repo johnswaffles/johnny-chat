@@ -47,3 +47,9 @@ test('output retries are bounded and do not retry network or safety errors', asy
   assert.deepEqual(budgets,[25000,50000,64000]);
   let calls=0;await assert.rejects(withStoryOutputBudget(async()=>{calls++;throw new Error('network');}),/network/);assert.equal(calls,1);
 });
+
+ test('a long passage cannot silently become a synopsis',()=>{
+ const source='This is a detailed sentence in a full scene. '.repeat(30);
+ const output=normalizeAutopilotParagraphs({revisedParagraphs:[{id:'p',text:'A short summary.',disposition:'revised'}]},{paragraphs:[{id:'p',text:source,label:'Scene'}]});
+ assert.equal(output.paragraphs[0].revisedText,source);assert.equal(output.paragraphs[0].needsReview,true);
+ });

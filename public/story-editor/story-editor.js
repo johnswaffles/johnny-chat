@@ -24,7 +24,9 @@
     toastTimer: null,
     startupBusy: false,
     autopilotJob: null,
-    autopilotTimer: null
+    autopilotTimer: null,
+    pollFailures: 0,
+    selectedBrief: "novel"
   };
 
   const el = {
@@ -316,10 +318,12 @@
   function autopilotPercent(job) {
     if (!job) return 0;
     if (job.status === "completed") return 100;
-    if (job.status === "failed") return job.totalChunks ? Math.round((job.completedChunks / job.totalChunks) * 100) : 0;
-    if (job.phase === "planning") return job.totalChunks ? 8 : 3;
+
+    if (job.phase === "reading") return Math.round(15 * Math.max(0, job.currentChunk - 1) / Math.max(1, job.totalChunks));
+    if (job.phase === "planning") return 15;
+    if (job.phase === "polishing") return Math.round(70 + 24 * Math.max(0, job.currentChunk - 1) / Math.max(1, job.totalChunks));
     if (job.phase === "review") return 95;
-    return job.totalChunks ? Math.min(92, Math.round((job.completedChunks / job.totalChunks) * 92)) : 12;
+    return job.totalChunks ? Math.min(70, 20 + Math.round((job.completedChunks / job.totalChunks) * 50)) : 0;
   }
 
   function renderAutopilot() {
@@ -335,15 +339,34 @@
     const percent = autopilotPercent(job);
     const running = job.status === "queued" || job.status === "running";
     const phaseLabels = {
-      queued: "Queued for manuscript planning",
+      queued: "Your manuscript is in the editing queue",
+      reading: `Reading section ${job.currentChunk || 1} of ${job.totalChunks || "…"}`,
+      polishing: `Final polish: section ${job.currentChunk || 1} of ${job.totalChunks || "…"}`,
+      retrying: "Waiting to retry automatically",
+      paused: "Editing paused",
+      interrupted: "Recovering saved progress",
       planning: "Building the editorial and continuity plan",
-      editing: `Editing connected chunk ${job.currentChunk || 1} of ${job.totalChunks || "…"}`,
+      editing: `Revising section ${job.currentChunk || 1} of ${job.totalChunks || "…"}`,
       review: "Checking continuity and story endings",
       complete: "Full-manuscript edit complete",
       error: "Autopilot stopped safely"
     };
     el.autopilotProgress.hidden = false;
     el.autopilotStart.disabled = running;
+    document.getElementById('autopilot-pause').hidden = !running;
+    el.autopilotIntent.disabled = running;
+    el.requestEdit.disabled = running;
+    el.saveBible.disabled = running;
+    const stages=['reading','planning','editing','polishing','review'];
+    document.querySelectorAll('[data-stage]').forEach(node=>{
+      const index=stages.indexOf(node.dataset.stage), current=stages.indexOf(job.phase);
+      node.classList.toggle('current',node.dataset.stage===job.phase);
+      node.classList.toggle('done',job.status==='completed'||(current>=0&&index<current));
+    });
+    const seconds=job.worker?.heartbeat ? Math.max(0,Math.round((Date.now()-job.worker.heartbeat)/1000)) : null;
+    document.getElementById('worker-status').textContent = running
+      ? (job.worker?.state==='queued' ? 'Saved in the queue. Editing continues automatically, even with this page closed.' : seconds!==null&&seconds<60 ? `Editor connected · checked ${seconds} seconds ago. Progress advances when a section is saved.` : 'Reconnecting to the editor. Saved sections are safe.')
+      : (job.status==='completed'?'All editing stages finished. Your draft is ready to review.':'Your original and completed sections remain saved.');
     el.autopilotStart.textContent = running ? "Full edit is working…" : job.status === "completed" ? "Run another full edit" : "Resume unfinished edit";
     document.getElementById("autopilot-status-label").textContent = running ? "Editing in progress" : job.status === "completed" ? "Revision saved" : "Run paused";
     el.autopilotPhase.textContent = phaseLabels[job.phase] || "Working through the manuscript";
@@ -357,7 +380,7 @@
       ? `${job.completedChunks} chunks complete · ${report.paragraphsRevised || 0} passages revised${report.paragraphsPreserved ? ` · ${report.paragraphsPreserved} passages preserved verbatim` : ""}${review.overall ? ` · ${review.overall}` : ""}`
       : job.status === "failed"
         ? (job.error || "The original manuscript was kept intact.")
-        : "The page can stay open while the model works; progress is saved between chunks.";
+        : "You can close this page and return later. The editor saves each section and retries temporary service failures.";
   }
 
   function renderRevisionReport(job) {
@@ -367,6 +390,7 @@
     const report = job.report || {};
     const retained = report.passagesForReview || [];
     document.getElementById("revision-summary").textContent = `${formatNumber(report.paragraphsRevised)} passages revised. ${retained.length ? `${retained.length} ${retained.length === 1 ? "passage kept" : "passages kept"} unchanged for your review.` : "Read through the revision before treating it as your final manuscript."}`;
+    if(report.wordCounts) document.getElementById('revision-summary').textContent += ` Word count: ${formatNumber(report.wordCounts.before)} → ${formatNumber(report.wordCounts.after)}.`;
     const attention = document.getElementById("revision-attention");
     attention.replaceChildren();
     retained.forEach((passage) => {
@@ -721,7 +745,7 @@
   async function uploadManuscript(event) {
     event.preventDefault();
     const file = el.fileInput.files?.[0];
-    const intent = String(el.intentInput.value || "").trim();
+    const intent = String(el.intentInput.value || briefs[state.selectedBrief]).trim();
     if (!file) {
       setUploadStatus("Choose a manuscript before importing.", true);
       return;
@@ -751,6 +775,8 @@
       await loadProject(data.projectId);
       closeDialog(el.uploadDialog);
       el.uploadForm.reset();
+      state.selectedBrief='novel';
+      document.querySelectorAll('[data-brief]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.brief==='novel')));
       updateSelectedFile();
       showToast(`${data.title} is ready to edit.`);
       await startAutopilot();
@@ -758,7 +784,7 @@
       setUploadStatus(error.message || "The manuscript could not be imported.", true);
     } finally {
       el.uploadSubmit.disabled = false;
-      el.uploadSubmit.textContent = "Import & start full edit";
+      el.uploadSubmit.textContent = "Edit my manuscript";
     }
   }
 
@@ -769,15 +795,16 @@
       const response = await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/autopilot/${encodeURIComponent(state.autopilotJob.id)}`);
       const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not read Autopilot progress.");
+      state.pollFailures = 0;
       state.autopilotJob = data.job;
       renderAutopilot();
       if (data.job.status === "queued" || data.job.status === "running") {
-        state.autopilotTimer = window.setTimeout(pollAutopilot, 1600);
+        state.autopilotTimer = window.setTimeout(pollAutopilot, 4000);
         return;
       }
       if (data.job.status === "completed") {
         await loadProject(state.project.id);
-        document.getElementById("advanced-workbench")?.setAttribute("open", "");
+
         state.autopilotJob = data.job;
         renderOverview();
         showToast("Revision saved. Your draft and editorial notes are ready.");
@@ -785,7 +812,9 @@
         showToast(data.job.error || "Autopilot stopped before it could finish.", true);
       }
     } catch (error) {
-      showToast(error.message || "Could not read Autopilot progress.", true);
+      state.pollFailures += 1;
+      document.getElementById('worker-status').textContent = error.code === 'AUTH_REQUIRED' ? 'Unlock your session again to see progress. The saved run continues on the server.' : 'Connection interrupted. Reconnecting automatically; your saved work is safe.';
+      if (error.code !== 'AUTH_REQUIRED') state.autopilotTimer = window.setTimeout(pollAutopilot, Math.min(30000, 3000 * 2 ** Math.min(state.pollFailures,4)));
     }
   }
 
@@ -984,12 +1013,15 @@
   document.getElementById("download-original").addEventListener("click", () => exportDocx("original"));
   document.getElementById("download-revision").addEventListener("click", () => el.exportDocx.click());
   const briefs = {
+    story: "Polish this into a complete professional short story for adult readers. Preserve my voice, mature themes, characters, plot, and ending. Strengthen prose, pacing, and emotional depth without inventing major events.",
     novel: "Polish this into a professional novel for adult readers. Preserve my voice, plot, mature themes, and ending. Strengthen clarity, pacing, dialogue, and emotional depth without inventing major events.",
     memoir: "Edit this memoir for adult readers. Preserve my lived experience, voice, facts, and emotional honesty. Improve clarity, narrative flow, and pacing without inventing events or dialogue.",
     education: "Edit this for an adult educational audience. Improve structure, clarity, and accessibility. Preserve factual meaning and uncertainty. Do not invent facts, citations, or evidence; flag claims that need verification.",
     copyedit: "Lightly copyedit this manuscript for adult readers. Correct grammar, spelling, punctuation, and inconsistencies. Preserve my style, mature themes, meaning, plot, and paragraph structure."
   };
   document.querySelectorAll("[data-brief]").forEach((button) => button.addEventListener("click", () => {
+    state.selectedBrief = button.dataset.brief;
+    document.querySelectorAll("[data-brief]").forEach(b=>b.setAttribute("aria-pressed",String(b===button)));
     el.intentInput.value = briefs[button.dataset.brief];
     el.intentInput.focus();
   }));
@@ -1021,7 +1053,7 @@
   el.requestEdit.addEventListener("click", requestEdit);
   el.acceptEdit.addEventListener("click", () => decideEdit("accept"));
   el.rejectEdit.addEventListener("click", () => decideEdit("reject"));
-  el.exportDocx.addEventListener("click", exportDocx);
+  el.exportDocx.addEventListener("click", () => exportDocx("edited"));
   el.deleteProject.addEventListener("click", deleteProject);
   el.toastClose.addEventListener("click", () => {
     el.toast.hidden = true;
@@ -1033,21 +1065,29 @@
     if (event.target === dialog) closeDialog(dialog);
   }));
 
-  ["dragenter", "dragover"].forEach((name) => el.fileDrop.addEventListener(name, (event) => {
+  document.addEventListener('dragover', event=>{if(Array.from(event.dataTransfer?.types || []).includes('Files')) event.preventDefault();});
+  document.addEventListener('drop',event=>{
+    if(!event.dataTransfer?.files?.length) return;
     event.preventDefault();
-    el.fileDrop.classList.add("is-dragging");
-  }));
-  ["dragleave", "drop"].forEach((name) => el.fileDrop.addEventListener(name, (event) => {
-    event.preventDefault();
-    el.fileDrop.classList.remove("is-dragging");
-  }));
-  el.fileDrop.addEventListener("drop", (event) => {
-    const files = event.dataTransfer?.files;
-    if (!files?.length) return;
-    const transfer = new DataTransfer();
-    transfer.items.add(files[0]);
-    el.fileInput.files = transfer.files;
-    updateSelectedFile();
+    if(event.dataTransfer.files.length!==1) {showToast('Please drop one manuscript at a time.',true);return;}
+    const file=event.dataTransfer.files[0];
+    if(!/\.(txt|docx|pdf)$/i.test(file.name)) {showToast('Choose a Word document, PDF, or text file.',true);return;}
+    const transfer=new DataTransfer();transfer.items.add(file);el.fileInput.files=transfer.files;
+    updateSelectedFile();if(!el.uploadDialog.open) openDialog(el.uploadDialog);
+  });
+  document.getElementById('autopilot-pause').addEventListener('click',async()=>{
+    try {
+      const response=await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/autopilot/${encodeURIComponent(state.autopilotJob.id)}/pause`,{method:'POST'});
+      const data=await readJsonResponse(response);if(!response.ok) throw new Error(data.error);
+      window.clearTimeout(state.autopilotTimer);state.autopilotJob=data.job;renderAutopilot();
+    } catch(error) {showToast(error.message,true);}
+  });
+  document.getElementById('download-report').addEventListener('click',async()=>{
+    try {
+      const response=await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/report.txt`);
+      if(!response.ok) throw new Error('The editorial report is not ready yet.');
+      const url=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=url;a.download='editorial-report.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    } catch(error) {showToast(error.message,true);}
   });
 
   [el.bibleCharacters, el.bibleSettings, el.bibleTimeline, el.biblePlot, el.bibleTone, el.bibleContinuity].forEach((textarea) => {

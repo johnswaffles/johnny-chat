@@ -20,11 +20,13 @@ const requests=[];
 let resumeBudgetFailures=0;
 const truncatedStages=new Set();
 const mock=http.createServer(async(req,res)=>{
+ if(process.env.STORY_PREVIEW && req.url==='/preview') {res.writeHead(302,{'Set-Cookie':`gpt54_session=${token}; Path=/; SameSite=Lax`,Location:origin+'/story-editor/'});res.end();return;}
  let raw=''; for await(const part of req) raw+=part;
  const body=JSON.parse(raw); requests.push(body);
  assert.equal(body.model,'gpt-6-astra'); assert.equal(body.reasoning.effort,'high'); assert.equal(body.reasoning.mode,undefined);
  const user=JSON.parse(body.input[1].content);
  const stage=body.text?.format?.name;
+ if(body.input[1].content.includes('PAUSE_TEST')) await new Promise(r=>setTimeout(r,500));
  const retryStage=body.input[1].content.includes('BUDGET_ONCE')&&!truncatedStages.has(stage);
  const resumeFailure=user.chunk?.paragraphs.some(p=>p.text.includes('RESUME_BUDGET'))&&resumeBudgetFailures++<3;
  if(retryStage||resumeFailure){truncatedStages.add(stage);res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'incomplete',incomplete_details:{reason:'max_output_tokens'},output:[{type:'message',content:[{type:'output_text',text:'{"revisedParagraphs":[]}'}]}]}));return;}
@@ -64,7 +66,17 @@ assert.equal(main.job.status,'completed');assert.equal(main.job.report.paragraph
 assert.equal(main.project.autopilot.id,main.job.id);
 const retained=main.project.sections.find(s=>s.originalText.includes('KEEP_EXACT')&&s.kind==='paragraph');assert.ok(!retained.editedText);
 assert.ok(requests.some(r=>r.input[1].content.includes('cannabis')));
+assert.ok(requests.some(r=>JSON.parse(r.input[1].content).passages?.length));
+assert.ok(requests.some(r=>r.text.format.name==='story_autopilot_polish'));
+const report=await fetch(origin+main.base+'/report.txt',{headers:auth});assert.equal(report.status,200);assert.match(await report.text(),/EDITORIAL REPORT/);
 const download=await fetch(origin+main.base+'/export.docx',{headers:auth});assert.equal(download.status,200);const bytes=Buffer.from(await download.arrayBuffer());assert.equal(bytes.subarray(0,2).toString(),'PK');await writeFile(testDir+'/edited.docx',bytes);
+const docxImport=new FormData();docxImport.append('manuscript',new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),'Roundtrip.docx');
+const roundtrip=await json('/api/story-editor/upload',{method:'POST',body:docxImport});assert.ok(roundtrip.sections>=3);
+const pdfStream='BT /F1 12 Tf 72 720 Td (A complete sample sentence from a selectable PDF.) Tj ET';
+const pdfObjects=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',`<< /Length ${pdfStream.length} >>\nstream\n${pdfStream}\nendstream`];
+let pdf='%PDF-1.4\n',offsets=[0];pdfObjects.forEach((obj,i)=>{offsets.push(Buffer.byteLength(pdf));pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;});const xref=Buffer.byteLength(pdf);pdf+=`xref\n0 6\n0000000000 65535 f \n${offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n ').join('\n')}\ntrailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+const pdfImport=new FormData();pdfImport.append('manuscript',new Blob([pdf],{type:'application/pdf'}),'Selectable.pdf');
+const pdfProject=await json('/api/story-editor/upload',{method:'POST',body:pdfImport});assert.ok(pdfProject.sections>0);
 const original=await fetch(origin+main.base+'/export.docx?source=original',{headers:auth});assert.equal(original.status,200);await writeFile(testDir+'/original.docx',Buffer.from(await original.arrayBuffer()));
 const whole=await run(Array.from({length:12},(_,i)=>i===0?'WHOLE_REFUSAL simulated hold.':`Paragraph ${i} of the local test manuscript.`).join('\n\n'),'LOCAL TEST - Refusal');assert.equal(whole.job.status,'completed');assert.ok(whole.job.report.paragraphsPreserved > 0);assert.ok(whole.job.report.paragraphsRevised > 0);assert.equal(whole.job.report.paragraphsPreserved + whole.job.report.paragraphsRevised,12);
 const fail=await run('TECHNICAL_FAILURE simulated service problem.','LOCAL TEST - Connection');assert.equal(fail.job.status,'failed');assert.equal(fail.project.sections.filter(s=>s.editedText).length,0);
@@ -75,23 +87,36 @@ const initialEdits=stopped.project.edits.length;
 // Reproduce a process disappearing while the saved job still says running.
 const db=new DatabaseSync(testDir+'/story.sqlite');
 db.prepare("UPDATE story_autopilot_jobs SET status='running', finished_at='' WHERE id=?").run(stopped.job.id);
+db.prepare("UPDATE story_worker_queue SET state='running',owner='dead-process',lease_until=1 WHERE job_id=?").run(stopped.job.id);
 db.close();
 await new Promise(resolve=>{child.once('exit',resolve);child.kill();});
 child=launch();child.stderr.on('data',d=>backendErrors+=d);
 for(let i=0;i<50;i++) {try {const r=await fetch(origin+'/api/chatbot-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:'local-story-preview'})});const t=(await r.json()).token;if(t){auth.Authorization=`Bearer ${t}`;break;}}catch{}await new Promise(r=>setTimeout(r,100));}
 const interrupted=await json(stopped.base);
-assert.equal(interrupted.autopilot.status,'failed');
-assert.equal(interrupted.autopilot.phase,'interrupted');
-assert.equal(interrupted.autopilot.completedChunks,stopped.job.completedChunks);
+assert.ok(['queued','running','completed'].includes(interrupted.autopilot.status));
+assert.ok(interrupted.autopilot.completedChunks>=stopped.job.completedChunks);
 const checkDb=new DatabaseSync(testDir+'/story.sqlite');
-assert.equal(checkDb.prepare('SELECT status FROM story_autopilot_jobs WHERE id=?').get(stopped.job.id).status,'running','read-only recovery must not mutate saved jobs');
+assert.ok(checkDb.prepare('SELECT completed_chunks FROM story_autopilot_jobs WHERE id=?').get(stopped.job.id).completed_chunks>=stopped.job.completedChunks);
 checkDb.close();
 const requestCount=requests.length;
-const resumed=await json(stopped.base+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume:true,intent:stopped.job.intent})});assert.equal(resumed.job.id,stopped.job.id);
+// No explicit resume: the durable queue must recover the expired worker itself.
 let resumedJob;
 for(let i=0;i<100;i++){resumedJob=(await json(stopped.base+'/autopilot/'+stopped.job.id)).job;if(['completed','failed'].includes(resumedJob.status))break;await new Promise(r=>setTimeout(r,100));}
 assert.equal(resumedJob.status,'completed');
-const after=await json(stopped.base);assert.equal(after.edits.length,12);assert.ok(initialEdits<12);
-assert.ok(!requests.slice(requestCount).some(r=>JSON.parse(r.input[1].content).chunk?.paragraphs.some(p=>p.text.includes('Checkpoint passage 0.'))));
+const after=await json(stopped.base);assert.equal(after.edits.length,24);assert.ok(initialEdits<12);
+assert.ok(!requests.slice(requestCount).filter(r=>r.text.format.name!=='story_autopilot_polish').some(r=>JSON.parse(r.input[1].content).chunk?.paragraphs.some(p=>p.text.includes('Checkpoint passage 0.'))));
+const pauseForm=new FormData();pauseForm.append('manuscript',new Blob(['PAUSE_TEST The visitor left a note on the counter.'],{type:'text/plain'}),'Pause test.txt');
+const pauseUpload=await json('/api/story-editor/upload',{method:'POST',body:pauseForm});
+const pauseBase='/api/story-editor/projects/'+pauseUpload.projectId;
+const starts=await Promise.all([1,2].map(()=>json(pauseBase+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})));
+assert.equal(starts[0].job.id,starts[1].job.id,'double clicks must share one active run');
+const pauseJob=starts[0].job.id;
+await json(pauseBase+'/autopilot/'+pauseJob+'/pause',{method:'POST'});
+await new Promise(r=>setTimeout(r,700));
+const paused=await json(pauseBase);assert.equal(paused.autopilot.status,'failed');assert.equal(paused.edits.length,0,'late response must not write after pause');
+await json(pauseBase+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume:true,intent:starts[0].job.intent})});
+let finished;
+for(let i=0;i<150;i++){finished=(await json(pauseBase+'/autopilot/'+pauseJob)).job;if(['completed','failed'].includes(finished.status))break;await new Promise(r=>setTimeout(r,100));}
+assert.equal(finished.status,'completed');
 console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');
-child.kill();mock.close();
+if(process.env.STORY_PREVIEW) console.log(`LOCAL PREVIEW: http://127.0.0.1:${mock.address().port}/preview`); else {child.kill();mock.close();}
