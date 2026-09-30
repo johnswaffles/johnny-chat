@@ -1,4 +1,4 @@
-import {PLATFORMS} from './game.js?release=20260929-living-meadow';
+import {PLATFORMS} from './game.js?release=20260930-chain-tempest';
 // Ground-mounted props belong to a surface, never arbitrary world coordinates.
 export function groundedPlacement(platforms,{platformId,offset,footprint=12}){
  const p=platforms.find(p=>p.id===platformId);

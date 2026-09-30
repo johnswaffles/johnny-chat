@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Elemental magic review</title>
+<style>body{margin:0;background:#071923;color:#dce9eb;font:14px system-ui}header{display:flex;gap:10px;padding:12px;flex-wrap:wrap;align-items:center}button,a{background:#142c3a;color:#e6cf9b;border:1px solid #648b9f;padding:9px;text-decoration:none}#stage{position:relative;height:calc(100vh - 100px);overflow:hidden}canvas{width:100%;height:100%;display:block}output{display:block;padding:6px 12px}</style>
+<header><strong>Elemental magic</strong><button id="ember">Ember Orb</button><button id="frost">Frost Fan</button><button id="chain">Chain Spark</button><button id="face">Turn left / right</button><button id="air">Toggle airborne</button><button id="burn">Burning enemy snapshot</button><button id="hold">Freeze hold snapshot</button><button id="flight">Flight snapshot</button><button id="snapshot">Impact snapshot</button><button id="play">Play sequence</button><button id="benchmark">Measure rendering</button><button id="gentle">Toggle gentle effects</button><a href="../?gorge=1">Play game</a></header><output>Loading…</output><div id="stage"><canvas></canvas></div>
+<script type="module">
+import {Renderer,loadArt} from '../src/render.js?release=20260930-chain-tempest';
+import {Game} from '../src/game.js?release=20260930-chain-tempest';
+import {useEquipped} from '../src/inventory.js?release=20260930-chain-tempest';
+const r=new Renderer(document.querySelector('canvas'),await loadArt());r.title=false;r.quality='high';r.resize();
+let bench=null,benchResult='';
+let facing=1,airborne=false;
+let g,kind='ember',age=0,last=0,playing=true;
+function flush(){for(const e of g.events)r.event(e);g.events=[];}
+function start(){g=new Game();g.player.x=1235;g.player.y=airborne?470:560;g.player.face=facing;g.player.onGround=!airborne;g.enemies.forEach(e=>e.dead=true);for(let i=0;i<3;i++){const e=g.enemies[i];Object.assign(e,{dead:false,x:1235+facing*(265+i*145),y:560,origin:1235+facing*(265+i*145),cd:99,hp:500,maxHp:500,role:'ranged'});}g.inventory.equipped=kind;g.inventory.charges[kind]=6;r.reset();r.camera=Math.max(0,g.player.x-r.w*.37);useEquipped(g);flush();age=0;}
+for(const k of ['ember','frost','chain'])document.querySelector('#'+k).onclick=()=>{kind=k;playing=true;start();};
+function snapshot(time){start();for(let t=0;t<time;t+=1/120){g.update(1/120,{});flush();r.draw(g,1/120);}playing=false;}
+document.querySelector('#hold').onclick=()=>{kind='frost';snapshot(1.5);};
+document.querySelector('#burn').onclick=()=>{kind='ember';snapshot(1.03);};
+document.querySelector('#snapshot').onclick=()=>snapshot(kind==='chain'?.07:.44);document.querySelector('#flight').onclick=()=>snapshot(.12);
+document.querySelector('#face').onclick=()=>{facing=-facing;playing=true;start();};document.querySelector('#air').onclick=()=>{airborne=!airborne;playing=true;start();};
+document.querySelector('#play').onclick=()=>{playing=true;start();};document.querySelector('#gentle').onclick=()=>r.gentle=!r.gentle;
+document.querySelector('#benchmark').onclick=()=>{playing=true;start();bench=[];benchResult='';};
+addEventListener('resize',()=>r.resize());start();
+function frame(t){const before=performance.now();const dt=last?Math.min(.04,(t-last)/1000):0;last=t;if(playing){age+=dt;if(age>2.5)start();g.update(dt,{});flush();}r.draw(g,playing?dt:0);document.querySelector('output').textContent=`${kind==='ember'?'Ember Orb':kind==='frost'?'Frost Fan':'Chain Spark'} · ${playing?'Live spell sequence':'Paused snapshot'} · ${r.gentle?'Gentle':'Rich'} effects`;if(bench){bench.push(performance.now()-before);if(bench.length>=180){const sorted=[...bench].sort((a,b)=>a-b);benchResult=' · 180 frames: mean JS '+(bench.reduce((a,b)=>a+b,0)/bench.length).toFixed(2)+'ms, p95 '+sorted[170].toFixed(2)+'ms';bench=null;}}document.querySelector('output').textContent+=benchResult;if(kind==='frost'){const frozen=g.enemies.filter(e=>!e.dead&&e.freeze>0);document.querySelector('output').textContent+=' · Frozen: '+frozen.length+' · remaining '+(frozen[0]?.freeze||0).toFixed(2)+'s';}requestAnimationFrame(frame);}requestAnimationFrame(frame);
+</script>

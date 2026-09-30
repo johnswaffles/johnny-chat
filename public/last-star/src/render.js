@@ -1,18 +1,19 @@
-import {prepareFlora,drawGorgeFlora} from './gorge-flora.js?release=20260929-living-meadow';
-import {GorgeScene} from './gorge-scene.js?release=20260929-living-meadow';
-import {paintedAction,drawPaintedPose} from './action-poses.js?release=20260929-living-meadow';
-import {drawReactiveLight,lightEvent,prepareWizardLighting,wizardLight,spellLights} from './reactive-light.js?release=20260929-living-meadow';
-import {drawSilverwoodLayers,prepareSilverwoodLayers} from './silverwood-layers.js?release=20260929-living-meadow';
-import {sceneMotion,renderResolution,drawSceneLife} from './scene-life.js?release=20260929-living-meadow';
-import {drawLevel1,elementEvent} from './level1-fx.js?release=20260929-living-meadow';
-import {drawEnemyPose} from './enemy-frames.js?release=20260929-living-meadow';
-import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20260929-living-meadow';
-import {forwardCastPose} from './cast-pose.js?release=20260929-living-meadow';
-import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20260929-living-meadow';
-import {LANTERNS} from './level-decor.js?release=20260929-living-meadow';
-import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20260929-living-meadow';
-import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20260929-living-meadow';
-import {PLATFORMS,SEALS,WIDTH,clamp} from './game.js?release=20260929-living-meadow';
+import {drawElementalProjectile} from './elemental-vfx.js?release=20260930-chain-tempest';
+import {prepareFlora,drawGorgeFlora} from './gorge-flora.js?release=20260930-chain-tempest';
+import {GorgeScene,drawGorgeFallback} from './gorge-scene.js?release=20260930-chain-tempest';
+import {paintedAction,drawPaintedPose} from './action-poses.js?release=20260930-chain-tempest';
+import {drawReactiveLight,lightEvent,prepareWizardLighting,wizardLight,spellLights} from './reactive-light.js?release=20260930-chain-tempest';
+import {drawSilverwoodLayers,prepareSilverwoodLayers} from './silverwood-layers.js?release=20260930-chain-tempest';
+import {sceneMotion,renderResolution,drawSceneLife} from './scene-life.js?release=20260930-chain-tempest';
+import {drawLevel1,elementEvent} from './level1-fx.js?release=20260930-chain-tempest';
+import {drawEnemyPose} from './enemy-frames.js?release=20260930-chain-tempest';
+import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20260930-chain-tempest';
+import {forwardCastPose} from './cast-pose.js?release=20260930-chain-tempest';
+import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20260930-chain-tempest';
+import {LANTERNS} from './level-decor.js?release=20260930-chain-tempest';
+import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20260930-chain-tempest';
+import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20260930-chain-tempest';
+import {PLATFORMS,SEALS,WIDTH,clamp} from './game.js?release=20260930-chain-tempest';
 const TAU=Math.PI*2;
 const rand=(n)=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 const WIZARD=[
@@ -42,7 +43,7 @@ export class Renderer {
   reset(){for(const key of ['particles','rings','arcs','echoes','arcadeWaves','shardImpacts','elementFX','lightPulses'])this[key]=[];this.shake=this.flash=this.time=0;this.wizardAnimation=newWizardAnimation();}
   resize(){const dpr=renderResolution(window.innerWidth,window.innerHeight,window.devicePixelRatio);this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';const bgRatio=this.quality==='low'?1:Math.min(dpr,1.5);this.backgroundCanvas.width=Math.round(window.innerWidth*bgRatio);this.backgroundCanvas.height=Math.round(window.innerHeight*bgRatio);Object.assign(this.backgroundCanvas.style,{left:this.canvas.offsetLeft+'px',top:this.canvas.offsetTop+'px',width:this.canvas.clientWidth+'px',height:this.canvas.clientHeight+'px'});this.backgroundContext.imageSmoothingEnabled=true;this.backgroundContext.imageSmoothingQuality='high';this.gorge?.resize(this.canvas,bgRatio);}
   backdrop(game){
-    const active=this.gorgeEnabled&&this.camera<1800&&this.previewLayers!==false&&this.gorge?.ready;
+    const active=this.gorgeEnabled&&this.previewLayers!==false&&this.gorge?.ready;
     if(this.gorge)this.gorge.canvas.hidden=!active;
     this.backgroundCanvas.hidden=!!active;
     if(active&&this.gorge.draw(this))return;
@@ -60,7 +61,7 @@ export class Renderer {
     arcadeEvent(this,e);elementEvent(this,e);lightEvent(this,e);
     if(e.type==='special-cast'){const color=e.kind==='ember'?'gold':e.kind==='chain'?'violet':'blue';this.burst(e.x,e.y,color,12,85);this.rings.push({x:e.x,y:e.y,r:6,life:.2,color});}
     if(e.type==='cast'){this.burst(e.x,e.y,'blue',12,95);this.rings.push({x:e.x,y:e.y,r:5,life:.22,color:'blue'});}
-    if(e.type==='hit'){this.shardImpacts.push({x:e.x,y:e.y,life:.32});if(this.shardImpacts.length>20)this.shardImpacts.shift();this.burst(e.x,e.y,'blue',20,140);this.rings.push({x:e.x,y:e.y,r:6,life:.32,color:'blue'});}
+    if(e.type==='hit'&&e.element!=='fire'){this.shardImpacts.push({x:e.x,y:e.y,life:.32});if(this.shardImpacts.length>20)this.shardImpacts.shift();this.burst(e.x,e.y,'blue',20,140);this.rings.push({x:e.x,y:e.y,r:6,life:.32,color:'blue'});}
     if(e.type==='jump'){this.burst(e.x,e.y,'teal',e.second?22:9,60);if(e.second)this.rings.push({x:e.x,y:e.y,r:10,life:.5,color:'teal'});}
     if(e.type==='blink'){
       for(const pos of [e.from,e.to]){this.burst(pos.x,pos.y-55,'violet',40,150);this.rings.push({x:pos.x,y:pos.y-55,r:20,life:.65,color:'violet',portal:true});}
@@ -78,6 +79,7 @@ export class Renderer {
     if(e.type==='lightning'){this.arcs.push({from:{x:e.x-60,y:225},to:{x:e.x,y:e.y},life:.25,lightning:true});this.burst(e.x,e.y-10,'blue',35,180);this.shake=.12;}
   }
   background(game){
+    if(this.gorgeEnabled&&this.art.gorgeRidge){drawGorgeFallback(this);return;}
     const c=this.ctx,w=this.w,t=this.time;const authored=this.art.sceneryPieces&&this.previewLayers!==false?clamp((2300-this.camera)/450,0,1):0;
     c.fillStyle='#071923';c.fillRect(0,0,w,720);
     const water=waterfallTransform(this.art.valley,w,this.camera,WIDTH);
@@ -87,20 +89,10 @@ export class Renderer {
     // Quiet shafts stay behind the readable combat plane.
     c.save();c.globalCompositeOperation='screen';
     for(let i=0;i<5;i++){c.globalAlpha=.8+Math.sin(t*.22+i)*.2;const x=((i*461-this.camera*.13)% (w+650)+w+650)%(w+650)-200;const g=c.createLinearGradient(x,0,x+150,640);g.addColorStop(0,'#addfed00');g.addColorStop(.2,'#aedfec0d');g.addColorStop(.7,'#91cbdb08');g.addColorStop(1,'#91cbdb00');c.fillStyle=g;c.beginPath();c.moveTo(x,0);c.lineTo(x+35,0);c.lineTo(x+310,660);c.lineTo(x+100,660);c.closePath();c.fill();}c.restore();
-    // Independent middle-distance layers give the painting real parallax.
-    for(let i=0;i<12;i++){
-      const x=i*740+120-this.camera*.64;if(x<-450||x>w+450)continue;
-      const h=330+rand(i)*180,alpha=.5*(i<3?1-authored:1);if(alpha<=0)continue;
-      this.tree(x,590,h*1.06,h,alpha,i%2===0,i);
-    }
-    for(let i=0;i<10;i++){
-      const x=1900+i*520-this.camera*.8;if(x<-250||x>w+250)continue;
-      const alpha=.48*(i===0?1-authored:1);if(alpha>0)this.prop('arch',x,620,220,310,alpha);
-    }
+    // Nearby solid scenery cannot use independent camera drift: its roots
+    // would slide away from supporting terrain and float over gaps.
+    // The complete landscape supplies distant trees/architecture instead.
     this.fog(290,.025,.08);this.fog(405,.035,.12);this.fog(505,.07,.17);
-    for(const tree of [[-150,615,730],[1280,585,370],[2450,598,440],[4100,606,380],[5690,590,470],[6500,610,430],[8010,635,680]]){
-      const x=tree[0]-this.camera*.93,alpha=.75*(tree[0]===1280?1-authored:1);if(x<-650||x>w+650||alpha<=0)continue;this.tree(x,tree[1],tree[2]*1.02,tree[2],alpha,tree[0]%3===0,tree[0]);
-    }
     const astrolabe=7350-this.camera;
     if(astrolabe>-350&&astrolabe<w+350){
       this.glow(astrolabe,310,560,game.bossDefeated?'gold':'blue',.33);
@@ -144,7 +136,7 @@ export class Renderer {
       }else this.prop('rock',x+p.w/2,p.y+85,p.w+10,95,1,p.id%2===0);
       // A slender moss rim makes the actual landing surface unambiguous.
       c.strokeStyle='#9cb88b70';c.lineWidth=2;c.beginPath();c.moveTo(x+6,p.y+1);c.lineTo(x+p.w-6,p.y+1);c.stroke();
-      if(this.gorgeEnabled&&this.camera<1800&&this.art.floraSprites){drawGorgeFlora(this,game,p);}else for(let j=0;j<p.w/25;j++){
+      if(this.gorgeEnabled&&this.art.floraSprites){drawGorgeFlora(this,game,p);}else for(let j=0;j<p.w/25;j++){
         const gx=x+j*25+rand(j+p.id*30)*15;const seed=j+p.id*91;const h=5+rand(seed)*12;c.strokeStyle=j%3?'#426b56':'#8aa884';c.lineWidth=1;c.beginPath();c.moveTo(gx,p.y+2);c.quadraticCurveTo(gx-3,p.y-h*.5,gx+Math.sin(this.time*1.1+seed)*3,p.y-h);c.stroke();
         if(rand(seed+15)>.88){this.glow(gx,p.y-8,27,'teal',.6);c.fillStyle='#9fddd1';c.fillRect(gx,p.y-8,2,3);}
       }
@@ -251,7 +243,7 @@ export class Renderer {
     const c=this.ctx,t=this.time;
     for(const b of game.projectiles){
       const x=b.x-this.camera,y=b.y,player=b.owner==='player';
-      if(player){if(b.kind==='ember'){this.glow(x,y,68,'gold',.9);c.fillStyle='#fff4c4';c.beginPath();c.arc(x,y,8,0,TAU);c.fill();c.strokeStyle='#ff9a47';c.lineWidth=7;c.beginPath();c.moveTo(x,y);c.lineTo(x-b.vx*.035,y-b.vy*.035);c.stroke();}else if(b.kind==='frost'){c.save();c.translate(x,y);c.rotate(Math.atan2(b.vy,b.vx));c.fillStyle='#d7faff';c.beginPath();c.moveTo(13,0);c.lineTo(-8,-4);c.lineTo(-4,0);c.lineTo(-8,4);c.closePath();c.fill();c.restore();this.glow(x,y,30,'blue',.5);}else {if(b.power>=2)this.glow(x,y,b.power===3?50:65,'blue',.65);this.starshard(x,y,b.vx,b.vy);}continue;}
+      if(player){if(!drawElementalProjectile(this,b)){if(b.power>=2)this.glow(x,y,b.power===3?50:65,'blue',.65);this.starshard(x,y,b.vx,b.vy);}continue;}
       this.glow(x,y,73,'violet',.85);
       const tail=27,len=Math.hypot(b.vx,b.vy)||1,dx=b.vx/len,dy=b.vy/len;
       const g=c.createLinearGradient(x-dx*tail,y-dy*tail,x,y);g.addColorStop(0,'#d0a1ee00');g.addColorStop(1,'#dba8ee');c.strokeStyle=g;c.lineWidth=4;c.beginPath();c.moveTo(x-dx*tail,y-dy*tail);c.lineTo(x,y);c.stroke();

@@ -1,8 +1,18 @@
 // Silverwood environment study: independent GPU layers; no per-frame pixel copies.
 // Coordinates are in the same 720-high logical space as the gameplay renderer.
 export function gorgeLayout(width,camera){
-  return {horizon:[-380-camera*.12,-130,Math.max(1850,width+500),Math.max(1850,width+500)/3],
-    ridge:[-150-camera*.42,20,2100,700]};
+  // Ease travel inside each painting's overscan instead of exposing its edge.
+  const pan=(budget,speed)=>budget>0?budget*-Math.expm1(-Math.max(0,camera)*speed/budget):0;
+  const hw=Math.max(1850,width+500),rw=Math.max(2100,width+500);
+  return {horizon:[-380-pan(hw-width-380,.12),-130,hw,hw/3],
+    ridge:[-150-pan(rw-width-150,.42),720-rw/3,rw,rw/3]};
+}
+export function drawGorgeFallback(r){
+ const c=r.ctx,{horizon,ridge}=gorgeLayout(r.w,r.camera);
+ const sky=c.createLinearGradient(0,0,0,720);sky.addColorStop(0,'#061020');sky.addColorStop(1,'#294a5e');c.fillStyle=sky;c.fillRect(0,0,r.w,720);
+ const cloudX=((r.time*6-r.camera*.06)%2100+2100)%2100-600;
+ for(const x of [cloudX-2100,cloudX,cloudX+2100])if(x<r.w&&x+1800>0)c.drawImage(r.art.gorgeClouds,x,-125,1800,470);
+ c.drawImage(r.art.gorgeHorizon,...horizon);c.drawImage(r.art.gorgeRidge,...ridge);
 }
 const vertex=`
 attribute vec2 a; uniform vec2 viewport; uniform vec4 rect;

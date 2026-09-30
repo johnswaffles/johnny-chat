@@ -1,4 +1,4 @@
-import {ACTIONS,DEFAULT_KEYS,DEFAULT_PAD,buttonName,keyName,normalizeKey,validKey,rebind} from './controls.js?release=20260929-living-meadow';
+import {ACTIONS,DEFAULT_KEYS,DEFAULT_PAD,buttonName,keyName,normalizeKey,validKey,rebind} from './controls.js?release=20260930-chain-tempest';
 export class ControlsUI {
  constructor(config,controller,onChange){
   this.config=config;this.controller=controller;this.onChange=onChange;this.capture=null;

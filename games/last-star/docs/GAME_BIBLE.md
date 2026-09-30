@@ -1,6 +1,6 @@
 # Crownforge: Last Star — game bible
 
-Last updated: September 29, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
+Last updated: September 30, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
 
 ## Identity and scope
 
@@ -83,7 +83,7 @@ The focused active loadout is unlimited Starshard, Eventide, and **Ember Orb / F
 
 - Defaults: A/D move, Space double jump, J hold staff, Shift blink, K use, hold Tab ring, E/Q next/previous, release Tab equips only, E interact, Esc pause. Xbox: left stick move, right stick aim, A jump, X staff, B blink, Y use, hold LB ring, RB/LT next/previous, release LB equips only, RB interact, Menu pause. Every gameplay action is remappable.
 - Ring slows the entire simulation to 25%; UI navigation stays real time. Charge/use requires a separate new press. Empty items stay equipped. Mode changes cancel the ring; held input cannot reopen it until released. One-shot inputs survive render frames with no simulation step.
-- Tuning source: src/level1-config.js. Ember: 66 base, radius120, burn6 every0.6s for2.4s. Frost: five 16-base shards, 1.1s ordinary freeze, 3.5s freeze resistance, follow-up shatter24 once; boss/brute slow50% for1.6s. Chain: 45 base, first range470 from muzzle then230, up to four unique targets, nearest-first and ID tie-break. Chain stagger0.3s ordinary /0.15s brute /0.08s boss with1.2s resistance. Flask: heal65, no consumption at full health. Special stacks6, flask3, overflow75 score per excess item. Failed activations must not spend charges or Reprisal.
+- Tuning source: src/level1-config.js. Ember: 66 base, radius120, burn6 every0.6s for2.4s. Frost: five 16-base shards, 2.2s ordinary freeze, 3.5s freeze resistance, follow-up shatter24 once; boss/brute slow50% for1.6s. Chain: 45 base, first range470 from muzzle then230, up to four unique targets, nearest-first and ID tie-break. Chain stagger0.3s ordinary /0.15s brute /0.08s boss with1.2s resistance. Flask: heal65, no consumption at full health. Special stacks6, flask3, overflow75 score per excess item. Failed activations must not spend charges or Reprisal.
 - Staff tiers: crystals0/6/15 produce one36-base bolt /one46-base stronger bolt /three38-base bolts. All bolts of a cast share one Reprisal budget. Existing missing-health damage, 2% actual-loss lifesteal, Reprisal, score chains and Overdrive continue.
 - Guaranteed scrolls/power/flasks and four breakable chests are grounded by supporting-platform validation. Ordinary loot magnet95, collected once; gold50/gem150. Do not place ordinary loot over a pit. Introductory enemy580, first scroll960, clustered enemies1510/1660, first guaranteed power1790. Later loot and enemies reuse the current route.
 - Roles: approaching melee, ranged, resistant brute. No passive touch damage. Windup precedes active melee/projectiles and recovery. Guardian cycles fan, delayed marked ground, jumpable low sweep with recovery. Preserve attack atlas bounds and inspect both facings at gameplay scale.
@@ -147,3 +147,27 @@ Prompts: docs/art/GORGE_FLORA.md. Focused tests protect footprint support and co
 ## September 29 living-meadow live test
 
 User authorized publishing the approved gorge and flora preview for live testing. Release marker: 20260929-living-meadow. Playable opt-in route: /last-star/?gorge=1. Scenery review: /last-star/tests/gorge-review.html?gorge=1. The first camera section uses the new scenery; the remaining route retains existing art with the documented temporary handoff. This is explicitly a live test of the first section, not a completed full-level scenery migration. Previous local-only statements describe the pre-authorization stage. Gameplay changes from the approved Silverwood polish preview accompany this build.
+
+## Supported scenery — September 30
+
+Remove the legacy standalone parallax tree/arch overlays, including the detached Silverwood tree crop whose flat root edge floated over the first pit. Retain the complete gorge/panorama artwork, waterfalls and grounded flora. Nearby solid props must share their supporting terrain transform; independent parallax must not move their roots into a playable gap. Future trees require a documented support surface and full root footprint, complete uncropped art, and pit-edge review at narrow and wide viewports. A background drawing call is not an exemption from physical support. Keep ordinary fixtures off intentional floating platforms unless explicitly authored as part of that island.
+
+## Continuous Silverwood scenery — September 30
+
+The user approved carrying the opening look throughout this level. The gorge route must never switch to the old panorama at camera1800. Use the same opaque, separated mountain/ridge/cloud art throughout, with smooth bounded parallax inside each painting's available overscan. Preserve aspect ratio; never stretch art across7900 units, repeat trees/doorways or expose a texture's rectangular side edge. Detailed grounded flora continues on all platforms. GPU failure uses the same gorge assets on Canvas2D instead of changing scenery style. This supersedes the earlier two-screen scope and temporary hard-handoff rules. This revision is local pending live release.
+
+## Secondary spell spectacle — September 30
+
+Ember Orb uses a compact molten core, curling flame ribbons and an expanding combustion burst. Frost Fan uses faceted ice shards with glacial trails and crystalline freeze/shatter bursts. Chain Spark uses a blue/violet branching bolt, white core and star-shaped contact flash. Small elemental sigils mark successful casts at the staff muzzle. Preserve actual projectiles, targets, timing, charges, damage and collision sizes; graphics are presentation only. Effects reuse the32-element aftermath cap, freeze on pause, and reduce branches/ribbons/shards in Gentle mode. No fullscreen flash, costly filters or unreadable opaque explosion disc. Review both projectile directions, air casting and actual enemy contact. Local review: tests/elemental-review.html?gorge=1.
+
+### Electrical surge refinement
+
+Chain Spark now has three independently writhing blue/violet channels, fine branch discharges, a contact corona and outward electrical sparks. The visible aftermath lasts0.40 seconds; damage still occurs once at the original cast instant. Gentle uses one stable strand with fewer sparks. Reduced-flash disables intensity modulation. Preserve the32-effect budget and bounded local glow. Ember gains extra curled flame arcs; Frost gains a refraction halo and sparkling ice trails. No new attack behavior or resource changes.
+
+### Readable burning damage
+
+An enemy with an active Ember burn shows rising orange flame tongues, sparks, warm body light and faint smoke. Attach these to its current position; reduce them in Gentle, freeze with pause, fade near expiration, and stop immediately on death. Every actual burn tick emits an orange spark pulse and an orange damage number labelled burn. Do not show blue Starshard impacts on burn ticks. Tick feedback reports actual health removed and never manufactures an extra hit; keep existing damage, duration and cadence. Fire and ice impacts gain thin expanding crescent shells; keep the enemy silhouette visible.
+
+### September 30 live electrical tempest and longer freeze
+
+Frost Fan freezes ordinary enemies for 2.2 seconds, twice its previous1.1 seconds. Preserve3.5-second re-freeze resistance, one follow-up shatter and boss/brute50% slow for1.6 seconds. Chain Spark adds traveling white-hot charges, helical ion trails, longer branching forks and a larger local contact corona; aftermath lasts0.55 seconds. Damage, target count, range, charges and cooldown stay unchanged. Gentle reduces channels, forks and particles; reduced-flash uses a stable path seed and constant intensity. User authorized releasing these and the reviewed continuous scenery/elemental improvements for live testing.

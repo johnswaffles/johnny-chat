@@ -1,9 +1,9 @@
-import {newSilverwoodEncounter,updateSilverwoodEncounter,silverwoodEnemyReady} from './silverwood-encounter.js?release=20260929-living-meadow';
-import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260929-living-meadow';
-import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260929-living-meadow';
-import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260929-living-meadow';
-import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260929-living-meadow';
-import {starshardMuzzle} from './cast-pose.js?release=20260929-living-meadow';
+import {newSilverwoodEncounter,updateSilverwoodEncounter,silverwoodEnemyReady} from './silverwood-encounter.js?release=20260930-chain-tempest';
+import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260930-chain-tempest';
+import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260930-chain-tempest';
+import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260930-chain-tempest';
+import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260930-chain-tempest';
+import {starshardMuzzle} from './cast-pose.js?release=20260930-chain-tempest';
 export const SAVE_KEY = 'crownforge-last-star-level1-preview-v1';
 export const WIDTH = 7900;
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -21,7 +21,7 @@ export const SEALS = [
   {x:3690,y:565,name:'The Broken Aqueduct',chapter:'II · THE BROKEN AQUEDUCT'},
   {x:6550,y:570,name:'The Last Observatory',chapter:'III · THE LAST OBSERVATORY'},
 ];
-import {MEMORIES} from './memories.js?release=20260929-living-meadow';
+import {MEMORIES} from './memories.js?release=20260930-chain-tempest';
 export {MEMORIES};
 const ENEMIES = [
  [1510,560,'wraith'],[580,580,'wraith'],[1660,560,'wraith'],
@@ -142,7 +142,7 @@ export class Game {
     }else return false;
     p.mana-=cost;p.cooldowns[kind]=COOLDOWNS[kind];return true;
   }
-  damage(e,base,attack=null){
+  damage(e,base,attack=null,element=null){
     if(e.dead||e.hp<=0||this.player.hp<=0||!Number.isFinite(base)||base<=0)return;
     if(e.type==='boss'&&!this.bossStarted)return;
     if(this.targetId!==e.id){this.targetId=e.id;this.chain=0;}
@@ -155,8 +155,8 @@ export class Game {
     if(e.type!=='boss'&&e.staggerCd<=0){e.stagger=e.role==='brute'?.06:.12;e.staggerCd=e.role==='brute'?1.2:.7;const floor=this.platforms.find(f=>e.x>=f.x&&e.x<=f.x+f.w&&e.y===f.y);if(floor)e.x=clamp(e.x+Math.sign(e.x-this.player.x)*(e.role==='brute'?3:10),floor.x+25,floor.x+floor.w-25);}
     const dealt=Math.min(e.hp,amount);e.hp=Math.max(0,e.hp-amount);e.flash=.16;
     this.player.hp=Math.min(this.player.maxHp,this.player.hp+dealt*LIFE_STEAL);
-    this.numbers.push({x:e.x,y:e.y-(e.type==='boss'?140:85),text:String(amount),life:.8,color:this.chain>=4?'#e9d29c':'#bceff8'});
-    this.event('hit',{x:e.x,y:e.y-55,big:e.type==='boss'});
+    this.numbers.push({x:e.x,y:e.y-(e.type==='boss'?140:85),text:String(amount),life:.8,color:element==='fire'?'#ffad69':this.chain>=4?'#e9d29c':'#bceff8'});
+    this.event('hit',{x:e.x,y:e.y-55,big:e.type==='boss',element});
     if(e.hp<=0){e.dead=true;this.kills++;rewardKill(this,e);this.player.mana=Math.min(100,this.player.mana+14);this.event('enemy-death',{x:e.x,y:e.y-50,boss:e.type==='boss'});
       if(e.type==='boss'){this.bossDefeated=true;this.projectiles=this.projectiles.filter(b=>b.owner==='player');this.player.hp=210;this.event('dialogue',{text:'Even a broken star can find its way home. The ember is yours again.'});}
     }
@@ -200,7 +200,7 @@ export class Game {
     if(p.x>6910&&this.checkpoint===3&&!this.bossStarted&&!this.bossDefeated){this.bossStarted=true;this.event('boss');}
     updateSilverwoodEncounter(this,dt);
     for(const e of this.enemies){
-      if(e.dead)continue;if(e.burn>0){e.burn=Math.max(0,e.burn-dt);e.burnTick-=dt;if(e.burnTick<=0){e.burnTick+=LEVEL1.spells.ember.burnInterval;this.damage(e,LEVEL1.spells.ember.burnDamage);}}if(e.dead)continue;for(const k of ['freeze','freezeImmune','slow'])e[k]=Math.max(0,(e[k]||0)-dt);e.stagger=Math.max(0,e.stagger-dt);e.staggerCd=Math.max(0,e.staggerCd-dt);e.flash=Math.max(0,e.flash-dt);e.attack=Math.max(0,e.attack-dt);
+      if(e.dead)continue;if(e.burn>0){e.burn=Math.max(0,e.burn-dt);e.burnTick-=dt;if(e.burnTick<=0){e.burnTick+=LEVEL1.spells.ember.burnInterval;const before=e.hp;this.damage(e,LEVEL1.spells.ember.burnDamage,null,'fire');if(e.hp<before){const n=this.numbers.at(-1);if(n){n.color='#ffad69';n.text+=' burn';}this.event('burn-tick',{x:e.x,y:e.y-45,enemyId:e.id,damage:before-e.hp});}}}if(e.dead)continue;for(const k of ['freeze','freezeImmune','slow'])e[k]=Math.max(0,(e[k]||0)-dt);e.stagger=Math.max(0,e.stagger-dt);e.staggerCd=Math.max(0,e.staggerCd-dt);e.flash=Math.max(0,e.flash-dt);e.attack=Math.max(0,e.attack-dt);
       if(!silverwoodEnemyReady(this,e))continue;
       const dx=p.x-e.x,dy=p.y-e.y;e.face=Math.sign(dx)||-1;
       if(e.type==='boss'&&!this.bossStarted)continue;
@@ -228,7 +228,7 @@ export class Game {
       b.life-=dt;b.px=b.x;b.py=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;
       if(b.owner==='player'){
         for(const e of this.enemies){if(e.dead)continue;const r=e.type==='boss'?55:31;
-          if(Math.abs(b.x-e.x)<r+10&&b.y>e.y-(e.type==='boss'?170:100)&&b.y<e.y+5){if(b.kind==='ember'){for(const victim of this.enemies)if(!victim.dead&&Math.hypot(victim.x-b.x,victim.y-50-b.y)<LEVEL1.spells.ember.radius){this.damage(victim,b.damage,b.attack);this.applyStatus(victim,'ember');}this.event('ember-impact',{x:b.x,y:b.y});}else {this.damage(e,b.damage,b.attack);if(b.kind==='frost')this.applyStatus(e,'frost',b.attack);}b.life=0;break;}}
+          if(Math.abs(b.x-e.x)<r+10&&b.y>e.y-(e.type==='boss'?170:100)&&b.y<e.y+5){if(b.kind==='ember'){for(const victim of this.enemies)if(!victim.dead&&Math.hypot(victim.x-b.x,victim.y-50-b.y)<LEVEL1.spells.ember.radius){this.damage(victim,b.damage,b.attack,'fire');this.applyStatus(victim,'ember');}this.event('ember-impact',{x:b.x,y:b.y});}else {this.damage(e,b.damage,b.attack);if(b.kind==='frost')this.applyStatus(e,'frost',b.attack);}b.life=0;break;}}
       if(b.life>0)for(const chest of this.chests){if(!chest.open&&Math.abs(b.x-chest.x)<32&&b.y>chest.y-60&&b.y<chest.y+20){breakChest(this,chest);b.life=0;break;}}
       }else if(Math.abs(b.x-p.x)<24&&b.y>p.y-100&&b.y<p.y){this.hurt(b.damage);b.life=0;}
     }

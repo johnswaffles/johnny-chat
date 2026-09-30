@@ -18,10 +18,8 @@ export function drawSilverwoodLayers(r,g){
   for(let i=0;i<18;i++){const y=215+((i*43+t*190)%675),x=y<325?240:265+(Math.max(0,y-530)*.16);c.globalAlpha=(.16+Math.sin(i*7+t)*.07)*fade;c.lineWidth=2+(i%3);c.beginPath();c.moveTo(x+(i%3-1)*8,y);c.lineTo(x+(i%3-1)*8+2,y+23);c.stroke();}c.restore();done();
   r.glow(fallX+165,fallY-50,130,'blue',.2*fade);
  }
- const treeX=1450-r.camera*.84;
- if(treeX<r.w+350&&treeX> -500){const done=object(r,'tree',treeX-400,650,.5,.7*fade,Math.sin(t*.6)*(r.gentle?.001:.004));done();}
- const archX=2060-r.camera*.9;
- if(archX<r.w+250&&archX> -300){const done=object(r,'arch',archX-570,650,.5,.83*fade);done();}
+ // Detached tree/arch crops end at a hard atlas edge without a support
+ // surface. Leave these out; keep the backed spillway and complete scenery.
  // A few local spray droplets around the real basin, below the jump line.
  if(fallX<r.w&&fallX> -250){c.save();c.fillStyle='#caefff';for(let i=0;i<8;i++){const phase=(t*.6+i/8)%1;c.globalAlpha=(1-phase)*.23*fade;c.beginPath();c.arc(fallX+170+Math.sin(i*13)*phase*40,fallY-40-Math.sin(phase*Math.PI)*24,1+phase,0,Math.PI*2);c.fill();}c.restore();}
 }

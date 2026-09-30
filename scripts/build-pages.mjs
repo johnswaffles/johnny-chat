@@ -4620,7 +4620,7 @@ async function syncLastStarBuild() {
   }
   // Opt-in browser QA uses the same input adapter and route driver as local tests.
   await mkdir(path.join(target, "tests"), { recursive: true });
-  for (const item of ["route-driver.mjs", "virtual-gamepad.js", "recording.js", "gorge-review.html"]) {
+  for (const item of ["route-driver.mjs", "virtual-gamepad.js", "recording.js", "gorge-review.html", "elemental-review.html"]) {
     await cp(path.join(source, "tests", item), path.join(target, "tests", item));
   }
 }

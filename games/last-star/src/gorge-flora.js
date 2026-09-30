@@ -3,7 +3,7 @@ const random=n=>{const v=Math.sin(n*127.1+43.7)*43758.5453;return v-Math.floor(v
 const CUTS=[[48,128,434,348],[566,77,430,406],[1092,72,386,404],[36,547,453,418],[528,540,494,423],[1096,551,413,414]];
 export function prepareFlora(image){return CUTS.map(([x,y,w,h])=>{const c=document.createElement('canvas');c.width=Math.round(w/h*128);c.height=128;const ctx=c.getContext('2d');ctx.imageSmoothingQuality='high';ctx.drawImage(image,x,y,w,h,0,0,c.width,128);return c;});}
 export function floraForPlatform(p){
- const plants=[];if(p.x>=2600)return plants;
+ const plants=[];
  for(let i=0;i<Math.floor((p.w-30)/23);i++){
   const seed=p.id*193+i*7,x=p.x+20+i*23+random(seed)*9;
   const kind=random(seed+1)>.78?4:random(seed+2)>.6?1:0;

@@ -1,5 +1,5 @@
 // One authored encounter on the existing Silverwood platform. No arena walls.
-import {placeLoot} from './loot.js?release=20260929-living-meadow';
+import {placeLoot} from './loot.js?release=20260930-chain-tempest';
 export function newSilverwoodEncounter(checkpoint){return {state:checkpoint>1?'cleared':'waiting',time:0,rewarded:checkpoint>1};}
 export function updateSilverwoodEncounter(g,dt){
  const a=g.silverwood;if(a.state==='cleared')return;

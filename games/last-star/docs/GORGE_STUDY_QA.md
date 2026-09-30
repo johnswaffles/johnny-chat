@@ -40,3 +40,13 @@ Horizon v2 and six-species flora atlas integrated. Explicit padded crops visuall
 Rich twelve-enemy sample after foliage integration, same 1364 × 899 / DPR1 setup: 299 measured intervals, mean frame16.67ms, p95 frame18.2ms, mean JS work0.95ms, p95 work2.1ms. Approximately60FPS in this sample; no claim about other devices or Retina performance.
 
 Final browser checks also passed for identical paused foreground plants, independent scenery motion, WebGL error0, context-loss fallback and restored rendering.
+
+
+## September 30 supported scenery correction
+
+Removed detached legacy parallax trees/arches and the hard-bottomed Silverwood tree/arch crops; complete paintings and the backed spillway remain. Reviewed the 1815–1985 floating platform and adjoining pit at 428px and 1364px widths. New gorge motion, paused redraw, paused plants, context-loss fallback and restoration all passed; WebGL error 0 and browser console errors empty. Node tests: 76 passed. Local preview only; this correction has not been deployed.
+
+
+## September 30 full-route continuity
+
+Removed the camera1800 scenery handoff; retained gorge GPU rendering through the entire route. Bounded smooth parallax preserves aspect ratios and edge coverage at428/1280/1800/2560 logical widths. Detailed flora now continues on later platforms. Same-art Canvas2D fallback avoids changing styles on graphics failure. Browser reviewed former cutoff atx2400, middle at4600 and end at7300. Motion, paused redraw/plants, context fallback/restore all PASS; WebGL error0. Resolved a stale module import by updating the release marker. Node tests78 pass. Local only, not deployed.
