@@ -1,5 +1,5 @@
-import {LEVEL1} from './level1-config.js?release=20260930-chain-tempest';
-import {starshardMuzzle} from './cast-pose.js?release=20260930-chain-tempest';
+import {LEVEL1} from './level1-config.js?release=20261001-stick-wheel';
+import {starshardMuzzle} from './cast-pose.js?release=20261001-stick-wheel';
 export const SLOTS=['ember','frost','chain','flask'];
 export const newInventory=()=>({equipped:'ember',charges:{ember:0,frost:0,chain:0,flask:0},cooldown:0});
 export function grantItem(game,kind,count=1){
@@ -29,13 +29,21 @@ export function useEquipped(game,input={}){
  }
  game.event('special-cast',{kind,...origin});return true;
 }
+// Clockwise slots match the visible wheel: top, right, bottom, left.
+export function stickRingIndex(x,y,current){
+ if(!Number.isFinite(x)||!Number.isFinite(y)||Math.hypot(x,y)<.35)return current;
+ const angle=Math.atan2(y,x)+Math.PI/2,center=current*Math.PI/2;
+ const delta=Math.atan2(Math.sin(angle-center),Math.cos(angle-center));
+ if(Math.abs(delta)<=Math.PI/4+.12)return current;
+ return (Math.round(angle/(Math.PI/2))+4)%4;
+}
 export class SelectionRing{
  constructor(){this.open=false;this.index=0;this.inhibited=false;}
  cancel(){this.open=false;this.inhibited=true;}
  step(input,inventory){
-  if(!input.ring)this.inhibited=false;const was=this.open;
-  if(input.ring&&!this.inhibited){if(!was)this.index=Math.max(0,SLOTS.indexOf(inventory.equipped));this.open=true;if(input.interact)this.index=(this.index+1)%SLOTS.length;if(input.previous)this.index=(this.index+SLOTS.length-1)%SLOTS.length;}
+  if(!input.ring)this.inhibited=false;const was=this.open,oldIndex=this.index;
+  if(input.ring&&!this.inhibited){if(!was)this.index=Math.max(0,SLOTS.indexOf(inventory.equipped));this.open=true;if(input.interact)this.index=(this.index+1)%SLOTS.length;if(input.previous)this.index=(this.index+SLOTS.length-1)%SLOTS.length;this.index=stickRingIndex(input.ringX,input.ringY,this.index);}
   else if(was){inventory.equipped=SLOTS[this.index];this.open=false;}
-  return {use:!!input.use&&!this.open&&!was,speed:this.open?LEVEL1.ringSpeed:1,changed:was!==this.open};
+  return {use:!!input.use&&!this.open&&!was,speed:this.open?LEVEL1.ringSpeed:1,changed:was!==this.open,selectionChanged:this.open&&oldIndex!==this.index};
  }
 }

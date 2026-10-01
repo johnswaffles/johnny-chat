@@ -171,3 +171,7 @@ An enemy with an active Ember burn shows rising orange flame tongues, sparks, wa
 ### September 30 live electrical tempest and longer freeze
 
 Frost Fan freezes ordinary enemies for 2.2 seconds, twice its previous1.1 seconds. Preserve3.5-second re-freeze resistance, one follow-up shatter and boss/brute50% slow for1.6 seconds. Chain Spark adds traveling white-hot charges, helical ion trails, longer branching forks and a larger local contact corona; aftermath lasts0.55 seconds. Damage, target count, range, charges and cooldown stay unchanged. Gentle reduces channels, forks and particles; reduced-flash uses a stable path seed and constant intensity. User authorized releasing these and the reviewed continuous scenery/elemental improvements for live testing.
+
+## Right-stick spell selection — October 1
+
+Hold the remappable selection button (XboxLB by default), then point the right stick toward a spell: upEmber Orb, rightFrost Fan, downChain Spark, leftHealing Flask. The compact wheel follows these clockwise directions. Releasing equips the highlighted item without casting; returning the stick to center retains the highlight. Radial0.35 threshold and angular hysteresis reject drift and diagonal flicker. The right stick still aims outside the wheel. Existing keyboard and RB/LT cycling, charge rules and slow-world behavior remain available.

@@ -1,4 +1,4 @@
-import {ACTIONS,DEFAULT_KEYS,DEFAULT_PAD,buttonName,keyName,normalizeKey,validKey,rebind} from './controls.js?release=20260930-chain-tempest';
+import {ACTIONS,DEFAULT_KEYS,DEFAULT_PAD,buttonName,keyName,normalizeKey,validKey,rebind} from './controls.js?release=20261001-stick-wheel';
 export class ControlsUI {
  constructor(config,controller,onChange){
   this.config=config;this.controller=controller;this.onChange=onChange;this.capture=null;

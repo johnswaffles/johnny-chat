@@ -2,9 +2,9 @@
 <style>body{margin:0;background:#071923;color:#dce9eb;font:14px system-ui}header{display:flex;gap:10px;padding:12px;flex-wrap:wrap;align-items:center}button,a{background:#142c3a;color:#e6cf9b;border:1px solid #648b9f;padding:9px;text-decoration:none}#stage{position:relative;height:calc(100vh - 100px);overflow:hidden}canvas{width:100%;height:100%;display:block}output{display:block;padding:6px 12px}</style>
 <header><strong>Elemental magic</strong><button id="ember">Ember Orb</button><button id="frost">Frost Fan</button><button id="chain">Chain Spark</button><button id="face">Turn left / right</button><button id="air">Toggle airborne</button><button id="burn">Burning enemy snapshot</button><button id="hold">Freeze hold snapshot</button><button id="flight">Flight snapshot</button><button id="snapshot">Impact snapshot</button><button id="play">Play sequence</button><button id="benchmark">Measure rendering</button><button id="gentle">Toggle gentle effects</button><a href="../?gorge=1">Play game</a></header><output>Loading…</output><div id="stage"><canvas></canvas></div>
 <script type="module">
-import {Renderer,loadArt} from '../src/render.js?release=20260930-chain-tempest';
-import {Game} from '../src/game.js?release=20260930-chain-tempest';
-import {useEquipped} from '../src/inventory.js?release=20260930-chain-tempest';
+import {Renderer,loadArt} from '../src/render.js?release=20261001-stick-wheel';
+import {Game} from '../src/game.js?release=20261001-stick-wheel';
+import {useEquipped} from '../src/inventory.js?release=20261001-stick-wheel';
 const r=new Renderer(document.querySelector('canvas'),await loadArt());r.title=false;r.quality='high';r.resize();
 let bench=null,benchResult='';
 let facing=1,airborne=false;

@@ -1,12 +1,12 @@
-import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20260930-chain-tempest';
-import {LEVEL1} from './level1-config.js?release=20260930-chain-tempest';
+import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20261001-stick-wheel';
+import {LEVEL1} from './level1-config.js?release=20261001-stick-wheel';
 const selection=new SelectionRing();
 let pendingActions={},hitStop=0,hitStopGap=0,needsFrame=true;
-import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20260930-chain-tempest';
-import {Renderer,loadArt} from './render.js?release=20260930-chain-tempest';
-import {Soundscape} from './audio.js?release=20260930-chain-tempest';
-import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20260930-chain-tempest';
-import {ControlsUI} from './controls-ui.js?release=20260930-chain-tempest';
+import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20261001-stick-wheel';
+import {Renderer,loadArt} from './render.js?release=20261001-stick-wheel';
+import {Soundscape} from './audio.js?release=20261001-stick-wheel';
+import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20261001-stick-wheel';
+import {ControlsUI} from './controls-ui.js?release=20261001-stick-wheel';
 const $=id=>document.getElementById(id);
 const qa=new URLSearchParams(location.search).has('qa');
 const storageKey=qa?SAVE_KEY+'-qa':SAVE_KEY;
@@ -79,7 +79,7 @@ function input(){
   if(qaReplay&&qaDriver)return qaDriver(game);
   const has=a=>actionKeys(a).some(k=>keys.has(k)),edge=a=>actionKeys(a).some(k=>pressed.has(k));
   const pad=controller.consume(bindings);
-  const r={move:(has('right')?1:0)-(has('left')?1:0)||pad.move,jump:edge('jump')||pad.jump,bolt:has('bolt')||mouseDown||pad.bolt,blink:edge('blink')||pad.blink,use:edge('use')||pad.use,ring:has('ring')||pad.ring,previous:edge('previous')||pad.previous,interact:edge('interact')||pad.interact};
+  const r={move:(has('right')?1:0)-(has('left')?1:0)||pad.move,jump:edge('jump')||pad.jump,bolt:has('bolt')||mouseDown||pad.bolt,blink:edge('blink')||pad.blink,use:edge('use')||pad.use,ring:has('ring')||pad.ring,ringX:pad.ringX,ringY:pad.ringY,previous:edge('previous')||pad.previous,interact:edge('interact')||pad.interact};
   if(lastDevice==='controller'&&Math.hypot(controller.aim.x,controller.aim.y)>.1){r.aimX=game.player.x+controller.aim.x*600;r.aimY=game.player.y-68+controller.aim.y*600;}
   if(mouseDown&&mouseAim)Object.assign(r,mouseAim);pressed.clear();return r;
 }
@@ -145,7 +145,7 @@ function updateUI(){
   for(const button of document.querySelectorAll('[data-spell]')){const spell=button.dataset.spell,cd=p.cooldowns[spell],locked=spell==='dragon'&&game.checkpoint<2;button.style.setProperty('--ready',`${(1-cd/COOLDOWNS[spell])*100}%`);button.querySelector('kbd').textContent=prompt(spell);button.title=`${ACTIONS[spell]} · ${prompt(spell)}${spell==='bolt'?' · Hold to cast':''}`;button.querySelector('.cooldown').textContent=locked?'◇':cd>.1?(cd<1?cd.toFixed(1):Math.ceil(cd)):'';button.classList.toggle('unavailable',locked||(spell==='dragon'&&p.mana<60)||(spell==='constellation'&&p.mana<30));}
   $('selection-ring').classList.toggle('on-left',game.player.x-renderer.camera>renderer.w*.6);$('selection-ring').hidden=!selection.open||mode!=='playing';
   for(const [i,b] of [...document.querySelectorAll('[data-item]')].entries()){const kind=b.dataset.item;b.classList.toggle('chosen',selection.index===i);b.querySelector('strong').textContent=game.inventory.charges[kind];b.setAttribute('aria-selected',String(selection.index===i));}
-  const item=game.inventory.equipped;$('equipped-name').textContent=LEVEL1.spells[item].name;$('equipped-count').textContent=game.inventory.charges[item];$('equipped-key').textContent=prompt('use');$('equipped-item').dataset.itemIcon=item;$('ring-hint').textContent=`Hold ${prompt('ring')} · ${prompt('interact')} next / ${prompt('previous')} previous`;
+  const item=game.inventory.equipped;$('equipped-name').textContent=LEVEL1.spells[item].name;$('equipped-count').textContent=game.inventory.charges[item];$('equipped-key').textContent=prompt('use');$('equipped-item').dataset.itemIcon=item;$('ring-hint').textContent=padMode?`Hold ${prompt('ring')} · Right stick selects`:`Hold ${prompt('ring')} · ${prompt('interact')} next / ${prompt('previous')} previous`;
   const hints=document.querySelectorAll('.bottom-hint span');hints[0].textContent=padMode?`Left stick move · Right stick aim · ${prompt('jump')} double jump`:`${prompt('left')} / ${prompt('right')} move · ${prompt('jump')} jump / double jump`;hints[1].textContent=`${prompt('interact')} interact · ${padMode?'Menu':'ESC'} pause`;
   controlsUI.status(controllerError);
   if(qa&&$('qa-state'))$('qa-state').textContent=JSON.stringify({mode,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.hp),reprisal:Math.round(p.retaliation*3),ring:selection.open,inventory:game.inventory,score:game.arcade.score,crystals:game.arcade.crystals,power:game.arcade.rank,overdrive:game.arcade.overdrive,drops:game.arcade.drops.length,seals:game.checkpoint,kills:game.kills,elapsed:Math.round(game.elapsed),boss:game.bossStarted,bossHP:Math.round(boss.hp),silverwood:game.silverwood,dragon:!!game.dragon,memories:[...game.memories],scenery:renderer.gorgeEnabled?{gpu:!!renderer.gorge?.ready,active:!renderer.gorge?.canvas.hidden,time:+renderer.time.toFixed(3),camera:+renderer.camera.toFixed(2)}:undefined});
@@ -156,7 +156,7 @@ function loop(now){
   hitStopGap=Math.max(0,hitStopGap-dt);hitStop=Math.max(0,hitStop-dt);let worldSpeed=1;
   if(mode==='playing'){
     const controls=input(),state=selection.step(controls,game.inventory);worldSpeed=state.speed;controls.use=state.use;if(selection.open){controls.interact=controls.bolt=controls.blink=controls.jump=false;}
-    if(state.changed||controls.previous||controls.interact&&selection.open)audio.event({type:'selection'});
+    if(state.changed||state.selectionChanged||controls.previous||controls.interact&&selection.open)audio.event({type:'selection'});
     for(const a of ['jump','blink','use','interact'])pendingActions[a]||=controls[a];if(selection.open)pendingActions={};
     accumulator+=(hitStop>0?0:dt)*worldSpeed;let first=true;
     while(accumulator>=1/60){const step={...controls,...pendingActions};pendingActions={};if(!first){step.jump=step.blink=step.use=step.interact=false;}game.update(1/60,step);events();accumulator-=1/60;first=false;if(mode!=='playing'){accumulator=0;break;}}
@@ -175,11 +175,11 @@ try{
   requestAnimationFrame(loop);
   // Local QA surface is opt-in and absent from the normal player route.
   if(qa){
-    qaDriver=(await import('../tests/route-driver.mjs?release=20260930-chain-tempest')).routeInput;
+    qaDriver=(await import('../tests/route-driver.mjs?release=20261001-stick-wheel')).routeInput;
     const panel=document.createElement('details');panel.id='qa-panel';panel.open=true;
     panel.innerHTML='<summary>Local QA</summary><button id="qa-replay">Run input-only playthrough</button><button id="qa-stop">Take control</button><button id="qa-resume">Resume saved checkpoint</button><output id="qa-state"></output>';
     $('game').append(panel);(await import('../tests/recording.js')).addRecording(panel,$('world'));
-    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20260930-chain-tempest')).virtualGamepad(panel);
+    qaPadSource=(await import('../tests/virtual-gamepad.js?release=20261001-stick-wheel')).virtualGamepad(panel);
     const quiet=document.createElement('button');quiet.textContent='Quiet gorge review';quiet.onclick=()=>{start(false);game.player.x=1235;game.player.y=560;game.player.invuln=10000;game.checkpoint=1;game.zone=0;for(const enemy of game.enemies)enemy.dead=true;renderer.camera=game.player.x-renderer.w*.37;dialogueUntil=areaUntil=0;$('dialogue').hidden=true;$('area-title').classList.remove('visible');};panel.append(quiet);
     const polish=document.createElement('button');polish.textContent='Review Silverwood encounter';polish.onclick=()=>{start(false);game.player.x=1235;game.player.y=560;game.checkpoint=1;game.zone=0;dialogueUntil=0;$('dialogue').hidden=true;renderer.camera=game.player.x-renderer.w*.37;grantItem(game,'ember',3);};panel.append(polish);
   const scenery=document.createElement('button');scenery.textContent='Inspect eastern waterfalls';scenery.onclick=()=>{start(false);game.player.x=6650;game.player.y=570;game.checkpoint=3;game.player.invuln=60;renderer.camera=game.player.x-renderer.w*.37;};panel.append(scenery);

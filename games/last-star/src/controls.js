@@ -41,6 +41,7 @@ export class Controller {
     const b=config.pad,held=a=>this.down.has(b[a]),edge=a=>this.pending.has(b[a]);
     const digital=(held('right')?1:0)-(held('left')?1:0);
     const result={move:digital||this.move,jump:edge('jump'),bolt:held('bolt'),blink:edge('blink'),use:edge('use'),ring:held('ring'),previous:edge('previous'),interact:edge('interact')};
+    result.ringX=result.ring?this.aim.x:0;result.ringY=result.ring?this.aim.y:0;
     this.pending.clear();return result;
   }
 }

@@ -1,9 +1,9 @@
-import {newSilverwoodEncounter,updateSilverwoodEncounter,silverwoodEnemyReady} from './silverwood-encounter.js?release=20260930-chain-tempest';
-import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20260930-chain-tempest';
-import {newInventory,useEquipped,grantItem} from './inventory.js?release=20260930-chain-tempest';
-import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20260930-chain-tempest';
-import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20260930-chain-tempest';
-import {starshardMuzzle} from './cast-pose.js?release=20260930-chain-tempest';
+import {newSilverwoodEncounter,updateSilverwoodEncounter,silverwoodEnemyReady} from './silverwood-encounter.js?release=20261001-stick-wheel';
+import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20261001-stick-wheel';
+import {newInventory,useEquipped,grantItem} from './inventory.js?release=20261001-stick-wheel';
+import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20261001-stick-wheel';
+import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20261001-stick-wheel';
+import {starshardMuzzle} from './cast-pose.js?release=20261001-stick-wheel';
 export const SAVE_KEY = 'crownforge-last-star-level1-preview-v1';
 export const WIDTH = 7900;
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -21,7 +21,7 @@ export const SEALS = [
   {x:3690,y:565,name:'The Broken Aqueduct',chapter:'II · THE BROKEN AQUEDUCT'},
   {x:6550,y:570,name:'The Last Observatory',chapter:'III · THE LAST OBSERVATORY'},
 ];
-import {MEMORIES} from './memories.js?release=20260930-chain-tempest';
+import {MEMORIES} from './memories.js?release=20261001-stick-wheel';
 export {MEMORIES};
 const ENEMIES = [
  [1510,560,'wraith'],[580,580,'wraith'],[1660,560,'wraith'],

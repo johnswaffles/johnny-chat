@@ -1,4 +1,4 @@
-import {actionPose} from './action-poses.js?release=20260930-chain-tempest';
+import {actionPose} from './action-poses.js?release=20261001-stick-wheel';
 // Shared painted crystal coordinates keep rendering and projectile origins together.
 export function forwardCastPose(p){
  const scale=.17;

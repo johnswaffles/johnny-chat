@@ -1,4 +1,4 @@
-import {drawElementalEffect,drawBurningEnemy} from './elemental-vfx.js?release=20260930-chain-tempest';
+import {drawElementalEffect,drawBurningEnemy} from './elemental-vfx.js?release=20261001-stick-wheel';
 const TAU=Math.PI*2;
 export function drawLevel1(r,g,dt){
  const c=r.ctx,t=r.time;
