@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&amp;display=optional" rel="stylesheet">
-  <link rel="stylesheet" href="./story-editor.css?v=20260929-pipeline1">
-  <script defer src="./story-editor.js?v=20260929-pipeline1"></script>
+  <link rel="stylesheet" href="./story-editor.css?v=20260930-reader1">
+  <script defer src="./story-editor.js?v=20260930-reader1"></script>
 </head>
 <body>
   <div class="studio-shell">
@@ -191,6 +191,17 @@
           <button type="button" class="ghost-button" id="download-report">Download editorial report</button>
           <div id="revision-attention"></div>
           <details><summary>Editorial notes</summary><div id="revision-notes"></div></details>
+        </section>
+        <section id="book-reader" class="book-reader" hidden aria-labelledby="reader-title">
+          <div class="report-heading"><div><span class="overline">Read &amp; listen</span><h2 id="reader-title">Your finished book</h2></div><button id="reader-open" class="primary-button" type="button">Open book</button></div>
+          <p>Read the revised manuscript here, or listen to one chapter at a time.</p>
+          <div id="reader-body" hidden>
+            <div class="reader-toolbar"><label for="reader-chapter">Chapter</label><select id="reader-chapter"></select><button id="reader-prev" class="ghost-button" type="button">Previous chapter</button><button id="reader-next" class="ghost-button" type="button">Next chapter</button></div>
+            <div class="reader-listen"><button id="reader-listen" class="primary-button" type="button">Listen to this chapter</button><button id="reader-stop" class="ghost-button" type="button" hidden>Stop listening</button><button id="reader-listen-next" class="ghost-button" type="button" hidden>Listen to next chapter</button><span>Marin · OpenAI AI-generated voice</span></div>
+            <audio id="reader-audio" controls hidden preload="none" aria-label="Chapter narration"></audio>
+            <p id="reader-status" role="status" aria-live="polite"></p>
+            <article id="reader-pages" class="reader-pages" aria-label="Finished chapter"></article>
+          </div>
         </section>
         <details class="advanced-workbench" id="advanced-workbench">
           <summary><span>Review sections and optional passage tools</span><small>Open this after the run to inspect preserved passages or make a one-off revision.</small></summary>
@@ -402,5 +413,6 @@
     <p id="toast-message"></p>
     <button type="button" id="toast-close" aria-label="Dismiss notification">×</button>
   </div>
+  <script src="reader.js?v=20260930-reader1" type="module"></script>
 </body>
 </html>

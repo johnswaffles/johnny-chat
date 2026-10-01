@@ -53,3 +53,23 @@ Before a release, inspect the authenticated production run state. After release,
 verify health marker `durable-editorial-pipeline-v3`, use a synthetic manuscript for
 live model validation, and read the resulting text. A full real manuscript still
 needs author review before publication. Scanned PDFs need OCR before import.
+
+## Finished-book reader and narration
+
+Completed projects expose an in-app chapter reader. The chapter dropdown and
+Previous/Next controls only change displayed text. “Listen to this chapter” calls
+the authenticated chapter speech route with a saved revision hash and audio part
+index. The server resolves the text from SQLite; it never trusts client-supplied
+manuscript text. Marin / `gpt-4o-mini-tts` narrates the revised text, with original
+text used for retained passages. The UI discloses that the voice is AI generated.
+
+Provider requests are limited to 3,800 characters at paragraph/sentence boundaries,
+without dropping any words. Only the selected chapter continues between parts;
+reaching its end waits for the user's “Listen to next chapter” request. Stop or
+changing chapters aborts the browser request and fences stale playback. A bounded
+32 MiB process-local audio cache avoids repeat API calls while resident; cache
+entries expire through eviction or restart. It is not a permanent audiobook store.
+
+Validation: `node --test scripts/test-story-reader.mjs`; the integration test also
+covers authentication, saved text selection, preserved passages, stale revisions,
+invalid part requests, cached replay, and exclusion of the next chapter's text.

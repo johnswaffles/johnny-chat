@@ -329,6 +329,7 @@
   function renderAutopilot() {
     const job = state.autopilotJob;
     renderRevisionReport(job);
+    document.dispatchEvent(new CustomEvent("story-reader-project", {detail:{id:state.project?.id,completed:job?.status === "completed"}}));
     document.getElementById("autopilot-new-run").hidden = job?.status !== "failed";
     if (!job) {
       el.autopilotProgress.hidden = true;

@@ -17,12 +17,15 @@ function sample(schema) {
  return 'Local test editorial note.';
 }
 const requests=[];
+const speechRequests=[];
 let resumeBudgetFailures=0;
 const truncatedStages=new Set();
 const mock=http.createServer(async(req,res)=>{
  if(process.env.STORY_PREVIEW && req.url==='/preview') {res.writeHead(302,{'Set-Cookie':`gpt54_session=${token}; Path=/; SameSite=Lax`,Location:origin+'/story-editor/'});res.end();return;}
  let raw=''; for await(const part of req) raw+=part;
- const body=JSON.parse(raw); requests.push(body);
+ const body=JSON.parse(raw);
+ if(req.url==='/v1/audio/speech') {speechRequests.push(body);assert.equal(body.voice,'marin');assert.equal(body.model,'gpt-4o-mini-tts');assert.ok(body.input.length<=4096);res.writeHead(200,{'Content-Type':'audio/mpeg'});res.end(Buffer.from('ID3-local-test-audio'));return;}
+ requests.push(body);
  assert.equal(body.model,'gpt-6-astra'); assert.equal(body.reasoning.effort,'high'); assert.equal(body.reasoning.mode,undefined);
  const user=JSON.parse(body.input[1].content);
  const stage=body.text?.format?.name;
@@ -70,6 +73,15 @@ assert.ok(requests.some(r=>JSON.parse(r.input[1].content).passages?.length));
 assert.ok(requests.some(r=>r.text.format.name==='story_autopilot_polish'));
 const report=await fetch(origin+main.base+'/report.txt',{headers:auth});assert.equal(report.status,200);assert.match(await report.text(),/EDITORIAL REPORT/);
 const download=await fetch(origin+main.base+'/export.docx',{headers:auth});assert.equal(download.status,200);const bytes=Buffer.from(await download.arrayBuffer());assert.equal(bytes.subarray(0,2).toString(),'PK');await writeFile(testDir+'/edited.docx',bytes);
+const reader=await json(main.base+'/reader');assert.equal(reader.completed,true);assert.equal(reader.chapters.length,1);assert.ok(reader.chapters[0].text.includes('KEEP_EXACT'));assert.equal(speechRequests.length,0,'Opening the reader must not generate speech');
+const spoken=await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:reader.chapters[0].revision})});assert.equal(spoken.status,200);assert.equal(spoken.headers.get('content-type'),'audio/mpeg');assert.ok((await spoken.arrayBuffer()).byteLength);assert.equal(speechRequests.length,1);assert.equal(speechRequests[0].input,reader.chapters[0].text,'Narrate the saved edited text with preserved passages');
+await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:reader.chapters[0].revision})});assert.equal(speechRequests.length,1,'Replay uses cached audio');
+assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:'outdated'})})).status,409);
+assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:999,revision:reader.chapters[0].revision})})).status,400);
+assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST'})).status,401);
+const chapterTest=await run('Chapter One\n\nFIRST_CHAPTER_ONLY The door opened.\n\nChapter Two\n\nSECOND_CHAPTER_ONLY The boat returned.','LOCAL TEST - Chapter reader');
+const twoChapters=await json(chapterTest.base+'/reader');assert.equal(twoChapters.chapters.length,2);const beforeSpeech=speechRequests.length;
+await fetch(origin+chapterTest.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:twoChapters.chapters[0].revision})});assert.equal(speechRequests.length,beforeSpeech+1);assert.ok(!speechRequests.at(-1).input.includes('SECOND_CHAPTER_ONLY'),'Chapter one never sends chapter two');
 const docxImport=new FormData();docxImport.append('manuscript',new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),'Roundtrip.docx');
 const roundtrip=await json('/api/story-editor/upload',{method:'POST',body:docxImport});assert.ok(roundtrip.sections>=3);
 const pdfStream='BT /F1 12 Tf 72 720 Td (A complete sample sentence from a selectable PDF.) Tj ET';

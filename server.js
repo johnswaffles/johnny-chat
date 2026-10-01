@@ -1,3 +1,4 @@
+import { bookChapters, speechParts } from "./public/story-editor/reader-model.mjs";
 import { createStoryQueue, storyTask, assertStoryLease } from "./lib/story-queue.mjs";
 import { getTextsmithSchema, getTextsmithSmsStats, parseTextsmithMessages, textsmithMessagesFit, textsmithPrompt } from "./lib/textsmith.mjs";
 import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, withStoryOutputBudget, STORY_EDITOR_CONTEXT } from "./lib/story-editor.mjs";
@@ -1655,6 +1656,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorProtectedPassthrough: true,
   storyEditorContentHandling: "context-aware-review-v2",
   storyEditorOutputRecovery: "durable-editorial-pipeline-v3",
+  storyEditorReader: "chapter-reader-marin-v1",
   textsmithVersion: "intentional-messages-v2",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
@@ -4572,6 +4574,65 @@ app.get("/api/story-editor/projects/:id/report.txt",async(req,res)=>{
     const lines=['EDITORIAL REPORT','',report.intent,'',report.finalReview?.overall || '',`${report.paragraphsRevised || 0} passages revised.`,...((report.passagesForReview || []).map(p=>`${p.label}: ${p.reason}`)),...(report.warnings || []),...((report.finalReview?.issues || []).map(i=>`${i.location}: ${i.issue} ${i.recommendation}`)),'','Read the full revision before publication. Original text remains available separately.'];
     res.setHeader('Content-Disposition','attachment; filename="editorial-report.txt"');res.type('text/plain').send(lines.join('\n'));
   } catch(error) {res.status(500).json({error:error.message});}
+});
+
+// Narration reads only a requested part of one saved chapter. No future chapter is prefetched.
+async function storyReaderBook(projectId) {
+  const project = (await storyQuery(`SELECT title FROM story_projects WHERE id=${sqliteLiteral(projectId)} LIMIT 1;`))[0];
+  if (!project) return null;
+  const job = (await storyQuery(`SELECT status FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} ORDER BY created_at DESC LIMIT 1;`))[0];
+  const sections = await storyQuery(`SELECT kind, chapter_index AS chapterIndex, original_text AS originalText, edited_text AS editedText FROM story_sections WHERE project_id=${sqliteLiteral(projectId)} ORDER BY chapter_index,scene_index,paragraph_index,line_index;`);
+  const chapters = bookChapters(sections).map(chapter => ({ ...chapter, revision: createHash('sha256').update(chapter.text).digest('hex'), partCount: speechParts(chapter.text).length }));
+  return { title: project.title, completed: job?.status === 'completed', voice: 'marin', chapters };
+}
+app.get('/api/story-editor/projects/:id/reader', async(req,res) => {
+  try {
+    if (!requireStoryEditorSession(req,res)) return;
+    const book = await storyReaderBook(String(req.params.id));
+    if (!book) return res.status(404).json({ok:false,error:'Project not found.'});
+    res.setHeader('Cache-Control','no-store'); res.json({ok:true,...book});
+  } catch(err) { res.status(500).json({ok:false,error:String(err.message || err)}); }
+});
+const storySpeechCache = new Map();
+let storySpeechBytes = 0;
+const storySpeechPending = new Map();
+app.post('/api/story-editor/projects/:id/chapters/:chapter/speech', async(req,res) => {
+  try {
+    if (!requireStoryEditorSession(req,res)) return;
+    if (!OPENAI_API_KEY) return res.status(503).json({ok:false,error:'Narration is not configured.'});
+    const book = await storyReaderBook(String(req.params.id));
+    if (!book) return res.status(404).json({ok:false,error:'Project not found.'});
+    if (!book.completed) return res.status(409).json({ok:false,error:'Finish the manuscript edit before listening.'});
+    const chapter = book.chapters.find(c=>c.index===Number(req.params.chapter));
+    if (!chapter) return res.status(404).json({ok:false,error:'Chapter not found.'});
+    if (req.body?.revision !== chapter.revision) return res.status(409).json({ok:false,error:'This chapter changed. Reopen the reader to hear the latest draft.'});
+    const parts = speechParts(chapter.text), part = req.body?.part;
+    if (!Number.isInteger(part) || part < 0 || part >= parts.length) return res.status(400).json({ok:false,error:'Choose a valid chapter audio part.'});
+    const key = `${req.params.id}:${chapter.revision}:${part}:marin`;
+    let audio = storySpeechCache.get(key);
+    if (!audio) {
+      let pending = storySpeechPending.get(key);
+      if (!pending) {
+        if (storySpeechPending.size >= 3) return res.status(429).json({ok:false,error:'Narration is busy. Please try again in a moment.'});
+        pending = (async()=> {
+          const speech = await openai.audio.speech.create({model:'gpt-4o-mini-tts',voice:'marin',input:parts[part],response_format:'mp3',instructions:'Narrate this book naturally and warmly, with clear diction, thoughtful pauses, and restrained emotion. Read the supplied words exactly; do not add commentary.'},{timeout:120000,maxRetries:1});
+          const buffer = Buffer.from(await speech.arrayBuffer());
+          while (storySpeechBytes + buffer.length > 32 * 1024 * 1024 && storySpeechCache.size) {
+            const oldest = storySpeechCache.keys().next().value; storySpeechBytes -= storySpeechCache.get(oldest).length; storySpeechCache.delete(oldest);
+          }
+          if (buffer.length <= 32 * 1024 * 1024) {storySpeechCache.set(key,buffer);storySpeechBytes += buffer.length;}
+          return buffer;
+        })();
+        storySpeechPending.set(key,pending);
+        pending.finally(()=>storySpeechPending.delete(key)).catch(()=>{});
+      }
+      audio = await pending;
+    }
+    res.setHeader('Cache-Control','no-store');res.type('audio/mpeg').send(audio);
+  } catch(err) {
+    console.error('Story narration failed:',err.status || err.code || 'speech_error');
+    res.status(502).json({ok:false,error:'The chapter audio could not be generated. Please try again.'});
+  }
 });
 
 app.get("/api/story-editor/projects/:id/export.docx", async (req, res) => {
