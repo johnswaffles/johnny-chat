@@ -79,15 +79,24 @@ await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...aut
 assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:'outdated'})})).status,409);
 assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:999,revision:reader.chapters[0].revision})})).status,400);
 assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST'})).status,401);
+const speechBeforeSingleChapter=requests.length;
+const singleChapterChange=await fetch(origin+main.base+'/autopilot',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({chapter:1,changeRequest:true,intent:'Edit the current chapter only.'})});
+assert.equal(singleChapterChange.status,409,'Single-chapter imports require explicit Whole book scope');
+assert.match((await singleChapterChange.json()).error,/whole manuscript/i);assert.equal(requests.length,speechBeforeSingleChapter,'Blocked scope sends no model request');
 const chapterTest=await run('Chapter One\n\nFIRST_CHAPTER_ONLY The door opened.\n\nChapter Two\n\nSECOND_CHAPTER_ONLY The boat returned.','LOCAL TEST - Chapter reader');
 const twoChapters=await json(chapterTest.base+'/reader');assert.equal(twoChapters.chapters.length,2);const beforeSpeech=speechRequests.length;
 await fetch(origin+chapterTest.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:twoChapters.chapters[0].revision})});assert.equal(speechRequests.length,beforeSpeech+1);assert.ok(!speechRequests.at(-1).input.includes('SECOND_CHAPTER_ONLY'),'Chapter one never sends chapter two');
 const chapterOneBefore=chapterTest.project.sections.filter(s=>s.chapterIndex===1).map(s=>s.editedText);
 const chapterTwoBefore=chapterTest.project.sections.find(s=>s.chapterIndex===2 && s.kind==='paragraph').editedText;
+const chapterChangeRequestOffset=requests.length;
 const changeStart=await json(chapterTest.base+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({intent:'AUTHOR REQUEST: Add a detail about the boat. Preserve unaffected prose.',changeRequest:true,chapter:2})});
 let changeJob;
 for(let i=0;i<100;i++){changeJob=(await json(chapterTest.base+'/autopilot/'+changeStart.job.id)).job;if(['completed','failed'].includes(changeJob.status))break;await new Promise(r=>setTimeout(r,100));}
 assert.equal(changeJob.status,'completed');
+const chapterChangePayloads=requests.slice(chapterChangeRequestOffset);
+assert.ok(chapterChangePayloads.length>0);
+assert.ok(chapterChangePayloads.every(r=>!JSON.stringify(r).includes('FIRST_CHAPTER_ONLY')),'No stage may send prose from another chapter to the model');
+assert.ok(chapterChangePayloads.some(r=>JSON.stringify(r).includes('SECOND_CHAPTER_ONLY')),'The selected chapter is sent to the model');
 const changedChapter=await json(chapterTest.base);
 assert.deepEqual(changedChapter.sections.filter(s=>s.chapterIndex===1).map(s=>s.editedText),chapterOneBefore,'A chapter request must not write another chapter');
 assert.ok(changedChapter.sections.find(s=>s.chapterIndex===2 && s.kind==='paragraph').editedText.startsWith(chapterTwoBefore),'Changes build on the edited draft');

@@ -1657,7 +1657,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorContentHandling: "context-aware-review-v2",
   storyEditorOutputRecovery: "durable-editorial-pipeline-v3",
   storyEditorReader: "chapter-reader-marin-v1",
-  storyEditorChangeRequests: "scoped-author-request-v1",
+  storyEditorChangeRequests: "chapter-scope-guard-v2",
   textsmithVersion: "intentional-messages-v2",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
@@ -4392,6 +4392,10 @@ app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
     if(chapter !== undefined && req.body?.changeRequest !== true) return res.status(400).json({ok:false,error:"Chapter scope requires a change request."});
     if (chapter !== undefined && (!Number.isInteger(chapter) || chapter < 1)) return res.status(400).json({ok:false,error:'Choose a valid chapter.'});
     if (chapter !== undefined && !(await storyQuery(`SELECT id FROM story_sections WHERE project_id=${sqliteLiteral(projectId)} AND chapter_index=${chapter} AND kind='paragraph' LIMIT 1;`)).length) return res.status(404).json({ok:false,error:'Chapter not found.'});
+    if(chapter !== undefined) {
+      const count=Number((await storyQuery(`SELECT COUNT(DISTINCT chapter_index) AS count FROM story_sections WHERE project_id=${sqliteLiteral(projectId)} AND kind='paragraph';`))[0]?.count);
+      if(count<=1) return res.status(409).json({ok:false,error:'This import has only one chapter, so a chapter edit would process the whole manuscript. Add chapter breaks, or explicitly choose Whole book.'});
+    }
     const jobId = storyId("autopilot");
     const now = storyNow();
     await storyExec([

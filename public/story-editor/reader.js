@@ -93,6 +93,7 @@ $('author-request-submit').addEventListener('click',()=>{
   const scope=$('author-request-scope').value;
   if(!request) {$('author-request-status').textContent='Describe the change you want first.';return;}
   if(scope==='chapter' && !book?.chapters[selected]) {$('author-request-status').textContent='Open the book and select the chapter first.';return;}
+  if(scope==='chapter' && book.chapters.length===1) {$('author-request-status').textContent='This import has only one chapter, so this would edit the whole manuscript. Add chapter breaks, or explicitly choose Whole book.';return;}
   stop();
   document.dispatchEvent(new CustomEvent('story-author-request',{detail:{projectId,request,chapter:scope==='chapter'?book.chapters[selected].index:undefined}}));
 });

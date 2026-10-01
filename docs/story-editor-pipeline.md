@@ -88,3 +88,11 @@ including paragraph breaks; original imported text and edit history stay saved.
 
 The integration fixture verifies that a chapter request starts from the edited
 draft, leaves the other chapter unchanged, and rejects nonexistent chapter scope.
+
+Chapter-scope token audit: integration tests inspect every outgoing model payload
+for a scoped job and verify that another chapter's prose never appears. Selected
+chapter prose is sent in bounded sections alongside saved continuity notes; other
+chapters are not reread. A single-chapter import is rejected for chapter-only edits
+in both UI and API, because its one chapter is the whole manuscript. Users must
+establish chapter boundaries or explicitly select Whole book. The rejection occurs
+before job creation and makes no model requests.
