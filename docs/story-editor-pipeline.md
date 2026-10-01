@@ -73,3 +73,18 @@ entries expire through eviction or restart. It is not a permanent audiobook stor
 Validation: `node --test scripts/test-story-reader.mjs`; the integration test also
 covers authentication, saved text selection, preserved passages, stale revisions,
 invalid part requests, cached replay, and exclusion of the next chapter's text.
+
+## Author change requests
+
+The finished-book panel accepts plain-language requests to change, add, or rewrite
+material. Users apply a request to the whole book or to the selected reader chapter.
+A fresh job snapshots the current edited text. Scope is stored atomically with the
+job in `story_job_requests` so restart/resume keeps the same boundaries. Chapter
+jobs write only that chapter and receive the previous completed editorial plan as
+continuity context. User-requested changes take priority over conflicting plot
+preservation instructions; unrelated changes and fabricated nonfiction claims
+remain disallowed. Added prose is stored inside existing passage text entries,
+including paragraph breaks; original imported text and edit history stay saved.
+
+The integration fixture verifies that a chapter request starts from the edited
+draft, leaves the other chapter unchanged, and rejects nonexistent chapter scope.

@@ -349,7 +349,7 @@
       planning: "Building the editorial and continuity plan",
       editing: `Revising section ${job.currentChunk || 1} of ${job.totalChunks || "…"}`,
       review: "Checking continuity and story endings",
-      complete: "Full-manuscript edit complete",
+      complete: job.report?.changedChapter ? `Chapter ${job.report.changedChapter} changes complete` : "Full-manuscript edit complete",
       error: "Autopilot stopped safely"
     };
     el.autopilotProgress.hidden = false;
@@ -819,9 +819,9 @@
     }
   }
 
-  async function startAutopilot({ fresh = false } = {}) {
+  async function startAutopilot({ fresh = false, requestedIntent, chapter, changeRequest = false } = {}) {
     if (!state.project || el.autopilotStart.disabled) return;
-    const intent = String(el.autopilotIntent.value || "").trim();
+    const intent = String(requestedIntent || el.autopilotIntent.value || "").trim();
     if (!intent) {
       showToast("Tell the editor what you want done before starting Autopilot.", true);
       el.autopilotIntent.focus();
@@ -832,20 +832,31 @@
       const response = await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/autopilot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intent, resume: !fresh && state.autopilotJob?.status === "failed" && state.autopilotJob?.intent === intent })
+        body: JSON.stringify({ intent, chapter, changeRequest, resume: !fresh && state.autopilotJob?.status === "failed" && state.autopilotJob?.intent === intent })
       });
       const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Autopilot could not start.");
       state.project.userIntent = intent;
+      el.autopilotIntent.value = intent;
       state.autopilotJob = data.job;
       renderAutopilot();
-      showToast(data.alreadyRunning ? "Autopilot is already working on this manuscript." : "Autopilot started. Your original draft is preserved.");
+      showToast(data.alreadyRunning ? "Autopilot is already working on this manuscript." : changeRequest ? "Applying your requested changes to the revised draft." : "Autopilot started. Your original draft is preserved.");
       await pollAutopilot();
     } catch (error) {
       el.autopilotStart.disabled = false;
       showToast(error.message || "Autopilot could not start.", true);
     }
   }
+
+  document.addEventListener('story-author-request',async event=>{
+    const request=event.detail;
+    if(request.projectId!==state.project?.id || ['queued','running'].includes(state.autopilotJob?.status)) return;
+    const intent=`AUTHOR REQUEST: ${request.request}\nApply these requested changes and additions to ${request.chapter ? 'chapter '+request.chapter : 'the whole book'} using the current revised draft. Preserve voice and all unaffected material. Requested changes take priority over preserving conflicting source events. Do not invent unrelated plot changes or nonfiction facts.`;
+    document.dispatchEvent(new CustomEvent('story-author-request-result',{detail:{message:'Starting your requested changes…',busy:true}}));
+    await startAutopilot({fresh:true,requestedIntent:intent,chapter:request.chapter,changeRequest:true});
+    const started=['queued','running','completed'].includes(state.autopilotJob?.status) && state.autopilotJob?.intent===intent;
+    document.dispatchEvent(new CustomEvent('story-author-request-result',{detail:{message:started?'Your changes are being applied. Follow the editing progress above.':'The change request could not start. Check the notification and try again.',busy:false}}));
+  });
 
   async function saveBible() {
     if (!state.project) return;

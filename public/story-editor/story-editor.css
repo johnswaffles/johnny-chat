@@ -689,3 +689,8 @@ button[disabled] { cursor: not-allowed; opacity: 0.46; }
 .reader-pages h4 { font: 600 20px/1.5 var(--serif); }
 .reader-pages p { margin: 0 0 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media(max-width:600px) { .book-reader { padding: 18px; } .reader-toolbar select { max-width: none; } .reader-pages { font-size: 17px; } }
+.author-request { margin: 24px 0; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: rgba(98,80,166,.04); }
+.author-request h3 { margin: 0 0 14px; font: 600 24px/1.2 var(--serif); }
+.author-request label { display: block; font-size: 13px; margin-bottom: 8px; }
+.author-request textarea { display: block; width: 100%; box-sizing: border-box; padding: 14px; border: 1px solid var(--line); border-radius: 12px; font: 14px/1.6 inherit; color: var(--ink); background: var(--paper); resize: vertical; }
+.author-request p { color: var(--copy); font-size: 12px; line-height: 1.6; }

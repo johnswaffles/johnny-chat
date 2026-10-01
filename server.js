@@ -1657,6 +1657,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorContentHandling: "context-aware-review-v2",
   storyEditorOutputRecovery: "durable-editorial-pipeline-v3",
   storyEditorReader: "chapter-reader-marin-v1",
+  storyEditorChangeRequests: "scoped-author-request-v1",
   textsmithVersion: "intentional-messages-v2",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
@@ -3279,6 +3280,7 @@ async function ensureStoryDb() {
       );
       CREATE TABLE IF NOT EXISTS story_stage_cache (job_id TEXT, cache_key TEXT, value_json TEXT NOT NULL, PRIMARY KEY(job_id,cache_key));
       CREATE TABLE IF NOT EXISTS story_job_sources (job_id TEXT PRIMARY KEY, source_json TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS story_job_requests (job_id TEXT PRIMARY KEY, request_json TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS story_autopilot_chunks_job_idx ON story_autopilot_chunks(job_id, chunk_index);
     `).then(async () => {
       const columns = await sqliteRun("PRAGMA table_info(story_projects);");
@@ -3859,11 +3861,14 @@ async function runStoryAutopilotJob(jobId) {
     const projects = await storyQuery(`SELECT * FROM story_projects WHERE id = ${sqliteLiteral(job.project_id)} LIMIT 1;`);
     const project = projects[0];
     if (!project) throw new Error("The manuscript no longer exists.");
+    const changeRequest = parseStoryObject((await storyQuery(`SELECT request_json FROM story_job_requests WHERE job_id=${sqliteLiteral(jobId)};`))[0]?.request_json);
+    const lastChapter=Number((await storyQuery(`SELECT MAX(chapter_index) AS lastChapter FROM story_sections WHERE project_id=${sqliteLiteral(job.project_id)} AND kind='paragraph';`))[0]?.lastChapter) || 1;
+    const chapterFilter = changeRequest.chapter ? ` AND chapter_index=${Number(changeRequest.chapter)}` : '';
     let rows = await storyQuery(`
       SELECT id, chapter_index, scene_index, paragraph_index, label, original_text, edited_text,
         preserve_verbatim, preserve_reason
       FROM story_sections
-      WHERE project_id = ${sqliteLiteral(job.project_id)} AND kind = 'paragraph'
+      WHERE project_id = ${sqliteLiteral(job.project_id)} AND kind = 'paragraph'${chapterFilter}
       ORDER BY chapter_index, scene_index, paragraph_index;
     `);
     const snapshot = await storyQuery(`SELECT source_json FROM story_job_sources WHERE job_id=${sqliteLiteral(jobId)};`);
@@ -3899,6 +3904,7 @@ async function runStoryAutopilotJob(jobId) {
     await storyExec(chunkStatements);
 
     const bible = await getStoryBible(job.project_id);
+    const priorPlan = changeRequest.chapter ? parseStoryObject((await storyQuery(`SELECT plan_json FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(job.project_id)} AND id<>${sqliteLiteral(jobId)} AND status='completed' ORDER BY created_at DESC LIMIT 1;`))[0]?.plan_json) : {};
     const protectedParagraphCount = chunks.reduce((total, chunk) => total + chunk.paragraphs.filter((paragraph) => paragraph.preserveVerbatim).length, 0);
     const editableParagraphCount = chunks.reduce((total, chunk) => total + chunk.paragraphs.filter((paragraph) => !paragraph.preserveVerbatim).length, 0);
     const warnings = [];
@@ -3961,7 +3967,8 @@ async function runStoryAutopilotJob(jobId) {
           user: {
             project: { title: project.title, filename: project.filename },
             intent: redactStorySensitiveText(job.intent),
-            storyBible: redactStoryModelValue(bible),
+            storyBible: redactStoryModelValue({...bible,previousBookPlan:priorPlan}),
+            scope:changeRequest.chapter ? {chapter:changeRequest.chapter,lastChapter} : "whole book",
             manuscriptOutline: outline,
             manuscriptNotes,
             openingSample: redactStorySensitiveText(rows.filter((row) => !storySectionProtection(row).preserveVerbatim).slice(0, 3).map((row) => row.edited_text || row.original_text).join("\n\n").slice(0, 4000)),
@@ -4005,7 +4012,7 @@ async function runStoryAutopilotJob(jobId) {
         message: `Editing chunk ${chunk.index} of ${chunks.length}; carrying forward the story state.`
       });
       await storyExec(`UPDATE story_autopilot_chunks SET status = 'running', updated_at = ${sqliteLiteral(storyNow())} WHERE id = ${sqliteLiteral(chunk.id)};`);
-      const isFinal = chunk.index === chunks.length;
+      const isFinal = chunk.index === chunks.length && (!changeRequest.chapter || changeRequest.chapter === lastChapter);
       const editableChunk = { ...chunk, paragraphs: chunk.paragraphs.filter((paragraph) => !paragraph.preserveVerbatim) };
       const protectedPassages = protectedPassageDescriptors(chunk.paragraphs);
       let result = {
@@ -4025,8 +4032,8 @@ async function runStoryAutopilotJob(jobId) {
             system: [
               "You are Story Editor, a high-agency editor revising one connected chunk of a much larger manuscript.",
               "Follow the user's brief and the editorial plan. Preserve continuity with the supplied handoff ledger and Story Bible.",
-              "Deliver a full prose revision, not a synopsis. Preserve scene substance, character motivations, mature themes, point of view, and ending. Do not invent major events or unsupported nonfiction claims. Changes to length must serve the brief; do not compress a chapter into a summary.",
-              "Return one entry per supplied paragraph ID, in order. Set disposition to revised for edited prose. If you cannot edit a passage, set disposition to preserved, text to an empty string, and note to a brief reason; the application keeps its exact source. Continue with the other permitted passages. Do not add, remove, reorder, or merge paragraphs.",
+              "Deliver a full prose revision, not a synopsis. Preserve scene substance, character motivations, mature themes, point of view, and ending. Make changes and additions explicitly requested in the user brief, even when they alter existing events or characters. Preserve unaffected material. Do not invent unrelated major events or unsupported nonfiction claims. Changes to length must serve the brief; do not compress a chapter into a summary.",
+              "Return one entry per supplied paragraph ID, in order. Set disposition to revised for edited prose. If you cannot edit a passage, set disposition to preserved, text to an empty string, and note to a brief reason; the application keeps its exact source. Continue with the other permitted passages. Keep the supplied paragraph IDs and order. When the user requests new material, include the added prose and any new paragraph breaks within the appropriate returned text entry.",
               "Protected passages are intentionally omitted from the editable text. Do not reconstruct, quote, summarize, or transform them; their IDs and narrative position are preserved by the application.",
               "This chunk is part of an ongoing story. Unless this is explicitly the final chunk, do not wind down, summarize, resolve the central conflict, say goodbye, add a moral, or use ending language. Preserve unfinished business, active tension, and forward momentum into the next chunk.",
               "The final chunk may resolve the story only when the source and user brief call for resolution.",
@@ -4035,7 +4042,7 @@ async function runStoryAutopilotJob(jobId) {
             user: {
               intent: redactStorySensitiveText(job.intent),
               plan: redactStoryModelValue(plan),
-              storyBible: redactStoryModelValue(bible),
+              storyBible: redactStoryModelValue({...bible, previousBookPlan: priorPlan}),
               previousHandoff: redactStoryModelValue(handoff),
               protectedPassages,
               chunk: {
@@ -4059,7 +4066,7 @@ async function runStoryAutopilotJob(jobId) {
             for(const paragraph of editableChunk.paragraphs) {
               try {
                 const single=await storyModelJson({format:STORY_AUTOPILOT_CHUNK_SCHEMA,maxOutputTokens:9000,
-                  system:"Revise this single passage in its supplied narrative context, following the editorial plan. Preserve its meaning, voice, and events; do not summarize or invent. If you cannot edit it, return disposition preserved and empty text. Return only the supplied paragraph ID. Other passages are handled separately, without reconstructing refused content.",
+                  system:"Revise this single passage in its supplied narrative context, following the editorial plan. Preserve its meaning, voice, and events except for changes or additions explicitly requested in the user brief; do not summarize or invent unrelated events. If you cannot edit it, return disposition preserved and empty text. Return only the supplied paragraph ID. Other passages are handled separately, without reconstructing refused content.",
                   user:{intent:job.intent,plan,previousHandoff:handoff,chunk:{index:chunk.index,isFinal,paragraphs:[{id:paragraph.id,text:paragraph.text,label:paragraph.label}]}}});
                 individual.push(...(single.revisedParagraphs || []));
               } catch(singleError) {if(!isStorySafetyRefusal(singleError)) throw singleError;individual.push({id:paragraph.id,text:'',disposition:'preserved',note:'The model declined this passage. Its exact source is retained.'});}
@@ -4132,7 +4139,7 @@ async function runStoryAutopilotJob(jobId) {
         try {
           const result=await storyModelJson({format:{...STORY_AUTOPILOT_CHUNK_SCHEMA,name:"story_autopilot_polish"},maxOutputTokens:9000,
             system:'You are the final line editor. Polish the supplied revised prose for natural rhythm, clarity, grammar, and consistent voice. Use the whole-book plan and notes to catch continuity slips. Preserve all source events, uncertainty, names, dialogue intent, mature themes, and the ending. Do not summarize, invent, or resolve ambiguity by guessing. Return each supplied paragraph ID exactly once and in order. If a passage cannot be polished, set disposition preserved and empty text. Keep it for human review. Return structured JSON.',
-            user:{intent:job.intent,plan,manuscriptNotes,chunk:{index:chunk.index,isFinal:chunk.index===chunks.length,paragraphs:polishChunk.paragraphs.map(p=>({id:p.id,text:p.text}))}}});
+            user:{intent:job.intent,plan,manuscriptNotes,chunk:{index:chunk.index,isFinal:chunk.index===chunks.length && (!changeRequest.chapter || changeRequest.chapter===lastChapter),paragraphs:polishChunk.paragraphs.map(p=>({id:p.id,text:p.text}))}}});
           polishReport={section:chunk.index,continuity:result.handoff,quality:result.quality};
           polished=normalizeAutopilotParagraphs(result,polishChunk);
         } catch(error) { if(!isStorySafetyRefusal(error)) throw error; warnings.push(`Section ${chunk.index}: final polish declined; the saved revision was kept.`);polishReport.quality={needsReview:true}; }
@@ -4182,13 +4189,15 @@ async function runStoryAutopilotJob(jobId) {
       }
     }
     if (passagesForReview.length) review.readyForExport = false;
-    const finalRows=await storyQuery(`SELECT id,original_text,edited_text FROM story_sections WHERE project_id=${sqliteLiteral(job.project_id)} AND kind='paragraph';`);
+    const finalRows=await storyQuery(`SELECT id,original_text,edited_text FROM story_sections WHERE project_id=${sqliteLiteral(job.project_id)} AND kind='paragraph'${chapterFilter};`);
     const countWords=text=>(String(text || '').match(/\S+/g)||[]).length;
     const wordCounts={before:rows.reduce((n,p)=>n+countWords(p.edited_text || p.original_text),0),after:finalRows.reduce((n,p)=>n+countWords(p.edited_text || p.original_text),0)};
     if(wordCounts.before>100 && wordCounts.after<wordCounts.before*0.8) {warnings.push('The draft is more than 20% shorter. Review the length change before publication.');review.readyForExport=false;}
     if(warnings.length || polishReports.some(p=>p.quality?.needsReview)) review.readyForExport=false;
     const report = {
       wordCounts,
+      changedChapter: changeRequest.chapter || null,
+      authorRequest: changeRequest.request || null,
       intent: job.intent,
       model: STORY_EDITOR_MODEL,
       chunks: chunks.length,
@@ -4279,6 +4288,7 @@ app.delete("/api/story-editor/projects/:id", async (req, res) => {
       "BEGIN;",
       `DELETE FROM story_autopilot_chunks WHERE project_id = ${sqliteLiteral(projectId)};`,
       `DELETE FROM story_stage_cache WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
+      `DELETE FROM story_job_requests WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
       `DELETE FROM story_job_sources WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
       `DELETE FROM story_worker_queue WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
       `DELETE FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)};`,
@@ -4378,12 +4388,17 @@ app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
       await scheduleStoryJob(previous.id,true);
       return res.status(202).json({ ok: true, resumed: true, job: storyAutopilotJobView(await getStoryAutopilotJob(previous.id, projectId)) });
     }
+    const chapter = req.body?.chapter;
+    if(chapter !== undefined && req.body?.changeRequest !== true) return res.status(400).json({ok:false,error:"Chapter scope requires a change request."});
+    if (chapter !== undefined && (!Number.isInteger(chapter) || chapter < 1)) return res.status(400).json({ok:false,error:'Choose a valid chapter.'});
+    if (chapter !== undefined && !(await storyQuery(`SELECT id FROM story_sections WHERE project_id=${sqliteLiteral(projectId)} AND chapter_index=${chapter} AND kind='paragraph' LIMIT 1;`)).length) return res.status(404).json({ok:false,error:'Chapter not found.'});
     const jobId = storyId("autopilot");
     const now = storyNow();
     await storyExec([
       "BEGIN;",
       `UPDATE story_projects SET user_intent = ${sqliteLiteral(intent)}, updated_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(projectId)} AND NOT EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'));`,
       `INSERT INTO story_autopilot_jobs (id, project_id, intent, status, phase, message, created_at, updated_at) SELECT ${sqliteLiteral(jobId)}, ${sqliteLiteral(projectId)}, ${sqliteLiteral(intent)}, 'queued', 'queued', 'Queued for manuscript planning.', ${sqliteLiteral(now)}, ${sqliteLiteral(now)} WHERE NOT EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'));`,
+      ...(req.body?.changeRequest === true ? [`INSERT INTO story_job_requests SELECT ${sqliteLiteral(jobId)},${sqliteLiteral(JSON.stringify({chapter:chapter || null,request:intent}))} WHERE EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE id=${sqliteLiteral(jobId)});`] : []),
       "COMMIT;"
     ]);
     const job = await getStoryAutopilotJob(jobId, projectId);

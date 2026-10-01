@@ -82,6 +82,16 @@ assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST'})
 const chapterTest=await run('Chapter One\n\nFIRST_CHAPTER_ONLY The door opened.\n\nChapter Two\n\nSECOND_CHAPTER_ONLY The boat returned.','LOCAL TEST - Chapter reader');
 const twoChapters=await json(chapterTest.base+'/reader');assert.equal(twoChapters.chapters.length,2);const beforeSpeech=speechRequests.length;
 await fetch(origin+chapterTest.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:twoChapters.chapters[0].revision})});assert.equal(speechRequests.length,beforeSpeech+1);assert.ok(!speechRequests.at(-1).input.includes('SECOND_CHAPTER_ONLY'),'Chapter one never sends chapter two');
+const chapterOneBefore=chapterTest.project.sections.filter(s=>s.chapterIndex===1).map(s=>s.editedText);
+const chapterTwoBefore=chapterTest.project.sections.find(s=>s.chapterIndex===2 && s.kind==='paragraph').editedText;
+const changeStart=await json(chapterTest.base+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({intent:'AUTHOR REQUEST: Add a detail about the boat. Preserve unaffected prose.',changeRequest:true,chapter:2})});
+let changeJob;
+for(let i=0;i<100;i++){changeJob=(await json(chapterTest.base+'/autopilot/'+changeStart.job.id)).job;if(['completed','failed'].includes(changeJob.status))break;await new Promise(r=>setTimeout(r,100));}
+assert.equal(changeJob.status,'completed');
+const changedChapter=await json(chapterTest.base);
+assert.deepEqual(changedChapter.sections.filter(s=>s.chapterIndex===1).map(s=>s.editedText),chapterOneBefore,'A chapter request must not write another chapter');
+assert.ok(changedChapter.sections.find(s=>s.chapterIndex===2 && s.kind==='paragraph').editedText.startsWith(chapterTwoBefore),'Changes build on the edited draft');
+assert.equal((await fetch(origin+chapterTest.base+'/autopilot',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({changeRequest:true,chapter:999,intent:'Change a chapter.'})})).status,404);
 const docxImport=new FormData();docxImport.append('manuscript',new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),'Roundtrip.docx');
 const roundtrip=await json('/api/story-editor/upload',{method:'POST',body:docxImport});assert.ok(roundtrip.sections>=3);
 const pdfStream='BT /F1 12 Tf 72 720 Td (A complete sample sentence from a selectable PDF.) Tj ET';

@@ -87,3 +87,16 @@ $('reader-stop').addEventListener('click',()=>stop('Listening stopped.'));
 $('reader-listen-next').addEventListener('click',()=>{if(book && selected+1<book.chapters.length){selected++;chapterView();listen();}});
 audio.addEventListener('error',()=>{if(playing)stop('Audio playback failed. Choose “Listen to this chapter” to retry.');});
 window.addEventListener('pagehide',()=>stop());
+
+$('author-request-submit').addEventListener('click',()=>{
+  const request=$('author-request-text').value.trim();
+  const scope=$('author-request-scope').value;
+  if(!request) {$('author-request-status').textContent='Describe the change you want first.';return;}
+  if(scope==='chapter' && !book?.chapters[selected]) {$('author-request-status').textContent='Open the book and select the chapter first.';return;}
+  stop();
+  document.dispatchEvent(new CustomEvent('story-author-request',{detail:{projectId,request,chapter:scope==='chapter'?book.chapters[selected].index:undefined}}));
+});
+document.addEventListener('story-author-request-result',event=>{
+  $('author-request-status').textContent=event.detail.message;
+  $('author-request-submit').disabled=event.detail.busy;
+});
