@@ -1,3 +1,5 @@
+import { readChapterLayout, saveChapterLayout, readPassageSplit, splitSavedPassage } from "./lib/story-layout.mjs";
+import { splitStoryManuscript, pdfPageText } from "./lib/story-chapters.mjs";
 import { bookChapters, speechParts } from "./public/story-editor/reader-model.mjs";
 import { createStoryQueue, storyTask, assertStoryLease } from "./lib/story-queue.mjs";
 import { getTextsmithSchema, getTextsmithSmsStats, parseTextsmithMessages, textsmithMessagesFit, textsmithPrompt } from "./lib/textsmith.mjs";
@@ -1658,6 +1660,8 @@ app.get("/health", (_req, res) => res.json({
   storyEditorOutputRecovery: "durable-editorial-pipeline-v3",
   storyEditorReader: "chapter-reader-marin-v1",
   storyEditorChangeRequests: "chapter-scope-guard-v2",
+  storyEditorChapterOrganization: "reviewed-passage-splits-v2",
+  storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
   textsmithVersion: "intentional-messages-v2",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
@@ -3281,6 +3285,9 @@ async function ensureStoryDb() {
       CREATE TABLE IF NOT EXISTS story_stage_cache (job_id TEXT, cache_key TEXT, value_json TEXT NOT NULL, PRIMARY KEY(job_id,cache_key));
       CREATE TABLE IF NOT EXISTS story_job_sources (job_id TEXT PRIMARY KEY, source_json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS story_job_requests (job_id TEXT PRIMARY KEY, request_json TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS story_original_snapshots (project_id TEXT PRIMARY KEY, sections_json TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS story_passage_splits (parent_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, child_ids TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS story_chapter_names (project_id TEXT NOT NULL, chapter_index INTEGER NOT NULL, title TEXT NOT NULL, PRIMARY KEY(project_id,chapter_index));
       CREATE INDEX IF NOT EXISTS story_autopilot_chunks_job_idx ON story_autopilot_chunks(job_id, chunk_index);
     `).then(async () => {
       const columns = await sqliteRun("PRAGMA table_info(story_projects);");
@@ -3331,65 +3338,7 @@ function normalizeBibleRow(row = {}) {
 }
 
 function splitManuscript(text) {
-  const clean = normalizeStoryText(text, STORY_EDITOR_MAX_TEXT_CHARS);
-  const blocks = clean.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
-  const sections = [];
-  let chapterIndex = 1;
-  let sceneIndex = 1;
-  let paragraphIndex = 0;
-  let currentChapterTitle = "Chapter 1";
-  let currentSceneTitle = "Scene 1";
-
-  for (const block of blocks) {
-    if (/^(chapter|prologue|epilogue)\b[\s\d:.-]*/i.test(block) && block.length < 120) {
-      currentChapterTitle = block;
-      chapterIndex += sections.length ? 1 : 0;
-      sceneIndex = 1;
-      paragraphIndex = 0;
-      sections.push({
-        id: storyId("sec"),
-        kind: "chapter",
-        chapterIndex,
-        sceneIndex,
-        paragraphIndex: 0,
-        lineIndex: 0,
-        label: currentChapterTitle,
-        originalText: block
-      });
-      continue;
-    }
-
-    if (/^(\*\s*){3,}$|^#{1,3}\s|^scene\b/i.test(block) && block.length < 160) {
-      currentSceneTitle = /^#{1,3}\s/.test(block) ? block.replace(/^#{1,3}\s*/, "") : block;
-      sceneIndex += paragraphIndex ? 1 : 0;
-      paragraphIndex = 0;
-      sections.push({
-        id: storyId("sec"),
-        kind: "scene",
-        chapterIndex,
-        sceneIndex,
-        paragraphIndex: 0,
-        lineIndex: 0,
-        label: currentSceneTitle,
-        originalText: block
-      });
-      continue;
-    }
-
-    paragraphIndex += 1;
-    sections.push({
-      id: storyId("sec"),
-      kind: "paragraph",
-      chapterIndex,
-      sceneIndex,
-      paragraphIndex,
-      lineIndex: 0,
-      label: `${currentChapterTitle} / ${currentSceneTitle} / P${paragraphIndex}`,
-      originalText: block
-    });
-  }
-
-  return sections;
+  return splitStoryManuscript(normalizeStoryText(text, STORY_EDITOR_MAX_TEXT_CHARS),()=>storyId("sec"));
 }
 
 // Preserve the author's actual language; keywords are not content decisions.
@@ -3415,7 +3364,7 @@ async function extractPdfText(buffer) {
   for (let i = 1; i <= pdfDocument.numPages; i += 1) {
     const page = await pdfDocument.getPage(i);
     const textContent = await page.getTextContent();
-    extractedText += textContent.items.map((item) => item.str || "").join(" ") + "\n\n";
+    extractedText += pdfPageText(textContent.items) + "\n\n";
   }
   return validateStoryImport(extractedText);
 }
@@ -4294,6 +4243,9 @@ app.delete("/api/story-editor/projects/:id", async (req, res) => {
       `DELETE FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)};`,
       `DELETE FROM story_edits WHERE project_id = ${sqliteLiteral(projectId)};`,
       `DELETE FROM story_bible WHERE project_id = ${sqliteLiteral(projectId)};`,
+      `DELETE FROM story_original_snapshots WHERE project_id = ${sqliteLiteral(projectId)};`,
+      `DELETE FROM story_passage_splits WHERE project_id = ${sqliteLiteral(projectId)};`,
+      `DELETE FROM story_chapter_names WHERE project_id = ${sqliteLiteral(projectId)};`,
       `DELETE FROM story_sections WHERE project_id = ${sqliteLiteral(projectId)};`,
       `DELETE FROM story_projects WHERE id = ${sqliteLiteral(projectId)};`,
       "COMMIT;"
@@ -4328,6 +4280,32 @@ app.get("/api/story-editor/projects/:id", async (req, res) => {
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err.message || err) });
   }
+});
+
+// Chapter organization never starts editing or requests model output.
+app.get('/api/story-editor/projects/:id/chapter-layout', async(req,res)=>{
+ try {
+  if(!requireStoryEditorSession(req,res)) return;
+  await ensureStoryDb();
+  res.setHeader('Cache-Control','no-store');
+  res.json({ok:true,...readChapterLayout(STORY_EDITOR_DB_PATH,String(req.params.id))});
+ } catch(err) {res.status(err.status || 500).json({ok:false,error:String(err.message || err)});}
+});
+app.put('/api/story-editor/projects/:id/chapter-layout', async(req,res)=>{
+ try {
+  if(!requireStoryEditorSession(req,res)) return;
+  await ensureStoryDb();
+  res.json({ok:true,...saveChapterLayout(STORY_EDITOR_DB_PATH,String(req.params.id),req.body)});
+ } catch(err) {res.status(err.status || 500).json({ok:false,error:String(err.message || err)});}
+});
+
+app.get('/api/story-editor/projects/:id/passage-split/:sectionId', async(req,res)=>{
+ try {if(!requireStoryEditorSession(req,res))return;await ensureStoryDb();res.setHeader('Cache-Control','no-store');res.json({ok:true,...readPassageSplit(STORY_EDITOR_DB_PATH,String(req.params.id),String(req.params.sectionId))});}
+ catch(err){res.status(err.status || 500).json({ok:false,error:String(err.message || err)});}
+});
+app.post('/api/story-editor/projects/:id/passage-split', async(req,res)=>{
+ try {if(!requireStoryEditorSession(req,res))return;await ensureStoryDb();res.json({ok:true,...splitSavedPassage(STORY_EDITOR_DB_PATH,String(req.params.id),req.body)});}
+ catch(err){res.status(err.status || 500).json({ok:false,error:String(err.message || err)});}
 });
 
 app.post("/api/story-editor/upload", storyUpload.single("manuscript"), async (req, res) => {
@@ -4567,6 +4545,7 @@ app.post("/api/story-editor/edits/:id/:decision", async (req, res) => {
     const edit = rows[0];
     if (!edit) return res.status(404).json({ ok: false, error: "Edit not found." });
     if(await rejectActiveStoryMutation(edit.project_id,res)) return;
+    if(decision==='accept' && (await storyQuery(`SELECT kind FROM story_sections WHERE id=${sqliteLiteral(edit.section_id)};`))[0]?.kind==='split-source') return res.status(409).json({ok:false,error:'This passage was split into chapters. Its earlier versions remain saved, but cannot replace one of the new pieces.'});
     const status = decision === "accept" ? "accepted" : "rejected";
     const now = storyNow();
     const statements = [
@@ -4574,7 +4553,7 @@ app.post("/api/story-editor/edits/:id/:decision", async (req, res) => {
       `UPDATE story_edits SET status = ${sqliteLiteral(status)}, decided_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(editId)};`
     ];
     if (status === "accepted") {
-      statements.push(`UPDATE story_sections SET edited_text = ${sqliteLiteral(edit.suggestion)}, updated_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(edit.section_id)};`);
+      statements.push(`UPDATE story_sections SET edited_text = ${sqliteLiteral(edit.suggestion)}, updated_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(edit.section_id)} AND kind <> 'split-source';`);
     }
     statements.push("COMMIT;");
     await storyExec(statements);
@@ -4601,7 +4580,8 @@ async function storyReaderBook(projectId) {
   if (!project) return null;
   const job = (await storyQuery(`SELECT status FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} ORDER BY created_at DESC LIMIT 1;`))[0];
   const sections = await storyQuery(`SELECT kind, chapter_index AS chapterIndex, original_text AS originalText, edited_text AS editedText FROM story_sections WHERE project_id=${sqliteLiteral(projectId)} ORDER BY chapter_index,scene_index,paragraph_index,line_index;`);
-  const chapters = bookChapters(sections).map(chapter => ({ ...chapter, revision: createHash('sha256').update(chapter.text).digest('hex'), partCount: speechParts(chapter.text).length }));
+  const names = await storyQuery(`SELECT chapter_index AS chapterIndex,title FROM story_chapter_names WHERE project_id=${sqliteLiteral(projectId)};`);
+  const chapters = bookChapters(sections, names).map(chapter => ({ ...chapter, revision: createHash('sha256').update(chapter.text).digest('hex'), partCount: speechParts(chapter.text).length }));
   return { title: project.title, completed: job?.status === 'completed', voice: 'marin', chapters };
 }
 app.get('/api/story-editor/projects/:id/reader', async(req,res) => {
@@ -4661,12 +4641,18 @@ app.get("/api/story-editor/projects/:id/export.docx", async (req, res) => {
     const projects = await storyQuery(`SELECT title FROM story_projects WHERE id = ${sqliteLiteral(projectId)} LIMIT 1;`);
     const title = projects[0]?.title || "Edited Manuscript";
     const sections = await storyQuery(`
-      SELECT kind, original_text AS originalText, edited_text AS editedText FROM story_sections
+      SELECT kind, chapter_index AS chapterIndex, original_text AS originalText, edited_text AS editedText FROM story_sections
       WHERE project_id = ${sqliteLiteral(projectId)} AND kind IN ('chapter', 'scene', 'paragraph')
       ORDER BY chapter_index, scene_index, paragraph_index, line_index;
     `);
     const original = req.query.source === "original";
-    const paragraphs = sections.map((section) => ({kind:section.kind,text:original ? section.originalText : section.editedText || section.originalText}));
+    const names = original ? [] : await storyQuery(`SELECT chapter_index AS chapterIndex,title FROM story_chapter_names WHERE project_id=${sqliteLiteral(projectId)};`);
+    const snapshot = original ? (await storyQuery(`SELECT sections_json FROM story_original_snapshots WHERE project_id=${sqliteLiteral(projectId)};`))[0] : null;
+    const paragraphs = snapshot
+      ? JSON.parse(snapshot.sections_json).map(section=>({kind:section.kind,text:section.original_text}))
+      : names.length
+      ? bookChapters(sections,names).flatMap(chapter=>[{kind:'chapter',text:chapter.title},...chapter.blocks])
+      : sections.map((section) => ({kind:section.kind,text:original ? section.originalText : section.editedText || section.originalText}));
     const docx = await buildDocxBuffer(title, paragraphs);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
     res.setHeader("Content-Disposition", `attachment; filename="${title.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80) || "manuscript"}-${original ? "original" : "edited"}.docx"`);

@@ -10,3 +10,8 @@ test('long chapter narration loses no words and never exceeds provider length',(
   const parts=speechParts(text);assert.equal(parts.join(''),text);assert.ok(parts.every(p=>p.length<=3800));assert.ok(parts.length>1);assert.ok(parts.every(p=>!/[\uD800-\uDBFF]$/.test(p)));
  }
 });
+
+test('manual names appear in the reader while source prose and chapter isolation stay intact',()=>{
+ const chapters=bookChapters([{kind:'chapter',chapterIndex:1,originalText:'Original heading'},{kind:'paragraph',chapterIndex:1,originalText:'First source',editedText:'First revision'},{kind:'paragraph',chapterIndex:2,originalText:'Second source'}],[{chapterIndex:1,title:'Departure'},{chapterIndex:2,title:'Homecoming'}]);
+ assert.equal(chapters[0].text,'Departure\n\nFirst revision');assert.equal(chapters[1].text,'Homecoming\n\nSecond source');
+});

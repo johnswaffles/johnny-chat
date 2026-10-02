@@ -694,3 +694,25 @@ button[disabled] { cursor: not-allowed; opacity: 0.46; }
 .author-request label { display: block; font-size: 13px; margin-bottom: 8px; }
 .author-request textarea { display: block; width: 100%; box-sizing: border-box; padding: 14px; border: 1px solid var(--line); border-radius: 12px; font: 14px/1.6 inherit; color: var(--ink); background: var(--paper); resize: vertical; }
 .author-request p { color: var(--copy); font-size: 12px; line-height: 1.6; }
+
+.chapter-layout-card {display:flex;gap:1.5rem;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:18px;background:var(--paper);padding:1.5rem;margin:1.5rem 0;}
+.chapter-layout-card h2 {margin:.4rem 0;font-family:var(--serif);}
+.chapter-layout-card p,.chapter-layout-preview {color:var(--copy);}
+#chapter-layout-dialog {width:min(850px,calc(100vw - 32px));max-height:85vh;overflow:auto;border:1px solid var(--line);border-radius:20px;background:var(--paper);color:var(--ink);}
+.chapter-layout-form {padding:1.5rem;}
+.chapter-layout-row {border-top:1px solid var(--line);padding:1rem 0;}
+.chapter-layout-row label {display:block;margin:.6rem 0;}
+.chapter-layout-row input,.chapter-layout-row select {display:block;width:100%;margin-top:.4rem;padding:.65rem;border:1px solid var(--line-strong);border-radius:8px;background:var(--paper);color:var(--ink);font:inherit;}
+.chapter-layout-actions {display:flex;gap:.5rem;flex-wrap:wrap;}
+@media(max-width:600px) {.chapter-layout-card {align-items:stretch;flex-direction:column;}.chapter-layout-form {padding:.6rem;}}
+
+#passage-split-dialog {width:min(900px,calc(100vw - 32px));max-height:85vh;overflow:auto;border:1px solid var(--line);border-radius:20px;background:var(--paper);color:var(--ink);}
+.passage-split-controls {padding:1rem 0;border-top:1px solid var(--line);}
+.passage-split-controls select,#passage-split-form input,#passage-split-form textarea {display:block;width:100%;margin:.5rem 0 1rem;padding:.65rem;border:1px solid var(--line-strong);border-radius:8px;background:var(--paper);color:var(--ink);font:inherit;}
+#passage-split-form textarea {white-space:pre-wrap;line-height:1.6;}
+.split-preview {display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.split-preview p {white-space:pre-wrap;overflow-wrap:anywhere;background:var(--paper-deep);padding:.75rem;}
+@media(max-width:600px) {.split-preview {grid-template-columns:1fr;}}
+
+#passage-split-history {display:block;}
+#passage-split-history pre {white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;}

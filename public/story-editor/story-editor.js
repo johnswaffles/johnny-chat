@@ -329,7 +329,7 @@
   function renderAutopilot() {
     const job = state.autopilotJob;
     renderRevisionReport(job);
-    document.dispatchEvent(new CustomEvent("story-reader-project", {detail:{id:state.project?.id,completed:job?.status === "completed"}}));
+    document.dispatchEvent(new CustomEvent("story-reader-project", {detail:{id:state.project?.id,completed:job?.status === "completed",busy:["queued","running"].includes(job?.status)}}));
     document.getElementById("autopilot-new-run").hidden = job?.status !== "failed";
     if (!job) {
       el.autopilotProgress.hidden = true;
@@ -712,6 +712,10 @@
     await loadProject(currentStillExists ? state.project.id : state.projects[0].id);
   }
 
+  document.addEventListener("story-chapters-saved",event=>{
+    if(event.detail.projectId===state.project?.id) loadProject(state.project.id).then(()=>showToast("Chapter boundaries saved. Reopen the book to use them.")).catch(handleError);
+  });
+
   async function loadProject(id) {
     const previousSelection = state.project?.id === id ? state.selectedId : "";
     el.editingStage.classList.add("is-busy");
@@ -721,6 +725,7 @@
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not open that manuscript.");
       state.project = data.project;
       state.sections = data.sections || [];
+      document.dispatchEvent(new CustomEvent("story-split-history",{detail:{sections:state.sections,edits:data.edits || []}}));
       state.bible = data.bible || {};
       state.edits = data.edits || [];
       state.autopilotJob = data.autopilot || null;

@@ -158,7 +158,7 @@ function loginPage(errorMessage = "") {
 </html>`;
 }
 
-export async function onRequest(context) {
+async function serveStoryEditor(context) {
   const { request, next } = context;
   const url = new URL(request.url);
   const cookies = parseCookies(request.headers.get("cookie"));
@@ -203,4 +203,12 @@ export async function onRequest(context) {
     status: 200,
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }
   });
+}
+
+// Public release metadata verifies deployment without unlocking any manuscript.
+export async function onRequest(context) {
+  const response = await serveStoryEditor(context);
+  const marked = new Response(response.body, response);
+  marked.headers.set("X-Story-Editor-Chapters", "reviewed-passage-splits-v2");
+  return marked;
 }

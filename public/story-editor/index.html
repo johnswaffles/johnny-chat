@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&amp;display=optional" rel="stylesheet">
-  <link rel="stylesheet" href="./story-editor.css?v=20260930-scope2">
-  <script defer src="./story-editor.js?v=20260930-scope2"></script>
+  <link rel="stylesheet" href="./story-editor.css?v=20261002-chapters2">
+  <script defer src="./story-editor.js?v=20261002-chapters2"></script>
 </head>
 <body>
   <div class="studio-shell">
@@ -184,6 +184,12 @@
           </div>
         </section>
 
+        <section class="chapter-layout-card" aria-labelledby="chapter-layout-title">
+          <div><span class="overline">Your book's structure</span><h2 id="chapter-layout-title">Chapters</h2>
+          <p>If your book imported as one chapter, add breaks at saved passages before editing or listening chapter by chapter.</p></div>
+          <button id="chapter-layout-open" type="button" disabled class="ghost-button">Organize chapters</button>
+        </section>
+        <details id="passage-split-history" class="chapter-layout-card" hidden><summary>Passages saved before chapter splits</summary><div id="passage-split-history-items"></div></details>
         <section class="revision-report" id="revision-report" hidden aria-labelledby="revision-report-title">
           <div class="report-heading"><div><span class="overline">Back at your desk</span><h2 id="revision-report-title">Your revised draft</h2></div><button class="primary-button" id="download-revision" type="button">Download Word document</button></div>
           <p id="revision-summary"></p>
@@ -416,11 +422,39 @@
     </form>
   </dialog>
 
+  <dialog id="chapter-layout-dialog" aria-labelledby="chapter-layout-dialog-title">
+    <form id="chapter-layout-form" class="chapter-layout-form">
+      <h2 id="chapter-layout-dialog-title">Organize your chapters</h2>
+      <p>Name each chapter and choose the saved passage where it starts. Breaks change organization; your original and revised words stay saved. For a heading inside one passage, use Split inside a passage below.</p>
+      <p>After changing boundaries on a paused or failed edit, start a new edit rather than resuming the old run.</p>
+      <div id="chapter-layout-rows"></div>
+      <details class="passage-split-controls"><summary>Chapter heading inside a saved passage?</summary>
+      <p>Choose the saved passage. You will mark and preview matching starts in the original and revised versions before saving.</p>
+      <label>Saved passage<select id="passage-split-select"></select></label><button id="passage-split-open" type="button" class="ghost-button">Split inside this passage</button></details>
+      <p id="chapter-layout-message" role="status" aria-live="polite"></p>
+      <div class="chapter-layout-actions"><button id="chapter-layout-add" type="button" class="ghost-button">Add chapter break</button><button id="chapter-layout-cancel" type="button" class="ghost-button">Cancel</button><button id="chapter-layout-save" type="submit" class="primary-button">Save chapters</button></div>
+    </form>
+  </dialog>
+  <dialog id="passage-split-dialog" aria-labelledby="passage-split-title">
+    <form id="passage-split-form" class="chapter-layout-form">
+      <h2 id="passage-split-title">Start a chapter inside this passage</h2>
+      <p>Place the cursor before the first word of the new chapter. If the draft was revised, mark the matching start in both versions. The app will not guess their alignment.</p>
+      <label>New chapter name<input id="passage-split-name" required maxlength="110"></label>
+      <label>Original text<textarea id="passage-original" readonly rows="8"></textarea></label><button id="original-split-mark" type="button" class="ghost-button">Use original cursor position</button>
+      <div class="split-preview"><div><h3>Previous chapter ends</h3><p id="original-split-before"></p></div><div><h3>New chapter starts</h3><p id="original-split-after"></p></div></div>
+      <div id="passage-revised-group"><label>Revised draft<textarea id="passage-revised" readonly rows="8"></textarea></label><button id="revised-split-mark" type="button" class="ghost-button">Use revised cursor position</button>
+      <div class="split-preview"><div><h3>Previous chapter ends</h3><p id="revised-split-before"></p></div><div><h3>New chapter starts</h3><p id="revised-split-after"></p></div></div></div>
+      <p id="passage-split-message" role="status" aria-live="polite"></p>
+      <p>The entire passage and its earlier versions remain saved in the split history. Original Word export keeps the original manuscript unchanged. Editing must restart after a split; the old stopped run cannot resume.</p>
+      <div class="chapter-layout-actions"><button id="passage-split-cancel" type="button" class="ghost-button">Cancel</button><button id="passage-split-save" type="submit" class="primary-button" disabled>Save split and new chapter</button></div>
+    </form>
+  </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden>
     <span class="toast-icon" aria-hidden="true">✓</span>
     <p id="toast-message"></p>
     <button type="button" id="toast-close" aria-label="Dismiss notification">×</button>
   </div>
-  <script src="reader.js?v=20260930-scope2" type="module"></script>
+  <script src="reader.js?v=20261002-chapters2" type="module"></script>
+  <script src="chapters.js?v=20261002-chapters2" type="module"></script>
 </body>
 </html>

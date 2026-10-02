@@ -1,15 +1,16 @@
 // Shared chapter boundaries keep displayed and narrated text identical.
-export function bookChapters(sections) {
+export function bookChapters(sections, names = []) {
   const chapters = [];
   for (const section of sections) {
     if (!['chapter', 'scene', 'paragraph'].includes(section.kind)) continue;
     const index = Number(section.chapterIndex) || 1;
     let chapter = chapters.find(c => c.index === index);
-    if (!chapter) { chapter = { index, title: `Chapter ${index}`, blocks: [] }; chapters.push(chapter); }
+    if (!chapter) { chapter = { index, title: index===1 && sections.some(s=>s.kind==='chapter' && Number(s.chapterIndex)>1) ? 'Front matter' : `Chapter ${index}`, blocks: [] }; chapters.push(chapter); }
     const text = String(section.editedText || section.originalText || '').trim();
     if (section.kind === 'chapter') chapter.title = text || chapter.title;
     else if (text) chapter.blocks.push({ kind: section.kind, text });
   }
+  for (const chapter of chapters) chapter.title = names.find(n=>Number(n.chapterIndex)===chapter.index)?.title || chapter.title;
   return chapters.filter(c => c.blocks.length).map(c => ({ ...c, text: [c.title, ...c.blocks.map(b => b.text)].join('\n\n') }));
 }
 

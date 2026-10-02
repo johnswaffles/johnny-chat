@@ -96,3 +96,69 @@ chapters are not reread. A single-chapter import is rejected for chapter-only ed
 in both UI and API, because its one chapter is the whole manuscript. Users must
 establish chapter boundaries or explicitly select Whole book. The rejection occurs
 before job creation and makes no model requests.
+
+## Chapter detection and organization
+
+New imports preserve PDF text line boundaries and recognize explicit standalone
+Chapter headings using digits, Roman numerals or written numbers, plus Prologue
+and Epilogue. Headings can share a block with prose or put Chapter and its number
+on adjacent lines. Front matter stays separate; repeated running headings stay
+saved without creating another chapter. Ambiguous prose, page numbers and dotted
+contents entries are not inferred as chapter starts. No length-based splitting
+occurs. Existing projects are not automatically reparsed or migrated.
+
+Organize chapters opens a local draft of chapter starts and names. Users can add,
+remove and move breaks between existing saved passages, preview the starts, then
+save or cancel. For a heading inside a passage, a separate split preview lets the author mark
+matching starts in the original and revised versions. The application does not
+guess alignment or require reimport. Renamed titles appear in the reader/narration and revised DOCX; original
+DOCX export retains the saved original text in its original sequence.
+
+Authenticated GET/PUT chapter-layout endpoints use an optimistic revision hash and
+an IMMEDIATE SQLite transaction. Editing in queued/running state blocks changes;
+stale views, unordered or duplicate boundaries, empty chapters and invalid names
+are rejected. An identical save is a no-op. Section IDs, source/revised prose,
+preservation flags, summaries, edit history, job sources/checkpoints and continuity
+notes remain unchanged. Only chapter organization, labels and timestamps change;
+titles live in additive story_chapter_names metadata. Changed organization prevents
+resuming an old stopped job through the existing modified-manuscript guard; start
+a new edit instead. No model request is made by chapter organization. Reader
+revision hashes fence old narration requests after boundaries or names change.
+The single-chapter scope guard remains in place.
+
+Focused checks: node --test scripts/test-story-chapters*.mjs
+scripts/test-story-editor.mjs scripts/test-story-queue.mjs scripts/test-story-reader.mjs.
+The chapter controller DOM event harness checks cancel, repeat, error/retry, rename
+and project changes without opening or focusing a browser. The API integration
+fixture additionally covers organization of a completed revised project, isolation
+of later chapter edits, PDF heading extraction and rejection of resume after a
+structure change, using only a fake model and temporary databases.
+
+### Within-passage chapter starts
+
+The split preview uses read-only original/revised text boxes. Put the cursor before
+the first word of the new chapter and mark that start in each version; a draft
+without a revision needs only the original mark. Both ending/starting previews are
+shown before Save split and new chapter. A valid start must leave nonempty text on
+both sides and sit between words. Original and revised offsets are independent:
+author review is necessary when edits moved, added or removed the chapter marker.
+Cancel makes no change; pending unsaved chapter-layout changes must be saved or
+cancelled before opening a split. No model call occurs.
+
+One transaction archives the entire parent as split-source, creates two active
+paragraph pieces with new IDs, inserts a new named chapter, and records the child
+IDs in story_passage_splits. Concatenating each pair of original/revised pieces
+recovers its exact parent string, including all whitespace. Parent prose, revision,
+history links and completed job records remain available. Original Word export uses
+an immutable story_original_snapshots source snapshot made before the first layout
+change/split, preserving original paragraph boundaries. The first snapshot is never
+replaced by later splits. Splits with saved child-line edits are rejected because
+their alignment needs separate review; existing passage breaks remain available.
+
+Archived passages and available earlier versions can be read in Passages saved
+before chapter splits. An older whole-passage suggestion cannot be accepted into
+an archived parent after splitting. Repeated/stale saves are rejected. Active runs
+block splitting and stopped runs cannot resume against changed structure. A new
+chapter-only edit reads only its new active pieces plus continuity notes.
+
+Release health marker: storyEditorChapterOrganization=reviewed-passage-splits-v2.

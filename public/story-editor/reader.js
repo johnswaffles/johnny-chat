@@ -101,3 +101,5 @@ document.addEventListener('story-author-request-result',event=>{
   $('author-request-status').textContent=event.detail.message;
   $('author-request-submit').disabled=event.detail.busy;
 });
+
+document.addEventListener('story-chapters-saved',event=>{if(event.detail.projectId!==projectId)return;stop();book=null;selected=0;$('reader-body').hidden=true;$('reader-open').textContent='Open book';});
