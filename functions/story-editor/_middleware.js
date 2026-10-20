@@ -210,5 +210,6 @@ export async function onRequest(context) {
   const response = await serveStoryEditor(context);
   const marked = new Response(response.body, response);
   marked.headers.set("X-Story-Editor-Chapters", "reviewed-passage-splits-v2");
+  marked.headers.set("X-Story-Editor-Reader", "chapter-reader-marin-async-v2");
   return marked;
 }

@@ -63,12 +63,38 @@ index. The server resolves the text from SQLite; it never trusts client-supplied
 manuscript text. Marin / `gpt-4o-mini-tts` narrates the revised text, with original
 text used for retained passages. The UI discloses that the voice is AI generated.
 
-Provider requests are limited to 3,800 characters at paragraph/sentence boundaries,
+Provider requests are limited to 1,200 characters at paragraph/sentence boundaries,
 without dropping any words. Only the selected chapter continues between parts;
 reaching its end waits for the user's “Listen to next chapter” request. Stop or
 changing chapters aborts the browser request and fences stale playback. A bounded
 32 MiB process-local audio cache avoids repeat API calls while resident; cache
 entries expire through eviction or restart. It is not a permanent audiobook store.
+
+Updated readers POST `{part, revision, async:true}` and receive 202 while the part
+is generated, then GET the same speech path with `part` and `revision` query
+parameters until it returns audio. GET never generates or retries audio. Duplicate
+starts share pending work. Legacy POST callers still receive audio synchronously.
+A one-minute deadline covers the provider request and response body, aborting the
+request on timeout; paid provider retries are disabled. Failed results remain
+pollable until metadata eviction; only a fresh explicit POST can retry. Both
+success and failure metadata are bounded to 200 entries, with at most three
+provider requests active. No automatic recovery generates paid audio after restart.
+A missing result returns a retry message. Browser polling and individual requests
+also have deadlines; Stop/chapter changes abort polling and fence stale playback.
+Already-started provider work may finish into the bounded cache after Stop.
+
+Narration revisions include the chunking version so a reader opened before a
+chunk-size change must reopen instead of skipping text with old part counts.
+Release the backend first, then the Pages reader; old readers remain supported
+once reopened. HTML proxy failures show a readable error instead of a JSON parse
+failure. Shorter parts reduce the amount generated before first playback; actual
+provider latency still requires an authorized synthetic live check.
+
+Release verification: backend `/health` exposes
+`storyEditorReader=chapter-reader-marin-async-v2`; the gated Pages route exposes
+`X-Story-Editor-Reader: chapter-reader-marin-async-v2` without unlocking a manuscript.
+
+Additional offline checks: `node --test scripts/test-story-speech.mjs`.
 
 Validation: `node --test scripts/test-story-reader.mjs`; the integration test also
 covers authentication, saved text selection, preserved passages, stale revisions,

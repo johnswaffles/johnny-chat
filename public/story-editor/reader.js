@@ -1,3 +1,4 @@
+import { chapterAudio } from './reader-speech.mjs';
 const apiBase = String(window.JOHNNY_CHAT_API_BASE_URL || location.origin).replace(/\/+$/, '');
 const $ = id => document.getElementById(id);
 let projectId = '', book = null, selected = 0, epoch = 0, controller = null, audioUrl = '', playing = false;
@@ -50,9 +51,11 @@ async function playPart(part, ticket) {
   $('reader-status').textContent = `Preparing ${chapter.title}${chapter.partCount > 1 ? ` · part ${part+1} of ${chapter.partCount}` : ''}…`;
   controller = new AbortController();
   try {
-    const response = await fetch(`${apiBase}/api/story-editor/projects/${encodeURIComponent(projectId)}/chapters/${chapter.index}/speech`, {method:'POST',headers:headers(true),signal:controller.signal,body:JSON.stringify({part,revision:chapter.revision})});
-    if (!response.ok) {const data=await response.json();throw new Error(data.error || 'Narration could not be loaded.');}
-    const blob = await response.blob();
+    const preparing = $('reader-status').textContent, started = Date.now();
+    const blob = await chapterAudio(`${apiBase}/api/story-editor/projects/${encodeURIComponent(projectId)}/chapters/${chapter.index}/speech`, {
+      part, revision:chapter.revision, headers:headers(true), signal:controller.signal,
+      onPending:()=>{if(ticket===epoch) $('reader-status').textContent = preparing + (Date.now()-started > 15000 ? ' The audio service is still working. You can stop while it finishes.' : '');}
+    });
     if(ticket!==epoch) return;
     if(audioUrl) URL.revokeObjectURL(audioUrl);
     audioUrl=URL.createObjectURL(blob);audio.src=audioUrl;audio.hidden=false;
