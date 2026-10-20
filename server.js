@@ -1,3 +1,4 @@
+import { createStorySpeech } from './lib/story-speech.mjs';
 import { readChapterLayout, saveChapterLayout, readPassageSplit, splitSavedPassage } from "./lib/story-layout.mjs";
 import { splitStoryManuscript, pdfPageText } from "./lib/story-chapters.mjs";
 import { bookChapters, speechParts } from "./public/story-editor/reader-model.mjs";
@@ -1658,7 +1659,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorProtectedPassthrough: true,
   storyEditorContentHandling: "context-aware-review-v2",
   storyEditorOutputRecovery: "durable-editorial-pipeline-v3",
-  storyEditorReader: "chapter-reader-marin-v1",
+  storyEditorReader: "chapter-reader-marin-async-v2",
   storyEditorChangeRequests: "chapter-scope-guard-v2",
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
@@ -4581,7 +4582,7 @@ async function storyReaderBook(projectId) {
   const job = (await storyQuery(`SELECT status FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} ORDER BY created_at DESC LIMIT 1;`))[0];
   const sections = await storyQuery(`SELECT kind, chapter_index AS chapterIndex, original_text AS originalText, edited_text AS editedText FROM story_sections WHERE project_id=${sqliteLiteral(projectId)} ORDER BY chapter_index,scene_index,paragraph_index,line_index;`);
   const names = await storyQuery(`SELECT chapter_index AS chapterIndex,title FROM story_chapter_names WHERE project_id=${sqliteLiteral(projectId)};`);
-  const chapters = bookChapters(sections, names).map(chapter => ({ ...chapter, revision: createHash('sha256').update(chapter.text).digest('hex'), partCount: speechParts(chapter.text).length }));
+  const chapters = bookChapters(sections, names).map(chapter => ({ ...chapter, revision: createHash('sha256').update('speech-v2:1200:' + chapter.text).digest('hex'), partCount: speechParts(chapter.text).length }));
   return { title: project.title, completed: job?.status === 'completed', voice: 'marin', chapters };
 }
 app.get('/api/story-editor/projects/:id/reader', async(req,res) => {
@@ -4592,10 +4593,9 @@ app.get('/api/story-editor/projects/:id/reader', async(req,res) => {
     res.setHeader('Cache-Control','no-store'); res.json({ok:true,...book});
   } catch(err) { res.status(500).json({ok:false,error:String(err.message || err)}); }
 });
-const storySpeechCache = new Map();
-let storySpeechBytes = 0;
-const storySpeechPending = new Map();
-app.post('/api/story-editor/projects/:id/chapters/:chapter/speech', async(req,res) => {
+const storySpeech = createStorySpeech({onError: err => console.error('Story narration failed:', err.status || err.code || 'speech_error')});
+async function storyChapterSpeech(req,res) {
+  res.setHeader('Cache-Control','no-store');
   try {
     if (!requireStoryEditorSession(req,res)) return;
     if (!OPENAI_API_KEY) return res.status(503).json({ok:false,error:'Narration is not configured.'});
@@ -4604,35 +4604,29 @@ app.post('/api/story-editor/projects/:id/chapters/:chapter/speech', async(req,re
     if (!book.completed) return res.status(409).json({ok:false,error:'Finish the manuscript edit before listening.'});
     const chapter = book.chapters.find(c=>c.index===Number(req.params.chapter));
     if (!chapter) return res.status(404).json({ok:false,error:'Chapter not found.'});
-    if (req.body?.revision !== chapter.revision) return res.status(409).json({ok:false,error:'This chapter changed. Reopen the reader to hear the latest draft.'});
-    const parts = speechParts(chapter.text), part = req.body?.part;
+    const poll = req.method === 'GET', params = poll ? req.query : req.body;
+    if (params?.revision !== chapter.revision) return res.status(409).json({ok:false,error:'This chapter changed. Reopen the reader to hear the latest draft.'});
+    const parts = speechParts(chapter.text), part = poll ? (/^\d+$/.test(params?.part) ? Number(params.part) : NaN) : params?.part;
     if (!Number.isInteger(part) || part < 0 || part >= parts.length) return res.status(400).json({ok:false,error:'Choose a valid chapter audio part.'});
-    const key = `${req.params.id}:${chapter.revision}:${part}:marin`;
-    let audio = storySpeechCache.get(key);
-    if (!audio) {
-      let pending = storySpeechPending.get(key);
-      if (!pending) {
-        if (storySpeechPending.size >= 3) return res.status(429).json({ok:false,error:'Narration is busy. Please try again in a moment.'});
-        pending = (async()=> {
-          const speech = await openai.audio.speech.create({model:'gpt-4o-mini-tts',voice:'marin',input:parts[part],response_format:'mp3',instructions:'Narrate this book naturally and warmly, with clear diction, thoughtful pauses, and restrained emotion. Read the supplied words exactly; do not add commentary.'},{timeout:120000,maxRetries:1});
-          const buffer = Buffer.from(await speech.arrayBuffer());
-          while (storySpeechBytes + buffer.length > 32 * 1024 * 1024 && storySpeechCache.size) {
-            const oldest = storySpeechCache.keys().next().value; storySpeechBytes -= storySpeechCache.get(oldest).length; storySpeechCache.delete(oldest);
-          }
-          if (buffer.length <= 32 * 1024 * 1024) {storySpeechCache.set(key,buffer);storySpeechBytes += buffer.length;}
-          return buffer;
-        })();
-        storySpeechPending.set(key,pending);
-        pending.finally(()=>storySpeechPending.delete(key)).catch(()=>{});
-      }
-      audio = await pending;
-    }
-    res.setHeader('Cache-Control','no-store');res.type('audio/mpeg').send(audio);
+    const key = `${req.params.id}:${chapter.revision}:${part}:marin:1200:v2`;
+    const entry = poll ? storySpeech.read(key) : storySpeech.start(key, async signal => {
+      const speech = await openai.audio.speech.create({model:'gpt-4o-mini-tts',voice:'marin',input:parts[part],response_format:'mp3',instructions:'Narrate this book naturally and warmly, with clear diction, thoughtful pauses, and restrained emotion. Read the supplied words exactly; do not add commentary.'},{signal,timeout:60000,maxRetries:0});
+      return Buffer.from(await speech.arrayBuffer());
+    });
+    if (!entry) return res.status(404).json({ok:false,error:'This audio expired or the service restarted. Choose Listen to retry.'});
+    if (entry.status === 'busy') return res.status(429).json({ok:false,error:'Narration is busy. Please try again in a moment.'});
+    // Older open readers still receive audio; updated readers never hold this POST open.
+    if (!poll && params?.async !== true && entry.status === 'pending') await entry.done;
+    if (entry.status === 'pending') return res.status(202).json({ok:true,status:'pending'});
+    if (entry.status === 'failed') return res.status(502).json({ok:false,error:'Narration could not finish within a minute or the audio service failed. Choose Listen to retry.'});
+    res.type('audio/mpeg').send(entry.audio);
   } catch(err) {
     console.error('Story narration failed:',err.status || err.code || 'speech_error');
-    res.status(502).json({ok:false,error:'The chapter audio could not be generated. Please try again.'});
+    res.status(502).json({ok:false,error:'The chapter audio could not be loaded. Please try again.'});
   }
-});
+}
+app.post('/api/story-editor/projects/:id/chapters/:chapter/speech', storyChapterSpeech);
+app.get('/api/story-editor/projects/:id/chapters/:chapter/speech', storyChapterSpeech);
 
 app.get("/api/story-editor/projects/:id/export.docx", async (req, res) => {
   try {

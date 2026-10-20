@@ -14,7 +14,7 @@ export function bookChapters(sections, names = []) {
   return chapters.filter(c => c.blocks.length).map(c => ({ ...c, text: [c.title, ...c.blocks.map(b => b.text)].join('\n\n') }));
 }
 
-export function speechParts(text, limit = 3800) {
+export function speechParts(text, limit = 1200) {
   const parts = [];
   let remaining = String(text || '');
   while (remaining.length > limit) {

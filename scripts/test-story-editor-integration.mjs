@@ -19,12 +19,14 @@ function sample(schema) {
 const requests=[];
 const speechRequests=[];
 let resumeBudgetFailures=0;
+let releaseSpeech;
+let speechGate = new Promise(resolve => releaseSpeech=resolve);
 const truncatedStages=new Set();
 const mock=http.createServer(async(req,res)=>{
  if(process.env.STORY_PREVIEW && req.url==='/preview') {res.writeHead(302,{'Set-Cookie':`gpt54_session=${token}; Path=/; SameSite=Lax`,Location:origin+'/story-editor/'});res.end();return;}
  let raw=''; for await(const part of req) raw+=part;
  const body=JSON.parse(raw);
- if(req.url==='/v1/audio/speech') {speechRequests.push(body);assert.equal(body.voice,'marin');assert.equal(body.model,'gpt-4o-mini-tts');assert.ok(body.input.length<=4096);res.writeHead(200,{'Content-Type':'audio/mpeg'});res.end(Buffer.from('ID3-local-test-audio'));return;}
+ if(req.url==='/v1/audio/speech') {speechRequests.push(body);await speechGate;assert.equal(body.voice,'marin');assert.equal(body.model,'gpt-4o-mini-tts');assert.ok(body.input.length<=4096);res.writeHead(200,{'Content-Type':'audio/mpeg'});res.end(Buffer.from('ID3-local-test-audio'));return;}
  requests.push(body);
  assert.equal(body.model,'gpt-6-astra'); assert.equal(body.reasoning.effort,'high'); assert.equal(body.reasoning.mode,undefined);
  const user=JSON.parse(body.input[1].content);
@@ -74,7 +76,21 @@ assert.ok(requests.some(r=>r.text.format.name==='story_autopilot_polish'));
 const report=await fetch(origin+main.base+'/report.txt',{headers:auth});assert.equal(report.status,200);assert.match(await report.text(),/EDITORIAL REPORT/);
 const download=await fetch(origin+main.base+'/export.docx',{headers:auth});assert.equal(download.status,200);const bytes=Buffer.from(await download.arrayBuffer());assert.equal(bytes.subarray(0,2).toString(),'PK');await writeFile(testDir+'/edited.docx',bytes);
 const reader=await json(main.base+'/reader');assert.equal(reader.completed,true);assert.equal(reader.chapters.length,1);assert.ok(reader.chapters[0].text.includes('KEEP_EXACT'));assert.equal(speechRequests.length,0,'Opening the reader must not generate speech');
-const spoken=await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:reader.chapters[0].revision})});assert.equal(spoken.status,200);assert.equal(spoken.headers.get('content-type'),'audio/mpeg');assert.ok((await spoken.arrayBuffer()).byteLength);assert.equal(speechRequests.length,1);assert.equal(speechRequests[0].input,reader.chapters[0].text,'Narrate the saved edited text with preserved passages');
+const speechUrl=origin+main.base+'/chapters/1/speech';
+const speechQuery='?part=0&revision='+reader.chapters[0].revision;
+assert.equal((await fetch(speechUrl+speechQuery,{headers:auth})).status,404);
+assert.equal(speechRequests.length,0,'Polling absent audio cannot trigger generation');
+const speechStart=()=>fetch(speechUrl,{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:reader.chapters[0].revision,async:true})});
+assert.equal((await speechStart()).status,202,'Slow provider cannot hold the start response open');
+assert.equal((await speechStart()).status,202);
+assert.equal((await fetch(speechUrl+speechQuery,{headers:auth})).status,202);
+assert.equal(speechRequests.length,1,'Duplicate starts and polls share one paid request');
+assert.equal((await fetch(speechUrl+speechQuery)).status,401);
+assert.equal((await fetch(speechUrl+'?part=0&revision=outdated',{headers:auth})).status,409);
+releaseSpeech();
+let spoken;
+for(let i=0;i<30;i++) {spoken=await fetch(speechUrl+speechQuery,{headers:auth});if(spoken.status!==202)break;await new Promise(r=>setTimeout(r,20));}
+assert.equal(spoken.status,200);assert.equal(spoken.headers.get('content-type'),'audio/mpeg');assert.ok((await spoken.arrayBuffer()).byteLength);assert.equal(speechRequests.length,1);assert.equal(speechRequests[0].input,reader.chapters[0].text,'Narrate the saved edited text with preserved passages');
 await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:reader.chapters[0].revision})});assert.equal(speechRequests.length,1,'Replay uses cached audio');
 assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:'outdated'})})).status,409);
 assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:999,revision:reader.chapters[0].revision})})).status,400);
