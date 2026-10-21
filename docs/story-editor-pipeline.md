@@ -188,3 +188,71 @@ block splitting and stopped runs cannot resume against changed structure. A new
 chapter-only edit reads only its new active pieces plus continuity notes.
 
 Release health marker: storyEditorChapterOrganization=reviewed-passage-splits-v2.
+
+### Conversational writing studio
+
+The draft opens inline as soon as a manuscript is selected. Current draft and
+immutable original are separate tabs; a studio edit creates a recoverable version,
+and Undo uses an optimistic revision check. Original exports retain their original
+snapshot. The full-edit report is labelled separately from later studio changes.
+
+Literary editing is pinned to `gpt-6-astra`, reasoning `max`, mode `pro`.
+The Realtime voice model handles conversation and tools; it must delegate prose
+writing and substantive creative analysis to the deep editor. No smaller model or
+lower reasoning fallback is permitted. A passage revision has four checkpointed
+passes: editorial plan, draft, independent critique, final refinement. Discussion
+uses the same model but cannot mutate prose. Instructions prioritize motivation,
+causality, subtext, viewpoint, voice and meaningful specificity over padding.
+These settings prioritize quality; they do not guarantee literary merit or instant
+completion. The author remains the judge of the result.
+
+Ordinary manuscripts are supplied in full to the deep editor (up to 450 KB of
+serialized source). Larger manuscripts are read in source-hashed chunks to build
+project-scoped continuity notes, cached only for unchanged chunks. Oversized notes
+are consolidated before downstream passes. This is a lossy context strategy for
+large books, not a claim that every word remains in each later prompt. Nearby
+prose, selected chapter, prior editorial plan, recent conversation, and explicit
+author story notes supplement it. Live voice receives bounded selected context.
+Story notes are visible and removable; no memories from Morrow or ChatGPT are
+imported or inferred, and fiction is not stored as personal biography.
+
+Additive SQLite studio tables persist tasks, passes, project notes, conversation,
+versions and bookmarks. A task returns 202 promptly and is polled separately.
+One task per manuscript runs at a time. Lease ownership, source revision hashes,
+and atomic final saves fence late or competing results. Cancellation aborts the
+provider call where possible and prevents a late save. Expired work fails visibly;
+only an explicit retry resumes completed passes. Provider retries are disabled.
+Each provider call has a ten-minute timeout; total task deadline is 45 minutes.
+
+Talk explicitly requests microphone access and a short-lived WebRTC credential;
+the server key never reaches the browser. Speech interrupts exact saved-text
+narration immediately. Changes use selected passage and saved listening position;
+the new saved revision can then be read back. Navigation, manual pause, and project
+switch fence stale playback. Exact narration uses asynchronous start/poll routes
+and a bounded audio cache; GET polling never generates paid audio. These user
+actions send selected text/audio or editorial context to OpenAI and can incur API
+charges. Opening the draft or reading its saved task status does neither.
+
+Focused verification: `node --test scripts/test-writing-studio.mjs
+scripts/test-writing-studio-ui.mjs scripts/test-studio-voice.mjs`.
+`node scripts/test-story-editor-integration.mjs` uses temporary synthetic books,
+a local fake provider and real server routes; it also checks imports, exports,
+durable queues, original preservation, undo, deletion cleanup, and restart recovery.
+No live paid generation or microphone session is part of these checks.
+
+Release markers: health `storyEditorStudio=layered-literary-studio-v1`, frontend
+`X-Story-Editor-Studio: layered-literary-studio-v1`.
+
+The studio mission is continuous, beginning-to-end collaboration toward the author’s
+chosen finished work. A separately saved manuscript goal survives one-off briefs,
+feeds both the deep passage editor and the full-book planning context, and can be
+updated explicitly by text form or voice tool. It cannot change midway through an
+active edit. Completed automated edits are presented for review, never as proof
+that the author’s work is finished.
+
+Returning opens the persisted working passage and, if its revision still matches,
+its saved audio fragment/time. A source excerpt offers immediate orientation with
+no provider call, plus an explicit Read one passage earlier control. Playback
+continues across chapter boundaries. Bookmarks are revision-aware, saved during
+playback and on pause/exit, with small keepalive requests on page exit. If prose
+changes, old audio time resets to the beginning of that passage.

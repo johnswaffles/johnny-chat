@@ -1,3 +1,5 @@
+import { createLayeredStudioEditor, STUDIO_QUALITY } from './lib/studio-editor.mjs';
+import { installWritingStudio, STUDIO_INSTRUCTIONS, STUDIO_FORMAT } from './lib/writing-studio.mjs';
 import { createStorySpeech } from './lib/story-speech.mjs';
 import { readChapterLayout, saveChapterLayout, readPassageSplit, splitSavedPassage } from "./lib/story-layout.mjs";
 import { splitStoryManuscript, pdfPageText } from "./lib/story-chapters.mjs";
@@ -83,9 +85,9 @@ const VOICE_DEEP_THINK_MODEL = "gpt-6-astra";
 const UPLOAD_VISION_MODEL = "gpt-6-astra";
 const DEEP_RESEARCH_MODEL = "gpt-6-astra";
 const MORROW_PERSONALITY_VERSION = "morrow-personality-v4";
-const STORY_EDITOR_MODEL = OPENAI_STORY_EDITOR_MODEL || OPENAI_GPT54_MODEL || OPENAI_CHAT_MODEL;
-const STORY_EDITOR_REASONING_EFFORT = OPENAI_STORY_EDITOR_REASONING_EFFORT || "high";
-const STORY_EDITOR_REASONING_MODE = OPENAI_STORY_EDITOR_REASONING_MODE || "";
+const STORY_EDITOR_MODEL = STUDIO_QUALITY.model;
+const STORY_EDITOR_REASONING_EFFORT = STUDIO_QUALITY.effort;
+const STORY_EDITOR_REASONING_MODE = STUDIO_QUALITY.mode;
 const STORY_EDITOR_UPLOAD_MB = Math.max(1, Number(STORY_EDITOR_MAX_UPLOAD_MB) || 80);
 const STORY_EDITOR_MAX_TEXT_CHARS = Math.max(1000000, (Number(STORY_EDITOR_MAX_TEXT_MB) || 80) * 1024 * 1024);
 
@@ -1660,6 +1662,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorContentHandling: "context-aware-review-v2",
   storyEditorOutputRecovery: "durable-editorial-pipeline-v3",
   storyEditorReader: "chapter-reader-marin-async-v2",
+  storyEditorStudio: "layered-literary-studio-v1",
   storyEditorChangeRequests: "chapter-scope-guard-v2",
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
@@ -3461,7 +3464,7 @@ function parseStoryObject(value, fallback = {}) {
 function storyEditorReasoningConfig() {
   if (!STORY_EDITOR_REASONING_EFFORT || /^(gpt-4|gpt-3|text-)/i.test(STORY_EDITOR_MODEL)) return {};
   const reasoning = { effort: STORY_EDITOR_REASONING_EFFORT };
-  if (/^gpt-5\.6(?:-|$)/i.test(STORY_EDITOR_MODEL) && STORY_EDITOR_REASONING_MODE) {
+  if (STORY_EDITOR_REASONING_MODE) {
     reasoning.mode = STORY_EDITOR_REASONING_MODE;
   }
   return { reasoning };
@@ -3631,14 +3634,9 @@ async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) 
   };
   const value = await withStoryOutputBudget(async (budget) => {
     let response;
-    try {
-      response = await openai.responses.create({ ...request, max_output_tokens: budget }, {timeout: 600000, maxRetries: 2, signal: storyTask.getStore()?.signal});
-    } catch (error) {
-      if (!request.reasoning?.mode || !/reasoning|mode|pro|unsupported|invalid/i.test(String(error?.message || ""))) throw error;
-      response = await openai.responses.create({ ...request, max_output_tokens: budget, reasoning: { effort: STORY_EDITOR_REASONING_EFFORT } }, {timeout:600000,maxRetries:2,signal:storyTask.getStore()?.signal});
-    }
+    response = await openai.responses.create({ ...request, max_output_tokens: budget }, {timeout:600000,maxRetries:0,signal:storyTask.getStore()?.signal});
     return parseStoryModelJson(response);
-  }, maxOutputTokens);
+  }, Math.max(32768,maxOutputTokens));
   if (jobId) await storyExec(`INSERT OR REPLACE INTO story_stage_cache VALUES (${sqliteLiteral(jobId)},${sqliteLiteral(cacheKey)},${sqliteLiteral(JSON.stringify(value))});`);
   return value;
 }
@@ -3854,6 +3852,8 @@ async function runStoryAutopilotJob(jobId) {
     await storyExec(chunkStatements);
 
     const bible = await getStoryBible(job.project_id);
+    const goalTable = (await storyQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='studio_goals';"))[0];
+    if(goalTable) bible.manuscriptGoal = (await storyQuery(`SELECT goal FROM studio_goals WHERE project_id=${sqliteLiteral(job.project_id)};`))[0]?.goal || "";
     const priorPlan = changeRequest.chapter ? parseStoryObject((await storyQuery(`SELECT plan_json FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(job.project_id)} AND id<>${sqliteLiteral(jobId)} AND status='completed' ORDER BY created_at DESC LIMIT 1;`))[0]?.plan_json) : {};
     const protectedParagraphCount = chunks.reduce((total, chunk) => total + chunk.paragraphs.filter((paragraph) => paragraph.preserveVerbatim).length, 0);
     const editableParagraphCount = chunks.reduce((total, chunk) => total + chunk.paragraphs.filter((paragraph) => !paragraph.preserveVerbatim).length, 0);
@@ -3907,7 +3907,7 @@ async function runStoryAutopilotJob(jobId) {
           format: STORY_AUTOPILOT_PLAN_SCHEMA,
           maxOutputTokens: 5000,
           system: [
-            "You are the lead editor planning a complete, high-quality long-form fiction transformation.",
+            "You are the lead editor helping the author work through the entire story, beginning to end, toward the finished novel, manuscript, or other work they want. Use the saved manuscript goal as the destination and this run’s brief as the immediate task. An automated edit is a revision for author review, not proof that the work is finished.",
             "The user's brief is the governing instruction. If it asks for a genre, franchise, adaptation, episode, movie, or bestseller-style transformation, make a concrete plan for doing that consistently; do not merely copyedit.",
             "If it does not ask for a transformation, preserve the author's story, voice, point of view, tense, and intent while improving it.",
             "Some passages are marked PROTECTED MATERIAL. They are legitimate user-owned fiction, but they are outside this model edit: do not analyze, quote, transform, or reproduce them. Plan only around their narrative position and preserve them verbatim.",
@@ -4219,7 +4219,7 @@ app.get("/api/story-editor/projects", async (req, res) => {
   try {
     if (!requireStoryEditorSession(req, res)) return;
     const projects = await storyQuery("SELECT id, title, filename, user_intent AS userIntent, created_at AS createdAt, updated_at AS updatedAt FROM story_projects ORDER BY updated_at DESC;");
-    res.json({ ok: true, projects, engine: { model: STORY_EDITOR_MODEL, reasoningEffort: STORY_EDITOR_REASONING_EFFORT } });
+    res.json({ ok: true, projects, engine: { model: STORY_EDITOR_MODEL, reasoningEffort: STORY_EDITOR_REASONING_EFFORT, reasoningMode:STORY_EDITOR_REASONING_MODE } });
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err.message || err) });
   }
@@ -4234,8 +4234,14 @@ app.delete("/api/story-editor/projects/:id", async (req, res) => {
     if (!projects[0]) return res.status(404).json({ ok: false, error: "Project not found." });
     const active = await storyQuery(`SELECT id FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} AND status IN ('queued', 'running') LIMIT 1;`);
     if (active[0]) return res.status(409).json({ ok: false, error: "This manuscript is still being edited. Wait for the run to finish before deleting it." });
+    const studioTables = new Set((await storyQuery("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'studio_%';")).map(row=>row.name));
+    if(studioTables.has('studio_tasks') && (await storyQuery(`SELECT id FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running') LIMIT 1;`))[0]) return res.status(409).json({ok:false,error:'Stop or finish the current studio edit before deleting this manuscript.'});
+    const studioDeletes=[];
+    if(studioTables.has('studio_task_stages')) studioDeletes.push(`DELETE FROM studio_task_stages WHERE task_id IN (SELECT id FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)});`);
+    for(const table of ['studio_goals','studio_context_cache','studio_messages','studio_notes','studio_versions','studio_state','studio_tasks']) if(studioTables.has(table)) studioDeletes.push(`DELETE FROM ${table} WHERE project_id=${sqliteLiteral(projectId)};`);
     await storyExec([
       "BEGIN;",
+      ...studioDeletes,
       `DELETE FROM story_autopilot_chunks WHERE project_id = ${sqliteLiteral(projectId)};`,
       `DELETE FROM story_stage_cache WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
       `DELETE FROM story_job_requests WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
@@ -4354,6 +4360,9 @@ app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
     if (active[0] && !(req.body?.resume === true && storyAutopilotInterrupted(active[0]))) {
       return res.status(200).json({ ok: true, alreadyRunning: true, job: storyAutopilotJobView(active[0]) });
     }
+    const studioTasksExist = (await storyQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='studio_tasks';"))[0];
+    const studioIdle = studioTasksExist ? ` AND NOT EXISTS (SELECT 1 FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'))` : "";
+    if(studioTasksExist && (await storyQuery(`SELECT id FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running') LIMIT 1;`))[0]) return res.status(409).json({ok:false,error:'Finish or stop the current studio request before starting a full edit.'});
     const intent = normalizeStoryText(req.body?.intent || project.user_intent || "Edit this manuscript for clarity, coherence, and stronger prose while preserving the author's voice.", 4000);
     if (!intent) return res.status(400).json({ ok: false, error: "Tell Story Editor what you want done before starting Autopilot." });
     if (req.body?.resume === true) {
@@ -4379,14 +4388,15 @@ app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
     const now = storyNow();
     await storyExec([
       "BEGIN;",
-      `UPDATE story_projects SET user_intent = ${sqliteLiteral(intent)}, updated_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(projectId)} AND NOT EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'));`,
-      `INSERT INTO story_autopilot_jobs (id, project_id, intent, status, phase, message, created_at, updated_at) SELECT ${sqliteLiteral(jobId)}, ${sqliteLiteral(projectId)}, ${sqliteLiteral(intent)}, 'queued', 'queued', 'Queued for manuscript planning.', ${sqliteLiteral(now)}, ${sqliteLiteral(now)} WHERE NOT EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'));`,
+      `UPDATE story_projects SET user_intent = ${sqliteLiteral(intent)}, updated_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(projectId)} AND NOT EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'))${studioIdle};`,
+      `INSERT INTO story_autopilot_jobs (id, project_id, intent, status, phase, message, created_at, updated_at) SELECT ${sqliteLiteral(jobId)}, ${sqliteLiteral(projectId)}, ${sqliteLiteral(intent)}, 'queued', 'queued', 'Queued for manuscript planning.', ${sqliteLiteral(now)}, ${sqliteLiteral(now)} WHERE NOT EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'))${studioIdle};`,
       ...(req.body?.changeRequest === true ? [`INSERT INTO story_job_requests SELECT ${sqliteLiteral(jobId)},${sqliteLiteral(JSON.stringify({chapter:chapter || null,request:intent}))} WHERE EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE id=${sqliteLiteral(jobId)});`] : []),
       "COMMIT;"
     ]);
     const job = await getStoryAutopilotJob(jobId, projectId);
     if(!job) {
       const existing=(await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running') ORDER BY created_at DESC LIMIT 1;`))[0];
+      if(!existing)return res.status(409).json({ok:false,error:'Another studio request started. Finish or stop it before starting a full edit.'});
       return res.json({ok:true,alreadyRunning:true,job:storyAutopilotJobView(existing)});
     }
     await scheduleStoryJob(jobId);
@@ -4627,6 +4637,41 @@ async function storyChapterSpeech(req,res) {
 }
 app.post('/api/story-editor/projects/:id/chapters/:chapter/speech', storyChapterSpeech);
 app.get('/api/story-editor/projects/:id/chapters/:chapter/speech', storyChapterSpeech);
+
+
+// A manuscript-scoped collaboration surface; Morrow's personal memory stays separate.
+installWritingStudio(app, {
+  path: STORY_EDITOR_DB_PATH, ready: ensureStoryDb, authorize: requireStoryEditorSession,
+  generate: createLayeredStudioEditor({
+    instructions: STORY_EDITOR_CONTEXT+'\n'+STUDIO_INSTRUCTIONS, decisionFormat:STUDIO_FORMAT,
+    call: async (request,signal) => {
+      if (!OPENAI_API_KEY) throw Object.assign(new Error('The writing partner is not configured.'),{status:503});
+      let response;
+      try { response=await openai.responses.create(request,{signal,timeout:600000,maxRetries:0}); }
+      catch(error) { if(signal.aborted)throw error;throw Object.assign(new Error('The maximum-quality editor could not finish this pass. No smaller model was substituted. Completed passes are saved; retry to continue.'),{status:502}); }
+      assertStoryModelResponse(response);return JSON.parse(extractResponseText(response));
+    }
+  }),
+  createVoice: async (instructions, tools) => {
+    if (!OPENAI_API_KEY) throw Object.assign(new Error('Live voice is not configured.'), {status:503});
+    const model = MORROW_REALTIME_MODEL;
+    const response = await fetch(`${String(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/,'')}/realtime/client_secrets`, {
+      method:'POST', signal:AbortSignal.timeout(15000),
+      headers:{Authorization:`Bearer ${OPENAI_API_KEY}`,'Content-Type':'application/json'},
+      body:JSON.stringify({expires_after:{anchor:'created_at',seconds:600},session:{type:'realtime',model,instructions,output_modalities:['audio'],
+        audio:{input:{transcription:{model:OPENAI_TRANSCRIBE_MODEL},noise_reduction:{type:'near_field'},turn_detection:{type:'server_vad',threshold:0.65,prefix_padding_ms:300,silence_duration_ms:700,create_response:true,interrupt_response:true}},output:{voice:'marin'}},tools,tool_choice:'auto'}})
+    });
+    if (!response.ok) throw Object.assign(new Error('Live voice could not connect. Please try again.'),{status:502});
+    const data=await response.json(),value=data.value || data.client_secret?.value;
+    if (!value) throw Object.assign(new Error('Live voice returned an incomplete connection.'),{status:502});
+    return {value,model,realtimeUrl:'https://api.openai.com/v1/realtime/calls'};
+  },
+  createSpeech: async (text,signal) => {
+    if (!OPENAI_API_KEY) throw Object.assign(new Error('Narration is not configured.'),{status:503});
+    const response=await openai.audio.speech.create({model:'gpt-4o-mini-tts',voice:'marin',input:text,response_format:'mp3',instructions:'Read these exact manuscript words naturally and warmly. Do not add commentary.'},{signal,timeout:60000,maxRetries:0});
+    return Buffer.from(await response.arrayBuffer());
+  }
+});
 
 app.get("/api/story-editor/projects/:id/export.docx", async (req, res) => {
   try {

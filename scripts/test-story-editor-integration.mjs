@@ -18,6 +18,7 @@ function sample(schema) {
 }
 const requests=[];
 const speechRequests=[];
+const studioVoiceRequests=[];
 let resumeBudgetFailures=0;
 let releaseSpeech;
 let speechGate = new Promise(resolve => releaseSpeech=resolve);
@@ -27,10 +28,20 @@ const mock=http.createServer(async(req,res)=>{
  let raw=''; for await(const part of req) raw+=part;
  const body=JSON.parse(raw);
  if(req.url==='/v1/audio/speech') {speechRequests.push(body);await speechGate;assert.equal(body.voice,'marin');assert.equal(body.model,'gpt-4o-mini-tts');assert.ok(body.input.length<=4096);res.writeHead(200,{'Content-Type':'audio/mpeg'});res.end(Buffer.from('ID3-local-test-audio'));return;}
+ if(req.url==='/v1/realtime/client_secrets'){studioVoiceRequests.push(body);assert.ok(body.session.tools.some(t=>t.name==='edit_passage'));res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({value:'synthetic-no-live-connection',expires_at:Date.now()/1000+60}));return;}
  requests.push(body);
- assert.equal(body.model,'gpt-6-astra'); assert.equal(body.reasoning.effort,'high'); assert.equal(body.reasoning.mode,undefined);
+ assert.equal(body.model,'gpt-6-astra'); assert.equal(body.reasoning.effort,'max'); assert.equal(body.reasoning.mode,'pro');
  const user=JSON.parse(body.input[1].content);
  const stage=body.text?.format?.name;
+ if(['writing_studio_turn','studio_draft','studio_critique','studio_final'].includes(stage)){
+  let value;
+  if(stage==='writing_studio_turn')value={action:'revise',reply:'Developing the moment without changing its outcome.',revisionText:'',note:'Make the emotional conflict concrete and retain the quiet voice.',chapter:0,passage:0};
+  if(stage==='studio_draft')value={text:user.context.selection.text+' She held the envelope by its unopened edge.',craftNotes:'Developed the physical hesitation.'};
+  if(stage==='studio_critique')value={strengths:['A physical action carries feeling.'],issues:['Keep the causal decision visible.'],continuityRisks:[],authorIntentFit:'Matches the request.'};
+  if(stage==='studio_final')value={text:user.candidate+' Her thumb found the crease, then let it go.',craftNotes:'Her hesitation now appears in a specific action; the decision and original voice remain intact.'};
+  res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(value)}]}]}));return;
+ }
+
  if(body.input[1].content.includes('PAUSE_TEST')) await new Promise(r=>setTimeout(r,500));
  const retryStage=body.input[1].content.includes('BUDGET_ONCE')&&!truncatedStages.has(stage);
  const resumeFailure=user.chunk?.paragraphs.some(p=>p.text.includes('RESUME_BUDGET'))&&resumeBudgetFailures++<3;
@@ -235,5 +246,33 @@ await json(pauseBase+'/autopilot',{method:'POST',headers:{'Content-Type':'applic
 let finished;
 for(let i=0;i<150;i++){finished=(await json(pauseBase+'/autopilot/'+pauseJob)).job;if(['completed','failed'].includes(finished.status))break;await new Promise(r=>setTimeout(r,100));}
 assert.equal(finished.status,'completed');
+// A complete studio collaboration uses only this local fake model and temporary database.
+const studioBook=await run('Chapter One\n\nThe letter had waited beside the kitchen window for three days. Every morning, Mara moved it to wipe the sill, and every morning she put it back.\n\nHer brother had written her name carefully. She recognized the way he pressed too hard on the final stroke, as though he could make certainty out of ink.\n\nChapter Two\n\nAt the station, the last train had not yet been called.','The Letter - studio preview');
+const studioBase=studioBook.base+'/studio';
+assert.equal((await fetch(origin+studioBase)).status,401);
+let studioState=await json(studioBase);assert.deepEqual(studioState.quality,{model:'gpt-6-astra',effort:'max',mode:'pro'});assert.equal(studioState.chapters.length,2);
+await json(studioBase+'/goal',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:'A finished literary novel with a quiet voice, developed from beginning to end.'})});
+assert.equal((await json(studioBase)).goal,'A finished literary novel with a quiet voice, developed from beginning to end.');
+
+const studioPassage=studioState.chapters[0].passages[0],savedOriginal=studioState.original;
+await json(studioBase+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:'Mara wants reconciliation, but she is afraid of what opening the letter will require.'})});
+const beforeStudioCalls=requests.length;
+const studioRequest={requestId:'local-studio-edit',sectionId:studioPassage.id,revision:studioPassage.revision,message:'Deepen her hesitation through physical action, without changing the decision.'};
+const studioStart=await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(studioRequest)});assert.ok(['queued','running'].includes(studioStart.task.status));
+let studioTask;
+for(let i=0;i<100;i++){studioTask=(await json(studioBase+'/tasks/local-studio-edit')).task;if(['done','failed'].includes(studioTask.status))break;await new Promise(r=>setTimeout(r,30));}
+assert.equal(studioTask.status,'done',studioTask.error);assert.deepEqual(requests.slice(beforeStudioCalls).map(r=>r.text.format.name),['writing_studio_turn','studio_draft','studio_critique','studio_final']);
+studioState=await json(studioBase);assert.equal(studioState.original,savedOriginal);assert.equal(studioState.versions.length,1);assert.match(studioState.chapters[0].passages[0].text,/Her thumb found the crease/);
+const repeated=await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(studioRequest)});assert.equal(repeated.task.status,'done');assert.equal(requests.length-beforeStudioCalls,4);
+assert.equal((await fetch(origin+studioBase+'/speech?'+new URLSearchParams({sectionId:studioPassage.id,revision:studioPassage.revision,part:'0'}),{headers:auth})).status,409);
+const currentPassage=studioState.chapters[0].passages[0];
+const studioVoice=await json(studioBase+'/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sectionId:currentPassage.id,revision:currentPassage.revision})});assert.equal(studioVoice.value,'synthetic-no-live-connection');assert.equal(studioVoiceRequests.length,1);assert.ok(!studioVoiceRequests[0].session.instructions.includes('SECOND_CHAPTER_ONLY'));
+await json(studioBase+'/bookmark',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({sectionId:currentPassage.id,revision:currentPassage.revision,part:0,seconds:8})});assert.equal((await json(studioBase)).bookmark.seconds,8);
+if(!process.env.STORY_PREVIEW){await json(studioBase+'/undo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sectionId:currentPassage.id,revision:currentPassage.revision})});assert.equal((await json(studioBase)).chapters[0].passages[0].text,studioPassage.text);}
+if(!process.env.STORY_PREVIEW){
+ const removed=await fetch(origin+studioBook.base,{method:'DELETE',headers:auth});assert.equal(removed.status,200);
+ const check=new DatabaseSync(testDir+'/story.sqlite');for(const table of ['studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
+}
+console.log('PASS: studio four-pass Astra/max/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
 console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');
 if(process.env.STORY_PREVIEW) console.log(`LOCAL PREVIEW: http://127.0.0.1:${mock.address().port}/preview`); else {child.kill();mock.close();}
