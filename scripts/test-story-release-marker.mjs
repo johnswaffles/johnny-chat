@@ -15,5 +15,6 @@ test('authenticated streaming response retains status, body and headers',async()
  try {
   const response=await onRequest({request:new Request('https://example.test/story-editor/',{headers:{Cookie:'gpt54_session=synthetic-session'}}),env:{},next:()=>new Response('synthetic private shell',{status:200,headers:{'Cache-Control':'private','Content-Type':'text/html','ETag':'fixture-etag'}})});
   assert.equal(response.status,200);assert.equal(response.headers.get('X-Story-Editor-Reader'),'chapter-reader-marin-async-v2');assert.equal(await response.text(),'synthetic private shell');assert.equal(response.headers.get('ETag'),'fixture-etag');assert.equal(response.headers.get('Cache-Control'),'private');assert.equal(response.headers.get('Content-Type'),'text/html');assert.equal(response.headers.get('X-Story-Editor-Chapters'),marker);
+  assert.equal(response.headers.get('X-Story-Editor-Studio'),'layered-literary-studio-v1');
  } finally {globalThis.fetch=oldFetch;}
 });

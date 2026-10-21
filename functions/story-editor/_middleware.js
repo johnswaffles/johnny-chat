@@ -211,5 +211,6 @@ export async function onRequest(context) {
   const marked = new Response(response.body, response);
   marked.headers.set("X-Story-Editor-Chapters", "reviewed-passage-splits-v2");
   marked.headers.set("X-Story-Editor-Reader", "chapter-reader-marin-async-v2");
+  marked.headers.set("X-Story-Editor-Studio", "layered-literary-studio-v1");
   return marked;
 }

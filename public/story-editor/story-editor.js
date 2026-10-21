@@ -390,7 +390,7 @@
     if (panel.hidden) return;
     const report = job.report || {};
     const retained = report.passagesForReview || [];
-    document.getElementById("revision-summary").textContent = `${formatNumber(report.paragraphsRevised)} passages revised. ${retained.length ? `${retained.length} ${retained.length === 1 ? "passage kept" : "passages kept"} unchanged for your review.` : "Read through the revision before treating it as your final manuscript."}`;
+    document.getElementById("revision-summary").textContent = `From the last full edit: ${formatNumber(report.paragraphsRevised)} passages revised. ${retained.length ? `${retained.length} ${retained.length === 1 ? "passage kept" : "passages kept"} unchanged for your review.` : "Read through the revision before treating it as your final manuscript."}`;
     if(report.wordCounts) document.getElementById('revision-summary').textContent += ` Word count: ${formatNumber(report.wordCounts.before)} → ${formatNumber(report.wordCounts.after)}.`;
     const attention = document.getElementById("revision-attention");
     attention.replaceChildren();
@@ -657,6 +657,7 @@
     el.problemView.hidden = true;
     el.welcomeView.hidden = Boolean(state.project);
     el.workspaceView.hidden = !state.project;
+    if(!state.project)document.dispatchEvent(new CustomEvent("story-reader-project",{detail:{id:null}}));
   }
 
   function showStartupProblem(error) {
@@ -698,7 +699,7 @@
     const data = await readJsonResponse(response);
     if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not load your manuscripts.");
     state.projects = data.projects || [];
-    document.getElementById("editor-engine").textContent = data.engine ? `${data.engine.model === "gpt-6-astra" ? "GPT-6 Astra" : data.engine.model} · ${data.engine.reasoningEffort} reasoning.` : "Editor configuration unavailable.";
+    document.getElementById("editor-engine").textContent = data.engine ? `${data.engine.model === "gpt-6-astra" ? "GPT-6 Astra" : data.engine.model} · ${data.engine.reasoningEffort} reasoning${data.engine.reasoningMode ? " · "+data.engine.reasoningMode : ""}.` : "Editor configuration unavailable.";
     renderProjects();
     if (!state.projects.length) {
       state.project = null;
@@ -713,7 +714,7 @@
   }
 
   document.addEventListener("story-chapters-saved",event=>{
-    if(event.detail.projectId===state.project?.id) loadProject(state.project.id).then(()=>showToast("Chapter boundaries saved. Reopen the book to use them.")).catch(handleError);
+    if(event.detail.projectId===state.project?.id) loadProject(state.project.id).then(()=>showToast("Chapter boundaries saved. The studio is showing the updated draft.")).catch(handleError);
   });
 
   async function loadProject(id) {
@@ -1132,4 +1133,6 @@
   });
 
   retryStartup();
+  document.addEventListener('story-studio-ready',()=>{if(state.project)renderAutopilot();});
+  document.addEventListener('story-studio-saved',event=>{if(event.detail.projectId===state.project?.id)void loadProject(state.project.id).catch(handleError);});
 })();

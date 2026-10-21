@@ -716,3 +716,101 @@ button[disabled] { cursor: not-allowed; opacity: 0.46; }
 
 #passage-split-history {display:block;}
 #passage-split-history pre {white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;}
+
+/* The manuscript is the place; conversation is always beside it. */
+.writing-room {margin:26px 0 36px;background:#fbf9f4;border:1px solid var(--line);border-radius:25px;overflow:hidden;box-shadow:0 15px 55px rgba(29,24,42,.045);}
+.room-heading {padding:30px 30px 19px;display:flex;align-items:start;justify-content:space-between;gap:24px;}
+.room-heading h2 {font:500 clamp(27px,3vw,39px)/1.15 var(--serif);letter-spacing:-.035em;margin:9px 0;}
+.room-heading p {font-size:14px;color:var(--copy);line-height:1.7;margin:8px 0 0;}
+.room-transport {display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:0 30px 15px;}
+.voice-connect {border:1px solid #c2b4db;background:#eee7f8;color:#4f3c70;border-radius:12px;padding:12px 16px;font:600 13px var(--sans);cursor:pointer;}
+.voice-connect[aria-pressed="true"] {background:#51406c;color:#fff;border-color:#51406c;}
+#studio-voice-status {font-size:11px;line-height:1.6;color:var(--copy);}
+.room-status {padding:0 30px;margin:0 0 7px;min-height:20px;font-size:13px;color:#4f3c70;line-height:1.6;}
+.room-disclosure {padding:0 30px 18px;margin:0;font-size:11px;line-height:1.7;color:var(--copy);max-width:950px;}
+.room-grid {display:grid;grid-template-columns:minmax(0,1.35fr) minmax(290px,.85fr);border-top:1px solid var(--line);}
+.draft-desk {min-width:0;background:#fffdf8;}
+.draft-tabs {display:flex;gap:22px;align-items:center;border-bottom:1px solid var(--line);padding:0 26px;}
+.draft-tabs button {background:none;border:0;border-bottom:2px solid transparent;padding:18px 0;font:600 12px var(--sans);color:var(--copy);cursor:pointer;}
+.draft-tabs button[aria-pressed="true"] {border-color:#675083;color:#4d365f;}
+.draft-navigation {display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:18px 22px 8px;font-size:11px;color:var(--copy);}
+.draft-navigation select {flex:1;min-width:120px;max-width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:#fffdf8;color:var(--ink);font:500 12px var(--sans);}
+.draft-navigation button {border:1px solid var(--line);background:transparent;border-radius:7px;padding:7px 11px;color:var(--ink);cursor:pointer;}
+.draft-hint {padding:4px 24px 12px;color:var(--copy);font-size:11px;line-height:1.7;}
+.studio-pages {max-height:70vh;min-height:350px;overflow:auto;padding:12px 24px 30px;scroll-padding:35px;}
+.studio-pages h3 {font:500 28px/1.25 var(--serif);margin:15px 12px 25px;}
+.studio-passage {padding:13px 17px;border:1px solid transparent;border-radius:12px;cursor:pointer;position:relative;outline-offset:3px;}
+.studio-passage p,.studio-original-text {font:18px/1.9 var(--serif);white-space:pre-wrap;overflow-wrap:anywhere;color:#332d37;margin:0;}
+.studio-passage h4 {font:600 20px/1.5 var(--serif);margin:5px 0;}
+.studio-passage:hover {background:#f6f1e9;}
+.studio-passage[aria-current="true"] {background:#f3edf9;border-color:#ddd0ec;}
+.studio-passage small {display:block;font:500 10px var(--sans);letter-spacing:.04em;color:#78618b;margin:0 0 8px;}
+.studio-original-text {padding:12px;}
+#studio-audio {width:calc(100% - 40px);margin:10px 20px;}
+.draft-footer {padding:15px 20px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.draft-footer span {font-size:10px;color:var(--copy);}
+.conversation-desk {min-width:0;border-left:1px solid var(--line);background:#f5f1e9;display:flex;flex-direction:column;}
+.conversation-desk > header {padding:24px 24px 12px;}
+.conversation-desk h3 {font:500 25px/1.25 var(--serif);margin:7px 0 10px;}
+#studio-quality {font-size:10px;color:var(--copy);line-height:1.6;}
+.studio-messages {padding:7px 22px 16px;overflow:auto;min-height:170px;max-height:43vh;flex:1;}
+.studio-message {margin:0 0 18px;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;}
+.studio-message strong {display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#8c7b97;margin-bottom:5px;}
+.studio-message[data-role="user"] {padding:13px 15px;border:1px solid #e3d9cc;border-radius:13px;background:#fbf8f2;}
+.studio-empty {font:19px/1.6 var(--serif);color:#786a7f;margin:20px 0;}
+.studio-compose {margin:0 18px 18px;padding:14px;background:#fffdf8;border:1px solid #d9cddd;border-radius:15px;}
+.studio-compose > label,.studio-notes form label {display:block;font-size:10px;font-weight:600;color:var(--copy);margin-bottom:7px;}
+.studio-compose textarea,.studio-notes textarea {box-sizing:border-box;width:100%;resize:vertical;border:0;background:transparent;font:13px/1.7 var(--sans);color:var(--ink);padding:0;min-height:80px;}
+.studio-compose > div {display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:10px;}
+.readback-option {font-size:10px;color:var(--copy);display:flex;align-items:center;gap:5px;}
+.studio-notes,.studio-history {padding:15px 23px;border-top:1px solid var(--line);font-size:11px;color:var(--copy);line-height:1.7;}
+.studio-notes summary,.studio-history summary,.whole-book-request summary {cursor:pointer;font-weight:600;color:#5c486c;}
+.studio-notes ul {list-style:none;padding:0;}
+.studio-notes li {padding:10px 0;border-bottom:1px solid var(--line);white-space:pre-wrap;}
+.studio-notes li button {margin-left:8px;border:0;background:transparent;color:#785c70;text-decoration:underline;font-size:10px;cursor:pointer;}
+.studio-notes form {margin-top:16px;}
+.studio-progress {margin:0 22px 16px;font-size:11px;color:var(--copy);}
+.studio-progress ol {list-style:none;display:flex;flex-wrap:wrap;gap:5px;padding:0;margin:0;}
+.studio-progress li {border:1px solid #d8cde0;border-radius:20px;padding:5px 8px;font-size:9px;}
+.studio-progress li.current {background:#66507e;color:white;border-color:#66507e;}
+.studio-progress li.done {background:#e5ecdf;color:#426041;border-color:#d3ddcc;}
+.whole-book-request {padding:19px 26px;border-top:1px solid var(--line);font-size:12px;background:#fbf9f4;}
+.whole-book-request .author-request {margin-bottom:0;}
+#studio-retry {margin:0 20px 15px;}
+@media(min-width:1200px){.room-transport{position:sticky;top:0;z-index:3;background:#fbf9f4;padding-top:12px;}}
+@media(max-width:1050px){.room-grid{grid-template-columns:minmax(0,1.1fr) minmax(275px,1fr);}.room-heading{padding:24px 20px 16px;}.room-transport{padding-left:20px;padding-right:20px;}.room-disclosure,.room-status{padding-left:20px;padding-right:20px;}.studio-pages{padding:10px 12px 24px;}.conversation-desk > header{padding:20px 18px 12px;}}
+@media(max-width:760px){.room-grid{grid-template-columns:1fr;}.conversation-desk{border-left:0;border-top:1px solid var(--line);}.studio-pages{max-height:52vh;min-height:230px;}.studio-messages{max-height:34vh;}.room-heading{flex-wrap:wrap;gap:12px;}.room-heading h2{font-size:30px;}.room-transport button{flex-grow:1;}.studio-passage p,.studio-original-text{font-size:17px;}.studio-compose{position:sticky;bottom:12px;z-index:2;box-shadow:0 4px 25px #39244412;}}
+/* Keep prose visible on the first screen instead of repeating large dashboard headings. */
+.workspace-view {padding-top:20px;}
+.workspace-view > .project-overview {align-items:center;margin-bottom:14px;gap:20px;}
+.workspace-view .project-heading h1 {font-size:28px;line-height:1.1;}
+.workspace-view .progress-card {width:225px;padding:11px 14px;}
+.writing-room {margin-top:18px;}
+.room-heading {padding-top:22px;padding-bottom:14px;}
+.room-heading h2 {font-size:30px;}
+.room-heading p {font-size:12px;line-height:1.6;margin-top:5px;}
+.room-transport {padding-bottom:10px;}
+.room-disclosure {padding-bottom:13px;}
+.room-disclosure summary {cursor:pointer;color:#887b91;}
+.room-disclosure p {margin:7px 0 0;}
+.studio-chat-jump {display:none;}
+@media(max-width:960px){.workspace-view > .project-overview{flex-direction:row;}.workspace-view .progress-card{width:210px;}}
+@media(max-width:760px){.workspace-view .progress-card{display:none;}.workspace-view .project-heading h1{font-size:24px;}.workspace-view .project-heading > .overline{display:none;}.studio-chat-jump{display:inline-block;font-size:12px;color:#675083;padding:7px 0;}.room-heading h2{font-size:28px;}.room-heading{padding-top:19px;}.room-heading p{max-width:35ch;}}
+.writing-room {overflow:clip;}
+.room-transport {position:sticky;top:72px;z-index:20;background:#fbf9f4;padding-top:10px;border-bottom:1px solid var(--line);}
+.studio-passage {scroll-margin-top:175px;}
+@media(max-width:760px){.room-transport{top:64px;}.studio-passage{scroll-margin-top:220px;}}
+
+/* A durable place in the whole manuscript, without a model call on arrival. */
+.studio-continuity{padding:22px 26px;border-bottom:1px solid var(--line,#e1d9ce);background:rgba(244,239,230,.42);display:grid;gap:12px;}
+.studio-continuity h3{margin:7px 0;font:500 23px/1.2 Georgia,serif;color:#393044;}
+.studio-continuity p{margin:4px 0;color:#746b7a;font-size:12px;line-height:1.65;}
+.studio-return-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.studio-continuity details{font-size:12px;color:#655973;}
+.studio-continuity summary{cursor:pointer;line-height:1.5;overflow-wrap:anywhere;}
+.studio-continuity form{display:grid;gap:8px;margin-top:12px;}
+.studio-continuity label{font-size:11px;font-weight:700;}
+.studio-continuity textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid #dcd3e3;border-radius:12px;background:#fffefa;color:#393044;font:inherit;resize:vertical;}
+.studio-continuity form button{justify-self:start;}
+.studio-recap{font-family:Georgia,serif;white-space:pre-wrap;}
+@media(max-width:640px){.studio-continuity{padding:18px;}.studio-continuity h3{font-size:21px;}}
