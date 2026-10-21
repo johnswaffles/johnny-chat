@@ -256,3 +256,11 @@ no provider call, plus an explicit Read one passage earlier control. Playback
 continues across chapter boundaries. Bookmarks are revision-aware, saved during
 playback and on pause/exit, with small keepalive requests on page exit. If prose
 changes, old audio time resets to the beginning of that passage.
+
+Read from here locks synchronously while narration is preparing or playing, with
+an additional controller guard against repeated/programmatic invocations. Pause,
+voice interruption, selecting another passage, completion, and audio failure
+release the lock. Connecting Talk with Johnny first pauses narration. Automatic
+passage/chapter transitions retain the lock. No new generation starts merely
+because the controls refresh; existing server request-key deduplication remains
+in force when an author explicitly pauses and resumes the same audio fragment.

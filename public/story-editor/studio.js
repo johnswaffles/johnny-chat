@@ -25,7 +25,7 @@ function saveBookmark(){
  state.resume={...position};void api('/bookmark',{method:'PUT',body:position}).catch(()=>{});
 }
 function pause(message='Paused here. Tell Johnny what you want to explore or change.',interrupt=true){
- saveBookmark();state.reading=false;state.audioEpoch++;speechController?.abort();speechController=null;audio.pause();if(interrupt)voice.interrupt();if(message)status(message);
+ saveBookmark();state.reading=false;state.audioEpoch++;speechController?.abort();speechController=null;audio.pause();if(interrupt)voice.interrupt();renderControls();if(message)status(message);
 }
 function resetAudio(){audio.pause();audio.removeAttribute('src');audio.load();audio.hidden=true;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl='';state.loadedAudio=null;}
 function renderConversation(){
@@ -74,7 +74,7 @@ function renderJourney(){
  if(document.activeElement!==$('studio-goal'))$('studio-goal').value=state.data?.goal||'';
  $('studio-goal-save').disabled=!!state.task||!!state.data?.busy;
 }
-function renderControls(){renderJourney();const ready=!!passage();$('studio-read').disabled=!ready;$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
+function renderControls(){renderJourney();const ready=!!passage();$('studio-read').disabled=!ready||state.reading;$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
 async function updateVoiceContext(){if(!voice.connected||!passage())return;const id=state.id,sectionId=state.sectionId,ticket=state.epoch;contextController?.abort();contextController=new AbortController();try{const data=await api('/context?'+new URLSearchParams({sectionId}),{signal:contextController.signal});if(ticket===state.epoch&&sectionId===state.sectionId&&id===state.id)voice.updateContext(data.instructions);}catch(error){if(error.name!=='AbortError')status('The draft is open, but voice context could not refresh. Reconnect voice before asking for another edit.');}}
 function selectSection(id,{scroll=true,stop=true}={}){if(!allPassages().some(p=>p.id===id))throw Error('That passage is not in this manuscript.');if(stop)pause('');state.original=false;state.sectionId=id;state.resume=null;state.loadedAudio=null;renderDraft({scroll});renderControls();void updateVoiceContext();const p=passage();void api('/bookmark',{method:'PUT',body:{sectionId:id,revision:p.revision,part:0,seconds:0}}).catch(()=>{});}
 async function refresh({initial=false,resumePending=true,fromTask=false}={}){
@@ -107,7 +107,7 @@ async function playPart(part,ticket,seek=0){
   try{await audio.play();}catch{status('Your passage is ready. Press Play in the audio controls to listen.');}
  }catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch||error.name==='AbortError')return;pause(error.message+' Press Read to retry this passage.');}
 }
-async function read({restart=false}={}){if(!passage())return;pause('');state.original=false;renderDraft({scroll:true});const p=passage(),resume=!restart&&state.resume?.sectionId===p.id&&state.resume?.revision===p.revision?state.resume:null;state.reading=true;await playPart(resume?.part||0,state.audioEpoch,resume?.seconds||0);}
+async function read({restart=false}={}){if(!passage()||state.reading)return;pause('');state.original=false;renderDraft({scroll:true});const p=passage(),resume=!restart&&state.resume?.sectionId===p.id&&state.resume?.revision===p.revision?state.resume:null;state.reading=true;renderControls();await playPart(resume?.part||0,state.audioEpoch,resume?.seconds||0);}
 function renderPhase(task){$('studio-progress-copy').textContent=phaseLabels[task.phase]||phaseLabels.queued;const names=['planning','drafting','reviewing','refining'],index=names.indexOf(task.phase);for(const li of $('studio-progress').querySelectorAll('li')){li.classList.toggle('current',li.dataset.pass===task.phase);li.classList.toggle('done',names.indexOf(li.dataset.pass)<index);}status(phaseLabels[task.phase]||phaseLabels.queued);}
 async function pollTask(taskId,{readTicket=state.audioEpoch,requestedSection=state.sectionId}={}){
  const ticket=state.epoch,id=state.id;taskController?.abort();taskController=new AbortController();const signal=taskController.signal;let failures=0;
@@ -171,7 +171,7 @@ $('studio-recap-read').addEventListener('click',()=>void run(async()=>{const all
 $('studio-goal-form').addEventListener('submit',event=>{event.preventDefault();void run(async()=>{await api('/goal',{method:'PUT',body:{goal:$('studio-goal').value.trim()}});await refresh();status('Your destination is saved for this whole manuscript. We’ll keep working toward it when you return.');});});
 $('studio-read').addEventListener('click',()=>void run(()=>read()));
 $('studio-pause').addEventListener('click',()=>pause());
-$('studio-voice').addEventListener('click',()=>{if(voice.connected||voiceStarting){pause('Voice ended. Your draft and conversation stay saved.');voice.close();voiceStarting=false;$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';$('studio-voice-status').textContent='Voice is off · typing works too';renderControls();}else{voiceSession=crypto.randomUUID();voiceStarting=true;renderControls();void voice.connect();}});
+$('studio-voice').addEventListener('click',()=>{if(voice.connected||voiceStarting){pause('Voice ended. Your draft and conversation stay saved.');voice.close();voiceStarting=false;$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';$('studio-voice-status').textContent='Voice is off · typing works too';renderControls();}else{pause('Narration paused. Connecting voice…');voiceSession=crypto.randomUUID();voiceStarting=true;renderControls();void voice.connect();}});
 $('studio-current').addEventListener('click',()=>{state.original=false;renderDraft();});
 $('studio-original').addEventListener('click',()=>{pause('Your original is preserved here. Switch to Current draft to continue the collaboration.');state.original=true;renderDraft();});
 $('studio-original-export').addEventListener('click',()=>$('download-original').click());
