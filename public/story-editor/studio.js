@@ -1,6 +1,6 @@
 import {speechParts} from './reader-model.mjs';
-import {chapterAudio} from './reader-speech.mjs';
-import {StudioVoice} from './studio-voice.mjs';
+import {chapterAudio} from './reader-speech.mjs?v=20261021-journey3';
+import {StudioVoice} from './studio-voice.mjs?v=20261021-journey3';
 const $=id=>document.getElementById(id);
 const origin=String(window.JOHNNY_CHAT_API_BASE_URL||location.origin).replace(/\/+$/,'');
 const state={id:'',data:null,sectionId:'',original:false,epoch:0,audioEpoch:0,reading:false,task:null,polling:false,lastTask:null,resume:null,audioUrl:'',loadedAudio:null};
