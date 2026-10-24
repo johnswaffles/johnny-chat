@@ -1,7 +1,7 @@
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import assert from 'node:assert/strict';
-import { writeFile, mkdtemp } from 'node:fs/promises';
+import { readFile, writeFile, mkdtemp } from 'node:fs/promises';
 import { spawn, execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -67,8 +67,8 @@ assert.ok(token,'local backend available: '+backendErrors);
 const auth={Authorization:`Bearer ${token}`};
 assert.equal((await fetch(origin+'/api/story-editor/projects')).status,401);
 async function json(url,options={}) {const r=await fetch(origin+url,{...options,headers:{...auth,...options.headers}});const value=await r.json();assert.ok(r.ok,JSON.stringify(value));return value;}
-async function run(text,title) {
- const form=new FormData();form.append('manuscript',new Blob([text],{type:'text/plain'}),title+'.txt');form.append('intent','Polish this adult novel without changing the plot.');
+async function run(text,title,intent='Polish this adult novel without changing the plot.') {
+ const form=new FormData();form.append('manuscript',new Blob([text],{type:'text/plain'}),title+'.txt');form.append('intentJson',JSON.stringify(intent));
  const upload=await json('/api/story-editor/upload',{method:'POST',body:form});
  const base='/api/story-editor/projects/'+upload.projectId;
  const start=await json(base+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
@@ -76,6 +76,21 @@ async function run(text,title) {
  for(let i=0;i<100;i++){job=(await json(base+'/autopilot/'+start.job.id)).job;if(['completed','failed'].includes(job.status))break;await new Promise(r=>setTimeout(r,100));}
  return {job,project:await json(base),base};
 }
+const longPrompt=process.env.STORY_PROMPT_FIXTURE?await readFile(process.env.STORY_PROMPT_FIXTURE,'utf8'):'  Preserve every meaningful detail.\n'.repeat(700)+'END OF LONG PROMPT  ';
+if(process.env.STORY_PROMPT_FIXTURE)assert.equal(Buffer.byteLength(longPrompt),8802,'Complete supplied attachment');
+const longStart=requests.length;
+const longBook=await run('Chapter One\n\nThe synthetic room was empty.','LONG PROMPT TEST',longPrompt);
+assert.equal(longBook.job.status,'completed');assert.equal(longBook.project.project.userIntent,longPrompt);assert.equal(longBook.job.intent,longPrompt);
+assert.equal((await json(longBook.base)).project.userIntent,longPrompt,'Reload preserves complete prompt');
+const longCalls=requests.slice(longStart).map(r=>JSON.parse(r.input[1].content)).filter(u=>u.intent!==undefined);
+assert.ok(longCalls.length>=3);for(const call of longCalls)assert.equal(call.intent,longPrompt,'Every editorial stage receives the full prompt');
+const oversized='é'.repeat(50001);
+const oversizedForm=new FormData();oversizedForm.append('manuscript',new Blob(['Synthetic only'],{type:'text/plain'}),'too-long.txt');oversizedForm.append('intent',oversized);
+const priorCount=(await json('/api/story-editor/projects')).projects.length;
+assert.equal((await fetch(origin+'/api/story-editor/upload',{method:'POST',headers:auth,body:oversizedForm})).status,413);
+assert.equal((await json('/api/story-editor/projects')).projects.length,priorCount,'Oversized prompt cannot create a truncated project');
+assert.equal((await fetch(origin+longBook.base+'/autopilot',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({intent:oversized})})).status,413);
+console.log('PASS: complete long prompt entry/storage/reload and every editorial stage; oversized UTF-8 requests rejected with 413 and no truncated project.');
 const source='Chapter One\n\nShe smelled cannabis in the deserted hallway.\n\nKEEP_EXACT  This is a test passage.\n\nHe shut the door and went downstairs.';
 const main=await run(source,'LOCAL DEMO - The Quiet Hall');
 assert.equal(main.job.status,'completed');assert.equal(main.job.report.paragraphsRevised,2);assert.equal(main.job.report.passagesForReview.length,1);

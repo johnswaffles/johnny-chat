@@ -1,3 +1,4 @@
+import { editorialPrompt, MAX_PROMPT_BYTES } from './public/story-editor/prompt-model.mjs';
 import { createLayeredStudioEditor, STUDIO_QUALITY } from './lib/studio-editor.mjs';
 import { installWritingStudio, STUDIO_INSTRUCTIONS, STUDIO_FORMAT } from './lib/writing-studio.mjs';
 import { createStorySpeech } from './lib/story-speech.mjs';
@@ -1664,6 +1665,8 @@ app.get("/health", (_req, res) => res.json({
   storyEditorReader: "chapter-reader-marin-async-v2",
   storyEditorStudio: "layered-literary-studio-v1",
   storyEditorNotebook: "whole-manuscript-scope-v1",
+  storyEditorPrompts: "lossless-prompts-v1",
+  storyEditorPromptMaxBytes: MAX_PROMPT_BYTES,
   storyEditorChangeRequests: "chapter-scope-guard-v2",
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
@@ -3166,6 +3169,12 @@ function requireStoryEditorSession(req, res) {
   return requireChatbotSession(req, res);
 }
 
+function readStoryPromptField(body) {
+  if (body?.intentJson === undefined) return body?.intent;
+  try { return JSON.parse(body.intentJson); }
+  catch { throw Object.assign(new Error('The editorial prompt could not be read. Nothing was shortened or saved.'),{status:400}); }
+}
+
 function normalizeStoryText(value, max = 200000) {
   return String(value || "")
     .replace(/\r\n/g, "\n")
@@ -4326,7 +4335,7 @@ app.post("/api/story-editor/upload", storyUpload.single("manuscript"), async (re
     const projectId = storyId("project");
     const now = storyNow();
     const title = String(req.body?.title || req.file.originalname || "Untitled manuscript").replace(/\.(txt|docx|pdf)$/i, "").slice(0, 160);
-    const userIntent = normalizeStoryText(req.body?.intent || "Edit this manuscript for clarity, coherence, and stronger prose while preserving the author's voice.", 4000);
+    const userIntent = editorialPrompt(readStoryPromptField(req.body) ?? "Edit this manuscript for clarity, coherence, and stronger prose while preserving the author's voice.");
     const sections = splitManuscript(text);
     const statements = [
       "BEGIN;",
@@ -4345,7 +4354,7 @@ app.post("/api/story-editor/upload", storyUpload.single("manuscript"), async (re
     await storyExec(statements);
     res.json({ ok: true, projectId, title, sections: sections.filter((section) => section.kind === "paragraph").length, intent: userIntent });
   } catch (err) {
-    res.status(500).json({ ok: false, error: String(err.message || err) });
+    res.status(err.status || 500).json({ ok: false, error: String(err.message || err) });
   }
 });
 
@@ -4364,7 +4373,7 @@ app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
     const studioTasksExist = (await storyQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='studio_tasks';"))[0];
     const studioIdle = studioTasksExist ? ` AND NOT EXISTS (SELECT 1 FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'))` : "";
     if(studioTasksExist && (await storyQuery(`SELECT id FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running') LIMIT 1;`))[0]) return res.status(409).json({ok:false,error:'Finish or stop the current studio request before starting a full edit.'});
-    const intent = normalizeStoryText(req.body?.intent || project.user_intent || "Edit this manuscript for clarity, coherence, and stronger prose while preserving the author's voice.", 4000);
+    const intent = editorialPrompt(req.body?.intent ?? (project.user_intent || "Edit this manuscript for clarity, coherence, and stronger prose while preserving the author's voice."));
     if (!intent) return res.status(400).json({ ok: false, error: "Tell Story Editor what you want done before starting Autopilot." });
     if (req.body?.resume === true) {
       const previous = recoverableStoryJob((await storyQuery(`SELECT * FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} ORDER BY created_at DESC LIMIT 1;`))[0]);
@@ -4403,7 +4412,7 @@ app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
     await scheduleStoryJob(jobId);
     res.status(202).json({ ok: true, job: storyAutopilotJobView(job) });
   } catch (err) {
-    res.status(500).json({ ok: false, error: String(err.message || err) });
+    res.status(err.status || 500).json({ ok: false, error: String(err.message || err) });
   }
 });
 

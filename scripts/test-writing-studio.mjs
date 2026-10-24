@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {mkdtempSync,rmSync} from 'node:fs';
+import {readFileSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {createWritingStudio,installWritingStudio,studioRevision,STUDIO_FORMAT,STUDIO_INSTRUCTIONS} from '../lib/writing-studio.mjs';
 import {createLayeredStudioEditor,STUDIO_QUALITY} from '../lib/studio-editor.mjs';
@@ -152,4 +152,14 @@ test('book proposals use one maximum-quality planning call and cannot trigger do
  const calls=[];const editor=createLayeredStudioEditor({instructions:STUDIO_INSTRUCTIONS,decisionFormat:STUDIO_FORMAT,call:async body=>{calls.push(body);return {...result(),action:'revise_book'};}});
  const output=await editor({requestScope:'book'},new AbortController().signal);assert.equal(output.action,'revise_book');assert.equal(calls.length,1);assert.equal(calls[0].model,'gpt-6-astra');assert.deepEqual(calls[0].reasoning,{effort:'max',mode:'pro'});
  const broken=createLayeredStudioEditor({instructions:STUDIO_INSTRUCTIONS,decisionFormat:STUDIO_FORMAT,call:async()=>result()});await assert.rejects(broken({requestScope:'book'},new AbortController().signal),/whole-manuscript/);
+});
+
+test('long editorial requests, goals, and context survive storage/restart without clipping',async t=>{
+ const text=process.env.STORY_PROMPT_FIXTURE?readFileSync(process.env.STORY_PROMPT_FIXTURE,'utf8'):'  Keep detail.\n'.repeat(900)+'FINAL INSTRUCTION  ';
+ let delivered;const {studio,path,request}=fixture(t,async input=>{delivered=input;return {...result(),action:'discuss'};});
+ studio.goal('book',text);assert.equal(studio.snapshot('book').goal,text);
+ studio.start('book',request('long-request',text));await studio.tick();assert.equal(delivered.request,text);assert.equal(delivered.manuscriptGoal,text);assert.equal(studio.snapshot('book').messages[0].text,text);assert.equal(studio.context('book','a',true).history[0].text,text);
+ const reload=createWritingStudio({path,generate:async()=>assert.fail()});reload.init();assert.equal(reload.snapshot('book').goal,text);assert.equal(reload.snapshot('book').messages[0].text,text);reload.stop();
+ assert.throws(()=>studio.goal('book','é'.repeat(50001)),e=>e.status===413);assert.equal(studio.snapshot('book').goal,text);
+ assert.throws(()=>studio.start('book',request('oversized','é'.repeat(50001))),e=>e.status===413);
 });
