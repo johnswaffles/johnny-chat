@@ -215,6 +215,7 @@ export async function onRequest(context) {
   marked.headers.set("X-Story-Editor-Notebook", "compact-setup-v1");
   marked.headers.set("X-Story-Editor-Prompts", "lossless-prompts-v1");
   marked.headers.set("X-Story-Editor-Workspace", "start-over-preserve-library-v1");
+  marked.headers.set("X-Story-Editor-Book-Drafts", "versioned-chapter-canon-v1");
   marked.headers.set("X-Story-Editor-Quality", "gpt-6.1-sol-pro-xhigh");
   marked.headers.set("X-Story-Editor-Provider", "durable-background-responses-v1");
   return marked;

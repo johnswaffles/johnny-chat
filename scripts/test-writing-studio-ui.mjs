@@ -7,25 +7,30 @@ import {randomUUID} from 'node:crypto';
 import {speechParts} from '../public/story-editor/reader-model.mjs';
 import {notebookJourney,notebookReference} from '../public/story-editor/notebook-model.mjs';
 class Element {
- constructor(tag='div'){this.tagName=tag;this.children=[];this.attributes={};this.dataset={};this.events={};this.textContent='';this.hidden=false;this.disabled=false;this.value='';this.checked=false;this.currentTime=0;this.duration=20;this.classList={toggle(){},add(){},remove(){}};}
+ constructor(tag='div'){this.tagName=tag;this.children=[];this.attributes={};this.dataset={};this.style={};this.events={};this.textContent='';this.hidden=false;this.disabled=false;this.value='';this.checked=false;this.currentTime=0;this.duration=20;this.classList={toggle(){},add(){},remove(){}};}
  setAttribute(k,v){this.attributes[k]=v;}
  removeAttribute(k){delete this.attributes[k];if(k==='src')this.src='';}
  append(...children){this.children.push(...children);}
  replaceChildren(...children){this.children=children;this.textContent="";}
  addEventListener(type,fn){(this.events[type]||=[]).push(fn);}
  querySelectorAll(selector){return selector==='li'?this.children:[];}
- scrollIntoView(){} focus(){} showModal(){this.open=true;} load(){} pause(){this.paused=true;}
+ scrollIntoView(){} focus(){} close(){this.open=false;} showModal(){this.open=true;} load(){} pause(){this.paused=true;}
  async play(){this.played=(this.played||0)+1;this.paused=false;}
 }
 const html=readFileSync(new URL('../public/story-editor/index.html',import.meta.url),'utf8');
 const source=readFileSync(new URL('../public/story-editor/studio.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
-async function harness({gate,failed=false,bookmark=null,audioFetcher,proposal=false}={}){
+async function harness({gate,failed=false,bookmark=null,audioFetcher,proposal=false,bookGate,bookFailure=false}={}){
  const elements=new Map([...html.matchAll(/id="([^"]+)"/g)].map(m=>[m[1],new Element()]));
  elements.get('studio-readback').checked=true;
- const book={projectId:'book',title:'Local story',busy:false,original:'The imported original.',chapters:[{index:1,title:'One',passages:[{id:'a',text:'Current first passage.',original:'Original first passage.',revision:'r1',kind:'paragraph'},{id:'b',text:'Current second passage.',original:'Original second passage.',revision:'r2',kind:'paragraph'}]}],notes:[],messages:[],versions:[],bookmark,task:null,lastTask:null};
+ let bookStore={books:[],book:null};let bookSaves=0;const savedVersions=[];
+ const book={projectId:'book',title:'Local story',busy:false,original:'The imported original.',chapters:[{index:1,title:'One',revision:'chapter-r1',passages:[{id:'a',text:'Current first passage.',original:'Original first passage.',revision:'r1',kind:'paragraph'},{id:'b',text:'Current second passage.',original:'Original second passage.',revision:'r2',kind:'paragraph'}]}],notes:[],messages:[],versions:[],bookmark,task:null,lastTask:null};
  const calls=[],audioCalls=[];let accepted=false;
  const fetcher=async(url,options={})=>{
   const path=new URL(url).pathname;calls.push({path,method:options.method,body:options.body});
+  if(path.endsWith('/book/link')){const body=JSON.parse(options.body);bookStore={books:[{id:body.bookId||'saved-book',title:body.title||'Existing book'}],book:{id:body.bookId||'saved-book',title:body.title||'Existing book',revision:1,useContinuity:true,chapters:[]}};book.bookDrafts=bookStore;return Response.json(bookStore);}
+  if(path.endsWith('/book/chapters')&&options.method==='POST'){bookSaves++;if(bookGate)await bookGate;if(bookFailure)return Response.json({error:'Storage busy. Nothing was saved.'},{status:409});if(!bookStore.book.chapters.length){bookStore.book.revision++;bookStore.book.chapters.push({id:'chapter1',position:1,title:'One',versionId:'saved-v1',version:1,savedAt:'2026-01-01',sourceProjectId:'book',sourceChapterIndex:1});savedVersions.push({id:'saved-v1',number:1,savedAt:'2026-01-01'});}book.bookDrafts=bookStore;return Response.json(bookStore);}
+  if(path.endsWith('/book/chapters/chapter1'))return Response.json({chapterId:'chapter1',title:'One',approvedVersionId:'saved-v1',versionId:'saved-v1',version:1,savedAt:'2026-01-01',versions:savedVersions,content:{title:'One',passages:[{text:'A complete saved chapter.'}]}});
+  if(path.endsWith('/book'))return Response.json(bookStore);
   if(path.endsWith('/studio/tasks')&&options.method==='POST'){accepted=true;book.task={id:'task1',status:'running',phase:'drafting'};return Response.json({ok:true,task:book.task},{status:202});}
   if(path.endsWith('/tasks/task1')){
    if(gate)await gate;
@@ -41,8 +46,8 @@ async function harness({gate,failed=false,bookmark=null,audioFetcher,proposal=fa
  class Voice {constructor(options){this.options=options;this.connected=false;this.interrupts=0;}interrupt(){this.interrupts++;}close(){}updateContext(){}async connect(){this.connects=(this.connects||0)+1;}}
  const listeners={};const dispatched=[];const document={cookie:'',getElementById:id=>elements.get(id),createElement:tag=>new Element(tag),addEventListener(type,fn){(listeners[type]||=[]).push(fn);},dispatchEvent(event){dispatched.push(event);for(const fn of listeners[event.type]||[])fn(event);}};
  const sandbox={document,window:{JOHNNY_CHAT_API_BASE_URL:'http://local.test',addEventListener(){}},location:{origin:'http://local.test'},URL,URLSearchParams,AbortController,AbortSignal,Blob,Response,crypto:{randomUUID},requestAnimationFrame:fn=>fn(),matchMedia:()=>({matches:true}),setTimeout,clearTimeout,fetch:fetcher,speechParts,notebookJourney,notebookReference,editorialQualityLabel,StudioVoice:Voice,chapterAudio:async(url,options)=>{audioCalls.push({url,options});return audioFetcher?audioFetcher(url,options):new Blob(['fake local audio']);},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}};
- const context=vm.createContext(sandbox);vm.runInContext(source+'\nthis.testStudio={state,refresh,sendRequest,pause,selectSection,voice,read,resetWorkspace};',context);const api=context.testStudio;api.state.id='book';await api.refresh({initial:true});
- return {api,elements,calls,audioCalls,book,dispatched,accepted:()=>accepted};
+ const context=vm.createContext(sandbox);vm.runInContext(source+'\nthis.testStudio={state,refresh,sendRequest,pause,selectSection,voice,read,resetWorkspace,renderNotebook,bookAction,saveChapter,setBookOpen,renderBookDrafts,openSavedChapter};',context);const api=context.testStudio;api.state.id='book';await api.refresh({initial:true});
+ return {api,elements,calls,audioCalls,book,dispatched,accepted:()=>accepted,bookSaves:()=>bookSaves};
 }
 test('a successful revision automatically reads the new saved version, not the old prose',async()=>{
  const h=await harness();const result=await h.api.sendRequest('Deepen it.');await new Promise(r=>setImmediate(r));
@@ -127,4 +132,22 @@ test('Start over clears narration, pending audio, conversation, selection, promp
  let release;const h=await harness({audioFetcher:async()=>{await new Promise(r=>release=r);return new Blob(['late']);}});h.elements.get('studio-input').value='Unsent question';h.api.state.proposal={id:'proposal',request:'Unsent change'};const pending=h.api.read();const original=h.book.original;h.api.resetWorkspace();release();await pending;
  assert.equal(h.api.state.id,'');assert.equal(h.api.state.data,null);assert.equal(h.api.state.sectionId,'');assert.equal(h.api.state.proposal,null);assert.equal(h.api.state.reading,false);assert.equal(h.elements.get('studio-input').value,'');assert.equal(h.elements.get('studio-messages').children.length,0);assert.equal(h.elements.get('studio-pages').children.length,0);assert.equal(h.elements.get('studio-audio').played,undefined);assert.equal(h.elements.get('studio-audio').hidden,true);assert.equal(h.book.original,original);assert.equal(h.calls.some(c=>c.method==='DELETE'),false);h.api.resetWorkspace();assert.equal(h.api.state.id,'');
  h.api.state.id='book';await h.api.refresh({initial:true});assert.equal(h.api.state.data.original,original);assert.equal(h.api.state.sectionId,'a');
+});
+
+
+test('Book drafts requires explicit creation/save and rapid Save presses submit once',async()=>{
+ let release;const h=await harness({bookGate:new Promise(r=>release=r)});await h.api.bookAction(h.api.saveChapter);assert.equal(h.bookSaves(),0);assert.equal(h.elements.get('book-drafts-panel').hidden,false);
+ h.elements.get('book-name').value='My assembled book';h.elements.get('book-create-form').events.submit[0]({preventDefault(){}});await new Promise(r=>setImmediate(r));assert.equal(h.bookSaves(),1);assert.equal(h.elements.get('book-save-chapter').disabled,true);await h.api.bookAction(h.api.saveChapter);assert.equal(h.bookSaves(),1);release();await new Promise(r=>setImmediate(r));assert.equal(h.api.state.data.bookDrafts.book.chapters.length,1);assert.equal(h.api.state.bookSaving,false);assert.match(h.elements.get('book-drafts-status').textContent,/Chapter saved/);assert.equal(h.book.original,'The imported original.');
+});
+test('failed book save keeps draft and book, shows error, and unlocks explicit retry',async()=>{
+ const h=await harness({bookFailure:true});h.elements.get('book-name').value='Book';h.elements.get('book-create-form').events.submit[0]({preventDefault(){}});await new Promise(r=>setImmediate(r));assert.equal(h.bookSaves(),1);assert.match(h.elements.get('book-drafts-status').textContent,/Nothing was saved/);assert.equal(h.api.state.data.bookDrafts.book.chapters.length,0);assert.equal(h.api.state.bookSaving,false);assert.equal(h.api.state.data.chapters[0].passages[0].text,'Current first passage.');await h.api.bookAction(h.api.saveChapter);assert.equal(h.bookSaves(),2);
+});
+test('saved chapter opens read-only without replacing current prose; Start over closes and clears local shelf',async()=>{
+ const h=await harness();h.elements.get('book-name').value='Book';h.elements.get('book-create-form').events.submit[0]({preventDefault(){}});await new Promise(r=>setImmediate(r));await h.api.openSavedChapter('chapter1');assert.equal(h.elements.get('book-version-dialog').open,true);assert.equal(h.elements.get('book-version-text').textContent,'A complete saved chapter.');assert.equal(h.api.state.data.chapters[0].passages[0].text,'Current first passage.');h.api.resetWorkspace();assert.equal(h.elements.get('book-version-dialog').open,false);assert.equal(h.elements.get('book-drafts-panel').hidden,true);assert.equal(h.api.state.savedChapter,null);assert.equal(h.api.state.bookSaving,false);assert.equal(h.api.state.data,null);
+});
+test('a save response arriving after Start over cannot reopen or fill the new workspace',async()=>{
+ let release;const h=await harness({bookGate:new Promise(r=>release=r)});h.elements.get('book-name').value='Book';h.elements.get('book-create-form').events.submit[0]({preventDefault(){}});await new Promise(r=>setImmediate(r));assert.equal(h.bookSaves(),1);h.api.resetWorkspace();release();await new Promise(r=>setImmediate(r));assert.equal(h.api.state.data,null);assert.equal(h.elements.get('book-drafts-panel').hidden,true);assert.equal(h.api.state.bookSaving,false);assert.equal(h.elements.get('book-drafts-status').textContent,'');
+});
+test('Original view and active editorial work cannot save a chapter through the controls',async()=>{
+ const h=await harness();h.api.state.original=true;h.api.renderBookDrafts();assert.equal(h.elements.get('book-save-chapter').disabled,true);h.api.state.original=false;h.api.state.data.busy=true;h.api.renderBookDrafts();assert.equal(h.elements.get('book-save-chapter').disabled,true);assert.equal(h.elements.get('book-select').disabled,true);h.api.state.data.busy=false;h.api.renderBookDrafts();assert.equal(h.elements.get('book-save-chapter').disabled,false);
 });
