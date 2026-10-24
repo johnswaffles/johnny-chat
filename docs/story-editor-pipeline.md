@@ -297,3 +297,21 @@ Editorial instructions now use a shared validator with a 100,000 UTF-8 byte reso
 The additional preset, “Comprehensive publication polish (preserve and expand),” develops meaningful detail without shortening merely for brevity or adding filler. It calls for engaging, authoritative, approachable prose, logical organization, source-supported information, and no invented facts, citations, quotations, or memoir experiences. It explicitly flags external research and unsupported design work for review; the pipeline does not claim browsing or custom document-layout capabilities.
 
 Set `STORY_PROMPT_FIXTURE` to the locally materialized attachment when running the integration, studio, and setup-browser tests. The 8,802-byte fixture is not committed. Tests verify full content through setup, preset switches, multipart encoding, storage/reload, deep-editor requests, all full-revision stages, and oversized UTF-8 rejection. Existing short presets and model settings are unchanged.
+
+
+### Astra reasoning audit (October 24)
+
+The author explicitly chose to keep maximum reasoning. Both production revision 34ad054 and the local configuration use `gpt-6-astra`, `reasoning.effort: max`, and `reasoning.mode: pro`. The unpublished xhigh setting and related cache-key changes were reverted. No deployment or paid edit was needed.
+
+The existing Johnny service owner exactly matched the sole authorized Render workspace. Scoped read-only application logs showed an upload at 16:16:46 UTC, a full-manuscript Autopilot POST at 16:16:47, and polling of that same project's job at 16:22:43 (356 seconds later). This establishes that a full job was requested, not that the particular request completed or used the provider. No response status bodies or per-call model/token receipts were present; the available log types were app and build. Cached checkpoints, preserved passages, and completed prior work remain possible explanations, not confirmed findings. Further proof requires authenticated job metadata and provider receipts where available. Do not rerun the manuscript to establish evidence.
+
+
+### Durable provider responses and honest progress
+
+Full-manuscript jobs now submit Astra Max Pro requests with Responses `background:true` and `store:true` (matching the existing foreground default retention). A SQLite provider ledger records each stage/budget's submission identity, response ID, status, actual returned model/reasoning where supplied, check timestamps, and terminal usage/output. Short GET polls replace ten-minute foreground generation connections. A polling interruption, worker restart, or polling-window expiration retrieves the same response; it does not create a replacement generation. Existing legacy stage-cache keys and completed manuscript chunks remain reusable.
+
+A submission acknowledgement lost before its response ID is saved fails closed: no documented create-idempotency guarantee is assumed and no automatic paid replay occurs. Known provider terminal failures remain recorded for review. Existing bounded output-budget handling may submit a distinct larger-budget response only after a confirmed incomplete response. Worker lease checks fence stale/paused workers before ledger or manuscript writes. Mismatched returned model/reasoning is blocked, never silently substituted. Project deletion includes the private provider ledger.
+
+The timeout classifier recognizes the SDK's “Request timed out.” wording. Network status-check errors can retry safely because the response ID persists; unknown creation outcomes cannot. User-facing progress labels show completed revision sections separately from workflow-stage estimates, saved stage results, worker heartbeat, and provider status/check time. Provider receipt metadata is exposed only through the authenticated job response; no manuscript text is added to logs.
+
+Tests cover pending-to-complete polling, worker restarts, lost acknowledgements, concurrent duplicate calls, cancelled responses, model/reasoning mismatch, usage receipts, bounded polling windows, legacy checkpoint upgrade recovery, originals, exports, pause fencing, and safe duplicate-start behavior. Resume the existing failed job only after the deployed backend/frontend release is healthy; never start a new full job to recover it.

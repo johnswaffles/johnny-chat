@@ -16,6 +16,8 @@ function sample(schema) {
  if(schema.type==='integer') return 1;
  return 'Local test editorial note.';
 }
+let providerSequence=0;
+const fakeResponse=data=>({id:'resp_local_'+(++providerSequence),model:'gpt-6-astra',object:'response',...data});
 const requests=[];
 const speechRequests=[];
 const studioVoiceRequests=[];
@@ -23,7 +25,10 @@ let resumeBudgetFailures=0;
 let releaseSpeech;
 let speechGate = new Promise(resolve => releaseSpeech=resolve);
 const truncatedStages=new Set();
+const pendingResponses=new Map();
+let pauseResponseStarted=false;
 const mock=http.createServer(async(req,res)=>{
+ if(req.method==='GET'&&req.url.startsWith('/v1/responses/')){const item=pendingResponses.get(req.url.split('/').pop());res.writeHead(item?200:404,{'Content-Type':'application/json'});res.end(JSON.stringify(item||{error:{message:'Not found'}}));return;}
  if(process.env.STORY_PREVIEW && req.url==='/preview') {res.writeHead(302,{'Set-Cookie':`gpt54_session=${token}; Path=/; SameSite=Lax`,Location:origin+'/story-editor/'});res.end();return;}
  let raw=''; for await(const part of req) raw+=part;
  const body=JSON.parse(raw);
@@ -39,22 +44,25 @@ const mock=http.createServer(async(req,res)=>{
   if(stage==='studio_draft')value={text:user.context.selection.text+' She held the envelope by its unopened edge.',craftNotes:'Developed the physical hesitation.'};
   if(stage==='studio_critique')value={strengths:['A physical action carries feeling.'],issues:['Keep the causal decision visible.'],continuityRisks:[],authorIntentFit:'Matches the request.'};
   if(stage==='studio_final')value={text:user.candidate+' Her thumb found the crease, then let it go.',craftNotes:'Her hesitation now appears in a specific action; the decision and original voice remain intact.'};
-  res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(value)}]}]}));return;
+  res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(fakeResponse({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(value)}]}]})));return;
  }
 
- if(body.input[1].content.includes('PAUSE_TEST')) await new Promise(r=>setTimeout(r,500));
+ if(body.input[1].content.includes('PAUSE_TEST')&&!pauseResponseStarted){
+  if(body.background){pauseResponseStarted=true;const id='resp_paused_'+(++providerSequence);pendingResponses.set(id,{id,model:'gpt-6-astra',status:'in_progress'});res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(pendingResponses.get(id)));res={writeHead(){},end(data){pendingResponses.set(id,{...JSON.parse(data),id});}};}
+  await new Promise(r=>setTimeout(r,500));
+ }
  const retryStage=body.input[1].content.includes('BUDGET_ONCE')&&!truncatedStages.has(stage);
  const resumeFailure=user.chunk?.paragraphs.some(p=>p.text.includes('RESUME_BUDGET'))&&resumeBudgetFailures++<3;
- if(retryStage||resumeFailure){truncatedStages.add(stage);res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'incomplete',incomplete_details:{reason:'max_output_tokens'},output:[{type:'message',content:[{type:'output_text',text:'{"revisedParagraphs":[]}'}]}]}));return;}
+ if(retryStage||resumeFailure){truncatedStages.add(stage);res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(fakeResponse({status:'incomplete',incomplete_details:{reason:'max_output_tokens'},output:[{type:'message',content:[{type:'output_text',text:'{"revisedParagraphs":[]}'}]}]})));return;}
 
- if(user.chunk?.paragraphs.some(p=>p.text.includes('WHOLE_REFUSAL'))) {res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'completed',output:[{type:'message',content:[{type:'refusal',refusal:'Simulated refusal'}]}]}));return;}
+ if(user.chunk?.paragraphs.some(p=>p.text.includes('WHOLE_REFUSAL'))) {res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(fakeResponse({status:'completed',output:[{type:'message',content:[{type:'refusal',refusal:'Simulated refusal'}]}]})));return;}
  if(user.chunk?.paragraphs.some(p=>p.text.includes('TECHNICAL_FAILURE'))) {res.writeHead(400,{'Content-Type':'application/json'});res.end(JSON.stringify({error:{message:'Network policy blocked connection',code:'invalid_request_error'}}));return;}
  const value=sample(body.text.format.schema);
  if(user.chunk) {
    value.revisedParagraphs=user.chunk.paragraphs.map(p=>({id:p.id,text:p.text.includes('KEEP_EXACT')?'':p.text+' The room fell quiet.',note:p.text.includes('KEEP_EXACT')?'Simulated passage hold for testing.':'Clarity improved.',disposition:p.text.includes('KEEP_EXACT')?'preserved':'revised'}));
    value.quality.closureRisk='low';
  }
- res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(value)}]}]}));
+ res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify(fakeResponse({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(value)}]}]})));
 });
 await new Promise(r=>mock.listen(0,'127.0.0.1',r));
 const launch=()=>spawn(process.execPath,['server.js'],{cwd:fileURLToPath(new URL('..',import.meta.url)),env:{...process.env,PORT:String(port),OPENAI_API_KEY:'local-test-only',OPENAI_BASE_URL:`http://127.0.0.1:${mock.address().port}/v1`,OPENAI_STORY_EDITOR_MODEL:'gpt-6-astra',OPENAI_STORY_EDITOR_REASONING_EFFORT:'high',OPENAI_STORY_EDITOR_REASONING_MODE:'',JOHNNY_CHAT_PASSWORD:'local-story-preview',STORY_EDITOR_DB_PATH:testDir+'/story.sqlite',JOHNNY_CHAT_USAGE_PATH:testDir+'/usage.json',JOHNNY_CHAT_LIBRARY_PATH:testDir+'/library.json',PUBLIC_BOARD_STORE_PATH:testDir+'/board.json',PUBLIC_BOARD_RATE_LIMIT_PATH:testDir+'/rate.json',CLOCKWISE_DB_PATH:testDir+'/clock.sqlite'},stdio:['ignore','ignore','pipe']});
@@ -229,6 +237,10 @@ assert.equal(stopped.job.status,'failed');assert.ok(stopped.job.completedChunks>
 const initialEdits=stopped.project.edits.length;
 // Reproduce a process disappearing while the saved job still says running.
 const db=new DatabaseSync(testDir+'/story.sqlite');
+// Simulate a pre-upgrade foreground failure: saved stage results exist, but
+// no provider ID was ever recorded for its unsuccessful requests. New-provider
+// uncertain submissions and pending-ID recovery are covered independently.
+db.prepare("DELETE FROM story_provider_requests WHERE job_id=? AND state='incomplete'").run(stopped.job.id);
 db.prepare("UPDATE story_autopilot_jobs SET status='running', finished_at='' WHERE id=?").run(stopped.job.id);
 db.prepare("UPDATE story_worker_queue SET state='running',owner='dead-process',lease_until=1 WHERE job_id=?").run(stopped.job.id);
 db.close();

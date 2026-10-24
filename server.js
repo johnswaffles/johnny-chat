@@ -1,3 +1,4 @@
+import {createStoryResponses, STORY_RESPONSE_SCHEMA} from './lib/story-responses.mjs';
 import { editorialPrompt, MAX_PROMPT_BYTES } from './public/story-editor/prompt-model.mjs';
 import { createLayeredStudioEditor, STUDIO_QUALITY } from './lib/studio-editor.mjs';
 import { installWritingStudio, STUDIO_INSTRUCTIONS, STUDIO_FORMAT } from './lib/writing-studio.mjs';
@@ -1578,6 +1579,7 @@ app.post("/api/realtime-token", async (req, res) => {
 });
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
+const storyResponses = createStoryResponses({path:STORY_EDITOR_DB_PATH,client:openai.responses,guard:db=>assertStoryLease(db)});
 
 // Allow iframe embedding from any origin
 app.use((req, res, next) => {
@@ -1666,6 +1668,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorStudio: "layered-literary-studio-v1",
   storyEditorNotebook: "whole-manuscript-scope-v1",
   storyEditorPrompts: "lossless-prompts-v1",
+  storyEditorProvider: "durable-background-responses-v1",
   storyEditorPromptMaxBytes: MAX_PROMPT_BYTES,
   storyEditorChangeRequests: "chapter-scope-guard-v2",
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
@@ -3296,6 +3299,7 @@ async function ensureStoryDb() {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+      ${STORY_RESPONSE_SCHEMA}
       CREATE TABLE IF NOT EXISTS story_stage_cache (job_id TEXT, cache_key TEXT, value_json TEXT NOT NULL, PRIMARY KEY(job_id,cache_key));
       CREATE TABLE IF NOT EXISTS story_job_sources (job_id TEXT PRIMARY KEY, source_json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS story_job_requests (job_id TEXT PRIMARY KEY, request_json TEXT NOT NULL);
@@ -3644,7 +3648,9 @@ async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) 
   };
   const value = await withStoryOutputBudget(async (budget) => {
     let response;
-    response = await openai.responses.create({ ...request, max_output_tokens: budget }, {timeout:600000,maxRetries:0,signal:storyTask.getStore()?.signal});
+    response = jobId
+      ? await storyResponses.run(jobId,cacheKey+':'+budget,{...request,max_output_tokens:budget},storyTask.getStore()?.signal)
+      : await openai.responses.create({...request,max_output_tokens:budget},{timeout:600000,maxRetries:0});
     return parseStoryModelJson(response);
   }, Math.max(32768,maxOutputTokens));
   if (jobId) await storyExec(`INSERT OR REPLACE INTO story_stage_cache VALUES (${sqliteLiteral(jobId)},${sqliteLiteral(cacheKey)},${sqliteLiteral(JSON.stringify(value))});`);
@@ -3725,7 +3731,9 @@ function storyAutopilotJobView(row) {
     finishedAt: row.finished_at || "",
     createdAt: row.created_at || "",
     updatedAt: row.updated_at || "",
-    worker: storyQueueReady ? storyQueue.info(row.id) : null
+    worker: storyQueueReady ? storyQueue.info(row.id) : null,
+    provider: storyResponses.info(row.id),
+    savedStageResults: (()=>{const db=new DatabaseSync(STORY_EDITOR_DB_PATH,{readOnly:true});try{return db.prepare('SELECT count(*) AS n FROM story_stage_cache WHERE job_id=?').get(row.id).n;}finally{db.close();}})()
   };
 }
 
@@ -4253,6 +4261,7 @@ app.delete("/api/story-editor/projects/:id", async (req, res) => {
       "BEGIN;",
       ...studioDeletes,
       `DELETE FROM story_autopilot_chunks WHERE project_id = ${sqliteLiteral(projectId)};`,
+      `DELETE FROM story_provider_requests WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
       `DELETE FROM story_stage_cache WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
       `DELETE FROM story_job_requests WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
       `DELETE FROM story_job_sources WHERE job_id IN (SELECT id FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)});`,
