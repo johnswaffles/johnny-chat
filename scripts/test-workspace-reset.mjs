@@ -1,3 +1,4 @@
+import {editorialQualityLabel} from '../public/story-editor/quality-label.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createWorkspaceReset} from '../public/story-editor/workspace-reset.mjs';
@@ -37,7 +38,7 @@ async function workspaceHarness({accept=true,workActive=false,blank=true,gate}={
  const document={cookie:'',activeElement:null,body:new Element(),getElementById:id=>elements.get(id),createElement:()=>new Element(),querySelector:()=>null,querySelectorAll:q=>q==='textarea'?textareaIds.map(id=>elements.get(id)):q==='dialog'?dialogIds.map(id=>elements.get(id)):[],addEventListener(){},dispatchEvent:e=>events.push(e)};
  const window={location:{origin:'http://local.test'},confirm:text=>{confirms.push(text);return accept;},setTimeout:()=>1,clearTimeout(){},addEventListener(){},innerWidth:1000};
  const fetch=async(url,options={})=>{calls.push({url,method:options.method});if(gate&&url.endsWith('/autopilot/job'))await gate;if(url.endsWith('/work-status'))return Response.json({ok:true,active:workActive});if(url.endsWith('/stop-work'))return Response.json({ok:true,stopped:true});if(url.endsWith('/projects'))return Response.json({ok:true,projects:[project]});if(url.endsWith('/autopilot/job'))return Response.json({ok:true,job:{id:'job',status:'completed',totalChunks:1,completedChunks:1}});return Response.json({ok:true,project,sections,bible:{},edits:[],autopilot:null});};
- const context=vm.createContext({window,document,fetch,Response,Headers,URL,FormData,sessionStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)},CustomEvent:class{constructor(type,opts){this.type=type;this.detail=opts?.detail;}},createWorkspaceReset,editorialPrompt,PUBLICATION_POLISH,Intl,setTimeout:()=>1,clearTimeout(){}});
+ const context=vm.createContext({window,document,fetch,Response,Headers,URL,FormData,sessionStorage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)},CustomEvent:class{constructor(type,opts){this.type=type;this.detail=opts?.detail;}},createWorkspaceReset,editorialPrompt,PUBLICATION_POLISH,editorialQualityLabel,Intl,setTimeout:()=>1,clearTimeout(){}});
  vm.runInContext(code,context);await new Promise(r=>setImmediate(r));return {api:context.workspaceTest,elements,calls,events,confirms,store,sections};
 }
 test('real workspace reset clears setup, preserves library, survives reload, and permits explicit library reopening',async()=>{

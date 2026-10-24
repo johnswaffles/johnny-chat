@@ -1,3 +1,4 @@
+import {editorialQualityLabel} from './quality-label.mjs?v=20261024-sol-pro-xhigh1';
 import {createWorkspaceReset} from './workspace-reset.mjs?v=20261024-reset1';
 import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-prompts1';
 (function () {
@@ -709,7 +710,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not load your manuscripts.");
     if(epoch!==state.workspaceEpoch)return;
     state.projects = data.projects || [];
-    document.getElementById("editor-engine").textContent = data.engine ? `${data.engine.model === "gpt-6-astra" ? "GPT-6 Astra" : data.engine.model} · ${data.engine.reasoningEffort} reasoning${data.engine.reasoningMode ? " · "+data.engine.reasoningMode : ""}.` : "Editor configuration unavailable.";
+    document.getElementById("editor-engine").textContent = editorialQualityLabel(data.engine?{model:data.engine.model,effort:data.engine.reasoningEffort,mode:data.engine.reasoningMode}:null)+'.';
     renderProjects();
     if (!state.projects.length) {
       state.project = null;

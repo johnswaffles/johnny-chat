@@ -1,3 +1,4 @@
+import {editorialQualityLabel} from './quality-label.mjs?v=20261024-sol-pro-xhigh1';
 import {notebookJourney,notebookReference} from './notebook-model.mjs?v=20261024-background1';
 import {speechParts} from './reader-model.mjs';
 import {chapterAudio} from './reader-speech.mjs?v=20261021-journey3';
@@ -93,7 +94,7 @@ function renderJourney(){
  if(document.activeElement!==$('studio-goal'))$('studio-goal').value=state.data?.goal||'';
  $('studio-goal-save').disabled=!!state.task||!!state.data?.busy;
 }
-function renderControls(){renderJourney();renderNotebook();const ready=!!passage();$('studio-read').disabled=!ready||state.reading;$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
+function renderControls(){$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage();$('studio-read').disabled=!ready||state.reading;$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
 async function updateVoiceContext(){if(!voice.connected||!passage())return;const id=state.id,sectionId=state.sectionId,ticket=state.epoch;contextController?.abort();contextController=new AbortController();try{const data=await api('/context?'+new URLSearchParams({sectionId}),{signal:contextController.signal});if(ticket===state.epoch&&sectionId===state.sectionId&&id===state.id)voice.updateContext(data.instructions);}catch(error){if(error.name!=='AbortError')status('The draft is open, but voice context could not refresh. Reconnect voice before asking for another edit.');}}
 function selectSection(id,{scroll=true,stop=true}={}){if(!allPassages().some(p=>p.id===id))throw Error('That passage is not in this manuscript.');if(stop){pause('');state.scope='passage';}state.original=false;state.sectionId=id;state.resume=null;state.loadedAudio=null;renderDraft({scroll});renderControls();void updateVoiceContext();const p=passage();void api('/bookmark',{method:'PUT',body:{sectionId:id,revision:p.revision,part:0,seconds:0}}).catch(()=>{});}
 async function refresh({initial=false,resumePending=true,fromTask=false}={}){
