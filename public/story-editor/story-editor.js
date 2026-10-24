@@ -26,7 +26,7 @@
     autopilotJob: null,
     autopilotTimer: null,
     pollFailures: 0,
-    selectedBrief: "novel"
+    uploading: false
   };
 
   const el = {
@@ -247,13 +247,13 @@
   }
 
   function openDialog(dialog) {
-    if (!dialog) return;
+    if (!dialog || (dialog === el.uploadDialog && state.uploading)) return;
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
   }
 
   function closeDialog(dialog) {
-    if (!dialog) return;
+    if (!dialog || (dialog === el.uploadDialog && state.uploading)) return;
     if (typeof dialog.close === "function") dialog.close();
     else dialog.removeAttribute("open");
   }
@@ -311,7 +311,7 @@
     }
     renderAutopilot();
     el.openBible.disabled = false;
-    el.exportDocx.disabled = false;
+    el.exportDocx.disabled = !state.sections.some(s=>s.editedText) && state.autopilotJob?.status!=="completed";
     el.deleteProject.disabled = false;
   }
 
@@ -329,7 +329,7 @@
   function renderAutopilot() {
     const job = state.autopilotJob;
     renderRevisionReport(job);
-    document.dispatchEvent(new CustomEvent("story-reader-project", {detail:{id:state.project?.id,completed:job?.status === "completed",busy:["queued","running"].includes(job?.status)}}));
+    document.dispatchEvent(new CustomEvent("story-reader-project", {detail:{id:state.project?.id,completed:job?.status === "completed",job:job||null,busy:["queued","running"].includes(job?.status)}}));
     document.getElementById("autopilot-new-run").hidden = job?.status !== "failed";
     if (!job) {
       el.autopilotProgress.hidden = true;
@@ -400,7 +400,9 @@
       button.className = "review-passage";
       button.textContent = `${passage.label || "Passage"} — ${passage.reason || "Kept unchanged"}`;
       button.addEventListener("click", () => {
-        document.getElementById("advanced-workbench").open = true;
+        openDialog(document.getElementById("notebook-tools-dialog"));
+        document.getElementById("advanced-workbench").open=true;
+        document.getElementById("advanced-workbench").parentElement.closest("details").open=true;
         state.sectionFilter = "all";
         el.sectionFilter.value = "";
         state.selectedId = passage.id;
@@ -751,8 +753,10 @@
 
   async function uploadManuscript(event) {
     event.preventDefault();
+    if (state.uploading) return;
     const file = el.fileInput.files?.[0];
-    const intent = String(el.intentInput.value || briefs[state.selectedBrief]).trim();
+    const choice = document.getElementById("setup-prompt").value;
+    const intent = String(choice === "custom" ? el.intentInput.value : briefs[choice] || "").trim();
     if (!file) {
       setUploadStatus("Choose a manuscript before importing.", true);
       return;
@@ -762,12 +766,15 @@
       el.intentInput.focus();
       return;
     }
+    if (!/\.(txt|docx|pdf)$/i.test(file.name)) {
+      setUploadStatus("Choose a Word document, PDF, or text file.",true);return;
+    }
     if (file.size > 80 * 1024 * 1024) {
       setUploadStatus("That file is larger than 80 MB. Please choose a smaller manuscript.", true);
       return;
     }
-    el.uploadSubmit.disabled = true;
-    el.uploadSubmit.textContent = "Organizing manuscript…";
+    setUploadBusy(true);
+    el.uploadSubmit.textContent = "Importing…";
     setUploadStatus("Extracting the text and organizing it into passages…");
     try {
       const formData = new FormData();
@@ -780,18 +787,17 @@
       setUploadStatus(`Ready — ${data.sections} passages found.`);
       await loadProjects();
       await loadProject(data.projectId);
-      closeDialog(el.uploadDialog);
+      el.uploadDialog.close();
       el.uploadForm.reset();
-      state.selectedBrief='novel';
-      document.querySelectorAll('[data-brief]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.brief==='novel')));
+      updateSetupPrompt();
       updateSelectedFile();
       showToast(`${data.title} is ready to edit.`);
       await startAutopilot();
     } catch (error) {
       setUploadStatus(error.message || "The manuscript could not be imported.", true);
     } finally {
-      el.uploadSubmit.disabled = false;
-      el.uploadSubmit.textContent = "Edit my manuscript";
+      setUploadBusy(false);
+      el.uploadSubmit.textContent = "Start revision";
     }
   }
 
@@ -858,11 +864,13 @@
     const request=event.detail;
     if(request.projectId!==state.project?.id || ['queued','running'].includes(state.autopilotJob?.status)) return;
     const intent=`AUTHOR REQUEST: ${request.request}\nApply these requested changes and additions to ${request.chapter ? 'chapter '+request.chapter : 'the whole book'} using the current revised draft. Preserve voice and all unaffected material. Requested changes take priority over preserving conflicting source events. Do not invent unrelated plot changes or nonfiction facts.`;
-    document.dispatchEvent(new CustomEvent('story-author-request-result',{detail:{message:'Starting your requested changes…',busy:true}}));
+    document.dispatchEvent(new CustomEvent('story-author-request-result',{detail:{projectId:request.projectId,message:'Starting your requested changes…',busy:true}}));
     await startAutopilot({fresh:true,requestedIntent:intent,chapter:request.chapter,changeRequest:true});
     const started=['queued','running','completed'].includes(state.autopilotJob?.status) && state.autopilotJob?.intent===intent;
-    document.dispatchEvent(new CustomEvent('story-author-request-result',{detail:{message:started?'Your changes are being applied. Follow the editing progress above.':'The change request could not start. Check the notification and try again.',busy:false}}));
+    document.dispatchEvent(new CustomEvent('story-author-request-result',{detail:{projectId:request.projectId,started,message:started?'Your changes are being applied. Follow the editing progress above.':'The change request could not start. Check the notification and try again.',busy:false}}));
   });
+
+  document.addEventListener('story-notebook-revise',async event=>{if(event.detail.projectId!==state.project?.id)return;await startAutopilot({fresh:!event.detail.resume,requestedIntent:event.detail.resume?state.autopilotJob?.intent:event.detail.intent});});
 
   async function saveBible() {
     if (!state.project) return;
@@ -971,16 +979,17 @@
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
-      link.download = `${state.project.title.replace(/[^a-z0-9_-]+/gi, "-") || "manuscript"}-${source}.docx`;
+      const downloadTitle=source==="original"?state.project.title:state.project.title.replace(/\s*\(original\)\s*/gi," ").trim();
+      link.download = `${downloadTitle.replace(/[^a-z0-9_-]+/gi, "-") || "manuscript"}-${source==="original"?"original":"revised"}.docx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
-      showToast(`Your ${source} manuscript is downloading.`);
+      showToast(`Your ${source === "original" ? "original" : "revised"} manuscript is downloading.`);
     } catch (error) {
       showToast(error.message || "The DOCX export could not be created.", true);
     } finally {
-      el.exportDocx.disabled = false;
+      el.exportDocx.disabled = !state.sections.some(s=>s.editedText) && state.autopilotJob?.status!=="completed";
     }
   }
 
@@ -1010,8 +1019,8 @@
     const file = el.fileInput.files?.[0];
     el.fileDrop.classList.toggle("has-file", Boolean(file));
     if (!file) {
-      el.filePrompt.textContent = "Drop your manuscript here";
-      el.fileDetail.textContent = "or click to choose a TXT, DOCX, or PDF";
+      el.filePrompt.textContent = "Drop a manuscript or choose a file";
+      el.fileDetail.textContent = "Word, PDF, or text · up to 80 MB";
       setUploadStatus("");
       return;
     }
@@ -1031,18 +1040,26 @@
   document.getElementById("download-original").addEventListener("click", () => exportDocx("original"));
   document.getElementById("download-revision").addEventListener("click", () => el.exportDocx.click());
   const briefs = {
-    story: "Polish this into a complete professional short story for adult readers. Preserve my voice, mature themes, characters, plot, and ending. Strengthen prose, pacing, and emotional depth without inventing major events.",
-    novel: "Polish this into a professional novel for adult readers. Preserve my voice, plot, mature themes, and ending. Strengthen clarity, pacing, dialogue, and emotional depth without inventing major events.",
-    memoir: "Edit this memoir for adult readers. Preserve my lived experience, voice, facts, and emotional honesty. Improve clarity, narrative flow, and pacing without inventing events or dialogue.",
-    education: "Edit this for an adult educational audience. Improve structure, clarity, and accessibility. Preserve factual meaning and uncertainty. Do not invent facts, citations, or evidence; flag claims that need verification.",
-    copyedit: "Lightly copyedit this manuscript for adult readers. Correct grammar, spelling, punctuation, and inconsistencies. Preserve my style, mature themes, meaning, plot, and paragraph structure."
+    novel: "Develop this draft into the strongest complete novel it can become. Preserve the author's voice, plot, characters, viewpoint, and ending. Deepen character motivation, emotional complexity, subtext, causal scene progression, and meaningful detail. Strengthen prose, pacing, and dialogue without decorative padding, reducing scenes to summaries, inventing major events, or forcing premature closure. Keep mature themes in context. Flag uncertainty rather than inventing canon.",
+    story: "Polish this into a compelling, complete short story. Preserve my voice, characters, plot, mature themes, and ending. Deepen emotional stakes and subtext, sharpen prose and dialogue, and strengthen pacing without padding or inventing major events.",
+    memoir: "Shape this into a compelling memoir. Preserve my lived experience, voice, facts, uncertainty, and emotional honesty. Deepen reflection grounded in the supplied experience. Improve structure, narrative flow, and prose without inventing events, motives, facts, or dialogue.",
+    copyedit: "Lightly copyedit this manuscript. Correct grammar, spelling, punctuation, and inconsistencies. Preserve my style, mature themes, meaning, plot, and paragraph structure. Do not substantially rewrite or expand it."
   };
-  document.querySelectorAll("[data-brief]").forEach((button) => button.addEventListener("click", () => {
-    state.selectedBrief = button.dataset.brief;
-    document.querySelectorAll("[data-brief]").forEach(b=>b.setAttribute("aria-pressed",String(b===button)));
-    el.intentInput.value = briefs[button.dataset.brief];
-    el.intentInput.focus();
-  }));
+  function updateSetupPrompt(){
+    const choice=document.getElementById('setup-prompt').value,custom=choice==='custom';
+    document.getElementById('setup-custom-field').hidden=!custom;
+    el.intentInput.required=custom;
+    document.getElementById('setup-prompt-description').textContent=custom?'Your direction guides the complete revision.':({novel:'Deepen character, emotional complexity, and prose while preserving your story and voice.',story:'Strengthen a complete short story without padding or changing its outcome.',memoir:'Improve flow and emotional honesty while preserving your lived experience and facts.',copyedit:'Correct language and consistency with the lightest touch.'}[choice]);
+    document.getElementById('setup-prompt-details').hidden=custom;
+    document.getElementById('setup-prompt-full').textContent=briefs[choice]||'';
+  }
+  function setUploadBusy(busy){
+    state.uploading=busy;el.uploadForm.setAttribute('aria-busy',String(busy));
+    for(const control of [el.uploadSubmit,el.fileInput,el.intentInput,document.getElementById('setup-prompt'),...el.uploadDialog.querySelectorAll('[data-close-dialog]')])control.disabled=busy;
+  }
+  document.getElementById('setup-prompt').addEventListener('change',updateSetupPrompt);
+  el.uploadDialog.addEventListener('cancel',event=>{if(state.uploading)event.preventDefault();});
+  updateSetupPrompt();
   el.openUpload.addEventListener("click", () => openDialog(el.uploadDialog));
   el.welcomeUpload.addEventListener("click", () => openDialog(el.uploadDialog));
   el.retryStartup.addEventListener("click", retryStartup);
@@ -1086,6 +1103,7 @@
   document.addEventListener('dragover', event=>{if(Array.from(event.dataTransfer?.types || []).includes('Files')) event.preventDefault();});
   document.addEventListener('drop',event=>{
     if(!event.dataTransfer?.files?.length) return;
+    if(state.uploading){event.preventDefault();return;}
     event.preventDefault();
     if(event.dataTransfer.files.length!==1) {showToast('Please drop one manuscript at a time.',true);return;}
     const file=event.dataTransfer.files[0];
@@ -1117,16 +1135,16 @@
 
   window.addEventListener("keydown", (event) => {
     const dialogOpen = document.querySelector("dialog[open]");
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && !dialogOpen) {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && document.getElementById("notebook-tools-dialog").open && document.getElementById("advanced-workbench").open) {
       event.preventDefault();
       requestEdit();
       return;
     }
-    if (event.altKey && event.key === "ArrowLeft" && !dialogOpen) {
+    if (event.altKey && event.key === "ArrowLeft" && document.getElementById("notebook-tools-dialog").open && document.getElementById("advanced-workbench").open) {
       event.preventDefault();
       moveSection(-1);
     }
-    if (event.altKey && event.key === "ArrowRight" && !dialogOpen) {
+    if (event.altKey && event.key === "ArrowRight" && document.getElementById("notebook-tools-dialog").open && document.getElementById("advanced-workbench").open) {
       event.preventDefault();
       moveSection(1);
     }

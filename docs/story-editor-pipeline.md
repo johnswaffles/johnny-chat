@@ -264,3 +264,27 @@ release the lock. Connecting Talk with Johnny first pauses narration. Automatic
 passage/chapter transitions retain the lock. No new generation starts merely
 because the controls refresh; existing server request-key deduplication remains
 in force when an author explicitly pauses and resumes the same audio fragment.
+
+
+## Writing notebook workflow (October 2026)
+
+The main surface is now source → conversation → draft. Upload asks the author what the manuscript should become, saves that direction, and starts the existing durable whole-manuscript revision. A single next-step banner tracks actual job state, offers recovery, then begins a guided passage review. The saved bookmark restores the working place across visits; a restart one passage earlier remains available. Original and revised draft have separate views and downloads. Revised export is disabled before a revision exists and uses a `-revised.docx` filename.
+
+The default conversation scope is the whole manuscript. The literary planner receives `requestScope: book`; a whole-work change produces `revise_book`, a durable proposal requiring Apply before the existing full-revision queue runs. It never silently rewrites just the selected passage. Beginning the walkthrough or selecting a passage changes scope to that passage. The server rejects a passage mutation returned for a book-scoped request, including before downstream paid drafting stages. Voice has distinct `edit_manuscript` and `edit_passage` tools. Existing maximum-quality layered editing and short-section narration remain in place.
+
+Reports, chapter organization, story decisions, and legacy passage tools are in More, closed by default. Valid model references such as `[Chapter 1, passage 2]` navigate only to supplied locations. No automatically generated Google-style summary replaces exact manuscript narration.
+
+Design research: [Gemini Notebook, formerly NotebookLM](https://blog.google/innovation-and-ai/products/gemini-notebook/notebooklm-gemini-notebook/), [Sources / Chat / Studio](https://support.google.com/gemininotebook/answer/16206563?hl=en), and [Audio Overviews](https://support.google.com/gemininotebook/answer/16212820?hl=en). The notebook organization informs the interaction; the product remains Johnny's writing collaboration, with original preservation and editing rather than only research summaries.
+
+Verification: `node --test scripts/test-notebook-workflow.mjs scripts/test-writing-studio.mjs scripts/test-writing-studio-ui.mjs` covers journey state, references, scope fencing, durable proposals and explicit application. `node scripts/test-story-editor-integration.mjs` exercises the HTTP contract and revised/original DOCX content using a fake local provider and synthetic manuscripts. No billable provider call is necessary for these checks.
+
+
+### Compact setup (October 24, local only)
+
+A manuscript now starts with one file picker/drop target and one prompt selector: deep story revision, short story polish, memoir, light copyedit, or a custom prompt. Full preset wording is available in a collapsed disclosure. Custom text survives preset switches and cancelled setup. Replacing the selected file changes only the pending import; importing creates a separate project and preserves the current manuscript's source and edits. No model or reasoning settings change.
+
+Import locks synchronously before its first request. Repeated submit events, file replacement, prompt changes, backdrop dismissal, and Escape cannot create overlapping imports while it is running. Cancelling before import makes no request. Validation and failed imports retain the selected file and prompt. Importing is explicitly busy; successful import starts one existing durable full revision.
+
+The library is a drawer on desktop and mobile. A compact next-step strip replaces the large journey banner; the story occupies roughly two thirds of the desktop workspace. History and undo move into More. Original/revised tabs, chapter navigation, narration controls, conversation, and revised DOCX export remain accessible.
+
+Browser regression check: start `STORY_PREVIEW=1 node scripts/test-story-editor-integration.mjs`, then run `STORY_PREVIEW_URL=http://127.0.0.1:<fixture-port>/preview STORY_SCREENSHOT_DIR=/tmp PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs node scripts/test-manuscript-setup-ui.mjs`. The test requires Playwright Core and an installed Chrome (override with CHROME_PATH); it runs an isolated headless browser, permits only loopback requests, and uses synthetic text. It covers desktop/mobile layouts, file replacement, preset/custom prompt payloads and draft retention, cancellation, blank custom input, repeated submits, preserved prior edits, and history/undo access.

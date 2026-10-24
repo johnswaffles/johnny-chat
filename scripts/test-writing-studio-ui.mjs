@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {speechParts} from '../public/story-editor/reader-model.mjs';
+import {notebookJourney,notebookReference} from '../public/story-editor/notebook-model.mjs';
 class Element {
  constructor(tag='div'){this.tagName=tag;this.children=[];this.attributes={};this.dataset={};this.events={};this.textContent='';this.hidden=false;this.disabled=false;this.value='';this.checked=false;this.currentTime=0;this.duration=20;this.classList={toggle(){},add(){},remove(){}};}
  setAttribute(k,v){this.attributes[k]=v;}
@@ -12,12 +13,12 @@ class Element {
  replaceChildren(...children){this.children=children;}
  addEventListener(type,fn){(this.events[type]||=[]).push(fn);}
  querySelectorAll(selector){return selector==='li'?this.children:[];}
- scrollIntoView(){} focus(){} load(){} pause(){this.paused=true;}
+ scrollIntoView(){} focus(){} showModal(){this.open=true;} load(){} pause(){this.paused=true;}
  async play(){this.played=(this.played||0)+1;this.paused=false;}
 }
 const html=readFileSync(new URL('../public/story-editor/index.html',import.meta.url),'utf8');
 const source=readFileSync(new URL('../public/story-editor/studio.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
-async function harness({gate,failed=false,bookmark=null,audioFetcher}={}){
+async function harness({gate,failed=false,bookmark=null,audioFetcher,proposal=false}={}){
  const elements=new Map([...html.matchAll(/id="([^"]+)"/g)].map(m=>[m[1],new Element()]));
  elements.get('studio-readback').checked=true;
  const book={projectId:'book',title:'Local story',busy:false,original:'The imported original.',chapters:[{index:1,title:'One',passages:[{id:'a',text:'Current first passage.',original:'Original first passage.',revision:'r1',kind:'paragraph'},{id:'b',text:'Current second passage.',original:'Original second passage.',revision:'r2',kind:'paragraph'}]}],notes:[],messages:[],versions:[],bookmark,task:null,lastTask:null};
@@ -29,17 +30,18 @@ async function harness({gate,failed=false,bookmark=null,audioFetcher}={}){
    if(gate)await gate;
    book.task=null;
    if(failed)return Response.json({ok:true,task:{id:'task1',status:'failed',error:'The critique could not finish.'}});
+   if(proposal)return Response.json({ok:true,task:{id:'task1',status:'done',result:{action:'revise_book',reply:'Review and apply this whole-manuscript change.',request:'Deepen the whole novel.',requiresConfirmation:true}}});
    book.chapters[0].passages[0].text='The critically refined passage.';book.chapters[0].passages[0].revision='r3';book.versions=[{id:'v1',sectionId:'a',instruction:'Deepen it.',createdAt:'2026-01-01'}];
    return Response.json({ok:true,task:{id:'task1',status:'done',result:{action:'revise',sectionId:'a',reply:'Saved the deeper passage.'}}});
   }
-  if(path.endsWith('/studio'))return Response.json({ok:true,...book});
+  if(path.endsWith('/studio'))return Response.json({ok:true,...book,...(proposal&&accepted?{lastTask:{id:'task1',status:'done',result:{action:'revise_book',request:'Deepen the whole novel.',requiresConfirmation:true}}}:{})});
   return Response.json({ok:true});
  };
  class Voice {constructor(options){this.options=options;this.connected=false;this.interrupts=0;}interrupt(){this.interrupts++;}close(){}updateContext(){}async connect(){this.connects=(this.connects||0)+1;}}
- const document={cookie:'',getElementById:id=>elements.get(id),createElement:tag=>new Element(tag),addEventListener(){},dispatchEvent(){}};
- const sandbox={document,window:{JOHNNY_CHAT_API_BASE_URL:'http://local.test',addEventListener(){}},location:{origin:'http://local.test'},URL,URLSearchParams,AbortController,AbortSignal,Blob,Response,crypto:{randomUUID},requestAnimationFrame:fn=>fn(),matchMedia:()=>({matches:true}),setTimeout,clearTimeout,fetch:fetcher,speechParts,StudioVoice:Voice,chapterAudio:async(url,options)=>{audioCalls.push({url,options});return audioFetcher?audioFetcher(url,options):new Blob(['fake local audio']);},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}};
+ const dispatched=[];const document={cookie:'',getElementById:id=>elements.get(id),createElement:tag=>new Element(tag),addEventListener(){},dispatchEvent(event){dispatched.push(event);}};
+ const sandbox={document,window:{JOHNNY_CHAT_API_BASE_URL:'http://local.test',addEventListener(){}},location:{origin:'http://local.test'},URL,URLSearchParams,AbortController,AbortSignal,Blob,Response,crypto:{randomUUID},requestAnimationFrame:fn=>fn(),matchMedia:()=>({matches:true}),setTimeout,clearTimeout,fetch:fetcher,speechParts,notebookJourney,notebookReference,StudioVoice:Voice,chapterAudio:async(url,options)=>{audioCalls.push({url,options});return audioFetcher?audioFetcher(url,options):new Blob(['fake local audio']);},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}};
  const context=vm.createContext(sandbox);vm.runInContext(source+'\nthis.testStudio={state,refresh,sendRequest,pause,selectSection,voice,read};',context);const api=context.testStudio;api.state.id='book';await api.refresh({initial:true});
- return {api,elements,calls,audioCalls,book,accepted:()=>accepted};
+ return {api,elements,calls,audioCalls,book,dispatched,accepted:()=>accepted};
 }
 test('a successful revision automatically reads the new saved version, not the old prose',async()=>{
  const h=await harness();const result=await h.api.sendRequest('Deepen it.');await new Promise(r=>setImmediate(r));
@@ -110,4 +112,12 @@ test('Read stays locked across automatic passage transitions and unlocks at the 
  const h=await harness();await h.api.read();h.elements.get('studio-audio').onended();await new Promise(r=>setImmediate(r));
  assert.equal(h.api.state.sectionId,'b');assert.equal(h.elements.get('studio-read').disabled,true);assert.equal(h.audioCalls.length,2);
  h.elements.get('studio-audio').onended();assert.equal(h.api.state.reading,false);assert.equal(h.elements.get('studio-read').disabled,false);
+});
+
+test('a book proposal stays visible without a full edit until the author explicitly applies it',async()=>{
+ const h=await harness({proposal:true});await h.api.sendRequest('Deepen the whole novel.');assert.equal(h.elements.get('notebook-proposal').hidden,false);assert.equal(h.api.state.data.chapters[0].passages[0].revision,'r1');assert.equal(h.dispatched.filter(e=>e.type==='story-author-request').length,0);
+ h.elements.get('notebook-proposal-apply').events.click[0]();assert.equal(h.dispatched.filter(e=>e.type==='story-author-request').length,1);h.elements.get('notebook-proposal-apply').events.click[0]();assert.equal(h.dispatched.filter(e=>e.type==='story-author-request').length,1);
+});
+test('starting collaborative review goes to the beginning and switches the conversation to that passage',async()=>{
+ const h=await harness({bookmark:{sectionId:'b',revision:'r2',part:0,seconds:4}});h.elements.get('notebook-next').dataset.action='begin';h.elements.get('notebook-next').events.click[0]();assert.equal(h.api.state.sectionId,'a');assert.equal(h.api.state.scope,'passage');assert.equal(h.elements.get('book-reader').dataset.view,'draft');assert.equal(h.audioCalls.length,0);
 });

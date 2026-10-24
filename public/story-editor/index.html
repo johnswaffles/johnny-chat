@@ -4,24 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#171625">
-  <title>Johnny’s writing studio | justaskjohnny.com</title>
-  <meta name="description" content="A private, focused studio for shaping fiction without losing your voice.">
+  <title>Johnny’s Notebook | Writing studio</title>
+  <meta name="description" content="Your manuscript, one conversation, and the next draft. A private writing partner from first page to finished work.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&amp;display=optional" rel="stylesheet">
-  <link rel="stylesheet" href="./story-editor.css?v=20261021-journey3">
-  <script defer src="./story-editor.js?v=20261021-journey3"></script>
+  <link rel="stylesheet" href="./story-editor.css?v=20261024-simple1">
+  <script defer src="./story-editor.js?v=20261024-simple1"></script>
 </head>
-<body>
-  <div class="studio-shell">
-    <aside class="library-rail" id="library-rail" aria-label="Manuscript library">
+<body class="notebook-app simple-studio"><div class="studio-shell"><aside class="library-rail" id="library-rail" aria-label="Manuscript library">
       <div class="rail-brand">
         <a class="brand-mark" href="https://justaskjohnny.com" aria-label="Go to justaskjohnny.com">
           <svg viewBox="0 0 36 36" aria-hidden="true"><path d="M9 27c8-1 14-7 18-18-11 4-17 10-18 18Z"/><path d="M11 25c4-4 8-8 14-12"/></svg>
         </a>
         <div>
           <span>Johnny's writing studio</span>
-          <strong>Story Editor</strong>
+          <strong>Johnny’s Notebook</strong>
         </div>
         <button class="icon-button rail-close" id="rail-close" type="button" aria-label="Close manuscript library">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
@@ -36,7 +34,7 @@
       <div class="library-heading">
         <div>
           <span class="overline">Library</span>
-          <h2>Your stories</h2>
+          <h2>Manuscripts</h2>
         </div>
         <button class="icon-button" id="refresh-projects" type="button" aria-label="Refresh manuscripts" title="Refresh manuscripts">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
@@ -51,7 +49,7 @@
 
       <div class="project-list" id="project-list" aria-live="polite"></div>
 
-      <div class="rail-footer">
+      <section id="notebook-source" class="notebook-source" hidden><span class="panel-kicker">YOUR SOURCE</span><p id="notebook-source-name"></p><button class="source-file" type="button" id="notebook-original">▤ Original manuscript <small>Preserved, read only</small></button><details class="notebook-direction"><summary>Direction for this work</summary><form id="studio-goal-form"><label for="studio-goal">Your destination for this whole work</label><textarea id="studio-goal" rows="2" maxlength="6000" placeholder="A finished literary novel for adult readers, preserving my quiet voice and developing the emotional depth."></textarea><button class="ghost-button" type="submit" id="studio-goal-save">Save manuscript goal</button></form><span id="studio-goal-copy" hidden></span></details><div class="notebook-outline-head">Contents</div><nav id="notebook-outline" aria-label="Manuscript chapters"></nav></section><div class="rail-footer">
         <div class="privacy-note">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
           <span><strong>Private workspace</strong>Your manuscripts stay behind your access password.</span>
@@ -61,40 +59,10 @@
           Back to justaskjohnny.com
         </a>
       </div>
-    </aside>
-
-    <button class="rail-scrim" id="rail-scrim" type="button" aria-label="Close manuscript library"></button>
-
-    <main class="studio-main">
-      <header class="topbar">
-        <div class="topbar-title">
-          <button class="icon-button rail-open" id="rail-open" type="button" aria-label="Open manuscript library">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-          </button>
-          <div>
-            <span id="project-filename">Story Editor</span>
-            <strong id="project-title">Your quiet place to make every line count.</strong>
-          </div>
-        </div>
-        <div class="topbar-actions">
-          <button class="secondary-button" id="open-bible" type="button" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z"/></svg>
-            Story Bible
-          </button>
-          <button class="secondary-button" id="export-docx" type="button" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
-            Export
-          </button>
-          <button class="danger-button" id="delete-project" type="button" disabled>Delete project</button>
-        </div>
-      </header>
-
-      <section class="loading-view" id="loading-view" aria-live="polite">
+    </aside><button class="rail-scrim" id="rail-scrim" type="button" aria-label="Close manuscript library"></button><main class="studio-main"><header class="topbar notebook-topbar"><div class="topbar-title"><button class="icon-button rail-open" id="rail-open" type="button" aria-label="Open manuscript library">☰</button><div><span id="project-filename">JOHNNY’S NOTEBOOK</span><strong id="project-title">Your writing, in good company.</strong></div></div><div class="topbar-actions"><button class="ghost-button" id="notebook-tools" type="button">More ···</button><button class="primary-button" id="export-docx" type="button" aria-label="Download revised draft" disabled><span class="notebook-download-full">↓ Download revised draft</span><span class="notebook-download-short" aria-hidden="true">↓ Draft</span></button></div></header><section class="loading-view" id="loading-view" aria-live="polite">
         <div class="loading-mark" aria-hidden="true"><i></i><i></i><i></i></div>
         <p>Opening your writing studio…</p>
-      </section>
-
-      <section class="problem-view" id="problem-view" hidden aria-live="assertive">
+      </section><section class="problem-view" id="problem-view" hidden aria-live="assertive">
         <div class="problem-card">
           <span class="problem-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M12 8v5m0 3.5v.5M10.4 4.4 3.2 17a2 2 0 0 0 1.7 3h14.2a2 2 0 0 0 1.7-3L13.6 4.4a1.85 1.85 0 0 0-3.2 0Z"/></svg>
@@ -111,96 +79,7 @@
           </div>
           <small>No automatic refreshes will happen from this screen.</small>
         </div>
-      </section>
-
-      <section class="welcome-view" id="welcome-view" hidden>
-        <div class="welcome-copy">
-          <span class="overline">A better way to revise</span>
-          <h1>Your manuscript.<br><em>Its next chapter.</em></h1>
-          <p>Drop in your draft. Choose a direction. Get a complete revision you can read, refine, and download. Written for your audience, with your voice at its heart.</p>
-          <button class="primary-button" id="welcome-upload" type="button">
-            Start with your manuscript
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
-          </button>
-          <small>Fiction, memoir, or educational writing · TXT, DOCX, PDF</small>
-        </div>
-        <div class="welcome-visual" aria-hidden="true">
-          <div class="paper paper-back"><span></span><span></span><span></span></div>
-          <div class="paper paper-front">
-            <div class="paper-kicker">CHAPTER ONE</div>
-            <div class="paper-title"></div>
-            <span></span><span></span><span></span><span></span><span></span>
-            <div class="editor-note"><b>✦</b> The heart of the scene is already here.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="workspace-view" id="workspace-view" hidden>
-        <header class="project-overview">
-          <div class="project-heading">
-            <span class="overline">Current manuscript</span>
-            <h1 id="overview-title">Untitled manuscript</h1>
-            <div class="project-meta" id="project-meta"></div>
-          </div>
-          <div class="progress-card">
-            <div class="progress-copy">
-              <span>Revision progress</span>
-              <strong id="progress-value">0%</strong>
-            </div>
-            <div class="progress-track" role="progressbar" aria-label="Revision progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track"><i id="progress-fill"></i></div>
-            <small id="progress-detail">No passages revised yet</small>
-          </div>
-        </header>
-
-        <section id="book-reader" class="writing-room" hidden aria-labelledby="reader-title">
-          <header class="room-heading"><div><span class="overline">A story only you could tell</span><h2 id="reader-title">Your imagination. A little more room.</h2><p>Read, interrupt, explore an idea. We’ll shape the next version together.</p></div><button id="studio-refresh" type="button" class="ghost-button">Refresh draft</button></header>
-          <div class="room-transport">
-            <button id="studio-read" type="button" class="primary-button">▶ Read from here</button>
-            <button id="studio-pause" type="button" class="secondary-button">Pause / interrupt</button>
-            <button id="studio-voice" type="button" class="voice-connect" aria-pressed="false"><span aria-hidden="true">◉</span> Talk with Johnny</button>
-            <a id="studio-chat-jump" class="studio-chat-jump" href="#studio-compose">Write an idea ↓</a>
-            <span id="studio-voice-status" role="status" aria-live="polite">Voice is off · typing works too</span>
-          </div>
-          <p id="studio-status" class="room-status" role="status" aria-live="polite">Opening your draft…</p>
-          <details class="room-disclosure"><summary>About voice &amp; privacy</summary><p>Johnny’s voice is AI generated. Voice starts only when you turn it on. While connected, your microphone audio and selected story context go to OpenAI. Speak to pause narration and discuss the passage. Story decisions are saved with this manuscript, separate from Morrow’s personal memory.</p></details>
-          <section class="studio-continuity" aria-label="Your manuscript journey">
-            <div><span class="overline">From the first page to your finished work</span><h3 id="studio-return-title">Let’s begin your story.</h3><p id="studio-return-copy">We’ll work through the whole manuscript at your pace. Your place and story decisions stay saved for your next visit.</p></div>
-            <div class="studio-return-actions"><button id="studio-continue" class="secondary-button" type="button">Continue here ↓</button><button id="studio-recap-read" class="ghost-button" type="button">Read one passage earlier</button></div>
-            <details><summary>A little context before we continue</summary><p id="studio-recap" class="studio-recap"></p></details>
-            <details><summary>What we’re making: <span id="studio-goal-copy">Your finished manuscript</span></summary><form id="studio-goal-form"><label for="studio-goal">Your destination for this whole work</label><textarea id="studio-goal" rows="2" maxlength="6000" placeholder="A finished literary novel for adult readers, preserving my quiet voice and developing the emotional depth."></textarea><button class="ghost-button" type="submit" id="studio-goal-save">Save manuscript goal</button></form></details>
-          </section>
-          <div class="room-grid">
-            <section class="draft-desk" aria-label="Your manuscript">
-              <div class="draft-tabs" role="group" aria-label="Manuscript version"><button id="studio-current" type="button" aria-pressed="true">Current draft</button><button id="studio-original" type="button" aria-pressed="false">Original · read only</button></div>
-              <div id="studio-navigation" class="draft-navigation"><label for="studio-chapter">Chapter</label><select id="studio-chapter"></select><button id="studio-prev" type="button" aria-label="Previous passage">←</button><span id="studio-location"></span><button id="studio-next" type="button" aria-label="Next passage">→</button></div>
-              <div class="draft-hint"><span id="studio-version-hint">Choose any passage to work on it. The highlighted passage is where Johnny is listening with you.</span><button id="studio-original-export" class="ghost-button" type="button" hidden>Download original</button></div>
-              <article id="studio-pages" class="studio-pages" aria-label="Manuscript text" tabindex="0"></article>
-              <audio id="studio-audio" controls hidden preload="none" aria-label="Exact saved passage narration"></audio>
-              <div class="draft-footer"><button id="studio-undo" type="button" class="ghost-button">Undo last change here</button><span>Every studio edit keeps its previous version.</span></div>
-              <details class="studio-history"><summary>Changes to this passage</summary><div id="studio-versions"></div></details>
-            </section>
-            <section class="conversation-desk" aria-labelledby="studio-conversation-title">
-              <header><span class="overline">In conversation</span><h3 id="studio-conversation-title">Let’s find what the story needs.</h3><p id="studio-quality" title="GPT-6 Astra · max reasoning · pro execution">Deep literary edit · plan, write, critique, refine</p></header>
-              <div id="studio-messages" class="studio-messages" role="log" aria-label="Your conversation with Johnny" aria-live="polite"></div>
-              <div id="studio-progress" class="studio-progress" hidden><ol aria-label="Editorial passes"><li data-pass="planning">Story &amp; intent</li><li data-pass="drafting">Write</li><li data-pass="reviewing">Critique</li><li data-pass="refining">Refine</li></ol><p id="studio-progress-copy">Connecting the scene to the larger story…</p><button id="studio-cancel" class="ghost-button" type="button">Stop this edit</button></div>
-              <form id="studio-compose" class="studio-compose"><label for="studio-input">Say what you’re imagining</label><textarea id="studio-input" rows="3" maxlength="3000" placeholder="Let her hesitate here. She wants to tell him the truth, but she’s afraid of what it will cost."></textarea><div><label class="readback-option"><input id="studio-readback" type="checkbox" checked> Read changes back to me</label><button id="studio-send" type="submit" class="primary-button">Send to Johnny ↗</button></div></form>
-              <button id="studio-retry" type="button" class="ghost-button" hidden>Retry the unfinished edit</button>
-              <details class="studio-notes"><summary>Story notes <span id="studio-notes-count"></span></summary><p>Decisions and details you ask Johnny to remember for this manuscript. You can review or remove them here.</p><ul id="studio-notes-list"></ul><form id="studio-note-form"><label for="studio-note">Remember a story detail</label><textarea id="studio-note" rows="2" maxlength="2000" placeholder="Her brother knows about the letter, but she doesn’t know he has read it."></textarea><button class="ghost-button" type="submit">Save story note</button></form></details>
-            </section>
-          </div>
-          <details class="whole-book-request"><summary>Request a change across the whole book</summary>
-          <div class="author-request">
-            <h3>What would you like to change?</h3>
-            <label for="author-request-text">Tell the editor what to change, add, or rewrite</label>
-            <textarea id="author-request-text" rows="4" maxlength="3000" placeholder="Add a scene where the sisters discuss their father. Make the dialogue warmer and keep the ending."></textarea>
-            <div class="reader-toolbar"><label for="author-request-scope">Apply to</label><select id="author-request-scope"><option value="book">Whole book</option><option value="chapter">Current chapter</option></select><button id="author-request-submit" class="primary-button" type="button">Make these changes</button></div>
-            <p>Uses your current revised draft. Changes you request take priority; the original stays saved. Open the book to select a chapter.</p>
-            <p id="author-request-status" role="status" aria-live="polite"></p>
-          </div>
-          </details>
-        </section>
-
-        <section class="autopilot-card" id="autopilot-card" aria-labelledby="autopilot-title">
+      </section><section class="welcome-view notebook-welcome" id="welcome-view" hidden><span class="welcome-symbol" aria-hidden="true">▤</span><span class="panel-kicker">JOHNNY’S WRITING NOTEBOOK</span><h1>Your story. Room to make it better.</h1><p>Drop a manuscript. Choose a revision prompt. Then work through the story together.</p><button class="welcome-drop" id="welcome-upload" type="button"><b>＋</b><strong>Drop your manuscript here</strong><span>or choose a file · Word, PDF, or text</span></button><div class="welcome-path"><span>1. Your first draft</span><i>→</i><span>2. A complete revision</span><i>→</i><span>3. Work through it together</span></div><small>Your original stays saved. You decide when it’s finished.</small></section><section class="workspace-view" id="workspace-view" hidden><section class="notebook-journey" aria-label="Your next step"><div class="journey-path"><span id="notebook-stage-source" data-journey="source">1 · Your manuscript</span><span id="notebook-stage-revision" data-journey="revision">2 · First revision</span><span id="notebook-stage-together" data-journey="together">3 · Work through together</span></div><div class="journey-current"><div><h2 id="notebook-step-title">Your manuscript is here.</h2><p id="notebook-step-copy">Tell Johnny what you want it to become.</p></div><button id="notebook-next" class="primary-button" type="button">Create first revision</button></div><div id="notebook-job-progress" class="notebook-job-progress" hidden><progress id="notebook-job-meter" max="100" value="0" aria-label="First revision progress"></progress><span id="notebook-job-copy"></span><button id="notebook-stop-full" class="ghost-button" type="button">Pause revision</button></div></section><nav class="notebook-mobile-tabs" aria-label="Workspace view"><button id="notebook-chat-tab" type="button" aria-pressed="true">Conversation</button><button id="notebook-draft-tab" type="button" aria-pressed="false">Draft</button></nav><section id="book-reader" class="writing-room notebook-panels" hidden aria-label="Manuscript conversation and draft"><section class="conversation-desk notebook-conversation" aria-labelledby="studio-conversation-title"><header class="panel-heading"><div><span class="panel-kicker">CONVERSATION</span><h2 id="studio-conversation-title">Johnny</h2></div><button id="studio-refresh" type="button" class="icon-button" aria-label="Refresh saved work" title="Refresh saved work">↻</button></header><div class="notebook-chat-intro" id="notebook-chat-intro"><span aria-hidden="true">✦</span><h3>The whole story is in the conversation.</h3><p>Ask about a character, explore an idea, or tell Johnny what you want to change. When you’re ready, work through the revised draft one passage at a time.</p><div class="notebook-suggestions"><button id="notebook-suggest-story" type="button" data-suggest="What does this manuscript need most to become a strong, finished work?">What does this story need?</button><button id="notebook-suggest-arc" type="button" data-suggest="Help me think through the emotional arc of this manuscript. Do not change the draft yet.">Explore the emotional arc</button></div></div><div id="studio-messages" class="studio-messages" role="log" aria-label="Your conversation with Johnny" aria-live="polite"></div><div id="studio-progress" class="studio-progress" hidden><ol aria-label="Editorial passes"><li data-pass="planning">Story &amp; intent</li><li data-pass="drafting">Write</li><li data-pass="reviewing">Critique</li><li data-pass="refining">Refine</li></ol><p id="studio-progress-copy">Connecting the scene to the larger story…</p><button id="studio-cancel" class="ghost-button" type="button">Stop this edit</button></div><section id="notebook-proposal" class="notebook-proposal" hidden><h3>A change across the whole manuscript</h3><p id="notebook-proposal-copy"></p><small>This starts a full revision. Your original stays saved.</small><div><button type="button" id="notebook-proposal-apply" class="primary-button">Apply to whole manuscript</button><button type="button" id="notebook-proposal-cancel" class="ghost-button">Keep discussing</button></div></section><form id="studio-compose" class="studio-compose"><div class="compose-scope"><label for="notebook-scope">Talking about</label><select id="notebook-scope"><option value="book">Whole manuscript</option><option value="passage">This passage</option></select></div><label class="sr-only" for="studio-input">Say what you’re imagining</label><textarea id="studio-input" rows="3" maxlength="3000" placeholder="Ask a question or describe what you want to change…"></textarea><div><label class="readback-option"><input id="studio-readback" type="checkbox" checked> Read changes back</label><button id="studio-send" type="submit" class="primary-button">Send ↑</button></div></form><button id="studio-retry" type="button" class="ghost-button" hidden>Retry the unfinished edit</button><p id="studio-status" class="room-status" role="status" aria-live="polite">Opening your manuscript…</p><p id="studio-quality" class="notebook-quality" title="GPT-6 Astra · max reasoning · pro execution">Deep literary editing · your original stays saved</p></section><section class="draft-desk notebook-draft" aria-labelledby="reader-title"><header class="panel-heading"><div><span class="panel-kicker">YOUR DRAFT</span><h2 id="reader-title">Your story</h2></div><span id="notebook-saved">Saved</span></header><div class="draft-tabs" role="group" aria-label="Manuscript version"><button id="studio-current" type="button" aria-pressed="true">Revised draft</button><button id="studio-original" type="button" aria-pressed="false">Original</button></div><div id="studio-navigation" class="draft-navigation"><label class="sr-only" for="studio-chapter">Chapter</label><select id="studio-chapter"></select><button id="studio-prev" type="button" aria-label="Previous passage">←</button><span id="studio-location"></span><button id="studio-next" type="button" aria-label="Next passage">→</button></div><p class="draft-hint" id="studio-version-hint">Select a passage to work on it together.</p><button id="studio-original-export" class="ghost-button" type="button" hidden>Download original DOCX</button><div class="notebook-resume"><span id="studio-return-title"></span><p id="studio-return-copy"></p><div><button id="studio-continue" class="ghost-button" type="button">Continue here</button><button id="studio-recap-read" class="ghost-button" type="button">Read one passage earlier</button></div><details><summary>Quick recap</summary><p id="studio-recap"></p></details></div><article id="studio-pages" class="studio-pages" aria-label="Manuscript text" tabindex="0"></article><div class="room-transport"><button id="studio-read" type="button" class="primary-button">▶ Read from here</button><button id="studio-pause" type="button" class="secondary-button">Pause / interrupt</button><button id="studio-voice" type="button" class="voice-connect" aria-pressed="false">◉ Talk with Johnny</button><span id="studio-voice-status" role="status" aria-live="polite">Voice is off · typing works too</span><a id="studio-chat-jump" class="studio-chat-jump" href="#studio-compose">Write an idea ↑</a></div><audio id="studio-audio" controls hidden preload="none" aria-label="Exact saved passage narration"></audio><details class="room-disclosure"><summary>About voice &amp; privacy</summary><p>Johnny’s voice is AI generated. Turning on voice sends microphone audio and selected story context to OpenAI. Read sends short pieces of saved text for narration. Writing requests use your manuscript context and can incur API charges. Your original stays saved; story notes belong only to this manuscript.</p></details></section></section><div hidden><h1 id="overview-title">Untitled manuscript</h1><div class="project-meta" id="project-meta"></div><strong id="progress-value">0%</strong><div class="progress-track" role="progressbar" aria-label="Revision progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track"><i id="progress-fill"></i></div><small id="progress-detail">No passages revised yet</small></div></section></main></div><dialog id="notebook-tools-dialog" class="studio-dialog notebook-tools-dialog" aria-labelledby="notebook-tools-title"><header class="dialog-head"><div><span class="panel-kicker">WHEN YOU NEED THEM</span><h2 id="notebook-tools-title">Manuscript tools</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close manuscript tools">×</button></header><details><summary>Passage history &amp; undo</summary><div class="draft-footer"><button id="studio-undo" type="button" class="ghost-button">Undo last passage change</button><details class="studio-history"><summary>Passage history</summary><div id="studio-versions"></div></details></div></details><details><summary>Story decisions &amp; notes</summary><div class="studio-notes"><p>Details you explicitly ask Johnny to remember. <span id="studio-notes-count"></span></p><ul id="studio-notes-list"></ul><form id="studio-note-form"><label for="studio-note">Remember a story detail</label><textarea id="studio-note" rows="2" maxlength="2000" placeholder="Her brother knows about the letter, but she doesn’t know he has read it."></textarea><button class="ghost-button" type="submit">Save story note</button></form></div></details><details><summary>Request a change throughout the manuscript</summary><textarea id="author-request-text" rows="4" maxlength="3000" placeholder="Add a scene where the sisters discuss their father. Make the dialogue warmer and keep the ending."></textarea><label for="author-request-scope">Apply to</label><select id="author-request-scope"><option value="book">Whole book</option><option value="chapter">Current chapter</option></select><button id="author-request-submit" class="primary-button" type="button">Make these changes</button><p id="author-request-status" role="status" aria-live="polite"></p></details><details><summary>Full revision, reports &amp; passage tools</summary>        <section class="autopilot-card" id="autopilot-card" aria-labelledby="autopilot-title">
           <div class="autopilot-copy">
             <span class="overline">Your editorial brief</span>
             <h2 id="autopilot-title">What should this draft become?</h2>
@@ -239,7 +118,7 @@
         </section>
         <details id="passage-split-history" class="chapter-layout-card" hidden><summary>Passages saved before chapter splits</summary><div id="passage-split-history-items"></div></details>
         <section class="revision-report" id="revision-report" hidden aria-labelledby="revision-report-title">
-          <div class="report-heading"><div><span class="overline">Back at your desk</span><h2 id="revision-report-title">Full-edit report</h2></div><button class="primary-button" id="download-revision" type="button">Download current draft</button></div>
+          <div class="report-heading"><div><span class="overline">Back at your desk</span><h2 id="revision-report-title">Editorial report</h2></div><button class="primary-button" id="download-revision" type="button">Download current draft</button></div>
           <p id="revision-summary"></p>
           <button type="button" class="ghost-button" id="download-original">Download original text as Word</button>
           <button type="button" class="ghost-button" id="download-report">Download editorial report</button>
@@ -373,56 +252,26 @@
           </section>
           </div>
         </details>
-      </section>
-    </main>
-  </div>
-
-  <dialog class="studio-dialog upload-dialog" id="upload-dialog">
+</details><div class="notebook-management"><button class="secondary-button" id="open-bible" type="button" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z"/></svg>
+            Story Bible
+          </button><button class="danger-button" id="delete-project" type="button" disabled>Delete project</button></div></dialog><dialog class="studio-dialog upload-dialog" id="upload-dialog">
     <form id="upload-form" method="dialog">
-      <div class="dialog-head">
-        <div>
-          <span class="overline">Start the full edit</span>
-          <h2>Drop a manuscript. Give it one direction.</h2>
-          <p>Story Editor will organize the entire document and carry your instruction through the finished draft.</p>
-        </div>
-        <button class="icon-button dialog-close" type="button" data-close-dialog aria-label="Close">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
-        </button>
-      </div>
-
-      <label class="file-drop" id="file-drop">
-        <input id="file-input" name="manuscript" type="file" accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
-        <span class="drop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v5h14v-5"/></svg></span>
-        <strong id="file-prompt">Drop your manuscript here</strong>
-        <span id="file-detail">or click to choose a TXT, DOCX, or PDF</span>
-        <small>Up to 80 MB · TXT, DOCX, or PDF</small>
-      </label>
-
-      <div class="brief-presets" role="group" aria-label="Starting direction">
-        <button type="button" data-brief="novel" aria-pressed="true">Professional novel</button>
-        <button type="button" data-brief="story">Polished story</button>
-        <button type="button" data-brief="memoir">Memoir</button>
-        <button type="button" data-brief="education">Educational</button>
-        <button type="button" data-brief="copyedit">Light copyedit</button>
-      </div>
-      <label class="intent-field">
-        <span>Your direction <small>Optional — the selected style is enough</small></span>
-        <textarea id="intent-input" name="intent" rows="4" placeholder="Describe the book you want, your audience, and what matters most to preserve.">Polish this into a professional novel for adult readers. Preserve my voice, plot, mature themes, and ending. Strengthen clarity, pacing, dialogue, and emotional depth without inventing major events.</textarea>
-        <small class="field-hint">Describe the outcome you want. You do not need to explain chunking, continuity, pacing, or how the edit should be performed.</small>
-      </label>
-
-
-
-      <p class="manuscript-promise">Mature themes are considered in context. If a passage cannot be edited, its words stay intact and it is flagged for your review. Your manuscript is sent to OpenAI to perform the edit.</p>
+      <div class="dialog-head"><div><h2>Start with your manuscript</h2><p>Choose a file and how you want Johnny to help.</p></div><button class="icon-button" type="button" data-close-dialog aria-label="Close setup">×</button></div>
+      <label class="file-drop" id="file-drop"><input id="file-input" name="manuscript" type="file" accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required><strong id="file-prompt">Drop a manuscript or choose a file</strong><span id="file-detail">Word, PDF, or text · up to 80 MB</span></label>
+      <label class="setup-prompt-label" for="setup-prompt">How should we work on it?</label>
+      <select id="setup-prompt" name="prompt"><option value="novel">Deep story revision</option><option value="story">Polish a short story</option><option value="memoir">Shape a memoir</option><option value="copyedit">Light copyedit</option><option value="custom">Write my own prompt</option></select>
+      <p id="setup-prompt-description"></p><details id="setup-prompt-details"><summary>View the full prompt</summary><p id="setup-prompt-full"></p></details>
+      <label class="intent-field" id="setup-custom-field" hidden><span>Your prompt</span><textarea id="intent-input" name="intent" rows="3" maxlength="4000" placeholder="Describe what you want this story to become, and what Johnny should preserve."></textarea></label>
+      <small class="setup-preservation">Each file starts a separate manuscript. Your original and existing work stay saved. Starting a revision sends this file to OpenAI.</small>
       <div class="dialog-status" id="upload-status" role="status"></div>
       <div class="dialog-actions">
         <button class="ghost-button" type="button" data-close-dialog>Cancel</button>
-        <button class="primary-button" id="upload-submit" type="submit">Edit my manuscript</button>
+        <button class="primary-button" id="upload-submit" type="submit">Start revision</button>
       </div>
     </form>
   </dialog>
-
-  <dialog class="studio-dialog bible-dialog" id="bible-dialog">
+<dialog class="studio-dialog bible-dialog" id="bible-dialog">
     <form method="dialog">
       <div class="dialog-head">
         <div>
@@ -450,8 +299,7 @@
       </div>
     </form>
   </dialog>
-
-  <dialog id="chapter-layout-dialog" aria-labelledby="chapter-layout-dialog-title">
+<dialog id="chapter-layout-dialog" aria-labelledby="chapter-layout-dialog-title">
     <form id="chapter-layout-form" class="chapter-layout-form">
       <h2 id="chapter-layout-dialog-title">Organize your chapters</h2>
       <p>Name each chapter and choose the saved passage where it starts. Breaks change organization; your original and revised words stay saved. For a heading inside one passage, use Split inside a passage below.</p>
@@ -464,7 +312,7 @@
       <div class="chapter-layout-actions"><button id="chapter-layout-add" type="button" class="ghost-button">Add chapter break</button><button id="chapter-layout-cancel" type="button" class="ghost-button">Cancel</button><button id="chapter-layout-save" type="submit" class="primary-button">Save chapters</button></div>
     </form>
   </dialog>
-  <dialog id="passage-split-dialog" aria-labelledby="passage-split-title">
+<dialog id="passage-split-dialog" aria-labelledby="passage-split-title">
     <form id="passage-split-form" class="chapter-layout-form">
       <h2 id="passage-split-title">Start a chapter inside this passage</h2>
       <p>Place the cursor before the first word of the new chapter. If the draft was revised, mark the matching start in both versions. The app will not guess their alignment.</p>
@@ -478,12 +326,8 @@
       <div class="chapter-layout-actions"><button id="passage-split-cancel" type="button" class="ghost-button">Cancel</button><button id="passage-split-save" type="submit" class="primary-button" disabled>Save split and new chapter</button></div>
     </form>
   </dialog>
-  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
     <span class="toast-icon" aria-hidden="true">✓</span>
     <p id="toast-message"></p>
     <button type="button" id="toast-close" aria-label="Dismiss notification">×</button>
-  </div>
-  <script src="studio.js?v=20261021-read-once1" type="module"></script>
-  <script src="chapters.js?v=20261002-chapters2" type="module"></script>
-</body>
-</html>
+  </div><script src="studio.js?v=20261024-simple1" type="module"></script><script src="chapters.js?v=20261002-chapters2" type="module"></script></body></html>
