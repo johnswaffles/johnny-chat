@@ -1669,6 +1669,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorNotebook: "whole-manuscript-scope-v1",
   storyEditorPrompts: "lossless-prompts-v1",
   storyEditorProvider: "durable-background-responses-v1",
+  storyEditorWorkspace: "start-over-preserve-library-v1",
   storyEditorPromptMaxBytes: MAX_PROMPT_BYTES,
   storyEditorChangeRequests: "chapter-scope-guard-v2",
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
@@ -4658,9 +4659,27 @@ app.post('/api/story-editor/projects/:id/chapters/:chapter/speech', storyChapter
 app.get('/api/story-editor/projects/:id/chapters/:chapter/speech', storyChapterSpeech);
 
 
+async function fullWorkspaceWork(id){
+ const jobs=await storyQuery(`SELECT id,status FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(id)} AND (status IN ('queued','running') OR id IN (SELECT job_id FROM story_provider_requests WHERE state IN ('queued','in_progress','submitting','submission_unknown')));`);
+ return {active:jobs.length>0,jobs};
+}
+async function stopFullWorkspaceWork(id){
+ await ensureStoryQueue();
+ const {jobs}=await fullWorkspaceWork(id);
+ for(const job of jobs){
+  if(['queued','running'].includes(job.status)){
+   storyQueue.pause(job.id);
+   await updateStoryAutopilotJob(job.id,{status:'failed',phase:'paused',error:'Stopped by you. Original and saved revisions remain in the library.',finished_at:storyNow()});
+  }
+  await storyResponses.cancelJob(job.id);
+ }
+ if((await fullWorkspaceWork(id)).active)throw Object.assign(Error('New editorial work appeared while stopping. Check this manuscript before starting over.'),{status:409});
+}
+
 // A manuscript-scoped collaboration surface; Morrow's personal memory stays separate.
 installWritingStudio(app, {
   path: STORY_EDITOR_DB_PATH, ready: ensureStoryDb, authorize: requireStoryEditorSession,
+  fullWorkStatus: fullWorkspaceWork, stopFullWork: stopFullWorkspaceWork,
   generate: createLayeredStudioEditor({
     instructions: STORY_EDITOR_CONTEXT+'\n'+STUDIO_INSTRUCTIONS, decisionFormat:STUDIO_FORMAT,
     call: async (request,signal) => {

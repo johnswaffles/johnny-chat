@@ -315,3 +315,21 @@ A submission acknowledgement lost before its response ID is saved fails closed: 
 The timeout classifier recognizes the SDK's “Request timed out.” wording. Network status-check errors can retry safely because the response ID persists; unknown creation outcomes cannot. User-facing progress labels show completed revision sections separately from workflow-stage estimates, saved stage results, worker heartbeat, and provider status/check time. Provider receipt metadata is exposed only through the authenticated job response; no manuscript text is added to logs.
 
 Tests cover pending-to-complete polling, worker restarts, lost acknowledgements, concurrent duplicate calls, cancelled responses, model/reasoning mismatch, usage receipts, bounded polling windows, legacy checkpoint upgrade recovery, originals, exports, pause fencing, and safe duplicate-start behavior. Resume the existing failed job only after the deployed backend/frontend release is healthy; never start a new full job to recover it.
+
+## Start over (October 24)
+
+The top Start over button clears only the current browser workspace and opens new
+file/prompt setup. Saved projects, original text, completed revisions, conversation
+and bookmarks remain in the library. Unsent local fields are cleared only after
+confirmation. The blank selection persists per tab across reload/back restoration;
+explicitly opening a library manuscript restores that manuscript. Workspace epochs
+fence late project loads, polls, audio and task responses. Upload/submission in
+flight must finish acknowledgement before reset; no uncertain duplicate is created.
+
+Authenticated work-status/stop-work studio routes stop project-scoped full-edit
+workers and passage tasks. Full-edit provider responses are retrieved and cancelled
+by their saved IDs, with terminal receipts persisted. A missing submission ID or
+unconfirmed cancellation blocks reset visibly. Foreground passage calls and already
+started TTS may finish after abort; confirmation discloses this billing limitation.
+No reset route deletes or overwrites manuscript data. All reset tests use synthetic
+text and mocked providers. Release marker: start-over-preserve-library-v1.

@@ -44,3 +44,18 @@ test('reported reasoning downgrade is blocked and recorded without accepting its
 test('terminal provider cancellation is never replayed on resume',async t=>{
  let creates=0;const {runner}=fixture(t,{create:async()=>{creates++;return response('cancelled');},retrieve:async()=>assert.fail()});for(let i=0;i<2;i++)await assert.rejects(runner.run('job','stage',request),e=>e.code==='PROVIDER_CANCELLED');assert.equal(creates,1);
 });
+
+test('stopping a known background request cancels once and never creates new work on repeat',async t=>{
+ let creates=0,cancels=0;const {runner}=fixture(t,{create:async()=>{creates++;return response('in_progress');},retrieve:async()=>response('in_progress'),cancel:async id=>{assert.equal(id,'resp_synthetic');cancels++;return response('cancelled');}},{windowMs:0});
+ await assert.rejects(runner.run('job','stage',request),e=>e.code==='PROVIDER_STILL_WORKING');await runner.cancelJob('job');await runner.cancelJob('job');assert.equal(cancels,1);assert.equal(creates,1);assert.equal(runner.info('job').state,'cancelled');
+});
+test('stop verifies a lost cancellation reply via the same provider response and preserves terminal completion',async t=>{
+ let cancelled=false,calls=0;const {runner}=fixture(t,{create:async()=>response('queued'),retrieve:async()=>response(cancelled?'cancelled':'in_progress'),cancel:async()=>{calls++;cancelled=true;throw Error('Request timed out.');}},{windowMs:0});
+ await assert.rejects(runner.run('job','stage',request));await runner.cancelJob('job');assert.equal(calls,1);assert.equal(runner.info('job').state,'cancelled');
+});
+test('unknown submission blocks reset rather than silently orphaning or recreating provider work',async t=>{
+ const {runner}=fixture(t,{create:async()=>{throw Error('Request timed out.');},retrieve:async()=>assert.fail(),cancel:async()=>assert.fail()});await assert.rejects(runner.run('job','stage',request));await assert.rejects(runner.cancelJob('job'),e=>e.code==='PROVIDER_SUBMISSION_UNKNOWN'&&e.status===409);
+});
+test('stop records already completed provider work without replay or redundant cancellation',async t=>{
+ const {runner}=fixture(t,{create:async()=>response('queued'),retrieve:async()=>response(),cancel:async()=>assert.fail()},{windowMs:0});await assert.rejects(runner.run('job','stage',request));await runner.cancelJob('job');assert.equal(runner.info('job').state,'completed');
+});

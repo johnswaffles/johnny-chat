@@ -25,9 +25,10 @@ let resumeBudgetFailures=0;
 let releaseSpeech;
 let speechGate = new Promise(resolve => releaseSpeech=resolve);
 const truncatedStages=new Set();
-const pendingResponses=new Map();
+const pendingResponses=new Map();let cancellationCalls=0;
 let pauseResponseStarted=false;
 const mock=http.createServer(async(req,res)=>{
+ if(req.method==='POST'&&/^\/v1\/responses\/[^/]+\/cancel$/.test(req.url)){const id=req.url.split('/').at(-2);const item=pendingResponses.get(id);cancellationCalls++;if(item)item.status='cancelled';res.writeHead(item?200:404,{'Content-Type':'application/json'});res.end(JSON.stringify(item||{error:{message:'Not found'}}));return;}
  if(req.method==='GET'&&req.url.startsWith('/v1/responses/')){const item=pendingResponses.get(req.url.split('/').pop());res.writeHead(item?200:404,{'Content-Type':'application/json'});res.end(JSON.stringify(item||{error:{message:'Not found'}}));return;}
  if(process.env.STORY_PREVIEW && req.url==='/preview') {res.writeHead(302,{'Set-Cookie':`gpt54_session=${token}; Path=/; SameSite=Lax`,Location:origin+'/story-editor/'});res.end();return;}
  let raw=''; for await(const part of req) raw+=part;
@@ -274,6 +275,25 @@ let finished;
 for(let i=0;i<150;i++){finished=(await json(pauseBase+'/autopilot/'+pauseJob)).job;if(['completed','failed'].includes(finished.status))break;await new Promise(r=>setTimeout(r,100));}
 assert.equal(finished.status,'completed');
 // A complete studio collaboration uses only this local fake model and temporary database.
+// Synthetic active full edit: stop must cancel its provider, revoke ownership,
+// preserve originals/revisions, and be safe to repeat with no paid create.
+const stopForm=new FormData();stopForm.append('manuscript',new Blob(['Synthetic preserved original.'],{type:'text/plain'}),'Start over test.txt');
+const stopUpload=await json('/api/story-editor/upload',{method:'POST',body:stopForm});const stopBase='/api/story-editor/projects/'+stopUpload.projectId;
+const stopDb=new DatabaseSync(testDir+'/story.sqlite');
+stopDb.prepare("INSERT INTO story_autopilot_jobs(id,project_id,intent,status,phase,total_chunks,completed_chunks,created_at,updated_at) VALUES(?,?,?,'running','editing',2,1,?,?)").run('synthetic-stop-job',stopUpload.projectId,'Synthetic only',new Date().toISOString(),new Date().toISOString());
+stopDb.prepare("INSERT INTO story_worker_queue(job_id,state) VALUES(?,'failed')").run('synthetic-stop-job');
+stopDb.prepare("UPDATE story_sections SET edited_text='Synthetic saved revision.' WHERE project_id=? AND kind='paragraph'").run(stopUpload.projectId);
+stopDb.prepare("INSERT INTO story_provider_requests(job_id,stage_key,stage,state,response_id,client_request_id,model,effort,mode,submitted_at,checked_at) VALUES(?,?,?,'in_progress',?,?,?,'max','pro',?,?)").run('synthetic-stop-job','stage','story_autopilot_chunk','resp_stop_fixture','stop-fixture','gpt-6-astra',new Date().toISOString(),new Date().toISOString());
+pendingResponses.set('resp_stop_fixture',{id:'resp_stop_fixture',status:'in_progress',model:'gpt-6-astra'});
+assert.equal((await json(stopBase+'/studio/work-status')).active,true);const requestsBeforeStop=requests.length;
+assert.equal((await json(stopBase+'/studio/stop-work',{method:'POST'})).stopped,true);
+assert.equal((await json(stopBase+'/studio/stop-work',{method:'POST'})).stopped,true);
+assert.equal((await json(stopBase+'/studio/work-status')).active,false);assert.equal(cancellationCalls,1);assert.equal(requests.length,requestsBeforeStop);
+const stoppedProject=await json(stopBase);assert.equal(stoppedProject.autopilot.phase,'paused');assert.equal(stoppedProject.autopilot.completedChunks,1);assert.equal(stoppedProject.sections.find(p=>p.kind==='paragraph').originalText,'Synthetic preserved original.');assert.equal(stoppedProject.sections.find(p=>p.kind==='paragraph').editedText,'Synthetic saved revision.');
+assert.equal(stopDb.prepare('SELECT state FROM story_provider_requests WHERE job_id=?').get('synthetic-stop-job').state,'cancelled');assert.equal(stopDb.prepare('SELECT lease_until FROM story_worker_queue WHERE job_id=?').get('synthetic-stop-job').lease_until,0);stopDb.close();
+assert.equal((await fetch(origin+stopBase+'/studio/stop-work',{method:'POST'})).status,401);
+console.log('PASS: Start over work-status and repeated stop, provider cancellation, no new generation, original/revision preservation, authentication.');
+
 const studioBook=await run('Chapter One\n\nThe letter had waited beside the kitchen window for three days. Every morning, Mara moved it to wipe the sill, and every morning she put it back.\n\nHer brother had written her name carefully. She recognized the way he pressed too hard on the final stroke, as though he could make certainty out of ink.\n\nChapter Two\n\nAt the station, the last train had not yet been called.','The Letter - studio preview');
 const studioBase=studioBook.base+'/studio';
 assert.equal((await fetch(origin+studioBase)).status,401);
