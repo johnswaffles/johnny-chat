@@ -188,7 +188,7 @@ const voice=new StudioVoice({
 let voiceSession='';
 $('studio-continue').addEventListener('click',()=>{setNotebookView('draft');state.scope='passage';state.original=false;renderDraft({scroll:true});status('We’re back at your saved passage. Press Read, or tell Johnny what you want to work on.');});
 $('studio-recap-read').addEventListener('click',()=>void run(async()=>{const all=allPassages(),index=all.findIndex(p=>p.id===state.sectionId);if(index>0){selectSection(all[index-1].id);await read({restart:true});}}));
-$('studio-goal-form').addEventListener('submit',event=>{event.preventDefault();void run(async()=>{await api('/goal',{method:'PUT',body:{goal:$('studio-goal').value.trim()}});await refresh();status('Your destination is saved for this whole manuscript. We’ll keep working toward it when you return.');});});
+$('studio-goal-form').addEventListener('submit',event=>{event.preventDefault();void run(async()=>{await api('/goal',{method:'PUT',body:{goal:$('studio-goal').value}});await refresh();status('Your destination is saved for this whole manuscript. We’ll keep working toward it when you return.');});});
 $('studio-read').addEventListener('click',()=>void run(()=>read()));
 $('studio-pause').addEventListener('click',()=>pause());
 $('studio-voice').addEventListener('click',()=>{if(voice.connected||voiceStarting){pause('Voice ended. Your draft and conversation stay saved.');voice.close();voiceStarting=false;$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';$('studio-voice-status').textContent='Voice is off · typing works too';renderControls();}else{pause('Narration paused. Connecting voice…');voiceSession=crypto.randomUUID();voiceStarting=true;renderControls();void voice.connect();}});
@@ -198,7 +198,7 @@ $('studio-original-export').addEventListener('click',()=>$('download-original').
 $('studio-chapter').addEventListener('change',()=>{const c=chapters().find(c=>c.index===Number($('studio-chapter').value));if(c)selectSection(c.passages[0].id);});
 for(const [id,direction] of [['studio-prev',-1],['studio-next',1]])$(id).addEventListener('click',()=>{const all=allPassages(),index=all.findIndex(p=>p.id===state.sectionId);if(all[index+direction])selectSection(all[index+direction].id);});
 $('studio-refresh').addEventListener('click',()=>void run(async()=>{await refresh();if(!state.task)status('Your saved draft is up to date.');}));
-$('studio-compose').addEventListener('submit',event=>{event.preventDefault();const text=$('studio-input').value.trim();if(!text){$('studio-input').focus();return;}void run(async()=>{const result=await sendRequest(text);if(result?.ok)$('studio-input').value='';});});
+$('studio-compose').addEventListener('submit',event=>{event.preventDefault();const text=$('studio-input').value;if(!text.trim()){$('studio-input').focus();return;}void run(async()=>{const result=await sendRequest(text);if(result?.ok)$('studio-input').value='';});});
 $('studio-undo').addEventListener('click',()=>void run(undo));
 $('studio-cancel').addEventListener('click',()=>void run(async()=>{pause('Stopping this edit…');if(state.task)await api('/tasks/'+encodeURIComponent(state.task)+'/cancel',{method:'POST',body:{}});}));
 $('studio-retry').addEventListener('click',()=>void run(async()=>{const id=state.lastTask;if(!id)return;pause('');const data=await api('/tasks/'+encodeURIComponent(id)+'/retry',{method:'POST',body:{}});state.lastTask=null;state.task=data.task.id;renderControls();await pollTask(data.task.id);}));
@@ -214,7 +214,7 @@ document.addEventListener('story-reader-project',event=>{
 document.addEventListener('story-chapters-saved',event=>{if(event.detail.projectId===state.id){pause('Chapter structure updated. Opening the current draft…');void run(()=>refresh());}});
 window.addEventListener('pagehide',()=>{pause('');voice.close();taskController?.abort();});
 $('author-request-submit').addEventListener('click',()=>{
- const request=$('author-request-text').value.trim(),scope=$('author-request-scope').value;
+ const request=$('author-request-text').value,scope=$('author-request-scope').value;
  if(!request){$('author-request-status').textContent='Describe the change you want first.';return;}
  if(scope==='chapter'&&chapters().length<2){$('author-request-status').textContent='This import has one chapter. Organize chapters first, or explicitly choose Whole book.';return;}
  pause('');document.dispatchEvent(new CustomEvent('story-author-request',{detail:{projectId:state.id,request,chapter:scope==='chapter'?chapter()?.index:undefined}}));

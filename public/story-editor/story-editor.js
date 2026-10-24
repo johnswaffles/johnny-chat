@@ -1,3 +1,4 @@
+import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-prompts1';
 (function () {
   const apiBase = String(window.JOHNNY_CHAT_API_BASE_URL || window.location.origin).replace(/\/+$/, "");
   const sessionCookieName = "gpt54_session";
@@ -756,16 +757,17 @@
     if (state.uploading) return;
     const file = el.fileInput.files?.[0];
     const choice = document.getElementById("setup-prompt").value;
-    const intent = String(choice === "custom" ? el.intentInput.value : briefs[choice] || "").trim();
+    const intent = String(choice === "custom" ? el.intentInput.value : briefs[choice] || "");
     if (!file) {
       setUploadStatus("Choose a manuscript before importing.", true);
       return;
     }
-    if (!intent) {
+    if (!intent.trim()) {
       setUploadStatus("Tell the editor what you want done before importing.", true);
       el.intentInput.focus();
       return;
     }
+    try{editorialPrompt(intent);}catch(error){setUploadStatus(error.message,true);return;}
     if (!/\.(txt|docx|pdf)$/i.test(file.name)) {
       setUploadStatus("Choose a Word document, PDF, or text file.",true);return;
     }
@@ -779,7 +781,7 @@
     try {
       const formData = new FormData();
       formData.append("title", file.name);
-      formData.append("intent", intent);
+      formData.append("intentJson", JSON.stringify(intent));
       formData.append("manuscript", file);
       const response = await apiFetch("/api/story-editor/upload", { method: "POST", body: formData });
       const data = await readJsonResponse(response);
@@ -833,7 +835,8 @@
 
   async function startAutopilot({ fresh = false, requestedIntent, chapter, changeRequest = false } = {}) {
     if (!state.project || el.autopilotStart.disabled) return;
-    const intent = String(requestedIntent || el.autopilotIntent.value || "").trim();
+    const intent = String(requestedIntent ?? el.autopilotIntent.value ?? "");
+    try{editorialPrompt(intent);}catch(error){showToast(error.message,true);return;}
     if (!intent) {
       showToast("Tell the editor what you want done before starting Autopilot.", true);
       el.autopilotIntent.focus();
@@ -1040,6 +1043,7 @@
   document.getElementById("download-original").addEventListener("click", () => exportDocx("original"));
   document.getElementById("download-revision").addEventListener("click", () => el.exportDocx.click());
   const briefs = {
+    publication: PUBLICATION_POLISH,
     novel: "Develop this draft into the strongest complete novel it can become. Preserve the author's voice, plot, characters, viewpoint, and ending. Deepen character motivation, emotional complexity, subtext, causal scene progression, and meaningful detail. Strengthen prose, pacing, and dialogue without decorative padding, reducing scenes to summaries, inventing major events, or forcing premature closure. Keep mature themes in context. Flag uncertainty rather than inventing canon.",
     story: "Polish this into a compelling, complete short story. Preserve my voice, characters, plot, mature themes, and ending. Deepen emotional stakes and subtext, sharpen prose and dialogue, and strengthen pacing without padding or inventing major events.",
     memoir: "Shape this into a compelling memoir. Preserve my lived experience, voice, facts, uncertainty, and emotional honesty. Deepen reflection grounded in the supplied experience. Improve structure, narrative flow, and prose without inventing events, motives, facts, or dialogue.",
@@ -1049,7 +1053,7 @@
     const choice=document.getElementById('setup-prompt').value,custom=choice==='custom';
     document.getElementById('setup-custom-field').hidden=!custom;
     el.intentInput.required=custom;
-    document.getElementById('setup-prompt-description').textContent=custom?'Your direction guides the complete revision.':({novel:'Deepen character, emotional complexity, and prose while preserving your story and voice.',story:'Strengthen a complete short story without padding or changing its outcome.',memoir:'Improve flow and emotional honesty while preserving your lived experience and facts.',copyedit:'Correct language and consistency with the lightest touch.'}[choice]);
+    document.getElementById('setup-prompt-description').textContent=custom?'Your direction guides the complete revision.':({publication:'Preserve and enrich meaningful detail with professional, approachable prose; flag research and design needs honestly.',novel:'Deepen character, emotional complexity, and prose while preserving your story and voice.',story:'Strengthen a complete short story without padding or changing its outcome.',memoir:'Improve flow and emotional honesty while preserving your lived experience and facts.',copyedit:'Correct language and consistency with the lightest touch.'}[choice]);
     document.getElementById('setup-prompt-details').hidden=custom;
     document.getElementById('setup-prompt-full').textContent=briefs[choice]||'';
   }

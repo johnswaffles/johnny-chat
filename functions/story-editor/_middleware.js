@@ -213,5 +213,6 @@ export async function onRequest(context) {
   marked.headers.set("X-Story-Editor-Reader", "chapter-reader-marin-async-v2");
   marked.headers.set("X-Story-Editor-Studio", "layered-literary-studio-v1");
   marked.headers.set("X-Story-Editor-Notebook", "compact-setup-v1");
+  marked.headers.set("X-Story-Editor-Prompts", "lossless-prompts-v1");
   return marked;
 }

@@ -1,5 +1,7 @@
 // Uses only the synthetic STORY_PREVIEW fixture and an isolated local browser.
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const supplied=process.env.STORY_PROMPT_FIXTURE?await readFile(process.env.STORY_PROMPT_FIXTURE,'utf8'):('Full detailed direction.\n'.repeat(400)+'END');
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright-core');
 const preview=process.env.STORY_PREVIEW_URL;
 if(!preview||!/^http:\/\/127\.0\.0\.1:\d+\/preview$/.test(preview))throw Error('Provide the synthetic STORY_PREVIEW_URL, never a production URL.');
@@ -36,7 +38,10 @@ try{
  await page.locator('#intent-input').fill('   ');
  await page.locator('#upload-submit').click();
  assert.equal(imports,0,'Blank custom prompt never imports a file');
- await page.locator('#intent-input').fill('Preserve my gentle voice and develop emotional depth.');
+ await page.locator('#intent-input').fill('é'.repeat(50001));await page.locator('#upload-submit').click();assert.equal(imports,0);assert.match(await page.locator('#upload-status').textContent(),/100,000/);
+ await page.locator('#intent-input').fill(supplied);assert.equal(await page.locator('#intent-input').inputValue(),supplied);
+ await page.locator('#setup-prompt').selectOption('publication');assert.match(await page.locator('#setup-prompt-full').textContent(),/never invent the author/);
+ await page.locator('#setup-prompt').selectOption('custom');assert.equal(await page.locator('#intent-input').inputValue(),supplied);
  gate=new Promise(resolve=>releaseImport=resolve);
  await page.locator('#upload-submit').click();
   await page.locator('#upload-form').evaluate(form=>{form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));});
@@ -48,8 +53,9 @@ try{
  await page.locator('#upload-dialog').waitFor({state:'hidden'});
  await page.waitForFunction(()=>document.querySelector('#notebook-next').textContent.includes('Start at')||document.querySelector('#notebook-next').textContent.includes('Continue'),{},{timeout:15000});
  assert.equal(imports,1);assert.equal(starts,1,'Repeated submit starts exactly one revision');
- assert.match(postedIntent,/gentle voice/);assert.match(postedIntent,/filename="replacement.txt"/);assert.doesNotMatch(postedIntent,/filename="first.txt"/);
+ assert.equal(JSON.parse(postedIntent.match(/name="intentJson"\r\n\r\n([^\r]+)\r\n/)[1]),supplied,'Complete exact prompt in encoded multipart payload');assert.match(postedIntent,/filename="replacement.txt"/);assert.doesNotMatch(postedIntent,/filename="first.txt"/);
  assert.equal(await page.locator('#setup-prompt').inputValue(),'novel');
+ await page.reload();await page.locator('#studio-pages .studio-passage').first().waitFor();assert.equal(await page.locator('#studio-goal').inputValue(),supplied,'Reloaded goal contains the entire supplied prompt');
  await page.locator('#rail-open').click();await page.locator('#open-upload').click();
  await page.locator('#file-input').setInputFiles(file('preset.txt'));
  await page.locator('#upload-submit').click();
