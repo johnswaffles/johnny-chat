@@ -4,12 +4,12 @@ import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {createStoryResponses} from '../lib/story-responses.mjs';
 import {transientStoryError} from '../lib/story-queue.mjs';
-const request={model:'gpt-6-astra',reasoning:{effort:'max',mode:'pro'},max_output_tokens:32768,text:{format:{name:'story_autopilot_plan'}},input:[{role:'user',content:'Synthetic only'}]};
-const response=(status='completed')=>({id:'resp_synthetic',model:'gpt-6-astra',status,output:[],usage:{input_tokens:20,output_tokens:30,output_tokens_details:{reasoning_tokens:25}}});
+const request={model:'gpt-6.1-sol',reasoning:{effort:'xhigh',mode:'pro'},max_output_tokens:32768,text:{format:{name:'story_autopilot_plan'}},input:[{role:'user',content:'Synthetic only'}]};
+const response=(status='completed')=>({id:'resp_synthetic',model:'gpt-6.1-sol',status,output:[],usage:{input_tokens:20,output_tokens:30,output_tokens_details:{reasoning_tokens:25}}});
 function fixture(t,client,options={}){const dir=mkdtempSync(tmpdir()+'/story-provider-');t.after(()=>rmSync(dir,{recursive:true,force:true}));const args={path:dir+'/state.sqlite',client,pollMs:0,...options};const runner=createStoryResponses(args);runner.init();return {runner,args};}
 test('background request persists receipt, actual model and usage; terminal reuse makes no new call',async t=>{
- let creates=0,gets=0;const {runner}=fixture(t,{create:async(body,options)=>{creates++;assert.equal(body.background,true);assert.equal(body.store,true);assert.deepEqual(body.reasoning,{effort:'max',mode:'pro'});assert.equal(options.maxRetries,0);assert.ok(options.headers['X-Client-Request-Id']);return response('queued');},retrieve:async()=>{gets++;return response();}});
- assert.equal((await runner.run('job','stage',request)).status,'completed');assert.equal((await runner.run('job','stage',request)).status,'completed');assert.equal(creates,1);assert.equal(gets,1);const info=runner.info('job');assert.equal(info.state,'completed');assert.equal(info.model,'gpt-6-astra');assert.equal(info.usage.output_tokens_details.reasoning_tokens,25);assert.ok(!JSON.stringify(info).includes('Synthetic only'));
+ let creates=0,gets=0;const {runner}=fixture(t,{create:async(body,options)=>{creates++;assert.equal(body.background,true);assert.equal(body.store,true);assert.deepEqual(body.reasoning,{effort:'xhigh',mode:'pro'});assert.equal(options.maxRetries,0);assert.ok(options.headers['X-Client-Request-Id']);return response('queued');},retrieve:async()=>{gets++;return response();}});
+ assert.equal((await runner.run('job','stage',request)).status,'completed');assert.equal((await runner.run('job','stage',request)).status,'completed');assert.equal(creates,1);assert.equal(gets,1);const info=runner.info('job');assert.equal(info.state,'completed');assert.equal(info.model,'gpt-6.1-sol');assert.equal(info.usage.output_tokens_details.reasoning_tokens,25);assert.ok(!JSON.stringify(info).includes('Synthetic only'));
 });
 test('poll timeout and restart recover the same response ID, never another paid create',async t=>{
  let creates=0,gets=0;const {runner,args}=fixture(t,{create:async()=>{creates++;return response('in_progress');},retrieve:async id=>{assert.equal(id,'resp_synthetic');if(++gets===1)throw Error('Request timed out.');return response();}});
@@ -58,4 +58,8 @@ test('unknown submission blocks reset rather than silently orphaning or recreati
 });
 test('stop records already completed provider work without replay or redundant cancellation',async t=>{
  const {runner}=fixture(t,{create:async()=>response('queued'),retrieve:async()=>response(),cancel:async()=>assert.fail()},{windowMs:0});await assert.rejects(runner.run('job','stage',request));await runner.cancelJob('job');assert.equal(runner.info('job').state,'completed');
+});
+
+test('an Astra response cannot be silently accepted for a Sol request',async t=>{
+ const {runner}=fixture(t,{create:async()=>({...response(),model:'gpt-6-astra'}),retrieve:async()=>assert.fail()});await assert.rejects(runner.run('job','stage',request),e=>e.code==='PROVIDER_MODEL_MISMATCH');
 });

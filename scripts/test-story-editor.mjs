@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, withStoryOutputBudget } from '../lib/story-editor.mjs';
+import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, withStoryOutputBudget, storyEditorialCacheKey } from '../lib/story-editor.mjs';
 
 test('adult themes and ambiguous words are not automatic exclusions', () => {
   for (const text of ['She smelled cannabis.', 'His joint ached.', 'A blunt reply.', 'A lecture on psilocybin research.']) assert.equal(classifyStoryProtection(text).preserveVerbatim, false);
@@ -53,3 +53,11 @@ test('output retries are bounded and do not retry network or safety errors', asy
  const output=normalizeAutopilotParagraphs({revisedParagraphs:[{id:'p',text:'A short summary.',disposition:'revised'}]},{paragraphs:[{id:'p',text:source,label:'Scene'}]});
  assert.equal(output.paragraphs[0].revisedText,source);assert.equal(output.paragraphs[0].needsReview,true);
  });
+
+test('editorial cache identity separates models, reasoning and modes without changing source data',()=>{
+ const input={format:{name:'scene'},system:'Synthetic instructions',user:{text:'Synthetic passage'},maxOutputTokens:32768};
+ const quality={model:'gpt-6.1-sol',effort:'xhigh',mode:'pro'};const key=storyEditorialCacheKey(input,quality);
+ assert.equal(storyEditorialCacheKey(structuredClone(input),{...quality}),key);
+ for(const change of [{model:'gpt-6-astra'},{effort:'max'},{mode:'standard'}])assert.notEqual(storyEditorialCacheKey(input,{...quality,...change}),key);
+ assert.equal(input.user.text,'Synthetic passage');
+});

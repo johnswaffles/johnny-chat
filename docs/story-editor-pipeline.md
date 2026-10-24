@@ -196,7 +196,7 @@ immutable original are separate tabs; a studio edit creates a recoverable versio
 and Undo uses an optimistic revision check. Original exports retain their original
 snapshot. The full-edit report is labelled separately from later studio changes.
 
-Literary editing is pinned to `gpt-6-astra`, reasoning `max`, mode `pro`.
+Literary editing is pinned to `gpt-6.1-sol`, reasoning `xhigh` (Extra High), mode `pro`.
 The Realtime voice model handles conversation and tools; it must delegate prose
 writing and substantive creative analysis to the deep editor. No smaller model or
 lower reasoning fallback is permitted. A passage revision has four checkpointed
@@ -333,3 +333,14 @@ unconfirmed cancellation blocks reset visibly. Foreground passage calls and alre
 started TTS may finish after abort; confirmation discloses this billing limitation.
 No reset route deletes or overwrites manuscript data. All reset tests use synthetic
 text and mocked providers. Release marker: start-over-preserve-library-v1.
+
+## Editorial model selection (October 24, after the completed run)
+
+The chosen literary configuration is GPT-6.1 Sol / Extra High / Pro. One shared
+constant governs whole-manuscript reading, planning, revision, polish and review,
+and the studio's planning, drafting, critique and refinement. Other app models,
+voice and narration are unchanged. New stage-cache keys include the model, effort
+and mode, preventing cross-configuration receipt reuse. Saved originals, revisions
+and completed jobs are preserved; deployment starts no generation and resumes no
+finished job. Actual future provider responses must still match the requested model
+and reported reasoning; there is no silent fallback. UI labels read server quality.

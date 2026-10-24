@@ -65,7 +65,7 @@ test('layered maximum-quality editing checkpoints passes and explicit retry resu
  const {studio,request,db}=fixture(t,editor);studio.start('book',request());await studio.tick();assert.equal(studio.task('book','request-1').status,'failed');assert.equal(db.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,2);assert.equal(studio.snapshot('book').versions.length,0);
  studio.start('book',{...request(),retry:true});await studio.tick();assert.equal(studio.task('book','request-1').status,'done');
  assert.deepEqual(calls.map(c=>c.text.format.name),['writing_studio_turn','studio_draft','studio_critique','studio_critique','studio_final']);
- for(const c of calls){assert.equal(c.model,'gpt-6-astra');assert.deepEqual(c.reasoning,{effort:'max',mode:'pro'});assert.ok(c.max_output_tokens>=32768);}
+ for(const c of calls){assert.equal(c.model,'gpt-6.1-sol');assert.deepEqual(c.reasoning,{effort:'xhigh',mode:'pro'});assert.ok(c.max_output_tokens>=32768);}
  assert.equal(studio.snapshot('book').versions.length,1);assert.equal(studio.task('book','request-1').result.quality.mode,'pro');
 });
 test('a restart retains completed work and marks an expired running task failed without regenerating',async t=>{
@@ -84,7 +84,7 @@ test('narration resolves exact saved passage text, rejects stale revisions, and 
 });
 function harness(t){
  const {path}=fixture(t);const routes=new Map();const app=Object.fromEntries(['get','post','put','delete'].map(method=>[method,(path,handler)=>routes.set(method+' '+path,handler)]));let generated=0,voiceCalls=0,speechCalls=0,readyCalls=0;
- const studio=installWritingStudio(app,{path,ready:async()=>{readyCalls++;},authorize:(req,res)=>req.authorized|| (res.status(401).json({error:'Private access required'}),false),generate:async()=>{generated++;return result();},createVoice:async(instructions,tools)=>{voiceCalls++;assert.match(instructions,/maximum-quality literary editing workflow/);assert.ok(tools.some(t=>t.name==='edit_passage'));assert.ok(tools.some(t=>t.name==='edit_manuscript'));return {value:'synthetic-ephemeral',model:'voice-test',realtimeUrl:'https://example.test/calls'};},createSpeech:async text=>{speechCalls++;assert.equal(text,'Current first passage.');return Buffer.from('ID3-local');}});t.after(()=>studio.stop());
+ const studio=installWritingStudio(app,{path,ready:async()=>{readyCalls++;},authorize:(req,res)=>req.authorized|| (res.status(401).json({error:'Private access required'}),false),generate:async()=>{generated++;return result();},createVoice:async(instructions,tools)=>{voiceCalls++;assert.match(instructions,/configured deep literary editing workflow/);assert.ok(tools.some(t=>t.name==='edit_passage'));assert.ok(tools.some(t=>t.name==='edit_manuscript'));return {value:'synthetic-ephemeral',model:'voice-test',realtimeUrl:'https://example.test/calls'};},createSpeech:async text=>{speechCalls++;assert.equal(text,'Current first passage.');return Buffer.from('ID3-local');}});t.after(()=>studio.stop());
  return {routes,counts:()=>({generated,voiceCalls,speechCalls,readyCalls}),async run(method,suffix,{authorized=true,body={},query={}}={}){const res={statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(c){this.statusCode=c;return this;},json(body){this.body=body;return this;},type(t){this.contentType=t;return this;},send(body){this.body=body;return this;}};await routes.get(method+' /api/story-editor/projects/:id/studio'+suffix)({method:method.toUpperCase(),params:{id:'book',taskId:'request-1'},authorized,body,query},res);return res;}};
 }
 test('all collaboration routes authenticate before initializing storage or invoking a provider',async t=>{
@@ -150,7 +150,7 @@ test('whole-manuscript scope rejects a model that tries to overwrite only the se
 });
 test('book proposals use one maximum-quality planning call and cannot trigger downstream prose passes',async()=>{
  const calls=[];const editor=createLayeredStudioEditor({instructions:STUDIO_INSTRUCTIONS,decisionFormat:STUDIO_FORMAT,call:async body=>{calls.push(body);return {...result(),action:'revise_book'};}});
- const output=await editor({requestScope:'book'},new AbortController().signal);assert.equal(output.action,'revise_book');assert.equal(calls.length,1);assert.equal(calls[0].model,'gpt-6-astra');assert.deepEqual(calls[0].reasoning,{effort:'max',mode:'pro'});
+ const output=await editor({requestScope:'book'},new AbortController().signal);assert.equal(output.action,'revise_book');assert.equal(calls.length,1);assert.equal(calls[0].model,'gpt-6.1-sol');assert.deepEqual(calls[0].reasoning,{effort:'xhigh',mode:'pro'});
  const broken=createLayeredStudioEditor({instructions:STUDIO_INSTRUCTIONS,decisionFormat:STUDIO_FORMAT,call:async()=>result()});await assert.rejects(broken({requestScope:'book'},new AbortController().signal),/whole-manuscript/);
 });
 

@@ -8,7 +8,7 @@ import { splitStoryManuscript, pdfPageText } from "./lib/story-chapters.mjs";
 import { bookChapters, speechParts } from "./public/story-editor/reader-model.mjs";
 import { createStoryQueue, storyTask, assertStoryLease } from "./lib/story-queue.mjs";
 import { getTextsmithSchema, getTextsmithSmsStats, parseTextsmithMessages, textsmithMessagesFit, textsmithPrompt } from "./lib/textsmith.mjs";
-import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, withStoryOutputBudget, STORY_EDITOR_CONTEXT } from "./lib/story-editor.mjs";
+import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, withStoryOutputBudget, storyEditorialCacheKey, STORY_EDITOR_CONTEXT } from "./lib/story-editor.mjs";
 import express from "express";
 import cors from "cors";
 import multer from "multer";
@@ -37,9 +37,9 @@ const {
   OPENAI_LIVE_MODEL = "gpt-4o",
   OPENAI_GPT54_MODEL = OPENAI_CHAT_MODEL,
   OPENAI_GPT54_REASONING_EFFORT = "",
-  OPENAI_STORY_EDITOR_MODEL = "gpt-6-astra",
-  OPENAI_STORY_EDITOR_REASONING_EFFORT = "high",
-  OPENAI_STORY_EDITOR_REASONING_MODE = "",
+  OPENAI_STORY_EDITOR_MODEL = "gpt-6.1-sol",
+  OPENAI_STORY_EDITOR_REASONING_EFFORT = "xhigh",
+  OPENAI_STORY_EDITOR_REASONING_MODE = "pro",
   OPENAI_TEXTSMITH_MODEL = "gpt-6-astra",
   OPENAI_TEXTSMITH_FALLBACK_MODEL = "gpt-5.6-luna",
   OPENAI_REALTIME_SEARCH_MODEL = "",
@@ -3632,7 +3632,7 @@ function parseStoryModelJson(response) {
 
 async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) {
   const jobId = storyTask.getStore()?.jobId;
-  const cacheKey = createHash('sha256').update(JSON.stringify({format,system,user,maxOutputTokens})).digest('hex');
+  const cacheKey = storyEditorialCacheKey({format,system,user,maxOutputTokens},STUDIO_QUALITY);
   if (jobId) {
     const cached = await storyQuery(`SELECT value_json FROM story_stage_cache WHERE job_id=${sqliteLiteral(jobId)} AND cache_key=${sqliteLiteral(cacheKey)};`);
     if (cached[0]) return JSON.parse(cached[0].value_json);
@@ -4686,7 +4686,7 @@ installWritingStudio(app, {
       if (!OPENAI_API_KEY) throw Object.assign(new Error('The writing partner is not configured.'),{status:503});
       let response;
       try { response=await openai.responses.create(request,{signal,timeout:600000,maxRetries:0}); }
-      catch(error) { if(signal.aborted)throw error;throw Object.assign(new Error('The maximum-quality editor could not finish this pass. No smaller model was substituted. Completed passes are saved; retry to continue.'),{status:502}); }
+      catch(error) { if(signal.aborted)throw error;throw Object.assign(new Error('The configured literary editor could not finish this pass. No smaller model was substituted. Completed passes are saved; retry to continue.'),{status:502}); }
       assertStoryModelResponse(response);return JSON.parse(extractResponseText(response));
     }
   }),

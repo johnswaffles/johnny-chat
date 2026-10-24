@@ -17,7 +17,7 @@ function sample(schema) {
  return 'Local test editorial note.';
 }
 let providerSequence=0;
-const fakeResponse=data=>({id:'resp_local_'+(++providerSequence),model:'gpt-6-astra',object:'response',...data});
+const fakeResponse=data=>({id:'resp_local_'+(++providerSequence),model:'gpt-6.1-sol',object:'response',...data});
 const requests=[];
 const speechRequests=[];
 const studioVoiceRequests=[];
@@ -36,7 +36,7 @@ const mock=http.createServer(async(req,res)=>{
  if(req.url==='/v1/audio/speech') {speechRequests.push(body);await speechGate;assert.equal(body.voice,'marin');assert.equal(body.model,'gpt-4o-mini-tts');assert.ok(body.input.length<=4096);res.writeHead(200,{'Content-Type':'audio/mpeg'});res.end(Buffer.from('ID3-local-test-audio'));return;}
  if(req.url==='/v1/realtime/client_secrets'){studioVoiceRequests.push(body);assert.ok(body.session.tools.some(t=>t.name==='edit_passage'));res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({value:'synthetic-no-live-connection',expires_at:Date.now()/1000+60}));return;}
  requests.push(body);
- assert.equal(body.model,'gpt-6-astra'); assert.equal(body.reasoning.effort,'max'); assert.equal(body.reasoning.mode,'pro');
+ assert.equal(body.model,'gpt-6.1-sol'); assert.equal(body.reasoning.effort,'xhigh'); assert.equal(body.reasoning.mode,'pro');
  const user=JSON.parse(body.input[1].content);
  const stage=body.text?.format?.name;
  if(['writing_studio_turn','studio_draft','studio_critique','studio_final'].includes(stage)){
@@ -49,7 +49,7 @@ const mock=http.createServer(async(req,res)=>{
  }
 
  if(body.input[1].content.includes('PAUSE_TEST')&&!pauseResponseStarted){
-  if(body.background){pauseResponseStarted=true;const id='resp_paused_'+(++providerSequence);pendingResponses.set(id,{id,model:'gpt-6-astra',status:'in_progress'});res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(pendingResponses.get(id)));res={writeHead(){},end(data){pendingResponses.set(id,{...JSON.parse(data),id});}};}
+  if(body.background){pauseResponseStarted=true;const id='resp_paused_'+(++providerSequence);pendingResponses.set(id,{id,model:'gpt-6.1-sol',status:'in_progress'});res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(pendingResponses.get(id)));res={writeHead(){},end(data){pendingResponses.set(id,{...JSON.parse(data),id});}};}
   await new Promise(r=>setTimeout(r,500));
  }
  const retryStage=body.input[1].content.includes('BUDGET_ONCE')&&!truncatedStages.has(stage);
@@ -283,8 +283,8 @@ const stopDb=new DatabaseSync(testDir+'/story.sqlite');
 stopDb.prepare("INSERT INTO story_autopilot_jobs(id,project_id,intent,status,phase,total_chunks,completed_chunks,created_at,updated_at) VALUES(?,?,?,'running','editing',2,1,?,?)").run('synthetic-stop-job',stopUpload.projectId,'Synthetic only',new Date().toISOString(),new Date().toISOString());
 stopDb.prepare("INSERT INTO story_worker_queue(job_id,state) VALUES(?,'failed')").run('synthetic-stop-job');
 stopDb.prepare("UPDATE story_sections SET edited_text='Synthetic saved revision.' WHERE project_id=? AND kind='paragraph'").run(stopUpload.projectId);
-stopDb.prepare("INSERT INTO story_provider_requests(job_id,stage_key,stage,state,response_id,client_request_id,model,effort,mode,submitted_at,checked_at) VALUES(?,?,?,'in_progress',?,?,?,'max','pro',?,?)").run('synthetic-stop-job','stage','story_autopilot_chunk','resp_stop_fixture','stop-fixture','gpt-6-astra',new Date().toISOString(),new Date().toISOString());
-pendingResponses.set('resp_stop_fixture',{id:'resp_stop_fixture',status:'in_progress',model:'gpt-6-astra'});
+stopDb.prepare("INSERT INTO story_provider_requests(job_id,stage_key,stage,state,response_id,client_request_id,model,effort,mode,submitted_at,checked_at) VALUES(?,?,?,'in_progress',?,?,?,'xhigh','pro',?,?)").run('synthetic-stop-job','stage','story_autopilot_chunk','resp_stop_fixture','stop-fixture','gpt-6.1-sol',new Date().toISOString(),new Date().toISOString());
+pendingResponses.set('resp_stop_fixture',{id:'resp_stop_fixture',status:'in_progress',model:'gpt-6.1-sol'});
 assert.equal((await json(stopBase+'/studio/work-status')).active,true);const requestsBeforeStop=requests.length;
 assert.equal((await json(stopBase+'/studio/stop-work',{method:'POST'})).stopped,true);
 assert.equal((await json(stopBase+'/studio/stop-work',{method:'POST'})).stopped,true);
@@ -297,7 +297,7 @@ console.log('PASS: Start over work-status and repeated stop, provider cancellati
 const studioBook=await run('Chapter One\n\nThe letter had waited beside the kitchen window for three days. Every morning, Mara moved it to wipe the sill, and every morning she put it back.\n\nHer brother had written her name carefully. She recognized the way he pressed too hard on the final stroke, as though he could make certainty out of ink.\n\nChapter Two\n\nAt the station, the last train had not yet been called.','The Letter - studio preview');
 const studioBase=studioBook.base+'/studio';
 assert.equal((await fetch(origin+studioBase)).status,401);
-let studioState=await json(studioBase);assert.deepEqual(studioState.quality,{model:'gpt-6-astra',effort:'max',mode:'pro'});assert.equal(studioState.chapters.length,2);
+let studioState=await json(studioBase);assert.deepEqual(studioState.quality,{model:'gpt-6.1-sol',effort:'xhigh',mode:'pro'});assert.equal(studioState.chapters.length,2);
 await json(studioBase+'/goal',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:'A finished literary novel with a quiet voice, developed from beginning to end.'})});
 assert.equal((await json(studioBase)).goal,'A finished literary novel with a quiet voice, developed from beginning to end.');
 
@@ -335,6 +335,6 @@ if(!process.env.STORY_PREVIEW){
  const removed=await fetch(origin+studioBook.base,{method:'DELETE',headers:auth});assert.equal(removed.status,200);
  const check=new DatabaseSync(testDir+'/story.sqlite');for(const table of ['studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
 }
-console.log('PASS: whole-manuscript proposal confirmation/scope/reload; revised vs original DOCX content; studio four-pass Astra/max/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
+console.log('PASS: whole-manuscript proposal confirmation/scope/reload; revised vs original DOCX content; studio four-pass Sol/xhigh/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
 console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');
 if(process.env.STORY_PREVIEW) console.log(`LOCAL PREVIEW: http://127.0.0.1:${mock.address().port}/preview`); else {child.kill();mock.close();}
