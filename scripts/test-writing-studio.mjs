@@ -84,7 +84,7 @@ test('narration resolves exact saved passage text, rejects stale revisions, and 
 });
 function harness(t){
  const {path}=fixture(t);const routes=new Map();const app=Object.fromEntries(['get','post','put','delete'].map(method=>[method,(path,handler)=>routes.set(method+' '+path,handler)]));let generated=0,voiceCalls=0,speechCalls=0,readyCalls=0;
- const studio=installWritingStudio(app,{path,ready:async()=>{readyCalls++;},authorize:(req,res)=>req.authorized|| (res.status(401).json({error:'Private access required'}),false),generate:async()=>{generated++;return result();},createVoice:async(instructions,tools)=>{voiceCalls++;assert.match(instructions,/maximum-quality layered literary editor/);assert.ok(tools.some(t=>t.name==='edit_passage'));return {value:'synthetic-ephemeral',model:'voice-test',realtimeUrl:'https://example.test/calls'};},createSpeech:async text=>{speechCalls++;assert.equal(text,'Current first passage.');return Buffer.from('ID3-local');}});t.after(()=>studio.stop());
+ const studio=installWritingStudio(app,{path,ready:async()=>{readyCalls++;},authorize:(req,res)=>req.authorized|| (res.status(401).json({error:'Private access required'}),false),generate:async()=>{generated++;return result();},createVoice:async(instructions,tools)=>{voiceCalls++;assert.match(instructions,/maximum-quality literary editing workflow/);assert.ok(tools.some(t=>t.name==='edit_passage'));assert.ok(tools.some(t=>t.name==='edit_manuscript'));return {value:'synthetic-ephemeral',model:'voice-test',realtimeUrl:'https://example.test/calls'};},createSpeech:async text=>{speechCalls++;assert.equal(text,'Current first passage.');return Buffer.from('ID3-local');}});t.after(()=>studio.stop());
  return {routes,counts:()=>({generated,voiceCalls,speechCalls,readyCalls}),async run(method,suffix,{authorized=true,body={},query={}}={}){const res={statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(c){this.statusCode=c;return this;},json(body){this.body=body;return this;},type(t){this.contentType=t;return this;},send(body){this.body=body;return this;}};await routes.get(method+' /api/story-editor/projects/:id/studio'+suffix)({method:method.toUpperCase(),params:{id:'book',taskId:'request-1'},authorized,body,query},res);return res;}};
 }
 test('all collaboration routes authenticate before initializing storage or invoking a provider',async t=>{
@@ -136,4 +136,20 @@ test('the whole-manuscript goal and exact working position survive restarting th
 test('manuscript goals cannot change halfway through an edit, and the mission is whole-story collaboration',t=>{
  const {studio,request}=fixture(t);studio.start('book',request());assert.throws(()=>studio.goal('book','A screenplay.'),/Finish or stop/);
  assert.match(STUDIO_INSTRUCTIONS,/entire uploaded story/);assert.match(STUDIO_INSTRUCTIONS,/author decides/);assert.match(STUDIO_INSTRUCTIONS,/one passage earlier/);
+});
+
+test('whole-manuscript revision becomes a durable proposal, never a silent one-passage write',async t=>{
+ let input;const {studio,request}=fixture(t,async context=>{input=context;return {...result(),action:'revise_book',reply:'I can apply this across the manuscript. Review the request and apply it when ready.'};});
+ studio.start('book',{...request('book-request','Develop the emotional arc across the entire novel.'),scope:'book'});await studio.tick();
+ const task=studio.task('book','book-request');assert.equal(task.status,'done');assert.equal(task.result.action,'revise_book');assert.equal(task.result.request,'Develop the emotional arc across the entire novel.');assert.equal(task.result.requiresConfirmation,true);
+ assert.equal(input.requestScope,'book');assert.equal(studio.snapshot('book').versions.length,0);assert.equal(studio.snapshot('book').chapters[0].passages[0].text,'Current first passage.');assert.equal(studio.snapshot('book').lastTask.result.request,task.result.request);
+ assert.throws(()=>studio.start('book',{...request('book-request','Develop the emotional arc across the entire novel.'),scope:'passage'}),/already in use/);
+});
+test('whole-manuscript scope rejects a model that tries to overwrite only the selected passage',async t=>{
+ const {studio,request}=fixture(t);studio.start('book',{...request(),scope:'book'});await studio.tick();assert.equal(studio.task('book','request-1').status,'failed');assert.match(studio.task('book','request-1').error,/whole-manuscript/);assert.equal(studio.snapshot('book').versions.length,0);
+});
+test('book proposals use one maximum-quality planning call and cannot trigger downstream prose passes',async()=>{
+ const calls=[];const editor=createLayeredStudioEditor({instructions:STUDIO_INSTRUCTIONS,decisionFormat:STUDIO_FORMAT,call:async body=>{calls.push(body);return {...result(),action:'revise_book'};}});
+ const output=await editor({requestScope:'book'},new AbortController().signal);assert.equal(output.action,'revise_book');assert.equal(calls.length,1);assert.equal(calls[0].model,'gpt-6-astra');assert.deepEqual(calls[0].reasoning,{effort:'max',mode:'pro'});
+ const broken=createLayeredStudioEditor({instructions:STUDIO_INSTRUCTIONS,decisionFormat:STUDIO_FORMAT,call:async()=>result()});await assert.rejects(broken({requestScope:'book'},new AbortController().signal),/whole-manuscript/);
 });

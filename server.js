@@ -1663,6 +1663,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorOutputRecovery: "durable-editorial-pipeline-v3",
   storyEditorReader: "chapter-reader-marin-async-v2",
   storyEditorStudio: "layered-literary-studio-v1",
+  storyEditorNotebook: "whole-manuscript-scope-v1",
   storyEditorChangeRequests: "chapter-scope-guard-v2",
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",

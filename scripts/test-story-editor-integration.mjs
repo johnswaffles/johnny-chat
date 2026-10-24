@@ -35,7 +35,7 @@ const mock=http.createServer(async(req,res)=>{
  const stage=body.text?.format?.name;
  if(['writing_studio_turn','studio_draft','studio_critique','studio_final'].includes(stage)){
   let value;
-  if(stage==='writing_studio_turn')value={action:'revise',reply:'Developing the moment without changing its outcome.',revisionText:'',note:'Make the emotional conflict concrete and retain the quiet voice.',chapter:0,passage:0};
+  if(stage==='writing_studio_turn')value={action:user.requestScope==='book'?'revise_book':'revise',reply:'Developing the moment without changing its outcome.',revisionText:'',note:'Make the emotional conflict concrete and retain the quiet voice.',chapter:0,passage:0};
   if(stage==='studio_draft')value={text:user.context.selection.text+' She held the envelope by its unopened edge.',craftNotes:'Developed the physical hesitation.'};
   if(stage==='studio_critique')value={strengths:['A physical action carries feeling.'],issues:['Keep the causal decision visible.'],continuityRisks:[],authorIntentFit:'Matches the request.'};
   if(stage==='studio_final')value={text:user.candidate+' Her thumb found the crease, then let it go.',craftNotes:'Her hesitation now appears in a specific action; the decision and original voice remain intact.'};
@@ -264,6 +264,21 @@ for(let i=0;i<100;i++){studioTask=(await json(studioBase+'/tasks/local-studio-ed
 assert.equal(studioTask.status,'done',studioTask.error);assert.deepEqual(requests.slice(beforeStudioCalls).map(r=>r.text.format.name),['writing_studio_turn','studio_draft','studio_critique','studio_final']);
 studioState=await json(studioBase);assert.equal(studioState.original,savedOriginal);assert.equal(studioState.versions.length,1);assert.match(studioState.chapters[0].passages[0].text,/Her thumb found the crease/);
 const repeated=await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(studioRequest)});assert.equal(repeated.task.status,'done');assert.equal(requests.length-beforeStudioCalls,4);
+const fullBefore=await json(studioBook.base);
+const proposalBefore=requests.length;
+await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:'whole-book-proposal',scope:'book',sectionId:studioState.chapters[0].passages[0].id,revision:studioState.chapters[0].passages[0].revision,message:'Deepen the emotional arc throughout the whole manuscript.'})});
+let proposal;
+for(let i=0;i<100;i++){proposal=(await json(studioBase+'/tasks/whole-book-proposal')).task;if(['done','failed'].includes(proposal.status))break;await new Promise(r=>setTimeout(r,30));}
+assert.equal(proposal.status,'done',proposal.error);assert.equal(proposal.result.action,'revise_book');assert.equal(proposal.result.requiresConfirmation,true);
+assert.equal(requests.length-proposalBefore,1,'Whole-book proposal runs planning only');
+assert.deepEqual((await json(studioBook.base)).sections,fullBefore.sections,'Proposal never silently edits one passage');
+assert.equal((await json(studioBook.base)).autopilot.id,fullBefore.autopilot.id,'Proposal cannot start a full revision without Apply');
+assert.equal((await json(studioBase)).lastTask.result.action,'revise_book','Proposal survives a page reload');
+const revisedBytes=Buffer.from(await (await fetch(origin+studioBook.base+'/export.docx?source=edited',{headers:auth})).arrayBuffer());
+const originalBytes=Buffer.from(await (await fetch(origin+studioBook.base+'/export.docx?source=original',{headers:auth})).arrayBuffer());
+await writeFile(testDir+'/studio-revised.docx',revisedBytes);await writeFile(testDir+'/studio-original.docx',originalBytes);
+assert.match(execFileSync('unzip',['-p',testDir+'/studio-revised.docx','word/document.xml']).toString(),/Her thumb found the crease/);
+assert.doesNotMatch(execFileSync('unzip',['-p',testDir+'/studio-original.docx','word/document.xml']).toString(),/Her thumb found the crease/);
 assert.equal((await fetch(origin+studioBase+'/speech?'+new URLSearchParams({sectionId:studioPassage.id,revision:studioPassage.revision,part:'0'}),{headers:auth})).status,409);
 const currentPassage=studioState.chapters[0].passages[0];
 const studioVoice=await json(studioBase+'/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sectionId:currentPassage.id,revision:currentPassage.revision})});assert.equal(studioVoice.value,'synthetic-no-live-connection');assert.equal(studioVoiceRequests.length,1);assert.ok(!studioVoiceRequests[0].session.instructions.includes('SECOND_CHAPTER_ONLY'));
@@ -273,6 +288,6 @@ if(!process.env.STORY_PREVIEW){
  const removed=await fetch(origin+studioBook.base,{method:'DELETE',headers:auth});assert.equal(removed.status,200);
  const check=new DatabaseSync(testDir+'/story.sqlite');for(const table of ['studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
 }
-console.log('PASS: studio four-pass Astra/max/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
+console.log('PASS: whole-manuscript proposal confirmation/scope/reload; revised vs original DOCX content; studio four-pass Astra/max/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
 console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');
 if(process.env.STORY_PREVIEW) console.log(`LOCAL PREVIEW: http://127.0.0.1:${mock.address().port}/preview`); else {child.kill();mock.close();}
