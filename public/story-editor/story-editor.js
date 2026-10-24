@@ -1,3 +1,4 @@
+import {createWorkspaceReset} from './workspace-reset.mjs?v=20261024-reset1';
 import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-prompts1';
 (function () {
   const apiBase = String(window.JOHNNY_CHAT_API_BASE_URL || window.location.origin).replace(/\/+$/, "");
@@ -13,6 +14,8 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   };
 
   const state = {
+    workspaceEpoch: 0, loadEpoch: 0, resetting: false, legacyBusy: false, startingFull: false,
+    blank: (()=>{try{return sessionStorage.getItem("johnny-story-workspace")==="";}catch{return false;}})(),
     projects: [],
     project: null,
     sections: [],
@@ -334,6 +337,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     document.getElementById("autopilot-new-run").hidden = job?.status !== "failed";
     if (!job) {
       el.autopilotProgress.hidden = true;
+      document.getElementById("autopilot-pause").hidden=true;el.autopilotIntent.disabled=false;el.requestEdit.disabled=false;
       el.autopilotStart.disabled = false;
       el.autopilotStart.textContent = "Run full edit";
       return;
@@ -660,6 +664,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     el.problemView.hidden = true;
     el.welcomeView.hidden = Boolean(state.project);
     el.workspaceView.hidden = !state.project;
+    document.getElementById("notebook-tools").disabled=!state.project;
     if(!state.project)document.dispatchEvent(new CustomEvent("story-reader-project",{detail:{id:null}}));
   }
 
@@ -698,9 +703,11 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   }
 
   async function loadProjects() {
+    const epoch=state.workspaceEpoch;
     const response = await apiFetch("/api/story-editor/projects");
     const data = await readJsonResponse(response);
     if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not load your manuscripts.");
+    if(epoch!==state.workspaceEpoch)return;
     state.projects = data.projects || [];
     document.getElementById("editor-engine").textContent = data.engine ? `${data.engine.model === "gpt-6-astra" ? "GPT-6 Astra" : data.engine.model} · ${data.engine.reasoningEffort} reasoning${data.engine.reasoningMode ? " · "+data.engine.reasoningMode : ""}.` : "Editor configuration unavailable.";
     renderProjects();
@@ -712,6 +719,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
       showProjectState();
       return;
     }
+    if(state.blank){showProjectState();return;}
     const currentStillExists = state.projects.some((project) => project.id === state.project?.id);
     await loadProject(currentStillExists ? state.project.id : state.projects[0].id);
   }
@@ -721,12 +729,17 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   });
 
   async function loadProject(id) {
+    if(state.resetting)return;
+    const epoch=state.workspaceEpoch,load=++state.loadEpoch;
     const previousSelection = state.project?.id === id ? state.selectedId : "";
     el.editingStage.classList.add("is-busy");
     try {
       const response = await apiFetch(`/api/story-editor/projects/${encodeURIComponent(id)}`);
       const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not open that manuscript.");
+      if(epoch!==state.workspaceEpoch||load!==state.loadEpoch)return;
+      state.blank=false;try{sessionStorage.setItem("johnny-story-workspace",id);}catch{}
+      window.clearTimeout(state.autopilotTimer);
       state.project = data.project;
       state.sections = data.sections || [];
       document.dispatchEvent(new CustomEvent("story-split-history",{detail:{sections:state.sections,edits:data.edits || []}}));
@@ -754,7 +767,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
 
   async function uploadManuscript(event) {
     event.preventDefault();
-    if (state.uploading) return;
+    if (state.uploading || state.resetting) return;
     const file = el.fileInput.files?.[0];
     const choice = document.getElementById("setup-prompt").value;
     const intent = String(choice === "custom" ? el.intentInput.value : briefs[choice] || "");
@@ -806,10 +819,12 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   async function pollAutopilot() {
     window.clearTimeout(state.autopilotTimer);
     if (!state.project || !state.autopilotJob?.id) return;
+    const epoch=state.workspaceEpoch,id=state.project.id,jobId=state.autopilotJob.id;
     try {
       const response = await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/autopilot/${encodeURIComponent(state.autopilotJob.id)}`);
       const data = await readJsonResponse(response);
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not read Autopilot progress.");
+      if(epoch!==state.workspaceEpoch||id!==state.project?.id||jobId!==state.autopilotJob?.id)return;
       state.pollFailures = 0;
       state.autopilotJob = data.job;
       renderAutopilot();
@@ -827,6 +842,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
         showToast(data.job.error || "Autopilot stopped before it could finish.", true);
       }
     } catch (error) {
+      if(epoch!==state.workspaceEpoch||id!==state.project?.id)return;
       state.pollFailures += 1;
       document.getElementById('worker-status').textContent = error.code === 'AUTH_REQUIRED' ? 'Unlock your session again to see progress. The saved run continues on the server.' : 'Connection interrupted. Reconnecting automatically; your saved work is safe.';
       if (error.code !== 'AUTH_REQUIRED') state.autopilotTimer = window.setTimeout(pollAutopilot, Math.min(30000, 3000 * 2 ** Math.min(state.pollFailures,4)));
@@ -843,6 +859,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
       return;
     }
     el.autopilotStart.disabled = true;
+    state.startingFull=true;
     try {
       const response = await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/autopilot`, {
         method: "POST",
@@ -856,10 +873,12 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
       state.autopilotJob = data.job;
       renderAutopilot();
       showToast(data.alreadyRunning ? "Autopilot is already working on this manuscript." : changeRequest ? "Applying your requested changes to the revised draft." : "Autopilot started. Your original draft is preserved.");
+      state.startingFull=false;
       await pollAutopilot();
     } catch (error) {
       el.autopilotStart.disabled = false;
       showToast(error.message || "Autopilot could not start.", true);
+    } finally {state.startingFull=false;
     }
   }
 
@@ -913,6 +932,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   async function requestEdit() {
     const section = selectedSection();
     if (!state.project || !section || el.requestEdit.disabled) return;
+    state.legacyBusy=true;
     el.requestEdit.disabled = true;
     el.requestEdit.classList.add("is-loading");
     el.requestEdit.querySelector("span").textContent = "Crafting revision…";
@@ -945,6 +965,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
       renderSuggestion(null);
       showToast(error.message || "The revision could not be generated.", true);
     } finally {
+      state.legacyBusy=false;
       el.requestEdit.disabled = false;
       el.requestEdit.classList.remove("is-loading");
       el.requestEdit.querySelector("span").textContent = "Generate revision";
@@ -1058,13 +1079,58 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     document.getElementById('setup-prompt-full').textContent=briefs[choice]||'';
   }
   function setUploadBusy(busy){
-    state.uploading=busy;el.uploadForm.setAttribute('aria-busy',String(busy));
+    state.uploading=busy;document.getElementById("start-over").disabled=busy;el.uploadForm.setAttribute('aria-busy',String(busy));
     for(const control of [el.uploadSubmit,el.fileInput,el.intentInput,document.getElementById('setup-prompt'),...el.uploadDialog.querySelectorAll('[data-close-dialog]')])control.disabled=busy;
   }
   document.getElementById('setup-prompt').addEventListener('change',updateSetupPrompt);
   el.uploadDialog.addEventListener('cancel',event=>{if(state.uploading)event.preventDefault();});
+  async function workspaceJson(suffix,options={}){
+    const response=await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/studio/${suffix}`,options);
+    const data=await readJsonResponse(response);if(!response.ok||!data.ok)throw Error(data.error||'Could not check editing work. Your workspace is still open.');return data;
+  }
+  function clearWorkspace(){
+    state.workspaceEpoch++;state.loadEpoch++;state.blank=true;try{sessionStorage.setItem('johnny-story-workspace','');}catch{}
+    window.clearTimeout(state.autopilotTimer);window.clearTimeout(state.toastTimer);
+    Object.assign(state,{project:null,sections:[],bible:null,edits:[],selectedId:'',sectionFilter:'all',pendingEdit:null,previewEdit:null,autopilotJob:null,autopilotTimer:null,pollFailures:0});
+    document.dispatchEvent(new CustomEvent('story-workspace-reset'));
+    for(const dialog of document.querySelectorAll('dialog'))closeDialog(dialog);
+    for(const field of document.querySelectorAll('textarea'))field.value='';
+    el.uploadForm.reset();document.getElementById('setup-prompt').value='novel';updateSetupPrompt();updateSelectedFile();
+    for(const field of [el.projectFilter,el.sectionFilter,el.editNote])field.value='';
+    for(const details of document.querySelectorAll('details'))details.open=false;
+    el.mode.value='line';el.modeDescription.textContent=modeDescriptions.line;el.sectionFilterButtons.forEach(button=>button.classList.toggle('active',button.dataset.sectionFilter==='all'));
+    for(const id of ['autopilot-fill','progress-fill'])document.getElementById(id).style.width='0%';document.getElementById('notebook-job-meter').value=0;
+    el.projectTitle.textContent='Your writing, in good company.';el.projectFilename.textContent='JOHNNY’S NOTEBOOK';
+    el.exportDocx.disabled=true;el.deleteProject.disabled=true;el.openBible.disabled=true;
+    el.autopilotProgress.hidden=true;el.toast.hidden=true;
+    for(const id of ['section-list','version-list','revision-notes','revision-attention','passage-split-history-items'])document.getElementById(id)?.replaceChildren();
+    renderProjects();showProjectState();setLibraryOpen(false);openDialog(el.uploadDialog);el.fileInput.focus();
+  }
+  let resetDecision=null;
+  function finishResetConfirmation(accepted){const resolve=resetDecision;resetDecision=null;closeDialog(document.getElementById('reset-confirm'));resolve?.(accepted);}
+  document.getElementById('reset-confirm-accept').addEventListener('click',()=>finishResetConfirmation(true));
+  document.getElementById('reset-confirm-cancel').addEventListener('click',()=>finishResetConfirmation(false));
+  document.getElementById('reset-confirm').addEventListener('cancel',event=>{event.preventDefault();finishResetConfirmation(false);});
+  document.getElementById('reset-confirm').addEventListener('close',()=>{if(resetDecision)finishResetConfirmation(false);});
+  function confirmReset(message){document.getElementById('reset-confirm-message').textContent=message;return new Promise(resolve=>{resetDecision=resolve;openDialog(document.getElementById('reset-confirm'));document.getElementById('reset-confirm-cancel').focus();});}
+  const startOver=createWorkspaceReset({
+    busy(value){state.resetting=value;document.getElementById('start-over').disabled=value||state.uploading;},
+    async getWork(){
+      const check={starting:state.startingFull};document.dispatchEvent(new CustomEvent('story-workspace-check',{detail:check}));
+      if(state.uploading||state.legacyBusy||check.starting)throw Error('Let the current import or passage request finish before starting over.');
+      return {projectId:state.project?.id,active:state.project?(await workspaceJson('work-status')).active:false};
+    },
+    confirm(work){
+      const dirty=[...document.querySelectorAll('textarea')].some(field=>field.value.trim())||el.fileInput.files?.length;
+      return !(work.projectId||dirty)||confirmReset(work.active?
+        'Stop editing and start over? This stops the current manuscript’s editing and checks cancellation of its provider work. Work already performed may be billed. Saved manuscripts, originals, and completed revisions stay in your library. Playback and voice stop; already-started audio or passage requests may still finish and be billed. Unsent text in this workspace will be cleared.':
+        'Start over with a new file and prompt? Saved manuscripts, originals, and revisions stay in your library. Playback and voice stop; already-started audio or passage requests may still finish and be billed. Unsent text in this workspace will be cleared.');
+    },
+    stop:()=>workspaceJson('stop-work',{method:'POST'}),clear:clearWorkspace
+  });
+  document.getElementById('start-over').addEventListener('click',()=>void startOver().catch(error=>showToast(error.message,true)));
   updateSetupPrompt();
-  el.openUpload.addEventListener("click", () => openDialog(el.uploadDialog));
+  el.openUpload.addEventListener("click", () => void startOver().catch(error=>showToast(error.message,true)));
   el.welcomeUpload.addEventListener("click", () => openDialog(el.uploadDialog));
   el.retryStartup.addEventListener("click", retryStartup);
   el.openBible.addEventListener("click", () => openDialog(el.bibleDialog));

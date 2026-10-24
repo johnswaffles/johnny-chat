@@ -164,8 +164,8 @@ async function undo(){const p=passage();if(!p)return;pause('');await api('/undo'
 const voice=new StudioVoice({
  token:signal=>{const p=passage();return api('/voice',{method:'POST',body:{sectionId:p.id,revision:p.revision},signal});},
  onSpeech:()=>{pause('Paused here. Listening to what you want to change…',false);},
- onStatus:text=>{voiceStarting=false;$('studio-voice-status').textContent=text;$('studio-voice').setAttribute('aria-pressed',String(voice.connected));$('studio-voice').textContent=voice.connected?'◉ End voice':'◉ Talk with Johnny';renderControls();},
- onError:error=>{voiceStarting=false;$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';renderControls();status(error.message);},
+ onStatus:text=>{if(!state.id)return;voiceStarting=false;$('studio-voice-status').textContent=text;$('studio-voice').setAttribute('aria-pressed',String(voice.connected));$('studio-voice').textContent=voice.connected?'◉ End voice':'◉ Talk with Johnny';renderControls();},
+ onError:error=>{if(!state.id)return;voiceStarting=false;$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';renderControls();status(error.message);},
  onTranscript:(role,text,itemId)=>{
   if(!state.data||!text.trim())return;const messageId=`voice-${voiceSession}-${role}-${itemId}`;
   if(state.data.messages.some(m=>m.id===messageId))return;
@@ -205,6 +205,19 @@ $('studio-retry').addEventListener('click',()=>void run(async()=>{const id=state
 $('studio-note-form').addEventListener('submit',event=>{event.preventDefault();const note=$('studio-note').value.trim();if(note)void run(async()=>{await api('/notes',{method:'POST',body:{note}});$('studio-note').value='';await refresh();status('Story note saved for this manuscript.');});});
 audio.addEventListener('timeupdate',()=>{if(Date.now()-lastBookmark>5000){lastBookmark=Date.now();saveBookmark();}});
 audio.addEventListener('error',()=>{if(state.reading&&state.loadedAudio)pause('Audio playback failed. Press Read to retry the saved passage.');});
+function resetWorkspace(){
+ pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();
+ state.epoch++;Object.assign(state,{id:'',data:null,sectionId:'',original:false,reading:false,task:null,polling:false,lastTask:null,resume:null,scope:'book',flowJob:null,walkthrough:false,proposal:null,ignoredProposal:'',proposalApplying:false});
+ resetAudio();setNotebookView('chat');$('book-reader').hidden=true;
+ for(const id of ['studio-pages','studio-messages','studio-versions','studio-notes-list','studio-chapter','notebook-outline'])$(id).replaceChildren();
+ for(const id of ['studio-input','studio-note','studio-goal','author-request-text'])$(id).value='';
+ for(const id of ['studio-status','studio-location','studio-recap','studio-return-copy','studio-return-title','notebook-job-copy','author-request-status','notebook-source-name'])$(id).textContent='';
+ $('studio-readback').checked=true;$('author-request-scope').value='book';$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';
+ $('notebook-source').hidden=true;$('notebook-job-progress').hidden=true;$('notebook-proposal').hidden=true;$('studio-progress').hidden=true;$('studio-retry').hidden=true;
+ renderControls();
+}
+document.addEventListener('story-workspace-check',event=>{if(state.task==='starting')event.detail.starting=true;});
+document.addEventListener('story-workspace-reset',resetWorkspace);
 document.addEventListener('story-reader-project',event=>{
  const {id,busy}=event.detail;state.flowJob=event.detail.job||null;
  if(id!==state.id){pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();state.epoch++;state.id=id||'';state.flowJob=event.detail.job||null;state.walkthrough=false;state.scope='book';state.proposal=null;state.proposalApplying=false;state.ignoredProposal='';try{state.ignoredProposal=window.localStorage?.getItem('johnny-notebook-dismissed-'+state.id)||'';}catch{}setNotebookView('chat');state.data=null;state.sectionId='';state.task=null;state.polling=false;state.lastTask=null;state.original=false;state.resume=null;resetAudio();$('book-reader').hidden=!id;$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';renderControls();if(id)void run(()=>refresh({initial:true}));}

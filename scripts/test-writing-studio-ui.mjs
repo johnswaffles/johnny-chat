@@ -10,7 +10,7 @@ class Element {
  setAttribute(k,v){this.attributes[k]=v;}
  removeAttribute(k){delete this.attributes[k];if(k==='src')this.src='';}
  append(...children){this.children.push(...children);}
- replaceChildren(...children){this.children=children;}
+ replaceChildren(...children){this.children=children;this.textContent="";}
  addEventListener(type,fn){(this.events[type]||=[]).push(fn);}
  querySelectorAll(selector){return selector==='li'?this.children:[];}
  scrollIntoView(){} focus(){} showModal(){this.open=true;} load(){} pause(){this.paused=true;}
@@ -38,9 +38,9 @@ async function harness({gate,failed=false,bookmark=null,audioFetcher,proposal=fa
   return Response.json({ok:true});
  };
  class Voice {constructor(options){this.options=options;this.connected=false;this.interrupts=0;}interrupt(){this.interrupts++;}close(){}updateContext(){}async connect(){this.connects=(this.connects||0)+1;}}
- const dispatched=[];const document={cookie:'',getElementById:id=>elements.get(id),createElement:tag=>new Element(tag),addEventListener(){},dispatchEvent(event){dispatched.push(event);}};
+ const listeners={};const dispatched=[];const document={cookie:'',getElementById:id=>elements.get(id),createElement:tag=>new Element(tag),addEventListener(type,fn){(listeners[type]||=[]).push(fn);},dispatchEvent(event){dispatched.push(event);for(const fn of listeners[event.type]||[])fn(event);}};
  const sandbox={document,window:{JOHNNY_CHAT_API_BASE_URL:'http://local.test',addEventListener(){}},location:{origin:'http://local.test'},URL,URLSearchParams,AbortController,AbortSignal,Blob,Response,crypto:{randomUUID},requestAnimationFrame:fn=>fn(),matchMedia:()=>({matches:true}),setTimeout,clearTimeout,fetch:fetcher,speechParts,notebookJourney,notebookReference,StudioVoice:Voice,chapterAudio:async(url,options)=>{audioCalls.push({url,options});return audioFetcher?audioFetcher(url,options):new Blob(['fake local audio']);},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}};
- const context=vm.createContext(sandbox);vm.runInContext(source+'\nthis.testStudio={state,refresh,sendRequest,pause,selectSection,voice,read};',context);const api=context.testStudio;api.state.id='book';await api.refresh({initial:true});
+ const context=vm.createContext(sandbox);vm.runInContext(source+'\nthis.testStudio={state,refresh,sendRequest,pause,selectSection,voice,read,resetWorkspace};',context);const api=context.testStudio;api.state.id='book';await api.refresh({initial:true});
  return {api,elements,calls,audioCalls,book,dispatched,accepted:()=>accepted};
 }
 test('a successful revision automatically reads the new saved version, not the old prose',async()=>{
@@ -120,4 +120,10 @@ test('a book proposal stays visible without a full edit until the author explici
 });
 test('starting collaborative review goes to the beginning and switches the conversation to that passage',async()=>{
  const h=await harness({bookmark:{sectionId:'b',revision:'r2',part:0,seconds:4}});h.elements.get('notebook-next').dataset.action='begin';h.elements.get('notebook-next').events.click[0]();assert.equal(h.api.state.sectionId,'a');assert.equal(h.api.state.scope,'passage');assert.equal(h.elements.get('book-reader').dataset.view,'draft');assert.equal(h.audioCalls.length,0);
+});
+
+test('Start over clears narration, pending audio, conversation, selection, prompts and proposal without deleting saved content',async()=>{
+ let release;const h=await harness({audioFetcher:async()=>{await new Promise(r=>release=r);return new Blob(['late']);}});h.elements.get('studio-input').value='Unsent question';h.api.state.proposal={id:'proposal',request:'Unsent change'};const pending=h.api.read();const original=h.book.original;h.api.resetWorkspace();release();await pending;
+ assert.equal(h.api.state.id,'');assert.equal(h.api.state.data,null);assert.equal(h.api.state.sectionId,'');assert.equal(h.api.state.proposal,null);assert.equal(h.api.state.reading,false);assert.equal(h.elements.get('studio-input').value,'');assert.equal(h.elements.get('studio-messages').children.length,0);assert.equal(h.elements.get('studio-pages').children.length,0);assert.equal(h.elements.get('studio-audio').played,undefined);assert.equal(h.elements.get('studio-audio').hidden,true);assert.equal(h.book.original,original);assert.equal(h.calls.some(c=>c.method==='DELETE'),false);h.api.resetWorkspace();assert.equal(h.api.state.id,'');
+ h.api.state.id='book';await h.api.refresh({initial:true});assert.equal(h.api.state.data.original,original);assert.equal(h.api.state.sectionId,'a');
 });
