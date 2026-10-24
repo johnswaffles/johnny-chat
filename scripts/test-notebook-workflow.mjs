@@ -13,3 +13,8 @@ test('source references resolve only actual chapter and passage targets',()=>{
  const chapters=[{index:1,passages:[{id:'a'},{id:'b'}]},{index:3,passages:[{id:'c'}]}];
  assert.equal(notebookReference(chapters,1,2),'b');assert.equal(notebookReference(chapters,3,1),'c');assert.equal(notebookReference(chapters,2,1),null);assert.equal(notebookReference(chapters,1,0),null);assert.equal(notebookReference(chapters,1,12),null);
 });
+
+test('provider activity and stage estimates never claim unsaved revision chunks are complete',()=>{
+ const state=notebookJourney({job:{status:'running',phase:'reading',currentChunk:10,totalChunks:10,completedChunks:0,savedStageResults:9,provider:{state:'in_progress',model:'gpt-6-astra',effort:'max',mode:'pro',checkedAt:'2026-10-24T17:00:00Z'}}});
+ assert.match(state.detail,/0\/10 revision sections saved/);assert.match(state.detail,/9 stage results checkpointed/);assert.match(state.detail,/Provider: in_progress/);assert.equal(state.action,'working');
+});

@@ -1,4 +1,4 @@
-import {notebookJourney,notebookReference} from './notebook-model.mjs?v=20261021-notebook1';
+import {notebookJourney,notebookReference} from './notebook-model.mjs?v=20261024-background1';
 import {speechParts} from './reader-model.mjs';
 import {chapterAudio} from './reader-speech.mjs?v=20261021-journey3';
 import {StudioVoice} from './studio-voice.mjs?v=20261021-journey3';

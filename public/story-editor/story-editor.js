@@ -367,12 +367,12 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     });
     const seconds=job.worker?.heartbeat ? Math.max(0,Math.round((Date.now()-job.worker.heartbeat)/1000)) : null;
     document.getElementById('worker-status').textContent = running
-      ? (job.worker?.state==='queued' ? 'Saved in the queue. Editing continues automatically, even with this page closed.' : seconds!==null&&seconds<60 ? `Editor connected · checked ${seconds} seconds ago. Progress advances when a section is saved.` : 'Reconnecting to the editor. Saved sections are safe.')
-      : (job.status==='completed'?'All editing stages finished. Your draft is ready to review.':'Your original and completed sections remain saved.');
+      ? (job.provider ? `Worker heartbeat ${seconds===null?'unavailable':seconds+' seconds ago'} · Provider ${job.provider.state} · last checked ${job.provider.checkedAt}` : job.worker?.state==='queued' ? 'Saved in the queue. Editing continues automatically, even with this page closed.' : seconds!==null&&seconds<60 ? `Editor connected · heartbeat ${seconds} seconds ago. This is not proof of completed writing.` : 'Reconnecting to the editor. Saved sections are safe.')
+      : (job.status==='completed'?'All editing stages finished. Check the revised/preserved passage counts before review.':'Your original and completed sections remain saved.');
     el.autopilotStart.textContent = running ? "Full edit is working…" : job.status === "completed" ? "Run another full edit" : "Resume unfinished edit";
     document.getElementById("autopilot-status-label").textContent = running ? "Editing in progress" : job.status === "completed" ? "Revision saved" : "Run paused";
     el.autopilotPhase.textContent = phaseLabels[job.phase] || "Working through the manuscript";
-    el.autopilotPercent.textContent = `${percent}%`;
+    el.autopilotPercent.textContent = `${job.completedChunks || 0}/${job.totalChunks || "…"} revision sections saved`;
     el.autopilotFill.style.width = `${percent}%`;
     el.autopilotTrack.setAttribute("aria-valuenow", String(percent));
     el.autopilotMessage.textContent = job.message || "The model is carrying the manuscript forward.";
