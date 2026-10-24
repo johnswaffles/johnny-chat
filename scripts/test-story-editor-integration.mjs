@@ -6,6 +6,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 const testDir=await mkdtemp(tmpdir()+'/story-editor-test-');
+function fixtureDb(options={}){const d=new DatabaseSync(testDir+'/story.sqlite',options);d.exec('PRAGMA busy_timeout=5000');return d;}
 const probe=http.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));
 const origin=`http://127.0.0.1:${port}`;
 function sample(schema) {
@@ -37,7 +38,7 @@ const mock=http.createServer(async(req,res)=>{
  if(req.url==='/v1/realtime/client_secrets'){studioVoiceRequests.push(body);assert.ok(body.session.tools.some(t=>t.name==='edit_passage'));res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({value:'synthetic-no-live-connection',expires_at:Date.now()/1000+60}));return;}
  requests.push(body);
  assert.equal(body.model,'gpt-6.1-sol'); assert.equal(body.reasoning.effort,'xhigh'); assert.equal(body.reasoning.mode,'pro');
- const user=JSON.parse(body.input[1].content);
+ const envelope=JSON.parse(body.input[1].content);const user=envelope.editorialInput??envelope;
  const stage=body.text?.format?.name;
  if(['writing_studio_turn','studio_draft','studio_critique','studio_final'].includes(stage)){
   let value;
@@ -237,7 +238,7 @@ const stopped=await run(Array.from({length:12},(_,i)=>i===11?'RESUME_BUDGET The 
 assert.equal(stopped.job.status,'failed');assert.ok(stopped.job.completedChunks>0);
 const initialEdits=stopped.project.edits.length;
 // Reproduce a process disappearing while the saved job still says running.
-const db=new DatabaseSync(testDir+'/story.sqlite');
+const db=fixtureDb();
 // Simulate a pre-upgrade foreground failure: saved stage results exist, but
 // no provider ID was ever recorded for its unsuccessful requests. New-provider
 // uncertain submissions and pending-ID recovery are covered independently.
@@ -251,7 +252,7 @@ for(let i=0;i<50;i++) {try {const r=await fetch(origin+'/api/chatbot-access',{me
 const interrupted=await json(stopped.base);
 assert.ok(['queued','running','completed'].includes(interrupted.autopilot.status));
 assert.ok(interrupted.autopilot.completedChunks>=stopped.job.completedChunks);
-const checkDb=new DatabaseSync(testDir+'/story.sqlite');
+const checkDb=fixtureDb();
 assert.ok(checkDb.prepare('SELECT completed_chunks FROM story_autopilot_jobs WHERE id=?').get(stopped.job.id).completed_chunks>=stopped.job.completedChunks);
 checkDb.close();
 const requestCount=requests.length;
@@ -279,7 +280,7 @@ assert.equal(finished.status,'completed');
 // preserve originals/revisions, and be safe to repeat with no paid create.
 const stopForm=new FormData();stopForm.append('manuscript',new Blob(['Synthetic preserved original.'],{type:'text/plain'}),'Start over test.txt');
 const stopUpload=await json('/api/story-editor/upload',{method:'POST',body:stopForm});const stopBase='/api/story-editor/projects/'+stopUpload.projectId;
-const stopDb=new DatabaseSync(testDir+'/story.sqlite');
+const stopDb=fixtureDb();
 stopDb.prepare("INSERT INTO story_autopilot_jobs(id,project_id,intent,status,phase,total_chunks,completed_chunks,created_at,updated_at) VALUES(?,?,?,'running','editing',2,1,?,?)").run('synthetic-stop-job',stopUpload.projectId,'Synthetic only',new Date().toISOString(),new Date().toISOString());
 stopDb.prepare("INSERT INTO story_worker_queue(job_id,state) VALUES(?,'failed')").run('synthetic-stop-job');
 stopDb.prepare("UPDATE story_sections SET edited_text='Synthetic saved revision.' WHERE project_id=? AND kind='paragraph'").run(stopUpload.projectId);
@@ -332,8 +333,25 @@ const studioVoice=await json(studioBase+'/voice',{method:'POST',headers:{'Conten
 await json(studioBase+'/bookmark',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({sectionId:currentPassage.id,revision:currentPassage.revision,part:0,seconds:8})});assert.equal((await json(studioBase)).bookmark.seconds,8);
 if(!process.env.STORY_PREVIEW){await json(studioBase+'/undo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sectionId:currentPassage.id,revision:currentPassage.revision})});assert.equal((await json(studioBase)).chapters[0].passages[0].text,studioPassage.text);}
 if(!process.env.STORY_PREVIEW){
+ const referenceBook=await json(studioBase+'/book/link',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'Synthetic continuity novel',useContinuity:true})});
+ const sourceChapter=(await json(studioBase)).chapters[0];
+ const savedBook=await json(studioBase+'/book/chapters',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chapterIndex:sourceChapter.index,chapterRevision:sourceChapter.revision,bookRevision:referenceBook.book.revision})});
+ const savedChapter=savedBook.book.chapters[0];assert.equal((await fetch(origin+studioBase+'/book')).status,401);assert.equal((await fetch(origin+studioBase+'/book/chapters/'+savedChapter.id)).status,401);
+ const savedText=await json(studioBase+'/book/chapters/'+savedChapter.id);assert.equal(savedText.content.passages[0].text,sourceChapter.passages[0].text);
+ const nextForm=new FormData();nextForm.append('manuscript',new Blob(['Chapter One\n\nThe next day, Mara returned to the kitchen window.'],{type:'text/plain'}),'Synthetic next chapter.txt');
+ const nextUpload=await json('/api/story-editor/upload',{method:'POST',body:nextForm});const nextBase='/api/story-editor/projects/'+nextUpload.projectId;
+ await json(nextBase+'/studio/book/link',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({bookId:savedBook.book.id,useContinuity:true})});
+ const canonStart=requests.length;const start=await json(nextBase+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({intent:'Develop the next chapter, preserving earlier continuity.'})});let job;
+ for(let i=0;i<100;i++){job=(await json(nextBase+'/autopilot/'+start.job.id)).job;if(['completed','failed'].includes(job.status))break;await new Promise(r=>setTimeout(r,50));}assert.equal(job.status,'completed',job.error);
+ const canonCalls=requests.slice(canonStart);assert.ok(canonCalls.length>=4);for(const call of canonCalls){const input=JSON.parse(call.input[1].content);assert.equal(input.savedBookContinuity.chapters[0].versionId,savedChapter.versionId);assert.ok(JSON.stringify(input.savedBookContinuity).includes(sourceChapter.passages[0].text));assert.match(call.input[0].content,/incomplete evidence/);}
+ assert.ok(canonCalls.some(c=>c.text.format.name==='story_autopilot_plan'));assert.ok(canonCalls.some(c=>c.text.format.name==='story_autopilot_chunk'));assert.ok(canonCalls.some(c=>c.text.format.name==='story_autopilot_polish'));assert.ok(canonCalls.some(c=>c.text.format.name==='story_autopilot_review'));
+ const canonDb=fixtureDb({readOnly:true});assert.equal(JSON.parse(canonDb.prepare('SELECT request_json FROM story_job_requests WHERE job_id=?').get(start.job.id).request_json).bookCanon.chapters[0].versionId,savedChapter.versionId);canonDb.close();
+ assert.deepEqual((await json(studioBase+'/book/chapters/'+savedChapter.id)).content,savedText.content,'Subsequent full edit cannot overwrite approved chapter snapshot');
+ console.log('PASS: authenticated full chapter save/reload, cross-upload book linking, pinned approved canon in every Autopilot stage and durable job request, immutable references; no paid provider.');
+}
+if(!process.env.STORY_PREVIEW){
  const removed=await fetch(origin+studioBook.base,{method:'DELETE',headers:auth});assert.equal(removed.status,200);
- const check=new DatabaseSync(testDir+'/story.sqlite');for(const table of ['studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
+ const check=fixtureDb();for(const table of ['studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
 }
 console.log('PASS: whole-manuscript proposal confirmation/scope/reload; revised vs original DOCX content; studio four-pass Sol/xhigh/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
 console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');

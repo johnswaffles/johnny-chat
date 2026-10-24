@@ -344,3 +344,48 @@ and mode, preventing cross-configuration receipt reuse. Saved originals, revisio
 and completed jobs are preserved; deployment starts no generation and resumes no
 finished job. Actual future provider responses must still match the requested model
 and reported reasoning; there is no silent fallback. UI labels read server quality.
+
+## Book drafts
+
+The optional right-side Book drafts shelf uses the existing private SQLite workspace;
+no Drive account or new infrastructure is involved. Save chapter captures all current
+chapter passages in an immutable, numbered snapshot and explicitly approves that
+version as a continuity reference. Editing the working manuscript never changes a
+saved snapshot. Historical versions can be reopened, downloaded, or selected as the
+reference without replacing the working manuscript. Book order is explicit; the
+assembled plain-text download uses approved versions in that order. A new upload can
+be linked to an existing book through the shelf. Existing originals and revisions
+remain separate. Start over clears shelf UI, never book storage. The access boundary
+is the existing shared-password private library, not new per-person accounts.
+
+Saving, ordering and retrieving are local database operations, with no model calls.
+Editing includes locally retrieved, exact approved text with chapter/version IDs,
+UTF-16 source ranges, per-chapter UTF-8 coverage and completeness flags. Small reference
+sets fit in full. Larger sets use endings and query-matching excerpts within 48,000
+UTF-8 bytes including metadata, not an asserted token count. No generated summary is
+invented. Every eligible chapter remains in the manifest; unsupplied/protected text is
+not claimed read. Explicitly protected saved passages are never retrieved for the
+model. The model is instructed to ask about missing details instead of fabricating
+continuity. This bounds cost and context but is not proof of exhaustive continuity
+checking. Source files remain full and available in the shelf.
+
+For a chapter already saved in the book, only earlier approved chapters in book order
+are references. For unsaved chapters, earlier source chapters and chapters saved from
+other linked uploads are eligible; the user should choose a book containing prior
+material. The continuity checkbox can disable this context. Deep studio requests
+receive it in every literary stage; full Autopilot requests snapshot it durably in
+story_job_requests and preserve it on resume. Changing references does not change an
+existing failed run's pinned snapshot. Cache keys include supplied continuity.
+
+Saved book mutation uses IMMEDIATE transactions and stale-book/source checks. Active
+edits in any linked manuscript block reference changes; repeated identical saves do
+not create duplicate versions. Limits are 100 chapters per book, 2 MB per snapshot,
+and 20 MB cumulative version storage per book. Errors reject rather than truncate or
+prune. There is no permanent-delete action. Removing a source project does not erase
+its independent saved book snapshots.
+
+Validation: node --test scripts/test-book-drafts.mjs scripts/test-writing-studio-ui.mjs
+and the existing mocked story-editor integration fixture, now including authenticated
+cross-upload book linking and actual canon-bearing Autopilot requests. The loopback
+preview scripts/preview-book-drafts.mjs uses a temporary synthetic database, no
+provider credentials, and no paid generation.

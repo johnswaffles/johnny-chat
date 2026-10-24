@@ -1,3 +1,4 @@
+import {BOOK_CANON_INSTRUCTIONS} from './lib/book-drafts.mjs';
 import {createStoryResponses, STORY_RESPONSE_SCHEMA} from './lib/story-responses.mjs';
 import { editorialPrompt, MAX_PROMPT_BYTES } from './public/story-editor/prompt-model.mjs';
 import { createLayeredStudioEditor, STUDIO_QUALITY } from './lib/studio-editor.mjs';
@@ -1670,6 +1671,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorPrompts: "lossless-prompts-v1",
   storyEditorProvider: "durable-background-responses-v1",
   storyEditorWorkspace: "start-over-preserve-library-v1",
+  storyEditorBookDrafts: "versioned-chapter-canon-v1",
   storyEditorPromptMaxBytes: MAX_PROMPT_BYTES,
   storyEditorChangeRequests: "chapter-scope-guard-v2",
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
@@ -3632,6 +3634,8 @@ function parseStoryModelJson(response) {
 
 async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) {
   const jobId = storyTask.getStore()?.jobId;
+  const savedBookContinuity=storyTask.getStore()?.bookCanon;
+  if(savedBookContinuity){system+='\n'+BOOK_CANON_INSTRUCTIONS;user={editorialInput:user,savedBookContinuity};}
   const cacheKey = storyEditorialCacheKey({format,system,user,maxOutputTokens},STUDIO_QUALITY);
   if (jobId) {
     const cached = await storyQuery(`SELECT value_json FROM story_stage_cache WHERE job_id=${sqliteLiteral(jobId)} AND cache_key=${sqliteLiteral(cacheKey)};`);
@@ -3829,6 +3833,7 @@ async function runStoryAutopilotJob(jobId) {
     const project = projects[0];
     if (!project) throw new Error("The manuscript no longer exists.");
     const changeRequest = parseStoryObject((await storyQuery(`SELECT request_json FROM story_job_requests WHERE job_id=${sqliteLiteral(jobId)};`))[0]?.request_json);
+    if(storyTask.getStore())storyTask.getStore().bookCanon=changeRequest.bookCanon||null;
     const lastChapter=Number((await storyQuery(`SELECT MAX(chapter_index) AS lastChapter FROM story_sections WHERE project_id=${sqliteLiteral(job.project_id)} AND kind='paragraph';`))[0]?.lastChapter) || 1;
     const chapterFilter = changeRequest.chapter ? ` AND chapter_index=${Number(changeRequest.chapter)}` : '';
     let rows = await storyQuery(`
@@ -4405,12 +4410,13 @@ app.post("/api/story-editor/projects/:id/autopilot", async (req, res) => {
       if(count<=1) return res.status(409).json({ok:false,error:'This import has only one chapter, so a chapter edit would process the whole manuscript. Add chapter breaks, or explicitly choose Whole book.'});
     }
     const jobId = storyId("autopilot");
+    const bookCanon=writingStudio.bookCanon(projectId,{chapterIndex:chapter||1,query:intent});
     const now = storyNow();
     await storyExec([
       "BEGIN;",
       `UPDATE story_projects SET user_intent = ${sqliteLiteral(intent)}, updated_at = ${sqliteLiteral(now)} WHERE id = ${sqliteLiteral(projectId)} AND NOT EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'))${studioIdle};`,
       `INSERT INTO story_autopilot_jobs (id, project_id, intent, status, phase, message, created_at, updated_at) SELECT ${sqliteLiteral(jobId)}, ${sqliteLiteral(projectId)}, ${sqliteLiteral(intent)}, 'queued', 'queued', 'Queued for manuscript planning.', ${sqliteLiteral(now)}, ${sqliteLiteral(now)} WHERE NOT EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running'))${studioIdle};`,
-      ...(req.body?.changeRequest === true ? [`INSERT INTO story_job_requests SELECT ${sqliteLiteral(jobId)},${sqliteLiteral(JSON.stringify({chapter:chapter || null,request:intent}))} WHERE EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE id=${sqliteLiteral(jobId)});`] : []),
+      `INSERT INTO story_job_requests SELECT ${sqliteLiteral(jobId)},${sqliteLiteral(JSON.stringify({chapter:chapter || null,request:intent,bookCanon}))} WHERE EXISTS (SELECT 1 FROM story_autopilot_jobs WHERE id=${sqliteLiteral(jobId)});`,
       "COMMIT;"
     ]);
     const job = await getStoryAutopilotJob(jobId, projectId);
@@ -4677,7 +4683,7 @@ async function stopFullWorkspaceWork(id){
 }
 
 // A manuscript-scoped collaboration surface; Morrow's personal memory stays separate.
-installWritingStudio(app, {
+const writingStudio=installWritingStudio(app, {
   path: STORY_EDITOR_DB_PATH, ready: ensureStoryDb, authorize: requireStoryEditorSession,
   fullWorkStatus: fullWorkspaceWork, stopFullWork: stopFullWorkspaceWork,
   generate: createLayeredStudioEditor({
