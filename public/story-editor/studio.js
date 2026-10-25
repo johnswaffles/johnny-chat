@@ -199,7 +199,7 @@ async function pollTask(taskId,{readTicket=state.audioEpoch,requestedSection=sta
   if(['failed','cancelled'].includes(task.status)){state.task=null;state.lastTask=taskId;renderControls();await refresh();status(task.error||'This request stopped. Retry can resume completed passes.');return {ok:false,error:task.error};}
   if(task.status==='done'){
    state.task=null;state.lastTask=null;await refresh({resumePending:false,fromTask:true});if(ticket!==state.epoch)return;
-   const result=task.result;status(result.reply);document.dispatchEvent(new CustomEvent('story-studio-saved',{detail:{projectId:id}}));
+   const result=task.result;status(result.reply);if(readTicket!==-1)document.dispatchEvent(new CustomEvent('story-studio-saved',{detail:{projectId:id}}));
    if(result.action==='navigate')selectSection(result.sectionId);
    const shouldRead=result.action==='read'||(result.action==='revise'&&$('studio-readback').checked);
    if(shouldRead&&readTicket===state.audioEpoch&&requestedSection===state.sectionId){void read({restart:result.action==='revise'});return {ok:true,narrating:true,...result};}
