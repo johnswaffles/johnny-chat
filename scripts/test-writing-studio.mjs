@@ -85,7 +85,7 @@ test('narration resolves exact saved passage text, rejects stale revisions, and 
 function harness(t){
  const {path}=fixture(t);const routes=new Map();const app=Object.fromEntries(['get','post','put','delete'].map(method=>[method,(path,handler)=>routes.set(method+' '+path,handler)]));let generated=0,voiceCalls=0,speechCalls=0,readyCalls=0;
  const studio=installWritingStudio(app,{path,ready:async()=>{readyCalls++;},authorize:(req,res)=>req.authorized|| (res.status(401).json({error:'Private access required'}),false),generate:async()=>{generated++;return result();},createVoice:async(instructions,tools)=>{voiceCalls++;assert.match(instructions,/configured deep literary editing workflow/);assert.ok(tools.some(t=>t.name==='edit_passage'));assert.ok(tools.some(t=>t.name==='edit_manuscript'));return {value:'synthetic-ephemeral',model:'voice-test',realtimeUrl:'https://example.test/calls'};},createSpeech:async text=>{speechCalls++;assert.equal(text,'Current first passage.');return Buffer.from('ID3-local');}});t.after(()=>studio.stop());
- return {routes,counts:()=>({generated,voiceCalls,speechCalls,readyCalls}),async run(method,suffix,{authorized=true,body={},query={}}={}){const res={statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(c){this.statusCode=c;return this;},json(body){this.body=body;return this;},type(t){this.contentType=t;return this;},send(body){this.body=body;return this;}};await routes.get(method+' /api/story-editor/projects/:id/studio'+suffix)({method:method.toUpperCase(),params:{id:'book',taskId:'request-1'},authorized,body,query},res);return res;}};
+ return {routes,counts:()=>({generated,voiceCalls,speechCalls,readyCalls}),async run(method,suffix,{authorized=true,body={},query={},headers={}}={}){const res={statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(c){this.statusCode=c;return this;},json(body){this.body=body;return this;},type(t){this.contentType=t;return this;},send(body){this.body=body;return this;}};await routes.get(method+' /api/story-editor/projects/:id/studio'+suffix)({method:method.toUpperCase(),params:{id:'book',taskId:'request-1'},authorized,body,query,headers},res);return res;}};
 }
 test('all collaboration routes authenticate before initializing storage or invoking a provider',async t=>{
  const h=harness(t);for(const [key,handler] of h.routes){const res={status(){return this;},json(){return this;},setHeader(){}};await handler({authorized:false},res);}
@@ -97,7 +97,7 @@ test('live session is explicit, context is project scoped, and GET polling never
  assert.equal((await h.run('post','/voice',{body:{sectionId:'a',revision:'old'}})).statusCode,409);assert.equal(h.counts().voiceCalls,0);
  const context=await h.run('get','/context',{query:{sectionId:'a'}});assert.ok(!context.body.instructions.includes('PRIVATE_OTHER_BOOK'));assert.equal(h.counts().voiceCalls,0);
  assert.equal((await h.run('post','/voice',{body:{sectionId:'a',revision:query.revision}})).statusCode,200);assert.equal(h.counts().voiceCalls,1);
- const start=await h.run('post','/speech',{body:{...query,part:0}});assert.equal(start.statusCode,202);await new Promise(r=>setImmediate(r));const ready=await h.run('get','/speech',{query});assert.equal(ready.contentType,'audio/mpeg');assert.equal(h.counts().speechCalls,1);
+ const start=await h.run('post','/speech',{body:{...query,part:0}});assert.equal(start.statusCode,202);await new Promise(r=>setImmediate(r));const ready=await h.run('get','/speech',{query});assert.equal(ready.contentType,'audio/wav');assert.equal(h.counts().speechCalls,1);
 });
 
 test('discussion-only deep thinking cannot be turned into a draft mutation by model output',async t=>{
@@ -162,4 +162,11 @@ test('long editorial requests, goals, and context survive storage/restart withou
  const reload=createWritingStudio({path,generate:async()=>assert.fail()});reload.init();assert.equal(reload.snapshot('book').goal,text);assert.equal(reload.snapshot('book').messages[0].text,text);reload.stop();
  assert.throws(()=>studio.goal('book','é'.repeat(50001)),e=>e.status===413);assert.equal(studio.snapshot('book').goal,text);
  assert.throws(()=>studio.start('book',request('oversized','é'.repeat(50001))),e=>e.status===413);
+});
+
+test('narration voice and Unicode delivery directions isolate cached audio; invalid settings never call provider',async t=>{
+ const h=harness(t),body={sectionId:'a',revision:studioRevision('Current first passage.'),part:0};
+ const run=async settings=>{const headers={'x-story-narration':Buffer.from(JSON.stringify(settings)).toString('base64')};const start=await h.run('post','/speech',{body,headers});assert.equal(start.statusCode,202);await new Promise(r=>setImmediate(r));assert.equal((await h.run('get','/speech',{query:{...body,part:'0'},headers})).statusCode,200);};
+ await run({voice:'marin',direction:'Whisper.'});await run({voice:'cedar',direction:'Whisper.'});await run({voice:'cedar',direction:'轻声叙述。'});assert.equal(h.counts().speechCalls,3);
+ const bad=await h.run('post','/speech',{body:{...body,narration:{voice:'not-a-voice'}}});assert.equal(bad.statusCode,400);assert.equal(h.counts().speechCalls,3);
 });

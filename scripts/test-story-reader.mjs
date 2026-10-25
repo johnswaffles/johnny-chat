@@ -15,3 +15,8 @@ test('manual names appear in the reader while source prose and chapter isolation
  const chapters=bookChapters([{kind:'chapter',chapterIndex:1,originalText:'Original heading'},{kind:'paragraph',chapterIndex:1,originalText:'First source',editedText:'First revision'},{kind:'paragraph',chapterIndex:2,originalText:'Second source'}],[{chapterIndex:1,title:'Departure'},{chapterIndex:2,title:'Homecoming'}]);
  assert.equal(chapters[0].text,'Departure\n\nFirst revision');assert.equal(chapters[1].text,'Homecoming\n\nSecond source');
 });
+
+test('even short adjacent paragraphs are separate API parts; long paragraphs stay bounded',()=>{
+ assert.deepEqual(speechParts('One short paragraph.\n\nThe next one.'),['One short paragraph.','The next one.']);
+ const parts=speechParts('A long sentence. '.repeat(200)+'\n\nA different paragraph.');assert.ok(parts.every(p=>p.length<=1200));assert.equal(parts.at(-1),'A different paragraph.');assert.ok(parts.slice(0,-1).every(p=>!p.includes('different paragraph')));
+});

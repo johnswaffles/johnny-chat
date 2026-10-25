@@ -1,3 +1,5 @@
+import {createRealtimeNarrator,narrationIdentity} from './lib/story-realtime-speech.mjs';
+import {narrationOptions} from './public/story-editor/narration-model.mjs';
 import {BOOK_CANON_INSTRUCTIONS} from './lib/book-drafts.mjs';
 import {createStoryResponses, STORY_RESPONSE_SCHEMA} from './lib/story-responses.mjs';
 import { editorialPrompt, MAX_PROMPT_BYTES } from './public/story-editor/prompt-model.mjs';
@@ -1666,6 +1668,8 @@ app.get("/health", (_req, res) => res.json({
   storyEditorContentHandling: "context-aware-review-v2",
   storyEditorOutputRecovery: "durable-editorial-pipeline-v3",
   storyEditorReader: "chapter-reader-marin-async-v2",
+  storyEditorNarration: "realtime-paragraph-voice-v1",
+  storyEditorNarrationModel: "gpt-realtime-2.1-mini",
   storyEditorStudio: "layered-literary-studio-v1",
   storyEditorNotebook: "whole-manuscript-scope-v1",
   storyEditorPrompts: "lossless-prompts-v1",
@@ -4618,7 +4622,7 @@ async function storyReaderBook(projectId) {
   const job = (await storyQuery(`SELECT status FROM story_autopilot_jobs WHERE project_id=${sqliteLiteral(projectId)} ORDER BY created_at DESC LIMIT 1;`))[0];
   const sections = await storyQuery(`SELECT kind, chapter_index AS chapterIndex, original_text AS originalText, edited_text AS editedText FROM story_sections WHERE project_id=${sqliteLiteral(projectId)} ORDER BY chapter_index,scene_index,paragraph_index,line_index;`);
   const names = await storyQuery(`SELECT chapter_index AS chapterIndex,title FROM story_chapter_names WHERE project_id=${sqliteLiteral(projectId)};`);
-  const chapters = bookChapters(sections, names).map(chapter => ({ ...chapter, revision: createHash('sha256').update('speech-v2:1200:' + chapter.text).digest('hex'), partCount: speechParts(chapter.text).length }));
+  const chapters = bookChapters(sections, names).map(chapter => ({ ...chapter, revision: createHash('sha256').update('speech-v3:paragraph:1200:' + chapter.text).digest('hex'), partCount: speechParts(chapter.text).length }));
   return { title: project.title, completed: job?.status === 'completed', voice: 'marin', chapters };
 }
 app.get('/api/story-editor/projects/:id/reader', async(req,res) => {
@@ -4630,6 +4634,7 @@ app.get('/api/story-editor/projects/:id/reader', async(req,res) => {
   } catch(err) { res.status(500).json({ok:false,error:String(err.message || err)}); }
 });
 const storySpeech = createStorySpeech({onError: err => console.error('Story narration failed:', err.status || err.code || 'speech_error')});
+const narrateStory=createRealtimeNarrator({apiKey:OPENAI_API_KEY,baseURL:process.env.OPENAI_BASE_URL});
 async function storyChapterSpeech(req,res) {
   res.setHeader('Cache-Control','no-store');
   try {
@@ -4644,18 +4649,17 @@ async function storyChapterSpeech(req,res) {
     if (params?.revision !== chapter.revision) return res.status(409).json({ok:false,error:'This chapter changed. Reopen the reader to hear the latest draft.'});
     const parts = speechParts(chapter.text), part = poll ? (/^\d+$/.test(params?.part) ? Number(params.part) : NaN) : params?.part;
     if (!Number.isInteger(part) || part < 0 || part >= parts.length) return res.status(400).json({ok:false,error:'Choose a valid chapter audio part.'});
-    const key = `${req.params.id}:${chapter.revision}:${part}:marin:1200:v2`;
-    const entry = poll ? storySpeech.read(key) : storySpeech.start(key, async signal => {
-      const speech = await openai.audio.speech.create({model:'gpt-4o-mini-tts',voice:'marin',input:parts[part],response_format:'mp3',instructions:'Narrate this book naturally and warmly, with clear diction, thoughtful pauses, and restrained emotion. Read the supplied words exactly; do not add commentary.'},{signal,timeout:60000,maxRetries:0});
-      return Buffer.from(await speech.arrayBuffer());
-    });
+    let settings;
+    try {settings=narrationOptions(req.headers['x-story-narration']?JSON.parse(Buffer.from(req.headers['x-story-narration'],'base64').toString('utf8')):params?.narration);} catch(error){return res.status(400).json({ok:false,error:error.message});}
+    const key = `${req.params.id}:${chapter.revision}:${part}:${narrationIdentity(settings)}`;
+    const entry = poll ? storySpeech.read(key) : storySpeech.start(key, signal=>narrateStory(parts[part],signal,settings));
     if (!entry) return res.status(404).json({ok:false,error:'This audio expired or the service restarted. Choose Listen to retry.'});
     if (entry.status === 'busy') return res.status(429).json({ok:false,error:'Narration is busy. Please try again in a moment.'});
     // Older open readers still receive audio; updated readers never hold this POST open.
     if (!poll && params?.async !== true && entry.status === 'pending') await entry.done;
     if (entry.status === 'pending') return res.status(202).json({ok:true,status:'pending'});
     if (entry.status === 'failed') return res.status(502).json({ok:false,error:'Narration could not finish within a minute or the audio service failed. Choose Listen to retry.'});
-    res.type('audio/mpeg').send(entry.audio);
+    res.type('audio/wav').send(entry.audio);
   } catch(err) {
     console.error('Story narration failed:',err.status || err.code || 'speech_error');
     res.status(502).json({ok:false,error:'The chapter audio could not be loaded. Please try again.'});
@@ -4710,11 +4714,7 @@ const writingStudio=installWritingStudio(app, {
     if (!value) throw Object.assign(new Error('Live voice returned an incomplete connection.'),{status:502});
     return {value,model,realtimeUrl:'https://api.openai.com/v1/realtime/calls'};
   },
-  createSpeech: async (text,signal) => {
-    if (!OPENAI_API_KEY) throw Object.assign(new Error('Narration is not configured.'),{status:503});
-    const response=await openai.audio.speech.create({model:'gpt-4o-mini-tts',voice:'marin',input:text,response_format:'mp3',instructions:'Read these exact manuscript words naturally and warmly. Do not add commentary.'},{signal,timeout:60000,maxRetries:0});
-    return Buffer.from(await response.arrayBuffer());
-  }
+  createSpeech: narrateStory
 });
 
 app.get("/api/story-editor/projects/:id/export.docx", async (req, res) => {

@@ -14,7 +14,7 @@ export function bookChapters(sections, names = []) {
   return chapters.filter(c => c.blocks.length).map(c => ({ ...c, text: [c.title, ...c.blocks.map(b => b.text)].join('\n\n') }));
 }
 
-export function speechParts(text, limit = 1200) {
+function splitLongParagraph(text, limit) {
   const parts = [];
   let remaining = String(text || '');
   while (remaining.length > limit) {
@@ -31,4 +31,10 @@ export function speechParts(text, limit = 1200) {
   }
   if (remaining) parts.push(remaining);
   return parts;
+}
+
+// Paragraph boundaries are hard request boundaries, even when several fit below
+// the character ceiling. Blank separators are not spoken or sent as extra calls.
+export function speechParts(text,limit=1200){
+ return String(text||'').split(/\n[ \t]*\n+/).filter(part=>part.trim()).flatMap(part=>splitLongParagraph(part,limit));
 }
