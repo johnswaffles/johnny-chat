@@ -216,6 +216,7 @@ export async function onRequest(context) {
   marked.headers.set("X-Story-Editor-Prompts", "lossless-prompts-v1");
   marked.headers.set("X-Story-Editor-Workspace", "start-over-preserve-library-v1");
   marked.headers.set("X-Story-Editor-Progress", "saved-sections-provider-tracker-v1");
+  marked.headers.set("X-Story-Editor-Session-Recovery", "explicit-unlock-preserve-work-v1");
   marked.headers.set("X-Story-Editor-Read-Lock", "single-flight-loading-v1");
   marked.headers.set("X-Story-Editor-Book-Drafts", "versioned-chapter-canon-v1");
   marked.headers.set("X-Story-Editor-Quality", "gpt-6.1-sol-pro-xhigh");

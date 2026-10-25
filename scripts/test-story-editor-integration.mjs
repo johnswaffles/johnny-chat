@@ -1,3 +1,4 @@
+import {createHmac} from 'node:crypto';
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import assert from 'node:assert/strict';
@@ -298,6 +299,9 @@ console.log('PASS: Start over work-status and repeated stop, provider cancellati
 const studioBook=await run('Chapter One\n\nThe letter had waited beside the kitchen window for three days. Every morning, Mara moved it to wipe the sill, and every morning she put it back.\n\nHer brother had written her name carefully. She recognized the way he pressed too hard on the final stroke, as though he could make certainty out of ink.\n\nChapter Two\n\nAt the station, the last train had not yet been called.','The Letter - studio preview');
 const studioBase=studioBook.base+'/studio';
 assert.equal((await fetch(origin+studioBase)).status,401);
+const expiredPayload=Buffer.from(JSON.stringify({profile:'gpt54',iat:Date.now()-86400000,exp:Date.now()-1,nonce:'synthetic-expired'})).toString('base64url');const expiredToken=expiredPayload+'.'+createHmac('sha256','local-story-preview').update(expiredPayload).digest('base64url');const expiredHeaders={Authorization:'Bearer '+expiredToken,'Content-Type':'application/json'};const speechBeforeExpiry=speechRequests.length,modelBeforeExpiry=requests.length;
+for(const suffix of ['/speech','/bookmark'])assert.equal((await fetch(origin+studioBase+suffix,{method:suffix==='/bookmark'?'PUT':'POST',headers:expiredHeaders,body:JSON.stringify({sectionId:'synthetic-invalid',revision:'none',part:0})})).status,401);assert.equal(speechRequests.length,speechBeforeExpiry);assert.equal(requests.length,modelBeforeExpiry);assert.equal((await json(studioBase)).original,studioBook.project.sections.map(s=>s.originalText).join('\n\n'));
+console.log('PASS: signed expired session blocks narration and bookmark before provider calls or manuscript writes; fresh authenticated session can reopen the original.');
 let studioState=await json(studioBase);assert.deepEqual(studioState.quality,{model:'gpt-6.1-sol',effort:'xhigh',mode:'pro'});assert.equal(studioState.chapters.length,2);
 await json(studioBase+'/goal',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:'A finished literary novel with a quiet voice, developed from beginning to end.'})});
 assert.equal((await json(studioBase)).goal,'A finished literary novel with a quiet voice, developed from beginning to end.');

@@ -69,3 +69,7 @@ test('Pages proxy preserves pending status and authenticated GET query without g
   assert.equal(response.status,202);assert.equal(response.headers.get('Cache-Control'),'no-store');assert.equal((await response.json()).status,'pending');assert.equal(calls,1);
  } finally {globalThis.fetch=oldFetch;}
 });
+
+test('speech 401 retains an auth-specific error and never retries generation or polling',async()=>{
+ for(const pending of [false,true]){const methods=[];await assert.rejects(chapterAudio('/speech',options({fetcher:async(url,init)=>{methods.push(init.method);return pending&&methods.length===1?new Response('{}',{status:202}):new Response('{"detail":"Private session required"}',{status:401,headers:{'Content-Type':'application/json'}});}})),error=>error.code==='AUTH_REQUIRED'&&error.status===401&&/unlocking/.test(error.message));assert.deepEqual(methods,pending?['POST','GET']:['POST']);}
+});

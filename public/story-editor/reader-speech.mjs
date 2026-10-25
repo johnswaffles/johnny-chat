@@ -22,6 +22,7 @@ export async function chapterAudio(url, {part, revision, sectionId, headers, sig
       if (response.status === 202) {
         onPending(); polling = true; await pause(pollMs, deadline); continue;
       }
+      if (response.status === 401) throw Object.assign(new Error('Your private session needs unlocking. Unlock the studio again, then press Read to listen.'),{code:'AUTH_REQUIRED',status:401});
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || (response.status === 524 || response.status === 504

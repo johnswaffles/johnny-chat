@@ -2,30 +2,33 @@ import {editorialQualityLabel} from './quality-label.mjs?v=20261024-sol-pro-xhig
 import {renderRevisionTracker} from './revision-tracker.mjs?v=20261025-tracker-reader1';
 import {notebookJourney,notebookReference} from './notebook-model.mjs?v=20261024-background1';
 import {speechParts} from './reader-model.mjs';
-import {chapterAudio} from './reader-speech.mjs?v=20261021-journey3';
+import {chapterAudio} from './reader-speech.mjs?v=20261025-session-recovery1';
 import {StudioVoice} from './studio-voice.mjs?v=20261021-journey3';
 const $=id=>document.getElementById(id);
 const origin=String(window.JOHNNY_CHAT_API_BASE_URL||location.origin).replace(/\/+$/,'');
-const state={id:'',data:null,sectionId:'',original:false,epoch:0,audioEpoch:0,reading:false,readPhase:'idle',audioFlight:'',task:null,polling:false,lastTask:null,resume:null,audioUrl:'',loadedAudio:null,scope:'book',flowJob:null,walkthrough:false,proposal:null,ignoredProposal:'',proposalApplying:false,connection:'connected',bookSaving:false,bookOpen:false,bookCreating:false,savedChapter:null};
+const state={id:'',data:null,sectionId:'',original:false,epoch:0,audioEpoch:0,reading:false,readPhase:'idle',audioFlight:'',task:null,polling:false,lastTask:null,resume:null,audioUrl:'',loadedAudio:null,scope:'book',flowJob:null,walkthrough:false,proposal:null,ignoredProposal:'',proposalApplying:false,connection:'connected',authRequired:false,authEpoch:0,accessChecking:false,bookSaving:false,bookOpen:false,bookCreating:false,savedChapter:null};
 const audio=$('studio-audio');let speechController,taskController,contextController,voiceStarting=false,lastBookmark=0;
 const phaseLabels={reading:'Reading the current manuscript and rebuilding only changed continuity notes…',queued:'Waiting for the editor…',planning:'Understanding your intent and the scene’s place in the story…',drafting:'Writing the passage with character, voice, and emotional depth…',reviewing:'Independently checking depth, continuity, subtext, and what changed…',refining:'Refining the prose against the critique before saving…'};
 const status=text=>$('studio-status').textContent=text;
 function auth(){const cookie=document.cookie.split(';').map(s=>s.trim()).find(s=>s.startsWith('gpt54_session='));return cookie?{Authorization:`Bearer ${decodeURIComponent(cookie.slice(14))}`}:{ };}
 const base=(id=state.id)=>`${origin}/api/story-editor/projects/${encodeURIComponent(id)}/studio`;
-async function api(path='',{method='GET',body,signal,id=state.id}={}){
+const accessError=()=>Object.assign(new Error('Your private session needs unlocking. Use Unlock again; your saved draft and unsent text stay safe.'),{code:'AUTH_REQUIRED',status:401});
+async function api(path='',{method='GET',body,signal,id=state.id,allowLocked=false}={}){
+ if(state.authRequired&&!allowLocked)throw accessError();const authEpoch=state.authEpoch,workspaceEpoch=state.epoch;
  const response=await fetch(base(id)+path,{method,headers:{...auth(),...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)}),keepalive:path==='/bookmark',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(20000)]):AbortSignal.timeout(20000)});
+ if(response.status===401){if(authEpoch===state.authEpoch&&workspaceEpoch===state.epoch&&id===state.id)requireUnlock();throw accessError();}
  const data=await response.json().catch(()=>({error:'The studio returned an unreadable response. Your saved draft is safe; refresh to reconnect.'}));
- if(!response.ok)throw Error(data.error||'The studio could not connect. Refresh to try again.');return data;
+ if(!response.ok)throw Error(data.error||data.detail||'The studio could not connect. Refresh to try again.');return data;
 }
 const chapters=()=>state.data?.chapters||[];
 const allPassages=()=>chapters().flatMap(c=>c.passages);
 const passage=()=>allPassages().find(p=>p.id===state.sectionId);
 const chapter=()=>chapters().find(c=>c.passages.some(p=>p.id===state.sectionId));
 function saveBookmark(){
- const p=passage();if(!p||!state.id||state.original)return;
+ const p=passage();if(!p||!state.id||state.original||state.authRequired)return;
  const position=state.loadedAudio?.sectionId===p.id&&state.loadedAudio.revision===p.revision?{...state.loadedAudio,seconds:audio.currentTime||0}:state.resume||{sectionId:p.id,revision:p.revision,part:0,seconds:0};
  if(!position||position.sectionId!==p.id||position.revision!==p.revision)return;
- state.resume={...position};void api('/bookmark',{method:'PUT',body:position}).catch(()=>{});
+ state.resume={...position};const id=state.id,ticket=state.epoch;void api('/bookmark',{method:'PUT',body:position}).then(()=>{if(id===state.id&&ticket===state.epoch)$('studio-bookmark-warning').hidden=true;}).catch(error=>{if(id!==state.id||ticket!==state.epoch||error.code==='AUTH_REQUIRED')return;$('studio-bookmark-warning').textContent='Your listening position has not synced. Your saved manuscript is safe; keep this tab open. It will retry while you listen.';$('studio-bookmark-warning').hidden=false;});
 }
 function pause(message='Paused here. Tell Johnny what you want to explore or change.',interrupt=true){
  saveBookmark();state.reading=false;state.readPhase='idle';state.audioFlight='';state.audioEpoch++;speechController?.abort();speechController=null;audio.pause();if(interrupt)voice.interrupt();renderControls();if(message)status(message);
@@ -48,7 +51,7 @@ function renderNotebook(){
  const flow=notebookJourney({job:state.flowJob,busy:data?.busy,bookmark:data?.bookmark,hasRevision,walkthrough:state.walkthrough});
  $('notebook-step-title').textContent=flow.title;$('notebook-step-copy').textContent=flow.copy;$('notebook-next').textContent=flow.label;$('notebook-next').disabled=!p||flow.action==='working'||!!state.task;$('notebook-next').dataset.action=flow.action;
  for(const step of ['source','revision','together']){const node=$('notebook-stage-'+step);node.setAttribute('aria-current',flow.step===step?'step':'false');node.classList.toggle('done',['source','revision','together'].indexOf(step)<['source','revision','together'].indexOf(flow.step));}
- $('notebook-next').hidden=flow.action==='working';renderRevisionTracker($,{job:state.flowJob,connection:state.connection});
+ $('notebook-next').hidden=flow.action==='working';renderRevisionTracker($,{job:state.flowJob,connection:state.authRequired?'auth':state.connection});
  $('notebook-source').hidden=!data;$('notebook-source-name').textContent=data?.title||'';$('notebook-scope').value=state.scope;$('studio-input').placeholder=state.scope==='book'?'Ask about the whole manuscript, or describe a change throughout…':'Tell Johnny what you want to change in this passage…';
  $('notebook-chat-intro').hidden=!!data?.messages.length||!!state.task;$('notebook-saved').textContent=state.task?'Editing…':'Saved';
  const outline=$('notebook-outline');outline.replaceChildren();for(const item of chapters()){const button=document.createElement('button');button.type='button';button.textContent=item.title;button.setAttribute('aria-current',String(c?.index===item.index));button.addEventListener('click',()=>{selectSection(item.passages[0].id);setNotebookView('draft');$('library-rail').classList.remove('open');$('rail-open').setAttribute('aria-expanded','false');});outline.append(button);}
@@ -93,14 +96,14 @@ function renderJourney(){
  const previous=all[index-1];$('studio-recap').textContent=previous?`Immediately before this passage, in your saved draft: “${previous.text.slice(-420)}”`:(p?`At the start of your saved draft: “${p.text.slice(0,420)}”`:'');
  const goal=state.data?.goal||'Your finished manuscript';$('studio-goal-copy').textContent=goal.length>140?goal.slice(0,140)+'…':goal;
  if(document.activeElement!==$('studio-goal'))$('studio-goal').value=state.data?.goal||'';
- $('studio-goal-save').disabled=!!state.task||!!state.data?.busy;
+ $('studio-goal-save').disabled=state.authRequired||!!state.task||!!state.data?.busy;
 }
-function renderControls(){renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage();$('studio-read').disabled=!ready||state.reading;$('studio-read').textContent=state.reading?(state.readPhase==='preparing'?'Preparing audio…':state.readPhase==='ready'?'Audio ready · use Play':'Reading…'):'▶ Read from here';$('studio-read').setAttribute('aria-busy',String(state.reading&&state.readPhase==='preparing'));$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
+function renderControls(){renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage()&&!state.authRequired;$('studio-read').disabled=!ready||state.reading;$('studio-read').textContent=state.reading?(state.readPhase==='preparing'?'Preparing audio…':state.readPhase==='ready'?'Audio ready · use Play':'Reading…'):'▶ Read from here';$('studio-read').setAttribute('aria-busy',String(state.reading&&state.readPhase==='preparing'));$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=state.authRequired||!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
 function setBookOpen(open){state.bookOpen=!!open;$('book-drafts-panel').hidden=!open;$('book-toggle').setAttribute('aria-expanded',String(!!open));if(open)$('book-close').focus();}
 function bookNotice(text){$('book-drafts-status').textContent=text;}
 function bookButton(text,action,label=text){const b=document.createElement('button');b.type='button';b.className='ghost-button';b.textContent=text;b.setAttribute('aria-label',label);b.disabled=state.bookSaving||!!state.task||!!state.data?.busy;b.addEventListener('click',()=>void bookAction(action));return b;}
 function renderBookDrafts(){
- const data=state.data?.bookDrafts||{books:[],book:null},book=data.book,c=chapter(),busy=state.bookSaving||!!state.task||!!state.data?.busy;
+ const data=state.data?.bookDrafts||{books:[],book:null},book=data.book,c=chapter(),busy=state.authRequired||state.bookSaving||!!state.task||!!state.data?.busy;
  $('book-save-chapter').disabled=!c||busy||state.original;$('book-toggle').disabled=!state.id;$('book-save-chapter').textContent=state.bookSaving?'Saving…':'Save chapter';$('book-drafts-count').textContent=book?.chapters.length?`(${book.chapters.length})`:'';
  const select=$('book-select');select.replaceChildren();const option=document.createElement('option');option.value='';option.textContent='Create a new book…';select.append(option);for(const item of data.books){const option=document.createElement('option');option.value=item.id;option.textContent=item.title;select.append(option);}select.value=state.bookCreating?'':book?.id||'';select.disabled=busy;
  $('book-create-form').hidden=!!book&&!state.bookCreating;$('book-existing-controls').hidden=!book||state.bookCreating;$('book-create').disabled=busy;$('book-name').disabled=busy;$('book-use-continuity').checked=!!book?.useContinuity;$('book-use-continuity').disabled=busy;
@@ -128,10 +131,31 @@ $('book-version-select').addEventListener('change',()=>void bookAction(()=>openS
 $('book-version-approve').addEventListener('click',()=>void bookAction(async()=>{const v=state.savedChapter;if(await changeBook({revision:state.data.bookDrafts.book.revision,chapterId:v.chapterId,versionId:v.versionId})){await openSavedChapter(v.chapterId,v.versionId);$('book-version-status').textContent='Continuity reference changed. The working draft was not replaced.';}}));
 $('book-version-download').addEventListener('click',()=>{const v=state.savedChapter;if(v)downloadBookText(v.content.title+' version '+v.version,v.content.title+'\n\n'+v.content.passages.map(p=>p.text).join('\n\n'));});
 $('book-export').addEventListener('click',()=>void bookAction(async()=>{const book=state.data.bookDrafts.book,id=state.id,ticket=state.epoch,revision=book.revision;const chapters=[];for(const c of book.chapters){const v=await api('/book/chapters/'+encodeURIComponent(c.id)+'?'+new URLSearchParams({versionId:c.versionId}));if(id!==state.id||ticket!==state.epoch)return;chapters.push(v.content.title+'\n\n'+v.content.passages.map(p=>p.text).join('\n\n'));}const current=await api('/book');if(id!==state.id||ticket!==state.epoch)return;if(current.book?.revision!==revision)throw Error('Book references changed while assembling. Refresh and download again.');downloadBookText(book.title,chapters.join('\n\n\n'));bookNotice('Downloaded the complete saved reference versions in book order.');}));
+function renderAccess(){const banner=$('studio-auth-banner');banner.hidden=!state.authRequired;$('studio-auth-check').disabled=state.accessChecking;$('studio-auth-check').textContent=state.accessChecking?'Checking access…':'Check access';}
+function requireUnlock(){
+ if(state.authRequired){renderAccess();return;}
+ state.authRequired=true;state.connection='auth';pause('Your session needs unlocking. Open Unlock again in a new tab, then return here. Your saved revisions and unsent text are safe.');voice.close();voiceStarting=false;$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';$('studio-voice-status').textContent='Voice is off · unlock to reconnect';taskController?.abort();contextController?.abort();
+ $('studio-auth-copy').textContent='Your private session needs unlocking. Saved revisions are safe. Unsent text stays in this tab; keep it open.';renderAccess();renderControls();$('studio-auth-banner').focus();$('studio-auth-banner').scrollIntoView({block:'nearest'});document.dispatchEvent(new CustomEvent('story-auth-required',{detail:{source:'studio'}}));
+}
+async function checkAccess(){
+ if(state.accessChecking)return;const id=state.id,ticket=state.epoch;state.accessChecking=true;renderAccess();
+ try{
+  if(id)await refresh({resumePending:false,allowLocked:true});
+  else{const response=await fetch(origin+'/api/story-editor/projects',{headers:auth(),signal:AbortSignal.timeout(20000)});if(response.status===401)throw accessError();if(!response.ok)throw Error('The studio could not verify access just now.');}
+  if(id!==state.id||ticket!==state.epoch)return;
+  state.authRequired=false;state.authEpoch++;state.connection='connected';renderAccess();renderControls();document.dispatchEvent(new CustomEvent('story-auth-restored'));status('Unlocked. Your saved draft is refreshed. Press Read when you are ready; nothing was restarted.');
+  if(state.data?.task||state.task)void resumeTask(state.data?.task?.id||state.task);
+ }catch(error){if(id!==state.id||ticket!==state.epoch)return;if(error.code==='AUTH_REQUIRED'){requireUnlock();$('studio-auth-copy').textContent='Access is still locked. Use Unlock again in the new tab, finish signing in, then return here. Your text stays open.';}else{$('studio-auth-copy').textContent='Could not reconnect just now. Keep this tab open to preserve unsent text, then try Check access again.';status(error.message||'The connection could not be verified.');}}
+ finally{if(id===state.id&&ticket===state.epoch){state.accessChecking=false;renderAccess();}}
+}
+$('studio-auth-check').addEventListener('click',()=>void checkAccess());
+document.addEventListener('story-auth-required',()=>requireUnlock());
+window.addEventListener('focus',()=>{if(state.authRequired)void checkAccess();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.authRequired)void checkAccess();});
 async function updateVoiceContext(){if(!voice.connected||!passage())return;const id=state.id,sectionId=state.sectionId,ticket=state.epoch;contextController?.abort();contextController=new AbortController();try{const data=await api('/context?'+new URLSearchParams({sectionId}),{signal:contextController.signal});if(ticket===state.epoch&&sectionId===state.sectionId&&id===state.id)voice.updateContext(data.instructions);}catch(error){if(error.name!=='AbortError')status('The draft is open, but voice context could not refresh. Reconnect voice before asking for another edit.');}}
 function selectSection(id,{scroll=true,stop=true}={}){if(!allPassages().some(p=>p.id===id))throw Error('That passage is not in this manuscript.');if(stop){pause('');state.scope='passage';}state.original=false;state.sectionId=id;state.resume=null;state.loadedAudio=null;renderDraft({scroll});renderControls();void updateVoiceContext();const p=passage();void api('/bookmark',{method:'PUT',body:{sectionId:id,revision:p.revision,part:0,seconds:0}}).catch(()=>{});}
-async function refresh({initial=false,resumePending=true,fromTask=false}={}){
- const id=state.id,ticket=state.epoch;if(!id)return;const data=await api('',{id});if(ticket!==state.epoch||id!==state.id)return;
+async function refresh({initial=false,resumePending=true,fromTask=false,allowLocked=false}={}){
+ const id=state.id,ticket=state.epoch;if(!id)return;const data=await api('',{id,allowLocked});if(ticket!==state.epoch||id!==state.id)return;
  const before=passage()?.revision;state.data=data;if(data.lastTask?.result?.action==='revise_book'&&data.lastTask.id!==state.ignoredProposal)state.proposal={id:data.lastTask.id,...data.lastTask.result};
  if(!allPassages().some(p=>p.id===state.sectionId))state.sectionId=data.bookmark?.sectionId&&allPassages().some(p=>p.id===data.bookmark.sectionId)?data.bookmark.sectionId:allPassages()[0]?.id||'';
  if(initial&&data.bookmark?.sectionId===state.sectionId&&passage())state.resume={...data.bookmark,revision:passage().revision,...(data.bookmark.revision!==passage().revision?{part:0,seconds:0}:{})};
@@ -159,17 +183,17 @@ async function playPart(part,ticket,seek=0){
   };
   status(`Reading ${c.title} · passage ${c.passages.indexOf(p)+1}. ${voice.connected?'Speak to interrupt.':'Press Pause to stop here.'}`);
   try{await audio.play();if(ticket===state.audioEpoch&&projectTicket===state.epoch&&state.sectionId===p.id&&state.loadedAudio?.part===part){state.readPhase='playing';renderControls();}}catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch)return;if(error.name==='NotAllowedError'){state.readPhase='ready';renderControls();status('Your passage is ready. Press Play in the audio controls to listen, or Pause to choose another starting point.');}else pause('Playback could not start. Press Read to retry this saved passage.');}
- }catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch)return;pause((error.message||'Audio preparation was interrupted.')+' Press Read to retry this passage.');}
+ }catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch)return;if(error.code==='AUTH_REQUIRED'){requireUnlock();return;}pause((error.message||'Audio preparation was interrupted.')+' Press Read to retry this passage.');}
  finally{if(state.audioFlight===flight)state.audioFlight='';}
 }
-async function read({restart=false}={}){if(!passage()||state.reading)return;setNotebookView('draft');pause('');state.original=false;renderDraft({scroll:true});const p=passage(),resume=!restart&&state.resume?.sectionId===p.id&&state.resume?.revision===p.revision?state.resume:null;state.reading=true;state.readPhase='preparing';renderControls();await playPart(resume?.part||0,state.audioEpoch,resume?.seconds||0);}
+async function read({restart=false}={}){if(state.authRequired){status(accessError().message);return;}if(!passage()||state.reading)return;setNotebookView('draft');pause('');state.original=false;renderDraft({scroll:true});const p=passage(),resume=!restart&&state.resume?.sectionId===p.id&&state.resume?.revision===p.revision?state.resume:null;state.reading=true;state.readPhase='preparing';renderControls();await playPart(resume?.part||0,state.audioEpoch,resume?.seconds||0);}
 function renderPhase(task){$('studio-progress-copy').textContent=phaseLabels[task.phase]||phaseLabels.queued;const names=['planning','drafting','reviewing','refining'],index=names.indexOf(task.phase);for(const li of $('studio-progress').querySelectorAll('li')){li.classList.toggle('current',li.dataset.pass===task.phase);li.classList.toggle('done',names.indexOf(li.dataset.pass)<index);}status(phaseLabels[task.phase]||phaseLabels.queued);}
 async function pollTask(taskId,{readTicket=state.audioEpoch,requestedSection=state.sectionId}={}){
  const ticket=state.epoch,id=state.id;taskController?.abort();taskController=new AbortController();const signal=taskController.signal;let failures=0;
  const end=Date.now()+46*60*1000;state.polling=true;
  try{while(Date.now()<end){
   if(ticket!==state.epoch||signal.aborted)return;
-  let data;try{data=await api('/tasks/'+encodeURIComponent(taskId),{id,signal});failures=0;}catch(error){if(signal.aborted)return;if(++failures>=3)throw Error('The connection was interrupted. Your request is saved; Refresh draft will reconnect without starting another edit.');await delay(2000,signal);continue;}
+  let data;try{data=await api('/tasks/'+encodeURIComponent(taskId),{id,signal});failures=0;}catch(error){if(signal.aborted)return;if(error.code==='AUTH_REQUIRED')throw error;if(++failures>=3)throw Error('The connection was interrupted. Your request is saved; Refresh draft will reconnect without starting another edit.');await delay(2000,signal);continue;}
   if(ticket!==state.epoch)return;
   const task=data.task;renderPhase(task);
   if(['failed','cancelled'].includes(task.status)){state.task=null;state.lastTask=taskId;renderControls();await refresh();status(task.error||'This request stopped. Retry can resume completed passes.');return {ok:false,error:task.error};}
@@ -244,22 +268,23 @@ audio.addEventListener('timeupdate',()=>{if(Date.now()-lastBookmark>5000){lastBo
 audio.addEventListener('error',()=>{if(state.reading&&state.loadedAudio)pause('Audio playback failed. Press Read to retry the saved passage.');});
 function resetWorkspace(){
  pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();
- setBookOpen(false);state.bookSaving=false;state.bookCreating=false;state.savedChapter=null;if($('book-version-dialog').open)$('book-version-dialog').close();$('book-name').value='';bookNotice('');
+ setBookOpen(false);state.bookSaving=false;state.bookCreating=false;state.accessChecking=false;state.authEpoch++;state.savedChapter=null;if($('book-version-dialog').open)$('book-version-dialog').close();$('book-name').value='';bookNotice('');
  state.epoch++;Object.assign(state,{id:'',data:null,sectionId:'',original:false,reading:false,task:null,polling:false,lastTask:null,resume:null,scope:'book',flowJob:null,walkthrough:false,proposal:null,ignoredProposal:'',proposalApplying:false});
  resetAudio();setNotebookView('chat');$('book-reader').hidden=true;
  for(const id of ['studio-pages','studio-messages','studio-versions','studio-notes-list','studio-chapter','notebook-outline'])$(id).replaceChildren();
  for(const id of ['studio-input','studio-note','studio-goal','author-request-text'])$(id).value='';
  for(const id of ['studio-status','studio-location','studio-recap','studio-return-copy','studio-return-title','notebook-job-copy','author-request-status','notebook-source-name'])$(id).textContent='';
  $('studio-readback').checked=true;$('author-request-scope').value='book';$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';
+ $('studio-bookmark-warning').hidden=true;$('studio-bookmark-warning').textContent='';
  $('notebook-source').hidden=true;$('notebook-job-progress').hidden=true;$('notebook-proposal').hidden=true;$('studio-progress').hidden=true;$('studio-retry').hidden=true;
  renderControls();
 }
 document.addEventListener('story-workspace-check',event=>{if(state.task==='starting')event.detail.starting=true;});
 document.addEventListener('story-workspace-reset',resetWorkspace);
-document.addEventListener('story-reader-connection',event=>{if(event.detail.id!==state.id)return;state.connection=event.detail.state;renderRevisionTracker($,{job:state.flowJob,connection:state.connection});});
+document.addEventListener('story-reader-connection',event=>{if(event.detail.id!==state.id)return;state.connection=event.detail.state;renderRevisionTracker($,{job:state.flowJob,connection:state.authRequired?'auth':state.connection});});
 document.addEventListener('story-reader-project',event=>{
  const {id,busy}=event.detail;state.connection='connected';state.flowJob=event.detail.job||null;
- if(id!==state.id){setBookOpen(false);state.bookSaving=false;state.bookCreating=false;state.savedChapter=null;if($('book-version-dialog').open)$('book-version-dialog').close();$('book-name').value='';bookNotice('');pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();state.epoch++;state.id=id||'';state.flowJob=event.detail.job||null;state.walkthrough=false;state.scope='book';state.proposal=null;state.proposalApplying=false;state.ignoredProposal='';try{state.ignoredProposal=window.localStorage?.getItem('johnny-notebook-dismissed-'+state.id)||'';}catch{}setNotebookView('chat');state.data=null;state.sectionId='';state.task=null;state.polling=false;state.lastTask=null;state.original=false;state.resume=null;resetAudio();$('book-reader').hidden=!id;$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';renderControls();if(id)void run(()=>refresh({initial:true}));}
+ if(id!==state.id){setBookOpen(false);state.bookSaving=false;state.bookCreating=false;state.accessChecking=false;state.authEpoch++;state.savedChapter=null;if($('book-version-dialog').open)$('book-version-dialog').close();$('book-name').value='';bookNotice('');pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();state.epoch++;state.id=id||'';state.flowJob=event.detail.job||null;state.walkthrough=false;state.scope='book';state.proposal=null;state.proposalApplying=false;state.ignoredProposal='';try{state.ignoredProposal=window.localStorage?.getItem('johnny-notebook-dismissed-'+state.id)||'';}catch{}setNotebookView('chat');state.data=null;state.sectionId='';state.task=null;state.polling=false;state.lastTask=null;state.original=false;state.resume=null;resetAudio();$('book-reader').hidden=!id;$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';renderControls();if(id)void run(()=>refresh({initial:true}));}
  else if(state.data&&state.data.busy!==!!busy)void run(()=>refresh());
  renderNotebook();
 });
@@ -283,5 +308,5 @@ $('notebook-proposal-cancel').addEventListener('click',dismissProposal);
 $('notebook-proposal-apply').addEventListener('click',()=>{if(!state.proposal||state.proposalApplying)return;state.proposalApplying=true;renderNotebook();document.dispatchEvent(new CustomEvent('story-author-request',{detail:{projectId:state.id,request:state.proposal.request}}));});
 for(const [id,text] of [['notebook-suggest-story','What does this manuscript need most to become a strong, finished work?'],['notebook-suggest-arc','Help me think through the emotional arc of this manuscript. Do not change the draft yet.']])$(id).addEventListener('click',()=>{state.scope='book';$('notebook-scope').value='book';$('studio-input').value=text;$('studio-input').focus();});
 document.addEventListener('story-author-request-result',event=>{if(event.detail.projectId&&event.detail.projectId!==state.id)return;if(event.detail.started)dismissProposal();else if(event.detail.busy===false){state.proposalApplying=false;renderNotebook();}});
-setNotebookView('chat');
+setNotebookView('chat');renderAccess();
 document.dispatchEvent(new CustomEvent('story-studio-ready'));

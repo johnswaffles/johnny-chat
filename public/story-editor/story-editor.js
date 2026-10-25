@@ -15,7 +15,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   };
 
   const state = {
-    workspaceEpoch: 0, loadEpoch: 0, resetting: false, legacyBusy: false, startingFull: false,
+    authRequired:false,workspaceEpoch: 0, loadEpoch: 0, resetting: false, legacyBusy: false, startingFull: false,
     blank: (()=>{try{return sessionStorage.getItem("johnny-story-workspace")==="";}catch{return false;}})(),
     projects: [],
     project: null,
@@ -138,7 +138,8 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   }
 
   async function apiFetch(path, options = {}) {
-    const response = await fetch(`${apiBase}${path}`, {
+    if(state.authRequired)throw Object.assign(new Error('Unlock the studio again to reconnect. Unsent text stays in this tab.'),{code:'AUTH_REQUIRED'});
+    const tokenAtStart=readCookie(sessionCookieName);const response = await fetch(`${apiBase}${path}`, {
       ...options,
       credentials: "same-origin",
       headers: authHeaders(options.headers)
@@ -146,6 +147,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     if (response.status === 401) {
       const error = new Error("Your private session needs to be unlocked again.");
       error.code = "AUTH_REQUIRED";
+      if(readCookie(sessionCookieName)===tokenAtStart)document.dispatchEvent(new CustomEvent("story-auth-required",{detail:{source:"workspace"}}));
       throw error;
     }
     return response;
@@ -817,7 +819,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     }
   }
 
-  async function pollAutopilot() {
+  async function pollAutopilot({refreshCompleted=true}={}) {
     window.clearTimeout(state.autopilotTimer);
     if (!state.project || !state.autopilotJob?.id) return;
     const epoch=state.workspaceEpoch,id=state.project.id,jobId=state.autopilotJob.id;
@@ -830,14 +832,14 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
       state.autopilotJob = data.job;
       renderAutopilot();
       if (data.job.status === "queued" || data.job.status === "running") {
-        state.autopilotTimer = window.setTimeout(pollAutopilot, 4000);
+        state.autopilotTimer = window.setTimeout(()=>pollAutopilot({refreshCompleted}), 4000);
         return;
       }
       if (data.job.status === "completed") {
-        await loadProject(state.project.id);
+        if(refreshCompleted)await loadProject(state.project.id);
 
         state.autopilotJob = data.job;
-        renderOverview();
+        if(refreshCompleted)renderOverview();else el.exportDocx.disabled=false;
         showToast("Revision saved. Your draft and editorial notes are ready.");
       } else if (data.job.status === "failed") {
         showToast(data.job.error || "Autopilot stopped before it could finish.", true);
@@ -847,7 +849,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
       state.pollFailures += 1;
       document.dispatchEvent(new CustomEvent('story-reader-connection',{detail:{id,state:error.code==='AUTH_REQUIRED'?'auth':'reconnecting'}}));
       document.getElementById('worker-status').textContent = error.code === 'AUTH_REQUIRED' ? 'Unlock your session again to see progress. The saved run continues on the server.' : 'Connection interrupted. Reconnecting automatically; your saved work is safe.';
-      if (error.code !== 'AUTH_REQUIRED') state.autopilotTimer = window.setTimeout(pollAutopilot, Math.min(30000, 3000 * 2 ** Math.min(state.pollFailures,4)));
+      if (error.code !== 'AUTH_REQUIRED') state.autopilotTimer = window.setTimeout(()=>pollAutopilot({refreshCompleted}), Math.min(30000, 3000 * 2 ** Math.min(state.pollFailures,4)));
     }
   }
 
@@ -1222,6 +1224,8 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     }
   });
 
+  document.addEventListener('story-auth-required',()=>{state.authRequired=true;window.clearTimeout(state.autopilotTimer);});
+  document.addEventListener('story-auth-restored',()=>{state.authRequired=false;if(!state.project)void retryStartup();else if(['queued','running'].includes(state.autopilotJob?.status))void pollAutopilot({refreshCompleted:false});});
   retryStartup();
   document.addEventListener('story-studio-ready',()=>{if(state.project)renderAutopilot();});
   document.addEventListener('story-studio-saved',event=>{if(event.detail.projectId===state.project?.id)void loadProject(state.project.id).catch(handleError);});

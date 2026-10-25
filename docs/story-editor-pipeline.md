@@ -416,3 +416,31 @@ Unexpected aborts, generation failures and device playback failures unlock Read.
 Browser autoplay blocking retains ready audio for the native Play control without
 an automatic paid retry. Existing backend coalescing/cache and POST-once/GET-poll
 behavior remain intact. Synthetic tests exercise these paths without paid narration.
+
+## Session expiry and narration recovery
+
+A 401 from narration, bookmarks, studio requests, or the main workspace now has
+an explicit AUTH_REQUIRED path. The loaded workspace remains open with a visible
+Unlock again banner. The existing ?reauth=1 password gate opens in a new tab;
+returning or pressing Check access performs a single-flight, read-only refresh.
+Unsent conversation, notes and editorial briefs remain in their fields. No audio
+POST, edit submission, job restart or cancellation occurs merely from recovery.
+A deliberate Read is required afterward. Existing 12-hour token/cookie lifetime,
+server validation, Secure/SameSite policy and password gate remain unchanged.
+
+A 401 pauses local playback and voice, stops repeated bookmark writes and suspends
+polling without stopping server jobs. Non-auth bookmark failure gets a persistent
+visible warning until a later successful sync. Stale 401 responses from an earlier
+access generation cannot relock a newly verified session. Restored full-job polling
+avoids reloading the legacy editing forms, preserving unsent fields while the studio
+fetches the saved revision. The current listening selection is retained when valid.
+
+The screenshot supplied October 25 shows 401 on both /studio/speech and
+/studio/bookmark. Expired overnight access is consistent with the 12-hour policy;
+the screenshot does not prove the precise token-expiry cause. Tests include a signed
+expired token and confirm no provider calls or manuscript writes pass authorization.
+Live sign-in/audio remain user checks; no real manuscript was narrated for this fix.
+
+This frontend-only release can use Render's documented [skip render] commit phrase
+(https://render.com/docs/deploys#skipping-an-auto-deploy) so the backend and any active
+jobs keep running. Pages deploys the updated UI normally. No cloud setting changes.
