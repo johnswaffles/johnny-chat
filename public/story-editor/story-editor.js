@@ -845,6 +845,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     } catch (error) {
       if(epoch!==state.workspaceEpoch||id!==state.project?.id)return;
       state.pollFailures += 1;
+      document.dispatchEvent(new CustomEvent('story-reader-connection',{detail:{id,state:error.code==='AUTH_REQUIRED'?'auth':'reconnecting'}}));
       document.getElementById('worker-status').textContent = error.code === 'AUTH_REQUIRED' ? 'Unlock your session again to see progress. The saved run continues on the server.' : 'Connection interrupted. Reconnecting automatically; your saved work is safe.';
       if (error.code !== 'AUTH_REQUIRED') state.autopilotTimer = window.setTimeout(pollAutopilot, Math.min(30000, 3000 * 2 ** Math.min(state.pollFailures,4)));
     }

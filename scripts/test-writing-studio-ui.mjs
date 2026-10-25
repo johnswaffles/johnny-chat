@@ -1,4 +1,5 @@
 import {editorialQualityLabel} from '../public/story-editor/quality-label.mjs';
+import {renderRevisionTracker} from '../public/story-editor/revision-tracker.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -45,8 +46,8 @@ async function harness({gate,failed=false,bookmark=null,audioFetcher,proposal=fa
  };
  class Voice {constructor(options){this.options=options;this.connected=false;this.interrupts=0;}interrupt(){this.interrupts++;}close(){}updateContext(){}async connect(){this.connects=(this.connects||0)+1;}}
  const listeners={};const dispatched=[];const document={cookie:'',getElementById:id=>elements.get(id),createElement:tag=>new Element(tag),addEventListener(type,fn){(listeners[type]||=[]).push(fn);},dispatchEvent(event){dispatched.push(event);for(const fn of listeners[event.type]||[])fn(event);}};
- const sandbox={document,window:{JOHNNY_CHAT_API_BASE_URL:'http://local.test',addEventListener(){}},location:{origin:'http://local.test'},URL,URLSearchParams,AbortController,AbortSignal,Blob,Response,crypto:{randomUUID},requestAnimationFrame:fn=>fn(),matchMedia:()=>({matches:true}),setTimeout,clearTimeout,fetch:fetcher,speechParts,notebookJourney,notebookReference,editorialQualityLabel,StudioVoice:Voice,chapterAudio:async(url,options)=>{audioCalls.push({url,options});return audioFetcher?audioFetcher(url,options):new Blob(['fake local audio']);},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}};
- const context=vm.createContext(sandbox);vm.runInContext(source+'\nthis.testStudio={state,refresh,sendRequest,pause,selectSection,voice,read,resetWorkspace,renderNotebook,bookAction,saveChapter,setBookOpen,renderBookDrafts,openSavedChapter};',context);const api=context.testStudio;api.state.id='book';await api.refresh({initial:true});
+ const sandbox={document,window:{JOHNNY_CHAT_API_BASE_URL:'http://local.test',addEventListener(){}},location:{origin:'http://local.test'},URL,URLSearchParams,AbortController,AbortSignal,Blob,Response,crypto:{randomUUID},requestAnimationFrame:fn=>fn(),matchMedia:()=>({matches:true}),setTimeout,clearTimeout,fetch:fetcher,speechParts,notebookJourney,notebookReference,editorialQualityLabel,renderRevisionTracker,StudioVoice:Voice,chapterAudio:async(url,options)=>{audioCalls.push({url,options});return audioFetcher?audioFetcher(url,options):new Blob(['fake local audio']);},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}};
+ const context=vm.createContext(sandbox);vm.runInContext(source+'\nthis.testStudio={state,refresh,sendRequest,pause,selectSection,voice,read,resetWorkspace,renderNotebook,bookAction,saveChapter,setBookOpen,renderBookDrafts,openSavedChapter,playPart};',context);const api=context.testStudio;api.state.id='book';await api.refresh({initial:true});
  return {api,elements,calls,audioCalls,book,dispatched,accepted:()=>accepted,bookSaves:()=>bookSaves};
 }
 test('a successful revision automatically reads the new saved version, not the old prose',async()=>{
@@ -134,6 +135,11 @@ test('Start over clears narration, pending audio, conversation, selection, promp
  h.api.state.id='book';await h.api.refresh({initial:true});assert.equal(h.api.state.data.original,original);assert.equal(h.api.state.sectionId,'a');
 });
 
+test('tracker keeps saved prose separate from stages, recovers after reconnect, and clears on Start over',async()=>{
+ const h=await harness();h.api.state.flowJob={status:'running',phase:'reading',completedChunks:0,totalChunks:10,currentChunk:8,provider:{state:'in_progress',checkedAt:new Date().toISOString()}};h.api.renderNotebook();assert.equal(h.elements.get('revision-tracker-count').textContent,'0');assert.equal(h.elements.get('revision-step-reading').dataset.state,'current');assert.equal(h.elements.get('notebook-next').hidden,true);
+ h.api.state.connection='reconnecting';h.api.renderNotebook();assert.equal(h.elements.get('notebook-job-progress').dataset.state,'reconnecting');assert.match(h.elements.get('revision-tracker-title').textContent,/Last known/);assert.equal(h.elements.get('notebook-job-progress').dataset.motion,'false');
+ h.api.state.connection='connected';h.api.state.flowJob={status:'completed',phase:'complete',completedChunks:10,totalChunks:10};h.api.renderNotebook();assert.equal(h.elements.get('revision-tracker-count').textContent,'10');assert.equal(h.elements.get('notebook-job-progress').dataset.state,'complete');assert.equal(h.elements.get('notebook-next').hidden,false);assert.equal(h.elements.get('notebook-stop-full').hidden,true);h.api.resetWorkspace();assert.equal(h.elements.get('notebook-job-progress').hidden,true);
+});
 
 test('Book drafts requires explicit creation/save and rapid Save presses submit once',async()=>{
  let release;const h=await harness({bookGate:new Promise(r=>release=r)});await h.api.bookAction(h.api.saveChapter);assert.equal(h.bookSaves(),0);assert.equal(h.elements.get('book-drafts-panel').hidden,false);
@@ -150,4 +156,17 @@ test('a save response arriving after Start over cannot reopen or fill the new wo
 });
 test('Original view and active editorial work cannot save a chapter through the controls',async()=>{
  const h=await harness();h.api.state.original=true;h.api.renderBookDrafts();assert.equal(h.elements.get('book-save-chapter').disabled,true);h.api.state.original=false;h.api.state.data.busy=true;h.api.renderBookDrafts();assert.equal(h.elements.get('book-save-chapter').disabled,true);assert.equal(h.elements.get('book-select').disabled,true);h.api.state.data.busy=false;h.api.renderBookDrafts();assert.equal(h.elements.get('book-save-chapter').disabled,false);
+});
+
+test('Read click handler shows loading synchronously and permits one pending audio operation',async()=>{
+ let release;const h=await harness({audioFetcher:()=>new Promise(r=>release=r)});for(let i=0;i<30;i++)h.elements.get('studio-read').events.click[0]();assert.equal(h.audioCalls.length,1);assert.equal(h.elements.get('studio-read').textContent,'Preparing audio…');assert.equal(h.elements.get('studio-read').attributes['aria-busy'],'true');await h.api.playPart(0,h.api.state.audioEpoch);assert.equal(h.audioCalls.length,1);release(new Blob(['synthetic']));await new Promise(r=>setImmediate(r));assert.equal(h.elements.get('studio-read').textContent,'Reading…');assert.equal(h.elements.get('studio-read').attributes['aria-busy'],'false');assert.equal(h.elements.get('studio-read').disabled,true);
+});
+test('duplicate audio-ended events advance once and share one pending next-part request',async()=>{
+ let release,calls=0;const h=await harness({audioFetcher:async()=>{if(++calls===2)await new Promise(r=>release=r);return new Blob(['synthetic']);}});await h.api.read();const ended=h.elements.get('studio-audio').onended;ended();ended();await new Promise(r=>setImmediate(r));assert.equal(h.audioCalls.length,2);assert.equal(h.api.state.sectionId,'b');assert.equal(h.elements.get('studio-read').textContent,'Preparing audio…');release();await new Promise(r=>setImmediate(r));assert.equal(h.elements.get('studio-audio').played,2);
+});
+test('unexpected AbortError unlocks Read and a deliberate retry works',async()=>{
+ let calls=0;const h=await harness({audioFetcher:async()=>{if(++calls===1)throw new DOMException('Synthetic interrupted request','AbortError');return new Blob(['synthetic']);}});await h.api.read();assert.equal(h.api.state.reading,false);assert.equal(h.elements.get('studio-read').disabled,false);assert.equal(h.elements.get('studio-read').attributes['aria-busy'],'false');await h.api.read();assert.equal(h.audioCalls.length,2);assert.equal(h.elements.get('studio-audio').played,1);
+});
+test('playback errors unlock Read; browser autoplay blocking keeps ready audio without another request',async()=>{
+ const h=await harness();h.elements.get('studio-audio').play=async()=>{throw Error('Synthetic device unavailable');};await h.api.read();assert.equal(h.elements.get('studio-read').disabled,false);assert.match(h.elements.get('studio-status').textContent,/Playback could not start/);h.elements.get('studio-audio').play=async()=>{throw new DOMException('Autoplay blocked','NotAllowedError');};await h.api.read();assert.equal(h.elements.get('studio-read').disabled,true);assert.equal(h.elements.get('studio-read').textContent,'Audio ready · use Play');await h.api.read();assert.equal(h.audioCalls.length,2);h.elements.get('studio-pause').events.click[0]();assert.equal(h.elements.get('studio-read').disabled,false);
 });

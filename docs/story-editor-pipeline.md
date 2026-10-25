@@ -345,6 +345,21 @@ and completed jobs are preserved; deployment starts no generation and resumes no
 finished job. Actual future provider responses must still match the requested model
 and reported reasoning; there is no silent fallback. UI labels read server quality.
 
+## Revision progress tracker
+
+The revision tracker reads saved job counts and phase/provider receipts. Its meter
+means saved revision sections only; reading notes and planning never increment it.
+Polish and review remain separate milestones after the revision count is full.
+Failed/paused state retains saved counts, and missing/stale/failed polling is
+explicitly unconfirmed. Heartbeats and estimated stage percentages are not used
+as completed prose. Motion is limited to a fresh queued/working provider dot and
+a transition when a saved count actually changes, with reduced-motion overrides.
+
+`node scripts/preview-revision-tracker.mjs` serves a loopback-only synthetic
+preview using the actual frontend. The labelled selector covers twelve states.
+It cannot run generation, narration, cancellation or edits, and reads no user
+manuscripts or credentials. The production tracker shows the same grounded states.
+
 ## Book drafts
 
 The optional right-side Book drafts shelf uses the existing private SQLite workspace;
@@ -389,3 +404,15 @@ and the existing mocked story-editor integration fixture, now including authenti
 cross-upload book linking and actual canon-bearing Autopilot requests. The loopback
 preview scripts/preview-book-drafts.mjs uses a temporary synthetic database, no
 provider credentials, and no paid generation.
+
+## Read from here loading and single-flight guard
+
+Read locks synchronously before requesting a short audio part and stays disabled
+through preparation, playback, and automatic part/passage transitions. The label and
+aria-busy expose preparation. Pause, Talk, source navigation and Start over invalidate
+the audio epoch and permit a deliberate new Read. Each pending part has a flight key;
+each ended callback advances once. Late audio cannot start after cancellation.
+Unexpected aborts, generation failures and device playback failures unlock Read.
+Browser autoplay blocking retains ready audio for the native Play control without
+an automatic paid retry. Existing backend coalescing/cache and POST-once/GET-poll
+behavior remain intact. Synthetic tests exercise these paths without paid narration.

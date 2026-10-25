@@ -1,11 +1,12 @@
 import {editorialQualityLabel} from './quality-label.mjs?v=20261024-sol-pro-xhigh1';
+import {renderRevisionTracker} from './revision-tracker.mjs?v=20261025-tracker-reader1';
 import {notebookJourney,notebookReference} from './notebook-model.mjs?v=20261024-background1';
 import {speechParts} from './reader-model.mjs';
 import {chapterAudio} from './reader-speech.mjs?v=20261021-journey3';
 import {StudioVoice} from './studio-voice.mjs?v=20261021-journey3';
 const $=id=>document.getElementById(id);
 const origin=String(window.JOHNNY_CHAT_API_BASE_URL||location.origin).replace(/\/+$/,'');
-const state={id:'',data:null,sectionId:'',original:false,epoch:0,audioEpoch:0,reading:false,task:null,polling:false,lastTask:null,resume:null,audioUrl:'',loadedAudio:null,scope:'book',flowJob:null,walkthrough:false,proposal:null,ignoredProposal:'',proposalApplying:false,bookSaving:false,bookOpen:false,bookCreating:false,savedChapter:null};
+const state={id:'',data:null,sectionId:'',original:false,epoch:0,audioEpoch:0,reading:false,readPhase:'idle',audioFlight:'',task:null,polling:false,lastTask:null,resume:null,audioUrl:'',loadedAudio:null,scope:'book',flowJob:null,walkthrough:false,proposal:null,ignoredProposal:'',proposalApplying:false,connection:'connected',bookSaving:false,bookOpen:false,bookCreating:false,savedChapter:null};
 const audio=$('studio-audio');let speechController,taskController,contextController,voiceStarting=false,lastBookmark=0;
 const phaseLabels={reading:'Reading the current manuscript and rebuilding only changed continuity notes…',queued:'Waiting for the editor…',planning:'Understanding your intent and the scene’s place in the story…',drafting:'Writing the passage with character, voice, and emotional depth…',reviewing:'Independently checking depth, continuity, subtext, and what changed…',refining:'Refining the prose against the critique before saving…'};
 const status=text=>$('studio-status').textContent=text;
@@ -27,7 +28,7 @@ function saveBookmark(){
  state.resume={...position};void api('/bookmark',{method:'PUT',body:position}).catch(()=>{});
 }
 function pause(message='Paused here. Tell Johnny what you want to explore or change.',interrupt=true){
- saveBookmark();state.reading=false;state.audioEpoch++;speechController?.abort();speechController=null;audio.pause();if(interrupt)voice.interrupt();renderControls();if(message)status(message);
+ saveBookmark();state.reading=false;state.readPhase='idle';state.audioFlight='';state.audioEpoch++;speechController?.abort();speechController=null;audio.pause();if(interrupt)voice.interrupt();renderControls();if(message)status(message);
 }
 function resetAudio(){audio.pause();audio.removeAttribute('src');audio.load();audio.hidden=true;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl='';state.loadedAudio=null;}
 function renderConversation(){
@@ -47,7 +48,7 @@ function renderNotebook(){
  const flow=notebookJourney({job:state.flowJob,busy:data?.busy,bookmark:data?.bookmark,hasRevision,walkthrough:state.walkthrough});
  $('notebook-step-title').textContent=flow.title;$('notebook-step-copy').textContent=flow.copy;$('notebook-next').textContent=flow.label;$('notebook-next').disabled=!p||flow.action==='working'||!!state.task;$('notebook-next').dataset.action=flow.action;
  for(const step of ['source','revision','together']){const node=$('notebook-stage-'+step);node.setAttribute('aria-current',flow.step===step?'step':'false');node.classList.toggle('done',['source','revision','together'].indexOf(step)<['source','revision','together'].indexOf(flow.step));}
- $('notebook-job-progress').hidden=flow.action!=='working';$('notebook-job-meter').value=flow.progress;$('notebook-job-copy').textContent=flow.detail||'';
+ $('notebook-next').hidden=flow.action==='working';renderRevisionTracker($,{job:state.flowJob,connection:state.connection});
  $('notebook-source').hidden=!data;$('notebook-source-name').textContent=data?.title||'';$('notebook-scope').value=state.scope;$('studio-input').placeholder=state.scope==='book'?'Ask about the whole manuscript, or describe a change throughout…':'Tell Johnny what you want to change in this passage…';
  $('notebook-chat-intro').hidden=!!data?.messages.length||!!state.task;$('notebook-saved').textContent=state.task?'Editing…':'Saved';
  const outline=$('notebook-outline');outline.replaceChildren();for(const item of chapters()){const button=document.createElement('button');button.type='button';button.textContent=item.title;button.setAttribute('aria-current',String(c?.index===item.index));button.addEventListener('click',()=>{selectSection(item.passages[0].id);setNotebookView('draft');$('library-rail').classList.remove('open');$('rail-open').setAttribute('aria-expanded','false');});outline.append(button);}
@@ -94,7 +95,7 @@ function renderJourney(){
  if(document.activeElement!==$('studio-goal'))$('studio-goal').value=state.data?.goal||'';
  $('studio-goal-save').disabled=!!state.task||!!state.data?.busy;
 }
-function renderControls(){renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage();$('studio-read').disabled=!ready||state.reading;$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
+function renderControls(){renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage();$('studio-read').disabled=!ready||state.reading;$('studio-read').textContent=state.reading?(state.readPhase==='preparing'?'Preparing audio…':state.readPhase==='ready'?'Audio ready · use Play':'Reading…'):'▶ Read from here';$('studio-read').setAttribute('aria-busy',String(state.reading&&state.readPhase==='preparing'));$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
 function setBookOpen(open){state.bookOpen=!!open;$('book-drafts-panel').hidden=!open;$('book-toggle').setAttribute('aria-expanded',String(!!open));if(open)$('book-close').focus();}
 function bookNotice(text){$('book-drafts-status').textContent=text;}
 function bookButton(text,action,label=text){const b=document.createElement('button');b.type='button';b.className='ghost-button';b.textContent=text;b.setAttribute('aria-label',label);b.disabled=state.bookSaving||!!state.task||!!state.data?.busy;b.addEventListener('click',()=>void bookAction(action));return b;}
@@ -134,7 +135,7 @@ async function refresh({initial=false,resumePending=true,fromTask=false}={}){
  const before=passage()?.revision;state.data=data;if(data.lastTask?.result?.action==='revise_book'&&data.lastTask.id!==state.ignoredProposal)state.proposal={id:data.lastTask.id,...data.lastTask.result};
  if(!allPassages().some(p=>p.id===state.sectionId))state.sectionId=data.bookmark?.sectionId&&allPassages().some(p=>p.id===data.bookmark.sectionId)?data.bookmark.sectionId:allPassages()[0]?.id||'';
  if(initial&&data.bookmark?.sectionId===state.sectionId&&passage())state.resume={...data.bookmark,revision:passage().revision,...(data.bookmark.revision!==passage().revision?{part:0,seconds:0}:{})};
- if(before&&passage()?.revision!==before){if(fromTask){state.reading=false;speechController?.abort();}else pause('The draft was updated. Read from here to hear the saved version.');state.resume=null;resetAudio();}
+ if(before&&passage()?.revision!==before){if(fromTask){state.reading=false;state.readPhase='idle';state.audioFlight='';speechController?.abort();}else pause('The draft was updated. Read from here to hear the saved version.');state.resume=null;resetAudio();}
  renderDraft();renderConversation();renderNotes();renderControls();
  if(resumePending){if(data.task&&(!state.task||!state.polling))void resumeTask(data.task.id);else if(state.task&&!state.polling)void resumeTask(state.task);}
  if(initial&&data.lastTask&&['failed','cancelled'].includes(data.lastTask.status)){state.lastTask=data.lastTask.id;renderControls();status(data.lastTask.error||'An earlier request stopped. Retry can resume its completed passes.');}
@@ -144,22 +145,24 @@ async function refresh({initial=false,resumePending=true,fromTask=false}={}){
 async function run(fn){try{await fn();}catch(error){if(error.name!=='AbortError')status(error.message||'That action could not finish. Your saved draft is safe.');}}
 async function playPart(part,ticket,seek=0){
  const p=passage(),c=chapter(),id=state.id,projectTicket=state.epoch;if(!p||!state.reading)return;
+ const flight=JSON.stringify([id,p.id,p.revision,part,ticket]);if(state.audioFlight===flight)return;state.audioFlight=flight;state.readPhase='preparing';renderControls();
  const parts=speechParts(p.text);state.resume={sectionId:p.id,revision:p.revision,part,seconds:seek};resetAudio();speechController=new AbortController();status(`Preparing ${c.title} · passage ${c.passages.indexOf(p)+1}…`);
  try{
   const blob=await chapterAudio(base(id)+'/speech',{sectionId:p.id,part,revision:p.revision,headers:{...auth(),'Content-Type':'application/json'},signal:speechController.signal,onPending:()=>{if(ticket===state.audioEpoch)status(`Preparing the saved passage for reading… You can pause at any time.`);}});
   if(ticket!==state.audioEpoch||projectTicket!==state.epoch||!state.reading||state.sectionId!==p.id)return;
   state.audioUrl=URL.createObjectURL(blob);audio.src=state.audioUrl;audio.hidden=false;state.loadedAudio={sectionId:p.id,revision:p.revision,part,seconds:seek};
   if(seek)audio.addEventListener('loadedmetadata',()=>{if(ticket===state.audioEpoch)audio.currentTime=Math.min(seek,Number.isFinite(audio.duration)?Math.max(0,audio.duration-0.1):seek);},{once:true});
-  audio.onended=()=>{
-   if(ticket!==state.audioEpoch||!state.reading)return;
+  let advanced=false;audio.onended=()=>{
+   if(advanced||ticket!==state.audioEpoch||!state.reading)return;advanced=true;
    if(part+1<parts.length)void playPart(part+1,ticket);
    else{const all=allPassages(),next=all[all.findIndex(item=>item.id===p.id)+1];if(next){selectSection(next.id,{stop:false});void playPart(0,ticket);}else{pause('You’ve reached the end of the current draft. Your place is saved. We can review, revise, or discuss what it needs before you call it finished.');state.resume=null;}}
   };
   status(`Reading ${c.title} · passage ${c.passages.indexOf(p)+1}. ${voice.connected?'Speak to interrupt.':'Press Pause to stop here.'}`);
-  try{await audio.play();}catch{status('Your passage is ready. Press Play in the audio controls to listen.');}
- }catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch||error.name==='AbortError')return;pause(error.message+' Press Read to retry this passage.');}
+  try{await audio.play();if(ticket===state.audioEpoch&&projectTicket===state.epoch&&state.sectionId===p.id&&state.loadedAudio?.part===part){state.readPhase='playing';renderControls();}}catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch)return;if(error.name==='NotAllowedError'){state.readPhase='ready';renderControls();status('Your passage is ready. Press Play in the audio controls to listen, or Pause to choose another starting point.');}else pause('Playback could not start. Press Read to retry this saved passage.');}
+ }catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch)return;pause((error.message||'Audio preparation was interrupted.')+' Press Read to retry this passage.');}
+ finally{if(state.audioFlight===flight)state.audioFlight='';}
 }
-async function read({restart=false}={}){if(!passage()||state.reading)return;setNotebookView('draft');pause('');state.original=false;renderDraft({scroll:true});const p=passage(),resume=!restart&&state.resume?.sectionId===p.id&&state.resume?.revision===p.revision?state.resume:null;state.reading=true;renderControls();await playPart(resume?.part||0,state.audioEpoch,resume?.seconds||0);}
+async function read({restart=false}={}){if(!passage()||state.reading)return;setNotebookView('draft');pause('');state.original=false;renderDraft({scroll:true});const p=passage(),resume=!restart&&state.resume?.sectionId===p.id&&state.resume?.revision===p.revision?state.resume:null;state.reading=true;state.readPhase='preparing';renderControls();await playPart(resume?.part||0,state.audioEpoch,resume?.seconds||0);}
 function renderPhase(task){$('studio-progress-copy').textContent=phaseLabels[task.phase]||phaseLabels.queued;const names=['planning','drafting','reviewing','refining'],index=names.indexOf(task.phase);for(const li of $('studio-progress').querySelectorAll('li')){li.classList.toggle('current',li.dataset.pass===task.phase);li.classList.toggle('done',names.indexOf(li.dataset.pass)<index);}status(phaseLabels[task.phase]||phaseLabels.queued);}
 async function pollTask(taskId,{readTicket=state.audioEpoch,requestedSection=state.sectionId}={}){
  const ticket=state.epoch,id=state.id;taskController?.abort();taskController=new AbortController();const signal=taskController.signal;let failures=0;
@@ -236,6 +239,7 @@ $('studio-undo').addEventListener('click',()=>void run(undo));
 $('studio-cancel').addEventListener('click',()=>void run(async()=>{pause('Stopping this edit…');if(state.task)await api('/tasks/'+encodeURIComponent(state.task)+'/cancel',{method:'POST',body:{}});}));
 $('studio-retry').addEventListener('click',()=>void run(async()=>{const id=state.lastTask;if(!id)return;pause('');const data=await api('/tasks/'+encodeURIComponent(id)+'/retry',{method:'POST',body:{}});state.lastTask=null;state.task=data.task.id;renderControls();await pollTask(data.task.id);}));
 $('studio-note-form').addEventListener('submit',event=>{event.preventDefault();const note=$('studio-note').value.trim();if(note)void run(async()=>{await api('/notes',{method:'POST',body:{note}});$('studio-note').value='';await refresh();status('Story note saved for this manuscript.');});});
+audio.addEventListener('play',()=>{if(state.reading){state.readPhase='playing';renderControls();}});
 audio.addEventListener('timeupdate',()=>{if(Date.now()-lastBookmark>5000){lastBookmark=Date.now();saveBookmark();}});
 audio.addEventListener('error',()=>{if(state.reading&&state.loadedAudio)pause('Audio playback failed. Press Read to retry the saved passage.');});
 function resetWorkspace(){
@@ -252,8 +256,9 @@ function resetWorkspace(){
 }
 document.addEventListener('story-workspace-check',event=>{if(state.task==='starting')event.detail.starting=true;});
 document.addEventListener('story-workspace-reset',resetWorkspace);
+document.addEventListener('story-reader-connection',event=>{if(event.detail.id!==state.id)return;state.connection=event.detail.state;renderRevisionTracker($,{job:state.flowJob,connection:state.connection});});
 document.addEventListener('story-reader-project',event=>{
- const {id,busy}=event.detail;state.flowJob=event.detail.job||null;
+ const {id,busy}=event.detail;state.connection='connected';state.flowJob=event.detail.job||null;
  if(id!==state.id){setBookOpen(false);state.bookSaving=false;state.bookCreating=false;state.savedChapter=null;if($('book-version-dialog').open)$('book-version-dialog').close();$('book-name').value='';bookNotice('');pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();state.epoch++;state.id=id||'';state.flowJob=event.detail.job||null;state.walkthrough=false;state.scope='book';state.proposal=null;state.proposalApplying=false;state.ignoredProposal='';try{state.ignoredProposal=window.localStorage?.getItem('johnny-notebook-dismissed-'+state.id)||'';}catch{}setNotebookView('chat');state.data=null;state.sectionId='';state.task=null;state.polling=false;state.lastTask=null;state.original=false;state.resume=null;resetAudio();$('book-reader').hidden=!id;$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';renderControls();if(id)void run(()=>refresh({initial:true}));}
  else if(state.data&&state.data.busy!==!!busy)void run(()=>refresh());
  renderNotebook();
