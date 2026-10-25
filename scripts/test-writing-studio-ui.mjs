@@ -193,3 +193,5 @@ test('a late 401 from before reauthentication cannot relock the restored session
 });
 
 test('read-only recovery of a finished task does not reload unsent legacy forms or restart narration',async()=>{const h=await harness();h.elements.get('studio-note').value='Unsent local note';await h.api.resumeTask('task1');assert.equal(h.elements.get('studio-note').value,'Unsent local note');assert.equal(h.audioCalls.length,0);assert.equal(h.dispatched.filter(e=>e.type==='story-studio-saved').length,0);assert.match(h.api.state.data.chapters[0].passages[0].text,/critically refined/);});
+
+test('navigation bookmark failures are visible through the same guarded sync path',async()=>{const h=await harness({httpHook:async path=>path.endsWith('/bookmark')?Response.json({error:'Synthetic offline'},{status:503}):null});h.api.selectSection('b');await new Promise(r=>setImmediate(r));assert.equal(h.api.state.sectionId,'b');assert.equal(h.elements.get('studio-bookmark-warning').hidden,false);assert.equal(h.api.state.resume.sectionId,'b');assert.equal(h.api.state.resume.part,0);assert.equal(h.audioCalls.length,0);});
