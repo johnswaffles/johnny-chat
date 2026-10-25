@@ -1668,6 +1668,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorContentHandling: "context-aware-review-v2",
   storyEditorOutputRecovery: "durable-editorial-pipeline-v3",
   storyEditorReader: "chapter-reader-marin-async-v2",
+  storyEditorNavigation: "chapter-file-tree-v1",
   storyEditorNarration: "realtime-paragraph-voice-v1",
   storyEditorNarrationModel: "gpt-realtime-2.1-mini",
   storyEditorStudio: "layered-literary-studio-v1",
