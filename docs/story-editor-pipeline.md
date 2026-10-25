@@ -514,3 +514,41 @@ pause/resume/prefetch races, cancellation and auth recovery. Browser access rema
 restricted by the prior selected-URL denial; no live browser or listening verification
 was attempted during implementation. Release verification does not claim paid audio
 or private browser listening was tested.
+
+## Chapter/file navigation
+
+The left rail uses native expandable folders for Original upload (read only),
+Revised working draft, and the linked book's approved saved chapters. Originals
+are grouped from the immutable upload snapshot, independently of revised chapter
+names or later passage splits. The full original remains available. Original
+selection cannot send an edit, start narration of a different version, or save the
+wrong chapter. Revised selection opens the existing draft; saved-book selection
+opens the existing read-only version dialog. No duplicate chapter storage is added.
+Folders retain expansion across redraws, and a validated tab-scoped chapter/version
+selection restores without generation. Large desktops retain the rail; smaller
+screens use the existing Library drawer and generous touch targets.
+
+Add chapter/file uses the existing import endpoint to create a separate upload,
+not replace or append to an existing immutable original. In this explicit add mode,
+import never starts Autopilot. If the current file is linked to a book, the new file
+is linked for continuity using the existing book-link endpoint. A busy book may
+reject linking; the imported file still stays safe in the library and can be
+connected later. Approval into assembled book order still requires Save chapter.
+A failed import retains add-only retry mode, and repeated submits are single-flight.
+Normal initial file-and-prompt revision remains unchanged.
+
+Unsent conversation, notes and editorial fields are cached per manuscript in the
+current browser tab's sessionStorage, with an in-memory fallback. Switching does
+not carry one file's unsent text into another or silently discard it. Start over
+clears only the explicitly reset workspace's unsent cache. Browser storage denial
+or quota means the fallback survives switches in the same tab but not closing it;
+this cache is not server persistence. Pending local suggestion decisions block
+switching until reviewed; ordinary active server jobs continue without cancellation,
+restart or duplicate generation. API and client epoch guards fence stale loads and
+poll responses. Navigation itself does not change originals, revisions or book order.
+
+Validation uses synthetic chapters, mocked DOM/storage, local SQLite and fake provider
+responses: original/revised/saved selection, expand/collapse redraws, reload, repeated
+navigation and imports, unsent-field restoration, active-job preservation and import
+failure. Responsive rules and controls are checked in code; actual desktop/mobile
+browser rendering remains unverified under the prior selected-URL restriction.

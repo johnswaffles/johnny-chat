@@ -1,0 +1,10 @@
+// Native disclosures retain keyboard behavior; buttons select files, not folders.
+export function renderChapterTree(container,{chapters=[],originalChapters=[],book=null,activeChapter,original=false,originalChapter=null,openState=new Map()},select,document=container.ownerDocument||globalThis.document){
+ container.replaceChildren();
+ function folder(key,title,parent=container){const details=document.createElement('details');details.className='chapter-tree-folder';details.open=openState.get(key)??true;const summary=document.createElement('summary'),icon=document.createElement('span'),label=document.createElement('span');icon.className='tree-folder-icon';icon.textContent='▰';icon.setAttribute('aria-hidden','true');label.textContent=title;summary.append(icon,label);details.append(summary);details.addEventListener('toggle',()=>openState.set(key,details.open));parent.append(details);return details;}
+ function file(parent,title,selection,active=false){const button=document.createElement('button');button.type='button';button.className='chapter-tree-file';button.textContent='▤ '+title;button.setAttribute('aria-current',active?'page':'false');button.addEventListener('click',()=>select(selection));parent.append(button);}
+ const source=folder('original','Original upload · read only');file(source,'Complete uploaded file',{version:'original',chapter:null},original&&originalChapter===null);
+ for(const c of originalChapters)file(source,c.title,{version:'original',chapter:c.index},original&&originalChapter===c.index);
+ const revised=folder('revised','Revised working draft');for(const c of chapters)file(revised,c.title,{version:'revised',chapter:c.index},!original&&activeChapter===c.index);
+ if(book){const saved=folder('book','Saved book chapters · '+book.title);if(!book.chapters?.length){const note=document.createElement('small');note.textContent='Use Save chapter when a version is ready.';saved.append(note);}for(const c of book.chapters||[])file(saved,`${c.position}. ${c.title}`,{version:'saved',chapterId:c.id});}
+}

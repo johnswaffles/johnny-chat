@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&amp;display=optional" rel="stylesheet">
-  <link rel="stylesheet" href="./story-editor.css?v=20261025-realtime1">
+  <link rel="stylesheet" href="./story-editor.css?v=20261025-tree1">
   <link rel="stylesheet" href="./revision-tracker.css?v=20261025-session-recovery3">
-  <script type="module" src="./story-editor.js?v=20261025-session-recovery3"></script>
+  <script type="module" src="./story-editor.js?v=20261025-tree1"></script>
 </head>
 <body class="notebook-app simple-studio"><div class="studio-shell"><aside class="library-rail" id="library-rail" aria-label="Manuscript library">
       <div class="rail-brand">
@@ -35,7 +35,7 @@
       <div class="library-heading">
         <div>
           <span class="overline">Library</span>
-          <h2>Manuscripts</h2>
+          <h2>Uploaded files</h2>
         </div>
         <button class="icon-button" id="refresh-projects" type="button" aria-label="Refresh manuscripts" title="Refresh manuscripts">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
@@ -48,9 +48,9 @@
         <input id="project-filter" type="search" placeholder="Find a manuscript…" autocomplete="off">
       </label>
 
-      <div class="project-list" id="project-list" aria-live="polite"></div>
+      <button id="add-chapter-file" type="button" class="ghost-button">＋ Add chapter / file</button><p class="tree-library-hint">Each upload keeps its own original and revisions.</p><div class="project-list" id="project-list" aria-live="polite"></div>
 
-      <section id="notebook-source" class="notebook-source" hidden><span class="panel-kicker">YOUR SOURCE</span><p id="notebook-source-name"></p><button class="source-file" type="button" id="notebook-original">▤ Original manuscript <small>Preserved, read only</small></button><details class="notebook-direction"><summary>Direction for this work</summary><form id="studio-goal-form"><label for="studio-goal">Your destination for this whole work</label><textarea id="studio-goal" rows="2"  placeholder="A finished literary novel for adult readers, preserving my quiet voice and developing the emotional depth."></textarea><button class="ghost-button" type="submit" id="studio-goal-save">Save manuscript goal</button></form><span id="studio-goal-copy" hidden></span></details><div class="notebook-outline-head">Contents</div><nav id="notebook-outline" aria-label="Manuscript chapters"></nav></section><div class="rail-footer">
+      <section id="notebook-source" class="notebook-source" hidden><span class="panel-kicker">YOUR SOURCE</span><p id="notebook-source-name"></p><button hidden class="source-file" type="button" id="notebook-original">▤ Original manuscript <small>Preserved, read only</small></button><details class="notebook-direction"><summary>Direction for this work</summary><form id="studio-goal-form"><label for="studio-goal">Your destination for this whole work</label><textarea id="studio-goal" rows="2"  placeholder="A finished literary novel for adult readers, preserving my quiet voice and developing the emotional depth."></textarea><button class="ghost-button" type="submit" id="studio-goal-save">Save manuscript goal</button></form><span id="studio-goal-copy" hidden></span></details><div class="notebook-outline-head">Files &amp; versions</div><nav id="notebook-outline" aria-label="Manuscript chapters"></nav></section><div class="rail-footer">
         <div class="privacy-note">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
           <span><strong>Private workspace</strong>Your manuscripts stay behind your access password.</span>
@@ -257,7 +257,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z"/></svg>
             Story Bible
           </button><button class="danger-button" id="delete-project" type="button" disabled>Delete project</button></div></dialog><dialog id="reset-confirm" class="studio-dialog reset-confirm" aria-labelledby="reset-confirm-title"><h2 id="reset-confirm-title">Start over?</h2><p id="reset-confirm-message"></p><div class="dialog-actions"><button id="reset-confirm-cancel" type="button" class="ghost-button">Keep working</button><button id="reset-confirm-accept" type="button" class="primary-button">Start over</button></div></dialog><dialog class="studio-dialog upload-dialog" id="upload-dialog">
-    <form id="upload-form" method="dialog">
+    <p id="add-chapter-help" class="setup-preservation" hidden></p><form id="upload-form" method="dialog">
       <div class="dialog-head"><div><h2>Start with your manuscript</h2><p>Choose a file and how you want Johnny to help.</p></div><button class="icon-button" type="button" data-close-dialog aria-label="Close setup">×</button></div>
       <label class="file-drop" id="file-drop"><input id="file-input" name="manuscript" type="file" accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required><strong id="file-prompt">Drop a manuscript or choose a file</strong><span id="file-detail">Word, PDF, or text · up to 80 MB</span></label>
       <label class="setup-prompt-label" for="setup-prompt">How should we work on it?</label>
@@ -331,4 +331,4 @@
     <span class="toast-icon" aria-hidden="true">✓</span>
     <p id="toast-message"></p>
     <button type="button" id="toast-close" aria-label="Dismiss notification">×</button>
-  </div><script src="studio.js?v=20261025-realtime1" type="module"></script><script src="chapters.js?v=20261002-chapters2" type="module"></script></body></html>
+  </div><script src="studio.js?v=20261025-tree1" type="module"></script><script src="chapters.js?v=20261002-chapters2" type="module"></script></body></html>

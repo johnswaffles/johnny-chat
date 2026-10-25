@@ -1,0 +1,15 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {renderChapterTree} from '../public/story-editor/chapter-tree.mjs';
+import {createNavigationDrafts} from '../public/story-editor/navigation-drafts.mjs';
+class Element{constructor(tag){this.tagName=tag;this.children=[];this.attributes={};this.events={};}append(...children){this.children.push(...children);}replaceChildren(){this.children=[];}setAttribute(k,v){this.attributes[k]=v;}addEventListener(t,fn){this.events[t]=fn;}}
+const document={createElement:tag=>new Element(tag)};
+test('distinct Original/Revised folders keep chapter identities, active version and collapse through redraw',()=>{
+ const root=new Element(),openState=new Map(),selected=[];const model={chapters:[{index:1,title:'Revised one'},{index:2,title:'Revised two'}],originalChapters:[{index:1,title:'Imported one'}],activeChapter:2,original:false,openState};renderChapterTree(root,model,s=>selected.push(s),document);assert.equal(root.children.length,2);const [original,revised]=root.children;assert.match(original.children[0].children[1].textContent,/Original/);assert.match(revised.children[0].children[1].textContent,/Revised/);assert.equal(revised.children[2].attributes['aria-current'],'page');original.children[2].events.click();assert.deepEqual(selected[0],{version:'original',chapter:1});original.open=false;original.events.toggle();renderChapterTree(root,model,()=>{},document);assert.equal(root.children[0].open,false);
+});
+test('approved chapters use existing book order and read-only snapshot navigation without a new store',()=>{
+ const root=new Element(),calls=[];renderChapterTree(root,{book:{title:'Book',chapters:[{id:'b',position:1,title:'Second upload'},{id:'a',position:2,title:'First upload'}]}},x=>calls.push(x),document);const folder=root.children[2];assert.match(folder.children[1].textContent,/1\. Second upload/);folder.children[1].events.click();assert.deepEqual(calls,[{version:'saved',chapterId:'b'}]);
+});
+test('unsent fields stay isolated by project across switch, reload, clearing and storage failure',()=>{
+ const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};const drafts=createNavigationDrafts(storage);drafts.baseline('one',{'studio-input':'','bible-tone':'saved tone'});drafts.capture('one',{'studio-input':'Unsent idea','bible-tone':'saved tone'});drafts.capture('two',{'studio-input':'Another idea'});const reload=createNavigationDrafts(storage);assert.deepEqual(reload.read('one'),{'studio-input':'Unsent idea'});assert.deepEqual(reload.read('two'),{'studio-input':'Another idea'});reload.clear('one');assert.deepEqual(reload.read('one'),{});assert.deepEqual(reload.read('two'),{'studio-input':'Another idea'});const blocked=createNavigationDrafts({getItem(){throw Error('blocked');},setItem(){throw Error('quota');}});assert.equal(blocked.capture('one',{'studio-note':'Keep me'}),false);assert.deepEqual(blocked.read('one'),{'studio-note':'Keep me'});
+});

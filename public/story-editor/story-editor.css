@@ -1112,3 +1112,12 @@ button[disabled] { cursor: not-allowed; opacity: 0.46; }
 .narration-settings label{display:block;font-size:.85rem;font-weight:600}.narration-settings select,.narration-settings textarea{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:9px;border:1px solid #aaa79d;border-radius:8px;background:#fff;color:#25251f;font:inherit}
 .narration-settings small{display:block;margin-top:8px;line-height:1.5;color:#55564e}.narration-settings textarea{resize:vertical;min-height:74px}
 @media(max-width:480px){.narration-options{grid-template-columns:1fr}.room-transport{flex-wrap:wrap}}
+
+/* Familiar file/folder navigation without a second storage system. */
+.tree-library-hint{font-size:11px;line-height:1.5;color:#645d70;margin:7px 0 12px}.tree-upload-file .project-cover{border-radius:3px;width:28px;height:32px;font-size:12px}.tree-upload-file .project-copy strong{font-size:12px}
+#notebook-outline{max-height:none;display:block;overflow:visible}.chapter-tree-folder{margin:5px 0;padding:0}.chapter-tree-folder summary{display:flex;align-items:center;gap:6px;cursor:pointer;font:600 12px/1.5 var(--sans);color:#40394d;padding:7px 0;list-style:none}.chapter-tree-folder summary::before{content:'▸';font-size:11px;width:9px}.chapter-tree-folder[open]>summary::before{content:'▾'}.tree-folder-icon{color:#95621d}
+#notebook-outline .chapter-tree-file{display:block;width:calc(100% - 14px);margin:2px 0 2px 14px;border-left:1px solid #d2cbd9;border-radius:0 6px 6px 0;padding:8px 7px;overflow-wrap:anywhere;color:#51465c;font-size:12px;min-height:36px}
+#notebook-outline .chapter-tree-file[aria-current="page"]{background:#e8def4;color:#372047;font-weight:700;border-left:3px solid #6f4788}.chapter-tree-folder small{display:block;padding:8px 12px;font-size:11px;line-height:1.5;color:#655b70}.chapter-tree-folder summary:focus-visible,#notebook-outline button:focus-visible{outline:2px solid #6f4788;outline-offset:2px}
+@media(min-width:1400px){.simple-studio .studio-shell{grid-template-columns:260px minmax(0,1fr)}.simple-studio .studio-main{grid-column:2}.simple-studio .library-rail{width:260px;transform:none}.simple-studio .rail-open,.simple-studio .rail-close{display:none!important}.simple-studio .library-rail.open~.rail-scrim{display:none}.simple-studio .workspace-view{padding:14px 18px}}
+@media(max-width:600px){#notebook-outline .chapter-tree-file,.chapter-tree-folder summary{min-height:44px}.chapter-tree-folder summary{font-size:13px}}
+.chapter-tree-folder summary span:last-child{min-width:0;overflow-wrap:anywhere}

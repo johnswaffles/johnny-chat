@@ -1,3 +1,4 @@
+import {renderChapterTree} from './chapter-tree.mjs?v=20261025-tree1';
 import {NarrationBuffer} from './narration-buffer.mjs?v=20261025-realtime1';
 import {NARRATION_PRESETS,narrationOptions,narrationSignature} from './narration-model.mjs?v=20261025-realtime1';
 import {editorialQualityLabel} from './quality-label.mjs?v=20261024-sol-pro-xhigh1';
@@ -9,6 +10,7 @@ import {StudioVoice} from './studio-voice.mjs?v=20261021-journey3';
 const $=id=>document.getElementById(id);
 const origin=String(window.JOHNNY_CHAT_API_BASE_URL||location.origin).replace(/\/+$/,'');
 const state={id:'',data:null,sectionId:'',original:false,epoch:0,audioEpoch:0,reading:false,readPhase:'idle',audioFlight:'',task:null,polling:false,lastTask:null,resume:null,audioUrl:'',loadedAudio:null,scope:'book',flowJob:null,walkthrough:false,proposal:null,ignoredProposal:'',proposalApplying:false,connection:'connected',authRequired:false,authEpoch:0,accessChecking:false,bookSaving:false,bookOpen:false,bookCreating:false,savedChapter:null};
+const treeOpen=new Map();
 const audio=$('studio-audio');let speechController,taskController,contextController,voiceStarting=false,lastBookmark=0;
 const phaseLabels={reading:'Reading the current manuscript and rebuilding only changed continuity notes…',queued:'Waiting for the editor…',planning:'Understanding your intent and the scene’s place in the story…',drafting:'Writing the passage with character, voice, and emotional depth…',reviewing:'Independently checking depth, continuity, subtext, and what changed…',refining:'Refining the prose against the critique before saving…'};
 const status=text=>$('studio-status').textContent=text;
@@ -73,9 +75,20 @@ function renderNotebook(){
  $('notebook-next').hidden=flow.action==='working';renderRevisionTracker($,{job:state.flowJob,connection:state.authRequired?'auth':state.connection});
  $('notebook-source').hidden=!data;$('notebook-source-name').textContent=data?.title||'';$('notebook-scope').value=state.scope;$('studio-input').placeholder=state.scope==='book'?'Ask about the whole manuscript, or describe a change throughout…':'Tell Johnny what you want to change in this passage…';
  $('notebook-chat-intro').hidden=!!data?.messages.length||!!state.task;$('notebook-saved').textContent=state.task?'Editing…':'Saved';
- const outline=$('notebook-outline');outline.replaceChildren();for(const item of chapters()){const button=document.createElement('button');button.type='button';button.textContent=item.title;button.setAttribute('aria-current',String(c?.index===item.index));button.addEventListener('click',()=>{selectSection(item.passages[0].id);setNotebookView('draft');$('library-rail').classList.remove('open');$('rail-open').setAttribute('aria-expanded','false');});outline.append(button);}
+ renderChapterTree($('notebook-outline'),{chapters:chapters(),originalChapters:data?.originalChapters||chapters().map(item=>({index:item.index,title:item.title,text:item.passages.map(p=>p.original).join('\n\n')})),book:data?.bookDrafts?.book,activeChapter:c?.index,original:state.original,originalChapter:state.originalChapter??null,openState:treeOpen},selection=>void run(()=>navigateTree(selection)));
+
  const proposal=state.proposal;$('notebook-proposal').hidden=!proposal;$('notebook-proposal-copy').textContent=proposal?.request||'';$('notebook-proposal-apply').disabled=state.proposalApplying||!!data?.busy||!!state.task;
 }
+function rememberTreeSelection(){if(!state.id)return;try{window.sessionStorage?.setItem('johnny-story-tree:'+state.id,JSON.stringify({original:state.original,chapter:state.original?state.originalChapter:chapter()?.index,sectionId:state.sectionId}));}catch{}}
+function restoreTreeSelection(){try{const saved=JSON.parse(window.sessionStorage?.getItem('johnny-story-tree:'+state.id)||'null');if(!saved)return;if(saved.original&&(saved.chapter==null||state.data.originalChapters?.some(c=>c.index===saved.chapter))){state.original=true;state.originalChapter=saved.chapter??null;}else if(!saved.original){const c=chapters().find(c=>c.index===saved.chapter),p=c?.passages.find(p=>p.id===saved.sectionId)||c?.passages[0];if(p)state.sectionId=p.id;}}catch{}}
+async function navigateTree(selection){
+ if(selection.version==='saved'){pause('Viewing a saved book chapter. Your working draft stays unchanged.');await openSavedChapter(selection.chapterId);return;}
+ const check={allowed:true};document.dispatchEvent(new CustomEvent('story-before-navigate',{detail:check}));if(!check.allowed)return;
+ if(selection.version==='original'){voice.close();pause('Viewing the preserved original. Editing and reading use the revised draft.');state.original=true;state.originalChapter=selection.chapter;renderDraft();renderControls();}
+ else{const item=chapters().find(c=>c.index===selection.chapter);if(item?.passages[0])selectSection(item.passages[0].id);}
+ rememberTreeSelection();setNotebookView('draft');$('library-rail').classList.remove('open');$('rail-open').setAttribute('aria-expanded','false');
+}
+function restoreNavigationDrafts(values){for(const [id,value] of Object.entries(values||{})){const field=$(id);if(field)field.value=value;}if(Object.hasOwn(values||{},'studio-goal'))state.goalDirty=true;}
 function renderNotes(){
  $('studio-notes-count').textContent=state.data?.notes.length?`(${state.data.notes.length})`:'';$('studio-notes-list').replaceChildren();
  for(const note of state.data?.notes||[]){const li=document.createElement('li'),text=document.createElement('span'),button=document.createElement('button');text.textContent=note.text;button.type='button';button.textContent='Remove';button.setAttribute('aria-label','Remove this story note');button.addEventListener('click',()=>void run(async()=>{await api('/notes/'+encodeURIComponent(note.id),{method:'DELETE'});await refresh();status('Story note removed.');}));li.append(text,button);$('studio-notes-list').append(li);}
@@ -90,9 +103,10 @@ function renderDraft({scroll=false}={}){
  const p=passage(),c=chapter(),container=$('studio-pages');
  $('studio-current').setAttribute('aria-pressed',String(!state.original));$('studio-original').setAttribute('aria-pressed',String(state.original));
  $('studio-navigation').hidden=state.original;$('studio-original-export').hidden=!state.original;
+ $('reader-title').textContent=state.original?(state.originalChapter==null?'Original upload':state.data?.originalChapters?.find(c=>c.index===state.originalChapter)?.title||'Original chapter'):(c?.title||state.data?.title||'Your draft');
  $('studio-version-hint').textContent=state.original?'Your imported original, preserved separately from the current draft.':'Choose any passage to work on it. The highlighted passage is where Johnny is listening with you.';
  container.replaceChildren();
- if(state.original){const text=document.createElement('div');text.className='studio-original-text';text.textContent=state.data?.original||'';container.append(text);return;}
+ if(state.original){const text=document.createElement('div');text.className='studio-original-text';text.textContent=state.originalChapter==null?state.data?.original||'':state.data?.originalChapters?.find(c=>c.index===state.originalChapter)?.text||chapters().find(c=>c.index===state.originalChapter)?.passages.map(p=>p.original).join('\n\n')||'';container.append(text);return;}
  if(!p||!c){container.textContent='There are no readable passages in this manuscript yet.';return;}
  $('studio-chapter').replaceChildren(...chapters().map(ch=>{const option=document.createElement('option');option.value=String(ch.index);option.textContent=ch.title;return option;}));$('studio-chapter').value=String(c.index);
  const index=c.passages.indexOf(p);$('studio-location').textContent=`${index+1} / ${c.passages.length}`;
@@ -114,10 +128,10 @@ function renderJourney(){
  $('studio-recap-read').disabled=index<1;
  const previous=all[index-1];$('studio-recap').textContent=previous?`Immediately before this passage, in your saved draft: “${previous.text.slice(-420)}”`:(p?`At the start of your saved draft: “${p.text.slice(0,420)}”`:'');
  const goal=state.data?.goal||'Your finished manuscript';$('studio-goal-copy').textContent=goal.length>140?goal.slice(0,140)+'…':goal;
- if(document.activeElement!==$('studio-goal'))$('studio-goal').value=state.data?.goal||'';
+ if(!state.goalDirty&&document.activeElement!==$('studio-goal'))$('studio-goal').value=state.data?.goal||'';
  $('studio-goal-save').disabled=state.authRequired||!!state.task||!!state.data?.busy;
 }
-function renderControls(){renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage()&&!state.authRequired;$('studio-read').disabled=!ready||state.reading;$('studio-read').textContent=state.reading?(state.readPhase==='preparing'?'Preparing audio…':state.readPhase==='ready'?'Audio ready · use Play':'Reading…'):state.readPhase==='paused'?'▶ Resume reading':'▶ Read from here';$('studio-pause').textContent=state.readPhase==='paused'?'▶ Resume':'Pause / interrupt';$('studio-stop').disabled=!state.reading&&state.readPhase!=='paused';$('studio-read').setAttribute('aria-busy',String(state.reading&&state.readPhase==='preparing'));$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=state.authRequired||!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
+function renderControls(){renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage()&&!state.authRequired&&!state.original;$('studio-read').disabled=!ready||state.reading;$('studio-read').textContent=state.reading?(state.readPhase==='preparing'?'Preparing audio…':state.readPhase==='ready'?'Audio ready · use Play':'Reading…'):state.readPhase==='paused'?'▶ Resume reading':'▶ Read from here';$('studio-pause').textContent=state.readPhase==='paused'?'▶ Resume':'Pause / interrupt';$('studio-stop').disabled=!state.reading&&state.readPhase!=='paused';$('studio-read').setAttribute('aria-busy',String(state.reading&&state.readPhase==='preparing'));$('studio-send').disabled=state.original||!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=state.authRequired||!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
 function setBookOpen(open){state.bookOpen=!!open;$('book-drafts-panel').hidden=!open;$('book-toggle').setAttribute('aria-expanded',String(!!open));if(open)$('book-close').focus();}
 function bookNotice(text){$('book-drafts-status').textContent=text;}
 function bookButton(text,action,label=text){const b=document.createElement('button');b.type='button';b.className='ghost-button';b.textContent=text;b.setAttribute('aria-label',label);b.disabled=state.bookSaving||!!state.task||!!state.data?.busy;b.addEventListener('click',()=>void bookAction(action));return b;}
@@ -135,7 +149,7 @@ function renderBookDrafts(){
  }
 }
 async function bookAction(fn){if(state.bookSaving)return;const id=state.id,ticket=state.epoch;state.bookSaving=true;renderBookDrafts();try{await fn();}catch(error){if(id===state.id&&ticket===state.epoch){bookNotice(error.message||'Could not save. Your working draft and saved chapters are unchanged.');$('book-version-status').textContent=error.message||'Could not load this version.';}}finally{if(id===state.id&&ticket===state.epoch){state.bookSaving=false;renderBookDrafts();}}}
-async function acceptBookResponse(path,options){const id=state.id,ticket=state.epoch;const data=await api(path,options);if(id!==state.id||ticket!==state.epoch)return false;state.data.bookDrafts=data;if(path==='/book/link')state.bookCreating=false;renderBookDrafts();return true;}
+async function acceptBookResponse(path,options){const id=state.id,ticket=state.epoch;const data=await api(path,options);if(id!==state.id||ticket!==state.epoch)return false;state.data.bookDrafts=data;if(path==='/book/link')state.bookCreating=false;renderBookDrafts();renderNotebook();return true;}
 async function changeBook(body){return acceptBookResponse('/book',{method:'PUT',body});}
 async function saveChapter(){const c=chapter(),book=state.data?.bookDrafts?.book;if(!c)return;if(!book||state.bookCreating){setBookOpen(true);bookNotice('Name a new book, or select an existing one. Then save this chapter.');$('book-name').focus();return;}if(await acceptBookResponse('/book/chapters',{method:'POST',body:{chapterIndex:c.index,chapterRevision:c.revision,bookRevision:book.revision}})){setBookOpen(true);bookNotice('Chapter saved as your continuity reference. Working draft and original are unchanged.');}}
 async function openSavedChapter(chapterId,versionId){const id=state.id,ticket=state.epoch;const data=await api('/book/chapters/'+encodeURIComponent(chapterId)+(versionId?'?'+new URLSearchParams({versionId}):''));if(id!==state.id||ticket!==state.epoch)return;state.savedChapter=data;$('book-version-title').textContent=data.content.title;$('book-version-text').textContent=data.content.passages.map(p=>p.text).join('\n\n');$('book-version-meta').textContent=`Version ${data.version} · ${new Date(data.savedAt).toLocaleString()} · ${data.versionId===data.approvedVersionId?'Current continuity reference':'Historical version'}`;$('book-version-status').textContent='';const select=$('book-version-select');select.replaceChildren();for(const version of data.versions){const option=document.createElement('option');option.value=version.id;option.textContent=`Version ${version.number} · ${new Date(version.savedAt).toLocaleString()}`;select.append(option);}select.value=data.versionId;$('book-version-approve').disabled=data.versionId===data.approvedVersionId||!!state.task||!!state.data?.busy;if(!$('book-version-dialog').open)$('book-version-dialog').showModal();}
@@ -172,16 +186,18 @@ document.addEventListener('story-auth-required',()=>requireUnlock());
 window.addEventListener('focus',()=>{if(state.authRequired)void checkAccess();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.authRequired)void checkAccess();});
 async function updateVoiceContext(){if(!voice.connected||!passage())return;const id=state.id,sectionId=state.sectionId,ticket=state.epoch;contextController?.abort();contextController=new AbortController();try{const data=await api('/context?'+new URLSearchParams({sectionId}),{signal:contextController.signal});if(ticket===state.epoch&&sectionId===state.sectionId&&id===state.id)voice.updateContext(data.instructions);}catch(error){if(error.name!=='AbortError')status('The draft is open, but voice context could not refresh. Reconnect voice before asking for another edit.');}}
-function selectSection(id,{scroll=true,stop=true}={}){if(!allPassages().some(p=>p.id===id))throw Error('That passage is not in this manuscript.');if(stop){pause('');state.scope='passage';}state.original=false;state.sectionId=id;state.resume=null;state.loadedAudio=null;renderDraft({scroll});renderControls();void updateVoiceContext();saveBookmark();}
+function selectSection(id,{scroll=true,stop=true}={}){if(!allPassages().some(p=>p.id===id))throw Error('That passage is not in this manuscript.');if(stop){pause('');state.scope='passage';}state.original=false;state.originalChapter=null;state.sectionId=id;state.resume=null;state.loadedAudio=null;rememberTreeSelection();renderDraft({scroll});renderControls();void updateVoiceContext();saveBookmark();}
 async function refresh({initial=false,resumePending=true,fromTask=false,allowLocked=false}={}){
  const id=state.id,ticket=state.epoch;if(!id)return;const data=await api('',{id,allowLocked});if(ticket!==state.epoch||id!==state.id)return;
  const before=passage()?.revision;state.data=data;if(data.lastTask?.result?.action==='revise_book'&&data.lastTask.id!==state.ignoredProposal)state.proposal={id:data.lastTask.id,...data.lastTask.result};
  if(!allPassages().some(p=>p.id===state.sectionId))state.sectionId=data.bookmark?.sectionId&&allPassages().some(p=>p.id===data.bookmark.sectionId)?data.bookmark.sectionId:allPassages()[0]?.id||'';
+ if(initial)restoreTreeSelection();
  if(initial&&data.bookmark?.sectionId===state.sectionId&&passage())state.resume={...data.bookmark,revision:passage().revision,...(data.bookmark.revision!==passage().revision||data.bookmark.audioIdentity!==narrationSignature(readingSettings())?{part:0,seconds:0}:{})};
  if(before&&passage()?.revision!==before){if(fromTask){state.reading=false;state.readPhase='idle';state.audioFlight='';speechController?.abort();}else pause('The draft was updated. Read from here to hear the saved version.');state.resume=null;resetAudio();}
  renderDraft();renderConversation();renderNotes();renderControls();
  if(resumePending){if(data.task&&(!state.task||!state.polling))void resumeTask(data.task.id);else if(state.task&&!state.polling)void resumeTask(state.task);}
  if(initial&&data.lastTask&&['failed','cancelled'].includes(data.lastTask.status)){state.lastTask=data.lastTask.id;renderControls();status(data.lastTask.error||'An earlier request stopped. Retry can resume its completed passes.');}
+ if(state.pendingNavigationDrafts){restoreNavigationDrafts(state.pendingNavigationDrafts);state.pendingNavigationDrafts=null;}
  if(initial&&!data.task&&!state.lastTask)status(data.busy?'Your full edit is working. You can read the draft; passage changes will be available when it finishes or is paused.':(data.bookmark?'Welcome back. Your saved place is open; continue here or read one passage earlier.':'Your draft is open. We’ll work through your whole story toward the finished work you want.'));
  void updateVoiceContext();
 }
@@ -268,16 +284,16 @@ const voice=new StudioVoice({
 let voiceSession='';
 $('studio-continue').addEventListener('click',()=>{setNotebookView('draft');state.scope='passage';state.original=false;renderDraft({scroll:true});status('We’re back at your saved passage. Press Read, or tell Johnny what you want to work on.');});
 $('studio-recap-read').addEventListener('click',()=>void run(async()=>{const all=allPassages(),index=all.findIndex(p=>p.id===state.sectionId);if(index>0){selectSection(all[index-1].id);await read({restart:true});}}));
-$('studio-goal-form').addEventListener('submit',event=>{event.preventDefault();void run(async()=>{await api('/goal',{method:'PUT',body:{goal:$('studio-goal').value}});await refresh();status('Your destination is saved for this whole manuscript. We’ll keep working toward it when you return.');});});
+$('studio-goal-form').addEventListener('submit',event=>{event.preventDefault();void run(async()=>{await api('/goal',{method:'PUT',body:{goal:$('studio-goal').value}});state.goalDirty=false;await refresh();status('Your destination is saved for this whole manuscript. We’ll keep working toward it when you return.');});});
 $('studio-read').addEventListener('click',()=>void run(()=>read()));
 $('studio-pause').addEventListener('click',()=>pauseReading());
 $('studio-stop').addEventListener('click',()=>pause('Stopped. Press Read to start from your saved place.'));
 $('studio-narration-preset').addEventListener('change',()=>{const preset=$('studio-narration-preset').value;if(NARRATION_PRESETS[preset])$('studio-narration-direction').value=NARRATION_PRESETS[preset];changeReadingSettings();});
-for(const name of ['studio-narration-voice','studio-narration-direction'])$(name).addEventListener('change',()=>pause('Reading style changed. Press Read to hear it; your manuscript is unchanged.'));
+for(const name of ['studio-narration-voice','studio-narration-direction'])$(name).addEventListener('change',()=>changeReadingSettings());
 $('studio-narration-direction').addEventListener('input',()=>{if(state.reading||state.readPhase==='paused')changeReadingSettings();$('studio-narration-preset').value='custom';});
 $('studio-voice').addEventListener('click',()=>{if(voice.connected||voiceStarting){pause('Voice ended. Your draft and conversation stay saved.');voice.close();voiceStarting=false;$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';$('studio-voice-status').textContent='Voice is off · typing works too';renderControls();}else{pause('Narration paused. Connecting voice…');voiceSession=crypto.randomUUID();voiceStarting=true;renderControls();void voice.connect();}});
-$('studio-current').addEventListener('click',()=>{state.original=false;renderDraft();});
-$('studio-original').addEventListener('click',()=>{pause('Your original is preserved here. Switch to Current draft to continue the collaboration.');state.original=true;renderDraft();});
+$('studio-current').addEventListener('click',()=>{state.original=false;state.originalChapter=null;rememberTreeSelection();renderDraft();renderControls();});
+$('studio-original').addEventListener('click',()=>{voice.close();pause('Your original is preserved here. Switch to Current draft to continue the collaboration.');state.original=true;state.originalChapter=null;rememberTreeSelection();renderDraft();renderControls();});
 $('studio-original-export').addEventListener('click',()=>$('download-original').click());
 $('studio-chapter').addEventListener('change',()=>{const c=chapters().find(c=>c.index===Number($('studio-chapter').value));if(c)selectSection(c.passages[0].id);});
 for(const [id,direction] of [['studio-prev',-1],['studio-next',1]])$(id).addEventListener('click',()=>{const all=allPassages(),index=all.findIndex(p=>p.id===state.sectionId);if(all[index+direction])selectSection(all[index+direction].id);});
@@ -294,7 +310,7 @@ audio.addEventListener('error',()=>{if(state.reading&&state.loadedAudio)pause('A
 function resetWorkspace(){
  pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();
  setBookOpen(false);state.bookSaving=false;state.bookCreating=false;state.accessChecking=false;state.authEpoch++;state.savedChapter=null;if($('book-version-dialog').open)$('book-version-dialog').close();$('book-name').value='';bookNotice('');
- state.epoch++;Object.assign(state,{id:'',data:null,sectionId:'',original:false,reading:false,task:null,polling:false,lastTask:null,resume:null,scope:'book',flowJob:null,walkthrough:false,proposal:null,ignoredProposal:'',proposalApplying:false});
+ state.goalDirty=false;state.pendingNavigationDrafts=null;state.originalChapter=null;state.epoch++;Object.assign(state,{id:'',data:null,sectionId:'',original:false,reading:false,task:null,polling:false,lastTask:null,resume:null,scope:'book',flowJob:null,walkthrough:false,proposal:null,ignoredProposal:'',proposalApplying:false});
  resetAudio();setNotebookView('chat');$('book-reader').hidden=true;
  for(const id of ['studio-pages','studio-messages','studio-versions','studio-notes-list','studio-chapter','notebook-outline'])$(id).replaceChildren();
  for(const id of ['studio-input','studio-note','studio-goal','author-request-text'])$(id).value='';
@@ -304,12 +320,15 @@ function resetWorkspace(){
  $('notebook-source').hidden=true;$('notebook-job-progress').hidden=true;$('notebook-proposal').hidden=true;$('studio-progress').hidden=true;$('studio-retry').hidden=true;
  renderControls();
 }
+$('studio-goal').addEventListener('input',()=>{state.goalDirty=true;});
+document.addEventListener('story-restore-navigation-drafts',event=>{if(event.detail.projectId!==state.id)return;if(state.data)restoreNavigationDrafts(event.detail.values);else state.pendingNavigationDrafts=event.detail.values;});
+document.addEventListener('story-add-chapter-context',event=>{event.detail.bookId=state.data?.bookDrafts?.book?.id||null;});
 document.addEventListener('story-workspace-check',event=>{if(state.task==='starting')event.detail.starting=true;});
 document.addEventListener('story-workspace-reset',resetWorkspace);
 document.addEventListener('story-reader-connection',event=>{if(event.detail.id!==state.id)return;state.connection=event.detail.state;renderRevisionTracker($,{job:state.flowJob,connection:state.authRequired?'auth':state.connection});});
 document.addEventListener('story-reader-project',event=>{
  const {id,busy}=event.detail;state.connection='connected';state.flowJob=event.detail.job||null;
- if(id!==state.id){setBookOpen(false);state.bookSaving=false;state.bookCreating=false;state.accessChecking=false;state.authEpoch++;state.savedChapter=null;if($('book-version-dialog').open)$('book-version-dialog').close();$('book-name').value='';bookNotice('');pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();state.epoch++;state.id=id||'';state.flowJob=event.detail.job||null;state.walkthrough=false;state.scope='book';state.proposal=null;state.proposalApplying=false;state.ignoredProposal='';try{state.ignoredProposal=window.localStorage?.getItem('johnny-notebook-dismissed-'+state.id)||'';}catch{}setNotebookView('chat');state.data=null;state.sectionId='';state.task=null;state.polling=false;state.lastTask=null;state.original=false;state.resume=null;resetAudio();$('book-reader').hidden=!id;$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';renderControls();if(id)void run(()=>refresh({initial:true}));}
+ if(id!==state.id){setBookOpen(false);state.bookSaving=false;state.bookCreating=false;state.accessChecking=false;state.authEpoch++;state.savedChapter=null;if($('book-version-dialog').open)$('book-version-dialog').close();$('book-name').value='';bookNotice('');pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();state.epoch++;state.goalDirty=false;state.pendingNavigationDrafts=null;state.originalChapter=null;state.id=id||'';state.flowJob=event.detail.job||null;state.walkthrough=false;state.scope='book';state.proposal=null;state.proposalApplying=false;state.ignoredProposal='';try{state.ignoredProposal=window.localStorage?.getItem('johnny-notebook-dismissed-'+state.id)||'';}catch{}setNotebookView('chat');state.data=null;state.sectionId='';state.task=null;state.polling=false;state.lastTask=null;state.original=false;state.resume=null;resetAudio();$('book-reader').hidden=!id;$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';renderControls();if(id)void run(()=>refresh({initial:true}));}
  else if(state.data&&state.data.busy!==!!busy)void run(()=>refresh());
  renderNotebook();
 });
@@ -325,7 +344,7 @@ document.addEventListener('story-author-request-result',event=>{$('author-reques
 $('notebook-tools').addEventListener('click',()=>$('notebook-tools-dialog').showModal());
 $('notebook-chat-tab').addEventListener('click',()=>setNotebookView('chat'));
 $('notebook-draft-tab').addEventListener('click',()=>setNotebookView('draft'));
-$('notebook-original').addEventListener('click',()=>{pause('Your imported original is preserved here.');state.original=true;renderDraft();setNotebookView('draft');$('library-rail').classList.remove('open');$('rail-open').setAttribute('aria-expanded','false');});
+$('notebook-original').addEventListener('click',()=>{pause('Your imported original is preserved here.');state.original=true;state.originalChapter=null;renderDraft();renderControls();setNotebookView('draft');$('library-rail').classList.remove('open');$('rail-open').setAttribute('aria-expanded','false');});
 $('notebook-scope').addEventListener('change',()=>{state.scope=$('notebook-scope').value==='passage'?'passage':'book';renderControls();});
 $('notebook-next').addEventListener('click',()=>{const action=$('notebook-next').dataset.action;if(['create','resume'].includes(action)){document.dispatchEvent(new CustomEvent('story-notebook-revise',{detail:{projectId:state.id,intent:state.data.goal,resume:action==='resume'}}));return;}state.walkthrough=true;state.scope='passage';if(action==='begin'&&allPassages()[0])selectSection(allPassages()[0].id);else renderControls();setNotebookView('draft');status('We’ll work through the manuscript together. Press Read, or tell Johnny what you want to change here.');});
 $('notebook-stop-full').addEventListener('click',()=>$('autopilot-pause').click());
