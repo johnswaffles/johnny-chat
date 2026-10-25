@@ -444,3 +444,73 @@ Live sign-in/audio remain user checks; no real manuscript was narrated for this 
 This frontend-only release can use Render's documented [skip render] commit phrase
 (https://render.com/docs/deploys#skipping-an-auto-deploy) so the backend and any active
 jobs keep running. Pages deploys the updated UI normally. No cloud setting changes.
+
+## Realtime paragraph narration
+
+Story Studio and the older chapter speech route use `gpt-realtime-2.1-mini` over
+server-side Realtime WebSockets, not `/audio/speech`. Each requested short part opens
+one connection, disables automatic turn detection/tools, sends exactly one text input
+with `conversation: none`, and closes after a completed response. No previous prose,
+conversation, microphone input, or generated audio is carried into another request.
+The existing API key and OPENAI_BASE_URL integration are reused. Generic non-story
+speech and Talk with Johnny are separate paths and are unchanged.
+
+The shared splitter makes paragraph boundaries hard request boundaries. Long
+paragraphs still split at sentence/word boundaries under 1,200 UTF-16 code units.
+Voice and delivery directions are optional compact controls. Directions are capped
+at 2,000 code units, rejected rather than clipped, and constrain performance rather
+than editing. There are ten documented built-in voices; Marin is the default.
+Directions use a bounded UTF-8/base64 header for POST and GET polling so they do not
+appear in request URLs. Server-side validation and model/voice/directions/split-version
+cache identities prevent reuse of audio for a different performance.
+
+Realtime PCM16 mono at 24 kHz is buffered for this one part and returned as WAV.
+Only completed responses with a matching output word transcript are playable;
+comparison normalizes Unicode, case, punctuation and apostrophes. Missing, additional,
+omitted or reordered words fail visibly without an automatic paid retry. The transcript
+is model metadata, not independent proof of every spoken sound. Alternate number
+spellings or pronunciation transcripts may be rejected conservatively. Live listening
+is still required before asserting voice quality or fidelity. Buffers are bounded to
+8 MB per provider response; inference is capped at 4,096 output tokens and 60 seconds.
+Timeout/abort closes the connection and sends response.cancel when possible. Socket
+errors expose safe app messages, not provider details or credentials.
+
+Playback holds only a current part and at most one lookahead. While actually playing,
+a timeupdate with 0–8 seconds remaining may prepare the next part. This is a duration
+threshold, not sentence alignment. Repeated updates share the pending/cached promise;
+completion alone never chains further prefetch. If playback ends first, it waits for
+the same request. Pause retains the current Blob, native position and prepared/pending
+lookahead, including completion during pause; Resume does not POST again. Native
+audio Pause/Play participate in the same state. Stop, Talk, source/voice/style changes,
+Start over, and auth expiry fence late responses and clear local buffers. Browser
+Stop does not guarantee cancellation of a server request already accepted; up to one
+lookahead may already have incurred cost. Server coalescing still avoids duplicate
+same-key work, and GET polling never starts generation. No automatic paid retries.
+
+A non-destructive `studio_state.audio_identity` metadata column tags new listening
+bookmarks with the performance and part format. Existing saved projects, originals,
+revisions and bookmark records are preserved. An older/incompatible bookmark opens
+its saved passage from its start rather than applying seconds from different audio.
+Pause/Resume within the open page retains the exact current audio position. Prepared
+Blobs are memory-only and do not survive reload; server audio is also an ephemeral,
+bounded process cache, so it is not promised permanent free replay.
+
+Official references checked October 25, 2026:
+- https://developers.openai.com/api/docs/guides/realtime-websocket
+- https://developers.openai.com/api/reference/resources/realtime/client-events/
+- https://developers.openai.com/api/reference/resources/realtime/server-events/
+- https://developers.openai.com/api/docs/models/gpt-realtime-2.1-mini
+- https://developers.openai.com/api/docs/pricing
+- https://developers.openai.com/api/docs/guides/realtime-costs
+
+Current documented Mini rates: $20/million output audio tokens, $0.60/million input
+text tokens and $2.40/million output text tokens. With one output audio token per
+50 ms, the audio-only estimate is about $1.44 per generated hour, plus text/special
+and any other billable tokens. This is an estimate, not a fixed hourly quote, and
+includes generated lookahead even if never played. No paid requests were used to
+validate this change. Local mocks cover WebSocket lifecycle, WAV, exact-word rejection,
+resource ceilings, voice/style cache identity, paragraph scope, single flight,
+pause/resume/prefetch races, cancellation and auth recovery. Browser access remains
+restricted by the prior selected-URL denial; no live browser or listening verification
+was attempted during implementation. Release verification does not claim paid audio
+or private browser listening was tested.

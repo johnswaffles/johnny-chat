@@ -73,3 +73,9 @@ test('Pages proxy preserves pending status and authenticated GET query without g
 test('speech 401 retains an auth-specific error and never retries generation or polling',async()=>{
  for(const pending of [false,true]){const methods=[];await assert.rejects(chapterAudio('/speech',options({fetcher:async(url,init)=>{methods.push(init.method);return pending&&methods.length===1?new Response('{}',{status:202}):new Response('{"detail":"Private session required"}',{status:401,headers:{'Content-Type':'application/json'}});}})),error=>error.code==='AUTH_REQUIRED'&&error.status===401&&/unlocking/.test(error.message));assert.deepEqual(methods,pending?['POST','GET']:['POST']);}
 });
+
+test('Unicode narration settings stay identical through POST/poll headers, out of query strings',async()=>{
+ const narration={voice:'cedar',direction:'轻声叙述。'.repeat(350)},calls=[];
+ await chapterAudio('/speech',options({narration,fetcher:async(url,init)=>{calls.push({url,init});return calls.length===1?new Response('{}',{status:202}):new Response('wav',{headers:{'Content-Type':'audio/wav'}});}}));
+ const header=calls[0].init.headers['X-Story-Narration'];assert.equal(header,calls[1].init.headers['X-Story-Narration']);assert.ok(header.length<9000);assert.equal(JSON.parse(Buffer.from(header,'base64').toString('utf8')).direction,narration.direction);assert.ok(!calls[1].url.includes('direction'));
+});

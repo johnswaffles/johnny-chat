@@ -1,3 +1,5 @@
+import {speechParts} from '../public/story-editor/reader-model.mjs';
+import {WebSocketServer} from 'ws';
 import {createHmac} from 'node:crypto';
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
@@ -67,6 +69,8 @@ const mock=http.createServer(async(req,res)=>{
  }
  res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify(fakeResponse({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(value)}]}]})));
 });
+const realtimeMock=new WebSocketServer({server:mock,path:'/v1/realtime'});
+realtimeMock.on('connection',(ws,req)=>{assert.equal(new URL(req.url,'http://local.test').searchParams.get('model'),'gpt-realtime-2.1-mini');ws.send(JSON.stringify({type:'session.created'}));ws.on('message',async raw=>{const event=JSON.parse(raw);if(event.type==='session.update'){ws.send(JSON.stringify({type:'session.updated'}));return;}if(event.type!=='response.create')return;const response=event.response;assert.equal(response.conversation,'none');assert.equal(response.input.length,1);assert.equal(response.audio.output.voice,'marin');const text=response.input[0].content[0].text;assert.ok(text.length<=1200);speechRequests.push({model:'gpt-realtime-2.1-mini',voice:'marin',input:text});await speechGate;if(ws.readyState!==1)return;for(const e of [{type:'response.created',response:{id:'mock_audio'}},{type:'response.output_audio.delta',delta:Buffer.alloc(480).toString('base64')},{type:'response.output_audio_transcript.done',transcript:text},{type:'response.done',response:{status:'completed'}}])ws.send(JSON.stringify(e));});});
 await new Promise(r=>mock.listen(0,'127.0.0.1',r));
 const launch=()=>spawn(process.execPath,['server.js'],{cwd:fileURLToPath(new URL('..',import.meta.url)),env:{...process.env,PORT:String(port),OPENAI_API_KEY:'local-test-only',OPENAI_BASE_URL:`http://127.0.0.1:${mock.address().port}/v1`,OPENAI_STORY_EDITOR_MODEL:'gpt-6-astra',OPENAI_STORY_EDITOR_REASONING_EFFORT:'high',OPENAI_STORY_EDITOR_REASONING_MODE:'',JOHNNY_CHAT_PASSWORD:'local-story-preview',STORY_EDITOR_DB_PATH:testDir+'/story.sqlite',JOHNNY_CHAT_USAGE_PATH:testDir+'/usage.json',JOHNNY_CHAT_LIBRARY_PATH:testDir+'/library.json',PUBLIC_BOARD_STORE_PATH:testDir+'/board.json',PUBLIC_BOARD_RATE_LIMIT_PATH:testDir+'/rate.json',CLOCKWISE_DB_PATH:testDir+'/clock.sqlite'},stdio:['ignore','ignore','pipe']});
 let child=launch();
@@ -127,7 +131,7 @@ assert.equal((await fetch(speechUrl+'?part=0&revision=outdated',{headers:auth}))
 releaseSpeech();
 let spoken;
 for(let i=0;i<30;i++) {spoken=await fetch(speechUrl+speechQuery,{headers:auth});if(spoken.status!==202)break;await new Promise(r=>setTimeout(r,20));}
-assert.equal(spoken.status,200);assert.equal(spoken.headers.get('content-type'),'audio/mpeg');assert.ok((await spoken.arrayBuffer()).byteLength);assert.equal(speechRequests.length,1);assert.equal(speechRequests[0].input,reader.chapters[0].text,'Narrate the saved edited text with preserved passages');
+assert.equal(spoken.status,200);assert.equal(spoken.headers.get('content-type'),'audio/wav');assert.ok((await spoken.arrayBuffer()).byteLength);assert.equal(speechRequests.length,1);assert.equal(speechRequests[0].input,speechParts(reader.chapters[0].text)[0],'Narrate just the requested saved paragraph, not the chapter');
 await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:reader.chapters[0].revision})});assert.equal(speechRequests.length,1,'Replay uses cached audio');
 assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:0,revision:'outdated'})})).status,409);
 assert.equal((await fetch(origin+main.base+'/chapters/1/speech',{method:'POST',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({part:999,revision:reader.chapters[0].revision})})).status,400);
@@ -359,4 +363,4 @@ if(!process.env.STORY_PREVIEW){
 }
 console.log('PASS: whole-manuscript proposal confirmation/scope/reload; revised vs original DOCX content; studio four-pass Sol/xhigh/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
 console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');
-if(process.env.STORY_PREVIEW) console.log(`LOCAL PREVIEW: http://127.0.0.1:${mock.address().port}/preview`); else {child.kill();mock.close();}
+if(process.env.STORY_PREVIEW) console.log(`LOCAL PREVIEW: http://127.0.0.1:${mock.address().port}/preview`); else {child.kill();realtimeMock.close();mock.close();}

@@ -1,3 +1,4 @@
+import {narrationHeader} from './narration-model.mjs';
 function pause(ms, signal) {
   return new Promise((resolve, reject) => {
     const abort = () => { clearTimeout(timer); reject(signal.reason); };
@@ -7,7 +8,7 @@ function pause(ms, signal) {
   });
 }
 
-export async function chapterAudio(url, {part, revision, sectionId, headers, signal, onPending = () => {}, fetcher = fetch, pollMs = 1000, timeoutMs = 90000}) {
+export async function chapterAudio(url, {part, revision, sectionId, narration, headers, signal, onPending = () => {}, fetcher = fetch, pollMs = 1000, timeoutMs = 90000}) {
   const deadline = AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]);
   const selection = sectionId ? {sectionId} : {};
   const query = new URLSearchParams({part:String(part), revision, ...selection});
@@ -15,7 +16,7 @@ export async function chapterAudio(url, {part, revision, sectionId, headers, sig
   try {
     while (true) {
       const response = await fetcher(polling ? `${url}?${query}` : url, {
-        method:polling ? 'GET' : 'POST', headers,
+        method:polling ? 'GET' : 'POST', headers:{...headers,...(narration?{'X-Story-Narration':narrationHeader(narration)}:{})},
         signal:AbortSignal.any([deadline, AbortSignal.timeout(15000)]),
         ...(polling ? {} : {body:JSON.stringify({part, revision, async:true, ...selection})})
       });

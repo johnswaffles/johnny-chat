@@ -1,8 +1,10 @@
+import {NarrationBuffer} from './narration-buffer.mjs?v=20261025-realtime1';
+import {NARRATION_PRESETS,narrationOptions,narrationSignature} from './narration-model.mjs?v=20261025-realtime1';
 import {editorialQualityLabel} from './quality-label.mjs?v=20261024-sol-pro-xhigh1';
 import {renderRevisionTracker} from './revision-tracker.mjs?v=20261025-tracker-reader1';
 import {notebookJourney,notebookReference} from './notebook-model.mjs?v=20261024-background1';
-import {speechParts} from './reader-model.mjs';
-import {chapterAudio} from './reader-speech.mjs?v=20261025-session-recovery1';
+import {speechParts} from './reader-model.mjs?v=20261025-paragraph1';
+import {chapterAudio} from './reader-speech.mjs?v=20261025-realtime1';
 import {StudioVoice} from './studio-voice.mjs?v=20261021-journey3';
 const $=id=>document.getElementById(id);
 const origin=String(window.JOHNNY_CHAT_API_BASE_URL||location.origin).replace(/\/+$/,'');
@@ -28,10 +30,27 @@ function saveBookmark(){
  const p=passage();if(!p||!state.id||state.original||state.authRequired)return;
  const position=state.loadedAudio?.sectionId===p.id&&state.loadedAudio.revision===p.revision?{...state.loadedAudio,seconds:audio.currentTime||0}:state.resume||{sectionId:p.id,revision:p.revision,part:0,seconds:0};
  if(!position||position.sectionId!==p.id||position.revision!==p.revision)return;
- state.resume={...position};const id=state.id,ticket=state.epoch;void api('/bookmark',{method:'PUT',body:position}).then(()=>{if(id===state.id&&ticket===state.epoch)$('studio-bookmark-warning').hidden=true;}).catch(error=>{if(id!==state.id||ticket!==state.epoch||error.code==='AUTH_REQUIRED')return;$('studio-bookmark-warning').textContent='Your listening position has not synced. Your saved manuscript is safe; keep this tab open. It will retry while you listen.';$('studio-bookmark-warning').hidden=false;});
+ position.narration=state.readSettings||readingSettings();state.resume={...position};const id=state.id,ticket=state.epoch;void api('/bookmark',{method:'PUT',body:position}).then(()=>{if(id===state.id&&ticket===state.epoch)$('studio-bookmark-warning').hidden=true;}).catch(error=>{if(id!==state.id||ticket!==state.epoch||error.code==='AUTH_REQUIRED')return;$('studio-bookmark-warning').textContent='Your listening position has not synced. Your saved manuscript is safe; keep this tab open. It will retry while you listen.';$('studio-bookmark-warning').hidden=false;});
+}
+const narrationBuffer=new NarrationBuffer(async(target,signal)=>{const ticket=state.epoch,authTicket=state.authEpoch;try{return await chapterAudio(base(target.id)+'/speech',{sectionId:target.sectionId,part:target.part,revision:target.revision,narration:target.settings,headers:{...auth(),'Content-Type':'application/json'},signal,onPending:()=>{if(state.reading&&state.sectionId===target.sectionId)status('Preparing a short part of your saved passage…');}});}catch(error){if(error.code==='AUTH_REQUIRED'&&ticket===state.epoch&&authTicket===state.authEpoch&&target.id===state.id)requireUnlock();throw error;}});
+
+function changeReadingSettings(){pause('Reading style changed. Press Read to hear it from this passage; your manuscript is unchanged.');state.resume=null;state.readSettings=null;}
+function readingSettings(){return narrationOptions({voice:$('studio-narration-voice').value||'marin',direction:$('studio-narration-direction').value||NARRATION_PRESETS.natural});}
+function audioTarget(p,part){const settings=state.readSettings||readingSettings();return {id:state.id,sectionId:p.id,revision:p.revision,part,settings,key:JSON.stringify([state.id,p.id,p.revision,part,settings])};}
+function nextAudioTarget(p,part){if(part+1<speechParts(p.text).length)return audioTarget(p,part+1);const all=allPassages(),next=all[all.findIndex(item=>item.id===p.id)+1];return next?audioTarget(next,0):null;}
+function pauseReading(){
+ if(state.readPhase==='paused'){void run(()=>read());return;}
+ if(!state.reading)return;
+ saveBookmark();state.reading=false;state.readPhase='paused';audio.pause();voice.interrupt();renderControls();status('Paused. Resume keeps this audio and your place; no further parts are requested while paused.');
+}
+async function resumeReading(){
+ if(state.readPhase!=='paused'||state.authRequired)return;
+ const ticket=state.audioEpoch,projectTicket=state.epoch;state.reading=true;state.readPhase=state.loadedAudio?'playing':'preparing';renderControls();
+ if(state.loadedAudio){try{await audio.play();}catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch||!state.reading)return;if(error.name==='NotAllowedError'){state.readPhase='ready';renderControls();status('Your audio is still ready. Use Play in the audio controls to resume.');}else pause('Playback could not resume. Press Read to try again.');}}
+ // A pending current part will load and play when it completes; never submit twice.
 }
 function pause(message='Paused here. Tell Johnny what you want to explore or change.',interrupt=true){
- saveBookmark();state.reading=false;state.readPhase='idle';state.audioFlight='';state.audioEpoch++;speechController?.abort();speechController=null;audio.pause();if(interrupt)voice.interrupt();renderControls();if(message)status(message);
+ saveBookmark();narrationBuffer.clear();state.reading=false;state.readPhase='idle';state.audioFlight='';state.audioEpoch++;speechController?.abort();speechController=null;resetAudio();if(interrupt)voice.interrupt();renderControls();if(message)status(message);
 }
 function resetAudio(){audio.pause();audio.removeAttribute('src');audio.load();audio.hidden=true;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl='';state.loadedAudio=null;}
 function renderConversation(){
@@ -98,7 +117,7 @@ function renderJourney(){
  if(document.activeElement!==$('studio-goal'))$('studio-goal').value=state.data?.goal||'';
  $('studio-goal-save').disabled=state.authRequired||!!state.task||!!state.data?.busy;
 }
-function renderControls(){renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage()&&!state.authRequired;$('studio-read').disabled=!ready||state.reading;$('studio-read').textContent=state.reading?(state.readPhase==='preparing'?'Preparing audio…':state.readPhase==='ready'?'Audio ready · use Play':'Reading…'):'▶ Read from here';$('studio-read').setAttribute('aria-busy',String(state.reading&&state.readPhase==='preparing'));$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=state.authRequired||!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
+function renderControls(){renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage()&&!state.authRequired;$('studio-read').disabled=!ready||state.reading;$('studio-read').textContent=state.reading?(state.readPhase==='preparing'?'Preparing audio…':state.readPhase==='ready'?'Audio ready · use Play':'Reading…'):state.readPhase==='paused'?'▶ Resume reading':'▶ Read from here';$('studio-pause').textContent=state.readPhase==='paused'?'▶ Resume':'Pause / interrupt';$('studio-stop').disabled=!state.reading&&state.readPhase!=='paused';$('studio-read').setAttribute('aria-busy',String(state.reading&&state.readPhase==='preparing'));$('studio-send').disabled=!ready||!!state.task||!!state.data?.busy;$('studio-input').disabled=state.authRequired||!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
 function setBookOpen(open){state.bookOpen=!!open;$('book-drafts-panel').hidden=!open;$('book-toggle').setAttribute('aria-expanded',String(!!open));if(open)$('book-close').focus();}
 function bookNotice(text){$('book-drafts-status').textContent=text;}
 function bookButton(text,action,label=text){const b=document.createElement('button');b.type='button';b.className='ghost-button';b.textContent=text;b.setAttribute('aria-label',label);b.disabled=state.bookSaving||!!state.task||!!state.data?.busy;b.addEventListener('click',()=>void bookAction(action));return b;}
@@ -158,7 +177,7 @@ async function refresh({initial=false,resumePending=true,fromTask=false,allowLoc
  const id=state.id,ticket=state.epoch;if(!id)return;const data=await api('',{id,allowLocked});if(ticket!==state.epoch||id!==state.id)return;
  const before=passage()?.revision;state.data=data;if(data.lastTask?.result?.action==='revise_book'&&data.lastTask.id!==state.ignoredProposal)state.proposal={id:data.lastTask.id,...data.lastTask.result};
  if(!allPassages().some(p=>p.id===state.sectionId))state.sectionId=data.bookmark?.sectionId&&allPassages().some(p=>p.id===data.bookmark.sectionId)?data.bookmark.sectionId:allPassages()[0]?.id||'';
- if(initial&&data.bookmark?.sectionId===state.sectionId&&passage())state.resume={...data.bookmark,revision:passage().revision,...(data.bookmark.revision!==passage().revision?{part:0,seconds:0}:{})};
+ if(initial&&data.bookmark?.sectionId===state.sectionId&&passage())state.resume={...data.bookmark,revision:passage().revision,...(data.bookmark.revision!==passage().revision||data.bookmark.audioIdentity!==narrationSignature(readingSettings())?{part:0,seconds:0}:{})};
  if(before&&passage()?.revision!==before){if(fromTask){state.reading=false;state.readPhase='idle';state.audioFlight='';speechController?.abort();}else pause('The draft was updated. Read from here to hear the saved version.');state.resume=null;resetAudio();}
  renderDraft();renderConversation();renderNotes();renderControls();
  if(resumePending){if(data.task&&(!state.task||!state.polling))void resumeTask(data.task.id);else if(state.task&&!state.polling)void resumeTask(state.task);}
@@ -172,8 +191,8 @@ async function playPart(part,ticket,seek=0){
  const flight=JSON.stringify([id,p.id,p.revision,part,ticket]);if(state.audioFlight===flight)return;state.audioFlight=flight;state.readPhase='preparing';renderControls();
  const parts=speechParts(p.text);state.resume={sectionId:p.id,revision:p.revision,part,seconds:seek};resetAudio();speechController=new AbortController();status(`Preparing ${c.title} · passage ${c.passages.indexOf(p)+1}…`);
  try{
-  const blob=await chapterAudio(base(id)+'/speech',{sectionId:p.id,part,revision:p.revision,headers:{...auth(),'Content-Type':'application/json'},signal:speechController.signal,onPending:()=>{if(ticket===state.audioEpoch)status(`Preparing the saved passage for reading… You can pause at any time.`);}});
-  if(ticket!==state.audioEpoch||projectTicket!==state.epoch||!state.reading||state.sectionId!==p.id)return;
+  const blob=await narrationBuffer.get(audioTarget(p,part));
+  if(ticket!==state.audioEpoch||projectTicket!==state.epoch||(!state.reading&&state.readPhase!=='paused')||state.sectionId!==p.id)return;
   state.audioUrl=URL.createObjectURL(blob);audio.src=state.audioUrl;audio.hidden=false;state.loadedAudio={sectionId:p.id,revision:p.revision,part,seconds:seek};
   if(seek)audio.addEventListener('loadedmetadata',()=>{if(ticket===state.audioEpoch)audio.currentTime=Math.min(seek,Number.isFinite(audio.duration)?Math.max(0,audio.duration-0.1):seek);},{once:true});
   let advanced=false;audio.onended=()=>{
@@ -181,12 +200,13 @@ async function playPart(part,ticket,seek=0){
    if(part+1<parts.length)void playPart(part+1,ticket);
    else{const all=allPassages(),next=all[all.findIndex(item=>item.id===p.id)+1];if(next){selectSection(next.id,{stop:false});void playPart(0,ticket);}else{pause('You’ve reached the end of the current draft. Your place is saved. We can review, revise, or discuss what it needs before you call it finished.');state.resume=null;}}
   };
+  if(!state.reading){renderControls();return;}
   status(`Reading ${c.title} · passage ${c.passages.indexOf(p)+1}. ${voice.connected?'Speak to interrupt.':'Press Pause to stop here.'}`);
   try{await audio.play();if(ticket===state.audioEpoch&&projectTicket===state.epoch&&state.sectionId===p.id&&state.loadedAudio?.part===part){state.readPhase='playing';renderControls();}}catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch)return;if(error.name==='NotAllowedError'){state.readPhase='ready';renderControls();status('Your passage is ready. Press Play in the audio controls to listen, or Pause to choose another starting point.');}else pause('Playback could not start. Press Read to retry this saved passage.');}
  }catch(error){if(ticket!==state.audioEpoch||projectTicket!==state.epoch)return;if(error.code==='AUTH_REQUIRED'){requireUnlock();return;}pause((error.message||'Audio preparation was interrupted.')+' Press Read to retry this passage.');}
  finally{if(state.audioFlight===flight)state.audioFlight='';}
 }
-async function read({restart=false}={}){if(state.authRequired){status(accessError().message);return;}if(!passage()||state.reading)return;setNotebookView('draft');pause('');state.original=false;renderDraft({scroll:true});const p=passage(),resume=!restart&&state.resume?.sectionId===p.id&&state.resume?.revision===p.revision?state.resume:null;state.reading=true;state.readPhase='preparing';renderControls();await playPart(resume?.part||0,state.audioEpoch,resume?.seconds||0);}
+async function read({restart=false}={}){if(state.authRequired){status(accessError().message);return;}if(state.readPhase==='paused')return resumeReading();if(!passage()||state.reading)return;state.readSettings=readingSettings();setNotebookView('draft');pause('');state.original=false;renderDraft({scroll:true});const p=passage(),resume=!restart&&state.resume?.sectionId===p.id&&state.resume?.revision===p.revision?state.resume:null;state.reading=true;state.readPhase='preparing';renderControls();await playPart(resume?.part||0,state.audioEpoch,resume?.seconds||0);}
 function renderPhase(task){$('studio-progress-copy').textContent=phaseLabels[task.phase]||phaseLabels.queued;const names=['planning','drafting','reviewing','refining'],index=names.indexOf(task.phase);for(const li of $('studio-progress').querySelectorAll('li')){li.classList.toggle('current',li.dataset.pass===task.phase);li.classList.toggle('done',names.indexOf(li.dataset.pass)<index);}status(phaseLabels[task.phase]||phaseLabels.queued);}
 async function pollTask(taskId,{readTicket=state.audioEpoch,requestedSection=state.sectionId}={}){
  const ticket=state.epoch,id=state.id;taskController?.abort();taskController=new AbortController();const signal=taskController.signal;let failures=0;
@@ -250,7 +270,11 @@ $('studio-continue').addEventListener('click',()=>{setNotebookView('draft');stat
 $('studio-recap-read').addEventListener('click',()=>void run(async()=>{const all=allPassages(),index=all.findIndex(p=>p.id===state.sectionId);if(index>0){selectSection(all[index-1].id);await read({restart:true});}}));
 $('studio-goal-form').addEventListener('submit',event=>{event.preventDefault();void run(async()=>{await api('/goal',{method:'PUT',body:{goal:$('studio-goal').value}});await refresh();status('Your destination is saved for this whole manuscript. We’ll keep working toward it when you return.');});});
 $('studio-read').addEventListener('click',()=>void run(()=>read()));
-$('studio-pause').addEventListener('click',()=>pause());
+$('studio-pause').addEventListener('click',()=>pauseReading());
+$('studio-stop').addEventListener('click',()=>pause('Stopped. Press Read to start from your saved place.'));
+$('studio-narration-preset').addEventListener('change',()=>{const preset=$('studio-narration-preset').value;if(NARRATION_PRESETS[preset])$('studio-narration-direction').value=NARRATION_PRESETS[preset];changeReadingSettings();});
+for(const name of ['studio-narration-voice','studio-narration-direction'])$(name).addEventListener('change',()=>pause('Reading style changed. Press Read to hear it; your manuscript is unchanged.'));
+$('studio-narration-direction').addEventListener('input',()=>{if(state.reading||state.readPhase==='paused')changeReadingSettings();$('studio-narration-preset').value='custom';});
 $('studio-voice').addEventListener('click',()=>{if(voice.connected||voiceStarting){pause('Voice ended. Your draft and conversation stay saved.');voice.close();voiceStarting=false;$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';$('studio-voice-status').textContent='Voice is off · typing works too';renderControls();}else{pause('Narration paused. Connecting voice…');voiceSession=crypto.randomUUID();voiceStarting=true;renderControls();void voice.connect();}});
 $('studio-current').addEventListener('click',()=>{state.original=false;renderDraft();});
 $('studio-original').addEventListener('click',()=>{pause('Your original is preserved here. Switch to Current draft to continue the collaboration.');state.original=true;renderDraft();});
@@ -263,8 +287,9 @@ $('studio-undo').addEventListener('click',()=>void run(undo));
 $('studio-cancel').addEventListener('click',()=>void run(async()=>{pause('Stopping this edit…');if(state.task)await api('/tasks/'+encodeURIComponent(state.task)+'/cancel',{method:'POST',body:{}});}));
 $('studio-retry').addEventListener('click',()=>void run(async()=>{const id=state.lastTask;if(!id)return;pause('');const data=await api('/tasks/'+encodeURIComponent(id)+'/retry',{method:'POST',body:{}});state.lastTask=null;state.task=data.task.id;renderControls();await pollTask(data.task.id);}));
 $('studio-note-form').addEventListener('submit',event=>{event.preventDefault();const note=$('studio-note').value.trim();if(note)void run(async()=>{await api('/notes',{method:'POST',body:{note}});$('studio-note').value='';await refresh();status('Story note saved for this manuscript.');});});
-audio.addEventListener('play',()=>{if(state.reading&&state.loadedAudio?.sectionId===state.sectionId&&state.loadedAudio?.revision===passage()?.revision){state.readPhase='playing';renderControls();}});
-audio.addEventListener('timeupdate',()=>{if(Date.now()-lastBookmark>5000){lastBookmark=Date.now();saveBookmark();}});
+audio.addEventListener('play',()=>{if((state.reading||state.readPhase==='paused')&&state.loadedAudio?.sectionId===state.sectionId&&state.loadedAudio?.revision===passage()?.revision){state.reading=true;state.readPhase='playing';renderControls();}});
+audio.addEventListener('pause',()=>{if(state.reading&&state.readPhase==='playing'&&!audio.ended)pauseReading();});
+audio.addEventListener('timeupdate',()=>{if(state.reading&&state.readPhase==='playing'&&Number.isFinite(audio.duration)&&audio.duration-audio.currentTime>0&&audio.duration-audio.currentTime<=8&&state.loadedAudio){narrationBuffer.prepare(nextAudioTarget(passage(),state.loadedAudio.part));}if(Date.now()-lastBookmark>5000){lastBookmark=Date.now();saveBookmark();}});
 audio.addEventListener('error',()=>{if(state.reading&&state.loadedAudio)pause('Audio playback failed. Press Read to retry the saved passage.');});
 function resetWorkspace(){
  pause('');voice.close();voiceStarting=false;taskController?.abort();contextController?.abort();
@@ -274,7 +299,7 @@ function resetWorkspace(){
  for(const id of ['studio-pages','studio-messages','studio-versions','studio-notes-list','studio-chapter','notebook-outline'])$(id).replaceChildren();
  for(const id of ['studio-input','studio-note','studio-goal','author-request-text'])$(id).value='';
  for(const id of ['studio-status','studio-location','studio-recap','studio-return-copy','studio-return-title','notebook-job-copy','author-request-status','notebook-source-name'])$(id).textContent='';
- $('studio-readback').checked=true;$('author-request-scope').value='book';$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';
+ $('studio-narration-voice').value='marin';$('studio-narration-preset').value='natural';$('studio-narration-direction').value=NARRATION_PRESETS.natural;state.readSettings=null;$('studio-readback').checked=true;$('author-request-scope').value='book';$('studio-voice-status').textContent='Voice is off · typing works too';$('studio-voice').setAttribute('aria-pressed','false');$('studio-voice').textContent='◉ Talk with Johnny';
  $('studio-bookmark-warning').hidden=true;$('studio-bookmark-warning').textContent='';
  $('notebook-source').hidden=true;$('notebook-job-progress').hidden=true;$('notebook-proposal').hidden=true;$('studio-progress').hidden=true;$('studio-retry').hidden=true;
  renderControls();

@@ -1,3 +1,5 @@
+import {NarrationBuffer} from '../public/story-editor/narration-buffer.mjs';
+import {NARRATION_PRESETS,narrationOptions,narrationSignature} from '../public/story-editor/narration-model.mjs';
 import {editorialQualityLabel} from '../public/story-editor/quality-label.mjs';
 import {renderRevisionTracker} from '../public/story-editor/revision-tracker.mjs';
 import {test} from 'node:test';
@@ -24,7 +26,7 @@ async function harness({gate,failed=false,bookmark=null,audioFetcher,proposal=fa
  const elements=new Map([...html.matchAll(/id="([^"]+)"/g)].map(m=>[m[1],new Element()]));
  elements.get('studio-readback').checked=true;
  let bookStore={books:[],book:null};let bookSaves=0;const savedVersions=[];
- const book={projectId:'book',title:'Local story',busy:false,original:'The imported original.',chapters:[{index:1,title:'One',revision:'chapter-r1',passages:[{id:'a',text:'Current first passage.',original:'Original first passage.',revision:'r1',kind:'paragraph'},{id:'b',text:'Current second passage.',original:'Original second passage.',revision:'r2',kind:'paragraph'}]}],notes:[],messages:[],versions:[],bookmark,task:null,lastTask:null};
+ const book={projectId:'book',title:'Local story',busy:false,original:'The imported original.',chapters:[{index:1,title:'One',revision:'chapter-r1',passages:[{id:'a',text:'Current first passage.',original:'Original first passage.',revision:'r1',kind:'paragraph'},{id:'b',text:'Current second passage.',original:'Original second passage.',revision:'r2',kind:'paragraph'}]}],notes:[],messages:[],versions:[],bookmark:bookmark?{audioIdentity:narrationSignature(),...bookmark}:null,task:null,lastTask:null};
  const calls=[],audioCalls=[];let accepted=false;
  const fetcher=async(url,options={})=>{
   const path=new URL(url).pathname;calls.push({path,method:options.method,body:options.body});if(httpHook){const override=await httpHook(path,options,book);if(override)return override;}
@@ -46,8 +48,8 @@ async function harness({gate,failed=false,bookmark=null,audioFetcher,proposal=fa
  };
  class Voice {constructor(options){this.options=options;this.connected=false;this.interrupts=0;}interrupt(){this.interrupts++;}close(){}updateContext(){}async connect(){this.connects=(this.connects||0)+1;}}
  const listeners={},windowListeners={};const dispatched=[];const document={cookie:'',getElementById:id=>elements.get(id),createElement:tag=>new Element(tag),addEventListener(type,fn){(listeners[type]||=[]).push(fn);},dispatchEvent(event){dispatched.push(event);for(const fn of listeners[event.type]||[])fn(event);}};
- const sandbox={document,window:{JOHNNY_CHAT_API_BASE_URL:'http://local.test',addEventListener(type,fn){(windowListeners[type]||=[]).push(fn);}},location:{origin:'http://local.test'},URL,URLSearchParams,AbortController,AbortSignal,Blob,Response,crypto:{randomUUID},requestAnimationFrame:fn=>fn(),matchMedia:()=>({matches:true}),setTimeout,clearTimeout,fetch:fetcher,speechParts,notebookJourney,notebookReference,editorialQualityLabel,renderRevisionTracker,StudioVoice:Voice,chapterAudio:async(url,options)=>{audioCalls.push({url,options});return audioFetcher?audioFetcher(url,options):new Blob(['fake local audio']);},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}};
- const context=vm.createContext(sandbox);vm.runInContext(source+'\nthis.testStudio={state,refresh,sendRequest,pause,selectSection,voice,read,resetWorkspace,renderNotebook,bookAction,saveChapter,setBookOpen,renderBookDrafts,openSavedChapter,playPart,checkAccess,requireUnlock,saveBookmark,api,resumeTask};',context);const api=context.testStudio;api.state.id='book';await api.refresh({initial:true});
+ const sandbox={document,window:{JOHNNY_CHAT_API_BASE_URL:'http://local.test',addEventListener(type,fn){(windowListeners[type]||=[]).push(fn);}},location:{origin:'http://local.test'},URL,URLSearchParams,AbortController,AbortSignal,Blob,Response,crypto:{randomUUID},requestAnimationFrame:fn=>fn(),matchMedia:()=>({matches:true}),setTimeout,clearTimeout,fetch:fetcher,NarrationBuffer,NARRATION_PRESETS,narrationOptions,narrationSignature,speechParts,notebookJourney,notebookReference,editorialQualityLabel,renderRevisionTracker,StudioVoice:Voice,chapterAudio:async(url,options)=>{audioCalls.push({url,options});return audioFetcher?audioFetcher(url,options):new Blob(['fake local audio']);},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}};
+ const context=vm.createContext(sandbox);vm.runInContext(source+'\nthis.testStudio={state,refresh,sendRequest,pause,selectSection,voice,read,resetWorkspace,renderNotebook,bookAction,saveChapter,setBookOpen,renderBookDrafts,openSavedChapter,playPart,pauseReading,resumeReading,narrationBuffer,checkAccess,requireUnlock,saveBookmark,api,resumeTask};',context);const api=context.testStudio;api.state.id='book';await api.refresh({initial:true});
  return {api,elements,calls,audioCalls,book,dispatched,listeners,windowListeners,accepted:()=>accepted,bookSaves:()=>bookSaves};
 }
 test('a successful revision automatically reads the new saved version, not the old prose',async()=>{
@@ -99,9 +101,9 @@ test('rapid repeated Read actions start only one request while preparing and sta
  release();await first;assert.equal(h.elements.get('studio-audio').played,1);assert.equal(h.elements.get('studio-read').disabled,true);
  await h.api.read();assert.equal(h.audioCalls.length,1);
 });
-test('Pause unlocks Read and an old pending response cannot start playback after a new attempt',async()=>{
+test('Stop unlocks Read and an old pending response cannot start playback after a new attempt',async()=>{
  let release;const gate=new Promise(r=>release=r);let count=0;const h=await harness({audioFetcher:async()=>{if(++count===1)await gate;return new Blob(['fake audio']);}});
- const first=h.api.read();h.elements.get('studio-pause').events.click[0]();assert.equal(h.elements.get('studio-read').disabled,false);assert.equal(h.audioCalls[0].options.signal.aborted,true);
+ const first=h.api.read();h.elements.get('studio-stop').events.click[0]();assert.equal(h.elements.get('studio-read').disabled,false);assert.equal(h.audioCalls[0].options.signal.aborted,true);
  await h.api.read();assert.equal(h.audioCalls.length,2);assert.equal(h.elements.get('studio-read').disabled,true);
  release();await first;assert.equal(h.elements.get('studio-audio').played,1);
 });
@@ -195,3 +197,39 @@ test('a late 401 from before reauthentication cannot relock the restored session
 test('read-only recovery of a finished task does not reload unsent legacy forms or restart narration',async()=>{const h=await harness();h.elements.get('studio-note').value='Unsent local note';await h.api.resumeTask('task1');assert.equal(h.elements.get('studio-note').value,'Unsent local note');assert.equal(h.audioCalls.length,0);assert.equal(h.dispatched.filter(e=>e.type==='story-studio-saved').length,0);assert.match(h.api.state.data.chapters[0].passages[0].text,/critically refined/);});
 
 test('navigation bookmark failures are visible through the same guarded sync path',async()=>{const h=await harness({httpHook:async path=>path.endsWith('/bookmark')?Response.json({error:'Synthetic offline'},{status:503}):null});h.api.selectSection('b');await new Promise(r=>setImmediate(r));assert.equal(h.api.state.sectionId,'b');assert.equal(h.elements.get('studio-bookmark-warning').hidden,false);assert.equal(h.api.state.resume.sectionId,'b');assert.equal(h.api.state.resume.part,0);assert.equal(h.audioCalls.length,0);});
+
+const tick=()=>new Promise(r=>setImmediate(r));
+const audioEvent=(h,name)=>{for(const fn of h.elements.get('studio-audio').events[name]||[])fn();};
+test('true Pause and rapid Resume reuse current audio and exact position without another request',async()=>{
+ const h=await harness();await h.api.read();const audio=h.elements.get('studio-audio'),src=audio.src;audio.currentTime=7.25;h.api.pauseReading();assert.equal(h.api.state.readPhase,'paused');assert.equal(audio.src,src);assert.equal(audio.currentTime,7.25);assert.equal(h.audioCalls[0].options.signal.aborted,false);await Promise.all([h.api.read(),h.api.read(),h.api.read()]);assert.equal(h.audioCalls.length,1);assert.equal(audio.currentTime,7.25);assert.equal(audio.played,2);assert.equal(h.api.state.reading,true);
+});
+test('pausing during initial generation retains its completion without autoplay or duplicate requests',async()=>{
+ let release;const h=await harness({audioFetcher:()=>new Promise(r=>release=r)});const reading=h.api.read();h.api.pauseReading();release(new Blob(['one']));await reading;assert.equal(h.elements.get('studio-audio').played,undefined);assert.ok(h.elements.get('studio-audio').src);await h.api.read();assert.equal(h.audioCalls.length,1);assert.equal(h.elements.get('studio-audio').played,1);
+});
+test('at most one near-end lookahead, paused completion retained, next playback reuses it',async()=>{
+ let release;const h=await harness({audioFetcher:async(url,options)=>options.sectionId==='b'?await new Promise(r=>release=r):new Blob(['first'])});await h.api.read();const audio=h.elements.get('studio-audio');audio.duration=20;audio.currentTime=3;audioEvent(h,'timeupdate');assert.equal(h.audioCalls.length,1);audio.currentTime=13;audioEvent(h,'timeupdate');audioEvent(h,'timeupdate');assert.equal(h.audioCalls.length,2);h.api.pauseReading();release(new Blob(['next']));await tick();audioEvent(h,'timeupdate');assert.equal(h.audioCalls.length,2);assert.equal(audio.played,1);await h.api.read();audio.onended();await tick();assert.equal(h.audioCalls.length,2);assert.equal(h.api.state.sectionId,'b');assert.equal(audio.played,3);
+});
+test('ending while lookahead pending then pausing does not autoplay its late completion',async()=>{
+ let release;const h=await harness({audioFetcher:async(url,options)=>options.sectionId==='b'?await new Promise(r=>release=r):new Blob(['first'])});await h.api.read();const audio=h.elements.get('studio-audio');audio.currentTime=13;audioEvent(h,'timeupdate');audio.onended();await tick();h.api.pauseReading();release(new Blob(['next']));await tick();assert.equal(audio.played,1);assert.equal(h.audioCalls.length,2);await h.api.read();assert.equal(audio.played,2);assert.equal(h.audioCalls.length,2);
+});
+test('Stop and selection discard lookahead and late responses, never schedule more audio',async()=>{
+ for(const action of ['stop','selection']){let release;const h=await harness({audioFetcher:async(url,options)=>options.sectionId==='b'?await new Promise(r=>release=r):new Blob(['first'])});await h.api.read();const audio=h.elements.get('studio-audio');audio.currentTime=13;audioEvent(h,'timeupdate');if(action==='stop')h.elements.get('studio-stop').events.click[0]();else h.api.selectSection('b');assert.equal(h.audioCalls[1].options.signal.aborted,true);release(new Blob(['late']));await tick();assert.equal(audio.played,1);audioEvent(h,'timeupdate');assert.equal(h.audioCalls.length,2);assert.equal(h.api.narrationBuffer.next,null);}
+});
+test('style change invalidates prepared audio and old timing, then explicitly reads with new directions',async()=>{
+ const h=await harness();await h.api.read();h.elements.get('studio-audio').currentTime=8;h.api.pauseReading();h.elements.get('studio-narration-voice').value='cedar';h.elements.get('studio-narration-direction').value='Hushed and suspenseful.';h.elements.get('studio-narration-direction').events.input[0]();assert.equal(h.api.state.resume,null);assert.equal(h.elements.get('studio-narration-preset').value,'custom');await h.api.read();assert.equal(h.audioCalls.length,2);assert.equal(h.audioCalls[1].options.narration.voice,'cedar');assert.equal(h.audioCalls[1].options.narration.direction,'Hushed and suspenseful.');assert.equal(h.api.state.loadedAudio.seconds,0);
+});
+test('lookahead auth failure stops scheduling and unlock flow never resubmits speech',async()=>{
+ const h=await harness({audioFetcher:async(url,options)=>{if(options.sectionId==='b')throw Object.assign(Error('Unlock again'),{code:'AUTH_REQUIRED'});return new Blob(['first']);}});await h.api.read();h.elements.get('studio-audio').currentTime=13;audioEvent(h,'timeupdate');await tick();assert.equal(h.api.state.authRequired,true);assert.equal(h.api.state.reading,false);await h.api.checkAccess();assert.equal(h.audioCalls.length,2);assert.equal(h.api.state.authRequired,false);
+});
+test('native audio Pause and Play participate in Resume without duplicate API calls',async()=>{
+ const h=await harness();await h.api.read();audioEvent(h,'pause');assert.equal(h.api.state.readPhase,'paused');audioEvent(h,'play');assert.equal(h.api.state.reading,true);assert.equal(h.api.state.readPhase,'playing');assert.equal(h.audioCalls.length,1);
+});
+
+test('a bookmark from a different voice or old part format reopens its passage without reusing incompatible audio seconds',async()=>{
+ for(const audioIdentity of ['',narrationSignature({voice:'cedar'})]){const h=await harness({bookmark:{sectionId:'b',revision:'r2',part:0,seconds:12,audioIdentity}});assert.equal(h.api.state.sectionId,'b');assert.equal(h.api.state.resume.seconds,0);assert.equal(h.api.state.resume.part,0);assert.equal(h.audioCalls.length,0);}
+});
+
+test('late Resume rejection cannot stop a new read after Stop, and blocked Resume retains generated audio',async()=>{
+ const h=await harness();await h.api.read();h.api.pauseReading();const audio=h.elements.get('studio-audio');let reject;audio.play=()=>new Promise((resolve,r)=>reject=r);const old=h.api.read();h.elements.get('studio-stop').events.click[0]();audio.play=async()=>{};await h.api.read();reject(Object.assign(Error('interrupted'),{name:'AbortError'}));await old;assert.equal(h.api.state.reading,true);assert.equal(h.audioCalls.length,2);
+ h.api.pauseReading();const src=audio.src;audio.play=async()=>{throw Object.assign(Error('gesture'),{name:'NotAllowedError'});};await h.api.read();assert.equal(h.api.state.readPhase,'ready');assert.equal(audio.src,src);assert.equal(h.audioCalls.length,2);
+});

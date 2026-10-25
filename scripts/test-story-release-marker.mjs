@@ -5,7 +5,7 @@ const marker='reviewed-passage-splits-v2';
 test('frontend marker exposes only release metadata while access gate and reauthentication stay intact',async()=>{
  let forwarded=false;
  const response=await onRequest({request:new Request('https://example.test/story-editor/'),env:{},next:()=>{forwarded=true;}});
- assert.equal(forwarded,false);assert.equal(response.status,200);assert.equal(response.headers.get('X-Story-Editor-Reader'),'chapter-reader-marin-async-v2');assert.equal(response.headers.get('X-Story-Editor-Chapters'),marker);assert.equal(response.headers.get('Cache-Control'),'no-store');assert.match(await response.text(),/Story Editor Access/);
+ assert.equal(response.headers.get('X-Story-Editor-Narration'),'realtime-paragraph-voice-v1');assert.equal(forwarded,false);assert.equal(response.status,200);assert.equal(response.headers.get('X-Story-Editor-Reader'),'chapter-reader-marin-async-v2');assert.equal(response.headers.get('X-Story-Editor-Chapters'),marker);assert.equal(response.headers.get('Cache-Control'),'no-store');assert.match(await response.text(),/Story Editor Access/);
  const reauth=await onRequest({request:new Request('https://example.test/story-editor/?reauth=1'),env:{},next:()=>{throw Error('Must remain gated');}});
  assert.equal(reauth.status,200);assert.match(reauth.headers.get('set-cookie'),/Max-Age=0/);assert.equal(reauth.headers.get('X-Story-Editor-Chapters'),marker);
 });
