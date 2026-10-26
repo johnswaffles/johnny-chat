@@ -57,3 +57,14 @@ test('short callbacks and genuinely different logistics remain valid',()=>{
 test('malformed values and whitespace-only messages fail safely',()=>{
  for(const value of [null, {}, [2,'hello'], [' ','Hello']]) assert.equal(textsmithMessagesFit(value,'split'),false);
 });
+
+test('two-message choice develops sparse notes without inventing facts or requiring padding',()=>{
+ const prompt=textsmithPrompt('split');
+ assert.match(prompt,/SPARSE-SOURCE EXPANSION/);
+ assert.match(prompt,/110-160 characters each/);
+ assert.match(prompt,/never a hard minimum/);
+ assert.match(prompt,/Respect requests for no questions or no reply/);
+ assert.match(prompt,/Never add a new promise, service, deadline, reason, price, or commitment/);
+ assert.doesNotMatch(prompt,/use a short natural follow-through|do not stretch a short source/);
+ assert.doesNotMatch(textsmithPrompt('single'),/SPARSE-SOURCE EXPANSION/);
+});

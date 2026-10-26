@@ -1685,7 +1685,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorAssistant: "Mara",
   storyEditorBible: "managed-source-bible-v2",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
-  textsmithVersion: "complementary-pair-v3",
+  textsmithVersion: "rich-sparse-pair-v4",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
 
