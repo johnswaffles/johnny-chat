@@ -3,7 +3,7 @@ import {LEVEL1} from './level1-config.js?release=20261001-stick-wheel';
 const selection=new SelectionRing();
 let pendingActions={},hitStop=0,hitStopGap=0,needsFrame=true;
 import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20261001-stick-wheel';
-import {Renderer,loadArt} from './render.js?release=20261026-celestial-treasures';
+import {Renderer,loadArt} from './render.js?release=20261026-luminous-world';
 import {Soundscape} from './audio.js?release=20261001-stick-wheel';
 import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20261001-stick-wheel';
 import {ControlsUI} from './controls-ui.js?release=20261001-stick-wheel';

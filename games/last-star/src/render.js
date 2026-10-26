@@ -1,11 +1,13 @@
-import {drawElementalProjectile} from './elemental-vfx.js?release=20261001-stick-wheel';
+import {MAGIC_ART} from './magic-art.js?release=20261026-luminous-world';
+import {astralEvent,drawAstralEffects,drawStarshard} from './astral-vfx.js?release=20261026-luminous-world';
+import {drawElementalProjectile} from './elemental-vfx.js?release=20261026-luminous-world';
 import {prepareFlora,drawGorgeFlora} from './gorge-flora.js?release=20261001-stick-wheel';
-import {GorgeScene,drawGorgeFallback} from './gorge-scene.js?release=20261001-stick-wheel';
+import {GorgeScene,drawGorgeFallback} from './gorge-scene.js?release=20261026-luminous-world';
 import {paintedAction,drawPaintedPose} from './action-poses.js?release=20261001-stick-wheel';
-import {drawReactiveLight,lightEvent,prepareWizardLighting,wizardLight,spellLights} from './reactive-light.js?release=20261001-stick-wheel';
+import {drawReactiveLight,lightEvent,prepareWizardLighting,wizardLight,spellLights} from './reactive-light.js?release=20261026-luminous-world';
 import {drawSilverwoodLayers,prepareSilverwoodLayers} from './silverwood-layers.js?release=20261001-stick-wheel';
 import {sceneMotion,renderResolution,drawSceneLife} from './scene-life.js?release=20261001-stick-wheel';
-import {drawLevel1,elementEvent} from './level1-fx.js?release=20261026-celestial-treasures';
+import {drawLevel1,elementEvent} from './level1-fx.js?release=20261026-luminous-world';
 import {drawEnemyPose} from './enemy-frames.js?release=20261001-stick-wheel';
 import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20261026-celestial-treasures';
 import {CELESTIAL_ART} from './celestial-art.js?release=20261026-celestial-treasures';
@@ -23,11 +25,13 @@ const WIZARD=[
 ];
 const PROPS={tree:[40,45,587,575],rock:[633,322,600,270],arch:[22,631,586,575],dragon:[628,629,610,581]};
 export async function loadArt(){
-  const paths={wizardActions:'arcanist-actions-v2.png',silverwoodLayers:'silverwood-layers-v1.png',valley:'last-star-valley-architecture-v3.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
-  if(new URLSearchParams(location.search).has('gorge'))Object.assign(paths,{gorgeClouds:'silverwood-clouds-v1.png',gorgeFlora:'silverwood-flora-v1.png',gorgeHorizon:'silverwood-horizon-v2.png',gorgeRidge:'silverwood-gorge-v2.png'});
+  const paths={wizardActions:'arcanist-actions-v2.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
+  if(!new URLSearchParams(location.search).has('legacy-scene'))Object.assign(paths,{gorgeClouds:'silverwood-clouds-v1.png',gorgeFlora:'silverwood-flora-v1.png',gorgeHorizon:'silverwood-horizon-v4.webp',gorgeRidge:'silverwood-gorge-v2.png'});
+  else Object.assign(paths,{silverwoodLayers:'silverwood-layers-v1.png',valley:'last-star-valley-architecture-v3.png'});
   for(const kind of ['ember','frost','chain','flask','chest','power','gem','gold'])paths['item_'+kind]='level1-items/'+kind+'.png';
   for(const [kind,asset] of Object.entries(CELESTIAL_ART))paths['pickup_'+kind]=asset.path;
-  const images={pickupBounds:Object.fromEntries(Object.entries(CELESTIAL_ART).map(([kind,asset])=>[kind,asset.bounds]))};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));if(images.gorgeFlora)images.floraSprites=prepareFlora(images.gorgeFlora);images.wizardLightCache=prepareWizardLighting(images);images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);images.waterSprites=await createWaterfallSprites(images.valley);return images;
+  for(const [key,asset] of Object.entries(MAGIC_ART))paths[key]=asset.path;
+  const images={magicBounds:Object.fromEntries(Object.entries(MAGIC_ART).map(([key,asset])=>[key,asset.bounds])),pickupBounds:Object.fromEntries(Object.entries(CELESTIAL_ART).map(([kind,asset])=>[kind,asset.bounds]))};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;try{await im.decode();images[key]=im;}catch(error){if(!MAGIC_ART[key])throw error;console.warn('Optional magic artwork unavailable; using drawn effect:',key);}}));if(images.gorgeFlora)images.floraSprites=prepareFlora(images.gorgeFlora);images.wizardLightCache=prepareWizardLighting(images);if(images.silverwoodLayers)images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);if(images.valley)images.waterSprites=await createWaterfallSprites(images.valley);return images;
 }
 export class Renderer {
   constructor(canvas,art){
@@ -38,12 +42,12 @@ export class Renderer {
     this.celestialSeal=makeCelestialSeal();this.shardImpacts=[];
     this.wizardAnimation=newWizardAnimation();
     this.waterSprites=art.waterSprites;
-    this.gorgeEnabled=new URLSearchParams(location.search).has('gorge');
+    this.gorgeEnabled=!new URLSearchParams(location.search).has('legacy-scene');
     if(this.gorgeEnabled){try{this.gorge=new GorgeScene(canvas,art);}catch(error){console.warn('GPU scenery unavailable; using existing scenery',error);}}
     this.resize();
   }
-  reset(){for(const key of ['particles','rings','arcs','echoes','arcadeWaves','shardImpacts','elementFX','lightPulses'])this[key]=[];this.shake=this.flash=this.time=0;this.wizardAnimation=newWizardAnimation();}
-  resize(){const dpr=renderResolution(window.innerWidth,window.innerHeight,window.devicePixelRatio);this.canvas.width=Math.round(window.innerWidth*dpr);this.canvas.height=Math.round(window.innerHeight*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';const bgRatio=this.quality==='low'?1:Math.min(dpr,1.5);this.backgroundCanvas.width=Math.round(window.innerWidth*bgRatio);this.backgroundCanvas.height=Math.round(window.innerHeight*bgRatio);Object.assign(this.backgroundCanvas.style,{left:this.canvas.offsetLeft+'px',top:this.canvas.offsetTop+'px',width:this.canvas.clientWidth+'px',height:this.canvas.clientHeight+'px'});this.backgroundContext.imageSmoothingEnabled=true;this.backgroundContext.imageSmoothingQuality='high';this.gorge?.resize(this.canvas,bgRatio);}
+  reset(){for(const key of ['particles','rings','arcs','echoes','arcadeWaves','shardImpacts','elementFX','lightPulses','astralFX'])this[key]=[];this.shake=this.flash=this.time=0;this.wizardAnimation=newWizardAnimation();}
+  resize(){const width=this.canvas.clientWidth||window.innerWidth,height=this.canvas.clientHeight||window.innerHeight;const dpr=renderResolution(width,height,window.devicePixelRatio);this.canvas.width=Math.round(width*dpr);this.canvas.height=Math.round(height*dpr);this.scale=this.canvas.height/720;this.w=this.canvas.width/this.scale;this.h=720;this.ctx.imageSmoothingEnabled=true;this.ctx.imageSmoothingQuality='high';const bgRatio=this.quality==='low'?1:Math.min(dpr,1.5);this.backgroundCanvas.width=Math.round(width*bgRatio);this.backgroundCanvas.height=Math.round(height*bgRatio);Object.assign(this.backgroundCanvas.style,{left:this.canvas.offsetLeft+'px',top:this.canvas.offsetTop+'px',width:this.canvas.clientWidth+'px',height:this.canvas.clientHeight+'px'});this.backgroundContext.imageSmoothingEnabled=true;this.backgroundContext.imageSmoothingQuality='high';this.gorge?.resize(this.canvas,bgRatio);}
   backdrop(game){
     const active=this.gorgeEnabled&&this.previewLayers!==false&&this.gorge?.ready;
     if(this.gorge)this.gorge.canvas.hidden=!active;
@@ -60,14 +64,14 @@ export class Renderer {
   }
   event(e){
     for(const [key,limit] of [['rings',48],['arcs',48],['echoes',12],['arcadeWaves',16]])if(this[key]?.length>=limit)this[key].splice(0,this[key].length-limit+1);
-    arcadeEvent(this,e);elementEvent(this,e);lightEvent(this,e);
+    arcadeEvent(this,e);elementEvent(this,e);lightEvent(this,e);astralEvent(this,e);
     if(e.type==='special-cast'){const color=e.kind==='ember'?'gold':e.kind==='chain'?'violet':'blue';this.burst(e.x,e.y,color,12,85);this.rings.push({x:e.x,y:e.y,r:6,life:.2,color});}
-    if(e.type==='cast'){this.burst(e.x,e.y,'blue',12,95);this.rings.push({x:e.x,y:e.y,r:5,life:.22,color:'blue'});}
+    if(e.type==='cast')this.burst(e.x,e.y,'blue',6,65);
     if(e.type==='hit'&&e.element!=='fire'){this.shardImpacts.push({x:e.x,y:e.y,life:.32});if(this.shardImpacts.length>20)this.shardImpacts.shift();this.burst(e.x,e.y,'blue',20,140);this.rings.push({x:e.x,y:e.y,r:6,life:.32,color:'blue'});}
     if(e.type==='jump'){this.burst(e.x,e.y,'teal',e.second?22:9,60);if(e.second)this.rings.push({x:e.x,y:e.y,r:10,life:.5,color:'teal'});}
     if(e.type==='blink'){
-      for(const pos of [e.from,e.to]){this.burst(pos.x,pos.y-55,'violet',40,150);this.rings.push({x:pos.x,y:pos.y-55,r:20,life:.65,color:'violet',portal:true});}
-      this.echoes.push({x:e.from.x,y:e.from.y,life:.7});this.arcs.push({from:{x:e.from.x,y:e.from.y-55},to:{x:e.to.x,y:e.to.y-55},life:.28,soft:true});
+      for(const pos of [e.from,e.to])this.burst(pos.x,pos.y-55,'violet',16,90);
+      this.echoes.push({x:e.from.x,y:e.from.y,face:Math.sign(e.to.x-e.from.x)||1,life:.5});
     }
     if(e.type==='arc')this.arcs.push({...e,life:.23});
     if(e.type==='meteor-hit'){this.burst(e.x,e.y-20,'blue',70,270);this.rings.push({x:e.x,y:e.y,r:20,life:.75,color:'blue',ground:true});this.shake=.18;this.flash=.06;}
@@ -233,14 +237,7 @@ export class Renderer {
       if(!boss&&e.hp<e.maxHp){c.fillStyle='#1a1431';c.fillRect(x-24,e.y-h-15,48,3);c.fillStyle='#c994d4';c.fillRect(x-24,e.y-h-15,48*e.hp/e.maxHp,3);}
     }
   }
-  starshard(x,y,vx,vy){
-    const c=this.ctx,frame=Math.floor(this.time*(this.gentle?8:16))%8;
-    // Painted plasma animation, anchored on the bright forward striking surface.
-    c.save();c.translate(x,y);c.rotate(Math.atan2(vy,vx));
-    c.globalCompositeOperation='screen';
-    c.drawImage(this.art.starshard,(frame%4)*384,Math.floor(frame/4)*512,384,512,-49,-42,58,77.333);
-    c.restore();
-  }
+  starshard(x,y,vx,vy){drawStarshard(this,x,y,vx,vy);}
   spells(game){
     const c=this.ctx,t=this.time;
     for(const b of game.projectiles){
@@ -278,13 +275,13 @@ export class Renderer {
     }this.shardImpacts=this.shardImpacts.filter(hit=>hit.life>0);
     for(const p of this.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=dt*80;p.vx*=1-dt*.6;const x=p.x-this.camera;c.globalAlpha=clamp(p.life/.5,0,1);c.fillStyle=p.color==='gold'?'#f5dfaa':p.color==='violet'?'#d6b6ff':p.color==='teal'?'#b7f2d8':'#c2efff';c.fillRect(x,p.y,p.r,p.r);}
     c.globalAlpha=1;this.particles=this.particles.filter(p=>p.life>0);
-    for(const ring of this.rings){ring.life-=dt;ring.r+=dt*150;const x=ring.x-this.camera;this.glow(x,ring.y,ring.r*2,ring.color,Math.min(1,ring.life)*.6);c.save();c.globalAlpha=Math.min(1,ring.life*2);c.strokeStyle=ring.color==='gold'?'#efd9a6':ring.color==='violet'?'#cbb4ff':'#c0efff';c.lineWidth=1.5;c.beginPath();c.ellipse(x,ring.y,ring.portal?ring.r*.4:ring.r,ring.ground?ring.r*.14:ring.r,0,0,TAU);c.stroke();c.restore();}
+    for(const ring of this.rings){ring.life=Math.max(0,ring.life-dt);if(!ring.life)continue;ring.r+=dt*150;const x=ring.x-this.camera;this.glow(x,ring.y,ring.r*2,ring.color,Math.min(1,ring.life)*.6);c.save();c.globalAlpha=Math.min(1,ring.life*2);c.strokeStyle=ring.color==='gold'?'#efd9a6':ring.color==='violet'?'#cbb4ff':'#c0efff';c.lineWidth=1.5;c.beginPath();c.ellipse(x,ring.y,ring.portal?ring.r*.4:ring.r,ring.ground?ring.r*.14:ring.r,0,0,TAU);c.stroke();c.restore();}
     this.rings=this.rings.filter(r=>r.life>0);
-    for(const arc of this.arcs){arc.life-=dt;const ax=arc.from.x-this.camera,bx=arc.to.x-this.camera;c.save();c.globalAlpha=Math.min(1,arc.life*5);c.strokeStyle='#c8ecff';c.lineWidth=arc.lightning?3:1.5;c.shadowColor='#5fbbff';c.shadowBlur=15;c.beginPath();c.moveTo(ax,arc.from.y);
-      for(let k=1;k<=10;k++){const q=k/10;c.lineTo(ax+(bx-ax)*q+(k<10?Math.sin(k*3+this.time*50)*(arc.soft?3:12):0),arc.from.y+(arc.to.y-arc.from.y)*q);}
+    for(const arc of this.arcs){arc.life=Math.max(0,arc.life-dt);if(!arc.life)continue;const ax=arc.from.x-this.camera,bx=arc.to.x-this.camera;c.save();c.globalAlpha=Math.min(this.reducedFlash?.65:1,arc.life*5);c.strokeStyle='#c8ecff';c.lineWidth=arc.lightning?3:1.5;c.shadowColor='#5fbbff';c.shadowBlur=this.quality==='low'?0:12;c.beginPath();c.moveTo(ax,arc.from.y);
+      for(let k=1;k<=10;k++){const q=k/10;c.lineTo(ax+(bx-ax)*q+(k<10?Math.sin(k*3+(this.gentle||this.reducedFlash?0:this.time*35))*(arc.soft?3:12):0),arc.from.y+(arc.to.y-arc.from.y)*q);}
       c.stroke();c.restore();
     }this.arcs=this.arcs.filter(a=>a.life>0);
-    for(const e of this.echoes){e.life-=dt;this.wizard({...e,vx:0,face:1,onGround:true,cast:0,mantle:0},e.life*.5,6);}this.echoes=this.echoes.filter(e=>e.life>0);
+    for(const e of this.echoes){e.life=Math.max(0,e.life-dt);if(!e.life)continue;this.wizard({...e,vx:0,face:e.face||1,onGround:true,cast:0,mantle:0},e.life*.5,6);}this.echoes=this.echoes.filter(e=>e.life>0);
   }
   foreground(){
     const c=this.ctx,t=this.time;
@@ -298,7 +295,7 @@ export class Renderer {
     const g=c.createLinearGradient(0,600,0,720);g.addColorStop(0,'#020e1700');g.addColorStop(1,'#020e1788');c.fillStyle=g;c.fillRect(0,600,this.w,120);
   }
   draw(game,dt=1/60){
-    this.worldLights=spellLights(game);this.time+=this.gentle?dt*.65:dt;const c=this.ctx,p=game.player;
+    this.worldLights=spellLights(game,this);this.time+=this.gentle?dt*.65:dt;const c=this.ctx,p=game.player;
     const desired=clamp(p.x-this.w*.37,0,WIDTH-this.w);
     if(this.title)this.camera=0;else this.camera+=(desired-this.camera)*(1-Math.exp(-dt*6));
     c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,this.canvas.width,this.canvas.height);c.setTransform(this.scale,0,0,this.scale,0,0);c.save();
@@ -314,7 +311,7 @@ export class Renderer {
       for(let i=0;i<3;i++){const a=i*TAU/3+(this.gentle?0:this.time*.9);const sx=x+Math.cos(a)*34,sy=y+Math.sin(a)*45;this.star(sx,sy,4,'#e7d5ff');}
       c.restore();
     }
-    this.spells(game);drawArcade(this,game,dt);drawLevel1(this,game,dt);this.particlesDraw(dt);
+    this.spells(game);drawArcade(this,game,dt);drawLevel1(this,game,dt);this.particlesDraw(dt);drawAstralEffects(this,dt);
     for(const n of game.numbers){c.globalAlpha=Math.min(1,n.life*3);c.fillStyle=n.color;c.textAlign='center';c.font='bold 17px Georgia';c.shadowColor='#061522';c.shadowBlur=5;c.fillText(n.text,n.x-this.camera,n.y);c.shadowBlur=0;}c.globalAlpha=1;
     this.foreground();this.flash=Math.max(0,this.flash-dt);if(!this.gentle&&!this.reducedFlash&&this.flash>0){c.fillStyle=`rgba(168,225,250,${this.flash*.35})`;c.fillRect(0,0,this.w,720);}
     c.restore();

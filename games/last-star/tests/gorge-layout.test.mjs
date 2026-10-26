@@ -23,3 +23,19 @@ test('former transition has continuous parallax rather than a hard handoff',()=>
  }
  for(const p of PLATFORMS.filter(p=>p.x>=2600))assert.ok(floraForPlatform(p).length>0);
 });
+
+test('registered water rectangle stays attached to ridge at every camera and aspect',async()=>{
+ const {gorgeWaterRect,GORGE_WATER}=await import('../src/gorge-scene.js');
+ assert.deepEqual(GORGE_WATER,{u:.416,v:.585,w:.146,h:.47});
+ for(const width of [960,1280,1800,2560])for(const camera of [0,1800,2500,6500,7900]){
+  const ridge=gorgeLayout(width,camera).ridge,[x,y,w,h]=gorgeWaterRect(ridge);
+  assert.equal(x,ridge[0]+ridge[2]*.416);assert.equal(y,ridge[1]+ridge[3]*.585);
+  assert.equal(w,ridge[2]*.146);assert.equal(h,ridge[3]*.47);
+ }
+});
+test('atmospheric grading leaves solid layers opaque and the observatory spire inside frame',async()=>{
+ const {gorgeAppearance}=await import('../src/gorge-scene.js');
+ for(const kind of ['horizon','ridge']){const style=gorgeAppearance(kind);assert.equal(style.opacity,1);assert.ok(style.exposure>0&&style.exposure<1);assert.ok(style.saturation>0&&style.saturation<=1);}
+ assert.ok(gorgeAppearance('clouds').opacity<1);
+ for(const width of [960,1280,1800,2560])assert.ok(gorgeLayout(width,0).horizon[1]+gorgeLayout(width,0).horizon[3]*.20>0);
+});

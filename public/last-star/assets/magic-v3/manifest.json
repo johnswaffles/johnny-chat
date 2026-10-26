@@ -1,0 +1,95 @@
+{
+  "version": "20261026-luminous-magic-v3",
+  "generator": "built-in image_gen",
+  "delivery": "512px maximum edge WebP, quality90; alpha preserved during proportional resampling.",
+  "boundsConvention": "[x,y,width,height], alpha >=16 bounds expanded by four source pixels",
+  "assets": {
+    "magicEmber": {
+      "path": "magic-v3/ember-impact-v3.webp",
+      "width": 512,
+      "height": 512,
+      "bounds": [
+        23,
+        19,
+        473,
+        477
+      ],
+      "bytes": 128102,
+      "sha256": "ddd8ad213acc5e57d9cdcc808096bd0e6ec5943476c2bb6b7c7d64c138b48ece",
+      "sourcePath": "output/last-star-luminous-20261026/source-art/ember-impact-v3.png",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceSha256": "193ca405c127b9b2162bbade60b00dd7f898f21742e64ce8497f2ea12c8883c3",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerAlphaMean": 252.11,
+      "role": "Near-round molten core and clockwise flame crescents; no directional tail."
+    },
+    "magicFrost": {
+      "path": "magic-v3/frost-impact-v3.webp",
+      "width": 512,
+      "height": 512,
+      "bounds": [
+        3,
+        15,
+        506,
+        483
+      ],
+      "bytes": 133186,
+      "sha256": "31370459d1d929b9f1a7c4d2b621c59af06a102bc5bbe31f48fe258656467d80",
+      "sourcePath": "output/last-star-luminous-20261026/source-art/frost-impact-v3.png",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceSha256": "9220f92ebd9f51968e6586c3dec2690d1b030c58a6950c0a844c761d4b55fed7",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerAlphaMean": 0.29,
+      "role": "Radial ice-fracture crown with open center and cyan edge glow."
+    },
+    "magicAstral": {
+      "path": "magic-v3/astral-corona-v3.webp",
+      "width": 512,
+      "height": 512,
+      "bounds": [
+        28,
+        13,
+        467,
+        479
+      ],
+      "bytes": 116568,
+      "sha256": "801fbf3f83585085949893d37eb1131cc86fd0c12c606cc6c05631c9b2d2e9f1",
+      "sourcePath": "output/last-star-luminous-20261026/source-art/astral-corona-v3.png",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceSha256": "5af683457beca0425e8b9237c1fbacfa6f28ff6a48eba821ebb4095ac1c71434",
+      "alphaExtrema": [
+        0,
+        255
+      ],
+      "cornerAlpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "centerAlphaMean": 0.0,
+      "role": "Irregular open astral portal corona, violet and blue with gold-white threads."
+    }
+  }
+}

@@ -4,15 +4,58 @@ export function gorgeLayout(width,camera){
   // Ease travel inside each painting's overscan instead of exposing its edge.
   const pan=(budget,speed)=>budget>0?budget*-Math.expm1(-Math.max(0,camera)*speed/budget):0;
   const hw=Math.max(1850,width+500),rw=Math.max(2100,width+500);
-  return {horizon:[-380-pan(hw-width-380,.12),-130,hw,hw/3],
+  return {horizon:[-420-pan(hw-width-420,.12),-65,hw,hw/3],
     ridge:[-150-pan(rw-width-150,.42),720-rw/3,rw,rw/3]};
 }
+// Water stays registered to the approved ridge; these coordinates are shared by both backends.
+export const GORGE_WATER={u:.416,v:.585,w:.146,h:.47};
+export function gorgeWaterRect(ridge){const [x,y,w,h]=ridge;return [x+w*GORGE_WATER.u,y+h*GORGE_WATER.v,w*GORGE_WATER.w,h*GORGE_WATER.h];}
+export function gorgeAppearance(kind){
+ return kind==='ridge'?{atmosphere:.20,exposure:.79,saturation:.76,opacity:1}:
+  kind==='horizon'?{atmosphere:.26,exposure:.82,saturation:.72,opacity:1}:
+  {atmosphere:.08,exposure:.68,saturation:.65,opacity:.58};
+}
+const prepared=new WeakMap();
+function fallbackLayers(art){
+ if(prepared.has(art))return prepared.get(art);
+ const layers={};
+ for(const [kind,key] of [['clouds','gorgeClouds'],['horizon','gorgeHorizon'],['ridge','gorgeRidge']]){
+  const image=art[key],a=gorgeAppearance(kind),canvas=document.createElement('canvas');
+  canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;const c=canvas.getContext('2d');
+  // Static color grading is cached once. Solid terrain alpha is never faded.
+  c.filter=`saturate(${a.saturation}) brightness(${a.exposure})`;c.drawImage(image,0,0);c.filter='none';
+  c.globalCompositeOperation='source-atop';c.fillStyle=`rgba(20,38,54,${a.atmosphere})`;c.fillRect(0,0,canvas.width,canvas.height);
+  layers[kind]=canvas;
+ }
+ prepared.set(art,layers);return layers;
+}
+function fallbackMist(c,x,y,w,h,time,alpha){
+ const drift=Math.sin(time*.07)*18;
+ // Elliptic gradient without a full-screen filter or any image readback.
+ c.save();c.translate(x+w*.5+drift,y+h*.5);c.scale(w*.5,h*.5);
+ const vapor=c.createRadialGradient(0,0,0,0,0,1);vapor.addColorStop(0,`rgba(102,154,174,${alpha})`);vapor.addColorStop(.7,`rgba(66,112,139,${alpha*.35})`);vapor.addColorStop(1,'rgba(66,112,139,0)');c.fillStyle=vapor;c.fillRect(-1,-1,2,2);c.restore();
+}
+function fallbackWater(r,rect){
+ const c=r.ctx,[x,y,w,h]=rect,t=r.time,n=r.quality==='low'?14:24;
+ c.save();c.beginPath();c.rect(x,y,w,h);c.clip();
+ for(let i=0;i<n;i++){
+  const u=(i+.5)/n,phase=i*2.399,drift=Math.sin(t*.8+phase)*w*.006;
+  const line=c.createLinearGradient(0,y,0,y+h);line.addColorStop(0,'rgba(157,218,230,.22)');line.addColorStop(.70,'rgba(116,185,207,.12)');line.addColorStop(1,'rgba(116,185,207,0)');
+  c.strokeStyle=line;c.lineWidth=w/n*(.26+.18*Math.sin(phase)**2);c.beginPath();c.moveTo(x+w*(.1+u*.8)+drift,y);c.bezierCurveTo(x+w*(.1+u*.8)+drift,y+h*.3,x+w*(.08+u*.84)-drift,y+h*.6,x+w*(.06+u*.88),y+h);c.stroke();
+  const fall=((t*(.31+i*.013)+i*.173)%1+1)%1;c.strokeStyle=`rgba(187,232,239,${.10*(1-fall)})`;c.lineWidth=1;c.beginPath();c.moveTo(x+w*(.1+u*.8),y+fall*h);c.lineTo(x+w*(.1+u*.8),y+Math.min(1,fall+.10)*h);c.stroke();
+ }
+ c.restore();
+}
 export function drawGorgeFallback(r){
- const c=r.ctx,{horizon,ridge}=gorgeLayout(r.w,r.camera);
+ const c=r.ctx,{horizon,ridge}=gorgeLayout(r.w,r.camera),layers=fallbackLayers(r.art);
  const sky=c.createLinearGradient(0,0,0,720);sky.addColorStop(0,'#061020');sky.addColorStop(1,'#294a5e');c.fillStyle=sky;c.fillRect(0,0,r.w,720);
+ const mx=r.w*.64-r.camera*.025,my=145;c.save();const moon=c.createRadialGradient(mx,my,8,mx,my,95);moon.addColorStop(0,'#b6dfe445');moon.addColorStop(1,'#b6dfe400');c.fillStyle=moon;c.fillRect(mx-95,my-95,190,190);c.fillStyle='#92bdcb';c.beginPath();c.arc(mx,my,25,0,Math.PI*2);c.fill();c.restore();
  const cloudX=((r.time*6-r.camera*.06)%2100+2100)%2100-600;
- for(const x of [cloudX-2100,cloudX,cloudX+2100])if(x<r.w&&x+1800>0)c.drawImage(r.art.gorgeClouds,x,-125,1800,470);
- c.drawImage(r.art.gorgeHorizon,...horizon);c.drawImage(r.art.gorgeRidge,...ridge);
+ c.save();c.globalAlpha=gorgeAppearance('clouds').opacity;for(const x of [cloudX-2100,cloudX,cloudX+2100])if(x<r.w&&x+1800>0)c.drawImage(layers.clouds,x,-125,1800,470);c.restore();
+ c.drawImage(layers.horizon,...horizon);
+ fallbackMist(c,-100,260,r.w+200,230,r.time,.16);
+ c.drawImage(layers.ridge,...ridge);fallbackWater(r,gorgeWaterRect(ridge));
+ const [x,y,w,h]=ridge;fallbackMist(c,x+w*.375,y+h*.91,w*.25,115,r.time,.15);
 }
 const vertex=`
 attribute vec2 a; uniform vec2 viewport; uniform vec4 rect;
@@ -40,27 +83,30 @@ void main(){vec2 p=vec2(uv.x*viewport.x,uv.y*720.);
  vec3 cloud=mix(vec3(.085,.16,.23),vec3(.34,.46,.53),clamp(n+rim,0.,1.));
  col=mix(col,cloud,mass*.25);gl_FragColor=vec4(col,1.);}`;
 const terrain=common+`
-uniform sampler2D art; uniform float atmosphere, shade, wind;
+uniform sampler2D art; uniform float atmosphere, shade, wind, exposure, saturation, opacity;
 void main(){vec2 sampleUV=uv;
 float crown=(1.-smoothstep(.34,.49,uv.y))*(1.-smoothstep(.30,.36,uv.x));
-sampleUV.x+=wind*crown*sin(time*.7+uv.y*15.)*.0015;
+sampleUV.x+=wind*crown*sin(time*.7+uv.y*15.)*.0011;
 vec4 tex=texture2D(art,sampleUV);if(tex.a<.01)discard;
- vec3 color=mix(tex.rgb,vec3(.16,.26,.33),atmosphere);
- float cloudShadow=.90+.10*noise(vec2(uv.x*7.-time*.026,uv.y*2.));
- color*=mix(1.,cloudShadow,shade);gl_FragColor=vec4(color,tex.a);}`;
+ vec3 base=mix(vec3(dot(tex.rgb,vec3(.2126,.7152,.0722))),tex.rgb,saturation)*exposure;
+ vec3 color=mix(base,vec3(.078,.149,.212),atmosphere);
+ float cloudShadow=.94+.06*noise(vec2(uv.x*7.-time*.026,uv.y*2.));
+ color*=mix(1.,cloudShadow,shade);gl_FragColor=vec4(color,tex.a*opacity);}`;
 const water=common+`
 void main(){float y=uv.y;float edge=abs(uv.x-.5);
  float width=.40+.09*y;float boundary=1.-smoothstep(width-.05,width,edge+sin(y*23.-time*2.)*.009);
  float strands=fbm(vec2(uv.x*39.+sin(y*8.-time)*.25,y*3.-time*2.5));
  float wisps=pow(noise(vec2(uv.x*85.,y*8.-time*4.)),3.);
  float foam=pow(max(0.,sin(uv.x*100.+time*2.)),6.)*(1.-smoothstep(0.,.09,y));
- vec3 col=mix(vec3(.13,.38,.47),vec3(.74,.93,.96),strands*.85+wisps*.6+foam);
- float alpha=boundary*(.60+strands*.30)*(1.-smoothstep(.83,1.,y));
+ float ribbons=smoothstep(.44,.78,strands);
+ vec3 col=mix(vec3(.13,.31,.39),vec3(.66,.84,.89),ribbons*.72+wisps*.25+foam*.25);
+ float alpha=boundary*(.08+ribbons*.29+wisps*.12+foam*.14)*(1.-smoothstep(.80,1.,y));
  gl_FragColor=vec4(col,alpha);}`;
 const spray=common+`
+uniform float opacity;
 void main(){vec2 p=(uv-.5)*vec2(2.,3.);float shape=max(0.,1.-dot(p,p));
  float n=fbm(vec2(uv.x*5.-time*.13,uv.y*3.+time*.15));
- gl_FragColor=vec4(.50,.74,.79,shape*shape*n*.35);}`;
+ gl_FragColor=vec4(.50,.74,.79,shape*shape*n*opacity);}`;
 
 export class GorgeScene{
  constructor(front,art){
@@ -78,27 +124,27 @@ export class GorgeScene{
    const compile=(type,text)=>{const s=gl.createShader(type);gl.shaderSource(s,text);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;};
    const v=compile(gl.VERTEX_SHADER,vertex),f=compile(gl.FRAGMENT_SHADER,source),p=gl.createProgram();gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);gl.deleteShader(v);gl.deleteShader(f);
    if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p));
-   this.programs[name]={p,a:gl.getAttribLocation(p,'a'),u:Object.fromEntries(['viewport','rect','time','wind','camera','art','atmosphere','shade'].map(n=>[n,gl.getUniformLocation(p,n)]))};
+   this.programs[name]={p,a:gl.getAttribLocation(p,'a'),u:Object.fromEntries(['viewport','rect','time','wind','camera','art','atmosphere','shade','exposure','saturation','opacity'].map(n=>[n,gl.getUniformLocation(p,n)]))};
   }
   this.buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,0,1,1,0,1,1]),gl.STATIC_DRAW);
   this.textures={};for(const key of ['gorgeHorizon','gorgeRidge','gorgeClouds']){const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,this.art[key]);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);this.textures[key]=tx;}
   gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);this.ready=true;
  }
  resize(front,ratio){this.canvas.width=Math.round(front.clientWidth*ratio);this.canvas.height=Math.round(front.clientHeight*ratio);Object.assign(this.canvas.style,{left:front.offsetLeft+'px',top:front.offsetTop+'px',width:front.clientWidth+'px',height:front.clientHeight+'px'});}
- pass(name,rect,r,options={}){const gl=this.gl,{p,a,u}=this.programs[name];gl.useProgram(p);gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);gl.uniform2f(u.viewport,r.w,720);gl.uniform4fv(u.rect,rect);gl.uniform1f(u.time,r.time);gl.uniform1f(u.wind,options.wind||0);gl.uniform1f(u.camera,r.camera);gl.uniform1f(u.atmosphere,options.atmosphere||0);gl.uniform1f(u.shade,options.shade||0);
+ pass(name,rect,r,options={}){const gl=this.gl,{p,a,u}=this.programs[name];gl.useProgram(p);gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);gl.uniform2f(u.viewport,r.w,720);gl.uniform4fv(u.rect,rect);gl.uniform1f(u.time,r.time);gl.uniform1f(u.wind,options.wind||0);gl.uniform1f(u.camera,r.camera);gl.uniform1f(u.atmosphere,options.atmosphere||0);gl.uniform1f(u.shade,options.shade||0);gl.uniform1f(u.exposure,options.exposure??1);gl.uniform1f(u.saturation,options.saturation??1);gl.uniform1f(u.opacity,options.opacity??1);
   if(options.texture){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.textures[options.texture]);gl.uniform1i(u.art,0);}gl.drawArrays(gl.TRIANGLES,0,6);
  }
  draw(r){if(!this.ready)return false;const gl=this.gl;gl.viewport(0,0,this.canvas.width,this.canvas.height);
   const {horizon,ridge}=gorgeLayout(r.w,r.camera);
   this.pass('sky',[0,0,r.w,720],r);
   const cloudX=((r.time*6-r.camera*.06)%2100+2100)%2100-600;
-  for(const x of [cloudX-2100,cloudX,cloudX+2100])if(x<r.w&&x+1800>0)this.pass('terrain',[x,-125,1800,470],r,{texture:'gorgeClouds',atmosphere:.1});
-  this.pass('terrain',horizon,r,{texture:'gorgeHorizon',atmosphere:.15});
-  this.pass('spray',[-150-r.camera*.2,360,r.w+450,260],r);
-  this.pass('terrain',ridge,r,{texture:'gorgeRidge',shade:1,wind:r.gentle?.2:1});
+  for(const x of [cloudX-2100,cloudX,cloudX+2100])if(x<r.w&&x+1800>0)this.pass('terrain',[x,-125,1800,470],r,{texture:'gorgeClouds',...gorgeAppearance('clouds')});
+  this.pass('terrain',horizon,r,{texture:'gorgeHorizon',...gorgeAppearance('horizon')});
+  this.pass('spray',[-100,260,r.w+200,230],r,{opacity:.40});
+  this.pass('terrain',ridge,r,{texture:'gorgeRidge',...gorgeAppearance('ridge'),shade:1,wind:r.gentle?.2:1});
   // Registered to river lip in v2 artwork (u .423–.554, v .587).
-  const [x,y,w,h]=ridge;this.pass('water',[x+w*.416,y+h*.585,w*.146,h*.47],r);
-  this.pass('spray',[x+w*.375,y+h*.91,w*.25,115],r);
+  const [x,y,w,h]=ridge;this.pass('water',gorgeWaterRect(ridge),r);
+  this.pass('spray',[x+w*.375,y+h*.91,w*.25,115],r,{opacity:r.quality==='low'?.22:.30});
   return true;
  }
 }

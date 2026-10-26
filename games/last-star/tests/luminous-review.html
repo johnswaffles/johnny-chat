@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Last Star · Luminous World</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;color:#e4e8ee;background:#08111e}*{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;grid-template-rows:auto minmax(240px,1fr) auto;height:100svh}header{padding:18px 26px 13px;border-bottom:1px solid #a8cae029;display:flex;justify-content:space-between;align-items:center;gap:14px;background:linear-gradient(120deg,#111f31,#0d1225)}h1{font:500 27px Georgia,serif;margin:4px 0 7px;letter-spacing:.02em}.eyebrow{color:#d7bb82;font-size:10px;letter-spacing:.25em;text-transform:uppercase}p{margin:0;color:#99adbd;font-size:12px;line-height:1.5}a,button,select{font:inherit;color:#dfe9f0;border:1px solid #50667b80;background:#172738;border-radius:6px;text-decoration:none;cursor:pointer}a{padding:11px 16px;font-size:12px}button{padding:9px 12px;font-size:12px}button:hover,a:hover{border-color:#d6bb83}button[aria-pressed=true]{border-color:#d6bb83;background:#2b3240;box-shadow:inset 0 -2px #d6bb83}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #a8e9ff;outline-offset:3px}#stage{position:relative;overflow:hidden;min-height:0;background:#081725}#world{width:100%;height:100%;display:block}#scene-label{position:absolute;left:26px;bottom:22px;z-index:1;pointer-events:none;text-shadow:0 2px 8px #07101c}#scene-label strong{font:24px Georgia;display:block;margin-bottom:5px}#scene-label span{font-size:11px;color:#c4d7dd}footer{padding:13px 24px 15px;border-top:1px solid #a8cae029;background:#0d1725;display:grid;gap:11px}.spells{display:flex;gap:7px;flex-wrap:wrap}.spells button{display:flex;align-items:center;gap:7px;padding:5px 12px 5px 4px}.spells img{width:38px;height:38px;object-fit:contain}.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:11px;color:#a9bcc9}.controls label{display:flex;gap:6px;align-items:center}input[type=range]{accent-color:#ceb378;width:130px}input[type=checkbox]{accent-color:#8acddb}select{padding:6px}.divider{height:20px;width:1px;background:#abc4d02b}output{margin-left:auto;color:#9eb5c5;font-size:11px;max-width:340px}#hint{font-size:11px;color:#829bab} @media(min-width:701px) and (max-width:900px){.spells{gap:5px}.spells button{font-size:11px;padding-right:8px}.spells img{width:30px;height:32px}#hint{display:none}header p{display:none}footer{padding:10px 16px}header{padding:12px 20px}#scene-label strong{font-size:20px}} @media(max-width:700px){body{height:auto;min-height:100svh;grid-template-rows:auto 55svh auto}header{padding:14px 15px}header p{max-width:280px}header a{padding:10px}h1{font-size:23px}footer{padding:11px 12px}.spells{gap:5px}.spells button{font-size:10px;padding-right:8px}.spells img{width:28px;height:30px}output{margin-left:0}#scene-label{left:16px;bottom:16px}#scene-label strong{font-size:20px}}
+</style></head><body>
+<header><div><div class="eyebrow">Last Star · Local art preview</div><h1>The luminous world</h1><p>Moonlit Silverwood, sculpted magic, and light that touches the world.</p></div><a href="../">Play Last Star ↗</a></header>
+<main id="stage"><canvas id="world" aria-label="Animated magical effects in Silverwood"></canvas><div id="scene-label"><strong id="spell-title">Ember Orb</strong><span id="spell-description">A molten heart, curling flame, and a blossoming impact.</span></div></main>
+<footer><div class="spells" aria-label="Choose a magic demonstration">
+<button data-spell="bolt" aria-pressed="false"><img src="../assets/celestial-v2/starshard-v2.webp" alt="">Starshard</button>
+<button data-spell="blink" aria-pressed="false"><img src="../assets/celestial-v2/eventide-v2.webp" alt="">Eventide</button>
+<button data-spell="ember" aria-pressed="true"><img src="../assets/celestial-v2/ember-v2.webp" alt="">Ember Orb</button>
+<button data-spell="frost" aria-pressed="false"><img src="../assets/celestial-v2/frost-v2.webp" alt="">Frost Fan</button>
+<button data-spell="chain" aria-pressed="false"><img src="../assets/celestial-v2/chain-v2.webp" alt="">Chain Spark</button>
+<button data-spell="flask" aria-pressed="false"><img src="../assets/celestial-v2/flask-v2.webp" alt="">Restoration</button>
+</div><div class="controls"><button id="play">Pause</button><button id="replay">Replay</button><label>Moment <input id="scrub" aria-label="Scrub through spell animation" type="range" min="0" max="1.8" step=".01" value="0"></label><button id="face">Face left</button><span class="divider"></span><label><input id="gentle" type="checkbox">Gentle</label><label><input id="reduced" type="checkbox">Reduced flashes</label><label>Scenery <select id="quality"><option value="high">Rich</option><option value="low">Light</option></select></label><a id="compare" href="?legacy-scene=1">Previous background</a><output>Loading the atelier…</output></div><div id="hint">Looping demonstrations use the game's spell logic. Drag Moment to inspect a paused impact. This preview is local.</div></footer>
+<script type="module">
+import {Renderer,loadArt} from '../src/render.js?release=20261026-luminous-world';
+import {Game} from '../src/game.js?release=20261001-stick-wheel';
+import {useEquipped} from '../src/inventory.js?release=20261001-stick-wheel';
+async function boot(){
+const names={bolt:['Starshard','A compact blue wave, luminous wisps, and a crisp striking edge.'],blink:['Eventide Passage','Twin astral apertures trace your passage through the night.'],ember:['Ember Orb','A molten heart, curling flame, and a blossoming impact.'],frost:['Frost Fan','Faceted ice blades fracture into a crown of winter light.'],chain:['Chain Spark','Violet lightning forks between targets with brilliant contact points.'],flask:['Restoration','Emerald leaves of light spiral upward from the ground.']};
+const r=new Renderer(document.querySelector('#world'),await loadArt());r.title=false;r.resize();
+let g,kind='ember',age=0,facing=1,playing=true,last=0,benchmark=[],sampled=0;
+const out=document.querySelector('output'),scrub=document.querySelector('#scrub');
+function flush(){for(const e of g.events)r.event(e);g.events=[];}
+function start(){
+ g=new Game();Object.assign(g.player,{x:1235,y:560,face:facing,onGround:true,hp:120,invuln:0});g.enemies.forEach(e=>e.dead=true);
+ for(let i=0;i<3;i++){const e=g.enemies[i];Object.assign(e,{dead:false,x:1235+facing*(265+i*145),y:560,origin:1235+facing*(265+i*145),cd:99,hp:500,maxHp:500,role:'ranged'});}
+ r.reset();r.camera=Math.max(0,g.player.x-r.w*.37);age=0;
+ if(['bolt','blink'].includes(kind))g.spell(kind,{});else{g.inventory.equipped=kind;g.inventory.charges[kind]=6;useEquipped(g);}
+ flush();document.querySelector('#spell-title').textContent=names[kind][0];document.querySelector('#spell-description').textContent=names[kind][1];
+ document.querySelectorAll('[data-spell]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.spell===kind)));
+}
+function step(dt){g.update(dt,{});flush();r.draw(g,dt);age+=dt;}
+function snapshot(time){start();for(let t=0;t<time;t+=1/120)step(Math.min(1/120,time-t));playing=false;document.querySelector('#play').textContent='Play';scrub.value=age;}
+function choose(k){kind=k;playing=true;document.querySelector('#play').textContent='Pause';start();}
+document.querySelectorAll('[data-spell]').forEach(b=>b.onclick=()=>choose(b.dataset.spell));
+document.querySelector('#play').onclick=()=>{playing=!playing;document.querySelector('#play').textContent=playing?'Pause':'Play';};
+document.querySelector('#replay').onclick=()=>choose(kind);scrub.oninput=()=>snapshot(Number(scrub.value));
+document.querySelector('#face').onclick=()=>{facing=-facing;document.querySelector('#face').textContent=facing===1?'Face left':'Face right';choose(kind);};
+document.querySelector('#gentle').onchange=e=>r.gentle=e.target.checked;
+document.querySelector('#reduced').onchange=e=>r.reducedFlash=e.target.checked;
+document.querySelector('#quality').onchange=e=>{r.quality=e.target.value;r.resize();};
+if(new URLSearchParams(location.search).has('legacy-scene')){document.querySelector('#compare').href='luminous-review.html';document.querySelector('#compare').textContent='New background';}
+addEventListener('resize',()=>r.resize());start();
+window.__luminousReview={get game(){return g;},renderer:r,choose,snapshot,setFacing(v){facing=v;choose(kind);},get state(){return {kind,age,playing,facing,time:r.time,projectiles:g.projectiles.length,elementFX:r.elementFX?.length||0,astralFX:r.astralFX?.length||0,meanFrame:sampled?benchmark.reduce((a,b)=>a+b,0)/benchmark.length:0};}};
+function frame(t){const dt=last?Math.min(.04,(t-last)/1000):0;last=t;const before=performance.now();if(playing){if(age>2.7)start();step(dt);scrub.value=Math.min(1.8,age);}else r.draw(g,0);benchmark.push(performance.now()-before);if(benchmark.length>180)benchmark.shift();sampled++;out.textContent=`${playing?'Playing':'Paused'} · ${age.toFixed(2)}s · ${r.gorge?.ready?'Layered GPU scenery':r.gorgeEnabled?'Layered canvas scenery':'Previous scenery'}`;requestAnimationFrame(frame);}requestAnimationFrame(frame);
+}
+boot().catch(error=>{document.querySelector('output').textContent='Artwork could not load. Reload the local preview to try again.';document.querySelectorAll('button,input,select').forEach(el=>el.disabled=true);console.warn('Local magic preview unavailable',error);});
+</script></body></html>
