@@ -14,8 +14,8 @@
 <button data-spell="flask" aria-pressed="false"><img src="../assets/celestial-v2/flask-v2.webp" alt="">Restoration</button>
 </div><div class="controls"><button id="play">Pause</button><button id="replay">Replay</button><label>Moment <input id="scrub" aria-label="Scrub through spell animation" type="range" min="0" max="1.8" step=".01" value="0"></label><button id="face">Face left</button><span class="divider"></span><label><input id="gentle" type="checkbox">Gentle</label><label><input id="reduced" type="checkbox">Reduced flashes</label><label>Scenery <select id="quality"><option value="high">Rich</option><option value="low">Light</option></select></label><a id="compare" href="?legacy-scene=1">Previous background</a><output>Loading the atelier…</output></div><div id="hint">Looping demonstrations use the game's spell logic. Drag Moment to inspect a paused impact. This preview is local.</div></footer>
 <script type="module">
-import {Renderer,loadArt} from '../src/render.js?release=20261026-luminous-world';
-import {Game} from '../src/game.js?release=20261001-stick-wheel';
+import {Renderer,loadArt} from '../src/render.js?release=20261026-astral-gateways';
+import {Game} from '../src/game.js?release=20261026-astral-gateways';
 import {useEquipped} from '../src/inventory.js?release=20261001-stick-wheel';
 async function boot(){
 const names={bolt:['Starshard','A compact blue wave, luminous wisps, and a crisp striking edge.'],blink:['Eventide Passage','Twin astral apertures trace your passage through the night.'],ember:['Ember Orb','A molten heart, curling flame, and a blossoming impact.'],frost:['Frost Fan','Faceted ice blades fracture into a crown of winter light.'],chain:['Chain Spark','Violet lightning forks between targets with brilliant contact points.'],flask:['Restoration','Emerald leaves of light spiral upward from the ground.']};

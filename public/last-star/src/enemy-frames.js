@@ -9,7 +9,7 @@ export const ENEMY_FRAMES={
  boss:[
   {rect:[10,535,555,460],pivot:[280,965]},
   {rect:[540,475,450,520],pivot:[735,965]},
-  {rect:[985,575,545,420],pivot:[1320,965]},
+  {rect:[995,575,535,420],pivot:[1320,965]},
  ],
 };
 export function drawEnemyPose(ctx,image,type,frame,x,y,face= -1){
@@ -18,6 +18,7 @@ export function drawEnemyPose(ctx,image,type,frame,x,y,face= -1){
  // The neighboring guardian's raised blade overlaps the lower-left corner of
  // the wraith windup's rectangular bounds. Exclude only that empty corner.
  if(type==='wraith'&&frame===1){ctx.beginPath();const points=[[550,10],[960,10],[960,510],[710,510],[710,455],[550,455]];for(let i=0;i<points.length;i++){const [a,b]=points[i];ctx[i?'lineTo':'moveTo']((a-pivot[0])*scale,(b-pivot[1])*scale);}ctx.closePath();ctx.clip();}
- if(type==='boss'&&frame===1){ctx.beginPath();const points=[[540,475],[705,475],[745,550],[990,550],[990,995],[540,995]];for(let i=0;i<points.length;i++){const [a,b]=points[i];ctx[i?'lineTo':'moveTo']((a-pivot[0])*scale,(b-pivot[1])*scale);}ctx.closePath();ctx.clip();}
+ // Exclude the idle pose's neighboring blade tip from the lower-left corner.
+ if(type==='boss'&&frame===1){ctx.beginPath();const points=[[540,475],[705,475],[745,550],[990,550],[990,995],[580,995],[580,750],[540,750]];for(let i=0;i<points.length;i++){const [a,b]=points[i];ctx[i?'lineTo':'moveTo']((a-pivot[0])*scale,(b-pivot[1])*scale);}ctx.closePath();ctx.clip();}
  ctx.drawImage(image,...rect,(rect[0]-pivot[0])*scale,(rect[1]-pivot[1])*scale,rect[2]*scale,rect[3]*scale);ctx.restore();
 }

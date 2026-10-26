@@ -1,0 +1,21 @@
+{
+  "generator": "built-in image_gen",
+  "transparent_background": true,
+  "assets": [
+    {
+      "name": "seal-relic-v1",
+      "prompt": "Use case: stylized-concept. Create ONE original premium painterly 2D fantasy game sprite on genuine transparent background: the Starveil checkpoint relic. A radiant many-faceted icy blue eight-point star gemstone, large central readable diamond-star silhouette, encased in two incomplete interlocking antique brass astrolabe rings, precise engraved metal filigree, three small suspended teardrop sapphires below, delicate ivory-gold accents. It is an elegant sacred astronomical mechanism floating upright, not a generic UI badge. Front view, centered, nearly symmetrical, tall oval composition, isolated complete object, fills 85 percent of square image with generous transparent margin. Rich physical metal, cobalt shadows, crisp pale cyan facets, restrained localized magical glow, broad shapes readable at 90 pixels. No pedestal, no gateway architecture, no scene, no lettering, no border or square fog, no human. Transparent gaps between rings, real alpha all around. Original Last Star celestial-gothic style; avoid overexposed white center and avoid tiny illegible clutter. Deliver one object, no sheet.",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a17825-5128-7141-bb38-d8d889bb4372/exec-78d0520b-0956-4998-9940-a8cd0ab37adb.png"
+    },
+    {
+      "name": "void-star-v1",
+      "prompt": "Use case: stylized-concept. ONE original painterly fantasy game spell projectile sprite on truly transparent background. A compact Hollow Astronomer void-star nucleus: broken angular obsidian-black crystal fragments levitating around a small burning violet-magenta six-point rift, luminous amethyst cracks in the dark faceted shell, three short hooked wisps of indigo plasma curling around the core, tiny rose-white edge sparks. Clearly three-dimensional rich material; jagged compact circular silhouette; restrained bright center with dark masses and open gaps, readable at40pixels. Isolated, centered whole object fills75percent of a square, ample transparent margin, front/three-quarter view. It is sinister celestial magic, not an eyeball, skull, planet, gem jewelry, meteor or generic glowing sphere. No long directional trail (renderer adds motion), no scenery, no text, no frame, no opaque smoke square. Use dark violet, amethyst, black obsidian, hot magenta and a few pale lavender highlights. Transparent edges and gaps; crisp faceted detail with painterly luminous wisps.",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a17825-5128-7141-bb38-d8d889bb4372/exec-e538bbd0-5a45-442e-98b6-51275e3f94f1.png"
+    },
+    {
+      "name": "rift-crown-v1",
+      "prompt": "Use case: stylized-concept. ONE original painterly game visual effect sprite on real transparent background. A low broad eruption of dark astronomical magic emerging from an invisible ground line: five irregular black-violet glass splinters and upward hooked ribbons of amethyst/magenta plasma, forming a dramatic shallow crown of energy. Center intensely violet with a few thin ivory-rose highlights, dark obsidian body edges and transparent spaces between the spikes. Side view for a 2D platform game. Wide composition around 1.8:1 overall content, grounded lower edge, most height central, side tips curl outward. The effect is energy only, no physical rocks or floor plate, no debris beyond margin. Isolated full silhouette with at least10percent transparent padding, rich hand-painted luminous detail, readable when displayed180pixels wide and100pixels tall. Never a generic circle, explosion fireball, red fire, UI icon, skull, person, architecture, scene or opaque square of fog. No text, no border. This is a sinister celestial spell impact with precise bright inner tongues and dark broken contours, not a huge opaque pillar.",
+      "generatedSource": "/Users/johnshopinski/.codex/generated_images/01a17825-5128-7141-bb38-d8d889bb4372/exec-c0b76a67-baba-404e-8d21-f5ca862f5607.png"
+    }
+  ]
+}

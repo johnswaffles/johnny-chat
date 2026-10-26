@@ -1,0 +1,50 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Last Star · Astral Gateways</title><style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;color:#e4e8ee;background:#08111e}*{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;grid-template-rows:auto minmax(240px,1fr) auto;height:100svh}header{padding:18px 26px 13px;border-bottom:1px solid #a8cae029;display:flex;justify-content:space-between;align-items:center;gap:14px;background:linear-gradient(120deg,#111f31,#0d1225)}h1{font:500 27px Georgia,serif;margin:4px 0 7px;letter-spacing:.02em}.eyebrow{color:#d7bb82;font-size:10px;letter-spacing:.25em;text-transform:uppercase}p{margin:0;color:#99adbd;font-size:12px;line-height:1.5}a,button,select{font:inherit;color:#dfe9f0;border:1px solid #50667b80;background:#172738;border-radius:6px;text-decoration:none;cursor:pointer}a{padding:11px 16px;font-size:12px}button{padding:9px 12px;font-size:12px}button:hover,a:hover{border-color:#d6bb83}button[aria-pressed=true]{border-color:#d6bb83;background:#2b3240;box-shadow:inset 0 -2px #d6bb83}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #a8e9ff;outline-offset:3px}#stage{position:relative;overflow:hidden;min-height:0;background:#081725}#world{width:100%;height:100%;display:block}#scene-label{position:absolute;left:26px;bottom:22px;z-index:1;pointer-events:none;text-shadow:0 2px 8px #07101c}#scene-label strong{font:24px Georgia;display:block;margin-bottom:5px}#scene-label span{font-size:11px;color:#c4d7dd}footer{padding:13px 24px 15px;border-top:1px solid #a8cae029;background:#0d1725;display:grid;gap:11px}.spells{display:flex;gap:7px;flex-wrap:wrap}.spells button{display:flex;align-items:center;gap:7px;padding:5px 12px 5px 4px}.spells img{width:38px;height:38px;object-fit:contain}.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:11px;color:#a9bcc9}.controls label{display:flex;gap:6px;align-items:center}input[type=range]{accent-color:#ceb378;width:130px}input[type=checkbox]{accent-color:#8acddb}select{padding:6px}.divider{height:20px;width:1px;background:#abc4d02b}output{margin-left:auto;color:#9eb5c5;font-size:11px;max-width:340px}#hint{font-size:11px;color:#829bab} @media(min-width:701px) and (max-width:900px){.spells{gap:5px}.spells button{font-size:11px;padding-right:8px}.spells img{width:30px;height:32px}#hint{display:none}header p{display:none}footer{padding:10px 16px}header{padding:12px 20px}#scene-label strong{font-size:20px}} @media(max-width:700px){body{height:auto;min-height:100svh;grid-template-rows:auto 55svh auto}header{padding:14px 15px}header p{max-width:280px}header a{padding:10px}h1{font-size:23px}footer{padding:11px 12px}.spells{gap:5px}.spells button{font-size:10px;padding-right:8px}.spells img{width:28px;height:30px}output{margin-left:0}#scene-label{left:16px;bottom:16px}#scene-label strong{font-size:20px}}
+
+.spells button{padding:8px 12px}.spells{gap:6px}#scene-label{max-width:540px}#hint a{font-size:11px;padding:0;border:0;background:none;color:#b5cedc} @media(max-width:900px){.spells button{padding:7px 9px}.divider{display:none}}</style></head><body>
+<header><div><div class="eyebrow">Last Star · Local art preview</div><h1>Astral gateways &amp; forbidden magic</h1><p>Jewelled starseals, sculpted shadow spells, and a more imposing Hollow Astronomer.</p></div><a href="../">Play Last Star ↗</a></header>
+<main id="stage"><canvas id="world" aria-label="Animated checkpoint and enemy magic demonstrations"></canvas><div id="scene-label"><strong id="spell-title"></strong><span id="spell-description"></span></div></main>
+<footer><div class="spells" aria-label="Choose a visual demonstration"></div><div class="controls"><button id="play">Pause</button><button id="replay">Replay</button><label>Moment <input id="scrub" aria-label="Scrub through animation" type="range" min="0" max="3" step=".01" value="0"></label><button id="face">Face left</button><label><input id="gentle" type="checkbox">Gentle</label><label><input id="reduced" type="checkbox">Reduced flashes</label><label>Scenery <select id="quality"><option value="high">Rich</option><option value="low">Light</option></select></label><output>Loading artwork…</output></div><div id="hint">Drag Moment to examine a cast or eruption. <a href="luminous-review.html">Explore your six spells ↗</a> · Local preview</div></footer>
+<script type="module">
+import {Renderer,loadArt} from '../src/render.js?release=20261026-astral-gateways';
+import {Game,WIDTH} from '../src/game.js?release=20261026-astral-gateways';
+async function boot(){
+ const names={seal:['The starseal','An astrolabe of brass and sapphire replaces the simple checkpoint star.'],awaken:['Awakening','The starseal answers with gold light and a rising constellation.'],gate:['Observatory gate','Three illuminated locks open the way to the Hollow Astronomer.'],wraith:['Wraith magic','A splintered void star with a flowing plasma tail and a distinct cast.'],melee:['Spectral strike','A charging crescent follows the shade’s actual striking arc.'],fan:['Astronomer · Void fan','Three fractured stars emerge from a gathering dark constellation.'],rift:['Astronomer · Rift crown','A steady warning marks the danger before black glass and violet fire erupt.'],sweep:['Astronomer · Lunar sweep','A low, curling crescent skims the floor. Jump over the wave.'],mantle:['Astral Mantle','Faceted plates and emerald light surround the arcanist.'],overdrive:['Starlight Overdrive','A golden ward carries the power of a collected star.']};
+ const r=new Renderer(document.querySelector('#world'),await loadArt());r.title=false;r.resize();
+ let g,kind='awaken',age=0,facing=1,playing=true,last=0,activated=false,frames=[];
+ const out=document.querySelector('output'),scrub=document.querySelector('#scrub');
+ document.querySelector('.spells').innerHTML=Object.entries(names).map(([k,v])=>`<button data-scene="${k}" aria-pressed="false">${({seal:'Starseal',awaken:'Awakening',gate:'Gateway',wraith:'Wraith',melee:'Strike',fan:'Void fan',rift:'Rift crown',sweep:'Lunar sweep',mantle:'Mantle',overdrive:'Overdrive'})[k]}</button>`).join('');
+ function flush(){for(const e of g.events)r.event(e);g.events=[];}
+ function start(){
+  g=new Game();g.enemies.forEach(e=>e.dead=true);g.projectiles=[];g.effects=[];g.loot=[];g.chests=[];g.events=[];g.zone=2;age=0;activated=false;r.reset();
+  const bossScene=['fan','rift','sweep'].includes(kind),hostile=bossScene||['wraith','melee'].includes(kind),gap=r.w<900?Math.max(100,r.w*.37-125):365;
+  Object.assign(g.player,{x:hostile?facing===1?7045:7515:['seal','awaken'].includes(kind)?765:kind==='gate'?6770:1275,y:hostile||kind==='gate'?570:['seal','awaken'].includes(kind)?580:560,face:facing,hp:9999,maxHp:9999,onGround:true});
+  if(hostile){
+   g.checkpoint=3;g.bossStarted=true;
+   const e=bossScene?g.enemies.find(e=>e.type==='boss'):g.enemies.find(e=>e.type!=='boss');
+   Object.assign(e,{dead:false,x:g.player.x+facing*(kind==='melee'?65:gap),y:570,face:-facing,origin:g.player.x+facing*gap,role:bossScene?'guardian':kind==='melee'?'approach':'ranged',hp:bossScene?1850:145,maxHp:bossScene?1850:145,windup:bossScene?.8:kind==='melee'?.6:.6,cd:99,phase:kind==='rift'?1:kind==='sweep'?2:0,attack:0});
+  }else if(kind==='gate')g.checkpoint=2;
+  else if(kind==='mantle'){g.player.mantle=5;r.event({type:'mantle',x:g.player.x,y:g.player.y-57});}
+  else if(kind==='overdrive'){g.arcade.overdrive=5;r.event({type:'overdrive',x:g.player.x,y:g.player.y-55});}
+  r.camera=Math.max(0,Math.min(WIDTH-r.w,g.player.x-r.w*.37));
+  document.querySelector('#spell-title').textContent=names[kind][0];document.querySelector('#spell-description').textContent=names[kind][1];
+  document.querySelectorAll('[data-scene]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.scene===kind)));r.draw(g,0);
+ }
+ function step(dt){
+  if(kind==='awaken'&&age>=.65&&!activated){g.interact();activated=true;}
+  if(kind==='gate'&&age>=1.2)g.checkpoint=3;
+  g.update(dt,{});flush();r.draw(g,dt);age+=dt;
+ }
+ function snapshot(time){start();for(let t=0;t<time;t+=1/120)step(Math.min(1/120,time-t));playing=false;document.querySelector('#play').textContent='Play';scrub.value=age;}
+ function choose(k){kind=k;playing=true;document.querySelector('#play').textContent='Pause';start();}
+ document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>choose(b.dataset.scene));
+ document.querySelector('#play').onclick=()=>{playing=!playing;document.querySelector('#play').textContent=playing?'Pause':'Play';};
+ document.querySelector('#replay').onclick=()=>choose(kind);scrub.oninput=()=>snapshot(Number(scrub.value));
+ document.querySelector('#face').onclick=()=>{facing=-facing;document.querySelector('#face').textContent=facing===1?'Face left':'Face right';choose(kind);};
+ document.querySelector('#gentle').onchange=e=>r.gentle=e.target.checked;document.querySelector('#reduced').onchange=e=>r.reducedFlash=e.target.checked;
+ document.querySelector('#quality').onchange=e=>{r.quality=e.target.value;r.resize();};addEventListener('resize',()=>r.resize());start();
+ window.__arcanaReview={get game(){return g;},renderer:r,choose,snapshot,setFacing(v){facing=v;choose(kind);},get state(){return {kind,age,playing,facing,time:r.time,checkpoint:g.checkpoint,projectiles:g.projectiles.length,effects:g.effects,arcanaFX:r.arcanaFX.length,meanFrame:frames.length?frames.reduce((a,b)=>a+b,0)/frames.length:0};}};
+ function frame(t){const dt=last?Math.min(.04,(t-last)/1000):0;last=t;const before=performance.now();if(playing){if(age>3.2)start();step(dt);scrub.value=Math.min(3,age);}else r.draw(g,0);frames.push(performance.now()-before);if(frames.length>180)frames.shift();out.textContent=`${playing?'Playing':'Paused'} · ${age.toFixed(2)}s`;requestAnimationFrame(frame);}requestAnimationFrame(frame);
+}
+boot().catch(error=>{document.querySelector('output').textContent='Artwork could not load. Reload the preview to try again.';console.error(error);});
+</script></body></html>

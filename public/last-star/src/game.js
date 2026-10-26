@@ -163,7 +163,7 @@ export class Game {
   }
   hurt(amount,source='enemy'){
     const p=this.player;if(p.invuln>0||this.state!=='playing'||!Number.isFinite(amount)||amount<=0)return;
-    if(p.hp-amount<210*.35&&p.mantleCd<=0&&p.mantle<=0){p.mantle=6;p.mantleCd=30;this.event('mantle');}
+    if(p.hp-amount<210*.35&&p.mantleCd<=0&&p.mantle<=0){p.mantle=6;p.mantleCd=30;this.event('mantle',{x:p.x,y:p.y-57});}
     if(p.mantle>0)amount*=.3;
     const lost=Math.min(p.hp,amount);
     if(source==='enemy'){p.retaliation+=lost;this.event('retaliation-charge',{x:p.x,y:p.y-65,bonus:p.retaliation*3});}
@@ -197,7 +197,7 @@ export class Game {
     if(input.interact)this.interact();
     const zone=p.x<2600?0:p.x<5100?1:2;
     if(zone!==this.zone){this.zone=zone;this.event('zone',{index:zone});}
-    if(p.x>6910&&this.checkpoint===3&&!this.bossStarted&&!this.bossDefeated){this.bossStarted=true;this.event('boss');}
+    if(p.x>6910&&this.checkpoint===3&&!this.bossStarted&&!this.bossDefeated){this.bossStarted=true;const boss=this.enemies.find(e=>e.type==='boss');this.event('boss',{x:boss.x,y:boss.y});}
     updateSilverwoodEncounter(this,dt);
     for(const e of this.enemies){
       if(e.dead)continue;if(e.burn>0){e.burn=Math.max(0,e.burn-dt);e.burnTick-=dt;if(e.burnTick<=0){e.burnTick+=LEVEL1.spells.ember.burnInterval;const before=e.hp;this.damage(e,LEVEL1.spells.ember.burnDamage,null,'fire');if(e.hp<before){const n=this.numbers.at(-1);if(n){n.color='#ffad69';n.text+=' burn';}this.event('burn-tick',{x:e.x,y:e.y-45,enemyId:e.id,damage:before-e.hp});}}}if(e.dead)continue;for(const k of ['freeze','freezeImmune','slow'])e[k]=Math.max(0,(e[k]||0)-dt);e.stagger=Math.max(0,e.stagger-dt);e.staggerCd=Math.max(0,e.staggerCd-dt);e.flash=Math.max(0,e.flash-dt);e.attack=Math.max(0,e.attack-dt);
@@ -210,11 +210,11 @@ export class Game {
         if(e.windup<=0){e.attack=.4;
           if(e.type==='boss'){
             const fast=e.hp<e.maxHp*.5,pattern=e.phase++%3;
-            if(pattern===0){for(let i=-1;i<=1;i++){const angle=Math.atan2(dy-25,dx)+i*.18;this.projectiles.push({x:e.x,y:e.y-85,vx:Math.cos(angle)*250,vy:Math.sin(angle)*250,life:4,damage:25,owner:'enemy',r:13});}}
+            if(pattern===0){for(let i=-1;i<=1;i++){const angle=Math.atan2(dy-25,dx)+i*.18;this.projectiles.push({x:e.x,y:e.y-85,vx:Math.cos(angle)*250,vy:Math.sin(angle)*250,life:4,damage:25,owner:'enemy',r:13,visual:'fan'});}}
             else if(pattern===1){for(const offset of [-115,115])this.effects.push({type:'danger',x:clamp(p.x+offset,6860,7640),y:570,age:0,life:1.4,fired:false});}
-            else {this.projectiles.push({x:e.x,y:e.y-25,vx:e.face*300,vy:0,life:3,damage:30,owner:'enemy',r:13});}
-            this.event('enemy-cast',{x:e.x,y:e.y-85});e.cd=fast?2.1:2.7;
-          }else {if(e.role==='ranged'){const len=Math.hypot(dx,dy)||1;this.projectiles.push({x:e.x,y:e.y-55,vx:dx/len*230,vy:dy/len*230,life:3.5,damage:23,owner:'enemy',r:10});}e.cd=e.role==='brute'?2.3:1.8;}
+            else {this.projectiles.push({x:e.x,y:e.y-25,vx:e.face*300,vy:0,life:3,damage:30,owner:'enemy',r:13,visual:'sweep'});}
+            this.event('enemy-cast',{x:e.x,y:e.y-(pattern===2?25:85),face:e.face,visual:pattern===0?'fan':pattern===1?'rift':'sweep'});e.cd=fast?2.1:2.7;
+          }else {if(e.role==='ranged'){const len=Math.hypot(dx,dy)||1;this.projectiles.push({x:e.x,y:e.y-55,vx:dx/len*230,vy:dy/len*230,life:3.5,damage:23,owner:'enemy',r:10,visual:'wraith'});this.event('enemy-cast',{x:e.x,y:e.y-55,face:e.face,visual:'wraith'});}e.cd=e.role==='brute'?2.3:1.8;}
 
         }
       }else{
@@ -230,7 +230,7 @@ export class Game {
         for(const e of this.enemies){if(e.dead)continue;const r=e.type==='boss'?55:31;
           if(Math.abs(b.x-e.x)<r+10&&b.y>e.y-(e.type==='boss'?170:100)&&b.y<e.y+5){if(b.kind==='ember'){for(const victim of this.enemies)if(!victim.dead&&Math.hypot(victim.x-b.x,victim.y-50-b.y)<LEVEL1.spells.ember.radius){this.damage(victim,b.damage,b.attack,'fire');this.applyStatus(victim,'ember');}this.event('ember-impact',{x:b.x,y:b.y});}else {this.damage(e,b.damage,b.attack);if(b.kind==='frost')this.applyStatus(e,'frost',b.attack);}b.life=0;break;}}
       if(b.life>0)for(const chest of this.chests){if(!chest.open&&Math.abs(b.x-chest.x)<32&&b.y>chest.y-60&&b.y<chest.y+20){breakChest(this,chest);b.life=0;break;}}
-      }else if(Math.abs(b.x-p.x)<24&&b.y>p.y-100&&b.y<p.y){this.hurt(b.damage);b.life=0;}
+      }else if(Math.abs(b.x-p.x)<24&&b.y>p.y-100&&b.y<p.y){this.hurt(b.damage);this.event('hostile-impact',{x:b.x,y:b.y,visual:b.visual});b.life=0;}
     }
     this.projectiles=this.projectiles.filter(b=>b.life>0).slice(-LEVEL1.maxProjectiles);
     for(const f of this.effects){

@@ -22,9 +22,9 @@ export function drawReactiveLight(r,g){
  r.lightPulses=(r.lightPulses||[]).filter(f=>r.time-f.born<f.duration);c.restore();
 }
 export function lightEvent(r,e){
- if(!['cast','hit','ember-impact','encounter-clear','chain-arc','heal','blink'].includes(e.type))return;
- const x=e.x??e.to?.x,y=e.y??(e.to?.y-(e.type==='blink'?55:0));if(!Number.isFinite(x)||!Number.isFinite(y))return;
- r.lightPulses??=[];r.lightPulses.push({x,y,born:r.time,duration:e.type==='encounter-clear'?1.6:['heal','blink'].includes(e.type)?.6:.32,color:e.element==='fire'||e.type==='ember-impact'||e.type==='encounter-clear'?'gold':['chain-arc','blink'].includes(e.type)?'violet':e.type==='heal'?'teal':'blue'});if(r.lightPulses.length>12)r.lightPulses.shift();
+ if(!['cast','hit','ember-impact','encounter-clear','chain-arc','heal','blink','enemy-cast','hostile-impact','danger-hit','seal','mantle'].includes(e.type))return;
+ const x=e.x??e.to?.x,y=(e.type==='seal'?e.y-85:e.type==='danger-hit'?e.y-30:e.y)??(e.to?.y-(e.type==='blink'?55:0));if(!Number.isFinite(x)||!Number.isFinite(y))return;
+ r.lightPulses??=[];r.lightPulses.push({x,y,born:r.time,duration:e.type==='encounter-clear'?1.6:['heal','blink'].includes(e.type)?.6:.32,color:e.element==='fire'||e.type==='ember-impact'||e.type==='encounter-clear'||e.type==='seal'?'gold':['chain-arc','blink','enemy-cast','hostile-impact','danger-hit'].includes(e.type)?'violet':['heal','mantle'].includes(e.type)?'teal':'blue'});if(r.lightPulses.length>12)r.lightPulses.shift();
 }
 
 // Small tinted sprite caches are made once. Never change full-world compositing to source-atop.
