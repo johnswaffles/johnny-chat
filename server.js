@@ -1,3 +1,4 @@
+import {bibleModelRequest,MANAGED_BIBLE_INSTRUCTIONS} from './lib/managed-story-bible.mjs';
 import {createRealtimeNarrator,narrationIdentity} from './lib/story-realtime-speech.mjs';
 import {narrationOptions} from './public/story-editor/narration-model.mjs';
 import {BOOK_CANON_INSTRUCTIONS} from './lib/book-drafts.mjs';
@@ -1682,6 +1683,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
   storyEditorComfort: "review-and-reading-comfort-v1",
   storyEditorAssistant: "Mara",
+  storyEditorBible: "managed-source-bible-v1",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
   textsmithVersion: "intentional-messages-v2",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
@@ -3642,6 +3644,8 @@ function parseStoryModelJson(response) {
 async function storyModelJson({ format, system, user, maxOutputTokens = 4000 }) {
   const jobId = storyTask.getStore()?.jobId;
   const savedBookContinuity=storyTask.getStore()?.bookCanon;
+  const managedStoryBible=storyTask.getStore()?.managedBible;
+  if(managedStoryBible){user={...(typeof user==='object'&&user?user:{editorialInput:user}),managedStoryBible};system+='\n'+MANAGED_BIBLE_INSTRUCTIONS;}
   if(savedBookContinuity){system+='\n'+BOOK_CANON_INSTRUCTIONS;user={editorialInput:user,savedBookContinuity};}
   const cacheKey = storyEditorialCacheKey({format,system,user,maxOutputTokens},STUDIO_QUALITY);
   if (jobId) {
@@ -3841,6 +3845,9 @@ async function runStoryAutopilotJob(jobId) {
     if (!project) throw new Error("The manuscript no longer exists.");
     const changeRequest = parseStoryObject((await storyQuery(`SELECT request_json FROM story_job_requests WHERE job_id=${sqliteLiteral(jobId)};`))[0]?.request_json);
     if(storyTask.getStore())storyTask.getStore().bookCanon=changeRequest.bookCanon||null;
+    await updateStoryAutopilotJob(jobId,{phase:'reading',message:'Mara is updating the Story Bible before revising.'});
+    await writingStudio.ensureBible(project.id,{chapterIndex:changeRequest.chapter||undefined});
+    if(storyTask.getStore())storyTask.getStore().managedBible=writingStudio.bibleStatus(project.id,{chapterIndex:changeRequest.chapter||undefined,context:true});
     const lastChapter=Number((await storyQuery(`SELECT MAX(chapter_index) AS lastChapter FROM story_sections WHERE project_id=${sqliteLiteral(job.project_id)} AND kind='paragraph';`))[0]?.lastChapter) || 1;
     const chapterFilter = changeRequest.chapter ? ` AND chapter_index=${Number(changeRequest.chapter)}` : '';
     let rows = await storyQuery(`
@@ -4265,11 +4272,11 @@ app.delete("/api/story-editor/projects/:id", async (req, res) => {
     if (!projects[0]) return res.status(404).json({ ok: false, error: "Project not found." });
     const active = await storyQuery(`SELECT id FROM story_autopilot_jobs WHERE project_id = ${sqliteLiteral(projectId)} AND status IN ('queued', 'running') LIMIT 1;`);
     if (active[0]) return res.status(409).json({ ok: false, error: "This manuscript is still being edited. Wait for the run to finish before deleting it." });
-    const studioTables = new Set((await storyQuery("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'studio_%';")).map(row=>row.name));
+    const studioTables = new Set((await storyQuery("SELECT name FROM sqlite_master WHERE type='table' AND (name LIKE 'studio_%' OR name LIKE 'managed_bible_%');")).map(row=>row.name));
     if(studioTables.has('studio_tasks') && (await storyQuery(`SELECT id FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running') LIMIT 1;`))[0]) return res.status(409).json({ok:false,error:'Stop or finish the current studio edit before deleting this manuscript.'});
     const studioDeletes=[];
     if(studioTables.has('studio_task_stages')) studioDeletes.push(`DELETE FROM studio_task_stages WHERE task_id IN (SELECT id FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)});`);
-    for(const table of ['studio_goals','studio_context_cache','studio_messages','studio_notes','studio_versions','studio_state','studio_tasks']) if(studioTables.has(table)) studioDeletes.push(`DELETE FROM ${table} WHERE project_id=${sqliteLiteral(projectId)};`);
+    for(const table of ['managed_bible_chunks','studio_goals','studio_context_cache','studio_messages','studio_notes','studio_versions','studio_state','studio_tasks']) if(studioTables.has(table)) studioDeletes.push(`DELETE FROM ${table} WHERE project_id=${sqliteLiteral(projectId)};`);
     await storyExec([
       "BEGIN;",
       ...studioDeletes,
@@ -4693,8 +4700,13 @@ async function stopFullWorkspaceWork(id){
 const writingStudio=installWritingStudio(app, {
   path: STORY_EDITOR_DB_PATH, ready: ensureStoryDb, authorize: requireStoryEditorSession,
   fullWorkStatus: fullWorkspaceWork, stopFullWork: stopFullWorkspaceWork,
+  generateBible: async(source,signal)=>{
+    if(!OPENAI_API_KEY)throw new Error('The writing partner is not configured.');
+    const response=await openai.responses.create(bibleModelRequest(source),{signal,timeout:600000,maxRetries:0});
+    assertStoryModelResponse(response);return JSON.parse(extractResponseText(response));
+  },
   generate: createLayeredStudioEditor({
-    instructions: STORY_EDITOR_CONTEXT+'\n'+STUDIO_INSTRUCTIONS, decisionFormat:STUDIO_FORMAT,
+    instructions: STORY_EDITOR_CONTEXT+'\n'+STUDIO_INSTRUCTIONS+'\n'+MANAGED_BIBLE_INSTRUCTIONS, decisionFormat:STUDIO_FORMAT,
     call: async (request,signal) => {
       if (!OPENAI_API_KEY) throw Object.assign(new Error('The writing partner is not configured.'),{status:503});
       let response;

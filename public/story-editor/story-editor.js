@@ -809,6 +809,10 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     el.uploadSubmit.textContent = "Importing…";
     setUploadStatus("Extracting the text and organizing it into passages…");
     try {
+      if(addition?.projectId&&!addition.bookId){
+        const linked=await apiFetch(`/api/story-editor/projects/${encodeURIComponent(addition.projectId)}/studio/book/link`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:String(addition.title||'My book').slice(0,160),useContinuity:true})});
+        const book=await readJsonResponse(linked);if(!linked.ok)throw Error(book.error||'Finish the active edit before adding a chapter to this book.');addition.bookId=book.book.id;
+      }
       const formData = new FormData();
       formData.append("title", file.name);
       formData.append("intentJson", JSON.stringify(intent));
@@ -936,6 +940,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
       if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not save your Story Bible.");
       state.bible = data.bible;
       el.bibleSaveState.textContent = "All notes are up to date.";
+      document.dispatchEvent(new CustomEvent('story-bible-refresh',{detail:{projectId:state.project.id}}));
       el.bibleSaveState.classList.remove("unsaved");
       showToast("Story Bible saved.");
     } catch (error) {
@@ -1152,7 +1157,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   el.openUpload.addEventListener("click", () => void startOver().catch(error=>showToast(error.message,true)));
   document.getElementById('add-chapter-file').addEventListener('click',()=>{
     if(!navigationAllowed())return;keepUnsent();const detail={bookId:null};document.dispatchEvent(new CustomEvent('story-add-chapter-context',{detail}));state.addChapterMode=detail;
-    document.getElementById('add-chapter-help').hidden=false;document.getElementById('add-chapter-help').textContent=detail.bookId?'Add a separate chapter file to this book. Existing originals and revisions stay saved. No revision starts until you request it. Use Save chapter when the new version is ready.':'Add a separate chapter file to your library. Existing originals and revisions stay saved. No revision starts until you request it. Use Book drafts to assemble approved chapters.';
+    document.getElementById('add-chapter-help').hidden=false;document.getElementById('add-chapter-help').textContent=detail.bookId?'Add a separate chapter file to this book. Existing originals and revisions stay saved. No revision starts until you request it. Use Save chapter when the new version is ready.':'Add the next chapter to this story. Mara will carry its Story Bible forward automatically. Your existing originals and revisions stay saved.';
     el.uploadSubmit.textContent='Add chapter file';openDialog(el.uploadDialog);el.fileInput.focus();
   });
   el.uploadDialog.addEventListener('close',()=>{if(!state.uploading){state.addChapterMode=null;document.getElementById('add-chapter-help').hidden=true;el.uploadSubmit.textContent='Start revision';}});

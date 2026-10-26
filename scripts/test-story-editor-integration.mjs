@@ -43,6 +43,7 @@ const mock=http.createServer(async(req,res)=>{
  assert.equal(body.model,'gpt-6.1-sol'); assert.equal(body.reasoning.effort,'xhigh'); assert.equal(body.reasoning.mode,'pro');
  const envelope=JSON.parse(body.input[1].content);const user=envelope.editorialInput??envelope;
  const stage=body.text?.format?.name;
+ if(stage==='managed_story_bible'){const value={facts:[{category:'characters',note:'A source-grounded continuity observation.',evidence:user.text.slice(0,40)}]};res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(fakeResponse({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(value)}]}]})));return;}
  if(['writing_studio_turn','studio_draft','studio_critique','studio_final'].includes(stage)){
   let value;
   if(stage==='writing_studio_turn')value={action:user.requestMode==='discuss'?'discuss':user.requestScope==='book'?'revise_book':'revise',reply:user.requestMode==='discuss'?'The selected material builds tension through a concrete hesitation. Your draft is unchanged.':'Developing the moment without changing its outcome.',revisionText:'',note:'Make the emotional conflict concrete and retain the quiet voice.',chapter:0,passage:0};
@@ -319,7 +320,7 @@ const discussionBefore=requests.length,discussionOriginal=JSON.stringify(studioS
 await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:'local-chapter-discussion',mode:'discuss',scope:'chapter',sectionId:studioPassage.id,revision:studioPassage.revision,message:'Discuss the pacing of this chapter.'})});
 let discussion;
 for(let i=0;i<100;i++){discussion=(await json(studioBase+'/tasks/local-chapter-discussion')).task;if(['done','failed'].includes(discussion.status))break;await new Promise(r=>setTimeout(r,30));}
-assert.equal(discussion.status,'done',discussion.error);assert.equal(discussion.result.action,'discuss');assert.equal(requests.length-discussionBefore,1);assert.ok(!JSON.stringify(requests.slice(discussionBefore)).includes('At the station'),'Chapter discussion excludes other chapter prose from the actual provider payload');assert.equal(JSON.stringify((await json(studioBase)).chapters),discussionOriginal);assert.equal((await json(studioBase)).versions.length,0);
+assert.equal(discussion.status,'done',discussion.error);assert.equal(discussion.result.action,'discuss');assert.equal(requests.slice(discussionBefore).filter(r=>r.text.format.name!=='managed_story_bible').length,1);assert.equal(requests.slice(discussionBefore).filter(r=>r.text.format.name==='managed_story_bible').length,1);assert.ok(!JSON.stringify(requests.slice(discussionBefore)).includes('At the station'),'Chapter discussion excludes other chapter prose from the actual provider payload');assert.equal(JSON.stringify((await json(studioBase)).chapters),discussionOriginal);assert.equal((await json(studioBase)).versions.length,0);
 console.log('PASS: explicit chapter discussion uses one mocked planning request, excludes other chapters from provider payloads, and never changes prose.');
 const beforeStudioCalls=requests.length;
 const studioRequest={requestId:'local-studio-edit',mode:'edit',scope:'passage',sectionId:studioPassage.id,revision:studioPassage.revision,message:'Deepen her hesitation through physical action, without changing the decision.'};
@@ -346,7 +347,7 @@ await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'applicati
 let proposal;
 for(let i=0;i<100;i++){proposal=(await json(studioBase+'/tasks/whole-book-proposal')).task;if(['done','failed'].includes(proposal.status))break;await new Promise(r=>setTimeout(r,30));}
 assert.equal(proposal.status,'done',proposal.error);assert.equal(proposal.result.action,'revise_book');assert.equal(proposal.result.requiresConfirmation,true);
-assert.equal(requests.length-proposalBefore,1,'Whole-book proposal runs planning only');
+assert.equal(requests.slice(proposalBefore).filter(r=>r.text.format.name!=='managed_story_bible').length,1,'Whole-book proposal runs planning only after refreshing Bible notes');
 assert.deepEqual((await json(studioBook.base)).sections,fullBefore.sections,'Proposal never silently edits one passage');
 assert.equal((await json(studioBook.base)).autopilot.id,fullBefore.autopilot.id,'Proposal cannot start a full revision without Apply');
 assert.equal((await json(studioBase)).lastTask.result.action,'revise_book','Proposal survives a page reload');
@@ -369,9 +370,15 @@ if(!process.env.STORY_PREVIEW){
  const nextForm=new FormData();nextForm.append('manuscript',new Blob(['Chapter One\n\nThe next day, Mara returned to the kitchen window.'],{type:'text/plain'}),'Synthetic next chapter.txt');
  const nextUpload=await json('/api/story-editor/upload',{method:'POST',body:nextForm});const nextBase='/api/story-editor/projects/'+nextUpload.projectId;
  await json(nextBase+'/studio/book/link',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({bookId:savedBook.book.id,useContinuity:true})});
+ assert.equal((await fetch(origin+nextBase+'/studio/bible')).status,401);
+ await json(nextBase+'/studio/bible/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+ let sharedBible;for(let i=0;i<100;i++){sharedBible=(await json(nextBase+'/studio/bible')).bible;if(sharedBible.status==='ready')break;await new Promise(r=>setTimeout(r,30));}
+ assert.equal(sharedBible.status,'ready');assert.ok(sharedBible.chapters.some(c=>c.projectId===studioState.projectId&&c.facts.length));assert.ok(sharedBible.chapters.some(c=>c.projectId===nextUpload.projectId&&c.facts.length));
+ const sourceContext=await json(nextBase+'/studio/context?sectionId='+encodeURIComponent((await json(nextBase+'/studio')).chapters[0].passages[0].id));assert.match(sourceContext.instructions,/source-grounded continuity observation/);
+ const cachedCount=requests.length;await json(nextBase+'/studio/bible/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});await new Promise(r=>setTimeout(r,50));assert.equal(requests.length,cachedCount,'No repeated model calls for an unchanged shared Bible');
  const canonStart=requests.length;const start=await json(nextBase+'/autopilot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({intent:'Develop the next chapter, preserving earlier continuity.'})});let job;
  for(let i=0;i<100;i++){job=(await json(nextBase+'/autopilot/'+start.job.id)).job;if(['completed','failed'].includes(job.status))break;await new Promise(r=>setTimeout(r,50));}assert.equal(job.status,'completed',job.error);
- const canonCalls=requests.slice(canonStart);assert.ok(canonCalls.length>=4);for(const call of canonCalls){const input=JSON.parse(call.input[1].content);assert.equal(input.savedBookContinuity.chapters[0].versionId,savedChapter.versionId);assert.ok(JSON.stringify(input.savedBookContinuity).includes(sourceChapter.passages[0].text));assert.match(call.input[0].content,/incomplete evidence/);}
+ const canonCalls=requests.slice(canonStart).filter(r=>r.text.format.name!=='managed_story_bible');assert.ok(canonCalls.length>=4);for(const call of canonCalls){const input=JSON.parse(call.input[1].content);assert.equal(input.savedBookContinuity.chapters[0].versionId,savedChapter.versionId);assert.ok(JSON.stringify(input.savedBookContinuity).includes(sourceChapter.passages[0].text));assert.match(call.input[0].content,/incomplete evidence/);}
  assert.ok(canonCalls.some(c=>c.text.format.name==='story_autopilot_plan'));assert.ok(canonCalls.some(c=>c.text.format.name==='story_autopilot_chunk'));assert.ok(canonCalls.some(c=>c.text.format.name==='story_autopilot_polish'));assert.ok(canonCalls.some(c=>c.text.format.name==='story_autopilot_review'));
  const canonDb=fixtureDb({readOnly:true});assert.equal(JSON.parse(canonDb.prepare('SELECT request_json FROM story_job_requests WHERE job_id=?').get(start.job.id).request_json).bookCanon.chapters[0].versionId,savedChapter.versionId);canonDb.close();
  assert.deepEqual((await json(studioBase+'/book/chapters/'+savedChapter.id)).content,savedText.content,'Subsequent full edit cannot overwrite approved chapter snapshot');
@@ -379,7 +386,7 @@ if(!process.env.STORY_PREVIEW){
 }
 if(!process.env.STORY_PREVIEW){
  const removed=await fetch(origin+studioBook.base,{method:'DELETE',headers:auth});assert.equal(removed.status,200);
- const check=fixtureDb();for(const table of ['studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
+ const check=fixtureDb();for(const table of ['managed_bible_chunks','studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
 }
 console.log('PASS: whole-manuscript proposal confirmation/scope/reload; revised vs original DOCX content; studio four-pass Sol/xhigh/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
 console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');
