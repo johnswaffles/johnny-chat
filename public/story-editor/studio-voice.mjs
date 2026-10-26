@@ -8,7 +8,7 @@ export class StudioVoice {
  async connect(){
   this.close();const ticket=this.epoch;this.controller=new AbortController();this.onStatus('Connecting voice…');
   try{
-   if(!this.mediaDevices?.getUserMedia||!this.Peer)throw Error('Live voice needs a supported browser with microphone access. You can still write to Johnny below.');
+   if(!this.mediaDevices?.getUserMedia||!this.Peer)throw Error('Live voice needs a supported browser with microphone access. You can still write to Mara below.');
    const stream=await this.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
    if(ticket!==this.epoch){stream.getTracks().forEach(t=>t.stop());return;}
    this.stream=stream;
