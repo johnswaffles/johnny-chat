@@ -367,3 +367,15 @@ test('a different completed job starts collapsed and absent progress hides both 
  h.api.state.flowJob={id:'second',status:'completed',phase:'review'};h.api.renderEditorialProgress();assert.equal(h.elements.get('notebook-job-progress').hidden,true);assert.equal(h.elements.get('notebook-progress-toggle').attributes['aria-expanded'],'false');
  h.api.state.flowJob=null;h.api.renderEditorialProgress();assert.equal(h.elements.get('notebook-job-progress').hidden,true);assert.equal(h.elements.get('notebook-progress-toggle').hidden,true);
 });
+
+test('an old manual save cannot erase newer unsent recovery after returning to the same passage',async()=>{
+ let release;const gate=new Promise(resolve=>release=resolve);
+ const h=await harness({httpHook:async(path)=>{if(path==='/api/story-editor/projects/book/studio/passage'){await gate;return Response.json({ok:true,changed:true});}}});
+ h.api.openManualEdit();h.elements.get('studio-manual-text').value='Submitted wording from the old visit.';const pending=h.api.saveManualEdit();await settled();
+ h.listeners['story-reader-project'][0]({detail:{id:'',busy:false}});await settled();h.listeners['story-reader-project'][0]({detail:{id:'book',busy:false}});await settled();await settled();
+ h.api.openManualEdit();assert.equal(h.elements.get('studio-manual-text').value,'Submitted wording from the old visit.');h.elements.get('studio-manual-text').value='New unsent wording after returning.';h.elements.get('studio-manual-text').events.input[0]();
+ const storageKey='johnny-story-manual:book:a';assert.equal(JSON.parse(h.navigationStore.get(storageKey)).text,'New unsent wording after returning.');
+ release();await pending;
+ assert.equal(h.elements.get('studio-edit-dialog').open,true);assert.equal(h.elements.get('studio-manual-text').value,'New unsent wording after returning.');assert.equal(h.api.state.manualSaving,false);
+ assert.equal(JSON.parse(h.navigationStore.get(storageKey)).text,'New unsent wording after returning.','Old save completion must preserve the recovery copy of newer unsent work');
+});

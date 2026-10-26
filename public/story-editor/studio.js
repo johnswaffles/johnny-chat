@@ -163,7 +163,7 @@ async function saveManualEdit(){
  if(!manualTarget||state.manualSaving||$('studio-manual-save').disabled)return;const target={...manualTarget},text=$('studio-manual-text').value,ticket=state.epoch;
  if(!text.trim()){$('studio-manual-status').textContent='Keep some text in this passage before saving.';return;}
  persistManualDraft();state.manualSaving=true;$('studio-manual-save').disabled=true;$('studio-manual-text').disabled=true;$('studio-manual-discard').disabled=true;$('studio-manual-status').textContent='Saving your words…';renderControls();
- try{const result=await api('/passage',{id:target.id,method:'PUT',body:{sectionId:target.sectionId,revision:target.revision,text}});forgetManualDraft(target);
+ try{const result=await api('/passage',{id:target.id,method:'PUT',body:{sectionId:target.sectionId,revision:target.revision,text}});const retained=storedManualDraft(target);if(!retained||(retained.text===text&&retained.revision===target.revision))forgetManualDraft(target);
   if(ticket!==state.epoch||target.id!==state.id)return;
   manualTarget=null;$('studio-edit-dialog').close();state.resume=null;await refresh();
   document.dispatchEvent(new CustomEvent('story-studio-saved',{detail:{projectId:target.id}}));status(result.changed?'Your words are saved. Compare or Undo is available beside the passage.':'This passage already matches your saved draft.');void updateVoiceContext();
