@@ -22,7 +22,7 @@ const mock=http.createServer(async(req,res)=>{
  if(body.input[1].content.includes('EXPERT')) assert.match(body.input[0].content,/EXPERT CUSTOMER CARE/);
  const count=body.text.format.schema.properties.messages.minItems;
  const first=body.input[1].content.includes('RETRY')&&!body.input[0].content.includes('Previous candidate');
- if(!first&&body.input[1].content.includes('RETRY')) assert.match(body.input[0].content,/TWO-message, 160-characters-EACH/);
+ if(!first&&body.input[1].content.includes('RETRY')&&!body.input[0].content.includes('DEVELOPMENT PASS')) assert.match(body.input[0].content,/TWO-message, 160-characters-EACH/);
  let messages=first?['a'.repeat(161),'Second complete message.']:count===2?['Hi Sarah, your Thursday appointment needs to move from 2:00 to 3:00 because of the weather.','Would 3:00 still work for you? Thank you for being flexible.']:['Hi Mike, your estimate is ready: $285. I can stop by Friday afternoon if that works for you.'];
  if(body.input[1].content.includes('REPEATED') || body.input[1].content.includes('PERSISTENT')) {
   const repair=body.input[0].content.includes('Previous candidate');
@@ -31,6 +31,10 @@ const mock=http.createServer(async(req,res)=>{
    ? ['Your estimate is ready for review. The total is $285.', 'Your estimate is ready for review. Would Friday afternoon work?']
    : ['Hi Mike, your estimate is ready for review. The total is $285.', 'Would Friday afternoon work for you?'];
  }
+ if(body.input[0].content.includes('DEVELOPMENT PASS')) {
+  messages=['Hi Mike, your estimate is ready for review. The total is $285, and I wanted to make sure you had the details before deciding.', 'Would Friday afternoon work for you? Please let me know whether that suits your schedule or if you have any questions about the estimate.'];
+ }
+ if(body.input[0].content.includes('DEVELOPMENT PASS')&&body.input[1].content.includes('BAD_DEVELOPMENT')) messages=['x'.repeat(161),'Second text.'];
  res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({messages})}]}]}));
 });
 await new Promise(r=>mock.listen(0,'127.0.0.1',r));
@@ -43,15 +47,17 @@ assert.ok(token,'local backend available: '+backendErrors);
 const auth={Authorization:`Bearer ${token}`};
 for(const mode of ['single','split']) {
  const r=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input: mode==='split'?'RETRY appointment update':'Estimate for Mike is $285 Friday afternoon if it works.',mode})});
- assert.equal(r.status,200);const data=await r.json();assert.equal(data.messages.length,mode==='split'?2:1);assert.ok(data.stats.every(s=>s.characters<=s.limit));
+ assert.equal(r.status,200);const data=await r.json();assert.equal(data.messages.length,mode==='split'?2:1);assert.ok(data.stats.every(s=>s.characters<=s.limit));if(mode==='split') assert.ok(data.stats.reduce((n,s)=>n+s.characters,0)>=220,'valid developed pair replaces the bare pair');
 }
 const expert=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'EXPERT: Tell Mike his estimate is $285 and ask whether Friday afternoon works.',mode:'single',tone:'expert'})});
 assert.equal(expert.status,200);
-assert.equal(attempts,4,'overlong pair repaired once without dropping second message');
+assert.equal(attempts,5,'overlong pair repaired once without dropping second message');
 const repeated=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'REPEATED estimate is $285, offer Friday afternoon.',mode:'split'})});
-assert.equal(repeated.status,200);const fixedPair=await repeated.json();assert.equal(fixedPair.messages.length,2);assert.equal(attempts,6,'repeated statement triggers one repair even though both messages fit');
+assert.equal(repeated.status,200);const fixedPair=await repeated.json();assert.equal(fixedPair.messages.length,2);assert.equal(attempts,8,'repeated statement triggers one repair even though both messages fit');
 const persistent=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'PERSISTENT estimate is $285, offer Friday afternoon.',mode:'split'})});
-assert.equal(persistent.status,422);assert.equal(attempts,10,'persistent repetition is never returned as a successful pair; retries are bounded');
+assert.equal(persistent.status,422);assert.equal(attempts,12,'persistent repetition is never returned as a successful pair; retries are bounded');
+const unsafeExpansion=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'BAD_DEVELOPMENT appointment update',mode:'split'})});
+assert.equal(unsafeExpansion.status,200);const preserved=await unsafeExpansion.json();assert.ok(preserved.stats.every(s=>s.characters<=160));assert.equal(preserved.messages[0],'Hi Sarah, your Thursday appointment needs to move from 2:00 to 3:00 because of the weather.','invalid expansion cannot replace a valid pair');
 const empty=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(empty.status,400);
 console.log('PASS: real endpoint single/pair output, character stats, overlong pair repair, repeated-statement repair, bounded rejection, empty-input validation, Astra request parameters.');
 child.kill();mock.close();

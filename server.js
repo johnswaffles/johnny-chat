@@ -11,7 +11,7 @@ import { readChapterLayout, saveChapterLayout, readPassageSplit, splitSavedPassa
 import { splitStoryManuscript, pdfPageText } from "./lib/story-chapters.mjs";
 import { bookChapters, speechParts } from "./public/story-editor/reader-model.mjs";
 import { createStoryQueue, storyTask, assertStoryLease } from "./lib/story-queue.mjs";
-import { getTextsmithSchema, getTextsmithSmsStats, parseTextsmithMessages, textsmithMessagesFit, textsmithValidationIssues, textsmithPrompt } from "./lib/textsmith.mjs";
+import { getTextsmithSchema, getTextsmithSmsStats, parseTextsmithMessages, textsmithMessagesFit, textsmithValidationIssues, textsmithPairNeedsDevelopment, textsmithPrompt } from "./lib/textsmith.mjs";
 import { classifyStoryProtection, storySectionProtection, isStorySafetyRefusal, normalizeAutopilotParagraphs, assertStoryModelResponse, withStoryOutputBudget, storyEditorialCacheKey, STORY_EDITOR_CONTEXT } from "./lib/story-editor.mjs";
 import express from "express";
 import cors from "cors";
@@ -1214,7 +1214,7 @@ function textsmithRateAllowed(req) {
   return true;
 }
 
-async function createTextsmithResponse({ input, mode, model, tone = "warm", draft = "" }) {
+async function createTextsmithResponse({ input, mode, model, tone = "warm", draft = "", expand = false }) {
   const response = await openai.responses.create({
     model,
     reasoning: { effort: "low" },
@@ -1222,7 +1222,7 @@ async function createTextsmithResponse({ input, mode, model, tone = "warm", draf
     store: false,
     text: { format: getTextsmithSchema(mode) },
     input: [
-      { role: "system", content: textsmithPrompt(mode, draft, tone) },
+      { role: "system", content: textsmithPrompt(mode, draft, tone, expand) },
       { role: "user", content: `ROUGH CUSTOMER TEXT\n${input}` }
     ]
   });
@@ -1685,7 +1685,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorAssistant: "Mara",
   storyEditorBible: "managed-source-bible-v2",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
-  textsmithVersion: "rich-sparse-pair-v4",
+  textsmithVersion: "rich-sparse-pair-v5",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
 
@@ -5384,6 +5384,21 @@ app.post("/api/textsmith", async (req, res) => {
 
     if (!textsmithMessagesFit(messages, mode)) {
       return res.status(422).json({ detail: "The message could not be written cleanly within the limits without repeating or losing meaning. Please clarify the key details and try again." });
+    }
+
+    if (textsmithPairNeedsDevelopment(messages, mode)) {
+      try {
+        const developed = await createTextsmithResponse({
+          input, mode, model, tone, expand: true,
+          draft: JSON.stringify(messages.map(text => ({ text, characters: Array.from(text).length })))
+        });
+        const length = pair => pair.reduce((total, text) => total + Array.from(text).length, 0);
+        if (textsmithMessagesFit(developed, mode) && length(developed) > length(messages)) messages = developed;
+      } catch (error) {
+        // A failed optional polish must not discard an already valid pair.
+        if (error.contentRefusal) throw error;
+        console.warn('TextSmith development pass unavailable; retaining validated messages.');
+      }
     }
 
     void recordJohnnyChatUsage("textsmith", { model, mode });

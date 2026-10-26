@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTextsmithSmsStats, textsmithMessagesFit, parseTextsmithMessages, textsmithPrompt, textsmithValidationIssues } from '../lib/textsmith.mjs';
+import { getTextsmithSmsStats, textsmithMessagesFit, parseTextsmithMessages, textsmithPrompt, textsmithValidationIssues, textsmithPairNeedsDevelopment } from '../lib/textsmith.mjs';
 test('one message is strictly under 160; two messages each allow 160',()=>{
  assert.equal(textsmithMessagesFit(['a'.repeat(159)],'single'),true);
  assert.equal(textsmithMessagesFit(['a'.repeat(160)],'single'),false);
@@ -67,4 +67,14 @@ test('two-message choice develops sparse notes without inventing facts or requir
  assert.match(prompt,/Never add a new promise, service, deadline, reason, price, or commitment/);
  assert.doesNotMatch(prompt,/use a short natural follow-through|do not stretch a short source/);
  assert.doesNotMatch(textsmithPrompt('single'),/SPARSE-SOURCE EXPANSION/);
+});
+
+test('development pass is reserved for valid underfilled pairs',()=>{
+ assert.equal(textsmithPairNeedsDevelopment(['Hi Alex, I am running 10 minutes late.', 'I apologize for the delay.'],'split'),true);
+ assert.equal(textsmithPairNeedsDevelopment(['a'.repeat(120),'b'.repeat(120)],'split'),false);
+ assert.equal(textsmithPairNeedsDevelopment(['a'.repeat(161),'b'],'split'),false);
+ assert.equal(textsmithPairNeedsDevelopment(['Hello'],'single'),false);
+ const prompt=textsmithPrompt('split','candidate','warm',true);
+ assert.match(prompt,/DEVELOPMENT PASS/);
+ assert.doesNotMatch(prompt,/previous candidate failed validation/);
 });
