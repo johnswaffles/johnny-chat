@@ -174,3 +174,67 @@ test('narration voice and Unicode delivery directions isolate cached audio; inva
 test('original tree chapters come from the immutable upload snapshot despite later revised structure',t=>{
  const {studio,db}=fixture(t);const original=[{kind:'chapter',chapter_index:1,original_text:'Imported opening'},{kind:'paragraph',chapter_index:1,original_text:'The immutable opening.'},{kind:'chapter',chapter_index:2,original_text:'Imported ending'},{kind:'paragraph',chapter_index:2,original_text:'The immutable ending.'}];db.prepare('INSERT INTO story_original_snapshots VALUES(?,?)').run('book',JSON.stringify(original));db.prepare("UPDATE story_sections SET original_text='Later split source',edited_text='Later working revision' WHERE id='a'").run();const before=db.prepare('SELECT sections_json FROM story_original_snapshots WHERE project_id=?').get('book').sections_json;const snapshot=studio.snapshot('book');assert.equal(snapshot.originalChapters.length,2);assert.equal(snapshot.originalChapters[0].title,'Imported opening');assert.match(snapshot.originalChapters[0].text,/immutable opening/);assert.ok(!snapshot.originalChapters[0].text.includes('Later working'));assert.equal(snapshot.chapters[0].passages[0].text,'Later working revision');assert.equal(db.prepare('SELECT sections_json FROM story_original_snapshots WHERE project_id=?').get('book').sections_json,before);
 });
+
+test('manual passage edits keep exact author text, create a comparable version, and undo without a provider',t=>{
+ let calls=0;const {studio,db,request}=fixture(t,async()=>{calls++;return result();});
+ const text='  The author’s own wording.\n\nA second paragraph.  ',saved=studio.savePassage('book',{sectionId:'a',revision:request().revision,text});
+ assert.equal(saved.changed,true);assert.equal(saved.revision,studioRevision(text));assert.equal(calls,0);
+ assert.equal(studio.snapshot('book').chapters[0].passages[0].text,text);assert.equal(db.prepare("SELECT original_text FROM story_sections WHERE id='a'").get().original_text,'Original first passage.');
+ const history=studio.snapshot('book').versions[0];assert.equal(history.beforeRevision,request().revision);assert.equal(history.afterRevision,saved.revision);assert.ok(!Object.hasOwn(history,'beforeText'));
+ const version=studio.version('book',saved.versionId);assert.equal(version.beforeText,'Current first passage.');assert.equal(version.afterText,text);assert.equal(version.instruction,'Manual text edit');assert.equal(version.explanation,'You edited this passage directly.');
+ assert.throws(()=>studio.version('other',saved.versionId),e=>e.status===404);
+ assert.equal(studio.savePassage('book',{sectionId:'a',revision:saved.revision,text}).changed,false);assert.equal(studio.snapshot('book').versions.length,1);
+ studio.undo('book',{sectionId:'a',revision:saved.revision});assert.equal(studio.snapshot('book').chapters[0].passages[0].text,'Current first passage.');assert.ok(studio.version('book',saved.versionId).undoneAt);assert.equal(calls,0);
+});
+
+test('manual edits reject stale, protected, busy, empty, and oversized changes without partial writes',t=>{
+ const {studio,db,request}=fixture(t,async()=>assert.fail('Manual edit must never generate'));
+ const edit={sectionId:'a',revision:request().revision,text:'Changed by the author.'};
+ assert.throws(()=>studio.savePassage('book',{...edit,revision:'old'}),e=>e.status===409);
+ assert.throws(()=>studio.savePassage('book',{...edit,text:' \n '}),e=>e.status===400);
+ assert.throws(()=>studio.savePassage('book',{...edit,text:'x'.repeat(50001)}),e=>e.status===413);
+ assert.throws(()=>studio.savePassage('other',edit),e=>e.status===404);
+ db.prepare("UPDATE story_sections SET preserve_verbatim=1 WHERE id='a'").run();assert.throws(()=>studio.savePassage('book',edit),/preservation/);db.prepare("UPDATE story_sections SET preserve_verbatim=0 WHERE id='a'").run();
+ db.prepare("INSERT INTO story_autopilot_jobs VALUES('full','book','running','{}','2026-01-01')").run();assert.throws(()=>studio.savePassage('book',edit),/full edit is running/);db.prepare("DELETE FROM story_autopilot_jobs WHERE id='full'").run();
+ studio.start('book',request());assert.throws(()=>studio.savePassage('book',edit),/current request/);studio.cancel('book','request-1');
+ db.exec("CREATE TRIGGER reject_manual_update BEFORE UPDATE ON story_sections BEGIN SELECT RAISE(ABORT,'storage test'); END;");assert.throws(()=>studio.savePassage('book',edit),/storage test/);
+ assert.equal(studio.snapshot('book').versions.length,0);assert.equal(studio.snapshot('book').chapters[0].passages[0].text,'Current first passage.');
+});
+
+test('manual route authenticates, saves without paid calls, and returns recoverable conflict errors',async t=>{
+ const h=harness(t),body={sectionId:'a',revision:studioRevision('Current first passage.'),text:'Written directly.'};
+ assert.equal((await h.run('put','/passage',{authorized:false,body})).statusCode,401);assert.deepEqual(h.counts(),{generated:0,voiceCalls:0,speechCalls:0,readyCalls:0});
+ const saved=await h.run('put','/passage',{body});assert.equal(saved.statusCode,200);assert.equal(saved.body.changed,true);assert.equal(saved.body.revision,studioRevision(body.text));
+ assert.equal((await h.run('put','/passage',{body})).statusCode,409);assert.equal(h.counts().generated,0);assert.equal(h.counts().speechCalls,0);
+});
+
+test('chapter discussion sends only its chapter prose and scoped conversation to the provider',async t=>{
+ const inputs=[];const {studio,db,request}=fixture(t,async input=>{inputs.push(input);return {...result(),action:'discuss',reply:'The selected chapter builds tension through her hesitation.'};});
+ const sentinel='OTHER_CHAPTER_PROSE_NEVER_SEND';db.prepare("UPDATE story_sections SET original_text=?,summary=? WHERE id='c'").run(sentinel,sentinel);
+ studio.note('book',sentinel);studio.message('book','assistant',sentinel,'unscoped');db.prepare("INSERT INTO story_bible VALUES('book',?,'','','','','')").run(sentinel);db.prepare("INSERT INTO story_autopilot_jobs VALUES('finished','book','completed',?,'2026-01-01')").run(sentinel);
+ studio.start('book',{...request('chapter-one','Discuss this chapter’s pacing.'),mode:'discuss',scope:'chapter'});await studio.tick();assert.equal(studio.task('book','chapter-one').status,'done');
+ const input=inputs[0],json=JSON.stringify(input);assert.ok(!json.includes(sentinel));assert.ok(!json.includes('PRIVATE_OTHER_BOOK'));assert.deepEqual([...new Set(input.fullManuscript.map(p=>p.chapter))],[1]);assert.equal(input.navigation.length,1);assert.equal(input.savedBookContinuity,null);assert.equal(input.history.length,1);assert.equal(studio.snapshot('book').versions.length,0);
+ studio.start('book',{...request('chapter-two','Tell me more about that tension.'),mode:'discuss',scope:'chapter'});await studio.tick();assert.equal(inputs[1].history.length,3);assert.ok(inputs[1].history.some(m=>m.text.includes('selected chapter builds tension')));
+ assert.throws(()=>studio.start('book',{...request('bad-mode'),mode:'edit',scope:'chapter'}),/chapter revision control/);
+});
+
+test('chapter discussion and explicit passage revision reject unrelated provider actions',async t=>{
+ const chapter=fixture(t,async()=>result('Unauthorized chapter change.'));chapter.studio.start('book',{...chapter.request(),mode:'discuss',scope:'chapter'});await chapter.studio.tick();assert.equal(chapter.studio.task('book','request-1').status,'failed');assert.equal(chapter.studio.snapshot('book').versions.length,0);
+ const passage=fixture(t,async()=>({...result(),action:'remember',note:'Unexpected canon.'}));passage.studio.start('book',{...passage.request(),mode:'edit',scope:'passage'});await passage.studio.tick();assert.equal(passage.studio.task('book','request-1').status,'failed');assert.equal(passage.studio.snapshot('book').notes.length,0);
+ let calls=0;const editor=createLayeredStudioEditor({instructions:STUDIO_INSTRUCTIONS,decisionFormat:STUDIO_FORMAT,call:async()=>{calls++;return {...result(),action:'navigate'};}});await assert.rejects(editor({requestMode:'edit',requestScope:'passage'},new AbortController().signal),/unrelated action/);assert.equal(calls,1);
+});
+
+test('oversized historical comparison rejects without clipping or deleting saved text',t=>{
+ const {studio,db}=fixture(t);const before='x'.repeat(2000001);db.prepare('INSERT INTO studio_versions VALUES(?,?,?,?,?,?,?,NULL)').run('huge','book','a',before,'after','Legacy large version','2026-01-01');
+ assert.throws(()=>studio.version('book','huge'),e=>e.status===413);assert.equal(db.prepare("SELECT before_text FROM studio_versions WHERE id='huge'").get().before_text.length,before.length);assert.ok(studio.snapshot('book').versions.find(v=>v.id==='huge'));
+});
+
+
+test('comparison explains saved editorial outcomes with bounded safe lookup and honest fallback',async t=>{
+ let calls=0;const {studio,db,request}=fixture(t,async()=>{calls++;return result();});studio.start('book',request());await studio.tick();
+ const saved=studio.snapshot('book').versions[0];assert.equal(studio.version('book',saved.id).explanation,result().reply);assert.equal(calls,1);
+ db.prepare("UPDATE studio_tasks SET result_json='not-json' WHERE id='request-1'").run();assert.match(studio.version('book',saved.id).explanation,/recoverable saved change/);
+ db.prepare("UPDATE studio_tasks SET result_json=? WHERE id='request-1'").run(JSON.stringify({versionId:'different-version',reply:'Unrelated explanation.'}));assert.ok(!studio.version('book',saved.id).explanation.includes('Unrelated'));
+ db.prepare("UPDATE studio_tasks SET result_json=?,project_id='other' WHERE id='request-1'").run(JSON.stringify({versionId:saved.id,reply:'Another manuscript must not provide the explanation.'}));assert.match(studio.version('book',saved.id).explanation,/recoverable saved change/);
+ assert.equal(calls,1);assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE name='studio_tasks_project_history'").get());
+});

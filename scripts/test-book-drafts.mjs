@@ -84,3 +84,9 @@ test('Autopilot snapshots canon once, restores it on resume, and adds it before 
 test('adding empty book storage preserves pre-feature task revision identities',t=>{
  const {studio,db}=fixture(t);const rows=db.prepare("SELECT id,chapter_index,scene_index,paragraph_index,line_index,kind,original_text,edited_text FROM story_sections WHERE project_id=? ORDER BY id").all('next'),names=db.prepare('SELECT chapter_index,title FROM story_chapter_names WHERE project_id=? ORDER BY chapter_index').all('next');const expected=studioRevision(JSON.stringify({rows,names,goal:''}));studio.start('next',{requestId:'compatible-task',sectionId:'c',revision:studioRevision('Mara approaches the flooded orchard.'),message:'Discuss the scene.',mode:'discuss'});assert.equal(db.prepare('SELECT source_revision FROM studio_tasks WHERE id=?').get('compatible-task').source_revision,expected);
 });
+
+test('saved chapter source revision distinguishes an approved version from a changed working draft',t=>{
+ const {studio,save}=fixture(t);studio.chooseBook('one',{title:'The approved book'});const before=studio.snapshot('one'),saved=save().book.chapters[0];assert.equal(saved.sourceRevision,before.chapters[0].revision);
+ studio.savePassage('one',{sectionId:'a',revision:before.chapters[0].passages[0].revision,text:'The author changes the opening after approval.'});const changed=studio.snapshot('one');assert.notEqual(changed.chapters[0].revision,changed.bookDrafts.book.chapters[0].sourceRevision);assert.equal(changed.bookDrafts.book.chapters[0].sourceRevision,saved.sourceRevision);
+ const refreshed=save();assert.equal(refreshed.book.chapters[0].sourceRevision,studio.snapshot('one').chapters[0].revision);assert.equal(refreshed.book.chapters[0].version,2);
+});

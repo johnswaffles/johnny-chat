@@ -903,7 +903,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
 
   document.addEventListener('story-author-request',async event=>{
     const request=event.detail;
-    if(request.projectId!==state.project?.id || ['queued','running'].includes(state.autopilotJob?.status)) return;
+    if(request.projectId!==state.project?.id || ['queued','running'].includes(state.autopilotJob?.status)){document.dispatchEvent(new CustomEvent('story-author-request-result',{detail:{projectId:request.projectId,started:false,busy:false,message:request.projectId!==state.project?.id?'The manuscript changed. Reopen it before revising.':'A revision is already running. Let it finish or pause it first.'}}));return;}
     const intent=`AUTHOR REQUEST: ${request.request}\nApply these requested changes and additions to ${request.chapter ? 'chapter '+request.chapter : 'the whole book'} using the current revised draft. Preserve voice and all unaffected material. Requested changes take priority over preserving conflicting source events. Do not invent unrelated plot changes or nonfiction facts.`;
     document.dispatchEvent(new CustomEvent('story-author-request-result',{detail:{projectId:request.projectId,message:'Starting your requested changes…',busy:true}}));
     await startAutopilot({fresh:true,requestedIntent:intent,chapter:request.chapter,changeRequest:true});

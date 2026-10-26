@@ -45,7 +45,7 @@ const mock=http.createServer(async(req,res)=>{
  const stage=body.text?.format?.name;
  if(['writing_studio_turn','studio_draft','studio_critique','studio_final'].includes(stage)){
   let value;
-  if(stage==='writing_studio_turn')value={action:user.requestScope==='book'?'revise_book':'revise',reply:'Developing the moment without changing its outcome.',revisionText:'',note:'Make the emotional conflict concrete and retain the quiet voice.',chapter:0,passage:0};
+  if(stage==='writing_studio_turn')value={action:user.requestMode==='discuss'?'discuss':user.requestScope==='book'?'revise_book':'revise',reply:user.requestMode==='discuss'?'The selected material builds tension through a concrete hesitation. Your draft is unchanged.':'Developing the moment without changing its outcome.',revisionText:'',note:'Make the emotional conflict concrete and retain the quiet voice.',chapter:0,passage:0};
   if(stage==='studio_draft')value={text:user.context.selection.text+' She held the envelope by its unopened edge.',craftNotes:'Developed the physical hesitation.'};
   if(stage==='studio_critique')value={strengths:['A physical action carries feeling.'],issues:['Keep the causal decision visible.'],continuityRisks:[],authorIntentFit:'Matches the request.'};
   if(stage==='studio_final')value={text:user.candidate+' Her thumb found the crease, then let it go.',craftNotes:'Her hesitation now appears in a specific action; the decision and original voice remain intact.'};
@@ -292,6 +292,9 @@ stopDb.prepare("UPDATE story_sections SET edited_text='Synthetic saved revision.
 stopDb.prepare("INSERT INTO story_provider_requests(job_id,stage_key,stage,state,response_id,client_request_id,model,effort,mode,submitted_at,checked_at) VALUES(?,?,?,'in_progress',?,?,?,'xhigh','pro',?,?)").run('synthetic-stop-job','stage','story_autopilot_chunk','resp_stop_fixture','stop-fixture','gpt-6.1-sol',new Date().toISOString(),new Date().toISOString());
 pendingResponses.set('resp_stop_fixture',{id:'resp_stop_fixture',status:'in_progress',model:'gpt-6.1-sol'});
 assert.equal((await json(stopBase+'/studio/work-status')).active,true);const requestsBeforeStop=requests.length;
+const activePassage=(await json(stopBase+'/studio')).chapters[0].passages[0];
+const activeManual=await fetch(origin+stopBase+'/studio/passage',{method:'PUT',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({sectionId:activePassage.id,revision:activePassage.revision,text:'Must not replace an active full revision.'})});
+assert.equal(activeManual.status,409);assert.match((await activeManual.json()).error,/full edit is running/);assert.equal(requests.length,requestsBeforeStop);
 assert.equal((await json(stopBase+'/studio/stop-work',{method:'POST'})).stopped,true);
 assert.equal((await json(stopBase+'/studio/stop-work',{method:'POST'})).stopped,true);
 assert.equal((await json(stopBase+'/studio/work-status')).active,false);assert.equal(cancellationCalls,1);assert.equal(requests.length,requestsBeforeStop);
@@ -312,14 +315,31 @@ assert.equal((await json(studioBase)).goal,'A finished literary novel with a qui
 
 const studioPassage=studioState.chapters[0].passages[0],savedOriginal=studioState.original;
 await json(studioBase+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:'Mara wants reconciliation, but she is afraid of what opening the letter will require.'})});
+const discussionBefore=requests.length,discussionOriginal=JSON.stringify(studioState.chapters);
+await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:'local-chapter-discussion',mode:'discuss',scope:'chapter',sectionId:studioPassage.id,revision:studioPassage.revision,message:'Discuss the pacing of this chapter.'})});
+let discussion;
+for(let i=0;i<100;i++){discussion=(await json(studioBase+'/tasks/local-chapter-discussion')).task;if(['done','failed'].includes(discussion.status))break;await new Promise(r=>setTimeout(r,30));}
+assert.equal(discussion.status,'done',discussion.error);assert.equal(discussion.result.action,'discuss');assert.equal(requests.length-discussionBefore,1);assert.ok(!JSON.stringify(requests.slice(discussionBefore)).includes('At the station'),'Chapter discussion excludes other chapter prose from the actual provider payload');assert.equal(JSON.stringify((await json(studioBase)).chapters),discussionOriginal);assert.equal((await json(studioBase)).versions.length,0);
+console.log('PASS: explicit chapter discussion uses one mocked planning request, excludes other chapters from provider payloads, and never changes prose.');
 const beforeStudioCalls=requests.length;
-const studioRequest={requestId:'local-studio-edit',sectionId:studioPassage.id,revision:studioPassage.revision,message:'Deepen her hesitation through physical action, without changing the decision.'};
+const studioRequest={requestId:'local-studio-edit',mode:'edit',scope:'passage',sectionId:studioPassage.id,revision:studioPassage.revision,message:'Deepen her hesitation through physical action, without changing the decision.'};
 const studioStart=await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(studioRequest)});assert.ok(['queued','running'].includes(studioStart.task.status));
 let studioTask;
 for(let i=0;i<100;i++){studioTask=(await json(studioBase+'/tasks/local-studio-edit')).task;if(['done','failed'].includes(studioTask.status))break;await new Promise(r=>setTimeout(r,30));}
 assert.equal(studioTask.status,'done',studioTask.error);assert.deepEqual(requests.slice(beforeStudioCalls).map(r=>r.text.format.name),['writing_studio_turn','studio_draft','studio_critique','studio_final']);
-studioState=await json(studioBase);assert.equal(studioState.original,savedOriginal);assert.equal(studioState.versions.length,1);assert.match(studioState.chapters[0].passages[0].text,/Her thumb found the crease/);
+studioState=await json(studioBase);assert.equal(studioState.original,savedOriginal);assert.equal(studioState.versions.length,1);assert.match(studioState.chapters[0].passages[0].text,/Her thumb found the crease/);assert.equal((await json(studioBase+'/versions/'+studioState.versions[0].id)).version.explanation,studioTask.result.reply);
 const repeated=await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(studioRequest)});assert.equal(repeated.task.status,'done');assert.equal(requests.length-beforeStudioCalls,4);
+// Direct author edits use the same durable versions and Undo, with no provider call.
+const manualBefore=requests.length,manualPassage=studioState.chapters[0].passages[0],manualText='  Mara rested her hand against the unopened letter.\n\nShe would decide in the morning.  ';
+const manualInput={sectionId:manualPassage.id,revision:manualPassage.revision,text:manualText};
+assert.equal((await fetch(origin+studioBase+'/passage',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(manualInput)})).status,401);
+const manualSaved=await json(studioBase+'/passage',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(manualInput)});assert.equal(manualSaved.changed,true);assert.equal(requests.length,manualBefore);
+assert.equal((await fetch(origin+studioBase+'/versions/'+manualSaved.versionId)).status,401);
+const manualVersion=(await json(studioBase+'/versions/'+manualSaved.versionId)).version;assert.equal(manualVersion.beforeText,manualPassage.text);assert.equal(manualVersion.afterText,manualText);assert.equal(manualVersion.instruction,'Manual text edit');assert.equal(manualVersion.explanation,'You edited this passage directly.');
+const manualState=await json(studioBase);assert.equal(manualState.original,savedOriginal);assert.equal(manualState.chapters[0].passages[0].text,manualText);assert.equal(manualState.versions[0].afterRevision,manualSaved.revision);assert.ok(!Object.hasOwn(manualState.versions[0],'afterText'),'Routine snapshots do not contain every historical prose version');
+assert.equal((await fetch(origin+studioBase+'/passage',{method:'PUT',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify(manualInput)})).status,409);
+await json(studioBase+'/undo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sectionId:manualPassage.id,revision:manualSaved.revision})});studioState=await json(studioBase);assert.equal(studioState.chapters[0].passages[0].text,manualPassage.text);assert.equal(studioState.original,savedOriginal);assert.equal(requests.length,manualBefore);
+console.log('PASS: authenticated manual edit, exact Unicode/whitespace preservation, saved comparison retrieval, conflict rejection, and Undo without any model request.');
 const fullBefore=await json(studioBook.base);
 const proposalBefore=requests.length;
 await json(studioBase+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:'whole-book-proposal',scope:'book',sectionId:studioState.chapters[0].passages[0].id,revision:studioState.chapters[0].passages[0].revision,message:'Deepen the emotional arc throughout the whole manuscript.'})});

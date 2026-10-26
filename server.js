@@ -1680,6 +1680,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorPromptMaxBytes: MAX_PROMPT_BYTES,
   storyEditorChangeRequests: "chapter-scope-guard-v2",
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
+  storyEditorComfort: "review-and-reading-comfort-v1",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
   textsmithVersion: "intentional-messages-v2",
   textsmithModel: OPENAI_TEXTSMITH_MODEL

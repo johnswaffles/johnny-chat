@@ -20,3 +20,18 @@ test('authenticated streaming response retains status, body and headers',async()
 });
 
 test('explicit unlock still uses existing password gate, secure cookie and twelve-hour policy',async()=>{const oldFetch=globalThis.fetch;globalThis.fetch=async(url,options)=>{assert.ok(url.endsWith('/api/chatbot-access'));assert.deepEqual(JSON.parse(options.body),{password:'synthetic-only-password'});return Response.json({ok:true,token:'synthetic-new-session',maxAge:43200});};try{const response=await onRequest({request:new Request('https://example.test/story-editor/?reauth=1',{method:'POST',body:new URLSearchParams({password:'synthetic-only-password'})}),env:{},next:()=>{throw Error('Must authenticate first');}});assert.equal(response.status,303);assert.equal(response.headers.get('Location'),'https://example.test/story-editor/');assert.match(response.headers.get('Set-Cookie'),/Max-Age=43200/);assert.match(response.headers.get('Set-Cookie'),/SameSite=Lax; Secure/);}finally{globalThis.fetch=oldFetch;}});
+
+test('password visibility control preserves credentials and is not a submit action',async()=>{
+ const response=await onRequest({request:new Request('https://example.test/story-editor/'),env:{},next:()=>{throw Error('Must remain gated');}});
+ const html=await response.text();
+ assert.match(html,/Enter your private workspace password/);
+ assert.doesNotMatch(html,/GPT 5\.6|autofocus/);
+ assert.match(html,/<button id="password-toggle"[^>]*type="button"/);
+ const script=html.match(/<script>([\s\S]*?)<\/script>/)?.[1];assert.ok(script);
+ const input={type:'password',value:'synthetic-private-input'};
+ const toggle={hidden:true,attributes:{},addEventListener(type,fn){assert.equal(type,'click');this.click=fn;},setAttribute(key,value){this.attributes[key]=value;}};
+ const {runInNewContext}=await import('node:vm');runInNewContext(script,{document:{getElementById:id=>id==='workspace-password'?input:toggle}});
+ assert.equal(toggle.hidden,false);toggle.click();
+ assert.equal(input.type,'text');assert.equal(input.value,'synthetic-private-input');assert.equal(toggle.attributes['aria-pressed'],'true');assert.equal(toggle.attributes['aria-label'],'Hide password');
+ toggle.click();assert.equal(input.type,'password');assert.equal(input.value,'synthetic-private-input');assert.equal(toggle.attributes['aria-pressed'],'false');
+});

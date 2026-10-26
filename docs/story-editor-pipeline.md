@@ -552,3 +552,41 @@ responses: original/revised/saved selection, expand/collapse redraws, reload, re
 navigation and imports, unsent-field restoration, active-job preservation and import
 failure. Responsive rules and controls are checked in code; actual desktop/mobile
 browser rendering remains unverified under the prior selected-URL restriction.
+
+## Passage review and reading comfort (October 26, 2026)
+
+The primary composer exposes Discuss/Revise and Passage/Chapter/Whole manuscript.
+Discuss always uses the non-mutating mode. Chapter discussion sends only that
+chapter's prose and scoped conversation; global prose-bearing notes, plans,
+conversation, and saved-book excerpts are excluded. Chapter and manuscript
+revision use the existing durable scoped revision queue. Voice tool behavior and
+the configured literary/narration models are unchanged.
+
+Compare changes sits beside the draft and shows either original-to-current or a
+saved studio change, using complete text and safe DOM text nodes. When available,
+the editor’s saved explanation accompanies that change; no extra AI call is made. A bounded word
+comparison falls back to highlighting a complete changed block for very large
+rewrites. Undo remains guarded against stale or external changes.
+
+Manual passage editing calls authenticated PUT /studio/passage with the selected
+revision hash. It preserves exact author text, the original, and recoverable
+before/after history in one transaction, makes no provider call, and rejects
+stale/busy writes. Unsent manual edits stay per manuscript/passage in this tab's
+session storage (in memory if storage is unavailable). A stale unsent revision is
+never silently applied to a newer passage. Comparison details are fetched by
+project-scoped GET /studio/versions/:versionId, with an explicit 2 MB limit instead
+of clipping. Saved book metadata includes its source revision so the UI can
+separate automatic draft saving from an approved book version.
+
+Warm paper and Dusk themes, text size, reading width, and native playback speed
+are local display preferences. Focus reading hides the conversation with a
+visible exit. Speed changes do not request or regenerate narration and do not
+restart playback. Authentication remains the existing private shared-password
+workspace; the access page now uses durable wording and an accessible password
+visibility control.
+
+Release markers: backend `storyEditorComfort` and Pages `X-Story-Editor-Comfort`
+are `review-and-reading-comfort-v1`. Deploy the compatible backend before the
+Pages frontend. Validate with the writing studio, book drafts, reading comfort,
+passage comparison, narration regression, and isolated integration suites. Browser
+QA uses only the local synthetic provider and manuscript fixture.
