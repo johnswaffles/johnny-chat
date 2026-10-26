@@ -3,128 +3,74 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TextSmith | justaskjohnny.com</title>
-  <meta name="description" content="Turn rough customer notes into polished SMS messages that use the space well without sounding cramped.">
+  <meta name="theme-color" content="#e7eedf">
+  <title>TextSmith — Your words, well put</title>
+  <meta name="description" content="A little polish for your everyday messages. Turn a rough note into a thoughtful, professional text that still sounds like you.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/textsmith/textsmith.css?v=customer-care-20260910">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Libre+Baskerville:ital,wght@1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/textsmith/textsmith.css?v=forest-glow-20261026">
 </head>
 <body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/></symbol>
+    <symbol id="icon-note" viewBox="0 0 24 24"><path d="M14 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M8 10h3m-3 5h8m0-12v6m-3-3h6"/></symbol>
+  </svg>
+  <a class="skip-link" href="#source-text">Skip to your draft</a>
   <div class="site-shell">
     <header class="site-nav">
-      <a class="brand" href="/">justaskjohnny.com</a>
-      <nav aria-label="Site navigation">
-        <a href="/">Home</a>
-        <a class="active" href="/textsmith/" aria-current="page">TextSmith</a>
-        <a href="/#featured">My Apps</a>
-      </nav>
+      <a class="brand" href="/textsmith/" aria-label="TextSmith home">
+        <span class="brand-mark" aria-hidden="true">Ts<span>.</span></span>
+        <span>TextSmith<span class="brand-byline">by justaskjohnny</span></span>
+      </a>
+      <nav aria-label="Site navigation"><a href="/#featured">All apps <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a></nav>
     </header>
 
     <main class="page">
-      <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true"></span> Your words, well put</p>
-          <h1>A better text.<br>Still unmistakably you.</h1>
-          <p class="lede">Say it your way. We’ll turn the rough thought into a thoughtful, professional text—with the right details and a natural next step.</p>
-          <div class="principles" aria-label="TextSmith principles">
-            <span>Professional by default</span>
-            <span>Never padded with filler</span>
-            <span>No emoji</span>
-          </div>
-        </div>
-        <div class="hero-rule" aria-hidden="true">
-          <span>QUALITY</span>
-          <i></i>
-          <span>FIT</span>
-        </div>
+      <section class="intro" aria-labelledby="page-title">
+        <div><p class="eyebrow">YOUR WORDS, WELL PUT</p><h1 id="page-title">A little polish. <em>A lot more you.</em></h1><p class="lede">From a rough thought to a text worth sending.</p></div>
+        <span class="studio-label"><span></span> Your everyday message studio</span>
       </section>
 
       <section class="studio" aria-label="TextSmith workspace">
-        <section class="panel input-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="panel-kicker">01 / Start with the thought</p>
-              <h2>What do you want to say?</h2>
+        <div class="studio-toolbar">
+          <div class="format-control">
+            <span class="control-label" id="format-label">Format</span>
+            <div class="mode-switch" role="group" aria-labelledby="format-label" aria-describedby="mode-description">
+              <button class="mode-option active" type="button" data-mode="single" aria-pressed="true">One message</button>
+              <button class="mode-option" type="button" data-mode="split" aria-pressed="false">Two messages</button>
             </div>
-            <span class="input-count" id="input-count">0 / 6,000</span>
+            <span class="mode-budget" id="mode-budget">159 characters max</span>
+            <p class="sr-only" id="mode-description">One complete message, up to 159 characters.</p>
           </div>
+          <div class="tone-field"><label class="control-label" for="tone">Tone</label><select id="tone"><option value="warm">Warm &amp; professional</option><option value="direct">Clear &amp; direct</option><option value="reassuring">Calm &amp; reassuring</option><option value="expert">Expert customer care</option></select></div>
+        </div>
 
-          <label class="sr-only" for="source-text">What do you want to say?</label>
-          <textarea id="source-text" maxlength="6000" placeholder="Example: I need to let Sarah know her Thursday appointment has to move from 2:00 to 3:00 because of the weather, and thank her for being flexible."></textarea>
+        <div class="workspace-grid">
+          <section class="panel input-panel" aria-labelledby="draft-heading">
+            <div class="panel-heading"><h2 id="draft-heading"><svg class="icon" aria-hidden="true"><use href="#icon-note"/></svg>Your draft</h2><button class="text-button" id="clear-button" type="button" disabled>Clear</button></div>
+            <label class="sr-only" for="source-text">What do you want to say?</label>
+            <textarea id="source-text" maxlength="6000" spellcheck="true" placeholder="What do you want to say?&#10;&#10;A few details, a rough note, or the message you’re overthinking. Start anywhere."></textarea>
+            <div class="draft-meta"><span>Rough is welcome.</span><span class="input-count" id="input-count">0 / 6,000</span></div>
+            <div class="examples" aria-label="Example messages"><span>Try</span><button type="button" data-example="Let Mike know the estimate is ready, the total is $285, and I can come by Friday afternoon if that works for him.">Estimate follow-up <span aria-hidden="true">↗</span></button><button type="button" data-example="Tell the customer we received their request and will call them tomorrow morning with an arrival window.">Arrival update <span aria-hidden="true">↗</span></button></div>
+            <div class="compose-actions"><p class="keyboard-note"><kbd>⌘ / Ctrl</kbd> + <kbd>Enter</kbd></p><button class="primary-button" id="rewrite-button" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-spark"/></svg><span>Polish message</span><svg class="icon button-arrow" aria-hidden="true"><use href="#icon-arrow"/></svg></button></div>
+          </section>
 
-          <div class="examples" aria-label="Example messages">
-            <span>Try an example</span>
-            <button type="button" data-example="Let Mike know the estimate is ready, the total is $285, and I can come by Friday afternoon if that works for him.">Estimate follow-up</button>
-            <button type="button" data-example="Tell the customer we received their request and will call them tomorrow morning with an arrival window.">Arrival update</button>
-          </div>
-
-          <div class="mode-block">
-            <div class="mode-heading">
-              <div>
-                <p class="panel-kicker">02 / Choose the fit</p>
-                <h2>How many messages?</h2>
-              </div>
-              <span class="mode-budget" id="mode-budget">Under 160</span>
-            </div>
-            <div class="mode-switch" role="group" aria-label="How many messages?">
-              <button class="mode-option active" type="button" data-mode="single" aria-pressed="true">
-                <strong>One message</strong>
-                <small>Under 160 characters</small>
-              </button>
-              <button class="mode-option" type="button" data-mode="split" aria-pressed="false">
-                <strong>Two messages</strong>
-                <small>Up to 160 characters each</small>
-              </button>
-            </div>
-            <p class="mode-description" id="mode-description">One complete message. TextSmith preserves detail and trims only what is necessary.</p>
-          </div>
-
-          <label class="tone-field" for="tone">How should it sound?
-            <select id="tone"><option value="warm">Warm &amp; professional</option><option value="direct">Clear &amp; direct</option><option value="reassuring">Calm &amp; reassuring</option><option value="expert">Expert customer care</option></select>
-            <small>For extra care, choose Expert customer care: personal, considerate, and clear about what comes next.</small>
-          </label>
-          <button class="primary-button" id="rewrite-button" type="button">
-            <span>Write my message</span>
-            <b aria-hidden="true">↗</b>
-          </button>
-          <p class="keyboard-note">Ctrl / ⌘ + Enter to write. Enter adds a new line.</p>
-        </section>
-
-        <section class="panel output-panel" aria-live="polite">
-          <div class="panel-heading output-heading">
-            <div>
-              <p class="panel-kicker">03 / Keep the meaning</p>
-              <h2>Ready to send</h2>
-            </div>
-            <span class="status-pill" id="status-pill">Waiting</span>
-          </div>
-
-          <div class="result-area" id="result-area">
-            <div class="empty-result">
-              <div class="empty-line empty-line-wide"></div>
-              <div class="empty-line"></div>
-              <div class="empty-line empty-line-short"></div>
-              <p>Your polished message will appear here.</p>
-            </div>
-          </div>
-
-          <div class="output-footer">
-            <div class="model-note"><span class="model-dot"></span><span id="model-label">Thoughtfully written. Length checked.</span></div>
-            <p>Make any final tweaks right in the message. In two-message mode, copy and send each text separately. Your phone’s carrier may count accented or non-Latin characters differently.</p>
-          </div>
-        </section>
+          <section class="panel output-panel" aria-labelledby="result-heading">
+            <div class="panel-heading"><h2 id="result-heading"><svg class="icon" aria-hidden="true"><use href="#icon-spark"/></svg>Ready to send</h2><span class="status-pill" id="status-pill" role="status">Awaiting your draft</span></div>
+            <div class="result-area" id="result-area" aria-live="polite" aria-busy="false"></div>
+            <div class="output-footer"><svg class="icon" aria-hidden="true"><use href="#icon-check"/></svg><span id="model-label">Your words. Thoughtfully refined.</span><span class="edit-note">Edit · Copy · Send</span></div>
+          </section>
+        </div>
       </section>
 
-      <section class="guardrail-strip" aria-label="TextSmith quality rules">
-        <div><span class="strip-number">A</span><strong>Keep the useful detail</strong><p>Keep the names, timing, prices, and next steps that matter.</p></div>
-        <div><span class="strip-number">B</span><strong>Shorten with judgment</strong><p>Redundancy goes first. Meaning and human tone stay.</p></div>
-        <div><span class="strip-number">C</span><strong>Check the actual fit</strong><p>See a live character count, even after your own edits.</p></div>
-      </section>
+      <div class="workspace-notes"><p><svg class="icon" aria-hidden="true"><use href="#icon-check"/></svg>Your details, preserved<span class="note-divider">/</span>Natural tone<span class="note-divider">/</span>No filler</p><details class="message-help"><summary>A note on message length <span aria-hidden="true">+</span></summary><p>One message allows up to 159 characters; two messages allow up to 160 each. Edit your results before copying, and send each text separately. Carriers may count accented or non-Latin characters differently.</p></details></div>
     </main>
-
-    <footer class="site-footer"><span>TextSmith</span><span>Built for messages that still sound like you.</span></footer>
+    <footer class="site-footer"><a href="/">A little help from Johnny.</a><span>Good words go a long way.</span></footer>
   </div>
-  <script src="/textsmith/textsmith.js?v=customer-care-20260910"></script>
+  <template id="empty-state-template"><div class="empty-result"><div class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><rect x="9" y="12" width="40" height="34" rx="9"/><path d="m18 46-3 10 15-10M20 25h16M20 33h11"/><path class="spark" d="m49 4 2.5 7.5L59 14l-7.5 2.5L49 24l-2.5-7.5L39 14l7.5-2.5L49 4Z"/></svg></div><h3>A good message starts here.</h3><p class="empty-description">Add your draft and let’s find the right words.</p><div class="empty-preview" aria-hidden="true"><span></span><span></span><span></span></div></div></template>
+  <script src="/textsmith/textsmith.js?v=writing-desk-20261026"></script>
 </body>
 </html>
