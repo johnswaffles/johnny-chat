@@ -299,3 +299,23 @@
 @media (prefers-reduced-motion:reduce) {
   .notebook-app *, .notebook-app *::before, .notebook-app *::after { scroll-behavior: auto !important; transition-duration: 0s !important; }
 }
+
+.managed-bible-dialog { width: min(760px, calc(100vw - 28px)); color: var(--ink); background: var(--paper); }
+.managed-bible-dialog > p { max-width: 65ch; line-height: 1.65; color: var(--copy); }
+#managed-bible-status { padding: 12px 16px; border-radius: 10px; background: var(--sage-soft); color: var(--sage); }
+.managed-bible-hint { font-size: .88rem; }
+#managed-bible-content > details { padding: 18px 0; border-top: 1px solid var(--line); }
+#managed-bible-content summary { cursor: pointer; line-height: 1.6; }
+#managed-bible-content h3 { margin-top: 22px; font-size: .95rem; color: var(--plum-deep); }
+#managed-bible-content li { margin: 12px 0; line-height: 1.65; }
+#managed-bible-content li details { font-size: .85rem; color: var(--copy); }
+#managed-bible-content blockquote { margin: 8px 0; padding: 8px 14px; border-left: 2px solid var(--line-strong); white-space: pre-wrap; }
+.notebook-app .managed-bible-dialog { padding: 26px; box-sizing: border-box; }
+.managed-bible-dialog .dialog-head { gap: 16px; }
+.managed-bible-dialog .dialog-head h2 { margin: 6px 0 18px; }
+.managed-bible-dialog .dialog-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+@media (max-width: 600px) {
+  .notebook-app .managed-bible-dialog { padding: 20px; }
+  .managed-bible-dialog .dialog-head h2 { font-size: 1.7rem; }
+  .managed-bible-dialog .dialog-actions button { width: 100%; min-height: 44px; }
+}

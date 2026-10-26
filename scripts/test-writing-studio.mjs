@@ -238,3 +238,58 @@ test('comparison explains saved editorial outcomes with bounded safe lookup and 
  db.prepare("UPDATE studio_tasks SET result_json=?,project_id='other' WHERE id='request-1'").run(JSON.stringify({versionId:saved.id,reply:'Another manuscript must not provide the explanation.'}));assert.match(studio.version('book',saved.id).explanation,/recoverable saved change/);
  assert.equal(calls,1);assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE name='studio_tasks_project_history'").get());
 });
+
+test('Mara builds a persistent shared Bible across chapter files and sends summaries, not earlier prose',async t=>{
+ const extracts=[],inputs=[];const {studio,db,path}=fixture(t,async input=>{inputs.push(input);return {...result(),action:'discuss'};},{generateBible:async source=>{extracts.push(source);return {facts:[{category:'characters',note:'A visitor has a secret.',evidence:source.text.slice(0,20)}]};}});
+ const book=studio.chooseBook('book',{title:'Shared novel'}).book;studio.chooseBook('other',{bookId:book.id});
+ await studio.ensureBible('other');assert.equal(extracts.length,3);assert.equal(studio.bibleStatus('other').status,'ready');
+ const earlier=studio.bibleStatus('book',{chapterIndex:1,context:true});assert.equal(earlier.chapters.length,1);assert.ok(!JSON.stringify(earlier).includes('PRIVATE_OTHER_BOOK'));
+ const context=studio.context('other','z',true,'What carries over?','chapter');assert.equal(context.managedStoryBible.chapters.length,3);assert.match(JSON.stringify(context.managedStoryBible),/visitor has a secret/);assert.ok(!JSON.stringify(context.managedStoryBible).includes('Current first passage.'));assert.ok(!JSON.stringify(context.managedStoryBible).includes('evidence'));
+ await studio.ensureBible('other');assert.equal(extracts.length,3,'unchanged chapters are not regenerated');
+ const reopened=createWritingStudio({path,generate:async()=>result(),generateBible:async()=>{throw Error('cache should persist');}});reopened.init();await reopened.ensureBible('other');assert.equal(reopened.bibleStatus('other').status,'ready');reopened.stop();
+ db.prepare("UPDATE story_sections SET edited_text='A new secret.' WHERE id='a'").run();assert.equal(studio.bibleStatus('other').status,'needed');const stale=studio.bibleStatus('other');assert.equal(stale.chapters[0].facts.length,0,'old chapter facts are never presented as current');await studio.ensureBible('other');assert.equal(extracts.length,4);assert.match(extracts.at(-1).text,/new secret/);
+ studio.start('other',{requestId:'bible-discuss',sectionId:'z',revision:studioRevision('PRIVATE_OTHER_BOOK'),message:'Use the earlier story information.',mode:'discuss',scope:'chapter'});await studio.tick();assert.equal(studio.task('other','bible-discuss').status,'done');assert.ok(inputs[0].managedStoryBible.chapters.some(c=>c.projectId==='book'));
+});
+
+test('Bible rejects unsupported source quotes, preserves author notes, and retries only explicitly',async t=>{
+ let calls=0,valid=false;const {studio,db}=fixture(t,undefined,{generateBible:async source=>{calls++;return {facts:[{category:'timeline',note:'An event.',evidence:valid?source.text.slice(0,10):'A quote absent from the manuscript.'}]};}});
+ db.prepare("INSERT INTO story_bible VALUES('book','AUTHOR TRUTH','','','','','')").run();studio.note('book','Keep this decision.');
+ await assert.rejects(studio.ensureBible('book'),/verify/);assert.equal(studio.bibleStatus('book').status,'failed');await assert.rejects(studio.ensureBible('book'));assert.equal(calls,1);
+ assert.equal(db.prepare("SELECT characters FROM story_bible WHERE project_id='book'").get().characters,'AUTHOR TRUTH');assert.equal(studio.snapshot('book').notes[0].text,'Keep this decision.');valid=true;await studio.syncBible('book',{retry:true});assert.equal(studio.bibleStatus('book').status,'ready');
+});
+
+test('late Bible output is cached only against its own source and cannot overwrite a changed chapter',async t=>{
+ let release;const gate=new Promise(resolve=>release=resolve);let first=true;const {studio,db}=fixture(t,undefined,{generateBible:async source=>{if(first){first=false;await gate;}return {facts:[{category:'characters',note:'An observation.',evidence:source.text.slice(0,10)}]};}});
+ const work=studio.syncBible('book');await new Promise(r=>setImmediate(r));db.prepare("UPDATE story_sections SET edited_text='Newer prose wins.' WHERE id='a'").run();release();await work;assert.equal(studio.bibleStatus('book').status,'needed');assert.equal(studio.bibleStatus('book').chapters[0].facts.length,0);await studio.ensureBible('book');assert.equal(studio.bibleStatus('book').status,'ready');
+});
+
+test('Current chapter refresh never sends raw earlier chapter prose to Bible extraction',async t=>{
+ const sources=[];const {studio}=fixture(t,undefined,{generateBible:async source=>{sources.push(source);return {facts:[]};}});
+ await studio.ensureBible('book',{chapterIndex:2});assert.equal(sources.length,1);assert.equal(sources[0].chapter,2);assert.ok(!JSON.stringify(sources).includes('Current first passage.'));
+ const context=studio.context('book','c',true,'Discuss','chapter');assert.equal(context.managedStoryBible.status,'needed');assert.equal(context.managedStoryBible.chapters[0].ready,false,'missing earlier notes are explicit, never invented');
+});
+
+test('interrupted Bible maintenance is resumable on reopen and excludes protected sources',async t=>{
+ const sources=[];const {studio,db}=fixture(t,undefined,{generateBible:async source=>{sources.push(source);return {facts:[]};}});
+ db.prepare("UPDATE story_sections SET preserve_verbatim=1 WHERE id='a'").run();
+ db.prepare("INSERT INTO managed_bible_runs VALUES('project:book','','running',NULL,'old-process','2026-01-01')").run();
+ // Simulate a process interrupted with the current source fingerprint.
+ const current=studio.bibleStatus('book');db.prepare("UPDATE managed_bible_runs SET source_hash=?").run(current.revision);assert.equal(studio.bibleStatus('book').status,'needed');
+ await studio.ensureBible('book');assert.equal(studio.bibleStatus('book').status,'ready');assert.ok(!JSON.stringify(sources).includes('Current first passage.'));assert.equal(studio.bibleStatus('book').chapters[0].protectedPassages,1);
+});
+
+test('watched Bible refreshes saved edits and Undo without a browser and resumes after restart',async t=>{
+ let calls=0;const generateBible=async source=>{calls++;return {facts:[{category:'timeline',note:'Observed event.',evidence:source.text.slice(0,12)}]};};
+ const {studio,path,db}=fixture(t,undefined,{generateBible});await studio.syncBible('book',{watch:true});assert.equal(calls,2);
+ const saved=studio.savePassage('book',{sectionId:'a',revision:studioRevision('Current first passage.'),text:'A changed event.'});await studio.maintainBible();assert.equal(calls,3);assert.equal(studio.bibleStatus('book').status,'ready');
+ studio.undo('book',{sectionId:'a',revision:saved.revision});await studio.maintainBible();assert.equal(calls,3,'Undo reuses verified notes for the restored source');
+ db.prepare("UPDATE story_sections SET edited_text='A later automatic revision.' WHERE id='a'").run();
+ const reopened=createWritingStudio({path,generate:async()=>result(),generateBible});reopened.init();reopened.startWorker();for(let i=0;i<100&&reopened.bibleStatus('book').status!=='ready';i++)await new Promise(r=>setTimeout(r,10));assert.equal(calls,4);assert.equal(reopened.bibleStatus('book').status,'ready');reopened.stop();
+ await studio.maintainBible();assert.equal(calls,4,'unchanged notes never trigger generation');
+});
+
+test('automatic Bible maintenance waits for edits and does not loop on failed generation',async t=>{
+ let calls=0,broken=false;const {studio,db}=fixture(t,undefined,{generateBible:async()=>{calls++;if(broken)throw Error('offline');return {facts:[]};}});
+ await studio.syncBible('book',{watch:true});db.prepare("UPDATE story_sections SET edited_text='Changed prose.' WHERE id='a'").run();db.prepare("INSERT INTO story_autopilot_jobs VALUES('editing','book','running','{}','2026-01-01')").run();await studio.maintainBible();assert.equal(calls,2);
+ db.prepare("UPDATE story_autopilot_jobs SET status='completed' WHERE id='editing'").run();broken=true;await studio.maintainBible();assert.equal(calls,3);await studio.maintainBible();assert.equal(calls,3);assert.equal(studio.bibleStatus('book').status,'failed');
+});
