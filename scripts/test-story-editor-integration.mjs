@@ -386,7 +386,7 @@ if(!process.env.STORY_PREVIEW){
 }
 if(!process.env.STORY_PREVIEW){
  const removed=await fetch(origin+studioBook.base,{method:'DELETE',headers:auth});assert.equal(removed.status,200);
- const check=fixtureDb();for(const table of ['managed_bible_chunks','studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
+ const check=fixtureDb();for(const table of ['managed_bible_watch','managed_bible_chunks','studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
 }
 console.log('PASS: whole-manuscript proposal confirmation/scope/reload; revised vs original DOCX content; studio four-pass Sol/xhigh/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
 console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');

@@ -277,3 +277,19 @@ test('interrupted Bible maintenance is resumable on reopen and excludes protecte
  const current=studio.bibleStatus('book');db.prepare("UPDATE managed_bible_runs SET source_hash=?").run(current.revision);assert.equal(studio.bibleStatus('book').status,'needed');
  await studio.ensureBible('book');assert.equal(studio.bibleStatus('book').status,'ready');assert.ok(!JSON.stringify(sources).includes('Current first passage.'));assert.equal(studio.bibleStatus('book').chapters[0].protectedPassages,1);
 });
+
+test('watched Bible refreshes saved edits and Undo without a browser and resumes after restart',async t=>{
+ let calls=0;const generateBible=async source=>{calls++;return {facts:[{category:'timeline',note:'Observed event.',evidence:source.text.slice(0,12)}]};};
+ const {studio,path,db}=fixture(t,undefined,{generateBible});await studio.syncBible('book',{watch:true});assert.equal(calls,2);
+ const saved=studio.savePassage('book',{sectionId:'a',revision:studioRevision('Current first passage.'),text:'A changed event.'});await studio.maintainBible();assert.equal(calls,3);assert.equal(studio.bibleStatus('book').status,'ready');
+ studio.undo('book',{sectionId:'a',revision:saved.revision});await studio.maintainBible();assert.equal(calls,3,'Undo reuses verified notes for the restored source');
+ db.prepare("UPDATE story_sections SET edited_text='A later automatic revision.' WHERE id='a'").run();
+ const reopened=createWritingStudio({path,generate:async()=>result(),generateBible});reopened.init();reopened.startWorker();for(let i=0;i<100&&reopened.bibleStatus('book').status!=='ready';i++)await new Promise(r=>setTimeout(r,10));assert.equal(calls,4);assert.equal(reopened.bibleStatus('book').status,'ready');reopened.stop();
+ await studio.maintainBible();assert.equal(calls,4,'unchanged notes never trigger generation');
+});
+
+test('automatic Bible maintenance waits for edits and does not loop on failed generation',async t=>{
+ let calls=0,broken=false;const {studio,db}=fixture(t,undefined,{generateBible:async()=>{calls++;if(broken)throw Error('offline');return {facts:[]};}});
+ await studio.syncBible('book',{watch:true});db.prepare("UPDATE story_sections SET edited_text='Changed prose.' WHERE id='a'").run();db.prepare("INSERT INTO story_autopilot_jobs VALUES('editing','book','running','{}','2026-01-01')").run();await studio.maintainBible();assert.equal(calls,2);
+ db.prepare("UPDATE story_autopilot_jobs SET status='completed' WHERE id='editing'").run();broken=true;await studio.maintainBible();assert.equal(calls,3);await studio.maintainBible();assert.equal(calls,3);assert.equal(studio.bibleStatus('book').status,'failed');
+});

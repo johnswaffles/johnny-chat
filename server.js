@@ -1683,7 +1683,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorChapterOrganization: "reviewed-passage-splits-v2",
   storyEditorComfort: "review-and-reading-comfort-v1",
   storyEditorAssistant: "Mara",
-  storyEditorBible: "managed-source-bible-v1",
+  storyEditorBible: "managed-source-bible-v2",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
   textsmithVersion: "intentional-messages-v2",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
@@ -4276,7 +4276,7 @@ app.delete("/api/story-editor/projects/:id", async (req, res) => {
     if(studioTables.has('studio_tasks') && (await storyQuery(`SELECT id FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)} AND status IN ('queued','running') LIMIT 1;`))[0]) return res.status(409).json({ok:false,error:'Stop or finish the current studio edit before deleting this manuscript.'});
     const studioDeletes=[];
     if(studioTables.has('studio_task_stages')) studioDeletes.push(`DELETE FROM studio_task_stages WHERE task_id IN (SELECT id FROM studio_tasks WHERE project_id=${sqliteLiteral(projectId)});`);
-    for(const table of ['managed_bible_chunks','studio_goals','studio_context_cache','studio_messages','studio_notes','studio_versions','studio_state','studio_tasks']) if(studioTables.has(table)) studioDeletes.push(`DELETE FROM ${table} WHERE project_id=${sqliteLiteral(projectId)};`);
+    for(const table of ['managed_bible_watch','managed_bible_chunks','studio_goals','studio_context_cache','studio_messages','studio_notes','studio_versions','studio_state','studio_tasks']) if(studioTables.has(table)) studioDeletes.push(`DELETE FROM ${table} WHERE project_id=${sqliteLiteral(projectId)};`);
     await storyExec([
       "BEGIN;",
       ...studioDeletes,
@@ -4731,6 +4731,7 @@ const writingStudio=installWritingStudio(app, {
   },
   createSpeech: narrateStory
 });
+void writingStudio.initialize().catch(error=>console.error('Writing studio initialization failed:',error.message));
 
 app.get("/api/story-editor/projects/:id/export.docx", async (req, res) => {
   try {

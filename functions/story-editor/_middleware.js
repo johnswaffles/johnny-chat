@@ -243,7 +243,7 @@ export async function onRequest(context) {
   marked.headers.set("X-Story-Editor-Narration", "realtime-paragraph-voice-v1");
   marked.headers.set("X-Story-Editor-Comfort", "review-and-reading-comfort-v1");
   marked.headers.set("X-Story-Editor-Assistant", "Mara");
-  marked.headers.set("X-Story-Editor-Bible", "managed-source-bible-v1");
+  marked.headers.set("X-Story-Editor-Bible", "managed-source-bible-v2");
   marked.headers.set("X-Story-Editor-Book-Drafts", "versioned-chapter-canon-v1");
   marked.headers.set("X-Story-Editor-Quality", "gpt-6.1-sol-pro-xhigh");
   marked.headers.set("X-Story-Editor-Provider", "durable-background-responses-v1");
