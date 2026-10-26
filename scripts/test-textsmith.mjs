@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTextsmithSmsStats, textsmithMessagesFit, parseTextsmithMessages, textsmithPrompt } from '../lib/textsmith.mjs';
+import { getTextsmithSmsStats, textsmithMessagesFit, parseTextsmithMessages, textsmithPrompt, textsmithValidationIssues, textsmithPairNeedsDevelopment } from '../lib/textsmith.mjs';
 test('one message is strictly under 160; two messages each allow 160',()=>{
  assert.equal(textsmithMessagesFit(['a'.repeat(159)],'single'),true);
  assert.equal(textsmithMessagesFit(['a'.repeat(160)],'single'),false);
@@ -24,8 +24,57 @@ test('two-message repair retains the original two-message contract',()=>{
  assert.match(prompt,/TWO-message, 160-characters-EACH/);assert.doesNotMatch(prompt,/one final SMS|under 150/);
 });
 
-test('fullness target is explicit in both modes without requiring filler',()=>{
+test('richness uses the pair budget without forcing both texts to fill up',()=>{
  assert.match(textsmithPrompt('single'),/145-159/);
- assert.match(textsmithPrompt('split'),/145-160 characters in EACH/);
+ assert.match(textsmithPrompt('split'),/NO minimum length per message/);
+ assert.match(textsmithPrompt('split'),/up to 320 characters/);
+ assert.match(textsmithPrompt('split'),/Remove semantic duplicates/);
+ assert.doesNotMatch(textsmithPrompt('split'),/145-160 characters in EACH/);
  assert.match(textsmithPrompt('single'),/Never add filler/);
+});
+
+test('split rejects punctuation-only rewrites and repeated statements inside otherwise different texts',()=>{
+ assert.equal(textsmithMessagesFit(['Your estimate is ready!', 'YOUR ESTIMATE IS READY.'],'split'),false);
+ const repeated=['Your estimate is ready for review. The total is $285.', 'Your estimate is ready for review. Would Friday afternoon work?'];
+ assert.equal(textsmithMessagesFit(repeated,'split'),false);
+ assert.match(textsmithValidationIssues(repeated,'split').join(' '),/statement is repeated/);
+});
+test('split rejects content containment even when sentence order and connective words differ',()=>{
+ const pair=['Hi Mike, your estimate for the fence repair is ready.', 'The fence repair estimate is ready, Mike. The total is $285. Would Friday afternoon work?'];
+ assert.equal(textsmithMessagesFit(pair,'split'),false);
+});
+test('short callbacks and genuinely different logistics remain valid',()=>{
+ const cases=[
+  ['Hi Sarah, the weather means moving your Thursday appointment from 2:00 to 3:00.', 'Would that time work for you? Thank you for being flexible.'],
+  ['The repair estimate is $285, including parts and labor.', 'Would Friday afternoon work for the repair?'],
+  ['The first payment for the repair is $285 on Monday.', 'The second payment for the repair is $150 on Friday.'],
+  ['Please leave the side gate unlocked for our arrival.', 'Please keep the back gate locked while the dog is outside.'],
+  ['Your appointment is at 3:00.', 'Does 3:00 still work for you?'],
+  ['I am on my way.', 'See you soon.']
+ ];
+ for (const pair of cases) assert.equal(textsmithMessagesFit(pair,'split'),true,JSON.stringify(pair));
+});
+test('malformed values and whitespace-only messages fail safely',()=>{
+ for(const value of [null, {}, [2,'hello'], [' ','Hello']]) assert.equal(textsmithMessagesFit(value,'split'),false);
+});
+
+test('two-message choice develops sparse notes without inventing facts or requiring padding',()=>{
+ const prompt=textsmithPrompt('split');
+ assert.match(prompt,/SPARSE-SOURCE EXPANSION/);
+ assert.match(prompt,/110-160 characters each/);
+ assert.match(prompt,/never a hard minimum/);
+ assert.match(prompt,/Respect requests for no questions or no reply/);
+ assert.match(prompt,/Never add a new promise, service, deadline, reason, price, or commitment/);
+ assert.doesNotMatch(prompt,/use a short natural follow-through|do not stretch a short source/);
+ assert.doesNotMatch(textsmithPrompt('single'),/SPARSE-SOURCE EXPANSION/);
+});
+
+test('development pass is reserved for valid underfilled pairs',()=>{
+ assert.equal(textsmithPairNeedsDevelopment(['Hi Alex, I am running 10 minutes late.', 'I apologize for the delay.'],'split'),true);
+ assert.equal(textsmithPairNeedsDevelopment(['a'.repeat(120),'b'.repeat(120)],'split'),false);
+ assert.equal(textsmithPairNeedsDevelopment(['a'.repeat(161),'b'],'split'),false);
+ assert.equal(textsmithPairNeedsDevelopment(['Hello'],'single'),false);
+ const prompt=textsmithPrompt('split','candidate','warm',true);
+ assert.match(prompt,/DEVELOPMENT PASS/);
+ assert.doesNotMatch(prompt,/previous candidate failed validation/);
 });
