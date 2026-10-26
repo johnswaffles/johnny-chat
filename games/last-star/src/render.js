@@ -5,9 +5,10 @@ import {paintedAction,drawPaintedPose} from './action-poses.js?release=20261001-
 import {drawReactiveLight,lightEvent,prepareWizardLighting,wizardLight,spellLights} from './reactive-light.js?release=20261001-stick-wheel';
 import {drawSilverwoodLayers,prepareSilverwoodLayers} from './silverwood-layers.js?release=20261001-stick-wheel';
 import {sceneMotion,renderResolution,drawSceneLife} from './scene-life.js?release=20261001-stick-wheel';
-import {drawLevel1,elementEvent} from './level1-fx.js?release=20261001-stick-wheel';
+import {drawLevel1,elementEvent} from './level1-fx.js?release=20261026-celestial-treasures';
 import {drawEnemyPose} from './enemy-frames.js?release=20261001-stick-wheel';
-import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20261001-stick-wheel';
+import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20261026-celestial-treasures';
+import {CELESTIAL_ART} from './celestial-art.js?release=20261026-celestial-treasures';
 import {forwardCastPose} from './cast-pose.js?release=20261001-stick-wheel';
 import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20261001-stick-wheel';
 import {LANTERNS} from './level-decor.js?release=20261001-stick-wheel';
@@ -25,7 +26,8 @@ export async function loadArt(){
   const paths={wizardActions:'arcanist-actions-v2.png',silverwoodLayers:'silverwood-layers-v1.png',valley:'last-star-valley-architecture-v3.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
   if(new URLSearchParams(location.search).has('gorge'))Object.assign(paths,{gorgeClouds:'silverwood-clouds-v1.png',gorgeFlora:'silverwood-flora-v1.png',gorgeHorizon:'silverwood-horizon-v2.png',gorgeRidge:'silverwood-gorge-v2.png'});
   for(const kind of ['ember','frost','chain','flask','chest','power','gem','gold'])paths['item_'+kind]='level1-items/'+kind+'.png';
-  const images={};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));if(images.gorgeFlora)images.floraSprites=prepareFlora(images.gorgeFlora);images.wizardLightCache=prepareWizardLighting(images);images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);images.waterSprites=await createWaterfallSprites(images.valley);return images;
+  for(const [kind,asset] of Object.entries(CELESTIAL_ART))paths['pickup_'+kind]=asset.path;
+  const images={pickupBounds:Object.fromEntries(Object.entries(CELESTIAL_ART).map(([kind,asset])=>[kind,asset.bounds]))};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;await im.decode();images[key]=im;}));if(images.gorgeFlora)images.floraSprites=prepareFlora(images.gorgeFlora);images.wizardLightCache=prepareWizardLighting(images);images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);images.waterSprites=await createWaterfallSprites(images.valley);return images;
 }
 export class Renderer {
   constructor(canvas,art){

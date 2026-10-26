@@ -1,0 +1,192 @@
+/* Celestial collection v2: artwork shares identity with world pickups, while
+   these portraits and their frames are sized independently of world objects. */
+#abilities {
+  gap: 8px;
+}
+#abilities button {
+  width: 72px;
+  height: 80px;
+  border-radius: 9px 9px 3px 3px;
+  border-color: #9aaeb65e;
+  background: radial-gradient(ellipse at 50% 36%, #203f51, #07121eee 76%);
+  box-shadow: inset 0 0 0 2px #081422, 0 5px 18px #0007;
+}
+#abilities .spell-symbol,
+#abilities .item-symbol {
+  width: 56px;
+  height: 56px;
+  margin: 2px auto 1px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  box-shadow: none;
+}
+#abilities [data-spell="bolt"] .spell-symbol {
+  background-image: url('../assets/celestial-v2/starshard-v2.webp');
+  background-position: center;
+}
+#abilities [data-spell="blink"] .spell-symbol {
+  background-image: url('../assets/celestial-v2/eventide-v2.webp');
+  background-position: center;
+}
+#abilities .spell-name {
+  display: block;
+  font: 10px/1.2 Georgia, serif;
+  color: #ede4cf;
+}
+#abilities kbd {
+  top: 4px;
+  left: 4px;
+  padding: 2px 3px;
+  background: #08131fee;
+  border-color: #cbb78766;
+}
+#equipped-item {
+  width: 88px !important;
+  background: radial-gradient(ellipse at 50% 36%, #243a48, #07121eee 76%) !important;
+}
+#equipped-count {
+  top: 4px;
+  right: 4px;
+  min-width: 17px;
+  padding: 2px 3px;
+  border-radius: 3px;
+  background: #08131fee;
+  color: #ffebbb;
+}
+[data-item-icon="ember"],
+#equipped-item[data-item-icon="ember"] .item-symbol {
+  background-image: url('../assets/celestial-v2/ember-v2.webp') !important;
+}
+[data-item-icon="frost"],
+#equipped-item[data-item-icon="frost"] .item-symbol {
+  background-image: url('../assets/celestial-v2/frost-v2.webp') !important;
+}
+[data-item-icon="chain"],
+#equipped-item[data-item-icon="chain"] .item-symbol {
+  background-image: url('../assets/celestial-v2/chain-v2.webp') !important;
+}
+[data-item-icon="flask"],
+#equipped-item[data-item-icon="flask"] .item-symbol {
+  background-image: url('../assets/celestial-v2/flask-v2.webp') !important;
+}
+.ring-items [data-item="ember"] { --element: #ffb56c; }
+.ring-items [data-item="frost"] { --element: #9ce9ff; }
+.ring-items [data-item="chain"] { --element: #ceacff; }
+.ring-items [data-item="flask"] { --element: #9aefc4; }
+#selection-ring {
+  width: 274px;
+  padding: 15px 12px 12px;
+  border: 1px solid #b9a06c99;
+  border-radius: 22px;
+  background: radial-gradient(ellipse at 50% 48%, #163344f7, #06131df7 76%);
+  box-shadow: inset 0 0 0 3px #152b344d, 0 12px 35px #0007;
+}
+#selection-ring.on-left { bottom: 132px; }
+#game.selecting-magic #dialogue { visibility: hidden; }
+#selection-ring > small:first-child {
+  display: block;
+  max-width: 220px;
+  margin: 0 auto;
+  font-size: 9px;
+  line-height: 1.5;
+  color: #d7d3c1;
+  letter-spacing: 1.1px;
+}
+.ring-items {
+  grid-template-columns: repeat(3, 76px);
+  grid-template-rows: repeat(3, 78px);
+  gap: 6px;
+  width: 240px;
+  height: 246px;
+  margin: 11px auto 7px;
+}
+.ring-items::before {
+  align-self: center;
+  justify-self: center;
+  width: 50px;
+  height: 50px;
+  line-height: 50px;
+  border: 1px solid #b6a37355;
+  border-radius: 50%;
+  color: #e9dfb7;
+  font-size: 25px;
+  text-shadow: 0 0 14px #a2d9ff88;
+}
+.ring-items button {
+  position: relative;
+  width: 76px;
+  height: 78px;
+  min-height: 78px;
+  padding: 3px 2px;
+  border: 1px solid #71899666;
+  border-radius: 10px;
+  background: radial-gradient(ellipse at 50% 36%, #203444, #081523 85%);
+  box-shadow: inset 0 0 0 2px #081523;
+  font: 9px/1.2 Arial, sans-serif;
+  color: #dce6e6;
+}
+.ring-items button > .item-symbol {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 3px;
+}
+.ring-items button > span:not(.item-symbol) {
+  display: block;
+  white-space: nowrap;
+  font-size: 9px;
+}
+.ring-items strong {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 17px;
+  padding: 2px 3px;
+  border-radius: 4px;
+  background: #06131fee;
+  color: #fce9bb;
+  font: 11px/1.1 Arial, sans-serif;
+}
+.ring-items button.chosen {
+  border-color: var(--element);
+  background: radial-gradient(ellipse at 50% 36%, #344b58, #0e2331 85%);
+  box-shadow: inset 0 0 0 2px #d5c28b20, 0 0 15px #b2dfff28;
+  transform: none;
+}
+.ring-items button.chosen > span:not(.item-symbol) { color: #fff5d9; }
+#ring-hint {
+  margin: 6px 0;
+  font: 10px/1.4 Arial, sans-serif;
+  color: #e3e7e4;
+}
+#selection-ring > small:last-child {
+  display: block;
+  font-size: 9px;
+  line-height: 1.4;
+  letter-spacing: .5px;
+}
+@media (max-width: 850px), (max-height: 620px) {
+  #abilities { gap: 6px; }
+  #abilities button { width: 66px; height: 74px; }
+  #abilities .spell-symbol, #abilities .item-symbol { width: 50px; height: 50px; }
+  #abilities .spell-name { font-size: 9px; }
+  #equipped-item { width: 80px !important; }
+  #selection-ring { width: 250px; padding: 12px 10px 10px; }
+  #selection-ring.on-left { bottom: 112px; }
+  .ring-items {
+    grid-template-columns: repeat(3, 70px);
+    grid-template-rows: repeat(3, 72px);
+    gap: 4px;
+    width: 218px;
+    height: 224px;
+  }
+  .ring-items button { width: 70px; height: 72px; min-height: 72px; }
+  .ring-items button > .item-symbol { width: 48px; height: 48px; }
+  .ring-items button > span:not(.item-symbol) { font-size: 8px; }
+}
+@media (max-width: 650px) {
+  #selection-ring { bottom: 108px; }
+  #selection-ring.on-left { left: 10px; }
+  #dialogue { bottom: 100px; }
+}

@@ -3,7 +3,7 @@ import {LEVEL1} from './level1-config.js?release=20261001-stick-wheel';
 const selection=new SelectionRing();
 let pendingActions={},hitStop=0,hitStopGap=0,needsFrame=true;
 import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20261001-stick-wheel';
-import {Renderer,loadArt} from './render.js?release=20261001-stick-wheel';
+import {Renderer,loadArt} from './render.js?release=20261026-celestial-treasures';
 import {Soundscape} from './audio.js?release=20261001-stick-wheel';
 import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20261001-stick-wheel';
 import {ControlsUI} from './controls-ui.js?release=20261001-stick-wheel';
@@ -138,14 +138,15 @@ function updateUI(){
   const padMode=lastDevice==='controller'&&controller.connected;
   const prompt=a=>padMode?buttonName(bindings.pad[a],controller.standard):keyName(bindings.keys[a]);
   $('game').classList.toggle('controller-active',padMode);
+  $('game').classList.toggle('selecting-magic',selection.open&&mode==='playing');
   $('world').setAttribute('aria-label',`Game world. ${padMode?'Left stick':prompt('left')+' and '+prompt('right')} to move, ${prompt('jump')} to jump, ${prompt('bolt')} to cast, ${prompt('blink')} to teleport, ${prompt('interact')} to interact, ${prompt('use')} to use equipped item, hold ${prompt('ring')} to select.`);
   const near=game.nearby();$('interaction').hidden=!near||mode!=='playing';if(near)$('interaction').innerHTML=`<kbd>${prompt('interact')}</kbd>${near.label}`;
   if((near&&performance.now()>dialogueUntil-3500)||(game.bossStarted&&!game.bossDefeated))$('dialogue').hidden=true;
   const boss=game.enemies.find(e=>e.type==='boss');$('boss-ui').hidden=!game.bossStarted||game.bossDefeated;$('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';
   for(const button of document.querySelectorAll('[data-spell]')){const spell=button.dataset.spell,cd=p.cooldowns[spell],locked=spell==='dragon'&&game.checkpoint<2;button.style.setProperty('--ready',`${(1-cd/COOLDOWNS[spell])*100}%`);button.querySelector('kbd').textContent=prompt(spell);button.title=`${ACTIONS[spell]} · ${prompt(spell)}${spell==='bolt'?' · Hold to cast':''}`;button.querySelector('.cooldown').textContent=locked?'◇':cd>.1?(cd<1?cd.toFixed(1):Math.ceil(cd)):'';button.classList.toggle('unavailable',locked||(spell==='dragon'&&p.mana<60)||(spell==='constellation'&&p.mana<30));}
   $('selection-ring').classList.toggle('on-left',game.player.x-renderer.camera>renderer.w*.6);$('selection-ring').hidden=!selection.open||mode!=='playing';
-  for(const [i,b] of [...document.querySelectorAll('[data-item]')].entries()){const kind=b.dataset.item;b.classList.toggle('chosen',selection.index===i);b.querySelector('strong').textContent=game.inventory.charges[kind];b.setAttribute('aria-selected',String(selection.index===i));}
-  const item=game.inventory.equipped;$('equipped-name').textContent=LEVEL1.spells[item].name;$('equipped-count').textContent=game.inventory.charges[item];$('equipped-key').textContent=prompt('use');$('equipped-item').dataset.itemIcon=item;$('ring-hint').textContent=padMode?`Hold ${prompt('ring')} · Right stick selects`:`Hold ${prompt('ring')} · ${prompt('interact')} next / ${prompt('previous')} previous`;
+  for(const [i,b] of [...document.querySelectorAll('[data-item]')].entries()){const kind=b.dataset.item;b.classList.toggle('chosen',selection.index===i);b.querySelector('strong').textContent=game.inventory.charges[kind];b.setAttribute('aria-selected',String(selection.index===i));b.setAttribute('aria-label',`${LEVEL1.spells[kind].name}, ${game.inventory.charges[kind]} charges`);}
+  const item=game.inventory.equipped;$('equipped-name').textContent=LEVEL1.spells[item].name;$('equipped-count').textContent=game.inventory.charges[item];$('equipped-key').textContent=prompt('use');$('equipped-item').dataset.itemIcon=item;$('equipped-item').title=`${LEVEL1.spells[item].name} · ${game.inventory.charges[item]} charges · ${prompt('use')} to use`;$('ring-hint').textContent=padMode?`Hold ${prompt('ring')} · Right stick selects`:`Hold ${prompt('ring')} · ${prompt('interact')} next / ${prompt('previous')} previous`;
   const hints=document.querySelectorAll('.bottom-hint span');hints[0].textContent=padMode?`Left stick move · Right stick aim · ${prompt('jump')} double jump`:`${prompt('left')} / ${prompt('right')} move · ${prompt('jump')} jump / double jump`;hints[1].textContent=`${prompt('interact')} interact · ${padMode?'Menu':'ESC'} pause`;
   controlsUI.status(controllerError);
   if(qa&&$('qa-state'))$('qa-state').textContent=JSON.stringify({mode,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.hp),reprisal:Math.round(p.retaliation*3),ring:selection.open,inventory:game.inventory,score:game.arcade.score,crystals:game.arcade.crystals,power:game.arcade.rank,overdrive:game.arcade.overdrive,drops:game.arcade.drops.length,seals:game.checkpoint,kills:game.kills,elapsed:Math.round(game.elapsed),boss:game.bossStarted,bossHP:Math.round(boss.hp),silverwood:game.silverwood,dragon:!!game.dragon,memories:[...game.memories],scenery:renderer.gorgeEnabled?{gpu:!!renderer.gorge?.ready,active:!renderer.gorge?.canvas.hidden,time:+renderer.time.toFixed(3),camera:+renderer.camera.toFixed(2)}:undefined});

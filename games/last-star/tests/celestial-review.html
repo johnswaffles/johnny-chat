@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Last Star · Celestial Art Review</title>
+  <style>
+    :root { color-scheme: dark; --ink: #e9e5d9; --muted: #a6b7c0; --gold: #d4bc87; --line: #a6bdc02b; --size: 54px; --surface: #06131e; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #07121d; color: var(--ink); font: 14px/1.5 Arial, sans-serif; }
+    body::before { content: ''; position: absolute; inset: 0 0 auto; height: 430px; z-index: -1; background: radial-gradient(ellipse at 76% 0%, #153b504f, transparent 70%); pointer-events: none; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid #a8e8ff; outline-offset: 4px; }
+    a { color: #d7c393; text-underline-offset: 4px; }
+    a:hover { color: #fff0cb; }
+    [hidden] { display: none !important; }
+    .wrap { width: min(1240px, 100%); margin: auto; padding: 30px 28px 40px; }
+    .topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 12px; color: var(--gold); font: 12px/1.4 Georgia, serif; letter-spacing: 4px; }
+    .brand span { font-size: 23px; letter-spacing: 0; }
+    .back { font-size: 12px; white-space: nowrap; }
+    header { padding: 30px 0 25px; border-bottom: 1px solid var(--line); }
+    .eyebrow { margin: 0 0 8px; color: var(--gold); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+    h1 { margin: 0; font: normal clamp(30px, 4vw, 44px)/1.15 Georgia, serif; letter-spacing: -.5px; }
+    .intro { max-width: 650px; margin: 12px 0 0; color: var(--muted); }
+    .controls { display: flex; flex-wrap: wrap; gap: 18px 30px; align-items: end; margin: 24px 0 16px; }
+    fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+    legend { margin-bottom: 8px; padding: 0; color: var(--muted); font-size: 11px; }
+    .segments { display: flex; flex-wrap: wrap; gap: 6px; }
+    button { min-height: 42px; padding: 9px 13px; color: #c2d0d3; border: 1px solid #7e9ca044; border-radius: 6px; background: #0c1c29; }
+    button:hover { border-color: #b9cfd18c; }
+    button[aria-pressed="true"] { color: #f2e4c4; border-color: #c6ad77b0; background: #23303a; box-shadow: inset 0 0 0 1px #e4c88615; }
+    button small { margin-left: 4px; color: inherit; opacity: .8; font-size: 10px; white-space: nowrap; }
+    .compare-button { display: flex; gap: 8px; align-items: center; }
+    .toggle-mark { width: 14px; height: 14px; border: 1px solid currentColor; border-radius: 3px; display: grid; place-items: center; font-size: 10px; }
+    [aria-pressed="true"] .toggle-mark::after { content: '✓'; }
+    .status { color: var(--muted); font-size: 12px; margin: 0 0 24px; }
+    .collection + .collection { margin-top: 28px; }
+    .section-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin-bottom: 12px; }
+    h2 { font: normal 22px/1.2 Georgia, serif; margin: 0; }
+    .section-heading p { margin: 0; color: var(--muted); font-size: 11px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr)); gap: 12px; }
+    body.comparing .grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 346px), 1fr)); }
+    .card { min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: #0b1a26; overflow: hidden; }
+    .card-head { padding: 13px 14px 0; }
+    h3 { margin: 0; font: normal 17px/1.3 Georgia, serif; overflow-wrap: anywhere; }
+    .asset-note { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+    .samples { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 12px; }
+    body.comparing .samples { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    figure { margin: 0; min-width: 0; }
+    .swatch { display: grid; place-items: center; min-height: calc(var(--size) + 28px); border: 1px solid #b4c1c318; border-radius: 5px; background: var(--surface); }
+    .art, .atlas-art { display: block; width: var(--size); height: var(--size); max-width: 100%; object-fit: contain; }
+    .atlas-art { background-repeat: no-repeat; background-size: 200% 200%; border-radius: calc(var(--size) * .18); }
+    .faded-chest { opacity: .45; }
+    figcaption { margin-top: 6px; text-align: center; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .current figcaption { color: #d6c18f; }
+    .previous { display: none; }
+    body.comparing .previous { display: block; }
+    .card-foot { padding: 0 14px 11px; font-size: 10px; color: #8da3af; }
+    .error { border: 1px solid #d99d80; border-radius: 7px; background: #382722; padding: 14px; color: #ffdecc; }
+    footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+    footer p { margin: 0; }
+    details { margin-top: 18px; color: var(--muted); font-size: 11px; }
+    summary { width: fit-content; cursor: pointer; color: #c4d1d1; }
+    details p { max-width: 800px; margin: 10px 0; }
+    code { font-size: 10px; overflow-wrap: anywhere; }
+    @media (max-width: 620px) {
+      .wrap { padding: 22px 16px 30px; }
+      header { padding-top: 24px; }
+      .controls { gap: 16px 20px; }
+      body.detail.comparing .samples { grid-template-columns: 1fr; }
+      body.detail .grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 370px) {
+      .brand { font-size: 11px; letter-spacing: 3px; }
+      .grid { grid-template-columns: 1fr; }
+      button { padding-inline: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topline">
+      <div class="brand"><span aria-hidden="true">✦</span> LAST STAR</div>
+      <a class="back" href="../">← Play locally</a>
+    </div>
+    <header>
+      <p class="eyebrow">Celestial collection · Local art review</p>
+      <h1>Magic &amp; treasures</h1>
+      <p class="intro">Review the new artwork at interface size or in detail. Switch surfaces to inspect transparent edges, and compare each piece with its previous appearance.</p>
+    </header>
+    <div class="controls" aria-label="Artwork review controls">
+      <fieldset>
+        <legend>Display scale</legend>
+        <div class="segments">
+          <button type="button" data-size="54" aria-pressed="true">Actual UI size <small>54 px</small></button>
+          <button type="button" data-size="160" aria-pressed="false">Detail <small>160 px</small></button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Preview surface</legend>
+        <div class="segments">
+          <button type="button" data-surface="dark" aria-pressed="true">Dark</button>
+          <button type="button" data-surface="bright" aria-pressed="false">Bright</button>
+        </div>
+      </fieldset>
+      <button type="button" id="compare" class="compare-button" aria-pressed="false"><span class="toggle-mark" aria-hidden="true"></span> Compare previous art</button>
+    </div>
+    <p id="status" class="status" role="status">Loading 11 local assets…</p>
+    <p id="error" class="error" role="alert" hidden></p>
+    <div id="collections"></div>
+    <noscript><p class="error">Enable JavaScript to load the local asset manifest and review controls.</p></noscript>
+    <details>
+      <summary>Comparison notes</summary>
+      <p>Starshard and Eventide Passage use the upper-left and upper-right quarters of the previous spell atlas. The other comparisons use the original Level 1 item images. The previous opened-chest state is the closed chest at 45% opacity, matching the former renderer.</p>
+      <p>Artwork keeps its native proportions inside a 54 or 160 pixel square. The 54 pixel setting matches the desktop selection-ring artwork; world pickup sizes vary. This page shows the full files used by the interface. World rendering uses the separately registered bounds in the manifest.</p>
+      <p>Source: <a href="../assets/celestial-v2/manifest.json">local art manifest</a> · <code id="version">Loading version…</code></p>
+    </details>
+    <footer>
+      <p>11 original assets · Six magic icons · Five treasure and pickup states</p>
+      <p>Local review only · Artwork comparison</p>
+    </footer>
+  </main>
+  <script type="module">
+    const groups = [
+      { name: 'Core magic', note: 'Staff and passage', items: [
+        { key: 'starshard', name: 'Starshard', note: 'Staff magic', atlas: '0% 0%' },
+        { key: 'eventide', name: 'Eventide Passage', note: 'Blink magic', atlas: '100% 0%' }
+      ] },
+      { name: 'Charged spells', note: 'The four selection-ring items', items: [
+        { key: 'ember', name: 'Ember Orb', note: 'Fire' },
+        { key: 'frost', name: 'Frost Fan', note: 'Ice' },
+        { key: 'chain', name: 'Chain Spark', note: 'Lightning' },
+        { key: 'flask', name: 'Healing Flask', note: 'Healing' }
+      ] },
+      { name: 'Treasures & pickups', note: 'Ground items and chest states', items: [
+        { key: 'chest', name: 'Treasure Chest', note: 'Closed' },
+        { key: 'chest_open', name: 'Treasure Chest · Open', note: 'Opened and empty', previous: 'chest' },
+        { key: 'power', name: 'Star Crystal', note: 'Power pickup' },
+        { key: 'gem', name: 'Gem', note: 'Treasure' },
+        { key: 'gold', name: 'Gold', note: 'Treasure' }
+      ] }
+    ];
+    let size = 54, surface = 'dark', comparing = false, loaded = false;
+    const status = document.querySelector('#status');
+    function updateStatus() {
+      if (!loaded) return;
+      status.textContent = `11 assets · ${size} px · ${surface === 'dark' ? 'Dark' : 'Bright'} surface${comparing ? ' · Previous and new art' : ' · New art'}`;
+    }
+    document.querySelectorAll('[data-size]').forEach(button => button.addEventListener('click', () => {
+      size = Number(button.dataset.size);
+      document.documentElement.style.setProperty('--size', `${size}px`);
+      document.body.classList.toggle('detail', size === 160);
+      document.querySelectorAll('[data-size]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      updateStatus();
+    }));
+    document.querySelectorAll('[data-surface]').forEach(button => button.addEventListener('click', () => {
+      surface = button.dataset.surface;
+      document.documentElement.style.setProperty('--surface', surface === 'dark' ? '#06131e' : '#e5e9e7');
+      document.querySelectorAll('[data-surface]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      updateStatus();
+    }));
+    document.querySelector('#compare').addEventListener('click', event => {
+      comparing = !comparing;
+      document.body.classList.toggle('comparing', comparing);
+      event.currentTarget.setAttribute('aria-pressed', String(comparing));
+      updateStatus();
+    });
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text) node.textContent = text;
+      return node;
+    }
+    const pendingImages = [];
+    function sample(item, entry, previous) {
+      const figure = element('figure', previous ? 'previous' : 'current');
+      const swatch = element('div', 'swatch');
+      if (previous && item.atlas) {
+        const art = element('span', 'atlas-art');
+        art.style.backgroundImage = "url('../assets/arcade-spell-icons-v1.png')";
+        art.style.backgroundPosition = item.atlas;
+        art.setAttribute('role', 'img');
+        art.setAttribute('aria-label', `Previous ${item.name} artwork`);
+        swatch.append(art);
+      } else {
+        const image = element('img', `art${previous && item.key === 'chest_open' ? ' faded-chest' : ''}`);
+        image.alt = `${previous ? 'Previous' : 'New'} ${item.name} artwork`;
+        image.src = previous ? `../assets/level1-items/${item.previous || item.key}.png` : `../assets/${entry.path}`;
+        image.decoding = 'async';
+        pendingImages.push(image.decode().catch(() => { throw new Error(`Could not load ${image.getAttribute('src')}`); }));
+        swatch.append(image);
+      }
+      figure.append(swatch, element('figcaption', '', previous ? (item.key === 'chest_open' ? 'Previous · faded closed chest' : 'Previous art') : 'Celestial collection'));
+      return figure;
+    }
+    try {
+      const response = await fetch('../assets/celestial-v2/manifest.json');
+      if (!response.ok) throw new Error(`Manifest returned HTTP ${response.status}`);
+      const manifest = await response.json();
+      document.querySelector('#version').textContent = manifest.version;
+      for (const group of groups) {
+        const section = element('section', 'collection');
+        const heading = element('div', 'section-heading');
+        heading.append(element('h2', '', group.name), element('p', '', group.note));
+        const grid = element('div', 'grid');
+        for (const item of group.items) {
+          const entry = manifest.assets[item.key];
+          if (!entry) throw new Error(`Missing manifest entry: ${item.key}`);
+          const card = element('article', 'card');
+          card.dataset.asset = item.key;
+          const head = element('div', 'card-head');
+          head.append(element('h3', '', item.name), element('p', 'asset-note', item.note));
+          const samples = element('div', 'samples');
+          samples.append(sample(item, entry, true), sample(item, entry, false));
+          card.append(head, samples, element('div', 'card-foot', `${entry.width} × ${entry.height} · ${Math.round(entry.bytes / 1024)} KB WebP`));
+          grid.append(card);
+        }
+        section.append(heading, grid);
+        document.querySelector('#collections').append(section);
+      }
+      const atlas = new Image();
+      atlas.src = '../assets/arcade-spell-icons-v1.png';
+      pendingImages.push(atlas.decode());
+      await Promise.all(pendingImages);
+      loaded = true;
+      updateStatus();
+    } catch (error) {
+      status.textContent = 'Artwork review could not finish loading.';
+      const message = document.querySelector('#error');
+      message.textContent = `${error.message}. Open this page through the local game server so the manifest and images can load.`;
+      message.hidden = false;
+    }
+  </script>
+</body>
+</html>

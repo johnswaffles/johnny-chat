@@ -1,3 +1,4 @@
+import {drawArcadeCrystal} from './pickup-art.js?release=20261026-celestial-treasures';
 const TAU=Math.PI*2;
 export function arcadeEvent(r,e){
  if(['enemy-death','overdrive','power-rank'].includes(e.type)){
@@ -9,12 +10,7 @@ export function arcadeEvent(r,e){
 }
 export function drawArcade(r,game,dt){
  const c=r.ctx,a=game.arcade;if(!a)return;
- for(const d of a.drops){const x=d.x-r.camera;if(x<-70||x>r.w+70)continue;const y=d.y+(d.homing?0:Math.sin(r.time*3+d.x)*3);
-  r.glow(x,y,65,'gold',.9);c.save();c.translate(x,y);
-  if(d.homing){c.strokeStyle='#ffd88188';c.lineWidth=2;c.beginPath();c.moveTo(0,0);c.lineTo((d.x-game.player.x)*.12,(d.y-game.player.y+50)*.12);c.stroke();}
-  c.fillStyle='#ffe79c';c.beginPath();c.moveTo(0,-12);c.lineTo(8,-2);c.lineTo(0,13);c.lineTo(-8,-2);c.closePath();c.fill();
-  c.fillStyle='#aa771b';c.beginPath();c.moveTo(0,-12);c.lineTo(8,-2);c.lineTo(0,13);c.closePath();c.fill();c.strokeStyle='#fffbe0';c.lineWidth=1;c.beginPath();c.moveTo(0,-12);c.lineTo(-8,-2);c.lineTo(0,13);c.stroke();c.restore();
- }
+ for(const d of a.drops)drawArcadeCrystal(r,d,game.player);
  if(a.overdrive>0){const x=game.player.x-r.camera,y=game.player.y-52;r.glow(x,y,155,'gold',.45);c.save();c.strokeStyle='#ffe6a3';c.lineWidth=1.4;c.globalAlpha=.65;
   for(let i=0;i<3;i++){const angle=(r.gentle?0:r.time*1.7)+i*TAU/3;c.beginPath();c.ellipse(x,y,38+i*7,57,angle,0,TAU);c.stroke();r.star(x+Math.cos(angle)*50,y+Math.sin(angle)*50,5,'#fff3be');}c.restore();
   for(const b of game.projectiles){if(b.owner!=='player')continue;const bx=b.x-r.camera;r.glow(bx,b.y,65,'gold',.7);r.star(bx-12,b.y,5,'#fff7cf');}

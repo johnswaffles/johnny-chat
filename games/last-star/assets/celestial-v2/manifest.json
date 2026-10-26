@@ -1,0 +1,161 @@
+{
+  "version": "20261026-celestial-treasures",
+  "generator": "built-in image_gen",
+  "delivery": "512px maximum edge WebP; original alpha preserved",
+  "assets": {
+    "starshard": {
+      "path": "celestial-v2/starshard-v2.webp",
+      "bounds": [
+        48,
+        12,
+        453,
+        485
+      ],
+      "width": 512,
+      "height": 512,
+      "bytes": 80308,
+      "sha256": "f6c79b5a05eb4165f264a5931de11f3814454bf2faa274d0b8f037073b3dd0f5",
+      "sourceSha256": "2d002a18a9d9a7bb91d01c6ad606e336d51545b6f905e22df1a526acb6ed0ff4"
+    },
+    "eventide": {
+      "path": "celestial-v2/eventide-v2.webp",
+      "bounds": [
+        43,
+        34,
+        457,
+        455
+      ],
+      "width": 512,
+      "height": 512,
+      "bytes": 86788,
+      "sha256": "f9bfb637f79b8a95a98a3f76c7959723afc48932adb468b003aa588db3a15e58",
+      "sourceSha256": "ad7f5379e30d81973b855c246713c40cc85674932ac27087ffb874db63868bc2"
+    },
+    "ember": {
+      "path": "celestial-v2/ember-v2.webp",
+      "bounds": [
+        20,
+        22,
+        479,
+        462
+      ],
+      "width": 512,
+      "height": 512,
+      "bytes": 115542,
+      "sha256": "c2d2c10854e5fc7c6bb51a0578d952fc561f39dcd462bf2ebc590620ff2e565c",
+      "sourceSha256": "6fea3494de224e50253f381886d0a88c612922dafc8d0e0890bf3881f747a15b"
+    },
+    "frost": {
+      "path": "celestial-v2/frost-v2.webp",
+      "bounds": [
+        12,
+        20,
+        489,
+        472
+      ],
+      "width": 512,
+      "height": 512,
+      "bytes": 115606,
+      "sha256": "76bd9bac6ad3b5b1ec30208dfad2767d8195440bd46a02e8acf029734969506f",
+      "sourceSha256": "facb30560a1e659d9c31ef127787a781eb41ea4944185d24c445a28e1a33642b"
+    },
+    "chain": {
+      "path": "celestial-v2/chain-v2.webp",
+      "bounds": [
+        31,
+        12,
+        469,
+        488
+      ],
+      "width": 512,
+      "height": 512,
+      "bytes": 78932,
+      "sha256": "cc5d7e7951efb02c86aec79ed83a16e3ebe72e48c3e3630c9df361641c43cba9",
+      "sourceSha256": "15b22b09af2ab859a89e1b4df3c858751c285ef1fb184778ed2bd255d7943153"
+    },
+    "flask": {
+      "path": "celestial-v2/flask-v2.webp",
+      "bounds": [
+        62,
+        5,
+        393,
+        498
+      ],
+      "width": 512,
+      "height": 512,
+      "bytes": 93074,
+      "sha256": "23c6939d455e8cf2d8c343a8f20a658bddc392814599ca688cb115e25d3317b4",
+      "sourceSha256": "5c472649bb92d48b86461d05f43a22817f395d1997935f934abed198f333f2be"
+    },
+    "chest": {
+      "path": "celestial-v2/chest-v2.webp",
+      "bounds": [
+        11,
+        36,
+        494,
+        337
+      ],
+      "width": 512,
+      "height": 398,
+      "bytes": 80842,
+      "sha256": "99554d8f037ef79c296f1a1312c640eeabd5962c78393d7de6764412f3995afe",
+      "sourceSha256": "aaab8072ea02eb6277c2dc64e822ec111a2fe3771a66852e234f475d51f059d8"
+    },
+    "chest_open": {
+      "path": "celestial-v2/chest-open-v2.webp",
+      "bounds": [
+        14,
+        4,
+        492,
+        385
+      ],
+      "width": 512,
+      "height": 398,
+      "bytes": 79560,
+      "sha256": "0af6b5a2855be57301f9ed3231fbeddd63f077c709cbfad7af41cf2d76fcd7b9",
+      "sourceSha256": "ceb86babfc8f65df6ddcec3500da9f08b977a5fb49cca40e5b11520be329f456"
+    },
+    "power": {
+      "path": "celestial-v2/power-v2.webp",
+      "bounds": [
+        147,
+        6,
+        216,
+        498
+      ],
+      "width": 512,
+      "height": 512,
+      "bytes": 47898,
+      "sha256": "77f31ea3fb7ceae45551c60ed45f4933e75336445a26cd8ebf235bfd39bf96e3",
+      "sourceSha256": "03ba9bf6de178bbe895b153e0209af663c26b2d59941ffe40cf4fea44e8aab68"
+    },
+    "gem": {
+      "path": "celestial-v2/gem-v2.webp",
+      "bounds": [
+        71,
+        28,
+        370,
+        454
+      ],
+      "width": 512,
+      "height": 512,
+      "bytes": 56622,
+      "sha256": "08c3cbc81edbf3e585d60764ee9e167ed2365a3c2190b4cacfb1c8d1adb0209e",
+      "sourceSha256": "9ebc19ecb4509c1616e8d78aaf3af03ccf8d6a8f8dbf09848b14ae238497f161"
+    },
+    "gold": {
+      "path": "celestial-v2/gold-v2.webp",
+      "bounds": [
+        33,
+        18,
+        447,
+        474
+      ],
+      "width": 512,
+      "height": 512,
+      "bytes": 100560,
+      "sha256": "2dff4fe1dbe12c58885e59e6c4e75be42f23e2512a039bd1d3a21cbb8df4f2d5",
+      "sourceSha256": "9710d930630d99f32aea71e7b190c854987fcfd005825770d3ffce28b83f9cdd"
+    }
+  }
+}

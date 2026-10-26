@@ -1,6 +1,6 @@
 # Crownforge: Last Star — game bible
 
-Last updated: September 30, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
+Last updated: October 26, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
 
 ## Identity and scope
 
@@ -175,3 +175,13 @@ Frost Fan freezes ordinary enemies for 2.2 seconds, twice its previous1.1 second
 ## Right-stick spell selection — October 1
 
 Hold the remappable selection button (XboxLB by default), then point the right stick toward a spell: upEmber Orb, rightFrost Fan, downChain Spark, leftHealing Flask. The compact wheel follows these clockwise directions. Releasing equips the highlighted item without casting; returning the stick to center retains the highlight. Radial0.35 threshold and angular hysteresis reject drift and diagonal flicker. The right stick still aims outside the wheel. Existing keyboard and RB/LT cycling, charge rules and slow-world behavior remain available.
+
+## Celestial icons and world treasure — October 26
+
+User approved the original celestial magic concept and explicitly requested improved items lying on the ground. This visual update uses eleven versioned transparent paintings: six active spell/item identities, closed/open star-locked chest, blue star-power crystal, violet gem and gold star coin. The source PNG masters, generation prompts, hashes and runtime bounds are preserved. See docs/art/CELESTIAL_COLLECTION.md.
+
+This supersedes the original small Blender scroll presentation and prior HUD size guidance for the current art pass. The hotbar stays bottom-left: desktop72×80 buttons with56px art, compact66×74 with50px art. The equipped slot is88px /80px wide. The directional wheel uses54px /48px art with names and charges separate; retain clockwise selection, side switching away from the player, slow-world timing and release-to-equip without casting.
+
+World pickups use their own display sizes and registered transparent bounds, independently of UI frames. Keep physical chests opaque and grounded on their supporting platform. Open chests use an empty, raised-lid painting without idle glow. Spell pickups have distinct silhouettes; rewards use faceted crystal/gem/coin art. The existing Starshard projectile remains a compact magical energy wave; its new crystal portrait is a UI emblem only. Do not infer combat changes from the artwork.
+
+New glints and motion are bounded, renderer-clock driven and disabled/reduced with Gentle, Light and reduced-flash settings. No per-frame pixel processing. All rewards, pickup attraction, chest triggers, charge rules, combat, level geometry, saves, character/scenery art and controls remain unchanged. Preserve earlier approved assets. This is a local review build until a public release is verified.
