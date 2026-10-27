@@ -35,6 +35,21 @@ const mock=http.createServer(async(req,res)=>{
   messages=['Hi Mike, your estimate is ready for review. The total is $285, and I wanted to make sure you had the details before deciding.', 'Would Friday afternoon work for you? Please let me know whether that suits your schedule or if you have any questions about the estimate.'];
  }
  if(body.input[0].content.includes('DEVELOPMENT PASS')&&body.input[1].content.includes('BAD_DEVELOPMENT')) messages=['x'.repeat(161),'Second text.'];
+ if(body.input[1].content.includes('CONTACT_')) {
+  assert.match(body.input[0].content,/ABC company phone number 618-555-1234/);
+  const repair=body.input[0].content.includes('Previous candidate');
+  const expand=body.input[0].content.includes('DEVELOPMENT PASS');
+  if(expand) messages=['The estimate is from ABC company phone number 618-555-1234.','Please call them to discuss the repair and ask any questions you may have.'];
+  else if(body.input[1].content.includes('CONTACT_EXPAND')) messages=['The estimate is from ABC company phone number 618-555-1234.','The total is $285.'];
+  else if(!repair) messages=count===1?['ABC company sent the $285 estimate. Call 618-555-1234 with any questions.']:['ABC company sent the estimate. The total is $285.','Their phone number is 618-555-1234. Call them to discuss it.'];
+  else {
+   assert.match(body.input[0].content,/Keep this business\/contact block together/);
+   messages=count===1?['The estimate is from ABC company phone number 618-555-1234. The total is $285.']:[
+    'ABC company phone number 618-555-1234 sent the $285 estimate. I wanted to share the details with you before you decide.',
+    'The repair covers the front gate and hinges. Please let me know whether you would like to go ahead or have any questions about the estimate.'
+   ];
+  }
+ }
  res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({messages})}]}]}));
 });
 await new Promise(r=>mock.listen(0,'127.0.0.1',r));
@@ -58,6 +73,12 @@ const persistent=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Co
 assert.equal(persistent.status,422);assert.equal(attempts,12,'persistent repetition is never returned as a successful pair; retries are bounded');
 const unsafeExpansion=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'BAD_DEVELOPMENT appointment update',mode:'split'})});
 assert.equal(unsafeExpansion.status,200);const preserved=await unsafeExpansion.json();assert.ok(preserved.stats.every(s=>s.characters<=160));assert.equal(preserved.messages[0],'Hi Sarah, your Thursday appointment needs to move from 2:00 to 3:00 because of the weather.','invalid expansion cannot replace a valid pair');
+for(const mode of ['single','split']) {
+ const contact=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'CONTACT_REPAIR: The $285 estimate from ABC company phone number 618-555-1234 covers the front gate and hinges. Ask whether they want to go ahead.',mode})});
+ assert.equal(contact.status,200);const data=await contact.json();assert.ok(data.messages.some(text=>text.includes('ABC company phone number 618-555-1234')));assert.ok(data.messages.every(text=>!text.includes('Call ')));assert.ok(data.stats.every(s=>s.characters<=s.limit));
+}
+const contactExpand=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'CONTACT_EXPAND: The estimate is from ABC company phone number 618-555-1234. The total is $285.',mode:'split'})});
+assert.equal(contactExpand.status,200);assert.deepEqual((await contactExpand.json()).messages,['The estimate is from ABC company phone number 618-555-1234.','The total is $285.'],'a development pass cannot add an unauthorized call invitation');
 const empty=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(empty.status,400);
-console.log('PASS: real endpoint single/pair output, character stats, overlong pair repair, repeated-statement repair, bounded rejection, empty-input validation, Astra request parameters.');
+console.log('PASS: real endpoint single/pair output, character stats, overlong pair repair, repeated-statement repair, bounded rejection, business-contact repair and development protection, empty-input validation, Astra request parameters.');
 child.kill();mock.close();

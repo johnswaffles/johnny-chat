@@ -1222,7 +1222,7 @@ async function createTextsmithResponse({ input, mode, model, tone = "warm", draf
     store: false,
     text: { format: getTextsmithSchema(mode) },
     input: [
-      { role: "system", content: textsmithPrompt(mode, draft, tone, expand) },
+      { role: "system", content: textsmithPrompt(mode, draft, tone, expand, input) },
       { role: "user", content: `ROUGH CUSTOMER TEXT\n${input}` }
     ]
   });
@@ -1685,7 +1685,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorAssistant: "Mara",
   storyEditorBible: "managed-source-bible-v2",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
-  textsmithVersion: "rich-sparse-pair-v5",
+  textsmithVersion: "contact-block-v6",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
 
@@ -5372,28 +5372,28 @@ app.post("/api/textsmith", async (req, res) => {
       messages = await createTextsmithResponse({ input, mode, model, tone });
     }
 
-    for (let attempt = 0; attempt < 3 && !textsmithMessagesFit(messages, mode); attempt += 1) {
+    for (let attempt = 0; attempt < 3 && !textsmithMessagesFit(messages, mode, input); attempt += 1) {
       messages = await createTextsmithResponse({
         input,
         mode,
         model,
         tone,
-        draft: JSON.stringify({ issues: textsmithValidationIssues(messages, mode), messages: messages.map(text => ({ text, characters: Array.from(text).length })) })
+        draft: JSON.stringify({ issues: textsmithValidationIssues(messages, mode, input), messages: messages.map(text => ({ text, characters: Array.from(text).length })) })
       });
     }
 
-    if (!textsmithMessagesFit(messages, mode)) {
+    if (!textsmithMessagesFit(messages, mode, input)) {
       return res.status(422).json({ detail: "The message could not be written cleanly within the limits without repeating or losing meaning. Please clarify the key details and try again." });
     }
 
-    if (textsmithPairNeedsDevelopment(messages, mode)) {
+    if (textsmithPairNeedsDevelopment(messages, mode, input)) {
       try {
         const developed = await createTextsmithResponse({
           input, mode, model, tone, expand: true,
           draft: JSON.stringify(messages.map(text => ({ text, characters: Array.from(text).length })))
         });
         const length = pair => pair.reduce((total, text) => total + Array.from(text).length, 0);
-        if (textsmithMessagesFit(developed, mode) && length(developed) > length(messages)) messages = developed;
+        if (textsmithMessagesFit(developed, mode, input) && length(developed) > length(messages)) messages = developed;
       } catch (error) {
         // A failed optional polish must not discard an already valid pair.
         if (error.contentRefusal) throw error;

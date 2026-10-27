@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTextsmithSmsStats, textsmithMessagesFit, parseTextsmithMessages, textsmithPrompt, textsmithValidationIssues, textsmithPairNeedsDevelopment } from '../lib/textsmith.mjs';
+import { getTextsmithSmsStats, textsmithMessagesFit, parseTextsmithMessages, textsmithPrompt, textsmithValidationIssues, textsmithPairNeedsDevelopment, getTextsmithContactBlocks } from '../lib/textsmith.mjs';
 test('one message is strictly under 160; two messages each allow 160',()=>{
  assert.equal(textsmithMessagesFit(['a'.repeat(159)],'single'),true);
  assert.equal(textsmithMessagesFit(['a'.repeat(160)],'single'),false);
@@ -77,4 +77,41 @@ test('development pass is reserved for valid underfilled pairs',()=>{
  const prompt=textsmithPrompt('split','candidate','warm',true);
  assert.match(prompt,/DEVELOPMENT PASS/);
  assert.doesNotMatch(prompt,/previous candidate failed validation/);
+});
+
+test('business contact blocks preserve the supplied label, punctuation, and number format',()=>{
+ for(const [source,block] of [
+  ['ABC company phone number 618-555-1234','ABC company phone number 618-555-1234'],
+  ['Tell Tom ABC company phone number 618-555-1234 sent the estimate.','ABC company phone number 618-555-1234'],
+  ['Use abc company 618-555-1234.','abc company 618-555-1234'],
+  ["The quote is from Green Valley Plumbing, phone: (618) 555-1234.",'Green Valley Plumbing, phone: (618) 555-1234'],
+  ["Use Joe's Heating & Air: +1 (618) 555-1234 ext. 8.","Joe's Heating & Air: +1 (618) 555-1234 ext. 8"]
+ ]) assert.deepEqual(getTextsmithContactBlocks(source),[block]);
+ assert.deepEqual(getTextsmithContactBlocks('The reference number is 1234567890.'),[]);
+});
+test('contact protection rejects split, relabeled, omitted, or reformatted business numbers',()=>{
+ const source='The estimate is from ABC company phone number 618-555-1234. The total is $285.';
+ assert.equal(textsmithMessagesFit(['The estimate is from ABC company phone number 618-555-1234. The total is $285.'],'single',source),true);
+ for(const pair of [
+  ['ABC company sent the estimate.', 'Their phone number is 618-555-1234. The total is $285.'],
+  ['ABC company: 618-555-1234 sent the estimate.', 'The total is $285.'],
+  ['ABC company phone number (618) 555-1234 sent the estimate.', 'The total is $285.'],
+  ['The estimate is ready.', 'The total is $285.']
+ ]) assert.equal(textsmithMessagesFit(pair,'split',source),false,JSON.stringify(pair));
+});
+test('supplying a business phone number does not authorize a call invitation',()=>{
+ const block='ABC company phone number 618-555-1234';
+ const source=`The quote is from ${block}. The total is $285.`;
+ const invitation=[`The quote is from ${block}.`, 'Please call them if you have questions.'];
+ assert.equal(textsmithMessagesFit(invitation,'split',source),false);
+ assert.equal(textsmithMessagesFit([`${block}.`, 'You can reach them to discuss the quote.'],'split',source),false);
+ assert.equal(textsmithMessagesFit(invitation,'split',`Ask the customer to call ${block} with questions.`),true);
+ assert.equal(textsmithMessagesFit(invitation,'split',`${source} Do not call.`),false);
+});
+
+test('a phone label or business name containing Call is neutral contact data',()=>{
+ for(const block of ['ABC Company phone: 618-555-1234','Call & Sons, tel. (618) 555-1234']) {
+  assert.equal(textsmithMessagesFit([`The estimate came from ${block}.`],'single',`The estimate came from ${block}.`),true);
+  assert.equal(textsmithMessagesFit([`${block}. Call them today.`],'single',`The estimate came from ${block}.`),false);
+ }
 });
