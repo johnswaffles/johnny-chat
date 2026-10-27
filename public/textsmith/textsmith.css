@@ -45,6 +45,9 @@ h1 em { color: #42735d; background: linear-gradient(105deg, #21694f 8%, #538167 
 .mode-option { min-height: 30px; padding: 4px 12px; color: #596a5d; border: 1px solid transparent; border-radius: 5px; background: transparent; font-size: 11px; font-weight: 500; white-space: nowrap; }
 .mode-option:hover:not(:disabled):not(.active) { color: var(--green); background: #ffffff55; }
 .mode-option.active { color: #f5f8ed; background: linear-gradient(135deg, #376a50, #285541); border-color: #24523c; box-shadow: 0 2px 4px #2445331c, inset 0 1px 0 #ffffff22; }
+.new-message-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 5px; min-height: 36px; margin-left: 8px; padding: 5px 11px; border: 1px solid #cad9c0; border-radius: 6px; background: linear-gradient(#fffefa, #f0f5e8); color: #365c43; font-size: 11px; font-weight: 500; white-space: nowrap; box-shadow: 0 1px 2px #24453308; }
+.new-message-button > span { font-size: 16px; font-weight: 400; line-height: 1; }
+.new-message-button:hover { background: #e5efda; border-color: #96b486; box-shadow: 0 2px 5px #24453312; }
 .mode-budget { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .tone-field select { max-width: 210px; min-height: 36px; padding: 5px 27px 5px 10px; border: 1px solid #d1ddc9; border-radius: 6px; color: var(--ink); background: #ffffffb5; box-shadow: 0 1px 2px #24453305; font-size: 11px; }
 .workspace-grid { display: grid; grid-template-columns: 1fr 1fr; }
@@ -191,6 +194,9 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; bac
   .mode-switch { flex: 1; }
   .mode-option { flex: 1; padding: 4px 9px; }
   .format-control, .tone-field { min-width: 100%; gap: 7px; }
+  .format-control > .control-label { display: none; }
+  .format-control .mode-option { padding: 4px 6px; font-size: 10px; }
+  .new-message-button { min-height: 40px; margin-left: 3px; padding: 5px 8px; font-size: 10px; }
   .status-pill { font-size: 9px; padding: 3px 6px; }
   .examples { gap: 5px; }
   .examples button { padding: 5px 6px; gap: 5px; }
