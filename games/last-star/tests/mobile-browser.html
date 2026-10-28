@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Last Star mobile browser checks</title>
+  <style>
+    :root { color-scheme: dark; font: 14px/1.5 system-ui, sans-serif; }
+    body { margin: 20px; background: #071722; color: #e3e9e9; }
+    h1 { font-size: 22px; margin-bottom: 8px; }
+    p { max-width: 1000px; }
+    button { min-height: 44px; padding: 8px 16px; color: #eef4f2; background: #173847; border: 1px solid #7aa5b6; border-radius: 6px; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: wait; }
+    #status { display: inline-block; margin-left: 16px; font-weight: 600; }
+    #frame-area { overflow: auto; padding: 10px 0; }
+    iframe { display: block; border: 0; background: #06141d; width: 844px; height: 390px; }
+    #results { padding-left: 24px; }
+    #results li { margin: 3px 0; }
+    .pass { color: #a4e6bd; } .fail { color: #ffb6ac; } .note { color: #a9bdc8; }
+    #report { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #476573; padding: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Last Star · mobile browser checks</h1>
+  <p>This opt-in fixture checks the real game in a same-origin iframe. It sends synthetic PointerEvents with independent finger IDs and resizes the iframe to phone landscape dimensions. It is not a physical iPhone, Safari, Android device, or OS pointer-capture test. Browser screenshots and real-device play are separate verification steps.</p>
+  <p class="note">Focused scenarios use the game's existing <code>?qa</code> API to reset the run, remove enemies, seed item charges, and trigger death. The QA panel is hidden while measuring controls. Existing local save/settings values are restored after the run.</p>
+  <button id="run" type="button">Run browser checks</button><output id="status" role="status">Ready</output>
+  <div id="frame-area"><iframe id="game-frame" title="Last Star mobile test viewport" allow="autoplay"></iframe></div>
+  <ol id="results"></ol>
+  <pre id="report" hidden></pre>
+  <script type="module" src="./mobile-browser.js"></script>
+</body>
+</html>

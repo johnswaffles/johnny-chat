@@ -1,6 +1,6 @@
 # Crownforge: Last Star — game bible
 
-Last updated: October 26, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
+Last updated: October 28, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
 
 ## Identity and scope
 
@@ -56,7 +56,7 @@ Shades drop three Star Crystals, guardian twelve. Crystals settle above supporte
 
 Spell bar is compact at bottom-left: 64×66 desktop buttons, 40px artwork; responsive variants are smaller. Do not recentre or enlarge it over jump paths. Dialogue is a compact bottom-right subtitle, 3–4.5 seconds based on text length; on narrow screens it moves above the spell bar. Never restore the large center-bottom story banner. Persistent story belongs in the paused memory reader.
 
-Keyboard: A/D move, Space double jump, J Starshard, Shift Eventide, Q Constellation, R Heavenrend, E interact, Escape pause. Xbox: left stick/D-pad move, right stick aim, A jump, RT Starshard, B Eventide, X Constellation, Y Heavenrend, RB interact, Menu pause. Keep remapping UI, swap-on-conflict and saved dead-zone preferences. Reserved menu controls must remain reachable. Disconnect pauses controller play; focus loss and reader/settings screens pause combat. Desktop-first, no claimed touch support.
+Keyboard: A/D move, Space double jump, J Starshard, Shift Eventide, Q Constellation, R Heavenrend, E interact, Escape pause. Xbox: left stick/D-pad move, right stick aim, A jump, RT Starshard, B Eventide, X Constellation, Y Heavenrend, RB interact, Menu pause. Keep remapping UI, swap-on-conflict and saved dead-zone preferences. Reserved menu controls must remain reachable. Disconnect pauses controller play; focus loss and reader/settings screens pause combat. Desktop controls remain supported; landscape touch controls are defined in the October 28 override below.
 
 Music: **The Door Beneath the World** from Crownforge RTS, looping after user interaction. Synthesized spell, impact and collection effects share the sound setting; avoid peaks and repeated audio on resume.
 
@@ -209,3 +209,17 @@ Ground warnings must visibly match the existing ±90 damage footprint, remain st
 Pause freezes all new motion. Preserve Gentle, Light and reduced-flash choices; avoid strobing and fullscreen spell flashes. The new arcana event pool is bounded at24. Existing particle/projectile/light budgets remain in effect. Paintings load as optional assets with visible drawn fallbacks. Runtime images total278,776 bytes; provenance is in `docs/art/ASTRAL_GATEWAYS.md` and exact prompts in `docs/art/ARCANA_PROMPTS.json`. Review through `tests/arcana-review.html`; use the input-only campaign replay for gameplay proof. Release marker for this local review is `20261026-astral-gateways`; it is not a public deployment record.
 
 The all-pose runtime review also exposed a neighboring blade tip in the boss windup crop and a narrow cape fragment in its attack crop. Presentation-only clip bounds now exclude those atlas neighbors, preserving the boss’s full weapon, cloth, feet and shared pivots in both directions. The source sheet is unchanged.
+
+
+## Landscape phone play — October 28
+
+User requested a playable landscape mobile version and authorized a tested live release. Scope remains Level 1; memories stay shelved. No artwork, geometry, combat tuning, charge rules, saves or existing keyboard/controller bindings change.
+
+- Phones with coarse primary pointers (or touch without hover) automatically show the touch layout. `?touch=1` is an opt-in desktop preview of that layout. Fine-pointer desktops retain the original HUD, including touch-capable laptops with a mouse.
+- Left thumb: independent left/right holds. Right thumb: hold Cast for Starshard, tap Jump twice for double jump, tap Blink, or use the displayed equipped item. Multiple pointers remain independent. Short taps survive frames with no simulation step. A contextual left-side button restores/rests at starseals and completes the final return.
+- Tap Magic to open the compact four-item tray. Time slows using the existing selection system. Tapping a choice equips and closes; equipping never spends charges. Using is a separate press. Keyboard/controller takeover releases a touch-open tray and retains their original hold/release selection behavior.
+- Landscape HUD preserves health, buffs, staff/crystals, Overdrive, score, objective and seals in compact form. Touch buttons are at least48CSS pixels (pause44), with safe-area margins. The canvas keeps its720-unit world height and correct aspect ratio. Dynamic viewport height accommodates mobile browser chrome.
+- Portrait pauses active play and shows rotation guidance. Returning to landscape requires explicit Resume. Pause, blur, document hiding and resizing clear held touch inputs. Pointer cancel/lost capture release only the affected finger. The game surface blocks scrolling/zoom gestures during touch play; settings/title remain scrollable. A top-level Resume button remains reachable without scrolling through settings.
+- Gentle effects, reduced flashes, Light/Rich, checkpoints and the legacy scenery route remain available. Touch support is designed for modern Pointer Events browsers. Browser viewport/synthetic-pointer checks are not a physical iPhone or Android test.
+
+Release marker: `20261028-mobile-landscape`. See `docs/MOBILE_QA.md` for exact verification evidence and limitations.

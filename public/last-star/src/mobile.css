@@ -1,0 +1,139 @@
+/* Landscape touch layout. World coordinates, art and desktop HUD stay intact. */
+html, body { overscroll-behavior: none; }
+#game { height: 100%; height: 100dvh; }
+#world { touch-action: none; }
+.touch-intro, .touch-instructions, .touch-resume { display: none; }
+.touch-mode {
+  --safe-left: max(12px, env(safe-area-inset-left));
+  --safe-right: max(12px, env(safe-area-inset-right));
+  --safe-top: max(8px, env(safe-area-inset-top));
+  --safe-bottom: max(12px, env(safe-area-inset-bottom));
+  --touch-size: clamp(48px, 14.5dvh, 64px);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.touch-mode button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+#touch-controls { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+#touch-controls button {
+  position: relative; width: var(--touch-size); height: var(--touch-size);
+  min-width: 48px; min-height: 48px; padding: 3px;
+  border: 1px solid #a8c8d49c; border-radius: 16px;
+  background: linear-gradient(145deg, #153746e8, #051522e8);
+  color: #e1ece9; box-shadow: inset 0 0 0 2px #09202e, 0 3px 12px #0005;
+  font: 10px/1.2 Arial, sans-serif; pointer-events: auto; touch-action: none;
+}
+#touch-controls button.is-pressed, #touch-controls button.chosen {
+  background: #41616eef; border-color: #fff0ba; box-shadow: inset 0 0 0 2px #b3c2a85c;
+}
+.touch-movement {
+  position: absolute; left: var(--safe-left); bottom: var(--safe-bottom);
+  display: flex; gap: 12px;
+}
+#touch-controls .touch-movement button { width: calc(var(--touch-size) + 6px); height: calc(var(--touch-size) + 6px); font-size: 23px; border-radius: 50%; }
+.touch-actions {
+  position: absolute; right: var(--safe-right); bottom: var(--safe-bottom);
+  display: grid; grid-template-columns: repeat(3, var(--touch-size)); gap: 8px;
+}
+#touch-controls [data-touch-action="bolt"] { grid-column: 1 / 3; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; }
+#touch-controls [data-touch-action="jump"] { border-color: #e3cea0c4; background: linear-gradient(145deg, #3b4e50e8, #192a34ee); }
+#touch-controls [data-touch-action="jump"] > span:first-child { display: block; font-size: 26px; line-height: 28px; }
+#touch-magic > span:first-child { display: block; font: 28px/28px Georgia, serif; color: #e9d6a1; }
+#touch-controls .touch-icon { display: block; width: 30px; height: 30px; margin: 0 auto 1px; background-size: contain; background-position: center; background-repeat: no-repeat; }
+#touch-controls [data-touch-action="bolt"] .touch-icon { margin: 0; width: 38px; height: 38px; }
+.blink-icon { background-image: url('../assets/celestial-v2/eventide-v2.webp'); }
+.bolt-icon { background-image: url('../assets/celestial-v2/starshard-v2.webp'); }
+#touch-item-count, #touch-blink-cooldown:not(:empty) { position: absolute; top: 3px; right: 4px; border-radius: 3px; padding: 2px 3px; background: #06131fef; color: #ffdf9f; font: 11px Arial, sans-serif; }
+#touch-use.unavailable { border-color: #78909b; color: #9baeb7; }
+#touch-controls #touch-interact {
+  position: absolute; left: var(--safe-left); bottom: calc(var(--safe-bottom) + var(--touch-size) + 20px);
+  width: calc(var(--touch-size) * 2 + 24px); min-height: 44px; height: auto; padding: 12px 6px;
+  border-color: #e4ce91; color: #ffedbe; font-size: 11px;
+}
+.touch-mode #abilities, .touch-mode .bottom-hint, .touch-mode #interaction { display: none; }
+.touch-mode .vitals { left: var(--safe-left); top: var(--safe-top); gap: 0; }
+.touch-mode .crest, .touch-mode .vitals .eyebrow, .touch-mode .health-row > span:first-child { display: none; }
+.touch-mode .vital-info { width: 146px; }
+.touch-mode .health-row { margin: 0 0 5px; }
+.touch-mode .health-row > span:last-child { font-size: 12px; color: #e1eddd; }
+.touch-mode #buffs { max-width: 210px; min-height: 0; font: 9px/1.3 Arial, sans-serif; letter-spacing: 0; margin-top: 4px; }
+.touch-mode #power-hud { top: calc(var(--safe-top) + 64px); left: var(--safe-left); width: 146px; padding: 4px 6px; box-shadow: none; border-left-width: 1px; }
+.touch-mode #power-hud > div:first-child { font-size: 9px; gap: 4px; }
+.touch-mode #power-description { display: none; }
+.touch-mode .charge-track { height: 3px; margin-top: 4px; }
+.touch-mode #overdrive-label { font-size: 8px; letter-spacing: 0; }
+.touch-mode .quest { right: calc(var(--safe-right) + 58px); top: var(--safe-top); max-width: 230px; }
+.touch-mode .quest .eyebrow { font-size: 8px; letter-spacing: 1px; }
+.touch-mode #objective { margin-top: 3px; font-size: 11px; }
+.touch-mode #seals { font-size: 14px; letter-spacing: 5px; margin-top: 3px; }
+.touch-mode #pause-button { top: var(--safe-top); right: var(--safe-right); width: 44px; height: 44px; font-size: 18px; background: #071c2bd9; }
+.touch-mode #arcade-hud { top: var(--safe-top); left: 50%; right: auto; transform: translateX(-50%); width: 120px; }
+.touch-mode #arcade-hud > span { font-size: 7px; letter-spacing: 1.5px; }
+.touch-mode #run-score { font-size: 20px; letter-spacing: 1.5px; }
+.touch-mode #combo-label { font-size: 8px; letter-spacing: 0; }
+.touch-mode .combo-track { margin: 4px 10px; }
+.touch-mode #boss-ui { top: calc(var(--safe-top) + 52px); width: min(280px, 38%); }
+.touch-mode #boss-ui .eyebrow { font-size: 8px; letter-spacing: 1px; }
+.touch-mode #boss-ui .bar { margin-top: 5px; }
+.touch-mode #dialogue { left: 26%; right: 28%; bottom: var(--safe-bottom); width: auto; max-width: none; padding: 5px 8px; }
+.touch-mode #dialogue p { font-size: 10px; line-height: 1.4; }
+.touch-mode #toast { top: calc(var(--safe-top) + 90px); left: 25%; right: 25%; font-size: 10px; letter-spacing: 0; }
+.touch-mode #area-title { top: 27%; }
+.touch-mode #area-title small { font-size: 7px; margin-bottom: 5px; }
+.touch-mode #area-title strong { font-size: 25px; }
+/* A tap opens a compact tray; choosing equips, and using is a separate press. */
+.touch-mode #selection-ring, .touch-mode #selection-ring.on-left {
+  z-index: 5; left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%);
+  width: min(338px, calc(100% - 32px)); padding: 9px; border-radius: 14px;
+}
+.touch-mode #selection-ring > small:first-child { max-width: none; font-size: 8px; }
+.touch-mode .ring-items { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: auto; width: auto; height: auto; gap: 6px; margin: 7px 0; }
+.touch-mode .ring-items::before { display: none; }
+.touch-mode .ring-items button:nth-child(n) { grid-column: auto; grid-row: auto; width: 100%; height: 66px; min-height: 66px; }
+.touch-mode .ring-items button > .item-symbol { width: 40px; height: 40px; }
+.touch-mode .ring-items button > span:not(.item-symbol) { font-size: 8px; }
+.touch-mode #ring-hint { font-size: 10px; margin: 4px 0; }
+.touch-mode #selection-ring > small:last-child { font-size: 8px; }
+.touch-mode .touch-instructions { display: block; font: 12px/1.6 Arial, sans-serif; }
+.touch-mode .controls { display: none; }
+.touch-mode .modal-screen { padding: calc(var(--safe-top) + 52px) var(--safe-right) var(--safe-bottom) var(--safe-left); }
+.touch-mode .modal { max-height: 100%; width: min(620px, 100%); padding: 18px 26px; overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+.touch-mode .modal button, .touch-mode .setting { min-height: 44px; }
+.touch-mode .modal .setting input[type="checkbox"] { width: 22px; height: 22px; }
+.touch-mode .modal input[type="range"] { min-height: 44px; }
+.touch-mode .touch-resume { display: block; position: absolute; right: var(--safe-right); top: var(--safe-top); min-height: 44px; padding: 8px 18px; color: #fff0c9; background: #153442; border: 1px solid #a5bac4; font: 12px Arial, sans-serif; }
+.touch-mode #title-screen { overflow-y: auto; touch-action: pan-y; padding: calc(var(--safe-top) + 28px) var(--safe-right) calc(var(--safe-bottom) + 48px) var(--safe-left); }
+.touch-mode .topline { top: var(--safe-top); left: var(--safe-left); right: var(--safe-right); }
+.touch-mode .topline span:last-child { display: none; }
+.touch-mode .title-content { position: relative; top: auto; left: auto; max-width: none; width: 100%; display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: center; }
+.touch-mode .title-content > .eyebrow { grid-column: 1; font-size: 8px; letter-spacing: 1px; }
+.touch-mode h1 { grid-column: 1; grid-row: 2; margin: 7px 0; font-size: clamp(50px, 12dvh, 90px); letter-spacing: -3px; }
+.touch-mode .title-rule, .touch-mode .title-sub, .touch-mode .title-footer { display: none; }
+.touch-mode .title-content > p:not(.touch-intro):not(.title-sub) { grid-column: 1; margin: 3px 0; font-size: 13px; line-height: 1.5; }
+.touch-mode .title-content .touch-intro { display: block; grid-column: 2; grid-row: 1 / 3; align-self: end; font: 12px/1.6 Arial, sans-serif; margin: 0 0 8px; color: #c6d7d8; }
+.touch-mode .title-actions { grid-column: 2; grid-row: 3 / 5; margin: 0; gap: 6px; align-self: start; }
+.touch-mode .title-actions button { min-height: 44px; min-width: 0; width: 100%; font-size: 10px; letter-spacing: 1px; padding: 12px; }
+.touch-mode .title-bottom { position: fixed; left: var(--safe-left); right: var(--safe-right); bottom: var(--safe-bottom); }
+.touch-mode .title-bottom > span { font-size: 7px; letter-spacing: 1px; }
+.touch-mode #title-settings { min-height: 44px; padding: 10px; background: #071922c9; }
+#rotate-screen { position: absolute; inset: 0; z-index: 50; padding: max(24px, env(safe-area-inset-top)) 28px; background: radial-gradient(ellipse at 50% 35%, #1c3f4c, #06141f 72%); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+#rotate-screen .rotate-icon { font: 70px Georgia, serif; color: #d5bc81; }
+#rotate-screen h2 { font: 30px/1.2 Georgia, serif; margin: 18px 0; }
+#rotate-screen p { font: 16px/1.6 Arial, sans-serif; }
+#rotate-screen small { font: 12px/1.6 Arial, sans-serif; color: #a2b9c4; }
+@media (max-width: 700px) {
+  .touch-mode #arcade-hud { top: calc(var(--safe-top) + 48px); right: calc(var(--safe-right) + 56px); left: auto; transform: none; width: 110px; text-align: right; }
+  .touch-mode #arcade-hud > span, .touch-mode #combo-label, .touch-mode .combo-track { display: none; }
+  .touch-mode #run-score { font-size: 16px; }
+  .touch-mode .quest { max-width: 210px; }
+  .touch-mode #dialogue { left: 31%; right: 38%; }
+}
+@media (max-height: 300px) {
+  .touch-mode #power-hud { top: calc(var(--safe-top) + 52px); }
+  .touch-mode #buffs { font-size: 8px; max-height: 22px; overflow: hidden; }
+  .touch-mode #overdrive-label { display: none; }
+  .touch-mode #dialogue { bottom: calc(var(--safe-bottom) + 58px); left: 30%; right: 30%; }
+  .touch-mode .title-content > p:not(.touch-intro) { display: none; }
+  .touch-mode .title-content .touch-intro { grid-row: 1 / 2; font-size: 11px; }
+  .touch-mode .title-actions { grid-row: 2 / 4; }
+}

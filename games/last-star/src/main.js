@@ -1,3 +1,4 @@
+import {TouchControls} from './mobile-controls.js?release=20261028-mobile-landscape';
 import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20261001-stick-wheel';
 import {LEVEL1} from './level1-config.js?release=20261001-stick-wheel';
 const selection=new SelectionRing();
@@ -15,7 +16,15 @@ let game=new Game(),renderer,mode='title',menuReturn='title',previous=0,accumula
 const audio=new Soundscape();
 const controller=new Controller();
 let bindings;try{bindings=readBindings(localStorage.getItem(storageKey+'-bindings'));}catch{bindings=readBindings(null);}
-let lastDevice='keyboard',menuDirection=0,menuRepeatAt=0,controllerError='',qaPadSource=null;
+let touchRing=false,mousePointer=null;
+const touchMode=new URLSearchParams(location.search).has('touch')||matchMedia('(pointer: coarse)').matches||(navigator.maxTouchPoints>0&&!matchMedia('(hover: hover)').matches);
+$('game').classList.toggle('touch-mode',touchMode);
+const touch=new TouchControls($('touch-controls'),{
+  onActivity:()=>{lastDevice='touch';audio.start();},
+  canPress:()=>mode==='playing'&&!$('game').classList.contains('is-portrait'),
+  onRingToggle:()=>{touch.cancel();pendingActions={};touchRing=!touchRing;updateUI();}
+});
+let lastDevice=touchMode?'touch':'keyboard',menuDirection=0,menuRepeatAt=0,controllerError='',qaPadSource=null;
 const controlsUI=new ControlsUI(bindings,controller,()=>{try{localStorage.setItem(storageKey+'-bindings',JSON.stringify(bindings));}catch{controlsUI.message('Controls changed for this session; browser storage is unavailable.');}});
 let saved=null,settings={sound:true,gentle:matchMedia('(prefers-reduced-motion: reduce)').matches,quality:'low',music:.38,sfx:.28,shake:.65,reducedFlash:false};
 try{saved=parseSave(localStorage.getItem(storageKey));const prefs=JSON.parse(localStorage.getItem(SAVE_KEY+'-settings'));if(prefs){for(const key of ['music','sfx','shake'])if(Number.isFinite(prefs[key]))settings[key]=Math.max(0,Math.min(1,prefs[key]));settings.reducedFlash=prefs.reducedFlash===true;settings.sound=prefs.sound!==false;settings.gentle=prefs.gentle===true;settings.quality=prefs.quality==='low'?'low':'high';}}catch{}
@@ -23,8 +32,9 @@ const zoneNames=['The Silverwood','The Broken Aqueduct','The Last Observatory'];
 function showToast(text){$('toast').textContent=text;toastUntil=performance.now()+3000;$('toast').classList.add('visible');}
 function save(){saved=game.save();try{localStorage.setItem(storageKey,JSON.stringify(saved));}catch{showToast('This browser cannot save. Keep this window open to continue.');}}
 function showDialogue(text){$('dialogue').querySelector('p').textContent=text;dialogueUntil=performance.now()+Math.min(4500,Math.max(3000,text.length*45));$('dialogue').hidden=false;}
-function setMode(next){needsFrame=true;selection.cancel();pendingActions={};mode=next;keys.clear();pressed.clear();controller.clearEdges();mouseDown=false;mouseAim=null;for(const [id,name] of [['title-screen','title'],['pause-screen','pause'],['bindings-screen','bindings'],['death-screen','dead'],['ending-screen','won']])$(id).hidden=next!==name;$('hud').hidden=next==='title'||(next==='bindings'&&menuReturn==='title');if(renderer)renderer.title=next==='title';if(next!=='playing')requestAnimationFrame(()=>{if(mode!==next)return;const target=next==='pause'?'resume':next==='bindings'?'bindings-back':next==='dead'?'retry':next==='won'?'replay':saved&&!saved.completed?'continue':'begin';$(target)?.focus();});}
+function setMode(next){if(next==='playing'&&$('game').classList.contains('is-portrait'))return;needsFrame=true;selection.cancel();pendingActions={};mode=next;touchRing=false;touch.cancel();touch.setEnabled(touchMode&&next==='playing'&&!$('game').classList.contains('is-portrait'));mousePointer=null;keys.clear();pressed.clear();controller.clearEdges();mouseDown=false;mouseAim=null;for(const [id,name] of [['title-screen','title'],['pause-screen','pause'],['bindings-screen','bindings'],['death-screen','dead'],['ending-screen','won']])$(id).hidden=next!==name;$('hud').hidden=next==='title'||(next==='bindings'&&menuReturn==='title');if(renderer)renderer.title=next==='title';if(next!=='playing')requestAnimationFrame(()=>{if(mode!==next)return;const target=next==='pause'?'resume':next==='bindings'?'bindings-back':next==='dead'?'retry':next==='won'?'replay':saved&&!saved.completed?'continue':'begin';$(target)?.focus();});}
 function start(resume=false){
+  if(!renderer||$('game').classList.contains('is-portrait'))return;
   hitStop=hitStopGap=0;audio.reset();qaReplay=false;toastUntil=dialogueUntil=areaUntil=0;$('dialogue').hidden=true;$('toast').classList.remove('visible');$('area-title').classList.remove('visible');
   game=new Game(resume?saved:null);renderer.camera=Math.max(0,game.player.x-renderer.w*.37);renderer.reset();
   setMode('playing');audio.start();accumulator=0;
@@ -41,9 +51,9 @@ for(const [id,key] of [['sound','sound'],['gentle','gentle']]){$(id).checked=set
 for(const [id,key] of [['music-volume','music'],['sfx-volume','sfx'],['shake-volume','shake']]){$(id).value=settings[key];$(id).addEventListener('input',applySettings);} $('reduced-flash').checked=settings.reducedFlash;$('reduced-flash').addEventListener('change',applySettings);
 $('quality').value=settings.quality;$('quality').addEventListener('change',applySettings);
 $('equipped-item').onclick=()=>{if(mode==='playing'&&!selection.open)game.useItem();};
-for(const [i,b] of [...document.querySelectorAll('[data-item]')].entries())b.onclick=()=>{selection.index=i;audio.event({type:'selection'});};
+for(const [i,b] of [...document.querySelectorAll('[data-item]')].entries())b.onclick=()=>{selection.index=i;if(touchMode){touchRing=false;touch.cancel();pendingActions={};}audio.event({type:'selection'});};
 $('begin').addEventListener('click',()=>start(false));$('continue').addEventListener('click',()=>start(true));
-$('pause-button').addEventListener('click',pause);$('resume').addEventListener('click',()=>setMode(menuReturn));
+$('pause-button').addEventListener('click',pause);$('touch-resume').addEventListener('click',()=>{if(!$('game').classList.contains('is-portrait'))setMode(menuReturn);});$('resume').addEventListener('click',()=>setMode(menuReturn));
 $('title-settings').addEventListener('click',()=>{menuReturn='title';setMode('pause');$('hud').hidden=true;});
 $('customize-controls').addEventListener('click',()=>{setMode('bindings');controlsUI.cancel();controlsUI.status(controllerError);});
 $('bindings-back').addEventListener('click',()=>{controlsUI.cancel();setMode('pause');if(menuReturn==='title')$('hud').hidden=true;});
@@ -57,29 +67,42 @@ function actionKeys(action){
   // A customized primary binding takes precedence over an old convenience alias.
   return [primary,...(aliases[action]||[]).filter(k=>!Object.values(bindings.keys).includes(k))];
 }
+function leaveTouchRing(){if(touchRing){touchRing=false;touch.cancel();pendingActions={};selection.step({ring:false},game.inventory);}}
 window.addEventListener('keydown',e=>{
   if(controlsUI.key(e))return;
   const code=normalizeKey(e.code);lastDevice='keyboard';
   if(code!=='Escape'&&!Object.keys(DEFAULT_KEYS).some(a=>actionKeys(a).includes(code)))return;
+  leaveTouchRing();
   if(mode==='playing'||e.code==='Escape')e.preventDefault();
   if(e.code==='Escape'){if(!e.repeat)pause();return;}
   if(mode!=='playing')return;
   if(!keys.has(code))pressed.add(code);keys.add(code);
 });
 window.addEventListener('keyup',e=>keys.delete(normalizeKey(e.code)));
-window.addEventListener('blur',()=>{keys.clear();pressed.clear();controller.clearEdges();controlsUI.cancel();mouseDown=false;if(mode==='playing')pause();});
+window.addEventListener('blur',()=>{keys.clear();pressed.clear();controller.clearEdges();controlsUI.cancel();mouseDown=false;mousePointer=null;touch.cancel();touchRing=false;pendingActions={};if(mode==='playing')pause();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause();});
 function pointerWorld(e){const rect=$('world').getBoundingClientRect();return {aimX:(e.clientX-rect.left)/rect.width*renderer.w+renderer.camera,aimY:(e.clientY-rect.top)/rect.height*720};}
-$('world').addEventListener('pointerdown',e=>{lastDevice='keyboard';if(mode!=='playing')return;e.preventDefault();mouseAim=pointerWorld(e);if(e.button===0)mouseDown=true;if(e.button===2)game.useItem(mouseAim);});
-$('world').addEventListener('pointermove',e=>{if(mouseDown)mouseAim=pointerWorld(e);});
-window.addEventListener('pointerup',()=>{mouseDown=false;mouseAim=null;});
+$('world').addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;lastDevice='keyboard';if(mode!=='playing')return;e.preventDefault();mouseAim=pointerWorld(e);if(e.button===0){mouseDown=true;mousePointer=e.pointerId;try{$('world').setPointerCapture?.(e.pointerId);}catch{}}if(e.button===2)game.useItem(mouseAim);});
+$('world').addEventListener('pointermove',e=>{if(mouseDown&&e.pointerId===mousePointer)mouseAim=pointerWorld(e);});
+function releaseMouse(e){if(e.pointerId!==mousePointer)return;mouseDown=false;mouseAim=null;mousePointer=null;}
+window.addEventListener('pointerup',releaseMouse);window.addEventListener('pointercancel',e=>{releaseMouse(e);if(e.pointerType==='touch')pendingActions={};});$('world').addEventListener('lostpointercapture',releaseMouse);
 $('world').addEventListener('contextmenu',e=>e.preventDefault());
-window.addEventListener('resize',()=>{renderer?.resize();needsFrame=true;});
+function resizeViewport(){
+  const portrait=touchMode&&$('game').clientHeight>$('game').clientWidth;
+  $('game').classList.toggle('is-portrait',portrait);$('rotate-screen').hidden=!portrait;
+  touch.cancel();touchRing=false;selection.cancel();pendingActions={};mouseDown=false;mouseAim=null;mousePointer=null;
+  if(portrait&&mode==='playing')pause();
+  touch.setEnabled(touchMode&&mode==='playing'&&!portrait);
+  renderer?.resize();needsFrame=true;
+}
+window.addEventListener('resize',resizeViewport);
+window.visualViewport?.addEventListener('resize',resizeViewport);
+resizeViewport();
 function input(){
   if(qaReplay&&qaDriver)return qaDriver(game);
   const has=a=>actionKeys(a).some(k=>keys.has(k)),edge=a=>actionKeys(a).some(k=>pressed.has(k));
-  const pad=controller.consume(bindings);
-  const r={move:(has('right')?1:0)-(has('left')?1:0)||pad.move,jump:edge('jump')||pad.jump,bolt:has('bolt')||mouseDown||pad.bolt,blink:edge('blink')||pad.blink,use:edge('use')||pad.use,ring:has('ring')||pad.ring,ringX:pad.ringX,ringY:pad.ringY,previous:edge('previous')||pad.previous,interact:edge('interact')||pad.interact};
+  const pad=controller.consume(bindings),finger=touch.consume();
+  const r={move:(has('right')?1:0)-(has('left')?1:0)||finger.move||pad.move,jump:edge('jump')||finger.jump||pad.jump,bolt:has('bolt')||mouseDown||finger.bolt||pad.bolt,blink:edge('blink')||finger.blink||pad.blink,use:edge('use')||finger.use||pad.use,ring:has('ring')||touchRing||pad.ring,ringX:pad.ringX,ringY:pad.ringY,previous:edge('previous')||pad.previous,interact:edge('interact')||finger.interact||pad.interact};
   if(lastDevice==='controller'&&Math.hypot(controller.aim.x,controller.aim.y)>.1){r.aimX=game.player.x+controller.aim.x*600;r.aimY=game.player.y-68+controller.aim.y*600;}
   if(mouseDown&&mouseAim)Object.assign(r,mouseAim);pressed.clear();return r;
 }
@@ -87,7 +110,7 @@ function pollController(now){
   let pads=[];try{pads=navigator.getGamepads?.()||[];}catch{controllerError='Controller access is unavailable in this browser. Try opening this local game in Chrome or Edge.';}
   if(qaPadSource){const virtual=qaPadSource.sample();if(virtual!==null)pads=virtual;}
   const change=controller.poll(pads,bindings);
-  if(change.active)lastDevice='controller';
+  if(change.active){leaveTouchRing();lastDevice='controller';}
   if(change.changed){controlsUI.render();controlsUI.status(controllerError);}
   if(change.disconnected){controlsUI.cancel();controlsUI.status(controllerError);if(lastDevice==='controller'&&mode==='playing'){pause();showToast('Controller disconnected. Reconnect it or continue with the keyboard.');}lastDevice='keyboard';}
   if(controlsUI.poll(now)){controller.clearEdges();return;}
@@ -134,19 +157,29 @@ function updateUI(){
   $('chapter').textContent=SEALS[p.x<2600?0:p.x<5100?1:2].chapter;
   $('seals').textContent=[0,1,2].map(i=>i<game.checkpoint?'◆':'◇').join(' ');
   $('objective').textContent=game.bossDefeated?'Return the ember to the Observatory':game.bossStarted?'Free the Hollow Astronomer':game.checkpoint===0?'Awaken the Silverwood starseal':game.checkpoint===1?'Find the aqueduct starseal':game.checkpoint===2?'Reach the Observatory starseal':'Enter the Observatory';
-  const buffs=[`Missing health: +${Math.round(missingHealthBonus(p)*100)}% damage · 2% lifesteal`];if(p.retaliation>0)buffs.push(`Star Reprisal +${Math.round(p.retaliation*3)} next spell`);if(p.mantle>0)buffs.push(`Astral Mantle ${Math.ceil(p.mantle)}s`);if(p.blinked)buffs.push(`Eventide ${p.rangeStacks} · Reckoning ×${(1+game.chain*.25).toFixed(2)}`);$('buffs').textContent=buffs.join('  /  ');
+  const buffs=[`Missing health: +${Math.round(missingHealthBonus(p)*100)}% damage · 2% lifesteal`];if(p.retaliation>0)buffs.push(`Star Reprisal +${Math.round(p.retaliation*3)} next spell`);if(p.mantle>0)buffs.push(`Astral Mantle ${Math.ceil(p.mantle)}s`);if(p.blinked)buffs.push(`Eventide ${p.rangeStacks} · Reckoning ×${(1+game.chain*.25).toFixed(2)}`);$('buffs').textContent=touchMode?[`Damage +${Math.round(missingHealthBonus(p)*100)}%`,p.retaliation>0?`Reprisal +${Math.round(p.retaliation*3)}`:'',p.mantle>0?`Mantle ${Math.ceil(p.mantle)}s`:'',p.blinked?`Eventide ${p.rangeStacks} · ×${(1+game.chain*.25).toFixed(2)}`:''].filter(Boolean).join(' · '):buffs.join('  /  ');
   const padMode=lastDevice==='controller'&&controller.connected;
-  const prompt=a=>padMode?buttonName(bindings.pad[a],controller.standard):keyName(bindings.keys[a]);
+  const prompt=a=>lastDevice==='touch'?({left:'◀',right:'▶',jump:'Jump',bolt:'Cast',blink:'Blink',interact:'Awaken',use:'Item',ring:'Magic'}[a]||a):padMode?buttonName(bindings.pad[a],controller.standard):keyName(bindings.keys[a]);
   $('game').classList.toggle('controller-active',padMode);
   $('game').classList.toggle('selecting-magic',selection.open&&mode==='playing');
-  $('world').setAttribute('aria-label',`Game world. ${padMode?'Left stick':prompt('left')+' and '+prompt('right')} to move, ${prompt('jump')} to jump, ${prompt('bolt')} to cast, ${prompt('blink')} to teleport, ${prompt('interact')} to interact, ${prompt('use')} to use equipped item, hold ${prompt('ring')} to select.`);
-  const near=game.nearby();$('interaction').hidden=!near||mode!=='playing';if(near)$('interaction').innerHTML=`<kbd>${prompt('interact')}</kbd>${near.label}`;
+  $('world').setAttribute('aria-label',`Game world. ${padMode?'Left stick':prompt('left')+' and '+prompt('right')} to move, ${prompt('jump')} to jump, ${prompt('bolt')} to cast, ${prompt('blink')} to teleport, ${prompt('interact')} to interact, ${prompt('use')} to use equipped item, ${lastDevice==='touch'?'tap':'hold'} ${prompt('ring')} to select.`);
+  const near=game.nearby();$('interaction').hidden=!near||mode!=='playing';$('touch-interact').hidden=!near||mode!=='playing'||selection.open;if(near)$('touch-interact').textContent=near.label;
+  if(near)$('interaction').innerHTML=`<kbd>${prompt('interact')}</kbd>${near.label}`;
   if((near&&performance.now()>dialogueUntil-3500)||(game.bossStarted&&!game.bossDefeated))$('dialogue').hidden=true;
   const boss=game.enemies.find(e=>e.type==='boss');$('boss-ui').hidden=!game.bossStarted||game.bossDefeated;$('boss-fill').style.width=Math.max(0,boss.hp/boss.maxHp*100)+'%';
   for(const button of document.querySelectorAll('[data-spell]')){const spell=button.dataset.spell,cd=p.cooldowns[spell],locked=spell==='dragon'&&game.checkpoint<2;button.style.setProperty('--ready',`${(1-cd/COOLDOWNS[spell])*100}%`);button.querySelector('kbd').textContent=prompt(spell);button.title=`${ACTIONS[spell]} · ${prompt(spell)}${spell==='bolt'?' · Hold to cast':''}`;button.querySelector('.cooldown').textContent=locked?'◇':cd>.1?(cd<1?cd.toFixed(1):Math.ceil(cd)):'';button.classList.toggle('unavailable',locked||(spell==='dragon'&&p.mana<60)||(spell==='constellation'&&p.mana<30));}
   $('selection-ring').classList.toggle('on-left',game.player.x-renderer.camera>renderer.w*.6);$('selection-ring').hidden=!selection.open||mode!=='playing';
   for(const [i,b] of [...document.querySelectorAll('[data-item]')].entries()){const kind=b.dataset.item;b.classList.toggle('chosen',selection.index===i);b.querySelector('strong').textContent=game.inventory.charges[kind];b.setAttribute('aria-selected',String(selection.index===i));b.setAttribute('aria-label',`${LEVEL1.spells[kind].name}, ${game.inventory.charges[kind]} charges`);}
   const item=game.inventory.equipped;$('equipped-name').textContent=LEVEL1.spells[item].name;$('equipped-count').textContent=game.inventory.charges[item];$('equipped-key').textContent=prompt('use');$('equipped-item').dataset.itemIcon=item;$('equipped-item').title=`${LEVEL1.spells[item].name} · ${game.inventory.charges[item]} charges · ${prompt('use')} to use`;$('ring-hint').textContent=padMode?`Hold ${prompt('ring')} · Right stick selects`:`Hold ${prompt('ring')} · ${prompt('interact')} next / ${prompt('previous')} previous`;
+  $('touch-magic').setAttribute('aria-expanded',String(selection.open));
+  $('touch-magic').classList.toggle('chosen',selection.open);
+  $('touch-item-icon').dataset.itemIcon=item;
+  $('touch-item-name').textContent={ember:'Ember',frost:'Frost',chain:'Chain',flask:'Heal'}[item];
+  $('touch-item-count').textContent=game.inventory.charges[item];
+  $('touch-use').setAttribute('aria-label',`Use ${LEVEL1.spells[item].name}, ${game.inventory.charges[item]} charges`);
+  $('touch-use').classList.toggle('unavailable',game.inventory.charges[item]===0||game.inventory.cooldown>0);
+  $('touch-blink-cooldown').textContent=p.cooldowns.blink>.1?Math.ceil(p.cooldowns.blink):'';
+  if(touchMode){$('ring-hint').textContent='Tap an item to equip · tap Magic to close';$('selection-ring').lastElementChild.textContent='Equipping never spends a charge';}
   const hints=document.querySelectorAll('.bottom-hint span');hints[0].textContent=padMode?`Left stick move · Right stick aim · ${prompt('jump')} double jump`:`${prompt('left')} / ${prompt('right')} move · ${prompt('jump')} jump / double jump`;hints[1].textContent=`${prompt('interact')} interact · ${padMode?'Menu':'ESC'} pause`;
   controlsUI.status(controllerError);
   if(qa&&$('qa-state'))$('qa-state').textContent=JSON.stringify({mode,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.hp),reprisal:Math.round(p.retaliation*3),ring:selection.open,inventory:game.inventory,score:game.arcade.score,crystals:game.arcade.crystals,power:game.arcade.rank,overdrive:game.arcade.overdrive,drops:game.arcade.drops.length,seals:game.checkpoint,kills:game.kills,elapsed:Math.round(game.elapsed),boss:game.bossStarted,bossHP:Math.round(boss.hp),silverwood:game.silverwood,dragon:!!game.dragon,memories:[...game.memories],scenery:renderer.gorgeEnabled?{gpu:!!renderer.gorge?.ready,active:!renderer.gorge?.canvas.hidden,time:+renderer.time.toFixed(3),camera:+renderer.camera.toFixed(2)}:undefined});
@@ -158,7 +191,7 @@ function loop(now){
   if(mode==='playing'){
     const controls=input(),state=selection.step(controls,game.inventory);worldSpeed=state.speed;controls.use=state.use;if(selection.open){controls.interact=controls.bolt=controls.blink=controls.jump=false;}
     if(state.changed||state.selectionChanged||controls.previous||controls.interact&&selection.open)audio.event({type:'selection'});
-    for(const a of ['jump','blink','use','interact'])pendingActions[a]||=controls[a];if(selection.open)pendingActions={};
+    for(const a of ['jump','bolt','blink','use','interact'])pendingActions[a]||=controls[a];if(selection.open)pendingActions={};
     accumulator+=(hitStop>0?0:dt)*worldSpeed;let first=true;
     while(accumulator>=1/60){const step={...controls,...pendingActions};pendingActions={};if(!first){step.jump=step.blink=step.use=step.interact=false;}game.update(1/60,step);events();accumulator-=1/60;first=false;if(mode!=='playing'){accumulator=0;break;}}
     audio.update(game.time,game.player);
