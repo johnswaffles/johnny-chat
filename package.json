@@ -3,13 +3,17 @@
   "version": "2.3.1",
   "type": "module",
   "engines": {
-    "node": ">=22.5"
+    "node": ">=26.12.1 <27"
   },
   "scripts": {
     "build": "node scripts/build-pages.mjs",
     "build:pages": "CF_PAGES=1 node scripts/build-pages.mjs",
     "start": "node server.js",
-    "dev": "NODE_ENV=development node server.js"
+    "dev": "NODE_ENV=development node server.js",
+    "security:tls": "node scripts/check-emudhra-tls.mjs --probe",
+    "prestart": "node scripts/check-emudhra-tls.mjs --require-patched",
+    "prebuild": "node scripts/check-emudhra-tls.mjs --require-patched",
+    "prebuild:pages": "node scripts/check-emudhra-tls.mjs --require-patched"
   },
   "dependencies": {
     "cors": "^2.8.5",
