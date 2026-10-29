@@ -235,3 +235,8 @@ At the user's request, move the left/right movement and right-side action groups
 A fresh portrait visit must show rotation guidance before game modules or artwork initialize. Establish phone layout in the document head, independently of the game import graph; CSS owns the initial portrait prompt. Rotating before Start reveals a compact full title and reachable Begin button without page scrolling. Refreshing in either orientation must preserve those behaviors.
 
 Keep mobile text inflation at 100%, bound the title grid to the viewport, and prevent menu focus from scrolling the page during rotation. Handle orientation, viewport resize and page restoration; active play still pauses in portrait and requires explicit Resume on return. Retain the 4px control edge minimum and device safe areas. Release marker: `20261029-mobile-startup`.
+
+
+## Thumb controls flush to the edges — October 29 follow-up
+
+The user requested movement all the way left and down, and actions all the way right without lowering the action group. Movement and contextual interaction now use a 0px left inset; movement uses a separate 0px bottom inset. Actions use a 0px right inset and retain their existing bottom inset of max(4px, device safe-area bottom). This supersedes the previous side and movement-bottom safe-area margins for these controls. HUD and menu safe areas, target sizes and spacing stay unchanged. Release marker: `20261029-thumb-edges`.

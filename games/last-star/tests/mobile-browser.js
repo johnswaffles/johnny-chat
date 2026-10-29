@@ -195,7 +195,7 @@ async function geometry(label, width, height) {
     `${label}: no page overflow`);
   const actions = ['left', 'right', 'jump', 'bolt', 'blink', 'use', 'ring'];
   const targets = actions.map(button);
-  check(Math.abs(button('left').getBoundingClientRect().left - 4) < 1 && Math.abs(width - button('jump').getBoundingClientRect().right - 4) < 1 && Math.abs(height - button('jump').getBoundingClientRect().bottom - 4) < 1, `${label}: controls sit 4px from the sides and bottom on a flat viewport`);
+  check(Math.abs(button('left').getBoundingClientRect().left) < 1 && Math.abs(height - button('left').getBoundingClientRect().bottom) < 1 && Math.abs(width - button('jump').getBoundingClientRect().right) < 1 && Math.abs(height - button('jump').getBoundingClientRect().bottom - 4) < 1, `${label}: movement sits at bottom-left; actions sit at right edge with unchanged 4px bottom inset`);
   check(targets.every(el => fits(el, width, height, 44)), `${label}: all seven touch targets are at least 44px and inside screen`,
     actions.map((action, i) => `${action} ${rectText(targets[i])}`).join('; '));
   check(targets.every((a, i) => targets.slice(i + 1).every(b => !overlap(a.getBoundingClientRect(), b.getBoundingClientRect()))),
@@ -375,14 +375,12 @@ async function simulatedSafeAreas() {
       root.style.setProperty('--safe-left', '44px');
       root.style.setProperty('--safe-right', '44px');
       root.style.setProperty('--safe-bottom', '21px');
-      root.style.setProperty('--control-left', '44px');
-      root.style.setProperty('--control-right', '44px');
       root.style.setProperty('--control-bottom', '21px');
       await nextFrame();
       const targets = ['left', 'right', 'jump', 'bolt', 'blink', 'use', 'ring'].map(button);
       const rects = targets.map(el => el.getBoundingClientRect());
-      check(targets.every(el => fits(el, width, height, 44)) && rects.every(r => r.left >= 43 && r.right <= width - 43 && r.bottom <= height - 20),
-        `Simulated safe areas at ${width}×${height}: controls respect 44px side / 21px bottom insets`);
+      check(targets.every(el => fits(el, width, height, 44)) && Math.abs(rects[0].left) < 1 && Math.abs(rects[0].bottom - height) < 1 && Math.abs(rects[2].right - width) < 1 && Math.abs(rects[2].bottom - (height - 21)) < 1,
+        `Simulated safe areas at ${width}×${height}: movement stays bottom-left; actions stay right with their existing 21px bottom inset`);
       check(rects.every((a, i) => rects.slice(i + 1).every(b => !overlap(a, b))),
         `Simulated safe areas at ${width}×${height}: targets remain separate`);
       const pause = byId('pause-button').getBoundingClientRect();
