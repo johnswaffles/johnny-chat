@@ -17,8 +17,7 @@ const audio=new Soundscape();
 const controller=new Controller();
 let bindings;try{bindings=readBindings(localStorage.getItem(storageKey+'-bindings'));}catch{bindings=readBindings(null);}
 let touchRing=false,mousePointer=null;
-const touchMode=new URLSearchParams(location.search).has('touch')||matchMedia('(pointer: coarse)').matches||(navigator.maxTouchPoints>0&&!matchMedia('(hover: hover)').matches);
-$('game').classList.toggle('touch-mode',touchMode);
+const touchMode=document.documentElement.classList.contains('touch-mode');
 const touch=new TouchControls($('touch-controls'),{
   onActivity:()=>{lastDevice='touch';audio.start();},
   canPress:()=>mode==='playing'&&!$('game').classList.contains('is-portrait'),
@@ -32,7 +31,7 @@ const zoneNames=['The Silverwood','The Broken Aqueduct','The Last Observatory'];
 function showToast(text){$('toast').textContent=text;toastUntil=performance.now()+3000;$('toast').classList.add('visible');}
 function save(){saved=game.save();try{localStorage.setItem(storageKey,JSON.stringify(saved));}catch{showToast('This browser cannot save. Keep this window open to continue.');}}
 function showDialogue(text){$('dialogue').querySelector('p').textContent=text;dialogueUntil=performance.now()+Math.min(4500,Math.max(3000,text.length*45));$('dialogue').hidden=false;}
-function setMode(next){if(next==='playing'&&$('game').classList.contains('is-portrait'))return;needsFrame=true;selection.cancel();pendingActions={};mode=next;touchRing=false;touch.cancel();touch.setEnabled(touchMode&&next==='playing'&&!$('game').classList.contains('is-portrait'));mousePointer=null;keys.clear();pressed.clear();controller.clearEdges();mouseDown=false;mouseAim=null;for(const [id,name] of [['title-screen','title'],['pause-screen','pause'],['bindings-screen','bindings'],['death-screen','dead'],['ending-screen','won']])$(id).hidden=next!==name;$('hud').hidden=next==='title'||(next==='bindings'&&menuReturn==='title');if(renderer)renderer.title=next==='title';if(next!=='playing')requestAnimationFrame(()=>{if(mode!==next)return;const target=next==='pause'?'resume':next==='bindings'?'bindings-back':next==='dead'?'retry':next==='won'?'replay':saved&&!saved.completed?'continue':'begin';$(target)?.focus();});}
+function setMode(next){if(next==='playing'&&$('game').classList.contains('is-portrait'))return;needsFrame=true;selection.cancel();pendingActions={};mode=next;touchRing=false;touch.cancel();touch.setEnabled(touchMode&&next==='playing'&&!$('game').classList.contains('is-portrait'));mousePointer=null;keys.clear();pressed.clear();controller.clearEdges();mouseDown=false;mouseAim=null;for(const [id,name] of [['title-screen','title'],['pause-screen','pause'],['bindings-screen','bindings'],['death-screen','dead'],['ending-screen','won']])$(id).hidden=next!==name;$('hud').hidden=next==='title'||(next==='bindings'&&menuReturn==='title');if(renderer)renderer.title=next==='title';if(next!=='playing')requestAnimationFrame(()=>{if(mode!==next)return;const target=next==='pause'?'resume':next==='bindings'?'bindings-back':next==='dead'?'retry':next==='won'?'replay':saved&&!saved.completed?'continue':'begin';$(target)?.focus({preventScroll:true});});}
 function start(resume=false){
   if(!renderer||$('game').classList.contains('is-portrait'))return;
   hitStop=hitStopGap=0;audio.reset();qaReplay=false;toastUntil=dialogueUntil=areaUntil=0;$('dialogue').hidden=true;$('toast').classList.remove('visible');$('area-title').classList.remove('visible');
@@ -88,7 +87,7 @@ function releaseMouse(e){if(e.pointerId!==mousePointer)return;mouseDown=false;mo
 window.addEventListener('pointerup',releaseMouse);window.addEventListener('pointercancel',e=>{releaseMouse(e);if(e.pointerType==='touch')pendingActions={};});$('world').addEventListener('lostpointercapture',releaseMouse);
 $('world').addEventListener('contextmenu',e=>e.preventDefault());
 function resizeViewport(){
-  const portrait=touchMode&&$('game').clientHeight>$('game').clientWidth;
+  const portrait=touchMode&&matchMedia('(orientation: portrait)').matches;
   $('game').classList.toggle('is-portrait',portrait);$('rotate-screen').hidden=!portrait;
   touch.cancel();touchRing=false;selection.cancel();pendingActions={};mouseDown=false;mouseAim=null;mousePointer=null;
   if(portrait&&mode==='playing')pause();
@@ -97,6 +96,9 @@ function resizeViewport(){
 }
 window.addEventListener('resize',resizeViewport);
 window.visualViewport?.addEventListener('resize',resizeViewport);
+// Orientation can arrive before Safari has settled its new viewport dimensions.
+window.addEventListener('orientationchange',()=>{resizeViewport();requestAnimationFrame(resizeViewport);});
+window.addEventListener('pageshow',resizeViewport);
 resizeViewport();
 function input(){
   if(qaReplay&&qaDriver)return qaDriver(game);

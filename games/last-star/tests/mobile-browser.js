@@ -42,6 +42,7 @@ async function load(touch = true, scene = '') {
   held.clear();
   const loaded = new Promise(resolve => frame.addEventListener('load', resolve, {once: true}));
   frame.src = `../index.html?qa${touch ? '&touch=1' : ''}${scene}`;
+  frame.removeAttribute('srcdoc');
   await Promise.race([loaded, sleep(60000).then(() => { throw new Error('Game document did not load'); })]);
   await until(() => api() && !byId('begin').disabled, 'game artwork and QA API', 60000);
   byId('qa-panel').hidden = true;
@@ -102,6 +103,79 @@ function overlap(a, b) {
 function rectText(el) {
   const r = el.getBoundingClientRect();
   return `${Math.round(r.width)}×${Math.round(r.height)} at ${Math.round(r.x)},${Math.round(r.y)}`;
+}
+function titleGeometry(label, width, height, ready = true) {
+  const heading = doc().querySelector('.title-content h1');
+  const text = doc().createRange();
+  text.selectNodeContents(heading);
+  const glyphs = text.getBoundingClientRect();
+  const fontSize = parseFloat(win().getComputedStyle(heading).fontSize);
+  check(fits(heading, width, height) && fontSize <= 90 && glyphs.left >= -1 && glyphs.right <= width + 1 &&
+    glyphs.top >= -1 && glyphs.bottom <= height + 1 && glyphs.height <= 150,
+  `${label}: complete title text stays bounded inside the screen`,
+  `${rectText(heading)}; font ${fontSize}px; text ${Math.round(glyphs.width)}×${Math.round(glyphs.height)}`);
+  const begin = byId('begin'), r = begin.getBoundingClientRect();
+  const hit = doc().elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  check(fits(begin, width, height, 40) && (!ready || !begin.disabled) && (hit === begin || begin.contains(hit)),
+    `${label}: Begin is visible and unobscured without scrolling`, rectText(begin));
+  const title = byId('title-screen');
+  check(title.scrollLeft === 0 && title.scrollTop === 0 && title.scrollWidth <= title.clientWidth + 1 &&
+    doc().documentElement.scrollWidth <= width + 1 && doc().documentElement.scrollHeight <= height + 1,
+  `${label}: title starts at its origin with no horizontal or page overflow`);
+}
+async function startupWithoutModule() {
+  await viewport(390, 844);
+  const sourceUrl = new URL('../index.html', location.href);
+  const response = await fetch(sourceUrl, {cache: 'no-store'});
+  if (!response.ok) throw new Error(`Startup fixture could not fetch the game: HTTP ${response.status}`);
+  const snapshot = new DOMParser().parseFromString(await response.text(), 'text/html');
+  snapshot.querySelectorAll('script[type="module"]').forEach(script => script.remove());
+  const base = snapshot.createElement('base');
+  base.href = sourceUrl.href;
+  snapshot.head.prepend(base);
+  // srcdoc has no ?touch query. Force only device classification after the real
+  // head bootstrap; portrait guidance/layout must work with no game module at all.
+  const classifyTouch = snapshot.createElement('script');
+  classifyTouch.textContent = 'document.documentElement.classList.add("touch-mode");';
+  snapshot.head.append(classifyTouch);
+  const loaded = new Promise(resolve => frame.addEventListener('load', resolve, {once: true}));
+  frame.srcdoc = '<!doctype html>' + snapshot.documentElement.outerHTML;
+  await Promise.race([loaded, sleep(30000).then(() => { throw new Error('Module-free startup document did not load'); })]);
+  await nextFrame();
+  check(!api() && byId('begin').disabled, 'Startup fixture really omits game initialization');
+  check(shown(byId('rotate-screen')) && fits(byId('rotate-title'), 390, 844),
+    'Portrait guidance is visible before any game module or artwork initializes');
+  await viewport(844, 390);
+  check(!shown(byId('rotate-screen')) && shown(byId('title-screen')),
+    'Rotation before initialization reveals the title without game JavaScript');
+  titleGeometry('Before game initialization in landscape', 844, 390, false);
+  await viewport(390, 844);
+  check(shown(byId('rotate-screen')) && fits(byId('rotate-title'), 390, 844),
+    'Rotating back before initialization restores visible portrait guidance');
+}
+async function startupChecks() {
+  await viewport(390, 844);
+  await load(true);
+  check(api().mode === 'title' && shown(byId('rotate-screen')) && fits(byId('rotate-title'), 390, 844),
+    'Fresh portrait navigation shows readable guidance before Start');
+  await viewport(844, 390);
+  check(api().mode === 'title' && !shown(byId('rotate-screen')) && shown(byId('title-screen')),
+    'Rotating a fresh title to landscape reveals the title without starting or pausing');
+  titleGeometry('Fresh portrait-to-landscape navigation', 844, 390);
+  byId('begin').click();
+  await until(() => api().mode === 'playing', 'start after portrait-first navigation');
+  check(shown(byId('touch-controls')), 'Begin starts touch play after portrait-first navigation');
+
+  await viewport(390, 844);
+  await load(true);
+  check(api().mode === 'title' && shown(byId('rotate-screen')) && fits(byId('rotate-title'), 390, 844),
+    'Reloading in portrait returns to readable rotation guidance');
+  await viewport(568, 320);
+  titleGeometry('Portrait reload then small landscape', 568, 320);
+  await load(true);
+  check(api().mode === 'title' && !shown(byId('rotate-screen')),
+    'Reloading directly in landscape keeps the title available');
+  titleGeometry('Direct small-landscape reload', 568, 320);
 }
 async function geometry(label, width, height) {
   await viewport(width, height);
@@ -386,7 +460,10 @@ runButton.addEventListener('click', async () => {
   localStorage.removeItem('crownforge-last-star-level1-preview-v1-qa-bindings');
   const began = performance.now();
   try {
-    await load(true);
+    status.textContent = 'Checking portrait startup before game initialization…';
+    await startupWithoutModule();
+    status.textContent = 'Checking portrait navigation, rotation and reloads…';
+    await startupChecks();
     for (const [label, width, height] of sizes) {
       status.textContent = `Checking ${label} · ${width}×${height}`;
       await geometry(label, width, height);
@@ -408,7 +485,7 @@ runButton.addEventListener('click', async () => {
     const passed = records.filter(row => row.pass).length;
     const failed = records.length - passed;
     const summary = {passed, failed, seconds: +((performance.now() - began) / 1000).toFixed(1),
-      method: 'Synthetic PointerEvents, real iframe resize, real game loop, CSS safe-inset simulation, virtual standard gamepad. No physical-device, real-notch or OS pointer-capture claim.',
+      method: 'Real HTML/CSS startup with the game module omitted, portrait navigation/reloads, synthetic PointerEvents, real iframe resize, real game loop, CSS safe-inset simulation, virtual standard gamepad. No physical-device, real-notch or OS pointer-capture claim.',
       viewports: sizes.map(([name, width, height]) => ({name, width, height})), runtimeErrors, results: records};
     status.textContent = `${passed} passed · ${failed} failed`;
     status.className = failed ? 'fail' : 'pass';

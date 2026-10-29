@@ -26,3 +26,16 @@ A preliminary browser pass found a lost quick-Cast tap and a portrait-resume esc
 All changes remain Level 1-only. Gameplay tuning, original artwork, saves, Gentle options, legacy scenery and shelved Memories are preserved. No credentials, permissions, Node pin, TLS guard or deployment configuration were changed.
 
 Publication requires remote commit, CI and live-asset verification; a passing local build alone is not a live-release record.
+
+
+## October 29 startup regression fix
+
+User reported a blank portrait landing page and an oversized title after rotation. Confirmed: portrait guidance and touch layout previously depended on the full game module graph. The earlier iframe suite only checked orientation after startup. Extreme text enlargement was not reproduced in the available desktop browser; the fix also bounds the title grid and fixes mobile text inflation at 100%. No physical iPhone resolution is claimed.
+
+- 127/127 game tests passed under Node 26.12.1.
+- 119/119 browser assertions passed in the Codex in-app Chromium browser (15.4 seconds, zero runtime errors).
+- New checks render the real HTML/CSS with game modules removed: portrait guidance appears before initialization; rotating both ways works; the full landscape title and disabled loading button remain inside the viewport.
+- Fresh portrait navigation, portrait reload, portrait-to-small-landscape rotation and direct landscape reload pass. Begin is visible, enabled after loading, unobscured by hit testing, and starts touch play.
+- All previous input, pause/resume, safe-area simulation, six phone viewport sizes, desktop keyboard and virtual controller checks pass.
+- Top-level 390×844 portrait and 844×390 landscape screenshots were visually inspected. The landscape title font measured 46.8px; Begin occupied 398×44px fully inside the viewport.
+- Tests simulate layout, orientation and touch input. They do not emulate Safari's text-inflation engine, real phone browser chrome, hardware safe areas or physical multi-touch.

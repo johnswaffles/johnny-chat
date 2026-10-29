@@ -1,6 +1,6 @@
 # Crownforge: Last Star — game bible
 
-Last updated: October 28, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
+Last updated: October 29, 2026. This is the working specification for this game and future chapters. Read this before changing gameplay, creating art, or building another level. Update it in the same change as any approved design change. Historical prompts and DESIGN.md provide context; current source and the rules below describe shipped behavior. Do not copy obsolete numbers from earlier notes.
 
 ## Identity and scope
 
@@ -228,3 +228,10 @@ Release marker: `20261028-mobile-landscape`. See `docs/MOBILE_QA.md` for exact v
 ## Touch controls near the edges — October 29
 
 At the user's request, move the left/right movement and right-side action groups closer to the edges and bottom. Use a 4px minimum inset on unobstructed edges, while respecting the device's safe-area inset where larger. Keep the contextual interaction button aligned with the movement controls. HUD, touch target sizes, gameplay and desktop controls remain unchanged. Release marker: `20261029-mobile-edges`.
+
+
+## Phone startup and rotation — October 29
+
+A fresh portrait visit must show rotation guidance before game modules or artwork initialize. Establish phone layout in the document head, independently of the game import graph; CSS owns the initial portrait prompt. Rotating before Start reveals a compact full title and reachable Begin button without page scrolling. Refreshing in either orientation must preserve those behaviors.
+
+Keep mobile text inflation at 100%, bound the title grid to the viewport, and prevent menu focus from scrolling the page during rotation. Handle orientation, viewport resize and page restoration; active play still pauses in portrait and requires explicit Resume on return. Retain the 4px control edge minimum and device safe areas. Release marker: `20261029-mobile-startup`.

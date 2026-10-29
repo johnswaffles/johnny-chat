@@ -1,6 +1,8 @@
 /* Landscape touch layout. World coordinates, art and desktop HUD stay intact. */
-html, body { overscroll-behavior: none; }
+html, body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 #game { height: 100%; height: 100dvh; }
+html.touch-mode, html.touch-mode body { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+html.touch-mode #game { position: absolute; inset: 0; width: 100%; max-width: 100%; }
 #world { touch-action: none; }
 .touch-intro, .touch-instructions, .touch-resume { display: none; }
 .touch-mode {
@@ -11,6 +13,7 @@ html, body { overscroll-behavior: none; }
   --control-left: max(4px, env(safe-area-inset-left, 0px));
   --control-right: max(4px, env(safe-area-inset-right, 0px));
   --control-bottom: max(4px, env(safe-area-inset-bottom, 0px));
+  --touch-size: clamp(48px, 14.5vh, 64px);
   --touch-size: clamp(48px, 14.5dvh, 64px);
   -webkit-user-select: none;
   user-select: none;
@@ -105,12 +108,13 @@ html, body { overscroll-behavior: none; }
 .touch-mode .modal .setting input[type="checkbox"] { width: 22px; height: 22px; }
 .touch-mode .modal input[type="range"] { min-height: 44px; }
 .touch-mode .touch-resume { display: block; position: absolute; right: var(--safe-right); top: var(--safe-top); min-height: 44px; padding: 8px 18px; color: #fff0c9; background: #153442; border: 1px solid #a5bac4; font: 12px Arial, sans-serif; }
-.touch-mode #title-screen { overflow-y: auto; touch-action: pan-y; padding: calc(var(--safe-top) + 28px) var(--safe-right) calc(var(--safe-bottom) + 48px) var(--safe-left); }
+.touch-mode #title-screen { overflow-x: hidden; overflow-y: auto; touch-action: pan-y; padding: calc(var(--safe-top) + 28px) var(--safe-right) calc(var(--safe-bottom) + 48px) var(--safe-left); }
 .touch-mode .topline { top: var(--safe-top); left: var(--safe-left); right: var(--safe-right); }
 .touch-mode .topline span:last-child { display: none; }
-.touch-mode .title-content { position: relative; top: auto; left: auto; max-width: none; width: 100%; display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: center; }
+.touch-mode .title-content { position: relative; top: auto; left: auto; max-width: 100%; width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; align-items: center; }
+.touch-mode .title-content > * { min-width: 0; max-width: 100%; }
 .touch-mode .title-content > .eyebrow { grid-column: 1; font-size: 8px; letter-spacing: 1px; }
-.touch-mode h1 { grid-column: 1; grid-row: 2; margin: 7px 0; font-size: clamp(50px, 12dvh, 90px); letter-spacing: -3px; }
+.touch-mode h1 { grid-column: 1; grid-row: 2; margin: 7px 0; font-size: clamp(42px, 12vh, 72px); font-size: clamp(42px, 12dvh, 72px); line-height: 1.05; letter-spacing: -2px; }
 .touch-mode .title-rule, .touch-mode .title-sub, .touch-mode .title-footer { display: none; }
 .touch-mode .title-content > p:not(.touch-intro):not(.title-sub) { grid-column: 1; margin: 3px 0; font-size: 13px; line-height: 1.5; }
 .touch-mode .title-content .touch-intro { display: block; grid-column: 2; grid-row: 1 / 3; align-self: end; font: 12px/1.6 Arial, sans-serif; margin: 0 0 8px; color: #c6d7d8; }
@@ -124,6 +128,15 @@ html, body { overscroll-behavior: none; }
 #rotate-screen h2 { font: 30px/1.2 Georgia, serif; margin: 18px 0; }
 #rotate-screen p { font: 16px/1.6 Arial, sans-serif; }
 #rotate-screen small { font: 12px/1.6 Arial, sans-serif; color: #a2b9c4; }
+/* Portrait guidance cannot depend on downloading the game module graph. */
+@media (orientation: portrait) {
+  html.touch-mode #rotate-screen { display: flex !important; }
+  html.touch-mode #title-screen { visibility: hidden; }
+}
+@media (orientation: portrait) and (pointer: coarse), (orientation: portrait) and (hover: none) and (any-pointer: coarse) {
+  #rotate-screen { display: flex !important; }
+  #title-screen { visibility: hidden; }
+}
 @media (max-width: 700px) {
   .touch-mode #arcade-hud { top: calc(var(--safe-top) + 48px); right: calc(var(--safe-right) + 56px); left: auto; transform: none; width: 110px; text-align: right; }
   .touch-mode #arcade-hud > span, .touch-mode #combo-label, .touch-mode .combo-track { display: none; }
