@@ -223,3 +223,8 @@ User requested a playable landscape mobile version and authorized a tested live 
 - Gentle effects, reduced flashes, Light/Rich, checkpoints and the legacy scenery route remain available. Touch support is designed for modern Pointer Events browsers. Browser viewport/synthetic-pointer checks are not a physical iPhone or Android test.
 
 Release marker: `20261028-mobile-landscape`. See `docs/MOBILE_QA.md` for exact verification evidence and limitations.
+
+
+## Touch controls near the edges — October 29
+
+At the user's request, move the left/right movement and right-side action groups closer to the edges and bottom. Use a 4px minimum inset on unobstructed edges, while respecting the device's safe-area inset where larger. Keep the contextual interaction button aligned with the movement controls. HUD, touch target sizes, gameplay and desktop controls remain unchanged. Release marker: `20261029-mobile-edges`.

@@ -121,6 +121,7 @@ async function geometry(label, width, height) {
     `${label}: no page overflow`);
   const actions = ['left', 'right', 'jump', 'bolt', 'blink', 'use', 'ring'];
   const targets = actions.map(button);
+  check(Math.abs(button('left').getBoundingClientRect().left - 4) < 1 && Math.abs(width - button('jump').getBoundingClientRect().right - 4) < 1 && Math.abs(height - button('jump').getBoundingClientRect().bottom - 4) < 1, `${label}: controls sit 4px from the sides and bottom on a flat viewport`);
   check(targets.every(el => fits(el, width, height, 44)), `${label}: all seven touch targets are at least 44px and inside screen`,
     actions.map((action, i) => `${action} ${rectText(targets[i])}`).join('; '));
   check(targets.every((a, i) => targets.slice(i + 1).every(b => !overlap(a.getBoundingClientRect(), b.getBoundingClientRect()))),
@@ -300,6 +301,9 @@ async function simulatedSafeAreas() {
       root.style.setProperty('--safe-left', '44px');
       root.style.setProperty('--safe-right', '44px');
       root.style.setProperty('--safe-bottom', '21px');
+      root.style.setProperty('--control-left', '44px');
+      root.style.setProperty('--control-right', '44px');
+      root.style.setProperty('--control-bottom', '21px');
       await nextFrame();
       const targets = ['left', 'right', 'jump', 'bolt', 'blink', 'use', 'ring'].map(button);
       const rects = targets.map(el => el.getBoundingClientRect());
