@@ -49,6 +49,7 @@ h1 em { color: #42735d; background: linear-gradient(105deg, #21694f 8%, #538167 
 .new-message-button > span { font-size: 16px; font-weight: 400; line-height: 1; }
 .new-message-button:hover { background: #e5efda; border-color: #96b486; box-shadow: 0 2px 5px #24453312; }
 .mode-budget { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.tone-field[hidden] { display: none; }
 .tone-field select { max-width: 210px; min-height: 36px; padding: 5px 27px 5px 10px; border: 1px solid #d1ddc9; border-radius: 6px; color: var(--ink); background: #ffffffb5; box-shadow: 0 1px 2px #24453305; font-size: 11px; }
 .workspace-grid { display: grid; grid-template-columns: 1fr 1fr; }
 .panel { min-width: 0; padding: 23px 24px 19px; }
@@ -163,7 +164,7 @@ body::before { content: ""; position: fixed; inset: 0; pointer-events: none; bac
   .intro { margin-bottom: 22px; }
   h1 { font-size: 29px; line-height: 1.45; }
   .studio-toolbar { flex-wrap: wrap; gap: 12px; padding: 14px 18px; }
-  .format-control { flex: 1; }
+  .format-control { flex: 1; flex-wrap: wrap; }
   .tone-field { flex: 1; }
   .control-label { min-width: 38px; }
   .tone-field select { flex: 1; max-width: none; }

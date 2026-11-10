@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Libre+Baskerville:ital,wght@1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/textsmith/textsmith.css?v=new-message-20261027">
+  <link rel="stylesheet" href="/textsmith/textsmith.css?v=professional-20261110">
 </head>
 <body>
   <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -41,6 +41,7 @@
             <div class="mode-switch" role="group" aria-labelledby="format-label" aria-describedby="mode-description">
               <button class="mode-option active" type="button" data-mode="single" aria-pressed="true">One message</button>
               <button class="mode-option" type="button" data-mode="split" aria-pressed="false">Two messages</button>
+              <button class="mode-option" type="button" data-mode="professional" aria-pressed="false">Professional</button>
             </div>
             <button class="new-message-button" id="new-message-button" type="button"><span aria-hidden="true">+</span> New message</button>
             <span class="mode-budget" id="mode-budget">159 characters max</span>
@@ -67,11 +68,11 @@
         </div>
       </section>
 
-      <div class="workspace-notes"><p><svg class="icon" aria-hidden="true"><use href="#icon-check"/></svg>Your details, preserved<span class="note-divider">/</span>Natural tone<span class="note-divider">/</span>No filler</p><details class="message-help"><summary>A note on message length <span aria-hidden="true">+</span></summary><p>One message allows up to 159 characters; two messages allow up to 160 each. Edit your results before copying, and send each text separately. Carriers may count accented or non-Latin characters differently.</p></details></div>
+      <div class="workspace-notes"><p><svg class="icon" aria-hidden="true"><use href="#icon-check"/></svg>Your details, preserved<span class="note-divider">/</span>Natural tone<span class="note-divider">/</span>No filler</p><details class="message-help"><summary>A note on message length <span aria-hidden="true">+</span></summary><p>One message allows up to 159 characters. Two messages allow up to 160 each. Professional creates a single statement with no character cap on the result. Carriers may count accented or non-Latin characters differently in SMS.</p></details></div>
     </main>
     <footer class="site-footer"><a href="/">A little help from Johnny.</a><span>Good words go a long way.</span></footer>
   </div>
   <template id="empty-state-template"><div class="empty-result"><div class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><rect x="9" y="12" width="40" height="34" rx="9"/><path d="m18 46-3 10 15-10M20 25h16M20 33h11"/><path class="spark" d="m49 4 2.5 7.5L59 14l-7.5 2.5L49 24l-2.5-7.5L39 14l7.5-2.5L49 4Z"/></svg></div><h3>A good message starts here.</h3><p class="empty-description">Add your draft and let’s find the right words.</p><div class="empty-preview" aria-hidden="true"><span></span><span></span><span></span></div></div></template>
-  <script src="/textsmith/textsmith.js?v=new-message-20261027"></script>
+  <script src="/textsmith/textsmith.js?v=professional-20261110"></script>
 </body>
 </html>

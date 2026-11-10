@@ -1218,7 +1218,7 @@ async function createTextsmithResponse({ input, mode, model, tone = "warm", draf
   const response = await openai.responses.create({
     model,
     reasoning: { effort: "low" },
-    max_output_tokens: 2400,
+    max_output_tokens: mode === "professional" ? 12000 : 2400,
     store: false,
     text: { format: getTextsmithSchema(mode) },
     input: [
@@ -1229,7 +1229,7 @@ async function createTextsmithResponse({ input, mode, model, tone = "warm", draf
   const refused = (response.output || []).some(item => (item.content || []).some(part => part.type === "refusal"));
   if (refused) { const error = new Error("This request could not be rewritten."); error.contentRefusal = true; throw error; }
   if (response.status === "incomplete" || response.status === "failed") throw new Error("TextSmith response was incomplete.");
-  return parseTextsmithMessages(extractResponseText(response));
+  return parseTextsmithMessages(extractResponseText(response), mode);
 }
 
 function extractResponseSources(response) {
@@ -1685,7 +1685,7 @@ app.get("/health", (_req, res) => res.json({
   storyEditorAssistant: "Mara",
   storyEditorBible: "managed-source-bible-v2",
   storyEditorReleaseCommit: process.env.RENDER_GIT_COMMIT || "",
-  textsmithVersion: "contact-block-v6",
+  textsmithVersion: "professional-v7",
   textsmithModel: OPENAI_TEXTSMITH_MODEL
 }));
 
@@ -5355,8 +5355,10 @@ app.post("/api/textsmith", async (req, res) => {
     if (!OPENAI_API_KEY) return res.status(503).json({ detail: "TextSmith is not configured yet." });
     if (!textsmithRateAllowed(req)) return res.status(429).json({ detail: "TextSmith is taking a short pause. Try again in a minute." });
 
-    const input = compactText(req.body?.input).replace(/[\r\n]+/g, " ").trim();
-    const mode = req.body?.mode === "split" ? "split" : "single";
+    const requestedMode = req.body?.mode;
+    const mode = requestedMode === "professional" || requestedMode === "split" ? requestedMode : "single";
+    const source = compactText(req.body?.input);
+    const input = mode === "professional" ? source : source.replace(/[\r\n]+/g, " ").trim();
     const tone = ["warm", "direct", "reassuring", "expert"].includes(req.body?.tone) ? req.body.tone : "warm";
     if (!input) return res.status(400).json({ detail: "Paste the rough customer text first." });
     if (input.length > 6000) return res.status(413).json({ detail: "Please keep the source text under 6,000 characters." });
@@ -5383,7 +5385,10 @@ app.post("/api/textsmith", async (req, res) => {
     }
 
     if (!textsmithMessagesFit(messages, mode, input)) {
-      return res.status(422).json({ detail: "The message could not be written cleanly within the limits without repeating or losing meaning. Please clarify the key details and try again." });
+      const detail = mode === "professional"
+        ? "TextSmith could not produce a complete professional statement. Please clarify the key details and try again."
+        : "The message could not be written cleanly within the limits without repeating or losing meaning. Please clarify the key details and try again.";
+      return res.status(422).json({ detail });
     }
 
     if (textsmithPairNeedsDevelopment(messages, mode, input)) {

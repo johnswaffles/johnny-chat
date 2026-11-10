@@ -15,6 +15,7 @@ function sample(schema) {
  if(schema.type==='integer') return 1;
  return 'Local test editorial note.';
 }
+const professionalStatement = 'Thank you for reviewing the estimate. The total for repairing the front gate and replacing both hinges is $285.\n\nI am available on Friday afternoon. Please let me know whether that timing works for you and whether you would like to proceed.';
 let attempts=0;
 const mock=http.createServer(async(req,res)=>{
  let raw=''; for await(const p of req)raw+=p;const body=JSON.parse(raw);attempts++;
@@ -50,6 +51,14 @@ const mock=http.createServer(async(req,res)=>{
    ];
   }
  }
+ if(body.input[1].content.includes('PROFESSIONAL_TEST')) {
+  assert.match(body.input[0].content,/Correct spelling, grammar, punctuation/);
+  assert.match(body.input[0].content,/no character cap/);
+  assert.doesNotMatch(body.input[0].content,/159|160|EXPERT CUSTOMER CARE/);
+  assert.match(body.input[1].content,/gate and hinges\n\nOffer Friday/);
+  assert.equal(count,1);
+  messages=['  '+professionalStatement+'  '];
+ }
  res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({messages})}]}]}));
 });
 await new Promise(r=>mock.listen(0,'127.0.0.1',r));
@@ -79,6 +88,13 @@ for(const mode of ['single','split']) {
 }
 const contactExpand=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'CONTACT_EXPAND: The estimate is from ABC company phone number 618-555-1234. The total is $285.',mode:'split'})});
 assert.equal(contactExpand.status,200);assert.deepEqual((await contactExpand.json()).messages,['The estimate is from ABC company phone number 618-555-1234.','The total is $285.'],'a development pass cannot add an unauthorized call invitation');
+const professional=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:'PROFESSIONAL_TEST: Estimate is $285 for gate and hinges\n\nOffer Friday afternoon and ask whether to go ahead.',mode:'professional',tone:'expert'})});
+assert.equal(professional.status,200);
+const statement=await professional.json();
+assert.equal(statement.mode,'professional');
+assert.deepEqual(statement.messages,[professionalStatement]);
+assert.ok(professionalStatement.length>160);
+assert.deepEqual(statement.stats,[{characters:professionalStatement.length,limit:null,fits:true}]);
 const empty=await fetch(origin+'/api/textsmith',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(empty.status,400);
-console.log('PASS: real endpoint single/pair output, character stats, overlong pair repair, repeated-statement repair, bounded rejection, business-contact repair and development protection, empty-input validation, Astra request parameters.');
+console.log('PASS: real endpoint single/pair output, uncapped professional statement with paragraphs, character stats, overlong pair repair, repeated-statement repair, bounded rejection, business-contact repair and development protection, empty-input validation, Astra request parameters.');
 child.kill();mock.close();
