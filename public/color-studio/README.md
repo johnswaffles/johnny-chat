@@ -4,12 +4,12 @@ A standalone, touch-friendly color-by-number game at `/color-studio/`, linked fr
 
 ## Painting
 
-- Seventeen starter pictures: sixteen original vector illustrations across landscapes, botanical, animals, and patterns, plus a detailed fox-and-wildflower scene from the verified live Astra/Sunburst workflow.
-- Connected numbered regions, adaptive labels, selected-color highlighting, progress, favorites, undo/redo, hints, reference preview, auto-advance, optional sound, and contrast settings.
+- Eighteen starter pictures: a detailed featured alpine chalet, a fox-and-wildflower scene, and sixteen original vector illustrations across landscapes, botanical, animals, and patterns from the verified live Astra/Sunburst workflow.
+- Connected numbered regions with a single shared border network (no independently simplified duplicate edges), viewport-aware labels with readable selected-number badges, selected-color highlighting, progress, favorites, undo/redo, hints, reference preview, auto-advance, optional sound, and contrast settings.
 - Pinch zoom up to 40×, two-finger pan, mouse wheel, double tap, zoom/fit buttons, and hand tool. A pinch or pan cannot fill a region.
 - Keyboard painting through Find an area and Fill found area; H, +/−, 0, and standard undo/redo shortcuts.
 - Local photographs: aspect-preserving conversion, 8–48 requested colors, four detail presets, denoising, connected-component segmentation, merging of tiny regions, shared-edge simplification, and interior number placement. Palette count may be lower for photographs with fewer distinct colors.
-- IndexedDB saves and per-picture thumbnails. Favorites/preferences use localStorage. Saving errors are shown, and unsaved work prompts before leaving.
+- IndexedDB saves and per-picture thumbnails. Existing paintings receive the outline/label repair without changing region IDs or progress. Favorites/preferences use localStorage. Saving errors are shown, and unsaved work prompts before leaving.
 - 2,400-pixel PNG exports, printable numbered SVG with palette key, and JSON painting/studio backups. Restore validates all paintings before writing, combines compatible progress, and keeps conflicting puzzles as separate copies.
 - Previously loaded studio and local photo conversion work offline. AI requires a connection. No cloud account/synchronization is provided; backups transfer work between devices.
 

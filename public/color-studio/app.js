@@ -1,7 +1,7 @@
-import {catalog,artURL} from './art.js?v=20261114-atelier-2';
-import {PaintingCanvas,previewURL,drawPuzzle,rgb} from './canvas.js?v=20261114-atelier-2';
-import {getPainting,listCards,savePainting,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261114-atelier-2';
-import {validPuzzle} from './engine.js?v=20261114-atelier-2';
+import {catalog,artURL} from './art.js?v=20261114-atelier-3';
+import {PaintingCanvas,previewURL,drawPuzzle,rgb} from './canvas.js?v=20261114-atelier-3';
+import {getPainting,listCards,savePainting,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261114-atelier-3';
+import {validPuzzle,repairGeometry} from './engine.js?v=20261114-atelier-3';
 
 const $=id=>document.getElementById(id),icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -53,7 +53,7 @@ function renderGallery(){
 
 function convert(image,options,onProgress){
   return new Promise((resolve,reject)=>{
-    const worker=new Worker(new URL('./worker.js?v=20261114-atelier-2',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
+    const worker=new Worker(new URL('./worker.js?v=20261114-atelier-3',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
     const max=options.resolution||360,scale=max/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height),c=document.createElement('canvas');
     c.width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale));c.height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale));
     const ctx=c.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(image,0,0,c.width,c.height);const data=ctx.getImageData(0,0,c.width,c.height);
@@ -72,13 +72,14 @@ async function openPainting(id){
   }catch(error){toast(error.message);}finally{opening=false;}
 }
 function activatePainting(record){
+  if(record.puzzle.geometryVersion!==2)repairGeometry(record.puzzle);
   active=record;filled=new Set(record.filled||[]);selected=Math.max(0,Math.min(record.puzzle.palette.length-1,record.selected||0));history=[];redo=[];completedShown=filled.size===record.puzzle.regions.length;
   $('library-view').hidden=true;$('paint-view').hidden=false;document.body.style.overflow='hidden';$('painting-title').textContent=record.title;$('save-status').textContent=storageOK?'Saving on this device…':'Saving unavailable · export a backup';
   paintCanvas.load(record.puzzle,filled);paintCanvas.selected=selected;$('reference-toggle').setAttribute('aria-pressed','false');$('reference-toggle').textContent='Peek at the finished picture';$('canvas-stage').classList.remove('reference');$('fill-found').hidden=true;
-  paintCanvas.dragMode=false;$('pan-tool').setAttribute('aria-pressed','false');$('canvas-stage').classList.remove('moving');updateFavorite();updatePainting();queueSave();$('painting').focus({preventScroll:true});clearTimeout(toastTimer);$('toast').hidden=true;
+  $('canvas-note').textContent='Pick a number. Tap a matching space.';paintCanvas.dragMode=false;$('pan-tool').setAttribute('aria-pressed','false');$('canvas-stage').classList.remove('moving');updateFavorite();updatePainting();queueSave();$('painting').focus({preventScroll:true});clearTimeout(toastTimer);$('toast').hidden=true;
 }
 function counts(){const totals=new Array(active.puzzle.palette.length).fill(0),remaining=totals.slice();active.puzzle.regions.forEach((r,i)=>{totals[r.color]++;if(!filled.has(i))remaining[r.color]++;});return{totals,remaining};}
-function chooseColor(color){if(!active)return;selected=color;paintCanvas.selected=color;paintCanvas.focused=-1;$('fill-found').hidden=true;updatePainting();queueSave();}
+function chooseColor(color){if(!active)return;selected=color;paintCanvas.selected=color;paintCanvas.focused=-1;$('fill-found').hidden=true;paintCanvas.revealSelected();updatePainting();queueSave();}
 function updatePainting(){
   if(!active)return;const {remaining}=counts(),total=active.puzzle.regions.length,percent=Math.round(filled.size/total*100);
   $('progress-percent').innerHTML=`${percent}<span>%</span>`;$('progress-fill').style.width=`${filled.size/total*100}%`;$('progress-count').textContent=`${filled.size.toLocaleString()} of ${total.toLocaleString()} spaces colored`;$('color-count').textContent=`${remaining.length} colors`;
@@ -97,7 +98,7 @@ function fillRegion(id){
   if(r.color!==selected){$('canvas-note').textContent=`This space is color ${r.color+1}. Choose ${r.color+1} in your palette.`;return;}
   filled.add(id);history.push({id,color:selected});redo=[];paintCanvas.focused=-1;$('fill-found').hidden=true;playTone();$('canvas-note').textContent='A little more color. A little more calm.';
   const {remaining}=counts();if(!remaining[selected]&&preferences.autoAdvance){const next=remaining.findIndex((n,i)=>n>0&&i>selected);selected=next>=0?next:Math.max(0,remaining.findIndex(n=>n>0));paintCanvas.selected=selected;requestAnimationFrame(()=>$('palette').querySelector(`[data-color="${selected}"]`)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'}));}
-  updatePainting();queueSave();if(filled.size===active.puzzle.regions.length&&!completedShown){completedShown=true;setTimeout(showCompletion,400);}
+  paintCanvas.revealSelected();updatePainting();queueSave();if(filled.size===active.puzzle.regions.length&&!completedShown){completedShown=true;setTimeout(showCompletion,400);}
 }
 function undoFill(){const change=history.pop();if(!change)return;filled.delete(change.id);redo.push(change);selected=change.color;paintCanvas.selected=selected;updatePainting();queueSave();}
 function redoFill(){const change=redo.pop();if(!change)return;filled.add(change.id);history.push(change);updatePainting();queueSave();}
@@ -125,10 +126,11 @@ const filename=()=>active?.title.replace(/[^a-z0-9]+/gi,'-').toLowerCase()||'my-
 function exportPNG(finished=false){if(!active)return;const c=document.createElement('canvas'),s=2400/Math.max(active.puzzle.width,active.puzzle.height);c.width=Math.round(active.puzzle.width*s);c.height=Math.round(active.puzzle.height*s);const ctx=c.getContext('2d');ctx.scale(s,s);drawPuzzle(ctx,active.puzzle,filled,{scale:s,numbers:!finished,reference:finished});c.toBlob(blob=>{if(blob)download(blob,`${filename()}${finished?'-finished':''}.png`);else toast('Your browser could not export this picture.');},'image/png');}
 function exportPrintable(){
   if(!active)return;const p=active.puzzle,w=p.width,h=p.height,cols=6,legendH=Math.ceil(p.palette.length/cols)*29+70;
-  const paths=p.regions.map(r=>`<path d="${r.paths.map(loop=>'M'+loop.map(v=>v.join(' ')).join('L')+'Z').join('')}" fill="#fff" fill-rule="evenodd" stroke="#687461" stroke-width=".45"/>`).join('');
+  const paths=p.regions.map(r=>`<path d="${r.paths.map(loop=>'M'+loop.map(v=>v.join(' ')).join('L')+'Z').join('')}" fill="#fff" fill-rule="evenodd" stroke="none"/>`).join('');
+  const borders=(p.boundaries||[]).map(c=>`<path d="M${c.points.map(v=>v.join(' ')).join('L')}" fill="none" stroke="#687461" stroke-width=".45" stroke-linejoin="round"/>`).join('');
   const numbers=p.regions.map(r=>`<text x="${r.x}" y="${r.y}" font-size="${Math.max(1.8,Math.min(6,r.radius*1.25))}" text-anchor="middle" dominant-baseline="central" fill="#4a5844">${r.color+1}</text>`).join('');
   const legend=p.palette.map((c,i)=>{const x=(i%cols)*(w/cols),y=h+65+Math.floor(i/cols)*29;return `<rect x="${x+4}" y="${y-12}" width="17" height="17" rx="3" fill="${rgb(c)}" stroke="#98a38f" stroke-width=".5"/><text x="${x+27}" y="${y}" font-size="9">${i+1}</text><text x="${x+43}" y="${y}" font-size="5.5" fill="#687461">#${c.map(v=>v.toString(16).padStart(2,'0')).join('')}</text>`;}).join('');
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w*3}" height="${(h+legendH)*3}" viewBox="0 0 ${w} ${h+legendH}" font-family="Arial,sans-serif"><rect width="100%" height="100%" fill="white"/>${paths}${numbers}<text x="4" y="${h+25}" font-size="13" fill="#293d38">${escapeHTML(active.title)}</text><text x="4" y="${h+42}" font-size="7" fill="#687461">Color Studio by Johnny · Match each number to its color below</text>${legend}</svg>`;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w*3}" height="${(h+legendH)*3}" viewBox="0 0 ${w} ${h+legendH}" font-family="Arial,sans-serif"><rect width="100%" height="100%" fill="white"/>${paths}${borders}${numbers}<text x="4" y="${h+25}" font-size="13" fill="#293d38">${escapeHTML(active.title)}</text><text x="4" y="${h+42}" font-size="7" fill="#687461">Color Studio by Johnny · Match each number to its color below</text>${legend}</svg>`;
   download(new Blob([svg],{type:'image/svg+xml'}),`${filename()}-printable.svg`);toast('Printable SVG saved. Open it in a browser to print.');
 }
 function exportMenu(){if(!active)return;utility('Keep a little color.',`<p>Save what you’ve made, or take a numbered canvas to paper.</p><button class="outline-button" data-action="download-current">Current painting · PNG ${icon('download')}</button><button class="outline-button" data-action="download-finished">Finished color reference · PNG ${icon('download')}</button><button class="outline-button" data-action="printable">Numbered canvas + palette · printable SVG ${icon('download')}</button><button class="outline-button" data-action="painting-backup">This painting + progress · backup ${icon('download')}</button><p>PNG exports are 2,400 pixels on the longest side. Printable SVG includes every numbered region and a color key.</p><button class="text-button" data-action="backup">Back up or restore the whole studio</button>`);}
@@ -142,7 +144,7 @@ async function restoreBackup(file){
     const data=JSON.parse(await file.text());if(data.format!=='johnny-color-studio'||data.version!==1||!Array.isArray(data.paintings)||data.paintings.length>100)throw new Error('This file is not a supported Color Studio backup.');
     for(const r of data.paintings){if(!r||typeof r.id!=='string'||r.id.length>100||typeof r.title!=='string'||r.title.length>160||!validPuzzle(r.puzzle)||!Array.isArray(r.filled)||r.filled.some(id=>!Number.isInteger(id)||id<0||id>=r.puzzle.regions.length))throw new Error('The backup contains a painting that cannot be read.');}
     await saveNow();
-    for(const r of data.paintings){const existing=await getPainting(r.id),conflict=existing&&JSON.stringify(existing.puzzle)!==JSON.stringify(r.puzzle),id=conflict?`custom-${crypto.randomUUID()}`:r.id;const merged={id,puzzle:r.puzzle,custom:conflict||!catalog.some(a=>a.id===id),title:r.title,category:r.category==='AI creations'?'AI creations':catalog.find(a=>a.id===id)?.category||'My photos',filled:[...new Set([...(conflict?[]:existing?.filled||[]),...r.filled])],selected:0,updated:Date.now()};merged.thumbnail=previewURL(merged.puzzle,new Set(merged.filled),false,260);await savePainting(merged);}
+    for(const r of data.paintings){repairGeometry(r.puzzle);const existing=await getPainting(r.id);if(existing)repairGeometry(existing.puzzle);const conflict=existing&&JSON.stringify(existing.puzzle)!==JSON.stringify(r.puzzle),id=conflict?`custom-${crypto.randomUUID()}`:r.id;const merged={id,puzzle:r.puzzle,custom:conflict||!catalog.some(a=>a.id===id),title:r.title,category:r.category==='AI creations'?'AI creations':catalog.find(a=>a.id===id)?.category||'My photos',filled:[...new Set([...(conflict?[]:existing?.filled||[]),...r.filled])],selected:0,updated:Date.now()};merged.thumbnail=previewURL(merged.puzzle,new Set(merged.filled),false,260);await savePainting(merged);}
     if(Array.isArray(data.preferences?.favorites))for(const id of data.preferences.favorites)if(typeof id==='string')favorites.add(id);persistPreferences();await refreshCards();
     if(active){const restored=await getPainting(active.id);if(restored)activatePainting(restored);}
     $('utility-dialog').close();setView('studio');toast(`${data.paintings.length} painting${data.paintings.length===1?'':'s'} restored. Welcome back.`);
@@ -223,7 +225,7 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('change',e=>{const key=e.target.dataset.setting;if(key){preferences[key]=e.target.checked;persistPreferences();document.body.classList.toggle('contrast',!!preferences.contrast);paintCanvas.schedule();}});
 $('search').addEventListener('input',renderGallery);
-$('featured-start').onclick=()=>void openPainting('alpine');$('feature-art').src=artURL(catalog[0]);
+$('featured-start').onclick=()=>void openPainting(catalog[0].id);$('feature-art').src=artURL(catalog[0]);
 $('back-library').onclick=()=>void returnToLibrary();$('paint-favorite').onclick=()=>favorite(active.id);
 $('zoom-in').onclick=()=>paintCanvas.zoomAt(paintCanvas.zoom*1.5);$('zoom-out').onclick=()=>paintCanvas.zoomAt(paintCanvas.zoom/1.5);$('zoom-fit').onclick=()=>paintCanvas.fit();
 $('pan-tool').onclick=()=>{paintCanvas.dragMode=!paintCanvas.dragMode;$('pan-tool').setAttribute('aria-pressed',String(paintCanvas.dragMode));$('canvas-stage').classList.toggle('moving',paintCanvas.dragMode);};
@@ -242,4 +244,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)voi
 window.addEventListener('beforeunload',e=>{if(active&&(!storageOK||dirty)){e.preventDefault();e.returnValue='';}});
 void refreshCards();
 void apiJSON('/config').then(config=>{aiAvailable=!!config.enabled;}).catch(()=>{aiAvailable=null;});
-if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261114-atelier-2').catch(()=>{});});
+if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261114-atelier-3').catch(()=>{});});

@@ -10,16 +10,58 @@ function simplifyChain(points,tolerance=.9){
   }
   return index<0?[a,b]:[...simplifyChain(points.slice(0,index+1),tolerance).slice(0,-1),...simplifyChain(points.slice(index),tolerance)];
 }
-function simplifyOutline(loop,map,width,height){
-  // Junctions anchor shared edges, so neighboring shapes simplify identically.
-  let anchors=[];
-  loop.forEach(([x,y],i)=>{const around=new Set();for(const [dx,dy]of[[-1,-1],[0,-1],[-1,0],[0,0]]){const px=x+dx,py=y+dy;around.add(px<0||py<0||px>=width||py>=height?-1:map[py*width+px]);}if(around.size>2)anchors.push(i);});
-  if(!anchors.length){let first=0;loop.forEach((p,i)=>{if(p[1]*1000+p[0]<loop[first][1]*1000+loop[first][0])first=i;});anchors=[first];}
-  if(anchors.length===1){const a=loop[anchors[0]];let far=-1,index=0,key=Infinity;loop.forEach((p,i)=>{const d=(p[0]-a[0])**2+(p[1]-a[1])**2,k=p[1]*1000+p[0];if(d>far||(d===far&&k<key)){far=d;index=i;key=k;}});anchors.push(index);}
-  anchors.sort((a,b)=>a-b);const out=[];
-  for(let k=0;k<anchors.length;k++){const start=anchors[k],end=anchors[(k+1)%anchors.length],chain=[];let i=start;do{chain.push(loop[i]);i=(i+1)%loop.length;}while(i!==end);chain.push(loop[end]);out.push(...simplifyChain(chain).slice(0,-1));}
-  return out.length>=3?out:loop;
+// Trace each shared boundary exactly once. Both adjoining regions reuse the
+// SAME simplified points in opposite directions, including junction endpoints.
+export function repairGeometry(puzzle) {
+  const {width:w,height:h,map,regions}=puzzle,edges=[],vertices=new Map();
+  const point=(x,y)=>y*(w+1)+x,xy=id=>[id%(w+1),Math.floor(id/(w+1))];
+  function add(a,b,right,left){const id=edges.length;edges.push({a,b,right,left,used:false});for(const v of [a,b]){if(!vertices.has(v))vertices.set(v,[]);vertices.get(v).push(id);}}
+  for(let y=0;y<=h;y++)for(let x=0;x<w;x++){const above=y?map[(y-1)*w+x]:-1,below=y<h?map[y*w+x]:-1;if(above!==below)add(point(x,y),point(x+1,y),below,above);}
+  for(let x=0;x<=w;x++)for(let y=0;y<h;y++){const left=x?map[y*w+x-1]:-1,right=x<w?map[y*w+x]:-1;if(left!==right)add(point(x,y),point(x,y+1),left,right);}
+  const chains=[],byRegion=regions.map(()=>[]);
+  function trace(id,start){
+    const first=edges[id],right=first.a===start?first.right:first.left,left=first.a===start?first.left:first.right;
+    const points=[xy(start)];let v=start;
+    while(true){const e=edges[id];if(e.used)break;e.used=true;v=e.a===v?e.b:e.a;points.push(xy(v));const adjacent=vertices.get(v);if(v===start||adjacent.length!==2)break;const next=adjacent.find(i=>!edges[i].used);if(next===undefined)break;id=next;}
+    // Closed boundaries use the same canonical two halves for every owner.
+    let clean;
+    if(v===start){let split=1,far=0;points.forEach((p,i)=>{const d=(p[0]-points[0][0])**2+(p[1]-points[0][1])**2;if(d>far){far=d;split=i;}});clean=[...simplifyChain(points.slice(0,split+1)).slice(0,-1),...simplifyChain(points.slice(split))];}
+    else clean=simplifyChain(points);
+    if(v===start&&new Set(clean.map(p=>p.join(','))).size<3)clean=points;
+    const chain={points:clean,right,left};chains.push(chain);
+    if(right>=0)byRegion[right].push({start,end:v,points:clean});
+    if(left>=0)byRegion[left].push({start:v,end:start,points:[...clean].reverse()});
+  }
+  for(const [v,adjacent]of vertices)if(adjacent.length!==2)for(const id of adjacent)if(!edges[id].used)trace(id,v);
+  edges.forEach((e,id)=>{if(!e.used)trace(id,e.a);});
+  regions.forEach((r,id)=>{
+    r.paths=[];delete r.edges;r.radius=0;
+    const outgoing=new Map();for(const c of byRegion[id]){if(!outgoing.has(c.start))outgoing.set(c.start,[]);outgoing.get(c.start).push(c);}
+    while(outgoing.size){const start=outgoing.keys().next().value;let v=start,loop=[];
+      do{const list=outgoing.get(v);if(!list)throw new Error('An artwork boundary is open.');const c=list.pop();if(!list.length)outgoing.delete(v);loop.push(...c.points.slice(0,-1));v=c.end;}while(v!==start);
+      if(loop.length>=3)r.paths.push(loop);
+    }
+  });
+  // Interior clearance and distributed anchors support viewport-aware labels.
+  const distances=new Float32Array(w*h).fill(1e6);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=y*w+x,id=map[i];
+    if(x===0||y===0||x===w-1||y===h-1||map[i-1]!==id||map[i+1]!==id||map[i-w]!==id||map[i+w]!==id)distances[i]=.5;
+    else distances[i]=Math.min(distances[i-1]+1,distances[i-w]+1,distances[i-w-1]+Math.SQRT2,distances[i-w+1]+Math.SQRT2);
+  }
+  const anchors=regions.map(()=>new Map());
+  for(let y=h-1;y>=0;y--)for(let x=w-1;x>=0;x--){
+    const i=y*w+x,id=map[i],r=regions[id];
+    if(x<w-1)distances[i]=Math.min(distances[i],distances[i+1]+1);
+    if(y<h-1){distances[i]=Math.min(distances[i],distances[i+w]+1);if(x<w-1)distances[i]=Math.min(distances[i],distances[i+w+1]+Math.SQRT2);if(x)distances[i]=Math.min(distances[i],distances[i+w-1]+Math.SQRT2);}
+    const radius=distances[i];if(radius>r.radius){r.radius=radius;r.x=x+.5;r.y=y+.5;}
+    const tile=Math.floor(y/12)*Math.ceil(w/12)+Math.floor(x/12),old=anchors[id].get(tile);
+    if(!old||radius>old.radius)anchors[id].set(tile,{x:x+.5,y:y+.5,radius});
+  }
+  regions.forEach((r,id)=>{r.labels=[...anchors[id].values()];});
+  puzzle.boundaries=chains;puzzle.geometryVersion=2;return puzzle;
 }
+
 export function quantize(rgba, width, height, count, report = () => {}) {
   const n = width * height, samples = [], stride = Math.max(1, Math.floor(n / 6500));
   const rgb = (i) => { const a = rgba[i * 4 + 3] / 255; return [0, 1, 2].map(c => rgba[i * 4 + c] * a + 255 * (1 - a)); };
@@ -115,39 +157,10 @@ export function makePuzzle(rgba, width, height, options = {}, report = () => {})
   }
   const used=[...new Set(regions.map(r=>r.color))].sort((a,b)=>a-b),colorIndex=new Map(used.map((c,i)=>[c,i]));
   regions.forEach(r=>r.color=colorIndex.get(r.color));
-  const point=(x,y)=>y*(width+1)+x;
-  const dist=new Uint16Array(n).fill(65000);
-  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-    const i=y*width+x,id=regionMap[i],r=regions[id];let edge=false;
-    if(y===0||regionMap[i-width]!==id){r.edges.push([point(x,y),point(x+1,y)]);edge=true;}
-    if(x===width-1||regionMap[i+1]!==id){r.edges.push([point(x+1,y),point(x+1,y+1)]);edge=true;}
-    if(y===height-1||regionMap[i+width]!==id){r.edges.push([point(x+1,y+1),point(x,y+1)]);edge=true;}
-    if(x===0||regionMap[i-1]!==id){r.edges.push([point(x,y+1),point(x,y)]);edge=true;}
-    if(edge)dist[i]=1;
-    else dist[i]=Math.min(x?dist[i-1]+1:1,y?dist[i-width]+1:1);
-  }
-  for(let y=height-1;y>=0;y--)for(let x=width-1;x>=0;x--){
-    const i=y*width+x,id=regionMap[i];
-    if(x<width-1&&regionMap[i+1]===id)dist[i]=Math.min(dist[i],dist[i+1]+1);
-    if(y<height-1&&regionMap[i+width]===id)dist[i]=Math.min(dist[i],dist[i+width]+1);
-    const r=regions[id];if(dist[i]>r.radius){r.radius=dist[i];r.x=x+.5;r.y=y+.5;}
-  }
-  for(const r of regions){
-    const next=new Map();for(const [a,b] of r.edges){if(!next.has(a))next.set(a,[]);next.get(a).push(b);}
-    while(next.size){
-      const start=next.keys().next().value;let a=start;const loop=[];
-      do{
-        loop.push([a%(width+1),Math.floor(a/(width+1))]);
-        const list=next.get(a);if(!list)break;const b=list.pop();if(!list.length)next.delete(a);a=b;
-      }while(a!==start);
-      // Retain corners, remove straight-line vertices. Shared outlines remain identical.
-      const simplified=loop.filter((p,i)=>{const prev=loop[(i+loop.length-1)%loop.length],q=loop[(i+1)%loop.length];return (p[0]-prev[0])*(q[1]-p[1])!==(p[1]-prev[1])*(q[0]-p[0]);});
-      if(simplified.length>2)r.paths.push(simplifyOutline(simplified,regionMap,width,height));
-    }
-    delete r.edges;
-  }
+  const puzzle={version:1,width,height,palette:used.map(c=>palette[c]),regions,map:Array.from(regionMap)};
+  repairGeometry(puzzle);
   report('Your canvas is ready',1);
-  return {version:1,width,height,palette:used.map(c=>palette[c]),regions,map:Array.from(regionMap)};
+  return puzzle;
 }
 
 export function validPuzzle(p) {
