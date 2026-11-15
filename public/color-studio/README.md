@@ -4,14 +4,14 @@ A standalone, touch-friendly color-by-number game at `/color-studio/`, linked fr
 
 ## Painting
 
-- Eighteen starter pictures: a detailed featured alpine chalet, a fox-and-wildflower scene, and sixteen original vector illustrations across landscapes, botanical, animals, and patterns from the verified live Astra/Sunburst workflow.
-- Connected numbered regions with a single shared border network (no independently simplified duplicate edges), viewport-aware labels with readable selected-number badges, selected-color highlighting, progress, favorites, undo/redo, hints, reference preview, auto-advance, optional sound, and contrast settings.
+- Eighteen original detailed illustrations across landscapes, botanical, animals, and patterns. The collection includes the featured alpine chalet and seventeen individually generated replacement paintings. No procedural clipart remains in Discover. Full-size artwork uses lossless WebP; small gallery thumbnails keep browsing light.
+- Every built-in picture ships its precompiled, audited numbered canvas, giving every device identical regions without an initial conversion wait. Connected numbered regions use a single shared border network (no independently simplified duplicate edges), viewport-aware labels with readable selected-number badges, selected-color highlighting, progress, favorites, undo/redo, hints, reference preview, auto-advance, optional sound, and contrast settings.
 - Pinch zoom up to 40×, two-finger pan, mouse wheel, double tap, zoom/fit buttons, and hand tool. A pinch or pan cannot fill a region.
 - Keyboard painting through Find an area and Fill found area; H, +/−, 0, and standard undo/redo shortcuts.
-- Local photographs: aspect-preserving conversion, 8–48 requested colors, four detail presets, denoising, connected-component segmentation, merging of tiny regions, shared-edge simplification, and interior number placement. Palette count may be lower for photographs with fewer distinct colors.
-- IndexedDB saves and per-picture thumbnails. Existing paintings receive the outline/label repair without changing region IDs or progress. Favorites/preferences use localStorage. Saving errors are shown, and unsaved work prompts before leaving.
+- Local photographs: aspect-preserving conversion, 8–48 requested colors, four detail presets, denoising, connected-component segmentation, merging of tiny regions, shared-edge simplification, and number anchors verified against the actual rendered polygon. Palette count may be lower for photographs with fewer distinct colors.
+- IndexedDB saves and per-picture thumbnails. Existing paintings receive the outline/label repair without changing region IDs or progress. Replacement art uses new IDs; older saved editions remain in My studio and favorites also point to the new edition. Favorites/preferences use localStorage. Saving errors are shown, and unsaved work prompts before leaving.
 - 2,400-pixel PNG exports, printable numbered SVG with palette key, and JSON painting/studio backups. Restore validates all paintings before writing, combines compatible progress, and keeps conflicting puzzles as separate copies.
-- Previously loaded studio and local photo conversion work offline. AI requires a connection. No cloud account/synchronization is provided; backups transfer work between devices.
+- The studio shell, gallery thumbnails, previously opened paintings, and local photo conversion work offline. New built-in canvases need one online visit. AI requires a connection. No cloud account/synchronization is provided; backups transfer work between devices.
 
 ## OpenAI integration
 
@@ -44,3 +44,9 @@ Happy Color is the main product benchmark, with 100M+ Google Play downloads and 
 - https://play.google.com/store/apps/details?id=com.europosit.pixelcoloring
 - https://developers.openai.com/api/docs/models/gpt-6-astra
 - https://developers.openai.com/api/docs/models/gpt-image-2.6-sunburst
+
+## Gallery production
+
+`gallery-prompts.json` records the prompt set for the seventeen replacement assets, generated with the built-in OpenAI image tool. Full artwork and previews are in `public/color-studio/art/`; exact checked canvases and counts are in `public/color-studio/puzzles/`. The website's player-facing Astra/Sunburst API configuration is unchanged.
+
+To recompile after editing art, run `python scripts/color-studio/prepare-gallery.py --raw-dir <temporary-directory>` with Pillow installed, then `node scripts/color-studio/build-gallery.mjs <temporary-directory>`. Run `node --test scripts/color-studio/gallery.test.mjs` before publishing. The gallery tests cover every region's connectivity, actual polygon containment of all number anchors, matching shared edges, visibility of every palette color, and readability of each last remaining region at zoom.

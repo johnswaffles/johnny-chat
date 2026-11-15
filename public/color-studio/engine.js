@@ -10,6 +10,14 @@ function simplifyChain(points,tolerance=.9){
   }
   return index<0?[a,b]:[...simplifyChain(points.slice(0,index+1),tolerance).slice(0,-1),...simplifyChain(points.slice(index),tolerance)];
 }
+// Even-odd containment matches Canvas and SVG, including holes.
+export function pointInRegion(region,x,y){
+  let inside=false;
+  for(const loop of region.paths)for(let i=0,j=loop.length-1;i<loop.length;j=i++){
+    const a=loop[i],b=loop[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+  }
+  return inside;
+}
 // Trace each shared boundary exactly once. Both adjoining regions reuse the
 // SAME simplified points in opposite directions, including junction endpoints.
 export function repairGeometry(puzzle) {
@@ -54,12 +62,12 @@ export function repairGeometry(puzzle) {
     const i=y*w+x,id=map[i],r=regions[id];
     if(x<w-1)distances[i]=Math.min(distances[i],distances[i+1]+1);
     if(y<h-1){distances[i]=Math.min(distances[i],distances[i+w]+1);if(x<w-1)distances[i]=Math.min(distances[i],distances[i+w+1]+Math.SQRT2);if(x)distances[i]=Math.min(distances[i],distances[i+w-1]+Math.SQRT2);}
-    const radius=distances[i];if(radius>r.radius){r.radius=radius;r.x=x+.5;r.y=y+.5;}
+    const radius=distances[i];if(radius<=1&&!pointInRegion(r,x+.5,y+.5))continue;if(radius>r.radius){r.radius=radius;r.x=x+.5;r.y=y+.5;}
     const tile=Math.floor(y/12)*Math.ceil(w/12)+Math.floor(x/12),old=anchors[id].get(tile);
     if(!old||radius>old.radius)anchors[id].set(tile,{x:x+.5,y:y+.5,radius});
   }
   regions.forEach((r,id)=>{r.labels=[...anchors[id].values()];});
-  puzzle.boundaries=chains;puzzle.geometryVersion=2;return puzzle;
+  puzzle.boundaries=chains;puzzle.geometryVersion=3;return puzzle;
 }
 
 export function quantize(rgba, width, height, count, report = () => {}) {

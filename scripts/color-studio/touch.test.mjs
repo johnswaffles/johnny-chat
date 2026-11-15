@@ -28,7 +28,7 @@ test('hand tool and canceled gestures do not paint, and fit resets the view',()=
 
 test('selected color 3 remains readable in tiny spaces and in a cropped viewport',async()=>{
   const {labelPositions}=await import('../../public/color-studio/canvas.js');
-  const puzzle={width:100,height:100,map:Array(10000).fill(0),regions:[{color:2,x:80.5,y:80.5,radius:.5,labels:[]}]};
+  const puzzle={width:100,height:100,map:Array(10000).fill(0),regions:[{color:2,x:80.5,y:80.5,radius:.5,labels:[],paths:[[[0,0],[100,0],[100,100],[0,100]]]}]};
   const labels=labelPositions(puzzle,new Set(),{scale:1,selected:2,viewport:{x:10,y:10,width:35,height:35}});
   assert.equal(labels.length,1);assert.equal(labels[0].color,2);assert.equal(labels[0].size,14);
   assert.ok(labels[0].x>10&&labels[0].x<45);assert.ok(labels[0].y>10&&labels[0].y<45);

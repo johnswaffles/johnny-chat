@@ -1,3 +1,4 @@
+import {pointInRegion} from './engine.js?v=20261114-gallery-4';
 export const rgb=c=>`rgb(${c.join(',')})`;
 export function regionPath(r){const p=new Path2D();for(const loop of r.paths){if(!loop.length)continue;p.moveTo(...loop[0]);for(let i=1;i<loop.length;i++)p.lineTo(...loop[i]);p.closePath();}return p;}
 export function boundaryPath(puzzle){const p=new Path2D();for(const chain of puzzle.boundaries||[]){p.moveTo(...chain.points[0]);for(let i=1;i<chain.points.length;i++)p.lineTo(...chain.points[i]);}return p;}
@@ -13,7 +14,7 @@ export function labelPositions(puzzle,filled,{scale=1,selected=-1,viewport={x:0,
       for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
         const key=puzzle.map[y*puzzle.width+x];if(puzzle.regions[key].color!==selected||filled.has(key))continue;
         const score=(x-v.x-v.width/2)**2+(y-v.y-v.height/2)**2,old=visiblePixels.get(key);
-        if(!old||score<old.score)visiblePixels.set(key,{x:x+.5,y:y+.5,radius:.5,score});
+        if((!old||score<old.score)&&pointInRegion(puzzle.regions[key],x+.5,y+.5))visiblePixels.set(key,{x:x+.5,y:y+.5,radius:.5,score});
       }
     }
     return visiblePixels.get(id);

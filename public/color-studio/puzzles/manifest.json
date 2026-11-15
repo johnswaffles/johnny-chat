@@ -1,0 +1,92 @@
+[
+  {
+    "id": "alpine-retreat-v2",
+    "colors": 32,
+    "regions": 1282
+  },
+  {
+    "id": "alpine-v3",
+    "colors": 32,
+    "regions": 1889
+  },
+  {
+    "id": "bloom-v3",
+    "colors": 32,
+    "regions": 1857
+  },
+  {
+    "id": "blue-ridge-v3",
+    "colors": 31,
+    "regions": 1687
+  },
+  {
+    "id": "coastal-v3",
+    "colors": 32,
+    "regions": 1857
+  },
+  {
+    "id": "fox-stream-v3",
+    "colors": 32,
+    "regions": 1900
+  },
+  {
+    "id": "golden-hour-v3",
+    "colors": 32,
+    "regions": 1898
+  },
+  {
+    "id": "herbarium-v3",
+    "colors": 32,
+    "regions": 1887
+  },
+  {
+    "id": "moon-petals-v3",
+    "colors": 32,
+    "regions": 1612
+  },
+  {
+    "id": "paper-wings-v3",
+    "colors": 32,
+    "regions": 1276
+  },
+  {
+    "id": "rose-harbor-v3",
+    "colors": 32,
+    "regions": 1837
+  },
+  {
+    "id": "sage-cat-v3",
+    "colors": 32,
+    "regions": 1625
+  },
+  {
+    "id": "sea-glass-v3",
+    "colors": 32,
+    "regions": 1758
+  },
+  {
+    "id": "sunwheel-v3",
+    "colors": 32,
+    "regions": 1752
+  },
+  {
+    "id": "terracotta-v3",
+    "colors": 32,
+    "regions": 1880
+  },
+  {
+    "id": "wildflowers-v3",
+    "colors": 32,
+    "regions": 1900
+  },
+  {
+    "id": "windowsill-v3",
+    "colors": 32,
+    "regions": 1842
+  },
+  {
+    "id": "wings-v3",
+    "colors": 32,
+    "regions": 1568
+  }
+]

@@ -1,12 +1,13 @@
-import {catalog,artURL} from './art.js?v=20261114-atelier-3';
-import {PaintingCanvas,previewURL,drawPuzzle,rgb} from './canvas.js?v=20261114-atelier-3';
-import {getPainting,listCards,savePainting,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261114-atelier-3';
-import {validPuzzle,repairGeometry} from './engine.js?v=20261114-atelier-3';
+import {catalog,artURL,thumbnailURL} from './art.js?v=20261114-gallery-4';
+import {PaintingCanvas,previewURL,drawPuzzle,rgb} from './canvas.js?v=20261114-gallery-4';
+import {getPainting,listCards,savePainting,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261114-gallery-4';
+import {validPuzzle,repairGeometry} from './engine.js?v=20261114-gallery-4';
 
 const $=id=>document.getElementById(id),icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const preferences={autoAdvance:true,highlight:true,numbers:true,contrast:false,sound:false,...readPreferences()};
 let favorites=new Set(Array.isArray(preferences.favorites)?preferences.favorites:[]),cards=[],view='discover',filter='All pictures',active=null,filled=new Set(),selected=0,history=[],redo=[],saveTimer,saveChain=Promise.resolve(),toastTimer,opening=false,storageOK=true,completedShown=false,dirty=false,saveRevision=0;
+for(const art of catalog)if(art.legacyId&&favorites.has(art.legacyId))favorites.add(art.id);
 const apiBase=String(window.JOHNNY_CHAT_API_BASE_URL||(['localhost','127.0.0.1'].includes(location.hostname)?location.origin:'https://johnny-chat.onrender.com')).replace(/\/+$/,'');
 const api=path=>`${apiBase}/api/color-studio${path}`;
 let aiAvailable=null;
@@ -44,7 +45,7 @@ function renderGallery(){
   $('picture-grid').innerHTML=items.map(a=>{
     const c=cardMap.get(a.id),done=c?Math.round(c.done/c.total*100):0;
     // Sources are generated locally or validated during backup import.
-    const source=c?.thumbnail||(a.custom?a.thumbnail:artURL(a));
+    const source=!studio&&!a.custom?thumbnailURL(a):(c?.thumbnail||a.thumbnail||thumbnailURL(a));
     return `<article class="picture-card"><div class="picture-image"><button data-open="${escapeHTML(a.id)}" aria-label="${c?'Resume':'Color'} ${escapeHTML(a.title)}"><img src="${escapeHTML(source)}" alt="${escapeHTML(a.description||a.title)}" loading="lazy"><span class="image-overlay"><span>${c?'Keep coloring':'Start coloring'} ${icon('arrow')}</span></span></button><button class="favorite-button ${favorites.has(a.id)?'active':''}" data-favorite="${escapeHTML(a.id)}" aria-label="${favorites.has(a.id)?'Unfavorite':'Favorite'} ${escapeHTML(a.title)}" aria-pressed="${favorites.has(a.id)}">${icon('heart')}</button>${c?`<span class="card-progress">${done===100?'✓ Complete':`${done}% · Keep going`}</span>`:''}</div><h3 class="picture-title">${escapeHTML(a.title)}</h3><div class="picture-meta"><span>${escapeHTML(a.category)}</span><span>${c?`${c.total.toLocaleString()} spaces`:a.difficulty||'Your own creation'}</span></div></article>`;
   }).join('');
   $('empty-state').hidden=items.length>0;
@@ -53,7 +54,7 @@ function renderGallery(){
 
 function convert(image,options,onProgress){
   return new Promise((resolve,reject)=>{
-    const worker=new Worker(new URL('./worker.js?v=20261114-atelier-3',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
+    const worker=new Worker(new URL('./worker.js?v=20261114-gallery-4',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
     const max=options.resolution||360,scale=max/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height),c=document.createElement('canvas');
     c.width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale));c.height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale));
     const ctx=c.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(image,0,0,c.width,c.height);const data=ctx.getImageData(0,0,c.width,c.height);
@@ -67,12 +68,18 @@ async function openPainting(id){
   if(opening)return;opening=true;
   try{
     let record;try{record=await getPainting(id);}catch{storageOK=false;}
-    if(!record){const art=catalog.find(a=>a.id===id);if(!art)throw new Error('This picture could not be found.');toast('Laying out your colors…');const image=await loadImage(artURL(art));const puzzle=await convert(image,{colors:art.colors||24,resolution:art.resolution||420,minArea:art.minArea||24,maxRegions:2200},label=>{$('toast').textContent=label+'…';});record={id:art.id,title:art.title,category:art.category,puzzle,filled:[],custom:false,thumbnail:artURL(art),updated:Date.now()};}
+    if(!record){
+      const art=catalog.find(a=>a.id===id);if(!art)throw new Error('This picture could not be found.');toast('Opening your canvas…');
+      let response;try{response=await fetch(art.puzzleSource);}catch{throw new Error('Open this picture online once to make it available offline.');}
+      if(!response.ok)throw new Error('This canvas could not load. Please try again.');
+      const puzzle=await response.json();if(!validPuzzle(puzzle))throw new Error('This canvas could not be read. Please refresh the studio.');
+      record={id:art.id,title:art.title,category:art.category,puzzle,filled:[],custom:false,edition:art.edition,thumbnail:thumbnailURL(art),updated:Date.now()};
+    }
     activatePainting(record);
   }catch(error){toast(error.message);}finally{opening=false;}
 }
 function activatePainting(record){
-  if(record.puzzle.geometryVersion!==2)repairGeometry(record.puzzle);
+  if(record.puzzle.geometryVersion!==3)repairGeometry(record.puzzle);
   active=record;filled=new Set(record.filled||[]);selected=Math.max(0,Math.min(record.puzzle.palette.length-1,record.selected||0));history=[];redo=[];completedShown=filled.size===record.puzzle.regions.length;
   $('library-view').hidden=true;$('paint-view').hidden=false;document.body.style.overflow='hidden';$('painting-title').textContent=record.title;$('save-status').textContent=storageOK?'Saving on this device…':'Saving unavailable · export a backup';
   paintCanvas.load(record.puzzle,filled);paintCanvas.selected=selected;$('reference-toggle').setAttribute('aria-pressed','false');$('reference-toggle').textContent='Peek at the finished picture';$('canvas-stage').classList.remove('reference');$('fill-found').hidden=true;
@@ -116,7 +123,7 @@ async function saveNow(){
 }
 async function returnToLibrary(){await saveNow();$('paint-view').hidden=true;$('library-view').hidden=false;document.body.style.overflow='';renderGallery();}
 function utility(title,html){$('utility-title').textContent=title;$('utility-content').innerHTML=html;if(!$('utility-dialog').open)$('utility-dialog').showModal();}
-function help(){utility('One color at a time.',`<p>Welcome to your own little corner of calm.</p><ol class="help-steps"><li>Choose a picture, upload a photo, or create something with AI.</li><li>Pick a numbered color. Its spaces are gently highlighted.</li><li>Tap a matching space to fill it. There’s no penalty for a missed tap.</li><li>Pinch with two fingers to zoom up to 40×. Move with two fingers, or turn on the hand tool.</li><li>Use <strong>Find an area</strong> for tiny spaces. Keyboard players can then press Enter or choose <strong>Fill found area</strong>.</li></ol><p><strong>Keyboard:</strong> H finds an area, +/− zoom, 0 fits the canvas, Ctrl/⌘ Z undoes, and Shift Ctrl/⌘ Z redoes.</p><h3>Keep your quiet corner close.</h3><p>On iPad, open this page in Safari, tap Share, then Add to Home Screen. Open the studio online once to make the gallery and local photo converter available offline. AI creation needs an internet connection.</p><p class="backup-note">Progress and personal pictures stay in this browser on this device. Export a studio backup to move them to another device or keep a safe copy.</p><button class="outline-button" data-action="backup">Back up my studio ${icon('download')}</button>`);}
+function help(){utility('One color at a time.',`<p>Welcome to your own little corner of calm.</p><ol class="help-steps"><li>Choose a picture, upload a photo, or create something with AI.</li><li>Pick a numbered color. Its spaces are gently highlighted.</li><li>Tap a matching space to fill it. There’s no penalty for a missed tap.</li><li>Pinch with two fingers to zoom up to 40×. Move with two fingers, or turn on the hand tool.</li><li>Use <strong>Find an area</strong> for tiny spaces. Keyboard players can then press Enter or choose <strong>Fill found area</strong>.</li></ol><p><strong>Keyboard:</strong> H finds an area, +/− zoom, 0 fits the canvas, Ctrl/⌘ Z undoes, and Shift Ctrl/⌘ Z redoes.</p><h3>Keep your quiet corner close.</h3><p>On iPad, open this page in Safari, tap Share, then Add to Home Screen. Pictures you have opened and the local photo converter are available offline. Open a picture online once before taking it offline. AI creation needs an internet connection.</p><p class="backup-note">Progress and personal pictures stay in this browser on this device. Export a studio backup to move them to another device or keep a safe copy.</p><button class="outline-button" data-action="backup">Back up my studio ${icon('download')}</button>`);}
 function settings(){utility('Make yourself comfortable.',[
   ['autoAdvance','Keep the colors flowing','Move to the next color when one is finished.'],['highlight','A gentle guide','Highlight spaces matching the selected color.'],['numbers','Show the numbers','Numbers appear as you zoom into smaller spaces.'],['contrast','A little more contrast','Darker outlines and more readable labels.'],['sound','A soft note','A quiet sound for every space you color.']
 ].map(([key,title,note])=>`<label class="setting-row"><span>${title}<small>${note}</small></span><input type="checkbox" data-setting="${key}" ${preferences[key]?'checked':''}></label>`).join('')+`<p>Your changes save automatically on this device.</p><button class="outline-button" data-action="help">How to play</button><button class="text-button danger-button" data-action="restart">Start this picture over</button>${active?.custom?'<br><button class="text-button danger-button" data-action="delete">Delete this personal picture</button>':''}`);}
@@ -244,4 +251,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)voi
 window.addEventListener('beforeunload',e=>{if(active&&(!storageOK||dirty)){e.preventDefault();e.returnValue='';}});
 void refreshCards();
 void apiJSON('/config').then(config=>{aiAvailable=!!config.enabled;}).catch(()=>{aiAvailable=null;});
-if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261114-atelier-3').catch(()=>{});});
+if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261114-gallery-4').catch(()=>{});});

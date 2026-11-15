@@ -52,7 +52,7 @@ test('repairing saved paintings preserves region IDs, colors and progress, inclu
   const p=makePuzzle(image(24,24,(x,y)=>x===10&&y===10?[220,60,40]:[30,80,90]),24,24,{colors:8,minArea:1,smooth:false});
   const map=[...p.map],colors=p.regions.map(r=>r.color),filled=[0];delete p.geometryVersion;delete p.boundaries;
   p.regions.forEach(r=>{r.paths=[];delete r.labels;});repairGeometry(p);
-  assert.deepEqual(p.map,map);assert.deepEqual(p.regions.map(r=>r.color),colors);assert.equal(p.geometryVersion,2);assert.deepEqual(filled,[0]);
+  assert.deepEqual(p.map,map);assert.deepEqual(p.regions.map(r=>r.color),colors);assert.equal(p.geometryVersion,3);assert.deepEqual(filled,[0]);
   assert.ok(p.regions.every(r=>r.paths.length&&r.paths.every(loop=>loop.length>=3)));
   p.regions.forEach((r,id)=>r.labels.forEach(a=>assert.equal(p.map[Math.floor(a.y)*p.width+Math.floor(a.x)],id)));
 });
