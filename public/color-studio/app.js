@@ -1,11 +1,14 @@
-import {catalog,artURL,thumbnailURL} from './art.js?v=20261114-gallery-4';
-import {PaintingCanvas,previewURL,drawPuzzle,rgb} from './canvas.js?v=20261114-gallery-4';
-import {getPainting,listCards,savePainting,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261114-gallery-4';
-import {validPuzzle,repairGeometry} from './engine.js?v=20261114-gallery-4';
+import {catalog,artURL,thumbnailURL} from './art.js?v=20261115-canvas-1';
+import {PaintingCanvas,previewURL,drawPuzzle,rgb} from './canvas.js?v=20261115-canvas-1';
+import {getPainting,listCards,savePainting,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261115-canvas-1';
+import {validPuzzle,repairGeometry} from './engine.js?v=20261115-canvas-1';
+import {singlePicturePreview,previewPaintingId,isPaintingAvailable,nextUnfinishedColor} from './experience.js?v=20261115-canvas-1';
 
 const $=id=>document.getElementById(id),icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const preferences={autoAdvance:true,highlight:true,numbers:true,contrast:false,sound:false,...readPreferences()};
+// Enable the new guided experience once, then continue respecting saved settings.
+if(preferences.checkerExperience!==1){preferences.autoAdvance=true;preferences.highlight=true;preferences.checkerExperience=1;}
 let favorites=new Set(Array.isArray(preferences.favorites)?preferences.favorites:[]),cards=[],view='discover',filter='All pictures',active=null,filled=new Set(),selected=0,history=[],redo=[],saveTimer,saveChain=Promise.resolve(),toastTimer,opening=false,storageOK=true,completedShown=false,dirty=false,saveRevision=0;
 for(const art of catalog)if(art.legacyId&&favorites.has(art.legacyId))favorites.add(art.id);
 const apiBase=String(window.JOHNNY_CHAT_API_BASE_URL||(['localhost','127.0.0.1'].includes(location.hostname)?location.origin:'https://johnny-chat.onrender.com')).replace(/\/+$/,'');
@@ -24,7 +27,7 @@ function renderGallery(){
   const studio=view==='studio',fav=view==='favorites';
   $('featured').hidden=studio||fav;
   $('view-title').innerHTML=studio?'Your colors.<br><em>Your quiet corner.</em>':fav?'Keep a little<br><em>inspiration close.</em>':'A little color.<br><em>A little calm.</em>';
-  $('view-description').textContent=studio?'Pick up where you left off. Every little space is waiting for you.':fav?'All the pictures you’ve saved for a quieter moment.':'Find a picture you love. Bring it to life, one number at a time.';
+  $('view-description').textContent=singlePicturePreview?'Start with An alpine retreat. More pictures are coming soon.':studio?'Pick up where you left off. Every little space is waiting for you.':fav?'All the pictures you’ve saved for a quieter moment.':'Find a picture you love. Bring it to life, one number at a time.';
   $('collection-title').innerHTML=studio?'A little collection of you<span>.</span>':fav?'The ones that caught your eye<span>.</span>':'Find your next little escape<span>.</span>';
   $('collection-kicker').textContent=studio?'MADE WITH YOUR OWN TWO HANDS':fav?'YOUR PERSONAL INSPIRATION SHELF':'A CANVAS FOR EVERY MOOD';
   const filters=studio?['All pictures','In progress','Completed','My photos','AI creations']:['All pictures','Landscapes','Botanical','Animals','Patterns','My photos','AI creations'];
@@ -43,10 +46,10 @@ function renderGallery(){
   $('studio-stats').hidden=!studio;
   if(studio)$('studio-stats').innerHTML=`<div><strong>${cards.length}</strong><span>pictures started</span></div><div><strong>${cards.filter(c=>c.done===c.total).length}</strong><span>little masterpieces</span></div><div><strong>${cards.reduce((s,c)=>s+c.done,0).toLocaleString()}</strong><span>spaces brought to life</span></div>`;
   $('picture-grid').innerHTML=items.map(a=>{
-    const c=cardMap.get(a.id),done=c?Math.round(c.done/c.total*100):0;
+    const c=cardMap.get(a.id),done=c?Math.round(c.done/c.total*100):0,available=isPaintingAvailable(a.id);
     // Sources are generated locally or validated during backup import.
     const source=!studio&&!a.custom?thumbnailURL(a):(c?.thumbnail||a.thumbnail||thumbnailURL(a));
-    return `<article class="picture-card"><div class="picture-image"><button data-open="${escapeHTML(a.id)}" aria-label="${c?'Resume':'Color'} ${escapeHTML(a.title)}"><img src="${escapeHTML(source)}" alt="${escapeHTML(a.description||a.title)}" loading="lazy"><span class="image-overlay"><span>${c?'Keep coloring':'Start coloring'} ${icon('arrow')}</span></span></button><button class="favorite-button ${favorites.has(a.id)?'active':''}" data-favorite="${escapeHTML(a.id)}" aria-label="${favorites.has(a.id)?'Unfavorite':'Favorite'} ${escapeHTML(a.title)}" aria-pressed="${favorites.has(a.id)}">${icon('heart')}</button>${c?`<span class="card-progress">${done===100?'✓ Complete':`${done}% · Keep going`}</span>`:''}</div><h3 class="picture-title">${escapeHTML(a.title)}</h3><div class="picture-meta"><span>${escapeHTML(a.category)}</span><span>${c?`${c.total.toLocaleString()} spaces`:a.difficulty||'Your own creation'}</span></div></article>`;
+    return `<article class="picture-card ${available?'':'coming-soon'}"><div class="picture-image"><button ${available?`data-open="${escapeHTML(a.id)}"`:'disabled'} aria-label="${available?(c?'Resume':'Color'):'Coming soon:'} ${escapeHTML(a.title)}"><img src="${escapeHTML(source)}" alt="${escapeHTML(a.description||a.title)}" loading="lazy">${available?`<span class="image-overlay"><span>${c?'Keep coloring':'Start coloring'} ${icon('arrow')}</span></span>`:'<span class="coming-soon-label">Coming soon</span>'}</button>${available?`<button class="favorite-button ${favorites.has(a.id)?'active':''}" data-favorite="${escapeHTML(a.id)}" aria-label="${favorites.has(a.id)?'Unfavorite':'Favorite'} ${escapeHTML(a.title)}" aria-pressed="${favorites.has(a.id)}">${icon('heart')}</button>`:''}${c&&available?`<span class="card-progress">${done===100?'✓ Complete':`${done}% · Keep going`}</span>`:''}</div><h3 class="picture-title">${escapeHTML(a.title)}</h3><div class="picture-meta"><span>${escapeHTML(a.category)}</span><span>${available?(c?`${c.total.toLocaleString()} spaces`:a.difficulty||'Your own creation'):'Coming soon'}</span></div></article>`;
   }).join('');
   $('empty-state').hidden=items.length>0;
   if(!items.length)$('empty-state').innerHTML=`<h3>${search?'Nothing here just yet.':studio?'Your first canvas is waiting.':fav?'A place for your favorites.':'A little room for something new.'}</h3><p>${search?'Try a different word or category.':studio?'Start any picture, and it will be saved here automatically.':fav?'Tap a heart on a picture to keep it here.':'Create a picture from your own photo or imagination.'}</p><button class="outline-button" data-action="${studio||fav?'discover':'upload'}">${studio||fav?'Explore pictures':'Create a picture'} ${icon('arrow')}</button>`;
@@ -54,7 +57,7 @@ function renderGallery(){
 
 function convert(image,options,onProgress){
   return new Promise((resolve,reject)=>{
-    const worker=new Worker(new URL('./worker.js?v=20261114-gallery-4',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
+    const worker=new Worker(new URL('./worker.js?v=20261115-canvas-1',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
     const max=options.resolution||360,scale=max/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height),c=document.createElement('canvas');
     c.width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale));c.height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale));
     const ctx=c.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(image,0,0,c.width,c.height);const data=ctx.getImageData(0,0,c.width,c.height);
@@ -65,6 +68,7 @@ function convert(image,options,onProgress){
 }
 async function loadImage(source){const image=new Image();image.decoding='async';image.src=source;await image.decode();return image;}
 async function openPainting(id){
+  if(!isPaintingAvailable(id)){toast('This picture is coming soon. An alpine retreat is ready to color.');return;}
   if(opening)return;opening=true;
   try{
     let record;try{record=await getPainting(id);}catch{storageOK=false;}
@@ -82,15 +86,18 @@ function activatePainting(record){
   if(record.puzzle.geometryVersion!==3)repairGeometry(record.puzzle);
   active=record;filled=new Set(record.filled||[]);selected=Math.max(0,Math.min(record.puzzle.palette.length-1,record.selected||0));history=[];redo=[];completedShown=filled.size===record.puzzle.regions.length;
   $('library-view').hidden=true;$('paint-view').hidden=false;document.body.style.overflow='hidden';$('painting-title').textContent=record.title;$('save-status').textContent=storageOK?'Saving on this device…':'Saving unavailable · export a backup';
-  paintCanvas.load(record.puzzle,filled);paintCanvas.selected=selected;$('reference-toggle').setAttribute('aria-pressed','false');$('reference-toggle').textContent='Peek at the finished picture';$('canvas-stage').classList.remove('reference');$('fill-found').hidden=true;
-  $('canvas-note').textContent='Pick a number. Tap a matching space.';paintCanvas.dragMode=false;$('pan-tool').setAttribute('aria-pressed','false');$('canvas-stage').classList.remove('moving');updateFavorite();updatePainting();queueSave();$('painting').focus({preventScroll:true});clearTimeout(toastTimer);$('toast').hidden=true;
+  paintCanvas.load(record.puzzle,filled);paintCanvas.selected=selected;$('reference-toggle').setAttribute('aria-pressed','false');$('reference-toggle').textContent='Preview';$('canvas-stage').classList.remove('reference');$('fill-found').hidden=true;
+  $('canvas-note').textContent='Look for the checkered spaces. Pinch to explore.';paintCanvas.dragMode=false;$('pan-tool').setAttribute('aria-pressed','false');$('canvas-stage').classList.remove('moving');
+  const {remaining}=counts();if(!remaining[selected])selected=nextUnfinishedColor(remaining,selected);paintCanvas.selected=selected;
+  updateFavorite();updatePainting();queueSave();scrollSelectedColor();$('painting').focus({preventScroll:true});clearTimeout(toastTimer);$('toast').hidden=true;
 }
 function counts(){const totals=new Array(active.puzzle.palette.length).fill(0),remaining=totals.slice();active.puzzle.regions.forEach((r,i)=>{totals[r.color]++;if(!filled.has(i))remaining[r.color]++;});return{totals,remaining};}
-function chooseColor(color){if(!active)return;selected=color;paintCanvas.selected=color;paintCanvas.focused=-1;$('fill-found').hidden=true;paintCanvas.revealSelected();updatePainting();queueSave();}
+function scrollSelectedColor(){requestAnimationFrame(()=>$('palette').querySelector(`[data-color="${selected}"]`)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'}));}
+function chooseColor(color){if(!active)return;selected=color;paintCanvas.selected=color;paintCanvas.focused=-1;$('fill-found').hidden=true;$('canvas-note').textContent='Look for the checkered spaces. Pinch to explore.';updatePainting();queueSave();}
 function updatePainting(){
   if(!active)return;const {remaining}=counts(),total=active.puzzle.regions.length,percent=Math.round(filled.size/total*100);
   $('progress-percent').innerHTML=`${percent}<span>%</span>`;$('progress-fill').style.width=`${filled.size/total*100}%`;$('progress-count').textContent=`${filled.size.toLocaleString()} of ${total.toLocaleString()} spaces colored`;$('color-count').textContent=`${remaining.length} colors`;
-  $('palette-instruction').textContent=remaining[selected]?`Color ${selected+1} · ${remaining[selected]} little spaces waiting`:`Color ${selected+1} is complete. Beautifully done.`;
+  $('palette-instruction').textContent=remaining[selected]?`Color ${selected+1} · ${remaining[selected]} to find`:`Color ${selected+1} complete`;
   const focused=document.activeElement?.dataset.color;
   $('palette').innerHTML=active.puzzle.palette.map((c,i)=>`<button class="color-swatch ${remaining[i]===0?'complete':''}" style="--swatch:${rgb(c)};--text:${c[0]*.299+c[1]*.587+c[2]*.114>148?'#293d38':'#fffdf7'}" data-color="${i}" aria-label="Color ${i+1}, ${remaining[i]} areas remaining" aria-pressed="${selected===i}">${i+1}${remaining[i]?`<span class="swatch-remaining" aria-hidden="true">${remaining[i]}</span>`:''}</button>`).join('');
   if(focused!==undefined)$('palette').querySelector(`[data-color="${focused}"]`)?.focus({preventScroll:true});
@@ -104,11 +111,11 @@ function fillRegion(id){
   if(!active||paintCanvas.reference||filled.has(id))return;const r=active.puzzle.regions[id];if(!r)return;
   if(r.color!==selected){$('canvas-note').textContent=`This space is color ${r.color+1}. Choose ${r.color+1} in your palette.`;return;}
   filled.add(id);history.push({id,color:selected});redo=[];paintCanvas.focused=-1;$('fill-found').hidden=true;playTone();$('canvas-note').textContent='A little more color. A little more calm.';
-  const {remaining}=counts();if(!remaining[selected]&&preferences.autoAdvance){const next=remaining.findIndex((n,i)=>n>0&&i>selected);selected=next>=0?next:Math.max(0,remaining.findIndex(n=>n>0));paintCanvas.selected=selected;requestAnimationFrame(()=>$('palette').querySelector(`[data-color="${selected}"]`)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'}));}
-  paintCanvas.revealSelected();updatePainting();queueSave();if(filled.size===active.puzzle.regions.length&&!completedShown){completedShown=true;setTimeout(showCompletion,400);}
+  const {remaining}=counts();if(!remaining[selected]&&preferences.autoAdvance){selected=nextUnfinishedColor(remaining,selected);paintCanvas.selected=selected;scrollSelectedColor();$('canvas-note').textContent=remaining[selected]?`Next up: color ${selected+1}. Look for its checkered spaces.`:'Every space is colored. Beautifully done.';}
+  updatePainting();queueSave();if(filled.size===active.puzzle.regions.length&&!completedShown){completedShown=true;setTimeout(showCompletion,400);}
 }
-function undoFill(){const change=history.pop();if(!change)return;filled.delete(change.id);redo.push(change);selected=change.color;paintCanvas.selected=selected;updatePainting();queueSave();}
-function redoFill(){const change=redo.pop();if(!change)return;filled.add(change.id);history.push(change);updatePainting();queueSave();}
+function undoFill(){const change=history.pop();if(!change)return;filled.delete(change.id);redo.push(change);selected=change.color;paintCanvas.selected=selected;paintCanvas.focused=-1;$('fill-found').hidden=true;completedShown=false;updatePainting();scrollSelectedColor();queueSave();}
+function redoFill(){const change=redo.pop();if(!change)return;filled.add(change.id);history.push(change);selected=change.color;const {remaining}=counts();if(!remaining[selected]&&preferences.autoAdvance)selected=nextUnfinishedColor(remaining,selected);paintCanvas.selected=selected;paintCanvas.focused=-1;$('fill-found').hidden=true;updatePainting();scrollSelectedColor();queueSave();if(filled.size===active.puzzle.regions.length&&!completedShown){completedShown=true;setTimeout(showCompletion,400);}}
 function hint(){if(!active||paintCanvas.reference)return;let candidates=active.puzzle.regions.map((r,id)=>({...r,id})).filter(r=>!filled.has(r.id)&&r.color===selected);if(!candidates.length){const next=active.puzzle.regions.findIndex((r,id)=>!filled.has(id));if(next<0)return;chooseColor(active.puzzle.regions[next].color);candidates=active.puzzle.regions.map((r,id)=>({...r,id})).filter(r=>!filled.has(r.id)&&r.color===selected);}
   const logical=paintCanvas.logical({x:paintCanvas.w/2,y:paintCanvas.h/2});candidates.sort((a,b)=>Math.hypot(a.x-logical.x,a.y-logical.y)-Math.hypot(b.x-logical.x,b.y-logical.y));paintCanvas.focusRegion(candidates[0].id);$('canvas-note').textContent=`Here’s a space for color ${selected+1}. Tap it, or choose Fill found area.`;
 }
@@ -123,9 +130,9 @@ async function saveNow(){
 }
 async function returnToLibrary(){await saveNow();$('paint-view').hidden=true;$('library-view').hidden=false;document.body.style.overflow='';renderGallery();}
 function utility(title,html){$('utility-title').textContent=title;$('utility-content').innerHTML=html;if(!$('utility-dialog').open)$('utility-dialog').showModal();}
-function help(){utility('One color at a time.',`<p>Welcome to your own little corner of calm.</p><ol class="help-steps"><li>Choose a picture, upload a photo, or create something with AI.</li><li>Pick a numbered color. Its spaces are gently highlighted.</li><li>Tap a matching space to fill it. There’s no penalty for a missed tap.</li><li>Pinch with two fingers to zoom up to 40×. Move with two fingers, or turn on the hand tool.</li><li>Use <strong>Find an area</strong> for tiny spaces. Keyboard players can then press Enter or choose <strong>Fill found area</strong>.</li></ol><p><strong>Keyboard:</strong> H finds an area, +/− zoom, 0 fits the canvas, Ctrl/⌘ Z undoes, and Shift Ctrl/⌘ Z redoes.</p><h3>Keep your quiet corner close.</h3><p>On iPad, open this page in Safari, tap Share, then Add to Home Screen. Pictures you have opened and the local photo converter are available offline. Open a picture online once before taking it offline. AI creation needs an internet connection.</p><p class="backup-note">Progress and personal pictures stay in this browser on this device. Export a studio backup to move them to another device or keep a safe copy.</p><button class="outline-button" data-action="backup">Back up my studio ${icon('download')}</button>`);}
+function help(){utility('One color at a time.',`<p>Welcome to your own little corner of calm.</p><ol class="help-steps"><li>Start with An alpine retreat. More pictures and photo creation are coming soon.</li><li>Pick a numbered color. Look for its checkered spaces.</li><li>Tap a matching space to fill it. There’s no penalty for a missed tap.</li><li>Pinch with two fingers to zoom up to 40×. Move with two fingers, or turn on the hand tool.</li><li>Use <strong>Find an area</strong> for tiny spaces. Keyboard players can then press Enter or choose <strong>Fill found area</strong>.</li></ol><p><strong>Keyboard:</strong> H finds an area, +/− zoom, 0 fits the canvas, Ctrl/⌘ Z undoes, and Shift Ctrl/⌘ Z redoes.</p><h3>Keep your quiet corner close.</h3><p>On iPad, open this page in Safari, tap Share, then Add to Home Screen. Pictures you have opened and the local photo converter are available offline. Open a picture online once before taking it offline. AI creation needs an internet connection.</p><p class="backup-note">Progress and personal pictures stay in this browser on this device. Export a studio backup to move them to another device or keep a safe copy.</p><button class="outline-button" data-action="backup">Back up my studio ${icon('download')}</button>`);}
 function settings(){utility('Make yourself comfortable.',[
-  ['autoAdvance','Keep the colors flowing','Move to the next color when one is finished.'],['highlight','A gentle guide','Highlight spaces matching the selected color.'],['numbers','Show the numbers','Numbers appear as you zoom into smaller spaces.'],['contrast','A little more contrast','Darker outlines and more readable labels.'],['sound','A soft note','A quiet sound for every space you color.']
+  ['autoAdvance','Keep the colors flowing','Move to the next color when one is finished.'],['highlight','Checkered spaces','Show a checker pattern inside the selected color’s spaces.'],['numbers','Show the numbers','Small numbers appear as you zoom into smaller spaces.'],['contrast','A little more contrast','Darker outlines and more readable labels.'],['sound','A soft note','A quiet sound for every space you color.']
 ].map(([key,title,note])=>`<label class="setting-row"><span>${title}<small>${note}</small></span><input type="checkbox" data-setting="${key}" ${preferences[key]?'checked':''}></label>`).join('')+`<p>Your changes save automatically on this device.</p><button class="outline-button" data-action="help">How to play</button><button class="text-button danger-button" data-action="restart">Start this picture over</button>${active?.custom?'<br><button class="text-button danger-button" data-action="delete">Delete this personal picture</button>':''}`);}
 function showCompletion(){if(!active||filled.size!==active.puzzle.regions.length)return;utility('You made something beautiful.',`<div class="completion-art">✳</div><div class="completion-copy"><h3>${escapeHTML(active.title)}</h3><p>${active.puzzle.regions.length.toLocaleString()} little spaces. One lovely picture.<br>Take a moment. This one’s yours.</p></div><button class="primary" data-action="download-finished">Save my finished picture ${icon('download')}</button><button class="outline-button" data-action="export">More ways to keep it</button><button class="outline-button" data-action="library">Find another little escape ${icon('arrow')}</button>`);}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
@@ -161,7 +168,7 @@ async function restoreBackup(file){
 // Picture creator: AI image preparation and local numbered-region conversion.
 const creator={mode:'photo',photo:null,photoURL:null,generated:null,puzzle:null,busy:false,worker:null,reject:null,job:null,token:0,controller:null};
 function creatorMode(mode){if(creator.busy)return;creator.mode=mode;creator.generated=null;invalidatePreview();document.querySelectorAll('[data-create-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.createMode===mode)));$('prompt-field').hidden=mode!=='ai';$('photo-title-field').hidden=mode==='ai';$('ai-restyle-field').hidden=mode==='ai';$('style-field').hidden=mode==='photo'&&!$('ai-restyle').checked;$('drop-zone').hidden=mode==='ai'||!!creator.photo;$('preview-wrap').hidden=mode==='ai'||!creator.photo;$('ai-empty').hidden=mode!=='ai';if(creator.photo&&mode==='photo')$('source-preview').src=creator.photoURL;updateCreator();}
-function openCreator(mode='photo'){if(opening)return;creatorMode(mode);if(!$('create-dialog').open)$('create-dialog').showModal();if(mode==='ai')setTimeout(()=>$('ai-prompt').focus(),100);}
+function openCreator(mode='photo'){if(singlePicturePreview){toast('Photo and AI creations are coming soon. Try An alpine retreat first.');return;}if(opening)return;creatorMode(mode);if(!$('create-dialog').open)$('create-dialog').showModal();if(mode==='ai')setTimeout(()=>$('ai-prompt').focus(),100);}
 function invalidatePreview(){creator.puzzle=null;$('preview-ready').hidden=true;$('conversion-preview').hidden=true;$('source-preview').hidden=false;$('show-original').setAttribute('aria-pressed','true');$('show-converted').setAttribute('aria-pressed','false');}
 function updateCreator(){const ai=creator.mode==='ai'||$('ai-restyle').checked;const can=creator.mode==='photo'?!!creator.photo:!!$('ai-prompt').value.trim();$('create-painting').disabled=creator.busy||!can;$('color-output').textContent=`${$('color-range').value} colors`;$('style-field').hidden=!ai;$('creation-privacy').textContent=ai?'AI creation sends your description and selected photo to OpenAI to make the artwork. Your painting then saves on this device. This can take a few minutes.':'Direct conversion happens on your device. Your photo stays here.';$('create-painting').querySelector('span').textContent=creator.busy?'Making a little magic…':creator.generated?'Update painting preview':ai?'Create my artwork':'Prepare my picture';}
 function creatorBusy(value){creator.busy=value;$('cancel-creation').hidden=!value;for(const id of ['photo-input','ai-prompt','photo-title','color-range','detail-level','ai-restyle','ai-style','replace-photo'])$(id).disabled=value;document.querySelectorAll('[data-create-mode]').forEach(b=>b.disabled=value);updateCreator();}
@@ -232,12 +239,13 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('change',e=>{const key=e.target.dataset.setting;if(key){preferences[key]=e.target.checked;persistPreferences();document.body.classList.toggle('contrast',!!preferences.contrast);paintCanvas.schedule();}});
 $('search').addEventListener('input',renderGallery);
-$('featured-start').onclick=()=>void openPainting(catalog[0].id);$('feature-art').src=artURL(catalog[0]);
+$('featured-start').onclick=()=>void openPainting(previewPaintingId);$('feature-art').src=artURL(catalog[0]);
+if(singlePicturePreview){for(const button of document.querySelectorAll('[data-action="upload"],[data-action="ai"]')){button.disabled=true;button.title='Coming soon';button.setAttribute('aria-label',`${button.getAttribute('aria-label')||button.textContent.trim()} · Coming soon`);}document.querySelector('.create-banner').hidden=true;document.querySelector('.new-tag').textContent='SOON';}
 $('back-library').onclick=()=>void returnToLibrary();$('paint-favorite').onclick=()=>favorite(active.id);
 $('zoom-in').onclick=()=>paintCanvas.zoomAt(paintCanvas.zoom*1.5);$('zoom-out').onclick=()=>paintCanvas.zoomAt(paintCanvas.zoom/1.5);$('zoom-fit').onclick=()=>paintCanvas.fit();
 $('pan-tool').onclick=()=>{paintCanvas.dragMode=!paintCanvas.dragMode;$('pan-tool').setAttribute('aria-pressed',String(paintCanvas.dragMode));$('canvas-stage').classList.toggle('moving',paintCanvas.dragMode);};
 $('undo').onclick=undoFill;$('redo').onclick=redoFill;$('hint').onclick=hint;$('fill-found').onclick=()=>{if(paintCanvas.focused>=0)fillRegion(paintCanvas.focused);};
-$('reference-toggle').onclick=()=>{paintCanvas.reference=!paintCanvas.reference;$('reference-toggle').setAttribute('aria-pressed',String(paintCanvas.reference));$('reference-toggle').textContent=paintCanvas.reference?'Back to my painting':'Peek at the finished picture';$('canvas-stage').classList.toggle('reference',paintCanvas.reference);updatePainting();};
+$('reference-toggle').onclick=()=>{paintCanvas.reference=!paintCanvas.reference;$('reference-toggle').setAttribute('aria-pressed',String(paintCanvas.reference));$('reference-toggle').textContent=paintCanvas.reference?'Back to painting':'Preview';$('canvas-stage').classList.toggle('reference',paintCanvas.reference);updatePainting();};
 $('close-utility').onclick=()=>$('utility-dialog').close();$('close-create').onclick=()=>{cancelCreation();$('create-dialog').close();};$('create-dialog').addEventListener('cancel',cancelCreation);
 $('photo-input').onchange=e=>void choosePhoto(e.target.files[0]);$('replace-photo').onclick=()=>$('photo-input').click();
 for(const event of ['dragenter','dragover'])$('drop-zone').addEventListener(event,e=>{e.preventDefault();$('drop-zone').classList.add('dragging');});
@@ -251,4 +259,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)voi
 window.addEventListener('beforeunload',e=>{if(active&&(!storageOK||dirty)){e.preventDefault();e.returnValue='';}});
 void refreshCards();
 void apiJSON('/config').then(config=>{aiAvailable=!!config.enabled;}).catch(()=>{aiAvailable=null;});
-if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261114-gallery-4').catch(()=>{});});
+if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261115-canvas-1').catch(()=>{});});

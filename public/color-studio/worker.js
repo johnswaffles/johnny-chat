@@ -1,4 +1,4 @@
-import {makePuzzle} from './engine.js?v=20261114-gallery-4';
+import {makePuzzle} from './engine.js?v=20261115-canvas-1';
 self.onmessage = ({data}) => {
   try {
     const puzzle=makePuzzle(new Uint8ClampedArray(data.buffer),data.width,data.height,data.options,(label,progress)=>self.postMessage({label,progress}));

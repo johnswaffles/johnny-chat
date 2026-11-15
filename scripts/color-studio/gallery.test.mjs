@@ -42,11 +42,11 @@ for(const item of manifest)test(`gallery ${item.id}: connected spaces, shared ou
     filled.delete(id);
     const scale=Math.max(2,Math.min(40,32/Math.max(r.radius,1))),side=540/scale;
     const labels=labelPositions(p,filled,{selected:r.color,scale,viewport:{x:r.x-side/2,y:r.y-side/2,width:side,height:side}});
-    assert.ok(labels.some(l=>l.id===id&&l.active&&l.size*scale>=13.99),`region ${id}: final remaining space must have a readable number`);
+    assert.ok(labels.some(l=>l.id===id&&l.active&&l.size*scale>=8&&l.size*scale<=10.001),`region ${id}: final remaining space must have a small readable number at zoom`);
     filled.add(id);
   }
   for(const c of p.boundaries)for(let i=1;i<c.points.length;i++)for(const id of [c.left,c.right])if(id>=0)edge(expected,c.points[i-1],c.points[i],id);
   for(const owners of actual.values())owners.sort();for(const owners of expected.values())owners.sort();
   assert.deepEqual(actual,expected,'fills and shared outlines must use exactly the same border segments');
-  for(let selected=0;selected<p.palette.length;selected++)assert.ok(labelPositions(p,new Set(),{selected,scale:.8}).some(l=>l.active),`color ${selected+1} needs a visible number at fit`);
+  for(let selected=0;selected<p.palette.length;selected++)assert.ok(p.regions.some(r=>r.color===selected),`color ${selected+1} needs actual spaces to shade`);
 });

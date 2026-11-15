@@ -26,25 +26,44 @@ test('hand tool and canceled gestures do not paint, and fit resets the view',()=
   c.zoomAt(10);c.fit();assert.equal(c.zoom,1);assert.deepEqual(c.pan,{x:0,y:0});
 });
 
-test('selected color 3 remains readable in tiny spaces and in a cropped viewport',async()=>{
+test('selected numbers stay small and only appear when there is room inside the region',async()=>{
   const {labelPositions}=await import('../../public/color-studio/canvas.js');
-  const puzzle={width:100,height:100,map:Array(10000).fill(0),regions:[{color:2,x:80.5,y:80.5,radius:.5,labels:[],paths:[[[0,0],[100,0],[100,100],[0,100]]]}]};
-  const labels=labelPositions(puzzle,new Set(),{scale:1,selected:2,viewport:{x:10,y:10,width:35,height:35}});
-  assert.equal(labels.length,1);assert.equal(labels[0].color,2);assert.equal(labels[0].size,14);
-  assert.ok(labels[0].x>10&&labels[0].x<45);assert.ok(labels[0].y>10&&labels[0].y<45);
-  assert.equal(labelPositions(puzzle,new Set([0]),{selected:2}).length,0);
+  const puzzle={width:100,height:100,regions:[{color:2,x:50,y:50,radius:1,labels:[]}]};
+  assert.equal(labelPositions(puzzle,new Set(),{scale:1,selected:2}).length,0);
+  const selected=labelPositions(puzzle,new Set(),{scale:10,selected:2})[0];
+  const ordinary=labelPositions(puzzle,new Set(),{scale:10,selected:1})[0];
+  assert.equal(selected.size,ordinary.size);assert.equal(selected.size*10,10);
+  assert.equal(labelPositions(puzzle,new Set([0]),{scale:10,selected:2}).length,0);
 });
 
-test('selecting an offscreen color brings a matching numbered region into view',()=>{
-  const {instance:c}=canvas();c.puzzle.regions[0].color=2;c.selected=2;c.zoomAt(20);c.pan.x=10000;c.pan.y=10000;
-  assert.equal(c.visibleLabels().length,0);c.revealSelected();
-  assert.ok(c.visibleLabels().some(l=>l.color===2&&l.active));assert.equal(c.focused,0);
+test('tapping beside a selected number fills the actual region, never an enlarged number target',()=>{
+  const {instance:c,painted}=canvas();
+  c.puzzle.regions=[{color:0,x:49,y:50,radius:2},{color:1,x:75,y:50,radius:20}];
+  c.puzzle.map=Array.from({length:10000},(_,i)=>i%100<50?0:1);c.selected=0;
+  const o=c.origin(),s=c.base*c.zoom,x=o.x+50.5*s,y=o.y+50*s;
+  c.down(event(1,x,y));c.up(event(1,x,y));assert.deepEqual(painted,[1]);
 });
 
-test('number badges do not overlap and smaller spaces reveal their numbers when zoomed',async()=>{
+test('nearby small numbers do not overlap and reveal their detail at zoom',async()=>{
   const {labelPositions}=await import('../../public/color-studio/canvas.js');
-  const puzzle={width:100,height:100,map:Array(10000).fill(0),regions:[{color:2,x:40,y:50,radius:3},{color:2,x:45,y:50,radius:1}]};
-  assert.equal(labelPositions(puzzle,new Set(),{selected:2,scale:1}).length,1);
+  const puzzle={width:100,height:100,regions:[{color:2,x:40,y:50,radius:3},{color:2,x:45,y:50,radius:1}]};
+  assert.equal(labelPositions(puzzle,new Set(),{selected:2,scale:1}).length,0);
   assert.equal(labelPositions(puzzle,new Set(),{selected:2,scale:10}).length,2);
-  assert.equal(labelPositions(puzzle,new Set([0]),{selected:2,scale:1})[0].id,1);
+});
+
+test('checker shading uses only unfilled selected shapes and keeps its screen size at zoom',async()=>{
+  const {drawPuzzle}=await import('../../public/color-studio/canvas.js');
+  globalThis.OffscreenCanvas=class{getContext(){return{fillRect(){}};}};
+  const pattern={setTransform(matrix){this.matrix=matrix;}},fills=[],text=[];
+  const ctx={createPattern:()=>pattern,fillRect(){},stroke(){},fill(path,rule){fills.push({path,rule,style:this.fillStyle});},fillText(value){text.push({value,font:this.font});}};
+  const regions=[0,1,2].map((id)=>({color:id===1?1:0,x:20+30*id,y:50,radius:10,paths:[[[0,0],[100,0],[100,100],[0,100]]]}));
+  const p={width:100,height:100,regions,palette:[[20,30,40],[200,220,210]],boundaries:[]};
+  const paths=['selected','other-color','already-filled'];
+  drawPuzzle(ctx,p,new Set([2]),{selected:0,scale:4,paths});
+  assert.equal(fills[0].style,pattern);assert.equal(fills[0].rule,'evenodd');
+  assert.equal(fills[1].style,'#fffefa');assert.equal(fills[2].style,'rgb(20,30,40)');
+  assert.equal(pattern.matrix.a,.25);assert.ok(text.every(t=>t.font.startsWith('400 ')));
+  fills.length=0;drawPuzzle(ctx,p,new Set([2]),{selected:1,scale:8,paths});
+  assert.equal(fills[0].style,'#fffefa');assert.equal(fills[1].style,pattern);assert.equal(pattern.matrix.a,.125);
+  fills.length=0;drawPuzzle(ctx,p,new Set(),{selected:0,reference:true,scale:1,paths});assert.ok(fills.every(f=>f.style!==pattern));
 });
