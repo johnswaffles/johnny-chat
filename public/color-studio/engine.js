@@ -1,5 +1,5 @@
 // Image-to-puzzle pipeline. All image processing runs locally in a Worker.
-function simplifyChain(points,tolerance=.65){
+function simplifyChain(points,tolerance=.9){
   if(points.length<3)return points;
   const a=points[0],b=points.at(-1),dx=b[0]-a[0],dy=b[1]-a[1],length=dx*dx+dy*dy;
   let far=tolerance*tolerance,index=-1,key=Infinity;

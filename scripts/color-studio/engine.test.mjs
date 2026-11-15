@@ -27,6 +27,10 @@ test('transparency is composited onto paper, without inventing black regions',()
   const data=new Uint8ClampedArray(16*16*4),p=makePuzzle(data,16,16,{colors:12});
   assert.deepEqual(p.palette,[[255,255,255]]);assert.equal(p.regions.length,1);
 });
+test('diagonal borders become clean vector edges instead of pixel staircases',()=>{
+  const p=makePuzzle(image(180,180,(x,y)=>x>y?[210,70,35]:[30,90,100]),180,180,{colors:8,minArea:4});
+  assert.equal(p.regions.length,2);for(const r of p.regions)assert.ok(r.paths.flat().length<15,'straight diagonal must not retain hundreds of pixel corners');
+});
 test('backup validation rejects invalid geometry, out-of-range pixels and palettes',()=>{
   const p=makePuzzle(image(10,10,()=>[20,80,70]),10,10,{colors:8});assert.ok(validPuzzle(p));
   for(const broken of [{...p,map:[-1]},{...p,width:10000},{...p,palette:[[NaN,0,0]]},{...p,regions:[{...p.regions[0],paths:[[[NaN,0]]]}]}])assert.equal(validPuzzle(broken),false);
