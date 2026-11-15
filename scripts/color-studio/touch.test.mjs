@@ -38,10 +38,23 @@ test('selected numbers stay small and only appear when there is room inside the 
 
 test('tapping beside a selected number fills the actual region, never an enlarged number target',()=>{
   const {instance:c,painted}=canvas();
-  c.puzzle.regions=[{color:0,x:49,y:50,radius:2},{color:1,x:75,y:50,radius:20}];
-  c.puzzle.map=Array.from({length:10000},(_,i)=>i%100<50?0:1);c.selected=0;
+  c.load({width:100,height:100,regions:[{color:0,x:49,y:50,radius:2,paths:[[[0,0],[50,0],[50,100],[0,100]]]},{color:1,x:75,y:50,radius:20,paths:[[[50,0],[100,0],[100,100],[50,100]]]}],map:Array(10000).fill(0)},new Set());c.selected=0;
   const o=c.origin(),s=c.base*c.zoom,x=o.x+50.5*s,y=o.y+50*s;
   c.down(event(1,x,y));c.up(event(1,x,y));assert.deepEqual(painted,[1]);
+});
+
+test('hold magnifier waits before aiming, permits adjustment without panning, and fills only on lift',t=>{
+  t.mock.timers.enable({apis:['setTimeout']});const {instance:c,painted}=canvas();c.zoomAt(3);const pan={...c.pan};
+  c.down(event(1,300,300));t.mock.timers.tick(349);assert.equal(c.aim,null);t.mock.timers.tick(1);assert.ok(c.aim);assert.deepEqual(painted,[]);
+  c.move(event(1,350,320));assert.deepEqual(c.aim,{x:350,y:320});assert.deepEqual(c.pan,pan);
+  c.up(event(1,350,320));assert.deepEqual(painted,[0]);assert.equal(c.aim,null);
+});
+
+test('a second finger or canceled gesture dismisses the magnifier without filling',t=>{
+  t.mock.timers.enable({apis:['setTimeout']});const {instance:c,painted}=canvas();
+  c.down(event(1,300,300));t.mock.timers.tick(350);assert.ok(c.aim);
+  c.down(event(2,400,300));assert.equal(c.aim,null);c.move(event(2,450,300));c.up(event(2,450,300));c.up(event(1,300,300));assert.deepEqual(painted,[]);
+  c.down(event(3,300,300));t.mock.timers.tick(350);c.cancel(event(3,300,300));c.up(event(3,300,300));assert.deepEqual(painted,[]);
 });
 
 test('nearby small numbers do not overlap and reveal their detail at zoom',async()=>{

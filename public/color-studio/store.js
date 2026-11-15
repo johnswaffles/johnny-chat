@@ -15,6 +15,16 @@ export async function savePainting(record){
     tx.objectStore('cards').put({id,title,category,thumbnail,updated,custom,total:puzzle.regions.length,done:filled.length});
   });
 }
+export async function saveUpgrade(previous,updated){
+  const archive={...previous,id:updated.previousEditionId,title:`${previous.title} · previous edition`,custom:false,archived:true};
+  return transact(['paintings','cards'],'readwrite',tx=>{
+    for(const record of [archive,updated]){
+      tx.objectStore('paintings').put(record);
+      const {id,title,category,thumbnail,updated,custom,filled,puzzle}=record;
+      tx.objectStore('cards').put({id,title,category,thumbnail,updated,custom,archived:!!record.archived,total:puzzle.regions.length,done:filled.length});
+    }
+  });
+}
 export const deletePainting=id=>transact(['paintings','cards'],'readwrite',tx=>{tx.objectStore('paintings').delete(id);tx.objectStore('cards').delete(id);});
 export function readPreferences(){try{return JSON.parse(localStorage.getItem('color-studio-preferences')||'{}');}catch{return {};}}
 export function writePreferences(p){localStorage.setItem('color-studio-preferences',JSON.stringify(p));}

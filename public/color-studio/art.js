@@ -8,8 +8,8 @@ export const catalog=[
     "difficulty": "Intricate",
     "source": "./art/alpine-retreat-v2.webp",
     "preview": "./art/alpine-retreat-v2-thumb.webp",
-    "puzzleSource": "./puzzles/alpine-retreat-v2.json",
-    "edition": 3
+    "puzzleSource": "./puzzles/alpine-retreat-v5.json",
+    "edition": 5
   },
   {
     "id": "fox-stream-v3",

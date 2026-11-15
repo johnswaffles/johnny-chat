@@ -24,7 +24,7 @@ function contains(region,x,y){
   return inside;
 }
 for(const item of manifest)test(`gallery ${item.id}: connected spaces, shared outlines and every number reachable`,async()=>{
-  const p=JSON.parse(await readFile(new URL(item.id+'.json',base),'utf8'));
+  const p=JSON.parse(await readFile(new URL('../../public/color-studio/'+catalog.find(a=>a.id===item.id).puzzleSource,import.meta.url),'utf8'));
   assert.ok(validPuzzle(p));assert.ok(p.palette.length>=24&&p.palette.length<=32);assert.ok(p.regions.length>=300&&p.regions.length<=1900);
   const sizes=new Uint32Array(p.regions.length),starts=new Int32Array(p.regions.length).fill(-1),seen=new Uint8Array(p.map.length),queue=new Int32Array(p.map.length);
   p.map.forEach((id,i)=>{sizes[id]++;starts[id]=i;});
