@@ -70,5 +70,6 @@ export const catalog=[
   ['sunwheel','The sun collector','Patterns','mandala',0,'A warm geometric sun mandala'],
   ['rose-harbor','Rosewater harbor','Landscapes','coast',2,'A peaceful pink coastal scene'],
 ].map(([id,title,category,type,p,description],i)=>({id,title,category,type,p,description,seed:i,difficulty:i%3===0?'Relaxed':i%3===1?'Detailed':'Balanced'}));
+catalog.splice(1,0,{id:'fox-stream',title:'Fox beside the golden stream',category:'Animals',description:'A resting red fox among wildflowers beside a wooden bridge and mountain stream',difficulty:'Intricate',source:'./art/fox-stream.png',colors:32,resolution:540,minArea:16});
 export function artwork(item){const p=palettes[item.p];return `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">${types[item.type](p,item.seed)}</svg>`;}
-export const artURL=item=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(artwork(item));
+export const artURL=item=>item.source||'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(artwork(item));

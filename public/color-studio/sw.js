@@ -1,5 +1,5 @@
-const CACHE='johnny-color-studio-v1';
-const FILES=['./','./index.html','./style.css','./app.js','./art.js','./engine.js','./worker.js','./canvas.js','./store.js','./icon.svg','./manifest.webmanifest'];
+const CACHE='johnny-color-studio-v2';
+const FILES=['./','./index.html','./style.css','./app.js','./art.js','./engine.js','./worker.js','./canvas.js','./store.js','./icon.svg','./manifest.webmanifest','./art/fox-stream.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('johnny-color-studio-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.method!=='GET'||url.origin!==location.origin||!url.pathname.startsWith('/color-studio/')||url.pathname.includes('/api/'))return;event.respondWith(fetch(event.request).then(response=>{if(response.ok){const copy=response.clone();void caches.open(CACHE).then(cache=>cache.put(event.request,copy));}return response;}).catch(()=>caches.match(event.request).then(cached=>cached||Response.error())));});

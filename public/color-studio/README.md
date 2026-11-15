@@ -4,7 +4,7 @@ A standalone, touch-friendly color-by-number game at `/color-studio/`, linked fr
 
 ## Painting
 
-- Sixteen original vector illustrations across landscapes, botanical, animals, and patterns.
+- Seventeen starter pictures: sixteen original vector illustrations across landscapes, botanical, animals, and patterns, plus a detailed fox-and-wildflower scene from the verified live Astra/Sunburst workflow.
 - Connected numbered regions, adaptive labels, selected-color highlighting, progress, favorites, undo/redo, hints, reference preview, auto-advance, optional sound, and contrast settings.
 - Pinch zoom up to 40×, two-finger pan, mouse wheel, double tap, zoom/fit buttons, and hand tool. A pinch or pan cannot fill a region.
 - Keyboard painting through Find an area and Fill found area; H, +/−, 0, and standard undo/redo shortcuts.

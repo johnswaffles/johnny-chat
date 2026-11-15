@@ -67,7 +67,7 @@ async function openPainting(id){
   if(opening)return;opening=true;
   try{
     let record;try{record=await getPainting(id);}catch{storageOK=false;}
-    if(!record){const art=catalog.find(a=>a.id===id);if(!art)throw new Error('This picture could not be found.');toast('Laying out your colors…');const image=await loadImage(artURL(art));const puzzle=await convert(image,{colors:24,resolution:420,minArea:24,maxRegions:1500},label=>{$('toast').textContent=label+'…';});record={id:art.id,title:art.title,category:art.category,puzzle,filled:[],custom:false,thumbnail:artURL(art),updated:Date.now()};}
+    if(!record){const art=catalog.find(a=>a.id===id);if(!art)throw new Error('This picture could not be found.');toast('Laying out your colors…');const image=await loadImage(artURL(art));const puzzle=await convert(image,{colors:art.colors||24,resolution:art.resolution||420,minArea:art.minArea||24,maxRegions:2200},label=>{$('toast').textContent=label+'…';});record={id:art.id,title:art.title,category:art.category,puzzle,filled:[],custom:false,thumbnail:artURL(art),updated:Date.now()};}
     activatePainting(record);
   }catch(error){toast(error.message);}finally{opening=false;}
 }
