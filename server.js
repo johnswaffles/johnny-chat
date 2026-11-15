@@ -1,4 +1,5 @@
 import {bibleModelRequest,MANAGED_BIBLE_INSTRUCTIONS} from './lib/managed-story-bible.mjs';
+import {installColorStudio} from './lib/color-studio.mjs';
 import {createRealtimeNarrator,narrationIdentity} from './lib/story-realtime-speech.mjs';
 import {narrationOptions} from './public/story-editor/narration-model.mjs';
 import {BOOK_CANON_INSTRUCTIONS} from './lib/book-drafts.mjs';
@@ -1583,6 +1584,7 @@ app.post("/api/realtime-token", async (req, res) => {
 });
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY || "sk-dummy" });
+installColorStudio(app,{openai,enabled:!!OPENAI_API_KEY,clientKey:getRequestClientKey,recordUsage:recordJohnnyChatUsage});
 const storyResponses = createStoryResponses({path:STORY_EDITOR_DB_PATH,client:openai.responses,guard:db=>assertStoryLease(db)});
 
 // Allow iframe embedding from any origin

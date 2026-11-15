@@ -33,3 +33,10 @@
 
 /last-star/style.css
   Cache-Control: no-cache
+
+/color-studio/*
+  Cache-Control: no-cache
+
+/color-studio/sw.js
+  Service-Worker-Allowed: /color-studio/
+  Cache-Control: no-store
