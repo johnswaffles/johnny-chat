@@ -1,6 +1,6 @@
 # Color Studio
 
-A standalone, touch-friendly color-by-number game at `/color-studio/`, linked from the home page’s arcade. Built with browser modules, Canvas 2D, a processing Worker, IndexedDB, and a scoped service worker. No frontend build or new dependency is required.
+A standalone, touch-friendly color-by-number game at `/color-studio/`, linked from the home page’s arcade. Built with browser modules, Canvas 2D, a processing Worker, IndexedDB, and a scoped service worker. No frontend build or runtime dependency is required. IndexedDB regression tests use the development-only fake-indexeddb package.
 
 ## Painting
 
@@ -12,10 +12,12 @@ The current single-picture preview enables **An alpine retreat** only. Other pic
 - Existing alpine paintings upgrade by overlap with the new regions (at least half a new region already painted). The complete previous record is saved atomically before the upgrade and can be downloaded from Painting settings. Offline or failed upgrades keep the original painting usable.
 - Hold on the canvas for 350 ms to open a 2.5× vector magnifier, slide to aim and lift to paint. Panning before the hold, adding a second finger, or canceling the gesture dismisses it without filling. It can be disabled in Settings.
 - The canvas uses the full viewport width above a horizontally scrolling bottom palette in both iPad orientations. There is no side palette or oversized number hit target. Completing a color selects the next unfinished color without moving the canvas; only an explicit hint moves to a region. Undo and redo keep the selection and checkered areas in sync.
+- Zoom, painting position, undo and redo survive reopening. Rotation keeps the same painting point centered where pan limits allow. History is validated on load; a geometry upgrade clears region-specific history while keeping the old edition archived.
+- Quick taps on separate neighboring shapes paint independently; double-tap zoom requires the same shape (or empty canvas).
 - Pinch zoom up to 40×, two-finger pan, mouse wheel, double tap, zoom/fit buttons, and hand tool. A pinch or pan cannot fill a region.
 - Keyboard painting through Find an area and Fill found area; H, +/−, 0, and standard undo/redo shortcuts.
 - Local photographs: aspect-preserving conversion, 8–48 requested colors, four detail presets, denoising, connected-component segmentation, merging of tiny regions, shared-edge simplification, and number anchors verified against the actual rendered polygon. Palette count may be lower for photographs with fewer distinct colors.
-- IndexedDB saves and per-picture thumbnails. Older paintings receive the outline/label repair. The alpine edition uses the backed-up upgrade described above. Replacement art uses new IDs; older saved editions remain in My studio and favorites also point to the new edition. Favorites/preferences use localStorage. Saving errors are shown, and unsaved work prompts before leaving.
+- IndexedDB v2 keeps artwork separate from small progress updates. A transactional artwork revision prevents mismatched geometry across tabs; old v1 records migrate without deleting their data. Gallery thumbnails reuse cached vector paths and only redraw when colored regions change. Complete backups still contain both artwork and progress. Older paintings receive the outline/label repair. The alpine edition uses the backed-up upgrade described above. Replacement art uses new IDs; older saved editions remain in My studio and favorites also point to the new edition. Favorites/preferences use localStorage. Saving errors are shown, and unsaved work prompts before leaving.
 - 2,400-pixel PNG exports, printable numbered SVG with palette key, and JSON painting/studio backups. Restore validates all paintings before writing, combines compatible progress, and keeps conflicting puzzles as separate copies.
 - The studio shell, gallery thumbnails, previously opened paintings, and local photo conversion work offline. New built-in canvases need one online visit. AI requires a connection. No cloud account/synchronization is provided; backups transfer work between devices.
 
@@ -40,7 +42,7 @@ node --test scripts/color-studio/*.test.mjs
 npm run build:pages
 ```
 
-Tests exercise image topology, coverage, label placement, noise merging, deterministic conversion, backup validation, pinch/pan/tap semantics, API request models/quality, asynchronous generation, image edits, refusal, bad uploads, cancellation, and rate limiting. Provider calls in automated tests are mocked. Live paid generation is a separate release check.
+Tests exercise save migration, failed-write rollback, portable backups, persistent view/history, neighboring rapid taps, image topology, coverage, label placement, noise merging, deterministic conversion, backup validation, pinch/pan/tap semantics, API request models/quality, asynchronous generation, image edits, refusal, bad uploads, cancellation, and rate limiting. Provider calls in automated tests are mocked. Live paid generation is a separate release check.
 
 ## Product reference
 

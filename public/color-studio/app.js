@@ -1,20 +1,20 @@
-import {catalog,artURL,thumbnailURL} from './art.js?v=20261115-alpine-3';
-import {PaintingCanvas,previewURL,drawPuzzle,rgb,svgCommands} from './canvas.js?v=20261115-alpine-3';
-import {getPainting,listCards,savePainting,saveUpgrade,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261115-alpine-3';
-import {validPuzzle,repairGeometry} from './engine.js?v=20261115-alpine-3';
-import {singlePicturePreview,previewPaintingId,isPaintingAvailable,nextUnfinishedColor,upgradePainting} from './experience.js?v=20261115-alpine-3';
+import {catalog,artURL,thumbnailURL} from './art.js?v=20261115-flow-1';
+import {PaintingCanvas,previewURL,drawPuzzle,rgb,svgCommands} from './canvas.js?v=20261115-flow-1';
+import {getPainting,listCards,savePainting,saveUpgrade,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261115-flow-1';
+import {validPuzzle,repairGeometry} from './engine.js?v=20261115-flow-1';
+import {singlePicturePreview,previewPaintingId,isPaintingAvailable,nextUnfinishedColor,upgradePainting,paintingHistory} from './experience.js?v=20261115-flow-1';
 
 const $=id=>document.getElementById(id),icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const preferences={autoAdvance:true,highlight:true,numbers:true,magnifier:true,contrast:false,sound:false,...readPreferences()};
 // Enable the new guided experience once, then continue respecting saved settings.
 if(preferences.checkerExperience!==1){preferences.autoAdvance=true;preferences.highlight=true;preferences.checkerExperience=1;}
-let favorites=new Set(Array.isArray(preferences.favorites)?preferences.favorites:[]),cards=[],view='discover',filter='All pictures',active=null,filled=new Set(),selected=0,history=[],redo=[],saveTimer,saveChain=Promise.resolve(),toastTimer,opening=false,storageOK=true,completedShown=false,dirty=false,saveRevision=0;
+let favorites=new Set(Array.isArray(preferences.favorites)?preferences.favorites:[]),cards=[],view='discover',filter='All pictures',active=null,filled=new Set(),selected=0,history=[],redo=[],saveTimer,saveChain=Promise.resolve(),toastTimer,opening=false,storageOK=true,completedShown=false,dirty=false,saveRevision=0,thumbnailKey=null;
 for(const art of catalog)if(art.legacyId&&favorites.has(art.legacyId))favorites.add(art.id);
 const apiBase=String(window.JOHNNY_CHAT_API_BASE_URL||(['localhost','127.0.0.1'].includes(location.hostname)?location.origin:'https://johnny-chat.onrender.com')).replace(/\/+$/,'');
 const api=path=>`${apiBase}/api/color-studio${path}`;
 let aiAvailable=null;
-const paintCanvas=new PaintingCanvas($('painting'),{paint:fillRegion,preferences,onZoom:z=>$('zoom-label').textContent=`${Math.round(z*100)}%`,onFocus:()=>{$('fill-found').hidden=false;},onAim:aiming=>$('canvas-note').textContent=aiming?'Move to aim. Lift to color.':'Pinch to explore · Hold for a magnifier'});
+const paintCanvas=new PaintingCanvas($('painting'),{paint:fillRegion,preferences,onViewChange:()=>{if(!$('paint-view').hidden)queueSave();},onZoom:z=>$('zoom-label').textContent=`${Math.round(z*100)}%`,onFocus:()=>{$('fill-found').hidden=false;},onAim:aiming=>$('canvas-note').textContent=aiming?'Move to aim. Lift to color.':'Pinch to explore · Hold for a magnifier'});
 document.body.classList.toggle('contrast',!!preferences.contrast);
 
 function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4200);}
@@ -57,7 +57,7 @@ function renderGallery(){
 
 function convert(image,options,onProgress){
   return new Promise((resolve,reject)=>{
-    const worker=new Worker(new URL('./worker.js?v=20261115-alpine-3',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
+    const worker=new Worker(new URL('./worker.js?v=20261115-flow-1',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
     const max=options.resolution||360,scale=max/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height),c=document.createElement('canvas');
     c.width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale));c.height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale));
     const ctx=c.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(image,0,0,c.width,c.height);const data=ctx.getImageData(0,0,c.width,c.height);
@@ -71,7 +71,7 @@ async function openPainting(id){
   if(!isPaintingAvailable(id)){toast('This picture is coming soon. An alpine retreat is ready to color.');return;}
   if(opening)return;opening=true;
   try{
-    let record;try{record=await getPainting(id);}catch{storageOK=false;}
+    let record;try{record=await getPainting(id);}catch(error){storageOK=false;if(error.name==='StorageBlockedError')throw error;}
     const art=catalog.find(a=>a.id===id);let upgradeNotice='';
     if(record&&art&&art.edition>(record.edition||0)){
       try{const response=await fetch(art.puzzleSource);if(!response.ok)throw new Error('Offline');const puzzle=await response.json();if(!validPuzzle(puzzle))throw new Error('Invalid canvas');const upgraded=upgradePainting(record,puzzle,art.edition);upgraded.thumbnail=previewURL(puzzle,new Set(upgraded.filled),false,260);await saveUpgrade(record,upgraded);record=upgraded;upgradeNotice='Smoother alpine canvas ready. Your previous painting is backed up in Settings.';}
@@ -90,9 +90,9 @@ async function openPainting(id){
 }
 function activatePainting(record){
   if(!record.puzzle.geometryVersion||record.puzzle.geometryVersion<3)repairGeometry(record.puzzle);
-  active=record;filled=new Set(record.filled||[]);selected=Math.max(0,Math.min(record.puzzle.palette.length-1,record.selected||0));history=[];redo=[];completedShown=filled.size===record.puzzle.regions.length;
+  active=record;filled=new Set(record.filled||[]);selected=Math.max(0,Math.min(record.puzzle.palette.length-1,record.selected||0));({history,redo}=paintingHistory(record));thumbnailKey=null;completedShown=filled.size===record.puzzle.regions.length;
   $('library-view').hidden=true;$('paint-view').hidden=false;document.body.style.overflow='hidden';$('painting-title').textContent=record.title;$('save-status').textContent=storageOK?'Saving on this device…':'Saving unavailable · export a backup';
-  paintCanvas.load(record.puzzle,filled);paintCanvas.selected=selected;$('reference-toggle').setAttribute('aria-pressed','false');$('reference-toggle').textContent='Preview';$('canvas-stage').classList.remove('reference');$('fill-found').hidden=true;
+  paintCanvas.load(record.puzzle,filled,record.view);paintCanvas.selected=selected;$('reference-toggle').setAttribute('aria-pressed','false');$('reference-toggle').textContent='Preview';$('canvas-stage').classList.remove('reference');$('fill-found').hidden=true;
   $('canvas-note').textContent='Find the checkered spaces · Pinch to zoom · Hold to magnify';paintCanvas.dragMode=false;$('pan-tool').setAttribute('aria-pressed','false');$('canvas-stage').classList.remove('moving');
   const {remaining}=counts();if(!remaining[selected])selected=nextUnfinishedColor(remaining,selected);paintCanvas.selected=selected;
   updateFavorite();updatePainting();queueSave();scrollSelectedColor();$('painting').focus({preventScroll:true});clearTimeout(toastTimer);$('toast').hidden=true;
@@ -128,8 +128,9 @@ function hint(){if(!active||paintCanvas.reference)return;let candidates=active.p
 function queueSave(){clearTimeout(saveTimer);if(!active)return;dirty=true;saveRevision++;$('save-status').textContent='Saving…';saveTimer=setTimeout(()=>void saveNow(),350);}
 async function saveNow(){
   clearTimeout(saveTimer);if(!active)return;
-  const revision=saveRevision,record={...active,filled:[...filled],selected,updated:Date.now()};
-  record.thumbnail=previewURL(record.puzzle,filled,false,260);active=record;
+  const revision=saveRevision,record={...active,filled:[...filled],selected,history:history.map(c=>({...c})),redo:redo.map(c=>({...c})),view:paintCanvas.viewState(),updated:Date.now()};
+  const nextThumbnailKey=record.filled.join(',');
+  if(thumbnailKey!==nextThumbnailKey){record.thumbnail=previewURL(record.puzzle,filled,false,260,{paths:paintCanvas.paths,outline:paintCanvas.outline});thumbnailKey=nextThumbnailKey;}active=record;
   saveChain=saveChain.catch(()=>{}).then(()=>savePainting(record));
   try{await saveChain;storageOK=true;if(active?.id===record.id&&revision===saveRevision){dirty=false;$('save-status').textContent='✓ Saved on this device';}const c={id:record.id,title:record.title,category:record.category,custom:record.custom,thumbnail:record.thumbnail,updated:record.updated,total:record.puzzle.regions.length,done:record.filled.length};cards=[...cards.filter(a=>a.id!==record.id),c];}
   catch{storageOK=false;$('save-status').textContent='Saving unavailable · export a backup';toast('Your browser could not save this painting. Export a backup before leaving.');}
@@ -164,7 +165,7 @@ async function restoreBackup(file){
     const data=JSON.parse(await file.text());if(data.format!=='johnny-color-studio'||data.version!==1||!Array.isArray(data.paintings)||data.paintings.length>100)throw new Error('This file is not a supported Color Studio backup.');
     for(const r of data.paintings){if(!r||typeof r.id!=='string'||r.id.length>100||typeof r.title!=='string'||r.title.length>160||!validPuzzle(r.puzzle)||!Array.isArray(r.filled)||r.filled.some(id=>!Number.isInteger(id)||id<0||id>=r.puzzle.regions.length))throw new Error('The backup contains a painting that cannot be read.');}
     await saveNow();
-    for(const r of data.paintings){repairGeometry(r.puzzle);const existing=await getPainting(r.id);if(existing)repairGeometry(existing.puzzle);const conflict=existing&&JSON.stringify(existing.puzzle)!==JSON.stringify(r.puzzle),id=conflict?`custom-${crypto.randomUUID()}`:r.id;const merged={id,puzzle:r.puzzle,custom:conflict||!catalog.some(a=>a.id===id),title:r.title,category:r.category==='AI creations'?'AI creations':catalog.find(a=>a.id===id)?.category||'My photos',filled:[...new Set([...(conflict?[]:existing?.filled||[]),...r.filled])],edition:Number.isInteger(r.edition)?r.edition:0,previousEditionId:typeof r.previousEditionId==='string'?r.previousEditionId:undefined,selected:0,updated:Date.now()};merged.thumbnail=previewURL(merged.puzzle,new Set(merged.filled),false,260);await savePainting(merged);}
+    for(const r of data.paintings){repairGeometry(r.puzzle);const existing=await getPainting(r.id);if(existing)repairGeometry(existing.puzzle);const conflict=existing&&JSON.stringify(existing.puzzle)!==JSON.stringify(r.puzzle),id=conflict?`custom-${crypto.randomUUID()}`:r.id;const merged={id,puzzle:r.puzzle,custom:conflict||!catalog.some(a=>a.id===id),title:r.title,category:r.category==='AI creations'?'AI creations':catalog.find(a=>a.id===id)?.category||'My photos',filled:[...new Set([...(conflict?[]:existing?.filled||[]),...r.filled])],edition:Number.isInteger(r.edition)?r.edition:0,view:(conflict?null:existing)?.view||r.view,history:(conflict?null:existing)?.history||r.history,redo:(conflict?null:existing)?.redo||r.redo,previousEditionId:typeof r.previousEditionId==='string'?r.previousEditionId:undefined,selected:0,updated:Date.now()};merged.thumbnail=previewURL(merged.puzzle,new Set(merged.filled),false,260);await savePainting(merged);}
     if(Array.isArray(data.preferences?.favorites))for(const id of data.preferences.favorites)if(typeof id==='string')favorites.add(id);persistPreferences();await refreshCards();
     if(active){const restored=await getPainting(active.id);if(restored)activatePainting(restored);}
     $('utility-dialog').close();setView('studio');toast(`${data.paintings.length} painting${data.paintings.length===1?'':'s'} restored. Welcome back.`);
@@ -266,4 +267,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)voi
 window.addEventListener('beforeunload',e=>{if(active&&(!storageOK||dirty)){e.preventDefault();e.returnValue='';}});
 void refreshCards();
 void apiJSON('/config').then(config=>{aiAvailable=!!config.enabled;}).catch(()=>{aiAvailable=null;});
-if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261115-alpine-3').catch(()=>{});});
+if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261115-flow-1').catch(()=>{});});

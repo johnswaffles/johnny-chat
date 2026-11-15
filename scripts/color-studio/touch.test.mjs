@@ -80,3 +80,38 @@ test('checker shading uses only unfilled selected shapes and keeps its screen si
   assert.equal(fills[0].style,'#fffefa');assert.equal(fills[1].style,pattern);assert.equal(pattern.matrix.a,.125);
   fills.length=0;drawPuzzle(ctx,p,new Set(),{selected:0,reference:true,scale:1,paths});assert.ok(fills.every(f=>f.style!==pattern));
 });
+
+test('quick taps on neighboring regions both paint without an accidental double-tap zoom',()=>{
+  const {instance:c,painted}=canvas();
+  c.load({width:100,height:100,regions:[{color:0,paths:[[[0,0],[50,0],[50,100],[0,100]]]},{color:0,paths:[[[50,0],[100,0],[100,100],[50,100]]]}]},new Set());
+  for(const x of [294,306]){c.down(event(1,x,300));c.up(event(1,x,300));c.cancel(event(1,x,300));}
+  assert.deepEqual(painted,[0,1]);assert.equal(c.zoom,1);
+});
+
+test('double-tap still zooms on the same region, including normal capture release',()=>{
+  const {instance:c,painted}=canvas();
+  for(let i=0;i<2;i++){c.down(event(1,300,300));c.up(event(1,300,300));c.cancel(event(1,300,300));}
+  assert.equal(c.zoom,2.5);assert.deepEqual(painted,[0]);
+});
+
+test('a canceled gesture clears the previous tap instead of triggering a later zoom',()=>{
+  const {instance:c,painted}=canvas();
+  c.down(event(1,300,300));c.up(event(1,300,300));
+  c.down(event(2,300,300));c.cancel(event(2,300,300));
+  c.down(event(3,300,300));c.up(event(3,300,300));assert.equal(c.zoom,1);assert.equal(painted.length,2);
+});
+
+test('reopening and rotating preserve the zoom and painting point at the center',()=>{
+  const {instance:c}=canvas();c.zoomAt(6,{x:370,y:350});const view=c.viewState(),puzzle=c.puzzle;
+  c.canvas.getBoundingClientRect=()=>({left:0,top:0,width:1180,height:820});c.resize();
+  for(const key of ['zoom','x','y'])assert.ok(Math.abs(c.viewState()[key]-view[key])<1e-10);
+  c.load(puzzle,new Set(),view);
+  for(const key of ['zoom','x','y'])assert.ok(Math.abs(c.viewState()[key]-view[key])<1e-10);
+  c.fit();assert.deepEqual(c.viewState(),{zoom:1,x:.5,y:.5});
+});
+
+test('invalid saved views fit safely and loading a second painting resets gesture memory',()=>{
+  const {instance:c,painted}=canvas();c.down(event(1,300,300));c.up(event(1,300,300));
+  c.load(c.puzzle,new Set(),{zoom:Infinity,x:NaN,y:1});assert.deepEqual(c.viewState(),{zoom:1,x:.5,y:.5});
+  c.down(event(1,300,300));c.up(event(1,300,300));assert.equal(c.zoom,1);assert.equal(painted.length,2);
+});

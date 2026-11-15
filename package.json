@@ -23,5 +23,8 @@
     "openai": "^4.58.1",
     "pdfjs-dist": "^5.4.530",
     "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5"
   }
 }
