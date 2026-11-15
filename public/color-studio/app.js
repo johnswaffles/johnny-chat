@@ -1,7 +1,7 @@
-import {catalog,artURL} from './art.js';
-import {PaintingCanvas,previewURL,drawPuzzle,rgb} from './canvas.js';
-import {getPainting,listCards,savePainting,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js';
-import {validPuzzle} from './engine.js';
+import {catalog,artURL} from './art.js?v=20261114-atelier-2';
+import {PaintingCanvas,previewURL,drawPuzzle,rgb} from './canvas.js?v=20261114-atelier-2';
+import {getPainting,listCards,savePainting,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261114-atelier-2';
+import {validPuzzle} from './engine.js?v=20261114-atelier-2';
 
 const $=id=>document.getElementById(id),icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -53,7 +53,7 @@ function renderGallery(){
 
 function convert(image,options,onProgress){
   return new Promise((resolve,reject)=>{
-    const worker=new Worker(new URL('./worker.js',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
+    const worker=new Worker(new URL('./worker.js?v=20261114-atelier-2',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
     const max=options.resolution||360,scale=max/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height),c=document.createElement('canvas');
     c.width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale));c.height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale));
     const ctx=c.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(image,0,0,c.width,c.height);const data=ctx.getImageData(0,0,c.width,c.height);
@@ -242,4 +242,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)voi
 window.addEventListener('beforeunload',e=>{if(active&&(!storageOK||dirty)){e.preventDefault();e.returnValue='';}});
 void refreshCards();
 void apiJSON('/config').then(config=>{aiAvailable=!!config.enabled;}).catch(()=>{aiAvailable=null;});
-if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js').catch(()=>{});});
+if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261114-atelier-2').catch(()=>{});});
