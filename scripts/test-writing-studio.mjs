@@ -65,7 +65,7 @@ test('layered maximum-quality editing checkpoints passes and explicit retry resu
  const {studio,request,db}=fixture(t,editor);studio.start('book',request());await studio.tick();assert.equal(studio.task('book','request-1').status,'failed');assert.equal(db.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,2);assert.equal(studio.snapshot('book').versions.length,0);
  studio.start('book',{...request(),retry:true});await studio.tick();assert.equal(studio.task('book','request-1').status,'done');
  assert.deepEqual(calls.map(c=>c.text.format.name),['writing_studio_turn','studio_draft','studio_critique','studio_critique','studio_final']);
- for(const c of calls){assert.equal(c.model,'gpt-6.1-sol');assert.deepEqual(c.reasoning,{effort:'xhigh',mode:'pro'});assert.ok(c.max_output_tokens>=32768);}
+ for(const c of calls){assert.equal(c.model,'gpt-6.2-astra');assert.deepEqual(c.reasoning,{effort:'xhigh',mode:'pro'});assert.ok(c.max_output_tokens>=32768);}
  assert.equal(studio.snapshot('book').versions.length,1);assert.equal(studio.task('book','request-1').result.quality.mode,'pro');
 });
 test('a restart retains completed work and marks an expired running task failed without regenerating',async t=>{
@@ -110,7 +110,7 @@ test('long-book reading uses source hashes and reuses unchanged continuity notes
  let reads=0;const formats=[];
  const editor=createLayeredStudioEditor({decisionFormat:STUDIO_FORMAT,instructions:STUDIO_INSTRUCTIONS,call:async request=>{
   const name=request.text.format.name;formats.push(name);
-  if(name==='studio_source_ledger'){reads++;return {events:['A source-grounded event.'],characters:['Mara has a conflicting desire.'],openThreads:[],voice:'Quiet, specific.'};}
+  if(name==='studio_source_ledger'){reads++;return {events:['A source-grounded event.'],characters:['Mara has a conflicting desire.'],openThreads:[],voice:'Quiet, specific.',craft:['[Chapter 1, passage 1] The delayed arrival creates tension.']};}
   return {...result(),action:'discuss',reply:'The hesitation needs a concrete competing desire.'};
  }});
  const {studio,db,request}=fixture(t,editor);db.prepare("UPDATE story_sections SET original_text=? WHERE id='c'").run('A source sentence. '.repeat(30000));
@@ -150,7 +150,7 @@ test('whole-manuscript scope rejects a model that tries to overwrite only the se
 });
 test('book proposals use one maximum-quality planning call and cannot trigger downstream prose passes',async()=>{
  const calls=[];const editor=createLayeredStudioEditor({instructions:STUDIO_INSTRUCTIONS,decisionFormat:STUDIO_FORMAT,call:async body=>{calls.push(body);return {...result(),action:'revise_book'};}});
- const output=await editor({requestScope:'book'},new AbortController().signal);assert.equal(output.action,'revise_book');assert.equal(calls.length,1);assert.equal(calls[0].model,'gpt-6.1-sol');assert.deepEqual(calls[0].reasoning,{effort:'xhigh',mode:'pro'});
+ const output=await editor({requestScope:'book'},new AbortController().signal);assert.equal(output.action,'revise_book');assert.equal(calls.length,1);assert.equal(calls[0].model,'gpt-6.2-astra');assert.deepEqual(calls[0].reasoning,{effort:'xhigh',mode:'pro'});
  const broken=createLayeredStudioEditor({instructions:STUDIO_INSTRUCTIONS,decisionFormat:STUDIO_FORMAT,call:async()=>result()});await assert.rejects(broken({requestScope:'book'},new AbortController().signal),/whole-manuscript/);
 });
 

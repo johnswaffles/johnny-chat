@@ -319,3 +319,10 @@
   .managed-bible-dialog .dialog-head h2 { font-size: 1.7rem; }
   .managed-bible-dialog .dialog-actions button { width: 100%; min-height: 44px; }
 }
+
+#import-order p { margin: .25rem 0; }
+#chapter-file-list { padding-left: 1.8rem; max-height: 14rem; overflow-y: auto; }
+#chapter-file-list li { margin: .3rem 0; padding-inline: .2rem; }
+#chapter-file-list li span { display: inline-block; width: calc(100% - 7rem); overflow-wrap: anywhere; vertical-align: middle; }
+#chapter-file-list button { margin-inline-start: .2rem; min-width: 2rem; min-height: 2rem; }
+#import-title-field input { width: 100%; padding: .5rem; font: inherit; }

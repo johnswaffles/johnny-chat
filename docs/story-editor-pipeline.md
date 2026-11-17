@@ -196,7 +196,7 @@ immutable original are separate tabs; a studio edit creates a recoverable versio
 and Undo uses an optimistic revision check. Original exports retain their original
 snapshot. The full-edit report is labelled separately from later studio changes.
 
-Literary editing is pinned to `gpt-6.1-sol`, reasoning `xhigh` (Extra High), mode `pro`.
+Literary editing is pinned to `gpt-6.2-astra`, reasoning `xhigh` (Extra High), mode `pro`.
 The Realtime voice model handles conversation and tools; it must delegate prose
 writing and substantive creative analysis to the deep editor. No smaller model or
 lower reasoning fallback is permitted. A passage revision has four checkpointed
@@ -336,7 +336,7 @@ text and mocked providers. Release marker: start-over-preserve-library-v1.
 
 ## Editorial model selection (October 24, after the completed run)
 
-The chosen literary configuration is GPT-6.1 Sol / Extra High / Pro. One shared
+The chosen literary configuration is GPT-6.2 Astra / Extra High / Pro. One shared
 constant governs whole-manuscript reading, planning, revision, polish and review,
 and the studio's planning, drafting, critique and refinement. Other app models,
 voice and narration are unchanged. New stage-cache keys include the model, effort
@@ -528,14 +528,12 @@ Folders retain expansion across redraws, and a validated tab-scoped chapter/vers
 selection restores without generation. Large desktops retain the rail; smaller
 screens use the existing Library drawer and generous touch targets.
 
-Add chapter/file uses the existing import endpoint to create a separate upload,
-not replace or append to an existing immutable original. In this explicit add mode,
-import never starts Autopilot. If the current file is linked to a book, the new file
-is linked for continuity using the existing book-link endpoint. A busy book may
-reject linking; the imported file still stays safe in the library and can be
-connected later. Approval into assembled book order still requires Save chapter.
-A failed import retains add-only retry mode, and repeated submits are single-flight.
-Normal initial file-and-prompt revision remains unchanged.
+The importer accepts a manuscript or a batch of chapter files. The author can order
+files before importing, append a batch to the open manuscript, or assemble current
+working drafts from the library into a new project. Batch inserts and retry receipts
+share one transaction. The author can choose to start revision after a new import.
+Whole-manuscript review runs as a discussion. Large drafts use cached reading notes
+with chapter and passage references for continuity and literary craft.
 
 Unsent conversation, notes and editorial fields are cached per manuscript in the
 current browser tab's sessionStorage, with an in-memory fallback. Switching does

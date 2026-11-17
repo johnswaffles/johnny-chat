@@ -56,8 +56,14 @@ test('output retries are bounded and do not retry network or safety errors', asy
 
 test('editorial cache identity separates models, reasoning and modes without changing source data',()=>{
  const input={format:{name:'scene'},system:'Synthetic instructions',user:{text:'Synthetic passage'},maxOutputTokens:32768};
- const quality={model:'gpt-6.1-sol',effort:'xhigh',mode:'pro'};const key=storyEditorialCacheKey(input,quality);
+ const quality={model:'gpt-6.2-astra',effort:'xhigh',mode:'pro'};const key=storyEditorialCacheKey(input,quality);
  assert.equal(storyEditorialCacheKey(structuredClone(input),{...quality}),key);
  for(const change of [{model:'gpt-6-astra'},{effort:'max'},{mode:'standard'}])assert.notEqual(storyEditorialCacheKey(input,{...quality,...change}),key);
  assert.equal(input.user.text,'Synthetic passage');
+});
+
+import {orderChapterFiles} from '../public/story-editor/chapter-import.mjs';
+test('chapter imports order numbered files and preserve the selection order of unnumbered files',()=>{
+ const names=['Epilogue.txt','Chapter 10.docx','Chapter Nine.pdf','Loose ends.txt','Prologue.txt','02 Arrival.txt','Chapter IV.pdf','After lunch.txt'];
+ assert.deepEqual(orderChapterFiles(names.map(name=>({name}))).map(f=>f.name),['Prologue.txt','02 Arrival.txt','Chapter IV.pdf','Chapter Nine.pdf','Chapter 10.docx','Loose ends.txt','After lunch.txt','Epilogue.txt']);
 });

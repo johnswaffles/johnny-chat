@@ -21,7 +21,7 @@ function sample(schema) {
  return 'Local test editorial note.';
 }
 let providerSequence=0;
-const fakeResponse=data=>({id:'resp_local_'+(++providerSequence),model:'gpt-6.1-sol',object:'response',...data});
+const fakeResponse=data=>({id:'resp_local_'+(++providerSequence),model:'gpt-6.2-astra',object:'response',...data});
 const requests=[];
 const speechRequests=[];
 const studioVoiceRequests=[];
@@ -40,7 +40,7 @@ const mock=http.createServer(async(req,res)=>{
  if(req.url==='/v1/audio/speech') {speechRequests.push(body);await speechGate;assert.equal(body.voice,'marin');assert.equal(body.model,'gpt-4o-mini-tts');assert.ok(body.input.length<=4096);res.writeHead(200,{'Content-Type':'audio/mpeg'});res.end(Buffer.from('ID3-local-test-audio'));return;}
  if(req.url==='/v1/realtime/client_secrets'){studioVoiceRequests.push(body);assert.ok(body.session.tools.some(t=>t.name==='edit_passage'));res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({value:'synthetic-no-live-connection',expires_at:Date.now()/1000+60}));return;}
  requests.push(body);
- assert.equal(body.model,'gpt-6.1-sol'); assert.equal(body.reasoning.effort,'xhigh'); assert.equal(body.reasoning.mode,'pro');
+ assert.equal(body.model,'gpt-6.2-astra'); assert.equal(body.reasoning.effort,'xhigh'); assert.equal(body.reasoning.mode,'pro');
  const envelope=JSON.parse(body.input[1].content);const user=envelope.editorialInput??envelope;
  const stage=body.text?.format?.name;
  if(stage==='managed_story_bible'){const value={facts:[{category:'characters',note:'A source-grounded continuity observation.',evidence:user.text.slice(0,40)}]};res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(fakeResponse({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(value)}]}]})));return;}
@@ -54,7 +54,7 @@ const mock=http.createServer(async(req,res)=>{
  }
 
  if(body.input[1].content.includes('PAUSE_TEST')&&!pauseResponseStarted){
-  if(body.background){pauseResponseStarted=true;const id='resp_paused_'+(++providerSequence);pendingResponses.set(id,{id,model:'gpt-6.1-sol',status:'in_progress'});res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(pendingResponses.get(id)));res={writeHead(){},end(data){pendingResponses.set(id,{...JSON.parse(data),id});}};}
+  if(body.background){pauseResponseStarted=true;const id='resp_paused_'+(++providerSequence);pendingResponses.set(id,{id,model:'gpt-6.2-astra',status:'in_progress'});res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(pendingResponses.get(id)));res={writeHead(){},end(data){pendingResponses.set(id,{...JSON.parse(data),id});}};}
   await new Promise(r=>setTimeout(r,500));
  }
  const retryStage=body.input[1].content.includes('BUDGET_ONCE')&&!truncatedStages.has(stage);
@@ -92,12 +92,42 @@ async function run(text,title,intent='Polish this adult novel without changing t
  for(let i=0;i<100;i++){job=(await json(base+'/autopilot/'+start.job.id)).job;if(['completed','failed'].includes(job.status))break;await new Promise(r=>setTimeout(r,100));}
  return {job,project:await json(base),base};
 }
+// A batch is one project. Replaying the form after a network interruption must be safe.
+function chapterBatch(entries, key){
+ const form=new FormData();form.append('requestId',key);
+ for(const [name,text] of entries)form.append('manuscript',new Blob([text],{type:'text/plain'}),name);
+ return form;
+}
+const ordered=[['02 The quay.txt','She waited on the quay.'],['10 Storm.txt','Chapter Ten\n\nThe storm passed.\n\nEpilogue\n\nSpring arrived.']];
+const multi=await json('/api/story-editor/upload',{method:'POST',body:chapterBatch(ordered,'batch-fixture')});
+const multiBase='/api/story-editor/projects/'+multi.projectId;
+assert.equal(multi.chapters,3);
+assert.equal((await json('/api/story-editor/upload',{method:'POST',body:chapterBatch(ordered,'batch-fixture')})).projectId,multi.projectId);
+const beforeImport=await json(multiBase+'/studio');
+assert.deepEqual(beforeImport.chapters.map(c=>c.title),['02 The quay','Chapter Ten','Epilogue']);
+const added=[['Afterword.txt','Her diary is still there.']];
+const addUrl=multiBase+'/chapters/import';
+await json(addUrl,{method:'POST',body:chapterBatch(added,'append-fixture')});
+await json(addUrl,{method:'POST',body:chapterBatch(added,'append-fixture')});
+assert.deepEqual((await json(multiBase+'/studio')).chapters.map(c=>c.title),['02 The quay','Chapter Ten','Epilogue','Afterword']);
+assert.deepEqual((await json(multiBase+'/studio')).chapters.slice(0,3),beforeImport.chapters);
+const invalid=await fetch(origin+addUrl,{method:'POST',headers:auth,body:chapterBatch([['Fine.txt','Sadie left.'],['Bad.txt','']], 'rollback-fixture')});
+assert.equal(invalid.status,400);assert.equal((await json(multiBase+'/studio')).chapters.length,4);
 const longPrompt=process.env.STORY_PROMPT_FIXTURE?await readFile(process.env.STORY_PROMPT_FIXTURE,'utf8'):'  Preserve every meaningful detail.\n'.repeat(700)+'END OF LONG PROMPT  ';
 if(process.env.STORY_PROMPT_FIXTURE)assert.equal(Buffer.byteLength(longPrompt),8802,'Complete supplied attachment');
 const longStart=requests.length;
 const longBook=await run('Chapter One\n\nThe synthetic room was empty.','LONG PROMPT TEST',longPrompt);
 assert.equal(longBook.job.status,'completed');assert.equal(longBook.project.project.userIntent,longPrompt);assert.equal(longBook.job.intent,longPrompt);
 assert.equal((await json(longBook.base)).project.userIntent,longPrompt,'Reload preserves complete prompt');
+const sourceBefore=await json(multiBase+'/studio');
+const assembly={sourceIds:[longBook.project.project.id,multi.projectId],requestId:'assembly-fixture',title:'A book from saved chapters',intent:'Keep my voice.'};
+const assembled=await json('/api/story-editor/assemble',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(assembly)});
+const assembledStudio=await json('/api/story-editor/projects/'+assembled.projectId+'/studio');
+assert.equal(assembledStudio.chapters.length,5);
+assert.equal(assembledStudio.chapters[0].passages[0].original,longBook.project.sections.find(s=>s.kind==='paragraph').editedText);
+assert.deepEqual(assembledStudio.chapters.slice(1).map(c=>c.title),sourceBefore.chapters.map(c=>c.title));
+assert.deepEqual((await json(multiBase+'/studio')).chapters,sourceBefore.chapters);
+assert.equal((await json('/api/story-editor/assemble',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(assembly)})).projectId,assembled.projectId);
 const longCalls=requests.slice(longStart).map(r=>JSON.parse(r.input[1].content)).filter(u=>u.intent!==undefined);
 assert.ok(longCalls.length>=3);for(const call of longCalls)assert.equal(call.intent,longPrompt,'Every editorial stage receives the full prompt');
 const oversized='é'.repeat(50001);
@@ -290,8 +320,8 @@ const stopDb=fixtureDb();
 stopDb.prepare("INSERT INTO story_autopilot_jobs(id,project_id,intent,status,phase,total_chunks,completed_chunks,created_at,updated_at) VALUES(?,?,?,'running','editing',2,1,?,?)").run('synthetic-stop-job',stopUpload.projectId,'Synthetic only',new Date().toISOString(),new Date().toISOString());
 stopDb.prepare("INSERT INTO story_worker_queue(job_id,state) VALUES(?,'failed')").run('synthetic-stop-job');
 stopDb.prepare("UPDATE story_sections SET edited_text='Synthetic saved revision.' WHERE project_id=? AND kind='paragraph'").run(stopUpload.projectId);
-stopDb.prepare("INSERT INTO story_provider_requests(job_id,stage_key,stage,state,response_id,client_request_id,model,effort,mode,submitted_at,checked_at) VALUES(?,?,?,'in_progress',?,?,?,'xhigh','pro',?,?)").run('synthetic-stop-job','stage','story_autopilot_chunk','resp_stop_fixture','stop-fixture','gpt-6.1-sol',new Date().toISOString(),new Date().toISOString());
-pendingResponses.set('resp_stop_fixture',{id:'resp_stop_fixture',status:'in_progress',model:'gpt-6.1-sol'});
+stopDb.prepare("INSERT INTO story_provider_requests(job_id,stage_key,stage,state,response_id,client_request_id,model,effort,mode,submitted_at,checked_at) VALUES(?,?,?,'in_progress',?,?,?,'xhigh','pro',?,?)").run('synthetic-stop-job','stage','story_autopilot_chunk','resp_stop_fixture','stop-fixture','gpt-6.2-astra',new Date().toISOString(),new Date().toISOString());
+pendingResponses.set('resp_stop_fixture',{id:'resp_stop_fixture',status:'in_progress',model:'gpt-6.2-astra'});
 assert.equal((await json(stopBase+'/studio/work-status')).active,true);const requestsBeforeStop=requests.length;
 const activePassage=(await json(stopBase+'/studio')).chapters[0].passages[0];
 const activeManual=await fetch(origin+stopBase+'/studio/passage',{method:'PUT',headers:{...auth,'Content-Type':'application/json'},body:JSON.stringify({sectionId:activePassage.id,revision:activePassage.revision,text:'Must not replace an active full revision.'})});
@@ -310,7 +340,7 @@ assert.equal((await fetch(origin+studioBase)).status,401);
 const expiredPayload=Buffer.from(JSON.stringify({profile:'gpt54',iat:Date.now()-86400000,exp:Date.now()-1,nonce:'synthetic-expired'})).toString('base64url');const expiredToken=expiredPayload+'.'+createHmac('sha256','local-story-preview').update(expiredPayload).digest('base64url');const expiredHeaders={Authorization:'Bearer '+expiredToken,'Content-Type':'application/json'};const speechBeforeExpiry=speechRequests.length,modelBeforeExpiry=requests.length;
 for(const suffix of ['/speech','/bookmark'])assert.equal((await fetch(origin+studioBase+suffix,{method:suffix==='/bookmark'?'PUT':'POST',headers:expiredHeaders,body:JSON.stringify({sectionId:'synthetic-invalid',revision:'none',part:0})})).status,401);assert.equal(speechRequests.length,speechBeforeExpiry);assert.equal(requests.length,modelBeforeExpiry);assert.equal((await json(studioBase)).original,studioBook.project.sections.map(s=>s.originalText).join('\n\n'));
 console.log('PASS: signed expired session blocks narration and bookmark before provider calls or manuscript writes; fresh authenticated session can reopen the original.');
-let studioState=await json(studioBase);assert.deepEqual(studioState.quality,{model:'gpt-6.1-sol',effort:'xhigh',mode:'pro'});assert.equal(studioState.chapters.length,2);
+let studioState=await json(studioBase);assert.deepEqual(studioState.quality,{model:'gpt-6.2-astra',effort:'xhigh',mode:'pro'});assert.equal(studioState.chapters.length,2);
 await json(studioBase+'/goal',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:'A finished literary novel with a quiet voice, developed from beginning to end.'})});
 assert.equal((await json(studioBase)).goal,'A finished literary novel with a quiet voice, developed from beginning to end.');
 
@@ -388,6 +418,6 @@ if(!process.env.STORY_PREVIEW){
  const removed=await fetch(origin+studioBook.base,{method:'DELETE',headers:auth});assert.equal(removed.status,200);
  const check=fixtureDb();for(const table of ['managed_bible_watch','managed_bible_chunks','studio_goals','studio_tasks','studio_notes','studio_messages','studio_versions','studio_state','studio_context_cache'])assert.equal(check.prepare(`SELECT count(*) AS n FROM ${table} WHERE project_id=?`).get(studioState.projectId).n,0);assert.equal(check.prepare('SELECT count(*) AS n FROM studio_task_stages').get().n,0);check.close();
 }
-console.log('PASS: whole-manuscript proposal confirmation/scope/reload; revised vs original DOCX content; studio four-pass Sol/xhigh/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
+console.log('PASS: whole-manuscript proposal confirmation/scope/reload; revised vs original DOCX content; studio four-pass Astra 6.2/xhigh/pro edit; durable/idempotent tasks; original preservation; history/undo; project notes; bookmark; mocked voice-token contract.');
 console.log('PASS: upload/export; refusal preservation; technical failure; output-budget retries; process restart detection; same-job resume skips saved paragraphs and avoids duplicate revisions.');
 if(process.env.STORY_PREVIEW) console.log(`LOCAL PREVIEW: http://127.0.0.1:${mock.address().port}/preview`); else {child.kill();realtimeMock.close();mock.close();}

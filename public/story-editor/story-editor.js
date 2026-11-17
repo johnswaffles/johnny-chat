@@ -1,5 +1,6 @@
+import {orderChapterFiles} from './chapter-import.mjs';
 import {createNavigationDrafts,NAVIGATION_FIELDS} from './navigation-drafts.mjs?v=20261025-tree1';
-import {editorialQualityLabel} from './quality-label.mjs?v=20261024-sol-pro-xhigh1';
+import {editorialQualityLabel} from './quality-label.mjs?v=20261117-astra62';
 import {createWorkspaceReset} from './workspace-reset.mjs?v=20261024-reset1';
 import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-prompts1';
 (function () {
@@ -723,6 +724,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     if (!response.ok || data.ok !== true) throw new Error(data.error || "Could not load your manuscripts.");
     if(epoch!==state.workspaceEpoch)return;
     state.projects = data.projects || [];
+    document.getElementById('assemble-library').hidden=!state.projects.length;
     document.getElementById("editor-engine").textContent = editorialQualityLabel(data.engine?{model:data.engine.model,effort:data.engine.reasoningEffort,mode:data.engine.reasoningMode}:null)+'.';
     renderProjects();
     if (!state.projects.length) {
@@ -781,61 +783,65 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     }
   }
 
+  let chapterFiles=[], importRequest='', libraryImport=false;
+  function receiveFiles(files){
+    const combined=[...chapterFiles];
+    for(const file of files){
+      if(!/\.(txt|docx|pdf)$/i.test(file.name)){setUploadStatus('Choose Word, PDF, or text files.',true);return;}
+      if(!combined.includes(file)) combined.push(file);
+    }
+    if(combined.length>100 || combined.reduce((sum,file)=>sum+file.size,0)>80*1024*1024){setUploadStatus('Choose up to 100 files and 80 MB combined per import.',true);return;}
+    // Preserve manual ordering after an author has arranged the list.
+    chapterFiles=manualOrder?combined:orderChapterFiles(combined);
+    importRequest=''; updateSelectedFile();
+  }
+  let manualOrder=false;
+  function clearImport(){
+    chapterFiles=[]; manualOrder=false; importRequest=''; el.uploadForm.reset(); updateSetupPrompt(); updateSelectedFile();
+  }
+  function openImport(append,fromLibrary=false){
+    if(!navigationAllowed())return;
+    keepUnsent();
+    libraryImport=fromLibrary;
+    state.addChapterMode=append && state.project?{projectId:state.project.id,title:state.project.title}:null;
+    clearImport();openDialog(el.uploadDialog);(fromLibrary?document.getElementById("library-import-source"):el.fileInput).focus();
+  }
   async function uploadManuscript(event) {
     event.preventDefault();
-    if (state.uploading || state.resetting) return;
-    const file = el.fileInput.files?.[0];
-    const choice = document.getElementById("setup-prompt").value;
-    const intent = String(choice === "custom" ? el.intentInput.value : briefs[choice] || "");
-    if (!file) {
-      setUploadStatus("Choose a manuscript before importing.", true);
-      return;
-    }
-    if (!intent.trim()) {
-      setUploadStatus("Tell the editor what you want done before importing.", true);
-      el.intentInput.focus();
-      return;
-    }
-    try{editorialPrompt(intent);}catch(error){setUploadStatus(error.message,true);return;}
-    if (!/\.(txt|docx|pdf)$/i.test(file.name)) {
-      setUploadStatus("Choose a Word document, PDF, or text file.",true);return;
-    }
-    if (file.size > 80 * 1024 * 1024) {
-      setUploadStatus("That file is larger than 80 MB. Please choose a smaller manuscript.", true);
-      return;
-    }
-    const addition=state.addChapterMode;let importFinished=false;
-    setUploadBusy(true);
-    el.uploadSubmit.textContent = "Importing…";
-    setUploadStatus("Extracting the text and organizing it into passages…");
-    try {
-      if(addition?.projectId&&!addition.bookId){
-        const linked=await apiFetch(`/api/story-editor/projects/${encodeURIComponent(addition.projectId)}/studio/book/link`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:String(addition.title||'My book').slice(0,160),useContinuity:true})});
-        const book=await readJsonResponse(linked);if(!linked.ok)throw Error(book.error||'Finish the active edit before adding a chapter to this book.');addition.bookId=book.book.id;
+    if(state.uploading || state.resetting) return;
+    if(!chapterFiles.length){setUploadStatus(libraryImport?'Choose a saved manuscript.':'Choose at least one chapter file.',true);(libraryImport?document.getElementById('library-import-source'):el.fileInput).focus();return;}
+    const addition=state.addChapterMode, revise=!addition && event.submitter?.value==='revise';
+    const choice=document.getElementById('setup-prompt').value;
+    const intent=choice==='custom'?el.intentInput.value:briefs[choice];
+    if(!addition){try{editorialPrompt(intent);}catch(error){setUploadStatus(error.message,true);return;}}
+    const title=document.getElementById('import-title').value.trim() || (chapterFiles.length===1?chapterFiles[0].name:'My manuscript');
+    setUploadBusy(true);setUploadStatus('Importing your files in the order shown…');
+    let saved;
+    try{
+      importRequest ||= crypto.randomUUID();
+      let url,options;
+      if(libraryImport){
+        url='/api/story-editor/assemble';
+        options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sourceIds:chapterFiles.map(file=>file.id),requestId:importRequest,title,intent})};
+      } else {
+        const form=new FormData();
+        if(!addition){form.append('title',title);form.append('intentJson',JSON.stringify(intent));}
+        form.append('requestId',importRequest);
+        for(const file of chapterFiles) form.append('manuscript',file);
+        url=addition?`/api/story-editor/projects/${encodeURIComponent(addition.projectId)}/chapters/import`:'/api/story-editor/upload';
+        options={method:'POST',body:form};
       }
-      const formData = new FormData();
-      formData.append("title", file.name);
-      formData.append("intentJson", JSON.stringify(intent));
-      formData.append("manuscript", file);
-      const response = await apiFetch("/api/story-editor/upload", { method: "POST", body: formData });
-      const data = await readJsonResponse(response);
-      if (!response.ok || data.ok !== true) throw new Error(data.error || "The manuscript could not be imported.");
-      setUploadStatus(`Ready — ${data.sections} passages found.`);
-      let bookNotice='';if(addition?.bookId){try{const linked=await apiFetch(`/api/story-editor/projects/${encodeURIComponent(data.projectId)}/studio/book/link`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({bookId:addition.bookId,useContinuity:true})});if(!linked.ok)throw Error('Book is busy.');}catch{bookNotice=' The file is safely imported; connect it through Book drafts when the book is available.';}}
-      await loadProjects();
-      await loadProject(data.projectId,{fromImport:true});
+      const response=await apiFetch(url,options);
+      const data=await readJsonResponse(response);
+      if(!response.ok || !data.ok) throw Error(data.error||'The files could not be imported.');
+      saved=data;
+      await loadProjects();await loadProject(data.projectId,{fromImport:true});
       el.uploadDialog.close();
-      el.uploadForm.reset();
-      updateSetupPrompt();
-      updateSelectedFile();
-      showToast(addition?`${data.title} added. Your other files stay saved. Choose Create first revision when ready.${bookNotice}`:`${data.title} is ready to edit.`);
-      importFinished=true;if(!addition)await startAutopilot();
-    } catch (error) {
-      setUploadStatus(error.message || "The manuscript could not be imported.", true);
-    } finally {
-      setUploadBusy(false);state.addChapterMode=importFinished?null:addition;document.getElementById('add-chapter-help').hidden=!state.addChapterMode;
-      el.uploadSubmit.textContent = state.addChapterMode?'Add chapter file':'Start revision';
-    }
+      showToast(`${data.title} · ${data.chapters} ${data.chapters===1?'chapter':'chapters'} ${addition?'added':'imported'}.`);
+    }catch(error){setUploadStatus(saved?'Your chapters were saved. Refresh the library to open the manuscript.':error.message,true);return;}
+    finally{setUploadBusy(false);}
+    state.addChapterMode=null;libraryImport=false;clearImport();
+    if(revise) await startAutopilot();
   }
 
   async function pollAutopilot({refreshCompleted=true}={}) {
@@ -1064,17 +1070,48 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   }
 
   function updateSelectedFile() {
-    const file = el.fileInput.files?.[0];
-    el.fileDrop.classList.toggle("has-file", Boolean(file));
-    if (!file) {
-      el.filePrompt.textContent = "Drop a manuscript or choose a file";
-      el.fileDetail.textContent = "Word, PDF, or text · up to 80 MB";
-      setUploadStatus("");
-      return;
+    const addition=state.addChapterMode;
+    const count=chapterFiles.length;
+    el.fileDrop.classList.toggle('has-file',count>0);
+    el.filePrompt.textContent=count?'Choose more files':'Drop files here or choose files';
+    el.fileDetail.textContent=count?`${count} ${count===1?'file':'files'} · ${formatFileSize(chapterFiles.reduce((sum,f)=>sum+f.size,0))}`:'Word, PDF, or text · up to 80 MB combined';
+    document.getElementById('import-heading').textContent=libraryImport?'Assemble from library':addition?'Add chapters':'Import a manuscript';
+    document.getElementById('import-instructions').textContent=libraryImport?'Choose the saved drafts that belong together. Their current text becomes the starting draft of a new manuscript. Each source keeps its revision history.':'Choose a complete draft or drop its chapter files together.';
+    el.fileDrop.hidden=libraryImport;document.getElementById('library-import-field').hidden=!libraryImport;
+    if(libraryImport){
+      const select=document.getElementById('library-import-source');select.replaceChildren(new Option('Choose a manuscript…',''));
+      for(const project of state.projects){
+        if(chapterFiles.some(file=>file.id===project.id))continue;
+        select.add(new Option(project.title+' · '+new Date(project.updatedAt).toLocaleString(),project.id));
+      }
     }
-    el.filePrompt.textContent = file.name;
-    el.fileDetail.textContent = `${formatFileSize(file.size)} · Ready to import`;
-    setUploadStatus("");
+    const help=document.getElementById('add-chapter-help');help.hidden=!addition;
+    if(addition)help.textContent=`These files will follow the last chapter of “${addition.title}”.`;
+    document.getElementById('import-direction').hidden=!!addition;
+    el.intentInput.required=!addition && document.getElementById('setup-prompt').value==='custom';
+    document.getElementById('import-title-field').hidden=!!addition || (!libraryImport && count<2);
+    document.getElementById('import-order').hidden=count===0;
+    document.getElementById('import-only').hidden=!!addition;
+    el.uploadSubmit.textContent=addition?'Add chapters':'Import and revise';
+    const list=document.getElementById('chapter-file-list');list.replaceChildren();
+    chapterFiles.forEach((file,index)=>{
+      const item=document.createElement('li'), name=document.createElement('span');
+      name.textContent=file.name;item.append(name);
+      for(const [label,delta] of [['Move up',-1],['Move down',1],['Remove',0]]){
+        const button=document.createElement('button');button.type='button';button.textContent=delta<0?'↑':delta>0?'↓':'×';
+        button.setAttribute('aria-label',label+' '+file.name);button.title=label;
+        button.disabled=delta!==0 && !chapterFiles[index+delta];
+        button.onclick=()=>{
+          if(state.uploading)return;
+          chapterFiles.splice(index,1);if(delta){chapterFiles.splice(index+delta,0,file);manualOrder=true;}
+          importRequest='';updateSelectedFile();
+          const row=list.children[Math.max(0,Math.min(index+delta,chapterFiles.length-1))];(row?.querySelector('button:not(:disabled)')||(libraryImport?document.getElementById('library-import-source'):el.fileInput)).focus();
+        };
+        item.append(button);
+      }
+      list.append(item);
+    });
+    setUploadStatus('');
   }
 
   function handleError(error) {
@@ -1104,7 +1141,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   }
   function setUploadBusy(busy){
     state.uploading=busy;document.getElementById("start-over").disabled=busy;el.uploadForm.setAttribute('aria-busy',String(busy));
-    for(const control of [el.uploadSubmit,el.fileInput,el.intentInput,document.getElementById('setup-prompt'),...el.uploadDialog.querySelectorAll('[data-close-dialog]')])control.disabled=busy;
+    for(const control of [el.uploadSubmit,document.getElementById('library-import-source'),document.getElementById('import-title'),document.getElementById('import-only'),el.fileInput,el.intentInput,document.getElementById('setup-prompt'),...el.uploadDialog.querySelectorAll('[data-close-dialog]')])control.disabled=busy;
   }
   document.getElementById('setup-prompt').addEventListener('change',updateSetupPrompt);
   el.uploadDialog.addEventListener('cancel',event=>{if(state.uploading)event.preventDefault();});
@@ -1112,14 +1149,14 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     const response=await apiFetch(`/api/story-editor/projects/${encodeURIComponent(state.project.id)}/studio/${suffix}`,options);
     const data=await readJsonResponse(response);if(!response.ok||!data.ok)throw Error(data.error||'Could not check editing work. Your workspace is still open.');return data;
   }
-  function clearWorkspace(){navigationDrafts.clear(state.project?.id);state.addChapterMode=null;
+  function clearWorkspace(){libraryImport=false;navigationDrafts.clear(state.project?.id);state.addChapterMode=null;
     state.workspaceEpoch++;state.loadEpoch++;state.blank=true;try{sessionStorage.setItem('johnny-story-workspace','');}catch{}
     window.clearTimeout(state.autopilotTimer);window.clearTimeout(state.toastTimer);
     Object.assign(state,{project:null,sections:[],bible:null,edits:[],selectedId:'',sectionFilter:'all',pendingEdit:null,previewEdit:null,autopilotJob:null,autopilotTimer:null,pollFailures:0});
     document.dispatchEvent(new CustomEvent('story-workspace-reset'));
     for(const dialog of document.querySelectorAll('dialog'))closeDialog(dialog);
     for(const field of document.querySelectorAll('textarea'))field.value='';
-    el.uploadForm.reset();document.getElementById('setup-prompt').value='novel';updateSetupPrompt();updateSelectedFile();
+    clearImport();
     for(const field of [el.projectFilter,el.sectionFilter,el.editNote])field.value='';
     for(const details of document.querySelectorAll('details'))details.open=false;
     el.mode.value='line';el.modeDescription.textContent=modeDescriptions.line;el.sectionFilterButtons.forEach(button=>button.classList.toggle('active',button.dataset.sectionFilter==='all'));
@@ -1145,7 +1182,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
       return {projectId:state.project?.id,active:state.project?(await workspaceJson('work-status')).active:false};
     },
     confirm(work){
-      const dirty=[...document.querySelectorAll('textarea')].some(field=>field.value.trim())||el.fileInput.files?.length;
+      const dirty=[...document.querySelectorAll('textarea')].some(field=>field.value.trim())||chapterFiles.length;
       return !(work.projectId||dirty)||confirmReset(work.active?
         'Stop editing and start over? This stops the current manuscript’s editing and checks cancellation of its provider work. Work already performed may be billed. Saved manuscripts, originals, and completed revisions stay in your library. Playback and voice stop; already-started audio or passage requests may still finish and be billed. Unsent text in this workspace will be cleared.':
         'Start over with a new file and prompt? Saved manuscripts, originals, and revisions stay in your library. Playback and voice stop; already-started audio or passage requests may still finish and be billed. Unsent text in this workspace will be cleared.');
@@ -1155,13 +1192,17 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   document.getElementById('start-over').addEventListener('click',()=>void startOver().catch(error=>showToast(error.message,true)));
   updateSetupPrompt();
   el.openUpload.addEventListener("click", () => void startOver().catch(error=>showToast(error.message,true)));
-  document.getElementById('add-chapter-file').addEventListener('click',()=>{
-    if(!navigationAllowed())return;keepUnsent();const detail={bookId:null};document.dispatchEvent(new CustomEvent('story-add-chapter-context',{detail}));state.addChapterMode=detail;
-    document.getElementById('add-chapter-help').hidden=false;document.getElementById('add-chapter-help').textContent=detail.bookId?'Add a separate chapter file to this book. Existing originals and revisions stay saved. No revision starts until you request it. Use Save chapter when the new version is ready.':'Add the next chapter to this story. Mara will carry its Story Bible forward automatically. Your existing originals and revisions stay saved.';
-    el.uploadSubmit.textContent='Add chapter file';openDialog(el.uploadDialog);el.fileInput.focus();
+  document.getElementById('assemble-library').addEventListener('click',()=>openImport(false,true));
+  document.getElementById('library-import-source').addEventListener('change',event=>{
+    const project=state.projects.find(p=>p.id===event.target.value);if(!project)return;
+    chapterFiles.push({id:project.id,name:project.title,size:0});
+    if(!manualOrder)chapterFiles=orderChapterFiles(chapterFiles);
+    importRequest='';updateSelectedFile();
   });
-  el.uploadDialog.addEventListener('close',()=>{if(!state.uploading){state.addChapterMode=null;document.getElementById('add-chapter-help').hidden=true;el.uploadSubmit.textContent='Start revision';}});
-  el.welcomeUpload.addEventListener("click", () => openDialog(el.uploadDialog));
+  document.getElementById('add-chapter-file').addEventListener('click',()=>openImport(true));
+  el.uploadDialog.addEventListener('close',()=>{if(!state.uploading){state.addChapterMode=null;libraryImport=false;clearImport();}});
+  el.welcomeUpload.addEventListener('click',()=>openImport(false));
+  el.uploadForm.addEventListener('input',()=>{importRequest='';});
   el.retryStartup.addEventListener("click", retryStartup);
   el.openBible.addEventListener("click", () => openDialog(el.bibleDialog));
   el.autopilotStart.addEventListener("click", startAutopilot);
@@ -1170,7 +1211,7 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
   el.railClose.addEventListener("click", () => setLibraryOpen(false));
   el.railScrim.addEventListener("click", () => setLibraryOpen(false));
   el.uploadForm.addEventListener("submit", uploadManuscript);
-  el.fileInput.addEventListener("change", updateSelectedFile);
+  el.fileInput.addEventListener("change",()=>{receiveFiles(el.fileInput.files);el.fileInput.value="";});
   el.projectFilter.addEventListener("input", renderProjects);
   el.refreshProjects.addEventListener("click", () => loadProjects().then(() => showToast("Manuscript library refreshed.")).catch(handleError));
   el.sectionFilter.addEventListener("input", renderSections);
@@ -1205,11 +1246,8 @@ import {editorialPrompt,PUBLICATION_POLISH} from './prompt-model.mjs?v=20261024-
     if(!event.dataTransfer?.files?.length) return;
     if(state.uploading){event.preventDefault();return;}
     event.preventDefault();
-    if(event.dataTransfer.files.length!==1) {showToast('Please drop one manuscript at a time.',true);return;}
-    const file=event.dataTransfer.files[0];
-    if(!/\.(txt|docx|pdf)$/i.test(file.name)) {showToast('Choose a Word document, PDF, or text file.',true);return;}
-    const transfer=new DataTransfer();transfer.items.add(file);el.fileInput.files=transfer.files;
-    updateSelectedFile();if(!el.uploadDialog.open) openDialog(el.uploadDialog);
+    if(!el.uploadDialog.open)openImport(!!state.project);
+    if(el.uploadDialog.open&&!libraryImport)receiveFiles(event.dataTransfer.files);
   });
   document.getElementById('autopilot-pause').addEventListener('click',async()=>{
     try {

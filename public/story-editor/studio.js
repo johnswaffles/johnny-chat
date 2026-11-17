@@ -3,7 +3,7 @@ import {initReadingComfort} from './reading-comfort.mjs?v=20261026-comfort1';
 import {renderChapterTree} from './chapter-tree.mjs?v=20261025-tree1';
 import {NarrationBuffer} from './narration-buffer.mjs?v=20261025-realtime1';
 import {NARRATION_PRESETS,narrationOptions,narrationSignature} from './narration-model.mjs?v=20261025-realtime1';
-import {editorialQualityLabel} from './quality-label.mjs?v=20261024-sol-pro-xhigh1';
+import {editorialQualityLabel} from './quality-label.mjs?v=20261117-astra62';
 import {renderRevisionTracker} from './revision-tracker.mjs?v=20261026-mara1';
 import {notebookJourney,notebookReference} from './notebook-model.mjs?v=20261026-mara1';
 import {speechParts} from './reader-model.mjs?v=20261025-paragraph1';
@@ -235,7 +235,9 @@ function renderJourney(){
  if(!state.goalDirty&&document.activeElement!==$('studio-goal'))$('studio-goal').value=state.data?.goal||'';
  $('studio-goal-save').disabled=state.authRequired||!!state.task||!!state.data?.busy;
 }
-function renderControls(){renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage()&&!state.authRequired&&!state.original;$('studio-read').disabled=!ready||state.reading;$('studio-read').textContent=state.reading?(state.readPhase==='preparing'?'Preparing audio…':state.readPhase==='ready'?'Audio ready · use Play':'Reading…'):state.readPhase==='paused'?'▶ Resume reading':'▶ Read from here';$('studio-pause').textContent=state.readPhase==='paused'?'▶ Resume':'Pause / interrupt';$('studio-stop').disabled=!state.reading&&state.readPhase!=='paused';$('studio-read').setAttribute('aria-busy',String(state.reading&&state.readPhase==='preparing'));$('studio-send').disabled=state.original||!ready||state.manualSaving||state.requestStarting||!!state.task||!!state.data?.busy;$('studio-input').disabled=state.authRequired||state.manualSaving||state.requestStarting||!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
+function renderControls(){
+ $('notebook-suggest-story').disabled=!passage()||state.original||state.authRequired||!!state.task||state.manualSaving||state.requestStarting||!!state.data?.busy;
+ renderBookDrafts();$('studio-quality').title=editorialQualityLabel(state.data?.quality);renderJourney();renderNotebook();const ready=!!passage()&&!state.authRequired&&!state.original;$('studio-read').disabled=!ready||state.reading;$('studio-read').textContent=state.reading?(state.readPhase==='preparing'?'Preparing audio…':state.readPhase==='ready'?'Audio ready · use Play':'Reading…'):state.readPhase==='paused'?'▶ Resume reading':'▶ Read from here';$('studio-pause').textContent=state.readPhase==='paused'?'▶ Resume':'Pause / interrupt';$('studio-stop').disabled=!state.reading&&state.readPhase!=='paused';$('studio-read').setAttribute('aria-busy',String(state.reading&&state.readPhase==='preparing'));$('studio-send').disabled=state.original||!ready||state.manualSaving||state.requestStarting||!!state.task||!!state.data?.busy;$('studio-input').disabled=state.authRequired||state.manualSaving||state.requestStarting||!!state.task||!!state.data?.busy;$('studio-voice').disabled=!ready||voiceStarting;$('studio-progress').hidden=!state.task;$('studio-retry').hidden=!state.lastTask||!!state.task;renderHistory();}
 function setBookOpen(open){state.bookOpen=!!open;$('book-drafts-panel').hidden=!open;$('book-toggle').setAttribute('aria-expanded',String(!!open));if(open)$('book-close').focus();}
 function bookNotice(text){$('book-drafts-status').textContent=text;}
 function bookButton(text,action,label=text){const b=document.createElement('button');b.type='button';b.className='ghost-button';b.textContent=text;b.setAttribute('aria-label',label);b.disabled=state.bookSaving||!!state.task||!!state.data?.busy;b.addEventListener('click',()=>void bookAction(action));return b;}
@@ -456,7 +458,12 @@ $('notebook-next').addEventListener('click',()=>{const action=$('notebook-next')
 $('notebook-stop-full').addEventListener('click',()=>$('autopilot-pause').click());
 $('notebook-proposal-cancel').addEventListener('click',dismissProposal);
 $('notebook-proposal-apply').addEventListener('click',()=>{if(!state.proposal||state.proposalApplying)return;state.proposalApplying=true;renderNotebook();document.dispatchEvent(new CustomEvent('story-author-request',{detail:{projectId:state.id,request:state.proposal.request}}));});
-for(const [id,text] of [['notebook-suggest-story','What does this manuscript need most to become a strong, finished work?'],['notebook-suggest-arc','Help me think through the emotional arc of this manuscript. Do not change the draft yet.']])$(id).addEventListener('click',()=>{state.scope='book';state.requestMode='discuss';renderControls();$('studio-input').value=text;$('studio-input').focus();});
+$('notebook-suggest-story').addEventListener('click',async()=>{
+ const request="Read the current manuscript from beginning to end against my saved goal. Tell me what is already working and should survive revision. Trace character choices, setups and payoffs, voice, pacing, timeline and repeated beats across chapters. Give the three most consequential improvements the text actually supports, or fewer if warranted. For each, explain the reader's experience, point to specific evidence using [Chapter N, passage N], and suggest a concrete revision. Distinguish an unresolved question from a contradiction. Close with the one change you would tackle first.";
+ state.scope='book';state.requestMode='discuss';renderControls();setNotebookView('chat');
+ try{await sendRequest(request,crypto.randomUUID(),'discuss','book');}catch(error){status(error.message);}
+});
+$('notebook-suggest-arc').addEventListener('click',()=>{state.scope='book';state.requestMode='discuss';renderControls();$('studio-input').value='Help me think through the emotional arc of this manuscript. Do not change the draft yet.';$('studio-input').focus();});
 document.addEventListener('story-author-request-result',event=>{if(event.detail.projectId&&event.detail.projectId!==state.id)return;if(event.detail.started)dismissProposal();else if(event.detail.busy===false){state.proposalApplying=false;renderNotebook();}});
 setNotebookView('chat');renderAccess();
 document.dispatchEvent(new CustomEvent('story-studio-ready'));

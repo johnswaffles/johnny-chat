@@ -379,3 +379,11 @@ test('an old manual save cannot erase newer unsent recovery after returning to t
  assert.equal(h.elements.get('studio-edit-dialog').open,true);assert.equal(h.elements.get('studio-manual-text').value,'New unsent wording after returning.');assert.equal(h.api.state.manualSaving,false);
  assert.equal(JSON.parse(h.navigationStore.get(storageKey)).text,'New unsent wording after returning.','Old save completion must preserve the recovery copy of newer unsent work');
 });
+
+test('whole manuscript review explicitly requests discussion and preserves unsent composer text',async()=>{
+ const h=await harness();h.elements.get('studio-input').value='My next question';
+ await h.elements.get('notebook-suggest-story').events.click[0]();
+ const task=h.calls.find(c=>c.method==='POST'&&c.path.endsWith('/tasks'));
+ const body=typeof task.body==='string'?JSON.parse(task.body):task.body;assert.equal(body.scope,'book');assert.equal(body.mode,'discuss');
+ assert.match(body.message,/setups and payoffs/);assert.equal(h.elements.get('studio-input').value,'My next question');
+});
